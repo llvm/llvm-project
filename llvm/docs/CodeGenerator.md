@@ -15,6 +15,9 @@
 </style>
 ```
 
+```{contents}
+:local:
+```
 
 ```{warning}
 This is a work in progress.

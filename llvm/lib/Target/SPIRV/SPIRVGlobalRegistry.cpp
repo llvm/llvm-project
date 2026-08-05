@@ -91,13 +91,6 @@ storageClassRequiresExplictLayout(SPIRV::StorageClass::StorageClass SC) {
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(DataLayout DL)
     : DL(DL), Bound(0), CurMF(nullptr) {}
 
-void SPIRVGlobalRegistry::constrainSelectedInstRegOperands(
-    MachineInstrBuilder &MIB) const {
-  const auto &ST = CurMF->getSubtarget();
-  MIB.constrainAllUses(*ST.getInstrInfo(), *ST.getRegisterInfo(),
-                       *ST.getRegBankInfo());
-}
-
 SPIRVTypeInst
 SPIRVGlobalRegistry::assignIntTypeToVReg(unsigned BitWidth, Register VReg,
                                          MachineInstr &I,
@@ -406,7 +399,10 @@ Register SPIRVGlobalRegistry::createConstFP(const ConstantFP *CF,
                           CF->getValueAPF().bitcastToAPInt().getZExtValue()),
                     MIB);
         }
-        constrainSelectedInstRegOperands(MIB);
+        const auto &ST = CurMF->getSubtarget();
+        constrainSelectedInstRegOperands(*MIB, *ST.getInstrInfo(),
+                                         *ST.getRegisterInfo(),
+                                         *ST.getRegBankInfo());
         return MIB;
       });
   add(CF, Const);
@@ -468,7 +464,10 @@ Register SPIRVGlobalRegistry::createConstInt(const ConstantInt *CI,
                     .addDef(Res)
                     .addUse(getSPIRVTypeID(SpvType));
         }
-        constrainSelectedInstRegOperands(MIB);
+        const auto &ST = CurMF->getSubtarget();
+        constrainSelectedInstRegOperands(*MIB, *ST.getInstrInfo(),
+                                         *ST.getRegisterInfo(),
+                                         *ST.getRegBankInfo());
         return MIB;
       });
   add(CI, Const);
@@ -514,7 +513,10 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
                     .addDef(Res)
                     .addUse(SpvTypeReg);
         }
-        constrainSelectedInstRegOperands(MIB);
+        const auto &Subtarget = CurMF->getSubtarget();
+        constrainSelectedInstRegOperands(*MIB, *Subtarget.getInstrInfo(),
+                                         *Subtarget.getRegisterInfo(),
+                                         *Subtarget.getRegBankInfo());
         return MIB;
       });
   add(CI, Const);
@@ -607,7 +609,10 @@ Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
                     .addDef(Res)
                     .addUse(getSPIRVTypeID(SpvType));
         }
-        constrainSelectedInstRegOperands(MIB);
+        const auto &Subtarget = CurMF->getSubtarget();
+        constrainSelectedInstRegOperands(*MIB, *Subtarget.getInstrInfo(),
+                                         *Subtarget.getRegisterInfo(),
+                                         *Subtarget.getRegBankInfo());
         return MIB;
       });
   add(CA, NewMI);
@@ -847,7 +852,10 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   // ISel may introduce a new register on this step, so we need to add it to
   // DT and correct its type avoiding fails on the next stage.
   if (IsInstSelector) {
-    constrainSelectedInstRegOperands(MIB);
+    const auto &Subtarget = CurMF->getSubtarget();
+    constrainSelectedInstRegOperands(*MIB, *Subtarget.getInstrInfo(),
+                                     *Subtarget.getRegisterInfo(),
+                                     *Subtarget.getRegBankInfo());
   }
   add(GVar, MIB);
 
@@ -1196,8 +1204,6 @@ SPIRVTypeInst SPIRVGlobalRegistry::createSPIRVType(
                       : getOpTypeInt(Width, MIRBuilder, false);
   }
   if (Ty->isFloatingPointTy()) {
-    if (Ty->isFP128Ty() || Ty->isPPC_FP128Ty())
-      llvm::reportFatalUsageError("fp128 is not supported in SPIR-V");
     if (Ty->isBFloatTy()) {
       return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder,
                             SPIRV::FPEncoding::BFloat16KHR);
@@ -2080,7 +2086,10 @@ Register SPIRVGlobalRegistry::getOrCreateUndef(MachineInstr &I,
                            MIRBuilder.getDL(), TII.get(SPIRV::OpUndef))
                        .addDef(Res)
                        .addUse(getSPIRVTypeID(SpvType));
-        constrainSelectedInstRegOperands(MIB);
+        const auto &ST = CurMF->getSubtarget();
+        constrainSelectedInstRegOperands(*MIB, *ST.getInstrInfo(),
+                                         *ST.getRegisterInfo(),
+                                         *ST.getRegBankInfo());
         return MIB;
       });
   add(UV, NewMI);

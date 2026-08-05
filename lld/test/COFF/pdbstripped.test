@@ -1,7 +1,0 @@
-# RUN: yaml2obj %p/Inputs/pdb1.yaml -o %t1.obj
-# RUN: yaml2obj %p/Inputs/pdb2.yaml -o %t2.obj
-# RUN: rm -f %t.dll %t.pdb
-# RUN: lld-link /debug /pdb:%t.pdb /pdbstripped:%t2.pdb /pdbaltpath:test.pdb /dll /out:%t.dll \
-# RUN:   /entry:main /nodefaultlib %t1.obj %t2.obj 2>&1 | FileCheck %s
-
-CHECK: warning: ignoring /pdbstripped flag, it is not yet supported

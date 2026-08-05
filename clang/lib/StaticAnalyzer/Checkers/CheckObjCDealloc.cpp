@@ -27,14 +27,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -44,7 +44,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -984,9 +983,16 @@ bool ObjCDeallocChecker::isInInstanceDealloc(const CheckerContext &C,
 /// 'self' in the frame for -dealloc.
 bool ObjCDeallocChecker::instanceDeallocIsOnStack(const CheckerContext &C,
                                                   SVal &InstanceValOut) const {
-  return llvm::any_of(C.stackframes(), [&](const StackFrame &SF) {
-    return isInInstanceDealloc(C, &SF, InstanceValOut);
-  });
+  const StackFrame *SF = C.getStackFrame();
+
+  while (SF) {
+    if (isInInstanceDealloc(C, SF, InstanceValOut))
+      return true;
+
+    SF = SF->getParent();
+  }
+
+  return false;
 }
 
 /// Returns true if the ID is a class in which is known to have

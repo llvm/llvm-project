@@ -35,9 +35,6 @@
 ; }
 
 ; CHECK: DW_TAG_structure_type
-; CHECK-NEXT: DW_AT_name ("B")
-
-; CHECK: DW_TAG_structure_type
 ; CHECK-NEXT: DW_AT_name ("C")
 ; CHECK: [[M_FN3_DECL:.*]]:  DW_TAG_subprogram
 ; CHECK-NOT: {{DW_TAG|NULL}}

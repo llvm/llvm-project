@@ -15,7 +15,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -186,10 +185,6 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
         FnTy, GlobalValue::LinkageTypes::InternalLinkage,
         M.getDataLayout().getProgramAddressSpace(), "__NoopCoro_ResumeDestroy",
         &M);
-
-    // Mark this synthetic function's entry count as explicitly unknown.
-    setExplicitlyUnknownFunctionEntryCount(*NoopFn, DEBUG_TYPE);
-
     buildDebugInfoForNoopResumeDestroyFunc(NoopFn);
     auto *Entry = BasicBlock::Create(C, "entry", NoopFn);
     ReturnInst::Create(C, Entry);

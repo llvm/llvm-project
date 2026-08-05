@@ -84,7 +84,6 @@
 #include "llvm/Transforms/Utils/LoopConstrainer.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -1034,11 +1033,8 @@ bool InductiveRangeCheckElimination::run(
     PrintRecognizedRangeChecks(errs());
 
   const char *FailureReason = nullptr;
-  SCEVExpander LoopStructureExpander(SE, "loop-constrainer");
-  SCEVExpanderCleaner LoopStructureExpanderCleaner(LoopStructureExpander);
   std::optional<LoopStructure> MaybeLoopStructure =
-      LoopStructure::parseLoopStructure(LoopStructureExpander, *L,
-                                        AllowUnsignedLatchCondition,
+      LoopStructure::parseLoopStructure(SE, *L, AllowUnsignedLatchCondition,
                                         FailureReason);
   if (!MaybeLoopStructure) {
     LLVM_DEBUG(dbgs() << "irce: could not parse loop structure: "
@@ -1080,15 +1076,13 @@ bool InductiveRangeCheckElimination::run(
       calculateSubRanges(SE, *L, *SafeIterRange, LS);
   if (!MaybeSR) {
     LLVM_DEBUG(dbgs() << "irce: could not compute subranges\n");
-    return Changed;
+    return false;
   }
 
   LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT,
                      SafeIterRange->getBegin()->getType(), *MaybeSR);
 
   if (LC.run()) {
-    LoopStructureExpanderCleaner.markResultUsed();
-    LS.IndVarStart->setName("indvar.start");
     Changed = true;
 
     auto PrintConstrainedLoopInfo = [L]() {

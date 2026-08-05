@@ -1534,7 +1534,7 @@ bool DFAJumpThreading::run(Function &F) {
   }
 
 #ifdef NDEBUG
-  LI->verify();
+  LI->verify(DTU->getDomTree());
 #endif
 
   SmallPtrSet<const Value *, 32> EphValues;

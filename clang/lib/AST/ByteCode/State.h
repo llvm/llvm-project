@@ -162,7 +162,6 @@ public:
 
   /// Add a note to a prior diagnostic.
   OptionalDiagnostic Note(SourceLocation Loc, diag::kind DiagId);
-  OptionalDiagnostic Note(SourceInfo Loc, diag::kind DiagId);
 
   /// Add a stack of notes to a prior diagnostic.
   void addNotes(ArrayRef<PartialDiagnosticAt> Diags);

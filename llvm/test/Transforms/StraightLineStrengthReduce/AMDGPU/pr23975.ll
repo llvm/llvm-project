@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes=slsr -S | FileCheck %s
 ; RUN: opt < %s -passes='slsr' -S | FileCheck %s
 
-target triple = "amdgpu6.00--"
+target triple = "amdgcn--"
 
 %struct.Matrix4x4 = type { [4 x [4 x float]] }
 

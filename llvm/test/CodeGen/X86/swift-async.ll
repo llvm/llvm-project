@@ -27,12 +27,9 @@ define void @more_csrs(ptr swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: more_csrs:
 ; CHECK: btsq    $60, %rbp
 ; CHECK: pushq   %rbp
-; CHECK: .cfi_def_cfa_offset 16
 ; CHECK: .cfi_offset %rbp, -16
 ; CHECK: pushq   %r14
-; CHECK: .cfi_adjust_cfa_offset 8
 ; CHECK: leaq    8(%rsp), %rbp
-; CHECK: .cfi_def_cfa %rbp, 16
 ; CHECK: subq    $8, %rsp
 ; CHECK: pushq   %r15
 ; CHECK: .cfi_offset %r15, -40
@@ -55,9 +52,8 @@ define void @locals(ptr swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK: .cfi_def_cfa_offset 16
 ; CHECK: .cfi_offset %rbp, -16
 ; CHECK: pushq   %r14
-; CHECK: .cfi_adjust_cfa_offset 8
 ; CHECK: leaq    8(%rsp), %rbp
-; CHECK: .cfi_def_cfa %rbp, 16
+; CHECK: .cfi_def_cfa_register %rbp
 ; CHECK: subq    $56, %rsp
 
 ; CHECK: leaq    -48(%rbp), %rdi
@@ -84,13 +80,6 @@ define void @use_input_context(ptr swiftasync %ctx, ptr %ptr) "frame-pointer"="a
 
 define ptr @context_in_func() "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: context_in_func:
-; CHECK: pushq   %rbp
-; CHECK: .cfi_def_cfa_offset 16
-; CHECK: .cfi_offset %rbp, -16
-; CHECK: pushq   $0
-; CHECK: .cfi_adjust_cfa_offset 8
-; CHECK: leaq    8(%rsp), %rbp
-; CHECK: .cfi_def_cfa %rbp, 16
 ; CHECK: leaq    -8(%rbp), %rax
 
 ; CHECK-32-LABEL: context_in_func

@@ -310,8 +310,6 @@ template <> struct GraphTraits<VPBlockBase *> {
   static inline ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType::end(N);
   }
-
-  static unsigned getNumber(NodeRef N) { return N->getNumber(); }
 };
 
 template <> struct GraphTraits<const VPBlockBase *> {
@@ -327,8 +325,6 @@ template <> struct GraphTraits<const VPBlockBase *> {
   static inline ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType::end(N);
   }
-
-  static unsigned getNumber(NodeRef N) { return N->getNumber(); }
 };
 
 template <> struct GraphTraits<Inverse<VPBlockBase *>> {
@@ -345,8 +341,6 @@ template <> struct GraphTraits<Inverse<VPBlockBase *>> {
   static inline ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType::end(N);
   }
-
-  static unsigned getNumber(NodeRef N) { return N->getNumber(); }
 };
 
 template <> struct GraphTraits<VPlan *> {
@@ -365,11 +359,6 @@ template <> struct GraphTraits<VPlan *> {
     // matter.
     return nodes_iterator::end(N->getEntry());
   }
-
-  static unsigned getMaxNumber(GraphRef N) { return N->getMaxBlockNumber(); }
-
-  // Nodes are never renumbered.
-  static unsigned getNumberEpoch(GraphRef) { return 0; }
 };
 
 } // namespace llvm

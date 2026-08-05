@@ -267,7 +267,3 @@ def TuneFusionShiftBitExtract
                        return false;
                    }]>,
                  ]>;
-
-
-// Xqci macro fusions.
-include "RISCVMacroFusionXQCI.td"

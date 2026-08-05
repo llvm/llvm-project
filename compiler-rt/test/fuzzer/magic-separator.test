@@ -1,4 +1,0 @@
-# Temporary disable this test on non-linux: looks like there is no memmem on windows.
-REQUIRES: linux, x86_64
-RUN: %cpp_compiler -O2 %S/MagicSeparatorTest.cpp -o %t-MagicSeparatorTest
-RUN: not %run %t-MagicSeparatorTest  -use_value_profile=1 -seed=1 -runs=100000000 -max_len=10

@@ -9014,9 +9014,6 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
   if (Ordering == AtomicOrdering::Release ||
       Ordering == AtomicOrdering::AcquireRelease)
     return error(Loc, "atomic load cannot use Release ordering");
-  if (IsElementwise && Ordering == AtomicOrdering::SequentiallyConsistent)
-    return error(Loc,
-                 "atomic elementwise load cannot be sequentially consistent");
 
   SmallPtrSet<Type *, 4> Visited;
   if (!Alignment && !Ty->isSized(&Visited))
@@ -9225,38 +9222,40 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
 
   if (Ordering == AtomicOrdering::Unordered)
     return tokError("atomicrmw cannot be unordered");
-  if (IsElementwise && Ordering == AtomicOrdering::SequentiallyConsistent)
-    return tokError("atomicrmw elementwise cannot be sequentially consistent");
   if (!Ptr->getType()->isPointerTy())
     return error(PtrLoc, "atomicrmw operand must be a pointer");
   if (Val->getType()->isScalableTy())
     return error(ValLoc, "atomicrmw operand may not be scalable");
 
-  Type *ValTy = Val->getType();
+  // For elementwise ops, the value must be a fixed vector type whose element
+  // type is legal for the corresponding scalar atomicrmw operation. So assign
+  // ScalarTy the element type for elementwise ops so we can check this.
+  Type *ScalarTy = Val->getType();
   if (IsElementwise) {
-    if (!isa<FixedVectorType>(Val->getType()))
+    auto *VecTy = dyn_cast<FixedVectorType>(Val->getType());
+    if (!VecTy)
       return error(ValLoc,
                    "atomicrmw elementwise operand must be a fixed vector type");
+    ScalarTy = VecTy->getElementType();
   }
 
   if (Operation == AtomicRMWInst::Xchg) {
-    if (!ValTy->isIntOrIntVectorTy() && !ValTy->isFPOrFPVectorTy() &&
-        !ValTy->isPtrOrPtrVectorTy()) {
+    if (!ScalarTy->isIntegerTy() && !ScalarTy->isFloatingPointTy() &&
+        !ScalarTy->isPointerTy()) {
       return error(
           ValLoc,
           "atomicrmw " + AtomicRMWInst::getOperationName(Operation) +
-              " operand must be an integer type, a floating-point type, a "
-              "pointer type, or a fixed vector of any of these types");
+              " operand must be an integer, floating point, or pointer type");
     }
   } else if (IsFP) {
-    if (!ValTy->isFPOrFPVectorTy()) {
+    if (!ScalarTy->isFPOrFPVectorTy()) {
       return error(ValLoc, "atomicrmw " +
                                AtomicRMWInst::getOperationName(Operation) +
                                " operand must be a floating point or fixed "
                                "vector of floating point type");
     }
   } else {
-    if (!ValTy->isIntOrIntVectorTy()) {
+    if (!ScalarTy->isIntOrIntVectorTy()) {
       return error(
           ValLoc,
           "atomicrmw " + AtomicRMWInst::getOperationName(Operation) +
@@ -9265,7 +9264,7 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   }
 
   unsigned Size =
-      PFS.getFunction().getDataLayout().getTypeStoreSizeInBits(ValTy);
+      PFS.getFunction().getDataLayout().getTypeStoreSizeInBits(Val->getType());
   if (Size < 8 || (Size & (Size - 1)))
     return error(ValLoc,
                  "atomicrmw operand must have a power-of-two byte size");

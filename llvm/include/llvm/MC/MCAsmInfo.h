@@ -27,7 +27,6 @@
 
 namespace llvm {
 
-template <typename, unsigned> class EnumStrings;
 class MCAssembler;
 class MCContext;
 class MCCFIInstruction;
@@ -74,8 +73,12 @@ public:
                             /// quote, e.g., `'A`.
   };
 
-  /// Type for at specifiers. Currently, 16 bits is enough.
-  using AtSpecifierKind = uint16_t;
+  // This describes a @ style relocation specifier (expr@specifier) supported by
+  // AsmParser::parsePrimaryExpr.
+  struct AtSpecifier {
+    uint32_t Kind;
+    StringRef Name;
+  };
 
 protected:
   //===------------------------------------------------------------------===//
@@ -371,9 +374,6 @@ protected:
   /// absolute difference.
   bool DwarfFDESymbolsUseAbsDiff = false;
 
-  /// The optional specifier to use for the relative FDE symbol references.
-  uint16_t DwarfFDERelSymbolSpec = 0;
-
   /// True if DWARF `.file directory' directive syntax is used by
   /// default.
   bool EnableDwarfFileDirectoryDefault = true;
@@ -428,11 +428,9 @@ protected:
   // If true, use Motorola-style integers in Assembly (ex. $0ac).
   bool UseMotorolaIntegers = false;
 
-  // This describes a @ style relocation specifier (expr@specifier) supported by
-  // AsmParser::parsePrimaryExpr.
-  llvm::DenseMap<AtSpecifierKind, StringRef> AtSpecifierToName;
-  llvm::StringMap<AtSpecifierKind> NameToAtSpecifier;
-  void initializeAtSpecifiers(EnumStrings<AtSpecifierKind, 1>);
+  llvm::DenseMap<uint32_t, StringRef> AtSpecifierToName;
+  llvm::StringMap<uint32_t> NameToAtSpecifier;
+  void initializeAtSpecifiers(ArrayRef<AtSpecifier>);
 
   // Lowercase identifiers (e.g. register names, dialect keywords) that must be
   // quoted when used as a symbol name.
@@ -486,15 +484,16 @@ public:
                                                     unsigned Encoding,
                                                     MCStreamer &Streamer) const;
 
-  const MCExpr *getExprForFDESymbol(const MCSymbol *Sym, unsigned Encoding,
-                                    MCStreamer &Streamer) const;
+  virtual const MCExpr *getExprForFDESymbol(const MCSymbol *Sym,
+                                            unsigned Encoding,
+                                            MCStreamer &Streamer) const;
 
   /// Return true if C is an acceptable character inside a symbol name.
-  bool isAcceptableChar(char C) const;
+  virtual bool isAcceptableChar(char C) const;
 
   /// Return true if the identifier \p Name does not need quotes to be
   /// syntactically correct.
-  bool isValidUnquotedName(StringRef Name) const;
+  virtual bool isValidUnquotedName(StringRef Name) const;
 
   llvm::DenseSet<llvm::CachedHashStringRef> &getReservedIdentifiers() {
     return ReservedIdentifiers;
@@ -722,7 +721,7 @@ public:
   }
 
   /// Set whether target want to use AsmParser to parse inlineasm.
-  void setParseInlineAsmUsingAsmParser(bool Value) {
+  virtual void setParseInlineAsmUsingAsmParser(bool Value) {
     ParseInlineAsmUsingAsmParser = Value;
   }
 
@@ -730,7 +729,10 @@ public:
   bool preserveAsmComments() const { return PreserveAsmComments; }
 
   /// Set whether assembly (inline or otherwise) should be parsed.
-  void setPreserveAsmComments(bool Value) { PreserveAsmComments = Value; }
+  virtual void setPreserveAsmComments(bool Value) {
+    PreserveAsmComments = Value;
+  }
+
 
   bool shouldUseLogicalShr() const { return UseLogicalShr; }
 

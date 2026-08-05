@@ -432,10 +432,6 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
   AddAttributeIfSet("branch-target-enforcement");
   AddAttributeIfSet("branch-protection-pauth-lr");
   AddAttributeIfSet("guarded-control-stack");
-  AddAttributeIfSet("ptrauth-returns");
-  AddAttributeIfSet("ptrauth-auth-traps");
-  AddAttributeIfSet("ptrauth-indirect-gotos");
-  AddAttributeIfSet("aarch64-jump-table-hardening");
 
   F->addFnAttrs(B);
   return F;

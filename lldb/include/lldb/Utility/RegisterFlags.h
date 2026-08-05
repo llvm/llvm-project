@@ -9,8 +9,6 @@
 #ifndef LLDB_UTILITY_REGISTERFLAGS_H
 #define LLDB_UTILITY_REGISTERFLAGS_H
 
-#include "lldb/Utility/RegisterType.h"
-
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -22,7 +20,7 @@ namespace lldb_private {
 class Stream;
 class Log;
 
-class FieldEnum : public RegisterType {
+class FieldEnum {
 public:
   struct Enumerator {
     uint64_t m_value;
@@ -33,9 +31,9 @@ public:
     Enumerator(uint64_t value, std::string name)
         : m_value(value), m_name(std::move(name)) {}
 
-    void DumpToLog(Log *log) const;
+    void ToXML(Stream &strm) const;
 
-    void ToXMLElement(Stream &strm) const;
+    void DumpToLog(Log *log) const;
   };
 
   typedef std::vector<Enumerator> Enumerators;
@@ -47,22 +45,18 @@ public:
 
   const Enumerators &GetEnumerators() const { return m_enumerators; }
 
+  const std::string &GetID() const { return m_id; }
+
   void ToXML(Stream &strm, unsigned size) const;
 
   void DumpToLog(Log *log) const;
 
-  virtual void ToXMLElement(Stream &strm,
-                            const RegisterType *user = nullptr) const override;
-
-  static bool classof(const RegisterType *register_type) {
-    return register_type->getKind() == RegisterType::eRegisterTypeKindEnum;
-  }
-
 private:
+  std::string m_id;
   Enumerators m_enumerators;
 };
 
-class RegisterFlags : public RegisterType {
+class RegisterFlags {
 public:
   class Field {
   public:
@@ -108,7 +102,10 @@ public:
     /// covered by either field.
     unsigned PaddingDistance(const Field &other) const;
 
-    void ToXMLElement(Stream &strm) const;
+    /// Output XML that describes this field, to be inserted into a target XML
+    /// file. Reserved characters in field names like "<" are replaced with
+    /// their XML safe equivalents like "&gt;".
+    void ToXML(Stream &strm) const;
 
     bool operator<(const Field &rhs) const {
       return GetStart() < rhs.GetStart();
@@ -166,6 +163,7 @@ public:
   }
 
   const std::vector<Field> &GetFields() const { return m_fields; }
+  const std::string &GetID() const { return m_id; }
   unsigned GetSize() const { return m_size; }
   void DumpToLog(Log *log) const;
 
@@ -176,14 +174,20 @@ public:
   /// be split into many tables as needed.
   std::string AsTable(uint32_t max_width) const;
 
-  virtual void ToXMLElement(Stream &strm,
-                            const RegisterType *user = nullptr) const override;
+  /// Output XML that describes this set of flags.
+  /// EnumsToXML should have been called before this.
+  void ToXML(Stream &strm) const;
 
-  static bool classof(const RegisterType *register_type) {
-    return register_type->getKind() == RegisterType::eRegisterTypeKindFlags;
-  }
+  /// Enum types must be defined before use, and
+  /// GDBRemoteCommunicationServerLLGS view of the register types is based only
+  /// on the registers. So this method emits any enum types that the upcoming
+  /// set of fields may need. "seen" is a set of Enum IDs that we have already
+  /// printed, that is updated with any printed by this call. This prevents us
+  /// printing the same enum multiple times.
+  void EnumsToXML(Stream &strm, llvm::StringSet<> &seen) const;
 
 private:
+  const std::string m_id;
   /// Size in bytes
   const unsigned m_size;
   std::vector<Field> m_fields;

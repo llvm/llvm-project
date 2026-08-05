@@ -72,7 +72,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/NVPTXTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -437,20 +436,18 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
   }
 }
 
-/// True if T names a function to call: a function pointer, a function
-/// reference, or a reference to a function pointer. Dependent types are also
-/// accepted, and re-checked after instantiation.
-static bool isCallbackOrDependent(QualType T) {
+/// True if T (or its pointee, after stripping a top-level reference) is a
+/// function pointer or dependent.
+static bool isFunctionPointerOrDependent(QualType T) {
   T = T.getNonReferenceType();
-  return T->isDependentType() || T->isFunctionPointerType() ||
-         T->isFunctionType();
+  return T->isDependentType() || T->isFunctionPointerType();
 }
 
 /// Checks that thread-safety attributes on variables or fields apply only to
-/// function pointer or function reference types.
+/// function pointer types.
 static bool checkThreadSafetyValueDeclIsFunPtr(Sema &S, const ValueDecl *VD,
                                                const AttributeCommonInfo &A) {
-  if (isCallbackOrDependent(VD->getType()))
+  if (isFunctionPointerOrDependent(VD->getType()))
     return true;
   S.Diag(A.getLoc(), diag::warn_thread_attribute_not_on_fun_ptr)
       << A << (isa<FieldDecl>(VD) ? 1 : 0);
@@ -480,8 +477,8 @@ static bool checkThreadSafetyAttrSubject(Sema &S, Decl *D, const ParsedAttr &AL,
 
   if (CheckParmVar) {
     if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
-      // A function-pointer or function-reference parameter is also valid here.
-      if (isCallbackOrDependent(PVD->getType()))
+      // A function-pointer parameter is also valid here.
+      if (isFunctionPointerOrDependent(PVD->getType()))
         return true;
       return checkFunParamsAreScopedLockable(S, PVD, AL);
     }
@@ -503,7 +500,7 @@ bool Sema::checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A) {
   // Parameters of template functions need to be re-checked during
   // instantiation because their types might have been dependent.
   if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
-    if (isCallbackOrDependent(PVD->getType()))
+    if (isFunctionPointerOrDependent(PVD->getType()))
       return true;
     return checkFunParamsAreScopedLockable(*this, PVD, *A);
   }
@@ -6130,8 +6127,8 @@ Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
     // launch bounds attribute within ompx_attribute to support other archs.
     if (!IgnoreArch) {
       // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
-      OffloadArch SM = getOffloadArch(Context.getTargetInfo());
-      if (SM.isUnknown() || llvm::NVPTX::getSmVersion(SM.nvptxKind()) < 900) {
+      auto SM = getOffloadArch(Context.getTargetInfo());
+      if (SM == OffloadArch::Unknown || SM < OffloadArch::SM_90) {
         Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
             << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
         // Ignore it by setting MaxBlocks to null;
@@ -6245,8 +6242,7 @@ void Sema::addNoClusterAttr(Decl *D, const AttributeCommonInfo &CI) {
 static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const TargetInfo &TTI = S.Context.getTargetInfo();
   OffloadArch Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
-  if ((TTI.getTriple().isNVPTX() &&
-       llvm::NVPTX::getSmVersion(Arch.nvptxKind()) < 900) ||
+  if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
       (TTI.getTriple().isAMDGPU() &&
        !TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters"))) {
     S.Diag(AL.getLoc(), diag::err_cluster_attr_not_supported) << AL;
@@ -6265,8 +6261,7 @@ static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleNoClusterAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const TargetInfo &TTI = S.Context.getTargetInfo();
   OffloadArch Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
-  if ((TTI.getTriple().isNVPTX() &&
-       llvm::NVPTX::getSmVersion(Arch.nvptxKind()) < 900) ||
+  if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
       (TTI.getTriple().isAMDGPU() &&
        !TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters"))) {
     S.Diag(AL.getLoc(), diag::err_cluster_attr_not_supported) << AL;

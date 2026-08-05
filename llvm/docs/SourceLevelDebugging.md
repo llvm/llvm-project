@@ -1,5 +1,8 @@
 # Source Level Debugging with LLVM
 
+```{contents}
+:local:
+```
 
 ## Introduction
 

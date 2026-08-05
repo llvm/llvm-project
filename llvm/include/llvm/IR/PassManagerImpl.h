@@ -145,8 +145,7 @@ AnalysisManager<IRUnitT, ExtraArgTs...>::getResultImpl(
     }
 
     AnalysisResultListT &ResultList = AnalysisResultLists[&IR];
-    ResultList.emplace_back(
-        ID, P.run(IR, *this, std::forward<ExtraArgTs>(ExtraArgs)...));
+    ResultList.emplace_back(ID, P.run(IR, *this, ExtraArgs...));
 
     PI.runAfterAnalysis(P, IR);
 

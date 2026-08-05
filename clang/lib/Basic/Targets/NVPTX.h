@@ -24,21 +24,37 @@
 namespace clang {
 namespace targets {
 
-static constexpr LangASMap NVPTXAddrSpaceMap = {
-    {LangAS::opencl_global, 1},
-    {LangAS::opencl_local, 3},
-    {LangAS::opencl_constant, 4},
+static const unsigned NVPTXAddrSpaceMap[] = {
+    0, // Default
+    1, // opencl_global
+    3, // opencl_local
+    4, // opencl_constant
+    0, // opencl_private
     // FIXME: generic has to be added to the target
-    {LangAS::opencl_generic, 0},
-    {LangAS::opencl_global_device, 1},
-    {LangAS::opencl_global_host, 1},
-    {LangAS::cuda_device, 1},
-    {LangAS::cuda_constant, 4},
-    {LangAS::cuda_shared, 3},
-    {LangAS::sycl_global, 1},
-    {LangAS::sycl_global_device, 1},
-    {LangAS::sycl_global_host, 1},
-    {LangAS::sycl_local, 3},
+    0, // opencl_generic
+    1, // opencl_global_device
+    1, // opencl_global_host
+    1, // cuda_device
+    4, // cuda_constant
+    3, // cuda_shared
+    1, // sycl_global
+    1, // sycl_global_device
+    1, // sycl_global_host
+    3, // sycl_local
+    0, // sycl_private
+    0, // ptr32_sptr
+    0, // ptr32_uptr
+    0, // ptr64
+    0, // hlsl_groupshared
+    0, // hlsl_constant
+    0, // hlsl_private
+    0, // hlsl_device
+    0, // hlsl_input
+    0, // hlsl_output
+    0, // hlsl_push_constant
+    // Wasm address space values for this target are dummy values,
+    // as it is only enabled for Wasm targets.
+    20, // wasm_funcref
 };
 
 /// The DWARF address class. Taken from
@@ -72,7 +88,7 @@ public:
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override {
-    if (!GPU.isUnused())
+    if (GPU != OffloadArch::Unused)
       Features[OffloadArchToString(GPU)] = true;
     // Only add PTX feature if explicitly requested. Otherwise, let the backend
     // use the minimum required PTX version for the target SM.
@@ -131,16 +147,18 @@ public:
   }
 
   bool isValidCPUName(StringRef Name) const override {
-    return !StringToOffloadArch(Name).isUnknown();
+    return StringToOffloadArch(Name) != OffloadArch::Unknown;
   }
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
-    fillValidOffloadArchList(Values);
+    for (int i = static_cast<int>(OffloadArch::SM_20);
+         i < static_cast<int>(OffloadArch::Generic); ++i)
+      Values.emplace_back(OffloadArchToString(static_cast<OffloadArch>(i)));
   }
 
   bool setCPU(StringRef Name) override {
     GPU = StringToOffloadArch(Name);
-    return !GPU.isUnknown();
+    return GPU != OffloadArch::Unknown;
   }
 
   void setSupportedOpenCLOpts() override {

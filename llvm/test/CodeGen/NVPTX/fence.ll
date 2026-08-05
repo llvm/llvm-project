@@ -11,17 +11,20 @@ define void @fence_acquire_thread() {
 ; SM30-LABEL: fence_acquire_thread(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    ret;
 ;
 ; SM70-LABEL: fence_acquire_thread(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_acquire_thread(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ret;
@@ -34,6 +37,7 @@ define void @fence_acquire_sys() {
 ; SM30-LABEL: fence_acquire_sys(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.sys;
 ; SM30-NEXT:    ret;
@@ -41,12 +45,14 @@ define void @fence_acquire_sys() {
 ; SM70-LABEL: fence_acquire_sys(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.acq_rel.sys;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_acquire_sys(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.acquire.sys;
@@ -60,6 +66,7 @@ define void @fence_acquire_cta() {
 ; SM30-LABEL: fence_acquire_cta(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.cta;
 ; SM30-NEXT:    ret;
@@ -67,12 +74,14 @@ define void @fence_acquire_cta() {
 ; SM70-LABEL: fence_acquire_cta(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.acq_rel.cta;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_acquire_cta(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.acquire.cta;
@@ -86,6 +95,7 @@ define void @fence_acquire_cluster() {
 ; SM30-LABEL: fence_acquire_cluster(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.cta;
 ; SM30-NEXT:    ret;
@@ -93,12 +103,14 @@ define void @fence_acquire_cluster() {
 ; SM70-LABEL: fence_acquire_cluster(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.acq_rel.cta;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_acquire_cluster(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.acquire.cluster;
@@ -112,6 +124,7 @@ define void @fence_acquire_gpu() {
 ; SM30-LABEL: fence_acquire_gpu(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.gl;
 ; SM30-NEXT:    ret;
@@ -119,12 +132,14 @@ define void @fence_acquire_gpu() {
 ; SM70-LABEL: fence_acquire_gpu(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.acq_rel.gpu;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_acquire_gpu(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.acquire.gpu;
@@ -138,17 +153,20 @@ define void @fence_release_thread() {
 ; SM30-LABEL: fence_release_thread(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    ret;
 ;
 ; SM70-LABEL: fence_release_thread(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_release_thread(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ret;
@@ -161,6 +179,7 @@ define void @fence_release_sys() {
 ; SM30-LABEL: fence_release_sys(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.sys;
 ; SM30-NEXT:    ret;
@@ -168,12 +187,14 @@ define void @fence_release_sys() {
 ; SM70-LABEL: fence_release_sys(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.acq_rel.sys;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_release_sys(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.release.sys;
@@ -187,6 +208,7 @@ define void @fence_release_cta() {
 ; SM30-LABEL: fence_release_cta(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.cta;
 ; SM30-NEXT:    ret;
@@ -194,12 +216,14 @@ define void @fence_release_cta() {
 ; SM70-LABEL: fence_release_cta(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.acq_rel.cta;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_release_cta(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.release.cta;
@@ -213,6 +237,7 @@ define void @fence_release_cluster() {
 ; SM30-LABEL: fence_release_cluster(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.cta;
 ; SM30-NEXT:    ret;
@@ -220,12 +245,14 @@ define void @fence_release_cluster() {
 ; SM70-LABEL: fence_release_cluster(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.acq_rel.cta;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_release_cluster(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.release.cluster;
@@ -239,6 +266,7 @@ define void @fence_release_gpu() {
 ; SM30-LABEL: fence_release_gpu(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.gl;
 ; SM30-NEXT:    ret;
@@ -246,12 +274,14 @@ define void @fence_release_gpu() {
 ; SM70-LABEL: fence_release_gpu(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.acq_rel.gpu;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_release_gpu(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.release.gpu;
@@ -265,17 +295,20 @@ define void @fence_acq_rel_thread() {
 ; SM30-LABEL: fence_acq_rel_thread(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    ret;
 ;
 ; SM70-LABEL: fence_acq_rel_thread(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_acq_rel_thread(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ret;
@@ -288,6 +321,7 @@ define void @fence_acq_rel_sys() {
 ; SM30-LABEL: fence_acq_rel_sys(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.sys;
 ; SM30-NEXT:    ret;
@@ -295,12 +329,14 @@ define void @fence_acq_rel_sys() {
 ; SM70-LABEL: fence_acq_rel_sys(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.acq_rel.sys;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_acq_rel_sys(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.acq_rel.sys;
@@ -314,6 +350,7 @@ define void @fence_acq_rel_cta() {
 ; SM30-LABEL: fence_acq_rel_cta(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.cta;
 ; SM30-NEXT:    ret;
@@ -321,12 +358,14 @@ define void @fence_acq_rel_cta() {
 ; SM70-LABEL: fence_acq_rel_cta(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.acq_rel.cta;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_acq_rel_cta(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.acq_rel.cta;
@@ -340,6 +379,7 @@ define void @fence_acq_rel_cluster() {
 ; SM30-LABEL: fence_acq_rel_cluster(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.cta;
 ; SM30-NEXT:    ret;
@@ -347,12 +387,14 @@ define void @fence_acq_rel_cluster() {
 ; SM70-LABEL: fence_acq_rel_cluster(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.acq_rel.cta;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_acq_rel_cluster(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.acq_rel.cluster;
@@ -366,6 +408,7 @@ define void @fence_acq_rel_gpu() {
 ; SM30-LABEL: fence_acq_rel_gpu(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.gl;
 ; SM30-NEXT:    ret;
@@ -373,12 +416,14 @@ define void @fence_acq_rel_gpu() {
 ; SM70-LABEL: fence_acq_rel_gpu(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.acq_rel.gpu;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_acq_rel_gpu(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.acq_rel.gpu;
@@ -392,17 +437,20 @@ define void @fence_seq_cst_thread() {
 ; SM30-LABEL: fence_seq_cst_thread(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    ret;
 ;
 ; SM70-LABEL: fence_seq_cst_thread(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_seq_cst_thread(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ret;
@@ -415,6 +463,7 @@ define void @fence_seq_cst_sys() {
 ; SM30-LABEL: fence_seq_cst_sys(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.sys;
 ; SM30-NEXT:    ret;
@@ -422,12 +471,14 @@ define void @fence_seq_cst_sys() {
 ; SM70-LABEL: fence_seq_cst_sys(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.sc.sys;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_seq_cst_sys(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.sc.sys;
@@ -441,6 +492,7 @@ define void @fence_seq_cst_cta() {
 ; SM30-LABEL: fence_seq_cst_cta(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.cta;
 ; SM30-NEXT:    ret;
@@ -448,12 +500,14 @@ define void @fence_seq_cst_cta() {
 ; SM70-LABEL: fence_seq_cst_cta(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.sc.cta;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_seq_cst_cta(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.sc.cta;
@@ -467,6 +521,7 @@ define void @fence_seq_cst_cluster() {
 ; SM30-LABEL: fence_seq_cst_cluster(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.cta;
 ; SM30-NEXT:    ret;
@@ -474,12 +529,14 @@ define void @fence_seq_cst_cluster() {
 ; SM70-LABEL: fence_seq_cst_cluster(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.sc.cta;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_seq_cst_cluster(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.sc.cluster;
@@ -493,6 +550,7 @@ define void @fence_seq_cst_gpu() {
 ; SM30-LABEL: fence_seq_cst_gpu(
 ; SM30:       {
 ; SM30-EMPTY:
+; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    membar.gl;
 ; SM30-NEXT:    ret;
@@ -500,12 +558,14 @@ define void @fence_seq_cst_gpu() {
 ; SM70-LABEL: fence_seq_cst_gpu(
 ; SM70:       {
 ; SM70-EMPTY:
+; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    fence.sc.gpu;
 ; SM70-NEXT:    ret;
 ;
 ; SM90-LABEL: fence_seq_cst_gpu(
 ; SM90:       {
+; SM90-EMPTY:
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    fence.sc.gpu;

@@ -9,7 +9,7 @@ from lldbsuite.test import lldbutil
 
 
 @skipUnlessArch("arm")
-@requireLinux
+@skipUnlessPlatform(["linux"])
 class ArmLinuxTLSRegister(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

@@ -2,6 +2,8 @@
 Kaleidoscope: Code generation to LLVM IR
 ========================================
 
+.. contents::
+   :local:
 
 Chapter 3 Introduction
 ======================

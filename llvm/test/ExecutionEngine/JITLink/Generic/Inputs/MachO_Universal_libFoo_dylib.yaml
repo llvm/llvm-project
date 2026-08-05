@@ -26,8 +26,8 @@ Slices:
       cputype:         0x1000007
       cpusubtype:      0x3
       filetype:        0x6
-      ncmds:           14
-      sizeofcmds:      608
+      ncmds:           13
+      sizeofcmds:      568
       flags:           0x100085
       reserved:        0x0
     LoadCommands:
@@ -45,9 +45,9 @@ Slices:
         Sections:
           - sectname:        __text
             segname:         __TEXT
-            addr:            0x2C8
+            addr:            0x2A0
             size:            3
-            offset:          0x2C8
+            offset:          0x2A0
             align:           4
             reloff:          0x0
             nreloc:          0
@@ -122,10 +122,6 @@ Slices:
         Tools:
           - tool:            3
             version:         76481792
-      - cmd:             LC_TARGET_TRIPLE
-        cmdsize:         40
-        triple:          12
-        Content:         'x86_64-apple-macos27.0.0'
       - cmd:             LC_SOURCE_VERSION
         cmdsize:         16
         version:         0
@@ -185,8 +181,8 @@ Slices:
       cputype:         0x100000C
       cpusubtype:      0x80000002
       filetype:        0x6
-      ncmds:           15
-      sizeofcmds:      704
+      ncmds:           14
+      sizeofcmds:      664
       flags:           0x100085
       reserved:        0x0
     LoadCommands:
@@ -204,9 +200,9 @@ Slices:
         Sections:
           - sectname:        __text
             segname:         __TEXT
-            addr:            0x300
+            addr:            0x2D8
             size:            8
-            offset:          0x300
+            offset:          0x2D8
             align:           2
             reloff:          0x0
             nreloc:          0
@@ -217,9 +213,9 @@ Slices:
             content:         00008052C0035FD6
           - sectname:        __unwind_info
             segname:         __TEXT
-            addr:            0x308
+            addr:            0x2E0
             size:            88
-            offset:          0x308
+            offset:          0x2E0
             align:           2
             reloff:          0x0
             nreloc:          0
@@ -294,10 +290,6 @@ Slices:
         Tools:
           - tool:            3
             version:         76481792
-      - cmd:             LC_TARGET_TRIPLE
-        cmdsize:         40
-        triple:          12
-        Content:         'arm64e-apple-macos27.0.0'
       - cmd:             LC_SOURCE_VERSION
         cmdsize:         16
         version:         0

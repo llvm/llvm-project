@@ -82,8 +82,6 @@ enum DynamicClassInfoHelper {
   eDynamicClassInfoHelperGetRealizedClassList,
 };
 
-enum JITEngine { eJITEngineMCJIT, eJITEngineORC };
-
 class TargetExperimentalProperties : public Properties {
 public:
   TargetExperimentalProperties();
@@ -188,8 +186,6 @@ public:
   bool GetEnableNotifyAboutFixIts() const;
 
   FileSpec GetSaveJITObjectsDir() const;
-
-  JITEngine GetJITEngine() const;
 
   bool GetEnableSyntheticValue() const;
 

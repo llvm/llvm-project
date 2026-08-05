@@ -4,7 +4,6 @@ Test Getting the expression path for registers works correctly
 
 import lldb
 from lldbsuite.test import lldbutil
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import TestBase, VALID_BREAKPOINT, VALID_TARGET
 
 
@@ -50,7 +49,6 @@ class TestExprPathRegisters(TestBase):
             if reg_value:
                 self.verify_register_path(reg_value)
 
-    @requireNotWasm  # wasm exposes no registers
     def test_all_registers(self):
         """Test all the registers that is avaiable on the machine"""
         self.build()

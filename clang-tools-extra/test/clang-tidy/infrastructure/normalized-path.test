@@ -1,3 +1,0 @@
-// RUN: clang-tidy %S/Inputs/normalized-path/error-config/../code.cpp --verify-config 2>&1 | FileCheck %s
-
-// CHECK-NOT: Error parsing

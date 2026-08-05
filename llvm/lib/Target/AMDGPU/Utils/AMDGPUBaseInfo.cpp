@@ -816,7 +816,7 @@ bool isTensorStore(unsigned Opc) {
 }
 
 unsigned getTemporalHintType(const MCInstrDesc TID) {
-  if (SIInstrFlags::isAtomic(TID))
+  if (TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet))
     return CPol::TH_TYPE_ATOMIC;
   unsigned Opc = TID.getOpcode();
   // Async and Tensor store should have the temporal hint type of TH_TYPE_STORE
@@ -914,7 +914,7 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
   HasSrc2Acc = TiedIdx != -1;
   Opcode = OpDesc.getOpcode();
 
-  IsVOP3 = VOP3Layout || SIInstrFlags::isVOP3(OpDesc);
+  IsVOP3 = VOP3Layout || (OpDesc.TSFlags & SIInstrFlags::VOP3);
   SrcOperandsNum = AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src2)   ? 3
                    : AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::imm)  ? 3
                    : AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src1) ? 2
@@ -928,12 +928,6 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
     NumVOPD3Mods = 2;
     if (IsVOP3)
       SrcOperandsNum = 3;
-  } else if (Opcode == AMDGPU::V_DOT2_F32_F16 ||
-             Opcode == AMDGPU::V_DOT2_F32_BF16) {
-    // VOP3P opcodes that have VOPD but don't have VOP2 version. Using VOPD3
-    // path in getIndexOfSrcInMCOperands to get correct src operand indexes,
-    // but generating VOPD, not VOPD3.
-    NumVOPD3Mods = SrcOperandsNum;
   } else if (isSISrcFPOperand(OpDesc,
                               getNamedOperandIdx(Opcode, OpName::src0))) {
     // All FP VOPD instructions have Neg modifiers for all operands except
@@ -943,7 +937,7 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
       --NumVOPD3Mods;
   }
 
-  if (SIInstrFlags::isVOP3(OpDesc))
+  if (OpDesc.TSFlags & SIInstrFlags::VOP3)
     return;
 
   auto OperandsNum = OpDesc.getNumOperands();
@@ -1078,7 +1072,7 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
   auto [OpX, OpY] = getVOPDComponents(VOPDOpcode);
   const auto &OpXDesc = InstrInfo->get(OpX);
   const auto &OpYDesc = InstrInfo->get(OpY);
-  bool VOPD3 = SIInstrFlags::isVOPD3(*InstrInfo, VOPDOpcode);
+  bool VOPD3 = InstrInfo->get(VOPDOpcode).TSFlags & SIInstrFlags::VOPD3;
   VOPD::ComponentInfo OpXInfo(OpXDesc, VOPD::ComponentKind::COMPONENT_X, VOPD3);
   VOPD::ComponentInfo OpYInfo(OpYDesc, OpXInfo, VOPD3);
   return VOPD::InstInfo(OpXInfo, OpYInfo);
@@ -1087,7 +1081,7 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
 TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
                               StringRef FeatureString) {
   TargetID TargetID(parseArchAMDGCN(STI.getCPU()), STI.getTargetTriple(),
-                    STI.getFeatureBits().test(FeatureXNACKOnOffModes)
+                    STI.getFeatureBits().test(FeatureSupportsXNACK)
                         ? TargetIDSetting::Any
                         : TargetIDSetting::Unsupported,
                     STI.getFeatureBits().test(FeatureSupportsSRAMECC)
@@ -1113,8 +1107,7 @@ TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
   }
 
   // Only allow changing xnack setting if the target supports on/off modes.
-  // Targets without on/off mode support keep their initial setting
-  // (Unsupported).
+  // Targets without on/off mode support keep their initial setting (Any).
 
   bool XnackSupported = STI.getFeatureBits().test(FeatureXNACKOnOffModes);
   bool SramEccSupported = TargetID.isSramEccSupported();
@@ -1263,7 +1256,35 @@ unsigned getWavesPerWorkGroup(const MCSubtargetInfo &STI,
   return divideCeil(FlatWorkGroupSize, getWavefrontSize(STI));
 }
 
+unsigned getSGPRAllocGranule(const MCSubtargetInfo &STI) {
+  IsaVersion Version = getIsaVersion(STI.getCPU());
+  if (Version.Major >= 10)
+    return getAddressableNumSGPRs(STI);
+  if (Version.Major >= 8)
+    return 16;
+  return 8;
+}
+
 unsigned getSGPREncodingGranule(const MCSubtargetInfo &STI) { return 8; }
+
+unsigned getTotalNumSGPRs(const MCSubtargetInfo &STI) {
+  IsaVersion Version = getIsaVersion(STI.getCPU());
+  if (Version.Major >= 8)
+    return 800;
+  return 512;
+}
+
+unsigned getAddressableNumSGPRs(const MCSubtargetInfo &STI) {
+  if (STI.getFeatureBits().test(FeatureSGPRInitBug))
+    return FIXED_NUM_SGPRS_FOR_INIT_BUG;
+
+  IsaVersion Version = getIsaVersion(STI.getCPU());
+  if (Version.Major >= 10)
+    return 106;
+  if (Version.Major >= 8)
+    return 102;
+  return 104;
+}
 
 // Per-wave SGPRs reserved for the trap handler when enabled.
 static unsigned getSGPRTrapHandlerReserve(const MCSubtargetInfo &STI) {
@@ -1294,29 +1315,27 @@ unsigned getMinNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU) {
   if (WavesPerEU >= getMaxWavesPerEU(STI))
     return 0;
 
-  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
   unsigned MinNumSGPRs =
-      getSGPRBudgetPerWave(getTotalNumSGPRs(Kind), WavesPerEU + 1,
+      getSGPRBudgetPerWave(getTotalNumSGPRs(STI), WavesPerEU + 1,
                            getSGPRTrapHandlerReserve(STI),
-                           getSGPRAllocGranule(Kind)) +
+                           getSGPRAllocGranule(STI)) +
       1;
-  return std::min(MinNumSGPRs, getAddressableNumSGPRs(Kind));
+  return std::min(MinNumSGPRs, getAddressableNumSGPRs(STI));
 }
 
 unsigned getMaxNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
                         bool Addressable) {
   assert(WavesPerEU != 0);
 
-  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
-  unsigned AddressableNumSGPRs = getAddressableNumSGPRs(Kind);
+  unsigned AddressableNumSGPRs = getAddressableNumSGPRs(STI);
   IsaVersion Version = getIsaVersion(STI.getCPU());
   if (Version.Major >= 10)
     return Addressable ? AddressableNumSGPRs : 108;
   if (Version.Major >= 8 && !Addressable)
     AddressableNumSGPRs = 112;
-  unsigned MaxNumSGPRs = getSGPRBudgetPerWave(
-      getTotalNumSGPRs(Kind), WavesPerEU, getSGPRTrapHandlerReserve(STI),
-      getSGPRAllocGranule(Kind));
+  unsigned MaxNumSGPRs = getSGPRBudgetPerWave(getTotalNumSGPRs(STI), WavesPerEU,
+                                              getSGPRTrapHandlerReserve(STI),
+                                              getSGPRAllocGranule(STI));
   return std::min(MaxNumSGPRs, AddressableNumSGPRs);
 }
 
@@ -1472,9 +1491,8 @@ unsigned getOccupancyWithNumSGPRs(const MCSubtargetInfo &STI, unsigned SGPRs) {
   if (!isSGPROccupancyLimited(STI))
     return MaxWaves;
 
-  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
-  return getOccupancyWithNumSGPRs(SGPRs, MaxWaves, getTotalNumSGPRs(Kind),
-                                  getSGPRAllocGranule(Kind),
+  return getOccupancyWithNumSGPRs(SGPRs, MaxWaves, getTotalNumSGPRs(STI),
+                                  getSGPRAllocGranule(STI),
                                   getSGPRTrapHandlerReserve(STI));
 }
 
@@ -2558,10 +2576,6 @@ bool isGFX9Plus(const MCSubtargetInfo &STI) {
 
 bool isNotGFX9Plus(const MCSubtargetInfo &STI) { return !isGFX9Plus(STI); }
 
-bool hasPopsExitingWaveID(const MCSubtargetInfo &STI) {
-  return STI.hasFeature(AMDGPU::FeaturePopsExitingWaveID);
-}
-
 bool isGFX10(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX10);
 }
@@ -3600,9 +3614,11 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
       AMDGPU::OpName::src0Y, AMDGPU::OpName::NUM_OPERAND_NAMES,
       AMDGPU::OpName::vsrc1Y, AMDGPU::OpName::vdstY};
 
-  if (SIInstrFlags::isVOP1(Desc) || SIInstrFlags::isVOP2(Desc) ||
-      SIInstrFlags::isVOP3Like(Desc) || SIInstrFlags::isVOPC(Desc) ||
-      SIInstrFlags::isDPP(Desc)) {
+  unsigned TSFlags = Desc.TSFlags;
+
+  if (TSFlags &
+      (SIInstrFlags::VOP1 | SIInstrFlags::VOP2 | SIInstrFlags::VOP3 |
+       SIInstrFlags::VOP3P | SIInstrFlags::VOPC | SIInstrFlags::DPP)) {
     switch (Desc.getOpcode()) {
     // LD_SCALE operands ignore MSB.
     case AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32:
@@ -3626,16 +3642,16 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
     return {VOPOps, nullptr};
   }
 
-  if (SIInstrFlags::isDS(Desc))
+  if (TSFlags & SIInstrFlags::DS)
     return {VDSOps, nullptr};
 
-  if (SIInstrFlags::isFLAT(Desc))
+  if (TSFlags & SIInstrFlags::FLAT)
     return {FLATOps, nullptr};
 
-  if (SIInstrFlags::isBuffer(Desc))
+  if (TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF))
     return {BUFOps, nullptr};
 
-  if (SIInstrFlags::isVIMAGE(Desc))
+  if (TSFlags & SIInstrFlags::VIMAGE)
     return {VIMGOps, nullptr};
 
   if (AMDGPU::isVOPD(Desc.getOpcode())) {
@@ -3644,9 +3660,9 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
             (OpY == AMDGPU::V_FMAMK_F32) ? VOPDFMAMKOpsY : VOPDOpsY};
   }
 
-  assert(!SIInstrFlags::isMIMG(Desc));
+  assert(!(TSFlags & SIInstrFlags::MIMG));
 
-  if (SIInstrFlags::isVSAMPLE(Desc) || SIInstrFlags::isEXP(Desc))
+  if (TSFlags & (SIInstrFlags::VSAMPLE | SIInstrFlags::EXP))
     llvm_unreachable("Sample and export VGPR lowering is not implemented and"
                      " these instructions are not expected on gfx1250");
 
@@ -3655,13 +3671,15 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
 
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
   const MCInstrDesc &Desc = MII.get(Opcode);
-  if (SIInstrFlags::isSMRD(Desc))
+  uint64_t TSFlags = Desc.TSFlags;
+
+  if (TSFlags & SIInstrFlags::SMRD)
     return Desc.mayLoad() && !Desc.mayStore() && !getSMEMIsBuffer(Opcode);
-  if (!SIInstrFlags::isFLAT(Desc))
+  if (!(TSFlags & SIInstrFlags::FLAT))
     return false;
 
   // Only SV and SVS modes are supported.
-  if (SIInstrFlags::isFlatScratch(MII, Opcode))
+  if (TSFlags & SIInstrFlags::FlatScratch)
     return hasNamedOperand(Opcode, OpName::vaddr);
 
   // Only GVS mode is supported.
@@ -3732,21 +3750,21 @@ unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
   return 64; // In sync with getAddressableLocalMemorySize
 }
 
-bool isPackedSingleSGPRFP32Inst(unsigned Opc) {
+bool isPackedFP32Inst(unsigned Opc) {
   switch (Opc) {
-  case AMDGPU::V_PK_ADD_F32_gfx1250:
-  case AMDGPU::V_PK_ADD_F32_gfx1250_gfx12:
-  case AMDGPU::V_PK_MUL_F32_gfx1250:
-  case AMDGPU::V_PK_MUL_F32_gfx1250_gfx12:
-  case AMDGPU::V_PK_FMA_F32_gfx1250:
-  case AMDGPU::V_PK_FMA_F32_gfx1250_gfx12:
+  case AMDGPU::V_PK_ADD_F32:
+  case AMDGPU::V_PK_ADD_F32_gfx12:
+  case AMDGPU::V_PK_MUL_F32:
+  case AMDGPU::V_PK_MUL_F32_gfx12:
+  case AMDGPU::V_PK_FMA_F32:
+  case AMDGPU::V_PK_FMA_F32_gfx12:
     return true;
   default:
     return false;
   }
 }
 
-bool isPackedSingleSGPR64BitInst(unsigned Opc) {
+bool isPacked64BitInst(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::V_PK_ADD_F64:
   case AMDGPU::V_PK_ADD_F64_gfx1250:
@@ -3770,8 +3788,8 @@ bool isPackedSingleSGPR64BitInst(unsigned Opc) {
   }
 }
 
-bool isSingleSGPRReadInst(unsigned Opc) {
-  return isPackedSingleSGPRFP32Inst(Opc) || isPackedSingleSGPR64BitInst(Opc);
+bool isPackedFP32or64BitInst(unsigned Opc) {
+  return isPackedFP32Inst(Opc) || isPacked64BitInst(Opc);
 }
 
 const std::array<unsigned, 3> &ClusterDimsAttr::getDims() const {
@@ -3820,34 +3838,6 @@ ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {
     A.Dims = {(*Attr)[0], (*Attr)[1], (*Attr)[2]};
 
   return A;
-}
-
-std::optional<APFloat> evaluateRcp(const APFloat &Val) {
-  const fltSemantics &Sem = Val.getSemantics();
-
-  // v_rcp_f16/bf16 are correctly rounded.
-  if (&Sem == &APFloat::IEEEhalf() || &Sem == &APFloat::BFloat())
-    return APFloat::getOne(Sem) / Val;
-
-  // v_rcp_f32/f64 always flush a denormal input to zero (preserving sign)
-  // before reciprocating.
-  APFloat Arg = Val;
-  if (Arg.isDenormal())
-    Arg = APFloat::getZero(Sem, Arg.isNegative());
-
-  APFloat Result = APFloat::getOne(Sem) / Arg;
-
-  // v_rcp_f32/f64 always flush a denormal result to zero (preserving sign).
-  if (Result.isDenormal())
-    Result = APFloat::getZero(Sem, Result.isNegative());
-
-  // v_rcp_f32/f64 only approximate the reciprocal, except for these special
-  // cases where the result is exact.
-  if (!Result.isZero() && !Result.isInfinity() && !Result.isNaN() &&
-      !Result.isOne() && !Result.isMinusOne())
-    return std::nullopt;
-
-  return Result;
 }
 
 } // namespace AMDGPU

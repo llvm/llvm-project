@@ -24,7 +24,7 @@ def OpenMP : DirectiveLanguage {
   let loopModifierPrefix = "OMPLM_";
   let makeEnumAvailableInNamespace = true;
   let enableBitmaskEnumInNamespace = true;
-  let clauseEnumSetClass = "llvm::omp::ClauseSet";
+  let clauseEnumSetClass = "OmpClauseSet";
   let flangClauseBaseClass = "OmpClause";
 }
 
@@ -147,18 +147,12 @@ def OMPC_Counts : Clause<[Spelling<"counts">]> {
   let clangClass = "OMPCountsClause";
 }
 def OMPC_Default : Clause<[Spelling<"default">]> {
-  // This is for default DSA.
-  // For the "otherwise" clause, use OMPC_DefaultVariant.
   let clangClass = "OMPDefaultClause";
   let flangClass = "OmpDefaultClause";
 }
 def OMPC_DefaultMap : Clause<[Spelling<"defaultmap">]> {
   let clangClass = "OMPDefaultmapClause";
   let flangClass = "OmpDefaultmapClause";
-}
-def OMPC_DefaultVariant : Clause<[Spelling<"default">]> {
-  let name = "default_variant";
-  let flangClass = "OmpDefaultVariantClause";
 }
 def OMPC_Depend : Clause<[Spelling<"depend">]> {
   let clangClass = "OMPDependClause";
@@ -618,14 +612,9 @@ def OMPC_Untied : Clause<[Spelling<"untied">]> {
   let clangClass = "OMPUntiedClause";
 }
 def OMPC_Update : Clause<[Spelling<"update">]> {
-  // This is the "update" clause for "atomic" construct.
-  // For "depobj" use OMPC_UpdateDependObjects.
   let clangClass = "OMPUpdateClause";
-}
-def OMPC_UpdateDependObjects : Clause<[Spelling<"update">]> {
-  let name = "update_depend_objects";
-  let clangClass = "OMPUpdateDependObjectsClause";
-  let flangClass = "OmpUpdateDependObjectsClause";
+  let flangClass = "OmpUpdateClause";
+  let isValueOptional = true;
 }
 def OMPC_Use : Clause<[Spelling<"use">]> {
   let clangClass = "OMPUseClause";
@@ -878,7 +867,7 @@ def OMP_Depobj : Directive<[Spelling<"depobj">]> {
     VersionedClause<OMPC_Init, 60>,
   ];
   let allowedOnceClauses = [
-    VersionedClause<OMPC_UpdateDependObjects, 50>,
+    VersionedClause<OMPC_Update, 50>,
   ];
   let association = AS_None;
   let category = CA_Executable;
@@ -1067,7 +1056,7 @@ def OMP_Metadirective : Directive<[Spelling<"metadirective">]> {
     VersionedClause<OMPC_When>,
   ];
   let allowedOnceClauses = [
-    VersionedClause<OMPC_DefaultVariant, 50, 51>,
+    VersionedClause<OMPC_Default, 50, 51>,
     VersionedClause<OMPC_Otherwise, 52>,
   ];
   let association = AS_None;

@@ -19,14 +19,6 @@
 ; CHECK: DW_TAG_compile_unit
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_name	("test_unused")
-
-; The LexicalScope for parent scope of structure 'Z' is created (thanks to test_external
-; call), therefore, DW_TAG_structure_type for structure 'Z' is placed inside
-; the DW_TAG_lexical_block.
-; CHECK:     DW_TAG_lexical_block
-; CHECK:       DW_TAG_structure_type
-; CHECK:         DW_AT_name	("Z")
-; CHECK:       NULL
 ; CHECK:     DW_TAG_structure_type
 ; CHECK:       DW_AT_name	("Y")
 
@@ -37,6 +29,13 @@
 
 ; CHECK:     DW_TAG_structure_type
 ; CHECK:       DW_AT_name	("X")
+; The LexicalScope for parent scope of structure 'Z' is created (thanks to test_external
+; call), therefore, DW_TAG_structure_type for structure 'Z' is placed inside
+; the DW_TAG_lexical_block.
+; CHECK:     DW_TAG_lexical_block
+; CHECK:       DW_TAG_structure_type
+; CHECK:         DW_AT_name	("Z")
+; CHECK:       NULL
 ; CHECK:     NULL
 ; CHECK:   NULL
 

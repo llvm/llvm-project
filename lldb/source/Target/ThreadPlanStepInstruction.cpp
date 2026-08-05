@@ -60,21 +60,21 @@ void ThreadPlanStepInstruction::GetDescription(Stream *s,
 
   if (level == lldb::eDescriptionLevelBrief) {
     if (m_step_over)
-      s->PutCString("instruction step over");
+      s->Printf("instruction step over");
     else
-      s->PutCString("instruction step into");
+      s->Printf("instruction step into");
 
     PrintFailureIfAny();
   } else {
-    s->PutCString("Stepping one instruction past ");
+    s->Printf("Stepping one instruction past ");
     DumpAddress(s->AsRawOstream(), m_instruction_addr, sizeof(addr_t));
     if (!m_start_has_symbol)
-      s->PutCString(" which has no symbol");
+      s->Printf(" which has no symbol");
 
     if (m_step_over)
-      s->PutCString(" stepping over calls");
+      s->Printf(" stepping over calls");
     else
-      s->PutCString(" stepping into calls");
+      s->Printf(" stepping into calls");
 
     PrintFailureIfAny();
   }

@@ -140,8 +140,7 @@ public:
     Offset offset() const { return O; }
   };
 
-  // Skip empty string at the start.
-  constexpr Iterator begin() const { return Iterator(*this, 1); }
+  constexpr Iterator begin() const { return Iterator(*this, 0); }
   constexpr Iterator end() const { return Iterator(*this, size() - 1); }
 };
 

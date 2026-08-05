@@ -1,6 +1,11 @@
 import("//compiler-rt/target.gni")
 
-if (current_toolchain != host_toolchain) {
+if (current_toolchain == host_toolchain) {
+  copy("ignorelist") {
+    sources = [ "asan_ignorelist.txt" ]
+    outputs = [ "$clang_resource_dir/share/{{source_target_relative}}" ]
+  }
+} else {
   asan_sources = [
     "asan_activation.cpp",
     "asan_activation.h",

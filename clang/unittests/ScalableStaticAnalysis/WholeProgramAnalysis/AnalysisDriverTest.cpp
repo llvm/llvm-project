@@ -468,20 +468,15 @@ TEST_F(AnalysisDriverTest, RunByName) {
           "no result for 'AnalysisName(Analysis2)' in WPASuite"));
 }
 
-// run(names) — a requested name with no data in the LUSummary yields an empty
-// (but initialized and finalized) result rather than an error.
-TEST_F(AnalysisDriverTest, RunByNameEmptyWhenMissingData) {
+// run(names) — error when a requested name has no data in LUSummary.
+TEST_F(AnalysisDriverTest, RunByNameErrorMissingData) {
   auto LU = makeLUSummary();
   AnalysisDriver Driver(std::move(LU));
 
-  auto WPAOrErr = Driver.run({AnalysisName("Analysis1")});
-  ASSERT_THAT_EXPECTED(WPAOrErr, llvm::Succeeded());
-
-  auto R1OrErr = WPAOrErr->get<Analysis1Result>();
-  ASSERT_THAT_EXPECTED(R1OrErr, llvm::Succeeded());
-  EXPECT_TRUE(R1OrErr->Entries.empty());
-  EXPECT_TRUE(R1OrErr->WasInitialized);
-  EXPECT_TRUE(R1OrErr->WasFinalized);
+  EXPECT_THAT_EXPECTED(
+      Driver.run({AnalysisName("Analysis1")}),
+      llvm::FailedWithMessage(
+          "no data for analysis 'AnalysisName(Analysis1)' in LUSummary"));
 }
 
 // run(names) — error when a requested name has no registered analysis.
@@ -527,20 +522,15 @@ TEST_F(AnalysisDriverTest, RunByType) {
           "no result for 'AnalysisName(Analysis2)' in WPASuite"));
 }
 
-// run<ResultTs...>() — a requested type with no data in the LUSummary yields an
-// empty (but initialized and finalized) result rather than an error.
-TEST_F(AnalysisDriverTest, RunByTypeEmptyWhenMissingData) {
+// run<ResultTs...>() — error when a requested type has no data in LUSummary.
+TEST_F(AnalysisDriverTest, RunByTypeErrorMissingData) {
   auto LU = makeLUSummary();
   AnalysisDriver Driver(std::move(LU));
 
-  auto WPAOrErr = Driver.run<Analysis1Result>();
-  ASSERT_THAT_EXPECTED(WPAOrErr, llvm::Succeeded());
-
-  auto R1OrErr = WPAOrErr->get<Analysis1Result>();
-  ASSERT_THAT_EXPECTED(R1OrErr, llvm::Succeeded());
-  EXPECT_TRUE(R1OrErr->Entries.empty());
-  EXPECT_TRUE(R1OrErr->WasInitialized);
-  EXPECT_TRUE(R1OrErr->WasFinalized);
+  EXPECT_THAT_EXPECTED(
+      Driver.run<Analysis1Result>(),
+      llvm::FailedWithMessage(
+          "no data for analysis 'AnalysisName(Analysis1)' in LUSummary"));
 }
 
 // contains() — present entries return true; absent entries return false.

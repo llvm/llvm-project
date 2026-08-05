@@ -89,30 +89,30 @@ void ThreadPlanRunToAddress::GetDescription(Stream *s,
 
   if (level == lldb::eDescriptionLevelBrief) {
     if (num_addresses == 0) {
-      s->PutCString("run to address with no addresses given.");
+      s->Printf("run to address with no addresses given.");
       return;
     } else if (num_addresses == 1)
-      s->PutCString("run to address: ");
+      s->Printf("run to address: ");
     else
-      s->PutCString("run to addresses: ");
+      s->Printf("run to addresses: ");
 
     for (size_t i = 0; i < num_addresses; i++) {
       DumpAddress(s->AsRawOstream(), m_addresses[i], sizeof(addr_t));
-      s->PutCString(" ");
+      s->Printf(" ");
     }
   } else {
     if (num_addresses == 0) {
-      s->PutCString("run to address with no addresses given.");
+      s->Printf("run to address with no addresses given.");
       return;
     } else if (num_addresses == 1)
-      s->PutCString("Run to address: ");
+      s->Printf("Run to address: ");
     else {
-      s->PutCString("Run to addresses: ");
+      s->Printf("Run to addresses: ");
     }
 
     for (size_t i = 0; i < num_addresses; i++) {
       if (num_addresses > 1) {
-        s->PutCString("\n");
+        s->Printf("\n");
         s->Indent();
       }
 
@@ -123,7 +123,7 @@ void ThreadPlanRunToAddress::GetDescription(Stream *s,
       if (breakpoint)
         breakpoint->Dump(s);
       else
-        s->PutCString("but the breakpoint has been deleted.");
+        s->Printf("but the breakpoint has been deleted.");
     }
   }
 }
@@ -131,7 +131,7 @@ void ThreadPlanRunToAddress::GetDescription(Stream *s,
 bool ThreadPlanRunToAddress::ValidatePlan(Stream *error) {
   if (m_could_not_resolve_hw_bp) {
     if (error)
-      error->PutCString("Could not set hardware breakpoint(s)");
+      error->Printf("Could not set hardware breakpoint(s)");
     return false;
   }
 
@@ -142,9 +142,9 @@ bool ThreadPlanRunToAddress::ValidatePlan(Stream *error) {
     if (m_break_ids[i] == LLDB_INVALID_BREAK_ID) {
       all_bps_good = false;
       if (error) {
-        error->PutCString("Could not set breakpoint for address: ");
+        error->Printf("Could not set breakpoint for address: ");
         DumpAddress(error->AsRawOstream(), m_addresses[i], sizeof(addr_t));
-        error->PutCString("\n");
+        error->Printf("\n");
       }
     }
   }

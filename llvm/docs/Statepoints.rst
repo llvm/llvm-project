@@ -2,6 +2,9 @@
 Garbage Collection Safepoints in LLVM
 =====================================
 
+.. contents::
+   :local:
+   :depth: 2
 
 Status
 =======

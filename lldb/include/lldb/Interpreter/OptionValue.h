@@ -102,10 +102,7 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign);
 
-  void Clear() {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    ClearImpl();
-  }
+  virtual void Clear() = 0;
 
   virtual lldb::OptionValueSP
   DeepCopy(const lldb::OptionValueSP &new_parent) const;
@@ -353,8 +350,6 @@ protected:
   // DeepCopy to it. Inherit from Cloneable to avoid doing this manually.
   virtual lldb::OptionValueSP Clone() const = 0;
 
-  virtual void ClearImpl() = 0;
-
   class DefaultValueFormat {
   public:
     DefaultValueFormat(Stream &stream) : stream(stream) {
@@ -377,8 +372,6 @@ protected:
                                 // set from the command line or as a setting,
                                 // versus if we just have the default value that
                                 // was already populated in the option value.
-  mutable std::mutex m_mutex;
-
 private:
   std::optional<ArchSpec> GetArchSpecValue() const;
   bool SetArchSpecValue(ArchSpec arch_spec);
@@ -419,6 +412,8 @@ private:
   bool SetFormatEntityValue(const FormatEntity::Entry &entry);
 
   const RegularExpression *GetRegexValue() const;
+
+  mutable std::mutex m_mutex;
 };
 
 } // namespace lldb_private

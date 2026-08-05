@@ -260,8 +260,7 @@ let isPseudo = 1, isMeta = 1, isNotDuplicable = 1, SchedRW = [WriteSystem] in {
                             "#SEH_PushFrame $mode", []>;
   def SEH_EndPrologue : I<0, Pseudo, (outs), (ins),
                             "#SEH_EndPrologue", []>;
-  // Widened from i1imm to i8imm to hold V3 (the version can be 1, 2 or 3).
-  def SEH_UnwindVersion : I<0, Pseudo, (outs), (ins i8imm:$version),
+  def SEH_UnwindVersion : I<0, Pseudo, (outs), (ins i1imm:$version),
                             "#SEH_UnwindVersion $version", []>;
 }
 

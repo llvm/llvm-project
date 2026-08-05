@@ -1,5 +1,8 @@
 # How To Add A Constrained Floating-Point Intrinsic
 
+```{contents}
+:local: true
+```
 
 :::{warning}
 This is a work in progress.

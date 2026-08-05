@@ -6,8 +6,7 @@ STRING_EXTENSION_OUTSIDE(SBSymbolContextList)
         def __iter__(self):
             '''Iterate over all symbol contexts in a lldb.SBSymbolContextList
             object.'''
-            for i in range(self.GetSize()):
-                yield self.GetContextAtIndex(i)
+            return lldb_iter(self, 'GetSize', 'GetContextAtIndex')
 
         def __len__(self):
             return int(self.GetSize())

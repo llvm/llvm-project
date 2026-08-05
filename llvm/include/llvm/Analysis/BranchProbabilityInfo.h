@@ -27,7 +27,8 @@
 namespace llvm {
 
 class Function;
-class CycleInfo;
+class Loop;
+class LoopInfo;
 class raw_ostream;
 class DominatorTree;
 class PostDominatorTree;
@@ -109,11 +110,11 @@ class BranchProbabilityInfo {
 public:
   BranchProbabilityInfo() = default;
 
-  BranchProbabilityInfo(const Function &F, const CycleInfo &CI,
+  BranchProbabilityInfo(const Function &F, const LoopInfo &LI,
                         const TargetLibraryInfo *TLI = nullptr,
                         DominatorTree *DT = nullptr,
                         PostDominatorTree *PDT = nullptr) {
-    calculate(F, CI, TLI, DT, PDT);
+    calculate(F, LI, TLI, DT, PDT);
   }
 
   LLVM_ABI bool invalidate(Function &, const PreservedAnalyses &PA,
@@ -173,7 +174,7 @@ public:
     return IsLikely ? LikelyProb : LikelyProb.getCompl();
   }
 
-  LLVM_ABI void calculate(const Function &F, const CycleInfo &CI,
+  LLVM_ABI void calculate(const Function &F, const LoopInfo &LI,
                           const TargetLibraryInfo *TLI, DominatorTree *DT,
                           PostDominatorTree *PDT);
 

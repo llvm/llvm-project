@@ -61,6 +61,7 @@
 ; CHECK:     greedy<all>
 ; CHECK:     virt-reg-rewriter
 ; CHECK:     stack-slot-coloring
+; CHECK:     stack-slot-coloring
 ; CHECK:     machine-cp
 ; CHECK:     machinelicm
 ; CHECK:     remove-redundant-debug-values

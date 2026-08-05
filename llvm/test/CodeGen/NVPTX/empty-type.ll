@@ -15,6 +15,7 @@ define %empty @ret_empty(i32 %n) {
 ; CHECK-LABEL: ret_empty(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ret;
   ret %empty zeroinitializer
@@ -24,6 +25,7 @@ define %empty @ret_empty(i32 %n) {
 define void @only_empty(%empty %z) {
 ; CHECK-LABEL: only_empty(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ret;
@@ -96,6 +98,7 @@ define ptx_kernel void @kernel(%empty %z, ptr %p, i32 %n) {
 define void @caller() {
 ; CHECK-LABEL: caller(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    { // callseq 0, 0

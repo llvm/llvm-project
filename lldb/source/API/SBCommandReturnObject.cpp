@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBCommandReturnObject.h"
-#include "SBCommandReturnObjectImpl.h"
 #include "Utils.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFile.h"
@@ -26,27 +25,30 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBCommandReturnObjectImpl::SBCommandReturnObjectImpl()
-    : m_ptr(new CommandReturnObject(false)) {}
+class lldb_private::SBCommandReturnObjectImpl {
+public:
+  SBCommandReturnObjectImpl() : m_ptr(new CommandReturnObject(false)) {}
+  SBCommandReturnObjectImpl(CommandReturnObject &ref)
+      : m_ptr(&ref), m_owned(false) {}
+  SBCommandReturnObjectImpl(const SBCommandReturnObjectImpl &rhs)
+      : m_ptr(new CommandReturnObject(*rhs.m_ptr)), m_owned(rhs.m_owned) {}
+  SBCommandReturnObjectImpl &operator=(const SBCommandReturnObjectImpl &rhs) {
+    SBCommandReturnObjectImpl copy(rhs);
+    std::swap(*this, copy);
+    return *this;
+  }
+  // rvalue ctor+assignment are not used by SBCommandReturnObject.
+  ~SBCommandReturnObjectImpl() {
+    if (m_owned)
+      delete m_ptr;
+  }
 
-SBCommandReturnObjectImpl::SBCommandReturnObjectImpl(CommandReturnObject &ref)
-    : m_ptr(&ref), m_owned(false) {}
+  CommandReturnObject &operator*() const { return *m_ptr; }
 
-SBCommandReturnObjectImpl::SBCommandReturnObjectImpl(
-    const SBCommandReturnObjectImpl &rhs)
-    : m_ptr(new CommandReturnObject(*rhs.m_ptr)), m_owned(rhs.m_owned) {}
-
-SBCommandReturnObjectImpl &
-SBCommandReturnObjectImpl::operator=(const SBCommandReturnObjectImpl &rhs) {
-  SBCommandReturnObjectImpl copy(rhs);
-  std::swap(*this, copy);
-  return *this;
-}
-
-SBCommandReturnObjectImpl::~SBCommandReturnObjectImpl() {
-  if (m_owned)
-    delete m_ptr;
-}
+private:
+  CommandReturnObject *m_ptr;
+  bool m_owned = true;
+};
 
 SBCommandReturnObject::SBCommandReturnObject()
     : m_opaque_up(new SBCommandReturnObjectImpl()) {
@@ -219,19 +221,19 @@ void SBCommandReturnObject::AppendWarning(const char *message) {
 }
 
 CommandReturnObject *SBCommandReturnObject::operator->() const {
-  return m_opaque_up->get();
+  return &**m_opaque_up;
 }
 
 CommandReturnObject *SBCommandReturnObject::get() const {
-  return m_opaque_up->get();
+  return &**m_opaque_up;
 }
 
 CommandReturnObject &SBCommandReturnObject::operator*() const {
-  return *m_opaque_up->get();
+  return **m_opaque_up;
 }
 
 CommandReturnObject &SBCommandReturnObject::ref() const {
-  return *m_opaque_up->get();
+  return **m_opaque_up;
 }
 
 bool SBCommandReturnObject::GetDescription(SBStream &description) {

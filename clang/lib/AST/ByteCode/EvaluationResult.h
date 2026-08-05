@@ -9,7 +9,6 @@
 #ifndef LLVM_CLANG_AST_INTERP_EVALUATION_RESULT_H
 #define LLVM_CLANG_AST_INTERP_EVALUATION_RESULT_H
 
-#include "DeclOrExpr.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
@@ -37,15 +36,17 @@ public:
     Valid,   // Result is valid and empty.
   };
 
+  using DeclTy = llvm::PointerUnion<const Decl *, const Expr *>;
+
 private:
 #ifndef NDEBUG
   const Context *Ctx = nullptr;
 #endif
   APValue Value;
   ResultKind Kind = Empty;
-  DeclOrExpr Source = nullptr;
+  DeclTy Source = nullptr;
 
-  void setSource(DeclOrExpr D) { Source = D; }
+  void setSource(DeclTy D) { Source = D; }
 
   void takeValue(APValue &&V) {
     assert(empty());
@@ -84,9 +85,10 @@ public:
                                const Pointer &Ptr, SourceInfo Info);
 
   QualType getSourceType() const {
-    if (const auto *D = Source.asValueDecl())
+    if (const auto *D =
+            dyn_cast_if_present<ValueDecl>(Source.dyn_cast<const Decl *>()))
       return D->getType();
-    if (const auto *E = Source.asExpr())
+    if (const auto *E = Source.dyn_cast<const Expr *>())
       return E->getType();
     return QualType();
   }

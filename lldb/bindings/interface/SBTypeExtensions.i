@@ -153,8 +153,7 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBType, lldb::eDescriptionLevelBrief)
 
     def __iter__(self):
         '''Iterate over all types in a lldb.SBTypeList object.'''
-        for i in range(self.GetSize()):
-            yield self.GetTypeAtIndex(i)
+        return lldb_iter(self, 'GetSize', 'GetTypeAtIndex')
 
     def __len__(self):
         '''Return the number of types in a lldb.SBTypeList object.'''

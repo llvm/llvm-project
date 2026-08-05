@@ -1071,7 +1071,7 @@ exit:
 !13 = !{i32 999999, i64 1, i32 2}
 !14 = !{!"function_entry_count", i64 0}
 !15 = distinct !{!15, !16}
-!16 = !{!"llvm.loop.vectorize.enable"}
+!16 = !{!"llvm.loop.vectorize.enable", i1 true}
 ;.
 ; CHECK: [[PROF14]] = !{!"function_entry_count", i64 0}
 ; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META16:![0-9]+]], [[META17:![0-9]+]]}

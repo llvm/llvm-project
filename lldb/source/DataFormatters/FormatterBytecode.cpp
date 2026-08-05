@@ -14,7 +14,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadicDetails.h"
@@ -452,9 +451,9 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
     return error("null object");
 
       auto sel_error = [&](const char *msg) {
-        return llvm::createStringErrorV("{0} (opcode={1}, selector={2})", msg,
-                                        toString(opcode).c_str(),
-                                        toString(sel).c_str());
+        return llvm::createStringError("{0} (opcode={1}, selector={2})", msg,
+                                       toString(opcode).c_str(),
+                                       toString(sel).c_str());
       };
 
       switch (sel) {

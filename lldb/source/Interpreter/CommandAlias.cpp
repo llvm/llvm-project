@@ -144,7 +144,7 @@ void CommandAlias::GetAliasExpansion(StreamString &help_string) const {
   help_string.Printf("'%*s", (int)command_name.size(), command_name.data());
 
   if (!m_option_args_sp) {
-    help_string.PutCString("'");
+    help_string.Printf("'");
     return;
   }
 
@@ -165,7 +165,7 @@ void CommandAlias::GetAliasExpansion(StreamString &help_string) const {
     }
   }
 
-  help_string.PutCString("'");
+  help_string.Printf("'");
 }
 
 bool CommandAlias::IsDashDashCommand() {

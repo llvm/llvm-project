@@ -9,7 +9,8 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_NEXTAFTERTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_NEXTAFTERTEST_H
 
-#include "hdr/fenv_macros.h"
+#undef LIBC_MATH_USE_SYSTEM_FENV
+
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -18,6 +19,8 @@
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
+
+#include "hdr/fenv_macros.h"
 
 using LIBC_NAMESPACE::Sign;
 

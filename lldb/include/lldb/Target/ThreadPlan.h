@@ -462,7 +462,10 @@ public:
   }
 
   void DoTraceLog() {
-    if (m_tracer_sp && m_tracer_sp->TracingEnabled())
+    if (!m_tracer_sp)
+      return;
+    m_tracer_sp->EnableTracing(GetThread().GetTraceEnabledState());
+    if (m_tracer_sp->TracingEnabled())
       m_tracer_sp->Log();
   }
 

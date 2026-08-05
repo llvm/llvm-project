@@ -52,7 +52,6 @@ private:
   bool tryMergeNSStringLiteral();
   bool tryMergeJSPrivateIdentifier();
   bool tryMergeCSharpStringLiteral();
-  bool tryMergeCSharpUtf8StringLiteral();
   bool tryMergeCSharpKeywordVariables();
   bool tryMergeNullishCoalescingEqual();
   bool tryTransformCSharpForEach();

@@ -464,13 +464,9 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       switch (ID) {
       case Intrinsic::lifetime_start: {
         MemoryLocation ArgLoc = MemoryLocation::getAfter(II->getArgOperand(0));
-        AliasResult R = BatchAA.alias(ArgLoc, MemLoc);
-        if (R == AliasResult::MustAlias)
+        if (BatchAA.isMustAlias(ArgLoc, MemLoc))
           return MemDepResult::getDef(II);
-        if (R == AliasResult::NoAlias)
-          continue;
-        // A partial overlap must act as a barrier.
-        return MemDepResult::getClobber(II);
+        continue;
       }
       case Intrinsic::masked_load:
       case Intrinsic::masked_store: {

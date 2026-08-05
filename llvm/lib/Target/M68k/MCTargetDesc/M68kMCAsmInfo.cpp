@@ -12,19 +12,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "M68kMCAsmInfo.h"
-#include "llvm/ADT/Enum.h"
+
 #include "llvm/MC/MCExpr.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
-constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
-    {{"GOTOFF"}, M68k::S_GOTOFF},     {{"GOTPCREL"}, M68k::S_GOTPCREL},
-    {{"GOTTPOFF"}, M68k::S_GOTTPOFF}, {{"PLT"}, M68k::S_PLT},
-    {{"TLSGD"}, M68k::S_TLSGD},       {{"TLSLD"}, M68k::S_TLSLD},
-    {{"TLSLDM"}, M68k::S_TLSLDM},     {{"TPOFF"}, M68k::S_TPOFF},
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {
+    {M68k::S_GOTOFF, "GOTOFF"},     {M68k::S_GOTPCREL, "GOTPCREL"},
+    {M68k::S_GOTTPOFF, "GOTTPOFF"}, {M68k::S_PLT, "PLT"},
+    {M68k::S_TLSGD, "TLSGD"},       {M68k::S_TLSLD, "TLSLD"},
+    {M68k::S_TLSLDM, "TLSLDM"},     {M68k::S_TPOFF, "TPOFF"},
 };
-constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
 void M68kELFMCAsmInfo::anchor() {}
 

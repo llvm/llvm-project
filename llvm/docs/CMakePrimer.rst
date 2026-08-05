@@ -2,6 +2,8 @@
 CMake Primer
 ============
 
+.. contents::
+   :local:
 
 .. warning::
    Disclaimer: This documentation is written by LLVM project contributors `not`

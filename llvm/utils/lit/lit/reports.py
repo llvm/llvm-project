@@ -183,7 +183,7 @@ class XunitReport(Report):
         if code == lit.Test.EXCLUDED:
             return "Test not selected (--filter, --max-tests)"
         if code == lit.Test.SKIPPED:
-            return "Skipped"
+            return "User interrupt"
 
         assert code == lit.Test.UNSUPPORTED
         features = test.getMissingRequiredFeatures()

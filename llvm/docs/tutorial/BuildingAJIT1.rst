@@ -2,6 +2,8 @@
 Building a JIT: Starting out with KaleidoscopeJIT
 =======================================================
 
+.. contents::
+   :local:
 
 Chapter 1 Introduction
 ======================

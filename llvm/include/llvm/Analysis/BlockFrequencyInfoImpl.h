@@ -282,15 +282,17 @@ public:
 
     bool isLoopHeader() const { return Loop && Loop->isHeader(Node); }
 
-    /// The innermost loop containing Node that Node does not head.
-    ///
-    /// A block can head several nested loops: createIrreducibleLoop() reuses
-    /// an SCC's entry blocks as the irreducible loop's headers.
+    bool isDoubleLoopHeader() const {
+      return isLoopHeader() && Loop->Parent && Loop->Parent->isIrreducible() &&
+             Loop->Parent->isHeader(Node);
+    }
+
     LoopData *getContainingLoop() const {
-      LoopData *L = Loop;
-      while (L && L->isHeader(Node))
-        L = L->Parent;
-      return L;
+      if (!isLoopHeader())
+        return Loop;
+      if (!isDoubleLoopHeader())
+        return Loop->Parent;
+      return Loop->Parent->Parent;
     }
 
     /// Resolve a node to its representative.
@@ -311,10 +313,6 @@ public:
       return L ? L->getHeader() : Node;
     }
 
-    /// The outermost loop containing Node that is currently packaged, if any.
-    ///
-    /// Packaging is transient state: this answers what represents Node at the
-    /// level being processed, not where Node sits in the loop nest.
     LoopData *getPackagedLoop() const {
       if (!Loop || !Loop->IsPackaged)
         return nullptr;
@@ -324,14 +322,17 @@ public:
       return L;
     }
 
-    /// The mass slot for Node: its own, or that of the outermost packaged
-    /// loop it heads.
+    /// Get the appropriate mass for a node.
+    ///
+    /// Get appropriate mass for Node.  If Node is a loop-header (whose loop
+    /// has been packaged), returns the mass of its pseudo-node.  If it's a
+    /// node inside a packaged loop, it returns the loop's mass.
     BlockMass &getMass() {
-      BlockMass *M = &Mass;
-      for (LoopData *L = Loop; L && L->IsPackaged && L->isHeader(Node);
-           L = L->Parent)
-        M = &L->Mass;
-      return *M;
+      if (!isAPackage())
+        return Mass;
+      if (!isADoublePackage())
+        return Loop->Mass;
+      return Loop->Parent->Mass;
     }
 
     /// Has ContainingLoop been packaged up?
@@ -339,6 +340,11 @@ public:
 
     /// Has Loop been packaged up?
     bool isAPackage() const { return isLoopHeader() && Loop->IsPackaged; }
+
+    /// Has Loop been packaged up twice?
+    bool isADoublePackage() const {
+      return isDoubleLoopHeader() && Loop->Parent->IsPackaged;
+    }
   };
 
   /// Unscaled probability weight.
@@ -589,22 +595,22 @@ struct IrreducibleGraph {
   using BlockNode = BFIBase::BlockNode;
   struct IrrNode {
     BlockNode Node;
-    SmallVector<const IrrNode *, 4> Succs;
+    unsigned NumIn = 0;
+    std::deque<const IrrNode *> Edges;
 
     IrrNode(const BlockNode &Node) : Node(Node) {}
 
-    using iterator = SmallVectorImpl<const IrrNode *>::const_iterator;
+    using iterator = std::deque<const IrrNode *>::const_iterator;
 
-    iterator succ_begin() const { return Succs.begin(); }
-    iterator succ_end() const { return Succs.end(); }
+    iterator pred_begin() const { return Edges.begin(); }
+    iterator succ_begin() const { return Edges.begin() + NumIn; }
+    iterator pred_end() const { return succ_begin(); }
+    iterator succ_end() const { return Edges.end(); }
   };
   BlockNode Start;
   const IrrNode *StartIrr = nullptr;
   std::vector<IrrNode> Nodes;
   SmallDenseMap<uint32_t, IrrNode *, 4> Lookup;
-
-  /// The position of \p N in \a Nodes, for indexing side tables.
-  unsigned getIndex(const IrrNode *N) const { return N - Nodes.data(); }
 
   /// Construct an explicit graph containing irreducible control flow.
   ///
@@ -1173,17 +1179,16 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::initializeLoops() {
 }
 
 template <class BT> void BlockFrequencyInfoImpl<BT>::computeMassInLoops() {
-  // Visit loops with the deepest first, and the top-level loops last. The first
-  // computeMassInLoop returns false if *L contains an irreducible sub-SCC.
-  // computeIrreducibleMass then packages each such SCC into a new loop,
-  // inserted immediately after *L.
-  for (auto L = Loops.end(), B = Loops.begin(); L != B;) {
-    --L;
+  // Visit loops with the deepest first, and the top-level loops last.
+  for (auto L = Loops.rbegin(), E = Loops.rend(); L != E; ++L) {
     if (computeMassInLoop(*L))
       continue;
-    computeIrreducibleMass(&*L, std::next(L));
-    if (!computeMassInLoop(*L))
-      llvm_unreachable("unhandled irreducible control flow");
+    auto Next = std::next(L);
+    computeIrreducibleMass(&*L, L.base());
+    L = std::prev(Next);
+    if (computeMassInLoop(*L))
+      continue;
+    llvm_unreachable("unhandled irreducible control flow");
   }
 }
 

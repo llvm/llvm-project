@@ -1,5 +1,8 @@
 # MergeFunctions pass, how it works
 
+```{contents}
+:local:
+```
 
 ## Introduction
 

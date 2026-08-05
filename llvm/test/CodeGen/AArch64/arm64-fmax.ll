@@ -5,8 +5,7 @@ define double @test_direct(float %in) {
 ; CHECK-LABEL: test_direct:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    fcsel s0, s1, s0, lt
+; CHECK-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NEXT:    fcvt d0, s0
 ; CHECK-NEXT:    ret
   %cmp = fcmp nnan olt float %in, 0.000000e+00
@@ -19,8 +18,7 @@ define double @test_cross(float %in) {
 ; CHECK-LABEL: test_cross:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    fcsel s0, s0, s1, lt
+; CHECK-NEXT:    fminnm s0, s0, s1
 ; CHECK-NEXT:    fcvt d0, s0
 ; CHECK-NEXT:    ret
   %cmp = fcmp nnan ult float %in, 0.000000e+00
@@ -35,8 +33,7 @@ define double @test_cross_fail_nan(float %in) {
 ; CHECK-LABEL: test_cross_fail_nan:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    fcsel s0, s0, s1, lt
+; CHECK-NEXT:    fminnm s0, s0, s1
 ; CHECK-NEXT:    fcvt d0, s0
 ; CHECK-NEXT:    ret
   %cmp = fcmp nnan olt float %in, 0.000000e+00

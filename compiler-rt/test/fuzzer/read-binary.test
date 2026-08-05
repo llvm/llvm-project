@@ -1,7 +1,0 @@
-# Test that libFuzzer reads files properly.
-
-# Account for the fact that echo will add a trailing newline.
-RUN: echo -e "Hello\r\nWorld\r" > %t-testcase
-RUN: %cpp_compiler %S/ReadBinaryTest.cpp -o %t-fuzzer
-RUN: %run %t-fuzzer %t-testcase | FileCheck %s
-CHECK: BINGO!

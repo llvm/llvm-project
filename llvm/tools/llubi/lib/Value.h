@@ -53,19 +53,16 @@ struct Byte {
   void zeroBits(uint8_t Mask) {
     ConcreteMask |= Mask;
     Value &= ~Mask;
-    TagMask &= ~Mask;
   }
 
   void poisonBits(uint8_t Mask) {
     ConcreteMask &= ~Mask;
     Value &= ~Mask;
-    TagMask &= ~Mask;
   }
 
   void undefBits(uint8_t Mask) {
     ConcreteMask &= ~Mask;
     Value |= Mask;
-    TagMask &= ~Mask;
   }
 
   void writeBits(uint8_t Mask, uint8_t Val) {
@@ -80,13 +77,6 @@ struct Byte {
         "Please ensure pointer bits are concrete before calling writeTagBits.");
     TagMask |= Mask;
     TagValue = (TagValue & ~Mask) | (Tag & Mask);
-  }
-
-  void writeByte(uint8_t Mask, const Byte &RHS) {
-    ConcreteMask = (ConcreteMask & ~Mask) | (RHS.ConcreteMask & Mask);
-    Value = (Value & ~Mask) | (RHS.Value & Mask);
-    TagMask = (TagMask & ~Mask) | (RHS.TagMask & Mask);
-    TagValue = (TagValue & ~Mask) | (RHS.TagValue & Mask);
   }
 
   /// Returns a logical byte that is part of two adjacent bytes.
@@ -109,26 +99,13 @@ struct Byte {
                 static_cast<uint8_t>(TagMask >> Shift),
                 static_cast<uint8_t>(TagValue >> Shift)};
   }
-
-  Byte shl(uint8_t Shift) const {
-    return Byte{static_cast<uint8_t>(ConcreteMask << Shift),
-                static_cast<uint8_t>(Value << Shift),
-                static_cast<uint8_t>(TagMask << Shift),
-                static_cast<uint8_t>(TagValue << Shift)};
-  }
-
-  bool areHighBitsZExtd(uint8_t BitsFrom) const {
-    uint8_t Mask = static_cast<uint8_t>((~0U) << BitsFrom);
-    return (ConcreteMask & Mask) == Mask && (Value & Mask) == 0 &&
-           (TagMask & Mask) == 0;
-  }
 };
 
+// TODO: Byte
 enum class StorageKind {
   Integer,
   Float,
   Pointer,
-  Byte,
   Poison,
   None,      // Placeholder for void type
   Aggregate, // Struct, Array or Vector
@@ -243,52 +220,6 @@ public:
   Provenance &provenance() const { return *Prov; }
 };
 
-/// Represents a scalar byte value. If the value is not byte-sized, the high
-/// bits are zero-padded.
-class ByteValue {
-  // The byte order is endianness-dependent.
-  std::vector<Byte> Val;
-  uint32_t BitWidth : 31;
-  uint32_t IsLittleEndian : 1;
-
-public:
-  ByteValue(const APInt &V, bool IsLittleEndian);
-  ByteValue(uint32_t BitWidth, ArrayRef<Byte> Val, bool IsLittleEndian,
-            bool ImplicitClearHighBits = false)
-      : ByteValue(BitWidth, std::vector<Byte>(Val), IsLittleEndian,
-                  ImplicitClearHighBits) {}
-  ByteValue(uint32_t BitWidth, std::vector<Byte> Val, bool IsLittleEndian,
-            bool ImplicitClearHighBits = false)
-      : Val(std::move(Val)), BitWidth(BitWidth),
-        IsLittleEndian(IsLittleEndian) {
-    if (ImplicitClearHighBits && (BitWidth & 7) != 0) {
-      uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
-      if (IsLittleEndian)
-        this->Val.back().zeroBits(Mask);
-      else
-        this->Val.front().zeroBits(Mask);
-    }
-    assert(((BitWidth & 7) == 0 ||
-            ((IsLittleEndian ? this->Val.back() : this->Val.front())
-                 .areHighBitsZExtd(BitWidth & 7))) &&
-           "The caller is responsible to zero high bits for non-byte-sized "
-           "values.");
-  }
-  ByteValue(const ByteValue &) = default;
-  ByteValue(ByteValue &&) = default;
-  ByteValue &operator=(const ByteValue &) = default;
-  ByteValue &operator=(ByteValue &&) = default;
-  ~ByteValue() = default;
-
-  static ByteValue zero(uint32_t BitWidth, bool IsLittleEndian);
-  static ByteValue poison(uint32_t BitWidth, bool IsLittleEndian);
-
-  uint32_t getBitWidth() const { return BitWidth; }
-  ArrayRef<Byte> bytes() const { return Val; }
-  MutableArrayRef<Byte> mutableBytes() { return Val; }
-  void print(Context &Ctx, raw_ostream &OS) const;
-};
-
 // Value representation for actual values of LLVM values.
 // We don't model undef values here (except for byte types).
 class [[nodiscard]] AnyValue {
@@ -297,7 +228,6 @@ class [[nodiscard]] AnyValue {
     APInt IntVal;
     APFloat FloatVal;
     Pointer PtrVal;
-    ByteValue ByteVal;
     std::vector<AnyValue> AggVal;
   };
 
@@ -310,7 +240,6 @@ public:
   AnyValue(APInt Val) : Kind(StorageKind::Integer), IntVal(std::move(Val)) {}
   AnyValue(APFloat Val) : Kind(StorageKind::Float), FloatVal(std::move(Val)) {}
   AnyValue(Pointer Val) : Kind(StorageKind::Pointer), PtrVal(std::move(Val)) {}
-  AnyValue(ByteValue Val) : Kind(StorageKind::Byte), ByteVal(std::move(Val)) {}
   AnyValue(std::vector<AnyValue> Val)
       : Kind(StorageKind::Aggregate), AggVal(std::move(Val)) {}
   AnyValue(const AnyValue &Other);
@@ -319,7 +248,7 @@ public:
   AnyValue &operator=(AnyValue &&);
   ~AnyValue() { destroy(); }
 
-  void print(Context &Ctx, raw_ostream &OS) const;
+  void print(raw_ostream &OS) const;
 
   static AnyValue poison() { return AnyValue(PoisonTag{}); }
   static AnyValue boolean(bool Val) { return AnyValue(APInt(1, Val)); }
@@ -332,7 +261,6 @@ public:
   bool isInteger() const { return Kind == StorageKind::Integer; }
   bool isFloat() const { return Kind == StorageKind::Float; }
   bool isPointer() const { return Kind == StorageKind::Pointer; }
-  bool isByte() const { return Kind == StorageKind::Byte; }
   bool isAggregate() const { return Kind == StorageKind::Aggregate; }
 
   bool isCompatibleWith(Type *Ty) const {
@@ -347,8 +275,6 @@ public:
       return Ty->isFloatingPointTy();
     case StorageKind::Pointer:
       return Ty->isPointerTy();
-    case StorageKind::Byte:
-      return Ty->isByteTy();
     // We don't check elements recursively.
     case StorageKind::Aggregate:
       return Ty->isAggregateType() || Ty->isVectorTy();
@@ -369,16 +295,6 @@ public:
   const Pointer &asPointer() const {
     assert(Kind == StorageKind::Pointer && "Expect a pointer value");
     return PtrVal;
-  }
-
-  const ByteValue &asByte() const {
-    assert(Kind == StorageKind::Byte && "Expect a byte value");
-    return ByteVal;
-  }
-
-  ByteValue &asMutableByte() {
-    assert(Kind == StorageKind::Byte && "Expect a byte value");
-    return ByteVal;
   }
 
   const std::vector<AnyValue> &asAggregate() const {
@@ -408,22 +324,10 @@ public:
   }
 };
 
-class AnyValuePrinter {
-  Context &Ctx;
-  raw_ostream &OS;
-
-public:
-  AnyValuePrinter(Context &Ctx, raw_ostream &OS) : Ctx(Ctx), OS(OS) {}
-  AnyValuePrinter &operator<<(const AnyValue &V) {
-    V.print(Ctx, OS);
-    return *this;
-  }
-  template <typename T> AnyValuePrinter &operator<<(const T &Val) {
-    OS << Val;
-    return *this;
-  }
-  operator raw_ostream &() { return OS; }
-};
+inline raw_ostream &operator<<(raw_ostream &OS, const AnyValue &V) {
+  V.print(OS);
+  return OS;
+}
 
 inline raw_ostream &operator<<(raw_ostream &OS, const Pointer &P) {
   P.print(OS);

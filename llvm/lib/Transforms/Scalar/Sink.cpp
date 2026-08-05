@@ -259,6 +259,8 @@ namespace {
       AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<DominatorTreeWrapperPass>();
       AU.addRequired<LoopInfoWrapperPass>();
+      AU.addPreserved<DominatorTreeWrapperPass>();
+      AU.addPreserved<LoopInfoWrapperPass>();
     }
   };
 } // end anonymous namespace

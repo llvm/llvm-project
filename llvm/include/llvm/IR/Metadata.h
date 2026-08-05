@@ -1466,8 +1466,6 @@ public:
   LLVM_ABI static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedCalleeTypeMetadata(const MDNode *A,
                                                       const MDNode *B);
-  LLVM_ABI static MDNode *getMergedAllocTokenMetadata(const MDNode *A,
-                                                      const MDNode *B);
 
   /// Convert !captures metadata to CaptureComponents. MD may be nullptr.
   LLVM_ABI static CaptureComponents toCaptureComponents(const MDNode *MD);

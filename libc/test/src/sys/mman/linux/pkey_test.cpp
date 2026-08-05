@@ -73,13 +73,7 @@ public:
 };
 
 bool protection_keys_supported() {
-  static bool checked = false;
-  static bool supported;
-  if (checked)
-    return supported;
-
-  checked = true;
-  supported = []() {
+  static bool supported = []() {
     PKeyGuard pkey(LIBC_NAMESPACE::pkey_alloc(0, 0));
     int err = libc_errno;
     libc_errno = 0;

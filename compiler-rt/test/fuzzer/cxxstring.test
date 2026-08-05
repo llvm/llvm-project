@@ -1,6 +1,0 @@
-UNSUPPORTED: target={{.*freebsd.*}}
-
-RUN: %cpp_compiler %S/CxxStringEqTest.cpp -o %t-CxxStringEqTest
-
-RUN: not %run %t-CxxStringEqTest -seed=1 -runs=1000000 2>&1 | FileCheck %s
-CHECK: BINGO

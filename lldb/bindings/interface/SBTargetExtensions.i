@@ -105,14 +105,12 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
         def module_iter(self):
             '''Returns an iterator over all modules in a lldb.SBTarget
             object.'''
-            for i in range(self.GetNumModules()):
-                yield self.GetModuleAtIndex(i)
+            return lldb_iter(self, 'GetNumModules', 'GetModuleAtIndex')
 
         def breakpoint_iter(self):
             '''Returns an iterator over all breakpoints in a lldb.SBTarget
             object.'''
-            for i in range(self.GetNumBreakpoints()):
-                yield self.GetBreakpointAtIndex(i)
+            return lldb_iter(self, 'GetNumBreakpoints', 'GetBreakpointAtIndex')
 
         class bkpts_access(object):
             '''A helper object that will lazily hand out bkpts for a target when supplied an index.'''
@@ -146,8 +144,7 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
         def watchpoint_iter(self):
             '''Returns an iterator over all watchpoints in a lldb.SBTarget
             object.'''
-            for i in range(self.GetNumWatchpoints()):
-                yield self.GetWatchpointAtIndex(i)
+            return lldb_iter(self, 'GetNumWatchpoints', 'GetWatchpointAtIndex')
 
         class watchpoints_access(object):
             '''A helper object that will lazily hand out watchpoints for a target when supplied an index.'''

@@ -1,3 +1,0 @@
-global:*badGlobal*=init
-type:*badNamespace::BadClass*=init
-src:*initialization-ignorelist-extra2.cpp=init

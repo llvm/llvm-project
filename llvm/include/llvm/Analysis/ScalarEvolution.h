@@ -59,7 +59,6 @@ class LoopInfo;
 class raw_ostream;
 class ScalarEvolution;
 class SCEVAddRecExpr;
-class SCEVConstant;
 class SCEVUnknown;
 class StructType;
 class TargetLibraryInfo;
@@ -269,9 +268,6 @@ protected:
   /// have no SCEVUse flags.
   const SCEV *CanonicalSCEV = nullptr;
 
-  /// Immutable type of the SCEV.
-  Type *const Ty;
-
 public:
   using NoWrapFlags = SCEVNoWrapFlags;
   static constexpr auto FlagAnyWrap = SCEVNoWrapFlags::FlagAnyWrap;
@@ -281,15 +277,15 @@ public:
   static constexpr auto NoWrapMask = SCEVNoWrapFlags::NoWrapMask;
 
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
-                unsigned short ExpressionSize, Type *Ty)
-      : FastID(ID), SCEVType(SCEVTy), ExpressionSize(ExpressionSize), Ty(Ty) {}
+                unsigned short ExpressionSize)
+      : FastID(ID), SCEVType(SCEVTy), ExpressionSize(ExpressionSize) {}
   SCEV(const SCEV &) = delete;
   SCEV &operator=(const SCEV &) = delete;
 
   SCEVTypes getSCEVType() const { return SCEVType; }
 
   /// Return the LLVM type of this SCEV expression.
-  Type *getType() const { return Ty; }
+  LLVM_ABI Type *getType() const;
 
   /// Return operands of this SCEV expression.
   LLVM_ABI ArrayRef<SCEVUse> operands() const;
@@ -737,8 +733,10 @@ public:
   LLVM_ABI const SCEV *getConstant(ConstantInt *V);
   LLVM_ABI const SCEV *getConstant(const APInt &Val);
   LLVM_ABI const SCEV *getConstant(Type *Ty, uint64_t V, bool isSigned = false);
+  LLVM_ABI const SCEV *getLosslessPtrToIntExpr(const SCEV *Op);
 
   LLVM_ABI const SCEV *getPtrToAddrExpr(const SCEV *Op);
+  LLVM_ABI const SCEV *getPtrToIntExpr(const SCEV *Op, Type *Ty);
   LLVM_ABI const SCEV *getTruncateExpr(const SCEV *Op, Type *Ty,
                                        unsigned Depth = 0);
   LLVM_ABI const SCEV *getVScale(Type *Ty);
@@ -878,7 +876,7 @@ public:
   /// If the LHS and RHS are pointers which don't share a common base
   /// (according to getPointerBase()), this returns a SCEVCouldNotCompute.
   /// To compute the difference between two unrelated pointers, you can
-  /// explicitly convert the arguments using getPtrToAddrExpr(), for pointer
+  /// explicitly convert the arguments using getPtrToIntExpr(), for pointer
   /// types that support it.
   LLVM_ABI const SCEV *getMinusSCEV(SCEVUse LHS, SCEVUse RHS,
                                     SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
@@ -2540,10 +2538,6 @@ private:
   FoldingSet<SCEV> UniqueSCEVs;
   FoldingSet<SCEVPredicate> UniquePreds;
   BumpPtrAllocator SCEVAllocator;
-
-  /// Fast lookup cache for SCEVConstant nodes, using the fact that IR constants
-  /// are already uniqued.
-  DenseMap<ConstantInt *, SCEVConstant *> ConstantSCEVs;
 
   /// This maps loops to a list of addrecs that directly use said loop.
   DenseMap<const Loop *, SmallVector<const SCEVAddRecExpr *, 4>> LoopUsers;

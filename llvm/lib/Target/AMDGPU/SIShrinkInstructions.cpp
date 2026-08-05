@@ -15,7 +15,6 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 
 #define DEBUG_TYPE "si-shrink-instructions"
 

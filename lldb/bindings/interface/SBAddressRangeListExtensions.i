@@ -7,8 +7,7 @@
 
     def __iter__(self):
       '''Iterate over all the address ranges in a lldb.SBAddressRangeList object.'''
-      for i in range(self.GetSize()):
-        yield self.GetAddressRangeAtIndex(i)
+      return lldb_iter(self, 'GetSize', 'GetAddressRangeAtIndex')
 
     def __getitem__(self, idx):
       '''Get the address range at a given index in an lldb.SBAddressRangeList object.'''

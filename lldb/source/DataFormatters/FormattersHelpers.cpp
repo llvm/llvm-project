@@ -131,7 +131,7 @@ lldb_private::formatters::GetArrayAddressOrPointerValue(ValueObject &valobj) {
 void lldb_private::formatters::DumpCxxSmartPtrPointerSummary(
     Stream &stream, ValueObject &ptr, const TypeSummaryOptions &options) {
   if (ptr.GetValueAsUnsigned(0) == 0) {
-    stream.PutCString("nullptr");
+    stream.Printf("nullptr");
     return;
   }
 

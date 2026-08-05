@@ -3,7 +3,6 @@ Test Process::FindInMemory.
 """
 
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from address_ranges_helper import *
@@ -28,7 +27,6 @@ class FindInMemoryTestCase(TestBase):
         )
         self.assertTrue(self.bp.IsValid())
 
-    @skipIfWasm  # Wasm exposes no stack pointer register
     def test_check_stack_pointer(self):
         """Make sure the 'stack_pointer' variable lives on the stack"""
         self.assertTrue(self.process, PROCESS_IS_VALID)

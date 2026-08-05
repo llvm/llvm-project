@@ -37,8 +37,7 @@ STRING_EXTENSION_OUTSIDE(SBBreakpoint)
         def __iter__(self):
             '''Iterate over all breakpoint locations in a lldb.SBBreakpoint
             object.'''
-            for i in range(self.GetNumLocations()):
-                yield self.GetLocationAtIndex(i)
+            return lldb_iter(self, 'GetNumLocations', 'GetLocationAtIndex')
 
         def __len__(self):
             '''Return the number of breakpoint locations in a lldb.SBBreakpoint

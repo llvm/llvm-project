@@ -692,9 +692,8 @@ TEST_F(ProgramEnvTest, TestExecuteEmptyEnvironment) {
 
   std::string Error;
   bool ExecutionFailed;
-  [[maybe_unused]] int RetCode =
-      ExecuteAndWait(Executable, argv, ArrayRef<StringRef>{}, {}, 0, 0, &Error,
-                     &ExecutionFailed);
+  int RetCode = ExecuteAndWait(Executable, argv, ArrayRef<StringRef>{}, {}, 0,
+                               0, &Error, &ExecutionFailed);
   EXPECT_FALSE(ExecutionFailed) << Error;
 #ifndef __MINGW32__
   // When running with an empty environment, the child process doesn't in herit

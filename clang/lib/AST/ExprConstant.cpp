@@ -974,11 +974,9 @@ namespace {
       // of each element is likely to take some number of steps anyway.
       uint64_t Limit = getLangOpts().ConstexprStepLimit;
       if (Limit != 0 && ElemCount > Limit) {
-        if (Diag) {
-          FFDiag(Loc, diag::note_constexpr_new_exceeds_limits, 1)
+        if (Diag)
+          FFDiag(Loc, diag::note_constexpr_new_exceeds_limits)
               << ElemCount << Limit;
-          Note(Loc, diag::note_constexpr_steps);
-        }
         return false;
       }
       return true;
@@ -1005,9 +1003,7 @@ namespace {
         return true;
 
       if (!StepsLeft) {
-        FFDiag(S->getBeginLoc(), diag::note_constexpr_step_limit_exceeded, 1)
-            << getLangOpts().ConstexprStepLimit;
-        Note(S->getBeginLoc(), diag::note_constexpr_steps);
+        FFDiag(S->getBeginLoc(), diag::note_constexpr_step_limit_exceeded);
         return false;
       }
       --StepsLeft;
@@ -20398,8 +20394,7 @@ static bool TryEvaluateBuiltinNaN(const ASTContext &Context,
                                   bool SNaN,
                                   llvm::APFloat &Result) {
   const StringLiteral *S = dyn_cast<StringLiteral>(Arg->IgnoreParenCasts());
-  if (!S || !S->isOrdinary())
-    return false;
+  if (!S) return false;
 
   const llvm::fltSemantics &Sem = Context.getFloatTypeSemantics(ResultTy);
 

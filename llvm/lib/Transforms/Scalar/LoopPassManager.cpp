@@ -303,7 +303,7 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
     if (VerifyDomInfo)
       LAR.DT.verify();
     if (VerifyLoopInfo)
-      LAR.LI.verify();
+      LAR.LI.verify(LAR.DT);
     if (VerifySCEV)
       LAR.SE.verify();
     if (LAR.MSSA && VerifyMemorySSA)

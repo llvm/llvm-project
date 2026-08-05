@@ -11,6 +11,3 @@ int get(int);
 IntIntFuncref getFuncref() {
     return get;
 }
-
-static_assert(!__is_same(IntIntFuncref, const IntIntFuncref), "");
-static_assert(!__is_same(int(*__funcref)(int), int(*const __funcref)(int)), "");

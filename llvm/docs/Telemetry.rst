@@ -2,6 +2,8 @@
 Telemetry framework in LLVM
 ===========================
 
+.. contents::
+   :local:
 
 .. toctree::
    :hidden:

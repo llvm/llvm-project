@@ -28,7 +28,6 @@ static bool LowerFenceInst(FenceInst *FI) {
 
 static bool LowerLoadInst(LoadInst *LI) {
   LI->setAtomic(AtomicOrdering::NotAtomic);
-  LI->setElementwise(false);
   return true;
 }
 

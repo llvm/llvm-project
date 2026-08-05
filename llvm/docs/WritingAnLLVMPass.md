@@ -3,6 +3,9 @@
 ```{program} opt
 ```
 
+```{contents}
+:local:
+```
 
 ## Introduction --- What is a pass?
 
@@ -632,6 +635,7 @@ Pre-ISel Intrinsic Lowering
 FunctionPass Manager
   Expand IR instructions
   Expand Atomic instructions
+SVE intrinsics optimizations
   FunctionPass Manager
     Dominator Tree Construction
 FunctionPass Manager

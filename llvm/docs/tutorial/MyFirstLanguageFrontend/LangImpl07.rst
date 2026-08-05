@@ -2,6 +2,8 @@
 Kaleidoscope: Extending the Language: Mutable Variables
 =======================================================
 
+.. contents::
+   :local:
 
 Chapter 7 Introduction
 ======================

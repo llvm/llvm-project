@@ -1398,7 +1398,6 @@ TEST_F(OpenMPIRBuilderTest, ParallelForwardAsPointers) {
 TEST_F(OpenMPIRBuilderTest, CanonicalLoopSimple) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   IRBuilder<> Builder(BB);
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
@@ -1456,7 +1455,6 @@ TEST_F(OpenMPIRBuilderTest, CanonicalLoopSimple) {
 
 TEST_F(OpenMPIRBuilderTest, CanonicalLoopTripCount) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   IRBuilder<> Builder(BB);
 
@@ -1526,7 +1524,6 @@ TEST_F(OpenMPIRBuilderTest, CanonicalLoopTripCount) {
 TEST_F(OpenMPIRBuilderTest, CollapseNestedLoops) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
 
@@ -1625,7 +1622,6 @@ TEST_F(OpenMPIRBuilderTest, CollapseNestedLoops) {
 
 TEST_F(OpenMPIRBuilderTest, TileSingleLoop) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   CallInst *Call;
   BasicBlock *BodyCode;
   CanonicalLoopInfo *Loop =
@@ -1671,7 +1667,6 @@ TEST_F(OpenMPIRBuilderTest, TileSingleLoop) {
 TEST_F(OpenMPIRBuilderTest, TileNestedLoops) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
 
@@ -1761,7 +1756,6 @@ TEST_F(OpenMPIRBuilderTest, TileNestedLoops) {
 TEST_F(OpenMPIRBuilderTest, TileNestedLoopsWithBounds) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
 
@@ -1898,7 +1892,6 @@ TEST_F(OpenMPIRBuilderTest, TileNestedLoopsWithBounds) {
 TEST_F(OpenMPIRBuilderTest, TileSingleLoopCounts) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   IRBuilder<> Builder(BB);
 
@@ -1988,7 +1981,6 @@ TEST_F(OpenMPIRBuilderTest, TileSingleLoopCounts) {
 
 TEST_F(OpenMPIRBuilderTest, ApplySimd) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   MapVector<Value *, Value *> AlignedVars;
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
   ASSERT_NE(CLI, nullptr);
@@ -2024,7 +2016,6 @@ TEST_F(OpenMPIRBuilderTest, ApplySimd) {
 
 TEST_F(OpenMPIRBuilderTest, ApplySimdCustomAligned) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   IRBuilder<> Builder(BB);
   const int AlignmentValue = 32;
   llvm::BasicBlock *sourceBlock = Builder.GetInsertBlock();
@@ -2088,7 +2079,6 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdCustomAligned) {
 }
 TEST_F(OpenMPIRBuilderTest, ApplySimdlen) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   MapVector<Value *, Value *> AlignedVars;
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
   ASSERT_NE(CLI, nullptr);
@@ -2125,7 +2115,6 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdlen) {
 
 TEST_F(OpenMPIRBuilderTest, ApplySafelenOrderConcurrent) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   MapVector<Value *, Value *> AlignedVars;
 
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
@@ -2164,7 +2153,6 @@ TEST_F(OpenMPIRBuilderTest, ApplySafelenOrderConcurrent) {
 
 TEST_F(OpenMPIRBuilderTest, ApplySafelen) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   MapVector<Value *, Value *> AlignedVars;
 
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
@@ -2200,7 +2188,6 @@ TEST_F(OpenMPIRBuilderTest, ApplySafelen) {
 
 TEST_F(OpenMPIRBuilderTest, ApplySimdlenSafelen) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   MapVector<Value *, Value *> AlignedVars;
 
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
@@ -2237,7 +2224,6 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdlenSafelen) {
 
 TEST_F(OpenMPIRBuilderTest, ApplySimdIf) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   IRBuilder<> Builder(BB);
   MapVector<Value *, Value *> AlignedVars;
   AllocaInst *Alloc1 = Builder.CreateAlloca(Builder.getInt32Ty());
@@ -2301,7 +2287,6 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdIf) {
 
 TEST_F(OpenMPIRBuilderTest, UnrollLoopFull) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
 
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
   ASSERT_NE(CLI, nullptr);
@@ -2327,7 +2312,6 @@ TEST_F(OpenMPIRBuilderTest, UnrollLoopFull) {
 
 TEST_F(OpenMPIRBuilderTest, UnrollLoopPartial) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
   ASSERT_NE(CLI, nullptr);
 
@@ -2362,7 +2346,6 @@ TEST_F(OpenMPIRBuilderTest, UnrollLoopPartial) {
 
 TEST_F(OpenMPIRBuilderTest, UnrollLoopHeuristic) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
 
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
   ASSERT_NE(CLI, nullptr);
@@ -3134,7 +3117,6 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
 TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSource) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -3218,7 +3200,6 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSource) {
 TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSink) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -3302,7 +3283,6 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSink) {
 TEST_F(OpenMPIRBuilderTest, OrderedDirectiveThreads) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -3378,7 +3358,6 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveThreads) {
 TEST_F(OpenMPIRBuilderTest, OrderedDirectiveSimd) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -3810,7 +3789,6 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveCopyPrivate) {
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicReadFlt) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -3854,7 +3832,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicReadFlt) {
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicReadInt) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -3906,7 +3883,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicReadInt) {
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicWriteFlt) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -3944,7 +3920,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicWriteFlt) {
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicWriteInt) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -3988,7 +3963,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicWriteInt) {
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdate) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -4056,7 +4030,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdate) {
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateFloat) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -4123,7 +4096,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateFloat) {
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateIntr) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -4191,7 +4163,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateIntr) {
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicCapture) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -4242,7 +4213,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCapture) {
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicCompare) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -4301,7 +4271,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCompare) {
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicCompareCapture) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -4549,7 +4518,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicRWStructType) {
   // Test for issue #165184: atomic read/write on struct types should use
   // element type size, not pointer size.
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -7938,7 +7906,6 @@ TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopInvalidLoopBody) {
 TEST_F(OpenMPIRBuilderTest, CreateTaskgroup) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -8345,7 +8312,6 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysNonContigCountExpression) {
   CombinedInfo.Types.push_back(static_cast<omp::OpenMPOffloadMappingFlags>(
       omp::OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG |
       omp::OpenMPOffloadMappingFlags::OMP_MAP_TO));
-  CombinedInfo.HasAttachPtr.push_back(false);
   CombinedInfo.Names.push_back(
       Builder.CreateGlobalString("data", "data_name", 0, M.get()));
 
@@ -8376,7 +8342,6 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysNonContigCountExpression) {
 TEST_F(OpenMPIRBuilderTest, ScopeDirective) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -8425,7 +8390,6 @@ TEST_F(OpenMPIRBuilderTest, ScopeDirective) {
 TEST_F(OpenMPIRBuilderTest, ScopeDirectiveNowait) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -8467,7 +8431,6 @@ TEST_F(OpenMPIRBuilderTest, ScopeDirectiveNowait) {
 TEST_F(OpenMPIRBuilderTest, FuseLoopRangeNoDeadBlocks) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.Config.IsTargetDevice = false;
   OMPBuilder.initialize();
   F->setName("func");
 

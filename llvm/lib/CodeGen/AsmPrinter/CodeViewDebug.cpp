@@ -2285,10 +2285,10 @@ TypeIndex CodeViewDebug::lowerTypeEnum(const DICompositeType *Ty) {
       // We assume that the frontend provides all members in source declaration
       // order, which is what MSVC does.
       if (auto *Enumerator = dyn_cast_or_null<DIEnumerator>(Element)) {
-        EnumeratorRecord ER(
-            MemberAccess::Public,
-            APSInt(Enumerator->getValue(), Enumerator->isUnsigned()),
-            Enumerator->getName());
+        // FIXME: Is it correct to always emit these as unsigned here?
+        EnumeratorRecord ER(MemberAccess::Public,
+                            APSInt(Enumerator->getValue(), true),
+                            Enumerator->getName());
         ContinuationBuilder.writeMemberType(ER);
         EnumeratorCount++;
       }

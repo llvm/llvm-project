@@ -108,6 +108,3 @@ enum fixedEnum : int { fixedEnumerator };
 // PRINT-LABEL: enum fixedEnum : int {
 // PRINT-NEXT: fixedEnumerator
 // PRINT-NEXT: };
-
-enum fixedEnum fixedEnumVar = (enum fixedEnum)0;
-//PRINT-LABEL: enum fixedEnum fixedEnumVar = (enum fixedEnum)0;

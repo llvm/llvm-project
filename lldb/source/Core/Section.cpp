@@ -153,8 +153,6 @@ const char *Section::GetTypeAsCString() const {
     return "swift-modules";
   case eSectionTypeWasmName:
     return "wasm-name";
-  case eSectionTypeWasmGlobal:
-    return "wasm-global";
   case eSectionTypeOther:
     return "regular";
   }
@@ -412,7 +410,6 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeGoSymtab:
   case eSectionTypeAbsoluteAddress:
   case eSectionTypeWasmName:
-  case eSectionTypeWasmGlobal:
   case eSectionTypeOther:
   // Used for "__dof_cache" in mach-o or ".debug" for COFF which isn't debug
   // information that we parse at all. This was causing system files with no

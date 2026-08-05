@@ -43,7 +43,6 @@ public:
                                  bool SkipImmediates = false);
   void printOpConstantVarOps(const MCInst *MI, unsigned StartIndex,
                              raw_ostream &O);
-  unsigned printMemoryOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 
   void printExtension(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   template <SPIRV::OperandCategory::OperandCategory category>

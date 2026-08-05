@@ -977,7 +977,7 @@ public:
                                     .getAnalyzerOptions();
         // If appropriate option is disabled, ignore the cast.
         // NOTE: ShouldSupportSymbolicIntegerCasts is `false` by default.
-        if (!Opts.analyzerSymbolicIntegerCasts())
+        if (!Opts.ShouldSupportSymbolicIntegerCasts)
           return V;
         return simplifySymbolCast(V, CastTy);
       }

@@ -194,7 +194,6 @@ resources/sbapi
 resources/dataformatters
 resources/formatterbytecode
 resources/addinglanguagesupport
-resources/addingtargetsupport
 resources/caveats
 resources/projects
 ```

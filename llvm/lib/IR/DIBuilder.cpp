@@ -1152,10 +1152,10 @@ DILexicalBlock *DIBuilder::createLexicalBlock(DIScope *Scope, DIFile *File,
                                      File, Line, Col);
 }
 
-DbgRecord *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
+DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                     DIExpression *Expr, const DILocation *DL,
                                     BasicBlock *InsertAtEnd) {
-  // If this block already has a terminator then insert this record before
+  // If this block already has a terminator then insert this intrinsic before
   // the terminator. Otherwise, put it at the end of the block.
   Instruction *InsertBefore = InsertAtEnd->getTerminatorOrNull();
   return insertDeclare(Storage, VarInfo, Expr, DL,
@@ -1163,7 +1163,7 @@ DbgRecord *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                     : InsertAtEnd->end());
 }
 
-DbgRecord *DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
+DbgInstPtr DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
                                       DILocalVariable *SrcVar,
                                       DIExpression *ValExpr, Value *Addr,
                                       DIExpression *AddrExpr,
@@ -1194,16 +1194,18 @@ static Value *getDbgIntrinsicValueImpl(LLVMContext &VMContext, Value *V) {
   return MetadataAsValue::get(VMContext, ValueAsMetadata::get(V));
 }
 
-DbgRecord *DIBuilder::insertDbgValue(Value *Val, DILocalVariable *VarInfo,
-                                     DIExpression *Expr, const DILocation *DL,
-                                     InsertPosition InsertPt) {
+DbgInstPtr DIBuilder::insertDbgValueIntrinsic(llvm::Value *Val,
+                                              DILocalVariable *VarInfo,
+                                              DIExpression *Expr,
+                                              const DILocation *DL,
+                                              InsertPosition InsertPt) {
   DbgVariableRecord *DVR =
       DbgVariableRecord::createDbgVariableRecord(Val, VarInfo, Expr, DL);
   insertDbgVariableRecord(DVR, InsertPt);
   return DVR;
 }
 
-DbgRecord *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
+DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                     DIExpression *Expr, const DILocation *DL,
                                     InsertPosition InsertPt) {
   assert(VarInfo && "empty or invalid DILocalVariable* passed to dbg.declare");
@@ -1218,7 +1220,7 @@ DbgRecord *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
   return DVR;
 }
 
-DbgRecord *DIBuilder::insertDeclareValue(Value *Storage,
+DbgInstPtr DIBuilder::insertDeclareValue(Value *Storage,
                                          DILocalVariable *VarInfo,
                                          DIExpression *Expr,
                                          const DILocation *DL,
@@ -1273,7 +1275,7 @@ Instruction *DIBuilder::insertDbgIntrinsic(llvm::Function *IntrinsicFn,
   return B.CreateCall(IntrinsicFn, Args);
 }
 
-DbgRecord *DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
+DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
                                   InsertPosition InsertPt) {
   assert(LabelInfo && "empty or invalid DILabel* passed to dbg.label");
   assert(DL && "Expected debug loc");

@@ -15,7 +15,7 @@
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
-class ScriptedBreakpointInterface : virtual public ScriptedInterface {
+class ScriptedBreakpointInterface : public ScriptedInterface {
 public:
   virtual llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(const ScriptedMetadata &scripted_metadata,

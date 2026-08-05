@@ -965,7 +965,7 @@ static StringRef sanitizeFunctionName(StringRef funcName) {
 static DenseMap<StringRef, LibFunc>
 buildIndexMap(const llvm::StringTable &StandardNames) {
   DenseMap<StringRef, LibFunc> Indices;
-  unsigned Idx = 1; // 0 is NotLibFunc.
+  unsigned Idx = 0;
   Indices.reserve(LibFunc::NumLibFuncs);
   for (const auto &Func : StandardNames)
     Indices[Func] = static_cast<LibFunc>(Idx++);

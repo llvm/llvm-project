@@ -7,6 +7,8 @@ User Guide for the DirectX Target
    It is not yet feature complete or ready to be used outside of experimental or
    demonstration contexts.
 
+.. contents::
+   :local:
 
 .. toctree::
    :hidden:
@@ -16,7 +18,6 @@ User Guide for the DirectX Target
    DirectX/DXILOpTableGenDesign
    DirectX/DXILResources
    DirectX/RootSignatures
-   DirectX/SemanticSignatures
 
 Introduction
 ============

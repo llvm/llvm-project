@@ -2,6 +2,8 @@
 YAML I/O
 =====================
 
+.. contents::
+   :local:
 
 Introduction to YAML
 ====================

@@ -1,6 +1,6 @@
 add_custom_target(libc_sys_uio_unittests)
 
-add_libc_test(
+add_libc_unittest(
   writev_test
   SUITE
     libc_sys_uio_unittests
@@ -10,14 +10,14 @@ add_libc_test(
     libc.hdr.types.struct_iovec
     libc.src.__support.common
     libc.src.errno.errno
+    libc.src.fcntl.open
     libc.src.sys.uio.writev
     libc.src.unistd.close
-    libc.src.unistd.pipe
-    libc.src.unistd.read
+    libc.src.unistd.unlink
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   readv_test
   SUITE
     libc_sys_uio_unittests
@@ -27,9 +27,10 @@ add_libc_test(
     libc.hdr.types.struct_iovec
     libc.src.__support.common
     libc.src.errno.errno
+    libc.src.fcntl.open
     libc.src.sys.uio.readv
     libc.src.unistd.close
-    libc.src.unistd.pipe
+    libc.src.unistd.unlink
     libc.src.unistd.write
     libc.test.UnitTest.ErrnoSetterMatcher
 )

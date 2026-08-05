@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SizeOpts.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
@@ -34,15 +33,12 @@ protected:
   struct BFIData {
     std::unique_ptr<DominatorTree> DT;
     std::unique_ptr<LoopInfo> LI;
-    std::unique_ptr<CycleInfo> CI;
     std::unique_ptr<BranchProbabilityInfo> BPI;
     std::unique_ptr<BlockFrequencyInfo> BFI;
     BFIData(Function &F) {
       DT.reset(new DominatorTree(F));
       LI.reset(new LoopInfo(*DT));
-      CI.reset(new CycleInfo());
-      CI->compute(F);
-      BPI.reset(new BranchProbabilityInfo(F, *CI));
+      BPI.reset(new BranchProbabilityInfo(F, *LI));
       BFI.reset(new BlockFrequencyInfo(F, *BPI, *LI));
     }
     BlockFrequencyInfo *get() { return BFI.get(); }

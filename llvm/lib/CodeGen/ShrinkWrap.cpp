@@ -113,7 +113,7 @@ namespace {
 /// are safe for such insertion.
 class ShrinkWrapImpl {
   /// Hold callee-saved information.
-  const RegisterClassInfo *RCI = nullptr;
+  RegisterClassInfo RCI;
   MachineDominatorTree *MDT = nullptr;
   MachinePostDominatorTree *MPDT = nullptr;
 
@@ -224,6 +224,7 @@ class ShrinkWrapImpl {
 
   /// Initialize the pass for \p MF.
   void init(MachineFunction &MF) {
+    RCI.runOnMachineFunction(MF);
     Save = nullptr;
     Restore = nullptr;
     EntryFreq = MBFI->getEntryFreq();
@@ -244,11 +245,10 @@ class ShrinkWrapImpl {
   bool ArePointsInteresting() const { return Save != Entry && Save && Restore; }
 
 public:
-  ShrinkWrapImpl(const RegisterClassInfo *RCI, MachineDominatorTree *MDT,
-                 MachinePostDominatorTree *MPDT,
+  ShrinkWrapImpl(MachineDominatorTree *MDT, MachinePostDominatorTree *MPDT,
                  MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *MLI,
                  MachineOptimizationRemarkEmitter *ORE)
-      : RCI(RCI), MDT(MDT), MPDT(MPDT), MBFI(MBFI), MLI(MLI), ORE(ORE) {}
+      : MDT(MDT), MPDT(MPDT), MBFI(MBFI), MLI(MLI), ORE(ORE) {}
 
   /// Check if shrink wrapping is enabled for this target and function.
   static bool isShrinkWrapEnabled(const MachineFunction &MF);
@@ -269,7 +269,6 @@ public:
     AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<MachineOptimizationRemarkEmitterPass>();
-    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -297,7 +296,6 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
-INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(ShrinkWrapLegacy, DEBUG_TYPE, "Shrink Wrap Pass", false,
                     false)
 
@@ -359,7 +357,7 @@ bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
       // register. Until the FP is assigned a Physical Register PPC's FP needs
       // to be checked separately.
       UseOrDefCSR = (!MI.isCall() && PhysReg == SP) ||
-                    RCI->getLastCalleeSavedAlias(PhysReg) ||
+                    RCI.getLastCalleeSavedAlias(PhysReg) ||
                     (!MI.isReturn() &&
                      TRI->isNonallocatableRegisterCalleeSave(PhysReg)) ||
                     TRI->isVirtualFrameRegister(PhysReg);
@@ -1000,8 +998,6 @@ bool ShrinkWrapLegacy::runOnMachineFunction(MachineFunction &MF) {
       !ShrinkWrapImpl::isShrinkWrapEnabled(MF))
     return false;
 
-  const RegisterClassInfo *RCI =
-      &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   MachineDominatorTree *MDT =
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MachinePostDominatorTree *MPDT =
@@ -1012,7 +1008,7 @@ bool ShrinkWrapLegacy::runOnMachineFunction(MachineFunction &MF) {
   MachineOptimizationRemarkEmitter *ORE =
       &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
-  return ShrinkWrapImpl(RCI, MDT, MPDT, MBFI, MLI, ORE).run(MF);
+  return ShrinkWrapImpl(MDT, MPDT, MBFI, MLI, ORE).run(MF);
 }
 
 PreservedAnalyses ShrinkWrapPass::run(MachineFunction &MF,
@@ -1021,8 +1017,6 @@ PreservedAnalyses ShrinkWrapPass::run(MachineFunction &MF,
   if (MF.empty() || !ShrinkWrapImpl::isShrinkWrapEnabled(MF))
     return PreservedAnalyses::all();
 
-  const RegisterClassInfo &RCI =
-      MFAM.getResult<MachineRegisterClassAnalysis>(MF);
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachinePostDominatorTree &MPDT =
       MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);
@@ -1032,7 +1026,7 @@ PreservedAnalyses ShrinkWrapPass::run(MachineFunction &MF,
   MachineOptimizationRemarkEmitter &ORE =
       MFAM.getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
 
-  ShrinkWrapImpl(&RCI, &MDT, &MPDT, &MBFI, &MLI, &ORE).run(MF);
+  ShrinkWrapImpl(&MDT, &MPDT, &MBFI, &MLI, &ORE).run(MF);
   return PreservedAnalyses::all();
 }
 

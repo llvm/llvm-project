@@ -1,4 +1,0 @@
-__asan_*
-__lsan_*
-__ubsan_*
-__sancov_*

@@ -1,5 +1,8 @@
 # JITLink and ORC's ObjectLinkingLayer
 
+```{contents}
+:local: true
+```
 
 ## Introduction
 

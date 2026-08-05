@@ -1416,10 +1416,12 @@ static ObjCMethodDecl *findMethodInCurrentClass(Sema &S, Selector Sel) {
   return nullptr;
 }
 
-ExprResult SemaObjC::ParseObjCSelectorExpression(
-    Selector Sel, SourceLocation AtLoc, SourceLocation SelKWLoc,
-    SourceLocation SelNameLoc, SourceLocation LParenLoc,
-    SourceLocation RParenLoc, bool WarnMultipleSelectors) {
+ExprResult SemaObjC::ParseObjCSelectorExpression(Selector Sel,
+                                                 SourceLocation AtLoc,
+                                                 SourceLocation SelLoc,
+                                                 SourceLocation LParenLoc,
+                                                 SourceLocation RParenLoc,
+                                                 bool WarnMultipleSelectors) {
   ASTContext &Context = getASTContext();
   ObjCMethodDecl *Method = LookupInstanceMethodInGlobalPool(Sel,
                              SourceRange(LParenLoc, RParenLoc));
@@ -1431,13 +1433,12 @@ ExprResult SemaObjC::ParseObjCSelectorExpression(
       Selector MatchedSel = OM->getSelector();
       SourceRange SelectorRange(LParenLoc.getLocWithOffset(1),
                                 RParenLoc.getLocWithOffset(-1));
-      Diag(SelKWLoc, diag::warn_undeclared_selector_with_typo)
-          << Sel << MatchedSel
-          << FixItHint::CreateReplacement(SelectorRange,
-                                          MatchedSel.getAsString());
+      Diag(SelLoc, diag::warn_undeclared_selector_with_typo)
+        << Sel << MatchedSel
+        << FixItHint::CreateReplacement(SelectorRange, MatchedSel.getAsString());
 
     } else
-      Diag(SelKWLoc, diag::warn_undeclared_selector) << Sel;
+        Diag(SelLoc, diag::warn_undeclared_selector) << Sel;
   } else {
     DiagnoseMismatchedSelectors(SemaRef, AtLoc, Method, LParenLoc, RParenLoc,
                                 WarnMultipleSelectors);
@@ -1508,7 +1509,7 @@ ExprResult SemaObjC::ParseObjCSelectorExpression(
     }
   }
   QualType Ty = Context.getObjCSelType();
-  return new (Context) ObjCSelectorExpr(Ty, Sel, AtLoc, SelNameLoc, RParenLoc);
+  return new (Context) ObjCSelectorExpr(Ty, Sel, AtLoc, RParenLoc);
 }
 
 ExprResult SemaObjC::ParseObjCProtocolExpression(IdentifierInfo *ProtocolId,

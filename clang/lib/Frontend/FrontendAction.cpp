@@ -522,20 +522,18 @@ static SourceLocation ReadOriginalFileName(CompilerInstance &CI,
       return SourceLocation();
   }
 
-  RawLexer->LexIncludeFilename(T);
-  if (T.isAtStartOfLine() || T.getKind() != tok::header_name)
+  RawLexer->LexFromRawLexer(T);
+  if (T.isAtStartOfLine() || T.getKind() != tok::string_literal)
     return SourceLocation();
 
-  Preprocessor &PP = CI.getPreprocessor();
-  SmallString<128> HeaderNameBuffer;
-  StringRef HeaderName = PP.getSpelling(T, HeaderNameBuffer);
-  PP.GetLineDirectiveFilenameSpelling(T.getLocation(), HeaderName);
-
+  StringLiteralParser Literal(T, CI.getPreprocessor(),
+                              StringLiteralEvalMethod::Unevaluated);
+  if (Literal.hadError)
+    return SourceLocation();
   RawLexer->LexFromRawLexer(T);
   if (T.isNot(tok::eof) && !T.isAtStartOfLine())
     return SourceLocation();
-
-  InputFile = HeaderName.str();
+  InputFile = Literal.GetString().str();
 
   if (IsModuleMap)
     CI.getSourceManager().AddLineNote(

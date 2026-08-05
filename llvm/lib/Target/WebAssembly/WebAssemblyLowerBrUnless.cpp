@@ -18,11 +18,8 @@
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
-#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachinePassManager.h"
-#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -30,7 +27,7 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-lower-br_unless"
 
 namespace {
-class WebAssemblyLowerBrUnlessLegacy final : public MachineFunctionPass {
+class WebAssemblyLowerBrUnless final : public MachineFunctionPass {
   StringRef getPassName() const override {
     return "WebAssembly Lower br_unless";
   }
@@ -44,19 +41,19 @@ class WebAssemblyLowerBrUnlessLegacy final : public MachineFunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyLowerBrUnlessLegacy() : MachineFunctionPass(ID) {}
+  WebAssemblyLowerBrUnless() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyLowerBrUnlessLegacy::ID = 0;
-INITIALIZE_PASS(WebAssemblyLowerBrUnlessLegacy, DEBUG_TYPE,
+char WebAssemblyLowerBrUnless::ID = 0;
+INITIALIZE_PASS(WebAssemblyLowerBrUnless, DEBUG_TYPE,
                 "Lowers br_unless into inverted br_if", false, false)
 
-FunctionPass *llvm::createWebAssemblyLowerBrUnlessLegacyPass() {
-  return new WebAssemblyLowerBrUnlessLegacy();
+FunctionPass *llvm::createWebAssemblyLowerBrUnless() {
+  return new WebAssemblyLowerBrUnless();
 }
 
-static bool lowerBrUnless(MachineFunction &MF) {
+bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Lowering br_unless **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
@@ -209,16 +206,4 @@ static bool lowerBrUnless(MachineFunction &MF) {
   }
 
   return true;
-}
-
-bool WebAssemblyLowerBrUnlessLegacy::runOnMachineFunction(MachineFunction &MF) {
-  return lowerBrUnless(MF);
-}
-
-PreservedAnalyses
-WebAssemblyLowerBrUnlessPass::run(MachineFunction &MF,
-                                  MachineFunctionAnalysisManager &MFAM) {
-  return lowerBrUnless(MF) ? getMachineFunctionPassPreservedAnalyses()
-                                 .preserveSet<CFGAnalyses>()
-                           : PreservedAnalyses::all();
 }

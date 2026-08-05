@@ -2,6 +2,9 @@
 Scudo Hardened Allocator
 ========================
 
+.. contents::
+   :local:
+   :depth: 2
 
 Introduction
 ============

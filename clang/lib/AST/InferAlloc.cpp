@@ -27,9 +27,7 @@ typeContainsPointer(QualType T,
                     llvm::SmallPtrSet<const RecordDecl *, 4> &VisitedRD,
                     bool &IncompleteType) {
   QualType CanonicalType = T.getCanonicalType();
-  if (CanonicalType->isAnyPointerType() || CanonicalType->isReferenceType() ||
-      CanonicalType->isMemberFunctionPointerType() ||
-      CanonicalType->isBlockPointerType())
+  if (CanonicalType->isPointerType())
     return true; // base case
 
   // Look through typedef chain to check for special types.

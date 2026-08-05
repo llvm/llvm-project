@@ -276,9 +276,6 @@ public:
 
   SourceRange getSourceRange() const { return {getBeginLoc(), getEndLoc()}; }
 
-  void dump(ASTContext &Context) const;
-  void dump(llvm::raw_ostream &OS, ASTContext &Context) const;
-
 private:
   friend class Sema;
   static NormalizedConstraint *

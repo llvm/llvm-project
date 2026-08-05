@@ -1,5 +1,0 @@
-header: memory.h
-public_includes:
-  - string.h
-standards:
-  - posix

@@ -85,7 +85,7 @@ bool SBAddressRangeList::GetDescription(SBStream &description,
     if (is_first) {
       is_first = false;
     } else {
-      stream.PutCString(", ");
+      stream.Printf(", ");
     }
     GetAddressRangeAtIndex(i).GetDescription(description, target);
   }

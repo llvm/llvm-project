@@ -11,7 +11,6 @@
 
 #include "clang/Basic/Cuda.h"
 #include "clang/Driver/Driver.h"
-#include "llvm/TargetParser/NVPTXTargetParser.h"
 #include <bitset>
 
 namespace clang {
@@ -29,9 +28,9 @@ private:
   std::string IncludePath;
   llvm::StringMap<std::string> LibDeviceMap;
 
-  // NVIDIA architectures (indexed by GPUKind) for which we have raised an error
-  // in CheckCudaVersionSupportsArch.
-  mutable std::bitset<llvm::NVPTX::GK_LAST + 1> ArchsWithBadVersion;
+  // CUDA architectures for which we have raised an error in
+  // CheckCudaVersionSupportsArch.
+  mutable std::bitset<(int)OffloadArch::LAST> ArchsWithBadVersion;
 
 public:
   CudaInstallationDetector(const Driver &D, const llvm::Triple &HostTriple,

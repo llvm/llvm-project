@@ -124,10 +124,10 @@ UnsignedOrNone Program::getOrCreateGlobal(const ValueDecl *VD,
   return std::nullopt;
 }
 
-unsigned Program::getOrCreateDummy(DeclOrExpr D, bool IsConstexprUnknown) {
+unsigned Program::getOrCreateDummy(DeclTy D, bool IsConstexprUnknown) {
   assert(D);
 
-  if (const auto *VD = D.asVarDecl())
+  if (const auto *VD = dyn_cast_if_present<VarDecl>(dyn_cast<const Decl *>(D)))
     D = VD->getFirstDecl();
 
   // Dedup blocks since they are immutable and pointers cannot be compared.
@@ -137,10 +137,10 @@ unsigned Program::getOrCreateDummy(DeclOrExpr D, bool IsConstexprUnknown) {
 
   QualType QT;
   bool IsWeak = false;
-  if (const auto *E = D.asExpr()) {
+  if (const auto *E = dyn_cast<const Expr *>(D)) {
     QT = E->getType();
   } else {
-    const auto *VD = D.asValueDecl();
+    const auto *VD = cast<ValueDecl>(cast<const Decl *>(D));
     IsWeak = VD->isWeak();
     QT = VD->getType();
     if (QT->isPointerOrReferenceType())
@@ -250,8 +250,8 @@ UnsignedOrNone Program::createGlobal(const Expr *E, QualType ExprType) {
   return std::nullopt;
 }
 
-UnsignedOrNone Program::createGlobal(DeclOrExpr D, QualType Ty, bool IsStatic,
-                                     bool IsExtern, bool IsWeak,
+UnsignedOrNone Program::createGlobal(const DeclTy &D, QualType Ty,
+                                     bool IsStatic, bool IsExtern, bool IsWeak,
                                      bool IsConstexprUnknown,
                                      const Expr *Init) {
   // Since this global variable is constexpr-unknown and a reference, register
@@ -263,7 +263,7 @@ UnsignedOrNone Program::createGlobal(DeclOrExpr D, QualType Ty, bool IsStatic,
   // Create a descriptor for the global.
   Descriptor *Desc;
   const bool IsConst = Ty.isConstQualified();
-  const bool IsTemporary = D.isExpr();
+  const bool IsTemporary = D.dyn_cast<const Expr *>();
   const bool IsVolatile = Ty.isVolatileQualified();
   if (OptPrimType T = Ctx.classify(Ty))
     Desc = createDescriptor(D, *T, nullptr, Descriptor::GlobalMD, IsConst,
@@ -412,7 +412,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   return R;
 }
 
-Descriptor *Program::createDescriptor(DeclOrExpr D, const Type *Ty,
+Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                                       Descriptor::MetadataSize MDSize,
                                       bool IsConst, bool IsTemporary,
                                       bool IsMutable, bool IsVolatile,

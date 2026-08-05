@@ -6,18 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 #include "include/llvm-libc-macros/math-function-macros.h"
-#include "test/UnitTest/LibcCTest.h"
+
+#include <assert.h>
 
 // check if macro is defined
 #ifndef iszero
 #error "iszero macro is not defined"
 #else
-TEST(iszero) {
-  EXPECT_TRUE(iszero(1.0f) == 0);
-  EXPECT_TRUE(iszero(1.0) == 0);
-  EXPECT_TRUE(iszero(1.0L) == 0);
-  EXPECT_TRUE(iszero(0.0f) == 1);
-  EXPECT_TRUE(iszero(0.0) == 1);
-  EXPECT_TRUE(iszero(0.0L) == 1);
+int main(void) {
+  assert(iszero(1.0f) == 0);
+  assert(iszero(1.0) == 0);
+  assert(iszero(1.0L) == 0);
+  assert(iszero(0.0f) == 1);
+  assert(iszero(0.0) == 1);
+  assert(iszero(0.0L) == 1);
+  return 0;
 }
 #endif

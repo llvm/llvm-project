@@ -1,17 +1,7 @@
 # There is no difference between input and output speeds on Linux.
 # However, since POSIX requires separate functions for setting and getting
-# of the input and output speeds, we use different entrypoints with the
+# of the input and output speeds, we use different entrypoints wiht the
 # same getter/setter logic.
-
-add_header_library(
-  speed_utils
-  HDRS
-    speed_utils.h
-  DEPENDS
-    libc.hdr.termios_macros
-    libc.hdr.types.speed_t
-)
-
 add_entrypoint_object(
   cfgetispeed
   SRCS
@@ -19,9 +9,7 @@ add_entrypoint_object(
   HDRS
     ../cfgetispeed.h
   DEPENDS
-    libc.hdr.types.speed_t
-    libc.hdr.types.struct_termios
-    libc.src.__support.macros.null_check
+    libc.include.termios
 )
 
 add_entrypoint_object(
@@ -31,11 +19,8 @@ add_entrypoint_object(
   HDRS
     ../cfsetispeed.h
   DEPENDS
-    .speed_utils
-    libc.hdr.types.speed_t
-    libc.hdr.types.struct_termios
+    libc.include.termios
     libc.src.errno.errno
-    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -45,9 +30,7 @@ add_entrypoint_object(
   HDRS
     ../cfgetospeed.h
   DEPENDS
-    libc.hdr.types.speed_t
-    libc.hdr.types.struct_termios
-    libc.src.__support.macros.null_check
+    libc.include.termios
 )
 
 add_entrypoint_object(
@@ -57,11 +40,8 @@ add_entrypoint_object(
   HDRS
     ../cfsetospeed.h
   DEPENDS
-    .speed_utils
-    libc.hdr.types.speed_t
-    libc.hdr.types.struct_termios
+    libc.include.termios
     libc.src.errno.errno
-    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -71,7 +51,7 @@ add_entrypoint_object(
   HDRS
     ../tcgetsid.h
   DEPENDS
-    libc.hdr.types.pid_t
+    libc.include.termios
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
@@ -83,6 +63,7 @@ add_entrypoint_object(
   HDRS
     ../tcdrain.h
   DEPENDS
+    libc.include.termios
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
@@ -94,7 +75,7 @@ add_entrypoint_object(
   HDRS
     ../tcflush.h
   DEPENDS
-    libc.hdr.termios_macros
+    libc.include.termios
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
@@ -106,7 +87,7 @@ add_entrypoint_object(
   HDRS
     ../tcflow.h
   DEPENDS
-    libc.hdr.termios_macros
+    libc.include.termios
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
@@ -118,6 +99,7 @@ add_entrypoint_object(
   HDRS
     ../tcsendbreak.h
   DEPENDS
+    libc.include.termios
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
@@ -126,9 +108,6 @@ add_header_library(
   kernel_termios
   HDRS
     kernel_termios.h
-  DEPENDS
-    libc.hdr.types.cc_t
-    libc.hdr.types.tcflag_t
 )
 
 add_entrypoint_object(
@@ -139,12 +118,9 @@ add_entrypoint_object(
     ../tcgetattr.h
   DEPENDS
     .kernel_termios
-    .speed_utils
-    libc.hdr.termios_macros
-    libc.hdr.types.struct_termios
+    libc.include.termios
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
-    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -155,10 +131,7 @@ add_entrypoint_object(
     ../tcsetattr.h
   DEPENDS
     .kernel_termios
-    .speed_utils
-    libc.hdr.termios_macros
-    libc.hdr.types.struct_termios
+    libc.include.termios
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
-    libc.src.__support.macros.null_check
 )

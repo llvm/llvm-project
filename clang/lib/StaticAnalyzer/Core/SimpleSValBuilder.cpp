@@ -861,7 +861,7 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
 
     // If one of the operands is a symbol and the other is a constant,
     // build an expression for use by the constraint manager.
-    if (SymbolRef rSym = rhs.getAsLocSymbol(true)) {
+    if (SymbolRef rSym = rhs.getAsLocSymbol()) {
       if (op == BO_Cmp)
         return UnknownVal();
 

@@ -6,8 +6,7 @@ STRING_EXTENSION_OUTSIDE(SBInstructionList)
         def __iter__(self):
             '''Iterate over all instructions in a lldb.SBInstructionList
             object.'''
-            for i in range(self.GetSize()):
-                yield self.GetInstructionAtIndex(i)
+            return lldb_iter(self, 'GetSize', 'GetInstructionAtIndex')
 
         def __len__(self):
             '''Access len of the instruction list.'''

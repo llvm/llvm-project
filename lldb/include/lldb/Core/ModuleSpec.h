@@ -224,7 +224,7 @@ public:
     if (m_arch.IsValid()) {
       if (dumped_something)
         strm.PutCString(", ");
-      strm.PutCString("arch = ");
+      strm.Printf("arch = ");
       m_arch.DumpTriple(strm.AsRawOstream());
       dumped_something = true;
     }

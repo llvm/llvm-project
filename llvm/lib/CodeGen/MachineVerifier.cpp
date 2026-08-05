@@ -731,19 +731,12 @@ void MachineVerifier::visitMachineFunctionBefore() {
   }
 }
 
-static bool hasPHIs(const MachineFunction &MF) {
-  return !MF.getProperties().hasNoPHIs() &&
-         any_of(MF, [](const MachineBasicBlock &MBB) {
-           return !MBB.phis().empty();
-         });
-}
-
 void
 MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   FirstTerminator = nullptr;
   FirstNonPHI = nullptr;
 
-  if (MRI->tracksLiveness() && hasPHIs(*MF)) {
+  if (!MF->getProperties().hasNoPHIs() && MRI->tracksLiveness()) {
     // If this block has allocatable physical registers live-in, check that
     // it is an entry block or landing pad.
     for (const auto &LI : MBB->liveins()) {
@@ -2367,7 +2360,7 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     if (!MI->getOperand(0).isReg() || !MI->getOperand(0).isDef())
       report("Unspillable Terminator does not define a reg", MI);
     Register Def = MI->getOperand(0).getReg();
-    if (Def.isVirtual() && hasPHIs(*MF) &&
+    if (Def.isVirtual() && !MF->getProperties().hasNoPHIs() &&
         std::distance(MRI->use_nodbg_begin(Def), MRI->use_nodbg_end()) > 1)
       report("Unspillable Terminator expected to have at most one use!", MI);
   }

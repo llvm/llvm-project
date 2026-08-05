@@ -1,8 +1,0 @@
-node_modules/
-src/
-bindings/
-binding.gyp
-Cargo.toml
-Cargo.lock
-target/
-build/

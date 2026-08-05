@@ -46,9 +46,6 @@ public:
   /// contains the set of assigned registers corresponding to the operand.
   SmallVector<Register, 1> Regs;
 
-  /// The register class selected for this operand's constraint.
-  const TargetRegisterClass *RegClass = nullptr;
-
   explicit GISelAsmOperandInfo(const TargetLowering::AsmOperandInfo &Info)
       : TargetLowering::AsmOperandInfo(Info) {}
 };
@@ -115,7 +112,6 @@ static void getRegistersForValue(MachineFunction &MF,
   // RC is unset only on failure. Return immediately.
   if (!RC)
     return;
-  OpInfo.RegClass = RC;
 
   // No need to allocate a matching input constraint since the constraint it's
   // matching to has already been allocated.
@@ -223,7 +219,7 @@ static bool buildAnyextOrCopy(Register Dst, Register Src,
                            "destination register class\n");
       return false;
     }
-    Src = MIRBuilder.buildAnyExt(LLT::integer(DstSize), Src).getReg(0);
+    Src = MIRBuilder.buildAnyExt(LLT::scalar(DstSize), Src).getReg(0);
   }
 
   MIRBuilder.buildCopy(Dst, Src);
@@ -429,14 +425,14 @@ bool InlineAsmLowering::lowerInlineAsm(
         // We need the tied input to live in the same register class as the def.
         //
         // - if Def is a vreg, we can just use its regclass.
-        // - if Def is a physreg, create a vreg in the regclass selected for its
-        //   constraint.
+        // - if Def is a physreg, create a vreg in the minimal regclass for that
+        //   physreg.
         //
         // Otherwise RegBankSelect may leave it in the wrong bank (e.g. GPR even
         // though it's tied to an FP physreg).
-        const TargetRegisterClass *RC =
-            Def.isVirtual() ? MRI->getRegClass(Def) : OpInfo.RegClass;
-        assert(RC && "Expected a register class for matching constraint");
+        const TargetRegisterClass *RC = Def.isVirtual()
+                                            ? MRI->getRegClass(Def)
+                                            : TRI->getMinimalPhysRegClass(Def);
 
         // Materialize `In` in a new vreg that has a register class that matches
         // the register class of `Def`.
@@ -640,9 +636,11 @@ bool InlineAsmLowering::lowerInlineAsm(
       if (ResTy.isScalar() && ResTy.getSizeInBits() < SrcSize) {
         // First copy the non-typed virtual register into a generic virtual
         // register
-        auto Copy = MIRBuilder.buildCopy(LLT::integer(SrcSize), SrcReg);
+        Register Tmp1Reg =
+            MRI->createGenericVirtualRegister(LLT::scalar(SrcSize));
+        MIRBuilder.buildCopy(Tmp1Reg, SrcReg);
         // Need to truncate the result of the register
-        MIRBuilder.buildTrunc(ResRegs[i], Copy);
+        MIRBuilder.buildTrunc(ResRegs[i], Tmp1Reg);
       } else if (ResTy.getSizeInBits() == SrcSize) {
         MIRBuilder.buildCopy(ResRegs[i], SrcReg);
       } else {

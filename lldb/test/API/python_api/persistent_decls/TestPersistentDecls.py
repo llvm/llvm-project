@@ -6,11 +6,9 @@ and values.
 
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
-from lldbsuite.test.decorators import skipIfWasm
 from lldbsuite.test.lldbtest import *
 
 
-@skipIfWasm  # no expression evaluation
 class TestPersistentDecls(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

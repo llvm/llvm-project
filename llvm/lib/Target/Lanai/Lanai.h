@@ -37,7 +37,7 @@ FunctionPass *createLanaiISelDagLegacyPass(LanaiTargetMachine &TM);
 // createLanaiDelaySlotFillerPass - This pass fills delay slots
 // with useful instructions or nop's
 class LanaiDelaySlotFillerPass
-    : public RequiredPassInfoMixin<LanaiDelaySlotFillerPass> {
+    : public PassInfoMixin<LanaiDelaySlotFillerPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
@@ -48,8 +48,7 @@ createLanaiDelaySlotFillerLegacyPass(const LanaiTargetMachine &TM);
 
 // createLanaiMemAluCombinerPass - This pass combines loads/stores and
 // arithmetic operations.
-class LanaiMemAluCombinerPass
-    : public RequiredPassInfoMixin<LanaiMemAluCombinerPass> {
+class LanaiMemAluCombinerPass : public PassInfoMixin<LanaiMemAluCombinerPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

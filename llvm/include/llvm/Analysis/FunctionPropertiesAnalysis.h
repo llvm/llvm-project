@@ -185,7 +185,7 @@ public:
 
 /// Statistics pass for the FunctionPropertiesAnalysis results.
 class FunctionPropertiesStatisticsPass
-    : public RequiredPassInfoMixin<FunctionPropertiesStatisticsPass> {
+    : public PassInfoMixin<FunctionPropertiesStatisticsPass> {
   bool IsPreOptimization;
 
 public:

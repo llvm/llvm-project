@@ -237,25 +237,19 @@ export class LLDBDapConfigurationProvider
         }
 
         if (os.platform() === "win32") {
-          const lldbDapProcess = child_process.spawnSync(
+          const pythonCheckProcess = child_process.spawnSync(
             executable.command,
-            ["--help"],
+            ["--check-python"],
           );
-          if (lldbDapProcess.stdout?.toString().includes("--check-python")) {
-            const pythonCheckProcess = child_process.spawnSync(
-              executable.command,
-              ["--check-python"],
+          if (pythonCheckProcess.status !== 0) {
+            await vscode.window.showErrorMessage(
+              "Python is not installed correctly. Please install it to use lldb-dap.",
+              {
+                modal: true,
+                detail: pythonCheckProcess.stderr?.toString() ?? "",
+              },
             );
-            if (pythonCheckProcess.status !== 0) {
-              await vscode.window.showErrorMessage(
-                "Python is not installed correctly. Please install it to use lldb-dap.",
-                {
-                  modal: true,
-                  detail: pythonCheckProcess.stderr?.toString() ?? "",
-                },
-              );
-              return undefined;
-            }
+            return undefined;
           }
         }
 

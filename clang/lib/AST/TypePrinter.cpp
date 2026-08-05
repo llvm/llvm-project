@@ -288,7 +288,6 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::MacroQualified:
     case Type::OverflowBehavior:
     case Type::CountAttributed:
-    case Type::LateParsedAttr:
       CanPrefixQualifiers = false;
       break;
 
@@ -1396,7 +1395,7 @@ void TypePrinter::printUnaryTransformBefore(const UnaryTransformType *T,
   static const llvm::DenseMap<int, const char *> Transformation = {{
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
   {UnaryTransformType::Enum, "__" #Trait},
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/TransformTypeTraits.def"
   }};
   OS << Transformation.lookup(T->getUTTKind()) << '(';
   print(T->getBaseType(), OS, StringRef());
@@ -1858,20 +1857,6 @@ void TypePrinter::printCountAttributedAfter(const CountAttributedType *T,
     printCountAttributedImpl(T, OS, Policy);
 }
 
-void TypePrinter::printLateParsedAttrBefore(const LateParsedAttrType *T,
-                                            raw_ostream &OS) {
-  // LateParsedAttrType is a transient placeholder that should not appear
-  // in user-facing output. Just print the wrapped type.
-  printBefore(T->getWrappedType(), OS);
-}
-
-void TypePrinter::printLateParsedAttrAfter(const LateParsedAttrType *T,
-                                           raw_ostream &OS) {
-  // LateParsedAttrType is a transient placeholder that should not appear
-  // in user-facing output. Just print the wrapped type.
-  printAfter(T->getWrappedType(), OS);
-}
-
 void TypePrinter::printAttributedBefore(const AttributedType *T,
                                         raw_ostream &OS) {
   // FIXME: Generate this with TableGen.
@@ -2031,7 +2016,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::HLSLIsCounter:
   case attr::HLSLResourceDimension:
   case attr::HLSLIsArray:
-  case attr::HLSLIsMultiSampled:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
   case attr::OpenCLPrivateAddressSpace:
@@ -2213,8 +2197,6 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     OS << " [[hlsl::is_counter]]";
   if (Attrs.IsArray)
     OS << " [[hlsl::is_array]]";
-  if (Attrs.IsMultiSampled)
-    OS << " [[hlsl::is_ms]]";
 
   QualType ContainedTy = T->getContainedType();
   if (!ContainedTy.isNull()) {
@@ -2766,8 +2748,6 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "hlsl_push_constant";
   case LangAS::wasm_funcref:
     return "__funcref";
-  case LangAS::amdgpu_barrier:
-    return "amdgpu_barrier";
   default:
     return std::to_string(toTargetAddressSpace(AS));
   }

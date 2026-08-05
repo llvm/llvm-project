@@ -18,19 +18,10 @@ endfunction(llvm_replace_compiler_option)
 
 macro(add_td_sources srcs)
   file(GLOB tds *.td)
-  # Explicit existence check is necessary to filter dangling symlinks out
-  # (e.g. editor lock files such as Emacs' `.#foo.td`), as also done in
-  # add_header_files_for_glob below.
-  set(existing_tds)
-  foreach(td ${tds})
-    if(EXISTS ${td})
-      list(APPEND existing_tds ${td})
-    endif()
-  endforeach()
-  if( existing_tds )
-    source_group("TableGen descriptions" FILES ${existing_tds})
-    set_source_files_properties(${existing_tds} PROPERTIES HEADER_FILE_ONLY ON)
-    list(APPEND ${srcs} ${existing_tds})
+  if( tds )
+    source_group("TableGen descriptions" FILES ${tds})
+    set_source_files_properties(${tds} PROPERTIES HEADER_FILE_ONLY ON)
+    list(APPEND ${srcs} ${tds})
   endif()
 endmacro(add_td_sources)
 

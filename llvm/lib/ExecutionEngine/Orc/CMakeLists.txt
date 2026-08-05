@@ -10,7 +10,6 @@ add_llvm_component_library(LLVMOrcJIT
   AbsoluteSymbols.cpp
   BacktraceTools.cpp
   COFF.cpp
-  COFFAutoImportGenerator.cpp
   COFFVCRuntimeSupport.cpp
   COFFPlatform.cpp
   CompileOnDemandLayer.cpp

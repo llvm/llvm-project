@@ -2,7 +2,7 @@
 
 ; CHECK: if.end{{.*}}:
 ; CHECK-NOT: if.end{{.*}}:
-declare i32 @__gxx_wasm_personality_v0(ptr)
+declare i32 @__gxx_wasm_personality_v0(...)
 
 declare void @foo()
 
@@ -30,3 +30,4 @@ catch:                                            ; preds = %catch.dispatch
 cleanup:                                          ; preds = %invoke.cont
   br label %while.body
 }
+

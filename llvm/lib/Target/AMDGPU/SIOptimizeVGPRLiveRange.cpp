@@ -79,7 +79,6 @@
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
@@ -163,6 +162,8 @@ public:
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addPreserved<LiveVariablesWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -491,12 +492,15 @@ void SIOptimizeVGPRLiveRange::updateLiveRangeInElseRegion(
   }
 
   // Transfer the possible Kills in ElseBlocks from Reg to NewReg
-  llvm::erase_if(OldVarInfo.Kills, [&](MachineInstr *MI) {
-    if (!ElseBlocks.contains(MI->getParent()))
-      return false;
-    NewVarInfo.Kills.push_back(MI);
-    return true;
-  });
+  auto I = OldVarInfo.Kills.begin();
+  while (I != OldVarInfo.Kills.end()) {
+    if (ElseBlocks.contains((*I)->getParent())) {
+      NewVarInfo.Kills.push_back(*I);
+      I = OldVarInfo.Kills.erase(I);
+    } else {
+      ++I;
+    }
+  }
 }
 
 void SIOptimizeVGPRLiveRange::optimizeLiveRange(
@@ -658,6 +662,8 @@ SIOptimizeVGPRLiveRangePass::run(MachineFunction &MF,
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<LiveVariablesAnalysis>();
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<MachineLoopAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

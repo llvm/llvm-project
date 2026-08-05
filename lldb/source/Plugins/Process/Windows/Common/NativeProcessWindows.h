@@ -182,8 +182,6 @@ private:
   /// launch / attach.
   bool m_initial_stop_seen = false;
 
-  bool m_expecting_loader_int3 = false;
-
   /// Set when Halt() / Interrupt() schedules a DebugBreakProcess injection.
   bool m_pending_halt = false;
 

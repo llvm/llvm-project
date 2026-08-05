@@ -7,7 +7,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-@skipIfWasm  # assert() ends a WASI process, there is no signal to stop on
 class AssertingInferiorTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],

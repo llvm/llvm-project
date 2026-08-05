@@ -39,7 +39,6 @@
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 
-#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 
@@ -334,10 +333,6 @@ void SymbolFileDWARF::Terminate() {
 
 llvm::StringRef SymbolFileDWARF::GetPluginDescriptionStatic() {
   return "DWARF and DWARF3 debug symbol file reader.";
-}
-
-llvm::StringRef SymbolFileDWARF::GetDwoDiagnosticSuffix() {
-  return LLDB_DWO_DIAGNOSTIC_SUFFIX;
 }
 
 SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFileSP objfile_sp) {
@@ -1923,14 +1918,13 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     }
     unit.SetDwoError(Status::FromErrorStringWithFormatv(
         "unable to locate .dwo debug file \"{0}\" for skeleton DIE "
-        "{1:x16}. {2}",
-        error_dwo_path.GetPath().c_str(), cu_die.GetOffset(),
-        GetDwoDiagnosticSuffix()));
+        "{1:x16}",
+        error_dwo_path.GetPath().c_str(), cu_die.GetOffset()));
 
     if (m_dwo_warning_issued.test_and_set(std::memory_order_relaxed) == false) {
       GetObjectFile()->GetModule()->ReportWarning(
-          "unable to locate separate debug file (dwo, dwp). {0}",
-          GetDwoDiagnosticSuffix());
+          "unable to locate separate debug file (dwo, dwp). Debugging will be "
+          "degraded");
     }
     return nullptr;
   }

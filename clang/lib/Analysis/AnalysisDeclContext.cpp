@@ -36,7 +36,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
@@ -425,8 +424,15 @@ const StackFrame *StackFrameManager::getStackFrame(
 //===----------------------------------------------------------------------===//
 
 bool StackFrame::isParentOf(const StackFrame *SF) const {
-  return llvm::any_of(SF->parents(),
-                      [this](const StackFrame &A) { return &A == this; });
+  do {
+    const StackFrame *Parent = SF->getParent();
+    if (Parent == this)
+      return true;
+    else
+      SF = Parent;
+  } while (SF);
+
+  return false;
 }
 
 static void printLocation(raw_ostream &Out, const SourceManager &SM,
@@ -445,13 +451,15 @@ void StackFrame::dumpStack(raw_ostream &Out) const {
   const SourceManager &SM =
       getAnalysisDeclContext()->getASTContext().getSourceManager();
 
-  for (auto [Idx, SF] : llvm::enumerate(parentsIncludingSelf())) {
-    Out << "\t#" << Idx << ' ';
-    if (const auto *D = dyn_cast<NamedDecl>(SF.getDecl()))
+  unsigned Frame = 0;
+  for (const StackFrame *SF = this; SF; SF = SF->getParent()) {
+    Out << "\t#" << Frame << ' ';
+    ++Frame;
+    if (const auto *D = dyn_cast<NamedDecl>(SF->getDecl()))
       Out << "Calling " << AnalysisDeclContext::getFunctionName(D);
     else
       Out << "Calling anonymous code";
-    if (const Expr *E = SF.getCallSite()) {
+    if (const Expr *E = SF->getCallSite()) {
       Out << " at line ";
       printLocation(Out, SM, E->getBeginLoc());
     }
@@ -469,17 +477,19 @@ void StackFrame::printJson(
   const SourceManager &SM =
       getAnalysisDeclContext()->getASTContext().getSourceManager();
 
-  for (auto [Idx, SF] : llvm::enumerate(parentsIncludingSelf())) {
+  unsigned Frame = 0;
+  for (const StackFrame *SF = this; SF; SF = SF->getParent()) {
     Indent(Out, Space, IsDot)
-        << "{ \"lctx_id\": " << SF.getID() << ", \"location_context\": \"";
-    Out << '#' << Idx << " Call\", \"calling\": \"";
-    if (const auto *D = dyn_cast<NamedDecl>(SF.getDecl()))
+        << "{ \"lctx_id\": " << SF->getID() << ", \"location_context\": \"";
+    Out << '#' << Frame << " Call\", \"calling\": \"";
+    ++Frame;
+    if (const auto *D = dyn_cast<NamedDecl>(SF->getDecl()))
       Out << D->getQualifiedNameAsString();
     else
       Out << "anonymous code";
 
     Out << "\", \"location\": ";
-    if (const Expr *E = SF.getCallSite()) {
+    if (const Expr *E = SF->getCallSite()) {
       printSourceLocationAsJson(Out, E->getBeginLoc(), SM);
     } else {
       Out << "null";
@@ -487,10 +497,10 @@ void StackFrame::printJson(
 
     Out << ", \"items\": ";
 
-    printMoreInfoPerStackFrame(&SF);
+    printMoreInfoPerStackFrame(SF);
 
     Out << '}';
-    if (SF.getParent())
+    if (SF->getParent())
       Out << ',';
     Out << NL;
   }

@@ -4,13 +4,11 @@ source_set("Basic") {
     "//llvm/lib/TableGen",
   ]
   sources = [
-    "AMDGPUTargetDefEmitter.cpp",
     "ARMTargetDefEmitter.cpp",
     "Attributes.cpp",
     "CodeGenIntrinsics.cpp",
     "DirectiveEmitter.cpp",
     "IntrinsicEmitter.cpp",
-    "PredicateExpanderDag.cpp",
     "RISCVTargetDefEmitter.cpp",
     "RuntimeLibcalls.cpp",
     "RuntimeLibcallsEmitter.cpp",

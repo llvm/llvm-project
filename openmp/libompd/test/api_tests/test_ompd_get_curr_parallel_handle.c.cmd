@@ -1,3 +1,0 @@
-ompd init
-b test_ompd_get_curr_parallel_handle.c:11
-ompdtestapi ompd_get_curr_parallel_handle

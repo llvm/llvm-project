@@ -1,4 +1,0 @@
-ompd init
-b test_ompd_parallel_handle_compare.c:14
-c
-ompdtestapi ompd_parallel_handle_compare

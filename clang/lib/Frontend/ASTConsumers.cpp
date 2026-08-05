@@ -99,7 +99,6 @@ namespace {
       } else if (OutputKind == Print) {
         PrintingPolicy Policy(D->getASTContext().getLangOpts());
         Policy.IncludeTagDefinition = true;
-        Policy.PrettyEnums = false;
         D->print(Out, Policy, /*Indentation=*/0, /*PrintInstantiation=*/true);
       } else if (OutputKind != None) {
         D->dump(Out, OutputKind == DumpFull, OutputFormat);

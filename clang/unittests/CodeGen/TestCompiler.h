@@ -33,21 +33,17 @@ struct TestCompiler {
   unsigned PtrSize = 0;
 
   TestCompiler(clang::LangOptions LO,
-               clang::CodeGenOptions CGO = clang::CodeGenOptions(),
-               llvm::StringRef TripleStr = "") {
+               clang::CodeGenOptions CGO = clang::CodeGenOptions()) {
     compiler.getLangOpts() = LO;
     compiler.getCodeGenOpts() = CGO;
     compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
     compiler.createDiagnostics();
 
-    llvm::Triple Tr(TripleStr.empty()
-                        ? llvm::Triple::normalize(llvm::sys::getProcessTriple())
-                        : llvm::Triple::normalize(TripleStr));
-    if (TripleStr.empty()) {
-      Tr.setOS(Triple::Linux);
-      Tr.setVendor(Triple::VendorType::UnknownVendor);
-      Tr.setEnvironment(Triple::EnvironmentType::UnknownEnvironment);
-    }
+    std::string TrStr = llvm::Triple::normalize(llvm::sys::getProcessTriple());
+    llvm::Triple Tr(TrStr);
+    Tr.setOS(Triple::Linux);
+    Tr.setVendor(Triple::VendorType::UnknownVendor);
+    Tr.setEnvironment(Triple::EnvironmentType::UnknownEnvironment);
     compiler.getTargetOpts().Triple = Tr.getTriple();
     compiler.setTarget(clang::TargetInfo::CreateTargetInfo(
         compiler.getDiagnostics(), compiler.getTargetOpts()));

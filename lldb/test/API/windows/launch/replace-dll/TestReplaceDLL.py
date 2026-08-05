@@ -10,7 +10,7 @@ import os
 class ReplaceDllTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
 
-    @requireWindows
+    @skipUnlessWindows
     def test(self):
         """
         Test that LLDB unlocks module files once all references are released.

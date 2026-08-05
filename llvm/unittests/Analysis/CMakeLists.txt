@@ -34,6 +34,7 @@ set(ANALYSIS_TEST_SOURCES
   FunctionPropertiesAnalysisTest.cpp
   InlineCostTest.cpp
   IR2VecTest.cpp
+  IRSimilarityIdentifierTest.cpp
   IVDescriptorsTest.cpp
   LastRunTrackingAnalysisTest.cpp
   LazyCallGraphTest.cpp

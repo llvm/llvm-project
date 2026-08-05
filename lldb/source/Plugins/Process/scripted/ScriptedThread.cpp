@@ -11,7 +11,6 @@
 
 #include "Plugins/Process/Utility/RegisterContextThreadMemory.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
-#include "lldb/Core/Debugger.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -70,8 +69,11 @@ ScriptedThread::Create(ScriptedProcess &process,
   auto obj_or_err = scripted_thread_interface->CreatePluginObject(
       thread_metadata, exe_ctx, script_object);
 
-  if (!obj_or_err)
-    return obj_or_err.takeError();
+  if (!obj_or_err) {
+    llvm::consumeError(obj_or_err.takeError());
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to create script object.");
+  }
 
   StructuredData::GenericSP owned_script_object_sp = *obj_or_err;
 
@@ -268,15 +270,14 @@ bool ScriptedThread::LoadArtificialStackFrames() {
       auto frame_from_script_obj_or_err = create_frame_from_script_object(idx);
 
       if (!frame_from_script_obj_or_err) {
-        llvm::consumeError(frame_from_dict_or_err.takeError());
-        Debugger::ReportError(
-            llvm::formatv(
-                "couldn't add artificial frame ({0}) to ScriptedThread "
-                "StackFrameList: {1}",
-                idx, llvm::toString(frame_from_script_obj_or_err.takeError()))
+        return ScriptedInterface::ErrorWithMessage<bool>(
+            LLVM_PRETTY_FUNCTION,
+            llvm::Twine(
+                "Couldn't add artificial frame (" + llvm::Twine(idx) +
+                llvm::Twine(") to ScriptedThread StackFrameList: ") +
+                llvm::toString(frame_from_script_obj_or_err.takeError()))
                 .str(),
-            GetProcess()->GetTarget().GetDebugger().GetID());
-        return false;
+            error, LLDBLog::Thread);
       } else {
         llvm::consumeError(frame_from_dict_or_err.takeError());
         synth_frame_sp = *frame_from_script_obj_or_err;

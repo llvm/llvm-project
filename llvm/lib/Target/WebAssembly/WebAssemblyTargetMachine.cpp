@@ -103,22 +103,22 @@ LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyAsmPrinterPass(PR);
   initializeWebAssemblySetP2AlignOperandsLegacyPass(PR);
   initializeWebAssemblyReplacePhysRegsLegacyPass(PR);
-  initializeWebAssemblyOptimizeLiveIntervalsLegacyPass(PR);
-  initializeWebAssemblyMemIntrinsicResultsLegacyPass(PR);
-  initializeWebAssemblyRegStackifyLegacyPass(PR);
-  initializeWebAssemblyRegColoringLegacyPass(PR);
+  initializeWebAssemblyOptimizeLiveIntervalsPass(PR);
+  initializeWebAssemblyMemIntrinsicResultsPass(PR);
+  initializeWebAssemblyRegStackifyPass(PR);
+  initializeWebAssemblyRegColoringPass(PR);
   initializeWebAssemblyNullifyDebugValueListsLegacyPass(PR);
   initializeWebAssemblyFixIrreducibleControlFlowLegacyPass(PR);
   initializeWebAssemblyLateEHPrepareLegacyPass(PR);
-  initializeWebAssemblyExceptionInfoWrapperPassPass(PR);
-  initializeWebAssemblyCFGSortLegacyPass(PR);
-  initializeWebAssemblyCFGStackifyLegacyPass(PR);
-  initializeWebAssemblyExplicitLocalsLegacyPass(PR);
-  initializeWebAssemblyLowerBrUnlessLegacyPass(PR);
-  initializeWebAssemblyRegNumberingLegacyPass(PR);
-  initializeWebAssemblyDebugFixupLegacyPass(PR);
-  initializeWebAssemblyPeepholeLegacyPass(PR);
-  initializeWebAssemblyMCLowerPreLegacyPass(PR);
+  initializeWebAssemblyExceptionInfoPass(PR);
+  initializeWebAssemblyCFGSortPass(PR);
+  initializeWebAssemblyCFGStackifyPass(PR);
+  initializeWebAssemblyExplicitLocalsPass(PR);
+  initializeWebAssemblyLowerBrUnlessPass(PR);
+  initializeWebAssemblyRegNumberingPass(PR);
+  initializeWebAssemblyDebugFixupPass(PR);
+  initializeWebAssemblyPeepholePass(PR);
+  initializeWebAssemblyMCLowerPrePassPass(PR);
   initializeWebAssemblyFixBrTableDefaultsLegacyPass(PR);
   initializeWebAssemblyDAGToDAGISelLegacyPass(PR);
 }
@@ -461,10 +461,10 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // Preparations and optimizations related to register stackification.
   if (getOptLevel() != CodeGenOptLevel::None) {
     // Depend on LiveIntervals and perform some optimizations on it.
-    addPass(createWebAssemblyOptimizeLiveIntervalsLegacyPass());
+    addPass(createWebAssemblyOptimizeLiveIntervals());
 
     // Prepare memory intrinsic calls for register stackifying.
-    addPass(createWebAssemblyMemIntrinsicResultsLegacyPass());
+    addPass(createWebAssemblyMemIntrinsicResults());
   }
 
   // Mark registers as representing wasm's value stack. This is a key
@@ -472,42 +472,42 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // MemIntrinsicResults above) very late, so that it sees as much code as
   // possible, including code emitted by PEI and expanded by late tail
   // duplication.
-  addPass(createWebAssemblyRegStackifyLegacyPass(getOptLevel()));
+  addPass(createWebAssemblyRegStackify(getOptLevel()));
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     // Run the register coloring pass to reduce the total number of registers.
     // This runs after stackification so that it doesn't consider registers
     // that become stackified.
-    addPass(createWebAssemblyRegColoringLegacyPass());
+    addPass(createWebAssemblyRegColoring());
   }
 
   // Sort the blocks of the CFG into topological order, a prerequisite for
   // BLOCK and LOOP markers.
-  addPass(createWebAssemblyCFGSortLegacyPass());
+  addPass(createWebAssemblyCFGSort());
 
   // Insert BLOCK and LOOP markers.
-  addPass(createWebAssemblyCFGStackifyLegacyPass());
+  addPass(createWebAssemblyCFGStackify());
 
   // Insert explicit local.get and local.set operators.
   if (!WasmDisableExplicitLocals)
-    addPass(createWebAssemblyExplicitLocalsLegacyPass());
+    addPass(createWebAssemblyExplicitLocals());
 
   // Lower br_unless into br_if.
-  addPass(createWebAssemblyLowerBrUnlessLegacyPass());
+  addPass(createWebAssemblyLowerBrUnless());
 
   // Perform the very last peephole optimizations on the code.
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createWebAssemblyPeepholeLegacyPass());
+    addPass(createWebAssemblyPeephole());
 
   // Create a mapping from LLVM CodeGen virtual registers to wasm registers.
-  addPass(createWebAssemblyRegNumberingLegacyPass());
+  addPass(createWebAssemblyRegNumbering());
 
   // Fix debug_values whose defs have been stackified.
   if (!WasmDisableExplicitLocals)
-    addPass(createWebAssemblyDebugFixupLegacyPass());
+    addPass(createWebAssemblyDebugFixup());
 
   // Collect information to prepare for MC lowering / asm printing.
-  addPass(createWebAssemblyMCLowerPreLegacyPass());
+  addPass(createWebAssemblyMCLowerPrePass());
 }
 
 bool WebAssemblyPassConfig::addPreISel() {

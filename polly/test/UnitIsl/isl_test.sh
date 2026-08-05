@@ -1,1 +1,0 @@
-; RUN: polly-isl-test

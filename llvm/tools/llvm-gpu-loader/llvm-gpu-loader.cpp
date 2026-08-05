@@ -65,11 +65,6 @@ static cl::alias Blocks("blocks", cl::aliasopt(BlocksX),
                         cl::desc("Alias for --blocks-x"),
                         cl::cat(LoaderCategory));
 
-static cl::list<std::string> Kernels(
-    "kernel", cl::value_desc("name"),
-    cl::desc("Launch '<name>(void)' instead of the 'main' entry point."),
-    cl::cat(LoaderCategory));
-
 static cl::opt<std::string> File(cl::Positional, cl::Required,
                                  cl::desc("<gpu executable>"),
                                  cl::cat(LoaderCategory));
@@ -101,7 +96,8 @@ static void *copyArgumentVector(int Argc, const char **Argv,
 
   // We allocate enough space for a null terminated array and all the strings.
   void *DevArgv;
-  OFFLOAD_ERR(olMemAllocHost(Device, ArgSize + StringLen, &DevArgv));
+  OFFLOAD_ERR(
+      olMemAlloc(Device, OL_ALLOC_TYPE_HOST, ArgSize + StringLen, &DevArgv));
   if (!DevArgv)
     handleError(
         createStringError("Failed to allocate memory for environment."));
@@ -211,7 +207,7 @@ int main(int argc, const char **argv, const char **envp) {
     handleError(errorCodeToError(EC));
   MemoryBufferRef Image = **ImageOrErr;
 
-  ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
+  ol_platform_backend_t Backend;
   ol_init_args_t InitArgs = OL_INIT_ARGS_INIT;
 
   file_magic Magic = identify_magic(Image.getBuffer());
@@ -234,9 +230,6 @@ int main(int argc, const char **argv, const char **envp) {
           ELF::convertEMachineToArchName(ElfOrErr->getHeader().e_machine)
               .data()));
     }
-  }
-
-  if (Backend != OL_PLATFORM_BACKEND_UNKNOWN) {
     InitArgs.NumPlatforms = 1;
     InitArgs.Platforms = &Backend;
   }
@@ -268,29 +261,21 @@ int main(int argc, const char **argv, const char **envp) {
   OFFLOAD_ERR(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, sizeof(int), &DevRet));
   OFFLOAD_ERR(olMemcpy(Queue, DevRet, Device, &Zero, Host, sizeof(int)));
 
+  ol_kernel_launch_size_args_t BeginLaunch{1, {1, 1, 1}, {1, 1, 1}, 0};
+  launchKernel(Queue, Device, Program, "_begin", BeginLaunch, DevArgc, DevArgv,
+               DevEnvp);
+  OFFLOAD_ERR(olSyncQueue(Queue));
+
   uint32_t Dims = (BlocksZ > 1) ? 3 : (BlocksY > 1) ? 2 : 1;
   ol_kernel_launch_size_args_t StartLaunch{Dims,
                                            {BlocksX, BlocksY, BlocksZ},
                                            {ThreadsX, ThreadsY, ThreadsZ},
                                            /*SharedMemBytes=*/0};
-  if (!Kernels.empty()) {
-    // Launch the user-specified kernels in order. These must take no arguments.
-    for (const std::string &Kernel : Kernels)
-      launchKernel(Queue, Device, Program, Kernel.c_str(), StartLaunch);
-  } else {
-    // The '_begin' and '_end' kernels perform libc startup and teardown. Global
-    // constructors and destructors are handled automatically by the runtime.
-    ol_kernel_launch_size_args_t BeginLaunch{1, {1, 1, 1}, {1, 1, 1}, 0};
-    launchKernel(Queue, Device, Program, "_begin", BeginLaunch, DevArgc,
-                 DevArgv, DevEnvp);
-    OFFLOAD_ERR(olSyncQueue(Queue));
+  launchKernel(Queue, Device, Program, "_start", StartLaunch, DevArgc, DevArgv,
+               DevEnvp, DevRet);
 
-    launchKernel(Queue, Device, Program, "_start", StartLaunch, DevArgc,
-                 DevArgv, DevEnvp, DevRet);
-
-    ol_kernel_launch_size_args_t EndLaunch{1, {1, 1, 1}, {1, 1, 1}, 0};
-    launchKernel(Queue, Device, Program, "_end", EndLaunch);
-  }
+  ol_kernel_launch_size_args_t EndLaunch{1, {1, 1, 1}, {1, 1, 1}, 0};
+  launchKernel(Queue, Device, Program, "_end", EndLaunch);
 
   int Ret;
   OFFLOAD_ERR(olMemcpy(Queue, &Ret, Host, DevRet, Device, sizeof(int)));

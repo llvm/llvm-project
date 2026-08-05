@@ -33,6 +33,5 @@ entry:
 
 attributes #0 = { "target-features"="-xnack" }
 
-!llvm.module.flags = !{!0, !1}
+!llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}
-!1 = !{i32 1, !"amdgpu.xnack", i32 0}

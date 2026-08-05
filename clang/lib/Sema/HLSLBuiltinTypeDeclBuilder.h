@@ -106,7 +106,6 @@ public:
                                                 bool IsArray = false);
   BuiltinTypeDeclBuilder &addByteAddressBufferLoadMethods();
   BuiltinTypeDeclBuilder &addByteAddressBufferStoreMethods();
-  BuiltinTypeDeclBuilder &addByteAddressBufferInterlockedMethods();
   BuiltinTypeDeclBuilder &addSampleMethods(ResourceDimension Dim,
                                            bool IsArray = false);
   BuiltinTypeDeclBuilder &addSampleBiasMethods(ResourceDimension Dim,
@@ -135,9 +134,6 @@ public:
                             QualType ReturnTy = QualType());
   BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name, bool IsConst,
                                            QualType ValueType);
-  BuiltinTypeDeclBuilder &
-  addByteAddressBufferInterlockedMethod(StringRef MethodName, QualType ValueTy,
-                                        StringRef BuiltinName);
   BuiltinTypeDeclBuilder &addAppendMethod();
   BuiltinTypeDeclBuilder &addConsumeMethod();
 
@@ -168,7 +164,6 @@ private:
                          QualType ElementTy,
                          AccessSpecifier Access = AccessSpecifier::AS_private);
   QualType getGatherReturnType();
-  BuiltinTypeDeclBuilder &addDerivativeAvailability(StringRef MethodName);
   FieldDecl *getResourceHandleField() const;
   FieldDecl *getResourceCounterHandleField() const;
   QualType getFirstTemplateTypeParam();

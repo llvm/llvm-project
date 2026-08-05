@@ -1,8 +1,0 @@
-# RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
-
-# RUN: lld-link /out:%t.exe /entry:main %t.obj /inferasanlibs 2>&1 | FileCheck --check-prefix=POS %s
-# RUN: lld-link /out:%t.exe /entry:main %t.obj /inferasanlibs:no 2>&1 | FileCheck --allow-empty --check-prefix=NEG %s
-
-POS: ignoring '/inferasanlibs', this flag is not supported
-
-NEG-NOT: ignoring '/inferasanlibs', this flag is not supported

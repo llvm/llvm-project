@@ -135,7 +135,7 @@ public:
 
     SetActualResolver();
     if (m_actual_resolver_sp) {
-      s->PutCString(" using: ");
+      s->Printf(" using: ");
       m_actual_resolver_sp->GetDescription(s);
     } else
       s->Printf(" the correct runtime exception handler will be determined "

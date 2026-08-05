@@ -1,7 +1,0 @@
-[
-{
-  "directory": "test_dir/build",
-  "command": "clang++ -I../include -o bar.o test_dir/src/bar.cpp",
-  "file": "test_dir/src/bar.cpp"
-}
-]

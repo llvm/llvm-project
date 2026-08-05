@@ -15,9 +15,6 @@ types:
   - type_name: struct_msghdr
   - type_name: struct_iovec
   - type_name: struct_linger
-  - type_name: struct_ucred
-    standards:
-      - linux
   - type_name: size_t
   - type_name: ssize_t
 enums: []

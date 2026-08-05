@@ -11,7 +11,15 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp0) {
-  struct tm input = {};
+  struct tm input = {.tm_sec = 0,
+                     .tm_min = 0,
+                     .tm_hour = 0,
+                     .tm_mday = 0,
+                     .tm_mon = 0,
+                     .tm_year = 0,
+                     .tm_wday = 0,
+                     .tm_yday = 0,
+                     .tm_isdst = 0};
   const time_t timer = 0;
 
   struct tm *result = LIBC_NAMESPACE::localtime_r(&timer, &input);
@@ -44,7 +52,15 @@ TEST(LlvmLibcLocaltimeR, NullPtr) {
 // This will be resolved a new pull request.
 
 TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp) {
-  struct tm input = {};
+  struct tm input = {.tm_sec = 0,
+                     .tm_min = 0,
+                     .tm_hour = 0,
+                     .tm_mday = 0,
+                     .tm_mon = 0,
+                     .tm_year = 0,
+                     .tm_wday = 0,
+                     .tm_yday = 0,
+                     .tm_isdst = 0};
   const time_t timer = 1756595338;
   struct tm *result = LIBC_NAMESPACE::localtime_r(&timer, &input);
 
@@ -60,7 +76,15 @@ TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp) {
 }
 
 TEST(LlvmLibcLocaltimeR, ValidUnixTimestampNegative) {
-  struct tm input = {};
+  struct tm input = {.tm_sec = 0,
+                     .tm_min = 0,
+                     .tm_hour = 0,
+                     .tm_mday = 0,
+                     .tm_mon = 0,
+                     .tm_year = 0,
+                     .tm_wday = 0,
+                     .tm_yday = 0,
+                     .tm_isdst = 0};
   const time_t timer = -1756595338;
   struct tm *result = LIBC_NAMESPACE::localtime_r(&timer, &input);
 

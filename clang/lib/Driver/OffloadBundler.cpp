@@ -83,7 +83,8 @@ OffloadTargetInfo::OffloadTargetInfo(const StringRef Target,
   StringRef TargetIdWithFeature =
       Components.size() == 6 ? Components.back() : "";
   StringRef TargetId = TargetIdWithFeature.split(':').first;
-  if (!TargetId.empty() && !clang::StringToOffloadArch(TargetId).isUnknown())
+  if (!TargetId.empty() &&
+      clang::StringToOffloadArch(TargetId) != clang::OffloadArch::Unknown)
     this->TargetID = TargetIdWithFeature;
   else
     this->TargetID = "";

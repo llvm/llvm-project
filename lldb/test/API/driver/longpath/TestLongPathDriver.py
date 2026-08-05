@@ -15,7 +15,7 @@ from lldbsuite.test import lldbutil
 MAX_PATH = 260
 
 
-@requireWindows
+@skipUnlessWindows
 class DriverLongPathTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

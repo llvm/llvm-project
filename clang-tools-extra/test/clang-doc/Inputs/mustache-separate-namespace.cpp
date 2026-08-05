@@ -1,3 +1,0 @@
-namespace MyNamespace {
-class Foo;
-}

@@ -242,6 +242,8 @@ SuperDeallocBRVisitor::VisitNode(const ExplodedNode *Succ,
   if (Satisfied)
     return nullptr;
 
+  ProgramStateRef State = Succ->getState();
+
   bool CalledNow =
       Succ->getState()->contains<CalledSuperDealloc>(ReceiverSymbol);
   bool CalledBefore =

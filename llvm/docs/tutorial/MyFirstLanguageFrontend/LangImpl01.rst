@@ -2,6 +2,8 @@
 Kaleidoscope: Kaleidoscope Introduction and the Lexer
 =====================================================
 
+.. contents::
+   :local:
 
 The Kaleidoscope Language
 =========================

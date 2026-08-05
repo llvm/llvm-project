@@ -9,7 +9,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # Wasm has no writable PC to jump
 class ThreadJumpTestCase(TestBase):
     def setUp(self):
         TestBase.setUp(self)

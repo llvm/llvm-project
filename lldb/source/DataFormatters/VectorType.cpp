@@ -306,7 +306,7 @@ bool lldb_private::formatters::VectorTypeSummaryProvider(
     const char *child_value = child_sp->GetValueAsCString();
     if (child_value && *child_value) {
       if (first) {
-        s.PutCString(child_value);
+        s.Printf("%s", child_value);
         first = false;
       } else {
         s.Printf(", %s", child_value);

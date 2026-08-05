@@ -89,12 +89,12 @@ namespace {
     }
 
     const APFloat &getFpVal() const {
-      assert(IsFp && BufHasFpVal && "Incorrect state");
+      assert(IsFp && BufHasFpVal && "Incorret state");
       return *getFpValPtr();
     }
 
     APFloat &getFpVal() {
-      assert(IsFp && BufHasFpVal && "Incorrect state");
+      assert(IsFp && BufHasFpVal && "Incorret state");
       return *getFpValPtr();
     }
 

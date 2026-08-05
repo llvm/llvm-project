@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -171,11 +170,6 @@ namespace {
 
     StringRef getPassName() const override {
       return THUMB2_SIZE_REDUCE_NAME;
-    }
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
-      MachineFunctionPass::getAnalysisUsage(AU);
     }
 
   private:

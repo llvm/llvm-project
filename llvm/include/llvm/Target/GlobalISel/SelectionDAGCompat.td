@@ -312,6 +312,3 @@ class GIComplexPatternEquiv<ComplexPattern seldag> {
 class GISDNodeXFormEquiv<SDNodeXForm seldag> {
   SDNodeXForm SelDAGEquivalent = seldag;
 }
-
-def : GICustomOperandRenderer<"renderFrameIndex">,
-      GISDNodeXFormEquiv<to_tframeindex>;

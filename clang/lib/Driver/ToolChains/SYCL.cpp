@@ -21,6 +21,7 @@ SYCLInstallationDetector::SYCLInstallationDetector(
     : D(D) {
   // When -fsycl is active, locate the SYCL runtime library and record its
   // directory in SYCLRTLibPath for use by the linker.
+  StringRef SysRoot = D.SysRoot;
   SmallString<128> DriverDir(D.Dir);
 
   if (HostTriple.isWindowsMSVCEnvironment() ||
@@ -29,7 +30,8 @@ SYCLInstallationDetector::SYCLInstallationDetector(
     // NOTE: Only checks for LLVMSYCL.lib existence (release variant).
     // Debug vs release library selection happens at link time based on CRT
     // flags.
-    if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
+    if (DriverDir.starts_with(SysRoot) &&
+        Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
       SmallString<128> LibDir(DriverDir);
       llvm::sys::path::append(LibDir, "..", "lib");
 
@@ -50,7 +52,8 @@ SYCLInstallationDetector::SYCLInstallationDetector(
     SmallString<128> FlatLibPath(DriverDir);
     llvm::sys::path::append(FlatLibPath, "..", "lib", "libLLVMSYCL.so");
 
-    if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
+    if (DriverDir.starts_with(SysRoot) &&
+        Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
       // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON: library is in lib/<triple>/
       if (D.getVFS().exists(LibPath))
         llvm::sys::path::append(DriverDir, "..", "lib", HostTriple.str());

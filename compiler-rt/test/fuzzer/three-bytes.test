@@ -1,7 +1,0 @@
-Tests -use_value_profile=2 (alternative VP metric).
-RUN: %cpp_compiler %S/ThreeBytes.cpp -o %t
-
-RUN:     %run %t -seed=1 -runs=30000
-RUN: not %run %t -seed=1 -runs=1000000 -use_value_profile=2 2>&1 | FileCheck %s
-
-CHECK: Test unit written

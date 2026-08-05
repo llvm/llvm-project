@@ -20,7 +20,6 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -374,7 +373,7 @@ exit:
   LoopInfo LI(DT);
 
   EXPECT_TRUE(DT.verify());
-  LI.verify();
+  LI.verify(DT);
   auto *LoopBB = getBasicBlockByName(*F, "loop");
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   auto *New = splitBlockBefore(LoopBB, LoopBB->getFirstInsertionPt(), &DTU, &LI,
@@ -382,7 +381,7 @@ exit:
                                LoopBB->getName() + ".split");
 
   EXPECT_TRUE(DT.verify());
-  LI.verify();
+  LI.verify(DT);
   EXPECT_EQ(LI.getLoopFor(New)->getHeader(), New);
 }
 
@@ -489,12 +488,12 @@ exit:
   LoopInfo LI(DT);
 
   EXPECT_TRUE(DT.verify());
-  LI.verify();
+  LI.verify(DT);
   SplitBlockPredecessors(getBasicBlockByName(*F, "catch_dest"),
                          {getBasicBlockByName(*F, "loop")}, "", &DT, &LI);
 
   EXPECT_TRUE(DT.verify());
-  LI.verify();
+  LI.verify(DT);
   EXPECT_EQ(LI.getLoopFor(getBasicBlockByName(*F, "catch_dest")), nullptr);
 }
 
@@ -539,12 +538,12 @@ exit:
   LoopInfo LI(DT);
 
   EXPECT_TRUE(DT.verify());
-  LI.verify();
+  LI.verify(DT);
   SplitBlockPredecessors(getBasicBlockByName(*F, "catch_dest"),
                          {getBasicBlockByName(*F, "loop")}, "", &DT, &LI);
 
   EXPECT_TRUE(DT.verify());
-  LI.verify();
+  LI.verify(DT);
   EXPECT_EQ(LI.getLoopFor(getBasicBlockByName(*F, "catch_dest")),
             LI.getLoopFor(getBasicBlockByName(*F, "superloop")));
 }
@@ -652,9 +651,7 @@ bb4:
   Function *F = M->getFunction("crit_edge");
   DominatorTree DT(*F);
   LoopInfo LI(DT);
-  CycleInfo CI;
-  CI.compute(*F);
-  BranchProbabilityInfo BPI(*F, CI);
+  BranchProbabilityInfo BPI(*F, LI);
   BlockFrequencyInfo BFI(*F, BPI, LI);
 
   ASSERT_TRUE(SplitIndirectBrCriticalEdges(*F, /*IgnoreBlocksWithoutPHI=*/true,
@@ -696,9 +693,7 @@ bb4:
   Function *F = M->getFunction("crit_edge");
   DominatorTree DT(*F);
   LoopInfo LI(DT);
-  CycleInfo CI;
-  CI.compute(*F);
-  BranchProbabilityInfo BPI(*F, CI);
+  BranchProbabilityInfo BPI(*F, LI);
   BlockFrequencyInfo BFI(*F, BPI, LI);
 
   ASSERT_TRUE(SplitIndirectBrCriticalEdges(*F, /*IgnoreBlocksWithoutPHI=*/false,
@@ -799,9 +794,8 @@ L19:
 )IR");
   Function *F = M->getFunction("edge_probability");
   DominatorTree DT(*F);
-  CycleInfo CI;
-  CI.compute(*F);
-  BranchProbabilityInfo BPI(*F, CI);
+  LoopInfo LI(DT);
+  BranchProbabilityInfo BPI(*F, LI);
 
   // Check that the unreachable block has the minimal probability.
   const BasicBlock *EntryBB = getBasicBlockByName(*F, "entry");

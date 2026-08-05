@@ -136,44 +136,40 @@ class NoopEventHandler : public ubi::EventHandler {
 };
 
 class VerboseEventHandler : public NoopEventHandler {
-  ubi::AnyValuePrinter OS;
-
 public:
-  VerboseEventHandler(ubi::Context &Ctx) : OS(Ctx, errs()) {}
-
   bool onInstructionExecuted(Instruction &I,
                              const ubi::AnyValue &Result) override {
     if (Result.isNone()) {
-      OS << I << '\n';
+      errs() << I << '\n';
     } else {
-      OS << I << " => " << Result << '\n';
+      errs() << I << " => " << Result << '\n';
     }
 
     return true;
   }
 
   bool onBBJump(Instruction &I, BasicBlock &To) override {
-    OS << I << " jump to ";
-    To.printAsOperand(OS, /*PrintType=*/false);
-    OS << '\n';
+    errs() << I << " jump to ";
+    To.printAsOperand(errs(), /*PrintType=*/false);
+    errs() << '\n';
     return true;
   }
 
   bool onFunctionEntry(Function &F, ArrayRef<ubi::AnyValue> Args,
                        CallBase *CallSite) override {
-    OS << "Entering function: " << F.getName() << '\n';
+    errs() << "Entering function: " << F.getName() << '\n';
     size_t ArgSize = F.arg_size();
     for (auto &&[Idx, Arg] : enumerate(Args)) {
       if (Idx >= ArgSize)
-        OS << "  vaarg[" << (Idx - ArgSize) << "] = " << Arg << '\n';
+        errs() << "  vaarg[" << (Idx - ArgSize) << "] = " << Arg << '\n';
       else
-        OS << "  " << *F.getArg(Idx) << " = " << Arg << '\n';
+        errs() << "  " << *F.getArg(Idx) << " = " << Arg << '\n';
     }
     return true;
   }
 
   bool onFunctionExit(Function &F, const ubi::AnyValue &RetVal) override {
-    OS << "Exiting function: " << F.getName() << '\n';
+    errs() << "Exiting function: " << F.getName() << '\n';
     return true;
   }
 
@@ -184,13 +180,13 @@ public:
     case ubi::ProgramExitInfo::ProgramExitKind::Failed:
       return;
     case ubi::ProgramExitInfo::ProgramExitKind::Exited:
-      OS << "Program exited with code " << Info.ExitCode << '\n';
+      errs() << "Program exited with code " << Info.ExitCode << '\n';
       return;
     case ubi::ProgramExitInfo::ProgramExitKind::Aborted:
-      OS << "Program aborted.\n";
+      errs() << "Program aborted.\n";
       return;
     case ubi::ProgramExitInfo::ProgramExitKind::Terminated:
-      OS << "Program terminated.\n";
+      errs() << "Program terminated.\n";
       return;
     }
 
@@ -324,7 +320,7 @@ int main(int argc, char **argv) {
   }
 
   NoopEventHandler NoopHandler;
-  VerboseEventHandler VerboseHandler(Ctx);
+  VerboseEventHandler VerboseHandler;
   ubi::AnyValue RetVal;
   ubi::ProgramExitInfo ExitInfo = Ctx.runFunction(
       *EntryFn, Args, RetVal, Verbose ? VerboseHandler : NoopHandler);

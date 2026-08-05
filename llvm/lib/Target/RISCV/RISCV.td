@@ -92,7 +92,6 @@ def RISCVAsmParser : AsmParser {
   let ShouldEmitMatchRegisterAltName = true;
   let AllowDuplicateRegisterNames = true;
   let ReportMultipleNearMisses = true;
-  let EmitTokenDiagnosticTypes = true;
 }
 
 def RISCVAsmWriter : AsmWriter {

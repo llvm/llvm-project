@@ -108,7 +108,7 @@ protected:
   friend class SBValue;
   friend class SBWatchpoint;
 
-  friend class lldb_private::ScriptInterpreterBridge;
+  friend class lldb_private::ScriptInterpreter;
 
   lldb_private::Stream *operator->();
 

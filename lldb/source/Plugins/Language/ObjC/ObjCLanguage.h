@@ -146,9 +146,6 @@ public:
 
   lldb::TypeCategoryImplSP GetFormatters() override;
 
-  HardcodedFormatters::HardcodedSyntheticFinder
-  GetHardcodedSynthetics() override;
-
   std::vector<FormattersMatchCandidate>
   GetPossibleFormattersMatches(ValueObject &valobj,
                                lldb::DynamicValueType use_dynamic) override;

@@ -1,5 +1,8 @@
 # Machine IR (MIR) Format Reference Manual
 
+```{contents}
+:local:
+```
 
 ```{warning}
 This is a work in progress.

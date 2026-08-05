@@ -11,7 +11,6 @@
 
 namespace clang {
 namespace api_notes {
-
 LLVM_DUMP_METHOD void CommonEntityInfo::dump(llvm::raw_ostream &OS) const {
   if (Unavailable)
     OS << "[Unavailable] (" << UnavailableMsg << ")" << ' ';

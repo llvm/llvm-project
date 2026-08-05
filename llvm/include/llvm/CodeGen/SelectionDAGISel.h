@@ -280,7 +280,6 @@ public:
     OPC_CheckOrImm,
     OPC_CheckImmAllOnesV,
     OPC_CheckImmAllZerosV,
-    OPC_CheckUndef,
     OPC_CheckFoldableChainNode,
 
     OPC_EmitInteger,

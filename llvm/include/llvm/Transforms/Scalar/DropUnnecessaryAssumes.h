@@ -23,9 +23,6 @@ struct DropUnnecessaryAssumesPass
       : DropDereferenceable(DropDereferenceable) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  LLVM_ABI void
-  printPipeline(raw_ostream &OS,
-                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
   bool DropDereferenceable;

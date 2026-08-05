@@ -2396,31 +2396,6 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
 
   LLVM_DEBUG(dbgs() << "RAIn:\t"; PrintOps(I, Ops); dbgs() << '\n');
 
-  // Boost the rank of divergent operands so they sort towards the root of the
-  // expression tree, clustering uniform operands together at the leaves. On
-  // targets without divergence UniformityInfo is empty and this is a no-op.
-  //
-  // Example: (uniform1 + divergent) + uniform2
-  //       -> (uniform1 + uniform2) + divergent
-  if (UA && Ops.size() > 2) {
-    constexpr unsigned DivergentRankOffset = 1U << 28;
-    BasicBlock *ParentBB = I->getParent();
-    for (ValueEntry &Entry : Ops) {
-      if (isa<Constant>(Entry.Op))
-        continue;
-      bool Divergent = false;
-      for (const Use &U : Entry.Op->uses()) {
-        Instruction *Usr = dyn_cast<Instruction>(U.getUser());
-        if (Usr && Usr->getParent() == ParentBB) {
-          Divergent = UA->isDivergentAtUse(U);
-          break;
-        }
-      }
-      if (Divergent)
-        Entry.Rank += DivergentRankOffset;
-    }
-  }
-
   // Now that we have linearized the tree to a list and have gathered all of
   // the operands and their ranks, sort the operands by their rank.  Use a
   // stable_sort so that values with equal ranks will have their relative
@@ -2670,17 +2645,7 @@ ReassociatePass::BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT) {
   }
 }
 
-PreservedAnalyses ReassociatePass::run(Function &F,
-                                       FunctionAnalysisManager &AM) {
-  // UniformityInfo is empty (and cheap) on targets without branch divergence,
-  // so request it unconditionally.
-  UniformityInfo &UI = AM.getResult<UniformityInfoAnalysis>(F);
-  return runImpl(F, UI);
-}
-
-PreservedAnalyses ReassociatePass::runImpl(Function &F, UniformityInfo &UI) {
-  UA = &UI;
-
+PreservedAnalyses ReassociatePass::run(Function &F, FunctionAnalysisManager &) {
   // Get the functions basic blocks in Reverse Post Order. This order is used by
   // BuildRankMap to pre calculate ranks correctly. It also excludes dead basic
   // blocks (it has been seen that the analysis in this pass could hang when
@@ -2743,12 +2708,11 @@ PreservedAnalyses ReassociatePass::runImpl(Function &F, UniformityInfo &UI) {
     }
   }
 
-  // We are done with the rank map, pair map, and uniformity info.
+  // We are done with the rank map and pair map.
   RankMap.clear();
   ValueRankMap.clear();
   for (auto &Entry : PairMap)
     Entry.clear();
-  UA = nullptr;
 
   if (MadeChange) {
     PreservedAnalyses PA;
@@ -2775,17 +2739,15 @@ public:
     if (skipFunction(F))
       return false;
 
-    UniformityInfo &UI =
-        getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-
-    PreservedAnalyses PA = Impl.runImpl(F, UI);
+    FunctionAnalysisManager DummyFAM;
+    auto PA = Impl.run(F, DummyFAM);
     return !PA.areAllPreserved();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<UniformityInfoWrapperPass>();
     AU.addPreserved<AAResultsWrapperPass>();
+    AU.addPreserved<BasicAAWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
@@ -2794,11 +2756,8 @@ public:
 
 char ReassociateLegacyPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(ReassociateLegacyPass, "reassociate",
-                      "Reassociate expressions", false, false)
-INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
-INITIALIZE_PASS_END(ReassociateLegacyPass, "reassociate",
-                    "Reassociate expressions", false, false)
+INITIALIZE_PASS(ReassociateLegacyPass, "reassociate",
+                "Reassociate expressions", false, false)
 
 // Public interface to the Reassociate pass
 FunctionPass *llvm::createReassociatePass() {

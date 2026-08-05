@@ -140,6 +140,7 @@ set(LLVM_TEST_DEPENDS
   llvm-reduce
   llvm-remarkutil
   llvm-rtdyld
+  llvm-sim
   llvm-size
   llvm-split
   llvm-stress
@@ -184,11 +185,6 @@ endif()
 
 if (TARGET llvm-mt)
   list(APPEND LLVM_TEST_DEPENDS llvm-mt)
-endif ()
-
-# Only built when the AMDGPU target is enabled.
-if (TARGET llvm-calc-occupancy)
-  list(APPEND LLVM_TEST_DEPENDS llvm-calc-occupancy)
 endif ()
 
 if(LLVM_INCLUDE_EXAMPLES)

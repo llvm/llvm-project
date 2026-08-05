@@ -4,121 +4,122 @@ Test lldb-dap stackTrace request with an extended backtrace thread.
 
 import os
 
-from lldbsuite.test.decorators import skipUnlessDarwin
-from lldbsuite.test.lldbplatformutil import findBacktraceRecordingDylib
-from lldbsuite.test.lldbtest import line_number
-from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
-from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, StackFrameFormat
+import lldbdap_testcase
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test.lldbplatformutil import *
 
 
-class TestDAP_extendedStackTrace(DAPTestCaseBase):
-    def build_and_run_to_breakpoint(self, display_extended_backtrace: bool = True):
+class TestDAP_extendedStackTrace(lldbdap_testcase.DAPTestCaseBase):
+    def build_and_run(self, displayExtendedBacktrace=True):
         backtrace_recording_lib = findBacktraceRecordingDylib()
         if not backtrace_recording_lib:
             self.skipTest(
-                "Skipped because libBacktraceRecording.dylib was not present on the system."
+                "Skipped because libBacktraceRecording.dylib was present on the system."
             )
+
         if not os.path.isfile("/usr/lib/system/introspection/libdispatch.dylib"):
             self.skipTest(
                 "Skipped because introspection libdispatch dylib is not present."
             )
 
         program = self.getBuildArtifact("a.out")
-        session = self.build_and_create_session()
-        source = self.getSourcePath("main.m")
-        bp_line = line_number(source, "breakpoint 1")
 
-        launch_args = LaunchArgs(
-            program=program,
+        self.build_and_launch(
+            program,
             env=[
                 "DYLD_LIBRARY_PATH=/usr/lib/system/introspection",
-                f"DYLD_INSERT_LIBRARIES={backtrace_recording_lib}",
+                "DYLD_INSERT_LIBRARIES=" + backtrace_recording_lib,
             ],
-            displayExtendedBacktrace=display_extended_backtrace,
+            displayExtendedBacktrace=displayExtendedBacktrace,
         )
-        with session.configure(launch_args) as cm:
-            [bp_id] = session.resolve_source_breakpoints(source, [bp_line])
+        source = "main.m"
+        breakpoint = line_number(source, "breakpoint 1")
+        lines = [breakpoint]
 
-        stop_event = session.verify_stopped_on_breakpoint(bp_id, after=cm.process_event)
-        return session, stop_event
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.assertEqual(
+            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        )
 
     @skipUnlessDarwin
     def test_stackTrace(self):
-        """Tests the 'stackTrace' packet on a thread with an extended backtrace."""
-        session, stop_event = self.build_and_run_to_breakpoint()
-        thread_id = self.expect_not_none(stop_event.body.threadId)
+        """
+        Tests the 'stackTrace' packet on a thread with an extended backtrace.
+        """
+        self.build_and_run()
+        events = self.continue_to_next_stop()
 
-        response = session.stack_trace(thread_id)
-        stack_frames = response.body.stackFrames
-        total_frames = response.body.totalFrames
+        stackFrames, totalFrames = self.get_stackFrames_and_totalFramesCount(
+            threadId=events[0]["body"]["threadId"]
+        )
+        self.assertGreaterEqual(len(stackFrames), 3, "expect >= 3 frames")
+        self.assertEqual(len(stackFrames), totalFrames)
+        self.assertEqual(stackFrames[0]["name"], "one")
+        self.assertEqual(stackFrames[1]["name"], "two")
+        self.assertEqual(stackFrames[2]["name"], "three")
 
-        self.assertGreaterEqual(len(stack_frames), 3, "expect >= 3 frames")
-        self.assertEqual(len(stack_frames), total_frames)
-        self.assertEqual(stack_frames[0].name, "one")
-        self.assertEqual(stack_frames[1].name, "two")
-        self.assertEqual(stack_frames[2].name, "three")
-
-        stack_labels = [
+        stackLabels = [
             (i, frame)
-            for i, frame in enumerate(stack_frames)
-            if frame.presentationHint == "label"
+            for i, frame in enumerate(stackFrames)
+            if frame.get("presentationHint", "") == "label"
         ]
-        self.assertEqual(len(stack_labels), 2, "expected two label stack frames")
+        self.assertEqual(len(stackLabels), 2, "expected two label stack frames")
         self.assertRegex(
-            stack_labels[0][1].name,
+            stackLabels[0][1]["name"],
             r"Enqueued from com.apple.root.default-qos \(Thread \d\)",
         )
         self.assertRegex(
-            stack_labels[1][1].name,
+            stackLabels[1][1]["name"],
             r"Enqueued from com.apple.main-thread \(Thread \d\)",
         )
 
-        for i, frame in stack_labels:
+        for i, frame in stackLabels:
             # Ensure requesting startFrame+levels across thread backtraces works as expected.
-            response = session.stack_trace(thread_id, startFrame=i - 1, levels=3)
-            stack_frames = response.body.stackFrames
-            total_frames = self.expect_not_none(response.body.totalFrames)
-            self.assertEqual(len(stack_frames), 3, "expected 3 frames with levels=3")
-            self.assertGreaterEqual(
-                total_frames, i + 3, "total frames should include a pagination offset"
+            stackFrames, totalFrames = self.get_stackFrames_and_totalFramesCount(
+                threadId=events[0]["body"]["threadId"], startFrame=i - 1, levels=3
             )
-            self.assertEqual(stack_frames[1], frame)
-
-            # Ensure requesting startFrame+levels at the beginning of a thread backtrace works as expected.
-            response = session.stack_trace(thread_id, startFrame=i, levels=3)
-            stack_frames = response.body.stackFrames
-            total_frames = self.expect_not_none(response.body.totalFrames)
-            self.assertEqual(len(stack_frames), 3, "expected 3 frames with levels=3")
+            self.assertEqual(len(stackFrames), 3, "expected 3 frames with levels=3")
             self.assertGreaterEqual(
-                total_frames, i + 3, "total frames should include a pagination offset"
+                totalFrames, i + 3, "total frames should include a pagination offset"
             )
-            self.assertEqual(stack_frames[0], frame)
+            self.assertEqual(stackFrames[1], frame)
 
-            # Ensure requests with startFrame+levels that end precisely on the
-            # last frame include the totalFrames pagination offset.
-            response = session.stack_trace(thread_id, startFrame=i - 1, levels=1)
-            stack_frames = response.body.stackFrames
-            total_frames = self.expect_not_none(response.body.totalFrames)
-            self.assertEqual(len(stack_frames), 1, "expected 1 frame with levels=1")
+            # Ensure requesting startFrame+levels at the beginning of a thread backtraces works as expected.
+            stackFrames, totalFrames = self.get_stackFrames_and_totalFramesCount(
+                threadId=events[0]["body"]["threadId"], startFrame=i, levels=3
+            )
+            self.assertEqual(len(stackFrames), 3, "expected 3 frames with levels=3")
             self.assertGreaterEqual(
-                total_frames, i, "total frames should include a pagination offset"
+                totalFrames, i + 3, "total frames should include a pagination offset"
+            )
+            self.assertEqual(stackFrames[0], frame)
+
+            # Ensure requests with startFrame+levels that end precisely on the last frame includes the totalFrames pagination offset.
+            stackFrames, totalFrames = self.get_stackFrames_and_totalFramesCount(
+                threadId=events[0]["body"]["threadId"], startFrame=i - 1, levels=1
+            )
+            self.assertEqual(len(stackFrames), 1, "expected 1 frames with levels=1")
+            self.assertGreaterEqual(
+                totalFrames, i, "total frames should include a pagination offset"
             )
 
     @skipUnlessDarwin
     def test_stackTraceWithFormat(self):
-        """Tests the 'stackTrace' packet using stack trace formats."""
-        session, stop_event = self.build_and_run_to_breakpoint(
-            display_extended_backtrace=False
-        )
-        thread_id = self.expect_not_none(stop_event.body.threadId)
+        """
+        Tests the 'stackTrace' packet on a thread with an extended backtrace using stack trace formats.
+        """
+        self.build_and_run(displayExtendedBacktrace=False)
+        events = self.continue_to_next_stop()
 
-        response = session.stack_trace(
-            thread_id, format=StackFrameFormat(includeAll=True)
+        stackFrames, _ = self.get_stackFrames_and_totalFramesCount(
+            threadId=events[0]["body"]["threadId"], format={"includeAll": True}
         )
 
-        stack_labels = [
-            frame
-            for frame in response.body.stackFrames
-            if frame.presentationHint == "label"
+        stackLabels = [
+            (i, frame)
+            for i, frame in enumerate(stackFrames)
+            if frame.get("presentationHint", "") == "label"
         ]
-        self.assertEqual(len(stack_labels), 2, "expected two label stack frames")
+
+        self.assertEqual(len(stackLabels), 2, "expected two label stack frames")

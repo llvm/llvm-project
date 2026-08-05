@@ -9,8 +9,7 @@ STRING_EXTENSION_OUTSIDE(SBFileSpecList)
 
     def __iter__(self):
       '''Iterate over all FileSpecs in a lldb.SBFileSpecList object.'''
-      for i in range(self.GetSize()):
-          yield self.GetFileSpecAtIndex(i)
+      return lldb_iter(self, 'GetSize', 'GetFileSpecAtIndex')
 
     def __getitem__(self, idx):
       '''Get the FileSpec at a given index in an lldb.SBFileSpecList object.'''

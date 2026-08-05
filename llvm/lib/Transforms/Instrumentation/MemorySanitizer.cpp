@@ -2651,8 +2651,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S0 = getShadow(&I, 0);
 
     /// For scalars:
-    /// Since they are converting from floating-point to integer, or between
-    /// different width floating-point values, the output is:
+    /// Since they are converting from floating-point to integer, the output is
     /// - fully uninitialized if *any* bit of the input is uninitialized
     /// - fully ininitialized if all bits of the input are ininitialized
     /// We apply the same principle on a per-field basis for vectors.
@@ -2674,13 +2673,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitUIToFPInst(CastInst &I) {
     handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
   }
-
-  void visitFPExtInst(CastInst &I) {
-    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
-  }
-  void visitFPTruncInst(CastInst &I) {
-    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
-  }
+  void visitFPExtInst(CastInst &I) { handleShadowOr(I); }
+  void visitFPTruncInst(CastInst &I) { handleShadowOr(I); }
 
   /// Generic handler to compute shadow for bitwise AND.
   ///

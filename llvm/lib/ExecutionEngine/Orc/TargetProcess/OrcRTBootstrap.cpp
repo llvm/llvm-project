@@ -8,7 +8,6 @@
 
 #include "OrcRTBootstrap.h"
 
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/Calls.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
@@ -136,8 +135,8 @@ runAsMainWrapper(const char *ArgData, size_t ArgSize) {
 }
 
 static llvm::orc::shared::CWrapperFunctionBuffer
-runAsInt32VoidFunctionWrapper(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<rt::sps::CallInt32VoidSPSSig>::handle(
+runAsVoidFunctionWrapper(const char *ArgData, size_t ArgSize) {
+  return WrapperFunction<rt::SPSRunAsVoidFunctionSignature>::handle(
              ArgData, ArgSize,
              [](ExecutorAddr MainAddr) -> int32_t {
                return runAsVoidFunction(MainAddr.toPtr<int32_t (*)(void)>());
@@ -146,8 +145,8 @@ runAsInt32VoidFunctionWrapper(const char *ArgData, size_t ArgSize) {
 }
 
 static llvm::orc::shared::CWrapperFunctionBuffer
-runAsInt32Int32FunctionWrapper(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<rt::sps::CallInt32Int32SPSSig>::handle(
+runAsIntFunctionWrapper(const char *ArgData, size_t ArgSize) {
+  return WrapperFunction<rt::SPSRunAsIntFunctionSignature>::handle(
              ArgData, ArgSize,
              [](ExecutorAddr MainAddr, int32_t Arg) -> int32_t {
                return runAsIntFunction(MainAddr.toPtr<int32_t (*)(int32_t)>(),
@@ -187,11 +186,11 @@ void addTo(StringMap<ExecutorAddr> &M) {
       ExecutorAddr::fromPtr(&readBuffersWrapper);
   M[rt::MemoryReadStringsWrapperName] =
       ExecutorAddr::fromPtr(&readStringsWrapper);
-  M[rt::sps::CallMainCIName] = ExecutorAddr::fromPtr(&runAsMainWrapper);
-  M[rt::sps::CallInt32VoidCIName] =
-      ExecutorAddr::fromPtr(&runAsInt32VoidFunctionWrapper);
-  M[rt::sps::CallInt32Int32CIName] =
-      ExecutorAddr::fromPtr(&runAsInt32Int32FunctionWrapper);
+  M[rt::RunAsMainWrapperName] = ExecutorAddr::fromPtr(&runAsMainWrapper);
+  M[rt::RunAsVoidFunctionWrapperName] =
+      ExecutorAddr::fromPtr(&runAsVoidFunctionWrapper);
+  M[rt::RunAsIntFunctionWrapperName] =
+      ExecutorAddr::fromPtr(&runAsIntFunctionWrapper);
 }
 
 } // end namespace rt_bootstrap

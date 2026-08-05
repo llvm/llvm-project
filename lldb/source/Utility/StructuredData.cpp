@@ -197,7 +197,7 @@ void StructuredData::Boolean::GetDescription(lldb_private::Stream &s) const {
 }
 
 void StructuredData::String::GetDescription(lldb_private::Stream &s) const {
-  s.PutCString(m_value.empty() ? "\"\"" : m_value.c_str());
+  s.Printf("%s", m_value.empty() ? "\"\"" : m_value.c_str());
 }
 
 void StructuredData::Array::GetDescription(lldb_private::Stream &s) const {
@@ -283,7 +283,7 @@ void StructuredData::Dictionary::GetDescription(lldb_private::Stream &s) const {
 }
 
 void StructuredData::Null::GetDescription(lldb_private::Stream &s) const {
-  s.PutCString("NULL");
+  s.Printf("NULL");
 }
 
 void StructuredData::Generic::GetDescription(lldb_private::Stream &s) const {

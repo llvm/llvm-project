@@ -176,8 +176,8 @@ declare void @pluto()
 
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.unroll.disable"}
-!2 = !{!"llvm.loop.vectorize.disable"}
+!2 = !{!"llvm.loop.vectorize.enable", i1 false}
 !3 = !{!"llvm.loop.licm_versioning.disable"}
-!4 = !{!"llvm.loop.distribute.disable"}
+!4 = !{!"llvm.loop.distribute.enable", i1 false}
 !5 = !{}
 !6 = distinct !{!6, !1, !2, !3, !4}

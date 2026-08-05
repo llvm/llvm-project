@@ -14,7 +14,7 @@
 #ifndef LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 #define LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 
-#include "clang/Basic/BuiltinTraits.h"
+#include "clang/Basic/TypeTraits.h"
 #include <cstdint>
 #include <optional>
 

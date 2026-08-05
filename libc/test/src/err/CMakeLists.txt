@@ -6,6 +6,7 @@ endif()
 
 add_libc_test(
   err_test
+  UNIT_TEST_ONLY
   SUITE
     libc_err_unittests
   SRCS
@@ -17,6 +18,7 @@ add_libc_test(
 
 add_libc_test(
   errx_test
+  UNIT_TEST_ONLY
   SUITE
     libc_err_unittests
   SRCS
@@ -27,6 +29,7 @@ add_libc_test(
 
 add_libc_test(
   verr_test
+  UNIT_TEST_ONLY
   SUITE
     libc_err_unittests
   SRCS
@@ -38,6 +41,7 @@ add_libc_test(
 
 add_libc_test(
   verrx_test
+  UNIT_TEST_ONLY
   SUITE
     libc_err_unittests
   SRCS
@@ -48,6 +52,7 @@ add_libc_test(
 
 add_libc_test(
   warn_test
+  UNIT_TEST_ONLY
   SUITE
     libc_err_unittests
   SRCS
@@ -59,6 +64,7 @@ add_libc_test(
 
 add_libc_test(
   warnx_test
+  UNIT_TEST_ONLY
   SUITE
     libc_err_unittests
   SRCS
@@ -70,6 +76,7 @@ add_libc_test(
 
 add_libc_test(
   vwarn_test
+  UNIT_TEST_ONLY
   SUITE
     libc_err_unittests
   SRCS
@@ -81,6 +88,7 @@ add_libc_test(
 
 add_libc_test(
   vwarnx_test
+  UNIT_TEST_ONLY
   SUITE
     libc_err_unittests
   SRCS

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/MC/MCContext.h"
@@ -62,19 +61,15 @@ MCAsmInfo::getExprForPersonalitySymbol(const MCSymbol *Sym,
   return getExprForFDESymbol(Sym, Encoding, Streamer);
 }
 
-const MCExpr *MCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
-                                             unsigned Encoding,
-                                             MCStreamer &Streamer) const {
+const MCExpr *
+MCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
+                               unsigned Encoding,
+                               MCStreamer &Streamer) const {
+  if (!(Encoding & dwarf::DW_EH_PE_pcrel))
+    return MCSymbolRefExpr::create(Sym, Streamer.getContext());
+
   MCContext &Context = Streamer.getContext();
   const MCExpr *Res = MCSymbolRefExpr::create(Sym, Context);
-
-  if (!(Encoding & dwarf::DW_EH_PE_pcrel))
-    return Res;
-  if (DwarfFDERelSymbolSpec) {
-    assert(Encoding & dwarf::DW_EH_PE_sdata4 && "Unexpected encoding");
-    return MCSpecifierExpr::create(Res, DwarfFDERelSymbolSpec, Context);
-  }
-
   MCSymbol *PCSym = Context.createTempSymbol();
   Streamer.emitLabel(PCSym);
   const MCExpr *PC = MCSymbolRefExpr::create(PCSym, Context);
@@ -82,23 +77,10 @@ const MCExpr *MCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
 }
 
 bool MCAsmInfo::isAcceptableChar(char C) const {
-  // For AIX assembler, symbols may consist of numeric digits, underscores,
-  // periods, uppercase or lowercase letters, orany combination of these.
-  // QualName is allowed for a MCSymbolXCOFF, and QualName contains '[' and ']'.
-  //
-  // Others also allow '$'. HLASM (SystemZ) also allows '#'.
-
-  if (isAlnum(C) || C == '_' || C == '.')
-    return true;
-  if (C == '[' || C == ']')
-    return isAIX();
   if (C == '@')
     return doesAllowAtInName();
-  if (C == '$')
-    return !isAIX();
-  if (C == '#')
-    return isHLASM();
-  return false;
+
+  return isAlnum(C) || C == '_' || C == '$' || C == '.';
 }
 
 bool MCAsmInfo::isValidUnquotedName(StringRef Name) const {
@@ -112,7 +94,7 @@ bool MCAsmInfo::isValidUnquotedName(StringRef Name) const {
       return false;
   }
 
-  return !getReservedIdentifiers().contains(CachedHashStringRef(Name.lower()));
+  return true;
 }
 
 bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
@@ -121,15 +103,15 @@ bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
         (SectionName == ".bss" && !usesELFSectionDirectiveForBSS());
 }
 
-void MCAsmInfo::initializeAtSpecifiers(EnumStrings<AtSpecifierKind, 1> Descs) {
+void MCAsmInfo::initializeAtSpecifiers(ArrayRef<AtSpecifier> Descs) {
   assert(AtSpecifierToName.empty() && "cannot initialize twice");
   UseAtForSpecifier = true;
-  for (const auto &Desc : Descs) {
+  for (auto Desc : Descs) {
     [[maybe_unused]] auto It =
-        AtSpecifierToName.try_emplace(Desc.value(), Desc.name());
+        AtSpecifierToName.try_emplace(Desc.Kind, Desc.Name);
     assert(It.second && "duplicate Kind");
     [[maybe_unused]] auto It2 =
-        NameToAtSpecifier.try_emplace(Desc.name().lower(), Desc.value());
+        NameToAtSpecifier.try_emplace(Desc.Name.lower(), Desc.Kind);
     assert(It2.second);
   }
 }

@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
@@ -55,6 +54,8 @@ struct XRayInstrumentationLegacy : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -225,18 +226,17 @@ bool XRayInstrumentation::run(MachineFunction &MF) {
     bool TooFewInstrs = MICount < XRayThreshold;
 
     if (!IgnoreLoops) {
-      // Get MachineLoopInfo or compute it on the fly if it's unavailable,
-      // which needs a MachineDominatorTree only for an irreducible CFG.
+      // Get MachineDominatorTree or compute it on the fly if it's unavailable
       MachineDominatorTree ComputedMDT;
+      if (!MDT) {
+        ComputedMDT.recalculate(MF);
+        MDT = &ComputedMDT;
+      }
+
+      // Get MachineLoopInfo or compute it on the fly if it's unavailable
       MachineLoopInfo ComputedMLI;
       if (!MLI) {
-        ComputedMLI.calculate(MF, [&]() -> const MachineDominatorTree & {
-          if (!MDT) {
-            ComputedMDT.recalculate(MF);
-            MDT = &ComputedMDT;
-          }
-          return *MDT;
-        });
+        ComputedMLI.analyze(*MDT);
         MLI = &ComputedMLI;
       }
 

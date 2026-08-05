@@ -45,7 +45,9 @@ public:
 
   StringRef getPassName() const override { return "PPC Lower MASS Entries"; }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {}
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetTransformInfoWrapperPass>();
+  }
 
 private:
   static bool isMASSVFunc(StringRef Name);

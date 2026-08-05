@@ -272,7 +272,6 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   bool WaveLimiter = false;
   bool HasSpilledSGPRs = false;
   bool HasSpilledVGPRs = false;
-  bool HasNoWWMPoolSGPRSpillFallback = false;
   uint16_t NumWaveDispatchSGPRs = 0;
   uint16_t NumWaveDispatchVGPRs = 0;
   uint32_t HighBitsOf32BitAddress = 0;
@@ -335,8 +334,6 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("waveLimiter", MFI.WaveLimiter, false);
     YamlIO.mapOptional("hasSpilledSGPRs", MFI.HasSpilledSGPRs, false);
     YamlIO.mapOptional("hasSpilledVGPRs", MFI.HasSpilledVGPRs, false);
-    YamlIO.mapOptional("hasNoWWMPoolSGPRSpillFallback",
-                       MFI.HasNoWWMPoolSGPRSpillFallback, false);
     YamlIO.mapOptional("numWaveDispatchSGPRs", MFI.NumWaveDispatchSGPRs, false);
     YamlIO.mapOptional("numWaveDispatchVGPRs", MFI.NumWaveDispatchVGPRs, false);
     YamlIO.mapOptional("scratchRSrcReg", MFI.ScratchRSrcReg,
@@ -580,9 +577,9 @@ private:
   WWMSpillsMap WWMSpills;
 
   // Before allocation, the VGPR registers are partitioned into two distinct
-  // sets, the first one for WWM values and the second set for per-lane values.
+  // sets, the first one for WWM-values and the second set for non-WWM values.
   // The latter set should be reserved during WWM-regalloc.
-  BitVector PerLaneVGPRMask;
+  BitVector NonWWMRegMask;
 
   using ReservedRegSet = SmallSetVector<Register, 8>;
   // To track the VGPRs reserved for WWM instructions. They get stack slots
@@ -615,11 +612,6 @@ private:
   // Emergency stack slot. Sometimes, we create this before finalizing the stack
   // frame, so save it here and add it to the RegScavenger later.
   std::optional<int> ScavengeFI;
-
-  // Ordinary SGPR spills fell back to memory because no WWM VGPR pool was
-  // available. This path may require additional nested VGPR scavenging slots
-  // during frame-index elimination.
-  bool HasNoWWMPoolSGPRSpillFallback = false;
 
   // Map each VGPR CSR to the mask needed to save and restore it using block
   // load/store instructions. Only used if the subtarget feature for VGPR block
@@ -679,9 +671,9 @@ public:
                            : WWMReservedRegs.contains(Reg);
   }
 
-  void updatePerLaneVGPRMask(BitVector &RegMask) { PerLaneVGPRMask = RegMask; }
-  BitVector getPerLaneVGPRMask() const { return PerLaneVGPRMask; }
-  void clearPerLaneVGPRAllocMask() { PerLaneVGPRMask.clear(); }
+  void updateNonWWMRegMask(BitVector &RegMask) { NonWWMRegMask = RegMask; }
+  BitVector getNonWWMRegMask() const { return NonWWMRegMask; }
+  void clearNonWWMRegAllocMask() { NonWWMRegMask.clear(); }
 
   SIModeRegisterDefaults getMode() const { return Mode; }
 
@@ -860,11 +852,6 @@ public:
 
   int getScavengeFI(MachineFrameInfo &MFI, const SIRegisterInfo &TRI);
   std::optional<int> getOptionalScavengeFI() const { return ScavengeFI; }
-
-  void setNoWWMPoolSGPRSpillFallback() { HasNoWWMPoolSGPRSpillFallback = true; }
-  bool hasNoWWMPoolSGPRSpillFallback() const {
-    return HasNoWWMPoolSGPRSpillFallback;
-  }
 
   unsigned getBytesInStackArgArea() const {
     return BytesInStackArgArea;

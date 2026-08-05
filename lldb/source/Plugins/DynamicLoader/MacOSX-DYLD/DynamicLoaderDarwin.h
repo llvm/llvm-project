@@ -79,9 +79,7 @@ protected:
   public:
     Segment() : name() {}
 
-    // Segment name is 16 characters long. An extra byte is added to guarantee
-    // nul termination in case all 16 bytes are used.
-    char name[17];
+    lldb_private::ConstString name;
     lldb::addr_t vmaddr = LLDB_INVALID_ADDRESS;
     lldb::addr_t vmsize = 0;
     lldb::addr_t fileoff = 0;
@@ -92,8 +90,7 @@ protected:
     uint32_t flags = 0;
 
     bool operator==(const Segment &rhs) const {
-      return llvm::StringRef(name) == llvm::StringRef(rhs.name) &&
-             vmaddr == rhs.vmaddr && vmsize == rhs.vmsize;
+      return name == rhs.name && vmaddr == rhs.vmaddr && vmsize == rhs.vmsize;
     }
 
     void PutToLog(lldb_private::Log *log, lldb::addr_t slide) const;
@@ -171,6 +168,8 @@ protected:
     }
 
     lldb_private::ArchSpec GetArchitecture() const;
+
+    const Segment *FindSegment(lldb_private::ConstString name) const;
 
     void PutToLog(lldb_private::Log *log) const;
 

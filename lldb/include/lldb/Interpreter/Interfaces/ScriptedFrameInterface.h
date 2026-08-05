@@ -10,6 +10,7 @@
 #define LLDB_INTERPRETER_INTERFACES_SCRIPTEDFRAMEINTERFACE_H
 
 #include "ScriptedInterface.h"
+#include "lldb/API/SBValueList.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/lldb-private.h"

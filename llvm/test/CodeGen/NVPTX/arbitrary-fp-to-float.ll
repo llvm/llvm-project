@@ -26,6 +26,7 @@ define float @from_f8e5m2_normal() {
 ; CHECK-LABEL: from_f8e5m2_normal(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1065353216;
 ; CHECK-NEXT:    ret;
@@ -37,6 +38,7 @@ define float @from_f8e5m2_normal() {
 define float @from_f8e5m2_zero() {
 ; CHECK-LABEL: from_f8e5m2_zero(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 0;
@@ -50,6 +52,7 @@ define float @from_f8e5m2_neg_zero() {
 ; CHECK-LABEL: from_f8e5m2_neg_zero(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], -2147483648;
 ; CHECK-NEXT:    ret;
@@ -61,6 +64,7 @@ define float @from_f8e5m2_neg_zero() {
 define float @from_f8e5m2_denorm() {
 ; CHECK-LABEL: from_f8e5m2_denorm(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 931135488;
@@ -74,6 +78,7 @@ define float @from_f8e5m2_inf() {
 ; CHECK-LABEL: from_f8e5m2_inf(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 2139095040;
 ; CHECK-NEXT:    ret;
@@ -85,6 +90,7 @@ define float @from_f8e5m2_inf() {
 define float @from_f8e5m2_nan() {
 ; CHECK-LABEL: from_f8e5m2_nan(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 2143289344;
@@ -98,6 +104,7 @@ define float @from_f8e5m2_max() {
 ; CHECK-LABEL: from_f8e5m2_max(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1197473792;
 ; CHECK-NEXT:    ret;
@@ -109,6 +116,7 @@ define float @from_f8e5m2_max() {
 define float @from_f8e5m2_neg() {
 ; CHECK-LABEL: from_f8e5m2_neg(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], -1082130432;
@@ -175,6 +183,7 @@ define float @from_f8e4m3fn_normal() {
 ; CHECK-LABEL: from_f8e4m3fn_normal(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1065353216;
 ; CHECK-NEXT:    ret;
@@ -186,6 +195,7 @@ define float @from_f8e4m3fn_normal() {
 define float @from_f8e4m3fn_nan() {
 ; CHECK-LABEL: from_f8e4m3fn_nan(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 2143289344;
@@ -200,6 +210,7 @@ define float @from_f8e4m3fn_max() {
 ; CHECK-LABEL: from_f8e4m3fn_max(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1138753536;
 ; CHECK-NEXT:    ret;
@@ -213,6 +224,7 @@ define float @from_f8e4m3fn_not_nan() {
 ; CHECK-LABEL: from_f8e4m3fn_not_nan(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1137704960;
 ; CHECK-NEXT:    ret;
@@ -225,6 +237,7 @@ define float @from_f8e4m3fn_zero() {
 ; CHECK-LABEL: from_f8e4m3fn_zero(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
@@ -236,6 +249,7 @@ define float @from_f8e4m3fn_zero() {
 define float @from_f8e4m3fn_denorm() {
 ; CHECK-LABEL: from_f8e4m3fn_denorm(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 989855744;
@@ -299,6 +313,7 @@ define float @from_f6e3m2fn_normal() {
 ; CHECK-LABEL: from_f6e3m2fn_normal(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1065353216;
 ; CHECK-NEXT:    ret;
@@ -310,6 +325,7 @@ define float @from_f6e3m2fn_normal() {
 define float @from_f6e3m2fn_max() {
 ; CHECK-LABEL: from_f6e3m2fn_max(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1105199104;
@@ -323,6 +339,7 @@ define float @from_f6e3m2fn_denorm() {
 ; CHECK-LABEL: from_f6e3m2fn_denorm(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1031798784;
 ; CHECK-NEXT:    ret;
@@ -335,6 +352,7 @@ define float @from_f6e3m2fn_zero() {
 ; CHECK-LABEL: from_f6e3m2fn_zero(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
@@ -346,6 +364,7 @@ define float @from_f6e3m2fn_zero() {
 define float @from_f6e3m2fn_neg() {
 ; CHECK-LABEL: from_f6e3m2fn_neg(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], -1082130432;
@@ -410,6 +429,7 @@ define float @from_f6e2m3fn_normal() {
 ; CHECK-LABEL: from_f6e2m3fn_normal(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1065353216;
 ; CHECK-NEXT:    ret;
@@ -421,6 +441,7 @@ define float @from_f6e2m3fn_normal() {
 define float @from_f6e2m3fn_max() {
 ; CHECK-LABEL: from_f6e2m3fn_max(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1089470464;
@@ -434,6 +455,7 @@ define float @from_f6e2m3fn_denorm() {
 ; CHECK-LABEL: from_f6e2m3fn_denorm(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1040187392;
 ; CHECK-NEXT:    ret;
@@ -445,6 +467,7 @@ define float @from_f6e2m3fn_denorm() {
 define float @from_f6e2m3fn_zero() {
 ; CHECK-LABEL: from_f6e2m3fn_zero(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 0;
@@ -509,6 +532,7 @@ define float @from_f4e2m1fn_normal() {
 ; CHECK-LABEL: from_f4e2m1fn_normal(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1065353216;
 ; CHECK-NEXT:    ret;
@@ -521,6 +545,7 @@ define float @from_f4e2m1fn_denorm() {
 ; CHECK-LABEL: from_f4e2m1fn_denorm(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1056964608;
 ; CHECK-NEXT:    ret;
@@ -532,6 +557,7 @@ define float @from_f4e2m1fn_denorm() {
 define float @from_f4e2m1fn_max() {
 ; CHECK-LABEL: from_f4e2m1fn_max(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1086324736;
@@ -593,6 +619,7 @@ define half @from_f8e5m2_to_f16() {
 ; CHECK-LABEL: from_f8e5m2_to_f16(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b16 [func_retval0], 0x3C00;
 ; CHECK-NEXT:    ret;
@@ -604,6 +631,7 @@ define half @from_f8e5m2_to_f16() {
 define double @from_f8e5m2_to_f64() {
 ; CHECK-LABEL: from_f8e5m2_to_f64(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b64 [func_retval0], 4607182418800017408;

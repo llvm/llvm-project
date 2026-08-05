@@ -161,7 +161,7 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
   KernelBB->replaceSuccessor(BB, KernelBB);
 
   generateExistingPhis(KernelBB, PrologBBs.back(), KernelBB, KernelBB, VRMap,
-                       VRMapPhi, InstrMap, MaxStageCount, MaxStageCount, false);
+                       InstrMap, MaxStageCount, MaxStageCount, false);
   generatePhis(KernelBB, PrologBBs.back(), KernelBB, KernelBB, VRMap, VRMapPhi,
                InstrMap, MaxStageCount, MaxStageCount, false);
 
@@ -313,7 +313,7 @@ void ModuloScheduleExpander::generateEpilog(
       }
     }
     generateExistingPhis(NewBB, PrologBBs[i - 1], PredBB, KernelBB, VRMap,
-                         VRMapPhi, InstrMap, LastStage, EpilogStage, i == 1);
+                         InstrMap, LastStage, EpilogStage, i == 1);
     generatePhis(NewBB, PrologBBs[i - 1], PredBB, KernelBB, VRMap, VRMapPhi,
                  InstrMap, LastStage, EpilogStage, i == 1);
     PredBB = NewBB;
@@ -370,9 +370,8 @@ static bool hasUseAfterLoop(Register Reg, MachineBasicBlock *BB,
 /// creation of new Phis.
 void ModuloScheduleExpander::generateExistingPhis(
     MachineBasicBlock *NewBB, MachineBasicBlock *BB1, MachineBasicBlock *BB2,
-    MachineBasicBlock *KernelBB, ValueMapTy *VRMap, ValueMapTy *VRMapPhi,
-    InstrMapTy &InstrMap, unsigned LastStageNum, unsigned CurStageNum,
-    bool IsLast) {
+    MachineBasicBlock *KernelBB, ValueMapTy *VRMap, InstrMapTy &InstrMap,
+    unsigned LastStageNum, unsigned CurStageNum, bool IsLast) {
   // Compute the stage number for the initial value of the Phi, which
   // comes from the prolog. The prolog to use depends on to which kernel/
   // epilog that we're adding the Phi.
@@ -500,26 +499,23 @@ void ModuloScheduleExpander::generateExistingPhis(
         // contains the last definition of the Phi.
         if (np == 0 && PrevStage == LastStageNum &&
             (StageScheduled != 0 || LoopValStage != 0) &&
-            getMapPhiReg(VRMap, VRMapPhi, PrevStage - StageDiffAdj, LoopVal))
-          PhiOp2 =
-              getMapPhiReg(VRMap, VRMapPhi, PrevStage - StageDiffAdj, LoopVal);
+            VRMap[PrevStage - StageDiffAdj].count(LoopVal))
+          PhiOp2 = VRMap[PrevStage - StageDiffAdj][LoopVal];
         // Use the value defined by the Phi. We add one because we switch
         // from looking at the loop value to the Phi definition.
         else if (np > 0 && PrevStage == LastStageNum &&
-                 getMapPhiReg(VRMap, VRMapPhi, PrevStage - np + 1, Def))
-          PhiOp2 = getMapPhiReg(VRMap, VRMapPhi, PrevStage - np + 1, Def);
+                 VRMap[PrevStage - np + 1].count(Def))
+          PhiOp2 = VRMap[PrevStage - np + 1][Def];
         // Use the loop value defined in the kernel.
         else if (static_cast<unsigned>(LoopValStage) > PrologStage + 1 &&
-                 getMapPhiReg(VRMap, VRMapPhi, PrevStage - StageDiffAdj - np,
-                              LoopVal))
-          PhiOp2 = getMapPhiReg(VRMap, VRMapPhi, PrevStage - StageDiffAdj - np,
-                                LoopVal);
+                 VRMap[PrevStage - StageDiffAdj - np].count(LoopVal))
+          PhiOp2 = VRMap[PrevStage - StageDiffAdj - np][LoopVal];
         // Use the value defined by the Phi, unless we're generating the first
         // epilog and the Phi refers to a Phi in a different stage.
-        else if (getMapPhiReg(VRMap, VRMapPhi, PrevStage - np, Def) &&
+        else if (VRMap[PrevStage - np].count(Def) &&
                  (!LoopDefIsPhi || (PrevStage != LastStageNum) ||
                   (LoopValStage == StageScheduled)))
-          PhiOp2 = getMapPhiReg(VRMap, VRMapPhi, PrevStage - np, Def);
+          PhiOp2 = VRMap[PrevStage - np][Def];
       }
 
       // Check if we can reuse an existing Phi. This occurs when a Phi

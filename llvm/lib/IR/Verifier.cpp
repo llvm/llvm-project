@@ -117,7 +117,6 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1008,21 +1007,6 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
             "smaller",
             CurrentMD);
     }
-
-    // Enforce the single-operand form of llvm.loop.distribute metadata.
-    if (CurrentMD->getNumOperands() > 0 &&
-        (CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.enable") ||
-         CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.disable")))
-      Check(CurrentMD->getNumOperands() == 1,
-            "Expected one operand for llvm.loop.distribute metadata",
-            CurrentMD);
-
-    // Enforce the single-operand form of llvm.loop.vectorize.enable metadata.
-    if (CurrentMD->getNumOperands() > 0 &&
-        (CurrentMD->getOperand(0).equalsStr("llvm.loop.vectorize.enable") ||
-         CurrentMD->getOperand(0).equalsStr("llvm.loop.vectorize.disable")))
-      Check(CurrentMD->getNumOperands() == 1,
-            "Expecting only the metadata name", CurrentMD);
 
     // Check these last, so we diagnose problems in operands first.
     Check(!CurrentMD->isTemporary(), "Expected no forward declarations!",
@@ -2008,26 +1992,6 @@ Verifier::visitModuleFlag(const MDNode *Op,
     Check(Value, "wchar_size metadata requires constant integer argument");
   }
 
-  if (ID->getString() == "long-double-type") {
-    Check(MFB == Module::Error,
-          "long-double-type module flag must use 'error' merge behavior", Op);
-    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
-    Check(Value, "long-double-type metadata requires a string argument");
-    if (Value)
-      Check(parseLongDoubleFormat(Value->getString()).has_value(),
-            "invalid long-double-type metadata value", Op);
-  }
-
-  if (ID->getString() == "float-abi") {
-    Check(MFB == Module::Error,
-          "float-abi module flag must use 'error' merge behavior", Op);
-    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
-    Check(Value, "float-abi metadata requires a string argument");
-    if (Value)
-      Check(FloatABI::parseABIType(Value->getString()).has_value(),
-            "invalid float-abi metadata value", Op);
-  }
-
   if (ID->getString() == "Linker Options") {
     // If the llvm.linker.options named metadata exists, we assume that the
     // bitcode reader has upgraded the module flag. Otherwise the flag might
@@ -2556,8 +2520,6 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
 
-  checkUnsignedBaseTenFuncAttr(Attrs, "tail-pad-to-size", V);
-  checkUnsignedBaseTenFuncAttr(Attrs, "tail-pad-value", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-entry", V);
   if (Attrs.hasFnAttr("patchable-function-entry-section"))
@@ -3927,8 +3889,10 @@ void Verifier::visitCallBase(CallBase &Call) {
   Check(!Attrs.hasFnAttr(Attribute::DenormalFPEnv),
         "denormal_fpenv attribute may not apply to call sites", Call);
 
-  // FIXME: Missing verifier check to forbid a call site marked strictfp without
-  // caller function marked strictfp.
+  Check(!Attrs.hasFnAttr(Attribute::StrictFP) ||
+            Call.getFunction()->isStrictFP(),
+        "call site marked strictfp without caller function marked strictfp",
+        Call);
 
   // Verify call attributes.
   verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic, Call.isInlineAsm());
@@ -4624,25 +4588,26 @@ void Verifier::visitLoadInst(LoadInst &LI) {
               LI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Load cannot have Release ordering", &LI);
 
+    Type *ScalarTy = ElTy;
     if (LI.isElementwise()) {
-      Check(LI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
-            "atomic elementwise load cannot be sequentially consistent.", &LI);
       auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
       Check(VecTy,
             "atomic elementwise load operand must have fixed vector type!", &LI,
             ElTy);
-      if (VecTy)
-        checkAtomicMemAccessSize(VecTy->getElementType(), &LI);
+      if (VecTy) {
+        checkAtomicMemAccessSize(ScalarTy, &LI);
+        ScalarTy = VecTy->getElementType();
+      }
     }
 
-    Check(ElTy->getScalarType()->isIntOrPtrTy() ||
-              ElTy->getScalarType()->isByteTy() ||
-              ElTy->getScalarType()->isFloatingPointTy(),
+    Check(ScalarTy->getScalarType()->isIntOrPtrTy() ||
+              ScalarTy->getScalarType()->isByteTy() ||
+              ScalarTy->getScalarType()->isFloatingPointTy(),
           "atomic load operand must have integer, byte, pointer, floating "
           "point, or vector type!",
           ElTy, &LI);
 
-    checkAtomicMemAccessSize(ElTy, &LI);
+    checkAtomicMemAccessSize(ScalarTy, &LI);
   } else {
     Check(!LI.isElementwise(), "non-atomic load cannot be elementwise", &LI);
     Check(LI.getSyncScopeID() == SyncScope::System,
@@ -4758,33 +4723,30 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
         "atomicrmw instructions cannot be unordered.", &RMWI);
   auto Op = RMWI.getOperation();
   Type *ElTy = RMWI.getOperand(1)->getType();
-  Check(!ElTy->isScalableTy(), "atomicrmw operand may not be scalable", &RMWI);
+  Type *ScalarTy = ElTy;
   if (RMWI.isElementwise()) {
-    Check(RMWI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
-          "atomicrmw elementwise cannot be sequentially consistent.", &RMWI);
     auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
     Check(VecTy, "atomicrmw elementwise operand must have fixed vector type!",
           &RMWI, ElTy);
     if (VecTy)
-      checkAtomicMemAccessSize(VecTy->getElementType(), &RMWI);
+      ScalarTy = VecTy->getElementType();
   }
 
   if (Op == AtomicRMWInst::Xchg) {
-    Check((ElTy->isIntOrIntVectorTy() || ElTy->isFPOrFPVectorTy() ||
-           ElTy->isPtrOrPtrVectorTy()),
+    Check(ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy() ||
+              ScalarTy->isPointerTy(),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-              " operand must be an integer type, a floating-point type, a "
-              "pointer type, or a fixed vector of any of these types!",
+              " operand must have integer or floating point type!",
           &RMWI, ElTy);
   } else if (AtomicRMWInst::isFPOperation(Op)) {
-    Check(ElTy->isFPOrFPVectorTy(),
+    Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must have floating-point or fixed vector of "
               "floating-point "
               "type!",
           &RMWI, ElTy);
   } else {
-    Check(ElTy->isIntOrIntVectorTy(),
+    Check(ElTy->isIntOrIntVectorTy() && !isa<ScalableVectorType>(ElTy),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must have integer or fixed vector of integer type!",
           &RMWI, ElTy);

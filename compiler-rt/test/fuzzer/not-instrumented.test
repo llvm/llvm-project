@@ -1,4 +1,0 @@
-RUN: %cpp_compiler %S/NotinstrumentedTest.cpp -fsanitize-coverage=0 -o %t-NotinstrumentedTest-NoCoverage
-RUN: %run %t-NotinstrumentedTest-NoCoverage -runs=100 2>&1 | FileCheck %s --check-prefix=NO_COVERAGE
-
-NO_COVERAGE: WARNING: no interesting inputs were found so far. Is the code instrumented for coverage?

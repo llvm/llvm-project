@@ -653,7 +653,7 @@ class Source:
     checksums: Optional[List[Checksum]] = None
 
     def __post_init__(self):
-        if not self.name and not self.path and self.sourceReference is None:
+        if not self.name and not self.path and not self.sourceReference:
             raise ValueError(
                 f"Source requires either name, path, or source_reference. {self}"
             )
@@ -1150,24 +1150,15 @@ class LaunchArgs:
 @dataclass(frozen=True)
 @args_protocol
 class AttachArgs:
-    @dataclass(frozen=True)
-    class Session:
-        targetId: int
-        debuggerId: Optional[int] = None
+    restart: Optional[Any] = field(metadata={"alias": "__restart"}, default=None)
 
-    program: Optional[str] = None
     attachCommands: Optional[List[str]] = None
     pid: Optional[int] = None
     waitFor: Optional[bool] = None
-    gdbRemotePort: Optional[int] = field(
-        metadata={"alias": "gdb-remote-port"}, default=None
-    )
-    gdbRemoteHostname: Optional[str] = field(
-        metadata={"alias": "gdb-remote-hostname"}, default=None
-    )
+    gdbRemotePort: Optional[int] = None
+    gdbRemoteHostname: Optional[str] = None
     coreFile: Optional[str] = None
-    session: Optional[Session] = None
-    restart: Optional[Any] = field(metadata={"alias": "__restart"}, default=None)
+    program: Optional[str] = None
 
     # Configurations.
     debuggerRoot: Optional[str] = None

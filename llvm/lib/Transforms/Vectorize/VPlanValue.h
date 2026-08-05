@@ -246,9 +246,7 @@ public:
   }
 };
 
-/// VPValues are defined by a VPRegionBlock, like the canonical IV. They must
-/// be materialized when the containing region is dissolved, before VPlan
-/// execution.
+/// VPValues defined by a VPRegionBlock, like the canonical IV.
 class VPRegionValue : public VPSymbolicValue {
   VPRegionBlock *DefiningRegion;
   DebugLoc DL;

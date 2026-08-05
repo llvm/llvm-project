@@ -126,8 +126,7 @@ enum ActionType {
   GenDiagDocs,
   GenOptDocs,
   GenDataCollectors,
-  GenTestPragmaAttributeSupportedAttributes,
-  GenClangTraits
+  GenTestPragmaAttributeSupportedAttributes
 };
 
 namespace {
@@ -371,9 +370,7 @@ cl::opt<ActionType> Action(
         clEnumValN(GenTestPragmaAttributeSupportedAttributes,
                    "gen-clang-test-pragma-attribute-supported-attributes",
                    "Generate a list of attributes supported by #pragma clang "
-                   "attribute for testing purposes"),
-        clEnumValN(GenClangTraits, "gen-clang-traits",
-                   "Generate Traits.inc for clang")));
+                   "attribute for testing purposes")));
 
 cl::opt<std::string>
 ClangComponent("clang-component",
@@ -695,9 +692,6 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenTestPragmaAttributeSupportedAttributes:
     EmitTestPragmaAttributeSupportedAttributes(Records, OS);
-    break;
-  case GenClangTraits:
-    EmitClangTraits(Records, OS);
     break;
   }
 

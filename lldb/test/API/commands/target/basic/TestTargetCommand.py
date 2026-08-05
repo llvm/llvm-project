@@ -38,7 +38,6 @@ class targetCommandTestCase(TestBase):
         self.build(dictionary=dc)
         self.addTearDownCleanup(dictionary=dc)
 
-    @skipIfWasm  # a null dereference is a valid read in a Wasm linear memory, so the inferior does not fault
     def test_target_command(self):
         """Test some target commands: create, list, select."""
         self.buildAll()
@@ -564,7 +563,6 @@ class targetCommandTestCase(TestBase):
     @expectedFailureAll(
         oslist=["freebsd"], bugnumber="github.com/llvm/llvm-project/issues/56079"
     )
-    @skipIfWasm  # a Wasm executable statically links the C library, so its debug info holds many ints
     def test_target_modules_type(self):
         self.buildB()
         self.runCmd("file " + self.getBuildArtifact("b.out"), CURRENT_EXECUTABLE_SET)

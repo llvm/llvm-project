@@ -32,13 +32,11 @@ const char *CFIProgram::operandTypeString(CFIProgram::OperandType OT) {
     ENUM_TO_CSTR(OT_Address);
     ENUM_TO_CSTR(OT_Offset);
     ENUM_TO_CSTR(OT_FactoredCodeOffset);
-    ENUM_TO_CSTR(OT_SignedFactCodeOffset);
     ENUM_TO_CSTR(OT_SignedFactDataOffset);
     ENUM_TO_CSTR(OT_UnsignedFactDataOffset);
     ENUM_TO_CSTR(OT_Register);
     ENUM_TO_CSTR(OT_AddressSpace);
     ENUM_TO_CSTR(OT_Expression);
-    ENUM_TO_CSTR(OT_RAState);
   }
   return "<unknown CFIProgram::OperandType>";
 }
@@ -63,7 +61,6 @@ CFIProgram::Instruction::getOperandAsUnsigned(const CFIProgram &CFIP,
   case OT_Offset:
   case OT_SignedFactDataOffset:
   case OT_UnsignedFactDataOffset:
-  case OT_SignedFactCodeOffset:
     return createStringError(
         errc::invalid_argument,
         "op[%" PRIu32 "] has OperandType OT_Offset which produces a signed "
@@ -73,7 +70,6 @@ CFIProgram::Instruction::getOperandAsUnsigned(const CFIProgram &CFIP,
   case OT_Address:
   case OT_Register:
   case OT_AddressSpace:
-  case OT_RAState:
     return Operand;
 
   case OT_FactoredCodeOffset: {
@@ -110,7 +106,6 @@ CFIProgram::Instruction::getOperandAsSigned(const CFIProgram &CFIP,
   case OT_Address:
   case OT_Register:
   case OT_AddressSpace:
-  case OT_RAState:
     return createStringError(
         errc::invalid_argument,
         "op[%" PRIu32 "] has OperandType %s which produces an unsigned result, "
@@ -129,16 +124,6 @@ CFIProgram::Instruction::getOperandAsSigned(const CFIProgram &CFIP,
                                "alignment is zero",
                                OperandIdx, CFIProgram::operandTypeString(Type));
     return int64_t(Operand) * DataAlignmentFactor;
-  }
-
-  case OT_SignedFactCodeOffset: {
-    const int64_t CodeAlignmentFactor = CFIP.codeAlign();
-    if (CodeAlignmentFactor == 0)
-      return createStringError(errc::invalid_argument,
-                               "op[%" PRIu32 "] has type %s but code "
-                               "alignment is zero",
-                               OperandIdx, CFIProgram::operandTypeString(Type));
-    return int64_t(Operand) * CodeAlignmentFactor;
   }
 
   case OT_UnsignedFactDataOffset: {
@@ -207,7 +192,6 @@ CFIProgram::getOperandTypes() {
   DECLARE_OP0(DW_CFA_restore_state);
   DECLARE_OP0(DW_CFA_GNU_window_save);
   DECLARE_OP0(DW_CFA_AARCH64_negate_ra_state_with_pc);
-  DECLARE_OP2(DW_CFA_AARCH64_set_ra_state, OT_RAState, OT_SignedFactCodeOffset);
   DECLARE_OP1(DW_CFA_GNU_args_size, OT_Offset);
   DECLARE_OP0(DW_CFA_nop);
 

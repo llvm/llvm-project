@@ -1,3 +1,0 @@
-module a { header "a.h" export * }
-module b { header "b.h" export * use a }
-module c { header "c.h" export * use b }

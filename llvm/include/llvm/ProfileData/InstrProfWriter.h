@@ -186,9 +186,7 @@ public:
     if (static_cast<bool>(
             (ProfileKind & InstrProfKind::FrontendInstrumentation) ^
             (Other & InstrProfKind::FrontendInstrumentation))) {
-      return make_error<InstrProfError>(
-          instrprof_error::unsupported_version,
-          "cannot merge IR generated profile with Clang generated profile");
+      return make_error<InstrProfError>(instrprof_error::unsupported_version);
     }
     if (testIncompatible(InstrProfKind::FunctionEntryOnly,
                          InstrProfKind::FunctionEntryInstrumentation) ||
@@ -197,11 +195,6 @@ public:
       return make_error<InstrProfError>(
           instrprof_error::unsupported_version,
           "cannot merge FunctionEntryOnly profiles and BB profiles together");
-    }
-    if (static_cast<bool>((ProfileKind & InstrProfKind::SingleByteCoverage) ^
-                          (Other & InstrProfKind::SingleByteCoverage))) {
-      return make_error<InstrProfError>(
-          instrprof_error::coverage_count_mismatch);
     }
 
     // Now we update the profile type with the bits that are set.

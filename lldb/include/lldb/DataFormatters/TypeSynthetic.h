@@ -477,7 +477,8 @@ public:
 
   private:
     std::string m_python_class;
-    lldb::ScriptedSyntheticChildrenInterfaceSP m_interface_sp;
+    StructuredData::ObjectSP m_wrapper_sp;
+    ScriptInterpreter *m_interpreter;
 
     FrontEnd(const FrontEnd &) = delete;
     const FrontEnd &operator=(const FrontEnd &) = delete;

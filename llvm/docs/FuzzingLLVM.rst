@@ -2,6 +2,9 @@
 Fuzzing LLVM libraries and tools
 ================================
 
+.. contents::
+   :local:
+   :depth: 2
 
 Introduction
 ============

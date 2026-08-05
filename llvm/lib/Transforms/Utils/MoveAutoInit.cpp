@@ -226,6 +226,7 @@ PreservedAnalyses MoveAutoInitPass::run(Function &F,
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<MemorySSAAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;

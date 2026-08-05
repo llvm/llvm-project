@@ -40,15 +40,7 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         architecture = root.find("architecture")
         self.assertIsNotNone(architecture)
-        # Match the expected gdbserver's arch, see GDBRemoteCommunicationServerLLGS::BuildTargetXml.
-        replaced_arch = {
-            "x86_64": "i386:x86-64",
-            "riscv64": "riscv:rv64",
-            "riscv32": "riscv:rv32",
-        }
-        arch: str = self.getArchitecture()
-        expected_arch = replaced_arch.get(arch, arch)
-        self.assertIn(architecture.text, expected_arch)
+        self.assertIn(self.getArchitecture(), architecture.text)
 
         feature = root.find("feature")
         self.assertIsNotNone(feature)

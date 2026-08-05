@@ -84,9 +84,10 @@ entry:
 define <vscale x 32 x i1> @whilewr_8_split(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilewr_8_split:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    subs x9, x1, x0
+; CHECK-NEXT:    sub x9, x1, x0
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    csinv x9, x9, xzr, hi
+; CHECK-NEXT:    cmp x9, #1
+; CHECK-NEXT:    csinv x9, x9, xzr, ge
 ; CHECK-NEXT:    whilewr p0.b, x0, x1
 ; CHECK-NEXT:    whilelo p1.b, x8, x9
 ; CHECK-NEXT:    ret
@@ -98,10 +99,11 @@ entry:
 define <vscale x 64 x i1> @whilewr_8_split2(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilewr_8_split2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    subs x9, x1, x0
+; CHECK-NEXT:    sub x9, x1, x0
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    rdvl x10, #2
-; CHECK-NEXT:    csinv x9, x9, xzr, hi
+; CHECK-NEXT:    cmp x9, #1
+; CHECK-NEXT:    csinv x9, x9, xzr, ge
 ; CHECK-NEXT:    whilewr p0.b, x0, x1
 ; CHECK-NEXT:    whilelo p1.b, x8, x9
 ; CHECK-NEXT:    rdvl x8, #3
@@ -116,10 +118,11 @@ entry:
 define <vscale x 16 x i1> @whilewr_16_expand(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilewr_16_expand:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    subs x8, x1, x0
+; CHECK-NEXT:    sub x8, x1, x0
 ; CHECK-NEXT:    add x8, x8, x8, lsr #63
 ; CHECK-NEXT:    asr x8, x8, #1
-; CHECK-NEXT:    csinv x8, x8, xzr, hi
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    csinv x8, x8, xzr, ge
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -130,11 +133,12 @@ entry:
 define <vscale x 32 x i1> @whilewr_16_expand2(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilewr_16_expand2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    subs x9, x1, x0
+; CHECK-NEXT:    sub x9, x1, x0
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    add x9, x9, x9, lsr #63
 ; CHECK-NEXT:    asr x9, x9, #1
-; CHECK-NEXT:    csinv x9, x9, xzr, hi
+; CHECK-NEXT:    cmp x9, #1
+; CHECK-NEXT:    csinv x9, x9, xzr, ge
 ; CHECK-NEXT:    whilelo p0.b, xzr, x9
 ; CHECK-NEXT:    whilelo p1.b, x8, x9
 ; CHECK-NEXT:    ret
@@ -149,9 +153,9 @@ define <vscale x 8 x i1> @whilewr_32_expand(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x9, x8, #3
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x8, x8, #2
-; CHECK-NEXT:    csinv x8, x8, xzr, hi
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    csinv x8, x8, xzr, ge
 ; CHECK-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -165,9 +169,9 @@ define <vscale x 16 x i1> @whilewr_32_expand2(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x9, x8, #3
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x8, x8, #2
-; CHECK-NEXT:    csinv x8, x8, xzr, hi
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    csinv x8, x8, xzr, ge
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -182,9 +186,9 @@ define <vscale x 32 x i1> @whilewr_32_expand3(i64 %a, i64 %b) {
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    add x10, x9, #3
 ; CHECK-NEXT:    csel x9, x10, x9, mi
-; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x9, x9, #2
-; CHECK-NEXT:    csinv x9, x9, xzr, hi
+; CHECK-NEXT:    cmp x9, #1
+; CHECK-NEXT:    csinv x9, x9, xzr, ge
 ; CHECK-NEXT:    whilelo p0.b, xzr, x9
 ; CHECK-NEXT:    whilelo p1.b, x8, x9
 ; CHECK-NEXT:    ret
@@ -199,9 +203,9 @@ define <vscale x 4 x i1> @whilewr_64_expand(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x9, x8, #7
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x8, x8, #3
-; CHECK-NEXT:    csinv x8, x8, xzr, hi
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    csinv x8, x8, xzr, ge
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -215,9 +219,9 @@ define <vscale x 8 x i1> @whilewr_64_expand2(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x9, x8, #7
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x8, x8, #3
-; CHECK-NEXT:    csinv x8, x8, xzr, hi
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    csinv x8, x8, xzr, ge
 ; CHECK-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -231,9 +235,9 @@ define <vscale x 16 x i1> @whilewr_64_expand3(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x9, x8, #7
 ; CHECK-NEXT:    csel x8, x9, x8, mi
-; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x8, x8, #3
-; CHECK-NEXT:    csinv x8, x8, xzr, hi
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    csinv x8, x8, xzr, ge
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -248,9 +252,9 @@ define <vscale x 32 x i1> @whilewr_64_expand4(i64 %a, i64 %b) {
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    add x10, x9, #7
 ; CHECK-NEXT:    csel x9, x10, x9, mi
-; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x9, x9, #3
-; CHECK-NEXT:    csinv x9, x9, xzr, hi
+; CHECK-NEXT:    cmp x9, #1
+; CHECK-NEXT:    csinv x9, x9, xzr, ge
 ; CHECK-NEXT:    whilelo p0.b, xzr, x9
 ; CHECK-NEXT:    whilelo p1.b, x8, x9
 ; CHECK-NEXT:    ret
@@ -293,11 +297,12 @@ define <vscale x 16 x i1> @whilewr_badimm(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilewr_badimm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x8, #6148914691236517205 // =0x5555555555555555
-; CHECK-NEXT:    subs x9, x1, x0
+; CHECK-NEXT:    sub x9, x1, x0
 ; CHECK-NEXT:    movk x8, #21846
 ; CHECK-NEXT:    smulh x8, x9, x8
 ; CHECK-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-NEXT:    csinv x8, x8, xzr, hi
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    csinv x8, x8, xzr, ge
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
 entry:

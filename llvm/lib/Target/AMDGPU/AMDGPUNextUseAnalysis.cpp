@@ -1122,7 +1122,7 @@ private:
   MBBDistPair calcShortestDistanceToExit(const MachineBasicBlock *CurMBB,
                                          const MachineLoop *CurLoop) const {
     SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock *>> ExitEdges;
-    MLI->getExitEdges(*CurLoop, ExitEdges);
+    CurLoop->getExitEdges(ExitEdges);
     MBBDistPair LD;
 
     for (auto [Exit, Dest] : ExitEdges) {

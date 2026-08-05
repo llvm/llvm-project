@@ -156,8 +156,8 @@ add_entrypoint_object(
     ../fpathconf.h
   DEPENDS
     libc.include.unistd
-    libc.hdr.types.struct_statfs
-    libc.src.__support.OSUtil.linux.syscall_wrappers.fstatfs
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
     libc.src.unistd.linux.pathconf_utils
 )
@@ -394,8 +394,8 @@ add_entrypoint_object(
     ../pathconf.h
   DEPENDS
     libc.include.unistd
-    libc.hdr.types.struct_statfs
-    libc.src.__support.OSUtil.linux.syscall_wrappers.statfs
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
     libc.src.unistd.linux.pathconf_utils
 )
@@ -409,8 +409,9 @@ add_object_library(
   DEPENDS
     libc.hdr.limits_macros
     libc.hdr.unistd_macros
+    libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
-    libc.hdr.types.struct_statfs
+    libc.src.sys.statvfs.linux.statfs_utils
 )
 
 add_entrypoint_object(

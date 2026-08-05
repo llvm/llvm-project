@@ -1,3 +1,0 @@
-# RUN: toyc-ch4 %s -emit=ast 2>&1 | FileCheck %s
-# CHECK-NOT: Assert
-# CHECK: Parse error

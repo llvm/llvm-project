@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_AST_INTERP_DESCRIPTOR_H
 #define LLVM_CLANG_AST_INTERP_DESCRIPTOR_H
 
-#include "DeclOrExpr.h"
 #include "InitMap.h"
 #include "PrimType.h"
 #include "clang/AST/Decl.h"
@@ -26,6 +25,8 @@ class Record;
 class SourceInfo;
 struct Descriptor;
 enum PrimType : uint8_t;
+
+using DeclTy = llvm::PointerUnion<const Decl *, const Expr *>;
 
 /// Invoked whenever a block is created. The constructor method fills in the
 /// inline descriptors of all fields and array elements. It also initializes
@@ -122,7 +123,7 @@ static_assert(sizeof(GlobalInlineDescriptor) != sizeof(InlineDescriptor), "");
 struct Descriptor final {
 private:
   /// Original declaration, used to emit the error message.
-  const DeclOrExpr Source;
+  const DeclTy Source;
   const Type *SourceType = nullptr;
   /// Size of an element, in host bytes.
   const unsigned ElemSize;
@@ -173,33 +174,34 @@ public:
   const BlockDtorFn DtorFn = nullptr;
 
   /// Allocates a descriptor for a primitive.
-  Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type, MetadataSize MD,
-             bool IsConst, bool IsTemporary, bool IsMutable, bool IsVolatile);
-
-  /// Allocates a descriptor for an array of primitives.
-  Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type, MetadataSize MD,
-             size_t NumElems, bool IsConst, bool IsTemporary, bool IsMutable,
+  Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
+             MetadataSize MD, bool IsConst, bool IsTemporary, bool IsMutable,
              bool IsVolatile);
 
+  /// Allocates a descriptor for an array of primitives.
+  Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
+             MetadataSize MD, size_t NumElems, bool IsConst, bool IsTemporary,
+             bool IsMutable, bool IsVolatile);
+
   /// Allocates a descriptor for an array of primitives of unknown size.
-  Descriptor(DeclOrExpr D, PrimType Type, MetadataSize MDSize, bool IsConst,
+  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MDSize, bool IsConst,
              bool IsTemporary, UnknownSize);
 
   /// Allocates a descriptor for an array of composites.
-  Descriptor(DeclOrExpr D, const Type *SourceTy, const Descriptor *Elem,
+  Descriptor(const DeclTy &D, const Type *SourceTy, const Descriptor *Elem,
              MetadataSize MD, unsigned NumElems, bool IsConst, bool IsTemporary,
              bool IsMutable);
 
   /// Allocates a descriptor for an array of composites of unknown size.
-  Descriptor(DeclOrExpr D, const Descriptor *Elem, MetadataSize MD,
+  Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
              bool IsTemporary, UnknownSize);
 
   /// Allocates a descriptor for a record.
-  Descriptor(DeclOrExpr D, const Record *R, MetadataSize MD, bool IsConst,
+  Descriptor(const DeclTy &D, const Record *R, MetadataSize MD, bool IsConst,
              bool IsTemporary, bool IsMutable, bool IsVolatile);
 
   /// Allocates a dummy descriptor.
-  Descriptor(DeclOrExpr D, MetadataSize MD = std::nullopt);
+  Descriptor(const DeclTy &D, MetadataSize MD = std::nullopt);
 
   QualType getType() const;
   QualType getElemQualType() const;
@@ -207,9 +209,9 @@ public:
   SourceLocation getLocation() const;
   SourceInfo getLoc() const;
 
-  const Decl *asDecl() const { return Source.asDecl(); }
-  const Expr *asExpr() const { return Source.asExpr(); }
-  DeclOrExpr getSource() const { return Source; }
+  const Decl *asDecl() const { return dyn_cast<const Decl *>(Source); }
+  const Expr *asExpr() const { return dyn_cast<const Expr *>(Source); }
+  const DeclTy &getSource() const { return Source; }
 
   const ValueDecl *asValueDecl() const {
     return dyn_cast_if_present<ValueDecl>(asDecl());

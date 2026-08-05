@@ -2,6 +2,9 @@
 GWP-ASan
 ========
 
+.. contents::
+   :local:
+   :depth: 2
 
 Introduction
 ============

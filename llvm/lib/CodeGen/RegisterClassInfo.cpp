@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -204,7 +203,25 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
 /// nonoverlapping reserved registers. However, computing the allocation order
 /// for all register classes would be too expensive.
 unsigned RegisterClassInfo::computePSetLimit(unsigned Idx) const {
-  const TargetRegisterClass *RC = TRI->getLargestRegClassForRegPressureSet(Idx);
+  const TargetRegisterClass *RC = nullptr;
+  unsigned NumRCUnits = 0;
+  for (const TargetRegisterClass &C : TRI->regclasses()) {
+    const int *PSetID = TRI->getRegClassPressureSets(&C);
+    for (; *PSetID != -1; ++PSetID) {
+      if ((unsigned)*PSetID == Idx)
+        break;
+    }
+    if (*PSetID == -1)
+      continue;
+
+    // Found a register class that counts against this pressure set.
+    // For efficiency, only compute the set order for the largest set.
+    unsigned NUnits = TRI->getRegClassWeight(&C).WeightLimit;
+    if (!RC || NUnits > NumRCUnits) {
+      RC = &C;
+      NumRCUnits = NUnits;
+    }
+  }
   assert(RC && "Failed to find register class");
   compute(RC);
   unsigned NAllocatableRegs = getNumAllocatableRegs(RC);
@@ -218,33 +235,3 @@ unsigned RegisterClassInfo::computePSetLimit(unsigned Idx) const {
   unsigned NReserved = RC->getNumRegs() - NAllocatableRegs;
   return RegPressureSetLimit - TRI->getRegClassWeight(RC).RegWeight * NReserved;
 }
-
-INITIALIZE_PASS(MachineRegisterClassInfoWrapperPass,
-                "machine-register-class-info",
-                "Machine Register Class Info Analysis", true, true)
-
-MachineRegisterClassAnalysis::Result
-MachineRegisterClassAnalysis::run(MachineFunction &MF,
-                                  MachineFunctionAnalysisManager &) {
-  RegisterClassInfo RCI;
-  RCI.runOnMachineFunction(MF);
-  return RCI;
-}
-
-char MachineRegisterClassInfoWrapperPass::ID = 0;
-
-MachineRegisterClassInfoWrapperPass::MachineRegisterClassInfoWrapperPass()
-    : MachineFunctionPass(ID), RCI() {
-  PassRegistry &Registry = *PassRegistry::getPassRegistry();
-  initializeMachineRegisterClassInfoWrapperPassPass(Registry);
-}
-
-bool MachineRegisterClassInfoWrapperPass::runOnMachineFunction(
-    MachineFunction &MF) {
-  RCI.runOnMachineFunction(MF);
-  return false;
-}
-
-void MachineRegisterClassInfoWrapperPass::anchor() {}
-
-AnalysisKey MachineRegisterClassAnalysis::Key;

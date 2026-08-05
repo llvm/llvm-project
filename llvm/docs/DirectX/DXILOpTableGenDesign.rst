@@ -1,6 +1,8 @@
 ==============================================================
 Specification of DXIL Operations using TableGen Representation
 ==============================================================
+.. contents::
+   :local:
 
 .. toctree
    :hidden

@@ -1,5 +1,8 @@
 # Project Governance
 
+```{contents}
+:local:
+```
 
 ## Area Teams
 

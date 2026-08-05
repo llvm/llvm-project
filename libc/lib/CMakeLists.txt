@@ -63,7 +63,7 @@ install(
 )
 
 foreach(file ${added_bitcode_targets})
-  install(FILES $<TARGET_PROPERTY:${file},TARGET_FILE>
+  install(FILES $<TARGET_FILE:${file}>
           DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
           RENAME $<TARGET_PROPERTY:${file},OUTPUT_NAME>
           COMPONENT libc

@@ -188,11 +188,7 @@ static MachineFunction &createFrameHelperMachineFunction(Module *M,
 
   MachineFunction &MF = MMI->getOrCreateMachineFunction(*F);
   // Remove unnecessary register liveness and set NoVRegs.
-  MF.getProperties()
-      .resetTracksLiveness()
-      .resetIsSSA()
-      .setNoVRegs()
-      .setNoPHIs();
+  MF.getProperties().resetTracksLiveness().resetIsSSA().setNoVRegs();
   MF.getRegInfo().freezeReservedRegs();
 
   // Create entry block.

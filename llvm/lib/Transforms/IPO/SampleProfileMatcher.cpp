@@ -771,6 +771,7 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
   // TODO: Support MD5 profile.
   if (FunctionSamples::UseMD5)
     return;
+  SampleProfileNameSet NamesInProfile(Reader);
 
   for (auto &F : M) {
     // Skip declarations, as even if the function can be matched, we have
@@ -786,7 +787,7 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
     // For extended binary, functions fully inlined may not be loaded in the
     // top-level profile, so check the NameTable which has the all symbol names
     // in profile.
-    if (Reader.contains(CanonFName))
+    if (NamesInProfile.contains(CanonFName))
       continue;
 
     // For extended binary, non-profiled function symbols are in the profile

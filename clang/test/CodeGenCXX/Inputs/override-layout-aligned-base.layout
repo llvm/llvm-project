@@ -1,8 +1,0 @@
-
-*** Dumping AST Record Layout
-Type: struct AlignedBase
-
-Layout: <ASTRecordLayout
-  Size:64
-  Alignment:64
-  FieldOffsets: []>

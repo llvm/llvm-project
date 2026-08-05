@@ -133,9 +133,6 @@ struct Session {
   Expected<orc::JITDylib *> getOrLoadDynamicLibrary(StringRef LibPath);
   Error loadAndLinkDynamicLibrary(orc::JITDylib &JD, StringRef LibPath);
 
-  Expected<orc::JITDylib *> getOrLoadAutoImportDLL(StringRef LibPath);
-  Error loadAndLinkAutoImportDLL(orc::JITDylib &JD, StringRef LibPath);
-
   orc::ObjectLayer &getLinkLayer(bool Lazy) {
     assert((!Lazy || LazyLinking) &&
            "Lazy linking requested but not available");
@@ -158,7 +155,6 @@ struct Session {
                                               Twine ErrorMsgStem);
 
   DynLibJDMap DynLibJDs;
-  DynLibJDMap AutoImportJDs;
 
   std::mutex M;
   std::condition_variable ActiveLinksCV;

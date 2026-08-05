@@ -26,8 +26,6 @@ using namespace dwarf_linker;
 
 namespace dsymutil {
 
-class PseudoProbeLinker;
-
 /// DwarfLinkerForBinaryRelocationMap contains the logic to handle the
 /// relocations and to store them inside an associated RelocationMap.
 class DwarfLinkerForBinaryRelocationMap {
@@ -266,7 +264,7 @@ private:
                                                  const Triple &triple);
   ErrorOr<std::unique_ptr<dwarf_linker::DWARFFile>>
   loadObject(const DebugMapObject &Obj, const DebugMap &DebugMap,
-             remarks::RemarkLinker &RL, PseudoProbeLinker &PL,
+             remarks::RemarkLinker &RL,
              std::shared_ptr<DwarfLinkerForBinaryRelocationMap> DLBRM);
 
   void collectRelocationsToApplyToSwiftReflectionSections(

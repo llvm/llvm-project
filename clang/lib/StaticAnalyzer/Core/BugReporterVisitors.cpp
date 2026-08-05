@@ -346,14 +346,14 @@ static bool wasRegionOfInterestModifiedAt(const SubRegion *RegionOfInterest,
 // Implementation of BugReporterVisitor.
 //===----------------------------------------------------------------------===//
 
-PathDiagnosticPieceRef
-BugReporterVisitor::getEndPath(const ExplodedNode *, BugReporterContext &,
-                               PathSensitiveBugReport &) {
+PathDiagnosticPieceRef BugReporterVisitor::getEndPath(BugReporterContext &,
+                                                      const ExplodedNode *,
+                                                      PathSensitiveBugReport &) {
   return nullptr;
 }
 
-void BugReporterVisitor::finalizeVisitor(const ExplodedNode *,
-                                         BugReporterContext &,
+void BugReporterVisitor::finalizeVisitor(BugReporterContext &,
+                                         const ExplodedNode *,
                                          PathSensitiveBugReport &) {}
 
 PathDiagnosticPieceRef
@@ -1115,7 +1115,7 @@ public:
     llvm_unreachable("Invalid visit mode!");
   }
 
-  void finalizeVisitor(const ExplodedNode *, BugReporterContext &,
+  void finalizeVisitor(BugReporterContext &, const ExplodedNode *,
                        PathSensitiveBugReport &BR) override {
     if (EnableNullFPSuppression && ShouldInvalidate)
       BR.markInvalid(ReturnVisitor::getTag(), CalleeSF);
@@ -3252,7 +3252,7 @@ bool ConditionBRVisitor::isPieceMessageGeneric(
 //===----------------------------------------------------------------------===//
 
 void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
-    const ExplodedNode *N, BugReporterContext &BRC,
+    BugReporterContext &BRC, const ExplodedNode *N,
     PathSensitiveBugReport &BR) {
   // Here we suppress false positives coming from system headers. This list is
   // based on known issues.
@@ -3292,8 +3292,8 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
         }
       }
 
-      for (const StackFrame &SF : N->stackframes()) {
-        const auto *MD = dyn_cast<CXXMethodDecl>(SF.getDecl());
+      for (const auto *SF = N->getStackFrame(); SF; SF = SF->getParent()) {
+        const auto *MD = dyn_cast<CXXMethodDecl>(SF->getDecl());
         if (!MD)
           continue;
 

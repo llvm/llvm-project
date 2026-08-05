@@ -13,6 +13,7 @@
 
 #include "src/stdlib/getenv.h"
 #include "src/stdlib/setenv.h"
+#include "src/string/strcmp.h"
 
 #include "test/IntegrationTest/test.h"
 
@@ -29,7 +30,7 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     // Verify it was set
     char *value = LIBC_NAMESPACE::getenv("SETENV_TEST_VAR");
     ASSERT_NE(value, nullptr);
-    ASSERT_STREQ(value, "test_value");
+    ASSERT_EQ(LIBC_NAMESPACE::strcmp(value, "test_value"), 0);
   }
 
   // Test: OverwriteExisting
@@ -37,12 +38,16 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     // Set initial value
     ASSERT_EQ(LIBC_NAMESPACE::setenv("OVERWRITE_VAR", "original", 1), 0);
     ASSERT_ERRNO_SUCCESS();
-    ASSERT_STREQ(LIBC_NAMESPACE::getenv("OVERWRITE_VAR"), "original");
+    ASSERT_EQ(LIBC_NAMESPACE::strcmp(LIBC_NAMESPACE::getenv("OVERWRITE_VAR"),
+                                     "original"),
+              0);
 
     // Overwrite with new value (overwrite = 1)
     ASSERT_EQ(LIBC_NAMESPACE::setenv("OVERWRITE_VAR", "replaced", 1), 0);
     ASSERT_ERRNO_SUCCESS();
-    ASSERT_STREQ(LIBC_NAMESPACE::getenv("OVERWRITE_VAR"), "replaced");
+    ASSERT_EQ(LIBC_NAMESPACE::strcmp(LIBC_NAMESPACE::getenv("OVERWRITE_VAR"),
+                                     "replaced"),
+              0);
   }
 
   // Test: NoOverwriteFlag
@@ -50,17 +55,23 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     // Set initial value
     ASSERT_EQ(LIBC_NAMESPACE::setenv("NO_OVERWRITE_VAR", "original", 1), 0);
     ASSERT_ERRNO_SUCCESS();
-    ASSERT_STREQ(LIBC_NAMESPACE::getenv("NO_OVERWRITE_VAR"), "original");
+    ASSERT_EQ(LIBC_NAMESPACE::strcmp(LIBC_NAMESPACE::getenv("NO_OVERWRITE_VAR"),
+                                     "original"),
+              0);
 
     // Try to set with overwrite = 0 (should not change)
     ASSERT_EQ(LIBC_NAMESPACE::setenv("NO_OVERWRITE_VAR", "ignored", 0), 0);
     ASSERT_ERRNO_SUCCESS();
-    ASSERT_STREQ(LIBC_NAMESPACE::getenv("NO_OVERWRITE_VAR"), "original");
+    ASSERT_EQ(LIBC_NAMESPACE::strcmp(LIBC_NAMESPACE::getenv("NO_OVERWRITE_VAR"),
+                                     "original"),
+              0);
 
     // Verify it still works with overwrite = 1
     ASSERT_EQ(LIBC_NAMESPACE::setenv("NO_OVERWRITE_VAR", "changed", 1), 0);
     ASSERT_ERRNO_SUCCESS();
-    ASSERT_STREQ(LIBC_NAMESPACE::getenv("NO_OVERWRITE_VAR"), "changed");
+    ASSERT_EQ(LIBC_NAMESPACE::strcmp(LIBC_NAMESPACE::getenv("NO_OVERWRITE_VAR"),
+                                     "changed"),
+              0);
   }
 
   // Note: passing nullptr for name or value is undefined behavior per POSIX.
@@ -90,7 +101,7 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
 
     char *value = LIBC_NAMESPACE::getenv("EMPTY_VALUE_VAR");
     ASSERT_NE(value, nullptr);
-    ASSERT_STREQ(value, "");
+    ASSERT_EQ(LIBC_NAMESPACE::strcmp(value, ""), 0);
   }
 
   // Test: MultipleVariables
@@ -105,9 +116,12 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     ASSERT_ERRNO_SUCCESS();
 
     // Verify all are set correctly
-    ASSERT_STREQ(LIBC_NAMESPACE::getenv("VAR1"), "value1");
-    ASSERT_STREQ(LIBC_NAMESPACE::getenv("VAR2"), "value2");
-    ASSERT_STREQ(LIBC_NAMESPACE::getenv("VAR3"), "value3");
+    ASSERT_EQ(LIBC_NAMESPACE::strcmp(LIBC_NAMESPACE::getenv("VAR1"), "value1"),
+              0);
+    ASSERT_EQ(LIBC_NAMESPACE::strcmp(LIBC_NAMESPACE::getenv("VAR2"), "value2"),
+              0);
+    ASSERT_EQ(LIBC_NAMESPACE::strcmp(LIBC_NAMESPACE::getenv("VAR3"), "value3"),
+              0);
   }
 
   // Test: LongValues
@@ -120,7 +134,9 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
 
     ASSERT_EQ(LIBC_NAMESPACE::setenv(long_name, long_value, 1), 0);
     ASSERT_ERRNO_SUCCESS();
-    ASSERT_STREQ(LIBC_NAMESPACE::getenv(long_name), long_value);
+    ASSERT_EQ(
+        LIBC_NAMESPACE::strcmp(LIBC_NAMESPACE::getenv(long_name), long_value),
+        0);
   }
 
   // Test: SpecialCharacters
@@ -128,7 +144,9 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     // Test with special characters in value (but not in name)
     ASSERT_EQ(LIBC_NAMESPACE::setenv("SPECIAL_CHARS", "!@#$%^&*()", 1), 0);
     ASSERT_ERRNO_SUCCESS();
-    ASSERT_STREQ(LIBC_NAMESPACE::getenv("SPECIAL_CHARS"), "!@#$%^&*()");
+    ASSERT_EQ(LIBC_NAMESPACE::strcmp(LIBC_NAMESPACE::getenv("SPECIAL_CHARS"),
+                                     "!@#$%^&*()"),
+              0);
   }
 
   // Test: ReplaceMultipleTimes
@@ -136,15 +154,21 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     // Replace the same variable multiple times
     ASSERT_EQ(LIBC_NAMESPACE::setenv("MULTI_REPLACE", "value1", 1), 0);
     ASSERT_ERRNO_SUCCESS();
-    ASSERT_STREQ(LIBC_NAMESPACE::getenv("MULTI_REPLACE"), "value1");
+    ASSERT_EQ(LIBC_NAMESPACE::strcmp(LIBC_NAMESPACE::getenv("MULTI_REPLACE"),
+                                     "value1"),
+              0);
 
     ASSERT_EQ(LIBC_NAMESPACE::setenv("MULTI_REPLACE", "value2", 1), 0);
     ASSERT_ERRNO_SUCCESS();
-    ASSERT_STREQ(LIBC_NAMESPACE::getenv("MULTI_REPLACE"), "value2");
+    ASSERT_EQ(LIBC_NAMESPACE::strcmp(LIBC_NAMESPACE::getenv("MULTI_REPLACE"),
+                                     "value2"),
+              0);
 
     ASSERT_EQ(LIBC_NAMESPACE::setenv("MULTI_REPLACE", "value3", 1), 0);
     ASSERT_ERRNO_SUCCESS();
-    ASSERT_STREQ(LIBC_NAMESPACE::getenv("MULTI_REPLACE"), "value3");
+    ASSERT_EQ(LIBC_NAMESPACE::strcmp(LIBC_NAMESPACE::getenv("MULTI_REPLACE"),
+                                     "value3"),
+              0);
   }
 
   return 0;

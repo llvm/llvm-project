@@ -15,7 +15,7 @@ except Exception as err:
 
 InterestingStores = 0
 for line in input:
-    if line.lstrip().startswith("store"):
+    if "store" in line:
         InterestingStores += 1
 
 print("Interesting stores ", InterestingStores, " sleeping ", sleep_seconds)

@@ -31,4 +31,4 @@ for.end:
 }
 
 !0 = !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.enable"}
+!1 = !{!"llvm.loop.vectorize.enable", i1 true}

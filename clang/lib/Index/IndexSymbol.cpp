@@ -302,15 +302,11 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Lang = SymbolLanguage::CXX;
       break;
     }
-    case Decl::ClassTemplate: {
-      const ClassTemplateDecl *CTD = cast<ClassTemplateDecl>(D);
-      Info.Kind = CTD->getTemplatedDecl()->getTagKind() == TagTypeKind::Struct
-                      ? SymbolKind::Struct
-                      : SymbolKind::Class;
+    case Decl::ClassTemplate:
+      Info.Kind = SymbolKind::Class;
       Info.Properties |= (SymbolPropertySet)SymbolProperty::Generic;
       Info.Lang = SymbolLanguage::CXX;
       break;
-    }
     case Decl::FunctionTemplate:
       Info.Kind = SymbolKind::Function;
       Info.Properties |= (SymbolPropertySet)SymbolProperty::Generic;

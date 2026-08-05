@@ -37,6 +37,11 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
+  void Clear() override {
+    m_uuid.Clear();
+    m_value_was_set = false;
+  }
+
   // Subclass specific functions
 
   UUID &GetCurrentValue() { return m_uuid; }
@@ -49,11 +54,6 @@ public:
                     CompletionRequest &request) override;
 
 protected:
-  void ClearImpl() override {
-    m_uuid.Clear();
-    m_value_was_set = false;
-  }
-
   UUID m_uuid;
 };
 

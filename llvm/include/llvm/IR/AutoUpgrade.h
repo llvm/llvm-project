@@ -112,14 +112,7 @@ namespace llvm {
 
   /// Check whether a string looks like an old loop attachment tag.
   inline bool mayBeOldLoopAttachmentTag(StringRef Name) {
-    // "llvm.loop.distribute.enable" and "llvm.loop.vectorize.enable" are
-    // intentionally included: the current single-operand form shares the tag
-    // with the removed two-operand form (!{!"...", i1 X}), so we can only
-    // decide by inspecting the operands, which happens in
-    // upgradeLoopArgument().
-    return Name.starts_with("llvm.vectorizer.") ||
-           Name == "llvm.loop.distribute.enable" ||
-           Name == "llvm.loop.vectorize.enable";
+    return Name.starts_with("llvm.vectorizer.");
   }
 
   /// Upgrade the loop attachment metadata node.

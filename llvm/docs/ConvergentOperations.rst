@@ -2,6 +2,9 @@
 Convergent Operation Semantics
 ==============================
 
+.. contents::
+   :local:
+   :depth: 4
 
 Overview
 ========

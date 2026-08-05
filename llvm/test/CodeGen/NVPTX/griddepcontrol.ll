@@ -6,6 +6,7 @@ define void @griddepcontrol() {
 ; CHECK-LABEL: griddepcontrol(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    griddepcontrol.launch_dependents;
 ; CHECK-NEXT:    griddepcontrol.wait;

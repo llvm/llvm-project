@@ -3,6 +3,8 @@
 Generic Machine IR
 ==================
 
+.. contents::
+   :local:
 
 Generic MIR (gMIR) is an intermediate representation that shares the same data
 structures as :doc:`MachineIR (MIR) <../MIRLangRef>` but has more relaxed

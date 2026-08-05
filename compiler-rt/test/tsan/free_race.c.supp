@@ -1,2 +1,0 @@
-# Suppression for a use-after-free in free_race.c
-race:^Thread2$

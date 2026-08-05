@@ -1,4 +1,6 @@
 ; Test passes if there is no mismatch on a convert instruction
+;
+; UNSUPPORTED: asserts
 
 ; REQUIRES: asserts
 ; RUN: llc -O2 -mtriple=hexagon -mattr=+hvxv81,+hvx-length128B \

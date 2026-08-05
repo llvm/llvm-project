@@ -240,7 +240,8 @@ bool llvm::applyDebugifyMetadata(
       auto LocalVar = DIB.createAutoVariable(SP, Name, File, Loc->getLine(),
                                              getCachedDIType(V->getType()),
                                              /*AlwaysPreserve=*/true);
-      DIB.insertDbgValue(V, LocalVar, DIB.createExpression(), Loc, InsertPt);
+      DIB.insertDbgValueIntrinsic(V, LocalVar, DIB.createExpression(), Loc,
+                                  InsertPt);
     };
 
     for (BasicBlock &BB : F) {

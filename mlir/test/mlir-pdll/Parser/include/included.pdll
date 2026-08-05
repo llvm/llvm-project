@@ -1,5 +1,0 @@
-// This file is included by 'include.pdll' as part of testing include files.
-
-Pattern IncludedPattern {
-  erase _: Op;
-}

@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -76,13 +75,6 @@ MipsRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
 // Callee Saved Registers methods
 //===----------------------------------------------------------------------===//
 
-/// Check if the user has declared $gp/$28 as a global regiater.
-bool isGPUsedAsGlobalRegister(const MachineFunction &MF) {
-  const Module *Module = MF.getFunction().getParent();
-
-  return Module->getNamedMetadata("llvm.named.register.$28");
-}
-
 /// Mips Callee Saved Registers
 const MCPhysReg *
 MipsRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
@@ -97,23 +89,20 @@ MipsRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
                                      : CSR_Interrupt_32_SaveList;
   }
 
-  bool GPIsGlobal = isGPUsedAsGlobalRegister(*MF);
   // N64 ABI
   if (Subtarget.isABI_N64()) {
     if (Subtarget.isSingleFloat())
-      return GPIsGlobal ? CSR_N64_SingleFloat_NoGP_SaveList
-                        : CSR_N64_SingleFloat_SaveList;
+      return CSR_N64_SingleFloat_SaveList;
 
-    return GPIsGlobal ? CSR_N64_NoGP_SaveList : CSR_N64_SaveList;
+    return CSR_N64_SaveList;
   }
 
   // N32 ABI
   if (Subtarget.isABI_N32()) {
     if (Subtarget.isSingleFloat())
-      return GPIsGlobal ? CSR_N32_SingleFloat_NoGP_SaveList
-                        : CSR_N32_SingleFloat_SaveList;
+      return CSR_N32_SingleFloat_SaveList;
 
-    return GPIsGlobal ? CSR_N32_NoGP_SaveList : CSR_N32_SaveList;
+    return CSR_N32_SaveList;
   }
 
   // O32 ABI
@@ -186,8 +175,7 @@ getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(R);
 
   // For mno-abicalls, GP is a program invariant!
-  bool GPIsGlobal = isGPUsedAsGlobalRegister(MF);
-  if (!Subtarget.isABICalls() || GPIsGlobal) {
+  if (!Subtarget.isABICalls()) {
     Reserved.set(Mips::GP);
     Reserved.set(Mips::GP_64);
   }

@@ -28,7 +28,7 @@ def has_lldb_codesign():
         return False
 
 
-@requireDarwin
+@skipUnlessDarwin
 class TestdSYMCodesign(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     SHARED_BUILD_TESTCASE = False

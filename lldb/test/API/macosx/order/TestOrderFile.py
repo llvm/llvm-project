@@ -11,7 +11,7 @@ from lldbsuite.test import lldbutil
 
 
 class OrderFileTestCase(TestBase):
-    @requireDarwin
+    @skipUnlessDarwin
     def test(self):
         """Test debug symbols follow the correct order by the order file."""
         self.build()

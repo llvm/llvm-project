@@ -154,7 +154,7 @@ private:
   friend class SBTarget;
   friend class SBValue;
 
-  friend class lldb_private::ScriptInterpreterBridge;
+  friend class lldb_private::ScriptInterpreter;
 
   lldb::DataExtractorSP m_opaque_sp;
 };

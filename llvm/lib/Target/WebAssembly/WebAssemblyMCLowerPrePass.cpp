@@ -17,14 +17,9 @@
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -32,13 +27,13 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-mclower-prepass"
 
 namespace {
-class WebAssemblyMCLowerPreLegacy final : public ModulePass {
+class WebAssemblyMCLowerPrePass final : public ModulePass {
   StringRef getPassName() const override {
     return "WebAssembly MC Lower Pre Pass";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
+    AU.setPreservesCFG();
     ModulePass::getAnalysisUsage(AU);
   }
 
@@ -46,17 +41,18 @@ class WebAssemblyMCLowerPreLegacy final : public ModulePass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyMCLowerPreLegacy() : ModulePass(ID) {}
+  WebAssemblyMCLowerPrePass() : ModulePass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyMCLowerPreLegacy::ID = 0;
-INITIALIZE_PASS(WebAssemblyMCLowerPreLegacy, DEBUG_TYPE,
-                "Collects information ahead of time for MC lowering", false,
-                false)
+char WebAssemblyMCLowerPrePass::ID = 0;
+INITIALIZE_PASS(
+    WebAssemblyMCLowerPrePass, DEBUG_TYPE,
+    "Collects information ahead of time for MC lowering",
+    false, false)
 
-ModulePass *llvm::createWebAssemblyMCLowerPreLegacyPass() {
-  return new WebAssemblyMCLowerPreLegacy();
+ModulePass *llvm::createWebAssemblyMCLowerPrePass() {
+  return new WebAssemblyMCLowerPrePass();
 }
 
 // NOTE: this is a ModulePass since we need to enforce that this code has run
@@ -66,12 +62,16 @@ ModulePass *llvm::createWebAssemblyMCLowerPreLegacyPass() {
 //
 // The information stored here is essential for emitExternalDecls in the Wasm
 // AsmPrinter
-static void mcLower(Module &M, MachineModuleInfo &MMI,
-                    llvm::function_ref<MachineFunction *(Function *)> GetMF) {
+bool WebAssemblyMCLowerPrePass::runOnModule(Module &M) {
+  auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
+  if (!MMIWP)
+    return true;
+
+  MachineModuleInfo &MMI = MMIWP->getMMI();
   MachineModuleInfoWasm &MMIW = MMI.getObjFileInfo<MachineModuleInfoWasm>();
 
   for (Function &F : M) {
-    MachineFunction *MF = GetMF(&F);
+    MachineFunction *MF = MMI.getMachineFunction(F);
     if (!MF)
       continue;
 
@@ -92,28 +92,5 @@ static void mcLower(Module &M, MachineModuleInfo &MMI,
       }
     }
   }
-}
-
-bool WebAssemblyMCLowerPreLegacy::runOnModule(Module &M) {
-  auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
-  if (!MMIWP)
-    return false;
-  MachineModuleInfo &MMI = MMIWP->getMMI();
-  mcLower(M, MMI, [MMIWP](Function *F) {
-    return MMIWP->getMMI().getMachineFunction(*F);
-  });
-  return false;
-}
-
-PreservedAnalyses WebAssemblyMCLowerPrePass::run(Module &M,
-                                                 ModuleAnalysisManager &MAM) {
-  MachineModuleInfo &MMI = MAM.getResult<MachineModuleAnalysis>(M).getMMI();
-  mcLower(M, MMI, [&](Function *F) {
-    MachineFunctionAnalysis::Result *MFA =
-        MAM.getResult<FunctionAnalysisManagerModuleProxy>(M)
-            .getManager()
-            .getCachedResult<MachineFunctionAnalysis>(*F);
-    return MFA ? &MFA->getMF() : nullptr;
-  });
-  return PreservedAnalyses::all();
+  return true;
 }

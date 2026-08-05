@@ -214,8 +214,7 @@ public:
 
   /// emitZeroCallUsedRegs - Zeros out call used registers.
   virtual void emitZeroCallUsedRegs(BitVector RegsToZero,
-                                    MachineBasicBlock &MBB,
-                                    RegScavenger *RS) const {}
+                                    MachineBasicBlock &MBB) const {}
 
   /// With basic block sections, emit callee saved frame moves for basic blocks
   /// that are in a different section.

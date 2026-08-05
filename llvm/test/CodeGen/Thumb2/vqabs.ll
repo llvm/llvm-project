@@ -52,7 +52,10 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vqabs_sat_test16(<16 x i8> %A) {
 ; CHECK-LABEL: vqabs_sat_test16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vqabs.s8 q0, q0
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vcmp.s8 gt, q0, zr
+; CHECK-NEXT:    vqsub.s8 q1, q1, q0
+; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = icmp sgt <16 x i8> %A, zeroinitializer
@@ -64,7 +67,10 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vqabs_sat_test8(<8 x i16> %A) {
 ; CHECK-LABEL: vqabs_sat_test8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vqabs.s16 q0, q0
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vcmp.s16 gt, q0, zr
+; CHECK-NEXT:    vqsub.s16 q1, q1, q0
+; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = icmp sgt <8 x i16> %A, zeroinitializer
@@ -76,7 +82,10 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vqabs_sat_test4(<4 x i32> %A) {
 ; CHECK-LABEL: vqabs_sat_test4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vqabs.s32 q0, q0
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vcmp.s32 gt, q0, zr
+; CHECK-NEXT:    vqsub.s32 q1, q1, q0
+; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = icmp sgt <4 x i32> %A, zeroinitializer

@@ -28,13 +28,9 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/SlotIndexes.h"
-#include "llvm/IR/Analysis.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -44,7 +40,7 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-reg-stackify"
 
 namespace {
-class WebAssemblyRegStackifyLegacy final : public MachineFunctionPass {
+class WebAssemblyRegStackify final : public MachineFunctionPass {
   bool Optimize;
 
   StringRef getPassName() const override {
@@ -57,8 +53,11 @@ class WebAssemblyRegStackifyLegacy final : public MachineFunctionPass {
       AU.addRequired<LiveIntervalsWrapperPass>();
       AU.addRequired<MachineDominatorTreeWrapperPass>();
     }
+    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
+    AU.addPreservedID(LiveVariablesID);
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -66,21 +65,19 @@ class WebAssemblyRegStackifyLegacy final : public MachineFunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyRegStackifyLegacy(CodeGenOptLevel OptLevel)
+  WebAssemblyRegStackify(CodeGenOptLevel OptLevel)
       : MachineFunctionPass(ID), Optimize(OptLevel != CodeGenOptLevel::None) {}
-  WebAssemblyRegStackifyLegacy()
-      : WebAssemblyRegStackifyLegacy(CodeGenOptLevel::Default) {}
+  WebAssemblyRegStackify() : WebAssemblyRegStackify(CodeGenOptLevel::Default) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyRegStackifyLegacy::ID = 0;
-INITIALIZE_PASS(WebAssemblyRegStackifyLegacy, DEBUG_TYPE,
+char WebAssemblyRegStackify::ID = 0;
+INITIALIZE_PASS(WebAssemblyRegStackify, DEBUG_TYPE,
                 "Reorder instructions to use the WebAssembly value stack",
                 false, false)
 
-FunctionPass *
-llvm::createWebAssemblyRegStackifyLegacyPass(CodeGenOptLevel OptLevel) {
-  return new WebAssemblyRegStackifyLegacy(OptLevel);
+FunctionPass *llvm::createWebAssemblyRegStackify(CodeGenOptLevel OptLevel) {
+  return new WebAssemblyRegStackify(OptLevel);
 }
 
 // Decorate the given instruction with implicit operands that enforce the
@@ -829,8 +826,7 @@ public:
 };
 } // end anonymous namespace
 
-static bool regStackify(MachineFunction &MF, bool Optimize,
-                        MachineDominatorTree *MDT, LiveIntervals *LIS) {
+bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Register Stackifying **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
@@ -839,9 +835,11 @@ static bool regStackify(MachineFunction &MF, bool Optimize,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  MachineDominatorTree *MDT = nullptr;
+  LiveIntervals *LIS = nullptr;
   if (Optimize) {
-    assert(MDT && "expected MDT to be available");
-    assert(LIS && "expected LIS to be available");
+    MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+    LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   }
 
   // Walk the instructions from the bottom up. Currently we don't look past
@@ -1022,32 +1020,4 @@ static bool regStackify(MachineFunction &MF, bool Optimize,
 #endif
 
   return Changed;
-}
-
-bool WebAssemblyRegStackifyLegacy::runOnMachineFunction(MachineFunction &MF) {
-  MachineDominatorTree *MDT = nullptr;
-  LiveIntervals *LIS = nullptr;
-  if (Optimize) {
-    MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-    LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  }
-  return regStackify(MF, Optimize, MDT, LIS);
-}
-
-PreservedAnalyses
-WebAssemblyRegStackifyPass::run(MachineFunction &MF,
-                                MachineFunctionAnalysisManager &MFAM) {
-  MachineDominatorTree *MDT = nullptr;
-  LiveIntervals *LIS = nullptr;
-  if (Optimize) {
-    MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-    LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
-  }
-  bool Changed = regStackify(MF, Optimize, MDT, LIS);
-  if (!Changed)
-    return PreservedAnalyses::all();
-  return getMachineFunctionPassPreservedAnalyses()
-      .preserveSet<CFGAnalyses>()
-      .preserve<LiveIntervalsAnalysis>()
-      .preserve<SlotIndexesAnalysis>();
 }

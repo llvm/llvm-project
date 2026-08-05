@@ -18,11 +18,8 @@
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -30,7 +27,7 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-reg-numbering"
 
 namespace {
-class WebAssemblyRegNumberingLegacy final : public MachineFunctionPass {
+class WebAssemblyRegNumbering final : public MachineFunctionPass {
   StringRef getPassName() const override {
     return "WebAssembly Register Numbering";
   }
@@ -44,20 +41,20 @@ class WebAssemblyRegNumberingLegacy final : public MachineFunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyRegNumberingLegacy() : MachineFunctionPass(ID) {}
+  WebAssemblyRegNumbering() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyRegNumberingLegacy::ID = 0;
-INITIALIZE_PASS(WebAssemblyRegNumberingLegacy, DEBUG_TYPE,
+char WebAssemblyRegNumbering::ID = 0;
+INITIALIZE_PASS(WebAssemblyRegNumbering, DEBUG_TYPE,
                 "Assigns WebAssembly register numbers for virtual registers",
                 false, false)
 
-FunctionPass *llvm::createWebAssemblyRegNumberingLegacyPass() {
-  return new WebAssemblyRegNumberingLegacy();
+FunctionPass *llvm::createWebAssemblyRegNumbering() {
+  return new WebAssemblyRegNumbering();
 }
 
-static bool regNumbering(MachineFunction &MF) {
+bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Register Numbering **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
@@ -107,16 +104,4 @@ static bool regNumbering(MachineFunction &MF) {
   }
 
   return true;
-}
-
-bool WebAssemblyRegNumberingLegacy::runOnMachineFunction(MachineFunction &MF) {
-  return regNumbering(MF);
-}
-
-PreservedAnalyses
-WebAssemblyRegNumberingPass::run(MachineFunction &MF,
-                                 MachineFunctionAnalysisManager &MFAM) {
-  return regNumbering(MF) ? getMachineFunctionPassPreservedAnalyses()
-                                .preserveSet<CFGAnalyses>()
-                          : PreservedAnalyses::all();
 }

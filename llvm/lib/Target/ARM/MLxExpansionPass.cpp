@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -45,11 +44,6 @@ namespace {
 
     StringRef getPassName() const override {
       return "ARM MLA / MLS expansion pass";
-    }
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
-      MachineFunctionPass::getAnalysisUsage(AU);
     }
 
   private:

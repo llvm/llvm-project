@@ -212,7 +212,7 @@ deserializeSummary(const llvm::json::Object &Data, EntityIdTable &,
       std::make_unique<TypeConstrainedPointersEntitySummary>();
 
   Sum->Entities = std::move(*EntityIDSet);
-  return std::unique_ptr<EntitySummary>(std::move(Sum));
+  return Sum;
 }
 
 struct TypeConstrainedPointersJSONFormatInfo final : JSONFormat::FormatInfo {
@@ -246,7 +246,7 @@ deserializeAnalysisResult(const llvm::json::Object &Data,
       std::make_unique<TypeConstrainedPointersAnalysisResult>();
 
   AR->Entities = std::move(*EntityIDSet);
-  return std::unique_ptr<AnalysisResult>(std::move(AR));
+  return AR;
 }
 
 JSONFormat::AnalysisResultRegistry::Add<TypeConstrainedPointersAnalysisResult>

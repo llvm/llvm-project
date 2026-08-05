@@ -6,6 +6,7 @@ define void @test_nvvm_fence_proxy_async() {
 ; CHECK-LABEL: test_nvvm_fence_proxy_async(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    fence.proxy.async;
 ; CHECK-NEXT:    ret;
@@ -16,6 +17,7 @@ define void @test_nvvm_fence_proxy_async() {
 define void @test_nvvm_fence_proxy_async_global() {
 ; CHECK-LABEL: test_nvvm_fence_proxy_async_global(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    fence.proxy.async.global;
@@ -28,6 +30,7 @@ define void @test_nvvm_fence_proxy_async_shared_cluster() {
 ; CHECK-LABEL: test_nvvm_fence_proxy_async_shared_cluster(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    fence.proxy.async.shared::cluster;
 ; CHECK-NEXT:    ret;
@@ -38,6 +41,7 @@ define void @test_nvvm_fence_proxy_async_shared_cluster() {
 define void @test_nvvm_fence_proxy_async_shared_cta() {
 ; CHECK-LABEL: test_nvvm_fence_proxy_async_shared_cta(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    fence.proxy.async.shared::cta;

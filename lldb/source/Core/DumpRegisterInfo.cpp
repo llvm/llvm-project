@@ -11,8 +11,6 @@
 #include "lldb/Utility/RegisterFlags.h"
 #include "lldb/Utility/Stream.h"
 
-#include "llvm/Support/Casting.h"
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -64,9 +62,7 @@ void lldb_private::DumpRegisterInfo(Stream &strm, RegisterContext &ctx,
   }
 
   DoDumpRegisterInfo(strm, info.name, info.alt_name, info.byte_size,
-                     invalidates, read_from, in_sets,
-                     llvm::dyn_cast_if_present<lldb_private::RegisterFlags>(
-                         info.register_type),
+                     invalidates, read_from, in_sets, info.flags_type,
                      terminal_width);
 }
 

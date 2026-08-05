@@ -26,12 +26,7 @@
 #include "clang/CIR/Passes.h"
 
 struct CIRToLLVMPipelineOptions
-    : public mlir::PassPipelineOptions<CIRToLLVMPipelineOptions> {
-  Option<bool> enableOpenMP{
-      *this, "enable-openmp",
-      llvm::cl::desc("Add OpenMP-specific CIR-to-LLVM lowering passes"),
-      llvm::cl::init(false)};
-};
+    : public mlir::PassPipelineOptions<CIRToLLVMPipelineOptions> {};
 
 int main(int argc, char **argv) {
   // TODO: register needed MLIR passes for CIR?
@@ -49,7 +44,7 @@ int main(int argc, char **argv) {
   mlir::PassPipelineRegistration<CIRToLLVMPipelineOptions> pipeline(
       "cir-to-llvm", "",
       [](mlir::OpPassManager &pm, const CIRToLLVMPipelineOptions &options) {
-        cir::direct::populateCIRToLLVMPasses(pm, options.enableOpenMP);
+        cir::direct::populateCIRToLLVMPasses(pm);
       });
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {

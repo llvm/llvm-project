@@ -31,6 +31,8 @@ public:
 
   Type GetType() const override { return eTypeProperties; }
 
+  void Clear() override;
+
   static lldb::OptionValuePropertiesSP
   CreateLocalCopy(const Properties &global_properties);
 
@@ -178,8 +180,6 @@ protected:
   }
 
   bool VerifyPath();
-
-  void ClearImpl() override;
 
   std::string m_name;
   std::vector<Property> m_properties;

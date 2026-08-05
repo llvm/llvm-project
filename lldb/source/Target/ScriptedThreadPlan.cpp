@@ -20,7 +20,6 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
-#include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -90,10 +89,6 @@ void ScriptedThreadPlan::DidPush() {
                                                       this->shared_from_this());
     if (!obj_or_err) {
       m_error_str = llvm::toString(obj_or_err.takeError());
-      Debugger::ReportError(
-          llvm::formatv("failed to create ScriptedThreadPlan: {0}", m_error_str)
-              .str(),
-          m_process.GetTarget().GetDebugger().GetID());
       SetPlanComplete(false);
     } else
       m_implementation_sp = *obj_or_err;

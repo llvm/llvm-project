@@ -1,7 +1,5 @@
 #include "llvm/ExecutionEngine/Orc/ReOptimizeLayer.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
 using namespace llvm;
 using namespace orc;
@@ -95,19 +93,17 @@ Error ReOptimizeLayer::addOrcRTLiteSupport(JITDylib &PlatformJD,
   BasicBlock *Entry = BasicBlock::Create(*Ctx, "entry", ReOptimizeFn);
   Builder.SetInsertPoint(Entry);
 
-  ExecutorAddr JITDispatchSym, JITDispatchCtxSym;
-  if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static,
-          makeJITDylibSearchOrder(&ES.getBootstrapJITDylib()),
-          {{ES.intern(rt::DispatchName), &JITDispatchSym},
-           {ES.intern(rt::DispatchCtxName), &JITDispatchCtxSym}}))
-    return Err;
+  // Create absolute address constants
+  auto &JDI = PlatformJD.getExecutionSession()
+                  .getExecutorProcessControl()
+                  .getJITDispatchInfo();
 
   Type *IntPtrTy = DL.getIntPtrType(*Ctx);
   Constant *JITDispatchPtr = ConstantExpr::getIntToPtr(
-      ConstantInt::get(IntPtrTy, JITDispatchSym.getValue()), VoidPtrTy);
+      ConstantInt::get(IntPtrTy, JDI.JITDispatchFunction.getValue()),
+      VoidPtrTy);
   Constant *JITDispatchCtxPtr = ConstantExpr::getIntToPtr(
-      ConstantInt::get(IntPtrTy, JITDispatchCtxSym.getValue()), VoidPtrTy);
+      ConstantInt::get(IntPtrTy, JDI.JITDispatchContext.getValue()), VoidPtrTy);
   Constant *HelperFnAddr = ConstantExpr::getIntToPtr(
       ConstantInt::get(IntPtrTy, reinterpret_cast<uintptr_t>(
                                      &orc_rt_lite_reoptimize_helper)),

@@ -160,7 +160,7 @@ std::string Hurd::getDynamicLinker(const ArgList &Args) const {
     break;
   }
 
-  return "";
+  llvm_unreachable("unsupported architecture");
 }
 
 void Hurd::AddClangSystemIncludeArgs(const ArgList &DriverArgs,

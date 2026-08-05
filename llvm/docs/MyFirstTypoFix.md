@@ -1,5 +1,8 @@
 # MyFirstTypoFix
 
+```{contents}
+:local:
+```
 
 ## Introduction
 

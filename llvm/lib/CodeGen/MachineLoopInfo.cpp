@@ -37,12 +37,7 @@ AnalysisKey MachineLoopAnalysis::Key;
 MachineLoopAnalysis::Result
 MachineLoopAnalysis::run(MachineFunction &MF,
                          MachineFunctionAnalysisManager &MFAM) {
-  MachineLoopInfo LI;
-  // The dominator tree is needed only for an irreducible CFG.
-  LI.calculate(MF, [&]() -> const MachineDominatorTree & {
-    return MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  });
-  return LI;
+  return MachineLoopInfo(MFAM.getResult<MachineDominatorTreeAnalysis>(MF));
 }
 
 PreservedAnalyses
@@ -83,13 +78,6 @@ bool MachineLoopInfo::invalidate(
 void MachineLoopInfo::calculate(MachineDominatorTree &MDT) {
   releaseMemory();
   analyze(MDT);
-}
-
-void MachineLoopInfo::calculate(
-    MachineFunction &MF,
-    function_ref<const DomTreeBase<MachineBasicBlock> &()> GetDomTree) {
-  releaseMemory();
-  analyze(&MF, GetDomTree);
 }
 
 void MachineLoopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {

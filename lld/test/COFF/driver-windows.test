@@ -1,3 +1,0 @@
-# REQUIRES: system-windows
-# RUN: env LLD_IN_TEST=1 not LLD-LINK 2>&1 | FileCheck %s
-CHECK: no input files

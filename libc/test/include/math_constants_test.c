@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include "include/llvm-libc-macros/math-macros.h"
-#include "test/UnitTest/LibcCTest.h"
 
 #define IS_DOUBLE(X) _Generic((X), double: 1, default: 0)
 
@@ -16,8 +15,9 @@
 #ifndef M_PI
 #error "M_PI macro is not defined"
 #else
-TEST(math_constants) {
+int main(void) {
   _Static_assert(IS_DOUBLE(M_PI), "M_PI is not of double type.");
   _Static_assert(IS_FLOAT(M_PIf), "M_PIf is not of float type.");
+  return 0;
 }
 #endif

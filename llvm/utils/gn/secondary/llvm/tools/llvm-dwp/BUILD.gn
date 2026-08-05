@@ -12,7 +12,7 @@ if (llvm_install_binutils_symlinks) {
   symlink_or_copy("dwp") {
     deps = [ ":llvm-dwp" ]
     source = "llvm-dwp"
-    output = "$root_out_dir/bin/dwp"
+    output = "$llvm_current_bindir/dwp"
   }
 }
 

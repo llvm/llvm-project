@@ -1,9 +1,0 @@
-click
-GitPython
-numpy
-pandas
-plotly
-scipy
-statsmodels
-tabulate
-tqdm

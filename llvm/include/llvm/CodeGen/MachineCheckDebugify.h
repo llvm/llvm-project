@@ -23,7 +23,7 @@
 namespace llvm {
 
 class CheckDebugMachineModulePass
-    : public RequiredPassInfoMixin<CheckDebugMachineModulePass> {
+    : public PassInfoMixin<CheckDebugMachineModulePass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

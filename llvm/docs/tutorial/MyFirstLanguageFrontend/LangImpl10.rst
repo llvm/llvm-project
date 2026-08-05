@@ -2,6 +2,8 @@
 Kaleidoscope: Conclusion and other useful LLVM tidbits
 ======================================================
 
+.. contents::
+   :local:
 
 Tutorial Conclusion
 ===================

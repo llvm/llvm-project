@@ -307,21 +307,11 @@ bool LoopVersioningLICM::instructionSafeForVersioning(Instruction *I) {
       LLVM_DEBUG(dbgs() << "    Convergent call site found.\n");
       return false;
     }
-    if (!Call->willReturn()) {
-      LLVM_DEBUG(dbgs() << "    Call site that may not return found.\n");
-      return false;
-    }
 
-    // Calls that only access inaccessible memory cannot alias loop memory and
-    // are safe to duplicate during loop versioning. This covers
-    // llvm.pseudoprobe (used for sample-based profiling under
-    // -fpseudo-probe-for-profiling).
-    if (Call->mayThrow() ||
-        !AA->getMemoryEffects(Call).onlyAccessesInaccessibleMem()) {
+    if (!AA->doesNotAccessMemory(Call)) {
       LLVM_DEBUG(dbgs() << "    Unsafe call site found.\n");
       return false;
     }
-    return true;
   }
 
   // Avoid loops with possiblity of throw

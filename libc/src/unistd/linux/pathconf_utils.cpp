@@ -12,10 +12,11 @@
 
 #include "hdr/limits_macros.h"
 #include "hdr/unistd_macros.h"
+#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/unistd/linux/pathconf_utils.h"
+#include "src/sys/statvfs/linux/statfs_utils.h"
 
 // other linux specific includes
 #include <linux/bfs_fs.h>
@@ -29,7 +30,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-long filesizebits(const struct statfs &s) {
+long filesizebits(const statfs_utils::LinuxStatFs &s) {
   switch (s.f_type) {
   case JFFS2_SUPER_MAGIC:
   case MSDOS_SUPER_MAGIC:
@@ -39,7 +40,7 @@ long filesizebits(const struct statfs &s) {
   return 64;
 }
 
-long link_max(const struct statfs &s) {
+long link_max(const statfs_utils::LinuxStatFs &s) {
   switch (s.f_type) {
   case EXT2_SUPER_MAGIC:
     return 32000;
@@ -55,7 +56,7 @@ long link_max(const struct statfs &s) {
   return LINK_MAX;
 }
 
-long symlinks(const struct statfs &s) {
+long symlinks(const statfs_utils::LinuxStatFs &s) {
   switch (s.f_type) {
   case ADFS_SUPER_MAGIC:
   case BFS_MAGIC:
@@ -68,7 +69,7 @@ long symlinks(const struct statfs &s) {
   return 1;
 }
 
-long pathconfig(const struct statfs &s, int name) {
+long pathconfig(const statfs_utils::LinuxStatFs &s, int name) {
   switch (name) {
   case _PC_LINK_MAX:
     return link_max(s);

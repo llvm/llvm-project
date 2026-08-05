@@ -33,8 +33,6 @@ namespace testing {
 
 namespace internal {
 
-RunContext *current_context = nullptr;
-
 TestLogger &operator<<(TestLogger &logger, Location Loc) {
   return logger << Loc.file << ":" << Loc.line << ": FAILURE\n";
 }
@@ -47,7 +45,7 @@ cpp::enable_if_t<(cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t))) ||
                  cpp::string>
 describeValue(T Value) {
   const IntegerToString<T, radix::Hex::WithPrefix> buffer(Value);
-  return cpp::string(buffer.view());
+  return buffer.view();
 }
 
 // When the value is of a standard integral type, just display it as normal.
@@ -89,8 +87,8 @@ cpp::string describeValue(cpp::wstring_view Value) {
 }
 
 template <typename ValType>
-bool test_impl(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
-               const char *LHSStr, const char *RHSStr, Location Loc) {
+bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
+          const char *LHSStr, const char *RHSStr, Location Loc) {
   auto ExplainDifference = [=, &Ctx](bool Cond,
                                      cpp::string_view OpString) -> bool {
     if (Cond)
@@ -176,14 +174,13 @@ int Test::runTests(const TestOptions &Options) {
     }
 
     tlog << green << "[ RUN      ] " << reset << TestName << '\n';
-    RunContext Ctx;
-    internal::current_context = &Ctx;
     [[maybe_unused]] const uint64_t start_time = static_cast<uint64_t>(clock());
+    RunContext Ctx;
     T->SetUp();
+    T->setContext(&Ctx);
     T->Run();
     T->TearDown();
     [[maybe_unused]] const uint64_t end_time = static_cast<uint64_t>(clock());
-    internal::current_context = nullptr;
     switch (Ctx.status()) {
     case RunContext::RunResult::Fail:
       tlog << red << "[  FAILED  ] " << reset << TestName << '\n';
@@ -232,9 +229,9 @@ int Test::runTests(const TestOptions &Options) {
 namespace internal {
 
 #define TEST_SPECIALIZATION(TYPE)                                              \
-  template bool test_impl<TYPE>(RunContext * Ctx, TestCond Cond, TYPE LHS,     \
-                                TYPE RHS, const char *LHSStr,                  \
-                                const char *RHSStr, Location Loc)
+  template bool test<TYPE>(RunContext * Ctx, TestCond Cond, TYPE LHS,          \
+                           TYPE RHS, const char *LHSStr, const char *RHSStr,   \
+                           Location Loc)
 
 TEST_SPECIALIZATION(wchar_t);
 
@@ -289,30 +286,28 @@ TEST_SPECIALIZATION(unsigned accum);
 TEST_SPECIALIZATION(unsigned long accum);
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 
-bool test_str_eq(const char *LHS, const char *RHS, const char *LHSStr,
-                 const char *RHSStr, internal::Location Loc) {
-  return test_impl(internal::current_context, TestCond::EQ,
-                   LHS ? cpp::string_view(LHS) : cpp::string_view(),
-                   RHS ? cpp::string_view(RHS) : cpp::string_view(), LHSStr,
-                   RHSStr, Loc);
-}
-
-bool test_str_ne(const char *LHS, const char *RHS, const char *LHSStr,
-                 const char *RHSStr, internal::Location Loc) {
-  return test_impl(internal::current_context, TestCond::NE,
-                   LHS ? cpp::string_view(LHS) : cpp::string_view(),
-                   RHS ? cpp::string_view(RHS) : cpp::string_view(), LHSStr,
-                   RHSStr, Loc);
-}
-
 } // namespace internal
+
+bool Test::testStrEq(const char *LHS, const char *RHS, const char *LHSStr,
+                     const char *RHSStr, internal::Location Loc) {
+  return internal::test(
+      Ctx, TestCond::EQ, LHS ? cpp::string_view(LHS) : cpp::string_view(),
+      RHS ? cpp::string_view(RHS) : cpp::string_view(), LHSStr, RHSStr, Loc);
+}
+
+bool Test::testStrNe(const char *LHS, const char *RHS, const char *LHSStr,
+                     const char *RHSStr, internal::Location Loc) {
+  return internal::test(
+      Ctx, TestCond::NE, LHS ? cpp::string_view(LHS) : cpp::string_view(),
+      RHS ? cpp::string_view(RHS) : cpp::string_view(), LHSStr, RHSStr, Loc);
+}
 
 bool Test::testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
                      const char *RHSStr, internal::Location Loc) {
   if (MatchResult)
     return true;
 
-  internal::current_context->markFail();
+  Ctx->markFail();
   if (!Matcher.is_silent()) {
     tlog << Loc;
     tlog << "Failed to match " << LHSStr << " against " << RHSStr << ".\n";

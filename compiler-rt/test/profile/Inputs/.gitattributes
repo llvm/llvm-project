@@ -1,3 +1,0 @@
-instrprof-gcov-*.c text eol=lf
-instrprof-gcov-*.cpp text eol=lf
-instrprof-shared-*.c text eol=lf

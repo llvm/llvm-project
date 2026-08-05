@@ -8,7 +8,7 @@
 ; this by teaching `-stop-after` how to stop at the last instance of a Pass,
 ; but we're just marking XFAIL for these two targets for now.
 ; XFAIL: target=riscv{{.*}}
-; XFAIL: target=amdgpu-{{.*}}
+; XFAIL: target=amdgcn-{{.*}}
 
 ; Generated with "clang++ -g -O1 -S -emit-llvm"
 ;

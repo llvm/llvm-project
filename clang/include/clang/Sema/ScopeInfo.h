@@ -879,8 +879,6 @@ public:
   /// is known.
   bool AfterParameterList = true;
 
-  bool BeforeCompoundStatement = true;
-
   ParmVarDecl *ExplicitObjectParameter = nullptr;
 
   /// Source range covering the lambda introducer [...].

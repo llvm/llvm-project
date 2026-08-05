@@ -39,18 +39,15 @@ STRING_EXTENSION_OUTSIDE(SBModule)
 
         def __iter__(self):
             '''Iterate over all symbols in a lldb.SBModule object.'''
-            for i in range(self.GetNumSymbols()):
-                yield self.GetSymbolAtIndex(i)
+            return lldb_iter(self, 'GetNumSymbols', 'GetSymbolAtIndex')
 
         def section_iter(self):
             '''Iterate over all sections in a lldb.SBModule object.'''
-            for i in range(self.GetNumSections()):
-                yield self.GetSectionAtIndex(i)
+            return lldb_iter(self, 'GetNumSections', 'GetSectionAtIndex')
 
         def compile_unit_iter(self):
             '''Iterate over all compile units in a lldb.SBModule object.'''
-            for i in range(self.GetNumCompileUnits()):
-                yield self.GetCompileUnitAtIndex(i)
+            return lldb_iter(self, 'GetNumCompileUnits', 'GetCompileUnitAtIndex')
 
         def symbol_in_section_iter(self, section):
             '''Given a module and its contained section, returns an iterator on the

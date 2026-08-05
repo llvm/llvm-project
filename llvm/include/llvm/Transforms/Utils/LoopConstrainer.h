@@ -24,7 +24,6 @@ class LoopInfo;
 class PHINode;
 class ScalarEvolution;
 class SCEV;
-class SCEVExpander;
 class Value;
 
 // Keeps track of the structure of a loop.  This is similar to llvm::Loop,
@@ -81,12 +80,8 @@ struct LoopStructure {
     return Result;
   }
 
-  /// Parse \p L and use \p Expander to materialize values needed by the parsed
-  /// structure. This allows the caller to discard speculative expansions with
-  /// a SCEVExpanderCleaner if the transformation is not committed.
   LLVM_ABI static std::optional<LoopStructure>
-  parseLoopStructure(SCEVExpander &Expander, Loop &L,
-                     bool AllowUnsignedLatchCond, const char *&FailureReason);
+  parseLoopStructure(ScalarEvolution &, Loop &, bool, const char *&);
 };
 
 /// This class is used to constrain loops to run within a given iteration space.

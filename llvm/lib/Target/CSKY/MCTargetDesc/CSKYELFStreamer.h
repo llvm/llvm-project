@@ -91,6 +91,8 @@ private:
   void finishAttributeSection() override;
   size_t calculateContentSize() const;
 
+  void emitTargetAttributes(const MCSubtargetInfo &STI) override;
+
 public:
   MCELFStreamer &getStreamer();
   CSKYTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);

@@ -24,6 +24,10 @@ template("unix_toolchain") {
       cxx = "$compiler_wrapper $cxx"
     }
 
+    if (!defined(bindir)) {
+      bindir = "{{root_out_dir}}/bin"
+    }
+
     tool("cc") {
       depfile = "{{output}}.d"
       command = "$cc -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}}"
@@ -117,7 +121,7 @@ template("unix_toolchain") {
 
       # Setting this allows targets to override the default executable output by
       # setting output_dir.
-      default_output_dir = "{{root_out_dir}}/bin"
+      default_output_dir = bindir
     }
 
     tool("copy") {
@@ -147,18 +151,39 @@ template("unix_toolchain") {
   }
 }
 
-unix_toolchain("unix") {
-  if (current_os != "ios" && current_os != "mac") {
-    if (clang_base_path != "") {
-      ar = rebase_path(clang_base_path, root_build_dir) + "/bin/llvm-ar"
-    } else {
-      ar = "ar"
+template("stage1_unix_toolchain") {
+  unix_toolchain(target_name) {
+    forward_variables_from(invoker, "*")
+
+    if (current_os != "ios" && current_os != "mac") {
+      if (clang_base_path != "") {
+        ar = rebase_path(clang_base_path, root_build_dir) + "/bin/llvm-ar"
+      } else {
+        ar = "ar"
+      }
+    }
+
+    toolchain_args = {}
+    toolchain_args = {
+      forward_variables_from(invoker.toolchain_args, "*")
+
+      current_os = host_os
+      current_cpu = host_cpu
     }
   }
+}
 
-  toolchain_args = {
-    current_os = host_os
-    current_cpu = host_cpu
+if (host_os != "win") {
+  stage1_unix_toolchain("host") {
+    toolchain_args = {}
+  }
+
+  stage1_unix_toolchain("host_debug") {
+    bindir = "bin.dbg"
+    toolchain_args = {
+      toolchain_is_optimized = false
+      toolchain_symbol_level = 2
+    }
   }
 }
 
@@ -389,10 +414,12 @@ template("win_toolchain") {
   }
 }
 
-win_toolchain("win") {
-  toolchain_args = {
-    current_os = "win"
-    current_cpu = host_cpu
+if (host_os == "win") {
+  win_toolchain("host") {
+    toolchain_args = {
+      current_os = "win"
+      current_cpu = host_cpu
+    }
   }
 }
 

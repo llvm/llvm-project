@@ -7,28 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
-#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Lex/Token.h"
-#include "clang/Tooling/Core/Replacement.h"
-#include "clang/Tooling/Inclusions/IncludeStyle.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Regex.h"
-#include <algorithm>
-#include <cassert>
-#include <climits>
-#include <functional>
 #include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
 
 namespace clang {
 namespace tooling {
@@ -171,7 +154,7 @@ unsigned getMinHeaderInsertionOffset(StringRef FileName, StringRef Code,
 }
 
 // Check if a sequence of tokens is like
-//    "#(include | import) ("header.h" | <header.h>)".
+//    "#include ("header.h" | <header.h>)".
 // If it is, \p Tok will be the token after this directive; otherwise, it can be
 // any token after the given \p Tok (including \p Tok).
 bool checkAndConsumeInclusiveDirective(Lexer &Lex, Token &Tok) {
@@ -180,9 +163,7 @@ bool checkAndConsumeInclusiveDirective(Lexer &Lex, Token &Tok) {
     return true;
   };
   if (Tok.is(tok::hash) && !Lex.LexFromRawLexer(Tok) &&
-      Tok.is(tok::raw_identifier) &&
-      (Tok.getRawIdentifier() == "include" ||
-       Tok.getRawIdentifier() == "import")) {
+      Tok.is(tok::raw_identifier) && Tok.getRawIdentifier() == "include") {
     if (Lex.LexFromRawLexer(Tok))
       return false;
     if (Tok.is(tok::string_literal))
@@ -265,7 +246,7 @@ inline StringRef trimInclude(StringRef IncludeName) {
 }
 
 const char IncludeRegexPattern[] =
-    "^[\t ]*#[\t ]*(import|include)[^\"<]*([\"<][^\">]*[\">])";
+    R"(^[\t\ ]*#[\t\ ]*(import|include)[^"<]*(["<][^">]*[">]))";
 
 // The filename of Path excluding extension.
 // Used to match implementation with headers, this differs from sys::path::stem:
@@ -359,8 +340,7 @@ bool IncludeCategoryManager::isMainHeader(StringRef IncludeName) const {
   else if (FileStem.equals_insensitive(HeaderStem))
     Matching = FileStem; // example 3)
   if (!Matching.empty()) {
-    llvm::Regex MainIncludeRegex(llvm::Regex::escape(HeaderStem) +
-                                     Style.IncludeIsMainRegex,
+    llvm::Regex MainIncludeRegex(HeaderStem.str() + Style.IncludeIsMainRegex,
                                  llvm::Regex::IgnoreCase);
     if (MainIncludeRegex.match(Matching))
       return true;
@@ -446,13 +426,13 @@ void HeaderIncludes::addExistingInclude(Include IncludeToAdd,
 }
 
 std::optional<tooling::Replacement>
-HeaderIncludes::insert(llvm::StringRef Header, bool IsAngled,
+HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled,
                        IncludeDirective Directive) const {
-  assert(Header == trimInclude(Header));
+  assert(IncludeName == trimInclude(IncludeName));
   // If a <header> ("header") already exists in code, "header" (<header>) with
   // different quotation and/or directive will still be inserted.
   // FIXME: figure out if this is the best behavior.
-  auto It = ExistingIncludes.find(Header);
+  auto It = ExistingIncludes.find(IncludeName);
   if (It != ExistingIncludes.end()) {
     for (const auto &Inc : It->second)
       if (Inc.Directive == Directive &&
@@ -461,7 +441,7 @@ HeaderIncludes::insert(llvm::StringRef Header, bool IsAngled,
         return std::nullopt;
   }
   std::string Quoted =
-      std::string(llvm::formatv(IsAngled ? "<{0}>" : "\"{0}\"", Header));
+      std::string(llvm::formatv(IsAngled ? "<{0}>" : "\"{0}\"", IncludeName));
   StringRef QuotedName = Quoted;
   int Priority = Categories.getIncludePriority(
       QuotedName, /*CheckMainHeader=*/!MainIncludeFound);

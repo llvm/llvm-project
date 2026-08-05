@@ -3977,11 +3977,9 @@ void RISCVInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearFPR64), Reg);
   } else if (RISCV::FPR128RegClass.contains(Reg)) {
     BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearFPR128), Reg);
-  } else if (RISCV::VRRegClass.contains(Reg)) {
-    BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearVR), Reg);
   } else {
     llvm::reportFatalInternalError(
-        "buildClearRegister is not implemented for " + TRI.getRegAsmName(Reg));
+        "buildClearRegister is not implemented for vector registers");
   }
 }
 
@@ -5539,9 +5537,10 @@ bool RISCVInstrInfo::isSafeToMove(const MachineInstr &From,
       if (II->definesRegister(PhysReg, nullptr) ||
           II->readsRegister(PhysReg, nullptr))
         return false;
-    II->isSafeToMove(SawStore);
-    if (SawStore)
+    if (II->mayStore()) {
+      SawStore = true;
       break;
+    }
   }
   return From.isSafeToMove(SawStore);
 }

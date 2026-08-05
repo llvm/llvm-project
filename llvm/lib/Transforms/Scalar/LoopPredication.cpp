@@ -877,7 +877,7 @@ bool LoopPredication::isLoopProfitableToPredicate() {
     return true;
 
   SmallVector<std::pair<BasicBlock *, BasicBlock *>, 8> ExitEdges;
-  LI->getExitEdges(*L, ExitEdges);
+  L->getExitEdges(ExitEdges);
   // If there is only one exiting edge in the loop, it is always profitable to
   // predicate the loop.
   if (ExitEdges.size() == 1)

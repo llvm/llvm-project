@@ -16,7 +16,6 @@ class MemoryFindTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number("main.cpp", "// break here")
 
-    @skipIfWasm  # no expression evaluation (memory find calls strlen())
     def test_memory_find(self):
         """Test the 'memory find' command."""
         self.build()

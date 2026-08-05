@@ -16,7 +16,6 @@
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
@@ -35,13 +34,11 @@ OptimizationRemarkEmitter::OptimizationRemarkEmitter(const Function *F)
   DT.recalculate(*const_cast<Function *>(F));
 
   // Generate LoopInfo from it.
-  CycleInfo CI;
-  CI.compute(*const_cast<Function *>(F));
   LoopInfo LI;
   LI.analyze(DT);
 
   // Then compute BranchProbabilityInfo.
-  BranchProbabilityInfo BPI(*F, CI, nullptr, &DT, nullptr);
+  BranchProbabilityInfo BPI(*F, LI, nullptr, &DT, nullptr);
 
   // Finally compute BFI.
   OwnedBFI = std::make_unique<BlockFrequencyInfo>(*F, BPI, LI);

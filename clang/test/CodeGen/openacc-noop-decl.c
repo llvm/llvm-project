@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
-// CHECK: target triple
 
 // Check to ensure these are no-ops/don't really do anything.
 void name();

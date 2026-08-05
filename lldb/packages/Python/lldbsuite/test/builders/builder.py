@@ -209,6 +209,15 @@ class Builder:
             "CXX=%s" % cxx,
         ] + utils
 
+    def getSDKRootSpec(self):
+        """
+        Helper function to return the key-value string to specify the SDK root
+        used for the make system.
+        """
+        if configuration.sdkroot:
+            return ["SDKROOT={}".format(configuration.sdkroot)]
+        return []
+
     def getModuleCacheSpec(self):
         """
         Helper function to return the key-value string to specify the clang
@@ -293,6 +302,7 @@ class Builder:
             self.getTripleSpec(),
             self.getToolchainSpec(compiler),
             self.getExtraMakeArgs(),
+            self.getSDKRootSpec(),
             self.getModuleCacheSpec(),
             self.getLibCxxArgs(),
             self.getLLDBObjRoot(),

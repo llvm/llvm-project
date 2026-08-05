@@ -34,22 +34,14 @@ TEST_F(LlvmLibcDirentTest, SimpleOpenAndRead) {
     struct ::dirent *d = LIBC_NAMESPACE::readdir(dir);
     if (d == nullptr)
       break;
-    if (string_view(&d->d_name[0]) == "file1.txt") {
+    if (string_view(&d->d_name[0]) == "file1.txt")
       file1 = d;
-      EXPECT_EQ(d->d_type, static_cast<decltype(d->d_type)>(DT_REG));
-    }
-    if (string_view(&d->d_name[0]) == "file2.txt") {
+    if (string_view(&d->d_name[0]) == "file2.txt")
       file2 = d;
-      EXPECT_EQ(d->d_type, static_cast<decltype(d->d_type)>(DT_REG));
-    }
-    if (string_view(&d->d_name[0]) == "dir1") {
+    if (string_view(&d->d_name[0]) == "dir1")
       dir1 = d;
-      EXPECT_EQ(d->d_type, static_cast<decltype(d->d_type)>(DT_DIR));
-    }
-    if (string_view(&d->d_name[0]) == "dir2") {
+    if (string_view(&d->d_name[0]) == "dir2")
       dir2 = d;
-      EXPECT_EQ(d->d_type, static_cast<decltype(d->d_type)>(DT_DIR));
-    }
   }
 
   // Verify that we don't break out of the above loop in error.

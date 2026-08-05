@@ -192,10 +192,9 @@ bool GEPOperator::accumulateConstantOffset(
         unsigned ElementIdx = ConstOffset->getZExtValue();
         const StructLayout *SL = DL.getStructLayout(STy);
         // Element offset is in bytes.
-        if (!AccumulateOffset(APInt(Offset.getBitWidth(),
-                                    SL->getElementOffset(ElementIdx),
-                                    /*isSigned=*/false, /*implicitTrunc=*/true),
-                              1))
+        if (!AccumulateOffset(
+                APInt(Offset.getBitWidth(), SL->getElementOffset(ElementIdx)),
+                1))
           return false;
         continue;
       }
@@ -258,8 +257,7 @@ bool GEPOperator::collectOffset(
         unsigned ElementIdx = ConstOffset->getZExtValue();
         const StructLayout *SL = DL.getStructLayout(STy);
         // Element offset is in bytes.
-        CollectConstantOffset(APInt(BitWidth, SL->getElementOffset(ElementIdx),
-                                    /*isSigned=*/false, /*implicitTrunc=*/true),
+        CollectConstantOffset(APInt(BitWidth, SL->getElementOffset(ElementIdx)),
                               1);
         continue;
       }

@@ -8,6 +8,7 @@ define dso_local void @naked() naked "frame-pointer"="all" {
 ; CHECK-32-LABEL: naked(
 ; CHECK-32:       {
 ; CHECK-32-EMPTY:
+; CHECK-32-EMPTY:
 ; CHECK-32-NEXT:  // %bb.0:
 ; CHECK-32-NEXT:    { // callseq 0, 0
 ; CHECK-32-NEXT:    call.uni main, ();
@@ -18,6 +19,7 @@ define dso_local void @naked() naked "frame-pointer"="all" {
 ;
 ; CHECK-64-LABEL: naked(
 ; CHECK-64:       {
+; CHECK-64-EMPTY:
 ; CHECK-64-EMPTY:
 ; CHECK-64-NEXT:  // %bb.0:
 ; CHECK-64-NEXT:    { // callseq 0, 0
@@ -34,6 +36,7 @@ define dso_local void @normal() "frame-pointer"="all" {
 ; CHECK-32-LABEL: normal(
 ; CHECK-32:       {
 ; CHECK-32-EMPTY:
+; CHECK-32-EMPTY:
 ; CHECK-32-NEXT:  // %bb.0:
 ; CHECK-32-NEXT:    { // callseq 1, 0
 ; CHECK-32-NEXT:    call.uni main, ();
@@ -44,6 +47,7 @@ define dso_local void @normal() "frame-pointer"="all" {
 ;
 ; CHECK-64-LABEL: normal(
 ; CHECK-64:       {
+; CHECK-64-EMPTY:
 ; CHECK-64-EMPTY:
 ; CHECK-64-NEXT:  // %bb.0:
 ; CHECK-64-NEXT:    { // callseq 1, 0

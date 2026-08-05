@@ -9,7 +9,6 @@
 #include "DWARFLinkerTypeUnit.h"
 #include "DIEGenerator.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/Parallel.h"
 
 using namespace llvm;
 using namespace dwarf_linker;

@@ -94,9 +94,8 @@ inline bool CheckArraySize(InterpState &S, CodePtr OpPC, uint64_t NumElems) {
   uint64_t Limit = S.getLangOpts().ConstexprStepLimit;
   if (Limit != 0 && NumElems > Limit) {
     S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_new_exceeds_limits, 1)
+             diag::note_constexpr_new_exceeds_limits)
         << NumElems << Limit;
-    S.Note(S.Current->getSource(OpPC), diag::note_constexpr_steps);
     return false;
   }
   return true;

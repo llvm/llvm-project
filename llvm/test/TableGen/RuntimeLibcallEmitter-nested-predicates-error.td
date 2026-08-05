@@ -5,13 +5,9 @@ include "llvm/IR/RuntimeLibcallsImpl.td"
 def FUNC0 : RuntimeLibcall;
 def FUNC1 : RuntimeLibcall;
 
-def IsFoo : LibcallPredicate<[{isFoo()}]>;
-def IsBar : LibcallPredicate<[{isBar()}]>;
-def IsTargetArch : LibcallPredicate<[{isTargetArch()}]>;
-
-def isFoo : RuntimeLibcallAvailability<(all_of IsFoo)>;
-def isBar : RuntimeLibcallAvailability<(all_of IsBar)>;
-def isTargetArch : RuntimeLibcallAvailability<(all_of IsTargetArch)>;
+def isFoo : RuntimeLibcallPredicate<[{isFoo()}]>;
+def isBar : RuntimeLibcallPredicate<[{isBar()}]>;
+def isTargetArch : RuntimeLibcallPredicate<[{isTargetArch()}]>;
 
 def func0 : RuntimeLibcallImpl<FUNC0>;
 def func1 : RuntimeLibcallImpl<FUNC1>;

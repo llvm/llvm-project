@@ -210,7 +210,7 @@ protected:
   friend class SBPlatform;
   friend class SBTarget;
 
-  friend class lldb_private::ScriptInterpreterBridge;
+  friend class lldb_private::ScriptInterpreter;
 
   const lldb_private::ProcessLaunchInfo &ref() const;
   void set_ref(const lldb_private::ProcessLaunchInfo &info);

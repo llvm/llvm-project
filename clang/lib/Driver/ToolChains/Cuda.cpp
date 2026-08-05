@@ -97,10 +97,6 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_131;
   if (raw_version < 13030)
     return CudaVersion::CUDA_132;
-  if (raw_version < 13040)
-    return CudaVersion::CUDA_133;
-  if (raw_version < 13050)
-    return CudaVersion::CUDA_134;
   return CudaVersion::NEW;
 }
 
@@ -239,12 +235,14 @@ CudaInstallationDetector::CudaInstallationDetector(
       // CUDA-9+ uses single libdevice file for all GPU variants.
       std::string FilePath = LibDevicePath + "/libdevice.10.bc";
       if (FS.exists(FilePath)) {
-        // CUDA-9+ uses a single libdevice file for every NVIDIA GPU variant
-        // (sm_30 and newer).
-#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
-  if ((SM_ID) >= 300)                                                          \
-    LibDeviceMap[NAME] = FilePath;
-#include "llvm/TargetParser/NVPTXTargetParser.def"
+        for (int Arch = (int)OffloadArch::SM_30, E = (int)OffloadArch::LAST;
+             Arch < E; ++Arch) {
+          OffloadArch OA = static_cast<OffloadArch>(Arch);
+          if (!IsNVIDIAOffloadArch(OA))
+            continue;
+          std::string OffloadArchName(OffloadArchToString(OA));
+          LibDeviceMap[OffloadArchName] = FilePath;
+        }
       }
     } else {
       std::error_code EC;
@@ -328,15 +326,14 @@ void CudaInstallationDetector::AddCudaIncludeArgs(
 
 void CudaInstallationDetector::CheckCudaVersionSupportsArch(
     OffloadArch Arch) const {
-  // Only NVIDIA architectures depend on the CUDA toolkit version.
-  if (!Arch.isNVPTX() || Version == CudaVersion::UNKNOWN ||
-      ArchsWithBadVersion[Arch.nvptxKind()])
+  if (Arch == OffloadArch::Unknown || Version == CudaVersion::UNKNOWN ||
+      ArchsWithBadVersion[(int)Arch])
     return;
 
   auto MinVersion = MinVersionForOffloadArch(Arch);
   auto MaxVersion = MaxVersionForOffloadArch(Arch);
   if (Version < MinVersion || Version > MaxVersion) {
-    ArchsWithBadVersion[Arch.nvptxKind()] = true;
+    ArchsWithBadVersion[(int)Arch] = true;
     D.Diag(diag::err_drv_cuda_version_unsupported)
         << OffloadArchToString(Arch) << CudaVersionToString(MinVersion)
         << CudaVersionToString(MaxVersion) << InstallPath
@@ -417,7 +414,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Obtain architecture from the action.
-  assert(!GPUArch.Arch.isUnknown() &&
+  assert(GPUArch.Arch != OffloadArch::Unknown &&
          "Device action expected to have an architecture.");
 
   // Check that our installation's ptxas supports gpu_arch.
@@ -619,13 +616,7 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_ptxas_path_EQ))
     CmdArgs.push_back(Args.MakeArgString(
-        "--ptxas-path=" + Args.getLastArgValue(options::OPT_ptxas_path_EQ)));
-
-  // The wrapper runs 'ptxas' itself when doing LTO, so it needs these.
-  for (const Arg *A : Args.filtered(options::OPT_Xcuda_ptxas)) {
-    A->claim();
-    CmdArgs.append({"-Xptxas", A->getValue()});
-  }
+        "--pxtas-path=" + Args.getLastArgValue(options::OPT_ptxas_path_EQ)));
 
   if (Args.hasArg(options::OPT_cuda_path_EQ) || TC.CudaInstallation.isValid()) {
     StringRef CudaPath = Args.getLastArgValue(
@@ -700,8 +691,6 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
-    CASE_CUDA_VERSION(134, 94);
-    CASE_CUDA_VERSION(133, 93);
     CASE_CUDA_VERSION(132, 92);
     CASE_CUDA_VERSION(131, 91);
     CASE_CUDA_VERSION(130, 90);
@@ -783,7 +772,7 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
   if (!DAL->hasArg(options::OPT_march_EQ) && OffloadKind != Action::OFK_None) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                      OffloadArchToString(OffloadArch::CudaDefault()));
+                      OffloadArchToString(OffloadArch::CudaDefault));
   } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "generic" &&
              OffloadKind == Action::OFK_None) {
     DAL->eraseArg(options::OPT_march_EQ);

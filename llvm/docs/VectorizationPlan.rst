@@ -2,6 +2,8 @@
 Vectorization Plan
 ==================
 
+.. contents::
+   :local:
 
 Abstract
 ========

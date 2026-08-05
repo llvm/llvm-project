@@ -24,7 +24,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 
 using namespace clang;
@@ -228,7 +227,7 @@ private:
   ExplodedNode *tryToReportBug(const MemRegion *Region, const CXXRecordDecl *RD,
                                CheckerContext &C, MisuseKind MK) const;
 
-  bool isInMoveSafeStackFrame(const CheckerContext &C) const;
+  bool isInMoveSafeStackFrame(const StackFrame *SF) const;
   bool isStateResetMethod(const CXXMethodDecl *MethodDec) const;
   bool isMoveSafeMethod(const CXXMethodDecl *MethodDec) const;
   const ExplodedNode *getMoveLocation(const ExplodedNode *N,
@@ -375,7 +374,8 @@ void MoveChecker::modelUse(ProgramStateRef State, const MemRegion *Region,
   if (MK == MK_Dereference && OK.StdKind != SK_SmartPtr)
     MK = MK_FunCall;
 
-  if (!RS || !shouldWarnAbout(OK, MK) || isInMoveSafeStackFrame(C)) {
+  if (!RS || !shouldWarnAbout(OK, MK) ||
+      isInMoveSafeStackFrame(C.getStackFrame())) {
     // Finalize changes made by the caller.
     C.addTransition(State);
     return;
@@ -615,17 +615,19 @@ bool MoveChecker::isStateResetMethod(const CXXMethodDecl *MethodDec) const {
 
 // Don't report an error inside a move related operation.
 // We assume that the programmer knows what she does.
-bool MoveChecker::isInMoveSafeStackFrame(const CheckerContext &C) const {
-  return llvm::any_of(C.stackframes(), [this](const StackFrame &Frame) {
-    const auto *SFDec = Frame.getDecl();
+bool MoveChecker::isInMoveSafeStackFrame(const StackFrame *SF) const {
+  do {
+    const auto *SFDec = SF->getDecl();
     auto *CtorDec = dyn_cast_or_null<CXXConstructorDecl>(SFDec);
     auto *DtorDec = dyn_cast_or_null<CXXDestructorDecl>(SFDec);
     auto *MethodDec = dyn_cast_or_null<CXXMethodDecl>(SFDec);
-    return DtorDec || (CtorDec && CtorDec->isCopyOrMoveConstructor()) ||
-           (MethodDec && MethodDec->isOverloadedOperator() &&
-            MethodDec->getOverloadedOperator() == OO_Equal) ||
-           isStateResetMethod(MethodDec) || isMoveSafeMethod(MethodDec);
-  });
+    if (DtorDec || (CtorDec && CtorDec->isCopyOrMoveConstructor()) ||
+        (MethodDec && MethodDec->isOverloadedOperator() &&
+         MethodDec->getOverloadedOperator() == OO_Equal) ||
+        isStateResetMethod(MethodDec) || isMoveSafeMethod(MethodDec))
+      return true;
+  } while ((SF = SF->getParent()));
+  return false;
 }
 
 bool MoveChecker::belongsTo(const CXXRecordDecl *RD,

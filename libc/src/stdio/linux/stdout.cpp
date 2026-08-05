@@ -29,6 +29,6 @@ LLVM_LIBC_VARIABLE(FILE *, stdout) = reinterpret_cast<FILE *>(&StdOut);
 
 #else // overlay mode
 
-extern "C" FILE *stdout;
+extern "C" FILE *stderr;
 
 #endif // LIBC_FULL_BUILD

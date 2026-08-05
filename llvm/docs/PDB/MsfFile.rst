@@ -2,6 +2,8 @@
 The MSF File Format
 =====================================
 
+.. contents::
+   :local:
 
 .. _msf_layout:
 

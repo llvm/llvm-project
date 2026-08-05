@@ -1,7 +1,0 @@
-// RUN: not tblgen-lsp-server < %s 2> %t.err
-// RUN: FileCheck %s < %t.err
-//
-// No LSP messages here, just let tblgen-lsp-server see the end-of-file
-// CHECK: Transport error:
-// (Typically "Transport error: Input/output error" but platform-dependent).
-

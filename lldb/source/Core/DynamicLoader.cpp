@@ -356,7 +356,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
   } else {
     if (force_symbol_search) {
       lldb::StreamUP s = target.GetDebugger().GetAsyncErrorStream();
-      s->PutCString("Unable to find file");
+      s->Printf("Unable to find file");
       if (!name.empty())
         s->Printf(" %s", name.str().c_str());
       if (uuid.IsValid())
@@ -367,7 +367,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
         else
           s->Printf(" at address 0x%" PRIx64, value);
       }
-      s->PutCString("\n");
+      s->Printf("\n");
     }
     LLDB_LOGF(log,
               "Unable to find binary %s with UUID %s and load it at "

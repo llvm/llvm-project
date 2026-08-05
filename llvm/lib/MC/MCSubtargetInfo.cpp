@@ -124,7 +124,7 @@ static void Help(StringTable CPUNames, ArrayRef<SubtargetFeatureKV> FeatTable) {
 
   // Print the CPU table.
   errs() << "Available CPUs for this target:\n\n";
-  for (auto &CPUName : CPUNames) {
+  for (auto &CPUName : drop_begin(CPUNames)) {
     // Skip apple-latest, as that's only meant to be used in
     // disassemblers/debuggers, and we don't want normal code to be built with
     // it as an -mcpu=
@@ -159,7 +159,7 @@ static void cpuHelp(StringTable CPUNames) {
 
   // Print the CPU table.
   errs() << "Available CPUs for this target:\n\n";
-  for (auto &CPU : CPUNames) {
+  for (auto &CPU : llvm::drop_begin(CPUNames)) {
     // Skip apple-latest, as that's only meant to be used in
     // disassemblers/debuggers, and we don't want normal code to be built with
     // it as an -mcpu=
@@ -197,7 +197,7 @@ static FeatureBitset getFeatures(MCSubtargetInfo &STI, StringRef CPU,
 
   // Find CPU entry if CPU name is specified.
   else if (!CPU.empty()) {
-    const SubtargetSubTypeKV *CPUEntry = STI.resolveCPU(CPU);
+    const SubtargetSubTypeKV *CPUEntry = Find(CPU, ProcDesc);
 
     // If there is a match
     if (CPUEntry) {
@@ -210,7 +210,7 @@ static FeatureBitset getFeatures(MCSubtargetInfo &STI, StringRef CPU,
   }
 
   if (!TuneCPU.empty()) {
-    const SubtargetSubTypeKV *CPUEntry = STI.resolveCPU(TuneCPU);
+    const SubtargetSubTypeKV *CPUEntry = Find(TuneCPU, ProcDesc);
 
     // If there is a match
     if (CPUEntry) {
@@ -258,14 +258,13 @@ void MCSubtargetInfo::setDefaultFeatures(StringRef CPU, StringRef TuneCPU,
 MCSubtargetInfo::MCSubtargetInfo(
     const Triple &TT, StringRef C, StringRef TC, StringRef FS, StringTable PN,
     ArrayRef<SubtargetFeatureKV> PF, ArrayRef<SubtargetSubTypeKV> PD,
-    ArrayRef<SubtargetSubTypeAliasKV> PA, const MCSchedModel *PSM,
-    const MCWriteProcResEntry *WPR, const MCWriteLatencyEntry *WL,
-    const MCReadAdvanceEntry *RA, const InstrStage *IS, const unsigned *OC,
-    const unsigned *FP)
+    const MCSchedModel *PSM, const MCWriteProcResEntry *WPR,
+    const MCWriteLatencyEntry *WL, const MCReadAdvanceEntry *RA,
+    const InstrStage *IS, const unsigned *OC, const unsigned *FP)
     : TargetTriple(TT), CPU(std::string(C)), TuneCPU(std::string(TC)),
-      ProcNames(PN), ProcFeatures(PF), ProcDesc(PD), ProcAliases(PA),
-      ProcSchedModels(PSM), WriteProcResTable(WPR), WriteLatencyTable(WL),
-      ReadAdvanceTable(RA), Stages(IS), OperandCycles(OC), ForwardingPaths(FP) {
+      ProcNames(PN), ProcFeatures(PF), ProcDesc(PD), ProcSchedModels(PSM),
+      WriteProcResTable(WPR), WriteLatencyTable(WL), ReadAdvanceTable(RA),
+      Stages(IS), OperandCycles(OC), ForwardingPaths(FP) {
   InitMCProcessorInfo(CPU, TuneCPU, FS);
 }
 
@@ -435,23 +434,12 @@ bool MCSubtargetInfo::checkFeatureExpression(StringRef FeatureExpr) const {
   return Parser.parse();
 }
 
-const SubtargetSubTypeKV *MCSubtargetInfo::resolveCPU(StringRef CPU) const {
-  if (const SubtargetSubTypeKV *CPUEntry = Find(CPU, ProcDesc))
-    return CPUEntry;
-
-  // Not a canonical processor name; check whether it is a known alias.
-  if (const SubtargetSubTypeAliasKV *Alias = Find(CPU, ProcAliases))
-    return &ProcDesc[Alias->SubTypeIdx];
-
-  return nullptr;
-}
-
 const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
   assert(llvm::is_sorted(ProcDesc) &&
          "Processor machine model table is not sorted");
 
   // Find entry
-  const SubtargetSubTypeKV *CPUEntry = resolveCPU(CPU);
+  const SubtargetSubTypeKV *CPUEntry = Find(CPU, ProcDesc);
 
   if (!CPUEntry) {
     if (CPU != "help") // Don't error if the user asked for help.

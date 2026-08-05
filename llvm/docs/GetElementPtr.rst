@@ -2,6 +2,8 @@
 The Often Misunderstood GEP Instruction
 =======================================
 
+.. contents::
+   :local:
 
 Introduction
 ============

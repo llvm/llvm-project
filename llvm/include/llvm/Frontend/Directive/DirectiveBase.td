@@ -103,9 +103,6 @@ class Clause<list<Spelling> ss> {
   // Spellings of the clause.
   list<Spelling> spellings = ss;
 
-  // Optional name for the generated enum (if different from spelling).
-  string name = ?;
-
   // Optional class holding value of the clause in clang AST.
   string clangClass = "";
 
@@ -229,9 +226,6 @@ def LM_Unrolled: LoopModifier<[Spelling<"unrolled">]> {}
 class Directive<list<Spelling> ss> {
   // Spellings of the directive.
   list<Spelling> spellings = ss;
-
-  // Optional name for the generated enum (if different from spelling).
-  string name = ?;
 
   // Clauses cannot appear twice in the three allowed lists below. Also, since
   // required implies allowed, the same clause cannot appear in both the

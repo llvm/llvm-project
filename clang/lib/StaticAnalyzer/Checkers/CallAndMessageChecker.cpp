@@ -321,27 +321,12 @@ bool CallAndMessageChecker::uninitRefOrPointer(CheckerContext &C, SVal V,
   const SVal PointeeV = State->getSVal(SValMemRegion, PointeeT);
   const Expr *ArgEx = Call.getArgExpr(ArgumentNumber);
 
-  auto DescribeArgument = [ParamT, PointeeT,
-                           &Call](bool ArgIsStruct) -> std::string {
-    if (PointeeT.isConstQualified())
-      return llvm::formatv(
-          "this argument is const{0} and {1} input data of the function",
-          ParamT->isPointerType() ? " pointer" : "",
-          ArgIsStruct ? "may contain" : "is likely");
-    else
-      return llvm::formatv(
-          "function '{0}' expects {1}this argument to be initialized",
-          cast<NamedDecl>(Call.getDecl())->getNameAsString(),
-          ParamT->isPointerType() ? "memory pointed to by " : "");
-  };
-
   if (PointeeV.isUndef()) {
     if (ExplodedNode *N = C.generateErrorNode()) {
       std::string Msg = llvm::formatv(
-          "{0}{1} function call argument {2} an uninitialized value; {3}",
+          "{0}{1} function call argument is {2} uninitialized value",
           ArgumentNumber + 1, llvm::getOrdinalSuffix(ArgumentNumber + 1),
-          ParamT->isPointerType() ? "points to" : "is",
-          DescribeArgument(/*ArgIsStruct=*/false));
+          ParamT->isPointerType() ? "a pointer to" : "an");
       auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
       R->addRange(Call.getArgSourceRange(ArgumentNumber));
       if (ArgEx)
@@ -361,10 +346,9 @@ bool CallAndMessageChecker::uninitRefOrPointer(CheckerContext &C, SVal V,
     if (F.Find(D->getRegion())) {
       if (ExplodedNode *N = C.generateErrorNode()) {
         std::string Msg = llvm::formatv(
-            "{0}{1} function call argument {2} an uninitialized value{3}; {4}",
+            "{0}{1} function call argument {2} an uninitialized value{3}",
             (ArgumentNumber + 1), llvm::getOrdinalSuffix(ArgumentNumber + 1),
-            ParamT->isPointerType() ? "points to" : "is", F.FieldChain,
-            DescribeArgument(/*ArgIsStruct=*/true));
+            ParamT->isPointerType() ? "points to" : "references", F.FieldChain);
         auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
         R->addRange(Call.getArgSourceRange(ArgumentNumber));
         if (ArgEx)

@@ -413,9 +413,8 @@ WebAssemblyFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
     // that this code is not reached in that case, but assert here to be sure.
     assert(!MF.getSubtarget<WebAssemblySubtarget>().hasLibcallThreadContext());
 
-    // The __stack_pointer global holds only the innermost frame's stack
-    // pointer, so this frame base is correct only for the innermost frame.
-    // TODO: Describe outer frames, which need a per-frame stack pointer value.
+    // TODO: This should work on a breakpoint at a function with no frame,
+    // but probably won't work for traversing up the stack.
     Loc.Location.WasmLoc = {WebAssembly::TI_GLOBAL_RELOC, 0};
   }
   return Loc;

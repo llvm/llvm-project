@@ -8,7 +8,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # a platform command needs a connection to the host it runs on
 class PlatformCommandTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

@@ -134,12 +134,16 @@ void LoopVectorizationUtils::reportVectorization(OptimizationRemarkEmitter *ORE,
   });
 }
 
-bool VFSelectionContext::isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy,
-                                                  Align Alignment,
-                                                  unsigned AddressSpace) const {
+bool VFSelectionContext::isLegalMaskedLoadOrStore(Instruction *I,
+                                                  ElementCount VF) const {
+  assert(isa<LoadInst>(I) || isa<StoreInst>(I));
+  auto *Ty = getLoadStoreType(I);
+  const unsigned AS = getLoadStoreAddressSpace(I);
+  const Align Alignment = getLoadStoreAlignment(I);
+
   return ForceTargetSupportsMaskedMemoryOps ||
-         (IsLoad ? TTI.isLegalMaskedLoad(ScalarTy, Alignment, AddressSpace)
-                 : TTI.isLegalMaskedStore(ScalarTy, Alignment, AddressSpace));
+         (isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, Alignment, AS)
+                           : TTI.isLegalMaskedStore(Ty, Alignment, AS));
 }
 
 bool VFSelectionContext::isLegalGatherOrScatter(Value *V,

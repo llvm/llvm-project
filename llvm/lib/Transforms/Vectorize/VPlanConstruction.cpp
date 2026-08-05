@@ -1277,12 +1277,18 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
 
   // Disconnect countable early exits from the loop, leaving it with a single
   // exit from the latch. Countable early exits are left for a scalar epilog.
-  for (auto [EarlyExitingVPBB, EB] : vputils::getEarlyExits(Plan, MiddleVPBB)) {
-    // Remove phi operands for the early exiting block.
-    for (VPRecipeBase &R : EB->phis())
-      cast<VPIRPhi>(&R)->removeIncomingValueFor(EarlyExitingVPBB);
-    EarlyExitingVPBB->getTerminator()->eraseFromParent();
-    VPBlockUtils::disconnectBlocks(EarlyExitingVPBB, EB);
+  for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
+    for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
+      if (Pred == MiddleVPBB)
+        continue;
+
+      // Remove phi operands for the early exiting block.
+      for (VPRecipeBase &R : EB->phis())
+        cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
+      auto *EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
+      EarlyExitingVPBB->getTerminator()->eraseFromParent();
+      VPBlockUtils::disconnectBlocks(Pred, EB);
+    }
   }
   return true;
 }
@@ -1751,7 +1757,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       if (DerivedIV->hasOneUse() && IsTC(DIVTC)) {
         auto *NewSel = MiddleBuilder.createSelect(
             AnyNaNLane, LoopRegion->getCanonicalIV(), DIVTC);
-        DerivedIV->moveAfter(MiddleBuilder.getRecipeAtInsertPoint());
+        DerivedIV->moveAfter(&*MiddleBuilder.getInsertPoint());
         DerivedIV->setOperand(1, NewSel);
         continue;
       }
@@ -2035,7 +2041,7 @@ static bool handleFirstArgMinOrMax(
         InductionDescriptor::IK_IntInduction,
         nullptr, // No FPBinOp for integer induction
         WideIV->getStartValue(), FinalCanIV, WideIV->getStepValue());
-    DerivedIVRecipe->insertBefore(Builder.getRecipeAtInsertPoint());
+    DerivedIVRecipe->insertBefore(&*Builder.getInsertPoint());
     FinalCanIV = DerivedIVRecipe;
   }
 
@@ -2241,24 +2247,4 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     FindIVRdxResult->setOperand(0, FinalIVSelect);
   }
   return true;
-}
-
-void VPlanTransforms::attachAliasMaskToHeaderMask(VPlan &Plan) {
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPValue *HeaderMask = LoopRegion->getHeaderMask();
-  Type *I1Ty = IntegerType::getInt1Ty(Plan.getContext());
-
-  VPBuilder Builder(Plan.getVectorPreheader());
-  auto *AliasMask = Builder.createNaryOp(
-      VPInstruction::IncomingAliasMask, {}, nullptr, {}, {},
-      DebugLoc::getUnknown(), "incoming.alias.mask", I1Ty);
-
-  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
-  Builder = VPBuilder(Header, Header->getFirstNonPhi());
-
-  // Update all existing users of the header mask to "HeaderMask & AliasMask".
-  auto *ClampedHeaderMask = Builder.createAnd(HeaderMask, AliasMask);
-  HeaderMask->replaceUsesWithIf(ClampedHeaderMask, [&](VPUser &U, unsigned) {
-    return &U != ClampedHeaderMask;
-  });
 }

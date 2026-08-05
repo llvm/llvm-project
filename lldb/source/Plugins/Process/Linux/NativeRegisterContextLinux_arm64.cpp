@@ -180,6 +180,18 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   m_max_hwp_supported = 16;
   m_max_hbp_supported = 16;
 
+  m_gpr_is_valid = false;
+  m_fpu_is_valid = false;
+  m_sve_buffer_is_valid = false;
+  m_sve_header_is_valid = false;
+  m_pac_mask_is_valid = false;
+  m_mte_ctrl_is_valid = false;
+  m_tls_is_valid = false;
+  m_zt_buffer_is_valid = false;
+  m_fpmr_is_valid = false;
+  m_gcs_is_valid = false;
+  m_poe_is_valid = false;
+
   // SME adds the tpidr2 register
   m_tls_size = GetRegisterInfo().IsSSVEPresent() ? sizeof(m_tls_regs)
                                                  : sizeof(m_tls_regs.tpidr_reg);
@@ -611,7 +623,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
         uint64_t vg_value = reg_value.GetAsUInt64();
 
         if (sve::vl_valid(vg_value * 8)) {
-          if (IsValid(RegisterSetType::SVE_HEADER) && vg_value == GetSVERegVG())
+          if (m_sve_header_is_valid && vg_value == GetSVERegVG())
             return error;
 
           SetSVERegVG(vg_value);
@@ -620,11 +632,11 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
           if (error.Success()) {
             // Changing VG during streaming mode also changes the size of ZA.
             if (m_sve_state == SVEState::Streaming)
-              Invalidate(RegisterSetType::ZA_HEADER);
+              m_za_header_is_valid = false;
             ConfigureRegisterContext();
           }
 
-          if (IsValid(RegisterSetType::SVE_HEADER) && vg_value == GetSVERegVG())
+          if (m_sve_header_is_valid && vg_value == GetSVERegVG())
             return error;
         }
 
@@ -761,10 +773,25 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
   return Status::FromErrorString("Failed to write register value");
 }
 
-uint8_t *NativeRegisterContextLinux_arm64::AddRegisterSetType(
-    uint8_t *dst, RegisterSetType register_set_type) {
-  std::memcpy(dst, &register_set_type, sizeof(register_set_type));
-  return dst + sizeof(RegisterSetType);
+enum RegisterSetType : uint32_t {
+  GPR, // General purpose registers.
+  SVE, // Used for SVE registers in streaming or non-streaming mode.
+  FPR, // When there is no SVE, or SVE in FPSIMD mode, or streaming only SVE
+       // that is in non-streaming mode.
+  // Pointer authentication registers are read only, so not included here.
+  MTE,  // Memory tagging control registers.
+  TLS,  // Thread local storage registers.
+  SME,  // ZA only, because SVCR and SVG are pseudo registers.
+  SME2, // ZT only.
+  FPMR, // Floating point mode control registers.
+  GCS,  // Guarded Control Stack registers.
+  POE,  // Permission Overlay registers.
+};
+
+static uint8_t *AddRegisterSetType(uint8_t *dst,
+                                   RegisterSetType register_set_type) {
+  *(reinterpret_cast<uint32_t *>(dst)) = register_set_type;
+  return dst + sizeof(uint32_t);
 }
 
 static uint8_t *AddSavedRegistersData(uint8_t *dst, void *src, size_t size) {
@@ -772,8 +799,9 @@ static uint8_t *AddSavedRegistersData(uint8_t *dst, void *src, size_t size) {
   return dst + size;
 }
 
-uint8_t *NativeRegisterContextLinux_arm64::AddSavedRegisters(
-    uint8_t *dst, RegisterSetType register_set_type, void *src, size_t size) {
+static uint8_t *AddSavedRegisters(uint8_t *dst,
+                                  enum RegisterSetType register_set_type,
+                                  void *src, size_t size) {
   dst = AddRegisterSetType(dst, register_set_type);
   return AddSavedRegistersData(dst, src, size);
 }
@@ -797,7 +825,7 @@ NativeRegisterContextLinux_arm64::CacheAllRegisters(uint32_t &cached_size) {
     cached_size += sizeof(RegisterSetType) + m_za_header.size;
     // For the same reason, we need to force it to be re-read so that it will
     // always contain the real header.
-    Invalidate(RegisterSetType::ZA);
+    m_za_buffer_is_valid = false;
     error = ReadZA();
     if (error.Fail())
       return error;
@@ -927,14 +955,14 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
     // Use the header size not the buffer size, as we may be using the buffer
     // for fake data, which we do not want to write out.
     assert(m_za_header.size <= GetZABufferSize());
-    dst = AddSavedRegisters(dst, RegisterSetType::ZA, GetZABuffer(),
+    dst = AddSavedRegisters(dst, RegisterSetType::SME, GetZABuffer(),
                             m_za_header.size);
   }
 
   if ((GetRegisterInfo().IsSVEPresent() || GetRegisterInfo().IsSSVEPresent()) &&
       m_sve_state != SVEState::StreamingFPSIMD) {
     dst = AddRegisterSetType(dst, RegisterSetType::SVE);
-    std::memcpy(dst, &m_sve_state, sizeof(m_sve_state));
+    *(reinterpret_cast<SVEState *>(dst)) = m_sve_state;
     dst += sizeof(m_sve_state);
     dst = AddSavedRegistersData(dst, GetSVEBuffer(), GetSVEBufferSize());
   } else {
@@ -944,7 +972,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
 
   if ((m_sve_state == SVEState::Streaming) && GetRegisterInfo().IsZAPresent()) {
     assert(m_za_header.size <= GetZABufferSize());
-    dst = AddSavedRegisters(dst, RegisterSetType::ZA, GetZABuffer(),
+    dst = AddSavedRegisters(dst, RegisterSetType::SME, GetZABuffer(),
                             m_za_header.size);
   }
 
@@ -958,7 +986,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
       GetRegisterInfo().IsZTPresent() &&
       // And ZA is enabled.
       m_za_header.size > sizeof(m_za_header))
-    dst = AddSavedRegisters(dst, RegisterSetType::ZT, GetZTBuffer(),
+    dst = AddSavedRegisters(dst, RegisterSetType::SME2, GetZTBuffer(),
                             GetZTBufferSize());
 
   if (GetRegisterInfo().IsMTEPresent()) {
@@ -987,12 +1015,10 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   return error;
 }
 
-Status NativeRegisterContextLinux_arm64::RestoreRegisters(
-    void *buffer, const uint8_t **src, size_t len,
-    const NativeRegisterContextLinux_arm64::RegisterSetType set,
-    std::function<Status()> writer) {
+static Status RestoreRegisters(void *buffer, const uint8_t **src, size_t len,
+                               bool &is_valid, std::function<Status()> writer) {
   ::memcpy(buffer, *src, len);
-  MakeValid(set);
+  is_valid = true;
   *src += len;
   return writer();
 }
@@ -1040,33 +1066,33 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
 
   const uint8_t *end = src + data_sp->GetByteSize();
   while (src < end) {
-    RegisterSetType kind;
-    std::memcpy(&kind, src, sizeof(kind));
+    const RegisterSetType kind =
+        *reinterpret_cast<const RegisterSetType *>(src);
     src += sizeof(RegisterSetType);
 
     switch (kind) {
     case RegisterSetType::GPR:
       error = RestoreRegisters(
-          GetGPRBuffer(), &src, GetGPRBufferSize(), kind,
+          GetGPRBuffer(), &src, GetGPRBufferSize(), m_gpr_is_valid,
           std::bind(&NativeRegisterContextLinux_arm64::WriteGPR, this));
       break;
     case RegisterSetType::SVE:
       // Restore to the correct mode, streaming or not.
-      std::memcpy(&m_sve_state, src, sizeof(m_sve_state));
+      m_sve_state = static_cast<SVEState>(*src);
       src += sizeof(m_sve_state);
 
       // First write SVE header. We do not use RestoreRegisters because we do
       // not want src to be modified yet.
       ::memcpy(GetSVEHeader(), src, GetSVEHeaderSize());
       if (!sve::vl_valid(m_sve_header.vl)) {
-        Invalidate(RegisterSetType::SVE_HEADER);
+        m_sve_header_is_valid = false;
         error = Status::FromErrorStringWithFormat(
             "NativeRegisterContextLinux_arm64::%s "
             "Invalid SVE header in data_sp",
             __FUNCTION__);
         return error;
       }
-      MakeValid(RegisterSetType::SVE_HEADER);
+      m_sve_header_is_valid = true;
       error = WriteSVEHeader();
       if (error.Fail())
         return error;
@@ -1078,11 +1104,12 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
 
       // Write header and register data, incrementing src this time.
       error = RestoreRegisters(
-          GetSVEBuffer(), &src, GetSVEBufferSize(), kind,
+          GetSVEBuffer(), &src, GetSVEBufferSize(), m_sve_buffer_is_valid,
           std::bind(&NativeRegisterContextLinux_arm64::WriteAllSVE, this));
       break;
     case RegisterSetType::FPR: {
-      Invalidate(RegisterSetType::SVE_HEADER, RegisterSetType::SVE);
+      m_sve_buffer_is_valid = false;
+      m_sve_header_is_valid = false;
       m_sve_state = SVEState::Unknown;
       ConfigureRegisterContext();
 
@@ -1133,8 +1160,9 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
 
         if (error.Success()) {
           // Wrote FPU, and SVE overlaps FPU.
-          Invalidate(RegisterSetType::FPR, RegisterSetType::SVE_HEADER,
-                     RegisterSetType::SVE);
+          m_fpu_is_valid = false;
+          m_sve_buffer_is_valid = false;
+          m_sve_header_is_valid = false;
 
           m_sve_state = SVEState::Unknown;
           ConfigureRegisterContext();
@@ -1143,22 +1171,22 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
         // the others.
       } else {
         error = RestoreRegisters(
-            GetFPRBuffer(), &src, GetFPRSize(), kind,
+            GetFPRBuffer(), &src, GetFPRSize(), m_fpu_is_valid,
             std::bind(&NativeRegisterContextLinux_arm64::WriteFPR, this));
       }
       break;
     }
     case RegisterSetType::MTE:
       error = RestoreRegisters(
-          GetMTEControl(), &src, GetMTEControlSize(), kind,
+          GetMTEControl(), &src, GetMTEControlSize(), m_mte_ctrl_is_valid,
           std::bind(&NativeRegisterContextLinux_arm64::WriteMTEControl, this));
       break;
     case RegisterSetType::TLS:
       error = RestoreRegisters(
-          GetTLSBuffer(), &src, GetTLSBufferSize(), kind,
+          GetTLSBuffer(), &src, GetTLSBufferSize(), m_tls_is_valid,
           std::bind(&NativeRegisterContextLinux_arm64::WriteTLS, this));
       break;
-    case RegisterSetType::ZA:
+    case RegisterSetType::SME:
       // To enable or disable ZA you write the regset with or without register
       // data. The kernel detects this by looking at the ioVec's length, not the
       // ZA header size you pass in. Therefore we must write header and register
@@ -1170,7 +1198,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       // this so WriteZA uses the correct size.
       m_za_ptrace_payload.resize(m_za_header.size);
       ::memcpy(GetZABuffer(), src, GetZABufferSize());
-      MakeValid(RegisterSetType::ZA);
+      m_za_buffer_is_valid = true;
 
       error = WriteZA();
       if (error.Fail())
@@ -1185,17 +1213,17 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       error = ReadZA();
       src += GetZABufferSize();
       break;
-    case RegisterSetType::ZT:
+    case RegisterSetType::SME2:
       // Doing this would activate an inactive ZA, however we will only get here
       // if the state we are restoring had an active ZA. Restoring ZT0 will
       // always come after restoring ZA.
       error = RestoreRegisters(
-          GetZTBuffer(), &src, GetZTBufferSize(), kind,
+          GetZTBuffer(), &src, GetZTBufferSize(), m_zt_buffer_is_valid,
           std::bind(&NativeRegisterContextLinux_arm64::WriteZT, this));
       break;
     case RegisterSetType::FPMR:
       error = RestoreRegisters(
-          GetFPMRBuffer(), &src, GetFPMRBufferSize(), kind,
+          GetFPMRBuffer(), &src, GetFPMRBufferSize(), m_fpmr_is_valid,
           std::bind(&NativeRegisterContextLinux_arm64::WriteFPMR, this));
       break;
     case RegisterSetType::GCS: {
@@ -1203,21 +1231,20 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       // to keep things simple we will not revert any change to the
       // PR_SHADOW_STACK_ENABLE bit. Instead patch in the current enable bit
       // into the registers we are about to restore.
-      Invalidate(RegisterSetType::GCS);
+      m_gcs_is_valid = false;
       error = ReadGCS();
       if (error.Fail())
         return error;
 
       uint64_t enable_bit = m_gcs_regs.features_enabled & 1UL;
-      gcs_regs new_gcs_regs;
-      std::memcpy(&new_gcs_regs, src, sizeof(new_gcs_regs));
+      gcs_regs new_gcs_regs = *reinterpret_cast<const gcs_regs *>(src);
       new_gcs_regs.features_enabled =
           (new_gcs_regs.features_enabled & ~1UL) | enable_bit;
 
       const uint8_t *new_gcs_src =
           reinterpret_cast<const uint8_t *>(&new_gcs_regs);
       error = RestoreRegisters(
-          GetGCSBuffer(), &new_gcs_src, GetGCSBufferSize(), kind,
+          GetGCSBuffer(), &new_gcs_src, GetGCSBufferSize(), m_gcs_is_valid,
           std::bind(&NativeRegisterContextLinux_arm64::WriteGCS, this));
       src += GetGCSBufferSize();
 
@@ -1225,13 +1252,8 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
     }
     case RegisterSetType::POE:
       error = RestoreRegisters(
-          GetPOEBuffer(), &src, GetPOEBufferSize(), kind,
+          GetPOEBuffer(), &src, GetPOEBufferSize(), m_poe_is_valid,
           std::bind(&NativeRegisterContextLinux_arm64::WritePOE, this));
-      break;
-    case RegisterSetType::PAC:
-    case RegisterSetType::SVE_HEADER:
-    case RegisterSetType::ZA_HEADER:
-      // These are not saved or restored.
       break;
     }
 
@@ -1272,7 +1294,7 @@ NativeRegisterContextLinux_arm64::WriteHardwareDebugRegs(DREGType hwbType) {
 Status NativeRegisterContextLinux_arm64::ReadGPR() {
   Status error;
 
-  if (IsValid(RegisterSetType::GPR))
+  if (m_gpr_is_valid)
     return error;
 
   struct iovec ioVec;
@@ -1282,7 +1304,7 @@ Status NativeRegisterContextLinux_arm64::ReadGPR() {
   error = ReadRegisterSet(&ioVec, GetGPRBufferSize(), llvm::ELF::NT_PRSTATUS);
 
   if (error.Success())
-    MakeValid(RegisterSetType::GPR);
+    m_gpr_is_valid = true;
 
   return error;
 }
@@ -1296,7 +1318,7 @@ Status NativeRegisterContextLinux_arm64::WriteGPR() {
   ioVec.iov_base = GetGPRBuffer();
   ioVec.iov_len = GetGPRBufferSize();
 
-  Invalidate(RegisterSetType::GPR);
+  m_gpr_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetGPRBufferSize(), llvm::ELF::NT_PRSTATUS);
 }
@@ -1304,7 +1326,7 @@ Status NativeRegisterContextLinux_arm64::WriteGPR() {
 Status NativeRegisterContextLinux_arm64::ReadFPR() {
   Status error;
 
-  if (IsValid(RegisterSetType::FPR))
+  if (m_fpu_is_valid)
     return error;
 
   struct iovec ioVec;
@@ -1313,7 +1335,7 @@ Status NativeRegisterContextLinux_arm64::ReadFPR() {
 
   error = ReadRegisterSet(&ioVec, GetFPRSize(), llvm::ELF::NT_FPREGSET);
   if (error.Success())
-    MakeValid(RegisterSetType::FPR);
+    m_fpu_is_valid = true;
 
   return error;
 }
@@ -1327,15 +1349,28 @@ Status NativeRegisterContextLinux_arm64::WriteFPR() {
   ioVec.iov_base = GetFPRBuffer();
   ioVec.iov_len = GetFPRSize();
 
+  m_fpu_is_valid = false;
   // SVE Z registers overlap the FP registers.
-  Invalidate(RegisterSetType::FPR, RegisterSetType::SVE_HEADER,
-             RegisterSetType::SVE);
+  m_sve_buffer_is_valid = false;
+  m_sve_header_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetFPRSize(), llvm::ELF::NT_FPREGSET);
 }
 
 void NativeRegisterContextLinux_arm64::InvalidateAllRegisters() {
-  m_validity = static_cast<RegisterSetType>(0);
+  m_gpr_is_valid = false;
+  m_fpu_is_valid = false;
+  m_sve_buffer_is_valid = false;
+  m_sve_header_is_valid = false;
+  m_za_buffer_is_valid = false;
+  m_za_header_is_valid = false;
+  m_pac_mask_is_valid = false;
+  m_mte_ctrl_is_valid = false;
+  m_tls_is_valid = false;
+  m_zt_buffer_is_valid = false;
+  m_fpmr_is_valid = false;
+  m_gcs_is_valid = false;
+  m_poe_is_valid = false;
 
   // Update SVE and ZA registers in case there is change in configuration.
   ConfigureRegisterContext();
@@ -1354,7 +1389,7 @@ unsigned NativeRegisterContextLinux_arm64::GetSVERegSet() {
 Status NativeRegisterContextLinux_arm64::ReadSVEHeader() {
   Status error;
 
-  if (IsValid(RegisterSetType::SVE_HEADER))
+  if (m_sve_header_is_valid)
     return error;
 
   struct iovec ioVec;
@@ -1364,7 +1399,7 @@ Status NativeRegisterContextLinux_arm64::ReadSVEHeader() {
   error = ReadRegisterSet(&ioVec, GetSVEHeaderSize(), GetSVERegSet());
 
   if (error.Success())
-    MakeValid(RegisterSetType::SVE_HEADER);
+    m_sve_header_is_valid = true;
 
   return error;
 }
@@ -1372,7 +1407,7 @@ Status NativeRegisterContextLinux_arm64::ReadSVEHeader() {
 Status NativeRegisterContextLinux_arm64::ReadPAuthMask() {
   Status error;
 
-  if (IsValid(RegisterSetType::PAC))
+  if (m_pac_mask_is_valid)
     return error;
 
   struct iovec ioVec;
@@ -1382,7 +1417,7 @@ Status NativeRegisterContextLinux_arm64::ReadPAuthMask() {
   error = ReadRegisterSet(&ioVec, GetPACMaskSize(), llvm::ELF::NT_ARM_PAC_MASK);
 
   if (error.Success())
-    MakeValid(RegisterSetType::PAC);
+    m_pac_mask_is_valid = true;
 
   return error;
 }
@@ -1398,15 +1433,16 @@ Status NativeRegisterContextLinux_arm64::WriteSVEHeader() {
   ioVec.iov_base = GetSVEHeader();
   ioVec.iov_len = GetSVEHeaderSize();
 
-  Invalidate(RegisterSetType::FPR, RegisterSetType::SVE_HEADER,
-             RegisterSetType::SVE);
+  m_sve_buffer_is_valid = false;
+  m_sve_header_is_valid = false;
+  m_fpu_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetSVEHeaderSize(), GetSVERegSet());
 }
 
 Status NativeRegisterContextLinux_arm64::ReadAllSVE() {
   Status error;
-  if (IsValid(RegisterSetType::SVE))
+  if (m_sve_buffer_is_valid)
     return error;
 
   struct iovec ioVec;
@@ -1416,7 +1452,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllSVE() {
   error = ReadRegisterSet(&ioVec, GetSVEBufferSize(), GetSVERegSet());
 
   if (error.Success())
-    MakeValid(RegisterSetType::SVE);
+    m_sve_buffer_is_valid = true;
 
   return error;
 }
@@ -1433,8 +1469,9 @@ Status NativeRegisterContextLinux_arm64::WriteAllSVE() {
   ioVec.iov_base = GetSVEBuffer();
   ioVec.iov_len = GetSVEBufferSize();
 
-  Invalidate(RegisterSetType::FPR, RegisterSetType::SVE_HEADER,
-             RegisterSetType::SVE);
+  m_sve_buffer_is_valid = false;
+  m_sve_header_is_valid = false;
+  m_fpu_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetSVEBufferSize(), GetSVERegSet());
 }
@@ -1460,7 +1497,7 @@ Status NativeRegisterContextLinux_arm64::ReadSMEControl() {
 Status NativeRegisterContextLinux_arm64::ReadMTEControl() {
   Status error;
 
-  if (IsValid(RegisterSetType::MTE))
+  if (m_mte_ctrl_is_valid)
     return error;
 
   struct iovec ioVec;
@@ -1471,7 +1508,7 @@ Status NativeRegisterContextLinux_arm64::ReadMTEControl() {
                           llvm::ELF::NT_ARM_TAGGED_ADDR_CTRL);
 
   if (error.Success())
-    MakeValid(RegisterSetType::MTE);
+    m_mte_ctrl_is_valid = true;
 
   return error;
 }
@@ -1487,7 +1524,7 @@ Status NativeRegisterContextLinux_arm64::WriteMTEControl() {
   ioVec.iov_base = GetMTEControl();
   ioVec.iov_len = GetMTEControlSize();
 
-  Invalidate(RegisterSetType::MTE);
+  m_mte_ctrl_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetMTEControlSize(),
                           llvm::ELF::NT_ARM_TAGGED_ADDR_CTRL);
@@ -1496,7 +1533,7 @@ Status NativeRegisterContextLinux_arm64::WriteMTEControl() {
 Status NativeRegisterContextLinux_arm64::ReadTLS() {
   Status error;
 
-  if (IsValid(RegisterSetType::TLS))
+  if (m_tls_is_valid)
     return error;
 
   struct iovec ioVec;
@@ -1506,7 +1543,7 @@ Status NativeRegisterContextLinux_arm64::ReadTLS() {
   error = ReadRegisterSet(&ioVec, GetTLSBufferSize(), llvm::ELF::NT_ARM_TLS);
 
   if (error.Success())
-    MakeValid(RegisterSetType::TLS);
+    m_tls_is_valid = true;
 
   return error;
 }
@@ -1522,7 +1559,7 @@ Status NativeRegisterContextLinux_arm64::WriteTLS() {
   ioVec.iov_base = GetTLSBuffer();
   ioVec.iov_len = GetTLSBufferSize();
 
-  Invalidate(RegisterSetType::TLS);
+  m_tls_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetTLSBufferSize(), llvm::ELF::NT_ARM_TLS);
 }
@@ -1530,7 +1567,7 @@ Status NativeRegisterContextLinux_arm64::WriteTLS() {
 Status NativeRegisterContextLinux_arm64::ReadGCS() {
   Status error;
 
-  if (IsValid(RegisterSetType::GCS))
+  if (m_gcs_is_valid)
     return error;
 
   struct iovec ioVec;
@@ -1540,7 +1577,7 @@ Status NativeRegisterContextLinux_arm64::ReadGCS() {
   error = ReadRegisterSet(&ioVec, GetGCSBufferSize(), llvm::ELF::NT_ARM_GCS);
 
   if (error.Success())
-    MakeValid(RegisterSetType::GCS);
+    m_gcs_is_valid = true;
 
   return error;
 }
@@ -1556,7 +1593,7 @@ Status NativeRegisterContextLinux_arm64::WriteGCS() {
   ioVec.iov_base = GetGCSBuffer();
   ioVec.iov_len = GetGCSBufferSize();
 
-  Invalidate(RegisterSetType::GCS);
+  m_gcs_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetGCSBufferSize(), llvm::ELF::NT_ARM_GCS);
 }
@@ -1564,7 +1601,7 @@ Status NativeRegisterContextLinux_arm64::WriteGCS() {
 Status NativeRegisterContextLinux_arm64::ReadZAHeader() {
   Status error;
 
-  if (IsValid(RegisterSetType::ZA_HEADER))
+  if (m_za_header_is_valid)
     return error;
 
   struct iovec ioVec;
@@ -1574,7 +1611,7 @@ Status NativeRegisterContextLinux_arm64::ReadZAHeader() {
   error = ReadRegisterSet(&ioVec, GetZAHeaderSize(), llvm::ELF::NT_ARM_ZA);
 
   if (error.Success())
-    MakeValid(RegisterSetType::ZA_HEADER);
+    m_za_header_is_valid = true;
 
   return error;
 }
@@ -1582,7 +1619,7 @@ Status NativeRegisterContextLinux_arm64::ReadZAHeader() {
 Status NativeRegisterContextLinux_arm64::ReadZA() {
   Status error;
 
-  if (IsValid(RegisterSetType::ZA))
+  if (m_za_buffer_is_valid)
     return error;
 
   struct iovec ioVec;
@@ -1592,7 +1629,7 @@ Status NativeRegisterContextLinux_arm64::ReadZA() {
   error = ReadRegisterSet(&ioVec, GetZABufferSize(), llvm::ELF::NT_ARM_ZA);
 
   if (error.Success())
-    MakeValid(RegisterSetType::ZA);
+    m_za_buffer_is_valid = true;
 
   return error;
 }
@@ -1611,9 +1648,10 @@ Status NativeRegisterContextLinux_arm64::WriteZA() {
   ioVec.iov_base = GetZABuffer();
   ioVec.iov_len = GetZABufferSize();
 
-  Invalidate(RegisterSetType::ZA_HEADER, RegisterSetType::ZA,
-             // Writing to ZA may enable ZA, which means ZT0 may change too.
-             RegisterSetType::ZT);
+  m_za_buffer_is_valid = false;
+  m_za_header_is_valid = false;
+  // Writing to ZA may enable ZA, which means ZT0 may change too.
+  m_zt_buffer_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetZABufferSize(), llvm::ELF::NT_ARM_ZA);
 }
@@ -1621,7 +1659,7 @@ Status NativeRegisterContextLinux_arm64::WriteZA() {
 Status NativeRegisterContextLinux_arm64::ReadZT() {
   Status error;
 
-  if (IsValid(RegisterSetType::ZT))
+  if (m_zt_buffer_is_valid)
     return error;
 
   struct iovec ioVec;
@@ -1629,8 +1667,7 @@ Status NativeRegisterContextLinux_arm64::ReadZT() {
   ioVec.iov_len = GetZTBufferSize();
 
   error = ReadRegisterSet(&ioVec, GetZTBufferSize(), llvm::ELF::NT_ARM_ZT);
-  if (error.Success())
-    MakeValid(RegisterSetType::ZT);
+  m_zt_buffer_is_valid = error.Success();
 
   return error;
 }
@@ -1646,10 +1683,11 @@ Status NativeRegisterContextLinux_arm64::WriteZT() {
   ioVec.iov_base = GetZTBuffer();
   ioVec.iov_len = GetZTBufferSize();
 
-  Invalidate(RegisterSetType::ZT,
-             // Writing to an inactive ZT0 will enable ZA as well,
-             // which invalidates our current copy of it.
-             RegisterSetType::ZA_HEADER, RegisterSetType::ZA);
+  m_zt_buffer_is_valid = false;
+  // Writing to an inactive ZT0 will enable ZA as well, which invalidates our
+  // current copy of it.
+  m_za_buffer_is_valid = false;
+  m_za_header_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetZTBufferSize(), llvm::ELF::NT_ARM_ZT);
 }
@@ -1657,7 +1695,7 @@ Status NativeRegisterContextLinux_arm64::WriteZT() {
 Status NativeRegisterContextLinux_arm64::ReadFPMR() {
   Status error;
 
-  if (IsValid(RegisterSetType::FPMR))
+  if (m_fpmr_is_valid)
     return error;
 
   struct iovec ioVec;
@@ -1667,7 +1705,7 @@ Status NativeRegisterContextLinux_arm64::ReadFPMR() {
   error = ReadRegisterSet(&ioVec, GetFPMRBufferSize(), llvm::ELF::NT_ARM_FPMR);
 
   if (error.Success())
-    MakeValid(RegisterSetType::FPMR);
+    m_fpmr_is_valid = true;
 
   return error;
 }
@@ -1683,7 +1721,7 @@ Status NativeRegisterContextLinux_arm64::WriteFPMR() {
   ioVec.iov_base = GetFPMRBuffer();
   ioVec.iov_len = GetFPMRBufferSize();
 
-  Invalidate(RegisterSetType::FPMR);
+  m_fpmr_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetFPMRBufferSize(), llvm::ELF::NT_ARM_FPMR);
 }
@@ -1691,7 +1729,7 @@ Status NativeRegisterContextLinux_arm64::WriteFPMR() {
 Status NativeRegisterContextLinux_arm64::ReadPOE() {
   Status error;
 
-  if (IsValid(RegisterSetType::POE))
+  if (m_poe_is_valid)
     return error;
 
   struct iovec ioVec;
@@ -1701,7 +1739,7 @@ Status NativeRegisterContextLinux_arm64::ReadPOE() {
   error = ReadRegisterSet(&ioVec, GetPOEBufferSize(), llvm::ELF::NT_ARM_POE);
 
   if (error.Success())
-    MakeValid(RegisterSetType::POE);
+    m_poe_is_valid = true;
 
   return error;
 }
@@ -1717,7 +1755,7 @@ Status NativeRegisterContextLinux_arm64::WritePOE() {
   ioVec.iov_base = GetPOEBuffer();
   ioVec.iov_len = GetPOEBufferSize();
 
-  Invalidate(RegisterSetType::POE);
+  m_poe_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetPOEBufferSize(), llvm::ELF::NT_ARM_POE);
 }
@@ -1728,14 +1766,14 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
   // streaming SVE mode.
   // If m_sve_state is set to SVEState::Disabled on first stop, code below will
   // be deemed non operational for the lifetime of current process.
-  if (!IsValid(RegisterSetType::SVE_HEADER) &&
-      m_sve_state != SVEState::Disabled) {
+  if (!m_sve_header_is_valid && m_sve_state != SVEState::Disabled) {
     // Systems may have SVE and/or SME. If they are SME only, the SVE regset
     // cannot be read from but the SME one can. If they have both SVE and SME,
     // only the active mode will return valid register data.
 
     // Check for SME.
-    Invalidate(RegisterSetType::SVE_HEADER, RegisterSetType::SVE);
+    m_sve_header_is_valid = false;
+    m_sve_buffer_is_valid = false;
     m_sve_state = SVEState::Streaming;
     Status error = ReadSVEHeader();
 
@@ -1745,7 +1783,8 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
         ((m_sve_header.flags & sve::ptrace_regs_mask) == sve::ptrace_regs_sve);
 
     // Check for SVE.
-    Invalidate(RegisterSetType::SVE_HEADER, RegisterSetType::SVE);
+    m_sve_header_is_valid = false;
+    m_sve_buffer_is_valid = false;
     m_sve_state = SVEState::Full;
     error = ReadSVEHeader();
 
@@ -1774,7 +1813,9 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
     if (m_sve_state == SVEState::Full || m_sve_state == SVEState::FPSIMD ||
         m_sve_state == SVEState::Streaming ||
         m_sve_state == SVEState::StreamingFPSIMD) {
-      Invalidate(RegisterSetType::SVE_HEADER, RegisterSetType::SVE);
+
+      m_sve_header_is_valid = false;
+      m_sve_buffer_is_valid = false;
       error = ReadSVEHeader();
 
       // On every stop we configure SVE vector length by calling
@@ -1788,7 +1829,7 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
     }
   }
 
-  if (!IsValid(RegisterSetType::ZA_HEADER)) {
+  if (!m_za_header_is_valid) {
     Status error = ReadZAHeader();
     if (error.Success()) {
       uint32_t vq = RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64SVE;
@@ -1797,7 +1838,7 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
 
       GetRegisterInfo().ConfigureVectorLengthZA(vq);
       m_za_ptrace_payload.resize(m_za_header.size);
-      Invalidate(RegisterSetType::ZA);
+      m_za_buffer_is_valid = false;
     }
   }
 }

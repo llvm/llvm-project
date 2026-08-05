@@ -15,7 +15,7 @@ class NoNlistsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote
-    @requireDarwin
+    @skipUnlessDarwin
     def test_no_nlist_symbols(self):
         self.build()
 

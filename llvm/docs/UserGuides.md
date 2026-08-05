@@ -5,6 +5,9 @@ you should look into [Clang](https://clang.llvm.org) instead. The
 documentation here is intended for users who have a need to work with the
 intermediate LLVM representation.
 
+```{contents}
+:local:
+```
 
 ```{toctree}
 :hidden:
@@ -40,7 +43,6 @@ Instrumentor
 InstrRefDebugInfo
 RemoveDIsDebugInfo
 KeyInstructionsDebugInfo
-DynamicDebugging
 InstrProfileFormat
 InstCombineContributorGuide
 WritingAnLLVMBackend
@@ -233,11 +235,6 @@ yaml2obj
 
   This document explains how the debug info feature Key Instructions is
   implemented in LLVM.
-
-- {doc}`DynamicDebugging`
-
-  This document explains how the dynamic debugging feature is implemented in
-  LLVM.
 
 - {doc}`InstrProfileFormat`
 

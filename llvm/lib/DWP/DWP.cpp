@@ -1041,8 +1041,6 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
       break;
   }
 
-  Strings.clear();
-
   if (Version < 5) {
     // Lie about there being no info contributions so the TU index only includes
     // the type unit contribution for DWARF < 5. In DWARFv5 the TU index has a
@@ -1103,13 +1101,12 @@ Error DWPWriter::writeELF(raw_pwrite_stream &OS) {
 
   // Collect non-empty sections and build the section name string table.
   struct OutputEntry {
-    SectionData *Data;
+    const SectionData *Data;
     const char *Name;
     uint64_t Flags;
     uint64_t EntSize;
     uint32_t NameOffset;
     uint64_t FileOffset; // filled in during layout
-    uint64_t Size;       // filled in during layout
   };
   SmallVector<OutputEntry> Entries;
 
@@ -1123,7 +1120,7 @@ Error DWPWriter::writeELF(raw_pwrite_stream &OS) {
     Strtab.append(M.Name);
     Strtab.push_back('\0');
     Entries.push_back(
-        {&Sections[M.Id], M.Name, M.Flags, M.EntSize, NameOff, 0, 0});
+        {&Sections[M.Id], M.Name, M.Flags, M.EntSize, NameOff, 0});
   }
 
   // Add .strtab and .symtab name entries.
@@ -1149,8 +1146,7 @@ Error DWPWriter::writeELF(raw_pwrite_stream &OS) {
   uint64_t Offset = EhdrSize;
   for (auto &E : Entries) {
     E.FileOffset = Offset;
-    E.Size = E.Data->totalSize();
-    Offset += E.Size;
+    Offset += E.Data->totalSize();
   }
 
   uint64_t StrtabOffset = Offset;
@@ -1171,7 +1167,7 @@ Error DWPWriter::writeELF(raw_pwrite_stream &OS) {
                    /*EFlags=*/0, SHTOffset, NumSections, StrtabIdx);
 
   // --- Write section data ---
-  for (auto &E : Entries)
+  for (const auto &E : Entries)
     E.Data->writeTo(OS);
 
   // --- Write .strtab ---
@@ -1191,7 +1187,8 @@ Error DWPWriter::writeELF(raw_pwrite_stream &OS) {
   // [1..N] data sections
   for (const auto &E : Entries)
     ELF::writeSectionHeader(Wr, true, E.NameOffset, ELF::SHT_PROGBITS, E.Flags,
-                            0, E.FileOffset, E.Size, 0, 0, 1, E.EntSize);
+                            0, E.FileOffset, E.Data->totalSize(), 0, 0, 1,
+                            E.EntSize);
 
   // [N+1] .strtab
   ELF::writeSectionHeader(Wr, true, StrtabNameOff, ELF::SHT_STRTAB, 0, 0,
@@ -1236,7 +1233,7 @@ Error DWPWriter::writeWASM(raw_pwrite_stream &OS) {
 
   // Emit each non-empty section as a WASM custom section (id=0).
   for (const auto &M : Meta) {
-    SectionData &SD = Sections[M.Id];
+    const SectionData &SD = Sections[M.Id];
     if (SD.empty())
       continue;
 

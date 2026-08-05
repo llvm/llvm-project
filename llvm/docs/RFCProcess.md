@@ -1,5 +1,9 @@
 # Request For Comment (RFC) process
 
+```{contents}
+:local:
+:depth: 1
+```
 
 ## Introduction
 

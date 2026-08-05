@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 #include "include/llvm-libc-macros/math-function-macros.h"
-#include "test/UnitTest/LibcCTest.h"
+
+#include <assert.h>
 
 // check if macro is defined
 #ifndef isinf
 #error "isinf macro is not defined"
 #else
-TEST(isinf) {
-  EXPECT_FALSE(isinf(1.0f));
-  EXPECT_FALSE(isinf(1.0));
-  EXPECT_FALSE(isinf(1.0L));
+int main(void) {
+  assert(!isinf(1.0f));
+  assert(!isinf(1.0));
+  assert(!isinf(1.0L));
+  return 0;
 }
 #endif

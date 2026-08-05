@@ -2,6 +2,8 @@
 LLVM's Optional Rich Disassembly Output
 =======================================
 
+.. contents::
+   :local:
 
 Introduction
 ============

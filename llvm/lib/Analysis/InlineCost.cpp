@@ -34,6 +34,7 @@
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/InlineAsm.h"
@@ -1082,11 +1083,11 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // movement, require a certain amount of setup, etc. So when optimising for
     // size, we penalise any call sites that perform loops. We do this after all
     // other costs here, so will likely only be dealing with relatively small
-    // functions (and hence LI will hopefully be cheap).
+    // functions (and hence DT and LI will hopefully be cheap).
     auto *Caller = CandidateCall.getFunction();
     if (Caller->hasMinSize()) {
-      LoopInfo LI;
-      LI.analyze(&F);
+      DominatorTree DT(F);
+      LoopInfo LI(DT);
       int NumLoops = 0;
       for (Loop *L : LI) {
         // Ignore loops that will not be executed
@@ -1394,8 +1395,8 @@ private:
   InlineResult finalizeAnalysis() override {
     auto *Caller = CandidateCall.getFunction();
     if (Caller->hasMinSize()) {
-      LoopInfo LI;
-      LI.analyze(&F);
+      DominatorTree DT(F);
+      LoopInfo LI(DT);
       for (Loop *L : LI) {
         // Ignore loops that will not be executed
         if (DeadBlocks.count(L->getHeader()))
@@ -3208,9 +3209,6 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   if (Call.hasFnAttr(Attribute::AlwaysInline)) {
     if (Call.getAttributes().hasFnAttr(Attribute::NoInline))
       return InlineResult::failure("noinline call site attribute");
-
-    if (!AttributeFuncs::isStrictFPInlineCompatible(*Caller, *Callee))
-      return InlineResult::failure("incompatible strictfp attributes");
 
     auto IsViable = isInlineViable(*Callee);
     if (IsViable.isSuccess())

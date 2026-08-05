@@ -1164,9 +1164,6 @@ DEF_TRAVERSE_TYPE(CountAttributedType, {
   TRY_TO(TraverseType(T->desugar()));
 })
 
-DEF_TRAVERSE_TYPE(LateParsedAttrType,
-                  { TRY_TO(TraverseType(T->getWrappedType())); })
-
 DEF_TRAVERSE_TYPE(BTFTagAttributedType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
@@ -1523,9 +1520,6 @@ DEF_TRAVERSE_TYPELOC(AttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getModifiedLoc())); })
 
 DEF_TRAVERSE_TYPELOC(CountAttributedType,
-                     { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
-
-DEF_TRAVERSE_TYPELOC(LateParsedAttrType,
                      { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
 
 DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
@@ -3707,12 +3701,6 @@ bool RecursiveASTVisitor<Derived>::VisitOMPWriteClause(OMPWriteClause *) {
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPUpdateClause(OMPUpdateClause *) {
-  return true;
-}
-
-template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPUpdateDependObjectsClause(
-    OMPUpdateDependObjectsClause *) {
   return true;
 }
 

@@ -1,3 +1,0 @@
-set(LLVM_TARGET_DEFINITIONS ConvertToEmitCPatternInterface.td)
-mlir_tablegen(ConvertToEmitCPatternInterface.h.inc -gen-dialect-interface-decls)
-add_mlir_generic_tablegen_target(MLIRConvertToEmitCPatternInterfaceIncGen)

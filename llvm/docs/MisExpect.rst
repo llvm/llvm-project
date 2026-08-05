@@ -1,6 +1,7 @@
 ===================
 Misexpect
 ===================
+.. contents::
 
 .. toctree::
    :maxdepth: 1

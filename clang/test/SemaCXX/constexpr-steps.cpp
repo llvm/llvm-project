@@ -10,8 +10,7 @@
 //  - One for the 'return' statemnet
 constexpr bool steps(int n) {
   for (int k = 0; k != n; ++k) {}
-  return true; // expected-note {{step limit}} \
-               // expected-note {{use -fconstexpr-steps}}
+  return true; // expected-note {{step limit}}
 }
 
 static_assert(steps((MAX - 4)), ""); // ok

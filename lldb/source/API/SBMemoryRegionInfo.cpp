@@ -169,7 +169,7 @@ bool SBMemoryRegionInfo::GetDescription(SBStream &description) {
   strm.Printf(m_opaque_up->GetReadable() ? "R" : "-");
   strm.Printf(m_opaque_up->GetWritable() ? "W" : "-");
   strm.Printf(m_opaque_up->GetExecutable() ? "X" : "-");
-  strm.PutCString("]");
+  strm.Printf("]");
 
   return true;
 }

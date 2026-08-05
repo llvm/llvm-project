@@ -1,4 +1,0 @@
-UNSUPPORTED: target={{.*freebsd.*}}
-RUN: %cpp_compiler %S/MemcmpTest.cpp -o %t-MemcmpTest
-RUN: not %run %t-MemcmpTest               -seed=1 -runs=10000000   2>&1 | FileCheck %s
-CHECK: BINGO

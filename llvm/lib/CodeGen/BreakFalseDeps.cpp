@@ -301,6 +301,7 @@ bool BreakFalseDeps::run(MachineFunction &CurMF) {
   MF = &CurMF;
   TII = MF->getSubtarget().getInstrInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
+
   RegClassInfo.runOnMachineFunction(CurMF, /*Rev=*/true);
 
   LLVM_DEBUG(dbgs() << "********** BREAK FALSE DEPENDENCIES **********\n");

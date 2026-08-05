@@ -10,6 +10,7 @@ define void @test_prmt_f4e() {
 ; CHECK-LABEL: test_prmt_f4e(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.volatile.global.b32 [g], 50462976;
 ; CHECK-NEXT:    st.volatile.global.b32 [g], 67305985;
@@ -33,6 +34,7 @@ define void @test_prmt_f4e() {
 define void @test_prmt_b4e() {
 ; CHECK-LABEL: test_prmt_b4e(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.volatile.global.b32 [g], 84281088;
@@ -58,6 +60,7 @@ define void @test_prmt_ecl() {
 ; CHECK-LABEL: test_prmt_ecl(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.volatile.global.b32 [g], 50462976;
 ; CHECK-NEXT:    st.volatile.global.b32 [g], 50462977;
@@ -79,6 +82,7 @@ define void @test_prmt_ecr() {
 ; CHECK-LABEL: test_prmt_ecr(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.volatile.global.b32 [g], 0;
 ; CHECK-NEXT:    st.volatile.global.b32 [g], 16843008;
@@ -99,6 +103,7 @@ define void @test_prmt_ecr() {
 define void @test_prmt_rc8() {
 ; CHECK-LABEL: test_prmt_rc8(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.volatile.global.b32 [g], 0;
@@ -124,6 +129,7 @@ define void @test_prmt_rc16() {
 ; CHECK-LABEL: test_prmt_rc16(
 ; CHECK:       {
 ; CHECK-EMPTY:
+; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.volatile.global.b32 [g], 16777472;
 ; CHECK-NEXT:    st.volatile.global.b32 [g], 50463490;
@@ -142,6 +148,7 @@ define void @test_prmt_rc16() {
 define void @test_prmt_basic() {
 ; CHECK-LABEL: test_prmt_basic(
 ; CHECK:       {
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.volatile.global.b32 [g], 66051;

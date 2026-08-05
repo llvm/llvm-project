@@ -1,5 +1,0 @@
-header: sys/fcntl.h
-public_includes:
-  - fcntl.h
-standards:
-  - posix

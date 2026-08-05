@@ -26,8 +26,13 @@ L2:
 
 // CIR-LABEL: cir.func {{.*}} @f
 // CIR:   %[[TBL:.*]] = cir.get_global @f.tbl
-// CIR:   cir.indirect_goto %{{.*}} : !cir.ptr<!void>
+// CIR:   cir.indirect_br %{{.*}} : !cir.ptr<!void>, [
+// CIR-NEXT: ^[[L1BB:.*]],
+// CIR-NEXT: ^[[L2BB:.*]]
+// CIR:   ]
+// CIR: ^[[L1BB]]:
 // CIR:   cir.label "L1"
+// CIR: ^[[L2BB]]:
 // CIR:   cir.label "L2"
 
 // LLVM-LABEL: define dso_local i32 @f(
@@ -45,8 +50,13 @@ B:
 }
 
 // CIR-LABEL: cir.func {{.*}} @g
-// CIR:   cir.indirect_goto %{{.*}} : !cir.ptr<!void>
+// CIR:   cir.indirect_br %{{.*}} : !cir.ptr<!void>, [
+// CIR-NEXT: ^[[ABB:.*]],
+// CIR-NEXT: ^[[BBB:.*]]
+// CIR:   ]
+// CIR: ^[[ABB]]:
 // CIR:   cir.label "A"
+// CIR: ^[[BBB]]:
 // CIR:   cir.label "B"
 
 // LLVM-LABEL: define dso_local i32 @g(
@@ -54,7 +64,7 @@ B:
 // OGCG:   indirectbr ptr %{{.*}}, [label %[[GA]], label %[[GA]], label %[[GB]]]
 
 // h takes a label address but never executes a `goto *`, so CIR emits no
-// indirect goto (classic still emits a dead poisoned indirectbr).
+// indirect branch (classic still emits a dead poisoned indirectbr).
 int h(int x) {
   static const void *tbl[] = {&&L1};
   (void)tbl;
@@ -64,7 +74,7 @@ L1:
 }
 
 // CIR-LABEL: cir.func {{.*}} @h
-// CIR-NOT: cir.indirect_goto
+// CIR-NOT: cir.indirect_br
 
 // LLVM-LABEL: define dso_local i32 @h(
 // LLVMCIR-NOT: indirectbr
@@ -86,7 +96,7 @@ B2:
 
 // CIR-LABEL: cir.func {{.*}} @m
 // CIR:   cir.block_address <@m, "B2">
-// CIR:   cir.indirect_goto
+// CIR:   cir.indirect_br
 // CIR-DAG:   cir.label "A2"
 // CIR-DAG:   cir.label "B2"
 

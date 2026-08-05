@@ -1,8 +1,0 @@
-struct
-    ThisStructHasANameThatResultsInAMangledNameThatIsExactly250CharactersLongThatIsSupposedToTestTheFilenameLengthLimitsWithinClangDocInOrdertoSeeifclangdocwillcrashornotdependingonthelengthofthestructIfTheLengthIsTooLongThenClangDocWillCrashAnd12 {
-};
-
-// This name is 1 character over the limit, so it will be serialized as a USR.
-struct
-    ThisStructHasANameThatResultsInAMangledNameThatIsExactly251CharactersLongThatIsSupposedToTestTheFilenameLengthLimitsWithinClangDocInOrdertoSeeifclangdocwillcrashornotdependingonthelengthofthestructIfTheLengthIsTooLongThenClangDocWillCrashAnd123 {
-};

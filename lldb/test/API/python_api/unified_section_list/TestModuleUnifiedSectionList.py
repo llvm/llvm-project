@@ -15,7 +15,7 @@ from lldbsuite.test.lldbutil import symbol_type_to_str
 class ModuleUnifiedSectionList(TestBase):
     SHARED_BUILD_TESTCASE = False
 
-    @requirePlatform(["linux", "freebsd", "netbsd"])
+    @skipUnlessPlatform(["linux", "freebsd", "netbsd"])
     def test_unified_section_list(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

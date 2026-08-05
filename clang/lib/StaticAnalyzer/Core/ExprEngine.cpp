@@ -1196,7 +1196,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
       }
 
       SVal InitVal;
-      if (Field->getType()->isArrayType()) {
+      if (Init->getType()->isArrayType()) {
         // Handle arrays of trivial type. We can represent this with a
         // primitive load/copy from the base array region.
         const ArraySubscriptExpr *ASE;
@@ -2390,7 +2390,11 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
 }
 
 /// Block entrance.  (Update counters).
-void ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
+/// FIXME: `BlockEdge &L` is only used for debug statistics, consider removing
+/// it and using `BlockEntrance &BE` (where `BlockEntrance` is a subtype of
+/// `ProgramPoint`) for statistical purposes.
+void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
+                                         const BlockEntrance &BE,
                                          NodeBuilder &Builder,
                                          ExplodedNode *Pred) {
   // If we reach a loop which has a known bound (and meets
@@ -2468,7 +2472,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
       NumMaxBlockCountReached++;
 
     // Make sink nodes as exhausted(for stats) only if retry failed.
-    Engine.blocksExhausted.push_back(std::make_pair(BE, Sink));
+    Engine.blocksExhausted.push_back(std::make_pair(L, Sink));
   }
 }
 
@@ -2660,6 +2664,7 @@ assumeCondition(const Stmt *ConditionStmt, ExplodedNode *N) {
 
   DefinedSVal V = X.castAs<DefinedSVal>();
 
+  ProgramStateRef StTrue, StFalse;
   return State->assume(V);
 }
 
@@ -3347,6 +3352,7 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
     for (const auto I : CheckedSet)
       VisitCommonDeclRefExpr(M, Member, I, EvalSet);
   } else {
+    ExplodedNodeSet Tmp;
 
     for (const auto I : CheckedSet) {
       ProgramStateRef state = I->getState();
@@ -3407,7 +3413,10 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
         EvalSet.insert(Engine.makeNodeWithBinding(
             I, M, L, state, ProgramPoint::PostLValueKind));
       } else {
-        evalLoad(EvalSet, M, M, I, state, L);
+        // FIXME: When evalLoad no longer uses NodeBuilders, eliminate Tmp and
+        // pass EvalSet as the first argument of evalLoad.
+        evalLoad(Tmp, M, M, I, state, L);
+        EvalSet.insert(Tmp);
       }
     }
   }
@@ -3632,10 +3641,9 @@ void ExprEngine::evalLoad(ExplodedNodeSet &Dst,
   if (Tmp.empty())
     return;
 
-  if (location.isUndef()) {
-    Dst.insert(Tmp);
+  NodeBuilder Bldr(Tmp, Dst, *currBldrCtx);
+  if (location.isUndef())
     return;
-  }
 
   // Proceed with the load.
   for (const auto I : Tmp) {
@@ -3648,26 +3656,29 @@ void ExprEngine::evalLoad(ExplodedNodeSet &Dst,
       V = state->getSVal(location.castAs<Loc>(), LoadTy);
     }
 
-    const auto *SF = I->getStackFrame();
-    PostLoad Loc(NodeEx, SF, tag);
-    Dst.insert(Engine.makeNode(Loc, state->BindExpr(BoundEx, SF, V), I));
+    Bldr.generateNode(NodeEx, I,
+                      state->BindExpr(BoundEx, I->getStackFrame(), V), tag,
+                      ProgramPoint::PostLoadKind);
   }
 }
 
-void ExprEngine::evalLocation(ExplodedNodeSet &Dst, const Stmt *NodeEx,
-                              const Stmt *BoundEx, ExplodedNode *Pred,
-                              ProgramStateRef state, SVal location,
+void ExprEngine::evalLocation(ExplodedNodeSet &Dst,
+                              const Stmt *NodeEx,
+                              const Stmt *BoundEx,
+                              ExplodedNode *Pred,
+                              ProgramStateRef state,
+                              SVal location,
                               bool isLoad) {
+  NodeBuilder BldrTop(Pred, Dst, *currBldrCtx);
   // Early checks for performance reason.
   if (location.isUnknown()) {
-    Dst.insert(Pred);
     return;
   }
 
   ExplodedNodeSet Src;
-  if (Pred->getState() == state) {
-    Src.insert(Pred);
-  } else {
+  BldrTop.takeNodes(Pred);
+  NodeBuilder Bldr(Pred, Src, *currBldrCtx);
+  if (Pred->getState() != state) {
     // Associate this new state with an ExplodedNode.
     // FIXME: If I pass null tag, the graph is incorrect, e.g for
     //   int *p;
@@ -3678,14 +3689,12 @@ void ExprEngine::evalLocation(ExplodedNodeSet &Dst, const Stmt *NodeEx,
     // "Variable 'p' initialized to a null pointer value"
 
     static SimpleProgramPointTag tag(TagProviderName, "Location");
-    PostStmt Loc(NodeEx, Pred->getStackFrame(), &tag);
-    Src.insert(Engine.makeNode(Loc, state, Pred));
+    Bldr.generateNode(NodeEx, Pred, state, &tag);
   }
-
   ExplodedNodeSet Tmp;
   getCheckerManager().runCheckersForLocation(Tmp, Src, location, isLoad,
                                              NodeEx, BoundEx, *this);
-  Dst.insert(Tmp);
+  BldrTop.addNodes(Tmp);
 }
 
 std::pair<const ProgramPointTag *, const ProgramPointTag *>

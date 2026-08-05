@@ -241,11 +241,11 @@ void UnwindPlan::Row::Dump(Stream &s, const UnwindPlan *unwind_plan,
   m_cfa_value.Dump(s, unwind_plan, thread);
 
   if (!m_afa_value.IsUnspecified()) {
-    s.PutCString(" AFA=");
+    s.Printf(" AFA=");
     m_afa_value.Dump(s, unwind_plan, thread);
   }
 
-  s.PutCString(" => ");
+  s.Printf(" => ");
   for (collection::const_iterator idx = m_register_locations.begin();
        idx != m_register_locations.end(); ++idx) {
     DumpRegisterName(s, unwind_plan, thread, idx->first);
@@ -512,40 +512,40 @@ void UnwindPlan::Dump(Stream &s, Thread *thread, lldb::addr_t base_addr) const {
     s.Printf("This UnwindPlan originally sourced from %s\n",
              m_source_name.GetCString());
   }
-  s.PutCString("This UnwindPlan is sourced from the compiler: ");
+  s.Printf("This UnwindPlan is sourced from the compiler: ");
   switch (m_plan_is_sourced_from_compiler) {
   case eLazyBoolYes:
-    s.PutCString("yes.\n");
+    s.Printf("yes.\n");
     break;
   case eLazyBoolNo:
-    s.PutCString("no.\n");
+    s.Printf("no.\n");
     break;
   case eLazyBoolCalculate:
-    s.PutCString("not specified.\n");
+    s.Printf("not specified.\n");
     break;
   }
-  s.PutCString("This UnwindPlan is valid at all instruction locations: ");
+  s.Printf("This UnwindPlan is valid at all instruction locations: ");
   switch (m_plan_is_valid_at_all_instruction_locations) {
   case eLazyBoolYes:
-    s.PutCString("yes.\n");
+    s.Printf("yes.\n");
     break;
   case eLazyBoolNo:
-    s.PutCString("no.\n");
+    s.Printf("no.\n");
     break;
   case eLazyBoolCalculate:
-    s.PutCString("not specified.\n");
+    s.Printf("not specified.\n");
     break;
   }
-  s.PutCString("This UnwindPlan is for a trap handler function: ");
+  s.Printf("This UnwindPlan is for a trap handler function: ");
   switch (m_plan_is_for_signal_trap) {
   case eLazyBoolYes:
-    s.PutCString("yes.\n");
+    s.Printf("yes.\n");
     break;
   case eLazyBoolNo:
-    s.PutCString("no.\n");
+    s.Printf("no.\n");
     break;
   case eLazyBoolCalculate:
-    s.PutCString("not specified.\n");
+    s.Printf("not specified.\n");
     break;
   }
   if (!m_plan_valid_ranges.empty()) {

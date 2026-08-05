@@ -81,7 +81,7 @@ TEST(LoopUtils, DeleteDeadLoopNest) {
 
         assert(DT.verify(DominatorTree::VerificationLevel::Fast) &&
                "Expecting valid dominator tree");
-        LI.verify();
+        LI.verify(DT);
         assert(LI.begin() == LI.end() &&
                "Expecting no loops left in function F");
         SE.verify();

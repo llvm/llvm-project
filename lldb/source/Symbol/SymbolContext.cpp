@@ -89,7 +89,7 @@ bool SymbolContext::DumpStopContext(
     SymbolContext inline_parent_sc;
     Address inline_parent_addr;
     if (!show_function_name) {
-      s->PutCString("<");
+      s->Printf("<");
       dumped_something = true;
     } else {
       ConstString name;
@@ -168,7 +168,7 @@ bool SymbolContext::DumpStopContext(
     }
   } else if (symbol != nullptr) {
     if (!show_function_name) {
-      s->PutCString("<");
+      s->Printf("<");
       dumped_something = true;
     } else if (symbol->GetName()) {
       dumped_something = true;
@@ -675,7 +675,7 @@ LineEntry SymbolContext::GetFunctionStartLineEntry() const {
   }
 
   if (function) {
-    if (function->GetStartLineTableEntry(line_entry))
+    if (function->GetAddress().CalculateSymbolContextLineEntry(line_entry))
       return line_entry;
   }
   return LineEntry();
@@ -1127,7 +1127,7 @@ void SymbolContextSpecifier::GetDescription(
   char path_str[PATH_MAX + 1];
 
   if (m_type == eNothingSpecified) {
-    s->PutCString("Nothing specified.\n");
+    s->Printf("Nothing specified.\n");
   }
 
   if (m_type == eModuleSpecified) {
@@ -1148,11 +1148,11 @@ void SymbolContextSpecifier::GetDescription(
       if (m_type == eLineEndSpecified)
         s->Printf("to line %" PRIu64 "", (uint64_t)m_end_line);
       else
-        s->PutCString("to end");
+        s->Printf("to end");
     } else if (m_type == eLineEndSpecified) {
       s->Printf(" from start to line %" PRIu64 "", (uint64_t)m_end_line);
     }
-    s->PutCString(".\n");
+    s->Printf(".\n");
   }
 
   if (m_type == eLineStartSpecified) {
@@ -1161,8 +1161,8 @@ void SymbolContextSpecifier::GetDescription(
     if (m_type == eLineEndSpecified)
       s->Printf("to line %" PRIu64 "", (uint64_t)m_end_line);
     else
-      s->PutCString("to end");
-    s->PutCString(".\n");
+      s->Printf("to end");
+    s->Printf(".\n");
   } else if (m_type == eLineEndSpecified) {
     s->Printf("From start to line %" PRIu64 ".\n", (uint64_t)m_end_line);
   }

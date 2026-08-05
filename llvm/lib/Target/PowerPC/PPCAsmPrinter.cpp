@@ -1768,32 +1768,25 @@ PPCAsmPrinter::getAdjustedFasterLocalExpr(const MachineOperand &MO,
 }
 
 void PPCLinuxAsmPrinter::emitGNUAttributes(Module &M) {
-  // Emit long double format into GNU attribute
-  MDString *LongDoubleType =
-      cast_or_null<MDString>(M.getModuleFlag("long-double-type"));
-  if (!LongDoubleType)
+  // Emit float ABI into GNU attribute
+  Metadata *MD = M.getModuleFlag("float-abi");
+  MDString *FloatABI = dyn_cast_or_null<MDString>(MD);
+  if (!FloatABI)
     return;
-
+  StringRef flt = FloatABI->getString();
   // TODO: Support emitting soft-fp and hard double/single attributes.
-  switch (*parseLongDoubleFormat(LongDoubleType->getString())) {
-  case LongDoubleFormat::PPCDoubleDouble:
+  if (flt == "doubledouble")
     OutStreamer->emitGNUAttribute(Tag_GNU_Power_ABI_FP,
                                   Val_GNU_Power_ABI_HardFloat_DP |
                                       Val_GNU_Power_ABI_LDBL_IBM128);
-    break;
-  case LongDoubleFormat::IEEEquad:
+  else if (flt == "ieeequad")
     OutStreamer->emitGNUAttribute(Tag_GNU_Power_ABI_FP,
                                   Val_GNU_Power_ABI_HardFloat_DP |
                                       Val_GNU_Power_ABI_LDBL_IEEE128);
-    break;
-  case LongDoubleFormat::IEEEdouble:
+  else if (flt == "ieeedouble")
     OutStreamer->emitGNUAttribute(Tag_GNU_Power_ABI_FP,
                                   Val_GNU_Power_ABI_HardFloat_DP |
                                       Val_GNU_Power_ABI_LDBL_64);
-    break;
-  default:
-    break;
-  }
 }
 
 void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {

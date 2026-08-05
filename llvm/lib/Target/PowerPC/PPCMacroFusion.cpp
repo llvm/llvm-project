@@ -234,10 +234,7 @@ static bool checkOpConstraints(FusionFeature::FusionKind Kd,
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
-                                   const MachineInstr &SecondMI,
-                                   const SDep *Dep) {
-  if (isNonDataDep(Dep))
-    return false;
+                                   const MachineInstr &SecondMI) {
   // We use the PPC namespace to avoid the need to prefix opcodes with PPC:: in
   // the def file.
   using namespace PPC;

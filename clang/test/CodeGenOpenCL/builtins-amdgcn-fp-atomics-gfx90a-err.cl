@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu9.0a-amd-amdhsa \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx90a \
 // RUN:   -verify -S -o - %s
 
 // REQUIRES: amdgpu-registered-target

@@ -604,14 +604,12 @@ inline ErrorOr<size_t> SampleProfileReaderBinary::readStringIndex(T &Table) {
 
 ErrorOr<FunctionId>
 SampleProfileReaderBinary::readStringFromTable(size_t *RetIdx) {
-  if (!NameTable)
-    return sampleprof_error::truncated_name_table;
-  auto Idx = readStringIndex(*NameTable);
+  auto Idx = readStringIndex(NameTable);
   if (std::error_code EC = Idx.getError())
     return EC;
   if (RetIdx)
     *RetIdx = *Idx;
-  return (*NameTable)[*Idx];
+  return NameTable[*Idx];
 }
 
 ErrorOr<SampleContextFrames>
@@ -873,9 +871,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     ProfileIsMD5 = ProfileIsMD5 || UseMD5;
     FunctionSamples::HasUniqSuffix =
         hasSecFlag(Entry, SecNameTableFlags::SecFlagUniqSuffix);
-    bool IsEytzinger = hasSecFlag(Entry, SecNameTableFlags::SecFlagEytzinger);
-    if (std::error_code EC =
-            readNameTableSec(UseMD5, FixedLengthMD5, IsEytzinger))
+    if (std::error_code EC = readNameTableSec(UseMD5, FixedLengthMD5))
       return EC;
     break;
   }
@@ -1269,7 +1265,7 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
   // because optimization passes can only handle either type.
   bool UseMD5 = useMD5();
 
-  std::vector<FunctionId> TableVec;
+  auto &TableVec = NameTable.setToEager();
   TableVec.reserve(*Size);
   if (!ProfileIsCS) {
     MD5SampleContextTable.clear();
@@ -1295,66 +1291,12 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
   }
   if (!ProfileIsCS)
     MD5SampleContextStart = MD5SampleContextTable.data();
-  if (UseMD5)
-    NameTable =
-        std::make_unique<MD5SampleProfileNameTable>(std::move(TableVec));
-  else
-    NameTable =
-        std::make_unique<StringSampleProfileNameTable>(std::move(TableVec));
-  return sampleprof_error::success;
-}
-
-std::error_code SampleProfileReaderExtBinaryBase::readNameTableSec(
-    bool IsMD5, bool FixedLengthMD5, bool IsEytzinger) {
-  if (IsEytzinger)
-    return readNameTableSecEytzinger(IsMD5, FixedLengthMD5);
-  return readNameTableSecLegacy(IsMD5, FixedLengthMD5);
-}
-
-// Read the Eytzinger layout for SecNameTable from an ExtBinary MD5 profile.
-//
-// The section consists of three sequential ULEB128 symbol counts (CS, Flat, and
-// Inlinees) followed by their corresponding arrays of 64-bit MD5 hash keys laid
-// out in Eytzinger order.
-std::error_code SampleProfileReaderExtBinaryBase::readNameTableSecEytzinger(
-    bool IsMD5, bool FixedLengthMD5) {
-  assert(IsMD5 && "Eytzinger name tables require MD5 representation");
-  if (!IsMD5)
-    return sampleprof_error::malformed;
-
-  // Read the table sizes for CS, flat, and inlinee symbols.
-  std::array<uint64_t, static_cast<size_t>(EytzingerSpan::NumSpans)> Counts;
-  for (uint64_t &Count : Counts) {
-    auto ValOrErr = readNumber<uint64_t>();
-    if (std::error_code EC = ValOrErr.getError())
-      return EC;
-    Count = *ValOrErr;
-  }
-  auto [NumCS, NumFlat, NumInlinees] = Counts;
-
-  // Guard against unsigned overflow in total entry computation.
-  if (NumCS > std::numeric_limits<uint32_t>::max() ||
-      NumFlat > std::numeric_limits<uint32_t>::max() ||
-      NumInlinees > std::numeric_limits<uint32_t>::max())
-    return sampleprof_error::malformed;
-
-  uint64_t TotalEntries = NumCS + NumFlat + NumInlinees;
-  if (static_cast<size_t>(End - Data) < TotalEntries * sizeof(uint64_t))
-    return sampleprof_error::truncated;
-
-  NameTable = std::make_unique<EytzingerSampleProfileNameTable>(
-      reinterpret_cast<const support::ulittle64_t *>(Data), NumCS, NumFlat,
-      NumInlinees);
-
-  if (!ProfileIsCS)
-    MD5SampleContextStart = reinterpret_cast<const uint64_t *>(Data);
-  Data = Data + TotalEntries * sizeof(uint64_t);
   return sampleprof_error::success;
 }
 
 std::error_code
-SampleProfileReaderExtBinaryBase::readNameTableSecLegacy(bool IsMD5,
-                                                         bool FixedLengthMD5) {
+SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
+                                                   bool FixedLengthMD5) {
   if (FixedLengthMD5) {
     if (!IsMD5)
       errs() << "If FixedLengthMD5 is true, UseMD5 has to be true";
@@ -1369,9 +1311,9 @@ SampleProfileReaderExtBinaryBase::readNameTableSecLegacy(bool IsMD5,
       return sampleprof_error::truncated;
 
     if (LazyLoadNameTable) {
-      NameTable = std::make_unique<LazySampleProfileNameTable>(Data, *Size);
+      NameTable.setLazy(Data, *Size);
     } else {
-      std::vector<FunctionId> TableVec;
+      auto &TableVec = NameTable.setToEager();
       TableVec.reserve(*Size);
       for (size_t I = 0; I < *Size; ++I) {
         using namespace support;
@@ -1379,8 +1321,6 @@ SampleProfileReaderExtBinaryBase::readNameTableSecLegacy(bool IsMD5,
             Data + I * sizeof(uint64_t), endianness::little);
         TableVec.emplace_back(FunctionId(FID));
       }
-      NameTable =
-          std::make_unique<MD5SampleProfileNameTable>(std::move(TableVec));
     }
     if (!ProfileIsCS)
       MD5SampleContextStart = reinterpret_cast<const uint64_t *>(Data);
@@ -1394,7 +1334,7 @@ SampleProfileReaderExtBinaryBase::readNameTableSecLegacy(bool IsMD5,
     if (std::error_code EC = Size.getError())
       return EC;
 
-    std::vector<FunctionId> TableVec;
+    auto &TableVec = NameTable.setToEager();
     TableVec.reserve(*Size);
     if (!ProfileIsCS)
       MD5SampleContextTable.resize(*Size);
@@ -1408,8 +1348,6 @@ SampleProfileReaderExtBinaryBase::readNameTableSecLegacy(bool IsMD5,
     }
     if (!ProfileIsCS)
       MD5SampleContextStart = MD5SampleContextTable.data();
-    NameTable =
-        std::make_unique<MD5SampleProfileNameTable>(std::move(TableVec));
     return sampleprof_error::success;
   }
 
@@ -1647,8 +1585,6 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
 
   switch (Entry.Type) {
   case SecNameTable:
-    if (hasSecFlag(Entry, SecNameTableFlags::SecFlagEytzinger))
-      Flags.append("eytzinger,");
     if (hasSecFlag(Entry, SecNameTableFlags::SecFlagFixedLengthMD5))
       Flags.append("fixlenmd5,");
     else if (hasSecFlag(Entry, SecNameTableFlags::SecFlagMD5Name))

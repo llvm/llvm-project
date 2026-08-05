@@ -93,6 +93,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
+    AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<StaticDataProfileInfoWrapperPass>();

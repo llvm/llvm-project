@@ -505,8 +505,7 @@ bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
           T.getTag() == dwarf::DW_TAG_ptr_to_member_type)
         continue;
       const char *RawName = detail::toString(T.find(dwarf::DW_AT_name));
-      if (!RawName)
-        continue;
+      assert(RawName);
       StringRef Name = RawName;
       auto V = C.find(dwarf::DW_AT_const_value);
       bool IsQualifiedChar = false;
@@ -605,8 +604,7 @@ bool DWARFTypePrinter<DieType>::appendTemplateParameters(DieType D,
     if (C.getTag() == dwarf::DW_TAG_GNU_template_template_param) {
       const char *RawName =
           detail::toString(C.find(dwarf::DW_AT_GNU_template_name));
-      if (!RawName)
-        continue;
+      assert(RawName);
       StringRef Name = RawName;
       Sep();
       OS << Name;

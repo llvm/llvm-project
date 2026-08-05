@@ -4,7 +4,7 @@
 
 ; RUN: opt < %s -passes=pgo-instr-gen -S | FileCheck %s
 
-target triple = "amdgpu7.00-amd-amdhsa"
+target triple = "amdgcn-amd-amdhsa"
 
 @fptr = addrspace(1) global ptr null, align 8
 

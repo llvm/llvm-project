@@ -1,5 +1,0 @@
-header: sys/unistd.h
-public_includes:
-  - unistd.h
-standards:
-  - posix

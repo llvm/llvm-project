@@ -8,9 +8,6 @@
 
 #include "../lldb-python.h"
 
-#include "API/ScriptInterpreterBridge.h"
-#include "lldb/API/SBValue.h"
-#include "lldb/API/SBValueList.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
@@ -49,7 +46,7 @@ Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(
     python::PythonObject &p, Status &error) {
   if (lldb::SBError *sb_error = reinterpret_cast<lldb::SBError *>(
           python::LLDBSWIGPython_CastPyObjectToSBError(p.get())))
-    return ScriptInterpreterBridge::GetStatus(*sb_error);
+    return m_interpreter.GetStatusFromSBError(*sb_error);
   error =
       Status::FromErrorString("Couldn't cast lldb::SBError to lldb::Status.");
 
@@ -61,25 +58,10 @@ Event *ScriptedPythonInterface::ExtractValueFromPythonObject<Event *>(
     python::PythonObject &p, Status &error) {
   if (lldb::SBEvent *sb_event = reinterpret_cast<lldb::SBEvent *>(
           python::LLDBSWIGPython_CastPyObjectToSBEvent(p.get())))
-    return ScriptInterpreterBridge::GetEvent(*sb_event);
+    return m_interpreter.GetOpaqueTypeFromSBEvent(*sb_event);
   error = Status::FromErrorString(
       "Couldn't cast lldb::SBEvent to lldb_private::Event.");
 
-  return nullptr;
-}
-
-template <>
-CommandReturnObject *
-ScriptedPythonInterface::ExtractValueFromPythonObject<CommandReturnObject *>(
-    python::PythonObject &p, Status &error) {
-  if (lldb::SBCommandReturnObject *sb_cmd_retobj =
-          reinterpret_cast<lldb::SBCommandReturnObject *>(
-              python::LLDBSWIGPython_CastPyObjectToSBCommandReturnObject(
-                  p.get())))
-    return ScriptInterpreterBridge::GetCommandReturnObject(*sb_cmd_retobj);
-  error =
-      Status::FromErrorString("couldn't cast lldb::SBCommandReturnObject to "
-                              "lldb_private::CommandReturnObject.");
   return nullptr;
 }
 
@@ -89,7 +71,7 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StreamSP>(
     python::PythonObject &p, Status &error) {
   if (lldb::SBStream *sb_stream = reinterpret_cast<lldb::SBStream *>(
           python::LLDBSWIGPython_CastPyObjectToSBStream(p.get())))
-    return ScriptInterpreterBridge::GetStream(*sb_stream);
+    return m_interpreter.GetOpaqueTypeFromSBStream(*sb_stream);
   error = Status::FromErrorString(
       "Couldn't cast lldb::SBStream to lldb_private::Stream.");
 
@@ -102,7 +84,7 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameSP>(
     python::PythonObject &p, Status &error) {
   if (lldb::SBFrame *sb_frame = reinterpret_cast<lldb::SBFrame *>(
           python::LLDBSWIGPython_CastPyObjectToSBFrame(p.get())))
-    return ScriptInterpreterBridge::GetStackFrame(*sb_frame);
+    return m_interpreter.GetOpaqueTypeFromSBFrame(*sb_frame);
   error = Status::FromErrorString(
       "Couldn't cast lldb::SBFrame to lldb_private::StackFrame.");
 
@@ -115,7 +97,7 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ThreadSP>(
     python::PythonObject &p, Status &error) {
   if (lldb::SBThread *sb_thread = reinterpret_cast<lldb::SBThread *>(
           python::LLDBSWIGPython_CastPyObjectToSBThread(p.get())))
-    return ScriptInterpreterBridge::GetThread(*sb_thread);
+    return m_interpreter.GetOpaqueTypeFromSBThread(*sb_thread);
   error = Status::FromErrorString(
       "Couldn't cast lldb::SBThread to lldb_private::Thread.");
 
@@ -129,7 +111,7 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<SymbolContext>(
   if (lldb::SBSymbolContext *sb_symbol_context =
           reinterpret_cast<lldb::SBSymbolContext *>(
               python::LLDBSWIGPython_CastPyObjectToSBSymbolContext(p.get())))
-    return ScriptInterpreterBridge::GetSymbolContext(*sb_symbol_context);
+    return m_interpreter.GetOpaqueTypeFromSBSymbolContext(*sb_symbol_context);
   error = Status::FromErrorString(
       "Couldn't cast lldb::SBSymbolContext to lldb_private::SymbolContext.");
 
@@ -149,7 +131,7 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DataExtractorSP>(
     return nullptr;
   }
 
-  return ScriptInterpreterBridge::GetDataExtractor(*sb_data);
+  return m_interpreter.GetDataExtractorFromSBData(*sb_data);
 }
 
 template <>
@@ -165,7 +147,7 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::BreakpointSP>(
     return nullptr;
   }
 
-  return ScriptInterpreterBridge::GetBreakpoint(*sb_breakpoint);
+  return m_interpreter.GetOpaqueTypeFromSBBreakpoint(*sb_breakpoint);
 }
 
 template <>
@@ -183,7 +165,7 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
     return nullptr;
   }
 
-  return ScriptInterpreterBridge::GetBreakpointLocation(*sb_break_loc);
+  return m_interpreter.GetOpaqueTypeFromSBBreakpointLocation(*sb_break_loc);
 }
 
 template <>
@@ -198,7 +180,7 @@ lldb::ProcessAttachInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
     return nullptr;
   }
 
-  return ScriptInterpreterBridge::GetProcessAttachInfo(*sb_attach_info);
+  return m_interpreter.GetOpaqueTypeFromSBAttachInfo(*sb_attach_info);
 }
 
 template <>
@@ -213,7 +195,7 @@ lldb::ProcessLaunchInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
     return nullptr;
   }
 
-  return ScriptInterpreterBridge::GetProcessLaunchInfo(*sb_launch_info);
+  return m_interpreter.GetOpaqueTypeFromSBLaunchInfo(*sb_launch_info);
 }
 
 template <>
@@ -232,7 +214,7 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
     return {};
   }
 
-  return ScriptInterpreterBridge::GetMemoryRegionInfo(*sb_mem_reg_info);
+  return m_interpreter.GetOpaqueTypeFromSBMemoryRegionInfo(*sb_mem_reg_info);
 }
 
 template <>
@@ -251,7 +233,7 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
     return {};
   }
 
-  return ScriptInterpreterBridge::GetExecutionContextRef(*sb_exe_ctx);
+  return m_interpreter.GetOpaqueTypeFromSBExecutionContext(*sb_exe_ctx);
 }
 
 template <>
@@ -286,7 +268,7 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameListSP>(
     return {};
   }
 
-  return ScriptInterpreterBridge::GetStackFrameList(*sb_frame_list);
+  return m_interpreter.GetOpaqueTypeFromSBFrameList(*sb_frame_list);
 }
 
 template <>
@@ -301,7 +283,7 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectSP>(
     return {};
   }
 
-  return ScriptInterpreterBridge::GetValueObject(*sb_value);
+  return m_interpreter.GetOpaqueTypeFromSBValue(*sb_value);
 }
 
 template <>
@@ -316,7 +298,7 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::TargetSP>(
     return {};
   }
 
-  return ScriptInterpreterBridge::GetTarget(*sb_target);
+  return m_interpreter.GetOpaqueTypeFromSBTarget(*sb_target);
 }
 
 template <>
@@ -332,7 +314,7 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
           python::LLDBSWIGPython_CastPyObjectToSBValueList(p.get()))) {
     for (uint32_t i = 0, e = sb_value_list->GetSize(); i < e; ++i) {
       SBValue value = sb_value_list->GetValueAtIndex(i);
-      out->Append(ScriptInterpreterBridge::GetValueObject(value));
+      out->Append(m_interpreter.GetOpaqueTypeFromSBValue(value));
     }
     return out;
   }
@@ -361,7 +343,7 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
           python::LLDBSWIGPython_CastPyObjectToSBValue(
               static_cast<PyObject *>(generic->GetValue())));
       if (sb_value)
-        if (auto valobj_sp = ScriptInterpreterBridge::GetValueObject(*sb_value))
+        if (auto valobj_sp = m_interpreter.GetOpaqueTypeFromSBValue(*sb_value))
           out->Append(valobj_sp);
       ++index;
       return true;
@@ -397,40 +379,4 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
   }
 
   return static_cast<ValueType>(unmasked | flags);
-}
-
-template <>
-lldb::DebuggerSP
-ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DebuggerSP>(
-    python::PythonObject &p, Status &error) {
-  if (lldb::SBDebugger *sb_dbg = reinterpret_cast<lldb::SBDebugger *>(
-          python::LLDBSWIGPython_CastPyObjectToSBDebugger(p.get())))
-    return ScriptInterpreterBridge::GetDebugger(*sb_dbg);
-  error = Status::FromErrorString(
-      "couldn't cast lldb::SBDebugger to lldb::DebuggerSP.");
-  return {};
-}
-
-template <>
-std::vector<std::string>
-ScriptedPythonInterface::ExtractValueFromPythonObject<std::vector<std::string>>(
-    python::PythonObject &p, Status &error) {
-  std::vector<std::string> result;
-  python::PythonList list(python::PyRefType::Borrowed, p.get());
-  if (!list.IsValid()) {
-    error = Status::FromErrorString(
-        "couldn't extract std::vector<std::string>: not a Python list.");
-    return result;
-  }
-
-  const uint32_t size = list.GetSize();
-  result.reserve(size);
-  for (uint32_t i = 0; i < size; ++i) {
-    python::PythonString item(python::PyRefType::Borrowed,
-                              list.GetItemAtIndex(i).get());
-    if (!item.IsValid())
-      continue;
-    result.push_back(item.GetString().str());
-  }
-  return result;
 }

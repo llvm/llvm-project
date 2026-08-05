@@ -137,8 +137,10 @@ public:
     return TargetID;
   }
   std::optional<AMDGPU::TargetID> &getTargetID() { return TargetID; }
-  void initializeTargetID(const MCSubtargetInfo &STI,
-                          bool ApplyFeatureString = false);
+  void initializeTargetID(const MCSubtargetInfo &STI, StringRef FeatureString) {
+    assert(TargetID == std::nullopt && "TargetID can only be initialized once");
+    TargetID = AMDGPU::createAMDGPUTargetID(STI, FeatureString);
+  }
 };
 
 class AMDGPUTargetAsmStreamer final : public AMDGPUTargetStreamer {

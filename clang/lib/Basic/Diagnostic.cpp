@@ -1122,12 +1122,11 @@ SmallString<16> clang::EscapeSingleCodepointForDiagnostic(StringRef Str) {
 }
 
 SmallString<16> clang::EscapeSingleCodepointForDiagnostic(llvm::UTF32 CP) {
-  char ResultBuf[UNI_MAX_UTF8_BYTES_PER_CODE_POINT];
-  char *ResultPtr = ResultBuf;
-  if (!llvm::ConvertCodePointToUTF8(CP, ResultPtr))
+  std::string Str;
+  bool Converted = convertUTF32ToUTF8String(ArrayRef<llvm::UTF32>(&CP, 1), Str);
+  if (!Converted)
     return SmallString<16>(llvm::formatv("<{0:X+}>", CP).str());
-  return EscapeSingleCodepointForDiagnostic(
-      StringRef(ResultBuf, ResultPtr - ResultBuf));
+  return EscapeSingleCodepointForDiagnostic(Str);
 }
 
 void Diagnostic::FormatDiagnostic(const char *DiagStr, const char *DiagEnd,

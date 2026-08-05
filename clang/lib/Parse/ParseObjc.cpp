@@ -3199,13 +3199,13 @@ Parser::ParseObjCProtocolExpression(SourceLocation AtLoc) {
 }
 
 ExprResult Parser::ParseObjCSelectorExpression(SourceLocation AtLoc) {
-  SourceLocation SelectorKeywordLoc = ConsumeToken();
+  SourceLocation SelectorLoc = ConsumeToken();
 
   if (Tok.isNot(tok::l_paren))
     return ExprError(Diag(Tok, diag::err_expected_lparen_after) << "@selector");
 
   SmallVector<const IdentifierInfo *, 12> KeyIdents;
-  SourceLocation SelectorNameLoc;
+  SourceLocation sLoc;
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
@@ -3219,7 +3219,7 @@ ExprResult Parser::ParseObjCSelectorExpression(SourceLocation AtLoc) {
     return ExprError();
   }
 
-  IdentifierInfo *SelIdent = ParseObjCSelectorPiece(SelectorNameLoc);
+  IdentifierInfo *SelIdent = ParseObjCSelectorPiece(sLoc);
   if (!SelIdent &&  // missing selector name.
       Tok.isNot(tok::colon) && Tok.isNot(tok::coloncolon))
     return ExprError(Diag(Tok, diag::err_expected) << tok::identifier);
@@ -3259,8 +3259,8 @@ ExprResult Parser::ParseObjCSelectorExpression(SourceLocation AtLoc) {
   T.consumeClose();
   Selector Sel = PP.getSelectorTable().getSelector(nColons, &KeyIdents[0]);
   return Actions.ObjC().ParseObjCSelectorExpression(
-      Sel, AtLoc, SelectorKeywordLoc, SelectorNameLoc, T.getOpenLocation(),
-      T.getCloseLocation(), !HasOptionalParen);
+      Sel, AtLoc, SelectorLoc, T.getOpenLocation(), T.getCloseLocation(),
+      !HasOptionalParen);
 }
 
 void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {

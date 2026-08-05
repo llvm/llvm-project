@@ -112,8 +112,8 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
 
   // Emit warning for each block we bailed out on.
   const CoreEngine &CE = Eng.getCoreEngine();
-  for (const BlockEntrance &BE : make_first_range(CE.exhausted_blocks())) {
-    const CFGBlock *Exit = BE.getBlock();
+  for (const BlockEdge &BE : make_first_range(CE.exhausted_blocks())) {
+    const CFGBlock *Exit = BE.getDst();
     if (Exit->empty())
       continue;
     const CFGElement &CE = Exit->front();

@@ -18,7 +18,6 @@ static_library("Orc") {
     "AbsoluteSymbols.cpp",
     "BacktraceTools.cpp",
     "COFF.cpp",
-    "COFFAutoImportGenerator.cpp",
     "COFFPlatform.cpp",
     "COFFVCRuntimeSupport.cpp",
     "CompileOnDemandLayer.cpp",

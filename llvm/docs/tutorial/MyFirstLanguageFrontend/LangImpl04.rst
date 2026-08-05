@@ -2,6 +2,8 @@
 Kaleidoscope: Adding JIT and Optimizer Support
 ==============================================
 
+.. contents::
+   :local:
 
 Chapter 4 Introduction
 ======================

@@ -5,8 +5,7 @@ include "llvm/IR/RuntimeLibcallsImpl.td"
 def SOME_FUNC : RuntimeLibcall;
 def func_a : RuntimeLibcallImpl<SOME_FUNC>;
 
-def IsTargetArchA : LibcallPredicate<[{isTargetArchA()}]>;
-def isTargetArchA : RuntimeLibcallAvailability<(all_of IsTargetArchA)>;
+def isTargetArchA : RuntimeLibcallPredicate<[{isTargetArchA()}]>;
 
 // CHECK: [[@LINE+4]]:5: error: entry for SystemLibrary is not a RuntimeLibcallImpl
 // CHECK-NEXT: def TheSystemLibraryA : SystemRuntimeLibrary<isTargetArchA,

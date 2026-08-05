@@ -37,19 +37,7 @@ void InvalidParams::log(raw_ostream &OS) const {
      << "'";
 }
 std::error_code InvalidParams::convertToErrorCode() const {
-  // JSON-RPC Invalid params
-  return std::error_code(InvalidParams::kErrorCode, std::generic_category());
-}
-
-char InvalidMessage::ID;
-
-void InvalidMessage::log(raw_ostream &OS) const {
-  OS << "invalid message '" << m_raw_message << "': '" << m_reason << "'";
-}
-
-std::error_code InvalidMessage::convertToErrorCode() const {
-  // JSON-RPC Parse error
-  return std::error_code(InvalidMessage::kErrorCode, std::generic_category());
+  return std::make_error_code(std::errc::invalid_argument);
 }
 
 char MethodNotFound::ID;

@@ -72,8 +72,8 @@
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -1581,11 +1581,9 @@ void PGOUseFunc::populateCoverage() {
   }
 
   unsigned NumCorruptCoverage = 0;
-  CycleInfo CI;
-  CI.compute(F);
-  LoopInfo LI;
-  LI.analyze(&F);
-  BranchProbabilityInfo BPI(F, CI);
+  DominatorTree DT(F);
+  LoopInfo LI(DT);
+  BranchProbabilityInfo BPI(F, LI);
   BlockFrequencyInfo BFI(F, BPI, LI);
   auto IsBlockDead = [&](const BasicBlock &BB) -> std::optional<bool> {
     if (auto C = BFI.getBlockProfileCount(&BB))
@@ -2341,12 +2339,9 @@ static bool annotateAllFunctions(
     if (PGOViewCounts != PGOVCT_None &&
         (ViewBlockFreqFuncName.empty() ||
          F.getName() == ViewBlockFreqFuncName)) {
-      LoopInfo LI;
-      LI.analyze(&F);
-      CycleInfo CI;
-      CI.compute(F);
+      LoopInfo LI{DominatorTree(F)};
       std::unique_ptr<BranchProbabilityInfo> NewBPI =
-          std::make_unique<BranchProbabilityInfo>(F, CI);
+          std::make_unique<BranchProbabilityInfo>(F, LI);
       std::unique_ptr<BlockFrequencyInfo> NewBFI =
           std::make_unique<BlockFrequencyInfo>(F, *NewBPI, LI);
       if (PGOViewCounts == PGOVCT_Graph)
@@ -2371,11 +2366,8 @@ static bool annotateAllFunctions(
     }
 
     if (PGOVerifyBFI || PGOVerifyHotBFI || PGOFixEntryCount) {
-      CycleInfo CI;
-      CI.compute(F);
-      LoopInfo LI;
-      LI.analyze(&F);
-      BranchProbabilityInfo NBPI(F, CI);
+      LoopInfo LI{DominatorTree(F)};
+      BranchProbabilityInfo NBPI(F, LI);
 
       // Fix func entry count.
       if (PGOFixEntryCount)

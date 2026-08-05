@@ -1,5 +1,8 @@
 # Compiling CUDA with clang
 
+```{contents}
+:local: true
+```
 
 ## Introduction
 

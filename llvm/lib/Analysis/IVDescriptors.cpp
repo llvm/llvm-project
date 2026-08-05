@@ -262,7 +262,7 @@ hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK) {
 
 static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
                                                 ScalarEvolution *SE) {
-  Type *Ty = Phi->getType()->getScalarType();
+  Type *Ty = Phi->getType();
   BasicBlock *Latch = TheLoop->getLoopLatch();
   if (Phi->getNumIncomingValues() != 2 ||
       Phi->getParent() != TheLoop->getHeader() ||

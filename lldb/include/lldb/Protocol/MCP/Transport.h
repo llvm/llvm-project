@@ -95,9 +95,6 @@ public:
 
   void Log(llvm::StringRef message) override;
 
-  llvm::Error ReplyWithParseError(llvm::StringRef raw_message,
-                                  llvm::StringRef reason) override;
-
 private:
   LogCallback m_log_callback;
 };

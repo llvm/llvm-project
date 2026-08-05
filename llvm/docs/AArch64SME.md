@@ -1,5 +1,8 @@
 # Support for AArch64 Scalable Matrix Extension in LLVM
 
+```{contents}
+:local: true
+```
 
 ## 1. Introduction
 

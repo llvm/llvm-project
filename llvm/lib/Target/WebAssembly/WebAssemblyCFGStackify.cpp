@@ -33,12 +33,8 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachinePassManager.h"
-#include "llvm/IR/Analysis.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
@@ -50,10 +46,19 @@ STATISTIC(NumCallUnwindMismatches, "Number of call unwind mismatches found");
 STATISTIC(NumCatchUnwindMismatches, "Number of catch unwind mismatches found");
 
 namespace {
-class WebAssemblyCFGStackifyImpl {
-  MachineDominatorTree &MDT;
-  MachineLoopInfo &MLI;
-  WebAssemblyExceptionInfo &WEI;
+class WebAssemblyCFGStackify final : public MachineFunctionPass {
+  MachineDominatorTree *MDT;
+
+  StringRef getPassName() const override { return "WebAssembly CFG Stackify"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addRequired<WebAssemblyExceptionInfo>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   // For each block whose label represents the end of a scope, record the block
   // which holds the beginning of the scope. This will allow us to quickly skip
@@ -164,38 +169,21 @@ class WebAssemblyCFGStackifyImpl {
   void unregisterScope(MachineInstr *Begin);
 
 public:
-  WebAssemblyCFGStackifyImpl(MachineDominatorTree &MDT, MachineLoopInfo &MLI,
-                             WebAssemblyExceptionInfo &WEI)
-      : MDT(MDT), MLI(MLI), WEI(WEI) {}
-
-  bool runOnMachineFunction(MachineFunction &MF);
-};
-
-class WebAssemblyCFGStackifyLegacy : public MachineFunctionPass {
-  StringRef getPassName() const override { return "WebAssembly CFG Stackify"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addRequired<WebAssemblyExceptionInfoWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-public:
-  bool runOnMachineFunction(MachineFunction &MF) override;
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyCFGStackifyLegacy() : MachineFunctionPass(ID) {}
+  WebAssemblyCFGStackify() : MachineFunctionPass(ID) {}
+  ~WebAssemblyCFGStackify() override { releaseMemory(); }
+  void releaseMemory() override;
 };
 } // end anonymous namespace
 
-char WebAssemblyCFGStackifyLegacy::ID = 0;
+char WebAssemblyCFGStackify::ID = 0;
 INITIALIZE_PASS(
-    WebAssemblyCFGStackifyLegacy, DEBUG_TYPE,
+    WebAssemblyCFGStackify, DEBUG_TYPE,
     "Insert BLOCK/LOOP/TRY/TRY_TABLE markers for WebAssembly scopes", false,
     false)
 
-FunctionPass *llvm::createWebAssemblyCFGStackifyLegacyPass() {
-  return new WebAssemblyCFGStackifyLegacy();
+FunctionPass *llvm::createWebAssemblyCFGStackify() {
+  return new WebAssemblyCFGStackify();
 }
 
 /// Test whether Pred has any terminators explicitly branching to MBB, as
@@ -260,22 +248,22 @@ getLatestInsertPos(MachineBasicBlock *MBB, const Container &BeforeSet,
   return InsertPos;
 }
 
-void WebAssemblyCFGStackifyImpl::registerScope(MachineInstr *Begin,
-                                               MachineInstr *End) {
+void WebAssemblyCFGStackify::registerScope(MachineInstr *Begin,
+                                           MachineInstr *End) {
   BeginToEnd[Begin] = End;
   EndToBegin[End] = Begin;
 }
 
 // When 'End' is not an 'end_try' but a 'delegate', EHPad is nullptr.
-void WebAssemblyCFGStackifyImpl::registerTryScope(MachineInstr *Begin,
-                                                  MachineInstr *End,
-                                                  MachineBasicBlock *EHPad) {
+void WebAssemblyCFGStackify::registerTryScope(MachineInstr *Begin,
+                                              MachineInstr *End,
+                                              MachineBasicBlock *EHPad) {
   registerScope(Begin, End);
   TryToEHPad[Begin] = EHPad;
   EHPadToTry[EHPad] = Begin;
 }
 
-void WebAssemblyCFGStackifyImpl::unregisterScope(MachineInstr *Begin) {
+void WebAssemblyCFGStackify::unregisterScope(MachineInstr *Begin) {
   assert(BeginToEnd.count(Begin));
   MachineInstr *End = BeginToEnd[Begin];
   assert(EndToBegin.count(End));
@@ -292,7 +280,7 @@ void WebAssemblyCFGStackifyImpl::unregisterScope(MachineInstr *Begin) {
 /// Insert a BLOCK marker for branches to MBB (if needed).
 // TODO Consider a more generalized way of handling block (and also loop and
 // try) signatures when we implement the multi-value proposal later.
-void WebAssemblyCFGStackifyImpl::placeBlockMarker(MachineBasicBlock &MBB) {
+void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
   assert(!MBB.isEHPad());
   MachineFunction &MF = *MBB.getParent();
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
@@ -306,7 +294,7 @@ void WebAssemblyCFGStackifyImpl::placeBlockMarker(MachineBasicBlock &MBB) {
   int MBBNumber = MBB.getNumber();
   for (MachineBasicBlock *Pred : MBB.predecessors()) {
     if (Pred->getNumber() < MBBNumber) {
-      Header = Header ? MDT.findNearestCommonDominator(Header, Pred) : Pred;
+      Header = Header ? MDT->findNearestCommonDominator(Header, Pred) : Pred;
       if (explicitlyBranchesTo(Pred, &MBB))
         IsBranchedTo = true;
     }
@@ -443,8 +431,10 @@ void WebAssemblyCFGStackifyImpl::placeBlockMarker(MachineBasicBlock &MBB) {
 }
 
 /// Insert a LOOP marker for a loop starting at MBB (if it's a loop header).
-void WebAssemblyCFGStackifyImpl::placeLoopMarker(MachineBasicBlock &MBB) {
+void WebAssemblyCFGStackify::placeLoopMarker(MachineBasicBlock &MBB) {
   MachineFunction &MF = *MBB.getParent();
+  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
   SortRegionInfo SRI(MLI, WEI);
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
@@ -508,10 +498,13 @@ void WebAssemblyCFGStackifyImpl::placeLoopMarker(MachineBasicBlock &MBB) {
   updateScopeTops(&MBB, AfterLoop);
 }
 
-void WebAssemblyCFGStackifyImpl::placeTryMarker(MachineBasicBlock &MBB) {
+void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   assert(MBB.isEHPad());
   MachineFunction &MF = *MBB.getParent();
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
   SortRegionInfo SRI(MLI, WEI);
   const auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
 
@@ -699,10 +692,13 @@ void WebAssemblyCFGStackifyImpl::placeTryMarker(MachineBasicBlock &MBB) {
     updateScopeTops(Header, End);
 }
 
-void WebAssemblyCFGStackifyImpl::placeTryTableMarker(MachineBasicBlock &MBB) {
+void WebAssemblyCFGStackify::placeTryTableMarker(MachineBasicBlock &MBB) {
   assert(MBB.isEHPad());
   MachineFunction &MF = *MBB.getParent();
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
   SortRegionInfo SRI(MLI, WEI);
   const auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
 
@@ -993,7 +989,7 @@ void WebAssemblyCFGStackifyImpl::placeTryTableMarker(MachineBasicBlock &MBB) {
     updateScopeTops(Header, End);
 }
 
-void WebAssemblyCFGStackifyImpl::removeUnnecessaryInstrs(MachineFunction &MF) {
+void WebAssemblyCFGStackify::removeUnnecessaryInstrs(MachineFunction &MF) {
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
   // When there is an unconditional branch right before a catch instruction and
@@ -1175,7 +1171,7 @@ static void unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB,
 
 // Wrap the given range of instructions with a try-delegate that targets
 // 'UnwindDest'. RangeBegin and RangeEnd are inclusive.
-void WebAssemblyCFGStackifyImpl::addNestedTryDelegate(
+void WebAssemblyCFGStackify::addNestedTryDelegate(
     MachineInstr *RangeBegin, MachineInstr *RangeEnd,
     MachineBasicBlock *UnwindDest) {
   auto *BeginBB = RangeBegin->getParent();
@@ -1313,7 +1309,7 @@ void WebAssemblyCFGStackifyImpl::addNestedTryDelegate(
 //   throw_ref
 // end_try_table
 MachineBasicBlock *
-WebAssemblyCFGStackifyImpl::getTrampolineBlock(MachineBasicBlock *UnwindDest) {
+WebAssemblyCFGStackify::getTrampolineBlock(MachineBasicBlock *UnwindDest) {
   // We need one trampoline BB per unwind destination, even though there are
   // multiple try_tables target the same unwind destination. If we have already
   // created one for the given UnwindDest, return it.
@@ -1384,9 +1380,9 @@ WebAssemblyCFGStackifyImpl::getTrampolineBlock(MachineBasicBlock *UnwindDest) {
 
 // Wrap the given range of instructions with a try_table-end_try_table that
 // targets 'UnwindDest'. RangeBegin and RangeEnd are inclusive.
-void WebAssemblyCFGStackifyImpl::addNestedTryTable(
-    MachineInstr *RangeBegin, MachineInstr *RangeEnd,
-    MachineBasicBlock *UnwindDest) {
+void WebAssemblyCFGStackify::addNestedTryTable(MachineInstr *RangeBegin,
+                                               MachineInstr *RangeEnd,
+                                               MachineBasicBlock *UnwindDest) {
   auto *BeginBB = RangeBegin->getParent();
   auto *EndBB = RangeEnd->getParent();
 
@@ -1593,7 +1589,7 @@ static void splitEndLoopBB(MachineBasicBlock *EndTryTableBB) {
   return Name;
 }
 
-bool WebAssemblyCFGStackifyImpl::fixCallUnwindMismatches(MachineFunction &MF) {
+bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
   // This function is used for both the legacy EH and the standard (exnref) EH,
   // and the reason we have unwind mismatches is the same for the both of them,
   // but the code examples in the comments are going to be different. To make
@@ -2077,7 +2073,7 @@ bool WebAssemblyCFGStackifyImpl::fixCallUnwindMismatches(MachineFunction &MF) {
   return true;
 }
 
-bool WebAssemblyCFGStackifyImpl::fixCatchUnwindMismatches(MachineFunction &MF) {
+bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
   // This function is used for both the legacy EH and the standard (exnref) EH,
   // and the reason we have unwind mismatches is the same for the both of them,
   // but the code examples in the comments are going to be different. To make
@@ -2368,7 +2364,7 @@ bool WebAssemblyCFGStackifyImpl::fixCatchUnwindMismatches(MachineFunction &MF) {
   return true;
 }
 
-void WebAssemblyCFGStackifyImpl::recalculateScopeTops(MachineFunction &MF) {
+void WebAssemblyCFGStackify::recalculateScopeTops(MachineFunction &MF) {
   // Renumber BBs and recalculate ScopeTop info because new BBs might have been
   // created and inserted during fixing unwind mismatches.
   MF.RenumberBlocks();
@@ -2402,7 +2398,7 @@ void WebAssemblyCFGStackifyImpl::recalculateScopeTops(MachineFunction &MF) {
 /// that end at the function end need to have a return type signature that
 /// matches the function signature, even though it's unreachable. This function
 /// checks for such cases and fixes up the signatures.
-void WebAssemblyCFGStackifyImpl::fixEndsAtEndOfFunction(MachineFunction &MF) {
+void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
   const auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
 
   if (MFI.getResults().empty())
@@ -2510,7 +2506,7 @@ static void addUnreachableAfterTryTables(MachineFunction &MF,
 }
 
 /// Insert BLOCK/LOOP/TRY/TRY_TABLE markers at appropriate places.
-void WebAssemblyCFGStackifyImpl::placeMarkers(MachineFunction &MF) {
+void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
   // We allocate one more than the number of blocks in the function to
   // accommodate for the possible fake block we may insert at the end.
   ScopeTops.resize(MF.getNumBlockIDs() + 1);
@@ -2552,7 +2548,7 @@ void WebAssemblyCFGStackifyImpl::placeMarkers(MachineFunction &MF) {
   }
 }
 
-unsigned WebAssemblyCFGStackifyImpl::getBranchDepth(
+unsigned WebAssemblyCFGStackify::getBranchDepth(
     const SmallVectorImpl<EndMarkerInfo> &Stack, const MachineBasicBlock *MBB) {
   unsigned Depth = 0;
   for (auto X : reverse(Stack)) {
@@ -2564,7 +2560,7 @@ unsigned WebAssemblyCFGStackifyImpl::getBranchDepth(
   return Depth;
 }
 
-unsigned WebAssemblyCFGStackifyImpl::getDelegateDepth(
+unsigned WebAssemblyCFGStackify::getDelegateDepth(
     const SmallVectorImpl<EndMarkerInfo> &Stack, const MachineBasicBlock *MBB) {
   if (MBB == FakeCallerBB)
     return Stack.size();
@@ -2599,7 +2595,7 @@ unsigned WebAssemblyCFGStackifyImpl::getDelegateDepth(
   return Depth;
 }
 
-unsigned WebAssemblyCFGStackifyImpl::getRethrowDepth(
+unsigned WebAssemblyCFGStackify::getRethrowDepth(
     const SmallVectorImpl<EndMarkerInfo> &Stack,
     const MachineBasicBlock *EHPadToRethrow) {
   unsigned Depth = 0;
@@ -2616,7 +2612,7 @@ unsigned WebAssemblyCFGStackifyImpl::getRethrowDepth(
   return Depth;
 }
 
-void WebAssemblyCFGStackifyImpl::rewriteDepthImmediates(MachineFunction &MF) {
+void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
   // Now rewrite references to basic blocks to be depth immediates.
   SmallVector<EndMarkerInfo, 8> Stack;
 
@@ -2687,17 +2683,29 @@ void WebAssemblyCFGStackifyImpl::rewriteDepthImmediates(MachineFunction &MF) {
   assert(Stack.empty() && "Control flow should be balanced");
 }
 
-void WebAssemblyCFGStackifyImpl::cleanupFunctionData(MachineFunction &MF) {
+void WebAssemblyCFGStackify::cleanupFunctionData(MachineFunction &MF) {
   if (FakeCallerBB)
     MF.deleteMachineBasicBlock(FakeCallerBB);
   AppendixBB = FakeCallerBB = CallerTrampolineBB = nullptr;
 }
 
-bool WebAssemblyCFGStackifyImpl::runOnMachineFunction(MachineFunction &MF) {
+void WebAssemblyCFGStackify::releaseMemory() {
+  ScopeTops.clear();
+  BeginToEnd.clear();
+  EndToBegin.clear();
+  TryToEHPad.clear();
+  EHPadToTry.clear();
+  UnwindDestToTrampoline.clear();
+}
+
+bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** CFG Stackifying **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
   const MCAsmInfo &MCAI = MF.getTarget().getMCAsmInfo();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+
+  releaseMemory();
 
   // Liveness is not tracked for VALUE_STACK physreg.
   MF.getRegInfo().invalidateLiveness();
@@ -2726,27 +2734,4 @@ bool WebAssemblyCFGStackifyImpl::runOnMachineFunction(MachineFunction &MF) {
 
   MF.getInfo<WebAssemblyFunctionInfo>()->setCFGStackified();
   return true;
-}
-
-bool WebAssemblyCFGStackifyLegacy::runOnMachineFunction(MachineFunction &MF) {
-  MachineDominatorTree &MDT =
-      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  WebAssemblyExceptionInfo &WEI =
-      getAnalysis<WebAssemblyExceptionInfoWrapperPass>().getWEI();
-  WebAssemblyCFGStackifyImpl Impl(MDT, MLI, WEI);
-  return Impl.runOnMachineFunction(MF);
-}
-
-PreservedAnalyses
-WebAssemblyCFGStackifyPass::run(MachineFunction &MF,
-                                MachineFunctionAnalysisManager &MFAM) {
-  MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  MachineLoopInfo &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
-  WebAssemblyExceptionInfo &WEI =
-      MFAM.getResult<WebAssemblyExceptionAnalysis>(MF);
-  WebAssemblyCFGStackifyImpl Impl(MDT, MLI, WEI);
-  return Impl.runOnMachineFunction(MF)
-             ? getMachineFunctionPassPreservedAnalyses()
-             : PreservedAnalyses::all();
 }

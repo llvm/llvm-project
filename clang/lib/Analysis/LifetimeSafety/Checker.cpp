@@ -166,12 +166,10 @@ public:
     auto MovedAtEscape = MovedLoans.getMovedLoans(OEF);
     for (LoanID LID : EscapedLoans) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
-      const PlaceholderBase *PB = L->getAccessPath().getAsPlaceholderBase();
-      if (!PB)
-        continue;
-      if (const auto *PVD = PB->getParmVarDecl())
+      const AccessPath &AP = L->getAccessPath();
+      if (const auto *PVD = AP.getAsPlaceholderParam())
         CheckParam(PVD, /*IsMoved=*/MovedAtEscape.lookup(LID));
-      else if (const auto *MD = PB->getImplicitThisParent())
+      else if (const auto *MD = AP.getAsPlaceholderThis())
         CheckImplicitThis(MD);
     }
   }
@@ -179,8 +177,7 @@ public:
   /// Checks for use-after-free & use-after-return errors when an access path
   /// expires (e.g., a variable goes out of scope).
   ///
-  /// When a path expires, all loans prefixed by that path expire. For example,
-  /// if `x` expires, loans to `x`, `x.field`, and `x.field.*` all expire.
+  /// When a path expires, all loans having this path expires.
   /// This method examines all live origins and reports warnings for loans they
   /// hold that are prefixed by the expired path.
   void checkExpiry(const ExpireFact *EF) {
@@ -190,9 +187,9 @@ public:
       LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
       for (LoanID HeldLoanID : HeldLoans) {
         const Loan *HeldLoan = FactMgr.getLoanMgr().getLoan(HeldLoanID);
-        if (!ExpiredPath.isPrefixOf(HeldLoan->getAccessPath()))
+        if (ExpiredPath != HeldLoan->getAccessPath())
           continue;
-        // HeldLoan is expired because its base or itself is expired.
+        // HeldLoan is expired because its AccessPath is expired.
         PendingWarning &CurWarning = FinalWarningsMap[HeldLoan->getID()];
         const Expr *MovedExpr = nullptr;
         if (auto *ME = MovedLoans.getMovedLoans(EF).lookup(HeldLoanID))
@@ -212,11 +209,9 @@ public:
 
   /// Checks for use-after-invalidation errors when a container is modified.
   ///
-  /// When a container is invalidated, loans pointing into its interior are
-  /// invalidated. For example, if container `v` is invalidated, iterators with
-  /// loans to `v.*` are invalidated. This method finds live origins holding
-  /// such loans and reports warnings. A loan is invalidated if its path extends
-  /// an invalidated container's path (e.g., `v.*` extends `v`).
+  /// This method identifies origins that are live at the point of invalidation
+  /// and checks if they hold loans that are invalidated by the operation
+  /// (e.g., iterators into a vector that is being pushed to).
   void checkInvalidation(const InvalidateOriginFact *IOF) {
     OriginID InvalidatedOrigin = IOF->getInvalidatedOrigin();
     /// Get loans directly pointing to the invalidated container
@@ -225,7 +220,7 @@ public:
     auto IsInvalidated = [&](const Loan *L) {
       for (LoanID InvalidID : DirectlyInvalidatedLoans) {
         const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
-        if (InvalidL->getAccessPath().isPrefixOf(L->getAccessPath()))
+        if (InvalidL->getAccessPath() == L->getAccessPath())
           return true;
       }
       return false;
@@ -256,13 +251,11 @@ public:
       return;
     for (const auto &[LID, Warning] : FinalWarningsMap) {
       const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
-      const Expr *IssueExpr = L->getIssueExpr();
-      const ParmVarDecl *InvalidatedPVD = nullptr;
-      if (const PlaceholderBase *PB = L->getAccessPath().getAsPlaceholderBase())
-        InvalidatedPVD = PB->getParmVarDecl();
-
+      const Expr *IssueExpr = L->getIssuingExpr();
       llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
           CausingFact = Warning.CausingFact;
+      const ParmVarDecl *InvalidatedPVD =
+          L->getAccessPath().getAsPlaceholderParam();
       const Expr *MovedExpr = Warning.MovedExpr;
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
 

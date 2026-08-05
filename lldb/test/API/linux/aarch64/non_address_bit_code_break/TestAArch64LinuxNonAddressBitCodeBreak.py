@@ -54,11 +54,11 @@ class AArch64LinuxNonAddressBitCodeBreak(TestBase):
 
     # AArch64 Linux always enables the top byte ignore feature
     @skipUnlessArch("aarch64")
-    @requireLinux
+    @skipUnlessPlatform(["linux"])
     def test_software_break(self):
         self.do_tagged_break(False)
 
     @skipUnlessArch("aarch64")
-    @requireLinux
+    @skipUnlessPlatform(["linux"])
     def test_hardware_break(self):
         self.do_tagged_break(True)

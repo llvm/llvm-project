@@ -207,7 +207,7 @@ void BreakpointLocationList::GetDescription(Stream *s,
   collection::iterator pos, end = m_locations.end();
 
   for (pos = m_locations.begin(); pos != end; ++pos) {
-    s->PutCString(" ");
+    s->Printf(" ");
     (*pos)->GetDescription(s, level);
   }
 }

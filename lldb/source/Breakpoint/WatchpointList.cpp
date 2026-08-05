@@ -213,7 +213,7 @@ void WatchpointList::GetDescription(Stream *s, lldb::DescriptionLevel level) {
   wp_collection::iterator pos, end = m_watchpoints.end();
 
   for (pos = m_watchpoints.begin(); pos != end; ++pos) {
-    s->PutCString(" ");
+    s->Printf(" ");
     (*pos)->Dump(s);
   }
 }

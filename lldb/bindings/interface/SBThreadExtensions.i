@@ -10,8 +10,7 @@ STRING_EXTENSION_OUTSIDE(SBThread)
 
         def __iter__(self):
             '''Iterate over all frames in a lldb.SBThread object.'''
-            for i in range(self.GetNumFrames()):
-                yield self.GetFrameAtIndex(i)
+            return lldb_iter(self, 'GetNumFrames', 'GetFrameAtIndex')
 
         def __len__(self):
             '''Return the number of frames in a lldb.SBThread object.'''

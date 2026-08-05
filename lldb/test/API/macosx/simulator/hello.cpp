@@ -4,9 +4,7 @@
 
 static void print_pid() { fprintf(stderr, "PID: %d\n", getpid()); }
 
-// The test kills this process after the `platform process list` check, so this
-// sleep should never expire.
-static void sleep() { std::this_thread::sleep_for(std::chrono::seconds(600)); }
+static void sleep() { std::this_thread::sleep_for(std::chrono::seconds(10)); }
 
 int main(int argc, char **argv) {
   print_pid();

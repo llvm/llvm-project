@@ -1,3 +1,0 @@
-BasedOnStyle: Google
-AllowShortIfStatementsOnASingleLine: false
-IndentPPDirectives: AfterHash

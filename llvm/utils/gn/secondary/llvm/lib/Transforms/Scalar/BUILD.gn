@@ -40,7 +40,6 @@ static_library("Scalar") {
     "JumpTableToSwitch.cpp",
     "JumpThreading.cpp",
     "LICM.cpp",
-    "LogicalSROA.cpp",
     "LoopAccessAnalysisPrinter.cpp",
     "LoopBoundSplit.cpp",
     "LoopDataPrefetch.cpp",

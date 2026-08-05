@@ -29,12 +29,10 @@
 using namespace clang;
 
 /// PrintMacroDefinition - Print a macro definition in a form that will be
-/// properly accepted back as a definition. If 'II' is nullptr, only the
-/// expansion will be printed.
-static void PrintMacroDefinition(const IdentifierInfo *II, const MacroInfo &MI,
+/// properly accepted back as a definition.
+static void PrintMacroDefinition(const IdentifierInfo &II, const MacroInfo &MI,
                                  Preprocessor &PP, raw_ostream *OS) {
-  if (II)
-    *OS << "#define " << II->getName();
+  *OS << "#define " << II.getName();
 
   if (MI.isFunctionLike()) {
     *OS << '(';
@@ -184,8 +182,6 @@ public:
   void PragmaExecCharsetPop(SourceLocation Loc) override;
   void PragmaAssumeNonNullBegin(SourceLocation Loc) override;
   void PragmaAssumeNonNullEnd(SourceLocation Loc) override;
-  void PragmaSetPPState(SourceLocation Loc, IdentifierInfo *MacroName,
-                        std::uint64_t Value) override;
 
   /// Insert whitespace before emitting the next token.
   ///
@@ -262,11 +258,11 @@ void PrintPPOutputPPCallbacks::WriteLineInfo(unsigned LineNo,
   // Emit #line directives or GNU line markers depending on what mode we're in.
   if (UseLineDirectives) {
     *OS << "#line" << ' ' << LineNo << ' ' << '"';
-    *OS << CurFilename;
+    OS->write_escaped(CurFilename);
     *OS << '"';
   } else {
     *OS << '#' << ' ' << LineNo << ' ' << '"';
-    *OS << CurFilename;
+    OS->write_escaped(CurFilename);
     *OS << '"';
 
     if (ExtraLen)
@@ -563,38 +559,22 @@ void PrintPPOutputPPCallbacks::Ident(SourceLocation Loc, StringRef S) {
 /// MacroDefined - This hook is called whenever a macro definition is seen.
 void PrintPPOutputPPCallbacks::MacroDefined(const Token &MacroNameTok,
                                             const MacroDirective *MD) {
-  bool ShouldEmitDefine = true;
   const MacroInfo *MI = MD->getMacroInfo();
-  SourceLocation DefLoc = MI->getDefinitionLoc();
-
   // Print out macro definitions in -dD mode and when we have -fdirectives-only
   // for C++20 header units.
   if ((!DumpDefines && !DirectivesOnly) ||
       // Ignore __FILE__ etc.
-      MI->isBuiltinMacro()) {
-    ShouldEmitDefine = false;
-  } else if (DirectivesOnly && !MI->isUsed()) {
+      MI->isBuiltinMacro())
+    return;
+
+  SourceLocation DefLoc = MI->getDefinitionLoc();
+  if (DirectivesOnly && !MI->isUsed()) {
     SourceManager &SM = PP.getSourceManager();
     if (SM.isInPredefinedFile(DefLoc))
-      ShouldEmitDefine = false;
+      return;
   }
-
-  IdentifierInfo *MacroName = MacroNameTok.getIdentifierInfo();
-  if (!ShouldEmitDefine) {
-    // Preserve macro definitions of macros that can be used with
-    // '#pragma clang __set_pp_state' as pragmas if printing '#define's
-    // is disabled.
-    if (PP.isPragmaSetPPStateMacro(MacroName)) {
-      MoveToLine(DefLoc, /*RequireStartOfLine=*/true);
-      *OS << "#pragma clang __set_pp_state " << MacroName->getName();
-      PrintMacroDefinition(/*II=*/nullptr, *MI, PP, OS);
-      setEmittedDirectiveOnThisLine();
-    }
-    return;
-  }
-
   MoveToLine(DefLoc, /*RequireStartOfLine=*/true);
-  PrintMacroDefinition(MacroName, *MI, PP, OS);
+  PrintMacroDefinition(*MacroNameTok.getIdentifierInfo(), *MI, PP, OS);
   setEmittedDirectiveOnThisLine();
 }
 
@@ -769,15 +749,6 @@ void PrintPPOutputPPCallbacks::
 PragmaAssumeNonNullEnd(SourceLocation Loc) {
   MoveToLine(Loc, /*RequireStartOfLine=*/true);
   *OS << "#pragma clang assume_nonnull end";
-  setEmittedDirectiveOnThisLine();
-}
-
-void PrintPPOutputPPCallbacks::PragmaSetPPState(SourceLocation Loc,
-                                                IdentifierInfo *MacroName,
-                                                std::uint64_t Value) {
-  MoveToLine(Loc, /*RequireStartOfLine=*/true);
-  *OS << "#pragma clang __set_pp_state " << MacroName->getName() << " "
-      << Value;
   setEmittedDirectiveOnThisLine();
 }
 
@@ -1122,7 +1093,7 @@ static void DoPrintMacros(Preprocessor &PP, raw_ostream *OS) {
     // Ignore computed macros like __LINE__ and friends.
     if (MI.isBuiltinMacro()) continue;
 
-    PrintMacroDefinition(MacrosByID[i].first, MI, PP, OS);
+    PrintMacroDefinition(*MacrosByID[i].first, MI, PP, OS);
     *OS << '\n';
   }
 }

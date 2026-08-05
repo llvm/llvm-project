@@ -148,9 +148,9 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
     return true;
 
   SourceLocation InitLoc;
-  if (const auto *D = Source.asDecl())
+  if (const auto *D = dyn_cast<const Decl *>(Source))
     InitLoc = cast<VarDecl>(D)->getAnyInitializer()->getExprLoc();
-  else if (const auto *E = Source.asExpr())
+  else if (const auto *E = dyn_cast<const Expr *>(Source))
     InitLoc = E->getExprLoc();
 
   if (const Record *R = Ptr.getRecord())

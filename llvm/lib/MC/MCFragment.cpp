@@ -167,8 +167,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_BoundaryAlign: {
     const auto *BF = cast<MCBoundaryAlignFragment>(this);
     OS << " BoundarySize:" << BF->getAlignment().value()
-       << " LastFragment:" << BF->getLastFragment() << " Size:" << BF->getSize()
-       << " AlignToEnd:" << BF->isAlignToEnd();
+       << " LastFragment:" << BF->getLastFragment()
+       << " Size:" << BF->getSize();
     break;
   }
   case MCFragment::FT_PrefAlign:

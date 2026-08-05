@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu12.00-amd-amdhsa \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx1200 \
 // RUN:   %s -emit-llvm -o - | FileCheck %s
 
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu12.00-amd-amdhsa \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx1200 \
 // RUN:   -S -o - %s | FileCheck -check-prefix=GFX12 %s
 
 // REQUIRES: amdgpu-registered-target

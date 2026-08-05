@@ -25,12 +25,6 @@ def G_ADD_LOW : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_ADDHN : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type1:$src1, type1:$src2);
-  let hasSideEffects = 0;
-}
-
 // Pseudo for a rev32 instruction. Produced post-legalization from
 // G_SHUFFLE_VECTORs with appropriate masks.
 def G_REV32 : AArch64GenericInstruction {
@@ -309,7 +303,6 @@ def G_BSP : AArch64GenericInstruction {
   let GISelMatchGenericTypes = 1;
 }
 
-def : GINodeEquiv<G_ADDHN, AArch64addhn>;
 def : GINodeEquiv<G_REV32, AArch64rev32>;
 def : GINodeEquiv<G_REV64, AArch64rev64>;
 def : GINodeEquiv<G_UZP1, AArch64uzp1>;

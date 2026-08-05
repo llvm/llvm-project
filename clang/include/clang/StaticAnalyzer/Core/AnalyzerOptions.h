@@ -391,11 +391,6 @@ public:
   ExplorationStrategyKind getExplorationStrategy() const;
   CTUPhase1InliningKind getCTUPhase1Inlining() const;
 
-  bool analyzerSymbolicIntegerCasts() const {
-    return ShouldSupportSymbolicIntegerCasts ||
-           AnalysisConstraintsOpt == Z3ConstraintsModel;
-  }
-
   /// Returns the inter-procedural analysis mode.
   IPAKind getIPAMode() const;
 

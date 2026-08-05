@@ -2,7 +2,7 @@
 ; RUN: opt -passes=instcombine -S -o - %s | FileCheck %s
 ; REQUIRES: amdgpu-registered-target
 
-target triple = "amdgpu7.00-amd-amdhsa"
+target triple = "amdgcn-amd-amdhsa"
 
 %anon = type { i32, [8 x ptr], ptr }
 

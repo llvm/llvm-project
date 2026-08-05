@@ -10,7 +10,7 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.lldbutil import get_stopped_thread, state_type_to_str
 
 
-@requireSignals
+@skipIfNoSignals
 class SignalsAPITestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -49,10 +49,4 @@ class SignalsAPITestCase(TestBase):
         )
         self.assertEqual(
             process.GetExitStatus(), 0, "The process should have returned 0"
-        )
-
-        self.assertIn(
-            sigint,
-            unix_signals.get_unix_signals_list(),
-            "SIGINT should be in the list of supported signals",
         )

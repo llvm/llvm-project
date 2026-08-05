@@ -56,8 +56,7 @@ STRING_EXTENSION_OUTSIDE(SBValue)
 
         def __iter__(self):
             '''Iterate over all child values of a lldb.SBValue object.'''
-            for i in range(self.GetNumChildren()):
-                yield self.GetChildAtIndex(i)
+            return lldb_iter(self, 'GetNumChildren', 'GetChildAtIndex')
 
         def __len__(self):
             '''Return the number of child values of a lldb.SBValue object.'''

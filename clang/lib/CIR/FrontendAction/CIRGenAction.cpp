@@ -57,10 +57,9 @@ getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
 
 static std::unique_ptr<llvm::Module>
 lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
-                     bool EnableOpenMP,
                      llvm::StringRef mlirSaveTempsOutFile = {},
                      llvm::vfs::FileSystem *fs = nullptr) {
-  return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx, EnableOpenMP,
+  return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx,
                                               mlirSaveTempsOutFile, fs);
 }
 
@@ -144,8 +143,7 @@ public:
       if (runCIRToCIRPasses(
               MlirModule, MlirCtx, C, !FEOptions.ClangIRDisableCIRVerifier,
               FEOptions.ClangIREnableIdiomRecognizer, CGO.OptimizationLevel > 0,
-              EnableLibOpt, LibOptOptions,
-              FEOptions.ClangIREnableCallConvLowering)
+              EnableLibOpt, LibOptOptions)
               .failed()) {
         CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
         return;
@@ -181,9 +179,9 @@ public:
           MlirModule->print(out);
       }
 
-      std::unique_ptr<llvm::Module> LLVMModule = lowerFromCIRToLLVMIR(
-          MlirModule, LLVMCtx, C.getLangOpts().OpenMP, mlirSaveTempsOutFile,
-          &CI.getVirtualFileSystem());
+      std::unique_ptr<llvm::Module> LLVMModule =
+          lowerFromCIRToLLVMIR(MlirModule, LLVMCtx, mlirSaveTempsOutFile,
+                               &CI.getVirtualFileSystem());
 
       if (linkInModules(*LLVMModule))
         return;

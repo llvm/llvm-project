@@ -661,8 +661,7 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                                      const llvm::Triple &Triple,
                                      const llvm::opt::ArgList &Args,
-                                     std::vector<StringRef> &Features,
-                                     bool ForAS) {
+                                     std::vector<StringRef> &Features) {
   if (Args.hasFlag(options::OPT_mwavefrontsize64,
                    options::OPT_mno_wavefrontsize64, false))
     Features.push_back("+wavefrontsize64");
@@ -670,22 +669,6 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
   if (Args.hasFlag(options::OPT_mamdgpu_precise_memory_op,
                    options::OPT_mno_amdgpu_precise_memory_op, false))
     Features.push_back("+precise-memory");
-
-  // When assembling, the xnack/sramecc mode cannot come from a module flag
-  // (there is no module), so forward it to the assembler as a feature.
-  if (ForAS) {
-    if (Arg *A = Args.getLastArg(options::OPT_mxnack, options::OPT_mno_xnack)) {
-      Features.push_back(
-          A->getOption().matches(options::OPT_mxnack) ? "+xnack" : "-xnack");
-    }
-
-    if (Arg *A =
-            Args.getLastArg(options::OPT_msramecc, options::OPT_mno_sramecc)) {
-      Features.push_back(A->getOption().matches(options::OPT_msramecc)
-                             ? "+sramecc"
-                             : "-sramecc");
-    }
-  }
 
   handleTargetFeaturesGroup(D, Triple, Args, Features,
                             options::OPT_m_amdgpu_Features_Group);
@@ -1306,11 +1289,11 @@ LTOKind AMDGPUToolChain::getLTOMode(const ArgList &Args,
 
 static bool isXnackAvailable(const llvm::Triple &TT, llvm::StringRef TargetID) {
   // Arch-specific check - only report as supported if arch has xnack+
-  if (!TT.isAMDGCN())
-    return false;
   llvm::StringRef Processor = getProcessorFromTargetID(TT, TargetID);
-  llvm::AMDGPU::GPUKind ProcKind = llvm::AMDGPU::parseArchAMDGCN(Processor);
-  unsigned Features = llvm::AMDGPU::getArchAttrAMDGCN(ProcKind);
+  auto ProcKind = TT.isAMDGCN() ? llvm::AMDGPU::parseArchAMDGCN(Processor)
+                                : llvm::AMDGPU::parseArchR600(Processor);
+  auto Features = TT.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(ProcKind)
+                                : llvm::AMDGPU::getArchAttrR600(ProcKind);
 
   // If processor has xnack but doesn't support on/off modes, xnack is always on
   bool XnackAlwaysOn = (Features & llvm::AMDGPU::FEATURE_XNACK) &&

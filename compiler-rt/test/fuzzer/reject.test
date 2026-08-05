@@ -1,9 +1,0 @@
-# Runs the Reject.cpp test,
-# ensures that the input 'acc' is present in the corpus,
-# and the input 'rej' is not.
-
-RUN: rm -rf %t-corpus && mkdir %t-corpus
-RUN: %cpp_compiler %S/Reject.cpp -o %t-Reject
-RUN: %run %t-Reject -runs=1000000 %t-corpus
-RUN: grep 'acc' %t-corpus/*
-RUN: not grep 'rej' %t-corpus/*

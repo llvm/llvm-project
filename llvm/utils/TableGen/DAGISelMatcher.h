@@ -88,7 +88,6 @@ public:
     CheckOrImm,
     CheckImmAllOnesV,
     CheckImmAllZerosV,
-    CheckUndef,
     CheckFoldableChainNode,
 
     // Node creation/emisssion.
@@ -144,7 +143,6 @@ public:
     case CheckOrImm:
     case CheckImmAllOnesV:
     case CheckImmAllZerosV:
-    case CheckUndef:
     case CheckFoldableChainNode:
       return true;
     }
@@ -992,20 +990,6 @@ public:
   static bool classof(const Matcher *N) {
     return N->getKind() == CheckImmAllZerosV;
   }
-
-private:
-  void printImpl(raw_ostream &OS, indent Indent) const override;
-  bool isEqualImpl(const Matcher *M) const override { return true; }
-  bool isContradictoryImpl(const Matcher *M) const override;
-};
-
-/// CheckUndefMatcher - This checks if the current node is undef or poison,
-/// i.e. SDNode::isUndef() (ISD::UNDEF or ISD::POISON).
-class CheckUndefMatcher : public Matcher {
-public:
-  CheckUndefMatcher() : Matcher(CheckUndef) {}
-
-  static bool classof(const Matcher *N) { return N->getKind() == CheckUndef; }
 
 private:
   void printImpl(raw_ostream &OS, indent Indent) const override;

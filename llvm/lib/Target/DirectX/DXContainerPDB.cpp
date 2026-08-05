@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectX.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/DebugInfo/CodeView/GUID.h"
@@ -18,14 +17,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
-
-extern cl::opt<bool> PdbInPrivate;
 
 namespace {
 
@@ -91,22 +85,10 @@ ArrayRef<MCDXContainerPart> DXContainerPDB::collectParts() {
   return Parts;
 }
 
-static GlobalVariable *createPrivateDataGlobal(Module &M, StringRef Data) {
-  Constant *Content =
-      ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
-  auto *GV =
-      new GlobalVariable(M, Content->getType(), true,
-                         GlobalValue::PrivateLinkage, Content, "dx.priv");
-  GV->setSection("PRIV");
-  GV->setAlignment(Align(1));
-  return GV;
-}
-
 bool DXContainerPDB::runOnModule(Module &M) {
-  llvm::scope_exit Cleanup([&]() { reset(); });
   this->M = &M;
 
-  SmallString<128> DebugFileName;
+  StringRef DebugFileName;
   ArrayRef<char> ModuleHash;
   for (const GlobalVariable &GV : M.globals()) {
     if (GV.getSection() == PdbFileNameSectionName) {
@@ -120,22 +102,10 @@ bool DXContainerPDB::runOnModule(Module &M) {
   }
 
   // PDB emission was not requested.
-  if (DebugFileName.empty() && !PdbInPrivate)
+  if (DebugFileName.empty())
     return false;
   if (ModuleHash.empty())
     report_fatal_error("Module hash for PDB not found");
-
-  bool DeleteAfterRead = false;
-  if (DebugFileName.empty()) {
-    if (std::error_code EC =
-            sys::fs::createTemporaryFile("dxil", "pdb", DebugFileName))
-      reportFatalInternalError("Failed to create temporary PDB file");
-    DeleteAfterRead = true;
-  }
-  llvm::scope_exit FileCleanup([&]() {
-    if (DeleteAfterRead)
-      sys::fs::remove(DebugFileName);
-  });
 
   BumpPtrAllocator Allocator;
   pdb::PDBFileBuilder Builder(Allocator);
@@ -181,17 +151,9 @@ bool DXContainerPDB::runOnModule(Module &M) {
     reportFatalUsageError("Couldn't write to PDB file: " +
                           Twine(toString(std::move(Err))));
 
-  if (!PdbInPrivate)
-    return false;
+  reset();
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(
-      DebugFileName, /*IsText=*/false, /*RequiresNullTerminator=*/false);
-  if (!Buf)
-    reportFatalInternalError("Failed to read PDB for PRIV embedding");
-
-  appendToCompilerUsed(M, createPrivateDataGlobal(M, (*Buf)->getBuffer()));
-
-  return true;
+  return false;
 }
 
 char DXContainerPDB::ID = 0;

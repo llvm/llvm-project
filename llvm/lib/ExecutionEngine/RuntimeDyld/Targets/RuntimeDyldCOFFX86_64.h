@@ -266,12 +266,6 @@ public:
       break;
     }
 
-    case COFF::IMAGE_REL_AMD64_SECREL: {
-      uint8_t *Displacement = (uint8_t *)ObjTarget;
-      Addend = readBytesUnaligned(Displacement, 4);
-      break;
-    }
-
     default:
       break;
     }

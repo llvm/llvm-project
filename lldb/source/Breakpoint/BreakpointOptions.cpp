@@ -522,10 +522,10 @@ void BreakpointOptions::GetDescription(Stream *s,
     s->Printf("%sabled ", m_enabled ? "en" : "dis");
 
     if (m_one_shot)
-      s->PutCString("one-shot ");
+      s->Printf("one-shot ");
 
     if (m_auto_continue)
-      s->PutCString("auto-continue ");
+      s->Printf("auto-continue ");
 
     if (m_thread_spec_up)
       m_thread_spec_up->GetDescription(s, level);

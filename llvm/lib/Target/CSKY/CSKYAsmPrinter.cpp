@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -130,7 +129,7 @@ void CSKYAsmPrinter::emitFunctionBodyEnd() {
 
 void CSKYAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (TM.getTargetTriple().isOSBinFormatELF())
-    emitAttributes(M);
+    emitAttributes();
 }
 
 void CSKYAsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -246,12 +245,19 @@ void CSKYAsmPrinter::emitMachineConstantPoolValue(
   OutStreamer->emitValue(Expr, Size);
 }
 
-void CSKYAsmPrinter::emitAttributes(Module &M) {
+void CSKYAsmPrinter::emitAttributes() {
   CSKYTargetStreamer &CTS =
       static_cast<CSKYTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
-  CTS.emitTargetAttributes(TM.getMCSubtargetInfo(),
-                           M.getFloatABI() == FloatABI::Hard);
+  const Triple &TT = TM.getTargetTriple();
+  StringRef CPU = TM.getTargetCPU();
+  StringRef FS = TM.getTargetFeatureString();
+  const CSKYTargetMachine &CTM = static_cast<const CSKYTargetMachine &>(TM);
+  /* TuneCPU doesn't impact emission of ELF attributes, ELF attributes only
+     care about arch related features, so we can set TuneCPU as CPU.  */
+  const CSKYSubtarget STI(TT, CPU, /*TuneCPU=*/CPU, FS, CTM);
+
+  CTS.emitTargetAttributes(STI);
 }
 
 bool CSKYAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,

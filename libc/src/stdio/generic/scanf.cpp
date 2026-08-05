@@ -40,7 +40,3 @@ LLVM_LIBC_FUNCTION(int, scanf, (const char *__restrict format, ...)) {
 }
 
 } // namespace LIBC_NAMESPACE_DECL
-
-#ifdef LIBC_COPT_SCANF_PROVIDE_ISOC99_ALIASES
-LLVM_LIBC_ADD_FUNCTION_C_ALIAS(scanf, __isoc99_scanf);
-#endif // LIBC_COPT_SCANF_PROVIDE_ISOC99_ALIASES

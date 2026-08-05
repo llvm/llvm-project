@@ -14,7 +14,6 @@
 #define LLVM_CLANG_AST_INTERP_BYTECODEEXPRGEN_H
 
 #include "ByteCodeEmitter.h"
-#include "DeclOrExpr.h"
 #include "EvalEmitter.h"
 #include "Pointer.h"
 #include "PrimType.h"
@@ -340,12 +339,12 @@ protected:
                      bool Activate, bool IsOperatorCall);
 
   /// Creates a local primitive value.
-  unsigned allocateLocalPrimitive(DeclOrExpr &&Decl, PrimType Ty, bool IsConst,
+  unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
                                   bool IsVolatile = false,
                                   ScopeKind SC = ScopeKind::Block);
 
   /// Allocates a space storing a local given its type.
-  UnsignedOrNone allocateLocal(DeclOrExpr &&Decl, QualType Ty = QualType(),
+  UnsignedOrNone allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
                                ScopeKind = ScopeKind::Block);
   UnsignedOrNone allocateTemporary(const Expr *E);
 
@@ -428,7 +427,7 @@ private:
                              const BinaryOperator *E);
   bool emitRecordDestructionPop(const Record *R, SourceInfo Loc);
   bool emitDestructionPop(const Descriptor *Desc, SourceInfo Loc);
-  bool emitDummyPtr(DeclOrExpr D, const Expr *E, bool CU = false);
+  bool emitDummyPtr(const DeclTy &D, const Expr *E, bool CU = false);
   bool emitFloat(const APFloat &F, SourceInfo Info);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
@@ -495,7 +494,7 @@ protected:
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
   bool Initializing = false;
-  const VarDecl *InitializingDecl = nullptr;
+  const ValueDecl *InitializingDecl = nullptr;
 
   llvm::SmallVector<InitLink> InitStack;
   bool InitStackActive = false;

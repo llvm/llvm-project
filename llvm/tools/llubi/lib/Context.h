@@ -191,16 +191,12 @@ template <typename ArrayRefT> class BytesView {
   bool IsLittleEndian;
 
 public:
-  explicit BytesView(ArrayRefT Ref, bool IsLittleEndian)
-      : Bytes(Ref), IsLittleEndian(IsLittleEndian) {}
   explicit BytesView(ArrayRefT Ref, const DataLayout &DL)
-      : BytesView(Ref, DL.isLittleEndian()) {}
+      : Bytes(Ref), IsLittleEndian(DL.isLittleEndian()) {}
 
   auto &operator[](uint32_t Index) {
     return Bytes[IsLittleEndian ? Index : Bytes.size() - 1 - Index];
   }
-
-  size_t size() const { return Bytes.size(); }
 };
 
 using ConstBytesView = BytesView<ArrayRef<Byte>>;

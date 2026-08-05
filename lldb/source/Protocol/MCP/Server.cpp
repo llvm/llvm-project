@@ -60,12 +60,6 @@ bool lldb_protocol::mcp::fromJSON(const json::Value &V, ServerInfo &SM,
          O.mapOptional("pid", SM.pid);
 }
 
-/// Returns the on-disk registry path for the instance with the given \p pid.
-static FileSpec GetServerInfoPath(lldb::pid_t pid) {
-  return HostInfo::GetUserLLDBDir().CopyByAppendingPathComponent(
-      formatv("lldb-mcp-{0}.json", pid).str());
-}
-
 Expected<ServerInfoHandle> ServerInfo::Write(const ServerInfo &info) {
   // The file is written by the process that hosts the server, so stamp its pid
   // to keep it consistent with the filename below.
@@ -81,7 +75,8 @@ Expected<ServerInfoHandle> ServerInfo::Write(const ServerInfo &info) {
   if (error.Fail())
     return error.takeError();
 
-  FileSpec mcp_registry_entry_path = GetServerInfoPath(stamped.pid);
+  FileSpec mcp_registry_entry_path = user_lldb_dir.CopyByAppendingPathComponent(
+      formatv("lldb-mcp-{0}.json", stamped.pid).str());
 
   const File::OpenOptions flags = File::eOpenOptionWriteOnly |
                                   File::eOpenOptionCanCreate |
@@ -93,15 +88,6 @@ Expected<ServerInfoHandle> ServerInfo::Write(const ServerInfo &info) {
   if (llvm::Error error = (*file)->Write(buf.data(), num_bytes).takeError())
     return error;
   return ServerInfoHandle{mcp_registry_entry_path.GetPath()};
-}
-
-llvm::Error ServerInfo::Remove(lldb::pid_t pid) {
-  std::string path = GetServerInfoPath(pid).GetPath();
-  // A missing entry is not an error. sys::fs::remove already reports success
-  // when the file is gone.
-  if (std::error_code ec = sys::fs::remove(path))
-    return errorCodeToError(ec);
-  return llvm::Error::success();
 }
 
 Expected<std::vector<ServerInfo>> ServerInfo::Load() {

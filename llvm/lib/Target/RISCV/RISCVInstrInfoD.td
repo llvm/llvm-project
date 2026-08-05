@@ -38,7 +38,6 @@ def GPRPairAsFPR : AsmOperandClass {
   let ParserMethod = "parseGPRPairAsFPR64";
   let PredicateMethod = "isGPRPairAsFPR64";
   let RenderMethod = "addRegOperands";
-  let DiagnosticString = "register must be an even-numbered GPR when used as an FP operand";
 }
 
 def GPRF64AsFPR : AsmOperandClass {
@@ -46,7 +45,6 @@ def GPRF64AsFPR : AsmOperandClass {
   let PredicateMethod = "isGPRAsFPR";
   let ParserMethod = "parseGPRAsFPR64";
   let RenderMethod = "addRegOperands";
-  let DiagnosticString = "register must be a GPR when used as an FP operand";
 }
 
 def FPR64INX : RegisterOperand<GPR> {

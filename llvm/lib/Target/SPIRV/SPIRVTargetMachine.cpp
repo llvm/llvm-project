@@ -16,7 +16,6 @@
 #include "SPIRVCBufferAccess.h"
 #include "SPIRVCtorDtorLowering.h"
 #include "SPIRVEmitIntrinsics.h"
-#include "SPIRVFinalizeShaderLinkage.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizeImplicitBinding.h"
 #include "SPIRVLegalizePointerCast.h"
@@ -76,7 +75,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVPrepareGlobalsLegacyPass(PR);
   initializeSPIRVLegalizeImplicitBindingLegacyPass(PR);
   initializeSPIRVCtorDtorLoweringLegacyPass(PR);
-  initializeSPIRVFinalizeShaderLinkageLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -188,13 +186,10 @@ void SPIRVPassConfig::addIRPasses() {
 
   TargetPassConfig::addIRPasses();
 
-  if (TM.getSubtargetImpl()->isShader()) {
-    if (getOptLevel() != CodeGenOptLevel::None)
-      addPass(createSPIRVFinalizeShaderLinkagePass(TM));
-  } else {
-    // Variadic function calls aren't supported in shader code.
-    // This needs to come before SPIRVPrepareFunctions because this
-    // may introduce intrinsic calls.
+  // Variadic function calls aren't supported in shader code.
+  // This needs to come before SPIRVPrepareFunctions because this
+  // may introduce intrinsic calls.
+  if (!TM.getSubtargetImpl()->isShader()) {
     addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
   }
 

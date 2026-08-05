@@ -1,4 +1,0 @@
-RUN: %cpp_compiler %S/NullDerefTest.cpp -o %t-SimpleCmpTest
-RUN: %run %t-SimpleCmpTest -seed=-1 -runs=0 2>&1 | FileCheck %s --check-prefix=CHECK_SEED_MINUS_ONE
-CHECK_SEED_MINUS_ONE: Seed: 4294967295
-

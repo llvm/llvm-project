@@ -342,10 +342,6 @@ public:
   /// is read.
   virtual void PragmaAssumeNonNullEnd(SourceLocation Loc) {}
 
-  /// Callback invoked when a \#pragma clang __set_pp_state directive is read.
-  virtual void PragmaSetPPState(SourceLocation Loc, IdentifierInfo *MacroName,
-                                std::uint64_t Value) {}
-
   /// Called by Preprocessor::HandleMacroExpandedIdentifier when a
   /// macro invocation is found.
   virtual void MacroExpands(const Token &MacroNameTok,
@@ -702,12 +698,6 @@ public:
   void PragmaAssumeNonNullEnd(SourceLocation Loc) override {
     First->PragmaAssumeNonNullEnd(Loc);
     Second->PragmaAssumeNonNullEnd(Loc);
-  }
-
-  void PragmaSetPPState(SourceLocation Loc, IdentifierInfo *MacroName,
-                        std::uint64_t Value) override {
-    First->PragmaSetPPState(Loc, MacroName, Value);
-    Second->PragmaSetPPState(Loc, MacroName, Value);
   }
 
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,

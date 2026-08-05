@@ -1,3 +1,0 @@
-; RUN: llvm-profgen --perfscript %S/Inputs/invalid-short-lbr.perfscript --populate-profile-symbol-list --show-density --output=%t --binary %S/Inputs/noinline-cs-noprobe.perfbin | FileCheck %s
-
-; CHECK-NOT: error: Invalid perf script input!

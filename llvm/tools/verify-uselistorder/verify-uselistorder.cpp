@@ -73,7 +73,7 @@ namespace {
 struct TempFile {
   std::string Filename;
   FileRemover Remover;
-  bool init(const std::string &Ext, bool IsText = false);
+  bool init(const std::string &Ext);
   bool writeBitcode(const Module &M) const;
   bool writeAssembly(const Module &M) const;
   std::unique_ptr<Module> readBitcode(LLVMContext &Context) const;
@@ -106,12 +106,10 @@ struct ValueMapping {
 
 } // end namespace
 
-bool TempFile::init(const std::string &Ext, bool IsText) {
+bool TempFile::init(const std::string &Ext) {
   SmallVector<char, 64> Vector;
   LLVM_DEBUG(dbgs() << " - create-temp-file\n");
-  if (auto EC = sys::fs::createTemporaryFile("uselistorder", Ext, Vector,
-                                             IsText ? sys::fs::OF_Text
-                                                    : sys::fs::OF_None)) {
+  if (auto EC = sys::fs::createTemporaryFile("uselistorder", Ext, Vector)) {
     errs() << "verify-uselistorder: error: " << EC.message() << "\n";
     return true;
   }
@@ -369,7 +367,7 @@ static void verifyAfterRoundTrip(const Module &M,
 
 static void verifyBitcodeUseListOrder(const Module &M) {
   TempFile F;
-  if (F.init("bc", /*IsText=*/false))
+  if (F.init("bc"))
     report_fatal_error("failed to initialize bitcode file");
 
   if (F.writeBitcode(M))
@@ -381,7 +379,7 @@ static void verifyBitcodeUseListOrder(const Module &M) {
 
 static void verifyAssemblyUseListOrder(const Module &M) {
   TempFile F;
-  if (F.init("ll", /*IsText=*/true))
+  if (F.init("ll"))
     report_fatal_error("failed to initialize assembly file");
 
   if (F.writeAssembly(M))

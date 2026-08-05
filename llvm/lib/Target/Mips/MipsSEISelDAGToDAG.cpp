@@ -40,6 +40,7 @@ bool MipsSEDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
 }
 
 void MipsSEDAGToDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<DominatorTreeWrapperPass>();
   SelectionDAGISelLegacy::getAnalysisUsage(AU);
 }
 

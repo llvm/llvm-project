@@ -136,26 +136,6 @@ template <typename F> static bool usesInput(const ArgList &Args, F &&Fn) {
   });
 }
 
-static bool isIncludeDirArg(StringRef Arg) {
-  return Arg == "-internal-isystem" || Arg == "-internal-externc-isystem" ||
-         Arg == "-isystem" || Arg == "-cxx-isystem" || Arg == "-idirafter";
-}
-
-static void printCXXStdlibIncludeDirs(const ToolChain &TC,
-                                      const ArgList &Args) {
-  ArgStringList CC1Args;
-  if (Args.hasArg(options::OPT_stdlibxx_isystem))
-    TC.AddClangCXXStdlibIsystemArgs(Args, CC1Args);
-  else
-    TC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);
-
-  for (size_t I = 0; I < CC1Args.size(); ++I) {
-    StringRef Arg(CC1Args[I]);
-    if (isIncludeDirArg(Arg) && I + 1 < CC1Args.size())
-      llvm::outs() << CC1Args[++I] << '\n';
-  }
-}
-
 CUIDOptions::CUIDOptions(llvm::opt::DerivedArgList &Args, const Driver &D)
     : UseCUID(Kind::Hash) {
   if (Arg *A = Args.getLastArg(options::OPT_fuse_cuid_EQ)) {
@@ -961,26 +941,27 @@ static TripleSet inferOffloadToolchains(Compilation &C,
   TripleSet Triples;
   for (llvm::StringRef Arch : Archs) {
     OffloadArch ID = StringToOffloadArch(Arch);
-    if (ID.isUnknown())
+    if (ID == OffloadArch::Unknown)
       ID = StringToOffloadArch(
           getProcessorFromTargetID(llvm::Triple("amdgcn-amd-amdhsa"), Arch));
 
-    if (Kind == Action::OFK_HIP && !ID.isAMDGPU() && !ID.isSPIRV()) {
+    if (Kind == Action::OFK_HIP && !IsAMDOffloadArch(ID)) {
       C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
           << "HIP" << Arch;
       return {};
     }
-    if (Kind == Action::OFK_Cuda && !ID.isNVPTX()) {
+    if (Kind == Action::OFK_Cuda && !IsNVIDIAOffloadArch(ID)) {
       C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
           << "CUDA" << Arch;
       return {};
     }
-    if (Kind == Action::OFK_OpenMP && (ID.isUnknown() || ID.isUnused())) {
+    if (Kind == Action::OFK_OpenMP &&
+        (ID == OffloadArch::Unknown || ID == OffloadArch::Unused)) {
       C.getDriver().Diag(clang::diag::err_drv_failed_to_deduce_target_from_arch)
           << Arch;
       return {};
     }
-    if (ID.isUnknown() || ID.isUnused()) {
+    if (ID == OffloadArch::Unknown || ID == OffloadArch::Unused) {
       C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
           << "offload" << Arch;
       return {};
@@ -2693,16 +2674,6 @@ bool Driver::HandleImmediateArgs(Compilation &C) {
     return false;
   }
 
-  if (C.getArgs().hasArg(options::OPT_print_cxx_stdlib)) {
-    llvm::outs() << TC.GetCXXStdlibName(C.getArgs()) << '\n';
-    return false;
-  }
-
-  if (C.getArgs().hasArg(options::OPT_print_cxx_stdlib_include_dirs)) {
-    printCXXStdlibIncludeDirs(TC, C.getArgs());
-    return false;
-  }
-
   if (C.getArgs().hasArg(options::OPT_print_std_module_manifest_path)) {
     llvm::outs() << GetStdModuleManifestPath(C, C.getDefaultToolChain())
                  << '\n';
@@ -3465,7 +3436,7 @@ class OffloadingActionBuilder final {
     bool Relocatable = false;
 
     /// Default GPU architecture if there's no one specified.
-    OffloadArch DefaultOffloadArch = OffloadArch::getUnknown();
+    OffloadArch DefaultOffloadArch = OffloadArch::Unknown;
 
     /// Compilation unit ID specified by option '-fuse-cuid=' or'-cuid='.
     const CUIDOptions &CUIDOpts;
@@ -3643,7 +3614,7 @@ class OffloadingActionBuilder final {
     CudaActionBuilder(Compilation &C, DerivedArgList &Args,
                       const InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_Cuda) {
-      DefaultOffloadArch = OffloadArch::CudaDefault();
+      DefaultOffloadArch = OffloadArch::CudaDefault;
     }
 
     ActionBuilderReturnCode
@@ -3768,7 +3739,7 @@ class OffloadingActionBuilder final {
                      const InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_HIP) {
 
-      DefaultOffloadArch = OffloadArch::HIPDefault();
+      DefaultOffloadArch = OffloadArch::HIPDefault;
 
       if (Args.hasArg(options::OPT_fhip_emit_relocatable,
                       options::OPT_fno_hip_emit_relocatable)) {
@@ -4541,14 +4512,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   bool UseNewOffloadingDriver = Args.hasFlag(
       options::OPT_offload_new_driver, options::OPT_no_offload_new_driver,
       C.getActiveOffloadKinds() != Action::OFK_None);
-  bool HIPRDCDeviceOnlyFatBin =
-      UseNewOffloadingDriver && C.isOffloadingHostKind(Action::OFK_HIP) &&
-      offloadDeviceOnly() && Args.hasArg(options::OPT_hip_link) &&
-      Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false) &&
-      getFinalPhase(Args) == phases::Link &&
-      !Args.hasArg(options::OPT_emit_llvm) &&
-      Args.hasFlag(options::OPT_gpu_bundle_output,
-                   options::OPT_no_gpu_bundle_output, true);
 
   // Builder to be used to build offloading actions.
   std::unique_ptr<OffloadingActionBuilder> OffloadBuilder =
@@ -4573,12 +4536,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
     // Build the pipeline for this file.
     Action *Current = C.MakeAction<InputAction>(*InputArg, InputType);
-
-    // Device-only HIP links consume packaged offload bitcode directly.
-    if (HIPRDCDeviceOnlyFatBin && InputType == types::TY_LLVM_BC) {
-      LinkerInputs.push_back(Current);
-      continue;
-    }
 
     std::string CUID;
     if (CUIDOpts.isEnabled() && types::isSrcFile(InputType)) {
@@ -4706,9 +4663,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       LA = C.MakeAction<StaticLibJobAction>(LinkerInputs, types::TY_Image);
     } else if (UseNewOffloadingDriver ||
                Args.hasArg(options::OPT_offload_link)) {
-      LA = C.MakeAction<LinkerWrapperJobAction>(
-          LinkerInputs,
-          HIPRDCDeviceOnlyFatBin ? types::TY_HIP_FATBIN : types::TY_Image);
+      LA = C.MakeAction<LinkerWrapperJobAction>(LinkerInputs, types::TY_Image);
       LA->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
                                    /*BA=*/{});
     } else {
@@ -4881,21 +4836,22 @@ static StringRef getCanonicalArchString(Compilation &C,
   // expecting the triple to be only NVPTX / AMDGPU.
   OffloadArch Arch =
       StringToOffloadArch(getProcessorFromTargetID(Triple, ArchStr));
-  if (Triple.isNVPTX() && (Arch.isUnknown() || !Arch.isNVPTX())) {
+  if (Triple.isNVPTX() &&
+      (Arch == OffloadArch::Unknown || !IsNVIDIAOffloadArch(Arch))) {
     C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
         << "CUDA" << ArchStr;
     return StringRef();
   } else if (Triple.isAMDGPU() &&
-             (Arch.isUnknown() || (!Arch.isAMDGPU() && !Arch.isSPIRV()))) {
+             (Arch == OffloadArch::Unknown || !IsAMDOffloadArch(Arch))) {
     C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
         << "HIP" << ArchStr;
     return StringRef();
   }
 
-  if (Arch.isNVPTX())
+  if (IsNVIDIAOffloadArch(Arch))
     return Args.MakeArgStringRef(OffloadArchToString(Arch));
 
-  if (Arch.isAMDGPU() || Arch.isSPIRV()) {
+  if (IsAMDOffloadArch(Arch)) {
     llvm::StringMap<bool> Features;
     std::optional<StringRef> Arch = parseTargetID(Triple, ArchStr, &Features);
     if (!Arch) {
@@ -4990,12 +4946,12 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
   if (Archs.empty()) {
     if (Kind == Action::OFK_Cuda) {
       Archs.insert(OffloadArchToString(TC.getTriple().isSPIRV()
-                                           ? OffloadArch::getUnused()
-                                           : OffloadArch::CudaDefault()));
+                                           ? OffloadArch::Unused
+                                           : OffloadArch::CudaDefault));
     } else if (Kind == Action::OFK_HIP) {
       Archs.insert(OffloadArchToString(TC.getTriple().isSPIRV()
-                                           ? OffloadArch::getGeneric()
-                                           : OffloadArch::HIPDefault()));
+                                           ? OffloadArch::Generic
+                                           : OffloadArch::HIPDefault));
     } else if (Kind == Action::OFK_SYCL) {
       Archs.insert(StringRef());
     } else if (Kind == Action::OFK_OpenMP) {

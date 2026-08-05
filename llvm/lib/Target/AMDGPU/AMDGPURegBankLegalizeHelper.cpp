@@ -644,7 +644,7 @@ bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI,
     NumLoads = LoadSize / 128;
     Ty = Ty.divide(NumLoads);
   }
-  for (int I = 0; I < NumLoads; ++I)
+  for (int i = 0; i < NumLoads; ++i)
     LoadParts.emplace_back(MRI.createVirtualRegister({VgprRB, Ty}));
   MachineMemOperand *OrigMMO = *MI.memoperands_begin();
   const Align Alignment = OrigMMO->getAlign();
@@ -654,6 +654,9 @@ bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI,
   int64_t ImmOffset = 0;
   unsigned MMOOffset = setBufferOffsets(B, MI.getOperand(2).getReg(), VOffset,
                                         SOffset, ImmOffset, Alignment);
+  // Use the MMO size from the original instruction rather than the (possibly
+  // widened) register type. E.g. 96-bit loads are widened to 128-bit during
+  // legalization but the MMO still reflects the original 96-bit access size.
   const unsigned MemSize = divideCeil(OrigMMO->getSize().getValue(), NumLoads);
   MachineMemOperand *BaseMMO = MF.getMachineMemOperand(OrigMMO, 0, MemSize);
   if (MMOOffset != 0)
@@ -662,7 +665,6 @@ bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI,
   // instead. We can assume that the buffer is unswizzled.
   Register RSrc = MI.getOperand(1).getReg();
   Register VIndex = B.buildConstant(VgprRB_I32, 0).getReg(0);
-  unsigned CachePolicy = MI.getOperand(3).getImm();
   unsigned Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD;
   switch (MI.getOpcode()) {
   case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SBYTE:
@@ -680,17 +682,17 @@ bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI,
   default:
     break;
   }
-  for (int I = 0; I < NumLoads; ++I) {
+  for (int i = 0; i < NumLoads; ++i) {
     B.buildInstr(Opc)
-        .addDef(LoadParts[I])       // vdata
+        .addDef(LoadParts[i])       // vdata
         .addUse(RSrc)               // rsrc
         .addUse(VIndex)             // vindex
         .addUse(VOffset)            // voffset
         .addUse(SOffset)            // soffset
-        .addImm(ImmOffset + 16 * I) // offset(imm)
-        .addImm(CachePolicy)        // cachepolicy, swizzled buffer(imm)
+        .addImm(ImmOffset + 16 * i) // offset(imm)
+        .addImm(0)                  // cachepolicy, swizzled buffer(imm)
         .addImm(0)                  // idxen(imm)
-        .addMemOperand(MF.getMachineMemOperand(BaseMMO, 16 * I, MemSize));
+        .addMemOperand(MF.getMachineMemOperand(BaseMMO, 16 * i, MemSize));
   }
   if (NumLoads == 1)
     B.buildCopy(Dst, LoadParts[0]);
@@ -2312,10 +2314,8 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       assert(RB == VccRB || RB == SgprRB);
       if (RB == SgprRB) {
         auto Aext = B.buildAnyExt(SgprRB_I32, Reg);
-        auto Cst1 = B.buildConstant(SgprRB_I32, 1);
-        auto BoolInReg = B.buildAnd(SgprRB_I32, Aext, Cst1);
-        auto CopyVcc_Scc = B.buildInstr(AMDGPU::G_AMDGPU_COPY_VCC_SCC,
-                                        {VccRB_S1}, {BoolInReg});
+        auto CopyVcc_Scc =
+            B.buildInstr(AMDGPU::G_AMDGPU_COPY_VCC_SCC, {VccRB_S1}, {Aext});
         Op.setReg(CopyVcc_Scc.getReg(0));
       }
       break;

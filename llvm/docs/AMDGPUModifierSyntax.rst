@@ -2,6 +2,8 @@
 Syntax of AMDGPU Instruction Modifiers
 ======================================
 
+.. contents::
+   :local:
 
 Conventions
 ===========

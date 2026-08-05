@@ -2,6 +2,9 @@
 Test-Suite Extensions
 =====================
 
+.. contents::
+   :depth: 1
+   :local:
 
 Abstract
 ========

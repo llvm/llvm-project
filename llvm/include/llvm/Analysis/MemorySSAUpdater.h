@@ -255,7 +255,7 @@ private:
   getPreviousDefFromEnd(BasicBlock *,
                         DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> &);
   MemoryAccess *
-  getPreviousDefIterative(BasicBlock *,
+  getPreviousDefRecursive(BasicBlock *,
                           DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> &);
   MemoryAccess *recursePhi(MemoryAccess *Phi);
   MemoryAccess *tryRemoveTrivialPhi(MemoryPhi *Phi);

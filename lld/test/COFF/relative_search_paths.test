@@ -1,4 +1,0 @@
-We should be able to find libraries with relative search paths.
-# RUN: mkdir -p %t.dir/relative/path
-# RUN: cp %p/Inputs/std64.lib %t.dir/relative/path
-# RUN: lld-link %p/Inputs/hello64.obj /libpath:%t.dir relative/path/std64.lib /entry:main

@@ -223,8 +223,7 @@ bool RISCVPreAllocZilsdOpt::canFormLdSdPair(MachineInstr *MI0,
   if (FirstReg == SecondReg) {
     const MachineInstr *FirstOpDefInst = MRI->getUniqueVRegDef(FirstReg);
     if (FirstOpDefInst->isCopy() &&
-        FirstOpDefInst->getOperand(1).getReg() == RISCV::X0 &&
-        MRI->getRegClass(FirstReg)->contains(RISCV::X0))
+        FirstOpDefInst->getOperand(1).getReg() == RISCV::X0)
       return true;
     return false;
   }

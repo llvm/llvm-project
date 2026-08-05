@@ -69,10 +69,6 @@ public:
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override;
 
-  void emitBundleAlignMode(Align Alignment) override;
-  void emitBundleLock(bool AlignToEnd, const MCSubtargetInfo &STI) override;
-  void emitBundleUnlock(const MCSubtargetInfo &STI) override;
-
   // This is final. Override MCTargetStreamer::finish instead for
   // target-specific code.
   void finishImpl() final;
@@ -136,7 +132,6 @@ private:
 
   // GNU attributes that will get emitted at the end of the asm file.
   SmallVector<AttributeItem, 64> GNUAttributes;
-  MCBoundaryAlignFragment *BundleBA = nullptr;
 
 public:
   void emitGNUAttribute(unsigned Tag, unsigned Value) override {

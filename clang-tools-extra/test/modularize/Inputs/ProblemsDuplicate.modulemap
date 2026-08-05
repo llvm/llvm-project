@@ -1,9 +1,0 @@
-// ProblemsDuplicate.modulemap
-module DuplicateHeader1 {
-  header "DuplicateHeader1.h"
-  export *
-}
-module DuplicateHeader2 {
-  header "DuplicateHeader2.h"
-  export *
-}

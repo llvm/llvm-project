@@ -277,8 +277,8 @@ public:
                                    BugReporterContext &BRC,
                                    PathSensitiveBugReport &BR) override;
 
-  PathDiagnosticPieceRef getEndPath(const ExplodedNode *N,
-                                    BugReporterContext &BRC,
+  PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
+                                    const ExplodedNode *N,
                                     PathSensitiveBugReport &BR) override;
 };
 
@@ -288,8 +288,8 @@ public:
       : RefCountReportVisitor(Sym, /*IsReleaseUnowned=*/false),
         LastBinding(LastBinding) {}
 
-  PathDiagnosticPieceRef getEndPath(const ExplodedNode *N,
-                                    BugReporterContext &BRC,
+  PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
+                                    const ExplodedNode *N,
                                     PathSensitiveBugReport &BR) override;
 
 private:
@@ -501,7 +501,9 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
     if (const CallExpr *CE = dyn_cast<CallExpr>(S)) {
       // Iterate through the parameter expressions and see if the symbol
       // was ever passed as an argument.
-      for (auto AI = CE->arg_begin(), AE = CE->arg_end(); AI != AE; ++AI) {
+      unsigned i = 0;
+
+      for (auto AI=CE->arg_begin(), AE=CE->arg_end(); AI!=AE; ++AI, ++i) {
 
         // Retrieve the value of the argument.  Is it the symbol
         // we are interested in?
@@ -691,16 +693,16 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
 }
 
 PathDiagnosticPieceRef
-RefCountReportVisitor::getEndPath(const ExplodedNode *EndN,
-                                  BugReporterContext &BRC,
+RefCountReportVisitor::getEndPath(BugReporterContext &BRC,
+                                  const ExplodedNode *EndN,
                                   PathSensitiveBugReport &BR) {
   BR.markInteresting(Sym);
   return BugReporterVisitor::getDefaultEndPath(BRC, EndN, BR);
 }
 
 PathDiagnosticPieceRef
-RefLeakReportVisitor::getEndPath(const ExplodedNode *EndN,
-                                 BugReporterContext &BRC,
+RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
+                                 const ExplodedNode *EndN,
                                  PathSensitiveBugReport &BR) {
 
   // Tell the BugReporterContext to report cases when the tracked symbol is

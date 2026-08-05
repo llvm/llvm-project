@@ -1,2 +1,0 @@
-!where {file: 'simple_prog.cpp', lines: !range [!label start, !label end]}:
-  ? !value i

@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
-#include "WebAssemblyAsmPrinter.h"
-#include "WebAssemblyExceptionInfo.h"
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
@@ -81,9 +79,6 @@ public:
   void addISelPrepare(PassManagerWrapper &PMW) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
   void addPreEmitPass(PassManagerWrapper &PMW) const;
-  void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
-  void addAsmPrinter(PassManagerWrapper &PMW) const;
-  void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
 };
 
 void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
@@ -199,10 +194,10 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(
   // Preparations and optimizations related to register stackification.
   if (getOptLevel() != CodeGenOptLevel::None) {
     // Depend on LiveIntervals and perform some optimizations on it.
-    addMachineFunctionPass(WebAssemblyOptimizeLiveIntervalsPass(), PMW);
+    // TODO(boomanaiden154): WebAssemblyOptimizeLiveIntervals
 
     // Prepare memory intrinsic calls for register stackifying.
-    addMachineFunctionPass(WebAssemblyMemIntrinsicResultsPass(), PMW);
+    // TODO(boomanaiden154): WebAssemblyMemIntrinsicResults
   }
 
   // Mark registers as representing wasm's value stack. This is a key
@@ -210,75 +205,52 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(
   // MemIntrinsicResults above) very late, so that it sees as much code as
   // possible, including code emitted by PEI and expanded by late tail
   // duplication.
-  addMachineFunctionPass(WebAssemblyRegStackifyPass(getOptLevel()), PMW);
+  // TODO(boomanaiden154): WebAssemblyRegStackify
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     // Run the register coloring pass to reduce the total number of registers.
     // This runs after stackification so that it doesn't consider registers
     // that become stackified.
-    addMachineFunctionPass(WebAssemblyRegColoringPass(), PMW);
+    // TODO(boomanaiden154): WebAssemblyRegColoring
   }
 
   // Sort the blocks of the CFG into topological order, a prerequisite for
   // BLOCK and LOOP markers.
-  addMachineFunctionPass(WebAssemblyCFGSortPass(), PMW);
+  // TODO(boomanaiden154): WebAssemblyCFGSort
 
   // Insert BLOCK and LOOP markers.
-  addMachineFunctionPass(WebAssemblyCFGStackifyPass(), PMW);
+  // TODO(boomanaiden154): WebAssemblyCFGStackify
 
   // Insert explicit local.get and local.set operators.
-  if (!WasmDisableExplicitLocals)
-    addMachineFunctionPass(WebAssemblyExplicitLocalsPass(), PMW);
+  if (!WasmDisableExplicitLocals) {
+    // TODO(boomanaiden154): WebAssemblyExplicitLocals
+  }
 
   // Lower br_unless into br_if.
-  addMachineFunctionPass(WebAssemblyLowerBrUnlessPass(), PMW);
+  // TODO(boomanaiden154): WebAssemblyLowerBrUnless
 
   // Perform the very last peephole optimizations on the code.
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addMachineFunctionPass(WebAssemblyPeepholePass(), PMW);
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    // TODO(boomanaiden154): WebAssemblyPeephole
+  }
 
   // Create a mapping from LLVM CodeGen virtual registers to wasm registers.
-  addMachineFunctionPass(WebAssemblyRegNumberingPass(), PMW);
+  // TODO(boomanaiden154): WebAssemblyRegNumbering
 
   // Fix debug_values whose defs have been stackified.
-  if (!WasmDisableExplicitLocals)
-    addMachineFunctionPass(WebAssemblyDebugFixupPass(), PMW);
+  if (!WasmDisableExplicitLocals) {
+    // TODO(boomanaiden154): WebAssemblyDebugFixup
+  }
 
   // Collect information to prepare for MC lowering / asm printing.
-  flushFPMsToMPM(PMW);
-  addModulePass(WebAssemblyMCLowerPrePass(), PMW);
-}
-
-void WebAssemblyCodeGenPassBuilder::addAsmPrinterBegin(
-    PassManagerWrapper &PMW) const {
-  addModulePass(WebAssemblyAsmPrinterBeginPass(), PMW);
-}
-
-void WebAssemblyCodeGenPassBuilder::addAsmPrinter(
-    PassManagerWrapper &PMW) const {
-  addMachineFunctionPass(WebAssemblyAsmPrinterPass(), PMW);
-}
-
-void WebAssemblyCodeGenPassBuilder::addAsmPrinterEnd(
-    PassManagerWrapper &PMW) const {
-  addModulePass(WebAssemblyAsmPrinterEndPass(), PMW);
+  // TODO(boomanaiden154): WebAssemblyMCLowerPrePass
 }
 
 } // namespace
 
-void WebAssemblyTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void WebAssemblyTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "WebAssemblyPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
-  // TODO(boomanaiden154): Move this into the base CodeGenPassBuilder once all
-  // targets that currently implement it have a ported asm-printer pass.
-  if (PIC) {
-    PIC->addClassToPassName(WebAssemblyAsmPrinterBeginPass::name(),
-                            "wasm-asm-printer-begin");
-    PIC->addClassToPassName(WebAssemblyAsmPrinterPass::name(),
-                            "wasm-asm-printer");
-    PIC->addClassToPassName(WebAssemblyAsmPrinterEndPass::name(),
-                            "wasm-asm-printer-end");
-  }
 }
 
 Error WebAssemblyTargetMachine::buildCodeGenPipeline(

@@ -1,5 +1,8 @@
 # TableGen Overview
 
+```{contents}
+:local:
+```
 
 ```{toctree}
 :hidden:

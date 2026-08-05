@@ -308,7 +308,7 @@ public:
   // ex: async -> Async
   //     num_threads -> NumThreads
   std::string getFormattedParserClassName() const {
-    std::string Name = getFormattedName();
+    StringRef Name = getSpellingForIdentifier();
     return BaseRecord::getUpperCamelName(Name, "_");
   }
 

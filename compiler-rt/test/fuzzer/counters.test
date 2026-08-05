@@ -1,8 +1,0 @@
-UNSUPPORTED: ios, target={{(aarch64|arm).*}}
-RUN: %cpp_compiler %S/CounterTest.cpp -o %t-CounterTest
-RUN: not %run %t-CounterTest  -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s --check-prefix=COUNTERS
-
-COUNTERS: INITED {{.*}} {{bits:|ft:}}
-COUNTERS: NEW {{.*}} {{bits:|ft:}} {{[1-9]*}}
-COUNTERS: NEW {{.*}} {{bits:|ft:}} {{[1-9]*}}
-COUNTERS: BINGO

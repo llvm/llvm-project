@@ -25,7 +25,7 @@
 
 namespace llvm {
 
-class AssignGUIDPass : public RequiredPassInfoMixin<AssignGUIDPass> {
+class AssignGUIDPass : public PassInfoMixin<AssignGUIDPass> {
 public:
   AssignGUIDPass() = default;
 
@@ -35,6 +35,8 @@ public:
     AssignGUIDPass::runOnModule(M);
     return PreservedAnalyses::all();
   }
+
+  static bool isRequired() { return true; }
 
   // Let GlobalMerge assign a GUID for merged GVs, instead of needing to
   // traverse all the module; or instead of making GlobalValue::assignGUID

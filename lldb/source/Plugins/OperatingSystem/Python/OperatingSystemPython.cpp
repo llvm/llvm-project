@@ -33,7 +33,6 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
-#include "llvm/Support/FormatVariadic.h"
 
 #include <memory>
 
@@ -121,12 +120,7 @@ OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
       scripted_metadata, exe_ctx, nullptr);
 
   if (!obj_or_err) {
-    std::string msg = llvm::toString(obj_or_err.takeError());
-    if (process)
-      Debugger::ReportError(
-          llvm::formatv("failed to create OperatingSystemPython: {0}", msg)
-              .str(),
-          process->GetTarget().GetDebugger().GetID());
+    llvm::consumeError(obj_or_err.takeError());
     return;
   }
 

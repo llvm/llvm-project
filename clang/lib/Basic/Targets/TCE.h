@@ -29,14 +29,37 @@ namespace targets {
 // target processor and program binary. TCE co-design environment is
 // publicly available in http://tce.cs.tut.fi
 
-static constexpr LangASMap TCEOpenCLAddrSpaceMap = {
-    {LangAS::opencl_global, 1},
-    {LangAS::opencl_local, 3},
-    {LangAS::opencl_constant, 2},
+static const unsigned TCEOpenCLAddrSpaceMap[] = {
+    0, // Default
+    1, // opencl_global
+    3, // opencl_local
+    2, // opencl_constant
+    0, // opencl_private
+    1, // opencl_global_device
+    1, // opencl_global_host
     // FIXME: generic has to be added to the target
-    {LangAS::opencl_generic, 0},
-    {LangAS::opencl_global_device, 1},
-    {LangAS::opencl_global_host, 1},
+    0, // opencl_generic
+    0, // cuda_device
+    0, // cuda_constant
+    0, // cuda_shared
+    0, // sycl_global
+    0, // sycl_global_device
+    0, // sycl_global_host
+    0, // sycl_local
+    0, // sycl_private
+    0, // ptr32_sptr
+    0, // ptr32_uptr
+    0, // ptr64
+    0, // hlsl_groupshared
+    0, // hlsl_constant
+    0, // hlsl_private
+    0, // hlsl_device
+    0, // hlsl_input
+    0, // hlsl_output
+    0, // hlsl_push_constant
+    // Wasm address space values for this target are dummy values,
+    // as it is only enabled for Wasm targets.
+    20, // wasm_funcref
 };
 
 class LLVM_LIBRARY_VISIBILITY TCETargetInfo : public TargetInfo {

@@ -239,9 +239,7 @@ def CIR_ComplexType : CIR_Type<"Complex", "complex", [
 //===----------------------------------------------------------------------===//
 
 def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
-        ["getPreferredAlignment", "getIndexBitwidth", "areCompatible",
-         "verifyEntries"]>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
 ]> {
   let summary = "CIR pointer type";
@@ -882,8 +880,6 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
     /// the storage type when lowering to LLVM IR).  Returns a null type for
     /// empty unions.
     mlir::Type getUnionStorageType(const mlir::DataLayout &dataLayout) const;
-    static mlir::Type getUnionStorageType(const mlir::DataLayout &dataLayout,
-                                          llvm::ArrayRef<mlir::Type> members);
 
     void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
                   mlir::Type padding = {});

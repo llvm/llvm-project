@@ -82,9 +82,7 @@ define i32 @g() {
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP1:%.*]], %[[INNER_LATCH_SPLIT:.*]] ], [ 0, %[[INNER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
 ; CHECK:       [[INNER_LATCH]]:
-; CHECK-NEXT:    br label %[[INNER_LATCH1:.*]]
-; CHECK:       [[INNER_LATCH1]]:
-; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 42, %[[INNER_LATCH]] ]
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 42, %[[OUTER_HEADER]] ]
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_NEXT]], 2
 ; CHECK-NEXT:    br label %[[INNER_EXIT:.*]]

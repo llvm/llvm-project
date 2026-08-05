@@ -12,7 +12,6 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Casting.h"
 
 #include <algorithm>
 #include <limits>
@@ -147,22 +146,16 @@ void RegisterFlags::SetFields(const std::vector<Field> &fields) {
   // The last field may not extend all the way to bit 0.
   if (previous_field && previous_field->GetStart() != 0)
     m_fields.push_back(Field("", 0, previous_field->GetStart() - 1));
-
-  std::vector<const RegisterType *> dependencies;
-  for (const auto &field : m_fields)
-    if (auto enum_type = field.GetEnum())
-      dependencies.push_back(dynamic_cast<const RegisterType *>(enum_type));
-  SetDependencies(std::move(dependencies));
 }
 
 RegisterFlags::RegisterFlags(std::string id, unsigned size,
                              const std::vector<Field> &fields)
-    : RegisterType(RegisterType::eRegisterTypeKindFlags, id), m_size(size) {
+    : m_id(std::move(id)), m_size(size) {
   SetFields(fields);
 }
 
 void RegisterFlags::DumpToLog(Log *log) const {
-  LLDB_LOG(log, "ID: \"{0}\" Size: {1}", GetID().c_str(), m_size);
+  LLDB_LOG(log, "ID: \"{0}\" Size: {1}", m_id.c_str(), m_size);
   for (const Field &field : m_fields)
     field.DumpToLog(log);
 }
@@ -325,7 +318,18 @@ std::string RegisterFlags::DumpEnums(uint32_t max_width) const {
   return strm.GetString().str();
 }
 
-void FieldEnum::ToXMLElement(Stream &strm, const RegisterType *user) const {
+void RegisterFlags::EnumsToXML(Stream &strm, llvm::StringSet<> &seen) const {
+  for (const Field &field : m_fields)
+    if (const FieldEnum *enum_type = field.GetEnum()) {
+      const std::string &id = enum_type->GetID();
+      if (!seen.contains(id)) {
+        enum_type->ToXML(strm, GetSize());
+        seen.insert(id);
+      }
+    }
+}
+
+void FieldEnum::ToXML(Stream &strm, unsigned size) const {
   // Example XML:
   // <enum id="foo" size="4">
   //  <evalue name="bar" value="1"/>
@@ -334,16 +338,10 @@ void FieldEnum::ToXMLElement(Stream &strm, const RegisterType *user) const {
   // it.
 
   strm.Indent();
-  strm << "<enum id=\"" << GetID() << "\"";
-
-  // We don't expect the user of an enum type to be anything but a register,
-  // but we cannot crash if that isn't true.
-  if (const RegisterFlags *flags_type =
-          llvm::dyn_cast_if_present<RegisterFlags>(user)) {
-    // This is the size of the underlying enum type if this were a C type.
-    // In other words, the size of the register in bytes.
-    strm.Printf(" size=\"%d\"", flags_type->GetSize());
-  }
+  strm << "<enum id=\"" << GetID() << "\" ";
+  // This is the size of the underlying enum type if this were a C type.
+  // In other words, the size of the register in bytes.
+  strm.Printf("size=\"%d\"", size);
 
   const Enumerators &enumerators = GetEnumerators();
   if (enumerators.empty()) {
@@ -355,14 +353,14 @@ void FieldEnum::ToXMLElement(Stream &strm, const RegisterType *user) const {
   strm.IndentMore();
   for (const auto &enumerator : enumerators) {
     strm.Indent();
-    enumerator.ToXMLElement(strm);
+    enumerator.ToXML(strm);
     strm.PutChar('\n');
   }
   strm.IndentLess();
   strm.Indent("</enum>\n");
 }
 
-void FieldEnum::Enumerator::ToXMLElement(Stream &strm) const {
+void FieldEnum::Enumerator::ToXML(Stream &strm) const {
   std::string escaped_name;
   llvm::raw_string_ostream escape_strm(escaped_name);
   llvm::printHTMLEscaped(m_name, escape_strm);
@@ -375,13 +373,12 @@ void FieldEnum::Enumerator::DumpToLog(Log *log) const {
 }
 
 void FieldEnum::DumpToLog(Log *log) const {
-  LLDB_LOG(log, "ID: \"{0}\"", GetID().c_str());
+  LLDB_LOG(log, "ID: \"{0}\"", m_id.c_str());
   for (const auto &enumerator : GetEnumerators())
     enumerator.DumpToLog(log);
 }
 
-void RegisterFlags::ToXMLElement(Stream &strm, const RegisterType *user) const {
-  (void)user;
+void RegisterFlags::ToXML(Stream &strm) const {
   // Example XML:
   // <flags id="cpsr_flags" size="4">
   //   <field name="incorrect" start="0" end="0"/>
@@ -397,14 +394,14 @@ void RegisterFlags::ToXMLElement(Stream &strm, const RegisterType *user) const {
 
     strm << "\n";
     strm.IndentMore();
-    field.ToXMLElement(strm);
+    field.ToXML(strm);
     strm.IndentLess();
   }
   strm.PutChar('\n');
   strm.Indent("</flags>\n");
 }
 
-void RegisterFlags::Field::ToXMLElement(Stream &strm) const {
+void RegisterFlags::Field::ToXML(Stream &strm) const {
   // Example XML with an enum:
   // <field name="correct" start="0" end="0" type="some_enum">
   // Without:
@@ -426,8 +423,7 @@ void RegisterFlags::Field::ToXMLElement(Stream &strm) const {
 }
 
 FieldEnum::FieldEnum(std::string id, const Enumerators &enumerators)
-    : RegisterType(RegisterType::eRegisterTypeKindEnum, id),
-      m_enumerators(enumerators) {
+    : m_id(id), m_enumerators(enumerators) {
   for (const auto &enumerator : m_enumerators) {
     UNUSED_IF_ASSERT_DISABLED(enumerator);
     assert(enumerator.m_name.size() && "Enumerator name cannot be empty");
