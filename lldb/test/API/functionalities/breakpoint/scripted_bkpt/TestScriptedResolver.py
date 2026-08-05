@@ -42,7 +42,6 @@ class TestScriptedResolver(TestBase):
         self.build()
         self.do_test_copy_from_dummy_target()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_scripted_resolver_creation(self):
         self.build()
         target = self.make_target_and_import()
