@@ -664,6 +664,12 @@ const char *Prescanner::SkipWhiteSpaceIncludingEmptyMacros(
   while (true) {
     if (int n{IsSpaceOrTab(p)}) {
       p += n;
+    } else if (IsCComment(p)) {
+      if (const char *after{SkipCComment(p)}) {
+        p = after;
+      } else {
+        break;
+      }
     } else if (preprocessor_.AnyDefinitions() && IsLegalIdentifierStart(*p)) {
       // Skip keyword macros with empty definitions
       const char *q{p + 1};
