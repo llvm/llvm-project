@@ -140,10 +140,11 @@ void UpdateVCEPass::runOnOperation() {
     if (auto maxVersionIfx = dyn_cast<spirv::QueryMaxVersionInterface>(op)) {
       std::optional<spirv::Version> maxVersion = maxVersionIfx.getMaxVersion();
       if (maxVersion && *maxVersion < allowedVersion) {
-        return op->emitError("'") << op->getName() << "' requires max version "
-                                  << spirv::stringifyVersion(*maxVersion)
-                                  << " but target environment allows up to "
-                                  << spirv::stringifyVersion(allowedVersion);
+        return op->emitError("'")
+               << op->getName() << "' is missing after version "
+               << spirv::stringifyVersion(*maxVersion)
+               << " but target environment is "
+               << spirv::stringifyVersion(allowedVersion);
       }
     }
 

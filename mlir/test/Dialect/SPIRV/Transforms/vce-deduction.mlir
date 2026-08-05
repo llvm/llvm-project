@@ -53,7 +53,7 @@ spirv.module Logical GLSL450 attributes {
     #spirv.vce<v1.6, [Kernel], []>, #spirv.resource_limits<>>
 } {
   spirv.func @atomic_compare_exchange_weak(%ptr : !spirv.ptr<i32, Workgroup>, %value : i32, %comparator : i32) -> i32 "None" {
-    // expected-error @+1 {{'spirv.AtomicCompareExchangeWeak' requires max version v1.3 but target environment allows up to v1.6}}
+    // expected-error @+1 {{'spirv.AtomicCompareExchangeWeak' is missing after version v1.3 but target environment is v1.6}}
     %0 = spirv.AtomicCompareExchangeWeak <Workgroup> <Acquire> <None> %ptr, %value, %comparator : !spirv.ptr<i32, Workgroup>
     spirv.ReturnValue %0 : i32
   }
