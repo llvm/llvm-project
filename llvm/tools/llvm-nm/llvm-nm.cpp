@@ -1017,6 +1017,8 @@ static char getSymbolNMTypeChar(COFFImportFile &Obj) {
 static char getSymbolNMTypeChar(GOFFObjectFile &, basic_symbol_iterator I) {
   GOFFSymbolRef Ref(*I);
   Expected<SymbolRef::Type> Type = Ref.getSymbolGOFFType();
+  // TODO: Add a test using yaml2obj once GOFF ESD record support is
+  // available in yaml2obj.
   if (!Type) {
     consumeError(Type.takeError());
     return '?';
@@ -1027,8 +1029,6 @@ static char getSymbolNMTypeChar(GOFFObjectFile &, basic_symbol_iterator I) {
   case SymbolRef::ST_Function:
     return 't';
   default:
-    // TODO: Add a test using yaml2obj once GOFF ESD record support is
-    // available in yaml2obj.
     llvm_unreachable("GOFFObjectFile::getSymbolType returned unexpected type");
   }
 }
