@@ -1712,7 +1712,7 @@ To make(const parser::OmpClause::To &inp,
       // clang-format on
   );
   CLAUSET_ENUM_CONVERT( //
-      convertPre, parser::OmpPresentModifier::Value, From::Expectation,
+      convertPre, parser::OmpPresentModifier::Value, To::Expectation,
       // clang-format off
       MS(Present, Present)
       // clang-format on
@@ -1725,10 +1725,10 @@ To make(const parser::OmpClause::To &inp,
   auto *t3 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
   auto &t4 = std::get<parser::OmpObjectList>(inp.v.t);
 
-  std::optional<From::Expectation> maybeExp = //
+  std::optional<To::Expectation> maybeExp = //
       t0   ? maybeApplyToV(convertExp, t0)
       : t1 ? maybeApplyToV(convertPre, t1)
-           : std::optional<From::Expectation>{};
+           : std::optional<To::Expectation>{};
 
   auto mappers = [&]() -> std::optional<List<Mapper>> {
     if (t2)
