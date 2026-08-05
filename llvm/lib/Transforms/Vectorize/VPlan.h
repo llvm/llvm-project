@@ -461,12 +461,13 @@ public:
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
     VPReductionPHISC,
+    VPMonotonicPHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes
     VPFirstPHISC = VPWidenPHISC,
     VPFirstHeaderPHISC = VPCurrentIterationPHISC,
-    VPLastHeaderPHISC = VPReductionPHISC,
-    VPLastPHISC = VPReductionPHISC,
+    VPLastHeaderPHISC = VPMonotonicPHISC,
+    VPLastPHISC = VPMonotonicPHISC,
   };
 
   VPRecipeBase(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
@@ -659,6 +660,7 @@ public:
     case VPRecipeBase::VPReductionPHISC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
+    case VPRecipeBase::VPMonotonicPHISC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveEVLSC:
@@ -2080,7 +2082,9 @@ public:
                                DL),
         Alignment(Alignment) {
     assert((VectorIntrinsicID == Intrinsic::experimental_vp_strided_load ||
-            VectorIntrinsicID == Intrinsic::experimental_vp_strided_store) &&
+            VectorIntrinsicID == Intrinsic::experimental_vp_strided_store ||
+            VectorIntrinsicID == Intrinsic::masked_compressstore ||
+            VectorIntrinsicID == Intrinsic::masked_expandload) &&
            "Unexpected intrinsic");
   }
 
@@ -2956,6 +2960,57 @@ protected:
   void printRecipe(raw_ostream &O, const Twine &Indent,
                    VPSlotTracker &SlotTracker) const override;
 #endif
+};
+
+/// A recipe for handling monotonic phis. The start value is the first operand
+/// of the recipe and the incoming value from the backedge is the second
+/// operand.
+class VPMonotonicPHIRecipe : public VPHeaderPHIRecipe {
+  MonotonicDescriptor Desc;
+
+public:
+  VPMonotonicPHIRecipe(PHINode *Phi, const MonotonicDescriptor &Desc,
+                       VPValue &Start, VPValue &BackedgeValue)
+      : VPHeaderPHIRecipe(VPRecipeBase::VPMonotonicPHISC, Phi, &Start),
+        Desc(Desc) {
+
+    addOperand(&BackedgeValue);
+  }
+
+  ~VPMonotonicPHIRecipe() override = default;
+
+  VPMonotonicPHIRecipe *clone() override {
+    auto *R =
+        new VPMonotonicPHIRecipe(cast<PHINode>(getUnderlyingInstr()), Desc,
+                                 *getStartValue(), *getBackedgeValue());
+    return R;
+  }
+
+  VP_CLASSOF_IMPL(VPRecipeBase::VPMonotonicPHISC)
+
+  static inline bool classof(const VPHeaderPHIRecipe *R) {
+    return R->getVPRecipeID() == VPRecipeBase::VPMonotonicPHISC;
+  }
+
+  void execute(VPTransformState &State) override;
+
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
+#endif
+
+  const MonotonicDescriptor &getDescriptor() const { return Desc; }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
@@ -4352,7 +4407,8 @@ struct CastInfoMixinImpl
 template <>
 struct CastInfo<VPPhiAccessors, VPRecipeBase *>
     : vpdetail::CastInfoMixinImpl<VPPhiAccessors, VPPhi, VPIRPhi,
-                                  VPWidenPHIRecipe, VPHeaderPHIRecipe> {};
+                                  VPWidenPHIRecipe, VPHeaderPHIRecipe,
+                                  VPMonotonicPHIRecipe> {};
 
 template <>
 struct CastInfo<VPPhiAccessors, const VPRecipeBase *>

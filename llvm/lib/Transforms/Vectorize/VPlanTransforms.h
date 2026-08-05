@@ -170,6 +170,7 @@ struct VPlanTransforms {
       const VPDominatorTree &VPDT,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
       const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
+      const MapVector<PHINode *, MonotonicDescriptor> &MonotonicPHIs,
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
       const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering);
 
@@ -589,6 +590,13 @@ struct VPlanTransforms {
   /// extracts of the last active lane edge.
   static void adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
                                                     VFRange &Range);
+
+  /// Adjust the backedge value for monotonic PHIs. Changes the update to be
+  /// number of active lanes of the predicated edge between the step increment
+  /// and the loop (multiplied by the step size).
+  static void adjustMonotonicPhiBackedgeUsers(VPlan &Plan,
+                                              VPBasicBlock *HeaderVPBB,
+                                              PredicatedScalarEvolution &PSE);
 
   /// Optimize FindLast reductions selecting IVs (or expressions of IVs) by
   /// converting them to FindIV reductions, if their IV range excludes a

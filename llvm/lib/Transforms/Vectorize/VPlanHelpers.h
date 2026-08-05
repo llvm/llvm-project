@@ -360,6 +360,10 @@ struct VPCostContext {
   /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
   uint64_t getPredBlockCostDivisor(BasicBlock *BB) const;
 
+  /// Returns true if \p I is known to be uniform after vectorization.
+  /// Forwards to LoopVectorizationCostModel::isUniformAfterVectorization.
+  bool isUniformAfterVectorization(Instruction *I, ElementCount VF) const;
+
   /// Returns true if \p I is known to be scalarized at \p VF.
   bool willBeScalarized(Instruction *I, ElementCount VF) const;
 

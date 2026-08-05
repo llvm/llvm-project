@@ -4368,6 +4368,55 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
   }
 }
 
+void VPlanTransforms::adjustMonotonicPhiBackedgeUsers(
+    VPlan &Plan, VPBasicBlock *HeaderVPBB, PredicatedScalarEvolution &PSE) {
+  for (VPRecipeBase &R : HeaderVPBB->phis()) {
+    auto *MonotonicPhi = dyn_cast<VPMonotonicPHIRecipe>(&R);
+    if (!MonotonicPhi)
+      continue;
+
+    // Obtain mask value for the predicate edge from the last VPBlendRecipe in
+    // chain.
+    VPValue *Chain = MonotonicPhi->getBackedgeValue();
+    VPValue *Mask = nullptr;
+    while (auto *BlendR = dyn_cast<VPBlendRecipe>(Chain))
+      for (unsigned I = 0, E = BlendR->getNumIncomingValues(); I != E; ++I)
+        if (auto *IncomingVal = BlendR->getIncomingValue(I);
+            IncomingVal != MonotonicPhi) {
+          Chain = IncomingVal;
+          Mask = BlendR->getMask(I);
+          break;
+        }
+    assert(Mask);
+
+    auto &Desc = MonotonicPhi->getDescriptor();
+    auto &SE = *PSE.getSE();
+    auto *Step = vputils::getOrCreateVPValueForSCEVExpr(
+        Plan, Desc.getExpr()->getStepRecurrence(SE));
+
+    auto *BackedgeVal = MonotonicPhi->getIncomingValue(1);
+    auto *InsertBlock = BackedgeVal->getDefiningRecipe()->getParent();
+    VPBuilder Builder(InsertBlock, InsertBlock->getFirstNonPhi());
+
+    Type *UpdateType = MonotonicPhi->getScalarType();
+    if (UpdateType->isPointerTy())
+      UpdateType = Plan.getDataLayout().getIndexType(UpdateType);
+
+    auto *HandledLanes = Builder.createNaryOp(
+        VPInstruction::NumActiveLanes, {Mask}, nullptr, {}, {},
+        DebugLoc::getUnknown(), "handled.lanes", UpdateType);
+    VPValue *Offset =
+        Builder.createOverflowingOp(Instruction::Mul, {Step, HandledLanes});
+    VPValue *Update;
+    if (MonotonicPhi->getScalarType()->isPointerTy())
+      Update = Builder.createPtrAdd(MonotonicPhi, Offset);
+    else
+      Update = Builder.createAdd(MonotonicPhi, Offset, {}, "monotonic.add");
+
+    BackedgeVal->replaceAllUsesWith(Update);
+  }
+}
+
 /// Check if \p V is a binary expression of a widened IV and a loop-invariant
 /// value. Returns the widened IV if found, nullptr otherwise.
 static VPWidenIntOrFpInductionRecipe *getExpressionIV(VPValue *V) {

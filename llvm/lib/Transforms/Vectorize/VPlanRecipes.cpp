@@ -1219,6 +1219,7 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
         return ReplicateRecipe->isPredicated() ? TTI::CastContextHint::Masked
                                                : TTI::CastContextHint::Normal;
       }
+
       const auto *WidenMemoryRecipe = dyn_cast<VPWidenMemoryRecipe>(R);
       if (WidenMemoryRecipe == nullptr)
         return TTI::CastContextHint::None;
@@ -1458,6 +1459,12 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
                                   VectorTy, Ctx.CostKind, /*Mask=*/{},
                                   /*Index=*/0);
+  }
+  case VPInstruction::NumActiveLanes: {
+    Type *ElementTy = getOperand(0)->getScalarType();
+    auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
+    return Ctx.TTI.getArithmeticReductionCost(Instruction::Add, VectorTy,
+                                              std::nullopt, Ctx.CostKind);
   }
   case VPInstruction::ExtractLastLane: {
     // Add on the cost of extracting the element.
@@ -2397,7 +2404,7 @@ void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 void VPWidenMemIntrinsicRecipe::execute(VPTransformState &State) {
   CallInst *MemI = createVectorCall(State);
-  auto PtrPos = VPIntrinsic::getMemoryPointerParamPos(getVectorIntrinsicID());
+  auto PtrPos = getVectorMemoryIntrinsicPointerArgIdx(getVectorIntrinsicID());
   assert(PtrPos && "Expected a memory intrinsic with a valid pointer position");
   MemI->addParamAttr(
       *PtrPos, Attribute::getWithAlignment(MemI->getContext(), Alignment));
@@ -2417,13 +2424,13 @@ InstructionCost
 VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
                                        VPCostContext &Ctx) const {
   Type *DataTy;
-  if (auto DataPos = VPIntrinsic::getMemoryDataParamPos(getVectorIntrinsicID()))
+  if (auto DataPos = getVectorStoreIntrinsicDataArgIdx(getVectorIntrinsicID()))
     DataTy = getOperand(*DataPos)->getScalarType();
   else
     DataTy = getScalarType();
   assert(!DataTy->isVoidTy() && "Expected a non-void data type");
   Type *Ty = toVectorTy(DataTy, VF);
-  auto MaskPos = VPIntrinsic::getMaskParamPos(getVectorIntrinsicID());
+  auto MaskPos = getVectorIntrinsicMaskArgIdx(getVectorIntrinsicID());
   assert(MaskPos && "Expected a memory intrinsic with a valid mask position");
   return computeMemIntrinsicCost(getVectorIntrinsicID(), Ty,
                                  !match(getOperand(*MaskPos), m_True()),
@@ -5038,6 +5045,30 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   return vputils::onlyFirstLaneUsed(this);
+}
+
+void VPMonotonicPHIRecipe::execute(VPTransformState &State) {
+  executePhiRecipe(this, *this, State, /*IsScalar=*/true, "monotonic.iv");
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPMonotonicPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
+                                       VPSlotTracker &SlotTracker) const {
+  O << Indent << "MONOTONIC-PHI ";
+
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+InstructionCost VPMonotonicPHIRecipe::computeCost(ElementCount VF,
+                                                  VPCostContext &Ctx) const {
+  auto *Phi = cast<PHINode>(getUnderlyingValue());
+  // The value of a monotonic phi must be uniform across the VF.
+  if (!Ctx.isUniformAfterVectorization(Phi, VF))
+    return InstructionCost::getInvalid();
+  return VPHeaderPHIRecipe::computeCost(VF, Ctx);
 }
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
