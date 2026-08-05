@@ -1,7 +1,7 @@
 add_llvm_component_library(LLVMPISADesc
+  PISAInstPrinter.cpp
   PISAMCAsmInfo.cpp
   PISAMCTargetDesc.cpp
-  PISAInstPrinter.cpp
 
   LINK_COMPONENTS
   CodeGenTypes

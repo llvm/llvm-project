@@ -28,7 +28,7 @@ public:
     llvm_unreachable("unexpected execution");
   }
   Register getFrameRegister(const MachineFunction &MF) const override {
-    return 0;
+    return Register();
   }
 };
 } // namespace llvm
