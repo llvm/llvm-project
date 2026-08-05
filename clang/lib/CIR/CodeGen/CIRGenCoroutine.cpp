@@ -551,6 +551,11 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.restoreInsertionPoint(coroRetRegion);
 
+  cir::CoroEndOp::create(
+      cgm.getBuilder(), openCurlyLoc,
+      mlir::ValueRange{builder.getNullPtr(builder.getVoidPtrTy(), openCurlyLoc),
+                       builder.getBool(false, openCurlyLoc)});
+
   if (auto *ret = cast_or_null<ReturnStmt>(s.getReturnStmt())) {
     // Since we already emitted the return value above, so we shouldn't
     // emit it again here.
