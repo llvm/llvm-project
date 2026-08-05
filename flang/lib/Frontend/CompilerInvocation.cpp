@@ -780,6 +780,9 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   }
 
   opts.outputFile = args.getLastArgValue(clang::options::OPT_o);
+  opts.dependencyOutputFile =
+      args.getLastArgValue(clang::options::OPT_dependency_file);
+  opts.dependencyTargets = args.getAllArgValues(clang::options::OPT_MT);
   opts.showHelp = args.hasArg(clang::options::OPT_help);
   opts.showVersion = args.hasArg(clang::options::OPT_version);
   opts.printSupportedCPUs =
