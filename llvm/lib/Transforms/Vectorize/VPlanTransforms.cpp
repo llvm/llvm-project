@@ -5740,11 +5740,10 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
         StoredValue = StoreR->getStoredValue();
         DataTy = StoredValue->getScalarType();
         IntrinID = Intrinsic::experimental_vp_strided_store;
-      } else if (auto *LoadR = dyn_cast<VPWidenLoadRecipe>(&R)) {
+      } else {
+        auto *LoadR = cast<VPWidenLoadRecipe>(&R);
         DataTy = LoadR->getScalarType();
         IntrinID = Intrinsic::experimental_vp_strided_load;
-      } else {
-        continue;
       }
 
       Align Alignment = MemR->getAlign();
