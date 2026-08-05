@@ -588,10 +588,9 @@ define <4 x float> @vfmax_vv_v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> %m
 ;
 ; AVX512-LABEL: vfmax_vv_v4f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmaxps %xmm0, %xmm1, %xmm2
-; AVX512-NEXT:    vcmpunordps %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovaps %xmm1, %xmm2 {%k1}
-; AVX512-NEXT:    vmovaps %xmm2, %xmm0
+; AVX512-NEXT:    vcmpordps %xmm0, %xmm0, %k1
+; AVX512-NEXT:    vmaxps %xmm0, %xmm1, %xmm1 {%k1}
+; AVX512-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %v = call <4 x float> @llvm.vp.maxnum.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> %m, i32 %evl)
   ret <4 x float> %v
@@ -638,10 +637,9 @@ define <8 x float> @vfmax_vv_v8f32(<8 x float> %va, <8 x float> %vb, <8 x i1> %m
 ;
 ; AVX512-LABEL: vfmax_vv_v8f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmaxps %ymm0, %ymm1, %ymm2
-; AVX512-NEXT:    vcmpunordps %ymm0, %ymm0, %k1
-; AVX512-NEXT:    vmovaps %ymm1, %ymm2 {%k1}
-; AVX512-NEXT:    vmovaps %ymm2, %ymm0
+; AVX512-NEXT:    vcmpordps %ymm0, %ymm0, %k1
+; AVX512-NEXT:    vmaxps %ymm0, %ymm1, %ymm1 {%k1}
+; AVX512-NEXT:    vmovaps %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %v = call <8 x float> @llvm.vp.maxnum.v8f32(<8 x float> %va, <8 x float> %vb, <8 x i1> %m, i32 %evl)
   ret <8 x float> %v
@@ -682,10 +680,9 @@ define <4 x float> @vfmin_vv_v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> %m
 ;
 ; AVX512-LABEL: vfmin_vv_v4f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vminps %xmm0, %xmm1, %xmm2
-; AVX512-NEXT:    vcmpunordps %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovaps %xmm1, %xmm2 {%k1}
-; AVX512-NEXT:    vmovaps %xmm2, %xmm0
+; AVX512-NEXT:    vcmpordps %xmm0, %xmm0, %k1
+; AVX512-NEXT:    vminps %xmm0, %xmm1, %xmm1 {%k1}
+; AVX512-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %v = call <4 x float> @llvm.vp.minnum.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> %m, i32 %evl)
   ret <4 x float> %v
@@ -732,10 +729,9 @@ define <8 x float> @vfmin_vv_v8f32(<8 x float> %va, <8 x float> %vb, <8 x i1> %m
 ;
 ; AVX512-LABEL: vfmin_vv_v8f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vminps %ymm0, %ymm1, %ymm2
-; AVX512-NEXT:    vcmpunordps %ymm0, %ymm0, %k1
-; AVX512-NEXT:    vmovaps %ymm1, %ymm2 {%k1}
-; AVX512-NEXT:    vmovaps %ymm2, %ymm0
+; AVX512-NEXT:    vcmpordps %ymm0, %ymm0, %k1
+; AVX512-NEXT:    vminps %ymm0, %ymm1, %ymm1 {%k1}
+; AVX512-NEXT:    vmovaps %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %v = call <8 x float> @llvm.vp.minnum.v8f32(<8 x float> %va, <8 x float> %vb, <8 x i1> %m, i32 %evl)
   ret <8 x float> %v
