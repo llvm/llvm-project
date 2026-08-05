@@ -8,9 +8,6 @@
 
 // bool isfinite(floating-point-type x); // constexpr since C++23
 
-// We don't control the implementation on windows
-// UNSUPPORTED: windows
-
 #include <cassert>
 #include <cmath>
 #include <limits>

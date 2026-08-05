@@ -392,6 +392,7 @@ namespace __math {
 // To workaround this, we use _LIBCPP_PREFERRED_OVERLOAD to make our overloads stronger than those overloads, which is
 // necessary for constexpr addition in C++23. When _LIBCPP_PREFERRED_OVERLOAD is not supported, we use template
 // overloads as a workaround to avoid conflicts.
+// std::__math::signbit in <__math/traits.h> has the same problem and uses the same workaround.
 
 #      ifdef _LIBCPP_PREFERRED_OVERLOAD
 [[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23
@@ -459,7 +460,9 @@ using std::__math::isunordered;
 
 #      if defined(_LIBCPP_MSVCRT) && _LIBCPP_STD_VER >= 20
 // MS UCRT incorrectly defines some functions in a way not working with integer types. Until C++20, this was worked
-// around by -fdelayed-template-parsing. Since C++20, we can use standard feature "requires" instead.
+// around by -fdelayed-template-parsing. Since C++20, we can use standard feature "requires" instead. The UCRT
+// definitions are also not constexpr, so the __ucrt overloads are constrained on all of is_arithmetic_v rather than
+// just the integer types, which makes them usable in constant expressions as P0533R9 requires since C++23.
 
 // TODO: Remove the workaround once UCRT fixes these functions. Note that this doesn't seem planned as of 2025-07 per
 // https://developercommunity.visualstudio.com/t/10294165.

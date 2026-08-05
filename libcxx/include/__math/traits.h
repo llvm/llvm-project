@@ -25,9 +25,27 @@ namespace __math {
 
 // signbit
 
-// The universal C runtime (UCRT) in the WinSDK provides floating point overloads
-// for std::signbit(). By defining our overloads as templates, we can work around
-// this issue as templates are less preferred than non-template functions.
+// The universal C runtime (UCRT) in the WinSDK provides non-template floating point overloads for std::signbit(), and
+// a non-template function can't outrank another non-template function. We used to declare ours as templates so that
+// the UCRT's would win, but that leaves std::signbit non-constexpr in C++23 on Windows, which P0533R9 requires it to
+// be. _LIBCPP_PREFERRED_OVERLOAD makes ours win instead, the same way <math.h> handles fpclassify, which the UCRT
+// declares in exactly the same shape. Without the attribute we fall back to templates, keeping the old behavior.
+#ifdef _LIBCPP_PREFERRED_OVERLOAD
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool signbit(float __x) _NOEXCEPT {
+  return __builtin_signbit(__x);
+}
+
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool
+signbit(double __x) _NOEXCEPT {
+  return __builtin_signbit(__x);
+}
+
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool
+signbit(long double __x) _NOEXCEPT {
+  return __builtin_signbit(__x);
+}
+#else
 template <class = void>
 [[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool signbit(float __x) _NOEXCEPT {
   return __builtin_signbit(__x);
@@ -42,6 +60,7 @@ template <class = void>
 [[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool signbit(long double __x) _NOEXCEPT {
   return __builtin_signbit(__x);
 }
+#endif
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 [[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
@@ -195,28 +214,41 @@ isunordered(_A1 __x, _A2 __y) _NOEXCEPT {
 
 #if defined(_LIBCPP_MSVCRT) && _LIBCPP_STD_VER >= 20
 namespace __ucrt {
+// The UCRT declares these as unconstrained, non-constexpr function templates, so it isn't only integer arguments that
+// need handling here: without a candidate of our own, floating-point calls resolve to the UCRT's templates too and
+// std::isfinite & friends stay non-constexpr in C++23, violating P0533R9.
+//
+// Constraining ours on is_arithmetic_v covers both. The UCRT's templates and ours have equivalent
+// parameter-type-lists, so neither is more specialized and the more-constrained one wins ([temp.func.order]), which is
+// the same mechanism the two-argument traits below already rely on.
+//
+// Note that we forward to the __math overloads but intentionally do not pull them into this namespace with a
+// using-declaration: the __math ones are constrained through a defaulted template parameter rather than a
+// requires-clause, so their template-parameter-lists are not equivalent to the UCRT's, neither is more specialized,
+// the more-constrained tiebreak does not apply, and integral calls become ambiguous.
+
 template <class _A1>
-  requires is_integral_v<_A1>
-[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isfinite(_A1) noexcept {
-  return true;
+  requires is_arithmetic_v<_A1>
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isfinite(_A1 __x) noexcept {
+  return __math::isfinite(__x);
 }
 
 template <class _A1>
-  requires is_integral_v<_A1>
-[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(_A1) noexcept {
-  return false;
+  requires is_arithmetic_v<_A1>
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(_A1 __x) noexcept {
+  return __math::isinf(__x);
 }
 
 template <class _A1>
-  requires is_integral_v<_A1>
-[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan(_A1) noexcept {
-  return false;
+  requires is_arithmetic_v<_A1>
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan(_A1 __x) noexcept {
+  return __math::isnan(__x);
 }
 
 template <class _A1>
-  requires is_integral_v<_A1>
+  requires is_arithmetic_v<_A1>
 [[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnormal(_A1 __x) noexcept {
-  return __x != 0;
+  return __math::isnormal(__x);
 }
 
 template <class _A1, class _A2>
