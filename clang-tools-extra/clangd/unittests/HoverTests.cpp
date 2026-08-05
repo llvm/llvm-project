@@ -5411,7 +5411,67 @@ TEST(Hover, HLSLInvalidVectorSwizzleNoCrash) {
   auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
   EXPECT_FALSE(H);
 }
+TEST(Hover, HLSLControlFlowAndLoopHints) {
+  struct {
+    const char *const Code;
+    const std::function<void(HoverInfo &)> ExpectedBuilder;
+  } Cases[] = {{
+                   R"hlsl(
+            [numthreads(1, 1, 1)]
+            void main() {
+              [^unroll]
+              for (int i = 0; i < 4; i++) {}
+            }
+          )hlsl",
+                   [](HoverInfo &HI) { HI.Name = "unroll"; }},
+               {
+                   R"hlsl(
+            [numthreads(1, 1, 1)]
+            void main() {
+              [l^oop]
+              for (int i = 0; i < 4; i++) {}
+            }
+          )hlsl",
+                   [](HoverInfo &HI) { HI.Name = "loop"; }},
+               {
+                   R"hlsl(
+            [numthreads(1, 1, 1)]
+            void main() {
+              [b^ranch]
+              if (true) {}
+            }
+          )hlsl",
+                   [](HoverInfo &HI) { HI.Name = "branch"; }},
+               {
+                   R"hlsl(
+            [numthreads(1, 1, 1)]
+            void main() {
+              [f^latten]
+              if (true) {}
+            }
+          )hlsl",
+                   [](HoverInfo &HI) { HI.Name = "flatten"; }}};
 
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    Annotations T(Case.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    configureHLSL(TU);
+    auto AST = TU.build();
+
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+
+    HoverInfo Expected;
+    Case.ExpectedBuilder(Expected);
+
+    EXPECT_EQ(H->Name, Expected.Name);
+
+    if (Expected.Name == "unroll" || Expected.Name == "loop") {
+      EXPECT_FALSE(H->Documentation.empty());
+    }
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
