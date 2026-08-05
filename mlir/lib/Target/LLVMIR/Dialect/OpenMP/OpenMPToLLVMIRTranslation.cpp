@@ -6211,10 +6211,19 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
   bool isWeak = atomicCompareOp.getWeak();
 
   bool savedHandleFPNegZero = ompBuilder->setHandleFPNegZero(true);
-  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
-      ompBuilder->createAtomicCompare(ompLoc, llvmAtomicX, vOpVal, rOpVal, eVal,
-                                      dVal, atomicOrdering, compareOp,
-                                      isXBinopExpr, false, false, isWeak);
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP = [&]() {
+    if (auto failOrder = atomicCompareOp.getFailMemoryOrder()) {
+      llvm::AtomicOrdering failureOrdering = convertAtomicOrdering(*failOrder);
+      return ompBuilder->createAtomicCompare(
+          ompLoc, llvmAtomicX, vOpVal, rOpVal, eVal, dVal, atomicOrdering,
+          compareOp, isXBinopExpr, /*IsPostfixUpdate=*/false,
+          /*IsFailOnly=*/false, failureOrdering, isWeak);
+    }
+    return ompBuilder->createAtomicCompare(
+        ompLoc, llvmAtomicX, vOpVal, rOpVal, eVal, dVal, atomicOrdering,
+        compareOp, isXBinopExpr, /*IsPostfixUpdate=*/false,
+        /*IsFailOnly=*/false, isWeak);
+  }();
   ompBuilder->setHandleFPNegZero(savedHandleFPNegZero);
 
   if (failed(handleError(afterIP, *atomicCompareOp)))

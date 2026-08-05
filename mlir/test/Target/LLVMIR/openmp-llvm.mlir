@@ -2811,6 +2811,33 @@ llvm.func @omp_atomic_compare_weak(%x : !llvm.ptr, %e : i32, %d : i32) {
 
 // -----
 
+// CHECK-LABEL: @omp_atomic_compare_fail
+// CHECK-SAME: (ptr %[[X:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_fail(%x : !llvm.ptr, %e : i32, %d : i32) {
+  // The fail clause sets the cmpxchg failure ordering independently of the
+  // success ordering. Relaxed success + acquire failure.
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic acquire
+  omp.atomic.compare %x : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  } {fail_memory_order = #omp<memoryorderkind acquire>}
+
+  // Seq_cst success + relaxed failure.
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] seq_cst monotonic
+  omp.atomic.compare memory_order(seq_cst) %x : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  } {fail_memory_order = #omp<memoryorderkind relaxed>}
+
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @omp_atomic_compare_float_neg_zero
 // CHECK-SAME: (ptr %[[XF:.*]], float %[[EF:.*]], float %[[DF:.*]])
 // Verify NaN guard + ±0.0 handling.
