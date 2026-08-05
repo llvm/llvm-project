@@ -14,6 +14,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/StaticAnalyzer/Checkers/ContainerOfModeling.h"
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -324,6 +325,16 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
     Offset = EvalBinOp(BO_Add, *Offset, *Delta);
     if (!Offset)
       return std::nullopt;
+
+    if (const SubRegion *ParentRegion =
+            getContainerOfParentRegion(CurRegion, State, SVB)) {
+      // The negative character offset exactly cancels the field's offset in
+      // its parent record. Continue from the parent so that an enclosing array
+      // (if any) remains the bounds owner.
+      OwnerRegion = ParentRegion;
+      CurRegion = dyn_cast<ElementRegion>(OwnerRegion);
+      continue;
+    }
 
     OwnerRegion = CurRegion->getSuperRegion()->getAs<SubRegion>();
     // When this is just another ElementRegion layer, we need to continue the
