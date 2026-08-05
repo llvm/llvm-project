@@ -706,8 +706,7 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test_enum_duplicated(self):
-        """Check that lldb only uses the last instance of enums with the same
-        id."""
+        """Check that lldb uses the first instance of enums with the same id."""
         self.setup_register_test(
             """\
           <enum id="some_enum" size="4">
@@ -724,8 +723,8 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
           <reg name="cpsr" regnum="33" bitsize="32" type="cpsr_flags"/>"""
         )
 
-        self.expect("register info cpsr", patterns=["E: 1 = def$"])
-        self.expect("register read cpsr", patterns=[r"\(E = def\)$"])
+        self.expect("register info cpsr", patterns=["E: 1 = abc$"])
+        self.expect("register read cpsr", patterns=[r"\(E = abc\)$"])
 
     @skipIfXmlSupportMissing
     @skipIfRemote

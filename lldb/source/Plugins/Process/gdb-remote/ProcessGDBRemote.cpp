@@ -5037,14 +5037,25 @@ ParseEnums(XMLNode feature_node,
         });
 
         if (!id.empty()) {
-          RegisterTypeEnum::Enumerators enumerators =
-              ParseEnumEvalues(enum_node);
-          if (!enumerators.empty()) {
-            LLDB_LOG(log,
-                     "ProcessGDBRemote::ParseEnums Found enum type \"{0}\"",
-                     id);
-            register_types.insert_or_assign(
-                id, std::make_unique<RegisterTypeEnum>(id, enumerators));
+          // If there are multiple elements using the same ID, we will only
+          // use the first one seen.
+          if (register_types.contains(id)) {
+            LLDB_LOG(
+                log,
+                "ProcessGDBRemote::ParseEnums Definition of enum with "
+                "ID \"{0}\" shadows previous use of that ID, using original "
+                "definition instead.",
+                id);
+          } else {
+            RegisterTypeEnum::Enumerators enumerators =
+                ParseEnumEvalues(enum_node);
+            if (!enumerators.empty()) {
+              LLDB_LOG(log,
+                       "ProcessGDBRemote::ParseEnums Found enum type \"{0}\"",
+                       id);
+              register_types.insert_or_assign(
+                  id, std::make_unique<RegisterTypeEnum>(id, enumerators));
+            }
           }
         }
 
