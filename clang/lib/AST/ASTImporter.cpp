@@ -3386,6 +3386,24 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
   return D2;
 }
 
+/// Carry over the inheritable attributes onto a freshly imported declaration.
+static void importInheritableAttrs(ASTContext &Ctx, Decl *To, Decl *Prev) {
+  if (!To || !Prev || To == Prev)
+    return;
+
+  if (!isa<CXXRecordDecl>(To) || To->hasAttr<MSInheritanceAttr>())
+    return;
+
+  for (Decl *R : Prev->redecls()) {
+    if (const auto *IA = R->getAttr<MSInheritanceAttr>()) {
+      auto *Clone = cast<InheritableAttr>(IA->clone(Ctx));
+      Clone->setInherited(true);
+      To->addAttr(Clone);
+      return;
+    }
+  }
+}
+
 ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
   bool IsFriendTemplate = false;
   if (auto *DCXX = dyn_cast<CXXRecordDecl>(D)) {
@@ -3567,6 +3585,8 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
     D2->setLexicalDeclContext(LexicalDC);
     addDeclToContexts(D, D2);
   }
+
+  importInheritableAttrs(Importer.getToContext(), D2, PrevDecl);
 
   if (auto BraceRangeOrErr = import(D->getBraceRange()))
     D2->setBraceRange(*BraceRangeOrErr);
@@ -6620,6 +6640,8 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
       // Add this specialization to the class template.
       ClassTemplate->AddSpecialization(D2, InsertPos);
   }
+
+  importInheritableAttrs(Importer.getToContext(), D2, PrevDecl);
 
   D2->setSpecializationKind(D->getSpecializationKind());
 
