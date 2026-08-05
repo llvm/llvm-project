@@ -1,30 +1,30 @@
 ; RUN: llc -mtriple=riscv32-elf -filetype=obj -code-model=small -verify-machineinstrs < %s \
-; RUN:   | llvm-objdump -t - \
+; RUN:   | llvm-readelf -s - \
 ; RUN:   | FileCheck %s -check-prefixes=RV32I-SMALL
 ; RUN: llc -mtriple=riscv32-elf -filetype=obj -code-model=medium -verify-machineinstrs < %s \
-; RUN:   | llvm-objdump -t - \
+; RUN:   | llvm-readelf -s - \
 ; RUN:   | FileCheck %s -check-prefixes=RV32I-MEDIUM
 ; RUN: llc -mtriple=riscv32-elf -filetype=obj -relocation-model=pic -verify-machineinstrs < %s \
-; RUN:   | llvm-objdump -t - \
+; RUN:   | llvm-readelf -s - \
 ; RUN:   | FileCheck %s -check-prefixes=RV32I-PIC
 ; RUN: llc -mtriple=riscv64-elf -filetype=obj -code-model=small -verify-machineinstrs < %s \
-; RUN:   | llvm-objdump -t - \
+; RUN:   | llvm-readelf -s - \
 ; RUN:   | FileCheck %s -check-prefixes=RV64I-SMALL
 ; RUN: llc -mtriple=riscv64-elf -filetype=obj -code-model=medium -verify-machineinstrs < %s \
-; RUN:   | llvm-objdump -t - \
+; RUN:   | llvm-readelf -s - \
 ; RUN:   | FileCheck %s -check-prefixes=RV64I-MEDIUM
 ; RUN: llc -mtriple=riscv64-elf -filetype=obj -relocation-model=pic -verify-machineinstrs < %s \
-; RUN:   | llvm-objdump -t - \
+; RUN:   | llvm-readelf -s - \
 ; RUN:   | FileCheck %s -check-prefixes=RV64I-PIC
 
 
 define void @above_threshold(i32 signext %in, ptr %out) nounwind {
-; RV32I-SMALL:  {{[0-9a-f]+}} l     O .rodata        00000018 .LJTI0_0
-; RV32I-MEDIUM: {{[0-9a-f]+}} l     O .rodata        00000018 .LJTI0_0
-; RV32I-PIC:    {{[0-9a-f]+}} l     O .rodata        00000018 .LJTI0_0
-; RV64I-SMALL:  {{[0-9a-f]+}} l     O .rodata        0000000000000018 .LJTI0_0
-; RV64I-MEDIUM: {{[0-9a-f]+}} l     O .rodata        0000000000000030 .LJTI0_0
-; RV64I-PIC:    {{[0-9a-f]+}} l     O .rodata        0000000000000018 .LJTI0_0
+; RV32I-SMALL:  24 OBJECT LOCAL DEFAULT [[#]] .LJTI0_0
+; RV32I-MEDIUM: 24 OBJECT LOCAL DEFAULT [[#]] .LJTI0_0
+; RV32I-PIC:    24 OBJECT LOCAL DEFAULT [[#]] .LJTI0_0
+; RV64I-SMALL:  24 OBJECT LOCAL DEFAULT [[#]] .LJTI0_0
+; RV64I-MEDIUM: 48 OBJECT LOCAL DEFAULT [[#]] .LJTI0_0
+; RV64I-PIC:    24 OBJECT LOCAL DEFAULT [[#]] .LJTI0_0
 
 entry:
   switch i32 %in, label %exit [
