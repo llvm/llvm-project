@@ -2393,6 +2393,7 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
 ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
                                                   ExplodedNode *Pred) {
   const StackFrame *SF = Pred->getStackFrame();
+  const Stmt *Term = getCurrBlock()->getTerminatorStmt();
   bool HasGeneratedNodes = false;
   auto MakeDefaultNode = [BE, &Engine = Engine, OriginalPred = Pred]() {
     return Engine.makeNode(BE, OriginalPred->getState(), OriginalPred);
@@ -2402,7 +2403,6 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
   // other constraints) then consider completely unrolling it.
   if(AMgr.options.ShouldUnrollLoops) {
     unsigned maxBlockVisitOnPath = AMgr.options.maxBlockVisitOnPath;
-    const Stmt *Term = getCurrBlock()->getTerminatorStmt();
     if (Term) {
       ProgramStateRef NewState = updateLoopStack(Term, AMgr.getASTContext(),
                                                  Pred, maxBlockVisitOnPath);
@@ -2423,7 +2423,6 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
   unsigned int BlockCount = getNumVisitedCurrent();
   if (BlockCount == AMgr.options.maxBlockVisitOnPath - 1 &&
       AMgr.options.ShouldWidenLoops) {
-    const Stmt *Term = getCurrBlock()->getTerminatorStmt();
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return HasGeneratedNodes ? Pred : MakeDefaultNode();
 
