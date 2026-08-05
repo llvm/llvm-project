@@ -298,7 +298,7 @@ namespace CallingConv {
     CHERIoT_LibraryCall = 127,
 
     /// Used for PISA kernel functions.
-    PISA_KERNEL = 183,
+    PISA_KERNEL = 128,
 
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
