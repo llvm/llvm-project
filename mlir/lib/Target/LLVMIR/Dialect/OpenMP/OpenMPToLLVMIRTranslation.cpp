@@ -6122,8 +6122,14 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
     llvm::Value *dInt =
         builder.CreateAlignedLoad(intTy, dAlloca, maxAlign, "cmplx.d.int");
 
+    // Honor the `fail` clause ordering when present (the verifier guarantees
+    // it is a valid cmpxchg failure ordering); otherwise derive it from the
+    // success ordering.
     llvm::AtomicOrdering failOrdering =
-        llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(atomicOrdering);
+        atomicCompareOp.getFailMemoryOrder()
+            ? convertAtomicOrdering(atomicCompareOp.getFailMemoryOrder())
+            : llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(
+                  atomicOrdering);
     auto *cmpXchg = builder.CreateAtomicCmpXchg(llvmX, eInt, dInt, maxAlign,
                                                 atomicOrdering, failOrdering);
     cmpXchg->setWeak(atomicCompareOp.getWeak());
