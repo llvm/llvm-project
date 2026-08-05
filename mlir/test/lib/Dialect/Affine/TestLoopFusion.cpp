@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "test-loop-fusion"
 
@@ -51,6 +52,16 @@ struct TestLoopFusion
   Option<bool> clTestLoopFusionUtilities{
       *this, "test-loop-fusion-utilities",
       llvm::cl::desc("Enable testing of loop fusion transformation utilities"),
+      llvm::cl::init(false)};
+
+  Option<bool> clTestEdgeKinds{
+      *this, "test-loop-fusion-edge-kinds",
+      llvm::cl::desc("Enable testing of dependence graph edge kinds"),
+      llvm::cl::init(false)};
+
+  Option<bool> clTestFusionFailure{
+      *this, "test-loop-fusion-failure",
+      llvm::cl::desc("Enable testing of failed producer-consumer fusion"),
       llvm::cl::init(false)};
 };
 
@@ -154,6 +165,98 @@ static bool testLoopFusionUtilities(AffineForOp forOpA, AffineForOp forOpB,
   return false;
 }
 
+// Verify that an unanalyzable dependence is reported by the
+// producer-consumer legality check before slice computation is attempted.
+// This distinguishes a failed dependence proof from a later generic slice
+// failure, which would otherwise leave the same IR unchanged for both cases.
+static bool testFusionFailure(AffineForOp forOpA, AffineForOp forOpB, unsigned,
+                              unsigned, unsigned loopDepth,
+                              unsigned maxLoopDepth) {
+  if (forOpA->getBlock() != forOpB->getBlock() ||
+      !forOpA->isBeforeInBlock(forOpB))
+    return false;
+
+  FusionStrategy strategy(FusionStrategy::ProducerConsumer);
+  for (unsigned d = loopDepth + 1; d <= maxLoopDepth; ++d) {
+    ComputationSliceState sliceUnion;
+    FusionResult result =
+        canFuseLoops(forOpA, forOpB, d, &sliceUnion, strategy);
+    if (result.value == FusionResult::FailFusionDependence) {
+      forOpA->emitRemark("fusion dependence prevents fusion");
+      return false;
+    }
+  }
+  return false;
+}
+
+// Exercises the distinction between storage and exact-SSA graph edges. Keep
+// both edge kinds on the same value so that a query or count that accidentally
+// assumes one kind cannot pass by observing a different value.
+static bool testEdgeKinds(func::FuncOp funcOp) {
+  Operation *srcOp = nullptr;
+  Operation *dstOp = nullptr;
+  Value memref;
+  for (Operation &op : funcOp.getBody().front()) {
+    if (op.getNumResults() == 0 ||
+        !isa<BaseMemRefType>(op.getResult(0).getType()))
+      continue;
+    if (!srcOp) {
+      srcOp = &op;
+      memref = op.getResult(0);
+    } else {
+      dstOp = &op;
+      break;
+    }
+  }
+
+  if (!srcOp || !dstOp) {
+    funcOp.emitError("edge-kind test requires two memref-producing operations");
+    return false;
+  }
+
+  MemRefDependenceGraph graph(funcOp.getBody().front());
+  unsigned srcId = graph.addNode(srcOp);
+  unsigned dstId = graph.addNode(dstOp);
+
+  auto checkState = [&](StringRef label, bool any, bool memory, bool ssa,
+                        unsigned edgeCount) {
+    bool anyEdge = graph.hasEdge(srcId, dstId, memref);
+    bool memoryEdge = graph.hasEdge(srcId, dstId, memref,
+                                    MemRefDependenceGraph::Edge::Kind::Memory);
+    bool ssaEdge = graph.hasEdge(srcId, dstId, memref,
+                                 MemRefDependenceGraph::Edge::Kind::SSA);
+    bool result = anyEdge == any && memoryEdge == memory && ssaEdge == ssa &&
+                  graph.outEdges.lookup(srcId).size() == edgeCount &&
+                  graph.inEdges.lookup(dstId).size() == edgeCount &&
+                  graph.memrefEdgeCount.lookup(memref) == edgeCount;
+    llvm::outs() << "edge-kinds " << label << " any=" << (anyEdge ? 1 : 0)
+                 << " memory=" << (memoryEdge ? 1 : 0)
+                 << " ssa=" << (ssaEdge ? 1 : 0)
+                 << " out=" << graph.outEdges.lookup(srcId).size()
+                 << " in=" << graph.inEdges.lookup(dstId).size()
+                 << " count=" << graph.memrefEdgeCount.lookup(memref) << "\n";
+    return result;
+  };
+
+  graph.addEdge(srcId, dstId, memref, MemRefDependenceGraph::Edge::Kind::SSA);
+  if (!checkState("ssa-only", true, false, true, 1))
+    return false;
+
+  graph.addEdge(srcId, dstId, memref,
+                MemRefDependenceGraph::Edge::Kind::Memory);
+  if (!checkState("both", true, true, true, 2))
+    return false;
+
+  graph.removeEdge(srcId, dstId, memref,
+                   MemRefDependenceGraph::Edge::Kind::Memory);
+  if (!checkState("ssa-after-memory-removal", true, false, true, 1))
+    return false;
+
+  graph.removeEdge(srcId, dstId, memref,
+                   MemRefDependenceGraph::Edge::Kind::SSA);
+  return checkState("empty", false, false, false, 0);
+}
+
 using LoopFunc = function_ref<bool(AffineForOp, AffineForOp, unsigned, unsigned,
                                    unsigned, unsigned)>;
 
@@ -182,6 +285,16 @@ static bool iterateLoops(ArrayRef<SmallVector<AffineForOp, 2>> depthToLoops,
 
 void TestLoopFusion::runOnOperation() {
   std::vector<SmallVector<AffineForOp, 2>> depthToLoops;
+  if (clTestEdgeKinds) {
+    if (!testEdgeKinds(getOperation()))
+      signalPassFailure();
+    return;
+  }
+  if (clTestFusionFailure) {
+    gatherLoops(getOperation(), depthToLoops);
+    iterateLoops(depthToLoops, testFusionFailure);
+    return;
+  }
   if (clTestLoopFusionUtilities) {
     // Run loop fusion until a fixed point is reached.
     do {

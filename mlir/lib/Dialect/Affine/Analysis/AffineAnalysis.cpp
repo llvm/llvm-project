@@ -715,7 +715,7 @@ DependenceResult mlir::affine::checkAccessDependence(
 
 /// Gathers dependence components for dependences between all ops in loop nest
 /// rooted at 'forOp' at loop depths in range [1, maxLoopDepth].
-void mlir::affine::getDependenceComponents(
+LogicalResult mlir::affine::getDependenceComponents(
     AffineForOp forOp, unsigned maxLoopDepth,
     std::vector<SmallVector<DependenceComponent, 2>> *depCompsVec) {
   // Collect all load and store ops in loop nest rooted at 'forOp'.
@@ -740,9 +740,12 @@ void mlir::affine::getDependenceComponents(
         DependenceResult result = checkMemrefAccessDependence(
             srcAccess, dstAccess, d, /*dependenceConstraints=*/nullptr,
             &depComps);
+        if (result.value == DependenceResult::Failure)
+          return failure();
         if (hasDependence(result))
           depCompsVec->push_back(depComps);
       }
     }
   }
+  return success();
 }
