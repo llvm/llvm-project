@@ -34,6 +34,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/BalancedPartitioning.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
@@ -172,6 +173,8 @@ auto BPOrderer<D>::computeOrder(
 
   BPFunctionNode::UtilityNodeT maxUN = 0;
   MapVector<unsigned, UtilityNodes> startupSectionIdxUNs;
+  DenseMap<BPFunctionNode::UtilityNodeT, BPFunctionNode::UtilityNodeWeightT>
+      nonUnitStartupUNWeights;
   // Used to define the initial order for startup functions.
   DenseMap<unsigned, size_t> sectionIdxToTimestamp;
   uint64_t numProfiledFunctionRefs = 0, numResolvedProfiledFunctionRefs = 0;
@@ -195,6 +198,11 @@ auto BPOrderer<D>::computeOrder(
 
     MapVector<unsigned, BPFunctionNode::UtilityNodeT> sectionIdxToFirstUN;
     for (size_t traceIdx = 0; traceIdx < traces.size(); traceIdx++) {
+      const uint64_t traceWeight = traces[traceIdx].Weight;
+      // A zero-weight trace is equivalent to no copies of the trace.
+      if (traceWeight == 0)
+        continue;
+      const BPFunctionNode::UtilityNodeT firstTraceUN = maxUN;
       uint64_t currentSize = 0, cutoffSize = 1;
       size_t cutoffTimestamp = 1;
       auto &trace = traces[traceIdx].FunctionNameRefs;
@@ -203,7 +211,8 @@ auto BPOrderer<D>::computeOrder(
             reader->getSymtab().getFuncOrVarName(trace[timestamp]));
         parsedFuncName = lld::utils::getRootSymbol(parsedFuncName);
         if (verbose) {
-          ++numProfiledFunctionRefs;
+          numProfiledFunctionRefs =
+              SaturatingAdd(numProfiledFunctionRefs, traceWeight);
           uniqueProfiledFunctions.insert(CachedHashStringRef(parsedFuncName));
         }
 
@@ -212,7 +221,8 @@ auto BPOrderer<D>::computeOrder(
         if (sectionIdxsIt == rootSymbolToSectionIdxs.end())
           continue;
         if (verbose) {
-          ++numResolvedProfiledFunctionRefs;
+          numResolvedProfiledFunctionRefs =
+              SaturatingAdd(numResolvedProfiledFunctionRefs, traceWeight);
           uniqueResolvedProfiledFunctions.insert(
               CachedHashStringRef(parsedFuncName));
         }
@@ -241,6 +251,9 @@ auto BPOrderer<D>::computeOrder(
       for (auto &[sectionIdx, firstUN] : sectionIdxToFirstUN)
         for (auto un = firstUN; un <= maxUN; ++un)
           startupSectionIdxUNs[sectionIdx].push_back(un);
+      if (traceWeight != 1)
+        for (auto un = firstTraceUN; un <= maxUN; ++un)
+          nonUnitStartupUNWeights.try_emplace(un, traceWeight);
       ++maxUN;
       sectionIdxToFirstUN.clear();
     }
@@ -333,7 +346,8 @@ auto BPOrderer<D>::computeOrder(
     for (auto &[sectionIdx, compressionUns] :
          unsForStartupFunctionCompression) {
       auto &uns = startupSectionIdxUNs[sectionIdx];
-      uns.append(compressionUns);
+      for (auto un : compressionUns)
+        uns.push_back(un);
       llvm::sort(uns);
       uns.erase(llvm::unique(uns), uns.end());
     }
@@ -369,7 +383,7 @@ auto BPOrderer<D>::computeOrder(
     TimeTraceScope timeScope("Balanced Partitioning");
     BalancedPartitioningConfig config;
     BalancedPartitioning bp(config);
-    bp.run(nodesForStartup);
+    bp.run(nodesForStartup, nonUnitStartupUNWeights);
     for (auto &nodes : nodesForCompression)
       bp.run(nodes);
   }
@@ -459,9 +473,14 @@ auto BPOrderer<D>::computeOrder(
 
       // The area under the curve F where F(t) is the total number of page
       // faults at step t.
-      unsigned area = 0;
+      // Saturation makes an oversized weighted profile deterministic rather
+      // than allowing the diagnostic-only aggregate to wrap.
+      uint64_t area = 0;
       for (auto &trace : reader->getTemporalProfTraces()) {
+        if (trace.Weight == 0)
+          continue;
         SmallSet<uint64_t, 0> touchedPages;
+        uint64_t traceArea = 0;
         for (unsigned step = 0; step < trace.FunctionNameRefs.size(); step++) {
           auto traceId = trace.FunctionNameRefs[step];
           auto [Filename, ParsedFuncName] =
@@ -473,8 +492,10 @@ auto BPOrderer<D>::computeOrder(
             for (uint64_t i = firstPage; i <= lastPage; i++)
               touchedPages.insert(i);
           }
-          area += touchedPages.size();
+          traceArea = SaturatingAdd(traceArea,
+                                    static_cast<uint64_t>(touchedPages.size()));
         }
+        area = SaturatingMultiplyAdd(traceArea, trace.Weight, area);
       }
       dbgs() << "Total area under the page fault curve: " << (float)area
              << "\n";

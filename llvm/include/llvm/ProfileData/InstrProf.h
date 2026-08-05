@@ -449,10 +449,10 @@ struct TemporalProfTraceTy {
   /// Use a set of temporal profile traces to create a list of balanced
   /// partitioning function nodes used by BalancedPartitioning to generate a
   /// function order that reduces page faults during startup
-  LLVM_ABI static void
-  createBPFunctionNodes(ArrayRef<TemporalProfTraceTy> Traces,
-                        std::vector<BPFunctionNode> &Nodes,
-                        bool RemoveOutlierUNs = true);
+  LLVM_ABI static void createBPFunctionNodes(
+      ArrayRef<TemporalProfTraceTy> Traces, std::vector<BPFunctionNode> &Nodes,
+      bool RemoveOutlierUNs = true,
+      BalancedPartitioning::UtilityNodeWeightsT *UtilityNodeWeights = nullptr);
 };
 
 inline std::error_code make_error_code(instrprof_error E) {

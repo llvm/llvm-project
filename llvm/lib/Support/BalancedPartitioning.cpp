@@ -12,11 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/BalancedPartitioning.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
+
+#include <memory>
+#include <type_traits>
 
 using namespace llvm;
 #define DEBUG_TYPE "balanced-partitioning"
@@ -77,6 +81,29 @@ BalancedPartitioning::BalancedPartitioning(
 }
 
 void BalancedPartitioning::run(std::vector<BPFunctionNode> &Nodes) const {
+  runImpl(Nodes, nullptr);
+}
+
+void BalancedPartitioning::run(
+    std::vector<BPFunctionNode> &Nodes,
+    const UtilityNodeWeightsT &UtilityNodeWeights) const {
+  assert(llvm::all_of(UtilityNodeWeights,
+                      [](const auto &Entry) { return Entry.second > 0; }) &&
+         "utility weights must be positive");
+  auto HasNonUnitWeight = llvm::any_of(
+      UtilityNodeWeights, [](const auto &Entry) { return Entry.second != 1; });
+  if (!HasNonUnitWeight) {
+    run(Nodes);
+    return;
+  }
+  runImpl(Nodes,
+          std::make_shared<const UtilityNodeWeightsT>(UtilityNodeWeights));
+}
+
+template <typename UtilityNodeWeightsPtrT>
+void BalancedPartitioning::runImpl(
+    std::vector<BPFunctionNode> &Nodes,
+    UtilityNodeWeightsPtrT UtilityNodeWeights) const {
   LLVM_DEBUG(
       dbgs() << format(
           "Partitioning %d nodes using depth %d and %d iterations per split\n",
@@ -93,8 +120,10 @@ void BalancedPartitioning::run(std::vector<BPFunctionNode> &Nodes) const {
     Nodes[I].InputOrderIndex = I;
 
   auto NodesRange = llvm::make_range(Nodes.begin(), Nodes.end());
-  auto BisectTask = [this, NodesRange, &TP]() {
-    bisect(NodesRange, /*RecDepth=*/0, /*RootBucket=*/1, /*Offset=*/0, TP);
+  auto BisectTask = [this, NodesRange, &TP,
+                     UtilityNodeWeights = std::move(UtilityNodeWeights)]() {
+    bisect(NodesRange, /*RecDepth=*/0, /*RootBucket=*/1, /*Offset=*/0, TP,
+           std::move(UtilityNodeWeights));
   };
   if (TP) {
     TP->async(std::move(BisectTask));
@@ -110,10 +139,11 @@ void BalancedPartitioning::run(std::vector<BPFunctionNode> &Nodes) const {
   LLVM_DEBUG(dbgs() << "Balanced partitioning completed\n");
 }
 
-void BalancedPartitioning::bisect(const FunctionNodeRange Nodes,
-                                  unsigned RecDepth, unsigned RootBucket,
-                                  unsigned Offset,
-                                  std::optional<BPThreadPool> &TP) const {
+template <typename UtilityNodeWeightsPtrT>
+void BalancedPartitioning::bisect(
+    const FunctionNodeRange Nodes, unsigned RecDepth, unsigned RootBucket,
+    unsigned Offset, std::optional<BPThreadPool> &TP,
+    UtilityNodeWeightsPtrT UtilityNodeWeights) const {
   unsigned NumNodes = llvm::size(Nodes);
   if (NumNodes <= 1 || RecDepth >= Config.SplitDepth) {
     // We've reach the lowest level of the recursion tree. Fall back to the
@@ -137,7 +167,8 @@ void BalancedPartitioning::bisect(const FunctionNodeRange Nodes,
   // Split into two and assign to the left and right buckets
   split(Nodes, LeftBucket);
 
-  runIterations(Nodes, LeftBucket, RightBucket, RNG);
+  auto ChildUtilityNodeWeights = runIterations(
+      Nodes, LeftBucket, RightBucket, std::move(UtilityNodeWeights), RNG);
 
   // Split nodes wrt the resulting buckets
   auto NodesMid =
@@ -147,12 +178,15 @@ void BalancedPartitioning::bisect(const FunctionNodeRange Nodes,
   auto LeftNodes = llvm::make_range(Nodes.begin(), NodesMid);
   auto RightNodes = llvm::make_range(NodesMid, Nodes.end());
 
-  auto LeftRecTask = [this, LeftNodes, RecDepth, LeftBucket, Offset, &TP]() {
-    bisect(LeftNodes, RecDepth + 1, LeftBucket, Offset, TP);
+  auto LeftRecTask = [this, LeftNodes, RecDepth, LeftBucket, Offset, &TP,
+                      ChildUtilityNodeWeights]() {
+    bisect(LeftNodes, RecDepth + 1, LeftBucket, Offset, TP,
+           ChildUtilityNodeWeights);
   };
-  auto RightRecTask = [this, RightNodes, RecDepth, RightBucket, MidOffset,
-                       &TP]() {
-    bisect(RightNodes, RecDepth + 1, RightBucket, MidOffset, TP);
+  auto RightRecTask = [this, RightNodes, RecDepth, RightBucket, MidOffset, &TP,
+                       ChildUtilityNodeWeights]() {
+    bisect(RightNodes, RecDepth + 1, RightBucket, MidOffset, TP,
+           ChildUtilityNodeWeights);
   };
 
   if (TP && RecDepth < Config.TaskSplitDepth && NumNodes >= 4) {
@@ -164,10 +198,10 @@ void BalancedPartitioning::bisect(const FunctionNodeRange Nodes,
   }
 }
 
-void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
-                                         unsigned LeftBucket,
-                                         unsigned RightBucket,
-                                         std::mt19937 &RNG) const {
+template <typename UtilityNodeWeightsPtrT>
+UtilityNodeWeightsPtrT BalancedPartitioning::runIterations(
+    const FunctionNodeRange Nodes, unsigned LeftBucket, unsigned RightBucket,
+    UtilityNodeWeightsPtrT UtilityNodeWeights, std::mt19937 &RNG) const {
   unsigned NumNodes = llvm::size(Nodes);
   DenseMap<BPFunctionNode::UtilityNodeT, unsigned> UtilityNodeIndex;
   for (auto &N : Nodes)
@@ -183,9 +217,37 @@ void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
 
   // Renumber utility nodes so they can be used to index into Signatures
   UtilityNodeIndex.clear();
-  for (auto &N : Nodes)
-    for (auto &UN : N.UtilityNodes)
-      UN = UtilityNodeIndex.insert({UN, UtilityNodeIndex.size()}).first->second;
+  if constexpr (std::is_same_v<UtilityNodeWeightsPtrT, std::nullptr_t>) {
+    for (auto &N : Nodes)
+      for (auto &UN : N.UtilityNodes)
+        UN = UtilityNodeIndex.insert({UN, UtilityNodeIndex.size()})
+                 .first->second;
+  } else {
+    auto RenumberedWeights = std::make_shared<UtilityNodeWeightsT>();
+    for (auto &N : Nodes) {
+      for (auto &UN : N.UtilityNodes) {
+        auto WeightIt = UtilityNodeWeights->find(UN);
+        BPFunctionNode::UtilityNodeWeightT Weight =
+            WeightIt == UtilityNodeWeights->end() ? 1 : WeightIt->second;
+        auto [IndexIt, WasInserted] =
+            UtilityNodeIndex.insert({UN, UtilityNodeIndex.size()});
+        UN = IndexIt->second;
+        if (WasInserted) {
+          if (Weight != 1)
+            RenumberedWeights->try_emplace(UN, Weight);
+          continue;
+        }
+        auto RenumberedWeightIt = RenumberedWeights->find(UN);
+        BPFunctionNode::UtilityNodeWeightT RenumberedWeight =
+            RenumberedWeightIt == RenumberedWeights->end()
+                ? 1
+                : RenumberedWeightIt->second;
+        assert(RenumberedWeight == Weight &&
+               "a utility node must have a consistent weight");
+      }
+    }
+    UtilityNodeWeights = std::move(RenumberedWeights);
+  }
 
   // Initialize signatures
   SignaturesT Signatures(/*Size=*/UtilityNodeIndex.size());
@@ -200,21 +262,37 @@ void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
     }
   }
 
+  SmallVector<BPFunctionNode::UtilityNodeWeightT, 4> RenumberedWeights;
+  if constexpr (!std::is_same_v<UtilityNodeWeightsPtrT, std::nullptr_t>) {
+    if (!UtilityNodeWeights->empty()) {
+      RenumberedWeights.assign(Signatures.size(), 1);
+      for (auto [UN, Weight] : *UtilityNodeWeights)
+        RenumberedWeights[UN] = Weight;
+    }
+  }
+
   for (unsigned I = 0; I < Config.IterationsPerSplit; I++) {
-    unsigned NumMovedNodes =
-        runIteration(Nodes, LeftBucket, RightBucket, Signatures, RNG);
+    unsigned NumMovedNodes;
+    if (RenumberedWeights.empty())
+      NumMovedNodes = runIteration(Nodes, LeftBucket, RightBucket, Signatures,
+                                   nullptr, RNG);
+    else
+      NumMovedNodes = runIteration(
+          Nodes, LeftBucket, RightBucket, Signatures,
+          ArrayRef<BPFunctionNode::UtilityNodeWeightT>(RenumberedWeights), RNG);
     if (NumMovedNodes == 0)
       break;
   }
+  return UtilityNodeWeights;
 }
 
-unsigned BalancedPartitioning::runIteration(const FunctionNodeRange Nodes,
-                                            unsigned LeftBucket,
-                                            unsigned RightBucket,
-                                            SignaturesT &Signatures,
-                                            std::mt19937 &RNG) const {
+template <typename UtilityNodeWeightsRefT>
+unsigned BalancedPartitioning::runIteration(
+    const FunctionNodeRange Nodes, unsigned LeftBucket, unsigned RightBucket,
+    SignaturesT &Signatures, UtilityNodeWeightsRefT UtilityNodeWeights,
+    std::mt19937 &RNG) const {
   // Init signature cost caches
-  for (auto &Signature : Signatures) {
+  for (auto [I, Signature] : llvm::enumerate(Signatures)) {
     if (Signature.CachedGainIsValid)
       continue;
     unsigned L = Signature.LeftCount;
@@ -227,6 +305,10 @@ unsigned BalancedPartitioning::runIteration(const FunctionNodeRange Nodes,
       Signature.CachedGainLR = Cost - logCost(L - 1, R + 1);
     if (R > 0)
       Signature.CachedGainRL = Cost - logCost(L + 1, R - 1);
+    if constexpr (!std::is_same_v<UtilityNodeWeightsRefT, std::nullptr_t>) {
+      Signature.CachedGainLR *= static_cast<float>(UtilityNodeWeights[I]);
+      Signature.CachedGainRL *= static_cast<float>(UtilityNodeWeights[I]);
+    }
     Signature.CachedGainIsValid = true;
   }
 

@@ -1,0 +1,31 @@
+# RUN: llvm-profdata order %s --num-test-traces=1 | FileCheck %s
+
+# CHECK: # Total area under the page fault curve: 1.844674e+19
+
+:ir
+:temporal_prof_traces
+# Num Traces
+3
+# Trace Stream Size
+3
+# Weight
+1
+a, b
+# Weight
+1
+b, a
+# Weight
+18446744073709551615
+a, b
+
+a
+# Func Hash
+1
+# Num Counters
+1
+# Counter Values
+1
+b
+2
+1
+1

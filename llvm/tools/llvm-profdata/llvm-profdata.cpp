@@ -38,6 +38,7 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
@@ -3433,10 +3434,12 @@ static int order_main() {
   Traces = Traces.drop_back(NumTestTraces);
 
   std::vector<BPFunctionNode> Nodes;
-  TemporalProfTraceTy::createBPFunctionNodes(Traces, Nodes);
+  BalancedPartitioning::UtilityNodeWeightsT UtilityNodeWeights;
+  TemporalProfTraceTy::createBPFunctionNodes(
+      Traces, Nodes, /*RemoveOutlierUNs=*/true, &UtilityNodeWeights);
   BalancedPartitioningConfig Config;
   BalancedPartitioning BP(Config);
-  BP.run(Nodes);
+  BP.run(Nodes, UtilityNodeWeights);
 
   OS << "# Ordered " << Nodes.size() << " functions\n";
   if (!TestTraces.empty()) {
@@ -3446,15 +3449,20 @@ static int order_main() {
       IdToPageNumber[Node.Id] = IdToPageNumber.size() / 32;
 
     SmallSet<unsigned, 0> TouchedPages;
-    unsigned Area = 0;
+    uint64_t Area = 0;
     for (auto &Trace : TestTraces) {
+      if (Trace.Weight == 0)
+        continue;
+      uint64_t TraceArea = 0;
       for (auto Id : Trace.FunctionNameRefs) {
         auto It = IdToPageNumber.find(Id);
         if (It == IdToPageNumber.end())
           continue;
         TouchedPages.insert(It->getSecond());
-        Area += TouchedPages.size();
+        TraceArea = SaturatingAdd(TraceArea,
+                                  static_cast<uint64_t>(TouchedPages.size()));
       }
+      Area = SaturatingMultiplyAdd(TraceArea, Trace.Weight, Area);
       TouchedPages.clear();
     }
     OS << "# Total area under the page fault curve: " << (float)Area << "\n";

@@ -41,6 +41,8 @@
 
 #include "raw_ostream.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 
 #include <atomic>
@@ -60,6 +62,7 @@ class BPFunctionNode {
 public:
   using IDT = uint64_t;
   using UtilityNodeT = uint32_t;
+  using UtilityNodeWeightT = uint64_t;
 
   /// \param UtilityNodes the set of utility nodes (must be unique'd)
   BPFunctionNode(IDT Id, ArrayRef<UtilityNodeT> UtilityNodes)
@@ -100,10 +103,18 @@ struct BalancedPartitioningConfig {
 
 class BalancedPartitioning {
 public:
+  using UtilityNodeWeightsT = DenseMap<BPFunctionNode::UtilityNodeT,
+                                       BPFunctionNode::UtilityNodeWeightT>;
+
   LLVM_ABI BalancedPartitioning(const BalancedPartitioningConfig &Config);
 
   /// Run recursive graph partitioning that optimizes a given objective.
   LLVM_ABI void run(std::vector<BPFunctionNode> &Nodes) const;
+  /// Run recursive graph partitioning with positive, non-unit utility weights.
+  /// A utility's cost is multiplied by its weight without materializing
+  /// duplicate utility nodes. Missing utilities have weight one.
+  LLVM_ABI void run(std::vector<BPFunctionNode> &Nodes,
+                    const UtilityNodeWeightsT &UtilityNodeWeights) const;
 
 private:
   struct UtilitySignature;
@@ -138,19 +149,30 @@ private:
   /// \param RootBucket the initial bucket of the dataVertices
   /// \param Offset the assigned buckets are the range [Offset, Offset +
   /// Nodes.size()]
+  template <typename UtilityNodeWeightsPtrT>
   void bisect(const FunctionNodeRange Nodes, unsigned RecDepth,
               unsigned RootBucket, unsigned Offset,
-              std::optional<BPThreadPool> &TP) const;
+              std::optional<BPThreadPool> &TP,
+              UtilityNodeWeightsPtrT UtilityNodeWeights) const;
 
   /// Run bisection iterations
-  void runIterations(const FunctionNodeRange Nodes, unsigned LeftBucket,
-                     unsigned RightBucket, std::mt19937 &RNG) const;
+  template <typename UtilityNodeWeightsPtrT>
+  UtilityNodeWeightsPtrT
+  runIterations(const FunctionNodeRange Nodes, unsigned LeftBucket,
+                unsigned RightBucket, UtilityNodeWeightsPtrT UtilityNodeWeights,
+                std::mt19937 &RNG) const;
 
   /// Run a bisection iteration to improve the optimization goal
   /// \returns the total number of moved FunctionNodes
+  template <typename UtilityNodeWeightsRefT>
   unsigned runIteration(const FunctionNodeRange Nodes, unsigned LeftBucket,
                         unsigned RightBucket, SignaturesT &Signatures,
+                        UtilityNodeWeightsRefT UtilityNodeWeights,
                         std::mt19937 &RNG) const;
+
+  template <typename UtilityNodeWeightsPtrT>
+  void runImpl(std::vector<BPFunctionNode> &Nodes,
+               UtilityNodeWeightsPtrT UtilityNodeWeights) const;
 
   /// Try to move \p N from one bucket to another
   /// \returns true iff \p N is moved

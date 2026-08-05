@@ -1146,16 +1146,20 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
 
 void TemporalProfTraceTy::createBPFunctionNodes(
     ArrayRef<TemporalProfTraceTy> Traces, std::vector<BPFunctionNode> &Nodes,
-    bool RemoveOutlierUNs) {
+    bool RemoveOutlierUNs,
+    BalancedPartitioning::UtilityNodeWeightsT *UtilityNodeWeights) {
   using IDT = BPFunctionNode::IDT;
   using UtilityNodeT = BPFunctionNode::UtilityNodeT;
   UtilityNodeT MaxUN = 0;
   DenseMap<IDT, size_t> IdToFirstTimestamp;
   DenseMap<IDT, UtilityNodeT> IdToFirstUN;
   DenseMap<IDT, SmallVector<UtilityNodeT>> IdToUNs;
-  // TODO: We need to use the Trace.Weight field to give more weight to more
-  // important utilities
+  DenseMap<UtilityNodeT, BPFunctionNode::UtilityNodeWeightT> NonUnitUNWeights;
   for (auto &Trace : Traces) {
+    // A zero-weight trace is equivalent to no copies of the trace.
+    if (Trace.Weight == 0)
+      continue;
+    const UtilityNodeT FirstTraceUN = MaxUN;
     size_t CutoffTimestamp = 1;
     for (size_t Timestamp = 0; Timestamp < Trace.FunctionNameRefs.size();
          Timestamp++) {
@@ -1172,6 +1176,9 @@ void TemporalProfTraceTy::createBPFunctionNodes(
     for (auto &[Id, FirstUN] : IdToFirstUN)
       for (auto UN = FirstUN; UN <= MaxUN; ++UN)
         IdToUNs[Id].push_back(UN);
+    if (Trace.Weight != 1)
+      for (auto UN = FirstTraceUN; UN <= MaxUN; ++UN)
+        NonUnitUNWeights.try_emplace(UN, Trace.Weight);
     ++MaxUN;
     IdToFirstUN.clear();
   }
@@ -1192,6 +1199,8 @@ void TemporalProfTraceTy::createBPFunctionNodes(
 
   for (auto &[Id, UNs] : IdToUNs)
     Nodes.emplace_back(Id, UNs);
+  if (UtilityNodeWeights)
+    *UtilityNodeWeights = std::move(NonUnitUNWeights);
 
   // Since BalancedPartitioning is sensitive to the initial order, we explicitly
   // order nodes by their earliest timestamp.
