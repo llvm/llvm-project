@@ -1940,9 +1940,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{UniInVgprV2S16}, {IntrId, VgprV2S16, VgprV2S16, VgprV2S16}})
       .Div(V2S16, {{VgprV2S16}, {IntrId, VgprV2S16, VgprV2S16, VgprV2S16}});
 
-  addRulesForIOpcs({amdgcn_permlane16, amdgcn_permlanex16}, Standard)
-      .Div(S32, {{Vgpr32},
-                 {IntrId, Vgpr32, Vgpr32, SgprB32_ReadFirstLane,
+  addRulesForIOpcs({amdgcn_permlane16, amdgcn_permlanex16}, StandardB)
+      .Div(B32, {{VgprB32},
+                 {IntrId, VgprB32, VgprB32, SgprB32_ReadFirstLane,
                   SgprB32_ReadFirstLane}});
 
   addRulesForIOpcs({amdgcn_permlane_bcast, amdgcn_permlane_up,
