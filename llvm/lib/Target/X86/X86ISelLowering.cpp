@@ -47171,8 +47171,8 @@ static SDValue createPSADBW(SelectionDAG &DAG, SDValue N0, SDValue N1,
 }
 
 // Attempt to replace an all_of/any_of/parity style horizontal reduction with a MOVMSK.
-static SDValue combinePredicateReduction(SDNode *Reduce, SelectionDAG &DAG,
-                                         const X86Subtarget &Subtarget) {
+static SDValue combineVECREDUCE_LOGIC(SDNode *Reduce, SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget) {
   // Bail without SSE2.
   if (!Subtarget.hasSSE2())
     return SDValue();
@@ -48175,12 +48175,6 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   }
 
   return SDValue();
-}
-
-static SDValue combineVECREDUCE_LOGIC(SDNode *N, SelectionDAG &DAG,
-                                      const X86Subtarget &Subtarget) {
-  // Attempt to replace an all_of/any_of horizontal reduction with a MOVMSK.
-  return combinePredicateReduction(N, DAG, Subtarget);
 }
 
 static SDValue combineVECREDUCE_MUL(SDNode *N, SelectionDAG &DAG,
