@@ -2457,6 +2457,18 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
       case NEON::BI__builtin_neon_vst1_lane_v:
       case NEON::BI__builtin_neon_vst1q_lane_v:
       case NEON::BI__builtin_neon_vstrq_p128:
+      case NEON::BI__builtin_neon_vst2_v:
+      case NEON::BI__builtin_neon_vst2q_v:
+      case NEON::BI__builtin_neon_vst2_lane_v:
+      case NEON::BI__builtin_neon_vst2q_lane_v:
+      case NEON::BI__builtin_neon_vst3_v:
+      case NEON::BI__builtin_neon_vst3q_v:
+      case NEON::BI__builtin_neon_vst3_lane_v:
+      case NEON::BI__builtin_neon_vst3q_lane_v:
+      case NEON::BI__builtin_neon_vst4_v:
+      case NEON::BI__builtin_neon_vst4q_v:
+      case NEON::BI__builtin_neon_vst4_lane_v:
+      case NEON::BI__builtin_neon_vst4q_lane_v:
         // Get the alignment for the argument in addition to the value;
         // we'll use it later.
         ptrOp0 = emitPointerWithAlignment(expr->getArg(0));
@@ -3368,22 +3380,62 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vld3q_lane_v:
   case NEON::BI__builtin_neon_vld4_lane_v:
   case NEON::BI__builtin_neon_vld4q_lane_v:
-  case NEON::BI__builtin_neon_vst2_v:
-  case NEON::BI__builtin_neon_vst2q_v:
-  case NEON::BI__builtin_neon_vst2_lane_v:
-  case NEON::BI__builtin_neon_vst2q_lane_v:
-  case NEON::BI__builtin_neon_vst3_v:
-  case NEON::BI__builtin_neon_vst3q_v:
-  case NEON::BI__builtin_neon_vst3_lane_v:
-  case NEON::BI__builtin_neon_vst3q_lane_v:
-  case NEON::BI__builtin_neon_vst4_v:
-  case NEON::BI__builtin_neon_vst4q_v:
-  case NEON::BI__builtin_neon_vst4_lane_v:
-  case NEON::BI__builtin_neon_vst4q_lane_v:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
+  case NEON::BI__builtin_neon_vst2_v:
+  case NEON::BI__builtin_neon_vst2q_v: {
+    // The builtin call has the pointer first, but the AArch64 st2 intrinsic
+    // takes the vector operands first and the pointer last.
+    std::rotate(ops.begin(), ops.begin() + 1, ops.end());
+    llvm::SmallVector<mlir::Type> argTypes = {ty, ty, builder.getVoidPtrTy()};
+    return emitNeonCall(cgm, builder, argTypes, ops, "aarch64.neon.st2",
+                        cgm.voidTy, loc);
+  }
+  case NEON::BI__builtin_neon_vst2_lane_v:
+  case NEON::BI__builtin_neon_vst2q_lane_v: {
+    std::rotate(ops.begin(), ops.begin() + 1, ops.end());
+    ops[2] = builder.createIntCast(ops[2], sInt64Ty);
+    llvm::SmallVector<mlir::Type> argTypes = {ty, ty, sInt64Ty,
+                                              builder.getVoidPtrTy()};
+    return emitNeonCall(cgm, builder, argTypes, ops, "aarch64.neon.st2lane",
+                        cgm.voidTy, loc);
+  }
+  case NEON::BI__builtin_neon_vst3_v:
+  case NEON::BI__builtin_neon_vst3q_v: {
+    std::rotate(ops.begin(), ops.begin() + 1, ops.end());
+    llvm::SmallVector<mlir::Type> argTypes = {ty, ty, ty,
+                                              builder.getVoidPtrTy()};
+    return emitNeonCall(cgm, builder, argTypes, ops, "aarch64.neon.st3",
+                        cgm.voidTy, loc);
+  }
+  case NEON::BI__builtin_neon_vst3_lane_v:
+  case NEON::BI__builtin_neon_vst3q_lane_v: {
+    std::rotate(ops.begin(), ops.begin() + 1, ops.end());
+    ops[3] = builder.createIntCast(ops[3], sInt64Ty);
+    llvm::SmallVector<mlir::Type> argTypes = {ty, ty, ty, sInt64Ty,
+                                              builder.getVoidPtrTy()};
+    return emitNeonCall(cgm, builder, argTypes, ops, "aarch64.neon.st3lane",
+                        cgm.voidTy, loc);
+  }
+  case NEON::BI__builtin_neon_vst4_v:
+  case NEON::BI__builtin_neon_vst4q_v: {
+    std::rotate(ops.begin(), ops.begin() + 1, ops.end());
+    llvm::SmallVector<mlir::Type> argTypes = {ty, ty, ty, ty,
+                                              builder.getVoidPtrTy()};
+    return emitNeonCall(cgm, builder, argTypes, ops, "aarch64.neon.st4",
+                        cgm.voidTy, loc);
+  }
+  case NEON::BI__builtin_neon_vst4_lane_v:
+  case NEON::BI__builtin_neon_vst4q_lane_v: {
+    std::rotate(ops.begin(), ops.begin() + 1, ops.end());
+    ops[4] = builder.createIntCast(ops[4], sInt64Ty);
+    llvm::SmallVector<mlir::Type> argTypes = {
+        ty, ty, ty, ty, sInt64Ty, builder.getVoidPtrTy()};
+    return emitNeonCall(cgm, builder, argTypes, ops, "aarch64.neon.st4lane",
+                        cgm.voidTy, loc);
+  }
   case NEON::BI__builtin_neon_vtrn_v:
   case NEON::BI__builtin_neon_vtrnq_v: {
     ops[1] = builder.createBitcast(ops[1], ty);
