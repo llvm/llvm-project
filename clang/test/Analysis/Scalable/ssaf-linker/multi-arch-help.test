@@ -1,18 +1,13 @@
-// Test clang-ssaf-linker help option
+// Test the --help output for the `multi-arch` subcommand.
 
-// RUN: clang-ssaf-linker --help-list-hidden \
+// RUN: clang-ssaf-linker multi-arch --help-list-hidden \
 // RUN:           | FileCheck %s --match-full-lines
 
 // CHECK:      OVERVIEW: SSAF Linker
 // CHECK-EMPTY:
-// CHECK-NEXT: USAGE: clang-ssaf-linker{{(\.exe)?}} [subcommand] [options] <input files>
+// CHECK-NEXT: SUBCOMMAND 'multi-arch': Operations on multi-architecture StaticLibrary and SharedLibrary artifacts
 // CHECK-EMPTY:
-// CHECK-NEXT: SUBCOMMANDS:
-// CHECK-EMPTY:
-// CHECK-NEXT:   multi-arch     - Operations on multi-architecture StaticLibrary and SharedLibrary artifacts
-// CHECK-NEXT:   static-library - Operations on StaticLibraries
-// CHECK-EMPTY:
-// CHECK-NEXT:   Type "clang-ssaf-linker{{(\.exe)?}} <subcommand> --help" to get more help on a specific subcommand
+// CHECK-NEXT: USAGE: clang-ssaf-linker{{(\.exe)?}} multi-arch [options] <verb> <static-library or shared-library files>
 // CHECK-EMPTY:
 // CHECK-NEXT: OPTIONS:
 // CHECK-NEXT:   -h                  - Alias for --help
@@ -25,4 +20,3 @@
 // CHECK-NEXT:   --print-options     - Print non-default options after command line parsing
 // CHECK-NEXT:   --time              - Enable timing
 // CHECK-NEXT:   --verbose           - Enable verbose output
-// CHECK-NEXT:   --version           - Display the version of this program
