@@ -2,7 +2,7 @@
 
 module attributes {
   cir.record_layouts = {
-    // expected-error @below {{record_align must be non-zero}}
+    // expected-error @below {{failed to verify that record_align must be a non-zero power of two}}
     S = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
                            has_trivial_dtor = true, record_align = 0>}
 } {
@@ -12,7 +12,7 @@ module attributes {
 
 module attributes {
   cir.record_layouts = {
-    // expected-error @below {{record_align must be a power of two, got 3}}
+    // expected-error @below {{failed to verify that record_align must be a non-zero power of two}}
     S = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
                            has_trivial_dtor = true, record_align = 3>}
 } {
