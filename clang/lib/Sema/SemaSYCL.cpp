@@ -715,30 +715,28 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
     }
   }
 
-  template<typename Func, typename ...Ts>
+  template <typename Func, typename... Ts>
   void emitDiagnosticImpl(clang::diag::kind DiagId, Func additionalDiagnostics,
-    Ts &&...Args) {
-    const auto &Detail =
-        getObjectAccessDiagDetails(ObjectAccessPath.back());
+                          Ts &&...Args) {
+    const auto &Detail = getObjectAccessDiagDetails(ObjectAccessPath.back());
     {
-      ((SemaSYCLRef.Diag(Detail.Loc, DiagId) << Detail.Type)
-        << ... << Args);
+      ((SemaSYCLRef.Diag(Detail.Loc, DiagId) << Detail.Type) << ... << Args);
     }
     additionalDiagnostics();
     emitObjectAccessPathNotes();
   }
 
-  template<typename Func, typename ...Ts>
+  template <typename Func, typename... Ts>
   std::enable_if_t<std::is_invocable_v<Func>, void>
   emitDiagnostic(clang::diag::kind DiagId, Func additionalDiagnostics,
-    Ts &&...Args) {
-      emitDiagnosticImpl(DiagId, additionalDiagnostics,
-        std::forward<Ts>(Args)...);
+                 Ts &&...Args) {
+    emitDiagnosticImpl(DiagId, additionalDiagnostics,
+                       std::forward<Ts>(Args)...);
   }
 
-  template<typename ...Ts>
+  template <typename... Ts>
   void emitDiagnostic(clang::diag::kind DiagId, Ts &&...Args) {
-    emitDiagnosticImpl(DiagId, []{}, std::forward<Ts>(Args)...);
+    emitDiagnosticImpl(DiagId, [] {}, std::forward<Ts>(Args)...);
   }
 
 public:
@@ -785,13 +783,13 @@ public:
       // might not be relevant once the programmer addresses the
       // invalid use of a reference.
       emitDiagnostic(diag::err_sycl_kernel_bad_param_type,
-        diag::InvalidSYCLKernelParamReason::ReferenceType);
+                     diag::InvalidSYCLKernelParamReason::ReferenceType);
       IsValid = false;
       return false;
     }
     if (Ty->isAtomicType()) {
       emitDiagnostic(diag::err_sycl_kernel_bad_param_type,
-        diag::InvalidSYCLKernelParamReason::AtomicType);
+                     diag::InvalidSYCLKernelParamReason::AtomicType);
       IsValid = false;
       return false;
     }
@@ -801,22 +799,23 @@ public:
         const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
         // FAM can only be defined as the last element of a structure.
         const FieldDecl *FAM = nullptr;
-        for (const FieldDecl* FD : RD->fields())
+        for (const FieldDecl *FD : RD->fields())
           FAM = FD;
         assert(FAM && "structure with flexible array member has no fields??");
 
         if (FAM->getType()->isIncompleteArrayType())
           SemaSYCLRef.Diag(FAM->getLocation(),
-            diag::note_flexible_array_member_defined_here) << FAM << RD;
+                           diag::note_flexible_array_member_defined_here)
+              << FAM << RD;
         else
           findFAM(FAM->getType());
         SemaSYCLRef.Diag(RD->getLocation(), diag::note_within_field_of_type)
             << RD;
       };
 
-      emitDiagnostic(diag::err_sycl_kernel_bad_param_type,
-                     [&] { findFAM(Ty); },
-                     diag::InvalidSYCLKernelParamReason::FAM);
+      emitDiagnostic(
+          diag::err_sycl_kernel_bad_param_type, [&] { findFAM(Ty); },
+          diag::InvalidSYCLKernelParamReason::FAM);
       IsValid = false;
       return false;
     }
@@ -827,11 +826,12 @@ public:
         auto findVBases = [&] {
           for (const CXXBaseSpecifier &VB : RD->vbases())
             SemaSYCLRef.Diag(VB.getBaseTypeLoc(),
-              diag::note_vbase_specifier_here) << Ty << VB.getType();
+                             diag::note_vbase_specifier_here)
+                << Ty << VB.getType();
         };
-        emitDiagnostic(diag::err_sycl_kernel_bad_param_type,
-                       [&] { findVBases(); },
-                       diag::InvalidSYCLKernelParamReason::VirtualBase);
+        emitDiagnostic(
+            diag::err_sycl_kernel_bad_param_type, [&] { findVBases(); },
+            diag::InvalidSYCLKernelParamReason::VirtualBase);
         IsValid = false;
         return false;
       }
