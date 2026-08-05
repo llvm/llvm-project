@@ -936,8 +936,19 @@ static void assignUsesToGroups(Register CandidateReg, MachineInstr *CurMI,
       if (CurLoop && AreLoopsInSameLoopNest(UseLoop, CurLoop)) {
         // If the high register pressure point and the use are in the same
         // loop nest then the restore instruction is emitted before the use.
-        Groups.emplace_back(Use, Use->getParent(),
-                            DomGroup::RestorePlacement::BeforeHead);
+        if (UseLoop->getLoopDepth() == 1) {
+          Groups.emplace_back(Use, Use->getParent(),
+                              DomGroup::RestorePlacement::BeforeHead);
+        } else {
+          while (UseLoop->getLoopDepth() > 2) {
+            UseLoop = UseLoop->getParentLoop();
+          }
+          assert(UseLoop->getLoopDepth() == 2 &&
+                 "The loop has wrong loop depth.");
+          MachineBasicBlock *UseLoopPreheader = UseLoop->getLoopPreheader();
+          Groups.emplace_back(Use, UseLoopPreheader,
+                              DomGroup::RestorePlacement::LoopPreheader);
+        }
       } else {
         // If the high register pressure point is outside of the loop nest of
         // the use, then the restore instruction is emitted in the outermost
