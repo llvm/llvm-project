@@ -682,11 +682,7 @@ public:
     if (E->getCallReturnType(CGF.getContext())->isReferenceType())
       return EmitLoadOfLValue(E);
 
-    std::optional<CodeGenFunction::CGFPOptionsRAII> FPOptsRAII;
-    const FunctionDecl *FD = E->getDirectCallee();
-    bool IsBuiltin = FD && FD->getBuiltinID() != 0;
-    if (!IsBuiltin && E->getType()->hasFloatingRepresentation())
-      FPOptsRAII.emplace(CGF, E);
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
 
     Value *V = CGF.EmitCallExpr(E).getScalarVal();
 
