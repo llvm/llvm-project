@@ -555,10 +555,11 @@ public:
 
   void atomicAdd(MCInst &Inst, MCPhysReg RegAtomic, MCPhysReg RegTo,
                  MCPhysReg RegCnt) const {
+    // AMO operands are ordered as rd, rs2 (value), rs1 (address).
     Inst = MCInstBuilder(atomicAddOpc())
                .addReg(RegAtomic)
-               .addReg(RegTo)
-               .addReg(RegCnt);
+               .addReg(RegCnt)
+               .addReg(RegTo);
   }
 
   InstructionListType createRegCmpJE(MCPhysReg RegNo, const MCSymbol *Target,
