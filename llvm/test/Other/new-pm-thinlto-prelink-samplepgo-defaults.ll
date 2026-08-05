@@ -56,7 +56,6 @@
 ; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: CycleAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
-; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass on foo
 ; CHECK-O-NEXT: Running pass: PGOForceFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: AlwaysInlinerPass
@@ -96,8 +95,10 @@
 ; CHECK-O-NEXT: Running pass: ReassociatePass
 ; CHECK-O-NEXT: Running analysis: UniformityInfoAnalysis
 ; CHECK-O23-NEXT: Running pass: ConstraintEliminationPass
+; CHECK-O23-NEXT: Running analysis: LoopAnalysis on foo
 ; CHECK-O23-NEXT: Running analysis: ScalarEvolutionAnalysis
 ; CHECK-O-NEXT: Running pass: LoopSimplifyPass
+; CHECK-O1-NEXT: Running analysis: LoopAnalysis on foo
 ; CHECK-O-NEXT: Running pass: LCSSAPass
 ; CHECK-O1-NEXT: Running analysis: ScalarEvolutionAnalysis
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
