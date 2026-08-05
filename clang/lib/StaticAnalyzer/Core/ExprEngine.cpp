@@ -2394,28 +2394,19 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
                                                   ExplodedNode *Pred) {
   const StackFrame *SF = Pred->getStackFrame();
   const Stmt *Term = getCurrBlock()->getTerminatorStmt();
-  bool HasGeneratedNodes = false;
-  auto MakeDefaultNode = [BE, &Engine = Engine, OriginalPred = Pred]() {
-    return Engine.makeNode(BE, OriginalPred->getState(), OriginalPred);
-  };
+  ProgramStateRef State = Pred->getState();
 
   // If we reach a loop which has a known bound (and meets
   // other constraints) then consider completely unrolling it.
   if(AMgr.options.ShouldUnrollLoops) {
     unsigned maxBlockVisitOnPath = AMgr.options.maxBlockVisitOnPath;
     if (Term) {
-      ProgramStateRef NewState = updateLoopStack(Term, AMgr.getASTContext(),
-                                                 Pred, maxBlockVisitOnPath);
-      if (NewState != Pred->getState()) {
-        HasGeneratedNodes = true;
-        Pred = Engine.makeNode(BE, NewState, Pred);
-        if (!Pred)
-          return nullptr;
-      }
+      State = updateLoopStack(Term, AMgr.getASTContext(), Pred,
+                              maxBlockVisitOnPath);
     }
     // Is we are inside an unrolled loop then no need the check the counters.
-    if(isUnrolledState(Pred->getState()))
-      return HasGeneratedNodes ? Pred : MakeDefaultNode();
+    if (isUnrolledState(State))
+      return Engine.makeNode(BE, State, Pred);
   }
 
   // If this block is terminated by a loop and it has already been visited the
@@ -2424,7 +2415,15 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
   if (BlockCount == AMgr.options.maxBlockVisitOnPath - 1 &&
       AMgr.options.ShouldWidenLoops) {
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
-      return HasGeneratedNodes ? Pred : MakeDefaultNode();
+      return Engine.makeNode(BE, State, Pred);
+
+    if (State != Pred->getState()) {
+      // TODO: This intermediate transition is very likely to be irrelevant,
+      // remove it in a follow-up change.
+      Pred = Engine.makeNode(BE, State, Pred);
+      if (!Pred)
+        return nullptr;
+    }
 
     // FIXME:
     // We cannot use the CFG element from the via `ExprEngine::getCFGElementRef`
@@ -2433,16 +2432,24 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     // block, but the terminator cannot be referred as a CFG element.
     // Here we just pass the the first CFG element in the block.
     ProgramStateRef WidenedState = getWidenedLoopState(
-        Pred->getState(), SF, BlockCount, *getCurrBlock()->ref_begin());
+        State, SF, BlockCount, *getCurrBlock()->ref_begin());
     return Engine.makeNode(BE, WidenedState, Pred);
   }
 
   if (BlockCount < AMgr.options.maxBlockVisitOnPath)
-    return HasGeneratedNodes ? Pred : MakeDefaultNode();
+    return Engine.makeNode(BE, State, Pred);
+
+  if (State != Pred->getState()) {
+    // TODO: This intermediate transition is very likely to be irrelevant,
+    // remove it in a follow-up change.
+    Pred = Engine.makeNode(BE, State, Pred);
+    if (!Pred)
+      return nullptr;
+  }
 
   static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
-  const ExplodedNode *Sink = Engine.makeNode(BE.withTag(&Tag), Pred->getState(),
-                                             Pred, /*MarkAsSink=*/true);
+  const ExplodedNode *Sink =
+      Engine.makeNode(BE.withTag(&Tag), State, Pred, /*MarkAsSink=*/true);
 
   if (!SF->inTopFrame()) {
     // FIXME: This will unconditionally prevent inlining this function (even
