@@ -21,11 +21,6 @@
 #include "Utils/ELF.h"
 #include "omptarget.h"
 
-#ifdef OMPT_SUPPORT
-#include "OpenMP/OMPT/Callback.h"
-#include "omp-tools.h"
-#endif
-
 #include "GenericProfiler.h"
 
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -521,22 +516,6 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
   // vendor (u)uid will become available later.
   setDeviceUidFromVendorUid(std::to_string(static_cast<uint64_t>(DeviceId)));
 
-#ifdef OMPT_SUPPORT
-  OmptInitialized.store(false);
-  // Bind the callbacks to this device's member functions
-#define bindOmptCallback(Name, Type, Code)                                     \
-  if (ompt::Initialized && ompt::lookupCallbackByCode) {                       \
-    ompt::lookupCallbackByCode((ompt_callbacks_t)(Code),                       \
-                               ((ompt_callback_t *)&(Name##_fn)));             \
-    ODBG(OLDT_Tool) << "OMPT: class bound " << #Name << "="                    \
-                    << ((void *)(uint64_t)Name##_fn);                          \
-  }
-
-  FOREACH_OMPT_DEVICE_EVENT(bindOmptCallback);
-#undef bindOmptCallback
-
-#endif
-
   // Envar that indicates whether mapped host buffers should be locked
   // automatically. The possible values are boolean (on/off) and a special:
   //   off:       Mapped host buffers are not locked.
@@ -567,18 +546,6 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
 Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (auto Err = initImpl(Plugin))
     return Err;
-
-#ifdef OMPT_SUPPORT
-  if (ompt::Initialized) {
-    bool ExpectedStatus = false;
-    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
-      performOmptCallback(device_initialize, Plugin.getUserId(DeviceId),
-                          /*type=*/getComputeUnitKind().c_str(),
-                          /*device=*/reinterpret_cast<ompt_device_t *>(this),
-                          /*lookup=*/ompt::lookupCallbackByName,
-                          /*documentation=*/nullptr);
-  }
-#endif
 
   Plugin.getProfiler()->handleInit(this, &Plugin);
 
@@ -675,14 +642,6 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     RecordReplay = nullptr;
   }
 
-#ifdef OMPT_SUPPORT
-  if (ompt::Initialized) {
-    bool ExpectedStatus = true;
-    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
-      performOmptCallback(device_finalize, Plugin.getUserId(DeviceId));
-  }
-#endif
-
   Plugin.getProfiler()->handleDeinit(this, &Plugin);
 
   return deinitImpl();
@@ -729,18 +688,6 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
 
   if (auto Err = setupRPCServer(Plugin, *Image))
     return std::move(Err);
-
-#ifdef OMPT_SUPPORT
-  if (ompt::Initialized) {
-    size_t Bytes = InputTgtImage.size();
-    performOmptCallback(
-        device_load, Plugin.getUserId(DeviceId),
-        /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
-        /*ImgSize=*/Bytes,
-        /*HostAddr=*/const_cast<unsigned char *>(InputTgtImage.bytes_begin()),
-        /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
-  }
-#endif
 
   Plugin.getProfiler()->handleLoadBinary(this, &Plugin, InputTgtImage);
 

@@ -1460,16 +1460,6 @@ protected:
   /// This is used to run the RPC server during task synchronization.
   RPCServerTy *RPCServer;
 
-#ifdef OMPT_SUPPORT
-  /// OMPT callback functions
-#define defineOmptCallback(Name, Type, Code) Name##_t Name##_fn = nullptr;
-  FOREACH_OMPT_DEVICE_EVENT(defineOmptCallback)
-#undef defineOmptCallback
-
-  /// Internal representation for OMPT device (initialize & finalize)
-  std::atomic<bool> OmptInitialized;
-#endif
-
   /// The total per-block native shared memory that a kernel may use.
   size_t MaxBlockSharedMemSize = 0;
 };
