@@ -127,6 +127,12 @@ jobs:
           "${COMPILER}" --version
           python3 --version
 
+      - name: Setup virtual environment
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install -r libcxx/utils/requirements.txt
+
       - name: Run the benchmarks
         env:
           COMMIT: ${{ inputs.commit }}
@@ -134,6 +140,7 @@ jobs:
           FILTER: ${{ inputs.filter }}
           LNT_MACHINE: ${{ matrix.lnt-machine }}
         run: |
+          source .venv/bin/activate
           filter_arg=()
           if [ -n "${FILTER}" ]; then
             filter_arg=(--filter "${FILTER}")
@@ -154,6 +161,7 @@ jobs:
           COMMIT: ${{ inputs.commit }}
           LNT_URL: ${{ inputs.lnt-url }}
         run: |
+          source .venv/bin/activate
           libcxx/utils/ci/lnt/submit-benchmarks             \
             --lnt-url "${LNT_URL}"                          \
             --test-suite libcxx                             \

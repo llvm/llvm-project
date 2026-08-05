@@ -281,7 +281,7 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_depend}},
-          {51, {Clause::OMPC_depend, Clause::OMPC_update}},
+          {51, {Clause::OMPC_depend, Clause::OMPC_update_depend_objects}},
           {52, {Clause::OMPC_doacross}},
       },
   };
@@ -451,6 +451,23 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLinearModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_linear}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLinearStep>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"linear-step",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_linear}},
+          {52, {}},
       },
   };
   return desc;
@@ -709,12 +726,11 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpStepSimpleModifier>() {
       /*name=*/"step-simple-modifier",
       /*props=*/
       {
-          {45, {OmpProperty::Unique}},
           {52, {OmpProperty::Unique, OmpProperty::Exclusive}},
       },
       /*clauses=*/
       {
-          {45, {Clause::OMPC_linear}},
+          {52, {Clause::OMPC_linear}},
       },
   };
   return desc;
@@ -731,7 +747,7 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_depend}},
-          {51, {Clause::OMPC_depend, Clause::OMPC_update}},
+          {51, {Clause::OMPC_depend, Clause::OMPC_update_depend_objects}},
       },
   };
   return desc;

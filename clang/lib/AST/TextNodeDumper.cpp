@@ -372,7 +372,10 @@ void TextNodeDumper::Visit(const OMPClause *C) {
   }
   {
     ColorScope Color(OS, ShowColors, ASTDumpColor::Attr);
-    StringRef ClauseName(llvm::omp::getOpenMPClauseName(C->getClauseKind()));
+    OpenMPClauseKind CKind = C->getClauseKind();
+    StringRef ClauseName(CKind == llvm::omp::Clause::OMPC_update_depend_objects
+                             ? StringRef("UpdateDependObjects")
+                             : llvm::omp::getOpenMPClauseName(CKind));
     OS << "OMP" << ClauseName.substr(/*Start=*/0, /*N=*/1).upper()
        << ClauseName.drop_front() << "Clause";
   }

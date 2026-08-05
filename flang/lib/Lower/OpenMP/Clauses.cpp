@@ -294,6 +294,7 @@ MAKE_EMPTY_CLASS(Simd, Simd);
 MAKE_EMPTY_CLASS(Threads, Threads);
 MAKE_EMPTY_CLASS(Unknown, Unknown);
 MAKE_EMPTY_CLASS(Untied, Untied);
+MAKE_EMPTY_CLASS(Update, Update);
 MAKE_EMPTY_CLASS(Weak, Weak);
 MAKE_EMPTY_CLASS(Write, Write);
 
@@ -1180,15 +1181,17 @@ Linear make(const parser::OmpClause::Linear &inp,
       semantics::OmpGetUniqueModifier<parser::OmpStepSimpleModifier>(mods);
   assert((!m0 || !m1) && "Simple and complex modifiers both present");
 
-  auto *m2 = semantics::OmpGetUniqueModifier<parser::OmpLinearModifier>(mods);
+  auto *m2 = semantics::OmpGetUniqueModifier<parser::OmpLinearStep>(mods);
+  auto *m3 = semantics::OmpGetUniqueModifier<parser::OmpLinearModifier>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
 
   auto &&maybeStep = m0   ? maybeApplyToV(makeExprFn(semaCtx), m0)
                      : m1 ? maybeApplyToV(makeExprFn(semaCtx), m1)
+                     : m2 ? maybeApplyToV(makeExprFn(semaCtx), m2)
                           : std::optional<Linear::StepComplexModifier>{};
 
   return Linear{{/*StepComplexModifier=*/std::move(maybeStep),
-                 /*LinearModifier=*/maybeApplyToV(convert, m2),
+                 /*LinearModifier=*/maybeApplyToV(convert, m3),
                  /*List=*/makeObjects(t1, semaCtx)}};
 }
 
@@ -1228,7 +1231,6 @@ Map make(const parser::OmpClause::Map &inp,
       // clang-format off
       MS(Always,    Always)
       MS(Close,     Close)
-      MS(Ompx_Hold, OmpxHold)
       MS(Present,   Present)
       // clang-format on
   );
@@ -1755,16 +1757,14 @@ Uniform make(const parser::OmpClause::Uniform &inp,
 // Unknown: empty
 // Untied: empty
 
-Update make(const parser::OmpClause::Update &inp,
-            semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpUpdateClause
-  if (inp.v) {
-    return common::visit(
-        [](auto &&s) { return Update{/*DependenceType=*/makeDepType(s)}; },
-        inp.v->u);
-  } else {
-    return Update{/*DependenceType=*/std::nullopt};
-  }
+UpdateDependObjects make(const parser::OmpClause::UpdateDependObjects &inp,
+                         semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpUpdateDependObjectsClause
+  return common::visit(
+      [](auto &&s) {
+        return UpdateDependObjects{/*DependenceType=*/makeDepType(s)};
+      },
+      inp.v.u);
 }
 
 Use make(const parser::OmpClause::Use &inp,
