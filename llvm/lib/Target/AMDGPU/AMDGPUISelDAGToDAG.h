@@ -74,6 +74,7 @@ public:
 protected:
   void SelectBuildVector(SDNode *N, unsigned RegClassID);
   void SelectVectorShuffle(SDNode *N);
+  void SelectExtractSubvector(SDNode *N);
   bool isSDWAOperand(const SDNode *N) const;
 
 private:
