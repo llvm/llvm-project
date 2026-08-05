@@ -6927,6 +6927,9 @@ bool X86TTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   switch (II->getIntrinsicID()) {
   default:
     return true;
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_xor:
   case Intrinsic::vector_reduce_mul:
   case Intrinsic::vector_reduce_smax:
   case Intrinsic::vector_reduce_smin:
