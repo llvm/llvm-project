@@ -48,6 +48,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/TargetParser/AtomicScope.h"
 #include "llvm/Transforms/Utils/LowerAtomic.h"
 #include <optional>
 
@@ -20582,7 +20583,9 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   auto SSID = RMW->getSyncScopeID();
   bool HasSystemScope =
       SSID == SyncScope::System ||
-      SSID == RMW->getContext().getOrInsertSyncScopeID("one-as");
+      SSID == RMW->getContext().getOrInsertSyncScopeID(*getAtomicScopeIRString(
+                  getTargetMachine().getTargetTriple(), AtomicScope::System,
+                  /*OneAddressSpace=*/true));
 
   auto Op = RMW->getOperation();
   switch (Op) {
