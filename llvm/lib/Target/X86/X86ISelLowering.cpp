@@ -48594,8 +48594,7 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
     return DAG.getSelect(DL, LHS.getValueType(), NewCond, RHS, LHS);
 
   // Invert the setcc for all users and commute all vselects.
-  SmallVector<SDNode *> UsersToUpdate(Cond->users());
-  for (SDNode *User : UsersToUpdate) {
+  for (SDNode *User : llvm::make_early_inc_range(Cond->users())) {
     SDValue UserLHS = User->getOperand(1);
     SDValue UserRHS = User->getOperand(2);
     [[maybe_unused]] SDNode *Updated =
