@@ -664,12 +664,12 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
   //       register file accordingly.
   if (hasGFX90AInsts()) {
     unsigned MinNumAGPRs = 0;
-    unsigned MinCapVGPRs = ~0u;
-    unsigned MaxCapVGPRs = 0;
+    unsigned VGPRCap = ~0u;
+    unsigned AGPRCap = ~0u;
     const unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
 
     const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
-    const std::pair<unsigned, unsigned> DefaultNumVGPR = {~0u, 0};
+    const std::pair<unsigned, unsigned> DefaultRegisterBudget = {~0u, ~0u};
     // TODO: The lower bound should probably force the number of required
     // registers up, overriding amdgpu-waves-per-eu.
     std::tie(MinNumAGPRs, MaxNumAGPRs) =
@@ -684,9 +684,9 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
       MinNumAGPRs = alignTo(MinNumAGPRs, 4);
 
       MinNumAGPRs = std::min(MinNumAGPRs, TotalNumAGPRs);
-      std::tie(MinCapVGPRs, MaxCapVGPRs) =
-        AMDGPU::getIntegerPairAttribute(F, "amdgpu-vgpr-budget", DefaultNumVGPR,
-                                        /*OnlyFirstRequired=*/true);
+      std::tie(VGPRCap, AGPRCap) =
+        AMDGPU::getIntegerPairAttribute(F, "amdgpu-register-budget", DefaultRegisterBudget,
+                                        /*OnlyFirstRequired=*/false);
     }
 
     // Clamp values to be inbounds of our limits, and ensure min <= max.
@@ -694,8 +694,8 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
     MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
     MinNumAGPRs = std::min({MinNumAGPRs, TotalNumAGPRs, MaxNumAGPRs});
 
-    MaxNumVGPRs = std::min({MaxVectorRegs - MinNumAGPRs, NumArchVGPRs, MinCapVGPRs});
-    MaxNumAGPRs = std::min({MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs, MaxVectorRegs - MaxCapVGPRs});
+    MaxNumVGPRs = std::min({MaxVectorRegs - MinNumAGPRs, NumArchVGPRs, VGPRCap});
+    MaxNumAGPRs = std::min({MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs, AGPRCap});
 
     LLVM_DEBUG(dbgs() << "MaxNumVGPRs: " << MaxNumVGPRs << ", MaxNumAGPRs: "
                       << MaxNumAGPRs << " (" << F.getName() << ")\n");

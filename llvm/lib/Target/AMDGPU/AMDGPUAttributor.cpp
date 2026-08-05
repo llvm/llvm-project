@@ -1436,15 +1436,15 @@ const char AAAMDGPUMinAGPRAlloc::ID = 0;
 /// The register-file split a function has been committed to by its callers.
 /// \p Min is the absolute ceiling on architected VGPRs, \p Max is the AGPR
 /// ceiling encoded relative to the total vector register budget.
-struct VGPRBudgetState {
-  unsigned Min = 0;
-  unsigned Max = 0;
+struct RegisterBudgetState {
+  unsigned VGPRs = 0;
+  unsigned AGPRs = 0;
   bool Unknown = true;
 
-  bool operator==(const VGPRBudgetState &Other) const {
-    return Unknown == Other.Unknown && Min == Other.Min && Max == Other.Max;
+  bool operator==(const RegisterBudgetState &Other) const {
+    return Unknown == Other.Unknown && VGPRs == Other.VGPRs && AGPRs ==  Other.AGPRs;
   }
-  bool operator!=(const VGPRBudgetState &Other) const {
+  bool operator!=(const RegisterBudgetState &Other) const {
     return !(*this == Other);
   }
 
@@ -1452,31 +1452,31 @@ struct VGPRBudgetState {
   /// callers has to fit inside all of their splits, so take the tightest
   /// ceiling on each side: the smallest VGPR count and, since AGPRs are
   /// encoded relative to the budget, the largest \p Max.
-  void merge(const VGPRBudgetState &Other) {
+  void merge(const RegisterBudgetState &Other) {
     assert(!Other.Unknown && "cannot merge an unknown budget");
     if (Unknown) {
       *this = Other;
       return;
     }
-    Min = std::min(Min, Other.Min);
-    Max = std::max(Max, Other.Max);
+    VGPRs = std::min(VGPRs, Other.VGPRs);
+    AGPRs = std::min(AGPRs, Other.AGPRs);
   }
 };
 
 /// An abstract attribute to propagate the register file split a kernel was
 /// compiled with down the call graph to its device functions, emitted as
-/// "amdgpu-vgpr-budget". Entry functions seed the split from their own vector
+/// "amdgpu-register-budget". Entry functions seed the split from their own vector
 /// register budget; every other function inherits the tightest split over its
 /// callers.
-struct AAAMDGPUVGPRBudget
+struct AAAMDGPURegisterBudget
     : public StateWrapper<BooleanState, AbstractAttribute> {
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
-  AAAMDGPUVGPRBudget(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+  AAAMDGPURegisterBudget(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
-  static AAAMDGPUVGPRBudget &createForPosition(const IRPosition &IRP,
+  static AAAMDGPURegisterBudget &createForPosition(const IRPosition &IRP,
                                                Attributor &A) {
     if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
-      return *new (A.Allocator) AAAMDGPUVGPRBudget(IRP, A);
+      return *new (A.Allocator) AAAMDGPURegisterBudget(IRP, A);
     llvm_unreachable("AAAMDGPUVGPRBudget is only valid for function position");
   }
 
@@ -1498,40 +1498,48 @@ struct AAAMDGPUVGPRBudget
 
   ChangeStatus updateImpl(Attributor &A) override {
     Function *F = getAssociatedFunction();
-    VGPRBudgetState OldState = Budget;
+    RegisterBudgetState OldState = Budget;
 
     // The budget is recomputed from scratch on every update rather than
     // accumulated, because the seed itself moves: a kernel's split shrinks as
     // AAAMDGPUMinAGPRAlloc climbs, and callees have to follow it down.
     if (AMDGPU::isEntryFunctionCC(F->getCallingConv())) {
       unsigned VGPRBudget = 0;
+      unsigned AGPRBudget = 0;
       const auto *AGPRAlloc = A.getAAFor<AAAMDGPUMinAGPRAlloc>(
-          *this, IRPosition::function(*F), DepClassTy::REQUIRED);
+          *this, IRPosition::function(*F), DepClassTy::OPTIONAL);
 
       auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
       const GCNSubtarget &ST = InfoCache.TM.getSubtarget<GCNSubtarget>(*F);
       unsigned MaxRegs = ST.getMaxNumVGPRs(*F);
-      if (!AGPRAlloc || !AGPRAlloc->isValidState())
-        VGPRBudget = MaxRegs / 2; // pessimistic
+      if (!AGPRAlloc || !AGPRAlloc->isValidState()) {
+        VGPRBudget = AGPRBudget = MaxRegs / 2; // pessimistic
+      }
       else
-        VGPRBudget = MaxRegs - std::min(MaxRegs, AGPRAlloc->getAssumed());
-          
-      Budget = {VGPRBudget, VGPRBudget, /*Unknown=*/false};
+      {
+        AGPRBudget = AGPRAlloc->getAssumed();
+        VGPRBudget = MaxRegs - std::min(MaxRegs, AGPRBudget);
+      }
+        
+      Budget = {VGPRBudget, AGPRBudget, /*Unknown=*/false};
+      LLVM_DEBUG(dbgs() << "Register budget for " << F->getName() << ": " << VGPRBudget << ", " << AGPRBudget << "\n");
     } else {
-      VGPRBudgetState Merged;
+      RegisterBudgetState Merged;
 
       auto CheckCallSite = [&](AbstractCallSite CS) {
         Function *Caller = CS.getInstruction()->getFunction();
-        const auto *CallerAA = A.getAAFor<AAAMDGPUVGPRBudget>(
+        const auto *CallerAA = A.getAAFor<AAAMDGPURegisterBudget>(
             *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
         if (!CallerAA || !CallerAA->isValidState())
+        {
           return false;
+        }
 
         // A caller without a budget yet imposes no constraint, so skip it
         // rather than giving up. This is what lets a call graph cycle be
         // seeded from outside the cycle instead of deadlocking on itself; the
         // dependency brings us back once the caller does have a value.
-        const VGPRBudgetState &CallerBudget = CallerAA->getBudget();
+        const RegisterBudgetState &CallerBudget = CallerAA->getBudget();
         if (!CallerBudget.Unknown)
           Merged.merge(CallerBudget);
         return true;
@@ -1565,10 +1573,7 @@ struct AAAMDGPUVGPRBudget
       return ChangeStatus::UNCHANGED;
     SmallString<16> Buffer;
     raw_svector_ostream OS(Buffer);
-    if (Budget.Min == Budget.Max)
-      OS << Budget.Min;
-    else
-      OS << Budget.Min << ',' << Budget.Max;
+    OS << Budget.VGPRs << ',' << Budget.AGPRs;
     return A.manifestAttrs(
         getIRPosition(),
         {Attribute::get(getAssociatedFunction()->getContext(), AttrName,
@@ -1576,14 +1581,14 @@ struct AAAMDGPUVGPRBudget
         /*ForceReplace=*/true);
   }
 
-  const VGPRBudgetState &getBudget() const { return Budget; }
+  const RegisterBudgetState &getBudget() const { return Budget; }
 
   const std::string getAsStr(Attributor *A) const override {
     if (!getAssumed() || Budget.Unknown)
       return "unknown";
     std::string Str;
     raw_string_ostream OS(Str);
-    OS << AttrName << '=' << Budget.Min << ',' << Budget.Max;
+    OS << AttrName << '=' << Budget.VGPRs << ',' << Budget.AGPRs;
     return Str;
   }
 
@@ -1601,12 +1606,12 @@ struct AAAMDGPUVGPRBudget
   static const char ID;
 
 private:
-  VGPRBudgetState Budget;
+  RegisterBudgetState Budget;
 
-  static constexpr char AttrName[] = "amdgpu-vgpr-budget";
+  static constexpr char AttrName[] = "amdgpu-register-budget";
 };
 
-const char AAAMDGPUVGPRBudget::ID = 0;
+const char AAAMDGPURegisterBudget::ID = 0;
 
 /// An abstract attribute to propagate the function attribute
 /// "amdgpu-cluster-dims" from kernel entry functions to device functions.
@@ -1771,7 +1776,7 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
       {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
        &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID,
-       &AAAMDGPUMinAGPRAlloc::ID, &AAAMDGPUVGPRBudget::ID, &AACallEdges::ID,
+       &AAAMDGPUMinAGPRAlloc::ID, &AAAMDGPURegisterBudget::ID, &AACallEdges::ID,
        &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
        &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
        &AAIndirectCallInfo::ID, &AAAMDGPUClusterDims::ID, &AAAlign::ID});
@@ -1818,7 +1823,7 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
 
     if (ST.hasGFX90AInsts()) {
       A.getOrCreateAAFor<AAAMDGPUMinAGPRAlloc>(IRPosition::function(*F));
-      A.getOrCreateAAFor<AAAMDGPUVGPRBudget>(IRPosition::function(*F));
+      A.getOrCreateAAFor<AAAMDGPURegisterBudget>(IRPosition::function(*F));
     }
 
     for (auto &I : instructions(F)) {
