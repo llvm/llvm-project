@@ -25187,8 +25187,10 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
 
   // Emit the runtime alias check while the block is still fully connected:
   // LCSSA-preserving SCEV expansion rewrites out-of-loop uses of
-  // loop-defined bases to poison in predecessor-less blocks.
-  IRBuilder<> ChkBuilder(Term);
+  // loop-defined bases to poison in predecessor-less blocks. Expand at the
+  // first insertion point, where no body instruction dominates, so the check
+  // cannot reuse scalars that are moved into the vector block and deleted.
+  IRBuilder<> ChkBuilder(BB, BB->getFirstInsertionPt());
   ChkBuilder.SetCurrentDebugLocation(Term->getDebugLoc());
   SCEVExpander Exp(*SE, "slp.rtcheck");
   Value *Cond = emitRuntimeAliasCheck(ChkBuilder, Exp);
