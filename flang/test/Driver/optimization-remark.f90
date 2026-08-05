@@ -96,5 +96,5 @@ end subroutine swap_real
 ! Relative path in a subdirectory: the relative path is displayed as given.
 ! RUN: rm -rf %t && mkdir -p %t/sub
 ! RUN: cp %s %t/sub/vec.f90
-! RUN: cd %t && %flang sub/vec.f90 -O2 -Rpass -S -o %t/vec.s 2>&1 | FileCheck %s --check-prefix=SUBDIR
+! RUN: cd %t && %flang sub/vec.f90 -O2 -Rpass -S %{output} 2>&1 | FileCheck %s --check-prefix=SUBDIR
 ! SUBDIR: {{^}}sub/vec.f90:{{[0-9]+}}:{{[0-9]+}}: remark:
