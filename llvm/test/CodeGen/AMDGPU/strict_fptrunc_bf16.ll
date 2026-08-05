@@ -13,7 +13,7 @@ define amdgpu_ps void @strict_fptrunc_f32_to_bf16(float %a, ptr %out) #0 {
 ;
 ; GFX1250-LABEL: strict_fptrunc_f32_to_bf16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
@@ -44,7 +44,7 @@ define amdgpu_ps void @strict_fptrunc_f64_to_bf16(double %a, ptr %out) #0 {
 ;
 ; GFX1250-LABEL: strict_fptrunc_f64_to_bf16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_cvt_f32_f64_e32 v6, v[0:1]
@@ -76,7 +76,7 @@ define amdgpu_ps void @strict_fptrunc_v2f32_to_v2bf16(<2 x float> %a, ptr %out) 
 ;
 ; GFX1250-LABEL: strict_fptrunc_v2f32_to_v2bf16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
@@ -116,7 +116,7 @@ define amdgpu_ps void @strict_fptrunc_v2f64_to_v2bf16(<2 x double> %a, ptr %out)
 ;
 ; GFX1250-LABEL: strict_fptrunc_v2f64_to_v2bf16:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_cvt_f32_f64_e32 v10, v[2:3]

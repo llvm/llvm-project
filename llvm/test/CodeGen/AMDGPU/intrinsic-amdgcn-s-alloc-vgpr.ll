@@ -8,7 +8,7 @@ declare i1 @llvm.amdgcn.s.alloc.vgpr(i32)
 define amdgpu_cs void @test_alloc_vreg_const(ptr addrspace(1) %out) #0 {
 ; GISEL-LABEL: test_alloc_vreg_const:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    global_wb
+; GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
@@ -28,7 +28,7 @@ define amdgpu_cs void @test_alloc_vreg_const(ptr addrspace(1) %out) #0 {
 ;
 ; DAGISEL-LABEL: test_alloc_vreg_const:
 ; DAGISEL:       ; %bb.0: ; %entry
-; DAGISEL-NEXT:    global_wb
+; DAGISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; DAGISEL-NEXT:    v_nop
 ; DAGISEL-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
@@ -44,7 +44,7 @@ define amdgpu_cs void @test_alloc_vreg_const(ptr addrspace(1) %out) #0 {
 ;
 ; NRBS-LABEL: test_alloc_vreg_const:
 ; NRBS:       ; %bb.0: ; %entry
-; NRBS-NEXT:    global_wb
+; NRBS-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; NRBS-NEXT:    v_nop
 ; NRBS-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
@@ -71,7 +71,7 @@ entry:
 define amdgpu_cs void @test_alloc_vreg_var(i32 inreg %n, ptr addrspace(1) %out) #0 {
 ; GISEL-LABEL: test_alloc_vreg_var:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    global_wb
+; GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
@@ -91,7 +91,7 @@ define amdgpu_cs void @test_alloc_vreg_var(i32 inreg %n, ptr addrspace(1) %out) 
 ;
 ; DAGISEL-LABEL: test_alloc_vreg_var:
 ; DAGISEL:       ; %bb.0: ; %entry
-; DAGISEL-NEXT:    global_wb
+; DAGISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; DAGISEL-NEXT:    v_nop
 ; DAGISEL-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
@@ -107,7 +107,7 @@ define amdgpu_cs void @test_alloc_vreg_var(i32 inreg %n, ptr addrspace(1) %out) 
 ;
 ; NRBS-LABEL: test_alloc_vreg_var:
 ; NRBS:       ; %bb.0: ; %entry
-; NRBS-NEXT:    global_wb
+; NRBS-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; NRBS-NEXT:    v_nop
 ; NRBS-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
@@ -134,7 +134,7 @@ entry:
 define amdgpu_cs void @test_alloc_vreg_vgpr(i32 %n, ptr addrspace(1) %out) #0 {
 ; GISEL-LABEL: test_alloc_vreg_vgpr:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    global_wb
+; GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -157,7 +157,7 @@ define amdgpu_cs void @test_alloc_vreg_vgpr(i32 %n, ptr addrspace(1) %out) #0 {
 ;
 ; DAGISEL-LABEL: test_alloc_vreg_vgpr:
 ; DAGISEL:       ; %bb.0: ; %entry
-; DAGISEL-NEXT:    global_wb
+; DAGISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; DAGISEL-NEXT:    v_nop
 ; DAGISEL-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -176,7 +176,7 @@ define amdgpu_cs void @test_alloc_vreg_vgpr(i32 %n, ptr addrspace(1) %out) #0 {
 ;
 ; NRBS-LABEL: test_alloc_vreg_vgpr:
 ; NRBS:       ; %bb.0: ; %entry
-; NRBS-NEXT:    global_wb
+; NRBS-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; NRBS-NEXT:    v_nop
 ; NRBS-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; NRBS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)

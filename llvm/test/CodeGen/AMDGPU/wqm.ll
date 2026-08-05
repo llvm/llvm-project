@@ -3415,7 +3415,9 @@ define amdgpu_ps void @test_for_deactivating_lanes_in_wave32(ptr addrspace(6) in
 main_body:
   %1 = ptrtoint ptr addrspace(6) %0 to i32
   %2 = insertelement <4 x i32> <i32 poison, i32 32768, i32 32, i32 822177708>, i32 %1, i32 0
-  %3 = call nsz arcp float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %2, i32 0, i32 0) #3
+  %sbuf.rsrc = bitcast <4 x i32> %2 to i128
+  %sbuf.ptr = inttoptr i128 %sbuf.rsrc to ptr addrspace(8)
+  %3 = call nsz arcp float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %sbuf.ptr, i32 0, i32 0) #3, !invariant.load !{}
   %4 = fcmp nsz arcp ugt float %3, 0.000000e+00
   call void @llvm.amdgcn.kill(i1 %4) #1
   ret void
@@ -3608,7 +3610,9 @@ main_body:
 if:
   %idx1 = extractelement <4 x i32> %idx0, i64 0
   %idx2 = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %idx1)
-  %idx3 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %sampler, i32 %idx2, i32 0)
+  %sampler.rsrc = bitcast <4 x i32> %sampler to i128
+  %sampler.ptr = inttoptr i128 %sampler.rsrc to ptr addrspace(8)
+  %idx3 = call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) %sampler.ptr, i32 %idx2, i32 0), !invariant.load !{}
 
   call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %tex1, <4 x i32> poison, i32 %idx3, i32 0, i32 0, i32 0)
   br label %endif
@@ -3675,7 +3679,9 @@ main_body:
   %tex2 = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %d, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
 
   %idx2 = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %idx1)
-  %idx3 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %sampler, i32 %idx2, i32 0)
+  %sampler.rsrc = bitcast <4 x i32> %sampler to i128
+  %sampler.ptr = inttoptr i128 %sampler.rsrc to ptr addrspace(8)
+  %idx3 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %sampler.ptr, i32 %idx2, i32 0), !invariant.load !{}
 
   %r0 = extractelement <4 x float> %tex1, i64 1
   %r1 = extractelement <4 x float> %tex2, i64 2
@@ -3723,7 +3729,8 @@ declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, 
 declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #2
 declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #2
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32)
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32 immarg) #7
+declare float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8), i32, i32 immarg) #7
+declare i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8), i32, i32 immarg) #7
 declare i32 @llvm.amdgcn.readfirstlane.i32(i32)
 
 attributes #1 = { nounwind }

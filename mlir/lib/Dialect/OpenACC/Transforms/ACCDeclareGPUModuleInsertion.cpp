@@ -109,21 +109,41 @@ public:
       Operation *deviceGlobal = globalOp.clone();
       auto declareAttr =
           globalOp.getAttrOfType<acc::DeclareAttr>(acc::getDeclareAttrName());
-      if (cudaUnified && declareAttr.getDataClause().getValue() !=
-                             acc::DataClause::acc_declare_device_resident)
+      auto globalVar = dyn_cast<acc::GlobalVariableOpInterface>(&globalOp);
+      bool makeUnifiedDeclaration =
+          cudaUnified &&
+          declareAttr.getDataClause().getValue() !=
+              acc::DataClause::acc_declare_device_resident &&
+          (!globalVar || !globalVar.isConstant());
+      if (makeUnifiedDeclaration)
         makeDeviceGlobalDeclaration(*deviceGlobal);
 
       if (Operation *existing = gpuSymTable.lookup(name.getValue())) {
         // Reuse when structurally equivalent ignoring locations and discardable
         // attrs such as `acc.declare` attributes. Only a different op type or a
         // true definition mismatch is a conflict.
-        if (existing->getName() != globalOp.getName() ||
-            !OperationEquivalence::isEquivalentTo(
-                existing, deviceGlobal,
-                OperationEquivalence::ignoreValueEquivalence,
-                /*markEquivalent=*/nullptr,
-                OperationEquivalence::IgnoreLocations |
-                    OperationEquivalence::IgnoreDiscardableAttrs)) {
+        auto isEquivalent = [](Operation *lhs, Operation *rhs) {
+          return lhs->getName() == rhs->getName() &&
+                 OperationEquivalence::isEquivalentTo(
+                     lhs, rhs, OperationEquivalence::ignoreValueEquivalence,
+                     /*markEquivalent=*/nullptr,
+                     OperationEquivalence::IgnoreLocations |
+                         OperationEquivalence::IgnoreDiscardableAttrs);
+        };
+        if (!isEquivalent(existing, deviceGlobal)) {
+          // Earlier GPU lowering can create a global in the GPU module before
+          // this pass. In unified memory, convert an equivalent pre-existing
+          // global to the declaration form expected for an OpenACC global.
+          if (makeUnifiedDeclaration) {
+            Operation *normalizedExisting = existing->clone();
+            makeDeviceGlobalDeclaration(*normalizedExisting);
+            bool canReuse = isEquivalent(normalizedExisting, deviceGlobal);
+            normalizedExisting->destroy();
+            if (canReuse)
+              makeDeviceGlobalDeclaration(*existing);
+          }
+        }
+        if (!isEquivalent(existing, deviceGlobal)) {
           deviceGlobal->destroy();
           accSupport.emitNYI(globalOp.getLoc(),
                              llvm::Twine("duplicate global symbol '") +

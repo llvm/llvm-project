@@ -44,19 +44,6 @@ using namespace mlir::abi;
 
 namespace {
 
-bool needsRewrite(const FunctionClassification &fc) {
-  // Direct without coercion is a true pass-through; any other kind (or a
-  // coerced Direct) means the rewriter must touch the IR.  Extend is
-  // technically attribute-only at the IR level but still counts because the
-  // attribute attachment changes observable behavior.
-  if ((fc.returnInfo.kind != ArgKind::Direct) || fc.returnInfo.coercedType)
-    return true;
-  for (const ArgClassification &ac : fc.argInfos)
-    if ((ac.kind != ArgKind::Direct) || ac.coercedType)
-      return true;
-  return false;
-}
-
 /// Return the coerced RecordType for a Direct classification that should be
 /// flattened into individual scalar arguments, or a null type if the
 /// classification does not call for flattening.
@@ -799,6 +786,38 @@ void applySretSlotAttrs(cir::CallOp newCall, mlir::ArrayAttr argAttrs,
   newCall->setAttr("arg_attrs", mlir::ArrayAttr::get(ctx, newArgAttrs));
 }
 
+/// For an indirect call, prepend the callee function pointer as operand 0 so
+/// CallOp::create rebuilds it as an indirect call, bitcasting it to a function
+/// pointer whose signature matches the rewritten operands and return type.
+/// No-op for direct calls.
+static void prependIndirectCallee(cir::CallOp call,
+                                  SmallVectorImpl<mlir::Value> &args,
+                                  mlir::Type retTy, mlir::OpBuilder &builder) {
+  if (!call.isIndirect())
+    return;
+  mlir::Value calleePtr = call.getIndirectCall();
+  SmallVector<mlir::Type> paramTypes;
+  paramTypes.reserve(args.size());
+  llvm::transform(args, std::back_inserter(paramTypes),
+                  [](mlir::Value v) { return v.getType(); });
+  // Lowering builds an indirect call's LLVM function type from the callee
+  // pointer's pointee and takes the call's result from that type, so the
+  // pointee's return type has to track the rewrite: an sret return would
+  // leave a result the call no longer produces, and a coerced return one of
+  // the wrong type.  The ellipsis has to survive for the same reason: the
+  // rebuilt pointee is what makes the lowered call variadic, and only a
+  // variadic call gets the vector-register count that the x86_64 SysV ABI
+  // passes in AL and that the callee's va_arg reads back.
+  auto calleeFnTy = cast<cir::FuncType>(
+      cast<cir::PointerType>(calleePtr.getType()).getPointee());
+  auto newPtrTy = cir::PointerType::get(
+      cir::FuncType::get(paramTypes, retTy, calleeFnTy.isVarArg()));
+  if (calleePtr.getType() != newPtrTy)
+    calleePtr = cir::CastOp::create(builder, call.getLoc(), newPtrTy,
+                                    cir::CastKind::bitcast, calleePtr);
+  args.insert(args.begin(), calleePtr);
+}
+
 /// Rewrite an indirect-return (sret) call site: prepend a return-slot
 /// pointer as operand 0, make the call return void, and either reuse a
 /// dominating single-use store destination as the slot (so construction
@@ -853,6 +872,7 @@ void rewriteIndirectReturnCall(cir::CallOp call,
   sretArgs.append(newArgs.begin(), newArgs.end());
 
   mlir::Type sretVoidTy = cir::VoidType::get(ctx);
+  prependIndirectCallee(call, sretArgs, sretVoidTy, builder);
   auto newCall = cir::CallOp::create(
       builder, call.getLoc(), call.getCalleeAttr(), sretVoidTy, sretArgs);
   for (mlir::NamedAttribute attr : call->getAttrs())
@@ -907,7 +927,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   // CIRGlobalValueInterface).
   cir::FuncOp funcOp = mlir::cast<cir::FuncOp>(funcOpInterface);
 
-  if (!needsRewrite(fc))
+  if (!fc.needsRewrite())
     return mlir::success();
 
   ArrayRef<mlir::Type> oldArgTypes = funcOp.getArgumentTypes();
@@ -1074,7 +1094,26 @@ mlir::LogicalResult
 CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
                                       const FunctionClassification &fc,
                                       mlir::OpBuilder &builder) {
-  if (!needsRewrite(fc))
+  // The classification covers exactly the callee's declared parameters, and
+  // the rewrite below pairs it with the call's operands one for one.  Both
+  // directions of a mismatch have to be reported before the pass-through early
+  // return, or a call whose declared parameters happen to be pass-through is
+  // left as written with its surplus operands never classified.
+  //
+  // A surplus operand went through an ellipsis.  A shortfall means the callee
+  // was declared no_proto, which turns off the verifier's argument-count check
+  // altogether.
+  unsigned numOperands =
+      mlir::cast<cir::CIRCallOpInterface>(callOp).getNumArgOperands();
+  if (numOperands > fc.argInfos.size())
+    return callOp->emitOpError()
+           << "variadic arguments not yet implemented in CallConvLowering";
+  if (numOperands < fc.argInfos.size())
+    return callOp->emitOpError()
+           << "call passes fewer arguments than the callee declares, which is "
+              "not yet implemented in CallConvLowering";
+
+  if (!fc.needsRewrite())
     return mlir::success();
 
   if (mlir::isa<cir::TryCallOp>(callOp))
@@ -1082,10 +1121,6 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
            << "TryCallOp not yet implemented in CallConvLowering";
 
   auto call = mlir::cast<cir::CallOp>(callOp);
-  if (call.isIndirect())
-    return call.emitOpError()
-           << "indirect call not yet implemented in CallConvLowering";
-
   mlir::MLIRContext *ctx = callOp->getContext();
   auto enclosingFunc = call->getParentOfType<mlir::FunctionOpInterface>();
 
@@ -1105,11 +1140,6 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   // types here for use in updateArgAttrs).
   SmallVector<mlir::Type> origCallArgTypes;
   llvm::append_range(origCallArgTypes, argOperands.getTypes());
-  if (argOperands.size() > fc.argInfos.size())
-    return call.emitOpError()
-           << "variadic arguments not yet implemented in CallConvLowering";
-  assert(fc.argInfos.size() == argOperands.size() &&
-         "call operand count must match classified arg count");
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
     if (ac.kind == ArgKind::Ignore)
       continue;
@@ -1196,6 +1226,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
     callRetTy = fc.returnInfo.coercedType;
 
   builder.setInsertionPoint(call);
+  prependIndirectCallee(call, newArgs, callRetTy, builder);
   auto newCall = cir::CallOp::create(builder, call.getLoc(),
                                      call.getCalleeAttr(), callRetTy, newArgs);
   for (mlir::NamedAttribute attr : call->getAttrs())

@@ -378,8 +378,11 @@ def simm12_lo : Simm12LoOp {
   let ParserMatchClass = SImmAsmOperand<12, "LO">;
 }
 
-// Variant of simm12_lo for memory-operand offsets that may be omitted
+// Variants of simm12(_lo) for memory-operand offsets that may be omitted
 // entirely, e.g. "lb a0, (a1)". See OptionalMemOffsetAsmOperand.
+def simm12_optional : RISCVSImmLeafOp<12> {
+  let ParserMatchClass = OptionalMemOffsetAsmOperand<simm12.ParserMatchClass>;
+}
 def simm12_lo_optional : Simm12LoOp {
   let ParserMatchClass = OptionalMemOffsetAsmOperand<simm12_lo.ParserMatchClass>;
 }
@@ -1904,6 +1907,14 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
 def PseudoMovImm : Pseudo<(outs GPR:$dst), (ins i32imm:$imm), []>,
                    Sched<[WriteIALU]>;
 
+// Materializes "$base + (imm << 12)" as a single pseudo so that
+// MachineLateInstrsCleanup can CSE identical upper-immediate additions.
+// Expanded to LUI+ADD by RISCVPostRAExpandPseudo.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8 in
+def PseudoAddUpperImm
+    : Pseudo<(outs GPR:$dst), (ins GPR:$base, uimm20_lui:$hi), []>,
+      Sched<[WriteIALU, ReadIALU]>;
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
     isCodeGenOnly = 0 in
 def PseudoLLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
@@ -1945,9 +1956,13 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
 def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.gd", "$dst, $src">;
 
+defvar TLSDESCVClobbers = !listconcat(
+    !foreach(i, !range(32), !cast<Register>("V"#i)),
+    [VTYPE, VL, VXSAT, VXRM]);
+
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 32 in
 def PseudoLA_TLSDESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), []> {
-  let Defs = [X5, X10];
+  let Defs = !listconcat([X5, X10], TLSDESCVClobbers);
 }
 
 def TLSDESCCallSymbol : AsmOperandClass {
@@ -1972,7 +1987,7 @@ def PseudoTLSDESCCall : Pseudo<(outs GPR:$rd),
                          (ins GPR:$rs1, simm12_lo:$imm12, tlsdesc_call_symbol:$src), [],
                          "jalr", "$rd, ${imm12}(${rs1}), $src">,
                          Sched<[WriteJalr, ReadJalr]> {
-  let Defs = [X10];
+  let Defs = !listconcat([X10], TLSDESCVClobbers);
   let Uses = [X10];
 }
 
@@ -2360,6 +2375,10 @@ include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
 include "RISCVInstrInfoZilsd.td"
 include "RISCVInstrInfoZibi.td"
+include "RISCVInstrInfoZilx.td"
+
+// Privileged
+include "RISCVInstrInfoSmcsps.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"
