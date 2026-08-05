@@ -158,6 +158,10 @@ class InstructionsState {
   /// Index of the operand modeling the copyable values: the addend for
   /// fmuladd (retried with a multiplicand), the first operand otherwise.
   unsigned CopyableOpIdx = 0;
+  /// Whether copyable single-use fmuls/fadds are modeled as
+  /// fmuladd(a, b, -0.0)/fmuladd(1.0, a, b), absorbing the binop instead of
+  /// computing and gathering its result.
+  bool AbsorbCopyableFMulOrFAdd = false;
 
 public:
   Instruction *getMainOp() const {
@@ -259,7 +263,31 @@ public:
     assert((Idx == 0 || Idx == 2) && "Unexpected copyable operand index.");
     CopyableOpIdx = Idx;
   }
+
+  /// Checks if copyable fmuls/fadds are absorbed as fmuladd(a, b, -0.0) or
+  /// fmuladd(1.0, a, b).
+  bool hasAbsorbedCopyableFMulOrFAdd() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return AbsorbCopyableFMulOrFAdd;
+  }
+
+  /// Sets the absorbed-fmul/fadd modeling for copyable fmuls/fadds.
+  void setAbsorbCopyableFMulOrFAdd(bool Absorb) {
+    AbsorbCopyableFMulOrFAdd = Absorb;
+  }
 };
+
+/// Checks if \p V is a single-use fmul/fadd with operands outside \p VL.
+bool isAbsorbableFMulOrFAdd(ArrayRef<Value *> VL, Value *V);
+
+/// Checks if \p V is a copyable single-use fmul/fadd, absorbable as
+/// fmuladd(a, b, -0.0) or fmuladd(1.0, a, b).
+bool isAbsorbableCopyableFMulOrFAdd(const InstructionsState &S, Value *V);
+
+/// Checks if every copyable in \p VL is an absorbable fmul/fadd: the binops
+/// die instead of being computed and gathered. Operand order is normalized
+/// when the operands are built.
+bool hasOnlyAbsorbableCopyableFMulOrFAdds(ArrayRef<Value *> VL);
 
 } // namespace llvm::slpvectorizer
 
