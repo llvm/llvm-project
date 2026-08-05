@@ -711,7 +711,7 @@ TEST_F(GOFFObjectFileTest, GlobalSymbols) {
     ++Symbol;
   };
 
-  // ESD records 'A' and 'B' shouldn't be considered symbols.
+  // FIXME: ESD records 'A' and 'B' should be considered symbols, but aren't returned iteration.
   ValidateGlobal("C", true);
   ValidateGlobal("D", true);
   ValidateGlobal("E", true);
