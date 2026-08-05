@@ -436,9 +436,7 @@ TEST_F(SelectionDAGNodeConstructionTest,
   SDValue Acc = buildVector(MVT::v2i32, DL, {100, 200});
   SDValue LHS = buildVector(MVT::v4i8, DL, {1, 2, 3, 4});
   SDValue RHS = buildVector(MVT::v4i8, DL, {5, 6, 7, 8});
-  SmallVector<SDValue, 4> PoisonRHS;
-  for (SDValue Elt : RHS->op_values())
-    PoisonRHS.push_back(Elt);
+  SmallVector<SDValue, 4> PoisonRHS(RHS->op_values());
   PoisonRHS[2] = DAG->getPOISON(MVT::i8);
   SDValue PoisonResult =
       DAG->getNode(ISD::PARTIAL_REDUCE_SMLA, DL, MVT::v2i32, Acc, LHS,
@@ -454,9 +452,7 @@ TEST_F(SelectionDAGNodeConstructionTest, DontFoldPartialReduceMLA) {
   SDValue LHS = buildVector(MVT::v4i8, DL, {1, 2, 3, 4});
   SDValue RHS = buildVector(MVT::v4i8, DL, {5, 6, 7, 8});
 
-  SmallVector<SDValue, 4> SpecialLHS;
-  for (SDValue Elt : LHS->op_values())
-    SpecialLHS.push_back(Elt);
+  SmallVector<SDValue, 4> SpecialLHS(LHS->op_values());
   SpecialLHS[2] = DAG->getConstant(APInt(8, 1), DL, MVT::i8,
                                    /*isTarget=*/false, /*isOpaque=*/true);
   SDValue OpaqueResult =
@@ -472,8 +468,7 @@ TEST_F(SelectionDAGNodeConstructionTest, DontFoldPartialReduceMLA) {
 
   SDValue Variable = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
                                          Register::index2VirtReg(2), MVT::i32);
-  SmallVector<SDValue, 2> MixedLHS = {Variable,
-                                      DAG->getConstant(2, DL, MVT::i32)};
+  SDValue MixedLHS[] = {Variable, DAG->getConstant(2, DL, MVT::i32)};
   SDValue NonConstantResult =
       DAG->getNode(ISD::PARTIAL_REDUCE_SMLA, DL, MVT::v2i32,
                    buildVector(MVT::v2i32, DL, {1, 2}),

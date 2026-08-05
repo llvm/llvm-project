@@ -7931,6 +7931,10 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     }
   }
 
+  // This is for vector folding only from here on.
+  if (!VT.isVector())
+    return SDValue();
+
   // Constant fold integer partial reductions with constant BUILD_VECTOR
   // operands. The reduction order is deliberately unspecified. Use the same
   // subvector layout as TargetLowering::expandPartialReduceMLA(), where input
@@ -7983,10 +7987,8 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 
       APInt LHSVal = LHS->getAPIntValue().trunc(InputEltBits);
       APInt RHSVal = RHS->getAPIntValue().trunc(InputEltBits);
-      LHSVal = IsLHSSigned ? LHSVal.sextOrTrunc(AccEltBits)
-                           : LHSVal.zextOrTrunc(AccEltBits);
-      RHSVal = IsRHSSigned ? RHSVal.sextOrTrunc(AccEltBits)
-                           : RHSVal.zextOrTrunc(AccEltBits);
+      LHSVal = IsLHSSigned ? LHSVal.sext(AccEltBits) : LHSVal.zext(AccEltBits);
+      RHSVal = IsRHSSigned ? RHSVal.sext(AccEltBits) : RHSVal.zext(AccEltBits);
       Results[AccIdx] += LHSVal * RHSVal;
     }
 
@@ -8011,10 +8013,6 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
                                       DL, LegalSVT));
     return getBuildVector(VT, DL, ResultOps);
   }
-
-  // This is for vector folding only from here on.
-  if (!VT.isVector())
-    return SDValue();
 
   ElementCount NumElts = VT.getVectorElementCount();
 
