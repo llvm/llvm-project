@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: no-exceptions
 
-// ensure that __uninitialized_allocator_copy calls the proper construct and destruct functions
+// ensure that __uninitialized_allocator_copy_n calls the proper construct and destruct functions
 
 #include <algorithm>
 #include <cassert>
@@ -58,8 +58,8 @@ int main(int, char**) {
   ThrowSometimes in[20];
   TEST_ALIGNAS_TYPE(ThrowSometimes) char out[sizeof(ThrowSometimes) * 20];
   try {
-    std::__uninitialized_allocator_copy(
-        alloc, std::begin(in), std::end(in), reinterpret_cast<ThrowSometimes*>(std::begin(out)));
+    std::__uninitialized_allocator_copy_n(
+        alloc, std::begin(in), 20, reinterpret_cast<ThrowSometimes*>(std::begin(out)));
   } catch (...) {
   }
 
