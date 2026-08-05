@@ -420,7 +420,9 @@ void RestoreCandidate::generateSpillRestoreInstrs(
          InstrOfCandidateReg->mayLoad() && "Expected restore instruction!");
   MachineBasicBlock *CurMBB = CurMI->getParent();
 
-  if (getCodeGenPlan() == CodeGenPlan::MoveRestoreInsideTheLoop) {
+  CodeGenPlan Plan = getCodeGenPlan();
+  switch (Plan) {
+  case CodeGenPlan::MoveRestoreInsideTheLoop: {
     // Move the restore that is in loop preheader inside the loop before the
     // HEAD.
     assert(GroupsOfUses.size() == 1 &&
@@ -475,7 +477,9 @@ void RestoreCandidate::generateSpillRestoreInstrs(
 
     // Update RestoreRegToDomGroup map with the updated DomGroup.
     RestoreRegToDomGroup[OrigRestore->getOperand(0).getReg()] = DG;
-  } else if (getCodeGenPlan() == CodeGenPlan::EmitNewRestoreBeforeUse) {
+    break;
+  }
+  case CodeGenPlan::EmitNewRestoreBeforeUse: {
     LLVM_DEBUG(dbgs() << "------------------------------------------------\n");
     LLVM_DEBUG(
         dbgs()
@@ -539,6 +543,11 @@ void RestoreCandidate::generateSpillRestoreInstrs(
         UpdatedBlockIds.insert(UseBlock);
       }
     }
+    break;
+  }
+  case CodeGenPlan::EmitSpillRestore: {
+    llvm_unreachable("This plan is not handled here.");
+  }
   }
 }
 
