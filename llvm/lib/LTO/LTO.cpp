@@ -194,6 +194,12 @@ std::string llvm::computeLTOCacheKey(
     AddUnsigned(-1);
   for (const auto &S : Conf.MllvmArgs)
     AddString(S);
+  if (StringRef CodeGenDataPath = cgdata::getCodeGenDataUsePath();
+      !CodeGenDataPath.empty()) {
+    auto FileOrErr = MemoryBuffer::getFile(CodeGenDataPath);
+    if (FileOrErr)
+      Hasher.update(FileOrErr.get()->getBuffer());
+  }
   AddUnsigned(static_cast<int>(Conf.CGOptLevel));
   AddUnsigned(static_cast<int>(Conf.CGFileType));
   AddUnsigned(Conf.OptLevel);
