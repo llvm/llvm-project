@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/Support/MathExtras.h"
 
 namespace llvm {
 
