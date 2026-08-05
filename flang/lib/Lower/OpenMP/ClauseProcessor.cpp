@@ -1989,12 +1989,32 @@ void ClauseProcessor::processMapObjectsWithIterator(
     return;
   }
 
-  // Inside a declare mapper, the mapper variable's components are mapped
-  // directly, allowing member locators such as v%a(i). Mapping a derived-type
-  // member outside a declare mapper requires parent/member handling that
-  // iterator modifiers do not support yet.
-  bool inDeclareMapper = mlir::isa_and_present<mlir::omp::DeclareMapperOp>(
-      converter.getFirOpBuilder().getRegion().getParentOp());
+  auto isDeclareMapperVariable = [&](const omp::Object &object) {
+    auto declareMapper = mlir::dyn_cast_if_present<mlir::omp::DeclareMapperOp>(
+        converter.getFirOpBuilder().getRegion().getParentOp());
+    if (!declareMapper)
+      return false;
+
+    omp::Object rootObject{object};
+    while (std::optional<omp::Object> baseObject =
+               getBaseObject(rootObject, semaCtx))
+      rootObject = *baseObject;
+
+    mlir::Value rootAddress = converter.getSymbolAddress(*rootObject.sym());
+    while (rootAddress) {
+      if (auto declare = rootAddress.getDefiningOp<hlfir::DeclareOp>()) {
+        rootAddress = declare.getMemref();
+        continue;
+      }
+      if (auto declare = rootAddress.getDefiningOp<fir::DeclareOp>()) {
+        rootAddress = declare.getMemref();
+        continue;
+      }
+      break;
+    }
+
+    return rootAddress == declareMapper.getRegion().front().getArgument(0);
+  };
 
   constexpr mlir::omp::ClauseMapFlags unsupportedReferenceModifiers =
       mlir::omp::ClauseMapFlags::ref_ptr | mlir::omp::ClauseMapFlags::ref_ptee |
@@ -2012,7 +2032,7 @@ void ClauseProcessor::processMapObjectsWithIterator(
       if (hasUnsupportedReferenceModifier)
         TODO(clauseLocation,
              "iterator modifier with reference or attach modifier");
-      if (!inDeclareMapper && getBaseObject(object, semaCtx))
+      if (getBaseObject(object, semaCtx) && !isDeclareMapperVariable(object))
         TODO(clauseLocation, "iterator modifier with derived type member map");
       if (const auto *symbol{object.sym()};
           symbol && semantics::IsOptional(*symbol))
