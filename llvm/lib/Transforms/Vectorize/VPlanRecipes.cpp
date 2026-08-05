@@ -1005,12 +1005,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
       Value *Im2 = IsRealPart ? PartnerPart : OwnPart;
 
       // (Re1 + i*Im1) * (Re2 + i*Im2)
-      Value *NewRe = Builder.CreateFSub(
-          Builder.CreateFMul(Re1, Re2), Builder.CreateFMul(Im1, Im2),
-          "rdx.re");
-      Value *NewIm = Builder.CreateFAdd(
-          Builder.CreateFMul(Re1, Im2), Builder.CreateFMul(Im1, Re2),
-          "rdx.im");
+      Value *NewRe = Builder.CreateFSub(Builder.CreateFMul(Re1, Re2),
+                                        Builder.CreateFMul(Im1, Im2), "rdx.re");
+      Value *NewIm = Builder.CreateFAdd(Builder.CreateFMul(Re1, Im2),
+                                        Builder.CreateFMul(Im1, Re2), "rdx.im");
 
       OwnVec = IsRealPart ? NewRe : NewIm;
       PartnerVec = IsRealPart ? NewIm : NewRe;
