@@ -2204,9 +2204,9 @@ public:
     return MCPlusBuilder::isReversibleBranch(Inst);
   }
 
-  void reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
-                              const MCSymbol *TBB, MCContext *Ctx,
-                              bool MustPreserveFlags = true) const override {
+  InstructionListType
+  reverseBranchCondition(MCInst Inst, const MCSymbol *TBB, MCContext *Ctx,
+                         bool MustPreserveFlags = true) const override {
     assert(isReversibleBranch(Inst, MustPreserveFlags) &&
            "Irreversible branch");
 
@@ -2255,8 +2255,7 @@ public:
         Code.emplace_back(MCInstBuilder(AArch64::Bcc)
                               .addImm(getInvertedCC(Inst.getOpcode()))
                               .addExpr(MCSymbolRefExpr::create(TBB, *Ctx)));
-        Parent->replaceInstruction(Parent->findInstruction(&Inst), Code);
-        return;
+        return Code;
       }
       Inst.setOpcode(InvertedOpcode);
     } else if (Inst.getOpcode() == AArch64::Bcc) {
@@ -2270,6 +2269,7 @@ public:
       llvm_unreachable("Unrecognized branch instruction");
     }
     replaceBranchTarget(Inst, TBB, Ctx);
+    return {Inst};
   }
 
   int getPCRelEncodingSize(const MCInst &Inst) const override {

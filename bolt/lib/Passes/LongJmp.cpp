@@ -860,8 +860,9 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
         BB->swapConditionalSuccessors();
         {
           auto L = BC.scopeLock();
-          MIB->reverseBranchCondition(BB, Inst, NextBB->getLabel(),
-                                      BC.Ctx.get(), PreserveFlags);
+          InstructionListType Code = MIB->reverseBranchCondition(
+              Inst, NextBB->getLabel(), BC.Ctx.get(), PreserveFlags);
+          BB->replaceInstruction(BB->findInstruction(&Inst), Code);
         }
         const uint64_t NewBBSize = BB->estimateSize();
 

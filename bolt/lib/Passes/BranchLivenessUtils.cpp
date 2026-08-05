@@ -25,8 +25,10 @@ bool needsBranchLiveness(BinaryFunction &BF) {
     return false;
 
   return llvm::any_of(BF, [&](BinaryBasicBlock &BB) {
-    return llvm::any_of(
-        BB, [&](MCInst &Inst) { return BC.MIB->isShortRangeBranch(Inst); });
+    return llvm::any_of(BB, [&](MCInst &Inst) {
+      return BC.MIB->isShortRangeBranch(Inst) &&
+             !BC.MIB->isReversibleBranch(Inst);
+    });
   });
 }
 
@@ -36,7 +38,8 @@ BranchLivenessInfo computeBranchLiveness(BinaryFunction &BF, RegAnalysis &RA) {
   if (BC.isAArch64())
     for (BinaryBasicBlock &BB : BF)
       for (MCInst &Inst : BB)
-        if (BC.MIB->isShortRangeBranch(Inst))
+        if (BC.MIB->isShortRangeBranch(Inst) &&
+            !BC.MIB->isReversibleBranch(Inst))
           Insts.push_back(&Inst);
 
   BranchLivenessInfo BLI;

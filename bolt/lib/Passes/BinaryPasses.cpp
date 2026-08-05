@@ -573,9 +573,12 @@ Error FixupBranches::runOnFunctions(BinaryContext &BC) {
     if (!BC.shouldEmit(BF) || !BF.isSimple())
       continue;
 
-    BranchLivenessInfo BLI;
-    if (RA)
-      BLI = computeBranchLiveness(BF, *RA);
+    if (!RA) {
+      BF.fixBranches();
+      continue;
+    }
+
+    BranchLivenessInfo BLI = computeBranchLiveness(BF, *RA);
     BF.fixBranches(&BLI);
   }
   return Error::success();
@@ -987,7 +990,11 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
       uint64_t Count = 0;
       if (CondSucc != BB) {
         // Patch the new target address into the conditional branch.
-        MIB->reverseBranchCondition(PredBB, *CondBranch, CalleeSymbol, Ctx);
+        InstructionListType Code =
+            MIB->reverseBranchCondition(*CondBranch, CalleeSymbol, Ctx);
+        auto II = PredBB->replaceInstruction(
+            PredBB->findInstruction(CondBranch), Code);
+        CondBranch = &*(II);
         // Since we reversed the condition on the branch we need to change
         // the target for the unconditional branch or add a unconditional
         // branch to the old target.  This has to be done manually since

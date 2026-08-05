@@ -2151,12 +2151,13 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  /// Reverses the branch condition in Inst and update its taken target to TBB.
-  /// Assumes that the branch is reversible. It may replace Inst with a longer
-  /// instruction sequence on some targets.
-  virtual void reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
-                                      const MCSymbol *TBB, MCContext *Ctx,
-                                      bool MustPreserveFlags = true) const {
+  /// Return the instruction sequence for the reversed branch condition of
+  /// \p Inst and update its taken target to \p TBB. Assumes that the branch is
+  /// reversible. It may replace Inst with a longer instruction sequence on some
+  /// targets.
+  virtual InstructionListType
+  reverseBranchCondition(MCInst Inst, const MCSymbol *TBB, MCContext *Ctx,
+                         bool MustPreserveFlags = true) const {
     llvm_unreachable("not implemented");
   }
 

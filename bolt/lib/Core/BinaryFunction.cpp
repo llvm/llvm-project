@@ -3747,8 +3747,9 @@ void BinaryFunction::fixBranches(const BranchLivenessInfo *BLI) {
         std::swap(TSuccessor, FSuccessor);
         BB->swapConditionalSuccessors();
         auto L = BC.scopeLock();
-        MIB->reverseBranchCondition(BB, *CondBranch, TSuccessor->getLabel(),
-                                    Ctx, PreserveFlags);
+        InstructionListType Code = MIB->reverseBranchCondition(
+            *CondBranch, TSuccessor->getLabel(), Ctx, PreserveFlags);
+        BB->replaceInstruction(BB->findInstruction(CondBranch), Code);
         return true;
       };
 
