@@ -718,10 +718,9 @@ Error collectGlobalObjectNameStrings(ArrayRef<std::string> NameStrs,
   std::string UncompressedNameStrings =
       join(NameStrs.begin(), NameStrs.end(), getInstrProfNameSeparator());
 
-  assert(
-      StringRef(UncompressedNameStrings).count(getInstrProfNameSeparator()) ==
-          (NameStrs.size() - 1) &&
-      "PGO name is invalid (contains separator token)");
+  assert(StringRef(UncompressedNameStrings)
+                 .count(getInstrProfNameSeparator()) == (NameStrs.size() - 1) &&
+         "PGO name is invalid (contains separator token)");
 
   unsigned EncLen = encodeULEB128(UncompressedNameStrings.length(), P);
   P += EncLen;
@@ -1147,17 +1146,20 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
 
 void TemporalProfTraceTy::createBPFunctionNodes(
     ArrayRef<TemporalProfTraceTy> Traces, std::vector<BPFunctionNode> &Nodes,
-    bool RemoveOutlierUNs) {
+    bool RemoveOutlierUNs,
+    BalancedPartitioning::UtilityNodeWeightsT *UtilityNodeWeights) {
   using IDT = BPFunctionNode::IDT;
   using UtilityNodeT = BPFunctionNode::UtilityNodeT;
   UtilityNodeT MaxUN = 0;
   DenseMap<IDT, size_t> IdToFirstTimestamp;
   DenseMap<IDT, UtilityNodeT> IdToFirstUN;
-  DenseMap<IDT, SmallVector<BPFunctionNode::WeightedUtilityNode>> IdToUNs;
+  DenseMap<IDT, SmallVector<UtilityNodeT>> IdToUNs;
+  DenseMap<UtilityNodeT, BPFunctionNode::UtilityNodeWeightT> NonUnitUNWeights;
   for (auto &Trace : Traces) {
     // A zero-weight trace is equivalent to no copies of the trace.
     if (Trace.Weight == 0)
       continue;
+    const UtilityNodeT FirstTraceUN = MaxUN;
     size_t CutoffTimestamp = 1;
     for (size_t Timestamp = 0; Timestamp < Trace.FunctionNameRefs.size();
          Timestamp++) {
@@ -1173,7 +1175,10 @@ void TemporalProfTraceTy::createBPFunctionNodes(
     }
     for (auto &[Id, FirstUN] : IdToFirstUN)
       for (auto UN = FirstUN; UN <= MaxUN; ++UN)
-        IdToUNs[Id].emplace_back(UN, Trace.Weight);
+        IdToUNs[Id].push_back(UN);
+    if (Trace.Weight != 1)
+      for (auto UN = FirstTraceUN; UN <= MaxUN; ++UN)
+        NonUnitUNWeights.try_emplace(UN, Trace.Weight);
     ++MaxUN;
     IdToFirstUN.clear();
   }
@@ -1182,18 +1187,20 @@ void TemporalProfTraceTy::createBPFunctionNodes(
     DenseMap<UtilityNodeT, unsigned> UNFrequency;
     for (auto &[Id, UNs] : IdToUNs)
       for (auto &UN : UNs)
-        ++UNFrequency[UN.Id];
+        ++UNFrequency[UN];
     // Filter out utility nodes that are too infrequent or too prevalent to make
     // BalancedPartitioning more effective.
     for (auto &[Id, UNs] : IdToUNs)
       llvm::erase_if(UNs, [&](auto &UN) {
-        unsigned Freq = UNFrequency[UN.Id];
+        unsigned Freq = UNFrequency[UN];
         return Freq <= 1 || 2 * Freq > IdToUNs.size();
       });
   }
 
   for (auto &[Id, UNs] : IdToUNs)
-    Nodes.push_back(BPFunctionNode::createWithWeightedUtilities(Id, UNs));
+    Nodes.emplace_back(Id, UNs);
+  if (UtilityNodeWeights)
+    *UtilityNodeWeights = std::move(NonUnitUNWeights);
 
   // Since BalancedPartitioning is sensitive to the initial order, we explicitly
   // order nodes by their earliest timestamp.
@@ -1216,13 +1223,13 @@ uint32_t getNumValueKindsInstrProf(const void *Record) {
 }
 
 uint32_t getNumValueSitesInstrProf(const void *Record, uint32_t VKind) {
-  return reinterpret_cast<const InstrProfRecord *>(Record)->getNumValueSites(
-      VKind);
+  return reinterpret_cast<const InstrProfRecord *>(Record)
+      ->getNumValueSites(VKind);
 }
 
 uint32_t getNumValueDataInstrProf(const void *Record, uint32_t VKind) {
-  return reinterpret_cast<const InstrProfRecord *>(Record)->getNumValueData(
-      VKind);
+  return reinterpret_cast<const InstrProfRecord *>(Record)
+      ->getNumValueData(VKind);
 }
 
 uint32_t getNumValueDataForSiteInstrProf(const void *R, uint32_t VK,
@@ -1423,8 +1430,9 @@ void annotateValueSite(Module &M, Instruction &Inst,
 }
 
 void annotateValueSite(Module &M, Instruction &Inst,
-                       ArrayRef<InstrProfValueData> VDs, uint64_t Sum,
-                       InstrProfValueKind ValueKind, uint32_t MaxMDCount) {
+                       ArrayRef<InstrProfValueData> VDs,
+                       uint64_t Sum, InstrProfValueKind ValueKind,
+                       uint32_t MaxMDCount) {
   if (VDs.empty())
     return;
   LLVMContext &Ctx = M.getContext();

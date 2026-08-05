@@ -100,19 +100,14 @@ TEST_F(BalancedPartitioningTest, MoveGain) {
 TEST_F(BalancedPartitioningTest, WeightedUtilitiesMatchReplication) {
   Config.SkipProbability = 0;
   Config.TaskSplitDepth = 0;
-  using WeightedUtilityNode = BPFunctionNode::WeightedUtilityNode;
 
   std::vector<BPFunctionNode> WeightedNodes = {
-      BPFunctionNode::createWithWeightedUtilities(0,
-                                                  {WeightedUtilityNode(1, 1)}),
-      BPFunctionNode::createWithWeightedUtilities(
-          1, {WeightedUtilityNode(1, 1), WeightedUtilityNode(2, 1)}),
-      BPFunctionNode::createWithWeightedUtilities(
-          2, {WeightedUtilityNode(0, 10), WeightedUtilityNode(1, 1),
-              WeightedUtilityNode(2, 1)}),
-      BPFunctionNode::createWithWeightedUtilities(
-          3, {WeightedUtilityNode(0, 10), WeightedUtilityNode(2, 1)}),
+      BPFunctionNode(0, {1}),
+      BPFunctionNode(1, {1, 2}),
+      BPFunctionNode(2, {0, 1, 2}),
+      BPFunctionNode(3, {0, 2}),
   };
+  BalancedPartitioning::UtilityNodeWeightsT UtilityNodeWeights = {{0, 10}};
   std::vector<BPFunctionNode> ReplicatedNodes = {
       BPFunctionNode(0, {10}),
       BPFunctionNode(1, {10, 11}),
@@ -126,24 +121,49 @@ TEST_F(BalancedPartitioningTest, WeightedUtilitiesMatchReplication) {
       BPFunctionNode(3, {0, 2}),
   };
   std::vector<BPFunctionNode> WeightOneNodes = {
-      BPFunctionNode::createWithWeightedUtilities(0,
-                                                  {WeightedUtilityNode(1, 1)}),
-      BPFunctionNode::createWithWeightedUtilities(
-          1, {WeightedUtilityNode(1, 1), WeightedUtilityNode(2, 1)}),
-      BPFunctionNode::createWithWeightedUtilities(
-          2, {WeightedUtilityNode(0, 1), WeightedUtilityNode(1, 1),
-              WeightedUtilityNode(2, 1)}),
-      BPFunctionNode::createWithWeightedUtilities(
-          3, {WeightedUtilityNode(0, 1), WeightedUtilityNode(2, 1)}),
+      BPFunctionNode(0, {1}),
+      BPFunctionNode(1, {1, 2}),
+      BPFunctionNode(2, {0, 1, 2}),
+      BPFunctionNode(3, {0, 2}),
   };
+  BalancedPartitioning::UtilityNodeWeightsT WeightOneUtilityNodeWeights = {
+      {0, 1}, {1, 1}, {2, 1}};
 
-  Bp.run(WeightedNodes);
+  Bp.run(WeightedNodes, UtilityNodeWeights);
   Bp.run(ReplicatedNodes);
   Bp.run(UnweightedNodes);
-  Bp.run(WeightOneNodes);
+  Bp.run(WeightOneNodes, WeightOneUtilityNodeWeights);
 
   EXPECT_EQ(getIds(WeightedNodes), getIds(ReplicatedNodes));
   EXPECT_NE(getIds(WeightedNodes), getIds(UnweightedNodes));
+  EXPECT_EQ(getIds(WeightOneNodes), getIds(UnweightedNodes));
+}
+
+TEST_F(BalancedPartitioningTest, WeightOneUtilitiesPreserveLargeOrder) {
+  const int ProblemSize = 1000;
+  std::vector<BPFunctionNode::UtilityNodeT> AllUNs;
+  for (int I = 0; I < ProblemSize; ++I)
+    AllUNs.push_back(I);
+
+  std::mt19937 RNG;
+  std::vector<BPFunctionNode> UnweightedNodes;
+  std::vector<BPFunctionNode> WeightOneNodes;
+  BalancedPartitioning::UtilityNodeWeightsT WeightOneUtilityNodeWeights;
+  for (int I = 0; I < ProblemSize; ++I) {
+    std::vector<BPFunctionNode::UtilityNodeT> UNs;
+    int SampleSize =
+        std::uniform_int_distribution<int>(0, AllUNs.size() - 1)(RNG);
+    std::sample(AllUNs.begin(), AllUNs.end(), std::back_inserter(UNs),
+                SampleSize, RNG);
+    UnweightedNodes.emplace_back(I, UNs);
+
+    for (auto UN : UNs)
+      WeightOneUtilityNodeWeights.try_emplace(UN, 1);
+    WeightOneNodes.emplace_back(I, UNs);
+  }
+
+  Bp.run(UnweightedNodes);
+  Bp.run(WeightOneNodes, WeightOneUtilityNodeWeights);
   EXPECT_EQ(getIds(WeightOneNodes), getIds(UnweightedNodes));
 }
 

@@ -41,6 +41,7 @@
 
 #include "raw_ostream.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 
@@ -63,39 +64,9 @@ public:
   using UtilityNodeT = uint32_t;
   using UtilityNodeWeightT = uint64_t;
 
-  struct WeightedUtilityNode {
-    UtilityNodeT Id;
-    UtilityNodeWeightT Weight;
-
-    WeightedUtilityNode(UtilityNodeT Id, UtilityNodeWeightT Weight)
-        : Id(Id), Weight(Weight) {}
-
-    bool operator==(const WeightedUtilityNode &Other) const {
-      return Id == Other.Id && Weight == Other.Weight;
-    }
-  };
-
   /// \param UtilityNodes the set of utility nodes (must be unique'd)
-  BPFunctionNode(IDT Id, ArrayRef<UtilityNodeT> UtilityNodes) : Id(Id) {
-    for (UtilityNodeT UtilityNode : UtilityNodes)
-      this->UtilityNodes.emplace_back(UtilityNode, 1);
-  }
-
-  /// Create a node with weighted utility nodes (which must be unique'd). All
-  /// occurrences of a utility node must have the same weight. A utility's cost
-  /// is multiplied by its weight without materializing duplicate utility
-  /// nodes. Zero-weight utility nodes are ignored.
-  static BPFunctionNode
-  createWithWeightedUtilities(IDT Id,
-                              ArrayRef<WeightedUtilityNode> UtilityNodes) {
-    BPFunctionNode Node(Id);
-    for (WeightedUtilityNode UtilityNode : UtilityNodes) {
-      if (UtilityNode.Weight == 0)
-        continue;
-      Node.UtilityNodes.push_back(UtilityNode);
-    }
-    return Node;
-  }
+  BPFunctionNode(IDT Id, ArrayRef<UtilityNodeT> UtilityNodes)
+      : Id(Id), UtilityNodes(UtilityNodes) {}
 
   /// The ID of this node
   IDT Id;
@@ -104,7 +75,7 @@ public:
 
 protected:
   /// The list of utility nodes associated with this node
-  SmallVector<WeightedUtilityNode, 4> UtilityNodes;
+  SmallVector<UtilityNodeT, 4> UtilityNodes;
   /// The bucket assigned by balanced partitioning
   std::optional<unsigned> Bucket;
   /// The index of the input order of the FunctionNodes
@@ -113,9 +84,6 @@ protected:
   friend class BPFunctionNodeTest_Basic_Test;
   friend class BalancedPartitioningTest_Basic_Test;
   friend class BalancedPartitioningTest_Large_Test;
-
-private:
-  explicit BPFunctionNode(IDT Id) : Id(Id) {}
 };
 
 /// Algorithm parameters; default values are tuned on real-world binaries
@@ -135,10 +103,18 @@ struct BalancedPartitioningConfig {
 
 class BalancedPartitioning {
 public:
+  using UtilityNodeWeightsT = DenseMap<BPFunctionNode::UtilityNodeT,
+                                       BPFunctionNode::UtilityNodeWeightT>;
+
   LLVM_ABI BalancedPartitioning(const BalancedPartitioningConfig &Config);
 
   /// Run recursive graph partitioning that optimizes a given objective.
   LLVM_ABI void run(std::vector<BPFunctionNode> &Nodes) const;
+  /// Run recursive graph partitioning with positive, non-unit utility weights.
+  /// A utility's cost is multiplied by its weight without materializing
+  /// duplicate utility nodes. Missing utilities have weight one.
+  LLVM_ABI void run(std::vector<BPFunctionNode> &Nodes,
+                    const UtilityNodeWeightsT &UtilityNodeWeights) const;
 
 private:
   struct UtilitySignature;
@@ -173,19 +149,30 @@ private:
   /// \param RootBucket the initial bucket of the dataVertices
   /// \param Offset the assigned buckets are the range [Offset, Offset +
   /// Nodes.size()]
+  template <typename UtilityNodeWeightsPtrT>
   void bisect(const FunctionNodeRange Nodes, unsigned RecDepth,
               unsigned RootBucket, unsigned Offset,
-              std::optional<BPThreadPool> &TP) const;
+              std::optional<BPThreadPool> &TP,
+              UtilityNodeWeightsPtrT UtilityNodeWeights) const;
 
   /// Run bisection iterations
-  void runIterations(const FunctionNodeRange Nodes, unsigned LeftBucket,
-                     unsigned RightBucket, std::mt19937 &RNG) const;
+  template <typename UtilityNodeWeightsPtrT>
+  UtilityNodeWeightsPtrT
+  runIterations(const FunctionNodeRange Nodes, unsigned LeftBucket,
+                unsigned RightBucket, UtilityNodeWeightsPtrT UtilityNodeWeights,
+                std::mt19937 &RNG) const;
 
   /// Run a bisection iteration to improve the optimization goal
   /// \returns the total number of moved FunctionNodes
+  template <typename UtilityNodeWeightsRefT>
   unsigned runIteration(const FunctionNodeRange Nodes, unsigned LeftBucket,
                         unsigned RightBucket, SignaturesT &Signatures,
+                        UtilityNodeWeightsRefT UtilityNodeWeights,
                         std::mt19937 &RNG) const;
+
+  template <typename UtilityNodeWeightsPtrT>
+  void runImpl(std::vector<BPFunctionNode> &Nodes,
+               UtilityNodeWeightsPtrT UtilityNodeWeights) const;
 
   /// Try to move \p N from one bucket to another
   /// \returns true iff \p N is moved
@@ -224,8 +211,6 @@ private:
     float CachedGainRL;
     /// Whether \p CachedGainLR and \p CachedGainRL are valid
     bool CachedGainIsValid = false;
-    /// The number of times this utility contributes to the objective
-    BPFunctionNode::UtilityNodeWeightT Weight = 1;
   };
 
 protected:

@@ -83,7 +83,6 @@ template <class D> struct BPOrderer {
 } // namespace lld
 
 using UtilityNodes = SmallVector<BPFunctionNode::UtilityNodeT>;
-using WeightedUtilityNodes = SmallVector<BPFunctionNode::WeightedUtilityNode>;
 
 template <class D>
 static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
@@ -173,7 +172,9 @@ auto BPOrderer<D>::computeOrder(
     sectionToIdx.try_emplace(isec, i);
 
   BPFunctionNode::UtilityNodeT maxUN = 0;
-  MapVector<unsigned, WeightedUtilityNodes> startupSectionIdxUNs;
+  MapVector<unsigned, UtilityNodes> startupSectionIdxUNs;
+  DenseMap<BPFunctionNode::UtilityNodeT, BPFunctionNode::UtilityNodeWeightT>
+      nonUnitStartupUNWeights;
   // Used to define the initial order for startup functions.
   DenseMap<unsigned, size_t> sectionIdxToTimestamp;
   uint64_t numProfiledFunctionRefs = 0, numResolvedProfiledFunctionRefs = 0;
@@ -203,6 +204,7 @@ auto BPOrderer<D>::computeOrder(
       // A zero-weight trace is equivalent to no copies of the trace.
       if (traceWeight == 0)
         continue;
+      const BPFunctionNode::UtilityNodeT firstTraceUN = maxUN;
       uint64_t currentSize = 0, cutoffSize = 1;
       size_t cutoffTimestamp = 1;
       auto &trace = traces[traceIdx].FunctionNameRefs;
@@ -250,7 +252,10 @@ auto BPOrderer<D>::computeOrder(
       }
       for (auto &[sectionIdx, firstUN] : sectionIdxToFirstUN)
         for (auto un = firstUN; un <= maxUN; ++un)
-          startupSectionIdxUNs[sectionIdx].emplace_back(un, traceWeight);
+          startupSectionIdxUNs[sectionIdx].push_back(un);
+      if (traceWeight != 1)
+        for (auto un = firstTraceUN; un <= maxUN; ++un)
+          nonUnitStartupUNWeights.try_emplace(un, traceWeight);
       ++maxUN;
       sectionIdxToFirstUN.clear();
     }
@@ -344,15 +349,9 @@ auto BPOrderer<D>::computeOrder(
          unsForStartupFunctionCompression) {
       auto &uns = startupSectionIdxUNs[sectionIdx];
       for (auto un : compressionUns)
-        uns.emplace_back(un, 1);
-      llvm::sort(uns, [](const auto &left, const auto &right) {
-        return left.Id < right.Id;
-      });
-      uns.erase(llvm::unique(uns,
-                             [](const auto &left, const auto &right) {
-                               return left.Id == right.Id;
-                             }),
-                uns.end());
+        uns.push_back(un);
+      llvm::sort(uns);
+      uns.erase(llvm::unique(uns), uns.end());
     }
   }
 
@@ -374,8 +373,7 @@ auto BPOrderer<D>::computeOrder(
 
   std::vector<BPFunctionNode> nodesForStartup;
   for (auto &[sectionIdx, uns] : startupSectionIdxUNs)
-    nodesForStartup.push_back(
-        BPFunctionNode::createWithWeightedUtilities(sectionIdx, uns));
+    nodesForStartup.emplace_back(sectionIdx, uns);
 
   // Use the first timestamp to define the initial order for startup nodes.
   llvm::sort(nodesForStartup, [&sectionIdxToTimestamp](auto &L, auto &R) {
@@ -387,7 +385,7 @@ auto BPOrderer<D>::computeOrder(
     TimeTraceScope timeScope("Balanced Partitioning");
     BalancedPartitioningConfig config;
     BalancedPartitioning bp(config);
-    bp.run(nodesForStartup);
+    bp.run(nodesForStartup, nonUnitStartupUNWeights);
     for (auto &nodes : nodesForCompression)
       bp.run(nodes);
   }
