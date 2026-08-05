@@ -297,12 +297,15 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
     // Why a pin could not be pre-colored, for -debug-only=si-pre-color-pins.
     const char *SoftWhy = Hard ? "?" : "disabled or non-virtual";
 
-    // Deterministic AGPR placement for a load tuple: when the pinned value is a
-    // REG_SEQUENCE of (folded) AGPR loads, rewrite each element's def to a
-    // fixed physical AGPR sub-register. Otherwise the MFMA A/B operands are AV
-    // and the allocator moves them back to VGPR under low pressure
-    // (non-deterministic).
-    if (Hard && WantAGPR) {
+    // Deterministic placement for a load tuple: when the pinned value is a
+    // REG_SEQUENCE of loads, rewrite each element's def to a fixed physical
+    // sub-register. For an AGPR pin this stops the allocator moving MFMA A/B
+    // operands back to VGPR under low pressure (they are AV-classed, so the
+    // placement is otherwise non-deterministic). For a VGPR pin it is the only
+    // way to place a value the hardware builds from more than one load, such as
+    // a WMMA B operand that two ds_reads assemble out of LDS -- the general path
+    // below rejects any REG_SEQUENCE def.
+    if (Hard) {
       MachineInstr *RS = MRI.getVRegDef(Src);
       MachineBasicBlock *PinMBB = Pin->getParent();
       bool Ok = RS && RS->isRegSequence() && RS->getParent() == PinMBB;
@@ -318,6 +321,23 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
             if (TII->getName(U.getOpcode()).contains("F8F6F4")) {
               Ok = false;
               break;
+            }
+            // A VGPR pin reaches shapes the AGPR path never sees, because the
+            // AGPR path only ever pins MFMA A/B inputs. A tied (two-address)
+            // use is a WMMA/MFMA accumulator, and TwoAddressInstruction
+            // requires both ends of a tie to be virtual; a PHI operand must
+            // stay virtual as well, since LiveVariables walks PHI sources with
+            // getVarInfo(). Leave both to the general path.
+            if (!WantAGPR) {
+              if (U.isPHI()) {
+                Ok = false;
+                break;
+              }
+              for (const MachineOperand &O : U.operands())
+                if (O.isReg() && O.isUse() && O.isTied() && O.getReg() == WL[I])
+                  Ok = false;
+              if (!Ok)
+                break;
             }
             if (U.isCopy() || U.isRegSequence() || U.isPHI() ||
                 U.getOpcode() == TargetOpcode::INSERT_SUBREG ||
