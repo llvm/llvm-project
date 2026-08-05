@@ -1392,13 +1392,13 @@ let hasSideEffects = false, mayLoad = true, mayStore = false, Size = 4,
     isCodeGenOnly = false in
 class PseudoQCAccessLoad_ri<string opcodestr>
   : Pseudo<(outs GPR:$rd),
-           (ins BasePtr:$rs1, simm12_lo_optional:$imm12, qc_access_symbol:$expr), [],
+           (ins BasePtr:$rs1, simm12_optional:$imm12, qc_access_symbol:$expr), [],
            opcodestr, "$rd, ${imm12}(${rs1}), $expr">;
 
 let hasSideEffects = false, mayLoad = false, mayStore = true, Size = 4,
     isCodeGenOnly = false in
 class PseudoQCAccessStore_rri<string opcodestr>
-  : Pseudo<(outs), (ins GPR:$rs2, BasePtr:$rs1, simm12_lo_optional:$imm12, qc_access_symbol:$expr),
+  : Pseudo<(outs), (ins GPR:$rs2, BasePtr:$rs1, simm12_optional:$imm12, qc_access_symbol:$expr),
            [], opcodestr, "$rs2, ${imm12}(${rs1}), $expr">;
 
 

@@ -378,8 +378,11 @@ def simm12_lo : Simm12LoOp {
   let ParserMatchClass = SImmAsmOperand<12, "LO">;
 }
 
-// Variant of simm12_lo for memory-operand offsets that may be omitted
+// Variants of simm12(_lo) for memory-operand offsets that may be omitted
 // entirely, e.g. "lb a0, (a1)". See OptionalMemOffsetAsmOperand.
+def simm12_optional : Simm12LoOp {
+  let ParserMatchClass = OptionalMemOffsetAsmOperand<simm12.ParserMatchClass>;
+}
 def simm12_lo_optional : Simm12LoOp {
   let ParserMatchClass = OptionalMemOffsetAsmOperand<simm12_lo.ParserMatchClass>;
 }
