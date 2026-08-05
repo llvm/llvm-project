@@ -96,7 +96,11 @@ private:
           return true;
         }
         _Tp __curr = __copy;
-        if (std::memcmp(__clear_padding(__prev), __clear_padding(__curr), sizeof(_Tp)) != 0) {
+        // Comparing the object representations is the point here; the casts opt out
+        // of -Wsuspicious-memcmp.
+        if (std::memcmp(static_cast<const void*>(__clear_padding(__prev)),
+                        static_cast<const void*>(__clear_padding(__curr)),
+                        sizeof(_Tp)) != 0) {
           // Value representation without padding bits do not compare equal ->
           // write the current content of *ptr into *expected
           std::memcpy(__expected, std::addressof(__copy), sizeof(_Tp));

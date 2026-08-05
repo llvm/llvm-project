@@ -1014,9 +1014,11 @@ def NonTrivialMemcall : DiagGroup<"nontrivial-memcall">;
 def NonTrivialMemaccess : DiagGroup<"nontrivial-memaccess", [NonTrivialMemcall]>;
 def NonportableSystemIncludePath : DiagGroup<"nonportable-system-include-path">;
 def SuspiciousBzero : DiagGroup<"suspicious-bzero">;
+def SuspiciousMemcmp : DiagGroup<"suspicious-memcmp">;
 def SuspiciousMemaccess : DiagGroup<"suspicious-memaccess",
   [SizeofPointerMemaccess, DynamicClassMemaccess,
-   NonTrivialMemaccess, MemsetTransposedArgs, SuspiciousBzero]>;
+   NonTrivialMemaccess, MemsetTransposedArgs, SuspiciousBzero,
+   SuspiciousMemcmp]>;
 def StaticInInline : DiagGroup<"static-in-inline">;
 def StaticLocalInInline : DiagGroup<"static-local-in-inline">;
 def UniqueObjectDuplication : DiagGroup<"unique-object-duplication"> {

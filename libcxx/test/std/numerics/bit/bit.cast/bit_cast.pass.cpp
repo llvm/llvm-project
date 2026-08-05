@@ -8,6 +8,13 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// This test deliberately compares object representations.
+#ifdef __clang__
+#  if __has_warning("-Wsuspicious-memcmp")
+#    pragma clang diagnostic ignored "-Wsuspicious-memcmp"
+#  endif
+#endif
+
 // <bit>
 //
 // template<class To, class From>

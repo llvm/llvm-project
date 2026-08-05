@@ -189,6 +189,14 @@ features cannot lower the translation-unit ABI level;
 - Fixed concept template parameters not being recognized in `-Wdocumentation`
   when mentioned in tparam comments. (#GH64087)
 
+- Added `-Wsuspicious-memcmp` (on by default, grouped under
+  `-Wsuspicious-memaccess`), which warns when `memcmp` or `bcmp` is used as a
+  whole-object equality test on a type that does not have a unique object
+  representation, such as a struct with padding bytes or floating-point
+  members, where two equal values may compare unequal. Partial (prefix)
+  comparisons and non-constant sizes are not diagnosed; casting a pointer
+  argument to `void *` silences the warning.
+
 - `-Wunused-but-set-variable` now diagnoses file-scope variables with
   internal linkage (`static` storage class) that are assigned but never used.
   This new coverage is added under the subgroup `-Wunused-but-set-global`,
