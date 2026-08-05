@@ -1424,11 +1424,11 @@ def fno_cuda_flush_denormals_to_zero : Flag<["-"], "fno-cuda-flush-denormals-to-
   Alias<fno_gpu_flush_denormals_to_zero>;
 def : Flag<["-"], "fcuda-rdc">, Alias<fgpu_rdc>;
 def : Flag<["-"], "fno-cuda-rdc">, Alias<fno_gpu_rdc>;
-defm cuda_short_ptr : BoolFOption<"cuda-short-ptr",
-  TargetOpts<"NVPTXUseShortPointers">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Use 32-bit pointers for accessing const/local/shared address spaces">,
-  NegFlag<SetFalse>>;
+def fcuda_short_ptr : Flag<["-"], "fcuda-short-ptr">,
+  Visibility<[ClangOption]>,
+  HelpText<"Use 32-bit pointers for accessing const/local/shared address spaces">;
+def fno_cuda_short_ptr : Flag<["-"], "fno-cuda-short-ptr">,
+  Visibility<[ClangOption]>;
 }
 
 def emit_static_lib : Flag<["--"], "emit-static-lib">,
