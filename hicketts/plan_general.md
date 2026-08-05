@@ -153,3 +153,73 @@ from thread-safety — keep the analogy explicit.
   (Owner/Pointer + lifetimebound live; proposed roles commented).
 - `hicketts/architecture.md` — pipeline map + design framings.
 - (later) `Attr.td`, Sema, model changes in the real tree.
+
+---
+
+## 12. Cross-check consumption: shared vocabulary vs private hook (Valentyn / PR)
+
+**The question.** `analyze_as_*` is today a *private hook* consumed by ONE check
+(the optional dataflow model). Valentyn's `size()==0 -> isEmpty()` example assumes
+it is a *shared, cross-check vocabulary*: annotate a type once and every relevant
+check honours it, using the type's custom method names. These are very different
+scopes — the PR should pick a lane explicitly rather than leave it implied.
+
+**Worked second consumer — `readability-container-size-empty`
+(`ContainerSizeEmptyCheck.cpp`).** Recognises a container *purely structurally*:
+a `size`/`length` method AND a method literally named `empty` returning bool
+(`:150`, `:154`). On `x.size()==0` it warns + attaches a fix-it whose replacement
+text is hardcoded to `"empty()"` (`:275`-`281`). Consequence for
+`[[analyze_as_method("empty")]] bool isEmpty()`:
+- it does NOT fire (the empty method isn't named `empty`; the attribute is ignored), and
+- even if it did, the fix-it would emit `empty()`, not `isEmpty()`.
+
+To support it: (a) accept an `analyze_as_method("empty")` bool method as the
+"empty" role alongside `hasName("empty")`, and (b) emit the *matched method's real
+name* in the fix-it. Note it also requires `returns(booleanType())` -> the L2
+return-type validation matters here too (Valentyn's recurring return-type theme).
+
+**The landscape (survey of candidate consumers).** Every check below recognises
+its target by its OWN hardcoded structural logic (`hasName(...)`, hardcoded
+`"std::..."`); NONE read `analyze_as_*` today. Grouped by what they'd need:
+
+Container method-role consumers (need "which method is empty/find/data/..."):
+- `readability/ContainerSizeEmptyCheck`     size()==0 -> empty()
+- `readability/ContainerContainsCheck`      find()!=end() -> contains()
+- `readability/ContainerDataPointerCheck`   &v[0] -> v.data()
+- `readability/SimplifySubscriptExprCheck`
+- `bugprone/StandaloneEmptyCheck`           ignored empty() (meant clear()?)
+- `bugprone/InaccurateEraseCheck`           erase-remove idiom
+- `bugprone/SizeofContainerCheck`           sizeof(container) misuse
+- `performance/InefficientAlgorithmCheck`   std::find on set -> member find
+- `modernize/LoopConvertCheck`              begin/end -> range-for
+- `modernize/UseEmplaceCheck`               push_back -> emplace_back
+- `modernize/ShrinkToFitCheck`              swap-trick -> shrink_to_fit
+
+Optional-role consumers:
+- `bugprone/UncheckedOptionalAccessCheck`   (current consumer)
+- `bugprone/OptionalValueConversionCheck`
+
+Smart-pointer-role consumers:
+- `modernize/Make{Unique,Shared,SmartPtr}Check`
+- `bugprone/{Unique,Shared,Smart}PtrArrayMismatchCheck`
+
+**Why the "we'll miss cases" worry is bounded.** The set is *enumerable*
+(~a dozen container checks + a few optional/smart-ptr), and consumption is
+*explicit per check* — a check either reads the vocabulary or it doesn't, so
+nothing is silently missed. You can't retrofit them all at once and shouldn't try.
+
+**Recommended architecture (do NOT big-bang):**
+1. Define the shared vocabulary as a CLOSED, DEMAND-DRIVEN role set — add a role
+   only when a consumer needs it. Method-roles span more than the optional
+   predicate (empty/find/contains/data/begin/end/...), so demand-driven or it
+   balloons.
+2. Provide ONE reusable helper/matcher: "does type T play class-role R" / "does
+   method M play method-role X", reading the attributes — so a check opts in with
+   a small change instead of reinventing recognition.
+3. Each opting-in check must ALSO fix its FIX-IT to use the real method name (the
+   container-size-empty `"empty()"` hardcoding is the canonical trap).
+4. Treat this survey as the ROADMAP; convert consumers incrementally.
+
+**For THIS PR:** keep scope to the dataflow correctness check; name
+`container-size-empty` as the concrete next consumer that proves the vocabulary is
+cross-check; record this landscape so no consumer is forgotten.
