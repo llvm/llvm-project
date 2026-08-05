@@ -15753,6 +15753,13 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   ConvertHalfVec =
       needsConversionOfHalfVec(ConvertHalfVec, Context, LHS.get(), RHS.get());
 
+  // Skip the vector conversion when the result is not a half/short vector (e.g.
+  // HLSL comparisons).
+  if (ConvertHalfVec && ResultTy->isVectorType() &&
+      !isVector(ResultTy, Context.HalfTy) &&
+      !isVector(ResultTy, Context.ShortTy))
+    ConvertHalfVec = false;
+
   // Check for array bounds violations for both sides of the BinaryOperator
   CheckArrayAccess(LHS.get());
   CheckArrayAccess(RHS.get());
