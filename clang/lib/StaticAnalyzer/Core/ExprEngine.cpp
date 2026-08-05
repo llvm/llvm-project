@@ -2442,10 +2442,8 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     return HasGeneratedNodes ? Pred : MakeDefaultNode();
 
   static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
-  const ProgramPoint TaggedLoc = BE.withTag(&Tag);
-  HasGeneratedNodes = true;
-  const ExplodedNode *Sink =
-      Engine.makeNode(TaggedLoc, Pred->getState(), Pred, /*MarkAsSink=*/true);
+  const ExplodedNode *Sink = Engine.makeNode(BE.withTag(&Tag), Pred->getState(),
+                                             Pred, /*MarkAsSink=*/true);
 
   if (!SF->inTopFrame()) {
     // FIXME: This will unconditionally prevent inlining this function (even
