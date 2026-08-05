@@ -803,10 +803,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // Get the original loop tripcount.
     Value *ScalarTC = State.get(getOperand(1), VPLane(0));
 
-    unsigned Multiplier =
-        getOpcode() == VPInstruction::ActiveLaneMask
-            ? 1
-            : cast<VPConstantInt>(getOperand(2))->getZExtValue();
+    uint64_t Multiplier =
+        getOpcode() == VPInstruction::WideActiveLaneMask
+            ? cast<VPConstantInt>(getOperand(2))->getZExtValue()
+            : 1;
 
     // If this part of the active lane mask is scalar, generate the CMP directly
     // to avoid unnecessary extracts.
@@ -1123,7 +1123,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::ExtractVectorForPart: {
     Value *Src = State.get(getOperand(0));
     Type *DstTy = VectorType::get(getScalarType(), State.VF);
-    unsigned Part = cast<VPConstantInt>(getOperand(1))->getZExtValue();
+    uint64_t Part = cast<VPConstantInt>(getOperand(1))->getZExtValue();
 
     if (Src->getType() == DstTy)
       return Src;
@@ -1441,10 +1441,10 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask: {
     Type *ArgTy = getOperand(0)->getScalarType();
-    unsigned Multiplier =
-        getOpcode() == VPInstruction::ActiveLaneMask
-            ? 1
-            : cast<VPConstantInt>(getOperand(2))->getZExtValue();
+    uint64_t Multiplier =
+        getOpcode() == VPInstruction::WideActiveLaneMask
+            ? cast<VPConstantInt>(getOperand(2))->getZExtValue()
+            : 1;
     Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF * Multiplier);
     IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
                                   {ArgTy, ArgTy});

@@ -2037,6 +2037,9 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
   return SE.isKnownPredicate(CmpInst::ICMP_EQ, VectorTripCount, C);
 }
 
+// Replaces ExtractVectorForPart instructions with ICMP when the VF is scalar
+// and the source is a WideActiveLaneMask. The unused mask is removed later
+// when removing dead recipes.
 static bool replaceMaskWithCompare(VPlan &Plan, ElementCount BestVF) {
   if (!BestVF.isScalar())
     return false;

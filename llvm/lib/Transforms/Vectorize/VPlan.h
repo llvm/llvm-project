@@ -1242,7 +1242,8 @@ public:
     // Creates a mask where each lane is active (true) whilst the current
     // counter (first operand + index) is less than the second operand. i.e.
     //    mask[i] = icmpt ult (op0 + i), op1
-    // The size of the mask returned is VF.
+    // ActiveLaneMask is used for tail-folding, with the exception of the
+    // DataAndControlFlow style. The size of the mask returned is VF.
     // When unrolled, ActiveLaneMask is duplicated.
     ActiveLaneMask,
     // As above, but takes an additional operand (Multiplier). The size of
