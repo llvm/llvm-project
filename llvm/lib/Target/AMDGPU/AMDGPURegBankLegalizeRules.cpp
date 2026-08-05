@@ -1819,6 +1819,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_s_barrier_leave,
                     amdgcn_s_barrier_signal,
                     amdgcn_s_barrier_wait,
+                    amdgcn_s_decperflevel,
+                    amdgcn_s_incperflevel,
                     amdgcn_s_monitor_sleep,
                     amdgcn_s_nop,
                     amdgcn_s_sethalt,
@@ -1958,6 +1960,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, SgprB32_ReadFirstLane}});
 
   addRulesForIOpcs({amdgcn_perm}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs(
+      {amdgcn_msad_u8, amdgcn_sad_hi_u8, amdgcn_sad_u16, amdgcn_sad_u8},
+      Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
 
