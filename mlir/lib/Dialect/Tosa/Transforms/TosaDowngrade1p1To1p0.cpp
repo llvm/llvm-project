@@ -151,6 +151,9 @@ static LogicalResult isMatMulTTypeCompatibleForDowngrade(tosa::MatMulTOp op) {
   if (aElementType != bElementType)
     return failure();
 
+  if (isa<BlockScaledType>(aElementType) || isa<BlockScaledType>(bElementType))
+    return failure();
+
   if ((aElementType.isF16() && outputElementType.isF16()) ||
       (aElementType.isF16() && outputElementType.isF32()) ||
       (aElementType.isF32() && outputElementType.isF32()) ||

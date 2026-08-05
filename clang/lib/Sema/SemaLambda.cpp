@@ -324,7 +324,8 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
       }
     } else if (isa<FieldDecl>(ManglingContextDecl)) {
       return DataMember;
-    } else if (isa<ImplicitConceptSpecializationDecl>(ManglingContextDecl)) {
+    } else if (isa<ImplicitConceptSpecializationDecl, ConceptDecl>(
+                   ManglingContextDecl)) {
       return Concept;
     }
 
@@ -1443,6 +1444,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   LambdaScopeInfo *LSI = getCurrentLambdaScopeUnsafe(*this);
   LSI->CallOperator->setConstexprKind(DS.getConstexprSpecifier());
+  LSI->BeforeCompoundStatement = false;
 
   SmallVector<ParmVarDecl *, 8> Params;
   bool ExplicitResultType;

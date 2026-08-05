@@ -833,7 +833,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     const MachineBasicBlock::iterator &MI) const {
   assert(MI->getNumMemOperands() > 0);
 
-  SyncScope::ID SSID = SyncScope::SingleThread;
+  std::optional<SyncScope::ID> MergedSSID;
   AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
   AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic;
   SIAtomicAddrSpace InstrAddrSpace = SIAtomicAddrSpace::NONE;
@@ -849,19 +849,19 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     IsVolatile |= MMO->isVolatile();
     IsLastUse |= MMO->getFlags() & MOLastUse;
     IsCooperative |= MMO->getFlags() & MOCooperative;
-    InstrAddrSpace |=
-      toSIAtomicAddrSpace(MMO->getPointerInfo().getAddrSpace());
+    InstrAddrSpace |= toSIAtomicAddrSpace(MMO->getPointerInfo().getAddrSpace());
     AtomicOrdering OpOrdering = MMO->getSuccessOrdering();
     if (OpOrdering != AtomicOrdering::NotAtomic) {
-      const auto &IsSyncScopeInclusion =
-          MMI->isSyncScopeInclusion(SSID, MMO->getSyncScopeID());
-      if (!IsSyncScopeInclusion) {
-        reportUnsupported(MI,
-          "Unsupported non-inclusive atomic synchronization scope");
+      // Merge the accumulated scope with the new one to get the smallest scope
+      // inclusive of both.
+      SyncScope::ID CurSSID = MergedSSID.value_or(MMO->getSyncScopeID());
+      const auto &Merged =
+          MMI->getMergedSyncScopeID(CurSSID, MMO->getSyncScopeID());
+      if (!Merged) {
+        reportUnsupported(MI, "Unsupported atomic synchronization scope");
         return std::nullopt;
       }
-
-      SSID = *IsSyncScopeInclusion ? SSID : MMO->getSyncScopeID();
+      MergedSSID = *Merged;
       Ordering = getMergedAtomicOrdering(Ordering, OpOrdering);
       assert(MMO->getFailureOrdering() != AtomicOrdering::Release &&
              MMO->getFailureOrdering() != AtomicOrdering::AcquireRelease);
@@ -869,6 +869,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
           getMergedAtomicOrdering(FailureOrdering, MMO->getFailureOrdering());
     }
   }
+  SyncScope::ID SSID = MergedSSID.value_or(SyncScope::SingleThread);
 
   // FIXME: The MMO of buffer atomic instructions does not always have an atomic
   // ordering. We only need to handle VBUFFER atomics on GFX12+ so we can fix it
@@ -903,7 +904,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
 
 std::optional<SIMemOpInfo>
 SIMemOpAccess::getLoadInfo(const MachineBasicBlock::iterator &MI) const {
-  assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
+  assert(SIInstrFlags::isMaybeAtomic(*MI));
 
   if (!(MI->mayLoad() && !MI->mayStore()))
     return std::nullopt;
@@ -917,7 +918,7 @@ SIMemOpAccess::getLoadInfo(const MachineBasicBlock::iterator &MI) const {
 
 std::optional<SIMemOpInfo>
 SIMemOpAccess::getStoreInfo(const MachineBasicBlock::iterator &MI) const {
-  assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
+  assert(SIInstrFlags::isMaybeAtomic(*MI));
 
   if (!(!MI->mayLoad() && MI->mayStore()))
     return std::nullopt;
@@ -931,7 +932,7 @@ SIMemOpAccess::getStoreInfo(const MachineBasicBlock::iterator &MI) const {
 
 std::optional<SIMemOpInfo>
 SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
-  assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
+  assert(SIInstrFlags::isMaybeAtomic(*MI));
 
   if (MI->getOpcode() != AMDGPU::ATOMIC_FENCE)
     return std::nullopt;
@@ -973,7 +974,7 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
 
 std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
     const MachineBasicBlock::iterator &MI) const {
-  assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
+  assert(SIInstrFlags::isMaybeAtomic(*MI));
 
   if (!(MI->mayLoad() && MI->mayStore()))
     return std::nullopt;
@@ -987,7 +988,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
 
 std::optional<SIMemOpInfo>
 SIMemOpAccess::getLDSDMAInfo(const MachineBasicBlock::iterator &MI) const {
-  assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
+  assert(SIInstrFlags::isMaybeAtomic(*MI));
 
   if (!SIInstrInfo::isLDSDMA(*MI))
     return std::nullopt;
@@ -2607,7 +2608,7 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
         MI = MI->eraseFromParent();
       }
 
-      if (MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic) {
+      if (SIInstrFlags::isMaybeAtomic(*MI)) {
         if (const auto &MOI = MOA.getLoadInfo(MI))
           Changed |= expandLoad(*MOI, MI);
         else if (const auto &MOI = MOA.getStoreInfo(MI))

@@ -2143,8 +2143,25 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
   case TargetOpcode::G_CONSTANT: {
     Register DefReg = I.getOperand(0).getReg();
     const LLT DefTy = MRI.getType(DefReg);
-    if (!DefTy.isPointer())
-      return false;
+    if (!DefTy.isPointer()) {
+      if (DefTy.getSizeInBits() >= 32 ||
+          RBI.getRegBank(DefReg, MRI, TRI)->getID() != AArch64::GPRRegBankID)
+        return false;
+      // Widen narrow GPR constants to s32 so imported patterns can match.
+      APInt Val = I.getOperand(1).getCImm()->getValue().zext(32);
+      I.getOperand(1).setCImm(
+          ConstantInt::get(MF.getFunction().getContext(), Val));
+
+      Register WideReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+      MRI.setRegBank(WideReg, RBI.getRegBank(AArch64::GPRRegBankID));
+      I.getOperand(0).setReg(WideReg);
+
+      MIB.setInsertPt(MBB, std::next(I.getIterator()));
+      auto Copy = MIB.buildCopy(DefReg, WideReg);
+      selectCopy(*Copy, TII, MRI, TRI, RBI);
+      MIB.setInstr(I);
+      return true;
+    }
     const unsigned PtrSize = DefTy.getSizeInBits();
     if (PtrSize != 32 && PtrSize != 64)
       return false;
@@ -4016,7 +4033,6 @@ bool AArch64InstructionSelector::selectExtractElt(
   const LLT NarrowTy = MRI.getType(DstReg);
   const Register SrcReg = I.getOperand(1).getReg();
   const LLT WideTy = MRI.getType(SrcReg);
-  (void)WideTy;
   assert(WideTy.getSizeInBits() >= NarrowTy.getSizeInBits() &&
          "source register size too small!");
   assert(!NarrowTy.isVector() && "cannot extract vector into vector!");
@@ -4025,19 +4041,42 @@ bool AArch64InstructionSelector::selectExtractElt(
   MachineOperand &LaneIdxOp = I.getOperand(2);
   assert(LaneIdxOp.isReg() && "Lane index operand was not a register?");
 
-  if (RBI.getRegBank(DstReg, MRI, TRI)->getID() != AArch64::FPRRegBankID) {
-    LLVM_DEBUG(dbgs() << "Cannot extract into GPR.\n");
-    return false;
-  }
-
   // Find the index to extract from.
   auto VRegAndVal = getIConstantVRegValWithLookThrough(LaneIdxOp.getReg(), MRI);
   if (!VRegAndVal)
     return false;
   unsigned LaneIdx = VRegAndVal->Value.getSExtValue();
 
-
   const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+  if (DstRB.getID() == AArch64::GPRRegBankID) {
+    unsigned Opcode;
+    switch (WideTy.getScalarSizeInBits()) {
+    case 8:
+      Opcode = AArch64::UMOVvi8;
+      break;
+    case 16:
+      Opcode = AArch64::UMOVvi16;
+      break;
+    case 32:
+      Opcode = AArch64::UMOVvi32;
+      break;
+    default:
+      return false;
+    }
+
+    if (WideTy.getSizeInBits() != 128) {
+      MachineInstr *ScalarToVector = emitScalarToVector(
+          WideTy.getSizeInBits(), &AArch64::FPR128RegClass, SrcReg, MIB);
+      assert(ScalarToVector && "Didn't expect emitScalarToVector to fail!");
+      I.getOperand(1).setReg(ScalarToVector->getOperand(0).getReg());
+    }
+
+    I.setDesc(TII.get(Opcode));
+    I.getOperand(2).ChangeToImmediate(LaneIdx);
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
+  }
+
   MachineInstr *Extract = emitExtractVectorElt(DstReg, DstRB, NarrowTy, SrcReg,
                                                LaneIdx, MIB);
   if (!Extract)

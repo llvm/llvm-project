@@ -215,6 +215,37 @@ struct MappingAarch64_42 {
 };
 
 /*
+C/C++ on linux/aarch64 (47-bit VMA)
+0000 0000 1000 - 0400 0000 0000: main binary                     (4096 GB)
+0400 0000 0000 - 0aaa 0000 0000: -
+0aaa 0000 0000 - 2800 0000 0000: shadow memory                  (30040 GB)
+2800 0000 0000 - 4000 0000 0000: -
+4000 0000 0000 - 5000 0000 0000: metainfo                       (16384 GB)
+5000 0000 0000 - 5555 0000 0000: -
+5555 0000 0000 - 5c00 0000 0000: main binary (PIE)               (6828 GB)
+5c00 0000 0000 - 7c00 0000 0000: -
+7c00 0000 0000 - 7fff ffff ffff: modules and main thread stack   (4096 GB)
+*/
+struct MappingAarch64_47 {
+  static const uptr kLoAppMemBeg = 0x0000000001000ull;
+  static const uptr kLoAppMemEnd = 0x0040000000000ull;
+  static const uptr kShadowBeg = 0x00aaa00000000ull;
+  static const uptr kShadowEnd = 0x0280000000000ull;
+  static const uptr kMetaShadowBeg = 0x0400000000000ull;
+  static const uptr kMetaShadowEnd = 0x0500000000000ull;
+  static const uptr kMidAppMemBeg = 0x0555500000000ull;
+  static const uptr kMidAppMemEnd = 0x05c0000000000ull;
+  static const uptr kHiAppMemBeg = 0x07c0000000000ull;
+  static const uptr kHiAppMemEnd = 0x0800000000000ull;
+  static const uptr kHeapMemBeg = 0x07c0000000000ull;
+  static const uptr kHeapMemEnd = 0x07c0000000000ull;
+  static const uptr kShadowMsk = 0x0600000000000ull;
+  static const uptr kShadowXor = 0x0100000000000ull;
+  static const uptr kShadowAdd = 0x0000000000000ull;
+  static const uptr kVdsoBeg = 0x07fff00000000ull;
+};
+
+/*
 C/C++ on linux/aarch64 (48-bit VMA)
 0000 0000 1000 - 0a00 0000 0000: main binary                   (10240 GB)
 0a00 0000 1000 - 1554 0000 0000: -
@@ -807,6 +838,8 @@ ALWAYS_INLINE auto SelectMapping(Arg arg) {
       return Func::template Apply<MappingAarch64_39>(arg);
     case 42:
       return Func::template Apply<MappingAarch64_42>(arg);
+    case 47:
+      return Func::template Apply<MappingAarch64_47>(arg);
     case 48:
       return Func::template Apply<MappingAarch64_48>(arg);
   }
@@ -846,6 +879,7 @@ void ForEachMapping() {
   Func::template Apply<MappingAppleAarch64>();
   Func::template Apply<MappingAarch64_39>();
   Func::template Apply<MappingAarch64_42>();
+  Func::template Apply<MappingAarch64_47>();
   Func::template Apply<MappingAarch64_48>();
   Func::template Apply<MappingLoongArch64_47>();
   Func::template Apply<MappingPPC64_44>();

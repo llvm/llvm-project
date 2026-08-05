@@ -86,6 +86,23 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       return true;
     }
   }
+  case AMDGPU::BI__builtin_amdgcn_uicmp:
+  case AMDGPU::BI__builtin_amdgcn_uicmpl:
+  case AMDGPU::BI__builtin_amdgcn_sicmp:
+  case AMDGPU::BI__builtin_amdgcn_sicmpl:
+  case AMDGPU::BI__builtin_amdgcn_fcmp:
+  case AMDGPU::BI__builtin_amdgcn_fcmpf: {
+    // These builtins are deprecated in favor of
+    // __builtin_amdgcn_ballot_{w32|w64}. Suggest the replacement matching the
+    // wavefront size of the calling function.
+    bool IsWave32 = Builtin::evaluateRequiredTargetFeatures("wavefrontsize32",
+                                                            CallerFeatureMap);
+    Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin)
+        << getASTContext().BuiltinInfo.getQuotedName(BuiltinID)
+        << (IsWave32 ? "__builtin_amdgcn_ballot_w32"
+                     : "__builtin_amdgcn_ballot_w64");
+    return false;
+  }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv:
   case AMDGPU::BI__builtin_amdgcn_set_fpenv:
     return false;
@@ -1061,5 +1078,108 @@ bool DiagnoseUnguardedBuiltins::VisitCallExpr(CallExpr *CE) {
 
 void SemaAMDGPU::DiagnoseUnguardedBuiltinUsage(FunctionDecl *FD) {
   DiagnoseUnguardedBuiltins(SemaRef).IssueDiagnostics(FD->getBody());
+}
+
+bool SemaAMDGPU::checkAMDGPUTypeSupport(QualType Ty, SourceLocation Loc) {
+  ASTContext &Ctx = getASTContext();
+  llvm::Triple TT = Ctx.getTargetInfo().getTriple();
+  const Type *BaseTy = Ty->getPointeeOrArrayElementType();
+
+  if (Ctx.getTargetInfo().getTriple().isSPIRV()) {
+    // The AMDGPU named barrier type requires special handling in the back-end
+    // and is not supported for SPIR-V
+    if (BaseTy->isAMDGPUNamedBarrierType()) {
+      SemaRef.Diag(Loc, diag::err_amdgpu_target_ext_type_unsupported)
+          << Ty << TT.str();
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static FieldDecl *getNamedBarrierField(const RecordDecl *R) {
+  for (FieldDecl *FD : R->fields()) {
+    QualType FDTy = FD->getType();
+    if (FDTy->isAMDGPUNamedBarrierTypeOrWrapper())
+      return FD;
+  }
+
+  return nullptr;
+}
+
+void SemaAMDGPU::checkNamedBarrierWrapper(RecordDecl *R) {
+  ASTContext &Context = getASTContext();
+  if (R->isInvalidDecl())
+    return;
+
+  if (!Context.getTargetInfo().hasAMDGPUTypes() &&
+      (!Context.getAuxTargetInfo() ||
+       !Context.getAuxTargetInfo()->hasAMDGPUTypes()))
+    return;
+
+  bool IsWrapper = false;
+  std::function<void()> DiagWrapperNote;
+
+  // First, check if this is a named barrier wrapper by virtue of the class
+  // declaring a named barrier field. This covers both C and C++.
+  if (FieldDecl *NamedBarrField = getNamedBarrierField(R)) {
+    // If this record contains a named barrier field, it must have only one
+    // field.
+    if (R->getNumFields() > 1) {
+      SemaRef.Diag(NamedBarrField->getLocation(),
+                   diag::err_amdgpu_invalid_field_not_a_wrapper)
+          << NamedBarrField->getType();
+      SemaRef.Diag(
+          R->getLocation(),
+          diag::note_amdgpu_not_a_named_barrier_wrapper_too_many_fields)
+          << R->getDeclName();
+      return;
+    }
+
+    IsWrapper = true;
+    DiagWrapperNote = [this, R, NamedBarrField]() {
+      SemaRef.Diag(NamedBarrField->getLocation(),
+                   diag::note_amdgpu_named_barrier_reason_field)
+          << R->getDeclName() << NamedBarrField->getDeclName();
+    };
+  }
+
+  // Then, for C++ classes, check if this is a named barrier wrapper by virtue
+  // of inheriting one.
+  const auto *CxxR = dyn_cast<CXXRecordDecl>(R);
+  if (CxxR && !IsWrapper) {
+    for (CXXBaseSpecifier BS : CxxR->bases()) {
+      const RecordDecl *Base = BS.getType()->getAsRecordDecl();
+      if (!Base || !Base->hasAttr<AMDGPUNamedBarrierWrapperAttr>())
+        continue;
+
+      IsWrapper = true;
+      DiagWrapperNote = [this, BS, R]() {
+        // Print using the CXXBaseSpecifier type as it includes the template
+        // parameters.
+        SemaRef.Diag(BS.getBeginLoc(),
+                     diag::note_amdgpu_named_barrier_reason_inherited)
+            << R->getDeclName() << BS.getType();
+      };
+    }
+  }
+
+  if (!IsWrapper)
+    return;
+
+  // Set the attribute even if the wrapper may be found to be invalid later.
+  R->addAttr(
+      AMDGPUNamedBarrierWrapperAttr::CreateImplicit(Context, SourceRange()));
+
+  // This is a wrapper CXXRecordDecl, it must have a C++11 standard layout.
+  if (CxxR && !CxxR->isCXX11StandardLayout()) {
+    SemaRef.Diag(R->getLocation(),
+                 diag::err_amdgpu_named_barrier_wrapper_non_standard_layout)
+        << R->getDeclName();
+    assert(DiagWrapperNote &&
+           "IsWrapper is set but no context diagnostic provided");
+    DiagWrapperNote();
+  }
 }
 } // namespace clang

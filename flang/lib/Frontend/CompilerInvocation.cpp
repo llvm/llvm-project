@@ -174,6 +174,23 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
   opts.DebugInfoForProfiling =
       args.hasArg(clang::options::OPT_fdebug_info_for_profiling);
 
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_compress_debug_sections_EQ)) {
+    auto type = llvm::StringSwitch<std::optional<llvm::DebugCompressionType>>(
+                    a->getValue())
+                    .Case("none", llvm::DebugCompressionType::None)
+                    .Case("zlib", llvm::DebugCompressionType::Zlib)
+                    .Case("zstd", llvm::DebugCompressionType::Zstd)
+                    .Default(std::nullopt);
+    if (type) {
+      opts.setCompressDebugSections(*type);
+    } else {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << a->getValue();
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -763,6 +780,9 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   }
 
   opts.outputFile = args.getLastArgValue(clang::options::OPT_o);
+  opts.dependencyOutputFile =
+      args.getLastArgValue(clang::options::OPT_dependency_file);
+  opts.dependencyTargets = args.getAllArgValues(clang::options::OPT_MT);
   opts.showHelp = args.hasArg(clang::options::OPT_help);
   opts.showVersion = args.hasArg(clang::options::OPT_version);
   opts.printSupportedCPUs =

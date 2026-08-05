@@ -1359,9 +1359,11 @@ EMPTY_CLASS(AssumedRankSpec);
 
 // R815 array-spec ->
 //        explicit-shape-spec-list | explicit-shape-bounds-spec |
-//        assumed-shape-spec-list | deferred-shape-spec-list |
-//        assumed-size-spec | implied-shape-spec |
+//        assumed-shape-spec-list | assumed-shape-bounds-spec |
+//        deferred-shape-spec-list | assumed-size-spec | implied-shape-spec |
 //        implied-shape-or-assumed-size-spec | assumed-rank-spec
+
+WRAPPER_CLASS(AssumedShapeBoundsSpec, IntExpr);
 
 struct ExplicitShapeBoundsSpec {
   TUPLE_CLASS_BOILERPLATE(ExplicitShapeBoundsSpec);
@@ -1371,8 +1373,8 @@ struct ExplicitShapeBoundsSpec {
 struct ArraySpec {
   UNION_CLASS_BOILERPLATE(ArraySpec);
   std::variant<std::list<ExplicitShapeSpec>, ExplicitShapeBoundsSpec,
-      std::list<AssumedShapeSpec>, DeferredShapeSpecList, AssumedSizeSpec,
-      ImpliedShapeSpec, AssumedRankSpec>
+      std::list<AssumedShapeSpec>, AssumedShapeBoundsSpec,
+      DeferredShapeSpecList, AssumedSizeSpec, ImpliedShapeSpec, AssumedRankSpec>
       u;
 };
 
@@ -4155,6 +4157,14 @@ struct OmpLinearModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpLinearModifier, Value);
 };
 
+// Ref: [4.5:207-210], [5.0:290-293], [5.1:323-325]
+//
+// linear-stepr ->
+//    integer-expresion                             // since 4.5, until 5.1
+struct OmpLinearStep {
+  WRAPPER_CLASS_BOILERPLATE(OmpLinearStep, ScalarIntExpr);
+};
+
 // Ref: [6.0:372-373]
 //
 // loop-modifier ->
@@ -4210,9 +4220,8 @@ struct OmpMapType {
 //    CLOSE |                                       // since 5.0, until 5.2
 //    PRESENT                                       // since 5.1, until 5.2
 // Since 6.0 the map-type-modifier has been split into individual modifiers.
-//
 struct OmpMapTypeModifier {
-  ENUM_CLASS(Value, Always, Close, Present, Ompx_Hold)
+  ENUM_CLASS(Value, Always, Close, Present)
   WRAPPER_CLASS_BOILERPLATE(OmpMapTypeModifier, Value);
 };
 
@@ -4333,10 +4342,10 @@ struct OmpStepComplexModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpStepComplexModifier, ScalarIntExpr);
 };
 
-// Ref: [4.5:207-210], [5.0:290-293], [5.1:323-325], [5.2:117-120]
+// Ref: [5.2:117-120], [6.0:232-235]
 //
 // step-simple-modifier ->
-//    integer-expresion                             // since 4.5
+//    integer-expresion                             // since 5.2
 struct OmpStepSimpleModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpStepSimpleModifier, ScalarIntExpr);
 };
@@ -4521,17 +4530,9 @@ struct OmpApplyClause {
 // data-sharing-attribute ->
 //    SHARED | NONE |                               // since 4.5
 //    PRIVATE | FIRSTPRIVATE                        // since 5.0
-//
-// When used in METADIRECTIVE:
-// default-clause ->
-//    DEFAULT(directive-specification)              // since 5.0, until 5.1
-// See also otherwise-clause.
 struct OmpDefaultClause {
   ENUM_CLASS(DataSharingAttribute, Private, Firstprivate, Shared, None)
-  UNION_CLASS_BOILERPLATE(OmpDefaultClause);
-  std::variant<DataSharingAttribute,
-      common::Indirection<OmpDirectiveSpecification>>
-      u;
+  WRAPPER_CLASS_BOILERPLATE(OmpDefaultClause, DataSharingAttribute);
 };
 
 // Ref: [4.5:103-107], [5.0:324-325], [5.1:357-358], [5.2:161-162]
@@ -4550,6 +4551,16 @@ struct OmpDefaultmapClause {
       Default, Present)
   MODIFIER_BOILERPLATE(OmpVariableCategory);
   std::tuple<ImplicitBehavior, MODIFIERS()> t;
+};
+
+// Ref: [5.0:56-57], [5.1:60-62]
+//
+// default-clause ->
+//    DEFAULT(directive-specification)              // since 5.0, until 5.1
+// See also otherwise-clause.
+struct OmpDefaultVariantClause {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpDefaultVariantClause, common::Indirection<OmpDirectiveSpecification>);
 };
 
 // Ref: [4.5:169-172], [5.0:255-259], [5.1:288-292], [5.2:91-93]
@@ -4814,16 +4825,19 @@ struct OmpLastprivateClause {
 // Ref: [4.5:207-210], [5.0:290-293], [5.1:323-325], [5.2:117-120]
 //
 // linear-clause ->
-//    LINEAR(list [: step-simple-modifier]) |       // since 4.5
+//    LINEAR(list [: linear-step]) |                // since 4.5, until 5.1
+//    LINEAR(list [: step-simple-modifier]) |       // since 5.2
+//    LINEAR(
+//        linear-modifier(list) [: linear-step]) |  // since 4.5, until 5.1
 //    LINEAR(linear-modifier(list)
-//        [: step-simple-modifier]) |               // since 4.5, until 5.2[*]
+//        [: step-simple-modifier]) |               // since 5.2, until 5.2[*]
 //    LINEAR(list [: linear-modifier,
 //        step-complex-modifier])                   // since 5.2
-// [*] Still allowed in 5.2 when on DECLARE SIMD, but deprecated.
+// [*] Allowed in 5.2 when on DECLARE SIMD, but deprecated.
 struct OmpLinearClause {
   TUPLE_CLASS_BOILERPLATE(OmpLinearClause);
-  MODIFIER_BOILERPLATE(
-      OmpLinearModifier, OmpStepSimpleModifier, OmpStepComplexModifier);
+  MODIFIER_BOILERPLATE(OmpLinearModifier, OmpLinearStep, OmpStepSimpleModifier,
+      OmpStepComplexModifier);
   std::tuple<OmpObjectList, MODIFIERS(), /*PostModified=*/bool> t;
 };
 
@@ -5109,8 +5123,8 @@ struct OmpUnifiedSharedMemoryClause {
 //    UPDATE(dependence-type)                       // since 5.0, until 5.1
 // update-clause ->
 //    UPDATE(task-dependence-type)                  // since 5.2
-struct OmpUpdateClause {
-  UNION_CLASS_BOILERPLATE(OmpUpdateClause);
+struct OmpUpdateDependObjectsClause {
+  UNION_CLASS_BOILERPLATE(OmpUpdateDependObjectsClause);
   // The dependence type is an argument here, not a modifier.
   std::variant<OmpDependenceType, OmpTaskDependenceType> u;
 };
