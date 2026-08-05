@@ -736,3 +736,86 @@ body:             |
     %val:_(<6 x p0>) = G_LOAD %ptr(p0) :: (load (<6 x p0>))
     G_STORE %val(<6 x p0>), %ptr(p0) :: (store (<6 x p0>))
     RET_ReallyLR
+...
+---
+name: load_v8s1
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: load_v8s1
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: %bc:_(i8) = G_LOAD %ptr(p0) :: (load (i8))
+    ; CHECK-NEXT: %ext:_(i64) = G_ANYEXT %bc(i8)
+    ; CHECK-NEXT: $x0 = COPY %ext(i64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %ptr:_(p0) = COPY $x0
+    %val:_(<8 x i1>) = G_LOAD %ptr(p0) :: (load (<8 x i1>))
+    %bc:_(i8) = G_BITCAST %val(<8 x i1>)
+    %ext:_(i64) = G_ANYEXT %bc(i8)
+    $x0 = COPY %ext(i64)
+    RET_ReallyLR implicit $x0
+...
+---
+name: load_v16s1
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: load_v16s1
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: %bc:_(i16) = G_LOAD %ptr(p0) :: (load (i16))
+    ; CHECK-NEXT: %ext:_(i64) = G_ANYEXT %bc(i16)
+    ; CHECK-NEXT: $x0 = COPY %ext(i64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %ptr:_(p0) = COPY $x0
+    %val:_(<16 x i1>) = G_LOAD %ptr(p0) :: (load (<16 x i1>))
+    %bc:_(i16) = G_BITCAST %val(<16 x i1>)
+    %ext:_(i64) = G_ANYEXT %bc(i16)
+    $x0 = COPY %ext(i64)
+    RET_ReallyLR implicit $x0
+...
+---
+name: store_v8s1
+body: |
+  bb.0:
+    liveins: $x0, $w1
+    ; CHECK-LABEL: name: store_v8s1
+    ; CHECK: liveins: $x0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: %in:_(i32) = COPY $w1
+    ; CHECK-NEXT: %tr:_(i8) = G_TRUNC %in(i32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i8) = COPY %tr(i8)
+    ; CHECK-NEXT: G_STORE [[COPY]](i8), %ptr(p0) :: (store (i8))
+    ; CHECK-NEXT: RET_ReallyLR
+    %ptr:_(p0) = COPY $x0
+    %in:_(i32) = COPY $w1
+    %tr:_(i8) = G_TRUNC %in(i32)
+    %bc:_(<8 x i1>) = G_BITCAST %tr(i8)
+    G_STORE %bc(<8 x i1>), %ptr(p0) :: (store (<8 x i1>))
+    RET_ReallyLR
+...
+---
+name: store_v16s1
+body: |
+  bb.0:
+    liveins: $x0, $w1
+    ; CHECK-LABEL: name: store_v16s1
+    ; CHECK: liveins: $x0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: %in:_(i32) = COPY $w1
+    ; CHECK-NEXT: %tr:_(i16) = G_TRUNC %in(i32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i16) = COPY %tr(i16)
+    ; CHECK-NEXT: G_STORE [[COPY]](i16), %ptr(p0) :: (store (i16))
+    ; CHECK-NEXT: RET_ReallyLR
+    %ptr:_(p0) = COPY $x0
+    %in:_(i32) = COPY $w1
+    %tr:_(i16) = G_TRUNC %in(i32)
+    %bc:_(<16 x i1>) = G_BITCAST %tr(i16)
+    G_STORE %bc(<16 x i1>), %ptr(p0) :: (store (<16 x i1>))
+    RET_ReallyLR
+...
