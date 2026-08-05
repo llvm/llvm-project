@@ -584,7 +584,10 @@ int getTypeCode(mlir::Type ty, const fir::KindMapping &kindMap) {
   }
   if (fir::isa_ref_type(ty))
     return CFI_type_cptr;
-  if (mlir::isa<fir::RecordType>(ty))
+  // fir::VectorType is the IBM Fortran vector() extension type used as a
+  // fir.box element type. Use CFI_type_struct as the accepted fallback
+  // for opaque aggregate types in internal descriptors
+  if (mlir::isa<fir::RecordType, fir::VectorType>(ty))
     return CFI_type_struct;
   llvm_unreachable("unsupported type");
 }
