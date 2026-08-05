@@ -1794,7 +1794,8 @@ void CodeGenFunction::EmitCaseStmtRange(const CaseStmt &S,
   Stmt::Likelihood LH = Stmt::getLikelihood(Attrs);
   llvm::APInt Range = RHS - LHS;
   // FIXME: parameters such as this should not be hardcoded.
-  if (Range.ult(llvm::APInt(Range.getBitWidth(), 64))) {
+  if (Range.getBitWidth() < 7 ||
+      Range.ult(llvm::APInt(Range.getBitWidth(), 64))) {
     // Range is small enough to add multiple switch instruction cases.
     uint64_t Total = getProfileCount(&S);
     unsigned NCases = Range.getZExtValue() + 1;
