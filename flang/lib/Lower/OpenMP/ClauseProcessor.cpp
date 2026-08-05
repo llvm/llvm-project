@@ -1996,10 +1996,22 @@ void ClauseProcessor::processMapObjectsWithIterator(
   bool inDeclareMapper = mlir::isa_and_present<mlir::omp::DeclareMapperOp>(
       converter.getFirOpBuilder().getRegion().getParentOp());
 
+  constexpr mlir::omp::ClauseMapFlags unsupportedReferenceModifiers =
+      mlir::omp::ClauseMapFlags::ref_ptr | mlir::omp::ClauseMapFlags::ref_ptee |
+      mlir::omp::ClauseMapFlags::attach_always |
+      mlir::omp::ClauseMapFlags::attach_never |
+      mlir::omp::ClauseMapFlags::attach_auto;
+  bool hasUnsupportedReferenceModifier =
+      (mapTypeBits & unsupportedReferenceModifiers) !=
+      mlir::omp::ClauseMapFlags::none;
+
   // Objects in an iterator-modified clause may independently reference
   // iterator variables, so handle each object separately.
   for (const omp::Object &object : objects) {
     if (hasIteratorIVReference(object, *ivSyms)) {
+      if (hasUnsupportedReferenceModifier)
+        TODO(clauseLocation,
+             "iterator modifier with reference or attach modifier");
       if (!inDeclareMapper && getBaseObject(object, semaCtx))
         TODO(clauseLocation, "iterator modifier with derived type member map");
       if (const auto *symbol{object.sym()};
