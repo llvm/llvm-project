@@ -1604,10 +1604,14 @@ void VPInstruction::execute(VPTransformState &State) {
   bool GeneratesPerFirstLaneOnly = canGenerateScalarForFirstLane() &&
                                    (vputils::onlyFirstLaneUsed(this) ||
                                     isVectorToScalar() || isSingleScalar());
-  assert((((GeneratedValue->getType()->isVectorTy() ||
-            GeneratedValue->getType()->isStructTy()) ==
-           !GeneratesPerFirstLaneOnly) ||
-          State.VF.isScalar()) &&
+  // REVEC: our initial values might be of vector type.
+  Type *InitialTy = getScalarType();
+  ElementCount NewEC = getElementCount(GeneratedValue->getType());
+  ElementCount InitialEC = getElementCount(InitialTy);
+  bool GotWidened = ElementCount::isKnownGT(NewEC, InitialEC) ||
+                    (NewEC.isScalable() && !InitialEC.isScalable()) ||
+                    GeneratedValue->getType()->isStructTy();
+  assert(((GotWidened == !GeneratesPerFirstLaneOnly) || State.VF.isScalar()) &&
          "scalar value but not only first lane defined");
   State.set(this, GeneratedValue,
             /*IsScalar*/ GeneratesPerFirstLaneOnly);

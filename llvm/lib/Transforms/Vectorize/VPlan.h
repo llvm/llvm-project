@@ -1520,8 +1520,9 @@ public:
   /// Returns true if the recipe only uses the first part of operand \p Op.
   bool usesFirstPartOnly(const VPValue *Op) const override;
 
-  /// Returns true if this VPInstruction produces a scalar value from a vector,
+  /// Whether this VPInstruction turns a VFxInitialTy type back into InitialTy,
   /// e.g. by performing a reduction or extracting a lane.
+  /// Note InitialTy might already be a vector if re-vectorising.
   bool isVectorToScalar() const;
 
   /// Returns true if the recipe produces a single scalar value.
