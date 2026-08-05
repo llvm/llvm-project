@@ -128,6 +128,8 @@ raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val) {
   if (Val.isConstantRange())
     return OS << "constantrange<" << Val.getConstantRange().getLower() << ", "
               << Val.getConstantRange().getUpper() << ">";
+  if (Val.isConstantIncludingUndef())
+    return OS << "constant incl. undef <" << *Val.getConstant() << ">";
   return OS << "constant<" << *Val.getConstant() << ">";
 }
 } // end namespace llvm

@@ -187,7 +187,8 @@ static bool simplifyCommonValuePhi(PHINode *P, LazyValueInfo *LVI,
   for (auto &IncomingConstant : IncomingConstants) {
     Constant *C = IncomingConstant.first;
     BasicBlock *IncomingBB = P->getIncomingBlock(IncomingConstant.second);
-    if (C != LVI->getConstantOnEdge(CommonValue, IncomingBB, ToBB, P))
+    if (C !=
+        LVI->getKnownNonUndefConstantOnEdge(CommonValue, IncomingBB, ToBB, P))
       return false;
   }
 

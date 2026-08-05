@@ -99,6 +99,43 @@ TEST_F(ValueLatticeTest, MergeIn) {
   EXPECT_TRUE(LV1.isOverdefined());
 }
 
+TEST_F(ValueLatticeTest, MergeNonIntegerConstantWithUndef) {
+  // Non-integer constants use the constant / constant_including_undef states
+  // (integers use constantrange* instead). Merging undef with such a constant
+  // must remember that the value may be undef, so it cannot be substituted for
+  // a well-defined value.
+  auto FloatTy = Type::getFloatTy(Context);
+  auto *C1 = ConstantFP::get(FloatTy, 1.1);
+
+  // undef merged with a constant -> constant_including_undef.
+  ValueLatticeElement LV1;
+  EXPECT_TRUE(LV1.markUndef());
+  EXPECT_TRUE(LV1.mergeIn(ValueLatticeElement::get(C1)));
+  EXPECT_TRUE(LV1.isConstantIncludingUndef());
+  EXPECT_TRUE(LV1.isConstant(/*UndefAllowed=*/true));
+  EXPECT_FALSE(LV1.isConstant(/*UndefAllowed=*/false));
+  EXPECT_EQ(LV1.getConstant(), C1);
+
+  // The symmetric merge order yields the same result.
+  auto LV2 = ValueLatticeElement::get(C1);
+  EXPECT_FALSE(LV2.isConstantIncludingUndef());
+  EXPECT_TRUE(LV2.isConstant(/*UndefAllowed=*/false));
+  ValueLatticeElement Undef;
+  EXPECT_TRUE(Undef.markUndef());
+  EXPECT_TRUE(LV2.mergeIn(Undef));
+  EXPECT_TRUE(LV2.isConstantIncludingUndef());
+  EXPECT_FALSE(LV2.isConstant(/*UndefAllowed=*/false));
+
+  // Merging the same constant value (without undef) keeps the undef flag.
+  EXPECT_FALSE(LV2.mergeIn(ValueLatticeElement::get(C1)));
+  EXPECT_TRUE(LV2.isConstantIncludingUndef());
+
+  // Merging a different constant goes to overdefined.
+  auto *C2 = ConstantFP::get(FloatTy, 2.2);
+  EXPECT_TRUE(LV2.mergeIn(ValueLatticeElement::get(C2)));
+  EXPECT_TRUE(LV2.isOverdefined());
+}
+
 TEST_F(ValueLatticeTest, getCompareIntegers) {
   auto *I32Ty = IntegerType::get(Context, 32);
   auto *I1Ty = IntegerType::get(Context, 1);

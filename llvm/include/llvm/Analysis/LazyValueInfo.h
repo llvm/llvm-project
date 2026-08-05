@@ -105,6 +105,13 @@ namespace llvm {
                                          BasicBlock *ToBB,
                                          Instruction *CxtI = nullptr);
 
+    /// Like getConstantOnEdge, but rejects results that may be undef on the
+    /// edge.
+    LLVM_ABI Constant *
+    getKnownNonUndefConstantOnEdge(Value *V, BasicBlock *FromBB,
+                                   BasicBlock *ToBB,
+                                   Instruction *CxtI = nullptr);
+
     /// Return the ConstantRage constraint that is known to hold for the
     /// specified value on the specified edge. This may be only be called
     /// on integer-typed Values.
