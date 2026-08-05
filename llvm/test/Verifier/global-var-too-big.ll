@@ -12,10 +12,27 @@ target datalayout = "e-m:e-p1:16:16-p2:32:32-p3:64:64-i8:8-i32:32-i64:64"
 @G3 = internal addrspace(1) global [65535 x i8] zeroinitializer, align 4
 @G4 = internal addrspace(2) global [2147483647 x i16] zeroinitializer, align 4
 
+; Too large but exempt: unreferenced, local linkage, has a section.
+@G5 = internal addrspace(1) global [65536 x i8] zeroinitializer, section "some_section_1", align 4
+@G6 = private addrspace(1) global [65536 x i8] zeroinitializer, section "some_section_2", align 4
+
+; Too large, has a section, but has a use so not exempt.
+@G7 = internal addrspace(1) global [65536 x i8] zeroinitializer, section "some_section_3", align 4
+@G7_user = global ptr addrspace(1) @G7
+
+; Too large, unreferenced, has a section, but external linkage so not exempt.
+@G8 = addrspace(1) global [65536 x i8] zeroinitializer, section "some_section_4", align 4
+
 ; CHECK: Global variable is too large to fit into the address space
 ; CHECK-NEXT: ptr addrspace(1) @G1
 ; CHECK-NEXT: [65536 x i8]
 ; CHECK: Global variable is too large to fit into the address space
 ; CHECK-NEXT: ptr addrspace(2) @G2
 ; CHECK-NEXT: [2147483648 x i16]
+; CHECK: Global variable is too large to fit into the address space
+; CHECK-NEXT: ptr addrspace(1) @G7
+; CHECK-NEXT: [65536 x i8]
+; CHECK: Global variable is too large to fit into the address space
+; CHECK-NEXT: ptr addrspace(1) @G8
+; CHECK-NEXT: [65536 x i8]
 ; CHECK-NOT: Global variable is too large to fit into the address space
