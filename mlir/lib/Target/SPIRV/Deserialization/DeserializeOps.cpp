@@ -753,6 +753,166 @@ Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
   return success();
 }
 
+// The auto-generated deserialization only supports a Variadic<>/Optional<>
+// operand as the last ODS argument, but `stride` sits between `pointer`/
+// `object` and the mandatory `matrix_layout` attribute. Hand-write the
+// deserialization since whether Stride is present cannot be inferred purely
+// from word count without also decoding MemoryLayout first.
+template <>
+LogicalResult Deserializer::processOp<spirv::KHRCooperativeMatrixLoadOp>(
+    ArrayRef<uint32_t> words) {
+  SmallVector<Type, 1> resultTypes;
+  size_t wordIndex = 0;
+
+  if (wordIndex >= words.size())
+    return emitError(unknownLoc,
+                     "expected result type <id> while deserializing "
+                     "spirv::KHRCooperativeMatrixLoadOp");
+  Type resultType = getType(words[wordIndex]);
+  if (!resultType)
+    return emitError(unknownLoc, "unknown type result <id> : ")
+           << words[wordIndex];
+  resultTypes.push_back(resultType);
+  wordIndex++;
+
+  if (wordIndex >= words.size())
+    return emitError(unknownLoc, "expected result <id> while deserializing "
+                                 "spirv::KHRCooperativeMatrixLoadOp");
+  uint32_t valueID = words[wordIndex++];
+
+  SmallVector<Value, 4> operands;
+  SmallVector<NamedAttribute, 4> attributes;
+
+  // Consumes the next word as a value <id>, appending it to `operands`.
+  // No-op once `words` is exhausted, since `stride` is optional.
+  auto readOperand = [&]() -> LogicalResult {
+    if (wordIndex >= words.size())
+      return success();
+    Value arg = getValue(words[wordIndex]);
+    if (!arg)
+      return emitError(unknownLoc, "unknown result <id> : ")
+             << words[wordIndex];
+    operands.push_back(arg);
+    wordIndex++;
+    return success();
+  };
+
+  // Consumes the next word into `word`. Returns false once `words` is
+  // exhausted, since `memory_operand` and `alignment` are optional.
+  auto tryConsumeWord = [&](uint32_t &word) {
+    if (wordIndex >= words.size())
+      return false;
+    word = words[wordIndex++];
+    return true;
+  };
+
+  if (failed(readOperand())) // pointer
+    return failure();
+
+  if (uint32_t word; tryConsumeWord(word))
+    attributes.push_back(opBuilder.getNamedAttr(
+        "matrix_layout",
+        opBuilder.getAttr<spirv::CooperativeMatrixLayoutKHRAttr>(
+            static_cast<spirv::CooperativeMatrixLayoutKHR>(
+                getConstantInt(word).getValue().getZExtValue()))));
+
+  if (failed(readOperand())) // stride
+    return failure();
+
+  if (uint32_t word; tryConsumeWord(word))
+    attributes.push_back(opBuilder.getNamedAttr(
+        "memory_operand", opBuilder.getAttr<spirv::MemoryAccessAttr>(
+                              static_cast<spirv::MemoryAccess>(word))));
+
+  if (uint32_t word; tryConsumeWord(word))
+    attributes.push_back(
+        opBuilder.getNamedAttr("alignment", opBuilder.getI32IntegerAttr(word)));
+
+  if (wordIndex != words.size())
+    return emitError(unknownLoc,
+                     "found more operands than expected when deserializing "
+                     "spirv::KHRCooperativeMatrixLoadOp, only ")
+           << wordIndex << " of " << words.size() << " processed";
+
+  if (decorations.count(valueID)) {
+    auto attrs = decorations[valueID].getAttrs();
+    attributes.append(attrs.begin(), attrs.end());
+  }
+  Location loc = createFileLineColLoc(opBuilder);
+  auto op = spirv::KHRCooperativeMatrixLoadOp::create(
+      opBuilder, loc, resultTypes, operands, attributes);
+  valueMap[valueID] = op.getResult();
+
+  return success();
+}
+
+template <>
+LogicalResult Deserializer::processOp<spirv::KHRCooperativeMatrixStoreOp>(
+    ArrayRef<uint32_t> words) {
+  size_t wordIndex = 0;
+  SmallVector<Value, 4> operands;
+  SmallVector<NamedAttribute, 4> attributes;
+
+  // Consumes the next word as a value <id>, appending it to `operands`.
+  // No-op once `words` is exhausted, since `stride` is optional.
+  auto readOperand = [&]() -> LogicalResult {
+    if (wordIndex >= words.size())
+      return success();
+    Value arg = getValue(words[wordIndex]);
+    if (!arg)
+      return emitError(unknownLoc, "unknown result <id> : ")
+             << words[wordIndex];
+    operands.push_back(arg);
+    wordIndex++;
+    return success();
+  };
+
+  // Consumes the next word into `word`. Returns false once `words` is
+  // exhausted, since `memory_operand` and `alignment` are optional.
+  auto tryConsumeWord = [&](uint32_t &word) {
+    if (wordIndex >= words.size())
+      return false;
+    word = words[wordIndex++];
+    return true;
+  };
+
+  if (failed(readOperand())) // pointer
+    return failure();
+  if (failed(readOperand())) // object
+    return failure();
+
+  if (uint32_t word; tryConsumeWord(word))
+    attributes.push_back(opBuilder.getNamedAttr(
+        "matrix_layout",
+        opBuilder.getAttr<spirv::CooperativeMatrixLayoutKHRAttr>(
+            static_cast<spirv::CooperativeMatrixLayoutKHR>(
+                getConstantInt(word).getValue().getZExtValue()))));
+
+  if (failed(readOperand())) // stride
+    return failure();
+
+  if (uint32_t word; tryConsumeWord(word))
+    attributes.push_back(opBuilder.getNamedAttr(
+        "memory_operand", opBuilder.getAttr<spirv::MemoryAccessAttr>(
+                              static_cast<spirv::MemoryAccess>(word))));
+
+  if (uint32_t word; tryConsumeWord(word))
+    attributes.push_back(
+        opBuilder.getNamedAttr("alignment", opBuilder.getI32IntegerAttr(word)));
+
+  if (wordIndex != words.size())
+    return emitError(unknownLoc,
+                     "found more operands than expected when deserializing "
+                     "spirv::KHRCooperativeMatrixStoreOp, only ")
+           << wordIndex << " of " << words.size() << " processed";
+
+  Location loc = createFileLineColLoc(opBuilder);
+  spirv::KHRCooperativeMatrixStoreOp::create(opBuilder, loc, TypeRange(),
+                                             operands, attributes);
+
+  return success();
+}
+
 template <>
 LogicalResult Deserializer::processOp<spirv::GenericCastToPtrExplicitOp>(
     ArrayRef<uint32_t> words) {
