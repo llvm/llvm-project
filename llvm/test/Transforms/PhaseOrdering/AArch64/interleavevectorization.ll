@@ -16,7 +16,7 @@ define void @add4(ptr noalias noundef %x, ptr noalias noundef %y, i32 noundef %n
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[X:%.*]], i64 [[OFFSET_IDX]]
@@ -136,7 +136,7 @@ define void @addsubs(ptr noalias noundef %x, ptr noundef %y, i32 noundef %n) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i16> [[WIDE_VEC]], <32 x i16> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
@@ -270,7 +270,7 @@ define void @add2sub2(ptr noalias noundef %x, ptr noundef %y, i32 noundef %n) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i16> [[WIDE_VEC]], <32 x i16> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
@@ -404,7 +404,7 @@ define void @addmul(ptr noalias noundef %x, ptr noundef %y, ptr noundef %z, i32 
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[Z:%.*]], i64 [[OFFSET_IDX]]
@@ -560,7 +560,7 @@ define void @addsubsmul(ptr noalias noundef %x, ptr noundef %y, ptr noundef %z, 
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i16> [[WIDE_VEC]], <32 x i16> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
@@ -737,7 +737,7 @@ define void @add2sub2mul(ptr noalias noundef %x, ptr noundef %y, ptr noundef %z,
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i16> [[WIDE_VEC]], <32 x i16> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>

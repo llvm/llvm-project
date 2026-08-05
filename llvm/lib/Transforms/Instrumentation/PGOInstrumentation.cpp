@@ -74,7 +74,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -1582,10 +1581,10 @@ void PGOUseFunc::populateCoverage() {
   }
 
   unsigned NumCorruptCoverage = 0;
-  DominatorTree DT(F);
   CycleInfo CI;
   CI.compute(F);
-  LoopInfo LI(DT);
+  LoopInfo LI;
+  LI.analyze(&F);
   BranchProbabilityInfo BPI(F, CI);
   BlockFrequencyInfo BFI(F, BPI, LI);
   auto IsBlockDead = [&](const BasicBlock &BB) -> std::optional<bool> {
@@ -2342,7 +2341,8 @@ static bool annotateAllFunctions(
     if (PGOViewCounts != PGOVCT_None &&
         (ViewBlockFreqFuncName.empty() ||
          F.getName() == ViewBlockFreqFuncName)) {
-      LoopInfo LI{DominatorTree(F)};
+      LoopInfo LI;
+      LI.analyze(&F);
       CycleInfo CI;
       CI.compute(F);
       std::unique_ptr<BranchProbabilityInfo> NewBPI =
@@ -2373,7 +2373,8 @@ static bool annotateAllFunctions(
     if (PGOVerifyBFI || PGOVerifyHotBFI || PGOFixEntryCount) {
       CycleInfo CI;
       CI.compute(F);
-      LoopInfo LI{DominatorTree(F)};
+      LoopInfo LI;
+      LI.analyze(&F);
       BranchProbabilityInfo NBPI(F, CI);
 
       // Fix func entry count.

@@ -1544,6 +1544,17 @@ llvm.func @rocdl.raw.ptr.buffer(%rsrc : !llvm.ptr<8>,
   llvm.return
 }
 
+llvm.func @rocdl.ptr.s.buffer(%rsrc : !llvm.ptr<8>, %offset : i32) {
+  // CHECK-LABEL: rocdl.ptr.s.buffer
+  // CHECK: call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 0){{.*}}!invariant.load
+  // CHECK: call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 0){{.*}}!invariant.load
+  // CHECK: call <4 x i32> @llvm.amdgcn.ptr.s.buffer.load.v4i32(ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 0){{.*}}!invariant.load
+  %r1 = rocdl.ptr.s.buffer.load %rsrc, %offset, 0 : i32
+  %r2 = rocdl.ptr.s.buffer.load %rsrc, %offset, 0 : vector<2xi32>
+  %r4 = rocdl.ptr.s.buffer.load %rsrc, %offset, 0 : vector<4xi32>
+  llvm.return
+}
+
 llvm.func @rocdl.raw.ptr.buffer.load.lds(%rsrc : !llvm.ptr<8>, %dstLds : !llvm.ptr<3>,
                         %voffset : i32, %soffset : i32) {
   %size = llvm.mlir.constant(4 : i32) : i32

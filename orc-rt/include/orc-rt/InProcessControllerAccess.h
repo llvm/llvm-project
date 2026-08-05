@@ -14,6 +14,7 @@
 #ifndef ORC_RT_INPROCESSCONTROLLERACCESS_H
 #define ORC_RT_INPROCESSCONTROLLERACCESS_H
 
+#include "orc-rt-c/CoreTypes.h"
 #include "orc-rt-c/WrapperFunction.h"
 #include "orc-rt/Error.h"
 #include "orc-rt/Session.h"
@@ -40,7 +41,8 @@ public:
 
     /// Accessors to be set by the InProcessEPC instance.
     void *IPEPC = nullptr;
-    void (*CallJITDispatch)(void *IPEPC, uint64_t CallId, void *HandlerTag,
+    void (*CallJITDispatch)(void *IPEPC, uint64_t CallId,
+                            orc_rt_ControllerHandlerTag T,
                             orc_rt_WrapperFunctionBuffer ArgBytes) = nullptr;
     void (*ReturnWrapperResult)(void *IPEPC, uint64_t CallId,
                                 orc_rt_WrapperFunctionBuffer ResultBytes) =
@@ -107,10 +109,11 @@ public:
 
   void disconnect() override;
 
-  void callController(OnControllerCallReturn OnComplete, HandlerTag T,
+  void callController(OnControllerCallReturn OnComplete,
+                      orc_rt_ControllerHandlerTag T,
                       WrapperFunctionBuffer ArgBytes) override;
-  void sendWrapperResult(uint64_t CallId,
-                         WrapperFunctionBuffer ResultBytes) override;
+  void sendWrapperResult(WrapperFunctionBuffer ResultBytes,
+                         uint64_t CallId) override;
 
 private:
   uint64_t registerPendingHandler(OnControllerCallReturn OnComplete);
