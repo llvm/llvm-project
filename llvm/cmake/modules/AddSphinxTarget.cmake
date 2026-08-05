@@ -41,6 +41,7 @@ function(add_sphinx_source_sync_target target source_dir destination_dir)
   set(scan_target "${target}-scan")
   set(scan_script "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/SphinxSourceScan.cmake")
   set(sync_script "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/SphinxSourceSync.cmake")
+  set(utils_script "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/SphinxSourceUtils.cmake")
 
   file(MAKE_DIRECTORY "${sync_dir}")
   string(REPLACE ";" "\n" preserve_docs "${ARG_PRESERVE_DOCS}")
@@ -79,6 +80,7 @@ function(add_sphinx_source_sync_target target source_dir destination_dir)
                             -P "${scan_script}"
                     BYPRODUCTS "${file_list}" "${destination_doc_list}"
                                "${missing_file_list}"
+                    DEPENDS "${scan_script}" "${utils_script}"
                     COMMENT
                     "Scanning Sphinx sources in \"${source_dir}\""
                     VERBATIM)
@@ -96,6 +98,7 @@ function(add_sphinx_source_sync_target target source_dir destination_dir)
                      DEPENDS "${file_list}" "${preserve_file}"
                              "${destination_doc_list}" "${missing_file_list}"
                              "${ignore_missing_file}" "${sync_script}"
+                             "${utils_script}"
                      DEPFILE "${depfile}"
                      BYPRODUCTS "${manifest_file}"
                      COMMENT

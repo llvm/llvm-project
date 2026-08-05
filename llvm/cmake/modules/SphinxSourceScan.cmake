@@ -18,6 +18,8 @@
 # MISSING_FILE_LIST records source files that do not currently exist in the
 # destination tree, excluding paths listed in IGNORE_MISSING_FILE.
 
+include("${CMAKE_CURRENT_LIST_DIR}/SphinxSourceUtils.cmake")
+
 if (NOT DEFINED SOURCE_DIR)
   message(FATAL_ERROR "SOURCE_DIR must be set")
 endif()
@@ -41,20 +43,6 @@ endif()
 if (NOT DEFINED IGNORE_MISSING_FILE)
   message(FATAL_ERROR "IGNORE_MISSING_FILE must be set")
 endif()
-
-function(write_if_changed output_file contents)
-  if (EXISTS "${output_file}")
-    file(READ "${output_file}" old_contents)
-  else()
-    set(old_contents)
-  endif()
-
-  if (NOT contents STREQUAL old_contents)
-    get_filename_component(output_dir "${output_file}" DIRECTORY)
-    file(MAKE_DIRECTORY "${output_dir}")
-    file(WRITE "${output_file}" "${contents}")
-  endif()
-endfunction()
 
 file(GLOB_RECURSE source_files
   LIST_DIRECTORIES false
