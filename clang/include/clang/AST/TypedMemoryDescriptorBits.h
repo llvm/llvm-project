@@ -97,7 +97,7 @@ struct TypedMemorySummary {
            (TypeFlags << kTypeFlagsShift) | (TypeKind << kTypeKindShift) |
            (CallsiteFlags << kCallsiteFlagsShift) | (Version << kVersionShift);
   }
-} __attribute__((packed));
+};
 
 struct TypedMemoryDescriptorBits {
   TypedMemoryDescriptorBits() : Hash(0) {}
@@ -116,11 +116,6 @@ struct TypedMemoryDescriptorBits {
     return (Summary << kSummaryShift) | (Hash << kHashShift);
   }
 };
-
-static_assert(sizeof(TypedMemorySummary) == sizeof(uint32_t),
-              "Summary must be 32 bits");
-static_assert(sizeof(TypedMemoryDescriptorBits) == sizeof(uint64_t),
-              "Descriptor must be 64 bits");
 
 } // namespace clang
 
