@@ -1,9 +1,10 @@
 import multiprocessing
 import os
 import platform
+import queue
 import sys
 import time
-from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
+from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 import concurrent.futures.process
 
@@ -234,6 +235,7 @@ class Run:
             tests_iter = enumerate(self.tests)
             pending = set()
             future_to_index = {}
+            completed = queue.SimpleQueue()
 
             def submit_next():
                 """Submits the next not-yet-submitted test, if any.
@@ -247,6 +249,7 @@ class Run:
                     future_to_test[future] = test
                     future_to_index[future] = i
                     pending.add(future)
+                    future.add_done_callback(completed.put)
                     return True
                 return False
 
@@ -254,14 +257,17 @@ class Run:
                 pass
 
             while pending:
-                done, pending = wait(
-                    pending,
-                    timeout=deadline - time.time(),
-                    return_when=FIRST_COMPLETED,
-                )
-                if not done:
+                try:
+                    done = [completed.get(timeout=max(0, deadline - time.time()))]
+                except queue.Empty:
                     raise TimeoutError()
+                while True:
+                    try:
+                        done.append(completed.get_nowait())
+                    except queue.Empty:
+                        break
                 for future in sorted(done, key=lambda f: future_to_index[f]):
+                    pending.discard(future)
                     del future_to_index[future]
                     remote_test = future.result()
                     local_test = future_to_test.pop(future)
