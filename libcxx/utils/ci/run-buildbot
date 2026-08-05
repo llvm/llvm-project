@@ -336,7 +336,7 @@ test-tools)
         --dry-run -vv \
         --lnt-url http://localhost:8000 \
         --test-suite libcxx \
-        "${BUILD_DIR}/results.lnt"
+        "${BUILD_DIR}/report.json"
 ;;
 #
 # Various Standard modes
