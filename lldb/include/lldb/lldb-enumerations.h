@@ -270,6 +270,12 @@ enum ScriptedExtension {
   eScriptedExtensionScriptedStackFrameRecognizer,
   kLastScriptedExtension = eScriptedExtensionScriptedStackFrameRecognizer
 };
+//enum for the Thread Tracers in Thread.cpp
+enum ThreadTracerKind {
+  eThreadTracerKindDefault = 0,
+  eThreadTracerKindAssembly,
+};
+
 
 /// Register numbering types.
 // See RegisterContext::ConvertRegisterKindToRegisterNumber to convert any of
