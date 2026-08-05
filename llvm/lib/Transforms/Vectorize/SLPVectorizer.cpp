@@ -19,6 +19,7 @@
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "SLPVectorizer/SLPCompatibilityAnalysis.h"
 #include "SLPVectorizer/SLPCostAnalysis.h"
+#include "SLPVectorizer/SLPTypeUtils.h"
 #include "SLPVectorizer/SLPUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -130,7 +131,9 @@ static cl::opt<bool>
     RunSLPVectorization("vectorize-slp", cl::init(true), cl::Hidden,
                         cl::desc("Run the SLP vectorization passes"));
 
-static cl::opt<bool>
+// Non-static so SLPVectorizer/ helper modules can reference it via an extern
+// declaration; see SLPTypeUtils.cpp.
+cl::opt<bool>
     SLPReVec("slp-revec", cl::init(false), cl::Hidden,
              cl::desc("Enable vectorization for wider vector utilization"));
 
@@ -349,65 +352,6 @@ static const int MinScheduleRegionSize = 16;
 
 /// Maximum allowed number of operands in the PHI nodes.
 static const unsigned MaxPHINumOperands = 128;
-
-/// Predicate for the element types that the SLP vectorizer supports.
-///
-/// The most important thing to filter here are types which are invalid in LLVM
-/// vectors. We also filter target specific types which have absolutely no
-/// meaningful vectorization path such as x86_fp80 and ppc_f128. This just
-/// avoids spending time checking the cost model and realizing that they will
-/// be inevitably scalarized.
-static bool isValidElementType(Type *Ty) {
-  // TODO: Support ScalableVectorType.
-  if (SLPReVec && isVectorizedTy(Ty) && !getVectorizedTypeVF(Ty).isScalable())
-    Ty = toScalarizedTy(Ty);
-  return canVectorizeTy(Ty) && !Ty->isX86_FP80Ty() && !Ty->isPPC_FP128Ty() &&
-         !Ty->isVoidTy();
-}
-
-/// Returns the "element type" of the given value/instruction \p V.
-/// For stores, returns the stored value type; for insertelement (when ReVec is
-/// off), the inserted operand type. For compares, the default is to return the
-/// result type (i1); when \p LookThroughCmp is true, returns the type of the
-/// compared operands instead, which is needed for vector width calculations
-/// (the width is determined by the operand type, not the i1 result).
-static Type *getValueType(Value *V, bool LookThroughCmp = false) {
-  if (auto *SI = dyn_cast<StoreInst>(V))
-    return SI->getValueOperand()->getType();
-  if (LookThroughCmp)
-    if (auto *CI = dyn_cast<CmpInst>(V))
-      return CI->getOperand(0)->getType();
-  if (!SLPReVec)
-    if (auto *IE = dyn_cast<InsertElementInst>(V))
-      return IE->getOperand(1)->getType();
-  if (auto *IV = dyn_cast<InsertValueInst>(V))
-    return IV->getOperand(1)->getType();
-  return V->getType();
-}
-
-/// \returns the vector type of ScalarTy based on vectorization factor.
-static Type *getWidenedType(Type *ScalarTy, unsigned VF) {
-  if (VF == 1 && !isVectorizedTy(ScalarTy)) {
-    // Workaround for 1 x vector types: toVectorizedTy returns the type
-    // unchanged when EC is scalar, but BoUpSLP relies on widening to
-    // <1 x ScalarTy> (or struct of <1 x ElTy>) to keep the rest of the
-    // pipeline operating on vector types.
-    if (auto *StructTy = dyn_cast<StructType>(ScalarTy)) {
-      assert(isUnpackedStructLiteral(StructTy) &&
-             "expected unpacked struct literal");
-      assert(all_of(StructTy->elements(), VectorType::isValidElementType) &&
-             "expected all element types to be valid vector element types");
-      return StructType::get(
-          StructTy->getContext(),
-          map_to_vector(StructTy->elements(), [&](Type *ElTy) -> Type * {
-            return FixedVectorType::get(ElTy, 1);
-          }));
-    }
-    return FixedVectorType::get(ScalarTy, 1);
-  }
-  return toVectorizedTy(toScalarizedTy(ScalarTy),
-                        ElementCount::getFixed(VF * getNumElements(ScalarTy)));
-}
 
 /// Returns the number of elements of the given type \p Ty, not less than \p Sz,
 /// which forms type, which splits by \p TTI into whole vector types during
