@@ -211,21 +211,21 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect(
             "frame variable 'i = i = 1'",
             error=True,
-            substrs=["expected 'eof', got: <'='"],
+            substrs=["Assignment is allowed only at top level"],
         )
         self.expect(
             "frame variable 'i = 1 - (i = 1)'",
             error=True,
-            substrs=["expected 'r_paren', got: <'='"],
+            substrs=["Assignment is allowed only at top level"],
         )
         self.expect(
             "frame variable '1 + (i = 1)'",
             error=True,
-            substrs=["expected 'r_paren', got: <'='"],
+            substrs=["Assignment is allowed only at top level"],
         )
         self.expect(
             "frame variable '(i = 1) + 1'",
             error=True,
-            substrs=["expected 'r_paren', got: <'='"],
+            substrs=["Assignment is allowed only at top level"],
         )
         self.expect("frame variable '*(arr + 1) = 5'", substrs=["= 5"])

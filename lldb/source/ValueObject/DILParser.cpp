@@ -1070,6 +1070,10 @@ ASTNodeUP DILParser::ParseFloatingPointLiteral() {
 }
 
 void DILParser::Expect(Token::Kind kind) {
+  if (CurToken().IsOneOf({Token::equal, Token::plusequal, Token::minusequal})) {
+    BailOut("Assignment is allowed only at top level.",
+            CurToken().GetLocation(), CurToken().GetSpelling().length());
+  }
   if (CurToken().IsNot(kind)) {
     BailOut(llvm::formatv("expected {0}, got: {1}", kind, CurToken()),
             CurToken().GetLocation(), CurToken().GetSpelling().length());
