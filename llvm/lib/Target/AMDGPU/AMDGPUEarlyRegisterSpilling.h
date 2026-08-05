@@ -45,9 +45,10 @@ struct RegisterSpillCandidate {
 class DomGroup {
 public:
   enum class RestorePlacement {
-    BeforeHead,
-    LoopPreheader,
-    IncomingBlockOfPhi,
+    BeforeHead,         // Emit restore before the Head of the DomGroup.
+    LoopPreheader,      // Emit restore in loop preheader.
+    IncomingBlockOfPhi, // Emit restore for incoming value in phi node.
+    CommonDominator,    // Emit restore in common dominator.
   };
 
 private:
@@ -103,6 +104,7 @@ public:
     return It->second;
   }
   RestorePlacement getWhereToRestore() const { return WhereToRestore; }
+  void setWhereToRestore(RestorePlacement RP) { WhereToRestore = RP; }
 };
 
 class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {

@@ -227,16 +227,17 @@ void SpillOrRestoreCandidate::emitRestoresForHead(
   // For each group emit one restore for the group header in the parent block
   // of the group header or the common dominator. The rest of the uses in the
   // group will reuse the value loaded by the restore of the header.
-  for (auto &G1 : groups()) {
-    if (G1.isDeleted())
+  for (auto &DG : groups()) {
+    if (DG.isDeleted())
       continue;
-    MachineInstr *Head = G1.getHead();
-    MachineBasicBlock *HeadMBB = G1.getRestoreBlock();
+    MachineInstr *Head = DG.getHead();
+    MachineBasicBlock *HeadMBB = DG.getRestoreBlock();
     MachineInstr *Restore = nullptr;
-    if (G1.hasCommonDominator() && EmitRestoreInCommonDominator) {
-      MachineBasicBlock *CommonDominator = G1.getCommonDominator();
+    if (DG.getWhereToRestore() == DomGroup::RestorePlacement::CommonDominator &&
+        EmitRestoreInCommonDominator) {
+      MachineBasicBlock *CommonDominator = DG.getCommonDominator();
       MachineInstr *UseInCommonDominator = nullptr;
-      for (auto *U : G1.getUses()) {
+      for (auto *U : DG.getUses()) {
         if (U->getParent() == CommonDominator) {
           if (UseInCommonDominator) {
             if (DT->dominates(U, UseInCommonDominator))
@@ -255,9 +256,10 @@ void SpillOrRestoreCandidate::emitRestoresForHead(
         Head->substituteRegister(CandidateReg, Restore->getOperand(0).getReg(),
                                  0, *TRI);
       }
-    } else if (Head->isPHI()) {
+    } else if (DG.getWhereToRestore() ==
+               DomGroup::RestorePlacement::IncomingBlockOfPhi) {
       LLVM_DEBUG(dbgs() << "Head is phi node: " << *Head);
-      LLVM_DEBUG(dbgs() << "The group has " << G1.size() << " use(s). \n");
+      LLVM_DEBUG(dbgs() << "The group has " << DG.size() << " use(s). \n");
       Restore = emitRestore(CandidateReg, *HeadMBB, FI);
       for (unsigned i = 1; i < Head->getNumOperands(); i += 2) {
         if (Head->getOperand(i).getReg() == CandidateReg &&
@@ -265,27 +267,28 @@ void SpillOrRestoreCandidate::emitRestoresForHead(
           Head->getOperand(i).setReg(Restore->getOperand(0).getReg());
         }
       }
-    } else if (Head->getParent() != HeadMBB) {
+    } else if (DG.getWhereToRestore() ==
+               DomGroup::RestorePlacement::LoopPreheader) {
       LLVM_DEBUG(dbgs() << "Restore in loop preheader.\n");
-      LLVM_DEBUG(dbgs() << "The group has " << G1.size() << " use(s). \n");
+      LLVM_DEBUG(dbgs() << "The group has " << DG.size() << " use(s). \n");
       LLVM_DEBUG(dbgs() << "The head is " << *Head);
       Restore = emitRestore(CandidateReg, *HeadMBB, FI);
       Head->substituteRegister(CandidateReg, Restore->getOperand(0).getReg(), 0,
                                *TRI);
     } else {
       LLVM_DEBUG(dbgs() << "Common case.\n");
-      LLVM_DEBUG(dbgs() << "The group has " << G1.size() << " use(s). \n");
+      LLVM_DEBUG(dbgs() << "The group has " << DG.size() << " use(s). \n");
       LLVM_DEBUG(dbgs() << "The head is " << *Head);
       Restore = emitRestore(CandidateReg, Head, FI);
     }
     RestoreInstrs.push_back(Restore);
     RestoreUses.push_back(Head);
-    G1.setRestore(Restore);
-    RestoreRegToDomGroup[Restore->getOperand(0).getReg()] = G1;
+    DG.setRestore(Restore);
+    RestoreRegToDomGroup[Restore->getOperand(0).getReg()] = DG;
 
     // Update the rest of the uses in the group to reuse the value restored by
     // the head of the group.
-    for (auto *U : G1.getUses()) {
+    for (auto *U : DG.getUses()) {
       if (U == Head)
         continue;
 
@@ -302,7 +305,7 @@ void SpillOrRestoreCandidate::emitRestoresForHead(
         MachineBasicBlock *RestoreMBB = Restore->getParent();
         for (unsigned i = 1; i < U->getNumOperands(); i += 2) {
           if (U->getOperand(i).getReg() == CandidateReg &&
-              U->getOperand(i + 1).getMBB() == G1.getRestoreBlockForPHI(U) &&
+              U->getOperand(i + 1).getMBB() == DG.getRestoreBlockForPHI(U) &&
               U->getOperand(i + 1).getMBB() == RestoreMBB) {
             U->getOperand(i).setReg(Restore->getOperand(0).getReg());
           }
@@ -1052,18 +1055,21 @@ void AMDGPUEarlyRegisterSpilling::groupUses(
           // Set a common dominator if the two restore blocks are different.
           G1.merge(G2);
           G1.setCommonDominator(CommonDom);
+	  G1.setWhereToRestore(DomGroup::RestorePlacement::CommonDominator);
         } else if ((RestoreBlock1 == RestoreBlock2) &&
                    DT->dominates(Head1, Head2) && !G1.getCommonDominator() &&
                    !G2.getCommonDominator()) {
           // If there is no common dominator and one Head dominates the other,
           // then we can merge the two groups.
           G1.merge(G2);
+          G1.setWhereToRestore(DomGroup::RestorePlacement::CommonDominator);
         } else if ((RestoreBlock1 != RestoreBlock2) &&
                    DT->dominates(RestoreBlock1, RestoreBlock2) &&
                    !G1.getCommonDominator() && !G2.getCommonDominator()) {
           // If there is no common dominator and one Head dominates the other,
           // then we can merge the two groups.
           G1.merge(G2);
+          G1.setWhereToRestore(DomGroup::RestorePlacement::CommonDominator);
         }
       } else if ((RestoreBlock1 == RestoreBlock2) &&
                  DT->dominates(Head1, Head2)) {
@@ -1406,6 +1412,7 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
       MachineInstr *OrigRestore = DG.getRestore();
       MachineBasicBlock *CurMBB = CurMI->getParent();
 
+      // TODO: Add support for DomGroup::CommonDominator.
       if (DG.getWhereToRestore() == DomGroup::RestorePlacement::LoopPreheader &&
           (CurMI == Head ||
            (DT->dominates(CurMI, Head) && !DT->dominates(Head, CurMI)))) {
