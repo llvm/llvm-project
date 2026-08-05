@@ -19,6 +19,10 @@ module std_config {
 }
 
 module std_core {
+  module cmath {
+    module special_functions { header "__cmath/special_functions.h" }
+  }
+
   module cstddef {
     module byte         { header "__cstddef/byte.h" }
     module max_align_t  {
@@ -65,7 +69,6 @@ module std_core {
     module remainder                        { header "__math/remainder.h" }
     module roots                            { header "__math/roots.h" }
     module rounding_functions               { header "__math/rounding_functions.h" }
-    module special_functions                { header "__math/special_functions.h" }
     module traits                           { header "__math/traits.h" }
     module trigonometric_functions          { header "__math/trigonometric_functions.h" }
   }
@@ -1639,7 +1642,6 @@ module std {
   // which are in turn used by the facet headers that make up std.locale, so making them part
   // of std.locale would create a cycle.
   module locale_base {
-    header "__locale"
     module codecvt          { header "__locale_dir/codecvt.h"          export * }
     module collate          { header "__locale_dir/collate.h"          export * }
     module ctype            { header "__locale_dir/ctype.h"            export * }
