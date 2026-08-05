@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIR/Dialect/Analysis/CIRBasicAliasAnalysis.h"
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 using namespace llvm;
 using namespace cir;
@@ -23,7 +23,8 @@ mlir::Value CIRBasicAliasAnalysis::getUnderlyingObject(mlir::Value val) {
   return val;
 }
 
-bool CIRBasicAliasAnalysis::areDistinctObjects(mlir::Value lhs, mlir::Value rhs) {
+bool CIRBasicAliasAnalysis::areDistinctObjects(mlir::Value lhs,
+                                               mlir::Value rhs) {
   // Two values are distinct allocations if they originate from different
   // cir.alloca operations (or other allocation ops) in the same function.
   // TODO: Extend to cover global addresses, function arguments with noalias,
@@ -46,7 +47,8 @@ bool CIRBasicAliasAnalysis::areDistinctObjects(mlir::Value lhs, mlir::Value rhs)
 // CIRBasicAliasAnalysis
 //===----------------------------------------------------------------------===//
 
-mlir::AliasResult CIRBasicAliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
+mlir::AliasResult CIRBasicAliasAnalysis::alias(mlir::Value lhs,
+                                               mlir::Value rhs) {
   if (lhs == rhs)
     return mlir::AliasResult::MustAlias;
 
