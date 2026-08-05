@@ -338,10 +338,11 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
     const auto *CT = Ty->getAs<ComplexType>();
     if (CT && CT->getElementType()->isIntegerType()) {
       uint64_t ElementTypeSize = Context.getTypeSize(CT->getElementType());
-      if (ElementTypeSize < 32) {
+      if (ElementTypeSize <= 32) {
         RegOffset += 1;
         return ABIArgInfo::getDirect(
-            llvm::IntegerType::get(VMContext, 2 * ElementTypeSize));
+            llvm::IntegerType::get(VMContext, 2 * ElementTypeSize),
+            /*Offset=*/0, Padding);
       }
     }
   }
