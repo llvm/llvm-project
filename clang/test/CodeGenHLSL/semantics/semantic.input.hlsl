@@ -39,17 +39,15 @@ void main(S s) {}
 
 // float4 e[2][3] : E -> 6 rows (2 x 3), 4 columns each; row-major flattening.
 // CHECK: %E0 = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 0, i8 0, i32 poison)
-// CHECK: %[[#E0:]] = insertvalue [3 x <4 x float>] poison, <4 x float> %E0, 0
+// CHECK: %[[#E:]] = insertvalue [2 x [3 x <4 x float>]] poison, <4 x float> %E0, 0, 0
 // CHECK: %E1 = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 1, i8 0, i32 poison)
-// CHECK: %[[#E0:]] = insertvalue [3 x <4 x float>] %[[#E0]], <4 x float> %E1, 1
+// CHECK: %[[#E:]] = insertvalue [2 x [3 x <4 x float>]] %[[#E]], <4 x float> %E1, 0, 1
 // CHECK: %E2 = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 2, i8 0, i32 poison)
-// CHECK: %[[#E0:]] = insertvalue [3 x <4 x float>] %[[#E0]], <4 x float> %E2, 2
-// CHECK: %[[#E:]] = insertvalue [2 x [3 x <4 x float>]] poison, [3 x <4 x float>] %[[#E0]], 0
+// CHECK: %[[#E:]] = insertvalue [2 x [3 x <4 x float>]] %[[#E]], <4 x float> %E2, 0, 2
 // CHECK: %E3 = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 3, i8 0, i32 poison)
-// CHECK: %[[#E1:]] = insertvalue [3 x <4 x float>] poison, <4 x float> %E3, 0
+// CHECK: %[[#E:]] = insertvalue [2 x [3 x <4 x float>]] %[[#E]], <4 x float> %E3, 1, 0
 // CHECK: %E4 = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 4, i8 0, i32 poison)
-// CHECK: %[[#E1:]] = insertvalue [3 x <4 x float>] %[[#E1]], <4 x float> %E4, 1
+// CHECK: %[[#E:]] = insertvalue [2 x [3 x <4 x float>]] %[[#E]], <4 x float> %E4, 1, 1
 // CHECK: %E5 = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 5, i8 0, i32 poison)
-// CHECK: %[[#E1:]] = insertvalue [3 x <4 x float>] %[[#E1]], <4 x float> %E5, 2
-// CHECK: %[[#E:]] = insertvalue [2 x [3 x <4 x float>]] %[[#E]], [3 x <4 x float>] %[[#E1]], 1
+// CHECK: %[[#E:]] = insertvalue [2 x [3 x <4 x float>]] %[[#E]], <4 x float> %E5, 1, 2
 // CHECK: %[[#S:]] = insertvalue %struct.S %[[#S]], [2 x [3 x <4 x float>]] %[[#E]], 3

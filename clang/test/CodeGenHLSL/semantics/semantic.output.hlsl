@@ -42,17 +42,15 @@ S main() {
 
 // float4 e[2][3] : E -> 6 rows (2 x 3), 4 columns each; row-major flattening.
 // CHECK: %[[#E:]] = extractvalue %struct.S %[[#S]], 3
-// CHECK: %[[#E0:]] = extractvalue [2 x [3 x <4 x float>]] %[[#E]], 0
-// CHECK: %[[#E00:]] = extractvalue [3 x <4 x float>] %[[#E0]], 0
+// CHECK: %[[#E00:]] = extractvalue [2 x [3 x <4 x float>]] %[[#E]], 0, 0
 // CHECK: call void @llvm.dx.store.output.v4f32(i32 3, i32 0, i8 0, <4 x float> %[[#E00]])
-// CHECK: %[[#E01:]] = extractvalue [3 x <4 x float>] %[[#E0]], 1
+// CHECK: %[[#E01:]] = extractvalue [2 x [3 x <4 x float>]] %[[#E]], 0, 1
 // CHECK: call void @llvm.dx.store.output.v4f32(i32 3, i32 1, i8 0, <4 x float> %[[#E01]])
-// CHECK: %[[#E02:]] = extractvalue [3 x <4 x float>] %[[#E0]], 2
+// CHECK: %[[#E02:]] = extractvalue [2 x [3 x <4 x float>]] %[[#E]], 0, 2
 // CHECK: call void @llvm.dx.store.output.v4f32(i32 3, i32 2, i8 0, <4 x float> %[[#E02]])
-// CHECK: %[[#E1:]] = extractvalue [2 x [3 x <4 x float>]] %[[#E]], 1
-// CHECK: %[[#E10:]] = extractvalue [3 x <4 x float>] %[[#E1]], 0
+// CHECK: %[[#E10:]] = extractvalue [2 x [3 x <4 x float>]] %[[#E]], 1, 0
 // CHECK: call void @llvm.dx.store.output.v4f32(i32 3, i32 3, i8 0, <4 x float> %[[#E10]])
-// CHECK: %[[#E11:]] = extractvalue [3 x <4 x float>] %[[#E1]], 1
+// CHECK: %[[#E11:]] = extractvalue [2 x [3 x <4 x float>]] %[[#E]], 1, 1
 // CHECK: call void @llvm.dx.store.output.v4f32(i32 3, i32 4, i8 0, <4 x float> %[[#E11]])
-// CHECK: %[[#E12:]] = extractvalue [3 x <4 x float>] %[[#E1]], 2
+// CHECK: %[[#E12:]] = extractvalue [2 x [3 x <4 x float>]] %[[#E]], 1, 2
 // CHECK: call void @llvm.dx.store.output.v4f32(i32 3, i32 5, i8 0, <4 x float> %[[#E12]])

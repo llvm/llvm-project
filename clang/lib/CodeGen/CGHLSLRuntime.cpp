@@ -1189,9 +1189,16 @@ void CGHLSLRuntime::emitSPIRVUserSemanticStore(
 namespace {
 // Describes how a semantic leaf lowers to signature rows
 struct SemanticShape {
-  unsigned Rows;
+  SmallVector<unsigned> Dimensions; // Empty dims denotes a scalar
   unsigned Cols;
   QualType RowType;
+
+  unsigned getNumRows() const {
+    unsigned Rows = 1;
+    for (unsigned Dimension : Dimensions)
+      Rows *= Dimension;
+    return Rows;
+  }
 };
 } // namespace
 
@@ -1203,13 +1210,12 @@ static QualType getSemanticLeafType(const clang::DeclaratorDecl *Decl) {
   return Decl->getType();
 }
 
-// Walks through the surrounding constant array types of \p Ty, accumulating the
-// number of rows, until reaching a scalar, vector, or matrix leaf. The leaf is
-// returned as the row type together with the number of rows.
+// Walks through the surrounding constant array types of \p Ty, collecting their
+// dimensions until reaching a scalar, vector, or matrix leaf.
 static SemanticShape getSemanticShape(ASTContext &Ctx, QualType Ty) {
-  unsigned Rows = 1;
+  SmallVector<unsigned> Dimensions;
   while (const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(Ty)) {
-    Rows *= CAT->getSize().getZExtValue();
+    Dimensions.push_back(CAT->getSize().getZExtValue());
     Ty = CAT->getElementType();
   }
 
@@ -1223,7 +1229,7 @@ static SemanticShape getSemanticShape(ASTContext &Ctx, QualType Ty) {
     Cols = MT->getNumColumns();
   }
 
-  return {Rows, Cols, Ty};
+  return {std::move(Dimensions), Cols, Ty};
 }
 
 llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
@@ -1245,74 +1251,39 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
   }
 
   unsigned SigId = DXILInputSemanticIndex++;
-  unsigned Row = 0;
 
-  // Scalar and vector leaves need no aggregate reconstruction.
-  if (!isa<llvm::ArrayType>(Type)) {
+  llvm::Type *LeafTy = CGM.getTypes().ConvertType(Shape.RowType);
+  llvm::Value *Result = llvm::PoisonValue::get(Type);
+
+  SmallVector<unsigned> Indices(Shape.Dimensions.size());
+
+  for (unsigned Row = 0; Row < Shape.getNumRows(); ++Row) {
     SmallVector<Value *> Args{
         /*SigElementId=*/B.getInt32(SigId),
         /*RowIndex=*/B.getInt32(Row),
         /*ColIndex=*/B.getInt8(0),
         /*GsVertexOrPrimIndex=*/llvm::PoisonValue::get(B.getInt32Ty())};
-    llvm::Value *Result =
-        B.CreateCall(IntrFn, Args, OB, Twine(Name).concat(Twine(Row++)));
-    // Booleans use their memory representation in DXIL signatures, but direct
+    llvm::Value *Value =
+        B.CreateCall(IntrFn, Args, OB, Twine(Name).concat(Twine(Row)));
+    // Booleans use their memory representation in DXIL signatures, but
     // function parameters use their value representation.
-    if (Result->getType() != Type) {
+    if (Value->getType() != LeafTy) {
       assert(Shape.RowType->hasBooleanRepresentation() &&
              "unexpected semantic load type mismatch");
-      Result = B.CreateICmpNE(
-          Result, llvm::Constant::getNullValue(Result->getType()), "loadedv");
+      Value = B.CreateICmpNE(
+          Value, llvm::Constant::getNullValue(Value->getType()), "loadedv");
     }
-    assert(Row == Shape.Rows && "unexpected number of semantic rows");
-    return Result;
-  }
 
-  struct LoadItem {
-    llvm::ArrayType *Type;
-    llvm::Value *Aggregate;
-    unsigned NextIndex;
-  };
+    Result =
+        Indices.empty() ? Value : B.CreateInsertValue(Result, Value, Indices);
 
-  SmallVector<LoadItem> Worklist;
-  auto *RootTy = cast<llvm::ArrayType>(Type);
-  Worklist.push_back({RootTy, llvm::PoisonValue::get(RootTy), 0});
-
-  llvm::Value *Result = nullptr;
-  while (!Worklist.empty()) {
-    LoadItem &Frame = Worklist.back();
-
-    if (Frame.NextIndex == Frame.Type->getNumElements()) {
-      llvm::Value *Aggregate = Frame.Aggregate;
-      Worklist.pop_back();
-      if (Worklist.empty()) {
-        Result = Aggregate;
+    // Advance the multidimensional index
+    for (unsigned I = Indices.size(); I-- > 0;) {
+      if (++Indices[I] < Shape.Dimensions[I])
         break;
-      }
-
-      LoadItem &Parent = Worklist.back();
-      Parent.Aggregate =
-          B.CreateInsertValue(Parent.Aggregate, Aggregate, Parent.NextIndex++);
-      continue;
+      Indices[I] = 0;
     }
-
-    llvm::Type *ElementTy = Frame.Type->getElementType();
-    if (auto *AT = dyn_cast<llvm::ArrayType>(ElementTy)) {
-      Worklist.push_back({AT, llvm::PoisonValue::get(AT), 0});
-      continue;
-    }
-
-    SmallVector<Value *> Args{
-        /*SigElementId=*/B.getInt32(SigId),
-        /*RowIndex=*/B.getInt32(Row),
-        /*ColIndex=*/B.getInt8(0),
-        /*GsVertexOrPrimIndex=*/llvm::PoisonValue::get(B.getInt32Ty())};
-    llvm::Value *Elt =
-        B.CreateCall(IntrFn, Args, OB, Twine(Name).concat(Twine(Row++)));
-    Frame.Aggregate =
-        B.CreateInsertValue(Frame.Aggregate, Elt, Frame.NextIndex++);
   }
-  assert(Row == Shape.Rows && "unexpected number of semantic rows");
   return Result;
 }
 
@@ -1336,26 +1307,11 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
   }
 
   unsigned SigId = DXILOutputSemanticIndex++;
-  unsigned Row = 0;
 
-  struct StoreItem {
-    llvm::Value *Aggregate;
-    std::optional<unsigned> Index;
-  };
-
-  SmallVector<StoreItem> Worklist{{Source, std::nullopt}};
-  while (!Worklist.empty()) {
-    StoreItem Item = Worklist.pop_back_val();
-    llvm::Value *Val = Item.Index
-                           ? B.CreateExtractValue(Item.Aggregate, *Item.Index)
-                           : Item.Aggregate;
-
-    if (auto *AT = dyn_cast<llvm::ArrayType>(Val->getType())) {
-      // Push elements in reverse so index 0 is visited first
-      for (unsigned I = AT->getNumElements(); I-- > 0;)
-        Worklist.push_back({Val, I});
-      continue;
-    }
+  SmallVector<unsigned> Indices(Shape.Dimensions.size());
+  for (unsigned Row = 0; Row < Shape.getNumRows(); ++Row) {
+    llvm::Value *Val =
+        Indices.empty() ? Source : B.CreateExtractValue(Source, Indices);
 
     // Booleans use their memory representation in DXIL signatures, but direct
     // function results use their value representation.
@@ -1366,11 +1322,17 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
     }
 
     SmallVector<Value *> Args{/*SigElementId=*/B.getInt32(SigId),
-                              /*RowIndex=*/B.getInt32(Row++),
+                              /*RowIndex=*/B.getInt32(Row),
                               /*ColIndex=*/B.getInt8(0), /*Value=*/Val};
     B.CreateCall(IntrFn, Args, OB);
+
+    // Advance the multidimensional index
+    for (unsigned I = Indices.size(); I-- > 0;) {
+      if (++Indices[I] < Shape.Dimensions[I])
+        break;
+      Indices[I] = 0;
+    }
   }
-  assert(Row == Shape.Rows && "unexpected number of semantic rows");
 }
 
 llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
