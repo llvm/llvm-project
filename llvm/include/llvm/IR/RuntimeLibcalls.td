@@ -2637,13 +2637,7 @@ def ARMSystemLibrary
            EABIHalfConvertCalls,
            GNUEABIHalfConvertCalls,
            ARMDoubleToHalfCalls,
-
-           LibcallImpls<(add AEABIOverrides),
-             RuntimeLibcallAvailability<
-               (all_of (any_of (not (any_of IsTargetAEABI, IsTargetGNUAEABI,
-                                            IsTargetMuslAEABI, IsOSFuchsia, IsAndroid)),
-                               (not IsAAPCS_ABI)),
-                       (not IsOSWindows))>>,
+           LibcallImpls<(add AEABIOverrides), isNotOSWindows>,
            // Use divmod compiler-rt calls for iOS 5.0 and later.
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
                         RuntimeLibcallAvailability<
@@ -2962,18 +2956,11 @@ def __mspabi_mpyll : RuntimeLibcallImpl<MUL_I64>;
 
 def isMSP430 : RuntimeLibcallAvailability<(all_of IsMSP430)>;
 
+// msp430 libgcc provides the 32-bit logical right shift only under
+// the __mspabi_srll name. Everything else in the default list
+// coexists in msp430 libgcc alongside its __mspabi_* variant.
 defvar MSP430DefaultOptOut = [
-  __addsf3, __divsf3, __extendsfdf2, __truncdfsf2, __fixsfsi,
-  __fixsfdi, __fixunssfsi, __mulsf3, __eqsf2, __gesf2, __gtsf2,
-  __divhi3, __divsi3, __ashlsi3, __floatsidf, __floatsisf,
-  __ashrsi3, __modhi3, __udivsi3, __fixdfsi, __fixunssfdi,
-  __udivhi3, __umodsi3, __nesf2, __lesf2, __floatundisf,
-  __fixdfdi, __fixunsdfsi, __modsi3, __floatunsisf,
-  __fixunsdfdi, __ltsf2, __floatdisf, __floatdidf,
-  __lshrsi3, __subsf3, __umodhi3, __floatunsidf,
-  __floatundidf, __gtdf2, __eqdf2, __gedf2, __ltdf2, __ledf2,
-  __adddf3, __divdf3, __divdi3, __moddi3,
-  __muldf3, __subdf3, __udivdi3, __umoddi3
+  __lshrsi3
 ];
 
 // EABI Libcalls - EABI Section 6.2

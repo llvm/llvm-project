@@ -1,6 +1,6 @@
 // REQUIRES: arm
 // RUN: llvm-mc  -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
-// RUN: ld.lld -z nosort-thunks %t -o %t2
+// RUN: ld.lld %t -o %t2
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x100000 --stop-address=0x10000c | FileCheck --check-prefix=CHECK1 %s
@@ -48,7 +48,7 @@ _start:
 // CHECK1-NEXT: <_start>:
 // CHECK1-NEXT:   100000:       f0ff fffe       bl      0x200000 <tfunc00>
 // CHECK1-NEXT:   100004:       f3ff d7fc       bl      0x1100000 <tfunc15>
-// CHECK1-NEXT:   100008:       f2ff d7fc       bl      0x1000004 <__Thumbv7ABSLongThunk_tfunc16>
+// CHECK1-NEXT:   100008:       f300 d00a       bl      0x1000020 <__Thumbv7ABSLongThunk_tfunc16>
 
  FUNCTION 00
 // CHECK2:  <tfunc00>:
@@ -62,7 +62,7 @@ _start:
         b.w tfunc28
 // CHECK4: <tfunc02>:
 // CHECK4-NEXT:   400000:       4770    bx      lr
-// CHECK4-NEXT:   400002:       f000 9001       b.w     0x1000008 <__Thumbv7ABSLongThunk_tfunc28>
+// CHECK4-NEXT:   400002:       f000 900b       b.w     0x100001c <__Thumbv7ABSLongThunk_tfunc28>
  FUNCTION 03
  FUNCTION 04
  FUNCTION 05
@@ -76,20 +76,20 @@ _start:
  FUNCTION 13
  FUNCTION 14
 // Expect precreated ThunkSection here
-// CHECK5: <__Thumbv7ABSLongThunk_tfunc16>:
-// CHECK5-NEXT:  1000004:       f1ff bffc       b.w     0x1200000 <tfunc16>
-// CHECK5: <__Thumbv7ABSLongThunk_tfunc28>:
-// CHECK5-NEXT:  1000008:       f1ff 97fa       b.w     0x1e00000 <tfunc28>
-// CHECK5: <__Thumbv7ABSLongThunk_tfunc32>:
-// CHECK5-NEXT:  100000c:       f240 0c01       movw    r12, #1
-// CHECK5-NEXT:  1000010:       f2c0 2c20       movt    r12, #544
-// CHECK5-NEXT:  1000014:       4760    bx      r12
-// CHECK5: <__Thumbv7ABSLongThunk_tfunc33>:
-// CHECK5-NEXT:  1000016:       f240 0c01       movw    r12, #1
-// CHECK5-NEXT:  100001a:       f2c0 2c30       movt    r12, #560
-// CHECK5-NEXT:  100001e:       4760    bx      r12
 // CHECK5: <__Thumbv7ABSLongThunk_tfunc02>:
-// CHECK5-NEXT:  1000020:       f7ff 97ee       b.w     0x400000 <tfunc02>
+// CHECK5-NEXT:  1000004:       f7ff 97fc       b.w     0x400000 <tfunc02>
+// CHECK5: <__Thumbv7ABSLongThunk_tfunc33>:
+// CHECK5-NEXT:  1000008:       f240 0c01       movw    r12, #1
+// CHECK5-NEXT:  100000c:       f2c0 2c30       movt    r12, #560
+// CHECK5-NEXT:  1000010:       4760    bx      r12
+// CHECK5: <__Thumbv7ABSLongThunk_tfunc32>:
+// CHECK5-NEXT:  1000012:       f240 0c01       movw    r12, #1
+// CHECK5-NEXT:  1000016:       f2c0 2c20       movt    r12, #544
+// CHECK5-NEXT:  100001a:       4760    bx      r12
+// CHECK5: <__Thumbv7ABSLongThunk_tfunc28>:
+// CHECK5-NEXT:  100001c:       f1ff 97f0       b.w     0x1e00000 <tfunc28>
+// CHECK5: <__Thumbv7ABSLongThunk_tfunc16>:
+// CHECK5-NEXT:  1000020:       f1ff bfee       b.w     0x1200000 <tfunc16>
  FUNCTION 15
 // tfunc00 and tfunc01 are < 16Mb away, expect no range extension thunks
  bl tfunc00
@@ -102,8 +102,8 @@ _start:
 // CHECK6-NEXT:  1100000:       4770    bx      lr
 // CHECK6-NEXT:  1100002:       f4ff d7fd       bl      0x200000 <tfunc00>
 // CHECK6-NEXT:  1100006:       f5ff d7fb       bl      0x300000 <tfunc01>
-// CHECK6-NEXT:  110000a:       f6ff ffff       bl      0x100000c <__Thumbv7ABSLongThunk_tfunc32>
-// CHECK6-NEXT:  110000e:       f700 f802       bl      0x1000016 <__Thumbv7ABSLongThunk_tfunc33>
+// CHECK6-NEXT:  110000a:       f700 f802       bl      0x1000012 <__Thumbv7ABSLongThunk_tfunc32>
+// CHECK6-NEXT:  110000e:       f6ff fffb       bl      0x1000008 <__Thumbv7ABSLongThunk_tfunc33>
  FUNCTION 16
  FUNCTION 17
  FUNCTION 18
@@ -126,7 +126,7 @@ _start:
 // section
 // CHECK8:  <tfunc28>:
 // CHECK8-NEXT:  1e00000:       4770    bx      lr
-// CHECK8-NEXT:  1e00002:       f600 900d       b.w     0x1000020 <__Thumbv7ABSLongThunk_tfunc02>
+// CHECK8-NEXT:  1e00002:       f5ff 97ff       b.w     0x1000004 <__Thumbv7ABSLongThunk_tfunc02>
 
  b.w tfunc02
  FUNCTION 29
