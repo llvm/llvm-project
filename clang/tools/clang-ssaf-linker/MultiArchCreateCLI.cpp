@@ -99,29 +99,31 @@ void MultiArchCreateCLI::run(llvm::TimerGroup &TG,
   llvm::Timer TBundle("bundle", "Bundle Input", TG);
   llvm::Timer TWrite("write", "Write Multi-Arch Bundle", TG);
 
-  info(Verbose, 0, "Bundling started.");
+  // Nesting depth for indenting verbose notes.
+  const unsigned Level = 0;
 
-  info(Verbose, 1, "Validating input.");
-  validate(TValidate);
+  info(Verbose, Level, "Bundling started.");
 
-  info(Verbose, 1, "Creating bundle.");
-  ArtifactEncoding Result = create(TRead, TBundle);
+  validate(Level + 1, TValidate);
 
-  info(Verbose, 1, "Writing bundle to '{0}'.", OutputFile.Path);
-  write(Result, TWrite);
+  ArtifactEncoding Result = create(Level + 1, TRead, TBundle);
 
-  info(Verbose, 0, "Bundling finished.");
+  write(Result, Level + 1, TWrite);
+
+  info(Verbose, Level, "Bundling finished.");
 
   // Second run() should start from a clean slate.
   InputFiles.clear();
   SourceByMember.clear();
 }
 
-void MultiArchCreateCLI::validate(llvm::Timer &TValidate) {
+void MultiArchCreateCLI::validate(unsigned Level, llvm::Timer &TValidate) {
+  info(Verbose, Level, "Validating input.");
+
   llvm::TimeRegion _(Time ? &TValidate : nullptr);
 
   OutputFile = FormatFile::fromOutputPath(OutputPath);
-  info(Verbose, 2, "Validated output path '{0}'.", OutputFile.Path);
+  info(Verbose, Level + 1, "Validated output path '{0}'.", OutputFile.Path);
 
   if (InputPaths.empty()) {
     fail(NoInputs);
@@ -131,29 +133,35 @@ void MultiArchCreateCLI::validate(llvm::Timer &TValidate) {
     InputFiles.push_back(FormatFile::fromInputPath(InputPath));
   }
 
-  info(Verbose, 2, "Validated {0} input artifact path(s).", InputFiles.size());
+  info(Verbose, Level + 1, "Validated {0} input artifact path(s).",
+       InputFiles.size());
 }
 
-ArtifactEncoding MultiArchCreateCLI::create(llvm::Timer &TRead,
+ArtifactEncoding MultiArchCreateCLI::create(unsigned Level, llvm::Timer &TRead,
                                             llvm::Timer &TBundle) {
-  info(Verbose, 2, "Bundling members.");
+  info(Verbose, Level, "Creating bundle.");
 
-  // The first input decides the bundle kind.
-  ArtifactEncoding First = readInput(0, TRead);
+  const unsigned MemberLevel = Level + 1;
+  info(Verbose, MemberLevel, "Bundling members.");
+
+  size_t Index = 0;
+  ArtifactEncoding First = readInput(Index, MemberLevel + 1, TRead);
 
   if (isStaticFamily(First)) {
-    return createStaticLibrary(std::move(First), TRead, TBundle);
-  } else if (isSharedFamily(First)) {
-    return createSharedLibrary(std::move(First), TRead, TBundle);
-  } else {
-    fail(InvalidInputKind, InputFiles[0].Path);
+    return createStaticLibrary(std::move(First), MemberLevel, TRead, TBundle);
   }
+
+  if (isSharedFamily(First)) {
+    return createSharedLibrary(std::move(First), MemberLevel, TRead, TBundle);
+  }
+
+  fail(InvalidInputKind, InputFiles[Index].Path);
 }
 
-ArtifactEncoding MultiArchCreateCLI::readInput(size_t Index,
+ArtifactEncoding MultiArchCreateCLI::readInput(size_t Index, unsigned Level,
                                                llvm::Timer &TRead) {
   const FormatFile &InputFile = InputFiles[Index];
-  info(Verbose, 3, "[{0}/{1}] Reading '{2}'.", Index + 1, InputFiles.size(),
+  info(Verbose, Level, "[{0}/{1}] Reading '{2}'.", Index + 1, InputFiles.size(),
        InputFile.Path);
 
   llvm::TimeRegion _(Time ? &TRead : nullptr);
@@ -186,52 +194,60 @@ MultiArchCreateCLI::sharedFamilyNamespace(const ArtifactEncoding &E) {
 }
 
 ArtifactEncoding MultiArchCreateCLI::createStaticLibrary(ArtifactEncoding First,
+                                                         unsigned Level,
                                                          llvm::Timer &TRead,
                                                          llvm::Timer &TBundle) {
   MultiArchStaticLibrary Bundle(staticFamilyNamespace(First).withKind(
       BuildNamespaceKind::MultiArchStaticLibrary));
 
-  addStaticInput(Bundle, std::move(First), 0, TBundle);
-  for (size_t Index = 1; Index < InputFiles.size(); ++Index) {
-    addStaticInput(Bundle, readInput(Index, TRead), Index, TBundle);
+  size_t Index = 0;
+
+  addStaticInput(Bundle, std::move(First), Index, Level + 1, TBundle);
+  for (Index = 1; Index < InputFiles.size(); ++Index) {
+    addStaticInput(Bundle, readInput(Index, Level + 1, TRead), Index, Level + 1,
+                   TBundle);
   }
 
   if (Bundle.Members.empty()) {
     fail(NoCandidateMembers);
   }
 
-  info(Verbose, 2, "Bundled {0} member(s).", Bundle.Members.size());
-  info(Verbose, 2, "Target namespace: '{0}'.", Bundle.Namespace);
+  info(Verbose, Level, "Bundled {0} member(s).", Bundle.Members.size());
+  info(Verbose, Level, "Target namespace: '{0}'.", Bundle.Namespace);
 
   return ArtifactEncoding(std::move(Bundle));
 }
 
 ArtifactEncoding MultiArchCreateCLI::createSharedLibrary(ArtifactEncoding First,
+                                                         unsigned Level,
                                                          llvm::Timer &TRead,
                                                          llvm::Timer &TBundle) {
   MultiArchSharedLibrary Bundle(sharedFamilyNamespace(First));
 
-  addSharedInput(Bundle, std::move(First), 0, TBundle);
-  for (size_t Index = 1; Index < InputFiles.size(); ++Index) {
-    addSharedInput(Bundle, readInput(Index, TRead), Index, TBundle);
+  size_t Index = 0;
+
+  addSharedInput(Bundle, std::move(First), Index, Level + 1, TBundle);
+  for (Index = 1; Index < InputFiles.size(); ++Index) {
+    addSharedInput(Bundle, readInput(Index, Level + 1, TRead), Index, Level + 1,
+                   TBundle);
   }
 
   if (Bundle.Members.empty()) {
     fail(NoCandidateMembers);
   }
 
-  info(Verbose, 2, "Bundled {0} member(s).", Bundle.Members.size());
-  info(Verbose, 2, "Target namespace: '{0}'.", Bundle.Namespace);
+  info(Verbose, Level, "Bundled {0} member(s).", Bundle.Members.size());
+  info(Verbose, Level, "Target namespace: '{0}'.", Bundle.Namespace);
 
   return ArtifactEncoding(std::move(Bundle));
 }
 
 void MultiArchCreateCLI::addStaticInput(MultiArchStaticLibrary &Bundle,
                                         ArtifactEncoding Encoding, size_t Index,
-                                        llvm::Timer &TBundle) {
+                                        unsigned Level, llvm::Timer &TBundle) {
   llvm::StringRef SourceFile = InputFiles[Index].Path;
-  info(Verbose, 3, "[{0}/{1}] Bundling '{2}'.", Index + 1, InputFiles.size(),
-       SourceFile);
+  info(Verbose, Level, "[{0}/{1}] Bundling '{2}'.", Index + 1,
+       InputFiles.size(), SourceFile);
   llvm::TimeRegion _(Time ? &TBundle : nullptr);
 
   if (auto *SL = std::get_if<StaticLibrary>(&Encoding)) {
@@ -266,10 +282,10 @@ void MultiArchCreateCLI::addStaticInput(MultiArchStaticLibrary &Bundle,
 
 void MultiArchCreateCLI::addSharedInput(MultiArchSharedLibrary &Bundle,
                                         ArtifactEncoding Encoding, size_t Index,
-                                        llvm::Timer &TBundle) {
+                                        unsigned Level, llvm::Timer &TBundle) {
   llvm::StringRef SourceFile = InputFiles[Index].Path;
-  info(Verbose, 3, "[{0}/{1}] Bundling '{2}'.", Index + 1, InputFiles.size(),
-       SourceFile);
+  info(Verbose, Level, "[{0}/{1}] Bundling '{2}'.", Index + 1,
+       InputFiles.size(), SourceFile);
   llvm::TimeRegion _(Time ? &TBundle : nullptr);
 
   if (auto *LU = std::get_if<LUSummaryEncoding>(&Encoding)) {
@@ -322,8 +338,10 @@ void MultiArchCreateCLI::addSharedMember(
   SourceByMember[It->get()] = SourceFile;
 }
 
-void MultiArchCreateCLI::write(const ArtifactEncoding &Bundle,
+void MultiArchCreateCLI::write(const ArtifactEncoding &Bundle, unsigned Level,
                                llvm::Timer &TWrite) {
+  info(Verbose, Level, "Writing bundle to '{0}'.", OutputFile.Path);
+
   llvm::TimeRegion _(Time ? &TWrite : nullptr);
 
   if (auto Err =

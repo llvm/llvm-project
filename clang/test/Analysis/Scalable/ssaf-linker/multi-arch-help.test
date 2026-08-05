@@ -5,7 +5,7 @@
 
 // CHECK:      OVERVIEW: SSAF Linker
 // CHECK-EMPTY:
-// CHECK-NEXT: SUBCOMMAND 'multi-arch': Operations on multi-architecture StaticLibraries and SharedLibraries
+// CHECK-NEXT: SUBCOMMAND 'multi-arch': Operations on multi-architecture StaticLibrary and SharedLibrary artifacts
 // CHECK-EMPTY:
 // CHECK-NEXT: USAGE: clang-ssaf-linker{{(\.exe)?}} multi-arch [options] <verb> <static-library or shared-library files>
 // CHECK-EMPTY:

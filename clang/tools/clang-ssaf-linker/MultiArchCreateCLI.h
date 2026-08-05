@@ -43,13 +43,14 @@ public:
 
 private:
   /// Validates the output path and every input path.
-  void validate(llvm::Timer &TValidate);
+  void validate(unsigned Level, llvm::Timer &TValidate);
 
   /// Constructs the artifact from the inputs.
-  ArtifactEncoding create(llvm::Timer &TRead, llvm::Timer &TBundle);
+  ArtifactEncoding create(unsigned Level, llvm::Timer &TRead,
+                          llvm::Timer &TBundle);
 
   /// Reads Artifact from file at \p Index.
-  ArtifactEncoding readInput(size_t Index, llvm::Timer &TRead);
+  ArtifactEncoding readInput(size_t Index, unsigned Level, llvm::Timer &TRead);
 
   /// Returns the namespace of the static-family input.
   static const BuildNamespace &staticFamilyNamespace(const ArtifactEncoding &E);
@@ -59,20 +60,20 @@ private:
   sharedFamilyNamespace(const ArtifactEncoding &E);
 
   /// Constructs a MultiArchStaticLibrary from the inputs.
-  ArtifactEncoding createStaticLibrary(ArtifactEncoding First,
+  ArtifactEncoding createStaticLibrary(ArtifactEncoding First, unsigned Level,
                                        llvm::Timer &TRead,
                                        llvm::Timer &TBundle);
 
   /// Constructs a MultiArchSharedLibrary from the inputs.
-  ArtifactEncoding createSharedLibrary(ArtifactEncoding First,
+  ArtifactEncoding createSharedLibrary(ArtifactEncoding First, unsigned Level,
                                        llvm::Timer &TRead,
                                        llvm::Timer &TBundle);
 
   /// Adds one input to the \p Bundle.
   void addStaticInput(MultiArchStaticLibrary &Bundle, ArtifactEncoding Encoding,
-                      size_t Index, llvm::Timer &TBundle);
+                      size_t Index, unsigned Level, llvm::Timer &TBundle);
   void addSharedInput(MultiArchSharedLibrary &Bundle, ArtifactEncoding Encoding,
-                      size_t Index, llvm::Timer &TBundle);
+                      size_t Index, unsigned Level, llvm::Timer &TBundle);
 
   /// Inserts one member, failing on duplicate target triple.
   void addStaticMember(MultiArchStaticLibrary &Bundle,
@@ -83,7 +84,8 @@ private:
                        llvm::StringRef SourceFile);
 
   /// Serializes the artifact to the validated output path.
-  void write(const ArtifactEncoding &Bundle, llvm::Timer &TWrite);
+  void write(const ArtifactEncoding &Bundle, unsigned Level,
+             llvm::Timer &TWrite);
 
   // Arguments captured by run() before dispatching to bundling methods.
   // InputPaths and OutputPath are non-owning: they alias the driver's cl::opt
