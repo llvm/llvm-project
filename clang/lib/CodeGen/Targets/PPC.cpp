@@ -369,7 +369,7 @@ class PPC32_SVR4_ABIInfo : public DefaultABIInfo {
   bool isComplexGnuABI() const {
     return !getTarget().getTriple().isOSDarwin() &&
            !getContext().getLangOpts().isCompatibleWith(
-               LangOptions::ClangABI::Ver22);
+               LangOptions::ClangABI::Ver23);
   }
 
   CharUnits getParamTypeAlignment(QualType Ty) const;
