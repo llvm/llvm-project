@@ -12,7 +12,9 @@
 
 // libc++ extension: sorted deduplication uses one-direction key comparison.
 
+#include <algorithm>
 #include <flat_map>
+#include <utility>
 
 #include <cassert>
 
@@ -30,9 +32,24 @@ struct CountingComp {
 };
 
 constexpr bool test() {
-  int count = 0;
-  std::flat_map<int, int, CountingComp> map({{0, 1}, {0, 2}}, CountingComp(count));
-  return map.size() == 1 && map.begin()->first == 0 && count == 2;
+  {
+    int count = 0;
+    std::flat_map<int, int, CountingComp> map({{0, 1}, {0, 2}}, CountingComp(count));
+    if (map.size() != 1 || map.begin()->first != 0 || count != 2)
+      return false;
+  }
+  {
+    // Interleaved duplicate runs exercise the element-moving part of the deduplication loop.
+    int count = 0;
+    std::flat_map<int, int, CountingComp> map({{1, 1}, {1, 2}, {2, 1}, {2, 2}, {2, 3}, {3, 1}, {4, 1}, {4, 2}},
+                                              CountingComp(count));
+    // Which mapped value survives deduplication is unspecified, so only check the keys.
+    int expected_keys[] = {1, 2, 3, 4};
+    if (!std::ranges::equal(map.keys(), expected_keys))
+      return false;
+    (void)count;
+  }
+  return true;
 }
 
 int main(int, char**) {

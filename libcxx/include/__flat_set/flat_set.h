@@ -694,7 +694,8 @@ private:
 
     _Iter __i = __first;
     for (++__i; ++__i != __last;) {
-      if (!__compare_(*__first, *__i)) {
+      // Since the range is sorted, *__first < *__i means *__i starts a new run of equivalent keys.
+      if (__compare_(*__first, *__i)) {
         *++__first = _IterOps<_RangeAlgPolicy>::__iter_move(__i);
       }
     }

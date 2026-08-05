@@ -12,6 +12,7 @@
 
 // libc++ extension: sorted deduplication uses one-direction key comparison.
 
+#include <algorithm>
 #include <flat_set>
 
 #include <cassert>
@@ -30,9 +31,22 @@ struct CountingComp {
 };
 
 constexpr bool test() {
-  int count = 0;
-  std::flat_set<int, CountingComp> set({0, 0}, CountingComp(count));
-  return set.size() == 1 && count == 2;
+  {
+    int count = 0;
+    std::flat_set<int, CountingComp> set({0, 0}, CountingComp(count));
+    if (set.size() != 1 || count != 2)
+      return false;
+  }
+  {
+    // Interleaved duplicate runs exercise the element-moving part of the deduplication loop.
+    int count = 0;
+    std::flat_set<int, CountingComp> set({1, 1, 2, 2, 2, 3, 4, 4}, CountingComp(count));
+    int expected[] = {1, 2, 3, 4};
+    if (!std::ranges::equal(set, expected))
+      return false;
+    (void)count;
+  }
+  return true;
 }
 
 int main(int, char**) {
