@@ -1447,9 +1447,9 @@ LLVM_DUMP_METHOD void KnownBits::dump() const {
 }
 #endif
 
-unsigned llvm::rotateNumSignBits(unsigned SrcSignBits, unsigned BitWidth,
-                                 std::optional<uint64_t> RotAmt,
-                                 bool IsRotateRight) {
+unsigned llvm::SignBitsOps::rot(unsigned SrcSignBits, unsigned BitWidth,
+                                std::optional<APInt> RotAmt,
+                                bool IsRotateRight) {
   // If we're rotating an 0/-1 value, then it stays an 0/-1 value.
   if (SrcSignBits == BitWidth)
     return BitWidth;
@@ -1457,7 +1457,7 @@ unsigned llvm::rotateNumSignBits(unsigned SrcSignBits, unsigned BitWidth,
   if (!RotAmt)
     return 1;
 
-  unsigned Amt = *RotAmt % BitWidth;
+  unsigned Amt = RotAmt->urem(BitWidth);
 
   // Handle rotate right by N like a rotate left by BitWidth-N.
   if (IsRotateRight)

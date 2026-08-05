@@ -2376,10 +2376,8 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     unsigned Tmp = computeNumSignBits(SrcReg, DemandedElts, Depth + 1);
     auto MaybeAmt =
         isConstantOrConstantSplatVector(MI.getOperand(2).getReg(), MRI);
-    FirstAnswer = rotateNumSignBits(
-        Tmp, TyBits,
-        MaybeAmt ? std::optional(MaybeAmt->getZExtValue()) : std::nullopt,
-        Opcode == TargetOpcode::G_ROTR);
+    FirstAnswer =
+        SignBitsOps::rot(Tmp, TyBits, MaybeAmt, Opcode == TargetOpcode::G_ROTR);
     break;
   }
   case TargetOpcode::G_SREM: {
