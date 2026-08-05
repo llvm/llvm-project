@@ -692,7 +692,7 @@ private:
     }
 
     _Iter __i = __first;
-    while (++__i != __last) {
+    for (++__i; ++__i != __last;) {
       if (!__pred(*__first, *__i)) {
         *++__first = _IterOps<_RangeAlgPolicy>::__iter_move(__i);
       }
