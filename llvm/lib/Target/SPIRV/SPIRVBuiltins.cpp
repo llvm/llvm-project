@@ -1383,7 +1383,7 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
     MachineInstr *ArgInstruction = getDefInstrMaybeConstant(BoolReg, MRI);
     if (ArgInstruction->getOpcode() == TargetOpcode::G_CONSTANT) {
       if (BoolRegType->getOpcode() != SPIRV::OpTypeBool)
-        Arg0 = GR->buildConstantInt(getIConstVal(BoolReg, MRI), MIRBuilder,
+        Arg0 = GR->buildConstantInt(getIConstVal(BoolReg, MRI) != 0, MIRBuilder,
                                     BoolType, true);
     } else {
       if (BoolRegType->getOpcode() == SPIRV::OpTypeInt) {
