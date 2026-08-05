@@ -2395,15 +2395,13 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
   const StackFrame *SF = Pred->getStackFrame();
   const Stmt *Term = getCurrBlock()->getTerminatorStmt();
   ProgramStateRef State = Pred->getState();
+  unsigned MaxBlockVisit = AMgr.options.maxBlockVisitOnPath;
 
   // If we reach a loop which has a known bound (and meets
   // other constraints) then consider completely unrolling it.
   if(AMgr.options.ShouldUnrollLoops) {
-    unsigned maxBlockVisitOnPath = AMgr.options.maxBlockVisitOnPath;
-    if (Term) {
-      State = updateLoopStack(Term, AMgr.getASTContext(), Pred,
-                              maxBlockVisitOnPath);
-    }
+    if (Term)
+      State = updateLoopStack(Term, AMgr.getASTContext(), Pred, MaxBlockVisit);
     // Is we are inside an unrolled loop then no need the check the counters.
     if (isUnrolledState(State))
       return Engine.makeNode(BE, State, Pred);
@@ -2412,8 +2410,7 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
   // If this block is terminated by a loop and it has already been visited the
   // maximum number of times, widen the loop.
   unsigned int BlockCount = getNumVisitedCurrent();
-  if (BlockCount == AMgr.options.maxBlockVisitOnPath - 1 &&
-      AMgr.options.ShouldWidenLoops) {
+  if (BlockCount == MaxBlockVisit - 1 && AMgr.options.ShouldWidenLoops) {
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return Engine.makeNode(BE, State, Pred);
 
@@ -2436,7 +2433,7 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     return Engine.makeNode(BE, WidenedState, Pred);
   }
 
-  if (BlockCount < AMgr.options.maxBlockVisitOnPath)
+  if (BlockCount < MaxBlockVisit)
     return Engine.makeNode(BE, State, Pred);
 
   if (State != Pred->getState()) {
