@@ -20,6 +20,7 @@
 // RUN: %clang_cc1 -std=c++20 %t/foo.cppm -emit-module-interface -o %t/foo.pcm
 // RUN: %clang_cc1 -std=c++20 %t/import_decl_not_in_same_line.cpp -fmodule-file=foo=%t/foo.pcm -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/not_import.cpp -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/not_import_compound_punctuators.cpp -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/import_spaceship.cpp -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/leading_empty_macro.cpp -fsyntax-only -verify
 // RUN: %clang_cc1 -std=c++20 %t/operator_keyword_and.cpp -fsyntax-only -verify
@@ -94,9 +95,47 @@ export module M;
 import ::               // expected-error {{use of undeclared identifier 'import'}}
 import ->               // expected-error {{cannot use arrow operator on a type}}
 
+//--- not_import_compound_punctuators.cpp
+// 'import' followed by a compound punctuator that begins with '<' but is
+// not itself '<' (i.e. '<<', '<=', '<<=') is not one of the [cpp.pre]/p2
+// alternatives ("a header-name, <, identifier, or :") and must not be
+// treated as introducing a header-unit-import directive, even though an
+// angled-header-name lex of the rest of the line would otherwise
+// (incorrectly) fold back to a bare '<' (when no '>' follows) or swallow a
+// later '>' into a bogus header-name. 'import' must be at the start of a
+// logical line to be considered for directive status at all, hence the
+// line breaks below.
+int import = 0;
+int a() { return
+import << 1;
+}
+int b() { return
+import <= 1;
+}
+int c() { return
+import <<= 1;
+}
+// Same, but with a '>' later on the line: the '<'-leading punctuator still
+// does not start a header-name, so 'import' stays an ordinary identifier
+// and the '<' is a shift/comparison operator rather than folding
+// '<< ... >' into a header-name.
+int d(int x) { return
+import << (x > 0); // ok, shift of int 'import'
+}
+int e() { return
+import << <foo.h>; // expected-error {{expected expression}} \
+                   // expected-error {{use of undeclared identifier 'foo'}} \
+                   // expected-error {{expected expression}}
+}
+
 //--- import_spaceship.cpp
 export module M;
-import <=>; // expected-error {{'=' file not found}}
+// '<=>' is a single preprocessing-token (maximal munch), and it is not one
+// of the [cpp.pre]/p2 alternatives ("a header-name, <, identifier, or :"),
+// so 'import <=>' does not introduce a header-unit-import directive: its
+// leading '<' must not be lexed as the start of a header-name.
+import <=>; // expected-error {{unknown type name 'import'}} \
+            // expected-error {{expected unqualified-id}}
 
 //--- leading_empty_macro.cpp
 // expected-no-diagnostics

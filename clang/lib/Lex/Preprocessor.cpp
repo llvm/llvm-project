@@ -1360,19 +1360,43 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
   llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
       CurPPLexer->ParsingPreprocessorDirective, true);
 
-  // The next token may be an angled string literal after import keyword.
-  llvm::SaveAndRestore<bool> SavedParsingFilemame(
-      CurPPLexer->ParsingFilename,
-      Result.getIdentifierInfo()->isImportKeyword());
+  bool IsImport = Result.getIdentifierInfo()->isImportKeyword();
 
+  // Peek under ordinary lexing rules first. Forcing ParsingFilename
+  // unconditionally (as before) makes the lexer scan any leading '<' as a
+  // header-name. That is wrong for two reasons: (1) if the scan never
+  // reaches a closing '>' on the line -- true for '<<', '<=', '<<=' with no
+  // later '>' -- it falls back to a synthetic bare '<' (see
+  // LexAngledStringLiteral) indistinguishable from a genuine one; (2) if a
+  // '>' does appear later on the line, the scan folds everything in between
+  // into a bogus header-name (e.g. 'import << <foo.h>', or the valid shift
+  // 'import << (a > b)'), even though the token actually following 'import'
+  // is '<<'. Neither '<<'/'<='/'<<='/'<=>' is one of [cpp.pre]/p2's
+  // alternatives ("a header-name, <, identifier, or :").
   std::optional<Token> NextTok = peekNextPPToken();
   if (!NextTok)
     return false;
 
+  // A header-name can only begin exactly at a '<' (or be spelled as a
+  // string literal). So only re-lex when the ordinary-mode token is a bare
+  // '<' or a quoted string -- not a compound punctuator that merely starts
+  // with '<' ('<<', '<=', '<<=', '<=>'), whose leading '<' does not
+  // introduce a header-name. Trust the re-lex only if a header-name
+  // actually terminated; otherwise keep the ordinary-mode token above.
+  if (IsImport && NextTok->isOneOf(tok::less, tok::string_literal)) {
+    llvm::SaveAndRestore<bool> SavedParsingFilename(CurPPLexer->ParsingFilename,
+                                                    true);
+    std::optional<Token> HeaderNameTok = peekNextPPToken();
+    if (!HeaderNameTok)
+      return false;
+    if (HeaderNameTok->is(tok::header_name))
+      NextTok = HeaderNameTok;
+  }
+
   if (NextTok->is(tok::raw_identifier))
     LookUpIdentifierInfo(*NextTok);
 
-  if (Result.getIdentifierInfo()->isImportKeyword()) {
+  if (IsImport) {
     if (NextTok->isOneOf(tok::identifier, tok::less, tok::colon,
                          tok::header_name)) {
       Result.setKind(tok::kw_import);
