@@ -28,14 +28,12 @@ namespace llvm::omp::target::plugin {
 class L0CmdListManagerTy {
   /// Underlying immediate command list.
   ze_command_list_handle_t CmdList;
-  /// Owning context (provides driver-loaded extension function pointers).
-  L0ContextTy &Context;
   /// Mutex to protect L0 operations that are not thread safe.
   std::mutex Mtx;
 
 public:
-  L0CmdListManagerTy(ze_command_list_handle_t CmdList, L0ContextTy &Context)
-      : CmdList(CmdList), Context(Context) {}
+  L0CmdListManagerTy(ze_command_list_handle_t CmdList)
+      : CmdList(CmdList) {}
 
   ze_command_list_handle_t getCmdList() const { return CmdList; }
 
