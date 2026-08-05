@@ -705,6 +705,26 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
           func_name.GetStringRef(), *ts);
     }
 
+    // Try to evaluate the expression without self if it is not available.
+    if (m_needs_object_ptr || m_in_static_method) {
+      bool has_self = llvm::any_of(
+          local_variables,
+          [](const SwiftASTManipulator::VariableInfo &variable) {
+            return variable.IsSelf();
+          });
+      if (!has_self) {
+        LLDB_LOG(log, "`self` is not avilable, "
+                      "downgrading to freestanding function");
+        diagnostic_manager.PutString(lldb::eSeverityWarning,
+                                     "'self' is not available in this frame; "
+                                     "evaluating the expression without it");
+        m_needs_object_ptr = false;
+        m_in_static_method = false;
+        m_is_class = false;
+        m_is_weak_self = false;
+      }
+    }
+
     if (!SwiftASTManipulator::ShouldBindGenericTypes(
             m_options.GetSwiftBindGenericTypes()) &&
         !CanEvaluateExpressionWithoutBindingGenericParams(
