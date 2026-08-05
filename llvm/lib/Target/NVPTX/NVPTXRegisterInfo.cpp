@@ -14,7 +14,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "MCTargetDesc/NVPTXInstPrinter.h"
 #include "NVPTX.h"
-#include "NVPTXTargetMachine.h"
+#include "NVPTXSubtarget.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -80,9 +80,9 @@ bool NVPTXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 }
 
 Register NVPTXRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  const NVPTXTargetMachine &TM =
-      static_cast<const NVPTXTargetMachine &>(MF.getTarget());
-  return TM.is64Bit() ? NVPTX::VRFrame64 : NVPTX::VRFrame32;
+  return MF.getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_GENERIC) == 64
+             ? NVPTX::VRFrame64
+             : NVPTX::VRFrame32;
 }
 
 Register
