@@ -1,4 +1,4 @@
-//===-- RegisterFlags.h -----------------------------------------*- C++ -*-===//
+//===------------------------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_REGISTERFLAGS_H
-#define LLDB_UTILITY_REGISTERFLAGS_H
-
-#include "lldb/Utility/RegisterType.h"
+#ifndef LLDB_UTILITY_REGISTERTYPEFLAGS_H
+#define LLDB_UTILITY_REGISTERTYPEFLAGS_H
 
 #include <stdint.h>
 #include <string>
 #include <vector>
 
+#include "lldb/Utility/RegisterType.h"
 #include "llvm/ADT/StringSet.h"
 
 namespace lldb_private {
@@ -22,7 +21,7 @@ namespace lldb_private {
 class Stream;
 class Log;
 
-class FieldEnum : public RegisterType {
+class RegisterTypeEnum : public RegisterType {
 public:
   struct Enumerator {
     uint64_t m_value;
@@ -43,11 +42,9 @@ public:
   // GDB also includes a "size" that is the size of the underlying register.
   // We will not store that here but instead use the size of the register
   // this gets attached to when emitting XML.
-  FieldEnum(std::string id, const Enumerators &enumerators);
+  RegisterTypeEnum(std::string id, const Enumerators &enumerators);
 
   const Enumerators &GetEnumerators() const { return m_enumerators; }
-
-  void ToXML(Stream &strm, unsigned size) const;
 
   void DumpToLog(Log *log) const;
 
@@ -62,7 +59,7 @@ private:
   Enumerators m_enumerators;
 };
 
-class RegisterFlags : public RegisterType {
+class RegisterTypeFlags : public RegisterType {
 public:
   class Field {
   public:
@@ -72,7 +69,7 @@ public:
 
     /// Construct a field that also has some known enum values.
     Field(std::string name, unsigned start, unsigned end,
-          const FieldEnum *enum_type);
+          const RegisterTypeEnum *enum_type);
 
     /// Construct a field that occupies a single bit.
     Field(std::string name, unsigned bit_position);
@@ -100,7 +97,7 @@ public:
     const std::string &GetName() const { return m_name; }
     unsigned GetStart() const { return m_start; }
     unsigned GetEnd() const { return m_end; }
-    const FieldEnum *GetEnum() const { return m_enum_type; }
+    const RegisterTypeEnum *GetEnum() const { return m_enum_type; }
     bool Overlaps(const Field &other) const;
     void DumpToLog(Log *log) const;
 
@@ -129,15 +126,15 @@ public:
     unsigned m_start;
     unsigned m_end;
 
-    const FieldEnum *m_enum_type;
+    const RegisterTypeEnum *m_enum_type;
   };
 
   /// This assumes that:
   /// * There is at least one field.
   /// * The fields are sorted in descending order.
   /// Gaps are allowed, they will be filled with anonymous padding fields.
-  RegisterFlags(std::string id, unsigned size,
-                const std::vector<Field> &fields);
+  RegisterTypeFlags(std::string id, unsigned size,
+                    const std::vector<Field> &fields);
 
   /// Replace all the fields with the new set of fields. All the assumptions
   /// and checks apply as when you use the constructor. Intended to only be used
@@ -167,6 +164,7 @@ public:
 
   const std::vector<Field> &GetFields() const { return m_fields; }
   unsigned GetSize() const { return m_size; }
+
   void DumpToLog(Log *log) const;
 
   /// Produce a text table showing the layout of all the fields. Unnamed/padding
@@ -191,4 +189,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_UTILITY_REGISTERFLAGS_H
+#endif // LLDB_UTILITY_REGISTERTYPEFLAGS_H

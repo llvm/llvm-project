@@ -323,11 +323,14 @@ public:
           // Return stack address.
           SemaHelper->reportUseAfterReturn(
               IssueExpr, RetEscape->getReturnExpr(), MovedExpr);
-        else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
+        else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF)) {
           // Dangling field.
+          bool IsCapturedByLambda =
+              FactMgr.isFieldCapturedByLambda(FieldEscape->getFieldDecl());
           SemaHelper->reportDanglingField(
-              IssueExpr, FieldEscape->getFieldDecl(), MovedExpr, ExpiryLoc);
-        else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF))
+              IssueExpr, FieldEscape->getFieldDecl(), MovedExpr,
+              IsCapturedByLambda, ExpiryLoc);
+        } else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF))
           // Global escape.
           SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
                                            MovedExpr, ExpiryLoc);
