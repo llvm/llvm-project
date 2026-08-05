@@ -9277,28 +9277,23 @@ TEST_P(ASTImporterOptionSpecificTestBase,
   // A global variable of class type is initialized with a lambda that
   // captures a reference to the variable itself. The class's constructor
   // template names a variable template specialization whose (dependent)
-  // argument is the lambda's own closure type, reached again as a class
-  // template argument.
+  // argument is the lambda's own closure type, which is reached again as a
+  // class template argument.
   //
-  // Importing the variable's declared type forces importing the whole
-  // class definition (including the constructor template's body) before
-  // the VarDecl itself is registered in the ASTImporter's Decl map (see
-  // VisitVarDecl(), which imports D->getType() before calling
-  // GetImportedOrCreateDecl()). Resolving the "ns::" qualifier inside that
-  // constructor pulls in the whole namespace, including the concrete
-  // specialization that closes back over the lambda's closure type; that
-  // closure gets force-imported (ImportDeclContext(ForceImport=true) for a
-  // complete RecordDecl), which reaches the lambda's call operator body,
-  // which references the same self-referencing global again -- and since
-  // it isn't mapped yet, this re-enters VisitVarDecl() for the same source
-  // Decl and rebuilds a second, independent LambdaExpr for the same
-  // closure while its call operator is still being imported into it.
-  // LambdaExpr::Create() -> CXXRecordDecl::getLambdaCallOperator() then
-  // performs a name lookup that fails, because the call operator isn't
-  // visible in its DeclContext until after its own body import completes
-  // (see addDeclToContexts() in VisitFunctionDecl()) -- tripping the
-  // "Missing lambda call operator!" assertion in
-  // getLambdaCallOperatorHelper() (DeclCXX.cpp).
+  // Importing the variable's declared type forces the import of the entire
+  // class definition before the VarDecl itself is registered.
+  // Resolving the "ns::" qualifier inside the constructor pulls in
+  // the entire namespace, including the concrete specialization that
+  // refers back to the lambda's closure type. When that closure is
+  // force-imported, the process reaches the lambda's call operator body,
+  // which references the same self-referencing global variable again. 
+  // Because the variable isn't mapped yet, the importer revisits it and 
+  // rebuilds a second, independent LambdaExpr for the same closure while 
+  // its call operator is still being imported into it.
+  // 
+  // Finally, the sequence LambdaExpr::Create() -> 
+  // CXXRecordDecl::getLambdaCallOperator() performs a name lookup on the 
+  // lambda closure that is currently being constructed.
   const char *Code =
       R"(
       namespace ns {

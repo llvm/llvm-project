@@ -4379,11 +4379,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
       return std::move(Err);
 
   // Make the function visible in its DeclContext's lookup table *before*
-  // importing its body. Every other Decl kind with dependent content
-  // (RecordDecl, EnumDecl, BindingDecl, ...) registers itself via
-  // addDeclToContexts() immediately after creation, before importing its
-  // members/definition. FunctionDecl used to be the exception, deferring
-  // this until after ImportFunctionDeclBody() below.
+  // importing its body.
   addDeclToContexts(D, ToFunction);
 
   if (D->doesThisDeclarationHaveABody()) {

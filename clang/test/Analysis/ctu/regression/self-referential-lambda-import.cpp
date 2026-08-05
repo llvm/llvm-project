@@ -15,9 +15,7 @@
 // `selfRef` isn't mapped yet, this re-enters its import and builds a
 // second, independent LambdaExpr for the same closure while the call
 // operator's own body import is still in flight. That second
-// LambdaExpr::Create() looks up the call operator via name lookup, but the
-// operator isn't visible in its DeclContext until its body import
-// completes, tripping the "Missing lambda call operator!" assertion.
+// LambdaExpr::Create() looks up the call operator via name lookup.
 
 // RUN: %clang_cc1 -std=c++20 -fpch-instantiate-templates -emit-pch -o %t/api.cpp.ast %t/api.cpp
 
