@@ -6,7 +6,7 @@
 // expected-error@+1{{'hlsl::dimension' attribute takes one argument}}
 __hlsl_resource_t [[hlsl::dimension()]] e1;
 
-// expected-error@+1{{expected string literal as argument of 'dimension' attribute}}
+// expected-error@+1{{'hlsl::dimension' attribute requires a string}}
 __hlsl_resource_t [[hlsl::dimension(2)]] e2;
 
 // expected-warning@+1{{ResourceDimension attribute argument not supported: gibberish}}
