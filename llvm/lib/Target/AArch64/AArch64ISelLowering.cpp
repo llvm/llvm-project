@@ -2716,7 +2716,7 @@ static bool isIntImmediate(const SDNode *N, uint64_t &Imm) {
   return false;
 }
 
-bool isVectorizedBinOp(unsigned Opcode) {
+static bool isVectorizedBinOp(unsigned Opcode) {
   switch (Opcode) {
   case AArch64ISD::SQDMULH:
     return true;
@@ -3909,7 +3909,7 @@ static SDValue getCondCode(SelectionDAG &DAG, AArch64CC::CondCode CC) {
   return DAG.getConstant(CC, SDLoc(), CondCodeVT);
 }
 
-unsigned numberOfInstrToLoadImm(const APInt &C) {
+static unsigned numberOfInstrToLoadImm(const APInt &C) {
   uint64_t Imm = C.getZExtValue();
   SmallVector<AArch64_IMM::ImmInsnModel> Insn;
   AArch64_IMM::expandMOVImm(Imm, 32, Insn);
@@ -6435,7 +6435,7 @@ SDValue AArch64TargetLowering::getRuntimePStateSM(SelectionDAG &DAG,
 //    ldr [%tileslice2, 8], [%ptr2, 8]
 // Case 5: The vecnum being an add of an immediate out of range is also handled,
 // in which case the same remainder logic as case 3 is used.
-SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
+static SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
   SDLoc DL(N);
 
   SDValue TileSlice = N->getOperand(2);
@@ -6482,7 +6482,7 @@ SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
                       DAG.getTargetConstant(ImmAddend, DL, MVT::i32)});
 }
 
-SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
+static SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
   SDValue ID =
       DAG.getTargetConstant(Intrinsic::aarch64_sve_match, DL, MVT::i64);
@@ -6702,6 +6702,10 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     } else {
       report_fatal_error("Unexpected type for AArch64 NEON intrinsic");
     }
+  }
+  case Intrinsic::aarch64_neon_addhn: {
+    return DAG.getNode(AArch64ISD::ADDHN, DL, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
   }
   case Intrinsic::aarch64_neon_pmull64: {
     SDValue LHS = Op.getOperand(1);
@@ -7325,7 +7329,8 @@ bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
          PreExtScalarVT == MVT::i32 || PreExtScalarVT == MVT::i64;
 }
 
-unsigned getGatherVecOpcode(bool IsScaled, bool IsSigned, bool NeedsExtend) {
+static unsigned getGatherVecOpcode(bool IsScaled, bool IsSigned,
+                                   bool NeedsExtend) {
   std::map<std::tuple<bool, bool, bool>, unsigned> AddrModes = {
       {std::make_tuple(/*Scaled*/ false, /*Signed*/ false, /*Extend*/ false),
        AArch64ISD::GLD1_MERGE_ZERO},
@@ -7348,7 +7353,7 @@ unsigned getGatherVecOpcode(bool IsScaled, bool IsSigned, bool NeedsExtend) {
   return AddrModes.find(Key)->second;
 }
 
-unsigned getSignExtendedGatherOpcode(unsigned Opcode) {
+static unsigned getSignExtendedGatherOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
     llvm_unreachable("unimplemented opcode");
@@ -11844,7 +11849,7 @@ AArch64TargetLowering::LowerPtrAuthGlobalAddress(SDValue Op,
 // Looks through \param Val to determine the bit that can be used to
 // check the sign of the value. It returns the unextended value and
 // the sign bit position.
-std::pair<SDValue, uint64_t> lookThroughSignExtension(SDValue Val) {
+static std::pair<SDValue, uint64_t> lookThroughSignExtension(SDValue Val) {
   if (Val.getOpcode() == ISD::SIGN_EXTEND_INREG)
     return {Val.getOperand(0),
             cast<VTSDNode>(Val.getOperand(1))->getVT().getFixedSizeInBits() -
@@ -15145,7 +15150,8 @@ static unsigned checkLaneSlide(ArrayRef<int> Mask, unsigned LaneStart,
 
 static SDValue isSlideWithZerosMask(ArrayRef<int> M, EVT VT, SDValue V1,
                                     SDValue V2, unsigned &ShiftAmount,
-                                    bool &IsRightShift) {
+                                    bool &IsRightShift,
+                                    unsigned &MatchedLaneSize) {
   unsigned VTSize = VT.getSizeInBits();
   if (VTSize != 64 && VTSize != 128)
     return SDValue();
@@ -15168,31 +15174,41 @@ static SDValue isSlideWithZerosMask(ArrayRef<int> M, EVT VT, SDValue V1,
     DataVec = V2;
   }
 
-  // For 64-bit vectors, check single lane
-  // For 128-bit vectors, check both 64-bit lanes have same slide
-  unsigned LaneElts = 64 / EltSize;
-  unsigned NumLanes = VTSize / 64;
+  // Try lane sizes 64, 32, 16 bits.
+  // For each lane size, check all lanes have the same slide pattern.
+  for (unsigned LaneSize : {64u, 32u, 16u}) {
+    if (LaneSize < EltSize * 2)
+      break; // need at least 2 elements per lane
+    unsigned LaneElts = LaneSize / EltSize;
+    unsigned NumLanes = VTSize / LaneSize;
 
-  bool FirstIsLeftSlide;
-  unsigned FirstSlideAmt =
-      checkLaneSlide(Mask, 0, LaneElts, NumElts, FirstIsLeftSlide);
-  if (FirstSlideAmt == 0)
-    return SDValue();
+    bool FirstIsLeftSlide;
+    unsigned FirstSlideAmt =
+        checkLaneSlide(Mask, 0, LaneElts, NumElts, FirstIsLeftSlide);
+    if (FirstSlideAmt == 0)
+      continue;
 
-  // For 128-bit, verify second lane matches
-  if (NumLanes == 2) {
-    bool SecondIsLeftSlide;
-    unsigned SecondSlideAmt =
-        checkLaneSlide(Mask, LaneElts, LaneElts, NumElts, SecondIsLeftSlide);
-    if (SecondSlideAmt != FirstSlideAmt ||
-        SecondIsLeftSlide != FirstIsLeftSlide)
-      return SDValue();
+    // Verify all lanes match
+    bool AllMatch = true;
+    for (unsigned Lane = 1; Lane < NumLanes; Lane++) {
+      bool IsLeftSlide;
+      unsigned SlideAmt =
+          checkLaneSlide(Mask, Lane * LaneElts, LaneElts, NumElts, IsLeftSlide);
+      if (SlideAmt != FirstSlideAmt || IsLeftSlide != FirstIsLeftSlide) {
+        AllMatch = false;
+        break;
+      }
+    }
+    if (!AllMatch)
+      continue;
+
+    ShiftAmount = FirstSlideAmt * EltSize;
+    IsRightShift = FirstIsLeftSlide;
+    if (ShiftAmount > 0 && ShiftAmount < LaneSize) {
+      MatchedLaneSize = LaneSize;
+      return DataVec;
+    }
   }
-
-  ShiftAmount = FirstSlideAmt * EltSize;
-  IsRightShift = FirstIsLeftSlide; // left slide = right shift in bits
-  if (ShiftAmount > 0 && ShiftAmount < 64)
-    return DataVec;
   return SDValue();
 }
 
@@ -15953,9 +15969,12 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   {
     unsigned ShiftAmount;
     bool IsRightShift;
-    if (SDValue DataVec = isSlideWithZerosMask(ShuffleMask, VT, V1, V2,
-                                               ShiftAmount, IsRightShift)) {
-      MVT ShiftVT = VT.getSizeInBits() == 64 ? MVT::v1i64 : MVT::v2i64;
+    unsigned MatchedLaneSize;
+    if (SDValue DataVec =
+            isSlideWithZerosMask(ShuffleMask, VT, V1, V2, ShiftAmount,
+                                 IsRightShift, MatchedLaneSize)) {
+      MVT ShiftVT = MVT::getVectorVT(MVT::getIntegerVT(MatchedLaneSize),
+                                     VT.getSizeInBits() / MatchedLaneSize);
       SDValue Vec = DAG.getNode(AArch64ISD::NVCAST, DL, ShiftVT, DataVec);
 
       SDValue ShiftAmt = DAG.getTargetConstant(ShiftAmount, DL, MVT::i32);
@@ -23647,6 +23666,21 @@ static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
+
+  if (DCI.isAfterLegalizeDAG() && N0.getOpcode() == ISD::OR && N0.hasOneUse()) {
+    EVT SrcVT = N0.getValueType();
+    const unsigned EltSize = SrcVT.getScalarSizeInBits();
+
+    if (((VT == MVT::v8i8 && SrcVT == MVT::v8i16) ||
+         (VT == MVT::v4i16 && SrcVT == MVT::v4i32) ||
+         (VT == MVT::v2i32 && SrcVT == MVT::v2i64)) &&
+        DAG.ComputeNumSignBits(N0.getOperand(0)) == EltSize &&
+        DAG.ComputeNumSignBits(N0.getOperand(1)) == EltSize) {
+      return DAG.getNode(AArch64ISD::ADDHN, DL, VT, N0.getOperand(0),
+                         N0.getOperand(1));
+    }
+  }
+
   if (VT.isFixedLengthVector() && VT.is64BitVector() && N0.hasOneUse() &&
       N0.getOpcode() == AArch64ISD::DUP) {
     SDValue Op = N0.getOperand(0);
@@ -27393,7 +27427,7 @@ static SDValue combineStoreValueFPToInt(StoreSDNode *ST,
   return SDValue(ST, 0);
 }
 
-bool isHalvingTruncateOfLegalScalableType(EVT SrcVT, EVT DstVT) {
+static bool isHalvingTruncateOfLegalScalableType(EVT SrcVT, EVT DstVT) {
   return (SrcVT == MVT::nxv8i16 && DstVT == MVT::nxv8i8) ||
          (SrcVT == MVT::nxv4i32 && DstVT == MVT::nxv4i16) ||
          (SrcVT == MVT::nxv2i64 && DstVT == MVT::nxv2i32);
@@ -29916,8 +29950,8 @@ static SDValue getScaledOffsetForBitWidth(SelectionDAG &DAG, SDValue Offset,
 ///      [<Zn>.[S|D]{, #<imm>}]
 ///
 /// where <imm> = sizeof(<T>) * k, for k = 0, 1, ..., 31.
-inline static bool isValidImmForSVEVecImmAddrMode(unsigned OffsetInBytes,
-                                                  unsigned ScalarSizeInBytes) {
+static bool isValidImmForSVEVecImmAddrMode(unsigned OffsetInBytes,
+                                           unsigned ScalarSizeInBytes) {
   // The immediate is not a multiple of the scalar size.
   if (OffsetInBytes % ScalarSizeInBytes)
     return false;

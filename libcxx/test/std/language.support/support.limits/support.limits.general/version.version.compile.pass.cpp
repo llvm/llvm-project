@@ -448,6 +448,10 @@
 #    error "__cpp_lib_incomplete_container_elements should not be defined before c++17"
 #  endif
 
+#  ifdef __cpp_lib_initializer_list
+#    error "__cpp_lib_initializer_list should not be defined before c++14"
+#  endif
+
 #  ifdef __cpp_lib_inplace_vector
 #    error "__cpp_lib_inplace_vector should not be defined before c++26"
 #  endif
@@ -948,6 +952,10 @@
 #    error "__cpp_lib_unwrap_ref should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_valarray
+#    error "__cpp_lib_valarray should not be defined before c++14"
+#  endif
+
 #  ifdef __cpp_lib_variant
 #    error "__cpp_lib_variant should not be defined before c++17"
 #  endif
@@ -1396,6 +1404,13 @@
 
 #  ifdef __cpp_lib_incomplete_container_elements
 #    error "__cpp_lib_incomplete_container_elements should not be defined before c++17"
+#  endif
+
+#  ifndef __cpp_lib_initializer_list
+#    error "__cpp_lib_initializer_list should be defined in c++14"
+#  endif
+#  if __cpp_lib_initializer_list != 202511L
+#    error "__cpp_lib_initializer_list should have the value 202511L in c++14"
 #  endif
 
 #  ifdef __cpp_lib_inplace_vector
@@ -1958,6 +1973,13 @@
 #    error "__cpp_lib_unwrap_ref should not be defined before c++20"
 #  endif
 
+#  ifndef __cpp_lib_valarray
+#    error "__cpp_lib_valarray should be defined in c++14"
+#  endif
+#  if __cpp_lib_valarray != 202511L
+#    error "__cpp_lib_valarray should have the value 202511L in c++14"
+#  endif
+
 #  ifdef __cpp_lib_variant
 #    error "__cpp_lib_variant should not be defined before c++17"
 #  endif
@@ -2478,6 +2500,13 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++17"
+#  endif
+
+#  ifndef __cpp_lib_initializer_list
+#    error "__cpp_lib_initializer_list should be defined in c++17"
+#  endif
+#  if __cpp_lib_initializer_list != 202511L
+#    error "__cpp_lib_initializer_list should have the value 202511L in c++17"
 #  endif
 
 #  ifdef __cpp_lib_inplace_vector
@@ -3154,6 +3183,13 @@
 #    error "__cpp_lib_unwrap_ref should not be defined before c++20"
 #  endif
 
+#  ifndef __cpp_lib_valarray
+#    error "__cpp_lib_valarray should be defined in c++17"
+#  endif
+#  if __cpp_lib_valarray != 202511L
+#    error "__cpp_lib_valarray should have the value 202511L in c++17"
+#  endif
+
 #  ifndef __cpp_lib_variant
 #    error "__cpp_lib_variant should be defined in c++17"
 #  endif
@@ -3818,6 +3854,13 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++20"
+#  endif
+
+#  ifndef __cpp_lib_initializer_list
+#    error "__cpp_lib_initializer_list should be defined in c++20"
+#  endif
+#  if __cpp_lib_initializer_list != 202511L
+#    error "__cpp_lib_initializer_list should have the value 202511L in c++20"
 #  endif
 
 #  ifdef __cpp_lib_inplace_vector
@@ -4620,6 +4663,13 @@
 #    error "__cpp_lib_unwrap_ref should have the value 201811L in c++20"
 #  endif
 
+#  ifndef __cpp_lib_valarray
+#    error "__cpp_lib_valarray should be defined in c++20"
+#  endif
+#  if __cpp_lib_valarray != 202511L
+#    error "__cpp_lib_valarray should have the value 202511L in c++20"
+#  endif
+
 #  ifndef __cpp_lib_variant
 #    error "__cpp_lib_variant should be defined in c++20"
 #  endif
@@ -5353,6 +5403,13 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++23"
+#  endif
+
+#  ifndef __cpp_lib_initializer_list
+#    error "__cpp_lib_initializer_list should be defined in c++23"
+#  endif
+#  if __cpp_lib_initializer_list != 202511L
+#    error "__cpp_lib_initializer_list should have the value 202511L in c++23"
 #  endif
 
 #  ifdef __cpp_lib_inplace_vector
@@ -6317,6 +6374,13 @@
 #    error "__cpp_lib_unwrap_ref should have the value 201811L in c++23"
 #  endif
 
+#  ifndef __cpp_lib_valarray
+#    error "__cpp_lib_valarray should be defined in c++23"
+#  endif
+#  if __cpp_lib_valarray != 202511L
+#    error "__cpp_lib_valarray should have the value 202511L in c++23"
+#  endif
+
 #  ifndef __cpp_lib_variant
 #    error "__cpp_lib_variant should be defined in c++23"
 #  endif
@@ -7242,6 +7306,13 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_initializer_list
+#    error "__cpp_lib_initializer_list should be defined in c++26"
+#  endif
+#  if __cpp_lib_initializer_list != 202511L
+#    error "__cpp_lib_initializer_list should have the value 202511L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -8327,6 +8398,13 @@
 #  endif
 #  if __cpp_lib_unwrap_ref != 201811L
 #    error "__cpp_lib_unwrap_ref should have the value 201811L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_valarray
+#    error "__cpp_lib_valarray should be defined in c++26"
+#  endif
+#  if __cpp_lib_valarray != 202511L
+#    error "__cpp_lib_valarray should have the value 202511L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_variant

@@ -63,6 +63,33 @@ private:
   /// is where the next operations will be introduced.
   CIRGenBuilderTy &builder;
 
+  /// Saves the builder's constrained floating-point configuration on
+  /// construction and restores it on destruction. The builder is shared
+  /// across all functions in the module, so its constrained-FP state must be
+  /// scoped to each function's emission.
+  ///
+  /// Note that the similarly named CIRGenFunction::CIRGenFPOptionsRAII
+  /// intentionally avoids restoring the "isFPConstrained" state because that
+  /// state is function-wide, but this object does restore the state so that
+  /// any CIRGenFunction instance created while we are in the process of
+  /// emitting another function cannot corrupt the prior functions state.
+  struct ConstrainedFPRAII {
+    CIRGenBuilderTy &builder;
+    bool savedIsFPConstrained;
+    LangOptions::FPExceptionModeKind savedExcept;
+    llvm::RoundingMode savedRounding;
+
+    explicit ConstrainedFPRAII(CIRGenBuilderTy &builder)
+        : builder(builder), savedIsFPConstrained(builder.getIsFPConstrained()),
+          savedExcept(builder.getDefaultConstrainedExcept()),
+          savedRounding(builder.getDefaultConstrainedRounding()) {}
+    ~ConstrainedFPRAII() {
+      builder.setIsFPConstrained(savedIsFPConstrained);
+      builder.setDefaultConstrainedExcept(savedExcept);
+      builder.setDefaultConstrainedRounding(savedRounding);
+    }
+  } constrainedFPState{builder};
+
 public:
   /// The GlobalDecl for the current function being compiled or the global
   /// variable currently being initialized.
@@ -243,7 +270,7 @@ public:
     void ConstructorHelper(clang::FPOptions FPFeatures);
     CIRGenFunction &cgf;
     clang::FPOptions oldFPFeatures;
-    llvm::fp::ExceptionBehavior oldExcept;
+    LangOptions::FPExceptionModeKind oldExcept;
     llvm::RoundingMode oldRounding;
   };
   clang::FPOptions curFPFeatures;
@@ -1850,13 +1877,14 @@ public:
   void emitConstructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
-  cir::CallOp emitCoroEndBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
-  cir::CallOp emitCoroIDBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
-  cir::CallOp emitCoroAllocBuiltinCall(mlir::Location loc);
-  cir::CallOp emitCoroBeginBuiltinCall(mlir::Location loc,
-                                       mlir::Value coroframeAddr);
+  cir::CoroEndOp emitCoroEndBuiltinCall(mlir::Location loc,
+                                        mlir::Value nullPtr);
+  cir::CoroIdOp emitCoroIDBuiltinCall(const CallExpr *e);
+  cir::CoroAllocOp emitCoroAllocBuiltinCall(const CallExpr *e);
+  cir::CoroBeginOp emitCoroBeginBuiltinCall(const CallExpr *e);
 
-  cir::CallOp emitCoroFreeBuiltin(const CallExpr *e);
+  cir::CoroSizeOp emitCoroSizeBuiltinCall(const CallExpr *e);
+  cir::CoroFreeOp emitCoroFreeBuiltin(const CallExpr *e);
   RValue emitCoroutineFrame();
 
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);

@@ -931,20 +931,63 @@ TYPE_PARSER(construct<OmpLinearModifier>( //
     "VAL" >> pure(OmpLinearModifier::Value::Val) ||
     "UVAL" >> pure(OmpLinearModifier::Value::Uval)))
 
+TYPE_PARSER(construct<OmpLinearStep>(scalarIntExpr))
+
 TYPE_PARSER(construct<OmpLowerBound>(scalarIntExpr))
 
 TYPE_PARSER(construct<OmpMapper>( //
     "MAPPER"_tok >> parenthesized(Parser<ObjectName>{})))
 
 // map-type -> ALLOC | DELETE | FROM | RELEASE | STORAGE | TO | TOFROM
-TYPE_PARSER(construct<OmpMapType>( //
-    "ALLOC" >> pure(OmpMapType::Value::Alloc) ||
-    // Parse "DELETE" as OmpDeleteModifier
-    "FROM" >> pure(OmpMapType::Value::From) ||
-    "RELEASE" >> pure(OmpMapType::Value::Release) ||
-    "STORAGE" >> pure(OmpMapType::Value::Storage) ||
-    "TO"_id >> pure(OmpMapType::Value::To) ||
-    "TOFROM" >> pure(OmpMapType::Value::Tofrom)))
+struct OmpMapTypeParser {
+  using resultType = OmpMapType::Value;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    unsigned version{state.userState()->langOptions().OpenMPVersion};
+    if (version < 60) {
+      auto parser{//
+          "ALLOC" >> pure(OmpMapType::Value::Alloc) ||
+          "DELETE" >> pure(OmpMapType::Value::Delete) ||
+          "FROM" >> pure(OmpMapType::Value::From) ||
+          "RELEASE" >> pure(OmpMapType::Value::Release) ||
+          "STORAGE" >> pure(OmpMapType::Value::Storage) ||
+          "TO"_id >> pure(OmpMapType::Value::To) ||
+          "TOFROM" >> pure(OmpMapType::Value::Tofrom)};
+      return parser.Parse(state);
+    } else {
+      auto parser{//
+          "ALLOC" >> pure(OmpMapType::Value::Alloc) ||
+          "FROM" >> pure(OmpMapType::Value::From) ||
+          "RELEASE" >> pure(OmpMapType::Value::Release) ||
+          "STORAGE" >> pure(OmpMapType::Value::Storage) ||
+          "TO"_id >> pure(OmpMapType::Value::To) ||
+          "TOFROM" >> pure(OmpMapType::Value::Tofrom)};
+      return parser.Parse(state);
+    }
+  }
+};
+
+TYPE_PARSER(OmpMapTypeParser{})
+
+struct OmpMapTypeModifierParser {
+  using resultType = OmpMapTypeModifier::Value;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    unsigned version{state.userState()->langOptions().OpenMPVersion};
+    if (version < 60) {
+      auto parser{//
+          "ALWAYS" >> pure(OmpMapTypeModifier::Value::Always) ||
+          "CLOSE" >> pure(OmpMapTypeModifier::Value::Close) ||
+          "PRESENT" >> pure(OmpMapTypeModifier::Value::Present)};
+      return parser.Parse(state);
+    } else {
+      // No longer in 6.0.
+      return std::nullopt;
+    }
+  }
+};
+
+TYPE_PARSER(OmpMapTypeModifierParser{})
 
 TYPE_PARSER(construct<OmpOrderModifier>(
     "REPRODUCIBLE" >> pure(OmpOrderModifier::Value::Reproducible) ||
@@ -1068,23 +1111,42 @@ TYPE_PARSER(sourced(construct<OmpInReductionClause::Modifier>(
 TYPE_PARSER(sourced(construct<OmpLastprivateClause::Modifier>(
     Parser<OmpLastprivateModifier>{})))
 
-TYPE_PARSER(sourced(
-    construct<OmpLinearClause::Modifier>(Parser<OmpLinearModifier>{}) ||
-    construct<OmpLinearClause::Modifier>(Parser<OmpStepComplexModifier>{}) ||
-    construct<OmpLinearClause::Modifier>(Parser<OmpStepSimpleModifier>{})))
+struct OmpLinearClauseModifierParser {
+  using resultType = OmpLinearClause::Modifier;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    unsigned version{state.userState()->langOptions().OpenMPVersion};
+    if (version < 52) {
+      auto parser{sourced( //
+          construct<resultType>(Parser<OmpLinearModifier>{}) ||
+          construct<resultType>(Parser<OmpLinearStep>{}))};
+      return parser.Parse(state);
+    } else {
+      auto parser{sourced( //
+          construct<resultType>(Parser<OmpLinearModifier>{}) ||
+          construct<resultType>(Parser<OmpStepComplexModifier>{}) ||
+          construct<resultType>(Parser<OmpStepSimpleModifier>{}))};
+      return parser.Parse(state);
+    }
+  }
+};
+
+TYPE_PARSER(OmpLinearClauseModifierParser{})
 
 TYPE_PARSER(sourced(construct<OmpMapClause::Modifier>(
-    sourced(construct<OmpMapClause::Modifier>(Parser<OmpAlwaysModifier>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpAttachModifier>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpCloseModifier>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpDeleteModifier>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpPresentModifier>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpRefModifier>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpSelfModifier>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpMapper>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpIterator>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpMapType>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpxHoldModifier>{})))))
+    // Try the two custom parsers first.
+    construct<OmpMapClause::Modifier>(OmpMapTypeParser{}) ||
+    construct<OmpMapClause::Modifier>(OmpMapTypeModifierParser{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpAlwaysModifier>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpAttachModifier>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpCloseModifier>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpDeleteModifier>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpIterator>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpMapper>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpPresentModifier>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpRefModifier>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpSelfModifier>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpxHoldModifier>{}))))
 
 TYPE_PARSER(
     sourced(construct<OmpOrderClause::Modifier>(Parser<OmpOrderModifier>{})))
@@ -1383,17 +1445,19 @@ OmpLinearClause makeLinearFromOldSyntax(OmpLinearClause::Modifier &&lm,
 TYPE_PARSER(
     // Parse the "modifier(x)" first, because syntacticaly it will match
     // an array element (i.e. a list item).
-    // LINEAR(linear-modifier(list) [: step-simple-modifier])
+    // LINEAR(linear-modifier(list) [: linear-step])
     construct<OmpLinearClause>( //
         applyFunction<OmpLinearClause>(makeLinearFromOldSyntax,
             SpecificModifierParser<OmpLinearModifier, OmpLinearClause>{},
             parenthesized(Parser<OmpObjectList>{}),
-            maybe(":"_tok >> SpecificModifierParser<OmpStepSimpleModifier,
-                                 OmpLinearClause>{}))) ||
+            maybe(":"_tok >>
+                (SpecificModifierParser<OmpLinearStep, OmpLinearClause>{} ||
+                    SpecificModifierParser<OmpStepSimpleModifier,
+                        OmpLinearClause>{})))) ||
     // LINEAR(list [: modifiers])
     construct<OmpLinearClause>( //
         Parser<OmpObjectList>{},
-        maybe(":"_tok >> nonemptyList(Parser<OmpLinearClause::Modifier>{})),
+        maybe(":"_tok >> nonemptyList(OmpLinearClauseModifierParser{})),
         /*PostModified=*/pure(true)))
 
 TYPE_PARSER(construct<OmpLooprangeClause>(
