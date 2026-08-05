@@ -988,6 +988,10 @@ func.func @supported_fp_type(%arg0: f32, %arg1: vector<4xf32>, %arg2: vector<4x8
 // index type.  When the module declares a 32-bit index via dlti.dl_spec,
 // index constants and index arithmetic ops must be emitted as i32 instead of
 // the default i64.
+//
+// These cases use the CHECK-DERIVE prefix: the `convert-to-llvm` RUN lines
+// above use the static pass implementation, which builds its type converter
+// without a data layout, so it always lowers `index` to i64.
 
 // 32-bit data layout: arith.constant with index type -> i32 constant.
 
