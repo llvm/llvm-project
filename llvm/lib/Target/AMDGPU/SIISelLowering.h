@@ -17,6 +17,7 @@
 #include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUISelLowering.h"
 #include "SIDefines.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
@@ -24,7 +25,6 @@ namespace llvm {
 class GCNSubtarget;
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
-struct SIModeRegisterDefaults;
 
 namespace AMDGPU {
 struct ImageDimIntrinsicInfo;
@@ -326,10 +326,6 @@ private:
                                       SDLoc DL, SDValue Ops[],
                                       MemSDNode *M) const;
 
-  bool isFMAFasterThanFMulAndFAdd(EVT VT,
-                                  const SIModeRegisterDefaults &Mode) const;
-  bool isFMADLegal(EVT VT, const SIModeRegisterDefaults &Mode) const;
-
 public:
   SITargetLowering(const TargetMachine &tm, const GCNSubtarget &STI);
 
@@ -510,10 +506,14 @@ public:
   bool isFMADLegal(const SelectionDAG &DAG, const SDNode *N) const override;
   bool isFMADLegal(const MachineInstr &MI, const LLT Ty) const override;
 
-  /// Variants for IR level callers, which have no MachineFunction and read the
-  /// mode register defaults from \p F instead.
-  bool isFMAFasterThanFMulAndFAdd(const Function &F, EVT VT) const;
-  bool isFMADLegal(const Function &F, EVT VT) const;
+  /// Variants for IR level callers, which have no MachineFunction to read the
+  /// denormal mode from and must pass \p FPEnv explicitly.
+  bool isFMAFasterThanFMulAndFAdd(EVT VT, DenormalFPEnv FPEnv) const;
+
+  /// \p VT is used as written, so a vector type reports false.
+  bool isFMADLegal(EVT VT, DenormalFPEnv FPEnv) const;
+
+  bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
 
   SDValue splitUnaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue splitBinaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
