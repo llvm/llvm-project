@@ -251,8 +251,7 @@ define float @from_phi(ptr %arrayidx.i, i32 %mul, float %acc) {
 ; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY7]], label [[FOR_COND_CLEANUP6:%.*]]
 ; CHECK:       for.body7:
 ; CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[HDR_ROW_0]], align 4
-; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = fcmp fast olt float [[TMP10]], [[ACC_ADDR_1]]
-; CHECK-NEXT:    [[DOTSROA_SPECULATED]] = select i1 [[CMP_I_I_I]], float [[TMP10]], float [[ACC_ADDR_1]]
+; CHECK-NEXT:    [[DOTSROA_SPECULATED]] = call nnan ninf nsz float @llvm.minnum.f32(float [[TMP10]], float [[ACC_ADDR_1]])
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_0]], 1
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[HDR_ROW_0]], i64 4
 ; CHECK-NEXT:    br label [[FOR_COND4]]
