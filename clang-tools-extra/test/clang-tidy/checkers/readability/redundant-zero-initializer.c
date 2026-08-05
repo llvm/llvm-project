@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c90,c99,c11,c17 -check-suffixes=C17 %s readability-redundant-zero-initializer %t
+// RUN: %check_clang_tidy -std=c17-or-earlier -check-suffixes=C17 %s readability-redundant-zero-initializer %t
 // RUN: %check_clang_tidy -std=c23-or-later -check-suffixes=C23 %s readability-redundant-zero-initializer %t
 
 char a[12] = {0};
