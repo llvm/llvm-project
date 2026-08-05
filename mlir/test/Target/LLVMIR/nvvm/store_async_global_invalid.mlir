@@ -17,7 +17,7 @@ llvm.func @st_async_global_mmio_non_sys(%addr: !llvm.ptr<1>, %value: i32) {
 // -----
 
 llvm.func @st_async_global_mmio_multimem(%addr: !llvm.ptr<1>, %value: i32) {
-  // expected-error @below {{multimem is not supported for mmio}}
+  // expected-error @below {{multimem is not supported with mmio}}
   nvvm.store.async.global %addr, %value {scope = #nvvm.mem_scope<sys>, mmio = true, multimem = true} : !llvm.ptr<1>, i32
   llvm.return
 }

@@ -5153,8 +5153,10 @@ def NVVM_AsyncStoreGlobalOp: NVVM_VoidIntrinsicOp<"store.async.global",
   let hasVerifier = 1;
 }
 
-def NVVM_AsyncStoreSharedOp: NVVM_VoidIntrinsicOp<"store.async.shared", 
-                                                  [NVVMRequiresSM<90>]> {
+def NVVM_AsyncStoreSharedOp: 
+  LLVM_IntrOpBase<NVVM_Dialect, "store.async.shared", "nvvm_st_async",
+                  /*overloadedResults=*/[], /*overloadedOperands=*/[1],
+                  [NVVMRequiresSM<90>], /*numResults=*/0> {
   let description = [{
     Performs an asynchronous store to shared cluster memory to the address 
     given by `addr`.
@@ -5168,7 +5170,6 @@ def NVVM_AsyncStoreSharedOp: NVVM_VoidIntrinsicOp<"store.async.shared",
   let arguments = (ins LLVM_PointerSharedCluster:$addr,
                        AnyTypeOf<[I32, I64, I128]>:$value, 
                        LLVM_PointerSharedCluster:$mbarrier);
-  let results = (outs );
   let assemblyFormat = "$addr `,` $value `,` `mbarrier` `=` $mbarrier attr-dict `:` type($addr) `,` type($value) `,` type($mbarrier)";
 }
 

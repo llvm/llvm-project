@@ -681,7 +681,7 @@ LogicalResult AsyncStoreGlobalOp::verify() {
     return emitOpError("mmio is only supported for SYS scope");
 
   if (isMmio && isMultimem)
-    return emitOpError("multimem is not supported for mmio");
+    return emitOpError("multimem is not supported with mmio");
 
   return success();
 }
@@ -3700,18 +3700,7 @@ mlir::NVVM::IDArgPair AsyncStoreGlobalOp::getIntrinsicIDAndArgs(
     return NVVM::IDArgPair(llvm::Intrinsic::nvvm_st_async_gpu,
                            {addr, value, isMultimem});
   }
-  llvm_unreachable("unsupported async store scope for global address space");
-}
-
-mlir::NVVM::IDArgPair AsyncStoreSharedOp::getIntrinsicIDAndArgs(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
-  auto thisOp = cast<NVVM::AsyncStoreSharedOp>(op);
-
-  llvm::Value *addr = mt.lookupValue(thisOp.getAddr());
-  llvm::Value *value = mt.lookupValue(thisOp.getValue());
-  llvm::Value *mbarrier = mt.lookupValue(thisOp.getMbarrier());
-
-  return {llvm::Intrinsic::nvvm_st_async, {addr, value, mbarrier}};
+  llvm_unreachable("unsupported scope for AsyncStoreGlobalOp");
 }
 
 mlir::NVVM::IDArgPair
