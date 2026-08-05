@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_SPECIAL_FUNCTIONS_H
-#define _LIBCPP___MATH_SPECIAL_FUNCTIONS_H
+#ifndef _LIBCPP___CMATH_SPECIAL_FUNCTIONS_H
+#define _LIBCPP___CMATH_SPECIAL_FUNCTIONS_H
 
 #include <__config>
 #include <__math/copysign.h>
@@ -81,4 +81,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___MATH_SPECIAL_FUNCTIONS_H
+#endif // _LIBCPP___CMATH_SPECIAL_FUNCTIONS_H

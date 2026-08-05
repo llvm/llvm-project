@@ -62,6 +62,17 @@ honored, and calls use the caller's features, matching GCC. Per-function
 features cannot lower the translation-unit ABI level;
 `-fclang-abi-compat=23` restores the previous behavior. (#GH193298)
 
+- On SPARC, a `_Complex` value with an integer element type is now passed and
+  returned packed into the one or two integer registers it fits in, matching GCC.
+  Clang previously passed such a value indirectly and returned it with one part
+  per register. 
+  `-fclang-abi-compat=23` restores the previous behavior. (#GH212340)
+
+- On SPARC64, a `_Complex char` or `_Complex short` is now
+  right-justified in its slot in the parameter array, like every other scalar
+  narrower than a slot, rather than left-justified the way a small struct is.
+  `-fclang-abi-compat=23` restores the previous behavior. (#GH212340)
+
 - On MIPS, a `_Complex` value with an integer element type is now returned packed
   into a single integer register when it fits in one, matching GCC. A `_Complex char` or
   `_Complex short`, and on N32/N64 also a `_Complex int`, is no longer returned
@@ -365,7 +376,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
+- Fixed an assertion crash when instantiating a nested requirement with an invalid constraint. (#GH213575)
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
+- Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -375,6 +388,8 @@ features cannot lower the translation-unit ABI level;
   format warnings to errors. (#GH211943)
 
 #### Bug Fixes to Attribute Support
+
+- Fixed crash (assertion) when the `alloc_align` attribute was applied to a declaration whose type has a `FunctionProtoType` but which is not itself a `FunctionDecl`, such as a function-pointer variable. (#GH122058)
 
 - The `counted_by`/`counted_by_or_null` diagnostic that rejects a pointer whose
   pointee is a struct with a flexible array member (e.g.
@@ -483,6 +498,9 @@ features cannot lower the translation-unit ABI level;
 #### CUDA/HIP Language Changes
 
 #### CUDA Support
+
+- Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
+  (`__cudaRegisterLinkedBinary`).
 
 #### AIX Support
 

@@ -14,9 +14,11 @@
 #include <__algorithm/find.h>
 #include <__algorithm/reverse.h>
 #include <__config>
-#include <__locale>
 #include <__locale_dir/check_grouping.h>
+#include <__locale_dir/ctype.h>
+#include <__locale_dir/ctype_base.h>
 #include <__locale_dir/get_c_locale.h>
+#include <__locale_dir/locale.h>
 #include <__locale_dir/pad_and_output.h>
 #include <__memory/unique_ptr.h>
 #include <ios>
