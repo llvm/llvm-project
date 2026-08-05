@@ -9286,13 +9286,13 @@ TEST_P(ASTImporterOptionSpecificTestBase,
   // the entire namespace, including the concrete specialization that
   // refers back to the lambda's closure type. When that closure is
   // force-imported, the process reaches the lambda's call operator body,
-  // which references the same self-referencing global variable again. 
-  // Because the variable isn't mapped yet, the importer revisits it and 
-  // rebuilds a second, independent LambdaExpr for the same closure while 
+  // which references the same self-referencing global variable again.
+  // Because the variable isn't mapped yet, the importer revisits it and
+  // rebuilds a second, independent LambdaExpr for the same closure while
   // its call operator is still being imported into it.
-  // 
-  // Finally, the sequence LambdaExpr::Create() -> 
-  // CXXRecordDecl::getLambdaCallOperator() performs a name lookup on the 
+  //
+  // Finally, the sequence LambdaExpr::Create() ->
+  // CXXRecordDecl::getLambdaCallOperator() performs a name lookup on the
   // lambda closure that is currently being constructed.
   const char *Code =
       R"(
