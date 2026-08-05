@@ -891,7 +891,26 @@ createExitVariable(BasicBlock *BB,
     return Builder.CreateSelect(BI->getCondition(), LHS, RHS);
   }
 
-  // TODO: add support for switch cases.
+  if (auto *SI = dyn_cast<SwitchInst>(T)) {
+    Value *Condition = SI->getCondition();
+    // The default destination acts as the fallback value of the select chain.
+    Value *Result = TargetToValue.lookup(SI->getDefaultDest());
+    for (const auto &Case : SI->cases()) {
+      Value *CaseValue = TargetToValue.lookup(Case.getCaseSuccessor());
+      // Successors that are internal to the region have no exit value.
+      if (CaseValue == nullptr)
+        continue;
+      // The first known exit value becomes the base of the select chain.
+      if (Result == nullptr) {
+        Result = CaseValue;
+        continue;
+      }
+      Value *Cmp = Builder.CreateICmpEQ(Condition, Case.getCaseValue());
+      Result = Builder.CreateSelect(Cmp, CaseValue, Result);
+    }
+    return Result;
+  }
+
   llvm_unreachable("Unhandled terminator type.");
 }
 
@@ -1235,12 +1254,17 @@ getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
     return std::nullopt;
 
   if (GV.isDeclarationForLinker()) {
-    // Interface variables must not get Import linkage.
     if (const auto *GVar = dyn_cast<GlobalVariable>(&GV)) {
       auto SC = addressSpaceToStorageClass(GVar->getAddressSpace(), ST);
+      // Interface variables must not get Import linkage.
       if (SC == SPIRV::StorageClass::Input ||
           SC == SPIRV::StorageClass::Output ||
           SC == SPIRV::StorageClass::PushConstant)
+        return std::nullopt;
+      // Shaders have no linker, so module-internal storage
+      // (e.g. HLSL groupshared) can't be imported
+      if (ST.isShader() && (SC == SPIRV::StorageClass::Workgroup ||
+                            SC == SPIRV::StorageClass::Private))
         return std::nullopt;
     }
     return SPIRV::LinkageType::Import;

@@ -8,8 +8,8 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-LABEL: define i1 @select_exit_cond(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = freeze i64 [[N]]
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[END1]], i64 [[START2]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[UMAX]], [[START2]]
