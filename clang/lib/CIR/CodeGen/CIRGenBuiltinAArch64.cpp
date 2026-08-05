@@ -501,6 +501,14 @@ emitCommonNeonSISDBuiltinExpr(CIRGenFunction &cgf,
   case NEON::BI__builtin_neon_vqshrns_n_s32:
   case NEON::BI__builtin_neon_vqshrnh_n_u16:
   case NEON::BI__builtin_neon_vqshrns_n_u32:
+  case NEON::BI__builtin_neon_vqsubb_s8:
+  case NEON::BI__builtin_neon_vqsubb_u8:
+  case NEON::BI__builtin_neon_vqsubh_s16:
+  case NEON::BI__builtin_neon_vqsubh_u16:
+  case NEON::BI__builtin_neon_vqsubs_s32:
+  case NEON::BI__builtin_neon_vqsubs_u32:
+  case NEON::BI__builtin_neon_vqsubd_s64:
+  case NEON::BI__builtin_neon_vqsubd_u64:
     break;
   }
 
