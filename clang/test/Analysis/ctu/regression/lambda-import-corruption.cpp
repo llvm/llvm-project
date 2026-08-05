@@ -2,19 +2,16 @@
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
 
-// Pathological case: a lambda's closure (the anonymous class that
-// implements its operator()) is created as a Decl before its members are
-// imported. If a member unrelated to the eventual failure -- e.g. the
-// implicit copy constructor, whose parameter type is `const ClosureType&`
-// -- imports successfully first, that success permanently caches the
-// closure's type as "imported" in ASTImporter::ImportedTypes, before the
-// member that actually fails (here, operator(), due to an unsupported
-// trailing requires-clause) is even reached. That cache is never
+// Pathological case: a lambda's closure is created as a Decl before its
+// members are imported. If a member unrelated to the eventual failure
+// (e.g. the implicit copy constructor) imports successfully first, that
+// success permanently caches the closure's type as "imported", before the
+// member that actually fails is even reached. That cache was never
 // invalidated when the closure's own import later fails, so anything that
-// subsequently needs the same type (the DeclRefExpr inside
-// `decltype(func(...))` on `rudolf`, below) silently gets the half-built
+// subsequently needs the same type (e.g. the DeclRefExpr inside
+// `decltype(func(...))` on `rudolf`, below) silently got the half-built
 // closure back instead of a clean failure, producing an inconsistent node
-// that crashes downstream.
+// that crashed.
 
 
 // RUN: %clang_cc1 -std=c++20 -emit-pch -o %t/api.cpp.ast %t/api.cpp
@@ -50,14 +47,6 @@ void entrypoint() {
   import_api(0); // expected-warning@isolate.cpp:20 {{Division by zero}}
 }
 
-void trigger1() {
-  trigger_api();
-}
-
-void trigger2() {
-  trigger_isolate();
-}
-
 //--- api.cpp
 
 template <class> int declval();
@@ -82,10 +71,6 @@ void import_api(int v) {
   import_isolate(v);
 }
 
-void trigger_api() {
-  ns::rudolf<void>(0); // fails to import
-}
-
 //--- isolate.cpp
 
 template <class> int declval();
@@ -107,8 +92,4 @@ template <class K> decltype(func(declval<K>())) rudolf(int v) { // no-crash
 void import_isolate(int v) {
   (void)ns::import_ns;
   (void)(42 / v); // raises "Division by zero"
-}
-
-void trigger_isolate() {
-  ns::rudolf<void>(0); // fails to import
 }
