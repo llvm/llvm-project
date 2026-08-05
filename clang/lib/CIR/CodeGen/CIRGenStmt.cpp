@@ -21,6 +21,7 @@
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -87,6 +88,9 @@ mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
 
 mlir::LogicalResult
 CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
+
+  const CallExpr *musttail = nullptr;
+
   for (const Attr *attr : s.getAttrs()) {
     switch (attr->getKind()) {
     default:
@@ -95,12 +99,17 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
     case attr::NoInline:
     case attr::AlwaysInline:
     case attr::NoConvergent:
-    case attr::MustTail:
     case attr::Atomic:
     case attr::HLSLControlFlowHint:
       cgm.errorNYI(s.getSourceRange(),
                    "Unimplemented statement attribute: ", attr->getKind());
       break;
+    case attr::MustTail: {
+      const Stmt *sub = s.getSubStmt();
+      const ReturnStmt *ret = cast<ReturnStmt>(sub);
+      musttail = cast<CallExpr>(ret->getRetValue()->IgnoreParens());
+      break;
+    }
     case attr::CXXAssume: {
       const Expr *assumptionExpr = cast<CXXAssumeAttr>(attr)->getAssumption();
       if (getLangOpts().CXXAssumptions && builder.getInsertionBlock() &&
@@ -113,6 +122,8 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
     } break;
     }
   }
+
+  SaveAndRestore save_musttail(mustTailCall, musttail);
 
   return emitStmt(s.getSubStmt(), /*useCurrentScope=*/true, s.getAttrs());
 }
@@ -859,6 +870,11 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
   mlir::ArrayAttr value;
   llvm::APSInt intVal = s.getLHS()->EvaluateKnownConstInt(getContext());
 
+  // Coerce a bool to an i1 for a switch, so we can just treat all its elements
+  // as an int later on.
+  if (isa<cir::BoolType>(condType))
+    condType = builder.getUIntNTy(1);
+
   // If the case statement has an RHS value, it is representing a GNU
   // case range statement, where LHS is the beginning of the range
   // and RHS is the end of the range.
@@ -1268,6 +1284,13 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
 
     mlir::Value condV = emitScalarExpr(s.getCond());
 
+    // Coerce bool values to an i1. There is no real sensible reason we need to
+    // represent a 'switch' of scoped-enum-with-bool-backing-type specially
+    // here.  It is a rarely used thing, and would result in a lot of work to
+    // properly handle this everywhere.
+    if (isa<cir::BoolType>(condV.getType()))
+      condV = builder.createBoolToInt(condV, builder.getUIntNTy(1));
+
     // TODO: PGO and likelihood (e.g. PGO.haveRegionCounts())
     assert(!cir::MissingFeatures::pgoUse());
     assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
@@ -1328,7 +1351,8 @@ void CIRGenFunction::emitReturnOfRValue(mlir::Location loc, RValue rv,
       emitAggregateCopy(dest, src, ty, getOverlapForReturnValue());
     }
   } else {
-    cgm.errorNYI(loc, "emitReturnOfRValue: complex return type");
+    assert(rv.isComplex() && "Unknown rvalue kind?");
+    builder.createStore(loc, rv.getComplexValue(), returnValue);
   }
 
   // Classic codegen emits a branch through any cleanups before continuing to

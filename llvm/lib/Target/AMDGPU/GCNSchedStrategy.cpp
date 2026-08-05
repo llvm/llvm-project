@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/Rematerializer.h"
@@ -2359,7 +2360,7 @@ void RewriteMFMAFormStage::resetRewriteCandsToVGPR(
 bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
   if (!static_cast<const SIInstrInfo *>(DAG.TII)->isMAI(*MI))
     return false;
-  if (AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode()) == -1)
+  if (AMDGPU::getAGPRFormOp(MI->getOpcode()) == -1)
     return false;
   // Reject candidates whose users force an unavoidable bridge copy.
   Register DstReg = MI->getOperand(0).getReg();
@@ -2397,7 +2398,7 @@ bool RewriteMFMAFormStage::initHeuristics(
       if (!isRewriteCandidate(&MI))
         continue;
 
-      int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode());
+      int ReplacementOp = AMDGPU::getAGPRFormOp(MI.getOpcode());
       assert(ReplacementOp != -1);
 
       RewriteCands.push_back({&MI, MI.getOpcode()});
@@ -2657,7 +2658,7 @@ bool RewriteMFMAFormStage::rewrite(
   }
 
   for (auto &[MI, OriginalOpcode] : RewriteCands) {
-    int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode());
+    int ReplacementOp = AMDGPU::getAGPRFormOp(MI->getOpcode());
     if (ReplacementOp == -1)
       continue;
     MI->setDesc(TII->get(ReplacementOp));
@@ -3005,9 +3006,10 @@ bool PreRARematStage::ScoredRemat::maybeBeneficial(
 
 PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
     MachineFunction &MF, const GCNScheduleDAGMILive &DAG) {
-  assert(DAG.MLI && "MLI not defined in DAG");
   MachineBranchProbabilityInfo MBPI;
-  MachineBlockFrequencyInfo MBFI(MF, MBPI, *DAG.MLI);
+  MachineCycleInfo MCI;
+  MCI.compute(MF);
+  MachineBlockFrequencyInfo MBFI(MF, MBPI, MCI);
 
   const unsigned NumRegions = DAG.Regions.size();
   MinFreq = MBFI.getEntryFreq().getFrequency();

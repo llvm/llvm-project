@@ -56,6 +56,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUAddrSpaceMap = {
     {LangAS::hlsl_input, llvm::AMDGPUAS::PRIVATE_ADDRESS},
     {LangAS::hlsl_output, llvm::AMDGPUAS::PRIVATE_ADDRESS},
     {LangAS::hlsl_push_constant, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::amdgpu_barrier, llvm::AMDGPUAS::LOCAL_ADDRESS},
 };
 
 } // namespace targets
@@ -202,6 +203,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 
   AddrSpaceMap = &AMDGPUAddrSpaceMap;
   UseAddrSpaceMapMangling = true;
+  HasAMDGPUTypes = true;
 
   if (Triple.isAMDGCN()) {
     // __bf16 is always available as a load/store only type on AMDGCN.
@@ -291,12 +293,9 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
       (getTriple().isAMDGCN() ? getArchNameAMDGCN(GPUKind)
                               : getArchNameR600(GPUKind));
 
-  // Sanitize the name of generic targets.
+  // Sanitize the name of generic targets, the only names containing '-'.
   // e.g. gfx10-1-generic -> gfx10_1_generic
-  if (GPUKind >= llvm::AMDGPU::GK_AMDGPU_GENERIC_FIRST &&
-      GPUKind <= llvm::AMDGPU::GK_AMDGPU_GENERIC_LAST) {
-    llvm::replace(CanonName, '-', '_');
-  }
+  llvm::replace(CanonName, '-', '_');
 
   Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
   // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___
