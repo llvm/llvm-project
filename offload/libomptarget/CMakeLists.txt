@@ -11,14 +11,13 @@ add_library(omptarget SHARED
 
   OpenMP/API.cpp
   OpenMP/InteropAPI.cpp
+  OpenMP/OMPT/Callback.cpp
 
   ../libompaccsupport/device.cpp
   ../libompaccsupport/PluginManager.cpp
   ../libompaccsupport/DeviceImage.cpp
   ../libompaccsupport/OffloadRTL.cpp
-
   ../libompaccsupport/Mapping.cpp
-  ../libompaccsupport/OMPT/Callback.cpp
 
   KernelLanguage/API.cpp
 )
