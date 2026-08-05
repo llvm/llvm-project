@@ -14,11 +14,11 @@
 
 inline constexpr size_t MAX_DEVICE_INFO_BYTES = 8;
 
-inline constexpr char zeroArray[MAX_DEVICE_INFO_BYTES] = {};
+inline constexpr char ZeroArray[MAX_DEVICE_INFO_BYTES] = {};
 
 template <typename T> struct SizedProperty {
-  size_t size;
-  T property;
+  size_t Size;
+  T Property;
 };
 
 // Firstly, we list all needed properties explicitly in PropertiesContainer
@@ -35,47 +35,46 @@ auto createPropertiesWithSizeContainer(
     size_t PropSize, PropertiesContainer<T> SelectedProperties)
     -> PropertiesWithSizeContainer<T> {
   PropertiesWithSizeContainer<T> Res;
-  for (auto p : SelectedProperties) {
-    Res.push_back({PropSize, p});
+  for (auto Prop : SelectedProperties) {
+    Res.push_back({PropSize, Prop});
   }
 
   return Res;
 }
 
 template <typename T>
-auto mergeProperties(
-    std::initializer_list<PropertiesWithSizeContainer<T>> properties)
-    -> PropertiesWithSizeContainer<T> {
-  PropertiesWithSizeContainer<T> finalProperties;
+auto mergeProperties(std::initializer_list<PropertiesWithSizeContainer<T>>
+                         Properties) -> PropertiesWithSizeContainer<T> {
+  PropertiesWithSizeContainer<T> FinalProperties;
 
-  for (auto prop : properties) {
-    finalProperties.insert(finalProperties.end(), prop.begin(), prop.end());
+  for (auto Prop : Properties) {
+    FinalProperties.insert(FinalProperties.end(), Prop.begin(), Prop.end());
   }
 
-  return finalProperties;
+  return FinalProperties;
 }
 
 template <typename T>
 PropertiesContainer<T>
-removeIrrelevantProperties(PropertiesContainer<T> base,
-                           PropertiesContainer<T> unwanted) {
-  PropertiesContainer<T> res(base);
+removeIrrelevantProperties(PropertiesContainer<T> Base,
+                           PropertiesContainer<T> Unwanted) {
+  PropertiesContainer<T> Res(Base);
 
-  for (auto prop : unwanted) {
-    res.erase(prop);
+  for (auto Prop : Unwanted) {
+    Res.erase(Prop);
   }
 
-  return res;
+  return Res;
 }
 
 template <typename T>
 PropertiesTypes<T> inline createTypesMap(
-    std::initializer_list<PropertiesWithSizeContainer<T>> properties) {
+    std::initializer_list<PropertiesWithSizeContainer<T>> Properties) {
   PropertiesTypes<T> Res;
 
-  for (auto container : properties) {
-    for (auto prop : container) {
-      Res.insert({prop.property, prop});
+  for (auto Container : Properties) {
+    for (auto Prop : Container) {
+      Res.insert({Prop.Property, Prop});
     }
   }
 
@@ -167,23 +166,23 @@ inline const DeviceInfoPropertiesTypes propertiesTypes =
     createTypesMap({BoolProperties, Uint32Properties, Uint64Properties,
                     CapabilitesFlagsProperties});
 
-inline bool defaultCheckIsNonZero(char *buffer) {
-  return memcmp(buffer, zeroArray, MAX_DEVICE_INFO_BYTES) != 0;
+inline bool defaultCheckIsNonZero(char *Buffer) {
+  return memcmp(Buffer, ZeroArray, MAX_DEVICE_INFO_BYTES) != 0;
 }
 
 template <typename T>
 inline std::string defaultPropertyTestPrinter(
     const ::testing::TestParamInfo<OffloadParam<SizedProperty<T>>> &info) {
-  auto device = std::get<0>(info.param);
-  auto paramData = std::get<1>(info.param);
+  auto Device = std::get<0>(info.param);
+  auto ParamData = std::get<1>(info.param);
 
-  std::string ss;
-  llvm::raw_string_ostream finalName(ss);
+  std::string TempStr;
+  llvm::raw_string_ostream FinalName(TempStr);
 
-  auto property = paramData.property;
-  finalName << device.Name << "__" << property;
+  auto Prop = ParamData.Property;
+  FinalName << Device.Name << "__" << Prop;
 
-  return SanitizeString(finalName.str());
+  return SanitizeString(FinalName.str());
 }
 
 template <typename T>
@@ -192,9 +191,9 @@ struct olPropertyTest : OffloadDeviceTestWithParam<SizedProperty<T>> {
     RETURN_ON_FATAL_FAILURE(
         OffloadDeviceTestWithParam<SizedProperty<T>>::SetUp());
 
-    auto paramData = this->getTestParam();
-    PropertySize = paramData.size;
-    Property = paramData.property;
+    auto ParamData = this->getTestParam();
+    PropertySize = ParamData.Size;
+    Property = ParamData.Property;
   }
 
   size_t PropertySize = 0;
@@ -202,6 +201,8 @@ struct olPropertyTest : OffloadDeviceTestWithParam<SizedProperty<T>> {
 };
 
 struct olGetHostDeviceInfoPropertyTest : olPropertyTest<ol_device_info_t> {
+  // Used when the fixture has been instantiated with getDevicesAndHost() in
+  // Fixtures.hpp instead of TestEnvironment::getDevices()
   bool isHost() { return Host == this->Device; }
 };
 
@@ -230,9 +231,9 @@ struct olGetSymbolInfoSizeGlobalTest
     RETURN_ON_FATAL_FAILURE(
         OffloadGlobalTestWithParam<SymbolInfoTuple>::SetUp());
 
-    auto paramData = this->getTestParam();
-    PropertySize = paramData.size;
-    Property = paramData.property;
+    auto ParamData = this->getTestParam();
+    PropertySize = ParamData.Size;
+    Property = ParamData.Property;
   }
 
   size_t PropertySize = 0;
