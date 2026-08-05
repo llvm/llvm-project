@@ -374,6 +374,7 @@ private:
 
   // FIXME: #57928, storing these here and reseting them in the entry is not
   // very nice and is a temporary until we accumulate the signatures as part of
+  // the mentioned issue.
   unsigned DXILInputSemanticIndex = 0;
   unsigned DXILOutputSemanticIndex = 0;
 };
