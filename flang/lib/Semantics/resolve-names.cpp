@@ -460,8 +460,8 @@ protected:
   const ArraySpec &arraySpec();
   void set_arraySpec(const ArraySpec arraySpec) { arraySpec_ = arraySpec; }
   const ArraySpec &coarraySpec();
-  std::list<Bound> &droppedBoundsToCheck() { return droppedBoundsToCheck_; }
-  const std::list<Bound> &attrDroppedBoundsToCheck() const {
+  std::vector<Bound> &droppedBoundsToCheck() { return droppedBoundsToCheck_; }
+  const std::vector<Bound> &attrDroppedBoundsToCheck() const {
     return attrDroppedBoundsToCheck_;
   }
   // Bounds from a DIMENSION attribute's array-spec that an entity-decl's own
@@ -469,8 +469,8 @@ protected:
   // but they remain specification expressions that must be validated.  Copies
   // are returned because the attribute applies to every entity-decl in the
   // statement.
-  std::list<Bound> overriddenAttrArraySpecBounds() const {
-    std::list<Bound> result;
+  std::vector<Bound> overriddenAttrArraySpecBounds() const {
+    std::vector<Bound> result;
     // An entity-decl overrides the DIMENSION attribute when it supplies its own
     // array-spec, whether that yields an array (arraySpec_) or, for a zero-size
     // explicit-shape bounds array (F2023), a scalar (droppedBoundsToCheck_).
@@ -507,7 +507,7 @@ private:
   // Bounds of a zero-size explicit-shape bounds array (F2023): the entity is
   // scalar, so these specification expressions are stashed here and validated
   // later rather than stored in the shape.
-  std::list<Bound> droppedBoundsToCheck_;
+  std::vector<Bound> droppedBoundsToCheck_;
   // When an ArraySpec is under an AttrSpec or ComponentAttrSpec, it is moved
   // into attrArraySpec_
   ArraySpec attrArraySpec_;
@@ -516,7 +516,7 @@ private:
   // Like attrArraySpec_, this is statement-level: it survives per-entity
   // clearing so the bounds are validated for every entity-decl the attribute
   // applies to, even when an entity-decl's own array-spec overrides the shape.
-  std::list<Bound> attrDroppedBoundsToCheck_;
+  std::vector<Bound> attrDroppedBoundsToCheck_;
 
   void PostAttrSpec();
 };
@@ -3039,8 +3039,10 @@ void ArraySpecVisitor::PostAttrSpec() {
   // A zero-size DIMENSION attribute leaves arraySpec_ empty but produces bounds
   // to check; move them to the statement-level list so they apply to every
   // entity-decl.
-  attrDroppedBoundsToCheck_.splice(
-      attrDroppedBoundsToCheck_.end(), droppedBoundsToCheck_);
+  attrDroppedBoundsToCheck_.insert(attrDroppedBoundsToCheck_.end(),
+      std::make_move_iterator(droppedBoundsToCheck_.begin()),
+      std::make_move_iterator(droppedBoundsToCheck_.end()));
+  droppedBoundsToCheck_.clear();
   if (!coarraySpec_.empty()) {
     if (attrCoarraySpec_.empty()) {
       attrCoarraySpec_ = coarraySpec_;

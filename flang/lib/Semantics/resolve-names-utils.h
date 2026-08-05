@@ -96,7 +96,7 @@ private:
 // appended to droppedBoundsToCheck so the caller can validate them during
 // declaration checking
 ArraySpec AnalyzeArraySpec(SemanticsContext &, const parser::ArraySpec &,
-    std::list<Bound> &droppedBoundsToCheck);
+    std::vector<Bound> &droppedBoundsToCheck);
 ArraySpec AnalyzeArraySpec(
     SemanticsContext &, const parser::ComponentArraySpec &);
 ArraySpec AnalyzeDeferredShapeSpecList(

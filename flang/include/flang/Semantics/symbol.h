@@ -476,7 +476,7 @@ public:
   void add_droppedBoundToCheck(Bound &&bound) {
     droppedBoundsToCheck_.emplace_back(std::move(bound));
   }
-  const std::list<Bound> &droppedBoundsToCheck() const {
+  const std::vector<Bound> &droppedBoundsToCheck() const {
     return droppedBoundsToCheck_;
   }
 
@@ -485,7 +485,7 @@ private:
   const parser::Expr *unanalyzedPDTComponentInit_{nullptr};
   ArraySpec shape_;
   ArraySpec coshape_;
-  std::list<Bound> droppedBoundsToCheck_;
+  std::vector<Bound> droppedBoundsToCheck_;
   common::IgnoreTKRSet ignoreTKR_;
   const Symbol *commonBlock_{nullptr}; // common block this object is in
   std::optional<common::CUDADataAttr> cudaDataAttr_;

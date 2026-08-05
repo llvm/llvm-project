@@ -194,7 +194,7 @@ public:
   // Bounds of a zero-size explicit-shape bounds array (F2023).  The entity is
   // scalar, so these are dropped from the shape, but they remain specification
   // expressions to be validated during declaration checking.
-  std::list<Bound> TakeDroppedBoundsToCheck() {
+  std::vector<Bound> TakeDroppedBoundsToCheck() {
     return std::move(droppedBoundsToCheck_);
   }
 
@@ -207,7 +207,7 @@ private:
   // Bounds dropped from a scalar (zero-size bounds array) declaration's shape,
   // retained as specification expressions to be validated during declaration
   // checking.
-  std::list<Bound> droppedBoundsToCheck_;
+  std::vector<Bound> droppedBoundsToCheck_;
 
   template <typename T> void Analyze(const std::list<T> &list) {
     for (const auto &elem : list) {
@@ -238,7 +238,7 @@ private:
 
 ArraySpec AnalyzeArraySpec(SemanticsContext &context,
     const parser::ArraySpec &arraySpec,
-    std::list<Bound> &droppedBoundsToCheck) {
+    std::vector<Bound> &droppedBoundsToCheck) {
   ArraySpecAnalyzer analyzer{context};
   ArraySpec result{analyzer.Analyze(arraySpec)};
   droppedBoundsToCheck = analyzer.TakeDroppedBoundsToCheck();
