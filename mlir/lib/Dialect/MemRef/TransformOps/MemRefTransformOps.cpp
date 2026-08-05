@@ -129,6 +129,39 @@ void transform::ApplyResolveRankedShapedTypeResultDimsPatternsOp::
 // Alloc and alloca to global utilities
 //===----------------------------------------------------------------------===//
 
+/// Checks whether an allocation operation can be converted to a
+/// `memref.global`.
+template <typename AllocLikeOp>
+static DiagnosedSilenceableFailure
+checkAllocToGlobalPreconditions(AllocLikeOp allocLikeOp) {
+  MemRefType memrefType = allocLikeOp.getType();
+  if (!memrefType.hasStaticShape()) {
+    return emitSilenceableFailure(allocLikeOp)
+           << "global ops require statically shaped memrefs, but got "
+           << memrefType;
+  }
+
+  if (!allocLikeOp.getSymbolOperands().empty()) {
+    return emitSilenceableFailure(allocLikeOp)
+           << "global ops do not support symbol operands, but got "
+           << memrefType;
+  }
+
+  int64_t offset;
+  SmallVector<int64_t, 4> strides;
+  if (failed(memrefType.getStridesAndOffset(strides, offset))) {
+    return emitSilenceableFailure(allocLikeOp)
+           << "global ops require strided layout, but got " << memrefType;
+  }
+  if (!ShapedType::isStatic(offset) || !ShapedType::isStaticShape(strides)) {
+    return emitSilenceableFailure(allocLikeOp)
+           << "global ops do not support dynamic offset or strides, but got "
+           << memrefType;
+  }
+
+  return DiagnosedSilenceableFailure::success();
+}
+
 /// Converts an allocation operation (`memref.alloca` or `memref.alloc`) to a
 /// `memref.global` operation in the nearest symbol table, and replaces the
 /// allocation with a `memref.get_global` operation. Any `memref.dealloc`
@@ -139,12 +172,10 @@ allocLikeToGlobal(transform::TransformRewriter &rewriter,
                   AllocLikeOp allocLikeOp, StringRef globalName,
                   memref::GlobalOp &globalOp,
                   memref::GetGlobalOp &getGlobalOp) {
-  MemRefType memrefType = allocLikeOp.getType();
-  if (!memrefType.hasStaticShape()) {
-    return emitSilenceableFailure(allocLikeOp->getLoc())
-           << "global ops require statically shaped memrefs, but got "
-           << memrefType;
-  }
+  if (DiagnosedSilenceableFailure failure =
+          checkAllocToGlobalPreconditions(allocLikeOp);
+      !failure.succeeded())
+    return failure;
 
   MLIRContext *ctx = rewriter.getContext();
   Location loc = allocLikeOp->getLoc();
@@ -161,14 +192,16 @@ allocLikeToGlobal(transform::TransformRewriter &rewriter,
   globalOp = memref::GlobalOp::create(
       builder, loc, StringAttr::get(ctx, globalName),
       StringAttr::get(ctx, "private"), TypeAttr::get(resultType), Attribute{},
-      UnitAttr{}, IntegerAttr{});
+      UnitAttr{}, allocLikeOp.getAlignmentAttr());
   symbolTable.insert(globalOp);
 
   // Remove any `memref.dealloc` operations referencing this allocation.
   // We assume that the allocation does not escape the current container
-  // (e.g., via return or interprocedural function calls), so any deallocation
-  // is a direct user of the allocation. This scopes complexity and avoids
-  // the need for interprocedural escape analysis.
+  // (e.g., via return or interprocedural function calls) and is not passed
+  // through control-flow or alias operations (e.g., `scf.if`, `cf.cond_br`,
+  // `select`, `memref.subview`), so any deallocation is a direct user of the
+  // allocation. Indirect deallocations are not removed and must be handled
+  // separately.
   for (Operation *user : llvm::make_early_inc_range(allocLikeOp->getUsers())) {
     if (auto dealloc = dyn_cast<memref::DeallocOp>(user))
       rewriter.eraseOp(dealloc);
