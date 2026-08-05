@@ -567,9 +567,11 @@ public:
       std::vector<MlirMemoryEffectInstance> effects;
       for (nb::handle object : iterable) {
         PyMemoryEffectInstance *effect = nullptr;
-        if (!nb::try_cast<PyMemoryEffectInstance *>(object, effect) || !effect)
+        if (!nb::try_cast<PyMemoryEffectInstance *>(object, effect) ||
+            !effect) {
           throw nb::type_error(
               "get_effects must return MemoryEffectInstance objects");
+        }
         effectObjects.push_back(nb::borrow<nb::object>(object));
         effects.push_back(effect->get());
       }

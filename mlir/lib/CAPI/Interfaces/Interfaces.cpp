@@ -69,26 +69,6 @@ SmallVector<std::unique_ptr<Region>> unwrapRegions(intptr_t nRegions,
   return unwrappedRegions;
 }
 
-void invokeMemoryEffectInstancesCallback(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
-    MlirMemoryEffectInstancesCallback callback, void *userData) {
-  SmallVector<MlirMemoryEffectInstance> wrappedEffects;
-  wrappedEffects.reserve(effects.size());
-  for (MemoryEffects::EffectInstance &effect : effects)
-    wrappedEffects.push_back(wrap(&effect));
-  callback(wrappedEffects.size(), wrappedEffects.data(), userData);
-}
-
-void appendMemoryEffectInstances(intptr_t numEffects,
-                                 MlirMemoryEffectInstance *effects,
-                                 void *userData) {
-  auto *unwrappedEffects =
-      static_cast<SmallVectorImpl<MemoryEffects::EffectInstance> *>(userData);
-  unwrappedEffects->reserve(unwrappedEffects->size() + numEffects);
-  for (intptr_t i = 0; i < numEffects; ++i)
-    unwrappedEffects->push_back(*unwrap(effects[i]));
-}
-
 } // namespace
 
 bool mlirOperationImplementsInterface(MlirOperation operation,
@@ -447,8 +427,18 @@ public:
   getEffects(Operation *op,
              SmallVectorImpl<MemoryEffects::EffectInstance> &effects) const {
     assert(callbacks.getEffects && "getEffects callback not set");
-    callbacks.getEffects(wrap(op), appendMemoryEffectInstances, &effects,
-                         callbacks.userData);
+    callbacks.getEffects(
+        wrap(op),
+        [](intptr_t numEffects, MlirMemoryEffectInstance *effectInstances,
+           void *userData) {
+          auto *unwrappedEffects =
+              static_cast<SmallVectorImpl<MemoryEffects::EffectInstance> *>(
+                  userData);
+          unwrappedEffects->reserve(unwrappedEffects->size() + numEffects);
+          for (intptr_t i = 0; i < numEffects; ++i)
+            unwrappedEffects->push_back(*unwrap(effectInstances[i]));
+        },
+        &effects, callbacks.userData);
   }
 
 private:
@@ -484,5 +474,9 @@ void mlirMemoryEffectsOpInterfaceGetEffects(
 
   SmallVector<MemoryEffects::EffectInstance> effects;
   iface.getEffects(effects);
-  invokeMemoryEffectInstancesCallback(effects, callback, userData);
+  SmallVector<MlirMemoryEffectInstance> wrappedEffects;
+  wrappedEffects.reserve(effects.size());
+  for (MemoryEffects::EffectInstance &effect : effects)
+    wrappedEffects.push_back(wrap(&effect));
+  callback(wrappedEffects.size(), wrappedEffects.data(), userData);
 }
