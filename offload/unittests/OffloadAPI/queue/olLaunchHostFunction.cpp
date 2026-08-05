@@ -24,7 +24,8 @@ struct olLaunchHostFunctionTest : OffloadQueueTest {
         nullptr);
     if (Result->Code == OL_ERRC_UNSUPPORTED)
       GTEST_SKIP() << "olLaunchHostFunction is not supported on this platform. "
-                      "Please update your environment";
+                      "Either the device does not support the feature or "
+                      "you need to update its drivers";
   }
 };
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchHostFunctionTest);
