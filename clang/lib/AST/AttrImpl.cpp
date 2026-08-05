@@ -250,12 +250,14 @@ void OMPDeclareVariantAttr::printPrettyPragma(
               P.Fr->printPretty(OS, nullptr, Policy);
               OS << ")";
             }
+            bool NeedSep = P.Fr != nullptr;
             for (Expr *A : P.Attrs) {
-              if (P.Fr)
+              if (NeedSep)
                 OS << ",";
               OS << "attr(";
               A->printPretty(OS, nullptr, Policy);
               OS << ")";
+              NeedSep = true;
             }
             OS << "}";
             Sep = ",";

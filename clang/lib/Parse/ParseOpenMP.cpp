@@ -3784,6 +3784,10 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
       ConsumeToken();
     } else if (Tok.getIdentifierInfo()->isStr("prefer_type") &&
                PreferTypeAllowed) {
+      if (Kind == OMPC_append_args && getLangOpts().OpenMP < 60) {
+        Diag(Tok, diag::err_omp_append_args_prefer_type_60);
+        HasError = true;
+      }
       ConsumeToken();
       BalancedDelimiterTracker PT(*this, tok::l_paren,
                                   tok::annot_pragma_openmp_end);
