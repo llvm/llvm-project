@@ -137,13 +137,48 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtarget_update_allocatable_2d
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtarget_update_allocatable_2dEa"}
-! CHECK: %[[IT:.*]] = omp.iterator(%{{.*}}: index, %{{.*}}: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
-! CHECK:   %[[BOX:.*]] = fir.load %[[A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
-! CHECK:   %[[BOUNDS0:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index) {stride_in_bytes = true}
-! CHECK:   %[[BOUNDS1:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index) {stride_in_bytes = true}
-! CHECK:   %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.heap<!fir.array<?x?xi32>>
-! CHECK:   %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.heap<!fir.array<?x?xi32>>, i32) map_clauses(to) capture(ByRef) bounds(%[[BOUNDS0]], %[[BOUNDS1]]) -> !llvm.ptr {name = ""}
-! CHECK:   omp.yield(%[[MAP]] : !llvm.ptr)
+! CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: index,
+! CHECK-SAME: %[[IV1:.*]]: index) =
+! CHECK: %[[IV0_I32:.*]] = fir.convert %[[IV0]] : (index) -> i32
+! CHECK: fir.store %[[IV0_I32]] to %[[IV0_ADDR:.*]] : !fir.ref<i32>
+! CHECK: %[[IV0_DECL:.*]]:2 = hlfir.declare %[[IV0_ADDR]]
+! CHECK: %[[IV1_I32:.*]] = fir.convert %[[IV1]] : (index) -> i32
+! CHECK: fir.store %[[IV1_I32]] to %[[IV1_ADDR:.*]] : !fir.ref<i32>
+! CHECK: %[[IV1_DECL:.*]]:2 = hlfir.declare %[[IV1_ADDR]]
+! CHECK: %[[BOX:.*]] = fir.load %[[A]]#0
+! CHECK: %[[C0:.*]] = arith.constant 0 : index
+! CHECK: %[[DIMS0_LB:.*]]:3 = fir.box_dims %[[BOX]], %[[C0]]
+! CHECK: %[[C0_EXTENT:.*]] = arith.constant 0 : index
+! CHECK: %[[DIMS0_EXTENT:.*]]:3 = fir.box_dims %[[BOX]], %[[C0_EXTENT]]
+! CHECK: %[[IV0_LOAD:.*]] = fir.load %[[IV0_DECL]]#0
+! CHECK: %[[IV0_I64:.*]] = fir.convert %[[IV0_LOAD]] : (i32) -> i64
+! CHECK: %[[IV0_INDEX:.*]] = fir.convert %[[IV0_I64]] : (i64) -> index
+! CHECK: %[[INDEX0:.*]] = arith.subi %[[IV0_INDEX]], %[[DIMS0_LB]]#0
+! CHECK: %[[BOUNDS0:.*]] = omp.map.bounds
+! CHECK-SAME: lower_bound(%[[INDEX0]] : index)
+! CHECK-SAME: upper_bound(%[[INDEX0]] : index)
+! CHECK-SAME: extent(%[[DIMS0_EXTENT]]#1 : index)
+! CHECK-SAME: stride(%[[DIMS0_EXTENT]]#2 : index)
+! CHECK-SAME: start_idx(%[[DIMS0_LB]]#0 : index)
+! CHECK: %[[C1:.*]] = arith.constant 1 : index
+! CHECK: %[[DIMS1_LB:.*]]:3 = fir.box_dims %[[BOX]], %[[C1]]
+! CHECK: %[[C1_EXTENT:.*]] = arith.constant 1 : index
+! CHECK: %[[DIMS1_EXTENT:.*]]:3 = fir.box_dims %[[BOX]], %[[C1_EXTENT]]
+! CHECK: %[[IV1_LOAD:.*]] = fir.load %[[IV1_DECL]]#0
+! CHECK: %[[IV1_I64:.*]] = fir.convert %[[IV1_LOAD]] : (i32) -> i64
+! CHECK: %[[IV1_INDEX:.*]] = fir.convert %[[IV1_I64]] : (i64) -> index
+! CHECK: %[[INDEX1:.*]] = arith.subi %[[IV1_INDEX]], %[[DIMS1_LB]]#0
+! CHECK: %[[BOUNDS1:.*]] = omp.map.bounds
+! CHECK-SAME: lower_bound(%[[INDEX1]] : index)
+! CHECK-SAME: upper_bound(%[[INDEX1]] : index)
+! CHECK-SAME: extent(%[[DIMS1_EXTENT]]#1 : index)
+! CHECK-SAME: stride(%[[DIMS1_EXTENT]]#2 : index)
+! CHECK-SAME: start_idx(%[[DIMS1_LB]]#0 : index)
+! CHECK: %[[BASE:.*]] = fir.box_addr %[[BOX]]
+! CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]]
+! CHECK-SAME: map_clauses(to)
+! CHECK-SAME: bounds(%[[BOUNDS0]], %[[BOUNDS1]])
+! CHECK: omp.yield(%[[MAP]] : !llvm.ptr)
 ! CHECK: } -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.target_update map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
 
