@@ -181,17 +181,22 @@ mlir::StringAttr getTargetFunctionName(mlir::MLIRContext *context,
 
 } // namespace
 
+// Check if a name is that of a data object, which in Fortran is a variable or
+// a named constant.
+static bool isDataObjectName(fir::NameUniquer::NameKind kind) {
+  return kind == fir::NameUniquer::NameKind::VARIABLE ||
+         kind == fir::NameUniquer::NameKind::CONSTANT;
+}
+
 // Check if a name belongs to a module rather than to a procedure.
 static bool isModuleLevelName(const fir::NameUniquer::DeconstructedName &name) {
   return name.procs.empty() && !name.modules.empty();
 }
 
-// Check if a global represents a module variable or a module named constant
-static bool isModuleVariable(fir::GlobalOp globalOp) {
+// Check if a global represents a data object declared in a module.
+static bool isModuleDataObject(fir::GlobalOp globalOp) {
   std::pair result = fir::NameUniquer::deconstruct(globalOp.getSymName());
-  return (result.first == fir::NameUniquer::NameKind::VARIABLE ||
-          result.first == fir::NameUniquer::NameKind::CONSTANT) &&
-         isModuleLevelName(result.second);
+  return isDataObjectName(result.first) && isModuleLevelName(result.second);
 }
 
 // Look up DIGlobalVariable from a global symbol
@@ -385,8 +390,7 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
                                        mlir::Value dummyScope) {
   auto result = fir::NameUniquer::deconstruct(declOp.getUniqName());
 
-  if (result.first != fir::NameUniquer::NameKind::VARIABLE &&
-      result.first != fir::NameUniquer::NameKind::CONSTANT)
+  if (!isDataObjectName(result.first))
     return;
 
   if (createCommonBlockGlobal(declOp, result.second.name, fileAttr, scopeAttr,
@@ -1085,7 +1089,7 @@ void AddDebugInfoPass::runOnOperation() {
 
   // Process module globals early.
   // Walk through all DeclareOps in functions and process globals that are
-  // module variables. This ensures that when we process USE statements,
+  // module data objects. This ensures that when we process USE statements,
   // the DIGlobalVariable lookups will succeed.
   if (debugLevel == mlir::LLVM::DIEmissionKind::Full) {
     module.walk([&](fir::cg::XDeclareOp declOp) {
@@ -1093,8 +1097,8 @@ void AddDebugInfoPass::runOnOperation() {
       if (defOp && llvm::isa<fir::AddrOfOp>(defOp)) {
         if (auto globalOp =
                 symbolTable.lookup<fir::GlobalOp>(declOp.getUniqName())) {
-          // Only process module variables here, not SAVE variables
-          if (isModuleVariable(globalOp)) {
+          // Only process module data objects here, not SAVE variables
+          if (isModuleDataObject(globalOp)) {
             handleGlobalOp(globalOp, fileAttr, cuAttr, typeGen, &symbolTable,
                            declOp);
           }
