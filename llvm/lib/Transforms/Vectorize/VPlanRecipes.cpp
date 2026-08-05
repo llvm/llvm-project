@@ -2433,9 +2433,12 @@ InstructionCost VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
 InstructionCost
 VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
                                        VPCostContext &Ctx) const {
-  Type *DataTy = getScalarType();
-  if (DataTy->isVoidTy())
-    DataTy = getOperand(0)->getScalarType();
+  Type *DataTy;
+  if (auto DataPos = VPIntrinsic::getMemoryDataParamPos(getVectorIntrinsicID()))
+    DataTy = getOperand(*DataPos)->getScalarType();
+  else
+    DataTy = getScalarType();
+  assert(!DataTy->isVoidTy() && "Expected a non-void data type");
   Type *Ty = toVectorTy(DataTy, VF);
   auto MaskPos = VPIntrinsic::getMaskParamPos(getVectorIntrinsicID());
   assert(MaskPos && "Expected a memory intrinsic with a valid mask position");
