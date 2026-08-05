@@ -25,9 +25,34 @@ module enum_pdt_order_mod
     module procedure wleaf1
   end interface
 
+  ! NOTE: Scope iterates components in SourceName (alphabetical) order, not
+  ! declaration order.  The three containers below deliberately pin down both
+  ! traversal orders so the test does not silently depend on the component
+  ! names chosen:
+  !   - In `container`, the shielded branch(1) sorts first (a_safe < b_bad).
+  !   - In `container_rev`, the unshielded branch(2) sorts first (a_bad <
+  !     b_safe).
+  !   - In `container_rev_decl`, the failing branch(2) is declared first but
+  !     sorts last (a_safe < b_bad), so declaration order and traversal order
+  !     disagree and the error must still surface.
+  ! Renaming a component in only one container would change which subtree is
+  ! visited first; keeping both spellings covers the error path regardless of
+  ! iteration order.  In `container_rev` the components are also declared in
+  ! non-alphabetical order (b_safe before a_bad) so the source itself shows
+  ! that SourceName order, not declaration order, drives the traversal.
   type :: container
     type(branch(1)) :: a_safe
     type(branch(2)) :: b_bad
+  end type
+
+  type :: container_rev
+    type(branch(1)) :: b_safe
+    type(branch(2)) :: a_bad
+  end type
+
+  type :: container_rev_decl
+    type(branch(2)) :: b_bad
+    type(branch(1)) :: a_safe
   end type
 
 contains
@@ -67,6 +92,25 @@ contains
   subroutine test_order_bug(u)
     integer, intent(in) :: u
     type(container) :: z
+    !ERROR: Enumeration type may not be used in unformatted I/O
+    write(u) z
+  end subroutine
+
+  ! Same as above, but the unshielded branch(2) is visited first in SourceName
+  ! order.  The error must still be emitted regardless of traversal order.
+  subroutine test_order_bug_rev(u)
+    integer, intent(in) :: u
+    type(container_rev) :: z
+    !ERROR: Enumeration type may not be used in unformatted I/O
+    write(u) z
+  end subroutine
+
+  ! Failing branch(2) is declared first but sorts last (a_safe < b_bad), so it
+  ! is visited last; the error must still be emitted regardless of the mismatch
+  ! between declaration order and traversal order.
+  subroutine test_order_bug_rev_decl(u)
+    integer, intent(in) :: u
+    type(container_rev_decl) :: z
     !ERROR: Enumeration type may not be used in unformatted I/O
     write(u) z
   end subroutine
