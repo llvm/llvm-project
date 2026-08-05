@@ -5324,8 +5324,15 @@ private:
           // copyable fmul turned into fmuladd(a, b, -0.0)) does not appear in
           // the operand columns of its own node, so the scan above never
           // releases the schedule data of the copyable instruction itself.
-          // Release it here to keep the unscheduled-deps counters balanced.
+          // Release it here to keep the unscheduled-deps counters balanced,
+          // consuming its self-use count so the reassociated-operand release
+          // below cannot release the same schedule data twice.
           if (isa<ScheduleCopyableData>(BundleMember) && !FoundInOpColumns) {
+            auto UseIt = OperandsUses.find(In);
+            if (UseIt != OperandsUses.end() && UseIt->second > 0) {
+              --UseIt->getSecond();
+              --TotalOpCount;
+            }
             if (ScheduleData *OpSD = getScheduleData(In))
               DecrUnsched(OpSD, /*IsControl=*/false);
           }
@@ -8985,13 +8992,18 @@ void BoUpSLP::buildExternalUses(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues) {
   const size_t NumVectScalars = ScalarToTreeEntries.size() + 1;
   DenseMap<Value *, unsigned> ScalarToExtUses;
-  // Peeled scalars still claimed by the tree (gathered or listed in some
-  // entry's scalars) survive as plain code, along with the peeled scalars
+  // Peeled scalars still claimed by the tree (gathered, listed in some
+  // entry's scalars, or modeled as a copyable element, which is emitted as
+  // a scalar) survive as plain code, along with the peeled scalars
   // in their operand chains, which no vector node can rematerialize.
   KeptReassocScalars.clear();
   SmallVector<const Value *, 8> KeptWorklist;
-  for (const Value *V : ReassocScalarToTreeEntries.keys())
-    if ((isGathered(V) || !getTreeEntries(V).empty()) &&
+  for (const auto &[V, Owners] : ReassocScalarToTreeEntries)
+    if ((isGathered(V) || !getTreeEntries(V).empty() ||
+         any_of(Owners,
+                [V](const TreeEntry *TE) {
+                  return TE->isCopyableElement(const_cast<Value *>(V));
+                })) &&
         KeptReassocScalars.insert(V).second)
       KeptWorklist.push_back(V);
   while (!KeptWorklist.empty()) {
