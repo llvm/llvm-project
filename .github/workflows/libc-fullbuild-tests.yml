@@ -94,15 +94,13 @@ jobs:
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv8m.main-none-eabi
-            cache_file: armv8m.main-none-eabi-softfp
             testing: SKIP
           - name: baremetal-armv8m-hard
             os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
-            target: armv8m.main-none-eabi
-            cache_file: armv8m.main-none-eabi-hard
+            target: armv8m.main-none-eabihf
             testing: SKIP
           - name: baremetal-armv8.1m
             os: ubuntu-24.04
@@ -188,7 +186,7 @@ jobs:
         case "${{ matrix.name }}" in
           baremetal-* )
             cmake $CMAKE_FLAGS \
-              -C /__w/llvm-project/llvm-project/libc/cmake/caches/${{ matrix.cache_file || matrix.target }}.cmake
+              -C /__w/llvm-project/llvm-project/libc/cmake/caches/${{ matrix.target }}.cmake
             ;;
           *-gpu | uefi-* )
             cmake \
