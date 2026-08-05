@@ -196,7 +196,7 @@ VoidTask silly_task() {
 // CIR:     %[[NullPtr2:.*]] = cir.const #cir.ptr<null>
 // CIR:     %[[Cond:.*]] = cir.cmp ne %[[FreeMem]], %[[NullPtr2]]
 // CIR:     cir.if %[[Cond]] {
-// CIR:       %[[Size:.*]] = cir.call @__builtin_coro_size()
+// CIR:       %[[Size:.*]] = cir.coro.intrinsic.size()
 // CIR:       cir.call @_ZdlPvm(%[[FreeMem]], %[[Size]])
 // CIR:     }
 // CIR:     cir.yield
