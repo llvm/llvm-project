@@ -62,6 +62,17 @@ honored, and calls use the caller's features, matching GCC. Per-function
 features cannot lower the translation-unit ABI level;
 `-fclang-abi-compat=23` restores the previous behavior. (#GH193298)
 
+- On SPARC, a `_Complex` value with an integer element type is now passed and
+  returned packed into the one or two integer registers it fits in, matching GCC.
+  Clang previously passed such a value indirectly and returned it with one part
+  per register. 
+  `-fclang-abi-compat=23` restores the previous behavior. (#GH212340)
+
+- On SPARC64, a `_Complex char` or `_Complex short` is now
+  right-justified in its slot in the parameter array, like every other scalar
+  narrower than a slot, rather than left-justified the way a small struct is.
+  `-fclang-abi-compat=23` restores the previous behavior. (#GH212340)
+
 - On MIPS, a `_Complex` value with an integer element type is now returned packed
   into a single integer register when it fits in one, matching GCC. A `_Complex char` or
   `_Complex short`, and on N32/N64 also a `_Complex int`, is no longer returned
