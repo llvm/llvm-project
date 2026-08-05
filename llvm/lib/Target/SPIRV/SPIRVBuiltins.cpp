@@ -1420,7 +1420,7 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
     MachineInstr *ArgInstruction = getDefInstrMaybeConstant(BoolReg, MRI);
     if (ArgInstruction->getOpcode() == TargetOpcode::G_CONSTANT) {
       if (BoolRegType->getOpcode() != SPIRV::OpTypeBool)
-        Arg0 = GR->buildConstantInt(getIConstVal(BoolReg, MRI), MIRBuilder,
+        Arg0 = GR->buildConstantInt(getIConstVal(BoolReg, MRI) != 0, MIRBuilder,
                                     BoolType, true);
     } else {
       if (BoolRegType->getOpcode() == SPIRV::OpTypeInt) {
@@ -3183,6 +3183,26 @@ static bool generateAsyncCopy(const SPIRV::IncomingCall *Call,
     Register TypeReg = GR->getSPIRVTypeID(NewType ? NewType : Call->ReturnType);
     unsigned NumArgs = Call->Arguments.size();
     Register EventReg = Call->Arguments[NumArgs - 1];
+    SPIRVTypeInst EventType = GR->getSPIRVTypeForVReg(EventReg);
+    if (!EventType || EventType->getOpcode() != SPIRV::OpTypeEvent) {
+      MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+      Register ConstReg = EventReg;
+      MachineInstr *Def = getDefInstrMaybeConstant(ConstReg, MRI);
+      if (Def->getOpcode() == TargetOpcode::G_CONSTANT &&
+          Def->getOperand(1).getCImm()->isZero()) {
+        // Only substitute a null Event for the "ptr null" idiom, not for a
+        // real event value that just is not typed as OpTypeEvent yet.
+        SPIRVTypeInst EventTy = NewType ? NewType
+                                        : GR->getOrCreateSPIRVTypeByName(
+                                              "spirv.Event", MIRBuilder, true);
+        Register EventTyReg = GR->getSPIRVTypeID(EventTy);
+        Register NullEventReg = createVirtualRegister(EventTy, GR, MIRBuilder);
+        MIRBuilder.buildInstr(SPIRV::OpConstantNull)
+            .addDef(NullEventReg)
+            .addUse(EventTyReg);
+        EventReg = NullEventReg;
+      }
+    }
     Register NumElemReg = Call->Arguments[2];
 
     // Untyped pointers use OpUntypedGroupAsyncCopyKHR, which adds an explicit

@@ -274,13 +274,21 @@ Value *EmitAMDGPUGridSize(CodeGenFunction &CGF, unsigned Index) {
 
 // Generates the IR for __builtin_read_exec_*.
 // Lowers the builtin to amdgcn_ballot intrinsic.
+//
+// The ballot must be taken at the wavefront width: a ballot narrower than the
+// wave size cannot represent one bit per lane and fails to select. Request the
+// mask at the wave width and narrow it afterwards for the _lo and _hi halves.
 static Value *EmitAMDGCNBallotForExec(CodeGenFunction &CGF, const CallExpr *E,
                                       llvm::Type *RegisterType,
                                       llvm::Type *ValueType, bool isExecHi) {
   CodeGen::CGBuilderTy &Builder = CGF.Builder;
   CodeGen::CodeGenModule &CGM = CGF.CGM;
 
-  Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, {RegisterType});
+  unsigned WaveSize = CGF.getTarget().getGridValue().GV_Warp_Size;
+  unsigned BallotSize = std::max(WaveSize, RegisterType->getIntegerBitWidth());
+  llvm::Type *BallotType = Builder.getIntNTy(BallotSize);
+
+  Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, {BallotType});
   llvm::Value *Call = Builder.CreateCall(F, {Builder.getInt1(true)});
 
   if (isExecHi) {
@@ -289,7 +297,7 @@ static Value *EmitAMDGCNBallotForExec(CodeGenFunction &CGF, const CallExpr *E,
     return Rt2;
   }
 
-  return Call;
+  return Builder.CreateTrunc(Call, ValueType);
 }
 
 static llvm::Value *loadTextureDescPtorAsVec8I32(CodeGenFunction &CGF,
@@ -470,6 +478,14 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   }
 
   MMRAMetadata::appendTags(*Inst, MMRAs);
+}
+
+void CodeGenFunction::AddAMDGPUAvailableVisibleMMRA(llvm::Instruction *Inst) {
+  if (AMDGPUAvailableVisibleMode.empty())
+    return;
+
+  constexpr const char *Tag = "amdgcn-av";
+  MMRAMetadata::appendTags(*Inst, {{Tag, AMDGPUAvailableVisibleMode}});
 }
 
 static Value *GetAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
@@ -1904,6 +1920,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     FenceInst *Fence = Builder.CreateFence(AO, SSID);
     if (E->getNumArgs() > 2)
       AddAMDGPUFenceAddressSpaceMMRA(Fence, E);
+    getTargetHooks().setTargetAtomicMetadata(*this, *Fence);
     return Fence;
   }
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
@@ -2016,6 +2033,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         Builder.CreateAtomicRMW(BinOp, Ptr, Val, AO, SSID);
     if (Volatile)
       RMW->setVolatile(true);
+    AddAMDGPUAvailableVisibleMMRA(RMW);
 
     unsigned AddrSpace = Ptr.getType()->getAddressSpace();
     if (AddrSpace != llvm::AMDGPUAS::LOCAL_ADDRESS) {

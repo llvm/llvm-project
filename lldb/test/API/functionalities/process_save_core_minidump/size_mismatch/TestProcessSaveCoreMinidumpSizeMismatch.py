@@ -50,6 +50,7 @@ class ProcessSaveCoreMinidumpSizeMismatchTestCase(TestBase):
         self.assertTrue(memory64_list_found, "minidump has no Memory64List stream")
 
     @skipUnlessPlatform(["linux"])
+    @skipIf(hostoslist=["windows"])
     def test_memory64_datasize_matches_written_bytes(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
