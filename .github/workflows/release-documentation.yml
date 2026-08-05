@@ -115,7 +115,7 @@ jobs:
             $(test -n "$INPUTS_RELEASE_VERSION" && echo -release "$INPUTS_RELEASE_VERSION" || echo -srcdir llvm)
             ls -ltr
           echo "man-page-tarball-name=$(basename $(find . -iname 'llvm_man_pages-*.tar.xz'))" >> "$GITHUB_OUTPUT"
-          echo "doxygen-tarball-name=$(basename $(find . -iname '*doxygen*.tar.xz'))" >> "$GITHUB_OUTPUT"
+          echo "doxygen-tarball-names=$(find . -maxdepth 1 -iname '*doxygen*.tar.xz' -exec basename {} \; | xargs)" >> "$GITHUB_OUTPUT"
 
 
       - name: Generate sha256 digest for tarballs
@@ -123,10 +123,10 @@ jobs:
         shell: bash
         env:
           MAN_PAGE_TARBALL_NAME: ${{ steps.build.outputs.man-page-tarball-name }}
-          DOXYGEN_TARBALL_NAME: ${{ steps.build.outputs.doxygen-tarball-name }}
+          DOXYGEN_TARBALL_NAMES: ${{ steps.build.outputs.doxygen-tarball-names }}
         run: |
             echo "man-page-digest=$(cat "$MAN_PAGE_TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
-            echo "doxygen-digest=$(cat "$DOXYGEN_TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+            echo "doxygen-digest=$(cat "$DOXYGEN_TARBALL_NAMES" | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
 
       - id: man-page-artifact-upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -140,7 +140,7 @@ jobs:
         with:
           name: doxygen
           path: |
-            ${{ steps.build.outputs.doxygen-tarball-name }}
+            ${{ steps.build.outputs.doxygen-tarball-names }}
 
       - name: Create Release Notes Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -200,6 +200,8 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - release-documentation
+    if: >-
+      github.event_name != 'pull_request'
     permissions:
       contents: write     # For man page uploads
       id-token: write     # For artifact attestations
