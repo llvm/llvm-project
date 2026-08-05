@@ -1739,8 +1739,19 @@ void VPInstruction::execute(VPTransformState &State) {
   if (!hasResult())
     return;
   assert(GeneratedValue && "generate must produce a value");
-  assert(((GeneratedValue->getType()->isVectorTy() ||
-           GeneratedValue->getType()->isStructTy()) == !GenerateSingleScalar) &&
+  // Figure out whether the initial type got widened, i.e. a scalar type became
+  // a vector, or a vector got widened to a wider EC for REVEC. It isn't enough
+  // to check that the new EC is larger, as VFScaleFactor can cause vectors to
+  // have a single element.
+  Type *InitialTy = getScalarType();
+  Type *NewTy = GeneratedValue->getType();
+  ElementCount InitialEC = getElementCount(InitialTy);
+  ElementCount NewEC = getElementCount(NewTy);
+  bool GotWidened = ElementCount::isKnownGT(NewEC, InitialEC) ||
+                    (NewEC.isScalable() && !InitialEC.isScalable()) ||
+                    (NewTy->isVectorTy() && !InitialTy->isVectorTy()) ||
+                    NewTy->isStructTy();
+  assert((GotWidened == !GenerateSingleScalar) &&
          "scalar value but not only first lane defined");
   State.set(this, GeneratedValue, GenerateSingleScalar);
   if (getOpcode() == VPInstruction::ResumeForEpilogue ||
