@@ -23676,8 +23676,7 @@ static SDValue MatchVectorAllEqualTest(SDValue OrigLHS, SDValue OrigRHS,
 
   // Match icmp(reduce_or(X),0) anyof reduction patterns.
   // Match icmp(reduce_and(X),-1) allof reduction patterns.
-  if ((LogicOp == ISD::AND && Op.getOpcode() == ISD::VECREDUCE_AND) ||
-      (LogicOp == ISD::OR && Op.getOpcode() == ISD::VECREDUCE_OR)) {
+  if (Op.getOpcode() == (CmpNull ? ISD::VECREDUCE_OR : ISD::VECREDUCE_AND)) {
     SDValue Match = Op.getOperand(0);
     EVT MatchVT = Match.getValueType();
     return LowerVectorAllEqual(DL, Match,
