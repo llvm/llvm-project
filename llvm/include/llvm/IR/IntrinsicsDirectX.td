@@ -335,6 +335,6 @@ def int_dx_store_output
           [],
           [llvm_i32_ty /*sigpointId*/, llvm_i32_ty /*sigElementId*/,
            llvm_i32_ty /*rowIndex*/, llvm_i8_ty /*colIndex*/,
-           llvm_i32_ty /*gsVertexOrPrimIndex*/, llvm_any_ty /*value*/],
+           llvm_any_ty /*value*/],
           [IntrConvergent]>;
 }
