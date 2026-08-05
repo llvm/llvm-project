@@ -834,6 +834,7 @@ add_fp_unittest(
     libc.src.__support.builtins.divdf3
     libc.src.__support.builtins.divsf3
     libc.src.__support.builtins.divtf3
+    libc.src.__support.builtins.extendbfsf2
     libc.src.__support.builtins.extenddftf2
     libc.src.__support.builtins.extendsfdf2
     libc.src.__support.builtins.extendsftf2
@@ -846,7 +847,10 @@ add_fp_unittest(
     libc.src.__support.builtins.subdf3
     libc.src.__support.builtins.subsf3
     libc.src.__support.builtins.subtf3
+    libc.src.__support.builtins.truncdfbf2
     libc.src.__support.builtins.truncdfsf2
+    libc.src.__support.builtins.truncsfbf2
+    libc.src.__support.builtins.trunctfbf2
     libc.src.__support.builtins.trunctfdf2
     libc.src.__support.builtins.trunctfsf2
     libc.src.__support.builtins.trunctfxf2

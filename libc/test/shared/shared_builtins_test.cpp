@@ -41,6 +41,7 @@ TEST(LlvmLibcSharedBuiltinsTest, QuadPrecisionArithmtic) {
 
 TEST(LlvmLibcSharedBuiltinsTest, ExtendConversion) {
   EXPECT_FP_EQ(1.5, shared::extendsfdf2(1.5f));
+  EXPECT_FP_EQ(1.5f, shared::extendbfsf2(static_cast<uint16_t>(0x3FC0)));
 #ifdef LIBC_TYPES_HAS_FLOAT128
   EXPECT_FP_EQ(float128(1.5), shared::extenddftf2(1.5));
   EXPECT_FP_EQ(float128(1.5), shared::extendsftf2(1.5f));
@@ -51,7 +52,12 @@ TEST(LlvmLibcSharedBuiltinsTest, ExtendConversion) {
 }
 
 TEST(LlvmLibcSharedBuiltinsTest, TruncateConversion) {
+  EXPECT_EQ(static_cast<uint16_t>(0x3FC0), shared::truncdfbf2(1.5));
   EXPECT_FP_EQ(1.5f, shared::truncdfsf2(1.5));
+  EXPECT_EQ(static_cast<uint16_t>(0x3FC0), shared::truncsfbf2(1.5f));
+#ifdef LIBC_TYPES_HAS_FLOAT128
+  EXPECT_EQ(static_cast<uint16_t>(0x3FC0), shared::trunctfbf2(float128(1.5)));
+#endif // LIBC_TYPES_HAS_FLOAT128
 #ifdef LIBC_TYPES_HAS_FLOAT128
   EXPECT_FP_EQ(1.5, shared::trunctfdf2(float128(1.5)));
   EXPECT_FP_EQ(1.5f, shared::trunctfsf2(float128(1.5)));
