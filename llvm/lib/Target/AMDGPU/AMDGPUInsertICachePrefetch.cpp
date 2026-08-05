@@ -87,14 +87,28 @@ bool AMDGPUInsertICachePrefetch::run(MachineFunction &MF) {
 
   // Skip past any instructions that must remain at the very beginning:
   // - Debug values and CFI instructions
+  // - The gfx1250 initial unclaused-VMEM workaround
   // - S_SETREG_IMM32_B32 instructions that set up MODE register bits
   //   (e.g., REPLAY_MODE bit 25 from SIFrameLowering)
   // We want the prefetches to come after all initial MODE setup.
+  bool SkippedInitialUnclausedVmemPrologue =
+      !ST.hasRequiresInitialUnclausedVmem();
   while (InsertPt != EntryBB.end()) {
     if (InsertPt->isDebugValue() || InsertPt->isCFIInstruction() ||
         InsertPt->getOpcode() == AMDGPU::S_SETREG_IMM32_B32) {
       ++InsertPt;
       continue;
+    }
+    if (!SkippedInitialUnclausedVmemPrologue &&
+        InsertPt->getOpcode() == AMDGPU::GLOBAL_PREFETCH_B8_SADDR) {
+      auto Next = InsertPt;
+      ++Next;
+      if (Next != EntryBB.end() &&
+          Next->getOpcode() == AMDGPU::V_NOP_e32) {
+        InsertPt = ++Next;
+        SkippedInitialUnclausedVmemPrologue = true;
+        continue;
+      }
     }
     break;
   }
