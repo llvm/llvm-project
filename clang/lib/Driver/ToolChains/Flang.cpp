@@ -907,7 +907,10 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       ApproxFunc = true;
       SignedZeros = false;
       FPContract = "fast";
-      LastFpContractOverrideOption = "-ffast-math";
+      if (A->getOption().getID() == options::OPT_Ofast)
+        LastFpContractOverrideOption = "-Ofast";
+      else
+        LastFpContractOverrideOption = "-ffast-math";
       setComplexRange(D, A->getSpelling(),
                       LangOptions::ComplexRangeKind::CX_Basic,
                       LastComplexRangeOption, Range);

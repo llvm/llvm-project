@@ -97,6 +97,13 @@
 ! CHECK-CONTRACT-NOFAST: -fc1
 ! CHECK-CONTRACT-NOFAST-SAME: -ffp-contract=off
 
+! Check that -Ofast is overridden.
+! RUN: %flang -Ofast -ffp-contract=off -fsyntax-only -### %s -o %t 2>&1 \
+! RUN:     | FileCheck --check-prefix=CHECK-OFAST-CONTRACT %s
+! CHECK-OFAST-CONTRACT: warning: overriding '-Ofast' option with '-ffp-contract=off' [-Woverriding-option]
+! CHECK-OFAST-CONTRACT: -fc1
+! CHECK-OFAST-CONTRACT-SAME: -ffp-contract=off
+
 ! Check that -ffast-math causes us to link to crtfastmath.o
 ! UNSUPPORTED: system-windows
 ! UNSUPPORTED: target=powerpc{{.*}}
