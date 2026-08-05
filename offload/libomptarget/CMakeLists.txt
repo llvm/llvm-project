@@ -55,6 +55,20 @@ if(LLVM_HAVE_LINK_VERSION_SCRIPT AND OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_S
   # built, so they are versioned from a separate script.
   target_link_libraries(omptarget PRIVATE "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports.ompt")
 endif()
+if (OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
+  # OmptProfiler.cpp implements OmptProfilerTy, which PluginManager constructs
+  # and owns. It is compiled into omptarget because that is where the profiler
+  # is instantiated and handed to the plugin API.
+  target_sources(omptarget PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/OMPT/OmptProfiler.cpp
+  )
+  target_include_directories(omptarget PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/OMPT
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/include
+  )
+  # PluginOmpt provides OmptTracing.cpp (plugin-side GPU tracing).
+  target_link_libraries(omptarget PRIVATE PluginOmpt)
+endif()
 
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.
