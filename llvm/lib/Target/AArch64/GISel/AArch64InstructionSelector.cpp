@@ -834,7 +834,7 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
                                unsigned OpSize) {
   switch (RegBankID) {
   case AArch64::GPRRegBankID:
-    if (OpSize == 32) {
+    if (OpSize == 8 || OpSize == 16 || OpSize == 32) {
       switch (GenericOpc) {
       case TargetOpcode::G_SHL:
         return AArch64::LSLVWr;
