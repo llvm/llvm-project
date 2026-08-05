@@ -749,7 +749,7 @@ add_fp_unittest(
     float16_test.cpp
   DEPENDS
     .exhaustive_test
-    libc.src.__support.FPUtil.Float16
+    libc.src.__support.FPUtil.float16
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES

@@ -44,24 +44,6 @@ add_header_library(
 )
 
 add_header_library(
-  Float16
-  HDRS
-    Float16.h
-  DEPENDS
-    .cast
-    .comparison_operations
-    .dyadic_float
-    libc.hdr.stdint_proxy
-    libc.src.__support.CPP.bit
-    libc.src.__support.CPP.type_traits
-    libc.src.__support.FPUtil.generic.add_sub
-    libc.src.__support.FPUtil.generic.div
-    libc.src.__support.FPUtil.generic.mul
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-)
-
-add_header_library(
   fpbits_str
   HDRS
     fpbits_str.h
@@ -291,6 +273,25 @@ add_header_library(
     libc.hdr.fenv_macros
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  float16
+  HDRS
+    float16.h
+  DEPENDS
+    .cast
+    .comparison_operations
+    .dyadic_float
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
 )
 

@@ -14,7 +14,7 @@
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
 #include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/FPUtil/Float16.h"
+#include "src/__support/FPUtil/float16.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"

@@ -240,7 +240,7 @@ add_fp_unittest(
     FAbsTest.h
   DEPENDS
     libc.src.math.fabsf16
-    libc.src.__support.FPUtil.Float16
+    libc.src.__support.FPUtil.float16
 )
 
 add_fp_unittest(

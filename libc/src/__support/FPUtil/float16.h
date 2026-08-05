@@ -9,10 +9,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOAT16_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOAT16_H
 
-#include "src/__support/macros/properties/types.h"
-
-#ifdef LIBC_USE_SOFT_FLOAT16
-
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/cast.h"
@@ -21,7 +17,9 @@
 #include "src/__support/FPUtil/generic/add_sub.h"
 #include "src/__support/FPUtil/generic/div.h"
 #include "src/__support/FPUtil/generic/mul.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
@@ -52,6 +50,8 @@ struct Float16 {
 
     } else if constexpr (cpp::is_convertible_v<T, Float16>) {
       bits = value.operator Float16().bits;
+    } else {
+      bits = fputil::cast<Float16>(static_cast<float>(value)).bits;
     }
   }
 
@@ -67,61 +67,74 @@ struct Float16 {
     return static_cast<T>(static_cast<float>(*this));
   }
 
-  LIBC_INLINE bool operator==(Float16 other) const {
+  LIBC_INLINE constexpr bool operator==(Float16 other) const {
     return fputil::equals(*this, other);
   }
 
-  LIBC_INLINE bool operator!=(Float16 other) const {
+  LIBC_INLINE constexpr bool operator!=(Float16 other) const {
     return !fputil::equals(*this, other);
   }
 
-  LIBC_INLINE bool operator<(Float16 other) const {
+  LIBC_INLINE constexpr bool operator<(Float16 other) const {
     return fputil::less_than(*this, other);
   }
 
-  LIBC_INLINE bool operator<=(Float16 other) const {
+  LIBC_INLINE constexpr bool operator<=(Float16 other) const {
     return fputil::less_than_or_equals(*this, other);
   }
 
-  LIBC_INLINE bool operator>(Float16 other) const {
+  LIBC_INLINE constexpr bool operator>(Float16 other) const {
     return fputil::greater_than(*this, other);
   }
 
-  LIBC_INLINE bool operator>=(Float16 other) const {
+  LIBC_INLINE constexpr bool operator>=(Float16 other) const {
     return fputil::greater_than_or_equals(*this, other);
   }
 
-  LIBC_INLINE constexpr Float16 operator-() const {
-    fputil::FPBits<float16> result(*this);
+  LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR Float16 operator-() const {
+    fputil::FPBits<Float16> result(*this);
     result.set_sign(result.is_pos() ? Sign::NEG : Sign::POS);
     return result.get_val();
   }
 
-  LIBC_INLINE Float16 operator+(Float16 other) const {
+  LIBC_INLINE constexpr Float16 operator+(Float16 other) const {
     return fputil::generic::add<Float16>(*this, other);
   }
 
-  LIBC_INLINE Float16 operator-(Float16 other) const {
+  LIBC_INLINE constexpr Float16 operator-(Float16 other) const {
     return fputil::generic::sub<Float16>(*this, other);
   }
 
-  LIBC_INLINE Float16 operator*(Float16 other) const {
-    return fputil::generic::mul<float16>(*this, other);
+  LIBC_INLINE constexpr Float16 operator*(Float16 other) const {
+    return fputil::generic::mul<Float16>(*this, other);
   }
 
-  LIBC_INLINE Float16 operator/(Float16 other) const {
-    return fputil::generic::div<float16>(*this, other);
+  LIBC_INLINE constexpr Float16 operator/(Float16 other) const {
+    return fputil::generic::div<Float16>(*this, other);
   }
 
-  LIBC_INLINE Float16 &operator*=(const Float16 &other) {
+  LIBC_INLINE constexpr Float16 &operator+=(Float16 other) {
+    *this = *this + other;
+    return *this;
+  }
+
+  LIBC_INLINE constexpr Float16 &operator-=(Float16 other) {
+    *this = *this - other;
+    return *this;
+  }
+
+  LIBC_INLINE constexpr Float16 &operator*=(Float16 other) {
     *this = *this * other;
+    return *this;
+  }
+
+  LIBC_INLINE constexpr Float16 &operator/=(Float16 other) {
+    *this = *this / other;
     return *this;
   }
 }; // struct Float16
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LIBC_USE_SOFT_FLOAT16
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOAT16_H

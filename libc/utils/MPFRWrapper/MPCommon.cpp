@@ -10,11 +10,7 @@
 
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/bfloat16.h"
-
-#ifdef LIBC_USE_SOFT_FLOAT16
-#include "src/__support/FPUtil/Float16.h"
-#endif
-
+#include "src/__support/FPUtil/float16.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
@@ -637,11 +633,17 @@ template <> long double MPFRNumber::as<long double>() const {
   return mpfr_get_ld(value, mpfr_rounding);
 }
 
-#if defined(LIBC_TYPES_HAS_FLOAT16) || defined(LIBC_USE_SOFT_FLOAT16)
+#ifdef LIBC_TYPES_HAS_FLOAT16
 template <> float16 MPFRNumber::as<float16>() const {
   // TODO: Either prove that this cast won't cause double-rounding errors, or
   // find a better way to get a float16.
   return fputil::cast<float16>(mpfr_get_d(value, mpfr_rounding));
+}
+#endif
+
+#if !defined(LIBC_USE_SOFT_FLOAT16)
+template <> fputil::Float16 MPFRNumber::as<fputil::Float16>() const {
+  return fputil::cast<fputil::Float16>(mpfr_get_d(value, mpfr_rounding));
 }
 #endif
 

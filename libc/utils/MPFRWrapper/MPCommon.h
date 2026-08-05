@@ -65,6 +65,12 @@ template <> struct ExtraPrecision<float128> {
 };
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
+#if !defined(LIBC_USE_SOFT_FLOAT16)
+template <> struct ExtraPrecision<LIBC_NAMESPACE::fputil::Float16> {
+  static constexpr unsigned int VALUE = 128;
+};
+#endif
+
 template <> struct ExtraPrecision<bfloat16> {
   static constexpr unsigned int VALUE = 64;
 };
@@ -115,6 +121,9 @@ public:
             cpp::enable_if_t<cpp::is_same_v<float, XType>
 #ifdef LIBC_TYPES_HAS_FLOAT16
                                  || cpp::is_same_v<float16, XType>
+#endif
+#if !defined(LIBC_USE_SOFT_FLOAT16)
+                                 || cpp::is_same_v<LIBC_NAMESPACE::fputil::Float16, XType>
 #endif
                                  || cpp::is_same_v<bfloat16, XType>,
                              int> = 0>
