@@ -1417,45 +1417,53 @@ bool RecurrenceDescriptor::isComplexMultiplyReduction(
   auto *OpB = dyn_cast<BinaryOperator>(BackB);
   if (!OpA || !OpB)
     return false;
-  PHINode *PhiReal;
+  PHINode *PhiRe, *PhiIm;
+  BinaryOperator *NextRe, *NextIm;
   if (OpA->getOpcode() == Instruction::FSub &&
-      OpB->getOpcode() == Instruction::FAdd)
-    PhiReal = PhiA;
-  else if (OpA->getOpcode() == Instruction::FAdd &&
-           OpB->getOpcode() == Instruction::FSub)
-    PhiReal = PhiB;
-  else
-    return false;
-  if (!OpA->hasAllowReassoc() || !OpB->hasAllowReassoc())
-    return false;
-
-  Value *ABExt, *BAExt, *AAExt, *BBExt;
-  if (!match(OpA,
-             m_c_BinOp(
-                 m_AllowReassoc(m_c_FMul(m_Value(ABExt), m_Specific(PhiB))),
-                 m_AllowReassoc(m_c_FMul(m_Value(AAExt), m_Specific(PhiA))))))
-    return false;
-  if (!match(OpB,
-             m_c_BinOp(
-                 m_AllowReassoc(m_c_FMul(m_Value(BAExt), m_Specific(PhiA))),
-                 m_AllowReassoc(m_c_FMul(m_Value(BBExt), m_Specific(PhiB))))))
-    return false;
-  if (ABExt != BAExt || AAExt != BBExt)
+      OpB->getOpcode() == Instruction::FAdd) {
+    PhiRe = PhiA;
+    PhiIm = PhiB;
+    NextRe = OpA;
+    NextIm = OpB;
+  } else if (OpA->getOpcode() == Instruction::FAdd &&
+             OpB->getOpcode() == Instruction::FSub) {
+    PhiRe = PhiB;
+    PhiIm = PhiA;
+    NextRe = OpB;
+    NextIm = OpA;
+  } else
     return false;
 
-  Type *Ty = PhiA->getType();
-  FastMathFlags FMF = OpA->getFastMathFlags() & OpB->getFastMathFlags();
+  Value *NthReForRe, *NthImForRe, *NthReForIm, *NthImForIm;
+  if (!match(NextRe->getOperand(0),
+             m_AllowReassoc(m_c_FMul(m_Value(NthReForRe), m_Specific(PhiRe)))))
+    return false;
+  if (!match(NextRe->getOperand(1),
+             m_AllowReassoc(m_c_FMul(m_Value(NthImForRe), m_Specific(PhiIm)))))
+    return false;
+  if (!match(NextIm, m_c_FAdd(m_AllowReassoc(m_c_FMul(m_Value(NthImForIm),
+                                                      m_Specific(PhiRe))),
+                              m_AllowReassoc(m_c_FMul(m_Value(NthReForIm),
+                                                      m_Specific(PhiIm))))))
+    return false;
+  if (NthImForRe != NthImForIm || NthReForRe != NthReForIm)
+    return false;
+
+  Type *Ty = PhiRe->getType();
+  FastMathFlags FMF = NextRe->getFastMathFlags() & NextIm->getFastMathFlags();
 
   SmallPtrSet<Instruction *, 8> CastInsts;
 
-  RdxDescA = RecurrenceDescriptor(
-      PhiA->getIncomingValueForBlock(TheLoop->getLoopPredecessor()),
-      cast<Instruction>(BackA), nullptr, RecurKind::ComplexFMul, FMF, nullptr,
-      Ty, false, false, CastInsts, 0, false, PhiB, PhiReal == PhiA);
-  RdxDescB = RecurrenceDescriptor(
-      PhiB->getIncomingValueForBlock(TheLoop->getLoopPredecessor()),
-      cast<Instruction>(BackB), nullptr, RecurKind::ComplexFMul, FMF, nullptr,
-      Ty, false, false, CastInsts, 0, false, PhiA, PhiReal == PhiB);
+  auto RdxDescRe = RecurrenceDescriptor(
+      PhiRe->getIncomingValueForBlock(TheLoop->getLoopPredecessor()),
+      cast<Instruction>(NextRe), nullptr, RecurKind::ComplexFMul, FMF, nullptr,
+      Ty, false, false, CastInsts, 0, false, PhiIm, true);
+  auto RdxDescIm = RecurrenceDescriptor(
+      PhiIm->getIncomingValueForBlock(TheLoop->getLoopPredecessor()),
+      cast<Instruction>(NextIm), nullptr, RecurKind::ComplexFMul, FMF, nullptr,
+      Ty, false, false, CastInsts, 0, false, PhiRe, false);
+  RdxDescA = PhiA == PhiRe ? RdxDescRe : RdxDescIm;
+  RdxDescB = PhiB == PhiRe ? RdxDescRe : RdxDescIm;
 
   return true;
 }

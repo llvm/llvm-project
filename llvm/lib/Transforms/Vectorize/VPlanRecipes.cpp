@@ -982,12 +982,39 @@ Value *VPInstruction::generate(VPTransformState &State) {
     bool IsRealPart = isReductionRealPart();
     bool IsInLoop = isReductionInLoop();
 
+    unsigned NumOperands = getNumOperands();
+    assert(NumOperands >= 2 && NumOperands % 2 == 0 &&
+           "Expected pairs of own/partner operands");
+
     Value *OwnVec = State.get(getOperand(0), IsInLoop);
     Value *PartnerVec = State.get(getOperand(1), IsInLoop);
 
     IRBuilderBase::FastMathFlagGuard FMFG(Builder);
     if (hasFastMathFlags())
       Builder.setFastMathFlags(getFastMathFlagsOrNone());
+
+    // Reduce across unroll parts with element-wise complex multiplication.
+    // Operands come in (own, partner) pairs from VPlanUnroll.
+    for (unsigned I = 2; I < NumOperands; I += 2) {
+      Value *OwnPart = State.get(getOperand(I), IsInLoop);
+      Value *PartnerPart = State.get(getOperand(I + 1), IsInLoop);
+
+      Value *Re1 = IsRealPart ? OwnVec : PartnerVec;
+      Value *Im1 = IsRealPart ? PartnerVec : OwnVec;
+      Value *Re2 = IsRealPart ? OwnPart : PartnerPart;
+      Value *Im2 = IsRealPart ? PartnerPart : OwnPart;
+
+      // (Re1 + i*Im1) * (Re2 + i*Im2)
+      Value *NewRe = Builder.CreateFSub(
+          Builder.CreateFMul(Re1, Re2), Builder.CreateFMul(Im1, Im2),
+          "rdx.re");
+      Value *NewIm = Builder.CreateFAdd(
+          Builder.CreateFMul(Re1, Im2), Builder.CreateFMul(Im1, Re2),
+          "rdx.im");
+
+      OwnVec = IsRealPart ? NewRe : NewIm;
+      PartnerVec = IsRealPart ? NewIm : NewRe;
+    }
 
     if (State.VF.isVector() && !IsInLoop) {
       Value *ReVec = IsRealPart ? OwnVec : PartnerVec;
