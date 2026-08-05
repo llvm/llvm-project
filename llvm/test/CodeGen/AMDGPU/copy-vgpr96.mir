@@ -1,0 +1,55 @@
+# RUN: llc -mtriple=amdgpu9.42 -verify-machineinstrs -run-pass=postrapseudos -o - %s | FileCheck %s
+
+---
+name: copy_vgpr96_nonoverlap
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr4_vgpr5_vgpr6
+
+    ; CHECK-LABEL: name: copy_vgpr96_nonoverlap
+    ; CHECK: liveins: $vgpr4_vgpr5_vgpr6
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $vgpr4_vgpr5, implicit $exec, implicit $vgpr4_vgpr5_vgpr6
+    ; CHECK-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr6, implicit $exec, implicit killed $vgpr4_vgpr5_vgpr6
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr0_vgpr1_vgpr2 = COPY killed $vgpr4_vgpr5_vgpr6
+    S_ENDPGM 0
+
+...
+
+---
+name: copy_vgpr96_overlap_forward
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr2_vgpr3_vgpr4
+
+    ; CHECK-LABEL: name: copy_vgpr96_overlap_forward
+    ; CHECK: liveins: $vgpr2_vgpr3_vgpr4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0_vgpr1 = V_MOV_B64_e32 $vgpr2_vgpr3, implicit $exec, implicit $vgpr2_vgpr3_vgpr4
+    ; CHECK-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit $vgpr2_vgpr3_vgpr4
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr0_vgpr1_vgpr2 = COPY killed $vgpr2_vgpr3_vgpr4
+    S_ENDPGM 0
+
+...
+
+---
+name: copy_vgpr96_overlap_backward
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2
+
+    ; CHECK-LABEL: name: copy_vgpr96_overlap_backward
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: $vgpr2_vgpr3 = V_MOV_B64_e32 $vgpr0_vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr2_vgpr3_vgpr4 = COPY killed $vgpr0_vgpr1_vgpr2
+    S_ENDPGM 0
+
+...
