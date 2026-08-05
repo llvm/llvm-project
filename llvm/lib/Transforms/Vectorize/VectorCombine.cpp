@@ -6046,7 +6046,6 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
     return false;
 
   // Rebuild the matched elementwise chain at the original vector width.
-  Builder.SetInsertPoint(Interleave);
   Value *WideValue = Deinterleave->getArgOperand(0);
 
   ElementCount WideEC =
@@ -6099,7 +6098,9 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
 
     SmallVector<Value *, 8> NarrowInsts(Step.Insts.begin(), Step.Insts.end());
     propagateIRFlags(NewValue, NarrowInsts);
-    propagateMetadata(cast<Instruction>(NewValue), NarrowInsts);
+
+    if (auto *NewInst = dyn_cast<Instruction>(NewValue))
+      propagateMetadata(NewInst, NarrowInsts);
 
     WideValue = NewValue;
   }
