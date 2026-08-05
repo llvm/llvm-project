@@ -454,6 +454,7 @@ private:
     InlineAsmIdentifierInfo Info;
     short BracCount = 0;
     short ParenCount = 0;
+    SMLoc LParenLoc;
     bool MemExpr = false;
     bool BracketUsed = false;
     bool NegativeAdditiveTerm = false;
@@ -498,6 +499,8 @@ private:
              State == IES_INTEGER || State == IES_REGISTER ||
              State == IES_OFFSET;
     }
+    bool hasUnmatchedParen() const { return ParenCount != 0; }
+    SMLoc getLParenLoc() const { return LParenLoc; }
 
     // Is the intel expression appended after an operand index.
     // [OperandIdx][Intel Expression]
@@ -1052,7 +1055,6 @@ private:
       TmpScale.reset();
       MemExpr = true;
       BracketUsed = true;
-      ParenCount = 0;
       BracCount++;
       return false;
     }
@@ -1068,10 +1070,6 @@ private:
       case IES_RPAREN:
         if (BracCount-- != 1) {
           ErrMsg = "unexpected bracket encountered";
-          return true;
-        }
-        if (ParenCount != 0) {
-          ErrMsg = "unmatched parenthesis";
           return true;
         }
         State = IES_RBRAC;
@@ -1106,7 +1104,7 @@ private:
       PrevState = CurrState;
       return false;
     }
-    void onLParen() {
+    void onLParen(SMLoc Loc) {
       IntelExprState CurrState = State;
       switch (State) {
       default:
@@ -1133,6 +1131,7 @@ private:
       case IES_INIT:
       case IES_LBRAC:
         ParenCount++;
+        LParenLoc = Loc;
         State = IES_LPAREN;
         IC.pushOperator(IC_LPAREN);
         break;
@@ -2281,7 +2280,9 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);
       }
       break;
-    case AsmToken::LParen:  SM.onLParen(); break;
+    case AsmToken::LParen:
+      SM.onLParen(Tok.getLoc());
+      break;
     case AsmToken::RParen:
       if (SM.onRParen(ErrMsg)) {
         return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);
@@ -2296,6 +2297,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
 
     PrevTK = TK;
   }
+  if (SM.hasUnmatchedParen())
+    return Error(SM.getLParenLoc(), "unmatched parenthesis");
   return false;
 }
 
