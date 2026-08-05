@@ -288,6 +288,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::MacroQualified:
     case Type::OverflowBehavior:
     case Type::CountAttributed:
+    case Type::LateParsedAttr:
       CanPrefixQualifiers = false;
       break;
 
@@ -1857,6 +1858,20 @@ void TypePrinter::printCountAttributedAfter(const CountAttributedType *T,
     printCountAttributedImpl(T, OS, Policy);
 }
 
+void TypePrinter::printLateParsedAttrBefore(const LateParsedAttrType *T,
+                                            raw_ostream &OS) {
+  // LateParsedAttrType is a transient placeholder that should not appear
+  // in user-facing output. Just print the wrapped type.
+  printBefore(T->getWrappedType(), OS);
+}
+
+void TypePrinter::printLateParsedAttrAfter(const LateParsedAttrType *T,
+                                           raw_ostream &OS) {
+  // LateParsedAttrType is a transient placeholder that should not appear
+  // in user-facing output. Just print the wrapped type.
+  printAfter(T->getWrappedType(), OS);
+}
+
 void TypePrinter::printAttributedBefore(const AttributedType *T,
                                         raw_ostream &OS) {
   // FIXME: Generate this with TableGen.
@@ -2751,6 +2766,8 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "hlsl_push_constant";
   case LangAS::wasm_funcref:
     return "__funcref";
+  case LangAS::amdgpu_barrier:
+    return "amdgpu_barrier";
   default:
     return std::to_string(toTargetAddressSpace(AS));
   }

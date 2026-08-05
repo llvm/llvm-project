@@ -18,7 +18,7 @@ define amdgpu_cs float @test_cvt_f32_bf8_byte0(i32 %a) {
 ;
 ; GFX1250-LABEL: test_cvt_f32_bf8_byte0:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_cvt_f32_bf8_dpp v0, v0 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -41,7 +41,7 @@ define amdgpu_cs float @test_cvt_f32_bf8_byte1(i32 %a) {
 ;
 ; GFX1250-LABEL: test_cvt_f32_bf8_byte1:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_cvt_f32_bf8_e64_dpp v0, v0 byte_sel:1 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -64,7 +64,7 @@ define amdgpu_cs float @test_cvt_f32_bf8_byte2(i32 %a) {
 ;
 ; GFX1250-LABEL: test_cvt_f32_bf8_byte2:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_cvt_f32_bf8_e64_dpp v0, v0 byte_sel:2 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -87,7 +87,7 @@ define amdgpu_cs float @test_cvt_f32_fp8_byte3(i32 %a) {
 ;
 ; GFX1250-LABEL: test_cvt_f32_fp8_byte3:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_cvt_f32_fp8_e64_dpp v0, v0 byte_sel:3 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -122,7 +122,7 @@ define amdgpu_cs void @test_cvt_pk_bf8_f32_word0(i32 %a, float %y, i32 %old, ptr
 ;
 ; GFX1250-TRUE16-LABEL: test_cvt_pk_bf8_f32_word0:
 ; GFX1250-TRUE16:       ; %bb.0:
-; GFX1250-TRUE16-NEXT:    global_wb
+; GFX1250-TRUE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-TRUE16-NEXT:    v_nop
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-TRUE16-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -134,7 +134,7 @@ define amdgpu_cs void @test_cvt_pk_bf8_f32_word0(i32 %a, float %y, i32 %old, ptr
 ;
 ; GFX1250-FAKE16-LABEL: test_cvt_pk_bf8_f32_word0:
 ; GFX1250-FAKE16:       ; %bb.0:
-; GFX1250-FAKE16-NEXT:    global_wb
+; GFX1250-FAKE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-FAKE16-NEXT:    v_nop
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
@@ -175,7 +175,7 @@ define amdgpu_cs void @test_cvt_pk_fp8_f32_word1(i32 %a, float %y, i32 %old, ptr
 ;
 ; GFX1250-TRUE16-LABEL: test_cvt_pk_fp8_f32_word1:
 ; GFX1250-TRUE16:       ; %bb.0:
-; GFX1250-TRUE16-NEXT:    global_wb
+; GFX1250-TRUE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-TRUE16-NEXT:    v_nop
 ; GFX1250-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-TRUE16-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -187,7 +187,7 @@ define amdgpu_cs void @test_cvt_pk_fp8_f32_word1(i32 %a, float %y, i32 %old, ptr
 ;
 ; GFX1250-FAKE16-LABEL: test_cvt_pk_fp8_f32_word1:
 ; GFX1250-FAKE16:       ; %bb.0:
-; GFX1250-FAKE16-NEXT:    global_wb
+; GFX1250-FAKE16-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-FAKE16-NEXT:    v_nop
 ; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-FAKE16-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
@@ -218,7 +218,7 @@ define amdgpu_cs void @test_cvt_sr_bf8_f32_byte0(i32 %a, i32 %r, i32 %old, ptr a
 ;
 ; GFX1250-LABEL: test_cvt_sr_bf8_f32_byte0:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
@@ -247,7 +247,7 @@ define amdgpu_cs void @test_cvt_sr_fp8_f32_byte1(i32 %a, i32 %r, i32 %old, ptr a
 ;
 ; GFX1250-LABEL: test_cvt_sr_fp8_f32_byte1:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
@@ -276,7 +276,7 @@ define amdgpu_cs void @test_cvt_sr_fp8_f32_byte2(i32 %a, i32 %r, i32 %old, ptr a
 ;
 ; GFX1250-LABEL: test_cvt_sr_fp8_f32_byte2:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3

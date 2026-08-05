@@ -4496,6 +4496,14 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTPOP,      MVT::i16,     {  1,  1,  2,  2 } }, // popcnt(zext())
     { ISD::CTPOP,      MVT::i8,      {  1,  1,  2,  2 } }, // popcnt(zext())
   };
+  static const CostKindTblEntry PCLMULCostTbl[] = {
+    { ISD::CLMUL,      MVT::v2i64,   {  3, 12,  4,  8 } }, // MOV+2xPCLMUL+unpack
+    { ISD::CLMUL,      MVT::v4i32,   {  8, 18, 12, 16 } }, // MOV+4xPCLMUL+unpack
+    { ISD::CLMUL,      MVT::i64,     {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+    { ISD::CLMUL,      MVT::i32,     {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+    { ISD::CLMUL,      MVT::i16,     {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+    { ISD::CLMUL,      MVT::i8,      {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+  };
   static const CostKindTblEntry X64CostTbl[] = { // 64-bit targets
     { ISD::ABS,        MVT::i64,     {  1,  2,  3,  3 } }, // SUB+CMOV
     { ISD::BITREVERSE, MVT::i64,     { 10, 12, 20, 22 } },
@@ -4718,6 +4726,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     ISD = ISD::UMULO;
     OpTy = RetTy->getContainedType(0);
     break;
+  case Intrinsic::clmul:
+    ISD = ISD::CLMUL;
+    break;
   }
 
   if (ISD != ISD::DELETED_NODE) {
@@ -4888,6 +4899,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         if (auto KindCost = Entry->Cost[CostKind])
           return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
     }
+
+    // FIXME: PCLMUL w/ AVX/AVX512 and VPCLMULQDQ are not handled properly.
+    if (ST->hasPCLMUL())
+      if (const auto *Entry = CostTableLookup(PCLMULCostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->is64Bit())
       if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))
@@ -5767,16 +5784,6 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
   auto *ValVTy = cast<FixedVectorType>(ValTy);
 
-  // Special case: vXi8 mul reductions are performed as vXi16.
-  if (ISD == ISD::MUL && MTy.getScalarType() == MVT::i8) {
-    auto *WideSclTy = IntegerType::get(ValVTy->getContext(), 16);
-    auto *WideVecTy = FixedVectorType::get(WideSclTy, ValVTy->getNumElements());
-    return getCastInstrCost(Instruction::ZExt, WideVecTy, ValTy,
-                            TargetTransformInfo::CastContextHint::None,
-                            CostKind) +
-           getArithmeticReductionCost(Opcode, WideVecTy, FMF, CostKind);
-  }
-
   InstructionCost ArithmeticCost = 0;
   if (LT.first != 1 && MTy.isVector() &&
       MTy.getVectorNumElements() < ValVTy->getNumElements()) {
@@ -5786,31 +5793,6 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     ArithmeticCost = getArithmeticInstrCost(Opcode, SingleOpTy, CostKind);
     ArithmeticCost *= LT.first - 1;
   }
-
-  if (ST->useSLMArithCosts())
-    if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return ArithmeticCost + *KindCost;
-
-  if (ST->hasBWI())
-    if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return ArithmeticCost + *KindCost;
-
-  if (ST->hasAVX512())
-    if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return ArithmeticCost + *KindCost;
-
-  if (ST->hasAVX())
-    if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return ArithmeticCost + *KindCost;
-
-  if (ST->hasSSE2())
-    if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return ArithmeticCost + *KindCost;
 
   // FIXME: These assume a naive kshift+binop lowering, which is probably
   // conservative in most cases.
@@ -5858,7 +5840,7 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     { ISD::OR,   MVT::v16i8,  {2, 2, 2, 2} }, // pmovmskb + cmp
   };
 
-  // Handle bool allof/anyof patterns.
+  // Handle bool allof/anyof vXi1 patterns before we check legal types.
   if (ValVTy->getElementType()->isIntegerTy(1)) {
     if (ISD == ISD::ADD) {
       // vXi1 addition reduction will bitcast to scalar and perform a popcount.
@@ -5869,16 +5851,6 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                               TargetTransformInfo::CastContextHint::None,
                               CostKind) +
              getIntrinsicInstrCost(ICA, CostKind);
-    }
-
-    InstructionCost ArithmeticCost = 0;
-    if (LT.first != 1 && MTy.isVector() &&
-        MTy.getVectorNumElements() < ValVTy->getNumElements()) {
-      // Type needs to be split. We need LT.first - 1 arithmetic ops.
-      auto *SingleOpTy = FixedVectorType::get(ValVTy->getElementType(),
-                                              MTy.getVectorNumElements());
-      ArithmeticCost = getArithmeticInstrCost(Opcode, SingleOpTy, CostKind);
-      ArithmeticCost *= LT.first - 1;
     }
 
     if (ST->hasAVX512())
@@ -5900,6 +5872,41 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
     return BaseT::getArithmeticReductionCost(Opcode, ValVTy, FMF, CostKind);
   }
+
+  // Special case: vXi8 mul reductions are performed as vXi16.
+  if (ISD == ISD::MUL && MTy.getScalarType() == MVT::i8) {
+    auto *WideSclTy = IntegerType::get(ValVTy->getContext(), 16);
+    auto *WideVecTy = FixedVectorType::get(WideSclTy, ValVTy->getNumElements());
+    return getCastInstrCost(Instruction::ZExt, WideVecTy, ValTy,
+                            TargetTransformInfo::CastContextHint::None,
+                            CostKind) +
+           getArithmeticReductionCost(Opcode, WideVecTy, FMF, CostKind);
+  }
+
+  if (ST->useSLMArithCosts())
+    if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasBWI())
+    if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasAVX512())
+    if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasAVX())
+    if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
+
+  if (ST->hasSSE2())
+    if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return ArithmeticCost + *KindCost;
 
   unsigned NumVecElts = ValVTy->getNumElements();
   unsigned ScalarSize = ValVTy->getScalarSizeInBits();
