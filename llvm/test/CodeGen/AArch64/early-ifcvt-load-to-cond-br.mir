@@ -1929,53 +1929,91 @@ name:            load_in_pred_call_in_block_behind_load
 alignment:       4
 tracksRegLiveness: true
 body:             |
-  ; CHECK-COMMON-LABEL: name: load_in_pred_call_in_block_behind_load
-  ; CHECK-COMMON: bb.0:
-  ; CHECK-COMMON-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-COMMON-NEXT:   liveins: $x0, $w1, $w2
-  ; CHECK-COMMON-NEXT: {{  $}}
-  ; CHECK-COMMON-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x0
-  ; CHECK-COMMON-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-  ; CHECK-COMMON-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
-  ; CHECK-COMMON-NEXT:   B %bb.1
-  ; CHECK-COMMON-NEXT: {{  $}}
-  ; CHECK-COMMON-NEXT: bb.1:
-  ; CHECK-COMMON-NEXT:   successors: %bb.2(0x80000000)
-  ; CHECK-COMMON-NEXT: {{  $}}
-  ; CHECK-COMMON-NEXT:   B %bb.2
-  ; CHECK-COMMON-NEXT: {{  $}}
-  ; CHECK-COMMON-NEXT: bb.2:
-  ; CHECK-COMMON-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
-  ; CHECK-COMMON-NEXT: {{  $}}
-  ; CHECK-COMMON-NEXT:   [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 0 :: (load (s32))
-  ; CHECK-COMMON-NEXT:   [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY1]], [[COPY2]], implicit-def $nzcv
-  ; CHECK-COMMON-NEXT:   Bcc 0, %bb.3, implicit $nzcv
-  ; CHECK-COMMON-NEXT:   B %bb.4
-  ; CHECK-COMMON-NEXT: {{  $}}
-  ; CHECK-COMMON-NEXT: bb.3:
-  ; CHECK-COMMON-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-COMMON-NEXT: {{  $}}
-  ; CHECK-COMMON-NEXT:   BL &foo, implicit-def $lr
-  ; CHECK-COMMON-NEXT:   B %bb.1
-  ; CHECK-COMMON-NEXT: {{  $}}
-  ; CHECK-COMMON-NEXT: bb.4:
-  ; CHECK-COMMON-NEXT:   successors: %bb.5(0x40000000), %bb.6(0x40000000)
-  ; CHECK-COMMON-NEXT: {{  $}}
-  ; CHECK-COMMON-NEXT:   [[ADDWri:%[0-9]+]]:gpr32common = ADDWri [[LDRWui]], 1, 0
-  ; CHECK-COMMON-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri]], 100, 0, implicit-def $nzcv
-  ; CHECK-COMMON-NEXT:   Bcc 12, %bb.6, implicit $nzcv
-  ; CHECK-COMMON-NEXT:   B %bb.5
-  ; CHECK-COMMON-NEXT: {{  $}}
-  ; CHECK-COMMON-NEXT: bb.5:
-  ; CHECK-COMMON-NEXT:   successors: %bb.6(0x80000000)
-  ; CHECK-COMMON-NEXT: {{  $}}
-  ; CHECK-COMMON-NEXT:   [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY1]], [[COPY2]], $wzr
-  ; CHECK-COMMON-NEXT:   [[MADDWrrr1:%[0-9]+]]:gpr32 = MADDWrrr [[MADDWrrr]], [[COPY1]], $wzr
-  ; CHECK-COMMON-NEXT: {{  $}}
-  ; CHECK-COMMON-NEXT: bb.6:
-  ; CHECK-COMMON-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.4, [[MADDWrrr1]], %bb.5
-  ; CHECK-COMMON-NEXT:   $w0 = COPY [[PHI]]
-  ; CHECK-COMMON-NEXT:   RET_ReallyLR implicit $w0
+  ; CHECK-DEFAULT-LABEL: name: load_in_pred_call_in_block_behind_load
+  ; CHECK-DEFAULT: bb.0:
+  ; CHECK-DEFAULT-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-DEFAULT-NEXT:   liveins: $x0, $w1, $w2
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+  ; CHECK-DEFAULT-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+  ; CHECK-DEFAULT-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
+  ; CHECK-DEFAULT-NEXT:   B %bb.1
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT: bb.1:
+  ; CHECK-DEFAULT-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT:   B %bb.2
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT: bb.2:
+  ; CHECK-DEFAULT-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT:   [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 0 :: (load (s32))
+  ; CHECK-DEFAULT-NEXT:   [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY1]], [[COPY2]], implicit-def $nzcv
+  ; CHECK-DEFAULT-NEXT:   Bcc 0, %bb.3, implicit $nzcv
+  ; CHECK-DEFAULT-NEXT:   B %bb.4
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT: bb.3:
+  ; CHECK-DEFAULT-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT:   BL &foo, implicit-def $lr
+  ; CHECK-DEFAULT-NEXT:   B %bb.1
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT: bb.4:
+  ; CHECK-DEFAULT-NEXT:   successors: %bb.5(0x40000000), %bb.6(0x40000000)
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT:   [[ADDWri:%[0-9]+]]:gpr32common = ADDWri [[LDRWui]], 1, 0
+  ; CHECK-DEFAULT-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri]], 100, 0, implicit-def $nzcv
+  ; CHECK-DEFAULT-NEXT:   Bcc 12, %bb.6, implicit $nzcv
+  ; CHECK-DEFAULT-NEXT:   B %bb.5
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT: bb.5:
+  ; CHECK-DEFAULT-NEXT:   successors: %bb.6(0x80000000)
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT:   [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY1]], [[COPY2]], $wzr
+  ; CHECK-DEFAULT-NEXT:   [[MADDWrrr1:%[0-9]+]]:gpr32 = MADDWrrr [[MADDWrrr]], [[COPY1]], $wzr
+  ; CHECK-DEFAULT-NEXT: {{  $}}
+  ; CHECK-DEFAULT-NEXT: bb.6:
+  ; CHECK-DEFAULT-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.4, [[MADDWrrr1]], %bb.5
+  ; CHECK-DEFAULT-NEXT:   $w0 = COPY [[PHI]]
+  ; CHECK-DEFAULT-NEXT:   RET_ReallyLR implicit $w0
+  ;
+  ; CHECK-DATA-DEPENDENT-LABEL: name: load_in_pred_call_in_block_behind_load
+  ; CHECK-DATA-DEPENDENT: bb.0:
+  ; CHECK-DATA-DEPENDENT-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-DATA-DEPENDENT-NEXT:   liveins: $x0, $w1, $w2
+  ; CHECK-DATA-DEPENDENT-NEXT: {{  $}}
+  ; CHECK-DATA-DEPENDENT-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+  ; CHECK-DATA-DEPENDENT-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+  ; CHECK-DATA-DEPENDENT-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
+  ; CHECK-DATA-DEPENDENT-NEXT:   B %bb.1
+  ; CHECK-DATA-DEPENDENT-NEXT: {{  $}}
+  ; CHECK-DATA-DEPENDENT-NEXT: bb.1:
+  ; CHECK-DATA-DEPENDENT-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-DATA-DEPENDENT-NEXT: {{  $}}
+  ; CHECK-DATA-DEPENDENT-NEXT:   B %bb.2
+  ; CHECK-DATA-DEPENDENT-NEXT: {{  $}}
+  ; CHECK-DATA-DEPENDENT-NEXT: bb.2:
+  ; CHECK-DATA-DEPENDENT-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
+  ; CHECK-DATA-DEPENDENT-NEXT: {{  $}}
+  ; CHECK-DATA-DEPENDENT-NEXT:   [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[COPY]], 0 :: (load (s32))
+  ; CHECK-DATA-DEPENDENT-NEXT:   [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY1]], [[COPY2]], implicit-def $nzcv
+  ; CHECK-DATA-DEPENDENT-NEXT:   Bcc 0, %bb.3, implicit $nzcv
+  ; CHECK-DATA-DEPENDENT-NEXT:   B %bb.4
+  ; CHECK-DATA-DEPENDENT-NEXT: {{  $}}
+  ; CHECK-DATA-DEPENDENT-NEXT: bb.3:
+  ; CHECK-DATA-DEPENDENT-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-DATA-DEPENDENT-NEXT: {{  $}}
+  ; CHECK-DATA-DEPENDENT-NEXT:   BL &foo, implicit-def $lr
+  ; CHECK-DATA-DEPENDENT-NEXT:   B %bb.1
+  ; CHECK-DATA-DEPENDENT-NEXT: {{  $}}
+  ; CHECK-DATA-DEPENDENT-NEXT: bb.4:
+  ; CHECK-DATA-DEPENDENT-NEXT:   [[ADDWri:%[0-9]+]]:gpr32common = ADDWri [[LDRWui]], 1, 0
+  ; CHECK-DATA-DEPENDENT-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[ADDWri]], 100, 0, implicit-def $nzcv
+  ; CHECK-DATA-DEPENDENT-NEXT:   [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY1]], [[COPY2]], $wzr
+  ; CHECK-DATA-DEPENDENT-NEXT:   [[MADDWrrr1:%[0-9]+]]:gpr32 = MADDWrrr [[MADDWrrr]], [[COPY1]], $wzr
+  ; CHECK-DATA-DEPENDENT-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY1]], [[MADDWrrr1]], 12, implicit $nzcv
+  ; CHECK-DATA-DEPENDENT-NEXT:   $w0 = COPY [[CSELWr]]
+  ; CHECK-DATA-DEPENDENT-NEXT:   RET_ReallyLR implicit $w0
   bb.0:
     successors: %bb.1(0x80000000)
     liveins: $x0, $w1, $w2
