@@ -52,8 +52,8 @@ For example, from the root of the `llvm-project` repository:
 cmake -C libclc/cmake/caches/amdgcn-amd-amdhsa-llvm.cmake -G Ninja -B build llvm
 ```
 
-The cache file sets `LLVM_ENABLE_PROJECTS`, `LLVM_TARGETS_TO_BUILD`,
-`LLVM_RUNTIME_TARGETS`, and all required `RUNTIMES_*` entries.
+The cache file sets `LLVM_ENABLE_PROJECTS`, `LLVM_RUNTIME_TARGETS`, and all
+required `RUNTIMES_*` entries.
 Additional `-D` flags can still be appended to override individual settings.
 
 #### Configure for the AMDGPU target
