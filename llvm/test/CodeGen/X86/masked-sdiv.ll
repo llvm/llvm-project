@@ -677,3 +677,100 @@ define <3 x i10> @sdiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
   %res = call <3 x i10> @llvm.masked.sdiv(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m)
   ret <3 x i10> %res
 }
+
+define <6 x i32> @sdiv_v6i32(<6 x i32> %x, <6 x i32> %y, <6 x i1> %m) {
+; SSE2-LABEL: sdiv_v6i32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movd %r9d, %xmm0
+; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd %edx, %xmm2
+; SSE2-NEXT:    movd %esi, %xmm3
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm5 = mem[0],zero,zero,zero
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm5 = xmm5[0],xmm2[0],xmm5[1],xmm2[1]
+; SSE2-NEXT:    cvtdq2pd %xmm5, %xmm2
+; SSE2-NEXT:    movd %r8d, %xmm5
+; SSE2-NEXT:    movd %ecx, %xmm6
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm5[0],xmm6[1],xmm5[1]
+; SSE2-NEXT:    cvtdq2pd %xmm6, %xmm5
+; SSE2-NEXT:    movss {{.*#+}} xmm6 = mem[0],zero,zero,zero
+; SSE2-NEXT:    divpd %xmm2, %xmm5
+; SSE2-NEXT:    cvttpd2dq %xmm5, %xmm2
+; SSE2-NEXT:    cvtdq2pd %xmm4, %xmm4
+; SSE2-NEXT:    cvtdq2pd %xmm3, %xmm3
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm6 = xmm6[0],xmm1[0],xmm6[1],xmm1[1]
+; SSE2-NEXT:    divpd %xmm4, %xmm3
+; SSE2-NEXT:    cvttpd2dq %xmm3, %xmm1
+; SSE2-NEXT:    cvtdq2pd %xmm6, %xmm3
+; SSE2-NEXT:    cvtdq2pd %xmm0, %xmm0
+; SSE2-NEXT:    movq %rdi, %rax
+; SSE2-NEXT:    divpd %xmm3, %xmm0
+; SSE2-NEXT:    cvttpd2dq %xmm0, %xmm0
+; SSE2-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE2-NEXT:    movlpd %xmm0, 16(%rdi)
+; SSE2-NEXT:    movapd %xmm1, (%rdi)
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: sdiv_v6i32:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movd %esi, %xmm0
+; SSE42-NEXT:    pinsrd $1, %edx, %xmm0
+; SSE42-NEXT:    movd %r9d, %xmm1
+; SSE42-NEXT:    pinsrd $1, {{[0-9]+}}(%rsp), %xmm1
+; SSE42-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE42-NEXT:    pinsrd $1, {{[0-9]+}}(%rsp), %xmm2
+; SSE42-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; SSE42-NEXT:    pinsrd $1, {{[0-9]+}}(%rsp), %xmm3
+; SSE42-NEXT:    movd %ecx, %xmm4
+; SSE42-NEXT:    pinsrd $1, %r8d, %xmm4
+; SSE42-NEXT:    cvtdq2pd %xmm4, %xmm4
+; SSE42-NEXT:    movd {{.*#+}} xmm5 = mem[0],zero,zero,zero
+; SSE42-NEXT:    pinsrd $1, {{[0-9]+}}(%rsp), %xmm5
+; SSE42-NEXT:    cvtdq2pd %xmm5, %xmm5
+; SSE42-NEXT:    divpd %xmm5, %xmm4
+; SSE42-NEXT:    cvttpd2dq %xmm4, %xmm4
+; SSE42-NEXT:    cvtdq2pd %xmm0, %xmm0
+; SSE42-NEXT:    cvtdq2pd %xmm3, %xmm3
+; SSE42-NEXT:    divpd %xmm3, %xmm0
+; SSE42-NEXT:    cvttpd2dq %xmm0, %xmm0
+; SSE42-NEXT:    cvtdq2pd %xmm2, %xmm2
+; SSE42-NEXT:    cvtdq2pd %xmm1, %xmm1
+; SSE42-NEXT:    movq %rdi, %rax
+; SSE42-NEXT:    divpd %xmm2, %xmm1
+; SSE42-NEXT:    cvttpd2dq %xmm1, %xmm1
+; SSE42-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm4[0]
+; SSE42-NEXT:    movlpd %xmm1, 16(%rdi)
+; SSE42-NEXT:    movapd %xmm0, (%rdi)
+; SSE42-NEXT:    retq
+;
+; AVX2-LABEL: sdiv_v6i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vcvtdq2pd %xmm1, %ymm2
+; AVX2-NEXT:    vcvtdq2pd %xmm0, %ymm3
+; AVX2-NEXT:    vdivpd %ymm2, %ymm3, %ymm2
+; AVX2-NEXT:    vcvttpd2dq %ymm2, %xmm2
+; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX2-NEXT:    vcvtdq2pd %xmm1, %ymm1
+; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; AVX2-NEXT:    vdivpd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: sdiv_v6i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvtdq2pd %ymm1, %zmm1
+; AVX512-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; AVX512-NEXT:    vdivpd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vcvttpd2dq %zmm0, %ymm0
+; AVX512-NEXT:    retq
+  %res = call <6 x i32> @llvm.masked.sdiv(<6 x i32> %x, <6 x i32> %y, <6 x i1> %m)
+  ret <6 x i32> %res
+}

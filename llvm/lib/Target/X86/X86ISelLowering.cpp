@@ -50581,8 +50581,8 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
-  // Run before the legalizer expands the division.
-  if (!VT.isVector() || !Subtarget.hasSSE2() || !DCI.isBeforeLegalizeOps())
+  // Vector division never survives op legalization to reach later rounds.
+  if (!VT.isVector() || !Subtarget.hasSSE2())
     return SDValue();
 
   SDValue Dividend = N->getOperand(0);
@@ -50625,15 +50625,21 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
       FPSclVT = MVT::f32;
     EVT FPVT = VT.changeVectorElementType(*DAG.getContext(), FPSclVT);
 
-    // Nothing will split an illegal FP type after type legalization.
+    // Nothing will split an illegal FP type after type legalization, so halve
+    // the divide while the integer halves stay legal.
     if (!DCI.isBeforeLegalize() &&
-        !DAG.getTargetLoweringInfo().isTypeLegal(FPVT))
+        !DAG.getTargetLoweringInfo().isTypeLegal(FPVT)) {
+      EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+      if (DAG.getTargetLoweringInfo().isTypeLegal(HalfVT))
+        return splitVectorIntBinary(SDValue(N, 0), DAG, DL);
       return SDValue();
+    }
 
     bool IsStrict = DAG.getMachineFunction().getFunction().hasFnAttribute(
         Attribute::StrictFP);
     if (IsStrict) {
-      // No SAE below 512-bit AVX512
+      // The SAE forms are 512-bit only. Inputs widen into a zmm below, which
+      // requires 512-bit types to be legal.
       if (!Subtarget.useAVX512Regs())
         return SDValue();
       // More lanes than one zmm divide can hold so split the divide.
