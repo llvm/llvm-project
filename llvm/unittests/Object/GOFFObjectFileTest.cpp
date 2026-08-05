@@ -70,8 +70,7 @@ protected:
   addEsdRecord(uint8_t Type, uint8_t ESDID, const std::vector<uint8_t> &Name,
                uint8_t ParentESDID = 0, uint8_t BindingScope = 0,
                uint8_t NameSpaceID = 0, uint8_t AdditionalFlags = 0,
-               std::array<uint8_t, 10> BehavioralAttributes = {0, 0, 0, 0, 0, 0,
-                                                               0, 0, 0, 0},
+               std::array<uint8_t, 10> BehavioralAttributes = {},
                uint32_t Length = 0) {
     size_t Pos = GOFFData.size();
     GOFFData.resize(GOFFData.size() + GOFF::RecordLength);
@@ -95,7 +94,7 @@ protected:
     size_t StringOffset = Pos + 72;           // Start of Symbol name
     for (uint8_t C : Name) {
       GOFFData[StringOffset] = (char)C;
-      StringOffset++;
+      ++StringOffset;
 
       if (StringOffset == Pos + GOFF::RecordLength) {
         // If we reach the end of the current record, we need to start a new
