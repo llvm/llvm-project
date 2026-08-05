@@ -187,9 +187,18 @@ struct State {
   /// Process block \p BB and add known facts to work-list.
   void addInfoFor(BasicBlock &BB);
 
+  /// If \p BB is a loop header, bound each induction phi in it by its start
+  /// value, if it is non-decreasing.
+  void addLowerBoundsForHeaderInductions(BasicBlock &BB);
+
   /// Try to add facts for loop inductions (AddRecs) in EQ/NE compares
   /// controlling the loop header.
   void addInfoForInductions(BasicBlock &BB);
+
+  /// Returns the senses, {unsigned, signed}, in which stepping the induction
+  /// phi \p PN, starting at \p Start, to \p Step cannot decrease it.
+  std::pair<bool, bool> getNonDecreasingInfo(PHINode &PN, Value *Start,
+                                             Value *Step);
 
   /// Returns true if we can add a known condition from BB to its successor
   /// block Succ.
@@ -965,6 +974,84 @@ static void dumpConstraint(ArrayRef<Entry> C,
 }
 #endif
 
+/// Splits the induction phi \p PN into the start value, coming from the loop
+/// predecessor \p LoopPred, and the step value, coming from inside the loop.
+/// Returns {nullptr, nullptr} if \p PN has other incoming values.
+static std::pair<Value *, Value *> getStartAndStep(const PHINode &PN,
+                                                   const BasicBlock *LoopPred) {
+  assert(PN.getBasicBlockIndex(LoopPred) >= 0 &&
+         "LoopPred must be a predecessor of the phi's block");
+  if (PN.getNumIncomingValues() != 2)
+    return {nullptr, nullptr};
+  unsigned StartIdx = PN.getIncomingBlock(0) == LoopPred ? 0 : 1;
+  return {PN.getIncomingValue(StartIdx), PN.getIncomingValue(1 - StartIdx)};
+}
+
+std::pair<bool, bool> State::getNonDecreasingInfo(PHINode &PN, Value *Start,
+                                                  Value *Step) {
+  bool Unsigned = false, Signed = false;
+  const APInt *StepOffset = nullptr;
+  if (match(Step, m_c_Add(m_Specific(&PN), m_APInt(StepOffset)))) {
+    if (StepOffset->isNegative())
+      return {false, false};
+    const auto *Add = cast<OverflowingBinaryOperator>(Step);
+    Unsigned = Add->hasNoUnsignedWrap();
+    Signed = Add->hasNoSignedWrap();
+  } else if (const auto *GEP = dyn_cast<GEPOperator>(Step)) {
+    const DataLayout &DL = PN.getDataLayout();
+    APInt GEPOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+    Unsigned = GEP->getPointerOperand() == &PN &&
+               (GEP->hasNoUnsignedWrap() ||
+                ((GEP->hasNoUnsignedSignedWrap() &&
+                  GEP->accumulateConstantOffset(DL, GEPOffset) &&
+                  !GEPOffset.isNegative())));
+  }
+
+  // Forming the SCEV of a phi is expensive, so only consult it for a PN + C
+  // step whose no-wrap flags prove nothing.
+  if (Unsigned || Signed || !StepOffset)
+    return {Unsigned, Signed};
+
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&PN));
+  if (!AR)
+    return {false, false};
+  return {SE.getMonotonicPredicateType(AR, CmpInst::ICMP_UGT) ==
+              ScalarEvolution::MonotonicallyIncreasing,
+          SE.getMonotonicPredicateType(AR, CmpInst::ICMP_SGT) ==
+              ScalarEvolution::MonotonicallyIncreasing};
+}
+
+void State::addLowerBoundsForHeaderInductions(BasicBlock &BB) {
+  Loop *L = LI.getLoopFor(&BB);
+  if (!L || L->getHeader() != &BB)
+    return;
+  BasicBlock *LoopPred = L->getLoopPredecessor();
+  if (!LoopPred)
+    return;
+
+  DomTreeNode *DTN = DT.getNode(&BB);
+  for (PHINode &PN : BB.phis()) {
+    if (!PN.getType()->isIntegerTy() && !PN.getType()->isPointerTy())
+      continue;
+
+    auto [Start, Step] = getStartAndStep(PN, LoopPred);
+    if (!Start)
+      continue;
+
+    auto [Unsigned, Signed] = getNonDecreasingInfo(PN, Start, Step);
+    // Every variable in the unsigned system already has a `V >= 0` row, so a
+    // zero start value would just duplicate it.
+    if (match(Start, m_Zero()))
+      Unsigned = false;
+    if (!Unsigned && !Signed)
+      continue;
+
+    CmpPredicate Pred(Unsigned ? CmpInst::ICMP_UGE : CmpInst::ICMP_SGE,
+                      /*HasSameSign=*/Unsigned && Signed);
+    WorkList.push_back(FactOrCheck::getConditionFact(DTN, Pred, &PN, Start));
+  }
+}
+
 void State::addInfoForInductions(BasicBlock &BB) {
   auto *L = LI.getLoopFor(&BB);
   if (!L)
@@ -1016,18 +1103,12 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!LoopPred || !L->isLoopInvariant(B))
     return;
 
-  Value *StartValue = PN->getIncomingValueForBlock(LoopPred);
-  BasicBlock *BackedgeBB = PN->getIncomingBlock(0) == LoopPred
-                               ? PN->getIncomingBlock(1)
-                               : PN->getIncomingBlock(0);
-  Value *Backedge = PN->getIncomingValueForBlock(BackedgeBB);
+  auto [StartValue, Backedge] = getStartAndStep(*PN, LoopPred);
   const APInt *StepOffset = nullptr;
   const SCEV *StartSCEV = nullptr;
-  OverflowingBinaryOperator *Inc = nullptr;
   if (match(Backedge, m_c_Add(m_Specific(PN), m_APInt(StepOffset)))) {
     if (StepOffset->isZero())
       return;
-    Inc = cast<OverflowingBinaryOperator>(Backedge);
   } else {
     const SCEV *Expr = SE.getSCEV(PN);
     if (!match(Expr,
@@ -1069,30 +1150,8 @@ void State::addInfoForInductions(BasicBlock &BB) {
     return;
   }
 
-  // Monotonicity is only used if the step is non-negative. If Inc is set it
-  // reduces to the induction wrap flags. If that fails, try to refine via SCEV.
-  bool MonotonicallyIncreasingUnsigned = Inc && Inc->hasNoUnsignedWrap();
-  bool MonotonicallyIncreasingSigned = Inc && Inc->hasNoSignedWrap();
-  if (!(MonotonicallyIncreasingUnsigned && MonotonicallyIncreasingSigned)) {
-    const SCEVAddRecExpr *IndAR = cast<SCEVAddRecExpr>(SE.getSCEV(PN));
-    if (!MonotonicallyIncreasingUnsigned)
-      MonotonicallyIncreasingUnsigned =
-          SE.getMonotonicPredicateType(IndAR, CmpInst::ICMP_UGT) ==
-          ScalarEvolution::MonotonicallyIncreasing;
-    if (!MonotonicallyIncreasingSigned)
-      MonotonicallyIncreasingSigned =
-          SE.getMonotonicPredicateType(IndAR, CmpInst::ICMP_SGT) ==
-          ScalarEvolution::MonotonicallyIncreasing;
-  }
-
-  // If the induction is known not to wrap, PN >= StartValue can be added
-  // unconditionally.
-  if (MonotonicallyIncreasingUnsigned)
-    WorkList.push_back(
-        FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_UGE, PN, StartValue));
-  if (MonotonicallyIncreasingSigned)
-    WorkList.push_back(
-        FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SGE, PN, StartValue));
+  auto [MonotonicallyIncreasingUnsigned, MonotonicallyIncreasingSigned] =
+      getNonDecreasingInfo(*PN, StartValue, Backedge);
 
   // Make sure AR either steps by 1 or that the value we compare against is a
   // GEP based on the same start value and all offsets are a multiple of the
@@ -1207,6 +1266,7 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
 }
 
 void State::addInfoFor(BasicBlock &BB) {
+  addLowerBoundsForHeaderInductions(BB);
   addInfoForInductions(BB);
   auto &DL = BB.getDataLayout();
 
