@@ -13581,7 +13581,7 @@ def err_sycl_entry_point_device_use : Error<
   "function %0 cannot be used in device code because it is declared with the"
   " %1 attribute">;
 def warn_sycl_kernel_param_has_ptr: Warning<
-  "pointers used in parameters to a SYCL kernel require a device that supports Unified Shared Memory (USM)">,
+  "pointers used in SYCL kernel parameters require a device that supports Unified Shared Memory (USM)">,
   InGroup<NonPortableSYCL>, DefaultIgnore;
 def err_sycl_kernel_bad_param_type : Error<
   "%0 type cannot be used in a SYCL kernel parameter because it "
