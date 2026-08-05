@@ -27853,12 +27853,13 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
     } else {
       auto *SD = cast<ScheduleData>(Picked);
       Instruction *PickedInst = SD->getInst();
-      bool ShouldMove = PickedInst->getNextNode() != LastScheduledInst;
-      if (ShouldMove)
+      if (PickedInst->getNextNode() != LastScheduledInst)
         PickedInst->moveAfter(LastScheduledInst->getPrevNode());
       LastScheduledInst = PickedInst;
       if (auto *EI = DE.CouldBeExtract.lookup(PickedInst)) {
-        if (ShouldMove)
+        // Keep deferred extract/remat instructions contiguous in the scheduled
+        // suffix so the scheduling frontier always points at a valid anchor.
+        if (EI->getNextNode() != LastScheduledInst)
           EI->moveAfter(LastScheduledInst->getPrevNode());
         LastScheduledInst = EI;
       }
