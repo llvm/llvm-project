@@ -2392,6 +2392,7 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
 /// Block entrance.  (Update counters).
 ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
                                                   ExplodedNode *Pred) {
+  const StackFrame *SF = Pred->getStackFrame();
   bool HasGeneratedNodes = false;
   auto MakeDefaultNode = [BE, &Engine = Engine, OriginalPred = Pred]() {
     return Engine.makeNode(BE, OriginalPred->getState(), OriginalPred);
@@ -2426,9 +2427,6 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return HasGeneratedNodes ? Pred : MakeDefaultNode();
 
-    // Widen.
-    const StackFrame *SF = Pred->getStackFrame();
-
     // FIXME:
     // We cannot use the CFG element from the via `ExprEngine::getCFGElementRef`
     // since we are currently at the block entrance and the current reference
@@ -2449,7 +2447,6 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
   const ExplodedNode *Sink =
       Engine.makeNode(TaggedLoc, Pred->getState(), Pred, /*MarkAsSink=*/true);
 
-  const StackFrame *SF = Pred->getStackFrame();
   if (!SF->inTopFrame()) {
     // FIXME: This will unconditionally prevent inlining this function (even
     // from other entry points), which is not a reasonable heuristic: even if
