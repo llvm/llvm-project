@@ -72,8 +72,7 @@ findDelayTarget(fir::DeclareOp declareOp, mlir::Block *entryBlock,
 
   auto recordRealUse = [&](mlir::Operation *user) {
     mlir::Operation *op = user;
-    while (op && op->getBlock() &&
-           op->getBlock()->getParent() != funcRegion)
+    while (op && op->getBlock() && op->getBlock()->getParent() != funcRegion)
       op = op->getParentOp();
     if (op && op->getBlock())
       uses.push_back(op);
