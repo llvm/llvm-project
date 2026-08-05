@@ -251,12 +251,12 @@ func.func @load_32bit_index(%memref : memref<200x100xf32>, %i : index, %j : inde
 }
 
 // ALL-LABEL: func @load_32bit_index
-// ALL: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i32
+// ALL: %[[C100:.*]] = llvm.mlir.constant(100 : i32) : i32
 // ALL: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]
 // ALL: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}
 // DEFAULT: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
 // INBOUNDS: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
-// ALL: llvm.load %[[GEP]] {alignment = 4 : i64} : !llvm.ptr -> vector<8xf32>
+// ALL: llvm.load %[[GEP]] <alignment = 4> : !llvm.ptr -> vector<8xf32>
 
 // -----
 
@@ -284,7 +284,8 @@ func.func @load_32bit_index_nuw_mul(%memref : memref<200x100xf32>, %i : index, %
 
 // -----
 
-// Same test for store.
+// With enable-gep-inbounds-nuw, the narrow i32 multiply and add carry
+// nsw/nuw flags, enabling SCEV to form a clean 32-bit AddRec.
 
 module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
 
@@ -296,9 +297,9 @@ func.func @store_32bit_index(%memref : memref<200x100xf32>, %i : index, %j : ind
 }
 
 // ALL-LABEL: func @store_32bit_index
-// ALL: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i32
+// ALL: %[[C100:.*]] = llvm.mlir.constant(100 : i32) : i32
 // ALL: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]
 // ALL: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}
 // DEFAULT: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
 // INBOUNDS: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i32) -> !llvm.ptr, f32
-// ALL: llvm.store %{{.*}}, %[[GEP]] {alignment = 4 : i64} : vector<8xf32>, !llvm.ptr
+// ALL: llvm.store %{{.*}}, %[[GEP]] <alignment = 4> : vector<8xf32>, !llvm.ptr

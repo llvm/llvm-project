@@ -84,11 +84,6 @@ func.func @cf_cond_br_with_weights(%cond: i1, %a: index, %b: index) -> index {
 
 // -----
 
-// Verify that the pass respects the module's data layout when deriving the
-// index type for block arguments.  When the module declares a 32-bit index
-// via dlti.dl_spec, cf.br and cf.cond_br must pass index-typed block
-// arguments as i32 instead of the default i64.
-
 // 32-bit data layout: cf.br with index block argument -> i32 branch arg.
 
 module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {

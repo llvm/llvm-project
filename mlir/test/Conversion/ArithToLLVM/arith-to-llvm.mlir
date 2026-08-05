@@ -984,7 +984,6 @@ func.func @supported_fp_type(%arg0: f32, %arg1: vector<4xf32>, %arg2: vector<4x8
 
 // -----
 
-<<<<<<< HEAD
 // The type converter maps the low-precision float types that have no LLVM
 // equivalent to an integer of the same width. The value attribute stays a float
 // attribute, which `llvm.mlir.constant` accepts for such a result type.
@@ -1097,11 +1096,8 @@ func.func @unconvertible_type_constant() -> tf32 {
   %0 = arith.constant 2.0 : tf32
   return %0 : tf32
 }
-=======
-// Verify that the pass respects the module's data layout when deriving the
-// index type.  When the module declares a 32-bit index via dlti.dl_spec,
-// index constants and index arithmetic ops must be emitted as i32 instead of
-// the default i64.
+
+// -----
 
 // 32-bit data layout: arith.constant with index type -> i32 constant.
 
@@ -1115,7 +1111,7 @@ func.func @constant_index_32bit() -> index {
 }
 
 // CHECK-DERIVE-LABEL: func @constant_index_32bit
-// CHECK-DERIVE: llvm.mlir.constant(0 : index) : i32
+// CHECK-DERIVE: llvm.mlir.constant(0 : i32) : i32
 
 // -----
 
@@ -1167,6 +1163,5 @@ func.func @constant_index_default() -> index {
 }
 
 // CHECK-DERIVE-LABEL: func @constant_index_default
-// CHECK-DERIVE: llvm.mlir.constant(0 : index) : i64
+// CHECK-DERIVE: llvm.mlir.constant(0 : i64) : i64
 
->>>>>>> 5bd7e208110c (Address comments)

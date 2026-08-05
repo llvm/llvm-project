@@ -108,9 +108,6 @@ void ConvertVectorToLLVMPass::runOnOperation() {
   }
 
   // Convert to the LLVM IR dialect.
-  // Use the module's data layout so that the index bitwidth is derived from the
-  // target (e.g. i32 on 32-bit targets) rather than hard-wired to i64, which
-  // mirrors what FinalizeMemRefToLLVMConversionPass does.
   const auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
   LowerToLLVMOptions options(&getContext(),
                              dataLayoutAnalysis.getAtOrAbove(getOperation()));
