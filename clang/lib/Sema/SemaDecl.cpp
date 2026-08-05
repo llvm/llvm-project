@@ -10782,7 +10782,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     const FunctionType *FT = NewFD->getType()->castAs<FunctionType>();
     if (isa<FunctionNoProtoType>(FT) && !D.isFunctionDefinition()) {
       CallingConv CC = FT->getExtInfo().getCC();
-      if (!supportsVariadicCall(CC)) {
+      if (!Context.getTargetInfo().supportsCallingConvVariadic(CC)) {
         // Windows system headers sometimes accidentally use stdcall without
         // (void) parameters, so we relax this to a warning.
         int DiagID =

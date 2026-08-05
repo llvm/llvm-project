@@ -3772,7 +3772,8 @@ static CallingConv getCCForDeclaratorChunk(
       CallingConv CC;
       if (!S.CheckCallingConvAttr(AL, CC, /*FunctionDecl=*/nullptr,
                                   S.CUDA().IdentifyTarget(D.getAttributes())) &&
-          (!FTI.isVariadic || supportsVariadicCall(CC))) {
+          (!FTI.isVariadic ||
+           S.Context.getTargetInfo().supportsCallingConvVariadic(CC))) {
         return CC;
       }
       break;
@@ -8350,18 +8351,6 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
 
   const FunctionType *fn = unwrapped.get();
 
-  // On amdgcnspirv, __cdecl on an abstract function type has no device-side
-  // equivalent, so normalize it to the device default CC to match an
-  // unadorned function type. Skip named decls and variadic types.
-  if (CC == CC_C && S.getLangOpts().CUDAIsDevice &&
-      S.Context.getTargetInfo().getTriple().isSPIRV() &&
-      state.getDeclarator().mayOmitIdentifier()) {
-    const auto *FnP = dyn_cast<FunctionProtoType>(fn);
-    if (!FnP || !FnP->isVariadic())
-      CC = S.Context.getDefaultCallingConvention(/*IsVariadic=*/false,
-                                                 /*IsCXXMethod=*/false);
-  }
-
   CallingConv CCOld = fn->getCallConv();
   Attr *CCAttr = getCCTypeAttr(S.Context, attr);
 
@@ -8385,7 +8374,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   // prototype that way.  And apparently we also "delay" warning about
   // unprototyped function types in general, despite not necessarily having
   // much ability to diagnose it later.
-  if (!supportsVariadicCall(CC)) {
+  if (!S.Context.getTargetInfo().supportsCallingConvVariadic(CC)) {
     const FunctionProtoType *FnP = dyn_cast<FunctionProtoType>(fn);
     if (FnP && FnP->isVariadic()) {
       // stdcall and fastcall are ignored with a warning for GCC and MS

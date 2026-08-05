@@ -1787,6 +1787,15 @@ public:
     }
   }
 
+  /// Determines whether a call using the given calling convention may be
+  /// variadic on this target. Unlike the target-agnostic
+  /// supportsVariadicCall(), this allows a target to reject its own default
+  /// calling convention (e.g. when that default is only nominally CC_C but
+  /// lowers to an ABI that cannot support variadic calls).
+  virtual bool supportsCallingConvVariadic(CallingConv CC) const {
+    return supportsVariadicCall(CC);
+  }
+
   enum CallingConvKind {
     CCK_Default,
     CCK_ClangABI4OrPS4,
