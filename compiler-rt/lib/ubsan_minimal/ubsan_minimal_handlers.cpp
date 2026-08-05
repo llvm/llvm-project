@@ -1,8 +1,10 @@
 #include "sanitizer_common/sanitizer_atomic.h"
 
 #include <stdint.h>
+#if !(SANITIZER_AMDGPU || SANITIZER_NVPTX || SANITIZER_SPIRV)
 #include <stdlib.h>
 #include <string.h>
+#endif
 
 #if defined(KERNEL_USE)
 extern "C" void ubsan_message(const char *msg);
