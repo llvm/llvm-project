@@ -715,6 +715,32 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
     }
   }
 
+  template<typename Func, typename ...Ts>
+  void emitDiagnosticImpl(clang::diag::kind DiagId, Func additionalDiagnostics,
+    Ts &&...Args) {
+    const auto &Detail =
+        getObjectAccessDiagDetails(ObjectAccessPath.back());
+    {
+      ((SemaSYCLRef.Diag(Detail.Loc, DiagId) << Detail.Type)
+        << ... << Args);
+    }
+    additionalDiagnostics();
+    emitObjectAccessPathNotes();
+  }
+
+  template<typename Func, typename ...Ts>
+  std::enable_if_t<std::is_invocable_v<Func>, void>
+  emitDiagnostic(clang::diag::kind DiagId, Func additionalDiagnostics,
+    Ts &&...Args) {
+      emitDiagnosticImpl(DiagId, additionalDiagnostics,
+        std::forward<Ts>(Args)...);
+  }
+
+  template<typename ...Ts>
+  void emitDiagnostic(clang::diag::kind DiagId, Ts &&...Args) {
+    emitDiagnosticImpl(DiagId, []{}, std::forward<Ts>(Args)...);
+  }
+
 public:
   KernelParamsChecker(SemaSYCL &SR, SourceLocation Loc)
       : ConstSubobjectVisitor<KernelParamsChecker>(SR.getASTContext()),
@@ -744,16 +770,6 @@ public:
 
   // Returns true if subobjects should be visited and false otherwise.
   bool checkType(QualType Ty) {
-    auto emitDiagnostic = [this](clang::diag::kind DiagId, auto &&...Args) {
-      const auto &DiagDetail =
-          getObjectAccessDiagDetails(ObjectAccessPath.back());
-      {
-        auto DB = SemaSYCLRef.Diag(DiagDetail.Loc, DiagId) << DiagDetail.Type;
-        (void)(DB << ... << Args);
-      }
-      emitObjectAccessPathNotes();
-    };
-
     if (Ty->isReferenceType()) {
       auto DirectParent = ObjectAccessPath.back();
       // Reference cannot be a base, so just assume we came via a FieldDecl.
@@ -768,26 +784,54 @@ public:
       // kernel parameter types contained within the referenced type
       // might not be relevant once the programmer addresses the
       // invalid use of a reference.
-      emitDiagnostic(diag::err_bad_kernel_param_type);
+      emitDiagnostic(diag::err_sycl_kernel_bad_param_type,
+        diag::InvalidSYCLKernelParamReason::ReferenceType);
       IsValid = false;
       return false;
     }
     if (Ty->isAtomicType()) {
-      emitDiagnostic(diag::err_bad_kernel_param_type);
+      emitDiagnostic(diag::err_sycl_kernel_bad_param_type,
+        diag::InvalidSYCLKernelParamReason::AtomicType);
       IsValid = false;
       return false;
     }
     if (Ty->isStructureTypeWithFlexibleArrayMember()) {
+      // Traversal to find FAM location:
+      std::function<void(QualType)> findFAM = [&](QualType Ty) {
+        const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
+        // FAM can only be defined as the last element of a structure.
+        const FieldDecl *FAM = nullptr;
+        for (const FieldDecl* FD : RD->fields())
+          FAM = FD;
+        assert(FAM && "structure with flexible array member has no fields??");
+
+        if (FAM->getType()->isIncompleteArrayType())
+          SemaSYCLRef.Diag(FAM->getLocation(),
+            diag::note_flexible_array_member_defined_here) << FAM << RD;
+        else
+          findFAM(FAM->getType());
+        SemaSYCLRef.Diag(RD->getLocation(), diag::note_within_field_of_type)
+            << RD;
+      };
+
       emitDiagnostic(diag::err_sycl_kernel_bad_param_type,
+                     [&] { findFAM(Ty); },
                      diag::InvalidSYCLKernelParamReason::FAM);
       IsValid = false;
       return false;
     }
     // Disallow classes that inherit virtual base classes.
-    if (CXXRecordDecl *RD = Ty->getAsCXXRecordDecl()) {
+    if (const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl()) {
       if (RD->getNumVBases() > 0) {
+        // Issue a diagnostic for virtual bases inherited by RD:
+        auto findVBases = [&] {
+          for (const CXXBaseSpecifier &VB : RD->vbases())
+            SemaSYCLRef.Diag(VB.getBaseTypeLoc(),
+              diag::note_vbase_specifier_here) << Ty << VB.getType();
+        };
         emitDiagnostic(diag::err_sycl_kernel_bad_param_type,
-                       diag::InvalidSYCLKernelParamReason::VirtualBases);
+                       [&] { findVBases(); },
+                       diag::InvalidSYCLKernelParamReason::VirtualBase);
         IsValid = false;
         return false;
       }
