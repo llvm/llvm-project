@@ -34,18 +34,6 @@ LLVM_ABI ModulePass *createDeadArgEliminationPass();
 LLVM_ABI ModulePass *createDeadArgHackingPass();
 
 //===----------------------------------------------------------------------===//
-//
-/// createLoopExtractorPass - This pass extracts all natural loops from the
-/// program into a function if it can.
-///
-LLVM_ABI Pass *createLoopExtractorPass();
-
-/// createSingleLoopExtractorPass - This pass extracts one natural loop from the
-/// program into a function if it can.  This is used by bugpoint.
-///
-LLVM_ABI Pass *createSingleLoopExtractorPass();
-
-//===----------------------------------------------------------------------===//
 /// createBarrierNoopPass - This pass is purely a module pass barrier in a pass
 /// manager.
 LLVM_ABI ModulePass *createBarrierNoopPass();
