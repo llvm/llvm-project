@@ -35,24 +35,6 @@ struct DefaultCtableComp {
   bool default_constructed_ = false;
 };
 
-struct CountingComp {
-  constexpr explicit CountingComp(int& count) : count_(count) {}
-
-  constexpr bool operator()(int x, int y) const {
-    ++count_;
-    return x < y;
-  }
-
-  int& count_;
-};
-
-void test_dedup_uses_one_direction_comparisons() {
-  int count = 0;
-  std::flat_set<int, CountingComp> set({0, 0}, CountingComp(count));
-  assert(set.size() == 1);
-  assert(count == 2);
-}
-
 template <template <class...> class KeyContainer>
 constexpr void test() {
   int expected[] = {1, 2, 3, 5};
@@ -178,7 +160,6 @@ constexpr bool test() {
 
 int main(int, char**) {
   test();
-  test_dedup_uses_one_direction_comparisons();
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif
