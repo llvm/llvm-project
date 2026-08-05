@@ -26,7 +26,7 @@ void CIRDataLayout::reset(mlir::DataLayoutSpecInterface spec) {
     if (mlir::DataLayoutEntryInterface entry =
             spec.getSpecForIdentifier(addrSpKey))
       if (auto val = llvm::dyn_cast<mlir::IntegerAttr>(entry.getValue()))
-        programAddrSpace = val.getInt();
+        programAddrSpace = val.getUInt();
   }
 }
 
