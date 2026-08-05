@@ -328,8 +328,8 @@ LLVM_ABI void printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS,
 
 LLVM_ABI void printFPClassMask(raw_ostream &OS, const Constant *ImmArgVal);
 
-/// Return true if the immediate argument value is accepted by any RangeSet
-/// constraint specified for this intrinsic argument.
+/// Returns true if \p Value satisfies the range constraints specified for
+/// argument \p ArgIdx of intrinsic \p IID.
 LLVM_ABI bool isImmArgValueInRangeSet(ID IID, unsigned ArgIdx,
                                       const APInt &Value);
 
