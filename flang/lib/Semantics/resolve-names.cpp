@@ -3010,6 +3010,7 @@ const ArraySpec &ArraySpecVisitor::coarraySpec() {
 void ArraySpecVisitor::BeginArraySpec() {
   CHECK(arraySpec_.empty());
   CHECK(coarraySpec_.empty());
+  CHECK(droppedBoundsToCheck_.empty());
   CHECK(attrArraySpec_.empty());
   CHECK(attrCoarraySpec_.empty());
   CHECK(attrDroppedBoundsToCheck_.empty());
@@ -3017,9 +3018,9 @@ void ArraySpecVisitor::BeginArraySpec() {
 void ArraySpecVisitor::EndArraySpec() {
   CHECK(arraySpec_.empty());
   CHECK(coarraySpec_.empty());
+  CHECK(droppedBoundsToCheck_.empty());
   attrArraySpec_.clear();
   attrCoarraySpec_.clear();
-  droppedBoundsToCheck_.clear();
   attrDroppedBoundsToCheck_.clear();
 }
 void ArraySpecVisitor::PostAttrSpec() {
