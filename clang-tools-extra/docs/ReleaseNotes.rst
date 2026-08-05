@@ -94,6 +94,10 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`check_clang_tidy.py` by adding support of
+  ``-std=cXX-or-earlier`` values, mirroring the existing ``-std=cXX-or-later``.
+  New construct expands to the given standard and every earlier one.
+
 New checks
 ^^^^^^^^^^
 
@@ -108,6 +112,10 @@ New check aliases
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`cppcoreguidelines-pro-type-member-init
+  <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
+  ``std::array`` the same as built-in arrays when `IgnoreArrays` option is enabled.
 
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in

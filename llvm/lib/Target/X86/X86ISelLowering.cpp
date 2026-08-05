@@ -1176,15 +1176,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SMIN, VT, VT == MVT::v8i16 ? Legal : Custom);
       setOperationAction(ISD::UMAX, VT, VT == MVT::v16i8 ? Legal : Custom);
       setOperationAction(ISD::UMIN, VT, VT == MVT::v16i8 ? Legal : Custom);
-      setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
     }
 
     // SSE2 can use basic vector unrolling.
     // SSE41 can use PHMINPOS to perform v16i8/v8i16 minmax reductions.
     // Fallback to ReplaceNodeResults for vXi64 reductions on 32-bit targets.
     for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::i64}) {
+      setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
       setOperationAction(ISD::VECREDUCE_MUL,  VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
@@ -2836,6 +2836,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::ANY_EXTEND_VECTOR_INREG,
                        ISD::SIGN_EXTEND_VECTOR_INREG,
                        ISD::ZERO_EXTEND_VECTOR_INREG,
+                       ISD::VECREDUCE_AND,
+                       ISD::VECREDUCE_OR,
+                       ISD::VECREDUCE_XOR,
                        ISD::VECREDUCE_MUL,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
@@ -3476,15 +3479,19 @@ bool X86TargetLowering::shouldReduceLoadWidth(
     if (const auto *GA = dyn_cast<GlobalAddressSDNode>(BasePtr.getOperand(0)))
       return GA->getTargetFlags() != X86II::MO_GOTTPOFF;
 
-  // If this is an (1) AVX vector load with (2) multiple uses and (3) all of
-  // those uses are extracted directly into a store, then the extract + store
-  // can be store-folded, or (4) any use will be used by legal full width
-  // instruction. Then, it's probably not worth splitting the load.
+  // If this is a (1) 128-bit or wider vector load, and any use will be used by
+  // a legal full width instruction, then the load can typically be memory
+  // folded into that instruction, so it's probably not worth splitting the
+  // load. Additionally, for (2) AVX vector loads with (3) multiple uses where
+  // (4) all of those uses are extracted directly into a store, the extract +
+  // store can be store-folded, so it's again not worth splitting.
   EVT VT = Load->getValueType(0);
-  if ((VT.is256BitVector() || VT.is512BitVector()) &&
-      !SDValue(Load, 0).hasOneUse()) {
+  if (VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) {
     bool FullWidthUse = false;
-    bool AllExtractStores = true;
+    // The extract + store folding only helps the AVX split case, which requires
+    // multiple uses of the load.
+    bool AllExtractStores = (VT.is256BitVector() || VT.is512BitVector()) &&
+                            !SDValue(Load, 0).hasOneUse();
     for (SDUse &Use : Load->uses()) {
       // Skip uses of the chain value. Result 0 of the node is the load value.
       if (Use.getResNo() != 0)
@@ -3493,7 +3500,7 @@ bool X86TargetLowering::shouldReduceLoadWidth(
       const SDNode *User = PeekThroughOneUserBitcasts(Use.getUser());
 
       // If this use is an extract + store, it's probably not worth splitting.
-      if (User->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      if (AllExtractStores && User->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
           all_of(User->uses(), [&](const SDUse &U) {
             const SDNode *Inner = PeekThroughOneUserBitcasts(U.getUser());
             return Inner->getOpcode() == ISD::STORE;
@@ -18457,6 +18464,8 @@ static bool canCombineAsMaskOperation(SDValue V,
     case ISD::SRL:
     case ISD::SRA:
     case ISD::MUL:
+    case ISD::PSEUDO_FMIN:
+    case ISD::PSEUDO_FMAX:
       break;
     }
     if (!V->hasOneUse())
@@ -23667,16 +23676,13 @@ static SDValue MatchVectorAllEqualTest(SDValue OrigLHS, SDValue OrigRHS,
 
   // Match icmp(reduce_or(X),0) anyof reduction patterns.
   // Match icmp(reduce_and(X),-1) allof reduction patterns.
-  if (Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-    ISD::NodeType BinOp;
-    if (SDValue Match =
-            DAG.matchBinOpReduction(Op.getNode(), BinOp, {LogicOp})) {
-      EVT MatchVT = Match.getValueType();
-      return LowerVectorAllEqual(DL, Match,
-                                 CmpNull ? DAG.getConstant(0, DL, MatchVT)
-                                         : DAG.getAllOnesConstant(DL, MatchVT),
-                                 CC, Mask, Subtarget, DAG, X86CC);
-    }
+  if (Op.getOpcode() == (CmpNull ? ISD::VECREDUCE_OR : ISD::VECREDUCE_AND)) {
+    SDValue Match = Op.getOperand(0);
+    EVT MatchVT = Match.getValueType();
+    return LowerVectorAllEqual(DL, Match,
+                               CmpNull ? DAG.getConstant(0, DL, MatchVT)
+                                       : DAG.getAllOnesConstant(DL, MatchVT),
+                               CC, Mask, Subtarget, DAG, X86CC);
   }
 
   if (Mask.isAllOnes()) {
@@ -33646,8 +33652,7 @@ static SDValue LowerPARITY(SDValue Op, const X86Subtarget &Subtarget,
   MVT VT = Op.getSimpleValueType();
 
   // Special case. If the input fits in 8-bits we can use a single 8-bit TEST.
-  if (VT == MVT::i8 ||
-      DAG.MaskedValueIsZero(X, APInt::getBitsSetFrom(VT.getSizeInBits(), 8))) {
+  if (VT == MVT::i8 || DAG.computeKnownBits(X).countMaxActiveBits() <= 8) {
     X = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, X);
     SDValue Flags = DAG.getNode(X86ISD::CMP, DL, MVT::i32, X,
                                 DAG.getConstant(0, DL, MVT::i8));
@@ -33662,7 +33667,7 @@ static SDValue LowerPARITY(SDValue Op, const X86Subtarget &Subtarget,
     return SDValue();
 
   if (VT == MVT::i64) {
-    // Xor the high and low 16-bits together using a 32-bit operation.
+    // Xor the high and low 32-bits together using a 32-bit operation.
     SDValue Hi = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32,
                              DAG.getNode(ISD::SRL, DL, MVT::i64, X,
                                          DAG.getConstant(32, DL, MVT::i8)));
@@ -35327,6 +35332,14 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, Lo, Hi);
       Results.push_back(Res);
     }
+    return;
+  }
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR: {
+    assert(N->getValueType(0) == MVT::i64 && "Unexpected vector reduction");
+    if (SDValue Res = LowerVECREDUCE(SDValue(N, 0), Subtarget, DAG, true))
+      Results.push_back(Res);
     return;
   }
   case ISD::VECREDUCE_MUL: {
@@ -47158,33 +47171,33 @@ static SDValue createPSADBW(SelectionDAG &DAG, SDValue N0, SDValue N1,
 }
 
 // Attempt to replace an all_of/any_of/parity style horizontal reduction with a MOVMSK.
-static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
-                                         const X86Subtarget &Subtarget) {
+static SDValue combineVECREDUCE_LOGIC(SDNode *Reduce, SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget) {
   // Bail without SSE2.
   if (!Subtarget.hasSSE2())
     return SDValue();
 
-  EVT ExtractVT = Extract->getValueType(0);
+  // Check for OR(any_of)/AND(all_of)/XOR(parity) horizontal reduction patterns.
+  if (Reduce->getOpcode() != ISD::VECREDUCE_AND &&
+      Reduce->getOpcode() != ISD::VECREDUCE_OR &&
+      Reduce->getOpcode() != ISD::VECREDUCE_XOR)
+    return SDValue();
+
+  ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Reduce->getOpcode());
+  SDValue Match = Reduce->getOperand(0);
+  EVT ExtractVT = Reduce->getValueType(0);
   unsigned BitWidth = ExtractVT.getSizeInBits();
   if (ExtractVT != MVT::i64 && ExtractVT != MVT::i32 && ExtractVT != MVT::i16 &&
       ExtractVT != MVT::i8 && ExtractVT != MVT::i1)
     return SDValue();
 
-  // Check for OR(any_of)/AND(all_of)/XOR(parity) horizontal reduction patterns.
-  ISD::NodeType BinOp;
-  SDValue Match = DAG.matchBinOpReduction(Extract, BinOp, {ISD::OR, ISD::AND});
-  if (!Match && ExtractVT == MVT::i1)
-    Match = DAG.matchBinOpReduction(Extract, BinOp, {ISD::XOR});
-  if (!Match)
-    return SDValue();
-
-  // EXTRACT_VECTOR_ELT can require implicit extension of the vector element
+  // ISD::VECREDUCE_* can require implicit extension of the vector element
   // which we can't support here for now.
   if (Match.getScalarValueSizeInBits() != BitWidth)
     return SDValue();
 
   SDValue Movmsk;
-  SDLoc DL(Extract);
+  SDLoc DL(Reduce);
   EVT MatchVT = Match.getValueType();
   unsigned NumElts = MatchVT.getVectorNumElements();
   unsigned MaxElts = Subtarget.hasInt256() ? 32 : 16;
@@ -48075,10 +48088,6 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   if (SDValue VPDPBUSD = combineVPDPBUSDPattern(N, DAG, Subtarget))
     return VPDPBUSD;
 
-  // Attempt to replace an all_of/any_of horizontal reduction with a MOVMSK.
-  if (SDValue Cmp = combinePredicateReduction(N, DAG, Subtarget))
-    return Cmp;
-
   // Attempt to optimize ADD/FADD reductions with HADD, promotion etc..
   if (SDValue V = combineArithReduction(N, DAG, Subtarget))
     return V;
@@ -48558,21 +48567,44 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
 
   ISD::CondCode CC;
   SDValue Cond, X, Y, LHS, RHS;
-  if (!sd_match(N, m_VSelect(m_AllOf(m_Value(Cond),
-                                     m_OneUse(m_SetCC(m_Value(X), m_Value(Y),
-                                                      m_CondCode(CC)))),
-                             m_Value(LHS), m_Value(RHS))))
+  if (!sd_match(
+          N, m_VSelect(m_AllOf(m_Value(Cond),
+                               m_SetCC(m_Value(X), m_Value(Y), m_CondCode(CC))),
+                       m_Value(LHS), m_Value(RHS))))
     return SDValue();
 
   if (canCombineAsMaskOperation(LHS, Subtarget) ||
       !canCombineAsMaskOperation(RHS, Subtarget))
     return SDValue();
 
+  // For multi-use setcc, check that all users are vselects that benefit.
+  bool CondHasOneUse = Cond.hasOneUse();
+  if (!CondHasOneUse) {
+    if (!llvm::all_of(Cond->users(), [&](SDNode *User) {
+          SDValue UserLHS, UserRHS;
+          return sd_match(User, m_VSelect(m_Specific(Cond), m_Value(UserLHS),
+                                          m_Value(UserRHS))) &&
+                 !canCombineAsMaskOperation(UserLHS, Subtarget) &&
+                 canCombineAsMaskOperation(UserRHS, Subtarget);
+        }))
+      return SDValue();
+  }
+
   // Commute LHS and RHS to create opportunity to select mask instruction.
   // (vselect M, L, R) -> (vselect ~M, R, L)
   ISD::CondCode NewCC = ISD::getSetCCInverse(CC, X.getValueType());
-  Cond = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(), X, Y, NewCC);
-  return DAG.getSelect(DL, LHS.getValueType(), Cond, RHS, LHS);
+  SDValue NewCond = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(), X, Y, NewCC);
+  if (CondHasOneUse)
+    return DAG.getSelect(DL, LHS.getValueType(), NewCond, RHS, LHS);
+
+  // Invert the setcc for all users and commute all vselects.
+  DAG.ReplaceAllUsesOfValueWith(Cond, NewCond);
+  for (SDNode *User : NewCond->users()) {
+    SDValue UserLHS = User->getOperand(1);
+    SDValue UserRHS = User->getOperand(2);
+    DAG.UpdateNodeOperands(User, NewCond, UserRHS, UserLHS);
+  }
+  return SDValue(N, 0);
 }
 
 /// Do target-specific dag combines on SELECT and VSELECT nodes.
@@ -63093,6 +63125,9 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VFCMULC:
   case X86ISD::VFMULC:      return combineFMulcFCMulc(N, DAG, Subtarget);
   case ISD::FNEG:           return combineFneg(N, DAG, DCI, Subtarget);
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:  return combineVECREDUCE_LOGIC(N, DAG, Subtarget);
   case ISD::VECREDUCE_MUL:  return combineVECREDUCE_MUL(N, DAG, Subtarget);
   case ISD::TRUNCATE:       return combineTruncate(N, DAG, Subtarget);
   case X86ISD::VTRUNC:      return combineVTRUNC(N, DAG, DCI);
