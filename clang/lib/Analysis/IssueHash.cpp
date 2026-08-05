@@ -94,6 +94,11 @@ static std::string GetEnclosingDeclContextSignature(const Decl *D) {
     case Decl::Record:
     case Decl::CXXRecord:
     case Decl::Enum:
+    case Decl::ObjCInterface:
+    case Decl::ObjCImplementation:
+    case Decl::ObjCCategory:
+    case Decl::ObjCCategoryImpl:
+    case Decl::ObjCProtocol:
       DeclName = ND->getQualifiedNameAsString();
       break;
     case Decl::CXXConstructor:
