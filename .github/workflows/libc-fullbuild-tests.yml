@@ -141,7 +141,7 @@ jobs:
       uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
       with:
         max-size: 1G
-        key: libc_fullbuild_v3_${{ matrix.name }}_${{ matrix.build_type }}_${{ matrix.c_compiler }}
+        key: libc_fullbuild_v3_${{ matrix.target }}_${{ matrix.build_type }}_${{ matrix.c_compiler }}
         variant: sccache
 
     # Configure libc fullbuild with scudo.
