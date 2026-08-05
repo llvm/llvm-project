@@ -248,7 +248,8 @@ getPGOFuncName(StringRef RawFuncName, GlobalValue::LinkageTypes Linkage,
 /// \return the modified name for global object \c GO suitable to be
 /// used as the key for IRPGO profile lookup. \c InLTO indicates if this is
 /// called from LTO optimization passes.
-LLVM_ABI std::string getIRPGOObjectName(const GlobalObject &GO, bool InLTO = false);
+LLVM_ABI std::string getIRPGOObjectName(const GlobalObject &GO,
+                                        bool InLTO = false);
 
 /// \return the filename and the function name parsed from the output of
 /// \c getIRPGOObjectName()
