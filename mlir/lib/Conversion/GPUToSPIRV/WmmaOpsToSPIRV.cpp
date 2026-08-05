@@ -322,6 +322,37 @@ struct WmmaElementwiseOpToSPIRVScalarMulLowering final
 namespace khr {
 namespace {
 
+struct MemoryRequirements {
+  spirv::MemoryAccessAttr memoryAccess;
+  IntegerAttr alignment;
+};
+
+/// Mirrors calculateMemoryRequirements in MemRefToSPIRV.cpp, simplified since
+/// coop matrix load/store have no alignment or nontemporal attrs of their own.
+static MemoryRequirements calculateMemoryRequirements(Value accessedPtr) {
+  auto ptrType = cast<spirv::PointerType>(accessedPtr.getType());
+  if (ptrType.getStorageClass() != spirv::StorageClass::PhysicalStorageBuffer)
+    return {};
+
+  // PhysicalStorageBuffer pointers require Aligned.
+  std::optional<int64_t> sizeInBytes;
+  Type pointeeType = ptrType.getPointeeType();
+  if (auto scalarType = dyn_cast<spirv::ScalarType>(pointeeType)) {
+    sizeInBytes = scalarType.getSizeInBytes();
+  } else if (auto vecType = dyn_cast<VectorType>(pointeeType)) {
+    if (auto scalarElem = dyn_cast<spirv::ScalarType>(vecType.getElementType()))
+      if (auto elemSize = scalarElem.getSizeInBytes())
+        sizeInBytes = *elemSize * vecType.getNumElements();
+  }
+
+  if (!sizeInBytes)
+    return {};
+
+  MLIRContext *ctx = accessedPtr.getContext();
+  return {spirv::MemoryAccessAttr::get(ctx, spirv::MemoryAccess::Aligned),
+          IntegerAttr::get(IntegerType::get(ctx, 32), *sizeInBytes)};
+}
+
 /// Converts the GPU MMA loadOp to KHRCooperativeMatrixLoad op in the SPIRV
 /// dialect.
 struct WmmaLoadOpToSPIRVLowering final
@@ -354,8 +385,10 @@ struct WmmaLoadOpToSPIRVLowering final
     auto layout = isColMajor ? spirv::CooperativeMatrixLayoutKHR::ColumnMajor
                              : spirv::CooperativeMatrixLayoutKHR::RowMajor;
 
+    MemoryRequirements memReq = calculateMemoryRequirements(bufferPtr);
     rewriter.replaceOpWithNewOp<spirv::KHRCooperativeMatrixLoadOp>(
-        op, coopType, bufferPtr, strideValue, layout);
+        op, coopType, bufferPtr, layout, strideValue, memReq.memoryAccess,
+        memReq.alignment);
     return success();
   }
 };
@@ -386,8 +419,10 @@ struct WmmaStoreOpToSPIRVLowering final
     auto layout = isColMajor ? spirv::CooperativeMatrixLayoutKHR::ColumnMajor
                              : spirv::CooperativeMatrixLayoutKHR::RowMajor;
 
+    MemoryRequirements memReq = calculateMemoryRequirements(bufferPtr);
     rewriter.replaceOpWithNewOp<spirv::KHRCooperativeMatrixStoreOp>(
-        op, bufferPtr, adaptor.getSrc(), strideValue, layout);
+        op, bufferPtr, adaptor.getSrc(), layout, strideValue,
+        memReq.memoryAccess, memReq.alignment);
     return success();
   }
 };
