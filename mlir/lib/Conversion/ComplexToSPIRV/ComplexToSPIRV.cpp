@@ -629,6 +629,60 @@ struct TanTanhOpPattern final : OpConversionPattern<ComplexOp> {
     return success();
   }
 };
+
+/// Computes complex.pow(lhs, rhs) following the polar decomposition
+/// lhs^rhs = exp(c*log(abs(lhs)) - d*arg(lhs))
+///         * (cos(c*arg(lhs) + d*log(abs(lhs)))
+///            + i*sin(c*arg(lhs) + d*log(abs(lhs))))
+/// where rhs = c + i*d.
+template <typename SqrtOp, typename LogOp, typename ExpOp, typename SinOp,
+          typename CosOp, typename Atan2Op, typename PowOp>
+struct PowOpPattern final : OpConversionPattern<complex::PowOp> {
+  using OpConversionPattern<complex::PowOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::PowOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType = getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value lhs = adaptor.getLhs();
+    Value rhs = adaptor.getRhs();
+
+    Value a = spirv::CompositeExtractOp::create(rewriter, loc, lhs, {0});
+    Value b = spirv::CompositeExtractOp::create(rewriter, loc, lhs, {1});
+    Value c = spirv::CompositeExtractOp::create(rewriter, loc, rhs, {0});
+    Value d = spirv::CompositeExtractOp::create(rewriter, loc, rhs, {1});
+
+    Value aSq = spirv::FMulOp::create(rewriter, loc, a, a);
+    Value bSq = spirv::FMulOp::create(rewriter, loc, b, b);
+    Value absSq = spirv::FAddOp::create(rewriter, loc, aSq, bSq);
+    Value abs = SqrtOp::create(rewriter, loc, absSq);
+    Value absToC = PowOp::create(rewriter, loc, abs, c);
+
+    Value argLhs = Atan2Op::create(rewriter, loc, b, a);
+    Value negD = spirv::FNegateOp::create(rewriter, loc, d);
+    Value negDArgLhs = spirv::FMulOp::create(rewriter, loc, negD, argLhs);
+    Value expNegDArgLhs = ExpOp::create(rewriter, loc, negDArgLhs);
+    Value coeff = spirv::FMulOp::create(rewriter, loc, absToC, expNegDArgLhs);
+
+    Value lnAbs = LogOp::create(rewriter, loc, abs);
+    Value cArgLhs = spirv::FMulOp::create(rewriter, loc, c, argLhs);
+    Value dLnAbs = spirv::FMulOp::create(rewriter, loc, d, lnAbs);
+    Value q = spirv::FAddOp::create(rewriter, loc, cArgLhs, dLnAbs);
+    Value cosQ = CosOp::create(rewriter, loc, q);
+    Value sinQ = SinOp::create(rewriter, loc, q);
+
+    Value resultRe = spirv::FMulOp::create(rewriter, loc, coeff, cosQ);
+    Value resultIm = spirv::FMulOp::create(rewriter, loc, coeff, sinQ);
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
+    return success();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -700,6 +754,11 @@ void mlir::populateComplexToSPIRVPatterns(
       TanTanhOpPattern</*IsTanh=*/true, spirv::GLSinOp, spirv::GLCosOp,
                        spirv::GLSinhOp, spirv::GLCoshOp>,
       TanTanhOpPattern</*IsTanh=*/true, spirv::CLSinOp, spirv::CLCosOp,
-                       spirv::CLSinhOp, spirv::CLCoshOp>>(typeConverter,
-                                                          context);
+                       spirv::CLSinhOp, spirv::CLCoshOp>,
+      PowOpPattern<spirv::GLSqrtOp, spirv::GLLogOp, spirv::GLExpOp,
+                   spirv::GLSinOp, spirv::GLCosOp, spirv::GLAtan2Op,
+                   spirv::GLPowOp>,
+      PowOpPattern<spirv::CLSqrtOp, spirv::CLLogOp, spirv::CLExpOp,
+                   spirv::CLSinOp, spirv::CLCosOp, spirv::CLAtan2Op,
+                   spirv::CLPowOp>>(typeConverter, context);
 }
