@@ -1642,7 +1642,6 @@ module std {
   // which are in turn used by the facet headers that make up std.locale, so making them part
   // of std.locale would create a cycle.
   module locale_base {
-    header "__locale"
     module codecvt          { header "__locale_dir/codecvt.h"          export * }
     module collate          { header "__locale_dir/collate.h"          export * }
     module ctype            { header "__locale_dir/ctype.h"            export * }
