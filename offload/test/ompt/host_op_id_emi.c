@@ -26,7 +26,8 @@ int main(void) {
 
   printf("Allocating Memory on Device\n");
   int *DevPtr = (int *)omp_target_alloc(sizeof(int), Device);
-  assert(DevPtr && "Could not allocate memory on device.");
+  int *DevPtr2 = (int *)omp_target_alloc(sizeof(int), Device);
+  assert(DevPtr && DevPtr2 && "Could not allocate memory on device.");
   int *HstPtr = (int *)malloc(sizeof(int));
   *HstPtr = 42;
 
@@ -35,11 +36,12 @@ int main(void) {
   assert(Status == 0 && "H2D memory copy operation failed.\n");
 
   printf("Testing: Device to Device\n");
-  Status = omp_target_memcpy(DevPtr, DevPtr, sizeof(int), 0, 0, Device, Device);
+  Status =
+      omp_target_memcpy(DevPtr2, DevPtr, sizeof(int), 0, 0, Device, Device);
   assert(Status == 0 && "D2D memory copy operation failed.\n");
 
   printf("Testing: Device to Host\n");
-  Status = omp_target_memcpy(HstPtr, DevPtr, sizeof(int), 0, 0, Host, Device);
+  Status = omp_target_memcpy(HstPtr, DevPtr2, sizeof(int), 0, 0, Host, Device);
   assert(Status == 0 && "D2H memory copy operation failed.\n");
 
   printf("Checking Correctness\n");
@@ -56,6 +58,7 @@ int main(void) {
   printf("Freeing Memory on Device\n");
   free(HstPtr);
   omp_target_free(DevPtr, Device);
+  omp_target_free(DevPtr2, Device);
 
   return 0;
 }
