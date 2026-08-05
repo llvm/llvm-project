@@ -32,14 +32,23 @@ subroutine uses_allocators_50
   x = 4
   !$omp end target
 
-  !WARNING: 'mem-space' modifier is not supported in OpenMP v5.0, try -fopenmp-version=52
-  !$omp target uses_allocators(memspace(omp_default_mem_space): my_alloc)
+  ! Accepting the newer syntax with a warning does not skip the remaining
+  ! checks on the specification.
+  !WARNING: 'traits-array' modifier is not supported in OpenMP v5.0, try -fopenmp-version=52
+  !ERROR: The traits array must be a named constant array
+  !$omp target uses_allocators(traits(1): my_alloc)
   x = 5
+  !$omp end target
+
+  !WARNING: 'mem-space' modifier is not supported in OpenMP v5.0, try -fopenmp-version=52
+  !ERROR: A non-predefined allocator 'my_alloc' in a USES_ALLOCATORS clause must have traits specified in OpenMP v5.0
+  !$omp target uses_allocators(memspace(omp_default_mem_space): my_alloc)
+  x = 6
   !$omp end target
 
   !ERROR: A non-predefined allocator 'omp_null_allocator' in a USES_ALLOCATORS clause must be a variable
   !$omp target uses_allocators(omp_null_allocator(tr))
-  x = 6
+  x = 7
   !$omp end target
 end subroutine
 

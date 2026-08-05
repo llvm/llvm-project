@@ -53,6 +53,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -5486,11 +5487,12 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
 
   // The traits of the deprecated syntax are stored as a traits-array modifier,
   // but they are not the 5.2 modifier, so they must not be version-checked.
+  // A modifier that postdates the OpenMP version in effect is only warned
+  // about, so the specification is accepted as an extension and must still be
+  // checked, otherwise a malformed one would reach lowering unvalidated.
   if (!isLegacySyntax) {
-    if (!OmpVerifyModifiers(spec, llvm::omp::OMPC_uses_allocators,
-            GetContext().clauseSource, context_)) {
-      return;
-    }
+    OmpVerifyModifiers(spec, llvm::omp::OMPC_uses_allocators,
+        GetContext().clauseSource, context_);
   }
 
   auto &modifiers{OmpGetModifiers(spec)};
