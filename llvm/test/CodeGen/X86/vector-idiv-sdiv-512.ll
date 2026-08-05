@@ -7,7 +7,6 @@
 ;
 
 define <8 x i64> @test_div7_8i64(<8 x i64> %a) nounwind {
-;
 ; AVX-LABEL: test_div7_8i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
@@ -247,7 +246,6 @@ define <64 x i8> @test_divconstant_64i8(<64 x i8> %a) nounwind {
 ;
 
 define <8 x i64> @test_rem7_8i64(<8 x i64> %a) nounwind {
-;
 ; AVX-LABEL: test_rem7_8i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
