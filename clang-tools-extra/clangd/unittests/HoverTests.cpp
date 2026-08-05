@@ -5472,6 +5472,54 @@ TEST(Hover, HLSLControlFlowAndLoopHints) {
     }
   }
 }
+
+TEST(Hover, CXXStatementAttributes) {
+  struct {
+    const char *const Code;
+    const char *const Target;
+    const char *const ExpectedName;
+  } Cases[] = {{
+                   R"cpp(
+            void foo() {
+              [[likely]] if (true) {}
+            }
+          )cpp",
+                   "likely", "likely"},
+               {
+                   R"cpp(
+            void foo() {
+              [[unlikely]] if (true) {}
+            }
+          )cpp",
+                   "unlikely", "unlikely"},
+               {
+                   R"cpp(
+            void foo() {
+              switch (1) {
+              case 1:
+                [[fallthrough]];
+              case 2:
+                break;
+              }
+            }
+          )cpp",
+                   "fallthrough", "fallthrough"}};
+
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    TestTU TU = TestTU::withCode(Case.Code);
+    TU.ExtraArgs.push_back("-std=c++20");
+    auto AST = TU.build();
+
+    llvm::StringRef Code = Case.Code;
+    size_t Offset = Code.find(Case.Target);
+    Position P = offsetToPosition(Code, Offset);
+
+    auto H = getHover(AST, P, format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+    EXPECT_EQ(H->Name, Case.ExpectedName);
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
