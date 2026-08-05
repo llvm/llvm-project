@@ -103,7 +103,7 @@ public:
 
   ArchSpec GetArchitecture() override { return m_arch; }
 
-  UUID GetUUID() override { return m_uuid; }
+  UUID GetUUID() override;
 
   uint32_t GetDependentModules(FileSpecList &files) override { return 0; }
 

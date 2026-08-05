@@ -4157,6 +4157,14 @@ struct OmpLinearModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpLinearModifier, Value);
 };
 
+// Ref: [4.5:207-210], [5.0:290-293], [5.1:323-325]
+//
+// linear-stepr ->
+//    integer-expresion                             // since 4.5, until 5.1
+struct OmpLinearStep {
+  WRAPPER_CLASS_BOILERPLATE(OmpLinearStep, ScalarIntExpr);
+};
+
 // Ref: [6.0:372-373]
 //
 // loop-modifier ->
@@ -4212,9 +4220,8 @@ struct OmpMapType {
 //    CLOSE |                                       // since 5.0, until 5.2
 //    PRESENT                                       // since 5.1, until 5.2
 // Since 6.0 the map-type-modifier has been split into individual modifiers.
-//
 struct OmpMapTypeModifier {
-  ENUM_CLASS(Value, Always, Close, Present, Ompx_Hold)
+  ENUM_CLASS(Value, Always, Close, Present)
   WRAPPER_CLASS_BOILERPLATE(OmpMapTypeModifier, Value);
 };
 
@@ -4335,10 +4342,10 @@ struct OmpStepComplexModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpStepComplexModifier, ScalarIntExpr);
 };
 
-// Ref: [4.5:207-210], [5.0:290-293], [5.1:323-325], [5.2:117-120]
+// Ref: [5.2:117-120], [6.0:232-235]
 //
 // step-simple-modifier ->
-//    integer-expresion                             // since 4.5
+//    integer-expresion                             // since 5.2
 struct OmpStepSimpleModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpStepSimpleModifier, ScalarIntExpr);
 };
@@ -4818,16 +4825,19 @@ struct OmpLastprivateClause {
 // Ref: [4.5:207-210], [5.0:290-293], [5.1:323-325], [5.2:117-120]
 //
 // linear-clause ->
-//    LINEAR(list [: step-simple-modifier]) |       // since 4.5
+//    LINEAR(list [: linear-step]) |                // since 4.5, until 5.1
+//    LINEAR(list [: step-simple-modifier]) |       // since 5.2
+//    LINEAR(
+//        linear-modifier(list) [: linear-step]) |  // since 4.5, until 5.1
 //    LINEAR(linear-modifier(list)
-//        [: step-simple-modifier]) |               // since 4.5, until 5.2[*]
+//        [: step-simple-modifier]) |               // since 5.2, until 5.2[*]
 //    LINEAR(list [: linear-modifier,
 //        step-complex-modifier])                   // since 5.2
-// [*] Still allowed in 5.2 when on DECLARE SIMD, but deprecated.
+// [*] Allowed in 5.2 when on DECLARE SIMD, but deprecated.
 struct OmpLinearClause {
   TUPLE_CLASS_BOILERPLATE(OmpLinearClause);
-  MODIFIER_BOILERPLATE(
-      OmpLinearModifier, OmpStepSimpleModifier, OmpStepComplexModifier);
+  MODIFIER_BOILERPLATE(OmpLinearModifier, OmpLinearStep, OmpStepSimpleModifier,
+      OmpStepComplexModifier);
   std::tuple<OmpObjectList, MODIFIERS(), /*PostModified=*/bool> t;
 };
 

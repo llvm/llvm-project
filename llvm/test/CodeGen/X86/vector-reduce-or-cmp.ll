@@ -17,7 +17,7 @@
 ; vXi64
 ;
 
-define i1 @test_v2i64(<2 x i64> %a0) {
+define i1 @test_v2i64(<2 x i64> %a0) nounwind {
 ; SSE2-LABEL: test_v2i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
@@ -43,7 +43,7 @@ define i1 @test_v2i64(<2 x i64> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v4i64(<4 x i64> %a0) {
+define i1 @test_v4i64(<4 x i64> %a0) nounwind {
 ; SSE2-LABEL: test_v4i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
@@ -72,14 +72,11 @@ define i1 @test_v4i64(<4 x i64> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v8i64(<8 x i64> %a0) {
+define i1 @test_v8i64(<8 x i64> %a0) nounwind {
 ; X86-SSE2-LABEL: test_v8i64:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    por %xmm2, %xmm0
@@ -92,7 +89,6 @@ define i1 @test_v8i64(<8 x i64> %a0) {
 ; X86-SSE2-NEXT:    sete %al
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_v8i64:
@@ -110,10 +106,7 @@ define i1 @test_v8i64(<8 x i64> %a0) {
 ; X86-SSE4-LABEL: test_v8i64:
 ; X86-SSE4:       # %bb.0:
 ; X86-SSE4-NEXT:    pushl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE4-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE4-NEXT:    movl %esp, %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE4-NEXT:    andl $-16, %esp
 ; X86-SSE4-NEXT:    subl $16, %esp
 ; X86-SSE4-NEXT:    por %xmm2, %xmm0
@@ -123,7 +116,6 @@ define i1 @test_v8i64(<8 x i64> %a0) {
 ; X86-SSE4-NEXT:    sete %al
 ; X86-SSE4-NEXT:    movl %ebp, %esp
 ; X86-SSE4-NEXT:    popl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE4-LABEL: test_v8i64:
@@ -163,14 +155,11 @@ define i1 @test_v8i64(<8 x i64> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v16i64(<16 x i64> %a0) {
+define i1 @test_v16i64(<16 x i64> %a0) nounwind {
 ; X86-SSE2-LABEL: test_v16i64:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    movdqa 8(%ebp), %xmm3
@@ -188,7 +177,6 @@ define i1 @test_v16i64(<16 x i64> %a0) {
 ; X86-SSE2-NEXT:    setne %al
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_v16i64:
@@ -210,10 +198,7 @@ define i1 @test_v16i64(<16 x i64> %a0) {
 ; X86-SSE4-LABEL: test_v16i64:
 ; X86-SSE4:       # %bb.0:
 ; X86-SSE4-NEXT:    pushl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE4-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE4-NEXT:    movl %esp, %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE4-NEXT:    andl $-16, %esp
 ; X86-SSE4-NEXT:    subl $16, %esp
 ; X86-SSE4-NEXT:    movdqa 8(%ebp), %xmm3
@@ -228,7 +213,6 @@ define i1 @test_v16i64(<16 x i64> %a0) {
 ; X86-SSE4-NEXT:    setne %al
 ; X86-SSE4-NEXT:    movl %ebp, %esp
 ; X86-SSE4-NEXT:    popl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE4-LABEL: test_v16i64:
@@ -247,10 +231,7 @@ define i1 @test_v16i64(<16 x i64> %a0) {
 ; X86-AVX1-LABEL: test_v16i64:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    pushl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX1-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX1-NEXT:    movl %esp, %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX1-NEXT:    andl $-32, %esp
 ; X86-AVX1-NEXT:    subl $32, %esp
 ; X86-AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
@@ -260,7 +241,6 @@ define i1 @test_v16i64(<16 x i64> %a0) {
 ; X86-AVX1-NEXT:    setne %al
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX1-NEXT:    vzeroupper
 ; X86-AVX1-NEXT:    retl
 ;
@@ -277,10 +257,7 @@ define i1 @test_v16i64(<16 x i64> %a0) {
 ; X86-AVX2-LABEL: test_v16i64:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    pushl %ebp
-; X86-AVX2-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX2-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX2-NEXT:    movl %esp, %ebp
-; X86-AVX2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX2-NEXT:    andl $-32, %esp
 ; X86-AVX2-NEXT:    subl $32, %esp
 ; X86-AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
@@ -290,7 +267,6 @@ define i1 @test_v16i64(<16 x i64> %a0) {
 ; X86-AVX2-NEXT:    setne %al
 ; X86-AVX2-NEXT:    movl %ebp, %esp
 ; X86-AVX2-NEXT:    popl %ebp
-; X86-AVX2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX2-NEXT:    vzeroupper
 ; X86-AVX2-NEXT:    retl
 ;
@@ -321,7 +297,7 @@ define i1 @test_v16i64(<16 x i64> %a0) {
 ; vXi32
 ;
 
-define i1 @test_v2i32(<2 x i32> %a0) {
+define i1 @test_v2i32(<2 x i32> %a0) nounwind {
 ; X86-SSE2-LABEL: test_v2i32:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movd %xmm0, %eax
@@ -387,7 +363,7 @@ define i1 @test_v2i32(<2 x i32> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v4i32(<4 x i32> %a0) {
+define i1 @test_v4i32(<4 x i32> %a0) nounwind {
 ; SSE2-LABEL: test_v4i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
@@ -413,7 +389,7 @@ define i1 @test_v4i32(<4 x i32> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v8i32(<8 x i32> %a0) {
+define i1 @test_v8i32(<8 x i32> %a0) nounwind {
 ; SSE2-LABEL: test_v8i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
@@ -442,14 +418,11 @@ define i1 @test_v8i32(<8 x i32> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v16i32(<16 x i32> %a0) {
+define i1 @test_v16i32(<16 x i32> %a0) nounwind {
 ; X86-SSE2-LABEL: test_v16i32:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    por %xmm2, %xmm0
@@ -462,7 +435,6 @@ define i1 @test_v16i32(<16 x i32> %a0) {
 ; X86-SSE2-NEXT:    setne %al
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_v16i32:
@@ -480,10 +452,7 @@ define i1 @test_v16i32(<16 x i32> %a0) {
 ; X86-SSE4-LABEL: test_v16i32:
 ; X86-SSE4:       # %bb.0:
 ; X86-SSE4-NEXT:    pushl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE4-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE4-NEXT:    movl %esp, %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE4-NEXT:    andl $-16, %esp
 ; X86-SSE4-NEXT:    subl $16, %esp
 ; X86-SSE4-NEXT:    por %xmm2, %xmm0
@@ -493,7 +462,6 @@ define i1 @test_v16i32(<16 x i32> %a0) {
 ; X86-SSE4-NEXT:    setne %al
 ; X86-SSE4-NEXT:    movl %ebp, %esp
 ; X86-SSE4-NEXT:    popl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE4-LABEL: test_v16i32:
@@ -533,14 +501,11 @@ define i1 @test_v16i32(<16 x i32> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v32i32(<32 x i32> %a0) {
+define i1 @test_v32i32(<32 x i32> %a0) nounwind {
 ; X86-SSE2-LABEL: test_v32i32:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    movdqa 8(%ebp), %xmm3
@@ -558,7 +523,6 @@ define i1 @test_v32i32(<32 x i32> %a0) {
 ; X86-SSE2-NEXT:    sete %al
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_v32i32:
@@ -580,10 +544,7 @@ define i1 @test_v32i32(<32 x i32> %a0) {
 ; X86-SSE4-LABEL: test_v32i32:
 ; X86-SSE4:       # %bb.0:
 ; X86-SSE4-NEXT:    pushl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE4-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE4-NEXT:    movl %esp, %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE4-NEXT:    andl $-16, %esp
 ; X86-SSE4-NEXT:    subl $16, %esp
 ; X86-SSE4-NEXT:    movdqa 8(%ebp), %xmm3
@@ -598,7 +559,6 @@ define i1 @test_v32i32(<32 x i32> %a0) {
 ; X86-SSE4-NEXT:    sete %al
 ; X86-SSE4-NEXT:    movl %ebp, %esp
 ; X86-SSE4-NEXT:    popl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE4-LABEL: test_v32i32:
@@ -617,10 +577,7 @@ define i1 @test_v32i32(<32 x i32> %a0) {
 ; X86-AVX1-LABEL: test_v32i32:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    pushl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX1-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX1-NEXT:    movl %esp, %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX1-NEXT:    andl $-32, %esp
 ; X86-AVX1-NEXT:    subl $32, %esp
 ; X86-AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
@@ -630,7 +587,6 @@ define i1 @test_v32i32(<32 x i32> %a0) {
 ; X86-AVX1-NEXT:    sete %al
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX1-NEXT:    vzeroupper
 ; X86-AVX1-NEXT:    retl
 ;
@@ -647,10 +603,7 @@ define i1 @test_v32i32(<32 x i32> %a0) {
 ; X86-AVX2-LABEL: test_v32i32:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    pushl %ebp
-; X86-AVX2-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX2-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX2-NEXT:    movl %esp, %ebp
-; X86-AVX2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX2-NEXT:    andl $-32, %esp
 ; X86-AVX2-NEXT:    subl $32, %esp
 ; X86-AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
@@ -660,7 +613,6 @@ define i1 @test_v32i32(<32 x i32> %a0) {
 ; X86-AVX2-NEXT:    sete %al
 ; X86-AVX2-NEXT:    movl %ebp, %esp
 ; X86-AVX2-NEXT:    popl %ebp
-; X86-AVX2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX2-NEXT:    vzeroupper
 ; X86-AVX2-NEXT:    retl
 ;
@@ -691,7 +643,7 @@ define i1 @test_v32i32(<32 x i32> %a0) {
 ; vXi16
 ;
 
-define i1 @test_v2i16(<2 x i16> %a0) {
+define i1 @test_v2i16(<2 x i16> %a0) nounwind {
 ; SSE-LABEL: test_v2i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd %xmm0, %eax
@@ -710,7 +662,7 @@ define i1 @test_v2i16(<2 x i16> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v4i16(<4 x i16> %a0) {
+define i1 @test_v4i16(<4 x i16> %a0) nounwind {
 ; X86-SSE2-LABEL: test_v4i16:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movd %xmm0, %eax
@@ -776,7 +728,7 @@ define i1 @test_v4i16(<4 x i16> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v8i16(<8 x i16> %a0) {
+define i1 @test_v8i16(<8 x i16> %a0) nounwind {
 ; SSE2-LABEL: test_v8i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
@@ -802,7 +754,7 @@ define i1 @test_v8i16(<8 x i16> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v16i16(<16 x i16> %a0) {
+define i1 @test_v16i16(<16 x i16> %a0) nounwind {
 ; SSE2-LABEL: test_v16i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
@@ -831,14 +783,11 @@ define i1 @test_v16i16(<16 x i16> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v32i16(<32 x i16> %a0) {
+define i1 @test_v32i16(<32 x i16> %a0) nounwind {
 ; X86-SSE2-LABEL: test_v32i16:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    por %xmm2, %xmm0
@@ -851,7 +800,6 @@ define i1 @test_v32i16(<32 x i16> %a0) {
 ; X86-SSE2-NEXT:    sete %al
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_v32i16:
@@ -869,10 +817,7 @@ define i1 @test_v32i16(<32 x i16> %a0) {
 ; X86-SSE4-LABEL: test_v32i16:
 ; X86-SSE4:       # %bb.0:
 ; X86-SSE4-NEXT:    pushl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE4-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE4-NEXT:    movl %esp, %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE4-NEXT:    andl $-16, %esp
 ; X86-SSE4-NEXT:    subl $16, %esp
 ; X86-SSE4-NEXT:    por %xmm2, %xmm0
@@ -882,7 +827,6 @@ define i1 @test_v32i16(<32 x i16> %a0) {
 ; X86-SSE4-NEXT:    sete %al
 ; X86-SSE4-NEXT:    movl %ebp, %esp
 ; X86-SSE4-NEXT:    popl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE4-LABEL: test_v32i16:
@@ -922,14 +866,11 @@ define i1 @test_v32i16(<32 x i16> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v64i16(<64 x i16> %a0) {
+define i1 @test_v64i16(<64 x i16> %a0) nounwind {
 ; X86-SSE2-LABEL: test_v64i16:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    movdqa 8(%ebp), %xmm3
@@ -947,7 +888,6 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; X86-SSE2-NEXT:    setne %al
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_v64i16:
@@ -969,10 +909,7 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; X86-SSE4-LABEL: test_v64i16:
 ; X86-SSE4:       # %bb.0:
 ; X86-SSE4-NEXT:    pushl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE4-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE4-NEXT:    movl %esp, %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE4-NEXT:    andl $-16, %esp
 ; X86-SSE4-NEXT:    subl $16, %esp
 ; X86-SSE4-NEXT:    movdqa 8(%ebp), %xmm3
@@ -987,7 +924,6 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; X86-SSE4-NEXT:    setne %al
 ; X86-SSE4-NEXT:    movl %ebp, %esp
 ; X86-SSE4-NEXT:    popl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE4-LABEL: test_v64i16:
@@ -1006,10 +942,7 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; X86-AVX1-LABEL: test_v64i16:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    pushl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX1-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX1-NEXT:    movl %esp, %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX1-NEXT:    andl $-32, %esp
 ; X86-AVX1-NEXT:    subl $32, %esp
 ; X86-AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
@@ -1019,7 +952,6 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; X86-AVX1-NEXT:    setne %al
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX1-NEXT:    vzeroupper
 ; X86-AVX1-NEXT:    retl
 ;
@@ -1036,10 +968,7 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; X86-AVX2-LABEL: test_v64i16:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    pushl %ebp
-; X86-AVX2-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX2-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX2-NEXT:    movl %esp, %ebp
-; X86-AVX2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX2-NEXT:    andl $-32, %esp
 ; X86-AVX2-NEXT:    subl $32, %esp
 ; X86-AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
@@ -1049,7 +978,6 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; X86-AVX2-NEXT:    setne %al
 ; X86-AVX2-NEXT:    movl %ebp, %esp
 ; X86-AVX2-NEXT:    popl %ebp
-; X86-AVX2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX2-NEXT:    vzeroupper
 ; X86-AVX2-NEXT:    retl
 ;
@@ -1080,7 +1008,7 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; vXi8
 ;
 
-define i1 @test_v2i8(<2 x i8> %a0) {
+define i1 @test_v2i8(<2 x i8> %a0) nounwind {
 ; SSE-LABEL: test_v2i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd %xmm0, %eax
@@ -1099,7 +1027,7 @@ define i1 @test_v2i8(<2 x i8> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v4i8(<4 x i8> %a0) {
+define i1 @test_v4i8(<4 x i8> %a0) nounwind {
 ; SSE-LABEL: test_v4i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd %xmm0, %eax
@@ -1118,7 +1046,7 @@ define i1 @test_v4i8(<4 x i8> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v8i8(<8 x i8> %a0) {
+define i1 @test_v8i8(<8 x i8> %a0) nounwind {
 ; X86-SSE2-LABEL: test_v8i8:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movd %xmm0, %eax
@@ -1184,7 +1112,7 @@ define i1 @test_v8i8(<8 x i8> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v16i8(<16 x i8> %a0) {
+define i1 @test_v16i8(<16 x i8> %a0) nounwind {
 ; SSE2-LABEL: test_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
@@ -1210,7 +1138,7 @@ define i1 @test_v16i8(<16 x i8> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v32i8(<32 x i8> %a0) {
+define i1 @test_v32i8(<32 x i8> %a0) nounwind {
 ; SSE2-LABEL: test_v32i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
@@ -1239,14 +1167,11 @@ define i1 @test_v32i8(<32 x i8> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v64i8(<64 x i8> %a0) {
+define i1 @test_v64i8(<64 x i8> %a0) nounwind {
 ; X86-SSE2-LABEL: test_v64i8:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    por %xmm2, %xmm0
@@ -1259,7 +1184,6 @@ define i1 @test_v64i8(<64 x i8> %a0) {
 ; X86-SSE2-NEXT:    setne %al
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_v64i8:
@@ -1277,10 +1201,7 @@ define i1 @test_v64i8(<64 x i8> %a0) {
 ; X86-SSE4-LABEL: test_v64i8:
 ; X86-SSE4:       # %bb.0:
 ; X86-SSE4-NEXT:    pushl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE4-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE4-NEXT:    movl %esp, %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE4-NEXT:    andl $-16, %esp
 ; X86-SSE4-NEXT:    subl $16, %esp
 ; X86-SSE4-NEXT:    por %xmm2, %xmm0
@@ -1290,7 +1211,6 @@ define i1 @test_v64i8(<64 x i8> %a0) {
 ; X86-SSE4-NEXT:    setne %al
 ; X86-SSE4-NEXT:    movl %ebp, %esp
 ; X86-SSE4-NEXT:    popl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE4-LABEL: test_v64i8:
@@ -1330,14 +1250,11 @@ define i1 @test_v64i8(<64 x i8> %a0) {
   ret i1 %2
 }
 
-define i1 @test_v128i8(<128 x i8> %a0) {
+define i1 @test_v128i8(<128 x i8> %a0) nounwind {
 ; X86-SSE2-LABEL: test_v128i8:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    movdqa 8(%ebp), %xmm3
@@ -1355,7 +1272,6 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ; X86-SSE2-NEXT:    sete %al
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_v128i8:
@@ -1377,10 +1293,7 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ; X86-SSE4-LABEL: test_v128i8:
 ; X86-SSE4:       # %bb.0:
 ; X86-SSE4-NEXT:    pushl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE4-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE4-NEXT:    movl %esp, %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE4-NEXT:    andl $-16, %esp
 ; X86-SSE4-NEXT:    subl $16, %esp
 ; X86-SSE4-NEXT:    movdqa 8(%ebp), %xmm3
@@ -1395,7 +1308,6 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ; X86-SSE4-NEXT:    sete %al
 ; X86-SSE4-NEXT:    movl %ebp, %esp
 ; X86-SSE4-NEXT:    popl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE4-LABEL: test_v128i8:
@@ -1414,10 +1326,7 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ; X86-AVX1-LABEL: test_v128i8:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    pushl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX1-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX1-NEXT:    movl %esp, %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX1-NEXT:    andl $-32, %esp
 ; X86-AVX1-NEXT:    subl $32, %esp
 ; X86-AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
@@ -1427,7 +1336,6 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ; X86-AVX1-NEXT:    sete %al
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX1-NEXT:    vzeroupper
 ; X86-AVX1-NEXT:    retl
 ;
@@ -1444,10 +1352,7 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ; X86-AVX2-LABEL: test_v128i8:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    pushl %ebp
-; X86-AVX2-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX2-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX2-NEXT:    movl %esp, %ebp
-; X86-AVX2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX2-NEXT:    andl $-32, %esp
 ; X86-AVX2-NEXT:    subl $32, %esp
 ; X86-AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
@@ -1457,7 +1362,6 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ; X86-AVX2-NEXT:    sete %al
 ; X86-AVX2-NEXT:    movl %ebp, %esp
 ; X86-AVX2-NEXT:    popl %ebp
-; X86-AVX2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX2-NEXT:    vzeroupper
 ; X86-AVX2-NEXT:    retl
 ;
@@ -1488,7 +1392,7 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ; Compare Truncated/Masked OR Reductions
 ;
 
-define i1 @trunc_v2i64(<2 x i64> %a0) {
+define i1 @trunc_v2i64(<2 x i64> %a0) nounwind {
 ; SSE2-LABEL: trunc_v2i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -1558,7 +1462,7 @@ define i1 @trunc_v2i64(<2 x i64> %a0) {
   ret i1 %3
 }
 
-define i1 @mask_v8i32(<8 x i32> %a0) {
+define i1 @mask_v8i32(<8 x i32> %a0) nounwind {
 ; SSE2-LABEL: mask_v8i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    orps %xmm1, %xmm0
@@ -1593,7 +1497,7 @@ define i1 @mask_v8i32(<8 x i32> %a0) {
   ret i1 %3
 }
 
-define i1 @mask_v8i32_2(<8 x i32> %a0) {
+define i1 @mask_v8i32_2(<8 x i32> %a0) nounwind {
 ; SSE2-LABEL: mask_v8i32_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
@@ -1661,7 +1565,7 @@ define i1 @mask_v8i32_2(<8 x i32> %a0) {
 }
 
 
-define i1 @signtest_v8i32(<8 x i32> %a0) {
+define i1 @signtest_v8i32(<8 x i32> %a0) nounwind {
 ; SSE2-LABEL: signtest_v8i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    orps %xmm1, %xmm0
@@ -1695,7 +1599,7 @@ define i1 @signtest_v8i32(<8 x i32> %a0) {
   ret i1 %2
 }
 
-define i1 @signtest_v4i64(<4 x i64> %a0) {
+define i1 @signtest_v4i64(<4 x i64> %a0) nounwind {
 ; X86-SSE2-LABEL: signtest_v4i64:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    por %xmm1, %xmm0
@@ -1742,7 +1646,7 @@ define i1 @signtest_v4i64(<4 x i64> %a0) {
   ret i1 %2
 }
 
-define i1 @trunc_v16i16(<16 x i16> %a0) {
+define i1 @trunc_v16i16(<16 x i16> %a0) nounwind {
 ; X86-SSE2-LABEL: trunc_v16i16:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    por %xmm1, %xmm0
@@ -1819,14 +1723,11 @@ define i1 @trunc_v16i16(<16 x i16> %a0) {
   ret i1 %3
 }
 
-define i1 @mask_v128i8(<128 x i8> %a0) {
+define i1 @mask_v128i8(<128 x i8> %a0) nounwind {
 ; X86-SSE2-LABEL: mask_v128i8:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    movdqa 8(%ebp), %xmm3
@@ -1843,7 +1744,6 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; X86-SSE2-NEXT:    sete %al
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: mask_v128i8:
@@ -1864,10 +1764,7 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; X86-SSE4-LABEL: mask_v128i8:
 ; X86-SSE4:       # %bb.0:
 ; X86-SSE4-NEXT:    pushl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE4-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE4-NEXT:    movl %esp, %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE4-NEXT:    andl $-16, %esp
 ; X86-SSE4-NEXT:    subl $16, %esp
 ; X86-SSE4-NEXT:    movdqa 8(%ebp), %xmm3
@@ -1882,7 +1779,6 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; X86-SSE4-NEXT:    sete %al
 ; X86-SSE4-NEXT:    movl %ebp, %esp
 ; X86-SSE4-NEXT:    popl %ebp
-; X86-SSE4-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE4-NEXT:    retl
 ;
 ; X64-SSE4-LABEL: mask_v128i8:
@@ -1901,10 +1797,7 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; X86-AVX1-LABEL: mask_v128i8:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    pushl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX1-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX1-NEXT:    movl %esp, %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX1-NEXT:    andl $-32, %esp
 ; X86-AVX1-NEXT:    subl $32, %esp
 ; X86-AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
@@ -1914,7 +1807,6 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; X86-AVX1-NEXT:    sete %al
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX1-NEXT:    vzeroupper
 ; X86-AVX1-NEXT:    retl
 ;
@@ -1931,10 +1823,7 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; X86-AVX2-LABEL: mask_v128i8:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    pushl %ebp
-; X86-AVX2-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX2-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX2-NEXT:    movl %esp, %ebp
-; X86-AVX2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX2-NEXT:    andl $-32, %esp
 ; X86-AVX2-NEXT:    subl $32, %esp
 ; X86-AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
@@ -1945,7 +1834,6 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; X86-AVX2-NEXT:    sete %al
 ; X86-AVX2-NEXT:    movl %ebp, %esp
 ; X86-AVX2-NEXT:    popl %ebp
-; X86-AVX2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX2-NEXT:    vzeroupper
 ; X86-AVX2-NEXT:    retl
 ;
@@ -1975,7 +1863,7 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 }
 
 %struct.Box = type { i32, i32, i32, i32 }
-define zeroext i1 @PR44781(ptr %0) {
+define zeroext i1 @PR44781(ptr %0) nounwind {
 ; X86-SSE2-LABEL: PR44781:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2071,138 +1959,256 @@ define zeroext i1 @PR44781(ptr %0) {
   ret i1 %5
 }
 
-define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
-; SSE-LABEL: mask_v3i1:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pxor %xmm0, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; SSE-NEXT:    por %xmm0, %xmm1
-; SSE-NEXT:    movd %xmm1, %eax
-; SSE-NEXT:    testb $1, %al
-; SSE-NEXT:    je .LBB30_2
-; SSE-NEXT:  # %bb.1:
-; SSE-NEXT:    xorl %eax, %eax
-; SSE-NEXT:    ret{{[l|q]}}
-; SSE-NEXT:  .LBB30_2:
-; SSE-NEXT:    movl $1, %eax
-; SSE-NEXT:    ret{{[l|q]}}
+define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) nounwind {
+; X86-SSE2-LABEL: mask_v3i1:
+; X86-SSE2:       # %bb.0: # %bb
+; X86-SSE2-NEXT:    pushl %ebp
+; X86-SSE2-NEXT:    movl %esp, %ebp
+; X86-SSE2-NEXT:    andl $-16, %esp
+; X86-SSE2-NEXT:    subl $32, %esp
+; X86-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; X86-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; X86-SSE2-NEXT:    pxor %xmm0, %xmm1
+; X86-SSE2-NEXT:    movdqa %xmm1, (%esp)
+; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    andb $1, %cl
+; X86-SSE2-NEXT:    shlb $2, %cl
+; X86-SSE2-NEXT:    andb $1, %al
+; X86-SSE2-NEXT:    addb %al, %al
+; X86-SSE2-NEXT:    subb (%esp), %al
+; X86-SSE2-NEXT:    orb %cl, %al
+; X86-SSE2-NEXT:    je .LBB30_3
+; X86-SSE2-NEXT:  # %bb.1: # %bb3
+; X86-SSE2-NEXT:    xorl %eax, %eax
+; X86-SSE2-NEXT:    jmp .LBB30_2
+; X86-SSE2-NEXT:  .LBB30_3: # %bb4
+; X86-SSE2-NEXT:    movl $1, %eax
+; X86-SSE2-NEXT:  .LBB30_2: # %bb3
+; X86-SSE2-NEXT:    movl %ebp, %esp
+; X86-SSE2-NEXT:    popl %ebp
+; X86-SSE2-NEXT:    retl
 ;
-; AVX1OR2-LABEL: mask_v3i1:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX1OR2-NEXT:    vpor %xmm1, %xmm0, %xmm1
-; AVX1OR2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; AVX1OR2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX1OR2-NEXT:    vmovd %xmm0, %eax
-; AVX1OR2-NEXT:    testb $1, %al
-; AVX1OR2-NEXT:    je .LBB30_2
-; AVX1OR2-NEXT:  # %bb.1:
-; AVX1OR2-NEXT:    xorl %eax, %eax
-; AVX1OR2-NEXT:    ret{{[l|q]}}
-; AVX1OR2-NEXT:  .LBB30_2:
-; AVX1OR2-NEXT:    movl $1, %eax
-; AVX1OR2-NEXT:    ret{{[l|q]}}
+; X64-SSE2-LABEL: mask_v3i1:
+; X64-SSE2:       # %bb.0: # %bb
+; X64-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; X64-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; X64-SSE2-NEXT:    pxor %xmm0, %xmm1
+; X64-SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
+; X64-SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; X64-SSE2-NEXT:    andb $1, %cl
+; X64-SSE2-NEXT:    shlb $2, %cl
+; X64-SSE2-NEXT:    andb $1, %al
+; X64-SSE2-NEXT:    addb %al, %al
+; X64-SSE2-NEXT:    subb -{{[0-9]+}}(%rsp), %al
+; X64-SSE2-NEXT:    orb %cl, %al
+; X64-SSE2-NEXT:    je .LBB30_2
+; X64-SSE2-NEXT:  # %bb.1: # %bb3
+; X64-SSE2-NEXT:    xorl %eax, %eax
+; X64-SSE2-NEXT:    retq
+; X64-SSE2-NEXT:  .LBB30_2: # %bb4
+; X64-SSE2-NEXT:    movl $1, %eax
+; X64-SSE2-NEXT:    retq
+;
+; X86-SSE4-LABEL: mask_v3i1:
+; X86-SSE4:       # %bb.0: # %bb
+; X86-SSE4-NEXT:    subl $1, %esp
+; X86-SSE4-NEXT:    pcmpeqd %xmm1, %xmm0
+; X86-SSE4-NEXT:    pcmpeqd %xmm1, %xmm1
+; X86-SSE4-NEXT:    pxor %xmm0, %xmm1
+; X86-SSE4-NEXT:    movd %xmm1, %ecx
+; X86-SSE4-NEXT:    pextrb $4, %xmm1, %eax
+; X86-SSE4-NEXT:    andb $1, %al
+; X86-SSE4-NEXT:    addb %al, %al
+; X86-SSE4-NEXT:    subb %cl, %al
+; X86-SSE4-NEXT:    pextrb $8, %xmm1, %ecx
+; X86-SSE4-NEXT:    andb $1, %cl
+; X86-SSE4-NEXT:    shlb $2, %cl
+; X86-SSE4-NEXT:    orb %al, %cl
+; X86-SSE4-NEXT:    je .LBB30_2
+; X86-SSE4-NEXT:  # %bb.1: # %bb3
+; X86-SSE4-NEXT:    xorl %eax, %eax
+; X86-SSE4-NEXT:    addl $1, %esp
+; X86-SSE4-NEXT:    retl
+; X86-SSE4-NEXT:  .LBB30_2: # %bb4
+; X86-SSE4-NEXT:    movl $1, %eax
+; X86-SSE4-NEXT:    addl $1, %esp
+; X86-SSE4-NEXT:    retl
+;
+; X64-SSE4-LABEL: mask_v3i1:
+; X64-SSE4:       # %bb.0: # %bb
+; X64-SSE4-NEXT:    pcmpeqd %xmm1, %xmm0
+; X64-SSE4-NEXT:    pcmpeqd %xmm1, %xmm1
+; X64-SSE4-NEXT:    pxor %xmm0, %xmm1
+; X64-SSE4-NEXT:    movd %xmm1, %eax
+; X64-SSE4-NEXT:    pextrb $4, %xmm1, %ecx
+; X64-SSE4-NEXT:    andb $1, %cl
+; X64-SSE4-NEXT:    addb %cl, %cl
+; X64-SSE4-NEXT:    subb %al, %cl
+; X64-SSE4-NEXT:    pextrb $8, %xmm1, %eax
+; X64-SSE4-NEXT:    andb $1, %al
+; X64-SSE4-NEXT:    shlb $2, %al
+; X64-SSE4-NEXT:    orb %cl, %al
+; X64-SSE4-NEXT:    je .LBB30_2
+; X64-SSE4-NEXT:  # %bb.1: # %bb3
+; X64-SSE4-NEXT:    xorl %eax, %eax
+; X64-SSE4-NEXT:    retq
+; X64-SSE4-NEXT:  .LBB30_2: # %bb4
+; X64-SSE4-NEXT:    movl $1, %eax
+; X64-SSE4-NEXT:    retq
+;
+; X86-AVX1-LABEL: mask_v3i1:
+; X86-AVX1:       # %bb.0: # %bb
+; X86-AVX1-NEXT:    subl $1, %esp
+; X86-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; X86-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vmovd %xmm0, %ecx
+; X86-AVX1-NEXT:    vpextrb $4, %xmm0, %eax
+; X86-AVX1-NEXT:    andb $1, %al
+; X86-AVX1-NEXT:    addb %al, %al
+; X86-AVX1-NEXT:    subb %cl, %al
+; X86-AVX1-NEXT:    vpextrb $8, %xmm0, %ecx
+; X86-AVX1-NEXT:    andb $1, %cl
+; X86-AVX1-NEXT:    shlb $2, %cl
+; X86-AVX1-NEXT:    orb %al, %cl
+; X86-AVX1-NEXT:    je .LBB30_2
+; X86-AVX1-NEXT:  # %bb.1: # %bb3
+; X86-AVX1-NEXT:    xorl %eax, %eax
+; X86-AVX1-NEXT:    addl $1, %esp
+; X86-AVX1-NEXT:    retl
+; X86-AVX1-NEXT:  .LBB30_2: # %bb4
+; X86-AVX1-NEXT:    movl $1, %eax
+; X86-AVX1-NEXT:    addl $1, %esp
+; X86-AVX1-NEXT:    retl
+;
+; X64-AVX1-LABEL: mask_v3i1:
+; X64-AVX1:       # %bb.0: # %bb
+; X64-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; X64-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vmovd %xmm0, %eax
+; X64-AVX1-NEXT:    vpextrb $4, %xmm0, %ecx
+; X64-AVX1-NEXT:    andb $1, %cl
+; X64-AVX1-NEXT:    addb %cl, %cl
+; X64-AVX1-NEXT:    subb %al, %cl
+; X64-AVX1-NEXT:    vpextrb $8, %xmm0, %eax
+; X64-AVX1-NEXT:    andb $1, %al
+; X64-AVX1-NEXT:    shlb $2, %al
+; X64-AVX1-NEXT:    orb %cl, %al
+; X64-AVX1-NEXT:    je .LBB30_2
+; X64-AVX1-NEXT:  # %bb.1: # %bb3
+; X64-AVX1-NEXT:    xorl %eax, %eax
+; X64-AVX1-NEXT:    retq
+; X64-AVX1-NEXT:  .LBB30_2: # %bb4
+; X64-AVX1-NEXT:    movl $1, %eax
+; X64-AVX1-NEXT:    retq
+;
+; X86-AVX2-LABEL: mask_v3i1:
+; X86-AVX2:       # %bb.0: # %bb
+; X86-AVX2-NEXT:    subl $1, %esp
+; X86-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; X86-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; X86-AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; X86-AVX2-NEXT:    vmovd %xmm0, %ecx
+; X86-AVX2-NEXT:    vpextrb $4, %xmm0, %eax
+; X86-AVX2-NEXT:    andb $1, %al
+; X86-AVX2-NEXT:    addb %al, %al
+; X86-AVX2-NEXT:    subb %cl, %al
+; X86-AVX2-NEXT:    vpextrb $8, %xmm0, %ecx
+; X86-AVX2-NEXT:    andb $1, %cl
+; X86-AVX2-NEXT:    shlb $2, %cl
+; X86-AVX2-NEXT:    orb %al, %cl
+; X86-AVX2-NEXT:    je .LBB30_2
+; X86-AVX2-NEXT:  # %bb.1: # %bb3
+; X86-AVX2-NEXT:    xorl %eax, %eax
+; X86-AVX2-NEXT:    addl $1, %esp
+; X86-AVX2-NEXT:    retl
+; X86-AVX2-NEXT:  .LBB30_2: # %bb4
+; X86-AVX2-NEXT:    movl $1, %eax
+; X86-AVX2-NEXT:    addl $1, %esp
+; X86-AVX2-NEXT:    retl
+;
+; X64-AVX2-LABEL: mask_v3i1:
+; X64-AVX2:       # %bb.0: # %bb
+; X64-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vmovd %xmm0, %eax
+; X64-AVX2-NEXT:    vpextrb $4, %xmm0, %ecx
+; X64-AVX2-NEXT:    andb $1, %cl
+; X64-AVX2-NEXT:    addb %cl, %cl
+; X64-AVX2-NEXT:    subb %al, %cl
+; X64-AVX2-NEXT:    vpextrb $8, %xmm0, %eax
+; X64-AVX2-NEXT:    andb $1, %al
+; X64-AVX2-NEXT:    shlb $2, %al
+; X64-AVX2-NEXT:    orb %cl, %al
+; X64-AVX2-NEXT:    je .LBB30_2
+; X64-AVX2-NEXT:  # %bb.1: # %bb3
+; X64-AVX2-NEXT:    xorl %eax, %eax
+; X64-AVX2-NEXT:    retq
+; X64-AVX2-NEXT:  .LBB30_2: # %bb4
+; X64-AVX2-NEXT:    movl $1, %eax
+; X64-AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: mask_v3i1:
-; AVX512F:       # %bb.0:
+; AVX512F:       # %bb.0: # %bb
 ; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
-; AVX512F-NEXT:    kshiftrw $2, %k0, %k1
-; AVX512F-NEXT:    korw %k1, %k0, %k1
-; AVX512F-NEXT:    kshiftrw $1, %k0, %k0
-; AVX512F-NEXT:    korw %k0, %k1, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    testb $1, %al
+; AVX512F-NEXT:    testb $7, %al
 ; AVX512F-NEXT:    je .LBB30_2
-; AVX512F-NEXT:  # %bb.1:
+; AVX512F-NEXT:  # %bb.1: # %bb3
 ; AVX512F-NEXT:    xorl %eax, %eax
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB30_2:
+; AVX512F-NEXT:  .LBB30_2: # %bb4
 ; AVX512F-NEXT:    movl $1, %eax
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: mask_v3i1:
-; AVX512BW:       # %bb.0:
+; AVX512BW:       # %bb.0: # %bb
 ; AVX512BW-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512BW-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
-; AVX512BW-NEXT:    kshiftrw $2, %k0, %k1
-; AVX512BW-NEXT:    korw %k1, %k0, %k1
-; AVX512BW-NEXT:    kshiftrw $1, %k0, %k0
-; AVX512BW-NEXT:    korw %k0, %k1, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
-; AVX512BW-NEXT:    testb $1, %al
+; AVX512BW-NEXT:    testb $7, %al
 ; AVX512BW-NEXT:    je .LBB30_2
-; AVX512BW-NEXT:  # %bb.1:
+; AVX512BW-NEXT:  # %bb.1: # %bb3
 ; AVX512BW-NEXT:    xorl %eax, %eax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-; AVX512BW-NEXT:  .LBB30_2:
+; AVX512BW-NEXT:  .LBB30_2: # %bb4
 ; AVX512BW-NEXT:    movl $1, %eax
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VL-LABEL: mask_v3i1:
-; AVX512VL:       # %bb.0:
+; AVX512VL:       # %bb.0: # %bb
 ; AVX512VL-NEXT:    vpcmpneqd %xmm1, %xmm0, %k0
-; AVX512VL-NEXT:    kshiftrb $2, %k0, %k1
-; AVX512VL-NEXT:    korw %k1, %k0, %k1
-; AVX512VL-NEXT:    kshiftrb $1, %k0, %k0
-; AVX512VL-NEXT:    korw %k0, %k1, %k0
 ; AVX512VL-NEXT:    kmovd %k0, %eax
-; AVX512VL-NEXT:    testb $1, %al
+; AVX512VL-NEXT:    testb $7, %al
 ; AVX512VL-NEXT:    je .LBB30_2
-; AVX512VL-NEXT:  # %bb.1:
+; AVX512VL-NEXT:  # %bb.1: # %bb3
 ; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    retq
-; AVX512VL-NEXT:  .LBB30_2:
+; AVX512VL-NEXT:  .LBB30_2: # %bb4
 ; AVX512VL-NEXT:    movl $1, %eax
 ; AVX512VL-NEXT:    retq
-  %1 = icmp ne <3 x i32> %a, %b
-  %2 = call i1 @llvm.vector.reduce.or.v3i1(<3 x i1> %1)
-  br i1 %2, label %3, label %4
-3:
+bb:
+  %i1 = icmp ne <3 x i32> %a, %b
+  %i2 = bitcast <3 x i1> %i1 to i3
+  %i3 = icmp ne i3 %i2, 0
+  br i1 %i3, label %bb3, label %bb4
+bb3:
   ret i32 0
-4:
+bb4:
   ret i32 1
 }
 
-declare i64 @llvm.vector.reduce.or.v2i64(<2 x i64>)
-declare i64 @llvm.vector.reduce.or.v4i64(<4 x i64>)
-declare i64 @llvm.vector.reduce.or.v8i64(<8 x i64>)
-declare i64 @llvm.vector.reduce.or.v16i64(<16 x i64>)
-
-declare i32 @llvm.vector.reduce.or.v2i32(<2 x i32>)
-declare i32 @llvm.vector.reduce.or.v4i32(<4 x i32>)
-declare i32 @llvm.vector.reduce.or.v8i32(<8 x i32>)
-declare i32 @llvm.vector.reduce.or.v16i32(<16 x i32>)
-declare i32 @llvm.vector.reduce.or.v32i32(<32 x i32>)
-
-declare i16 @llvm.vector.reduce.or.v2i16(<2 x i16>)
-declare i16 @llvm.vector.reduce.or.v4i16(<4 x i16>)
-declare i16 @llvm.vector.reduce.or.v8i16(<8 x i16>)
-declare i16 @llvm.vector.reduce.or.v16i16(<16 x i16>)
-declare i16 @llvm.vector.reduce.or.v32i16(<32 x i16>)
-declare i16 @llvm.vector.reduce.or.v64i16(<64 x i16>)
-
-declare i8 @llvm.vector.reduce.or.v2i8(<2 x i8>)
-declare i8 @llvm.vector.reduce.or.v4i8(<4 x i8>)
-declare i8 @llvm.vector.reduce.or.v8i8(<8 x i8>)
-declare i8 @llvm.vector.reduce.or.v16i8(<16 x i8>)
-declare i8 @llvm.vector.reduce.or.v32i8(<32 x i8>)
-declare i8 @llvm.vector.reduce.or.v64i8(<64 x i8>)
-declare i8 @llvm.vector.reduce.or.v128i8(<128 x i8>)
-
-declare i1 @llvm.vector.reduce.or.v3i1(<3 x i1>)
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; AVX1OR2: {{.*}}
 ; X86-SSE: {{.*}}
