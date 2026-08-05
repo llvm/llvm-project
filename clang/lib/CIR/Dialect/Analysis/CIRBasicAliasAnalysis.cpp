@@ -69,26 +69,18 @@ mlir::ModRefResult CIRBasicAliasAnalysis::getModRef(mlir::Operation *op,
     SmallVector<mlir::MemoryEffects::EffectInstance> effectList;
     effects.getEffects(effectList);
 
-    bool mod = false;
-    bool ref = false;
+    mlir::ModRefResult result = mlir::ModRefResult::getNoModRef();
     for (auto &effect : effectList) {
       // Only count effects on the queried location (or unknown location).
       mlir::Value effectVal = effect.getValue();
       if (effectVal && effectVal != location)
         continue;
       if (mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect()))
-        mod = true;
+        result = result.merge(mlir::ModRefResult::getMod());
       else if (mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect()))
-        ref = true;
+        result = result.merge(mlir::ModRefResult::getRef());
     }
-
-    if (!mod && !ref)
-      return mlir::ModRefResult::getNoModRef();
-    if (mod && !ref)
-      return mlir::ModRefResult::getMod();
-    if (!mod && ref)
-      return mlir::ModRefResult::getRef();
-    return mlir::ModRefResult::getModAndRef();
+    return result;
   }
 
   // Conservative fallback.
