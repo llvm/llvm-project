@@ -25,7 +25,10 @@ cir.global "private" internal tls_dyn dyn_tls_refs = <"asdf", "asdf", "asdf"> st
 !s32i = !cir.int<s, 32>
 
 module {
-  // expected-error@+1{{'dyn_tls_refs' only valid for dynamic tls}}
-cir.global "private" internal tls_local_dyn dyn_tls_refs = <"asdf", "asdf", "asdf"> @_ZZ1fvE1y : !s32i
+  // FIXME(cir) Parsing continues on when tls doesn't get recognized, and
+  // unfortunately Address space is the only thing that comes next. We should
+  // probably do a better job having address-space give up if we care enough here.
+  // expected-error@+2{{failed to parse Address Space Value for GlobalOp}}
+  // expected-error@+1{{custom op 'cir.global' unknown address space specifier 'invalid_tls_dyn'}}
+cir.global "private" internal invalid_tls_dyn dyn_tls_refs = <"asdf", "asdf", "asdf"> @_ZZ1fvE1y : !s32i
 }
-

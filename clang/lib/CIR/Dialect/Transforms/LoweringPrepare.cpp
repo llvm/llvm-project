@@ -1460,9 +1460,9 @@ void LoweringPreparePass::lowerLocalInitOp(cir::LocalInitOp initOp) {
   // Remove the init local op, now that we've done everything we need with it.
   initOp.erase();
 }
-static bool isThreadWrapperReplaceable(cir::TLS_Model tls,
+static bool isThreadWrapperReplaceable(cir::TLSModel tls,
                                        clang::ASTContext &astCtx) {
-  return tls == cir::TLS_Model::GeneralDynamic &&
+  return tls == cir::TLSModel::GeneralDynamic &&
          astCtx.getTargetInfo().getTriple().isOSDarwin();
 }
 
@@ -1613,8 +1613,7 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
     dtorRegion.getBlocks().clear();
 
     assert(!cir::MissingFeatures::astVarDeclInterface());
-    if (op.getTlsModel() == TLS_Model::GeneralDynamic &&
-        !op.getStaticLocalGuard().has_value()) {
+    if (op.getTlsModel() && !op.getStaticLocalGuard().has_value()) {
       // There are two types of global TLS variables: 'ordered' and 'unordered'.
       // 'ordered' are the common case. A call to any of them causes all of the
       // initializers for all other 'ordered' ones to be called, via a
@@ -1640,8 +1639,7 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
     } else {
       dynamicInitializers.push_back(f);
     }
-  } else if (op.getTlsModel() == TLS_Model::GeneralDynamic &&
-             op.getDynTlsRefs() && op.isDeclaration()) {
+  } else if (op.getTlsModel() && op.getDynTlsRefs() && op.isDeclaration()) {
     // If this is a declaration and has no init function, we probably DO have to
     // create an alias that needs checking, so create it as extern-weak.
     initAlias = defineGlobalThreadLocalInitAlias(op, {});
@@ -1650,7 +1648,7 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
   // We need a wrapper for TLS globals that MIGHT have a non-constant
   // initialization. The FE will have generated the DynTlsRefs for any with
   // known dynamic init, or unknown (extern) init.
-  if (op.getTlsModel() == TLS_Model::GeneralDynamic && op.getDynTlsRefs())
+  if (op.getTlsModel() && op.getDynTlsRefs())
     defineGlobalThreadLocalWrapper(op, initAlias, !op.isDeclaration());
 
   assert(!cir::MissingFeatures::opGlobalAnnotations());
@@ -1666,8 +1664,7 @@ void LoweringPreparePass::lowerGetGlobalOp(GetGlobalOp op) {
   // get-global operations rewritten to be calls to a wrapper function.  If
   // we're not in a dynamic TLS (or one without the TLS markers), we can leave
   // this one as a get-global and return early.
-  if (globalOp.getTlsModel() != TLS_Model::GeneralDynamic ||
-      !globalOp.getDynTlsRefs())
+  if (!globalOp.getTlsModel() || !globalOp.getDynTlsRefs())
     return;
 
   // If this is a global TLS, we need to replace the call to 'get_global' with a
@@ -1792,9 +1789,15 @@ LoweringPreparePass::createGlobalThreadLocalGuard(CIRBaseBuilderTy &builder,
   g.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
       builder.getContext(), cir::GlobalLinkageKind::InternalLinkage));
   g.setAlignment(clang::CharUnits::One().getAsAlign().value());
-  // At the moment, we only have implementation for this mode, as it is the
-  // default.  At one point we might need to load this mode from the module.
-  g.setTlsModel(TLS_Model::GeneralDynamic);
+
+  if (auto defTlsModel = mlirModule->getAttrOfType<TLSModelAttr>(
+          cir::CIRDialect::getDefaultTlsModelAttrName())) {
+    g.setTlsModel(defTlsModel.getValue());
+  } else {
+    // Default value, unless overridden in the IR/by the frontend.
+    g.setTlsModel(TLSModel::GeneralDynamic);
+  }
+
   g.setInitialValueAttr(cir::IntAttr::get(guardTy, 0));
   return g;
 }

@@ -68,9 +68,6 @@ void CIRGenModule::setGlobalTlsReferences(const VarDecl &vd,
   if (!getLangOpts().CPlusPlus)
     return;
 
-  if (globalOp.getTlsModel() != cir::TLS_Model::GeneralDynamic)
-    return;
-
   llvm::SmallString<256> wrapperFuncName;
   llvm::SmallString<256> initFuncName;
   llvm::SmallString<256> guardName;
