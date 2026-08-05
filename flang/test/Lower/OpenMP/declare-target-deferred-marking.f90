@@ -53,7 +53,7 @@ program main
 !HOST-LABEL: llvm.func @host_interface()
 !HOST-SAME: {{.*}}, omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (enter), automap = false>{{.*}}
 !ALL-LABEL: llvm.func @called_from_target_interface(!llvm.ptr, !llvm.ptr)
-!ALL-SAME: {{.*}}, omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), automap = false>{{.*}}
+!ALL-SAME: {{.*}}, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to), automap = false>{{.*}}
 !ALL-LABEL: llvm.func @any_interface()
 !ALL-SAME: {{.*}}, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false>{{.*}}
 !ALL-LABEL: llvm.func @device_interface()
