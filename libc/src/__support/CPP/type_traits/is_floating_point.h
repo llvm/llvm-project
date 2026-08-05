@@ -42,7 +42,8 @@ public:
 #endif
                               ,
                               bfloat16
-
+                              ,
+                              fputil::Float16
                               ,
                               fputil::Float128
 
