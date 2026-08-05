@@ -728,6 +728,50 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
     @skipIfXmlSupportMissing
     @skipIfRemote
+    def test_duplicate_enum_flags_id(self):
+        # If two elements are of the same type and have the same ID, the first
+        # one to be found wins. If they have different types, because we look
+        # for enums first, enums win over flags.
+        self.setup_register_test(
+            """\
+          <enum id="duplicated_id" size="8">
+            <evalue name="foo_1" value="1"/>
+          </enum>
+          <flags id="duplicated_id" size="4">
+            <field name="incorrect" start="0" end="0"/>
+          </flags>
+          <flags id="duplicated_id_2" size="8">
+            <field name="A" start="0" end="0" type="duplicated_id"/>
+            <field name="B" start="1" end="1" type="duplicated_id_2"/>
+          </flags>
+          <enum id="duplicated_id_2" size="8">
+            <evalue name="pc_enum_0" value="0"/>
+          </enum>
+          <flags id="pc_flags" size="8">
+            <field name="A" start="0" end="0" type="duplicated_id_2"/>
+          </flags>
+          <reg name="pc" bitsize="64" type="pc_flags"/>
+          <reg name="x0" regnum="0" bitsize="64" type="duplicated_id_2"/>
+          <reg name="cpsr" regnum="33" bitsize="32" type="duplicated_id"/>"""
+        )
+
+        # Check that a later flags is ignored in favour of an earlier enum.
+        # The "duplicated_id" enum wins over the "duplicated_id" flags.
+        # So cpsr does not have a flags type.
+        self.expect("register read cpsr", substrs=["(incorrect"], matching=False)
+
+        # Check that an earlier flags is ignored in favour of a later enum.
+        # The "duplicated_id" enum is parsed and used by x0's field A,
+        # but x0's flags "duplicated_id_2" is ignored because of the
+        # "duplicated_id_2" enum found previously. So x0 has no flags.
+        self.expect("register read x0", substrs=["A = "], matching=False)
+
+        # Prove we did parse the "duplicated_id_2" enum, which the PC's flags
+        # uses.
+        self.expect("register read pc", substrs=["(A = pc_enum_0)"])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
     def test_enum_use_first_valid(self):
         """Check that lldb uses the first enum that parses correctly and ignores
         the rest."""

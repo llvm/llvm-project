@@ -5408,9 +5408,9 @@ bool ParseRegisters(
             else
               LLDB_LOG(
                   log,
-                  "ProcessGDBRemote::ParseRegisters Size of register flags {0} "
+                  "ProcessGDBRemote::ParseRegisters Size of register type {0} "
                   "({1} bytes) for register {2} does not match the register "
-                  "size ({3} bytes). Ignoring this set of flags.",
+                  "size ({3} bytes). Ignoring this register type.",
                   register_type->GetID().c_str(), register_type->GetSize(),
                   reg_info.name, reg_info.byte_size);
           }
