@@ -586,15 +586,18 @@ unsigned WebAssemblyFastISel::signExtend(unsigned Reg, const Value *V,
       switch (From) {
       case MVT::i8:
       case MVT::i16: {
-        Register Tmp = createResultReg(&WebAssembly::I64RegClass);
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-                TII.get(WebAssembly::I64_EXTEND_U_I32), Tmp)
+                TII.get(WebAssembly::I64_EXTEND_U_I32), Result)
             .addReg(Reg);
+
+        Reg = Result;
+        Result = createResultReg(&WebAssembly::I64RegClass);
+
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                 TII.get(From == MVT::i8 ? WebAssembly::I64_EXTEND8_S_I64
                                         : WebAssembly::I64_EXTEND16_S_I64),
                 Result)
-            .addReg(Tmp);
+            .addReg(Reg);
         return Result;
       }
       case MVT::i32:
