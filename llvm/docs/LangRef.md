@@ -13730,9 +13730,13 @@ This instruction requires several arguments:
       the return value of the callee is returned to the caller's caller, even
       if a void return type is in use.
 
-   Both markers imply that the callee does not access allocas, va_args, or
-   byval arguments from the caller. As an exception to that, an alloca or byval
-   argument may be passed to the callee as a byval argument, which can be
+   Both markers imply that the callee does not access any value derived from
+   the caller's stack frame, which is torn down before the callee runs. That
+   covers allocas, va_args, and byval arguments, and equally an address of the
+   frame itself, including pointers returned by intrinsics such as
+   `llvm.frameaddress` with a level of zero, `llvm.localaddress`, or
+   `llvm.stacksave` evaluated in the caller. As an exception, an alloca or
+   byval argument may be passed to the callee as a byval argument, which can be
    dereferenced inside the callee. For example:
 
    ```llvm
@@ -13785,6 +13789,15 @@ This instruction requires several arguments:
    define void @invalid_byval(ptr byval(i64) %x) {
    entry:
      tail call void @take_ptr(ptr %x)
+     ret void
+   }
+
+   ; Invalid (assuming @take_ptr dereferences the pointer), because the frame
+   ; @frameaddress names is torn down before @take_ptr runs.
+   define void @invalid_frameaddress() {
+   entry:
+     %fp = call ptr @llvm.frameaddress.p0(i32 0)
+     tail call void @take_ptr(ptr %fp)
      ret void
    }
    ```
