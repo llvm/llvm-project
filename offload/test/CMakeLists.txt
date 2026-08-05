@@ -74,6 +74,13 @@ if(TARGET omptarget)
     DEPENDS ${OFFLOAD_TOOLS} omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
       LLVMOffload OffloadUnitTests
     ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
+else()
+  add_offload_testsuite(check-offload
+    "Running offload tests"
+    ${CMAKE_CURRENT_BINARY_DIR}/unit
+    EXCLUDE_FROM_CHECK_ALL
+    DEPENDS ${OFFLOAD_TOOLS} ${LIBOMPTARGET_TESTED_PLUGINS}
+      LLVMOffload OffloadUnitTests)
 endif()
 
 add_lit_testsuite(check-offload-unit "Running offload unittest suites"
