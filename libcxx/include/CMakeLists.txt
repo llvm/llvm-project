@@ -618,6 +618,7 @@ set(files
   __memory/noexcept_move_assign_container.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
+  __memory/pstl.h  
   __memory/ranges_construct_at.h
   __memory/ranges_destroy.h
   __memory/ranges_uninitialized_algorithms.h
