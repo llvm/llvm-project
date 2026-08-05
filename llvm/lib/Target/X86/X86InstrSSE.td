@@ -141,6 +141,7 @@ let Predicates = [NoAVX512] in {
 def : Pat<(v16i8 immAllZerosV), (V_SET0)>;
 def : Pat<(v8i16 immAllZerosV), (V_SET0)>;
 def : Pat<(v8f16 immAllZerosV), (V_SET0)>;
+def : Pat<(v8bf16 immAllZerosV), (V_SET0)>;
 def : Pat<(v4i32 immAllZerosV), (V_SET0)>;
 def : Pat<(v2i64 immAllZerosV), (V_SET0)>;
 def : Pat<(v2f64 immAllZerosV), (V_SET0)>;
@@ -161,6 +162,7 @@ let Predicates = [NoAVX512] in {
 def : Pat<(v32i8 immAllZerosV), (AVX_SET0)>;
 def : Pat<(v16i16 immAllZerosV), (AVX_SET0)>;
 def : Pat<(v16f16 immAllZerosV), (AVX_SET0)>;
+def : Pat<(v16bf16 immAllZerosV), (AVX_SET0)>;
 def : Pat<(v4i64 immAllZerosV), (AVX_SET0)>;
 def : Pat<(v8f32 immAllZerosV), (AVX_SET0)>;
 def : Pat<(v4f64 immAllZerosV), (AVX_SET0)>;
@@ -7870,10 +7872,10 @@ let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
             (VPBROADCASTWYrr (COPY_TO_REGCLASS FR16:$src, VR128))>;
 
   def : Pat<(v8bf16 (X86VBroadcastld16 addr:$src)),
-            (VPBROADCASTWrm addr:$src)>;
+               (VPBROADCASTWrm addr:$src)>;
   def : Pat<(v16bf16 (X86VBroadcastld16 addr:$src)),
-            (VPBROADCASTWYrm addr:$src)>;
-
+             (VPBROADCASTWYrm addr:$src)>;
+  
   def : Pat<(v8bf16 (X86VBroadcast (v8bf16 VR128:$src))),
             (VPBROADCASTWrr VR128:$src)>;
   def : Pat<(v16bf16 (X86VBroadcast (v8bf16 VR128:$src))),

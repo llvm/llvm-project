@@ -1427,9 +1427,9 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       if (SrcVT.isVector() || DstVT.isVector())
         continue;
 
-      // bf16 never lives on the fp stack, so it needs no stack round trip. It
-      // is not an isScalarFPTypeInSSEReg type because it has no scalar compare
-      // or arithmetic instructions, but it is still held in an SSE register.
+      // Treat it as not an isScalarFPTypeInSSEReg type because it has
+      // no scalar compare or arithmetic instructions,
+      // but it is still held in an SSE register.
       if (SrcVT == MVT::bf16 || DstVT == MVT::bf16)
         continue;
 
@@ -1489,9 +1489,9 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       if (SrcVT.isVector() || DstVT.isVector())
         continue;
 
-      // bf16 never lives on the fp stack, so it needs no stack round trip. It
-      // is not an isScalarFPTypeInSSEReg type because it has no scalar compare
-      // or arithmetic instructions, but it is still held in an SSE register.
+      // Treat it as not an isScalarFPTypeInSSEReg type because it has
+      // no scalar compare or arithmetic instructions,
+      // but it is still held in an SSE register.
       if (SrcVT == MVT::bf16 || DstVT == MVT::bf16)
         continue;
 

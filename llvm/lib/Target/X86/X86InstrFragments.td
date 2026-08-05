@@ -700,6 +700,7 @@ def loadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
 
 def loadi64  : PatFrag<(ops node:$ptr), (i64 (load node:$ptr))>;
 def loadf16  : PatFrag<(ops node:$ptr), (f16 (load node:$ptr))>;
+def loadbf16  : PatFrag<(ops node:$ptr), (bf16 (load node:$ptr))>;
 def loadf32  : PatFrag<(ops node:$ptr), (f32 (load node:$ptr))>;
 def loadf64  : PatFrag<(ops node:$ptr), (f64 (load node:$ptr))>;
 def loadf80  : PatFrag<(ops node:$ptr), (f80 (load node:$ptr))>;

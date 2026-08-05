@@ -2614,8 +2614,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
       setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
     }
-    // Claim it here for the same reason F16C does:
-    // bf16 has a real widening for it in combineFP_EXTEND.
+    // So we can handle bf16 in combineFP_EXTEND
     for (MVT VT : {MVT::v4f32, MVT::v8f32, MVT::v16f32})
       setOperationAction(ISD::FP_EXTEND, VT, Custom);
     setOperationAction(ISD::SETCC, MVT::v8bf16, Custom);
@@ -9388,10 +9387,10 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   if (SDValue VectorCst = materializeVectorConstant(Op, dl, DAG, Subtarget))
     return VectorCst;
 
-  // This has to come after materializeVectorConstant: rewriting the elements to
-  // i16/f16 hides an all-zeros or all-ones build from the isBuildVectorAll*
-  // predicates, which would then materialize the constant the long way round
-  // instead of with a SET0/pcmpeq/zeroing masked elements.
+  // This has to come after materializeVectorConstant sincerewriting the
+  // elements to i16/f16 hides an all-zeros or all-ones build from the
+  // isBuildVectorAll* predicates, which would then cause materialization
+  // of the constant via a load instead of with SET0/pcmpeq/masking elements.
   if (VT.getVectorElementType() == MVT::bf16 &&
       (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16()))
     return LowerBUILD_VECTORvXbf16(Op, DAG, Subtarget);
@@ -25184,9 +25183,7 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   ISD::CondCode CC =
       cast<CondCodeSDNode>(Op.getOperand(IsStrict ? 3 : 2))->get();
 
-  // There is no scalar bf16 compare at any feature level, so bf16 always has to
-  // go through the promotion to f32 that the legalizer does for it.
-  if (isBF16orSoftF16(Op0.getValueType(), Subtarget))
+ if (isSoftF16(Op0.getValueType(), Subtarget))
     return SDValue();
 
   // Handle f128 first, since one possible outcome is a normal integer
@@ -25799,7 +25796,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (Cond.getOpcode() == ISD::SETCC &&
-      !isBF16orSoftF16(Cond.getOperand(0).getSimpleValueType(), Subtarget)) {
+      !isSoftF16(Cond.getOperand(0).getSimpleValueType(), Subtarget)) {
     if (SDValue NewCond = LowerSETCC(Cond, DAG)) {
       Cond = NewCond;
       // If the condition was updated, it's possible that the operands of the
@@ -26447,7 +26444,7 @@ SDValue X86TargetLowering::LowerConditionalBranch(SDValue Op,
   // Bail out when we don't have native compare instructions.
   if (Cond.getOpcode() == ISD::SETCC &&
       Cond.getOperand(0).getValueType() != MVT::f128 &&
-      !isBF16orSoftF16(Cond.getOperand(0).getValueType(), Subtarget)) {
+      !isSoftF16(Cond.getOperand(0).getValueType(), Subtarget)) {
     SDValue LHS = Cond.getOperand(0);
     SDValue RHS = Cond.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
@@ -33304,7 +33301,7 @@ static SDValue LowerBITCAST(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getZExtOrTrunc(V, DL, DstVT);
   }
 
-  // Bitcasts between f16 and bf16 should be legal.
+  // Bitcasts between f16 and bf16 are legal.
   if (DstVT == MVT::f16 || DstVT == MVT::bf16)
     return Op;
 

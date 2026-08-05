@@ -1009,9 +1009,10 @@ defm VMAXBF16 : avx10_fp_binop_bf16<0x5F, "vmax", pseudo_fmax, SchedWriteFCmpSiz
 // VCOMISBF16
 let Uses = []<Register>, mayRaiseFPException = 0,
   Defs = [EFLAGS], Predicates = [HasAVX10_2] in {
-  //TODO: Replace null_frag with X86fcmp to support lowering `fcmp oeq bfloat *`
-  //which may require extend supports on BFR16X, loadbf16, ...
-  defm VCOMISBF16Z : sse12_ord_cmp<0x2F, FR16X, null_frag, bf16, f16mem, loadf16,
+  // Unlike vcomish/vcomiss, this is the only VCOM variant for bf16.
+  // Since it never raises an exception and does not read MXCSR
+  // it only matches X86any_fcmp.
+  defm VCOMISBF16Z : sse12_ord_cmp<0x2F, FR16X, X86any_fcmp, bf16, f16mem, loadbf16,
                                    "comisbf16", SSEPackedSingle>, T_MAP5, PD, EVEX,
                                    VEX_LIG, EVEX_CD8<16, CD8VT1>;
 
