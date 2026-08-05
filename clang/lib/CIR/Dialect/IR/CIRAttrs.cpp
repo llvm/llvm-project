@@ -920,12 +920,20 @@ LogicalResult DynamicCastInfoAttr::verify(
 // RecordLayout lookup
 //===----------------------------------------------------------------------===//
 
-RecordLayoutAttr cir::getRecordLayout(mlir::ModuleOp module,
-                                      mlir::StringAttr name) {
+RecordLayoutAttr cir::tryGetRecordLayout(mlir::ModuleOp module,
+                                         mlir::StringAttr name) {
+  if (!name)
+    return {};
   auto dict = module->getAttrOfType<mlir::DictionaryAttr>(
       CIRDialect::getRecordLayoutsAttrName());
-  assert(dict && "module missing cir.record_layouts attribute");
-  auto attr = dict.getAs<RecordLayoutAttr>(name);
+  if (!dict)
+    return {};
+  return dict.getAs<RecordLayoutAttr>(name);
+}
+
+RecordLayoutAttr cir::getRecordLayout(mlir::ModuleOp module,
+                                      mlir::StringAttr name) {
+  RecordLayoutAttr attr = tryGetRecordLayout(module, name);
   assert(attr && "record layout entry missing for named record");
   return attr;
 }
