@@ -9,9 +9,13 @@
 #ifndef LLVM_LIB_TARGET_PISA_MCTARGETDESC_PISAREGENCODER_H
 #define LLVM_LIB_TARGET_PISA_MCTARGETDESC_PISAREGENCODER_H
 
-#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/MC/MCRegister.h"
 
 namespace llvm {
+
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
+
 namespace PISA {
 
 class RegEncoder {
