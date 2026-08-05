@@ -117,7 +117,7 @@ DLWRAP_FINALIZE()
 // ZE_RESULT_ERROR_UNSUPPORTED_FEATURE nullptr in dlwrap.
 #define INVALIDATE_LEVEL_ZERO_API(function)                                    \
   if (dlwrap::function##_loaded() &&                                           \
-      api_helper::callDefaulted(function) ==                                   \
+      api_helper::callWithDefaultArgs(function) ==                                   \
           ZE_RESULT_ERROR_UNSUPPORTED_FEATURE) {                               \
     for (size_t I = 0; I < dlwrap::size(); I++) {                              \
       const char *Sym = dlwrap::symbol(I);                                     \

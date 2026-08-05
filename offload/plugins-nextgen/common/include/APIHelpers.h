@@ -70,7 +70,7 @@ struct FunctionArgs<ReturnType(ArgsTypes...)> {
 // Template to call function with all arguments initialized
 // with default values, so we can check if APIs are not returning
 // any kind of NOT_SUPPORTED errors
-template <typename Fn> auto callDefaulted(Fn &FunctionByLValue) {
+template <typename Fn> auto callWithDefaultArgs(Fn &FunctionByLValue) {
   // Get arguments tuple type corresponding to the function
   using FunctionArgsType = typename FunctionArgs<Fn>::type;
 
