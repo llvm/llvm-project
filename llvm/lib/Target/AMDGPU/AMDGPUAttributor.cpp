@@ -1434,8 +1434,8 @@ struct AAAMDGPUMinAGPRAlloc
 
 const char AAAMDGPUMinAGPRAlloc::ID = 0;
 /// The register-file split a function has been committed to by its callers.
-/// \p Min is the absolute ceiling on architected VGPRs, \p Max is the AGPR
-/// ceiling encoded relative to the total vector register budget.
+/// \p VGPRs and \p AGPRs are both absolute ceilings, so their sum stays within
+/// the total vector register budget of the tightest caller.
 struct RegisterBudgetState {
   unsigned VGPRs = 0;
   unsigned AGPRs = 0;
@@ -1450,8 +1450,7 @@ struct RegisterBudgetState {
 
   /// Combine with the budget of one caller. A function reachable from several
   /// callers has to fit inside all of their splits, so take the tightest
-  /// ceiling on each side: the smallest VGPR count and, since AGPRs are
-  /// encoded relative to the budget, the largest \p Max.
+  /// ceiling on each axis independently.
   void merge(const RegisterBudgetState &Other) {
     assert(!Other.Unknown && "cannot merge an unknown budget");
     if (Unknown) {
@@ -1477,7 +1476,8 @@ struct AAAMDGPURegisterBudget
                                                Attributor &A) {
     if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
       return *new (A.Allocator) AAAMDGPURegisterBudget(IRP, A);
-    llvm_unreachable("AAAMDGPUVGPRBudget is only valid for function position");
+    llvm_unreachable(
+        "AAAMDGPURegisterBudget is only valid for function position");
   }
 
   // When we known not all callers are known, we know that any unknown caller that reaches
@@ -1532,7 +1532,7 @@ struct AAAMDGPURegisterBudget
             *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
         if (!CallerAA || !CallerAA->isValidState())
         {
-          return false;
+          return true;
         }
 
         // A caller without a budget yet imposes no constraint, so skip it
@@ -1594,11 +1594,11 @@ struct AAAMDGPURegisterBudget
 
   void trackStatistics() const override {}
 
-  StringRef getName() const override { return "AAAMDGPUVGPRBudget"; }
+  StringRef getName() const override { return "AAAMDGPURegisterBudget"; }
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
-  /// AAAMDGPUVGPRBudget.
+  /// AAAMDGPURegisterBudget.
   static bool classof(const AbstractAttribute *AA) {
     return AA->getIdAddr() == &ID;
   }
