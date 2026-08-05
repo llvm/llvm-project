@@ -7,8 +7,3 @@ define amdgpu_kernel void @reduced_fabs_vector_truncate_crash(<2 x float> %0) {
   store <4 x half> %4, ptr addrspace(1) null, align 8
   ret void
 }
-
-; Function Attrs: nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none)
-declare <4 x half> @llvm.fabs.v4f16(<4 x half>) #0
-
-attributes #0 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
