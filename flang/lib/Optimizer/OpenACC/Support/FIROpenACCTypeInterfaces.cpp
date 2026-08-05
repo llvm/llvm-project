@@ -25,19 +25,15 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Optimizer/Support/Utils.h"
+#include "flang/Optimizer/Transforms/FIRToMemRefTypeConverter.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
-
-static llvm::cl::opt<bool> useAccReductionCombine(
-    "openacc-use-reduction-combine",
-    llvm::cl::desc("Whether to generate acc.reduction_combine. Does not "
-                   "control reduction for MIN/MAX and logical reductions."),
-    llvm::cl::init(false));
 
 static llvm::cl::opt<bool> useAccReductionCombineAll(
     "openacc-use-reduction-combine-all",
@@ -344,7 +340,9 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
           firBuilder, loc, exv, info);
     }
 
-    assert(false && "array with unknown dimension expected to have descriptor");
+    // An assumed-size array (or other non-descriptor array with an unknown
+    // trailing extent) has no recoverable bounds here and is passed without a
+    // descriptor; map it without bounds rather than asserting.
     return {};
   }
 
@@ -630,9 +628,10 @@ genDesignateWithTriplets(fir::FirOpBuilder &builder, mlir::Location loc,
   fir::SequenceType::Shape resultTypeShape;
   bool shapeIsConstant = true;
   for (mlir::Value extent : extents) {
-    if (std::optional<std::int64_t> cst_extent =
-            fir::getIntIfConstant(extent)) {
-      resultTypeShape.push_back(*cst_extent);
+    std::optional<llvm::APInt> cstExtent = fir::getIntIfConstant(extent);
+    if (std::optional<std::int64_t> cstExtent64 =
+            cstExtent ? cstExtent->trySExtValue() : std::nullopt) {
+      resultTypeShape.push_back(*cstExtent64);
     } else {
       resultTypeShape.push_back(fir::SequenceType::getUnknownExtent());
       shapeIsConstant = false;
@@ -741,13 +740,30 @@ template <typename Ty>
 mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange bounds, mlir::Value initVal, mlir::acc::VariableInfoAttr,
-    bool &needsDestroy) const {
+    mlir::ValueRange bounds, mlir::Value initVal,
+    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const {
   mlir::ModuleOp mod = mlirBuilder.getInsertionBlock()
                            ->getParent()
                            ->getParentOfType<mlir::ModuleOp>();
   assert(mod && "failed to retrieve ModuleOp");
   fir::FirOpBuilder builder(mlirBuilder, mod);
+
+  // When variable is optional: use fir.is_present to check. When non-optional,
+  // skip the conditional to avoid unnecessary branches.
+  std::optional<fir::IfOp> optIfOp;
+  bool mayBeOptional = false;
+  if (auto fortranVarInfo =
+          mlir::dyn_cast_if_present<fir::OpenACCFortranVariableInfoAttr>(
+              varInfo)) {
+    mayBeOptional = fortranVarInfo.getMayBeOptional();
+    if (mayBeOptional) {
+      mlir::Value cond =
+          fir::IsPresentOp::create(builder, loc, builder.getI1Type(), var);
+      optIfOp = fir::IfOp::create(builder, loc, mlir::TypeRange{type}, cond,
+                                  /*withElseRegion=*/true);
+      builder.setInsertionPointToStart(&optIfOp->getThenRegion().front());
+    }
+  }
 
   hlfir::Entity inputVar = hlfir::Entity{var};
   if (inputVar.isPolymorphic())
@@ -807,6 +823,15 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
   hlfir::genLengthParameters(loc, builder, privatizedVar, typeParams);
   mlir::Type baseType = privatizedVar.getElementOrSequenceType();
   // Step2: Create a temporary allocation for the privatized part.
+
+  // Create a `var_name` attribute with a placeholder value to be
+  // attached to the allocation. ACCRecipeMaterialization will then
+  // propagate the actual variable name to all ops that have this
+  // placeholder while materializing the recipe
+  mlir::NamedAttribute placeholderAttr = builder.getNamedAttr(
+      mlir::acc::getVarNameAttrName(),
+      mlir::acc::VarNameAttr::get(builder.getContext(),
+                                  mlir::acc::getVarNamePlaceholder()));
   mlir::Value alloc;
   if (fir::hasDynamicSize(baseType) ||
       (isPointerOrAllocatable && bounds.empty())) {
@@ -818,11 +843,11 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     // of POINTER/ALLOCATABLE can use alloca since only part of the data is
     // privatized (it makes no sense to deallocate them).
     alloc = builder.createHeapTemporary(loc, baseType, varName, tempExtents,
-                                        typeParams);
+                                        typeParams, {placeholderAttr});
     needsDestroy = true;
   } else {
     alloc = builder.createTemporary(loc, baseType, varName, tempExtents,
-                                    typeParams);
+                                    typeParams, {placeholderAttr});
   }
   // Step3: Assign the initial value to the privatized part if any.
   if (initVal) {
@@ -844,21 +869,22 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
          "dynamic allocation of the whole base in case of section is not "
          "expected");
 
+  mlir::Value retVal;
   if (inputVar.getType() == alloc.getType() && !allocateSection)
-    return alloc;
+    retVal = alloc;
 
   // Step4: reconstruct the input variable from the privatized part:
-  // - get a mock base address if the privatized part is a section (so that any
-  // addressing of the input variable can be replaced by the same addressing of
-  // the privatized part even though the allocated part for the private does not
-  // cover all the input variable storage. This is relying on OpenACC
-  // constraint that any addressing of such privatized variable inside the
-  // construct region can only address the variable inside the privatized
+  // - get a mock base address if the privatized part is a section (so that
+  // any addressing of the input variable can be replaced by the same
+  // addressing of the privatized part even though the allocated part for the
+  // private does not cover all the input variable storage. This is relying on
+  // OpenACC constraint that any addressing of such privatized variable inside
+  // the construct region can only address the variable inside the privatized
   // section).
-  // - reconstruct a descriptor with the same bounds and type parameters as the
-  // input if needed.
-  // - store this new descriptor in a temporary allocation if the input variable
-  // is a POINTER/ALLOCATABLE.
+  // - reconstruct a descriptor with the same bounds and type parameters as
+  // the input if needed.
+  // - store this new descriptor in a temporary allocation if the input
+  // variable is a POINTER/ALLOCATABLE.
   llvm::SmallVector<mlir::Value> inputVarLowerBounds, inputVarExtents;
   if (dereferencedVar.isArray()) {
     for (int dim = 0; dim < dereferencedVar.getRank(); ++dim) {
@@ -873,9 +899,9 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
   if (allocateSection) {
     // To compute the mock base address without doing pointer arithmetic,
     // compute: TYPE, TEMP(ZERO_BASED_SECTION_LB:) MOCK_BASE = TEMP(0)
-    // This addresses the section "backwards" (0 <= ZERO_BASED_SECTION_LB). This
-    // is currently OK, but care should be taken to avoid tripping bound checks
-    // if added in the future.
+    // This addresses the section "backwards" (0 <= ZERO_BASED_SECTION_LB).
+    // This is currently OK, but care should be taken to avoid tripping bound
+    // checks if added in the future.
     mlir::Type inputBaseAddrType =
         dereferencedVar.getBoxType().getBaseAddressType();
     mlir::Value tempBaseAddr =
@@ -900,7 +926,7 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
         builder.createConvert(loc, inputBaseAddrType, mockBase);
   }
 
-  mlir::Value retVal = privateVarBaseAddr;
+  retVal = privateVarBaseAddr;
   if (inputVar.isBoxAddressOrValue()) {
     // Recreate descriptor with same bounds as the input variable.
     mlir::Value shape;
@@ -918,6 +944,15 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
       retVal = box;
     }
   }
+
+  if (mayBeOptional) {
+    fir::ResultOp::create(builder, loc, retVal);
+    builder.setInsertionPointToStart(&optIfOp->getElseRegion().front());
+    mlir::Value absent = fir::AbsentOp::create(builder, loc, type);
+    fir::ResultOp::create(builder, loc, absent);
+    retVal = optIfOp->getResult(0);
+  }
+
   return retVal;
 }
 
@@ -963,6 +998,24 @@ bool OpenACCMappableModel<Ty>::generateCopy(
 
   source = hlfir::derefPointersAndAllocatables(loc, builder, source);
   destination = hlfir::derefPointersAndAllocatables(loc, builder, destination);
+
+  // When optional: only copy when source is present (fir.is_present). When
+  // absent, destination is already null from init. When non-optional, copy
+  // directly without the conditional.
+  if (auto fortranVarInfo =
+          mlir::dyn_cast_if_present<fir::OpenACCFortranVariableInfoAttr>(
+              varInfo)) {
+    if (fortranVarInfo.getMayBeOptional()) {
+      // When variable is optional: use fir.is_present to check. When
+      // non-optional, skip the conditional to avoid unnecessary branches.
+      std::optional<fir::IfOp> optIfOp;
+      mlir::Value cond =
+          fir::IsPresentOp::create(builder, loc, builder.getI1Type(), src);
+      optIfOp = fir::IfOp::create(builder, loc, mlir::TypeRange{}, cond,
+                                  /*withElseRegion=*/false);
+      builder.setInsertionPointToStart(&optIfOp->getThenRegion().front());
+    }
+  }
 
   if (!bounds.empty())
     std::tie(source, destination) =
@@ -1012,23 +1065,9 @@ template <typename Op>
 static mlir::Value genLogicalCombiner(fir::FirOpBuilder &builder,
                                       mlir::Location loc, mlir::Value value1,
                                       mlir::Value value2) {
-  mlir::Type i1 = builder.getI1Type();
-  mlir::Value v1 = fir::ConvertOp::create(builder, loc, i1, value1);
-  mlir::Value v2 = fir::ConvertOp::create(builder, loc, i1, value2);
-  mlir::Value combined = Op::create(builder, loc, v1, v2);
-  return fir::ConvertOp::create(builder, loc, value1.getType(), combined);
-}
-
-static mlir::Value genComparisonCombiner(fir::FirOpBuilder &builder,
-                                         mlir::Location loc,
-                                         mlir::arith::CmpIPredicate pred,
-                                         mlir::Value value1,
-                                         mlir::Value value2) {
-  mlir::Type i1 = builder.getI1Type();
-  mlir::Value v1 = fir::ConvertOp::create(builder, loc, i1, value1);
-  mlir::Value v2 = fir::ConvertOp::create(builder, loc, i1, value2);
-  mlir::Value add = mlir::arith::CmpIOp::create(builder, loc, pred, v1, v2);
-  return fir::ConvertOp::create(builder, loc, value1.getType(), add);
+  mlir::Type type = value1.getType();
+  mlir::Value v2 = builder.createConvert(loc, type, value2);
+  return Op::create(builder, loc, type, value1, v2);
 }
 
 static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
@@ -1098,19 +1137,16 @@ static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
     return mlir::arith::XOrIOp::create(builder, loc, value1, value2);
 
   if (op == mlir::acc::ReductionOperator::AccLand)
-    return genLogicalCombiner<mlir::arith::AndIOp>(builder, loc, value1,
-                                                   value2);
+    return genLogicalCombiner<fir::LogicalAndOp>(builder, loc, value1, value2);
 
   if (op == mlir::acc::ReductionOperator::AccLor)
-    return genLogicalCombiner<mlir::arith::OrIOp>(builder, loc, value1, value2);
+    return genLogicalCombiner<fir::LogicalOrOp>(builder, loc, value1, value2);
 
   if (op == mlir::acc::ReductionOperator::AccEqv)
-    return genComparisonCombiner(builder, loc, mlir::arith::CmpIPredicate::eq,
-                                 value1, value2);
+    return genLogicalCombiner<fir::EqvOp>(builder, loc, value1, value2);
 
   if (op == mlir::acc::ReductionOperator::AccNeqv)
-    return genComparisonCombiner(builder, loc, mlir::arith::CmpIPredicate::ne,
-                                 value1, value2);
+    return genLogicalCombiner<fir::NeqvOp>(builder, loc, value1, value2);
 
   TODO(loc, "reduction operator");
 }
@@ -1119,8 +1155,6 @@ static bool useAccReductionCombineOp(mlir::Type elementType,
                                      mlir::acc::ReductionOperator op) {
   if (useAccReductionCombineAll)
     return true;
-  if (!useAccReductionCombine)
-    return false;
   // LOGICAL operators do not have mlir operators and requires FIR specific
   // logic to interpret the TRUE and FALSE values from the storage (implemented
   // in fir.convert to i1).
@@ -1574,6 +1608,67 @@ template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genStore(
     mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::Value valueToStore,
     mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+
+template <typename Ty>
+mlir::MemRefType
+OpenACCPointerLikeModel<Ty>::getAsMemRefType(mlir::Type pointer,
+                                             mlir::ModuleOp module) const {
+  if (auto memrefTy = mlir::dyn_cast<mlir::MemRefType>(pointer))
+    return memrefTy;
+  fir::FIRToMemRefTypeConverter converter(module);
+  converter.setConvertComplexTypes(true);
+  if (!converter.convertibleMemrefType(pointer))
+    return {};
+  return converter.convertMemrefType(pointer);
+}
+
+template mlir::MemRefType
+OpenACCPointerLikeModel<fir::ReferenceType>::getAsMemRefType(
+    mlir::Type pointer, mlir::ModuleOp module) const;
+
+template mlir::MemRefType
+OpenACCPointerLikeModel<fir::PointerType>::getAsMemRefType(
+    mlir::Type pointer, mlir::ModuleOp module) const;
+
+template mlir::MemRefType
+OpenACCPointerLikeModel<fir::HeapType>::getAsMemRefType(
+    mlir::Type pointer, mlir::ModuleOp module) const;
+
+template mlir::MemRefType
+OpenACCPointerLikeModel<fir::LLVMPointerType>::getAsMemRefType(
+    mlir::Type pointer, mlir::ModuleOp module) const;
+
+template <typename Ty>
+mlir::Value OpenACCPointerLikeModel<Ty>::genCast(mlir::Type pointer,
+                                                 mlir::OpBuilder &builder,
+                                                 mlir::Location loc,
+                                                 mlir::Value value,
+                                                 mlir::Type resultType) const {
+  (void)pointer;
+  if (value.getType() == resultType)
+    return value;
+
+  if (fir::ConvertOp::canBeConverted(value.getType(), resultType))
+    return fir::ConvertOp::create(builder, loc, resultType, value);
+
+  return {};
+}
+
+template mlir::Value OpenACCPointerLikeModel<fir::ReferenceType>::genCast(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value value, mlir::Type resultType) const;
+
+template mlir::Value OpenACCPointerLikeModel<fir::PointerType>::genCast(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value value, mlir::Type resultType) const;
+
+template mlir::Value OpenACCPointerLikeModel<fir::HeapType>::genCast(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value value, mlir::Type resultType) const;
+
+template mlir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genCast(
+    mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::Value value, mlir::Type resultType) const;
 
 /// Check CUDA attributes on a function argument.
 static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {

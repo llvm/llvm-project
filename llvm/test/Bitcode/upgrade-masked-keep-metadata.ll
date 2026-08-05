@@ -52,7 +52,7 @@ define <4 x i32> @expandload(ptr nocapture readonly %a0) !dbg !43 {
 ; CHECK-LABEL: define <4 x i32> @expandload(
 ; CHECK-SAME: ptr readonly captures(none) [[A0:%.*]]) !dbg [[DBG43:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[V0:%.*]] = call <4 x i32> @llvm.masked.expandload.v4i32(ptr [[A0]], <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x i32> undef), !dbg [[DBG49:![0-9]+]], !tbaa [[INT_TBAA50:![0-9]+]]
+; CHECK-NEXT:    [[V0:%.*]] = call <4 x i32> @llvm.masked.expandload.v4i32.p0(ptr [[A0]], <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x i32> undef), !dbg [[DBG49:![0-9]+]], !tbaa [[INT_TBAA50:![0-9]+]]
 ; CHECK-NEXT:    ret <4 x i32> [[V0]], !dbg [[DBG52:![0-9]+]]
 ;
 entry:
@@ -64,7 +64,7 @@ define void @compressstore(<4 x i32> %a0, ptr nocapture %a1) !dbg !53 {
 ; CHECK-LABEL: define void @compressstore(
 ; CHECK-SAME: <4 x i32> [[A0:%.*]], ptr captures(none) [[A1:%.*]]) !dbg [[DBG53:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @llvm.masked.compressstore.v4i32(<4 x i32> [[A0]], ptr [[A1]], <4 x i1> <i1 false, i1 false, i1 true, i1 true>), !dbg [[DBG59:![0-9]+]], !tbaa [[INT_TBAA50]]
+; CHECK-NEXT:    call void @llvm.masked.compressstore.v4i32.p0(<4 x i32> [[A0]], ptr [[A1]], <4 x i1> <i1 false, i1 false, i1 true, i1 true>), !dbg [[DBG59:![0-9]+]], !tbaa [[INT_TBAA50]]
 ; CHECK-NEXT:    ret void, !dbg [[DBG60:![0-9]+]]
 ;
 entry:

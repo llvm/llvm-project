@@ -119,7 +119,7 @@ bool SBMemoryRegionInfo::IsMapped() {
 const char *SBMemoryRegionInfo::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_up->GetName().AsCString();
+  return m_opaque_up->GetName().AsCString(nullptr);
 }
 
 bool SBMemoryRegionInfo::HasDirtyMemoryPageList() {
@@ -169,7 +169,7 @@ bool SBMemoryRegionInfo::GetDescription(SBStream &description) {
   strm.Printf(m_opaque_up->GetReadable() ? "R" : "-");
   strm.Printf(m_opaque_up->GetWritable() ? "W" : "-");
   strm.Printf(m_opaque_up->GetExecutable() ? "X" : "-");
-  strm.Printf("]");
+  strm.PutCString("]");
 
   return true;
 }

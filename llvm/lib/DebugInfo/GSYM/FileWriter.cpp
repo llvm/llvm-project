@@ -16,6 +16,10 @@ using namespace gsym;
 
 FileWriter::~FileWriter() { OS.flush(); }
 
+void FileWriter::writeStringOffset(uint64_t Value) {
+  writeUnsigned(Value, StringOffsetSize);
+}
+
 void FileWriter::writeSLEB(int64_t S) {
   uint8_t Bytes[32];
   auto Length = encodeSLEB128(S, Bytes);
@@ -83,10 +87,10 @@ uint64_t FileWriter::tell() {
 }
 
 void FileWriter::alignTo(size_t Align) {
-  off_t Offset = OS.tell();
-  off_t AlignedOffset = (Offset + Align - 1) / Align * Align;
+  uint64_t Offset = OS.tell();
+  uint64_t AlignedOffset = (Offset + Align - 1) / Align * Align;
   if (AlignedOffset == Offset)
     return;
-  off_t PadCount = AlignedOffset - Offset;
+  uint64_t PadCount = AlignedOffset - Offset;
   OS.write_zeros(PadCount);
 }

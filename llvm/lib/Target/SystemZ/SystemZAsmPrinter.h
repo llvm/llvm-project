@@ -13,6 +13,7 @@
 #include "SystemZMCInstLower.h"
 #include "SystemZTargetMachine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/Compiler.h"
@@ -28,10 +29,6 @@ public:
   static char ID;
 
 private:
-  MCSymbol *CurrentFnPPA1Sym;     // PPA1 Symbol.
-  MCSymbol *CurrentFnEPMarkerSym; // Entry Point Marker.
-  MCSymbol *PPA2Sym;
-
   SystemZTargetStreamer *getTargetStreamer() {
     MCTargetStreamer *TS = OutStreamer->getTargetStreamer();
     assert(TS && "do not have a target streamer");
@@ -99,15 +96,14 @@ private:
   DenseMap<const GlobalObject *, SmallVector<const GlobalAlias *, 1>>
       GOAliasMap;
 
-  void emitPPA1(MCSymbol *FnEndSym);
+  void calculatePPA1();
   void emitPPA2(Module &M);
   void emitADASection();
   void emitIDRLSection(Module &M);
 
 public:
   SystemZAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID), CurrentFnPPA1Sym(nullptr),
-        CurrentFnEPMarkerSym(nullptr), PPA2Sym(nullptr),
+      : AsmPrinter(TM, std::move(Streamer), ID),
         ADATable(TM.getPointerSize(0)) {}
 
   // Override AsmPrinter.
@@ -148,6 +144,10 @@ private:
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
                                      SystemZMCInstLower &Lower);
   void LowerPATCHABLE_RET(const MachineInstr &MI, SystemZMCInstLower &Lower);
+  void lowerLOAD_TLS_BLOCK_ADDR(const MachineInstr &MI,
+                                SystemZMCInstLower &Lower);
+  void lowerLOAD_GLOBAL_STACKGUARD_ADDR(const MachineInstr &MI,
+                                        SystemZMCInstLower &Lower);
   void emitAttributes(Module &M);
 };
 } // end namespace llvm

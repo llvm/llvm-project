@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # ===-- x86_64_qemu_target_definition.py -----------------------------*- C++ -*-===//
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.

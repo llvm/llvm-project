@@ -17,37 +17,37 @@ define i32 @test_invariant_replicate_region(i32 %x, i1 %c) {
 ; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_IF:.*]], label %[[PRED_UREM_CONTINUE:.*]]
 ; CHECK:       [[PRED_UREM_IF]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = urem i32 10, [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE]]
 ; CHECK:       [[PRED_UREM_CONTINUE]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP2]], %[[PRED_UREM_IF]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP3]], %[[PRED_UREM_IF]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_IF1:.*]], label %[[PRED_UREM_CONTINUE2:.*]]
 ; CHECK:       [[PRED_UREM_IF1]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = urem i32 10, [[X]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[TMP5]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE2]]
 ; CHECK:       [[PRED_UREM_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i32> [ [[TMP3]], %[[PRED_UREM_CONTINUE]] ], [ [[TMP6]], %[[PRED_UREM_IF1]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i32> [ [[TMP2]], %[[PRED_UREM_CONTINUE]] ], [ [[TMP4]], %[[PRED_UREM_IF1]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_IF3:.*]], label %[[PRED_UREM_CONTINUE4:.*]]
 ; CHECK:       [[PRED_UREM_IF3]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = urem i32 10, [[X]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP9]], i32 2
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP9]], i64 2
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE4]]
 ; CHECK:       [[PRED_UREM_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x i32> [ [[TMP7]], %[[PRED_UREM_CONTINUE2]] ], [ [[TMP10]], %[[PRED_UREM_IF3]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i32> [ [[TMP6]], %[[PRED_UREM_CONTINUE2]] ], [ [[TMP7]], %[[PRED_UREM_IF3]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UREM_IF5:.*]], label %[[PRED_UREM_CONTINUE6]]
 ; CHECK:       [[PRED_UREM_IF5]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = urem i32 10, [[X]]
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP13]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[TMP13]], i64 3
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE6]]
 ; CHECK:       [[PRED_UREM_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i32> [ [[TMP11]], %[[PRED_UREM_CONTINUE4]] ], [ [[TMP14]], %[[PRED_UREM_IF5]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i32> [ [[TMP8]], %[[PRED_UREM_CONTINUE4]] ], [ [[TMP10]], %[[PRED_UREM_IF5]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <4 x i32> [[TMP12]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[PREDPHI]], i32 3
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[PREDPHI]], i64 3
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 [[TMP17]]

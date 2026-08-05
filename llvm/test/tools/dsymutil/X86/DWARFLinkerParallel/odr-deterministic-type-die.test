@@ -1,0 +1,118 @@
+# RUN: dsymutil --linker=parallel -f -o %t1.o -oso-prepend-path=%p/../ \
+# RUN:   -y %s --num-threads 4
+# RUN: dsymutil --linker=parallel -f -o %t2.o -oso-prepend-path=%p/../ \
+# RUN:   -y %s --num-threads 4
+# RUN: dsymutil --linker=parallel -f -o %t3.o -oso-prepend-path=%p/../ \
+# RUN:   -y %s --num-threads 4
+# RUN: diff %t1.o %t2.o
+# RUN: diff %t1.o %t3.o
+
+# This test checks that the parallel DWARF linker's type DIE allocation is
+# deterministic. The two .o files define the same C++ type (MyType) but were
+# compiled from different directories, giving them different DW_AT_decl_file
+# paths. Without deterministic type DIE allocation, the output varies between
+# runs because which CU "wins" the type slot depends on thread scheduling.
+#
+# The debug map duplicates each object file 16 times to maximize parallel
+# contention.
+#
+# Compiled from:
+#
+#   include/types.h:
+#     struct MyType { int x; int y; int getSum() { return x + y; } };
+#
+#   dir_a/a.cpp:
+#     #include "types.h"
+#     int funcA(MyType *t) { return t->getSum(); }
+#
+#   dir_b/b.cpp:
+#     #include "types.h"
+#     int funcB(MyType *t) { return t->getSum() + 1; }
+#
+#   cd dir_a && clang++ -g -O0 -c -I../include a.cpp -o a.o
+#   cd dir_b && clang++ -g -O0 -c -I../include b.cpp -o b.o
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename:        'Inputs/odr-determinism/a.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcAP6MyType, objAddr: 0x0, binAddr: 0x100000000, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000020, size: 0x20 }
+  - filename:        'Inputs/odr-determinism/b.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcBP6MyType, objAddr: 0x0, binAddr: 0x100000100, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000120, size: 0x20 }
+  - filename:        'Inputs/odr-determinism/a.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcAP6MyType, objAddr: 0x0, binAddr: 0x100000200, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000220, size: 0x20 }
+  - filename:        'Inputs/odr-determinism/b.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcBP6MyType, objAddr: 0x0, binAddr: 0x100000300, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000320, size: 0x20 }
+  - filename:        'Inputs/odr-determinism/a.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcAP6MyType, objAddr: 0x0, binAddr: 0x100000400, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000420, size: 0x20 }
+  - filename:        'Inputs/odr-determinism/b.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcBP6MyType, objAddr: 0x0, binAddr: 0x100000500, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000520, size: 0x20 }
+  - filename:        'Inputs/odr-determinism/a.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcAP6MyType, objAddr: 0x0, binAddr: 0x100000600, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000620, size: 0x20 }
+  - filename:        'Inputs/odr-determinism/b.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcBP6MyType, objAddr: 0x0, binAddr: 0x100000700, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000720, size: 0x20 }
+  - filename:        'Inputs/odr-determinism/a.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcAP6MyType, objAddr: 0x0, binAddr: 0x100000800, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000820, size: 0x20 }
+  - filename:        'Inputs/odr-determinism/b.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcBP6MyType, objAddr: 0x0, binAddr: 0x100000900, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000920, size: 0x20 }
+  - filename:        'Inputs/odr-determinism/a.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcAP6MyType, objAddr: 0x0, binAddr: 0x100000A00, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000A20, size: 0x20 }
+  - filename:        'Inputs/odr-determinism/b.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcBP6MyType, objAddr: 0x0, binAddr: 0x100000B00, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000B20, size: 0x20 }
+  - filename:        'Inputs/odr-determinism/a.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcAP6MyType, objAddr: 0x0, binAddr: 0x100000C00, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000C20, size: 0x20 }
+  - filename:        'Inputs/odr-determinism/b.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcBP6MyType, objAddr: 0x0, binAddr: 0x100000D00, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000D20, size: 0x20 }
+  - filename:        'Inputs/odr-determinism/a.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcAP6MyType, objAddr: 0x0, binAddr: 0x100000E00, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000E20, size: 0x20 }
+  - filename:        'Inputs/odr-determinism/b.o'
+    timestamp:       0
+    symbols:
+      - { sym: __Z5funcBP6MyType, objAddr: 0x0, binAddr: 0x100000F00, size: 0x20 }
+      - { sym: __ZN6MyType6getSumEv, objAddr: 0x20, binAddr: 0x100000F20, size: 0x20 }
+...

@@ -521,14 +521,10 @@ void LookupResult::resolveKind() {
 
   llvm::SmallVector<const NamedDecl *, 4> EquivalentNonFunctions;
   llvm::BitVector RemovedDecls(N);
-  llvm::BitVector UnresolvedUsingDecls(N);
 
   for (unsigned I = 0; I < N; I++) {
     const NamedDecl *D = Decls[I]->getUnderlyingDecl();
     D = cast<NamedDecl>(D->getCanonicalDecl());
-
-    if (isa<UnresolvedUsingIfExistsDecl>(D))
-      UnresolvedUsingDecls.set(I);
 
     // Ignore an invalid declaration unless it's the only one left.
     // Also ignore HLSLBufferDecl which not have name conflict with other Decls.
@@ -637,37 +633,16 @@ void LookupResult::resolveKind() {
     getSema().diagnoseEquivalentInternalLinkageDeclarations(
         getNameLoc(), HasNonFunction, EquivalentNonFunctions);
 
-  // A lookup can be ambiguous if we find multiple declarations that cannot
-  // coexist. This occurs if:
-  //
-  // 1. We have a non-function (like a variable or namespace), which cannot
-  //    be overloaded, and either a function or an unresolved using declaration.
-  bool ConflictWithNonFunction =
-      HasNonFunction && (HasFunction || HasUnresolved);
-
-  // 2. We have a hidden tag (struct or enum) and another declaration, and
-  //    Because they both remain in the results, they must be from different
-  //    scopes. If they were in the same scope, the tag would have been hidden
-  //    and removed prior.
-  bool HiddenTagConflict =
-      HideTags && HasTag && (HasFunction || HasNonFunction || HasUnresolved);
-
-  if (ConflictWithNonFunction || HiddenTagConflict)
-    Ambiguous = true;
-
-  if (Ambiguous && UnresolvedUsingDecls.count()) {
-    // If we would have an ambiguous reference but any of them are
-    // using_if_exist decls, ignore them since they are unresolved.
-    RemovedDecls |= UnresolvedUsingDecls;
-    Ambiguous = false;
-  }
-
   // Remove decls by replacing them with decls from the end (which
   // means that we need to iterate from the end) and then truncating
   // to the new size.
   for (int I = RemovedDecls.find_last(); I >= 0; I = RemovedDecls.find_prev(I))
     Decls[I] = Decls[--N];
   Decls.truncate(N);
+
+  if ((HasNonFunction && (HasFunction || HasUnresolved)) ||
+      (HideTags && HasTag && (HasFunction || HasNonFunction || HasUnresolved)))
+    Ambiguous = true;
 
   if (Ambiguous && ReferenceToPlaceHolderVariable)
     setAmbiguous(LookupAmbiguityKind::AmbiguousReferenceToPlaceholderVariable);
@@ -1614,17 +1589,19 @@ static Module *getDefiningModule(Sema &S, Decl *Entity) {
     // If this function was instantiated from a template, the defining module is
     // the module containing the pattern.
     if (FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   } else if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Entity)) {
     if (CXXRecordDecl *Pattern = RD->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   } else if (EnumDecl *ED = dyn_cast<EnumDecl>(Entity)) {
     if (auto *Pattern = ED->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   } else if (VarDecl *VD = dyn_cast<VarDecl>(Entity)) {
     if (VarDecl *Pattern = VD->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   }
+  if (!Entity)
+    return nullptr;
 
   // Walk up to the containing context. That might also have been instantiated
   // from a template.
@@ -2057,7 +2034,8 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   // Directly imported module are necessarily reachable.
   // Since we can't export import a module implementation partition unit, we
   // don't need to count for Exports here.
-  if (CurrentM && CurrentM->getTopLevelModule()->Imports.count(DeclTopModule))
+  if (CurrentM &&
+      llvm::is_contained(CurrentM->getTopLevelModule()->Imports, DeclTopModule))
     return true;
 
   // Then we treat all module implementation partition unit as unreachable.
@@ -4485,13 +4463,16 @@ LabelDecl *Sema::LookupExistingLabel(IdentifierInfo *II, SourceLocation Loc) {
                                     RedeclarationKind::NotForRedeclaration);
   // If we found a label, check to see if it is in the same context as us.
   // When in a Block, we don't want to reuse a label in an enclosing function.
-  if (!Res || Res->getDeclContext() != CurContext)
+  if (!Res ||
+      Res->getDeclContext()->getEnclosingNonExpansionStatementContext() !=
+          CurContext->getEnclosingNonExpansionStatementContext())
     return nullptr;
   return cast<LabelDecl>(Res);
 }
 
 LabelDecl *Sema::LookupOrCreateLabel(IdentifierInfo *II, SourceLocation Loc,
-                                     SourceLocation GnuLabelLoc) {
+                                     SourceLocation GnuLabelLoc,
+                                     bool IsLabelStmt) {
   if (GnuLabelLoc.isValid()) {
     // Local label definitions always shadow existing labels.
     auto *Res = LabelDecl::Create(Context, CurContext, Loc, II, GnuLabelLoc);
@@ -4500,15 +4481,43 @@ LabelDecl *Sema::LookupOrCreateLabel(IdentifierInfo *II, SourceLocation Loc,
     return cast<LabelDecl>(Res);
   }
 
-  // Not a GNU local label.
-  LabelDecl *Res = LookupExistingLabel(II, Loc);
-  if (!Res) {
-    // If not forward referenced or defined already, create the backing decl.
-    Res = LabelDecl::Create(Context, CurContext, Loc, II);
-    Scope *S = CurScope->getFnParent();
-    assert(S && "Not in a function?");
-    PushOnScopeChains(Res, S, true);
+  LabelDecl *Existing = LookupExistingLabel(II, Loc);
+
+  // C++26 [stmt.label]p4 An identifier label shall not be enclosed by an
+  // expansion-statement.
+  //
+  // As an extension, we allow GNU local labels since they are logically
+  // scoped to the containing block, which prevents us from ending up with
+  // multiple copies of the same label in a function after instantiation.
+  //
+  // While allowing this is slightly more complicated, it also has the nice
+  // side-effect of avoiding otherwise rather horrible diagnostics you'd get
+  // when trying to use '__label__' if we didn't support this.
+  if (IsLabelStmt && CurContext->isExpansionStmt()) {
+    if (Existing && Existing->isGnuLocal())
+      return Existing;
+
+    // Drop the label from the AST as creating it anyway would cause us to
+    // either issue various unhelpful diagnostics (if we were to declare
+    // it in the function decl context) or shadow a valid label with the
+    // same name outside the expansion statement.
+    Diag(Loc, diag::err_expansion_stmt_label);
+    return nullptr;
   }
+
+  if (Existing)
+    return Existing;
+
+  // Declare non-local labels outside any expansion statements; this is required
+  // to support jumping out of an expansion statement.
+  ContextRAII Ctx{*this, CurContext->getEnclosingNonExpansionStatementContext(),
+                  /*NewThisContext=*/false};
+
+  // Not a GNU local label. Create the backing decl.
+  auto *Res = LabelDecl::Create(Context, CurContext, Loc, II);
+  Scope *S = CurScope->getFnParent();
+  assert(S && "Not in a function?");
+  PushOnScopeChains(Res, S, true);
   return Res;
 }
 

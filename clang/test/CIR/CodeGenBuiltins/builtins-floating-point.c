@@ -1511,6 +1511,218 @@ long double my_tanl(long double f) {
   // OGCG: call x86_fp80 @llvm.tan.f80(
 }
 
+// cosh
+
+float my_coshf(float f) {
+  return __builtin_coshf(f);
+  // CIR: cir.func no_inline dso_local @my_coshf
+  // CIR: {{.+}} = cir.cosh {{.+}} : !cir.float
+
+  // LLVM: define dso_local float @my_coshf(float noundef {{.*}})
+  // LLVM:   call float @llvm.cosh.f32(float %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_coshf(
+  // OGCG: call float @llvm.cosh.f32(
+}
+double my_cosh(double f) {
+  return __builtin_cosh(f);
+  // CIR: cir.func no_inline dso_local @my_cosh
+  // CIR: {{.+}} = cir.cosh {{.+}} : !cir.double
+
+  // LLVM: define dso_local double @my_cosh(double noundef {{.*}})
+  // LLVM:   call double @llvm.cosh.f64(double %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_cosh(
+  // OGCG: call double @llvm.cosh.f64(
+}
+long double my_coshl(long double f) {
+  return __builtin_coshl(f);
+  // CIR: cir.func no_inline dso_local @my_coshl
+  // CIR: {{.+}} = cir.cosh {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.cosh {{.+}} : !cir.long_double<!cir.double>
+
+  // LLVM: define dso_local x86_fp80 @my_coshl(x86_fp80 noundef {{.*}})
+  // LLVM:   call x86_fp80 @llvm.cosh.f80(x86_fp80 %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_coshl(
+  // OGCG: call x86_fp80 @llvm.cosh.f80(
+}
+long double my_coshf128(long double f) {
+  return __builtin_coshf128(f);
+  // CIR: cir.func no_inline dso_local @my_coshf128
+  // CIR: {{.*}} = cir.cosh {{.*}} : !cir.f128
+  // AARCH64: {{.+}} = cir.cosh {{.+}} : !cir.f128
+
+  // LLVM: define dso_local x86_fp80 @my_coshf128(x86_fp80 noundef {{.*}})
+  // LLVM:   call fp128 @llvm.cosh.f128(fp128 %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_coshf128(
+  // OGCG: call fp128 @llvm.cosh.f128(
+}
+
+// sinh
+
+float my_sinhf(float f) {
+  return __builtin_sinhf(f);
+  // CIR: cir.func no_inline dso_local @my_sinhf
+  // CIR: {{.+}} = cir.sinh {{.+}} : !cir.float
+
+  // LLVM: define dso_local float @my_sinhf(float noundef {{.*}})
+  // LLVM:   call float @llvm.sinh.f32(float %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_sinhf(
+  // OGCG: call float @llvm.sinh.f32(
+}
+double my_sinh(double f) {
+  return __builtin_sinh(f);
+  // CIR: cir.func no_inline dso_local @my_sinh
+  // CIR: {{.+}} = cir.sinh {{.+}} : !cir.double
+
+  // LLVM: define dso_local double @my_sinh(double noundef {{.*}})
+  // LLVM:   call double @llvm.sinh.f64(double %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_sinh(
+  // OGCG: call double @llvm.sinh.f64(
+}
+long double my_sinhl(long double f) {
+  return __builtin_sinhl(f);
+  // CIR: cir.func no_inline dso_local @my_sinhl
+  // CIR: {{.+}} = cir.sinh {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.sinh {{.+}} : !cir.long_double<!cir.double>
+
+  // LLVM: define dso_local x86_fp80 @my_sinhl(x86_fp80 noundef {{.*}})
+  // LLVM:   call x86_fp80 @llvm.sinh.f80(x86_fp80 %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_sinhl(
+  // OGCG: call x86_fp80 @llvm.sinh.f80(
+}
+long double my_sinhf128(long double f) {
+  return __builtin_sinhf128(f);
+  // CIR: cir.func no_inline dso_local @my_sinhf128
+  // CIR: {{.+}} = cir.sinh {{.+}} : !cir.f128
+  // AARCH64: {{.+}} = cir.sinh {{.+}} : !cir.f128
+
+  // LLVM: define dso_local x86_fp80 @my_sinhf128(x86_fp80 noundef {{.*}})
+  // LLVM:   call fp128 @llvm.sinh.f128(fp128 %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_sinhf128(
+  // OGCG: call fp128 @llvm.sinh.f128(
+}
+
+// tanh
+
+float my_tanhf(float f) {
+  return __builtin_tanhf(f);
+  // CIR: cir.func no_inline dso_local @my_tanhf
+  // CIR: {{.+}} = cir.tanh {{.+}} : !cir.float
+
+  // LLVM: define dso_local float @my_tanhf(float noundef {{.*}})
+  // LLVM:   call float @llvm.tanh.f32(float %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_tanhf(
+  // OGCG: call float @llvm.tanh.f32(
+}
+double my_tanh(double f) {
+  return __builtin_tanh(f);
+  // CIR: cir.func no_inline dso_local @my_tanh
+  // CIR: {{.+}} = cir.tanh {{.+}} : !cir.double
+
+  // LLVM: define dso_local double @my_tanh(double noundef {{.*}})
+  // LLVM:   call double @llvm.tanh.f64(double %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_tanh(
+  // OGCG: call double @llvm.tanh.f64(
+}
+long double my_tanhl(long double f) {
+  return __builtin_tanhl(f);
+  // CIR: cir.func no_inline dso_local @my_tanhl
+  // CIR: {{.+}} = cir.tanh {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.tanh {{.+}} : !cir.long_double<!cir.double>
+
+  // LLVM: define dso_local x86_fp80 @my_tanhl(x86_fp80 noundef {{.*}})
+  // LLVM:   call x86_fp80 @llvm.tanh.f80(x86_fp80 %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_tanhl(
+  // OGCG: call x86_fp80 @llvm.tanh.f80(
+}
+long double my_tanhf128(long double f) {
+  return __builtin_tanhf128(f);
+  // CIR: cir.func no_inline dso_local @my_tanhf128
+  // CIR: {{.+}} = cir.tanh {{.+}} : !cir.f128
+  // AARCH64: {{.+}} = cir.tanh {{.+}} : !cir.f128
+
+  // LLVM: define dso_local x86_fp80 @my_tanhf128(x86_fp80 noundef {{.*}})
+  // LLVM:   call fp128 @llvm.tanh.f128(fp128 %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_tanhf128(
+  // OGCG: call fp128 @llvm.tanh.f128(
+}
+
+// exp10
+
+float my_exp10f(float f) {
+  return __builtin_exp10f(f);
+  // CIR: cir.func no_inline dso_local @my_exp10f
+  // CIR: {{.+}} = cir.exp10 {{.+}} : !cir.float
+
+  // LLVM: define dso_local float @my_exp10f(float noundef {{.*}})
+  // LLVM:   call float @llvm.exp10.f32(float %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_exp10f(
+  // OGCG: call float @llvm.exp10.f32(
+}
+double my_exp10(double f) {
+  return __builtin_exp10(f);
+  // CIR: cir.func no_inline dso_local @my_exp10
+  // CIR: {{.+}} = cir.exp10 {{.+}} : !cir.double
+
+  // LLVM: define dso_local double @my_exp10(double noundef {{.*}})
+  // LLVM:   call double @llvm.exp10.f64(double %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_exp10(
+  // OGCG: call double @llvm.exp10.f64(
+}
+long double my_exp10l(long double f) {
+  return __builtin_exp10l(f);
+  // CIR: cir.func no_inline dso_local @my_exp10l
+  // CIR: {{.+}} = cir.exp10 {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.exp10 {{.+}} : !cir.long_double<!cir.double>
+
+  // LLVM: define dso_local x86_fp80 @my_exp10l(x86_fp80 noundef {{.*}})
+  // LLVM:   call x86_fp80 @llvm.exp10.f80(x86_fp80 %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_exp10l(
+  // OGCG: call x86_fp80 @llvm.exp10.f80(
+}
+long double my_exp10f128(long double f) {
+  return __builtin_exp10f128(f);
+  // CIR: cir.func no_inline dso_local @my_exp10f128
+  // CIR: {{.+}} = cir.exp10 {{.+}} : !cir.f128
+  // AARCH64: {{.+}} = cir.exp10 {{.+}} : !cir.f128
+
+  // LLVM: define dso_local x86_fp80 @my_exp10f128(x86_fp80 noundef {{.*}})
+  // LLVM:   call fp128 @llvm.exp10.f128(fp128 %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_exp10f128(
+  // OGCG: call fp128 @llvm.exp10.f128(
+}
+
 float tanf(float);
 double tan(double);
 long double tanl(long double);
@@ -2209,4 +2421,30 @@ double my_roundeven(double x) {
 
   // OGCG: define{{.*}}@my_roundeven(
   // OGCG: call double @llvm.roundeven.f64(
+}
+
+int my_flt_rounds(void) {
+  return __builtin_flt_rounds();
+  // CIR: cir.func no_inline dso_local @my_flt_rounds
+  // CIR:   cir.call_llvm_intrinsic "get.rounding"  : () -> !s32i
+
+  // LLVM: define{{.*}} i32 @my_flt_rounds
+  // LLVM:   call i32 @llvm.get.rounding()
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_flt_rounds
+  // OGCG: call i32 @llvm.get.rounding()
+}
+
+void my_set_flt_rounds(int rounding) {
+  __builtin_set_flt_rounds(rounding);
+  // CIR: cir.func no_inline dso_local @my_set_flt_rounds
+  // CIR:   cir.call_llvm_intrinsic "set.rounding" %{{.*}} : (!s32i)
+
+  // LLVM: define{{.*}} void @my_set_flt_rounds
+  // LLVM:   call void @llvm.set.rounding(i32 %{{.+}})
+  // LLVM: }
+
+  // OGCG: define{{.*}}@my_set_flt_rounds
+  // OGCG: call void @llvm.set.rounding(i32 %{{.+}})
 }

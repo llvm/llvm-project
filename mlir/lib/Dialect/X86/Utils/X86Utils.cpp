@@ -116,15 +116,20 @@ struct ShuffleMasks {
   llvm::ArrayRef<int64_t> maskHi;
 };
 
-inline ShuffleMasks getShuffleMasks(int64_t nonUnitDimAcc) {
+inline ShuffleMasks getShuffleMasks(int64_t nonUnitDimAcc, bool isInt8Avx2) {
   // We only support these two layouts for now.
   assert((nonUnitDimAcc == 8 || nonUnitDimAcc == 16) &&
          "Unsupported nonUnitDimAcc value");
+
   // Do interleaving between two <8xf32> targeting AVX2.
   static constexpr int64_t maskLo8[] = {0, 8, 1, 9, 2, 10, 3, 11};
   static constexpr int64_t maskHi8[] = {4, 12, 5, 13, 6, 14, 7, 15};
 
-  // Shuffle two <16xf32> as below targeting AVX512.
+  // Do interleaving between two <8xi32> targeting AVX2.
+  static constexpr int64_t maskLo8_avx2_int8[] = {0, 1, 2, 3, 8, 9, 10, 11};
+  static constexpr int64_t maskHi8_avx2_int8[] = {4, 5, 6, 7, 12, 13, 14, 15};
+
+  // Shuffle two <16xf32/i32> as below targeting AVX512.
   static constexpr int64_t maskLo16[] = {0, 1, 2, 3, 16, 17, 18, 19,
                                          4, 5, 6, 7, 20, 21, 22, 23};
   static constexpr int64_t maskHi16[] = {8,  9,  10, 11, 24, 25, 26, 27,
@@ -133,7 +138,29 @@ inline ShuffleMasks getShuffleMasks(int64_t nonUnitDimAcc) {
   if (nonUnitDimAcc == 16)
     return {maskLo16, maskHi16};
 
+  if (isInt8Avx2)
+    return {maskLo8_avx2_int8, maskHi8_avx2_int8};
+
   return {maskLo8, maskHi8};
+}
+
+// Recursively follows single-use values through scf.yield operations
+// and returns the first non-yield user result in the contraction chain.
+Value contractionUsersAfterYield(Value v) {
+  if (!v || v.getNumUses() != 1)
+    return nullptr;
+
+  OpOperand &use = *v.use_begin();
+  Operation *user = use.getOwner();
+
+  if (!isa<scf::YieldOp>(user))
+    return v;
+
+  auto yield = cast<scf::YieldOp>(user);
+  Operation *parent = yield->getParentOp();
+  unsigned idx = use.getOperandNumber();
+
+  return contractionUsersAfterYield(parent->getResult(idx));
 }
 
 // This function walks backward from a value to locate its originating
@@ -147,8 +174,28 @@ Operation *traceToVectorReadLikeParentOperation(Value v) {
   while (true) {
     // Case 1: Value defined by an operation
     if (Operation *defOp = v.getDefiningOp()) {
-      if (isa<vector::TransferReadOp, vector::LoadOp>(defOp))
+      if (isa<vector::TransferReadOp, vector::LoadOp, arith::ConstantOp>(
+              defOp)) {
+
+        if (auto constOp = dyn_cast<arith::ConstantOp>(defOp)) {
+          if (auto denseAttr =
+                  dyn_cast<DenseElementsAttr>(constOp.getValue())) {
+            if (!denseAttr.isSplat())
+              return nullptr;
+
+            Attribute splat = denseAttr.getSplatValue<Attribute>();
+
+            if (auto floatAttr = dyn_cast<FloatAttr>(splat))
+              return floatAttr.getValue().isZero() ? defOp : nullptr;
+
+            if (auto intAttr = dyn_cast<IntegerAttr>(splat))
+              return intAttr.getValue().isZero() ? defOp : nullptr;
+          }
+
+          return nullptr;
+        }
         return defOp;
+      }
 
       return nullptr;
     }
@@ -179,8 +226,8 @@ Operation *traceToVectorReadLikeParentOperation(Value v) {
 // This function recursively traces a value through its uses to find
 // a downstream vector write-like operation (`vector.transfer_write`
 // or `vector.store`). It transparently follows values across `scf.for`
-// and `scf.yield` boundaries while stopping if layout-altering ops such
-// as `shape_cast` or `shuffle` are encountered. The traversal returns
+// and `scf.yield` boundaries while stopping if layout-altering ops
+// like `shuffle` are encountered. The traversal returns
 // the  matching write-like user. Returns `nullptr` if none is found or
 // the value has multiple users.
 Operation *traceToVectorWriteLikeUserOperation(Value v) {
@@ -195,7 +242,7 @@ Operation *traceToVectorWriteLikeUserOperation(Value v) {
     if (isa<vector::TransferWriteOp>(user) || isa<vector::StoreOp>(user))
       return user;
 
-    if (isa<vector::ShapeCastOp, vector::ShuffleOp>(user))
+    if (isa<vector::ShuffleOp>(user))
       return nullptr;
 
     // --- SCF YIELD ---
@@ -255,7 +302,8 @@ LogicalResult shuffleAfterReadLikeOp(PatternRewriter &rewriter, Operation *opA,
   auto castB =
       vector::ShapeCastOp::create(rewriter, loc, flatTy, opB->getResult(0));
 
-  auto masks = getShuffleMasks(nonUnitDimAcc);
+  auto masks = getShuffleMasks(
+      nonUnitDimAcc, (elemTy.isSignlessInteger(32) && nonUnitDimAcc == 8));
 
   auto shuffleLo = vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
                                              castB, masks.maskLo);
@@ -281,26 +329,23 @@ LogicalResult shuffleAfterReadLikeOp(PatternRewriter &rewriter, Operation *opA,
 // This function shuffles the vectors written by vector.contract operation
 // as a flat layout structure before they are stored.
 LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter,
-                                       Operation *opA, Operation *opB,
+                                       Value contractARes, Value contractBRes,
                                        int64_t nonUnitDimAcc,
                                        VectorType accTy) {
-  // Helper to extract vector operand from write-like ops
-  auto getWrittenVector = [](Operation *op) -> Value {
-    if (auto write = dyn_cast<vector::TransferWriteOp>(op))
-      return write.getVector();
-    if (auto store = dyn_cast<vector::StoreOp>(op))
-      return store.getValueToStore();
-    return nullptr;
-  };
 
-  Value vecA = getWrittenVector(opA);
-  Value vecB = getWrittenVector(opB);
+  Value vecA = contractionUsersAfterYield(contractARes);
+  Value vecB = contractionUsersAfterYield(contractBRes);
 
   if (!vecA || !vecB)
     return failure();
 
+  Operation *resultWriteOpA = *vecA.getUsers().begin();
+  Operation *resultWriteOpB = *vecB.getUsers().begin();
+
   // Decide insertion point and location
-  Operation *insertBefore = opA->isBeforeInBlock(opB) ? opA : opB;
+  Operation *insertBefore = resultWriteOpA->isBeforeInBlock(resultWriteOpB)
+                                ? resultWriteOpA
+                                : resultWriteOpB;
 
   rewriter.setInsertionPoint(insertBefore);
   Location loc = insertBefore->getLoc();
@@ -313,7 +358,8 @@ LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter,
   auto castB = vector::ShapeCastOp::create(rewriter, loc, flatTy, vecB);
 
   // TODO: derive shuffle masks instead of hard-coding
-  auto masks = getShuffleMasks(nonUnitDimAcc);
+  auto masks = getShuffleMasks(
+      nonUnitDimAcc, (elemTy.isSignlessInteger(32) && nonUnitDimAcc == 8));
 
   auto shuffledLo = vector::ShuffleOp::create(rewriter, loc, flatTy, castA,
                                               castB, masks.maskLo);
@@ -325,10 +371,8 @@ LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter,
   auto newVecB = vector::ShapeCastOp::create(rewriter, loc, accTy, shuffledHi);
 
   // Update write operands in place via the rewriter to notify it of changes.
-  rewriter.modifyOpInPlace(opA,
-                           [&]() { opA->setOperand(0, newVecA.getResult()); });
-  rewriter.modifyOpInPlace(opB,
-                           [&]() { opB->setOperand(0, newVecB.getResult()); });
+  resultWriteOpA->replaceUsesOfWith(vecA, newVecA);
+  resultWriteOpB->replaceUsesOfWith(vecB, newVecB);
 
   return success();
 }

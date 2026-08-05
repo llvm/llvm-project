@@ -24,6 +24,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ModRef.h"
 #include <cstdint>
 #include <utility>
 
@@ -53,9 +54,6 @@ class InsertPosition {
 
 public:
   InsertPosition(std::nullptr_t) : InsertAt() {}
-  LLVM_ABI LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-                           "BasicBlock::iterator")
-      InsertPosition(Instruction *InsertBefore);
   LLVM_ABI InsertPosition(BasicBlock *InsertAtEnd);
   InsertPosition(InstListType::iterator InsertAt) : InsertAt(InsertAt) {}
   operator InstListType::iterator() const { return InsertAt; }
@@ -168,9 +166,9 @@ public:
   LLVM_ABI void handleMarkerRemoval();
 
 protected:
-  // The 15 first bits of `Value::SubclassData` are available for subclasses of
+  // All 16 bits of `Value::SubclassData` are available for subclasses of
   // `Instruction` to use.
-  using OpaqueField = Bitfield::Element<uint16_t, 0, 15>;
+  using OpaqueField = Bitfield::Element<uint16_t, 0, 16>;
 
   // Template alias so that all Instruction storing alignment use the same
   // definiton.
@@ -189,11 +187,6 @@ protected:
   using AtomicOrderingBitfieldElementT =
       typename Bitfield::Element<AtomicOrdering, Offset, 3,
                                  AtomicOrdering::LAST>;
-
-private:
-  // The last bit is used to store whether the instruction has metadata attached
-  // or not.
-  using HasMetadataField = Bitfield::Element<bool, 15, 1>;
 
 protected:
   LLVM_ABI ~Instruction(); // Use deleteValue() to delete a generic Instruction.
@@ -503,6 +496,11 @@ public:
   LLVM_ABI void copyMetadata(const Instruction &SrcInst,
                              ArrayRef<unsigned> WL = ArrayRef<unsigned>());
 
+  /// Copy debug, profile, and memprof metadata from \p SrcInst to this
+  /// instruction without copying alias-analysis or type-dependent metadata.
+  /// TODO: Include additional metadata in the future if appropriate.
+  LLVM_ABI void copyProfileAndDebugMetadata(const Instruction &SrcInst);
+
   /// Erase all metadata that matches the predicate.
   LLVM_ABI void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
 
@@ -593,23 +591,22 @@ public:
   LLVM_ABI void dropPoisonGeneratingMetadata();
 
   /// Return true if this instruction has poison-generating attribute.
-  LLVM_ABI bool hasPoisonGeneratingReturnAttributes() const LLVM_READONLY;
+  LLVM_ABI bool hasPoisonGeneratingAttributes() const LLVM_READONLY;
 
-  /// Drops return attributes that may generate poison.
-  LLVM_ABI void dropPoisonGeneratingReturnAttributes();
+  /// Drops attributes that may generate poison.
+  LLVM_ABI void dropPoisonGeneratingAttributes();
 
   /// Return true if this instruction has poison-generating flags,
-  /// return attributes or metadata.
+  /// attributes or metadata.
   bool hasPoisonGeneratingAnnotations() const {
-    return hasPoisonGeneratingFlags() ||
-           hasPoisonGeneratingReturnAttributes() ||
+    return hasPoisonGeneratingFlags() || hasPoisonGeneratingAttributes() ||
            hasPoisonGeneratingMetadata();
   }
 
-  /// Drops flags, return attributes and metadata that may generate poison.
+  /// Drops flags, attributes and metadata that may generate poison.
   void dropPoisonGeneratingAnnotations() {
     dropPoisonGeneratingFlags();
-    dropPoisonGeneratingReturnAttributes();
+    dropPoisonGeneratingAttributes();
     dropPoisonGeneratingMetadata();
   }
 
@@ -711,6 +708,10 @@ public:
   /// operator which supports these flags. See LangRef.html for the meaning of
   /// these flags.
   LLVM_ABI FastMathFlags getFastMathFlags() const LLVM_READONLY;
+
+  /// Convenience function for getting fast-math flags, or default-constructed
+  /// FastMathFlags when not a FPMathOperator.
+  LLVM_ABI FastMathFlags getFastMathFlagsOrNone() const LLVM_READONLY;
 
   /// Copy I's fast-math flags
   LLVM_ABI void copyFastMathFlags(const Instruction *I);
@@ -841,6 +842,10 @@ public:
     return Opcode == Xor;
   }
 
+  /// Return memory effects of the instruction. argmem here refers to the
+  /// operands of the instruction.
+  LLVM_ABI MemoryEffects getMemoryEffects() const LLVM_READONLY;
+
   /// Return true if this instruction may modify memory.
   LLVM_ABI bool mayWriteToMemory() const LLVM_READONLY;
 
@@ -864,6 +869,10 @@ public:
 
   /// Return true if this instruction has a volatile memory access.
   LLVM_ABI bool isVolatile() const LLVM_READONLY;
+
+  /// Return true if this instruction may synchronize, in the sense that it
+  /// may introduce a synchronizes-with edge.
+  LLVM_ABI bool maySynchronize() const LLVM_READONLY;
 
   /// Return the type this instruction accesses in memory, if any.
   LLVM_ABI Type *getAccessType() const LLVM_READONLY;
@@ -1013,7 +1022,7 @@ public:
   LLVM_ABI void setSuccessor(unsigned Idx, BasicBlock *BB);
 
   LLVM_ABI iterator_range<const_succ_iterator> successors() const LLVM_READONLY;
-  LLVM_ABI iterator_range<succ_iterator> successors() {
+  iterator_range<succ_iterator> successors() {
     auto Ops = static_cast<const Instruction *>(this)->successors();
     Use *Begin = const_cast<Use *>(Ops.begin().getUse());
     Use *End = const_cast<Use *>(Ops.end().getUse());
@@ -1097,24 +1106,16 @@ private:
   }
 
 protected:
-  // Instruction subclasses can stick up to 15 bits of stuff into the
+  // Instruction subclasses can stick up to 16 bits of stuff into the
   // SubclassData field of instruction with these members.
 
   template <typename BitfieldElement>
   typename BitfieldElement::Type getSubclassData() const {
-    static_assert(
-        std::is_same<BitfieldElement, HasMetadataField>::value ||
-            !Bitfield::isOverlapping<BitfieldElement, HasMetadataField>(),
-        "Must not overlap with the metadata bit");
     return Bitfield::get<BitfieldElement>(getSubclassDataFromValue());
   }
 
   template <typename BitfieldElement>
   void setSubclassData(typename BitfieldElement::Type Value) {
-    static_assert(
-        std::is_same<BitfieldElement, HasMetadataField>::value ||
-            !Bitfield::isOverlapping<BitfieldElement, HasMetadataField>(),
-        "Must not overlap with the metadata bit");
     auto Storage = getSubclassDataFromValue();
     Bitfield::set<BitfieldElement>(Storage, Value);
     setValueSubclassData(Storage);

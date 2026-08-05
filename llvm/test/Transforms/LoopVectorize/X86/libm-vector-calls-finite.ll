@@ -10,7 +10,7 @@ define void @exp_f32(ptr nocapture %varray) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %tmp = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %tmp to float
@@ -21,13 +21,13 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !1
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable"}
 
 define void @exp_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @exp_f64
@@ -37,7 +37,7 @@ define void @exp_f64(ptr nocapture %varray) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %tmp = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %tmp to double
@@ -48,13 +48,13 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !11
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
 !11 = distinct !{!11, !12, !13}
 !12 = !{!"llvm.loop.vectorize.width", i32 4}
-!13 = !{!"llvm.loop.vectorize.enable", i1 true}
+!13 = !{!"llvm.loop.vectorize.enable"}
 
 define void @log_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @log_f32
@@ -64,7 +64,7 @@ define void @log_f32(ptr nocapture %varray) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %tmp = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %tmp to float
@@ -75,13 +75,13 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !21
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
 !21 = distinct !{!21, !22, !23}
 !22 = !{!"llvm.loop.vectorize.width", i32 4}
-!23 = !{!"llvm.loop.vectorize.enable", i1 true}
+!23 = !{!"llvm.loop.vectorize.enable"}
 
 define void @log_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @log_f64
@@ -91,7 +91,7 @@ define void @log_f64(ptr nocapture %varray) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %tmp = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %tmp to double
@@ -102,13 +102,13 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !31
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
 !31 = distinct !{!31, !32, !33}
 !32 = !{!"llvm.loop.vectorize.width", i32 4}
-!33 = !{!"llvm.loop.vectorize.enable", i1 true}
+!33 = !{!"llvm.loop.vectorize.enable"}
 
 define void @pow_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-LABEL: @pow_f32
@@ -118,7 +118,7 @@ define void @pow_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %tmp = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %tmp to float
@@ -131,13 +131,13 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !41
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
 !41 = distinct !{!41, !42, !43}
 !42 = !{!"llvm.loop.vectorize.width", i32 4}
-!43 = !{!"llvm.loop.vectorize.enable", i1 true}
+!43 = !{!"llvm.loop.vectorize.enable"}
 
 define void @pow_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-LABEL: @pow_f64
@@ -147,7 +147,7 @@ define void @pow_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %tmp = trunc i64 %indvars.iv to i32
   %conv = sitofp i32 %tmp to double
@@ -160,13 +160,13 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !51
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
 !51 = distinct !{!51, !52, !53}
 !52 = !{!"llvm.loop.vectorize.width", i32 4}
-!53 = !{!"llvm.loop.vectorize.enable", i1 true}
+!53 = !{!"llvm.loop.vectorize.enable"}
 
 declare float @__expf_finite(float) #0
 declare double @__exp_finite(double) #0

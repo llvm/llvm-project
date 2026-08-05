@@ -66,7 +66,6 @@ static void ForEachFormatterInModule(
   auto section_size = section_sp->GetSectionData(lldb_extractor);
   llvm::DataExtractor section = lldb_extractor.GetAsLLVM();
   bool le = section.isLittleEndian();
-  uint8_t addr_size = section.getAddressSize();
   llvm::DataExtractor::Cursor cursor(0);
   while (cursor && cursor.tell() < section_size) {
     if (!skipPadding(section, cursor))
@@ -74,17 +73,23 @@ static void ForEachFormatterInModule(
 
     uint64_t version = section.getULEB128(cursor);
     uint64_t record_size = section.getULEB128(cursor);
+    if (cursor && record_size > section_size - cursor.tell()) {
+      LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+               "Record size {0} exceeds the remaining size of the embedded "
+               "formatter section in {1}; ignoring the rest of the section.",
+               record_size, module.GetFileSpec());
+      break;
+    }
     if (version == 1) {
       llvm::DataExtractor record(
           section.getData().drop_front(cursor.tell()).take_front(record_size),
-          le, addr_size);
+          le);
       llvm::DataExtractor::Cursor cursor(0);
       uint64_t type_size = record.getULEB128(cursor);
       llvm::StringRef type_name = record.getBytes(cursor, type_size);
       llvm::Error error = cursor.takeError();
       if (!error)
-        fn(llvm::DataExtractor(record.getData().drop_front(cursor.tell()), le,
-                               addr_size),
+        fn(llvm::DataExtractor(record.getData().drop_front(cursor.tell()), le),
            type_name);
       else
         LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(error),
@@ -175,25 +180,29 @@ void LoadFormattersForModule(ModuleSP module_sp) {
         std::unique_ptr<llvm::MemoryBuffer> summary_func_up;
         std::array<std::unique_ptr<llvm::MemoryBuffer>, kSignatureCount>
             synthetic_methods;
+        bool has_synthetic_method = false;
         using Signatures = FormatterBytecode::Signatures;
         while (cursor && cursor.tell() < extractor.size()) {
           auto signature = static_cast<Signatures>(extractor.getU8(cursor));
           uint64_t size = extractor.getULEB128(cursor);
           llvm::StringRef bytecode = extractor.getBytes(cursor, size);
-          if (!cursor) {
-            LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), cursor.takeError(),
-                           "{0}");
+          if (!cursor)
             break;
-          }
           auto buffer_up = llvm::MemoryBuffer::getMemBufferCopy(bytecode);
           if (signature == Signatures::sig_summary)
             summary_func_up = std::move(buffer_up);
-          else if (signature <= Signatures::sig_update)
+          else if (signature <= Signatures::sig_update) {
             synthetic_methods[signature] = std::move(buffer_up);
-          else
+            has_synthetic_method = true;
+          } else
             LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                      "Unsupported formatter signature {0} for '{1}' in {2}",
                      signature, type_name, module_sp->GetFileSpec());
+        }
+        if (!cursor) {
+          LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), cursor.takeError(),
+                         "{0}");
+          return;
         }
 
         FormatterMatchType match_type = eFormatterMatchExact;
@@ -207,15 +216,20 @@ void LoadFormattersForModule(ModuleSP module_sp) {
           LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                    "Loaded embedded type summary for '{0}' from {1}.",
                    type_name, module_sp->GetFileSpec());
-        } else {
+        } else if (has_synthetic_method) {
           BytecodeSyntheticChildren::SyntheticBytecodeImplementation impl =
               CreateSyntheticImpl(synthetic_methods);
           auto synthetic_children_sp =
               std::make_shared<BytecodeSyntheticChildren>(std::move(impl));
           category->AddTypeSynthetic(type_name, match_type,
                                      synthetic_children_sp);
+          LLDB_LOG_VERBOSE(GetLog(LLDBLog::DataFormatters),
+                           "Loaded embedded type synthetic for '{0}' from {1}.",
+                           type_name, module_sp->GetFileSpec());
+        } else {
           LLDB_LOG(GetLog(LLDBLog::DataFormatters),
-                   "Loaded embedded type synthetic for '{0}' from {1}.",
+                   "No summary or synthetic methods found for '{0}' in {1}, "
+                   "not registering a formatter.",
                    type_name, module_sp->GetFileSpec());
         }
       });

@@ -343,6 +343,50 @@ func.func @test_convert_alloca_remat() {
 
 // -----
 
+// Integer-to-integer fir.convert is not an outline rematerialization candidate.
+func.func private @use_i64(i64) -> ()
+
+func.func @test_convert_integer_widen_no_remat(%arg0: !fir.ref<i32>) {
+  %0 = fir.load %arg0 : !fir.ref<i32>
+  %1 = fir.convert %0 : (i32) -> i64
+  fir.call @use_i64(%1) : (i64) -> ()
+  acc.parallel {
+    fir.call @use_i64(%1) : (i64) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_integer_widen_no_remat
+// CHECK: fir.load
+// CHECK: %[[CVT:.*]] = fir.convert
+// CHECK: fir.call @use_i64(%[[CVT]])
+// CHECK: acc.parallel {
+// CHECK-NEXT: fir.call @use_i64(%[[CVT]])
+
+// -----
+
+// Pointer-to-pointer fir.convert is not a rematerialization candidate.
+func.func private @use_ref_f32(!fir.ref<f32>) -> ()
+
+func.func @test_convert_ptr_to_ptr_no_remat(%arg0: !fir.ref<i32>) {
+  %0 = fir.convert %arg0 : (!fir.ref<i32>) -> !fir.ref<f32>
+  fir.call @use_ref_f32(%0) : (!fir.ref<f32>) -> ()
+  acc.parallel {
+    fir.call @use_ref_f32(%0) : (!fir.ref<f32>) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_ptr_to_ptr_no_remat
+// CHECK: %[[CVT:.*]] = fir.convert %arg0
+// CHECK: fir.call @use_ref_f32(%[[CVT]])
+// CHECK: acc.parallel {
+// CHECK-NEXT: fir.call @use_ref_f32(%[[CVT]])
+
+// -----
+
 // Test that an intermediate fir.convert in a trace chain
 // (declare -> convert -> unboxchar) does not get rematerialized,
 // while a direct ptr-to-int fir.convert is correctly sunk.
@@ -423,3 +467,75 @@ func.func @test_undef_slice_rematerialize(%arg0: !fir.box<!fir.array<?x?xf32>>) 
 // CHECK:   %[[UNDEF_INNER:.*]] = fir.undefined index
 // CHECK:   %[[SLICE_INNER:.*]] = fir.slice {{.*}}, %[[UNDEF_INNER]], %[[UNDEF_INNER]]
 // CHECK:   fir.rebox %arg0 [%[[SLICE_INNER]]]
+
+// -----
+
+// Test that fir.declare's dummy_scope operand is dropped, not duplicated,
+// when the declare is sunk into an offload region. Regression test: after
+// inlining, a fir.declare for a dummy argument aliasing a device-valid
+// global (e.g. one with !$ACC DECLARE COPYIN) is sunk/rematerialized into
+// the offload region. Its dummy_scope operand is an identity token (see
+// fir.dummy_scope) that must never be duplicated, so it must be dropped
+// from the sunk/cloned declare instead of being left as an illegal live-in
+// or cloned alongside it.
+
+fir.global @global_for_dummy_scope {acc.declare = #acc.declare<dataClause = acc_copyin>} : i32 {
+  %0 = arith.constant 0 : i32
+  fir.has_value %0 : i32
+}
+
+func.func private @use_ref(!fir.ref<i32>) -> ()
+
+func.func @test_dummy_scope_sink() {
+  %addr = fir.address_of(@global_for_dummy_scope) : !fir.ref<i32>
+  %scope = fir.dummy_scope : !fir.dscope
+  %decl = fir.declare %addr dummy_scope %scope {uniq_name = "global"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  acc.serial {
+    fir.call @use_ref(%decl) : (!fir.ref<i32>) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_dummy_scope_sink
+// The dummy scope stays outside, untouched and unduplicated: nothing
+// references it anymore once the declare's operand is dropped.
+// CHECK: fir.dummy_scope
+// CHECK: acc.serial {
+// CHECK-DAG:   fir.address_of(@global_for_dummy_scope)
+// CHECK-DAG:   %[[DECL:.*]] = fir.declare %{{.*}} {uniq_name = "global"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:   fir.call @use_ref(%[[DECL]])
+
+// -----
+
+// Test fir.declare rematerialization (used both inside and outside region):
+// the outer declare keeps its dummy_scope untouched, while the clone made
+// for the region drops it rather than duplicating the scope.
+
+fir.global @global_for_dummy_scope_remat {acc.declare = #acc.declare<dataClause = acc_copyin>} : i32 {
+  %0 = arith.constant 0 : i32
+  fir.has_value %0 : i32
+}
+
+func.func private @use_ref(!fir.ref<i32>) -> ()
+
+func.func @test_dummy_scope_rematerialize() {
+  %addr = fir.address_of(@global_for_dummy_scope_remat) : !fir.ref<i32>
+  %scope = fir.dummy_scope : !fir.dscope
+  %decl = fir.declare %addr dummy_scope %scope {uniq_name = "global"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  fir.call @use_ref(%decl) : (!fir.ref<i32>) -> ()
+  acc.serial {
+    fir.call @use_ref(%decl) : (!fir.ref<i32>) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_dummy_scope_rematerialize
+// CHECK: %[[SCOPE:.*]] = fir.dummy_scope
+// CHECK: %[[DECL_OUTER:.*]] = fir.declare %{{.*}} dummy_scope %[[SCOPE]] {uniq_name = "global"}
+// CHECK: fir.call @use_ref(%[[DECL_OUTER]])
+// CHECK: acc.serial {
+// CHECK-DAG:   fir.address_of(@global_for_dummy_scope_remat)
+// CHECK-DAG:   %[[DECL_INNER:.*]] = fir.declare %{{.*}} {uniq_name = "global"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:   fir.call @use_ref(%[[DECL_INNER]])

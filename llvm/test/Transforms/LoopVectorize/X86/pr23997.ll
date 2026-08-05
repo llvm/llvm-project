@@ -94,7 +94,7 @@ define void @foo(ptr addrspace(1) align 8 dereferenceable_or_null(16), ptr addrs
 entry:
   br label %preheader
 
-preheader:                                       ; preds = %4
+preheader:
   %.10 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 16
   %.12 = getelementptr inbounds i8, ptr addrspace(1) %1, i64 16
   br label %loop

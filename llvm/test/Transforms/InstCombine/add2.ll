@@ -345,7 +345,7 @@ define i16 @add_cttz(i16 %a) {
 ; CHECK-NEXT:    [[B:%.*]] = or disjoint i16 [[CTTZ]], -8
 ; CHECK-NEXT:    ret i16 [[B]]
 ;
-  ; llvm.cttz.i16(..., /*is_zero_undefined=*/true) implies the value returned
+  ; llvm.cttz.i16(..., /*is_zero_poison=*/true) implies the value returned
   ; is in [0, 16). The range metadata indicates the value returned is in [0, 8).
   ; Intersecting these ranges, we know the value returned is in [0, 8).
   ; Therefore, InstCombine will transform
@@ -367,7 +367,7 @@ define i16 @add_cttz_2(i16 %a) {
 ; CHECK-NEXT:    [[B:%.*]] = or disjoint i16 [[CTTZ]], -16
 ; CHECK-NEXT:    ret i16 [[B]]
 ;
-  ; llvm.cttz.i16(..., /*is_zero_undefined=*/true) implies the value returned
+  ; llvm.cttz.i16(..., /*is_zero_poison=*/true) implies the value returned
   ; is in [0, 16). The range metadata indicates the value returned is in
   ; [0, 32). Intersecting these ranges, we know the value returned is in
   ; [0, 16). Therefore, InstCombine will transform

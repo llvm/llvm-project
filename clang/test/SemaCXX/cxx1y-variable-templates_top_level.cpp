@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -std=c++98 -verify -fsyntax-only -Wno-unused-value -Wno-c++11-extensions -Wno-c++1y-extensions %s -DPRECXX11
 // RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only -Wno-unused-value -Wno-c++1y-extensions %s
 // RUN: %clang_cc1 -std=c++17 -verify -fsyntax-only -Wno-unused-value %s
+// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -Wno-unused-value %s
 // RUN: %clang_cc1 -std=c++2c -verify -fsyntax-only -Wno-unused-value %s
 
 
@@ -213,7 +214,7 @@ namespace explicit_specialization {
     CONST int pi2<int,T> = 3; // expected-note {{partial specialization matches [with T = int]}}
 
     void foo() {
-      int a = pi2<int,int>;  // expected-error {{ambiguous partial specializations of 'pi2<int, int>'}}
+      int a = pi2<int,int>;  // expected-error {{ambiguous partial specializations of 'pi2}}
     }
   }
 
@@ -541,3 +542,46 @@ void test() {
 }
 }
 #endif
+
+
+#if __cplusplus > 202002
+namespace GH132592 {
+  template<class>
+  constexpr auto x = false;
+
+  template<class T> requires true
+  constexpr auto x<T> = true; // expected-note 2{{partial specialization matches}}
+
+  template<class T> requires true && true
+  constexpr auto x<T> = true; // expected-note 2{{partial specialization matches}}
+
+  template<class T>
+  concept X = x<T>;
+  static_assert(x<void> && !X<void>); // expected-error {{ambiguous partial specializations of 'x'}}
+  static_assert(!X<void> && x<void>); // expected-error {{ambiguous partial specializations of 'x'}}
+
+}
+
+namespace GH54439 {
+  template <bool B> struct enable_if {};
+  template <> struct enable_if<true> {
+      using type = void;
+  };
+  template <bool B> using enable_if_t = enable_if<B>::type;
+
+  template <typename T> inline constexpr bool dependent_false = false;
+
+  template <typename T>
+  inline enable_if<dependent_false<T>>::type *is_foo = nullptr;
+
+  template <> inline constexpr bool is_foo<int> = true;
+
+  template <typename T>
+  concept has_is_foo = requires { is_foo<T>; };
+
+  static_assert(has_is_foo<int>);
+
+  static_assert(not has_is_foo<float>);
+}
+  
+#endif // __cplusplus > 202002

@@ -19,15 +19,6 @@ using namespace llvm::jitlink;
 namespace llvm {
 namespace orc {
 
-const EPCGenericJITLinkMemoryManager::SymbolNames
-    EPCGenericJITLinkMemoryManager::orc_rt_SimpleNativeMemoryMapSPSSymbols = {
-        "orc_rt_SimpleNativeMemoryMap_Instance",
-        "orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper",
-        "orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper",
-        "orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper",
-        "orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper",
-};
-
 class EPCGenericJITLinkMemoryManager::InFlightAlloc
     : public jitlink::JITLinkMemoryManager::InFlightAlloc {
 public:
@@ -108,7 +99,8 @@ private:
 };
 
 Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-EPCGenericJITLinkMemoryManager::Create(JITDylib &JD, SymbolNames SNs) {
+EPCGenericJITLinkMemoryManager::Create(
+    JITDylib &JD, rt::SimpleExecutorMemoryManagerSymbolNames SNs) {
   auto &ES = JD.getExecutionSession();
   SymbolAddrs SAs;
   if (auto Err = lookupAndRecordAddrs(
@@ -126,7 +118,8 @@ EPCGenericJITLinkMemoryManager::Create(JITDylib &JD, SymbolNames SNs) {
 }
 
 Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-EPCGenericJITLinkMemoryManager::Create(ExecutionSession &ES, SymbolNames SNs) {
+EPCGenericJITLinkMemoryManager::Create(
+    ExecutionSession &ES, rt::SimpleExecutorMemoryManagerSymbolNames SNs) {
   return Create(ES.getBootstrapJITDylib(), std::move(SNs));
 }
 

@@ -35,10 +35,14 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/DebugCounter.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-rewrite-agpr-copy-mfma"
+
+DEBUG_COUNTER(RewriteAGPRCopyMFMACounter, DEBUG_TYPE,
+              "Controls which MFMA chains are rewritten to AGPR form");
 
 namespace {
 
@@ -73,7 +77,7 @@ public:
         LIS(LIS), LSS(LSS), RegClassInfo(RegClassInfo) {}
 
   bool isRewriteCandidate(const MachineInstr &MI) const {
-    return TII.isMAI(MI) && AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode()) != -1;
+    return TII.isMAI(MI) && AMDGPU::getAGPRFormOp(MI.getOpcode()) != -1;
   }
 
   /// Find AV_* registers assigned to AGPRs (or virtual registers which were
@@ -155,7 +159,7 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
       // either AGPR or VGPR in src0/src1. We still need to check constraint
       // effects for scale variant, which does not allow AGPR.
       if (isRewriteCandidate(*MI)) {
-        int AGPROp = AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode());
+        int AGPROp = AMDGPU::getAGPRFormOp(MI->getOpcode());
         const MCInstrDesc &AGPRDesc = TII.get(AGPROp);
         const TargetRegisterClass *NewRC =
             TII.getRegClass(AGPRDesc, MO.getOperandNo());
@@ -205,7 +209,8 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
       if (!NewRC || NewRC == OldRC) {
         LLVM_DEBUG(dbgs() << "User of " << printReg(Reg, &TRI)
                           << " cannot be reassigned to "
-                          << TRI.getRegClassName(NewRC) << ": " << *MI);
+                          << (NewRC ? TRI.getRegClassName(NewRC) : "NULL")
+                          << ": " << *MI);
         return false;
       }
     }
@@ -267,7 +272,8 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
     LRM.unassign(LI);
   }
 
-  if (!attemptReassignmentsToAGPR(RewriteRegs, PhysRegHint)) {
+  if (!DebugCounter::shouldExecute(RewriteAGPRCopyMFMACounter) ||
+      !attemptReassignmentsToAGPR(RewriteRegs, PhysRegHint)) {
     // Roll back the register assignments to the original state.
     for (auto [LI, OldAssign] : TentativeReassignments) {
       if (VRM.hasPhys(LI->reg()))
@@ -287,8 +293,7 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryReassigningMFMAChain(
   }
 
   for (MachineInstr *RewriteCandidate : RewriteCandidates) {
-    int NewMFMAOp =
-        AMDGPU::getMFMASrcCVDstAGPROp(RewriteCandidate->getOpcode());
+    int NewMFMAOp = AMDGPU::getAGPRFormOp(RewriteCandidate->getOpcode());
     RewriteCandidate->setDesc(TII.get(NewMFMAOp));
     ++NumMFMAsRewrittenToAGPR;
   }
@@ -548,7 +553,26 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
       // replacement vreg uses.
       LiveInterval &NewLI = LIS.createAndComputeVirtRegInterval(NewVReg);
       VRM.grow();
+
+      // A spill slot can be stored to multiple times, so the replacement
+      // vreg may have multiple disconnected live range components. Split
+      // them into separate vregs to maintain the single-component invariant.
+      SmallVector<LiveInterval *, 4> SplitLIs;
+      LIS.splitSeparateComponents(NewLI, SplitLIs);
+
+      LLVM_DEBUG({
+        if (!SplitLIs.empty()) {
+          dbgs() << "Split unspilled interval into " << (SplitLIs.size() + 1)
+                 << " components\n";
+        }
+      });
+
       LRM.assign(NewLI, PhysReg);
+      for (LiveInterval *SplitLI : SplitLIs) {
+        VRM.grow();
+        LRM.assign(*SplitLI, PhysReg);
+      }
+
       MFI.RemoveStackObject(Slot);
       break;
     }

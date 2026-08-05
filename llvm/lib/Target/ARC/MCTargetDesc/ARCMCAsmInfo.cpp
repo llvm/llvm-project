@@ -11,7 +11,8 @@ using namespace llvm;
 
 void ARCMCAsmInfo::anchor() {}
 
-ARCMCAsmInfo::ARCMCAsmInfo(const Triple &TT) {
+ARCMCAsmInfo::ARCMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   SupportsDebugInformation = true;
   Data16bitsDirective = "\t.short\t";
   Data32bitsDirective = "\t.word\t";

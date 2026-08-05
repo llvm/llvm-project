@@ -406,7 +406,7 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: dead $x0 = PseudoVSETVLI [[COPY]], 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: [[PseudoVLE64_V_M1_:%[0-9]+]]:vr = PseudoVLE64_V_M1 undef $noreg, [[COPY2]], $noreg /* vl */, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: INLINEASM &"", 1 /* sideeffect attdialect */, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: dead $x0 = PseudoVSETVLI [[COPY]], 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 undef $noreg, [[PseudoVLE64_V_M1_]], [[COPY1]], $noreg /* vl */, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $v8 = COPY [[PseudoVADD_VV_M1_]], implicit $vtype
@@ -415,7 +415,7 @@ body:             |
     %1:vr = COPY $v8
     %0:gpr = COPY $x10
     %3:vr = PseudoVLE64_V_M1 undef $noreg, %0, %2, 6, 0
-    INLINEASM &"", 1 /* sideeffect attdialect */
+    INLINEASM &"", sideeffect attdialect
     %4:vr = PseudoVADD_VV_M1 undef $noreg, killed %3, %1, %2, 6, 0
     $v8 = COPY %4
     PseudoRET implicit $v8

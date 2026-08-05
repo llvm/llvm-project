@@ -199,13 +199,31 @@ foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unkn
 endforeach()
 
 if(FUCHSIA_SDK)
+  # Since there is only one build of the toolchain runtimes for users doing any
+  # supported -ffuchsia-api-level=... build, target the oldest unretired level.
+  file(READ "${FUCHSIA_SDK}/version_history.json" FUCHSIA_SDK_VERSION_HISTORY)
+  string(JSON FUCHSIA_SDK_API_LEVEL_COUNT LENGTH "${FUCHSIA_SDK_VERSION_HISTORY}" "data" "api_levels")
+  math(EXPR FUCHSIA_SDK_API_LEVEL_MAXIDX "${FUCHSIA_SDK_API_LEVEL_COUNT} - 1")
+  set(FUCHSIA_API_LEVEL 0)
+  foreach(idx RANGE ${FUCHSIA_SDK_API_LEVEL_MAXIDX})
+    string(JSON FUCHSIA_API_LEVEL_NAME MEMBER "${FUCHSIA_SDK_VERSION_HISTORY}" "data" "api_levels" ${idx})
+    string(JSON FUCHSIA_API_LEVEL_PHASE GET "${FUCHSIA_SDK_VERSION_HISTORY}" "data" "api_levels" "${FUCHSIA_API_LEVEL_NAME}" "phase")
+    if(NOT "${FUCHSIA_API_LEVEL_PHASE}" STREQUAL "retired")
+      set(FUCHSIA_API_LEVEL_INT ${FUCHSIA_API_LEVEL_NAME})
+      if(FUCHSIA_API_LEVEL EQUAL 0 OR FUCHSIA_API_LEVEL_INT LESS FUCHSIA_API_LEVEL)
+        set(FUCHSIA_API_LEVEL ${FUCHSIA_API_LEVEL_INT})
+      endif()
+    endif()
+  endforeach()
+  message(STATUS "Runtimes target Fuchsia API level ${FUCHSIA_API_LEVEL}")
+
   set(FUCHSIA_aarch64-unknown-fuchsia_NAME arm64)
   set(FUCHSIA_arm-unknown-fuchsia_NAME arm)
   set(FUCHSIA_i386-unknown-fuchsia_NAME x64)
   set(FUCHSIA_x86_64-unknown-fuchsia_NAME x64)
   set(FUCHSIA_riscv64-unknown-fuchsia_NAME riscv64)
   foreach(target i386-unknown-fuchsia;x86_64-unknown-fuchsia;aarch64-unknown-fuchsia;arm-unknown-fuchsia;riscv64-unknown-fuchsia)
-    set(FUCHSIA_${target}_COMPILER_FLAGS "--target=${target} -I${FUCHSIA_SDK}/pkg/sync/include -I${FUCHSIA_SDK}/pkg/fdio/include -fstack-size-section -fexperimental-call-graph-section")
+    set(FUCHSIA_${target}_COMPILER_FLAGS "--target=${target} -ffuchsia-api-level=${FUCHSIA_API_LEVEL} -I${FUCHSIA_SDK}/pkg/sync/include -I${FUCHSIA_SDK}/pkg/fdio/include -fstack-size-section -fexperimental-call-graph-section")
     set(FUCHSIA_${target}_LINKER_FLAGS "-L${FUCHSIA_SDK}/arch/${FUCHSIA_${target}_NAME}/lib")
     set(FUCHSIA_${target}_SYSROOT "${FUCHSIA_SDK}/arch/${FUCHSIA_${target}_NAME}/sysroot")
   endforeach()
@@ -240,6 +258,7 @@ if(FUCHSIA_SDK)
     set(RUNTIMES_${target}_COMPILER_RT_CXX_LIBRARY "libcxx" CACHE STRING "")
     set(RUNTIMES_${target}_COMPILER_RT_USE_BUILTINS_LIBRARY ON CACHE BOOL "")
     set(RUNTIMES_${target}_COMPILER_RT_USE_LLVM_UNWINDER ON CACHE BOOL "")
+    set(RUNTIMES_${target}_COMPILER_RT_ASAN_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
     set(RUNTIMES_${target}_LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
     set(RUNTIMES_${target}_LIBUNWIND_HIDE_SYMBOLS ON CACHE BOOL "")
     set(RUNTIMES_${target}_LIBCXXABI_USE_COMPILER_RT ON CACHE BOOL "")
@@ -473,6 +492,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-otool
   llvm-pdbutil
   llvm-profdata
+  llvm-profgen
   llvm-rc
   llvm-ranlib
   llvm-readelf

@@ -92,13 +92,13 @@ NativeProcessFreeBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
   if (!WIFSTOPPED(wstatus)) {
     LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
              WaitStatus::Decode(wstatus));
-    return llvm::createStringError("Could not sync with inferior process");
+    return llvm::createStringError("could not sync with inferior process");
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::createStringError("Cannot get process architecture");
+    return llvm::createStringError("cannot get process architecture");
   }
 
   // Set the architecture to the exe architecture.
@@ -129,7 +129,7 @@ NativeProcessFreeBSD::Manager::Attach(
   // Retrieve the architecture for the running process.
   ProcessInstanceInfo Info;
   if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::createStringError("Cannot get process architecture");
+    return llvm::createStringError("cannot get process architecture");
   }
 
   std::unique_ptr<NativeProcessFreeBSD> process_up(new NativeProcessFreeBSD(
@@ -316,22 +316,7 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
                info.pl_siginfo.si_addr);
 
       if (thread) {
-        auto &regctx = static_cast<NativeRegisterContextFreeBSD &>(
-            thread->GetRegisterContext());
-        auto thread_info =
-            m_threads_stepping_with_breakpoint.find(thread->GetID());
-        if (thread_info != m_threads_stepping_with_breakpoint.end() &&
-            llvm::is_contained(thread_info->second, regctx.GetPC())) {
-          thread->SetStoppedByTrace();
-          for (auto &&bp_addr : thread_info->second) {
-            Status brkpt_error = RemoveBreakpoint(bp_addr);
-            if (brkpt_error.Fail())
-              LLDB_LOG(log, "pid = {0} remove stepping breakpoint: {1}",
-                       thread_info->first, brkpt_error);
-          }
-          m_threads_stepping_with_breakpoint.erase(thread_info);
-        } else
-          thread->SetStoppedByBreakpoint();
+        thread->SetStoppedByBreakpoint();
         FixupBreakpointPCAsNeeded(*thread);
         SetCurrentThreadID(thread->GetID());
       }
@@ -749,9 +734,9 @@ Status NativeProcessFreeBSD::GetLoadedModuleFileSpec(const char *module_path,
       return Status();
     }
   }
-  return Status::FromErrorStringWithFormat(
-      "Module file (%s) not found in process' memory map!",
-      module_file_spec.GetFilename().AsCString());
+  return Status::FromErrorStringWithFormatv(
+      "Module file ({0}) not found in process' memory map!",
+      module_file_spec.GetFilename());
 }
 
 Status
@@ -1072,7 +1057,7 @@ NativeProcessFreeBSD::SaveCore(llvm::StringRef path_hint) {
       openFile(path, pc.pc_fd, CD_CreateNew, FA_Write, OF_None)) {
     if (std::error_code errc =
             createTemporaryFile("lldb", "core", pc.pc_fd, path))
-      return llvm::createStringError(errc, "Unable to create a temporary file");
+      return llvm::createStringError(errc, "unable to create a temporary file");
   }
   error = PtraceWrapper(PT_COREDUMP, GetID(), &pc, sizeof(pc));
 

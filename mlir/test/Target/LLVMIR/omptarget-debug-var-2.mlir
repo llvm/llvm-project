@@ -42,7 +42,7 @@ module attributes {omp.is_target_device = false} {
     %15 = omp.map.bounds lower_bound(%7 : i64) upper_bound(%6 : i64) extent(%10 : i64) stride(%8 : i64) start_idx(%8 : i64)
     %16 = omp.map.info var_ptr(%11 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(tofrom) capture(ByRef) bounds(%15) -> !llvm.ptr
     %17 = omp.map.info var_ptr(%4 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr
-    omp.target map_entries(%14 -> %arg0, %16 -> %arg1, %17 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%14 -> %arg0, %16 -> %arg1, %17 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       llvm.intr.dbg.declare #var_x = %arg0 : !llvm.ptr
       llvm.intr.dbg.declare #var_arr = %arg1 : !llvm.ptr
       llvm.intr.dbg.declare #var_i = %arg2 : !llvm.ptr

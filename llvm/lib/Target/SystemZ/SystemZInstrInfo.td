@@ -10,6 +10,13 @@ def IsTargetXPLINK64      : Predicate<"Subtarget->isTargetXPLINK64()">;
 def IsTargetELF           : Predicate<"Subtarget->isTargetELF()">;
 
 //===----------------------------------------------------------------------===//
+// Compiler fence
+//===----------------------------------------------------------------------===//
+
+let hasNoSchedulingInfo = 1 in
+  def FENCE : Pseudo<(outs), (ins), []>;
+
+//===----------------------------------------------------------------------===//
 // Stack allocation
 //===----------------------------------------------------------------------===//
 
@@ -522,6 +529,44 @@ let SimpleBDXStore = 1, mayStore = 1 in {
                        [(store GR128:$src, bdxaddr20only128:$dst)]>;
   }
 }
+
+let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 1 in {
+  // Load the TLS block's address for the purpose of loading the stack guard.
+  def LOAD_TLS_BLOCK_ADDR : Pseudo<(outs ADDR64:$grdaddr),
+                                            (ins), []>;
+  // Load the address of a global variable holding the stack guard.
+  def LOAD_GLOBAL_STACKGUARD_ADDR : Pseudo<(outs ADDR64:$grdaddr),
+                                               (ins), []>;
+
+  let mayStore = 1 in {
+    // Move the stack guard to the stack.
+    let usesCustomInserter = 1 in
+      def MOV_STACKGUARD_DAG : Pseudo<(outs),
+                                        (ins bdaddr12only:$grdloc), [
+                                          (z_mov_stackguard 
+                                            bdaddr12only:$grdloc
+                                          )
+                                     ]>;
+    let Constraints = "@earlyclobber $grdaddr" in
+      def MOV_STACKGUARD : Pseudo<(outs ADDR64:$grdaddr),
+                                    (ins bdaddr12only:$grdloc), []>;
+  }
+  let Defs = [CC] in {
+    // Compare the stack guard against the one on the stack.
+    let usesCustomInserter = 1 in
+      def CMP_STACKGUARD_DAG : Pseudo<(outs),
+                                           (ins bdaddr12only:$grdloc), 
+                                           [(set CC, 
+                                             (z_cmp_stackguard
+                                              (load bdaddr12only:$grdloc)
+                                             )
+                                            )]>;
+    let Constraints = "@earlyclobber $grdaddr" in
+      def CMP_STACKGUARD : Pseudo<(outs ADDR64:$grdaddr),
+                                       (ins bdaddr12only:$grdloc), []>;
+  }
+}
+
 def STRL  : StoreRILPC<"strl", 0xC4F, aligned_store, GR32>;
 def STGRL : StoreRILPC<"stgrl", 0xC4B, aligned_store, GR64>;
 
@@ -548,10 +593,16 @@ def MemsetImmReg : MemsetPseudo<imm64, GR32>;
 def MemsetRegImm : MemsetPseudo<ADDR64, imm32zx8trunc>;
 def MemsetRegReg : MemsetPseudo<ADDR64, GR32>;
 
-// Move right.
-let Predicates = [FeatureMiscellaneousExtensions3],
-    mayLoad = 1, mayStore = 1, Uses = [R0L] in
-  def MVCRL : SideEffectBinarySSE<"mvcrl", 0xE50A>;
+// Move right to left.
+let Predicates = [FeatureMiscellaneousExtensions3], mayLoad = 1,
+    mayStore = 1 in {
+  let Uses = [R0L] in
+    def MVCRL : SideEffectBinarySSE<"mvcrl", 0xE50A>;
+  let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Defs = [CC, R0L] in
+    def MemmoveImm : Pseudo<(outs),
+                        (ins ADDR64:$dest, ADDR64:$src, imm64:$length),
+                        [(z_memmove ADDR64:$dest, ADDR64:$src, imm64:$length)]>;
+}
 
 // String moves.
 let mayLoad = 1, mayStore = 1, Defs = [CC] in

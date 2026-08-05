@@ -11,9 +11,16 @@
 
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/PointerEmbeddedInt.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <climits>
 #include <optional>
+#include <string>
 #include <vector>
 
 namespace llvm {
@@ -22,6 +29,17 @@ class raw_ostream;
 
 namespace clang {
 namespace api_notes {
+
+template <typename RangeT>
+std::string formatAPINotesParameterSelector(RangeT &&Parameters) {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  OS << "[";
+  llvm::interleaveComma(Parameters, OS);
+  OS << "]";
+  return Result;
+}
+
 enum class RetainCountConventionKind {
   None,
   CFReturnsRetained,
@@ -233,13 +251,9 @@ inline bool operator!=(const CommonTypeInfo &LHS, const CommonTypeInfo &RHS) {
 /// Describes API notes data for an Objective-C class or protocol or a C++
 /// namespace.
 class ContextInfo : public CommonTypeInfo {
-  /// Whether this class has a default nullability.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned HasDefaultNullability : 1;
-
-  /// The default nullability.
-  LLVM_PREFERRED_TYPE(NullabilityKind)
-  unsigned DefaultNullability : 2;
+  /// The default nullability, if any.
+  LLVM_PREFERRED_TYPE(NullabilityKindOrNone)
+  unsigned DefaultNullabilityOrNone : 3;
 
   /// Whether this class has designated initializers recorded.
   LLVM_PREFERRED_TYPE(bool)
@@ -257,7 +271,7 @@ class ContextInfo : public CommonTypeInfo {
 
 public:
   ContextInfo()
-      : HasDefaultNullability(0), DefaultNullability(0), HasDesignatedInits(0),
+      : DefaultNullabilityOrNone(0), HasDesignatedInits(0),
         SwiftImportAsNonGenericSpecified(false), SwiftImportAsNonGeneric(false),
         SwiftObjCMembersSpecified(false), SwiftObjCMembers(false) {}
 
@@ -266,17 +280,15 @@ public:
   ///
   /// Returns the default nullability, if implied, or std::nullopt if there is
   /// none.
-  std::optional<NullabilityKind> getDefaultNullability() const {
-    return HasDefaultNullability
-               ? std::optional<NullabilityKind>(
-                     static_cast<NullabilityKind>(DefaultNullability))
-               : std::nullopt;
+  NullabilityKindOrNone getDefaultNullability() const {
+    return NullabilityKindOrNone::fromInternalRepresentation(
+        DefaultNullabilityOrNone);
   }
 
   /// Set the default nullability for properties and methods of this class.
   void setDefaultNullability(NullabilityKind Kind) {
-    HasDefaultNullability = true;
-    DefaultNullability = static_cast<unsigned>(Kind);
+    DefaultNullabilityOrNone =
+        NullabilityKindOrNone(Kind).toInternalRepresentation();
   }
 
   bool hasDesignatedInits() const { return HasDesignatedInits; }
@@ -412,30 +424,23 @@ inline bool operator!=(const BoundsSafetyInfo &LHS,
 
 /// API notes for a variable/property.
 class VariableInfo : public CommonEntityInfo {
-  /// Whether this property has been audited for nullability.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned NullabilityAudited : 1;
-
-  /// The kind of nullability for this property. Only valid if the nullability
+  /// The kind of nullability for this property, if the nullability
   /// has been audited.
-  LLVM_PREFERRED_TYPE(NullabilityKind)
-  unsigned Nullable : 2;
+  LLVM_PREFERRED_TYPE(NullabilityKindOrNone)
+  unsigned NullabilityOrNone : 3;
 
   /// The C type of the variable, as a string.
   std::string Type;
 
 public:
-  VariableInfo() : NullabilityAudited(false), Nullable(0) {}
+  VariableInfo() : NullabilityOrNone(0) {}
 
-  std::optional<NullabilityKind> getNullability() const {
-    return NullabilityAudited ? std::optional<NullabilityKind>(
-                                    static_cast<NullabilityKind>(Nullable))
-                              : std::nullopt;
+  NullabilityKindOrNone getNullability() const {
+    return NullabilityKindOrNone::fromInternalRepresentation(NullabilityOrNone);
   }
 
   void setNullabilityAudited(NullabilityKind kind) {
-    NullabilityAudited = true;
-    Nullable = static_cast<unsigned>(kind);
+    NullabilityOrNone = NullabilityKindOrNone(kind).toInternalRepresentation();
   }
 
   const std::string &getType() const { return Type; }
@@ -446,7 +451,7 @@ public:
   VariableInfo &operator|=(const VariableInfo &RHS) {
     static_cast<CommonEntityInfo &>(*this) |= RHS;
 
-    if (!NullabilityAudited && RHS.NullabilityAudited)
+    if (!getNullability() && RHS.getNullability())
       setNullabilityAudited(*RHS.getNullability());
     if (Type.empty())
       Type = RHS.Type;
@@ -459,8 +464,7 @@ public:
 
 inline bool operator==(const VariableInfo &LHS, const VariableInfo &RHS) {
   return static_cast<const CommonEntityInfo &>(LHS) == RHS &&
-         LHS.NullabilityAudited == RHS.NullabilityAudited &&
-         LHS.Nullable == RHS.Nullable && LHS.Type == RHS.Type;
+         LHS.NullabilityOrNone == RHS.NullabilityOrNone && LHS.Type == RHS.Type;
 }
 
 inline bool operator!=(const VariableInfo &LHS, const VariableInfo &RHS) {
@@ -648,6 +652,10 @@ public:
   /// A biased RetainCountConventionKind, where 0 means "unspecified".
   unsigned RawRetainCountConvention : 3;
 
+  /// Whether the function has the [[clang::unsafe_buffer_usage]] attribute
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned UnsafeBufferUsage : 1;
+
   // NullabilityKindSize bits are used to encode the nullability. The info
   // about the return type is stored at position 0, followed by the nullability
   // of the parameters.
@@ -666,7 +674,7 @@ public:
 
   FunctionInfo()
       : NullabilityAudited(false), NumAdjustedNullable(0),
-        RawRetainCountConvention() {}
+        RawRetainCountConvention(), UnsafeBufferUsage(0) {}
 
   static unsigned getMaxNullabilityIndex() {
     return ((sizeof(NullabilityPayload) * CHAR_BIT) / NullabilityKindSize);
@@ -738,6 +746,7 @@ public:
 inline bool operator==(const FunctionInfo &LHS, const FunctionInfo &RHS) {
   return static_cast<const CommonEntityInfo &>(LHS) == RHS &&
          LHS.NullabilityAudited == RHS.NullabilityAudited &&
+         LHS.UnsafeBufferUsage == RHS.UnsafeBufferUsage &&
          LHS.NumAdjustedNullable == RHS.NumAdjustedNullable &&
          LHS.NullabilityPayload == RHS.NullabilityPayload &&
          LHS.ResultType == RHS.ResultType && LHS.Params == RHS.Params &&
@@ -997,6 +1006,83 @@ struct Context {
   Context(ContextID id, ContextKind kind) : id(id), kind(kind) {}
 };
 
+using IdentifierID = llvm::PointerEmbeddedInt<unsigned, 31>;
+
+/// A key for a stored global-function or C++-method API notes entry.
+///
+/// The key is represented by the ID of its parent context, the declaration
+/// name, and optional exact parameter types.
+struct FunctionTableKey {
+  uint32_t parentContextID;
+  uint32_t nameID;
+  std::optional<llvm::SmallVector<IdentifierID, 2>> parameterTypeIDs;
+
+  FunctionTableKey() : parentContextID(-1), nameID(-1) {}
+
+  FunctionTableKey(uint32_t ParentContextID, uint32_t NameID)
+      : parentContextID(ParentContextID), nameID(NameID) {}
+
+  FunctionTableKey(uint32_t ParentContextID, uint32_t NameID,
+                   const llvm::SmallVectorImpl<IdentifierID> &ParameterTypeIDs)
+      : parentContextID(ParentContextID), nameID(NameID) {
+    parameterTypeIDs.emplace(ParameterTypeIDs.begin(), ParameterTypeIDs.end());
+  }
+
+  FunctionTableKey(std::optional<Context> ParentCtx, IdentifierID NameID)
+      : parentContextID(ParentCtx ? ParentCtx->id.Value
+                                  : static_cast<uint32_t>(-1)),
+        nameID(NameID) {}
+
+  FunctionTableKey(std::optional<Context> ParentCtx, IdentifierID NameID,
+                   const llvm::SmallVectorImpl<IdentifierID> &ParameterTypeIDs)
+      : parentContextID(ParentCtx ? ParentCtx->id.Value
+                                  : static_cast<uint32_t>(-1)),
+        nameID(NameID) {
+    parameterTypeIDs.emplace(ParameterTypeIDs.begin(), ParameterTypeIDs.end());
+  }
+
+  llvm::hash_code hashValue() const {
+    auto Hash = llvm::hash_combine(parentContextID, nameID,
+                                   static_cast<bool>(parameterTypeIDs));
+    if (parameterTypeIDs) {
+      Hash = llvm::hash_combine(Hash, parameterTypeIDs->size());
+      for (IdentifierID TypeID : *parameterTypeIDs)
+        Hash = llvm::hash_combine(Hash, static_cast<unsigned>(TypeID));
+    }
+    return Hash;
+  }
+};
+
+inline bool operator==(const FunctionTableKey &LHS,
+                       const FunctionTableKey &RHS) {
+  return LHS.parentContextID == RHS.parentContextID &&
+         LHS.nameID == RHS.nameID &&
+         LHS.parameterTypeIDs == RHS.parameterTypeIDs;
+}
+
+/// Stable reader-facing identity for an API notes function selector entry.
+///
+/// The key keeps the serialized function table identity together with the table
+/// kind. parentContextID names only the declaration context and does not say
+/// whether the entry came from the global-function or C++-method table.
+struct APINotesFunctionSelectorKey {
+  FunctionTableKey Key;
+  bool IsCXXMethod = false;
+
+  APINotesFunctionSelectorKey getWithoutParameterSelector() const {
+    return {FunctionTableKey(Key.parentContextID, Key.nameID), IsCXXMethod};
+  }
+
+  llvm::hash_code hashValue() const {
+    return llvm::hash_combine(Key.hashValue(), IsCXXMethod);
+  }
+};
+
+inline bool operator==(const APINotesFunctionSelectorKey &LHS,
+                       const APINotesFunctionSelectorKey &RHS) {
+  return LHS.Key == RHS.Key && LHS.IsCXXMethod == RHS.IsCXXMethod;
+}
+
 /// A temporary reference to an Objective-C selector, suitable for
 /// referencing selector data on the stack.
 ///
@@ -1009,5 +1095,31 @@ struct ObjCSelectorRef {
 };
 } // namespace api_notes
 } // namespace clang
+
+namespace llvm {
+template <> struct DenseMapInfo<clang::api_notes::FunctionTableKey> {
+  static unsigned getHashValue(const clang::api_notes::FunctionTableKey &Key) {
+    return Key.hashValue();
+  }
+
+  static bool isEqual(const clang::api_notes::FunctionTableKey &LHS,
+                      const clang::api_notes::FunctionTableKey &RHS) {
+    return LHS == RHS;
+  }
+};
+
+template <> struct DenseMapInfo<clang::api_notes::APINotesFunctionSelectorKey> {
+  static unsigned
+  getHashValue(const clang::api_notes::APINotesFunctionSelectorKey &Key) {
+    return Key.hashValue();
+  }
+
+  static bool
+  isEqual(const clang::api_notes::APINotesFunctionSelectorKey &LHS,
+          const clang::api_notes::APINotesFunctionSelectorKey &RHS) {
+    return LHS == RHS;
+  }
+};
+} // namespace llvm
 
 #endif

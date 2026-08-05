@@ -28,7 +28,7 @@ void ReturnBracedInitListCheck::registerMatchers(MatchFinder *Finder) {
                                        "::std::deque", "::std::forward_list",
                                        "::std::list"))));
 
-  auto ConstructExpr =
+  const auto ConstructExpr =
       cxxConstructExpr(
           unless(anyOf(
               // Skip explicit constructor.
@@ -66,8 +66,9 @@ void ReturnBracedInitListCheck::check(const MatchFinder::MatchResult &Result) {
   if (ReturnType != ConstructType)
     return;
 
-  auto Diag = diag(Loc, "avoid repeating the return type from the "
-                        "declaration; use a braced initializer list instead");
+  const auto Diag =
+      diag(Loc, "avoid repeating the return type from the "
+                "declaration; use a braced initializer list instead");
 
   const SourceRange CallParensRange =
       MatchedConstructExpr->getParenOrBraceRange();
@@ -81,8 +82,10 @@ void ReturnBracedInitListCheck::check(const MatchFinder::MatchResult &Result) {
        I < NumParams; ++I) {
     if (const auto *VD = dyn_cast<VarDecl>(
             MatchedConstructExpr->getConstructor()->getParamDecl(I))) {
-      if (MatchedConstructExpr->getArg(I)->getType().getCanonicalType() !=
-          VD->getType().getCanonicalType())
+      const auto ArgType = MatchedConstructExpr->getArg(I)->getType();
+      const auto ParamType = VD->getType().getNonReferenceType();
+      if (ArgType.getCanonicalType().getUnqualifiedType() !=
+          ParamType.getCanonicalType().getUnqualifiedType())
         return;
     }
   }

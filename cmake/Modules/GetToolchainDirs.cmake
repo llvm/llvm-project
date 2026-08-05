@@ -49,6 +49,17 @@ function (get_toolchain_fortran_module_subdir outvar)
 endfunction ()
 
 
+# Corresponds to Flang's ToolChain::getDefaultIntrinsicModuleDir().
+function (get_toolchain_module_subdir outvar)
+  set(outval "finclude/flang")
+
+  get_toolchain_target_dirname(arch_dirname)
+  set(outval "${outval}/${arch_dirname}")
+
+  set(${outvar} "${outval}" PARENT_SCOPE)
+endfunction ()
+
+
 # Corresponds to Clang's ToolChain::getOSLibName(). Adapted from Compiler-RT.
 function (get_toolchain_os_dirname outvar)
   if (ANDROID)
@@ -118,11 +129,21 @@ endfunction()
 # Corresponds to Clang's ToolChain::getRuntimePath().
 function (get_toolchain_target_dirname outvar)
   string(FIND "${LLVM_TARGET_TRIPLE}" "-" dash_index)
-  string(SUBSTRING "${LLVM_TARGET_TRIPLE}" 0 "${dash_index}" triple_cpu)
-  set(arch "${triple_cpu}")
-  if("${arch}" MATCHES "^i.86$")
-    set(arch "i386")
-  endif()
-  get_runtimes_target_libdir_common("${LLVM_TARGET_TRIPLE}" "${arch}" target)
+  if (dash_index EQUAL "-1")
+    # This means LLVM_TARGET_TRIPLE is not set and we cannot derive the dirname
+    # from it. The proper behavior here would be to emit an error since we have
+    # no target we can build for. However, compiler-rt uses
+    # COMPILER_RT_DEFAULT_TARGET_TRIPLE instead and ignores LLVM_TARGET_TRIPLE.
+    # To not break the build when building only compiler-rt, we skip the triple
+    # subdirectory.
+    set(target "")
+  else ()
+    string(SUBSTRING "${LLVM_TARGET_TRIPLE}" 0 "${dash_index}" triple_cpu)
+    set(arch "${triple_cpu}")
+    if("${arch}" MATCHES "^i.86$")
+      set(arch "i386")
+    endif()
+    get_runtimes_target_libdir_common("${LLVM_TARGET_TRIPLE}" "${arch}" target)
+  endif ()
   set("${outvar}" "${target}" PARENT_SCOPE)
 endfunction()

@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Missing hypotl
+// XFAIL: LLVM-LIBC-FIXME
+
 // <complex>
 
 // template<class T>

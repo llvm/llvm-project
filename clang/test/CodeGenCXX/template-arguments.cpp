@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -std=c++20 %s -emit-llvm -o - -triple x86_64-linux -DCONSTEXPR= | FileCheck %s
 // RUN: %clang_cc1 -std=c++20 %s -emit-llvm -o - -triple x86_64-linux -DCONSTEXPR=constexpr | FileCheck %s --check-prefix=CONST
 
+// RUN: %clang_cc1 -std=c++20 %s -emit-llvm -o - -triple x86_64-linux -DCONSTEXPR= -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 %s -emit-llvm -o - -triple x86_64-linux -DCONSTEXPR=constexpr -fexperimental-new-constant-interpreter | FileCheck %s --check-prefix=CONST
+
 template<typename T> CONSTEXPR T id(T v) { return v; }
 template<auto V> auto value = id(V);
 

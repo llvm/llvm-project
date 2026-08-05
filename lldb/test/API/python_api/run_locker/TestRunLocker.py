@@ -28,7 +28,7 @@ class TestRunLocker(TestBase):
     def test_run_locker_stop_at_entry(self):
         """Test that the run locker is set correctly when we launch"""
         self.build()
-        self.runlocker_test(False)
+        self.runlocker_test(True)
 
     def setUp(self):
         # Call super's setUp().
@@ -43,8 +43,8 @@ class TestRunLocker(TestBase):
 
         launch_info = target.GetLaunchInfo()
         if stop_at_entry:
-            flags = launch_info.GetFlags()
-            launch_info.SetFlags(flags | lldb.eLaunchFlagStopAtEntry)
+            flags = launch_info.GetLaunchFlags()
+            launch_info.SetLaunchFlags(flags | lldb.eLaunchFlagStopAtEntry)
 
         error = lldb.SBError()
         # We are trying to do things when the process is running, so
@@ -69,17 +69,33 @@ class TestRunLocker(TestBase):
             )
             state_type = lldb.SBProcess.GetStateFromEvent(event)
 
-        self.assertState(state_type, lldb.eStateRunning, "Didn't get a running event")
+        # A stop_at_entry launch may have already stopped, it may
+        # not be eStateRunning.
+        if not stop_at_entry or state_type != lldb.eStateStopped:
+            self.assertState(
+                state_type, lldb.eStateRunning, "Didn't get a running event"
+            )
 
         # We aren't checking the entry state, but just making sure
         # the running state is set properly if we continue in this state.
 
         if stop_at_entry:
-            event_result = listener.WaitForEvent(10, event)
-            self.assertTrue(event_result, "Timed out waiting for stop at entry stop")
-            state_type = lldb.SBProcess.GetStateFromEvent(event)
-            self.assertState(state_type, eStateStopped, "Stop at entry stopped")
+            if state_type != lldb.eStateStopped:
+                event_result = listener.WaitForEvent(10, event)
+                self.assertTrue(
+                    event_result, "Timed out waiting for stop at entry stop"
+                )
+                state_type = lldb.SBProcess.GetStateFromEvent(event)
+                self.assertState(state_type, eStateStopped, "Stop at entry stopped")
             process.Continue()
+            event_result = listener.WaitForEvent(10, event)
+            self.assertTrue(event_result, "timed out waiting for Continue")
+            state_type = lldb.SBProcess.GetStateFromEvent(event)
+            self.assertState(
+                state_type,
+                lldb.eStateRunning,
+                "Didn't get a running event after Continue",
+            )
 
         # Okay, now the process is running, make sure we can't do things
         # you aren't supposed to do while running, and that we get some
@@ -90,7 +106,7 @@ class TestRunLocker(TestBase):
         self.assertIn(
             "can't evaluate expressions when the process is running",
             repr(val),
-            "repr works"
+            "repr works",
         )
         error = val.GetError()
         self.assertTrue(error.Fail(), "Failed to run expression")
@@ -104,7 +120,7 @@ class TestRunLocker(TestBase):
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
         ret = interp.HandleCommand(
-            "script var = lldb.frame.EvaluateExpression('SomethingToCall()'); var.GetError().GetCString()",
+            "script var = lldb.target.EvaluateExpression('SomethingToCall()'); var.GetError().GetCString()",
             result,
         )
         self.assertIn(

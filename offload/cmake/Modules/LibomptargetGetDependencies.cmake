@@ -58,15 +58,6 @@ endif()
 ################################################################################
 # Looking for Level0
 ################################################################################
-find_path(LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR NAMES level_zero/ze_api.h)
-
-if(NOT LIBOMPTARGET_DEP_LEVEL_ZERO_INCLUDE_DIR)
-  set(LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND FALSE)
-else()
-  set(LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND TRUE)
-  find_library(LIBOMPTARGET_DEP_LEVEL_ZERO_LIBRARY NAMES ze_loader)
-endif()
-
 if(LIBOMPTARGET_OFFLOAD_ARCH)
   execute_process(COMMAND ${LIBOMPTARGET_OFFLOAD_ARCH} "--only=intel"
                   OUTPUT_VARIABLE LIBOMPTARGET_INTELGPU_ARCH_OUTPUT

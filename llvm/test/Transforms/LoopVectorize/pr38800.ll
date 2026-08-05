@@ -1,4 +1,4 @@
-; RUN: opt -passes=loop-vectorize -force-vector-width=2 -pass-remarks-missed='loop-vectorize' -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=2 -pass-remarks-analysis='loop-vectorize' -S < %s 2>&1 | FileCheck %s
 
 ; CHECK: remark: <unknown>:0:0: loop not vectorized: integer loop induction variable could not be identified
 
@@ -20,7 +20,7 @@ entry:
   %ptr.promoted = load float, ptr %ptr, align 4
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %add5 = phi float [ %ptr.promoted, %entry ], [ %add, %for.body ]
   %f.04 = phi float [ 0x3FB99999A0000000, %entry ], [ %add1, %for.body ]
   %add = fadd fast float %add5, %val
@@ -28,7 +28,7 @@ for.body:                                         ; preds = %entry, %for.body
   %cmp = fcmp fast olt float %add1, 1.000000e+00
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   store float %add, ptr %ptr, align 4
   ret void
 }
