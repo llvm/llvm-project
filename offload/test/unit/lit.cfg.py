@@ -33,6 +33,11 @@ if config.bin_llvm_tools_dir:
 if config.cuda_path:
     prepend_executable_path(f"{config.cuda_path}{os.path.sep}bin")
 
+# Windows doesn't have rpath so make sure runtime deps for the unittest
+# executable, such as LLVMOffload.dll, are found.
+if config.operating_system == "Windows" and config.library_dir:
+    prepend_executable_path(config.library_dir)
+
 # test_source_root: The root path where tests are located.
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = config.unittest_dir
