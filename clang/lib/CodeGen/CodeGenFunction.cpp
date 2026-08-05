@@ -121,9 +121,12 @@ llvm::fp::ExceptionBehavior
 clang::ToConstrainedExceptMD(LangOptions::FPExceptionModeKind Kind) {
 
   switch (Kind) {
-  case LangOptions::FPE_Ignore:  return llvm::fp::ebIgnore;
-  case LangOptions::FPE_MayTrap: return llvm::fp::ebMayTrap;
-  case LangOptions::FPE_Strict:  return llvm::fp::ebStrict;
+  case LangOptions::FPE_Ignore:
+    return llvm::fp::ebIgnore;
+  case LangOptions::FPE_MayTrap:
+    return llvm::fp::ebMayTrap;
+  case LangOptions::FPE_Strict:
+    return llvm::fp::ebStrict;
   default:
     llvm_unreachable("Unsupported FP Exception Behavior");
   }
@@ -181,8 +184,7 @@ void CodeGenFunction::CGFPOptionsRAII::ConstructorHelper(FPOptions FPFeatures) {
          "FPConstrained should be enabled on entire function");
 
   auto mergeFnAttrValue = [&](StringRef Name, bool Value) {
-    auto OldValue =
-        CGF.CurFn->getFnAttribute(Name).getValueAsBool();
+    auto OldValue = CGF.CurFn->getFnAttribute(Name).getValueAsBool();
     auto NewValue = OldValue & Value;
     if (OldValue != NewValue)
       CGF.CurFn->addFnAttr(Name, llvm::toStringRef(NewValue));
@@ -220,8 +222,8 @@ CodeGenFunction::MakeNaturalAlignAddrLValue(llvm::Value *V, QualType T,
                                       IsKnownNonNull);
 }
 
-LValue
-CodeGenFunction::MakeNaturalAlignPointeeAddrLValue(llvm::Value *V, QualType T) {
+LValue CodeGenFunction::MakeNaturalAlignPointeeAddrLValue(llvm::Value *V,
+                                                          QualType T) {
   return ::makeNaturalAlignAddrLValue(V, T, /*ForPointeeType*/ true,
                                       /*MightBeSigned*/ true, *this);
 }
@@ -357,7 +359,8 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
 }
 
 static void EmitIfUsed(CodeGenFunction &CGF, llvm::BasicBlock *BB) {
-  if (!BB) return;
+  if (!BB)
+    return;
   if (!BB->use_empty()) {
     CGF.CurFn->insert(CGF.CurFn->end(), BB);
     return;
@@ -379,9 +382,9 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
            "mismatched push/pop in convergence stack!");
   }
 
-  bool OnlySimpleReturnStmts = NumSimpleReturnExprs > 0
-    && NumSimpleReturnExprs == NumReturnExprs
-    && ReturnBlock.getBlock()->use_empty();
+  bool OnlySimpleReturnStmts = NumSimpleReturnExprs > 0 &&
+                               NumSimpleReturnExprs == NumReturnExprs &&
+                               ReturnBlock.getBlock()->use_empty();
   // Usually the return expression is evaluated before the cleanup
   // code.  If the function contains only a simple return statement,
   // such as a constant, the location before the cleanup code becomes
@@ -449,8 +452,7 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
                      RetKeyInstructionsAtomGroup);
   EmitEndEHSpec(CurCodeDecl);
 
-  assert(EHStack.empty() &&
-         "did not remove all scopes from cleanup stack!");
+  assert(EHStack.empty() && "did not remove all scopes from cleanup stack!");
 
   // If someone did an indirect goto, emit the indirect goto block at the end of
   // the function.
@@ -660,7 +662,8 @@ void CodeGenFunction::EmitKernelMetadata(const FunctionDecl *FD,
         llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getXDim()))),
         llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getYDim()))),
         llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getZDim())))};
-    Fn->setMetadata("work_group_size_hint", llvm::MDNode::get(Context, AttrMDArgs));
+    Fn->setMetadata("work_group_size_hint",
+                    llvm::MDNode::get(Context, AttrMDArgs));
   }
 
   if (const ReqdWorkGroupSizeAttr *A = FD->getAttr<ReqdWorkGroupSizeAttr>()) {
@@ -671,7 +674,8 @@ void CodeGenFunction::EmitKernelMetadata(const FunctionDecl *FD,
         llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getXDim()))),
         llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getYDim()))),
         llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getZDim())))};
-    Fn->setMetadata("reqd_work_group_size", llvm::MDNode::get(Context, AttrMDArgs));
+    Fn->setMetadata("reqd_work_group_size",
+                    llvm::MDNode::get(Context, AttrMDArgs));
   }
 
   if (const OpenCLIntelReqdSubGroupSizeAttr *A =
@@ -684,7 +688,7 @@ void CodeGenFunction::EmitKernelMetadata(const FunctionDecl *FD,
 }
 
 /// Determine whether the function F ends with a return stmt.
-static bool endsWithReturn(const Decl* F) {
+static bool endsWithReturn(const Decl *F) {
   const Stmt *Body = nullptr;
   if (auto *FD = dyn_cast_or_null<FunctionDecl>(F))
     Body = FD->getBody();
@@ -874,7 +878,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       const IdentifierInfo *II = OMD->getSelector().getIdentifierInfoForSlot(0);
       if (OMD->getMethodFamily() == OMF_dealloc ||
           OMD->getMethodFamily() == OMF_initialize ||
-          (OMD->getSelector().isUnarySelector() && II->isStr(".cxx_destruct"))) {
+          (OMD->getSelector().isUnarySelector() &&
+           II->isStr(".cxx_destruct"))) {
         markAsIgnoreThreadCheckingAtRuntime(Fn);
       }
     }
@@ -1190,14 +1195,14 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       if (CGM.getCodeGenOpts().MNopMCount) {
         if (!CGM.getCodeGenOpts().CallFEntry)
           CGM.getDiags().Report(diag::err_opt_not_valid_without_opt)
-            << "-mnop-mcount" << "-mfentry";
+              << "-mnop-mcount" << "-mfentry";
         Fn->addFnAttr("mnop-mcount");
       }
 
       if (CGM.getCodeGenOpts().RecordMCount) {
         if (!CGM.getCodeGenOpts().CallFEntry)
           CGM.getDiags().Report(diag::err_opt_not_valid_without_opt)
-            << "-mrecord-mcount" << "-mfentry";
+              << "-mrecord-mcount" << "-mfentry";
         Fn->addFnAttr("mrecord-mcount");
       }
     }
@@ -1207,7 +1212,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     if (getContext().getTargetInfo().getTriple().getArch() !=
         llvm::Triple::systemz)
       CGM.getDiags().Report(diag::err_opt_not_valid_on_target)
-        << "-mpacked-stack";
+          << "-mpacked-stack";
     Fn->addFnAttr("packed-stack");
   }
 
@@ -1247,8 +1252,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     unsigned Idx = CurFnInfo->getReturnInfo().getInAllocaFieldIndex();
     llvm::Function::arg_iterator EI = CurFn->arg_end();
     --EI;
-    llvm::Value *Addr = Builder.CreateStructGEP(
-        CurFnInfo->getArgStruct(), &*EI, Idx);
+    llvm::Value *Addr =
+        Builder.CreateStructGEP(CurFnInfo->getArgStruct(), &*EI, Idx);
     llvm::Type *Ty =
         cast<llvm::GetElementPtrInst>(Addr)->getResultElementType();
     ReturnValuePointer = Address(Addr, Ty, getPointerAlign());
@@ -1261,8 +1266,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     // Tell the epilog emitter to autorelease the result.  We do this
     // now so that various specialized functions can suppress it
     // during their IR-generation.
-    if (getLangOpts().ObjCAutoRefCount &&
-        !CurFnInfo->isReturnsRetained() &&
+    if (getLangOpts().ObjCAutoRefCount && !CurFnInfo->isReturnsRetained() &&
         RetTy->isObjCRetainableType())
       AutoreleaseResult = true;
   }
@@ -1301,7 +1305,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
         // Get the lvalue for the field (which is a copy of the enclosing object
         // or contains the address of the enclosing object).
-        LValue ThisFieldLValue = EmitLValueForLambdaField(LambdaThisCaptureField);
+        LValue ThisFieldLValue =
+            EmitLValueForLambdaField(LambdaThisCaptureField);
         if (!LambdaThisCaptureField->getType()->isPointerType()) {
           // If the enclosing object was captured by value, just use its
           // address. Sign this pointer.
@@ -1309,14 +1314,15 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         } else {
           // Load the lvalue pointed to by the field, since '*this' was captured
           // by reference.
-          CXXThisValue =
-              EmitLoadOfLValue(ThisFieldLValue, SourceLocation()).getScalarVal();
+          CXXThisValue = EmitLoadOfLValue(ThisFieldLValue, SourceLocation())
+                             .getScalarVal();
         }
       }
       for (auto *FD : MD->getParent()->fields()) {
         if (FD->hasCapturedVLAType()) {
-          auto *ExprArg = EmitLoadOfLValue(EmitLValueForLambdaField(FD),
-                                           SourceLocation()).getScalarVal();
+          auto *ExprArg =
+              EmitLoadOfLValue(EmitLValueForLambdaField(FD), SourceLocation())
+                  .getScalarVal();
           auto VAT = FD->getCapturedVLAType();
           VLASizeMap[VAT->getSizeExpr()] = ExprArg;
         }
@@ -1414,7 +1420,8 @@ void CodeGenFunction::EmitBlockWithFallThrough(llvm::BasicBlock *BB,
 static void TryMarkNoThrow(llvm::Function *F) {
   // LLVM treats 'nounwind' on a function as part of the type, so we
   // can't do this on functions that can be overwritten.
-  if (F->isInterposable()) return;
+  if (F->isInterposable())
+    return;
 
   for (llvm::BasicBlock &BB : *F)
     for (llvm::Instruction &I : BB)
@@ -1582,8 +1589,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     EmitDestructorBody(Args);
   else if (isa<CXXConstructorDecl>(FD))
     EmitConstructorBody(Args);
-  else if (getLangOpts().CUDA &&
-           !getLangOpts().CUDAIsDevice &&
+  else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
            FD->hasAttr<CUDAGlobalAttr>())
     CGM.getCUDARuntime().emitDeviceStub(*this, Args);
   else if (isa<CXXMethodDecl>(FD) &&
@@ -1687,7 +1693,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 /// that we can just remove the code.
 bool CodeGenFunction::ContainsLabel(const Stmt *S, bool IgnoreCaseStmts) {
   // Null statement, not a label!
-  if (!S) return false;
+  if (!S)
+    return false;
 
   // If this is a label, we have to emit the code, consider something like:
   // if (0) {  ...  foo:  bar(); }  goto foo;
@@ -1719,7 +1726,8 @@ bool CodeGenFunction::ContainsLabel(const Stmt *S, bool IgnoreCaseStmts) {
 /// inside of it, this is fine.
 bool CodeGenFunction::containsBreak(const Stmt *S) {
   // Null statement, not a label!
-  if (!S) return false;
+  if (!S)
+    return false;
 
   // If this is a switch or loop that defines its own break scope, then we can
   // include it and anything inside of it.
@@ -1739,7 +1747,8 @@ bool CodeGenFunction::containsBreak(const Stmt *S) {
 }
 
 bool CodeGenFunction::mightAddDeclToScope(const Stmt *S) {
-  if (!S) return false;
+  if (!S)
+    return false;
 
   // Some statement kinds add a scope and thus never add a decl to the current
   // scope. Note, this list is longer than the list of statements that might
@@ -1792,11 +1801,11 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
   // to bool.
   Expr::EvalResult Result;
   if (!Cond->EvaluateAsInt(Result, getContext()))
-    return false;  // Not foldable, not integer or not fully evaluatable.
+    return false; // Not foldable, not integer or not fully evaluatable.
 
   llvm::APSInt Int = Result.Val.getInt();
   if (!AllowLabels && CodeGenFunction::ContainsLabel(Cond))
-    return false;  // Contains a label.
+    return false; // Contains a label.
 
   PGO->markStmtMaybeUsed(Cond);
   ResultInt = std::move(Int);
@@ -2114,7 +2123,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
     //   br(c ? throw x : y, t, f) -> br(c, br(throw x, t, f), br(y, t, f)
     // Fold this to:
     //   br(c, throw x, br(y, t, f))
-    EmitCXXThrowExpr(Throw, /*KeepInsertionPoint*/false);
+    EmitCXXThrowExpr(Throw, /*KeepInsertionPoint*/ false);
     return;
   }
 
@@ -2234,8 +2243,8 @@ static void emitNonZeroVLAInit(CodeGenFunction &CGF, QualType baseType,
   CGBuilderTy &Builder = CGF.Builder;
 
   CharUnits baseSize = CGF.getContext().getTypeSizeInChars(baseType);
-  llvm::Value *baseSizeInChars
-    = llvm::ConstantInt::get(CGF.IntPtrTy, baseSize.getQuantity());
+  llvm::Value *baseSizeInChars =
+      llvm::ConstantInt::get(CGF.IntPtrTy, baseSize.getQuantity());
 
   Address begin = dest.withElementType(CGF.Int8Ty);
   llvm::Value *end = Builder.CreateInBoundsGEP(begin.getElementType(),
@@ -2253,8 +2262,7 @@ static void emitNonZeroVLAInit(CodeGenFunction &CGF, QualType baseType,
   llvm::PHINode *cur = Builder.CreatePHI(begin.getType(), 2, "vla.cur");
   cur->addIncoming(begin.emitRawPointer(CGF), originBB);
 
-  CharUnits curAlign =
-    dest.getAlignment().alignmentOfArrayElement(baseSize);
+  CharUnits curAlign = dest.getAlignment().alignmentOfArrayElement(baseSize);
 
   // memcpy the individual element bit-pattern.
   Builder.CreateMemCpy(Address(cur, CGF.Int8Ty, curAlign), src, baseSizeInChars,
@@ -2262,7 +2270,7 @@ static void emitNonZeroVLAInit(CodeGenFunction &CGF, QualType baseType,
 
   // Go to the next element.
   llvm::Value *next =
-    Builder.CreateInBoundsGEP(CGF.Int8Ty, cur, baseSizeInChars, "vla.next");
+      Builder.CreateInBoundsGEP(CGF.Int8Ty, cur, baseSizeInChars, "vla.next");
 
   // Leave if that's the end of the VLA.
   llvm::Value *done = Builder.CreateICmpEQ(next, end, "vla-init.isdone");
@@ -2302,8 +2310,7 @@ Address CodeGenFunction::EmitAddressOfPFPField(Address RecordPtr,
       VoidPtrTy, PtrPtr.getAlignment());
 }
 
-void
-CodeGenFunction::EmitNullInitialization(Address DestPtr, QualType Ty) {
+void CodeGenFunction::EmitNullInitialization(Address DestPtr, QualType Ty) {
   // Ignore empty classes in C++.
   if (getLangOpts().CPlusPlus)
     if (const auto *RD = Ty->getAsCXXRecordDecl(); RD && RD->isEmpty())
@@ -2321,9 +2328,8 @@ CodeGenFunction::EmitNullInitialization(Address DestPtr, QualType Ty) {
   // Don't bother emitting a zero-byte memset.
   if (size.isZero()) {
     // But note that getTypeInfo returns 0 for a VLA.
-    if (const VariableArrayType *vlaType =
-          dyn_cast_or_null<VariableArrayType>(
-                                          getContext().getAsArrayType(Ty))) {
+    if (const VariableArrayType *vlaType = dyn_cast_or_null<VariableArrayType>(
+            getContext().getAsArrayType(Ty))) {
       auto VlaSize = getVLASize(vlaType);
       SizeVal = VlaSize.NumElts;
       CharUnits eltSize = getContext().getTypeSizeInChars(VlaSize.Type);
@@ -2344,20 +2350,21 @@ CodeGenFunction::EmitNullInitialization(Address DestPtr, QualType Ty) {
   // like -1, which happens to be the pattern used by member-pointers.
   if (!CGM.getTypes().isZeroInitializable(Ty)) {
     // For a VLA, emit a single element, then splat that over the VLA.
-    if (vla) Ty = getContext().getBaseElementType(vla);
+    if (vla)
+      Ty = getContext().getBaseElementType(vla);
 
     llvm::Constant *NullConstant = CGM.EmitNullConstant(Ty);
 
-    llvm::GlobalVariable *NullVariable =
-      new llvm::GlobalVariable(CGM.getModule(), NullConstant->getType(),
-                               /*isConstant=*/true,
-                               llvm::GlobalVariable::PrivateLinkage,
-                               NullConstant, Twine());
+    llvm::GlobalVariable *NullVariable = new llvm::GlobalVariable(
+        CGM.getModule(), NullConstant->getType(),
+        /*isConstant=*/true, llvm::GlobalVariable::PrivateLinkage, NullConstant,
+        Twine());
     CharUnits NullAlign = DestPtr.getAlignment();
     NullVariable->setAlignment(NullAlign.getAsAlign());
     Address SrcPtr(NullVariable, Builder.getInt8Ty(), NullAlign);
 
-    if (vla) return emitNonZeroVLAInit(*this, Ty, DestPtr, SrcPtr, SizeVal);
+    if (vla)
+      return emitNonZeroVLAInit(*this, Ty, DestPtr, SrcPtr, SizeVal);
 
     // Get and call the appropriate llvm.memcpy overload.
     Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, false);
@@ -2391,13 +2398,14 @@ llvm::BlockAddress *CodeGenFunction::GetAddrOfLabel(const LabelDecl *L) {
 
 llvm::BasicBlock *CodeGenFunction::GetIndirectGotoBlock() {
   // If we already made the indirect branch for indirect goto, return its block.
-  if (IndirectBranch) return IndirectBranch->getParent();
+  if (IndirectBranch)
+    return IndirectBranch->getParent();
 
   CGBuilderTy TmpBuilder(CGM, createBasicBlock("indirectgoto"));
 
   // Create the PHI node that indirect gotos will add entries to.
-  llvm::Value *DestVal = TmpBuilder.CreatePHI(Int8PtrTy, 0,
-                                              "indirect.goto.dest");
+  llvm::Value *DestVal =
+      TmpBuilder.CreatePHI(Int8PtrTy, 0, "indirect.goto.dest");
 
   // Create the indirect branch instruction.
   IndirectBranch = TmpBuilder.CreateIndirectBr(DestVal);
@@ -2437,7 +2445,7 @@ llvm::Value *CodeGenFunction::emitArrayLength(const ArrayType *origArrayType,
   // We have some number of constant-length arrays, so addr should
   // have LLVM type [M x [N x [...]]]*.  Build a GEP that walks
   // down to the first element of addr.
-  SmallVector<llvm::Value*, 8> gepIndices;
+  SmallVector<llvm::Value *, 8> gepIndices;
 
   // GEP down to the array type.
   llvm::ConstantInt *zero = Builder.getInt32(0);
@@ -2447,7 +2455,7 @@ llvm::Value *CodeGenFunction::emitArrayLength(const ArrayType *origArrayType,
   QualType eltType;
 
   llvm::ArrayType *llvmArrayType =
-    dyn_cast<llvm::ArrayType>(addr.getElementType());
+      dyn_cast<llvm::ArrayType>(addr.getElementType());
   while (llvmArrayType) {
     assert(isa<ConstantArrayType>(arrayType));
     assert(cast<ConstantArrayType>(arrayType)->getZExtSize() ==
@@ -2457,8 +2465,7 @@ llvm::Value *CodeGenFunction::emitArrayLength(const ArrayType *origArrayType,
     countFromCLAs *= llvmArrayType->getNumElements();
     eltType = arrayType->getElementType();
 
-    llvmArrayType =
-      dyn_cast<llvm::ArrayType>(llvmArrayType->getElementType());
+    llvmArrayType = dyn_cast<llvm::ArrayType>(llvmArrayType->getElementType());
     arrayType = getContext().getAsArrayType(arrayType->getElementType());
     assert((!llvmArrayType || arrayType) &&
            "LLVM and Clang types are out-of-synch");
@@ -2486,8 +2493,7 @@ llvm::Value *CodeGenFunction::emitArrayLength(const ArrayType *origArrayType,
 
   baseType = eltType;
 
-  llvm::Value *numElements
-    = llvm::ConstantInt::get(SizeTy, countFromCLAs);
+  llvm::Value *numElements = llvm::ConstantInt::get(SizeTy, countFromCLAs);
 
   // If we had any VLA dimensions, factor them in.
   if (numVLAElements)
@@ -2523,11 +2529,10 @@ CodeGenFunction::getVLASize(const VariableArrayType *type) {
     }
   } while ((type = getContext().getAsVariableArrayType(elementType)));
 
-  return { numElements, elementType };
+  return {numElements, elementType};
 }
 
-CodeGenFunction::VlaSizePair
-CodeGenFunction::getVLAElements1D(QualType type) {
+CodeGenFunction::VlaSizePair CodeGenFunction::getVLAElements1D(QualType type) {
   const VariableArrayType *vla = getContext().getAsVariableArrayType(type);
   assert(vla && "type was not a variable array type!");
   return getVLAElements1D(vla);
@@ -2538,7 +2543,7 @@ CodeGenFunction::getVLAElements1D(const VariableArrayType *Vla) {
   llvm::Value *VlaSize = VLASizeMap[Vla->getSizeExpr()];
   assert(VlaSize && "no size for VLA!");
   assert(VlaSize->getType() == SizeTy);
-  return { VlaSize, Vla->getElementType() };
+  return {VlaSize, Vla->getElementType()};
 }
 
 void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
@@ -2702,7 +2707,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
   } while (type->isVariablyModifiedType());
 }
 
-Address CodeGenFunction::EmitVAListRef(const Expr* E) {
+Address CodeGenFunction::EmitVAListRef(const Expr *E) {
   if (getContext().getBuiltinVaListType()->isArrayType())
     return EmitPointerWithAlignment(E);
   return EmitLValue(E).getAddress();
@@ -2730,9 +2735,11 @@ CodeGenFunction::protectFromPeepholes(RValue rvalue) {
   // is trunc(zext) folding, but if we add more, we can easily
   // extend this protection.
 
-  if (!rvalue.isScalar()) return PeepholeProtection();
+  if (!rvalue.isScalar())
+    return PeepholeProtection();
   llvm::Value *value = rvalue.getScalarVal();
-  if (!isa<llvm::ZExtInst>(value)) return PeepholeProtection();
+  if (!isa<llvm::ZExtInst>(value))
+    return PeepholeProtection();
 
   // Just make an extra bitcast.
   assert(HaveInsertPoint());
@@ -2745,7 +2752,8 @@ CodeGenFunction::protectFromPeepholes(RValue rvalue) {
 }
 
 void CodeGenFunction::unprotectFromPeepholes(PeepholeProtection protection) {
-  if (!protection.Inst) return;
+  if (!protection.Inst)
+    return;
 
   // In theory, we could try to duplicate the peepholes now, but whatever.
   protection.Inst->eraseFromParent();
@@ -2852,7 +2860,7 @@ Address CodeGenFunction::EmitFieldAnnotations(const FieldDecl *D,
   return Address(V, Addr.getElementType(), Addr.getAlignment());
 }
 
-CodeGenFunction::CGCapturedStmtInfo::~CGCapturedStmtInfo() { }
+CodeGenFunction::CGCapturedStmtInfo::~CGCapturedStmtInfo() {}
 
 CodeGenFunction::SanitizerScope::SanitizerScope(CodeGenFunction *CGF)
     : CGF(CGF) {
@@ -2935,12 +2943,13 @@ void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
   // referenced by an accelerator executable function, we emit an error.
   bool IsHipStdPar = getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice;
   if (BuiltinID) {
-    StringRef FeatureList(CGM.getContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
-    if (!Builtin::evaluateRequiredTargetFeatures(
-        FeatureList, CallerFeatureMap) && !IsHipStdPar) {
+    StringRef FeatureList(
+        CGM.getContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
+    if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
+                                                 CallerFeatureMap) &&
+        !IsHipStdPar) {
       CGM.getDiags().Report(Loc, diag::err_builtin_needs_feature)
-          << TargetDecl->getDeclName()
-          << FeatureList;
+          << TargetDecl->getDeclName() << FeatureList;
     }
   } else if (!TargetDecl->isMultiVersion() &&
              TargetDecl->hasAttr<TargetAttr>()) {

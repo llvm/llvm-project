@@ -4,9 +4,7 @@ void strong_target(void) {}
 
 #pragma weak weak_alias = strong_target
 
-void use_alias(void) {
-  weak_alias();
-}
+void use_alias(void) { weak_alias(); }
 
 // CHECK-DAG: @weak_alias = weak alias void (), ptr @strong_target
 // CHECK-LABEL: define{{.*}} void @strong_target()

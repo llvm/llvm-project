@@ -73,12 +73,12 @@ __device__ void use_processor_is(void) {
 
 // INT-DUMP-LABEL: FunctionDecl {{.*}} use_is_invocable
 // INT-DUMP:       IfStmt
-// INT-DUMP-NEXT:  ImplicitCastExpr {{.*}} {{'_Bool'|'bool'}} <IntegralToBoolean>
-// INT-DUMP-NEXT:  IntegerLiteral {{.*}} 'int' 1
+// INT-DUMP-NEXT:  ImplicitCastExpr {{.*}} {{'_Bool'|'bool'}}
+// <IntegralToBoolean> INT-DUMP-NEXT:  IntegerLiteral {{.*}} 'int' 1
 // INT-DUMP-LABEL: FunctionDecl {{.*}} use_processor_is
 // INT-DUMP:       IfStmt
-// INT-DUMP-NEXT:  ImplicitCastExpr {{.*}} {{'_Bool'|'bool'}} <IntegralToBoolean>
-// INT-DUMP-NEXT:  IntegerLiteral {{.*}} 'int' 1
+// INT-DUMP-NEXT:  ImplicitCastExpr {{.*}} {{'_Bool'|'bool'}}
+// <IntegralToBoolean> INT-DUMP-NEXT:  IntegerLiteral {{.*}} 'int' 1
 
 // BOOL-DUMP-LABEL: FunctionDecl {{.*}} use_is_invocable
 // BOOL-DUMP:       IfStmt

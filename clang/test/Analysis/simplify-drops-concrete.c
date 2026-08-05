@@ -1,4 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify
+// %s
 //
 // This test guards a precision fix in RangedConstraintManager.  Previously the
 // assume machinery simplified a symbol to an SVal but *discarded* the result
@@ -59,8 +60,10 @@ void assumeSymInclusiveRange_switch(void) {
 // The evals below document that the analyzer knows the value is 0 on this path.
 void assumeSym_comparison(void) {
   if ((global_var & 137) == 2) {
-    clang_analyzer_eval(((global_var & 137) & 8) == 0); // expected-warning{{TRUE}}
-    clang_analyzer_eval(((global_var & 137) & 8) != 0); // expected-warning{{FALSE}}
+    clang_analyzer_eval(((global_var & 137) & 8) ==
+                        0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(((global_var & 137) & 8) !=
+                        0); // expected-warning{{FALSE}}
     // Consequently the comparison branch is correctly pruned (no warning):
     if (((global_var & 137) & 8) > 0)
       clang_analyzer_warnIfReached(); // no-warning (correctly unreachable)
@@ -78,11 +81,11 @@ void noCrashOnTypeMismatch(_Bool a) {
   // && V <= To` used APSInt relational operators, which assert on the
   // signedness/width mismatch; APSInt::compareValues() normalizes both.
   switch (a) { // expected-warning {{switch condition has boolean value}}
-    case 1:
-      clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
-      break;
-    case 0:
-      clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
-      break;
+  case 1:
+    clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+    break;
+  case 0:
+    clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+    break;
   }
 }

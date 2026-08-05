@@ -1,8 +1,8 @@
 // Check that we accept the program if '__GLIBCXX__' is defined:
 // RUN: %clang_cc1 -fsyntax-only -std=c++23 -verify %s -DDEFINE_GLIBCXX
 
-// Check that we preserve the value of __GLIBCXX__ via a pragma when preprocessing:
-// RUN: %clang_cc1 -E -std=c++23 %s -o %t.ii -DDEFINE_GLIBCXX
+// Check that we preserve the value of __GLIBCXX__ via a pragma when
+// preprocessing: RUN: %clang_cc1 -E -std=c++23 %s -o %t.ii -DDEFINE_GLIBCXX
 // RUN: FileCheck --input-file=%t.ii %s
 
 // Check that the preprocessed file compiles with no diagnostics:
@@ -35,17 +35,14 @@
 // with '-E' before passing the output of that back to Clang.
 
 #ifdef DEFINE_GLIBCXX
-#   define __GLIBCXX__ 20250513
+#define __GLIBCXX__ 20250513
 #endif
 
 #ifdef USE_PRAGMA
-#   pragma clang __set_pp_state __GLIBCXX__ 20250513
+#pragma clang __set_pp_state __GLIBCXX__ 20250513
 #endif
 
 namespace std {
-  template<typename _Rg>
-    constexpr auto format_kind =
-    __primary_template_not_defined(
-      format_kind<_Rg>
-    );
+template <typename _Rg>
+constexpr auto format_kind = __primary_template_not_defined(format_kind<_Rg>);
 }

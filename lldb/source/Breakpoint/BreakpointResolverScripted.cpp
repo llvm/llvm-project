@@ -8,7 +8,6 @@
 
 #include "lldb/Breakpoint/BreakpointResolverScripted.h"
 
-
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -162,7 +161,7 @@ BreakpointResolverScripted::SerializeToStructuredData() {
       new StructuredData::Dictionary());
 
   options_dict_sp->AddStringItem(GetKey(OptionNames::PythonClassName),
-                                   m_class_name);
+                                 m_class_name);
   if (m_args.IsValid())
     options_dict_sp->AddItem(GetKey(OptionNames::ScriptArgs),
                              m_args.GetObjectSP());
@@ -187,8 +186,7 @@ Searcher::CallbackReturn BreakpointResolverScripted::SearchCallback(
   return Searcher::eCallbackReturnStop;
 }
 
-lldb::SearchDepth
-BreakpointResolverScripted::GetDepth() {
+lldb::SearchDepth BreakpointResolverScripted::GetDepth() {
   lldb::SearchDepth depth = lldb::eSearchDepthModule;
   if (m_interface_sp)
     depth = m_interface_sp->GetDepth();

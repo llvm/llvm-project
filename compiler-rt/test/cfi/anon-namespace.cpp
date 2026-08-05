@@ -40,8 +40,8 @@
 
 // REQUIRES: cxxabi
 
-#include <stdio.h>
 #include "utils.h"
+#include <stdio.h>
 
 struct A {
   virtual void f() = 0;
@@ -53,17 +53,15 @@ struct B : A {
   virtual void f() {}
 };
 
-}
+} // namespace
 
 A *mkb();
 
 #ifdef TU1
 
-A *mkb() {
-  return new B;
-}
+A *mkb() { return new B; }
 
-#endif  // TU1
+#endif // TU1
 
 #ifdef TU2
 
@@ -90,4 +88,4 @@ int main() {
   fprintf(stderr, "2\n");
 }
 
-#endif  // TU2
+#endif // TU2

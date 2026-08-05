@@ -154,13 +154,9 @@ int main(int, char**) {
     test<TestType>();
     test<TestType>(42);
   }
-  {
-    test_throwing_ctor();
-  }
+  { test_throwing_ctor(); }
 #if TEST_STD_VER >= 26
-  {
-    test_reference_extension();
-  }
+  { test_reference_extension(); }
 #endif
   {
     constexpr std::optional<int> o1{4};

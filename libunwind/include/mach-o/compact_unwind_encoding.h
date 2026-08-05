@@ -9,7 +9,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef __COMPACT_UNWIND_ENCODING__
 #define __COMPACT_UNWIND_ENCODING__
 
@@ -30,7 +29,6 @@
 //
 // Note: Previously, the linker would transform some DWARF unwind infos into
 //       compact unwind info.  But that is fragile and no longer done.
-
 
 //
 // The compact unwind encoding is a 32-bit value which encoded in an
@@ -100,14 +98,14 @@ enum {
 //
 // For x86 there are four modes for the compact unwind encoding:
 // UNWIND_X86_MODE_EBP_FRAME:
-//    EBP based frame where EBP is push on stack immediately after return address,
-//    then ESP is moved to EBP. Thus, to unwind ESP is restored with the current
-//    EPB value, then EBP is restored by popping off the stack, and the return
-//    is done by popping the stack once more into the pc.
-//    All non-volatile registers that need to be restored must have been saved
-//    in a small range in the stack that starts EBP-4 to EBP-1020.  The offset/4
-//    is encoded in the UNWIND_X86_EBP_FRAME_OFFSET bits.  The registers saved
-//    are encoded in the UNWIND_X86_EBP_FRAME_REGISTERS bits as five 3-bit entries.
+//    EBP based frame where EBP is push on stack immediately after return
+//    address, then ESP is moved to EBP. Thus, to unwind ESP is restored with
+//    the current EPB value, then EBP is restored by popping off the stack, and
+//    the return is done by popping the stack once more into the pc. All
+//    non-volatile registers that need to be restored must have been saved in a
+//    small range in the stack that starts EBP-4 to EBP-1020.  The offset/4 is
+//    encoded in the UNWIND_X86_EBP_FRAME_OFFSET bits.  The registers saved are
+//    encoded in the UNWIND_X86_EBP_FRAME_REGISTERS bits as five 3-bit entries.
 //    Each entry contains which register to restore.
 // UNWIND_X86_MODE_STACK_IMMD:
 //    A "frameless" (EBP not used as frame pointer) function with a small
@@ -117,7 +115,8 @@ enum {
 //    All non-volatile registers that need to be restored must have been saved
 //    on the stack immediately after the return address.  The stack_size/4 is
 //    encoded in the UNWIND_X86_FRAMELESS_STACK_SIZE (max stack size is 1024).
-//    The number of registers saved is encoded in UNWIND_X86_FRAMELESS_STACK_REG_COUNT.
+//    The number of registers saved is encoded in
+//    UNWIND_X86_FRAMELESS_STACK_REG_COUNT.
 //    UNWIND_X86_FRAMELESS_STACK_REG_PERMUTATION contains which registers were
 //    saved and their order.
 // UNWIND_X86_MODE_STACK_IND:
@@ -142,7 +141,7 @@ enum {
 // with frameless stacks.  It is passed the number of registers to be saved and
 // an array of the register numbers saved.
 //
-//uint32_t permute_encode(uint32_t registerCount, const uint32_t registers[6])
+// uint32_t permute_encode(uint32_t registerCount, const uint32_t registers[6])
 //{
 //    uint32_t renumregs[6];
 //    for (int i=6-registerCount; i < 6; ++i) {
@@ -236,15 +235,15 @@ enum {
 //
 // For x86_64 there are four modes for the compact unwind encoding:
 // UNWIND_X86_64_MODE_RBP_FRAME:
-//    RBP based frame where RBP is push on stack immediately after return address,
-//    then RSP is moved to RBP. Thus, to unwind RSP is restored with the current
-//    EPB value, then RBP is restored by popping off the stack, and the return
-//    is done by popping the stack once more into the pc.
-//    All non-volatile registers that need to be restored must have been saved
-//    in a small range in the stack that starts RBP-8 to RBP-2040.  The offset/8
-//    is encoded in the UNWIND_X86_64_RBP_FRAME_OFFSET bits.  The registers saved
-//    are encoded in the UNWIND_X86_64_RBP_FRAME_REGISTERS bits as five 3-bit entries.
-//    Each entry contains which register to restore.
+//    RBP based frame where RBP is push on stack immediately after return
+//    address, then RSP is moved to RBP. Thus, to unwind RSP is restored with
+//    the current EPB value, then RBP is restored by popping off the stack, and
+//    the return is done by popping the stack once more into the pc. All
+//    non-volatile registers that need to be restored must have been saved in a
+//    small range in the stack that starts RBP-8 to RBP-2040.  The offset/8 is
+//    encoded in the UNWIND_X86_64_RBP_FRAME_OFFSET bits.  The registers saved
+//    are encoded in the UNWIND_X86_64_RBP_FRAME_REGISTERS bits as five 3-bit
+//    entries. Each entry contains which register to restore.
 // UNWIND_X86_64_MODE_STACK_IMMD:
 //    A "frameless" (RBP not used as frame pointer) function with a small
 //    constant stack size.  To return, a constant (encoded in the compact
@@ -252,10 +251,11 @@ enum {
 //    popping the stack into the pc.
 //    All non-volatile registers that need to be restored must have been saved
 //    on the stack immediately after the return address.  The stack_size/8 is
-//    encoded in the UNWIND_X86_64_FRAMELESS_STACK_SIZE (max stack size is 2048).
-//    The number of registers saved is encoded in UNWIND_X86_64_FRAMELESS_STACK_REG_COUNT.
-//    UNWIND_X86_64_FRAMELESS_STACK_REG_PERMUTATION contains which registers were
-//    saved and their order.
+//    encoded in the UNWIND_X86_64_FRAMELESS_STACK_SIZE (max stack size is
+//    2048). The number of registers saved is encoded in
+//    UNWIND_X86_64_FRAMELESS_STACK_REG_COUNT.
+//    UNWIND_X86_64_FRAMELESS_STACK_REG_PERMUTATION contains which registers
+//    were saved and their order.
 // UNWIND_X86_64_MODE_STACK_IND:
 //    A "frameless" (RBP not used as frame pointer) function large constant
 //    stack size.  This case is like the previous, except the stack size is too
@@ -402,9 +402,6 @@ enum {
 // Runtime support for compact unwind encodings are only available on 10.6
 // and later.  So, the compiler should not generate it when targeting pre-10.6.
 
-
-
-
 ////////////////////////////////////////////////////////////////////////////////
 //
 //  Final Linked Images: __TEXT,__unwind_info
@@ -412,38 +409,38 @@ enum {
 ////////////////////////////////////////////////////////////////////////////////
 
 //
-// The __TEXT,__unwind_info section is laid out for an efficient two level lookup.
-// The header of the section contains a coarse index that maps function address
-// to the page (4096 byte block) containing the unwind info for that function.
+// The __TEXT,__unwind_info section is laid out for an efficient two level
+// lookup. The header of the section contains a coarse index that maps function
+// address to the page (4096 byte block) containing the unwind info for that
+// function.
 //
 
 #define UNWIND_SECTION_VERSION 1
-struct unwind_info_section_header
-{
-    uint32_t    version;            // UNWIND_SECTION_VERSION
-    uint32_t    commonEncodingsArraySectionOffset;
-    uint32_t    commonEncodingsArrayCount;
-    uint32_t    personalityArraySectionOffset;
-    uint32_t    personalityArrayCount;
-    uint32_t    indexSectionOffset;
-    uint32_t    indexCount;
-    // compact_unwind_encoding_t[]
-    // uint32_t personalities[]
-    // unwind_info_section_header_index_entry[]
-    // unwind_info_section_header_lsda_index_entry[]
+struct unwind_info_section_header {
+  uint32_t version; // UNWIND_SECTION_VERSION
+  uint32_t commonEncodingsArraySectionOffset;
+  uint32_t commonEncodingsArrayCount;
+  uint32_t personalityArraySectionOffset;
+  uint32_t personalityArrayCount;
+  uint32_t indexSectionOffset;
+  uint32_t indexCount;
+  // compact_unwind_encoding_t[]
+  // uint32_t personalities[]
+  // unwind_info_section_header_index_entry[]
+  // unwind_info_section_header_lsda_index_entry[]
 };
 
-struct unwind_info_section_header_index_entry
-{
-    uint32_t        functionOffset;
-    uint32_t        secondLevelPagesSectionOffset;  // section offset to start of regular or compress page
-    uint32_t        lsdaIndexArraySectionOffset;    // section offset to start of lsda_index array for this range
+struct unwind_info_section_header_index_entry {
+  uint32_t functionOffset;
+  uint32_t secondLevelPagesSectionOffset; // section offset to start of regular
+                                          // or compress page
+  uint32_t lsdaIndexArraySectionOffset; // section offset to start of lsda_index
+                                        // array for this range
 };
 
-struct unwind_info_section_header_lsda_index_entry
-{
-    uint32_t        functionOffset;
-    uint32_t        lsdaOffset;
+struct unwind_info_section_header_lsda_index_entry {
+  uint32_t functionOffset;
+  uint32_t lsdaOffset;
 };
 
 //
@@ -453,37 +450,32 @@ struct unwind_info_section_header_lsda_index_entry
 // 511 entries.
 //
 
-struct unwind_info_regular_second_level_entry
-{
-    uint32_t                     functionOffset;
-    compact_unwind_encoding_t    encoding;
+struct unwind_info_regular_second_level_entry {
+  uint32_t functionOffset;
+  compact_unwind_encoding_t encoding;
 };
 
 #define UNWIND_SECOND_LEVEL_REGULAR 2
-struct unwind_info_regular_second_level_page_header
-{
-    uint32_t    kind;    // UNWIND_SECOND_LEVEL_REGULAR
-    uint16_t    entryPageOffset;
-    uint16_t    entryCount;
-    // entry array
+struct unwind_info_regular_second_level_page_header {
+  uint32_t kind; // UNWIND_SECOND_LEVEL_REGULAR
+  uint16_t entryPageOffset;
+  uint16_t entryCount;
+  // entry array
 };
 
 #define UNWIND_SECOND_LEVEL_COMPRESSED 3
-struct unwind_info_compressed_second_level_page_header
-{
-    uint32_t    kind;    // UNWIND_SECOND_LEVEL_COMPRESSED
-    uint16_t    entryPageOffset;
-    uint16_t    entryCount;
-    uint16_t    encodingsPageOffset;
-    uint16_t    encodingsCount;
-    // 32-bit entry array
-    // encodings array
+struct unwind_info_compressed_second_level_page_header {
+  uint32_t kind; // UNWIND_SECOND_LEVEL_COMPRESSED
+  uint16_t entryPageOffset;
+  uint16_t entryCount;
+  uint16_t encodingsPageOffset;
+  uint16_t encodingsCount;
+  // 32-bit entry array
+  // encodings array
 };
 
-#define UNWIND_INFO_COMPRESSED_ENTRY_FUNC_OFFSET(entry)            (entry & 0x00FFFFFF)
-#define UNWIND_INFO_COMPRESSED_ENTRY_ENCODING_INDEX(entry)        ((entry >> 24) & 0xFF)
-
-
+#define UNWIND_INFO_COMPRESSED_ENTRY_FUNC_OFFSET(entry) (entry & 0x00FFFFFF)
+#define UNWIND_INFO_COMPRESSED_ENTRY_ENCODING_INDEX(entry)                     \
+  ((entry >> 24) & 0xFF)
 
 #endif
-

@@ -50,7 +50,9 @@
 
 // NO-INCLUDES-NOT: {{.}}
 
-// LIBSTDCXX-INCLUDES: {{.*}}gcc_version_parsing_rt_libs{{/|\\}}lib{{/|\\}}gcc{{/|\\}}x86_64-redhat-linux{{/|\\}}10.2.0{{/|\\}}..{{/|\\}}..{{/|\\}}..{{/|\\}}gcc{{/|\\}}x86_64-redhat-linux{{/|\\}}10.2.0{{/|\\}}include{{/|\\}}c++
+// LIBSTDCXX-INCLUDES:
+// {{.*}}gcc_version_parsing_rt_libs{{/|\\}}lib{{/|\\}}gcc{{/|\\}}x86_64-redhat-linux{{/|\\}}10.2.0{{/|\\}}..{{/|\\}}..{{/|\\}}..{{/|\\}}gcc{{/|\\}}x86_64-redhat-linux{{/|\\}}10.2.0{{/|\\}}include{{/|\\}}c++
 
-// MSVC-INCLUDES: {{.*}}VC{{/|\\}}Tools{{/|\\}}MSVC{{/|\\}}27.1828.18284{{/|\\}}include
+// MSVC-INCLUDES:
+// {{.*}}VC{{/|\\}}Tools{{/|\\}}MSVC{{/|\\}}27.1828.18284{{/|\\}}include
 // MSVC-INCLUDES-NOT: atlmfc

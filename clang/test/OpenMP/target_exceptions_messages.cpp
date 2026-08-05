@@ -25,11 +25,11 @@
 #ifndef HEADER
 #define HEADER
 
-template <typename T>
-class TemplateClass {
+template <typename T> class TemplateClass {
   T a;
+
 public:
-  TemplateClass() { throw 1;}
+  TemplateClass() { throw 1; }
   T f_method() const { return a; }
 };
 
@@ -41,8 +41,7 @@ int baz2();
 
 int baz4() { return 5; }
 
-template <typename T>
-T FA() {
+template <typename T> T FA() {
   TemplateClass<T> s;
   return s.f_method();
 }
@@ -50,7 +49,10 @@ T FA() {
 #pragma omp declare target
 struct S {
   int a;
-  S(int a) : a(a) { throw 1; } // expected-warning-re {{target '{{.*}}' does not support exception handling; 'throw' is assumed to be never reached}}
+  S(int a) : a(a) {
+    throw 1;
+  } // expected-warning-re {{target '{{.*}}' does not support exception
+    // handling; 'throw' is assumed to be never reached}}
 };
 
 int foo() { return 0; }
@@ -59,23 +61,27 @@ int d;
 #pragma omp end declare target
 int c;
 
-int bar() { return 1 + foo() + bar() + baz1() + baz2(); } // expected-note {{called by 'bar'}}
+int bar() {
+  return 1 + foo() + bar() + baz1() + baz2();
+} // expected-note {{called by 'bar'}}
 
 int maini1() {
   int a;
   static long aa = 32;
   try {
-#pragma omp target map(tofrom \
-                       : a, b)
-  {
-    // expected-note@+1 {{called by 'maini1'}}
-    S s(a);
-    static long aaa = 23;
-    a = foo() + bar() + b + c + d + aa + aaa + FA<int>(); // expected-note{{called by 'maini1'}}
-    if (!a)
-      throw "Error"; // expected-warning-re {{target '{{.*}}' does not support exception handling; 'throw' is assumed to be never reached}}
-  }
-  } catch(...) {
+#pragma omp target map(tofrom : a, b)
+    {
+      // expected-note@+1 {{called by 'maini1'}}
+      S s(a);
+      static long aaa = 23;
+      a = foo() + bar() + b + c + d + aa + aaa +
+          FA<int>(); // expected-note{{called by 'maini1'}}
+      if (!a)
+        throw "Error"; // expected-warning-re {{target '{{.*}}' does not support
+                       // exception handling; 'throw' is assumed to be never
+                       // reached}}
+    }
+  } catch (...) {
   }
   return baz4();
 }
@@ -83,14 +89,18 @@ int maini1() {
 int baz3() { return 2 + baz2(); }
 int baz2() {
 #pragma omp target
-  try { // expected-warning-re {{target '{{.*}}' does not support exception handling; 'catch' block is ignored}}
-  ++c;
+  try { // expected-warning-re {{target '{{.*}}' does not support exception
+        // handling; 'catch' block is ignored}}
+    ++c;
   } catch (...) {
   }
   return 2 + baz3();
 }
 
-int baz1() { throw 1; } // expected-warning-re {{target '{{.*}}' does not support exception handling; 'throw' is assumed to be never reached}}
+int baz1() {
+  throw 1;
+} // expected-warning-re {{target '{{.*}}' does not support exception handling;
+  // 'throw' is assumed to be never reached}}
 
 int foobar1();
 int foobar2();
@@ -101,17 +111,23 @@ int (*B)() = &foobar2;
 #pragma omp end declare target
 
 int foobar1() { throw 1; }
-int foobar2() { throw 1; } // expected-warning-re {{target '{{.*}}' does not support exception handling; 'throw' is assumed to be never reached}}
-
+int foobar2() {
+  throw 1;
+} // expected-warning-re {{target '{{.*}}' does not support exception handling;
+  // 'throw' is assumed to be never reached}}
 
 int foobar3();
-int (*C)() = &foobar3; // expected-warning {{declaration is not declared in any declare target region}}
-                       // host-warning@-1 {{declaration is not declared in any declare target region}}
+int (*C)() = &foobar3; // expected-warning {{declaration is not declared in any
+                       // declare target region}} host-warning@-1 {{declaration
+                       // is not declared in any declare target region}}
 #pragma omp declare target
 int (*D)() = C; // expected-note {{used here}}
                 // host-note@-1 {{used here}}
 #pragma omp end declare target
-int foobar3() { throw 1; } // expected-warning-re {{target '{{.*}}' does not support exception handling; 'throw' is assumed to be never reached}}
+int foobar3() {
+  throw 1;
+} // expected-warning-re {{target '{{.*}}' does not support exception handling;
+  // 'throw' is assumed to be never reached}}
 
 // Check no infinite recursion in deferred diagnostic emitter.
 long E = (long)&E;

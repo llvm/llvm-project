@@ -140,7 +140,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
-}
+} // namespace
 
 INITIALIZE_PASS(LDTLSCleanup, "aarch64-local-dynamic-tls-cleanup",
                 TLSCLEANUP_PASS_NAME, false, false)

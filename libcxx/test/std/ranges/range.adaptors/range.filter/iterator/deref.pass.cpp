@@ -23,8 +23,8 @@
 
 template <class Iter, class ValueType = int, class Sent = sentinel_wrapper<Iter>>
 constexpr void test() {
-  using View = minimal_view<Iter, Sent>;
-  using FilterView = std::ranges::filter_view<View, AlwaysTrue>;
+  using View           = minimal_view<Iter, Sent>;
+  using FilterView     = std::ranges::filter_view<View, AlwaysTrue>;
   using FilterIterator = std::ranges::iterator_t<FilterView>;
 
   auto make_filter_view = [](auto begin, auto end, auto pred) {
@@ -54,13 +54,13 @@ constexpr bool tests() {
   test<contiguous_iterator<int*>>();
   test<int*>();
 
-  test<cpp17_input_iterator<int const*>,   int const>();
-  test<cpp20_input_iterator<int const*>,   int const>();
-  test<forward_iterator<int const*>,       int const>();
+  test<cpp17_input_iterator<int const*>, int const>();
+  test<cpp20_input_iterator<int const*>, int const>();
+  test<forward_iterator<int const*>, int const>();
   test<bidirectional_iterator<int const*>, int const>();
   test<random_access_iterator<int const*>, int const>();
-  test<contiguous_iterator<int const*>,    int const>();
-  test<int const*,                         int const>();
+  test<contiguous_iterator<int const*>, int const>();
+  test<int const*, int const>();
   return true;
 }
 

@@ -458,8 +458,8 @@ template <class ELFT> void OutputSection::maybeCompress(Ctx &ctx) {
     });
 
     // Update section size and combine Alder-32 checksums.
-    uint32_t checksum = 1;       // Initial Adler-32 value
-    compressedSize += 2;         // Elf_Chdir and zlib header
+    uint32_t checksum = 1; // Initial Adler-32 value
+    compressedSize += 2;   // Elf_Chdir and zlib header
     for (size_t i = 0; i != numShards; ++i) {
       compressedSize += shardsOut[i].size();
       checksum = adler32_combine(checksum, shardsAdler[i], shardsIn[i].size());

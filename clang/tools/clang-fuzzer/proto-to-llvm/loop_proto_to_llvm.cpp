@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "loop_proto_to_llvm.h"
-#include "cxx_loop_proto.pb.h"
 #include "../handle-llvm/input_arrays.h"
+#include "cxx_loop_proto.pb.h"
 
 // The following is needed to convert protos in human-readable form
 #include <google/protobuf/text_format.h>
@@ -36,25 +36,18 @@ static std::string get_var() {
 
 static bool inner_loop = false;
 class InnerLoop {
-  public:
-  InnerLoop() {
-    inner_loop = true;
-  }
-  ~InnerLoop() {
-    inner_loop = false;
-  }
+public:
+  InnerLoop() { inner_loop = true; }
+  ~InnerLoop() { inner_loop = false; }
 };
-
 
 // Proto to LLVM.
 
-std::string ConstToString(const Const &x) {
-  return std::to_string(x.val());
-}
+std::string ConstToString(const Const &x) { return std::to_string(x.val()); }
 std::string VarRefToString(std::ostream &os, const VarRef &x) {
   std::string which_loop = inner_loop ? "inner" : "outer";
   std::string arr;
-  switch(x.arr()) {
+  switch (x.arr()) {
   case VarRef::ARR_A:
     arr = "%a";
     break;
@@ -66,23 +59,22 @@ std::string VarRefToString(std::ostream &os, const VarRef &x) {
     break;
   }
   std::string ptr_var = get_var();
-  os << ptr_var << " = getelementptr inbounds i32, i32* " << arr
-     << ", i64 %" << which_loop << "_ct\n";
+  os << ptr_var << " = getelementptr inbounds i32, i32* " << arr << ", i64 %"
+     << which_loop << "_ct\n";
   return ptr_var;
 }
 std::string RvalueToString(std::ostream &os, const Rvalue &x) {
-  if(x.has_cons())
+  if (x.has_cons())
     return ConstToString(x.cons());
-  if(x.has_binop())
+  if (x.has_binop())
     return BinopToString(os, x.binop());
-  if(x.has_varref()) {
+  if (x.has_varref()) {
     std::string var_ref = VarRefToString(os, x.varref());
     std::string val_var = get_var();
     os << val_var << " = load i32, i32* " << var_ref << "\n";
     return val_var;
   }
   return "1";
-
 }
 std::string BinopToString(std::ostream &os, const BinaryOp &x) {
   std::string left = RvalueToString(os, x.left());
@@ -142,15 +134,15 @@ void NestedLoopToString(std::ostream &os, const LoopFunction &x) {
      << "%cmp = icmp sgt i64 %s, 0\n"
      << "br i1 %cmp, label %inner_loop_start, label %end\n"
      << "outer_loop:\n"
-     << x.outer_statements()
-     << "%o_ct_new = add i64 %outer_ct, 1\n"
+     << x.outer_statements() << "%o_ct_new = add i64 %outer_ct, 1\n"
      << "%jmp_outer = icmp eq i64 %o_ct_new, %s\n"
      << "br i1 %jmp_outer, label %end, label %inner_loop_start\n"
      << "inner_loop_start:\n"
      << "%outer_ct = phi i64 [%o_ct_new, %outer_loop], [0, %outer_loop_start]\n"
      << "br label %inner_loop\n"
      << "inner_loop:\n"
-     << "%inner_ct = phi i64 [0, %inner_loop_start], [%i_ct_new, %inner_loop]\n";
+     << "%inner_ct = phi i64 [0, %inner_loop_start], [%i_ct_new, "
+        "%inner_loop]\n";
   {
     InnerLoop IL;
     os << x.inner_statements();

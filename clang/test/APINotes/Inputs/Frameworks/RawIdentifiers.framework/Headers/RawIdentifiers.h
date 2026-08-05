@@ -1,5 +1,5 @@
 @interface NSSomeClass
--(instancetype)init;
+- (instancetype)init;
 @end
 
 @interface NSSomeClass (SomeCategory)

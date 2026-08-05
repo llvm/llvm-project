@@ -20,5 +20,6 @@ struct NineBytes {
 
 void positiveBoundary(std::optional<NineBytes> opt) {
   auto val = opt.value_or(NineBytes{});
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'NineBytes'
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type
+  // 'NineBytes'
 }

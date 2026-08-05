@@ -521,7 +521,9 @@ public:
   ///
   /// \return
   ///     A const compile unit object pointer.
-  const DWARFExpressionList &GetFrameBaseExpression() const { return m_frame_base; }
+  const DWARFExpressionList &GetFrameBaseExpression() const {
+    return m_frame_base;
+  }
 
   ConstString GetName() const;
 

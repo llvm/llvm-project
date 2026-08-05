@@ -221,10 +221,10 @@ BinarySection::~BinarySection() { updateContents(nullptr, 0); }
 void BinarySection::clearRelocations() { clearList(Relocations); }
 
 void BinarySection::print(raw_ostream &OS) const {
-  OS << getName() << ", "
-     << "0x" << Twine::utohexstr(getAddress()) << ", " << getSize() << " (0x"
-     << Twine::utohexstr(getOutputAddress()) << ", " << getOutputSize() << ")"
-     << ", data = " << getData() << ", output data = " << getOutputData();
+  OS << getName() << ", " << "0x" << Twine::utohexstr(getAddress()) << ", "
+     << getSize() << " (0x" << Twine::utohexstr(getOutputAddress()) << ", "
+     << getOutputSize() << ")" << ", data = " << getData()
+     << ", output data = " << getOutputData();
 
   if (isAllocatable())
     OS << " (allocatable)";

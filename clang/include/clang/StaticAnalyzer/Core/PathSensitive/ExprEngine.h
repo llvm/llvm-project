@@ -21,18 +21,18 @@
 #include "clang/Analysis/DomainSpecific/ObjCNoReturn.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
+#include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/FunctionSummary.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/WorkList.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cassert>
@@ -198,8 +198,8 @@ private:
 
 public:
   ExprEngine(cross_tu::CrossTranslationUnitContext &CTU, AnalysisManager &mgr,
-             SetOfConstDecls *VisitedCalleesIn,
-             FunctionSummariesTy *FS, InliningModes HowToInlineIn);
+             SetOfConstDecls *VisitedCalleesIn, FunctionSummariesTy *FS,
+             InliningModes HowToInlineIn);
 
   virtual ~ExprEngine() = default;
 
@@ -230,8 +230,7 @@ public:
   BugReporter &getBugReporter() { return BR; }
   const BugReporter &getBugReporter() const { return BR; }
 
-  cross_tu::CrossTranslationUnitContext *
-  getCrossTranslationUnitContext() {
+  cross_tu::CrossTranslationUnitContext *getCrossTranslationUnitContext() {
     return &CTU;
   }
 
@@ -303,7 +302,7 @@ public:
   /// Dump graph to the specified filename.
   /// If filename is empty, generate a temporary one.
   /// \return The filename the graph is written into.
-  std::string DumpGraph(bool trim = false, StringRef Filename="");
+  std::string DumpGraph(bool trim = false, StringRef Filename = "");
 
   /// Dump the graph consisting of the given nodes to a specified filename.
   /// Generate a temporary filename if it's not provided.
@@ -367,7 +366,7 @@ public:
 
   void ProcessStmt(const Stmt *S, ExplodedNode *Pred);
 
-  void ProcessLoopExit(const Stmt* S, ExplodedNode *Pred);
+  void ProcessLoopExit(const Stmt *S, ExplodedNode *Pred);
   void ProcessLifetimeEnd(const Stmt *S, const VarDecl *D, ExplodedNode *Pred);
 
   void ProcessInitializer(const CFGInitializer I, ExplodedNode *Pred);
@@ -376,16 +375,16 @@ public:
 
   void ProcessNewAllocator(const CXXNewExpr *NE, ExplodedNode *Pred);
 
-  void ProcessAutomaticObjDtor(const CFGAutomaticObjDtor D,
-                               ExplodedNode *Pred, ExplodedNodeSet &Dst);
-  void ProcessDeleteDtor(const CFGDeleteDtor D,
-                         ExplodedNode *Pred, ExplodedNodeSet &Dst);
-  void ProcessBaseDtor(const CFGBaseDtor D,
-                       ExplodedNode *Pred, ExplodedNodeSet &Dst);
-  void ProcessMemberDtor(const CFGMemberDtor D,
-                         ExplodedNode *Pred, ExplodedNodeSet &Dst);
-  void ProcessTemporaryDtor(const CFGTemporaryDtor D,
-                            ExplodedNode *Pred, ExplodedNodeSet &Dst);
+  void ProcessAutomaticObjDtor(const CFGAutomaticObjDtor D, ExplodedNode *Pred,
+                               ExplodedNodeSet &Dst);
+  void ProcessDeleteDtor(const CFGDeleteDtor D, ExplodedNode *Pred,
+                         ExplodedNodeSet &Dst);
+  void ProcessBaseDtor(const CFGBaseDtor D, ExplodedNode *Pred,
+                       ExplodedNodeSet &Dst);
+  void ProcessMemberDtor(const CFGMemberDtor D, ExplodedNode *Pred,
+                         ExplodedNodeSet &Dst);
+  void ProcessTemporaryDtor(const CFGTemporaryDtor D, ExplodedNode *Pred,
+                            ExplodedNodeSet &Dst);
 
   /// Called by CoreEngine when processing the entrance of a CFGBlock.
   void processCFGBlockEntrance(const BlockEntrance &BE, NodeBuilder &Builder,
@@ -454,7 +453,8 @@ public:
   ProgramStateRef processAssume(ProgramStateRef state, SVal cond,
                                 bool assumption);
 
-  /// processRegionChanges - Called by ProgramStateManager whenever a change is made
+  /// processRegionChanges - Called by ProgramStateManager whenever a change is
+  /// made
   ///  to the store. Used to update checkers that track region values.
   ProgramStateRef
   processRegionChanges(ProgramStateRef state,
@@ -489,9 +489,7 @@ public:
   }
 
   // FIXME: Remove when we migrate over to just using SValBuilder.
-  BasicValueFactory &getBasicVals() {
-    return StateMgr.getBasicVals();
-  }
+  BasicValueFactory &getBasicVals() { return StateMgr.getBasicVals(); }
 
   SymbolManager &getSymbolManager() { return SymMgr; }
   const SymbolManager &getSymbolManager() const { return SymMgr; }
@@ -516,8 +514,7 @@ public:
                               ExplodedNodeSet &Dst);
 
   /// VisitArraySubscriptExpr - Transfer function for array accesses.
-  void VisitArraySubscriptExpr(const ArraySubscriptExpr *Ex,
-                               ExplodedNode *Pred,
+  void VisitArraySubscriptExpr(const ArraySubscriptExpr *Ex, ExplodedNode *Pred,
                                ExplodedNodeSet &Dst);
 
   /// VisitGCCAsmStmt - Transfer function logic for inline asm.
@@ -537,9 +534,8 @@ public:
                        ExplodedNodeSet &Dst);
 
   /// VisitBinaryOperator - Transfer function logic for binary operators.
-  void VisitBinaryOperator(const BinaryOperator* B, ExplodedNode *Pred,
+  void VisitBinaryOperator(const BinaryOperator *B, ExplodedNode *Pred,
                            ExplodedNodeSet &Dst);
-
 
   /// VisitCall - Transfer function for function calls.
   void VisitCallExpr(const CallExpr *CE, ExplodedNode *Pred,
@@ -570,7 +566,7 @@ public:
                            ExplodedNodeSet &Dst);
 
   /// VisitLogicalExpr - Transfer function logic for '&&', '||'.
-  void VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
+  void VisitLogicalExpr(const BinaryOperator *B, ExplodedNode *Pred,
                         ExplodedNodeSet &Dst);
 
   /// VisitMemberExpr - Transfer function for member expressions.
@@ -618,11 +614,11 @@ public:
                                      ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   /// VisitUnaryOperator - Transfer function logic for unary operators.
-  void VisitUnaryOperator(const UnaryOperator* B, ExplodedNode *Pred,
+  void VisitUnaryOperator(const UnaryOperator *B, ExplodedNode *Pred,
                           ExplodedNodeSet &Dst);
 
   /// Handle ++ and -- (both pre- and post-increment).
-  void VisitIncrementDecrementOperator(const UnaryOperator* U,
+  void VisitIncrementDecrementOperator(const UnaryOperator *U,
                                        ExplodedNode *Pred,
                                        ExplodedNodeSet &Dst);
 
@@ -634,7 +630,7 @@ public:
                          ExplodedNodeSet &Dst);
 
   void VisitCXXThisExpr(const CXXThisExpr *TE, ExplodedNode *Pred,
-                        ExplodedNodeSet & Dst);
+                        ExplodedNodeSet &Dst);
 
   void VisitCXXConstructExpr(const CXXConstructExpr *E, ExplodedNode *Pred,
                              ExplodedNodeSet &Dst);
@@ -643,12 +639,10 @@ public:
                                      ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   void VisitCXXDestructor(QualType ObjectType, const MemRegion *Dest,
-                          const Stmt *S, bool IsBaseDtor,
-                          ExplodedNode *Pred, ExplodedNodeSet &Dst,
-                          EvalCallOptions &Options);
+                          const Stmt *S, bool IsBaseDtor, ExplodedNode *Pred,
+                          ExplodedNodeSet &Dst, EvalCallOptions &Options);
 
-  void VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
-                                ExplodedNode *Pred,
+  void VisitCXXNewAllocatorCall(const CXXNewExpr *CNE, ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst);
 
   void VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
@@ -659,8 +653,7 @@ public:
 
   /// Create a C++ temporary object for an rvalue.
   void CreateCXXTemporaryObject(const MaterializeTemporaryExpr *ME,
-                                ExplodedNode *Pred,
-                                ExplodedNodeSet &Dst);
+                                ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   void ConstructInitList(const Expr *Source, ArrayRef<Expr *> Args,
                          bool IsTransparent, ExplodedNode *Pred,
@@ -682,8 +675,8 @@ public:
                                       ExplodedNodeSet &Dst, ExplodedNode *Pred);
 
 public:
-  SVal evalBinOp(ProgramStateRef ST, BinaryOperator::Opcode Op,
-                 SVal LHS, SVal RHS, QualType T) {
+  SVal evalBinOp(ProgramStateRef ST, BinaryOperator::Opcode Op, SVal LHS,
+                 SVal RHS, QualType T) {
     return svalBuilder.evalBinOp(ST, Op, LHS, RHS, T);
   }
 
@@ -718,11 +711,9 @@ public:
   /// region invalidation.
   /// \param[in] ITraits Specifies invalidation traits for regions/symbols.
   ProgramStateRef notifyCheckersOfPointerEscape(
-                           ProgramStateRef State,
-                           const InvalidatedSymbols *Invalidated,
-                           ArrayRef<const MemRegion *> ExplicitRegions,
-                           const CallEvent *Call,
-                           RegionAndSymbolInvalidationTraits &ITraits);
+      ProgramStateRef State, const InvalidatedSymbols *Invalidated,
+      ArrayRef<const MemRegion *> ExplicitRegions, const CallEvent *Call,
+      RegionAndSymbolInvalidationTraits &ITraits);
 
 private:
   /// evalBind - Handle the semantics of binding a value to a specific location.
@@ -748,19 +739,16 @@ public:
   // same as state->getLValue(Ex).
   /// Simulate a read of the result of Ex.
   void evalLoad(ExplodedNodeSet &Dst,
-                const Expr *NodeEx,  /* Eventually will be a CFGStmt */
-                const Expr *BoundExpr,
-                ExplodedNode *Pred,
-                ProgramStateRef St,
-                SVal location,
-                const ProgramPointTag *tag = nullptr,
+                const Expr *NodeEx, /* Eventually will be a CFGStmt */
+                const Expr *BoundExpr, ExplodedNode *Pred, ProgramStateRef St,
+                SVal location, const ProgramPointTag *tag = nullptr,
                 QualType LoadTy = QualType());
 
   // FIXME: 'tag' should be removed, and a StackFrame should be used
   // instead.
   void evalStore(ExplodedNodeSet &Dst, const Expr *AssignE, const Expr *StoreE,
-                 ExplodedNode *Pred, ProgramStateRef St, SVal TargetLV, SVal Val,
-                 const ProgramPointTag *tag = nullptr);
+                 ExplodedNode *Pred, ProgramStateRef St, SVal TargetLV,
+                 SVal Val, const ProgramPointTag *tag = nullptr);
 
   /// Return the CFG element corresponding to the worklist element
   /// that is currently being processed by ExprEngine.
@@ -833,11 +821,8 @@ private:
 
   void evalLocation(ExplodedNodeSet &Dst,
                     const Stmt *NodeEx, /* This will eventually be a CFGStmt */
-                    const Stmt *BoundEx,
-                    ExplodedNode *Pred,
-                    ProgramStateRef St,
-                    SVal location,
-                    bool isLoad);
+                    const Stmt *BoundEx, ExplodedNode *Pred, ProgramStateRef St,
+                    SVal location, bool isLoad);
 
   /// Count the stack depth and determine if the call is recursive.
   void
@@ -1073,10 +1058,10 @@ private:
 /// The GDM stores the corresponding CallExpr pointer.
 // FIXME: This does not use the nice trait macros because it must be accessible
 // from multiple translation units.
-struct ReplayWithoutInlining{};
+struct ReplayWithoutInlining {};
 template <>
-struct ProgramStateTrait<ReplayWithoutInlining> :
-  public ProgramStatePartialTrait<const void*> {
+struct ProgramStateTrait<ReplayWithoutInlining>
+    : public ProgramStatePartialTrait<const void *> {
   static void *GDMIndex();
 };
 

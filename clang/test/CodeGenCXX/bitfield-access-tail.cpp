@@ -2,44 +2,82 @@
 
 // Configs that have cheap unaligned access
 // Little Endian
-// RUN: %clang_cc1 -triple=aarch64-apple-darwin %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
-// RUN: %clang_cc1 -triple=aarch64-linux-gnu %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
-// RUN: %clang_cc1 -triple=arm-apple-darwin %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT-DWN32 %s
-// RUN: %clang_cc1 -triple=arm-none-eabi %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=i686-linux-gnu %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=loongarch64-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
-// RUN: %clang_cc1 -triple=powerpcle-linux-gnu %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=ve-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
-// RUN: %clang_cc1 -triple=wasm32 %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=wasm64 %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
-// RUN: %clang_cc1 -triple=x86_64-linux-gnu %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
+// RUN: %clang_cc1 -triple=aarch64-apple-darwin %s -emit-llvm -o /dev/null
+// -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT64 %s RUN: %clang_cc1 -triple=aarch64-linux-gnu %s
+// -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck
+// --check-prefixes CHECK,LAYOUT,LAYOUT64 %s RUN: %clang_cc1
+// -triple=arm-apple-darwin %s -emit-llvm -o /dev/null
+// -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT-DWN32
+// %s RUN: %clang_cc1 -triple=arm-none-eabi %s -emit-llvm -o /dev/null
+// -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1 -triple=i686-linux-gnu %s -emit-llvm
+// -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1 -triple=loongarch64-elf %s
+// -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck
+// --check-prefixes CHECK,LAYOUT,LAYOUT64 %s RUN: %clang_cc1
+// -triple=powerpcle-linux-gnu %s -emit-llvm -o /dev/null
+// -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1 -triple=ve-elf %s -emit-llvm -o
+// /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT64 %s RUN: %clang_cc1 -triple=wasm32 %s -emit-llvm -o
+// /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1 -triple=wasm64 %s -emit-llvm -o
+// /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT64 %s RUN: %clang_cc1 -triple=x86_64-linux-gnu %s
+// -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck
+// --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
 
 // Big Endian
-// RUN: %clang_cc1 -triple=powerpc-linux-gnu %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=powerpc64-linux-gnu %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
-// RUN: %clang_cc1 -triple=systemz %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
+// RUN: %clang_cc1 -triple=powerpc-linux-gnu %s -emit-llvm -o /dev/null
+// -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1 -triple=powerpc64-linux-gnu %s
+// -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck
+// --check-prefixes CHECK,LAYOUT,LAYOUT64 %s RUN: %clang_cc1 -triple=systemz %s
+// -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck
+// --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
 
 // Configs that have expensive unaligned access
 // Little Endian
-// RUN: %clang_cc1 -triple=amdgpu-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
-// RUN: %clang_cc1 -triple=arc-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=bpf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
-// RUN: %clang_cc1 -triple=csky %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=hexagon-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=loongarch32-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=nvptx-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=riscv32 %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=riscv64 %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
-// RUN: %clang_cc1 -triple=spir-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=xcore-none-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
+// RUN: %clang_cc1 -triple=amdgpu-elf %s -emit-llvm -o /dev/null
+// -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT64 %s RUN: %clang_cc1 -triple=arc-elf %s -emit-llvm -o
+// /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1 -triple=bpf %s -emit-llvm -o
+// /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT64 %s RUN: %clang_cc1 -triple=csky %s -emit-llvm -o
+// /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1 -triple=hexagon-elf %s -emit-llvm -o
+// /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1 -triple=loongarch32-elf %s
+// -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck
+// --check-prefixes CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1 -triple=nvptx-elf
+// %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck
+// --check-prefixes CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1 -triple=riscv32 %s
+// -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck
+// --check-prefixes CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1 -triple=riscv64 %s
+// -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck
+// --check-prefixes CHECK,LAYOUT,LAYOUT64 %s RUN: %clang_cc1 -triple=spir-elf %s
+// -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck
+// --check-prefixes CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1
+// -triple=xcore-none-elf %s -emit-llvm -o /dev/null
+// -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT32 %s
 
 // Big endian
-// RUN: %clang_cc1 -triple=lanai-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=m68k-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=mips-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=mips64-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT64 %s
-// RUN: %clang_cc1 -triple=sparc-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
-// RUN: %clang_cc1 -triple=tce-elf %s -emit-llvm -o /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes CHECK,LAYOUT,LAYOUT32 %s
+// RUN: %clang_cc1 -triple=lanai-elf %s -emit-llvm -o /dev/null
+// -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1 -triple=m68k-elf %s -emit-llvm -o
+// /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1 -triple=mips-elf %s -emit-llvm -o
+// /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1 -triple=mips64-elf %s -emit-llvm -o
+// /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT64 %s RUN: %clang_cc1 -triple=sparc-elf %s -emit-llvm -o
+// /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT32 %s RUN: %clang_cc1 -triple=tce-elf %s -emit-llvm -o
+// /dev/null -fdump-record-layouts-simple | FileCheck --check-prefixes
+// CHECK,LAYOUT,LAYOUT32 %s
 
 // Can use tail padding
 struct Pod {
@@ -51,12 +89,14 @@ struct Pod {
 // LAYOUT-DWN32-SAME: type <{ i16, i8 }>
 // CHECK-NEXT: NonVirtualBaseLLVMType:%struct.Pod =
 // CHECK: BitFields:[
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:32 StorageOffset:0
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:32 StorageOffset:0
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1
+// StorageSize:32 StorageOffset:0 LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}}
+// Size:8 IsSigned:1 StorageSize:32 StorageOffset:0
 
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:16 StorageOffset:0
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:2
-// CHECK-NEXT: ]>
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1
+// StorageSize:16 StorageOffset:0 LAYOUT-DWN32-NEXT: <CGBitFieldInfo
+// Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:2 CHECK-NEXT:
+// ]>
 
 // No tail padding
 struct __attribute__((packed)) PPod {
@@ -68,12 +108,14 @@ struct __attribute__((packed)) PPod {
 // LAYOUT-DWN32-SAME: type <{ i16, i8 }>
 // CHECK-NEXT: NonVirtualBaseLLVMType:%struct.PPod =
 // CHECK: BitFields:[
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:16 StorageOffset:0
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:2
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1
+// StorageSize:16 StorageOffset:0 LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}}
+// Size:8 IsSigned:1 StorageSize:8 StorageOffset:2
 
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:16 StorageOffset:0
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:2
-// CHECK-NEXT: ]>
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1
+// StorageSize:16 StorageOffset:0 LAYOUT-DWN32-NEXT: <CGBitFieldInfo
+// Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:2 CHECK-NEXT:
+// ]>
 
 // Cannot use tail padding
 struct NonPod {
@@ -88,12 +130,14 @@ struct NonPod {
 // LAYOUT-SAME: NonPod.base = type <{ i16, i8 }>
 // LAYOUT-DWN32-SAME: NonPod = type <{ i16, i8 }>
 // CHECK: BitFields:[
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:16 StorageOffset:0
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:2
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1
+// StorageSize:16 StorageOffset:0 LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}}
+// Size:8 IsSigned:1 StorageSize:8 StorageOffset:2
 
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:16 StorageOffset:0
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:2
-// CHECK-NEXT: ]>
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1
+// StorageSize:16 StorageOffset:0 LAYOUT-DWN32-NEXT: <CGBitFieldInfo
+// Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:2 CHECK-NEXT:
+// ]>
 
 // No tail padding
 struct __attribute__((packed)) PNonPod {
@@ -106,16 +150,21 @@ struct __attribute__((packed)) PNonPod {
 // LAYOUT-DWN32-SAME: type <{ i16, i8 }>
 // CHECK-NEXT: NonVirtualBaseLLVMType:%struct.PNonPod =
 // CHECK: BitFields:[
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:16 StorageOffset:0
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:2
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1
+// StorageSize:16 StorageOffset:0 LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}}
+// Size:8 IsSigned:1 StorageSize:8 StorageOffset:2
 
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1 StorageSize:16 StorageOffset:0
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:2
-// CHECK-NEXT: ]>
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:16 IsSigned:1
+// StorageSize:16 StorageOffset:0 LAYOUT-DWN32-NEXT: <CGBitFieldInfo
+// Offset:{{[0-9]+}} Size:8 IsSigned:1 StorageSize:8 StorageOffset:2 CHECK-NEXT:
+// ]>
 
-struct __attribute__((aligned(4))) Empty {} empty;
+struct __attribute__((aligned(4))) Empty {
+} empty;
 
-struct Char { char a; } cbase;
+struct Char {
+  char a;
+} cbase;
 struct D : virtual Char {
   [[no_unique_address]] Empty e0;
   [[no_unique_address]] Empty e1;
@@ -130,12 +179,15 @@ struct D : virtual Char {
 // LAYOUT32-SAME: %struct.D = type { ptr, [3 x i8], %struct.Char }
 // LAYOUT-DWN32-SAME: %struct.D = type { ptr, [3 x i8], %struct.Char }
 // CHECK: BitFields:[
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:24 IsSigned:0 StorageSize:24 StorageOffset:{{(4|8)}}
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:24 IsSigned:0
+// StorageSize:24 StorageOffset:{{(4|8)}}
 
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:24 IsSigned:0 StorageSize:24 StorageOffset:{{(4|8)}}
-// CHECK-NEXT: ]>
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:24 IsSigned:0
+// StorageSize:24 StorageOffset:{{(4|8)}} CHECK-NEXT: ]>
 
-struct Int { int a; } ibase;
+struct Int {
+  int a;
+} ibase;
 struct E : virtual Int {
   [[no_unique_address]] Empty e0;
   [[no_unique_address]] Empty e1;
@@ -150,7 +202,8 @@ struct E : virtual Int {
 // LAYOUT32-SAME: type { ptr, i32 }
 // LAYOUT-DWN32-SAME: type { ptr, i32 }
 // CHECK: BitFields:[
-// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:24 IsSigned:0 StorageSize:32 StorageOffset:{{(4|8)}}
+// LAYOUT-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:24 IsSigned:0
+// StorageSize:32 StorageOffset:{{(4|8)}}
 
-// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:24 IsSigned:0 StorageSize:32 StorageOffset:{{(4|8)}}
-// CHECK-NEXT: ]>
+// LAYOUT-DWN32-NEXT: <CGBitFieldInfo Offset:{{[0-9]+}} Size:24 IsSigned:0
+// StorageSize:32 StorageOffset:{{(4|8)}} CHECK-NEXT: ]>

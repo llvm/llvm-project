@@ -474,7 +474,7 @@ void OmpStructureChecker::CheckIterationVariables(
     if (llvm::omp::isDataSharingAttributeClause(clauseId, version)) {
       for (const parser::OmpObject &object :
           parser::omp::GetOmpObjectList(clause)->v) {
-        if (const Symbol *symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
+        if (const Symbol * symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
           auto maybeSource{parser::omp::GetObjectSource(object)};
           assert(maybeSource && "Expecting object source");
           dsa.insert(
@@ -616,7 +616,7 @@ void OmpStructureChecker::CheckDistLinear(
       std::int64_t curCollapseVal{collapseVal};
       for (const parser::DoConstruct *loop{
                parser::omp::GetDoConstruct(construct)};
-          loop;) {
+           loop;) {
         if (loop->IsDoNormal()) {
           const parser::Name &itrVal{GetLoopIndex(loop)};
           if (itrVal.symbol) {

@@ -17,11 +17,14 @@
 
 // no-pointee-no-diagnostics
 
-void doStuff_pointerToConstInt(const int *u){};
+void doStuff_pointerToConstInt(const int *u) {};
 void pointee_uninit(void) {
   int i;
   int *p = &i;
-  doStuff_pointerToConstInt(p); // expected-warning{{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function [core.CallAndMessage]}}
+  doStuff_pointerToConstInt(
+      p); // expected-warning{{1st function call argument points to an
+          // uninitialized value; this argument is const pointer and is likely
+          // input data of the function [core.CallAndMessage]}}
 }
 
 typedef struct S {
@@ -29,24 +32,30 @@ typedef struct S {
   short b;
 } S;
 
-void doStuff_pointerToConstStruct(const S *s){};
+void doStuff_pointerToConstStruct(const S *s) {};
 void pointee_uninit_struct(void) {
   S s;
   S *p = &s;
-  doStuff_pointerToConstStruct(p); // expected-warning{{1st function call argument points to an uninitialized value (e.g., field: 'a'); this argument is const pointer and may contain input data of the function [core.CallAndMessage]}}
+  doStuff_pointerToConstStruct(
+      p); // expected-warning{{1st function call argument points to an
+          // uninitialized value (e.g., field: 'a'); this argument is const
+          // pointer and may contain input data of the function
+          // [core.CallAndMessage]}}
 }
 void pointee_uninit_struct_1(void) {
   S s;
   s.a = 2;
-  doStuff_pointerToConstStruct(&s); // expected-warning{{1st function call argument points to an uninitialized value (e.g., field: 'b'); this argument is const pointer and may contain input data of the function [core.CallAndMessage]}}
+  doStuff_pointerToConstStruct(
+      &s); // expected-warning{{1st function call argument points to an
+           // uninitialized value (e.g., field: 'b'); this argument is const
+           // pointer and may contain input data of the function
+           // [core.CallAndMessage]}}
 }
 void pointee_uninit_struct_2(void) {
   S s = {};
   doStuff_pointerToConstStruct(&s);
 }
-void pointee_uninit_struct_3(S *s) {
-  doStuff_pointerToConstStruct(s);
-}
+void pointee_uninit_struct_3(S *s) { doStuff_pointerToConstStruct(s); }
 void pointee_uninit_struct_4(void) {
   S s = {1, 2};
   doStuff_pointerToConstStruct(&s);
@@ -59,8 +68,8 @@ void pointee_uninit_struct_4(void) {
 // CHECK-SAME: <string>97a74322d64dca40aa57303842c745a1</string>
 
 typedef struct {
-  int i  :2;
-  int    :30;  // unnamed bit-field
+  int i : 2;
+  int : 30; // unnamed bit-field
 } B;
 
 extern void consume_B(B);
@@ -73,5 +82,7 @@ void bitfield_B_init(void) {
 
 void bitfield_B_uninit(void) {
   B b2;
-  consume_B(b2); // arg-init-warning{{Passed-by-value struct argument contains uninitialized data (e.g., field: 'i') [core.CallAndMessage]}}
+  consume_B(
+      b2); // arg-init-warning{{Passed-by-value struct argument contains
+           // uninitialized data (e.g., field: 'i') [core.CallAndMessage]}}
 }

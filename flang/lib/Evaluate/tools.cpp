@@ -65,7 +65,7 @@ Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
 
 std::optional<DataRef> ExtractDataRef(
     const ActualArgument &arg, bool intoSubstring, bool intoComplexPart) {
-  if (const Symbol *assumedType{arg.GetAssumedTypeDummy()}) {
+  if (const Symbol * assumedType{arg.GetAssumedTypeDummy()}) {
     return DataRef{*assumedType};
   } else {
     return ExtractDataRef(arg.UnwrapExpr(), intoSubstring, intoComplexPart);
@@ -104,8 +104,8 @@ auto IsVariableHelper::operator()(const ArrayRef &x) const -> Result {
 auto IsVariableHelper::operator()(const Substring &x) const -> Result {
   return (*this)(x.GetBaseObject());
 }
-auto IsVariableHelper::operator()(const ProcedureDesignator &x) const
-    -> Result {
+auto IsVariableHelper::operator()(
+    const ProcedureDesignator &x) const -> Result {
   if (const Symbol * symbol{x.GetSymbol()}) {
     const Symbol *result{FindFunctionResult(*symbol)};
     return result && IsPointer(*result) && !IsProcedurePointer(*result);
@@ -2149,13 +2149,13 @@ operation::Operator operation::OperationCode(const Relational<SomeType> &op) {
 
 operation::Operator operation::OperationCode(const ProcedureDesignator &proc) {
   Operator code{llvm::StringSwitch<Operator>(proc.GetName())
-          .Case("associated", Operator::Associated)
-          .Case("min", Operator::Min)
-          .Case("max", Operator::Max)
-          .Case("iand", Operator::And)
-          .Case("ior", Operator::Or)
-          .Case("ieor", Operator::Neqv)
-          .Default(Operator::Call)};
+                    .Case("associated", Operator::Associated)
+                    .Case("min", Operator::Min)
+                    .Case("max", Operator::Max)
+                    .Case("iand", Operator::And)
+                    .Case("ior", Operator::Or)
+                    .Case("ieor", Operator::Neqv)
+                    .Default(Operator::Call)};
   if (code == Operator::Call && proc.GetSpecificIntrinsic()) {
     return Operator::Intrinsic;
   }
@@ -2334,8 +2334,8 @@ std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &scope) {
     for (auto iter{scope.cbegin()}; iter != scope.cend(); ++iter) {
       const Symbol &symbol{*iter->second};
       if (symbol.test(Symbol::Flag::ParentComp)) {
-        if (const semantics::DeclTypeSpec *type{symbol.GetType()}) {
-          if (const semantics::DerivedTypeSpec *derived{type->AsDerived()}) {
+        if (const semantics::DeclTypeSpec * type{symbol.GetType()}) {
+          if (const semantics::DerivedTypeSpec * derived{type->AsDerived()}) {
             const semantics::Scope *parent{derived->scope()};
             if (!parent) {
               parent = derived->typeSymbol().scope();
@@ -2686,15 +2686,15 @@ bool IsSaved(const Symbol &original) {
   } else if (symbol.test(Symbol::Flag::InDataStmt)) {
     return true;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-      object && object->init()) {
+             object && object->init()) {
     return true;
   } else if (IsProcedurePointer(symbol) && symbol.has<ProcEntityDetails>() &&
       symbol.get<ProcEntityDetails>().init()) {
     return true;
   } else if (scope.hasSAVE()) {
     return true; // bare SAVE statement
-  } else if (const Symbol *block{FindCommonBlockContaining(symbol)};
-      block && block->attrs().test(Attr::SAVE)) {
+  } else if (const Symbol * block{FindCommonBlockContaining(symbol)};
+             block && block->attrs().test(Attr::SAVE)) {
     return true; // in COMMON with SAVE
   } else {
     return false;

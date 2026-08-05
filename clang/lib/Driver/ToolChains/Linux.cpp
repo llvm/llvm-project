@@ -294,8 +294,8 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     // to the detected gcc install, because if we are using devtoolset gcc then
     // we want to use other tools from devtoolset (e.g. ld) instead of the
     // standard system tools.
-    PPaths.push_back(Twine(GCCInstallation.getParentLibPath() +
-                     "/../bin").str());
+    PPaths.push_back(
+        Twine(GCCInstallation.getParentLibPath() + "/../bin").str());
 
   if (Arch == llvm::Triple::arm || Arch == llvm::Triple::thumb)
     ExtraOpts.push_back("-X");

@@ -242,7 +242,7 @@ void CheckHelper::Check(
     const DeclTypeSpec &type, bool canHaveAssumedTypeParameters) {
   if (type.category() == DeclTypeSpec::Character) {
     Check(type.characterTypeSpec().length(), canHaveAssumedTypeParameters);
-  } else if (const DerivedTypeSpec *derived{type.AsDerived()}) {
+  } else if (const DerivedTypeSpec * derived{type.AsDerived()}) {
     for (auto &parm : derived->parameters()) {
       Check(parm.second, canHaveAssumedTypeParameters);
     }
@@ -450,7 +450,7 @@ void CheckHelper::Check(const Symbol &symbol) {
             "An assumed-length CHARACTER(*) function cannot be PURE"_err_en_US);
       }
     }
-    if (const Symbol *result{FindFunctionResult(symbol)}) {
+    if (const Symbol * result{FindFunctionResult(symbol)}) {
       if (IsPointer(*result)) {
         messages_.Say(
             "An assumed-length CHARACTER(*) function cannot return a POINTER"_err_en_US);
@@ -715,7 +715,7 @@ void CheckHelper::CheckValue(
 
 void CheckHelper::CheckAssumedTypeEntity( // C709
     const Symbol &symbol, const ObjectEntityDetails &details) {
-  if (const DeclTypeSpec *type{symbol.GetType()};
+  if (const DeclTypeSpec * type{symbol.GetType()};
       type && type->category() == DeclTypeSpec::TypeStar) {
     if (!IsDummy(symbol)) {
       messages_.Say(
@@ -1613,10 +1613,10 @@ void CheckHelper::CheckSubprogram(
         "A procedure may not have both the SIMPLE and IMPURE attributes"_err_en_US);
     context_.SetError(symbol);
   }
-  if (const Symbol *iface{FindSeparateModuleSubprogramInterface(&symbol)}) {
+  if (const Symbol * iface{FindSeparateModuleSubprogramInterface(&symbol)}) {
     SubprogramMatchHelper{*this}.Check(symbol, *iface);
   }
-  if (const Scope *entryScope{details.entryScope()}) {
+  if (const Scope * entryScope{details.entryScope()}) {
     // ENTRY F'2023 15.6.2.6
     std::optional<parser::MessageFixedText> error;
     const Symbol *subprogram{entryScope->symbol()};
@@ -1860,7 +1860,7 @@ void CheckHelper::CheckDerivedType(
       (derivedType.attrs().test(Attr::BIND_C) || details.sequence())) {
     messages_.Say("An ABSTRACT derived type must be extensible"_err_en_US);
   }
-  if (const DeclTypeSpec *parent{FindParentTypeSpec(derivedType)}) {
+  if (const DeclTypeSpec * parent{FindParentTypeSpec(derivedType)}) {
     const DerivedTypeSpec *parentDerived{parent->AsDerived()};
     if (!IsExtensibleType(parentDerived)) { // C705
       messages_.Say("The parent type is not extensible"_err_en_US);
@@ -1947,7 +1947,7 @@ bool CheckHelper::CheckFinal(
   const Symbol *errSym{&subroutine};
   if (const auto *details{subroutine.detailsIf<SubprogramDetails>()}) {
     if (!details->dummyArgs().empty()) {
-      if (const Symbol *argSym{details->dummyArgs()[0]}) {
+      if (const Symbol * argSym{details->dummyArgs()[0]}) {
         errSym = argSym;
       }
     }
@@ -2129,7 +2129,7 @@ void CheckHelper::CollectSpecifics(DistinguishabilityHelper &helper,
       }
       continue;
     }
-    if (const Procedure *procedure{Characterize(specific)}) {
+    if (const Procedure * procedure{Characterize(specific)}) {
       if (procedure->HasExplicitInterface()) {
         helper.Add(generic, kind, specific, *procedure);
       } else {
@@ -2579,9 +2579,7 @@ void CheckHelper::CheckPassArg(
     return;
   }
   const auto &name{proc.name()};
-  const Symbol *interface {
-    interface0 ? FindInterface(*interface0) : nullptr
-  };
+  const Symbol *interface{interface0 ? FindInterface(*interface0) : nullptr};
   if (!interface) {
     messages_.Say(name,
         "Procedure component '%s' must have NOPASS attribute or explicit interface"_err_en_US,
@@ -2721,7 +2719,7 @@ void CheckHelper::CheckProcBinding(
   const Symbol *overridden{
       FindOverriddenBinding(symbol, isInaccessibleDeferred)};
   if (symbol.attrs().test(Attr::DEFERRED)) {
-    if (const Symbol *dtSymbol{dtScope.symbol()}) {
+    if (const Symbol * dtSymbol{dtScope.symbol()}) {
       if (!dtSymbol->attrs().test(Attr::ABSTRACT)) { // C733
         SayWithDeclaration(*dtSymbol,
             "Procedure bound to non-ABSTRACT derived type '%s' may not be DEFERRED"_err_en_US,
@@ -2838,7 +2836,7 @@ void CheckHelper::CheckProcBinding(
 void CheckHelper::Check(const Scope &scope) {
   scope_ = &scope;
   common::Restorer<const Symbol *> restorer{innermostSymbol_, innermostSymbol_};
-  if (const Symbol *symbol{scope.symbol()}) {
+  if (const Symbol * symbol{scope.symbol()}) {
     innermostSymbol_ = symbol;
   }
   if (scope.IsParameterizedDerivedTypeInstantiation()) {
@@ -3049,7 +3047,7 @@ void CheckHelper::CheckGenericOps(const Scope &scope) {
       // Not a generic; ensure characteristics are defined if a function.
       auto restorer{messages_.SetLocation(generic.name())};
       if (IsFunction(generic) && !context_.HasError(generic)) {
-        if (const Symbol *result{FindFunctionResult(generic)};
+        if (const Symbol * result{FindFunctionResult(generic)};
             result && !context_.HasError(*result)) {
           Characterize(generic);
         }
@@ -3065,7 +3063,7 @@ void CheckHelper::CheckGenericOps(const Scope &scope) {
     for (std::size_t i{0}; i < specifics.size(); ++i) {
       const Symbol &specific{*specifics[i]};
       auto restorer{messages_.SetLocation(bindingNames[i])};
-      if (const Procedure *proc{Characterize(specific)}) {
+      if (const Procedure * proc{Characterize(specific)}) {
         if (kind.IsAssignment()) {
           if (!CheckDefinedAssignment(specific, *proc)) {
             continue;
@@ -3084,7 +3082,7 @@ void CheckHelper::CheckGenericOps(const Scope &scope) {
     addSpecifics(symbol);
     const Symbol &ultimate{symbol.GetUltimate()};
     if (ultimate.has<DerivedTypeDetails>()) {
-      if (const Scope *typeScope{ultimate.scope()}) {
+      if (const Scope * typeScope{ultimate.scope()}) {
         for (const auto &pair2 : *typeScope) {
           addSpecifics(*pair2.second);
         }
@@ -3384,9 +3382,9 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
       // ok; F'2023 18.3.7 p2(6)
     } else if (derived) { // type has been checked
     } else if (auto dyType{evaluate::DynamicType::From(*type)}; dyType &&
-        evaluate::IsInteroperableIntrinsicType(
-            *dyType, InModuleFile() ? nullptr : &context_.languageFeatures())
-            .value_or(false)) {
+               evaluate::IsInteroperableIntrinsicType(*dyType,
+                   InModuleFile() ? nullptr : &context_.languageFeatures())
+                   .value_or(false)) {
       // F'2023 18.3.7 p2(4,5)
       // N.B. Language features are not passed to IsInteroperableIntrinsicType
       // when processing a module file, since the module file might have been
@@ -3670,8 +3668,8 @@ void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
 
 void CheckHelper::CheckDioDummyIsDerived(const Symbol &proc, const Symbol &arg,
     common::DefinedIo ioKind, const Symbol &generic) {
-  if (const DeclTypeSpec *type{arg.GetType()}) {
-    if (const DerivedTypeSpec *derivedType{type->AsDerived()}) {
+  if (const DeclTypeSpec * type{arg.GetType()}) {
+    if (const DerivedTypeSpec * derivedType{type->AsDerived()}) {
       CheckAlreadySeenDefinedIo(*derivedType, ioKind, proc, generic);
       bool isPolymorphic{type->IsPolymorphic()};
       if (isPolymorphic != IsExtensibleType(derivedType)) {
@@ -3690,7 +3688,7 @@ void CheckHelper::CheckDioDummyIsDerived(const Symbol &proc, const Symbol &arg,
 
 void CheckHelper::CheckDioDummyIsDefaultInteger(
     const Symbol &subp, const Symbol &arg) {
-  if (const DeclTypeSpec *type{arg.GetType()};
+  if (const DeclTypeSpec * type{arg.GetType()};
       type && type->IsNumeric(TypeCategory::Integer)) {
     if (const auto kind{evaluate::ToInt64(type->numericTypeSpec().kind())};
         kind && *kind == context_.GetDefaultKind(TypeCategory::Integer)) {
@@ -3967,9 +3965,9 @@ void CheckHelper::CheckModuleProcedureDef(const Symbol &symbol) {
       (procClass == ProcedureDefinitionClass::Module &&
           symbol.attrs().test(Attr::MODULE)) &&
       !subprogram->bindName() && !subprogram->isInterface()) {
-    const Symbol &interface {
-      subprogram->moduleInterface() ? *subprogram->moduleInterface() : symbol
-    };
+    const Symbol &interface{subprogram->moduleInterface()
+            ? *subprogram->moduleInterface()
+            : symbol};
     if (const Symbol *
             module{interface.owner().kind() == Scope::Kind::Module
                     ? interface.owner().symbol()

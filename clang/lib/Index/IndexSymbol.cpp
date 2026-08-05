@@ -127,9 +127,11 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
   if (const TagDecl *TD = dyn_cast<TagDecl>(D)) {
     switch (TD->getTagKind()) {
     case TagTypeKind::Struct:
-      Info.Kind = SymbolKind::Struct; break;
+      Info.Kind = SymbolKind::Struct;
+      break;
     case TagTypeKind::Union:
-      Info.Kind = SymbolKind::Union; break;
+      Info.Kind = SymbolKind::Union;
+      break;
     case TagTypeKind::Class:
       Info.Kind = SymbolKind::Class;
       Info.Lang = SymbolLanguage::CXX;
@@ -139,7 +141,8 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Lang = SymbolLanguage::CXX;
       break;
     case TagTypeKind::Enum:
-      Info.Kind = SymbolKind::Enum; break;
+      Info.Kind = SymbolKind::Enum;
+      break;
     }
 
     if (const CXXRecordDecl *CXXRec = dyn_cast<CXXRecordDecl>(D)) {
@@ -201,14 +204,15 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
     case Decl::Field:
     case Decl::IndirectField:
       Info.Kind = SymbolKind::Field;
-      if (const CXXRecordDecl *
-            CXXRec = dyn_cast<CXXRecordDecl>(D->getDeclContext())) {
+      if (const CXXRecordDecl *CXXRec =
+              dyn_cast<CXXRecordDecl>(D->getDeclContext())) {
         if (!CXXRec->isCLike())
           Info.Lang = SymbolLanguage::CXX;
       }
       break;
     case Decl::EnumConstant:
-      Info.Kind = SymbolKind::EnumConstant; break;
+      Info.Kind = SymbolKind::EnumConstant;
+      break;
     case Decl::ObjCInterface:
     case Decl::ObjCImplementation: {
       Info.Kind = SymbolKind::Class;
@@ -239,7 +243,8 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
     }
     case Decl::ObjCMethod: {
       const ObjCMethodDecl *MD = cast<ObjCMethodDecl>(D);
-      Info.Kind = MD->isInstanceMethod() ? SymbolKind::InstanceMethod : SymbolKind::ClassMethod;
+      Info.Kind = MD->isInstanceMethod() ? SymbolKind::InstanceMethod
+                                         : SymbolKind::ClassMethod;
       if (MD->isPropertyAccessor()) {
         if (MD->param_size())
           Info.SubKind = SymbolSubKind::AccessorSetter;
@@ -316,7 +321,7 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Properties |= (SymbolPropertySet)SymbolProperty::Generic;
       Info.Lang = SymbolLanguage::CXX;
       if (const CXXMethodDecl *MD = dyn_cast_or_null<CXXMethodDecl>(
-                           cast<FunctionTemplateDecl>(D)->getTemplatedDecl())) {
+              cast<FunctionTemplateDecl>(D)->getTemplatedDecl())) {
         if (isa<CXXConstructorDecl>(MD))
           Info.Kind = SymbolKind::Constructor;
         else if (isa<CXXDestructorDecl>(MD))
@@ -413,7 +418,7 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
 
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     if (FD->getTemplatedKind() ==
-          FunctionDecl::TK_FunctionTemplateSpecialization) {
+        FunctionDecl::TK_FunctionTemplateSpecialization) {
       Info.Properties |= (SymbolPropertySet)SymbolProperty::Generic;
       Info.Properties |=
           (SymbolPropertySet)SymbolProperty::TemplateSpecialization;
@@ -440,11 +445,11 @@ SymbolInfo index::getSymbolInfoForMacro(const MacroInfo &) {
   return Info;
 }
 
-bool index::applyForEachSymbolRoleInterruptible(SymbolRoleSet Roles,
-                                   llvm::function_ref<bool(SymbolRole)> Fn) {
-#define APPLY_FOR_ROLE(Role) \
-  if (Roles & (unsigned)SymbolRole::Role) \
-    if (!Fn(SymbolRole::Role)) \
+bool index::applyForEachSymbolRoleInterruptible(
+    SymbolRoleSet Roles, llvm::function_ref<bool(SymbolRole)> Fn) {
+#define APPLY_FOR_ROLE(Role)                                                   \
+  if (Roles & (unsigned)SymbolRole::Role)                                      \
+    if (!Fn(SymbolRole::Role))                                                 \
       return false;
 
   APPLY_FOR_ROLE(Declaration);
@@ -490,27 +495,69 @@ void index::printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS) {
     else
       VisitedOnce = true;
     switch (Role) {
-    case SymbolRole::Declaration: OS << "Decl"; break;
-    case SymbolRole::Definition: OS << "Def"; break;
-    case SymbolRole::Reference: OS << "Ref"; break;
-    case SymbolRole::Read: OS << "Read"; break;
-    case SymbolRole::Write: OS << "Writ"; break;
-    case SymbolRole::Call: OS << "Call"; break;
-    case SymbolRole::Dynamic: OS << "Dyn"; break;
-    case SymbolRole::AddressOf: OS << "Addr"; break;
-    case SymbolRole::Implicit: OS << "Impl"; break;
-    case SymbolRole::Undefinition: OS << "Undef"; break;
-    case SymbolRole::RelationChildOf: OS << "RelChild"; break;
-    case SymbolRole::RelationBaseOf: OS << "RelBase"; break;
-    case SymbolRole::RelationOverrideOf: OS << "RelOver"; break;
-    case SymbolRole::RelationReceivedBy: OS << "RelRec"; break;
-    case SymbolRole::RelationCalledBy: OS << "RelCall"; break;
-    case SymbolRole::RelationExtendedBy: OS << "RelExt"; break;
-    case SymbolRole::RelationAccessorOf: OS << "RelAcc"; break;
-    case SymbolRole::RelationContainedBy: OS << "RelCont"; break;
-    case SymbolRole::RelationIBTypeOf: OS << "RelIBType"; break;
-    case SymbolRole::RelationSpecializationOf: OS << "RelSpecialization"; break;
-    case SymbolRole::NameReference: OS << "NameReference"; break;
+    case SymbolRole::Declaration:
+      OS << "Decl";
+      break;
+    case SymbolRole::Definition:
+      OS << "Def";
+      break;
+    case SymbolRole::Reference:
+      OS << "Ref";
+      break;
+    case SymbolRole::Read:
+      OS << "Read";
+      break;
+    case SymbolRole::Write:
+      OS << "Writ";
+      break;
+    case SymbolRole::Call:
+      OS << "Call";
+      break;
+    case SymbolRole::Dynamic:
+      OS << "Dyn";
+      break;
+    case SymbolRole::AddressOf:
+      OS << "Addr";
+      break;
+    case SymbolRole::Implicit:
+      OS << "Impl";
+      break;
+    case SymbolRole::Undefinition:
+      OS << "Undef";
+      break;
+    case SymbolRole::RelationChildOf:
+      OS << "RelChild";
+      break;
+    case SymbolRole::RelationBaseOf:
+      OS << "RelBase";
+      break;
+    case SymbolRole::RelationOverrideOf:
+      OS << "RelOver";
+      break;
+    case SymbolRole::RelationReceivedBy:
+      OS << "RelRec";
+      break;
+    case SymbolRole::RelationCalledBy:
+      OS << "RelCall";
+      break;
+    case SymbolRole::RelationExtendedBy:
+      OS << "RelExt";
+      break;
+    case SymbolRole::RelationAccessorOf:
+      OS << "RelAcc";
+      break;
+    case SymbolRole::RelationContainedBy:
+      OS << "RelCont";
+      break;
+    case SymbolRole::RelationIBTypeOf:
+      OS << "RelIBType";
+      break;
+    case SymbolRole::RelationSpecializationOf:
+      OS << "RelSpecialization";
+      break;
+    case SymbolRole::NameReference:
+      OS << "NameReference";
+      break;
     }
   });
 }
@@ -538,36 +585,66 @@ StringRef index::getSymbolKindString(SymbolKind K) {
   // FIXME: for backwards compatibility, the include directive kind is treated
   // the same as Unknown
   case SymbolKind::IncludeDirective:
-  case SymbolKind::Unknown: return "<unknown>";
-  case SymbolKind::Module: return "module";
-  case SymbolKind::Namespace: return "namespace";
-  case SymbolKind::NamespaceAlias: return "namespace-alias";
-  case SymbolKind::Macro: return "macro";
-  case SymbolKind::Enum: return "enum";
-  case SymbolKind::Struct: return "struct";
-  case SymbolKind::Class: return "class";
-  case SymbolKind::Protocol: return "protocol";
-  case SymbolKind::Extension: return "extension";
-  case SymbolKind::Union: return "union";
-  case SymbolKind::TypeAlias: return "type-alias";
-  case SymbolKind::Function: return "function";
-  case SymbolKind::Variable: return "variable";
-  case SymbolKind::Field: return "field";
-  case SymbolKind::EnumConstant: return "enumerator";
-  case SymbolKind::InstanceMethod: return "instance-method";
-  case SymbolKind::ClassMethod: return "class-method";
-  case SymbolKind::StaticMethod: return "static-method";
-  case SymbolKind::InstanceProperty: return "instance-property";
-  case SymbolKind::ClassProperty: return "class-property";
-  case SymbolKind::StaticProperty: return "static-property";
-  case SymbolKind::Constructor: return "constructor";
-  case SymbolKind::Destructor: return "destructor";
-  case SymbolKind::ConversionFunction: return "conversion-func";
-  case SymbolKind::Parameter: return "param";
-  case SymbolKind::Using: return "using";
-  case SymbolKind::TemplateTypeParm: return "template-type-param";
-  case SymbolKind::TemplateTemplateParm: return "template-template-param";
-  case SymbolKind::NonTypeTemplateParm: return "non-type-template-param";
+  case SymbolKind::Unknown:
+    return "<unknown>";
+  case SymbolKind::Module:
+    return "module";
+  case SymbolKind::Namespace:
+    return "namespace";
+  case SymbolKind::NamespaceAlias:
+    return "namespace-alias";
+  case SymbolKind::Macro:
+    return "macro";
+  case SymbolKind::Enum:
+    return "enum";
+  case SymbolKind::Struct:
+    return "struct";
+  case SymbolKind::Class:
+    return "class";
+  case SymbolKind::Protocol:
+    return "protocol";
+  case SymbolKind::Extension:
+    return "extension";
+  case SymbolKind::Union:
+    return "union";
+  case SymbolKind::TypeAlias:
+    return "type-alias";
+  case SymbolKind::Function:
+    return "function";
+  case SymbolKind::Variable:
+    return "variable";
+  case SymbolKind::Field:
+    return "field";
+  case SymbolKind::EnumConstant:
+    return "enumerator";
+  case SymbolKind::InstanceMethod:
+    return "instance-method";
+  case SymbolKind::ClassMethod:
+    return "class-method";
+  case SymbolKind::StaticMethod:
+    return "static-method";
+  case SymbolKind::InstanceProperty:
+    return "instance-property";
+  case SymbolKind::ClassProperty:
+    return "class-property";
+  case SymbolKind::StaticProperty:
+    return "static-property";
+  case SymbolKind::Constructor:
+    return "constructor";
+  case SymbolKind::Destructor:
+    return "destructor";
+  case SymbolKind::ConversionFunction:
+    return "conversion-func";
+  case SymbolKind::Parameter:
+    return "param";
+  case SymbolKind::Using:
+    return "using";
+  case SymbolKind::TemplateTypeParm:
+    return "template-type-param";
+  case SymbolKind::TemplateTemplateParm:
+    return "template-template-param";
+  case SymbolKind::NonTypeTemplateParm:
+    return "non-type-template-param";
   case SymbolKind::Concept:
     return "concept";
   }
@@ -576,11 +653,16 @@ StringRef index::getSymbolKindString(SymbolKind K) {
 
 StringRef index::getSymbolSubKindString(SymbolSubKind K) {
   switch (K) {
-  case SymbolSubKind::None: return "<none>";
-  case SymbolSubKind::CXXCopyConstructor: return "cxx-copy-ctor";
-  case SymbolSubKind::CXXMoveConstructor: return "cxx-move-ctor";
-  case SymbolSubKind::AccessorGetter: return "acc-get";
-  case SymbolSubKind::AccessorSetter: return "acc-set";
+  case SymbolSubKind::None:
+    return "<none>";
+  case SymbolSubKind::CXXCopyConstructor:
+    return "cxx-copy-ctor";
+  case SymbolSubKind::CXXMoveConstructor:
+    return "cxx-move-ctor";
+  case SymbolSubKind::AccessorGetter:
+    return "acc-get";
+  case SymbolSubKind::AccessorSetter:
+    return "acc-set";
   case SymbolSubKind::UsingTypename:
     return "using-typename";
   case SymbolSubKind::UsingValue:
@@ -597,16 +679,20 @@ StringRef index::getSymbolSubKindString(SymbolSubKind K) {
 
 StringRef index::getSymbolLanguageString(SymbolLanguage K) {
   switch (K) {
-  case SymbolLanguage::C: return "C";
-  case SymbolLanguage::ObjC: return "ObjC";
-  case SymbolLanguage::CXX: return "C++";
-  case SymbolLanguage::Swift: return "Swift";
+  case SymbolLanguage::C:
+    return "C";
+  case SymbolLanguage::ObjC:
+    return "ObjC";
+  case SymbolLanguage::CXX:
+    return "C++";
+  case SymbolLanguage::Swift:
+    return "Swift";
   }
   llvm_unreachable("invalid symbol language kind");
 }
 
-void index::applyForEachSymbolProperty(SymbolPropertySet Props,
-                                  llvm::function_ref<void(SymbolProperty)> Fn) {
+void index::applyForEachSymbolProperty(
+    SymbolPropertySet Props, llvm::function_ref<void(SymbolProperty)> Fn) {
 #define APPLY_FOR_PROPERTY(K)                                                  \
   if (Props & (SymbolPropertySet)SymbolProperty::K)                            \
   Fn(SymbolProperty::K)
@@ -632,15 +718,33 @@ void index::printSymbolProperties(SymbolPropertySet Props, raw_ostream &OS) {
     else
       VisitedOnce = true;
     switch (Prop) {
-    case SymbolProperty::Generic: OS << "Gen"; break;
-    case SymbolProperty::TemplatePartialSpecialization: OS << "TPS"; break;
-    case SymbolProperty::TemplateSpecialization: OS << "TS"; break;
-    case SymbolProperty::UnitTest: OS << "test"; break;
-    case SymbolProperty::IBAnnotated: OS << "IB"; break;
-    case SymbolProperty::IBOutletCollection: OS << "IBColl"; break;
-    case SymbolProperty::GKInspectable: OS << "GKI"; break;
-    case SymbolProperty::Local: OS << "local"; break;
-    case SymbolProperty::ProtocolInterface: OS << "protocol"; break;
+    case SymbolProperty::Generic:
+      OS << "Gen";
+      break;
+    case SymbolProperty::TemplatePartialSpecialization:
+      OS << "TPS";
+      break;
+    case SymbolProperty::TemplateSpecialization:
+      OS << "TS";
+      break;
+    case SymbolProperty::UnitTest:
+      OS << "test";
+      break;
+    case SymbolProperty::IBAnnotated:
+      OS << "IB";
+      break;
+    case SymbolProperty::IBOutletCollection:
+      OS << "IBColl";
+      break;
+    case SymbolProperty::GKInspectable:
+      OS << "GKI";
+      break;
+    case SymbolProperty::Local:
+      OS << "local";
+      break;
+    case SymbolProperty::ProtocolInterface:
+      OS << "protocol";
+      break;
     }
   });
 }

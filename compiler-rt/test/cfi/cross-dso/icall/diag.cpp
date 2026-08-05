@@ -85,7 +85,7 @@ void *create_B();
 
 #ifdef SHARED_LIB
 
-#include "../../utils.h"
+#  include "../../utils.h"
 struct B {
   virtual void f();
 };
@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
     // CAST-DIAG-NEXT: note: vtable is of type '{{(struct )?}}B'
     // CAST-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-unrelated-cast
     // CAST-NODIAG-NOT: runtime error: control flow integrity check {{.*}} during cast to unrelated type
-    a = (A*)p;
+    a = (A *)p;
   } else {
     // Invisible to CFI.
     memcpy(&a, &p, sizeof(a));
@@ -158,6 +158,5 @@ int main(int argc, char *argv[]) {
   // VCALL-FATAL-NOT: =3=
   // ALL-RECOVER: =3=
   fprintf(stderr, "=3=\n");
-
 }
 #endif

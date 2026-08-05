@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm < %s | FileCheck -enable-var-scope -check-prefixes=CHECK,X86 %s
-// RUN: %clang_cc1 -triple amdgpu -emit-llvm < %s | FileCheck -enable-var-scope -check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm < %s | FileCheck
+// -enable-var-scope -check-prefixes=CHECK,X86 %s RUN: %clang_cc1 -triple amdgpu
+// -emit-llvm < %s | FileCheck -enable-var-scope -check-prefixes=CHECK,AMDGCN %s
 
 // CHECK: @foo ={{.*}} addrspace(1) global
 int foo __attribute__((address_space(1)));
@@ -29,9 +30,7 @@ __attribute__((address_space(2))) int *A, *B;
 // X86: load ptr addrspace(2), ptr @A
 // AMDGCN: load ptr addrspace(2), ptr addrspacecast (ptr addrspace(1) @A to ptr)
 // CHECK: store i32 {{.*}}, ptr addrspace(2)
-void test3(void) {
-  *A = *B;
-}
+void test3(void) { *A = *B; }
 
 // PR7437
 typedef struct {
@@ -41,7 +40,7 @@ typedef struct {
 // CHECK-LABEL: define{{.*}} void @test4(
 // CHECK: call void @llvm.memcpy.p0.p2
 // CHECK: call void @llvm.memcpy.p2.p0
-void test4(MyStruct __attribute__((address_space(2))) *pPtr) {
+void test4(MyStruct __attribute__((address_space(2))) * pPtr) {
   MyStruct s = pPtr[0];
   pPtr[0] = s;
 }
@@ -55,9 +54,9 @@ void test4(MyStruct __attribute__((address_space(2))) *pPtr) {
 // X86-NEXT: load ptr addrspace(1), ptr [[ALLOCA]]
 // X86-NEXT: getelementptr inbounds i8, ptr addrspace(1)
 // X86-NEXT: ret ptr addrspace(1)
-void __attribute__((address_space(1)))*
-void_ptr_arithmetic_test(void __attribute__((address_space(1))) *arg) {
-    return arg + 4;
+void __attribute__((address_space(1))) *
+    void_ptr_arithmetic_test(void __attribute__((address_space(1))) * arg) {
+  return arg + 4;
 }
 
 // CHECK-LABEL: define{{.*}} ptr @test5(
@@ -66,8 +65,7 @@ const unsigned *test5(void) {
   // different code path contrary to a fully initialized array.
   // X86: ret ptr @test5.bars
   // AMDGCN: ret ptr addrspacecast (ptr addrspace(4) @test5.bars to ptr)
-  static const unsigned bars[256] = {
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-      11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+  static const unsigned bars[256] = {0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10,
+                                     11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
   return &bars[0];
 }

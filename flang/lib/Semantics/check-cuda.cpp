@@ -172,7 +172,8 @@ struct FindHostArray
       if (Result hostArray{(*this)(symbol)}) {
         return hostArray;
       }
-    } else if (const auto *details{symbol.GetUltimate()
+    } else if (const auto *details{
+                   symbol.GetUltimate()
                        .detailsIf<semantics::ObjectEntityDetails>()}) {
       if (details->IsArray()) {
         if (!IsHostArray(baseSymbol)) {
@@ -868,8 +869,9 @@ void CUDAChecker::Enter(const parser::PrintStmt &x) {
     if (const auto *x{std::get_if<parser::Expr>(&item.u)}) {
       if (const auto *expr{GetExpr(context_, *x)}) {
         for (const Symbol &sym : CollectCudaSymbols(*expr)) {
-          if (const auto *details = sym.GetUltimate()
-                  .detailsIf<semantics::ObjectEntityDetails>()) {
+          if (const auto *details =
+                  sym.GetUltimate()
+                      .detailsIf<semantics::ObjectEntityDetails>()) {
             if (details->cudaDataAttr() &&
                 (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
                     *details->cudaDataAttr() ==

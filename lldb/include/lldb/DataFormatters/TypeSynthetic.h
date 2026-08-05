@@ -262,7 +262,9 @@ public:
 
   bool NonCacheable() const { return m_flags.GetNonCacheable(); }
 
-  bool WantsDereference() const { return m_flags.GetFrontEndWantsDereference();}
+  bool WantsDereference() const {
+    return m_flags.GetFrontEndWantsDereference();
+  }
 
   bool CustomSubscripting() const { return m_flags.GetCustomSubscripting(); }
 
@@ -395,7 +397,8 @@ public:
                                                     lldb::ValueObjectSP)>
       CreateFrontEndCallback;
   CXXSyntheticChildren(const SyntheticChildren::Flags &flags,
-                       const char *description, CreateFrontEndCallback callback);
+                       const char *description,
+                       CreateFrontEndCallback callback);
 
   virtual ~CXXSyntheticChildren();
 

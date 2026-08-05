@@ -696,8 +696,7 @@ Function *AArch64Arm64ECCallLowering::buildGuestExitThunk(Function *F) {
   // This is treated as a direct call, so do not use GuardFnCFGlobal.
   LoadInst *GuardCheckLoad = B.CreateLoad(PtrTy, GuardFnGlobal);
   Function *Thunk = buildExitThunk(F->getFunctionType(), F->getAttributes());
-  CallInst *GuardCheck = B.CreateCall(
-      GuardFnType, GuardCheckLoad, {F, Thunk});
+  CallInst *GuardCheck = B.CreateCall(GuardFnType, GuardCheckLoad, {F, Thunk});
   Value *GuardCheckDest = B.CreateExtractValue(GuardCheck, 0);
   Value *GuardFinalDest = B.CreateExtractValue(GuardCheck, 1);
 
@@ -804,9 +803,8 @@ void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
   // Create new call instruction. The CFGuard check should always be a call,
   // even if the original CallBase is an Invoke or CallBr instruction.
   Function *Thunk = buildExitThunk(CB->getFunctionType(), CB->getAttributes());
-  CallInst *GuardCheck =
-      B.CreateCall(GuardFnType, GuardCheckLoad, {CalledOperand, Thunk},
-                   Bundles);
+  CallInst *GuardCheck = B.CreateCall(GuardFnType, GuardCheckLoad,
+                                      {CalledOperand, Thunk}, Bundles);
   Value *GuardCheckDest = B.CreateExtractValue(GuardCheck, 0);
   Value *GuardFinalDest = B.CreateExtractValue(GuardCheck, 1);
 

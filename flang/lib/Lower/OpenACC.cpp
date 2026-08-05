@@ -4084,8 +4084,8 @@ genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                   if (parentSym.owner().kind() ==
                           Fortran::semantics::Scope::Kind::Module &&
                       parentSym.GetType()) {
-                    if (const Fortran::semantics::DerivedTypeSpec *derived{
-                            parentSym.GetType()->AsDerived()}) {
+                    if (const Fortran::semantics::DerivedTypeSpec *
+                        derived{parentSym.GetType()->AsDerived()}) {
                       if (Fortran::semantics::FindImmediateComponent(
                               *derived,
                               [&](const Fortran::semantics::Symbol &sym) {

@@ -3225,9 +3225,9 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS,
 
     RHS = RHS.isMin() ? RT(APSInt::getMaxValue(RHS.bitWidth(), false)) : -RHS;
 
-    return DoShift<LT, RT,
-                   Dir == ShiftDir::Left ? ShiftDir::Right : ShiftDir::Left>(
-        S, OpPC, LHS, RHS, Result);
+    return DoShift < LT, RT,
+           Dir == ShiftDir::Left ? ShiftDir::Right
+                                 : ShiftDir::Left > (S, OpPC, LHS, RHS, Result);
   }
 
   if (!CheckShift<Dir>(S, OpPC, LHS, RHS, Bits))
@@ -3304,9 +3304,12 @@ inline bool DoShiftAP(InterpState &S, CodePtr OpPC, const APSInt &LHS,
     S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS; //.toAPSInt();
     if (!S.noteUndefinedBehavior())
       return false;
-    return DoShiftAP<LT, RT,
-                     Dir == ShiftDir::Left ? ShiftDir::Right : ShiftDir::Left>(
-        S, OpPC, LHS, -(RHS.extend(RHS.getBitWidth() + 1)), Result);
+    return DoShiftAP < LT, RT,
+           Dir == ShiftDir::Left
+               ? ShiftDir::Right
+               : ShiftDir::Left > (S, OpPC, LHS,
+                                   -(RHS.extend(RHS.getBitWidth() + 1)),
+                                   Result);
   }
 
   if (!CheckShift<Dir>(S, OpPC, static_cast<LT>(LHS), static_cast<RT>(RHS),

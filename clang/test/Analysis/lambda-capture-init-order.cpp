@@ -29,11 +29,12 @@ void safe_useThenMove() {
 // CHECK-NEXT:     6: s
 // CHECK-NEXT:     7: [B1.5]([B1.6])
 // CHECK-NEXT:     8: std::move
-// CHECK-NEXT:     9: [B1.8] (ImplicitCastExpr, BuiltinFnToFnPtr, typename remove_reference<S &>::type &&(*)(struct S &))
-// CHECK-NEXT:    10: s
+// CHECK-NEXT:     9: [B1.8] (ImplicitCastExpr, BuiltinFnToFnPtr, typename
+// remove_reference<S &>::type &&(*)(struct S &)) CHECK-NEXT:    10: s
 // CHECK-NEXT:    11: [B1.9]([B1.10])
-// CHECK-NEXT:    12: [B1.11] (CXXConstructExpr{{.*}}, typename remove_reference<S &>::type)
-// CHECK-NEXT:    13: [x = [B1.7], y = [B1.12]]() mutable {
+// CHECK-NEXT:    12: [B1.11] (CXXConstructExpr{{.*}}, typename
+// remove_reference<S &>::type) CHECK-NEXT:    13: [x = [B1.7], y = [B1.12]]()
+// mutable {
 
 void unsafe_moveThenUse() {
   S s{7};
@@ -52,12 +53,10 @@ void unsafe_moveThenUse() {
 // CHECK-NEXT:     2: {[B1.1]}
 // CHECK-NEXT:     3: S s{7};
 // CHECK-NEXT:     4: std::move
-// CHECK-NEXT:     5: [B1.4] (ImplicitCastExpr, BuiltinFnToFnPtr, typename remove_reference<S &>::type &&(*)(struct S &))
-// CHECK-NEXT:     6: s
+// CHECK-NEXT:     5: [B1.4] (ImplicitCastExpr, BuiltinFnToFnPtr, typename
+// remove_reference<S &>::type &&(*)(struct S &)) CHECK-NEXT:     6: s
 // CHECK-NEXT:     7: [B1.5]([B1.6])
-// CHECK-NEXT:     8: [B1.7] (CXXConstructExpr{{.*}}, typename remove_reference<S &>::type)
-// CHECK-NEXT:     9: s
-// CHECK-NEXT:    10: [B1.9].use
-// CHECK-NEXT:    11: s
-// CHECK-NEXT:    12: [B1.10]([B1.11])
+// CHECK-NEXT:     8: [B1.7] (CXXConstructExpr{{.*}}, typename
+// remove_reference<S &>::type) CHECK-NEXT:     9: s CHECK-NEXT:    10:
+// [B1.9].use CHECK-NEXT:    11: s CHECK-NEXT:    12: [B1.10]([B1.11])
 // CHECK-NEXT:    13: [y = [B1.8], x = [B1.12]]() mutable {

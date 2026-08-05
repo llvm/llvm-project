@@ -47,8 +47,8 @@ static const int NVPTXDWARFAddrSpaceMap[] = {
     -1, // Default, opencl_private or opencl_generic - not defined
     5,  // opencl_global
     -1,
-    8,  // opencl_local or cuda_shared
-    4,  // opencl_constant or cuda_constant
+    8, // opencl_local or cuda_shared
+    4, // opencl_constant or cuda_constant
 };
 
 class LLVM_LIBRARY_VISIBILITY NVPTXTargetInfo : public TargetInfo {

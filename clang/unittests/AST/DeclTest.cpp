@@ -73,8 +73,7 @@ TEST(Decl, CleansUpAPValues) {
   // for ComplexInt.
   ASSERT_FALSE(runToolOnCodeWithArgs(
       Factory->create(),
-      "constexpr _Complex __uint128_t c = 0xffffffffffffffff;",
-      Args));
+      "constexpr _Complex __uint128_t c = 0xffffffffffffffff;", Args));
 }
 
 TEST(Decl, AsmLabelAttr) {
@@ -344,7 +343,8 @@ TEST(Decl, InConsistLinkageForTemplates) {
   EXPECT_EQ(ClassTemplates.size(), 1U);
   EXPECT_EQ(ClassSpecializations.size(), 1U);
   const NamedDecl *TemplatedC = ClassTemplates[0].getNodeAs<NamedDecl>("C");
-  const NamedDecl *SpecializedC = ClassSpecializations[0].getNodeAs<NamedDecl>("C");
+  const NamedDecl *SpecializedC =
+      ClassSpecializations[0].getNodeAs<NamedDecl>("C");
   EXPECT_EQ(TemplatedC->getLinkageInternal(),
             SpecializedC->getLinkageInternal());
 }
@@ -583,8 +583,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
                 .bind("operator new[]"),
             Ctx));
   ASSERT_TRUE(SizedAlignedArrayOperatorNew->getOwningModule());
-  EXPECT_TRUE(
-      SizedAlignedArrayOperatorNew->isFromExplicitGlobalModule());
+  EXPECT_TRUE(SizedAlignedArrayOperatorNew->isFromExplicitGlobalModule());
 
   // void operator delete(void*) noexcept;
   auto *Delete = selectFirst<FunctionDecl>(

@@ -1,9 +1,12 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -fclangir -emit-cir -std=c++17 -fcxx-exceptions -fexceptions -o %t.cir
-// RUN: FileCheck -check-prefixes=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -fclangir -emit-llvm -std=c++17 -fcxx-exceptions -fexceptions -o %t-cir.ll
-// RUN: FileCheck -check-prefixes=LLVM --input-file=%t-cir.ll %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -emit-llvm -std=c++17 -fcxx-exceptions -fexceptions -o %t.ll
-// RUN: FileCheck -check-prefixes=OGCG --input-file=%t.ll %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu
+// -fclangir -emit-cir -std=c++17 -fcxx-exceptions -fexceptions -o %t.cir RUN:
+// FileCheck -check-prefixes=CIR --input-file=%t.cir %s RUN: %clang_cc1
+// -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -fclangir -emit-llvm
+// -std=c++17 -fcxx-exceptions -fexceptions -o %t-cir.ll RUN: FileCheck
+// -check-prefixes=LLVM --input-file=%t-cir.ll %s RUN: %clang_cc1
+// -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -emit-llvm -std=c++17
+// -fcxx-exceptions -fexceptions -o %t.ll RUN: FileCheck -check-prefixes=OGCG
+// --input-file=%t.ll %s
 
 struct S {
   S();
@@ -17,20 +20,15 @@ void while_cond_var(int n) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z14while_cond_vari
-// CIR:     %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
-// CIR:   cir.scope {
-// CIR:     %[[S:.*]] = cir.alloca {{.*}}"s"{{.*}} : !cir.ptr<!rec_S>
-// CIR:     cir.while {
-// The cleanup active flag is cleared before the initializer and set once the
-// condition variable is constructed, so we don't call the destructor if the
-// variable wasn't successfully constructed.
-// CIR:       %[[FALSE:.*]] = cir.const #false
-// CIR:       cir.store %[[FALSE]], %[[FLAG]]
-// CIR:       cir.call @_ZN1SC1Ev(%[[S]])
-// CIR:       %[[TRUE:.*]] = cir.const #true
-// CIR:       cir.store %[[TRUE]], %[[FLAG]]
-// CIR:       %[[COND:.*]] = cir.call @_ZN1ScvbEv(%[[S]])
-// CIR:       cir.condition(%[[COND]])
+// CIR:     %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} :
+// !cir.ptr<!cir.bool> CIR:   cir.scope { CIR:     %[[S:.*]] = cir.alloca
+// {{.*}}"s"{{.*}} : !cir.ptr<!rec_S> CIR:     cir.while { The cleanup active
+// flag is cleared before the initializer and set once the condition variable is
+// constructed, so we don't call the destructor if the variable wasn't
+// successfully constructed. CIR:       %[[FALSE:.*]] = cir.const #false CIR:
+// cir.store %[[FALSE]], %[[FLAG]] CIR:       cir.call @_ZN1SC1Ev(%[[S]]) CIR:
+// %[[TRUE:.*]] = cir.const #true CIR:       cir.store %[[TRUE]], %[[FLAG]] CIR:
+// %[[COND:.*]] = cir.call @_ZN1ScvbEv(%[[S]]) CIR: cir.condition(%[[COND]])
 // CIR:     } do {
 // CIR:     } cleanup all {
 // CIR:       %[[ACTIVE:.*]] = cir.load {{.*}}%[[FLAG]]
@@ -40,11 +38,10 @@ void while_cond_var(int n) {
 // CIR:       cir.yield
 // CIR:     }
 
-// LLVM-LABEL: define dso_local void @_Z14while_cond_vari(i32 %0) {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
-// LLVM:         %[[FLAG:.*]] = alloca i8
-// The loop header branches into the condition region or to the loop exit.
-// LLVM:         br label %{{.*}}
+// LLVM-LABEL: define dso_local void @_Z14while_cond_vari(i32 %0) {{.*}}
+// personality ptr @__gxx_personality_v0 { LLVM:         %[[S:.*]] = alloca
+// %struct.S LLVM:         %[[FLAG:.*]] = alloca i8 The loop header branches
+// into the condition region or to the loop exit. LLVM:         br label %{{.*}}
 // LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
 // LLVM:         br i1 true, label %{{.*}}, label %[[EXIT:.*]]
@@ -98,16 +95,13 @@ void while_cond_var(int n) {
 // LLVM:       [[BACKEDGE]]:
 // LLVM:         br label %[[COND]]
 
-// OGCG-LABEL: define dso_local void @_Z14while_cond_vari(i32 %n) {{.*}} personality ptr @__gxx_personality_v0 {
-// OGCG:         %[[S:.*]] = alloca %struct.S
-// OGCG:         br label %[[COND:.*]]
-// OGCG:       [[COND]]:
-// OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[S]])
-// OGCG:         %[[CALL:.*]] = invoke {{.*}} i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
-// OGCG-NEXT:            to label %[[CONT:.*]] unwind label %[[LPAD:.*]]
-// OGCG:       [[CONT]]:
-// OGCG:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[EXIT:.*]]
-// OGCG:       [[EXIT]]:
+// OGCG-LABEL: define dso_local void @_Z14while_cond_vari(i32 %n) {{.*}}
+// personality ptr @__gxx_personality_v0 { OGCG:         %[[S:.*]] = alloca
+// %struct.S OGCG:         br label %[[COND:.*]] OGCG:       [[COND]]: OGCG:
+// call void @_ZN1SC1Ev(ptr {{.*}} %[[S]]) OGCG:         %[[CALL:.*]] = invoke
+// {{.*}} i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]]) OGCG-NEXT:            to label
+// %[[CONT:.*]] unwind label %[[LPAD:.*]] OGCG:       [[CONT]]: OGCG:         br
+// i1 %[[CALL]], label %[[BODY:.*]], label %[[EXIT:.*]] OGCG:       [[EXIT]]:
 // OGCG:         store i32 3, ptr %[[DEST:.*]],
 // OGCG:         br label %[[CLEANUP:.*]]
 // OGCG:       [[LPAD]]:
@@ -138,16 +132,12 @@ void while_cond_var_break() {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z20while_cond_var_breakv
-// CIR:     %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
-// CIR:   cir.scope {
-// CIR:     %[[S:.*]] = cir.alloca {{.*}}"s"{{.*}} : !cir.ptr<!rec_S>
-// CIR:     cir.while {
-// CIR:       %[[FALSE:.*]] = cir.const #false
-// CIR:       cir.store %[[FALSE]], %[[FLAG]]
-// CIR:       cir.call @_ZN1SC1Ev(%[[S]])
-// CIR:       %[[TRUE:.*]] = cir.const #true
-// CIR:       cir.store %[[TRUE]], %[[FLAG]]
-// CIR:       %[[COND:.*]] = cir.call @_ZN1ScvbEv(%[[S]])
+// CIR:     %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} :
+// !cir.ptr<!cir.bool> CIR:   cir.scope { CIR:     %[[S:.*]] = cir.alloca
+// {{.*}}"s"{{.*}} : !cir.ptr<!rec_S> CIR:     cir.while { CIR: %[[FALSE:.*]] =
+// cir.const #false CIR:       cir.store %[[FALSE]], %[[FLAG]] CIR: cir.call
+// @_ZN1SC1Ev(%[[S]]) CIR:       %[[TRUE:.*]] = cir.const #true CIR: cir.store
+// %[[TRUE]], %[[FLAG]] CIR:       %[[COND:.*]] = cir.call @_ZN1ScvbEv(%[[S]])
 // CIR-NOT:   cir.cleanup.scope
 // CIR:       cir.condition(%[[COND]])
 // CIR:     } do {
@@ -160,17 +150,13 @@ void while_cond_var_break() {
 // CIR:       cir.yield
 // CIR:     }
 
-// LLVM-LABEL: define dso_local void @_Z20while_cond_var_breakv() {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
-// LLVM:         %[[FLAG:.*]] = alloca i8
-// LLVM:         br label %{{.*}}
-// LLVM:         br label %[[COND:.*]]
-// LLVM:       [[COND]]:
-// LLVM:         br i1 true, label %{{.*}}, label %[[EXIT:.*]]
-// LLVM:         store i8 0, ptr %[[FLAG]]
-// LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}} %[[S]])
-// LLVM-NEXT:            to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]]
-// LLVM:       [[CTOR_CONT]]:
+// LLVM-LABEL: define dso_local void @_Z20while_cond_var_breakv() {{.*}}
+// personality ptr @__gxx_personality_v0 { LLVM:         %[[S:.*]] = alloca
+// %struct.S LLVM:         %[[FLAG:.*]] = alloca i8 LLVM:         br label
+// %{{.*}} LLVM:         br label %[[COND:.*]] LLVM:       [[COND]]: LLVM: br i1
+// true, label %{{.*}}, label %[[EXIT:.*]] LLVM:         store i8 0, ptr
+// %[[FLAG]] LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}} %[[S]]) LLVM-NEXT:
+// to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]] LLVM: [[CTOR_CONT]]:
 // LLVM:         store i8 1, ptr %[[FLAG]]
 // LLVM:         %[[CALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
 // LLVM-NEXT:            to label %[[CVB_CONT:.*]] unwind label %[[LPAD]]
@@ -204,24 +190,17 @@ void while_cond_var_break() {
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         resume { ptr, i32 }
 
-// OGCG-LABEL: define dso_local void @_Z20while_cond_var_breakv() {{.*}} personality ptr @__gxx_personality_v0 {
-// OGCG:         %[[S:.*]] = alloca %struct.S
-// OGCG:         br label %[[COND:.*]]
-// OGCG:       [[COND]]:
-// OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[S]])
-// OGCG:         %[[CALL:.*]] = invoke {{.*}} i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
-// OGCG-NEXT:            to label %[[CONT:.*]] unwind label %[[LPAD:.*]]
-// OGCG:       [[CONT]]:
-// OGCG:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
-// OGCG:       [[COND_FALSE]]:
-// OGCG:         store i32 3, ptr %[[DEST:.*]], align 4
-// OGCG:         br label %[[CLEANUP:.*]]
-// OGCG:       [[LPAD]]:
-// OGCG:         landingpad { ptr, i32 }
-// OGCG-NEXT:            cleanup
-// OGCG:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
-// OGCG:         br label %[[EHRESUME:.*]]
-// OGCG:       [[BODY]]:
+// OGCG-LABEL: define dso_local void @_Z20while_cond_var_breakv() {{.*}}
+// personality ptr @__gxx_personality_v0 { OGCG:         %[[S:.*]] = alloca
+// %struct.S OGCG:         br label %[[COND:.*]] OGCG:       [[COND]]: OGCG:
+// call void @_ZN1SC1Ev(ptr {{.*}} %[[S]]) OGCG:         %[[CALL:.*]] = invoke
+// {{.*}} i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]]) OGCG-NEXT:            to label
+// %[[CONT:.*]] unwind label %[[LPAD:.*]] OGCG:       [[CONT]]: OGCG:         br
+// i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]] OGCG:
+// [[COND_FALSE]]: OGCG:         store i32 3, ptr %[[DEST:.*]], align 4 OGCG: br
+// label %[[CLEANUP:.*]] OGCG:       [[LPAD]]: OGCG:         landingpad { ptr,
+// i32 } OGCG-NEXT:            cleanup OGCG:         call void @_ZN1SD1Ev(ptr
+// {{.*}} %[[S]]) OGCG:         br label %[[EHRESUME:.*]] OGCG:       [[BODY]]:
 // OGCG:         store i32 3, ptr %[[DEST]], align 4
 // OGCG:         br label %[[CLEANUP]]
 // OGCG:       [[CLEANUP]]:
@@ -239,16 +218,12 @@ void while_cond_var_continue() {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z23while_cond_var_continuev
-// CIR:     %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
-// CIR:   cir.scope {
-// CIR:     %[[S:.*]] = cir.alloca {{.*}}"s"{{.*}} : !cir.ptr<!rec_S>
-// CIR:     cir.while {
-// CIR:       %[[FALSE:.*]] = cir.const #false
-// CIR:       cir.store %[[FALSE]], %[[FLAG]]
-// CIR:       cir.call @_ZN1SC1Ev(%[[S]])
-// CIR:       %[[TRUE:.*]] = cir.const #true
-// CIR:       cir.store %[[TRUE]], %[[FLAG]]
-// CIR:       %[[COND:.*]] = cir.call @_ZN1ScvbEv(%[[S]])
+// CIR:     %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} :
+// !cir.ptr<!cir.bool> CIR:   cir.scope { CIR:     %[[S:.*]] = cir.alloca
+// {{.*}}"s"{{.*}} : !cir.ptr<!rec_S> CIR:     cir.while { CIR: %[[FALSE:.*]] =
+// cir.const #false CIR:       cir.store %[[FALSE]], %[[FLAG]] CIR: cir.call
+// @_ZN1SC1Ev(%[[S]]) CIR:       %[[TRUE:.*]] = cir.const #true CIR: cir.store
+// %[[TRUE]], %[[FLAG]] CIR:       %[[COND:.*]] = cir.call @_ZN1ScvbEv(%[[S]])
 // CIR-NOT:   cir.cleanup.scope
 // CIR:       cir.condition(%[[COND]])
 // CIR:     } do {
@@ -261,17 +236,13 @@ void while_cond_var_continue() {
 // CIR:       cir.yield
 // CIR:     }
 
-// LLVM-LABEL: define dso_local void @_Z23while_cond_var_continuev() {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
-// LLVM:         %[[FLAG:.*]] = alloca i8
-// LLVM:         br label %{{.*}}
-// LLVM:         br label %[[COND:.*]]
-// LLVM:       [[COND]]:
-// LLVM:         br i1 true, label %{{.*}}, label %[[EXIT:.*]]
-// LLVM:         store i8 0, ptr %[[FLAG]]
-// LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}} %[[S]])
-// LLVM-NEXT:            to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]]
-// LLVM:       [[CTOR_CONT]]:
+// LLVM-LABEL: define dso_local void @_Z23while_cond_var_continuev() {{.*}}
+// personality ptr @__gxx_personality_v0 { LLVM:         %[[S:.*]] = alloca
+// %struct.S LLVM:         %[[FLAG:.*]] = alloca i8 LLVM:         br label
+// %{{.*}} LLVM:         br label %[[COND:.*]] LLVM:       [[COND]]: LLVM: br i1
+// true, label %{{.*}}, label %[[EXIT:.*]] LLVM:         store i8 0, ptr
+// %[[FLAG]] LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}} %[[S]]) LLVM-NEXT:
+// to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]] LLVM: [[CTOR_CONT]]:
 // LLVM:         store i8 1, ptr %[[FLAG]]
 // LLVM:         %[[CALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
 // LLVM-NEXT:            to label %[[CVB_CONT:.*]] unwind label %[[LPAD]]
@@ -307,24 +278,17 @@ void while_cond_var_continue() {
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         resume { ptr, i32 }
 
-// OGCG-LABEL: define dso_local void @_Z23while_cond_var_continuev() {{.*}} personality ptr @__gxx_personality_v0 {
-// OGCG:         %[[S:.*]] = alloca %struct.S
-// OGCG:         br label %[[COND:.*]]
-// OGCG:       [[COND]]:
-// OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[S]])
-// OGCG:         %[[CALL:.*]] = invoke {{.*}} i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
-// OGCG-NEXT:            to label %[[CONT:.*]] unwind label %[[LPAD:.*]]
-// OGCG:       [[CONT]]:
-// OGCG:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
-// OGCG:       [[COND_FALSE]]:
-// OGCG:         store i32 3, ptr %[[DEST:.*]], align 4
-// OGCG:         br label %[[CLEANUP:.*]]
-// OGCG:       [[LPAD]]:
-// OGCG:         landingpad { ptr, i32 }
-// OGCG-NEXT:            cleanup
-// OGCG:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
-// OGCG:         br label %[[EHRESUME:.*]]
-// OGCG:       [[BODY]]:
+// OGCG-LABEL: define dso_local void @_Z23while_cond_var_continuev() {{.*}}
+// personality ptr @__gxx_personality_v0 { OGCG:         %[[S:.*]] = alloca
+// %struct.S OGCG:         br label %[[COND:.*]] OGCG:       [[COND]]: OGCG:
+// call void @_ZN1SC1Ev(ptr {{.*}} %[[S]]) OGCG:         %[[CALL:.*]] = invoke
+// {{.*}} i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]]) OGCG-NEXT:            to label
+// %[[CONT:.*]] unwind label %[[LPAD:.*]] OGCG:       [[CONT]]: OGCG:         br
+// i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]] OGCG:
+// [[COND_FALSE]]: OGCG:         store i32 3, ptr %[[DEST:.*]], align 4 OGCG: br
+// label %[[CLEANUP:.*]] OGCG:       [[LPAD]]: OGCG:         landingpad { ptr,
+// i32 } OGCG-NEXT:            cleanup OGCG:         call void @_ZN1SD1Ev(ptr
+// {{.*}} %[[S]]) OGCG:         br label %[[EHRESUME:.*]] OGCG:       [[BODY]]:
 // OGCG:         store i32 2, ptr %[[DEST]], align 4
 // OGCG:         br label %[[CLEANUP]]
 // OGCG:       [[CLEANUP]]:
@@ -345,12 +309,10 @@ void for_cond_var_break() {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z18for_cond_var_breakv
-// CIR:     %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
-// CIR:   cir.scope {
-// CIR:     %[[S:.*]] = cir.alloca {{.*}}"s"{{.*}} : !cir.ptr<!rec_S>
-// CIR:     cir.for : cond {
-// CIR:       %[[FALSE:.*]] = cir.const #false
-// CIR:       cir.store %[[FALSE]], %[[FLAG]]
+// CIR:     %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} :
+// !cir.ptr<!cir.bool> CIR:   cir.scope { CIR:     %[[S:.*]] = cir.alloca
+// {{.*}}"s"{{.*}} : !cir.ptr<!rec_S> CIR:     cir.for : cond { CIR:
+// %[[FALSE:.*]] = cir.const #false CIR:       cir.store %[[FALSE]], %[[FLAG]]
 // CIR:       cir.call @_ZN1SC1Ev(%[[S]])
 // CIR:       %[[TRUE:.*]] = cir.const #true
 // CIR:       cir.store %[[TRUE]], %[[FLAG]]
@@ -368,17 +330,13 @@ void for_cond_var_break() {
 // CIR:       cir.yield
 // CIR:     }
 
-// LLVM-LABEL: define dso_local void @_Z18for_cond_var_breakv() {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
-// LLVM:         %[[FLAG:.*]] = alloca i8
-// LLVM:         br label %{{.*}}
-// LLVM:         br label %[[COND:.*]]
-// LLVM:       [[COND]]:
-// LLVM:         br i1 true, label %{{.*}}, label %[[EXIT:.*]]
-// LLVM:         store i8 0, ptr %[[FLAG]]
-// LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}} %[[S]])
-// LLVM-NEXT:            to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]]
-// LLVM:       [[CTOR_CONT]]:
+// LLVM-LABEL: define dso_local void @_Z18for_cond_var_breakv() {{.*}}
+// personality ptr @__gxx_personality_v0 { LLVM:         %[[S:.*]] = alloca
+// %struct.S LLVM:         %[[FLAG:.*]] = alloca i8 LLVM:         br label
+// %{{.*}} LLVM:         br label %[[COND:.*]] LLVM:       [[COND]]: LLVM: br i1
+// true, label %{{.*}}, label %[[EXIT:.*]] LLVM:         store i8 0, ptr
+// %[[FLAG]] LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}} %[[S]]) LLVM-NEXT:
+// to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]] LLVM: [[CTOR_CONT]]:
 // LLVM:         store i8 1, ptr %[[FLAG]]
 // LLVM:         %[[CALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
 // LLVM-NEXT:            to label %[[CVB_CONT:.*]] unwind label %[[LPAD]]
@@ -412,24 +370,17 @@ void for_cond_var_break() {
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         resume { ptr, i32 }
 
-// OGCG-LABEL: define dso_local void @_Z18for_cond_var_breakv() {{.*}} personality ptr @__gxx_personality_v0 {
-// OGCG:         %[[S:.*]] = alloca %struct.S
-// OGCG:         br label %[[COND:.*]]
-// OGCG:       [[COND]]:
-// OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[S]])
-// OGCG:         %[[CALL:.*]] = invoke {{.*}} i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
-// OGCG-NEXT:            to label %[[CONT:.*]] unwind label %[[LPAD:.*]]
-// OGCG:       [[CONT]]:
-// OGCG:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
-// OGCG:       [[COND_FALSE]]:
-// OGCG:         store i32 2, ptr %[[DEST:.*]], align 4
-// OGCG:         br label %[[CLEANUP:.*]]
-// OGCG:       [[LPAD]]:
-// OGCG:         landingpad { ptr, i32 }
-// OGCG-NEXT:            cleanup
-// OGCG:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
-// OGCG:         br label %[[EHRESUME:.*]]
-// OGCG:       [[BODY]]:
+// OGCG-LABEL: define dso_local void @_Z18for_cond_var_breakv() {{.*}}
+// personality ptr @__gxx_personality_v0 { OGCG:         %[[S:.*]] = alloca
+// %struct.S OGCG:         br label %[[COND:.*]] OGCG:       [[COND]]: OGCG:
+// call void @_ZN1SC1Ev(ptr {{.*}} %[[S]]) OGCG:         %[[CALL:.*]] = invoke
+// {{.*}} i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]]) OGCG-NEXT:            to label
+// %[[CONT:.*]] unwind label %[[LPAD:.*]] OGCG:       [[CONT]]: OGCG:         br
+// i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]] OGCG:
+// [[COND_FALSE]]: OGCG:         store i32 2, ptr %[[DEST:.*]], align 4 OGCG: br
+// label %[[CLEANUP:.*]] OGCG:       [[LPAD]]: OGCG:         landingpad { ptr,
+// i32 } OGCG-NEXT:            cleanup OGCG:         call void @_ZN1SD1Ev(ptr
+// {{.*}} %[[S]]) OGCG:         br label %[[EHRESUME:.*]] OGCG:       [[BODY]]:
 // OGCG:         store i32 2, ptr %[[DEST]], align 4
 // OGCG:         br label %[[CLEANUP]]
 // OGCG:       [[CLEANUP]]:
@@ -447,12 +398,10 @@ void for_cond_var_continue() {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z21for_cond_var_continuev
-// CIR:     %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
-// CIR:   cir.scope {
-// CIR:     %[[S:.*]] = cir.alloca {{.*}}"s"{{.*}} : !cir.ptr<!rec_S>
-// CIR:     cir.for : cond {
-// CIR:       %[[FALSE:.*]] = cir.const #false
-// CIR:       cir.store %[[FALSE]], %[[FLAG]]
+// CIR:     %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} :
+// !cir.ptr<!cir.bool> CIR:   cir.scope { CIR:     %[[S:.*]] = cir.alloca
+// {{.*}}"s"{{.*}} : !cir.ptr<!rec_S> CIR:     cir.for : cond { CIR:
+// %[[FALSE:.*]] = cir.const #false CIR:       cir.store %[[FALSE]], %[[FLAG]]
 // CIR:       cir.call @_ZN1SC1Ev(%[[S]])
 // CIR:       %[[TRUE:.*]] = cir.const #true
 // CIR:       cir.store %[[TRUE]], %[[FLAG]]
@@ -470,17 +419,13 @@ void for_cond_var_continue() {
 // CIR:       cir.yield
 // CIR:     }
 
-// LLVM-LABEL: define dso_local void @_Z21for_cond_var_continuev() {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
-// LLVM:         %[[FLAG:.*]] = alloca i8
-// LLVM:         br label %{{.*}}
-// LLVM:         br label %[[COND:.*]]
-// LLVM:       [[COND]]:
-// LLVM:         br i1 true, label %{{.*}}, label %[[EXIT:.*]]
-// LLVM:         store i8 0, ptr %[[FLAG]]
-// LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}} %[[S]])
-// LLVM-NEXT:            to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]]
-// LLVM:       [[CTOR_CONT]]:
+// LLVM-LABEL: define dso_local void @_Z21for_cond_var_continuev() {{.*}}
+// personality ptr @__gxx_personality_v0 { LLVM:         %[[S:.*]] = alloca
+// %struct.S LLVM:         %[[FLAG:.*]] = alloca i8 LLVM:         br label
+// %{{.*}} LLVM:         br label %[[COND:.*]] LLVM:       [[COND]]: LLVM: br i1
+// true, label %{{.*}}, label %[[EXIT:.*]] LLVM:         store i8 0, ptr
+// %[[FLAG]] LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}} %[[S]]) LLVM-NEXT:
+// to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]] LLVM: [[CTOR_CONT]]:
 // LLVM:         store i8 1, ptr %[[FLAG]]
 // LLVM:         %[[CALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
 // LLVM-NEXT:            to label %[[CVB_CONT:.*]] unwind label %[[LPAD]]
@@ -522,24 +467,17 @@ void for_cond_var_continue() {
 // LLVM:       [[BACKEDGE1]]:
 // LLVM:         br label %[[COND]]
 
-// OGCG-LABEL: define dso_local void @_Z21for_cond_var_continuev() {{.*}} personality ptr @__gxx_personality_v0 {
-// OGCG:         %[[S:.*]] = alloca %struct.S
-// OGCG:         br label %[[COND:.*]]
-// OGCG:       [[COND]]:
-// OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[S]])
-// OGCG:         %[[CALL:.*]] = invoke {{.*}} i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
-// OGCG-NEXT:            to label %[[CONT:.*]] unwind label %[[LPAD:.*]]
-// OGCG:       [[CONT]]:
-// OGCG:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
-// OGCG:       [[COND_FALSE]]:
-// OGCG:         store i32 2, ptr %[[DEST:.*]], align 4
-// OGCG:         br label %[[CLEANUP:.*]]
-// OGCG:       [[LPAD]]:
-// OGCG:         landingpad { ptr, i32 }
-// OGCG-NEXT:            cleanup
-// OGCG:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
-// OGCG:         br label %[[EHRESUME:.*]]
-// OGCG:       [[BODY]]:
+// OGCG-LABEL: define dso_local void @_Z21for_cond_var_continuev() {{.*}}
+// personality ptr @__gxx_personality_v0 { OGCG:         %[[S:.*]] = alloca
+// %struct.S OGCG:         br label %[[COND:.*]] OGCG:       [[COND]]: OGCG:
+// call void @_ZN1SC1Ev(ptr {{.*}} %[[S]]) OGCG:         %[[CALL:.*]] = invoke
+// {{.*}} i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]]) OGCG-NEXT:            to label
+// %[[CONT:.*]] unwind label %[[LPAD:.*]] OGCG:       [[CONT]]: OGCG:         br
+// i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]] OGCG:
+// [[COND_FALSE]]: OGCG:         store i32 2, ptr %[[DEST:.*]], align 4 OGCG: br
+// label %[[CLEANUP:.*]] OGCG:       [[LPAD]]: OGCG:         landingpad { ptr,
+// i32 } OGCG-NEXT:            cleanup OGCG:         call void @_ZN1SD1Ev(ptr
+// {{.*}} %[[S]]) OGCG:         br label %[[EHRESUME:.*]] OGCG:       [[BODY]]:
 // OGCG:         store i32 3, ptr %[[DEST]], align 4
 // OGCG:         br label %[[CLEANUP]]
 // OGCG:       [[CLEANUP]]:
@@ -559,42 +497,28 @@ void for_cond_var(int n) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z12for_cond_vari
-// CIR:     %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
-// CIR:   cir.scope {
-// CIR:     %[[S:.*]] = cir.alloca {{.*}}"s"{{.*}} : !cir.ptr<!rec_S>
-// CIR:     cir.for : cond {
-// The active flag is cleared before the initializer and set once the condition
-// variable is constructed.
-// CIR:       %[[FALSE:.*]] = cir.const #false
-// CIR:       cir.store %[[FALSE]], %[[FLAG]]
-// CIR:       cir.call @_ZN1SC1Ev(%[[S]])
-// CIR:       %[[TRUE:.*]] = cir.const #true
-// CIR:       cir.store %[[TRUE]], %[[FLAG]]
-// CIR:       %[[COND:.*]] = cir.call @_ZN1ScvbEv(%[[S]])
-// CIR-NOT:   cir.cleanup.scope
-// CIR:       cir.condition(%[[COND]])
-// CIR:     } body {
-// CIR:     } step {
-// The per-iteration destructor is guarded by the active flag.
-// CIR:     } cleanup all {
-// CIR:       %[[ACTIVE:.*]] = cir.load {{.*}}%[[FLAG]]
-// CIR:       cir.if %[[ACTIVE]] {
-// CIR:         cir.call @_ZN1SD1Ev(%[[S]]) nothrow
-// CIR:       }
+// CIR:     %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} :
+// !cir.ptr<!cir.bool> CIR:   cir.scope { CIR:     %[[S:.*]] = cir.alloca
+// {{.*}}"s"{{.*}} : !cir.ptr<!rec_S> CIR:     cir.for : cond { The active flag
+// is cleared before the initializer and set once the condition variable is
+// constructed. CIR:       %[[FALSE:.*]] = cir.const #false CIR:       cir.store
+// %[[FALSE]], %[[FLAG]] CIR:       cir.call @_ZN1SC1Ev(%[[S]]) CIR:
+// %[[TRUE:.*]] = cir.const #true CIR:       cir.store %[[TRUE]], %[[FLAG]] CIR:
+// %[[COND:.*]] = cir.call @_ZN1ScvbEv(%[[S]]) CIR-NOT:   cir.cleanup.scope CIR:
+// cir.condition(%[[COND]]) CIR:     } body { CIR:     } step { The
+// per-iteration destructor is guarded by the active flag. CIR:     } cleanup
+// all { CIR:       %[[ACTIVE:.*]] = cir.load {{.*}}%[[FLAG]] CIR:       cir.if
+// %[[ACTIVE]] { CIR:         cir.call @_ZN1SD1Ev(%[[S]]) nothrow CIR:       }
 // CIR:       cir.yield
 // CIR:     }
 
-// LLVM-LABEL: define dso_local void @_Z12for_cond_vari(i32 %0) {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
-// LLVM:         %[[FLAG:.*]] = alloca i8
-// LLVM:         br label %{{.*}}
-// LLVM:         br label %[[COND:.*]]
-// LLVM:       [[COND]]:
-// LLVM:         br i1 true, label %{{.*}}, label %[[EXIT:.*]]
-// LLVM:         store i8 0, ptr %[[FLAG]]
-// LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}} %[[S]])
-// LLVM-NEXT:            to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]]
-// LLVM:       [[CTOR_CONT]]:
+// LLVM-LABEL: define dso_local void @_Z12for_cond_vari(i32 %0) {{.*}}
+// personality ptr @__gxx_personality_v0 { LLVM:         %[[S:.*]] = alloca
+// %struct.S LLVM:         %[[FLAG:.*]] = alloca i8 LLVM:         br label
+// %{{.*}} LLVM:         br label %[[COND:.*]] LLVM:       [[COND]]: LLVM: br i1
+// true, label %{{.*}}, label %[[EXIT:.*]] LLVM:         store i8 0, ptr
+// %[[FLAG]] LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}} %[[S]]) LLVM-NEXT:
+// to label %[[CTOR_CONT:.*]] unwind label %[[LPAD:.*]] LLVM: [[CTOR_CONT]]:
 // LLVM:         store i8 1, ptr %[[FLAG]]
 // LLVM:         %[[CALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
 // LLVM-NEXT:            to label %[[CVB_CONT:.*]] unwind label %[[LPAD]]
@@ -636,22 +560,16 @@ void for_cond_var(int n) {
 // LLVM:       [[BACKEDGE1]]:
 // LLVM:         br label %[[COND]]
 
-// OGCG-LABEL: define dso_local void @_Z12for_cond_vari(i32 %n) {{.*}} personality ptr @__gxx_personality_v0 {
-// OGCG:         %[[S:.*]] = alloca %struct.S
-// OGCG:         br label %[[COND:.*]]
-// OGCG:       [[COND]]:
-// OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[S]])
-// OGCG:         %[[CALL:.*]] = invoke {{.*}} i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
-// OGCG-NEXT:            to label %[[CONT:.*]] unwind label %[[LPAD:.*]]
-// OGCG:       [[CONT]]:
-// OGCG:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_CLEANUP:.*]]
-// The loop-exit edge sets the cleanup destination selector to the "break"
-// value.
-// OGCG:       [[COND_CLEANUP]]:
-// OGCG:         store i32 2, ptr %[[DEST:.*]],
-// OGCG:         br label %[[CLEANUP:.*]]
-// OGCG:       [[LPAD]]:
-// OGCG:         landingpad { ptr, i32 }
+// OGCG-LABEL: define dso_local void @_Z12for_cond_vari(i32 %n) {{.*}}
+// personality ptr @__gxx_personality_v0 { OGCG:         %[[S:.*]] = alloca
+// %struct.S OGCG:         br label %[[COND:.*]] OGCG:       [[COND]]: OGCG:
+// call void @_ZN1SC1Ev(ptr {{.*}} %[[S]]) OGCG:         %[[CALL:.*]] = invoke
+// {{.*}} i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]]) OGCG-NEXT:            to label
+// %[[CONT:.*]] unwind label %[[LPAD:.*]] OGCG:       [[CONT]]: OGCG:         br
+// i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_CLEANUP:.*]] The loop-exit
+// edge sets the cleanup destination selector to the "break" value. OGCG:
+// [[COND_CLEANUP]]: OGCG:         store i32 2, ptr %[[DEST:.*]], OGCG: br label
+// %[[CLEANUP:.*]] OGCG:       [[LPAD]]: OGCG:         landingpad { ptr, i32 }
 // OGCG-NEXT:            cleanup
 // OGCG:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // OGCG:         br label %[[EHRESUME:.*]]
@@ -682,21 +600,15 @@ void while_cond_var_temp(int n) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z19while_cond_var_tempi
-// CIR:     %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
-// CIR:     %[[S:.*]] = cir.alloca {{.*}}"s"{{.*}} : !cir.ptr<!rec_S>
-// CIR:     %[[TMP:.*]] = cir.alloca {{.*}}"ref.tmp0"{{.*}} : !cir.ptr<!rec_S>
-// CIR:     cir.while {
-// CIR:       %[[FALSE:.*]] = cir.const #false
-// CIR:       cir.store %[[FALSE]], %[[FLAG]]
-// CIR:       cir.call @_Z5makeSv() : () -> !rec_S
-// CIR:       cir.cleanup.scope {
-// CIR:         cir.call @_Z6chainSRK1S(%[[TMP]])
-// CIR:       } cleanup all {
-// CIR:         cir.call @_ZN1SD1Ev(%[[TMP]]) nothrow
-// CIR:         cir.yield
-// CIR:       }
-// CIR:       %[[TRUE:.*]] = cir.const #true
-// CIR:       cir.store %[[TRUE]], %[[FLAG]]
+// CIR:     %[[FLAG:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} :
+// !cir.ptr<!cir.bool> CIR:     %[[S:.*]] = cir.alloca {{.*}}"s"{{.*}} :
+// !cir.ptr<!rec_S> CIR:     %[[TMP:.*]] = cir.alloca {{.*}}"ref.tmp0"{{.*}} :
+// !cir.ptr<!rec_S> CIR:     cir.while { CIR:       %[[FALSE:.*]] = cir.const
+// #false CIR:       cir.store %[[FALSE]], %[[FLAG]] CIR:       cir.call
+// @_Z5makeSv() : () -> !rec_S CIR:       cir.cleanup.scope { CIR: cir.call
+// @_Z6chainSRK1S(%[[TMP]]) CIR:       } cleanup all { CIR:         cir.call
+// @_ZN1SD1Ev(%[[TMP]]) nothrow CIR:         cir.yield CIR:       } CIR:
+// %[[TRUE:.*]] = cir.const #true CIR:       cir.store %[[TRUE]], %[[FLAG]]
 // CIR-NOT:   cir.cleanup.scope
 // CIR:       %[[COND:.*]] = cir.call @_ZN1ScvbEv(%[[S]])
 // CIR:       cir.condition(%[[COND]])
@@ -709,35 +621,27 @@ void while_cond_var_temp(int n) {
 // CIR:       cir.yield
 // CIR:     }
 
-// LLVM-LABEL: define dso_local void @_Z19while_cond_var_tempi(i32 %0) {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
-// LLVM:         %[[TMP:.*]] = alloca %struct.S
-// LLVM:         %[[FLAG:.*]] = alloca i8
-// LLVM:         br label %{{.*}}
-// LLVM:         br label %[[COND:.*]]
+// LLVM-LABEL: define dso_local void @_Z19while_cond_var_tempi(i32 %0) {{.*}}
+// personality ptr @__gxx_personality_v0 { LLVM:         %[[S:.*]] = alloca
+// %struct.S LLVM:         %[[TMP:.*]] = alloca %struct.S LLVM: %[[FLAG:.*]] =
+// alloca i8 LLVM:         br label %{{.*}} LLVM:         br label %[[COND:.*]]
 // LLVM:       [[COND]]:
 // LLVM:         br i1 true, label %{{.*}}, label %[[EXIT:.*]]
 // LLVM:         store i8 0, ptr %[[FLAG]], align 1
 // LLVM:         %[[MK:.*]] = invoke %struct.S @_Z5makeSv()
-// LLVM-NEXT:            to label %[[MK_CONT:.*]] unwind label %[[LPAD_OUTER:.*]]
-// LLVM:       [[MK_CONT]]:
-// LLVM:         store %struct.S %[[MK]], ptr %[[TMP]], align 1
-// LLVM:         %[[CH:.*]] = invoke %struct.S @_Z6chainSRK1S(ptr {{.*}} %[[TMP]])
-// LLVM-NEXT:            to label %[[CH_CONT:.*]] unwind label %[[LPAD_TMP:.*]]
-// LLVM:       [[CH_CONT]]:
-// LLVM:         store %struct.S %[[CH]], ptr %[[S]], align 1
-// LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
-// LLVM:       [[LPAD_TMP]]:
-// LLVM:         landingpad { ptr, i32 }
-// LLVM-NEXT:            cleanup
-// LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
-// LLVM:         br label %[[EHCOMMON:.*]]
-// LLVM:         store i8 1, ptr %[[FLAG]], align 1
-// LLVM:         %[[CALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
-// LLVM-NEXT:            to label %[[CVB_CONT:.*]] unwind label %[[LPAD_OUTER]]
-// LLVM:       [[CVB_CONT]]:
-// LLVM:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
-// LLVM:       [[BODY]]:
+// LLVM-NEXT:            to label %[[MK_CONT:.*]] unwind label
+// %[[LPAD_OUTER:.*]] LLVM:       [[MK_CONT]]: LLVM:         store %struct.S
+// %[[MK]], ptr %[[TMP]], align 1 LLVM:         %[[CH:.*]] = invoke %struct.S
+// @_Z6chainSRK1S(ptr {{.*}} %[[TMP]]) LLVM-NEXT:            to label
+// %[[CH_CONT:.*]] unwind label %[[LPAD_TMP:.*]] LLVM:       [[CH_CONT]]: LLVM:
+// store %struct.S %[[CH]], ptr %[[S]], align 1 LLVM:         call void
+// @_ZN1SD1Ev(ptr {{.*}} %[[TMP]]) LLVM:       [[LPAD_TMP]]: LLVM: landingpad {
+// ptr, i32 } LLVM-NEXT:            cleanup LLVM:         call void
+// @_ZN1SD1Ev(ptr {{.*}} %[[TMP]]) LLVM:         br label %[[EHCOMMON:.*]] LLVM:
+// store i8 1, ptr %[[FLAG]], align 1 LLVM:         %[[CALL:.*]] = invoke i1
+// @_ZN1ScvbEv(ptr {{.*}} %[[S]]) LLVM-NEXT:            to label
+// %[[CVB_CONT:.*]] unwind label %[[LPAD_OUTER]] LLVM:       [[CVB_CONT]]: LLVM:
+// br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]] LLVM: [[BODY]]:
 // LLVM:         store i32 0, ptr %[[DEST:.*]], align 4
 // LLVM:         br label %[[CLEANUP:.*]]
 // LLVM:       [[COND_FALSE]]:
@@ -771,13 +675,12 @@ void while_cond_var_temp(int n) {
 // LLVM:       [[BACKEDGE]]:
 // LLVM:         br label %[[COND]]
 
-// OGCG-LABEL: define dso_local void @_Z19while_cond_var_tempi(i32 %n) {{.*}} personality ptr @__gxx_personality_v0 {
-// OGCG:         %[[S:.*]] = alloca %struct.S
-// OGCG:         %[[TMP:.*]] = alloca %struct.S
-// OGCG:         br label %[[COND:.*]]
-// OGCG:       [[COND]]:
-// OGCG:         call void @_Z5makeSv(ptr {{.*}} sret(%struct.S) {{.*}} %[[TMP]])
-// OGCG:         invoke void @_Z6chainSRK1S(ptr {{.*}} sret(%struct.S) {{.*}} %[[S]], ptr {{.*}} %[[TMP]])
+// OGCG-LABEL: define dso_local void @_Z19while_cond_var_tempi(i32 %n) {{.*}}
+// personality ptr @__gxx_personality_v0 { OGCG:         %[[S:.*]] = alloca
+// %struct.S OGCG:         %[[TMP:.*]] = alloca %struct.S OGCG:         br label
+// %[[COND:.*]] OGCG:       [[COND]]: OGCG:         call void @_Z5makeSv(ptr
+// {{.*}} sret(%struct.S) {{.*}} %[[TMP]]) OGCG:         invoke void
+// @_Z6chainSRK1S(ptr {{.*}} sret(%struct.S) {{.*}} %[[S]], ptr {{.*}} %[[TMP]])
 // OGCG-NEXT:            to label %[[CONT:.*]] unwind label %[[LPAD_TMP:.*]]
 // OGCG:       [[CONT]]:
 // OGCG:         call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
@@ -827,19 +730,15 @@ void while_cond_var_nested(int n) {
 
 // CIR-LABEL: cir.func {{.*}} @_Z21while_cond_var_nestedi
 // Each loop's condition variable gets its own active flag.
-// CIR:     %[[FLAG_OUTER:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
-// CIR:     %[[FLAG_INNER:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool>
-// CIR:     %[[S:.*]] = cir.alloca {{.*}}"s"{{.*}} : !cir.ptr<!rec_S>
-// CIR:     cir.while {
-// CIR:       cir.store %{{.*}}, %[[FLAG_OUTER]]
-// CIR:       %[[T:.*]] = cir.alloca {{.*}}"t"{{.*}} : !cir.ptr<!rec_S>
-// CIR:       cir.while {
-// CIR:         cir.store %{{.*}}, %[[FLAG_INNER]]
-// CIR:         cir.call @_ZN1SC1Ev(%[[T]])
-// CIR:         cir.store %{{.*}}, %[[FLAG_INNER]]
-// CIR:         %[[TCOND:.*]] = cir.call @_ZN1ScvbEv(%[[T]])
-// CIR:         cir.condition(%[[TCOND]])
-// CIR:       } do {
+// CIR:     %[[FLAG_OUTER:.*]] = cir.alloca {{.*}}"cond.cleanup.isactive"{{.*}}
+// : !cir.ptr<!cir.bool> CIR:     %[[FLAG_INNER:.*]] = cir.alloca
+// {{.*}}"cond.cleanup.isactive"{{.*}} : !cir.ptr<!cir.bool> CIR:     %[[S:.*]]
+// = cir.alloca {{.*}}"s"{{.*}} : !cir.ptr<!rec_S> CIR:     cir.while { CIR:
+// cir.store %{{.*}}, %[[FLAG_OUTER]] CIR:       %[[T:.*]] = cir.alloca
+// {{.*}}"t"{{.*}} : !cir.ptr<!rec_S> CIR:       cir.while { CIR: cir.store
+// %{{.*}}, %[[FLAG_INNER]] CIR:         cir.call @_ZN1SC1Ev(%[[T]]) CIR:
+// cir.store %{{.*}}, %[[FLAG_INNER]] CIR:         %[[TCOND:.*]] = cir.call
+// @_ZN1ScvbEv(%[[T]]) CIR:         cir.condition(%[[TCOND]]) CIR:       } do {
 // CIR:         %[[BV:.*]] = cir.alloca {{.*}}"bodyVar"{{.*}} : !cir.ptr<!rec_S>
 // CIR:         cir.call @_ZN1SC1Ev(%[[BV]])
 // CIR:         cir.cleanup.scope {
@@ -867,43 +766,32 @@ void while_cond_var_nested(int n) {
 // CIR:       cir.yield
 // CIR:     }
 
-// LLVM-LABEL: define dso_local void @_Z21while_cond_var_nestedi(i32 %0) {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:         %[[S:.*]] = alloca %struct.S
-// LLVM:         %[[FLAG_OUTER:.*]] = alloca i8
-// LLVM:         %[[FLAG_INNER:.*]] = alloca i8
-// LLVM:         br label %{{.*}}
-// LLVM:         br label %[[OUTER_COND:.*]]
-// LLVM:       [[OUTER_COND]]:
-// LLVM:         br i1 true, label %{{.*}}, label %[[OUTER_EXIT:.*]]
-// LLVM:         store i8 0, ptr %[[FLAG_OUTER]], align 1
-// LLVM:         br label %{{.*}}
-// LLVM:         br label %{{.*}}
-// LLVM:         br label %[[INNER_COND:.*]]
-// LLVM:       [[INNER_COND]]:
+// LLVM-LABEL: define dso_local void @_Z21while_cond_var_nestedi(i32 %0) {{.*}}
+// personality ptr @__gxx_personality_v0 { LLVM:         %[[S:.*]] = alloca
+// %struct.S LLVM:         %[[FLAG_OUTER:.*]] = alloca i8 LLVM:
+// %[[FLAG_INNER:.*]] = alloca i8 LLVM:         br label %{{.*}} LLVM: br label
+// %[[OUTER_COND:.*]] LLVM:       [[OUTER_COND]]: LLVM:         br i1 true,
+// label %{{.*}}, label %[[OUTER_EXIT:.*]] LLVM:         store i8 0, ptr
+// %[[FLAG_OUTER]], align 1 LLVM:         br label %{{.*}} LLVM:         br
+// label %{{.*}} LLVM:         br label %[[INNER_COND:.*]] LLVM: [[INNER_COND]]:
 // LLVM:         br i1 true, label %{{.*}}, label %[[INNER_EXIT:.*]]
 // LLVM:         store i8 0, ptr %[[FLAG_INNER]], align 1
 // LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}} %[[T:.*]])
-// LLVM-NEXT:            to label %[[ICTOR_CONT:.*]] unwind label %[[INNER_LPAD:.*]]
-// LLVM:       [[ICTOR_CONT]]:
-// LLVM:         store i8 1, ptr %[[FLAG_INNER]], align 1
-// LLVM:         %[[TCALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[T]])
-// LLVM-NEXT:            to label %[[TCVB_CONT:.*]] unwind label %[[INNER_LPAD]]
-// LLVM:       [[TCVB_CONT]]:
-// LLVM:         br i1 %[[TCALL]], label %[[IBODY:.*]], label %[[ICOND_FALSE:.*]]
-// LLVM:       [[IBODY]]:
-// LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}} %[[BV:.*]])
-// LLVM-NEXT:            to label %[[BV_CONT:.*]] unwind label %[[INNER_LPAD]]
-// LLVM:       [[BV_CONT]]:
-// LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[BV]])
-// LLVM:         store i32 0, ptr %[[DEST:.*]], align 4
-// LLVM:         br label %[[ICLEANUP:.*]]
-// LLVM:       [[ICOND_FALSE]]:
-// LLVM:         store i32 1, ptr %[[DEST]], align 4
-// LLVM:         br label %[[ICLEANUP]]
-// LLVM:       [[ICLEANUP]]:
-// LLVM:         %[[IACT:.*]] = load i8, ptr %[[FLAG_INNER]]
-// LLVM:         %[[IACTB:.*]] = trunc i8 %[[IACT]] to i1
-// LLVM:         br i1 %[[IACTB]], label %[[IDTOR:.*]], label %{{.*}}
+// LLVM-NEXT:            to label %[[ICTOR_CONT:.*]] unwind label
+// %[[INNER_LPAD:.*]] LLVM:       [[ICTOR_CONT]]: LLVM:         store i8 1, ptr
+// %[[FLAG_INNER]], align 1 LLVM:         %[[TCALL:.*]] = invoke i1
+// @_ZN1ScvbEv(ptr {{.*}} %[[T]]) LLVM-NEXT:            to label
+// %[[TCVB_CONT:.*]] unwind label %[[INNER_LPAD]] LLVM:       [[TCVB_CONT]]:
+// LLVM:         br i1 %[[TCALL]], label %[[IBODY:.*]], label
+// %[[ICOND_FALSE:.*]] LLVM:       [[IBODY]]: LLVM:         invoke void
+// @_ZN1SC1Ev(ptr {{.*}} %[[BV:.*]]) LLVM-NEXT:            to label
+// %[[BV_CONT:.*]] unwind label %[[INNER_LPAD]] LLVM:       [[BV_CONT]]: LLVM:
+// call void @_ZN1SD1Ev(ptr {{.*}} %[[BV]]) LLVM:         store i32 0, ptr
+// %[[DEST:.*]], align 4 LLVM:         br label %[[ICLEANUP:.*]] LLVM:
+// [[ICOND_FALSE]]: LLVM:         store i32 1, ptr %[[DEST]], align 4 LLVM: br
+// label %[[ICLEANUP]] LLVM:       [[ICLEANUP]]: LLVM:         %[[IACT:.*]] =
+// load i8, ptr %[[FLAG_INNER]] LLVM:         %[[IACTB:.*]] = trunc i8 %[[IACT]]
+// to i1 LLVM:         br i1 %[[IACTB]], label %[[IDTOR:.*]], label %{{.*}}
 // LLVM:       [[IDTOR]]:
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[T]])
 // LLVM:         %[[ISEL:.*]] = load i32, ptr %[[DEST]], align 4
@@ -928,23 +816,18 @@ void while_cond_var_nested(int n) {
 // LLVM:         br label %[[INNER_COND]]
 // LLVM:       [[INNER_EXIT]]:
 // LLVM:         invoke void @_ZN1SC1Ev(ptr {{.*}} %[[S]])
-// LLVM-NEXT:            to label %[[OCTOR_CONT:.*]] unwind label %[[OUTER_LPAD:.*]]
-// LLVM:       [[OCTOR_CONT]]:
-// LLVM:         store i8 1, ptr %[[FLAG_OUTER]], align 1
-// LLVM:         %[[SCALL:.*]] = invoke i1 @_ZN1ScvbEv(ptr {{.*}} %[[S]])
-// LLVM-NEXT:            to label %[[SCVB_CONT:.*]] unwind label %[[OUTER_LPAD]]
-// LLVM:       [[SCVB_CONT]]:
-// LLVM:         br i1 %[[SCALL]], label %[[OBODY:.*]], label %[[OCOND_FALSE:.*]]
-// LLVM:       [[OBODY]]:
-// LLVM:         store i32 0, ptr %[[DEST]], align 4
-// LLVM:         br label %[[OCLEANUP:.*]]
-// LLVM:       [[OCOND_FALSE]]:
-// LLVM:         store i32 1, ptr %[[DEST]], align 4
-// LLVM:         br label %[[OCLEANUP]]
-// LLVM:       [[OCLEANUP]]:
-// LLVM:         %[[OACT:.*]] = load i8, ptr %[[FLAG_OUTER]]
-// LLVM:         %[[OACTB:.*]] = trunc i8 %[[OACT]] to i1
-// LLVM:         br i1 %[[OACTB]], label %[[ODTOR:.*]], label %{{.*}}
+// LLVM-NEXT:            to label %[[OCTOR_CONT:.*]] unwind label
+// %[[OUTER_LPAD:.*]] LLVM:       [[OCTOR_CONT]]: LLVM:         store i8 1, ptr
+// %[[FLAG_OUTER]], align 1 LLVM:         %[[SCALL:.*]] = invoke i1
+// @_ZN1ScvbEv(ptr {{.*}} %[[S]]) LLVM-NEXT:            to label
+// %[[SCVB_CONT:.*]] unwind label %[[OUTER_LPAD]] LLVM:       [[SCVB_CONT]]:
+// LLVM:         br i1 %[[SCALL]], label %[[OBODY:.*]], label
+// %[[OCOND_FALSE:.*]] LLVM:       [[OBODY]]: LLVM:         store i32 0, ptr
+// %[[DEST]], align 4 LLVM:         br label %[[OCLEANUP:.*]] LLVM:
+// [[OCOND_FALSE]]: LLVM:         store i32 1, ptr %[[DEST]], align 4 LLVM: br
+// label %[[OCLEANUP]] LLVM:       [[OCLEANUP]]: LLVM:         %[[OACT:.*]] =
+// load i8, ptr %[[FLAG_OUTER]] LLVM:         %[[OACTB:.*]] = trunc i8 %[[OACT]]
+// to i1 LLVM:         br i1 %[[OACTB]], label %[[ODTOR:.*]], label %{{.*}}
 // LLVM:       [[ODTOR]]:
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         %[[OSEL:.*]] = load i32, ptr %[[DEST]], align 4
@@ -969,18 +852,14 @@ void while_cond_var_nested(int n) {
 // LLVM:       [[OBACKEDGE]]:
 // LLVM:         br label %[[OUTER_COND]]
 
-// OGCG-LABEL: define dso_local void @_Z21while_cond_var_nestedi(i32 %n) {{.*}} personality ptr @__gxx_personality_v0 {
-// OGCG:         %[[S:.*]] = alloca %struct.S
-// OGCG:         %[[T:.*]] = alloca %struct.S
-// OGCG:         %[[BV:.*]] = alloca %struct.S
-// OGCG:         br label %[[OUTER_COND:.*]]
-// OGCG:       [[OUTER_COND]]:
-// OGCG:         br label %[[INNER_COND:.*]]
-// OGCG:       [[INNER_COND]]:
-// OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[T]])
-// OGCG:         %[[TCALL:.*]] = invoke {{.*}} i1 @_ZN1ScvbEv(ptr {{.*}} %[[T]])
-// OGCG-NEXT:            to label %[[ICONT:.*]] unwind label %[[INNER_LPAD:.*]]
-// OGCG:       [[ICONT]]:
+// OGCG-LABEL: define dso_local void @_Z21while_cond_var_nestedi(i32 %n) {{.*}}
+// personality ptr @__gxx_personality_v0 { OGCG:         %[[S:.*]] = alloca
+// %struct.S OGCG:         %[[T:.*]] = alloca %struct.S OGCG:         %[[BV:.*]]
+// = alloca %struct.S OGCG:         br label %[[OUTER_COND:.*]] OGCG:
+// [[OUTER_COND]]: OGCG:         br label %[[INNER_COND:.*]] OGCG:
+// [[INNER_COND]]: OGCG:         call void @_ZN1SC1Ev(ptr {{.*}} %[[T]]) OGCG:
+// %[[TCALL:.*]] = invoke {{.*}} i1 @_ZN1ScvbEv(ptr {{.*}} %[[T]]) OGCG-NEXT: to
+// label %[[ICONT:.*]] unwind label %[[INNER_LPAD:.*]] OGCG:       [[ICONT]]:
 // OGCG:         br i1 %[[TCALL]], label %[[IBODY:.*]], label %[[INNER_EXIT:.*]]
 // OGCG:       [[INNER_EXIT]]:
 // OGCG:         store i32 5, ptr %[[DEST:.*]], align 4
@@ -992,15 +871,12 @@ void while_cond_var_nested(int n) {
 // OGCG:         br label %[[EHRESUME:.*]]
 // OGCG:       [[IBODY]]:
 // OGCG:         invoke void @_ZN1SC1Ev(ptr {{.*}} %[[BV]])
-// OGCG-NEXT:            to label %[[IBODY_CONT:.*]] unwind label %[[INNER_LPAD]]
-// OGCG:       [[IBODY_CONT]]:
-// OGCG:         call void @_ZN1SD1Ev(ptr {{.*}} %[[BV]])
-// OGCG:         store i32 0, ptr %[[DEST]], align 4
-// OGCG:         br label %[[ICLEANUP]]
-// OGCG:       [[ICLEANUP]]:
-// OGCG:         call void @_ZN1SD1Ev(ptr {{.*}} %[[T]])
-// OGCG:         %[[ISEL:.*]] = load i32, ptr %[[DEST]], align 4
-// OGCG:         switch i32 %[[ISEL]], label %{{.*}}
+// OGCG-NEXT:            to label %[[IBODY_CONT:.*]] unwind label
+// %[[INNER_LPAD]] OGCG:       [[IBODY_CONT]]: OGCG:         call void
+// @_ZN1SD1Ev(ptr {{.*}} %[[BV]]) OGCG:         store i32 0, ptr %[[DEST]],
+// align 4 OGCG:         br label %[[ICLEANUP]] OGCG:       [[ICLEANUP]]: OGCG:
+// call void @_ZN1SD1Ev(ptr {{.*}} %[[T]]) OGCG:         %[[ISEL:.*]] = load
+// i32, ptr %[[DEST]], align 4 OGCG:         switch i32 %[[ISEL]], label %{{.*}}
 // OGCG:           i32 0, label %[[ICONTINUE:.*]]
 // OGCG:           i32 5, label %[[INNER_END:.*]]
 // OGCG:       [[ICONTINUE]]:

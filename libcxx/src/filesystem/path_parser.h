@@ -209,11 +209,11 @@ public:
 
 private:
   void makeState(ParserState NewState, PosPtr Start, PosPtr End) noexcept {
-    State_    = NewState;
+    State_   = NewState;
     RawEntry = string_view_t(Start, End - Start);
   }
   void makeState(ParserState NewState) noexcept {
-    State_    = NewState;
+    State_   = NewState;
     RawEntry = {};
   }
 

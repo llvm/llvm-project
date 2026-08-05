@@ -16,14 +16,10 @@
 // CHECK: Type: struct AlignedBase
 // CHECK:   Size:64
 // CHECK:   Alignment:64
-struct AlignedBase {
-};
+struct AlignedBase {};
 
 // CHECK: Type: struct Derived
 // CHECK:   Alignment:64
-struct Derived : AlignedBase {
-};
+struct Derived : AlignedBase {};
 
-void use_structs() {
-  Derived d;
-}
+void use_structs() { Derived d; }

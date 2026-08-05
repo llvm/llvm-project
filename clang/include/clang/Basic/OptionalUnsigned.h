@@ -71,7 +71,7 @@ template <class T> struct OptionalUnsigned {
   }
 
 private:
-  constexpr OptionalUnsigned(std::nullopt_t, underlying_type Rep) : Rep(Rep) {};
+  constexpr OptionalUnsigned(std::nullopt_t, underlying_type Rep) : Rep(Rep){};
 
   underlying_type Rep;
 };

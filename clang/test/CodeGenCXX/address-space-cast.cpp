@@ -6,15 +6,11 @@ void func_pchar(__private__ char *x);
 void func_pvoid(__private__ void *x);
 void func_pint(__private__ int *x);
 
-class Base {
-};
+class Base {};
 
-class Derived : public Base {
-};
+class Derived : public Base {};
 
-void fn(Derived *p) {
-  __private__ Base *b = (__private__ Base *)p;
-}
+void fn(Derived *p) { __private__ Base *b = (__private__ Base *)p; }
 
 // CHECK-LABEL: test_cast
 void test_cast(char *gen_char_ptr, void *gen_void_ptr, int *gen_int_ptr) {
@@ -47,30 +43,37 @@ void test_cast(char *gen_char_ptr, void *gen_void_ptr, int *gen_int_ptr) {
   __private__ int *priv_int_ptr = (__private__ int *)gen_void_ptr;
 
   // CHECK: %[[cast:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(5)
-  // CHECK-NEXT: call void @_Z10func_pcharPU3AS5c(ptr addrspace(5) noundef %[[cast]])
+  // CHECK-NEXT: call void @_Z10func_pcharPU3AS5c(ptr addrspace(5) noundef
+  // %[[cast]])
   func_pchar((__private__ char *)gen_char_ptr);
 
   // CHECK: %[[cast:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(5)
-  // CHECK-NEXT: call void @_Z10func_pcharPU3AS5c(ptr addrspace(5) noundef %[[cast]])
+  // CHECK-NEXT: call void @_Z10func_pcharPU3AS5c(ptr addrspace(5) noundef
+  // %[[cast]])
   func_pchar((__private__ char *)gen_void_ptr);
 
   // CHECK: %[[cast:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(5)
-  // CHECK-NEXT: call void @_Z10func_pcharPU3AS5c(ptr addrspace(5) noundef %[[cast]])
+  // CHECK-NEXT: call void @_Z10func_pcharPU3AS5c(ptr addrspace(5) noundef
+  // %[[cast]])
   func_pchar((__private__ char *)gen_int_ptr);
 
   // CHECK: %[[cast:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(5)
-  // CHECK-NEXT: call void @_Z10func_pvoidPU3AS5v(ptr addrspace(5) noundef %[[cast]])
+  // CHECK-NEXT: call void @_Z10func_pvoidPU3AS5v(ptr addrspace(5) noundef
+  // %[[cast]])
   func_pvoid((__private__ void *)gen_char_ptr);
 
   // CHECK: %[[cast:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(5)
-  // CHECK-NEXT: call void @_Z10func_pvoidPU3AS5v(ptr addrspace(5) noundef %[[cast]])
+  // CHECK-NEXT: call void @_Z10func_pvoidPU3AS5v(ptr addrspace(5) noundef
+  // %[[cast]])
   func_pvoid((__private__ void *)gen_void_ptr);
 
   // CHECK: %[[cast:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(5)
-  // CHECK-NEXT: call void @_Z10func_pvoidPU3AS5v(ptr addrspace(5) noundef %[[cast]])
+  // CHECK-NEXT: call void @_Z10func_pvoidPU3AS5v(ptr addrspace(5) noundef
+  // %[[cast]])
   func_pvoid((__private__ void *)gen_int_ptr);
 
   // CHECK: %[[cast:.*]] = addrspacecast ptr %{{.*}} to ptr addrspace(5)
-  // CHECK-NEXT: call void @_Z9func_pintPU3AS5i(ptr addrspace(5) noundef %[[cast]])
+  // CHECK-NEXT: call void @_Z9func_pintPU3AS5i(ptr addrspace(5) noundef
+  // %[[cast]])
   func_pint((__private__ int *)gen_void_ptr);
 }

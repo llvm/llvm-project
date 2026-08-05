@@ -61,9 +61,7 @@ enum NotableIdentifierKind {
 };
 
 /// Defines the possible values of an on-off-switch (C99 6.10.6p2).
-enum OnOffSwitch {
-  OOS_ON, OOS_OFF, OOS_DEFAULT
-};
+enum OnOffSwitch { OOS_ON, OOS_OFF, OOS_DEFAULT };
 
 /// Determines the name of a token as used within the front end.
 ///

@@ -14,89 +14,89 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD
 
-#include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_libc.h"
-#include "sanitizer_common/sanitizer_linux.h"
-#include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
-#include "sanitizer_common/sanitizer_platform_limits_posix.h"
-#include "sanitizer_common/sanitizer_posix.h"
-#include "sanitizer_common/sanitizer_procmaps.h"
-#include "sanitizer_common/sanitizer_stackdepot.h"
-#include "sanitizer_common/sanitizer_stoptheworld.h"
-#include "tsan_flags.h"
-#include "tsan_platform.h"
-#include "tsan_rtl.h"
+#  include "sanitizer_common/sanitizer_common.h"
+#  include "sanitizer_common/sanitizer_libc.h"
+#  include "sanitizer_common/sanitizer_linux.h"
+#  include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
+#  include "sanitizer_common/sanitizer_platform_limits_posix.h"
+#  include "sanitizer_common/sanitizer_posix.h"
+#  include "sanitizer_common/sanitizer_procmaps.h"
+#  include "sanitizer_common/sanitizer_stackdepot.h"
+#  include "sanitizer_common/sanitizer_stoptheworld.h"
+#  include "tsan_flags.h"
+#  include "tsan_platform.h"
+#  include "tsan_rtl.h"
 
-#if SANITIZER_NETBSD
-#  // for __lwp_gettcb_fast() / __lwp_getprivate_fast()
-#  define _RTLD_SOURCE
-#  include <sys/types.h>
-#  include <machine/mcontext.h>
-#  undef _RTLD_SOURCE
-#  include <sys/param.h>
-#  if __NetBSD_Version__ >= 1099001200
-#    include <machine/lwp_private.h>
+#  if SANITIZER_NETBSD
+#    // for __lwp_gettcb_fast() / __lwp_getprivate_fast()
+#    define _RTLD_SOURCE
+#    include <machine/mcontext.h>
+#    include <sys/types.h>
+#    undef _RTLD_SOURCE
+#    include <sys/param.h>
+#    if __NetBSD_Version__ >= 1099001200
+#      include <machine/lwp_private.h>
+#    endif
 #  endif
-#endif
 
-#include <fcntl.h>
-#include <pthread.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
-#include <sys/mman.h>
-#if SANITIZER_LINUX
-#include <sys/personality.h>
-#include <setjmp.h>
-#endif
-#include <sys/syscall.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <sched.h>
-#include <dlfcn.h>
-#if SANITIZER_LINUX
-#define __need_res_state
-#include <resolv.h>
-#endif
+#  include <fcntl.h>
+#  include <pthread.h>
+#  include <signal.h>
+#  include <stdarg.h>
+#  include <stdio.h>
+#  include <stdlib.h>
+#  include <string.h>
+#  include <sys/mman.h>
+#  if SANITIZER_LINUX
+#    include <setjmp.h>
+#    include <sys/personality.h>
+#  endif
+#  include <dlfcn.h>
+#  include <sched.h>
+#  include <sys/resource.h>
+#  include <sys/socket.h>
+#  include <sys/stat.h>
+#  include <sys/syscall.h>
+#  include <sys/time.h>
+#  include <sys/types.h>
+#  include <unistd.h>
+#  if SANITIZER_LINUX
+#    define __need_res_state
+#    include <resolv.h>
+#  endif
 
-#ifdef sa_handler
-# undef sa_handler
-#endif
+#  ifdef sa_handler
+#    undef sa_handler
+#  endif
 
-#ifdef sa_sigaction
-# undef sa_sigaction
-#endif
+#  ifdef sa_sigaction
+#    undef sa_sigaction
+#  endif
 
-#if SANITIZER_FREEBSD
+#  if SANITIZER_FREEBSD
 extern "C" void *__libc_stack_end;
 void *__libc_stack_end = 0;
-#endif
+#  endif
 
-#if SANITIZER_LINUX && (defined(__aarch64__) || defined(__loongarch_lp64)) && \
-    !SANITIZER_GO
-# define INIT_LONGJMP_XOR_KEY 1
-#else
-# define INIT_LONGJMP_XOR_KEY 0
-#endif
+#  if SANITIZER_LINUX && \
+      (defined(__aarch64__) || defined(__loongarch_lp64)) && !SANITIZER_GO
+#    define INIT_LONGJMP_XOR_KEY 1
+#  else
+#    define INIT_LONGJMP_XOR_KEY 0
+#  endif
 
-#if INIT_LONGJMP_XOR_KEY
-#include "interception/interception.h"
+#  if INIT_LONGJMP_XOR_KEY
+#    include "interception/interception.h"
 // Must be declared outside of other namespaces.
 DECLARE_REAL(int, _setjmp, void *env)
-#endif
+#  endif
 
 namespace __tsan {
 
-#if INIT_LONGJMP_XOR_KEY
+#  if INIT_LONGJMP_XOR_KEY
 static void InitializeLongjmpXorKey();
 static uptr longjmp_xor_key;
-#endif
+#  endif
 
 // Runtime detected VMA size.
 uptr vmaSize;
@@ -161,22 +161,22 @@ void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
       stacks.allocated >> 20, nlive, nthread);
 }
 
-#if !SANITIZER_GO
+#  if !SANITIZER_GO
 // Mark shadow for .rodata sections with the special Shadow::kRodata marker.
 // Accesses to .rodata can't race, so this saves time, memory and trace space.
-static NOINLINE void MapRodata(char* buffer, uptr size) {
+static NOINLINE void MapRodata(char *buffer, uptr size) {
   // First create temp file.
   const char *tmpdir = GetEnv("TMPDIR");
   if (tmpdir == 0)
     tmpdir = GetEnv("TEST_TMPDIR");
-#ifdef P_tmpdir
+#    ifdef P_tmpdir
   if (tmpdir == 0)
     tmpdir = P_tmpdir;
-#endif
+#    endif
   if (tmpdir == 0)
     return;
-  internal_snprintf(buffer, size, "%s/tsan.rodata.%d",
-                    tmpdir, (int)internal_getpid());
+  internal_snprintf(buffer, size, "%s/tsan.rodata.%d", tmpdir,
+                    (int)internal_getpid());
   uptr openrv = internal_open(buffer, O_RDWR | O_CREAT | O_EXCL, 0600);
   if (internal_iserror(openrv))
     return;
@@ -198,7 +198,7 @@ static NOINLINE void MapRodata(char* buffer, uptr size) {
     return;
   }
   // Map the file into shadow of .rodata sections.
-  MemoryMappingLayout proc_maps(/*cache_enabled*/true);
+  MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
   // Reusing the buffer 'buffer'.
   MemoryMappedSegment segment(buffer, size);
   while (proc_maps.Next(&segment)) {
@@ -224,7 +224,7 @@ void InitializeShadowMemoryPlatform() {
   MapRodata(buffer, sizeof(buffer));
 }
 
-#endif  // #if !SANITIZER_GO
+#  endif  // #if !SANITIZER_GO
 
 #  if !SANITIZER_GO
 static void ReExecIfNeeded(bool ignore_heap) {
@@ -337,10 +337,9 @@ static void ReExecIfNeeded(bool ignore_heap) {
 #  endif
 
 void InitializePlatformEarly() {
-  vmaSize =
-    (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
-#if defined(__aarch64__)
-# if !SANITIZER_GO
+  vmaSize = (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
+#  if defined(__aarch64__)
+#    if !SANITIZER_GO
   if (vmaSize != 39 && vmaSize != 42 && vmaSize != 47 && vmaSize != 48) {
     Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
     Printf("FATAL: Found %zd - Supported 39, 42, 47 and 48\n", vmaSize);
@@ -425,7 +424,7 @@ void InitializePlatform() {
   // Go maps shadow memory lazily and works fine with limited address space.
   // Unlimited stack is not a problem as well, because the executable
   // is not compiled with -pie.
-#if !SANITIZER_GO
+#  if !SANITIZER_GO
   {
 #    if INIT_LONGJMP_XOR_KEY
     // Initialize the xor key used in {sig}{set,long}jump.
@@ -455,25 +454,25 @@ void InitializePlatform() {
     Die();
   }
 
-#endif  // !SANITIZER_GO
+#  endif  // !SANITIZER_GO
 }
 
-#if !SANITIZER_GO
+#  if !SANITIZER_GO
 // Extract file descriptors passed to glibc internal __res_iclose function.
 // This is required to properly "close" the fds, because we do not see internal
 // closes within glibc. The code is a pure hack.
 int ExtractResolvFDs(void *state, int *fds, int nfd) {
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#    if SANITIZER_LINUX && !SANITIZER_ANDROID
   int cnt = 0;
-  struct __res_state *statp = (struct __res_state*)state;
+  struct __res_state *statp = (struct __res_state *)state;
   for (int i = 0; i < MAXNS && cnt < nfd; i++) {
     if (statp->_u._ext.nsaddrs[i] && statp->_u._ext.nssocks[i] != -1)
       fds[cnt++] = statp->_u._ext.nssocks[i];
   }
   return cnt;
-#else
+#    else
   return 0;
-#endif
+#    endif
 }
 
 // Extract file descriptors passed via UNIX domain sockets.
@@ -481,14 +480,14 @@ int ExtractResolvFDs(void *state, int *fds, int nfd) {
 // see 'man recvmsg' and 'man 3 cmsg'.
 int ExtractRecvmsgFDs(void *msgp, int *fds, int nfd) {
   int res = 0;
-  msghdr *msg = (msghdr*)msgp;
+  msghdr *msg = (msghdr *)msgp;
   struct cmsghdr *cmsg = CMSG_FIRSTHDR(msg);
   for (; cmsg; cmsg = CMSG_NXTHDR(msg, cmsg)) {
     if (cmsg->cmsg_level != SOL_SOCKET || cmsg->cmsg_type != SCM_RIGHTS)
       continue;
     int n = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(fds[0]);
     for (int i = 0; i < n; i++) {
-      fds[res++] = ((int*)CMSG_DATA(cmsg))[i];
+      fds[res++] = ((int *)CMSG_DATA(cmsg))[i];
       if (res == nfd)
         return res;
     }
@@ -518,28 +517,28 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
   uptr sp;
   asm("ror  $0x11,     %0 \n"
       "xor  %%fs:0x30, %0 \n"
-      : "=r" (sp)
-      : "0" (mangled_sp));
+      : "=r"(sp)
+      : "0"(mangled_sp));
   return sp;
-# else
+#      else
   return mangled_sp;
-# endif
-#elif defined(__aarch64__)
-# if SANITIZER_LINUX
+#      endif
+#    elif defined(__aarch64__)
+#      if SANITIZER_LINUX
   return mangled_sp ^ longjmp_xor_key;
-# else
+#      else
   return mangled_sp;
-# endif
-#elif defined(__loongarch_lp64)
+#      endif
+#    elif defined(__loongarch_lp64)
   return mangled_sp ^ longjmp_xor_key;
-#elif defined(__powerpc64__)
+#    elif defined(__powerpc64__)
   // Reverse of:
   //   ld   r4, -28696(r13)
   //   xor  r4, r3, r4
   uptr xor_key;
-  asm("ld  %0, -28696(%%r13)" : "=r" (xor_key));
+  asm("ld  %0, -28696(%%r13)" : "=r"(xor_key));
   return mangled_sp ^ xor_key;
-#elif defined(__mips__)
+#    elif defined(__mips__)
   return mangled_sp;
 #    elif SANITIZER_RISCV64
   return mangled_sp;
@@ -552,20 +551,20 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #    endif
 }
 
-#if SANITIZER_NETBSD
-# ifdef __x86_64__
-#  define LONG_JMP_SP_ENV_SLOT 6
-# else
-#  error unsupported
-# endif
-#elif defined(__powerpc__)
-# define LONG_JMP_SP_ENV_SLOT 0
-#elif SANITIZER_FREEBSD
-# ifdef __aarch64__
-#  define LONG_JMP_SP_ENV_SLOT 1
-# else
-#  define LONG_JMP_SP_ENV_SLOT 2
-# endif
+#    if SANITIZER_NETBSD
+#      ifdef __x86_64__
+#        define LONG_JMP_SP_ENV_SLOT 6
+#      else
+#        error unsupported
+#      endif
+#    elif defined(__powerpc__)
+#      define LONG_JMP_SP_ENV_SLOT 0
+#    elif SANITIZER_FREEBSD
+#      ifdef __aarch64__
+#        define LONG_JMP_SP_ENV_SLOT 1
+#      else
+#        define LONG_JMP_SP_ENV_SLOT 2
+#      endif
 #    elif SANITIZER_ANDROID
 #      ifdef __aarch64__
 #        define LONG_JMP_SP_ENV_SLOT 3
@@ -597,7 +596,7 @@ uptr ExtractLongJmpSp(uptr *env) {
   return UnmangleLongJmpSp(mangled_sp);
 }
 
-#if INIT_LONGJMP_XOR_KEY
+#    if INIT_LONGJMP_XOR_KEY
 // GLIBC mangles the function pointers in jmp_buf (used in {set,long}*jmp
 // functions) by XORing them with a random key.  For AArch64 it is a global
 // variable rather than a TCB one (as for x86_64/powerpc).  We obtain the key by
@@ -609,17 +608,17 @@ static void InitializeLongjmpXorKey() {
 
   // 2. Retrieve vanilla/mangled SP.
   uptr sp;
-#ifdef __loongarch__
-  asm("move  %0, $sp" : "=r" (sp));
-#else
-  asm("mov  %0, sp" : "=r" (sp));
-#endif
+#      ifdef __loongarch__
+  asm("move  %0, $sp" : "=r"(sp));
+#      else
+  asm("mov  %0, sp" : "=r"(sp));
+#      endif
   uptr mangled_sp = ((uptr *)&env)[LONG_JMP_SP_ENV_SLOT];
 
   // 3. xor SPs to obtain key.
   longjmp_xor_key = mangled_sp ^ sp;
 }
-#endif
+#    endif
 
 extern "C" void __tsan_tls_initialization() {}
 
@@ -650,37 +649,37 @@ int call_pthread_cancel_with_cleanup(int (*fn)(void *arg),
   pthread_cleanup_pop(0);
   return res;
 }
-#endif  // !SANITIZER_GO
+#  endif  // !SANITIZER_GO
 
-#if !SANITIZER_GO
-void ReplaceSystemMalloc() { }
-#endif
+#  if !SANITIZER_GO
+void ReplaceSystemMalloc() {}
+#  endif
 
-#if !SANITIZER_GO
-#if SANITIZER_ANDROID
+#  if !SANITIZER_GO
+#    if SANITIZER_ANDROID
 // On Android, one thread can call intercepted functions after
 // DestroyThreadState(), so add a fake thread state for "dead" threads.
 static ThreadState *dead_thread_state = nullptr;
 
 ThreadState *cur_thread() {
-  ThreadState* thr = reinterpret_cast<ThreadState*>(*get_android_tls_ptr());
+  ThreadState *thr = reinterpret_cast<ThreadState *>(*get_android_tls_ptr());
   if (thr == nullptr) {
     __sanitizer_sigset_t emptyset;
     internal_sigfillset(&emptyset);
     __sanitizer_sigset_t oldset;
     CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, &emptyset, &oldset));
-    thr = reinterpret_cast<ThreadState*>(*get_android_tls_ptr());
+    thr = reinterpret_cast<ThreadState *>(*get_android_tls_ptr());
     if (thr == nullptr) {
-      thr = reinterpret_cast<ThreadState*>(MmapOrDie(sizeof(ThreadState),
-                                                     "ThreadState"));
+      thr = reinterpret_cast<ThreadState *>(
+          MmapOrDie(sizeof(ThreadState), "ThreadState"));
       *get_android_tls_ptr() = reinterpret_cast<uptr>(thr);
       if (dead_thread_state == nullptr) {
-        dead_thread_state = reinterpret_cast<ThreadState*>(
+        dead_thread_state = reinterpret_cast<ThreadState *>(
             MmapOrDie(sizeof(ThreadState), "ThreadState"));
         dead_thread_state->fast_state.SetIgnoreBit();
         dead_thread_state->ignore_interceptors = 1;
         dead_thread_state->is_dead = true;
-        *const_cast<u32*>(&dead_thread_state->tid) = -1;
+        *const_cast<u32 *>(&dead_thread_state->tid) = -1;
         CHECK_EQ(0, internal_mprotect(dead_thread_state, sizeof(ThreadState),
                                       PROT_READ));
       }
@@ -693,7 +692,7 @@ ThreadState *cur_thread() {
   // as a flag to disable memory initialization. This is a workaround to get the
   // correct ThreadState pointer.
   uptr addr = reinterpret_cast<uptr>(thr);
-  return reinterpret_cast<ThreadState*>(addr & ~1ULL);
+  return reinterpret_cast<ThreadState *>(addr & ~1ULL);
 }
 
 void set_cur_thread(ThreadState *thr) {
@@ -705,15 +704,15 @@ void cur_thread_finalize() {
   internal_sigfillset(&emptyset);
   __sanitizer_sigset_t oldset;
   CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, &emptyset, &oldset));
-  ThreadState* thr = reinterpret_cast<ThreadState*>(*get_android_tls_ptr());
+  ThreadState *thr = reinterpret_cast<ThreadState *>(*get_android_tls_ptr());
   if (thr != dead_thread_state) {
     *get_android_tls_ptr() = reinterpret_cast<uptr>(dead_thread_state);
     UnmapOrDie(thr, sizeof(ThreadState));
   }
   CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, &oldset, nullptr));
 }
-#endif  // SANITIZER_ANDROID
-#endif  // if !SANITIZER_GO
+#    endif  // SANITIZER_ANDROID
+#  endif    // if !SANITIZER_GO
 
 }  // namespace __tsan
 

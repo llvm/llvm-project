@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fsyntax-only -verify %s
-// expected-no-diagnostics
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fsyntax-only
+// -verify %s expected-no-diagnostics
 
 // The memcpy body must not block constant evaluation of a union assignment.
 

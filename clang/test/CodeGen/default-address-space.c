@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple amdgpu---amdgiz -emit-llvm < %s | FileCheck -check-prefixes=CHECK %s
+// RUN: %clang_cc1 -triple amdgpu---amdgiz -emit-llvm < %s | FileCheck
+// -check-prefixes=CHECK %s
 
 // CHECK-DAG: @foo ={{.*}} addrspace(1) global i32 0
 int foo;
@@ -26,9 +27,7 @@ int test2(int i) { return ban[i]; }
 // CHECK: load i32, ptr
 // CHECK: load ptr, ptr addrspacecast{{.*}} @A
 // CHECK: store i32 {{.*}}, ptr
-void test3(void) {
-  *A = *B;
-}
+void test3(void) { *A = *B; }
 
 // CHECK-LABEL: define{{.*}} void @test4(ptr noundef %a)
 // CHECK: %[[alloca:.*]] = alloca ptr, align 8, addrspace(5)
@@ -37,6 +36,4 @@ void test3(void) {
 // CHECK: %[[r0:.*]] = load ptr, ptr %[[a_addr]]
 // CHECK: %[[arrayidx:.*]] = getelementptr inbounds i32, ptr %[[r0]]
 // CHECK: store i32 0, ptr %[[arrayidx]]
-void test4(int *a) {
-  a[0] = 0;
-}
+void test4(int *a) { a[0] = 0; }

@@ -2,7 +2,8 @@
 // because targets such as PS4 default to gnu99.
 //
 // Deliberately no -triple here: the expectations below must hold for every
-// target and host, including big-endian ones. See test_strchr_wide_string_global.
+// target and host, including big-endian ones. See
+// test_strchr_wide_string_global.
 // RUN: %clang_analyze_cc1 -std=c17 -verify %s \
 // RUN:   -analyzer-checker=core,unix \
 // RUN:   -analyzer-checker=debug.ExprInspection \
@@ -37,37 +38,43 @@ void clang_analyzer_eval(int);
 char *returns_stack_strchr(void) {
   char buf[8] = "abc";
   return strchr(buf, 'b');
-  // expected-warning@-1 {{Address of stack memory associated with local variable 'buf' returned to caller}}
+  // expected-warning@-1 {{Address of stack memory associated with local
+  // variable 'buf' returned to caller}}
 }
 
 char *returns_stack_strrchr(void) {
   char buf[8] = "abc";
   return strrchr(buf, 'b');
-  // expected-warning@-1 {{Address of stack memory associated with local variable 'buf' returned to caller}}
+  // expected-warning@-1 {{Address of stack memory associated with local
+  // variable 'buf' returned to caller}}
 }
 
 char *returns_stack_strstr(void) {
   char buf[8] = "abc";
   return strstr(buf, "b");
-  // expected-warning@-1 {{Address of stack memory associated with local variable 'buf' returned to caller}}
+  // expected-warning@-1 {{Address of stack memory associated with local
+  // variable 'buf' returned to caller}}
 }
 
 char *returns_stack_strpbrk(void) {
   char buf[8] = "abc";
   return strpbrk(buf, "b");
-  // expected-warning@-1 {{Address of stack memory associated with local variable 'buf' returned to caller}}
+  // expected-warning@-1 {{Address of stack memory associated with local
+  // variable 'buf' returned to caller}}
 }
 
 void *returns_stack_memchr(void) {
   char buf[8] = "abc";
   return memchr(buf, 'b', sizeof buf);
-  // expected-warning@-1 {{Address of stack memory associated with local variable 'buf' returned to caller}}
+  // expected-warning@-1 {{Address of stack memory associated with local
+  // variable 'buf' returned to caller}}
 }
 
 char *returns_stack_strchrnul(void) {
   char buf[8] = "abc";
   return strchrnul(buf, 'b');
-  // expected-warning@-1 {{Address of stack memory associated with local variable 'buf' returned to caller}}
+  // expected-warning@-1 {{Address of stack memory associated with local
+  // variable 'buf' returned to caller}}
 }
 
 char *forwards_param(char *p) {
@@ -119,11 +126,21 @@ void null_source_strchrnul(int c) {
 
 // Both branches are reachable; the verifier matches the two values set-wise.
 void state_split(const char *p) {
-  clang_analyzer_eval(strchr(p, 'b') == 0);    // expected-warning {{TRUE}} expected-warning {{FALSE}}
-  clang_analyzer_eval(strrchr(p, 'b') == 0);   // expected-warning {{TRUE}} expected-warning {{FALSE}}
-  clang_analyzer_eval(strstr(p, "x") == 0);    // expected-warning {{TRUE}} expected-warning {{FALSE}}
-  clang_analyzer_eval(strpbrk(p, "x") == 0);   // expected-warning {{TRUE}} expected-warning {{FALSE}}
-  clang_analyzer_eval(memchr(p, 'b', 4) == 0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
+  clang_analyzer_eval(
+      strchr(p, 'b') ==
+      0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
+  clang_analyzer_eval(
+      strrchr(p, 'b') ==
+      0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
+  clang_analyzer_eval(
+      strstr(p, "x") ==
+      0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
+  clang_analyzer_eval(
+      strpbrk(p, "x") ==
+      0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
+  clang_analyzer_eval(
+      memchr(p, 'b', 4) ==
+      0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
 }
 
 // strchrnul does not split: it never returns NULL at runtime.
@@ -135,7 +152,8 @@ void strchrnul_is_nonnull(const char *p) {
 // is opaque, so equality with in-source pointers is UNKNOWN.
 void found_branch_offset_is_opaque(const char *p) {
   char *q = strchr(p, 'b');
-  if (!q) return; // constrain to "found" branch
+  if (!q)
+    return;                        // constrain to "found" branch
   clang_analyzer_eval(q == p);     // expected-warning {{UNKNOWN}}
   clang_analyzer_eval(q == p + 1); // expected-warning {{UNKNOWN}}
 }
@@ -143,7 +161,8 @@ void found_branch_offset_is_opaque(const char *p) {
 void resulting_ptr_shares_provenance_with_src(int rng, char *opaque) {
   if (rng == 10) {
     char *q = strchr("abcd", 'b');
-    free(q); // expected-warning {{Argument to 'free()' is the address of a global variable, which is not memory allocated by 'malloc()'}}
+    free(q); // expected-warning {{Argument to 'free()' is the address of a
+             // global variable, which is not memory allocated by 'malloc()'}}
     return;
   }
 
@@ -155,8 +174,9 @@ void resulting_ptr_shares_provenance_with_src(int rng, char *opaque) {
 
   if (rng == 30) {
     char *q = strchr(opaque, 'b');
-    free(q); // Notionally releases 'opaque'.
-    free(opaque); // expected-warning {{Attempt to release already released memory}}
+    free(q);      // Notionally releases 'opaque'.
+    free(opaque); // expected-warning {{Attempt to release already released
+                  // memory}}
     return;
   }
 }
@@ -200,15 +220,18 @@ void no_invalidation_of_globals(const char *p) {
 // --- strchr / strrchr: target character IS in the literal ---
 const char *test_strrchr_const_no_fp(void) {
   // This is the original reproducer from #209905.
-  return strrchr("/foo/bar.c", '/') ? strrchr("/foo/bar.c", '/') + 1 : "/foo/bar.c"; // no-warning
+  return strrchr("/foo/bar.c", '/') ? strrchr("/foo/bar.c", '/') + 1
+                                    : "/foo/bar.c"; // no-warning
 }
 
 void test_strchr_const_found(void) {
-  clang_analyzer_eval(strchr("/foo/bar.c", '/') == 0); // expected-warning {{FALSE}}
+  clang_analyzer_eval(strchr("/foo/bar.c", '/') ==
+                      0); // expected-warning {{FALSE}}
 }
 
 void test_strrchr_const_found(void) {
-  clang_analyzer_eval(strrchr("/foo/bar.c", '/') == 0); // expected-warning {{FALSE}}
+  clang_analyzer_eval(strrchr("/foo/bar.c", '/') ==
+                      0); // expected-warning {{FALSE}}
 }
 
 // --- strchr / strrchr: target character is NOT in the literal ---
@@ -222,59 +245,71 @@ void test_strrchr_const_not_found(void) {
 
 // --- memchr: character within bounds ---
 void test_memchr_const_found(void) {
-  clang_analyzer_eval(memchr("abcdef", 'c', 6) == 0); // expected-warning {{FALSE}}
+  clang_analyzer_eval(memchr("abcdef", 'c', 6) ==
+                      0); // expected-warning {{FALSE}}
 }
 
 // --- memchr: character beyond the specified length ---
 void test_memchr_const_not_in_range(void) {
-  clang_analyzer_eval(memchr("abcdef", 'f', 3) == 0); // expected-warning {{TRUE}}
+  clang_analyzer_eval(memchr("abcdef", 'f', 3) ==
+                      0); // expected-warning {{TRUE}}
 }
 
 // --- strstr: needle IS a substring ---
 void test_strstr_const_found(void) {
-  clang_analyzer_eval(strstr("hello world", "world") == 0); // expected-warning {{FALSE}}
+  clang_analyzer_eval(strstr("hello world", "world") ==
+                      0); // expected-warning {{FALSE}}
 }
 
 // --- strstr: needle is NOT a substring ---
 void test_strstr_const_not_found(void) {
-  clang_analyzer_eval(strstr("hello world", "xyz") == 0); // expected-warning {{TRUE}}
+  clang_analyzer_eval(strstr("hello world", "xyz") ==
+                      0); // expected-warning {{TRUE}}
 }
 
 // --- strpbrk: accept set has a match ---
 void test_strpbrk_const_found(void) {
-  clang_analyzer_eval(strpbrk("hello", "aeiou") == 0); // expected-warning {{FALSE}}
+  clang_analyzer_eval(strpbrk("hello", "aeiou") ==
+                      0); // expected-warning {{FALSE}}
 }
 
 // --- strpbrk: no character from accept set in source ---
 void test_strpbrk_const_not_found(void) {
-  clang_analyzer_eval(strpbrk("hello", "xyz") == 0); // expected-warning {{TRUE}}
+  clang_analyzer_eval(strpbrk("hello", "xyz") ==
+                      0); // expected-warning {{TRUE}}
 }
 
 // --- Non-constant source: both branches must still exist ---
 void test_strchr_non_const_source(const char *p) {
-  clang_analyzer_eval(strchr(p, '/') == 0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
+  clang_analyzer_eval(
+      strchr(p, '/') ==
+      0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
 }
 
 // --- Various constant source forms: const, static const, #define, __FILE__ ---
 static const char static_const_path[] = "/usr/local/bin/tool";
 
 void test_strchr_static_const(void) {
-  clang_analyzer_eval(strchr(static_const_path, '/') == 0); // expected-warning {{FALSE}}
+  clang_analyzer_eval(strchr(static_const_path, '/') ==
+                      0); // expected-warning {{FALSE}}
 }
 
 const char global_const_path[] = "/etc/config";
 
 void test_strrchr_global_const(void) {
-  clang_analyzer_eval(strrchr(global_const_path, '/') == 0); // expected-warning {{FALSE}}
+  clang_analyzer_eval(strrchr(global_const_path, '/') ==
+                      0); // expected-warning {{FALSE}}
 }
 
 #define FIXED_PATH "/home/user/project/file.c"
 
 void test_strchr_define(void) {
-  clang_analyzer_eval(strchr(FIXED_PATH, '/') == 0); // expected-warning {{FALSE}}
+  clang_analyzer_eval(strchr(FIXED_PATH, '/') ==
+                      0); // expected-warning {{FALSE}}
 }
 
-#define MY_FILE_BASENAME (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#define MY_FILE_BASENAME                                                       \
+  (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 
 void test_file_basename_macro(void) {
   const char *base = MY_FILE_BASENAME; // no-warning
@@ -287,20 +322,23 @@ void test_file_basename_macro(void) {
 #define MODULE_PATH "/opt/" PREFIX "/" SUFFIX ".so"
 
 void test_strchr_concatenated_define(void) {
-  clang_analyzer_eval(strchr(MODULE_PATH, '/') == 0); // expected-warning {{FALSE}}
+  clang_analyzer_eval(strchr(MODULE_PATH, '/') ==
+                      0); // expected-warning {{FALSE}}
 }
 
 // --- Character argument via #define ---
 #define SEPARATOR '/'
 
 void test_strchr_define_char(void) {
-  clang_analyzer_eval(strchr("/foo/bar", SEPARATOR) == 0); // expected-warning {{FALSE}}
+  clang_analyzer_eval(strchr("/foo/bar", SEPARATOR) ==
+                      0); // expected-warning {{FALSE}}
 }
 
 #define SEARCH_CHAR 'x'
 
 void test_strchr_define_char_not_found(void) {
-  clang_analyzer_eval(strchr("/foo/bar", SEARCH_CHAR) == 0); // expected-warning {{TRUE}}
+  clang_analyzer_eval(strchr("/foo/bar", SEARCH_CHAR) ==
+                      0); // expected-warning {{TRUE}}
 }
 
 // --- Edge cases: null character '\0' ---
@@ -310,12 +348,14 @@ void test_strchr_null_char_always_found(void) {
 }
 
 void test_strrchr_null_char_always_found(void) {
-  clang_analyzer_eval(strrchr("hello", '\0') == 0); // expected-warning {{FALSE}}
+  clang_analyzer_eval(strrchr("hello", '\0') ==
+                      0); // expected-warning {{FALSE}}
 }
 
 void test_memchr_null_char_within_bounds(void) {
   // "abc" has terminator at index 3; searching 4 bytes includes it.
-  clang_analyzer_eval(memchr("abc", '\0', 4) == 0); // expected-warning {{FALSE}}
+  clang_analyzer_eval(memchr("abc", '\0', 4) ==
+                      0); // expected-warning {{FALSE}}
 }
 
 void test_memchr_null_char_out_of_bounds(void) {
@@ -396,7 +436,8 @@ void test_strstr_empty_needle_offset(void) {
 void test_strpbrk_exact_offset(void) {
   const char *s = "hello";
   // First vowel 'e' is at index 1.
-  clang_analyzer_eval(strpbrk(s, "aeiou") == s + 1); // expected-warning {{TRUE}}
+  clang_analyzer_eval(strpbrk(s, "aeiou") ==
+                      s + 1); // expected-warning {{TRUE}}
 }
 
 // --- memchr: returns pointer to character within bounds ---
@@ -462,20 +503,23 @@ void test_strpbrk_before_null(void) {
 void test_memchr_pointer_past_null(void) {
   const char *s = "1ab\0cdf\0qwrt";
   // Starting from s+3 ("\0cdf\0qwrt"), search for 'd' in 4 bytes.
-  clang_analyzer_eval(memchr(s + 3, 'd', 4) == s + 5); // expected-warning {{TRUE}}
+  clang_analyzer_eval(memchr(s + 3, 'd', 4) ==
+                      s + 5); // expected-warning {{TRUE}}
 }
 
 // --- Second argument with pointer offset ---
 void test_strstr_needle_with_offset(void) {
   const char *needles = "xxworld";
   // needles + 2 is "world"; strstr finds it at index 6.
-  clang_analyzer_eval(strstr("hello world", needles + 2) == 0); // expected-warning {{FALSE}}
+  clang_analyzer_eval(strstr("hello world", needles + 2) ==
+                      0); // expected-warning {{FALSE}}
 }
 
 void test_strpbrk_accept_with_offset(void) {
   const char *chars = "xxaeiou";
   // chars + 2 is "aeiou"; first vowel 'e' in "hello" is at index 1.
-  clang_analyzer_eval(strpbrk("hello", chars + 2) == 0); // expected-warning {{FALSE}}
+  clang_analyzer_eval(strpbrk("hello", chars + 2) ==
+                      0); // expected-warning {{FALSE}}
 }
 
 // --- Both arguments with pointer offsets ---
@@ -483,14 +527,16 @@ void test_strstr_both_offsets(void) {
   const char *s = "XXhello world";
   const char *needles = "xxworld";
   // s+2 is "hello world", needles+2 is "world"; found at offset 6 from s+2.
-  clang_analyzer_eval(strstr(s + 2, needles + 2) == s + 8); // expected-warning {{TRUE}}
+  clang_analyzer_eval(strstr(s + 2, needles + 2) ==
+                      s + 8); // expected-warning {{TRUE}}
 }
 
 void test_strpbrk_both_offsets(void) {
   const char *s = "XXhello";
   const char *chars = "xxaeiou";
   // s+2 is "hello", chars+2 is "aeiou"; first vowel 'e' at offset 1 from s+2.
-  clang_analyzer_eval(strpbrk(s + 2, chars + 2) == s + 3); // expected-warning {{TRUE}}
+  clang_analyzer_eval(strpbrk(s + 2, chars + 2) ==
+                      s + 3); // expected-warning {{TRUE}}
 }
 
 // --- strchrnul: always returns non-null (pointer to found char or terminator)
@@ -503,8 +549,10 @@ void test_strchrnul_not_found_points_to_terminator(void) {
 void test_strchrnul_found_negative(void) {
   const char *s = "xxuhello";
   const char *ss = s + 3;
-  // 'u' is at index 1 in "xuhello", so strchrnul(ss-2, 'u') == s + 1 + 1 == s + 2.
-  clang_analyzer_eval(strchrnul(ss - 2, 'u') == s + 2); // expected-warning {{TRUE}}
+  // 'u' is at index 1 in "xuhello", so strchrnul(ss-2, 'u') == s + 1 + 1 == s
+  // + 2.
+  clang_analyzer_eval(strchrnul(ss - 2, 'u') ==
+                      s + 2); // expected-warning {{TRUE}}
 }
 
 void test_strchrnul_found_with_offset(void) {
@@ -517,7 +565,8 @@ void test_strchrnul_found_with_offset(void) {
 // --- Embedded null in the needle/accept set argument ---
 void test_strstr_needle_embedded_null(void) {
   // Needle "cd\0e" is truncated to "cd" by C semantics; "cd" is in "abcd".
-  clang_analyzer_eval(strstr("abcd", "cd\0e") == 0); // expected-warning {{FALSE}}
+  clang_analyzer_eval(strstr("abcd", "cd\0e") ==
+                      0); // expected-warning {{FALSE}}
 }
 
 void test_strpbrk_accept_embedded_null(void) {
@@ -531,25 +580,33 @@ void test_strpbrk_accept_embedded_null(void) {
 // out on these and stays conservative, keeping both branches.
 const __CHAR16_TYPE__ wide_str_global[] = u"abc";
 void test_strchr_wide_string_global(void) {
-  clang_analyzer_eval(strchr((const char *)wide_str_global, 'a') == 0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
+  clang_analyzer_eval(
+      strchr((const char *)wide_str_global, 'a') ==
+      0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
 }
 
 void test_strchr_wide_string_local(void) {
   const __CHAR16_TYPE__ w[] = u"abc";
-  clang_analyzer_eval(strchr((const char *)w, 'a') == 0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
+  clang_analyzer_eval(
+      strchr((const char *)w, 'a') ==
+      0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
 }
 
 // --- Wide string with 4-byte characters (UTF-32) ---
 const __CHAR32_TYPE__ wide32_global[] = U"abc";
 void test_strchr_wide32_string(void) {
-  clang_analyzer_eval(strchr((const char *)wide32_global, 'a') == 0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
+  clang_analyzer_eval(
+      strchr((const char *)wide32_global, 'a') ==
+      0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
 }
 
 // --- Wide string as needle argument ---
 const __CHAR16_TYPE__ wide_needle[] = u"lo";
 void test_strstr_wide_needle(void) {
   const char *s = "hello";
-  clang_analyzer_eval(strstr(s, (const char *)wide_needle) == 0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
+  clang_analyzer_eval(
+      strstr(s, (const char *)wide_needle) ==
+      0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
 }
 
 // --- Struct cast to char* ---
@@ -559,7 +616,9 @@ struct FourChars {
 void test_strchr_struct_cast(void) {
   // TODO: resolve const struct initializers (no padding between char members).
   struct FourChars s = {'h', 'e', 'l', 'l'};
-  clang_analyzer_eval(strchr((const char *)&s, 'e') == 0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
+  clang_analyzer_eval(
+      strchr((const char *)&s, 'e') ==
+      0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
 }
 
 // --- Union with wide and narrow access ---
@@ -567,8 +626,10 @@ union CharUnion {
   __CHAR16_TYPE__ w[4];
   char c[8];
 };
-const union CharUnion cu = { .w = u"abc" };
+const union CharUnion cu = {.w = u"abc"};
 void test_strchr_union_narrow_access(void) {
   // TODO: resolve union members with known initializers.
-  clang_analyzer_eval(strchr(cu.c, 'a') == 0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
+  clang_analyzer_eval(
+      strchr(cu.c, 'a') ==
+      0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
 }

@@ -1,27 +1,44 @@
-// RUN: %clang_cc1 -verify -fopenmp -triple x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT
+// RUN: %clang_cc1 -verify -fopenmp -triple x86_64-unknown-linux-gnu -x c
+// -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -triple x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT
+// RUN: %clang_cc1 -verify -fopenmp-simd -triple x86_64-unknown-linux-gnu -x c
+// -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT
 
-// RUN: %clang_cc1 -verify -fopenmp -triple amdgpu-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
+// RUN: %clang_cc1 -verify -fopenmp -triple amdgpu-amd-amdhsa -x c -std=c99
+// -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -triple amdgpu-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
+// RUN: %clang_cc1 -verify -fopenmp-simd -triple amdgpu-amd-amdhsa -x c -std=c99
+// -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
 
-// RUN: %clang_cc1 -verify -fopenmp -triple spirv64-intel -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
+// RUN: %clang_cc1 -verify -fopenmp -triple spirv64-intel -x c -std=c99
+// -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -triple spirv64-intel -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
+// RUN: %clang_cc1 -verify -fopenmp-simd -triple spirv64-intel -x c -std=c99
+// -ast-print %s -o - | FileCheck %s --check-prefix=DEFAULT-GPU
 
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -DOMP52 -triple x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -DOMP52 -triple
+// x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s
+// --check-prefix=OMP52
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -DOMP52 -triple x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -DOMP52 -triple
+// x86_64-unknown-linux-gnu -x c -std=c99 -ast-print %s -o - | FileCheck %s
+// --check-prefix=OMP52
 
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -DOMP52 -triple amdgpu-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52-GPU
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -DOMP52 -triple
+// amdgpu-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s
+// --check-prefix=OMP52-GPU
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -DOMP52 -triple amdgpu-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52-GPU
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -DOMP52 -triple
+// amdgpu-amd-amdhsa -x c -std=c99 -ast-print %s -o - | FileCheck %s
+// --check-prefix=OMP52-GPU
 
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -DOMP52 -triple spirv64-intel -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52-GPU
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -DOMP52 -triple
+// spirv64-intel -x c -std=c99 -ast-print %s -o - | FileCheck %s
+// --check-prefix=OMP52-GPU
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -DOMP52 -triple spirv64-intel -x c -std=c99 -ast-print %s -o - | FileCheck %s --check-prefix=OMP52-GPU
-// expected-no-diagnostics
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=52 -DOMP52 -triple
+// spirv64-intel -x c -std=c99 -ast-print %s -o - | FileCheck %s
+// --check-prefix=OMP52-GPU expected-no-diagnostics
 
 #ifndef HEADER
 #define HEADER
@@ -31,96 +48,89 @@ void bar(void);
 
 #define N 10
 void foo1(void) {
-#pragma omp metadirective when(device = {kind(cpu)} \
-                               : parallel) otherwise()
+#pragma omp metadirective when(device = {kind(cpu)} : parallel) otherwise()
   bar();
-#pragma omp metadirective when(implementation = {vendor(score(0)  \
-                                                        : llvm)}, \
-                               device = {kind(cpu)}               \
-                               : parallel) otherwise(target teams)
+#pragma omp metadirective when(implementation = {vendor(score(0) : llvm)},     \
+                                   device = {kind(cpu)} : parallel)            \
+    otherwise(target teams)
   bar();
-#pragma omp metadirective when(device = {kind(gpu)}                                 \
-                               : target teams) when(implementation = {vendor(llvm)} \
-                                                    : parallel) otherwise()
+#pragma omp metadirective when(device = {kind(gpu)} : target teams)            \
+    when(implementation = {vendor(llvm)} : parallel) otherwise()
   bar();
-#pragma omp metadirective otherwise(target) when(implementation = {vendor(score(5)  \
-                                                                        : llvm)}, \
-                                               device = {kind(cpu, host)}         \
-                                               : parallel)
+#pragma omp metadirective otherwise(target)                                    \
+    when(implementation = {vendor(score(5) : llvm)},                           \
+             device = {kind(cpu, host)} : parallel)
   bar();
-#pragma omp metadirective when(user = {condition(N > 10)}                 \
-                               : target) when(user = {condition(N == 10)} \
-                                              : parallel)
+#pragma omp metadirective when(user = {condition(N > 10)} : target)            \
+    when(user = {condition(N == 10)} : parallel)
   bar();
-#pragma omp metadirective when(device = {kind(host)} \
-                               : parallel for)
+#pragma omp metadirective when(device = {kind(host)} : parallel for)
   for (int i = 0; i < 100; i++)
     ;
-#pragma omp metadirective when(implementation = {extension(match_all)} \
-                               : parallel) otherwise(parallel for)
+#pragma omp metadirective when(                                                \
+        implementation = {extension(match_all)} : parallel)                    \
+    otherwise(parallel for)
   for (int i = 0; i < 100; i++)
     ;
-#pragma omp metadirective when(implementation = {extension(match_any)} \
-                               : parallel) otherwise(parallel for)
+#pragma omp metadirective when(                                                \
+        implementation = {extension(match_any)} : parallel)                    \
+    otherwise(parallel for)
   for (int i = 0; i < 100; i++)
     ;
-#pragma omp metadirective when(implementation = {extension(match_none)} \
-                               : parallel) otherwise(parallel for)
+#pragma omp metadirective when(                                                \
+        implementation = {extension(match_none)} : parallel)                   \
+    otherwise(parallel for)
   for (int i = 0; i < 100; i++)
     ;
 
-// Test metadirective with nested OpenMP directive.
+  // Test metadirective with nested OpenMP directive.
   int array[16];
-  #pragma omp metadirective when(user = {condition(1)} \
-                                 : parallel for)
+#pragma omp metadirective when(user = {condition(1)} : parallel for)
   for (int i = 0; i < 16; i++) {
-    #pragma omp simd
+#pragma omp simd
     for (int j = 0; j < 16; j++)
       array[i] = i;
   }
 
-#pragma omp metadirective when(device={arch("amdgcn")}: \
-                                teams distribute parallel for)\
-                                otherwise(parallel for)
+#pragma omp metadirective when(                                                \
+        device = {arch("amdgcn")} : teams distribute parallel for)             \
+        otherwise(parallel for)
   for (int i = 0; i < 100; i++)
-  ;
+    ;
 
-#pragma omp metadirective when(device={arch("spirv64")}: \
-                                teams distribute parallel for)\
-                                otherwise(parallel for)
+#pragma omp metadirective when(                                                \
+        device = {arch("spirv64")} : teams distribute parallel for)            \
+        otherwise(parallel for)
   for (int i = 0; i < 100; i++)
-  ;
+    ;
 
-#pragma omp metadirective when(implementation = {extension(match_all)} \
-                               : nothing) otherwise(parallel for)
+#pragma omp metadirective when(                                                \
+        implementation = {extension(match_all)} : nothing)                     \
+    otherwise(parallel for)
   for (int i = 0; i < 16; i++)
     ;
 
-#pragma omp metadirective when(implementation = {extension(match_any)} \
-                               : parallel) otherwise(nothing)
+#pragma omp metadirective when(                                                \
+        implementation = {extension(match_any)} : parallel) otherwise(nothing)
   for (int i = 0; i < 16; i++)
     ;
 
-
-#pragma omp metadirective when(user = {condition(0)}	\
-			       : parallel for)
-  for (int i=0; i<10; i++)
+#pragma omp metadirective when(user = {condition(0)} : parallel for)
+  for (int i = 0; i < 10; i++)
     ;
-#pragma omp metadirective when(user = {condition(0)}		  \
-			       : parallel for) when(implementation = {extension(match_none)} \
-						    : parallel) otherwise(parallel for)
-  for (int i=0; i<10; i++)
+#pragma omp metadirective when(user = {condition(0)} : parallel for) when(     \
+        implementation = {extension(match_none)} : parallel)                   \
+                                   otherwise(parallel for)
+  for (int i = 0; i < 10; i++)
     ;
 
-
-#pragma omp metadirective when(user = {condition(1)}	\
-			       : parallel for)
-  for (int i=0; i<10; i++)
+#pragma omp metadirective when(user = {condition(1)} : parallel for)
+  for (int i = 0; i < 10; i++)
     ;
-#pragma omp metadirective when(user = {condition(1)}		  \
-			       : parallel for) when(implementation = {extension(match_none)} \
-						    : parallel) otherwise(parallel for)
-  for (int i=0; i<10; i++)
+#pragma omp metadirective when(user = {condition(1)} : parallel for) when(     \
+        implementation = {extension(match_none)} : parallel)                   \
+                                   otherwise(parallel for)
+  for (int i = 0; i < 10; i++)
     ;
 }
 
@@ -158,107 +168,96 @@ void bar(void);
 
 #define N 10
 void foo2(void) {
-#pragma omp metadirective when(device = {kind(cpu)} \
-                               : parallel) default()
+#pragma omp metadirective when(device = {kind(cpu)} : parallel) default()
   bar();
-#pragma omp metadirective when(implementation = {vendor(score(0)  \
-                                                        : llvm)}, \
-                               device = {kind(cpu)}               \
-                               : parallel) default(target teams)
+#pragma omp metadirective when(                                                \
+        implementation = {vendor(score(0) : llvm)},                            \
+            device = {kind(cpu)} : parallel) default(target teams)
   bar();
-#pragma omp metadirective when(device = {kind(gpu)}                                 \
-                               : target teams) when(implementation = {vendor(llvm)} \
-                                                    : parallel) default()
+#pragma omp metadirective when(device = {kind(gpu)} : target teams)            \
+    when(implementation = {vendor(llvm)} : parallel) default()
   bar();
-#pragma omp metadirective default(target) when(implementation = {vendor(score(5)  \
-                                                                        : llvm)}, \
-                                               device = {kind(cpu, host)}         \
-                                               : parallel)
+#pragma omp metadirective default(target)                                      \
+    when(implementation = {vendor(score(5) : llvm)},                           \
+             device = {kind(cpu, host)} : parallel)
   bar();
-#pragma omp metadirective when(user = {condition(N > 10)}                 \
-                               : target) when(user = {condition(N == 10)} \
-                                              : parallel)
+#pragma omp metadirective when(user = {condition(N > 10)} : target)            \
+    when(user = {condition(N == 10)} : parallel)
   bar();
-#pragma omp metadirective when(device = {kind(host)} \
-                               : parallel for)
+#pragma omp metadirective when(device = {kind(host)} : parallel for)
   for (int i = 0; i < 100; i++)
     ;
-#pragma omp metadirective when(implementation = {extension(match_all)} \
-                               : parallel) default(parallel for)
+#pragma omp metadirective when(                                                \
+        implementation = {                                                     \
+                extension(match_all)} : parallel) default(parallel for)
   for (int i = 0; i < 100; i++)
     ;
-#pragma omp metadirective when(implementation = {extension(match_any)} \
-                               : parallel) default(parallel for)
+#pragma omp metadirective when(                                                \
+        implementation = {                                                     \
+                extension(match_any)} : parallel) default(parallel for)
   for (int i = 0; i < 100; i++)
     ;
-#pragma omp metadirective when(implementation = {extension(match_none)} \
-                               : parallel) default(parallel for)
+#pragma omp metadirective when(                                                \
+        implementation = {                                                     \
+                extension(match_none)} : parallel) default(parallel for)
   for (int i = 0; i < 100; i++)
     ;
 
-// Test metadirective with nested OpenMP directive.
+  // Test metadirective with nested OpenMP directive.
   int array[16];
-  #pragma omp metadirective when(user = {condition(1)} \
-                                 : parallel for)
+#pragma omp metadirective when(user = {condition(1)} : parallel for)
   for (int i = 0; i < 16; i++) {
-    #pragma omp simd
+#pragma omp simd
     for (int j = 0; j < 16; j++)
       array[i] = i;
   }
 
-#pragma omp metadirective when(device={arch("amdgcn")}: \
-                                teams distribute parallel for)\
-                                default(parallel for)
+#pragma omp metadirective when(device = {arch("amdgcn")} : teams distribute    \
+                                   parallel for) default(parallel for)
   for (int i = 0; i < 100; i++)
-  ;
+    ;
 
-#pragma omp metadirective when(device={arch("spirv64")}: \
-                                teams distribute parallel for)\
-                                default(parallel for)
+#pragma omp metadirective when(device = {arch("spirv64")} : teams distribute   \
+                                   parallel for) default(parallel for)
   for (int i = 0; i < 100; i++)
-  ;  
+    ;
 
-#pragma omp metadirective when(implementation = {extension(match_all)} \
-                               : nothing) default(parallel for)
+#pragma omp metadirective when(                                                \
+        implementation = {                                                     \
+                extension(match_all)} : nothing) default(parallel for)
   for (int i = 0; i < 16; i++)
     ;
 
-#pragma omp metadirective when(implementation = {extension(match_any)} \
-                               : parallel) default(nothing)
+#pragma omp metadirective when(                                                \
+        implementation = {extension(match_any)} : parallel) default(nothing)
   for (int i = 0; i < 16; i++)
     ;
 
-
-#pragma omp metadirective when(user = {condition(0)}	\
-			       : parallel for)
-  for (int i=0; i<10; i++)
+#pragma omp metadirective when(user = {condition(0)} : parallel for)
+  for (int i = 0; i < 10; i++)
     ;
-#pragma omp metadirective when(user = {condition(0)}		  \
-			       : parallel for) when(implementation = {extension(match_none)} \
-						    : parallel) default(parallel for)
-  for (int i=0; i<10; i++)
+#pragma omp metadirective when(user = {condition(0)} : parallel for) when(     \
+        implementation = {                                                     \
+                extension(match_none)} : parallel) default(parallel for)
+  for (int i = 0; i < 10; i++)
     ;
 
-
-#pragma omp metadirective when(user = {condition(1)}	\
-			       : parallel for)
-  for (int i=0; i<10; i++)
+#pragma omp metadirective when(user = {condition(1)} : parallel for)
+  for (int i = 0; i < 10; i++)
     ;
-#pragma omp metadirective when(user = {condition(1)}		  \
-			       : parallel for) when(implementation = {extension(match_none)} \
-						    : parallel) default(parallel for)
-  for (int i=0; i<10; i++)
+#pragma omp metadirective when(user = {condition(1)} : parallel for) when(     \
+        implementation = {                                                     \
+                extension(match_none)} : parallel) default(parallel for)
+  for (int i = 0; i < 10; i++)
     ;
 #if _OPENMP >= 202111
-    #pragma omp metadirective when(user = {condition(0)}	\
-                 : parallel for) otherwise()
-      for (int i=0; i<10; i++)
-        ;
-    
-    #pragma omp metadirective when(user = {condition(1)}	\
-                : parallel for) otherwise()
-      for (int i=0; i<10; i++)
-        ;
+#pragma omp metadirective when(user = {condition(0)} : parallel for) otherwise()
+  for (int i = 0; i < 10; i++)
+    ;
+
+#pragma omp metadirective when(user = {condition(1)} : parallel for) otherwise()
+  for (int i = 0; i < 10; i++)
+    ;
 #endif
 }
 
@@ -291,7 +290,5 @@ void foo2(void) {
 // DEFAULT: for (int i = 0; i < 16; i++)
 // DEFAULT: for (int i = 0; i < 16; i++)
 
-
 #endif
 #endif
-

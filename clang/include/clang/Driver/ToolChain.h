@@ -97,21 +97,11 @@ class ToolChain {
 public:
   using path_list = SmallVector<std::string, 16>;
 
-  enum CXXStdlibType {
-    CST_Libcxx,
-    CST_Libstdcxx
-  };
+  enum CXXStdlibType { CST_Libcxx, CST_Libstdcxx };
 
-  enum RuntimeLibType {
-    RLT_CompilerRT,
-    RLT_Libgcc
-  };
+  enum RuntimeLibType { RLT_CompilerRT, RLT_Libgcc };
 
-  enum UnwindLibType {
-    UNW_None,
-    UNW_CompilerRT,
-    UNW_Libgcc
-  };
+  enum UnwindLibType { UNW_None, UNW_CompilerRT, UNW_Libgcc };
 
   enum CStdlibType {
     CST_Newlib,
@@ -261,9 +251,9 @@ protected:
                                       llvm::opt::ArgStringList &CC1Args,
                                       const Twine &Path);
   static void
-      addExternCSystemIncludeIfExists(const llvm::opt::ArgList &DriverArgs,
-                                      llvm::opt::ArgStringList &CC1Args,
-                                      const Twine &Path);
+  addExternCSystemIncludeIfExists(const llvm::opt::ArgList &DriverArgs,
+                                  llvm::opt::ArgStringList &CC1Args,
+                                  const Twine &Path);
   static void addSystemFrameworkIncludes(const llvm::opt::ArgList &DriverArgs,
                                          llvm::opt::ArgStringList &CC1Args,
                                          ArrayRef<StringRef> Paths);
@@ -831,16 +821,18 @@ public:
   /// If a runtime library exists that sets global flags for unsafe floating
   /// point math, return true.
   ///
-  /// This checks for presence of the -Ofast, -ffast-math or -funsafe-math flags.
-  virtual bool isFastMathRuntimeAvailable(
-    const llvm::opt::ArgList &Args, std::string &Path) const;
+  /// This checks for presence of the -Ofast, -ffast-math or -funsafe-math
+  /// flags.
+  virtual bool isFastMathRuntimeAvailable(const llvm::opt::ArgList &Args,
+                                          std::string &Path) const;
 
   /// AddFastMathRuntimeIfAvailable - If a runtime library exists that sets
   /// global flags for unsafe floating point math, add it and return true.
   ///
-  /// This checks for presence of the -Ofast, -ffast-math or -funsafe-math flags.
-  bool addFastMathRuntimeIfAvailable(
-    const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CmdArgs) const;
+  /// This checks for presence of the -Ofast, -ffast-math or -funsafe-math
+  /// flags.
+  bool addFastMathRuntimeIfAvailable(const llvm::opt::ArgList &Args,
+                                     llvm::opt::ArgStringList &CmdArgs) const;
 
   /// getSystemGPUArchs - Use a tool to detect the user's availible GPUs.
   virtual Expected<SmallVector<std::string>>
@@ -887,9 +879,7 @@ public:
                          Action::OffloadKind DeviceOffloadKind) const;
 
   /// Return sanitizers which are enabled by default.
-  virtual SanitizerMask getDefaultSanitizers() const {
-    return SanitizerMask();
-  }
+  virtual SanitizerMask getDefaultSanitizers() const { return SanitizerMask(); }
 
   /// Returns true when it's possible to split LTO unit to use whole
   /// program devirtualization and CFI santiizers.

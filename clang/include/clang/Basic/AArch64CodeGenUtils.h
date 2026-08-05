@@ -98,16 +98,20 @@ struct AArch64SVEAndSMEVectorIntrinsicInfo {
 static_assert(sizeof(AArch64SVEAndSMEVectorIntrinsicInfo) == 16);
 
 #define NEONMAP0(NameBase)                                                     \
-  {#NameBase, NEON::BI__builtin_neon_##NameBase, 0, 0, 0}
+  { #NameBase, NEON::BI__builtin_neon_##NameBase, 0, 0, 0 }
 
 #define NEONMAP1(NameBase, LLVMIntrinsic, TypeModifier)                        \
-  {#NameBase, NEON::BI__builtin_neon_##NameBase,                               \
-   llvm::Intrinsic::LLVMIntrinsic, 0, TypeModifier}
+  {                                                                            \
+    #NameBase, NEON::BI__builtin_neon_##NameBase,                              \
+        llvm::Intrinsic::LLVMIntrinsic, 0, TypeModifier                        \
+  }
 
 #define NEONMAP2(NameBase, LLVMIntrinsic, AltLLVMIntrinsic, TypeModifier)      \
-  {#NameBase, NEON::BI__builtin_neon_##NameBase,                               \
-   llvm::Intrinsic::LLVMIntrinsic, llvm::Intrinsic::AltLLVMIntrinsic,          \
-   TypeModifier}
+  {                                                                            \
+    #NameBase, NEON::BI__builtin_neon_##NameBase,                              \
+        llvm::Intrinsic::LLVMIntrinsic, llvm::Intrinsic::AltLLVMIntrinsic,     \
+        TypeModifier                                                           \
+  }
 
 // clang-format off
 const inline ARMNeonVectorIntrinsicInfo AArch64SIMDIntrinsicMap [] = {

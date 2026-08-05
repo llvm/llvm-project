@@ -84,9 +84,7 @@ void small_file_tests() {
 
   { // read an empty file
     std::string empty_file = get_temp_file_name();
-    {
-      std::ofstream os(empty_file);
-    }
+    { std::ofstream os(empty_file); }
     std::ifstream is(empty_file);
     is.rdbuf()->pubsetbuf(nullptr, 64);
 

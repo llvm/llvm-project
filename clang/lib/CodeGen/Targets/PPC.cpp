@@ -401,7 +401,7 @@ public:
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
                                llvm::Value *Address) const override;
 };
-}
+} // namespace
 
 CharUnits PPC32_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   // Complex types are passed just like their elements.
@@ -507,7 +507,7 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
   // "Align" the register count when TY is i64.
   if (isI64 || (isF64 && IsSoftFloatABI)) {
     NumRegs = Builder.CreateAdd(NumRegs, Builder.getInt8(1));
-    NumRegs = Builder.CreateAnd(NumRegs, Builder.getInt8((uint8_t) ~1U));
+    NumRegs = Builder.CreateAnd(NumRegs, Builder.getInt8((uint8_t)~1U));
   }
 
   llvm::Value *CC =
@@ -541,7 +541,8 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
 
     // Get the address of the saved value by scaling the number of
     // registers we've used by the number of
-    CharUnits RegSize = CharUnits::fromQuantity((isInt || IsSoftFloatABI) ? 4 : 8);
+    CharUnits RegSize =
+        CharUnits::fromQuantity((isInt || IsSoftFloatABI) ? 4 : 8);
     llvm::Value *RegOffset =
         Builder.CreateMul(NumRegs, Builder.getInt8(RegSize.getQuantity()));
     RegAddr = Address(Builder.CreateInBoundsGEP(
@@ -550,9 +551,8 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
                       RegAddr.getAlignment().alignmentOfArrayElement(RegSize));
 
     // Increase the used-register count.
-    NumRegs =
-      Builder.CreateAdd(NumRegs,
-                        Builder.getInt8((isI64 || (isF64 && IsSoftFloatABI)) ? 2 : 1));
+    NumRegs = Builder.CreateAdd(
+        NumRegs, Builder.getInt8((isI64 || (isF64 && IsSoftFloatABI)) ? 2 : 1));
     Builder.CreateStore(NumRegs, NumRegsAddr);
 
     CGF.EmitBranch(Cont);
@@ -630,9 +630,8 @@ bool PPC32TargetCodeGenInfo::isStructReturnInRegABI(
   return false;
 }
 
-bool
-PPC32TargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
-                                                llvm::Value *Address) const {
+bool PPC32TargetCodeGenInfo::initDwarfEHRegSizeTable(
+    CodeGen::CodeGenFunction &CGF, llvm::Value *Address) const {
   return PPC_initDwarfEHRegSizeTable(CGF, Address, /*Is64Bit*/ false,
                                      /*IsAIX*/ false);
 }
@@ -729,12 +728,11 @@ public:
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
                                llvm::Value *Address) const override;
 };
-}
+} // namespace
 
 // Return true if the ABI requires Ty to be passed sign- or zero-
 // extended to 64 bits.
-bool
-PPC64_SVR4_ABIInfo::isPromotableTypeForABI(QualType Ty) const {
+bool PPC64_SVR4_ABIInfo::isPromotableTypeForABI(QualType Ty) const {
   // Treat an enum type as its underlying type.
   if (const auto *ED = Ty->getAsEnumDecl())
     Ty = ED->getIntegerType();
@@ -768,7 +766,7 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   if (const ComplexType *CTy = Ty->getAs<ComplexType>())
     Ty = CTy->getElementType();
 
-  auto FloatUsesVector = [this](QualType Ty){
+  auto FloatUsesVector = [this](QualType Ty) {
     return Ty->isRealFloatingType() && &getContext().getFloatTypeSemantics(
                                            Ty) == &llvm::APFloat::IEEEquad();
   };
@@ -776,7 +774,8 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   // Only vector types of size 16 bytes need alignment (larger types are
   // passed via reference, smaller types are not aligned).
   if (Ty->isVectorType()) {
-    return CharUnits::fromQuantity(getContext().getTypeSize(Ty) == 128 ? 16 : 8);
+    return CharUnits::fromQuantity(getContext().getTypeSize(Ty) == 128 ? 16
+                                                                       : 8);
   } else if (FloatUsesVector(Ty)) {
     // According to ABI document section 'Optional Save Areas': If extended
     // precision floating-point values in IEEE BINARY 128 QUADRUPLE PRECISION
@@ -844,18 +843,17 @@ bool PPC64_SVR4_ABIInfo::isHomogeneousAggregateSmallEnough(
     const Type *Base, uint64_t Members) const {
   // Vector and fp128 types require one register, other floating point types
   // require one or two registers depending on their size.
-  uint32_t NumRegs =
-      ((getContext().getTargetInfo().hasFloat128Type() &&
-          Base->isFloat128Type()) ||
-        Base->isVectorType()) ? 1
-                              : (getContext().getTypeSize(Base) + 63) / 64;
+  uint32_t NumRegs = ((getContext().getTargetInfo().hasFloat128Type() &&
+                       Base->isFloat128Type()) ||
+                      Base->isVectorType())
+                         ? 1
+                         : (getContext().getTypeSize(Base) + 63) / 64;
 
   // Homogeneous Aggregates may occupy at most 8 registers.
   return Members * NumRegs <= 8;
 }
 
-ABIArgInfo
-PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
+ABIArgInfo PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
   if (Ty->isAnyComplexType())
@@ -934,8 +932,7 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
               : ABIArgInfo::getDirect());
 }
 
-ABIArgInfo
-PPC64_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
+ABIArgInfo PPC64_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
 
@@ -1033,10 +1030,8 @@ RValue PPC64_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                           /*ForceRightAdjust*/ true);
 }
 
-bool
-PPC64_SVR4_TargetCodeGenInfo::initDwarfEHRegSizeTable(
-  CodeGen::CodeGenFunction &CGF,
-  llvm::Value *Address) const {
+bool PPC64_SVR4_TargetCodeGenInfo::initDwarfEHRegSizeTable(
+    CodeGen::CodeGenFunction &CGF, llvm::Value *Address) const {
   return PPC_initDwarfEHRegSizeTable(CGF, Address, /*Is64Bit*/ true,
                                      /*IsAIX*/ false);
 }
@@ -1063,9 +1058,8 @@ void PPC64_SVR4_TargetCodeGenInfo::emitTargetMetadata(
   }
 }
 
-bool
-PPC64TargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
-                                                llvm::Value *Address) const {
+bool PPC64TargetCodeGenInfo::initDwarfEHRegSizeTable(
+    CodeGen::CodeGenFunction &CGF, llvm::Value *Address) const {
   return PPC_initDwarfEHRegSizeTable(CGF, Address, /*Is64Bit*/ true,
                                      /*IsAIX*/ false);
 }

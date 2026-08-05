@@ -21,28 +21,24 @@
 #include "test_macros.h"
 
 // Make sure constructing with a std::seed_seq matches calling seed().
-void
-test1()
-{
-    unsigned a[] = {3, 5, 7};
-    std::seed_seq sseq(a, a+3);
-    std::mt19937 e1;
-    std::mt19937 e2(sseq);
-    assert(e1 != e2);
-    e1.seed(sseq);
-    assert(e1 == e2);
+void test1() {
+  unsigned a[] = {3, 5, 7};
+  std::seed_seq sseq(a, a + 3);
+  std::mt19937 e1;
+  std::mt19937 e2(sseq);
+  assert(e1 != e2);
+  e1.seed(sseq);
+  assert(e1 == e2);
 }
 
-void
-test2()
-{
-    unsigned a[] = {3, 5, 7};
-    std::seed_seq sseq(a, a+3);
-    std::mt19937_64 e1;
-    std::mt19937_64 e2(sseq);
-    assert(e1 != e2);
-    e1.seed(sseq);
-    assert(e1 == e2);
+void test2() {
+  unsigned a[] = {3, 5, 7};
+  std::seed_seq sseq(a, a + 3);
+  std::mt19937_64 e1;
+  std::mt19937_64 e2(sseq);
+  assert(e1 != e2);
+  e1.seed(sseq);
+  assert(e1 == e2);
 }
 
 // Make sure that seeding with a std::seed_seq produces the standard-mandated deterministic
@@ -64,12 +60,11 @@ void test4() {
   assert(e() == 11567978440329390872ull);
 }
 
-int main(int, char**)
-{
-    test1();
-    test2();
-    test3();
-    test4();
+int main(int, char**) {
+  test1();
+  test2();
+  test3();
+  test4();
 
-    return 0;
+  return 0;
 }

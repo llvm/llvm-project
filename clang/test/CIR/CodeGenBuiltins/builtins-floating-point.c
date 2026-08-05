@@ -1,11 +1,12 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
-// RUN: %clang_cc1 -triple aarch64-apple-darwin-macho -fclangir -emit-cir %s -o %t-aarch64.cir
-// RUN: FileCheck --input-file=%t-aarch64.cir %s --check-prefix=AARCH64
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm -o %t.ll %s
-// RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o %t-ogcg.ll %s
-// RUN: FileCheck --input-file=%t-ogcg.ll %s --check-prefix=OGCG
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o
+// %t.cir RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR RUN:
+// %clang_cc1 -triple aarch64-apple-darwin-macho -fclangir -emit-cir %s -o
+// %t-aarch64.cir RUN: FileCheck --input-file=%t-aarch64.cir %s
+// --check-prefix=AARCH64 RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu
+// -fclangir -emit-llvm -o %t.ll %s RUN: FileCheck --input-file=%t.ll %s
+// --check-prefix=LLVM RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu
+// -emit-llvm -o %t-ogcg.ll %s RUN: FileCheck --input-file=%t-ogcg.ll %s
+// --check-prefix=OGCG
 
 // lround
 
@@ -1888,8 +1889,8 @@ long double my_copysignl(long double x, long double y) {
   // AARCH64: cir.copysign %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @my_copysignl
-  // LLVM:   call x86_fp80 @llvm.copysign.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
-  // LLVM: }
+  // LLVM:   call x86_fp80 @llvm.copysign.f80(x86_fp80 %{{.+}}, x86_fp80
+  // %{{.+}}) LLVM: }
 
   // OGCG: define{{.*}}@my_copysignl(
   // OGCG: call x86_fp80 @llvm.copysign.f80(
@@ -1932,8 +1933,8 @@ long double call_copysignl(long double x, long double y) {
   // AARCH64: cir.copysign %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @call_copysignl
-  // LLVM:   call x86_fp80 @llvm.copysign.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
-  // LLVM: }
+  // LLVM:   call x86_fp80 @llvm.copysign.f80(x86_fp80 %{{.+}}, x86_fp80
+  // %{{.+}}) LLVM: }
 
   // OGCG: define{{.*}}@call_copysignl(
   // OGCG: call x86_fp80 @llvm.copysign.f80(
@@ -1974,8 +1975,8 @@ long double my_fmaxl(long double x, long double y) {
   // AARCH64: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @my_fmaxl
-  // LLVM:   call nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
-  // LLVM: }
+  // LLVM:   call nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80
+  // %{{.+}}) LLVM: }
 
   // OGCG: define{{.*}}@my_fmaxl(
   // OGCG: call nsz x86_fp80 @llvm.maxnum.f80(
@@ -2018,8 +2019,8 @@ long double call_fmaxl(long double x, long double y) {
   // AARCH64: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @call_fmaxl
-  // LLVM:   call nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
-  // LLVM: }
+  // LLVM:   call nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80
+  // %{{.+}}) LLVM: }
 
   // OGCG: define{{.*}}@call_fmaxl(
   // OGCG: call nsz x86_fp80 @llvm.maxnum.f80(
@@ -2060,8 +2061,8 @@ long double my_fminl(long double x, long double y) {
   // AARCH64: cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @my_fminl
-  // LLVM:   call nsz x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
-  // LLVM: }
+  // LLVM:   call nsz x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80
+  // %{{.+}}) LLVM: }
 
   // OGCG: define{{.*}}@my_fminl(
   // OGCG: call nsz x86_fp80 @llvm.minnum.f80(
@@ -2104,8 +2105,8 @@ long double call_fminl(long double x, long double y) {
   // AARCH64: cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @call_fminl
-  // LLVM:   call nsz x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
-  // LLVM: }
+  // LLVM:   call nsz x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80
+  // %{{.+}}) LLVM: }
 
   // OGCG: define{{.*}}@call_fminl(
   // OGCG: call nsz x86_fp80 @llvm.minnum.f80(

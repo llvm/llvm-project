@@ -15,10 +15,12 @@
 
 //--- cdb.json.in
 [{
-  "directory": "DIR",
-  "command": "clang -c DIR/main.c -o DIR/main.o -arch x86_64 -arch arm64 -DB=2 -DA=1 -UB -DC=3",
-  "file": "DIR/main.c"
+  "directory" : "DIR",
+  "command" : "clang -c DIR/main.c -o DIR/main.o -arch x86_64 -arch arm64 "
+              "-DB=2 -DA=1 -UB -DC=3",
+  "file" : "DIR/main.c"
 }]
 
-//--- main.c
-int main(void) { return 0; }
+    //--- main.c
+    int
+    main(void) { return 0; }

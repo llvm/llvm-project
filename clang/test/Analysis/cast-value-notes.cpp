@@ -5,26 +5,31 @@
 // RUN: %clang_analyze_cc1 -std=c++14 -triple amdgpu-unknown-unknown \
 // RUN: -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
 // RUN:  -analyzer-config suppress-dereferences-from-any-address-space=false\
-// RUN:  -analyzer-output=text -verify -DX86 -DNOT_SUPPRESSED %s 2>&1 | FileCheck %s -check-prefix=X86-CHECK
+// RUN:  -analyzer-output=text -verify -DX86 -DNOT_SUPPRESSED %s 2>&1 |
+// FileCheck %s -check-prefix=X86-CHECK
 //
 // RUN: %clang_analyze_cc1 -std=c++14 -triple amdgpu-unknown-unknown \
 // RUN: -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
 // RUN:  -analyzer-config suppress-dereferences-from-any-address-space=true\
-// RUN:  -analyzer-output=text -verify -DX86 -DSUPPRESSED %s 2>&1 | FileCheck %s -check-prefix=X86-CHECK
+// RUN:  -analyzer-output=text -verify -DX86 -DSUPPRESSED %s 2>&1 | FileCheck %s
+// -check-prefix=X86-CHECK
 //
 // RUN: %clang_analyze_cc1 -std=c++14 -triple x86_64-unknown-unknown \
 // RUN:  -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
-// RUN:  -analyzer-output=text -verify -DX86 -DSUPPRESSED %s 2>&1 | FileCheck %s --check-prefix=X86-CHECK
+// RUN:  -analyzer-output=text -verify -DX86 -DSUPPRESSED %s 2>&1 | FileCheck %s
+// --check-prefix=X86-CHECK
 //
 // RUN: %clang_analyze_cc1 -std=c++14 -triple x86_64-unknown-unknown \
 // RUN:  -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
 // RUN:  -analyzer-config suppress-dereferences-from-any-address-space=true\
-// RUN:  -analyzer-output=text -verify -DX86 -DSUPPRESSED %s 2>&1 | FileCheck %s --check-prefix=X86-CHECK-SUPPRESSED
+// RUN:  -analyzer-output=text -verify -DX86 -DSUPPRESSED %s 2>&1 | FileCheck %s
+// --check-prefix=X86-CHECK-SUPPRESSED
 //
 // RUN: %clang_analyze_cc1 -std=c++14 -triple x86_64-unknown-unknown \
 // RUN:  -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
 // RUN:  -analyzer-config suppress-dereferences-from-any-address-space=false\
-// RUN:  -analyzer-output=text -verify -DX86 -DNOT_SUPPRESSED %s 2>&1 | FileCheck %s --check-prefix=X86-CHECK
+// RUN:  -analyzer-output=text -verify -DX86 -DNOT_SUPPRESSED %s 2>&1 |
+// FileCheck %s --check-prefix=X86-CHECK
 //
 // RUN: %clang_analyze_cc1 -std=c++14 -triple mips-unknown-unknown \
 // RUN: -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
@@ -53,11 +58,9 @@
 
 namespace clang {
 struct Shape {
-  template <typename T>
-  const T *castAs() const;
+  template <typename T> const T *castAs() const;
 
-  template <typename T>
-  const T *getAs() const;
+  template <typename T> const T *getAs() const;
 };
 class Triangle : public Shape {};
 class Rectangle : public Shape {};
@@ -78,7 +81,8 @@ void evalReferences(const Shape &S) {
   // expected-warning@-3 {{Dereference of null pointer}}
   clang_analyzer_printState();
   // XX86-CHECK:      "dynamic_types": [
-  // XX86-CHECK-NEXT:   { "region": "SymRegion{reg_$0<const struct clang::Shape & S>}", "dyn_type": "const class clang::Circle &", "sub_classable": true }
+  // XX86-CHECK-NEXT:   { "region": "SymRegion{reg_$0<const struct clang::Shape
+  // & S>}", "dyn_type": "const class clang::Circle &", "sub_classable": true }
   (void)C;
 }
 #if defined(SUPPRESSED)
@@ -86,19 +90,24 @@ void evalReferences_addrspace(const Shape &S) {
   const auto &C = dyn_cast<DEVICE Circle>(S);
   clang_analyzer_printState();
   // X86-CHECK-SUPPRESSED: "dynamic_types": [
-  // X86-CHECK-SUPPRESSED-NEXT: { "region": "SymRegion{reg_$0<const Shape & S>}", "dyn_type": "const __attribute__((address_space(3))) class clang::Circle &", "sub_classable": true }
+  // X86-CHECK-SUPPRESSED-NEXT: { "region": "SymRegion{reg_$0<const Shape &
+  // S>}", "dyn_type": "const __attribute__((address_space(3))) class
+  // clang::Circle &", "sub_classable": true }
   (void)C;
 }
 #endif
 #if defined(NOT_SUPPRESSED)
 void evalReferences_addrspace(const Shape &S) {
   const auto &C = dyn_cast<DEVICE Circle>(S);
-  // expected-note@-1 {{Assuming 'S' is not a 'const __attribute__((address_space(3))) class clang::Circle &'}}
-  // expected-note@-2 {{Dereference of null pointer}}
-  // expected-warning@-3 {{Dereference of null pointer}}
+  // expected-note@-1 {{Assuming 'S' is not a 'const
+  // __attribute__((address_space(3))) class clang::Circle &'}} expected-note@-2
+  // {{Dereference of null pointer}} expected-warning@-3 {{Dereference of null
+  // pointer}}
   clang_analyzer_printState();
   // X86-CHECK: "dynamic_types": [
-  // X86-CHECK-NEXT: { "region": "SymRegion{reg_$0<const Shape & S>}", "dyn_type": "const __attribute__((address_space(3))) class clang::Circle &", "sub_classable": true }
+  // X86-CHECK-NEXT: { "region": "SymRegion{reg_$0<const Shape & S>}",
+  // "dyn_type": "const __attribute__((address_space(3))) class clang::Circle
+  // &", "sub_classable": true }
   (void)C;
 }
 #endif
@@ -128,14 +137,14 @@ void evalNonNullParamNonNullReturnReference(const Shape &S) {
   }
 
   if (dyn_cast_or_null<Triangle>(C)) {
-    // expected-note@-1 {{Assuming 'C' is not a 'const class clang::Triangle *'}}
-    // expected-note@-2 {{Taking false branch}}
+    // expected-note@-1 {{Assuming 'C' is not a 'const class clang::Triangle
+    // *'}} expected-note@-2 {{Taking false branch}}
     return;
   }
 
   if (dyn_cast_or_null<Rectangle>(C)) {
-    // expected-note@-1 {{Assuming 'C' is not a 'const class clang::Rectangle *'}}
-    // expected-note@-2 {{Taking false branch}}
+    // expected-note@-1 {{Assuming 'C' is not a 'const class clang::Rectangle
+    // *'}} expected-note@-2 {{Taking false branch}}
     return;
   }
 
@@ -158,8 +167,8 @@ void evalNonNullParamNonNullReturnReference(const Shape &S) {
   }
 
   if (isa<Triangle, Rectangle, Hexagon>(C)) {
-    // expected-note@-1 {{'C' is neither a 'Triangle' nor a 'Rectangle' nor a 'Hexagon'}}
-    // expected-note@-2 {{Taking false branch}}
+    // expected-note@-1 {{'C' is neither a 'Triangle' nor a 'Rectangle' nor a
+    // 'Hexagon'}} expected-note@-2 {{Taking false branch}}
     return;
   }
 
@@ -186,14 +195,14 @@ void evalNonNullParamNonNullReturn(const Shape *S) {
   }
 
   if (dyn_cast_or_null<Triangle>(C)) {
-    // expected-note@-1 {{Assuming 'C' is not a 'const class clang::Triangle *'}}
-    // expected-note@-2 {{Taking false branch}}
+    // expected-note@-1 {{Assuming 'C' is not a 'const class clang::Triangle
+    // *'}} expected-note@-2 {{Taking false branch}}
     return;
   }
 
   if (dyn_cast_or_null<Rectangle>(C)) {
-    // expected-note@-1 {{Assuming 'C' is not a 'const class clang::Rectangle *'}}
-    // expected-note@-2 {{Taking false branch}}
+    // expected-note@-1 {{Assuming 'C' is not a 'const class clang::Rectangle
+    // *'}} expected-note@-2 {{Taking false branch}}
     return;
   }
 
@@ -216,8 +225,8 @@ void evalNonNullParamNonNullReturn(const Shape *S) {
   }
 
   if (isa<Triangle, Rectangle, Hexagon>(C)) {
-    // expected-note@-1 {{'C' is neither a 'Triangle' nor a 'Rectangle' nor a 'Hexagon'}}
-    // expected-note@-2 {{Taking false branch}}
+    // expected-note@-1 {{'C' is neither a 'Triangle' nor a 'Rectangle' nor a
+    // 'Hexagon'}} expected-note@-2 {{Taking false branch}}
     return;
   }
 

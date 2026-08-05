@@ -313,8 +313,8 @@ static bool isIntExtFree(const Instruction *I) {
 static unsigned getImplicitScaleFactor(MVT VT) {
   switch (VT.SimpleTy) {
   default:
-    return 0;    // invalid
-  case MVT::i1:  // fall-through
+    return 0;   // invalid
+  case MVT::i1: // fall-through
   case MVT::i8:
     return 1;
   case MVT::i16:
@@ -370,12 +370,13 @@ Register AArch64FastISel::materializeInt(const ConstantInt *CI, MVT VT) {
     return fastEmit_i(VT, VT, ISD::Constant, CI->getZExtValue());
 
   // Create a copy from the zero register to materialize a "0" value.
-  const TargetRegisterClass *RC = (VT == MVT::i64) ? &AArch64::GPR64RegClass
-                                                   : &AArch64::GPR32RegClass;
+  const TargetRegisterClass *RC =
+      (VT == MVT::i64) ? &AArch64::GPR64RegClass : &AArch64::GPR32RegClass;
   unsigned ZeroReg = (VT == MVT::i64) ? AArch64::XZR : AArch64::WZR;
   Register ResultReg = createResultReg(RC);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
-          ResultReg).addReg(ZeroReg, getKillRegState(true));
+          ResultReg)
+      .addReg(ZeroReg, getKillRegState(true));
   return ResultReg;
 }
 
@@ -392,8 +393,7 @@ Register AArch64FastISel::materializeFP(const ConstantFP *CFP, MVT VT) {
   bool Is64Bit = (VT == MVT::f64);
   // This checks to see if we can use FMOV instructions to materialize
   // a constant, otherwise we have to materialize via the constant pool.
-  int Imm =
-      Is64Bit ? AArch64_AM::getFP64Imm(Val) : AArch64_AM::getFP32Imm(Val);
+  int Imm = Is64Bit ? AArch64_AM::getFP64Imm(Val) : AArch64_AM::getFP32Imm(Val);
   if (Imm != -1) {
     unsigned Opc = Is64Bit ? AArch64::FMOVDi : AArch64::FMOVSi;
     return fastEmitInst_i(Opc, TLI.getRegClassFor(VT), Imm);
@@ -402,16 +402,16 @@ Register AArch64FastISel::materializeFP(const ConstantFP *CFP, MVT VT) {
   // For the large code model materialize the FP constant in code.
   if (TM.getCodeModel() == CodeModel::Large) {
     unsigned Opc1 = Is64Bit ? AArch64::MOVi64imm : AArch64::MOVi32imm;
-    const TargetRegisterClass *RC = Is64Bit ?
-        &AArch64::GPR64RegClass : &AArch64::GPR32RegClass;
+    const TargetRegisterClass *RC =
+        Is64Bit ? &AArch64::GPR64RegClass : &AArch64::GPR32RegClass;
 
     Register TmpReg = createResultReg(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc1), TmpReg)
         .addImm(CFP->getValueAPF().bitcastToAPInt().getZExtValue());
 
     Register ResultReg = createResultReg(TLI.getRegClassFor(VT));
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg)
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
         .addReg(TmpReg, getKillRegState(true));
 
     return ResultReg;
@@ -424,7 +424,8 @@ Register AArch64FastISel::materializeFP(const ConstantFP *CFP, MVT VT) {
   unsigned CPI = MCP.getConstantPoolIndex(cast<Constant>(CFP), Alignment);
   Register ADRPReg = createResultReg(&AArch64::GPR64commonRegClass);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::ADRP),
-          ADRPReg).addConstantPoolIndex(CPI, 0, AArch64II::MO_PAGE);
+          ADRPReg)
+      .addConstantPoolIndex(CPI, 0, AArch64II::MO_PAGE);
 
   unsigned Opc = Is64Bit ? AArch64::LDRDui : AArch64::LDRSui;
   Register ResultReg = createResultReg(TLI.getRegClassFor(VT));
@@ -470,11 +471,11 @@ Register AArch64FastISel::materializeGV(const GlobalValue *GV) {
       ResultReg = createResultReg(&AArch64::GPR64RegClass);
       LdrOpc = AArch64::LDRXui;
     }
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(LdrOpc),
-            ResultReg)
-      .addReg(ADRPReg)
-      .addGlobalAddress(GV, 0, AArch64II::MO_GOT | AArch64II::MO_PAGEOFF |
-                        AArch64II::MO_NC | OpFlags);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(LdrOpc), ResultReg)
+        .addReg(ADRPReg)
+        .addGlobalAddress(GV, 0,
+                          AArch64II::MO_GOT | AArch64II::MO_PAGEOFF |
+                              AArch64II::MO_NC | OpFlags);
     if (!Subtarget->isTargetILP32())
       return ResultReg;
 
@@ -584,8 +585,8 @@ static bool isMulPowOf2(const Value *I) {
 }
 
 // Computes the address to get to an object.
-bool AArch64FastISel::computeAddress(const Value *Obj, Address &Addr, Type *Ty)
-{
+bool AArch64FastISel::computeAddress(const Value *Obj, Address &Addr,
+                                     Type *Ty) {
   const User *U = nullptr;
   unsigned Opcode = Instruction::UserOp1;
   if (const Instruction *I = dyn_cast<Instruction>(Obj)) {
@@ -943,7 +944,8 @@ bool AArch64FastISel::computeCallAddress(const Value *V, Address &Addr) {
   }
 
   switch (Opcode) {
-  default: break;
+  default:
+    break;
   case Instruction::BitCast:
     // Look past bitcasts if its operand is in the same BB.
     if (InMBB)
@@ -951,9 +953,8 @@ bool AArch64FastISel::computeCallAddress(const Value *V, Address &Addr) {
     break;
   case Instruction::IntToPtr:
     // Look past no-op inttoptrs if its operand is in the same BB.
-    if (InMBB &&
-        TLI.getValueType(DL, U->getOperand(0)->getType()) ==
-            TLI.getPointerTy(DL))
+    if (InMBB && TLI.getValueType(DL, U->getOperand(0)->getType()) ==
+                     TLI.getPointerTy(DL))
       return computeCallAddress(U->getOperand(0), Addr);
     break;
   case Instruction::PtrToInt:
@@ -1054,14 +1055,14 @@ bool AArch64FastISel::simplifyAddress(Address &Addr, MVT VT) {
   // If this is a stack pointer and the offset needs to be simplified then put
   // the alloca address into a register, set the base type back to register and
   // continue. This should almost never happen.
-  if ((ImmediateOffsetNeedsLowering || Addr.getOffsetReg()) && Addr.isFIBase())
-  {
+  if ((ImmediateOffsetNeedsLowering || Addr.getOffsetReg()) &&
+      Addr.isFIBase()) {
     Register ResultReg = createResultReg(&AArch64::GPR64spRegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::ADDXri),
             ResultReg)
-      .addFrameIndex(Addr.getFI())
-      .addImm(0)
-      .addImm(0);
+        .addFrameIndex(Addr.getFI())
+        .addImm(0)
+        .addImm(0);
     Addr.setKind(Address::RegBase);
     Addr.setReg(ResultReg);
   }
@@ -1070,7 +1071,7 @@ bool AArch64FastISel::simplifyAddress(Address &Addr, MVT VT) {
     Register ResultReg;
     if (Addr.getReg()) {
       if (Addr.getExtendType() == AArch64_AM::SXTW ||
-          Addr.getExtendType() == AArch64_AM::UXTW   )
+          Addr.getExtendType() == AArch64_AM::UXTW)
         ResultReg = emitAddSub_rx(/*UseAdd=*/true, MVT::i64, Addr.getReg(),
                                   Addr.getOffsetReg(), Addr.getExtendType(),
                                   Addr.getShift());
@@ -1137,9 +1138,9 @@ void AArch64FastISel::addLoadStoreOperands(Address &Addr,
     const MCInstrDesc &II = MIB->getDesc();
     unsigned Idx = (Flags & MachineMemOperand::MOStore) ? 1 : 0;
     Addr.setReg(
-      constrainOperandRegClass(II, Addr.getReg(), II.getNumDefs()+Idx));
-    Addr.setOffsetReg(
-      constrainOperandRegClass(II, Addr.getOffsetReg(), II.getNumDefs()+Idx+1));
+        constrainOperandRegClass(II, Addr.getReg(), II.getNumDefs() + Idx));
+    Addr.setOffsetReg(constrainOperandRegClass(II, Addr.getOffsetReg(),
+                                               II.getNumDefs() + Idx + 1));
     if (Addr.getOffsetReg()) {
       assert(Addr.getOffset() == 0 && "Unexpected offset");
       bool IsSigned = Addr.getExtendType() == AArch64_AM::SXTW ||
@@ -1175,7 +1176,7 @@ Register AArch64FastISel::emitAddSub(bool UseAdd, MVT RetVT, const Value *LHS,
     NeedExtend = true;
     ExtendType = IsZExt ? AArch64_AM::UXTH : AArch64_AM::SXTH;
     break;
-  case MVT::i32:  // fall-through
+  case MVT::i32: // fall-through
   case MVT::i64:
     break;
   }
@@ -1195,9 +1196,9 @@ Register AArch64FastISel::emitAddSub(bool UseAdd, MVT RetVT, const Value *LHS,
   if (UseAdd && LHS->hasOneUse() && isValueAvailable(LHS))
     if (const auto *SI = dyn_cast<BinaryOperator>(LHS))
       if (isa<ConstantInt>(SI->getOperand(1)))
-        if (SI->getOpcode() == Instruction::Shl  ||
+        if (SI->getOpcode() == Instruction::Shl ||
             SI->getOpcode() == Instruction::LShr ||
-            SI->getOpcode() == Instruction::AShr   )
+            SI->getOpcode() == Instruction::AShr)
           std::swap(LHS, RHS);
 
   Register LHSReg = getRegForValue(LHS);
@@ -1211,11 +1212,11 @@ Register AArch64FastISel::emitAddSub(bool UseAdd, MVT RetVT, const Value *LHS,
   if (const auto *C = dyn_cast<ConstantInt>(RHS)) {
     uint64_t Imm = IsZExt ? C->getZExtValue() : C->getSExtValue();
     if (C->isNegative())
-      ResultReg = emitAddSub_ri(!UseAdd, RetVT, LHSReg, -Imm, SetFlags,
-                                WantResult);
+      ResultReg =
+          emitAddSub_ri(!UseAdd, RetVT, LHSReg, -Imm, SetFlags, WantResult);
     else
-      ResultReg = emitAddSub_ri(UseAdd, RetVT, LHSReg, Imm, SetFlags,
-                                WantResult);
+      ResultReg =
+          emitAddSub_ri(UseAdd, RetVT, LHSReg, Imm, SetFlags, WantResult);
   } else if (const auto *C = dyn_cast<Constant>(RHS))
     if (C->isNullValue())
       ResultReg = emitAddSub_ri(UseAdd, RetVT, LHSReg, 0, SetFlags, WantResult);
@@ -1229,8 +1230,8 @@ Register AArch64FastISel::emitAddSub(bool UseAdd, MVT RetVT, const Value *LHS,
     Register RHSReg = getRegForValue(RHS);
     if (!RHSReg)
       return Register();
-    return emitAddSub_rx(UseAdd, RetVT, LHSReg, RHSReg, ExtendType, 0,
-                         SetFlags, WantResult);
+    return emitAddSub_rx(UseAdd, RetVT, LHSReg, RHSReg, ExtendType, 0, SetFlags,
+                         WantResult);
   }
 
   // Check if the mul can be folded into the instruction.
@@ -1261,10 +1262,17 @@ Register AArch64FastISel::emitAddSub(bool UseAdd, MVT RetVT, const Value *LHS,
       if (const auto *C = dyn_cast<ConstantInt>(SI->getOperand(1))) {
         AArch64_AM::ShiftExtendType ShiftType = AArch64_AM::InvalidShiftExtend;
         switch (SI->getOpcode()) {
-        default: break;
-        case Instruction::Shl:  ShiftType = AArch64_AM::LSL; break;
-        case Instruction::LShr: ShiftType = AArch64_AM::LSR; break;
-        case Instruction::AShr: ShiftType = AArch64_AM::ASR; break;
+        default:
+          break;
+        case Instruction::Shl:
+          ShiftType = AArch64_AM::LSL;
+          break;
+        case Instruction::LShr:
+          ShiftType = AArch64_AM::LSR;
+          break;
+        case Instruction::AShr:
+          ShiftType = AArch64_AM::ASR;
+          break;
         }
         uint64_t ShiftVal = C->getZExtValue();
         if (ShiftType != AArch64_AM::InvalidShiftExtend) {
@@ -1303,11 +1311,9 @@ Register AArch64FastISel::emitAddSub_rr(bool UseAdd, MVT RetVT, Register LHSReg,
     return Register();
 
   static const unsigned OpcTable[2][2][2] = {
-    { { AArch64::SUBWrr,  AArch64::SUBXrr  },
-      { AArch64::ADDWrr,  AArch64::ADDXrr  }  },
-    { { AArch64::SUBSWrr, AArch64::SUBSXrr },
-      { AArch64::ADDSWrr, AArch64::ADDSXrr }  }
-  };
+      {{AArch64::SUBWrr, AArch64::SUBXrr}, {AArch64::ADDWrr, AArch64::ADDXrr}},
+      {{AArch64::SUBSWrr, AArch64::SUBSXrr},
+       {AArch64::ADDSWrr, AArch64::ADDSXrr}}};
   bool Is64Bit = RetVT == MVT::i64;
   unsigned Opc = OpcTable[SetFlags][UseAdd][Is64Bit];
   const TargetRegisterClass *RC =
@@ -1345,11 +1351,9 @@ Register AArch64FastISel::emitAddSub_ri(bool UseAdd, MVT RetVT, Register LHSReg,
     return Register();
 
   static const unsigned OpcTable[2][2][2] = {
-    { { AArch64::SUBWri,  AArch64::SUBXri  },
-      { AArch64::ADDWri,  AArch64::ADDXri  }  },
-    { { AArch64::SUBSWri, AArch64::SUBSXri },
-      { AArch64::ADDSWri, AArch64::ADDSXri }  }
-  };
+      {{AArch64::SUBWri, AArch64::SUBXri}, {AArch64::ADDWri, AArch64::ADDXri}},
+      {{AArch64::SUBSWri, AArch64::SUBSXri},
+       {AArch64::ADDSWri, AArch64::ADDSXri}}};
   bool Is64Bit = RetVT == MVT::i64;
   unsigned Opc = OpcTable[SetFlags][UseAdd][Is64Bit];
   const TargetRegisterClass *RC;
@@ -1389,11 +1393,9 @@ Register AArch64FastISel::emitAddSub_rs(bool UseAdd, MVT RetVT, Register LHSReg,
     return Register();
 
   static const unsigned OpcTable[2][2][2] = {
-    { { AArch64::SUBWrs,  AArch64::SUBXrs  },
-      { AArch64::ADDWrs,  AArch64::ADDXrs  }  },
-    { { AArch64::SUBSWrs, AArch64::SUBSXrs },
-      { AArch64::ADDSWrs, AArch64::ADDSXrs }  }
-  };
+      {{AArch64::SUBWrs, AArch64::SUBXrs}, {AArch64::ADDWrs, AArch64::ADDXrs}},
+      {{AArch64::SUBSWrs, AArch64::SUBSXrs},
+       {AArch64::ADDSWrs, AArch64::ADDSXrs}}};
   bool Is64Bit = RetVT == MVT::i64;
   unsigned Opc = OpcTable[SetFlags][UseAdd][Is64Bit];
   const TargetRegisterClass *RC =
@@ -1430,11 +1432,9 @@ Register AArch64FastISel::emitAddSub_rx(bool UseAdd, MVT RetVT, Register LHSReg,
     return Register();
 
   static const unsigned OpcTable[2][2][2] = {
-    { { AArch64::SUBWrx,  AArch64::SUBXrx  },
-      { AArch64::ADDWrx,  AArch64::ADDXrx  }  },
-    { { AArch64::SUBSWrx, AArch64::SUBSXrx },
-      { AArch64::ADDSWrx, AArch64::ADDSXrx }  }
-  };
+      {{AArch64::SUBWrx, AArch64::SUBXrx}, {AArch64::ADDWrx, AArch64::ADDXrx}},
+      {{AArch64::SUBSWrx, AArch64::SUBSXrx},
+       {AArch64::ADDSWrx, AArch64::ADDSXrx}}};
   bool Is64Bit = RetVT == MVT::i64;
   unsigned Opc = OpcTable[SetFlags][UseAdd][Is64Bit];
   const TargetRegisterClass *RC = nullptr;
@@ -1657,11 +1657,9 @@ Register AArch64FastISel::emitLogicalOp_ri(unsigned ISDOpc, MVT RetVT,
                                            Register LHSReg, uint64_t Imm) {
   static_assert((ISD::AND + 1 == ISD::OR) && (ISD::AND + 2 == ISD::XOR),
                 "ISD nodes are not consecutive!");
-  static const unsigned OpcTable[3][2] = {
-    { AArch64::ANDWri, AArch64::ANDXri },
-    { AArch64::ORRWri, AArch64::ORRXri },
-    { AArch64::EORWri, AArch64::EORXri }
-  };
+  static const unsigned OpcTable[3][2] = {{AArch64::ANDWri, AArch64::ANDXri},
+                                          {AArch64::ORRWri, AArch64::ORRXri},
+                                          {AArch64::EORWri, AArch64::EORXri}};
   const TargetRegisterClass *RC;
   unsigned Opc;
   unsigned RegSize;
@@ -1688,9 +1686,8 @@ Register AArch64FastISel::emitLogicalOp_ri(unsigned ISDOpc, MVT RetVT,
   if (!AArch64_AM::isLogicalImmediate(Imm, RegSize))
     return Register();
 
-  Register ResultReg =
-      fastEmitInst_ri(Opc, RC, LHSReg,
-                      AArch64_AM::encodeLogicalImmediate(Imm, RegSize));
+  Register ResultReg = fastEmitInst_ri(
+      Opc, RC, LHSReg, AArch64_AM::encodeLogicalImmediate(Imm, RegSize));
   if (RetVT >= MVT::i8 && RetVT <= MVT::i16 && ISDOpc != ISD::AND) {
     uint64_t Mask = (RetVT == MVT::i8) ? 0xff : 0xffff;
     ResultReg = emitAnd_ri(MVT::i32, ResultReg, Mask);
@@ -1703,11 +1700,9 @@ Register AArch64FastISel::emitLogicalOp_rs(unsigned ISDOpc, MVT RetVT,
                                            uint64_t ShiftImm) {
   static_assert((ISD::AND + 1 == ISD::OR) && (ISD::AND + 2 == ISD::XOR),
                 "ISD nodes are not consecutive!");
-  static const unsigned OpcTable[3][2] = {
-    { AArch64::ANDWrs, AArch64::ANDXrs },
-    { AArch64::ORRWrs, AArch64::ORRXrs },
-    { AArch64::EORWrs, AArch64::EORXrs }
-  };
+  static const unsigned OpcTable[3][2] = {{AArch64::ANDWrs, AArch64::ANDXrs},
+                                          {AArch64::ORRWrs, AArch64::ORRXrs},
+                                          {AArch64::EORWrs, AArch64::EORXrs}};
 
   // Don't deal with undefined shifts.
   if (ShiftImm >= RetVT.getSizeInBits())
@@ -1766,50 +1761,40 @@ Register AArch64FastISel::emitLoad(MVT VT, MVT RetVT, Address Addr,
   }
 
   static const unsigned GPOpcTable[2][8][4] = {
-    // Sign-extend.
-    { { AArch64::LDURSBWi,  AArch64::LDURSHWi,  AArch64::LDURWi,
-        AArch64::LDURXi  },
-      { AArch64::LDURSBXi,  AArch64::LDURSHXi,  AArch64::LDURSWi,
-        AArch64::LDURXi  },
-      { AArch64::LDRSBWui,  AArch64::LDRSHWui,  AArch64::LDRWui,
-        AArch64::LDRXui  },
-      { AArch64::LDRSBXui,  AArch64::LDRSHXui,  AArch64::LDRSWui,
-        AArch64::LDRXui  },
-      { AArch64::LDRSBWroX, AArch64::LDRSHWroX, AArch64::LDRWroX,
-        AArch64::LDRXroX },
-      { AArch64::LDRSBXroX, AArch64::LDRSHXroX, AArch64::LDRSWroX,
-        AArch64::LDRXroX },
-      { AArch64::LDRSBWroW, AArch64::LDRSHWroW, AArch64::LDRWroW,
-        AArch64::LDRXroW },
-      { AArch64::LDRSBXroW, AArch64::LDRSHXroW, AArch64::LDRSWroW,
-        AArch64::LDRXroW }
-    },
-    // Zero-extend.
-    { { AArch64::LDURBBi,   AArch64::LDURHHi,   AArch64::LDURWi,
-        AArch64::LDURXi  },
-      { AArch64::LDURBBi,   AArch64::LDURHHi,   AArch64::LDURWi,
-        AArch64::LDURXi  },
-      { AArch64::LDRBBui,   AArch64::LDRHHui,   AArch64::LDRWui,
-        AArch64::LDRXui  },
-      { AArch64::LDRBBui,   AArch64::LDRHHui,   AArch64::LDRWui,
-        AArch64::LDRXui  },
-      { AArch64::LDRBBroX,  AArch64::LDRHHroX,  AArch64::LDRWroX,
-        AArch64::LDRXroX },
-      { AArch64::LDRBBroX,  AArch64::LDRHHroX,  AArch64::LDRWroX,
-        AArch64::LDRXroX },
-      { AArch64::LDRBBroW,  AArch64::LDRHHroW,  AArch64::LDRWroW,
-        AArch64::LDRXroW },
-      { AArch64::LDRBBroW,  AArch64::LDRHHroW,  AArch64::LDRWroW,
-        AArch64::LDRXroW }
-    }
-  };
+      // Sign-extend.
+      {{AArch64::LDURSBWi, AArch64::LDURSHWi, AArch64::LDURWi, AArch64::LDURXi},
+       {AArch64::LDURSBXi, AArch64::LDURSHXi, AArch64::LDURSWi,
+        AArch64::LDURXi},
+       {AArch64::LDRSBWui, AArch64::LDRSHWui, AArch64::LDRWui, AArch64::LDRXui},
+       {AArch64::LDRSBXui, AArch64::LDRSHXui, AArch64::LDRSWui,
+        AArch64::LDRXui},
+       {AArch64::LDRSBWroX, AArch64::LDRSHWroX, AArch64::LDRWroX,
+        AArch64::LDRXroX},
+       {AArch64::LDRSBXroX, AArch64::LDRSHXroX, AArch64::LDRSWroX,
+        AArch64::LDRXroX},
+       {AArch64::LDRSBWroW, AArch64::LDRSHWroW, AArch64::LDRWroW,
+        AArch64::LDRXroW},
+       {AArch64::LDRSBXroW, AArch64::LDRSHXroW, AArch64::LDRSWroW,
+        AArch64::LDRXroW}},
+      // Zero-extend.
+      {{AArch64::LDURBBi, AArch64::LDURHHi, AArch64::LDURWi, AArch64::LDURXi},
+       {AArch64::LDURBBi, AArch64::LDURHHi, AArch64::LDURWi, AArch64::LDURXi},
+       {AArch64::LDRBBui, AArch64::LDRHHui, AArch64::LDRWui, AArch64::LDRXui},
+       {AArch64::LDRBBui, AArch64::LDRHHui, AArch64::LDRWui, AArch64::LDRXui},
+       {AArch64::LDRBBroX, AArch64::LDRHHroX, AArch64::LDRWroX,
+        AArch64::LDRXroX},
+       {AArch64::LDRBBroX, AArch64::LDRHHroX, AArch64::LDRWroX,
+        AArch64::LDRXroX},
+       {AArch64::LDRBBroW, AArch64::LDRHHroW, AArch64::LDRWroW,
+        AArch64::LDRXroW},
+       {AArch64::LDRBBroW, AArch64::LDRHHroW, AArch64::LDRWroW,
+        AArch64::LDRXroW}}};
 
   static const unsigned FPOpcTable[4][2] = {
-    { AArch64::LDURSi,  AArch64::LDURDi  },
-    { AArch64::LDRSui,  AArch64::LDRDui  },
-    { AArch64::LDRSroX, AArch64::LDRDroX },
-    { AArch64::LDRSroW, AArch64::LDRDroW }
-  };
+      {AArch64::LDURSi, AArch64::LDURDi},
+      {AArch64::LDRSui, AArch64::LDRDui},
+      {AArch64::LDRSroX, AArch64::LDRDroX},
+      {AArch64::LDRSroW, AArch64::LDRDroW}};
 
   unsigned Opc;
   const TargetRegisterClass *RC;
@@ -1827,18 +1812,18 @@ Register AArch64FastISel::emitLoad(MVT VT, MVT RetVT, Address Addr,
   case MVT::i1: // Intentional fall-through.
   case MVT::i8:
     Opc = GPOpcTable[WantZExt][2 * Idx + IsRet64Bit][0];
-    RC = (IsRet64Bit && !WantZExt) ?
-             &AArch64::GPR64RegClass: &AArch64::GPR32RegClass;
+    RC = (IsRet64Bit && !WantZExt) ? &AArch64::GPR64RegClass
+                                   : &AArch64::GPR32RegClass;
     break;
   case MVT::i16:
     Opc = GPOpcTable[WantZExt][2 * Idx + IsRet64Bit][1];
-    RC = (IsRet64Bit && !WantZExt) ?
-             &AArch64::GPR64RegClass: &AArch64::GPR32RegClass;
+    RC = (IsRet64Bit && !WantZExt) ? &AArch64::GPR64RegClass
+                                   : &AArch64::GPR32RegClass;
     break;
   case MVT::i32:
     Opc = GPOpcTable[WantZExt][2 * Idx + IsRet64Bit][2];
-    RC = (IsRet64Bit && !WantZExt) ?
-             &AArch64::GPR64RegClass: &AArch64::GPR32RegClass;
+    RC = (IsRet64Bit && !WantZExt) ? &AArch64::GPR64RegClass
+                                   : &AArch64::GPR32RegClass;
     break;
   case MVT::i64:
     Opc = GPOpcTable[WantZExt][2 * Idx + IsRet64Bit][3];
@@ -1856,8 +1841,8 @@ Register AArch64FastISel::emitLoad(MVT VT, MVT RetVT, Address Addr,
 
   // Create the base instruction, then add the operands.
   Register ResultReg = createResultReg(RC);
-  MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-                                    TII.get(Opc), ResultReg);
+  MachineInstrBuilder MIB =
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc), ResultReg);
   addLoadStoreOperands(Addr, MIB, MachineMemOperand::MOLoad, ScaleFactor, MMO);
 
   // Loading an i1 requires special handling.
@@ -2014,8 +1999,8 @@ bool AArch64FastISel::selectLoad(const Instruction *I) {
           ResultReg = std::prev(I)->getOperand(0).getReg();
           removeDeadCode(I, std::next(I));
         } else
-          ResultReg = fastEmitInst_extractsubreg(MVT::i32, ResultReg,
-                                                 AArch64::sub_32);
+          ResultReg =
+              fastEmitInst_extractsubreg(MVT::i32, ResultReg, AArch64::sub_32);
       }
       updateValueMap(I, ResultReg);
       return true;
@@ -2051,11 +2036,20 @@ bool AArch64FastISel::emitStoreRelease(MVT VT, Register SrcReg,
                                        MachineMemOperand *MMO) {
   unsigned Opc;
   switch (VT.SimpleTy) {
-  default: return false;
-  case MVT::i8:  Opc = AArch64::STLRB; break;
-  case MVT::i16: Opc = AArch64::STLRH; break;
-  case MVT::i32: Opc = AArch64::STLRW; break;
-  case MVT::i64: Opc = AArch64::STLRX; break;
+  default:
+    return false;
+  case MVT::i8:
+    Opc = AArch64::STLRB;
+    break;
+  case MVT::i16:
+    Opc = AArch64::STLRH;
+    break;
+  case MVT::i32:
+    Opc = AArch64::STLRW;
+    break;
+  case MVT::i64:
+    Opc = AArch64::STLRX;
+    break;
   }
 
   const MCInstrDesc &II = TII.get(Opc);
@@ -2090,15 +2084,14 @@ bool AArch64FastISel::emitStore(MVT VT, Register SrcReg, Address Addr,
   }
 
   static const unsigned OpcTable[4][6] = {
-    { AArch64::STURBBi,  AArch64::STURHHi,  AArch64::STURWi,  AArch64::STURXi,
-      AArch64::STURSi,   AArch64::STURDi },
-    { AArch64::STRBBui,  AArch64::STRHHui,  AArch64::STRWui,  AArch64::STRXui,
-      AArch64::STRSui,   AArch64::STRDui },
-    { AArch64::STRBBroX, AArch64::STRHHroX, AArch64::STRWroX, AArch64::STRXroX,
-      AArch64::STRSroX,  AArch64::STRDroX },
-    { AArch64::STRBBroW, AArch64::STRHHroW, AArch64::STRWroW, AArch64::STRXroW,
-      AArch64::STRSroW,  AArch64::STRDroW }
-  };
+      {AArch64::STURBBi, AArch64::STURHHi, AArch64::STURWi, AArch64::STURXi,
+       AArch64::STURSi, AArch64::STURDi},
+      {AArch64::STRBBui, AArch64::STRHHui, AArch64::STRWui, AArch64::STRXui,
+       AArch64::STRSui, AArch64::STRDui},
+      {AArch64::STRBBroX, AArch64::STRHHroX, AArch64::STRWroX, AArch64::STRXroX,
+       AArch64::STRSroX, AArch64::STRDroX},
+      {AArch64::STRBBroW, AArch64::STRHHroW, AArch64::STRWroW, AArch64::STRXroW,
+       AArch64::STRSroW, AArch64::STRDroW}};
 
   unsigned Opc;
   bool VTIsi1 = false;
@@ -2110,14 +2103,29 @@ bool AArch64FastISel::emitStore(MVT VT, Register SrcReg, Address Addr,
     Idx++;
 
   switch (VT.SimpleTy) {
-  default: llvm_unreachable("Unexpected value type.");
-  case MVT::i1:  VTIsi1 = true; [[fallthrough]];
-  case MVT::i8:  Opc = OpcTable[Idx][0]; break;
-  case MVT::i16: Opc = OpcTable[Idx][1]; break;
-  case MVT::i32: Opc = OpcTable[Idx][2]; break;
-  case MVT::i64: Opc = OpcTable[Idx][3]; break;
-  case MVT::f32: Opc = OpcTable[Idx][4]; break;
-  case MVT::f64: Opc = OpcTable[Idx][5]; break;
+  default:
+    llvm_unreachable("Unexpected value type.");
+  case MVT::i1:
+    VTIsi1 = true;
+    [[fallthrough]];
+  case MVT::i8:
+    Opc = OpcTable[Idx][0];
+    break;
+  case MVT::i16:
+    Opc = OpcTable[Idx][1];
+    break;
+  case MVT::i32:
+    Opc = OpcTable[Idx][2];
+    break;
+  case MVT::i64:
+    Opc = OpcTable[Idx][3];
+    break;
+  case MVT::f32:
+    Opc = OpcTable[Idx][4];
+    break;
+  case MVT::f64:
+    Opc = OpcTable[Idx][5];
+    break;
   }
 
   // Storing an i1 requires special handling.
@@ -2340,11 +2348,8 @@ bool AArch64FastISel::emitCompareAndBranch(const CondBrInst *BI) {
   } // end switch
 
   static const unsigned OpcTable[2][2][2] = {
-    { {AArch64::CBZW,  AArch64::CBZX },
-      {AArch64::CBNZW, AArch64::CBNZX} },
-    { {AArch64::TBZW,  AArch64::TBZX },
-      {AArch64::TBNZW, AArch64::TBNZX} }
-  };
+      {{AArch64::CBZW, AArch64::CBZX}, {AArch64::CBNZW, AArch64::CBNZX}},
+      {{AArch64::TBZW, AArch64::TBZX}, {AArch64::TBNZW, AArch64::TBNZX}}};
 
   bool IsBitTest = TestBit != -1;
   bool Is64Bit = BW == 64;
@@ -2365,7 +2370,7 @@ bool AArch64FastISel::emitCompareAndBranch(const CondBrInst *BI) {
     SrcReg = emitIntExt(VT, SrcReg, MVT::i32, /*isZExt=*/true);
 
   // Emit the combined compare and branch instruction.
-  SrcReg = constrainOperandRegClass(II, SrcReg,  II.getNumDefs());
+  SrcReg = constrainOperandRegClass(II, SrcReg, II.getNumDefs());
   MachineInstrBuilder MIB =
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc))
           .addReg(SrcReg);
@@ -2470,8 +2475,8 @@ bool AArch64FastISel::selectBranch(const Instruction *I) {
 
       // Emit the branch.
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::Bcc))
-        .addImm(CC)
-        .addMBB(TBB);
+          .addImm(CC)
+          .addMBB(TBB);
 
       finishCondBranch(BI->getParent(), TBB, FBB);
       return true;
@@ -2490,8 +2495,8 @@ bool AArch64FastISel::selectBranch(const Instruction *I) {
   }
 
   const MCInstrDesc &II = TII.get(Opcode);
-  Register ConstrainedCondReg
-    = constrainOperandRegClass(II, CondReg, II.getNumDefs());
+  Register ConstrainedCondReg =
+      constrainOperandRegClass(II, CondReg, II.getNumDefs());
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
       .addReg(ConstrainedCondReg)
       .addImm(0)
@@ -2513,7 +2518,7 @@ bool AArch64FastISel::selectIndirectBr(const Instruction *I) {
 
   // Emit the indirect branch.
   const MCInstrDesc &II = TII.get(AArch64::BR);
-  AddrReg = constrainOperandRegClass(II, AddrReg,  II.getNumDefs());
+  AddrReg = constrainOperandRegClass(II, AddrReg, II.getNumDefs());
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II).addReg(AddrReg);
 
   // Make sure the CFG is up-to-date.
@@ -2538,8 +2543,8 @@ bool AArch64FastISel::selectCmp(const Instruction *I) {
     break;
   case CmpInst::FCMP_FALSE:
     ResultReg = createResultReg(&AArch64::GPR32RegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg)
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
         .addReg(AArch64::WZR, getKillRegState(true));
     break;
   case CmpInst::FCMP_TRUE:
@@ -2560,10 +2565,8 @@ bool AArch64FastISel::selectCmp(const Instruction *I) {
 
   // FCMP_UEQ and FCMP_ONE cannot be checked with a single instruction. These
   // condition codes are inverted, because they are used by CSINC.
-  static unsigned CondCodeTable[2][2] = {
-    { AArch64CC::NE, AArch64CC::VC },
-    { AArch64CC::PL, AArch64CC::LE }
-  };
+  static unsigned CondCodeTable[2][2] = {{AArch64CC::NE, AArch64CC::VC},
+                                         {AArch64CC::PL, AArch64CC::LE}};
   unsigned *CondCodes = nullptr;
   switch (Predicate) {
   default:
@@ -2655,8 +2658,8 @@ bool AArch64FastISel::optimizeSelect(const SelectInst *SI) {
   if (NeedExtraOp)
     Src1Reg = emitLogicalOp_ri(ISD::XOR, MVT::i32, Src1Reg, 1);
 
-  Register ResultReg = fastEmitInst_rr(Opc, &AArch64::GPR32RegClass, Src1Reg,
-                                       Src2Reg);
+  Register ResultReg =
+      fastEmitInst_rr(Opc, &AArch64::GPR32RegClass, Src1Reg, Src2Reg);
   updateValueMap(SI, ResultReg);
   return true;
 }
@@ -2761,8 +2764,7 @@ bool AArch64FastISel::selectSelect(const Instruction *I) {
     CondReg = constrainOperandRegClass(II, CondReg, 1);
 
     // Emit a TST instruction (ANDS wzr, reg, #imm).
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II,
-            AArch64::WZR)
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, AArch64::WZR)
         .addReg(CondReg)
         .addImm(AArch64_AM::encodeLogicalImmediate(1, 32));
   }
@@ -2792,7 +2794,8 @@ bool AArch64FastISel::selectFPExt(const Instruction *I) {
 
   Register ResultReg = createResultReg(&AArch64::FPR64RegClass);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::FCVTDSr),
-          ResultReg).addReg(Op);
+          ResultReg)
+      .addReg(Op);
   updateValueMap(I, ResultReg);
   return true;
 }
@@ -2808,7 +2811,8 @@ bool AArch64FastISel::selectFPTrunc(const Instruction *I) {
 
   Register ResultReg = createResultReg(&AArch64::FPR32RegClass);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::FCVTSDr),
-          ResultReg).addReg(Op);
+          ResultReg)
+      .addReg(Op);
   updateValueMap(I, ResultReg);
   return true;
 }
@@ -2947,19 +2951,18 @@ bool AArch64FastISel::fastLowerArguments() {
   }
 
   static const MCPhysReg Registers[6][8] = {
-    { AArch64::W0, AArch64::W1, AArch64::W2, AArch64::W3, AArch64::W4,
-      AArch64::W5, AArch64::W6, AArch64::W7 },
-    { AArch64::X0, AArch64::X1, AArch64::X2, AArch64::X3, AArch64::X4,
-      AArch64::X5, AArch64::X6, AArch64::X7 },
-    { AArch64::H0, AArch64::H1, AArch64::H2, AArch64::H3, AArch64::H4,
-      AArch64::H5, AArch64::H6, AArch64::H7 },
-    { AArch64::S0, AArch64::S1, AArch64::S2, AArch64::S3, AArch64::S4,
-      AArch64::S5, AArch64::S6, AArch64::S7 },
-    { AArch64::D0, AArch64::D1, AArch64::D2, AArch64::D3, AArch64::D4,
-      AArch64::D5, AArch64::D6, AArch64::D7 },
-    { AArch64::Q0, AArch64::Q1, AArch64::Q2, AArch64::Q3, AArch64::Q4,
-      AArch64::Q5, AArch64::Q6, AArch64::Q7 }
-  };
+      {AArch64::W0, AArch64::W1, AArch64::W2, AArch64::W3, AArch64::W4,
+       AArch64::W5, AArch64::W6, AArch64::W7},
+      {AArch64::X0, AArch64::X1, AArch64::X2, AArch64::X3, AArch64::X4,
+       AArch64::X5, AArch64::X6, AArch64::X7},
+      {AArch64::H0, AArch64::H1, AArch64::H2, AArch64::H3, AArch64::H4,
+       AArch64::H5, AArch64::H6, AArch64::H7},
+      {AArch64::S0, AArch64::S1, AArch64::S2, AArch64::S3, AArch64::S4,
+       AArch64::S5, AArch64::S6, AArch64::S7},
+      {AArch64::D0, AArch64::D1, AArch64::D2, AArch64::D3, AArch64::D4,
+       AArch64::D5, AArch64::D6, AArch64::D7},
+      {AArch64::Q0, AArch64::Q1, AArch64::Q2, AArch64::Q3, AArch64::Q4,
+       AArch64::Q5, AArch64::Q6, AArch64::Q7}};
 
   unsigned GPRIdx = 0;
   unsigned FPRIdx = 0;
@@ -2977,7 +2980,7 @@ bool AArch64FastISel::fastLowerArguments() {
     } else if (VT == MVT::f16 || VT == MVT::bf16) {
       SrcReg = Registers[2][FPRIdx++];
       RC = &AArch64::FPR16RegClass;
-    } else if (VT ==  MVT::f32) {
+    } else if (VT == MVT::f32) {
       SrcReg = Registers[3][FPRIdx++];
       RC = &AArch64::FPR32RegClass;
     } else if ((VT == MVT::f64) || VT.is64BitVector()) {
@@ -2994,8 +2997,8 @@ bool AArch64FastISel::fastLowerArguments() {
     // Without this, EmitLiveInCopies may eliminate the livein if its only
     // use is a bitcast (which isn't turned into an instruction).
     Register ResultReg = createResultReg(RC);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg)
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
         .addReg(DstReg, getKillRegState(true));
     updateValueMap(&Arg, ResultReg);
   }
@@ -3018,7 +3021,8 @@ bool AArch64FastISel::processCallArgs(CallLoweringInfo &CLI,
   // Issue CALLSEQ_START
   unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AdjStackDown))
-    .addImm(NumBytes).addImm(0);
+      .addImm(NumBytes)
+      .addImm(0);
 
   // Process the args.
   for (CCValAssign &VA : ArgLocs) {
@@ -3058,7 +3062,8 @@ bool AArch64FastISel::processCallArgs(CallLoweringInfo &CLI,
     // Now copy/store arg to correct locations.
     if (VA.isRegLoc() && !VA.needsCustom()) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-              TII.get(TargetOpcode::COPY), VA.getLocReg()).addReg(ArgReg);
+              TII.get(TargetOpcode::COPY), VA.getLocReg())
+          .addReg(ArgReg);
       CLI.OutRegs.push_back(VA.getLocReg());
     } else if (VA.needsCustom()) {
       // FIXME: Handle custom args.
@@ -3100,7 +3105,8 @@ bool AArch64FastISel::finishCall(CallLoweringInfo &CLI, unsigned NumBytes) {
   // Issue CALLSEQ_END
   unsigned AdjStackUp = TII.getCallFrameDestroyOpcode();
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AdjStackUp))
-    .addImm(NumBytes).addImm(0);
+      .addImm(NumBytes)
+      .addImm(0);
 
   // Now the return values.
   SmallVector<CCValAssign, 16> RVLocs;
@@ -3131,9 +3137,9 @@ bool AArch64FastISel::finishCall(CallLoweringInfo &CLI, unsigned NumBytes) {
 }
 
 bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
-  CallingConv::ID CC  = CLI.CallConv;
-  bool IsTailCall     = CLI.IsTailCall;
-  bool IsVarArg       = CLI.IsVarArg;
+  CallingConv::ID CC = CLI.CallConv;
+  bool IsTailCall = CLI.IsTailCall;
+  bool IsVarArg = CLI.IsVarArg;
   const Value *Callee = CLI.Callee;
   MCSymbol *Symbol = CLI.Symbol;
 
@@ -3250,8 +3256,8 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
           .addSym(Symbol, AArch64II::MO_GOT | AArch64II::MO_PAGE);
 
       CallReg = createResultReg(&AArch64::GPR64RegClass);
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-              TII.get(AArch64::LDRXui), CallReg)
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::LDRXui),
+              CallReg)
           .addReg(ADRPReg)
           .addSym(Symbol,
                   AArch64II::MO_GOT | AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
@@ -3357,8 +3363,7 @@ bool AArch64FastISel::foldXALUIntrinsic(AArch64CC::CondCode &CC,
   const auto *II = cast<IntrinsicInst>(EV->getAggregateOperand());
   MVT RetVT;
   const Function *Callee = II->getCalledFunction();
-  Type *RetTy =
-  cast<StructType>(Callee->getReturnType())->getTypeAtIndex(0U);
+  Type *RetTy = cast<StructType>(Callee->getReturnType())->getTypeAtIndex(0U);
   if (!isTypeLegal(RetTy, RetVT))
     return false;
 
@@ -3435,7 +3440,8 @@ bool AArch64FastISel::foldXALUIntrinsic(AArch64CC::CondCode &CC,
 bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
   // FIXME: Handle more intrinsics.
   switch (II->getIntrinsicID()) {
-  default: return false;
+  default:
+    return false;
   case Intrinsic::frameaddress: {
     MachineFrameInfo &MFI = FuncInfo.MF->getFrameInfo();
     MFI.setFrameAddressIsTaken(true);
@@ -3443,8 +3449,9 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     const AArch64RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
     Register FramePtr = RegInfo->getFrameRegister(*(FuncInfo.MF));
     Register SrcReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), SrcReg).addReg(FramePtr);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            SrcReg)
+        .addReg(FramePtr);
     // Recursively load frame address
     // ldr x0, [fp]
     // ldr x0, [x0]
@@ -3453,8 +3460,8 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     Register DestReg;
     unsigned Depth = cast<ConstantInt>(II->getOperand(0))->getZExtValue();
     while (Depth--) {
-      DestReg = fastEmitInst_ri(AArch64::LDRXui, &AArch64::GPR64RegClass,
-                                SrcReg, 0);
+      DestReg =
+          fastEmitInst_ri(AArch64::LDRXui, &AArch64::GPR64RegClass, SrcReg, 0);
       assert(DestReg && "Unexpected LDR instruction emission failure.");
       SrcReg = DestReg;
     }
@@ -3468,11 +3475,11 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     // SP = FP + Fixed Object + 16
     int FI = MFI.CreateFixedObject(4, 0, false);
     Register ResultReg = createResultReg(&AArch64::GPR64spRegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(AArch64::ADDXri), ResultReg)
-            .addFrameIndex(FI)
-            .addImm(0)
-            .addImm(0);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::ADDXri),
+            ResultReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addImm(0);
 
     updateValueMap(II, ResultReg);
     return true;
@@ -3610,7 +3617,7 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
       return false;
     Register ResultReg = createResultReg(TLI.getRegClassFor(VT));
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc), ResultReg)
-      .addReg(SrcReg);
+        .addReg(SrcReg);
     updateValueMap(II, ResultReg);
     return true;
   }
@@ -3689,7 +3696,8 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     Register ResultReg1, ResultReg2, MulReg;
     AArch64CC::CondCode CC = AArch64CC::Invalid;
     switch (IID) {
-    default: llvm_unreachable("Unexpected intrinsic!");
+    default:
+      llvm_unreachable("Unexpected intrinsic!");
     case Intrinsic::sadd_with_overflow:
       ResultReg1 = emitAdd(VT, LHS, RHS, /*SetFlags=*/true);
       CC = AArch64CC::VS;
@@ -3769,15 +3777,16 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     if (MulReg) {
       ResultReg1 = createResultReg(TLI.getRegClassFor(VT));
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-              TII.get(TargetOpcode::COPY), ResultReg1).addReg(MulReg);
+              TII.get(TargetOpcode::COPY), ResultReg1)
+          .addReg(MulReg);
     }
 
     if (!ResultReg1)
       return false;
 
-    ResultReg2 = fastEmitInst_rri(AArch64::CSINCWr, &AArch64::GPR32RegClass,
-                                  AArch64::WZR, AArch64::WZR,
-                                  getInvertedCondCode(CC));
+    ResultReg2 =
+        fastEmitInst_rri(AArch64::CSINCWr, &AArch64::GPR32RegClass,
+                         AArch64::WZR, AArch64::WZR, getInvertedCondCode(CC));
     (void)ResultReg2;
     assert((ResultReg1 + 1) == ResultReg2 &&
            "Nonconsecutive result registers.");
@@ -3929,8 +3938,9 @@ bool AArch64FastISel::selectRet(const Instruction *I) {
       SrcReg = emitAnd_ri(MVT::i64, SrcReg, 0xffffffff);
 
     // Make the copy.
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), DestReg).addReg(SrcReg);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            DestReg)
+        .addReg(SrcReg);
 
     // Add register to return instruction.
     RetRegs.push_back(VA.getLocReg());
@@ -3992,15 +4002,15 @@ bool AArch64FastISel::selectTrunc(const Instruction *I) {
       break;
     }
     // Issue an extract_subreg to get the lower 32-bits.
-    Register Reg32 = fastEmitInst_extractsubreg(MVT::i32, SrcReg,
-                                                AArch64::sub_32);
+    Register Reg32 =
+        fastEmitInst_extractsubreg(MVT::i32, SrcReg, AArch64::sub_32);
     // Create the AND instruction which performs the actual truncation.
     ResultReg = emitAnd_ri(MVT::i32, Reg32, Mask);
     assert(ResultReg && "Unexpected AND instruction emission failure.");
   } else {
     ResultReg = createResultReg(&AArch64::GPR32RegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg)
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
         .addReg(SrcReg);
   }
 
@@ -4050,9 +4060,13 @@ Register AArch64FastISel::emitMul_rr(MVT RetVT, Register Op0, Register Op1) {
   case MVT::i16:
   case MVT::i32:
     RetVT = MVT::i32;
-    Opc = AArch64::MADDWrrr; ZReg = AArch64::WZR; break;
+    Opc = AArch64::MADDWrrr;
+    ZReg = AArch64::WZR;
+    break;
   case MVT::i64:
-    Opc = AArch64::MADDXrrr; ZReg = AArch64::XZR; break;
+    Opc = AArch64::MADDXrrr;
+    ZReg = AArch64::XZR;
+    break;
   }
 
   const TargetRegisterClass *RC =
@@ -4064,16 +4078,16 @@ Register AArch64FastISel::emitSMULL_rr(MVT RetVT, Register Op0, Register Op1) {
   if (RetVT != MVT::i64)
     return Register();
 
-  return fastEmitInst_rrr(AArch64::SMADDLrrr, &AArch64::GPR64RegClass,
-                          Op0, Op1, AArch64::XZR);
+  return fastEmitInst_rrr(AArch64::SMADDLrrr, &AArch64::GPR64RegClass, Op0, Op1,
+                          AArch64::XZR);
 }
 
 Register AArch64FastISel::emitUMULL_rr(MVT RetVT, Register Op0, Register Op1) {
   if (RetVT != MVT::i64)
     return Register();
 
-  return fastEmitInst_rrr(AArch64::UMADDLrrr, &AArch64::GPR64RegClass,
-                          Op0, Op1, AArch64::XZR);
+  return fastEmitInst_rrr(AArch64::UMADDLrrr, &AArch64::GPR64RegClass, Op0, Op1,
+                          AArch64::XZR);
 }
 
 Register AArch64FastISel::emitLSL_rr(MVT RetVT, Register Op0Reg,
@@ -4084,10 +4098,22 @@ Register AArch64FastISel::emitLSL_rr(MVT RetVT, Register Op0Reg,
   switch (RetVT.SimpleTy) {
   default:
     return Register();
-  case MVT::i8:  Opc = AArch64::LSLVWr; NeedTrunc = true; Mask = 0xff;   break;
-  case MVT::i16: Opc = AArch64::LSLVWr; NeedTrunc = true; Mask = 0xffff; break;
-  case MVT::i32: Opc = AArch64::LSLVWr;                                  break;
-  case MVT::i64: Opc = AArch64::LSLVXr;                                  break;
+  case MVT::i8:
+    Opc = AArch64::LSLVWr;
+    NeedTrunc = true;
+    Mask = 0xff;
+    break;
+  case MVT::i16:
+    Opc = AArch64::LSLVWr;
+    NeedTrunc = true;
+    Mask = 0xffff;
+    break;
+  case MVT::i32:
+    Opc = AArch64::LSLVWr;
+    break;
+  case MVT::i64:
+    Opc = AArch64::LSLVXr;
+    break;
   }
 
   const TargetRegisterClass *RC =
@@ -4109,7 +4135,8 @@ Register AArch64FastISel::emitLSL_ri(MVT RetVT, MVT SrcVT, Register Op0,
           SrcVT == MVT::i32 || SrcVT == MVT::i64) &&
          "Unexpected source value type.");
   assert((RetVT == MVT::i8 || RetVT == MVT::i16 || RetVT == MVT::i32 ||
-          RetVT == MVT::i64) && "Unexpected return value type.");
+          RetVT == MVT::i64) &&
+         "Unexpected return value type.");
 
   bool Is64Bit = (RetVT == MVT::i64);
   unsigned RegSize = Is64Bit ? 64 : 32;
@@ -4162,10 +4189,8 @@ Register AArch64FastISel::emitLSL_ri(MVT RetVT, MVT SrcVT, Register Op0,
   unsigned ImmR = RegSize - Shift;
   // Limit the width to the length of the source type.
   unsigned ImmS = std::min<unsigned>(SrcBits - 1, DstBits - 1 - Shift);
-  static const unsigned OpcTable[2][2] = {
-    {AArch64::SBFMWri, AArch64::SBFMXri},
-    {AArch64::UBFMWri, AArch64::UBFMXri}
-  };
+  static const unsigned OpcTable[2][2] = {{AArch64::SBFMWri, AArch64::SBFMXri},
+                                          {AArch64::UBFMWri, AArch64::UBFMXri}};
   unsigned Opc = OpcTable[IsZExt][Is64Bit];
   if (SrcVT.SimpleTy <= MVT::i32 && RetVT == MVT::i64) {
     Register TmpReg = MRI.createVirtualRegister(RC);
@@ -4186,10 +4211,22 @@ Register AArch64FastISel::emitLSR_rr(MVT RetVT, Register Op0Reg,
   switch (RetVT.SimpleTy) {
   default:
     return Register();
-  case MVT::i8:  Opc = AArch64::LSRVWr; NeedTrunc = true; Mask = 0xff;   break;
-  case MVT::i16: Opc = AArch64::LSRVWr; NeedTrunc = true; Mask = 0xffff; break;
-  case MVT::i32: Opc = AArch64::LSRVWr; break;
-  case MVT::i64: Opc = AArch64::LSRVXr; break;
+  case MVT::i8:
+    Opc = AArch64::LSRVWr;
+    NeedTrunc = true;
+    Mask = 0xff;
+    break;
+  case MVT::i16:
+    Opc = AArch64::LSRVWr;
+    NeedTrunc = true;
+    Mask = 0xffff;
+    break;
+  case MVT::i32:
+    Opc = AArch64::LSRVWr;
+    break;
+  case MVT::i64:
+    Opc = AArch64::LSRVXr;
+    break;
   }
 
   const TargetRegisterClass *RC =
@@ -4212,7 +4249,8 @@ Register AArch64FastISel::emitLSR_ri(MVT RetVT, MVT SrcVT, Register Op0,
           SrcVT == MVT::i32 || SrcVT == MVT::i64) &&
          "Unexpected source value type.");
   assert((RetVT == MVT::i8 || RetVT == MVT::i16 || RetVT == MVT::i32 ||
-          RetVT == MVT::i64) && "Unexpected return value type.");
+          RetVT == MVT::i64) &&
+         "Unexpected return value type.");
 
   bool Is64Bit = (RetVT == MVT::i64);
   unsigned RegSize = Is64Bit ? 64 : 32;
@@ -4227,7 +4265,7 @@ Register AArch64FastISel::emitLSR_ri(MVT RetVT, MVT SrcVT, Register Op0,
       Register ResultReg = createResultReg(RC);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
               TII.get(TargetOpcode::COPY), ResultReg)
-      .addReg(Op0);
+          .addReg(Op0);
       return ResultReg;
     } else
       return emitIntExt(SrcVT, Op0, RetVT, IsZExt);
@@ -4278,10 +4316,8 @@ Register AArch64FastISel::emitLSR_ri(MVT RetVT, MVT SrcVT, Register Op0,
 
   unsigned ImmR = std::min<unsigned>(SrcBits - 1, Shift);
   unsigned ImmS = SrcBits - 1;
-  static const unsigned OpcTable[2][2] = {
-    {AArch64::SBFMWri, AArch64::SBFMXri},
-    {AArch64::UBFMWri, AArch64::UBFMXri}
-  };
+  static const unsigned OpcTable[2][2] = {{AArch64::SBFMWri, AArch64::SBFMXri},
+                                          {AArch64::UBFMWri, AArch64::UBFMXri}};
   unsigned Opc = OpcTable[IsZExt][Is64Bit];
   if (SrcVT.SimpleTy <= MVT::i32 && RetVT == MVT::i64) {
     Register TmpReg = MRI.createVirtualRegister(RC);
@@ -4302,10 +4338,22 @@ Register AArch64FastISel::emitASR_rr(MVT RetVT, Register Op0Reg,
   switch (RetVT.SimpleTy) {
   default:
     return Register();
-  case MVT::i8:  Opc = AArch64::ASRVWr; NeedTrunc = true; Mask = 0xff;   break;
-  case MVT::i16: Opc = AArch64::ASRVWr; NeedTrunc = true; Mask = 0xffff; break;
-  case MVT::i32: Opc = AArch64::ASRVWr;                                  break;
-  case MVT::i64: Opc = AArch64::ASRVXr;                                  break;
+  case MVT::i8:
+    Opc = AArch64::ASRVWr;
+    NeedTrunc = true;
+    Mask = 0xff;
+    break;
+  case MVT::i16:
+    Opc = AArch64::ASRVWr;
+    NeedTrunc = true;
+    Mask = 0xffff;
+    break;
+  case MVT::i32:
+    Opc = AArch64::ASRVWr;
+    break;
+  case MVT::i64:
+    Opc = AArch64::ASRVXr;
+    break;
   }
 
   const TargetRegisterClass *RC =
@@ -4328,7 +4376,8 @@ Register AArch64FastISel::emitASR_ri(MVT RetVT, MVT SrcVT, Register Op0,
           SrcVT == MVT::i32 || SrcVT == MVT::i64) &&
          "Unexpected source value type.");
   assert((RetVT == MVT::i8 || RetVT == MVT::i16 || RetVT == MVT::i32 ||
-          RetVT == MVT::i64) && "Unexpected return value type.");
+          RetVT == MVT::i64) &&
+         "Unexpected return value type.");
 
   bool Is64Bit = (RetVT == MVT::i64);
   unsigned RegSize = Is64Bit ? 64 : 32;
@@ -4343,7 +4392,7 @@ Register AArch64FastISel::emitASR_ri(MVT RetVT, MVT SrcVT, Register Op0,
       Register ResultReg = createResultReg(RC);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
               TII.get(TargetOpcode::COPY), ResultReg)
-      .addReg(Op0);
+          .addReg(Op0);
       return ResultReg;
     } else
       return emitIntExt(SrcVT, Op0, RetVT, IsZExt);
@@ -4383,10 +4432,8 @@ Register AArch64FastISel::emitASR_ri(MVT RetVT, MVT SrcVT, Register Op0,
 
   unsigned ImmR = std::min<unsigned>(SrcBits - 1, Shift);
   unsigned ImmS = SrcBits - 1;
-  static const unsigned OpcTable[2][2] = {
-    {AArch64::SBFMWri, AArch64::SBFMXri},
-    {AArch64::UBFMWri, AArch64::UBFMXri}
-  };
+  static const unsigned OpcTable[2][2] = {{AArch64::SBFMWri, AArch64::SBFMXri},
+                                          {AArch64::UBFMWri, AArch64::UBFMXri}};
   unsigned Opc = OpcTable[IsZExt][Is64Bit];
   if (SrcVT.SimpleTy <= MVT::i32 && RetVT == MVT::i64) {
     Register TmpReg = MRI.createVirtualRegister(RC);
@@ -4407,10 +4454,10 @@ Register AArch64FastISel::emitIntExt(MVT SrcVT, Register SrcReg, MVT DestVT,
   // DestVT are odd things, so test to make sure that they are both types we can
   // handle (i1/i8/i16/i32 for SrcVT and i8/i16/i32/i64 for DestVT), otherwise
   // bail out to SelectionDAG.
-  if (((DestVT != MVT::i8) && (DestVT != MVT::i16) &&
-       (DestVT != MVT::i32) && (DestVT != MVT::i64)) ||
-      ((SrcVT !=  MVT::i1) && (SrcVT !=  MVT::i8) &&
-       (SrcVT !=  MVT::i16) && (SrcVT !=  MVT::i32)))
+  if (((DestVT != MVT::i8) && (DestVT != MVT::i16) && (DestVT != MVT::i32) &&
+       (DestVT != MVT::i64)) ||
+      ((SrcVT != MVT::i1) && (SrcVT != MVT::i8) && (SrcVT != MVT::i16) &&
+       (SrcVT != MVT::i32)))
     return Register();
 
   unsigned Opc;
@@ -4685,7 +4732,8 @@ bool AArch64FastISel::selectShift(const Instruction *I) {
     if (const auto *ZExt = dyn_cast<ZExtInst>(Op0)) {
       if (!isIntExtFree(ZExt)) {
         MVT TmpVT;
-        if (isValueAvailable(ZExt) && isTypeSupported(ZExt->getSrcTy(), TmpVT)) {
+        if (isValueAvailable(ZExt) &&
+            isTypeSupported(ZExt->getSrcTy(), TmpVT)) {
           SrcVT = TmpVT;
           IsZExt = true;
           Op0 = ZExt->getOperand(0);
@@ -4694,7 +4742,8 @@ bool AArch64FastISel::selectShift(const Instruction *I) {
     } else if (const auto *SExt = dyn_cast<SExtInst>(Op0)) {
       if (!isIntExtFree(SExt)) {
         MVT TmpVT;
-        if (isValueAvailable(SExt) && isTypeSupported(SExt->getSrcTy(), TmpVT)) {
+        if (isValueAvailable(SExt) &&
+            isTypeSupported(SExt->getSrcTy(), TmpVT)) {
           SrcVT = TmpVT;
           IsZExt = false;
           Op0 = SExt->getOperand(0);
@@ -4707,7 +4756,8 @@ bool AArch64FastISel::selectShift(const Instruction *I) {
       return false;
 
     switch (I->getOpcode()) {
-    default: llvm_unreachable("Unexpected instruction.");
+    default:
+      llvm_unreachable("Unexpected instruction.");
     case Instruction::Shl:
       ResultReg = emitLSL_ri(RetVT, SrcVT, Op0Reg, ShiftVal, IsZExt);
       break;
@@ -4735,7 +4785,8 @@ bool AArch64FastISel::selectShift(const Instruction *I) {
 
   Register ResultReg;
   switch (I->getOpcode()) {
-  default: llvm_unreachable("Unexpected instruction.");
+  default:
+    llvm_unreachable("Unexpected instruction.");
   case Instruction::Shl:
     ResultReg = emitLSL_rr(RetVT, Op0Reg, Op1Reg);
     break;
@@ -4776,11 +4827,20 @@ bool AArch64FastISel::selectBitCast(const Instruction *I) {
 
   const TargetRegisterClass *RC = nullptr;
   switch (RetVT.SimpleTy) {
-  default: llvm_unreachable("Unexpected value type.");
-  case MVT::i32: RC = &AArch64::GPR32RegClass; break;
-  case MVT::i64: RC = &AArch64::GPR64RegClass; break;
-  case MVT::f32: RC = &AArch64::FPR32RegClass; break;
-  case MVT::f64: RC = &AArch64::FPR64RegClass; break;
+  default:
+    llvm_unreachable("Unexpected value type.");
+  case MVT::i32:
+    RC = &AArch64::GPR32RegClass;
+    break;
+  case MVT::i64:
+    RC = &AArch64::GPR64RegClass;
+    break;
+  case MVT::f32:
+    RC = &AArch64::FPR32RegClass;
+    break;
+  case MVT::f64:
+    RC = &AArch64::FPR64RegClass;
+    break;
   }
   Register Op0Reg = getRegForValue(I->getOperand(0));
   if (!Op0Reg)
@@ -4867,8 +4927,8 @@ bool AArch64FastISel::selectSDiv(const Instruction *I) {
     SelectOpc = AArch64::CSELWr;
     RC = &AArch64::GPR32RegClass;
   }
-  Register SelectReg = fastEmitInst_rri(SelectOpc, RC, AddReg, Src0Reg,
-                                        AArch64CC::LT);
+  Register SelectReg =
+      fastEmitInst_rri(SelectOpc, RC, AddReg, Src0Reg, AArch64CC::LT);
   if (!SelectReg)
     return false;
 
@@ -4924,8 +4984,8 @@ bool AArch64FastISel::selectGetElementPtr(const Instruction *I) {
   // into a single N = N + TotalOffset.
   uint64_t TotalOffs = 0;
   MVT VT = TLI.getPointerTy(DL);
-  for (gep_type_iterator GTI = gep_type_begin(I), E = gep_type_end(I);
-       GTI != E; ++GTI) {
+  for (gep_type_iterator GTI = gep_type_begin(I), E = gep_type_end(I); GTI != E;
+       ++GTI) {
     const Value *Idx = GTI.getOperand();
     if (auto *StTy = GTI.getStructTypeOrNull()) {
       unsigned Field = cast<ConstantInt>(Idx)->getZExtValue();

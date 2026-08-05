@@ -6,24 +6,24 @@
 // RUN:   | FileCheck %s --check-prefix=NONE
 
 // Explicit hard on a soft-default triple: flag emitted.
-// RUN: %clang_cc1 -triple arm-none-none-eabi -mfloat-abi hard -emit-llvm -o - %s \
-// RUN:   | FileCheck %s --check-prefix=HARD
+// RUN: %clang_cc1 -triple arm-none-none-eabi -mfloat-abi hard -emit-llvm -o -
+// %s \ RUN:   | FileCheck %s --check-prefix=HARD
 
 // Explicit soft on a soft-default triple: matches default, no flag.
-// RUN: %clang_cc1 -triple arm-none-none-eabi -mfloat-abi soft -emit-llvm -o - %s \
-// RUN:   | FileCheck %s --check-prefix=NONE
+// RUN: %clang_cc1 -triple arm-none-none-eabi -mfloat-abi soft -emit-llvm -o -
+// %s \ RUN:   | FileCheck %s --check-prefix=NONE
 
 // Default (hard) ABI on a hard-default triple: no flag.
 // RUN: %clang_cc1 -triple arm-none-none-eabihf -emit-llvm -o - %s \
 // RUN:   | FileCheck %s --check-prefix=NONE
 
 // Explicit soft on a hard-default triple: flag emitted.
-// RUN: %clang_cc1 -triple arm-none-none-eabihf -mfloat-abi soft -emit-llvm -o - %s \
-// RUN:   | FileCheck %s --check-prefix=SOFT
+// RUN: %clang_cc1 -triple arm-none-none-eabihf -mfloat-abi soft -emit-llvm -o -
+// %s \ RUN:   | FileCheck %s --check-prefix=SOFT
 
 // softfp collapses to soft: on a hard-default triple, flag emitted as soft.
-// RUN: %clang_cc1 -triple arm-none-none-eabihf -mfloat-abi softfp -emit-llvm -o - %s \
-// RUN:   | FileCheck %s --check-prefix=SOFT
+// RUN: %clang_cc1 -triple arm-none-none-eabihf -mfloat-abi softfp -emit-llvm -o
+// - %s \ RUN:   | FileCheck %s --check-prefix=SOFT
 
 void f(void) {}
 

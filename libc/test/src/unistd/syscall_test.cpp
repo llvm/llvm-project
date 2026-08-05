@@ -13,7 +13,7 @@
 
 #include "hdr/fcntl_macros.h"
 #include "hdr/sys_stat_macros.h" // For S_* flags.
-#include <sys/syscall.h> // For syscall numbers.
+#include <sys/syscall.h>         // For syscall numbers.
 #include <unistd.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;

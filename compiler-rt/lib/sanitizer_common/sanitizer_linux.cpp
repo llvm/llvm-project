@@ -558,7 +558,7 @@ uptr internal_fstat(fd_t fd, void *buf) {
   struct statx bufx;
   int res = internal_syscall(SYSCALL(statx), fd, "", AT_EMPTY_PATH,
                              STATX_BASIC_STATS, (uptr)&bufx);
-  statx_to_stat(&bufx, (struct stat*)buf);
+  statx_to_stat(&bufx, (struct stat *)buf);
   return res;
 #    else
   struct stat64 buf64;
@@ -1404,7 +1404,7 @@ void ForEachMappedRegion(link_map *map, void (*cb)(const void *, uptr)) {
   typedef ElfW(Phdr) Elf_Phdr;
   typedef ElfW(Ehdr) Elf_Ehdr;
 #    endif  // !SANITIZER_FREEBSD
-  char* base = DladdrElfHeaderBase((void*)map->l_ld, (char*)map->l_addr);
+  char *base = DladdrElfHeaderBase((void *)map->l_ld, (char *)map->l_addr);
   Elf_Ehdr *ehdr = (Elf_Ehdr *)base;
   char *phdrs = base + ehdr->e_phoff;
   char *phdrs_end = phdrs + ehdr->e_phnum * ehdr->e_phentsize;
@@ -1925,21 +1925,21 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
   return res;
 }
 #    elif defined(__hexagon__)
-uptr internal_clone(int (*fn)(void*), void* child_stack, int flags, void* arg,
-                    int* parent_tidptr, void* newtls, int* child_tidptr) {
+uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
+                    int *parent_tidptr, void *newtls, int *child_tidptr) {
   if (!fn || !child_stack)
     return -EINVAL;
-  child_stack = (char*)child_stack - 2 * sizeof(unsigned int);
-  ((unsigned int*)child_stack)[0] = (uptr)fn;
-  ((unsigned int*)child_stack)[1] = (uptr)arg;
+  child_stack = (char *)child_stack - 2 * sizeof(unsigned int);
+  ((unsigned int *)child_stack)[0] = (uptr)fn;
+  ((unsigned int *)child_stack)[1] = (uptr)arg;
 
   // Hexagon clone syscall uses the generic argument order (no
   // CONFIG_CLONE_BACKWARDS): flags, stack, ptid, ctid, tls.
   register int r0 __asm__("r0") = flags;
-  register void* r1 __asm__("r1") = child_stack;
-  register int* r2 __asm__("r2") = parent_tidptr;
-  register int* r3 __asm__("r3") = child_tidptr;
-  register void* r4 __asm__("r4") = newtls;
+  register void *r1 __asm__("r1") = child_stack;
+  register int *r2 __asm__("r2") = parent_tidptr;
+  register int *r3 __asm__("r3") = child_tidptr;
+  register void *r4 __asm__("r4") = newtls;
   register int r6 __asm__("r6") = __NR_clone;
 
   __asm__ __volatile__(
@@ -2052,10 +2052,11 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 #    elif SANITIZER_NETBSD
   uptr err = ucontext->uc_mcontext.__gregs[_REG_ERR];
 #    elif SANITIZER_HAIKU
-  uptr err = 0;  // FIXME: ucontext->uc_mcontext.r13;
-                 // The err register was added on the main branch and not
-                 // available with the current release. To be reverted later.
-                 // https://github.com/haiku/haiku/commit/11adda21aa4e6b24f71a496868a44d7607bc3764
+  uptr err =
+      0;  // FIXME: ucontext->uc_mcontext.r13;
+          // The err register was added on the main branch and not
+          // available with the current release. To be reverted later.
+          // https://github.com/haiku/haiku/commit/11adda21aa4e6b24f71a496868a44d7607bc3764
 #    elif SANITIZER_SOLARIS && defined(__i386__)
   const int Err = 13;
   uptr err = ucontext->uc_mcontext.gregs[Err];
@@ -2793,7 +2794,7 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   *bp = ucontext->uc_mcontext.__gregs[22];
   *sp = ucontext->uc_mcontext.__gregs[3];
 #  elif defined(__alpha__)
-  ucontext_t* ucontext = (ucontext_t*)context;
+  ucontext_t *ucontext = (ucontext_t *)context;
   *pc = ucontext->uc_mcontext.sc_pc;
   *bp = ucontext->uc_mcontext.sc_regs[15];  // $fp / $s6
   *sp = ucontext->uc_mcontext.sc_regs[30];  // $sp
@@ -2887,7 +2888,7 @@ void CheckMPROTECT() {
 #  endif
 }
 
-void OnDlOpen(const char* filename, int flag) {
+void OnDlOpen(const char *filename, int flag) {
 #  ifdef RTLD_DEEPBIND
   if (flag & RTLD_DEEPBIND) {
     Report(

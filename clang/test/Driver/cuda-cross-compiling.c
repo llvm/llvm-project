@@ -20,48 +20,55 @@
 // RUN: %clang -target nvptx64-nvidia-cuda -ccc-print-bindings %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=BINDINGS %s
 
-//      BINDINGS: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[PTX:.+]].s"
-// BINDINGS-NEXT: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[PTX]].s"], output: "[[CUBIN:.+]].o"
-// BINDINGS-NEXT: "nvptx64-nvidia-cuda" - "NVPTX::Linker", inputs: ["[[CUBIN]].o"], output: "a.out"
+//      BINDINGS: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT:.+]]"],
+//      output: "[[PTX:.+]].s"
+// BINDINGS-NEXT: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs:
+// ["[[PTX]].s"], output: "[[CUBIN:.+]].o" BINDINGS-NEXT: "nvptx64-nvidia-cuda"
+// - "NVPTX::Linker", inputs: ["[[CUBIN]].o"], output: "a.out"
 
 //
-// Test the generated arguments to the CUDA binary utils when targeting NVPTX. 
+// Test the generated arguments to the CUDA binary utils when targeting NVPTX.
 // Ensure that the '.o' files are converted to '.cubin' if produced internally.
 //
 // RUN: %clang -target nvptx64-nvidia-cuda -march=sm_61 -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=ARGS %s
 
-//      ARGS: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_61" {{.*}} "-o" "[[PTX:.+]].s"
-// ARGS-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_61" "--output-file" "[[CUBIN:.+]].o" "[[PTX]].s" "-c"
-// ARGS-NEXT: clang-nvlink-wrapper{{.*}}"-o" "a.out" "-arch" "sm_61"{{.*}}"[[CUBIN]].o"
+//      ARGS: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu"
+//      "sm_61" {{.*}} "-o" "[[PTX:.+]].s"
+// ARGS-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_61" "--output-file"
+// "[[CUBIN:.+]].o" "[[PTX]].s" "-c" ARGS-NEXT: clang-nvlink-wrapper{{.*}}"-o"
+// "a.out" "-arch" "sm_61"{{.*}}"[[CUBIN]].o"
 
 //
-// Test the generated arguments to the CUDA binary utils when targeting NVPTX. 
+// Test the generated arguments to the CUDA binary utils when targeting NVPTX.
 // Ensure that we emit '.o' files if compiled with '-c'
 //
 // RUN: %clang -target nvptx64-nvidia-cuda -march=sm_61 -c -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=OBJECT %s
-// RUN: %clang -target nvptx64-nvidia-cuda -save-temps -march=sm_61 -c -### %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=OBJECT %s
+// RUN: %clang -target nvptx64-nvidia-cuda -save-temps -march=sm_61 -c -### %s
+// 2>&1 \ RUN:   | FileCheck -check-prefix=OBJECT %s
 
-//      OBJECT: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_61" {{.*}} "-o" "[[PTX:.+]].s"
-// OBJECT-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_61" "--output-file" "[[OBJ:.+]].o" "[[PTX]].s" "-c"
+//      OBJECT: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu"
+//      "sm_61" {{.*}} "-o" "[[PTX:.+]].s"
+// OBJECT-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_61" "--output-file"
+// "[[OBJ:.+]].o" "[[PTX]].s" "-c"
 
 //
-// Test the generated arguments to the CUDA binary utils when targeting NVPTX. 
+// Test the generated arguments to the CUDA binary utils when targeting NVPTX.
 // Ensure that we copy input '.o' files to '.cubin' files when linking.
 //
 // RUN: touch %t.o
 // RUN: %clang -target nvptx64-nvidia-cuda -march=sm_61 -### %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=LINK %s
 
-// LINK: clang-nvlink-wrapper{{.*}}"-o" "a.out" "-arch" "sm_61"{{.*}}[[CUBIN:.+]].o
+// LINK: clang-nvlink-wrapper{{.*}}"-o" "a.out" "-arch"
+// "sm_61"{{.*}}[[CUBIN:.+]].o
 
 //
 // Test passing arguments directly to nvlink.
 //
-// RUN: %clang -target nvptx64-nvidia-cuda -Wl,-v -Wl,a,b -march=sm_52 -### %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=LINKER-ARGS %s
+// RUN: %clang -target nvptx64-nvidia-cuda -Wl,-v -Wl,a,b -march=sm_52 -### %s
+// 2>&1 \ RUN:   | FileCheck -check-prefix=LINKER-ARGS %s
 
 // LINKER-ARGS: clang-nvlink-wrapper{{.*}}"-v"{{.*}}"a" "b"
 
@@ -80,7 +87,8 @@
 // RUN: %clang -target nvptx64-nvidia-cuda -flto %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=MISSING-LTO %s
 
-// MISSING-LTO-NOT: error: must pass in an explicit nvptx64 gpu architecture to 'nvlink'
+// MISSING-LTO-NOT: error: must pass in an explicit nvptx64 gpu architecture to
+// 'nvlink'
 
 // RUN: %clang -target nvptx64-nvidia-cuda -flto -c %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=GENERIC %s
@@ -92,8 +100,8 @@
 //
 // Test forwarding the necessary +ptx feature.
 //
-// RUN: %clang -target nvptx64-nvidia-cuda --cuda-feature=+ptx63 -march=sm_52 -### %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=FEATURE %s
+// RUN: %clang -target nvptx64-nvidia-cuda --cuda-feature=+ptx63 -march=sm_52
+// -### %s 2>&1 \ RUN:   | FileCheck -check-prefix=FEATURE %s
 
 // FEATURE: clang-nvlink-wrapper{{.*}}"--plugin-opt=-mattr=+ptx63"
 
@@ -108,10 +116,12 @@
 //
 // Test cuda path handling
 //
-// RUN: %clang -target nvptx64-nvidia-cuda -march=sm_52 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
-// RUN:   -nogpulib -nogpuinc -### %s 2>&1 | FileCheck -check-prefix=PATH %s
+// RUN: %clang -target nvptx64-nvidia-cuda -march=sm_52
+// --cuda-path=%S/Inputs/CUDA/usr/local/cuda \ RUN:   -nogpulib -nogpuinc -###
+// %s 2>&1 | FileCheck -check-prefix=PATH %s
 
-// PATH: clang-nvlink-wrapper{{.*}}"--cuda-path={{.*}}/Inputs/CUDA/usr/local/cuda"
+// PATH:
+// clang-nvlink-wrapper{{.*}}"--cuda-path={{.*}}/Inputs/CUDA/usr/local/cuda"
 
 // RUN: %clang -target nvptx64-nvidia-cuda -march=sm_52 --ptxas-path=/some/path/to/ptxas \
 // RUN:   -nogpulib -nogpuinc -### %s 2>&1 | FileCheck -check-prefix=PTXAS-PATH %s
@@ -126,11 +136,13 @@
 // RUN:   -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:   -fprofile-generate %s 2>&1 | FileCheck -check-prefixes=PROFILE %s
 //      PROFILE: clang-nvlink-wrapper
-// PROFILE-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}nvptx64-nvidia-cuda{{/|\\\\}}libclang_rt.profile.a"
+// PROFILE-SAME:
+// "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}nvptx64-nvidia-cuda{{/|\\\\}}libclang_rt.profile.a"
 
 // RUN: %clang -### --target=nvptx64-nvidia-cuda -march=sm_89 -nogpulib \
 // RUN:   -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:   -fsanitize=undefined -fsanitize-minimal-runtime %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=UBSAN %s
 //      UBSAN: clang-nvlink-wrapper
-// UBSAN-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}nvptx64-nvidia-cuda{{/|\\\\}}libclang_rt.ubsan_minimal.a"
+// UBSAN-SAME:
+// "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}nvptx64-nvidia-cuda{{/|\\\\}}libclang_rt.ubsan_minimal.a"

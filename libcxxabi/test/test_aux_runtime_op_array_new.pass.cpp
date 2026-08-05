@@ -15,24 +15,24 @@
 //  allocation function is not called, and a std::bad_array_new_length exception
 //  is thrown instead (5.3.4p7).
 bool bad_array_new_length_test() {
-    try {
-      // We test this directly because Clang does not currently codegen the
-      // correct call to __cxa_bad_array_new_length, so this test would result
-      // in passing -1 to ::operator new[], which would then throw a
-      // std::bad_alloc, causing the test to fail.
-      __cxxabiv1::__cxa_throw_bad_array_new_length();
-    } catch ( const std::bad_array_new_length &banl ) {
-      return true;
-    }
-    return false;
+  try {
+    // We test this directly because Clang does not currently codegen the
+    // correct call to __cxa_bad_array_new_length, so this test would result
+    // in passing -1 to ::operator new[], which would then throw a
+    // std::bad_alloc, causing the test to fail.
+    __cxxabiv1::__cxa_throw_bad_array_new_length();
+  } catch (const std::bad_array_new_length& banl) {
+    return true;
+  }
+  return false;
 }
 
 int main(int, char**) {
-    int ret_val = 0;
+  int ret_val = 0;
 
-    if ( !bad_array_new_length_test ()) {
-        ret_val = 1;
-    }
+  if (!bad_array_new_length_test()) {
+    ret_val = 1;
+  }
 
-    return ret_val;
+  return ret_val;
 }

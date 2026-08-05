@@ -18,12 +18,11 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    using std::bad_optional_access;
+int main(int, char**) {
+  using std::bad_optional_access;
 
-    static_assert(std::is_base_of<std::exception, bad_optional_access>::value, "");
-    static_assert(std::is_convertible<bad_optional_access*, std::exception*>::value, "");
+  static_assert(std::is_base_of<std::exception, bad_optional_access>::value, "");
+  static_assert(std::is_convertible<bad_optional_access*, std::exception*>::value, "");
 
   return 0;
 }

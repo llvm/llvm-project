@@ -5,7 +5,8 @@
 void f(const int *end);
 
 void g(const int (&arrr)[10]) {
-  f(arrr); // expected-warning{{1st function call argument points to an uninitialized value;}}
+  f(arrr); // expected-warning{{1st function call argument points to an
+           // uninitialized value;}}
 }
 
 void h() {

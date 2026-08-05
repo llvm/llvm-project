@@ -134,7 +134,7 @@ TEST(MemoryMapping, ParseUnixMemoryProfileTruncated) {
   }
   UnmapOrDie(mem, 2 * page);
 }
-#  endif
+#    endif
 #  endif
 
 }  // namespace __sanitizer

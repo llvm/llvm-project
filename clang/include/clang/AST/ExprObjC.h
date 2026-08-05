@@ -104,7 +104,7 @@ public:
   SourceLocation getEndLoc() const LLVM_READONLY { return String->getEndLoc(); }
 
   // Iterators
-  child_range children() { return child_range(&String, &String+1); }
+  child_range children() { return child_range(&String, &String + 1); }
 
   const_child_range children() const {
     return const_child_range(&String, &String + 1);
@@ -178,21 +178,17 @@ public:
   Expr *getSubExpr() { return cast<Expr>(SubExpr); }
   const Expr *getSubExpr() const { return cast<Expr>(SubExpr); }
 
-  ObjCMethodDecl *getBoxingMethod() const {
-    return BoxingMethod;
-  }
+  ObjCMethodDecl *getBoxingMethod() const { return BoxingMethod; }
 
   SourceLocation getAtLoc() const { return Range.getBegin(); }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
   SourceLocation getEndLoc() const LLVM_READONLY { return Range.getEnd(); }
 
-  SourceRange getSourceRange() const LLVM_READONLY {
-    return Range;
-  }
+  SourceRange getSourceRange() const LLVM_READONLY { return Range; }
 
   // Iterators
-  child_range children() { return child_range(&SubExpr, &SubExpr+1); }
+  child_range children() { return child_range(&SubExpr, &SubExpr + 1); }
 
   const_child_range children() const {
     return const_child_range(&SubExpr, &SubExpr + 1);
@@ -201,11 +197,11 @@ public:
   using const_arg_iterator = ConstExprIterator;
 
   const_arg_iterator arg_begin() const {
-    return reinterpret_cast<Stmt const * const*>(&SubExpr);
+    return reinterpret_cast<Stmt const *const *>(&SubExpr);
   }
 
   const_arg_iterator arg_end() const {
-    return reinterpret_cast<Stmt const * const*>(&SubExpr + 1);
+    return reinterpret_cast<Stmt const *const *>(&SubExpr + 1);
   }
 
   static bool classof(const Stmt *T) {
@@ -286,7 +282,7 @@ public:
   }
 
   static bool classof(const Stmt *T) {
-      return T->getStmtClass() == ObjCArrayLiteralClass;
+    return T->getStmtClass() == ObjCArrayLiteralClass;
   }
 };
 
@@ -450,7 +446,8 @@ public:
     setDependence(computeDependence(this));
   }
 
-  explicit ObjCEncodeExpr(EmptyShell Empty) : Expr(ObjCEncodeExprClass, Empty){}
+  explicit ObjCEncodeExpr(EmptyShell Empty)
+      : Expr(ObjCEncodeExprClass, Empty) {}
 
   SourceLocation getAtLoc() const { return AtLoc; }
   void setAtLoc(SourceLocation L) { AtLoc = L; }
@@ -615,7 +612,7 @@ public:
 
   const Expr *getBase() const { return cast<Expr>(Base); }
   Expr *getBase() { return cast<Expr>(Base); }
-  void setBase(Expr * base) { Base = base; }
+  void setBase(Expr *base) { Base = base; }
 
   bool isArrow() const { return IsArrow; }
   bool isFreeIvar() const { return IsFreeIvar; }
@@ -634,7 +631,7 @@ public:
   void setOpLoc(SourceLocation L) { OpLoc = L; }
 
   // Iterators
-  child_range children() { return child_range(&Base, &Base+1); }
+  child_range children() { return child_range(&Base, &Base + 1); }
 
   const_child_range children() const {
     return const_child_range(&Base, &Base + 1);
@@ -817,8 +814,8 @@ public:
   // Iterators
   child_range children() {
     if (isa<Stmt *>(Receiver)) {
-      Stmt **begin = reinterpret_cast<Stmt**>(&Receiver); // hack!
-      return child_range(begin, begin+1);
+      Stmt **begin = reinterpret_cast<Stmt **>(&Receiver); // hack!
+      return child_range(begin, begin + 1);
     }
     return child_range(child_iterator(), child_iterator());
   }
@@ -877,7 +874,7 @@ class ObjCSubscriptRefExpr : public Expr {
   // for arrays, this is a numeric expression. For dictionaries, this is
   // an objective-c object pointer expression.
   enum { BASE, KEY, END_EXPR };
-  Stmt* SubExprs[END_EXPR];
+  Stmt *SubExprs[END_EXPR];
 
   ObjCMethodDecl *GetAtIndexMethodDecl;
 
@@ -914,21 +911,15 @@ public:
   Expr *getKeyExpr() const { return cast<Expr>(SubExprs[KEY]); }
   void setKeyExpr(Stmt *S) { SubExprs[KEY] = S; }
 
-  ObjCMethodDecl *getAtIndexMethodDecl() const {
-    return GetAtIndexMethodDecl;
-  }
+  ObjCMethodDecl *getAtIndexMethodDecl() const { return GetAtIndexMethodDecl; }
 
-  ObjCMethodDecl *setAtIndexMethodDecl() const {
-    return SetAtIndexMethodDecl;
-  }
+  ObjCMethodDecl *setAtIndexMethodDecl() const { return SetAtIndexMethodDecl; }
 
   bool isArraySubscriptRefExpr() const {
     return getKeyExpr()->getType()->isIntegralOrEnumerationType();
   }
 
-  child_range children() {
-    return child_range(SubExprs, SubExprs+END_EXPR);
-  }
+  child_range children() { return child_range(SubExprs, SubExprs + END_EXPR); }
 
   const_child_range children() const {
     return const_child_range(SubExprs, SubExprs + END_EXPR);
@@ -1043,37 +1034,24 @@ private:
     setNumArgs(NumArgs);
   }
 
-  ObjCMessageExpr(QualType T, ExprValueKind VK,
-                  SourceLocation LBracLoc,
-                  SourceLocation SuperLoc,
-                  bool IsInstanceSuper,
-                  QualType SuperType,
-                  Selector Sel,
+  ObjCMessageExpr(QualType T, ExprValueKind VK, SourceLocation LBracLoc,
+                  SourceLocation SuperLoc, bool IsInstanceSuper,
+                  QualType SuperType, Selector Sel,
                   ArrayRef<SourceLocation> SelLocs,
-                  SelectorLocationsKind SelLocsK,
-                  ObjCMethodDecl *Method,
-                  ArrayRef<Expr *> Args,
-                  SourceLocation RBracLoc,
+                  SelectorLocationsKind SelLocsK, ObjCMethodDecl *Method,
+                  ArrayRef<Expr *> Args, SourceLocation RBracLoc,
                   bool isImplicit);
-  ObjCMessageExpr(QualType T, ExprValueKind VK,
-                  SourceLocation LBracLoc,
-                  TypeSourceInfo *Receiver,
-                  Selector Sel,
+  ObjCMessageExpr(QualType T, ExprValueKind VK, SourceLocation LBracLoc,
+                  TypeSourceInfo *Receiver, Selector Sel,
                   ArrayRef<SourceLocation> SelLocs,
-                  SelectorLocationsKind SelLocsK,
-                  ObjCMethodDecl *Method,
-                  ArrayRef<Expr *> Args,
-                  SourceLocation RBracLoc,
+                  SelectorLocationsKind SelLocsK, ObjCMethodDecl *Method,
+                  ArrayRef<Expr *> Args, SourceLocation RBracLoc,
                   bool isImplicit);
-  ObjCMessageExpr(QualType T, ExprValueKind VK,
-                  SourceLocation LBracLoc,
-                  Expr *Receiver,
-                  Selector Sel,
+  ObjCMessageExpr(QualType T, ExprValueKind VK, SourceLocation LBracLoc,
+                  Expr *Receiver, Selector Sel,
                   ArrayRef<SourceLocation> SelLocs,
-                  SelectorLocationsKind SelLocsK,
-                  ObjCMethodDecl *Method,
-                  ArrayRef<Expr *> Args,
-                  SourceLocation RBracLoc,
+                  SelectorLocationsKind SelLocsK, ObjCMethodDecl *Method,
+                  ArrayRef<Expr *> Args, SourceLocation RBracLoc,
                   bool isImplicit);
 
   size_t numTrailingObjects(OverloadToken<void *>) const { return NumArgs + 1; }
@@ -1120,14 +1098,11 @@ private:
     return getNumSelectorLocs();
   }
 
-  static ObjCMessageExpr *alloc(const ASTContext &C,
-                                ArrayRef<Expr *> Args,
+  static ObjCMessageExpr *alloc(const ASTContext &C, ArrayRef<Expr *> Args,
                                 SourceLocation RBraceLoc,
-                                ArrayRef<SourceLocation> SelLocs,
-                                Selector Sel,
+                                ArrayRef<SourceLocation> SelLocs, Selector Sel,
                                 SelectorLocationsKind &SelLocsK);
-  static ObjCMessageExpr *alloc(const ASTContext &C,
-                                unsigned NumArgs,
+  static ObjCMessageExpr *alloc(const ASTContext &C, unsigned NumArgs,
                                 unsigned NumStoredSelLocs);
 
 public:
@@ -1161,17 +1136,12 @@ public:
   ///
   /// \param RBracLoc The location of the closing square bracket ']'.
   static ObjCMessageExpr *Create(const ASTContext &Context, QualType T,
-                                 ExprValueKind VK,
-                                 SourceLocation LBracLoc,
-                                 SourceLocation SuperLoc,
-                                 bool IsInstanceSuper,
-                                 QualType SuperType,
-                                 Selector Sel,
+                                 ExprValueKind VK, SourceLocation LBracLoc,
+                                 SourceLocation SuperLoc, bool IsInstanceSuper,
+                                 QualType SuperType, Selector Sel,
                                  ArrayRef<SourceLocation> SelLocs,
-                                 ObjCMethodDecl *Method,
-                                 ArrayRef<Expr *> Args,
-                                 SourceLocation RBracLoc,
-                                 bool isImplicit);
+                                 ObjCMethodDecl *Method, ArrayRef<Expr *> Args,
+                                 SourceLocation RBracLoc, bool isImplicit);
 
   /// Create a class message send.
   ///
@@ -1197,15 +1167,11 @@ public:
   ///
   /// \param RBracLoc The location of the closing square bracket ']'.
   static ObjCMessageExpr *Create(const ASTContext &Context, QualType T,
-                                 ExprValueKind VK,
-                                 SourceLocation LBracLoc,
-                                 TypeSourceInfo *Receiver,
-                                 Selector Sel,
+                                 ExprValueKind VK, SourceLocation LBracLoc,
+                                 TypeSourceInfo *Receiver, Selector Sel,
                                  ArrayRef<SourceLocation> SelLocs,
-                                 ObjCMethodDecl *Method,
-                                 ArrayRef<Expr *> Args,
-                                 SourceLocation RBracLoc,
-                                 bool isImplicit);
+                                 ObjCMethodDecl *Method, ArrayRef<Expr *> Args,
+                                 SourceLocation RBracLoc, bool isImplicit);
 
   /// Create an instance message send.
   ///
@@ -1231,15 +1197,11 @@ public:
   ///
   /// \param RBracLoc The location of the closing square bracket ']'.
   static ObjCMessageExpr *Create(const ASTContext &Context, QualType T,
-                                 ExprValueKind VK,
-                                 SourceLocation LBracLoc,
-                                 Expr *Receiver,
-                                 Selector Sel,
+                                 ExprValueKind VK, SourceLocation LBracLoc,
+                                 Expr *Receiver, Selector Sel,
                                  ArrayRef<SourceLocation> SeLocs,
-                                 ObjCMethodDecl *Method,
-                                 ArrayRef<Expr *> Args,
-                                 SourceLocation RBracLoc,
-                                 bool isImplicit);
+                                 ObjCMethodDecl *Method, ArrayRef<Expr *> Args,
+                                 SourceLocation RBracLoc, bool isImplicit);
 
   /// Create an empty Objective-C message expression, to be
   /// filled in by subsequent calls.
@@ -1305,7 +1267,7 @@ public:
     return nullptr;
   }
   const Expr *getInstanceReceiver() const {
-    return const_cast<ObjCMessageExpr*>(this)->getInstanceReceiver();
+    return const_cast<ObjCMessageExpr *>(this)->getInstanceReceiver();
   }
 
   /// Turn this message send into an instance message that
@@ -1382,7 +1344,7 @@ public:
   }
 
   void setSuper(SourceLocation Loc, QualType T, bool IsInstanceSuper) {
-    Kind = IsInstanceSuper? SuperInstance : SuperClass;
+    Kind = IsInstanceSuper ? SuperInstance : SuperClass;
     SuperLoc = Loc;
     setReceiverPointer(T.getAsOpaquePtr());
   }
@@ -1414,7 +1376,8 @@ public:
   }
 
   ObjCMethodFamily getMethodFamily() const {
-    if (HasMethod) return getMethodDecl()->getMethodFamily();
+    if (HasMethod)
+      return getMethodDecl()->getMethodFamily();
     return getSelector().getMethodFamily();
   }
 
@@ -1427,7 +1390,7 @@ public:
   Expr **getArgs() {
     return reinterpret_cast<Expr **>(getTrailingObjects<void *>() + 1);
   }
-  const Expr * const *getArgs() const {
+  const Expr *const *getArgs() const {
     return reinterpret_cast<const Expr *const *>(getTrailingObjects<void *>() +
                                                  1);
   }
@@ -1509,16 +1472,16 @@ public:
 
   arg_iterator arg_begin() { return reinterpret_cast<Stmt **>(getArgs()); }
 
-  arg_iterator arg_end()   {
+  arg_iterator arg_end() {
     return reinterpret_cast<Stmt **>(getArgs() + NumArgs);
   }
 
   const_arg_iterator arg_begin() const {
-    return reinterpret_cast<Stmt const * const*>(getArgs());
+    return reinterpret_cast<Stmt const *const *>(getArgs());
   }
 
   const_arg_iterator arg_end() const {
-    return reinterpret_cast<Stmt const * const*>(getArgs() + NumArgs);
+    return reinterpret_cast<Stmt const *const *>(getArgs() + NumArgs);
   }
 
   static bool classof(const Stmt *T) {
@@ -1579,7 +1542,7 @@ public:
   SourceLocation getExprLoc() const LLVM_READONLY { return IsaMemberLoc; }
 
   // Iterators
-  child_range children() { return child_range(&Base, &Base+1); }
+  child_range children() { return child_range(&Base, &Base + 1); }
 
   const_child_range children() const {
     return const_child_range(&Base, &Base + 1);
@@ -1642,7 +1605,7 @@ public:
   /// copy-restore.  If false, the temporary will be zero-initialized.
   bool shouldCopy() const { return ObjCIndirectCopyRestoreExprBits.ShouldCopy; }
 
-  child_range children() { return child_range(&Operand, &Operand+1); }
+  child_range children() { return child_range(&Operand, &Operand + 1); }
 
   const_child_range children() const {
     return const_child_range(&Operand, &Operand + 1);

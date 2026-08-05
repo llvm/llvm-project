@@ -61,14 +61,12 @@ task caller(gate &g, int &value, bool &finished) {
 }
 
 // CHECK-LABEL: define internal void @_Z6calleeR4gateRi.resume(
-// CHECK:         %[[DESTROY_ADDR:.+]] = getelementptr inbounds{{.*}} i8, ptr %{{.+}}, i64 8
-// CHECK-NEXT:    %[[DESTROY:.+]] = load ptr, ptr %[[DESTROY_ADDR]]
-// CHECK-NEXT:    %[[IS_ELIDED:.+]] = icmp eq ptr %[[DESTROY]], @_Z6calleeR4gateRi.cleanup
-// CHECK:         store i32 42,
-// CHECK:         br i1 %[[IS_ELIDED]], label %[[CORO_END:.+]], label %[[CORO_FREE:.+]]
-// CHECK:       [[CORO_FREE]]:
-// CHECK-NEXT:    tail call void @_Zdl
-// CHECK:       [[CORO_END]]:
+// CHECK:         %[[DESTROY_ADDR:.+]] = getelementptr inbounds{{.*}} i8, ptr
+// %{{.+}}, i64 8 CHECK-NEXT:    %[[DESTROY:.+]] = load ptr, ptr
+// %[[DESTROY_ADDR]] CHECK-NEXT:    %[[IS_ELIDED:.+]] = icmp eq ptr
+// %[[DESTROY]], @_Z6calleeR4gateRi.cleanup CHECK:         store i32 42, CHECK:
+// br i1 %[[IS_ELIDED]], label %[[CORO_END:.+]], label %[[CORO_FREE:.+]] CHECK:
+// [[CORO_FREE]]: CHECK-NEXT:    tail call void @_Zdl CHECK:       [[CORO_END]]:
 // CHECK-NEXT:    ret void
 
 // CHECK-LABEL: define internal {{.*}}void @_Z6calleeR4gateRi.destroy(

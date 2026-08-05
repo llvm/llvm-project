@@ -1561,8 +1561,8 @@ static bool RemapUseDeviceComponentNames(parser::DataRef &dr,
             }
             compName.symbol = sym;
             if (const auto *oed{sym->detailsIf<ObjectEntityDetails>()}) {
-              if (const DeclTypeSpec *t{oed->type()}) {
-                if (const DerivedTypeSpec *inner{t->AsDerived()}) {
+              if (const DeclTypeSpec * t{oed->type()}) {
+                if (const DerivedTypeSpec * inner{t->AsDerived()}) {
                   currDts = inner;
                 }
               }
@@ -1700,7 +1700,8 @@ void AccVisitor::CopySymbolWithDeviceStructurePath(const parser::Name *baseName,
   if (!sourceType || !sourceType->AsDerived()) {
     return;
   }
-  if (const DeclTypeSpec *newType{CloneDerivedTypeForUseDevice(
+  if (const DeclTypeSpec *
+      newType{CloneDerivedTypeForUseDevice(
           currScope(), context_, *sourceType, componentPath)}) {
     if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
       object->ReplaceType(*newType);
@@ -3335,7 +3336,7 @@ Symbol &ScopeHandler::MakeHostAssocSymbol(
 Symbol &ScopeHandler::MakeHostAssocSymbol(
     Scope &scope, const parser::Name &name, const Symbol &hostSymbol) {
   Symbol &symbol{*scope.try_emplace(name.source, HostAssocDetails{hostSymbol})
-          .first->second};
+                      .first->second};
   name.symbol = &symbol;
   symbol.attrs() = hostSymbol.attrs(); // TODO: except PRIVATE, PUBLIC?
   // These attributes can be redundantly reapplied without error
@@ -3923,7 +3924,7 @@ void ModuleVisitor::AddImplicitUseModules() {
   if (InModuleFile() || currScope().kind() != Scope::Kind::Subprogram) {
     return;
   }
-  if (const Symbol *symbol{currScope().symbol()}) {
+  if (const Symbol * symbol{currScope().symbol()}) {
     if (const auto *details{symbol->detailsIf<SubprogramDetails>()}) {
       if (auto attrs{details->cudaSubprogramAttrs()}) {
         if (*attrs == common::CUDASubprogramAttrs::Device ||
@@ -3948,7 +3949,7 @@ void ModuleVisitor::AddImplicitUseModules() {
     }
     bool isContainedInImplicitModule{false};
     for (const Scope *scope{&currScope()}; !scope->IsTopLevel();
-        scope = &scope->parent()) {
+         scope = &scope->parent()) {
       if (scope->kind() == Scope::Kind::Module) {
         if (std::optional<SourceName> scopeName{scope->GetName()};
             scopeName && scopeName->ToString() == module) {
@@ -3964,7 +3965,7 @@ void ModuleVisitor::AddImplicitUseModules() {
     }
     if (auto it{context().globalScope().find(moduleName)};
         it != context().globalScope().end()) {
-      if (Scope *scope{it->second->scope()};
+      if (Scope * scope{it->second->scope()};
           scope && DoesScopeContain(scope, currScope())) {
         continue;
       }
@@ -5016,7 +5017,7 @@ bool SubprogramVisitor::Pre(const parser::Suffix &suffix) {
     } else {
       Message &msg{Say(
           *resultName, "RESULT(%s) may appear only in a function"_err_en_US)};
-      if (const Symbol *subprogram{InclusiveScope().symbol()}) {
+      if (const Symbol * subprogram{InclusiveScope().symbol()}) {
         msg.Attach(subprogram->name(), "Containing subprogram"_en_US);
       }
     }
@@ -5094,7 +5095,7 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec::Attributes &attrs) {
         }
         // Implicitly USE the cudadevice module by copying its symbols in the
         // current scope.
-        if (const Scope *cudaDeviceScope{context().GetCUDADeviceScope()}) {
+        if (const Scope * cudaDeviceScope{context().GetCUDADeviceScope()}) {
           for (auto sym : cudaDeviceScope->GetSymbols()) {
             if (!currScope().FindSymbol(sym->name())) {
               auto &localSymbol{MakeSymbol(
@@ -5790,7 +5791,7 @@ Symbol *SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
           &MakeSymbol(context().GetTempName(currScope()), Attrs{},
               MiscDetails{MiscDetails::Kind::ScopeName}));
     }
-    if (const Symbol *previous{CheckExtantProc(name, subpFlag)}) {
+    if (const Symbol * previous{CheckExtantProc(name, subpFlag)}) {
       if (previous->test(Symbol::Flag::Function) &&
           previous->test(Symbol::Flag::Implicit)) {
         // Function was implicitly typed in previous compilation unit.
@@ -7065,8 +7066,8 @@ bool DeclarationVisitor::ResolveTypeOfOrClassOf(
     }
     auto category{
         isClassOf ? DeclTypeSpec::ClassDerived : DeclTypeSpec::TypeDerived};
-    if (const DeclTypeSpec *extant{
-            currScope().FindInstantiatedDerivedType(derived, category)}) {
+    if (const DeclTypeSpec *
+        extant{currScope().FindInstantiatedDerivedType(derived, category)}) {
       SetDeclTypeSpec(*extant);
     } else {
       DeclTypeSpec &type{
@@ -7324,7 +7325,7 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
     }
     auto &details{currScope().symbol()->get<DerivedTypeDetails>()};
     details.add_component(symbol);
-    if (const parser::Expr *kindExpr{GetOriginalKindParameter()}) {
+    if (const parser::Expr * kindExpr{GetOriginalKindParameter()}) {
       details.add_originalKindParameter(name.source, kindExpr);
     }
   }
@@ -8140,7 +8141,7 @@ bool DeclarationVisitor::PassesLocalityChecks(
           specName);
       return false;
     }
-    if (const DerivedTypeSpec *derived{type->AsDerived()}) { // F'2023 C1130
+    if (const DerivedTypeSpec * derived{type->AsDerived()}) { // F'2023 C1130
       if (auto bad{FindAllocatableUltimateComponent(*derived)}) {
         SayWithDecl(name, symbol,
             "Derived type variable '%s' with ultimate ALLOCATABLE component '%s' not allowed in a %s locality-spec"_err_en_US,
@@ -9554,7 +9555,7 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
       ConvertToObjectEntity(*symbol);
       ApplyImplicitRules(*symbol);
     } else if (const auto *tpd{symbol->detailsIf<TypeParamDetails>()};
-        tpd && !tpd->attr()) {
+               tpd && !tpd->attr()) {
       Say(name,
           "Type parameter '%s' was referenced before being declared"_err_en_US,
           name.source);
@@ -10420,7 +10421,7 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
 
 void ResolveNamesVisitor::UseCUDABuiltinNames() {
   if (FindCUDADeviceContext(&currScope())) {
-    if (const Scope *cudaBuiltinsScope{context().GetCUDABuiltinsScope()}) {
+    if (const Scope * cudaBuiltinsScope{context().GetCUDABuiltinsScope()}) {
       for (const auto &[name, symbol] : *cudaBuiltinsScope) {
         if (!FindInScope(name)) {
           auto &localSymbol{MakeSymbol(name)};
@@ -10723,8 +10724,8 @@ void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
     // not protect names from being hidden (8.8 p4).
     if (importNames.count(dummyName.source) > 0 ||
         importKind == common::ImportKind::All) {
-      if (const Symbol *host{
-              currScope().parent().FindSymbol(dummyName.source)}) {
+      if (const Symbol *
+          host{currScope().parent().FindSymbol(dummyName.source)}) {
         Say(dummyName.source,
             "'%s' from host may not be hidden by a statement function dummy argument"_err_en_US,
             dummyName.source)
@@ -10732,7 +10733,7 @@ void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
         continue;
       }
     }
-    if (const Symbol *local{FindInScope(currScope(), dummyName.source)}) {
+    if (const Symbol * local{FindInScope(currScope(), dummyName.source)}) {
       const Symbol &ultimate{local->GetUltimate()};
       const bool isScalarVariable{(ultimate.has<ObjectEntityDetails>() ||
                                       ultimate.has<EntityDetails>()) &&

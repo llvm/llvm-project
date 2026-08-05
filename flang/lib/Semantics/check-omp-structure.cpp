@@ -2029,7 +2029,7 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
   // definition in this compilation. Flang does not propagate the directive to
   // callers, so it has no effect; warn the user instead of silently ignoring
   // it. See https://github.com/llvm/llvm-project/issues/192581.
-  if (const Symbol *progUnitSym{progUnitScope.symbol()}) {
+  if (const Symbol * progUnitSym{progUnitScope.symbol()}) {
     if (const auto *subpDetails{progUnitSym->detailsIf<SubprogramDetails>()};
         subpDetails && subpDetails->isInterface()) {
       context_.Warn(common::UsageWarning::OpenMPUsage, dirName.source,
@@ -2069,7 +2069,7 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
     if (IsProcedure(*sym) || IsFunction(*sym)) {
       return true;
     }
-    if (const Symbol *owner{GetScopingUnit(sym->owner()).symbol()}) {
+    if (const Symbol * owner{GetScopingUnit(sym->owner()).symbol()}) {
       return IsProcedure(*owner) || IsFunction(*owner);
     }
     return false;
@@ -2356,7 +2356,7 @@ void OmpStructureChecker::CheckIndividualAllocateDirective(
       continue;
     }
 
-    if (const Symbol *symbol{GetObjectSymbol(*object, /*ultimate=*/true)}) {
+    if (const Symbol * symbol{GetObjectSymbol(*object, /*ultimate=*/true)}) {
       if (!IsTypeParamInquiry(*symbol)) {
         checkSymbol(*symbol, arg.source);
       }
@@ -3754,8 +3754,8 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
                                                         &objs,
                                                     std::string clause) {
             for (const auto &obj : objs.v) {
-              if (const parser::Name *objName{
-                      parser::Unwrap<parser::Name>(obj)}) {
+              if (const parser::Name *
+                  objName{parser::Unwrap<parser::Name>(obj)}) {
                 if (&objName->symbol->GetUltimate() == eventHandleSym) {
                   context_.Say(GetContext().clauseSource,
                       "A variable: `%s` that appears in a DETACH clause cannot appear on %s clause on the same construct"_err_en_US,
@@ -4418,7 +4418,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
 
 void OmpStructureChecker::CheckTypeParamInquiry(const parser::CharBlock &source,
     const parser::OmpObject &object, llvm::omp::Directive dirId) {
-  if (const Symbol *symbol{GetObjectSymbol(object)}) {
+  if (const Symbol * symbol{GetObjectSymbol(object)}) {
     if (IsTypeParamInquiry(*symbol)) {
       context_.Say(source,
           "A type parameter inquiry cannot appear on the %s directive"_err_en_US,
@@ -4429,7 +4429,7 @@ void OmpStructureChecker::CheckTypeParamInquiry(const parser::CharBlock &source,
 
 void OmpStructureChecker::CheckTypeParamInquiry(const parser::CharBlock &source,
     const parser::OmpObject &object, llvm::omp::Clause clauseId) {
-  if (const Symbol *symbol{GetObjectSymbol(object)}) {
+  if (const Symbol * symbol{GetObjectSymbol(object)}) {
     if (IsTypeParamInquiry(*symbol)) {
       context_.Say(source,
           "A type parameter inquiry cannot appear on the %s clause"_err_en_US,
@@ -4449,7 +4449,7 @@ void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
 void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
     const parser::CharBlock &source, const parser::OmpObject &object,
     llvm::StringRef clause) {
-  if (const Symbol *symbol{GetObjectSymbol(object)}) {
+  if (const Symbol * symbol{GetObjectSymbol(object)}) {
     if (IsTypeParamInquiry(*symbol)) {
       return;
     }
@@ -4873,7 +4873,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
     evaluate::ExpressionAnalyzer ea{context_};
     auto restore{ea.AllowWholeAssumedSizeArray(true)};
     for (auto &object : objects.v) {
-      if (const parser::Designator *d{GetDesignatorFromObj(object)}) {
+      if (const parser::Designator * d{GetDesignatorFromObj(object)}) {
         if (auto &&expr{ea.Analyze(*d)}) {
           if (hasBasePointer(*expr)) {
             continue;
@@ -4930,7 +4930,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
       (llvm::is_contained(leafs, Directive::OMPD_target_enter_data) ||
           llvm::is_contained(leafs, Directive::OMPD_target_exit_data))) {
     for (const parser::OmpObject &object : objects.v) {
-      if (const Symbol *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
+      if (const Symbol * sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
         if (HasTemporaryStackDescriptor(*sym)) {
           auto maybeSource{GetObjectSource(object)};
           parser::CharBlock source{
@@ -5736,7 +5736,7 @@ void OmpStructureChecker::CheckPrivateSymbolsInOuterCxt(
     auto enclosingClauseSet{dirIter->second.second};
     if (auto *enclosingContext{GetEnclosingContextWithDir(enclosingDir)}) {
       for (auto it{enclosingContext->clauseInfo.begin()};
-          it != enclosingContext->clauseInfo.end(); ++it) {
+           it != enclosingContext->clauseInfo.end(); ++it) {
         if (enclosingClauseSet.test(it->first)) {
           if (const auto *ompObjectList{GetOmpObjectList(*it->second)}) {
             GetSymbolsInObjectList(*ompObjectList, enclosingSymbols);
@@ -6038,7 +6038,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
                              parser::CharBlock source, bool requireDefinable) {
     // Type-parameter inquiries (e.g. x%kind) are diagnosed separately by
     // CheckTypeParamInquiry, so don't also flag them here.
-    if (const Symbol *sym{GetObjectSymbol(object)};
+    if (const Symbol * sym{GetObjectSymbol(object)};
         sym && IsTypeParamInquiry(*sym)) {
       return;
     }
@@ -6291,7 +6291,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Affinity &x) {
 
   const auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
   for (const parser::OmpObject &object : objects.v) {
-    if (const parser::Designator *designator{GetDesignatorFromObj(object)}) {
+    if (const parser::Designator * designator{GetDesignatorFromObj(object)}) {
       if (const auto *dataRef{GetDataRefFromObj(object)}) {
         if (const auto *arrayElement{GetArrayElementFromObj(object)}) {
           CheckArraySection(*arrayElement, GetLastName(*dataRef),

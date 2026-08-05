@@ -4,18 +4,23 @@
 // bogus diagnostics.
 class Foo {
   constexpr Foo() {
-    while (invalid()) {} // expected-error {{use of undeclared identifier}}
-    if (invalid()) {} // expected-error {{use of undeclared identifier}}
+    while (invalid()) {
+    } // expected-error {{use of undeclared identifier}}
+    if (invalid()) {
+    } // expected-error {{use of undeclared identifier}}
   }
 };
 
 constexpr void test1() {
-  while (invalid()) {} // expected-error {{use of undeclared identifier}}
-  if (invalid()) {} // expected-error {{use of undeclared identifier}}
+  while (invalid()) {
+  } // expected-error {{use of undeclared identifier}}
+  if (invalid()) {
+  } // expected-error {{use of undeclared identifier}}
 }
 
 struct A {
-  int *p = new int(invalid()); // expected-error {{use of undeclared identifier}}
+  int *p =
+      new int(invalid()); // expected-error {{use of undeclared identifier}}
   constexpr ~A() { delete p; }
 };
 constexpr int test2() {
@@ -35,7 +40,8 @@ constexpr int test4() {
 }
 
 constexpr int test5() { // expected-error {{constexpr function never produce}}
-  for (;; a++); // expected-error {{use of undeclared identifier}}  \
+  for (;; a++)
+    ; // expected-error {{use of undeclared identifier}}  \
                    expected-note {{constexpr evaluation hit maximum step limit of 1048576; possible infinite loop?}} \
                    expected-note {{use -fconstexpr-steps}}
   return 1;
@@ -53,43 +59,63 @@ constexpr int test6() { // expected-error {{constexpr function never produce}}
 }
 
 constexpr bool test7() {
-  for (int n = 0; ; invalid()) { if (n == 1) return true; } // expected-error {{use of undeclared identifier}}
+  for (int n = 0;; invalid()) {
+    if (n == 1)
+      return true;
+  } // expected-error {{use of undeclared identifier}}
   throw "bad";
 }
 
 constexpr void test8() {
-  do {}  while (invalid()); // expected-error {{use of undeclared identifier}}
+  do {
+  } while (invalid()); // expected-error {{use of undeclared identifier}}
   throw "bad";
 }
 
-template<int x> constexpr int f(int y) { // expected-note {{non-type template argument is not a constant expression}}
+template <int x>
+constexpr int f(int y) { // expected-note {{non-type template argument is not a
+                         // constant expression}}
   return x * y;
 }
 constexpr int test9(int x) {
-  return f<1>(f<x>(1)); // expected-error {{no matching function for call to 'f'}}
+  return f<1>(
+      f<x>(1)); // expected-error {{no matching function for call to 'f'}}
 }
 
-constexpr int test10() { return undef(); } // expected-error {{use of undeclared identifier 'undef'}}
-static_assert(test10() <= 1, "should not crash"); // expected-error {{static assertion expression is not an integral constant expression}}
+constexpr int test10() {
+  return undef();
+} // expected-error {{use of undeclared identifier 'undef'}}
+static_assert(
+    test10() <= 1,
+    "should not crash"); // expected-error {{static assertion expression is not
+                         // an integral constant expression}}
 
-struct X {} array[] = {undef()}; // expected-error {{use of undeclared identifier 'undef'}}
+struct X {
+} array[] = {
+    undef()}; // expected-error {{use of undeclared identifier 'undef'}}
 constexpr void test11() {
-  for (X& e : array) {}
+  for (X &e : array) {
+  }
 }
 
-constexpr int test12() { return "wrong"; } // expected-error {{cannot initialize return object of type 'int'}}
-constexpr int force12 = test12();          // expected-error {{must be initialized by a constant}}
+constexpr int test12() {
+  return "wrong";
+} // expected-error {{cannot initialize return object of type 'int'}}
+constexpr int force12 =
+    test12(); // expected-error {{must be initialized by a constant}}
 
-#define TEST_EVALUATE(Name, X)         \
-  constexpr int testEvaluate##Name() { \
-    X return 0;                        \
-  }                                    \
+#define TEST_EVALUATE(Name, X)                                                 \
+  constexpr int testEvaluate##Name() { X return 0; }                           \
   constexpr int forceEvaluate##Name = testEvaluate##Name()
 // Check that a variety of broken loops don't crash constant evaluation.
 // We're not checking specific recovery here so don't assert diagnostics.
 TEST_EVALUATE(Switch, switch (!!){});              // expected-error + {{}}
 TEST_EVALUATE(SwitchInit, switch (auto x = !!){}); // expected-error + {{}}
-TEST_EVALUATE(SwitchCondValDep, switch (invalid_value) { default: break; });    // expected-error + {{}}
+TEST_EVALUATE(
+    SwitchCondValDep, switch (invalid_value) {
+default:
+  break;
+    });                         // expected-error + {{}}
 TEST_EVALUATE(For, for (!!){}); // expected-error + {{}}
                                 // FIXME: should bail out instead of looping.
                                 // expected-note@-2 + {{infinite loop}}
@@ -98,17 +124,22 @@ TEST_EVALUATE(For, for (!!){}); // expected-error + {{}}
 TEST_EVALUATE(ForRange, for (auto x : !!){}); // expected-error + {{}}
 TEST_EVALUATE(While, while (!!){});           // expected-error + {{}}
 TEST_EVALUATE(DoWhile, do {} while (!!););    // expected-error + {{}}
-TEST_EVALUATE(DoWhileCond, do {} while (some_cond < 10););    // expected-error {{use of undeclared identifier}}  \
+TEST_EVALUATE(
+    DoWhileCond,
+    do {} while (some_cond <
+                 10);); // expected-error {{use of undeclared identifier}}  \
                                                               // expected-error {{constexpr variable 'forceEvaluateDoWhileCond' must be initialized by a constant expression}}
-TEST_EVALUATE(If, if (!!){};);                // expected-error + {{}}
-TEST_EVALUATE(IfInit, if (auto x = !!; 1){};);// expected-error + {{}}
-TEST_EVALUATE(ForInit, for (!!;;){};);// expected-error + {{}}
-                                      // expected-note@-1 + {{infinite loop}}
-                                      // expected-note@-2 + {{use -fconstexpr-steps}}
-                                      // expected-note@-3 {{in call}}
-TEST_EVALUATE(ForCond, for (; !!;){};);// expected-error + {{}}
-TEST_EVALUATE(ForInc, for (;; !!){};);// expected-error + {{}}
-                                      // expected-note@-1 + {{infinite loop}}
-                                      // expected-note@-2 + {{use -fconstexpr-steps}}
-                                      // expected-note@-3 {{in call}}
-TEST_EVALUATE(ForCondUnDef, for (;some_cond;){};);        // expected-error + {{}}
+TEST_EVALUATE(If, if (!!){};);                 // expected-error + {{}}
+TEST_EVALUATE(IfInit, if (auto x = !!; 1){};); // expected-error + {{}}
+TEST_EVALUATE(ForInit,
+              for (!!;;){};); // expected-error + {{}}
+                              // expected-note@-1 + {{infinite loop}}
+                              // expected-note@-2 + {{use -fconstexpr-steps}}
+                              // expected-note@-3 {{in call}}
+TEST_EVALUATE(ForCond, for (; !!;){};); // expected-error + {{}}
+TEST_EVALUATE(ForInc,
+              for (;; !!){};); // expected-error + {{}}
+                               // expected-note@-1 + {{infinite loop}}
+                               // expected-note@-2 + {{use -fconstexpr-steps}}
+                               // expected-note@-3 {{in call}}
+TEST_EVALUATE(ForCondUnDef, for (; some_cond;){};); // expected-error + {{}}

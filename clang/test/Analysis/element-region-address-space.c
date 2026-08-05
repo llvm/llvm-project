@@ -13,10 +13,9 @@ int test(ADDRESS_SPACE_32BITS int *p, ADDRESS_SPACE_32BITS void *q) {
 }
 
 // Make sure that the cstring checker handles non-default address spaces
-ADDRESS_SPACE_64BITS void *
-memcpy(ADDRESS_SPACE_64BITS void *,
-       ADDRESS_SPACE_32BITS const void *,
-       long unsigned int);
+ADDRESS_SPACE_64BITS void *memcpy(ADDRESS_SPACE_64BITS void *,
+                                  ADDRESS_SPACE_32BITS const void *,
+                                  long unsigned int);
 
 ADDRESS_SPACE_64BITS struct {
   char m[16];

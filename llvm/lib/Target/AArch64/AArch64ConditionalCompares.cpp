@@ -662,18 +662,46 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   switch (CmpMI->getOpcode()) {
   default:
     llvm_unreachable("Unknown compare opcode");
-  case AArch64::SUBSWri:    Opc = AArch64::CCMPWi; break;
-  case AArch64::SUBSWrr:    Opc = AArch64::CCMPWr; break;
-  case AArch64::SUBSXri:    Opc = AArch64::CCMPXi; break;
-  case AArch64::SUBSXrr:    Opc = AArch64::CCMPXr; break;
-  case AArch64::ADDSWri:    Opc = AArch64::CCMNWi; break;
-  case AArch64::ADDSWrr:    Opc = AArch64::CCMNWr; break;
-  case AArch64::ADDSXri:    Opc = AArch64::CCMNXi; break;
-  case AArch64::ADDSXrr:    Opc = AArch64::CCMNXr; break;
-  case AArch64::FCMPSrr:    Opc = AArch64::FCCMPSrr; FirstOp = 0; break;
-  case AArch64::FCMPDrr:    Opc = AArch64::FCCMPDrr; FirstOp = 0; break;
-  case AArch64::FCMPESrr:   Opc = AArch64::FCCMPESrr; FirstOp = 0; break;
-  case AArch64::FCMPEDrr:   Opc = AArch64::FCCMPEDrr; FirstOp = 0; break;
+  case AArch64::SUBSWri:
+    Opc = AArch64::CCMPWi;
+    break;
+  case AArch64::SUBSWrr:
+    Opc = AArch64::CCMPWr;
+    break;
+  case AArch64::SUBSXri:
+    Opc = AArch64::CCMPXi;
+    break;
+  case AArch64::SUBSXrr:
+    Opc = AArch64::CCMPXr;
+    break;
+  case AArch64::ADDSWri:
+    Opc = AArch64::CCMNWi;
+    break;
+  case AArch64::ADDSWrr:
+    Opc = AArch64::CCMNWr;
+    break;
+  case AArch64::ADDSXri:
+    Opc = AArch64::CCMNXi;
+    break;
+  case AArch64::ADDSXrr:
+    Opc = AArch64::CCMNXr;
+    break;
+  case AArch64::FCMPSrr:
+    Opc = AArch64::FCCMPSrr;
+    FirstOp = 0;
+    break;
+  case AArch64::FCMPDrr:
+    Opc = AArch64::FCCMPDrr;
+    FirstOp = 0;
+    break;
+  case AArch64::FCMPESrr:
+    Opc = AArch64::FCCMPESrr;
+    FirstOp = 0;
+    break;
+  case AArch64::FCMPEDrr:
+    Opc = AArch64::FCCMPEDrr;
+    FirstOp = 0;
+    break;
   case AArch64::CBZW:
   case AArch64::CBNZW:
     Opc = AArch64::CCMPWi;

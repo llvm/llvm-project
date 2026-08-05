@@ -2662,8 +2662,8 @@ auto APINotesReader::lookupTypedef(llvm::StringRef Name,
 }
 
 auto APINotesReader::lookupNamespaceID(
-    llvm::StringRef Name, std::optional<ContextID> ParentNamespaceID)
-    -> std::optional<ContextID> {
+    llvm::StringRef Name,
+    std::optional<ContextID> ParentNamespaceID) -> std::optional<ContextID> {
   if (!Implementation->ContextIDTable)
     return std::nullopt;
 

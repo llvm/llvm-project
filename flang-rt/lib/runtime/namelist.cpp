@@ -299,7 +299,7 @@ static RT_API_ATTRS void StorageSequenceExtension(Descriptor &desc,
                 : static_cast<SubscriptValue>(source.ElementBytes())};
         stride != 0) {
       common::optional<DescriptorAddendum> savedAddendum;
-      if (const DescriptorAddendum *addendum{desc.Addendum()}) {
+      if (const DescriptorAddendum * addendum{desc.Addendum()}) {
         // Preserve a copy of the addendum, if any, before clobbering it
         savedAddendum.emplace(*addendum);
       }
@@ -386,8 +386,8 @@ static RT_API_ATTRS bool HandleComponent(IoStatementState &io, Descriptor &desc,
     const DescriptorAddendum *addendum{source.Addendum()};
     if (const typeInfo::DerivedType *
         type{addendum ? addendum->derivedType() : nullptr}) {
-      if (const typeInfo::Component *comp{
-              type->FindDataComponent(compName, runtime::strlen(compName))}) {
+      if (const typeInfo::Component *
+          comp{type->FindDataComponent(compName, runtime::strlen(compName))}) {
         bool createdDesc{false};
         if (comp->rank() > 0 && source.rank() > 0) {
           // If base and component are both arrays, the component name

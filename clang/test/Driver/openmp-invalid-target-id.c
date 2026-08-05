@@ -125,7 +125,8 @@
 // RUN:   --offload-arch=gfx900+xnack \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=NOCOLON %s
 
-// NOCOLON: error: failed to deduce triple for target architecture 'gfx900+xnack'
+// NOCOLON: error: failed to deduce triple for target architecture
+// 'gfx900+xnack'
 
 // RUN: not %clang -### -target x86_64-linux-gnu \
 // RUN:   -fopenmp=libomp --offload-arch=gfx908 \

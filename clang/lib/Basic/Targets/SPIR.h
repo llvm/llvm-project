@@ -172,9 +172,7 @@ public:
                                                             : CCCR_Warning;
   }
 
-  CallingConv getDefaultCallingConv() const override {
-    return CC_SpirFunction;
-  }
+  CallingConv getDefaultCallingConv() const override { return CC_SpirFunction; }
 
   void setAddressSpaceMap(bool DefaultIsGeneric) {
     AddrSpaceMap = DefaultIsGeneric ? &SPIRDefIsGenMap : &SPIRDefIsPrivMap;

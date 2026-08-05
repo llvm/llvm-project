@@ -20,14 +20,16 @@
 //
 // Check compression/decompression of offload bundle.
 //
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip.bundle.bc -compress -verbose >%t.1.txt 2>&1
-// RUN: clang-offload-bundler -type=bc -list -input=%t.hip.bundle.bc | FileCheck -check-prefix=NOHOST %s
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.hip.bundle.bc -unbundle -verbose >%t.2.txt 2>&1
-// RUN: cat %t.1.txt %t.2.txt | FileCheck %s
-// RUN: diff %t.tgt1 %t.res.tgt1
-// RUN: diff %t.tgt2 %t.res.tgt2
+// RUN: clang-offload-bundler -type=bc
+// -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \ RUN:
+// -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip.bundle.bc -compress -verbose
+// >%t.1.txt 2>&1 RUN: clang-offload-bundler -type=bc -list
+// -input=%t.hip.bundle.bc | FileCheck -check-prefix=NOHOST %s
+// RUN: clang-offload-bundler -type=bc
+// -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \ RUN:
+// -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.hip.bundle.bc -unbundle
+// -verbose >%t.2.txt 2>&1 RUN: cat %t.1.txt %t.2.txt | FileCheck %s RUN: diff
+// %t.tgt1 %t.res.tgt1 RUN: diff %t.tgt2 %t.res.tgt2
 //
 // CHECK: Compressed bundle format version: 3
 // CHECK: Total file size (including headers): [[SIZE:[0-9]*]] bytes
@@ -59,31 +61,35 @@
 // Check -bundle-align option.
 //
 
-// RUN: clang-offload-bundler -bundle-align=4096 -type=bc -targets=host-x86_64-unknown-linux-gnu,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -input=%t.bc -input=%t.tgt1 -input=%t.tgt2 -output=%t.bundle3.bc -compress
-// RUN: clang-offload-bundler -type=bc -targets=host-x86_64-unknown-linux-gnu,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -output=%t.res.bc -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.bundle3.bc -unbundle
-// RUN: diff %t.bc %t.res.bc
-// RUN: diff %t.tgt1 %t.res.tgt1
-// RUN: diff %t.tgt2 %t.res.tgt2
+// RUN: clang-offload-bundler -bundle-align=4096 -type=bc
+// -targets=host-x86_64-unknown-linux-gnu,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu
+// -input=%t.bc -input=%t.tgt1 -input=%t.tgt2 -output=%t.bundle3.bc -compress
+// RUN: clang-offload-bundler -type=bc
+// -targets=host-x86_64-unknown-linux-gnu,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu
+// -output=%t.res.bc -output=%t.res.tgt1 -output=%t.res.tgt2
+// -input=%t.bundle3.bc -unbundle RUN: diff %t.bc %t.res.bc RUN: diff %t.tgt1
+// %t.res.tgt1 RUN: diff %t.tgt2 %t.res.tgt2
 
 // Check unbundling archive.
 //
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip_bundle1.bc -compress
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip_bundle2.bc -compress
-// RUN: rm -f %t.hip_archive.a
-// RUN: llvm-ar cr %t.hip_archive.a %t.hip_bundle1.bc %t.hip_bundle2.bc
-// RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -output=%t.hip_900.a -output=%t.hip_906.a -input=%t.hip_archive.a
-// RUN: llvm-ar t %t.hip_900.a | FileCheck -check-prefix=HIP-AR-900 %s
-// RUN: llvm-ar t %t.hip_906.a | FileCheck -check-prefix=HIP-AR-906 %s
-// HIP-AR-900-DAG: hip_bundle1-hip-amdgpu-amd-amdhsa--gfx900
-// HIP-AR-900-DAG: hip_bundle2-hip-amdgpu-amd-amdhsa--gfx900
-// HIP-AR-906-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906
-// HIP-AR-906-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx906
+// RUN: clang-offload-bundler -type=bc
+// -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \ RUN:
+// -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip_bundle1.bc -compress
+// RUN: clang-offload-bundler -type=bc
+// -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \ RUN:
+// -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip_bundle2.bc -compress RUN: rm -f
+// %t.hip_archive.a RUN: llvm-ar cr %t.hip_archive.a %t.hip_bundle1.bc
+// %t.hip_bundle2.bc
+// RUN: clang-offload-bundler -unbundle -type=a
+// -targets=hip-amdgpu-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \ RUN:
+// -output=%t.hip_900.a -output=%t.hip_906.a -input=%t.hip_archive.a RUN:
+// llvm-ar t %t.hip_900.a | FileCheck -check-prefix=HIP-AR-900 %s RUN: llvm-ar t
+// %t.hip_906.a | FileCheck -check-prefix=HIP-AR-906 %s HIP-AR-900-DAG:
+// hip_bundle1-hip-amdgpu-amd-amdhsa--gfx900 HIP-AR-900-DAG:
+// hip_bundle2-hip-amdgpu-amd-amdhsa--gfx900 HIP-AR-906-DAG:
+// hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906 HIP-AR-906-DAG:
+// hip_bundle2-hip-amdgcn-amd-amdhsa--gfx906
 
 // Some code so that we can create a binary out of this file.
 int A = 0;
-void test_func(void) {
-  ++A;
-}
+void test_func(void) { ++A; }

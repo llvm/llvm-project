@@ -1,6 +1,8 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,unix.Malloc,debug.ExprInspection -DNO_CROSSCHECK -verify %s
-// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-config crosscheck-with-z3=true -verify %s
-// REQUIRES: z3
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu
+// -analyzer-checker=core,unix.Malloc,debug.ExprInspection -DNO_CROSSCHECK
+// -verify %s RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu
+// -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-config
+// crosscheck-with-z3=true -verify %s REQUIRES: z3
 
 void clang_analyzer_dump(float);
 
@@ -16,20 +18,23 @@ int rem_parity(int x) // `x` even and `x + 1` even: impossible
   if (x % 2 == 0)
     if ((x + 1) % 2 == 0)
 #ifdef NO_CROSSCHECK
-      return *z; // expected-warning {{Dereference of null pointer (loaded from variable 'z')}}
+      return *z; // expected-warning {{Dereference of null pointer (loaded from
+                 // variable 'z')}}
 #else
       return *z; // no-warning
 #endif
   return 0;
 }
 
-int mul_parity(int x, int y) // `x == 2 * y` is even, yet assumed odd: impossible
+int mul_parity(int x,
+               int y) // `x == 2 * y` is even, yet assumed odd: impossible
 {
   int *z = 0;
   if (x == 2 * y)
     if (x % 2 != 0)
 #ifdef NO_CROSSCHECK
-      return *z; // expected-warning {{Dereference of null pointer (loaded from variable 'z')}}
+      return *z; // expected-warning {{Dereference of null pointer (loaded from
+                 // variable 'z')}}
 #else
       return *z; // no-warning
 #endif
@@ -42,7 +47,8 @@ int div_rem_identity(int x) // `(x / 10) * 10 + x % 10 == x` always holds
   if (x > 0 && x < 1000)
     if ((x / 10) * 10 + (x % 10) != x)
 #ifdef NO_CROSSCHECK
-      return *z; // expected-warning {{Dereference of null pointer (loaded from variable 'z')}}
+      return *z; // expected-warning {{Dereference of null pointer (loaded from
+                 // variable 'z')}}
 #else
       return *z; // no-warning
 #endif
@@ -63,7 +69,9 @@ _Bool nondet_bool();
 
 void h(int d) {
   int x, y, k, z = 1;
-  while (z < k) { // expected-warning {{The right operand of '<' is a garbage value}}
+  while (
+      z <
+      k) { // expected-warning {{The right operand of '<' is a garbage value}}
     z = 2 * z;
   }
 }
@@ -79,21 +87,26 @@ void i() {
 
 void floatUnaryNegInEq(int h, int l) {
   int j;
-  clang_analyzer_dump(-(float)h); // expected-warning-re{{-(float) (reg_${{[0-9]+}}<int h>)}}
-  clang_analyzer_dump((float)l); // expected-warning-re {{(float) (reg_${{[0-9]+}}<int l>)}}
-  if (-(float)h != (float)l) {  // should not crash
+  clang_analyzer_dump(
+      -(float)h); // expected-warning-re{{-(float) (reg_${{[0-9]+}}<int h>)}}
+  clang_analyzer_dump(
+      (float)l); // expected-warning-re {{(float) (reg_${{[0-9]+}}<int l>)}}
+  if (-(float)h != (float)l) { // should not crash
     j += 10;
-    // expected-warning@-1{{The left expression of the compound assignment uses uninitialized memory [core.uninitialized.Assign]}}
+    // expected-warning@-1{{The left expression of the compound assignment uses
+    // uninitialized memory [core.uninitialized.Assign]}}
   }
 }
 
 void floatUnaryLNotInEq(int h, int l) {
   int j;
   clang_analyzer_dump(!(float)h); // expected-warning{{Unknown}}
-  clang_analyzer_dump((float)l); // expected-warning-re {{(float) (reg_${{[0-9]+}}<int l>)}}
-  if ((!(float)h) != (float)l) {  // should not crash
+  clang_analyzer_dump(
+      (float)l); // expected-warning-re {{(float) (reg_${{[0-9]+}}<int l>)}}
+  if ((!(float)h) != (float)l) { // should not crash
     j += 10;
-    // expected-warning@-1{{The left expression of the compound assignment uses uninitialized memory [core.uninitialized.Assign]}}
+    // expected-warning@-1{{The left expression of the compound assignment uses
+    // uninitialized memory [core.uninitialized.Assign]}}
   }
 }
 
@@ -106,13 +119,15 @@ c *d;
 void e() {
   (void)d->b;
   int f;
-  a(f); // expected-warning {{1st function call argument is an uninitialized value [core.CallAndMessage]}}
+  a(f); // expected-warning {{1st function call argument is an uninitialized
+        // value [core.CallAndMessage]}}
 }
 
 void nullDerefGuardedByAtomicComp(int input) {
   int *nullPointer = 0;
   _Atomic int atomicValue = input;
   if (atomicValue == 0) {
-    *nullPointer = 1; // no-crash // expected-warning {{Dereference of null pointer (loaded from variable 'nullPointer')}}
+    *nullPointer = 1; // no-crash // expected-warning {{Dereference of null
+                      // pointer (loaded from variable 'nullPointer')}}
   }
 }

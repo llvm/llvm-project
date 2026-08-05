@@ -1,19 +1,33 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM,LLVMCIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=LLVM,OGCG
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o
+// %t.cir RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR RUN:
+// %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o
+// %t-cir.ll RUN: FileCheck --input-file=%t-cir.ll %s
+// --check-prefixes=LLVM,LLVMCIR RUN: %clang_cc1 -triple
+// x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll RUN: FileCheck
+// --input-file=%t.ll %s --check-prefixes=LLVM,OGCG
 
-// CIR-DAG: cir.global "private" internal dso_local @f.tbl = #cir.const_array<[#cir.block_addr_info<@f, "L1"> : !cir.ptr<!void>, #cir.block_addr_info<@f, "L2"> : !cir.ptr<!void>]> : !cir.array<!cir.ptr<!void> x 2>
-// CIR-DAG: cir.global "private" internal dso_local @g.tbl = #cir.const_array<[#cir.block_addr_info<@g, "A"> : !cir.ptr<!void>, #cir.block_addr_info<@g, "A"> : !cir.ptr<!void>, #cir.block_addr_info<@g, "B"> : !cir.ptr<!void>]> : !cir.array<!cir.ptr<!void> x 3>
-// CIR-DAG: cir.global "private" internal dso_local @h.tbl = #cir.const_array<[#cir.block_addr_info<@h, "L1"> : !cir.ptr<!void>]> : !cir.array<!cir.ptr<!void> x 1>
-// CIR-DAG: cir.global "private" internal dso_local @m.ctbl = #cir.const_array<[#cir.block_addr_info<@m, "A2"> : !cir.ptr<!void>]> : !cir.array<!cir.ptr<!void> x 1>
+// CIR-DAG: cir.global "private" internal dso_local @f.tbl =
+// #cir.const_array<[#cir.block_addr_info<@f, "L1"> : !cir.ptr<!void>,
+// #cir.block_addr_info<@f, "L2"> : !cir.ptr<!void>]> :
+// !cir.array<!cir.ptr<!void> x 2> CIR-DAG: cir.global "private" internal
+// dso_local @g.tbl = #cir.const_array<[#cir.block_addr_info<@g, "A"> :
+// !cir.ptr<!void>, #cir.block_addr_info<@g, "A"> : !cir.ptr<!void>,
+// #cir.block_addr_info<@g, "B"> : !cir.ptr<!void>]> :
+// !cir.array<!cir.ptr<!void> x 3> CIR-DAG: cir.global "private" internal
+// dso_local @h.tbl = #cir.const_array<[#cir.block_addr_info<@h, "L1"> :
+// !cir.ptr<!void>]> : !cir.array<!cir.ptr<!void> x 1> CIR-DAG: cir.global
+// "private" internal dso_local @m.ctbl =
+// #cir.const_array<[#cir.block_addr_info<@m, "A2"> : !cir.ptr<!void>]> :
+// !cir.array<!cir.ptr<!void> x 1>
 
-// LLVM-DAG: @f.tbl = internal global [2 x ptr] [ptr blockaddress(@f, %[[FL1:[0-9a-zA-Z_.]+]]), ptr blockaddress(@f, %[[FL2:[0-9a-zA-Z_.]+]])], align 16
-// LLVM-DAG: @g.tbl = internal global [3 x ptr] [ptr blockaddress(@g, %[[GA:[0-9a-zA-Z_.]+]]), ptr blockaddress(@g, %[[GA]]), ptr blockaddress(@g, %[[GB:[0-9a-zA-Z_.]+]])], align 16
-// LLVM-DAG: @h.tbl = internal global [1 x ptr] [ptr blockaddress(@h, %{{[0-9a-zA-Z_.]+}})], align 8
-// LLVM-DAG: @m.ctbl = internal global [1 x ptr] [ptr blockaddress(@m, %[[MA2:[0-9a-zA-Z_.]+]])], align 8
+// LLVM-DAG: @f.tbl = internal global [2 x ptr] [ptr blockaddress(@f,
+// %[[FL1:[0-9a-zA-Z_.]+]]), ptr blockaddress(@f, %[[FL2:[0-9a-zA-Z_.]+]])],
+// align 16 LLVM-DAG: @g.tbl = internal global [3 x ptr] [ptr blockaddress(@g,
+// %[[GA:[0-9a-zA-Z_.]+]]), ptr blockaddress(@g, %[[GA]]), ptr blockaddress(@g,
+// %[[GB:[0-9a-zA-Z_.]+]])], align 16 LLVM-DAG: @h.tbl = internal global [1 x
+// ptr] [ptr blockaddress(@h, %{{[0-9a-zA-Z_.]+}})], align 8 LLVM-DAG: @m.ctbl =
+// internal global [1 x ptr] [ptr blockaddress(@m, %[[MA2:[0-9a-zA-Z_.]+]])],
+// align 8
 
 int f(int x) {
   static const void *tbl[] = {&&L1, &&L2};

@@ -14,15 +14,23 @@
 // Check code object compatibility for archive unbundling
 //
 // Create an object bundle
-// RUN: clang-offload-bundler -type=o -targets=host-x86_64-unknown-linux-gnu,hip-amdgpu-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx908,hip-spirv64-amd-amdhsa--amdgcnspirv -input=%t.o -input=%t.tgt1 -input=%t.tgt2 -input=%t.tgt3 -output=%t.bundle
+// RUN: clang-offload-bundler -type=o
+// -targets=host-x86_64-unknown-linux-gnu,hip-amdgpu-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx908,hip-spirv64-amd-amdhsa--amdgcnspirv
+// -input=%t.o -input=%t.tgt1 -input=%t.tgt2 -input=%t.tgt3 -output=%t.bundle
 
-// RUN: clang-offload-bundler -unbundle -type=o -targets=hip-amdgpu-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx908,hip-spirv64-amd-amdhsa--amdgcnspirv -input=%t.bundle -output=%t-hip-amdgcn-amd-amdhsa--gfx906.bc -output=%t-hip-amdgcn-amd-amdhsa--gfx908.bc -output=%t-hip-spirv64-amd-amdhsa--amdgcnspirv.bc -debug-only=CodeObjectCompatibility 2>&1 | FileCheck %s -check-prefix=BUNDLE
-// BUNDLE: Compatible: Exact match: [CodeObject: hip-amdgpu-amd-amdhsa--gfx906] : [Target: hip-amdgpu-amd-amdhsa--gfx906]
-// BUNDLE: Compatible: Exact match: [CodeObject: hip-amdgcn-amd-amdhsa--gfx908] : [Target: hip-amdgcn-amd-amdhsa--gfx908]
-// BUNDLE: Compatible: Exact match: [CodeObject: hip-spirv64-amd-amdhsa--amdgcnspirv] : [Target: hip-spirv64-amd-amdhsa--amdgcnspirv]
+// RUN: clang-offload-bundler -unbundle -type=o
+// -targets=hip-amdgpu-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx908,hip-spirv64-amd-amdhsa--amdgcnspirv
+// -input=%t.bundle -output=%t-hip-amdgcn-amd-amdhsa--gfx906.bc
+// -output=%t-hip-amdgcn-amd-amdhsa--gfx908.bc
+// -output=%t-hip-spirv64-amd-amdhsa--amdgcnspirv.bc
+// -debug-only=CodeObjectCompatibility 2>&1 | FileCheck %s -check-prefix=BUNDLE
+// BUNDLE: Compatible: Exact match: [CodeObject: hip-amdgpu-amd-amdhsa--gfx906]
+// : [Target: hip-amdgpu-amd-amdhsa--gfx906] BUNDLE: Compatible: Exact match:
+// [CodeObject: hip-amdgcn-amd-amdhsa--gfx908] : [Target:
+// hip-amdgcn-amd-amdhsa--gfx908] BUNDLE: Compatible: Exact match: [CodeObject:
+// hip-spirv64-amd-amdhsa--amdgcnspirv] : [Target:
+// hip-spirv64-amd-amdhsa--amdgcnspirv]
 
 // Some code so that we can create a binary out of this file.
 int A = 0;
-void test_func(void) {
-  ++A;
-}
+void test_func(void) { ++A; }

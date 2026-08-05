@@ -805,7 +805,7 @@ public:
       : Base{*this}, scope_{scope}, map_{map} {}
   using Base::operator();
   bool operator()(const SymbolRef &ref) {
-    if (const Symbol *mapped{MapSymbol(*ref)}) {
+    if (const Symbol * mapped{MapSymbol(*ref)}) {
       const_cast<SymbolRef &>(ref) = *mapped;
     } else if (ref->has<UseDetails>()) {
       CopySymbol(&*ref);
@@ -934,7 +934,7 @@ const DeclTypeSpec *SymbolMapper::MapType(const DeclTypeSpec &type) {
       newType = &scope_.MakeCharacterType(
           std::move(newLen), KindExpr{charType.kind()});
     }
-  } else if (const DerivedTypeSpec *derived{type.AsDerived()}) {
+  } else if (const DerivedTypeSpec * derived{type.AsDerived()}) {
     if (!derived->parameters().empty()) {
       DerivedTypeSpec newDerived{derived->name(), derived->typeSymbol()};
       newDerived.CookParameters(scope_.context().foldingContext());
@@ -958,7 +958,7 @@ const DeclTypeSpec *SymbolMapper::MapType(const DeclTypeSpec *type) {
 }
 
 const Symbol *SymbolMapper::MapInterface(const Symbol *interface) {
-  if (const Symbol *mapped{MapSymbol(interface)}) {
+  if (const Symbol * mapped{MapSymbol(interface)}) {
     return mapped;
   }
   if (interface) {

@@ -311,7 +311,7 @@ ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
   }
 
   clang::HeaderSearch &HS =
-    m_compiler_instance->getPreprocessor().getHeaderSearchInfo();
+      m_compiler_instance->getPreprocessor().getHeaderSearchInfo();
 
   if (module.search_path) {
     auto path_begin = llvm::sys::path::begin(module.search_path.GetStringRef());
@@ -384,7 +384,8 @@ ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
 
   clang::Module *submodule = top_level_module;
 
-  for (auto &component : llvm::ArrayRef<ConstString>(module.path).drop_front()) {
+  for (auto &component :
+       llvm::ArrayRef<ConstString>(module.path).drop_front()) {
     clang::Module *found = submodule->findSubmodule(component.GetStringRef());
     if (!found) {
       lldb_private::StreamString error_stream;

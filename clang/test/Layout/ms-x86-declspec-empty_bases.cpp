@@ -24,8 +24,7 @@ struct B {
 };
 struct C {};
 struct __declspec(align(16)) D {};
-struct __declspec(empty_bases) X : A, D, B, C {
-};
+struct __declspec(empty_bases) X : A, D, B, C {};
 
 // CHECK: *** Dumping AST Record Layout
 // CHECK-NEXT:          0 | struct test1::A
@@ -61,7 +60,7 @@ struct __declspec(empty_bases) X : A, D, B, C {
 // CHECK-NEXT:            |  nvsize=16, nvalign=16]
 
 int _ = sizeof(X);
-}
+} // namespace test1
 
 namespace test2 {
 struct A {
@@ -132,7 +131,7 @@ int _ = sizeof(G);
 // CHECK-NEXT:          8 |       int e
 // CHECK-NEXT:            | [sizeof=12, align=4,
 // CHECK-NEXT:            |  nvsize=12, nvalign=4]
-}
+} // namespace test2
 
 namespace test3 {
 struct A {
@@ -203,7 +202,7 @@ int _ = sizeof(G);
 // CHECK-NEXT:          8 |       int e
 // CHECK-NEXT:            | [sizeof=12, align=4,
 // CHECK-NEXT:            |  nvsize=12, nvalign=4]
-}
+} // namespace test3
 
 namespace test4 {
 struct A {
@@ -274,7 +273,7 @@ int _ = sizeof(G);
 // CHECK-NEXT:          8 |       int e
 // CHECK-NEXT:            | [sizeof=12, align=4,
 // CHECK-NEXT:            |  nvsize=12, nvalign=4]
-}
+} // namespace test4
 
 namespace test5 {
 
@@ -289,8 +288,7 @@ struct __declspec(align(16)) D {};
 struct E {
   [[msvc::no_unique_address]] C c;
 };
-struct __declspec(empty_bases) X : A, D, B, C, E {
-};
+struct __declspec(empty_bases) X : A, D, B, C, E {};
 
 // CHECK: *** Dumping AST Record Layout
 // CHECK-NEXT:          0 | struct test5::A
@@ -334,4 +332,4 @@ struct __declspec(empty_bases) X : A, D, B, C, E {
 // CHECK-NEXT:            |  nvsize=16, nvalign=16]
 
 int _ = sizeof(X);
-}
+} // namespace test5

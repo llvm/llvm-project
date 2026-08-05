@@ -384,7 +384,7 @@ static void PutOpenMPRequirements(
   unsigned version{semaCtx.langOptions().OpenMPVersion};
 
   if (const auto *decls{GetOmpDeclarative(symbol)}) {
-    if (const llvm::omp::ClauseSet &reqs{decls->ompRequires()}; reqs.count()) {
+    if (const llvm::omp::ClauseSet & reqs{decls->ompRequires()}; reqs.count()) {
       os << "!$omp "
          << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
                 llvm::omp::Directive::OMPD_requires, version));
@@ -400,7 +400,7 @@ static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
 
   for (const Symbol &symbol : symbols) {
     if (const auto *decls{GetOmpDeclarative(symbol)}) {
-      if (const llvm::omp::ClauseSet &dtgt{decls->ompDeclTarget()};
+      if (const llvm::omp::ClauseSet & dtgt{decls->ompDeclTarget()};
           dtgt.count()) {
         os << "!$omp "
            << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
@@ -413,7 +413,7 @@ static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
       // Re-emit `!$omp groupprivate` (and its device_type) so a TU that `use`s
       // this module recovers the directive from the .mod file. Common-block
       // names must be wrapped in slashes when reparsed.
-      if (const llvm::omp::ClauseSet &gp{decls->ompGroupprivate()};
+      if (const llvm::omp::ClauseSet & gp{decls->ompGroupprivate()};
           gp.count()) {
         os << "!$omp "
            << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
@@ -1170,7 +1170,7 @@ void ModFileWriter::PutProcEntity(llvm::raw_ostream &os, const Symbol &symbol) {
       attrs);
   if (symbol.owner().IsDerivedType()) {
     if (const auto &init{details.init()}) {
-      if (const Symbol *symbol{*init}) {
+      if (const Symbol * symbol{*init}) {
         os << "=>" << symbol->name();
       } else {
         os << "=>NULL()";
@@ -1907,7 +1907,7 @@ void SubprogramSymbolCollector::Collect() {
         needed = needed || (spec && useSet_.count(spec->GetUltimate()) > 0) ||
             (dt && useSet_.count(dt->GetUltimate()) > 0);
       } else if (const auto *subp{ultimate.detailsIf<SubprogramDetails>()}) {
-        const Symbol *interface { subp->moduleInterface() };
+        const Symbol *interface{subp->moduleInterface()};
         needed = needed || (interface && useSet_.count(*interface) > 0);
       }
       if (needed) {
@@ -2067,7 +2067,7 @@ bool SubprogramSymbolCollector::NeedImport(
     return false;
   } else if (symbol.owner().Contains(scope_)) {
     return true;
-  } else if (const Symbol *found{scope_.FindSymbol(name)}) {
+  } else if (const Symbol * found{scope_.FindSymbol(name)}) {
     // detect import from ancestor of use-associated symbol
     return found->has<UseDetails>() && found->owner() != scope_;
   } else {

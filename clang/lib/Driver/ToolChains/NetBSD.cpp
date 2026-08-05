@@ -403,7 +403,8 @@ NetBSD::NetBSD(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
         break;
       case llvm::Triple::EABIHF:
       case llvm::Triple::GNUEABIHF:
-        getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/eabihf"));
+        getFilePaths().push_back(
+            concat(getDriver().SysRoot, "/usr/lib/eabihf"));
         break;
       default:
         getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/oabi"));
@@ -497,8 +498,8 @@ void NetBSD::AddClangSystemIncludeArgs(
 
 void NetBSD::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args) const {
-  addLibStdCXXIncludePaths(concat(getDriver().SysRoot, "/usr/include/g++"), "", "",
-                           DriverArgs, CC1Args);
+  addLibStdCXXIncludePaths(concat(getDriver().SysRoot, "/usr/include/g++"), "",
+                           "", DriverArgs, CC1Args);
 }
 
 llvm::ExceptionHandling NetBSD::GetExceptionModel(const ArgList &Args) const {

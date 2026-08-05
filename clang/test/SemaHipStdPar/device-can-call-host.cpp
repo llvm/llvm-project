@@ -31,7 +31,7 @@ struct T {
   void h() {}
 
   void operator+();
-  void operator-(const T&) {}
+  void operator-(const T &) {}
 
   operator Dummy() { return Dummy(); }
 };
@@ -47,13 +47,9 @@ __device__ void hd() { host_fn(); }
 template <typename T> __device__ void hd3() { host_fn(); }
 __device__ void device_fn() { hd3<int>(); }
 
-__device__ void local_var() {
-  S s;
-}
+__device__ void local_var() { S s; }
 
-__device__ void explicit_destructor(S *s) {
-  s->~S();
-}
+__device__ void explicit_destructor(S *s) { s->~S(); }
 
 __device__ void hd_member_fn() {
   T t;
@@ -68,12 +64,12 @@ __device__ void h_member_fn() {
 
 __device__ void unaryOp() {
   T t;
-  (void) +t;
+  (void)+t;
 }
 
 __device__ void binaryOp() {
   T t;
-  (void) (t - t);
+  (void)(t - t);
 }
 
 __device__ void implicitConversion() {
@@ -81,13 +77,12 @@ __device__ void implicitConversion() {
   Dummy d = t;
 }
 
-template <typename T>
-struct TmplStruct {
+template <typename T> struct TmplStruct {
   template <typename U> __device__ void fn() {}
 };
 
-template <>
-template <>
-__device__ void TmplStruct<int>::fn<int>() { host_fn(); }
+template <> template <> __device__ void TmplStruct<int>::fn<int>() {
+  host_fn();
+}
 
 __device__ void double_specialization() { TmplStruct<int>().fn<int>(); }

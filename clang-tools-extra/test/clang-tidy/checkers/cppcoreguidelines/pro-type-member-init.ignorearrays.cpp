@@ -8,7 +8,8 @@ using UsingArray = int[4];
 
 struct HasArrayMember {
   HasArrayMember() {}
-  // CHECK-MESSAGES: warning: constructor does not initialize these fields: Number
+  // CHECK-MESSAGES: warning: constructor does not initialize these fields:
+  // Number
   UsingArray U;
   TypedefArray T;
   int RawArray[4];
@@ -16,19 +17,17 @@ struct HasArrayMember {
 };
 
 namespace std {
-template <typename T, int N>
-struct array {
+template <typename T, int N> struct array {
   T _Elems[N];
   void fill(const T &);
 };
-}
+} // namespace std
 
-void test_local_std_array() {
-  std::array<int, 4> a;
-}
+void test_local_std_array() { std::array<int, 4> a; }
 
 struct HasStdArrayMember {
-  // CHECK-MESSAGES: warning: constructor does not initialize these fields: Number
+  // CHECK-MESSAGES: warning: constructor does not initialize these fields:
+  // Number
   HasStdArrayMember() {}
   std::array<int, 4> StdArray;
   int Number;
@@ -38,9 +37,7 @@ struct OnlyArray {
   int a[4];
 };
 
-void test_local_only_array() {
-  OnlyArray a;
-}
+void test_local_only_array() { OnlyArray a; }
 
 struct Mixed {
   int a[4];

@@ -2,69 +2,65 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 %s
 
-#define LOCKABLE            __attribute__ ((lockable))
-#define REENTRANT_CAPABILITY __attribute__ ((reentrant_capability))
-#define SCOPED_LOCKABLE     __attribute__ ((scoped_lockable))
-#define GUARDED_BY(...)     __attribute__ ((guarded_by(__VA_ARGS__)))
-#define GUARDED_VAR         __attribute__ ((guarded_var))
-#define PT_GUARDED_BY(...)  __attribute__ ((pt_guarded_by(__VA_ARGS__)))
-#define PT_GUARDED_VAR      __attribute__ ((pt_guarded_var))
-#define ACQUIRED_AFTER(...) __attribute__ ((acquired_after(__VA_ARGS__)))
-#define ACQUIRED_BEFORE(...) __attribute__ ((acquired_before(__VA_ARGS__)))
-#define EXCLUSIVE_LOCK_FUNCTION(...)    __attribute__ ((exclusive_lock_function(__VA_ARGS__)))
-#define SHARED_LOCK_FUNCTION(...)       __attribute__ ((shared_lock_function(__VA_ARGS__)))
-#define ASSERT_EXCLUSIVE_LOCK(...)      __attribute__ ((assert_exclusive_lock(__VA_ARGS__)))
-#define ASSERT_SHARED_LOCK(...)         __attribute__ ((assert_shared_lock(__VA_ARGS__)))
-#define EXCLUSIVE_TRYLOCK_FUNCTION(...) __attribute__ ((exclusive_trylock_function(__VA_ARGS__)))
-#define SHARED_TRYLOCK_FUNCTION(...)    __attribute__ ((shared_trylock_function(__VA_ARGS__)))
-#define UNLOCK_FUNCTION(...)            __attribute__ ((unlock_function(__VA_ARGS__)))
-#define LOCK_RETURNED(x)    __attribute__ ((lock_returned(x)))
-#define LOCKS_EXCLUDED(...) __attribute__ ((locks_excluded(__VA_ARGS__)))
-#define EXCLUSIVE_LOCKS_REQUIRED(...) \
-  __attribute__ ((exclusive_locks_required(__VA_ARGS__)))
-#define SHARED_LOCKS_REQUIRED(...) \
-  __attribute__ ((shared_locks_required(__VA_ARGS__)))
-#define NO_THREAD_SAFETY_ANALYSIS  __attribute__ ((no_thread_safety_analysis))
-
+#define LOCKABLE __attribute__((lockable))
+#define REENTRANT_CAPABILITY __attribute__((reentrant_capability))
+#define SCOPED_LOCKABLE __attribute__((scoped_lockable))
+#define GUARDED_BY(...) __attribute__((guarded_by(__VA_ARGS__)))
+#define GUARDED_VAR __attribute__((guarded_var))
+#define PT_GUARDED_BY(...) __attribute__((pt_guarded_by(__VA_ARGS__)))
+#define PT_GUARDED_VAR __attribute__((pt_guarded_var))
+#define ACQUIRED_AFTER(...) __attribute__((acquired_after(__VA_ARGS__)))
+#define ACQUIRED_BEFORE(...) __attribute__((acquired_before(__VA_ARGS__)))
+#define EXCLUSIVE_LOCK_FUNCTION(...)                                           \
+  __attribute__((exclusive_lock_function(__VA_ARGS__)))
+#define SHARED_LOCK_FUNCTION(...)                                              \
+  __attribute__((shared_lock_function(__VA_ARGS__)))
+#define ASSERT_EXCLUSIVE_LOCK(...)                                             \
+  __attribute__((assert_exclusive_lock(__VA_ARGS__)))
+#define ASSERT_SHARED_LOCK(...) __attribute__((assert_shared_lock(__VA_ARGS__)))
+#define EXCLUSIVE_TRYLOCK_FUNCTION(...)                                        \
+  __attribute__((exclusive_trylock_function(__VA_ARGS__)))
+#define SHARED_TRYLOCK_FUNCTION(...)                                           \
+  __attribute__((shared_trylock_function(__VA_ARGS__)))
+#define UNLOCK_FUNCTION(...) __attribute__((unlock_function(__VA_ARGS__)))
+#define LOCK_RETURNED(x) __attribute__((lock_returned(x)))
+#define LOCKS_EXCLUDED(...) __attribute__((locks_excluded(__VA_ARGS__)))
+#define EXCLUSIVE_LOCKS_REQUIRED(...)                                          \
+  __attribute__((exclusive_locks_required(__VA_ARGS__)))
+#define SHARED_LOCKS_REQUIRED(...)                                             \
+  __attribute__((shared_locks_required(__VA_ARGS__)))
+#define NO_THREAD_SAFETY_ANALYSIS __attribute__((no_thread_safety_analysis))
 
 class LOCKABLE Mutex {
-  public:
-  void Lock()          EXCLUSIVE_LOCK_FUNCTION();
-  void ReaderLock()    SHARED_LOCK_FUNCTION();
-  void Unlock()        UNLOCK_FUNCTION();
+public:
+  void Lock() EXCLUSIVE_LOCK_FUNCTION();
+  void ReaderLock() SHARED_LOCK_FUNCTION();
+  void Unlock() UNLOCK_FUNCTION();
 
-  bool TryLock()       EXCLUSIVE_TRYLOCK_FUNCTION(true);
+  bool TryLock() EXCLUSIVE_TRYLOCK_FUNCTION(true);
   bool ReaderTryLock() SHARED_TRYLOCK_FUNCTION(true);
 
-  void AssertHeld()       ASSERT_EXCLUSIVE_LOCK();
+  void AssertHeld() ASSERT_EXCLUSIVE_LOCK();
   void AssertReaderHeld() ASSERT_SHARED_LOCK();
 };
 
-class UnlockableMu{
-};
+class UnlockableMu {};
 
 class MuWrapper {
-  public:
+public:
   Mutex mu;
-  Mutex getMu() {
-    return mu;
-  }
-  Mutex * getMuPointer() {
-    return &mu;
-  }
+  Mutex getMu() { return mu; }
+  Mutex *getMuPointer() { return &mu; }
 };
 
-
 class MuDoubleWrapper {
-  public:
-  MuWrapper* muWrapper;
-  MuWrapper* getWrapper() {
-    return muWrapper;
-  }
+public:
+  MuWrapper *muWrapper;
+  MuWrapper *getWrapper() { return muWrapper; }
 };
 
 class SCOPED_LOCKABLE MutexLock {
- public:
+public:
   MutexLock(Mutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
   ~MutexLock() UNLOCK_FUNCTION();
 };
@@ -74,9 +70,9 @@ UnlockableMu umu;
 Mutex mu2;
 MuWrapper muWrapper;
 MuDoubleWrapper muDoubleWrapper;
-Mutex* muPointer;
-Mutex** muDoublePointer = & muPointer;
-Mutex& muRef = mu1;
+Mutex *muPointer;
+Mutex **muDoublePointer = &muPointer;
+Mutex &muRef = mu1;
 
 //---------------------------------------//
 // Scoping tests
@@ -93,10 +89,9 @@ class Foo2 {
 };
 
 class Bar {
- Mutex barmu;
- Mutex barmu2 ACQUIRED_AFTER(barmu);
+  Mutex barmu;
+  Mutex barmu2 ACQUIRED_AFTER(barmu);
 };
-
 
 //-----------------------------------------//
 //   No Thread Safety Analysis (noanal)    //
@@ -126,7 +121,7 @@ int noanal_test_var NO_THREAD_SAFETY_ANALYSIS; // \
   // expected-warning {{'no_thread_safety_analysis' attribute only applies to functions}}
 
 class NoanalFoo {
- private:
+private:
   int test_field NO_THREAD_SAFETY_ANALYSIS; // \
     // expected-warning {{'no_thread_safety_analysis' attribute only applies to functions}}
   void test_method() NO_THREAD_SAFETY_ANALYSIS;
@@ -138,7 +133,6 @@ class NO_THREAD_SAFETY_ANALYSIS NoanalTestClass { // \
 
 void noanal_fun_params(int lvar NO_THREAD_SAFETY_ANALYSIS); // \
   // expected-warning {{'no_thread_safety_analysis' attribute only applies to functions}}
-
 
 //-----------------------------------------//
 //  Guarded Var Attribute (gv)
@@ -154,7 +148,7 @@ int gv_var_args __attribute__((guarded_var(1))); // \
   // expected-error {{'guarded_var' attribute takes no arguments}}
 
 class GVFoo {
- private:
+private:
   int gv_field_noargs GUARDED_VAR;
   int gv_field_args __attribute__((guarded_var(1))); // \
     // expected-error {{'guarded_var' attribute takes no arguments}}
@@ -170,7 +164,7 @@ void gv_function() GUARDED_VAR; // \
 void gv_function_params(int gv_lvar GUARDED_VAR); // \
   // expected-warning {{'guarded_var' attribute only applies to}}
 
-int gv_testfn(int y){
+int gv_testfn(int y) {
   int x GUARDED_VAR = y; // \
     // expected-warning {{'guarded_var' attribute only applies to}}
   return x;
@@ -180,7 +174,7 @@ int gv_testfn(int y){
 //   Pt Guarded Var Attribute (pgv)
 //-----------------------------------------//
 
-//FIXME: add support for boost::scoped_ptr<int> fancyptr  and references
+// FIXME: add support for boost::scoped_ptr<int> fancyptr  and references
 
 #if !__has_attribute(pt_guarded_var)
 #error "Should support pt_guarded_var attribute"
@@ -192,9 +186,9 @@ int pgv_var_noargs PT_GUARDED_VAR; // \
     // expected-warning {{'pt_guarded_var' only applies to pointer types; type here is 'int'}}
 
 class PGVFoo {
- private:
+private:
   int *pt_field_noargs PT_GUARDED_VAR;
-  int field_noargs PT_GUARDED_VAR; // \
+  int field_noargs PT_GUARDED_VAR;                       // \
     // expected-warning {{'pt_guarded_var' only applies to pointer types; type here is 'int'}}
   int *gv_field_args __attribute__((pt_guarded_var(1))); // \
     // expected-error {{'pt_guarded_var' attribute takes no arguments}}
@@ -207,14 +201,13 @@ class PT_GUARDED_VAR PGV { // \
 int *pgv_var_args __attribute__((pt_guarded_var(1))); // \
   // expected-error {{'pt_guarded_var' attribute takes no arguments}}
 
-
 void pgv_function() PT_GUARDED_VAR; // \
   // expected-warning {{'pt_guarded_var' attribute only applies to}}
 
 void pgv_function_params(int *gv_lvar PT_GUARDED_VAR); // \
   // expected-warning {{'pt_guarded_var' attribute only applies to}}
 
-void pgv_testfn(int y){
+void pgv_testfn(int y) {
   int *x PT_GUARDED_VAR = new int(0); // \
     // expected-warning {{'pt_guarded_var' attribute only applies to}}
   delete x;
@@ -224,20 +217,19 @@ void pgv_testfn(int y){
 //  Lockable Attribute (l)
 //-----------------------------------------//
 
-//FIXME: In future we may want to add support for structs, ObjC classes, etc.
+// FIXME: In future we may want to add support for structs, ObjC classes, etc.
 
 #if !__has_attribute(lockable)
 #error "Should support lockable attribute"
 #endif
 
-class LOCKABLE LTestClass {
-};
+class LOCKABLE LTestClass {};
 
-class __attribute__((lockable (1))) LTestClass_args { // \
+class __attribute__((lockable(1))) LTestClass_args { // \
     // expected-error {{'lockable' attribute takes no arguments}}
 };
 
-void l_test_function() LOCKABLE;  // \
+void l_test_function() LOCKABLE; // \
   // expected-warning {{'lockable' attribute only applies to structs, unions, and classes}}
 
 int l_testfn(int y) {
@@ -250,19 +242,17 @@ int l_test_var LOCKABLE; // \
   // expected-warning {{'lockable' attribute only applies to}}
 
 class LFoo {
- private:
-  int test_field LOCKABLE; // \
+private:
+  int test_field LOCKABLE;     // \
     // expected-warning {{'lockable' attribute only applies to}}
   void test_method() LOCKABLE; // \
     // expected-warning {{'lockable' attribute only applies to}}
 };
 
-
 void l_function_params(int lvar LOCKABLE); // \
   // expected-warning {{'lockable' attribute only applies to}}
 
-class LOCKABLE REENTRANT_CAPABILITY LTestReentrant {
-};
+class LOCKABLE REENTRANT_CAPABILITY LTestReentrant {};
 
 // Attribute order does matter.
 class REENTRANT_CAPABILITY LOCKABLE LTestReentrantWrongOrder { // \
@@ -281,14 +271,13 @@ class REENTRANT_CAPABILITY LTestReentrantOnly { // \
 #error "Should support scoped_lockable attribute"
 #endif
 
-class SCOPED_LOCKABLE SLTestClass {
-};
+class SCOPED_LOCKABLE SLTestClass {};
 
-class __attribute__((scoped_lockable (1))) SLTestClass_args { // \
+class __attribute__((scoped_lockable(1))) SLTestClass_args { // \
   // expected-error {{'scoped_lockable' attribute takes no arguments}}
 };
 
-void sl_test_function() SCOPED_LOCKABLE;  // \
+void sl_test_function() SCOPED_LOCKABLE; // \
   // expected-warning {{'scoped_lockable' attribute only applies to structs, unions, and classes}}
 
 int sl_testfn(int y) {
@@ -301,17 +290,15 @@ int sl_test_var SCOPED_LOCKABLE; // \
   // expected-warning {{'scoped_lockable' attribute only applies to}}
 
 class SLFoo {
- private:
-  int test_field SCOPED_LOCKABLE; // \
+private:
+  int test_field SCOPED_LOCKABLE;     // \
     // expected-warning {{'scoped_lockable' attribute only applies to}}
   void test_method() SCOPED_LOCKABLE; // \
     // expected-warning {{'scoped_lockable' attribute only applies to}}
 };
 
-
 void sl_function_params(int lvar SCOPED_LOCKABLE); // \
   // expected-warning {{'scoped_lockable' attribute only applies to}}
-
 
 //-----------------------------------------//
 //  Guarded By Attribute (gb)
@@ -321,11 +308,13 @@ void sl_function_params(int lvar SCOPED_LOCKABLE); // \
 #error "Should support guarded_by attribute"
 #endif
 
-//1. Check applied to the right types & argument number
+// 1. Check applied to the right types & argument number
 
 int gb_var_arg GUARDED_BY(mu1);
 
-int gb_non_ascii GUARDED_BY(L"wide"); // expected-warning {{ignoring 'guarded_by' attribute because its argument is invalid}}
+int gb_non_ascii
+    GUARDED_BY(L"wide"); // expected-warning {{ignoring 'guarded_by' attribute
+                         // because its argument is invalid}}
 
 int gb_var_args GUARDED_BY(mu1, mu2);
 
@@ -333,7 +322,7 @@ int gb_var_noargs __attribute__((guarded_by)); // \
   // expected-error {{'guarded_by' attribute takes at least 1 argument}}
 
 class GBFoo {
- private:
+private:
   int gb_field_noargs __attribute__((guarded_by)); // \
     // expected-error {{'guarded_by' attribute takes at least 1 argument}}
   int gb_field_args GUARDED_BY(mu1);
@@ -350,13 +339,13 @@ void gb_function() GUARDED_BY(mu1); // \
 void gb_function_params(int gv_lvar GUARDED_BY(mu1)); // \
   // expected-warning {{'guarded_by' attribute only applies to}}
 
-int gb_testfn(int y){
+int gb_testfn(int y) {
   int x GUARDED_BY(mu1) = y; // \
     // expected-warning {{'guarded_by' attribute only applies to}}
   return x;
 }
 
-//2. Check argument parsing.
+// 2. Check argument parsing.
 
 // legal attribute arguments
 int gb_var_arg_1 GUARDED_BY(muWrapper.mu);
@@ -371,18 +360,17 @@ int gb_var_arg_9 GUARDED_BY(!&mu1);
 int gb_var_arg_10 GUARDED_BY(!&*&mu1);
 
 // illegal attribute arguments
-int gb_var_arg_bad_1 GUARDED_BY(1); // \
+int gb_var_arg_bad_1 GUARDED_BY(1);               // \
   // expected-warning {{'guarded_by' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'int'}}
-int gb_var_arg_bad_2 GUARDED_BY("mu"); // \
+int gb_var_arg_bad_2 GUARDED_BY("mu");            // \
   // expected-warning {{ignoring 'guarded_by' attribute because its argument is invalid}}
 int gb_var_arg_bad_3 GUARDED_BY(muDoublePointer); // \
   // expected-warning {{'guarded_by' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Mutex **'}}
-int gb_var_arg_bad_4 GUARDED_BY(umu); // \
+int gb_var_arg_bad_4 GUARDED_BY(umu);             // \
   // expected-warning {{'guarded_by' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'UnlockableMu'}}
 
-//3.
-// Thread Safety analysis tests
-
+// 3.
+//  Thread Safety analysis tests
 
 //-----------------------------------------//
 //  Pt Guarded By Attribute (pgb)
@@ -392,7 +380,7 @@ int gb_var_arg_bad_4 GUARDED_BY(umu); // \
 #error "Should support pt_guarded_by attribute"
 #endif
 
-//1. Check applied to the right types & argument number
+// 1. Check applied to the right types & argument number
 
 int *pgb_var_noargs __attribute__((pt_guarded_by)); // \
   // expected-error {{'pt_guarded_by' attribute takes at least 1 argument}}
@@ -405,7 +393,7 @@ int pgb_var_args PT_GUARDED_BY(mu1); // \
   // expected-warning {{'pt_guarded_by' only applies to pointer types; type here is 'int'}}
 
 class PGBFoo {
- private:
+private:
   int *pgb_field_noargs __attribute__((pt_guarded_by)); // \
     // expected-error {{'pt_guarded_by' attribute takes at least 1 argument}}
   int *pgb_field_args PT_GUARDED_BY(mu1);
@@ -422,35 +410,33 @@ void pgb_function() PT_GUARDED_BY(mu1); // \
 void pgb_function_params(int gv_lvar PT_GUARDED_BY(mu1)); // \
   // expected-warning {{'pt_guarded_by' attribute only applies to}}
 
-void pgb_testfn(int y){
+void pgb_testfn(int y) {
   int *x PT_GUARDED_BY(mu1) = new int(0); // \
     // expected-warning {{'pt_guarded_by' attribute only applies to}}
   delete x;
 }
 
-//2. Check argument parsing.
+// 2. Check argument parsing.
 
 // legal attribute arguments
-int * pgb_var_arg_1 PT_GUARDED_BY(muWrapper.mu);
-int * pgb_var_arg_2 PT_GUARDED_BY(muDoubleWrapper.muWrapper->mu);
-int * pgb_var_arg_3 PT_GUARDED_BY(muWrapper.getMu());
-int * pgb_var_arg_4 PT_GUARDED_BY(*muWrapper.getMuPointer());
-int * pgb_var_arg_5 PT_GUARDED_BY(&mu1);
-int * pgb_var_arg_6 PT_GUARDED_BY(muRef);
-int * pgb_var_arg_7 PT_GUARDED_BY(muDoubleWrapper.getWrapper()->getMu());
-int * pgb_var_arg_8 PT_GUARDED_BY(muPointer);
-
+int *pgb_var_arg_1 PT_GUARDED_BY(muWrapper.mu);
+int *pgb_var_arg_2 PT_GUARDED_BY(muDoubleWrapper.muWrapper->mu);
+int *pgb_var_arg_3 PT_GUARDED_BY(muWrapper.getMu());
+int *pgb_var_arg_4 PT_GUARDED_BY(*muWrapper.getMuPointer());
+int *pgb_var_arg_5 PT_GUARDED_BY(&mu1);
+int *pgb_var_arg_6 PT_GUARDED_BY(muRef);
+int *pgb_var_arg_7 PT_GUARDED_BY(muDoubleWrapper.getWrapper()->getMu());
+int *pgb_var_arg_8 PT_GUARDED_BY(muPointer);
 
 // illegal attribute arguments
-int * pgb_var_arg_bad_1 PT_GUARDED_BY(1); // \
+int *pgb_var_arg_bad_1 PT_GUARDED_BY(1);               // \
   // expected-warning {{'pt_guarded_by' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'int'}}
-int * pgb_var_arg_bad_2 PT_GUARDED_BY("mu"); // \
+int *pgb_var_arg_bad_2 PT_GUARDED_BY("mu");            // \
   // expected-warning {{ignoring 'pt_guarded_by' attribute because its argument is invalid}}
-int * pgb_var_arg_bad_3 PT_GUARDED_BY(muDoublePointer); // \
+int *pgb_var_arg_bad_3 PT_GUARDED_BY(muDoublePointer); // \
   // expected-warning {{'pt_guarded_by' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Mutex **'}}
-int * pgb_var_arg_bad_4 PT_GUARDED_BY(umu); // \
+int *pgb_var_arg_bad_4 PT_GUARDED_BY(umu);             // \
   // expected-warning {{'pt_guarded_by' attribute requires arguments whose type is annotated with 'capability' attribute}}
-
 
 //-----------------------------------------//
 //  Acquired After (aa)
@@ -468,7 +454,7 @@ Mutex aa_var_noargs __attribute__((acquired_after)); // \
   // expected-error {{'acquired_after' attribute takes at least 1 argument}}
 
 class AAFoo {
- private:
+private:
   Mutex aa_field_noargs __attribute__((acquired_after)); // \
     // expected-error {{'acquired_after' attribute takes at least 1 argument}}
   Mutex aa_field_args ACQUIRED_AFTER(mu1);
@@ -484,12 +470,12 @@ void aa_function() ACQUIRED_AFTER(mu1); // \
 void aa_function_params(int gv_lvar ACQUIRED_AFTER(mu1)); // \
   // expected-warning {{'acquired_after' attribute only applies to}}
 
-void aa_testfn(int y){
+void aa_testfn(int y) {
   Mutex x ACQUIRED_AFTER(mu1) = Mutex(); // \
     // expected-warning {{'acquired_after' attribute only applies to}}
 }
 
-//Check argument parsing.
+// Check argument parsing.
 
 // legal attribute arguments
 Mutex aa_var_arg_1 ACQUIRED_AFTER(muWrapper.mu);
@@ -501,17 +487,16 @@ Mutex aa_var_arg_6 ACQUIRED_AFTER(muRef);
 Mutex aa_var_arg_7 ACQUIRED_AFTER(muDoubleWrapper.getWrapper()->getMu());
 Mutex aa_var_arg_8 ACQUIRED_AFTER(muPointer);
 
-
 // illegal attribute arguments
-Mutex aa_var_arg_bad_1 ACQUIRED_AFTER(1); // \
+Mutex aa_var_arg_bad_1 ACQUIRED_AFTER(1);               // \
   // expected-warning {{'acquired_after' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'int'}}
-Mutex aa_var_arg_bad_2 ACQUIRED_AFTER("mu"); // \
+Mutex aa_var_arg_bad_2 ACQUIRED_AFTER("mu");            // \
   // expected-warning {{ignoring 'acquired_after' attribute because its argument is invalid}}
 Mutex aa_var_arg_bad_3 ACQUIRED_AFTER(muDoublePointer); // \
   // expected-warning {{'acquired_after' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Mutex **'}}
-Mutex aa_var_arg_bad_4 ACQUIRED_AFTER(umu); // \
+Mutex aa_var_arg_bad_4 ACQUIRED_AFTER(umu);             // \
   // expected-warning {{'acquired_after' attribute requires arguments whose type is annotated with 'capability' attribute}}
-UnlockableMu aa_var_arg_bad_5 ACQUIRED_AFTER(mu_aa); // \
+UnlockableMu aa_var_arg_bad_5 ACQUIRED_AFTER(mu_aa);    // \
   // expected-warning {{'acquired_after' attribute can only be applied in a context annotated with 'capability' attribute}}
 
 //-----------------------------------------//
@@ -528,7 +513,7 @@ Mutex ab_var_noargs __attribute__((acquired_before)); // \
   // expected-error {{'acquired_before' attribute takes at least 1 argument}}
 
 class ABFoo {
- private:
+private:
   Mutex ab_field_noargs __attribute__((acquired_before)); // \
     // expected-error {{'acquired_before' attribute takes at least 1 argument}}
   Mutex ab_field_args ACQUIRED_BEFORE(mu1);
@@ -544,7 +529,7 @@ void ab_function() ACQUIRED_BEFORE(mu1); // \
 void ab_function_params(int gv_lvar ACQUIRED_BEFORE(mu1)); // \
   // expected-warning {{'acquired_before' attribute only applies to}}
 
-void ab_testfn(int y){
+void ab_testfn(int y) {
   Mutex x ACQUIRED_BEFORE(mu1) = Mutex(); // \
     // expected-warning {{'acquired_before' attribute only applies to}}
 }
@@ -552,7 +537,7 @@ void ab_testfn(int y){
 // Note: illegal int ab_int ACQUIRED_BEFORE(mu1) will
 // be taken care of by warnings that ab__int is not lockable.
 
-//Check argument parsing.
+// Check argument parsing.
 
 // legal attribute arguments
 Mutex ab_var_arg_1 ACQUIRED_BEFORE(muWrapper.mu);
@@ -564,19 +549,17 @@ Mutex ab_var_arg_6 ACQUIRED_BEFORE(muRef);
 Mutex ab_var_arg_7 ACQUIRED_BEFORE(muDoubleWrapper.getWrapper()->getMu());
 Mutex ab_var_arg_8 ACQUIRED_BEFORE(muPointer);
 
-
 // illegal attribute arguments
-Mutex ab_var_arg_bad_1 ACQUIRED_BEFORE(1); // \
+Mutex ab_var_arg_bad_1 ACQUIRED_BEFORE(1);               // \
   // expected-warning {{'acquired_before' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'int'}}
-Mutex ab_var_arg_bad_2 ACQUIRED_BEFORE("mu"); // \
+Mutex ab_var_arg_bad_2 ACQUIRED_BEFORE("mu");            // \
   // expected-warning {{ignoring 'acquired_before' attribute because its argument is invalid}}
 Mutex ab_var_arg_bad_3 ACQUIRED_BEFORE(muDoublePointer); // \
   // expected-warning {{'acquired_before' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Mutex **'}}
-Mutex ab_var_arg_bad_4 ACQUIRED_BEFORE(umu); // \
+Mutex ab_var_arg_bad_4 ACQUIRED_BEFORE(umu);             // \
   // expected-warning {{'acquired_before' attribute requires arguments whose type is annotated with 'capability' attribute}}
-UnlockableMu ab_var_arg_bad_5 ACQUIRED_BEFORE(mu_ab); // \
+UnlockableMu ab_var_arg_bad_5 ACQUIRED_BEFORE(mu_ab);    // \
   // expected-warning {{'acquired_before' attribute can only be applied in a context annotated with 'capability' attribute}}
-
 
 //-----------------------------------------//
 //  Exclusive Lock Function (elf)
@@ -588,11 +571,19 @@ UnlockableMu ab_var_arg_bad_5 ACQUIRED_BEFORE(mu_ab); // \
 
 // takes zero or more arguments, all locks (vars/fields)
 
-void elf_function() EXCLUSIVE_LOCK_FUNCTION(); // expected-warning {{'exclusive_lock_function' attribute without capability arguments can only be applied to non-static methods of a class}}
+void elf_function()
+    EXCLUSIVE_LOCK_FUNCTION(); // expected-warning {{'exclusive_lock_function'
+                               // attribute without capability arguments can
+                               // only be applied to non-static methods of a
+                               // class}}
 
 void elf_function_args() EXCLUSIVE_LOCK_FUNCTION(mu1, mu2);
 
-int elf_testfn(int y) EXCLUSIVE_LOCK_FUNCTION(); // expected-warning {{'exclusive_lock_function' attribute without capability arguments can only be applied to non-static methods of a class}}
+int elf_testfn(int y)
+    EXCLUSIVE_LOCK_FUNCTION(); // expected-warning {{'exclusive_lock_function'
+                               // attribute without capability arguments can
+                               // only be applied to non-static methods of a
+                               // class}}
 
 int elf_testfn(int y) {
   int x EXCLUSIVE_LOCK_FUNCTION() = y; // \
@@ -604,8 +595,8 @@ int elf_test_var EXCLUSIVE_LOCK_FUNCTION(); // \
   // expected-warning {{'exclusive_lock_function' attribute on a variable requires the variable to be of function pointer type}}
 
 class ElfFoo {
- private:
-  int test_field EXCLUSIVE_LOCK_FUNCTION(); // \
+private:
+  int test_field EXCLUSIVE_LOCK_FUNCTION();     // \
     // expected-warning {{'exclusive_lock_function' attribute on a field requires the field to be of function pointer type}}
   void test_method() EXCLUSIVE_LOCK_FUNCTION(); // \
     // expected-warning {{'exclusive_lock_function' attribute without capability arguments refers to 'this', but 'ElfFoo' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
@@ -615,10 +606,10 @@ class EXCLUSIVE_LOCK_FUNCTION() ElfTestClass { // \
   // expected-warning {{'exclusive_lock_function' attribute only applies to functions, variables, and non-static data members}}
 };
 
-void elf_fun_params1(MutexLock& scope EXCLUSIVE_LOCK_FUNCTION(mu1));
-void elf_fun_params2(int lvar EXCLUSIVE_LOCK_FUNCTION(mu1)); // \
+void elf_fun_params1(MutexLock &scope EXCLUSIVE_LOCK_FUNCTION(mu1));
+void elf_fun_params2(int lvar EXCLUSIVE_LOCK_FUNCTION(mu1));      // \
   // expected-warning{{'exclusive_lock_function' attribute applies to function parameters only if their type is a function pointer or a reference to a 'scoped_lockable'-annotated type}}
-void elf_fun_params3(MutexLock& scope EXCLUSIVE_LOCK_FUNCTION()); // \
+void elf_fun_params3(MutexLock &scope EXCLUSIVE_LOCK_FUNCTION()); // \
   // expected-warning{{'exclusive_lock_function' attribute without capability arguments can only be applied to non-static methods of a class}}
 
 // Check argument parsing.
@@ -630,47 +621,46 @@ int elf_function_3() EXCLUSIVE_LOCK_FUNCTION(muWrapper.getMu());
 int elf_function_4() EXCLUSIVE_LOCK_FUNCTION(*muWrapper.getMuPointer());
 int elf_function_5() EXCLUSIVE_LOCK_FUNCTION(&mu1);
 int elf_function_6() EXCLUSIVE_LOCK_FUNCTION(muRef);
-int elf_function_7() EXCLUSIVE_LOCK_FUNCTION(muDoubleWrapper.getWrapper()->getMu());
+int elf_function_7()
+    EXCLUSIVE_LOCK_FUNCTION(muDoubleWrapper.getWrapper()->getMu());
 int elf_function_8() EXCLUSIVE_LOCK_FUNCTION(muPointer);
 int elf_function_9(Mutex x) EXCLUSIVE_LOCK_FUNCTION(1);
-int elf_function_9(Mutex x, Mutex y) EXCLUSIVE_LOCK_FUNCTION(1,2);
-
+int elf_function_9(Mutex x, Mutex y) EXCLUSIVE_LOCK_FUNCTION(1, 2);
 
 // illegal attribute arguments
-int elf_function_bad_2() EXCLUSIVE_LOCK_FUNCTION("mu"); // \
+int elf_function_bad_2() EXCLUSIVE_LOCK_FUNCTION("mu");            // \
   // expected-warning {{ignoring 'exclusive_lock_function' attribute because its argument is invalid}}
 int elf_function_bad_3() EXCLUSIVE_LOCK_FUNCTION(muDoublePointer); // \
   // expected-warning {{'exclusive_lock_function' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Mutex **'}}
-int elf_function_bad_4() EXCLUSIVE_LOCK_FUNCTION(umu); // \
+int elf_function_bad_4() EXCLUSIVE_LOCK_FUNCTION(umu);             // \
   // expected-warning {{'exclusive_lock_function' attribute requires arguments whose type is annotated with 'capability' attribute}}
 
-int elf_function_bad_1() EXCLUSIVE_LOCK_FUNCTION(1); // \
+int elf_function_bad_1() EXCLUSIVE_LOCK_FUNCTION(1);                 // \
   // expected-error {{'exclusive_lock_function' attribute parameter 1 is out of bounds: no parameters to index into}}
-int elf_function_bad_5(Mutex x) EXCLUSIVE_LOCK_FUNCTION(0); // \
+int elf_function_bad_5(Mutex x) EXCLUSIVE_LOCK_FUNCTION(0);          // \
   // expected-error {{'exclusive_lock_function' attribute parameter 1 is out of bounds: can only be 1, since there is one parameter}}
 int elf_function_bad_6(Mutex x, Mutex y) EXCLUSIVE_LOCK_FUNCTION(0); // \
   // expected-error {{'exclusive_lock_function' attribute parameter 1 is out of bounds: must be between 1 and 2}}
-int elf_function_bad_7() EXCLUSIVE_LOCK_FUNCTION(0); // \
+int elf_function_bad_7() EXCLUSIVE_LOCK_FUNCTION(0);                 // \
   // expected-error {{'exclusive_lock_function' attribute parameter 1 is out of bounds: no parameters to index into}}
 
-template<typename Mu>
-int elf_template(Mu& mu) EXCLUSIVE_LOCK_FUNCTION(mu) {}
+template <typename Mu> int elf_template(Mu &mu) EXCLUSIVE_LOCK_FUNCTION(mu) {}
 
-template int elf_template<Mutex>(Mutex&);
+template int elf_template<Mutex>(Mutex &);
 // FIXME: warn on template instantiation.
-template int elf_template<UnlockableMu>(UnlockableMu&);
+template int elf_template<UnlockableMu>(UnlockableMu &);
 
 #if __cplusplus >= 201103
 
-template<typename... Mus>
-int elf_variadic_template(Mus&... mus) EXCLUSIVE_LOCK_FUNCTION(mus...) {}
+template <typename... Mus>
+int elf_variadic_template(Mus &...mus) EXCLUSIVE_LOCK_FUNCTION(mus...) {}
 
-template int elf_variadic_template<Mutex, Mutex>(Mutex&, Mutex&);
+template int elf_variadic_template<Mutex, Mutex>(Mutex &, Mutex &);
 // FIXME: warn on template instantiation.
-template int elf_variadic_template<Mutex, UnlockableMu>(Mutex&, UnlockableMu&);
+template int elf_variadic_template<Mutex, UnlockableMu>(Mutex &,
+                                                        UnlockableMu &);
 
 #endif
-
 
 //-----------------------------------------//
 //  Shared Lock Function (slf)
@@ -682,11 +672,17 @@ template int elf_variadic_template<Mutex, UnlockableMu>(Mutex&, UnlockableMu&);
 
 // takes zero or more arguments, all locks (vars/fields)
 
-void slf_function() SHARED_LOCK_FUNCTION(); // expected-warning {{'shared_lock_function' attribute without capability arguments can only be applied to non-static methods of a class}}
+void slf_function()
+    SHARED_LOCK_FUNCTION(); // expected-warning {{'shared_lock_function'
+                            // attribute without capability arguments can only
+                            // be applied to non-static methods of a class}}
 
 void slf_function_args() SHARED_LOCK_FUNCTION(mu1, mu2);
 
-int slf_testfn(int y) SHARED_LOCK_FUNCTION(); // expected-warning {{'shared_lock_function' attribute without capability arguments can only be applied to non-static methods of a class}}
+int slf_testfn(int y)
+    SHARED_LOCK_FUNCTION(); // expected-warning {{'shared_lock_function'
+                            // attribute without capability arguments can only
+                            // be applied to non-static methods of a class}}
 
 int slf_testfn(int y) {
   int x SHARED_LOCK_FUNCTION() = y; // \
@@ -697,15 +693,15 @@ int slf_testfn(int y) {
 int slf_test_var SHARED_LOCK_FUNCTION(); // \
   // expected-warning {{'shared_lock_function' attribute on a variable requires the variable to be of function pointer type}}
 
-void slf_fun_params1(MutexLock& scope SHARED_LOCK_FUNCTION(mu1));
-void slf_fun_params2(int lvar SHARED_LOCK_FUNCTION(mu1)); // \
+void slf_fun_params1(MutexLock &scope SHARED_LOCK_FUNCTION(mu1));
+void slf_fun_params2(int lvar SHARED_LOCK_FUNCTION(mu1));      // \
   // expected-warning {{'shared_lock_function' attribute applies to function parameters only if their type is a function pointer or a reference to a 'scoped_lockable'-annotated type}}
-void slf_fun_params3(MutexLock& scope SHARED_LOCK_FUNCTION()); // \
+void slf_fun_params3(MutexLock &scope SHARED_LOCK_FUNCTION()); // \
   // expected-warning {{'shared_lock_function' attribute without capability arguments can only be applied to non-static methods of a class}}
 
 class SlfFoo {
- private:
-  int test_field SHARED_LOCK_FUNCTION(); // \
+private:
+  int test_field SHARED_LOCK_FUNCTION();     // \
     // expected-warning {{'shared_lock_function' attribute on a field requires the field to be of function pointer type}}
   void test_method() SHARED_LOCK_FUNCTION(); // \
     // expected-warning {{'shared_lock_function' attribute without capability arguments refers to 'this', but 'SlfFoo' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
@@ -724,47 +720,46 @@ int slf_function_3() SHARED_LOCK_FUNCTION(muWrapper.getMu());
 int slf_function_4() SHARED_LOCK_FUNCTION(*muWrapper.getMuPointer());
 int slf_function_5() SHARED_LOCK_FUNCTION(&mu1);
 int slf_function_6() SHARED_LOCK_FUNCTION(muRef);
-int slf_function_7() SHARED_LOCK_FUNCTION(muDoubleWrapper.getWrapper()->getMu());
+int slf_function_7()
+    SHARED_LOCK_FUNCTION(muDoubleWrapper.getWrapper()->getMu());
 int slf_function_8() SHARED_LOCK_FUNCTION(muPointer);
 int slf_function_9(Mutex x) SHARED_LOCK_FUNCTION(1);
-int slf_function_9(Mutex x, Mutex y) SHARED_LOCK_FUNCTION(1,2);
-
+int slf_function_9(Mutex x, Mutex y) SHARED_LOCK_FUNCTION(1, 2);
 
 // illegal attribute arguments
-int slf_function_bad_2() SHARED_LOCK_FUNCTION("mu"); // \
+int slf_function_bad_2() SHARED_LOCK_FUNCTION("mu");            // \
   // expected-warning {{ignoring 'shared_lock_function' attribute because its argument is invalid}}
 int slf_function_bad_3() SHARED_LOCK_FUNCTION(muDoublePointer); // \
   // expected-warning {{'shared_lock_function' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Mutex **'}}
-int slf_function_bad_4() SHARED_LOCK_FUNCTION(umu); // \
+int slf_function_bad_4() SHARED_LOCK_FUNCTION(umu);             // \
   // expected-warning {{'shared_lock_function' attribute requires arguments whose type is annotated with 'capability' attribute}}
 
-int slf_function_bad_1() SHARED_LOCK_FUNCTION(1); // \
+int slf_function_bad_1() SHARED_LOCK_FUNCTION(1);                 // \
   // expected-error {{'shared_lock_function' attribute parameter 1 is out of bounds: no parameters to index into}}
-int slf_function_bad_5(Mutex x) SHARED_LOCK_FUNCTION(0); // \
+int slf_function_bad_5(Mutex x) SHARED_LOCK_FUNCTION(0);          // \
   // expected-error {{'shared_lock_function' attribute parameter 1 is out of bounds: can only be 1, since there is one parameter}}
 int slf_function_bad_6(Mutex x, Mutex y) SHARED_LOCK_FUNCTION(0); // \
   // expected-error {{'shared_lock_function' attribute parameter 1 is out of bounds: must be between 1 and 2}}
-int slf_function_bad_7() SHARED_LOCK_FUNCTION(0); // \
+int slf_function_bad_7() SHARED_LOCK_FUNCTION(0);                 // \
   // expected-error {{'shared_lock_function' attribute parameter 1 is out of bounds: no parameters to index into}}
 
-template<typename Mu>
-int slf_template(Mu& mu) SHARED_LOCK_FUNCTION(mu) {}
+template <typename Mu> int slf_template(Mu &mu) SHARED_LOCK_FUNCTION(mu) {}
 
-template int slf_template<Mutex>(Mutex&);
+template int slf_template<Mutex>(Mutex &);
 // FIXME: warn on template instantiation.
-template int slf_template<UnlockableMu>(UnlockableMu&);
+template int slf_template<UnlockableMu>(UnlockableMu &);
 
 #if __cplusplus >= 201103
 
-template<typename... Mus>
-int slf_variadic_template(Mus&... mus) SHARED_LOCK_FUNCTION(mus...) {}
+template <typename... Mus>
+int slf_variadic_template(Mus &...mus) SHARED_LOCK_FUNCTION(mus...) {}
 
-template int slf_variadic_template<Mutex, Mutex>(Mutex&, Mutex&);
+template int slf_variadic_template<Mutex, Mutex>(Mutex &, Mutex &);
 // FIXME: warn on template instantiation.
-template int slf_variadic_template<Mutex, UnlockableMu>(Mutex&, UnlockableMu&);
+template int slf_variadic_template<Mutex, UnlockableMu>(Mutex &,
+                                                        UnlockableMu &);
 
 #endif
-
 
 //-----------------------------------------//
 //  Exclusive TryLock Function (etf)
@@ -798,8 +793,8 @@ int etf_test_var EXCLUSIVE_TRYLOCK_FUNCTION(1); // \
   // expected-warning {{'exclusive_trylock_function' attribute on a variable requires the variable to be of function pointer type}}
 
 class EtfFoo {
- private:
-  int test_field EXCLUSIVE_TRYLOCK_FUNCTION(1); // \
+private:
+  int test_field EXCLUSIVE_TRYLOCK_FUNCTION(1);     // \
     // expected-warning {{'exclusive_trylock_function' attribute on a field requires the field to be of function pointer type}}
   void test_method() EXCLUSIVE_TRYLOCK_FUNCTION(1); // \
     // expected-warning {{'exclusive_trylock_function' attribute without capability arguments refers to 'this', but 'EtfFoo' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
@@ -816,50 +811,51 @@ void etf_fun_params(int lvar EXCLUSIVE_TRYLOCK_FUNCTION(1)); // \
 
 // legal attribute arguments
 int etf_function_1() EXCLUSIVE_TRYLOCK_FUNCTION(1, muWrapper.mu);
-int etf_function_2() EXCLUSIVE_TRYLOCK_FUNCTION(1, muDoubleWrapper.muWrapper->mu);
+int etf_function_2()
+    EXCLUSIVE_TRYLOCK_FUNCTION(1, muDoubleWrapper.muWrapper->mu);
 int etf_function_3() EXCLUSIVE_TRYLOCK_FUNCTION(1, muWrapper.getMu());
 int etf_function_4() EXCLUSIVE_TRYLOCK_FUNCTION(1, *muWrapper.getMuPointer());
 int etf_function_5() EXCLUSIVE_TRYLOCK_FUNCTION(1, &mu1);
 int etf_function_6() EXCLUSIVE_TRYLOCK_FUNCTION(1, muRef);
-int etf_function_7() EXCLUSIVE_TRYLOCK_FUNCTION(1, muDoubleWrapper.getWrapper()->getMu());
+int etf_function_7()
+    EXCLUSIVE_TRYLOCK_FUNCTION(1, muDoubleWrapper.getWrapper()->getMu());
 int etf_functetfn_8() EXCLUSIVE_TRYLOCK_FUNCTION(1, muPointer);
 int etf_function_9() EXCLUSIVE_TRYLOCK_FUNCTION(true); // \
   // expected-warning {{'exclusive_trylock_function' attribute without capability arguments can only be applied to non-static methods of a class}}
 
-
 // illegal attribute arguments
-int etf_function_bad_1() EXCLUSIVE_TRYLOCK_FUNCTION(mu1); // \
+int etf_function_bad_1() EXCLUSIVE_TRYLOCK_FUNCTION(mu1);             // \
   // expected-error {{'exclusive_trylock_function' attribute requires parameter 1 to be int or bool}}
-int etf_function_bad_2() EXCLUSIVE_TRYLOCK_FUNCTION("mu"); // \
+int etf_function_bad_2() EXCLUSIVE_TRYLOCK_FUNCTION("mu");            // \
   // expected-error {{'exclusive_trylock_function' attribute requires parameter 1 to be int or bool}}
 int etf_function_bad_3() EXCLUSIVE_TRYLOCK_FUNCTION(muDoublePointer); // \
   // expected-error {{'exclusive_trylock_function' attribute requires parameter 1 to be int or bool}}
 
-int etf_function_bad_4() EXCLUSIVE_TRYLOCK_FUNCTION(1, "mu"); // \
+int etf_function_bad_4() EXCLUSIVE_TRYLOCK_FUNCTION(1, "mu");            // \
   // expected-warning {{ignoring 'exclusive_trylock_function' attribute because its argument is invalid}}
 int etf_function_bad_5() EXCLUSIVE_TRYLOCK_FUNCTION(1, muDoublePointer); // \
   // expected-warning {{'exclusive_trylock_function' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Mutex **'}}
-int etf_function_bad_6() EXCLUSIVE_TRYLOCK_FUNCTION(1, umu); // \
+int etf_function_bad_6() EXCLUSIVE_TRYLOCK_FUNCTION(1, umu);             // \
   // expected-warning {{'exclusive_trylock_function' attribute requires arguments whose type is annotated with 'capability' attribute}}
 
-template<typename Mu>
-int etf_template(Mu& mu) EXCLUSIVE_TRYLOCK_FUNCTION(1, mu) {}
+template <typename Mu>
+int etf_template(Mu &mu) EXCLUSIVE_TRYLOCK_FUNCTION(1, mu) {}
 
-template int etf_template<Mutex>(Mutex&);
+template int etf_template<Mutex>(Mutex &);
 // FIXME: warn on template instantiation.
-template int etf_template<UnlockableMu>(UnlockableMu&);
+template int etf_template<UnlockableMu>(UnlockableMu &);
 
 #if __cplusplus >= 201103
 
-template<typename... Mus>
-int etf_variadic_template(Mus&... mus) EXCLUSIVE_TRYLOCK_FUNCTION(1, mus...) {}
+template <typename... Mus>
+int etf_variadic_template(Mus &...mus) EXCLUSIVE_TRYLOCK_FUNCTION(1, mus...) {}
 
-template int etf_variadic_template<Mutex, Mutex>(Mutex&, Mutex&);
+template int etf_variadic_template<Mutex, Mutex>(Mutex &, Mutex &);
 // FIXME: warn on template instantiation.
-template int etf_variadic_template<Mutex, UnlockableMu>(Mutex&, UnlockableMu&);
+template int etf_variadic_template<Mutex, UnlockableMu>(Mutex &,
+                                                        UnlockableMu &);
 
 #endif
-
 
 //-----------------------------------------//
 //  Shared TryLock Function (stf)
@@ -872,7 +868,7 @@ template int etf_variadic_template<Mutex, UnlockableMu>(Mutex&, UnlockableMu&);
 // takes a mandatory boolean or integer argument specifying the retval
 // plus an optional list of locks (vars/fields)
 
-void stf_function() __attribute__((shared_trylock_function));  // \
+void stf_function() __attribute__((shared_trylock_function)); // \
   // expected-error {{'shared_trylock_function' attribute takes at least 1 argument}}
 
 void stf_function_args() SHARED_TRYLOCK_FUNCTION(1, mu2);
@@ -895,10 +891,9 @@ int stf_test_var SHARED_TRYLOCK_FUNCTION(1); // \
 void stf_fun_params(int lvar SHARED_TRYLOCK_FUNCTION(1)); // \
   // expected-warning {{'shared_trylock_function' attribute on a variable requires the variable to be of function pointer type}}
 
-
 class StfFoo {
- private:
-  int test_field SHARED_TRYLOCK_FUNCTION(1); // \
+private:
+  int test_field SHARED_TRYLOCK_FUNCTION(1);     // \
     // expected-warning {{'shared_trylock_function' attribute on a field requires the field to be of function pointer type}}
   void test_method() SHARED_TRYLOCK_FUNCTION(1); // \
     // expected-warning {{'shared_trylock_function' attribute without capability arguments refers to 'this', but 'StfFoo' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
@@ -917,45 +912,45 @@ int stf_function_3() SHARED_TRYLOCK_FUNCTION(1, muWrapper.getMu());
 int stf_function_4() SHARED_TRYLOCK_FUNCTION(1, *muWrapper.getMuPointer());
 int stf_function_5() SHARED_TRYLOCK_FUNCTION(1, &mu1);
 int stf_function_6() SHARED_TRYLOCK_FUNCTION(1, muRef);
-int stf_function_7() SHARED_TRYLOCK_FUNCTION(1, muDoubleWrapper.getWrapper()->getMu());
+int stf_function_7()
+    SHARED_TRYLOCK_FUNCTION(1, muDoubleWrapper.getWrapper()->getMu());
 int stf_function_8() SHARED_TRYLOCK_FUNCTION(1, muPointer);
 int stf_function_9() SHARED_TRYLOCK_FUNCTION(true); // \
   // expected-warning {{'shared_trylock_function' attribute without capability arguments can only be applied to non-static methods of a class}}
 
-
 // illegal attribute arguments
-int stf_function_bad_1() SHARED_TRYLOCK_FUNCTION(mu1); // \
+int stf_function_bad_1() SHARED_TRYLOCK_FUNCTION(mu1);             // \
   // expected-error {{'shared_trylock_function' attribute requires parameter 1 to be int or bool}}
-int stf_function_bad_2() SHARED_TRYLOCK_FUNCTION("mu"); // \
+int stf_function_bad_2() SHARED_TRYLOCK_FUNCTION("mu");            // \
   // expected-error {{'shared_trylock_function' attribute requires parameter 1 to be int or bool}}
 int stf_function_bad_3() SHARED_TRYLOCK_FUNCTION(muDoublePointer); // \
   // expected-error {{'shared_trylock_function' attribute requires parameter 1 to be int or bool}}
 
-int stf_function_bad_4() SHARED_TRYLOCK_FUNCTION(1, "mu"); // \
+int stf_function_bad_4() SHARED_TRYLOCK_FUNCTION(1, "mu");            // \
   // expected-warning {{ignoring 'shared_trylock_function' attribute because its argument is invalid}}
 int stf_function_bad_5() SHARED_TRYLOCK_FUNCTION(1, muDoublePointer); // \
   // expected-warning {{'shared_trylock_function' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Mutex **'}}
-int stf_function_bad_6() SHARED_TRYLOCK_FUNCTION(1, umu); // \
+int stf_function_bad_6() SHARED_TRYLOCK_FUNCTION(1, umu);             // \
   // expected-warning {{'shared_trylock_function' attribute requires arguments whose type is annotated with 'capability' attribute}}
 
-template<typename Mu>
-int stf_template(Mu& mu) SHARED_TRYLOCK_FUNCTION(1, mu) {}
+template <typename Mu>
+int stf_template(Mu &mu) SHARED_TRYLOCK_FUNCTION(1, mu) {}
 
-template int stf_template<Mutex>(Mutex&);
+template int stf_template<Mutex>(Mutex &);
 // FIXME: warn on template instantiation.
-template int stf_template<UnlockableMu>(UnlockableMu&);
+template int stf_template<UnlockableMu>(UnlockableMu &);
 
 #if __cplusplus >= 201103
 
-template<typename... Mus>
-int stf_variadic_template(Mus&... mus) SHARED_TRYLOCK_FUNCTION(1, mus...) {}
+template <typename... Mus>
+int stf_variadic_template(Mus &...mus) SHARED_TRYLOCK_FUNCTION(1, mus...) {}
 
-template int stf_variadic_template<Mutex, Mutex>(Mutex&, Mutex&);
+template int stf_variadic_template<Mutex, Mutex>(Mutex &, Mutex &);
 // FIXME: warn on template instantiation.
-template int stf_variadic_template<Mutex, UnlockableMu>(Mutex&, UnlockableMu&);
+template int stf_variadic_template<Mutex, UnlockableMu>(Mutex &,
+                                                        UnlockableMu &);
 
 #endif
-
 
 //-----------------------------------------//
 //  Unlock Function (uf)
@@ -969,7 +964,6 @@ template int stf_variadic_template<Mutex, UnlockableMu>(Mutex&, UnlockableMu&);
 
 void uf_function() UNLOCK_FUNCTION(); // \
   // expected-warning {{'unlock_function' attribute without capability arguments can only be applied to non-static methods of a class}}
-
 
 void uf_function_args() UNLOCK_FUNCTION(mu1, mu2);
 
@@ -986,8 +980,8 @@ int uf_test_var UNLOCK_FUNCTION(); // \
   // expected-warning {{'unlock_function' attribute on a variable requires the variable to be of function pointer type}}
 
 class UfFoo {
- private:
-  int test_field UNLOCK_FUNCTION(); // \
+private:
+  int test_field UNLOCK_FUNCTION();     // \
     // expected-warning {{'unlock_function' attribute on a field requires the field to be of function pointer type}}
   void test_method() UNLOCK_FUNCTION(); // \
     // expected-warning {{'unlock_function' attribute without capability arguments refers to 'this', but 'UfFoo' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
@@ -997,10 +991,10 @@ class NO_THREAD_SAFETY_ANALYSIS UfTestClass { // \
   // expected-warning {{'no_thread_safety_analysis' attribute only applies to functions}}
 };
 
-void uf_fun_params1(MutexLock& scope UNLOCK_FUNCTION(mu1));
-void uf_fun_params2(int lvar UNLOCK_FUNCTION(mu1)); // \
+void uf_fun_params1(MutexLock &scope UNLOCK_FUNCTION(mu1));
+void uf_fun_params2(int lvar UNLOCK_FUNCTION(mu1));      // \
   // expected-warning {{'unlock_function' attribute applies to function parameters only if their type is a function pointer or a reference to a 'scoped_lockable'-annotated type}}
-void uf_fun_params3(MutexLock& scope UNLOCK_FUNCTION()); // \
+void uf_fun_params3(MutexLock &scope UNLOCK_FUNCTION()); // \
   // expected-warning {{'unlock_function' attribute without capability arguments can only be applied to non-static methods of a class}}
 
 // Check argument parsing.
@@ -1015,44 +1009,41 @@ int uf_function_6() UNLOCK_FUNCTION(muRef);
 int uf_function_7() UNLOCK_FUNCTION(muDoubleWrapper.getWrapper()->getMu());
 int uf_function_8() UNLOCK_FUNCTION(muPointer);
 int uf_function_9(Mutex x) UNLOCK_FUNCTION(1);
-int uf_function_9(Mutex x, Mutex y) UNLOCK_FUNCTION(1,2);
-
+int uf_function_9(Mutex x, Mutex y) UNLOCK_FUNCTION(1, 2);
 
 // illegal attribute arguments
-int uf_function_bad_2() UNLOCK_FUNCTION("mu"); // \
+int uf_function_bad_2() UNLOCK_FUNCTION("mu");            // \
   // expected-warning {{ignoring 'unlock_function' attribute because its argument is invalid}}
 int uf_function_bad_3() UNLOCK_FUNCTION(muDoublePointer); // \
   // expected-warning {{'unlock_function' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Mutex **'}}
-int uf_function_bad_4() UNLOCK_FUNCTION(umu); // \
+int uf_function_bad_4() UNLOCK_FUNCTION(umu);             // \
   // expected-warning {{'unlock_function' attribute requires arguments whose type is annotated with 'capability' attribute}}
 
-int uf_function_bad_1() UNLOCK_FUNCTION(1); // \
+int uf_function_bad_1() UNLOCK_FUNCTION(1);                 // \
   // expected-error {{'unlock_function' attribute parameter 1 is out of bounds: no parameters to index into}}
-int uf_function_bad_5(Mutex x) UNLOCK_FUNCTION(0); // \
+int uf_function_bad_5(Mutex x) UNLOCK_FUNCTION(0);          // \
   // expected-error {{'unlock_function' attribute parameter 1 is out of bounds: can only be 1, since there is one parameter}}
 int uf_function_bad_6(Mutex x, Mutex y) UNLOCK_FUNCTION(0); // \
   // expected-error {{'unlock_function' attribute parameter 1 is out of bounds: must be between 1 and 2}}
-int uf_function_bad_7() UNLOCK_FUNCTION(0); // \
+int uf_function_bad_7() UNLOCK_FUNCTION(0);                 // \
   // expected-error {{'unlock_function' attribute parameter 1 is out of bounds: no parameters to index into}}
 
-template<typename Mu>
-int uf_template(Mu& mu) UNLOCK_FUNCTION(mu) {}
+template <typename Mu> int uf_template(Mu &mu) UNLOCK_FUNCTION(mu) {}
 
-template int uf_template<Mutex>(Mutex&);
+template int uf_template<Mutex>(Mutex &);
 // FIXME: warn on template instantiation.
-template int uf_template<UnlockableMu>(UnlockableMu&);
+template int uf_template<UnlockableMu>(UnlockableMu &);
 
 #if __cplusplus >= 201103
 
-template<typename... Mus>
-int uf_variadic_template(Mus&... mus) UNLOCK_FUNCTION(mus...) {}
+template <typename... Mus>
+int uf_variadic_template(Mus &...mus) UNLOCK_FUNCTION(mus...) {}
 
-template int uf_variadic_template<Mutex, Mutex>(Mutex&, Mutex&);
+template int uf_variadic_template<Mutex, Mutex>(Mutex &, Mutex &);
 // FIXME: warn on template instantiation.
-template int uf_variadic_template<Mutex, UnlockableMu>(Mutex&, UnlockableMu&);
+template int uf_variadic_template<Mutex, UnlockableMu>(Mutex &, UnlockableMu &);
 
 #endif
-
 
 //-----------------------------------------//
 //  Lock Returned (lr)
@@ -1087,7 +1078,7 @@ void lr_fun_params(int lvar LOCK_RETURNED(mu1)); // \
   // expected-warning {{'lock_returned' attribute only applies to functions}}
 
 class LrFoo {
- private:
+private:
   int test_field LOCK_RETURNED(mu1); // \
     // expected-warning {{'lock_returned' attribute only applies to functions}}
   void test_method() LOCK_RETURNED(mu1);
@@ -1109,18 +1100,15 @@ int lr_function_6() LOCK_RETURNED(muRef);
 int lr_function_7() LOCK_RETURNED(muDoubleWrapper.getWrapper()->getMu());
 int lr_function_8() LOCK_RETURNED(muPointer);
 
-
 // illegal attribute arguments
-int lr_function_bad_1() LOCK_RETURNED(1); // \
+int lr_function_bad_1() LOCK_RETURNED(1);               // \
   // expected-warning {{'lock_returned' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'int'}}
-int lr_function_bad_2() LOCK_RETURNED("mu"); // \
+int lr_function_bad_2() LOCK_RETURNED("mu");            // \
   // expected-warning {{ignoring 'lock_returned' attribute because its argument is invalid}}
 int lr_function_bad_3() LOCK_RETURNED(muDoublePointer); // \
   // expected-warning {{'lock_returned' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Mutex **'}}
-int lr_function_bad_4() LOCK_RETURNED(umu); // \
+int lr_function_bad_4() LOCK_RETURNED(umu);             // \
   // expected-warning {{'lock_returned' attribute requires arguments whose type is annotated with 'capability' attribute}}
-
-
 
 //-----------------------------------------//
 //  Locks Excluded (le)
@@ -1150,21 +1138,23 @@ int le_testfn(int y) {
 int le_test_var LOCKS_EXCLUDED(mu1); // \
   // expected-warning {{'locks_excluded' attribute on a variable requires the variable to be of function pointer type}}
 
-void le_fun_params1(MutexLock& scope LOCKS_EXCLUDED(mu1));
+void le_fun_params1(MutexLock &scope LOCKS_EXCLUDED(mu1));
 void le_fun_params2(int lvar LOCKS_EXCLUDED(mu1)); // \
   // expected-warning{{'locks_excluded' attribute applies to function parameters only if their type is a function pointer or a reference to a 'scoped_lockable'-annotated type}}
 
 template <typename T>
-void le_fun_params3(T& lvar LOCKS_EXCLUDED(mu1)) {} // \
+void le_fun_params3(T &lvar LOCKS_EXCLUDED(mu1)) {} // \
   // expected-warning{{'locks_excluded' attribute applies to function parameters only if their type is a function pointer or a reference to a 'scoped_lockable'-annotated type}}
 void call_le_fun_params3(int i) {
   MutexLock scope(&mu1);
-  le_fun_params3(i); // expected-note {{while substituting deduced template arguments into function template 'le_fun_params3' [with T = int]}}
+  le_fun_params3(
+      i); // expected-note {{while substituting deduced template arguments into
+          // function template 'le_fun_params3' [with T = int]}}
   le_fun_params3(scope);
 }
 
 class LeFoo {
- private:
+private:
   int test_field LOCKS_EXCLUDED(mu1); // \
     // expected-warning {{'locks_excluded' attribute on a field requires the field to be of function pointer type}}
   void test_method() LOCKS_EXCLUDED(mu1);
@@ -1186,35 +1176,32 @@ int le_function_6() LOCKS_EXCLUDED(muRef);
 int le_function_7() LOCKS_EXCLUDED(muDoubleWrapper.getWrapper()->getMu());
 int le_function_8() LOCKS_EXCLUDED(muPointer);
 
-
 // illegal attribute arguments
-int le_function_bad_1() LOCKS_EXCLUDED(1); // \
+int le_function_bad_1() LOCKS_EXCLUDED(1);               // \
   // expected-warning {{'locks_excluded' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'int'}}
-int le_function_bad_2() LOCKS_EXCLUDED("mu"); // \
+int le_function_bad_2() LOCKS_EXCLUDED("mu");            // \
   // expected-warning {{ignoring 'locks_excluded' attribute because its argument is invalid}}
 int le_function_bad_3() LOCKS_EXCLUDED(muDoublePointer); // \
   // expected-warning {{'locks_excluded' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Mutex **'}}
-int le_function_bad_4() LOCKS_EXCLUDED(umu); // \
+int le_function_bad_4() LOCKS_EXCLUDED(umu);             // \
   // expected-warning {{'locks_excluded' attribute requires arguments whose type is annotated with 'capability' attribute}}
 
-template<typename Mu>
-int le_template(Mu& mu) LOCKS_EXCLUDED(mu) {}
+template <typename Mu> int le_template(Mu &mu) LOCKS_EXCLUDED(mu) {}
 
-template int le_template<Mutex>(Mutex&);
+template int le_template<Mutex>(Mutex &);
 // FIXME: warn on template instantiation.
-template int le_template<UnlockableMu>(UnlockableMu&);
+template int le_template<UnlockableMu>(UnlockableMu &);
 
 #if __cplusplus >= 201103
 
-template<typename... Mus>
-int le_variadic_template(Mus&... mus) LOCKS_EXCLUDED(mus...) {}
+template <typename... Mus>
+int le_variadic_template(Mus &...mus) LOCKS_EXCLUDED(mus...) {}
 
-template int le_variadic_template<Mutex, Mutex>(Mutex&, Mutex&);
+template int le_variadic_template<Mutex, Mutex>(Mutex &, Mutex &);
 // FIXME: warn on template instantiation.
-template int le_variadic_template<Mutex, UnlockableMu>(Mutex&, UnlockableMu&);
+template int le_variadic_template<Mutex, UnlockableMu>(Mutex &, UnlockableMu &);
 
 #endif
-
 
 //-----------------------------------------//
 //  Exclusive Locks Required (elr)
@@ -1244,12 +1231,12 @@ int elr_testfn(int y) {
 int elr_test_var EXCLUSIVE_LOCKS_REQUIRED(mu1); // \
   // expected-warning {{'exclusive_locks_required' attribute on a variable requires the variable to be of function pointer type}}
 
-void elr_fun_params1(MutexLock& scope EXCLUSIVE_LOCKS_REQUIRED(mu1));
+void elr_fun_params1(MutexLock &scope EXCLUSIVE_LOCKS_REQUIRED(mu1));
 void elr_fun_params2(int lvar EXCLUSIVE_LOCKS_REQUIRED(mu1)); // \
   // expected-warning {{'exclusive_locks_required' attribute applies to function parameters only if their type is a function pointer or a reference to a 'scoped_lockable'-annotated type}}
 
 class ElrFoo {
- private:
+private:
   int test_field EXCLUSIVE_LOCKS_REQUIRED(mu1); // \
     // expected-warning {{'exclusive_locks_required' attribute on a field requires the field to be of function pointer type}}
   void test_method() EXCLUSIVE_LOCKS_REQUIRED(mu1);
@@ -1268,40 +1255,37 @@ int elr_function_3() EXCLUSIVE_LOCKS_REQUIRED(muWrapper.getMu());
 int elr_function_4() EXCLUSIVE_LOCKS_REQUIRED(*muWrapper.getMuPointer());
 int elr_function_5() EXCLUSIVE_LOCKS_REQUIRED(&mu1);
 int elr_function_6() EXCLUSIVE_LOCKS_REQUIRED(muRef);
-int elr_function_7() EXCLUSIVE_LOCKS_REQUIRED(muDoubleWrapper.getWrapper()->getMu());
+int elr_function_7()
+    EXCLUSIVE_LOCKS_REQUIRED(muDoubleWrapper.getWrapper()->getMu());
 int elr_function_8() EXCLUSIVE_LOCKS_REQUIRED(muPointer);
 
-
 // illegal attribute arguments
-int elr_function_bad_1() EXCLUSIVE_LOCKS_REQUIRED(1); // \
+int elr_function_bad_1() EXCLUSIVE_LOCKS_REQUIRED(1);               // \
   // expected-warning {{'exclusive_locks_required' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'int'}}
-int elr_function_bad_2() EXCLUSIVE_LOCKS_REQUIRED("mu"); // \
+int elr_function_bad_2() EXCLUSIVE_LOCKS_REQUIRED("mu");            // \
   // expected-warning {{ignoring 'exclusive_locks_required' attribute because its argument is invalid}}
 int elr_function_bad_3() EXCLUSIVE_LOCKS_REQUIRED(muDoublePointer); // \
   // expected-warning {{'exclusive_locks_required' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Mutex **'}}
-int elr_function_bad_4() EXCLUSIVE_LOCKS_REQUIRED(umu); // \
+int elr_function_bad_4() EXCLUSIVE_LOCKS_REQUIRED(umu);             // \
   // expected-warning {{'exclusive_locks_required' attribute requires arguments whose type is annotated with 'capability' attribute}}
 
-template<typename Mu>
-int elr_template(Mu& mu) EXCLUSIVE_LOCKS_REQUIRED(mu) {}
+template <typename Mu> int elr_template(Mu &mu) EXCLUSIVE_LOCKS_REQUIRED(mu) {}
 
-template int elr_template<Mutex>(Mutex&);
+template int elr_template<Mutex>(Mutex &);
 // FIXME: warn on template instantiation.
-template int elr_template<UnlockableMu>(UnlockableMu&);
+template int elr_template<UnlockableMu>(UnlockableMu &);
 
 #if __cplusplus >= 201103
 
-template<typename... Mus>
-int elr_variadic_template(Mus&... mus) EXCLUSIVE_LOCKS_REQUIRED(mus...) {}
+template <typename... Mus>
+int elr_variadic_template(Mus &...mus) EXCLUSIVE_LOCKS_REQUIRED(mus...) {}
 
-template int elr_variadic_template<Mutex, Mutex>(Mutex&, Mutex&);
+template int elr_variadic_template<Mutex, Mutex>(Mutex &, Mutex &);
 // FIXME: warn on template instantiation.
-template int elr_variadic_template<Mutex, UnlockableMu>(Mutex&, UnlockableMu&);
+template int elr_variadic_template<Mutex, UnlockableMu>(Mutex &,
+                                                        UnlockableMu &);
 
 #endif
-
-
-
 
 //-----------------------------------------//
 //  Shared Locks Required (slr)
@@ -1331,12 +1315,12 @@ int slr_testfn(int y) {
 int slr_test_var SHARED_LOCKS_REQUIRED(mu1); // \
   // expected-warning {{'shared_locks_required' attribute on a variable requires the variable to be of function pointer type}}
 
-void slr_fun_params1(MutexLock& scope SHARED_LOCKS_REQUIRED(mu1));
+void slr_fun_params1(MutexLock &scope SHARED_LOCKS_REQUIRED(mu1));
 void slr_fun_params2(int lvar SHARED_LOCKS_REQUIRED(mu1)); // \
   // expected-warning {{'shared_locks_required' attribute applies to function parameters only if their type is a function pointer or a reference to a 'scoped_lockable'-annotated type}}
 
 class SlrFoo {
- private:
+private:
   int test_field SHARED_LOCKS_REQUIRED(mu1); // \
     // expected-warning {{'shared_locks_required' attribute on a field requires the field to be of function pointer type}}
   void test_method() SHARED_LOCKS_REQUIRED(mu1);
@@ -1355,38 +1339,37 @@ int slr_function_3() SHARED_LOCKS_REQUIRED(muWrapper.getMu());
 int slr_function_4() SHARED_LOCKS_REQUIRED(*muWrapper.getMuPointer());
 int slr_function_5() SHARED_LOCKS_REQUIRED(&mu1);
 int slr_function_6() SHARED_LOCKS_REQUIRED(muRef);
-int slr_function_7() SHARED_LOCKS_REQUIRED(muDoubleWrapper.getWrapper()->getMu());
+int slr_function_7()
+    SHARED_LOCKS_REQUIRED(muDoubleWrapper.getWrapper()->getMu());
 int slr_function_8() SHARED_LOCKS_REQUIRED(muPointer);
 
-
 // illegal attribute arguments
-int slr_function_bad_1() SHARED_LOCKS_REQUIRED(1); // \
+int slr_function_bad_1() SHARED_LOCKS_REQUIRED(1);               // \
   // expected-warning {{'shared_locks_required' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'int'}}
-int slr_function_bad_2() SHARED_LOCKS_REQUIRED("mu"); // \
+int slr_function_bad_2() SHARED_LOCKS_REQUIRED("mu");            // \
   // expected-warning {{ignoring 'shared_locks_required' attribute because its argument is invalid}}
 int slr_function_bad_3() SHARED_LOCKS_REQUIRED(muDoublePointer); // \
   // expected-warning {{'shared_locks_required' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Mutex **'}}
-int slr_function_bad_4() SHARED_LOCKS_REQUIRED(umu); // \
+int slr_function_bad_4() SHARED_LOCKS_REQUIRED(umu);             // \
   // expected-warning {{'shared_locks_required' attribute requires arguments whose type is annotated with 'capability' attribute}}
 
-template<typename Mu>
-int slr_template(Mu& mu) SHARED_LOCKS_REQUIRED(mu) {}
+template <typename Mu> int slr_template(Mu &mu) SHARED_LOCKS_REQUIRED(mu) {}
 
-template int slr_template<Mutex>(Mutex&);
+template int slr_template<Mutex>(Mutex &);
 // FIXME: warn on template instantiation.
-template int slr_template<UnlockableMu>(UnlockableMu&);
+template int slr_template<UnlockableMu>(UnlockableMu &);
 
 #if __cplusplus >= 201103
 
-template<typename... Mus>
-int slr_variadic_template(Mus&... mus) SHARED_LOCKS_REQUIRED(mus...) {}
+template <typename... Mus>
+int slr_variadic_template(Mus &...mus) SHARED_LOCKS_REQUIRED(mus...) {}
 
-template int slr_variadic_template<Mutex, Mutex>(Mutex&, Mutex&);
+template int slr_variadic_template<Mutex, Mutex>(Mutex &, Mutex &);
 // FIXME: warn on template instantiation.
-template int slr_variadic_template<Mutex, UnlockableMu>(Mutex&, UnlockableMu&);
+template int slr_variadic_template<Mutex, UnlockableMu>(Mutex &,
+                                                        UnlockableMu &);
 
 #endif
-
 
 //-----------------------------------------//
 //  Regression tests for unusual cases.
@@ -1394,8 +1377,10 @@ template int slr_variadic_template<Mutex, UnlockableMu>(Mutex&, UnlockableMu&);
 
 int trivially_false_edges(bool b) {
   // Create NULL (never taken) edges in CFG
-  if (false) return 1;
-  else       return 2;
+  if (false)
+    return 1;
+  else
+    return 2;
 }
 
 // Possible Clang bug -- method pointer in template parameter
@@ -1404,8 +1389,7 @@ public:
   void foo();
 };
 
-template<void (UnFoo::*methptr)()>
-class MCaller {
+template <void (UnFoo::*methptr)()> class MCaller {
 public:
   static void call_method_ptr(UnFoo *f) {
     // FIXME: Possible Clang bug:
@@ -1414,7 +1398,7 @@ public:
   }
 };
 
-void call_method_ptr_inst(UnFoo* f) {
+void call_method_ptr_inst(UnFoo *f) {
   MCaller<&UnFoo::foo>::call_method_ptr(f);
 }
 
@@ -1423,7 +1407,8 @@ void empty_back_edge() {
   // Create a back edge to a block with no statements
   for (;;) {
     ++temp;
-    if (temp > 10) break;
+    if (temp > 10)
+      break;
   }
 }
 
@@ -1444,19 +1429,16 @@ struct Foomgoper {
   }
 };
 
-template <typename Mutex>
-struct SCOPED_LOCKABLE SLTemplateClass {
+template <typename Mutex> struct SCOPED_LOCKABLE SLTemplateClass {
   ~SLTemplateClass() UNLOCK_FUNCTION();
 };
 
-template <typename Mutex>
-struct NonSLTemplateClass {
+template <typename Mutex> struct NonSLTemplateClass {
   ~NonSLTemplateClass() UNLOCK_FUNCTION(); // \
     // expected-warning{{'unlock_function' attribute without capability arguments refers to 'this', but 'NonSLTemplateClass' isn't annotated with 'capability' or 'scoped_lockable' attribute}}
 };
 
-template <>
-struct SLTemplateClass<int> {};
+template <> struct SLTemplateClass<int> {};
 
 template <typename Mutex>
 struct SLTemplateDerived : public SLTemplateClass<Mutex> {
@@ -1492,23 +1474,21 @@ class StaticMu {
 
 class FooLate {
 public:
-  void foo1()           EXCLUSIVE_LOCKS_REQUIRED(gmu)   { }
-  void foo2()           EXCLUSIVE_LOCKS_REQUIRED(mu)    { }
-  void foo3(Mutex *m)   EXCLUSIVE_LOCKS_REQUIRED(m)     { }
-  void foo3(FooLate *f) EXCLUSIVE_LOCKS_REQUIRED(f->mu) { }
+  void foo1() EXCLUSIVE_LOCKS_REQUIRED(gmu) {}
+  void foo2() EXCLUSIVE_LOCKS_REQUIRED(mu) {}
+  void foo3(Mutex *m) EXCLUSIVE_LOCKS_REQUIRED(m) {}
+  void foo3(FooLate *f) EXCLUSIVE_LOCKS_REQUIRED(f->mu) {}
   void foo4(FooLate *f) EXCLUSIVE_LOCKS_REQUIRED(f->mu);
 
-  static void foo5()    EXCLUSIVE_LOCKS_REQUIRED(mu);
-//FIXME: Bug 32066 - Error should be emitted irrespective of C++ dialect
+  static void foo5() EXCLUSIVE_LOCKS_REQUIRED(mu);
+// FIXME: Bug 32066 - Error should be emitted irrespective of C++ dialect
 #if __cplusplus <= 199711L
   // expected-error@-3 {{invalid use of member 'mu' in static member function}}
 #endif
 
-  template <class T>
-  void foo6() EXCLUSIVE_LOCKS_REQUIRED(T::statmu) { }
+  template <class T> void foo6() EXCLUSIVE_LOCKS_REQUIRED(T::statmu) {}
 
-  template <class T>
-  void foo7(T* f) EXCLUSIVE_LOCKS_REQUIRED(f->mu) { }
+  template <class T> void foo7(T *f) EXCLUSIVE_LOCKS_REQUIRED(f->mu) {}
 
   int a GUARDED_BY(gmu);
   int b GUARDED_BY(mu);
@@ -1522,10 +1502,9 @@ public:
 //-------------------------
 
 class LOCKABLE EmptyArgListsTest {
-  void lock() EXCLUSIVE_LOCK_FUNCTION() { }
-  void unlock() UNLOCK_FUNCTION() { }
+  void lock() EXCLUSIVE_LOCK_FUNCTION() {}
+  void unlock() UNLOCK_FUNCTION() {}
 };
-
 
 namespace FunctionDefinitionParseTest {
 // Test parsing of attributes on function definitions.
@@ -1537,23 +1516,20 @@ public:
   void foo2(Foo *f);
 };
 
-template <class T>
-class Bar {
+template <class T> class Bar {
 public:
   Mutex mu_;
   void bar();
 };
 
-void Foo::foo1()       EXCLUSIVE_LOCKS_REQUIRED(mu_) { }
-void Foo::foo2(Foo *f) EXCLUSIVE_LOCKS_REQUIRED(f->mu_) { }
+void Foo::foo1() EXCLUSIVE_LOCKS_REQUIRED(mu_) {}
+void Foo::foo2(Foo *f) EXCLUSIVE_LOCKS_REQUIRED(f->mu_) {}
 
-template <class T>
-void Bar<T>::bar() EXCLUSIVE_LOCKS_REQUIRED(mu_) { }
+template <class T> void Bar<T>::bar() EXCLUSIVE_LOCKS_REQUIRED(mu_) {}
 
-void baz(Foo *f) EXCLUSIVE_LOCKS_REQUIRED(f->mu_) { }
+void baz(Foo *f) EXCLUSIVE_LOCKS_REQUIRED(f->mu_) {}
 
-} // end namespace
-
+} // namespace FunctionDefinitionParseTest
 
 namespace TestMultiDecl {
 
@@ -1568,7 +1544,6 @@ private:
 
 } // end namespace TestMultiDecl
 
-
 namespace NestedClassLateDecl {
 
 class Foo {
@@ -1576,9 +1551,9 @@ class Foo {
     int a GUARDED_BY(mu);
     int b GUARDED_BY(fooMuStatic);
 
-    void bar()        EXCLUSIVE_LOCKS_REQUIRED(mu)       { a = 0;    }
-    void bar2(Bar* b) EXCLUSIVE_LOCKS_REQUIRED(b->mu)    { b->a = 0; }
-    void bar3(Foo* f) EXCLUSIVE_LOCKS_REQUIRED(f->fooMu) { f->a = 0; }
+    void bar() EXCLUSIVE_LOCKS_REQUIRED(mu) { a = 0; }
+    void bar2(Bar *b) EXCLUSIVE_LOCKS_REQUIRED(b->mu) { b->a = 0; }
+    void bar3(Foo *f) EXCLUSIVE_LOCKS_REQUIRED(f->fooMu) { f->a = 0; }
 
     Mutex mu;
   };
@@ -1588,19 +1563,19 @@ class Foo {
   static Mutex fooMuStatic;
 };
 
-}
+} // namespace NestedClassLateDecl
 
 namespace PointerToMemberTest {
 
 // Empty string should be ignored.
-int  testEmptyAttribute GUARDED_BY("");
+int testEmptyAttribute GUARDED_BY("");
 void testEmptyAttributeFunction() EXCLUSIVE_LOCKS_REQUIRED("");
 
 class Graph {
 public:
   Mutex mu_;
 
-  static Mutex* get_static_mu() LOCK_RETURNED(&Graph::mu_);
+  static Mutex *get_static_mu() LOCK_RETURNED(&Graph::mu_);
 };
 
 class Node {
@@ -1609,54 +1584,48 @@ public:
   int a GUARDED_BY(&Graph::mu_);
 };
 
-}
-
+} // namespace PointerToMemberTest
 
 namespace SmartPointerTest {
 
-template<class T>
-class smart_ptr {
- public:
-  T* operator->() { return ptr_; }
-  T& operator*()  { return ptr_; }
+template <class T> class smart_ptr {
+public:
+  T *operator->() { return ptr_; }
+  T &operator*() { return ptr_; }
 
- private:
-  T* ptr_;
+private:
+  T *ptr_;
 };
-
 
 Mutex gmu;
 smart_ptr<int> gdat PT_GUARDED_BY(gmu);
-
 
 class MyClass {
 public:
   Mutex mu_;
   smart_ptr<Mutex> smu_;
 
-
   smart_ptr<int> a PT_GUARDED_BY(mu_);
-  int b            GUARDED_BY(smu_);
+  int b GUARDED_BY(smu_);
 };
 
-}
-
+} // namespace SmartPointerTest
 
 namespace InheritanceTest {
 
 class LOCKABLE Base {
- public:
-  void lock()   EXCLUSIVE_LOCK_FUNCTION();
+public:
+  void lock() EXCLUSIVE_LOCK_FUNCTION();
   void unlock() UNLOCK_FUNCTION();
 };
 
-class Base2 { };
+class Base2 {};
 
-class Derived1 : public Base { };
+class Derived1 : public Base {};
 
-class Derived2 : public Base2, public Derived1 { };
+class Derived2 : public Base2, public Derived1 {};
 
-class Derived3 : public Base2 { };
+class Derived3 : public Base2 {};
 
 class Foo {
   Derived1 mu1_;
@@ -1664,7 +1633,7 @@ class Foo {
   Derived3 mu3_;
   int a GUARDED_BY(mu1_);
   int b GUARDED_BY(mu2_);
-  int c GUARDED_BY(mu3_);  // \
+  int c GUARDED_BY(mu3_); // \
     // expected-warning {{'guarded_by' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Derived3'}}
 
   void foo() EXCLUSIVE_LOCKS_REQUIRED(mu1_, mu2_) {
@@ -1673,20 +1642,18 @@ class Foo {
   }
 };
 
-}
-
+} // namespace InheritanceTest
 
 namespace InvalidDeclTest {
 
-class Foo { };
+class Foo {};
 namespace {
-void Foo::bar(Mutex* mu) LOCKS_EXCLUDED(mu) { } // \
+void Foo::bar(Mutex *mu) LOCKS_EXCLUDED(mu) {} // \
    // expected-error   {{cannot define or redeclare 'bar' here because namespace '' does not enclose namespace 'Foo'}} \
    // expected-warning {{attribute locks_excluded ignored, because it is not attached to a declaration}}
-}
+} // namespace
 
 } // end namespace InvalidDeclTest
-
 
 namespace StaticScopeTest {
 
@@ -1697,28 +1664,26 @@ class Foo {
   int a GUARDED_BY(mu);
 
   static int si GUARDED_BY(mu);
-//FIXME: Bug 32066 - Error should be emitted irrespective of C++ dialect
+// FIXME: Bug 32066 - Error should be emitted irrespective of C++ dialect
 #if __cplusplus <= 199711L
   // expected-error@-3 {{invalid use of non-static data member 'mu'}}
 #endif
 
   static void foo() EXCLUSIVE_LOCKS_REQUIRED(mu);
-//FIXME: Bug 32066 - Error should be emitted irrespective of C++ dialect
+// FIXME: Bug 32066 - Error should be emitted irrespective of C++ dialect
 #if __cplusplus <= 199711L
   // expected-error@-3 {{invalid use of member 'mu' in static member function}}
 #endif
 
-  friend FooStream& operator<<(FooStream& s, const Foo& f)
-    EXCLUSIVE_LOCKS_REQUIRED(mu);
-//FIXME: Bug 32066 - Error should be emitted irrespective of C++ dialect
+  friend FooStream &operator<<(FooStream &s, const Foo &f)
+      EXCLUSIVE_LOCKS_REQUIRED(mu);
+// FIXME: Bug 32066 - Error should be emitted irrespective of C++ dialect
 #if __cplusplus <= 199711L
-    // expected-error@-3 {{invalid use of non-static data member 'mu'}}
+  // expected-error@-3 {{invalid use of non-static data member 'mu'}}
 #endif
 };
 
-
 } // end namespace StaticScopeTest
-
 
 namespace FunctionAttributesInsideClass_ICE_Test {
 
@@ -1741,19 +1706,18 @@ public:
   }
 };
 
-}  // end namespace FunctionAttributesInsideClass_ICE_Test
-
+} // end namespace FunctionAttributesInsideClass_ICE_Test
 
 #if __cplusplus >= 201103
 namespace CRASH_POST_R301735 {
-  class SomeClass {
-   public:
-     void foo() {
-       auto l = [this] { auto l = [] () EXCLUSIVE_LOCKS_REQUIRED(mu_) {}; };
-     }
-     Mutex mu_;
-   };
-}
+class SomeClass {
+public:
+  void foo() {
+    auto l = [this] { auto l = []() EXCLUSIVE_LOCKS_REQUIRED(mu_) {}; };
+  }
+  Mutex mu_;
+};
+} // namespace CRASH_POST_R301735
 #endif
 
 //-----------------------------------------//
@@ -1804,20 +1768,20 @@ struct BadFPFields {
 
 // Compound types (array of, pointer/reference to array of function pointers)
 // are not analyzed; a plain function pointer is required.
-void (*fp_array[4])(void) EXCLUSIVE_LOCK_FUNCTION(mu1); // \
+void (*fp_array[4])(void) EXCLUSIVE_LOCK_FUNCTION(mu1);           // \
   // expected-warning {{'exclusive_lock_function' attribute on a variable requires the variable to be of function pointer type}}
 void (*(*fp_ptr_to_array)[4])(void) EXCLUSIVE_LOCK_FUNCTION(mu1); // \
   // expected-warning {{'exclusive_lock_function' attribute on a variable requires the variable to be of function pointer type}}
-void (*(&fp_ref_to_array)[4])(void) EXCLUSIVE_LOCK_FUNCTION(mu1) = fp_array; // \
+void (*(&fp_ref_to_array)[4])(void)
+    EXCLUSIVE_LOCK_FUNCTION(mu1) = fp_array; // \
   // expected-warning {{'exclusive_lock_function' attribute on a variable requires the variable to be of function pointer type}}
 
 // C++11 spelling at the declaration prefix so attribute applies to variable.
 [[clang::acquire_capability(mu1)]] void (*fp_cxx11)(void);
 [[clang::requires_capability(mu1)]] void (*fp_cxx11_req)(void);
 
-template <typename FuncPtr>
-struct DependentFPFields {
-  FuncPtr lock EXCLUSIVE_LOCK_FUNCTION(mu1); // \
+template <typename FuncPtr> struct DependentFPFields {
+  FuncPtr lock EXCLUSIVE_LOCK_FUNCTION(mu1);         // \
     // expected-warning {{'exclusive_lock_function' attribute on a field requires the field to be of function pointer type}}
   FuncPtr requires_mu EXCLUSIVE_LOCKS_REQUIRED(mu1); // \
     // expected-warning {{'exclusive_locks_required' attribute on a field requires the field to be of function pointer type}}
@@ -1825,6 +1789,9 @@ struct DependentFPFields {
 
 typedef void (*GoodLockFn)(void);
 DependentFPFields<GoodLockFn> dependent_fp_fields_ok;
-DependentFPFields<int> dependent_fp_fields_bad; // expected-note {{in instantiation of template class 'FunctionPointers::DependentFPFields<int>' requested here}}
+DependentFPFields<int>
+    dependent_fp_fields_bad; // expected-note {{in instantiation of template
+                             // class 'FunctionPointers::DependentFPFields<int>'
+                             // requested here}}
 
-}  // namespace FunctionPointers
+} // namespace FunctionPointers

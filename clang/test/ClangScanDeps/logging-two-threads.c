@@ -21,20 +21,18 @@
 
 // Each module is compiled once and its pcm written once, regardless of which
 // thread wins the race to build the shared module A.
-// RUN: grep -c "pcm_compile:" %t/scan.log | FileCheck %s --check-prefix=COMPILES
-// RUN: grep -c "pcm_write:" %t/scan.log | FileCheck %s --check-prefix=PCMWRITES
-// COMPILES: {{^2$}}
-// PCMWRITES: {{^2$}}
+// RUN: grep -c "pcm_compile:" %t/scan.log | FileCheck %s
+// --check-prefix=COMPILES RUN: grep -c "pcm_write:" %t/scan.log | FileCheck %s
+// --check-prefix=PCMWRITES COMPILES: {{^2$}} PCMWRITES: {{^2$}}
 
 // The timestamp records when a worker last validated a module's inputs in this
 // build session. Both threads can notice the shared module A is unvalidated
 // before either records it, so each may validate and record it: A's timestamp
 // is written once or twice. B (imported by a single TU) is always written once.
 // The per-module ordering is checked by ASEQ/BSEQ below.
-// RUN: grep -c "timestamp_write:.*A-" %t/scan.log | FileCheck %s --check-prefix=TSA
-// RUN: grep -c "timestamp_write:.*B-" %t/scan.log | FileCheck %s --check-prefix=TSB
-// TSA: {{^[12]$}}
-// TSB: {{^1$}}
+// RUN: grep -c "timestamp_write:.*A-" %t/scan.log | FileCheck %s
+// --check-prefix=TSA RUN: grep -c "timestamp_write:.*B-" %t/scan.log |
+// FileCheck %s --check-prefix=TSB TSA: {{^[12]$}} TSB: {{^1$}}
 
 // Verify A's pcm is written before B's pcm.
 // RUN: grep "pcm_write:" %t/scan.log | FileCheck %s --check-prefix=WRITEORDER
@@ -59,19 +57,24 @@
 
 //--- cdb.json.template
 [{
-  "directory": "DIR",
-  "command": "clang -fsyntax-only DIR/tu1.c -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -fbuild-session-timestamp=1 -fmodules-validate-once-per-build-session",
-  "file": "DIR/tu1.c"
+  "directory" : "DIR",
+  "command" : "clang -fsyntax-only DIR/tu1.c -fmodules -fimplicit-module-maps "
+              "-fmodules-cache-path=DIR/cache -fbuild-session-timestamp=1 "
+              "-fmodules-validate-once-per-build-session",
+  "file" : "DIR/tu1.c"
 },
-{
-  "directory": "DIR",
-  "command": "clang -fsyntax-only DIR/tu2.c -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -fbuild-session-timestamp=1 -fmodules-validate-once-per-build-session",
-  "file": "DIR/tu2.c"
-}]
+ {
+   "directory" : "DIR",
+   "command" : "clang -fsyntax-only DIR/tu2.c -fmodules -fimplicit-module-maps "
+               "-fmodules-cache-path=DIR/cache -fbuild-session-timestamp=1 "
+               "-fmodules-validate-once-per-build-session",
+   "file" : "DIR/tu2.c"
+ }]
 
-//--- module.modulemap
-module A { header "A.h" }
-module B { header "B.h" }
+    //--- module.modulemap
+    module A { header "A.h" } module B {
+  header "B.h"
+}
 
 //--- A.h
 void a(void);

@@ -133,7 +133,6 @@ bool isOdd(unsigned reg) {
   case AArch64::Q28:
   case AArch64::Q30:
     return false;
-
   }
 }
 
@@ -146,10 +145,10 @@ bool haveSameParity(unsigned reg1, unsigned reg2) {
   return isOdd(reg1) == isOdd(reg2);
 }
 
-}
+} // namespace
 
 bool A57ChainingConstraint::addIntraChainConstraint(PBQPRAGraph &G, unsigned Rd,
-                                                 unsigned Ra) {
+                                                    unsigned Ra) {
   if (Rd == Ra)
     return false;
 
@@ -167,9 +166,9 @@ bool A57ChainingConstraint::addIntraChainConstraint(PBQPRAGraph &G, unsigned Rd,
   PBQPRAGraph::NodeId node2 = G.getMetadata().getNodeIdForVReg(Ra);
 
   const PBQPRAGraph::NodeMetadata::AllowedRegVector *vRdAllowed =
-    &G.getNodeMetadata(node1).getAllowedRegs();
+      &G.getNodeMetadata(node1).getAllowedRegs();
   const PBQPRAGraph::NodeMetadata::AllowedRegVector *vRaAllowed =
-    &G.getNodeMetadata(node2).getAllowedRegs();
+      &G.getNodeMetadata(node2).getAllowedRegs();
 
   PBQPRAGraph::EdgeId edge = G.findEdge(node1, node2);
 
@@ -180,8 +179,8 @@ bool A57ChainingConstraint::addIntraChainConstraint(PBQPRAGraph &G, unsigned Rd,
     const LiveInterval &la = LIs.getInterval(Ra);
     bool livesOverlap = ld.overlaps(la);
 
-    PBQPRAGraph::RawMatrix costs(vRdAllowed->size() + 1,
-                                 vRaAllowed->size() + 1, 0);
+    PBQPRAGraph::RawMatrix costs(vRdAllowed->size() + 1, vRaAllowed->size() + 1,
+                                 0);
     for (unsigned i = 0, ie = vRdAllowed->size(); i != ie; ++i) {
       unsigned pRd = (*vRdAllowed)[i];
       for (unsigned j = 0, je = vRaAllowed->size(); j != je; ++j) {
@@ -233,7 +232,7 @@ bool A57ChainingConstraint::addIntraChainConstraint(PBQPRAGraph &G, unsigned Rd,
 }
 
 void A57ChainingConstraint::addInterChainConstraint(PBQPRAGraph &G, unsigned Rd,
-                                                 unsigned Ra) {
+                                                    unsigned Ra) {
   LiveIntervals &LIs = G.getMetadata().LIS;
 
   // Do some Chain management
@@ -261,11 +260,11 @@ void A57ChainingConstraint::addInterChainConstraint(PBQPRAGraph &G, unsigned Rd,
     const LiveInterval &lr = LIs.getInterval(r);
     if (ld.overlaps(lr)) {
       const PBQPRAGraph::NodeMetadata::AllowedRegVector *vRdAllowed =
-        &G.getNodeMetadata(node1).getAllowedRegs();
+          &G.getNodeMetadata(node1).getAllowedRegs();
 
       PBQPRAGraph::NodeId node2 = G.getMetadata().getNodeIdForVReg(r);
       const PBQPRAGraph::NodeMetadata::AllowedRegVector *vRrAllowed =
-        &G.getNodeMetadata(node2).getAllowedRegs();
+          &G.getNodeMetadata(node2).getAllowedRegs();
 
       PBQPRAGraph::EdgeId edge = G.findEdge(node1, node2);
       assert(edge != G.invalidEdgeId() &&
@@ -323,15 +322,15 @@ void A57ChainingConstraint::apply(PBQPRAGraph &G) {
   TRI = MF.getSubtarget().getRegisterInfo();
   LLVM_DEBUG(MF.dump());
 
-  for (const auto &MBB: MF) {
+  for (const auto &MBB : MF) {
     Chains.clear(); // FIXME: really needed ? Could not work at MF level ?
 
-    for (const auto &MI: MBB) {
+    for (const auto &MI : MBB) {
 
       // Forget Chains which have expired
       for (auto r : Chains) {
         SmallVector<unsigned, 8> toDel;
-        if(regJustKilledBefore(LIs, r, MI)) {
+        if (regJustKilledBefore(LIs, r, MI)) {
           LLVM_DEBUG(dbgs() << "Killing chain " << printReg(r, TRI) << " at ";
                      MI.print(dbgs()));
           toDel.push_back(r);

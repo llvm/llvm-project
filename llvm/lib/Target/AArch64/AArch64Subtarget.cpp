@@ -35,14 +35,17 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #include "AArch64GenSubtargetInfo.inc"
 
-static cl::opt<bool>
-EnableEarlyIfConvert("aarch64-early-ifcvt", cl::desc("Enable the early if "
-                     "converter pass"), cl::init(true), cl::Hidden);
+static cl::opt<bool> EnableEarlyIfConvert("aarch64-early-ifcvt",
+                                          cl::desc("Enable the early if "
+                                                   "converter pass"),
+                                          cl::init(true), cl::Hidden);
 
 // If OS supports TBI, use this flag to enable it.
 static cl::opt<bool>
-UseAddressTopByteIgnored("aarch64-use-tbi", cl::desc("Assume that top byte of "
-                         "an address is ignored"), cl::init(false), cl::Hidden);
+    UseAddressTopByteIgnored("aarch64-use-tbi",
+                             cl::desc("Assume that top byte of "
+                                      "an address is ignored"),
+                             cl::init(false), cl::Hidden);
 
 static cl::opt<bool> MachOUseNonLazyBind(
     "aarch64-macho-enable-nonlazybind",
@@ -59,11 +62,12 @@ static cl::opt<unsigned> OverrideVectorInsertExtractBaseCost(
 // Reserve a list of X# registers, so they are unavailable for register
 // allocator, but can still be used as ABI requests, such as passing arguments
 // to function call.
-static cl::list<std::string>
-ReservedRegsForRA("reserve-regs-for-regalloc", cl::desc("Reserve physical "
-                  "registers, so they can't be used by register allocator. "
-                  "Should only be used for testing register allocator."),
-                  cl::CommaSeparated, cl::Hidden);
+static cl::list<std::string> ReservedRegsForRA(
+    "reserve-regs-for-regalloc",
+    cl::desc("Reserve physical "
+             "registers, so they can't be used by register allocator. "
+             "Should only be used for testing register allocator."),
+    cl::CommaSeparated, cl::Hidden);
 
 static cl::opt<AArch64PAuth::AuthCheckMethod>
     AuthenticatedLRCheckMethod("aarch64-authenticated-lr-check-method",

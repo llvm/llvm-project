@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -E %s 2>&1 | FileCheck %s -strict-whitespace
-// RUN: %clang_cc1 -E -fminimize-whitespace %s 2>&1 | FileCheck %s -strict-whitespace
-// PR6101
+// RUN: %clang_cc1 -E -fminimize-whitespace %s 2>&1 | FileCheck %s
+// -strict-whitespace PR6101
 int a;
 // CHECK: # 1 "{{.*}}line-directive-output.c"
 
@@ -19,7 +19,6 @@ int b;
 # 13
 int c;
 
-
 // CHECK-NEXT: # 1 "A.c"
 #line 1 "A.c"
 // CHECK-NEXT: # 2 "A.c"
@@ -33,12 +32,6 @@ int c;
 
 int y;
 
-
-
-
-
-
-
 // CHECK: # 1010 "A.c"
 int z;
 
@@ -50,24 +43,10 @@ extern int y;
 # 7 "A.c" 2
 extern int z;
 
-
-
-
-
-
-
-
-
-
-
-
-
 // CHECK: # 25 "A.c"
-
 
 // CHECK: # 50 "C.c" 1
 # 50 "C.c" 1
-
 
 // CHECK-NEXT: # 2000 "A.c" 2
 # 2000 "A.c" 2

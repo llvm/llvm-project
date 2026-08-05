@@ -125,8 +125,7 @@ private:
 
 public:
   /// Construct a CoreEngine object to analyze the provided CFG.
-  CoreEngine(ExprEngine &exprengine,
-             FunctionSummariesTy *FS,
+  CoreEngine(ExprEngine &exprengine, FunctionSummariesTy *FS,
              AnalyzerOptions &Opts);
 
   CoreEngine(const CoreEngine &) = delete;
@@ -142,15 +141,15 @@ public:
 
   /// Dispatch the work list item based on the given location information.
   /// Use Pred parameter as the predecessor state.
-  void dispatchWorkItem(ExplodedNode* Pred, ProgramPoint Loc,
-                        const WorkListUnit& WU);
+  void dispatchWorkItem(ExplodedNode *Pred, ProgramPoint Loc,
+                        const WorkListUnit &WU);
 
   // Functions for external checking of whether we have unfinished work.
   bool wasBlockAborted() const { return !blocksAborted.empty(); }
   bool wasBlocksExhausted() const { return !blocksExhausted.empty(); }
-  bool hasWorkRemaining() const { return wasBlocksExhausted() ||
-                                         WList->hasWork() ||
-                                         wasBlockAborted(); }
+  bool hasWorkRemaining() const {
+    return wasBlocksExhausted() || WList->hasWork() || wasBlockAborted();
+  }
 
   /// Inform the CoreEngine that a basic block was aborted because
   /// it could not be completely analyzed.
@@ -297,27 +296,24 @@ public:
   /// When a node is marked as sink, the exploration from the node is stopped -
   /// the node becomes the last node on the path and certain kinds of bugs are
   /// suppressed.
-  ExplodedNode *generateSink(const ProgramPoint &PP,
-                             ProgramStateRef State,
+  ExplodedNode *generateSink(const ProgramPoint &PP, ProgramStateRef State,
                              ExplodedNode *Pred) {
     return generateNode(PP, State, Pred, true);
   }
 
-  ExplodedNode *generateNode(const Stmt *S,
-                             ExplodedNode *Pred,
-                             ProgramStateRef St,
-                             const ProgramPointTag *tag = nullptr,
-                             ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
+  ExplodedNode *
+  generateNode(const Stmt *S, ExplodedNode *Pred, ProgramStateRef St,
+               const ProgramPointTag *tag = nullptr,
+               ProgramPoint::Kind K = ProgramPoint::PostStmtKind) {
     const ProgramPoint &L =
         ProgramPoint::getProgramPoint(S, K, Pred->getStackFrame(), tag);
     return generateNode(L, St, Pred);
   }
 
-  ExplodedNode *generateSink(const Stmt *S,
-                             ExplodedNode *Pred,
-                             ProgramStateRef St,
-                             const ProgramPointTag *tag = nullptr,
-                             ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
+  ExplodedNode *
+  generateSink(const Stmt *S, ExplodedNode *Pred, ProgramStateRef St,
+               const ProgramPointTag *tag = nullptr,
+               ProgramPoint::Kind K = ProgramPoint::PostStmtKind) {
     const ProgramPoint &L =
         ProgramPoint::getProgramPoint(S, K, Pred->getStackFrame(), tag);
     return generateSink(L, St, Pred);

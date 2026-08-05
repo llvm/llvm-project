@@ -16,9 +16,7 @@ int w = 42;
 extern int x;
 extern int __attribute__((weak)) w;
 
-int bar() {
-  return x + w;
-}
+int bar() { return x + w; }
 #else
 extern int y;
 extern int x;
@@ -42,45 +40,53 @@ int baz() { return y + x; }
 //
 // Check that we forward any unrecognized argument to 'nvlink'.
 //
-// RUN: clang-nvlink-wrapper --dry-run --assume-device-object -arch sm_52 %t-u.o -foo -o a.out 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=ARGS
-// ARGS: nvlink{{.*}} -arch sm_52 -foo -o a.out [[INPUT:.+]].cubin
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object -arch sm_52 %t-u.o
+// -foo -o a.out 2>&1 \ RUN:   | FileCheck %s --check-prefix=ARGS ARGS:
+// nvlink{{.*}} -arch sm_52 -foo -o a.out [[INPUT:.+]].cubin
 
 //
 // Check the symbol resolution for static archives. We expect to only link
 // `libx.a` and `liby.a` because extern weak symbols do not extract and `libz.a`
 // is not used at all.
 //
-// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t-x.a %t-u.a %t-y.a %t-z.a %t-w.a %t.o \
-// RUN:   -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=LINK
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t-x.a %t-u.a
+// %t-y.a %t-z.a %t-w.a %t.o \ RUN:   -arch sm_52 -o a.out 2>&1 | FileCheck %s
+// --check-prefix=LINK
 // RUN: clang-nvlink-wrapper --dry-run %t-x.a %t-u.a %t-y.a %t-z.a %t-w.a %t.o \
 // RUN:   -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=FORWARD
-// LINK: nvlink{{.*}} -arch sm_52 -o a.out [[INPUT:.+]].cubin {{.*}}-x-{{.*}}.cubin{{.*}}-y-{{.*}}.cubin
-// FORWARD: nvlink{{.*}} -arch sm_52 -o a.out [[INPUT:.+]].cubin {{.*}}-x-{{.*}}.o {{.*}}-u-{{.*}}.o {{.*}}-y-{{.*}}.o {{.*}}-z-{{.*}}.o {{.*}}-w-{{.*}}.o
+// LINK: nvlink{{.*}} -arch sm_52 -o a.out [[INPUT:.+]].cubin
+// {{.*}}-x-{{.*}}.cubin{{.*}}-y-{{.*}}.cubin FORWARD: nvlink{{.*}} -arch sm_52
+// -o a.out [[INPUT:.+]].cubin {{.*}}-x-{{.*}}.o {{.*}}-u-{{.*}}.o
+// {{.*}}-y-{{.*}}.o {{.*}}-z-{{.*}}.o {{.*}}-w-{{.*}}.o
 
 //
 // Same as above but we use '--undefined' to forcibly extract 'libz.a'
 //
-// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t-x.a %t-u.a %t-y.a %t-z.a %t-w.a %t.o \
-// RUN:   -u z -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=LINK
-// UNDEFINED: nvlink{{.*}} -arch sm_52 -o a.out [[INPUT:.+]].cubin {{.*}}-x-{{.*}}.cubin{{.*}}-y-{{.*}}.cubin{{.*}}-z-{{.*}}.cubin
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t-x.a %t-u.a
+// %t-y.a %t-z.a %t-w.a %t.o \ RUN:   -u z -arch sm_52 -o a.out 2>&1 | FileCheck
+// %s --check-prefix=LINK UNDEFINED: nvlink{{.*}} -arch sm_52 -o a.out
+// [[INPUT:.+]].cubin
+// {{.*}}-x-{{.*}}.cubin{{.*}}-y-{{.*}}.cubin{{.*}}-z-{{.*}}.cubin
 
 //
 // Check that the LTO interface works and properly preserves symbols used in a
 // regular object file.
 //
-// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t.o %t-u.o %t-y.a \
-// RUN:   -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=LTO
-// LTO: ptxas{{.*}} -m64 -c [[PTX:.+]].s -O3 -arch sm_52 -o [[CUBIN:.+]].cubin
-// LTO: nvlink{{.*}} -arch sm_52 -o a.out [[CUBIN]].cubin {{.*}}-u-{{.*}}.cubin {{.*}}-y-{{.*}}.cubin
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t.o %t-u.o %t-y.a
+// \ RUN:   -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=LTO LTO:
+// ptxas{{.*}} -m64 -c [[PTX:.+]].s -O3 -arch sm_52 -o [[CUBIN:.+]].cubin LTO:
+// nvlink{{.*}} -arch sm_52 -o a.out [[CUBIN]].cubin {{.*}}-u-{{.*}}.cubin
+// {{.*}}-y-{{.*}}.cubin
 
 //
 // Check that '-Xptxas' is forwarded to 'ptxas' and not to 'nvlink'.
 //
-// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t.o %t-u.o %t-y.a \
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t.o %t-u.o %t-y.a
+// \
 // RUN:   -Xptxas -maxrregcount=32 -arch sm_52 -o a.out 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=PTXAS-ARGS
-// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t.o %t-u.o %t-y.a \
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t.o %t-u.o %t-y.a
+// \
 // RUN:   -Xptxas=-maxrregcount=32 -arch sm_52 -o a.out 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=PTXAS-ARGS
 // PTXAS-ARGS: ptxas{{.*}} -arch sm_52 -maxrregcount=32 -o [[CUBIN:.+]].cubin
@@ -91,8 +97,8 @@ int baz() { return y + x; }
 // Check that we don't forward some arguments.
 //
 // RUN: clang-nvlink-wrapper --dry-run %t.o %t-u.o %t-y.a \
-// RUN:   -arch sm_52 --cuda-path/opt/cuda -o a.out 2>&1 | FileCheck %s --check-prefix=PATH
-// PATH-NOT: --cuda-path=/opt/cuda
+// RUN:   -arch sm_52 --cuda-path/opt/cuda -o a.out 2>&1 | FileCheck %s
+// --check-prefix=PATH PATH-NOT: --cuda-path=/opt/cuda
 
 //
 // Check that passes can be specified and debugged.
@@ -105,6 +111,5 @@ int baz() { return y + x; }
 //
 // Check that '-plugin` is ingored like in `ld.lld`
 //
-// RUN: clang-nvlink-wrapper --dry-run %t.o -plugin foo.so -arch sm_52 -o a.out \
-// RUN:   2>&1 | FileCheck %s --check-prefix=PLUGIN
-// PLUGIN-NOT: -plugin
+// RUN: clang-nvlink-wrapper --dry-run %t.o -plugin foo.so -arch sm_52 -o a.out
+// \ RUN:   2>&1 | FileCheck %s --check-prefix=PLUGIN PLUGIN-NOT: -plugin

@@ -33,16 +33,16 @@ STAT_COUNTER(NumBlocksUnreachable,
 namespace {
 class AnalyzerStatsChecker : public Checker<check::EndAnalysis> {
 public:
-  void checkEndAnalysis(ExplodedGraph &G, BugReporter &B,ExprEngine &Eng) const;
+  void checkEndAnalysis(ExplodedGraph &G, BugReporter &B,
+                        ExprEngine &Eng) const;
 };
-}
+} // namespace
 
-void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
-                                            BugReporter &B,
+void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G, BugReporter &B,
                                             ExprEngine &Eng) const {
   const CFG *C = nullptr;
   const SourceManager &SM = B.getSourceManager();
-  llvm::SmallPtrSet<const CFGBlock*, 32> reachable;
+  llvm::SmallPtrSet<const CFGBlock *, 32> reachable;
 
   const StackFrame *RootSF = Eng.getRootStackFrame();
 
@@ -101,11 +101,10 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
   NumBlocks += total;
   std::string NameOfRootFunction = std::string(output.str());
 
-  output << " -> Total CFGBlocks: " << total << " | Unreachable CFGBlocks: "
-      << unreachable << " | Exhausted Block: "
-      << (Eng.wasBlocksExhausted() ? "yes" : "no")
-      << " | Empty WorkList: "
-      << (Eng.hasEmptyWorkList() ? "yes" : "no");
+  output << " -> Total CFGBlocks: " << total
+         << " | Unreachable CFGBlocks: " << unreachable
+         << " | Exhausted Block: " << (Eng.wasBlocksExhausted() ? "yes" : "no")
+         << " | Empty WorkList: " << (Eng.hasEmptyWorkList() ? "yes" : "no");
 
   B.EmitBasicReport(D, this, "Analyzer Statistics", "Internal Statistics",
                     output.str(), PathDiagnosticLocation(D, SM));
@@ -120,8 +119,8 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
     if (std::optional<CFGStmt> CS = CE.getAs<CFGStmt>()) {
       SmallString<128> bufI;
       llvm::raw_svector_ostream outputI(bufI);
-      outputI << "(" << NameOfRootFunction << ")" <<
-                 ": The analyzer generated a sink at this point";
+      outputI << "(" << NameOfRootFunction << ")"
+              << ": The analyzer generated a sink at this point";
       B.EmitBasicReport(
           D, this, "Sink Point", "Internal Statistics", outputI.str(),
           PathDiagnosticLocation::createBegin(CS->getStmt(), SM, RootSF));

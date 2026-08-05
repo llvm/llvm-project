@@ -95,9 +95,10 @@ Error MachORewriteInstance::setProfile(StringRef Filename) {
 
   if (ProfileReader) {
     // Already exists
-    return make_error<StringError>(
-        Twine("multiple profiles specified: ") + ProfileReader->getFilename() +
-        " and " + Filename, inconvertibleErrorCode());
+    return make_error<StringError>(Twine("multiple profiles specified: ") +
+                                       ProfileReader->getFilename() + " and " +
+                                       Filename,
+                                   inconvertibleErrorCode());
   }
 
   ProfileReader = std::make_unique<DataReader>(Filename);
@@ -127,7 +128,8 @@ void MachORewriteInstance::processProfileData() {
 
 void MachORewriteInstance::readSpecialSections() {
   for (const object::SectionRef &Section : InputFile->sections()) {
-    Expected<StringRef> SectionName = Section.getName();;
+    Expected<StringRef> SectionName = Section.getName();
+    ;
     check_error(SectionName.takeError(), "cannot get section name");
     // Only register sections with names.
     if (!SectionName->empty()) {
@@ -390,9 +392,10 @@ void MachORewriteInstance::mapCodeSections(
           FuncSection.getError());
 
     FuncSection->setOutputAddress(Function->getOutputAddress());
-    LLVM_DEBUG(dbgs() << "BOLT: mapping 0x"
-                 << Twine::utohexstr(FuncSection->getAllocAddress()) << " to 0x"
-                 << Twine::utohexstr(Function->getOutputAddress()) << '\n');
+    LLVM_DEBUG(
+        dbgs() << "BOLT: mapping 0x"
+               << Twine::utohexstr(FuncSection->getAllocAddress()) << " to 0x"
+               << Twine::utohexstr(Function->getOutputAddress()) << '\n');
     MapSection(*FuncSection, Function->getOutputAddress());
     Function->setImageAddress(FuncSection->getAllocAddress());
     Function->setImageSize(FuncSection->getOutputSize());
@@ -428,8 +431,8 @@ void MachORewriteInstance::mapCodeSections(
 void MachORewriteInstance::emitAndLink() {
   std::error_code EC;
   std::unique_ptr<::llvm::ToolOutputFile> TempOut =
-      std::make_unique<::llvm::ToolOutputFile>(
-          opts::OutputFilename + ".bolt.o", EC, sys::fs::OF_None);
+      std::make_unique<::llvm::ToolOutputFile>(opts::OutputFilename + ".bolt.o",
+                                               EC, sys::fs::OF_None);
   check_error(EC, "cannot create output object file");
 
   if (opts::KeepTmp)
@@ -547,8 +550,8 @@ void MachORewriteInstance::rewriteFile() {
 }
 
 void MachORewriteInstance::adjustCommandLineOptions() {
-//FIXME! Upstream change
-//  opts::CheckOverlappingElements = false;
+  // FIXME! Upstream change
+  //   opts::CheckOverlappingElements = false;
   if (!opts::AlignText.getNumOccurrences())
     opts::AlignText = BC->PageAlign;
   if (opts::Instrument.getNumOccurrences())

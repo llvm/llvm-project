@@ -166,7 +166,7 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
   if (const auto *expr{arg.GetArgExpr()}) {
     return Characterize(*expr, context, invariantOnly);
   }
-  if (const Symbol *assumed{arg.GetAssumedTypeDummy()}) {
+  if (const Symbol * assumed{arg.GetAssumedTypeDummy()}) {
     return Characterize(*assumed, context, invariantOnly);
   }
   return std::nullopt;

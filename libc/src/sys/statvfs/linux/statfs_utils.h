@@ -24,7 +24,7 @@ LIBC_INLINE_VAR constexpr long ST_VALID = 0x0020;
 // a function in the same namespace with the same name. For consistency, we use
 // struct prefix for all statvfs/statfs related types.
 LIBC_INLINE struct statvfs statfs_to_statvfs(const struct statfs &in) {
-  struct statvfs out{};
+  struct statvfs out {};
   out.f_bsize = in.f_bsize;
   out.f_frsize = in.f_frsize;
   out.f_blocks = static_cast<decltype(out.f_blocks)>(in.f_blocks);

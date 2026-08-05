@@ -50,10 +50,10 @@ using namespace llvm;
 
 // Allow forcing all i64 operations with equivalent SIMD instructions to use
 // them. For stress-testing the transformation function.
-static cl::opt<bool>
-TransformAll("aarch64-simd-scalar-force-all",
-             cl::desc("Force use of AdvSIMD scalar instructions everywhere"),
-             cl::init(false), cl::Hidden);
+static cl::opt<bool> TransformAll(
+    "aarch64-simd-scalar-force-all",
+    cl::desc("Force use of AdvSIMD scalar instructions everywhere"),
+    cl::init(false), cl::Hidden);
 
 STATISTIC(NumScalarInsnsUsed, "Number of scalar instructions used");
 STATISTIC(NumCopiesDeleted, "Number of cross-class copies deleted");

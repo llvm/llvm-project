@@ -8,9 +8,15 @@
 // absence of ref ptr and offload entry for local variable and, by contrast,
 // presence of ref ptr and offload entry for enter variable.
 
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm-bc %s -o %t-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -x c++ -triple amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s --check-prefix=DEVICE
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -x c++ -triple
+// powerpc64le-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s
+// -o - | FileCheck %s --check-prefix=HOST RUN: %clang_cc1 -verify -fopenmp
+// -fopenmp-version=60 -x c++ -triple powerpc64le-unknown-unknown
+// -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm-bc %s -o %t-host.bc RUN:
+// %clang_cc1 -verify -fopenmp -fopenmp-version=60 -x c++ -triple
+// amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device
+// -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck
+// %s --check-prefix=DEVICE
 
 // expected-no-diagnostics
 
@@ -31,7 +37,10 @@ int enter_var;
 
 // enter_var with USM: pointer-reference indirection
 // HOST-DAG: @enter_var_decl_tgt_ref_ptr = weak global ptr @enter_var
-// HOST-DAG: @.offloading.entry.enter_var_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 0, ptr @enter_var_decl_tgt_ref_ptr, ptr @.offloading.entry_name{{.*}}, i64 8, i64 0, ptr null }, section "llvm_offload_entries"
+// HOST-DAG: @.offloading.entry.enter_var_decl_tgt_ref_ptr = weak constant
+// %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 0, ptr
+// @enter_var_decl_tgt_ref_ptr, ptr @.offloading.entry_name{{.*}}, i64 8, i64 0,
+// ptr null }, section "llvm_offload_entries"
 
 // Device: local_var is a direct global, enter_var uses ref ptr
 // DEVICE-DAG: @local_var = protected addrspace(1) global i32 0
@@ -40,7 +49,7 @@ int enter_var;
 
 int use_vars() {
   int result = 0;
-#pragma omp target map(from: result)
+#pragma omp target map(from : result)
   {
     local_var = 42;
     enter_var = 10;

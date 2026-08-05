@@ -6,16 +6,17 @@
 // RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-CL20
 
 #if defined(OCL12)
-    #define CAST (char *)(unsigned long)
+#define CAST (char *)(unsigned long)
 #else
-    #define CAST (char *)
+#define CAST (char *)
 #endif
 
 void allocas(unsigned long n) {
-    char *a = CAST __builtin_alloca(n);
-    char *uninitialized_a = CAST __builtin_alloca_uninitialized(n);
-    char *aligned_a = CAST __builtin_alloca_with_align(n, 8);
-    char *aligned_uninitialized_a = CAST __builtin_alloca_with_align_uninitialized(n, 8);
+  char *a = CAST __builtin_alloca(n);
+  char *uninitialized_a = CAST __builtin_alloca_uninitialized(n);
+  char *aligned_a = CAST __builtin_alloca_with_align(n, 8);
+  char *aligned_uninitialized_a =
+      CAST __builtin_alloca_with_align_uninitialized(n, 8);
 }
 
 // CHECK: @allocas(

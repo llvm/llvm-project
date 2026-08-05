@@ -366,8 +366,8 @@ public:
   /// in the address type.
   MutableBoxValue(mlir::Value addr, mlir::ValueRange lenParameters,
                   MutableProperties mutableProperties)
-      : AbstractIrBox(addr), lenParams{lenParameters.begin(),
-                                       lenParameters.end()},
+      : AbstractIrBox(addr),
+        lenParams{lenParameters.begin(), lenParameters.end()},
         mutableProperties{mutableProperties} {
     // Currently only accepts fir.(ref/ptr/heap)<fir.box<type>> mlir::Value for
     // the address. This may change if we accept

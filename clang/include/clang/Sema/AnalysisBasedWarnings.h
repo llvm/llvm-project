@@ -27,9 +27,9 @@ class QualType;
 class Sema;
 class VarDecl;
 namespace sema {
-  class FunctionScopeInfo;
-  class SemaPPCallbacks;
-}
+class FunctionScopeInfo;
+class SemaPPCallbacks;
+} // namespace sema
 
 namespace sema {
 
@@ -47,6 +47,7 @@ public:
     unsigned enableThreadSafetyAnalysis : 1;
     LLVM_PREFERRED_TYPE(bool)
     unsigned enableConsumedAnalysis : 1;
+
   public:
     Policy();
     void disableCheckFallThrough() { enableCheckFallThrough = 0; }
@@ -59,7 +60,7 @@ private:
   std::unique_ptr<InterProceduralData> IPData;
 
   enum VisitFlag { NotVisited = 0, Visited = 1, Pending = 2 };
-  llvm::DenseMap<const FunctionDecl*, VisitFlag> VisitedFD;
+  llvm::DenseMap<const FunctionDecl *, VisitFlag> VisitedFD;
   std::multimap<VarDecl *, PossiblyUnreachableDiag>
       VarDeclPossiblyUnreachableDiags;
 
@@ -115,8 +116,8 @@ public:
   AnalysisBasedWarnings(Sema &s);
   ~AnalysisBasedWarnings();
 
-  void IssueWarnings(Policy P, FunctionScopeInfo *fscope,
-                     const Decl *D, QualType BlockType);
+  void IssueWarnings(Policy P, FunctionScopeInfo *fscope, const Decl *D,
+                     QualType BlockType);
 
   // Issue warnings that require whole-translation-unit analysis.
   void IssueWarnings(TranslationUnitDecl *D);

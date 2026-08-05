@@ -1040,14 +1040,15 @@ public:
   /// Get the global index file cache.
   ///
   /// LLDB can cache data for a module between runs. This cache directory can be
-  /// used to stored data that previously was manually created each time you debug.
-  /// Examples include debug information indexes, symbol tables, symbol table
-  /// indexes, and more.
+  /// used to stored data that previously was manually created each time you
+  /// debug. Examples include debug information indexes, symbol tables, symbol
+  /// table indexes, and more.
   ///
   /// \returns
   ///   If caching is enabled in the lldb settings, return a pointer to the data
   ///   file cache. If caching is not enabled, return NULL.
   static DataFileCache *GetIndexCache();
+
 protected:
   // Member Variables
   mutable std::recursive_mutex m_mutex; ///< A mutex to keep this object happy

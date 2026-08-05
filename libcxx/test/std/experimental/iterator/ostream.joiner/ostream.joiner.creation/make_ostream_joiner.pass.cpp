@@ -31,26 +31,26 @@
 namespace exper = std::experimental;
 
 template <class Delim, class Iter, class CharT = char, class Traits = std::char_traits<CharT>>
-void test (Delim &&d, Iter first, Iter last, const CharT *expected ) {
-    std::basic_stringstream<CharT, Traits> sstream;
-    auto joiner = exper::make_ostream_joiner(sstream, d);
-    typedef exper::ostream_joiner<typename std::decay<Delim>::type, CharT, Traits> Joiner;
-    static_assert((std::is_same<decltype(joiner), Joiner>::value), "" );
-    while (first != last)
-        joiner = *first++;
-    assert(sstream.str() == expected);
-    }
+void test(Delim&& d, Iter first, Iter last, const CharT* expected) {
+  std::basic_stringstream<CharT, Traits> sstream;
+  auto joiner = exper::make_ostream_joiner(sstream, d);
+  typedef exper::ostream_joiner<typename std::decay<Delim>::type, CharT, Traits> Joiner;
+  static_assert((std::is_same<decltype(joiner), Joiner>::value), "");
+  while (first != last)
+    joiner = *first++;
+  assert(sstream.str() == expected);
+}
 
 int main(int, char**) {
-    const char chars[] = "0123456789";
-    const int  ints [] = { 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 };
+  const char chars[] = "0123456789";
+  const int ints[]   = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 
-//  There are more of these tests in another file.
-//  This is just to make sure that the ostream_joiner is created correctly
-    test('X', chars, chars+10, "0X1X2X3X4X5X6X7X8X9");
-    test('x', ints,  ints+10,  "10x11x12x13x14x15x16x17x18x19");
-    test("Z", chars, chars+10, "0Z1Z2Z3Z4Z5Z6Z7Z8Z9");
-    test("z", ints,  ints+10,  "10z11z12z13z14z15z16z17z18z19");
+  //  There are more of these tests in another file.
+  //  This is just to make sure that the ostream_joiner is created correctly
+  test('X', chars, chars + 10, "0X1X2X3X4X5X6X7X8X9");
+  test('x', ints, ints + 10, "10x11x12x13x14x15x16x17x18x19");
+  test("Z", chars, chars + 10, "0Z1Z2Z3Z4Z5Z6Z7Z8Z9");
+  test("z", ints, ints + 10, "10z11z12z13z14z15z16z17z18z19");
 
   return 0;
 }

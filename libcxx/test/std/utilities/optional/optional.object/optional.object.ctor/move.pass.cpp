@@ -194,9 +194,7 @@ int main(int, char**) {
     test<TestType>();
     test<TestType>(42);
   }
-  {
-    test_throwing_ctor();
-  }
+  { test_throwing_ctor(); }
   {
     struct ThrowsMove {
       ThrowsMove() noexcept(false) {}
@@ -211,9 +209,7 @@ int main(int, char**) {
     };
     static_assert(std::is_nothrow_move_constructible<optional<NoThrowMove>>::value, "");
   }
-  {
-    test_reference_extension();
-  }
+  { test_reference_extension(); }
   {
     constexpr std::optional<int> o1{4};
     constexpr std::optional<int> o2 = std::move(o1);

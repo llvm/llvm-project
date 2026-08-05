@@ -2094,8 +2094,7 @@ public:
   void VisitBlockExpr(const BlockExpr *B);
   void VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   void VisitCompoundStmt(const CompoundStmt *S);
-  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) { /* Do nothing. */
-  }
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) { /* Do nothing. */ }
   void VisitMSDependentExistsStmt(const MSDependentExistsStmt *S);
   void VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E);
   void VisitCXXNewExpr(const CXXNewExpr *E);
@@ -2208,8 +2207,8 @@ public:
   void VisitOMPMaskedTaskLoopDirective(const OMPMaskedTaskLoopDirective *D);
   void
   VisitOMPMasterTaskLoopSimdDirective(const OMPMasterTaskLoopSimdDirective *D);
-  void VisitOMPMaskedTaskLoopSimdDirective(
-      const OMPMaskedTaskLoopSimdDirective *D);
+  void
+  VisitOMPMaskedTaskLoopSimdDirective(const OMPMaskedTaskLoopSimdDirective *D);
   void VisitOMPParallelMasterTaskLoopDirective(
       const OMPParallelMasterTaskLoopDirective *D);
   void VisitOMPParallelMaskedTaskLoopDirective(
@@ -2800,8 +2799,7 @@ void OMPClauseEnqueue::VisitOMPDynGroupprivateClause(
 void OMPClauseEnqueue::VisitOMPDoacrossClause(const OMPDoacrossClause *C) {
   VisitOMPClauseList(C);
 }
-void OMPClauseEnqueue::VisitOMPXAttributeClause(const OMPXAttributeClause *C) {
-}
+void OMPClauseEnqueue::VisitOMPXAttributeClause(const OMPXAttributeClause *C) {}
 void OMPClauseEnqueue::VisitOMPXBareClause(const OMPXBareClause *C) {}
 
 } // namespace
@@ -2976,7 +2974,7 @@ void OpenACCClauseEnqueue::VisitIndependentClause(
     const OpenACCIndependentClause &C) {}
 void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
 void OpenACCClauseEnqueue::VisitNoHostClause(const OpenACCNoHostClause &C) {}
-void OpenACCClauseEnqueue::VisitBindClause(const OpenACCBindClause &C) { }
+void OpenACCClauseEnqueue::VisitBindClause(const OpenACCBindClause &C) {}
 void OpenACCClauseEnqueue::VisitFinalizeClause(const OpenACCFinalizeClause &C) {
 }
 void OpenACCClauseEnqueue::VisitIfPresentClause(
@@ -5296,7 +5294,7 @@ typedef struct _CXChildVisitResult {
   int reserved;
   enum CXChildVisitResult (*invoke)(struct _CXChildVisitResult *, CXCursor,
                                     CXCursor);
-} * CXCursorVisitorBlock;
+} *CXCursorVisitorBlock;
 
 static enum CXChildVisitResult visitWithBlock(CXCursor cursor, CXCursor parent,
                                               CXClientData client_data) {

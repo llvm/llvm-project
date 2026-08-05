@@ -2,7 +2,7 @@
 // PR5697
 namespace PR5697 {
 struct A {
-  virtual void f() { }
+  virtual void f() {}
   A();
   A(int);
 };
@@ -10,24 +10,21 @@ struct A {
 // A does not have a key function, so the first constructor we emit should
 // cause the vtable to be defined (without assertions.)
 // CHECK: @_ZTVN6PR56971AE = linkonce_odr addrspace(1) constant
-A::A() { }
-A::A(int) { }
-}
+A::A() {}
+A::A(int) {}
+} // namespace PR5697
 
 // Make sure that we don't assert when building the vtable for a class
 // template specialization or explicit instantiation with a key
 // function.
-template<typename T>
-struct Base {
+template <typename T> struct Base {
   virtual ~Base();
 };
 
-template<typename T>
-struct Derived : public Base<T> { };
+template <typename T> struct Derived : public Base<T> {};
 
-template<>
-struct Derived<char> : public Base<char> {
+template <> struct Derived<char> : public Base<char> {
   virtual void anchor();
 };
 
-void Derived<char>::anchor() { }
+void Derived<char>::anchor() {}

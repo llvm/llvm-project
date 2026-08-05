@@ -3,11 +3,11 @@
 
 // expected-no-diagnostics
 
-typedef char* va_list;
+typedef char *va_list;
 
-void foo(const char* f, ...) {
-    int r;
-    va_list args;
-    __builtin_va_start(args, f);
-    __builtin_va_end(args);
+void foo(const char *f, ...) {
+  int r;
+  va_list args;
+  __builtin_va_start(args, f);
+  __builtin_va_end(args);
 }

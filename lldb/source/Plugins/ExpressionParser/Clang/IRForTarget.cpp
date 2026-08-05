@@ -481,63 +481,68 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
 
   Constant *alloc_arg = Constant::getNullValue(i8_ptr_ty);
   Constant *bytes_arg = cstr ? cstr : Constant::getNullValue(i8_ptr_ty);
-  Constant *numBytes_arg = ConstantInt::get(
-      m_intptr_ty, cstr ? (string_array->getNumElements() - 1) * string_array->getElementByteSize() : 0, false);
- int encoding_flags = 0;
- switch (cstr ? string_array->getElementByteSize() : 1) {
- case 1:
-   encoding_flags = 0x08000100; /* 0x08000100 is kCFStringEncodingUTF8 */
-   break;
- case 2:
-   encoding_flags = 0x0100; /* 0x0100 is kCFStringEncodingUTF16 */
-   break;
- case 4:
-   encoding_flags = 0x0c000100; /* 0x0c000100 is kCFStringEncodingUTF32 */
-   break;
- default:
-   encoding_flags = 0x0600; /* fall back to 0x0600, kCFStringEncodingASCII */
-   LLDB_LOG(log, "Encountered an Objective-C constant string with unusual "
-                 "element size {0}",
-            string_array->getElementByteSize());
- }
- Constant *encoding_arg = ConstantInt::get(i32_ty, encoding_flags, false);
- Constant *isExternal_arg =
-     ConstantInt::get(i8_ty, 0x0, false); /* 0x0 is false */
+  Constant *numBytes_arg =
+      ConstantInt::get(m_intptr_ty,
+                       cstr ? (string_array->getNumElements() - 1) *
+                                  string_array->getElementByteSize()
+                            : 0,
+                       false);
+  int encoding_flags = 0;
+  switch (cstr ? string_array->getElementByteSize() : 1) {
+  case 1:
+    encoding_flags = 0x08000100; /* 0x08000100 is kCFStringEncodingUTF8 */
+    break;
+  case 2:
+    encoding_flags = 0x0100; /* 0x0100 is kCFStringEncodingUTF16 */
+    break;
+  case 4:
+    encoding_flags = 0x0c000100; /* 0x0c000100 is kCFStringEncodingUTF32 */
+    break;
+  default:
+    encoding_flags = 0x0600; /* fall back to 0x0600, kCFStringEncodingASCII */
+    LLDB_LOG(log,
+             "Encountered an Objective-C constant string with unusual "
+             "element size {0}",
+             string_array->getElementByteSize());
+  }
+  Constant *encoding_arg = ConstantInt::get(i32_ty, encoding_flags, false);
+  Constant *isExternal_arg =
+      ConstantInt::get(i8_ty, 0x0, false); /* 0x0 is false */
 
- Value *argument_array[5];
+  Value *argument_array[5];
 
- argument_array[0] = alloc_arg;
- argument_array[1] = bytes_arg;
- argument_array[2] = numBytes_arg;
- argument_array[3] = encoding_arg;
- argument_array[4] = isExternal_arg;
+  argument_array[0] = alloc_arg;
+  argument_array[1] = bytes_arg;
+  argument_array[2] = numBytes_arg;
+  argument_array[3] = encoding_arg;
+  argument_array[4] = isExternal_arg;
 
- ArrayRef<Value *> CFSCWB_arguments(argument_array, 5);
+  ArrayRef<Value *> CFSCWB_arguments(argument_array, 5);
 
- FunctionValueCache CFSCWB_Caller(
-     [this, &CFSCWB_arguments](llvm::Function *function) -> llvm::Value * {
-       return CallInst::Create(
-           m_CFStringCreateWithBytes, CFSCWB_arguments,
-           "CFStringCreateWithBytes",
-           llvm::cast<Instruction>(
-               m_entry_instruction_finder.GetValue(function))
-               ->getIterator());
-     });
+  FunctionValueCache CFSCWB_Caller(
+      [this, &CFSCWB_arguments](llvm::Function *function) -> llvm::Value * {
+        return CallInst::Create(
+            m_CFStringCreateWithBytes, CFSCWB_arguments,
+            "CFStringCreateWithBytes",
+            llvm::cast<Instruction>(
+                m_entry_instruction_finder.GetValue(function))
+                ->getIterator());
+      });
 
- if (auto err = UnfoldConstant(ns_str, nullptr, CFSCWB_Caller,
-                               m_entry_instruction_finder, m_error_stream)) {
-   std::string error_msg = llvm::toString(std::move(err));
-   LLDB_LOG(log,
-            "Couldn't replace the NSString with the result of the call: {0}",
-            error_msg);
+  if (auto err = UnfoldConstant(ns_str, nullptr, CFSCWB_Caller,
+                                m_entry_instruction_finder, m_error_stream)) {
+    std::string error_msg = llvm::toString(std::move(err));
+    LLDB_LOG(log,
+             "Couldn't replace the NSString with the result of the call: {0}",
+             error_msg);
 
-   m_error_stream.Format("error [IRForTarget internal]: Couldn't replace an "
-                         "Objective-C constant string with a dynamic "
-                         "string\n{0}",
-                         error_msg);
+    m_error_stream.Format("error [IRForTarget internal]: Couldn't replace an "
+                          "Objective-C constant string with a dynamic "
+                          "string\n{0}",
+                          error_msg);
 
-   return false;
- }
+    return false;
+  }
 
   ns_str->eraseFromParent();
 
@@ -802,8 +807,8 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
 
     bool missing_weak = false;
     static lldb_private::ConstString g_sel_registerName_str("sel_registerName");
-    sel_registerName_addr = m_execution_unit.FindSymbol(g_sel_registerName_str,
-                                                        missing_weak);
+    sel_registerName_addr =
+        m_execution_unit.FindSymbol(g_sel_registerName_str, missing_weak);
     if (sel_registerName_addr == LLDB_INVALID_ADDRESS || missing_weak)
       return false;
 
@@ -1116,8 +1121,8 @@ bool IRForTarget::MaybeHandleCallArguments(CallInst *Old) {
 
   LLDB_LOG(log, "MaybeHandleCallArguments({0})", PrintValue(Old));
 
-  for (unsigned op_index = 0, num_ops = Old->arg_size();
-       op_index < num_ops; ++op_index)
+  for (unsigned op_index = 0, num_ops = Old->arg_size(); op_index < num_ops;
+       ++op_index)
     // conservatively believe that this is a store
     if (!MaybeHandleVariable(Old->getArgOperand(op_index))) {
       m_error_stream.Printf("Internal error [IRForTarget]: Couldn't rewrite "

@@ -23,20 +23,18 @@
 //--- cdb.json.in
 
 [{
-  "directory": "DIR",
-  "command": "clang -c DIR/main.c -IDIR -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-modules -fimplicit-module-maps",
-  "file": "DIR/main.c"
+  "directory" : "DIR",
+  "command" : "clang -c DIR/main.c -IDIR -fmodules "
+              "-fmodules-cache-path=DIR/module-cache -fimplicit-modules "
+              "-fimplicit-module-maps",
+  "file" : "DIR/main.c"
 }]
 
-//--- module.modulemap
+    //--- module.modulemap
 
-module A {
-  header "a.h"
-}
+    module A { header "a.h" }
 
-module B {
-  header "b.h"
-}
+module B{header "b.h"}
 
 module C {
   header "c.h"

@@ -373,7 +373,7 @@ protected:
   static unsigned getDefaultFlagsForBarriers(OpenMPDirectiveKind Kind);
 
   /// Get the LLVM type for the critical name.
-  llvm::ArrayType *getKmpCriticalNameTy() const {return KmpCriticalNameTy;}
+  llvm::ArrayType *getKmpCriticalNameTy() const { return KmpCriticalNameTy; }
 
   /// Returns corresponding lock object for the specified critical region
   /// name. If the lock object does not exist it is created, otherwise the
@@ -433,7 +433,8 @@ protected:
   /// <mangled_name_for_global_var> + ".cache." for cache for threadprivate
   /// variables.
   llvm::StringMap<llvm::AssertingVH<llvm::GlobalVariable>,
-                  llvm::BumpPtrAllocator> InternalVars;
+                  llvm::BumpPtrAllocator>
+      InternalVars;
   /// Type typedef kmp_int32 (* kmp_routine_entry_t)(kmp_int32, void *);
   llvm::Type *KmpRoutineEntryPtrTy = nullptr;
   QualType KmpRoutineEntryPtrQTy;
@@ -864,8 +865,7 @@ public:
   /// checks).
   ///
   virtual void emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
-                               OpenMPDirectiveKind Kind,
-                               bool EmitChecks = true,
+                               OpenMPDirectiveKind Kind, bool EmitChecks = true,
                                bool ForceSimpleCall = false);
 
   /// Check if the specified \a ScheduleKind is static non-chunked.
@@ -1047,9 +1047,8 @@ public:
   /// \param ST Address of the output variable in which the stride value is
   /// returned.
   virtual llvm::Value *emitForNext(CodeGenFunction &CGF, SourceLocation Loc,
-                                   unsigned IVSize, bool IVSigned,
-                                   Address IL, Address LB,
-                                   Address UB, Address ST);
+                                   unsigned IVSize, bool IVSigned, Address IL,
+                                   Address LB, Address UB, Address ST);
 
   virtual llvm::Value *emitMessageClause(CodeGenFunction &CGF,
                                          const Expr *Message,
@@ -1568,15 +1567,16 @@ public:
 
   /// Choose default schedule type and chunk value for the
   /// dist_schedule clause.
-  virtual void getDefaultDistScheduleAndChunk(CodeGenFunction &CGF,
-      const OMPLoopDirective &S, OpenMPDistScheduleClauseKind &ScheduleKind,
-      llvm::Value *&Chunk) const {}
+  virtual void getDefaultDistScheduleAndChunk(
+      CodeGenFunction &CGF, const OMPLoopDirective &S,
+      OpenMPDistScheduleClauseKind &ScheduleKind, llvm::Value *&Chunk) const {}
 
   /// Choose default schedule type and chunk value for the
   /// schedule clause.
-  virtual void getDefaultScheduleAndChunk(CodeGenFunction &CGF,
-      const OMPLoopDirective &S, OpenMPScheduleClauseKind &ScheduleKind,
-      const Expr *&ChunkExpr) const;
+  virtual void
+  getDefaultScheduleAndChunk(CodeGenFunction &CGF, const OMPLoopDirective &S,
+                             OpenMPScheduleClauseKind &ScheduleKind,
+                             const Expr *&ChunkExpr) const;
 
   /// Emits call of the outlined function with the provided arguments,
   /// translating these arguments to correct target-specific arguments.

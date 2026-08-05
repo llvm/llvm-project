@@ -1,17 +1,15 @@
 // RUN: %clang_cc1 %s -triple=amdgpu-amd-amdhsa -emit-llvm -o %t
 // RUN: %clang_cc1 %s -triple=amdgpu-amd-amdhsa -emit-llvm -std=c++03 -o %t.03
 // RUN: %clang_cc1 %s -triple=amdgpu-amd-amdhsa -emit-llvm -std=c++11 -o %t.11
-// RUN: %clang_cc1 %s -triple=amdgpu-amd-amdhsa -disable-llvm-passes -O3 -emit-llvm -o %t.opt
-// RUN: FileCheck %s < %t
-// RUN: FileCheck %s < %t.03
-// RUN: FileCheck %s < %t.11
-// RUN: FileCheck --check-prefix=CHECK-OPT %s < %t.opt
+// RUN: %clang_cc1 %s -triple=amdgpu-amd-amdhsa -disable-llvm-passes -O3
+// -emit-llvm -o %t.opt RUN: FileCheck %s < %t RUN: FileCheck %s < %t.03 RUN:
+// FileCheck %s < %t.11 RUN: FileCheck --check-prefix=CHECK-OPT %s < %t.opt
 
 namespace {
-  struct A {
-    virtual void f() { }
-  };
-}
+struct A {
+  virtual void f() {}
+};
+} // namespace
 
 void f() { A b; }
 
@@ -20,43 +18,40 @@ struct B {
   virtual void f();
 };
 
-B::B() { }
+B::B() {}
 
 struct C : virtual B {
   C();
-  virtual void f() { }
+  virtual void f() {}
 };
 
-C::C() { }
+C::C() {}
 
 struct D {
   virtual void f();
 };
 
-void D::f() { }
+void D::f() {}
 
-static struct : D { } e;
+static struct : D {
+} e;
 
 // Force 'e' to be constructed and therefore have a vtable defined.
-void use_e() {
-  e.f();
-}
+void use_e() { e.f(); }
 
 // The destructor is the key function.
-template<typename T>
-struct E {
+template <typename T> struct E {
   virtual ~E();
 };
 
-template<typename T> E<T>::~E() { }
+template <typename T> E<T>::~E() {}
 
 // Anchor is the key function
-template<>
-struct E<char> {
+template <> struct E<char> {
   virtual void anchor();
 };
 
-void E<char>::anchor() { }
+void E<char>::anchor() {}
 
 template struct E<short>;
 extern template struct E<int>;
@@ -69,15 +64,13 @@ void use_E() {
 }
 
 // No key function
-template<typename T>
-struct F {
-  virtual void foo() { }
+template <typename T> struct F {
+  virtual void foo() {}
 };
 
 // No key function
-template<>
-struct F<char> {
-  virtual void foo() { }
+template <> struct F<char> {
+  virtual void foo() {}
 };
 
 template struct F<short>;
@@ -92,22 +85,22 @@ void use_F() {
   (void)fl;
 }
 
-// B has a key function that is not defined in this translation unit so its vtable
-// has external linkage.
-// CHECK-DAG: @_ZTV1B = external addrspace(1) constant
+// B has a key function that is not defined in this translation unit so its
+// vtable has external linkage. CHECK-DAG: @_ZTV1B = external addrspace(1)
+// constant
 
 // C has no key function, so its vtable should have weak_odr linkage
 // and hidden visibility
-// CHECK-DAG: @_ZTV1C = linkonce_odr addrspace(1) constant {{.*}}, comdat, align 8{{$}}
-// CHECK-DAG: @_ZTS1C = linkonce_odr addrspace(1) constant {{.*}}, comdat, align 1{{$}}
-// CHECK-DAG: @_ZTI1C = linkonce_odr addrspace(1) constant {{.*}}, comdat, align 8{{$}}
-// CHECK-DAG: @_ZTT1C = linkonce_odr unnamed_addr addrspace(1) constant {{.*}}, comdat, align 8{{$}}
+// CHECK-DAG: @_ZTV1C = linkonce_odr addrspace(1) constant {{.*}}, comdat, align
+// 8{{$}} CHECK-DAG: @_ZTS1C = linkonce_odr addrspace(1) constant {{.*}},
+// comdat, align 1{{$}} CHECK-DAG: @_ZTI1C = linkonce_odr addrspace(1) constant
+// {{.*}}, comdat, align 8{{$}} CHECK-DAG: @_ZTT1C = linkonce_odr unnamed_addr
+// addrspace(1) constant {{.*}}, comdat, align 8{{$}}
 
-// D has a key function that is defined in this translation unit so its vtable is
-// defined in the translation unit.
-// CHECK-DAG: @_ZTV1D ={{.*}}addrspace(1) constant
-// CHECK-DAG: @_ZTS1D ={{.*}} addrspace(1) constant
-// CHECK-DAG: @_ZTI1D ={{.*}} addrspace(1) constant
+// D has a key function that is defined in this translation unit so its vtable
+// is defined in the translation unit. CHECK-DAG: @_ZTV1D ={{.*}}addrspace(1)
+// constant CHECK-DAG: @_ZTS1D ={{.*}} addrspace(1) constant CHECK-DAG: @_ZTI1D
+// ={{.*}} addrspace(1) constant
 
 // E<char> is an explicit specialization with a key function defined
 // in this translation unit, so its vtable should have external
@@ -120,27 +113,31 @@ void use_F() {
 // defined in this translation unit, so its vtable should have
 // weak_odr linkage.
 // CHECK-DAG: @_ZTV1EIsE = weak_odr addrspace(1) constant {{.*}}, comdat,
-// CHECK-DAG: @_ZTS1EIsE = weak_odr addrspace(1) constant {{.*}}, comdat, align 1{{$}}
-// CHECK-DAG: @_ZTI1EIsE = weak_odr addrspace(1) constant {{.*}}, comdat, align 8{{$}}
+// CHECK-DAG: @_ZTS1EIsE = weak_odr addrspace(1) constant {{.*}}, comdat, align
+// 1{{$}} CHECK-DAG: @_ZTI1EIsE = weak_odr addrspace(1) constant {{.*}}, comdat,
+// align 8{{$}}
 
 // F<short> is an explicit template instantiation without a key
 // function, so its vtable should have weak_odr linkage
 // CHECK-DAG: @_ZTV1FIsE = weak_odr addrspace(1) constant {{.*}}, comdat,
-// CHECK-DAG: @_ZTS1FIsE = weak_odr addrspace(1) constant {{.*}}, comdat, align 1{{$}}
-// CHECK-DAG: @_ZTI1FIsE = weak_odr addrspace(1) constant {{.*}}, comdat, align 8{{$}}
+// CHECK-DAG: @_ZTS1FIsE = weak_odr addrspace(1) constant {{.*}}, comdat, align
+// 1{{$}} CHECK-DAG: @_ZTI1FIsE = weak_odr addrspace(1) constant {{.*}}, comdat,
+// align 8{{$}}
 
 // E<long> is an implicit template instantiation with a key function
 // defined in this translation unit, so its vtable should have
 // linkonce_odr linkage.
 // CHECK-DAG: @_ZTV1EIlE = linkonce_odr addrspace(1) constant {{.*}}, comdat,
-// CHECK-DAG: @_ZTS1EIlE = linkonce_odr addrspace(1) constant {{.*}}, comdat, align 1{{$}}
-// CHECK-DAG: @_ZTI1EIlE = linkonce_odr addrspace(1) constant {{.*}}, comdat, align 8{{$}}
+// CHECK-DAG: @_ZTS1EIlE = linkonce_odr addrspace(1) constant {{.*}}, comdat,
+// align 1{{$}} CHECK-DAG: @_ZTI1EIlE = linkonce_odr addrspace(1) constant
+// {{.*}}, comdat, align 8{{$}}
 
 // F<long> is an implicit template instantiation with no key function,
 // so its vtable should have linkonce_odr linkage.
 // CHECK-DAG: @_ZTV1FIlE = linkonce_odr addrspace(1) constant {{.*}}, comdat,
-// CHECK-DAG: @_ZTS1FIlE = linkonce_odr addrspace(1) constant {{.*}}, comdat, align 1{{$}}
-// CHECK-DAG: @_ZTI1FIlE = linkonce_odr addrspace(1) constant {{.*}}, comdat, align 8{{$}}
+// CHECK-DAG: @_ZTS1FIlE = linkonce_odr addrspace(1) constant {{.*}}, comdat,
+// align 1{{$}} CHECK-DAG: @_ZTI1FIlE = linkonce_odr addrspace(1) constant
+// {{.*}}, comdat, align 8{{$}}
 
 // F<int> is an explicit template instantiation declaration without a
 // key function, so its vtable should have external linkage.
@@ -171,35 +168,30 @@ void use_F() {
 // F<char> is an explicit specialization without a key function, so
 // its vtable should have linkonce_odr linkage.
 // CHECK-DAG: @_ZTV1FIcE = linkonce_odr addrspace(1) constant {{.*}}, comdat,
-// CHECK-DAG: @_ZTS1FIcE = linkonce_odr addrspace(1) constant {{.*}}, comdat, align 1{{$}}
-// CHECK-DAG: @_ZTI1FIcE = linkonce_odr addrspace(1) constant {{.*}}, comdat, align 8{{$}}
+// CHECK-DAG: @_ZTS1FIcE = linkonce_odr addrspace(1) constant {{.*}}, comdat,
+// align 1{{$}} CHECK-DAG: @_ZTI1FIcE = linkonce_odr addrspace(1) constant
+// {{.*}}, comdat, align 8{{$}}
 
 // CHECK-DAG: @_ZTV1GIiE = linkonce_odr addrspace(1) constant {{.*}}, comdat,
-template <typename T>
-class G {
+template <typename T> class G {
 public:
   G() {}
   virtual void f0();
   virtual void f1();
 };
-template <>
-void G<int>::f1() {}
-template <typename T>
-void G<T>::f0() {}
-void G_f0()  { new G<int>(); }
+template <> void G<int>::f1() {}
+template <typename T> void G<T>::f0() {}
+void G_f0() { new G<int>(); }
 
 // H<int> has a key function without a body but it's a template instantiation
 // so its VTable must be emitted.
 // CHECK-DAG: @_ZTV1HIiE = linkonce_odr addrspace(1) constant {{.*}}, comdat,
-template <typename T>
-class H {
+template <typename T> class H {
 public:
   virtual ~H();
 };
 
-void use_H() {
-  H<int> h;
-}
+void use_H() { H<int> h; }
 
 // I<int> has an explicit instantiation declaration and needs a VTT and
 // construction vtables.
@@ -209,9 +201,12 @@ void use_H() {
 // CHECK-NOT: @_ZTC1IIiE
 //
 // CHECK-OPT-DAG: @_ZTV1IIiE = available_externally addrspace(1) constant
-// CHECK-OPT-DAG: @_ZTT1IIiE = available_externally unnamed_addr addrspace(1) constant
-struct VBase1 { virtual void f(); }; struct VBase2 : virtual VBase1 {};
-template<typename T>
-struct I : VBase2 {};
+// CHECK-OPT-DAG: @_ZTT1IIiE = available_externally unnamed_addr addrspace(1)
+// constant
+struct VBase1 {
+  virtual void f();
+};
+struct VBase2 : virtual VBase1 {};
+template <typename T> struct I : VBase2 {};
 extern template struct I<int>;
 I<int> i;

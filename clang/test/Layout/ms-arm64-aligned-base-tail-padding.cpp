@@ -13,7 +13,9 @@ struct alignas(16) Type {
   long long a, b, c;
 };
 struct Mid : Type {};
-struct Node { void *next; };
+struct Node {
+  void *next;
+};
 
 // The over-aligned base's tail padding is reused for the following base only on
 // Arm64.

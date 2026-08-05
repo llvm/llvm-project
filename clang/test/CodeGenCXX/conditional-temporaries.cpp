@@ -1,25 +1,25 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -O2 -disable-llvm-passes | FileCheck %s --check-prefixes=CHECK,CHECK-NOOPT
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -O2 | FileCheck %s --check-prefixes=CHECK,CHECK-OPT
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=amdgpu-amd-amdhsa -O2 | FileCheck %s --check-prefixes=CHECK,CHECK-OPT
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -O2
+// -disable-llvm-passes | FileCheck %s --check-prefixes=CHECK,CHECK-NOOPT RUN:
+// %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -O2 | FileCheck %s
+// --check-prefixes=CHECK,CHECK-OPT RUN: %clang_cc1 -emit-llvm %s -o -
+// -triple=amdgpu-amd-amdhsa -O2 | FileCheck %s --check-prefixes=CHECK,CHECK-OPT
 
 namespace {
 
 static int ctorcalls;
 static int dtorcalls;
-  
+
 struct A {
   A() : i(0) { ctorcalls++; }
   ~A() { dtorcalls++; }
   int i;
-  
-  friend const A& operator<<(const A& a, int n) {
-    return a;
-  }
+
+  friend const A &operator<<(const A &a, int n) { return a; }
 };
 
-void g(int) { }
-void g(const A&) { }
+void g(int) {}
+void g(const A &) {}
 
 void f1(bool b) {
   g(b ? A().i : 0);
@@ -37,7 +37,7 @@ struct Checker {
 
 Checker c;
 
-}
+} // namespace
 
 // CHECK-OPT-LABEL: define{{.*}} i32 @_Z12getCtorCallsv()
 int getCtorCalls() {
@@ -57,7 +57,10 @@ bool success() {
   return ctorcalls == dtorcalls;
 }
 
-struct X { ~X(); int f(); };
+struct X {
+  ~X();
+  int f();
+};
 int g(int, int, int);
 // CHECK-LABEL: @_Z16lifetime_nontriv
 int lifetime_nontriv(bool cond) {
@@ -84,8 +87,8 @@ int lifetime_nontriv(bool cond) {
   // CHECK-NOOPT: call noundef i32 @_Z1giii(
   // CHECK-NOOPT: br label
   //
-  // CHECK-NOOPT: call noundef i32 @_Z1giii(i32 noundef 1, i32 noundef 2, i32 noundef 3)
-  // CHECK-NOOPT: br label
+  // CHECK-NOOPT: call noundef i32 @_Z1giii(i32 noundef 1, i32 noundef 2, i32
+  // noundef 3) CHECK-NOOPT: br label
   //
   // CHECK-NOOPT: load i1,
   // CHECK-NOOPT: br i1
@@ -138,7 +141,9 @@ int lifetime_nontriv(bool cond) {
   return cond ? g(X().f(), X().f(), X().f()) : g(1, 2, 3);
 }
 
-struct Y { int f(); };
+struct Y {
+  int f();
+};
 int g(int, int, int);
 // CHECK-LABEL: @_Z13lifetime_triv
 int lifetime_triv(bool cond) {
@@ -153,8 +158,8 @@ int lifetime_triv(bool cond) {
   // CHECK-NOOPT: call noundef i32 @_Z1giii(
   // CHECK-NOOPT: br label
   //
-  // CHECK-NOOPT: call noundef i32 @_Z1giii(i32 noundef 1, i32 noundef 2, i32 noundef 3)
-  // CHECK-NOOPT: br label
+  // CHECK-NOOPT: call noundef i32 @_Z1giii(i32 noundef 1, i32 noundef 2, i32
+  // noundef 3) CHECK-NOOPT: br label
   //
   // CHECK-NOOPT: call void @llvm.lifetime.end
   // CHECK-NOOPT-NOT: br
@@ -184,7 +189,10 @@ int lifetime_triv(bool cond) {
   return cond ? g(Y().f(), Y().f(), Y().f()) : g(1, 2, 3);
 }
 
-struct Z { ~Z() {} int f(); };
+struct Z {
+  ~Z() {}
+  int f();
+};
 int g(int, int, int);
 // CHECK-LABEL: @_Z22lifetime_nontriv_empty
 int lifetime_nontriv_empty(bool cond) {

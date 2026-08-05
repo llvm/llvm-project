@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Rewrite/Frontend/Rewriters.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
 #include "clang/Lex/Pragma.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Rewrite/Frontend/Rewriters.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -34,12 +34,12 @@ class InclusionRewriter : public PPCallbacks {
     IncludedFile(FileID Id, SrcMgr::CharacteristicKind FileType)
         : Id(Id), FileType(FileType) {}
   };
-  Preprocessor &PP; ///< Used to find inclusion directives.
+  Preprocessor &PP;  ///< Used to find inclusion directives.
   SourceManager &SM; ///< Used to read and manage source files.
-  raw_ostream &OS; ///< The destination stream for rewritten contents.
+  raw_ostream &OS;   ///< The destination stream for rewritten contents.
   StringRef MainEOL; ///< The line ending marker to use.
   llvm::MemoryBufferRef PredefinesBuffer; ///< The preprocessor predefines.
-  bool ShowLineMarkers; ///< Show #line markers.
+  bool ShowLineMarkers;                   ///< Show #line markers.
   bool UseLineDirectives; ///< Use of line directives or line markers.
   /// Tracks where inclusions that change the file are found.
   std::map<SourceLocation, IncludedFile> FileIncludes;
@@ -52,6 +52,7 @@ class InclusionRewriter : public PPCallbacks {
   /// Used transitively for building up the FileIncludes mapping over the
   /// various \c PPCallbacks callbacks.
   SourceLocation LastInclusionLocation;
+
 public:
   InclusionRewriter(Preprocessor &PP, raw_ostream &OS, bool ShowLineMarkers,
                     bool UseLineDirectives);
@@ -65,6 +66,7 @@ public:
     ModuleEntryIncludes.insert(
         {Tok.getLocation(), (Module *)Tok.getAnnotationValue()});
   }
+
 private:
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
@@ -101,7 +103,7 @@ private:
   StringRef NextIdentifierName(Lexer &RawLex, Token &RawToken);
 };
 
-}  // end anonymous namespace
+} // end anonymous namespace
 
 /// Initializes an InclusionRewriter with a \p PP source and \p OS destination.
 InclusionRewriter::InclusionRewriter(Preprocessor &PP, raw_ostream &OS,
@@ -151,8 +153,7 @@ void InclusionRewriter::WriteImplicitModuleImport(const Module *Mod) {
 
 /// FileChanged - Whenever the preprocessor enters or exits a #include file
 /// it invokes this handler.
-void InclusionRewriter::FileChanged(SourceLocation Loc,
-                                    FileChangeReason Reason,
+void InclusionRewriter::FileChanged(SourceLocation Loc, FileChangeReason Reason,
                                     SrcMgr::CharacteristicKind NewFileType,
                                     FileID) {
   if (Reason != EnterFile)
@@ -237,8 +238,7 @@ InclusionRewriter::FindModuleAtLocation(SourceLocation Loc) const {
 
 /// Simple lookup for a SourceLocation (specifically one denoting the hash in
 /// an inclusion directive) in the map of module entry information.
-const Module *
-InclusionRewriter::FindEnteredModule(SourceLocation Loc) const {
+const Module *InclusionRewriter::FindEnteredModule(SourceLocation Loc) const {
   const auto I = ModuleEntryIncludes.find(Loc);
   if (I != ModuleEntryIncludes.end())
     return I->second;
@@ -422,118 +422,118 @@ void InclusionRewriter::Process(FileID FileId,
         PP.LookUpIdentifierInfo(RawToken);
       if (RawToken.getIdentifierInfo() != nullptr) {
         switch (RawToken.getIdentifierInfo()->getPPKeywordID()) {
-          case tok::pp_include:
-          case tok::pp_include_next:
-          case tok::pp_import: {
-            SourceLocation Loc = HashToken.getLocation();
-            const IncludedFile *Inc = FindIncludeAtLocation(Loc);
-            CommentOutDirective(RawLex, HashToken, FromFile, LocalEOL,
-                                NextToWrite, Line, Inc);
-            if (FileId != PP.getPredefinesFileID())
-              WriteLineInfo(FileName, Line - 1, FileType, "");
-            StringRef LineInfoExtra;
-            if (const Module *Mod = FindModuleAtLocation(Loc))
-              WriteImplicitModuleImport(Mod);
-            else if (Inc) {
-              const Module *Mod = FindEnteredModule(Loc);
-              if (Mod)
-                OS << "#pragma clang module begin "
-                   << Mod->getFullModuleName(true) << "\n";
+        case tok::pp_include:
+        case tok::pp_include_next:
+        case tok::pp_import: {
+          SourceLocation Loc = HashToken.getLocation();
+          const IncludedFile *Inc = FindIncludeAtLocation(Loc);
+          CommentOutDirective(RawLex, HashToken, FromFile, LocalEOL,
+                              NextToWrite, Line, Inc);
+          if (FileId != PP.getPredefinesFileID())
+            WriteLineInfo(FileName, Line - 1, FileType, "");
+          StringRef LineInfoExtra;
+          if (const Module *Mod = FindModuleAtLocation(Loc))
+            WriteImplicitModuleImport(Mod);
+          else if (Inc) {
+            const Module *Mod = FindEnteredModule(Loc);
+            if (Mod)
+              OS << "#pragma clang module begin "
+                 << Mod->getFullModuleName(true) << "\n";
 
-              // Include and recursively process the file.
-              Process(Inc->Id, Inc->FileType);
+            // Include and recursively process the file.
+            Process(Inc->Id, Inc->FileType);
 
-              if (Mod)
-                OS << "#pragma clang module end /*"
-                   << Mod->getFullModuleName(true) << "*/\n";
-              // There's no #include, therefore no #if, for -include files.
-              if (FromFile != PredefinesBuffer) {
-                OS << "#endif /* " << getIncludedFileName(Inc)
-                   << " expanded by -frewrite-includes */" << LocalEOL;
-              }
-
-              // Add line marker to indicate we're returning from an included
-              // file.
-              LineInfoExtra = " 2";
+            if (Mod)
+              OS << "#pragma clang module end /*"
+                 << Mod->getFullModuleName(true) << "*/\n";
+            // There's no #include, therefore no #if, for -include files.
+            if (FromFile != PredefinesBuffer) {
+              OS << "#endif /* " << getIncludedFileName(Inc)
+                 << " expanded by -frewrite-includes */" << LocalEOL;
             }
-            // fix up lineinfo (since commented out directive changed line
-            // numbers) for inclusions that were skipped due to header guards
-            WriteLineInfo(FileName, Line, FileType, LineInfoExtra);
-            break;
+
+            // Add line marker to indicate we're returning from an included
+            // file.
+            LineInfoExtra = " 2";
           }
-          case tok::pp_pragma: {
-            StringRef Identifier = NextIdentifierName(RawLex, RawToken);
-            if (Identifier == "clang" || Identifier == "GCC") {
-              if (NextIdentifierName(RawLex, RawToken) == "system_header") {
-                // keep the directive in, commented out
-                CommentOutDirective(RawLex, HashToken, FromFile, LocalEOL,
-                  NextToWrite, Line);
-                // update our own type
-                FileType = SM.getFileCharacteristic(RawToken.getLocation());
-                WriteLineInfo(FileName, Line, FileType);
-              }
-            } else if (Identifier == "once") {
+          // fix up lineinfo (since commented out directive changed line
+          // numbers) for inclusions that were skipped due to header guards
+          WriteLineInfo(FileName, Line, FileType, LineInfoExtra);
+          break;
+        }
+        case tok::pp_pragma: {
+          StringRef Identifier = NextIdentifierName(RawLex, RawToken);
+          if (Identifier == "clang" || Identifier == "GCC") {
+            if (NextIdentifierName(RawLex, RawToken) == "system_header") {
               // keep the directive in, commented out
               CommentOutDirective(RawLex, HashToken, FromFile, LocalEOL,
-                NextToWrite, Line);
+                                  NextToWrite, Line);
+              // update our own type
+              FileType = SM.getFileCharacteristic(RawToken.getLocation());
               WriteLineInfo(FileName, Line, FileType);
             }
-            break;
-          }
-          case tok::pp_if:
-          case tok::pp_elif: {
-            bool elif = (RawToken.getIdentifierInfo()->getPPKeywordID() ==
-                         tok::pp_elif);
-            bool isTrue = IsIfAtLocationTrue(RawToken.getLocation());
-            OutputContentUpTo(FromFile, NextToWrite,
-                              SM.getFileOffset(HashToken.getLocation()),
-                              LocalEOL, Line, /*EnsureNewline=*/true);
-            do {
-              RawLex.LexFromRawLexer(RawToken);
-            } while (!RawToken.is(tok::eod) && RawToken.isNot(tok::eof));
-            // We need to disable the old condition, but that is tricky.
-            // Trying to comment it out can easily lead to comment nesting.
-            // So instead make the condition harmless by making it enclose
-            // and empty block. Moreover, put it itself inside an #if 0 block
-            // to disable it from getting evaluated (e.g. __has_include_next
-            // warns if used from the primary source file).
-            OS << "#if 0 /* disabled by -frewrite-includes */" << MainEOL;
-            if (elif) {
-              OS << "#if 0" << MainEOL;
-            }
-            OutputContentUpTo(FromFile, NextToWrite,
-                              SM.getFileOffset(RawToken.getLocation()) +
-                                  RawToken.getLength(),
-                              LocalEOL, Line, /*EnsureNewline=*/true);
-            // Close the empty block and the disabling block.
-            OS << "#endif" << MainEOL;
-            OS << "#endif /* disabled by -frewrite-includes */" << MainEOL;
-            OS << (elif ? "#elif " : "#if ") << (isTrue ? "1" : "0")
-               << " /* evaluated by -frewrite-includes */" << MainEOL;
+          } else if (Identifier == "once") {
+            // keep the directive in, commented out
+            CommentOutDirective(RawLex, HashToken, FromFile, LocalEOL,
+                                NextToWrite, Line);
             WriteLineInfo(FileName, Line, FileType);
-            break;
           }
-          case tok::pp_endif:
-          case tok::pp_else: {
-            // We surround every #include by #if 0 to comment it out, but that
-            // changes line numbers. These are fixed up right after that, but
-            // the whole #include could be inside a preprocessor conditional
-            // that is not processed. So it is necessary to fix the line
-            // numbers one the next line after each #else/#endif as well.
-            RawLex.SetKeepWhitespaceMode(true);
-            do {
-              RawLex.LexFromRawLexer(RawToken);
-            } while (RawToken.isNot(tok::eod) && RawToken.isNot(tok::eof));
-            OutputContentUpTo(FromFile, NextToWrite,
-                              SM.getFileOffset(RawToken.getLocation()) +
-                                  RawToken.getLength(),
-                              LocalEOL, Line, /*EnsureNewline=*/ true);
-            WriteLineInfo(FileName, Line, FileType);
-            RawLex.SetKeepWhitespaceMode(false);
-            break;
+          break;
+        }
+        case tok::pp_if:
+        case tok::pp_elif: {
+          bool elif =
+              (RawToken.getIdentifierInfo()->getPPKeywordID() == tok::pp_elif);
+          bool isTrue = IsIfAtLocationTrue(RawToken.getLocation());
+          OutputContentUpTo(FromFile, NextToWrite,
+                            SM.getFileOffset(HashToken.getLocation()), LocalEOL,
+                            Line, /*EnsureNewline=*/true);
+          do {
+            RawLex.LexFromRawLexer(RawToken);
+          } while (!RawToken.is(tok::eod) && RawToken.isNot(tok::eof));
+          // We need to disable the old condition, but that is tricky.
+          // Trying to comment it out can easily lead to comment nesting.
+          // So instead make the condition harmless by making it enclose
+          // and empty block. Moreover, put it itself inside an #if 0 block
+          // to disable it from getting evaluated (e.g. __has_include_next
+          // warns if used from the primary source file).
+          OS << "#if 0 /* disabled by -frewrite-includes */" << MainEOL;
+          if (elif) {
+            OS << "#if 0" << MainEOL;
           }
-          default:
-            break;
+          OutputContentUpTo(FromFile, NextToWrite,
+                            SM.getFileOffset(RawToken.getLocation()) +
+                                RawToken.getLength(),
+                            LocalEOL, Line, /*EnsureNewline=*/true);
+          // Close the empty block and the disabling block.
+          OS << "#endif" << MainEOL;
+          OS << "#endif /* disabled by -frewrite-includes */" << MainEOL;
+          OS << (elif ? "#elif " : "#if ") << (isTrue ? "1" : "0")
+             << " /* evaluated by -frewrite-includes */" << MainEOL;
+          WriteLineInfo(FileName, Line, FileType);
+          break;
+        }
+        case tok::pp_endif:
+        case tok::pp_else: {
+          // We surround every #include by #if 0 to comment it out, but that
+          // changes line numbers. These are fixed up right after that, but
+          // the whole #include could be inside a preprocessor conditional
+          // that is not processed. So it is necessary to fix the line
+          // numbers one the next line after each #else/#endif as well.
+          RawLex.SetKeepWhitespaceMode(true);
+          do {
+            RawLex.LexFromRawLexer(RawToken);
+          } while (RawToken.isNot(tok::eod) && RawToken.isNot(tok::eof));
+          OutputContentUpTo(FromFile, NextToWrite,
+                            SM.getFileOffset(RawToken.getLocation()) +
+                                RawToken.getLength(),
+                            LocalEOL, Line, /*EnsureNewline=*/true);
+          WriteLineInfo(FileName, Line, FileType);
+          RawLex.SetKeepWhitespaceMode(false);
+          break;
+        }
+        default:
+          break;
         }
       }
       RawLex.setParsingPreprocessorDirective(false);

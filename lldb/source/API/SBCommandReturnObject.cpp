@@ -64,8 +64,8 @@ SBCommandReturnObject::SBCommandReturnObject(const SBCommandReturnObject &rhs) {
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
-SBCommandReturnObject &SBCommandReturnObject::
-operator=(const SBCommandReturnObject &rhs) {
+SBCommandReturnObject &
+SBCommandReturnObject::operator=(const SBCommandReturnObject &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)

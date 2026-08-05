@@ -33,7 +33,7 @@
 namespace mlir {
 class DataLayout;
 class SymbolTable;
-}
+} // namespace mlir
 
 namespace fir {
 class AbstractArrayBox;

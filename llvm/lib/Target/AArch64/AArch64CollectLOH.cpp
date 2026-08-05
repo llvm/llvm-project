@@ -121,7 +121,8 @@ STATISTIC(NumLDRToLDR, "Number of simplifiable LDR reachable by LDR");
 STATISTIC(NumADRPToLDR, "Number of simplifiable LDR reachable by ADRP");
 STATISTIC(NumADRSimpleCandidate, "Number of simplifiable ADRP + ADD");
 
-#define AARCH64_COLLECT_LOH_NAME "AArch64 Collect Linker Optimization Hint (LOH)"
+#define AARCH64_COLLECT_LOH_NAME                                               \
+  "AArch64 Collect Linker Optimization Hint (LOH)"
 
 static bool canAddBePartOfLOH(const MachineInstr &MI) {
   // Check immediate to see if the immediate is an address.
@@ -254,11 +255,11 @@ static int mapRegToGPRIndex(MCRegister Reg) {
 /// The main algorithm walks backwards over a basic block maintaining this
 /// datastructure for each tracked general purpose register.
 struct LOHInfo {
-  MCLOHType Type : 8;           ///< "Best" type of LOH possible.
+  MCLOHType Type : 8; ///< "Best" type of LOH possible.
   LLVM_PREFERRED_TYPE(bool)
-  unsigned IsCandidate : 1;     ///< Possible LOH candidate.
+  unsigned IsCandidate : 1; ///< Possible LOH candidate.
   LLVM_PREFERRED_TYPE(bool)
-  unsigned OneUser : 1;         ///< Found exactly one user (yet).
+  unsigned OneUser : 1; ///< Found exactly one user (yet).
   LLVM_PREFERRED_TYPE(bool)
   unsigned MultiUsers : 1;      ///< Found multiple users.
   const MachineInstr *MI0;      ///< First instruction involved in the LOH.

@@ -35,15 +35,15 @@
 #include "test_macros.h"
 namespace fs = std::filesystem;
 
-MultiStringType InStr =  MKSTR("abcdefg/\"hijklmnop\"/qrstuvwxyz/123456789");
+MultiStringType InStr  = MKSTR("abcdefg/\"hijklmnop\"/qrstuvwxyz/123456789");
 MultiStringType OutStr = MKSTR("\"abcdefg/\\\"hijklmnop\\\"/qrstuvwxyz/123456789\"");
 
 template <class CharT>
 void doIOTest() {
   using namespace fs;
-  using Ptr = const CharT*;
+  using Ptr       = const CharT*;
   using StrStream = std::basic_stringstream<CharT>;
-  const Ptr E = OutStr;
+  const Ptr E     = OutStr;
   const path p((const char*)InStr);
   StrStream ss;
   { // test output
@@ -73,7 +73,6 @@ std::true_type is_istreamable_imp(int);
 
 template <class Stream, class Tp>
 std::false_type is_istreamable_imp(long);
-
 
 } // namespace impl
 

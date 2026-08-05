@@ -225,7 +225,7 @@ int main(int argc, char *argv[]) {
   TEST(int);
   // RUN: %run %t int 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
-  TEST(void*);
+  TEST(void *);
   // RUN: %run %t "void*" 2>&1 | FileCheck %s --implicit-check-not="ArgShadow"
 
   // As currently written, this test is UB for float:

@@ -15,18 +15,17 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    ASSERT_SAME_TYPE(decltype(std::ios_base::sync_with_stdio(false)), bool);
+int main(int, char**) {
+  ASSERT_SAME_TYPE(decltype(std::ios_base::sync_with_stdio(false)), bool);
 
-    assert( std::ios_base::sync_with_stdio(false));
-    assert(!std::ios_base::sync_with_stdio(false));
-    assert(!std::ios_base::sync_with_stdio(true));
-    assert( std::ios_base::sync_with_stdio(true));
-    assert( std::ios_base::sync_with_stdio());
-    assert( std::ios_base::sync_with_stdio(false));
-    assert(!std::ios_base::sync_with_stdio());
-    assert( std::ios_base::sync_with_stdio());
+  assert(std::ios_base::sync_with_stdio(false));
+  assert(!std::ios_base::sync_with_stdio(false));
+  assert(!std::ios_base::sync_with_stdio(true));
+  assert(std::ios_base::sync_with_stdio(true));
+  assert(std::ios_base::sync_with_stdio());
+  assert(std::ios_base::sync_with_stdio(false));
+  assert(!std::ios_base::sync_with_stdio());
+  assert(std::ios_base::sync_with_stdio());
 
   return 0;
 }

@@ -43,7 +43,7 @@
 
 using namespace llvm;
 
-#undef  DEBUG_TYPE
+#undef DEBUG_TYPE
 #define DEBUG_TYPE "bolt"
 
 namespace opts {
@@ -57,23 +57,19 @@ static cl::opt<bool>
                 cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
-PrintDebugInfo("print-debug-info",
-  cl::desc("print debug info when printing functions"),
-  cl::Hidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+    PrintDebugInfo("print-debug-info",
+                   cl::desc("print debug info when printing functions"),
+                   cl::Hidden, cl::ZeroOrMore, cl::cat(BoltCategory));
 
 cl::opt<bool> PrintRelocations(
     "print-relocations",
     cl::desc("print relocations when printing functions/objects"), cl::Hidden,
     cl::cat(BoltCategory));
 
-static cl::opt<bool>
-PrintMemData("print-mem-data",
-  cl::desc("print memory data annotations when printing functions"),
-  cl::Hidden,
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+static cl::opt<bool> PrintMemData(
+    "print-mem-data",
+    cl::desc("print memory data annotations when printing functions"),
+    cl::Hidden, cl::ZeroOrMore, cl::cat(BoltCategory));
 
 cl::opt<std::string> CompDirOverride(
     "comp-dir-override",

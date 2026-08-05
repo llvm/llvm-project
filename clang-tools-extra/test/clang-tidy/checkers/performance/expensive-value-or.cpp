@@ -21,35 +21,41 @@ void consume(std::string s);
 void positiveConstRefBinding(std::optional<std::string> opt,
                              const std::string &fallback) {
   const std::string &ref = opt.value_or(fallback);
-  // CHECK-MESSAGES-NON-OWNING: :[[@LINE-1]]:32: warning: 'value_or' copies expensive type 'std::basic_string<char>'
-  // CHECK-MESSAGES-OWNING: :[[@LINE-2]]:32: warning: 'value_or' copies expensive type 'std::basic_string<char>'
-  // CHECK-FIXES-NON-OWNING: const std::string &ref = (opt ? *opt : fallback);
-  // CHECK-FIXES-OWNING: const std::string &ref = (opt ? *opt : fallback);
+  // CHECK-MESSAGES-NON-OWNING: :[[@LINE-1]]:32: warning: 'value_or' copies
+  // expensive type 'std::basic_string<char>' CHECK-MESSAGES-OWNING:
+  // :[[@LINE-2]]:32: warning: 'value_or' copies expensive type
+  // 'std::basic_string<char>' CHECK-FIXES-NON-OWNING: const std::string &ref =
+  // (opt ? *opt : fallback); CHECK-FIXES-OWNING: const std::string &ref = (opt
+  // ? *opt : fallback);
 }
 
 void positiveConstRefParam(std::optional<std::string> opt,
                            const std::string &fallback) {
   consumeRef(opt.value_or(fallback));
-  // CHECK-MESSAGES-NON-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
-  // CHECK-MESSAGES-OWNING: :[[@LINE-2]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
-  // CHECK-FIXES-NON-OWNING: consumeRef((opt ? *opt : fallback));
-  // CHECK-FIXES-OWNING: consumeRef((opt ? *opt : fallback));
+  // CHECK-MESSAGES-NON-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies
+  // expensive type 'std::basic_string<char>' CHECK-MESSAGES-OWNING:
+  // :[[@LINE-2]]:18: warning: 'value_or' copies expensive type
+  // 'std::basic_string<char>' CHECK-FIXES-NON-OWNING: consumeRef((opt ? *opt :
+  // fallback)); CHECK-FIXES-OWNING: consumeRef((opt ? *opt : fallback));
 }
 
 void positiveConstMemberCall(std::optional<std::string> opt,
                              const std::string &fallback) {
   auto len = opt.value_or(fallback).size();
-  // CHECK-MESSAGES-NON-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
-  // CHECK-MESSAGES-OWNING: :[[@LINE-2]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
-  // CHECK-FIXES-NON-OWNING: auto len = (opt ? *opt : fallback).size();
-  // CHECK-FIXES-OWNING: auto len = (opt ? *opt : fallback).size();
+  // CHECK-MESSAGES-NON-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies
+  // expensive type 'std::basic_string<char>' CHECK-MESSAGES-OWNING:
+  // :[[@LINE-2]]:18: warning: 'value_or' copies expensive type
+  // 'std::basic_string<char>' CHECK-FIXES-NON-OWNING: auto len = (opt ? *opt :
+  // fallback).size(); CHECK-FIXES-OWNING: auto len = (opt ? *opt :
+  // fallback).size();
 }
 
 // Ownership-taking contexts: only warn in OWNING mode.
 
 void positiveOwnershipValue(std::optional<std::string> opt) {
   auto val = opt.value_or("default");
-  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies
+  // expensive type 'std::basic_string<char>'
 }
 
 struct LargeStruct {
@@ -58,7 +64,8 @@ struct LargeStruct {
 
 void positiveOwnershipLarge(std::optional<LargeStruct> opt) {
   auto val = opt.value_or(LargeStruct{});
-  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'LargeStruct'
+  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies
+  // expensive type 'LargeStruct'
 }
 
 struct SmallNonTrivial {
@@ -69,12 +76,14 @@ struct SmallNonTrivial {
 
 void positiveOwnershipSmallNonTrivial(std::optional<SmallNonTrivial> opt) {
   auto val = opt.value_or(SmallNonTrivial{42});
-  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'SmallNonTrivial'
+  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies
+  // expensive type 'SmallNonTrivial'
 }
 
 void positiveOwnershipByValueParam(std::optional<std::string> opt) {
   consume(opt.value_or("fallback"));
-  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:15: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:15: warning: 'value_or' copies
+  // expensive type 'std::basic_string<char>'
 }
 
 // Side-effect note tests.
@@ -82,24 +91,28 @@ void positiveOwnershipByValueParam(std::optional<std::string> opt) {
 std::string makeFallback();
 void positiveSideEffectFallback(std::optional<std::string> opt) {
   auto val = opt.value_or(makeFallback());
-  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
-  // CHECK-MESSAGES-OWNING: :[[@LINE-2]]:27: note: the fallback is always evaluated
+  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies
+  // expensive type 'std::basic_string<char>' CHECK-MESSAGES-OWNING:
+  // :[[@LINE-2]]:27: note: the fallback is always evaluated
 }
 
 // Constructing a temporary with a non-trivial destructor is not treated as a
 // definite side effect, so no note fires here.
 void positiveSideEffectTemporary(std::optional<std::string> opt) {
   auto val = opt.value_or(std::string("fallback"));
-  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies
+  // expensive type 'std::basic_string<char>'
 }
 
 std::optional<std::string> &getOptionalRef();
 void positiveSideEffectObject(const std::string &fallback) {
   const std::string &ref = getOptionalRef().value_or(fallback);
-  // CHECK-MESSAGES-NON-OWNING: :[[@LINE-1]]:45: warning: 'value_or' copies expensive type 'std::basic_string<char>'
-  // CHECK-MESSAGES-OWNING: :[[@LINE-2]]:45: warning: 'value_or' copies expensive type 'std::basic_string<char>'
-  // CHECK-FIXES-NON-OWNING: const std::string &ref = getOptionalRef().value_or(fallback);
-  // CHECK-FIXES-OWNING: const std::string &ref = getOptionalRef().value_or(fallback);
+  // CHECK-MESSAGES-NON-OWNING: :[[@LINE-1]]:45: warning: 'value_or' copies
+  // expensive type 'std::basic_string<char>' CHECK-MESSAGES-OWNING:
+  // :[[@LINE-2]]:45: warning: 'value_or' copies expensive type
+  // 'std::basic_string<char>' CHECK-FIXES-NON-OWNING: const std::string &ref =
+  // getOptionalRef().value_or(fallback); CHECK-FIXES-OWNING: const std::string
+  // &ref = getOptionalRef().value_or(fallback);
 }
 
 void negativeUnevaluatedContext(std::optional<std::string> opt,
@@ -112,30 +125,26 @@ void negativeUnevaluatedContext(std::optional<std::string> opt,
 
 template <typename T> void positiveTemplate(std::optional<T> opt) {
   auto val = opt.value_or(T{});
-  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies
+  // expensive type 'std::basic_string<char>'
 }
-void instantiate() {
-  positiveTemplate(std::optional<std::string>{});
-}
+void instantiate() { positiveTemplate(std::optional<std::string>{}); }
 
 // Rvalue optional tests.
 
 std::optional<std::string> getOpt();
-void negativeRvalueOptional() {
-  auto val = getOpt().value_or("default");
-}
+void negativeRvalueOptional() { auto val = getOpt().value_or("default"); }
 
 std::optional<LargeStruct> getLargeOpt();
 void positiveRvalueNoMoveAdvantage() {
   auto val = getLargeOpt().value_or(LargeStruct{});
-  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:28: warning: 'value_or' copies expensive type 'LargeStruct'
+  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:28: warning: 'value_or' copies
+  // expensive type 'LargeStruct'
 }
 
 // Negative cases: no warning in either mode.
 
-void negativeInt(std::optional<int> opt) {
-  auto val = opt.value_or(0);
-}
+void negativeInt(std::optional<int> opt) { auto val = opt.value_or(0); }
 
 struct SmallPOD {
   char x;
@@ -180,7 +189,8 @@ public:
 
 void positiveAbslDefault(absl::optional<std::string> opt) {
   auto val = opt.value_or("default");
-  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider avoiding the copy
+  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'value_or' copies
+  // expensive type 'std::basic_string<char>'; consider avoiding the copy
 }
 
 namespace custom {
@@ -196,12 +206,14 @@ public:
 
 void positiveValueOr(custom::CamelOptional<std::string> opt) {
   auto val = opt.valueOr("default");
-  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'valueOr' copies expensive type 'std::basic_string<char>'; consider avoiding the copy
+  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'valueOr' copies expensive
+  // type 'std::basic_string<char>'; consider avoiding the copy
 }
 
 void positiveValueOrPascal(custom::PascalOptional<std::string> opt) {
   auto val = opt.ValueOr("default");
-  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'ValueOr' copies expensive type 'std::basic_string<char>'; consider avoiding the copy
+  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'ValueOr' copies expensive
+  // type 'std::basic_string<char>'; consider avoiding the copy
 }
 
 // Macro test: verify the warning points to a useful location.
@@ -210,28 +222,26 @@ void positiveValueOrPascal(custom::PascalOptional<std::string> opt) {
 
 void positiveMacro(std::optional<std::string> opt) {
   auto val = GET_OR_DEFAULT(opt, "default");
-  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:14: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:14: warning: 'value_or' copies
+  // expensive type 'std::basic_string<char>'
 }
 
 // Inherited methods via using declarations (libc++ pattern).
 
 namespace inherited {
 
-template <typename T>
-struct OptionalBase {
+template <typename T> struct OptionalBase {
   const T &operator*() const & noexcept;
   T &operator*() & noexcept;
   T &value() &;
   const T &value() const &;
 };
 
-template <typename T>
-struct Optional : OptionalBase<T> {
+template <typename T> struct Optional : OptionalBase<T> {
   using OptionalBase<T>::operator*;
   using OptionalBase<T>::value;
 
-  template <class U = T>
-  T value_or(U &&default_value) const &;
+  template <class U = T> T value_or(U &&default_value) const &;
 };
 
 } // namespace inherited
@@ -239,8 +249,11 @@ struct Optional : OptionalBase<T> {
 void positiveInheritedRef(inherited::Optional<std::string> opt,
                           const std::string &fallback) {
   const std::string &ref = opt.value_or(fallback);
-  // CHECK-MESSAGES-NON-OWNING: :[[@LINE-1]]:32: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback
-  // CHECK-MESSAGES-OWNING: :[[@LINE-2]]:32: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback
+  // CHECK-MESSAGES-NON-OWNING: :[[@LINE-1]]:32: warning: 'value_or' copies
+  // expensive type 'std::basic_string<char>'; consider using 'operator*' or
+  // 'value()' with a separate fallback CHECK-MESSAGES-OWNING: :[[@LINE-2]]:32:
+  // warning: 'value_or' copies expensive type 'std::basic_string<char>';
+  // consider using 'operator*' or 'value()' with a separate fallback
   // CHECK-FIXES-NON-OWNING: const std::string &ref = (opt ? *opt : fallback);
   // CHECK-FIXES-OWNING: const std::string &ref = (opt ? *opt : fallback);
 }

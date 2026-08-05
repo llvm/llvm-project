@@ -124,7 +124,7 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous(
   // We might still need to check the actual size as a fallback
   std::size_t elementBytes{to.ElementBytes()};
   for (std::size_t n{to.Elements()}; n-- > 0;
-      toIt.Advance(), fromIt.Advance()) {
+       toIt.Advance(), fromIt.Advance()) {
     // typeElementBytes == 1 when P is a char - the non-specialised case
     if constexpr (typeElementBytes != 1) {
       runtime::memcpy(
@@ -148,7 +148,7 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
   std::size_t elementBytes{to.ElementBytes()};
   DescriptorIterator<RANK> fromIt{from};
   for (std::size_t n{to.Elements()}; n-- > 0;
-      toAt += elementBytes, fromIt.Advance()) {
+       toAt += elementBytes, fromIt.Advance()) {
     if constexpr (typeElementBytes != 1) {
       runtime::memcpy(toAt, fromIt.template Get<P>(), typeElementBytes);
     } else {
@@ -168,7 +168,7 @@ RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
   constexpr std::size_t typeElementBytes{sizeof(P)};
   std::size_t elementBytes{to.ElementBytes()};
   for (std::size_t n{to.Elements()}; n-- > 0;
-      toIt.Advance(), fromAt += elementBytes) {
+       toIt.Advance(), fromAt += elementBytes) {
     if constexpr (typeElementBytes != 1) {
       runtime::memcpy(toIt.template Get<P>(), fromAt, typeElementBytes);
     } else {

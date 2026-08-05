@@ -6,11 +6,15 @@
 [[clang::device_kernel]] void kernel1() {}
 
 namespace {
-[[clang::device_kernel]] void kernel2() {} // expected-error {{'kernel2' is specified as a device kernel but it is not externally visible}}
-}
+[[clang::device_kernel]] void kernel2() {
+} // expected-error {{'kernel2' is specified as a device kernel but it is not
+  // externally visible}}
+} // namespace
 
 namespace ns {
-  [[clang::device_kernel]] void kernel3() {}
-}
+[[clang::device_kernel]] void kernel3() {}
+} // namespace ns
 
-[[clang::device_kernel]] static void kernel4() {} // expected-error {{'kernel4' is specified as a device kernel but it is not externally visible}}
+[[clang::device_kernel]] static void kernel4() {
+} // expected-error {{'kernel4' is specified as a device kernel but it is not
+  // externally visible}}

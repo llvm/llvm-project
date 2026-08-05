@@ -18,23 +18,21 @@
 #include "operator_hijacker.h"
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
-        typedef int T;
-        T a[] = {5, 4, 3, 2, 1};
-        const unsigned N = sizeof(a)/sizeof(a[0]);
-        const std::valarray<T> v(a, N);
-        for (unsigned i = 0; i < N; ++i)
-        {
-            assert(v[i] == a[i]);
-        }
+int main(int, char**) {
+  {
+    typedef int T;
+    T a[]            = {5, 4, 3, 2, 1};
+    const unsigned N = sizeof(a) / sizeof(a[0]);
+    const std::valarray<T> v(a, N);
+    for (unsigned i = 0; i < N; ++i) {
+      assert(v[i] == a[i]);
     }
-    {
-      const std::valarray<operator_hijacker> v(1);
-      const operator_hijacker& r = v[0];
-      (void)r;
-    }
+  }
+  {
+    const std::valarray<operator_hijacker> v(1);
+    const operator_hijacker& r = v[0];
+    (void)r;
+  }
 
   return 0;
 }

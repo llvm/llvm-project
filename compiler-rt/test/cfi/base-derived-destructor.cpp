@@ -58,22 +58,19 @@
 
 // REQUIRES: cxxabi
 
-#include <stdio.h>
 #include "utils.h"
+#include <stdio.h>
 
-template<typename T>
-class A {
- public:
-  T* context() { return static_cast<T*>(this); }
+template <typename T> class A {
+public:
+  T *context() { return static_cast<T *>(this); }
 
-  virtual ~A() {
-    break_optimization(context());
-  }
+  virtual ~A() { break_optimization(context()); }
 };
 
 class B : public A<B> {
- public:
-  virtual ~B() { }
+public:
+  virtual ~B() {}
 };
 
 int main() {
@@ -84,7 +81,7 @@ int main() {
   // CFI-DIAG: runtime error: control flow integrity check for type 'B' failed during base-to-derived cast
   // CFI-DIAG-NEXT: note: vtable is of type '{{(class )?}}A<{{(class )?}}B>'
   // CFI-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-derived-cast
-  B* b = new B;
+  B *b = new B;
   break_optimization(b);
   delete b; // UB here
 

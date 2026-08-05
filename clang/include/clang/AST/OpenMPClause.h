@@ -2265,7 +2265,7 @@ class OMPScheduleClause : public OMPClause, public OMPClauseWithPreInit {
   OpenMPScheduleClauseKind Kind = OMPC_SCHEDULE_unknown;
 
   /// Modifiers for 'schedule' clause.
-  enum {FIRST, SECOND, NUM_MODIFIERS};
+  enum { FIRST, SECOND, NUM_MODIFIERS };
   OpenMPScheduleClauseModifier Modifiers[NUM_MODIFIERS];
 
   /// Locations of modifiers.
@@ -2496,7 +2496,7 @@ public:
                                   SourceLocation EndLoc);
 
   /// Build an empty clause.
-  static OMPOrderedClause* CreateEmpty(const ASTContext &C, unsigned NumLoops);
+  static OMPOrderedClause *CreateEmpty(const ASTContext &C, unsigned NumLoops);
 
   /// Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
@@ -3501,9 +3501,7 @@ public:
   }
 
   /// Gets the location of '(' (for the parameter) in fail clause.
-  SourceLocation getLParenLoc() const {
-    return LParenLoc;
-  }
+  SourceLocation getLParenLoc() const { return LParenLoc; }
 
   /// Gets the location of Fail Parameter (type memory-order-clause) in
   /// fail clause.
@@ -6949,9 +6947,8 @@ public:
   SourceLocation getColonLoc() const { return ColonLoc; }
 
   child_range children() {
-    return child_range(
-        reinterpret_cast<Stmt **>(varlist_begin()),
-        reinterpret_cast<Stmt **>(varlist_end()));
+    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                       reinterpret_cast<Stmt **>(varlist_end()));
   }
 
   const_child_range children() const {
@@ -6967,7 +6964,6 @@ public:
   const_child_range used_children() const {
     return const_cast<OMPMapClause *>(this)->used_children();
   }
-
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == llvm::omp::OMPC_map;
@@ -7723,8 +7719,8 @@ public:
 /// \code
 /// #pragma omp target defaultmap(tofrom: scalar)
 /// \endcode
-/// In this example directive '#pragma omp target' has 'defaultmap' clause of kind
-/// 'scalar' with modifier 'tofrom'.
+/// In this example directive '#pragma omp target' has 'defaultmap' clause of
+/// kind 'scalar' with modifier 'tofrom'.
 class OMPDefaultmapClause : public OMPClause {
   friend class OMPClauseReader;
 
@@ -7751,14 +7747,10 @@ class OMPDefaultmapClause : public OMPClause {
   /// Set the defaultmap modifier.
   ///
   /// \param M Defaultmap modifier.
-  void setDefaultmapModifier(OpenMPDefaultmapClauseModifier M) {
-    Modifier = M;
-  }
+  void setDefaultmapModifier(OpenMPDefaultmapClauseModifier M) { Modifier = M; }
 
   /// Set location of the defaultmap modifier.
-  void setDefaultmapModifierLoc(SourceLocation Loc) {
-    ModifierLoc = Loc;
-  }
+  void setDefaultmapModifierLoc(SourceLocation Loc) { ModifierLoc = Loc; }
 
   /// Sets the location of '('.
   ///
@@ -7808,9 +7800,7 @@ public:
   SourceLocation getDefaultmapKindLoc() { return KindLoc; }
 
   /// Get the modifier location.
-  SourceLocation getDefaultmapModifierLoc() const {
-    return ModifierLoc;
-  }
+  SourceLocation getDefaultmapModifierLoc() const { return ModifierLoc; }
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
@@ -9881,12 +9871,13 @@ public:
 
 /// This class implements a simple visitor for OMPClause
 /// subclasses.
-template<class ImplClass, template <typename> class Ptr, typename RetTy>
+template <class ImplClass, template <typename> class Ptr, typename RetTy>
 class OMPClauseVisitorBase {
 public:
 #define PTR(CLASS) Ptr<CLASS>
-#define DISPATCH(CLASS) \
-  return static_cast<ImplClass*>(this)->Visit##CLASS(static_cast<PTR(CLASS)>(S))
+#define DISPATCH(CLASS)                                                        \
+  return static_cast<ImplClass *>(this)->Visit##CLASS(                         \
+      static_cast<PTR(CLASS)>(S))
 
 #define GEN_CLANG_CLAUSE_CLASS
 #define CLAUSE_CLASS(Enum, Str, Class)                                         \
@@ -9919,9 +9910,9 @@ template <typename T> using const_ptr = std::add_pointer_t<std::add_const_t<T>>;
 template <class ImplClass, typename RetTy = void>
 class OMPClauseVisitor
     : public OMPClauseVisitorBase<ImplClass, std::add_pointer_t, RetTy> {};
-template<class ImplClass, typename RetTy = void>
-class ConstOMPClauseVisitor :
-      public OMPClauseVisitorBase <ImplClass, const_ptr, RetTy> {};
+template <class ImplClass, typename RetTy = void>
+class ConstOMPClauseVisitor
+    : public OMPClauseVisitorBase<ImplClass, const_ptr, RetTy> {};
 
 class OMPClausePrinter final : public OMPClauseVisitor<OMPClausePrinter> {
   raw_ostream &OS;
@@ -9982,12 +9973,11 @@ public:
   bool anyScoreOrCondition(
       llvm::function_ref<bool(Expr *&, bool /* IsScore */)> Cond) {
     return llvm::any_of(Sets, [&](OMPTraitSet &Set) {
-      return llvm::any_of(
-          Set.Selectors, [&](OMPTraitSelector &Selector) {
-            return Cond(Selector.ScoreOrCondition,
-                        /* IsScore */ Selector.Kind !=
-                            llvm::omp::TraitSelector::user_condition);
-          });
+      return llvm::any_of(Set.Selectors, [&](OMPTraitSelector &Selector) {
+        return Cond(Selector.ScoreOrCondition,
+                    /* IsScore */ Selector.Kind !=
+                        llvm::omp::TraitSelector::user_condition);
+      });
     });
   }
 

@@ -280,9 +280,7 @@ public:
   bool needsTocRestore() const { return archSpecificBit; }
   bool isTagged() const { return archSpecificBit; }
   void setNeedsTocRestore(bool v) { archSpecificBit = v; }
-  void setIsTagged(bool v) {
-    archSpecificBit = v;
-  }
+  void setIsTagged(bool v) { archSpecificBit = v; }
 
   // True if this symbol is defined by a symbol assignment or wrapped by --wrap.
   //
@@ -375,8 +373,7 @@ public:
           uint8_t stOther, uint8_t type, uint64_t value, uint64_t size,
           SectionBase *section)
       : Symbol(DefinedKind, file, name, binding, stOther, type), value(value),
-        size(size), section(section) {
-  }
+        size(size), section(section) {}
   void overwrite(Symbol &sym) const;
 
   static bool classof(const Symbol *s) { return s->isDefined(); }
@@ -412,8 +409,7 @@ public:
   CommonSymbol(Ctx &ctx, InputFile *file, StringRef name, uint8_t binding,
                uint8_t stOther, uint8_t type, uint64_t alignment, uint64_t size)
       : Symbol(CommonKind, file, name, binding, stOther, type),
-        alignment(alignment), size(size) {
-  }
+        alignment(alignment), size(size) {}
   void overwrite(Symbol &sym) const {
     Symbol::overwrite(sym, CommonKind);
     auto &s = static_cast<CommonSymbol &>(sym);
@@ -526,7 +522,8 @@ union SymbolUnion {
 
 template <typename... T> Defined *makeDefined(T &&...args) {
   auto *sym = getSpecificAllocSingleton<SymbolUnion>().Allocate();
-  auto &s = *new (reinterpret_cast<Defined *>(sym)) Defined(std::forward<T>(args)...);
+  auto &s =
+      *new (reinterpret_cast<Defined *>(sym)) Defined(std::forward<T>(args)...);
   return &s;
 }
 

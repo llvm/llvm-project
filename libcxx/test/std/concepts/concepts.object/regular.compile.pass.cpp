@@ -48,25 +48,25 @@ static_assert(std::regular<int (S::*)() noexcept>);
 static_assert(std::regular<int (S::*)() &>);
 static_assert(std::regular<int (S::*)() & noexcept>);
 static_assert(std::regular<int (S::*)() &&>);
-static_assert(std::regular<int (S::*)() && noexcept>);
+static_assert(std::regular < int(S::*)() && noexcept >);
 static_assert(std::regular<int (S::*)() const>);
 static_assert(std::regular<int (S::*)() const noexcept>);
 static_assert(std::regular<int (S::*)() const&>);
 static_assert(std::regular<int (S::*)() const & noexcept>);
 static_assert(std::regular<int (S::*)() const&&>);
-static_assert(std::regular<int (S::*)() const && noexcept>);
+static_assert(std::regular < int(S::*)() const&& noexcept >);
 static_assert(std::regular<int (S::*)() volatile>);
 static_assert(std::regular<int (S::*)() volatile noexcept>);
 static_assert(std::regular<int (S::*)() volatile&>);
 static_assert(std::regular<int (S::*)() volatile & noexcept>);
 static_assert(std::regular<int (S::*)() volatile&&>);
-static_assert(std::regular<int (S::*)() volatile && noexcept>);
+static_assert(std::regular < int(S::*)() volatile && noexcept >);
 static_assert(std::regular<int (S::*)() const volatile>);
 static_assert(std::regular<int (S::*)() const volatile noexcept>);
 static_assert(std::regular<int (S::*)() const volatile&>);
 static_assert(std::regular<int (S::*)() const volatile & noexcept>);
 static_assert(std::regular<int (S::*)() const volatile&&>);
-static_assert(std::regular<int (S::*)() const volatile && noexcept>);
+static_assert(std::regular < int(S::*)() const volatile&& noexcept >);
 
 union U {};
 static_assert(!std::regular<U>);
@@ -76,25 +76,25 @@ static_assert(std::regular<int (U::*)() noexcept>);
 static_assert(std::regular<int (U::*)() &>);
 static_assert(std::regular<int (U::*)() & noexcept>);
 static_assert(std::regular<int (U::*)() &&>);
-static_assert(std::regular<int (U::*)() && noexcept>);
+static_assert(std::regular < int(U::*)() && noexcept >);
 static_assert(std::regular<int (U::*)() const>);
 static_assert(std::regular<int (U::*)() const noexcept>);
 static_assert(std::regular<int (U::*)() const&>);
 static_assert(std::regular<int (U::*)() const & noexcept>);
 static_assert(std::regular<int (U::*)() const&&>);
-static_assert(std::regular<int (U::*)() const && noexcept>);
+static_assert(std::regular < int(U::*)() const&& noexcept >);
 static_assert(std::regular<int (U::*)() volatile>);
 static_assert(std::regular<int (U::*)() volatile noexcept>);
 static_assert(std::regular<int (U::*)() volatile&>);
 static_assert(std::regular<int (U::*)() volatile & noexcept>);
 static_assert(std::regular<int (U::*)() volatile&&>);
-static_assert(std::regular<int (U::*)() volatile && noexcept>);
+static_assert(std::regular < int(U::*)() volatile && noexcept >);
 static_assert(std::regular<int (U::*)() const volatile>);
 static_assert(std::regular<int (U::*)() const volatile noexcept>);
 static_assert(std::regular<int (U::*)() const volatile&>);
 static_assert(std::regular<int (U::*)() const volatile & noexcept>);
 static_assert(std::regular<int (U::*)() const volatile&&>);
-static_assert(std::regular<int (U::*)() const volatile && noexcept>);
+static_assert(std::regular < int(U::*)() const volatile&& noexcept >);
 
 static_assert(std::regular<std::vector<int> >);
 static_assert(std::regular<std::deque<int> >);
@@ -104,8 +104,7 @@ static_assert(std::regular<std::shared_ptr<std::unique_ptr<int> > >);
 static_assert(std::regular<std::optional<std::vector<int> > >);
 static_assert(std::regular<std::vector<int> >);
 static_assert(std::regular<std::vector<std::unique_ptr<int> > >);
-static_assert(std::semiregular<std::in_place_t> &&
-              !std::regular<std::in_place_t>);
+static_assert(std::semiregular<std::in_place_t> && !std::regular<std::in_place_t>);
 
 static_assert(!std::regular<has_volatile_member>);
 static_assert(!std::regular<has_array_member>);
@@ -143,13 +142,11 @@ static_assert(!std::regular<deleted_assignment_from_const_rvalue>);
 
 // not default_initializable
 static_assert(!std::regular<std::runtime_error>);
-static_assert(
-    !std::regular<std::tuple<std::runtime_error, std::overflow_error> >);
+static_assert(!std::regular<std::tuple<std::runtime_error, std::overflow_error> >);
 static_assert(!std::regular<std::nullopt_t>);
 static_assert(!std::regular<no_copy_constructor>);
 static_assert(!std::regular<no_copy_assignment>);
-static_assert(std::is_copy_assignable_v<no_copy_assignment_mutable> &&
-              !std::regular<no_copy_assignment_mutable>);
+static_assert(std::is_copy_assignable_v<no_copy_assignment_mutable> && !std::regular<no_copy_assignment_mutable>);
 static_assert(!std::regular<derived_from_noncopyable>);
 static_assert(!std::regular<has_noncopyable>);
 

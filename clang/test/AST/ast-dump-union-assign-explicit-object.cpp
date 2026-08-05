@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++2b -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++2b -ast-dump %s |
+// FileCheck %s
 
 union U {
   int a;

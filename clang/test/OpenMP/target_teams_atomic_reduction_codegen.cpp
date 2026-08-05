@@ -26,9 +26,9 @@ void atomicable_matrix(int n) {
       smx = -0x7fffffff - 1;
   unsigned umn = ~0u, umx = 0u;
   float f = 0.0f;
-#pragma omp target teams distribute parallel for reduction(+ : si)              \
-    reduction(- : su) reduction(& : an) reduction(| : orv) reduction(^ : xr)    \
-    reduction(min : smn) reduction(max : smx) reduction(min : umn)              \
+#pragma omp target teams distribute parallel for reduction(+ : si)             \
+    reduction(- : su) reduction(& : an) reduction(| : orv) reduction(^ : xr)   \
+    reduction(min : smn) reduction(max : smx) reduction(min : umn)             \
     reduction(max : umx) reduction(+ : f)
   for (int i = 0; i < n; ++i) {
     si += i;
@@ -45,8 +45,8 @@ void atomicable_matrix(int n) {
 }
 
 // A fp multiply and a fp max reduction have no direct atomicrmw, so each falls
-// back to the buffer path even with -fopenmp-target-atomic-reduction. Together with
-// the mixed construct below there are exactly three buffered writebacks.
+// back to the buffer path even with -fopenmp-target-atomic-reduction. Together
+// with the mixed construct below there are exactly three buffered writebacks.
 //
 // BUFFER-COUNT-3: call i32 @__kmpc_gpu_xteam_reduce_nowait(
 // BUFFER-NOT:     call i32 @__kmpc_gpu_xteam_reduce_nowait(
@@ -80,7 +80,7 @@ double nonatomicable_fpmax(int n) {
 double mixed(int n) {
   int s = 0;
   double p = 1.0;
-#pragma omp target teams distribute parallel for reduction(+ : s)               \
+#pragma omp target teams distribute parallel for reduction(+ : s)              \
     reduction(* : p)
   for (int i = 0; i < n; ++i) {
     s += i;

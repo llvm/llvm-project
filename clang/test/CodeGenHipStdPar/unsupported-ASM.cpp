@@ -4,7 +4,7 @@
 #define __global__ __attribute__((global))
 
 __global__ void foo(int i) {
-    asm ("addl %2, %1; seto %b0" : "=q" (i), "+g" (i) : "r" (i));
+  asm("addl %2, %1; seto %b0" : "=q"(i), "+g"(i) : "r"(i));
 }
 
 // CHECK: declare void @__ASM__hipstdpar_unsupported([{{.*}}])

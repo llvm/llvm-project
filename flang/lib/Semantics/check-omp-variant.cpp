@@ -82,7 +82,7 @@ public:
 
   bool Pre(const parser::DoConstruct &loop) {
     for (const omp::LoopControl &control : omp::GetLoopControls(loop)) {
-      if (const Symbol *symbol{control.iv.symbol}) {
+      if (const Symbol * symbol{control.iv.symbol}) {
         loopIndices_.insert(symbol->GetUltimate());
       }
     }
@@ -173,8 +173,8 @@ void OmpStructureChecker::CheckDefaultNoneInAssociatedLoop(
   unsigned version{context_.langOptions().OpenMPVersion};
   for (const parser::OmpClause &clause : spec.Clauses().v) {
     if (llvm::omp::isDataSharingAttributeClause(clause.Id(), version)) {
-      if (const parser::OmpObjectList *objects{
-              parser::omp::GetOmpObjectList(clause)}) {
+      if (const parser::OmpObjectList *
+          objects{parser::omp::GetOmpObjectList(clause)}) {
         GetSymbolsInObjectList(*objects, explicitDSA);
       }
     }
@@ -716,7 +716,7 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   llvm::omp::Directive dirId{x.DirId()};
   bool checkDefaultNoneInAssociatedLoop{
       GetDirectiveNest(MetadirectiveNest) != 0};
-  if (const parser::OpenMPConstruct *meta{GetCurrentConstruct()}) {
+  if (const parser::OpenMPConstruct * meta{GetCurrentConstruct()}) {
     if (parser::Unwrap<parser::OmpDelimitedMetadirectiveDirective>(meta->u)) {
       checkDefaultNoneInAssociatedLoop = false;
       unsigned version{context_.langOptions().OpenMPVersion};
@@ -1072,7 +1072,7 @@ static void CollectConstructSelectorSet(
           constructs.emplace_back(leaf, std::string{});
         }
       } else if (const auto *value{std::get_if<TraitName::Value>(&traitName.u)};
-          value && *value == TraitName::Value::Simd) {
+                 value && *value == TraitName::Value::Simd) {
         // In a construct selector, `simd` is represented as Value::Simd (it can
         // carry simd-specific properties), not as a Directive; treat it as
         // OMPD_simd and fold in its properties so they participate in the
@@ -1144,8 +1144,8 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
             variant = GetArgumentSymbol(arg);
             CheckProcedureSymbol(variant, arg.source);
             const Scope &containingScope{context_.FindScope(x.source)};
-            if (const Symbol *host{
-                    GetProgramUnitContaining(containingScope).symbol()}) {
+            if (const Symbol *
+                host{GetProgramUnitContaining(containingScope).symbol()}) {
               base = host;
             }
           },

@@ -1,5 +1,13 @@
-// RUN: %clang_cc1 -internal-isystem %S/Inputs/include -x c -fopenmp -triple x86_64-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm-bc %s -o %t-host.bc
-// RUN: %clang_cc1 -internal-isystem %S/../../lib/Headers/openmp_wrappers -include __clang_openmp_device_functions.h -internal-isystem %S/../../lib/Headers/openmp_wrappers -internal-isystem %S/Inputs/include -x c -fopenmp -triple amdgpu-amd-amdhsa -aux-triple x86_64-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -internal-isystem %S/Inputs/include -x c -fopenmp -triple
+// x86_64-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm-bc %s -o
+// %t-host.bc RUN: %clang_cc1 -internal-isystem
+// %S/../../lib/Headers/openmp_wrappers -include
+// __clang_openmp_device_functions.h -internal-isystem
+// %S/../../lib/Headers/openmp_wrappers -internal-isystem %S/Inputs/include -x c
+// -fopenmp -triple amdgpu-amd-amdhsa -aux-triple x86_64-unknown-unknown
+// -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device
+// -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s
+// --check-prefixes=CHECK
 
 #include <complex.h>
 
@@ -16,10 +24,9 @@ void test_complex_f64(double _Complex a) {
 // CHECK: define weak {{.*}} @__divdc3
 // CHECK-DAG: call double @llvm.fabs.f64(
 // CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, /* (nan) */ i32 3)
-// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, /* (zero sub norm) */ i32 504)
-// CHECK-DAG: call double @llvm.copysign.f64(
-// CHECK-DAG: call double @llvm.ldexp.f64.i32(
-// CHECK-DAG: call { double, i32 } @llvm.frexp.f64.i32
+// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, /* (zero sub norm) */
+// i32 504) CHECK-DAG: call double @llvm.copysign.f64( CHECK-DAG: call double
+// @llvm.ldexp.f64.i32( CHECK-DAG: call { double, i32 } @llvm.frexp.f64.i32
 
 // CHECK: define weak {{.*}} @__muldc3
 // CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, /* (nan) */ i32 3)

@@ -63,14 +63,16 @@ struct ParsedTargetAttr {
   StringRef Tune;
   StringRef BranchProtection;
   StringRef Duplicate;
-  bool operator ==(const ParsedTargetAttr &Other) const {
+  bool operator==(const ParsedTargetAttr &Other) const {
     return Duplicate == Other.Duplicate && CPU == Other.CPU &&
            Tune == Other.Tune && BranchProtection == Other.BranchProtection &&
            Features == Other.Features;
   }
 };
 
-namespace Builtin { struct Info; }
+namespace Builtin {
+struct Info;
+}
 
 enum class FloatModeKind {
   NoFloat = 0,
@@ -227,6 +229,7 @@ class TargetInfo : public TransferrableTargetInfo,
                    public RefCountedBase<TargetInfo> {
   TargetOptions *TargetOpts;
   llvm::Triple Triple;
+
 protected:
   // Target values set by the ctor of the actual target implementation.  Default
   // values are specified by the TargetInfo constructor.
@@ -234,7 +237,7 @@ protected:
   bool BigEndian;
   bool TLSSupported;
   bool VLASupported;
-  bool NoAsmVariants;  // True if {|} are normal characters.
+  bool NoAsmVariants;      // True if {|} are normal characters.
   bool HasFastHalfType;    // True if the backend has native half float support,
                            // and performing calculations in float instead does
                            // not have a performance advantage.
@@ -503,9 +506,7 @@ public:
   }
 
   /// Return the maximum width of pointers on this target.
-  virtual uint64_t getMaxPointerWidth() const {
-    return PointerWidth;
-  }
+  virtual uint64_t getMaxPointerWidth() const { return PointerWidth; }
 
   /// Get integer value for null pointer.
   /// \param AddrSpace address space of pointee in source language.
@@ -693,9 +694,7 @@ public:
   /// asking whether the target supported it or not; I think this should be
   /// removed once backends have been alerted to the type and have had the
   /// chance to do implementation work if needed.
-  virtual bool hasBitIntType() const {
-    return false;
-  }
+  virtual bool hasBitIntType() const { return false; }
 
   // Different targets may support a different maximum width for the _BitInt
   // type, depending on what operations are supported.
@@ -802,7 +801,9 @@ public:
   /// getBFloat16Width/Align/Format - Return the size/align/format of '__bf16'.
   unsigned getBFloat16Width() const { return BFloat16Width; }
   unsigned getBFloat16Align() const { return BFloat16Align; }
-  const llvm::fltSemantics &getBFloat16Format() const { return *BFloat16Format; }
+  const llvm::fltSemantics &getBFloat16Format() const {
+    return *BFloat16Format;
+  }
 
   /// getDoubleWidth/Align/Format - Return the size/align/format of 'double'.
   unsigned getDoubleWidth() const { return DoubleWidth; }
@@ -900,9 +901,7 @@ public:
   }
 
   /// Return the size of intmax_t and uintmax_t for this target, in bits.
-  unsigned getIntMaxTWidth() const {
-    return getTypeWidth(IntMaxType);
-  }
+  unsigned getIntMaxTWidth() const { return getTypeWidth(IntMaxType); }
 
   // Return the size of unwind_word for this target.
   virtual unsigned getUnwindWordWidth() const {
@@ -936,27 +935,19 @@ public:
   const char *getUserLabelPrefix() const { return UserLabelPrefix; }
 
   /// Returns the name of the mcount instrumentation function.
-  const char *getMCountName() const {
-    return MCountName;
-  }
+  const char *getMCountName() const { return MCountName; }
 
   /// Check if the Objective-C built-in boolean type should be signed
   /// char.
   ///
   /// Otherwise, if this returns false, the normal built-in boolean type
   /// should also be used for Objective-C.
-  bool useSignedCharForObjCBool() const {
-    return UseSignedCharForObjCBool;
-  }
-  void noSignedCharForObjCBool() {
-    UseSignedCharForObjCBool = false;
-  }
+  bool useSignedCharForObjCBool() const { return UseSignedCharForObjCBool; }
+  void noSignedCharForObjCBool() { UseSignedCharForObjCBool = false; }
 
   /// Check whether the alignment of bit-field types is respected
   /// when laying out structures.
-  bool useBitFieldTypeAlignment() const {
-    return UseBitFieldTypeAlignment;
-  }
+  bool useBitFieldTypeAlignment() const { return UseBitFieldTypeAlignment; }
 
   /// Check whether zero length bitfields should force alignment of
   /// the next member.
@@ -991,9 +982,7 @@ public:
   }
 
   /// Check whether this target support '\#pragma options align=mac68k'.
-  bool hasAlignMac68kSupport() const {
-    return HasAlignMac68kSupport;
-  }
+  bool hasAlignMac68kSupport() const { return HasAlignMac68kSupport; }
 
   /// Return the user string for the specified integer type enum.
   ///
@@ -1025,9 +1014,7 @@ public:
 
   /// Specify if mangling based on address space map should be used or
   /// not for language specific address spaces
-  bool useAddressSpaceMapMangling() const {
-    return UseAddrSpaceMapMangling;
-  }
+  bool useAddressSpaceMapMangling() const { return UseAddrSpaceMapMangling; }
 
   ///===---- Other target property query methods --------------------------===//
 
@@ -1152,8 +1139,8 @@ public:
     } ImmRange;
     llvm::SmallSet<int, 4> ImmSet;
 
-    std::string ConstraintStr;  // constraint: "=rm"
-    std::string Name;           // Operand name: [foo] with no []'s.
+    std::string ConstraintStr; // constraint: "=rm"
+    std::string Name;          // Operand name: [foo] with no []'s.
   public:
     ConstraintInfo(StringRef ConstraintStr, StringRef Name)
         : Flags(0), TiedOperand(-1), ConstraintStr(ConstraintStr.str()),
@@ -1213,9 +1200,7 @@ public:
       Flags |= CI_ImmediateConstant;
       ImmSet.insert(Exact);
     }
-    void setRequiresImmediate() {
-      Flags |= CI_ImmediateConstant;
-    }
+    void setRequiresImmediate() { Flags |= CI_ImmediateConstant; }
 
     /// Indicate that this is an input operand that is tied to
     /// the specified output operand.
@@ -1265,8 +1250,9 @@ public:
   // a constraint is valid and provides information about it.
   // FIXME: These should return a real error instead of just true/false.
   bool validateOutputConstraint(ConstraintInfo &Info) const;
-  bool validateInputConstraint(MutableArrayRef<ConstraintInfo> OutputConstraints,
-                               ConstraintInfo &info) const;
+  bool
+  validateInputConstraint(MutableArrayRef<ConstraintInfo> OutputConstraints,
+                          ConstraintInfo &info) const;
 
   virtual bool validateOutputSize(const llvm::StringMap<bool> &FeatureMap,
                                   StringRef /*Constraint*/,
@@ -1280,10 +1266,9 @@ public:
     return true;
   }
   virtual bool
-  validateConstraintModifier(StringRef /*Constraint*/,
-                             char /*Modifier*/,
+  validateConstraintModifier(StringRef /*Constraint*/, char /*Modifier*/,
                              unsigned /*Size*/,
-                             std::string &/*SuggestedModifier*/) const {
+                             std::string & /*SuggestedModifier*/) const {
     return true;
   }
   virtual bool
@@ -1319,14 +1304,10 @@ public:
 
   /// Returns true if NaN encoding is IEEE 754-2008.
   /// Only MIPS allows a different encoding.
-  virtual bool isNan2008() const {
-    return true;
-  }
+  virtual bool isNan2008() const { return true; }
 
   /// Returns the target triple of the primary target.
-  const llvm::Triple &getTriple() const {
-    return Triple;
-  }
+  const llvm::Triple &getTriple() const { return Triple; }
 
   /// Returns true if the target's processor is compatible with the processor
   /// named by \p Name, i.e. \p Name names this target's processor or a
@@ -1339,12 +1320,12 @@ public:
   }
 
   struct GCCRegAlias {
-    const char * const Aliases[5];
-    const char * const Register;
+    const char *const Aliases[5];
+    const char *const Register;
   };
 
   struct AddlRegName {
-    const char * const Names[5];
+    const char *const Names[5];
     const unsigned RegNum;
   };
 
@@ -1396,9 +1377,7 @@ public:
   virtual StringRef getABI() const { return StringRef(); }
 
   /// Get the C++ ABI currently in use.
-  TargetCXXABI getCXXABI() const {
-    return TheCXXABI;
-  }
+  TargetCXXABI getCXXABI() const { return TheCXXABI; }
 
   /// Should the Microsoft mangling scheme be used for C Calling Convention.
   bool shouldUseMicrosoftCCforMangling() const {
@@ -1419,9 +1398,7 @@ public:
   }
 
   /// Determine whether this TargetInfo supports the given CPU name.
-  virtual bool isValidCPUName(StringRef Name) const {
-    return true;
-  }
+  virtual bool isValidCPUName(StringRef Name) const { return true; }
 
   /// Determine whether this TargetInfo supports the given CPU name for
   /// tuning.
@@ -1432,23 +1409,17 @@ public:
   virtual ParsedTargetAttr parseTargetAttr(StringRef Str) const;
 
   /// Determine whether this TargetInfo supports tune in target attribute.
-  virtual bool supportsTargetAttributeTune() const {
-    return false;
-  }
+  virtual bool supportsTargetAttributeTune() const { return false; }
 
   /// Use the specified ABI.
   ///
   /// \return False on error (invalid ABI name).
-  virtual bool setABI(const std::string &Name) {
-    return false;
-  }
+  virtual bool setABI(const std::string &Name) { return false; }
 
   /// Use the specified unit for FP math.
   ///
   /// \return False on error (invalid unit name).
-  virtual bool setFPMath(StringRef Name) {
-    return false;
-  }
+  virtual bool setFPMath(StringRef Name) { return false; }
 
   /// Check if target has a given feature enabled
   virtual bool hasFeatureEnabled(const llvm::StringMap<bool> &Features,
@@ -1459,15 +1430,12 @@ public:
   /// Enable or disable a specific target feature;
   /// the feature name must be valid.
   virtual void setFeatureEnabled(llvm::StringMap<bool> &Features,
-                                 StringRef Name,
-                                 bool Enabled) const {
+                                 StringRef Name, bool Enabled) const {
     Features[Name] = Enabled;
   }
 
   /// Determine whether this TargetInfo supports the given feature.
-  virtual bool isValidFeatureName(StringRef Feature) const {
-    return true;
-  }
+  virtual bool isValidFeatureName(StringRef Feature) const { return true; }
 
   /// Returns true if feature has an impact on target code
   /// generation.
@@ -1550,8 +1518,8 @@ public:
   ///
   /// The target may modify the features list, to change which options are
   /// passed onwards to the backend.
-  /// FIXME: This part should be fixed so that we can change handleTargetFeatures
-  /// to merely a TargetInfo initialization routine.
+  /// FIXME: This part should be fixed so that we can change
+  /// handleTargetFeatures to merely a TargetInfo initialization routine.
   ///
   /// \return  False on error.
   virtual bool handleTargetFeatures(std::vector<std::string> &Features,
@@ -1560,9 +1528,7 @@ public:
   }
 
   /// Determine whether the given target has the given feature.
-  virtual bool hasFeature(StringRef Feature) const {
-    return false;
-  }
+  virtual bool hasFeature(StringRef Feature) const { return false; }
 
   /// Determine whether the given target feature is read only.
   bool isReadOnlyFeature(StringRef Feature) const {
@@ -1660,9 +1626,7 @@ public:
   }
 
   /// Whether the target supports thread-local storage.
-  bool isTLSSupported() const {
-    return TLSSupported;
-  }
+  bool isTLSSupported() const { return TLSSupported; }
 
   /// Return the maximum alignment (in bits) of a TLS variable
   ///
@@ -1687,22 +1651,16 @@ public:
   /// that says that when compiling for asm variant #0, "abc" should be
   /// generated, but when compiling for asm variant #1, "xyz" should be
   /// generated.
-  bool hasNoAsmVariants() const {
-    return NoAsmVariants;
-  }
+  bool hasNoAsmVariants() const { return NoAsmVariants; }
 
   /// Return the register number that __builtin_eh_return_regno would
   /// return with the specified argument.
   /// This corresponds with TargetLowering's getExceptionPointerRegister
   /// and getExceptionSelectorRegister in the backend.
-  virtual int getEHDataRegisterNumber(unsigned RegNo) const {
-    return -1;
-  }
+  virtual int getEHDataRegisterNumber(unsigned RegNo) const { return -1; }
 
   /// Return the section to use for C++ static initialization functions.
-  virtual const char *getStaticInitSectionSpecifier() const {
-    return nullptr;
-  }
+  virtual const char *getStaticInitSectionSpecifier() const { return nullptr; }
 
   const LangASMap &getAddressSpaceMap() const { return *AddrSpaceMap; }
   unsigned getTargetAddressSpace(LangAS AS) const {
@@ -1787,18 +1745,14 @@ public:
   /// produce an error (such as using thiscall on a non-instance function).
   virtual CallingConvCheckResult checkCallingConvention(CallingConv CC) const {
     switch (CC) {
-      default:
-        return CCCR_Warning;
-      case CC_C:
-        return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    case CC_C:
+      return CCCR_OK;
     }
   }
 
-  enum CallingConvKind {
-    CCK_Default,
-    CCK_ClangABI4OrPS4,
-    CCK_MicrosoftWin64
-  };
+  enum CallingConvKind { CCK_Default, CCK_ClangABI4OrPS4, CCK_MicrosoftWin64 };
 
   virtual CallingConvKind getCallingConvKind(bool ClangABICompat4) const;
 
@@ -1808,7 +1762,7 @@ public:
   /// does. So in newer Clang ABIs they are acceptable for POD to be compatible
   /// with GCC/Itanium ABI, and remains disqualifying for targets that need
   /// Clang backwards compatibility rather than GCC/Itanium ABI compatibility.
-  virtual bool areDefaultedSMFStillPOD(const LangOptions&) const;
+  virtual bool areDefaultedSMFStillPOD(const LangOptions &) const;
 
   /// Returns whether the target's ABI guarantees that a class's vtable has a
   /// unique address program-wide.
@@ -1829,13 +1783,10 @@ public:
 
   /// Controls if __builtin_longjmp / __builtin_setjmp can be lowered to
   /// llvm.eh.sjlj.longjmp / llvm.eh.sjlj.setjmp.
-  virtual bool hasSjLjLowering() const {
-    return false;
-  }
+  virtual bool hasSjLjLowering() const { return false; }
 
   /// Check if the target supports CFProtection branch.
-  virtual bool
-  checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const;
+  virtual bool checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const;
 
   /// Get the target default CFBranchLabelScheme scheme
   virtual CFBranchLabelSchemeKind getDefaultCFBranchLabelScheme() const;
@@ -1845,8 +1796,7 @@ public:
                                     DiagnosticsEngine &Diags) const;
 
   /// Check if the target supports CFProtection return.
-  virtual bool
-  checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const;
+  virtual bool checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const;
 
   /// Whether target allows to overalign ABI-specified preferred alignment
   virtual bool allowsLargerPreferedTypeAlignment() const { return true; }
@@ -1896,9 +1846,7 @@ public:
   virtual LangAS getOpenCLTypeAddrSpace(OpenCLTypeKind TK) const;
 
   /// \returns Target specific vtbl ptr address space.
-  virtual unsigned getVtblPtrAddressSpace() const {
-    return 0;
-  }
+  virtual unsigned getVtblPtrAddressSpace() const { return 0; }
 
   /// \returns If a target requires an address within a target specific address
   /// space \p AddressSpace to be converted in order to be used, then return the
@@ -1906,8 +1854,8 @@ public:
   ///
   /// \returns Otherwise return std::nullopt and no conversion will be emitted
   /// in the DWARF.
-  virtual std::optional<unsigned> getDWARFAddressSpace(unsigned AddressSpace)
-      const {
+  virtual std::optional<unsigned>
+  getDWARFAddressSpace(unsigned AddressSpace) const {
     return std::nullopt;
   }
 
@@ -1918,9 +1866,7 @@ public:
   }
 
   /// Check the target is valid after it is fully initialized.
-  virtual bool validateTarget(DiagnosticsEngine &Diags) const {
-    return true;
-  }
+  virtual bool validateTarget(DiagnosticsEngine &Diags) const { return true; }
 
   /// Check that OpenCL target has valid options setting based on OpenCL
   /// version.
@@ -1989,6 +1935,6 @@ std::unique_ptr<clang::TargetInfo>
 AllocateTarget(const llvm::Triple &Triple, const clang::TargetOptions &Opts);
 } // namespace targets
 
-}  // end namespace clang
+} // end namespace clang
 
 #endif

@@ -75,11 +75,13 @@
 // CHECK-FINITE-MATH-ONLY: #define __FINITE_MATH_ONLY__ 1
 //
 // RUN: %clang %s -E -dM -fno-finite-math-only -o - \
-// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-NO-FINITE-MATH-ONLY
-// CHECK-NO-FINITE-MATH-ONLY: #define __FINITE_MATH_ONLY__ 0
+// RUN:   | FileCheck -match-full-lines %s
+// --check-prefix=CHECK-NO-FINITE-MATH-ONLY CHECK-NO-FINITE-MATH-ONLY: #define
+// __FINITE_MATH_ONLY__ 0
 //
 // RUN: %clang_cc1 %s -E -dM -o - \
-// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-FINITE-MATH-FLAG-UNDEFINED
+// RUN:   | FileCheck -match-full-lines %s
+// --check-prefix=CHECK-FINITE-MATH-FLAG-UNDEFINED
 // CHECK-FINITE-MATH-FLAG-UNDEFINED: #define __FINITE_MATH_ONLY__ 0
 //
 // RUN: %clang_cc1 %s -E -dM -o - -triple i686 -target-cpu i386 \
@@ -119,7 +121,8 @@
 // CHECK-SYNC_CAS_ARMv6-NOT: __GCC_HAVE_SYNC_COMPARE_AND_SWAP
 //
 // RUN: %clang_cc1 %s -E -dM -o - -triple mips -target-cpu mips1 \
-// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SYNC_CAS_MIPS32_MIPS1
+// RUN:   | FileCheck -match-full-lines %s
+// --check-prefix=CHECK-SYNC_CAS_MIPS32_MIPS1
 // RUN: %clang_cc1 %s -E -dM -o - -triple mips -target-cpu mips2 \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SYNC_CAS_MIPS \
 // RUN:         --check-prefix=CHECK-SYNC_CAS_MIPS32
@@ -273,7 +276,8 @@
 // CHECK-SPIRV64-AMDGCN-NOT: #define __AMDGCN_UNSAFE_FP_ATOMICS__
 // CHECK-SPIRV64-AMDGCN-NOT: #define __SPIRV32__ 1
 // CHECK-SPIRV64-AMDGCN-NOT: #define __spirv__ 1
-// CHECK-SPIRV64-AMDGCN-UNSAFE-FP-ATOMICS: #define __AMDGCN_UNSAFE_FP_ATOMICS__ 1
+// CHECK-SPIRV64-AMDGCN-UNSAFE-FP-ATOMICS: #define __AMDGCN_UNSAFE_FP_ATOMICS__
+// 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x hip -triple x86_64-unknown-linux-gnu \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP
@@ -356,5 +360,6 @@
 // RUN:  -triple amdgpu-amd-amdhsa -fcuda-is-device | FileCheck -match-full-lines \
 // RUN:  %s --check-prefix=CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG
 // CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG: #define __HIPSTDPAR__ 1
-// CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG-NOT: #define __HIPSTDPAR_INTERPOSE_ALLOC_V1__ 1
-// CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG-NOT: #define __HIPSTDPAR_INTERPOSE_ALLOC__ 1
+// CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG-NOT: #define
+// __HIPSTDPAR_INTERPOSE_ALLOC_V1__ 1 CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG-NOT:
+// #define __HIPSTDPAR_INTERPOSE_ALLOC__ 1

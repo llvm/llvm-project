@@ -8,8 +8,9 @@
 // used global's unreferenced GV with a differently-typed one; the failed
 // parse keeps the module alive, and the next successful parse finalizes it.
 extern "C" int printf(const char *, ...);
-__attribute__((used)) int a asm("sym") = 1; float b asm("sym") = 2.0f;
+__attribute__((used)) int a asm("sym") = 1;
+float b asm("sym") = 2.0f;
 auto r1 = printf("ok = %d\n", 42);
 // CHECK: ok = 42
 
-%quit
+% quit

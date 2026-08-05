@@ -8,8 +8,7 @@
 #include <stdio.h>
 
 #ifdef SHARED_LIB
-void f() {
-}
+void f() {}
 #else
 void f();
 int main() {

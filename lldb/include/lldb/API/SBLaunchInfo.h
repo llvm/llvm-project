@@ -14,7 +14,7 @@
 namespace lldb_private {
 class SBLaunchInfoImpl;
 class ScriptInterpreter;
-}
+} // namespace lldb_private
 
 namespace lldb {
 

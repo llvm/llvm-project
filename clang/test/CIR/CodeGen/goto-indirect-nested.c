@@ -1,9 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM,LLVMCIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=LLVM,OGCG
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o
+// %t.cir RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR RUN:
+// %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o
+// %t-cir.ll RUN: FileCheck --input-file=%t-cir.ll %s
+// --check-prefixes=LLVM,LLVMCIR RUN: %clang_cc1 -triple
+// x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll RUN: FileCheck
+// --input-file=%t.ll %s --check-prefixes=LLVM,OGCG
 
 // A `goto *p` inside a nested scope, jumping to a top-level label.
 int nested_goto(int x) {
@@ -26,8 +27,8 @@ done:
 // CIR:   cir.label "done"
 
 // LLVM-LABEL: define dso_local i32 @nested_goto
-// LLVM:   store ptr blockaddress(@nested_goto, %[[DONE:.*]]), ptr %{{.*}}, align 8
-// LLVM:   indirectbr ptr %{{.*}}, [label %[[DONE]]]
+// LLVM:   store ptr blockaddress(@nested_goto, %[[DONE:.*]]), ptr %{{.*}},
+// align 8 LLVM:   indirectbr ptr %{{.*}}, [label %[[DONE]]]
 
 // A top-level `goto *p` whose target label sits inside a nested scope.
 int nested_label(int x) {
@@ -52,17 +53,15 @@ int nested_label(int x) {
 
 // CIR emits the store block first, then branches to the indirectbr block.
 // LLVMCIR-LABEL: define dso_local i32 @nested_label
-// LLVMCIR:   store ptr blockaddress(@nested_label, %[[INNER:.*]]), ptr %{{.*}}, align 8
-// LLVMCIR:   br label %[[IBR:.*]]
-// LLVMCIR: [[IBR]]:
-// LLVMCIR:   indirectbr ptr %{{.*}}, [label %[[INNER]]]
+// LLVMCIR:   store ptr blockaddress(@nested_label, %[[INNER:.*]]), ptr %{{.*}},
+// align 8 LLVMCIR:   br label %[[IBR:.*]] LLVMCIR: [[IBR]]: LLVMCIR: indirectbr
+// ptr %{{.*}}, [label %[[INNER]]]
 
-// OGCG emits the indirectbr block first; the store block branches back up to it.
-// OGCG-LABEL: define dso_local i32 @nested_label
-// OGCG:   indirectbr ptr %{{.*}}, [label %[[INNER:.*]]]
-// OGCG: [[STORE:.*]]:
-// OGCG:   store ptr blockaddress(@nested_label, %[[INNER]]), ptr %{{.*}}, align 8
-// OGCG:   br label %{{.*}}
+// OGCG emits the indirectbr block first; the store block branches back up to
+// it. OGCG-LABEL: define dso_local i32 @nested_label OGCG:   indirectbr ptr
+// %{{.*}}, [label %[[INNER:.*]]] OGCG: [[STORE:.*]]: OGCG:   store ptr
+// blockaddress(@nested_label, %[[INNER]]), ptr %{{.*}}, align 8 OGCG:   br
+// label %{{.*}}
 
 // A `goto *p` inside a loop body.
 int goto_in_loop(int n) {
@@ -84,8 +83,8 @@ out:
 // CIR:   cir.label "out"
 
 // LLVM-LABEL: define dso_local i32 @goto_in_loop
-// LLVM:   store ptr blockaddress(@goto_in_loop, %[[OUT:.*]]), ptr %{{.*}}, align 8
-// LLVM:   indirectbr ptr %{{.*}}, [label %[[OUT]]]
+// LLVM:   store ptr blockaddress(@goto_in_loop, %[[OUT:.*]]), ptr %{{.*}},
+// align 8 LLVM:   indirectbr ptr %{{.*}}, [label %[[OUT]]]
 
 // An address-taken label as the first statement of the function.
 int leading_label(int x) {
@@ -106,5 +105,5 @@ first:;
 // LLVM-LABEL: define dso_local i32 @leading_label
 // LLVM:   br label %[[FIRST:.*]]
 // LLVM: [[FIRST]]:
-// LLVM:   store ptr blockaddress(@leading_label, %[[FIRST]]), ptr %{{.*}}, align 8
-// LLVM:   indirectbr ptr %{{.*}}, [label %[[FIRST]]]
+// LLVM:   store ptr blockaddress(@leading_label, %[[FIRST]]), ptr %{{.*}},
+// align 8 LLVM:   indirectbr ptr %{{.*}}, [label %[[FIRST]]]

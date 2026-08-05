@@ -127,7 +127,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasRAOINT = false;
   bool HasAVXVNNIINT8 = false;
   bool HasAVXNECONVERT = false;
-  bool HasKL = false;      // For key locker
+  bool HasKL = false;     // For key locker
   bool HasWIDEKL = false; // For wide key locker
   bool HasHRESET = false;
   bool HasAVXVNNI = false;
@@ -339,9 +339,7 @@ public:
     return "";
   }
 
-  bool supportsTargetAttributeTune() const override {
-    return true;
-  }
+  bool supportsTargetAttributeTune() const override { return true; }
 
   bool isValidCPUName(StringRef Name) const override {
     bool Only64Bit = getTriple().getArch() != llvm::Triple::x86;
@@ -400,9 +398,7 @@ public:
 
   bool checkArithmeticFenceSupported() const override { return true; }
 
-  CallingConv getDefaultCallingConv() const override {
-    return CC_C;
-  }
+  CallingConv getDefaultCallingConv() const override { return CC_C; }
 
   bool hasSjLjLowering() const override { return true; }
 
@@ -553,8 +549,9 @@ public:
                                                                   Diags))
       return false;
     // We now know the features we have: we can decide how to align vectors.
-    MaxVectorAlign =
-        hasFeature("avx512f") ? 512 : hasFeature("avx") ? 256 : 128;
+    MaxVectorAlign = hasFeature("avx512f") ? 512
+                     : hasFeature("avx")   ? 256
+                                           : 128;
     return true;
   }
 };
@@ -768,9 +765,7 @@ public:
     }
   }
 
-  CallingConv getDefaultCallingConv() const override {
-    return CC_C;
-  }
+  CallingConv getDefaultCallingConv() const override { return CC_C; }
 
   // for x32 we need it here explicitly
   bool hasInt128Type() const override { return true; }
@@ -1049,8 +1044,9 @@ public:
                                                                   Diags))
       return false;
     // We now know the features we have: we can decide how to align vectors.
-    MaxVectorAlign =
-        hasFeature("avx512f") ? 512 : hasFeature("avx") ? 256 : 128;
+    MaxVectorAlign = hasFeature("avx512f") ? 512
+                     : hasFeature("avx")   ? 256
+                                           : 128;
     return true;
   }
 };

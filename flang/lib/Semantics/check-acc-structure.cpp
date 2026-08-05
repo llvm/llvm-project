@@ -379,7 +379,7 @@ void AccStructureChecker::CheckRoutineCallInLoop(const Symbol &symbol) {
   // is declared on its interface rather than on the pointer itself, follow the
   // interface to pick up the routine information.
   if (!infos || infos->empty()) {
-    if (const Symbol *subpSym{FindSubprogram(ult)}) {
+    if (const Symbol * subpSym{FindSubprogram(ult)}) {
       infos = getRoutineInfos(*subpSym);
     }
   }

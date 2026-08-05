@@ -72,11 +72,7 @@ enum DFormOpcd {
   ADDI = 14
 };
 
-enum DSFormOpcd {
-  LD = 58,
-  LWA = 58,
-  STD = 62
-};
+enum DSFormOpcd { LD = 58, LWA = 58, STD = 62 };
 
 constexpr uint32_t NOP = 0x60000000;
 
@@ -363,8 +359,8 @@ getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
 // instructions:
 //
 //   addis 3, 2, .LC0@toc@ha  # R_PPC64_TOC16_HA
-//   ld    3, .LC0@toc@l(3)   # R_PPC64_TOC16_LO_DS, load the address from a .toc entry
-//   ld/lwa 3, 0(3)           # load the value from the address
+//   ld    3, .LC0@toc@l(3)   # R_PPC64_TOC16_LO_DS, load the address from a
+//   .toc entry ld/lwa 3, 0(3)           # load the value from the address
 //
 //   .section .toc,"aw",@progbits
 //   .LC0: .tc var[TC],var
@@ -1370,7 +1366,7 @@ void PPC64::scanSection(InputSectionBase &sec, unsigned shard) {
 
 void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   RelType type = rel.type;
-  bool shouldTocOptimize =  isTocOptType(type);
+  bool shouldTocOptimize = isTocOptType(type);
 
   // Handle TLS optimization.
   switch (type) {

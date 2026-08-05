@@ -94,8 +94,7 @@ void PragmaNamespace::AddPragma(PragmaHandler *Handler) {
 
 void PragmaNamespace::RemovePragmaHandler(PragmaHandler *Handler) {
   auto I = Handlers.find(Handler->getName());
-  assert(I != Handlers.end() &&
-         "Handler not registered in this namespace");
+  assert(I != Handlers.end() && "Handler not registered in this namespace");
   // Release ownership back to the caller.
   I->getValue().release();
   Handlers.erase(I);
@@ -108,8 +107,8 @@ void PragmaNamespace::HandlePragma(Preprocessor &PP,
   PP.LexUnexpandedToken(Tok);
 
   // Get the handler for this token.  If there is no handler, ignore the pragma.
-  PragmaHandler *Handler
-    = FindHandler(Tok.getIdentifierInfo() ? Tok.getIdentifierInfo()->getName()
+  PragmaHandler *Handler =
+      FindHandler(Tok.getIdentifierInfo() ? Tok.getIdentifierInfo()->getName()
                                           : StringRef(),
                   /*IgnoreNull=*/false);
   if (!Handler) {
@@ -175,8 +174,8 @@ void Preprocessor::HandlePragmaDirective(PragmaIntroducer Introducer) {
   PragmaHandlers->HandlePragma(*this, Introducer, Tok);
 
   // If the pragma handler didn't read the rest of the line, consume it now.
-  if ((CurTokenLexer && CurTokenLexer->isParsingPreprocessorDirective())
-   || (CurPPLexer && CurPPLexer->ParsingPreprocessorDirective))
+  if ((CurTokenLexer && CurTokenLexer->isParsingPreprocessorDirective()) ||
+      (CurPPLexer && CurPPLexer->ParsingPreprocessorDirective))
     DiscardUntilEndOfDirective();
 }
 
@@ -223,8 +222,7 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
     // Skip bad tokens, and the ')', if present.
     if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::eof) && Tok.isNot(tok::eod))
       Lex(Tok);
-    while (Tok.isNot(tok::r_paren) &&
-           !Tok.isAtStartOfLine() &&
+    while (Tok.isNot(tok::r_paren) && !Tok.isAtStartOfLine() &&
            Tok.isNot(tok::eof) && Tok.isNot(tok::eod))
       Lex(Tok);
     if (Tok.is(tok::r_paren))
@@ -327,7 +325,7 @@ void clang::prepare_PragmaString(SmallVectorImpl<char> &StrVal) {
     StrVal.erase(StrVal.begin(), StrVal.begin() + 2 + NumDChars);
     StrVal.erase(StrVal.end() - 1 - NumDChars, StrVal.end());
   } else {
-    assert(StrVal[0] == '"' && StrVal[StrVal.size()-1] == '"' &&
+    assert(StrVal[0] == '"' && StrVal[StrVal.size() - 1] == '"' &&
            "Invalid string token!");
 
     // Remove escaped quotes and escapes.
@@ -445,12 +443,15 @@ void Preprocessor::HandlePragmaPoison() {
     // This avoids errors on code like:
     //   #pragma GCC poison X
     //   #pragma GCC poison X
-    if (CurPPLexer) CurPPLexer->LexingRawMode = true;
+    if (CurPPLexer)
+      CurPPLexer->LexingRawMode = true;
     LexUnexpandedToken(Tok);
-    if (CurPPLexer) CurPPLexer->LexingRawMode = false;
+    if (CurPPLexer)
+      CurPPLexer->LexingRawMode = false;
 
     // If we reached the end of line, we're done.
-    if (Tok.is(tok::eod)) return;
+    if (Tok.is(tok::eod))
+      return;
 
     // Can only poison identifiers.
     if (Tok.isNot(tok::raw_identifier)) {
@@ -463,7 +464,8 @@ void Preprocessor::HandlePragmaPoison() {
     IdentifierInfo *II = LookUpIdentifierInfo(Tok);
 
     // Already poisoned.
-    if (II->isPoisoned()) continue;
+    if (II->isPoisoned())
+      continue;
 
     // If this is a macro identifier, emit a warning.
     if (isMacroDefined(II))
@@ -512,7 +514,7 @@ void Preprocessor::HandlePragmaSystemHeader(Token &SysHeaderTok) {
 /// HandlePragmaDependency - Handle \#pragma GCC dependency "foo" blah.
 void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
   Token FilenameTok;
-  if (LexHeaderName(FilenameTok, /*AllowConcatenation*/false))
+  if (LexHeaderName(FilenameTok, /*AllowConcatenation*/ false))
     return;
 
   // If the next token wasn't a header-name, diagnose the error.
@@ -529,7 +531,7 @@ void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
     return;
 
   bool isAngled =
-    GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
+      GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
   // error.
   if (Filename.empty())
@@ -559,7 +561,7 @@ void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
 
     // Remove the trailing ' ' if present.
     if (!Message.empty())
-      Message.erase(Message.end()-1);
+      Message.erase(Message.end() - 1);
     Diag(FilenameTok, diag::pp_out_of_date_dependency) << Message;
   }
 }
@@ -574,7 +576,7 @@ IdentifierInfo *Preprocessor::ParsePragmaPushOrPopMacro(Token &Tok) {
   Lex(Tok);
   if (Tok.isNot(tok::l_paren)) {
     Diag(PragmaTok.getLocation(), diag::err_pragma_push_pop_macro_malformed)
-      << getSpelling(PragmaTok);
+        << getSpelling(PragmaTok);
     return nullptr;
   }
 
@@ -582,7 +584,7 @@ IdentifierInfo *Preprocessor::ParsePragmaPushOrPopMacro(Token &Tok) {
   Lex(Tok);
   if (Tok.isNot(tok::string_literal)) {
     Diag(PragmaTok.getLocation(), diag::err_pragma_push_pop_macro_malformed)
-      << getSpelling(PragmaTok);
+        << getSpelling(PragmaTok);
     return nullptr;
   }
 
@@ -599,11 +601,11 @@ IdentifierInfo *Preprocessor::ParsePragmaPushOrPopMacro(Token &Tok) {
   Lex(Tok);
   if (Tok.isNot(tok::r_paren)) {
     Diag(PragmaTok.getLocation(), diag::err_pragma_push_pop_macro_malformed)
-      << getSpelling(PragmaTok);
+        << getSpelling(PragmaTok);
     return nullptr;
   }
 
-  assert(StrVal[0] == '"' && StrVal[StrVal.size()-1] == '"' &&
+  assert(StrVal[0] == '"' && StrVal[StrVal.size() - 1] == '"' &&
          "Invalid string token!");
 
   if (StrVal.size() <= 2) {
@@ -634,7 +636,8 @@ IdentifierInfo *Preprocessor::ParsePragmaPushOrPopMacro(Token &Tok) {
 void Preprocessor::HandlePragmaPushMacro(Token &PushMacroTok) {
   // Parse the pragma directive and get the macro IdentifierInfo*.
   IdentifierInfo *IdentInfo = ParsePragmaPushOrPopMacro(PushMacroTok);
-  if (!IdentInfo) return;
+  if (!IdentInfo)
+    return;
 
   // Get the MacroInfo associated with IdentInfo.
   MacroInfo *MI = getMacroInfo(IdentInfo);
@@ -659,11 +662,12 @@ void Preprocessor::HandlePragmaPopMacro(Token &PopMacroTok) {
 
   // Parse the pragma directive and get the macro IdentifierInfo*.
   IdentifierInfo *IdentInfo = ParsePragmaPushOrPopMacro(PopMacroTok);
-  if (!IdentInfo) return;
+  if (!IdentInfo)
+    return;
 
   // Find the vector<MacroInfo*> associated with the macro.
   llvm::DenseMap<IdentifierInfo *, std::vector<MacroInfo *>>::iterator iter =
-    PragmaPushMacroInfo.find(IdentInfo);
+      PragmaPushMacroInfo.find(IdentInfo);
   if (iter != PragmaPushMacroInfo.end()) {
     // Forget the MacroInfo currently associated with IdentInfo.
     if (MacroInfo *MI = getMacroInfo(IdentInfo)) {
@@ -685,7 +689,7 @@ void Preprocessor::HandlePragmaPopMacro(Token &PopMacroTok) {
       PragmaPushMacroInfo.erase(iter);
   } else {
     Diag(MessageLoc, diag::warn_pragma_pop_macro_no_push)
-      << IdentInfo->getName();
+        << IdentInfo->getName();
   }
 }
 
@@ -747,12 +751,10 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
   // they're both of the same type (angled vs non-angled)
   StringRef OriginalSource = SourceFileName;
 
-  bool SourceIsAngled =
-    GetIncludeFilenameSpelling(SourceFilenameTok.getLocation(),
-                                SourceFileName);
-  bool ReplaceIsAngled =
-    GetIncludeFilenameSpelling(ReplaceFilenameTok.getLocation(),
-                                ReplaceFileName);
+  bool SourceIsAngled = GetIncludeFilenameSpelling(
+      SourceFilenameTok.getLocation(), SourceFileName);
+  bool ReplaceIsAngled = GetIncludeFilenameSpelling(
+      ReplaceFilenameTok.getLocation(), ReplaceFileName);
   if (!SourceFileName.empty() && !ReplaceFileName.empty() &&
       (SourceIsAngled != ReplaceIsAngled)) {
     unsigned int DiagID;
@@ -762,8 +764,7 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
       DiagID = diag::warn_pragma_include_alias_mismatch_quote;
 
     Diag(SourceFilenameTok.getLocation(), DiagID)
-      << SourceFileName
-      << ReplaceFileName;
+        << SourceFileName << ReplaceFileName;
 
     return;
   }
@@ -825,8 +826,7 @@ void Preprocessor::HandlePragmaModuleBuild(Token &Tok) {
   CurLexer->LexingRawMode = true;
 
   auto TryConsumeIdentifier = [&](StringRef Ident) -> bool {
-    if (Tok.getKind() != tok::raw_identifier ||
-        Tok.getRawIdentifier() != Ident)
+    if (Tok.getKind() != tok::raw_identifier || Tok.getRawIdentifier() != Ident)
       return false;
     CurLexer->Lex(Tok);
     return true;
@@ -969,7 +969,7 @@ void Preprocessor::AddPragmaHandler(StringRef Namespace,
     if (PragmaHandler *Existing = PragmaHandlers->FindHandler(Namespace)) {
       InsertNS = Existing->getIfNamespace();
       assert(InsertNS != nullptr && "Cannot have a pragma namespace and pragma"
-             " handler with the same name!");
+                                    " handler with the same name!");
     } else {
       // Otherwise, this namespace doesn't exist yet, create and insert the
       // handler for it.
@@ -1128,7 +1128,7 @@ struct PragmaDebugHandler : public PragmaHandler {
       DumpAnnot.startToken();
       DumpAnnot.setKind(tok::annot_pragma_dump);
       DumpAnnot.setAnnotationRange(SourceRange(Tok.getLocation()));
-      PP.EnterToken(DumpAnnot, /*IsReinject*/false);
+      PP.EnterToken(DumpAnnot, /*IsReinject*/ false);
     } else if (II->isStr("diag_mapping")) {
       Token DiagName;
       PP.LexUnexpandedToken(DiagName);
@@ -1245,7 +1245,7 @@ struct PragmaDebugHandler : public PragmaHandler {
         }
       } else {
         PP.Diag(Tok, diag::warn_pragma_debug_unexpected_command)
-          << DumpII->getName();
+            << DumpII->getName();
       }
     } else if (II->isStr("sloc_usage")) {
       // An optional integer literal argument specifies the number of files to
@@ -1265,8 +1265,7 @@ struct PragmaDebugHandler : public PragmaHandler {
       PP.getSourceManager().noteSLocAddressSpaceUsage(PP.getDiagnostics(),
                                                       MaxNotes);
     } else {
-      PP.Diag(Tok, diag::warn_pragma_debug_unexpected_command)
-        << II->getName();
+      PP.Diag(Tok, diag::warn_pragma_debug_unexpected_command) << II->getName();
     }
 
     PPCallbacks *Callbacks = PP.getPPCallbacks();
@@ -1280,7 +1279,7 @@ struct PragmaDebugHandler : public PragmaHandler {
 
     if (Tok.isNot(tok::eod)) {
       PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol)
-        << "pragma clang __debug captured";
+          << "pragma clang __debug captured";
       return;
     }
 
@@ -1297,14 +1296,14 @@ struct PragmaDebugHandler : public PragmaHandler {
 
 // Disable MSVC warning about runtime stack overflow.
 #ifdef _MSC_VER
-    #pragma warning(disable : 4717)
+#pragma warning(disable : 4717)
 #endif
   static void DebugOverflowStack(void (*P)() = nullptr) {
-    void (*volatile Self)(void(*P)()) = DebugOverflowStack;
-    Self(reinterpret_cast<void(*)()>(Self));
+    void (*volatile Self)(void (*P)()) = DebugOverflowStack;
+    Self(reinterpret_cast<void (*)()>(Self));
   }
 #ifdef _MSC_VER
-    #pragma warning(default : 4717)
+#pragma warning(default : 4717)
 #endif
 };
 
@@ -1328,7 +1327,8 @@ struct PragmaUnsafeBufferUsageHandler : public PragmaHandler {
         PP.Diag(Loc, diag::err_pp_double_begin_pragma_unsafe_buffer_usage);
     } else if (II->isStr("end")) {
       if (PP.enterOrExitSafeBufferOptOutRegion(false, Loc))
-        PP.Diag(Loc, diag::err_pp_unmatched_end_begin_pragma_unsafe_buffer_usage);
+        PP.Diag(Loc,
+                diag::err_pp_unmatched_end_begin_pragma_unsafe_buffer_usage);
     } else
       PP.Diag(Tok, diag::err_pp_pragma_unsafe_buffer_usage_syntax);
   }
@@ -1418,11 +1418,11 @@ public:
       // special case for it.
       PP.getDiagnostics().setSeverityForAll(Flavor, SV, DiagLoc);
     } else
-      unknownDiag = PP.getDiagnostics().setSeverityForGroup(Flavor, Group, SV,
-                                                            DiagLoc);
+      unknownDiag =
+          PP.getDiagnostics().setSeverityForGroup(Flavor, Group, SV, DiagLoc);
     if (unknownDiag)
       PP.Diag(StringLoc, diag::warn_pragma_diagnostic_unknown_warning)
-        << WarningName;
+          << WarningName;
     else if (Callbacks)
       Callbacks->PragmaDiagnostic(DiagLoc, Namespace, SV, WarningName);
   }
@@ -1623,7 +1623,8 @@ struct PragmaExecCharsetHandler : public PragmaHandler {
 
         // MSVC supports either of these, but nothing else.
         if (ExecCharset != "UTF-8" && ExecCharset != "utf-8") {
-          PP.Diag(Tok, diag::warn_pragma_exec_charset_push_invalid) << ExecCharset;
+          PP.Diag(Tok, diag::warn_pragma_exec_charset_push_invalid)
+              << ExecCharset;
           return;
         }
       }
@@ -1646,7 +1647,8 @@ struct PragmaExecCharsetHandler : public PragmaHandler {
 
     PP.Lex(Tok);
     if (Tok.isNot(tok::eod))
-      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma execution_character_set";
+      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol)
+          << "pragma execution_character_set";
   }
 };
 
@@ -1678,15 +1680,15 @@ private:
   const PPCallbacks::PragmaMessageKind Kind;
   const StringRef Namespace;
 
-  static const char* PragmaKind(PPCallbacks::PragmaMessageKind Kind,
+  static const char *PragmaKind(PPCallbacks::PragmaMessageKind Kind,
                                 bool PragmaNameOnly = false) {
     switch (Kind) {
-      case PPCallbacks::PMK_Message:
-        return PragmaNameOnly ? "message" : "pragma message";
-      case PPCallbacks::PMK_Warning:
-        return PragmaNameOnly ? "warning" : "pragma warning";
-      case PPCallbacks::PMK_Error:
-        return PragmaNameOnly ? "error" : "pragma error";
+    case PPCallbacks::PMK_Message:
+      return PragmaNameOnly ? "message" : "pragma message";
+    case PPCallbacks::PMK_Warning:
+      return PragmaNameOnly ? "warning" : "pragma warning";
+    case PPCallbacks::PMK_Error:
+      return PragmaNameOnly ? "error" : "pragma error";
     }
     llvm_unreachable("Unknown PragmaMessageKind!");
   }
@@ -1727,7 +1729,7 @@ public:
         PP.Diag(Tok.getLocation(), diag::err_pragma_message_malformed) << Kind;
         return;
       }
-      PP.Lex(Tok);  // eat the r_paren.
+      PP.Lex(Tok); // eat the r_paren.
     }
 
     if (Tok.isNot(tok::eod)) {
@@ -1737,8 +1739,9 @@ public:
 
     // Output the message.
     PP.Diag(MessageLoc, (Kind == PPCallbacks::PMK_Error)
-                          ? diag::err_pragma_message
-                          : diag::warn_pragma_message) << MessageString;
+                            ? diag::err_pragma_message
+                            : diag::warn_pragma_message)
+        << MessageString;
 
     // If the pragma is lexically sound, notify any interested PPCallbacks.
     if (PPCallbacks *Callbacks = PP.getPPCallbacks())
@@ -1768,7 +1771,7 @@ struct PragmaModuleImportHandler : public PragmaHandler {
     // If we have a non-empty module path, load the named module.
     Module *Imported =
         PP.getModuleLoader().loadModule(ImportLoc, ModuleName, Module::Hidden,
-                                      /*IsInclusionDirective=*/false);
+                                        /*IsInclusionDirective=*/false);
     if (!Imported)
       return;
 
@@ -1837,12 +1840,12 @@ struct PragmaModuleBeginHandler : public PragmaHandler {
     if (Preprocessor::checkModuleIsAvailable(
             PP.getLangOpts(), PP.getTargetInfo(), *M, PP.getDiagnostics())) {
       PP.Diag(BeginLoc, diag::note_pp_module_begin_here)
-        << M->getTopLevelModuleName();
+          << M->getTopLevelModuleName();
       return;
     }
 
     // Enter the scope of the submodule.
-    PP.EnterSubmodule(M, BeginLoc, /*ForPragma*/true);
+    PP.EnterSubmodule(M, BeginLoc, /*ForPragma*/ true);
     PP.EnterAnnotationToken(SourceRange(BeginLoc, ModuleName.back().getLoc()),
                             tok::annot_module_begin, M);
   }
@@ -1860,7 +1863,7 @@ struct PragmaModuleEndHandler : public PragmaHandler {
     if (Tok.isNot(tok::eod))
       PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma";
 
-    Module *M = PP.LeaveSubmodule(/*ForPragma*/true);
+    Module *M = PP.LeaveSubmodule(/*ForPragma*/ true);
     if (M)
       PP.EnterAnnotationToken(SourceRange(Loc), tok::annot_module_end, M);
     else
@@ -2046,7 +2049,8 @@ struct PragmaAssumeNonNullHandler : public PragmaHandler {
 /// \endcode
 ///
 /// \note This is
-/// <a href="http://msdn.microsoft.com/en-us/library/b6xkz944(v=vs.80).aspx">editor-only</a>
+/// <a
+/// href="http://msdn.microsoft.com/en-us/library/b6xkz944(v=vs.80).aspx">editor-only</a>
 /// pragma, just skipped by compiler.
 struct PragmaRegionHandler : public PragmaHandler {
   PragmaRegionHandler(const char *pragma) : PragmaHandler(pragma) {}
@@ -2224,10 +2228,10 @@ void Preprocessor::RegisterBuiltinPragmas() {
   AddPragmaHandler("GCC", new PragmaSystemHeaderHandler());
   AddPragmaHandler("GCC", new PragmaDependencyHandler());
   AddPragmaHandler("GCC", new PragmaDiagnosticHandler("GCC"));
-  AddPragmaHandler("GCC", new PragmaMessageHandler(PPCallbacks::PMK_Warning,
-                                                   "GCC"));
-  AddPragmaHandler("GCC", new PragmaMessageHandler(PPCallbacks::PMK_Error,
-                                                   "GCC"));
+  AddPragmaHandler("GCC",
+                   new PragmaMessageHandler(PPCallbacks::PMK_Warning, "GCC"));
+  AddPragmaHandler("GCC",
+                   new PragmaMessageHandler(PPCallbacks::PMK_Error, "GCC"));
   // #pragma clang ...
   AddPragmaHandler("clang", new PragmaPoisonHandler());
   AddPragmaHandler("clang", new PragmaSystemHeaderHandler());

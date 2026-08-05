@@ -23,8 +23,8 @@
 
 template <class Iter, class Sent = sentinel_wrapper<Iter>>
 constexpr void test() {
-  using View = minimal_view<Iter, Sent>;
-  using FilterView = std::ranges::filter_view<View, AlwaysTrue>;
+  using View           = minimal_view<Iter, Sent>;
+  using FilterView     = std::ranges::filter_view<View, AlwaysTrue>;
   using FilterIterator = std::ranges::iterator_t<FilterView>;
 
   auto make_filter_view = [](auto begin, auto end, auto pred) {
@@ -38,7 +38,7 @@ constexpr void test() {
   // Test the const& version
   {
     FilterIterator const iter = view.begin();
-    Iter const& result = iter.base();
+    Iter const& result        = iter.base();
     ASSERT_SAME_TYPE(Iter const&, decltype(iter.base()));
     ASSERT_NOEXCEPT(iter.base());
     assert(base(result) == array.data());
@@ -47,7 +47,7 @@ constexpr void test() {
   // Test the && version
   {
     FilterIterator iter = view.begin();
-    Iter result = std::move(iter).base();
+    Iter result         = std::move(iter).base();
     ASSERT_SAME_TYPE(Iter, decltype(std::move(iter).base()));
     assert(base(result) == array.data());
   }

@@ -12,7 +12,7 @@
 
 // CHECK: GOOD
 #if __has_builtin(__builtin_ia32_pause)
-  BAD
+BAD
 #else
-  GOOD
+GOOD
 #endif

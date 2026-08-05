@@ -5,7 +5,7 @@ void test_case_one() {
   int *ptr = nullptr;
   {
     int num = 5; // expected-note {{'num' initialized to 5}}
-    ptr = &num; // expected-note  {{Value assigned to 'ptr'}}
+    ptr = &num;  // expected-note  {{Value assigned to 'ptr'}}
   }
   // expected-note@-1 {{'num' is destroyed here}}
   *ptr = 6;
@@ -17,15 +17,15 @@ void test_case_two() {
   int *ptr_one = nullptr;
   int *ptr_two = nullptr;
   {
-    int n = 1; // expected-note {{'n' initialized to 1}}
-    int m = 2; // expected-note {{'m' initialized to 2}}
+    int n = 1;    // expected-note {{'n' initialized to 1}}
+    int m = 2;    // expected-note {{'m' initialized to 2}}
     ptr_one = &n; // expected-note {{Value assigned to 'ptr_one'}}
     ptr_two = &m; // expected-note {{Value assigned to 'ptr_two'}}
   }
   // expected-note@-1 {{'n' is destroyed here}}
   // expected-note@-2 {{'m' is destroyed here}}
   *ptr_one = 6;
-  *ptr_two = 7; 
+  *ptr_two = 7;
   // expected-warning@-2 {{Use of 'n' after its lifetime ended}}
   // expected-note@-3    {{Use of 'n' after its lifetime ended}}
   // expected-warning@-3 {{Use of 'm' after its lifetime ended}}
@@ -57,14 +57,14 @@ void test_case_four() {
 
 void test_case_five() {
   int *ptr = nullptr;
-  for(int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 10; ++i) {
     ptr = &i;
   }
   escape(ptr); // no-warning
 }
 
 void test_case_six() {
-  for(int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 10; ++i) {
     int *ptr = &i;
     escape(ptr); // no-warning
   }
@@ -76,7 +76,7 @@ void test_case_seven() {
   // expected-note@+2 {{Assuming 'i' is >= 10}}
   // expected-note@+1 {{Loop condition is false. Execution continues on line}}
   for (int i = 0; i < 10; ++i) { // expected-note {{'i' initialized to 0}}
-    ptr = &i; // expected-note {{Value assigned to 'ptr'}}
+    ptr = &i;                    // expected-note {{Value assigned to 'ptr'}}
     escape(ptr);
   }
   // expected-note@-1 {{'i' is destroyed here}}
@@ -89,7 +89,7 @@ void passing_dangling_ptr_to_opaque_func() {
   int *ptr = nullptr;
   {
     int num = 5; // expected-note {{'num' initialized to 5}}
-    ptr = &num; // expected-note  {{Value assigned to 'ptr'}}
+    ptr = &num;  // expected-note  {{Value assigned to 'ptr'}}
   }
   // expected-note@-1 {{'num' is destroyed here}}
   escape(ptr);
@@ -116,17 +116,24 @@ void inlined_callee_single_report() {
 struct MyBuffer {
   char buffer[8];
 };
-struct MyStruct { int x; };
-
-struct Inner { int x; };
-
-struct Outer { Inner inner; };
-
-struct A {
-  struct B { int x; };
-  B b;
+struct MyStruct {
+  int x;
 };
 
+struct Inner {
+  int x;
+};
+
+struct Outer {
+  Inner inner;
+};
+
+struct A {
+  struct B {
+    int x;
+  };
+  B b;
+};
 
 char member_subregion_dangling_deref() {
   const char *p = nullptr;
@@ -135,9 +142,10 @@ char member_subregion_dangling_deref() {
     p = tmp_buffer.buffer;
   }
   // expected-note@-1 {{'tmp_buffer.buffer[0]' is destroyed here}}
-  return *p; 
-  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[0]' after its lifetime ended}}
-  // expected-note@-2    {{Use of 'tmp_buffer.buffer[0]' after its lifetime ended}}
+  return *p;
+  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[0]' after its lifetime
+  // ended}} expected-note@-2    {{Use of 'tmp_buffer.buffer[0]' after its
+  // lifetime ended}}
 }
 
 void opaque(const char *);
@@ -151,8 +159,9 @@ void passing_dangling_to_call() {
   }
   // expected-note@-1 {{'tmp_buffer.buffer[0]' is destroyed here}}
   opaque(p);
-  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[0]' after its lifetime ended}}
-  // expected-note@-2    {{Use of 'tmp_buffer.buffer[0]' after its lifetime ended}}
+  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[0]' after its lifetime
+  // ended}} expected-note@-2    {{Use of 'tmp_buffer.buffer[0]' after its
+  // lifetime ended}}
 }
 
 char member_subregion_alive_deref() {
@@ -172,13 +181,14 @@ char member_subregion_alive_deref_pp() {
     ptr = tmp_buffer.buffer;
   }
   opaque_pp(pp);
-  return **pp; // no-warning  
+  return **pp; // no-warning
 }
 
 void arr_elem_subreg_dangling_deref() {
   int *ptr = nullptr;
   {
-    int local_arr[4]; // expected-note    {{'local_arr' declared without an initial value}}
+    int local_arr[4];    // expected-note    {{'local_arr' declared without an
+                         // initial value}}
     ptr = &local_arr[1]; // expected-note {{Value assigned to 'ptr'}}
   }
   // expected-note@-1 {{'local_arr[1]' is destroyed here}}
@@ -195,8 +205,9 @@ char member_array_elem_dangling_deref() {
   }
   // expected-note@-1 {{'tmp_buffer.buffer[3]' is destroyed here}}
   return *p;
-  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[3]' after its lifetime ended}}
-  // expected-note@-2    {{Use of 'tmp_buffer.buffer[3]' after its lifetime ended}}
+  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[3]' after its lifetime
+  // ended}} expected-note@-2    {{Use of 'tmp_buffer.buffer[3]' after its
+  // lifetime ended}}
 }
 
 char member_array_out_of_bounds_dangling_deref() {
@@ -207,8 +218,9 @@ char member_array_out_of_bounds_dangling_deref() {
   }
   // expected-note@-1 {{'tmp_buffer.buffer[10]' is destroyed here}}
   return *p;
-  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[10]' after its lifetime ended}}
-  // expected-note@-2    {{Use of 'tmp_buffer.buffer[10]' after its lifetime ended}}
+  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[10]' after its lifetime
+  // ended}} expected-note@-2    {{Use of 'tmp_buffer.buffer[10]' after its
+  // lifetime ended}}
 }
 
 int struct_field_dangling_deref() {
@@ -268,14 +280,15 @@ char member_subregion_dangling_deref_increment() {
   // expected-note@-1 {{'tmp_buffer.buffer[1]' is destroyed here}}
   p++;
   return *p;
-  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[1]' after its lifetime ended}}
-  // expected-note@-2    {{Use of 'tmp_buffer.buffer[1]' after its lifetime ended}}
+  // expected-warning@-1 {{Use of 'tmp_buffer.buffer[1]' after its lifetime
+  // ended}} expected-note@-2    {{Use of 'tmp_buffer.buffer[1]' after its
+  // lifetime ended}}
 }
 
 void chain() {
   int *ptr = nullptr;
   {
-    int local = 5;  // expected-note  {{'local' initialized to 5}}
+    int local = 5;   // expected-note  {{'local' initialized to 5}}
     int *a = &local; // expected-note {{'a' initialized here}}
     int *b = a; // expected-note      {{'b' initialized to the value of 'a'}}
     int *c = b; // expected-note      {{'c' initialized to the value of 'b'}}

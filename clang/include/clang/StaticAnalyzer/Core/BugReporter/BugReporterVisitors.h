@@ -280,7 +280,7 @@ public:
   ///
   /// See other overloads for explanation.
   template <class HandlerType, class... Args>
-  void addHighPriorityHandler(Args &&... ConstructorArgs) {
+  void addHighPriorityHandler(Args &&...ConstructorArgs) {
     addHighPriorityHandler(std::make_unique<HandlerType>(
         *this, std::forward<Args>(ConstructorArgs)...));
   }
@@ -289,7 +289,7 @@ public:
   ///
   /// See other overloads for explanation.
   template <class HandlerType, class... Args>
-  void addLowPriorityHandler(Args &&... ConstructorArgs) {
+  void addLowPriorityHandler(Args &&...ConstructorArgs) {
     addLowPriorityHandler(std::make_unique<HandlerType>(
         *this, std::forward<Args>(ConstructorArgs)...));
   }

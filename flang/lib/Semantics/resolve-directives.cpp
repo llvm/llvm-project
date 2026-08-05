@@ -445,7 +445,7 @@ public:
       if (isPrivate(*sym)) {
         return *sym;
       }
-      if (const Symbol *parent{getParent(sym)}) {
+      if (const Symbol * parent{getParent(sym)}) {
         sym = parent;
       } else {
         return *sym;
@@ -1088,7 +1088,7 @@ std::tuple<const parser::Name *, const parser::ScalarExpr *,
 DirectiveAttributeVisitor<T>::GetLoopBounds(const parser::DoConstruct &x) {
   using Bounds = parser::LoopControl::Bounds;
   if (x.GetLoopControl()) {
-    if (const Bounds *b{std::get_if<Bounds>(&x.GetLoopControl()->u)}) {
+    if (const Bounds * b{std::get_if<Bounds>(&x.GetLoopControl()->u)}) {
       const auto &step = b->Step();
       return {&b->Name().thing, &b->Lower(), &b->Upper(),
           step.has_value() ? &step.value() : nullptr};
@@ -2117,7 +2117,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   ClearDataSharingAttributeObjects();
 
   if (beginName.v == llvm::omp::Directive::OMPD_do) {
-    if (const parser::DoConstruct *doConstruct{x.GetNestedLoop()}) {
+    if (const parser::DoConstruct * doConstruct{x.GetNestedLoop()}) {
       if (doConstruct->IsDoWhile()) {
         return true;
       }
@@ -2153,7 +2153,7 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
   }
   // If this symbol already has a data-sharing attribute then there is nothing
   // to do here.
-  if (const Symbol *symbol{iv.symbol}) {
+  if (const Symbol * symbol{iv.symbol}) {
     for (auto symMap : targetIt->objectWithDSA) {
       if (symMap.first->name() == symbol->name()) {
         return;
@@ -2280,8 +2280,8 @@ bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
   unsigned version{context_.langOptions().OpenMPVersion};
   llvm::omp::ClauseSet clauses{llvm::omp::Clause::OMPC_device_type};
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    if (const parser::OmpObject *object{parser::omp::GetArgumentObject(arg)}) {
-      if (const Symbol *sym{omp::GetObjectSymbol(*object)}) {
+    if (const parser::OmpObject * object{parser::omp::GetArgumentObject(arg)}) {
+      if (const Symbol * sym{omp::GetObjectSymbol(*object)}) {
         common::visit(
             [&](auto &d) {
               using TypeD = llvm::remove_cvref_t<decltype(d)>;
@@ -2342,7 +2342,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
 
   auto addClause{
       [&](const parser::OmpObject &object, llvm::omp::Clause clauseId) {
-        if (const Symbol *sym{omp::GetObjectSymbol(object)}) {
+        if (const Symbol * sym{omp::GetObjectSymbol(object)}) {
           auto &clauseSet{
               const_cast<llvm::omp::ClauseSet &>(details[sym].ompDeclTarget())};
           clauseSet.set(clauseId);
@@ -2576,7 +2576,7 @@ static bool IsTargetCaptureImplicitlyFirstprivatizeable(const Symbol &symbol,
     // TODO: Relax restriction as we progress privitization and further
     // investigate the flags we can intermix with.
     if (!(dsa & (dataSharingAttributeFlags | dataMappingAttributeFlags))
-            .none() ||
+             .none() ||
         !checkSym.flags().none() || IsAssumedShape(checkSym) ||
         semantics::IsAllocatableOrPointer(checkSym)) {
       return false;
@@ -2847,7 +2847,8 @@ static bool IsOpenMPAggregate(const Symbol &symbol) {
   if (type->category() == Fortran::semantics::DeclTypeSpec::Category::Character)
     return true;
 
-  if (const auto *det{symbol.GetUltimate()
+  if (const auto *det{
+          symbol.GetUltimate()
               .detailsIf<Fortran::semantics::ObjectEntityDetails>()})
     if (det->IsArray())
       return true;
@@ -3005,7 +3006,7 @@ Symbol *OmpAttributeVisitor::ResolveOmpCommonBlockName(
     return nullptr;
   }
   if (auto *cb{GetProgramUnitOrBlockConstructContaining(GetContext().scope)
-              .FindCommonBlock(name->source)}) {
+                   .FindCommonBlock(name->source)}) {
     name->symbol = cb;
     return cb;
   }
@@ -3159,7 +3160,7 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
 void OmpAttributeVisitor::PropagateOmpFlagToEquivalenceSet(
     const Symbol &symbol, Symbol::Flag ompFlag) {
   // Find the equivalence set containing this symbol
-  if (const EquivalenceSet *eqSet{FindEquivalenceSet(symbol)}) {
+  if (const EquivalenceSet * eqSet{FindEquivalenceSet(symbol)}) {
     // Propagate the flag to all symbols in the equivalence set
     for (const EquivalenceObject &eqObj : *eqSet) {
       Symbol &eqSymbol{eqObj.symbol};

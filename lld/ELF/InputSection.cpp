@@ -1287,7 +1287,8 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(Ctx &ctx, uint8_t *buf,
     // conservative.
     if (Defined *d = dyn_cast<Defined>(rel.sym))
       if (InputSection *isec = cast_or_null<InputSection>(d->section))
-        if (!isec || !isec->getFile<ELFT>() || isec->getFile<ELFT>()->splitStack)
+        if (!isec || !isec->getFile<ELFT>() ||
+            isec->getFile<ELFT>()->splitStack)
           continue;
 
     if (enclosingPrologueAttempted(rel.offset, prologues))
@@ -1546,8 +1547,7 @@ SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
   if (!(flags & SHF_STRINGS))
     return pieces[offset / entsize];
   return partition_point(
-      pieces,
-      [=](const SectionPiece &p) { return p.inputOff <= offset; })[-1];
+      pieces, [=](const SectionPiece &p) { return p.inputOff <= offset; })[-1];
 }
 
 // Return the offset in an output section for a given input offset.

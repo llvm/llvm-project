@@ -46,9 +46,7 @@ constexpr bool test() {
   }
 
   // operator==(const text_encoding&, id) returns false if mib() is not equal to the id
-  {
-    assert(!(std::text_encoding(id::UTF8) == id::UTF16));
-  }
+  { assert(!(std::text_encoding(id::UTF8) == id::UTF16)); }
 
   return true;
 }

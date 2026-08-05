@@ -255,8 +255,7 @@ public:
   }
 
   virtual Status GenerateFunction(const char *signature,
-                                  const StringList &input,
-                                  bool is_callback) {
+                                  const StringList &input, bool is_callback) {
     return Status::FromErrorString("not implemented");
   }
 
@@ -387,8 +386,8 @@ public:
 
   virtual llvm::Expected<unsigned>
   GetMaxPositionalArgumentsForCallable(const llvm::StringRef &callable_name) {
-    return llvm::createStringError(
-    llvm::inconvertibleErrorCode(), "Unimplemented function");
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Unimplemented function");
   }
 
   static std::string LanguageToString(lldb::ScriptLanguage language);

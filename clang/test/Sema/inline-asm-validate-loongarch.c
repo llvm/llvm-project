@@ -3,8 +3,14 @@
 
 void test_clobber_conflict(void) {
   register long r4 asm("r4");
-  asm volatile("" :: "r"(r4) : "$r4"); // expected-error {{conflicts with asm clobber list}}
-  asm volatile("" :: "r"(r4) : "$a0"); // expected-error {{conflicts with asm clobber list}}
-  asm volatile("" : "=r"(r4) :: "$r4"); // expected-error {{conflicts with asm clobber list}}
-  asm volatile("" : "=r"(r4) :: "$a0"); // expected-error {{conflicts with asm clobber list}}
+  asm volatile("" ::"r"(r4)
+               : "$r4"); // expected-error {{conflicts with asm clobber list}}
+  asm volatile("" ::"r"(r4)
+               : "$a0"); // expected-error {{conflicts with asm clobber list}}
+  asm volatile(
+      ""
+      : "=r"(r4)::"$r4"); // expected-error {{conflicts with asm clobber list}}
+  asm volatile(
+      ""
+      : "=r"(r4)::"$a0"); // expected-error {{conflicts with asm clobber list}}
 }

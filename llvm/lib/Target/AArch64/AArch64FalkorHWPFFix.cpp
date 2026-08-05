@@ -54,10 +54,9 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-falkor-hwpf-fix"
 
 STATISTIC(NumStridedLoadsMarked, "Number of strided loads marked");
-STATISTIC(NumCollisionsAvoided,
-          "Number of HW prefetch tag collisions avoided");
-STATISTIC(NumCollisionsNotAvoided,
-          "Number of HW prefetch tag collisions not avoided due to lack of registers");
+STATISTIC(NumCollisionsAvoided, "Number of HW prefetch tag collisions avoided");
+STATISTIC(NumCollisionsNotAvoided, "Number of HW prefetch tag collisions not "
+                                   "avoided due to lack of registers");
 DEBUG_COUNTER(FixCounter, "falkor-hwpf",
               "Controls which tag collisions are avoided");
 
@@ -639,7 +638,8 @@ static std::optional<LoadInfo> getLoadInfo(const MachineInstr &MI) {
     return std::nullopt;
 
   LoadInfo LI;
-  LI.DestReg = DestRegIdx == -1 ? Register() : MI.getOperand(DestRegIdx).getReg();
+  LI.DestReg =
+      DestRegIdx == -1 ? Register() : MI.getOperand(DestRegIdx).getReg();
   LI.BaseReg = BaseReg;
   LI.BaseRegIdx = BaseRegIdx;
   LI.OffsetOpnd = OffsetIdx == -1 ? nullptr : &MI.getOperand(OffsetIdx);

@@ -1,8 +1,9 @@
 // REQUIRES: amdgpu-registered-target
 // REQUIRES: lld
 
-// RUN: %clang --target=amdgcn-amd-amdhsa -emit-llvm -c -nogpulib -DVAR=x %s -o %t.x.bc
-// RUN: %clang --target=amdgcn-amd-amdhsa -emit-llvm -c -nogpulib -DVAR=y %s -o %t.y.bc
+// RUN: %clang --target=amdgcn-amd-amdhsa -emit-llvm -c -nogpulib -DVAR=x %s -o
+// %t.x.bc RUN: %clang --target=amdgcn-amd-amdhsa -emit-llvm -c -nogpulib
+// -DVAR=y %s -o %t.y.bc
 // RUN: llvm-offload-binary -o %t.x.bundle.bc \
 // RUN:   --image=file=%t.x.bc,triple=amdgcn-amd-amdhsa,arch=gfx906,kind=hip \
 // RUN:   --image=file=%t.x.bc,triple=amdgcn-amd-amdhsa,arch=gfx942,kind=hip

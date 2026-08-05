@@ -1133,7 +1133,8 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   // Required for overloaded intrinsics.
   llvm::SmallVector<llvm::Type *, 2> IntrinsicTypes;
   switch (BuiltinID) {
-  default: llvm_unreachable("unexpected builtin ID");
+  default:
+    llvm_unreachable("unexpected builtin ID");
   case RISCV::BI__builtin_riscv_orc_b_32:
   case RISCV::BI__builtin_riscv_orc_b_64:
   case RISCV::BI__builtin_riscv_clmul_32:
@@ -1151,7 +1152,8 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_zip_32:
   case RISCV::BI__builtin_riscv_unzip_32: {
     switch (BuiltinID) {
-    default: llvm_unreachable("unexpected builtin ID");
+    default:
+      llvm_unreachable("unexpected builtin ID");
     // Zbb
     case RISCV::BI__builtin_riscv_orc_b_32:
     case RISCV::BI__builtin_riscv_orc_b_64:
@@ -1513,7 +1515,7 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
         getLLVMContext(), llvm::ConstantAsMetadata::get(Builder.getInt32(1)));
 
     int Width;
-    if(ResTy->isScalableTy()) {
+    if (ResTy->isScalableTy()) {
       const ScalableVectorType *SVTy = cast<ScalableVectorType>(ResTy);
       llvm::Type *ScalarTy = ResTy->getScalarType();
       Width = ScalarTy->getPrimitiveSizeInBits() *

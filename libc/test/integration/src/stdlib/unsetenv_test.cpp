@@ -37,9 +37,7 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
   }
 
   // Test: Unset non-existent variable succeeds
-  {
-    ASSERT_EQ(unsetenv("DOES_NOT_EXIST"), 0);
-  }
+  { ASSERT_EQ(unsetenv("DOES_NOT_EXIST"), 0); }
 
   // Test: Empty name sets errno to EINVAL
   {

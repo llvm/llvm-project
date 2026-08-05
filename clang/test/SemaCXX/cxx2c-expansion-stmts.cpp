@@ -1,13 +1,15 @@
-// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks -Wno-vla-cxx-extension -fconstexpr-steps=10000 -verify=expected,old-interp
-// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks -Wno-vla-cxx-extension -fconstexpr-steps=10000 -verify=expected,new-interp -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks
+// -Wno-vla-cxx-extension -fconstexpr-steps=10000 -verify=expected,old-interp
+// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks
+// -Wno-vla-cxx-extension -fconstexpr-steps=10000 -verify=expected,new-interp
+// -fexperimental-new-constant-interpreter
 namespace std {
-template <typename T>
-struct initializer_list {
-  const T* a;
-  const T* b;
-  initializer_list(T* a, T* b): a{a}, b{b} {}
+template <typename T> struct initializer_list {
+  const T *a;
+  const T *b;
+  initializer_list(T *a, T *b) : a{a}, b{b} {}
 };
-}
+} // namespace std
 
 struct S {
   int x;
@@ -25,35 +27,44 @@ void f1() {
   template for (constexpr auto x : {1}) g(x);
   template for (constexpr auto x : {1, 2, 3}) g(x);
   template for (constexpr auto x : {1}) tg<x>();
-  template for (constexpr auto x : {1, 2, 3})
-    static_assert(tg<x>());
+  template for (constexpr auto x : {1, 2, 3}) static_assert(tg<x>());
 
   template for (int x : {1, 2, 3}) g(x);
   template for (S x : {1, 2, 3}) g(x.x);
   template for (constexpr S x : {1, 2, 3}) tg<x.x>();
 
-  template for (int x : {"1", S(1), {1, 2}}) { // expected-error {{cannot initialize a variable of type 'int' with an lvalue of type 'const char[2]'}} \
+  template for (
+      int x :
+      {"1",
+       S(1),
+       {1,
+        2}}) { // expected-error {{cannot initialize a variable of type 'int' with an lvalue of type 'const char[2]'}} \
                                                   expected-error {{no viable conversion from 'S' to 'int'}} \
                                                   expected-error {{excess elements in scalar initializer}} \
                                                   expected-note 3 {{in instantiation of expansion statement requested here}}
     g(x);
   }
 
-  template for (constexpr auto x : {1, 2, 3, 4}) { // expected-note 3 {{in instantiation of expansion statement requested here}}
-    static_assert(tg<x>() == 4); // expected-error 3 {{static assertion failed due to requirement 'tg<x>() == 4'}} \
+  template for (constexpr auto x :
+                {1, 2, 3, 4}) { // expected-note 3 {{in instantiation of
+                                // expansion statement requested here}}
+    static_assert(
+        tg<x>() ==
+        4); // expected-error 3 {{static assertion failed due to requirement 'tg<x>() == 4'}} \
                                     expected-note {{expression evaluates to '1 == 4'}} \
                                     expected-note {{expression evaluates to '2 == 4'}} \
                                     expected-note {{expression evaluates to '3 == 4'}}
   }
 
-
-  template for (constexpr auto x : {1, 2}) { // expected-note 2 {{in instantiation of expansion statement requested here}}
-    static_assert(false, "not discarded"); // expected-error 2 {{static assertion failed: not discarded}}
+  template for (constexpr auto x :
+                {1, 2}) { // expected-note 2 {{in instantiation of expansion
+                          // statement requested here}}
+    static_assert(false, "not discarded"); // expected-error 2 {{static
+                                           // assertion failed: not discarded}}
   }
 }
 
-template <typename T>
-void t1() {
+template <typename T> void t1() {
   template for (T x : {}) g(x);
   template for (constexpr T x : {}) g(x);
   template for (auto x : {}) g(x);
@@ -65,32 +76,27 @@ void t1() {
   template for (constexpr auto x : {T(1), T(2)}) static_assert(tg<x>());
 }
 
-template <typename U>
-struct s1 {
-  template <typename T>
-  void tf() {
-      template for (T x : {}) g(x);
-      template for (constexpr T x : {}) g(x);
-      template for (U x : {}) g(x);
-      template for (constexpr U x : {}) g(x);
-      template for (auto x : {}) g(x);
-      template for (constexpr auto x : {}) g(x);
-      template for (T x : {1, 2}) g(x);
-      template for (U x : {1, 2}) g(x);
-      template for (U x : {T(1), T(2)}) g(x);
-      template for (T x : {U(1), U(2)}) g(x);
-      template for (auto x : {T(1), T(2)}) g(x);
-      template for (auto x : {U(1), T(2)}) g(x);
-      template for (constexpr U x : {T(1), T(2)}) static_assert(tg<x>());
-      template for (constexpr T x : {U(1), U(2)}) static_assert(tg<x>());
-      template for (constexpr auto x : {T(1), U(2)}) static_assert(tg<x>());
-    }
+template <typename U> struct s1 {
+  template <typename T> void tf() {
+    template for (T x : {}) g(x);
+    template for (constexpr T x : {}) g(x);
+    template for (U x : {}) g(x);
+    template for (constexpr U x : {}) g(x);
+    template for (auto x : {}) g(x);
+    template for (constexpr auto x : {}) g(x);
+    template for (T x : {1, 2}) g(x);
+    template for (U x : {1, 2}) g(x);
+    template for (U x : {T(1), T(2)}) g(x);
+    template for (T x : {U(1), U(2)}) g(x);
+    template for (auto x : {T(1), T(2)}) g(x);
+    template for (auto x : {U(1), T(2)}) g(x);
+    template for (constexpr U x : {T(1), T(2)}) static_assert(tg<x>());
+    template for (constexpr T x : {U(1), U(2)}) static_assert(tg<x>());
+    template for (constexpr auto x : {T(1), U(2)}) static_assert(tg<x>());
+  }
 };
 
-template <typename T>
-void t2() {
-  template for (T x : {}) g(x);
-}
+template <typename T> void t2() { template for (T x : {}) g(x); }
 
 void f2() {
   t1<int>();
@@ -101,44 +107,46 @@ void f2() {
   s1<long>().tf<int>();
   t2<S>();
   t2<S[1231]>();
-  t2<S***>();
+  t2<S ***>();
 }
 
-template <__SIZE_TYPE__ size>
-struct String {
+template <__SIZE_TYPE__ size> struct String {
   char data[size];
 
-  template <__SIZE_TYPE__ n>
-  constexpr String(const char (&str)[n]) { __builtin_memcpy(data, str, n); }
+  template <__SIZE_TYPE__ n> constexpr String(const char (&str)[n]) {
+    __builtin_memcpy(data, str, n);
+  }
 
-  constexpr const char* begin() const { return data; }
-  constexpr const char* end() const { return data + size - 1; }
+  constexpr const char *begin() const { return data; }
+  constexpr const char *end() const { return data + size - 1; }
 };
 
-template <__SIZE_TYPE__ n>
-String(const char (&str)[n]) -> String<n>;
+template <__SIZE_TYPE__ n> String(const char (&str)[n]) -> String<n>;
 
 // Note: Remove this test once we do support them.
 int iterating_expansion_stmts_unsupported() {
   static constexpr String s{"abcd"};
   int count = 0;
-  template for (constexpr auto x : s) count++; // expected-error {{iterating expansion statements are not yet supported}}
+  template for (constexpr auto x : s)
+      count++; // expected-error {{iterating expansion statements are not yet
+               // supported}}
   return count;
 }
 
-template <typename T>
-int iterating_expansion_stmts_unsupported_dependent() {
+template <typename T> int iterating_expansion_stmts_unsupported_dependent() {
   static constexpr String s{"abcd"};
   int count = 0;
-  template for (auto x : T(s)) count++; // expected-error {{iterating expansion statements are not yet supported}}
+  template for (auto x : T(s)) count++; // expected-error {{iterating expansion
+                                        // statements are not yet supported}}
   return count;
 }
 
 void iterating_expansion_stmts_unsupported_dependent_instantiate() {
-  iterating_expansion_stmts_unsupported_dependent<String<5>>(); // expected-note {{in instantiation of}}
+  iterating_expansion_stmts_unsupported_dependent<
+      String<5>>(); // expected-note {{in instantiation of}}
 }
 
-#if 0 // Disabled until we support iterating expansion statements.
+#if 0  // Disabled until we support iterating expansion statements.
 constexpr int f3() {
   static constexpr String s{"abcd"};
   int count = 0;
@@ -384,12 +392,16 @@ static_assert(adl_both_test() == 15);
 #endif // 0
 
 struct A {};
-struct B { int x = 1; };
-struct C { int a = 1, b = 2, c = 3; };
+struct B {
+  int x = 1;
+};
+struct C {
+  int a = 1, b = 2, c = 3;
+};
 struct D {
   int a = 1;
-  int* b = nullptr;
-  const char* c = "3";
+  int *b = nullptr;
+  const char *c = "3";
 };
 
 struct Nested {
@@ -400,12 +412,14 @@ struct Nested {
 
 struct PrivateDestructurable {
   friend void destructurable_friend();
+
 private:
   int a, b; // expected-note 4 {{declared private here}}
 };
 
 struct ProtectedDestructurable {
   friend void destructurable_friend();
+
 protected:
   int a, b; // expected-note 4 {{declared protected here}}
 };
@@ -425,16 +439,21 @@ void destructuring() {
   template for (auto x : c) g(x);
   template for (constexpr auto x : c) g(x);
 
-  template for (auto x : d) { // expected-note 2 {{in instantiation of expansion statement requested here}}
-    // expected-note@#g {{candidate function not viable: no known conversion from 'int *' to 'int' for 1st argument}}
-    // expected-note@#g {{candidate function not viable: no known conversion from 'const char *' to 'int' for 1st argument}}
+  template for (auto x : d) { // expected-note 2 {{in instantiation of expansion
+                              // statement requested here}}
+    // expected-note@#g {{candidate function not viable: no known conversion
+    // from 'int *' to 'int' for 1st argument}} expected-note@#g {{candidate
+    // function not viable: no known conversion from 'const char *' to 'int' for
+    // 1st argument}}
     g(x); // expected-error 2 {{no matching function for call to 'g'}}
-
   }
 
-  template for (constexpr auto x : d) { // expected-note 2 {{in instantiation of expansion statement requested here}}
-    // expected-note@#g {{candidate function not viable: no known conversion from 'int *const' to 'int' for 1st argument}}
-    // expected-note@#g {{candidate function not viable: no known conversion from 'const char *const' to 'int' for 1st argument}}
+  template for (constexpr auto x : d) { // expected-note 2 {{in instantiation of
+                                        // expansion statement requested here}}
+    // expected-note@#g {{candidate function not viable: no known conversion
+    // from 'int *const' to 'int' for 1st argument}} expected-note@#g
+    // {{candidate function not viable: no known conversion from 'const char
+    // *const' to 'int' for 1st argument}}
     g(x); // expected-error 2 {{no matching function for call to 'g'}}
   }
 }
@@ -449,8 +468,7 @@ constexpr int array() {
 
 static_assert(array() == 20);
 
-template <auto v>
-constexpr int destructure() {
+template <auto v> constexpr int destructure() {
   int sum = 0;
   template for (auto x : v) sum += x;
   template for (constexpr auto x : v) sum += x;
@@ -466,15 +484,11 @@ constexpr int nested() {
   int sum = 0;
   template for (constexpr auto x : n) {
     static constexpr auto val = x;
-    template for (auto y : val) {
-      sum += y;
-    }
+    template for (auto y : val) { sum += y; }
   }
   template for (constexpr auto x : n) {
     static constexpr auto val = x;
-    template for (constexpr auto y : val) {
-      sum += y;
-    }
+    template for (constexpr auto y : val) { sum += y; }
   }
   return sum;
 }
@@ -482,10 +496,12 @@ constexpr int nested() {
 static_assert(nested() == 14);
 
 void access_control_destructurable() {
-  template for (auto x : PrivateDestructurable()) {} // expected-error 2 {{cannot bind private member 'a' of 'PrivateDestructurable'}} \
+  template for (auto x : PrivateDestructurable()) {
+  } // expected-error 2 {{cannot bind private member 'a' of 'PrivateDestructurable'}} \
                                                         expected-error 2 {{cannot bind private member 'b' of 'PrivateDestructurable'}}
 
-  template for (auto x : ProtectedDestructurable()) {} // expected-error 2 {{cannot bind protected member 'a' of 'ProtectedDestructurable'}} \
+  template for (auto x : ProtectedDestructurable()) {
+  } // expected-error 2 {{cannot bind protected member 'a' of 'ProtectedDestructurable'}} \
                                                           expected-error 2 {{cannot bind protected member 'b' of 'ProtectedDestructurable'}}
 
   struct Derived : ProtectedDestructurable {
@@ -506,36 +522,59 @@ struct Placeholder {
 };
 
 void placeholder() {
-  template for (auto x: Placeholder().a) {}
+  template for (auto x : Placeholder().a) {}
 }
 
-union Union { int a; long b;};
+union Union {
+  int a;
+  long b;
+};
 
 struct MemberPtr {
   void f() {}
 };
 
-void overload_set(int); // expected-note 2 {{possible target for call}}
+void overload_set(int);  // expected-note 2 {{possible target for call}}
 void overload_set(long); // expected-note 2 {{possible target for call}}
 
 void invalid_types() {
-  template for (auto x : void()) {} // expected-error {{cannot expand expression of incomplete type 'void'}}
-  template for (auto x : 1) {} // expected-error {{cannot expand expression of type 'int'}}
-  template for (auto x : 1.f) {} // expected-error {{cannot expand expression of type 'float'}}
-  template for (auto x : 'c') {} // expected-error {{cannot expand expression of type 'char'}}
-  template for (auto x : invalid_types) {} // expected-error {{cannot expand expression of type 'void ()'}}
-  template for (auto x : &invalid_types) {} // expected-error {{cannot expand expression of type 'void (*)()'}}
-  template for (auto x : &MemberPtr::f) {} // expected-error {{cannot expand expression of type 'void (MemberPtr::*)()'}}
-  template for (auto x : overload_set) {} // expected-error{{reference to overloaded function could not be resolved; did you mean to call it?}}
-  template for (auto x : &overload_set) {} // expected-error{{reference to overloaded function could not be resolved; did you mean to call it?}}
-  template for (auto x : nullptr) {} // expected-error {{cannot expand expression of type 'std::nullptr_t'}}
-  template for (auto x : __builtin_strlen) {} // expected-error {{builtin functions must be directly called}}
-  template for (auto x : Union()) {} // expected-error {{cannot expand expression of type 'Union'}}
-  template for (auto x : (char*)nullptr) {} // expected-error {{cannot expand expression of type 'char *'}}
-  template for (auto x : []{}) {} // expected-error {{cannot expand lambda closure type}}
-  template for (auto x : [x=3]{}) {} // expected-error {{cannot expand lambda closure type}}
-  template for (auto x : [](auto){}) {} // expected-error {{cannot expand lambda closure type}}
-  template for (auto x : []<typename>(){}) {} // expected-error {{cannot expand lambda closure type}}
+  template for (auto x : void()) {
+  } // expected-error {{cannot expand expression of incomplete type 'void'}}
+  template for (auto x : 1) {
+  } // expected-error {{cannot expand expression of type 'int'}}
+  template for (auto x : 1.f) {
+  } // expected-error {{cannot expand expression of type 'float'}}
+  template for (auto x : 'c') {
+  } // expected-error {{cannot expand expression of type 'char'}}
+  template for (auto x : invalid_types) {
+  } // expected-error {{cannot expand expression of type 'void ()'}}
+  template for (auto x : &invalid_types) {
+  } // expected-error {{cannot expand expression of type 'void (*)()'}}
+  template for (auto x : &MemberPtr::f) {
+  } // expected-error {{cannot expand expression of type 'void
+    // (MemberPtr::*)()'}}
+  template for (auto x : overload_set) {
+  } // expected-error{{reference to overloaded function could not be resolved;
+    // did you mean to call it?}}
+  template for (auto x : &overload_set) {
+  } // expected-error{{reference to overloaded function could not be resolved;
+    // did you mean to call it?}}
+  template for (auto x : nullptr) {
+  } // expected-error {{cannot expand expression of type 'std::nullptr_t'}}
+  template for (auto x : __builtin_strlen) {
+  } // expected-error {{builtin functions must be directly called}}
+  template for (auto x : Union()) {
+  } // expected-error {{cannot expand expression of type 'Union'}}
+  template for (auto x : (char *)nullptr) {
+  } // expected-error {{cannot expand expression of type 'char *'}}
+  template for (auto x : [] {}) {
+  } // expected-error {{cannot expand lambda closure type}}
+  template for (auto x : [x = 3] {}) {
+  } // expected-error {{cannot expand lambda closure type}}
+  template for (auto x : [](auto) {}) {
+  } // expected-error {{cannot expand lambda closure type}}
+  template for (auto x : []<typename>() {}) {
+  } // expected-error {{cannot expand lambda closure type}}
 }
 
 constexpr int string_literals() {
@@ -548,7 +587,8 @@ constexpr int string_literals() {
   return i;
 }
 
-static_assert(string_literals() == 5 * (int('1') + int('2') + int('3') + int('4')));
+static_assert(string_literals() ==
+              5 * (int('1') + int('2') + int('3') + int('4')));
 
 struct Bitfields {
   int x : 5 = 1;
@@ -565,13 +605,9 @@ constexpr int bitfields() {
 static_assert(bitfields() == 6);
 
 struct EnumMember {
-  enum {
-    x, y, z
-  };
+  enum { x, y, z };
 
-  enum class Foo {
-    a, b, c
-  };
+  enum class Foo { a, b, c };
 
   using enum Foo;
 };
@@ -590,7 +626,7 @@ struct Mutable {
 
 constexpr int mutable_member() {
   const Mutable m;
-  template for (auto& i : m) i = 42;
+  template for (auto &i : m) i = 42;
   return m.x;
 }
 
@@ -614,7 +650,7 @@ constexpr int complex() {
 
 static_assert(complex() == 3);
 
-#if 0 // Disabled until we support iterating expansion statements.
+#if 0  // Disabled until we support iterating expansion statements.
 struct BeginOnly {
   int x{1};
   constexpr const int* begin() const { return nullptr; }
@@ -737,9 +773,10 @@ void unpaired_begin_end() {
 
 // Examples taken from [stmt.expand].
 namespace stmt_expand_examples {
-consteval int f(auto const&... Containers) {
+consteval int f(auto const &...Containers) {
   int result = 0;
-  template for (auto const& c : {Containers...}) {      // OK, enumerating expansion statement
+  template for (auto const &c :
+                {Containers...}) { // OK, enumerating expansion statement
     result += c[0];
   }
   return result;
@@ -748,7 +785,7 @@ constexpr int c1[] = {1, 2, 3};
 constexpr int c2[] = {4, 3, 2, 1};
 static_assert(f(c1, c2) == 5);
 
-#if 0 // Disabled until we support iterating expansion statements.
+#if 0  // Disabled until we support iterating expansion statements.
 // TODO: This entire example should work without issuing any diagnostics once
 // we have full support for references to constexpr variables (P2686).
 consteval int f() {
@@ -783,16 +820,18 @@ struct S {
 
 consteval long f(S s) {
   long result = 0;
-  template for (auto x : s) {                           // OK, destructuring expansion statement
+  template for (auto x : s) { // OK, destructuring expansion statement
     result += sizeof(x);
   }
   return result;
 }
 static_assert(f(S{}) == sizeof(int) + sizeof(short));
-}
+} // namespace stmt_expand_examples
 
 void not_constant_expression() {
-  template for (constexpr auto x : B()) { // expected-error {{constexpr variable '[__u0]' must be initialized by a constant expression}} \
+  template for (
+      constexpr auto x :
+      B()) { // expected-error {{constexpr variable '[__u0]' must be initialized by a constant expression}} \
                                              expected-note {{reference to temporary is not a constant expression}} \
                                              expected-note {{temporary created here}} \
                                              expected-error {{constexpr variable 'x' must be initialized by a constant expression}} \
@@ -807,8 +846,8 @@ void not_constant_expression() {
 
 constexpr int references_enumerating() {
   int x = 1, y = 2, z = 3;
-  template for (auto& x : {x, y, z}) { ++x; }
-  template for (auto&& x : {x, y, z}) { ++x; }
+  template for (auto &x : {x, y, z}) { ++x; }
+  template for (auto &&x : {x, y, z}) { ++x; }
   return x + y + z;
 }
 
@@ -816,8 +855,8 @@ static_assert(references_enumerating() == 12);
 
 constexpr int references_destructuring() {
   C c;
-  template for (auto& x : c) { ++x; }
-  template for (auto&& x : c) { ++x; }
+  template for (auto &x : c) { ++x; }
+  template for (auto &&x : c) { ++x; }
   return c.a + c.b + c.c;
 }
 
@@ -836,12 +875,14 @@ constexpr int break_continue() {
   }
 
   template for (auto x : {5, 6}) {
-    if (x == 6) break;
+    if (x == 6)
+      break;
     sum += x;
   }
 
   template for (auto x : {7, 8, 9}) {
-    if (x == 8) continue;
+    if (x == 8)
+      continue;
     sum += x;
   }
 
@@ -855,7 +896,8 @@ constexpr int break_continue_nested() {
 
   template for (auto x : {1, 2}) {
     template for (auto y : {3, 4}) {
-      if (x == 2) break;
+      if (x == 2)
+        break;
       sum += y;
     }
     sum += x;
@@ -863,7 +905,8 @@ constexpr int break_continue_nested() {
 
   template for (auto x : {5, 6}) {
     template for (auto y : {7, 8}) {
-      if (x == 6) continue;
+      if (x == 6)
+        continue;
       sum += y;
     }
     sum += x;
@@ -874,23 +917,29 @@ constexpr int break_continue_nested() {
 
 static_assert(break_continue_nested() == 36);
 
-template <typename ...Ts>
-void unexpanded_pack_bad(Ts ...ts) {
-  template for (auto x : ts) {} // expected-error {{expression contains unexpanded parameter pack 'ts'}}
-  template for (Ts x : {1, 2}) {} // expected-error {{declaration type contains unexpanded parameter pack 'Ts'}}
-  template for (auto x : {ts}) {} // expected-error {{initializer contains unexpanded parameter pack}} \
+template <typename... Ts> void unexpanded_pack_bad(Ts... ts) {
+  template for (auto x : ts) {
+  } // expected-error {{expression contains unexpanded parameter pack 'ts'}}
+  template for (Ts x : {1, 2}) {} // expected-error {{declaration type contains
+                                  // unexpanded parameter pack 'Ts'}}
+  template for (auto x : {ts}) {
+  } // expected-error {{initializer contains unexpanded parameter pack}} \
   // expected-note {{in instantiation of expansion statement requested here}}
 }
 
-struct E { int x, y; constexpr E(int x, int y) : x{x}, y{y} {}};
+struct E {
+  int x, y;
+  constexpr E(int x, int y) : x{x}, y{y} {}
+};
 
-template <typename ...Es>
-constexpr int unexpanded_pack_good(Es ...es) {
+template <typename... Es> constexpr int unexpanded_pack_good(Es... es) {
   int sum = 0;
-  ([&] {
-    template for (auto x : es) sum += x;
-    template for (Es e : {{5, 6}, {7, 8}}) sum += e.x + e.y;
-  }(), ...);
+  (
+      [&] {
+        template for (auto x : es) sum += x;
+        template for (Es e : {{5, 6}, {7, 8}}) sum += e.x + e.y;
+      }(),
+      ...);
   return sum;
 }
 
@@ -903,9 +952,7 @@ static_assert(unexpanded_pack_good(E{1, 2}, E{3, 4}) == 62);
 // a DecompositionDecl w/ zero bindings.
 constexpr bool empty_side_effect() {
   struct A {
-    constexpr A(bool& b) {
-      b = true;
-    }
+    constexpr A(bool &b) { b = true; }
   };
 
   bool constructed = false;
@@ -917,13 +964,13 @@ static_assert(empty_side_effect());
 
 namespace apply_lifetime_extension {
 struct T {
-  int& x;
-  constexpr T(int& x) noexcept : x(x) {}
+  int &x;
+  constexpr T(int &x) noexcept : x(x) {}
   constexpr ~T() noexcept { x = 42; }
 };
 
-constexpr const T& f(const T& t) noexcept { return t; }
-constexpr T g(int& x) noexcept { return T(x); }
+constexpr const T &f(const T &t) noexcept { return t; }
+constexpr T g(int &x) noexcept { return T(x); }
 
 // CWG 3043:
 //
@@ -932,57 +979,46 @@ constexpr T g(int& x) noexcept { return T(x); }
 // of iterating statements is constexpr).
 constexpr int lifetime_extension() {
   int x = 5;
-  int sum  = 0;
-  template for (auto e : f(g(x))) {
-    sum += x;
-  }
+  int sum = 0;
+  template for (auto e : f(g(x))) { sum += x; }
   return sum + x;
 }
 
 template <typename T>
 constexpr int lifetime_extension_instantiate_expansions() {
   int x = 5;
-  int sum  = 0;
-  template for (T e : f(g(x))) {
-    sum += x;
-  }
+  int sum = 0;
+  template for (T e : f(g(x))) { sum += x; }
   return sum + x;
 }
 
 template <typename T>
 constexpr int lifetime_extension_dependent_expansion_stmt() {
   int x = 5;
-  int sum  = 0;
-  template for (int e : f(g((T&)x))) {
-    sum += x;
-  }
+  int sum = 0;
+  template for (int e : f(g((T &)x))) { sum += x; }
   return sum + x;
 }
 
-template <typename U>
-struct foo {
+template <typename U> struct foo {
   template <typename T>
   constexpr int lifetime_extension_multiple_instantiations() {
-      int x = 5;
-      int sum  = 0;
-      template for (T e : f(g((U&)x))) {
-        sum += x;
-      }
-      return sum + x;
+    int x = 5;
+    int sum = 0;
+    template for (T e : f(g((U &)x))) { sum += x; }
+    return sum + x;
   }
 };
 
 static_assert(lifetime_extension() == 47);
 static_assert(lifetime_extension_instantiate_expansions<int>() == 47);
 static_assert(lifetime_extension_dependent_expansion_stmt<int>() == 47);
-static_assert(foo<int>().lifetime_extension_multiple_instantiations<int>() == 47);
-}
+static_assert(foo<int>().lifetime_extension_multiple_instantiations<int>() ==
+              47);
+} // namespace apply_lifetime_extension
 
-template <typename... Ts>
-constexpr int return_from_expansion(Ts... ts) {
-  template for (int i : {1, 2, 3}) {
-    return (ts + ...);
-  }
+template <typename... Ts> constexpr int return_from_expansion(Ts... ts) {
+  template for (int i : {1, 2, 3}) { return (ts + ...); }
   __builtin_unreachable();
 }
 
@@ -991,71 +1027,53 @@ static_assert(return_from_expansion(4, 5, 6) == 15);
 void not_constexpr();
 
 constexpr int empty_expansion_consteval() {
-  template for (auto _ : {}) {
-    not_constexpr();
-  }
+  template for (auto _ : {}) { not_constexpr(); }
   return 3;
 }
 
 static_assert(empty_expansion_consteval() == 3);
 
 void nested_empty_expansion() {
-  template for (auto x1 : {})
-    template for (auto x2 : {1})
-      static_assert(false);
+  template for (auto x1 : {}) template for (auto x2 : {1}) static_assert(false);
 
-  template for (auto x1 : {1})
-    template for (auto x2 : {})
-      template for (auto x3 : {1})
-        static_assert(false);
+  template for (auto x1 :
+                {1}) template for (auto x2 :
+                                   {}) template for (auto x3 :
+                                                     {1}) static_assert(false);
 
-  template for (auto x1 : {})
-    template for (auto x2 : {})
-      template for (auto x3 : {})
-        template for (auto x4 : {1})
-          static_assert(false);
+  template for (auto x1 : {}) template for (auto x2 : {}) template for (
+      auto x3 : {}) template for (auto x4 : {1}) static_assert(false);
 
-  template for (auto x1 : {})
-    template for (auto x2 : {1})
-      template for (auto x3 : {})
-        template for (auto x4 : {1})
-          static_assert(false);
+  template for (auto x1 : {}) template for (auto x2 : {1}) template for (
+      auto x3 : {}) template for (auto x4 : {1}) static_assert(false);
 
-  template for (auto x1 : {})
-    template for (auto x2 : {1})
-      template for (auto x4 : {1})
-        static_assert(false);
+  template for (auto x1 :
+                {}) template for (auto x2 :
+                                  {1}) template for (auto x4 :
+                                                     {1}) static_assert(false);
 }
 
 struct Empty {};
 
-template <typename T>
-void nested_empty_expansion_dependent() {
-  template for (auto x1 : T())
-    template for (auto x2 : {1})
-      static_assert(false);
+template <typename T> void nested_empty_expansion_dependent() {
+  template for (auto x1 : T()) template for (auto x2 :
+                                             {1}) static_assert(false);
 
-  template for (auto x1 : {1})
-    template for (auto x2 : T())
-      template for (auto x3 : {1})
-        static_assert(false);
+  template for (auto x1 :
+                {1}) template for (auto x2 :
+                                   T()) template for (auto x3 :
+                                                      {1}) static_assert(false);
 
-  template for (auto x1 : T())
-    template for (auto x2 : T())
-      template for (auto x3 : T())
-        template for (auto x4 : {1})
-          static_assert(false);
+  template for (auto x1 : T()) template for (auto x2 : T()) template for (
+      auto x3 : T()) template for (auto x4 : {1}) static_assert(false);
 
-  template for (auto x1 : T())
-    template for (auto x2 : {1})
-      template for (auto x3 : T())
-        template for (auto x4 : {1})
-          static_assert(false);
+  template for (auto x1 : T()) template for (auto x2 : {1}) template for (
+      auto x3 : T()) template for (auto x4 : {1}) static_assert(false);
 
-  template for (auto x1 : T())
-    template for (auto x2 : {1})
-      template for (auto x4 : {1})
-        static_assert(false);
+  template for (auto x1 :
+                T()) template for (auto x2 :
+                                   {1}) template for (auto x4 :
+                                                      {1}) static_assert(false);
 }
 
 void nested_empty_expansion_dependent_instantiate() {
@@ -1064,8 +1082,7 @@ void nested_empty_expansion_dependent_instantiate() {
 
 // Destructuring expansion statements using tuple_size/tuple_element/get.
 namespace std {
-template <typename>
-struct tuple_size;
+template <typename> struct tuple_size;
 
 template <__SIZE_TYPE__, typename>
 struct tuple_element; // expected-note {{template is declared here}}
@@ -1074,20 +1091,17 @@ namespace get_decomposition {
 struct MemberGet {
   int x[6]{};
 
-  template <__SIZE_TYPE__ I>
-  constexpr int& get() { return x[I * 2]; }
+  template <__SIZE_TYPE__ I> constexpr int &get() { return x[I * 2]; }
 };
 
 struct ADLGet {
   long x[8]{};
 };
 
-template <__SIZE_TYPE__ I>
-constexpr long& get(ADLGet& a) { return a.x[I * 2]; }
+template <__SIZE_TYPE__ I> constexpr long &get(ADLGet &a) { return a.x[I * 2]; }
 } // namespace get_decomposition
 
-template <>
-struct tuple_size<get_decomposition::MemberGet> {
+template <> struct tuple_size<get_decomposition::MemberGet> {
   static constexpr __SIZE_TYPE__ value = 3;
 };
 
@@ -1096,20 +1110,18 @@ struct tuple_element<I, get_decomposition::MemberGet> {
   using type = int;
 };
 
-template <>
-struct tuple_size<get_decomposition::ADLGet> {
+template <> struct tuple_size<get_decomposition::ADLGet> {
   static constexpr __SIZE_TYPE__ value = 4;
 };
 
-template <__SIZE_TYPE__ I>
-struct tuple_element<I, get_decomposition::ADLGet> {
+template <__SIZE_TYPE__ I> struct tuple_element<I, get_decomposition::ADLGet> {
   using type = long;
 };
 
 constexpr int member() {
   get_decomposition::MemberGet m;
   int v = 1;
-  template for (int& i : m) {
+  template for (int &i : m) {
     i = v;
     v++;
   }
@@ -1119,7 +1131,7 @@ constexpr int member() {
 constexpr long adl() {
   get_decomposition::ADLGet m;
   long v = 1;
-  template for (long& i : m) {
+  template for (long &i : m) {
     i = v;
     v++;
   }
@@ -1131,26 +1143,25 @@ static_assert(adl() == 10);
 
 struct TupleSizeOnly {};
 
-template <>
-struct tuple_size<TupleSizeOnly> {
+template <> struct tuple_size<TupleSizeOnly> {
   static constexpr __SIZE_TYPE__ value = 3;
 };
 
 struct TupleSizeAndGet {
-  template <__SIZE_TYPE__>
-  constexpr int get() { return 1; }
+  template <__SIZE_TYPE__> constexpr int get() { return 1; }
 };
 
-template <>
-struct tuple_size<TupleSizeAndGet> {
+template <> struct tuple_size<TupleSizeAndGet> {
   static constexpr __SIZE_TYPE__ value = 3;
 };
 
 void invalid() {
-  template for (auto x : TupleSizeOnly()) {} // expected-error {{use of undeclared identifier 'get'}} \
+  template for (auto x : TupleSizeOnly()) {
+  } // expected-error {{use of undeclared identifier 'get'}} \
                                                 expected-note {{in implicit initialization of binding declaration}}
 
-  template for (auto x : TupleSizeAndGet()) {} // expected-error {{implicit instantiation of undefined template 'std::tuple_element<0, std::TupleSizeAndGet>'}} \
+  template for (auto x : TupleSizeAndGet()) {
+  } // expected-error {{implicit instantiation of undefined template 'std::tuple_element<0, std::TupleSizeAndGet>'}} \
                                                   expected-note {{in implicit initialization of binding declaration}}
 }
 } // namespace std
@@ -1159,9 +1170,7 @@ constexpr int generic_lambda() {
   static constexpr int arr[]{1, 2, 3};
   int sum = 0;
   [n = 5, &sum]<class = void>() {
-    template for (constexpr auto x : arr) {
-      sum += n + x;
-    }
+    template for (constexpr auto x : arr) { sum += n + x; }
   }();
   return sum;
 }
@@ -1169,24 +1178,30 @@ constexpr int generic_lambda() {
 static_assert(generic_lambda() == 21);
 
 void for_range_decl_must_be_var() {
-  template for (void q() : "error") // expected-error {{expansion statement declaration must declare a variable}}
-    ;
+  template for (void q() : "error") // expected-error {{expansion statement
+                                    // declaration must declare a variable}}
+      ;
 }
 
 void init_list_bad() {
-  template for (auto y : {{1}, {2}, {3, {4}}, {{{5}}}}); // expected-error {{cannot deduce actual type for variable 'y' with type 'auto' from initializer list}} \
+  template for (
+      auto y :
+      {{1},
+       {2},
+       {3, {4}},
+       {{{5}}}}); // expected-error {{cannot deduce actual type for variable 'y' with type 'auto' from initializer list}} \
                                                             expected-note {{in instantiation of expansion statement requested here}}
 }
 
 // Test that the init statement is evaluated even if the expansion statement
 // expands to nothing.
 constexpr int init_stmt_empty_expansion() {
-#if 0 // Disabled until we support iterating expansion statements.
+#if 0  // Disabled until we support iterating expansion statements.
   static constexpr String empty{""};
 #endif // 0
   int x = 0;
   template for (int _ = x += 1; auto i : {}) {}
-#if 0 // Disabled until we support iterating expansion statements.
+#if 0  // Disabled until we support iterating expansion statements.
   template for (int _ = x += 2; auto i : empty) {}
 #endif // 0
   template for (int _ = x += 3; auto i : Empty()) {}
@@ -1197,41 +1212,49 @@ static_assert(init_stmt_empty_expansion() == 4);
 
 void vla(int n) {
   int a[n];
-  template for (int x : a) {} // expected-error {{cannot expand variable length array type 'int[n]'}}
+  template for (int x : a) {
+  } // expected-error {{cannot expand variable length array type 'int[n]'}}
 }
 
 template <typename T>
-void template_vla(T& a) { // expected-note {{variably modified type 'int[n]' cannot be used as a template argument}}
+void template_vla(T &a) { // expected-note {{variably modified type 'int[n]'
+                          // cannot be used as a template argument}}
   template for (int x : a) {}
 }
 
 void instantiate_template_vla(int n) {
   int a[n];
-  template_vla(a); // expected-error {{no matching function for call to 'template_vla'}}
+  template_vla(
+      a); // expected-error {{no matching function for call to 'template_vla'}}
 }
 
 struct Incomplete; // expected-note 2 {{forward declaration of 'Incomplete'}}
-void incomplete_type(Incomplete& s) {
-  template for (int x : s) {} // expected-error {{cannot expand expression of incomplete type 'Incomplete'}}
+void incomplete_type(Incomplete &s) {
+  template for (int x : s) {} // expected-error {{cannot expand expression of
+                              // incomplete type 'Incomplete'}}
 }
 
-template <typename T>
-void dependent_incomplete_type(T& s) {
-  template for (int x : s) {} // expected-error {{cannot expand expression of incomplete type 'Incomplete'}}
+template <typename T> void dependent_incomplete_type(T &s) {
+  template for (int x : s) {} // expected-error {{cannot expand expression of
+                              // incomplete type 'Incomplete'}}
 }
 
-template void dependent_incomplete_type<Incomplete>(Incomplete&); // expected-note {{in instantiation of function template specialization 'dependent_incomplete_type<Incomplete>' requested here}}
+template void dependent_incomplete_type<Incomplete>(
+    Incomplete &); // expected-note {{in instantiation of function template
+                   // specialization 'dependent_incomplete_type<Incomplete>'
+                   // requested here}}
 
-template <typename T>
-void lambda_template(T a) {
-  template for (auto x : a) {} // expected-error {{cannot expand lambda closure type}}
+template <typename T> void lambda_template(T a) {
+  template for (auto x : a) {
+  } // expected-error {{cannot expand lambda closure type}}
 }
 
 void lambda_template_call() {
-  lambda_template([]{}); // expected-note {{in instantiation of function template specialization}}
+  lambda_template([] {
+  }); // expected-note {{in instantiation of function template specialization}}
 }
 
-#if 0 // Disabled until we support iterating expansion statements.
+#if 0  // Disabled until we support iterating expansion statements.
 // CWG 3131 makes it possible to expand over non-constexpr ranges.
 namespace cwg3131 {
 constexpr int f1() {
@@ -1358,50 +1381,53 @@ namespace cwg3149 {
 struct NotCopyable {
   int x;
   constexpr NotCopyable(int x) : x{x} {}
-  constexpr NotCopyable(NotCopyable&& o) : x{o.x} {}
-  NotCopyable(const NotCopyable&) = delete; // expected-note 2 {{explicitly marked deleted here}}
+  constexpr NotCopyable(NotCopyable &&o) : x{o.x} {}
+  NotCopyable(const NotCopyable &) =
+      delete; // expected-note 2 {{explicitly marked deleted here}}
 };
 
 struct NotMovable {
   int x;
   constexpr NotMovable(int x) : x{x} {}
-  constexpr NotMovable(const NotMovable& o) : x{o.x} {}
-  NotMovable(NotMovable&&) = delete; // expected-note 2 {{explicitly marked deleted here}}
+  constexpr NotMovable(const NotMovable &o) : x{o.x} {}
+  NotMovable(NotMovable &&) =
+      delete; // expected-note 2 {{explicitly marked deleted here}}
 };
 
-template <typename T>
-struct Wrapper {
+template <typename T> struct Wrapper {
   T a;
   T b;
 };
 
 constexpr int f() {
-  Wrapper<NotMovable> nm{{3},{4}};
+  Wrapper<NotMovable> nm{{3}, {4}};
   Wrapper<NotCopyable> nc{{5}, {6}};
   int sum = 0;
   template for (auto x : Wrapper<NotCopyable>{{1}, {2}}) sum += x.x;
-  template for (auto& x : nc) sum += x.x;
-  template for (auto x : static_cast<Wrapper<NotCopyable>&&>(nc)) sum += x.x;
-  template for (auto&& x : static_cast<Wrapper<NotMovable>&&>(nm)) sum += x.x;
+  template for (auto &x : nc) sum += x.x;
+  template for (auto x : static_cast<Wrapper<NotCopyable> &&>(nc)) sum += x.x;
+  template for (auto &&x : static_cast<Wrapper<NotMovable> &&>(nm)) sum += x.x;
   return sum;
 }
 
 static_assert(f() == 32);
 
 int err() {
-  Wrapper<NotCopyable> nc{{3},{4}};
+  Wrapper<NotCopyable> nc{{3}, {4}};
   int sum = 0;
 
-  // expected-error@+2 2 {{call to deleted constructor of 'cwg3149::NotMovable'}}
-  // expected-note@+1 2 {{in instantiation of expansion statement requested here}}
+  // expected-error@+2 2 {{call to deleted constructor of
+  // 'cwg3149::NotMovable'}} expected-note@+1 2 {{in instantiation of expansion
+  // statement requested here}}
   template for (auto x : Wrapper<NotMovable>{{1}, {2}}) sum += x.x;
 
-  // expected-error@+2 2 {{call to deleted constructor of 'cwg3149::NotCopyable'}}
-  // expected-note@+1 2 {{in instantiation of expansion statement requested here}}
+  // expected-error@+2 2 {{call to deleted constructor of
+  // 'cwg3149::NotCopyable'}} expected-note@+1 2 {{in instantiation of expansion
+  // statement requested here}}
   template for (auto x : nc) sum += x.x;
   return sum;
 }
-}
+} // namespace cwg3149
 
 namespace cwg3045 {
 void f1() {
@@ -1409,7 +1435,7 @@ void f1() {
   int y;
 
   template for (auto x : {1}) { // expected-note {{previous definition is here}}
-    int x{}; // expected-error {{redefinition of 'x'}}
+    int x{};                    // expected-error {{redefinition of 'x'}}
   }
 
   { int x; }
@@ -1423,7 +1449,8 @@ void f1() {
   }
 
   template for (auto x : {1}) {
-    template for (auto y : {1}) { // expected-note {{previous definition is here}}
+    template for (auto y :
+                  {1}) { // expected-note {{previous definition is here}}
       int x{};
       int y{}; // expected-error {{redefinition of 'y'}}
     }
@@ -1432,29 +1459,41 @@ void f1() {
 
 void f2(int q) {
   switch (q) {
-    case 1: template for (auto x : {1}) [[fallthrough]]; // expected-error {{fallthrough annotation does not directly precede switch label}}
+  case 1:
+    template for (auto x : {1})
+        [[fallthrough]]; // expected-error {{fallthrough annotation does not
+                         // directly precede switch label}}
   }
   switch (q) {
-    case 1: template for (auto x : {1}) [[fallthrough]]; // expected-error {{fallthrough annotation does not directly precede switch label}}
-    case 2:;
+  case 1:
+    template for (auto x : {1})
+        [[fallthrough]]; // expected-error {{fallthrough annotation does not
+                         // directly precede switch label}}
+  case 2:;
   }
 
   switch (q) {
-    case 1: template for (auto x : {1}) { [[fallthrough]]; } // expected-error {{fallthrough annotation does not directly precede switch label}}
+  case 1:
+    template for (auto x : {1}) {
+      [[fallthrough]];
+    } // expected-error {{fallthrough annotation does not directly precede
+      // switch label}}
   }
 
   switch (q) {
-    case 1: template for (auto x : {1}) {
+  case 1:
+    template for (auto x : {1}) {
       switch (q) {
-        case 1: [[fallthrough]];
-        case 2:;
+      case 1:
+        [[fallthrough]];
+      case 2:;
       }
     }
   }
 }
-}
+} // namespace cwg3045
 
-#if 0 // Disabled until we support iterating expansion statements.
+#if 0  // Disabled until we support iterating expansion statements.
 // Check that we apply lifetime extension to iterating expansions statements.
 //
 // The new constant interpreter erroring on this is likely https://github.com/llvm/llvm-project/issues/187775.
@@ -1518,92 +1557,174 @@ static_assert(lifetime_extension_iterating_instantiation<void>() == 47); // new-
 // Tests that make sure that certain parts of an expansion statement end up in
 // the right DeclContext.
 namespace decl_context {
-struct S { int x{}, y{}; };
+struct S {
+  int x{}, y{};
+};
 
 void dependent_context() {
   // The init-statement should never be in a dependent context.
-  template for (int _ = ({ static_assert(false); 4; }); auto x : {}) {} // expected-error {{static assertion failed}}
-  template for (({ static_assert(false); }); auto x : {}) {} // expected-error {{static assertion failed}}
+  template for (int _ = ({
+                  static_assert(false);
+                  4;
+                });
+                auto x : {}) {} // expected-error {{static assertion failed}}
+  template for (({ static_assert(false); }); auto x : {}) {
+  } // expected-error {{static assertion failed}}
 
   // Likewise, the expansion-initializer is not dependent.
-  template for (auto x : { ({ static_assert(false); 4; }) }) {} // expected-error {{static assertion failed}}
-  template for (auto x : ({ static_assert(false); S(); })) {} // expected-error {{static assertion failed}}
+  template for (auto x : {({
+                  static_assert(false);
+                  4;
+                })}) {} // expected-error {{static assertion failed}}
+  template for (auto x : ({
+                  static_assert(false);
+                  S();
+                })) {} // expected-error {{static assertion failed}}
 
   // The for-range-declaration *is* dependent because it only appears within the
   // expansion(s), which means that it is discarded entirely if the expansion
   // size is 0.
-  template for (decltype(({ static_assert(false); 42; })) _ : {}) {}
-  template for (decltype(({ static_assert(false); 42; })) _ : {1}) {} // expected-error {{static assertion failed}} expected-note {{in instantiation of expansion statement}}
+  template for (decltype(({
+                  static_assert(false);
+                  42;
+                })) _ : {}) {}
+  template for (decltype(({
+                  static_assert(false);
+                  42;
+                })) _ : {1}) {
+  } // expected-error {{static assertion failed}} expected-note {{in
+    // instantiation of expansion statement}}
 }
 
-template <typename>
-void not_instantiated() {
-  template for (int _ = ({ static_assert(false); 4; }); auto x : {}) {}
+template <typename> void not_instantiated() {
+  template for (int _ = ({
+                  static_assert(false);
+                  4;
+                });
+                auto x : {}) {}
   template for (({ static_assert(false); }); auto x : {}) {}
-  template for (auto x : { ({ static_assert(false); 4; }) }) {}
-  template for (auto x : ({ static_assert(false); S(); })) {}
-  template for (decltype(({ static_assert(false); 42; })) _ : {}) {}
-  template for (decltype(({ static_assert(false); 42; })) _ : {1}) {}
+  template for (auto x : {({
+                  static_assert(false);
+                  4;
+                })}) {}
+  template for (auto x : ({
+                  static_assert(false);
+                  S();
+                })) {}
+  template for (decltype(({
+                  static_assert(false);
+                  42;
+                })) _ : {}) {}
+  template for (decltype(({
+                  static_assert(false);
+                  42;
+                })) _ : {1}) {}
 }
 
-template <typename>
-void instantiated() {
-  template for (int _ = ({ static_assert(false); 4; }); auto x : {}) {} // expected-error {{static assertion failed}}
-  template for (({ static_assert(false); }); auto x : {}) {} // expected-error {{static assertion failed}}
-  template for (auto x : { ({ static_assert(false); 4; }) }) {} // expected-error {{static assertion failed}}
-  template for (auto x : ({ static_assert(false); S(); })) {} // expected-error {{static assertion failed}}
-  template for (decltype(({ static_assert(false); 42; })) _ : {}) {}
-  template for (decltype(({ static_assert(false); 42; })) _ : {1}) {} // expected-error {{static assertion failed}}
+template <typename> void instantiated() {
+  template for (int _ = ({
+                  static_assert(false);
+                  4;
+                });
+                auto x : {}) {} // expected-error {{static assertion failed}}
+  template for (({ static_assert(false); }); auto x : {}) {
+  } // expected-error {{static assertion failed}}
+  template for (auto x : {({
+                  static_assert(false);
+                  4;
+                })}) {} // expected-error {{static assertion failed}}
+  template for (auto x : ({
+                  static_assert(false);
+                  S();
+                })) {} // expected-error {{static assertion failed}}
+  template for (decltype(({
+                  static_assert(false);
+                  42;
+                })) _ : {}) {}
+  template for (decltype(({
+                  static_assert(false);
+                  42;
+                })) _ : {1}) {} // expected-error {{static assertion failed}}
 }
 
-template <typename>
-struct Template {
-  template <typename>
-  void not_fully_instantiated() {
-    template for (int _ = ({ static_assert(false); 4; }); auto x : {}) {}
+template <typename> struct Template {
+  template <typename> void not_fully_instantiated() {
+    template for (int _ = ({
+                    static_assert(false);
+                    4;
+                  });
+                  auto x : {}) {}
     template for (({ static_assert(false); }); auto x : {}) {}
-    template for (auto x : { ({ static_assert(false); 4; }) }) {}
-    template for (auto x : ({ static_assert(false); S(); })) {}
-    template for (decltype(({ static_assert(false); 42; })) _ : {}) {}
-    template for (decltype(({ static_assert(false); 42; })) _ : {1}) {}
+    template for (auto x : {({
+                    static_assert(false);
+                    4;
+                  })}) {}
+    template for (auto x : ({
+                    static_assert(false);
+                    S();
+                  })) {}
+    template for (decltype(({
+                    static_assert(false);
+                    42;
+                  })) _ : {}) {}
+    template for (decltype(({
+                    static_assert(false);
+                    42;
+                  })) _ : {1}) {}
   }
 
-  template <typename>
-  void instantiated() {
-    template for (int _ = ({ static_assert(false); 4; }); auto x : {}) {} // expected-error {{static assertion failed}}
-    template for (({ static_assert(false); }); auto x : {}) {} // expected-error {{static assertion failed}}
-    template for (auto x : { ({ static_assert(false); 4; }) }) {} // expected-error {{static assertion failed}}
-    template for (auto x : ({ static_assert(false); S(); })) {} // expected-error {{static assertion failed}}
-    template for (decltype(({ static_assert(false); 42; })) _ : {}) {}
-    template for (decltype(({ static_assert(false); 42; })) _ : {1}) {} // expected-error {{static assertion failed}}
+  template <typename> void instantiated() {
+    template for (int _ = ({
+                    static_assert(false);
+                    4;
+                  });
+                  auto x : {}) {} // expected-error {{static assertion failed}}
+    template for (({ static_assert(false); }); auto x : {}) {
+    } // expected-error {{static assertion failed}}
+    template for (auto x : {({
+                    static_assert(false);
+                    4;
+                  })}) {} // expected-error {{static assertion failed}}
+    template for (auto x : ({
+                    static_assert(false);
+                    S();
+                  })) {} // expected-error {{static assertion failed}}
+    template for (decltype(({
+                    static_assert(false);
+                    42;
+                  })) _ : {}) {}
+    template for (decltype(({
+                    static_assert(false);
+                    42;
+                  })) _ : {1}) {} // expected-error {{static assertion failed}}
   }
 };
 
 void f() {
-  instantiated<void>(); // expected-note {{in instantiation of function template specialization 'decl_context::instantiated<void>'}}
+  instantiated<void>(); // expected-note {{in instantiation of function template
+                        // specialization 'decl_context::instantiated<void>'}}
 
   // This should *not* produce any diagnostics.
   Template<int>();
 
   // Rather, the diagnostics are only emitted if we actually fully instantiate
   // the function template.
-  Template<void>().instantiated<void>(); // expected-note {{in instantiation of function template specialization 'decl_context::Template<void>::instantiated<void>'}}
+  Template<void>()
+      .instantiated<
+          void>(); // expected-note {{in instantiation of function template
+                   // specialization
+                   // 'decl_context::Template<void>::instantiated<void>'}}
 }
-}
+} // namespace decl_context
 
 namespace gh211917 {
 auto f() {
-  template for (constexpr auto x : {1,2,3}) {
-    return 3;
-  }
+  template for (constexpr auto x : {1, 2, 3}) { return 3; }
 }
 
-template<typename T>
-T tf() {
-  template for (constexpr auto x : {1,2,3}) {
-    return 3;
-  }
+template <typename T> T tf() {
+  template for (constexpr auto x : {1, 2, 3}) { return 3; }
 }
 
 template long tf<long>();
-}
+} // namespace gh211917

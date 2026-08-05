@@ -388,8 +388,8 @@ namespace __math {
 // fpclassify
 
 #      ifdef _LIBCPP_PREFERRED_OVERLOAD
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD int fpclassify(float __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD int
+fpclassify(float __x) _NOEXCEPT {
   return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, __x);
 }
 

@@ -25,8 +25,8 @@ class MipsABIInfo : public ABIInfo {
                        SmallVectorImpl<llvm::Type *> &ArgList) const;
   llvm::Type *HandleAggregates(QualType Ty, uint64_t TySize,
                                bool ComplexFitsInFPRs) const;
-  llvm::Type* returnAggregateInRegs(QualType RetTy, uint64_t Size) const;
-  llvm::Type* getPaddingType(uint64_t Align, uint64_t Offset) const;
+  llvm::Type *returnAggregateInRegs(QualType RetTy, uint64_t Size) const;
+  llvm::Type *getPaddingType(uint64_t Align, uint64_t Offset) const;
 
   /// Whether `_Complex` values with an integer element type are returned the
   /// way GCC returns them. Clang 23 and earlier returned the real and the
@@ -40,9 +40,9 @@ class MipsABIInfo : public ABIInfo {
   ABIArgInfo classifyComplexReturnType(QualType RetTy, uint64_t Size) const;
 
 public:
-  MipsABIInfo(CodeGenTypes &CGT, bool _IsO32) :
-    ABIInfo(CGT), IsO32(_IsO32), MinABIStackAlignInBytes(IsO32 ? 4 : 8),
-    StackAlignInBytes(IsO32 ? 8 : 16) {}
+  MipsABIInfo(CodeGenTypes &CGT, bool _IsO32)
+      : ABIInfo(CGT), IsO32(_IsO32), MinABIStackAlignInBytes(IsO32 ? 4 : 8),
+        StackAlignInBytes(IsO32 ? 8 : 16) {}
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType RetTy, uint64_t &Offset) const;
@@ -54,6 +54,7 @@ public:
 
 class MIPSTargetCodeGenInfo : public TargetCodeGenInfo {
   unsigned SizeOfUnwindException;
+
 public:
   MIPSTargetCodeGenInfo(CodeGenTypes &CGT, bool IsO32)
       : TargetCodeGenInfo(std::make_unique<MipsABIInfo>(CGT, IsO32)),
@@ -66,7 +67,8 @@ public:
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
     const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-    if (!FD) return;
+    if (!FD)
+      return;
     llvm::Function *Fn = cast<llvm::Function>(GV);
 
     if (FD->hasAttr<MipsLongCallAttr>())
@@ -80,8 +82,7 @@ public:
 
     if (FD->hasAttr<Mips16Attr>()) {
       Fn->addFnAttr("mips16");
-    }
-    else if (FD->hasAttr<NoMips16Attr>()) {
+    } else if (FD->hasAttr<NoMips16Attr>()) {
       Fn->addFnAttr("nomips16");
     }
 
@@ -96,19 +97,36 @@ public:
 
     const char *Kind;
     switch (Attr->getInterrupt()) {
-    case MipsInterruptAttr::eic:     Kind = "eic"; break;
-    case MipsInterruptAttr::sw0:     Kind = "sw0"; break;
-    case MipsInterruptAttr::sw1:     Kind = "sw1"; break;
-    case MipsInterruptAttr::hw0:     Kind = "hw0"; break;
-    case MipsInterruptAttr::hw1:     Kind = "hw1"; break;
-    case MipsInterruptAttr::hw2:     Kind = "hw2"; break;
-    case MipsInterruptAttr::hw3:     Kind = "hw3"; break;
-    case MipsInterruptAttr::hw4:     Kind = "hw4"; break;
-    case MipsInterruptAttr::hw5:     Kind = "hw5"; break;
+    case MipsInterruptAttr::eic:
+      Kind = "eic";
+      break;
+    case MipsInterruptAttr::sw0:
+      Kind = "sw0";
+      break;
+    case MipsInterruptAttr::sw1:
+      Kind = "sw1";
+      break;
+    case MipsInterruptAttr::hw0:
+      Kind = "hw0";
+      break;
+    case MipsInterruptAttr::hw1:
+      Kind = "hw1";
+      break;
+    case MipsInterruptAttr::hw2:
+      Kind = "hw2";
+      break;
+    case MipsInterruptAttr::hw3:
+      Kind = "hw3";
+      break;
+    case MipsInterruptAttr::hw4:
+      Kind = "hw4";
+      break;
+    case MipsInterruptAttr::hw5:
+      Kind = "hw5";
+      break;
     }
 
     Fn->addFnAttr("interrupt", Kind);
-
   }
 
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
@@ -135,12 +153,12 @@ public:
     Opt = "/FAILIFMISMATCH:\"" + Name.str() + "=" + Value.str() + "\"";
   }
 };
-}
+} // namespace
 
 void MipsABIInfo::CoerceToIntArgs(
     uint64_t TySize, SmallVectorImpl<llvm::Type *> &ArgList) const {
   llvm::IntegerType *IntTy =
-    llvm::IntegerType::get(getVMContext(), MinABIStackAlignInBytes * 8);
+      llvm::IntegerType::get(getVMContext(), MinABIStackAlignInBytes * 8);
 
   // Add (TySize / MinABIStackAlignInBytes) args of IntTy.
   for (unsigned N = TySize / (MinABIStackAlignInBytes * 8); N; --N)
@@ -157,7 +175,7 @@ void MipsABIInfo::CoerceToIntArgs(
 // a register.
 llvm::Type *MipsABIInfo::HandleAggregates(QualType Ty, uint64_t TySize,
                                           bool ComplexFitsInFPRs) const {
-  SmallVector<llvm::Type*, 8> ArgList, IntArgList;
+  SmallVector<llvm::Type *, 8> ArgList, IntArgList;
 
   if (IsO32) {
     CoerceToIntArgs(TySize, ArgList);
@@ -227,8 +245,8 @@ llvm::Type *MipsABIInfo::getPaddingType(uint64_t OrigOffset,
   return llvm::IntegerType::get(getVMContext(), (Offset - OrigOffset) * 8);
 }
 
-ABIArgInfo
-MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
+ABIArgInfo MipsABIInfo::classifyArgumentType(QualType Ty,
+                                             uint64_t &Offset) const {
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
   uint64_t OrigOffset = Offset;
@@ -300,10 +318,10 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
       nullptr, 0, IsO32 ? nullptr : getPaddingType(OrigOffset, CurrOffset));
 }
 
-llvm::Type*
-MipsABIInfo::returnAggregateInRegs(QualType RetTy, uint64_t Size) const {
+llvm::Type *MipsABIInfo::returnAggregateInRegs(QualType RetTy,
+                                               uint64_t Size) const {
   const RecordType *RT = RetTy->getAsCanonical<RecordType>();
-  SmallVector<llvm::Type*, 8> RTList;
+  SmallVector<llvm::Type *, 8> RTList;
 
   if (RT && RT->isStructureOrClassType()) {
     const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
@@ -402,7 +420,8 @@ ABIArgInfo MipsABIInfo::classifyReturnType(QualType RetTy) const {
     return ABIArgInfo::getExtend(RetTy);
 
   if ((RetTy->isUnsignedIntegerOrEnumerationType() ||
-      RetTy->isSignedIntegerOrEnumerationType()) && Size == 32 && !IsO32)
+       RetTy->isSignedIntegerOrEnumerationType()) &&
+      Size == 32 && !IsO32)
     return ABIArgInfo::getSignExtend(RetTy);
 
   return ABIArgInfo::getDirect();
@@ -429,8 +448,7 @@ RValue MipsABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   unsigned SlotSizeInBits = IsO32 ? 32 : 64;
   unsigned PtrWidth = getTarget().getPointerWidth(LangAS::Default);
   bool DidPromote = false;
-  if ((Ty->isIntegerType() &&
-          getContext().getIntWidth(Ty) < SlotSizeInBits) ||
+  if ((Ty->isIntegerType() && getContext().getIntWidth(Ty) < SlotSizeInBits) ||
       (Ty->isPointerType() && PtrWidth < SlotSizeInBits)) {
     DidPromote = true;
     Ty = getContext().getIntTypeForBitwidth(SlotSizeInBits,
@@ -442,7 +460,7 @@ RValue MipsABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // The alignment of things in the argument area is never larger than
   // StackAlignInBytes.
   TyInfo.Align =
-    std::min(TyInfo.Align, CharUnits::fromQuantity(StackAlignInBytes));
+      std::min(TyInfo.Align, CharUnits::fromQuantity(StackAlignInBytes));
 
   // MinABIStackAlignInBytes is the size of argument slots on the stack.
   CharUnits ArgSlotSize = CharUnits::fromQuantity(MinABIStackAlignInBytes);
@@ -478,9 +496,8 @@ ABIArgInfo MipsABIInfo::extendType(QualType Ty) const {
   return ABIArgInfo::getExtend(Ty);
 }
 
-bool
-MIPSTargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
-                                               llvm::Value *Address) const {
+bool MIPSTargetCodeGenInfo::initDwarfEHRegSizeTable(
+    CodeGen::CodeGenFunction &CGF, llvm::Value *Address) const {
   // This information comes from gcc's implementation, which seems to
   // as canonical as it gets.
 

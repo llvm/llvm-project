@@ -81,16 +81,14 @@ public:
   CompoundScopeInfo(bool IsStmtExpr, FPOptions FPO)
       : IsStmtExpr(IsStmtExpr), InitialFPFeatures(FPO) {}
 
-  void setHasEmptyLoopBodies() {
-    HasEmptyLoopBodies = true;
-  }
+  void setHasEmptyLoopBodies() { HasEmptyLoopBodies = true; }
 };
 
 class PossiblyUnreachableDiag {
 public:
   PartialDiagnostic PD;
   SourceLocation Loc;
-  llvm::TinyPtrVector<const Stmt*> Stmts;
+  llvm::TinyPtrVector<const Stmt *> Stmts;
 
   PossiblyUnreachableDiag(const PartialDiagnostic &PD, SourceLocation Loc,
                           ArrayRef<const Stmt *> Stmts)
@@ -216,7 +214,7 @@ public:
   /// The list of return statements that occur within the function or
   /// block, if there is any chance of applying the named return value
   /// optimization, or if we need to infer a return type.
-  SmallVector<ReturnStmt*, 4> Returns;
+  SmallVector<ReturnStmt *, 4> Returns;
 
   /// The promise object for this coroutine, if any.
   VarDecl *CoroutinePromise = nullptr;
@@ -319,9 +317,7 @@ public:
     /// properties or ivars of 'self' (e.g. self.prop1.prop2) are considered to
     /// be exact, though this is not true for arbitrary variables
     /// (foo.prop1.prop2).
-    bool isExactProfile() const {
-      return Base.getInt();
-    }
+    bool isExactProfile() const { return Base.getInt(); }
 
     bool operator==(const WeakObjectProfileTy &Other) const {
       return Base == Other.Base && Property == Other.Property;
@@ -336,8 +332,8 @@ public:
       static unsigned getHashValue(const WeakObjectProfileTy &Val) {
         using Pair = std::pair<BaseInfoTy, const NamedDecl *>;
 
-        return llvm::DenseMapInfo<Pair>::getHashValue(Pair(Val.Base,
-                                                           Val.Property));
+        return llvm::DenseMapInfo<Pair>::getHashValue(
+            Pair(Val.Base, Val.Property));
       }
 
       static bool isEqual(const WeakObjectProfileTy &LHS,
@@ -363,9 +359,7 @@ public:
     bool isUnsafe() const { return Rep.getInt(); }
     void markSafe() { Rep.setInt(false); }
 
-    bool operator==(const WeakUseTy &Other) const {
-      return Rep == Other.Rep;
-    }
+    bool operator==(const WeakUseTy &Other) const { return Rep == Other.Rep; }
   };
 
   /// Used to collect uses of a particular weak object in a function body.
@@ -387,7 +381,7 @@ private:
   WeakObjectUseMap WeakObjectUses;
 
 protected:
-  FunctionScopeInfo(const FunctionScopeInfo&) = default;
+  FunctionScopeInfo(const FunctionScopeInfo &) = default;
 
 public:
   FunctionScopeInfo(DiagnosticsEngine &Diag)
@@ -429,39 +423,25 @@ public:
   /// Part of the implementation of -Wrepeated-use-of-weak.
   void markSafeWeakUse(const Expr *E);
 
-  const WeakObjectUseMap &getWeakObjectUses() const {
-    return WeakObjectUses;
-  }
+  const WeakObjectUseMap &getWeakObjectUses() const { return WeakObjectUses; }
 
-  void setHasBranchIntoScope() {
-    HasBranchIntoScope = true;
-  }
+  void setHasBranchIntoScope() { HasBranchIntoScope = true; }
 
-  void setHasBranchProtectedScope() {
-    HasBranchProtectedScope = true;
-  }
+  void setHasBranchProtectedScope() { HasBranchProtectedScope = true; }
 
-  void setHasIndirectGoto() {
-    HasIndirectGoto = true;
-  }
+  void setHasIndirectGoto() { HasIndirectGoto = true; }
 
   void setHasMustTail() { HasMustTail = true; }
 
-  void setHasDroppedStmt() {
-    HasDroppedStmt = true;
-  }
+  void setHasDroppedStmt() { HasDroppedStmt = true; }
 
   void setHasOMPDeclareReductionCombiner() {
     HasOMPDeclareReductionCombiner = true;
   }
 
-  void setHasFallthroughStmt() {
-    HasFallthroughStmt = true;
-  }
+  void setHasFallthroughStmt() { HasFallthroughStmt = true; }
 
-  void setUsesFPIntrin() {
-    UsesFPIntrin = true;
-  }
+  void setUsesFPIntrin() { UsesFPIntrin = true; }
 
   void setHasCXXTry(SourceLocation TryLoc) {
     setHasBranchProtectedScope();
@@ -491,20 +471,16 @@ public:
   }
 
   // Add a block introduced in this function.
-  void addBlock(const BlockDecl *BD) {
-    Blocks.insert(BD);
-  }
+  void addBlock(const BlockDecl *BD) { Blocks.insert(BD); }
 
   // Add a __block variable introduced in this function.
-  void addByrefBlockVar(VarDecl *VD) {
-    ByrefBlockVars.push_back(VD);
-  }
+  void addByrefBlockVar(VarDecl *VD) { ByrefBlockVars.push_back(VD); }
 
   bool isCoroutine() const { return !FirstCoroutineStmtLoc.isInvalid(); }
 
   void setFirstCoroutineStmt(SourceLocation Loc, StringRef Keyword) {
     assert(FirstCoroutineStmtLoc.isInvalid() &&
-                   "first coroutine statement location already set");
+           "first coroutine statement location already set");
     FirstCoroutineStmtLoc = Loc;
     FirstCoroutineStmtKind =
         llvm::StringSwitch<unsigned char>(Keyword)
@@ -517,8 +493,8 @@ public:
   }
 
   StringRef getFirstCoroutineStmtKeyword() const {
-    assert(FirstCoroutineStmtLoc.isValid()
-                   && "no coroutine statement available");
+    assert(FirstCoroutineStmtLoc.isValid() &&
+           "no coroutine statement available");
     auto Value =
         static_cast<enum FirstCoroutineStmtKind>(FirstCoroutineStmtKind);
     switch (Value) {
@@ -534,7 +510,7 @@ public:
 
   void setNeedsCoroutineSuspends(bool value = true) {
     assert((!value || CoroutineSuspends.first == nullptr) &&
-            "we already have valid suspend points");
+           "we already have valid suspend points");
     NeedsCoroutineSuspends = value;
   }
 
@@ -571,9 +547,7 @@ class Capture {
   // For blocks, __block capture applies to variables with that annotation,
   // variables of reference type are captured by reference, and other
   // variables are captured by copy.
-  enum CaptureKind {
-    Cap_ByCopy, Cap_ByRef, Cap_Block, Cap_VLA
-  };
+  enum CaptureKind { Cap_ByCopy, Cap_ByRef, Cap_Block, Cap_VLA };
 
   union {
     /// If Kind == Cap_VLA, the captured type.
@@ -698,11 +672,14 @@ public:
 
 class CapturingScopeInfo : public FunctionScopeInfo {
 protected:
-  CapturingScopeInfo(const CapturingScopeInfo&) = default;
+  CapturingScopeInfo(const CapturingScopeInfo &) = default;
 
 public:
   enum ImplicitCaptureStyle {
-    ImpCap_None, ImpCap_LambdaByval, ImpCap_LambdaByref, ImpCap_Block,
+    ImpCap_None,
+    ImpCap_LambdaByval,
+    ImpCap_LambdaByref,
+    ImpCap_Block,
     ImpCap_CapturedRegion
   };
 
@@ -782,8 +759,8 @@ public:
   }
 
   static bool classof(const FunctionScopeInfo *FSI) {
-    return FSI->Kind == SK_Block || FSI->Kind == SK_Lambda
-                                 || FSI->Kind == SK_CapturedRegion;
+    return FSI->Kind == SK_Block || FSI->Kind == SK_Lambda ||
+           FSI->Kind == SK_CapturedRegion;
   }
 };
 
@@ -838,10 +815,9 @@ public:
                           RecordDecl *RD, ImplicitParamDecl *Context,
                           CapturedRegionKind K, unsigned OpenMPLevel,
                           unsigned OpenMPCaptureLevel)
-      : CapturingScopeInfo(Diag, ImpCap_CapturedRegion),
-        TheCapturedDecl(CD), TheRecordDecl(RD), TheScope(S),
-        ContextParam(Context), CapRegionKind(K), OpenMPLevel(OpenMPLevel),
-        OpenMPCaptureLevel(OpenMPCaptureLevel) {
+      : CapturingScopeInfo(Diag, ImpCap_CapturedRegion), TheCapturedDecl(CD),
+        TheRecordDecl(RD), TheScope(S), ContextParam(Context), CapRegionKind(K),
+        OpenMPLevel(OpenMPLevel), OpenMPCaptureLevel(OpenMPCaptureLevel) {
     Kind = SK_CapturedRegion;
   }
 
@@ -865,8 +841,8 @@ public:
   }
 };
 
-class LambdaScopeInfo final :
-    public CapturingScopeInfo, public InventedTemplateParameterInfo {
+class LambdaScopeInfo final : public CapturingScopeInfo,
+                              public InventedTemplateParameterInfo {
 public:
   /// The class that describes the lambda.
   CXXRecordDecl *Lambda = nullptr;
@@ -930,7 +906,7 @@ public:
   ///  will truly be odr-used (i.e. need to be captured) by that nested lambda,
   ///  until its instantiation. But we still need to capture it in the
   ///  enclosing lambda if all intervening lambdas can capture the variable.
-  llvm::SmallVector<Expr*, 4> PotentiallyCapturingExprs;
+  llvm::SmallVector<Expr *, 4> PotentiallyCapturingExprs;
 
   /// Contains all variable-referring-expressions that refer
   ///  to local variables that are usable as constant expressions and
@@ -961,9 +937,7 @@ public:
   }
 
   /// Note when all explicit captures have been added.
-  void finishedExplicitCaptures() {
-    NumExplicitCaptures = Captures.size();
-  }
+  void finishedExplicitCaptures() { NumExplicitCaptures = Captures.size(); }
 
   static bool classof(const FunctionScopeInfo *FSI) {
     return FSI->Kind == SK_Lambda;
@@ -1040,11 +1014,11 @@ public:
   ///    /cfe-commits/Week-of-Mon-20131104/092596.html
   /// "The problem is that the set of captures for a lambda is part of the ABI
   ///  (since lambda layout can be made visible through inline functions and the
-  ///  like), and there are no guarantees as to which cases we'll manage to build
-  ///  an lvalue-to-rvalue conversion in, when parsing a template -- some
-  ///  seemingly harmless change elsewhere in Sema could cause us to start or stop
-  ///  building such a node. So we need a rule that anyone can implement and get
-  ///  exactly the same result".
+  ///  like), and there are no guarantees as to which cases we'll manage to
+  ///  build an lvalue-to-rvalue conversion in, when parsing a template -- some
+  ///  seemingly harmless change elsewhere in Sema could cause us to start or
+  ///  stop building such a node. So we need a rule that anyone can implement
+  ///  and get exactly the same result".
   void markVariableExprAsNonODRUsed(Expr *CapturingVarExpr) {
     assert(isa<DeclRefExpr>(CapturingVarExpr) ||
            isa<MemberExpr>(CapturingVarExpr) ||
@@ -1070,7 +1044,7 @@ public:
 
   bool hasPotentialCaptures() const {
     return getNumPotentialVariableCaptures() ||
-                                  PotentialThisCaptureLocation.isValid();
+           PotentialThisCaptureLocation.isValid();
   }
 
   void visitPotentialCaptures(

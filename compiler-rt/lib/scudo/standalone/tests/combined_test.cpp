@@ -75,26 +75,24 @@ template <typename Config> struct TestAllocator : scudo::Allocator<Config> {
   void operator delete(void *ptr);
 };
 
-constexpr size_t kMaxAlign = std::max({
-  alignof(scudo::Allocator<scudo::DefaultConfig>),
+constexpr size_t kMaxAlign =
+    std::max({alignof(scudo::Allocator<scudo::DefaultConfig>),
 #if SCUDO_CAN_USE_PRIMARY64
-      alignof(scudo::Allocator<scudo::FuchsiaConfig>),
+              alignof(scudo::Allocator<scudo::FuchsiaConfig>),
 #endif
-      alignof(scudo::Allocator<scudo::AndroidConfig>)
-});
+              alignof(scudo::Allocator<scudo::AndroidConfig>)});
 
 #if SCUDO_RISCV64
 // The allocator is over 4MB large. Rather than creating an instance of this on
 // the heap, keep it in a global storage to reduce fragmentation from having to
 // mmap this at the start of every test.
 struct TestAllocatorStorage {
-  static constexpr size_t kMaxSize = std::max({
-    sizeof(scudo::Allocator<scudo::DefaultConfig>),
+  static constexpr size_t kMaxSize =
+      std::max({sizeof(scudo::Allocator<scudo::DefaultConfig>),
 #if SCUDO_CAN_USE_PRIMARY64
-        sizeof(scudo::Allocator<scudo::FuchsiaConfig>),
+                sizeof(scudo::Allocator<scudo::FuchsiaConfig>),
 #endif
-        sizeof(scudo::Allocator<scudo::AndroidConfig>)
-  });
+                sizeof(scudo::Allocator<scudo::AndroidConfig>)});
 
   // To alleviate some problem, let's skip the thread safety analysis here.
   static void *get(size_t size) NO_THREAD_SAFETY_ANALYSIS {
@@ -871,7 +869,8 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ReleaseToOS) {
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, OddEven) {
   auto *Allocator = this->Allocator.get();
-  Allocator->setOption(scudo::Option::MemtagTuning, M_MEMTAG_TUNING_BUFFER_OVERFLOW);
+  Allocator->setOption(scudo::Option::MemtagTuning,
+                       M_MEMTAG_TUNING_BUFFER_OVERFLOW);
 
   if (!Allocator->useMemoryTaggingTestOnly())
     return;

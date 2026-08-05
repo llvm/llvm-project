@@ -9,7 +9,8 @@
 // RUN: %clang_cc1 -triple amdgpu10.30-amd-amdhsa \
 // RUN:   -fopenmp -nogpulib -target-feature -image-insts \
 // RUN:   -fopenmp-is-target-device -S -o - %s 2>&1 | FileCheck %s
-// CHECK: warning: feature flag '-image-insts' is ignored since the feature is read only
+// CHECK: warning: feature flag '-image-insts' is ignored since the feature is
+// read only
 
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 void foo();

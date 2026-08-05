@@ -16,8 +16,8 @@
 // https://android-review.googlesource.com/c/platform/bionic/+/1333960
 // UNSUPPORTED: android
 
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -31,7 +31,8 @@ void A::f() {}
 int main(int argc, char *argv[]) {
   char *volatile p = reinterpret_cast<char *>(new A());
   if (argc > 1 && strcmp(argv[1], "unaddressable") == 0) {
-    void *vtable = mmap(nullptr, 4096, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+    void *vtable =
+        mmap(nullptr, 4096, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
     // Create an object with a vtable in an unaddressable memory region.
     *(uintptr_t *)p = (uintptr_t)vtable + 64;
     // CHECK-UNADDR: runtime error: control flow integrity check for type 'A' failed during cast

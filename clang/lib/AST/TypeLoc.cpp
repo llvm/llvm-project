@@ -43,9 +43,9 @@ namespace {
 class TypeLocRanger : public TypeLocVisitor<TypeLocRanger, SourceRange> {
 public:
 #define ABSTRACT_TYPELOC(CLASS, PARENT)
-#define TYPELOC(CLASS, PARENT) \
-  SourceRange Visit##CLASS##TypeLoc(CLASS##TypeLoc TyLoc) { \
-    return TyLoc.getLocalSourceRange(); \
+#define TYPELOC(CLASS, PARENT)                                                 \
+  SourceRange Visit##CLASS##TypeLoc(CLASS##TypeLoc TyLoc) {                    \
+    return TyLoc.getLocalSourceRange();                                        \
   }
 #include "clang/AST/TypeLocNodes.def"
 };
@@ -53,7 +53,8 @@ public:
 } // namespace
 
 SourceRange TypeLoc::getLocalSourceRangeImpl(TypeLoc TL) {
-  if (TL.isNull()) return SourceRange();
+  if (TL.isNull())
+    return SourceRange();
   return TypeLocRanger().Visit(TL);
 }
 
@@ -62,9 +63,9 @@ namespace {
 class TypeAligner : public TypeLocVisitor<TypeAligner, unsigned> {
 public:
 #define ABSTRACT_TYPELOC(CLASS, PARENT)
-#define TYPELOC(CLASS, PARENT) \
-  unsigned Visit##CLASS##TypeLoc(CLASS##TypeLoc TyLoc) { \
-    return TyLoc.getLocalDataAlignment(); \
+#define TYPELOC(CLASS, PARENT)                                                 \
+  unsigned Visit##CLASS##TypeLoc(CLASS##TypeLoc TyLoc) {                       \
+    return TyLoc.getLocalDataAlignment();                                      \
   }
 #include "clang/AST/TypeLocNodes.def"
 };
@@ -73,7 +74,8 @@ public:
 
 /// Returns the alignment of the type source info data block.
 unsigned TypeLoc::getLocalAlignmentForType(QualType Ty) {
-  if (Ty.isNull()) return 1;
+  if (Ty.isNull())
+    return 1;
   return TypeAligner().Visit(TypeLoc(Ty, nullptr));
 }
 
@@ -82,9 +84,9 @@ namespace {
 class TypeSizer : public TypeLocVisitor<TypeSizer, unsigned> {
 public:
 #define ABSTRACT_TYPELOC(CLASS, PARENT)
-#define TYPELOC(CLASS, PARENT) \
-  unsigned Visit##CLASS##TypeLoc(CLASS##TypeLoc TyLoc) { \
-    return TyLoc.getLocalDataSize(); \
+#define TYPELOC(CLASS, PARENT)                                                 \
+  unsigned Visit##CLASS##TypeLoc(CLASS##TypeLoc TyLoc) {                       \
+    return TyLoc.getLocalDataSize();                                           \
   }
 #include "clang/AST/TypeLocNodes.def"
 };
@@ -112,9 +114,9 @@ namespace {
 class NextLoc : public TypeLocVisitor<NextLoc, TypeLoc> {
 public:
 #define ABSTRACT_TYPELOC(CLASS, PARENT)
-#define TYPELOC(CLASS, PARENT) \
-  TypeLoc Visit##CLASS##TypeLoc(CLASS##TypeLoc TyLoc) { \
-    return TyLoc.getNextTypeLoc(); \
+#define TYPELOC(CLASS, PARENT)                                                 \
+  TypeLoc Visit##CLASS##TypeLoc(CLASS##TypeLoc TyLoc) {                        \
+    return TyLoc.getNextTypeLoc();                                             \
   }
 #include "clang/AST/TypeLocNodes.def"
 };
@@ -123,9 +125,7 @@ public:
 
 /// Get the next TypeLoc pointed by this TypeLoc, e.g for "int*" the
 /// TypeLoc is a PointerLoc and next TypeLoc is for "int".
-TypeLoc TypeLoc::getNextTypeLocImpl(TypeLoc TL) {
-  return NextLoc().Visit(TL);
-}
+TypeLoc TypeLoc::getNextTypeLocImpl(TypeLoc TL) { return NextLoc().Visit(TL); }
 
 /// Initializes a type location, and all of its children
 /// recursively, as if the entire tree had been written in the
@@ -135,14 +135,15 @@ void TypeLoc::initializeImpl(ASTContext &Context, TypeLoc TL,
   while (true) {
     switch (TL.getTypeLocClass()) {
 #define ABSTRACT_TYPELOC(CLASS, PARENT)
-#define TYPELOC(CLASS, PARENT)        \
-    case CLASS: {                     \
-      CLASS##TypeLoc TLCasted = TL.castAs<CLASS##TypeLoc>(); \
-      TLCasted.initializeLocal(Context, Loc);  \
-      TL = TLCasted.getNextTypeLoc(); \
-      if (!TL) return;                \
-      continue;                       \
-    }
+#define TYPELOC(CLASS, PARENT)                                                 \
+  case CLASS: {                                                                \
+    CLASS##TypeLoc TLCasted = TL.castAs<CLASS##TypeLoc>();                     \
+    TLCasted.initializeLocal(Context, Loc);                                    \
+    TL = TLCasted.getNextTypeLoc();                                            \
+    if (!TL)                                                                   \
+      return;                                                                  \
+    continue;                                                                  \
+  }
 #include "clang/AST/TypeLocNodes.def"
     }
   }
@@ -157,9 +158,9 @@ public:
   TypeLocCopier(TypeLoc source) : Source(source) {}
 
 #define ABSTRACT_TYPELOC(CLASS, PARENT)
-#define TYPELOC(CLASS, PARENT)                          \
-  void Visit##CLASS##TypeLoc(CLASS##TypeLoc dest) {   \
-    dest.copyLocal(Source.castAs<CLASS##TypeLoc>());  \
+#define TYPELOC(CLASS, PARENT)                                                 \
+  void Visit##CLASS##TypeLoc(CLASS##TypeLoc dest) {                            \
+    dest.copyLocal(Source.castAs<CLASS##TypeLoc>());                           \
   }
 #include "clang/AST/TypeLocNodes.def"
 };
@@ -196,7 +197,8 @@ SourceLocation TypeLoc::getBeginLoc() const {
   while (true) {
     switch (Cur.getTypeLocClass()) {
     case FunctionProto:
-      if (Cur.castAs<FunctionProtoTypeLoc>().getTypePtr()
+      if (Cur.castAs<FunctionProtoTypeLoc>()
+              .getTypePtr()
               ->hasTrailingReturn()) {
         LeftMost = Cur;
         break;
@@ -280,10 +282,8 @@ struct TSTChecker : public TypeLocVisitor<TSTChecker, bool> {
   static bool isTypeSpec(TypeLoc _) { return false; }
 
 #define ABSTRACT_TYPELOC(CLASS, PARENT)
-#define TYPELOC(CLASS, PARENT) \
-  bool Visit##CLASS##TypeLoc(CLASS##TypeLoc TyLoc) { \
-    return isTypeSpec(TyLoc); \
-  }
+#define TYPELOC(CLASS, PARENT)                                                 \
+  bool Visit##CLASS##TypeLoc(CLASS##TypeLoc TyLoc) { return isTypeSpec(TyLoc); }
 #include "clang/AST/TypeLocNodes.def"
 };
 
@@ -298,7 +298,8 @@ struct TSTChecker : public TypeLocVisitor<TSTChecker, bool> {
 /// those here, but ideally we would have better implementations for
 /// them.
 bool TypeSpecTypeLoc::isKind(const TypeLoc &TL) {
-  if (TL.getType().hasLocalQualifiers()) return false;
+  if (TL.getType().hasLocalQualifiers())
+    return false;
   return TSTChecker().Visit(TL);
 }
 
@@ -316,7 +317,6 @@ SourceRange TypeOfExprTypeLoc::getLocalSourceRange() const {
     return SourceRange(getTypeofLoc(),
                        getUnderlyingExpr()->getSourceRange().getEnd());
 }
-
 
 TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
   if (needsExtraLocalData())
@@ -396,22 +396,19 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
   case BuiltinType::ObjCId:
   case BuiltinType::ObjCClass:
   case BuiltinType::ObjCSel:
-#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
   case BuiltinType::Id:
 #include "clang/Basic/OpenCLImageTypes.def"
-#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
-  case BuiltinType::Id:
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) case BuiltinType::Id:
 #include "clang/Basic/OpenCLExtensionTypes.def"
   case BuiltinType::OCLSampler:
   case BuiltinType::OCLEvent:
   case BuiltinType::OCLClkEvent:
   case BuiltinType::OCLQueue:
   case BuiltinType::OCLReserveID:
-#define SVE_TYPE(Name, Id, SingletonId) \
-  case BuiltinType::Id:
+#define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/AArch64ACLETypes.def"
-#define PPC_VECTOR_TYPE(Name, Id, Size) \
-  case BuiltinType::Id:
+#define PPC_VECTOR_TYPE(Name, Id, Size) case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
@@ -458,7 +455,8 @@ TypeLoc TypeLoc::findExplicitQualifierLoc() const {
 
   // Attributed types.
   if (auto attr = loc.getAs<AttributedTypeLoc>()) {
-    if (attr.isQualifier()) return attr;
+    if (attr.isQualifier())
+      return attr;
     return attr.getModifiedLoc().findExplicitQualifierLoc();
   }
 
@@ -553,7 +551,8 @@ SourceLocation TypeLoc::getNonElaboratedBeginLoc() const {
 void ObjCTypeParamTypeLoc::initializeLocal(ASTContext &Context,
                                            SourceLocation Loc) {
   setNameLoc(Loc);
-  if (!getNumProtocols()) return;
+  if (!getNumProtocols())
+    return;
 
   setProtocolLAngleLoc(Loc);
   setProtocolRAngleLoc(Loc);
@@ -567,9 +566,8 @@ void ObjCObjectTypeLoc::initializeLocal(ASTContext &Context,
   setTypeArgsLAngleLoc(Loc);
   setTypeArgsRAngleLoc(Loc);
   for (unsigned i = 0, e = getNumTypeArgs(); i != e; ++i) {
-    setTypeArgTInfo(i,
-                   Context.getTrivialTypeSourceInfo(
-                     getTypePtr()->getTypeArgsAsWritten()[i], Loc));
+    setTypeArgTInfo(i, Context.getTrivialTypeSourceInfo(
+                           getTypePtr()->getTypeArgsAsWritten()[i], Loc));
   }
   setProtocolLAngleLoc(Loc);
   setProtocolRAngleLoc(Loc);
@@ -602,21 +600,20 @@ SourceRange OverflowBehaviorTypeLoc::getLocalSourceRange() const {
   return SourceRange();
 }
 
-void TypeOfTypeLoc::initializeLocal(ASTContext &Context,
-                                       SourceLocation Loc) {
-  TypeofLikeTypeLoc<TypeOfTypeLoc, TypeOfType, TypeOfTypeLocInfo>
-      ::initializeLocal(Context, Loc);
+void TypeOfTypeLoc::initializeLocal(ASTContext &Context, SourceLocation Loc) {
+  TypeofLikeTypeLoc<TypeOfTypeLoc, TypeOfType,
+                    TypeOfTypeLocInfo>::initializeLocal(Context, Loc);
   this->getLocalData()->UnmodifiedTInfo =
       Context.getTrivialTypeSourceInfo(getUnmodifiedType(), Loc);
 }
 
 void UnaryTransformTypeLoc::initializeLocal(ASTContext &Context,
-                                       SourceLocation Loc) {
-    setKWLoc(Loc);
-    setRParenLoc(Loc);
-    setLParenLoc(Loc);
-    this->setUnderlyingTInfo(
-        Context.getTrivialTypeSourceInfo(getTypePtr()->getBaseType(), Loc));
+                                            SourceLocation Loc) {
+  setKWLoc(Loc);
+  setRParenLoc(Loc);
+  setLParenLoc(Loc);
+  this->setUnderlyingTInfo(
+      Context.getTrivialTypeSourceInfo(getTypePtr()->getBaseType(), Loc));
 }
 
 template <class TL>
@@ -737,8 +734,7 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(
 
     case TemplateArgument::Type:
       ArgInfos[i] = TemplateArgumentLocInfo(
-                          Context.getTrivialTypeSourceInfo(Args[i].getAsType(),
-                                                           Loc));
+          Context.getTrivialTypeSourceInfo(Args[i].getAsType(), Loc));
       break;
 
     case TemplateArgument::Template:
@@ -747,7 +743,8 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(
       TemplateName Template = Args[i].getAsTemplateOrTemplatePattern();
       if (DependentTemplateName *DTN = Template.getAsDependentTemplateName())
         Builder.MakeTrivial(Context, DTN->getQualifier(), Loc);
-      else if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
+      else if (QualifiedTemplateName *QTN =
+                   Template.getAsQualifiedTemplateName())
         Builder.MakeTrivial(Context, QTN->getQualifier(), Loc);
 
       ArgInfos[i] = TemplateArgumentLocInfo(
@@ -806,82 +803,73 @@ void DeducedTemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
 
 namespace {
 
-  class GetContainedAutoTypeLocVisitor :
-    public TypeLocVisitor<GetContainedAutoTypeLocVisitor, TypeLoc> {
-  public:
-    using TypeLocVisitor<GetContainedAutoTypeLocVisitor, TypeLoc>::Visit;
+class GetContainedAutoTypeLocVisitor
+    : public TypeLocVisitor<GetContainedAutoTypeLocVisitor, TypeLoc> {
+public:
+  using TypeLocVisitor<GetContainedAutoTypeLocVisitor, TypeLoc>::Visit;
 
-    TypeLoc VisitAutoTypeLoc(AutoTypeLoc TL) {
-      return TL;
-    }
+  TypeLoc VisitAutoTypeLoc(AutoTypeLoc TL) { return TL; }
 
-    // Only these types can contain the desired 'auto' type.
+  // Only these types can contain the desired 'auto' type.
 
-    TypeLoc VisitAtomicTypeLoc(AtomicTypeLoc T) {
-      return Visit(T.getValueLoc());
-    }
+  TypeLoc VisitAtomicTypeLoc(AtomicTypeLoc T) { return Visit(T.getValueLoc()); }
 
-    TypeLoc VisitQualifiedTypeLoc(QualifiedTypeLoc T) {
-      return Visit(T.getUnqualifiedLoc());
-    }
+  TypeLoc VisitQualifiedTypeLoc(QualifiedTypeLoc T) {
+    return Visit(T.getUnqualifiedLoc());
+  }
 
-    TypeLoc VisitPointerTypeLoc(PointerTypeLoc T) {
-      return Visit(T.getPointeeLoc());
-    }
+  TypeLoc VisitPointerTypeLoc(PointerTypeLoc T) {
+    return Visit(T.getPointeeLoc());
+  }
 
-    TypeLoc VisitBlockPointerTypeLoc(BlockPointerTypeLoc T) {
-      return Visit(T.getPointeeLoc());
-    }
+  TypeLoc VisitBlockPointerTypeLoc(BlockPointerTypeLoc T) {
+    return Visit(T.getPointeeLoc());
+  }
 
-    TypeLoc VisitReferenceTypeLoc(ReferenceTypeLoc T) {
-      return Visit(T.getPointeeLoc());
-    }
+  TypeLoc VisitReferenceTypeLoc(ReferenceTypeLoc T) {
+    return Visit(T.getPointeeLoc());
+  }
 
-    TypeLoc VisitMemberPointerTypeLoc(MemberPointerTypeLoc T) {
-      return Visit(T.getPointeeLoc());
-    }
+  TypeLoc VisitMemberPointerTypeLoc(MemberPointerTypeLoc T) {
+    return Visit(T.getPointeeLoc());
+  }
 
-    TypeLoc VisitArrayTypeLoc(ArrayTypeLoc T) {
-      return Visit(T.getElementLoc());
-    }
+  TypeLoc VisitArrayTypeLoc(ArrayTypeLoc T) { return Visit(T.getElementLoc()); }
 
-    TypeLoc VisitFunctionTypeLoc(FunctionTypeLoc T) {
-      return Visit(T.getReturnLoc());
-    }
+  TypeLoc VisitFunctionTypeLoc(FunctionTypeLoc T) {
+    return Visit(T.getReturnLoc());
+  }
 
-    TypeLoc VisitParenTypeLoc(ParenTypeLoc T) {
-      return Visit(T.getInnerLoc());
-    }
+  TypeLoc VisitParenTypeLoc(ParenTypeLoc T) { return Visit(T.getInnerLoc()); }
 
-    TypeLoc VisitAttributedTypeLoc(AttributedTypeLoc T) {
-      return Visit(T.getModifiedLoc());
-    }
+  TypeLoc VisitAttributedTypeLoc(AttributedTypeLoc T) {
+    return Visit(T.getModifiedLoc());
+  }
 
-    TypeLoc VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc T) {
-      return Visit(T.getWrappedLoc());
-    }
+  TypeLoc VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc T) {
+    return Visit(T.getWrappedLoc());
+  }
 
-    TypeLoc VisitOverflowBehaviorTypeLoc(OverflowBehaviorTypeLoc T) {
-      return Visit(T.getWrappedLoc());
-    }
+  TypeLoc VisitOverflowBehaviorTypeLoc(OverflowBehaviorTypeLoc T) {
+    return Visit(T.getWrappedLoc());
+  }
 
-    TypeLoc
-    VisitHLSLAttributedResourceTypeLoc(HLSLAttributedResourceTypeLoc T) {
-      return Visit(T.getWrappedLoc());
-    }
+  TypeLoc VisitHLSLAttributedResourceTypeLoc(HLSLAttributedResourceTypeLoc T) {
+    return Visit(T.getWrappedLoc());
+  }
 
-    TypeLoc VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc T) {
-      return Visit(T.getInnerLoc());
-    }
+  TypeLoc VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc T) {
+    return Visit(T.getInnerLoc());
+  }
 
-    TypeLoc VisitAdjustedTypeLoc(AdjustedTypeLoc T) {
-      return Visit(T.getOriginalLoc());
-    }
+  TypeLoc VisitAdjustedTypeLoc(AdjustedTypeLoc T) {
+    return Visit(T.getOriginalLoc());
+  }
 
-    TypeLoc VisitPackExpansionTypeLoc(PackExpansionTypeLoc T) {
-      return Visit(T.getPatternLoc());
-    }
-  };
+  TypeLoc VisitPackExpansionTypeLoc(PackExpansionTypeLoc T) {
+    return Visit(T.getPatternLoc());
+  }
+};
 
 } // namespace
 

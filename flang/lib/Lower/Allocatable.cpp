@@ -702,7 +702,7 @@ private:
     fir::ExtendedValue exv = isSource ? sourceExv : moldExv;
 
     bool sourceIsDevice = false;
-    if (const Fortran::semantics::Symbol *sym{GetLastSymbol(sourceExpr)})
+    if (const Fortran::semantics::Symbol * sym{GetLastSymbol(sourceExpr)})
       if (Fortran::semantics::IsCUDADevice(*sym))
         sourceIsDevice = true;
 
@@ -865,7 +865,7 @@ private:
     mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
 
     bool isSourceDevice = false;
-    if (const Fortran::semantics::Symbol *sym{GetLastSymbol(sourceExpr)})
+    if (const Fortran::semantics::Symbol * sym{GetLastSymbol(sourceExpr)})
       if (Fortran::semantics::IsCUDADevice(*sym))
         isSourceDevice = true;
 

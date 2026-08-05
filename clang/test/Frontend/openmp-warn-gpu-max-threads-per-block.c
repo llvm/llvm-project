@@ -8,7 +8,7 @@
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:     --gpu-max-threads-per-block=1024 -fsyntax-only -verify=hip %s
 
-// warn-warning@*{{'--gpu-max-threads-per-block=1024' is ignored since it is only supported for HIP}}
-// hip-no-diagnostics
+// warn-warning@*{{'--gpu-max-threads-per-block=1024' is ignored since it is
+// only supported for HIP}} hip-no-diagnostics
 
 void f(void) {}

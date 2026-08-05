@@ -6337,8 +6337,7 @@ llvm::LogicalResult fir::LocalitySpecifierOp::verifyRegions() {
 
     if (region.getNumArguments() != expectedNumArgs)
       return mlir::emitError(region.getLoc())
-             << "`" << regionName << "`: "
-             << "expected " << expectedNumArgs
+             << "`" << regionName << "`: " << "expected " << expectedNumArgs
              << " region arguments, got: " << region.getNumArguments();
 
     for (mlir::Block &block : region) {

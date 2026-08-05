@@ -1,5 +1,6 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -std=c++17 %s 2>&1 | FileCheck %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -std=c++11 %s 2>&1 | FileCheck %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -std=c++17 %s 2>&1 |
+// FileCheck %s RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG
+// -std=c++11 %s 2>&1 | FileCheck %s
 
 // RUN: %clang_analyze_cc1 -std=c++17 -analyzer-checker=core,cplusplus.Move \
 // RUN:   -analyzer-output=text -verify %s
@@ -12,26 +13,27 @@ int getVal(int);
 // Compound assignment operators sequence the RHS before the LHS, exactly like
 // simple assignment ([expr.ass]/1). The RHS (getVal) must therefore appear
 // before the LHS (getPtr) in the CFG.
-void test_builtin_compound(int a, int b) {
-  *getPtr(a) += getVal(b);
-}
+void test_builtin_compound(int a, int b) { *getPtr(a) += getVal(b); }
 
 // CHECK-LABEL: void test_builtin_compound(int a, int b)
 // CHECK:          1: getVal
-// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, int (*)(int))
-// CHECK-NEXT:     3: b
-// CHECK-NEXT:     4: [B1.3] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-NEXT:     5: [B1.2]([B1.4])
-// CHECK-NEXT:     6: getPtr
-// CHECK-NEXT:     7: [B1.6] (ImplicitCastExpr, FunctionToPointerDecay, int *(*)(int))
-// CHECK-NEXT:     8: a
-// CHECK-NEXT:     9: [B1.8] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-NEXT:    10: [B1.7]([B1.9])
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, int
+// (*)(int)) CHECK-NEXT:     3: b CHECK-NEXT:     4: [B1.3] (ImplicitCastExpr,
+// LValueToRValue, int) CHECK-NEXT:     5: [B1.2]([B1.4]) CHECK-NEXT:     6:
+// getPtr CHECK-NEXT:     7: [B1.6] (ImplicitCastExpr, FunctionToPointerDecay,
+// int *(*)(int)) CHECK-NEXT:     8: a CHECK-NEXT:     9: [B1.8]
+// (ImplicitCastExpr, LValueToRValue, int) CHECK-NEXT:    10: [B1.7]([B1.9])
 // CHECK-NEXT:    11: *[B1.10]
 // CHECK-NEXT:    12: [B1.11] += [B1.5]
 
-struct A { A(); ~A(); };
-struct B { B(); ~B(); };
+struct A {
+  A();
+  ~A();
+};
+struct B {
+  B();
+  ~B();
+};
 
 int &getLHS(const A &);
 int getRHS(const B &);
@@ -39,9 +41,7 @@ int getRHS(const B &);
 // The RHS temporary (B) is constructed before the LHS temporary (A), because
 // the RHS is fully sequenced before the LHS. Temporaries are destroyed in
 // reverse order of construction, so ~A() runs before ~B().
-void test_temp_dtor_order() {
-  getLHS(A()) += getRHS(B());
-}
+void test_temp_dtor_order() { getLHS(A()) += getRHS(B()); }
 
 // CHECK-LABEL: void test_temp_dtor_order()
 // CHECK:       ~A() (Temporary object destructor)

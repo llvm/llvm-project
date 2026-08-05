@@ -41,8 +41,7 @@ static std::string getPrettyTypeName(QualType QT) {
 /// Write information about the type state change to @c os,
 /// return whether the note should be generated.
 static bool shouldGenerateNote(llvm::raw_string_ostream &os,
-                               const RefVal *PrevT,
-                               const RefVal &CurrV,
+                               const RefVal *PrevT, const RefVal &CurrV,
                                bool DeallocSent) {
   // Get the previous type state.
   RefVal PrevV = *PrevT;
@@ -143,7 +142,6 @@ static std::optional<std::string> findMetaClassAlloc(const Expr *Callee) {
 
       if (const auto *RD = dyn_cast<CXXRecordDecl>(VD->getDeclContext()))
         return RD->getNameAsString();
-
     }
   }
   return std::nullopt;
@@ -249,7 +247,6 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
       } else if (CurrSt->isNonNull(RV).isConstrainedTrue()) {
         os << " (assuming the call returns non-zero)";
       }
-
     }
   }
 }
@@ -300,7 +297,6 @@ private:
 } // end namespace ento
 } // end namespace clang
 
-
 /// Find the first node with the parent stack frame.
 static const ExplodedNode *getCalleeNode(const ExplodedNode *Pred) {
   const StackFrame *SF = Pred->getStackFrame();
@@ -316,7 +312,6 @@ static const ExplodedNode *getCalleeNode(const ExplodedNode *Pred) {
   }
   return N;
 }
-
 
 /// Insert a diagnostic piece at function exit
 /// if a function parameter is annotated as "os_consumed",
@@ -336,7 +331,7 @@ annotateConsumedSummaryMismatch(const ExplodedNode *N,
   std::string sbuf;
   llvm::raw_string_ostream os(sbuf);
   ArrayRef<const ParmVarDecl *> Parameters = Call->parameters();
-  for (unsigned I=0; I < Call->getNumArgs() && I < Parameters.size(); ++I) {
+  for (unsigned I = 0; I < Call->getNumArgs() && I < Parameters.size(); ++I) {
     const ParmVarDecl *PVD = Parameters[I];
 
     if (!PVD->hasAttr<OSConsumedAttr>())
@@ -424,7 +419,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   ProgramStateRef CurrSt = N->getState();
   const StackFrame *SF = N->getStackFrame();
 
-  const RefVal* CurrT = getRefBinding(CurrSt, Sym);
+  const RefVal *CurrT = getRefBinding(CurrSt, Sym);
   if (!CurrT)
     return nullptr;
 
@@ -596,7 +591,7 @@ namespace {
 // the leak. The function can also return a stack frame, which should be
 // treated as interesting.
 struct AllocationInfo {
-  const ExplodedNode* N;
+  const ExplodedNode *N;
   const MemRegion *R;
   const StackFrame *InterestingMethodStackFrame;
   AllocationInfo(const ExplodedNode *InN, const MemRegion *InR,
@@ -642,10 +637,10 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
     // AllocationNodeInCurrentContext, is the last node in the current or
     // parent context in which the symbol was tracked.
     //
-    // Note that the allocation site might be in the parent context. For example,
-    // the case where an allocation happens in a block that captures a reference
-    // to it and that reference is overwritten/dropped by another call to
-    // the block.
+    // Note that the allocation site might be in the parent context. For
+    // example, the case where an allocation happens in a block that captures a
+    // reference to it and that reference is overwritten/dropped by another call
+    // to the block.
     if (NStackFrame == LeakStackFrame ||
         NStackFrame->isParentOf(LeakStackFrame))
       AllocationNodeInCurrentOrParentContext = N;

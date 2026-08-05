@@ -1185,7 +1185,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   // LowerMatrixIntrinsicsPass, which is transitively called by
   // buildThinLTODefaultPipeline under EnableMatrix.
   if ((IsThinLTO || IsFatLTO || IsUnifiedLTO) &&
-        Args.hasArg(options::OPT_fenable_matrix))
+      Args.hasArg(options::OPT_fenable_matrix))
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-enable-matrix"));
 
@@ -1531,7 +1531,7 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
     CmdArgs.push_back("-Bdynamic");
 
   if (RTKind == Driver::OMPRT_GOMP && GompNeedsRT)
-      CmdArgs.push_back("-lrt");
+    CmdArgs.push_back("-lrt");
 
   if (IsOffloadingHost)
     CmdArgs.push_back("-lomptarget");
@@ -1567,10 +1567,12 @@ static void addSanitizerRuntime(const ToolChain &TC, const ArgList &Args,
                                 bool IsShared, bool IsWhole) {
   // Wrap any static runtimes that must be forced into executable in
   // whole-archive.
-  if (IsWhole) CmdArgs.push_back("--whole-archive");
+  if (IsWhole)
+    CmdArgs.push_back("--whole-archive");
   CmdArgs.push_back(TC.getCompilerRTArgString(
       Args, Sanitizer, IsShared ? ToolChain::FT_Shared : ToolChain::FT_Static));
-  if (IsWhole) CmdArgs.push_back("--no-whole-archive");
+  if (IsWhole)
+    CmdArgs.push_back("--no-whole-archive");
 
   if (IsShared) {
     addArchSpecificRPath(TC, Args, CmdArgs);
@@ -1882,7 +1884,8 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
          FuzzerNeedsSanitizerDeps;
 }
 
-bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args, ArgStringList &CmdArgs) {
+bool tools::addXRayRuntime(const ToolChain &TC, const ArgList &Args,
+                           ArgStringList &CmdArgs) {
   const XRayArgs &XRay = TC.getXRayArgs(Args);
   if (Args.hasArg(options::OPT_shared)) {
     if (XRay.needsXRayDSORt()) {
@@ -1912,8 +1915,7 @@ void tools::linkXRayRuntimeDeps(const ToolChain &TC,
     CmdArgs.push_back("-lrt");
   CmdArgs.push_back("-lm");
 
-  if (!TC.getTriple().isOSFreeBSD() &&
-      !TC.getTriple().isOSNetBSD() &&
+  if (!TC.getTriple().isOSFreeBSD() && !TC.getTriple().isOSNetBSD() &&
       !TC.getTriple().isOSOpenBSD())
     CmdArgs.push_back("-ldl");
 }
@@ -2190,19 +2192,19 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
 
   bool EmbeddedPISupported;
   switch (Triple.getArch()) {
-    case llvm::Triple::arm:
-    case llvm::Triple::armeb:
-    case llvm::Triple::thumb:
-    case llvm::Triple::thumbeb:
-      EmbeddedPISupported = true;
-      break;
-    default:
-      EmbeddedPISupported = false;
-      break;
+  case llvm::Triple::arm:
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumb:
+  case llvm::Triple::thumbeb:
+    EmbeddedPISupported = true;
+    break;
+  default:
+    EmbeddedPISupported = false;
+    break;
   }
 
   bool ROPI = false, RWPI = false;
-  Arg* LastROPIArg = Args.getLastArg(options::OPT_fropi, options::OPT_fno_ropi);
+  Arg *LastROPIArg = Args.getLastArg(options::OPT_fropi, options::OPT_fno_ropi);
   if (LastROPIArg && LastROPIArg->getOption().matches(options::OPT_fropi)) {
     if (!EmbeddedPISupported)
       ToolChain.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
@@ -2231,7 +2233,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
     if (ABIName == "n64")
       PIC = true;
     // When targettng MIPS with -mno-abicalls, it's always static.
-    if(Args.hasArg(options::OPT_mno_abicalls))
+    if (Args.hasArg(options::OPT_mno_abicalls))
       return std::make_tuple(llvm::Reloc::Static, 0U, false);
     // Unlike other architectures, MIPS, even with -fPIC/-mxgot/multigot,
     // does not use PIC level 2 for historical reasons.
@@ -2451,7 +2453,8 @@ enum class LibGccType { UnspecifiedLibGcc, StaticLibGcc, SharedLibGcc };
 static LibGccType getLibGccType(const ToolChain &TC, const Driver &D,
                                 const ArgList &Args) {
   if (Args.hasArg(options::OPT_static_libgcc) ||
-      Args.hasArg(options::OPT_static) || Args.hasArg(options::OPT_static_pie) ||
+      Args.hasArg(options::OPT_static) ||
+      Args.hasArg(options::OPT_static_pie) ||
       // The Android NDK only provides libunwind.a, not libunwind.so.
       TC.getTriple().isAndroid())
     return LibGccType::StaticLibGcc;
@@ -2826,11 +2829,10 @@ static void GetSDLFromOffloadArchive(
     return;
 
   StringRef Prefix = isBitCodeSDL ? "libbc-" : "lib";
-  std::string OutputLib =
-      D.GetTemporaryPath(Twine(Prefix + llvm::sys::path::filename(Lib) + "-" +
-                               Arch + "-" + Target)
-                             .str(),
-                         "a");
+  std::string OutputLib = D.GetTemporaryPath(
+      Twine(Prefix + llvm::sys::path::filename(Lib) + "-" + Arch + "-" + Target)
+          .str(),
+      "a");
 
   C.addTempFile(C.getArgs().MakeArgString(OutputLib));
 
@@ -3036,8 +3038,8 @@ void tools::addMachineOutlinerArgs(const Driver &D,
     }
   };
 
-  if (Arg *A = Args.getLastArg(options::OPT_moutline,
-                               options::OPT_mno_outline)) {
+  if (Arg *A =
+          Args.getLastArg(options::OPT_moutline, options::OPT_mno_outline)) {
     if (A->getOption().matches(options::OPT_moutline)) {
       // We only support -moutline in AArch64, ARM, RISC-V and X86 targets right
       // now. If we're compiling for these, add the proper mllvm flags.

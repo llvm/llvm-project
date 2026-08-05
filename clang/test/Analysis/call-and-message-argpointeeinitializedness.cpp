@@ -25,19 +25,22 @@ void doStuffR(const S &);
 
 void uninit_val_p() {
   S s;
-  doStuffP(&s); // initializedness-partial-warning{{1st function call argument points to an uninitialized value (e.g., field: 'a')}} \
+  doStuffP(
+      &s); // initializedness-partial-warning{{1st function call argument points to an uninitialized value (e.g., field: 'a')}} \
                 // initializedness-complete-warning{{1st function call argument points to an uninitialized value}}
 }
 
 void uninit_val_r() {
   S s;
-  doStuffR(s); // initializedness-partial-warning{{1st function call argument is an uninitialized value (e.g., field: 'a'); this argument is const and may contain input data of the function}} \
+  doStuffR(
+      s); // initializedness-partial-warning{{1st function call argument is an uninitialized value (e.g., field: 'a'); this argument is const and may contain input data of the function}} \
                // initializedness-complete-warning{{1st function call argument is an uninitialized value; this argument is const and may contain input data of the function}}
 }
 
 S *uninit_new() {
   S *s = new S;
-  doStuffP(s); // initializedness-partial-warning{{1st function call argument points to an uninitialized value (e.g., field: 'a')}} \
+  doStuffP(
+      s); // initializedness-partial-warning{{1st function call argument points to an uninitialized value (e.g., field: 'a')}} \
                // initializedness-complete-warning{{1st function call argument points to an uninitialized value}}
   return s;
 }
@@ -57,17 +60,11 @@ void uninit_init_val() {
   doStuffP(&s);
 }
 
-void uninit_parm_ptr(S *s) {
-  doStuffP(s);
-}
+void uninit_parm_ptr(S *s) { doStuffP(s); }
 
-void uninit_parm_val(S s) {
-  doStuffP(&s);
-}
+void uninit_parm_val(S s) { doStuffP(&s); }
 
-void uninit_parm_ref(S &s) {
-  doStuffP(&s);
-}
+void uninit_parm_ref(S &s) { doStuffP(&s); }
 
 void init_val() {
   S s;
@@ -76,9 +73,7 @@ void init_val() {
   doStuffP(&s);
 }
 
-void uninit_global() {
-  doStuffP(&GlobalS);
-}
+void uninit_global() { doStuffP(&GlobalS); }
 
 void uninit_static() {
   static S s;
@@ -88,11 +83,16 @@ void uninit_static() {
 void uninit_val_partial_1() {
   S s;
   s.a = 1;
-  doStuffR(s); // initializedness-partial-warning{{1st function call argument is an uninitialized value (e.g., via the field chain: 'b.c'); this argument is const and may contain input data of the function}}
+  doStuffR(
+      s); // initializedness-partial-warning{{1st function call argument is an
+          // uninitialized value (e.g., via the field chain: 'b.c'); this
+          // argument is const and may contain input data of the function}}
 }
 
 void uninit_val_partial_2() {
   S s;
   s.b.c = 1;
-  doStuffR(s); // initializedness-partial-warning{{1st function call argument is an uninitialized value (e.g., field: 'a'); this argument is const and may contain input data of the function}}
+  doStuffR(s); // initializedness-partial-warning{{1st function call argument is
+               // an uninitialized value (e.g., field: 'a'); this argument is
+               // const and may contain input data of the function}}
 }

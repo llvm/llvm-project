@@ -58,7 +58,7 @@ private:
   }
 };
 char AArch64StorePairSuppress::ID = 0;
-} // anonymous
+} // namespace
 
 INITIALIZE_PASS(AArch64StorePairSuppress, "aarch64-stp-suppress",
                 STPSUPPRESS_PASS_NAME, false, false)
@@ -73,7 +73,8 @@ FunctionPass *llvm::createAArch64StorePairSuppressPass() {
 /// critical path. If the critical path is longer than the resource height, the
 /// extra vector ops can limit physreg renaming. Otherwise, it could simply
 /// oversaturate the vector units.
-bool AArch64StorePairSuppress::shouldAddSTPToBlock(const MachineBasicBlock *BB) {
+bool AArch64StorePairSuppress::shouldAddSTPToBlock(
+    const MachineBasicBlock *BB) {
   if (!MinInstr)
     MinInstr = Traces->getEnsemble(MachineTraceStrategy::TS_MinInstrCount);
 

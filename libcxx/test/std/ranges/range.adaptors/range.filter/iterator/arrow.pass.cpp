@@ -28,20 +28,23 @@ struct XYPoint {
 };
 
 template <class T>
-concept has_arrow = requires (T t) {
+concept has_arrow = requires(T t) {
   { t->x };
 };
 static_assert(has_arrow<XYPoint*>); // test the test
 
 struct WithArrowOperator {
   using iterator_category = std::input_iterator_tag;
-  using difference_type = std::ptrdiff_t;
-  using value_type = XYPoint;
+  using difference_type   = std::ptrdiff_t;
+  using value_type        = XYPoint;
 
-  constexpr explicit WithArrowOperator(XYPoint* p) : p_(p) { }
+  constexpr explicit WithArrowOperator(XYPoint* p) : p_(p) {}
   constexpr XYPoint& operator*() const { return *p_; }
   constexpr XYPoint* operator->() const { return p_; } // has arrow
-  constexpr WithArrowOperator& operator++() { ++p_; return *this; }
+  constexpr WithArrowOperator& operator++() {
+    ++p_;
+    return *this;
+  }
   constexpr WithArrowOperator operator++(int) { return WithArrowOperator(p_++); }
 
   friend constexpr XYPoint* base(WithArrowOperator const& i) { return i.p_; }
@@ -52,8 +55,8 @@ static_assert(std::input_iterator<WithArrowOperator>);
 struct WithNonCopyableIterator : std::ranges::view_base {
   struct iterator {
     using iterator_category = std::input_iterator_tag;
-    using difference_type = std::ptrdiff_t;
-    using value_type = XYPoint;
+    using difference_type   = std::ptrdiff_t;
+    using value_type        = XYPoint;
 
     iterator(iterator const&) = delete; // not copyable
     iterator(iterator&&);
@@ -76,8 +79,8 @@ static_assert(std::ranges::input_range<WithNonCopyableIterator>);
 template <class Iter, class Sent = sentinel_wrapper<Iter>>
 constexpr void test() {
   std::array<XYPoint, 5> array{{{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}};
-  using View = minimal_view<Iter, Sent>;
-  using FilterView = std::ranges::filter_view<View, AlwaysTrue>;
+  using View           = minimal_view<Iter, Sent>;
+  using FilterView     = std::ranges::filter_view<View, AlwaysTrue>;
   using FilterIterator = std::ranges::iterator_t<FilterView>;
 
   auto make_filter_view = [](auto begin, auto end, auto pred) {
@@ -86,7 +89,7 @@ constexpr void test() {
   };
 
   for (std::ptrdiff_t n = 0; n != 5; ++n) {
-    FilterView view = make_filter_view(array.data(), array.data() + array.size(), AlwaysTrue{});
+    FilterView view     = make_filter_view(array.data(), array.data() + array.size(), AlwaysTrue{});
     FilterIterator iter = view.begin();
     for (std::ptrdiff_t i = 0; i < n; ++i)
       ++iter;
@@ -108,8 +111,8 @@ constexpr bool tests() {
   // underlying iterator doesn't have one.
   {
     auto check_no_arrow = []<class It> {
-      using View = minimal_view<It, sentinel_wrapper<It>>;
-      using FilterView = std::ranges::filter_view<View, AlwaysTrue>;
+      using View           = minimal_view<It, sentinel_wrapper<It>>;
+      using FilterView     = std::ranges::filter_view<View, AlwaysTrue>;
       using FilterIterator = std::ranges::iterator_t<FilterView>;
       static_assert(!has_arrow<FilterIterator>);
     };
@@ -124,7 +127,7 @@ constexpr bool tests() {
   // Make sure filter_view::iterator doesn't have operator-> if the
   // underlying iterator is not copyable.
   {
-    using FilterView = std::ranges::filter_view<WithNonCopyableIterator, AlwaysTrue>;
+    using FilterView     = std::ranges::filter_view<WithNonCopyableIterator, AlwaysTrue>;
     using FilterIterator = std::ranges::iterator_t<FilterView>;
     static_assert(!has_arrow<FilterIterator>);
   }

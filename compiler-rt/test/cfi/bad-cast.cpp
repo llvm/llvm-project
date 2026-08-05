@@ -68,8 +68,8 @@
 
 // REQUIRES: cxxabi
 
-#include <stdio.h>
 #include "utils.h"
+#include <stdio.h>
 
 struct A {
   virtual void f();
@@ -83,8 +83,7 @@ struct B : A {
 
 void B::f() {}
 
-struct C : A {
-};
+struct C : A {};
 
 int main(int argc, char **argv) {
   create_derivers<B>();
@@ -107,30 +106,30 @@ int main(int argc, char **argv) {
   // CFI-DIAG-U: SUMMARY: UndefinedBehaviorSanitizer: cfi-unrelated-cast
 
   switch (argv[1][0]) {
-    case 'a':
-      static_cast<B *>(&a); // UB
-      break;
-    case 'b':
-      static_cast<B &>(a); // UB
-      break;
-    case 'c':
-      static_cast<B &&>(a); // UB
-      break;
-    case 'd':
-      static_cast<C *>(&a); // UB, strict only
-      break;
-    case 'e':
-      static_cast<C &>(a); // UB, strict only
-      break;
-    case 'f':
-      static_cast<C &&>(a); // UB, strict only
-      break;
-    case 'g':
-      static_cast<B *>(static_cast<void *>(&a)); // Non-UB bad cast
-      break;
-    case 'h':
-      static_cast<C *>(static_cast<void *>(&a)); // Non-UB bad cast, strict only
-      break;
+  case 'a':
+    static_cast<B *>(&a); // UB
+    break;
+  case 'b':
+    static_cast<B &>(a); // UB
+    break;
+  case 'c':
+    static_cast<B &&>(a); // UB
+    break;
+  case 'd':
+    static_cast<C *>(&a); // UB, strict only
+    break;
+  case 'e':
+    static_cast<C &>(a); // UB, strict only
+    break;
+  case 'f':
+    static_cast<C &&>(a); // UB, strict only
+    break;
+  case 'g':
+    static_cast<B *>(static_cast<void *>(&a)); // Non-UB bad cast
+    break;
+  case 'h':
+    static_cast<C *>(static_cast<void *>(&a)); // Non-UB bad cast, strict only
+    break;
   }
 
   // FAIL-NOT: {{^2$}}

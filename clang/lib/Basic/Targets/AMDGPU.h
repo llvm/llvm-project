@@ -152,9 +152,23 @@ public:
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override {
     static const ::llvm::StringSet<> SpecialRegs({
-        "exec", "vcc", "flat_scratch", "m0", "scc", "tba", "tma",
-        "flat_scratch_lo", "flat_scratch_hi", "vcc_lo", "vcc_hi", "exec_lo",
-        "exec_hi", "tma_lo", "tma_hi", "tba_lo", "tba_hi",
+        "exec",
+        "vcc",
+        "flat_scratch",
+        "m0",
+        "scc",
+        "tba",
+        "tma",
+        "flat_scratch_lo",
+        "flat_scratch_hi",
+        "vcc_lo",
+        "vcc_hi",
+        "exec_lo",
+        "exec_hi",
+        "tma_lo",
+        "tma_hi",
+        "tba_lo",
+        "tba_hi",
     });
 
     switch (*Name) {

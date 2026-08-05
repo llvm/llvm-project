@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fopenmp -fopenmp-is-target-device \
 // RUN:   -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fopenmp -fopenmp-is-target-device \
-// RUN:   -fclangir -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
-// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fopenmp -fopenmp-is-target-device \
-// RUN:   -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fopenmp -fopenmp-is-target-device
+// \ RUN:   -fclangir -emit-llvm %s -o %t.ll RUN: FileCheck --input-file=%t.ll
+// %s -check-prefix=LLVM
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fopenmp -fopenmp-is-target-device
+// \ RUN:   -emit-llvm %s -o %t.ll RUN: FileCheck --input-file=%t.ll %s
+// -check-prefix=OGCG
 
 // Test device-side filtering of globals, mirroring CGOpenMPRuntime logic:
 // - declare target functions and their transitive callees are emitted
@@ -33,10 +33,10 @@ void caller() {
 
 #pragma omp end declare target
 
-// CIR-DAG: cir.func {{.*}} @_Z12regular_funcv() {{.*}}omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)
-// CIR-DAG: cir.func {{.*}} @_Z6callerv() {{.*}}omp.declare_target
-// CIR-DAG: cir.func {{.*}} @_ZN1SC2Ev({{.*}})
-// CIR-DAG: cir.func {{.*}} @_ZN1SC1Ev({{.*}})
+// CIR-DAG: cir.func {{.*}} @_Z12regular_funcv() {{.*}}omp.declare_target =
+// #omp.declaretarget<device_type = (any), capture_clause = (to) CIR-DAG:
+// cir.func {{.*}} @_Z6callerv() {{.*}}omp.declare_target CIR-DAG: cir.func
+// {{.*}} @_ZN1SC2Ev({{.*}}) CIR-DAG: cir.func {{.*}} @_ZN1SC1Ev({{.*}})
 // CIR-DAG: cir.func {{.*}} @_ZN1SD2Ev({{.*}})
 // CIR-DAG: cir.func {{.*}} @_ZN1SD1Ev({{.*}})
 
@@ -62,7 +62,8 @@ void host_only_func() {}
 // LLVM-NOT: @_Z14host_only_funcv
 // OGCG-NOT: @_Z14host_only_funcv
 
-// ---- device_type(host): filtered out on device by isAssumedToBeNotEmitted ----
+// ---- device_type(host): filtered out on device by isAssumedToBeNotEmitted
+// ----
 
 void host_device_type_func() {}
 #pragma omp declare target to(host_device_type_func) device_type(host)

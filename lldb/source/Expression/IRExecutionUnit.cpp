@@ -313,30 +313,31 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
 
   class ObjectDumper : public llvm::ObjectCache {
   public:
-    ObjectDumper(FileSpec output_dir)  : m_out_dir(output_dir) {}
+    ObjectDumper(FileSpec output_dir) : m_out_dir(output_dir) {}
     void notifyObjectCompiled(const llvm::Module *module,
                               llvm::MemoryBufferRef object) override {
       int fd = 0;
       llvm::SmallVector<char, 256> result_path;
       std::string object_name_model =
           "jit-object-" + module->getModuleIdentifier() + "-%%%.o";
-      FileSpec model_spec 
-          = m_out_dir.CopyByAppendingPathComponent(object_name_model);
+      FileSpec model_spec =
+          m_out_dir.CopyByAppendingPathComponent(object_name_model);
       std::string model_path = model_spec.GetPath();
 
-      std::error_code result 
-        = llvm::sys::fs::createUniqueFile(model_path, fd, result_path);
+      std::error_code result =
+          llvm::sys::fs::createUniqueFile(model_path, fd, result_path);
       if (!result) {
-          llvm::raw_fd_ostream fds(fd, true);
-          fds.write(object.getBufferStart(), object.getBufferSize());
+        llvm::raw_fd_ostream fds(fd, true);
+        fds.write(object.getBufferStart(), object.getBufferSize());
       }
     }
     std::unique_ptr<llvm::MemoryBuffer>
-    getObject(const llvm::Module *module) override  {
+    getObject(const llvm::Module *module) override {
       // Return nothing - we're just abusing the object-cache mechanism to dump
       // objects.
       return nullptr;
-  }
+    }
+
   private:
     FileSpec m_out_dir;
   };
@@ -372,8 +373,9 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
           function.getName().str().c_str());
       return;
     }
-    m_jitted_functions.push_back(JittedFunction(
-        function.getName().str().c_str(), external, reinterpret_cast<uintptr_t>(fun_ptr)));
+    m_jitted_functions.push_back(
+        JittedFunction(function.getName().str().c_str(), external,
+                       reinterpret_cast<uintptr_t>(fun_ptr)));
   }
 
   CommitAllocations(process_sp);
@@ -385,27 +387,28 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   // local -> remote. That means we don't know the local address of the
   // Variables, but we don't need that for anything, so that's okay.
 
-  std::function<void(llvm::GlobalValue &)> RegisterOneValue = [this](
-      llvm::GlobalValue &val) {
-    if (val.hasExternalLinkage() && !val.isDeclaration()) {
-      uint64_t var_ptr_addr =
-          m_execution_engine_up->getGlobalValueAddress(val.getName().str());
+  std::function<void(llvm::GlobalValue &)> RegisterOneValue =
+      [this](llvm::GlobalValue &val) {
+        if (val.hasExternalLinkage() && !val.isDeclaration()) {
+          uint64_t var_ptr_addr =
+              m_execution_engine_up->getGlobalValueAddress(val.getName().str());
 
-      lldb::addr_t remote_addr = GetRemoteAddressForLocal(var_ptr_addr);
+          lldb::addr_t remote_addr = GetRemoteAddressForLocal(var_ptr_addr);
 
-      // This is a really unfortunae API that sometimes returns local addresses
-      // and sometimes returns remote addresses, based on whether the variable
-      // was relocated during ReportAllocations or not.
+          // This is a really unfortunae API that sometimes returns local
+          // addresses and sometimes returns remote addresses, based on whether
+          // the variable was relocated during ReportAllocations or not.
 
-      if (remote_addr == LLDB_INVALID_ADDRESS) {
-        remote_addr = var_ptr_addr;
-      }
+          if (remote_addr == LLDB_INVALID_ADDRESS) {
+            remote_addr = var_ptr_addr;
+          }
 
-      if (var_ptr_addr != 0)
-        m_jitted_global_variables.push_back(JittedGlobalVariable(
-            val.getName().str().c_str(), LLDB_INVALID_ADDRESS, remote_addr));
-    }
-  };
+          if (var_ptr_addr != 0)
+            m_jitted_global_variables.push_back(
+                JittedGlobalVariable(val.getName().str().c_str(),
+                                     LLDB_INVALID_ADDRESS, remote_addr));
+        }
+      };
 
   for (llvm::GlobalVariable &global_var : m_module->globals()) {
     RegisterOneValue(global_var);
@@ -1005,16 +1008,16 @@ void IRExecutionUnit::GetStaticInitializers(
   }
 }
 
-llvm::JITSymbol 
+llvm::JITSymbol
 IRExecutionUnit::MemoryManager::findSymbol(const std::string &Name) {
-    bool missing_weak = false;
-    uint64_t addr = GetSymbolAddressAndPresence(Name, missing_weak);
-    // This is a weak symbol:
-    if (missing_weak) 
-      return llvm::JITSymbol(addr, 
-          llvm::JITSymbolFlags::Exported | llvm::JITSymbolFlags::Weak);
-    else
-      return llvm::JITSymbol(addr, llvm::JITSymbolFlags::Exported);
+  bool missing_weak = false;
+  uint64_t addr = GetSymbolAddressAndPresence(Name, missing_weak);
+  // This is a weak symbol:
+  if (missing_weak)
+    return llvm::JITSymbol(addr, llvm::JITSymbolFlags::Exported |
+                                     llvm::JITSymbolFlags::Weak);
+  else
+    return llvm::JITSymbol(addr, llvm::JITSymbolFlags::Exported);
 }
 
 uint64_t
@@ -1023,8 +1026,7 @@ IRExecutionUnit::MemoryManager::getSymbolAddress(const std::string &Name) {
   return GetSymbolAddressAndPresence(Name, missing_weak);
 }
 
-uint64_t 
-IRExecutionUnit::MemoryManager::GetSymbolAddressAndPresence(
+uint64_t IRExecutionUnit::MemoryManager::GetSymbolAddressAndPresence(
     const std::string &Name, bool &missing_weak) {
   Log *log = GetLog(LLDBLog::Expressions);
 
@@ -1244,7 +1246,7 @@ void IRExecutionUnit::PopulateSectionList(
 
 ArchSpec IRExecutionUnit::GetArchitecture() {
   ExecutionContext exe_ctx(GetBestExecutionContextScope());
-  if(Target *target = exe_ctx.GetTargetPtr())
+  if (Target *target = exe_ctx.GetTargetPtr())
     return target->GetArchitecture();
   return ArchSpec();
 }

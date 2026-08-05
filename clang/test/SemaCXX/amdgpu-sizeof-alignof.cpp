@@ -34,8 +34,8 @@ void test() {
   static_assert(sizeof(double) == 8, "bad size");
   static_assert(alignof(double) == 8, "bad alignment");
 
-  static_assert(sizeof(void*) == 8, "bad size");
-  static_assert(alignof(void*) == 8, "bad alignment");
+  static_assert(sizeof(void *) == 8, "bad size");
+  static_assert(alignof(void *) == 8, "bad alignment");
   static_assert(sizeof(global_ptr_t) == 8, "bad size");
   static_assert(alignof(global_ptr_t) == 8, "bad alignment");
   static_assert(sizeof(constant_ptr_t) == 8, "bad size");

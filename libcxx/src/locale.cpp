@@ -61,7 +61,7 @@ struct __libcpp_unique_locale {
 
   __locale::__locale_t __loc_;
 
-  __libcpp_unique_locale(__libcpp_unique_locale const&) = delete;
+  __libcpp_unique_locale(__libcpp_unique_locale const&)            = delete;
   __libcpp_unique_locale& operator=(__libcpp_unique_locale const&) = delete;
 };
 

@@ -1263,7 +1263,8 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
   } else if (const auto *RT = RType->getAs<RecordType>()) {
     // If the return type is a non-dependent class template specialization,
     // it might be resolved to a RecordType.
-    if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl()))
+    if (const auto *CTSD =
+            dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl()))
       FReturnTemplateArgs = CTSD->getTemplateArgs().asArray();
   }
   assert(!FReturnTemplateArgs.empty() && "expected to see template arguments");
@@ -1298,10 +1299,10 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
   // issues for practice cases, we probably need to extend it to continue
   // performing deduction for rest of arguments to align with the C++
   // standard.
-  SemaRef.DeduceTemplateArguments(
-      F->getTemplateParameters(), FReturnTemplateArgs,
-      AliasRhsTemplateArgs, TDeduceInfo, DeduceResults,
-      /*NumberOfArgumentsMustMatch=*/false);
+  SemaRef.DeduceTemplateArguments(F->getTemplateParameters(),
+                                  FReturnTemplateArgs, AliasRhsTemplateArgs,
+                                  TDeduceInfo, DeduceResults,
+                                  /*NumberOfArgumentsMustMatch=*/false);
 
   SmallVector<TemplateArgument> DeducedArgs;
   SmallVector<unsigned> NonDeducedTemplateParamsInFIndex;

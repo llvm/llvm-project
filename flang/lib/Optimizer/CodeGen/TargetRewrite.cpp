@@ -984,12 +984,11 @@ public:
             llvm::StringRef extensionAttrName = attr.getIntExtensionAttrName();
             if (!extensionAttrName.empty() &&
                 isFuncWithCCallingConvention(func))
-              fixups.emplace_back(FixupTy::Codes::ArgumentType, argNo,
-                                  [=](FuncOpTy func) {
-                                    func.setArgAttr(
-                                        argNo, extensionAttrName,
-                                        mlir::UnitAttr::get(func.getContext()));
-                                  });
+              fixups.emplace_back(
+                  FixupTy::Codes::ArgumentType, argNo, [=](FuncOpTy func) {
+                    func.setArgAttr(argNo, extensionAttrName,
+                                    mlir::UnitAttr::get(func.getContext()));
+                  });
 
             newInTyAndAttrs.push_back(m[0]);
           })
@@ -1309,17 +1308,16 @@ public:
       auto argNo = newInTyAndAttrs.size();
       if (attr.isByVal()) {
         if (auto align = attr.getAlignment())
-          fixups.emplace_back(FixupTy::Codes::ArgumentAsLoad, argNo,
-                              [=](OpTy func) {
-                                auto elemType = fir::dyn_cast_ptrOrBoxEleTy(
-                                    func.getFunctionType().getInput(argNo));
-                                func.setArgAttr(argNo, "llvm.byval",
-                                                mlir::TypeAttr::get(elemType));
-                                func.setArgAttr(
-                                    argNo, "llvm.align",
-                                    rewriter->getIntegerAttr(
-                                        rewriter->getIntegerType(32), align));
-                              });
+          fixups.emplace_back(
+              FixupTy::Codes::ArgumentAsLoad, argNo, [=](OpTy func) {
+                auto elemType = fir::dyn_cast_ptrOrBoxEleTy(
+                    func.getFunctionType().getInput(argNo));
+                func.setArgAttr(argNo, "llvm.byval",
+                                mlir::TypeAttr::get(elemType));
+                func.setArgAttr(argNo, "llvm.align",
+                                rewriter->getIntegerAttr(
+                                    rewriter->getIntegerType(32), align));
+              });
         else
           fixups.emplace_back(FixupTy::Codes::ArgumentAsLoad,
                               newInTyAndAttrs.size(), [=](OpTy func) {
@@ -1330,12 +1328,11 @@ public:
                               });
       } else {
         if (auto align = attr.getAlignment())
-          fixups.emplace_back(
-              fixupCode, argNo, index, [=](OpTy func) {
-                func.setArgAttr(argNo, "llvm.align",
-                                rewriter->getIntegerAttr(
-                                    rewriter->getIntegerType(32), align));
-              });
+          fixups.emplace_back(fixupCode, argNo, index, [=](OpTy func) {
+            func.setArgAttr(
+                argNo, "llvm.align",
+                rewriter->getIntegerAttr(rewriter->getIntegerType(32), align));
+          });
         else
           fixups.emplace_back(fixupCode, argNo, index);
       }

@@ -22,9 +22,7 @@ struct B {
 };
 void B::f() {}
 
-void *create_B() {
-  return (void *)(new B());
-}
+void *create_B() { return (void *)(new B()); }
 
 #else
 

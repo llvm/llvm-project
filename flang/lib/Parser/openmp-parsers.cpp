@@ -58,14 +58,14 @@ constexpr auto scalarLogicalConstantExpr{scalar(logicalConstantExpr)};
 // Prevent accidental use of Parser<OmpClauseList>. Use OmpClauseListParser
 // instead.
 template <>
-auto Parser<OmpClauseList>::Parse(ParseState &state)
-    -> std::optional<OmpClauseList> = delete;
+auto Parser<OmpClauseList>::Parse(
+    ParseState &state) -> std::optional<OmpClauseList> = delete;
 
 // Prevent accidental use of Parser<OmpDirectiveSpecification>.
 // Use OmpDirectiveSpecificationParser instead.
 template <>
-auto Parser<OmpDirectiveSpecification>::Parse(ParseState &)
-    -> std::optional<OmpDirectiveSpecification> = delete;
+auto Parser<OmpDirectiveSpecification>::Parse(
+    ParseState &) -> std::optional<OmpDirectiveSpecification> = delete;
 
 // Parser that wraps the result of another parser into a Block. If the given
 // parser succeeds, the result is a block containing the ExecutionPartConstruct
@@ -1821,8 +1821,8 @@ OmpDirectiveSpecification static makeFlushFromOldSyntax(Verbatim &&text,
       std::move(clauses), std::move(flags)};
 }
 
-auto OmpDirectiveSpecificationParser::Parse(ParseState &state) const
-    -> std::optional<resultType> {
+auto OmpDirectiveSpecificationParser::Parse(
+    ParseState &state) const -> std::optional<resultType> {
   // Force this old-syntax parser to fail for FLUSH followed by '('.
   // Otherwise it could succeed on the new syntax but have one of
   // lists absent in the parsed result.

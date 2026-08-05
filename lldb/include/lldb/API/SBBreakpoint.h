@@ -24,7 +24,6 @@ namespace lldb {
 
 class LLDB_API SBBreakpoint {
 public:
-
   SBBreakpoint();
 
   SBBreakpoint(const lldb::SBBreakpoint &rhs);
@@ -104,7 +103,7 @@ public:
   void SetScriptCallbackFunction(const char *callback_function_name);
 
   SBError SetScriptCallbackFunction(const char *callback_function_name,
-                                 SBStructuredData &extra_args);
+                                    SBStructuredData &extra_args);
 
   void SetCommandLineCommands(SBStringList &commands);
 
@@ -155,8 +154,7 @@ public:
 
   /// Adds a location to the breakpoint at the address passed in.
   /// Can only be called from a ScriptedBreakpointResolver...
-  SBError
-  AddLocation(SBAddress &address);
+  SBError AddLocation(SBAddress &address);
   /// Add a "Facade location" to the breakpoint.  This returns the Facade
   /// Location that was added, which you can then use in
   /// get_location_description and was_hit in your breakpoint resolver.

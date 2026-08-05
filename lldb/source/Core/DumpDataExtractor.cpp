@@ -323,27 +323,27 @@ static const llvm::fltSemantics &GetFloatSemantics(const TargetSP &target_sp,
                                                    lldb::Format format) {
   if (target_sp) {
     auto type_system_or_err =
-      target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
+        target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
     if (!type_system_or_err)
       llvm::consumeError(type_system_or_err.takeError());
     else if (auto ts = *type_system_or_err)
       return ts->GetFloatTypeSemantics(byte_size, format);
   }
   // No target, just make a reasonable guess
-  switch(byte_size) {
-    case 2:
-      return llvm::APFloat::IEEEhalf();
-    case 4:
-      return llvm::APFloat::IEEEsingle();
-    case 8:
-      return llvm::APFloat::IEEEdouble();
-    case 16:
-      if (format == eFormatFloat128) {
-        return llvm::APFloat::IEEEquad();
-      }
-      // Otherwise it's ambigious whether a 16-byte float is a float128 or a
-      // target-specific long double.
+  switch (byte_size) {
+  case 2:
+    return llvm::APFloat::IEEEhalf();
+  case 4:
+    return llvm::APFloat::IEEEsingle();
+  case 8:
+    return llvm::APFloat::IEEEdouble();
+  case 16:
+    if (format == eFormatFloat128) {
+      return llvm::APFloat::IEEEquad();
     }
+    // Otherwise it's ambigious whether a 16-byte float is a float128 or a
+    // target-specific long double.
+  }
   return llvm::APFloat::Bogus();
 }
 

@@ -13,27 +13,18 @@ struct gen {
 
     struct final_awaiter {
       ~final_awaiter() noexcept;
-      bool await_ready() noexcept {
-        return false;
-      }
+      bool await_ready() noexcept { return false; }
       void await_suspend(std::coroutine_handle<>) noexcept {}
       void await_resume() noexcept {}
     };
 
-    final_awaiter final_suspend() noexcept {
-      return {};
-    }
+    final_awaiter final_suspend() noexcept { return {}; }
 
-    void unhandled_exception() {
-      throw;
-    }
+    void unhandled_exception() { throw; }
     void return_void() {}
   };
 
-  gen(std::coroutine_handle<promise_type> coro) noexcept
-  : coro(coro)
-  {
-  }
+  gen(std::coroutine_handle<promise_type> coro) noexcept : coro(coro) {}
 
   ~gen() noexcept {
     if (coro) {
@@ -41,11 +32,7 @@ struct gen {
     }
   }
 
-  gen(gen&& g) noexcept
-  : coro(g.coro)
-  {
-    g.coro = {};
-  }
+  gen(gen &&g) noexcept : coro(g.coro) { g.coro = {}; }
 
   std::coroutine_handle<promise_type> coro;
 };
@@ -61,10 +48,9 @@ gen maybe_throwing(bool x) {
 
 // CHECK: define{{.*}}@_Z14maybe_throwingb.destroy
 // CHECK: %[[INDEX:.+]] = load i1, ptr %index.addr, align 1
-// CHECK: br i1 %[[INDEX]], label %[[AFTERSUSPEND:.+]], label %[[CORO_FREE:.+]], !prof
-// CHECK: [[AFTERSUSPEND]]:
-// CHECK: call{{.*}}_ZN3gen12promise_type13final_awaiterD1Ev(
-// CHECK: [[CORO_FREE]]:
+// CHECK: br i1 %[[INDEX]], label %[[AFTERSUSPEND:.+]], label %[[CORO_FREE:.+]],
+// !prof CHECK: [[AFTERSUSPEND]]: CHECK:
+// call{{.*}}_ZN3gen12promise_type13final_awaiterD1Ev( CHECK: [[CORO_FREE]]:
 // CHECK: call{{.*}}_ZdlPv
 
 void noexcept_call() noexcept;
@@ -83,8 +69,7 @@ gen no_throwing() {
 // CHECK: define{{.*}}@_Z11no_throwingv.destroy({{.*}}%[[ARG:.+]])
 // CHECK: %[[RESUME_FN_ADDR:.+]] = load ptr, ptr %[[ARG]]
 // CHECK: %[[IF_NULL:.+]] = icmp eq ptr %[[RESUME_FN_ADDR]], null
-// CHECK: br i1 %[[IF_NULL]], label %[[AFTERSUSPEND:.+]], label %[[CORO_FREE:.+]]
-// CHECK: [[AFTERSUSPEND]]:
-// CHECK: call{{.*}}_ZN3gen12promise_type13final_awaiterD1Ev(
-// CHECK: [[CORO_FREE]]:
+// CHECK: br i1 %[[IF_NULL]], label %[[AFTERSUSPEND:.+]], label
+// %[[CORO_FREE:.+]] CHECK: [[AFTERSUSPEND]]: CHECK:
+// call{{.*}}_ZN3gen12promise_type13final_awaiterD1Ev( CHECK: [[CORO_FREE]]:
 // CHECK: call{{.*}}_ZdlPv

@@ -8,20 +8,17 @@
 // The -x ast in the second invocation of each pair confirms we are reading ast.
 
 // RUN: %clang_cc1 -triple s390x-none-zos -emit-pch -o %t.ast %s
-// RUN: %clang_cc1 -triple s390x-none-zos -emit-llvm -o - -x ast - < %t.ast | FileCheck --check-prefix=CHECK-C %s
+// RUN: %clang_cc1 -triple s390x-none-zos -emit-llvm -o - -x ast - < %t.ast |
+// FileCheck --check-prefix=CHECK-C %s
 
 // check that the langage attribute has come through
 // CHECK-C: !"zos_cu_language", !"C"}
 
-
 // RUN: %clang_cc1 -triple s390x-none-zos -emit-pch -o %t.ast -x c++ %s
-// RUN: %clang_cc1 -triple s390x-none-zos -emit-llvm -o - -x ast - < %t.ast | FileCheck --check-prefix CHECK-CPP %s
+// RUN: %clang_cc1 -triple s390x-none-zos -emit-llvm -o - -x ast - < %t.ast |
+// FileCheck --check-prefix CHECK-CPP %s
 
 // check that the langage attribute has come through
 // CHECK-CPP: !"zos_cu_language", !"C++"}
 
-
-
-int main(void) {
-  return 0;
-}
+int main(void) { return 0; }

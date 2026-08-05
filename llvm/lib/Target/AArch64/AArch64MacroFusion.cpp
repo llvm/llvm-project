@@ -234,15 +234,14 @@ static bool isLiteralsPair(const MachineInstr *FirstMI,
     return true;
 
   // Lower half of 64 bit immediate.
-  if((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::MOVZXi) &&
-     (SecondMI.getOpcode() == AArch64::MOVKXi &&
-      SecondMI.getOperand(3).getImm() == 16))
+  if ((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::MOVZXi) &&
+      (SecondMI.getOpcode() == AArch64::MOVKXi &&
+       SecondMI.getOperand(3).getImm() == 16))
     return true;
 
   // Upper half of 64 bit immediate.
-  if ((FirstMI == nullptr ||
-       (FirstMI->getOpcode() == AArch64::MOVKXi &&
-        FirstMI->getOperand(3).getImm() == 32)) &&
+  if ((FirstMI == nullptr || (FirstMI->getOpcode() == AArch64::MOVKXi &&
+                              FirstMI->getOperand(3).getImm() == 32)) &&
       (SecondMI.getOpcode() == AArch64::MOVKXi &&
        SecondMI.getOperand(3).getImm() == 48))
     return true;
@@ -281,7 +280,7 @@ static bool isAddressLdStPair(const MachineInstr *FirstMI,
     if (FirstMI == nullptr)
       return true;
 
-   switch (FirstMI->getOpcode()) {
+    switch (FirstMI->getOpcode()) {
     case AArch64::ADR:
       return SecondMI.getOperand(2).getImm() == 0;
     case AArch64::ADRP:
@@ -674,7 +673,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const MachineInstr *FirstMI,
                                    const MachineInstr &SecondMI,
                                    const SDep *Dep) {
-  const AArch64Subtarget &ST = static_cast<const AArch64Subtarget&>(TSI);
+  const AArch64Subtarget &ST = static_cast<const AArch64Subtarget &>(TSI);
   const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
 
   // All checking functions assume that the 1st instr is a wildcard if it is

@@ -171,8 +171,8 @@ uint32_t DIEBuilder::allocDIE(const DWARFUnit &DU, const DWARFDie &DDie,
 void DIEBuilder::constructFromUnit(DWARFUnit &DU) {
   std::optional<uint32_t> UnitId = getUnitId(DU);
   if (!UnitId) {
-    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: "
-              << "Skip Unit at " << Twine::utohexstr(DU.getOffset()) << "\n";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: " << "Skip Unit at "
+              << Twine::utohexstr(DU.getOffset()) << "\n";
     return;
   }
 

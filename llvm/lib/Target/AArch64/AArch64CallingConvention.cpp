@@ -113,9 +113,11 @@ static bool finishStackBlock(SmallVectorImpl<CCValAssign> &PendingMembers,
 
 /// The Darwin variadic PCS places anonymous arguments in 8-byte stack slots. An
 /// [N x Ty] type must still be contiguous in memory though.
-static bool CC_AArch64_Custom_Stack_Block(
-      unsigned &ValNo, MVT &ValVT, MVT &LocVT, CCValAssign::LocInfo &LocInfo,
-      ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+static bool CC_AArch64_Custom_Stack_Block(unsigned &ValNo, MVT &ValVT,
+                                          MVT &LocVT,
+                                          CCValAssign::LocInfo &LocInfo,
+                                          ISD::ArgFlagsTy &ArgFlags,
+                                          CCState &State) {
   SmallVectorImpl<CCValAssign> &PendingMembers = State.getPendingLocs();
 
   // Add the argument to the list to be allocated once we know the size of the
@@ -142,7 +144,8 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   // Try to allocate a contiguous block of registers, each of the correct
   // size to hold one member.
   ArrayRef<MCPhysReg> RegList;
-  if (LocVT.SimpleTy == MVT::i64 || (IsDarwinILP32 && LocVT.SimpleTy == MVT::i32))
+  if (LocVT.SimpleTy == MVT::i64 ||
+      (IsDarwinILP32 && LocVT.SimpleTy == MVT::i32))
     RegList = XRegList;
   else if (LocVT.SimpleTy == MVT::f16 || LocVT.SimpleTy == MVT::bf16)
     RegList = HRegList;

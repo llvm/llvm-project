@@ -52,10 +52,7 @@ extern cl::opt<unsigned> ExecutionCountThreshold;
 extern cl::opt<bool> UpdateDebugSections;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 
-enum DynoStatsSortOrder : char {
-  Ascending,
-  Descending
-};
+enum DynoStatsSortOrder : char { Ascending, Descending };
 
 static cl::opt<DynoStatsSortOrder> DynoStatsSortOrderOpt(
     "print-sorted-by-order",
@@ -68,15 +65,14 @@ static cl::opt<DynoStatsSortOrder> DynoStatsSortOrderOpt(
                           "Descending order")),
     cl::cat(BoltOptCategory));
 
-cl::list<std::string>
-HotTextMoveSections("hot-text-move-sections",
-  cl::desc("list of sections containing functions used for hugifying hot text. "
-           "BOLT makes sure these functions are not placed on the same page as "
-           "the hot text. (default=\'.stub,.mover\')."),
-  cl::value_desc("sec1,sec2,sec3,..."),
-  cl::CommaSeparated,
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+cl::list<std::string> HotTextMoveSections(
+    "hot-text-move-sections",
+    cl::desc(
+        "list of sections containing functions used for hugifying hot text. "
+        "BOLT makes sure these functions are not placed on the same page as "
+        "the hot text. (default=\'.stub,.mover\')."),
+    cl::value_desc("sec1,sec2,sec3,..."), cl::CommaSeparated, cl::ZeroOrMore,
+    cl::cat(BoltCategory));
 
 bool isHotTextMover(const BinaryFunction &Function) {
   for (std::string &SectionName : opts::HotTextMoveSections) {
@@ -188,34 +184,24 @@ static cl::opt<bool>
                      cl::desc("print the list of functions with stale profile"),
                      cl::Hidden, cl::cat(BoltOptCategory));
 
-enum SctcModes : char {
-  SctcAlways,
-  SctcPreserveDirection,
-  SctcHeuristic
-};
+enum SctcModes : char { SctcAlways, SctcPreserveDirection, SctcHeuristic };
 
-static cl::opt<SctcModes>
-SctcMode("sctc-mode",
-  cl::desc("mode for simplify conditional tail calls"),
-  cl::init(SctcAlways),
-  cl::values(clEnumValN(SctcAlways, "always", "always perform sctc"),
-    clEnumValN(SctcPreserveDirection,
-      "preserve",
-      "only perform sctc when branch direction is "
-      "preserved"),
-    clEnumValN(SctcHeuristic,
-      "heuristic",
-      "use branch prediction data to control sctc")),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<SctcModes> SctcMode(
+    "sctc-mode", cl::desc("mode for simplify conditional tail calls"),
+    cl::init(SctcAlways),
+    cl::values(clEnumValN(SctcAlways, "always", "always perform sctc"),
+               clEnumValN(SctcPreserveDirection, "preserve",
+                          "only perform sctc when branch direction is "
+                          "preserved"),
+               clEnumValN(SctcHeuristic, "heuristic",
+                          "use branch prediction data to control sctc")),
+    cl::ZeroOrMore, cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned>
-StaleThreshold("stale-threshold",
+static cl::opt<unsigned> StaleThreshold(
+    "stale-threshold",
     cl::desc(
-      "maximum percentage of stale functions to tolerate (default: 100)"),
-    cl::init(100),
-    cl::Hidden,
-    cl::cat(BoltOptCategory));
+        "maximum percentage of stale functions to tolerate (default: 100)"),
+    cl::init(100), cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned> TSPThreshold(
     "tsp-threshold",

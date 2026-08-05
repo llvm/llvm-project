@@ -1,10 +1,13 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-target-lowering %s -o %t.cir 2>%t-before-target-lowering.cir
-// RUN: FileCheck --input-file=%t-before-target-lowering.cir %s --check-prefixes=CIR-BEFORE-TL
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir
+// -emit-cir -mmlir --mlir-print-ir-before=cir-target-lowering %s -o %t.cir
+// 2>%t-before-target-lowering.cir RUN: FileCheck
+// --input-file=%t-before-target-lowering.cir %s --check-prefixes=CIR-BEFORE-TL
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir
+// -emit-llvm %s -o %t-cir.ll RUN: FileCheck --input-file=%t-cir.ll %s
+// -check-prefix=LLVM RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu
+// -Wno-unused-value -emit-llvm %s -o %t.ll RUN: FileCheck --input-file=%t.ll %s
+// -check-prefix=OGCG
 
 void scoped_atomic_load(int *ptr) {
   // CIR-BEFORE-TL-LABEL: @scoped_atomic_load
@@ -14,14 +17,16 @@ void scoped_atomic_load(int *ptr) {
 
   int x;
   __scoped_atomic_load(ptr, &x, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: %{{.+}} = cir.load align(4) syncscope(single_thread) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR: %{{.+}} = cir.load align(4) syncscope(system) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR-BEFORE-TL: %{{.+}} = cir.load align(4) syncscope(single_thread)
+  // atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i CIR: %{{.+}} = cir.load
+  // align(4) syncscope(system) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
   // LLVM: %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4
   // OGCG: %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4
 
   __scoped_atomic_load(ptr, &x, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: %{{.+}} = cir.load align(4) syncscope(system) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR: %{{.+}} = cir.load align(4) syncscope(system) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR-BEFORE-TL: %{{.+}} = cir.load align(4) syncscope(system)
+  // atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i CIR: %{{.+}} = cir.load
+  // align(4) syncscope(system) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
   // LLVM: %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4
   // OGCG: %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4
 }
@@ -33,14 +38,16 @@ void scoped_atomic_load_n(int *ptr) {
 
   int x;
   x = __scoped_atomic_load_n(ptr, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: %{{.+}} = cir.load align(4) syncscope(single_thread) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR: %{{.+}} = cir.load align(4) syncscope(system) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR-BEFORE-TL: %{{.+}} = cir.load align(4) syncscope(single_thread)
+  // atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i CIR: %{{.+}} = cir.load
+  // align(4) syncscope(system) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
   // LLVM: %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4
   // OGCG: %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4
 
   x = __scoped_atomic_load_n(ptr, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: %{{.+}} = cir.load align(4) syncscope(system) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR: %{{.+}} = cir.load align(4) syncscope(system) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR-BEFORE-TL: %{{.+}} = cir.load align(4) syncscope(system)
+  // atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i CIR: %{{.+}} = cir.load
+  // align(4) syncscope(system) atomic(relaxed) %{{.+}} : !cir.ptr<!s32i>, !s32i
   // LLVM: %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4
   // OGCG: %{{.+}} = load atomic i32, ptr %{{.+}} monotonic, align 4
 }
@@ -51,14 +58,16 @@ void scoped_atomic_store(int *ptr, int value) {
   // OGCG-LABEL: @scoped_atomic_store
 
   __scoped_atomic_store(ptr, &value, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.store align(4) syncscope(single_thread) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
-  // CIR: cir.store align(4) syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // CIR-BEFORE-TL: cir.store align(4) syncscope(single_thread) atomic(relaxed)
+  // %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i> CIR: cir.store align(4)
+  // syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
   // LLVM: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
   // OGCG: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
 
   __scoped_atomic_store(ptr, &value, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.store align(4) syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
-  // CIR: cir.store align(4) syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // CIR-BEFORE-TL: cir.store align(4) syncscope(system) atomic(relaxed)
+  // %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i> CIR: cir.store align(4)
+  // syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
   // LLVM: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
   // OGCG: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
 }
@@ -69,14 +78,16 @@ void scoped_atomic_store_n(int *ptr, int value) {
   // OGCG-LABEL: @scoped_atomic_store_n
 
   __scoped_atomic_store_n(ptr, value, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.store align(4) syncscope(single_thread) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
-  // CIR: cir.store align(4) syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // CIR-BEFORE-TL: cir.store align(4) syncscope(single_thread) atomic(relaxed)
+  // %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i> CIR: cir.store align(4)
+  // syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
   // LLVM: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
   // OGCG: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
 
   __scoped_atomic_store_n(ptr, value, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.store align(4) syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
-  // CIR: cir.store align(4) syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+  // CIR-BEFORE-TL: cir.store align(4) syncscope(system) atomic(relaxed)
+  // %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i> CIR: cir.store align(4)
+  // syncscope(system) atomic(relaxed) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
   // LLVM: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
   // OGCG: store atomic i32 %{{.+}}, ptr %{{.+}} monotonic, align 4
 }
@@ -87,15 +98,20 @@ void scoped_atomic_exchange(int *ptr, int *value, int *old) {
   // LLVM-LABEL: @scoped_atomic_exchange
   // OGCG-LABEL: @scoped_atomic_exchange
 
-  __scoped_atomic_exchange(ptr, value, old, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.xchg relaxed syncscope(single_thread) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
-  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+  __scoped_atomic_exchange(ptr, value, old, __ATOMIC_RELAXED,
+                           __MEMORY_SCOPE_SINGLE);
+  // CIR-BEFORE-TL: cir.atomic.xchg relaxed syncscope(single_thread) %{{.+}},
+  // %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: %{{.+}} = cir.atomic.xchg
+  // relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) ->
+  // !s32i LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic,
+  // align 4 OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic,
+  // align 4
 
-  __scoped_atomic_exchange(ptr, value, old, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  __scoped_atomic_exchange(ptr, value, old, __ATOMIC_RELAXED,
+                           __MEMORY_SCOPE_SYSTEM);
+  // CIR-BEFORE-TL: cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} :
+  // (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: %{{.+}} = cir.atomic.xchg relaxed
+  // syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
   // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
 }
@@ -106,15 +122,20 @@ void scoped_atomic_exchange_n(int *ptr, int value) {
   // LLVM-LABEL: @scoped_atomic_exchange_n
   // OGCG-LABEL: @scoped_atomic_exchange_n
 
-  __scoped_atomic_exchange_n(ptr, value, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.xchg relaxed syncscope(single_thread) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
-  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
+  __scoped_atomic_exchange_n(ptr, value, __ATOMIC_RELAXED,
+                             __MEMORY_SCOPE_SINGLE);
+  // CIR-BEFORE-TL: cir.atomic.xchg relaxed syncscope(single_thread) %{{.+}},
+  // %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: %{{.+}} = cir.atomic.xchg
+  // relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) ->
+  // !s32i LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic,
+  // align 4 OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic,
+  // align 4
 
-  __scoped_atomic_exchange_n(ptr, value, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  __scoped_atomic_exchange_n(ptr, value, __ATOMIC_RELAXED,
+                             __MEMORY_SCOPE_SYSTEM);
+  // CIR-BEFORE-TL: cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} :
+  // (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: %{{.+}} = cir.atomic.xchg relaxed
+  // syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
   // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
 }
@@ -128,34 +149,51 @@ void scoped_atomic_cmpxchg(int *ptr, int *expected, int *desired) {
   __scoped_atomic_compare_exchange(ptr, expected, desired, /*weak=*/0,
                                    __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE,
                                    __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(single_thread) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // LLVM: %{{.+}} = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
-  // OGCG: %{{.+}} = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg success(seq_cst)
+  // failure(acquire) syncscope(single_thread) %{{.+}}, %{{.+}}, %{{.+}}
+  // align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool) CIR:
+  // %{{.+}}, %{{.+}} = cir.atomic.cmpxchg success(seq_cst) failure(acquire)
+  // syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>,
+  // !s32i, !s32i) -> (!s32i, !cir.bool) LLVM: %{{.+}} = cmpxchg ptr %{{.+}},
+  // i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4 OGCG: %{{.+}} = cmpxchg
+  // ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
 
   __scoped_atomic_compare_exchange(ptr, expected, desired, /*weak=*/1,
                                    __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE,
                                    __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(single_thread) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // LLVM: %{{.+}} = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
-  // OGCG: %{{.+}} = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg weak success(seq_cst)
+  // failure(acquire) syncscope(single_thread) %{{.+}}, %{{.+}}, %{{.+}}
+  // align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool) CIR:
+  // %{{.+}}, %{{.+}} = cir.atomic.cmpxchg weak success(seq_cst)
+  // failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) :
+  // (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool) LLVM: %{{.+}} =
+  // cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // OGCG: %{{.+}} = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst
+  // acquire, align 4
 
   __scoped_atomic_compare_exchange(ptr, expected, desired, /*weak=*/0,
                                    __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE,
                                    __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // LLVM: %{{.+}} = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
-  // OGCG: %{{.+}} = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg success(seq_cst)
+  // failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) :
+  // (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool) CIR: %{{.+}}, %{{.+}}
+  // = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system)
+  // %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) ->
+  // (!s32i, !cir.bool) LLVM: %{{.+}} = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32
+  // %{{.+}} seq_cst acquire, align 4 OGCG: %{{.+}} = cmpxchg ptr %{{.+}}, i32
+  // %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
 
   __scoped_atomic_compare_exchange(ptr, expected, desired, /*weak=*/1,
                                    __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE,
                                    __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // LLVM: %{{.+}} = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
-  // OGCG: %{{.+}} = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg weak success(seq_cst)
+  // failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) :
+  // (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool) CIR: %{{.+}}, %{{.+}}
+  // = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire)
+  // syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>,
+  // !s32i, !s32i) -> (!s32i, !cir.bool) LLVM: %{{.+}} = cmpxchg weak ptr
+  // %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4 OGCG: %{{.+}} =
+  // cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
 }
 
 void scoped_atomic_cmpxchg_n(int *ptr, int *expected, int desired) {
@@ -167,34 +205,51 @@ void scoped_atomic_cmpxchg_n(int *ptr, int *expected, int desired) {
   __scoped_atomic_compare_exchange_n(ptr, expected, desired, /*weak=*/0,
                                      __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE,
                                      __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(single_thread) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // LLVM: %{{.+}} = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
-  // OGCG: %{{.+}} = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg success(seq_cst)
+  // failure(acquire) syncscope(single_thread) %{{.+}}, %{{.+}}, %{{.+}}
+  // align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool) CIR:
+  // %{{.+}}, %{{.+}} = cir.atomic.cmpxchg success(seq_cst) failure(acquire)
+  // syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>,
+  // !s32i, !s32i) -> (!s32i, !cir.bool) LLVM: %{{.+}} = cmpxchg ptr %{{.+}},
+  // i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4 OGCG: %{{.+}} = cmpxchg
+  // ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
 
   __scoped_atomic_compare_exchange_n(ptr, expected, desired, /*weak=*/1,
                                      __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE,
                                      __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(single_thread) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // LLVM: %{{.+}} = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
-  // OGCG: %{{.+}} = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg weak success(seq_cst)
+  // failure(acquire) syncscope(single_thread) %{{.+}}, %{{.+}}, %{{.+}}
+  // align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool) CIR:
+  // %{{.+}}, %{{.+}} = cir.atomic.cmpxchg weak success(seq_cst)
+  // failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) :
+  // (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool) LLVM: %{{.+}} =
+  // cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // OGCG: %{{.+}} = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst
+  // acquire, align 4
 
   __scoped_atomic_compare_exchange_n(ptr, expected, desired, /*weak=*/0,
                                      __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE,
                                      __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // LLVM: %{{.+}} = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
-  // OGCG: %{{.+}} = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg success(seq_cst)
+  // failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) :
+  // (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool) CIR: %{{.+}}, %{{.+}}
+  // = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system)
+  // %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) ->
+  // (!s32i, !cir.bool) LLVM: %{{.+}} = cmpxchg ptr %{{.+}}, i32 %{{.+}}, i32
+  // %{{.+}} seq_cst acquire, align 4 OGCG: %{{.+}} = cmpxchg ptr %{{.+}}, i32
+  // %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
 
   __scoped_atomic_compare_exchange_n(ptr, expected, desired, /*weak=*/1,
                                      __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE,
                                      __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // CIR: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
-  // LLVM: %{{.+}} = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
-  // OGCG: %{{.+}} = cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
+  // CIR-BEFORE-TL: %{{.+}}, %{{.+}} = cir.atomic.cmpxchg weak success(seq_cst)
+  // failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) :
+  // (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool) CIR: %{{.+}}, %{{.+}}
+  // = cir.atomic.cmpxchg weak success(seq_cst) failure(acquire)
+  // syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>,
+  // !s32i, !s32i) -> (!s32i, !cir.bool) LLVM: %{{.+}} = cmpxchg weak ptr
+  // %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4 OGCG: %{{.+}} =
+  // cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire, align 4
 }
 
 void scoped_atomic_fetch_add(int *ptr, int *value) {
@@ -204,16 +259,20 @@ void scoped_atomic_fetch_add(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_fetch_add
 
   __scoped_atomic_fetch_add(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch add seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch add seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch add seq_cst syncscope(single_thread)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR:
+  // cir.atomic.fetch add seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}}
+  // : (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw add ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4 OGCG: atomicrmw add ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 
   __scoped_atomic_fetch_add(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch add seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch add seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch add seq_cst syncscope(system) fetch_first
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // add seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} :
+  // (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw add ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4 OGCG: atomicrmw add ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 }
 
 void scoped_atomic_add_fetch(int *ptr, int *value) {
@@ -223,16 +282,18 @@ void scoped_atomic_add_fetch(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_add_fetch
 
   __scoped_atomic_add_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch add seq_cst syncscope(single_thread) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch add seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch add seq_cst syncscope(single_thread)
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // add seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i)
+  // -> !s32i LLVM: atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
   // OGCG: atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 
   __scoped_atomic_add_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch add seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch add seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch add seq_cst syncscope(system) %{{.+}},
+  // %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch add
+  // seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) ->
+  // !s32i LLVM: atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4 OGCG:
+  // atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 }
 
 void scoped_atomic_fetch_sub(int *ptr, int *value) {
@@ -242,16 +303,20 @@ void scoped_atomic_fetch_sub(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_fetch_sub
 
   __scoped_atomic_fetch_sub(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch sub seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw sub ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw sub ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch sub seq_cst syncscope(single_thread)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR:
+  // cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}}
+  // : (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw sub ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4 OGCG: atomicrmw sub ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 
   __scoped_atomic_fetch_sub(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw sub ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw sub ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch sub seq_cst syncscope(system) fetch_first
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // sub seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} :
+  // (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw sub ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4 OGCG: atomicrmw sub ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 }
 
 void scoped_atomic_sub_fetch(int *ptr, int *value) {
@@ -261,16 +326,18 @@ void scoped_atomic_sub_fetch(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_sub_fetch
 
   __scoped_atomic_sub_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch sub seq_cst syncscope(single_thread) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch sub seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw sub ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch sub seq_cst syncscope(single_thread)
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // sub seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i)
+  // -> !s32i LLVM: atomicrmw sub ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
   // OGCG: atomicrmw sub ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 
   __scoped_atomic_sub_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch sub seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch sub seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw sub ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw sub ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch sub seq_cst syncscope(system) %{{.+}},
+  // %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch sub
+  // seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) ->
+  // !s32i LLVM: atomicrmw sub ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4 OGCG:
+  // atomicrmw sub ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 }
 
 void scoped_atomic_fetch_min(int *ptr, int *value) {
@@ -280,16 +347,20 @@ void scoped_atomic_fetch_min(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_fetch_min
 
   __scoped_atomic_fetch_min(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch min seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch min seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw min ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw min ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch min seq_cst syncscope(single_thread)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR:
+  // cir.atomic.fetch min seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}}
+  // : (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw min ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4 OGCG: atomicrmw min ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 
   __scoped_atomic_fetch_min(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch min seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch min seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw min ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw min ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch min seq_cst syncscope(system) fetch_first
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // min seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} :
+  // (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw min ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4 OGCG: atomicrmw min ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 }
 
 void scoped_atomic_min_fetch(int *ptr, int *value) {
@@ -299,16 +370,18 @@ void scoped_atomic_min_fetch(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_min_fetch
 
   __scoped_atomic_min_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch min seq_cst syncscope(single_thread) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch min seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw min ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch min seq_cst syncscope(single_thread)
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // min seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i)
+  // -> !s32i LLVM: atomicrmw min ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
   // OGCG: atomicrmw min ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 
   __scoped_atomic_min_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch min seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch min seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw min ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw min ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch min seq_cst syncscope(system) %{{.+}},
+  // %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch min
+  // seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) ->
+  // !s32i LLVM: atomicrmw min ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4 OGCG:
+  // atomicrmw min ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 }
 
 void scoped_atomic_fetch_max(int *ptr, int *value) {
@@ -318,16 +391,20 @@ void scoped_atomic_fetch_max(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_fetch_max
 
   __scoped_atomic_fetch_max(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch max seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch max seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw max ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw max ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch max seq_cst syncscope(single_thread)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR:
+  // cir.atomic.fetch max seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}}
+  // : (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw max ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4 OGCG: atomicrmw max ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 
   __scoped_atomic_fetch_max(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch max seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch max seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw max ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw max ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch max seq_cst syncscope(system) fetch_first
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // max seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} :
+  // (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw max ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4 OGCG: atomicrmw max ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 }
 
 void scoped_atomic_max_fetch(int *ptr, int *value) {
@@ -337,16 +414,18 @@ void scoped_atomic_max_fetch(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_max_fetch
 
   __scoped_atomic_max_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch max seq_cst syncscope(single_thread) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch max seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw max ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch max seq_cst syncscope(single_thread)
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // max seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i)
+  // -> !s32i LLVM: atomicrmw max ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
   // OGCG: atomicrmw max ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 
   __scoped_atomic_max_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch max seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch max seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw max ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw max ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch max seq_cst syncscope(system) %{{.+}},
+  // %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch max
+  // seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) ->
+  // !s32i LLVM: atomicrmw max ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4 OGCG:
+  // atomicrmw max ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 }
 
 void scoped_atomic_fetch_fminimum(float *ptr, float value) {
@@ -357,17 +436,23 @@ void scoped_atomic_fetch_fminimum(float *ptr, float value) {
 
   __scoped_atomic_fetch_fminimum(ptr, value, __ATOMIC_SEQ_CST,
                                  __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch minimum seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // CIR: cir.atomic.fetch minimum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // LLVM: atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch minimum seq_cst syncscope(single_thread)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) ->
+  // !cir.float CIR: cir.atomic.fetch minimum seq_cst syncscope(system)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) ->
+  // !cir.float LLVM: atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst,
+  // align 4 OGCG: atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst, align
+  // 4
 
   __scoped_atomic_fetch_fminimum(ptr, value, __ATOMIC_SEQ_CST,
                                  __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch minimum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // CIR: cir.atomic.fetch minimum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // LLVM: atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch minimum seq_cst syncscope(system)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) ->
+  // !cir.float CIR: cir.atomic.fetch minimum seq_cst syncscope(system)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) ->
+  // !cir.float LLVM: atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst,
+  // align 4 OGCG: atomicrmw fminimum ptr %{{.+}}, float %{{.+}} seq_cst, align
+  // 4
 }
 
 void scoped_atomic_fetch_fmaximum(float *ptr, float value) {
@@ -378,17 +463,23 @@ void scoped_atomic_fetch_fmaximum(float *ptr, float value) {
 
   __scoped_atomic_fetch_fmaximum(ptr, value, __ATOMIC_SEQ_CST,
                                  __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch maximum seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // CIR: cir.atomic.fetch maximum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // LLVM: atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch maximum seq_cst syncscope(single_thread)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) ->
+  // !cir.float CIR: cir.atomic.fetch maximum seq_cst syncscope(system)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) ->
+  // !cir.float LLVM: atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst,
+  // align 4 OGCG: atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst, align
+  // 4
 
   __scoped_atomic_fetch_fmaximum(ptr, value, __ATOMIC_SEQ_CST,
                                  __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch maximum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // CIR: cir.atomic.fetch maximum seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // LLVM: atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch maximum seq_cst syncscope(system)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) ->
+  // !cir.float CIR: cir.atomic.fetch maximum seq_cst syncscope(system)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) ->
+  // !cir.float LLVM: atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst,
+  // align 4 OGCG: atomicrmw fmaximum ptr %{{.+}}, float %{{.+}} seq_cst, align
+  // 4
 }
 
 void scoped_atomic_fetch_fminimum_num(float *ptr, float value) {
@@ -399,17 +490,23 @@ void scoped_atomic_fetch_fminimum_num(float *ptr, float value) {
 
   __scoped_atomic_fetch_fminimum_num(ptr, value, __ATOMIC_SEQ_CST,
                                      __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch minimum_num seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // CIR: cir.atomic.fetch minimum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // LLVM: atomicrmw fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch minimum_num seq_cst
+  // syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} :
+  // (!cir.ptr<!cir.float>, !cir.float) -> !cir.float CIR: cir.atomic.fetch
+  // minimum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} :
+  // (!cir.ptr<!cir.float>, !cir.float) -> !cir.float LLVM: atomicrmw
+  // fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4 OGCG: atomicrmw
+  // fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
 
   __scoped_atomic_fetch_fminimum_num(ptr, value, __ATOMIC_SEQ_CST,
                                      __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch minimum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // CIR: cir.atomic.fetch minimum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // LLVM: atomicrmw fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch minimum_num seq_cst syncscope(system)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) ->
+  // !cir.float CIR: cir.atomic.fetch minimum_num seq_cst syncscope(system)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) ->
+  // !cir.float LLVM: atomicrmw fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst,
+  // align 4 OGCG: atomicrmw fminimumnum ptr %{{.+}}, float %{{.+}} seq_cst,
+  // align 4
 }
 
 void scoped_atomic_fetch_fmaximum_num(float *ptr, float value) {
@@ -420,17 +517,23 @@ void scoped_atomic_fetch_fmaximum_num(float *ptr, float value) {
 
   __scoped_atomic_fetch_fmaximum_num(ptr, value, __ATOMIC_SEQ_CST,
                                      __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch maximum_num seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // CIR: cir.atomic.fetch maximum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // LLVM: atomicrmw fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch maximum_num seq_cst
+  // syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} :
+  // (!cir.ptr<!cir.float>, !cir.float) -> !cir.float CIR: cir.atomic.fetch
+  // maximum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} :
+  // (!cir.ptr<!cir.float>, !cir.float) -> !cir.float LLVM: atomicrmw
+  // fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4 OGCG: atomicrmw
+  // fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
 
   __scoped_atomic_fetch_fmaximum_num(ptr, value, __ATOMIC_SEQ_CST,
                                      __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch maximum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // CIR: cir.atomic.fetch maximum_num seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
-  // LLVM: atomicrmw fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch maximum_num seq_cst syncscope(system)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) ->
+  // !cir.float CIR: cir.atomic.fetch maximum_num seq_cst syncscope(system)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!cir.float>, !cir.float) ->
+  // !cir.float LLVM: atomicrmw fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst,
+  // align 4 OGCG: atomicrmw fmaximumnum ptr %{{.+}}, float %{{.+}} seq_cst,
+  // align 4
 }
 
 void scoped_atomic_fetch_and(int *ptr, int *value) {
@@ -440,16 +543,20 @@ void scoped_atomic_fetch_and(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_fetch_and
 
   __scoped_atomic_fetch_and(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch and seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch and seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw and ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw and ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch and seq_cst syncscope(single_thread)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR:
+  // cir.atomic.fetch and seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}}
+  // : (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw and ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4 OGCG: atomicrmw and ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 
   __scoped_atomic_fetch_and(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch and seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch and seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw and ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw and ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch and seq_cst syncscope(system) fetch_first
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // and seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} :
+  // (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw and ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4 OGCG: atomicrmw and ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 }
 
 void scoped_atomic_and_fetch(int *ptr, int *value) {
@@ -459,16 +566,18 @@ void scoped_atomic_and_fetch(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_and_fetch
 
   __scoped_atomic_and_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch and seq_cst syncscope(single_thread) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch and seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw and ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch and seq_cst syncscope(single_thread)
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // and seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i)
+  // -> !s32i LLVM: atomicrmw and ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
   // OGCG: atomicrmw and ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 
   __scoped_atomic_and_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch and seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch and seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw and ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw and ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch and seq_cst syncscope(system) %{{.+}},
+  // %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch and
+  // seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) ->
+  // !s32i LLVM: atomicrmw and ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4 OGCG:
+  // atomicrmw and ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 }
 
 void scoped_atomic_fetch_or(int *ptr, int *value) {
@@ -478,16 +587,20 @@ void scoped_atomic_fetch_or(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_fetch_or
 
   __scoped_atomic_fetch_or(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch or seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch or seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw or ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw or ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch or seq_cst syncscope(single_thread)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR:
+  // cir.atomic.fetch or seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}}
+  // : (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw or ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4 OGCG: atomicrmw or ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 
   __scoped_atomic_fetch_or(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch or seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch or seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw or ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw or ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch or seq_cst syncscope(system) fetch_first
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // or seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} :
+  // (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw or ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4 OGCG: atomicrmw or ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 }
 
 void scoped_atomic_or_fetch(int *ptr, int *value) {
@@ -497,16 +610,18 @@ void scoped_atomic_or_fetch(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_or_fetch
 
   __scoped_atomic_or_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch or seq_cst syncscope(single_thread) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch or seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw or ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw or ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch or seq_cst syncscope(single_thread)
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // or seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) ->
+  // !s32i LLVM: atomicrmw or ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4 OGCG:
+  // atomicrmw or ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 
   __scoped_atomic_or_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch or seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch or seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw or ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw or ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch or seq_cst syncscope(system) %{{.+}},
+  // %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch or
+  // seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) ->
+  // !s32i LLVM: atomicrmw or ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4 OGCG:
+  // atomicrmw or ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 }
 
 void scoped_atomic_fetch_xor(int *ptr, int *value) {
@@ -516,16 +631,20 @@ void scoped_atomic_fetch_xor(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_fetch_xor
 
   __scoped_atomic_fetch_xor(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch xor seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch xor seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw xor ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw xor ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch xor seq_cst syncscope(single_thread)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR:
+  // cir.atomic.fetch xor seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}}
+  // : (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw xor ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4 OGCG: atomicrmw xor ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 
   __scoped_atomic_fetch_xor(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch xor seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch xor seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw xor ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw xor ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch xor seq_cst syncscope(system) fetch_first
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // xor seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} :
+  // (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw xor ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4 OGCG: atomicrmw xor ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 }
 
 void scoped_atomic_xor_fetch(int *ptr, int *value) {
@@ -535,16 +654,18 @@ void scoped_atomic_xor_fetch(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_xor_fetch
 
   __scoped_atomic_xor_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch xor seq_cst syncscope(single_thread) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch xor seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw xor ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch xor seq_cst syncscope(single_thread)
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // xor seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i)
+  // -> !s32i LLVM: atomicrmw xor ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
   // OGCG: atomicrmw xor ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 
   __scoped_atomic_xor_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch xor seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch xor seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw xor ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw xor ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch xor seq_cst syncscope(system) %{{.+}},
+  // %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch xor
+  // seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) ->
+  // !s32i LLVM: atomicrmw xor ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4 OGCG:
+  // atomicrmw xor ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 }
 
 void scoped_atomic_fetch_nand(int *ptr, int *value) {
@@ -554,16 +675,20 @@ void scoped_atomic_fetch_nand(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_fetch_nand
 
   __scoped_atomic_fetch_nand(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch nand seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch nand seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw nand ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw nand ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch nand seq_cst syncscope(single_thread)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR:
+  // cir.atomic.fetch nand seq_cst syncscope(system) fetch_first %{{.+}},
+  // %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw nand ptr
+  // %{{.+}}, i32 %{{.+}} seq_cst, align 4 OGCG: atomicrmw nand ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4
 
   __scoped_atomic_fetch_nand(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch nand seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch nand seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw nand ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw nand ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch nand seq_cst syncscope(system) fetch_first
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // nand seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} :
+  // (!cir.ptr<!s32i>, !s32i) -> !s32i LLVM: atomicrmw nand ptr %{{.+}}, i32
+  // %{{.+}} seq_cst, align 4 OGCG: atomicrmw nand ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 }
 
 void scoped_atomic_nand_fetch(int *ptr, int *value) {
@@ -573,16 +698,18 @@ void scoped_atomic_nand_fetch(int *ptr, int *value) {
   // OGCG-LABEL: @scoped_atomic_nand_fetch
 
   __scoped_atomic_nand_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: cir.atomic.fetch nand seq_cst syncscope(single_thread) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch nand seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw nand ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch nand seq_cst syncscope(single_thread)
+  // %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch
+  // nand seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i)
+  // -> !s32i LLVM: atomicrmw nand ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
   // OGCG: atomicrmw nand ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 
   __scoped_atomic_nand_fetch(ptr, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR-BEFORE-TL: cir.atomic.fetch nand seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: cir.atomic.fetch nand seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // LLVM: atomicrmw nand ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: atomicrmw nand ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // CIR-BEFORE-TL: cir.atomic.fetch nand seq_cst syncscope(system) %{{.+}},
+  // %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i CIR: cir.atomic.fetch nand
+  // seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) ->
+  // !s32i LLVM: atomicrmw nand ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4 OGCG:
+  // atomicrmw nand ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 }
 
 void scoped_atomic_fetch_uinc(int *ptr, int value) {
@@ -590,18 +717,26 @@ void scoped_atomic_fetch_uinc(int *ptr, int value) {
   // LLVM-LABEL: @scoped_atomic_fetch_uinc
   // OGCG-LABEL: @scoped_atomic_fetch_uinc
 
-  __scoped_atomic_fetch_uinc(ptr, value, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: %{{.+}} = cir.atomic.fetch uinc_wrap seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.fetch uinc_wrap seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  __scoped_atomic_fetch_uinc(ptr, value, __ATOMIC_SEQ_CST,
+                             __MEMORY_SCOPE_SINGLE);
+  // CIR-BEFORE-TL: %{{.+}} = cir.atomic.fetch uinc_wrap seq_cst
+  // syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>,
+  // !s32i) -> !s32i CIR: %{{.+}} = cir.atomic.fetch uinc_wrap seq_cst
+  // syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i)
+  // -> !s32i
 
-  // LLVM: %[[RES:.+]] = atomicrmw uinc_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: %[[RES:.+]] = atomicrmw uinc_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // LLVM: %[[RES:.+]] = atomicrmw uinc_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst,
+  // align 4 OGCG: %[[RES:.+]] = atomicrmw uinc_wrap ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 
-  __scoped_atomic_fetch_uinc(ptr, value, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR: %{{.+}} = cir.atomic.fetch uinc_wrap seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  __scoped_atomic_fetch_uinc(ptr, value, __ATOMIC_SEQ_CST,
+                             __MEMORY_SCOPE_SYSTEM);
+  // CIR: %{{.+}} = cir.atomic.fetch uinc_wrap seq_cst syncscope(system)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
 
-  // LLVM: %[[RES:.+]] = atomicrmw uinc_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: %[[RES:.+]] = atomicrmw uinc_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // LLVM: %[[RES:.+]] = atomicrmw uinc_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst,
+  // align 4 OGCG: %[[RES:.+]] = atomicrmw uinc_wrap ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 }
 
 void scoped_atomic_fetch_udec(int *ptr, int value) {
@@ -609,18 +744,26 @@ void scoped_atomic_fetch_udec(int *ptr, int value) {
   // LLVM-LABEL: @scoped_atomic_fetch_udec
   // OGCG-LABEL: @scoped_atomic_fetch_udec
 
-  __scoped_atomic_fetch_udec(ptr, value, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SINGLE);
-  // CIR-BEFORE-TL: %{{.+}} = cir.atomic.fetch udec_wrap seq_cst syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.fetch udec_wrap seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  __scoped_atomic_fetch_udec(ptr, value, __ATOMIC_SEQ_CST,
+                             __MEMORY_SCOPE_SINGLE);
+  // CIR-BEFORE-TL: %{{.+}} = cir.atomic.fetch udec_wrap seq_cst
+  // syncscope(single_thread) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>,
+  // !s32i) -> !s32i CIR: %{{.+}} = cir.atomic.fetch udec_wrap seq_cst
+  // syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i)
+  // -> !s32i
 
-  // LLVM: %[[RES:.+]] = atomicrmw udec_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: %[[RES:.+]] = atomicrmw udec_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // LLVM: %[[RES:.+]] = atomicrmw udec_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst,
+  // align 4 OGCG: %[[RES:.+]] = atomicrmw udec_wrap ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 
-  __scoped_atomic_fetch_udec(ptr, value, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);
-  // CIR: %{{.+}} = cir.atomic.fetch udec_wrap seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  __scoped_atomic_fetch_udec(ptr, value, __ATOMIC_SEQ_CST,
+                             __MEMORY_SCOPE_SYSTEM);
+  // CIR: %{{.+}} = cir.atomic.fetch udec_wrap seq_cst syncscope(system)
+  // fetch_first %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
 
-  // LLVM: %[[RES:.+]] = atomicrmw udec_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
-  // OGCG: %[[RES:.+]] = atomicrmw udec_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // LLVM: %[[RES:.+]] = atomicrmw udec_wrap ptr %{{.+}}, i32 %{{.+}} seq_cst,
+  // align 4 OGCG: %[[RES:.+]] = atomicrmw udec_wrap ptr %{{.+}}, i32 %{{.+}}
+  // seq_cst, align 4
 }
 
 int dynamic_sync_scope(int *p, int scope) {
@@ -634,27 +777,28 @@ int dynamic_sync_scope(int *p, int scope) {
   // CIR-BEFORE-TL:      %[[SCOPE:.+]] = cir.load {{.*}} !s32i
   // CIR-BEFORE-TL-NEXT: cir.switch(%[[SCOPE]] : !s32i) {
   // CIR-BEFORE-TL-NEXT:   cir.case(default, []) {
-  // CIR-BEFORE-TL:          %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-BEFORE-TL:          cir.break
+  // CIR-BEFORE-TL:          %{{.+}} = cir.load align(4) syncscope(system)
+  // atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i CIR-BEFORE-TL: cir.break
   // CIR-BEFORE-TL:        }
   // CIR-BEFORE-TL-NEXT:   cir.case(equal, [#cir.int<1> : !s32i]) {
-  // CIR-BEFORE-TL:          %{{.+}} = cir.load align(4) syncscope(device) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-BEFORE-TL:          cir.break
+  // CIR-BEFORE-TL:          %{{.+}} = cir.load align(4) syncscope(device)
+  // atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i CIR-BEFORE-TL: cir.break
   // CIR-BEFORE-TL:        }
   // CIR-BEFORE-TL-NEXT:   cir.case(equal, [#cir.int<2> : !s32i]) {
-  // CIR-BEFORE-TL:          %{{.+}} = cir.load align(4) syncscope(workgroup) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-BEFORE-TL:          cir.break
+  // CIR-BEFORE-TL:          %{{.+}} = cir.load align(4) syncscope(workgroup)
+  // atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i CIR-BEFORE-TL: cir.break
   // CIR-BEFORE-TL:        }
   // CIR-BEFORE-TL-NEXT:   cir.case(equal, [#cir.int<5> : !s32i]) {
-  // CIR-BEFORE-TL:          %{{.+}} = cir.load align(4) syncscope(cluster) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-BEFORE-TL:          cir.break
+  // CIR-BEFORE-TL:          %{{.+}} = cir.load align(4) syncscope(cluster)
+  // atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i CIR-BEFORE-TL: cir.break
   // CIR-BEFORE-TL:        }
   // CIR-BEFORE-TL-NEXT:   cir.case(equal, [#cir.int<3> : !s32i]) {
-  // CIR-BEFORE-TL:          %{{.+}} = cir.load align(4) syncscope(wavefront) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-BEFORE-TL:          cir.break
+  // CIR-BEFORE-TL:          %{{.+}} = cir.load align(4) syncscope(wavefront)
+  // atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i CIR-BEFORE-TL: cir.break
   // CIR-BEFORE-TL:        }
   // CIR-BEFORE-TL-NEXT:   cir.case(equal, [#cir.int<4> : !s32i]) {
-  // CIR-BEFORE-TL:          %{{.+}} = cir.load align(4) syncscope(single_thread) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
+  // CIR-BEFORE-TL:          %{{.+}} = cir.load align(4)
+  // syncscope(single_thread) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
   // CIR-BEFORE-TL:          cir.break
   // CIR-BEFORE-TL:        }
   // CIR-BEFORE-TL-NEXT:   cir.yield
@@ -663,29 +807,23 @@ int dynamic_sync_scope(int *p, int scope) {
   // CIR:      %[[SCOPE:.+]] = cir.load {{.*}} !s32i
   // CIR-NEXT: cir.switch(%[[SCOPE]] : !s32i) {
   // CIR-NEXT:   cir.case(default, []) {
-  // CIR:          %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR:          cir.break
-  // CIR:        }
+  // CIR:          %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst)
+  // %{{.+}} : !cir.ptr<!s32i>, !s32i CIR:          cir.break CIR:        }
   // CIR-NEXT:   cir.case(equal, [#cir.int<1> : !s32i]) {
-  // CIR:          %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR:          cir.break
-  // CIR:        }
+  // CIR:          %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst)
+  // %{{.+}} : !cir.ptr<!s32i>, !s32i CIR:          cir.break CIR:        }
   // CIR-NEXT:   cir.case(equal, [#cir.int<2> : !s32i]) {
-  // CIR:          %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR:          cir.break
-  // CIR:        }
+  // CIR:          %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst)
+  // %{{.+}} : !cir.ptr<!s32i>, !s32i CIR:          cir.break CIR:        }
   // CIR-NEXT:   cir.case(equal, [#cir.int<5> : !s32i]) {
-  // CIR:          %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR:          cir.break
-  // CIR:        }
+  // CIR:          %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst)
+  // %{{.+}} : !cir.ptr<!s32i>, !s32i CIR:          cir.break CIR:        }
   // CIR-NEXT:   cir.case(equal, [#cir.int<3> : !s32i]) {
-  // CIR:          %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR:          cir.break
-  // CIR:        }
+  // CIR:          %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst)
+  // %{{.+}} : !cir.ptr<!s32i>, !s32i CIR:          cir.break CIR:        }
   // CIR-NEXT:   cir.case(equal, [#cir.int<4> : !s32i]) {
-  // CIR:          %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR:          cir.break
-  // CIR:        }
+  // CIR:          %{{.+}} = cir.load align(4) syncscope(system) atomic(seq_cst)
+  // %{{.+}} : !cir.ptr<!s32i>, !s32i CIR:          cir.break CIR:        }
   // CIR-NEXT:   cir.yield
   // CIR-NEXT: }
 

@@ -93,8 +93,8 @@ unsigned TargetCodeGenInfo::getSizeOfUnwindException() const {
   return 32;
 }
 
-bool TargetCodeGenInfo::isNoProtoCallVariadic(const CallArgList &args,
-                                     const FunctionNoProtoType *fnType) const {
+bool TargetCodeGenInfo::isNoProtoCallVariadic(
+    const CallArgList &args, const FunctionNoProtoType *fnType) const {
   // The following conventions are known to require this to be false:
   //   x86_stdcall
   //   MIPS
@@ -102,9 +102,8 @@ bool TargetCodeGenInfo::isNoProtoCallVariadic(const CallArgList &args,
   return false;
 }
 
-void
-TargetCodeGenInfo::getDependentLibraryOption(llvm::StringRef Lib,
-                                             llvm::SmallString<24> &Opt) const {
+void TargetCodeGenInfo::getDependentLibraryOption(
+    llvm::StringRef Lib, llvm::SmallString<24> &Opt) const {
   // This assumes the user is passing a library name like "rt" instead of a
   // filename like "librt.a/so", and that they don't care whether it's static or
   // dynamic.
@@ -131,8 +130,9 @@ void TargetCodeGenInfo::setOCLKernelStubCallingConvention(
       FT, FT->getExtInfo().withCallingConv(CC_C));
 }
 
-llvm::Constant *TargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
-    llvm::PointerType *T, QualType QT) const {
+llvm::Constant *
+TargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
+                                  llvm::PointerType *T, QualType QT) const {
   return llvm::ConstantPointerNull::get(T);
 }
 
@@ -151,11 +151,9 @@ TargetCodeGenInfo::getLLVMSyncScopeStr(const LangOptions &LangOpts,
   return ""; /* default sync scope */
 }
 
-llvm::SyncScope::ID
-TargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
-                                      SyncScope Scope,
-                                      llvm::AtomicOrdering Ordering,
-                                      llvm::LLVMContext &Ctx) const {
+llvm::SyncScope::ID TargetCodeGenInfo::getLLVMSyncScopeID(
+    const LangOptions &LangOpts, SyncScope Scope, llvm::AtomicOrdering Ordering,
+    llvm::LLVMContext &Ctx) const {
   return Ctx.getOrInsertSyncScopeID(
       getLLVMSyncScopeStr(LangOpts, Scope, Ordering));
 }

@@ -45,10 +45,10 @@ static mlir::Value genVscaleTimesFactor(mlir::Location loc,
 }
 
 #define SVEMAP1(NameBase, LLVMIntrinsic, TypeModifier)                         \
-  {SVE::BI__builtin_sve_##NameBase, Intrinsic::LLVMIntrinsic, TypeModifier}
+  { SVE::BI__builtin_sve_##NameBase, Intrinsic::LLVMIntrinsic, TypeModifier }
 
 #define SVEMAP2(NameBase, TypeModifier)                                        \
-  {SVE::BI__builtin_sve_##NameBase, 0, TypeModifier}
+  { SVE::BI__builtin_sve_##NameBase, 0, TypeModifier }
 static const AArch64SVEAndSMEVectorIntrinsicInfo aarch64SVEIntrinsicMap[] = {
 #define GET_SVE_LLVM_INTRINSIC_MAP
 #include "clang/Basic/arm_sve_builtin_cg.inc"

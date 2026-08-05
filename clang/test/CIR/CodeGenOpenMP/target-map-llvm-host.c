@@ -9,30 +9,22 @@ void use(int);
 
 void target_map_to(int x) {
 #pragma omp target map(to : x)
-  {
-    use(x);
-  }
+  { use(x); }
 }
 
 void target_map_from(int x) {
 #pragma omp target map(from : x)
-  {
-    x = 42;
-  }
+  { x = 42; }
 }
 
 void target_map_tofrom(int x) {
 #pragma omp target map(tofrom : x)
-  {
-    x = x + 1;
-  }
+  { x = x + 1; }
 }
 
 void target_map_multiple(int a, int b) {
 #pragma omp target map(to : a) map(from : b)
-  {
-    b = a;
-  }
+  { b = a; }
 }
 
 // Host wrappers
@@ -41,37 +33,37 @@ void target_map_multiple(int a, int b) {
 // LLVM-SAME:  i32 noundef %[[ARG:[^,)]+]]
 // LLVM:         %[[X_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM:         store i32 %[[ARG]], ptr %[[X_ADDR]], align 4
-// LLVM:         %[[BP:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
-// LLVM:         store ptr %[[X_ADDR]], ptr %[[BP]], align 8
-// LLVM:         %[[P:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 0
-// LLVM:         store ptr %[[X_ADDR]], ptr %[[P]], align 8
-// LLVM:         call i32 @__tgt_target_kernel(
-// LLVM:       omp_offload.failed:
-// LLVM:         call void @__omp_offloading_{{.*}}_target_map_to_l{{.*}}(ptr %[[X_ADDR]], ptr null)
+// LLVM:         %[[BP:.*]] = getelementptr inbounds [2 x ptr], ptr
+// %.offload_baseptrs, i32 0, i32 0 LLVM:         store ptr %[[X_ADDR]], ptr
+// %[[BP]], align 8 LLVM:         %[[P:.*]] = getelementptr inbounds [2 x ptr],
+// ptr %.offload_ptrs, i32 0, i32 0 LLVM:         store ptr %[[X_ADDR]], ptr
+// %[[P]], align 8 LLVM:         call i32 @__tgt_target_kernel( LLVM:
+// omp_offload.failed: LLVM:         call void
+// @__omp_offloading_{{.*}}_target_map_to_l{{.*}}(ptr %[[X_ADDR]], ptr null)
 
 // LLVM-LABEL: define {{.*}} void @target_map_from(
 // LLVM-SAME:  i32 noundef %[[ARG:[^,)]+]]
 // LLVM:         %[[X_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM:         store i32 %[[ARG]], ptr %[[X_ADDR]], align 4
-// LLVM:         %[[BP:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
-// LLVM:         store ptr %[[X_ADDR]], ptr %[[BP]], align 8
-// LLVM:         %[[P:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 0
-// LLVM:         store ptr %[[X_ADDR]], ptr %[[P]], align 8
-// LLVM:         call i32 @__tgt_target_kernel(
-// LLVM:       omp_offload.failed:
-// LLVM:         call void @__omp_offloading_{{.*}}_target_map_from_l{{.*}}(ptr %[[X_ADDR]], ptr null)
+// LLVM:         %[[BP:.*]] = getelementptr inbounds [2 x ptr], ptr
+// %.offload_baseptrs, i32 0, i32 0 LLVM:         store ptr %[[X_ADDR]], ptr
+// %[[BP]], align 8 LLVM:         %[[P:.*]] = getelementptr inbounds [2 x ptr],
+// ptr %.offload_ptrs, i32 0, i32 0 LLVM:         store ptr %[[X_ADDR]], ptr
+// %[[P]], align 8 LLVM:         call i32 @__tgt_target_kernel( LLVM:
+// omp_offload.failed: LLVM:         call void
+// @__omp_offloading_{{.*}}_target_map_from_l{{.*}}(ptr %[[X_ADDR]], ptr null)
 
 // LLVM-LABEL: define {{.*}} void @target_map_tofrom(
 // LLVM-SAME:  i32 noundef %[[ARG:[^,)]+]]
 // LLVM:         %[[X_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM:         store i32 %[[ARG]], ptr %[[X_ADDR]], align 4
-// LLVM:         %[[BP:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
-// LLVM:         store ptr %[[X_ADDR]], ptr %[[BP]], align 8
-// LLVM:         %[[P:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 0
-// LLVM:         store ptr %[[X_ADDR]], ptr %[[P]], align 8
-// LLVM:         call i32 @__tgt_target_kernel(
-// LLVM:       omp_offload.failed:
-// LLVM:         call void @__omp_offloading_{{.*}}_target_map_tofrom_l{{.*}}(ptr %[[X_ADDR]], ptr null)
+// LLVM:         %[[BP:.*]] = getelementptr inbounds [2 x ptr], ptr
+// %.offload_baseptrs, i32 0, i32 0 LLVM:         store ptr %[[X_ADDR]], ptr
+// %[[BP]], align 8 LLVM:         %[[P:.*]] = getelementptr inbounds [2 x ptr],
+// ptr %.offload_ptrs, i32 0, i32 0 LLVM:         store ptr %[[X_ADDR]], ptr
+// %[[P]], align 8 LLVM:         call i32 @__tgt_target_kernel( LLVM:
+// omp_offload.failed: LLVM:         call void
+// @__omp_offloading_{{.*}}_target_map_tofrom_l{{.*}}(ptr %[[X_ADDR]], ptr null)
 
 // LLVM-LABEL: define {{.*}} void @target_map_multiple(
 // LLVM-SAME:  i32 noundef %[[ARG_A:[^,)]+]], i32 noundef %[[ARG_B:[^,)]+]]
@@ -79,17 +71,18 @@ void target_map_multiple(int a, int b) {
 // LLVM:         %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM:         store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
 // LLVM:         store i32 %[[ARG_B]], ptr %[[B_ADDR]], align 4
-// LLVM:         %[[BP_A:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
-// LLVM:         store ptr %[[A_ADDR]], ptr %[[BP_A]], align 8
-// LLVM:         %[[P_A:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 0
-// LLVM:         store ptr %[[A_ADDR]], ptr %[[P_A]], align 8
-// LLVM:         %[[BP_B:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
-// LLVM:         store ptr %[[B_ADDR]], ptr %[[BP_B]], align 8
-// LLVM:         %[[P_B:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 1
-// LLVM:         store ptr %[[B_ADDR]], ptr %[[P_B]], align 8
-// LLVM:         call i32 @__tgt_target_kernel(
-// LLVM:       omp_offload.failed:
-// LLVM:         call void @__omp_offloading_{{.*}}_target_map_multiple_l{{.*}}(ptr %[[A_ADDR]], ptr %[[B_ADDR]], ptr null)
+// LLVM:         %[[BP_A:.*]] = getelementptr inbounds [3 x ptr], ptr
+// %.offload_baseptrs, i32 0, i32 0 LLVM:         store ptr %[[A_ADDR]], ptr
+// %[[BP_A]], align 8 LLVM:         %[[P_A:.*]] = getelementptr inbounds [3 x
+// ptr], ptr %.offload_ptrs, i32 0, i32 0 LLVM:         store ptr %[[A_ADDR]],
+// ptr %[[P_A]], align 8 LLVM:         %[[BP_B:.*]] = getelementptr inbounds [3
+// x ptr], ptr %.offload_baseptrs, i32 0, i32 1 LLVM:         store ptr
+// %[[B_ADDR]], ptr %[[BP_B]], align 8 LLVM:         %[[P_B:.*]] = getelementptr
+// inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 1 LLVM:         store ptr
+// %[[B_ADDR]], ptr %[[P_B]], align 8 LLVM:         call i32
+// @__tgt_target_kernel( LLVM:       omp_offload.failed: LLVM:         call void
+// @__omp_offloading_{{.*}}_target_map_multiple_l{{.*}}(ptr %[[A_ADDR]], ptr
+// %[[B_ADDR]], ptr null)
 
 // Outlined target functions
 //
@@ -114,11 +107,11 @@ void target_map_multiple(int a, int b) {
 // LLVM:         store i32 %[[ADD]], ptr %[[ARG]], align 4
 // LLVM:         ret void
 
-// LLVM-LABEL: define internal void @__omp_offloading_{{.*}}_target_map_multiple_l
-// LLVM-SAME:  (ptr %[[ARG_A:[^,]+]], ptr %[[ARG_B:[^,]+]], ptr
-// LLVM:         %[[A:.*]] = load i32, ptr %[[ARG_A]], align 4
-// LLVM:         store i32 %[[A]], ptr %[[ARG_B]], align 4
-// LLVM:         ret void
+// LLVM-LABEL: define internal void
+// @__omp_offloading_{{.*}}_target_map_multiple_l LLVM-SAME:  (ptr
+// %[[ARG_A:[^,]+]], ptr %[[ARG_B:[^,]+]], ptr LLVM:         %[[A:.*]] = load
+// i32, ptr %[[ARG_A]], align 4 LLVM:         store i32 %[[A]], ptr %[[ARG_B]],
+// align 4 LLVM:         ret void
 
 // OGCG interleaves host wrapper and outlined function per target region.
 
@@ -157,7 +150,7 @@ void target_map_multiple(int a, int b) {
 // OGCG:       omp_offload.failed:
 // OGCG:         call void @__omp_offloading_{{.*}}_target_map_multiple_l
 
-// OGCG-LABEL: define internal void @__omp_offloading_{{.*}}_target_map_multiple_l
-// OGCG:         %[[A:.*]] = load i32, ptr %{{.*}}, align 4
-// OGCG:         store i32 %[[A]], ptr %{{.*}}, align 4
-// OGCG:         ret void
+// OGCG-LABEL: define internal void
+// @__omp_offloading_{{.*}}_target_map_multiple_l OGCG:         %[[A:.*]] = load
+// i32, ptr %{{.*}}, align 4 OGCG:         store i32 %[[A]], ptr %{{.*}}, align
+// 4 OGCG:         ret void

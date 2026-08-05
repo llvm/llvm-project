@@ -1213,8 +1213,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                  << NumIsLocalCalls << " isLocal() calls\n";
 
   if (PrintTiming) {
-    llvm::errs() << "wall time [s]\t"
-                 << "process time [s]\t"
+    llvm::errs() << "wall time [s]\t" << "process time [s]\t"
                  << "instruction count\n";
     const llvm::TimeRecord &R = T.getTotalTime();
     llvm::errs() << llvm::format("%0.4f", R.getWallTime()) << "\t"

@@ -59,8 +59,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-simd-instr-opt"
 
-STATISTIC(NumModifiedInstr,
-          "Number of SIMD instructions modified");
+STATISTIC(NumModifiedInstr, "Number of SIMD instructions modified");
 
 #define AARCH64_VECTOR_BY_ELEMENT_OPT_NAME                                     \
   "AArch64 SIMD instructions optimization pass"
@@ -93,10 +92,7 @@ public:
   // store instructions replacement pass early or not for a particular target.
   InterlEarlyExitMap &InterlEarlyExit;
 
-  typedef enum {
-    VectorElem,
-    Interleave
-  } Subpass;
+  typedef enum { VectorElem, Interleave } Subpass;
 
   // Instruction represented by OrigOpc is replaced by instructions in ReplOpc.
   struct InstReplInfo {
@@ -107,13 +103,14 @@ public:
   };
 
 #define RuleST2(OpcOrg, OpcR0, OpcR1, OpcR2, RC)                               \
-  {OpcOrg, {OpcR0, OpcR1, OpcR2}, 3, &RC}
+  { OpcOrg, {OpcR0, OpcR1, OpcR2}, 3, &RC }
 #define RuleST4(OpcOrg, OpcR0, OpcR1, OpcR2, OpcR3, OpcR4, OpcR5, OpcR6,       \
                 OpcR7, OpcR8, OpcR9, RC)                                       \
-  {OpcOrg,                                                                     \
-   {OpcR0, OpcR1, OpcR2, OpcR3, OpcR4, OpcR5, OpcR6, OpcR7, OpcR8, OpcR9},     \
-   10,                                                                         \
-   &RC}
+  {                                                                            \
+    OpcOrg, {OpcR0, OpcR1, OpcR2, OpcR3, OpcR4,                                \
+             OpcR5, OpcR6, OpcR7, OpcR8, OpcR9},                               \
+        10, &RC                                                                \
+  }
 
   AArch64SIMDInstrOptImpl(SIMDInstrTableMap &SIMDInstrTable,
                           InterlEarlyExitMap &InterlEarlyExit)
@@ -124,7 +121,7 @@ public:
   /// array InstDescRepl.
   /// Return true if replacement is expected to be faster.
   bool shouldReplaceInst(MachineFunction *MF, const MCInstrDesc *InstDesc,
-                         SmallVectorImpl<const MCInstrDesc*> &ReplInstrMCID);
+                         SmallVectorImpl<const MCInstrDesc *> &ReplInstrMCID);
 
   /// Determine if we need to exit the instruction replacement optimization
   /// passes early. This makes sure that no compile time is spent in this pass
@@ -256,22 +253,19 @@ bool AArch64SIMDInstrOptImpl::shouldReplaceInst(
 
   unsigned SCIdx = InstDesc->getSchedClass();
   const MCSchedClassDesc *SCDesc =
-    SchedModel.getMCSchedModel()->getSchedClassDesc(SCIdx);
+      SchedModel.getMCSchedModel()->getSchedClassDesc(SCIdx);
 
   // If a target does not define resources for the instructions
   // of interest, then return false for no replacement.
   const MCSchedClassDesc *SCDescRepl;
-  if (!SCDesc->isValid() || SCDesc->isVariant())
-  {
+  if (!SCDesc->isValid() || SCDesc->isVariant()) {
     SIMDInstrTable[InstID] = false;
     return false;
   }
-  for (const auto *IDesc : InstDescRepl)
-  {
-    SCDescRepl = SchedModel.getMCSchedModel()->getSchedClassDesc(
-      IDesc->getSchedClass());
-    if (!SCDescRepl->isValid() || SCDescRepl->isVariant())
-    {
+  for (const auto *IDesc : InstDescRepl) {
+    SCDescRepl =
+        SchedModel.getMCSchedModel()->getSchedClassDesc(IDesc->getSchedClass());
+    if (!SCDescRepl->isValid() || SCDescRepl->isVariant()) {
       SIMDInstrTable[InstID] = false;
       return false;
     }
@@ -279,16 +273,13 @@ bool AArch64SIMDInstrOptImpl::shouldReplaceInst(
 
   // Replacement cost.
   unsigned ReplCost = 0;
-  for (const auto *IDesc :InstDescRepl)
+  for (const auto *IDesc : InstDescRepl)
     ReplCost += SchedModel.computeInstrLatency(IDesc->getOpcode());
 
-  if (SchedModel.computeInstrLatency(InstDesc->getOpcode()) > ReplCost)
-  {
+  if (SchedModel.computeInstrLatency(InstDesc->getOpcode()) > ReplCost) {
     SIMDInstrTable[InstID] = true;
     return true;
-  }
-  else
-  {
+  } else {
     SIMDInstrTable[InstID] = false;
     return false;
   }
@@ -446,7 +437,7 @@ bool AArch64SIMDInstrOptImpl::optimizeVectElement(MachineInstr &MI) {
     break;
   }
 
-  SmallVector<const MCInstrDesc*, 2> ReplInstrMCID;
+  SmallVector<const MCInstrDesc *, 2> ReplInstrMCID;
   ReplInstrMCID.push_back(DupMCID);
   ReplInstrMCID.push_back(MulMCID);
   if (!shouldReplaceInst(MI.getParent()->getParent(), &TII->get(MI.getOpcode()),
@@ -540,7 +531,7 @@ bool AArch64SIMDInstrOptImpl::optimizeLdStInterleave(MachineInstr &MI) {
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock &MBB = *MI.getParent();
   SmallVector<unsigned, MaxNumRepl> ZipDest;
-  SmallVector<const MCInstrDesc*, MaxNumRepl> ReplInstrMCID;
+  SmallVector<const MCInstrDesc *, MaxNumRepl> ReplInstrMCID;
 
   // If current instruction matches any of the rewriting rules, then
   // gather information about parameters of the new instructions.
@@ -670,13 +661,13 @@ bool AArch64SIMDInstrOptImpl::processSeqRegInst(MachineInstr *DefiningMI,
   if (DefiningMI->getOpcode() != AArch64::REG_SEQUENCE)
     return false;
 
-  for (unsigned i=0; i<NumArg; i++) {
-    StReg[i]     = DefiningMI->getOperand(2*i+1).getReg();
-    StRegKill[i] = getKillRegState(DefiningMI->getOperand(2*i+1).isKill());
+  for (unsigned i = 0; i < NumArg; i++) {
+    StReg[i] = DefiningMI->getOperand(2 * i + 1).getReg();
+    StRegKill[i] = getKillRegState(DefiningMI->getOperand(2 * i + 1).isKill());
 
     // Validation check for the other arguments.
-    if (DefiningMI->getOperand(2*i+2).isImm()) {
-      switch (DefiningMI->getOperand(2*i+2).getImm()) {
+    if (DefiningMI->getOperand(2 * i + 2).isImm()) {
+      switch (DefiningMI->getOperand(2 * i + 2).getImm()) {
       default:
         return false;
 
@@ -690,8 +681,7 @@ bool AArch64SIMDInstrOptImpl::processSeqRegInst(MachineInstr *DefiningMI,
       case AArch64::qsub3:
         break;
       }
-    }
-    else
+    } else
       return false;
   }
   return true;
@@ -740,7 +730,7 @@ bool AArch64SIMDInstrOptImpl::run(MachineFunction &MF) {
         for (MachineInstr &MI : MBB) {
           bool InstRewrite;
           if (OptimizationKind == VectorElem)
-            InstRewrite = optimizeVectElement(MI) ;
+            InstRewrite = optimizeVectElement(MI);
           else
             InstRewrite = optimizeLdStInterleave(MI);
           if (InstRewrite) {

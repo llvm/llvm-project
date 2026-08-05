@@ -19,10 +19,10 @@
 #include "test_macros.h"
 
 void f() {
-    std::optional<std::in_place_t> opt; // expected-note {{requested here}}
-    // expected-error@*:* 1 {{instantiation of optional with in_place_t is ill-formed}}
+  std::optional<std::in_place_t> opt; // expected-note {{requested here}}
+  // expected-error@*:* 1 {{instantiation of optional with in_place_t is ill-formed}}
 #if TEST_STD_VER >= 26
-    std::optional<std::in_place_t&> opt1; // expected-note {{requested here}}
-    // expected-error@*:* 1 {{instantiation of optional with in_place_t is ill-formed}}
+  std::optional<std::in_place_t&> opt1; // expected-note {{requested here}}
+  // expected-error@*:* 1 {{instantiation of optional with in_place_t is ill-formed}}
 #endif
 }

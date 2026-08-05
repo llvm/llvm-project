@@ -27,10 +27,7 @@ void f() {
 }
 #else
 void f();
-void g() {
-}
+void g() {}
 
-int main() {
-  f();
-}
+int main() { f(); }
 #endif

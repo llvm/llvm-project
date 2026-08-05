@@ -2532,8 +2532,7 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const CodeCompletion &C) {
   OS << "Signature: " << "\"" << C.Signature << "\", "
-     << "SnippetSuffix: " << "\"" << C.SnippetSuffix << "\""
-     << ", Rendered:";
+     << "SnippetSuffix: " << "\"" << C.SnippetSuffix << "\"" << ", Rendered:";
   // For now just lean on CompletionItem.
   return OS << C.render(CodeCompleteOptions());
 }
@@ -2541,8 +2540,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const CodeCompletion &C) {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const CodeCompleteResult &R) {
   OS << "CodeCompleteResult: " << R.Completions.size() << (R.HasMore ? "+" : "")
-     << " (" << getCompletionKindString(R.Context) << ")"
-     << " items:\n";
+     << " (" << getCompletionKindString(R.Context) << ")" << " items:\n";
   for (const auto &C : R.Completions)
     OS << C << "\n";
   return OS;

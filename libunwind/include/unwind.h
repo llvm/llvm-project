@@ -15,16 +15,16 @@
 
 #include <__libunwind_config.h>
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__) && defined(_WIN32)
-#include <windows.h>
 #include <ntverp.h>
+#include <windows.h>
 #endif
 
 #if defined(__APPLE__)
-#define LIBUNWIND_UNAVAIL __attribute__ (( unavailable ))
+#define LIBUNWIND_UNAVAIL __attribute__((unavailable))
 #else
 #define LIBUNWIND_UNAVAIL
 #endif
@@ -53,7 +53,7 @@ typedef enum {
   _UA_END_OF_STACK = 16 // gcc extension to C++ ABI
 } _Unwind_Action;
 
-typedef struct _Unwind_Context _Unwind_Context;   // opaque
+typedef struct _Unwind_Context _Unwind_Context; // opaque
 
 #if defined(_LIBUNWIND_ARM_EHABI)
 #include <unwind_arm_ehabi.h>
@@ -65,13 +65,10 @@ typedef struct _Unwind_Context _Unwind_Context;   // opaque
 #include <unwind_wasm.h>
 #endif
 
-typedef _Unwind_Reason_Code (*_Unwind_Stop_Fn)
-    (int version,
-     _Unwind_Action actions,
-     _Unwind_Exception_Class exceptionClass,
-     _Unwind_Exception* exceptionObject,
-     struct _Unwind_Context* context,
-     void* stop_parameter);
+typedef _Unwind_Reason_Code (*_Unwind_Stop_Fn)(
+    int version, _Unwind_Action actions, _Unwind_Exception_Class exceptionClass,
+    _Unwind_Exception *exceptionObject, struct _Unwind_Context *context,
+    void *stop_parameter);
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,15 +76,15 @@ extern "C" {
 
 extern uintptr_t _Unwind_GetRegionStart(struct _Unwind_Context *context);
 extern uintptr_t
-    _Unwind_GetLanguageSpecificData(struct _Unwind_Context *context);
+_Unwind_GetLanguageSpecificData(struct _Unwind_Context *context);
 #ifdef __USING_SJLJ_EXCEPTIONS__
 extern _Unwind_Reason_Code
-    _Unwind_SjLj_ForcedUnwind(_Unwind_Exception *exception_object,
-                              _Unwind_Stop_Fn stop, void *stop_parameter);
+_Unwind_SjLj_ForcedUnwind(_Unwind_Exception *exception_object,
+                          _Unwind_Stop_Fn stop, void *stop_parameter);
 #else
 extern _Unwind_Reason_Code
-    _Unwind_ForcedUnwind(_Unwind_Exception *exception_object,
-                         _Unwind_Stop_Fn stop, void *stop_parameter);
+_Unwind_ForcedUnwind(_Unwind_Exception *exception_object, _Unwind_Stop_Fn stop,
+                     void *stop_parameter);
 #endif
 
 #ifdef __USING_SJLJ_EXCEPTIONS__
@@ -105,10 +102,10 @@ extern void _Unwind_SjLj_Unregister(_Unwind_FunctionContext_t fc);
 //
 #ifdef __USING_SJLJ_EXCEPTIONS__
 extern _Unwind_Reason_Code
-    _Unwind_SjLj_Resume_or_Rethrow(_Unwind_Exception *exception_object);
+_Unwind_SjLj_Resume_or_Rethrow(_Unwind_Exception *exception_object);
 #else
 extern _Unwind_Reason_Code
-    _Unwind_Resume_or_Rethrow(_Unwind_Exception *exception_object);
+_Unwind_Resume_or_Rethrow(_Unwind_Exception *exception_object);
 #endif
 
 // _Unwind_Backtrace() is a gcc extension that walks the stack and calls the
@@ -123,7 +120,6 @@ extern _Unwind_Reason_Code _Unwind_Backtrace(_Unwind_Trace_Fn, void *);
 // current frame.
 extern uintptr_t _Unwind_GetCFA(struct _Unwind_Context *);
 
-
 // _Unwind_GetIPInfo is a gcc extension that can be called from within a
 // personality handler.  Similar to _Unwind_GetIP() but also returns in
 // *ipBefore a non-zero value if the instruction pointer is at or before the
@@ -132,7 +128,6 @@ extern uintptr_t _Unwind_GetCFA(struct _Unwind_Context *);
 // end of the function containing the call instruction.
 extern uintptr_t _Unwind_GetIPInfo(struct _Unwind_Context *context,
                                    int *ipBefore);
-
 
 // __register_frame() is used with dynamically generated code to register the
 // FDE for a generated (JIT) code.  The FDE must use pc-rel addressing to point
@@ -155,7 +150,6 @@ struct dwarf_eh_bases {
 };
 extern const void *_Unwind_Find_FDE(const void *pc, struct dwarf_eh_bases *);
 
-
 // This function attempts to find the start (address of first instruction) of
 // a function given an address inside the function.  It only works if the
 // function has an FDE (DWARF unwind info).
@@ -165,29 +159,25 @@ extern void *_Unwind_FindEnclosingFunction(void *pc);
 
 // Mac OS X does not support text-rel and data-rel addressing so these functions
 // are unimplemented.
-extern uintptr_t _Unwind_GetDataRelBase(struct _Unwind_Context *context)
-    LIBUNWIND_UNAVAIL;
-extern uintptr_t _Unwind_GetTextRelBase(struct _Unwind_Context *context)
-    LIBUNWIND_UNAVAIL;
+extern uintptr_t
+_Unwind_GetDataRelBase(struct _Unwind_Context *context) LIBUNWIND_UNAVAIL;
+extern uintptr_t
+_Unwind_GetTextRelBase(struct _Unwind_Context *context) LIBUNWIND_UNAVAIL;
 
 // Mac OS X 10.4 and 10.5 had implementations of these functions in
 // libgcc_s.dylib, but they never worked.
 /// These functions are no longer available on Mac OS X.
 extern void __register_frame_info_bases(const void *fde, void *ob, void *tb,
                                         void *db) LIBUNWIND_UNAVAIL;
-extern void __register_frame_info(const void *fde, void *ob)
-    LIBUNWIND_UNAVAIL;
+extern void __register_frame_info(const void *fde, void *ob) LIBUNWIND_UNAVAIL;
 extern void __register_frame_info_table_bases(const void *fde, void *ob,
-                                              void *tb, void *db)
-    LIBUNWIND_UNAVAIL;
-extern void __register_frame_info_table(const void *fde, void *ob)
-    LIBUNWIND_UNAVAIL;
-extern void __register_frame_table(const void *fde)
-    LIBUNWIND_UNAVAIL;
-extern void *__deregister_frame_info(const void *fde)
-    LIBUNWIND_UNAVAIL;
-extern void *__deregister_frame_info_bases(const void *fde)
-    LIBUNWIND_UNAVAIL;
+                                              void *tb,
+                                              void *db) LIBUNWIND_UNAVAIL;
+extern void __register_frame_info_table(const void *fde,
+                                        void *ob) LIBUNWIND_UNAVAIL;
+extern void __register_frame_table(const void *fde) LIBUNWIND_UNAVAIL;
+extern void *__deregister_frame_info(const void *fde) LIBUNWIND_UNAVAIL;
+extern void *__deregister_frame_info_bases(const void *fde) LIBUNWIND_UNAVAIL;
 
 #if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
 #ifndef _WIN32

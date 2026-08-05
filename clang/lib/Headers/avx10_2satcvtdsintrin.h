@@ -101,8 +101,8 @@ _mm_cvtts_ss_u32(__m128 __A) {
   ((long long)__builtin_ia32_vcvttsd2sis64((__v2df)(__m128d)(__A),             \
                                            (const int)(__R)))
 
-static __inline__ unsigned long long
-    __DEFAULT_FN_ATTRS128 _mm_cvtts_ss_u64(__m128 __A) {
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS128
+_mm_cvtts_ss_u64(__m128 __A) {
   return (unsigned long long)__builtin_ia32_vcvttss2usis64(
       (__v4sf)__A, _MM_FROUND_CUR_DIRECTION);
 }

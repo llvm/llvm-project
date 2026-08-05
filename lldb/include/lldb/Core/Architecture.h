@@ -81,7 +81,8 @@ public:
   /// that doesn't have code in it, LLDB_INVALID_ADDRESS will be
   /// returned.
   virtual lldb::addr_t GetCallableLoadAddress(
-      lldb::addr_t addr, AddressClass addr_class = AddressClass::eInvalid) const {
+      lldb::addr_t addr,
+      AddressClass addr_class = AddressClass::eInvalid) const {
     return addr;
   }
 
@@ -96,8 +97,9 @@ public:
   /// that doesn't have code in it, LLDB_INVALID_ADDRESS will be
   /// returned.
 
-  virtual lldb::addr_t GetOpcodeLoadAddress(
-      lldb::addr_t addr, AddressClass addr_class = AddressClass::eInvalid) const {
+  virtual lldb::addr_t
+  GetOpcodeLoadAddress(lldb::addr_t addr,
+                       AddressClass addr_class = AddressClass::eInvalid) const {
     return addr;
   }
 

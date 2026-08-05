@@ -1,6 +1,9 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios   -coverage-data-file=/dev/null                                -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,OFF
-// RUN: %clang_cc1 -triple arm64e-apple-ios  -coverage-data-file=/dev/null                                -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,OFF
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -coverage-data-file=/dev/null                                -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,OFF
+// RUN: %clang_cc1 -triple arm64-apple-ios   -coverage-data-file=/dev/null
+// -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,OFF RUN: %clang_cc1
+// -triple arm64e-apple-ios  -coverage-data-file=/dev/null -emit-llvm %s -o - |
+// FileCheck %s --check-prefixes=ALL,OFF RUN: %clang_cc1 -triple
+// aarch64-linux-gnu -coverage-data-file=/dev/null -emit-llvm %s -o - |
+// FileCheck %s --check-prefixes=ALL,OFF
 
 // RUN: %clang_cc1 -triple arm64-apple-ios   -coverage-data-file=/dev/null -fptrauth-returns              -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,RETS \
 // RUN:   --implicit-check-not=ptrauth-auth-traps --implicit-check-not=ptrauth-indirect-gotos --implicit-check-not=aarch64-jump-table-hardening

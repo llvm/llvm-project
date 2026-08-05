@@ -19,14 +19,15 @@ struct S1 {
 
 void S1::f1() {}
 
-__attribute__((visibility("default"))) extern "C"
-void* dso_symbol() { return new S1(); }
+__attribute__((visibility("default"))) extern "C" void *dso_symbol() {
+  return new S1();
+}
 
 #else
 
 int main() {
-  void* (*fp)(void) =
-      reinterpret_cast<void*(*)(void)>(dlsym(RTLD_DEFAULT, "dso_symbol"));
+  void *(*fp)(void) =
+      reinterpret_cast<void *(*)(void)>(dlsym(RTLD_DEFAULT, "dso_symbol"));
   if (!fp) {
     perror("failed to resolve dso_symbol");
     return 1;
@@ -42,7 +43,7 @@ int main() {
   // CHECK: invalid vtable
   // CHECK: check failed in {{.*}}_exe_suffix, vtable located in {{.*}}[[DSONAME]]
   // CHECK: SUMMARY: UndefinedBehaviorSanitizer: cfi-unrelated-cast
-  S1 *Scast = reinterpret_cast<S1*>(S); // trigger cfi-unrelated-cast failure
+  S1 *Scast = reinterpret_cast<S1 *>(S); // trigger cfi-unrelated-cast failure
 
   return 0;
 }

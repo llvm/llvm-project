@@ -22,7 +22,7 @@ namespace llvm {
 class APFloat;
 class APSInt;
 class APInt;
-}
+} // namespace llvm
 namespace clang {
 class QualType;
 class LangOptions;

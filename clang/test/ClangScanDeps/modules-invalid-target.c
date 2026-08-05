@@ -23,7 +23,8 @@ void m(void);
 
 //--- cdb.json.template
 [{
-  "file": "",
-  "directory": "DIR",
-  "command": "clang -fmodules -fmodules-cache-path=DIR/cache -I DIR -x c --target=unknown-unknown-unknown"
+  "file" : "",
+  "directory" : "DIR",
+  "command" : "clang -fmodules -fmodules-cache-path=DIR/cache -I DIR -x c "
+              "--target=unknown-unknown-unknown"
 }]

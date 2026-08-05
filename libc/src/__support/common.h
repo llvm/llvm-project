@@ -81,7 +81,7 @@
 // clang-format on
 #endif // LIBC_TARGET_USES_LEADING_UNDERSCORE
 
-#else  // LIBC_COPT_PUBLIC_PACKAGING
+#else // LIBC_COPT_PUBLIC_PACKAGING
 #define LLVM_LIBC_FUNCTION_IMPL_4(type, name, arglist, c_alias)                \
   type name arglist
 
@@ -97,7 +97,8 @@
 // LLVM_LIBC_FUNCTION(type, name, arglist, #name)
 #define LLVM_LIBC_FUNCTION(...)                                                \
   GET_FIFTH(__VA_ARGS__, LLVM_LIBC_FUNCTION_IMPL_4, LLVM_LIBC_FUNCTION_IMPL_3, \
-            GET_NOTHING)(__VA_ARGS__)
+            GET_NOTHING)                                                       \
+  (__VA_ARGS__)
 
 // See comment on LLVM_LIBC_FUNCTION_IMPL_4 for why this checks
 // LIBC_TARGET_USES_LEADING_UNDERSCORE.

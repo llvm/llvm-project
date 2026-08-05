@@ -26,12 +26,12 @@
 #include <cstdio>
 
 #ifdef _WIN32
-  #define WIN32_LEAN_AND_MEAN
-  #define NOGDI
-  #ifndef NOMINMAX
-    #define NOMINMAX
-  #endif
-  #include <windows.h>
+#define WIN32_LEAN_AND_MEAN
+#define NOGDI
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #endif
 
 using namespace clang::driver;
@@ -268,10 +268,10 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         llvm::is_contained(defines, "_DLL")) {
       // Make sure the dynamic runtime thunk is not optimized out at link time
       // to ensure proper SEH handling.
-      CmdArgs.push_back(Args.MakeArgString(
-          TC.getArch() == llvm::Triple::x86
-              ? "-include:___asan_seh_interceptor"
-              : "-include:__asan_seh_interceptor"));
+      CmdArgs.push_back(
+          Args.MakeArgString(TC.getArch() == llvm::Triple::x86
+                                 ? "-include:___asan_seh_interceptor"
+                                 : "-include:__asan_seh_interceptor"));
       // Make sure the linker consider all object files from the dynamic runtime
       // thunk.
       CmdArgs.push_back(Args.MakeArgString(
@@ -741,8 +741,8 @@ static VersionTuple getMSVCVersionFromExe(const std::string &BinDir) {
   if (!llvm::ConvertUTF8toWide(ClExe.c_str(), ClExeWide))
     return Version;
 
-  const DWORD VersionSize = ::GetFileVersionInfoSizeW(ClExeWide.c_str(),
-                                                      nullptr);
+  const DWORD VersionSize =
+      ::GetFileVersionInfoSizeW(ClExeWide.c_str(), nullptr);
   if (VersionSize == 0)
     return Version;
 
@@ -759,7 +759,7 @@ static VersionTuple getMSVCVersionFromExe(const std::string &BinDir) {
     return Version;
 
   const unsigned Major = (FileInfo->dwFileVersionMS >> 16) & 0xFFFF;
-  const unsigned Minor = (FileInfo->dwFileVersionMS      ) & 0xFFFF;
+  const unsigned Minor = (FileInfo->dwFileVersionMS) & 0xFFFF;
   const unsigned Micro = (FileInfo->dwFileVersionLS >> 16) & 0xFFFF;
 
   Version = VersionTuple(Major, Minor, Micro);
@@ -939,12 +939,11 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   // As a fallback, select default install paths.
   // FIXME: Don't guess drives and paths like this on Windows.
   const StringRef Paths[] = {
-    "C:/Program Files/Microsoft Visual Studio 10.0/VC/include",
-    "C:/Program Files/Microsoft Visual Studio 9.0/VC/include",
-    "C:/Program Files/Microsoft Visual Studio 9.0/VC/PlatformSDK/Include",
-    "C:/Program Files/Microsoft Visual Studio 8/VC/include",
-    "C:/Program Files/Microsoft Visual Studio 8/VC/PlatformSDK/Include"
-  };
+      "C:/Program Files/Microsoft Visual Studio 10.0/VC/include",
+      "C:/Program Files/Microsoft Visual Studio 9.0/VC/include",
+      "C:/Program Files/Microsoft Visual Studio 9.0/VC/PlatformSDK/Include",
+      "C:/Program Files/Microsoft Visual Studio 8/VC/include",
+      "C:/Program Files/Microsoft Visual Studio 8/VC/PlatformSDK/Include"};
   addSystemIncludes(DriverArgs, CC1Args, Paths);
 #endif
 }
@@ -1065,7 +1064,8 @@ static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
           DAL.AddFlagArg(A, Opts.getOption(options::OPT_fno_inline));
           break;
         case '1':
-          DAL.AddFlagArg(A, Opts.getOption(options::OPT_finline_hint_functions));
+          DAL.AddFlagArg(A,
+                         Opts.getOption(options::OPT_finline_hint_functions));
           break;
         case '2':
         case '3':
@@ -1100,11 +1100,10 @@ static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
       }
       if (SupportsForcingFramePointer) {
         if (OmitFramePointer)
-          DAL.AddFlagArg(A,
-                         Opts.getOption(options::OPT_fomit_frame_pointer));
+          DAL.AddFlagArg(A, Opts.getOption(options::OPT_fomit_frame_pointer));
         else
-          DAL.AddFlagArg(
-              A, Opts.getOption(options::OPT_fno_omit_frame_pointer));
+          DAL.AddFlagArg(A,
+                         Opts.getOption(options::OPT_fno_omit_frame_pointer));
       } else {
         // Don't warn about /Oy- in x86-64 builds (where
         // SupportsForcingFramePointer is false).  The flag having no effect

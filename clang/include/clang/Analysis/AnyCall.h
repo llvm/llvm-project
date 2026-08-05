@@ -100,12 +100,11 @@ public:
   AnyCall(const FunctionDecl *D) : E(nullptr), D(D) {
     if (isa<CXXConstructorDecl>(D)) {
       K = Constructor;
-    } else if (isa <CXXDestructorDecl>(D)) {
+    } else if (isa<CXXDestructorDecl>(D)) {
       K = Destructor;
     } else {
       K = Function;
     }
-
   }
 
   /// If @c E is a generic call (to ObjC method /function/block/etc),
@@ -231,17 +230,11 @@ public:
     return nullptr;
   }
 
-  const Decl *getDecl() const {
-    return D;
-  }
+  const Decl *getDecl() const { return D; }
 
-  const Expr *getExpr() const {
-    return E;
-  }
+  const Expr *getExpr() const { return E; }
 
-  Kind getKind() const {
-    return K;
-  }
+  Kind getKind() const { return K; }
 
   void dump() const {
     if (E)
@@ -251,6 +244,6 @@ public:
   }
 };
 
-}
+} // namespace clang
 
 #endif // LLVM_CLANG_ANALYSIS_ANYCALL_H

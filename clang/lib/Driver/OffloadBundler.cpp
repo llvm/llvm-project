@@ -1707,7 +1707,7 @@ Error OffloadBundler::UnbundleArchive() {
 
       CodeObject = ((*NextTripleOrErr).has_value()) ? **NextTripleOrErr : "";
     } // End of processing of all bundle entries of this child of input archive.
-  }   // End of while over children of input archive.
+  } // End of while over children of input archive.
 
   assert(!ArchiveErr && "Error occurred while reading archive!");
 

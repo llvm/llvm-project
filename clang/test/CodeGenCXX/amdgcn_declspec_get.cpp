@@ -4,10 +4,8 @@
 int get_x();
 
 struct A {
-   __declspec(property(get = _get_x)) int x;
-   static int _get_x(void) {
-     return get_x();
-   };
+  __declspec(property(get = _get_x)) int x;
+  static int _get_x(void) { return get_x(); };
 };
 
 extern const A a;
@@ -19,7 +17,4 @@ extern const A a;
 // CHECK:  %call = call noundef i32 @_ZN1A6_get_xEv()
 // CHECK:  store i32 %call, ptr %[[ii]]
 // CHECK:  call void @llvm.lifetime.end.p5(ptr addrspace(5) %i)
-void test()
-{
-  int i = a.x;
-}
+void test() { int i = a.x; }

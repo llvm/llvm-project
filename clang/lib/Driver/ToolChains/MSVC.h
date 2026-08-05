@@ -85,9 +85,7 @@ public:
     return llvm::DebuggerKind::Default;
   }
 
-  unsigned GetDefaultDwarfVersion() const override {
-    return 4;
-  }
+  unsigned GetDefaultDwarfVersion() const override { return 4; }
 
   std::string getSubDirectoryPath(llvm::SubDirectoryType Type,
                                   llvm::StringRef SubdirParent = "") const;
@@ -119,8 +117,8 @@ public:
   void addSYCLIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                           llvm::opt::ArgStringList &CC1Args) const override;
 
-  bool getWindowsSDKLibraryPath(
-      const llvm::opt::ArgList &Args, std::string &path) const;
+  bool getWindowsSDKLibraryPath(const llvm::opt::ArgList &Args,
+                                std::string &path) const;
   bool getUniversalCRTLibraryPath(const llvm::opt::ArgList &Args,
                                   std::string &path) const;
   bool useUniversalCRT() const;

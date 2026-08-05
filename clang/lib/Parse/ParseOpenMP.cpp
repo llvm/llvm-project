@@ -864,8 +864,7 @@ void Parser::parseOMPTraitPropertyKind(OMPTraitProperty &TIProperty,
     Diag(NameLoc, diag::note_omp_declare_variant_ctx_is_a)
         << Name << CONTEXT_SELECTOR_SET_LVL << CONTEXT_TRAIT_LVL;
     Diag(NameLoc, diag::note_omp_declare_variant_ctx_try)
-        << Name << "<selector-name>"
-        << "(<property-name>)";
+        << Name << "<selector-name>" << "(<property-name>)";
     return;
   }
   TraitSelector SelectorForName =
@@ -1029,8 +1028,7 @@ void Parser::parseOMPTraitSelectorKind(OMPTraitSelector &TISelector,
     Diag(NameLoc, diag::note_omp_declare_variant_ctx_is_a)
         << Name << CONTEXT_SELECTOR_SET_LVL << CONTEXT_SELECTOR_LVL;
     Diag(NameLoc, diag::note_omp_declare_variant_ctx_try)
-        << Name << "<selector-name>"
-        << "<property-name>";
+        << Name << "<selector-name>" << "<property-name>";
     return;
   }
   for (const auto &PotentialSet :
@@ -1070,8 +1068,7 @@ static ExprResult parseContextScore(Parser &P) {
     (void)P.ConsumeAnyToken();
   else
     P.Diag(P.getCurToken(), diag::warn_omp_declare_variant_expected)
-        << "':'"
-        << "score expression";
+        << "':'" << "score expression";
   return ScoreExpr;
 }
 
@@ -1849,8 +1846,7 @@ void Parser::ParseOMPDeclareTargetClauses(
         if (DevTypeData) {
           if (DeviceTypeLoc.isValid()) {
             // We already saw another device_type clause, diagnose it.
-            Diag(DevTypeData->Loc,
-                 diag::warn_omp_more_one_device_type_clause);
+            Diag(DevTypeData->Loc, diag::warn_omp_more_one_device_type_clause);
             break;
           }
           switch (static_cast<OpenMPDeviceType>(DevTypeData->Type)) {
@@ -4022,8 +4018,7 @@ OMPClause *Parser::ParseOpenMPSimpleClause(OpenMPClauseKind Kind,
     return nullptr;
   if (getLangOpts().OpenMP < 51 && Kind == OMPC_default &&
       (static_cast<DefaultKind>(Val->Type) == OMP_DEFAULT_private ||
-       static_cast<DefaultKind>(Val->Type) ==
-           OMP_DEFAULT_firstprivate)) {
+       static_cast<DefaultKind>(Val->Type) == OMP_DEFAULT_firstprivate)) {
     Diag(Val->LOpen, diag::err_omp_invalid_dsa)
         << getOpenMPClauseName(static_cast<DefaultKind>(Val->Type) ==
                                        OMP_DEFAULT_private

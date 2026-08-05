@@ -1,8 +1,8 @@
 // Test OpenMP module attributes in CIR output.
 
 // Host, x86_64, no target triples
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -fclangir -emit-cir %s -o - \
-// RUN:   | FileCheck %s --check-prefix=HOST
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -fclangir -emit-cir
+// %s -o - \ RUN:   | FileCheck %s --check-prefix=HOST
 
 // HOST: module {{.*}} attributes {
 // HOST-SAME: omp.is_gpu = false
@@ -10,14 +10,16 @@
 // HOST-SAME: omp.version = #omp.version<version = {{[0-9]+}}>
 
 // Host with target triples
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -fclangir -emit-cir \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -fclangir -emit-cir
+// \
 // RUN:   -fopenmp-targets=amdgpu-amd-amdhsa,nvptx64-nvidia-cuda %s -o - \
 // RUN:   | FileCheck %s --check-prefix=HOST-TRIPLES
 
 // HOST-TRIPLES: module {{.*}} attributes {
 // HOST-TRIPLES-SAME: omp.is_gpu = false
 // HOST-TRIPLES-SAME: omp.is_target_device = false
-// HOST-TRIPLES-SAME: omp.target_triples = ["amdgpu-amd-amdhsa", "nvptx64-nvidia-cuda"]
+// HOST-TRIPLES-SAME: omp.target_triples = ["amdgpu-amd-amdhsa",
+// "nvptx64-nvidia-cuda"]
 
 // Device, AMDGPU
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fopenmp -fclangir -emit-cir \
@@ -54,12 +56,13 @@
 // RUN:   | FileCheck %s --check-prefix=DEVICE-FLAGS
 
 // DEVICE-FLAGS: module {{.*}}  attributes {
-// DEVICE-FLAGS-SAME: omp.flags = #omp.flags<assume_no_thread_state = true, assume_no_nested_parallelism = true
-// DEVICE-FLAGS-SAME: omp.is_gpu = true
+// DEVICE-FLAGS-SAME: omp.flags = #omp.flags<assume_no_thread_state = true,
+// assume_no_nested_parallelism = true DEVICE-FLAGS-SAME: omp.is_gpu = true
 // DEVICE-FLAGS-SAME: omp.is_target_device = true
 
 // Force USM (host)
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -fclangir -emit-cir \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -fclangir -emit-cir
+// \
 // RUN:   -fopenmp-force-usm %s -o - \
 // RUN:   | FileCheck %s --check-prefix=USM
 

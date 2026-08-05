@@ -12,9 +12,9 @@
 
 #include "ubsan_platform.h"
 #if CAN_SANITIZE_UB
-#include "ubsan_handlers.h"
 #include "ubsan_diag.h"
 #include "ubsan_flags.h"
+#include "ubsan_handlers.h"
 #include "ubsan_monitor.h"
 #include "ubsan_value.h"
 
@@ -76,12 +76,19 @@ enum TypeCheckKind {
   TCK_DynamicOperation
 };
 
-extern const char *const TypeCheckKinds[] = {
-    "load of", "store to", "reference binding to", "member access within",
-    "member call on", "constructor call on", "downcast of", "downcast of",
-    "upcast of", "cast to virtual base of", "_Nonnull binding to",
-    "dynamic operation on"};
-}
+extern const char *const TypeCheckKinds[] = {"load of",
+                                             "store to",
+                                             "reference binding to",
+                                             "member access within",
+                                             "member call on",
+                                             "constructor call on",
+                                             "downcast of",
+                                             "downcast of",
+                                             "upcast of",
+                                             "cast to virtual base of",
+                                             "_Nonnull binding to",
+                                             "dynamic operation on"};
+} // namespace __ubsan
 
 static void handleTypeMismatchImpl(TypeMismatchData *Data, ValueHandle Pointer,
                                    ReportOptions Opts) {
@@ -118,14 +125,16 @@ static void handleTypeMismatchImpl(TypeMismatchData *Data, ValueHandle Pointer,
         << TypeCheckKinds[Data->TypeCheckKind] << Data->Type;
     break;
   case ErrorType::MisalignedPointerUse:
-    Diag(Loc, DL_Error, ET, "%0 misaligned address %1 for type %3, "
-                        "which requires %2 byte alignment")
+    Diag(Loc, DL_Error, ET,
+         "%0 misaligned address %1 for type %3, "
+         "which requires %2 byte alignment")
         << TypeCheckKinds[Data->TypeCheckKind] << (void *)Pointer << Alignment
         << Data->Type;
     break;
   case ErrorType::InsufficientObjectSize:
-    Diag(Loc, DL_Error, ET, "%0 address %1 with insufficient space "
-                        "for an object of type %2")
+    Diag(Loc, DL_Error, ET,
+         "%0 address %1 with insufficient space "
+         "for an object of type %2")
         << TypeCheckKinds[Data->TypeCheckKind] << (void *)Pointer << Data->Type;
     break;
   default:
@@ -224,8 +233,9 @@ static void handleIntegerOverflowImpl(OverflowData *Data, ValueHandle LHS,
 
   ScopedReport R(Opts, Loc, ET);
 
-  Diag(Loc, DL_Error, ET, "%0 integer overflow: "
-                          "%1 %2 %3 cannot be represented in type %4")
+  Diag(Loc, DL_Error, ET,
+       "%0 integer overflow: "
+       "%1 %2 %3 cannot be represented in type %4")
       << (IsSigned ? "signed" : "unsigned") << Value(Data->Type, LHS)
       << Operator << RHS << Data->Type;
 }
@@ -277,7 +287,7 @@ void __ubsan::__ubsan_handle_negate_overflow(OverflowData *Data,
   handleNegateOverflowImpl(Data, OldVal, Opts);
 }
 void __ubsan::__ubsan_handle_negate_overflow_abort(OverflowData *Data,
-                                                    ValueHandle OldVal) {
+                                                   ValueHandle OldVal) {
   GET_REPORT_OPTIONS(true);
   handleNegateOverflowImpl(Data, OldVal, Opts);
   Die();
@@ -320,8 +330,8 @@ void __ubsan::__ubsan_handle_divrem_overflow(OverflowData *Data,
   handleDivremOverflowImpl(Data, LHS, RHS, Opts);
 }
 void __ubsan::__ubsan_handle_divrem_overflow_abort(OverflowData *Data,
-                                                    ValueHandle LHS,
-                                                    ValueHandle RHS) {
+                                                   ValueHandle LHS,
+                                                   ValueHandle RHS) {
   GET_REPORT_OPTIONS(true);
   handleDivremOverflowImpl(Data, LHS, RHS, Opts);
   Die();
@@ -370,9 +380,7 @@ void __ubsan::__ubsan_handle_shift_out_of_bounds(ShiftOutOfBoundsData *Data,
   handleShiftOutOfBoundsImpl(Data, LHS, RHS, Opts);
 }
 void __ubsan::__ubsan_handle_shift_out_of_bounds_abort(
-                                                     ShiftOutOfBoundsData *Data,
-                                                     ValueHandle LHS,
-                                                     ValueHandle RHS) {
+    ShiftOutOfBoundsData *Data, ValueHandle LHS, ValueHandle RHS) {
   GET_REPORT_OPTIONS(true);
   handleShiftOutOfBoundsImpl(Data, LHS, RHS, Opts);
   Die();
@@ -390,7 +398,7 @@ static void handleOutOfBoundsImpl(OutOfBoundsData *Data, ValueHandle Index,
 
   Value IndexVal(Data->IndexType, Index);
   Diag(Loc, DL_Error, ET, "index %0 out of bounds for type %1")
-    << IndexVal << Data->ArrayType;
+      << IndexVal << Data->ArrayType;
 }
 
 void __ubsan::__ubsan_handle_out_of_bounds(OutOfBoundsData *Data,
@@ -465,8 +473,9 @@ static void handleVLABoundNotPositive(VLABoundData *Data, ValueHandle Bound,
 
   ScopedReport R(Opts, Loc, ET);
 
-  Diag(Loc, DL_Error, ET, "variable length array bound evaluates to "
-                          "non-positive value %0")
+  Diag(Loc, DL_Error, ET,
+       "variable length array bound evaluates to "
+       "non-positive value %0")
       << Value(Data->Type, Bound);
 }
 
@@ -794,8 +803,7 @@ void __ubsan::__ubsan_handle_nullability_arg_abort(NonNullArgData *Data) {
 }
 
 static void handlePointerOverflowImpl(PointerOverflowData *Data,
-                                      ValueHandle Base,
-                                      ValueHandle Result,
+                                      ValueHandle Base, ValueHandle Result,
                                       ReportOptions Opts) {
   SourceLocation Loc = Data->Loc.acquire();
   ErrorType ET;
@@ -1012,4 +1020,4 @@ void __ubsan::__ubsan_handle_function_type_mismatch_abort(
     Die();
 }
 
-#endif  // CAN_SANITIZE_UB
+#endif // CAN_SANITIZE_UB

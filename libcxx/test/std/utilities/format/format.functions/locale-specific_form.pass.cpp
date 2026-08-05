@@ -160,9 +160,9 @@ void test(std::basic_string_view<CharT> expected, test_format_string<CharT, Args
   {
     std::basic_string<CharT> out;
     std::format_to_n_result result = std::format_to_n(std::back_inserter(out), 1000, fmt, std::forward<Args>(args)...);
-    using diff_type = decltype(result.size);
+    using diff_type                = decltype(result.size);
     diff_type formatted_size       = std::formatted_size(fmt, std::forward<Args>(args)...);
-    diff_type size = std::min<diff_type>(1000, formatted_size);
+    diff_type size                 = std::min<diff_type>(1000, formatted_size);
 
     assert(result.size == formatted_size);
     assert(out == expected.substr(0, size));
@@ -210,9 +210,9 @@ void test(
     std::basic_string<CharT> out;
     std::format_to_n_result result =
         std::format_to_n(std::back_inserter(out), 1000, loc, fmt, std::forward<Args>(args)...);
-    using diff_type = decltype(result.size);
+    using diff_type          = decltype(result.size);
     diff_type formatted_size = std::formatted_size(loc, fmt, std::forward<Args>(args)...);
-    diff_type size = std::min<diff_type>(1000, formatted_size);
+    diff_type size           = std::min<diff_type>(1000, formatted_size);
 
     assert(result.size == formatted_size);
     assert(out == expected.substr(0, size));
@@ -277,7 +277,7 @@ void test_bool() {
 
 template <class CharT>
 void test_integer() {
-  std::locale loc = std::locale(std::locale(), new numpunct<CharT>());
+  std::locale loc   = std::locale(std::locale(), new numpunct<CharT>());
   std::locale en_US = std::locale(LOCALE_en_US_UTF_8);
 
   // *** Decimal ***
@@ -605,7 +605,7 @@ void test_integer() {
 
 template <class F, class CharT>
 void test_floating_point_hex_lower_case() {
-  std::locale loc = std::locale(std::locale(), new numpunct<CharT>());
+  std::locale loc   = std::locale(std::locale(), new numpunct<CharT>());
   std::locale en_US = std::locale(LOCALE_en_US_UTF_8);
 
   // *** Basic ***
@@ -691,7 +691,7 @@ void test_floating_point_hex_lower_case() {
 
 template <class F, class CharT>
 void test_floating_point_hex_upper_case() {
-  std::locale loc = std::locale(std::locale(), new numpunct<CharT>());
+  std::locale loc   = std::locale(std::locale(), new numpunct<CharT>());
   std::locale en_US = std::locale(LOCALE_en_US_UTF_8);
 
   // *** Basic ***
@@ -777,7 +777,7 @@ void test_floating_point_hex_upper_case() {
 
 template <class F, class CharT>
 void test_floating_point_hex_lower_case_precision() {
-  std::locale loc = std::locale(std::locale(), new numpunct<CharT>());
+  std::locale loc   = std::locale(std::locale(), new numpunct<CharT>());
   std::locale en_US = std::locale(LOCALE_en_US_UTF_8);
 
   // *** Basic ***
@@ -863,7 +863,7 @@ void test_floating_point_hex_lower_case_precision() {
 
 template <class F, class CharT>
 void test_floating_point_hex_upper_case_precision() {
-  std::locale loc = std::locale(std::locale(), new numpunct<CharT>());
+  std::locale loc   = std::locale(std::locale(), new numpunct<CharT>());
   std::locale en_US = std::locale(LOCALE_en_US_UTF_8);
 
   // *** Basic ***
@@ -949,7 +949,7 @@ void test_floating_point_hex_upper_case_precision() {
 
 template <class F, class CharT>
 void test_floating_point_scientific_lower_case() {
-  std::locale loc = std::locale(std::locale(), new numpunct<CharT>());
+  std::locale loc   = std::locale(std::locale(), new numpunct<CharT>());
   std::locale en_US = std::locale(LOCALE_en_US_UTF_8);
 
   // *** Basic ***
@@ -1067,7 +1067,7 @@ void test_floating_point_scientific_lower_case() {
 
 template <class F, class CharT>
 void test_floating_point_scientific_upper_case() {
-  std::locale loc = std::locale(std::locale(), new numpunct<CharT>());
+  std::locale loc   = std::locale(std::locale(), new numpunct<CharT>());
   std::locale en_US = std::locale(LOCALE_en_US_UTF_8);
 
   // *** Basic ***
@@ -1185,7 +1185,7 @@ void test_floating_point_scientific_upper_case() {
 
 template <class F, class CharT>
 void test_floating_point_fixed_lower_case() {
-  std::locale loc = std::locale(std::locale(), new numpunct<CharT>());
+  std::locale loc   = std::locale(std::locale(), new numpunct<CharT>());
   std::locale en_US = std::locale(LOCALE_en_US_UTF_8);
 
   // *** Basic ***
@@ -1377,7 +1377,7 @@ void test_floating_point_fixed_lower_case() {
 
 template <class F, class CharT>
 void test_floating_point_fixed_upper_case() {
-  std::locale loc = std::locale(std::locale(), new numpunct<CharT>());
+  std::locale loc   = std::locale(std::locale(), new numpunct<CharT>());
   std::locale en_US = std::locale(LOCALE_en_US_UTF_8);
 
   // *** Basic ***
@@ -1569,7 +1569,7 @@ void test_floating_point_fixed_upper_case() {
 
 template <class F, class CharT>
 void test_floating_point_general_lower_case() {
-  std::locale loc = std::locale(std::locale(), new numpunct<CharT>());
+  std::locale loc   = std::locale(std::locale(), new numpunct<CharT>());
   std::locale en_US = std::locale(LOCALE_en_US_UTF_8);
 
   // *** Basic ***
@@ -1735,7 +1735,7 @@ void test_floating_point_general_lower_case() {
 
 template <class F, class CharT>
 void test_floating_point_general_upper_case() {
-  std::locale loc = std::locale(std::locale(), new numpunct<CharT>());
+  std::locale loc   = std::locale(std::locale(), new numpunct<CharT>());
   std::locale en_US = std::locale(LOCALE_en_US_UTF_8);
 
   // *** Basic ***
@@ -1901,7 +1901,7 @@ void test_floating_point_general_upper_case() {
 
 template <class F, class CharT>
 void test_floating_point_default() {
-  std::locale loc = std::locale(std::locale(), new numpunct<CharT>());
+  std::locale loc   = std::locale(std::locale(), new numpunct<CharT>());
   std::locale en_US = std::locale(LOCALE_en_US_UTF_8);
 
   // *** Basic ***
@@ -2131,7 +2131,7 @@ void test_floating_point_default() {
 
 template <class F, class CharT>
 void test_floating_point_default_precision() {
-  std::locale loc = std::locale(std::locale(), new numpunct<CharT>());
+  std::locale loc   = std::locale(std::locale(), new numpunct<CharT>());
   std::locale en_US = std::locale(LOCALE_en_US_UTF_8);
 
   // *** Basic ***

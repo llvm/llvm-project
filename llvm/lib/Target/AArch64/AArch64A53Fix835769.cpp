@@ -72,7 +72,6 @@ static bool isSecondInstructionInSequence(MachineInstr *MI) {
   }
 }
 
-
 //===----------------------------------------------------------------------===//
 
 namespace {
@@ -188,7 +187,7 @@ static MachineInstr *getLastNonPseudo(MachineBasicBlock &MBB,
   return nullptr;
 }
 
-static void insertNopBeforeInstruction(MachineBasicBlock &MBB, MachineInstr* MI,
+static void insertNopBeforeInstruction(MachineBasicBlock &MBB, MachineInstr *MI,
                                        const TargetInstrInfo *TII) {
   // If we are the first instruction of the block, put the NOP at the end of
   // the previous fallthrough block
@@ -214,7 +213,7 @@ bool AArch64A53Fix835769Impl::runOnBasicBlock(MachineBasicBlock &MBB) {
   // that match the conditions under which the erratum may trigger.
 
   // List of terminating instructions in matching sequences
-  std::vector<MachineInstr*> Sequences;
+  std::vector<MachineInstr *> Sequences;
   unsigned Idx = 0;
   MachineInstr *PrevInstr = nullptr;
 
@@ -235,7 +234,7 @@ bool AArch64A53Fix835769Impl::runOnBasicBlock(MachineBasicBlock &MBB) {
       if (isFirstInstructionInSequence(PrevInstr) &&
           isSecondInstructionInSequence(CurrInstr)) {
         LLVM_DEBUG(dbgs() << "   ** pattern found at Idx " << Idx << "!\n");
-        (void) Idx;
+        (void)Idx;
         Sequences.push_back(CurrInstr);
       }
     }

@@ -1,28 +1,43 @@
 struct ImmortalRefType {
-    ImmortalRefType * methodReturningFrt__(void);
-    ImmortalRefType * methodReturningFrt_returns_unretained(void);
-    ImmortalRefType * methodReturningFrt_returns_retained(void);
+  ImmortalRefType *methodReturningFrt__(void);
+  ImmortalRefType *methodReturningFrt_returns_unretained(void);
+  ImmortalRefType *methodReturningFrt_returns_retained(void);
 };
 
-ImmortalRefType * functionReturningFrt__(void);
-ImmortalRefType * functionReturningFrt_returns_unretained(void);
-ImmortalRefType * functionReturningFrt_returns_retained(void);
+ImmortalRefType *functionReturningFrt__(void);
+ImmortalRefType *functionReturningFrt_returns_unretained(void);
+ImmortalRefType *functionReturningFrt_returns_retained(void);
 
-
-struct RefCountedType { int value; };
+struct RefCountedType {
+  int value;
+};
 
 inline void RCRetain(RefCountedType *x) { x->value++; }
 inline void RCRelease(RefCountedType *x) { x->value--; }
 
-struct NonCopyableType { int value; };
-struct CopyableType { int value; };
+struct NonCopyableType {
+  int value;
+};
+struct CopyableType {
+  int value;
+};
 
-struct NonEscapableType { int value; };
-struct EscapableType { int value; };
+struct NonEscapableType {
+  int value;
+};
+struct EscapableType {
+  int value;
+};
 
-struct __attribute__((swift_attr("Escapable"))) EscapableAnnotatedInHeader { int value; };
-struct __attribute__((swift_attr("~Copyable"))) NoncopyableAnnotatedInHeader { int value; };
-struct __attribute__((swift_attr("Escapable"))) EscapabilityConflict { int value; };
+struct __attribute__((swift_attr("Escapable"))) EscapableAnnotatedInHeader {
+  int value;
+};
+struct __attribute__((swift_attr("~Copyable"))) NoncopyableAnnotatedInHeader {
+  int value;
+};
+struct __attribute__((swift_attr("Escapable"))) EscapabilityConflict {
+  int value;
+};
 
 struct RefCountedTypeWithDefaultConvention {};
 inline void retain(RefCountedType *x) {}
@@ -36,17 +51,15 @@ inline void ORCRelease(struct OpaqueRefCountedType *x);
 
 typedef unsigned WrappedOptions;
 
-struct NoncopyableWithDestroyType {
-};
+struct NoncopyableWithDestroyType {};
 
 void NCDDestroy(NoncopyableWithDestroyType instance);
 
 void ImportAsUnsafe();
-struct ImportAsUnsafeStruct {
-};
+struct ImportAsUnsafeStruct {};
 struct StructWithUnsafeMethod {
-    void ImportAsUnsafeMethod();
-    void ImportAsUnsafeMethodActuallySafe();
+  void ImportAsUnsafeMethod();
+  void ImportAsUnsafeMethodActuallySafe();
 };
 
 void ImportAsUnsafeAlreadyAnnotated() __attribute__((swift_attr("unsafe")));

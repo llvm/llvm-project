@@ -294,10 +294,14 @@ AArch64ConditionOptimizerImpl::findAdjustableCmp(MachineInstr *CondMI) {
 // Changes opcode adds <-> subs considering register operand width.
 static int getComplementOpc(int Opc) {
   switch (Opc) {
-  case AArch64::ADDSWri: return AArch64::SUBSWri;
-  case AArch64::ADDSXri: return AArch64::SUBSXri;
-  case AArch64::SUBSWri: return AArch64::ADDSWri;
-  case AArch64::SUBSXri: return AArch64::ADDSXri;
+  case AArch64::ADDSWri:
+    return AArch64::SUBSWri;
+  case AArch64::ADDSXri:
+    return AArch64::SUBSXri;
+  case AArch64::SUBSWri:
+    return AArch64::ADDSWri;
+  case AArch64::SUBSXri:
+    return AArch64::ADDSXri;
   default:
     llvm_unreachable("Unexpected opcode");
   }

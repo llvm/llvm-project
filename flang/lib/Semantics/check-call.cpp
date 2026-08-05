@@ -67,7 +67,7 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
-    if (const Symbol *base{GetFirstSymbol(*expr)}) {
+    if (const Symbol * base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
     if (IsBOZLiteral(*expr)) {
@@ -196,7 +196,7 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
                         actualOffset->symbol().size() ||
                     !evaluate::IsContiguous(
                         actualOffset->symbol(), foldingContext)
-                        .value_or(false)) {
+                         .value_or(false)) {
                   // If substring, take rest of substring
                   if (*actualLength > 0) {
                     actualChars -=
@@ -536,7 +536,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               "Actual argument associated with TYPE(*) %s may not have a parameterized derived type"_err_en_US,
               dummyName);
         }
-        if (const Symbol *tbp{FindImmediateComponent(
+        if (const Symbol *
+            tbp{FindImmediateComponent(
                 *actualDerived, [](const Symbol &symbol) {
                   return symbol.has<ProcBindingDetails>();
                 })}) { // F2023 15.5.2.5 p2
@@ -716,7 +717,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
                       actualOffset->symbol().size() ||
                   !evaluate::IsContiguous(
                       actualOffset->symbol(), foldingContext)
-                      .value_or(false)) {
+                       .value_or(false)) {
                 actualElements = 1;
               } else if (auto actualSymType{evaluate::DynamicType::From(
                              actualOffset->symbol())}) {
@@ -1259,7 +1260,7 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
   parser::ContextualMessages &messages{foldingContext.messages()};
   parser::CharBlock location{arg.sourceLocation().value_or(messages.at())};
   auto restorer{messages.SetLocation(location)};
-  const characteristics::Procedure &interface { dummy.procedure.value() };
+  const characteristics::Procedure &interface{dummy.procedure.value()};
   if (const auto *expr{arg.UnwrapExpr()}) {
     bool dummyIsPointer{
         dummy.attrs.test(characteristics::DummyProcedure::Attr::Pointer)};
@@ -1771,7 +1772,7 @@ static bool CheckElementalConformance(parser::ContextualMessages &messages,
               if (!evaluate::CheckConformance(messages, *shape, *argShape,
                       evaluate::CheckConformanceFlags::None, shapeName.c_str(),
                       argName.c_str())
-                      .value_or(true)) {
+                       .value_or(true)) {
                 return false;
               }
             } else {

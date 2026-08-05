@@ -25,7 +25,7 @@ public:
     Envp &operator=(Envp &&RHS) = default;
 
     char *const *get() const { return Data; }
-    operator char *const *() const { return get(); }
+    operator char * const *() const { return get(); }
 
   private:
     explicit Envp(const Environment &Env);
@@ -58,7 +58,7 @@ public:
   using Base::operator[];
 
   Environment() {}
-  Environment(const Environment &RHS) : Base(static_cast<const Base&>(RHS)) {}
+  Environment(const Environment &RHS) : Base(static_cast<const Base &>(RHS)) {}
   Environment(Environment &&RHS) : Base(std::move(RHS)) {}
   Environment(char *const *Env)
       : Environment(const_cast<const char *const *>(Env)) {}

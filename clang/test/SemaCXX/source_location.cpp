@@ -1,22 +1,28 @@
 // RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fexceptions -verify %s
-// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -DUSE_CONSTEVAL -fexceptions -verify %s
-// RUN: %clang_cc1 -std=c++2b -fcxx-exceptions -DUSE_CONSTEVAL -DPAREN_INIT -fexceptions -verify %s
-// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fms-extensions -DMS -fexceptions -fms-compatibility -verify %s
-// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fms-extensions -DMS -DUSE_CONSTEVAL -fexceptions -fms-compatibility -verify %s
+// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -DUSE_CONSTEVAL -fexceptions
+// -verify %s RUN: %clang_cc1 -std=c++2b -fcxx-exceptions -DUSE_CONSTEVAL
+// -DPAREN_INIT -fexceptions -verify %s RUN: %clang_cc1 -std=c++1z
+// -fcxx-exceptions -fms-extensions -DMS -fexceptions -fms-compatibility -verify
+// %s RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fms-extensions -DMS
+// -DUSE_CONSTEVAL -fexceptions -fms-compatibility -verify %s
 //
-// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
-// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -DUSE_CONSTEVAL -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
-// RUN: %clang_cc1 -std=c++2b -fcxx-exceptions -DUSE_CONSTEVAL -DPAREN_INIT -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
-// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fms-extensions -DMS -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -fms-compatibility -verify %s
-// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fms-extensions -DMS -DUSE_CONSTEVAL -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify -fms-compatibility %s
-// expected-no-diagnostics
+// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fexceptions
+// -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s RUN:
+// %clang_cc1 -std=c++2a -fcxx-exceptions -DUSE_CONSTEVAL -fexceptions
+// -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s RUN:
+// %clang_cc1 -std=c++2b -fcxx-exceptions -DUSE_CONSTEVAL -DPAREN_INIT
+// -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
+// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fms-extensions -DMS -fexceptions
+// -fexperimental-new-constant-interpreter -DNEW_INTERP -fms-compatibility
+// -verify %s RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fms-extensions -DMS
+// -DUSE_CONSTEVAL -fexceptions -fexperimental-new-constant-interpreter
+// -DNEW_INTERP -verify -fms-compatibility %s expected-no-diagnostics
 
 #define assert(...) ((__VA_ARGS__) ? ((void)0) : throw 42)
 #define CURRENT_FROM_MACRO() SL::current()
 #define FORWARD(...) __VA_ARGS__
 
-template <unsigned>
-struct Printer;
+template <unsigned> struct Printer;
 
 #ifdef USE_CONSTEVAL
 #define SOURCE_LOC_EVAL_KIND consteval
@@ -30,17 +36,25 @@ class source_location {
 
 public:
   static SOURCE_LOC_EVAL_KIND source_location
-    current(const __impl *__p = __builtin_source_location()) noexcept {
-      source_location __loc;
-      __loc.__m_impl = __p;
-      return __loc;
+  current(const __impl *__p = __builtin_source_location()) noexcept {
+    source_location __loc;
+    __loc.__m_impl = __p;
+    return __loc;
   }
   constexpr source_location() = default;
   constexpr source_location(source_location const &) = default;
-  constexpr unsigned int line() const noexcept { return __m_impl ? __m_impl->_M_line : 0; }
-  constexpr unsigned int column() const noexcept { return __m_impl ? __m_impl->_M_column : 0; }
-  constexpr const char *file() const noexcept { return __m_impl ? __m_impl->_M_file_name : ""; }
-  constexpr const char *function() const noexcept { return __m_impl ? __m_impl->_M_function_name : ""; }
+  constexpr unsigned int line() const noexcept {
+    return __m_impl ? __m_impl->_M_line : 0;
+  }
+  constexpr unsigned int column() const noexcept {
+    return __m_impl ? __m_impl->_M_column : 0;
+  }
+  constexpr const char *file() const noexcept {
+    return __m_impl ? __m_impl->_M_file_name : "";
+  }
+  constexpr const char *function() const noexcept {
+    return __m_impl ? __m_impl->_M_function_name : "";
+  }
 
 private:
   // Note: The type name "std::source_location::__impl", and its constituent
@@ -73,21 +87,15 @@ constexpr bool is_equal(const char *LHS, const char *RHS) {
   return *LHS == 0 && *RHS == 0;
 }
 
-template <class T>
-constexpr T identity(T t) {
-  return t;
-}
+template <class T> constexpr T identity(T t) { return t; }
 
-template <class T, class U>
-struct Pair {
+template <class T, class U> struct Pair {
   T first;
   U second;
 };
 
-template <class T, class U>
-constexpr bool is_same = false;
-template <class T>
-constexpr bool is_same<T, T> = true;
+template <class T, class U> constexpr bool is_same = false;
+template <class T> constexpr bool is_same<T, T> = true;
 
 // test types
 static_assert(is_same<decltype(__builtin_LINE()), unsigned>);
@@ -98,7 +106,8 @@ static_assert(is_same<decltype(__builtin_FUNCTION()), const char *>);
 #ifdef MS
 static_assert(is_same<decltype(__builtin_FUNCSIG()), const char *>);
 #endif
-static_assert(is_same<decltype(__builtin_source_location()), const std::source_location::public_impl_alias *>);
+static_assert(is_same<decltype(__builtin_source_location()),
+                      const std::source_location::public_impl_alias *>);
 
 // test noexcept
 static_assert(noexcept(__builtin_LINE()));
@@ -187,9 +196,7 @@ constexpr bool test_line_fn_template(T Expect, int L = __builtin_LINE()) {
 static_assert(test_line_fn_template(__LINE__));
 
 struct InMemInit {
-  constexpr bool check(int expect) const {
-    return info.line() == expect;
-  }
+  constexpr bool check(int expect) const { return info.line() == expect; }
   SL info = SL::current();
   InMemInit() = default;
   constexpr InMemInit(int) {}
@@ -197,41 +204,35 @@ struct InMemInit {
 static_assert(InMemInit{}.check(__LINE__ - 3), "");
 static_assert(InMemInit{42}.check(__LINE__ - 3), "");
 
-template <class T, class U = SL>
-struct InMemInitTemplate {
-  constexpr bool check(int expect) const {
-    return info.line() == expect;
-  }
+template <class T, class U = SL> struct InMemInitTemplate {
+  constexpr bool check(int expect) const { return info.line() == expect; }
   U info = U::current();
   InMemInitTemplate() = default;
   constexpr InMemInitTemplate(T) {}
   constexpr InMemInitTemplate(T, T) : info(U::current()) {}
-  template <class V = U> constexpr InMemInitTemplate(T, T, T, V info = U::current())
-      : info(info) {}
+  template <class V = U>
+  constexpr InMemInitTemplate(T, T, T, V info = U::current()) : info(info) {}
 };
 void test_mem_init_template() {
   constexpr int line_offset = 8;
   static_assert(InMemInitTemplate<int>{}.check(__LINE__ - line_offset), "");
-  static_assert(InMemInitTemplate<unsigned>{42}.check(__LINE__ - line_offset), "");
-  static_assert(InMemInitTemplate<unsigned>{42, 42}.check(__LINE__ - line_offset), "");
+  static_assert(InMemInitTemplate<unsigned>{42}.check(__LINE__ - line_offset),
+                "");
+  static_assert(
+      InMemInitTemplate<unsigned>{42, 42}.check(__LINE__ - line_offset), "");
   static_assert(InMemInitTemplate<unsigned>{42, 42, 42}.check(__LINE__), "");
 }
 
 struct AggInit {
   int x;
   int y = __builtin_LINE();
-  constexpr bool check(int expect) const {
-    return y == expect;
-  }
+  constexpr bool check(int expect) const { return y == expect; }
 };
 constexpr AggInit AI{42};
 static_assert(AI.check(__LINE__ - 1), "");
 
-template <class T, class U = SL>
-struct AggInitTemplate {
-  constexpr bool check(int expect) const {
-    return expect == info.line();
-  }
+template <class T, class U = SL> struct AggInitTemplate {
+  constexpr bool check(int expect) const { return expect == info.line(); }
   T x;
   U info = U::current();
 };
@@ -246,7 +247,8 @@ void fn_template_tests() {
 
 struct TestMethodTemplate {
   template <class T, class U = SL, class U2 = SL>
-  constexpr U get(T, U u = U::current(), U2 u2 = identity(U2::current())) const {
+  constexpr U get(T, U u = U::current(),
+                  U2 u2 = identity(U2::current())) const {
     assert(u.line() == u2.line());
     return u;
   }
@@ -283,8 +285,7 @@ struct AggBase {
   int z = __builtin_LINE();
 };
 #line 300
-struct AggDer : AggBase {
-};
+struct AggDer : AggBase {};
 #line 400
 static_assert(AggDer{}.x == 400, "");
 
@@ -295,8 +296,7 @@ struct ClassBase {
   int z = 0;
 #line 500
   ClassBase() = default;
-  constexpr ClassBase(int yy, int zz = __builtin_LINE())
-      : y(yy), z(zz) {}
+  constexpr ClassBase(int yy, int zz = __builtin_LINE()) : y(yy), z(zz) {}
 };
 struct ClassDer : ClassBase {
 #line 600
@@ -333,8 +333,12 @@ void test_function() {
   static_assert(is_equal(SLF::test_function().file(), __FILE__), "");
   static_assert(is_equal(SLF::test_function_template(42).file(), __FILE__), "");
 
-  static_assert(is_equal(SLF::test_function_indirect().file(), SLF::global_info.file()), "");
-  static_assert(is_equal(SLF::test_function_template_indirect(42).file(), SLF::global_info.file()), "");
+  static_assert(
+      is_equal(SLF::test_function_indirect().file(), SLF::global_info.file()),
+      "");
+  static_assert(is_equal(SLF::test_function_template_indirect(42).file(),
+                         SLF::global_info.file()),
+                "");
 
   static_assert(test_file_simple() != nullptr);
   static_assert(!is_equal(test_file_simple(), "source_location.cpp"));
@@ -368,21 +372,23 @@ void test_aggr_class() {
 //===----------------------------------------------------------------------===//
 
 namespace test_file_name {
-constexpr const char *test_file_name_simple(
-  const char *__f = __builtin_FILE_NAME()) {
+constexpr const char *
+test_file_name_simple(const char *__f = __builtin_FILE_NAME()) {
   return __f;
 }
 void test_function() {
 #line 900
   static_assert(is_equal(test_file_name_simple(), __FILE_NAME__));
   static_assert(is_equal(SLF::test_function_filename(), __FILE_NAME__), "");
-  static_assert(is_equal(SLF::test_function_filename_template(42),
-                         __FILE_NAME__), "");
+  static_assert(
+      is_equal(SLF::test_function_filename_template(42), __FILE_NAME__), "");
 
   static_assert(is_equal(SLF::test_function_filename_indirect(),
-                         SLF::global_info_filename), "");
+                         SLF::global_info_filename),
+                "");
   static_assert(is_equal(SLF::test_function_filename_template_indirect(42),
-                         SLF::global_info_filename), "");
+                         SLF::global_info_filename),
+                "");
 
   static_assert(test_file_name_simple() != nullptr);
   static_assert(is_equal(test_file_name_simple(), "source_location.cpp"));
@@ -420,9 +426,7 @@ namespace test_func {
 constexpr const char *test_func_simple(const char *__f = __builtin_FUNCTION()) {
   return __f;
 }
-constexpr const char *get_function() {
-  return __func__;
-}
+constexpr const char *get_function() { return __func__; }
 constexpr bool test_function() {
   return is_equal(__func__, test_func_simple()) &&
          !is_equal(get_function(), test_func_simple());
@@ -434,16 +438,14 @@ constexpr Pair<U, U> test_func_template(T, U u = U::current()) {
   static_assert(is_equal(__PRETTY_FUNCTION__, U::current().function()));
   return {u, U::current()};
 }
-template <class T>
-void func_template_tests() {
+template <class T> void func_template_tests() {
   constexpr auto P = test_func_template(42);
-  //static_assert(is_equal(P.first.function(), __func__), "");
-  //static_assert(!is_equal(P.second.function(), __func__), "");
+  // static_assert(is_equal(P.first.function(), __func__), "");
+  // static_assert(!is_equal(P.second.function(), __func__), "");
 }
 template void func_template_tests<int>();
 
-template <class = int, class T = SL>
-struct TestCtor {
+template <class = int, class T = SL> struct TestCtor {
   T info = T::current();
   T ctor_info;
   TestCtor() = default;
@@ -454,65 +456,69 @@ void ctor_tests() {
   constexpr TestCtor<> Default;
   constexpr TestCtor<> Template{42};
   static const char *XYZZY = Template.info.function();
-  static_assert(is_equal(Default.info.function(), "test_func::TestCtor<>::TestCtor() [T = std::source_location]"));
+  static_assert(
+      is_equal(Default.info.function(),
+               "test_func::TestCtor<>::TestCtor() [T = std::source_location]"));
   static_assert(is_equal(Default.ctor_info.function(), ""));
-  static_assert(is_equal(Template.info.function(), "test_func::TestCtor<>::TestCtor(int, U) [T = std::source_location, U = std::source_location]"));
+  static_assert(is_equal(Template.info.function(),
+                         "test_func::TestCtor<>::TestCtor(int, U) [T = "
+                         "std::source_location, U = std::source_location]"));
   static_assert(is_equal(Template.ctor_info.function(), __PRETTY_FUNCTION__));
 }
 
 constexpr SL global_sl = SL::current();
 static_assert(is_equal(global_sl.function(), ""));
 
-template <class T>
-class TestBI {
+template <class T> class TestBI {
 public:
-   TestBI() {
+  TestBI() {
 #ifdef MS
-     static_assert(is_equal(__FUNCTION__, "test_func::TestBI<int>::TestBI"));
+    static_assert(is_equal(__FUNCTION__, "test_func::TestBI<int>::TestBI"));
 #else
-     static_assert(is_equal(__FUNCTION__, "TestBI"));
+    static_assert(is_equal(__FUNCTION__, "TestBI"));
 #endif
-     static_assert(is_equal(__func__, "TestBI"));
-   }
+    static_assert(is_equal(__func__, "TestBI"));
+  }
 };
 
-template <class T>
-class TestClass {
+template <class T> class TestClass {
 public:
-   TestClass() {
+  TestClass() {
 #ifdef MS
-      static_assert(is_equal(__FUNCTION__, "test_func::TestClass<class test_func::C>::TestClass"));
+    static_assert(is_equal(
+        __FUNCTION__, "test_func::TestClass<class test_func::C>::TestClass"));
 #else
-      static_assert(is_equal(__FUNCTION__, "TestClass"));
+    static_assert(is_equal(__FUNCTION__, "TestClass"));
 #endif
-      static_assert(is_equal(__func__, "TestClass"));
-   }
+    static_assert(is_equal(__func__, "TestClass"));
+  }
 };
 
-template <class T>
-class TestStruct {
+template <class T> class TestStruct {
 public:
-   TestStruct() {
+  TestStruct() {
 #ifdef MS
-      static_assert(is_equal(__FUNCTION__, "test_func::TestStruct<struct test_func::S>::TestStruct"));
+    static_assert(
+        is_equal(__FUNCTION__,
+                 "test_func::TestStruct<struct test_func::S>::TestStruct"));
 #else
-      static_assert(is_equal(__FUNCTION__, "TestStruct"));
+    static_assert(is_equal(__FUNCTION__, "TestStruct"));
 #endif
-      static_assert(is_equal(__func__, "TestStruct"));
-   }
+    static_assert(is_equal(__func__, "TestStruct"));
+  }
 };
 
-template <class T>
-class TestEnum {
+template <class T> class TestEnum {
 public:
-   TestEnum() {
+  TestEnum() {
 #ifdef MS
-      static_assert(is_equal(__FUNCTION__, "test_func::TestEnum<enum test_func::E>::TestEnum"));
+    static_assert(is_equal(__FUNCTION__,
+                           "test_func::TestEnum<enum test_func::E>::TestEnum"));
 #else
-      static_assert(is_equal(__FUNCTION__, "TestEnum"));
+    static_assert(is_equal(__FUNCTION__, "TestEnum"));
 #endif
-      static_assert(is_equal(__func__, "TestEnum"));
-   }
+    static_assert(is_equal(__func__, "TestEnum"));
+  }
 };
 
 class C {};
@@ -524,51 +530,52 @@ TestClass<test_func::C> t2;
 TestStruct<test_func::S> t3;
 TestEnum<test_func::E> t4;
 
-class A { int b;};
+class A {
+  int b;
+};
 namespace inner {
-  template <class Ty>
-  class C {
-  public:
-    template <class T>
-    static void f(int i) {
-      (void)i;
+template <class Ty> class C {
+public:
+  template <class T> static void f(int i) {
+    (void)i;
 #ifdef MS
-     static_assert(is_equal(__FUNCTION__, "test_func::inner::C<class test_func::A>::f"));
+    static_assert(
+        is_equal(__FUNCTION__, "test_func::inner::C<class test_func::A>::f"));
 #else
-     static_assert(is_equal(__FUNCTION__, "f"));
+    static_assert(is_equal(__FUNCTION__, "f"));
 #endif
-    }
-    template <class T>
-    static constexpr void cf(int i) {
-      (void)i;
+  }
+  template <class T> static constexpr void cf(int i) {
+    (void)i;
 #ifdef MS
-     static_assert(is_equal(__FUNCTION__, "test_func::inner::C<class test_func::A>::cf"));
+    static_assert(
+        is_equal(__FUNCTION__, "test_func::inner::C<class test_func::A>::cf"));
 #else
-     static_assert(is_equal(__FUNCTION__, "cf"));
+    static_assert(is_equal(__FUNCTION__, "cf"));
 #endif
-    }
-    template <class T>
-    static void df(double f) {
-      (void)f;
+  }
+  template <class T> static void df(double f) {
+    (void)f;
 #ifdef MS
-      static_assert(is_equal(__FUNCTION__, "test_func::inner::C<class test_func::A>::df"));
+    static_assert(
+        is_equal(__FUNCTION__, "test_func::inner::C<class test_func::A>::df"));
 #else
-      static_assert(is_equal(__FUNCTION__, "df"));
+    static_assert(is_equal(__FUNCTION__, "df"));
 #endif
-    }
-    template <class T>
-    static constexpr void cdf(double f) {
-      (void)f;
+  }
+  template <class T> static constexpr void cdf(double f) {
+    (void)f;
 #ifdef MS
-      static_assert(is_equal(__FUNCTION__, "test_func::inner::C<class test_func::A>::cdf"));
+    static_assert(
+        is_equal(__FUNCTION__, "test_func::inner::C<class test_func::A>::cdf"));
 #else
-      static_assert(is_equal(__FUNCTION__, "cdf"));
+    static_assert(is_equal(__FUNCTION__, "cdf"));
 #endif
-    }
-  };
-}
+  }
+};
+} // namespace inner
 
-  void foo() {
+void foo() {
   test_func::inner::C<test_func::A>::f<char>(1);
   test_func::inner::C<test_func::A>::cf<char>(1);
   test_func::inner::C<test_func::A>::df<void>(1.0);
@@ -576,7 +583,6 @@ namespace inner {
 }
 
 } // namespace test_func
-
 
 //===----------------------------------------------------------------------===//
 //                            __builtin_FUNCSIG()
@@ -588,9 +594,7 @@ namespace test_funcsig {
 constexpr const char *test_funcsig_simple(const char *f = __builtin_FUNCSIG()) {
   return f;
 }
-constexpr const char *get_funcsig() {
-  return __FUNCSIG__;
-}
+constexpr const char *get_funcsig() { return __FUNCSIG__; }
 constexpr bool test_funcsig() {
   return is_equal(__FUNCSIG__, test_funcsig_simple()) &&
          !is_equal(get_funcsig(), test_funcsig_simple());
@@ -598,32 +602,33 @@ constexpr bool test_funcsig() {
 static_assert(test_funcsig());
 
 template <class T>
-constexpr Pair<const char*, const char*> test_funcsig_template(T, const char* f = __builtin_FUNCSIG()) {
+constexpr Pair<const char *, const char *>
+test_funcsig_template(T, const char *f = __builtin_FUNCSIG()) {
   return {f, __builtin_FUNCSIG()};
 }
-template <class T>
-void func_template_tests() {
+template <class T> void func_template_tests() {
   constexpr auto P = test_funcsig_template(42);
   static_assert(is_equal(P.first, __FUNCSIG__), "");
   static_assert(!is_equal(P.second, __FUNCSIG__), "");
 }
 template void func_template_tests<int>();
 
-template <class = int, class T = const char*>
-struct TestCtor {
+template <class = int, class T = const char *> struct TestCtor {
   T funcsig = __builtin_FUNCSIG();
   T ctor_funcsig;
   TestCtor() = default;
-  template <class F = const char*>
+  template <class F = const char *>
   constexpr TestCtor(int, F f = __builtin_FUNCSIG()) : ctor_funcsig(f) {}
 };
 void ctor_tests() {
   constexpr TestCtor<> Template{42};
-  static_assert(is_equal(Template.funcsig, "__cdecl test_funcsig::TestCtor<>::TestCtor(int, F) [T = const char *, F = const char *]"));
+  static_assert(is_equal(Template.funcsig,
+                         "__cdecl test_funcsig::TestCtor<>::TestCtor(int, F) "
+                         "[T = const char *, F = const char *]"));
   static_assert(is_equal(Template.ctor_funcsig, __FUNCSIG__));
 }
 
-constexpr const char* global_funcsig = __builtin_FUNCSIG();
+constexpr const char *global_funcsig = __builtin_FUNCSIG();
 static_assert(is_equal(global_funcsig, ""));
 
 } // namespace test_funcsig
@@ -726,7 +731,9 @@ namespace test_out_of_line_init {
 #line 4000 "test_out_of_line_init.cpp"
 constexpr unsigned get_line(unsigned n = __builtin_LINE()) { return n; }
 constexpr const char *get_file(const char *f = __builtin_FILE()) { return f; }
-constexpr const char *get_func(const char *f = __builtin_FUNCTION()) { return f; }
+constexpr const char *get_func(const char *f = __builtin_FUNCTION()) {
+  return f;
+}
 #line 4100 "A.cpp"
 struct A {
   int n = __builtin_LINE();
@@ -764,7 +771,8 @@ constexpr bool test_in_func() {
   static_assert(is_equal(b.a.info.file(), "test_func_passed.cpp"));
   static_assert(is_equal(b.a.func, "test_in_func"));
   static_assert(is_equal(b.a.func2, "test_in_func"));
-  static_assert(is_equal(b.a.info.function(), "bool test_out_of_line_init::test_in_func()"));
+  static_assert(is_equal(b.a.info.function(),
+                         "bool test_out_of_line_init::test_in_func()"));
   return true;
 }
 static_assert(test_in_func());
@@ -775,7 +783,9 @@ namespace test_global_scope {
 #line 5000 "test_global_scope.cpp"
 constexpr unsigned get_line(unsigned n = __builtin_LINE()) { return n; }
 constexpr const char *get_file(const char *f = __builtin_FILE()) { return f; }
-constexpr const char *get_func(const char *f = __builtin_FUNCTION()) { return f; }
+constexpr const char *get_func(const char *f = __builtin_FUNCTION()) {
+  return f;
+}
 #line 5100
 struct InInit {
   unsigned l = get_line();
@@ -822,21 +832,19 @@ static_assert(is_equal(I.info.file(), "InitGlobal.cpp"));
 
 namespace TestConstexprContext {
 #line 7000 "TestConstexprContext.cpp"
-  constexpr const char* foo() { return __builtin_FILE(); }
+constexpr const char *foo() { return __builtin_FILE(); }
 #line 7100 "Bar.cpp"
-  constexpr const char* bar(const char* x = foo()) { return x; }
-  constexpr bool test() {
-    static_assert(is_equal(bar(), "TestConstexprContext.cpp"));
-    return true;
-  }
-  static_assert(test());
+constexpr const char *bar(const char *x = foo()) { return x; }
+constexpr bool test() {
+  static_assert(is_equal(bar(), "TestConstexprContext.cpp"));
+  return true;
 }
+static_assert(test());
+} // namespace TestConstexprContext
 
 namespace Lambda {
 #line 8000 "TestLambda.cpp"
-constexpr int nested_lambda(int l = []{
-  return SL::current().line();
-}()) {
+constexpr int nested_lambda(int l = [] { return SL::current().line(); }()) {
   return l;
 }
 static_assert(nested_lambda() == __LINE__ - 4);
@@ -848,19 +856,17 @@ constexpr int lambda_param(int l = [](int l = SL::current().line()) {
 }
 static_assert(lambda_param() == __LINE__);
 
+} // namespace Lambda
 
+constexpr int compound_literal_fun(int a = (int){SL::current().line()}) {
+  return a;
 }
-
-constexpr int compound_literal_fun(int a =
-                  (int){ SL::current().line() }
-) { return a ;}
 static_assert(compound_literal_fun() == __LINE__);
 
 struct CompoundLiteral {
-  int a = (int){ SL::current().line() };
+  int a = (int){SL::current().line()};
 };
 static_assert(CompoundLiteral{}.a == __LINE__);
-
 
 // FIXME
 // Init captures are subexpressions of the lambda expression
@@ -870,44 +876,40 @@ static_assert(CompoundLiteral{}.a == __LINE__);
 // a fair bit of complexity.
 // We intend to implement that functionality once we find real world
 // use cases that require it.
-constexpr int test_init_capture(int a =
-                [b = SL::current().line()] { return b; }()) {
+constexpr int test_init_capture(int a = [b = SL::current().line()] {
+  return b;
+}()) {
   return a;
 }
 #if defined(USE_CONSTEVAL) && !defined(NEW_INTERP)
 static_assert(test_init_capture() == __LINE__ - 4);
 #else
-static_assert(test_init_capture() == __LINE__ );
+static_assert(test_init_capture() == __LINE__);
 #endif
 
 namespace check_immediate_invocations_in_templates {
 
-template <typename T = int>
-struct G {
-    T line = __builtin_LINE();
+template <typename T = int> struct G {
+  T line = __builtin_LINE();
 };
-template <typename T>
-struct S {
-    int i = G<T>{}.line;
+template <typename T> struct S {
+  int i = G<T>{}.line;
 };
 static_assert(S<int>{}.i != // intentional new line
               S<int>{}.i);
 
-template <typename T>
-constexpr int f(int i = G<T>{}.line) {
-    return i;
-}
+template <typename T> constexpr int f(int i = G<T>{}.line) { return i; }
 
 static_assert(f<int>() != // intentional new line
               f<int>());
-}
+} // namespace check_immediate_invocations_in_templates
 
 #ifdef PAREN_INIT
 namespace GH63903 {
 struct S {
-    int _;
-    int i = SL::current().line();
-    int j = __builtin_LINE();
+  int _;
+  int i = SL::current().line();
+  int j = __builtin_LINE();
 };
 // Ensure parent aggregate initialization is consistent with brace
 // aggregate initialization.
@@ -916,53 +918,44 @@ static_assert(S(0).i == __builtin_LINE());
 static_assert(S(0).i == S{0}.i);
 static_assert(S(0).j == S{0}.j);
 static_assert(S(0).j == S{0}.i);
-}
+} // namespace GH63903
 #endif
 
 namespace GH78128 {
 
-template<int N>
-constexpr int f() {
-  return N;
-}
+template <int N> constexpr int f() { return N; }
 
-template<typename T>
-void foo() {
-  constexpr auto* F1 = std::source_location::current().function();
+template <typename T> void foo() {
+  constexpr auto *F1 = std::source_location::current().function();
   static_assert(__builtin_strlen(F1) == f<__builtin_strlen(F1)>());
 
-  constexpr auto* F2 = __builtin_FUNCTION();
+  constexpr auto *F2 = __builtin_FUNCTION();
   static_assert(__builtin_strlen(F2) == f<__builtin_strlen(F2)>());
 
 #ifdef MS
-  constexpr auto* F3 = __builtin_FUNCSIG();
+  constexpr auto *F3 = __builtin_FUNCSIG();
   static_assert(__builtin_strlen(F3) == f<__builtin_strlen(F3)>());
 #endif
 }
 
-void test() {
-  foo<int>();
-}
+void test() { foo<int>(); }
 
-}
+} // namespace GH78128
 
 namespace GH80630 {
 
-#define GH80630_LAMBDA \
-    []( char const* fn ) { \
-        static constexpr std::source_location loc = std::source_location::current(); \
-        return &loc; \
-    }( std::source_location::current().function() )
+#define GH80630_LAMBDA                                                         \
+  [](char const *fn) {                                                         \
+    static constexpr std::source_location loc =                                \
+        std::source_location::current();                                       \
+    return &loc;                                                               \
+  }(std::source_location::current().function())
 
-auto f( std::source_location const* loc = GH80630_LAMBDA ) {
-    return loc;
-}
+auto f(std::source_location const *loc = GH80630_LAMBDA) { return loc; }
 
-auto g() {
-    return f();
-}
+auto g() { return f(); }
 
-}
+} // namespace GH80630
 
 namespace GH92680 {
 
@@ -975,39 +968,34 @@ auto construct_at(IntConstuctible) -> decltype(IntConstuctible()) {
   return {};
 }
 
-void test() {
-  construct_at<IntConstuctible>({});
-}
+void test() { construct_at<IntConstuctible>({}); }
 
-}
+} // namespace GH92680
 
 namespace GH106428 {
 
 struct add_fn {
-    template <typename T>
-    constexpr auto operator()(T lhs, T rhs,
-                              const std::source_location loc = std::source_location::current())
-        const -> T
-    {
-        return lhs + rhs;
-    }
+  template <typename T>
+  constexpr auto operator()(T lhs, T rhs,
+                            const std::source_location loc =
+                                std::source_location::current()) const -> T {
+    return lhs + rhs;
+  }
 };
 
+template <class _Fp, class... _Args> decltype(_Fp{}(0, 0)) __invoke(_Fp &&__f);
 
-template <class _Fp, class... _Args>
-decltype(_Fp{}(0, 0))
-__invoke(_Fp&& __f);
+template <typename T> struct type_identity {
+  using type = T;
+};
 
-template<typename T>
-struct type_identity { using type = T; };
-
-template<class Fn>
+template <class Fn>
 struct invoke_result : type_identity<decltype(__invoke(Fn{}))> {};
 
 using i = invoke_result<add_fn>::type;
 static_assert(__is_same(i, int));
 
-}
+} // namespace GH106428
 
 #if __cplusplus >= 202002L
 
@@ -1016,97 +1004,97 @@ struct buff {
   buff(buff &, const char * = __builtin_FUNCTION());
 };
 
-template <class Ty>
-Ty declval();
+template <class Ty> Ty declval();
 
-template <class Fx>
-auto Call(buff arg) -> decltype(Fx{}(arg));
+template <class Fx> auto Call(buff arg) -> decltype(Fx{}(arg));
 
-template <typename>
-struct F {};
+template <typename> struct F {};
 
-template <class Fx>
-struct InvocableR : F<decltype(Call<Fx>(declval<buff>()))> {
+template <class Fx> struct InvocableR : F<decltype(Call<Fx>(declval<buff>()))> {
   static constexpr bool value = false;
 };
 
-template <class Fx, bool = InvocableR<Fx>::value>
-void Help(Fx) {}
+template <class Fx, bool = InvocableR<Fx>::value> void Help(Fx) {}
 
 void Test() {
   Help([](buff) {});
 }
 
-}
+} // namespace GH81155
 
 #endif
 
-
 namespace GH67134 {
 template <int loc = std::source_location::current().line()>
-constexpr auto f(std::source_location loc2 = std::source_location::current()) { return loc; }
+constexpr auto f(std::source_location loc2 = std::source_location::current()) {
+  return loc;
+}
 
 int g = []() -> decltype(f()) { return 0; }();
 
 int call() {
 #if __cplusplus >= 202002L
-  return []<decltype(f()) = 0>() -> decltype(f()) { return  0; }();
+  return []<decltype(f()) = 0>() -> decltype(f()) { return 0; }();
 #endif
-  return []() -> decltype(f()) { return  0; }();
+  return []() -> decltype(f()) { return 0; }();
 }
 
 #if __cplusplus >= 202002L
-template<typename T>
-int Var = requires { []() -> decltype(f()){}; };
+template <typename T> int Var = requires { []() -> decltype(f()) {}; };
 int h = Var<int>;
 #endif
 
-
-}
+} // namespace GH67134
 
 namespace GH119129 {
-struct X{
-  constexpr int foo(std::source_location loc = std::source_location::current()) {
+struct X {
+  constexpr int
+  foo(std::source_location loc = std::source_location::current()) {
     return loc.line();
   }
 };
 static_assert(X{}.foo() == __LINE__);
-static_assert(X{}.
-                foo() == __LINE__);
+static_assert(X{}.foo() == __LINE__);
 static_assert(X{}.
 
-
-                foo() == __LINE__);
+              foo() == __LINE__);
 #line 10000
-static_assert(X{}.
-                foo() == 10001);
-}
+static_assert(X{}.foo() == 10001);
+} // namespace GH119129
 
 #ifdef MS
 namespace GH178324 {
-  struct a {
-    using e = int;
-  };
-  void current(const char * = __builtin_FUNCSIG());
-  template <class> void c() { decltype(a(current()))::e; }
+struct a {
+  using e = int;
+};
+void current(const char * = __builtin_FUNCSIG());
+template <class> void c() { decltype(a(current()))::e; }
 } // namespace GH178324
 #endif
 
 namespace GH122657 {
-template <unsigned long long n>
-struct Sized {
+template <unsigned long long n> struct Sized {
   char data[n];
 };
 
-template <typename T>
-int baz() {
+template <typename T> int baz() {
   static constexpr auto funcSize = sizeof(__func__);
   static constexpr auto functionSize = sizeof(__FUNCTION__);
   static constexpr auto prettySize = sizeof(__PRETTY_FUNCTION__);
 
-  auto lfunc = []() noexcept(sizeof(__func__) == funcSize) -> Sized<sizeof(__func__)> { return {}; };
-  auto lfunction = []() noexcept(sizeof(__FUNCTION__) == functionSize) -> Sized<sizeof(__FUNCTION__)> { return {}; };
-  auto lpretty = []() noexcept(sizeof(__PRETTY_FUNCTION__) == prettySize) -> Sized<sizeof(__PRETTY_FUNCTION__)> { return {}; };
+  auto lfunc =
+      []() noexcept(sizeof(__func__) == funcSize) -> Sized<sizeof(__func__)> {
+    return {};
+  };
+  auto lfunction = []() noexcept(sizeof(__FUNCTION__) ==
+                                 functionSize) -> Sized<sizeof(__FUNCTION__)> {
+    return {};
+  };
+  auto lpretty =
+      []() noexcept(sizeof(__PRETTY_FUNCTION__) ==
+                    prettySize) -> Sized<sizeof(__PRETTY_FUNCTION__)> {
+    return {};
+  };
 
   static_assert(sizeof(lfunc()) == 5, "baz");
   static_assert(noexcept(lfunc()) == true, "noexcept");
@@ -1114,7 +1102,8 @@ int baz() {
   static_assert(sizeof(lfunction()) == 5, "baz");
   static_assert(noexcept(lfunction()) == true, "noexcept");
 
-  static_assert(sizeof(lpretty()) == 43, "int GH122657::baz() [T = int]_block_invoke");
+  static_assert(sizeof(lpretty()) == 43,
+                "int GH122657::baz() [T = int]_block_invoke");
   static_assert(noexcept(lpretty()) == true, "noexcept");
 
   return 0;
@@ -1125,9 +1114,19 @@ int main() {
   static constexpr auto functionSize = sizeof(__FUNCTION__);
   static constexpr auto prettySize = sizeof(__PRETTY_FUNCTION__);
 
-  auto lfunc = []() noexcept(sizeof(__func__) == funcSize) -> Sized<sizeof(__func__)> { return {}; };
-  auto lfunction = []() noexcept(sizeof(__FUNCTION__) == functionSize) -> Sized<sizeof(__FUNCTION__)> { return {}; };
-  auto lpretty = []() noexcept(sizeof(__PRETTY_FUNCTION__) == prettySize) -> Sized<sizeof(__PRETTY_FUNCTION__)> { return {}; };
+  auto lfunc =
+      []() noexcept(sizeof(__func__) == funcSize) -> Sized<sizeof(__func__)> {
+    return {};
+  };
+  auto lfunction = []() noexcept(sizeof(__FUNCTION__) ==
+                                 functionSize) -> Sized<sizeof(__FUNCTION__)> {
+    return {};
+  };
+  auto lpretty =
+      []() noexcept(sizeof(__PRETTY_FUNCTION__) ==
+                    prettySize) -> Sized<sizeof(__PRETTY_FUNCTION__)> {
+    return {};
+  };
 
   static_assert(sizeof(lfunc()) == 5, "main");
   static_assert(noexcept(lfunc()) == true, "noexcept");

@@ -1,5 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -Wunreachable-code-aggressive -Wno-unused-value -Wno-covered-switch-default -I %S/Inputs %s
-// RUN: %clang_cc1 -fsyntax-only -fblocks -Wunreachable-code-aggressive -Wno-unused-value -Wno-covered-switch-default -fdiagnostics-parseable-fixits -I %S/Inputs %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -Wunreachable-code-aggressive
+// -Wno-unused-value -Wno-covered-switch-default -I %S/Inputs %s RUN: %clang_cc1
+// -fsyntax-only -fblocks -Wunreachable-code-aggressive -Wno-unused-value
+// -Wno-covered-switch-default -fdiagnostics-parseable-fixits -I %S/Inputs %s
+// 2>&1 | FileCheck %s
 
 #include "warn-unreachable.h"
 
@@ -9,21 +12,21 @@ int dead(void);
 
 void test1(void) {
   goto c;
-  d:
-  goto e;       // expected-warning {{will never be executed}}
-  c: ;
+d:
+  goto e; // expected-warning {{will never be executed}}
+c:;
   int i;
   return;
-  goto b;        // expected-warning {{will never be executed}}
-  goto a;        // expected-warning {{will never be executed}}
-  b:
+  goto b; // expected-warning {{will never be executed}}
+  goto a; // expected-warning {{will never be executed}}
+b:
   i = 1;
-  a:
+a:
   i = 2;
   goto f;
-  e:
+e:
   goto d;
-  f: ;
+f:;
 }
 
 void test2(void) {
@@ -31,73 +34,64 @@ void test2(void) {
   switch (live()) {
   case 1:
     halt(),
-      dead();   // expected-warning {{will never be executed}}
+        dead(); // expected-warning {{will never be executed}}
 
   case 2:
     live(), halt(),
-      dead();   // expected-warning {{will never be executed}}
+        dead(); // expected-warning {{will never be executed}}
 
   case 3:
-  live()
-    +           // expected-warning {{will never be executed}}
-    halt();
-  dead();
+    live() + // expected-warning {{will never be executed}}
+        halt();
+    dead();
 
   case 4:
   a4:
-    live(),
-      halt();
-    goto a4;    // expected-warning {{will never be executed}}
+    live(), halt();
+    goto a4; // expected-warning {{will never be executed}}
 
   case 5:
     goto a5;
   c5:
-    dead();     // expected-warning {{will never be executed}}
+    dead(); // expected-warning {{will never be executed}}
     goto b5;
   a5:
-    live(),
-      halt();
+    live(), halt();
   b5:
     goto c5;
 
   case 6:
     if (live())
       goto e6;
-    live(),
-      halt();
+    live(), halt();
   d6:
-    dead();     // expected-warning {{will never be executed}}
+    dead(); // expected-warning {{will never be executed}}
     goto b6;
   c6:
     dead();
     goto b6;
   e6:
-    live(),
-      halt();
+    live(), halt();
   b6:
     goto c6;
   case 7:
-    halt()
-      +
-      dead();   // expected-warning {{will never be executed}}
-    -           // expected-warning {{will never be executed}}
-      halt();
+    halt() + dead(); // expected-warning {{will never be executed}}
+    -                // expected-warning {{will never be executed}}
+        halt();
   case 8:
-    i           // expected-warning {{will never be executed}}
-      +=
-      halt();
+    i // expected-warning {{will never be executed}}
+        += halt();
   case 9:
-    halt()
-      ?         // expected-warning {{will never be executed}}
-      dead() : dead();
+    halt() ? // expected-warning {{will never be executed}}
+        dead()
+           : dead();
   case 10:
-    (           // expected-warning {{will never be executed}}
-      float)halt();
+    ( // expected-warning {{will never be executed}}
+        float)halt();
   case 11: {
     int a[5];
     live(),
-      a[halt()
-        ];      // expected-warning {{will never be executed}}
+        a[halt()]; // expected-warning {{will never be executed}}
   }
   }
 }
@@ -105,23 +99,26 @@ void test2(void) {
 enum Cases { C1, C2, C3 };
 int test_enum_cases(enum Cases C) {
   switch (C) {
-    case C1:
-    case C2:
-    case C3:
-      return 1;
-    default: {
-      int i = 0; // no-warning
-      ++i;
-      return i;
-    }
-  }  
+  case C1:
+  case C2:
+  case C3:
+    return 1;
+  default: {
+    int i = 0; // no-warning
+    ++i;
+    return i;
+  }
+  }
 }
 
 // Handle unreachable code triggered by macro expansions.
-void __myassert_rtn(const char *, const char *, int, const char *) __attribute__((__noreturn__));
+void __myassert_rtn(const char *, const char *, int, const char *)
+    __attribute__((__noreturn__));
 
-#define myassert(e) \
-    (__builtin_expect(!(e), 0) ? __myassert_rtn(__func__, __FILE__, __LINE__, #e) : (void)0)
+#define myassert(e)                                                            \
+  (__builtin_expect(!(e), 0)                                                   \
+       ? __myassert_rtn(__func__, __FILE__, __LINE__, #e)                      \
+       : (void)0)
 
 void test_assert(void) {
   myassert(0 && "unreachable");
@@ -129,19 +126,23 @@ void test_assert(void) {
 }
 
 // Test case for PR 9774.  Tests that dead code in macros aren't warned about.
-#define MY_MAX(a,b)     ((a) >= (b) ? (a) : (b))
+#define MY_MAX(a, b) ((a) >= (b) ? (a) : (b))
 void PR9774(int *s) {
-    for (int i = 0; i < MY_MAX(2, 3); i++) // no-warning
-        s[i] = 0;
+  for (int i = 0; i < MY_MAX(2, 3); i++) // no-warning
+    s[i] = 0;
 }
 
 // We should treat code guarded by 'x & 0' and 'x * 0' as unreachable.
 int calledFun(void);
 void test_mul_and_zero(int x) {
-  if (x & 0) calledFun(); // expected-warning {{will never be executed}}
-  if (0 & x) calledFun(); // expected-warning {{will never be executed}}
-  if (x * 0) calledFun(); // expected-warning {{will never be executed}}
-  if (0 * x) calledFun(); // expected-warning {{will never be executed}}
+  if (x & 0)
+    calledFun(); // expected-warning {{will never be executed}}
+  if (0 & x)
+    calledFun(); // expected-warning {{will never be executed}}
+  if (x * 0)
+    calledFun(); // expected-warning {{will never be executed}}
+  if (0 * x)
+    calledFun(); // expected-warning {{will never be executed}}
 }
 
 void raze(void) __attribute__((noreturn));
@@ -149,19 +150,19 @@ void warn_here(void);
 
 int test_break_preceded_by_noreturn(int i) {
   switch (i) {
-    case 1:
-      raze();
-      break; // expected-warning {{'break' will never be executed}}
-    case 2:
-      raze();
-      break; // expected-warning {{'break' will never be executed}}
-      warn_here(); // expected-warning {{will never be executed}}
-    case 3:
-      return 1;
-      break; // expected-warning {{will never be executed}}
-    default:
-      break;
-      break; // expected-warning {{will never be executed}}
+  case 1:
+    raze();
+    break; // expected-warning {{'break' will never be executed}}
+  case 2:
+    raze();
+    break;       // expected-warning {{'break' will never be executed}}
+    warn_here(); // expected-warning {{will never be executed}}
+  case 3:
+    return 1;
+    break; // expected-warning {{will never be executed}}
+  default:
+    break;
+    break; // expected-warning {{will never be executed}}
   }
   return i;
 }
@@ -209,10 +210,14 @@ MyEnum trivial_dead_return_enum(void) {
 
 MyEnum trivial_dead_return_enum_2(int x) {
   switch (x) {
-    case 1: return 1;
-    case 2: return 2;
-    case 3: return 3;
-    default: return 4;
+  case 1:
+    return 1;
+  case 2:
+    return 2;
+  case 3:
+    return 3;
+  default:
+    return 4;
   }
 
   return 2; // expected-warning {{will never be executed}}
@@ -230,10 +235,14 @@ char trivial_dead_return_char(void) {
 
 MyEnum nontrivial_dead_return_enum_2(int x) {
   switch (x) {
-    case 1: return 1;
-    case 2: return 2;
-    case 3: return 3;
-    default: return 4;
+  case 1:
+    return 1;
+  case 2:
+    return 2;
+  case 3:
+    return 3;
+  default:
+    return 4;
   }
 
   return calledFun(); // expected-warning {{will never be executed}}
@@ -243,9 +252,12 @@ enum X { A, B, C };
 
 int covered_switch(enum X x) {
   switch (x) {
-  case A: return 1;
-  case B: return 2;
-  case C: return 3;
+  case A:
+    return 1;
+  case B:
+    return 2;
+  case C:
+    return 3;
   }
   return 4; // no-warning
 }
@@ -257,7 +269,8 @@ int test_config_constant(int x) {
     calledFun(); // no-warning
     return 1;
   }
-  if (!1) { // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
+  if (!1) { // expected-note {{silence by adding parentheses to mark code as
+            // explicitly dead}}
     calledFun(); // expected-warning {{will never be executed}}
     return 1;
   }
@@ -268,9 +281,10 @@ int test_config_constant(int x) {
   if (x > 10)
     return CONFIG_CONSTANT ? calledFun() : calledFun(); // no-warning
   else
-    return 1 ? // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
-      calledFun() :
-      calledFun(); // expected-warning {{will never be executed}}
+    return 1 ? // expected-note {{silence by adding parentheses to mark code as
+               // explicitly dead}}
+               calledFun()
+             : calledFun(); // expected-warning {{will never be executed}}
 }
 
 int sizeof_int(int x, int y) {
@@ -280,13 +294,10 @@ int sizeof_int(int x, int y) {
     return 0; // no-warning
   if (x && y && sizeof(long) < sizeof(char))
     return 0; // no-warning
-  return 2; // no-warning
+  return 2;   // no-warning
 }
 
-enum MyEnum2 {
-  ME_A = CONFIG_CONSTANT,
-  ME_B = 1
-};
+enum MyEnum2 { ME_A = CONFIG_CONSTANT, ME_B = 1 };
 
 int test_MyEnum(void) {
   if (!ME_A)
@@ -295,7 +306,7 @@ int test_MyEnum(void) {
     return 2; // no-warning
   if (ME_B)
     return 3;
-  if (!ME_B) // expected-warning {{will never be executed}}
+  if (!ME_B)  // expected-warning {{will never be executed}}
     return 4; // expected-warning {{will never be executed}}
   return 5;
 }
@@ -307,8 +318,7 @@ int test_do_while(int x) {
       break;
     ++x;
     break;
-  }
-  while (0); // no-warning
+  } while (0); // no-warning
   return x;
 }
 
@@ -318,8 +328,7 @@ int test_do_while_nontrivial_cond(int x) {
       break;
     ++x;
     break;
-  }
-  while (calledFun()); // expected-warning {{will never be executed}}
+  } while (calledFun()); // expected-warning {{will never be executed}}
   return x;
 }
 
@@ -347,19 +356,19 @@ MyEnum trivial_dead_return_enum_SUPPRESSED(void) {
 
 int test_break_preceded_by_noreturn_SUPPRESSED(int i) {
   switch (i) {
-    case 1:
-      raze();
-      break; // no-warning
-    case 2:
-      raze();
-      break; // no-warning
-      warn_here(); // expected-warning {{will never be executed}}
-    case 3:
-      return 1;
-      break; // no-warning
-    default:
-      break;
-      break; // no-warning
+  case 1:
+    raze();
+    break; // no-warning
+  case 2:
+    raze();
+    break;       // no-warning
+    warn_here(); // expected-warning {{will never be executed}}
+  case 3:
+    return 1;
+    break; // no-warning
+  default:
+    break;
+    break; // no-warning
   }
   return i;
 }
@@ -368,10 +377,15 @@ int test_break_preceded_by_noreturn_SUPPRESSED(int i) {
 
 // Test "silencing" with parentheses.
 void test_with_paren_silencing(int x) {
-  if (0) calledFun(); // expected-warning {{will never be executed}} expected-note {{silence by adding parentheses to mark code as explicitly dead}}
-  if ((0)) calledFun(); // no-warning
+  if (0)
+    calledFun(); // expected-warning {{will never be executed}} expected-note
+                 // {{silence by adding parentheses to mark code as explicitly
+                 // dead}}
+  if ((0))
+    calledFun(); // no-warning
 
-  if (1) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
+  if (1) // expected-note {{silence by adding parentheses to mark code as
+         // explicitly dead}}
     calledFun();
   else
     calledFun(); // expected-warning {{will never be executed}}
@@ -380,17 +394,18 @@ void test_with_paren_silencing(int x) {
     calledFun();
   else
     calledFun(); // no-warning
-  
-  if (!1) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
+
+  if (!1) // expected-note {{silence by adding parentheses to mark code as
+          // explicitly dead}}
     calledFun(); // expected-warning {{code will never be executed}}
   else
     calledFun();
-  
+
   if ((!1))
     calledFun(); // no-warning
   else
     calledFun();
-  
+
   if (!(1))
     calledFun(); // no-warning
   else
@@ -402,10 +417,13 @@ struct StructWithPointer {
 };
 
 void emitJustOneWarningForOr(struct StructWithPointer *s) {
-  if (1 || !s->p) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
-    return; // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:7}:"/* DISABLES CODE */ ("
-            // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:8-[[@LINE-2]]:8}:")"
-  emitJustOneWarningForOr(s); // expected-warning {{code will never be executed}}
+  if (1 || !s->p) // expected-note {{silence by adding parentheses to mark code
+                  // as explicitly dead}}
+    return; // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:7}:"/* DISABLES
+            // CODE */ (" CHECK:
+            // fix-it:"{{.*}}":{[[@LINE-2]]:8-[[@LINE-2]]:8}:")"
+  emitJustOneWarningForOr(
+      s); // expected-warning {{code will never be executed}}
 }
 
 void emitJustOneWarningForOrSilenced(struct StructWithPointer *s) {
@@ -417,45 +435,55 @@ void emitJustOneWarningForOrSilenced(struct StructWithPointer *s) {
 
 void emitJustOneWarningForOr2(struct StructWithPointer *s) {
   if (1 || !s->p) // expected-warning {{code will never be executed}}
-    return; // expected-note@-1 {{silence by adding parentheses to mark code as explicitly dead}}
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"/* DISABLES CODE */ ("
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:8-[[@LINE-3]]:8}:")"
+    return; // expected-note@-1 {{silence by adding parentheses to mark code as
+            // explicitly dead}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:7}:"/* DISABLES CODE */
+  // (" CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:8-[[@LINE-3]]:8}:")"
 }
 
 void wrapOneInFixit(struct StructWithPointer *s) {
-  if (!s->p || 1) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
-    return; // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:16-[[@LINE-1]]:16}:"/* DISABLES CODE */ ("
-            // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:17}:")"
+  if (!s->p || 1) // expected-note {{silence by adding parentheses to mark code
+                  // as explicitly dead}}
+    return;       // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:16-[[@LINE-1]]:16}:"/*
+            // DISABLES CODE */ (" CHECK:
+            // fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:17}:")"
   wrapOneInFixit(s); // expected-warning {{code will never be executed}}
 }
 
 void unaryOpNoFixit(void) {
-  if (~ 1)
-    return; // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
+  if (~1)
+    return;         // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
   unaryOpNoFixit(); // expected-warning {{code will never be executed}}
 }
 
 void unaryOpStrictFixit(struct StructWithPointer *s) {
-  if (!(s->p && 0)) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
-    return; // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:17-[[@LINE-1]]:17}:"/* DISABLES CODE */ ("
-            // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:18-[[@LINE-2]]:18}:")"
+  if (!(s->p && 0)) // expected-note {{silence by adding parentheses to mark
+                    // code as explicitly dead}}
+    return; // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:17-[[@LINE-1]]:17}:"/*
+            // DISABLES CODE */ (" CHECK:
+            // fix-it:"{{.*}}":{[[@LINE-2]]:18-[[@LINE-2]]:18}:")"
   unaryOpStrictFixit(s); // expected-warning {{code will never be executed}}
 }
 
 void unaryOpFixitCastSubExpr(int x) {
-  if (! (int)0) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
-    return; // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:7}:"/* DISABLES CODE */ ("
-            // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:15-[[@LINE-2]]:15}:")"
-  unaryOpFixitCastSubExpr(x); // expected-warning {{code will never be executed}}
+  if (!(int)0) // expected-note {{silence by adding parentheses to mark code as
+               // explicitly dead}}
+    return; // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:7}:"/* DISABLES
+            // CODE */ (" CHECK:
+            // fix-it:"{{.*}}":{[[@LINE-2]]:15-[[@LINE-2]]:15}:")"
+  unaryOpFixitCastSubExpr(
+      x); // expected-warning {{code will never be executed}}
 }
 
 #define false 0
 #define true 1
 
 void testTrueFalseMacros(void) {
-  if (false) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
+  if (false) // expected-note {{silence by adding parentheses to mark code as
+             // explicitly dead}}
     testTrueFalseMacros(); // expected-warning {{code will never be executed}}
-  if (!true) // expected-note {{silence by adding parentheses to mark code as explicitly dead}}
+  if (!true) // expected-note {{silence by adding parentheses to mark code as
+             // explicitly dead}}
     testTrueFalseMacros(); // expected-warning {{code will never be executed}}
 }
 
@@ -465,7 +493,7 @@ int pr13910_foo(int x) {
   else
     return x;
   __builtin_unreachable(); // expected no warning
-  __builtin_assume(0); // expected no warning
+  __builtin_assume(0);     // expected no warning
 }
 
 int pr13910_bar(int x) {
@@ -490,12 +518,12 @@ int pr13910_bar2(int x) {
 void pr13910_noreturn(void) {
   raze();
   __builtin_unreachable(); // expected no warning
-  __builtin_assume(0); // expected no warning
+  __builtin_assume(0);     // expected no warning
 }
 
 void pr13910_assert(void) {
   myassert(0 && "unreachable");
   return;
   __builtin_unreachable(); // expected no warning
-  __builtin_assume(0); // expected no warning
+  __builtin_assume(0);     // expected no warning
 }

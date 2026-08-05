@@ -1098,7 +1098,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                   TRI->regsOverlap(MOP.getReg(), RegToRename)) {
                 assert((MOP.isImplicit() ||
                         (MOP.isRenamable() && !MOP.isEarlyClobber())) &&
-                           "Need renamable operands");
+                       "Need renamable operands");
                 Register MatchingReg;
                 if (const TargetRegisterClass *RC =
                         MI.getRegClassConstraint(OpIdx, TII, TRI))
@@ -1468,8 +1468,8 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
     // Remove the load, if the destination register of the loads is the same
     // register for stored value.
     if (StRt == LdRt && LoadSize == 8) {
-      for (MachineInstr &MI : make_range(StoreI->getIterator(),
-                                         LoadI->getIterator())) {
+      for (MachineInstr &MI :
+           make_range(StoreI->getIterator(), LoadI->getIterator())) {
         if (MI.killsRegister(StRt, TRI)) {
           MI.clearRegisterKills(StRt, TRI);
           break;
@@ -1555,8 +1555,8 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
   }
 
   // Clear kill flags between store and load.
-  for (MachineInstr &MI : make_range(StoreI->getIterator(),
-                                     BitExtMI->getIterator()))
+  for (MachineInstr &MI :
+       make_range(StoreI->getIterator(), BitExtMI->getIterator()))
     if (MI.killsRegister(StRt, TRI)) {
       MI.clearRegisterKills(StRt, TRI);
       break;
@@ -1900,8 +1900,7 @@ static bool canRenameUntilSecondLoad(
   UsedInBetween.accumulate(FirstLoad);
   auto RegToRename = getLdStRegOp(FirstLoad).getReg();
   bool Success = std::all_of(
-      FirstLoad.getIterator(), SecondLoad.getIterator(),
-      [&](MachineInstr &MI) {
+      FirstLoad.getIterator(), SecondLoad.getIterator(), [&](MachineInstr &MI) {
         LLVM_DEBUG(dbgs() << "Checking " << MI);
         // Currently we do not try to rename across frame-setup instructions.
         if (MI.getFlag(MachineInstr::FrameSetup)) {
@@ -2923,8 +2922,8 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   return true;
 }
 
-bool AArch64LoadStoreOpt::tryToMergeLdStUpdate
-    (MachineBasicBlock::iterator &MBBI) {
+bool AArch64LoadStoreOpt::tryToMergeLdStUpdate(
+    MachineBasicBlock::iterator &MBBI) {
   MachineInstr &MI = *MBBI;
   MachineBasicBlock::iterator E = MI.getParent()->end();
   MachineBasicBlock::iterator Update;

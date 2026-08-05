@@ -1,10 +1,19 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple amdgpu-amd-amdhsa -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck -check-prefixes=DEFAULT,ALL %s
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple amdgpu9.00-amd-amdhsa -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck -check-prefixes=DEFAULT,ALL %s
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown
+// -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host.bc RUN:
+// %clang_cc1 -fopenmp -x c++ -std=c++11 -triple amdgpu-amd-amdhsa
+// -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device
+// -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck
+// -check-prefixes=DEFAULT,ALL %s RUN: %clang_cc1 -fopenmp -x c++ -std=c++11
+// -triple amdgpu9.00-amd-amdhsa -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm
+// %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - |
+// FileCheck -check-prefixes=DEFAULT,ALL %s
 
-// RUN: %clang_cc1 -menable-no-nans -mno-amdgpu-ieee -fopenmp -x c++ -std=c++11 -triple amdgpu-amd-amdhsa -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck -check-prefixes=NOIEEE,ALL %s
+// RUN: %clang_cc1 -menable-no-nans -mno-amdgpu-ieee -fopenmp -x c++ -std=c++11
+// -triple amdgpu-amd-amdhsa -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s
+// -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - |
+// FileCheck -check-prefixes=NOIEEE,ALL %s
 
 // expected-no-diagnostics
 
@@ -31,8 +40,17 @@ int callable(int x) {
   return x + 1;
 }
 
-// DEFAULT: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
-// NOIEEE: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "amdgpu-ieee"="false" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+// DEFAULT: attributes #0 = { convergent mustprogress noinline norecurse
+// nounwind optnone "amdgpu-flat-work-group-size"="1,42" "kernel"
+// "no-trapping-math"="true" "omp_target_thread_limit"="42"
+// "stack-protector-buffer-size"="8" "uniform-work-group-size" } NOIEEE:
+// attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone
+// "amdgpu-flat-work-group-size"="1,42" "amdgpu-ieee"="false" "kernel"
+// "no-trapping-math"="true" "omp_target_thread_limit"="42"
+// "stack-protector-buffer-size"="8" "uniform-work-group-size" }
 
-// DEFAULT: attributes #2 = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// NOIEEE: attributes #2 = { convergent mustprogress noinline nounwind optnone "amdgpu-ieee"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// DEFAULT: attributes #2 = { convergent mustprogress noinline nounwind optnone
+// "no-trapping-math"="true" "stack-protector-buffer-size"="8" } NOIEEE:
+// attributes #2 = { convergent mustprogress noinline nounwind optnone
+// "amdgpu-ieee"="false" "no-trapping-math"="true"
+// "stack-protector-buffer-size"="8" }

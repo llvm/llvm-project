@@ -194,9 +194,9 @@ struct __num_get : protected __num_get_base {
       // TODO(LLVM 24): This can be removed, since -Wpsabi doesn't warn on [[gnu::always_inline]] functions anymore.
       _LIBCPP_DIAGNOSTIC_PUSH
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpsabi")
-      using __vec   = __simd_vector<char, 32>;
-      __vec __cmp   = std::__partial_load<__vec, __int_chr_cnt>(__atoms);
-      auto __res    = __vec(__val) == __cmp;
+      using __vec = __simd_vector<char, 32>;
+      __vec __cmp = std::__partial_load<__vec, __int_chr_cnt>(__atoms);
+      auto __res  = __vec(__val) == __cmp;
       if (std::__none_of(__res))
         return __int_chr_cnt;
       return std::min(__int_chr_cnt, std::__find_first_set(__res));
@@ -543,7 +543,7 @@ protected:
           __base = 16;
           ++__first;
         } else {
-          __base = 8;
+          __base       = 8;
           __parsed_num = true; // We only swallowed '0', so we've started to parse a number
         }
       } else {

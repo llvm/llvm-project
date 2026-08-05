@@ -77,8 +77,8 @@ lldb_private::TypeSummaryOptions *SBTypeSummaryOptions::operator->() {
   return m_opaque_up.get();
 }
 
-const lldb_private::TypeSummaryOptions *SBTypeSummaryOptions::
-operator->() const {
+const lldb_private::TypeSummaryOptions *
+SBTypeSummaryOptions::operator->() const {
   return m_opaque_up.get();
 }
 

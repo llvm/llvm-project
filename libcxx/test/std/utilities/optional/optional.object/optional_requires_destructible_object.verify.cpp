@@ -17,41 +17,39 @@
 
 using std::optional;
 
-struct X
-{
+struct X {
 private:
-    ~X() {}
+  ~X() {}
 };
 
-int main(int, char**)
-{
-    using std::optional;
-    {
+int main(int, char**) {
+  using std::optional;
+  {
 #if TEST_STD_VER >= 26
-      // expected-error-re@*:* {{static assertion failed{{.*}}instantiation of optional with an rvalue reference type is ill-formed}}
+    // expected-error-re@*:* {{static assertion failed{{.*}}instantiation of optional with an rvalue reference type is ill-formed}}
 #else
-      // expected-error-re@*:* 2 {{static assertion failed{{.*}}instantiation of optional with a reference type is ill-formed}}
+    // expected-error-re@*:* 2 {{static assertion failed{{.*}}instantiation of optional with a reference type is ill-formed}}
 #endif
-      optional<int&> opt1;
-      optional<int&&> opt2;
-    }
-    {
-      // expected-error-re@*:* {{static assertion failed{{.*}}instantiation of optional with a non-destructible type is ill-formed}}
-      optional<X> opt3;
-    }
-    {
-      // expected-error-re@*:* {{static assertion failed{{.*}}instantiation of optional with a non-object type is undefined behavior}}
-      // expected-error-re@*:* {{static assertion failed{{.*}}instantiation of optional with a non-destructible type is ill-formed}}
-      optional<void()> opt4;
-    }
-    {
-      // expected-error-re@*:* {{static assertion failed{{.*}}instantiation of optional with a non-object type is undefined behavior}}
-      // expected-error-re@*:* {{static assertion failed{{.*}}instantiation of optional with a non-destructible type is ill-formed}}
-      // expected-error@*:* 1+ {{cannot form a reference to 'void'}}
-      optional<const void> opt4;
-    }
-    // FIXME these are garbage diagnostics that Clang should not produce
-    // expected-error@*:* 0+ {{is not a base class}}
+    optional<int&> opt1;
+    optional<int&&> opt2;
+  }
+  {
+    // expected-error-re@*:* {{static assertion failed{{.*}}instantiation of optional with a non-destructible type is ill-formed}}
+    optional<X> opt3;
+  }
+  {
+    // expected-error-re@*:* {{static assertion failed{{.*}}instantiation of optional with a non-object type is undefined behavior}}
+    // expected-error-re@*:* {{static assertion failed{{.*}}instantiation of optional with a non-destructible type is ill-formed}}
+    optional<void()> opt4;
+  }
+  {
+    // expected-error-re@*:* {{static assertion failed{{.*}}instantiation of optional with a non-object type is undefined behavior}}
+    // expected-error-re@*:* {{static assertion failed{{.*}}instantiation of optional with a non-destructible type is ill-formed}}
+    // expected-error@*:* 1+ {{cannot form a reference to 'void'}}
+    optional<const void> opt4;
+  }
+  // FIXME these are garbage diagnostics that Clang should not produce
+  // expected-error@*:* 0+ {{is not a base class}}
 
-    return 0;
+  return 0;
 }

@@ -40,7 +40,7 @@ static void PrintMacroDefinition(const IdentifierInfo *II, const MacroInfo &MI,
     *OS << '(';
     if (!MI.param_empty()) {
       MacroInfo::param_iterator AI = MI.param_begin(), E = MI.param_end();
-      for (; AI+1 != E; ++AI) {
+      for (; AI + 1 != E; ++AI) {
         *OS << (*AI)->getName();
         *OS << ',';
       }
@@ -53,7 +53,7 @@ static void PrintMacroDefinition(const IdentifierInfo *II, const MacroInfo &MI,
     }
 
     if (MI.isGNUVarargs())
-      *OS << "...";  // #define foo(x...)
+      *OS << "..."; // #define foo(x...)
 
     *OS << ')';
   }
@@ -81,8 +81,10 @@ class PrintPPOutputPPCallbacks : public PPCallbacks {
   Preprocessor &PP;
   SourceManager &SM;
   TokenConcatenation ConcatInfo;
+
 public:
   raw_ostream *OS;
+
 private:
   unsigned CurLine;
 
@@ -230,8 +232,8 @@ public:
                    const Token &Tok) {
     return ConcatInfo.AvoidConcat(PrevPrevTok, PrevTok, Tok);
   }
-  void WriteLineInfo(unsigned LineNo, const char *Extra=nullptr,
-                     unsigned ExtraLen=0);
+  void WriteLineInfo(unsigned LineNo, const char *Extra = nullptr,
+                     unsigned ExtraLen = 0);
   bool LineMarkersAreDisabled() const { return DisableLineMarkers; }
   void HandleNewlinesInToken(const char *TokStr, unsigned Len);
 
@@ -240,8 +242,7 @@ public:
                     const MacroDirective *MD) override;
 
   /// MacroUndefined - This hook is called whenever a macro #undef is seen.
-  void MacroUndefined(const Token &MacroNameTok,
-                      const MacroDefinition &MD,
+  void MacroUndefined(const Token &MacroNameTok, const MacroDefinition &MD,
                       const MacroDirective *Undef) override;
 
   void BeginModule(const Module *M);
@@ -252,10 +253,9 @@ public:
 
   const Token &GetPrevToken() const { return PrevTok; }
 };
-}  // end anonymous namespace
+} // end anonymous namespace
 
-void PrintPPOutputPPCallbacks::WriteLineInfo(unsigned LineNo,
-                                             const char *Extra,
+void PrintPPOutputPPCallbacks::WriteLineInfo(unsigned LineNo, const char *Extra,
                                              unsigned ExtraLen) {
   startNewLineIfNeeded();
 
@@ -347,10 +347,9 @@ void PrintPPOutputPPCallbacks::startNewLineIfNeeded() {
 /// FileChanged - Whenever the preprocessor enters or exits a #include file
 /// it invokes this handler.  Update our conception of the current source
 /// position.
-void PrintPPOutputPPCallbacks::FileChanged(SourceLocation Loc,
-                                           FileChangeReason Reason,
-                                       SrcMgr::CharacteristicKind NewFileType,
-                                       FileID PrevFID) {
+void PrintPPOutputPPCallbacks::FileChanged(
+    SourceLocation Loc, FileChangeReason Reason,
+    SrcMgr::CharacteristicKind NewFileType, FileID PrevFID) {
   // Unless we are exiting a #include, make sure to skip ahead to the line the
   // #include directive was at.
   SourceManager &SourceMgr = SM;
@@ -497,11 +496,9 @@ void PrintPPOutputPPCallbacks::InclusionDirective(
     MoveToLine(HashLoc, /*RequireStartOfLine=*/true);
     const std::string TokenText = PP.getSpelling(IncludeTok);
     assert(!TokenText.empty());
-    *OS << "#" << TokenText << " "
-        << (IsAngled ? '<' : '"') << FileName << (IsAngled ? '>' : '"')
-        << " /* clang -E "
-        << (DumpIncludeDirectives ? "-dI" : "-fkeep-system-includes")
-        << " */";
+    *OS << "#" << TokenText << " " << (IsAngled ? '<' : '"') << FileName
+        << (IsAngled ? '>' : '"') << " /* clang -E "
+        << (DumpIncludeDirectives ? "-dI" : "-fkeep-system-includes") << " */";
     setEmittedDirectiveOnThisLine();
   }
 
@@ -514,10 +511,9 @@ void PrintPPOutputPPCallbacks::InclusionDirective(
       MoveToLine(HashLoc, /*RequireStartOfLine=*/true);
       *OS << "#pragma clang module import "
           << SuggestedModule->getFullModuleName(true)
-          << " /* clang -E: implicit import for "
-          << "#" << PP.getSpelling(IncludeTok) << " "
-          << (IsAngled ? '<' : '"') << FileName << (IsAngled ? '>' : '"')
-          << " */";
+          << " /* clang -E: implicit import for " << "#"
+          << PP.getSpelling(IncludeTok) << " " << (IsAngled ? '<' : '"')
+          << FileName << (IsAngled ? '>' : '"') << " */";
       setEmittedDirectiveOnThisLine();
       break;
 
@@ -616,10 +612,8 @@ static void outputPrintable(raw_ostream *OS, StringRef Str) {
     if (isPrintable(Char) && Char != '\\' && Char != '"')
       *OS << (char)Char;
     else // Output anything hard as an octal escape.
-      *OS << '\\'
-          << (char)('0' + ((Char >> 6) & 7))
-          << (char)('0' + ((Char >> 3) & 7))
-          << (char)('0' + ((Char >> 0) & 7));
+      *OS << '\\' << (char)('0' + ((Char >> 6) & 7))
+          << (char)('0' + ((Char >> 3) & 7)) << (char)('0' + ((Char >> 0) & 7));
   }
 }
 
@@ -632,15 +626,15 @@ void PrintPPOutputPPCallbacks::PragmaMessage(SourceLocation Loc,
   if (!Namespace.empty())
     *OS << Namespace << ' ';
   switch (Kind) {
-    case PMK_Message:
-      *OS << "message(\"";
-      break;
-    case PMK_Warning:
-      *OS << "warning \"";
-      break;
-    case PMK_Error:
-      *OS << "error \"";
-      break;
+  case PMK_Message:
+    *OS << "message(\"";
+    break;
+  case PMK_Warning:
+    *OS << "warning \"";
+    break;
+  case PMK_Error:
+    *OS << "error \"";
+    break;
   }
 
   outputPrintable(OS, Str);
@@ -660,15 +654,15 @@ void PrintPPOutputPPCallbacks::PragmaDebug(SourceLocation Loc,
   setEmittedDirectiveOnThisLine();
 }
 
-void PrintPPOutputPPCallbacks::
-PragmaDiagnosticPush(SourceLocation Loc, StringRef Namespace) {
+void PrintPPOutputPPCallbacks::PragmaDiagnosticPush(SourceLocation Loc,
+                                                    StringRef Namespace) {
   MoveToLine(Loc, /*RequireStartOfLine=*/true);
   *OS << "#pragma " << Namespace << " diagnostic push";
   setEmittedDirectiveOnThisLine();
 }
 
-void PrintPPOutputPPCallbacks::
-PragmaDiagnosticPop(SourceLocation Loc, StringRef Namespace) {
+void PrintPPOutputPPCallbacks::PragmaDiagnosticPop(SourceLocation Loc,
+                                                   StringRef Namespace) {
   MoveToLine(Loc, /*RequireStartOfLine=*/true);
   *OS << "#pragma " << Namespace << " diagnostic pop";
   setEmittedDirectiveOnThisLine();
@@ -707,16 +701,34 @@ void PrintPPOutputPPCallbacks::PragmaWarning(SourceLocation Loc,
   MoveToLine(Loc, /*RequireStartOfLine=*/true);
 
   *OS << "#pragma warning(";
-  switch(WarningSpec) {
-    case PWS_Default:  *OS << "default"; break;
-    case PWS_Disable:  *OS << "disable"; break;
-    case PWS_Error:    *OS << "error"; break;
-    case PWS_Once:     *OS << "once"; break;
-    case PWS_Suppress: *OS << "suppress"; break;
-    case PWS_Level1:   *OS << '1'; break;
-    case PWS_Level2:   *OS << '2'; break;
-    case PWS_Level3:   *OS << '3'; break;
-    case PWS_Level4:   *OS << '4'; break;
+  switch (WarningSpec) {
+  case PWS_Default:
+    *OS << "default";
+    break;
+  case PWS_Disable:
+    *OS << "disable";
+    break;
+  case PWS_Error:
+    *OS << "error";
+    break;
+  case PWS_Once:
+    *OS << "once";
+    break;
+  case PWS_Suppress:
+    *OS << "suppress";
+    break;
+  case PWS_Level1:
+    *OS << '1';
+    break;
+  case PWS_Level2:
+    *OS << '2';
+    break;
+  case PWS_Level3:
+    *OS << '3';
+    break;
+  case PWS_Level4:
+    *OS << '4';
+    break;
   }
   *OS << ':';
 
@@ -758,15 +770,13 @@ void PrintPPOutputPPCallbacks::PragmaExecCharsetPop(SourceLocation Loc) {
   setEmittedDirectiveOnThisLine();
 }
 
-void PrintPPOutputPPCallbacks::
-PragmaAssumeNonNullBegin(SourceLocation Loc) {
+void PrintPPOutputPPCallbacks::PragmaAssumeNonNullBegin(SourceLocation Loc) {
   MoveToLine(Loc, /*RequireStartOfLine=*/true);
   *OS << "#pragma clang assume_nonnull begin";
   setEmittedDirectiveOnThisLine();
 }
 
-void PrintPPOutputPPCallbacks::
-PragmaAssumeNonNullEnd(SourceLocation Loc) {
+void PrintPPOutputPPCallbacks::PragmaAssumeNonNullEnd(SourceLocation Loc) {
   MoveToLine(Loc, /*RequireStartOfLine=*/true);
   *OS << "#pragma clang assume_nonnull end";
   setEmittedDirectiveOnThisLine();
@@ -846,26 +856,24 @@ void PrintPPOutputPPCallbacks::HandleNewlinesInToken(const char *TokStr,
                                                      unsigned Len) {
   unsigned NumNewlines = 0;
   for (; Len; --Len, ++TokStr) {
-    if (*TokStr != '\n' &&
-        *TokStr != '\r')
+    if (*TokStr != '\n' && *TokStr != '\r')
       continue;
 
     ++NumNewlines;
 
     // If we have \n\r or \r\n, skip both and count as one line.
-    if (Len != 1 &&
-        (TokStr[1] == '\n' || TokStr[1] == '\r') &&
+    if (Len != 1 && (TokStr[1] == '\n' || TokStr[1] == '\r') &&
         TokStr[0] != TokStr[1]) {
       ++TokStr;
       --Len;
     }
   }
 
-  if (NumNewlines == 0) return;
+  if (NumNewlines == 0)
+    return;
 
   CurLine += NumNewlines;
 }
-
 
 namespace {
 struct UnknownPragmaHandler : public PragmaHandler {
@@ -918,11 +926,10 @@ struct UnknownPragmaHandler : public PragmaHandler {
 };
 } // end anonymous namespace
 
-
 static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
                                     PrintPPOutputPPCallbacks *Callbacks) {
-  bool DropComments = PP.getLangOpts().TraditionalCPP &&
-                      !PP.getCommentRetentionState();
+  bool DropComments =
+      PP.getLangOpts().TraditionalCPP && !PP.getCommentRetentionState();
 
   bool IsStartOfLine = false;
   bool IsCXXModuleDirective = false;
@@ -1120,7 +1127,8 @@ static void DoPrintMacros(Preprocessor &PP, raw_ostream *OS) {
   for (unsigned i = 0, e = MacrosByID.size(); i != e; ++i) {
     MacroInfo &MI = *MacrosByID[i].second;
     // Ignore computed macros like __LINE__ and friends.
-    if (MI.isBuiltinMacro()) continue;
+    if (MI.isBuiltinMacro())
+      continue;
 
     PrintMacroDefinition(MacrosByID[i].first, MI, PP, OS);
     *OS << '\n';
