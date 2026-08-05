@@ -98,3 +98,25 @@ class TestFrameVarDILAssignment(TestBase):
             error=True,
             substrs=["Assignment is allowed only at top level"],
         )
+
+        # Check that operators `--` and `++` return an error message.
+        self.expect(
+            "frame variable 'i++'",
+            error=True,
+            substrs=["Increment operator is not supported. Use `+=` instead."],
+        )
+        self.expect(
+            "frame variable '++i'",
+            error=True,
+            substrs=["Increment operator is not supported. Use `+=` instead."],
+        )
+        self.expect(
+            "frame variable 'i--'",
+            error=True,
+            substrs=["Decrement operator is not supported. Use `-=` instead."],
+        )
+        self.expect(
+            "frame variable -- '--i'",
+            error=True,
+            substrs=["Decrement operator is not supported. Use `-=` instead."],
+        )

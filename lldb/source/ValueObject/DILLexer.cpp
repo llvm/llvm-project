@@ -72,6 +72,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "minus";
   case Kind::minusequal:
     return "minusequal";
+  case Kind::minusminus:
+    return "minusminus";
   case Token::percent:
     return "percent";
   case Kind::period:
@@ -84,6 +86,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "plus";
   case Kind::plusequal:
     return "plusequal";
+  case Kind::plusplus:
+    return "plusplus";
   case Kind::question:
     return "question";
   case Kind::r_paren:
@@ -234,8 +238,10 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
       {Token::lessequal, "<="},
       {Token::lessless, "<<"},
       {Token::minusequal, "-="},
+      {Token::minusminus, "--"},
       {Token::pipepipe, "||"},
       {Token::plusequal, "+="},
+      {Token::plusplus, "++"},
       {Token::amp, "&"},
       {Token::caret, "^"},
       {Token::colon, ":"},

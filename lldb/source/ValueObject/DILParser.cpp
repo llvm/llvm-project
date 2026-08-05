@@ -499,7 +499,8 @@ ASTNodeUP DILParser::ParseCastExpression() {
 //
 ASTNodeUP DILParser::ParseUnaryExpression() {
   if (CurToken().IsOneOf({Token::amp, Token::star, Token::minus, Token::plus,
-                          Token::tilde, Token::exclaim})) {
+                          Token::tilde, Token::exclaim, Token::minusminus,
+                          Token::plusplus})) {
     Token token = CurToken();
     uint32_t loc = token.GetLocation();
     m_dil_lexer.Advance();
@@ -524,6 +525,14 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
     case Token::exclaim:
       return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::LNot,
                                            std::move(rhs));
+    case Token::minusminus:
+      BailOut("Decrement operator is not supported. Use `-=` instead.",
+              CurToken().GetLocation(), CurToken().GetSpelling().length());
+      return std::make_unique<ErrorNode>();
+    case Token::plusplus:
+      BailOut("Increment operator is not supported. Use `+=` instead.",
+              CurToken().GetLocation(), CurToken().GetSpelling().length());
+      return std::make_unique<ErrorNode>();
     default:
       llvm_unreachable("invalid token kind");
     }
@@ -543,7 +552,8 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
 ASTNodeUP DILParser::ParsePostfixExpression() {
   ASTNodeUP lhs = ParsePrimaryExpression();
   assert(lhs && "ASTNodeUP must not contain a nullptr");
-  while (CurToken().IsOneOf({Token::l_square, Token::period, Token::arrow})) {
+  while (CurToken().IsOneOf({Token::l_square, Token::period, Token::arrow,
+                             Token::minusminus, Token::plusplus})) {
     uint32_t loc = CurToken().GetLocation();
     Token token = CurToken();
     switch (token.GetKind()) {
@@ -579,6 +589,14 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
           token.GetKind() == Token::arrow, member_id);
       break;
     }
+    case Token::minusminus:
+      BailOut("Decrement operator is not supported. Use `-=` instead.",
+              CurToken().GetLocation(), CurToken().GetSpelling().length());
+      return std::make_unique<ErrorNode>();
+    case Token::plusplus:
+      BailOut("Increment operator is not supported. Use `+=` instead.",
+              CurToken().GetLocation(), CurToken().GetSpelling().length());
+      return std::make_unique<ErrorNode>();
     default:
       llvm_unreachable("invalid token");
     }
