@@ -83,6 +83,44 @@ class TestScriptedResolver(TestBase):
         self.assertTrue(overridden.IsHardware())
         self.assertEqual(initial_count + 1, target.GetNumBreakpoints())
 
+    def test_scripted_resolver_error_reported_once(self):
+        """Each entry point reports a construction failure through exactly one
+        channel: the command prints it, the SB API broadcasts it."""
+        self.build()
+        target = self.make_target_and_import()
+        extra_args = self.make_extra_args()
+        broadcaster = self.dbg.GetBroadcaster()
+        listener = lldbutil.start_listening_from(
+            broadcaster, lldb.SBDebugger.eBroadcastBitError
+        )
+
+        self.expect(
+            "breakpoint set -P resolver.DoesNotExist",
+            error=True,
+            substrs=["Could not find script class: resolver.DoesNotExist"],
+        )
+        self.assertFalse(
+            listener.GetNextEvent(lldb.SBEvent()),
+            "the command reports the error, so nothing should be broadcast",
+        )
+
+        target.BreakpointCreateFromScript(
+            "resolver.DoesNotExist",
+            extra_args,
+            lldb.SBFileSpecList(),
+            lldb.SBFileSpecList(),
+            False,
+        )
+        event = lldbutil.fetch_next_event(self, listener, broadcaster)
+        message = lldb.SBDebugger.GetDiagnosticFromEvent(event).GetValueForKey(
+            "message"
+        )
+        self.assertIn("resolver.DoesNotExist", message.GetStringValue(4096))
+        self.assertFalse(
+            listener.GetNextEvent(lldb.SBEvent()),
+            "the SB path should broadcast exactly one diagnostic",
+        )
+
     def make_target_and_import(self):
         target = self.make_target()
         self.import_resolver_script()

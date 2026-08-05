@@ -1118,6 +1118,10 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateFromScript(
                                             request_hardware,
                                             obj_sp,
                                             &error);
+    // This entry point has no error out-parameter.
+    if (error.Fail())
+      Debugger::ReportError(error.AsCString(),
+                            target_sp->GetDebugger().GetID());
   }
 
   return sb_bp;

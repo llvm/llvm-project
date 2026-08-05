@@ -32,6 +32,8 @@
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
 
 using namespace lldb;
@@ -659,8 +661,15 @@ lldb::BreakpointSP CPPLanguageRuntime::CreateExceptionBreakpoint(
   SearchFilterSP filter_sp(CreateExceptionSearchFilter());
   const bool hardware = false;
   const bool resolve_indirect_functions = false;
-  return target.CreateBreakpoint(filter_sp, exception_resolver_sp, is_internal,
-                                 hardware, resolve_indirect_functions);
+  llvm::Expected<BreakpointSP> bp_or_err =
+      target.CreateBreakpoint(filter_sp, exception_resolver_sp, is_internal,
+                              hardware, resolve_indirect_functions);
+  if (!bp_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Breakpoints), bp_or_err.takeError(),
+                   "Failed to create exception breakpoint: {0}");
+    return {};
+  }
+  return *bp_or_err;
 }
 
 void CPPLanguageRuntime::SetExceptionBreakpoints() {

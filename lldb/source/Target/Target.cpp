@@ -485,6 +485,17 @@ lldb_private::Target::CreateBreakpointAtUserEntry(Status &error) {
   return bp_sp;
 }
 
+/// Unwrap a breakpoint creation result for callers that have no error channel
+/// of their own.
+static BreakpointSP
+TakeBreakpointOrLog(llvm::Expected<BreakpointSP> bp_or_err) {
+  if (bp_or_err)
+    return *bp_or_err;
+  LLDB_LOG_ERROR(GetLog(LLDBLog::Breakpoints), bp_or_err.takeError(),
+                 "Failed to create breakpoint: {0}");
+  return {};
+}
+
 BreakpointSP Target::CreateSourceRegexBreakpoint(
     const FileSpecList *containingModules,
     const FileSpecList *source_file_spec_list,
@@ -499,7 +510,8 @@ BreakpointSP Target::CreateSourceRegexBreakpoint(
       nullptr, std::move(source_regex), function_names,
       !static_cast<bool>(move_to_nearest_code)));
 
-  return CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true);
+  return TakeBreakpointOrLog(
+      CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true));
 }
 
 BreakpointSP Target::CreateBreakpoint(const FileSpecList *containingModules,
@@ -557,7 +569,8 @@ BreakpointSP Target::CreateBreakpoint(const FileSpecList *containingModules,
 
   BreakpointResolverSP resolver_sp(new BreakpointResolverFileLine(
       nullptr, offset, skip_prologue, location_spec, removed_prefix_opt));
-  return CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true);
+  return TakeBreakpointOrLog(
+      CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true));
 }
 
 BreakpointSP Target::CreateBreakpoint(lldb::addr_t addr, bool internal,
@@ -587,7 +600,8 @@ BreakpointSP Target::CreateBreakpoint(const Address &addr, bool internal,
           shared_from_this());
   BreakpointResolverSP resolver_sp =
       std::make_shared<BreakpointResolverAddress>(nullptr, addr);
-  return CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, false);
+  return TakeBreakpointOrLog(
+      CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, false));
 }
 
 lldb::BreakpointSP
@@ -600,8 +614,8 @@ Target::CreateAddressInModuleBreakpoint(lldb::addr_t file_addr, bool internal,
   BreakpointResolverSP resolver_sp =
       std::make_shared<BreakpointResolverAddress>(nullptr, Address(file_addr),
                                                   file_spec);
-  return CreateBreakpoint(filter_sp, resolver_sp, internal, request_hardware,
-                          false);
+  return TakeBreakpointOrLog(CreateBreakpoint(filter_sp, resolver_sp, internal,
+                                              request_hardware, false));
 }
 
 BreakpointSP Target::CreateBreakpoint(
@@ -623,7 +637,8 @@ BreakpointSP Target::CreateBreakpoint(
     BreakpointResolverSP resolver_sp(new BreakpointResolverName(
         nullptr, func_name, func_name_type_mask, language, Breakpoint::Exact,
         offset, offset_is_insn_count, skip_prologue));
-    bp_sp = CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true);
+    bp_sp = TakeBreakpointOrLog(
+        CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true));
   }
   return bp_sp;
 }
@@ -649,7 +664,8 @@ Target::CreateBreakpoint(const FileSpecList *containingModules,
     BreakpointResolverSP resolver_sp(
         new BreakpointResolverName(nullptr, func_names, func_name_type_mask,
                                    language, offset, skip_prologue));
-    bp_sp = CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true);
+    bp_sp = TakeBreakpointOrLog(
+        CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true));
   }
   return bp_sp;
 }
@@ -679,7 +695,8 @@ Target::CreateBreakpoint(const FileSpecList *containingModules,
         nullptr, func_names, num_names, func_name_type_mask, language, offset,
         skip_prologue));
     resolver_sp->SetOffset(offset);
-    bp_sp = CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true);
+    bp_sp = TakeBreakpointOrLog(
+        CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true));
   }
   return bp_sp;
 }
@@ -753,7 +770,8 @@ BreakpointSP Target::CreateFuncRegexBreakpoint(
   BreakpointResolverSP resolver_sp(new BreakpointResolverName(
       nullptr, std::move(func_regex), requested_language, 0, skip));
 
-  return CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true);
+  return TakeBreakpointOrLog(
+      CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true));
 }
 
 lldb::BreakpointSP
@@ -779,6 +797,9 @@ lldb::BreakpointSP Target::CreateScriptedBreakpoint(
     const FileSpecList *containingSourceFiles, bool internal,
     bool request_hardware, StructuredData::ObjectSP extra_args_sp,
     Status *creation_error) {
+  if (creation_error)
+    creation_error->Clear();
+
   SearchFilterSP filter_sp;
 
   lldb::SearchDepth depth = lldb::eSearchDepthTarget;
@@ -802,17 +823,23 @@ lldb::BreakpointSP Target::CreateScriptedBreakpoint(
   BreakpointResolverSP resolver_sp =
       std::make_shared<BreakpointResolverScripted>(
           nullptr, class_name, depth, StructuredDataImpl(extra_args_sp));
-  return CreateBreakpoint(filter_sp, resolver_sp, internal, request_hardware,
-                          true, creation_error);
+  llvm::Expected<BreakpointSP> bp_or_err = CreateBreakpoint(
+      filter_sp, resolver_sp, internal, request_hardware, true);
+  if (bp_or_err)
+    return *bp_or_err;
+
+  Status error = Status::FromError(bp_or_err.takeError());
+  if (creation_error)
+    *creation_error = std::move(error);
+  else
+    Debugger::ReportError(error.AsCString(), GetDebugger().GetID());
+  return {};
 }
 
-BreakpointSP Target::CreateBreakpoint(SearchFilterSP &filter_sp,
-                                      BreakpointResolverSP &resolver_sp,
-                                      bool internal, bool request_hardware,
-                                      bool resolve_indirect_symbols,
-                                      Status *creation_error) {
-  if (creation_error)
-    creation_error->Clear();
+llvm::Expected<BreakpointSP>
+Target::CreateBreakpoint(SearchFilterSP &filter_sp,
+                         BreakpointResolverSP &resolver_sp, bool internal,
+                         bool request_hardware, bool resolve_indirect_symbols) {
   BreakpointSP bp_sp;
   if (filter_sp && resolver_sp) {
     // Now check whether there are any "Breakpoint Overrides" registered, and
@@ -830,11 +857,8 @@ BreakpointSP Target::CreateBreakpoint(SearchFilterSP &filter_sp,
     resolver_sp->SetBreakpoint(bp_sp);
     if (auto *scripted_resolver =
             llvm::dyn_cast<BreakpointResolverScripted>(resolver_sp.get());
-        scripted_resolver && scripted_resolver->GetError().Fail()) {
-      if (creation_error)
-        *creation_error = scripted_resolver->GetError().Clone();
-      return {};
-    }
+        scripted_resolver && scripted_resolver->GetError().Fail())
+      return scripted_resolver->GetError().ToError();
     AddBreakpoint(bp_sp, internal);
   }
   return bp_sp;
@@ -1422,7 +1446,7 @@ Status Target::CreateBreakpointsFromFile(const FileSpec &file,
         shared_from_this(), bkpt_data_sp, error);
     if (!error.Success()) {
       error = Status::FromErrorStringWithFormat(
-          "Error restoring breakpoint %zu from %s: %s.", i,
+          "Error restoring breakpoint %zu from %s: %s", i,
           file.GetPath().c_str(), error.AsCString());
       return error;
     }

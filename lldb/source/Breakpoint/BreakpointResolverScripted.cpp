@@ -36,7 +36,7 @@ BreakpointResolverScripted::BreakpointResolverScripted(
 }
 
 void BreakpointResolverScripted::CreateImplementationIfNeeded(
-    BreakpointSP breakpoint_sp) {
+    BreakpointSP breakpoint_sp, bool report_errors) {
   // This version has to be called with a valid breakpoint_sp
   // But the interface might have been made before we sent the breakpoint to
   // the interface.  If so, do that here:
@@ -54,11 +54,15 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded(
 
   TargetSP target_sp = breakpoint_sp->GetTargetSP();
   if (target_sp)
-    CreateImplementationIfNeeded(*target_sp.get(), breakpoint_sp);
+    CreateImplementationIfNeeded(*target_sp.get(), breakpoint_sp,
+                                 report_errors);
 }
 
 void BreakpointResolverScripted::CreateImplementationIfNeeded(
-    Target &target, BreakpointSP breakpoint_sp) {
+    Target &target, BreakpointSP breakpoint_sp, bool report_errors) {
+  // Don't let a stale failure reject a later success.
+  m_error.Clear();
+
   if (m_class_name.empty()) {
     m_error = Status::FromErrorString("scripted breakpoint class is empty");
     return;
@@ -101,10 +105,11 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded(
   if (!obj_or_err) {
     m_interface_sp.reset();
     std::string msg = llvm::toString(obj_or_err.takeError());
-    Debugger::ReportError(
-        llvm::formatv("failed to create BreakpointResolverScripted: {0}", msg)
-            .str(),
-        target.GetDebugger().GetID());
+    if (report_errors)
+      Debugger::ReportError(
+          llvm::formatv("failed to create BreakpointResolverScripted: {0}", msg)
+              .str(),
+          target.GetDebugger().GetID());
     m_error = Status(msg);
     return;
   }
@@ -133,7 +138,7 @@ bool BreakpointResolverScripted::OverridesResolver(
 }
 
 void BreakpointResolverScripted::NotifyBreakpointSet() {
-  CreateImplementationIfNeeded(GetBreakpoint());
+  CreateImplementationIfNeeded(GetBreakpoint(), /*report_errors=*/false);
 }
 
 BreakpointResolverSP BreakpointResolverScripted::CreateFromStructuredData(

@@ -75,8 +75,12 @@ public:
 protected:
   void NotifyBreakpointSet() override;
 private:
-  void CreateImplementationIfNeeded(lldb::BreakpointSP bkpt);
-  void CreateImplementationIfNeeded(Target &target, lldb::BreakpointSP bkpt);
+  /// \param report_errors Broadcast construction failures as debugger
+  /// diagnostics. Callers that propagate \c m_error themselves pass false.
+  void CreateImplementationIfNeeded(lldb::BreakpointSP bkpt,
+                                    bool report_errors = true);
+  void CreateImplementationIfNeeded(Target &target, lldb::BreakpointSP bkpt,
+                                    bool report_errors = true);
   ScriptInterpreter *GetScriptInterpreter();
 
   std::string m_class_name;

@@ -942,11 +942,11 @@ public:
                    bool request_hardware);
 
   // Use this to create a general breakpoint:
-  lldb::BreakpointSP CreateBreakpoint(lldb::SearchFilterSP &filter_sp,
-                                      lldb::BreakpointResolverSP &resolver_sp,
-                                      bool internal, bool request_hardware,
-                                      bool resolve_indirect_symbols,
-                                      Status *creation_error = nullptr);
+  /// A null breakpoint with no error means the filter or resolver was null.
+  llvm::Expected<lldb::BreakpointSP>
+  CreateBreakpoint(lldb::SearchFilterSP &filter_sp,
+                   lldb::BreakpointResolverSP &resolver_sp, bool internal,
+                   bool request_hardware, bool resolve_indirect_symbols);
 
   // Use this to create a watchpoint:
   lldb::WatchpointSP CreateWatchpoint(lldb::addr_t addr, size_t size,

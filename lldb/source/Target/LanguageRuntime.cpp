@@ -12,6 +12,8 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -231,9 +233,15 @@ BreakpointSP LanguageRuntime::CreateExceptionBreakpoint(
       new ExceptionSearchFilter(target.shared_from_this(), language));
   bool hardware = false;
   bool resolve_indirect_functions = false;
-  BreakpointSP exc_breakpt_sp(
+  llvm::Expected<BreakpointSP> bp_or_err =
       target.CreateBreakpoint(filter_sp, resolver_sp, is_internal, hardware,
-                              resolve_indirect_functions));
+                              resolve_indirect_functions);
+  if (!bp_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Breakpoints), bp_or_err.takeError(),
+                   "Failed to create exception breakpoint: {0}");
+    return {};
+  }
+  BreakpointSP exc_breakpt_sp = *bp_or_err;
   if (exc_breakpt_sp) {
     if (auto precond = GetExceptionPrecondition(language, throw_bp))
       exc_breakpt_sp->SetPrecondition(precond);
