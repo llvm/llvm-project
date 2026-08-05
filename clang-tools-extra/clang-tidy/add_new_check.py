@@ -287,12 +287,14 @@ def add_release_notes(
                     continue
 
                 if header_found and add_note_here:
-                    f.write(f"""- New {{doc}}`{check_name_dashes}
+                    f.write(
+                        f"""- New {{doc}}`{check_name_dashes}
   <clang-tidy/checks/{module}/{check_name}>` check.
 
 {wrapped_desc}
 
-""")
+"""
+                    )
                     note_added = True
 
             f.write(line)

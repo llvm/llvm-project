@@ -43,7 +43,8 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
         self.assertEqual(out_str, expected_text)
 
     def test_find_heading(self) -> None:
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             - Deprecated the {program}`clang-tidy` `zircon` module. All checks have been
               moved to the `fuchsia` module instead. The `zircon` module will be removed
               in the 24th release.
@@ -51,14 +52,16 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             #### New checks
             - New {doc}`bugprone-derived-method-shadowing-base-method
               <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
-            """)
+            """
+        )
         lines = text.splitlines(True)
         idx = _mod.find_heading(lines, "New checks")
         self.assertEqual(idx, 4)
 
     def test_duplicate_detection_and_report(self) -> None:
         # Ensure duplicate detection works properly when sorting is incorrect.
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             #### Changes in existing checks
 
             - Improved {doc}`bugprone-easily-swappable-parameters
@@ -76,13 +79,15 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
               correcting a spelling mistake on its option
               `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-            """)
+            """
+        )
         lines = text.splitlines(True)
         report = _mod._emit_duplicate_report(lines, "Changes in existing checks")
         self.assertIsNotNone(report)
         report_str = cast(str, report)
 
-        expected_report = textwrap.dedent("""\
+        expected_report = textwrap.dedent(
+            """\
             Error: Duplicate entries in 'Changes in existing checks'.
 
             Please merge these entries into a single bullet point.
@@ -101,12 +106,14 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
               correcting a spelling mistake on its option
               `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-            """)
+            """
+        )
         self.assertEqual(report_str, expected_report)
 
     def test_process_release_notes_with_unsorted_content(self) -> None:
         # When content is not normalized, the function writes normalized text and returns 0.
-        rn_text = textwrap.dedent("""\
+        rn_text = textwrap.dedent(
+            """\
             #### New checks
 
             - New {doc}`readability-redundant-parentheses
@@ -119,7 +126,8 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
 
               Finds derived class methods that shadow a (non-virtual) base class method.
 
-            """)
+            """
+        )
         with tempfile.TemporaryDirectory() as td:
             rn_doc = os.path.join(td, "ReleaseNotes.md")
             out_path = os.path.join(td, "out.md")
@@ -134,7 +142,8 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             with open(out_path, "r", encoding="utf-8") as f:
                 out = f.read()
 
-            expected_out = textwrap.dedent("""\
+            expected_out = textwrap.dedent(
+                """\
                 #### New checks
 
                 - New {doc}`bugprone-derived-method-shadowing-base-method
@@ -147,14 +156,16 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
 
                   Detect redundant parentheses.
 
-                """)
+                """
+            )
 
             self.assertEqual(out, expected_out)
             self.assertIn("not alphabetically sorted", buf.getvalue())
 
     def test_process_release_notes_prioritizes_sorting_over_duplicates(self) -> None:
         # Sorting is incorrect and duplicates exist, should report ordering issues first.
-        rn_text = textwrap.dedent("""\
+        rn_text = textwrap.dedent(
+            """\
             #### Changes in existing checks
 
             - Improved {doc}`bugprone-easily-swappable-parameters
@@ -172,7 +183,8 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
               correcting a spelling mistake on its option
               `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-            """)
+            """
+        )
         with tempfile.TemporaryDirectory() as td:
             rn_doc = os.path.join(td, "ReleaseNotes.md")
             out_path = os.path.join(td, "out.md")
@@ -190,7 +202,8 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
 
             with open(out_path, "r", encoding="utf-8") as f:
                 out = f.read()
-            expected_out = textwrap.dedent("""\
+            expected_out = textwrap.dedent(
+                """\
                 #### Changes in existing checks
 
                 - Improved {doc}`bugprone-easily-swappable-parameters
@@ -208,12 +221,14 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
                   exceptions from captures are now diagnosed, exceptions in the bodies of
                   lambdas that aren't actually invoked are not.
 
-                """)
+                """
+            )
             self.assertEqual(out, expected_out)
 
     def test_process_release_notes_with_duplicates_fails(self) -> None:
         # Sorting is already correct but duplicates exist, should return 3 and report.
-        rn_text = textwrap.dedent("""\
+        rn_text = textwrap.dedent(
+            """\
             #### Changes in existing checks
 
             - Improved {doc}`bugprone-easily-swappable-parameters
@@ -231,7 +246,8 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
               exceptions from captures are now diagnosed, exceptions in the bodies of
               lambdas that aren't actually invoked are not.
 
-            """)
+            """
+        )
         with tempfile.TemporaryDirectory() as td:
             rn_doc = os.path.join(td, "ReleaseNotes.md")
             out_path = os.path.join(td, "out.md")
@@ -243,7 +259,8 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
                 rc = _mod.process_release_notes(out_path, rn_doc)
 
             self.assertEqual(rc, 3)
-            expected_report = textwrap.dedent("""\
+            expected_report = textwrap.dedent(
+                """\
                 Error: Duplicate entries in 'Changes in existing checks'.
 
                 Please merge these entries into a single bullet point.
@@ -262,7 +279,8 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
                   correcting a spelling mistake on its option
                   `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-                """)
+                """
+            )
             self.assertEqual(buf.getvalue(), expected_report)
 
             with open(out_path, "r", encoding="utf-8") as f:
@@ -270,7 +288,8 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             self.assertEqual(out, rn_text)
 
     def test_release_notes_handles_nested_sub_bullets(self) -> None:
-        rn_text = textwrap.dedent("""\
+        rn_text = textwrap.dedent(
+            """\
             #### Changes in existing checks
 
             - Improved {doc}`bugprone-easily-swappable-parameters
@@ -293,11 +312,13 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
               exceptions from captures are now diagnosed, exceptions in the bodies of
               lambdas that aren't actually invoked are not.
 
-            """)
+            """
+        )
 
         out = _mod.normalize_release_notes(rn_text.splitlines(True))
 
-        expected_out = textwrap.dedent("""\
+        expected_out = textwrap.dedent(
+            """\
             #### Changes in existing checks
 
             - Improved {doc}`bugprone-easily-swappable-parameters
@@ -320,11 +341,13 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
 
               - `for` loops are supported.
 
-           """)
+           """
+        )
         self.assertEqual(out, expected_out)
 
     def test_release_notes_handles_multiline_doc(self) -> None:
-        rn_text = textwrap.dedent("""\
+        rn_text = textwrap.dedent(
+            """\
             #### Changes in existing checks
 
             - Renamed {doc}`performance-faster-string-find
@@ -340,11 +363,13 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
               `google-explicit-constructor`
               name is kept as an alias.
 
-            """)
+            """
+        )
 
         out = _mod.normalize_release_notes(rn_text.splitlines(True))
 
-        expected_out = textwrap.dedent("""\
+        expected_out = textwrap.dedent(
+            """\
             #### Changes in existing checks
 
             - Renamed {doc}`google-explicit-constructor
@@ -360,7 +385,8 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
               <clang-tidy/checks/performance/faster-string-operation>`.
               The `performance-faster-string-find` name is kept as an alias.
 
-            """)
+            """
+        )
         self.assertEqual(out, expected_out)
 
     def test_process_checks_list_normalizes_output(self) -> None:
