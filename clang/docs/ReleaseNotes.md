@@ -365,6 +365,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
+- Fixed an assertion crash when instantiating a nested requirement with an invalid constraint. (#GH213575)
+- Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -546,6 +548,11 @@ features cannot lower the translation-unit ABI level;
 
 - Added parsing and semantic support for `dims` modifier in `num_teams` and
   `thread_limit` clauses for OpenMP 6.1 or later.
+- Map-type-modifying modifiers applied to a list item with a user-defined mapper
+  are now propagated onto the maps the mapper expands to.
+- Mapping of expressions with base-pointers through a user-defined mapper (e.g.
+  `map(s.p[0:n])`) now conforms to OpenMP's conditional pointer-attachment,
+  matching the behavior of such maps outside a mapper.
 
 ### SYCL Support
 

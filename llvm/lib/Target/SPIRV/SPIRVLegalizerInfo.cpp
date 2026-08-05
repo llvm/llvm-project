@@ -173,18 +173,18 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions) ||
       ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4);
   bool IsLongVecs = ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector);
-  auto extendedScalarsAndVectors =
+  auto ExtendedScalarsAndVectors =
       [IsExtendedInts](const LegalityQuery &Query) {
         const LLT Ty = Query.Types[0];
         return IsExtendedInts && Ty.isValid() && !Ty.isPointerOrPointerVector();
       };
-  auto extendedScalarsAndVectorsProduct = [IsExtendedInts](
+  auto ExtendedScalarsAndVectorsProduct = [IsExtendedInts](
                                               const LegalityQuery &Query) {
     const LLT Ty1 = Query.Types[0], Ty2 = Query.Types[1];
     return IsExtendedInts && Ty1.isValid() && Ty2.isValid() &&
            !Ty1.isPointerOrPointerVector() && !Ty2.isPointerOrPointerVector();
   };
-  auto extendedPtrsScalarsAndVectors =
+  auto ExtendedPtrsScalarsAndVectors =
       [IsExtendedInts](const LegalityQuery &Query) {
         const LLT Ty = Query.Types[0];
         return IsExtendedInts && Ty.isValid();
@@ -355,7 +355,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_BITREVERSE, G_SADDSAT, G_UADDSAT, G_SSUBSAT,
                                G_USUBSAT, G_SCMP, G_UCMP})
       .legalFor(allIntScalarsAndVectors)
-      .legalIf(extendedScalarsAndVectors);
+      .legalIf(ExtendedScalarsAndVectors);
 
   getActionDefinitionsBuilder({G_SSHLSAT, G_USHLSAT}).lower();
 
@@ -376,12 +376,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_CTPOP)
       .legalForCartesianProduct(allIntScalarsAndVectors)
-      .legalIf(extendedScalarsAndVectorsProduct)
+      .legalIf(ExtendedScalarsAndVectorsProduct)
       .legalIf(typeOfLongVectors(0, IsLongVecs));
 
   getActionDefinitionsBuilder({G_TRUNC, G_ZEXT, G_SEXT, G_ANYEXT})
       .legalForCartesianProduct(allScalarsAndVectors)
-      .legalIf(extendedScalarsAndVectorsProduct)
+      .legalIf(ExtendedScalarsAndVectorsProduct)
       .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -395,13 +395,13 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .lower();
 
   getActionDefinitionsBuilder(G_PHI)
-      .legalFor(allPtrsScalarsAndVectors)
-      .legalIf(extendedPtrsScalarsAndVectors)
-      .legalIf(typeOfLongVectors(0, IsLongVecs))
-      .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
-                           0, ElementCount::getFixed(MaxVectorSize)));
+                           0, ElementCount::getFixed(MaxVectorSize)))
+      .legalFor(allPtrsScalarsAndVectors)
+      .legalIf(ExtendedPtrsScalarsAndVectors)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
+      .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder(G_BITCAST).legalIf(
       all(typeInSet(0, allPtrsScalarsAndVectors),
@@ -568,10 +568,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_INTRINSIC_ROUNDEVEN})
       .legalFor(allFloatScalars)
       .legalFor(allowedFloatVectorTypes)
-      .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
-                           0, ElementCount::getFixed(MaxVectorSize)));
+                   0, ElementCount::getFixed(MaxVectorSize)))
+        .moreElementsToNextPow2(0);
   // clang-format on
 
   getActionDefinitionsBuilder(G_FCOPYSIGN)
