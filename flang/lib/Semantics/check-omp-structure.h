@@ -238,7 +238,7 @@ public:
   void Enter(const parser::OmpClause::To &x);
   void Enter(const parser::OmpClause::UnifiedAddress &x);
   void Enter(const parser::OmpClause::UnifiedSharedMemory &x);
-  void Enter(const parser::OmpClause::Update &x);
+  void Enter(const parser::OmpClause::UpdateDependObjects &x);
   void Enter(const parser::OmpClause::UseDeviceAddr &x);
   void Enter(const parser::OmpClause::UseDevicePtr &x);
   void Enter(const parser::OmpClause::When &x);

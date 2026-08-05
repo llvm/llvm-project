@@ -1431,6 +1431,28 @@ struct SVEIntrinsicInfo {
     return *this;
   }
 
+  bool hasCmpPredicate() const {
+    return CmpPredicate != CmpInst::BAD_ICMP_PREDICATE;
+  }
+
+  CmpInst::Predicate getCmpPredicate() const {
+    assert(hasCmpPredicate() && "Property not set!");
+    return CmpPredicate;
+  }
+
+  SVEIntrinsicInfo &setCmpPredicate(CmpInst::Predicate Pred) {
+    assert(!hasCmpPredicate() && "Cannot set property twice!");
+    CmpPredicate = Pred;
+
+    if (CmpInst::isFPPredicate(Pred))
+      return setMatchingIROpcode(Instruction::FCmp);
+
+    if (CmpInst::isIntPredicate(Pred))
+      return setMatchingIROpcode(Instruction::ICmp);
+
+    llvm_unreachable("Unsupported compare predicate!");
+  }
+
   //
   // Properties relating to the result of inactive lanes.
   //
@@ -1507,6 +1529,7 @@ private:
 
   Intrinsic::ID UndefIntrinsic = Intrinsic::not_intrinsic;
   unsigned IROpcode = 0;
+  CmpInst::Predicate CmpPredicate = CmpInst::BAD_ICMP_PREDICATE;
 
   enum PredicationStyle {
     Uninitialized,
@@ -1755,29 +1778,8 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_uaddv:
   case Intrinsic::aarch64_sve_umaxv:
   case Intrinsic::aarch64_sve_umaxqv:
-  case Intrinsic::aarch64_sve_cmpeq:
-  case Intrinsic::aarch64_sve_cmpeq_wide:
-  case Intrinsic::aarch64_sve_cmpge:
-  case Intrinsic::aarch64_sve_cmpge_wide:
-  case Intrinsic::aarch64_sve_cmpgt:
-  case Intrinsic::aarch64_sve_cmpgt_wide:
-  case Intrinsic::aarch64_sve_cmphi:
-  case Intrinsic::aarch64_sve_cmphi_wide:
-  case Intrinsic::aarch64_sve_cmphs:
-  case Intrinsic::aarch64_sve_cmphs_wide:
-  case Intrinsic::aarch64_sve_cmple_wide:
-  case Intrinsic::aarch64_sve_cmplo_wide:
-  case Intrinsic::aarch64_sve_cmpls_wide:
-  case Intrinsic::aarch64_sve_cmplt_wide:
-  case Intrinsic::aarch64_sve_cmpne:
-  case Intrinsic::aarch64_sve_cmpne_wide:
   case Intrinsic::aarch64_sve_facge:
   case Intrinsic::aarch64_sve_facgt:
-  case Intrinsic::aarch64_sve_fcmpeq:
-  case Intrinsic::aarch64_sve_fcmpge:
-  case Intrinsic::aarch64_sve_fcmpgt:
-  case Intrinsic::aarch64_sve_fcmpne:
-  case Intrinsic::aarch64_sve_fcmpuo:
   case Intrinsic::aarch64_sve_ld1:
   case Intrinsic::aarch64_sve_ld1_gather:
   case Intrinsic::aarch64_sve_ld1_gather_index:
@@ -1824,6 +1826,58 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_eor_z:
     return SVEIntrinsicInfo::defaultZeroingOp().setMatchingIROpcode(
         Instruction::Xor);
+
+  case Intrinsic::aarch64_sve_cmpeq:
+  case Intrinsic::aarch64_sve_cmpeq_wide:
+    return SVEIntrinsicInfo::defaultZeroingOp().setCmpPredicate(
+        CmpInst::ICMP_EQ);
+  case Intrinsic::aarch64_sve_cmpge:
+  case Intrinsic::aarch64_sve_cmpge_wide:
+    return SVEIntrinsicInfo::defaultZeroingOp().setCmpPredicate(
+        CmpInst::ICMP_SGE);
+  case Intrinsic::aarch64_sve_cmpgt:
+  case Intrinsic::aarch64_sve_cmpgt_wide:
+    return SVEIntrinsicInfo::defaultZeroingOp().setCmpPredicate(
+        CmpInst::ICMP_SGT);
+  case Intrinsic::aarch64_sve_cmphi:
+  case Intrinsic::aarch64_sve_cmphi_wide:
+    return SVEIntrinsicInfo::defaultZeroingOp().setCmpPredicate(
+        CmpInst::ICMP_UGT);
+  case Intrinsic::aarch64_sve_cmphs:
+  case Intrinsic::aarch64_sve_cmphs_wide:
+    return SVEIntrinsicInfo::defaultZeroingOp().setCmpPredicate(
+        CmpInst::ICMP_UGE);
+  case Intrinsic::aarch64_sve_cmple_wide:
+    return SVEIntrinsicInfo::defaultZeroingOp().setCmpPredicate(
+        CmpInst::ICMP_SLE);
+  case Intrinsic::aarch64_sve_cmplo_wide:
+    return SVEIntrinsicInfo::defaultZeroingOp().setCmpPredicate(
+        CmpInst::ICMP_ULT);
+  case Intrinsic::aarch64_sve_cmpls_wide:
+    return SVEIntrinsicInfo::defaultZeroingOp().setCmpPredicate(
+        CmpInst::ICMP_ULE);
+  case Intrinsic::aarch64_sve_cmplt_wide:
+    return SVEIntrinsicInfo::defaultZeroingOp().setCmpPredicate(
+        CmpInst::ICMP_SLT);
+  case Intrinsic::aarch64_sve_cmpne:
+  case Intrinsic::aarch64_sve_cmpne_wide:
+    return SVEIntrinsicInfo::defaultZeroingOp().setCmpPredicate(
+        CmpInst::ICMP_NE);
+  case Intrinsic::aarch64_sve_fcmpeq:
+    return SVEIntrinsicInfo::defaultZeroingOp().setCmpPredicate(
+        CmpInst::FCMP_OEQ);
+  case Intrinsic::aarch64_sve_fcmpge:
+    return SVEIntrinsicInfo::defaultZeroingOp().setCmpPredicate(
+        CmpInst::FCMP_OGE);
+  case Intrinsic::aarch64_sve_fcmpgt:
+    return SVEIntrinsicInfo::defaultZeroingOp().setCmpPredicate(
+        CmpInst::FCMP_OGT);
+  case Intrinsic::aarch64_sve_fcmpne:
+    return SVEIntrinsicInfo::defaultZeroingOp().setCmpPredicate(
+        CmpInst::FCMP_UNE);
+  case Intrinsic::aarch64_sve_fcmpuo:
+    return SVEIntrinsicInfo::defaultZeroingOp().setCmpPredicate(
+        CmpInst::FCMP_UNO);
 
   case Intrinsic::aarch64_sve_prf:
   case Intrinsic::aarch64_sve_prfb_gather_index:
@@ -1964,6 +2018,73 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
   return IC.replaceInstUsesWith(II, SimpleII);
 }
 
+static std::optional<Instruction *>
+simplifySVEIntrinsicCompare(InstCombiner &IC, IntrinsicInst &II,
+                            const SVEIntrinsicInfo &IInfo) {
+  const unsigned Opc = IInfo.getMatchingIROpode();
+  assert((Opc == Instruction::ICmp || Opc == Instruction::FCmp) &&
+         "Expected a compare operation!");
+
+  Value *Pg = II.getOperand(0);
+  Value *LHS = II.getOperand(1);
+  Value *RHS = II.getOperand(2);
+  CmpInst::Predicate CmpPred = IInfo.getCmpPredicate();
+  bool IsWideICmp =
+      Opc == Instruction::ICmp && LHS->getType() != RHS->getType();
+  assert((IsWideICmp || LHS->getType() == RHS->getType()) &&
+         "Unexpected wide compare!");
+
+  // Canonicalise constants to the RHS.
+  if ((ICmpInst::isCommutative(CmpPred) || FCmpInst::isCommutative(CmpPred)) &&
+      isa<Constant>(LHS) && !isa<Constant>(RHS) && !IsWideICmp) {
+    IC.replaceOperand(II, 1, RHS);
+    IC.replaceOperand(II, 2, LHS);
+    return &II;
+  }
+
+  // Only active lanes matter when simplifying the operation.
+  LHS = stripInactiveLanes(LHS, Pg);
+  RHS = stripInactiveLanes(RHS, Pg);
+
+  if (IsWideICmp) {
+    // We can do more for wide compares, but not using simplifyCmpInst.
+    const APInt *LHSVal, *RHSVal;
+    if (!match(LHS, m_APInt(LHSVal)) || !match(RHS, m_APInt(RHSVal)))
+      return std::nullopt;
+
+    // Consider cmpge.wide(..., <vscale x 4 x i32> LHS, <vscale x 2 x i64> RHS),
+    // we must reconstruct the constants because LHS has the wrong element type,
+    // and RHS the wrong element count.
+    Type *WideVT = VectorType::get(RHS->getType()->getScalarType(),
+                                   cast<VectorType>(LHS->getType()));
+    // NOTE: Wide equality comparisons are signed.
+    if (ICmpInst::isUnsigned(CmpPred)) {
+      LHS = ConstantInt::get(WideVT, LHSVal->getZExtValue());
+      RHS = ConstantInt::get(WideVT, RHSVal->getZExtValue());
+    } else {
+      LHS = ConstantInt::get(WideVT, LHSVal->getSExtValue());
+      RHS = ConstantInt::get(WideVT, RHSVal->getSExtValue());
+    }
+  }
+
+  // TODO: Allow fast-math flags for calls to compare intrinsics.
+  const DataLayout &DL = II.getDataLayout();
+  Value *SimpleII = simplifyCmpInst(CmpPred, LHS, RHS, DL);
+
+  // No simplification happened.
+  if (!SimpleII)
+    return std::nullopt;
+
+  assert(IInfo.resultIsZeroInitialized() && "Expected a zeroing operation!");
+
+  if (match(SimpleII, m_ZeroInt()))
+    return IC.replaceInstUsesWith(II, SimpleII);
+
+  // Inactive lanes must be zeroed.
+  SimpleII = IC.Builder.CreateLogicalAnd(Pg, SimpleII);
+  return IC.replaceInstUsesWith(II, SimpleII);
+}
+
 // Use SVE intrinsic info to eliminate redundant operands and/or canonicalise
 // to operations with less strict inactive lane requirements.
 static std::optional<Instruction *>
@@ -2004,10 +2125,20 @@ simplifySVEIntrinsic(InstCombiner &IC, IntrinsicInst &II,
     }
   }
 
+  if (!IInfo.hasMatchingIROpode())
+    return std::nullopt;
+
+  //
   // Operation specific simplifications.
-  if (IInfo.hasMatchingIROpode() &&
-      Instruction::isBinaryOp(IInfo.getMatchingIROpode()))
+  //
+
+  unsigned Opc = IInfo.getMatchingIROpode();
+
+  if (Instruction::isBinaryOp(Opc))
     return simplifySVEIntrinsicBinOp(IC, II, IInfo);
+
+  if (Opc == Instruction::FCmp || Opc == Instruction::ICmp)
+    return simplifySVEIntrinsicCompare(IC, II, IInfo);
 
   return std::nullopt;
 }
@@ -3235,6 +3366,32 @@ instCombineInStreamingMode(InstCombiner &IC, IntrinsicInst &II) {
   return std::nullopt;
 }
 
+static std::optional<Instruction *> instCombineSVEUMin(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  // umin(umin(A, 1), umin(B, 1)) -> umin(umin(A,B), 1)
+  constexpr Intrinsic::ID UMinID = Intrinsic::aarch64_sve_umin_u;
+  Value *A, *B;
+  Value *Pg = II.getOperand(0);
+  if (match(II.getOperand(1), m_OneUse(m_Intrinsic<UMinID>(
+                                  m_Specific(Pg), m_Value(A), m_One()))) &&
+      match(II.getOperand(2), m_OneUse(m_Intrinsic<UMinID>(
+                                  m_Specific(Pg), m_Value(B), m_One())))) {
+    Value *NewUMin =
+        IC.Builder.CreateIntrinsic(UMinID, II.getType(), {Pg, A, B});
+    Value *NewLogicalUMin = IC.Builder.CreateIntrinsic(
+        UMinID, II.getType(), {Pg, NewUMin, ConstantInt::get(II.getType(), 1)});
+    return IC.replaceInstUsesWith(II, NewLogicalUMin);
+  }
+
+  // umin(umin(A, 1), 1) -> umin(A, 1)
+  if (match(II.getOperand(1),
+            m_Intrinsic<UMinID>(m_Specific(Pg), m_Value(), m_One())) &&
+      match(II.getOperand(2), m_One()))
+    return IC.replaceInstUsesWith(II, II.getOperand(1));
+
+  return std::nullopt;
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -3354,6 +3511,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEUxt(IC, II, 32);
   case Intrinsic::aarch64_sme_in_streaming_mode:
     return instCombineInStreamingMode(IC, II);
+  case Intrinsic::aarch64_sve_umin_u:
+    return instCombineSVEUMin(IC, II);
   }
 
   return std::nullopt;
@@ -4599,19 +4758,21 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     if (VTy->getElementCount() == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
 
-  // TODO: Handle more cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
-
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
-  // Increase the cost for half and bfloat types if not architecturally
-  // supported.
+  // TODO: Handle more cost kinds for floating point operations.
+  if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
+      ISD == ISD::FDIV || ISD == ISD::FREM || ISD == ISD::FNEG)
+    if (CostKind != TTI::TCK_RecipThroughput)
+      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
+                                           Op2Info, Args, CxtI);
+
   if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
       ISD == ISD::FDIV || ISD == ISD::FREM) {
+    // Increase the cost for half and bfloat types if not architecturally
+    // supported.
     if (auto PromotedCost = getFP16BF16PromoteCost(
             Ty, CostKind, Op1Info, Op2Info, /*IncludeTrunc=*/true,
             // There is not native support for fdiv/frem even with +sve-b16b16.
@@ -5173,8 +5334,9 @@ AArch64TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
   case Intrinsic::masked_gather:
     return getGatherScatterOpCost(MICA, CostKind);
   case Intrinsic::masked_load:
-  case Intrinsic::masked_expandload:
   case Intrinsic::masked_store:
+  case Intrinsic::masked_expandload:
+  case Intrinsic::masked_compressstore:
     return getMaskedMemoryOpCost(MICA, CostKind);
   }
   return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
@@ -5209,6 +5371,19 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
       return InstructionCost::getInvalid();
 
     // Operation will be split into expand of masked.load
+    MemOpCost *= 2;
+  }
+
+  if (MICA.getID() == Intrinsic::masked_compressstore) {
+    if (!isLegalMaskedCompressStore(Src, MICA.getAlignment()))
+      return InstructionCost::getInvalid();
+
+    // A compress store lowers to something like:
+    //  ptrue    p1.s
+    //  compact  z0.s, p0, z0.s
+    //  cntp     x8, p1, p0.s
+    //  whilelo  p0.s, xzr, x8
+    //  st1w     { z0.s }, p0, [x0]
     MemOpCost *= 2;
   }
 
@@ -6177,11 +6352,12 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     return Cost;
   }
 
-  if (isa<ScalableVectorType>(ValTy))
-    return getArithmeticReductionCostSVE(Opcode, ValTy, CostKind);
-
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
   MVT MTy = LT.second;
+
+  if (isa<ScalableVectorType>(ValTy) || TLI->useSVEForFixedLengthVectorVT(MTy))
+    return getArithmeticReductionCostSVE(Opcode, ValTy, CostKind);
+
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 

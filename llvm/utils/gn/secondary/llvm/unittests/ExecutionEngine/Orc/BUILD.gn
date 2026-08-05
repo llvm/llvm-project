@@ -15,6 +15,7 @@ unittest("OrcJITTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "COFFAutoImportGeneratorTest.cpp",
     "CallSPSViaEPCTest.cpp",
     "CallableTraitsHelperTest.cpp",
     "CoreAPIsTest.cpp",
@@ -43,6 +44,7 @@ unittest("OrcJITTests") {
     "RTDyldObjectLinkingLayerTest.cpp",
     "ReOptimizeLayerTest.cpp",
     "ResourceTrackerTest.cpp",
+    "SPSCallersTest.cpp",
     "SharedMemoryMapperTest.cpp",
     "SimpleExecutorMemoryManagerTest.cpp",
     "SimplePackedSerializationTest.cpp",

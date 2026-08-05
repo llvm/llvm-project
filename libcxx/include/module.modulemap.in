@@ -885,6 +885,7 @@ module std {
       export std.atomic.atomic_base // most of std::atomic methods are defined there
     }
     module check_memory_order     { header "__atomic/check_memory_order.h" }
+    module clear_padding          { header "__atomic/clear_padding.h" }
     module contention_t           { header "__atomic/contention_t.h" }
     module fence                  { header "__atomic/fence.h" }
     module floating_point_helper  { header "__atomic/floating_point_helper.h" }
@@ -1563,7 +1564,10 @@ module std {
     module projected                  { header "__iterator/projected.h" }
     module ranges_iterator_traits     { header "__iterator/ranges_iterator_traits.h" }
     module readable_traits            { header "__iterator/readable_traits.h" }
-    module reverse_access             { header "__iterator/reverse_access.h" }
+    module reverse_access {
+      header "__iterator/reverse_access.h"
+      export std.iterator.reverse_iterator
+    }
     module reverse_iterator           { header "__iterator/reverse_iterator.h" }
     module segmented_iterator         { header "__iterator/segmented_iterator.h" }
     module size                       { header "__iterator/size.h" }
@@ -1631,9 +1635,17 @@ module std {
     export *
   }
 
-  // TODO: Understand why this needs to live in its own module
+  // These headers can't be submodules of std.locale: they are used by <ios> and <streambuf>,
+  // which are in turn used by the facet headers that make up std.locale, so making them part
+  // of std.locale would create a cycle.
   module locale_base {
     header "__locale"
+    module codecvt          { header "__locale_dir/codecvt.h"          export * }
+    module collate          { header "__locale_dir/collate.h"          export * }
+    module ctype            { header "__locale_dir/ctype.h"            export * }
+    module ctype_base       { header "__locale_dir/ctype_base.h"       export * }
+    module locale           { header "__locale_dir/locale.h"           export * }
+    module utf8_conversions { header "__locale_dir/utf8_conversions.h" export * }
     export *
   }
 
@@ -1806,6 +1818,33 @@ module std {
   }
 
   module optional {
+    module fwd { header "__fwd/optional.h" }
+    module hash {
+      header "__optional/hash.h"
+      export std.functional.hash
+    }
+    module common {
+      header "__optional/common.h"
+      export std.format.fwd
+    }
+
+    module comparison { header "__optional/comparison.h" }
+    module make_optional { header "__optional/make_optional.h" }
+    module nullopt_t { header "__optional/nullopt_t.h" }
+    module optional {
+      header "__optional/optional.h"
+      export std.iterator.bounded_iter
+      export std.iterator.capacity_aware_iterator
+      export std.utility.swap
+    }
+    module optional_ref {
+      header "__optional/optional_ref.h"
+      export std.iterator.bounded_iter
+      export std.iterator.capacity_aware_iterator
+      export std.utility.swap
+    }
+    module swap { header "__optional/swap.h" }
+
     header "optional"
     export *
   }
@@ -2390,6 +2429,9 @@ module std {
       }
       module mismatch {
         header "__pstl/cpu_algos/mismatch.h"
+      }
+      module reverse {
+        header "__pstl/cpu_algos/reverse.h"
       }
       module stable_sort {
         header "__pstl/cpu_algos/stable_sort.h"
