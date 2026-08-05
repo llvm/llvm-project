@@ -189,7 +189,7 @@ inline static bool isMem(const MachineInstr &MI, unsigned Op) {
 inline static bool isAddMemInstrWithRelocation(const MachineInstr &MI) {
   unsigned Op = MI.getOpcode();
   if (Op == X86::ADD64rm || Op == X86::ADD64mr_ND || Op == X86::ADD64rm_ND) {
-    int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc());
+    int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc(), /*MustExist=*/true);
     const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
     if (MO.getTargetFlags() == X86II::MO_GOTTPOFF)
       return true;
@@ -221,7 +221,7 @@ inline static bool isMemInstrWithGOTPCREL(const MachineInstr &MI) {
   case X86::SBB64rm:
   case X86::SUB64rm:
   case X86::XOR64rm: {
-    int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc());
+    int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc(), /*MustExist=*/true);
     const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
     if (MO.getTargetFlags() == X86II::MO_GOTPCREL)
       return true;

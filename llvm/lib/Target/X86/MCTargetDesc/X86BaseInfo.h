@@ -1158,9 +1158,11 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
 /// \returns the operand index for the first field of the memory operand,
 /// adjusted with getOperandBias(), or -1 if the instruction has no memory
 /// operands.
-inline int getMemoryOperandIdx(const MCInstrDesc &Desc) {
+inline int getMemoryOperandIdx(const MCInstrDesc &Desc,
+                               bool MustExist = false) {
   int MemRefIdx = getMemoryOperandNo(Desc.TSFlags);
-  if (MemRefIdx < 0)
+  assert((!MustExist || MemRefIdx >= 0) && "Expected a memory operand");
+  if (!MustExist && MemRefIdx < 0)
     return -1;
   return MemRefIdx + getOperandBias(Desc);
 }
