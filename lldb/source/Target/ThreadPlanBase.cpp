@@ -30,26 +30,24 @@ using namespace lldb_private;
 ThreadPlanBase::ThreadPlanBase(Thread &thread)
     : ThreadPlan(ThreadPlan::eKindBase, "base plan", thread, eVoteYes,
                  eVoteNoOpinion) {
-// Set the tracer to a default tracer.
-// FIXME: need to add a thread settings variable to pix various tracers...
-// #define THREAD_PLAN_USE_ASSEMBLY_TRACER 1
-//commented to add our macro 
-#define THREAD_PLAN_USE_REVERSE_TRACER 1
-// #define THREAD_PLAN_USE_ASSEMBLY_TRACER 1 
-
-#if defined(THREAD_PLAN_USE_ASSEMBLY_TRACER)
-  ThreadPlanTracerSP new_tracer_sp(new ThreadPlanAssemblyTracer(thread));
-
-// Notice the change on the line below!
-#elif defined(THREAD_PLAN_USE_REVERSE_TRACER)
-  // Call your new reverse tracer here!
-  ThreadPlanTracerSP new_tracer_sp(new ThreadPlanReverseTracer(thread)); 
-
-#else
-  // Default fallback if neither macro is defined (fixed m_thread to thread)
-  ThreadPlanTracerSP new_tracer_sp(new ThreadPlanTracer(m_thread));
-#endif
-
+// =========================================================================
+  // THREAD PLAN TRACER SELECTION
+  // To add a new custom tracer:
+  // 1. Add your tracer enum value to `lldb::ThreadTracerKind` in `lldb-enumerations.h`.
+  // 2. Map the CLI string in `g_thread_tracer_kind_values` in `Thread.cpp`.
+  // 3. Add a new `case` label below to instantiate your `ThreadPlanTracer` subclass.
+  // =========================================================================                  
+ThreadPlanTracerSP new_tracer_sp;
+  switch (thread.GetTracerKind()) {
+  case eThreadTracerKindDefault:
+    new_tracer_sp = std::make_shared<ThreadPlanTracer>(thread);
+    break;
+  case eThreadTracerKindAssembly:
+  default:
+    new_tracer_sp = std::make_shared<ThreadPlanAssemblyTracer>(thread);
+    break;
+  }
+  
   new_tracer_sp->EnableTracing(thread.GetTraceEnabledState());
   SetThreadPlanTracer(new_tracer_sp);
   SetIsControllingPlan(true);

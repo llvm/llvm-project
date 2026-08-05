@@ -370,3 +370,8 @@ let Definition = "language", Path = "language" in {
     DefaultTrue,
     Desc<"If true, allow Language plugins to filter locations when setting breakpoints by line number or regex.">;
 }
+
+def ThreadTracerKind: Property<"tracer-kind", "Enum">,
+    DefaultEnumValue<"eThreadTracerKindAssembly">,
+    EnumValues<"OptionEnumValues(g_thread_tracer_kind_values)">,
+    Desc<"The type of tracer to use when thread tracing is enabled.">;

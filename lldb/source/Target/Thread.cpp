@@ -80,6 +80,23 @@ enum {
 #include "TargetPropertiesEnum.inc"
 };
 
+
+static constexpr OptionEnumValueElement g_thread_tracer_kind_values[] = {
+    {
+        eThreadTracerDefault,
+        "default",
+        "Standard thread tracer (logs stack frame and source location)",
+    },
+    {
+        eThreadTracerAssembly,
+        "assembly",
+        "Instruction-level assembly tracer (disassembles code and logs register diffs)",
+    },
+    
+};
+
+
+
 class ThreadOptionValueProperties
     : public Cloneable<ThreadOptionValueProperties, OptionValueProperties> {
 public:
@@ -112,6 +129,12 @@ ThreadProperties::ThreadProperties(bool is_global) : Properties() {
   } else
     m_collection_sp =
         OptionValueProperties::CreateLocalCopy(Thread::GetGlobalProperties());
+}
+
+lldb::ThreadTracerKind ThreadProperties::GetTracerKind() const {
+  const uint32_t idx = ePropertyThreadTracerKind;
+  return static_cast<lldb::ThreadTracerKind>(
+      GetPropertyAtIndexAsEnum(idx, g_thread_properties[idx].default_uint_value));
 }
 
 ThreadProperties::~ThreadProperties() = default;

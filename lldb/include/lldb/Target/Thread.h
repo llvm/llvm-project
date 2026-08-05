@@ -64,6 +64,9 @@ public:
   uint64_t GetMaxBacktraceDepth() const;
 
   uint64_t GetSingleThreadPlanTimeout() const;
+
+  lldb::ThreadTracerKind GetTracerKind() const;
+
 };
 
 class Thread : public std::enable_shared_from_this<Thread>,

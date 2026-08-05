@@ -16,6 +16,12 @@
 using namespace lldb;
 using namespace lldb_private;
 
+enum ThreadTracerKind {
+  eThreadTracerDefault = 0,
+  eThreadTracerAssembly,
+  eThreadTracerReverse
+};
+
 ThreadCollection::ThreadCollection() : m_threads(), m_mutex() {}
 
 ThreadCollection::ThreadCollection(collection threads)
