@@ -1398,7 +1398,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFSinhPos) {
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFCosh) {
-  // cosh(x) >= 1 for all real x; never negative.
+  // cosh(x) >= 1 for all real x; never negative, zero, or subnormal.
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
     %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
@@ -1413,12 +1413,12 @@ TEST_F(AArch64GISelMITest, TestFPClassFCosh) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPositive | fcNan, Known.KnownFPClasses);
+  EXPECT_EQ(fcPosNormal | fcPosInf | fcNan, Known.KnownFPClasses);
   EXPECT_EQ(std::nullopt, Known.SignBit);
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFCoshNNaN) {
-  // cosh of a non-NaN source is non-NaN (and non-negative).
+  // cosh of a non-NaN value is either positive normal or positive infinity.
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
     %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
@@ -1434,7 +1434,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFCoshNNaN) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPositive, Known.KnownFPClasses);
+  EXPECT_EQ(fcPosNormal | fcPosInf, Known.KnownFPClasses);
   EXPECT_EQ(false, Known.SignBit);
 }
 
