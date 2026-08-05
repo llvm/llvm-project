@@ -48595,7 +48595,6 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
 
   // Invert the setcc for all users and commute all vselects.
   SmallVector<SDNode *> UsersToUpdate(Cond->users());
-  DAG.ReplaceAllUsesOfValueWith(Cond, NewCond);
   for (SDNode *User : UsersToUpdate) {
     SDValue UserLHS = User->getOperand(1);
     SDValue UserRHS = User->getOperand(2);
