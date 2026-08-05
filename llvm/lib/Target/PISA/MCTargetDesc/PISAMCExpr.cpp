@@ -8,7 +8,6 @@
 
 #include "PISAMCExpr.h"
 #include "PISAInstPrinter.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/Format.h"

@@ -22,7 +22,6 @@
 #include "PISAUtils.h"
 
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
