@@ -12,15 +12,15 @@ void main(float a : AAA, int b : B, float2 c : CC) {
 
 // CHECK: define void @main()
 
-// CHECK-DXIL: %[[#AAA:]]  = call float @llvm.dx.load.input.f32(i32 0, i32 0, i8 0, i32 poison)
-// CHECK-DXIL:   %[[#B:]]  = call i32 @llvm.dx.load.input.i32(i32 1, i32 0, i8 0, i32 poison)
-// CHECK-DXIL:  %[[#CC:]]  = call <2 x float> @llvm.dx.load.input.v2f32(i32 2, i32 0, i8 0, i32 poison)
-// CHECK-DXIL:               call void @_Z4mainfiDv2_f(float %[[#AAA0]], i32 %[[#B0]], <2 x float> %[[#CC0]])
+// CHECK-DXIL: %[[AAA:.*]] = call float @llvm.dx.load.input.f32(i32 0, i32 0, i8 0, i32 poison)
+// CHECK-DXIL: %[[B:.*]] = call i32 @llvm.dx.load.input.i32(i32 1, i32 0, i8 0, i32 poison)
+// CHECK-DXIL: %[[CC:.*]] = call <2 x float> @llvm.dx.load.input.v2f32(i32 2, i32 0, i8 0, i32 poison)
+// CHECK-DXIL: call void @_Z4mainfiDv2_f(float %[[AAA]], i32 %[[B]], <2 x float> %[[CC]])
 
 // CHECK-SPIRV: %[[#AAA:]] = load float, ptr addrspace(7) @AAA0, align 4
 // CHECK-SPIRV:   %[[#B:]] = load i32, ptr addrspace(7) @B0, align 4
 // CHECK-SPIRV:  %[[#CC:]] = load <2 x float>, ptr addrspace(7) @CC0, align 4
-// CHECK-SPIRV:              call spir_func void @_Z4mainfiDv2_f(float %[[#AAA0]], i32 %[[#B0]], <2 x float> %[[#CC0]]) [ "convergencectrl"(token %0) ]
+// CHECK-SPIRV:              call spir_func void @_Z4mainfiDv2_f(float %[[#AAA]], i32 %[[#B]], <2 x float> %[[#CC]]) [ "convergencectrl"(token %0) ]
 
 
 // CHECK-SPIRV-DAG: ![[#METADATA_0]] = !{![[#METADATA_1:]]}
