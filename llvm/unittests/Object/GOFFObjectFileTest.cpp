@@ -634,101 +634,49 @@ TEST_F(GOFFObjectFileTest, TXTConstruct) {
   EXPECT_EQ(Contents, "\x12\x34\x56\x78\x9a\xbc\xde\xf0");
 }
 
-TEST(GOFFObjectFileTest, GlobalSymbols) {
-  char GOFFData[GOFF::RecordLength * 12] = {0x00};
-
+TEST_F(GOFFObjectFileTest, GlobalSymbols) {
   // HDR record.
-  GOFFData[0] = (char)0x03;
-  GOFFData[1] = (char)0xF0;
+  addHdrRecord();
 
   // ESD record 1: type SD
-  GOFFData[GOFF::RecordLength] = (char)0x03;
-  GOFFData[GOFF::RecordLength + 3] = (char)0x00;  // Type: SD
-  GOFFData[GOFF::RecordLength + 7] = (char)0x01;  // ESDID.
-  GOFFData[GOFF::RecordLength + 71] = (char)0x01; // Size of symbol name.
-  GOFFData[GOFF::RecordLength + 72] = (char)0xC1; // Symbol name is A.
+  addEsdRecord(0x00, 0x01, {0xC1}); // A
 
   // ESD record 2: type ED
-  GOFFData[GOFF::RecordLength * 2] = (char)0x03;
-  GOFFData[GOFF::RecordLength * 2 + 3] = (char)0x01;  // Type: ED
-  GOFFData[GOFF::RecordLength * 2 + 7] = (char)0x02;  // ESDID.
-  GOFFData[GOFF::RecordLength * 2 + 11] = (char)0x01; // Parent ESDID.
-  GOFFData[GOFF::RecordLength * 2 + 71] = (char)0x01; // Size of symbol name.
-  GOFFData[GOFF::RecordLength * 2 + 72] = (char)0xC2; // Symbol name is B.
+  addEsdRecord(0x01, 0x02, {0xC2}, 0x01); // B, parent=1
 
-  // ESD record 3: type LD
-  GOFFData[GOFF::RecordLength * 3] = (char)0x03;
-  GOFFData[GOFF::RecordLength * 3 + 3] = (char)0x02;  // Type: LD
-  GOFFData[GOFF::RecordLength * 3 + 7] = (char)0x03;  // ESDID.
-  GOFFData[GOFF::RecordLength * 3 + 11] = (char)0x02; // Parent ESDID.
-  GOFFData[GOFF::RecordLength * 3 + 71] = (char)0x01; // Size of symbol name.
-  GOFFData[GOFF::RecordLength * 3 + 72] = (char)0xC3; // Symbol name is C.
+  // ESD record 3: type LD (default binding scope = global)
+  addEsdRecord(0x02, 0x03, {0xC3}, 0x02); // C, parent=2
 
   // ESD record 4: type PR
-  GOFFData[GOFF::RecordLength * 4] = (char)0x03;
-  GOFFData[GOFF::RecordLength * 4 + 3] = (char)0x03;  // Type: PR
-  GOFFData[GOFF::RecordLength * 4 + 7] = (char)0x04;  // ESDID.
-  GOFFData[GOFF::RecordLength * 4 + 11] = (char)0x02; // Parent ESDID.
-  GOFFData[GOFF::RecordLength * 4 + 71] = (char)0x01; // Size of symbol name.
-  GOFFData[GOFF::RecordLength * 4 + 72] = (char)0xC4; // Symbol name is D.
+  addEsdRecord(0x03, 0x04, {0xC4}, 0x02); // D, parent=2
 
   // ESD record 5: type ErWx
-  GOFFData[GOFF::RecordLength * 5] = (char)0x03;
-  GOFFData[GOFF::RecordLength * 5 + 3] = (char)0x04;  // Type: ErWx
-  GOFFData[GOFF::RecordLength * 5 + 7] = (char)0x05;  // ESDID.
-  GOFFData[GOFF::RecordLength * 5 + 71] = (char)0x01; // Size of symbol name.
-  GOFFData[GOFF::RecordLength * 5 + 72] = (char)0xC5; // Symbol name is E.
+  addEsdRecord(0x04, 0x05, {0xC5}); // E
 
-  // ESD record 6: type LD + Section binding scope
-  GOFFData[GOFF::RecordLength * 6] = (char)0x03;
-  GOFFData[GOFF::RecordLength * 6 + 3] = (char)0x02;  // Type: LD
-  GOFFData[GOFF::RecordLength * 6 + 7] = (char)0x06;  // ESDID.
-  GOFFData[GOFF::RecordLength * 6 + 11] = (char)0x02; // Parent ESDID.
-  GOFFData[GOFF::RecordLength * 6 + 65] = (char)0x01; // Binding Scope: Section.
-  GOFFData[GOFF::RecordLength * 6 + 71] = (char)0x01; // Size of symbol name.
-  GOFFData[GOFF::RecordLength * 6 + 72] = (char)0xC6; // Symbol name is F.
+  // ESD record 6: type LD + Section binding scope (BindingScope=1 -> lower
+  // nibble of BehavioralAttributes[5])
+  addEsdRecord(0x02, 0x06, {0xC6}, 0x02, 0x00, 0x00, 0x00,
+               {0, 0, 0, 0, 0, 0x01, 0, 0, 0, 0}); // F, parent=2
 
   // ESD record 7: type LD + Module binding scope
-  GOFFData[GOFF::RecordLength * 7] = (char)0x03;
-  GOFFData[GOFF::RecordLength * 7 + 3] = (char)0x02;  // Type: LD
-  GOFFData[GOFF::RecordLength * 7 + 7] = (char)0x07;  // ESDID.
-  GOFFData[GOFF::RecordLength * 7 + 11] = (char)0x02; // Parent ESDID.
-  GOFFData[GOFF::RecordLength * 7 + 65] = (char)0x02; // Binding Scope: Module.
-  GOFFData[GOFF::RecordLength * 7 + 71] = (char)0x01; // Size of symbol name.
-  GOFFData[GOFF::RecordLength * 7 + 72] = (char)0xC7; // Symbol name is G.
+  addEsdRecord(0x02, 0x07, {0xC7}, 0x02, 0x00, 0x00, 0x00,
+               {0, 0, 0, 0, 0, 0x02, 0, 0, 0, 0}); // G, parent=2
 
   // ESD record 8: type LD + Library binding scope
-  GOFFData[GOFF::RecordLength * 8] = (char)0x03;
-  GOFFData[GOFF::RecordLength * 8 + 3] = (char)0x02;  // Type: LD
-  GOFFData[GOFF::RecordLength * 8 + 7] = (char)0x08;  // ESDID.
-  GOFFData[GOFF::RecordLength * 8 + 11] = (char)0x02; // Parent ESDID.
-  GOFFData[GOFF::RecordLength * 8 + 65] = (char)0x03; // Binding Scope: Library.
-  GOFFData[GOFF::RecordLength * 8 + 71] = (char)0x01; // Size of symbol name.
-  GOFFData[GOFF::RecordLength * 8 + 72] = (char)0xC8; // Symbol name is H.
+  addEsdRecord(0x02, 0x08, {0xC8}, 0x02, 0x00, 0x00, 0x00,
+               {0, 0, 0, 0, 0, 0x03, 0, 0, 0, 0}); // H, parent=2
 
   // ESD record 9: type LD + Import-Export binding scope
-  GOFFData[GOFF::RecordLength * 9] = (char)0x03;
-  GOFFData[GOFF::RecordLength * 9 + 3] = (char)0x02;  // Type: LD
-  GOFFData[GOFF::RecordLength * 9 + 7] = (char)0x09;  // ESDID.
-  GOFFData[GOFF::RecordLength * 9 + 11] = (char)0x02; // Parent ESDID.
-  GOFFData[GOFF::RecordLength * 9 + 65] =
-      (char)0x04; // Binding Scope: ImportExport.
-  GOFFData[GOFF::RecordLength * 9 + 71] = (char)0x01; // Size of symbol name.
-  GOFFData[GOFF::RecordLength * 9 + 72] = (char)0xC9; // Symbol name is I.
+  addEsdRecord(0x02, 0x09, {0xC9}, 0x02, 0x00, 0x00, 0x00,
+               {0, 0, 0, 0, 0, 0x04, 0, 0, 0, 0}); // I, parent=2
 
   // ESD record 10: type LD + blank name
-  GOFFData[GOFF::RecordLength * 10] = (char)0x03;
-  GOFFData[GOFF::RecordLength * 10 + 3] = (char)0x02;  // Type: LD
-  GOFFData[GOFF::RecordLength * 10 + 7] = (char)0x0A;  // ESDID.
-  GOFFData[GOFF::RecordLength * 10 + 11] = (char)0x02; // Parent ESDID.
-  GOFFData[GOFF::RecordLength * 10 + 71] = (char)0x01; // Size of symbol name.
-  GOFFData[GOFF::RecordLength * 10 + 72] = (char)0x40; // Symbol name is ' '.
+  addEsdRecord(0x02, 0x0A, {0x40}, 0x02); // ' ', parent=2
 
   // END record.
-  GOFFData[GOFF::RecordLength * 11] = (char)0x03;
-  GOFFData[GOFF::RecordLength * 11 + 1] = (char)0x40;
+  addEndRecord();
 
-  StringRef Data(GOFFData, GOFF::RecordLength * 12);
+  StringRef Data(GOFFData.data(), GOFFData.size());
 
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
       object::ObjectFile::createGOFFObjectFile(
@@ -736,7 +684,8 @@ TEST(GOFFObjectFileTest, GlobalSymbols) {
 
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 
-  GOFFObjectFile *GOFFObj = static_cast<GOFFObjectFile*>((*GOFFObjOrErr).get());
+  GOFFObjectFile *GOFFObj =
+      static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
 
   auto SymbolRange = GOFFObj->symbols();
   auto Symbol = SymbolRange.begin();
