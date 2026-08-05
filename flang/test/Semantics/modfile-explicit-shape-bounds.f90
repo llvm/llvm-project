@@ -50,3 +50,14 @@ end module
 !real(4)::a(__builtin_int(lb,kind=8):__builtin_int(ub,kind=8))
 !end
 !end
+
+! Zero-size bounds array in an entity-decl declares a scalar, overriding the
+! DIMENSION attribute's array-spec.
+module m4
+  integer, dimension(5) :: z(1 : [integer ::])
+end module
+
+!Expect: m4.mod
+!module m4
+!integer(4)::z
+!end

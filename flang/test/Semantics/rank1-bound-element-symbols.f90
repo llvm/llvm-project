@@ -15,6 +15,13 @@ subroutine s(n)
   a = 0.0
 end subroutine
 
+subroutine s2
+  ! A zero-size bounds array overrides the DIMENSION attribute and declares a
+  ! scalar (size=4, no shape), rather than a size=5*4 array.
+  !SYMBOLS: z size=4 {{.*}}: ObjectEntity type: INTEGER(4)
+  integer, dimension(5) :: z(1 : [integer ::])
+end
+
 ! -fdebug-unparse-with-symbols intentionally reproduces the original bound syntax 
 ! rather than the synthesized rank1BoundElement node; this confirms the construct 
 ! still round-trips through that action with its symbol annotations.

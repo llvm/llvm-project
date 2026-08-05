@@ -95,6 +95,19 @@ subroutine s1()
   !ERROR: Invalid specification expression: reference to impure function 'impf'
   integer, dimension([impf(),2,3]) :: z11([1,2,3])
 
+  ! A zero-size (scalar) entity-decl array-spec also overrides the DIMENSION
+  ! attribute, but the attribute's bounds must still be validated.
+  !ERROR: Invalid specification expression: reference to impure function 'impf'
+  integer, dimension(impf() : 5) :: z12(1 : [integer::])
+
+  ! A duplicate DIMENSION attribute is an error even when one of them is a
+  ! zero-size bounds array (F2023): such an attribute declares a scalar and so
+  ! leaves the statement-level array-spec empty, but it is still a DIMENSION.
+  !ERROR: Attribute 'DIMENSION' cannot be used more than once
+  integer, dimension(1 : [integer::]), dimension(3) :: z13
+  !ERROR: Attribute 'DIMENSION' cannot be used more than once
+  integer, dimension(3), dimension([integer::]) :: z14([integer::])
+
 end subroutine
 ! The bounds of a zero-size (scalar) declaration are validated during
 ! declaration checking, when the scope is complete -- not during name

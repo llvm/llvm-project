@@ -471,7 +471,12 @@ protected:
   // statement.
   std::list<Bound> overriddenAttrArraySpecBounds() const {
     std::list<Bound> result;
-    if (!arraySpec_.empty() && !attrArraySpec_.empty()) {
+    // An entity-decl overrides the DIMENSION attribute when it supplies its own
+    // array-spec, whether that yields an array (arraySpec_) or, for a zero-size
+    // explicit-shape bounds array (F2023), a scalar (droppedBoundsToCheck_).
+    bool entityHasOwnArraySpec{
+        !arraySpec_.empty() || !droppedBoundsToCheck_.empty()};
+    if (entityHasOwnArraySpec && !attrArraySpec_.empty()) {
       for (const ShapeSpec &spec : attrArraySpec_) {
         for (const Bound *bound : {&spec.lbound(), &spec.ubound()}) {
           // A constant bound -- notably the synthesized default lower bound of
@@ -2986,7 +2991,18 @@ void ArraySpecVisitor::Post(const parser::CoarraySpec &x) {
 }
 
 const ArraySpec &ArraySpecVisitor::arraySpec() {
-  return !arraySpec_.empty() ? arraySpec_ : attrArraySpec_;
+  if (!arraySpec_.empty()) {
+    return arraySpec_;
+  }
+  // An entity-decl's own array-spec that is a zero-size explicit-shape bounds
+  // array (F2023) declares a scalar: arraySpec_ is empty but its dropped
+  // bounds are recorded.  This still overrides any DIMENSION attribute, so
+  // don't fall back to the attribute's array-spec -- return the empty scalar
+  // shape.
+  if (!droppedBoundsToCheck_.empty()) {
+    return arraySpec_;
+  }
+  return attrArraySpec_;
 }
 const ArraySpec &ArraySpecVisitor::coarraySpec() {
   return !coarraySpec_.empty() ? coarraySpec_ : attrCoarraySpec_;
@@ -3008,11 +3024,13 @@ void ArraySpecVisitor::EndArraySpec() {
 }
 void ArraySpecVisitor::PostAttrSpec() {
   // Save dimension/codimension from attrs so we can process array/coarray-spec
-  // on the entity-decl
-  if (!arraySpec_.empty()) {
-    if (attrArraySpec_.empty()) {
-      attrArraySpec_ = arraySpec_;
-      arraySpec_.clear();
+  // on the entity-decl.
+  if (!arraySpec_.empty() || !droppedBoundsToCheck_.empty()) {
+    if (attrArraySpec_.empty() && attrDroppedBoundsToCheck_.empty()) {
+      if (!arraySpec_.empty()) {
+        attrArraySpec_ = arraySpec_;
+        arraySpec_.clear();
+      }
     } else {
       Say(currStmtSource().value(),
           "Attribute 'DIMENSION' cannot be used more than once"_err_en_US);
