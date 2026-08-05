@@ -25057,8 +25057,6 @@ static SDValue performIntrinsicCombine(SDNode *N,
 
         return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(N), N->getValueType(0),
                            Ops);
-
-      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(N), N->getValueType(0), Ops);
     }
     break;
   }
