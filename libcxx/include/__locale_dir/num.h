@@ -18,9 +18,10 @@
 #include <__config>
 #include <__iterator/istreambuf_iterator.h>
 #include <__iterator/ostreambuf_iterator.h>
-#include <__locale>
 #include <__locale_dir/check_grouping.h>
+#include <__locale_dir/ctype.h>
 #include <__locale_dir/get_c_locale.h>
+#include <__locale_dir/locale.h>
 #include <__locale_dir/pad_and_output.h>
 #include <__locale_dir/scan_keyword.h>
 #include <__memory/unique_ptr.h>

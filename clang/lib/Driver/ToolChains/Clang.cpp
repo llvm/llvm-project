@@ -1055,7 +1055,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       const ToolChain *TC = I.second;
       for (BoundArch Arch :
            D.getOffloadArchs(C, C.getArgs(), Action::OFK_Cuda, *TC)) {
-        if (IsNVIDIAOffloadArch(Arch.Arch))
+        if (Arch.Arch.isNVPTX())
           ArchIDs.insert(CudaArchToID(Arch.Arch));
       }
     }
@@ -7131,11 +7131,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       // thread and team counts in the device.
       if (Args.hasFlag(options::OPT_fopenmp_assume_teams_oversubscription,
                        options::OPT_fno_openmp_assume_teams_oversubscription,
-                       /*Default=*/false))
+                       /*Default=*/TargetFastUsed))
         CmdArgs.push_back("-fopenmp-assume-teams-oversubscription");
       if (Args.hasFlag(options::OPT_fopenmp_assume_threads_oversubscription,
                        options::OPT_fno_openmp_assume_threads_oversubscription,
-                       /*Default=*/false))
+                       /*Default=*/TargetFastUsed))
         CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
 
       // Handle -fopenmp-assume-no-thread-state (implied by target-fast)
