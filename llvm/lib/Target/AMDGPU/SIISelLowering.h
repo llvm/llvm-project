@@ -188,6 +188,7 @@ private:
   SDValue getSegmentAperture(unsigned AS, const SDLoc &DL,
                              SelectionDAG &DAG) const;
 
+  SDValue lowerFrameIndex(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;

@@ -1,0 +1,106 @@
+# RUN: llc -mtriple=amdgpu12.00-- -verify-machineinstrs -run-pass=amdgpu-private-object-vgprs -o - %s | FileCheck %s
+
+# AMDGPUPrivateObjectVGPRs in isolation. The pass reads the object's placement
+# from the !amdgpu.allocated.vgprs metadata on the alloca named by each marker's
+# memory operand, and turns that into register operands the allocator can see:
+# an implicit def on the start, an implicit killed use on the end, plus live-ins
+# for the blocks in between.
+
+--- |
+  define amdgpu_kernel void @operands_on_the_markers(ptr addrspace(1) %out) {
+    %obj = alloca [4 x i32], align 4, addrspace(13), !amdgpu.allocated.vgprs !0
+    ret void
+  }
+
+  define amdgpu_kernel void @live_through_a_block(ptr addrspace(1) %out) {
+    %obj = alloca [2 x i32], align 4, addrspace(13), !amdgpu.allocated.vgprs !1
+    ret void
+  }
+
+  define amdgpu_kernel void @end_synthesized_in_exit_block(ptr addrspace(1) %out) {
+    %obj = alloca [2 x i32], align 4, addrspace(13), !amdgpu.allocated.vgprs !1
+    ret void
+  }
+
+  define amdgpu_kernel void @second_object_above_the_first(ptr addrspace(1) %out) {
+    %a = alloca [2 x i32], align 4, addrspace(13), !amdgpu.allocated.vgprs !1
+    %b = alloca [2 x i32], align 4, addrspace(13), !amdgpu.allocated.vgprs !2
+    ret void
+  }
+
+  !0 = !{i32 0, i32 16}
+  !1 = !{i32 0, i32 8}
+  !2 = !{i32 8, i32 8}
+...
+---
+# A four-dword object at byte 0 occupies v[0:3]: defined at the start, killed at
+# the end.
+name:            operands_on_the_markers
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: operands_on_the_markers
+    ; CHECK: VGPR_LIFETIME_START implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3 :: (store (s128) into %ir.obj, addrspace 13)
+    ; CHECK-NEXT: VGPR_LIFETIME_END implicit killed $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3 :: (store (s128) into %ir.obj, addrspace 13)
+    ; CHECK-NEXT: S_ENDPGM 0
+    VGPR_LIFETIME_START :: (store (s128) into %ir.obj, addrspace 13)
+    VGPR_LIFETIME_END :: (store (s128) into %ir.obj, addrspace 13)
+    S_ENDPGM 0
+...
+---
+# The object is live out of bb.0 and dies in bb.2, so both bb.1 and bb.2 must
+# have its registers as live-ins even though neither mentions it.
+name:            live_through_a_block
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: live_through_a_block
+  ; CHECK: bb.0:
+  ; CHECK: VGPR_LIFETIME_START implicit-def $vgpr0, implicit-def $vgpr1
+  ; CHECK: bb.1:
+  ; CHECK: liveins: $vgpr0, $vgpr1
+  ; CHECK: bb.2:
+  ; CHECK-NEXT: liveins: $vgpr0, $vgpr1
+  ; CHECK: VGPR_LIFETIME_END implicit killed $vgpr0, implicit killed $vgpr1
+  bb.0:
+    successors: %bb.1
+    VGPR_LIFETIME_START :: (store (s64) into %ir.obj, addrspace 13)
+
+  bb.1:
+    successors: %bb.2
+
+  bb.2:
+    VGPR_LIFETIME_END :: (store (s64) into %ir.obj, addrspace 13)
+    S_ENDPGM 0
+...
+---
+# It is legal for the IR to have a start with no end. The pass then synthesizes
+# one in each exit block, as late as it can go.
+name:            end_synthesized_in_exit_block
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: end_synthesized_in_exit_block
+    ; CHECK: VGPR_LIFETIME_START implicit-def $vgpr0, implicit-def $vgpr1
+    ; CHECK-NEXT: VGPR_LIFETIME_END implicit killed $vgpr0, implicit killed $vgpr1
+    ; CHECK-NEXT: S_ENDPGM 0
+    VGPR_LIFETIME_START :: (store (s64) into %ir.obj, addrspace 13)
+    S_ENDPGM 0
+...
+---
+# Two objects are packed one above the other, so the second one's registers
+# start where the first one's end.
+name:            second_object_above_the_first
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: second_object_above_the_first
+    ; CHECK: VGPR_LIFETIME_START implicit-def $vgpr0, implicit-def $vgpr1 :: (store (s64) into %ir.a, addrspace 13)
+    ; CHECK-NEXT: VGPR_LIFETIME_START implicit-def $vgpr2, implicit-def $vgpr3 :: (store (s64) into %ir.b, addrspace 13)
+    ; CHECK-NEXT: VGPR_LIFETIME_END implicit killed $vgpr2, implicit killed $vgpr3 :: (store (s64) into %ir.b, addrspace 13)
+    ; CHECK-NEXT: VGPR_LIFETIME_END implicit killed $vgpr0, implicit killed $vgpr1 :: (store (s64) into %ir.a, addrspace 13)
+    VGPR_LIFETIME_START :: (store (s64) into %ir.a, addrspace 13)
+    VGPR_LIFETIME_START :: (store (s64) into %ir.b, addrspace 13)
+    VGPR_LIFETIME_END :: (store (s64) into %ir.b, addrspace 13)
+    VGPR_LIFETIME_END :: (store (s64) into %ir.a, addrspace 13)
+    S_ENDPGM 0
+...
