@@ -650,8 +650,6 @@ KnownFPClass KnownFPClass::asin(const KnownFPClass &KnownSrc) {
 
   // NaN propagates. asin(x) is also NaN for |x| > 1, so we cannot rule
   // out NaN without knowing the source is in [-1, 1].
-  Known.propagateNaN(KnownSrc);
-
   return Known;
 }
 
@@ -664,8 +662,6 @@ KnownFPClass KnownFPClass::acos(const KnownFPClass &KnownSrc) {
 
   // NaN propagates. acos(x) is also NaN for |x| > 1, so we cannot rule
   // out NaN without knowing the source is in [-1, 1].
-  Known.propagateNaN(KnownSrc);
-
   return Known;
 }
 
