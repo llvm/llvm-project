@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple=amdgcn--amdhsa %s | FileCheck --check-prefix=PRINT %s
+# RUN: llvm-mc -triple=amdgpu7.00--amdhsa %s | FileCheck --check-prefix=PRINT %s
 
-# RUN: llvm-mc -filetype=obj -triple=amdgcn--amdhsa %s -o %t
+# RUN: llvm-mc -filetype=obj -triple=amdgpu7.00--amdhsa %s -o %t
 # RUN: llvm-readobj -r %t | FileCheck %s
 
 # PRINT:      .reloc {{.*}}+2, R_AMDGPU_NONE, .data

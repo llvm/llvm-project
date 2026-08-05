@@ -1360,6 +1360,32 @@ struct MIFImageIndexOpConversion
   }
 };
 
+static void genCoarrayHandle(fir::FirOpBuilder &builder, mlir::ModuleOp mod,
+                             fir::DeclareOp op) {
+  builder.setInsertionPointAfter(op);
+  mlir::Location loc = op.getLoc();
+  mlir::Type ty = fir::unwrapRefType(op.getMemref().getType());
+
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty)) {
+    if (boxTy.isCoarray()) {
+      mlir::Type handleTy =
+          fir::BoxType::get(getCoarrayHandleType(builder, loc));
+      std::string globalName =
+          op.getUniqName().str() + coarrayHandleSuffix.str();
+      fir::GlobalOp global = builder.createGlobal(
+          loc, handleTy, globalName, builder.createLinkOnceLinkage());
+      mlir::Region &region = global.getRegion();
+      region.push_back(new mlir::Block);
+      mlir::Block &block = region.back();
+      auto insertPt = builder.saveInsertionPoint();
+      builder.setInsertionPointToStart(&block);
+      auto box = fir::factory::createUnallocatedBox(builder, loc, handleTy, {});
+      fir::HasValueOp::create(builder, loc, box);
+      builder.restoreInsertionPoint(insertPt);
+    }
+  }
+}
+
 class MIFOpConversion : public fir::impl::MIFOpConversionBase<MIFOpConversion> {
 public:
   void runOnOperation() override {
@@ -1384,11 +1410,15 @@ public:
 
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
-    mif::populateMIFOpConversionPatterns(typeConverter, *dl, patterns);
-
     target.addLegalDialect<fir::FIROpsDialect, mlir::cf::ControlFlowDialect>();
     target.addLegalOp<mlir::ModuleOp>();
 
+    // Generate non-allocated missing coarray_handle
+    fir::FirOpBuilder builder(op, fir::getKindMapping(op));
+    module.walk(
+        [&](fir::DeclareOp op) { genCoarrayHandle(builder, module, op); });
+
+    mif::populateMIFOpConversionPatterns(typeConverter, *dl, patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(ctx),

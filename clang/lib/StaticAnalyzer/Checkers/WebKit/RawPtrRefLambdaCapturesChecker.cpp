@@ -9,6 +9,7 @@
 #include "ASTUtils.h"
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
+#include "RawPtrRefSafetyModel.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -28,15 +29,20 @@ private:
   TrivialFunctionAnalysis TFA;
 
 protected:
-  mutable std::optional<RetainTypeChecker> RTC;
+  const std::unique_ptr<PtrRefSafetyModel> Model;
 
 public:
-  RawPtrRefLambdaCapturesChecker(const char *description)
-      : Bug(this, description, "WebKit coding guidelines") {}
+  RawPtrRefLambdaCapturesChecker(const char *description,
+                                 std::unique_ptr<PtrRefSafetyModel> Model)
+      : Bug(this, description, "WebKit coding guidelines"),
+        Model(std::move(Model)) {}
 
-  virtual std::optional<bool> isUnsafePtr(QualType) const = 0;
-  virtual bool isPtrType(const std::string &) const = 0;
-  virtual const char *typeName() const = 0;
+  std::optional<bool> isUnsafePtr(QualType QT) const {
+    return isUnsafePtrForStorage(*Model, QT);
+  }
+  bool isPtrType(const std::string &Name) const {
+    return Model->isPtrType(Name);
+  }
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
@@ -93,8 +99,8 @@ public:
       }
 
       bool VisitTypedefDecl(TypedefDecl *TD) override {
-        if (Checker->RTC)
-          Checker->RTC->visitTypedef(TD);
+        if (auto *RTC = Checker->Model->retainTypeChecker())
+          RTC->visitTypedef(TD);
         return true;
       }
 
@@ -494,7 +500,7 @@ public:
     };
 
     LocalVisitor visitor(this);
-    if (RTC)
+    if (auto *RTC = Model->retainTypeChecker())
       RTC->visitTranslationUnitDecl(TUD);
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
@@ -573,7 +579,7 @@ public:
       Os << "Implicitly captured ";
     }
 
-    Os << "variable 'this' is a raw pointer to " << typeName();
+    Os << "variable 'this' is a raw pointer to " << Model->typeName();
     if (auto *RD = T->getPointeeCXXRecordDecl()) {
       Os << " ";
       printQuotedQualifiedName(Os, RD);
@@ -584,12 +590,36 @@ public:
     BR->emitReport(std::move(Report));
   }
 
-  virtual void printPointer(llvm::raw_svector_ostream &Os,
-                            const Type *T) const {
+  void printPointer(llvm::raw_svector_ostream &Os, const Type *T) const {
+    if (Model->retainTypeChecker()) {
+      // An OS object may be spelled as an id qualified by an OS_-prefixed
+      // protocol; print that protocol name.
+      if (auto *ObjCPtr = dyn_cast<ObjCObjectPointerType>(T)) {
+        for (ObjCProtocolDecl *P : ObjCPtr->quals()) {
+          if (const auto *II = P->getIdentifier()) {
+            auto Name = II->getName();
+            if (Name.starts_with("OS_")) {
+              Os << Model->typeName() << " ";
+              printQuotedQualifiedName(Os, P);
+              return;
+            }
+          }
+        }
+      }
+      // Retain/OS types are frequently spelled through a typedef (e.g.
+      // CFXXXRef); print the typedef name rather than desugaring.
+      if (!isa<ObjCObjectPointerType>(T) && T->getAs<TypedefType>()) {
+        auto Typedef = T->getAs<TypedefType>();
+        assert(Typedef);
+        Os << Model->typeName() << " ";
+        printQuotedQualifiedName(Os, Typedef->getDecl());
+        return;
+      }
+    }
     T = T->getUnqualifiedDesugaredType();
     bool IsPtr = isa<PointerType>(T) || isa<ObjCObjectPointerType>(T);
     Os << (IsPtr ? "raw pointer" : "raw reference") << " to ";
-    Os << typeName();
+    Os << Model->typeName();
 
     if (auto *RD = T->getPointeeType()->getAsRecordDecl()) {
       Os << " ";
@@ -604,79 +634,23 @@ public:
 class UncountedLambdaCapturesChecker : public RawPtrRefLambdaCapturesChecker {
 public:
   UncountedLambdaCapturesChecker()
-      : RawPtrRefLambdaCapturesChecker("Lambda capture of uncounted variable") {
-  }
-
-  std::optional<bool> isUnsafePtr(QualType QT) const final {
-    return isUncountedPtr(QT.getCanonicalType());
-  }
-
-  virtual bool isPtrType(const std::string &Name) const final {
-    return isRefType(Name);
-  }
-
-  const char *typeName() const final { return "RefPtr-capable type"; }
+      : RawPtrRefLambdaCapturesChecker("Lambda capture of uncounted variable",
+                                       makeRefPtrSafetyModel()) {}
 };
 
 class UncheckedLambdaCapturesChecker : public RawPtrRefLambdaCapturesChecker {
 public:
   UncheckedLambdaCapturesChecker()
-      : RawPtrRefLambdaCapturesChecker("Lambda capture of unchecked variable") {
-  }
-
-  std::optional<bool> isUnsafePtr(QualType QT) const final {
-    return isUncheckedPtr(QT.getCanonicalType());
-  }
-
-  virtual bool isPtrType(const std::string &Name) const final {
-    return isCheckedPtr(Name);
-  }
-
-  const char *typeName() const final { return "CheckedPtr-capable type"; }
+      : RawPtrRefLambdaCapturesChecker("Lambda capture of unchecked variable",
+                                       makeCheckedPtrSafetyModel()) {}
 };
 
 class UnretainedLambdaCapturesChecker : public RawPtrRefLambdaCapturesChecker {
 public:
   UnretainedLambdaCapturesChecker()
       : RawPtrRefLambdaCapturesChecker("Lambda capture of unretained "
-                                       "variables") {
-    RTC = RetainTypeChecker();
-  }
-
-  std::optional<bool> isUnsafePtr(QualType QT) const final {
-    if (QT.hasStrongOrWeakObjCLifetime())
-      return false;
-    return RTC->isUnretained(QT);
-  }
-
-  virtual bool isPtrType(const std::string &Name) const final {
-    return isRetainPtrOrOSPtr(Name);
-  }
-
-  const char *typeName() const final { return "RetainPtr-capable type"; }
-
-  void printPointer(llvm::raw_svector_ostream &Os, const Type *T) const final {
-    if (auto *ObjCPtr = dyn_cast<ObjCObjectPointerType>(T)) {
-      for (ObjCProtocolDecl *P : ObjCPtr->quals()) {
-        if (const auto *II = P->getIdentifier()) {
-          auto Name = II->getName();
-          if (Name.starts_with("OS_")) {
-            Os << typeName() << " ";
-            printQuotedQualifiedName(Os, P);
-            return;
-          }
-        }
-      }
-    }
-    if (!isa<ObjCObjectPointerType>(T) && T->getAs<TypedefType>()) {
-      auto Typedef = T->getAs<TypedefType>();
-      assert(Typedef);
-      Os << typeName() << " ";
-      printQuotedQualifiedName(Os, Typedef->getDecl());
-      return;
-    }
-    return RawPtrRefLambdaCapturesChecker::printPointer(Os, T);
-  }
+                                       "variables",
+                                       makeRetainPtrSafetyModel()) {}
 };
 
 } // namespace

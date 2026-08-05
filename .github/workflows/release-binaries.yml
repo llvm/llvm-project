@@ -53,9 +53,6 @@ permissions:
 jobs:
   prepare:
     name: Prepare to build binaries
-    environment:
-      deployment: false
-      name: ${{ case( github.event_name == 'pull_request', null, 'release') }}
     runs-on: ${{ inputs.runs-on }}
     if: github.repository_owner == 'llvm'
     outputs:
@@ -72,24 +69,16 @@ jobs:
       attestation-name: ${{ steps.vars.outputs.attestation-name }}
 
     steps:
+    - name: Checkout LLVM
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+          persist-credentials: false
+
     - name: Validate Release Version
       if: inputs.release-version != ''
       uses: ./.github/workflows/validate-release-version
       with:
         release-version: ${{ inputs.release-version }}
-
-    - name: Checkout LLVM
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-      with:
-          persist-credentials: false
-
-    - name: Check Permissions
-      if: github.event_name != 'pull_request'
-      uses: ./.github/workflows/require-team-membership
-      with:
-        team-slug: llvm-release-managers
-        LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
-        LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
     # The name of the Windows binaries uses the version from source, so we need
     # to fetch it here.
@@ -368,6 +357,9 @@ jobs:
 
   upload-release-binaries:
     name: "Upload Release Binaries"
+    environment:
+      deployment: false
+      name: release
     needs:
       - prepare
       - build-release-package
@@ -385,6 +377,7 @@ jobs:
         with:
           persist-credentials: false
           sparse-checkout: |
+            .github/workflows/require-team-membership
             .github/workflows/upload-release-artifact
             .github/workflows/validate-release-version
             llvm/utils/release/github-upload-release.py

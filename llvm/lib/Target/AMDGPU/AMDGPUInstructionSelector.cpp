@@ -7181,7 +7181,7 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
   if (!EncodedOffset)
     return std::nullopt;
 
-  assert(MRI->getType(SOffset) == LLT::scalar(32));
+  assert(MRI->getType(SOffset).getSizeInBits() == 32);
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(SOffset); },
            [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedOffset); }}};
 }
@@ -7608,12 +7608,6 @@ void AMDGPUInstructionSelector::renderExtractCpolSetGLC(
                         (AMDGPU::isGFX12Plus(STI) ? AMDGPU::CPol::ALL
                                                   : AMDGPU::CPol::ALL_pregfx12);
   MIB.addImm(Cpol | AMDGPU::CPol::GLC);
-}
-
-void AMDGPUInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,
-                                                 const MachineInstr &MI,
-                                                 int OpIdx) const {
-  MIB.addFrameIndex(MI.getOperand(1).getIndex());
 }
 
 void AMDGPUInstructionSelector::renderFPPow2ToExponent(MachineInstrBuilder &MIB,
