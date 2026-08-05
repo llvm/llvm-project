@@ -274,17 +274,18 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
 
 void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
   auto *MD = ME->getMemberDecl();
-  if (isa<FieldDecl>(MD) && doesDeclHaveStorage(MD)) {
+  if (auto *FD = dyn_cast<FieldDecl>(MD); FD && doesDeclHaveStorage(FD)) {
     assert(ME->isGLValue() && "Field member should be GL value");
     OriginList *Dst = getOriginsList(*ME);
     assert(Dst && "Field member should have an origin list as it is GL value");
     OriginList *Src = getOriginsList(*ME->getBase());
     assert(Src && "Base expression should be a pointer/reference type");
-    // The field's glvalue (outermost origin) holds the same loans as the base
-    // expression.
+    // Flow loans from base to field, extending each loan's path with the field.
+    // E.g., if base has loan to `obj`, field gets loan to `obj.field`.
     CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-        Dst->getOuterOriginID(), Src->getOuterOriginID(),
-        /*Kill=*/true));
+        Dst->getOuterOriginID(), Src->getOuterOriginID(), /*KillDest=*/true));
+    CurrentBlockFacts.push_back(FactMgr.createFact<ProjectionFact>(
+        Dst->getOuterOriginID(), PathElement::getField(*FD)));
   }
 }
 

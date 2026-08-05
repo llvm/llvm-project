@@ -37,6 +37,9 @@ public:
 
   LoanSet getLoans(OriginID OID, ProgramPoint P) const;
 
+  void dumpLoans(OriginID OID, ProgramPoint P, llvm::raw_ostream &OS,
+                 const LoanManager &LM) const;
+
   /// Builds the chain of origins through which a loan has propagated.
   ///
   /// Starting from the last fact of the block containing StartPoint, this

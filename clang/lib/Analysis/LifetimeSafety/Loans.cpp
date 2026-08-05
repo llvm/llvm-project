@@ -64,4 +64,25 @@ LoanManager::getOrCreatePlaceholderBase(const CXXMethodDecl *MD) {
   PlaceholderBases.InsertNode(NewPB, InsertPos);
   return NewPB;
 }
+
+Loan *LoanManager::getOrCreateProjectedLoan(LoanID BaseLoanID,
+                                            PathElement Element) {
+  ExtensionCacheKey Key = {BaseLoanID, Element};
+  auto [It, Inserted] = LoanProjectionCache.try_emplace(Key, nullptr);
+  if (!Inserted)
+    return It->second;
+  const auto *BaseLoan = getLoan(BaseLoanID);
+  AccessPath ExtendedPath(BaseLoan->getAccessPath(), Element);
+  Loan *NewLoan = createLoan(ExtendedPath, BaseLoan->getIssueExpr());
+  BaseLoansMap[NewLoan->getID()] = BaseLoanID;
+  It->second = NewLoan;
+  return NewLoan;
+}
+
+std::optional<LoanID> LoanManager::getBaseLoan(LoanID ExtendedLoanID) const {
+  auto It = BaseLoansMap.find(ExtendedLoanID);
+  if (It != BaseLoansMap.end())
+    return It->second;
+  return std::nullopt;
+}
 } // namespace clang::lifetimes::internal
