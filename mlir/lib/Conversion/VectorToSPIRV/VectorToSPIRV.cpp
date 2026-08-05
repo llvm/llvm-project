@@ -727,6 +727,33 @@ struct VectorDeinterleaveOpConvert final
   }
 };
 
+/// Returns true if a pointer `OpBitcast` is valid for the target. Under the
+/// Logical addressing model pointers are opaque and can only be derived through
+/// `OpAccessChain`, so a pointer to the element type cannot be cast to a
+/// pointer to the vector type.
+static bool allowsPointerBitcast(const SPIRVTypeConverter &typeConverter) {
+  return typeConverter.allows(spirv::Capability::Addresses) ||
+         typeConverter.allows(
+             spirv::Capability::PhysicalStorageBufferAddresses);
+}
+
+/// Returns `indices` with the innermost index advanced by `offset`, so that the
+/// consecutive elements covered by a vector access can be addressed one at a
+/// time.
+static SmallVector<Value> offsetInnermostIndex(ValueRange indices,
+                                               int64_t offset, Location loc,
+                                               OpBuilder &builder) {
+  SmallVector<Value> result(indices.begin(), indices.end());
+  if (offset == 0 || result.empty())
+    return result;
+  Value innermost = result.back();
+  Value offsetValue = spirv::ConstantOp::create(
+      builder, loc, innermost.getType(),
+      builder.getIntegerAttr(innermost.getType(), offset));
+  result.back() = spirv::IAddOp::create(builder, loc, innermost, offsetValue);
+  return result;
+}
+
 struct VectorLoadOpConverter final
     : public OpConversionPattern<vector::LoadOp> {
   using Base::Base;
@@ -743,12 +770,6 @@ struct VectorLoadOpConverter final
 
     const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
     auto loc = loadOp.getLoc();
-    Value accessChain =
-        spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
-                             adaptor.getIndices(), loc, rewriter);
-    if (!accessChain)
-      return rewriter.notifyMatchFailure(
-          loadOp, "failed to get memref element pointer");
 
     spirv::StorageClass storageClass = attr.getValue();
     auto vectorType = loadOp.getVectorType();
@@ -757,8 +778,6 @@ struct VectorLoadOpConverter final
     auto spirvVectorType = typeConverter.convertType(vectorType);
     if (!spirvVectorType)
       return rewriter.notifyMatchFailure(loadOp, "unsupported vector type");
-
-    auto vectorPtrType = spirv::PointerType::get(spirvVectorType, storageClass);
 
     std::optional<uint64_t> alignment = loadOp.getAlignment();
     if (alignment > std::numeric_limits<uint32_t>::max()) {
@@ -776,14 +795,56 @@ struct VectorLoadOpConverter final
       alignmentAttr = rewriter.getI32IntegerAttr(alignment.value());
     }
 
+    int64_t numElements = vectorType.getNumElements();
+
+    // Without a pointer bitcast the vector cannot be loaded in one step. Load
+    // each element through its own access chain and assemble the vector. The
+    // alignment is dropped because it describes the vector access, not the
+    // individual element accesses.
+    if (numElements != 1 && !allowsPointerBitcast(typeConverter)) {
+      if (memrefType.getRank() == 0)
+        return rewriter.notifyMatchFailure(
+            loadOp, "cannot split a vector load from a rank-0 memref");
+      auto convertedVectorType = dyn_cast<VectorType>(spirvVectorType);
+      if (!convertedVectorType)
+        return rewriter.notifyMatchFailure(loadOp, "unsupported vector type");
+
+      Type elementType = convertedVectorType.getElementType();
+      SmallVector<Value> elements;
+      elements.reserve(numElements);
+      for (int64_t i = 0; i < numElements; ++i) {
+        SmallVector<Value> elementIndices =
+            offsetInnermostIndex(adaptor.getIndices(), i, loc, rewriter);
+        Value elementPtr =
+            spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
+                                 elementIndices, loc, rewriter);
+        if (!elementPtr)
+          return rewriter.notifyMatchFailure(
+              loadOp, "failed to get memref element pointer");
+        elements.push_back(
+            spirv::LoadOp::create(rewriter, loc, elementType, elementPtr));
+      }
+      rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+          loadOp, spirvVectorType, elements);
+      return success();
+    }
+
+    Value accessChain =
+        spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
+                             adaptor.getIndices(), loc, rewriter);
+    if (!accessChain)
+      return rewriter.notifyMatchFailure(
+          loadOp, "failed to get memref element pointer");
+
+    auto vectorPtrType = spirv::PointerType::get(spirvVectorType, storageClass);
+
     // For single element vectors, we don't need to bitcast the access chain to
     // the original vector type. Both is going to be the same, a pointer
     // to a scalar.
     Value castedAccessChain =
-        (vectorType.getNumElements() == 1)
-            ? accessChain
-            : spirv::BitcastOp::create(rewriter, loc, vectorPtrType,
-                                       accessChain);
+        (numElements == 1) ? accessChain
+                           : spirv::BitcastOp::create(
+                                 rewriter, loc, vectorPtrType, accessChain);
 
     rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, spirvVectorType,
                                                castedAccessChain,
@@ -809,12 +870,6 @@ struct VectorStoreOpConverter final
 
     const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
     auto loc = storeOp.getLoc();
-    Value accessChain =
-        spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
-                             adaptor.getIndices(), loc, rewriter);
-    if (!accessChain)
-      return rewriter.notifyMatchFailure(
-          storeOp, "failed to get memref element pointer");
 
     std::optional<uint64_t> alignment = storeOp.getAlignment();
     if (alignment > std::numeric_limits<uint32_t>::max()) {
@@ -830,16 +885,48 @@ struct VectorStoreOpConverter final
     if (!spirvVectorType)
       return rewriter.notifyMatchFailure(storeOp, "unsupported vector type");
 
+    int64_t numElements = vectorType.getNumElements();
+
+    // Mirror of the load path: without a pointer bitcast each element has to be
+    // extracted and stored through its own access chain.
+    if (numElements != 1 && !allowsPointerBitcast(typeConverter)) {
+      if (memrefType.getRank() == 0)
+        return rewriter.notifyMatchFailure(
+            storeOp, "cannot split a vector store to a rank-0 memref");
+      for (int64_t i = 0; i < numElements; ++i) {
+        SmallVector<Value> elementIndices =
+            offsetInnermostIndex(adaptor.getIndices(), i, loc, rewriter);
+        Value elementPtr =
+            spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
+                                 elementIndices, loc, rewriter);
+        if (!elementPtr)
+          return rewriter.notifyMatchFailure(
+              storeOp, "failed to get memref element pointer");
+        Value element = spirv::CompositeExtractOp::create(
+            rewriter, loc, adaptor.getValueToStore(),
+            ArrayRef<int32_t>{static_cast<int32_t>(i)});
+        spirv::StoreOp::create(rewriter, loc, elementPtr, element);
+      }
+      rewriter.eraseOp(storeOp);
+      return success();
+    }
+
+    Value accessChain =
+        spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
+                             adaptor.getIndices(), loc, rewriter);
+    if (!accessChain)
+      return rewriter.notifyMatchFailure(
+          storeOp, "failed to get memref element pointer");
+
     auto vectorPtrType = spirv::PointerType::get(spirvVectorType, storageClass);
 
     // For single element vectors, we don't need to bitcast the access chain to
     // the original vector type. Both is going to be the same, a pointer
     // to a scalar.
     Value castedAccessChain =
-        (vectorType.getNumElements() == 1)
-            ? accessChain
-            : spirv::BitcastOp::create(rewriter, loc, vectorPtrType,
-                                       accessChain);
+        (numElements == 1) ? accessChain
+                           : spirv::BitcastOp::create(
+                                 rewriter, loc, vectorPtrType, accessChain);
 
     auto memoryAccess = spirv::MemoryAccess::None;
     spirv::MemoryAccessAttr memoryAccessAttr;
