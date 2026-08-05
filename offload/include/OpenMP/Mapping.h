@@ -117,31 +117,8 @@ struct HostDataToTargetTy {
   const uintptr_t HstPtrEnd;       // non-inclusive.
   const map_var_info_t HstPtrName; // Optional source name of mapped variable.
 
-  // Not const: an entry whose storage is the host storage can later be given a
-  // device allocation, see giveDeviceAllocation().
-  uintptr_t TgtAllocBegin; // allocated target memory
-  uintptr_t TgtPtrBegin;   // mapped target memory = TgtAllocBegin + padding
-
-  /// Whether this entry's storage is the host storage itself, i.e. it owns no
-  /// device allocation. That is the case for the entries recorded on the
-  /// unified-shared-memory host path.
-  bool isHostBacked() const { return TgtPtrBegin == HstPtrBegin; }
-
-  /// Give a host-backed entry a device allocation, so that it stops sharing
-  /// storage with the original. Used when a pointer inside this entry's storage
-  /// is about to be attached: attachment assigns the corresponding pointer, and
-  /// while the corresponding storage is the original storage that assignment
-  /// would be observable through the original pointer.
-  ///
-  /// The entry keeps its identity, so its reference count continues to govern
-  /// its lifetime, and any shadow pointer recorded for it is transferred back
-  /// to the host by the same data motion as for any other entry.
-  void giveDeviceAllocation(uintptr_t NewTgtAllocBegin,
-                            uintptr_t NewTgtPtrBegin) {
-    assert(isHostBacked() && "Entry already owns a device allocation");
-    TgtAllocBegin = NewTgtAllocBegin;
-    TgtPtrBegin = NewTgtPtrBegin;
-  }
+  const uintptr_t TgtAllocBegin; // allocated target memory
+  const uintptr_t TgtPtrBegin; // mapped target memory = TgtAllocBegin + padding
 
 private:
   static const uint64_t INFRefCount = ~(uint64_t)0;
@@ -518,25 +495,6 @@ struct AttachMapInfo {
         MapType(Type), Pointername(Name) {}
 };
 
-/// A pointer that has been attached to a pointee, recorded so that it can be
-/// attached again if the pointee's entry is later given a device allocation and
-/// its device address therefore changes.
-///
-/// The pointee is the key of MappingInfoTy::AttachedPointers, so only what is
-/// needed to redo the attachment is kept here.
-struct AttachedPointerTy {
-  /// Original address of the pointer itself, e.g. &p or &s.p.
-  void **HstPtrAddr;
-  /// Original address of the pointee base, which may differ from the pointee
-  /// address that keys the index, e.g. for map(p[10:5]).
-  void *HstPteeBase;
-  /// Size of the pointer, which is larger than a pointer for a descriptor.
-  int64_t PtrSize;
-
-  AttachedPointerTy(void **HstPtrAddr, void *HstPteeBase, int64_t PtrSize)
-      : HstPtrAddr(HstPtrAddr), HstPteeBase(HstPteeBase), PtrSize(PtrSize) {}
-};
-
 /// Structure to track new allocations, ATTACH entries, DELETE entries and
 /// skipped FROM data transfer information for a given construct, across
 /// recursive calls (for handling mappers) to targetDataBegin/targetDataEnd.
@@ -707,23 +665,6 @@ struct MappingInfoTy {
   /// The type used to access the HDTT map.
   using HDTTMapAccessorTy = decltype(HostDataToTargetMap)::AccessorTy;
 
-  /// Which pointers are attached to a given pointee, keyed by the pointee's
-  /// original address.
-  ///
-  /// Attachment records a shadow pointer on the entry holding the pointer,
-  /// which gives the pointer's pointee but not the reverse. This index provides
-  /// the reverse direction, which is needed when a pointee's entry is given a
-  /// device allocation after something has already been attached to it: the
-  /// attached pointers designate its previous device address and have to be
-  /// attached again. See giveEntryDeviceAllocation().
-  ///
-  /// Only pointers that are actually attached are recorded, so this stays empty
-  /// for mappings that never involve pointer attachment.
-  ///
-  /// Accessed under the HDTT map accessor.
-  llvm::DenseMap<void *, llvm::SmallVector<AttachedPointerTy, 2>>
-      AttachedPointers;
-
   /// Lookup the mapping of \p HstPtrBegin in \p HDTTMap. The accessor ensures
   /// exclusive access to the HDTT map.
   LookupResult lookupMapping(HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin,
@@ -777,38 +718,6 @@ struct MappingInfoTy {
   /// HstPtrBegin uses shared memory.
   [[nodiscard]] int eraseMapEntry(HDTTMapAccessorTy &HDTTMap,
                                   HostDataToTargetTy *Entry, int64_t Size);
-
-  /// Record that \p HstPtrAddr is attached to the pointee at \p HstPteeBegin.
-  /// See AttachedPointers.
-  void recordAttachedPointer(void *HstPteeBegin, void **HstPtrAddr,
-                             void *HstPteeBase, int64_t PtrSize);
-
-  /// Give \p Entry, which must be host-backed, a device allocation and copy the
-  /// current contents of its storage into it, so that it stops sharing storage
-  /// with the original.
-  ///
-  /// This is needed before attaching a pointer that lies within \p Entry's
-  /// storage: attachment assigns the corresponding pointer, and while the
-  /// corresponding storage is the original storage that assignment is
-  /// observable through the original pointer. The whole entry has to be given
-  /// storage rather than just the pointer, because the device address of
-  /// anything inside it is defined as this entry's device address plus an
-  /// offset.
-  ///
-  /// The contents are copied so that whatever else the storage holds -- other
-  /// structure members, for instance -- is present on the device.
-  ///
-  /// Anything already attached to a pointee inside \p Entry designated its
-  /// previous device address, so those pointers have to be attached again. They
-  /// are appended to \p ToReattach as (pointee, pointer) pairs rather than
-  /// attached here, since performing an attachment is the caller's job.
-  ///
-  /// \p HDTTMap must be held by the caller. Returns \c OFFLOAD_SUCCESS if the
-  /// entry now owns a device allocation, and \c OFFLOAD_FAIL otherwise.
-  [[nodiscard]] int giveEntryDeviceAllocation(
-      HDTTMapAccessorTy &HDTTMap, HostDataToTargetTy *Entry,
-      AsyncInfoTy &AsyncInfo,
-      llvm::SmallVectorImpl<std::pair<void *, AttachedPointerTy>> &ToReattach);
 
   /// Deallocate the \p Entry from the device memory and delete it. Return \c
   /// OFFLOAD_SUCCESS if the deallocation operations executed successfully, and

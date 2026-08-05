@@ -561,73 +561,6 @@ int MappingInfoTy::eraseMapEntry(HDTTMapAccessorTy &HDTTMap,
   return OFFLOAD_SUCCESS;
 }
 
-void MappingInfoTy::recordAttachedPointer(void *HstPteeBegin, void **HstPtrAddr,
-                                          void *HstPteeBase, int64_t PtrSize) {
-  auto &Attached = AttachedPointers[HstPteeBegin];
-  for (const AttachedPointerTy &A : Attached)
-    if (A.HstPtrAddr == HstPtrAddr)
-      return;
-  Attached.emplace_back(HstPtrAddr, HstPteeBase, PtrSize);
-}
-
-int MappingInfoTy::giveEntryDeviceAllocation(
-    HDTTMapAccessorTy &HDTTMap, HostDataToTargetTy *Entry,
-    AsyncInfoTy &AsyncInfo,
-    llvm::SmallVectorImpl<std::pair<void *, AttachedPointerTy>> &ToReattach) {
-  assert(Entry && "Trying to allocate for a null entry.");
-  assert(Entry->isHostBacked() && "Entry already owns a device allocation");
-
-  void *HstPtrBegin = reinterpret_cast<void *>(Entry->HstPtrBegin);
-  int64_t Size = Entry->HstPtrEnd - Entry->HstPtrBegin;
-
-  uintptr_t TgtAllocBegin =
-      reinterpret_cast<uintptr_t>(Device.allocData(Size, HstPtrBegin));
-  if (!TgtAllocBegin) {
-    REPORT() << "Failed to allocate device memory for " << HstPtrBegin << ".";
-    return OFFLOAD_FAIL;
-  }
-
-  Entry->giveDeviceAllocation(TgtAllocBegin, TgtAllocBegin);
-
-  INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
-       "Allocating device memory for existing map entry with "
-       "HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD ", Size=%" PRId64 "\n",
-       DPxPTR(Entry->HstPtrBegin), DPxPTR(TgtAllocBegin), Size);
-  ODBG(ODT_Mapping) << "Allocating device memory for existing map entry (hst:"
-                    << HstPtrBegin
-                    << ") -> (tgt:" << reinterpret_cast<void *>(TgtAllocBegin)
-                    << "), Size=" << Size;
-
-  // The storage was shared with the host until now, so bring its current
-  // contents over: it may hold data other than the pointer being attached.
-  int Ret = Device.submitData(reinterpret_cast<void *>(TgtAllocBegin),
-                              HstPtrBegin, Size, AsyncInfo, Entry);
-  if (Ret != OFFLOAD_SUCCESS) {
-    REPORT() << "Copying data to device failed.";
-    return OFFLOAD_FAIL;
-  }
-
-  if (Device.notifyDataMapped(HstPtrBegin, Size))
-    return OFFLOAD_FAIL;
-
-  // The entry's device address has changed, so anything already attached to a
-  // pointee within it designates the previous one. Collect those pointers for
-  // the caller to attach again.
-  for (auto &[HstPteeBegin, Attached] : AttachedPointers) {
-    if (reinterpret_cast<uintptr_t>(HstPteeBegin) < Entry->HstPtrBegin ||
-        reinterpret_cast<uintptr_t>(HstPteeBegin) >= Entry->HstPtrEnd)
-      continue;
-    for (const AttachedPointerTy &A : Attached) {
-      ODBG(ODT_Mapping) << "Pointer " << A.HstPtrAddr
-                        << " is attached to pointee " << HstPteeBegin
-                        << " within the entry, so it needs attaching again";
-      ToReattach.emplace_back(HstPteeBegin, A);
-    }
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
 int MappingInfoTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry,
                                          int64_t Size) {
   assert(Entry && "Trying to deallocate a null entry.");
@@ -644,10 +577,11 @@ int MappingInfoTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry,
     return OFFLOAD_FAIL;
   }
 
-  // A host-backed entry owns no device allocation: its allocation maps to the
-  // host address itself, so it must not be handed to deleteData().
+  // The reuse entry recorded on the unified-shared-memory host path owns no
+  // device allocation: its allocation maps to the host address itself, so it
+  // must not be handed to deleteData().
   int Ret = OFFLOAD_SUCCESS;
-  if (!Entry->isHostBacked())
+  if (Entry->TgtAllocBegin != Entry->HstPtrBegin)
     Ret = Device.deleteData((void *)Entry->TgtAllocBegin);
 
   // Notify the plugin about the unmapped memory.

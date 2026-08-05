@@ -69,9 +69,10 @@ int main() {
 #pragma omp target enter data map(close, alloc : p[0 : 10])
 #endif
 
-  // The pointer's entry was given a device allocation, so attachment wrote the
-  // device pointee address there and the original p is untouched.
-  // CHECK: after attach: p == &x[0]
+  // EXPECTED: after attach: p == &x[0]
+  // CHECK:    after attach: p != &x[0]
+  // FIXME: the pointer's storage is shared with the original, so attachment wrote
+  // the device pointee address into the original p.
   printf("after attach: p %s &x[0]\n", p == &x[0] ? "==" : "!=");
 
   // CHECK: Done!
