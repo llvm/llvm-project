@@ -3327,19 +3327,17 @@ LLVM_ABI bool llvm::collectInvariantLoadsBoundChain(
   return !BoundLoads.empty() && !HoistedDeps.empty();
 }
 
-LoopAccessInfo::LoopAccessInfo(
-    Loop *L, ScalarEvolution *SE, const TargetTransformInfo *TTI,
-    const TargetLibraryInfo *TLI, AAResults *AA, DominatorTree *DT,
-    LoopInfo *LI, AssumptionCache *AC, bool AllowPartial,
-    ArrayRef<const SCEVTripCountInvariantPredicate *> TripCountInvariantPreds)
+LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
+                               const TargetTransformInfo *TTI,
+                               const TargetLibraryInfo *TLI, AAResults *AA,
+                               DominatorTree *DT, LoopInfo *LI,
+                               AssumptionCache *AC, bool AllowPartial,
+                               ArrayRef<const SCEVPredicate *> Assumptions)
     : PSE(std::make_unique<PredicatedScalarEvolution>(*SE, *L)),
       PtrRtChecking(nullptr), TheLoop(L), AllowPartial(AllowPartial),
-      TripCountInvariantPreds(TripCountInvariantPreds) {
-
-  for (const SCEVTripCountInvariantPredicate *P : TripCountInvariantPreds) {
-    PSE->addTripCountInvariantPredicate(P->getTripCountLoad(),
-                                        P->getTripCountInvariantLoad());
-  }
+      Assumptions(Assumptions) {
+  for (const SCEVPredicate *P : Assumptions)
+    PSE->addAssumption(P);
 
   unsigned MaxTargetVectorWidthInBits = std::numeric_limits<unsigned>::max();
   if (TTI && !TTI->enableScalableVectorization())
@@ -3416,28 +3414,30 @@ const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L,
   return getInfo(L, AllowPartial, {});
 }
 
-const LoopAccessInfo &LoopAccessInfoManager::getInfo(
-    Loop &L, bool AllowPartial,
-    ArrayRef<const SCEVTripCountInvariantPredicate *> TripCountInvariantPreds) {
+const LoopAccessInfo &
+LoopAccessInfoManager::getInfo(Loop &L, bool AllowPartial,
+                               ArrayRef<const SCEVPredicate *> Assumptions) {
   auto Insertion = LoopAccessInfoMap.try_emplace(&L);
   auto It = Insertion.first;
   bool Inserted = Insertion.second;
 
-  auto SamePreds = [&]() {
-    ArrayRef<const SCEVTripCountInvariantPredicate *> Cached =
-        It->second->getTripCountInvariantPreds();
-    if (Cached.size() != TripCountInvariantPreds.size())
+  auto SameAssumptions = [&]() {
+    ArrayRef<const SCEVPredicate *> CachedAssumptions =
+        It->second->getAssumptions();
+    if (CachedAssumptions.size() != Assumptions.size()) {
       return false;
-    return std::equal(Cached.begin(), Cached.end(),
-                      TripCountInvariantPreds.begin());
+    }
+    return std::equal(CachedAssumptions.begin(), CachedAssumptions.end(),
+                      Assumptions.begin());
   };
 
-  // We need to create the LoopAccessInfo if either we don't already have one,
-  // or if it was created with a different value of AllowPartial.
-  if (Inserted || It->second->hasAllowPartial() != AllowPartial || !SamePreds())
-    It->second =
-        std::make_unique<LoopAccessInfo>(&L, &SE, TTI, TLI, &AA, &DT, &LI, AC,
-                                         AllowPartial, TripCountInvariantPreds);
+  // We need to create the LoopAccessInfo if we don't already have one, or if it
+  // was created with a different value of AllowPartial, or under different
+  // assumptions.
+  if (Inserted || It->second->hasAllowPartial() != AllowPartial ||
+      !SameAssumptions())
+    It->second = std::make_unique<LoopAccessInfo>(
+        &L, &SE, TTI, TLI, &AA, &DT, &LI, AC, AllowPartial, Assumptions);
 
   return *It->second;
 }

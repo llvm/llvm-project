@@ -1636,28 +1636,16 @@ public:
     BasicBlock *LoopHeader = L->getHeader();
     BasicBlock *Preheader = L->getLoopPreheader();
 
-    SmallVector<const SCEVPredicate *, 4> SCEVPredsVec;
-    if (const auto *U = dyn_cast<SCEVUnionPredicate>(&UnionPred)) {
-      for (const SCEVPredicate *P : U->getPredicates()) {
-        if (!isa<SCEVTripCountInvariantPredicate>(P)) {
-          SCEVPredsVec.push_back(P);
-        }
-      }
-    } else if (!isa<SCEVTripCountInvariantPredicate>(&UnionPred)) {
-      SCEVPredsVec.push_back(&UnionPred);
-    }
-    SCEVUnionPredicate FilteredPred(SCEVPredsVec, *PSE.getSE());
-
     // Use SplitBlock to create blocks for SCEV & memory runtime checks to
     // ensure the blocks are properly added to LoopInfo & DominatorTree. Those
     // may be used by SCEVExpander. The blocks will be un-linked from their
     // predecessors and removed from LI & DT at the end of the function.
-    if (!FilteredPred.isAlwaysTrue()) {
+    if (!UnionPred.isAlwaysTrue()) {
       SCEVCheckBlock = SplitBlock(Preheader, Preheader->getTerminator(), DT, LI,
                                   nullptr, "vector.scevcheck");
 
       SCEVCheckCond = SCEVExp.expandCodeForPredicate(
-          &FilteredPred, SCEVCheckBlock->getTerminator());
+          &UnionPred, SCEVCheckBlock->getTerminator());
       if (isa<Constant>(SCEVCheckCond)) {
         // Clean up directly after expanding the predicate to a constant, to
         // avoid further expansions re-using anything left over from SCEVExp.
@@ -7925,7 +7913,7 @@ bool EnableLoadBoundVectorization(Loop *L, PredicatedScalarEvolution &PSE,
     if (!isa<SCEVUnknown>(LoadSCEV)) {
       continue;
     }
-    PSE.addTripCountInvariantPredicate(LoadSCEV, InvSCEV);
+    PSE.addAssumption(SE->getEqualPredicate(LoadSCEV, InvSCEV));
     Added = true;
   }
   if (!Added) {

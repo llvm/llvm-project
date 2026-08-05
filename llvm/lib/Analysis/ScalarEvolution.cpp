@@ -8649,8 +8649,15 @@ const SCEV *ScalarEvolution::getPredicatedExitCount(
 }
 
 const SCEV *ScalarEvolution::getPredicatedBackedgeTakenCount(
-    const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
-  return getPredicatedBackedgeTakenInfo(L).getExact(L, this, &Preds);
+    const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds,
+    const SCEVPredicate *Assumptions) {
+  if (!Assumptions || Assumptions->isAlwaysTrue())
+    return getPredicatedBackedgeTakenInfo(L).getExact(L, this, &Preds);
+
+  (void)getBackedgeTakenInfo(L);
+
+  SaveAndRestore<const SCEVPredicate *> Assumed(AssumedPreds, Assumptions);
+  return computeBackedgeTakenCount(L, true).getExact(L, this, &Preds);
 }
 
 const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L,
@@ -8667,37 +8674,21 @@ const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L,
 }
 
 const SCEV *ScalarEvolution::getPredicatedSymbolicMaxBackedgeTakenCount(
-    const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
-  return getPredicatedBackedgeTakenInfo(L).getSymbolicMax(L, this, &Preds);
+    const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds,
+    const SCEVPredicate *Assumptions) {
+  if (!Assumptions || Assumptions->isAlwaysTrue())
+    return getPredicatedBackedgeTakenInfo(L).getSymbolicMax(L, this, &Preds);
+
+  (void)getBackedgeTakenInfo(L);
+
+  SaveAndRestore<const SCEVPredicate *> Assumed(AssumedPreds, Assumptions);
+  BackedgeTakenInfo BTI = computeBackedgeTakenCount(L, true);
+  return BTI.getSymbolicMax(L, this, &Preds);
 }
 
 const SCEV *ScalarEvolution::getPredicatedConstantMaxBackedgeTakenCount(
     const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
   return getPredicatedBackedgeTakenInfo(L).getConstantMax(this, &Preds);
-}
-
-const SCEV *ScalarEvolution::computeBackedgeTakenCountWithTripCountInvariants(
-    const Loop *L, ArrayRef<const SCEVTripCountInvariantPredicate *> Preds,
-    bool SymbolicMax) {
-  if (Preds.empty())
-    return SymbolicMax ? getSymbolicMaxBackedgeTakenCount(L)
-                       : getBackedgeTakenCount(L);
-
-  ValueToSCEVMapTy Subst;
-  for (const SCEVTripCountInvariantPredicate *P : Preds) {
-    const auto *V = dyn_cast<SCEVUnknown>(P->getTripCountLoad());
-    if (!V)
-      return getCouldNotCompute();
-    Subst[V->getValue()] = P->getTripCountInvariantLoad();
-  }
-
-  (void)getBackedgeTakenInfo(L);
-
-  SaveAndRestore<DenseMap<const Value *, const SCEV *> *> Active(
-      ActiveTripCountInvariantSubst, &Subst);
-  BackedgeTakenInfo BTI =
-      computeBackedgeTakenCount(L, /*AllowPredicates=*/false);
-  return SymbolicMax ? BTI.getSymbolicMax(L, this) : BTI.getExact(L, this);
 }
 
 bool ScalarEvolution::isBackedgeTakenCountMaxOrZero(const Loop *L) {
@@ -9488,15 +9479,10 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   const SCEV *LHS = getSCEV(ExitCond->getOperand(0));
   const SCEV *RHS = getSCEV(ExitCond->getOperand(1));
 
-  // If the TripCountInvariant predicate is active, then replace the LHS and RHS
-  // to their proper substition values as per the substitution map.
-  if (ActiveTripCountInvariantSubst &&
-      !ActiveTripCountInvariantSubst->empty()) {
-    auto &Subst =
-        const_cast<ValueToSCEVMapTy &>(*ActiveTripCountInvariantSubst);
-
-    LHS = SCEVParameterRewriter::rewrite(LHS, *this, Subst);
-    RHS = SCEVParameterRewriter::rewrite(RHS, *this, Subst);
+  // Rewrite the SCEV with the equivalent SCEV mapped in predicates.
+  if (AssumedPreds) {
+    LHS = rewriteUsingPredicate(LHS, L, *AssumedPreds);
+    RHS = rewriteUsingPredicate(RHS, L, *AssumedPreds);
   }
 
   ExitLimit EL = computeExitLimitFromICmp(L, Pred, LHS, RHS, ControlsOnlyExit,
@@ -15298,22 +15284,6 @@ const SCEVPredicate *ScalarEvolution::getWrapPredicate(
   return OF;
 }
 
-const SCEVPredicate *
-ScalarEvolution::getTripCountInvariantPredicate(const SCEV *Load,
-                                                const SCEV *InvariantLoad) {
-  FoldingSetNodeID ID;
-  ID.AddInteger(SCEVPredicate::P_TripCountInvariant);
-  ID.AddPointer(Load);
-  ID.AddPointer(InvariantLoad);
-  void *IP = nullptr;
-  if (const auto *S = UniquePreds.FindNodeOrInsertPos(ID, IP))
-    return S;
-  auto *TCI = new (SCEVAllocator) SCEVTripCountInvariantPredicate(
-      ID.Intern(SCEVAllocator), Load, InvariantLoad);
-  UniquePreds.InsertNode(TCI, IP);
-  return TCI;
-}
-
 namespace {
 
 class SCEVPredicateRewriter : public SCEVRewriteVisitor<SCEVPredicateRewriter> {
@@ -15519,32 +15489,6 @@ void SCEVComparePredicate::print(raw_ostream &OS, unsigned Depth) const {
     OS.indent(Depth) << "Compare predicate: " << *LHS << " " << Pred << ") "
                      << *RHS << "\n";
 
-}
-
-SCEVTripCountInvariantPredicate::SCEVTripCountInvariantPredicate(
-    const FoldingSetNodeIDRef ID, const SCEV *TripCountLoad,
-    const SCEV *TripCountInvariantLoad)
-    : SCEVPredicate(ID, P_TripCountInvariant), TripCountLoad(TripCountLoad),
-      TripCountInvariantLoad(TripCountInvariantLoad) {}
-
-bool SCEVTripCountInvariantPredicate::implies(const SCEVPredicate *N,
-                                              ScalarEvolution &SE) const {
-  const auto *Op = dyn_cast<SCEVTripCountInvariantPredicate>(N);
-  if (!Op)
-    return false;
-  return Op->TripCountLoad == TripCountLoad &&
-         Op->TripCountInvariantLoad == TripCountInvariantLoad;
-}
-
-bool SCEVTripCountInvariantPredicate::isAlwaysTrue() const {
-  return TripCountLoad == TripCountInvariantLoad;
-}
-
-void SCEVTripCountInvariantPredicate::print(raw_ostream &OS,
-                                            unsigned Depth) const {
-  OS.indent(Depth) << "Trip count invariant predicate: " << *TripCountLoad
-                   << " is invariant (== " << *TripCountInvariantLoad << ")\n"
-                   << "\n";
 }
 
 SCEVWrapPredicate::SCEVWrapPredicate(const FoldingSetNodeIDRef ID,
@@ -15761,12 +15705,6 @@ const SCEV *PredicatedScalarEvolution::getPredicatedSCEV(const SCEV *Expr) {
     Expr = Entry.second;
 
   const SCEV *NewSCEV = SE.rewriteUsingPredicate(Expr, &L, *Preds);
-
-  if (!TripCountInvariantMap.empty()) {
-    NewSCEV =
-        SCEVParameterRewriter::rewrite(NewSCEV, SE, TripCountInvariantMap);
-  }
-
   Entry = {Generation, NewSCEV};
 
   return NewSCEV;
@@ -15774,32 +15712,22 @@ const SCEV *PredicatedScalarEvolution::getPredicatedSCEV(const SCEV *Expr) {
 
 const SCEV *PredicatedScalarEvolution::getBackedgeTakenCount() {
   if (!BackedgeCount) {
-    if (!TripCountInvariantPreds.empty()) {
-      BackedgeCount = SE.computeBackedgeTakenCountWithTripCountInvariants(
-          &L, TripCountInvariantPreds, /*SymbolicMax=*/false);
-    } else {
-      SmallVector<const SCEVPredicate *, 4> Preds;
-      BackedgeCount = SE.getPredicatedBackedgeTakenCount(&L, Preds);
-      for (const auto *P : Preds)
-        addPredicate(*P);
-    }
+    SmallVector<const SCEVPredicate *, 4> Preds;
+    BackedgeCount =
+        SE.getPredicatedBackedgeTakenCount(&L, Preds, UnionAssumptions.get());
+    for (const auto *P : Preds)
+      addPredicate(*P);
   }
   return BackedgeCount;
 }
 
 const SCEV *PredicatedScalarEvolution::getSymbolicMaxBackedgeTakenCount() {
   if (!SymbolicMaxBackedgeCount) {
-    if (!TripCountInvariantPreds.empty()) {
-      SymbolicMaxBackedgeCount =
-          SE.computeBackedgeTakenCountWithTripCountInvariants(
-              &L, TripCountInvariantPreds, /*SymbolicMax=*/true);
-    } else {
-      SmallVector<const SCEVPredicate *, 4> Preds;
-      SymbolicMaxBackedgeCount =
-          SE.getPredicatedSymbolicMaxBackedgeTakenCount(&L, Preds);
-      for (const auto *P : Preds)
-        addPredicate(*P);
-    }
+    SmallVector<const SCEVPredicate *, 4> Preds;
+    SymbolicMaxBackedgeCount = SE.getPredicatedSymbolicMaxBackedgeTakenCount(
+        &L, Preds, UnionAssumptions.get());
+    for (const auto *P : Preds)
+      addPredicate(*P);
   }
   return SymbolicMaxBackedgeCount;
 }
@@ -15824,22 +15752,17 @@ void PredicatedScalarEvolution::addPredicate(const SCEVPredicate &Pred) {
   updateGeneration();
 }
 
-void PredicatedScalarEvolution::addTripCountInvariantPredicate(
-    const SCEV *Load, const SCEV *InvariantLoad) {
-  const auto *V = dyn_cast<SCEVUnknown>(Load);
-  assert(V && "mem-invariant Load must be a SCEVUnknown");
+void PredicatedScalarEvolution::addAssumption(const SCEVPredicate *Assumption) {
+  if (Assumption->isAlwaysTrue() || is_contained(Assumptions, Assumption))
+    return;
 
-  const auto *P = cast<SCEVTripCountInvariantPredicate>(
-      SE.getTripCountInvariantPredicate(Load, InvariantLoad));
+  Assumptions.push_back(Assumption);
+  UnionAssumptions = std::make_unique<SCEVUnionPredicate>(Assumptions, SE);
 
-  if (TripCountInvariantMap.insert({V->getValue(), InvariantLoad}).second) {
-    TripCountInvariantPreds.push_back(P);
-    BackedgeCount = nullptr;
-    SymbolicMaxBackedgeCount = nullptr;
-    SmallConstantMaxTripCount.reset();
-  }
-
-  addPredicate(*P);
+  // Forcing recomputation of the backedge taken count with new assumptions
+  BackedgeCount = nullptr;
+  SymbolicMaxBackedgeCount = nullptr;
+  SmallConstantMaxTripCount.reset();
 }
 
 void PredicatedScalarEvolution::addPredicates(
@@ -15900,8 +15823,10 @@ PredicatedScalarEvolution::PredicatedScalarEvolution(
       Preds(std::make_unique<SCEVUnionPredicate>(Init.Preds->getPredicates(),
                                                  SE)),
       Generation(Init.Generation), BackedgeCount(Init.BackedgeCount),
-      TripCountInvariantPreds(Init.TripCountInvariantPreds),
-      TripCountInvariantMap(Init.TripCountInvariantMap) {}
+      Assumptions(Init.Assumptions) {
+  if (!Assumptions.empty())
+    UnionAssumptions = std::make_unique<SCEVUnionPredicate>(Assumptions, SE);
+}
 
 void PredicatedScalarEvolution::print(raw_ostream &OS, unsigned Depth) const {
   // For each block.

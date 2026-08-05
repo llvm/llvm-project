@@ -697,8 +697,7 @@ public:
                           const TargetLibraryInfo *TLI, AAResults *AA,
                           DominatorTree *DT, LoopInfo *LI, AssumptionCache *AC,
                           bool AllowPartial = false,
-                          ArrayRef<const SCEVTripCountInvariantPredicate *>
-                              TripCountInvariantPreds = {});
+                          ArrayRef<const SCEVPredicate *> Assumptions = {});
 
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles. Note that for dependences between loads &
@@ -718,10 +717,7 @@ public:
   /// could be analyzed.
   bool hasAllowPartial() const { return AllowPartial; }
 
-  ArrayRef<const SCEVTripCountInvariantPredicate *>
-  getTripCountInvariantPreds() const {
-    return TripCountInvariantPreds;
-  }
+  ArrayRef<const SCEVPredicate *> getAssumptions() const { return Assumptions; }
 
   const RuntimePointerChecking *getRuntimePointerChecking() const {
     return PtrRtChecking.get();
@@ -847,10 +843,8 @@ private:
   /// memory accesses could be analyzed.
   bool AllowPartial;
 
-  /// Predicates for the loops inside the loop which are used to compute the
-  /// tripcount and which this analysis assumes to be invariant.
-  SmallVector<const SCEVTripCountInvariantPredicate *, 2>
-      TripCountInvariantPreds;
+  /// Assumptions under which analysis is constructed
+  SmallVector<const SCEVPredicate *, 2> Assumptions;
 
   unsigned NumLoads = 0;
   unsigned NumStores = 0;
@@ -1026,8 +1020,7 @@ public:
 
   LLVM_ABI const LoopAccessInfo &
   getInfo(Loop &L, bool AllowPartial,
-          ArrayRef<const SCEVTripCountInvariantPredicate *>
-              TripCountInvariantPreds);
+          ArrayRef<const SCEVPredicate *> Assumptions);
 
   LLVM_ABI void clear();
 

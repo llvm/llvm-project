@@ -379,7 +379,7 @@ class SCEVPredicate : public FoldingSetNode {
   FoldingSetNodeIDRef FastID;
 
 public:
-  enum SCEVPredicateKind { P_Union, P_Compare, P_Wrap, P_TripCountInvariant };
+  enum SCEVPredicateKind { P_Union, P_Compare, P_Wrap };
 
 protected:
   SCEVPredicateKind Kind;
@@ -461,40 +461,6 @@ public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEVPredicate *P) {
     return P->getKind() == P_Compare;
-  }
-};
-
-/// This class extends the SCEVPredicate class to represent the assumption that
-/// the trip count of a loop is invariant. This predicate doesn't lower any
-/// numeric run-time check but solely depends on the memory alias checks
-/// generated for the loop by LoopVectorizer. NOTE: Users of this predicate make
-/// sure to verify that the memory alias checks are generated for the loop.
-class LLVM_ABI SCEVTripCountInvariantPredicate final : public SCEVPredicate {
-  const SCEV *TripCountLoad;
-  const SCEV *TripCountInvariantLoad;
-
-public:
-  SCEVTripCountInvariantPredicate(const FoldingSetNodeIDRef ID,
-                                  const SCEV *TripCountLoad,
-                                  const SCEV *TripCountInvariantLoad);
-
-  /// Implementation of the SCEVPredicate interface
-  bool implies(const SCEVPredicate *N, ScalarEvolution &SE) const override;
-  void print(raw_ostream &OS, unsigned Depth = 0) const override;
-  bool isAlwaysTrue() const override;
-
-  /// This predicate doesn't generate any runtime checks, and solely depends
-  /// upon the memory alias checks for the runtime check generation, so
-  /// contributes nothing to the check complexity
-  unsigned getComplexity() const override { return 0; }
-
-  const SCEV *getTripCountLoad() const { return TripCountLoad; }
-  const SCEV *getTripCountInvariantLoad() const {
-    return TripCountInvariantLoad;
-  }
-
-  static bool classof(const SCEVPredicate *P) {
-    return P->getKind() == P_TripCountInvariant;
   }
 };
 
@@ -1123,8 +1089,11 @@ public:
   /// SCEV predicates to Predicates that are required to be true in order for
   /// the answer to be correct. Predicates can be checked with run-time
   /// checks and can be used to perform loop versioning.
+  /// Assumptions holds predicates which are applied to the exit conditions
+  /// before they are analyzed;
   LLVM_ABI const SCEV *getPredicatedBackedgeTakenCount(
-      const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Predicates);
+      const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Predicates,
+      const SCEVPredicate *Assumptions = nullptr);
 
   /// When successful, this returns a SCEVConstant that is greater than or equal
   /// to (i.e. a "conservative over-approximation") of the value returend by
@@ -1153,14 +1122,11 @@ public:
   /// SCEV predicates to Predicates that are required to be true in order for
   /// the answer to be correct. Predicates can be checked with run-time
   /// checks and can be used to perform loop versioning.
+  /// Assumptions holds predicates which are applied to the exit conditions
+  /// before they are analyzed;
   LLVM_ABI const SCEV *getPredicatedSymbolicMaxBackedgeTakenCount(
-      const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Predicates);
-
-  /// To compute the backedge-taken count under the assumption of
-  /// TripCountInvariant predicate.
-  LLVM_ABI const SCEV *computeBackedgeTakenCountWithTripCountInvariants(
-      const Loop *L, ArrayRef<const SCEVTripCountInvariantPredicate *> Preds,
-      bool SymbolicMax = false);
+      const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Predicates,
+      const SCEVPredicate *Assumptions = nullptr);
 
   /// Return true if the backedge taken count is either the value returned by
   /// getConstantMaxBackedgeTakenCount or zero.
@@ -1562,9 +1528,6 @@ public:
   getWrapPredicate(const SCEVAddRecExpr *AR,
                    SCEVWrapPredicate::IncrementWrapFlags AddedFlags);
 
-  LLVM_ABI const SCEVPredicate *
-  getTripCountInvariantPredicate(const SCEV *Load, const SCEV *InvariantLoad);
-
   /// Re-writes the SCEV according to the Predicates in \p A.
   LLVM_ABI const SCEV *rewriteUsingPredicate(const SCEV *S, const Loop *L,
                                              const SCEVPredicate &A);
@@ -1933,8 +1896,7 @@ private:
   /// function as they are computed.
   DenseMap<const Loop *, BackedgeTakenInfo> PredicatedBackedgeTakenCounts;
 
-  DenseMap<const Value *, const SCEV *> *ActiveTripCountInvariantSubst =
-      nullptr;
+  const SCEVPredicate *AssumedPreds = nullptr;
 
   /// Loops whose backedge taken counts directly use this non-constant SCEV.
   DenseMap<const SCEV *, SmallPtrSet<PointerIntPair<const Loop *, 1, bool>, 4>>
@@ -2701,17 +2663,9 @@ public:
   /// Adds a new predicate.
   LLVM_ABI void addPredicate(const SCEVPredicate &Pred);
 
-  LLVM_ABI void addTripCountInvariantPredicate(const SCEV *Load,
-                                               const SCEV *InvariantLoad);
+  LLVM_ABI void addAssumption(const SCEVPredicate *Assumption);
 
-  LLVM_ABI bool hasTripCountInvariantPredicates() const {
-    return !TripCountInvariantPreds.empty();
-  }
-
-  LLVM_ABI ArrayRef<const SCEVTripCountInvariantPredicate *>
-  getTripCountInvariantPredicates() const {
-    return TripCountInvariantPreds;
-  }
+  ArrayRef<const SCEVPredicate *> getAssumptions() const { return Assumptions; }
 
   /// Adds all predicates in \p Preds.
   LLVM_ABI void addPredicates(ArrayRef<const SCEVPredicate *> Preds);
@@ -2784,10 +2738,9 @@ private:
   /// The symbolic backedge taken count.
   const SCEV *SymbolicMaxBackedgeCount = nullptr;
 
-  SmallVector<const SCEVTripCountInvariantPredicate *, 2>
-      TripCountInvariantPreds;
+  SmallVector<const SCEVPredicate *, 2> Assumptions;
 
-  DenseMap<const Value *, const SCEV *> TripCountInvariantMap;
+  std::unique_ptr<SCEVUnionPredicate> UnionAssumptions;
 
   /// The constant max trip count for the loop.
   std::optional<unsigned> SmallConstantMaxTripCount;
