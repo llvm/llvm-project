@@ -73,6 +73,19 @@ protected:
       return std::nullopt;
     }
 
+    std::optional<Symbol::Flag> FindExplicitDSAForMember(const Symbol &symbol) {
+      if (auto flag{FindSymbolWithDSA(symbol)}) {
+        return flag;
+      }
+      const Symbol &ultimate{symbol.GetUltimate()};
+      for (const auto &entry : objectWithDSA) {
+        if (entry.first->GetUltimate() == ultimate) {
+          return entry.second;
+        }
+      }
+      return std::nullopt;
+    }
+
     bool withinConstruct{false};
     std::int64_t associatedLoopLevel{0};
   };
@@ -603,6 +616,7 @@ public:
 
   bool Pre(const parser::OmpDeclareSimdDirective &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_declare_simd);
+    ClearDataSharingAttributeObjects();
     for (const parser::OmpArgument &arg : x.v.Arguments().v) {
       if (auto *object{parser::omp::GetArgumentObject(arg)}) {
         ResolveOmpObject(*object, Symbol::Flag::OmpDeclareSimd);
@@ -3219,7 +3233,7 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
                   !it->second.test(Symbol::Flag::OmpUseDeviceAddr)))};
       it->second.set(ompFlag);
       if (!allowRepeatedAppearance) {
-        CheckMultipleAppearances(name, *symbol, Symbol::Flag::OmpCommonBlock);
+        CheckMultipleAppearances(name, *symbol, ompFlag);
       }
     }
     // 2.15.3 When a named common block appears in a list, it has the
@@ -3329,6 +3343,14 @@ static bool WithMultipleAppearancesOmpException(
           symbol.test(Symbol::Flag::OmpFirstPrivate));
 }
 
+static bool IsFirstPrivateLastPrivatePair(
+    Symbol::Flag flag, Symbol::Flag prevFlag) {
+  return (flag == Symbol::Flag::OmpFirstPrivate &&
+             prevFlag == Symbol::Flag::OmpLastPrivate) ||
+      (flag == Symbol::Flag::OmpLastPrivate &&
+          prevFlag == Symbol::Flag::OmpFirstPrivate);
+}
+
 void OmpAttributeVisitor::CheckMultipleAppearances(
     const parser::Name &name, const Symbol &symbol, Symbol::Flag ompFlag) {
   const auto *target{&symbol};
@@ -3337,14 +3359,41 @@ void OmpAttributeVisitor::CheckMultipleAppearances(
       target = &details->symbol();
     }
   }
-  if (HasDataSharingAttributeObject(target->GetUltimate()) &&
-      !WithMultipleAppearancesOmpException(symbol, ompFlag)) {
+  const Symbol &ultimate{target->GetUltimate()};
+  bool conflicts{HasDataSharingAttributeObject(ultimate)};
+  if (!conflicts) {
+    if (const Symbol *commonBlock{FindCommonBlockContaining(ultimate)}) {
+      conflicts = HasDataSharingAttributeObject(*commonBlock);
+    } else if (const auto *details{ultimate.detailsIf<CommonBlockDetails>()}) {
+      for (const auto &object : details->objects()) {
+        const Symbol &member{object->GetUltimate()};
+        if (HasDataSharingAttributeObject(member)) {
+          bool allowed{WithMultipleAppearancesOmpException(member, ompFlag)};
+          if (!allowed) {
+            if (auto prevFlag{GetContext().FindExplicitDSAForMember(member)}) {
+              allowed = IsFirstPrivateLastPrivatePair(ompFlag, *prevFlag);
+            }
+          }
+          if (!allowed) {
+            conflicts = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+  if (conflicts && !WithMultipleAppearancesOmpException(symbol, ompFlag)) {
     context_.Say(name.source,
         "'%s' appears in more than one data-sharing clause "
         "on the same OpenMP directive"_err_en_US,
         name.ToString());
   } else {
-    AddDataSharingAttributeObject(target->GetUltimate());
+    AddDataSharingAttributeObject(ultimate);
+    if (const auto *details{ultimate.detailsIf<CommonBlockDetails>()}) {
+      for (const auto &object : details->objects()) {
+        AddDataSharingAttributeObject(object->GetUltimate());
+      }
+    }
   }
 }
 
