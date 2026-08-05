@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fclang-abi-compat=22 -emit-llvm -o - %s | FileCheck %s --check-prefix=LEGACY
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fclang-abi-compat=23 -emit-llvm -o - %s | FileCheck %s --check-prefix=LEGACY
 
 typedef _Float16 v1hf __attribute__((vector_size(2)));
 typedef _Float16 v2hf __attribute__((vector_size(4)));

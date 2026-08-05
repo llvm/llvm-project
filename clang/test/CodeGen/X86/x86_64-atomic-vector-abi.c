@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -target-feature +avx %s -emit-llvm -o - | FileCheck %s --check-prefix=AVX
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -target-feature +avx -fclang-abi-compat=22 %s -emit-llvm -o - | FileCheck %s --check-prefix=LEGACY
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -target-feature +avx -fclang-abi-compat=23 %s -emit-llvm -o - | FileCheck %s --check-prefix=LEGACY
 
 struct F3 {
   float a[3];

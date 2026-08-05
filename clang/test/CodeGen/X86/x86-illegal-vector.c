@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -target-feature +sse2 -emit-llvm -o - | FileCheck %s --check-prefixes=REGRET128,MEMRET256,MEMRET512
-// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -target-feature +sse2 -emit-llvm -o - -fclang-abi-compat=22 | FileCheck %s --check-prefixes=REGRET128,REGRET256,REGRET512
+// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -target-feature +sse2 -emit-llvm -o - -fclang-abi-compat=23 | FileCheck %s --check-prefixes=REGRET128,REGRET256,REGRET512
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -target-feature +avx -emit-llvm -o - | FileCheck %s --check-prefixes=REGRET128,REGRET256,MEMRET512
-// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -target-feature +avx -emit-llvm -o - -fclang-abi-compat=22 | FileCheck %s --check-prefixes=REGRET128,REGRET256,REGRET512
+// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -target-feature +avx -emit-llvm -o - -fclang-abi-compat=23 | FileCheck %s --check-prefixes=REGRET128,REGRET256,REGRET512
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -target-feature +avx512f -emit-llvm -o - | FileCheck %s --check-prefixes=REGRET128,REGRET256,REGRET512
-// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -target-feature +avx512f -emit-llvm -o - -fclang-abi-compat=22 | FileCheck %s --check-prefixes=REGRET128,REGRET256,REGRET512
+// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -target-feature +avx512f -emit-llvm -o - -fclang-abi-compat=23 | FileCheck %s --check-prefixes=REGRET128,REGRET256,REGRET512
 
 #define __MM_MALLOC_H
 #include <x86intrin.h>
