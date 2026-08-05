@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgpu9.50-amd-amdhsa < %s
+; RUN: not --crash llc -mtriple=amdgpu9.50-amd-amdhsa < %s
 
 define amdgpu_kernel void @reduced_fabs_vector_truncate_crash(<2 x float> %0) {
   %2 = fptrunc <2 x float> %0 to <2 x half>
