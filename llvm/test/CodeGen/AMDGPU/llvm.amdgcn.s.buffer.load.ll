@@ -2188,7 +2188,8 @@ define amdgpu_ps i32 @s_buffer_load_ptr_soffset(<4 x i32> inreg %desc, ptr addrs
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    v_nop
-; GFX1250-GISEL-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x34 nv
+; GFX1250-GISEL-NEXT:    s_add_co_u32 s4, s4, 52
+; GFX1250-GISEL-NEXT:    s_buffer_load_b32 s0, s[0:3], s4 offset:0x0 nv
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %gep = getelementptr i8, ptr addrspace(6) %p, i32 52
