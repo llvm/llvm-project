@@ -6,8 +6,8 @@
 // RUN: %{run} 2>&1 | FileCheck %s
 
 // ATTENTION:
-// We use FileCheck to ensure that the relative order of the notes are in the expected order.
-// These notes used to be emitted in a non-deterministic order, which wasn't checked by `-verify`.
+// We use FileCheck to ensure that the relative order of the notes is stable.
+// These notes used to be emitted in a non-deterministic order, which is not checked by `-verify`.
 
 struct MultipleSiblings {
   int a; // expected-note {{uninitialized field 'this->a'}}
