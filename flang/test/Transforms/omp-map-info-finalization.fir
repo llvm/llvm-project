@@ -51,8 +51,8 @@ func.func @test_iterator_descriptor_map_is_not_expanded(%arg0: !fir.box<!fir.arr
   %it = omp.iterator(%iv: index) = (%c1 to %c10 step %c1) {
     %addr = fir.box_addr %arg0 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
     %lb = arith.subi %iv, %c1 : index
-    %bounds = omp.map.bounds lower_bound(%lb : index) upper_bound(%lb : index) extent(%dims#1 : index) stride(%dims#2 : index) start_idx(%dims#0 : index) {stride_in_bytes = true}
-    %map = omp.map.info var_ptr(%addr : !fir.ref<!fir.array<?xf32>>, !fir.array<?xf32>) map_clauses(to) capture(ByRef) bounds(%bounds) -> !fir.ref<!fir.array<?xf32>> {name = ""}
+    %bounds = omp.map.bounds lower_bound(%lb : index) upper_bound(%lb : index) extent(%dims#1 : index) stride(%dims#2 : index) start_idx(%dims#0 : index) stride_in_bytes(true)
+    %map = omp.map.info var_ptr(%addr : !fir.ref<!fir.array<?xf32>>, !fir.array<?xf32>) map_clauses(to) capture(ByRef) bounds(%bounds) name("") -> !fir.ref<!fir.array<?xf32>>
     omp.yield(%map : !fir.ref<!fir.array<?xf32>>)
   } -> !omp.iterated<!fir.ref<!fir.array<?xf32>>>
   omp.target_enter_data map_iterated(%it : !omp.iterated<!fir.ref<!fir.array<?xf32>>>) {}
@@ -62,7 +62,45 @@ func.func @test_iterator_descriptor_map_is_not_expanded(%arg0: !fir.box<!fir.arr
 // CHECK-LABEL: func.func @test_iterator_descriptor_map_is_not_expanded
 // CHECK-NOT: fir.box_offset
 // CHECK: omp.iterator
-// CHECK: omp.map.info var_ptr({{.*}} : !fir.ref<!fir.array<?xf32>>, !fir.array<?xf32>) map_clauses(to) capture(ByRef) bounds({{.*}}) -> !fir.ref<!fir.array<?xf32>> {name = ""}
+// CHECK: omp.map.info var_ptr({{.*}} : !fir.ref<!fir.array<?xf32>>, !fir.array<?xf32>) map_clauses(to) capture(ByRef) bounds({{.*}}) name("") -> !fir.ref<!fir.array<?xf32>>
+// CHECK: omp.target_enter_data map_iterated
+
+// -----
+
+func.func @test_iterator_member_map_is_not_finalized(
+    %arg0: !fir.ref<!fir.type<_QFiterator_memberTt{x:i32}>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %it = omp.iterator(%iv: index) = (%c1 to %c10 step %c1) {
+    %member = fir.coordinate_of %arg0, x :
+        (!fir.ref<!fir.type<_QFiterator_memberTt{x:i32}>>) -> !fir.ref<i32>
+    %member_map = omp.map.info
+        var_ptr(%member : !fir.ref<i32>, i32)
+        map_clauses(close, to) capture(ByRef) name("record%x")
+        -> !fir.ref<i32>
+    %parent_map = omp.map.info
+        var_ptr(%arg0 :
+          !fir.ref<!fir.type<_QFiterator_memberTt{x:i32}>>,
+          !fir.type<_QFiterator_memberTt{x:i32}>)
+        map_clauses(to) capture(ByRef)
+        members(%member_map : [0] : !fir.ref<i32>) name("record")
+        partial_map(true) -> !fir.ref<!fir.type<_QFiterator_memberTt{x:i32}>>
+    omp.yield(
+      %parent_map : !fir.ref<!fir.type<_QFiterator_memberTt{x:i32}>>)
+  } -> !omp.iterated<
+    !fir.ref<!fir.type<_QFiterator_memberTt{x:i32}>>>
+  omp.target_enter_data map_iterated(
+    %it : !omp.iterated<
+      !fir.ref<!fir.type<_QFiterator_memberTt{x:i32}>>>) {}
+  return
+}
+
+// CHECK-LABEL: func.func @test_iterator_member_map_is_not_finalized
+// CHECK: omp.iterator
+// CHECK: omp.map.info
+// CHECK-SAME: map_clauses(close, to)
+// CHECK: omp.map.info
+// CHECK-SAME: members(
 // CHECK: omp.target_enter_data map_iterated
 
 // -----

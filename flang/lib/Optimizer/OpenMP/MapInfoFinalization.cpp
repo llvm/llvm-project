@@ -1438,15 +1438,20 @@ class MapInfoFinalizationPass
       deferrableDesc.clear();
       expandedBaseAddr.clear();
 
+      auto walkNonIteratedMapInfoOps = [&](auto &&callback) {
+        func->walk([&](mlir::omp::MapInfoOp op) {
+          if (!isNestedInIterator(op))
+            callback(op);
+        });
+      };
+
       // Walk all of the existing maps for parents with child maps and then
       // make sure to appropriately bind them to the target region that the
       // parent is bound to. Necessary for the next implicit record member
       // map step which depends on this canonicalization step. This step
       // is executed again as the final step of this pass to maintain
       // map to block argument consistency.
-      func->walk([&](mlir::omp::MapInfoOp op) {
-        if (isNestedInIterator(op))
-          return;
+      walkNonIteratedMapInfoOps([&](mlir::omp::MapInfoOp op) {
         mlir::Operation *targetUser = getFirstTargetUser(op);
         assert(targetUser && "expected user of map operation was not found");
         addImplicitMembersToTarget(op, builder, targetUser);
@@ -1454,17 +1459,14 @@ class MapInfoFinalizationPass
 
       // Next, walk `omp.map.info` ops to see if any record members should be
       // implicitly mapped.
-      func->walk([&](mlir::omp::MapInfoOp op) {
-        if (isNestedInIterator(op))
-          return mlir::WalkResult::advance();
-
+      walkNonIteratedMapInfoOps([&](mlir::omp::MapInfoOp op) {
         mlir::Type underlyingType =
             fir::unwrapRefType(op.getVarPtr().getType());
 
         // TODO Test with and support more complicated cases; like arrays for
         // records, for example.
         if (!fir::isRecordWithAllocatableMember(underlyingType))
-          return mlir::WalkResult::advance();
+          return;
 
         // TODO For now, only consider `omp.target` ops. Other ops that support
         // `map` clauses will follow later.
@@ -1473,7 +1475,7 @@ class MapInfoFinalizationPass
                 getFirstTargetUser(op));
 
         if (!target)
-          return mlir::WalkResult::advance();
+          return;
 
         auto mapClauseOwner =
             llvm::dyn_cast<mlir::omp::MapClauseOwningOpInterface>(*target);
@@ -1608,7 +1610,7 @@ class MapInfoFinalizationPass
         }
 
         if (newMapOpsForFields.empty())
-          return mlir::WalkResult::advance();
+          return;
 
         // Deduplicate by index path to avoid emitting duplicate members for
         // the same component. Use a set-based key to keep this near O(n).
@@ -1642,13 +1644,9 @@ class MapInfoFinalizationPass
         op.setMembersIndexAttr(builder.create2DI64ArrayAttr(newMemberIndices));
         // Set to partial map only if there is no user-defined mapper.
         op.setPartialMap(op.getMapperIdAttr() == nullptr);
-
-        return mlir::WalkResult::advance();
       });
 
-      func->walk([&](mlir::omp::MapInfoOp op) {
-        if (isNestedInIterator(op))
-          return;
+      walkNonIteratedMapInfoOps([&](mlir::omp::MapInfoOp op) {
         // NOTE: Currently only supports a single user for the MapInfoOp. This
         // is fine for the moment, as the Fortran frontend will generate a
         // new MapInfoOp with at most one user currently. In the case of
@@ -1674,7 +1672,7 @@ class MapInfoFinalizationPass
         }
       });
 
-      func->walk([&](mlir::omp::MapInfoOp op) {
+      walkNonIteratedMapInfoOps([&](mlir::omp::MapInfoOp op) {
         // If a record type is not mapped with the `close` modifier while some
         // of its members are (e.g. descriptor maps), then in USM mode, the
         // memory for the record will be allocated in unified memory while the
@@ -1743,9 +1741,7 @@ class MapInfoFinalizationPass
       // Wait until after we have generated all of our maps to add them onto
       // the target's block arguments, simplifying the process as there would be
       // no need to avoid accidental duplicate additions.
-      func->walk([&](mlir::omp::MapInfoOp op) {
-        if (isNestedInIterator(op))
-          return;
+      walkNonIteratedMapInfoOps([&](mlir::omp::MapInfoOp op) {
         mlir::Operation *targetUser = getFirstTargetUser(op);
         assert(targetUser && "expected user of map operation was not found");
         addImplicitMembersToTarget(op, builder, targetUser);
