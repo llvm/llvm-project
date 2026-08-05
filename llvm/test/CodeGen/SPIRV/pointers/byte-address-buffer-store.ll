@@ -1,8 +1,14 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
 
-; CHECK: OpAccessChain
-; CHECK: OpStore
+; CHECK-DAG: [[AC0:%[0-9]+]] = OpAccessChain {{.*}} %13 %13
+; CHECK: OpStore [[AC0]]
+; CHECK-DAG: [[AC1:%[0-9]+]] = OpAccessChain {{.*}} %13 %17
+; CHECK: OpStore [[AC1]]
+; CHECK-DAG: [[AC2:%[0-9]+]] = OpAccessChain {{.*}} %13 %15
+; CHECK: OpStore [[AC2]]
+; CHECK-DAG: [[AC3:%[0-9]+]] = OpAccessChain {{.*}} %13 %14
+; CHECK: OpStore [[AC3]]
 
 @.str = private unnamed_addr constant [4 x i8] c"Buf\00", align 1
 

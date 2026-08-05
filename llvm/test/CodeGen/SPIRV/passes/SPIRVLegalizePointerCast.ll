@@ -176,3 +176,92 @@ entry:
   %val = load <4 x i32>, ptr addrspace(11) %ptr, align 16
   ret void
 }
+
+@outI8 = addrspace(10) global i8 zeroinitializer
+@outI32 = addrspace(10) global i32 zeroinitializer
+@outF = addrspace(10) global float zeroinitializer
+
+; Single-byte access uses RetagDirect (retag + typed access), not byte-wise
+; decomposition.
+
+define void @byteBufferStoreI8() {
+; CHECK-LABEL: define void @byteBufferStoreI8(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: store i8 42, ptr addrspace(11)
+; CHECK-NOT: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  store i8 42, ptr addrspace(11) %ptr, align 1
+  ret void
+}
+
+define void @byteBufferLoadI8() {
+; CHECK-LABEL: define void @byteBufferLoadI8(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load i8, ptr addrspace(11)
+; CHECK-NOT: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+; CHECK: store i8 {{.*}}, ptr addrspace(10) @outI8
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  %val = load i8, ptr addrspace(11) %ptr, align 1
+  store i8 %val, ptr addrspace(10) @outI8, align 1
+  ret void
+}
+
+; Non-constant getpointer offset forces dynamic add in gepByteOffset.
+
+define void @byteBufferStoreDynamicOffset(i32 %byteOff) {
+; CHECK-LABEL: define void @byteBufferStoreDynamicOffset(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: add i32 {{.*}}%byteOff, 1
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 {{%}}
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 %byteOff)
+  store i32 42, ptr addrspace(11) %ptr, align 4
+  ret void
+}
+
+define void @byteBufferLoadDynamicOffset(i32 %byteOff) {
+; CHECK-LABEL: define void @byteBufferLoadDynamicOffset(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: add i32 {{.*}}%byteOff, 1
+; CHECK: load i8, ptr addrspace(11)
+; CHECK: store i32 {{.*}}, ptr addrspace(10) @outI32
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 %byteOff)
+  %val = load i32, ptr addrspace(11) %ptr, align 4
+  store i32 %val, ptr addrspace(10) @outI32, align 4
+  ret void
+}
+
+; Float access exercises bitcast in byte-wise combine/decompose paths.
+
+define void @byteBufferStoreFloat() {
+; CHECK-LABEL: define void @byteBufferStoreFloat(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: store i8
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 3)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  store float 1.000000e+00, ptr addrspace(11) %ptr, align 4
+  ret void
+}
+
+define void @byteBufferLoadFloat() {
+; CHECK-LABEL: define void @byteBufferLoadFloat(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load i8, ptr addrspace(11)
+; CHECK: bitcast i32 {{.*}} to float
+; CHECK: store float {{.*}}, ptr addrspace(10) @outF
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  %val = load float, ptr addrspace(11) %ptr, align 4
+  store float %val, ptr addrspace(10) @outF, align 4
+  ret void
+}
