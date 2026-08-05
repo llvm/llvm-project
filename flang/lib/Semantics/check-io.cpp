@@ -1282,64 +1282,80 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
 // value and is not expanded, so its subtree is skipped (based off of
 // FindInaccessibleComponent).
 //
-// The 'visited' set must be *path-scoped*: a type symbol is inserted on entry
-// and erased on unwind, so it only prunes recursion when it names a true
-// ancestor on the current path (a real F2023 C749 recursive-type cycle).  This
-// matters for parameterized derived types, where two instantiations share one
-// type symbol but their defined-I/O shielding is decided per-instantiation
-// (HasDefinedIo).
+// The walk is memoized on the *instantiated scope* (derived.scope()), which is
+// the key that distinguishes two parameterized-derived-type instantiations
+// sharing one type symbol -- their defined-I/O shielding is decided per
+// instantiation (HasDefinedIo).  This is a two-color DFS:
+//   - 'onPath' holds the scopes currently on the recursion stack; a repeat
+//     entry is an F2023 C749 recursive-type cycle and is pruned without being
+//     cached, since that partial result is only valid under the ancestor.
+//   - 'cache' holds the result of each fully-walked subtree, giving linear
+//     cost instead of the fanout^depth of an unmemoized path-scoped walk.
+// The cache is sound because a subtree's result depends only on 'which', the
+// (fixed) outer 'scope', and the instantiated scope's contents; for the
+// acyclic type graphs that legal unformatted I/O permits, no cycle prune
+// contaminates a cached result.
+using EnumComponentPathSet = std::unordered_set<const Scope *>;
+using EnumComponentCache = std::unordered_map<const Scope *, const Symbol *>;
+
 static const Symbol *FindEnumerationTypeComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope,
-    VisitedSymbolSet &visited) {
-  if (!visited.insert(&derived.typeSymbol()).second) {
+    EnumComponentPathSet &onPath, EnumComponentCache &cache) {
+  const Scope *dtScope{derived.scope()};
+  if (!dtScope) {
     return nullptr;
   }
+  if (auto it{cache.find(dtScope)}; it != cache.end()) {
+    return it->second;
+  }
+  if (!onPath.insert(dtScope).second) {
+    return nullptr; // cycle: prune without caching
+  }
   const Symbol *result{nullptr};
-  if (const Scope *dtScope{derived.scope()}) {
-    for (const auto &pair : *dtScope) {
-      const Symbol &symbol{*pair.second};
-      if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-        const DerivedTypeSpec *componentDerived{nullptr};
-        if (const DeclTypeSpec *type{details->type()}) {
-          if (type->category() == DeclTypeSpec::Category::TypeDerived) {
-            componentDerived = &type->derivedTypeSpec();
-          }
+  for (const auto &pair : *dtScope) {
+    const Symbol &symbol{*pair.second};
+    if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+      const DerivedTypeSpec *componentDerived{nullptr};
+      if (const DeclTypeSpec *type{details->type()}) {
+        if (type->category() == DeclTypeSpec::Category::TypeDerived) {
+          componentDerived = &type->derivedTypeSpec();
         }
-        if (!componentDerived) {
-          continue;
-        }
-        // The component's type is itself an enumeration type: this is the
-        // enumeration effective item we are looking for.
-        if (const auto *compDetails{
-                componentDerived->typeSymbol().detailsIf<DerivedTypeDetails>()};
-            compDetails && compDetails->isEnumerationType()) {
-          result = &symbol;
-          break;
-        }
-        // The component is processed by defined I/O. It is treated as a single
-        // value and does not expand into its components.
-        if (HasDefinedIo(which, *componentDerived, &scope)) {
-          continue;
-        }
-        // Otherwise the component expands into its own components; recurse to
-        // look for an enumeration effective item nested within it.
-        if (const Symbol *bad{FindEnumerationTypeComponent(
-                which, *componentDerived, scope, visited)}) {
-          result = bad;
-          break;
-        }
+      }
+      if (!componentDerived) {
+        continue;
+      }
+      // The component's type is itself an enumeration type: this is the
+      // enumeration effective item we are looking for.
+      if (const auto *compDetails{
+              componentDerived->typeSymbol().detailsIf<DerivedTypeDetails>()};
+          compDetails && compDetails->isEnumerationType()) {
+        result = &symbol;
+        break;
+      }
+      // The component is processed by defined I/O. It is treated as a single
+      // value and does not expand into its components.
+      if (HasDefinedIo(which, *componentDerived, &scope)) {
+        continue;
+      }
+      // Otherwise the component expands into its own components; recurse to
+      // look for an enumeration effective item nested within it.
+      if (const Symbol *bad{FindEnumerationTypeComponent(
+              which, *componentDerived, scope, onPath, cache)}) {
+        result = bad;
+        break;
       }
     }
   }
-  // Erase on unwind so 'visited' tracks only the current recursion path.
-  visited.erase(&derived.typeSymbol());
+  onPath.erase(dtScope);
+  cache.emplace(dtScope, result);
   return result;
 }
 
 static const Symbol *FindEnumerationTypeComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope) {
-  VisitedSymbolSet visited;
-  return FindEnumerationTypeComponent(which, derived, scope, visited);
+  EnumComponentPathSet onPath;
+  EnumComponentCache cache;
+  return FindEnumerationTypeComponent(which, derived, scope, onPath, cache);
 }
 
 // Fortran 2018, 12.6.3 paragraphs 5 & 7
