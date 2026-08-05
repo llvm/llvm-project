@@ -99,7 +99,8 @@ void UseAfterLifetimeEnd::reportDanglingSource(const MemRegion *Source,
   auto BR = std::make_unique<PathSensitiveBugReport>(
       BugMsg,
       (llvm::Twine("Returning value bound to ") +
-       lifetime_modeling::getRegionName(Source) + " that will go out of scope"),
+       Source->getDescriptiveName(/*UseQuotes=*/true, /*AllowFallback=*/true) +
+       " that will go out of scope"),
       N);
 
   if (SourceRange Range = getRegionDeclRange(Source); Range.isValid())
@@ -146,7 +147,9 @@ UseAfterLifetimeEndBRVisitor::VisitNode(const ExplodedNode *N,
   auto Piece = createSourcePiece(
       N, BRC,
       (llvm::Twine("Value's lifetime bound to the lifetime of ") +
-       lifetime_modeling::getRegionName(SourceRegion) + " here")
+       SourceRegion->getDescriptiveName(/*UseQuotes=*/true,
+                                        /*AllowFallback=*/true) +
+       " here")
           .str());
   return Piece;
 }
@@ -155,11 +158,13 @@ PathDiagnosticPieceRef
 UseAfterLifetimeEndBRVisitor::getEndPath(const ExplodedNode *N,
                                          BugReporterContext &BRC,
                                          PathSensitiveBugReport &BR) {
-  auto Piece = createSourcePiece(
-      N, BRC,
-      (llvm::Twine("Lifetime of ") +
-       lifetime_modeling::getRegionName(SourceRegion) + " ended here")
-          .str());
+  auto Piece =
+      createSourcePiece(N, BRC,
+                        (llvm::Twine("Lifetime of ") +
+                         SourceRegion->getDescriptiveName(
+                             /*UseQuotes=*/true, /*AllowFallback=*/true) +
+                         " ended here")
+                            .str());
   return Piece;
 }
 
