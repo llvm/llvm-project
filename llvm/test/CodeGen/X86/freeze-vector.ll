@@ -891,7 +891,7 @@ define i32 @freeze_vselect_demanded(<4 x i32> %csrc, <2 x i32> %a, <2 x i32> %b,
 ; vselect has multiple poison operands so  visitFREEZE can't drop
 ; escape store so demanded-elts can't drop
 ; known bits from lshr must reach final add folded into or
-define <2 x i64> @freeze_vselect_knownbits(<8 x i32> %csrc, <4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, ptr %escape) {
+define <2 x i64> @freeze_vselect_knownbits(<8 x i32> %csrc, <4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, ptr %escape) nounwind {
 ; X86-LABEL: freeze_vselect_knownbits:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
