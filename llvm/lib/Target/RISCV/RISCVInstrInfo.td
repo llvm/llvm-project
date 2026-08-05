@@ -383,7 +383,7 @@ def simm12_lo : Simm12LoOp {
 def simm12_optional : Simm12LoOp {
   let ParserMatchClass = OptionalMemOffsetAsmOperand<simm12.ParserMatchClass>;
 }
-def simm12_lo_optional : Simm12LoOp {
+def simm12_lo_optional : RISCVSImmLeafOp<12> {
   let ParserMatchClass = OptionalMemOffsetAsmOperand<simm12_lo.ParserMatchClass>;
 }
 
