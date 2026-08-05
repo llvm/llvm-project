@@ -933,6 +933,7 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       setComplexRange(D, A->getSpelling(),
                       LangOptions::ComplexRangeKind::CX_None,
                       LastComplexRangeOption, Range);
+      LastFpContractOverrideOption = "";
       break;
     }
 

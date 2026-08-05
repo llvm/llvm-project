@@ -97,6 +97,13 @@
 ! CHECK-CONTRACT-NOFAST: -fc1
 ! CHECK-CONTRACT-NOFAST-SAME: -ffp-contract=off
 
+! Check that no warning is emitted after -fno-fast-math.
+! RUN: %flang -ffast-math -fno-fast-math -ffp-contract=off -fsyntax-only -### %s -o %t 2>&1 \
+! RUN:     | FileCheck --check-prefix=CHECK-NOFAST-CONTRACT %s
+! CHECK-NOFAST-CONTRACT-NOT: warning: overriding '-ffast-math' option with '-ffp-contract=off' [-Woverriding-option]
+! CHECK-NOFAST-CONTRACT: -fc1
+! CHECK-NOFAST-CONTRACT-SAME: -ffp-contract=off
+
 ! Check that -Ofast is overridden.
 ! RUN: %flang -Ofast -ffp-contract=off -fsyntax-only -### %s -o %t 2>&1 \
 ! RUN:     | FileCheck --check-prefix=CHECK-OFAST-CONTRACT %s
