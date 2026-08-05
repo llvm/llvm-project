@@ -1966,7 +1966,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S64, {{Vgpr64}, {IntrId, Vgpr64, Vgpr32, Vgpr64}});
 
   addRulesForIOpcs({amdgcn_mqsad_u32_u8})
-      .Any({{UniV4S32}, {{UniInVgprV4S32}, {IntrId, Vgpr64, Vgpr32, VgprV4S32}}})
+      .Any(
+          {{UniV4S32}, {{UniInVgprV4S32}, {IntrId, Vgpr64, Vgpr32, VgprV4S32}}})
       .Any({{DivV4S32}, {{VgprV4S32}, {IntrId, Vgpr64, Vgpr32, VgprV4S32}}});
 
   addRulesForIOpcs(
