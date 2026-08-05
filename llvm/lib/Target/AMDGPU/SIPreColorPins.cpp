@@ -29,6 +29,7 @@
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -37,6 +38,10 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "si-pre-color-pins"
+
+STATISTIC(NumHardPins, "Number of values pre-colored to the requested register");
+STATISTIC(NumSoftPins, "Number of pins degraded to a soft allocation hint");
+STATISTIC(NumNoOpPins, "Number of pins dropped as a no-op");
 
 static cl::opt<bool> EnableHardPin(
     "amdgpu-hard-pin-regs", cl::init(true), cl::Hidden,
@@ -149,6 +154,7 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
       if (Src.isVirtual())
         MRI.constrainRegClass(Src, TRI->getEquivalentVGPRClass(RC));
       Pin->eraseFromParent();
+      ++NumNoOpPins;
       continue;
     }
     // Only VGPR pins drive the occupancy cap (see below); AGPRs are a separate
@@ -288,6 +294,8 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
     }
 
     bool Hard = EnableHardPin && PR && Src.isVirtual() && Dst.isVirtual();
+    // Why a pin could not be pre-colored, for -debug-only=si-pre-color-pins.
+    const char *SoftWhy = Hard ? "?" : "disabled or non-virtual";
 
     // Deterministic AGPR placement for a load tuple: when the pinned value is a
     // REG_SEQUENCE of (folded) AGPR loads, rewrite each element's def to a
@@ -404,6 +412,7 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
         RS->eraseFromParent();
         Pin->eraseFromParent();
         NeedRecomputeLiveIns = true;
+        ++NumHardPins;
         continue;
       }
     }
@@ -454,6 +463,9 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
         for (MachineInstr &DefMI : MRI.def_instructions(R)) {
           if (DefMI.isPHI() || DefMI.isRegSequence() || DefMI.isImplicitDef()) {
             Hard = false;
+            SoftWhy = DefMI.isPHI()          ? "PHI def"
+                      : DefMI.isRegSequence() ? "REG_SEQUENCE def"
+                                              : "IMPLICIT_DEF";
             break;
           }
         }
@@ -462,10 +474,22 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
         for (MachineOperand &MO : MRI.reg_operands(R)) {
           if (MO.getParent() == Pin)
             continue; // the pin itself is erased
+          // A PHI operand must stay virtual: LiveVariables walks PHI sources
+          // through getVarInfo(), which only accepts virtual registers, so a
+          // physreg there crashes before PHIElimination can lower it. This is
+          // reached when a pinned value defined in one block flows into a
+          // loop-carried PHI (several pinned accumulators initialised outside
+          // the loop). Leave the whole pin to the soft path.
+          if (MO.getParent()->isPHI()) {
+            Hard = false;
+            SoftWhy = "PHI use";
+            break;
+          }
           MCRegister Tgt =
               MO.getSubReg() ? TRI->getSubReg(PR, MO.getSubReg()) : PR;
           if (!Tgt) {
             Hard = false;
+            SoftWhy = "no such subregister";
             break;
           }
           const TargetRegisterClass *OpRC =
@@ -473,6 +497,7 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
                                                     TRI);
           if (OpRC && !OpRC->contains(Tgt)) {
             Hard = false;
+            SoftWhy = "operand class rejects the physreg";
             break;
           }
           ToRewrite.push_back(&MO);
@@ -502,6 +527,7 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
       for (MCRegUnit U : TRI->regunits(PR)) {
         if (Claimed.contains(U)) {
           Hard = false;
+          SoftWhy = "overlaps an earlier hard pin";
           break;
         }
       }
@@ -530,6 +556,7 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
       for (MachineOperand *MO : SubUses)
         if (MO->getParent()->getParent() != CopyMBB) {
           Hard = false;
+          SoftWhy = "subregister uses span blocks";
           break;
         }
       if (Hard) {
@@ -565,9 +592,13 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
       for (MCRegUnit U : TRI->regunits(PR))
         Claimed.insert(U);
       Pin->eraseFromParent();
+      ++NumHardPins;
       continue;
     }
 
+    ++NumSoftPins;
+    LLVM_DEBUG(dbgs() << "pin to " << (WantAGPR ? 'a' : 'v') << RegNo
+                      << " not pre-colored: " << SoftWhy << '\n');
     // Soft fallback: COPY + register-allocation hint (a no-op hint if the
     // physical tuple was illegal).
     BuildMI(*Pin->getParent(), Pin, Pin->getDebugLoc(),
