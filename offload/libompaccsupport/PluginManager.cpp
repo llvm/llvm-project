@@ -15,6 +15,9 @@
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/OmptCommonDefs.h"
 #include "OpenMP/OMPT/OmptTracing.h"
+#ifdef OMPT_SUPPORT
+#include "OmptProfiler.h"
+#endif
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
 #include "device.h"
@@ -57,7 +60,11 @@ void PluginManager::init() {
 #include "Shared/Targets.def"
 
   assert(!Profiler && "Expected profiler to be null");
+#ifdef OMPT_SUPPORT
+  Profiler = std::make_unique<llvm::omp::target::ompt::OmptProfilerTy>();
+#else
   Profiler = std::make_unique<llvm::omp::target::plugin::GenericProfilerTy>();
+#endif
 
   ODBG(ODT_Init) << "RTLs loaded!";
 }
