@@ -2341,8 +2341,10 @@ private:
 
   bool MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
     bool AttrsParsed = false;
+    // A '[' may begin a Microsoft attribute or a C++ lambda, so only parse it
+    // as an attribute after confirming it does not start a lambda.
     if ((getLangOpts().MicrosoftExt || getLangOpts().HLSL) &&
-        Tok.is(tok::l_square)) {
+        Tok.is(tok::l_square) && !startsLambdaNotMicrosoftAttribute()) {
       ParsedAttributes AttrsWithRange(AttrFactory);
       ParseMicrosoftAttributes(AttrsWithRange);
       AttrsParsed = !AttrsWithRange.empty();
@@ -4717,6 +4719,12 @@ private:
   ///
   /// If we are not looking at a lambda expression, returns ExprError().
   ExprResult TryParseLambdaExpression();
+
+  /// Returns true if the current '[' begins a CUDA/HIP lambda rather than a
+  /// Microsoft '[]' attribute (enabled under -fms-extensions or HLSL).
+  /// Restricted to CUDA/HIP, the only mode that allows attributes immediately
+  /// after a lambda's capture list.
+  bool startsLambdaNotMicrosoftAttribute();
 
   /// Parse a lambda introducer.
   /// \param Intro A LambdaIntroducer filled in with information about the

@@ -748,6 +748,23 @@ ExprResult Parser::TryParseLambdaExpression() {
   return ParseLambdaExpressionAfterIntroducer(Intro);
 }
 
+bool Parser::startsLambdaNotMicrosoftAttribute() {
+  // Restricted to CUDA/HIP, the only mode that allows attributes immediately
+  // after a lambda's capture list.
+  if (!getLangOpts().CUDA || Tok.isNot(tok::l_square))
+    return false;
+
+  // Skip the '[...]' and any trailing attributes (e.g. CUDA/HIP's
+  // '__device__'). A lambda then continues with '(', '{' or '<', while an
+  // attribute is followed by the declaration it applies to (e.g. '[propget]
+  // int get()').
+  RevertingTentativeParsingAction TPA(*this);
+  ConsumeBracket();
+  if (!SkipUntil(tok::r_square, StopAtSemi) || !TrySkipAttributes())
+    return false;
+  return Tok.isOneOf(tok::l_paren, tok::l_brace, tok::less);
+}
+
 bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
                                    LambdaIntroducerTentativeParse *Tentative) {
   if (Tentative)
