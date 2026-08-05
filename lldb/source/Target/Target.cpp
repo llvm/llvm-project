@@ -2209,7 +2209,17 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
   if (!file_cache_read_buffer && resolved_addr.IsSectionOffset()) {
     // If we didn't already try and read from the object file cache, then try
     // it after failing to read from the process.
-    return ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
+    error.Clear();
+    bytes_read = ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
+    // A short read here is only a failure if a live read already failed too.
+    // Reaching this point with a valid process means the process contributed
+    // nothing.
+    if (bytes_read > 0 && bytes_read != dst_len && error.Success() &&
+        ProcessIsValid())
+      error = Status::FromErrorStringWithFormatv(
+          "only {0} of {1} bytes were read from the object file cache",
+          bytes_read, dst_len);
+    return bytes_read;
   }
   return 0;
 }
