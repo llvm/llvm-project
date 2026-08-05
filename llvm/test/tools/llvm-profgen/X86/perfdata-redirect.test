@@ -3,14 +3,15 @@
 # RUN: split-file %s %t
 # RUN: yaml2obj %t/binary.yaml -o %t/perfdata-redirect.exe
 # RUN: touch %t/perf.data
-# RUN: chmod +x %t/mock-perf %t/mock-perf-fail
-# RUN: llvm-profgen --binary=%t/perfdata-redirect.exe \
-# RUN:   --perfdata=%t/perf.data --perf-binary=%t/mock-perf \
+# RUN: chmod +x %t/success/perf %t/failure/perf
+# RUN: env PATH="%t/success%{pathsep}%{PATH}" \
+# RUN:   llvm-profgen --binary=%t/perfdata-redirect.exe \
+# RUN:   --perfdata=%t/perf.data \
 # RUN:   --skip-symbolization --use-offset=0 --format=text --output=%t/profile
 # RUN: FileCheck %s --check-prefix=PROFILE --input-file=%t/profile
-# RUN: not llvm-profgen --binary=%t/perfdata-redirect.exe \
-# RUN:   --perfdata=%t/perf.data --perf-binary=%t/mock-perf-fail \
-# RUN:   --output=/dev/null 2>&1 \
+# RUN: not env PATH="%t/failure%{pathsep}%{PATH}" \
+# RUN:   llvm-profgen --binary=%t/perfdata-redirect.exe \
+# RUN:   --perfdata=%t/perf.data --output=/dev/null 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=SECOND-ERROR
 
 ## The first mock invocation deliberately writes the complete second output plus a
@@ -28,7 +29,7 @@
 # SECOND-ERROR-NEXT: second invocation failed
 # SECOND-ERROR-NOT: STALE-FIRST-STDERR
 
-#--- mock-perf
+#--- success/perf
 #!/bin/sh
 
 if [ "$1" != "script" ] || [ "$2" != "--show-mmap-events" ] || \
@@ -64,7 +65,7 @@ case "$4" in
     ;;
 esac
 
-#--- mock-perf-fail
+#--- failure/perf
 #!/bin/sh
 
 if [ "$1" != "script" ] || [ "$2" != "--show-mmap-events" ] || \

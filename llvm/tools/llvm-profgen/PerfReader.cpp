@@ -70,11 +70,6 @@ cl::opt<bool> TimeProfGen("time-profgen", cl::desc("Time llvm-profgen phases"),
 static const char *TimerGroupName = "profgen";
 static const char *TimerGroupDesc = "llvm-profgen";
 
-static cl::opt<std::string> PerfPath("perf-binary",
-                                     cl::desc("Path to perf binary"),
-                                     cl::value_desc("filename"),
-                                     cl::cat(ProfGenCategory));
-
 namespace sampleprof {
 
 void VirtualUnwinder::unwindCall(UnwindState &State) {
@@ -468,9 +463,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
                                          std::optional<int32_t> PIDFilter) {
   StringRef PerfData = File.InputFilePath;
   // Run perf script to retrieve PIDs matching binary we're interested in.
-  auto PerfExecutable = PerfPath.getNumOccurrences()
-                            ? std::optional<std::string>(PerfPath)
-                            : sys::Process::FindInEnvPath("PATH", "perf");
+  auto PerfExecutable = sys::Process::FindInEnvPath("PATH", "perf");
   if (!PerfExecutable) {
     exitWithError("Perf not found.");
   }

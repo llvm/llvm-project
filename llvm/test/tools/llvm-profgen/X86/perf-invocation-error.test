@@ -1,19 +1,33 @@
-# RUN: split-file %s %t
-# RUN: yaml2obj %t/binary.yaml -o %t/perf-binary-error.exe
-# RUN: touch %t/perf.data
+# REQUIRES: system-linux
 
-## yaml2obj is consistently available in LLVM test environments and returns a
-## nonzero status when invoked with perf script arguments.
-# RUN: not llvm-profgen --binary=%t/perf-binary-error.exe \
-# RUN:   --perfdata=%t/perf.data --perf-binary yaml2obj --output=/dev/null \
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/perf-invocation-error.exe
+# RUN: touch %t/perf.data
+# RUN: chmod +x %t/exit/perf
+
+## Verify that a nonzero perf exit status and its stderr are reported.
+# RUN: not env PATH="%t/exit%{pathsep}%{PATH}" \
+# RUN:   llvm-profgen --binary=%t/perf-invocation-error.exe \
+# RUN:   --perfdata=%t/perf.data --output=/dev/null \
 # RUN:   2>&1 | FileCheck %s --check-prefix=EXIT
-# RUN: not llvm-profgen --binary=%t/perf-binary-error.exe \
-# RUN:   --perfdata=%t/perf.data --perf-binary=%t/missing-perf \
+## Use a PATH that contains only the non-executable mock, so discovery cannot
+## fall through to a system perf if lookup ever requires executability.
+# RUN: not env PATH="%t/exec" \
+# RUN:   llvm-profgen --binary=%t/perf-invocation-error.exe \
+# RUN:   --perfdata=%t/perf.data \
 # RUN:   --output=/dev/null 2>&1 | FileCheck %s --check-prefix=EXEC
 
 # EXIT: error: Perf script failed with exit code 1
-# EXIT: yaml2obj
+# EXIT-NEXT: mock perf failed
 # EXEC: error: Failed to execute perf script
+
+#--- exit/perf
+#!/bin/sh
+echo "mock perf failed" >&2
+exit 1
+
+#--- exec/perf
+This file is deliberately not executable.
 
 #--- binary.yaml
 --- !ELF
