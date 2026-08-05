@@ -1597,13 +1597,14 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
   return std::nullopt;
 }
 
-static bool checkAndReplaceCondition(
-    CmpPredicate Pred, Value *A, Value *B, Instruction *CheckInst,
-    ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
-    Instruction *ContextInst, Module *ReproducerModule,
-    ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT,
-    LoopInfo &LI, ScalarEvolution &SE,
-    SmallVectorImpl<Instruction *> &ToRemove) {
+static bool
+checkAndReplaceCondition(CmpPredicate Pred, Value *A, Value *B,
+                         Instruction *CheckInst, ConstraintInfo &Info,
+                         unsigned NumIn, unsigned NumOut,
+                         Instruction *ContextInst, Module *ReproducerModule,
+                         ArrayRef<ReproducerEntry> ReproducerCondStack,
+                         DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE,
+                         SmallVectorImpl<Instruction *> &ToRemove) {
   auto ReplaceCmpWithConstant = [&](Instruction *CheckInst, bool IsTrue) {
     generateReproducer(CheckInst, ICmpInst::isSigned(Pred), ReproducerModule,
                        ReproducerCondStack, Info, DT);
