@@ -64,9 +64,7 @@ void lldb_private::DumpRegisterInfo(Stream &strm, RegisterContext &ctx,
   }
 
   DoDumpRegisterInfo(strm, info.name, info.alt_name, info.byte_size,
-                     invalidates, read_from, in_sets,
-                     llvm::dyn_cast_if_present<lldb_private::RegisterTypeFlags>(
-                         info.register_type),
+                     invalidates, read_from, in_sets, info.register_type,
                      terminal_width);
 }
 
