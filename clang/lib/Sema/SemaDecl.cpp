@@ -2667,6 +2667,33 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
       else
         New->setTypeSourceInfo(OldTD->getTypeSourceInfo());
 
+      // See https://github.com/llvm/llvm-project/issues/213299 for the case.
+      //
+      // Ideally, we shall merge the new enum with the old enum when we
+      // creating the new enum. But the enum is anonymous and the typedef's name
+      // come after the enum body, it is too late to merge them. This is the
+      // choice 10 years ago: a523022b5384d7a0901beea7a5f36ee9c09ba339. Actually
+      // what we're merging here is the typedef decls.
+      //
+      // Then https://github.com/llvm/llvm-project/pull/114240 removes the logic
+      // to remove the new ED. This the direct trigger for the above issue of
+      // ambiguous look ups.
+      //
+      // We choose to fix the problem by setting the type of new enum to the
+      // type of old enums. This is consistent with the above call to
+      // setTypeSourceInfo.
+      //
+      // FIXME: The check `M && M->isGlobalModule()` is not necessary but we
+      // hope to limit the impact of this change. We can relax the check when we
+      // find similar issue later in other cases.
+      if (Module *M = OldTag->getOwningModule(); M && M->isGlobalModule())
+        if (auto *NewEnum = dyn_cast<EnumDecl>(NewTag))
+          if (auto *OldEnum = dyn_cast<EnumDecl>(OldTag)) {
+            QualType OldEnumType = Context.getCanonicalTagType(OldEnum);
+            for (auto *ECD : NewEnum->enumerators())
+              ECD->setType(OldEnumType);
+          }
+
       // Make the old tag definition visible.
       makeMergedDefinitionVisible(Hidden);
 
