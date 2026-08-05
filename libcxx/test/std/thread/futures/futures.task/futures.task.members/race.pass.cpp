@@ -11,7 +11,7 @@
 
 // <future>
 
-// class packaged_task<R(ArgTypes...)>
+// class packaged_task<R(ArgTypes...)>git
 // future<R> get_future();
 // void operator()(ArgTypes... args);
 // void make_ready_at_thread_exit(ArgTypes... args);
@@ -34,7 +34,7 @@ void test_operator() {
     return 42;
   });
 
-  std::thread t = support::make_test_thread([&p] { p(); });
+  std::thread t      = support::make_test_thread([&p] { p(); });
   std::future<int> f = p.get_future();
 
   assert(f.get() == 42);
@@ -48,7 +48,7 @@ void test_operator_void() {
     ran = true;
   });
 
-  std::thread t = support::make_test_thread([&p] { p(); });
+  std::thread t       = support::make_test_thread([&p] { p(); });
   std::future<void> f = p.get_future();
 
   f.get();
@@ -62,7 +62,7 @@ void test_make_ready_at_thread_exit() {
     return 42;
   });
 
-  std::thread t = support::make_test_thread([&p] { p.make_ready_at_thread_exit(); });
+  std::thread t      = support::make_test_thread([&p] { p.make_ready_at_thread_exit(); });
   std::future<int> f = p.get_future();
 
   assert(f.get() == 42);
@@ -76,7 +76,7 @@ void test_make_ready_at_thread_exit_void() {
     ran = true;
   });
 
-  std::thread t = support::make_test_thread([&p] { p.make_ready_at_thread_exit(); });
+  std::thread t       = support::make_test_thread([&p] { p.make_ready_at_thread_exit(); });
   std::future<void> f = p.get_future();
 
   f.get();
