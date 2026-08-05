@@ -171,7 +171,7 @@ public:
   /// them, so they are dropped here rather than propagated to adjacent blocks.
   /// Dropping them at the boundary (instead of in `join`) also covers edges
   /// where `join` is never called, such as blocks with a single predecessor.
-  Lattice exitBlock(Lattice L) {
+  Lattice transferAtBlockExit(Lattice L) {
     return Lattice(L.PersistentOrigins, OriginLoanMapFactory.getEmptyMap());
   }
 

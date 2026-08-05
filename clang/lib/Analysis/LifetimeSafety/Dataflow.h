@@ -47,8 +47,8 @@ using ProgramPoint = const Fact *;
 ///   lifetime-relevant `Fact` transforms the lattice state. Only overloads
 ///   for facts relevant to the analysis need to be implemented.
 ///
-/// It may additionally override `Lattice exitBlock(Lattice);` to drop state
-/// that is not visible outside the block it was computed in.
+/// It may additionally override `Lattice transferAtBlockExit(Lattice);` to
+/// drop state that is not visible outside the block it was computed in.
 ///
 /// \tparam Derived The CRTP derived class that implements the specific
 /// analysis.
@@ -160,7 +160,7 @@ private:
         State = transferFact(State, F);
       }
     }
-    return static_cast<Derived *>(this)->exitBlock(State);
+    return static_cast<Derived *>(this)->transferAtBlockExit(State);
   }
 
   Lattice transferFact(Lattice In, const Fact *F) {
@@ -190,7 +190,7 @@ private:
   }
 
 public:
-  Lattice exitBlock(Lattice In) { return In; }
+  Lattice transferAtBlockExit(Lattice In) { return In; }
 
   Lattice transfer(Lattice In, const IssueFact &) { return In; }
   Lattice transfer(Lattice In, const ExpireFact &) { return In; }
