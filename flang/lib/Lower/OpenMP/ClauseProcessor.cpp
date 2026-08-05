@@ -2176,6 +2176,12 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
   llvm::SmallVector<Object> mapObjects;
 
+  // Preserve implicit default mapper synthesis for target update. The mapper
+  // resolver currently treats OMPD_unknown as the motion-directive path that
+  // may generate an implicit mapper.
+  constexpr llvm::omp::Directive mapperDirective =
+      llvm::omp::Directive::OMPD_unknown;
+
   auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
     mlir::Location clauseLocation = converter.genLocation(source);
     const auto &[expectation, mapper, iterator, objects] = clause.t;
@@ -2201,13 +2207,12 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
       processMapObjectsWithIterator(
           stmtCtx, clauseLocation, objects, iteratorRanges, &ivSyms,
           mapTypeBits, parentMemberIndices, result, mapObjects, mapperIdName,
-          /*isMotionModifier=*/true, llvm::omp::Directive::OMPD_target_update);
+          /*isMotionModifier=*/true, mapperDirective);
     } else {
       processMapObjectsWithIterator(
           stmtCtx, clauseLocation, objects, /*iteratorRanges=*/{},
           /*ivSyms=*/nullptr, mapTypeBits, parentMemberIndices, result,
-          mapObjects, mapperIdName, /*isMotionModifier=*/true,
-          llvm::omp::Directive::OMPD_target_update);
+          mapObjects, mapperIdName, /*isMotionModifier=*/true, mapperDirective);
     }
   };
 
