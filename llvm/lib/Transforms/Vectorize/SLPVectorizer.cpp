@@ -8707,7 +8707,7 @@ void BoUpSLP::buildExternalUses(
   for (const auto &[V, Owners] : ReassocScalarToTreeEntries)
     if ((isGathered(V) || !getTreeEntries(V).empty() ||
          any_of(Owners,
-                [V](const TreeEntry *TE) {
+                [V = V](const TreeEntry *TE) {
                   return TE->isCopyableElement(const_cast<Value *>(V));
                 })) &&
         KeptReassocScalars.insert(V).second)
