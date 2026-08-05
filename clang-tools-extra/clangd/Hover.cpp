@@ -960,11 +960,13 @@ std::optional<HoverInfo> getHoverContents(const SelectionTree::Node *N,
   std::optional<HoverInfo> HI;
 
   if (const auto *VecExpr = dyn_cast<ExtVectorElementExpr>(E)) {
+    HI.emplace();
     HI->Name = VecExpr->getAccessor().getName().str();
     HI->Type = printType(VecExpr->getType(), AST.getASTContext(), PP);
     return HI;
   }
   if (const auto *MatExpr = dyn_cast<MatrixElementExpr>(E)) {
+    HI.emplace();
     HI->Name = MatExpr->getAccessor().getName().str();
     HI->Type = printType(MatExpr->getType(), AST.getASTContext(), PP);
     return HI;
