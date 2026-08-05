@@ -317,10 +317,6 @@ public:
 
   void constructTypeDIE(DIE &Buffer, const DICompositeType *CTy);
 
-  /// addSectionDelta - Add a label delta attribute data and value.
-  void addSectionDelta(DIE &Die, dwarf::Attribute Attribute, const MCSymbol *Hi,
-                       const MCSymbol *Lo);
-
   /// Add a Dwarf section label attribute data and value.
   void addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
                        const MCSymbol *Label, const MCSymbol *Sec);
@@ -413,6 +409,10 @@ private:
   /// Returns 'true' if the current DwarfVersion is compatible
   /// with the specified \p Version.
   bool isCompatibleWithVersion(uint16_t Version) const;
+
+  /// addSectionDelta - Add a label delta attribute data and value.
+  void addSectionDelta(DIE &Die, dwarf::Attribute Attribute, const MCSymbol *Hi,
+                       const MCSymbol *Lo);
 };
 
 class DwarfTypeUnit final : public DwarfUnit {

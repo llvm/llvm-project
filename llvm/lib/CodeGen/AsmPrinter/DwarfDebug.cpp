@@ -1428,28 +1428,17 @@ void DwarfDebug::finalizeModuleInfo() {
     // If compile Unit has macros, emit "DW_AT_macro_info/DW_AT_macros"
     // attribute.
     if (CUNode->getMacros()) {
+      DIE &InfoEntry = useSplitDwarf() ? TheCU.getUnitDie() : U.getUnitDie();
       if (UseDebugMacroSection) {
-        if (useSplitDwarf())
-          TheCU.addSectionDelta(
-              TheCU.getUnitDie(), dwarf::DW_AT_macros, U.getMacroLabelBegin(),
-              TLOF.getDwarfMacroDWOSection()->getBeginSymbol());
-        else {
-          dwarf::Attribute MacrosAttr = getDwarfVersion() >= 5
-                                            ? dwarf::DW_AT_macros
-                                            : dwarf::DW_AT_GNU_macros;
-          U.addSectionLabel(U.getUnitDie(), MacrosAttr, U.getMacroLabelBegin(),
-                            TLOF.getDwarfMacroSection()->getBeginSymbol());
-        }
+        dwarf::Attribute MacrosAttr = getDwarfVersion() >= 5 || useSplitDwarf()
+                                          ? dwarf::DW_AT_macros
+                                          : dwarf::DW_AT_GNU_macros;
+        U.addSectionLabel(InfoEntry, MacrosAttr, U.getMacroLabelBegin(),
+                          TLOF.getDwarfMacroSection()->getBeginSymbol());
       } else {
-        if (useSplitDwarf())
-          TheCU.addSectionDelta(
-              TheCU.getUnitDie(), dwarf::DW_AT_macro_info,
-              U.getMacroLabelBegin(),
-              TLOF.getDwarfMacinfoDWOSection()->getBeginSymbol());
-        else
-          U.addSectionLabel(U.getUnitDie(), dwarf::DW_AT_macro_info,
-                            U.getMacroLabelBegin(),
-                            TLOF.getDwarfMacinfoSection()->getBeginSymbol());
+        U.addSectionLabel(InfoEntry, dwarf::DW_AT_macro_info,
+                          U.getMacroLabelBegin(),
+                          TLOF.getDwarfMacinfoSection()->getBeginSymbol());
       }
     }
   }

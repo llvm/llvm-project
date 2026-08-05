@@ -2129,7 +2129,7 @@ void DwarfUnit::addSectionDelta(DIE &Die, dwarf::Attribute Attribute,
 
 void DwarfUnit::addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
                                 const MCSymbol *Label, const MCSymbol *Sec) {
-  if (Asm->doesDwarfUseRelocationsAcrossSections())
+  if (Asm->doesDwarfUseRelocationsAcrossSections() && !isDwoUnit())
     addLabel(Die, Attribute, DD->getDwarfSectionOffsetForm(), Label);
   else
     addSectionDelta(Die, Attribute, Label, Sec);
