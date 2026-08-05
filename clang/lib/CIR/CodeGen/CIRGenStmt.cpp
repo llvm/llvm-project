@@ -870,7 +870,7 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
   mlir::ArrayAttr value;
   llvm::APSInt intVal = s.getLHS()->EvaluateKnownConstInt(getContext());
 
-  // coerce a bool to an i1 for a switch, so we can just treat all its elements
+  // Coerce a bool to an i1 for a switch, so we can just treat all its elements
   // as an int later on.
   if (isa<cir::BoolType>(condType))
     condType = builder.getUIntNTy(1);
