@@ -507,11 +507,11 @@ getMaskedDivRemCost(const TargetTransformInfo &TTI, unsigned Opcode,
 /// ShuffleVectorInst/getShuffleCost?
 static std::optional<TargetTransformInfo::ShuffleKind> isFixedVectorShuffle(
     ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask, AssumptionCache *AC,
-    const DenseMap<Value *, ExtractElementInst *> &CouldBeExtract) {
-  auto GetExtract = [&CouldBeExtract](Value *V) -> ExtractElementInst * {
+    function_ref<ExtractElementInst *(Value *)> LookupExtract) {
+  auto GetExtract = [&LookupExtract](Value *V) -> ExtractElementInst * {
     if (auto *EI = dyn_cast<ExtractElementInst>(V))
       return EI;
-    return CouldBeExtract.lookup(V);
+    return LookupExtract(V);
   };
   const auto *It = find_if(VL, [&](Value *V) { return GetExtract(V); });
   if (It == VL.end())
@@ -3159,7 +3159,7 @@ public:
   void emitDeferredExtracts();
 
   // Get handle for the DeferredExtractTracker
-  const DeferredExtractTracker &getDE() { return DE; }
+  const DeferredExtractTracker &getDE() const { return DE; }
 
   ~BoUpSLP();
 
@@ -3300,10 +3300,15 @@ private:
           : Scalar(Scalar), NewInst(NewInst), User(User) {}
     };
 
-    /// Map a scalar rematerialized form to the matching extractelement.
-    DenseMap<Value *, ExtractElementInst *> CouldBeExtract;
-    /// Reverse mapping used by scheduling: extractelement back to remat scalar.
-    DenseMap<Value *, Instruction *> CouldBeRemat;
+    ExtractElementInst *lookupExtract(Value *V) const {
+      return CouldBeExtract.lookup(V);
+    }
+
+    Instruction *lookupRemat(Value *V) const { return CouldBeRemat.lookup(V); }
+
+    bool hasExtract(Value *V) const { return CouldBeExtract.contains(V); }
+
+    bool hasRemat(Value *V) const { return CouldBeRemat.contains(V); }
 
     /// Cases where extraction is estimated as more profitable but want to
     /// delay extraction to allow for better vectorization in the interim.
@@ -3484,6 +3489,12 @@ private:
         return false;
       return isa<LoadInst>(Scalar);
     }
+
+  private:
+    /// Map a scalar rematerialized form to the matching extractelement.
+    DenseMap<Value *, ExtractElementInst *> CouldBeExtract;
+    /// Reverse mapping used by scheduling: extractelement back to remat scalar.
+    DenseMap<Value *, Instruction *> CouldBeRemat;
   };
 
   /// Vectorize a single entry in the tree.
@@ -4207,7 +4218,7 @@ private:
           if (UserTreeIdx.UserTE)
             for (auto &VPtr :
                  UserTreeIdx.UserTE->getOperand(UserTreeIdx.EdgeIdx))
-              if (auto *NewVPtr = DE.CouldBeExtract.lookup(VPtr))
+              if (auto *NewVPtr = DE.lookupExtract(VPtr))
                 VPtr = NewVPtr;
         }
       }
@@ -5742,7 +5753,7 @@ private:
                                     << *I << "\n");
                   // The scheduling node works on the rematerialized version
                   // of the extract
-                  if (auto *RI = DE.CouldBeRemat.lookup(I))
+                  if (auto *RI = DE.lookupRemat(I))
                     I = RI;
                   DecrUnschedForInst(
                       I, Bundle->getTreeEntry(), OpIdx, Checked,
@@ -14126,12 +14137,12 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop) {
       // entries and count once at the end.
       if (all_of(TE.Scalars, [&](Value *V) {
             return isa<ExtractElementInst, UndefValue, Constant>(V) ||
-                   DE.CouldBeExtract.contains(V);
+                   DE.hasExtract(V);
           })) {
         for (Value *V : TE.Scalars) {
           auto *EE = dyn_cast<ExtractElementInst>(V);
           if (!EE)
-            EE = DE.CouldBeExtract.lookup(V);
+            EE = DE.lookupExtract(V);
           if (EE) {
             uint64_t &VecScale =
                 GatherExtractSourceVecs.try_emplace(EE->getVectorOperand(), 0)
@@ -16387,7 +16398,7 @@ public:
   Value *adjustExtracts(const TreeEntry *E, MutableArrayRef<int> Mask,
                         ArrayRef<std::optional<TTI::ShuffleKind>> ShuffleKinds,
                         unsigned NumParts, bool &UseVecBaseAsInput,
-                        const DenseMap<Value *, Instruction *> &CouldBeRemat) {
+                        function_ref<Instruction *(Value *)> LookupRemat) {
     UseVecBaseAsInput = false;
     if (Mask.empty())
       return nullptr;
@@ -16464,13 +16475,13 @@ public:
         // rematerialized, the uses are stored by the rematerialized
         // instruction.
         bool OneUse;
-        if (auto *RI = CouldBeRemat.lookup(EE))
+        if (auto *RI = LookupRemat(EE))
           OneUse = RI->hasOneUse();
         else
           OneUse = EE->hasOneUse();
         if (OneUse || !PrevNodeFound) {
           Instruction *Ext;
-          if (auto *RI = CouldBeRemat.lookup(EE)) {
+          if (auto *RI = LookupRemat(EE)) {
             Ext = RI->user_back();
           } else {
             Ext = EE->user_back();
@@ -18525,7 +18536,9 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
             (((TE->hasState() &&
                TE->getOpcode() == Instruction::ExtractElement) ||
               all_of(TE->Scalars, IsaPred<ExtractElementInst, UndefValue>)) &&
-             isFixedVectorShuffle(TE->Scalars, Mask, AC, DE.CouldBeExtract)) ||
+             isFixedVectorShuffle(
+                 TE->Scalars, Mask, AC,
+                 [&](Value *V) { return DE.lookupExtract(V); })) ||
             (TE->hasState() && TE->getOpcode() == Instruction::Load &&
              !TE->isAltShuffle()) ||
             any_of(TE->Scalars, IsaPred<LoadInst>));
@@ -20942,7 +20955,8 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
   // Check that gather of extractelements can be represented as just a
   // shuffle of a single/two vectors the scalars are extracted from.
   std::optional<TTI::ShuffleKind> Res =
-      isFixedVectorShuffle(GatheredExtracts, Mask, AC, DE.CouldBeExtract);
+      isFixedVectorShuffle(GatheredExtracts, Mask, AC,
+                           [&](Value *V) { return DE.lookupExtract(V); });
   if (!Res || all_of(Mask, equal_to(PoisonMaskElem))) {
     // TODO: try to check other subsets if possible.
     // Restore the original VL if attempt was not successful.
@@ -22489,7 +22503,7 @@ public:
   Value *adjustExtracts(const TreeEntry *E, MutableArrayRef<int> Mask,
                         ArrayRef<std::optional<TTI::ShuffleKind>> ShuffleKinds,
                         unsigned NumParts, bool &UseVecBaseAsInput,
-                        const DenseMap<Value *, Instruction *> &CouldBeRemat) {
+                        function_ref<Instruction *(Value *)>) {
     UseVecBaseAsInput = false;
     SmallPtrSet<Value *, 4> UniqueBases;
     Value *VecBase = nullptr;
@@ -23002,7 +23016,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   auto GetGatheredExtract = [&](unsigned Idx) -> ExtractElementInst * {
     if (auto *EI = dyn_cast<ExtractElementInst>(StoredGS[Idx]))
       return EI;
-    return DE.CouldBeExtract.lookup(StoredGS[Idx]);
+    return DE.lookupExtract(StoredGS[Idx]);
   };
   if (!all_of(GatheredScalars, IsaPred<UndefValue>)) {
     // Check for gathered extracts.
@@ -23030,7 +23044,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       }
       if (Value *VecBase = ShuffleBuilder.adjustExtracts(
               E, ExtractMask, ExtractShuffles, NumParts, UseVecBaseAsInput,
-              DE.CouldBeRemat)) {
+              [&](Value *V) { return DE.lookupRemat(V); })) {
         ExtractVecBase = VecBase;
         if (auto *VecBaseTy = dyn_cast<FixedVectorType>(VecBase->getType()))
           if (VF == VecBaseTy->getNumElements() &&
@@ -25907,7 +25921,7 @@ Value *BoUpSLP::vectorizeTree(
         auto *EI = dyn_cast<ExtractElementInst>(ReplacedExtract);
         auto *RI = dyn_cast<Instruction>(Replacement);
         assert(EI && RI && "Expected to find underlying instructions");
-        if (DE.CouldBeExtract.contains(RI))
+        if (DE.hasExtract(RI))
           return;
         DE.transferRematCost(Inst, EI);
         DE.logExtractRematPair(EI, RI);
@@ -25917,8 +25931,7 @@ Value *BoUpSLP::vectorizeTree(
       auto *EI = dyn_cast<ExtractElementInst>(Replacement);
       auto *RI = Inst;
       assert(EI && RI && "Expected to find underlying instructions");
-      if (!DE.ExternalUsesAsExtract.contains(RI) ||
-          DE.CouldBeExtract.contains(RI))
+      if (!DE.ExternalUsesAsExtract.contains(RI) || DE.hasExtract(RI))
         return;
       DE.transferExtractCost(Inst, RI);
       DE.logExtractRematPair(EI, RI);
@@ -26266,8 +26279,7 @@ Value *BoUpSLP::vectorizeTree(
         continue;
       if (!isa<Instruction>(Scalar) || Entry->isCopyableElement(Scalar))
         continue;
-      if (DE.DeferredScalarsToExtract.contains(Scalar) ||
-          DE.CouldBeRemat.contains(Scalar))
+      if (DE.DeferredScalarsToExtract.contains(Scalar) || DE.hasRemat(Scalar))
         continue;
 #ifndef NDEBUG
       Type *Ty = Scalar->getType();
@@ -27244,24 +27256,23 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
       ScheduleDataMap[I] = SD;
     }
     // Both an extract and its rematerialization ought to be scheduled together
-    if (auto *EI = DE.CouldBeExtract.lookup(I)) {
+    if (auto *EI = DE.lookupExtract(I)) {
       if (!ScheduleDataMap.lookup(EI))
         ScheduleDataMap[EI] = SD;
-    } else if (auto *RI = DE.CouldBeRemat.lookup(I)) {
+    } else if (auto *RI = DE.lookupRemat(I)) {
       if (!ScheduleDataMap.lookup(RI))
         ScheduleDataMap[RI] = SD;
     }
-    bool IsSharedNode =
-        DE.CouldBeExtract.contains(I) || DE.CouldBeRemat.contains(I);
+    bool IsSharedNode = DE.hasExtract(I) || DE.hasRemat(I);
     assert((!isInSchedulingRegion(*SD) || IsSharedNode) &&
            "new ScheduleData already in scheduling region");
     if (!isInSchedulingRegion(*SD)) {
-      if (auto *RI = DE.CouldBeRemat.lookup(I)) {
+      if (auto *RI = DE.lookupRemat(I)) {
         SD->init(SchedulingRegionID, RI);
         SD->setExtractInst(I);
       } else {
         SD->init(SchedulingRegionID, I);
-        if (auto *EI = DE.CouldBeExtract.lookup(I))
+        if (auto *EI = DE.lookupExtract(I))
           SD->setExtractInst(EI);
       }
     }
@@ -27856,7 +27867,7 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
       if (PickedInst->getNextNode() != LastScheduledInst)
         PickedInst->moveAfter(LastScheduledInst->getPrevNode());
       LastScheduledInst = PickedInst;
-      if (auto *EI = DE.CouldBeExtract.lookup(PickedInst)) {
+      if (auto *EI = DE.lookupExtract(PickedInst)) {
         assert(EI->getParent() == PickedInst->getParent() && "Expected extract to be in same block as rematerialize version");
         // Keep deferred extract/remat instructions contiguous in the scheduled
         // suffix so the scheduling frontier always points at a valid anchor.
@@ -31114,8 +31125,9 @@ public:
           TrackedToOrig.push_back(RV);
         }
         SmallVector<int> Mask;
-        if (isFixedVectorShuffle(CommonCandidates, Mask, AC,
-                                 V.getDE().CouldBeExtract)) {
+        if (isFixedVectorShuffle(CommonCandidates, Mask, AC, [&](Value *Val) {
+              return V.getDE().lookupExtract(Val);
+            })) {
           ++I;
           Candidates.swap(CommonCandidates);
           ShuffledExtracts = true;
@@ -33105,8 +33117,9 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
   SmallVector<int> Mask;
   if (!findBuildAggregate(IEI, TTI, BuildVectorOpds, BuildVectorInsts, R) ||
       (all_of(BuildVectorOpds, IsaPred<ExtractElementInst, UndefValue>) &&
-       isFixedVectorShuffle(BuildVectorOpds, Mask, AC,
-                            R.getDE().CouldBeExtract)))
+       isFixedVectorShuffle(BuildVectorOpds, Mask, AC, [&](Value *V) {
+         return R.getDE().lookupExtract(V);
+       })))
     return false;
 
   if (MaxVFOnly && BuildVectorInsts.size() == 2) {
