@@ -3208,21 +3208,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_USUBO:
     return selectOverflowOp(I, MRI);
 
-  case TargetOpcode::G_PTRMASK: {
-    Register MaskReg = I.getOperand(2).getReg();
-    std::optional<int64_t> MaskVal = getIConstantVRegSExtVal(MaskReg, MRI);
-    // TODO: Implement arbitrary cases
-    if (!MaskVal || !isShiftedMask_64(*MaskVal))
-      return false;
-
-    uint64_t Mask = *MaskVal;
-    I.setDesc(TII.get(AArch64::ANDXri));
-    I.getOperand(2).ChangeToImmediate(
-        AArch64_AM::encodeLogicalImmediate(Mask, 64));
-
-    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-    return true;
-  }
   case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_TRUNC: {
     const LLT DstTy = MRI.getType(I.getOperand(0).getReg());

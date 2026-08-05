@@ -3271,119 +3271,6 @@ bool AMDGPUInstructionSelector::selectG_GLOBAL_VALUE(
     DstReg, IsVGPR ? AMDGPU::VGPR_32RegClass : AMDGPU::SReg_32RegClass, *MRI);
 }
 
-bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
-  Register DstReg = I.getOperand(0).getReg();
-  Register SrcReg = I.getOperand(1).getReg();
-  Register MaskReg = I.getOperand(2).getReg();
-  LLT Ty = MRI->getType(DstReg);
-  LLT MaskTy = MRI->getType(MaskReg);
-  MachineBasicBlock *BB = I.getParent();
-  const DebugLoc &DL = I.getDebugLoc();
-
-  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
-  const RegisterBank *SrcRB = RBI.getRegBank(SrcReg, *MRI, TRI);
-  const RegisterBank *MaskRB = RBI.getRegBank(MaskReg, *MRI, TRI);
-  const bool IsVGPR = DstRB->getID() == AMDGPU::VGPRRegBankID;
-  if (DstRB != SrcRB) // Should only happen for hand written MIR.
-    return false;
-
-  // Try to avoid emitting a bit operation when we only need to touch half of
-  // the 64-bit pointer.
-  APInt MaskOnes = VT->getKnownOnes(MaskReg).zext(64);
-  const APInt MaskHi32 = APInt::getHighBitsSet(64, 32);
-  const APInt MaskLo32 = APInt::getLowBitsSet(64, 32);
-
-  const bool CanCopyLow32 = (MaskOnes & MaskLo32) == MaskLo32;
-  const bool CanCopyHi32 = (MaskOnes & MaskHi32) == MaskHi32;
-
-  if (!IsVGPR && Ty.getSizeInBits() == 64 &&
-      !CanCopyLow32 && !CanCopyHi32) {
-    auto MIB = BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_AND_B64), DstReg)
-      .addReg(SrcReg)
-      .addReg(MaskReg)
-      .setOperandDead(3); // Dead scc
-    I.eraseFromParent();
-    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
-    return true;
-  }
-
-  unsigned NewOpc = IsVGPR ? AMDGPU::V_AND_B32_e64 : AMDGPU::S_AND_B32;
-  const TargetRegisterClass &RegRC
-    = IsVGPR ? AMDGPU::VGPR_32RegClass : AMDGPU::SReg_32RegClass;
-
-  const TargetRegisterClass *DstRC = TRI.getRegClassForTypeOnBank(Ty, *DstRB);
-  const TargetRegisterClass *SrcRC = TRI.getRegClassForTypeOnBank(Ty, *SrcRB);
-  const TargetRegisterClass *MaskRC =
-      TRI.getRegClassForTypeOnBank(MaskTy, *MaskRB);
-
-  if (!RBI.constrainGenericRegister(DstReg, *DstRC, *MRI) ||
-      !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI) ||
-      !RBI.constrainGenericRegister(MaskReg, *MaskRC, *MRI))
-    return false;
-
-  if (Ty.getSizeInBits() == 32) {
-    assert(MaskTy.getSizeInBits() == 32 &&
-           "ptrmask should have been narrowed during legalize");
-
-    auto NewOp = BuildMI(*BB, &I, DL, TII.get(NewOpc), DstReg)
-      .addReg(SrcReg)
-      .addReg(MaskReg);
-
-    if (!IsVGPR)
-      NewOp.setOperandDead(3); // Dead scc
-    I.eraseFromParent();
-    return true;
-  }
-
-  Register HiReg = MRI->createVirtualRegister(&RegRC);
-  Register LoReg = MRI->createVirtualRegister(&RegRC);
-
-  // Extract the subregisters from the source pointer.
-  BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), LoReg)
-      .addReg(SrcReg, {}, AMDGPU::sub0);
-  BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), HiReg)
-      .addReg(SrcReg, {}, AMDGPU::sub1);
-
-  Register MaskedLo, MaskedHi;
-
-  if (CanCopyLow32) {
-    // If all the bits in the low half are 1, we only need a copy for it.
-    MaskedLo = LoReg;
-  } else {
-    // Extract the mask subregister and apply the and.
-    Register MaskLo = MRI->createVirtualRegister(&RegRC);
-    MaskedLo = MRI->createVirtualRegister(&RegRC);
-
-    BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), MaskLo)
-        .addReg(MaskReg, {}, AMDGPU::sub0);
-    BuildMI(*BB, &I, DL, TII.get(NewOpc), MaskedLo)
-      .addReg(LoReg)
-      .addReg(MaskLo);
-  }
-
-  if (CanCopyHi32) {
-    // If all the bits in the high half are 1, we only need a copy for it.
-    MaskedHi = HiReg;
-  } else {
-    Register MaskHi = MRI->createVirtualRegister(&RegRC);
-    MaskedHi = MRI->createVirtualRegister(&RegRC);
-
-    BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), MaskHi)
-        .addReg(MaskReg, {}, AMDGPU::sub1);
-    BuildMI(*BB, &I, DL, TII.get(NewOpc), MaskedHi)
-      .addReg(HiReg)
-      .addReg(MaskHi);
-  }
-
-  BuildMI(*BB, &I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
-    .addReg(MaskedLo)
-    .addImm(AMDGPU::sub0)
-    .addReg(MaskedHi)
-    .addImm(AMDGPU::sub1);
-  I.eraseFromParent();
-  return true;
-}
-
 /// Return the register to use for the index value, and the subregister to use
 /// for the indirectly accessed register.
 static std::pair<Register, unsigned>
@@ -4671,8 +4558,6 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_BRCOND(I);
   case TargetOpcode::G_GLOBAL_VALUE:
     return selectG_GLOBAL_VALUE(I);
-  case TargetOpcode::G_PTRMASK:
-    return selectG_PTRMASK(I);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return selectG_EXTRACT_VECTOR_ELT(I);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
