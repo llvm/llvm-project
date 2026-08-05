@@ -2544,7 +2544,7 @@ static void genParallelClauses(
     mlir::Location loc, mlir::omp::ParallelOperands &clauseOps,
     llvm::SmallVectorImpl<Object> &reductionObjects) {
   ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processAllocate(clauseOps);
+  cp.processAllocate(clauseOps, /*supportAlignment=*/true);
   cp.processIf(llvm::omp::Directive::OMPD_parallel, clauseOps);
 
   HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter);
