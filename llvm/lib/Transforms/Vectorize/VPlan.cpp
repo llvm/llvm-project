@@ -279,6 +279,8 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
       CurrentParentLoop(CurrentParentLoop), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
+  assert(!isa<VPRegionValue>(Def) &&
+         "VPRegionValue must be materialized before VPTransformState::get");
   if (isa<VPIRValue, VPSymbolicValue>(Def))
     return Def->getUnderlyingValue();
 
@@ -311,6 +313,8 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
 }
 
 Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
+  assert(!isa<VPRegionValue>(Def) &&
+         "VPRegionValue must be materialized before VPTransformState::get");
   if (NeedsScalar) {
     assert((VF.isScalar() || isa<VPIRValue, VPSymbolicValue>(Def) ||
             hasVectorValue(Def) || !vputils::onlyFirstLaneUsed(Def) ||
@@ -337,12 +341,11 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   VPLane LastLane = VPLane::getLastLaneForVF(VF);
   IRBuilderBase::InsertPointGuard Guard(Builder);
   if (auto *LastInst = dyn_cast<Instruction>(get(Def, LastLane)))
-    // Set the insert point after the last scalarized instruction or after the
-    // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
-    // will directly follow the scalar definitions.
-    Builder.SetInsertPoint(isa<PHINode>(LastInst)
-                               ? LastInst->getParent()->getFirstNonPHIIt()
-                               : std::next(BasicBlock::iterator(LastInst)));
+    // Set the insert point after the last scalarized instruction. This
+    // ensures the insertelement sequence will directly follow the scalar
+    // definitions.
+    if (auto InsertPt = LastInst->getInsertionPointAfterDef())
+      Builder.SetInsertPoint(*InsertPt);
   Value *VectorValue = GetBroadcastInstrs(ScalarValue);
   set(Def, VectorValue);
   return VectorValue;
@@ -388,6 +391,27 @@ Value *VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,
     WideValue = Builder.CreateInsertElement(WideValue, ScalarInst, LaneExpr);
   }
   return WideValue;
+}
+
+void VPTransformState::fixupHeaderPhis() {
+  for (VPBlockBase *VPB : vp_depth_first_shallow(Plan->getEntry())) {
+    if (!VPBlockUtils::isHeader(VPB, VPDT))
+      continue;
+    auto *Header = cast<VPBasicBlock>(VPB);
+    auto *LatchVPBB = cast<VPBasicBlock>(Header->getPredecessors()[1]);
+    BasicBlock *VectorLatchBB = CFG.VPBB2IRBB[LatchVPBB];
+
+    for (VPRecipeBase &R : Header->phis()) {
+      auto *PhiR = cast<VPSingleDefRecipe>(&R);
+      bool NeedsScalar =
+          isa<VPPhi>(PhiR) || (isa<VPReductionPHIRecipe>(PhiR) &&
+                               cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+
+      Value *Phi = get(PhiR, NeedsScalar);
+      Value *Val = get(PhiR->getOperand(1), NeedsScalar);
+      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
+    }
+  }
 }
 
 BasicBlock *VPBasicBlock::createEmptyBasicBlock(VPTransformState &State) {
@@ -735,6 +759,13 @@ VPBlockUtils::cloneFrom(VPBlockBase *Entry) {
                         Exiting ? Old2NewVPBlocks[Exiting] : nullptr);
 }
 
+const VPBranchOnMaskRecipe *VPRegionBlock::getEntryBranchOnMask() const {
+  const auto *EntryBB = cast<VPBasicBlock>(getEntry());
+  assert(isReplicator() && EntryBB && EntryBB->size() == 1 &&
+         "not a valid replicating region");
+  return cast<VPBranchOnMaskRecipe>(&EntryBB->front());
+}
+
 VPRegionBlock *VPRegionBlock::clone() {
   const auto &[NewEntry, NewExiting] = VPBlockUtils::cloneFrom(getEntry());
   VPlan &Plan = *getPlan();
@@ -899,8 +930,10 @@ VPlan::~VPlan() {
       for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
         R.setOperand(I, &DummyValue);
 
-  for (auto *VPB : CreatedBlocks)
+  for (auto [Idx, VPB] : enumerate(CreatedBlocks)) {
+    assert(VPB->getNumber() == Idx && "block with mismatched number");
     delete VPB;
+  }
   for (VPValue *VPV : getLiveIns())
     delete VPV;
   delete BackedgeTakenCount;
@@ -1006,7 +1039,8 @@ void VPlan::execute(VPTransformState *State) {
 
     Loop *OrigLoop =
         State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
-    auto Blocks = OrigLoop->getBlocksVector();
+    SmallVector<BasicBlock *> Blocks(OrigLoop->block_begin(),
+                                     OrigLoop->block_end());
     Blocks.push_back(ScalarPh);
     while (!OrigLoop->isInnermost())
       State->LI->erase(*OrigLoop->begin());
@@ -1019,24 +1053,7 @@ void VPlan::execute(VPTransformState *State) {
   State->CFG.DTU.flush();
 
   // Fix the latch (backedge) value of all header phis in all loop headers.
-  for (VPBlockBase *VPB : vp_depth_first_shallow(getEntry())) {
-    if (!VPBlockUtils::isHeader(VPB, State->VPDT))
-      continue;
-    auto *Header = cast<VPBasicBlock>(VPB);
-    auto *LatchVPBB = cast<VPBasicBlock>(Header->getPredecessors()[1]);
-    BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
-
-    for (VPRecipeBase &R : Header->phis()) {
-      auto *PhiR = cast<VPSingleDefRecipe>(&R);
-      bool NeedsScalar =
-          isa<VPPhi>(PhiR) || (isa<VPReductionPHIRecipe>(PhiR) &&
-                               cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
-
-      Value *Phi = State->get(PhiR, NeedsScalar);
-      Value *Val = State->get(PhiR->getOperand(1), NeedsScalar);
-      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
-    }
-  }
+  State->fixupHeaderPhis();
 }
 
 InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
@@ -1289,8 +1306,10 @@ VPlan *VPlan::duplicate() {
   // current to new VPlan.
   unsigned NumBlocksAfterCloning = CreatedBlocks.size();
   for (unsigned I :
-       seq<unsigned>(NumBlocksBeforeCloning, NumBlocksAfterCloning))
+       seq<unsigned>(NumBlocksBeforeCloning, NumBlocksAfterCloning)) {
+    this->CreatedBlocks[I]->setNumber(NewPlan->CreatedBlocks.size());
     NewPlan->CreatedBlocks.push_back(this->CreatedBlocks[I]);
+  }
   CreatedBlocks.truncate(NumBlocksBeforeCloning);
 
   // Update ExitBlocks of the new plan.
@@ -1305,6 +1324,7 @@ VPlan *VPlan::duplicate() {
 
 VPIRBasicBlock *VPlan::createEmptyVPIRBasicBlock(BasicBlock *IRBB) {
   auto *VPIRBB = new VPIRBasicBlock(IRBB);
+  VPIRBB->setNumber(CreatedBlocks.size());
   CreatedBlocks.push_back(VPIRBB);
   return VPIRBB;
 }
@@ -1667,8 +1687,7 @@ bool LoopVectorizationPlanner::getDecisionAndClampRange(
 
 VPSingleDefRecipe *
 VPBuilder::createConsecutiveVectorPointer(VPValue *Ptr, Type *SourceElementTy,
-                                          bool Reverse, bool FoldTail,
-                                          DebugLoc DL) {
+                                          bool Reverse, DebugLoc DL) {
   VPlan &Plan = getPlan();
   GEPNoWrapFlags Flags = vputils::getGEPFlagsForPtr(Ptr);
   if (Reverse) {
@@ -1676,8 +1695,9 @@ VPBuilder::createConsecutiveVectorPointer(VPValue *Ptr, Type *SourceElementTy,
     // original scalar loop: drop the GEP no-wrap flags in this case. Otherwise
     // preserve existing flags without no-unsigned-wrap, as we will emit
     // negative indices.
-    GEPNoWrapFlags ReverseFlags =
-        FoldTail ? GEPNoWrapFlags::none() : Flags.withoutNoUnsignedWrap();
+    GEPNoWrapFlags ReverseFlags = Plan.hasTailFolded()
+                                      ? GEPNoWrapFlags::none()
+                                      : Flags.withoutNoUnsignedWrap();
     return tryInsertInstruction(new VPVectorEndPointerRecipe(
         Ptr, &Plan.getVF(), SourceElementTy, /*Stride=*/-1, ReverseFlags, DL));
   }
@@ -1873,6 +1893,16 @@ VPCostContext::getOperandInfo(VPValue *V) const {
 
   return {};
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+VPSlotTracker *VPCostContext::getSlotTracker() {
+  if (!PlanForSlotTracker)
+    return nullptr;
+  if (!SlotTracker)
+    SlotTracker = std::make_unique<VPSlotTracker>(PlanForSlotTracker);
+  return SlotTracker.get();
+}
+#endif
 
 InstructionCost VPCostContext::getScalarizationOverhead(
     Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,

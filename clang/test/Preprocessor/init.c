@@ -997,7 +997,7 @@
 // NVPTX64:#define __WINT_WIDTH__ 32
 //
 
-// RUN: %clang_cc1 -x cl -E -dM -ffreestanding -triple=amdgcn < /dev/null | FileCheck -match-full-lines -check-prefix AMDGCN --check-prefix AMDGPU %s
+// RUN: %clang_cc1 -x cl -E -dM -ffreestanding -triple=amdgpu < /dev/null | FileCheck -match-full-lines -check-prefix AMDGCN --check-prefix AMDGPU %s
 // RUN: %clang_cc1 -x cl -E -dM -ffreestanding -triple=r600 -target-cpu caicos < /dev/null | FileCheck -match-full-lines --check-prefix AMDGPU %s
 //
 // AMDGPU:#define __ENDIAN_LITTLE__ 1
@@ -2426,6 +2426,8 @@
 // ARM-DARWIN-BAREMETAL-32: #define __PTRDIFF_TYPE__ int
 // ARM-DARWIN-BAREMETAL-32: #define __SIZE_TYPE__ long unsigned int
 
+// ARM-DARWIN-BAREMETAL-64: #define __GCC_CONSTRUCTIVE_SIZE 64
+// ARM-DARWIN-BAREMETAL-64: #define __GCC_DESTRUCTIVE_SIZE 128
 // ARM-DARWIN-BAREMETAL-64: #define __INTPTR_TYPE__ long int
 // ARM-DARWIN-BAREMETAL-64: #define __PTRDIFF_TYPE__ long int
 // ARM-DARWIN-BAREMETAL-64: #define __SIZE_TYPE__ long unsigned int

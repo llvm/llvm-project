@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=+trap-handler < %s | FileCheck %s --check-prefixes=GCN,TRAP-HANDLER-ENABLE
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=-trap-handler < %s | FileCheck %s --check-prefixes=GCN,TRAP-HANDLER-DISABLE
+; RUN: llc -mtriple=amdgpu8.03-amd-amdhsa -mattr=+trap-handler < %s | FileCheck %s --check-prefixes=GCN,TRAP-HANDLER-ENABLE
+; RUN: llc -mtriple=amdgpu8.03-amd-amdhsa -mattr=-trap-handler < %s | FileCheck %s --check-prefixes=GCN,TRAP-HANDLER-DISABLE
 
 ; GCN-LABEL: {{^}}amdhsa_trap_num_sgprs
 ; TRAP-HANDLER-ENABLE:  NumSgprs: 63

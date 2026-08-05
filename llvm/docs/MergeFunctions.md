@@ -1,5 +1,6 @@
 # MergeFunctions pass, how it works
 
+
 ## Introduction
 
 Sometimes code contains equal functions, or functions that do exactly the same

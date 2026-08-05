@@ -1,7 +1,6 @@
 # MemorySSA
 
 
-
 ## Introduction
 
 `MemorySSA` is an analysis that allows us to cheaply reason about the

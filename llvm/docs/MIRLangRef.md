@@ -1,7 +1,6 @@
 # Machine IR (MIR) Format Reference Manual
 
 
-
 ```{warning}
 This is a work in progress.
 ```

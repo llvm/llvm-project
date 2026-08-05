@@ -2,6 +2,7 @@
 Memory Model Relaxation Annotations
 ===================================
 
+
 Introduction
 ============
 

@@ -1,7 +1,6 @@
 # Instrumentation Profile Format
 
 
-
 ## Overview
 
 Clang supports two types of profiling via instrumentation [^1]: frontend-based

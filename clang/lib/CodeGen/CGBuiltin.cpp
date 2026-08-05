@@ -1620,11 +1620,19 @@ static llvm::Value *EmitBitCountExpr(CodeGenFunction &CGF, const Expr *E) {
   // Boolean vectors can be casted directly to its bitfield representation. We
   // intentionally do not round up to the next power of two size and let LLVM
   // handle the trailing bits.
+  //
+  // In big endian mode, the bitfield representation has a reversed bit order,
+  // hence the need to add an operation to reverse it back to the expected
+  // order.
   if (auto *VT = dyn_cast<llvm::FixedVectorType>(ArgType);
       VT && VT->getElementType()->isIntegerTy(1)) {
     llvm::Type *StorageType =
         llvm::Type::getIntNTy(CGF.getLLVMContext(), VT->getNumElements());
     ArgValue = CGF.Builder.CreateBitCast(ArgValue, StorageType);
+
+    if (CGF.getTarget().isBigEndian())
+      ArgValue = CGF.Builder.CreateIntrinsic(Intrinsic::bitreverse,
+                                             {StorageType}, ArgValue);
   }
 
   return ArgValue;
@@ -2723,6 +2731,13 @@ private:
       if (ASTLayout.hasOwnVFPtr()) {
         OccuppiedIntervals.push_back(BitInterval{
             StartBitOffset, StartBitOffset + DL.getPointerSizeInBits()});
+      }
+
+      if (ASTLayout.hasOwnVBPtr()) {
+        auto Offset = ASTLayout.getVBPtrOffset().getQuantity();
+        auto StartVBPtr = StartBitOffset + Offset * CharWidth;
+        OccuppiedIntervals.push_back(
+            BitInterval{StartVBPtr, StartVBPtr + DL.getPointerSizeInBits()});
       }
 
       const auto VisitBase = [&ASTLayout, StartBitOffset, this](

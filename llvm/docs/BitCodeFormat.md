@@ -1,7 +1,6 @@
 # LLVM Bitcode File Format
 
 
-
 ## Abstract
 
 This document describes the LLVM bitstream file format and the encoding of the

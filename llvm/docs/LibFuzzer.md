@@ -1,6 +1,5 @@
 # libFuzzer – a library for coverage-guided fuzz testing.
 
-
 ## Introduction
 
 LibFuzzer is an in-process, coverage-guided, evolutionary fuzzing engine.
@@ -28,7 +27,6 @@ LibFuzzer requires a matching version of Clang.
 
 
 ## Getting Started
-
 
 
 ### Fuzz Target
@@ -415,7 +413,6 @@ about the mutation operation that produced the new input:
 
 ## Examples
 
-
 ### Toy example
 
 A simple function that does something interesting if it receives the input
@@ -472,7 +469,6 @@ to detect [Heartbleed] in one second.
 
 
 ## Advanced features
-
 
 ### Dictionaries
 LibFuzzer supports user-supplied dictionaries with input language keywords

@@ -671,4 +671,79 @@ def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// NVGPU Conversion Ops
+//===----------------------------------------------------------------------===//
+
+def AnyI32Like : TypeOrValueSemanticsContainer<I32, "scalar i32 or vector of i32">;
+
+def NVGPU_TruncfOp : NVGPU_Op<"truncf", [Pure]> {
+  let summary = "Truncate floating-point to narrower floating-point";
+  let description = [{
+    Truncate a floating-point value to a smaller floating-point type.
+    Destination must be strictly narrower than source.
+
+    Supported paths:
+      f16  -> f8 (f8E4M3FN, f8E5M2, f8E8M0FNU), f6 (f6E2M3FN, f6E3M2FN), 
+              f4 (f4E2M1FN)
+      bf16 -> f8 (f8E4M3FN, f8E5M2, f8E8M0FNU), f6 (f6E2M3FN, f6E3M2FN), 
+              f4 (f4E2M1FN)
+      f32  -> f16, bf16, f8 (f8E4M3FN, f8E5M2, f8E8M0FNU),
+              f6 (f6E2M3FN, f6E3M2FN), f4 (f4E2M1FN)
+      f64  -> f32, f16, bf16
+
+    The `random_bits` operand enables stochastic rounding (RS mode) for
+    f32->f16/bf16 conversions; when provided, `rnd` must be RS.
+
+    Example:
+    ```mlir
+    %r = nvgpu.truncf %in : vector<8xf32> to vector<8xf8E4M3FN>
+    %r = nvgpu.truncf %in : vector<8xf32> to vector<8xf6E2M3FN>
+    %r = nvgpu.truncf %in : f32 to f16
+    %r = nvgpu.truncf %in : vector<2x4xf16> to vector<2x4xf8E5M2>
+    ```
+  }];
+  let arguments = (ins AnyTypeOf<[AnyFloat, VectorOfNonZeroRankOf<[AnyFloat]>]>:$in,
+                       DefaultValuedAttr<FPRoundingModeAttr, "NVVM::FPRoundingMode::RN">:$rnd,
+                       DefaultValuedAttr<ConfinedAttr<SaturationModeAttr, 
+                         [EnumAttrIsOneOf<SaturationModeAttr, 
+                           [SaturationModeNone, SaturationModeFinite]>]>, 
+                         "NVVM::SaturationMode::SATFINITE">:$sat,
+                       DefaultValuedAttr<BoolAttr, "false">:$relu,
+                       Optional<I32>:$random_bits
+                       );
+  let results = (outs AnyTypeOf<[AnyFloat, VectorOfNonZeroRankOf<[AnyFloat]>]>:$out);
+  let assemblyFormat = "$in (`,` $random_bits^)? attr-dict `:` type($in) `to` type($out)";
+  let hasVerifier = 1;
+}
+
+def NVGPU_ExtfOp : NVGPU_Op<"extf", [Pure]> {
+  let summary = "Extend floating-point to wider floating-point";
+  let description = [{
+    Extend a floating-point value to a wider floating-point type.
+    Destination must be strictly wider than source.
+
+    Supported paths:
+      f4 (f4E2M1FN) -> f16, bf16
+      f6 (f6E2M3FN, f6E3M2FN) -> f16, bf16
+      f8 (f8E4M3FN, f8E5M2, f8E8M0FNU) -> f16, bf16
+      f16 -> f32
+      bf16 -> f32
+
+    Example:
+    ```mlir
+    %r = nvgpu.extf %in : vector<8xf8E4M3FN> to vector<8xf16>
+    %r = nvgpu.extf %in : vector<8xf6E3M2FN> to vector<8xf16>
+    %r = nvgpu.extf %in : vector<4xf8E5M2> to vector<4xf32>
+    %r = nvgpu.extf %in : f8E4M3FN to f32
+    ```
+  }];
+  let arguments = (ins AnyTypeOf<[AnyFloat, VectorOfNonZeroRankOf<[AnyFloat]>]>:$in,
+                       DefaultValuedAttr<FPRoundingModeAttr, "NVVM::FPRoundingMode::RN">:$rnd,
+                       DefaultValuedAttr<BoolAttr, "false">:$relu);
+  let results = (outs AnyTypeOf<[AnyFloat, VectorOfNonZeroRankOf<[AnyFloat]>]>:$out);
+  let assemblyFormat = "$in attr-dict `:` type($in) `to` type($out)";
+  let hasVerifier = 1;
+}
+
 #endif // MLIR_DIALECT_NVGPU_IR_NVGPUOPS_TD

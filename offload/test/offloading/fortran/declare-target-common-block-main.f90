@@ -5,7 +5,7 @@
 ! larger Fortran applications like Nekbone and SPEC benchmarks.
 ! REQUIRES: flang, amdgpu
 
-! RUN: %flang -c -fopenmp --offload-arch=gfx90a \
+! RUN: %flang -c -fopenmp -fopenmp-targets=%target_triple --offload-arch=gfx90a \
 ! RUN:   %S/../../Inputs/declare-target-common-block-sub.f90 -o declare-target-common-block-sub.o
 ! RUN: %libomptarget-compile-fortran-generic declare-target-common-block-sub.o
 ! RUN: %t | %fcheck-generic

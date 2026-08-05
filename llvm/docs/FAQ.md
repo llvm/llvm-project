@@ -2,7 +2,6 @@
 
 
 
-
 ## License
 
 ### Can I modify LLVM source code and redistribute the modified source?

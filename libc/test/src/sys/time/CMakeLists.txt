@@ -27,6 +27,7 @@ add_libc_unittest(
   SRCS
     setitimer_test.cpp
   DEPENDS
+    libc.hdr.sys_time_macros
     libc.include.signal
     libc.src.sys.time.setitimer
     libc.src.signal.sigaction
@@ -44,9 +45,23 @@ add_libc_unittest(
   SRCS
     getitimer_test.cpp
   DEPENDS
+    libc.hdr.sys_time_macros
     libc.src.sys.time.getitimer
     libc.src.__support.common
     libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  gettimeofday_test
+  SUITE
+    libc_sys_time_unittests
+  SRCS
+    gettimeofday_test.cpp
+  DEPENDS
+    libc.src.sys.time.gettimeofday
+    libc.hdr.types.struct_timeval
+    libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
 )

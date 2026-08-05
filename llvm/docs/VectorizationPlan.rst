@@ -2,6 +2,7 @@
 Vectorization Plan
 ==================
 
+
 Abstract
 ========
 The vectorization transformation can be rather complicated, involving several

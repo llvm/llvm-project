@@ -322,12 +322,14 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   RemarksSection = Ctx->getMachOSection(
       "__LLVM", "__remarks", MachO::S_ATTR_DEBUG, SectionKind::getMetadata());
 
-  PseudoProbeSection =
-      Ctx->getMachOSection("__PSEUDO_PROBE", "__probes",
-                           MachO::S_ATTR_DEBUG | MachO::S_ATTR_NO_DEAD_STRIP,
-                           SectionKind::getMetadata());
+  // Emit the pseudoprobe sections in the __LLVM segment. Current ld ignores the
+  // __LLVM and __DWARF segment, so the probe metadata is dropped from the final
+  // linked image on every toolchain.
+  PseudoProbeSection = Ctx->getMachOSection(
+      "__LLVM", "__probes", MachO::S_ATTR_DEBUG | MachO::S_ATTR_NO_DEAD_STRIP,
+      SectionKind::getMetadata());
   PseudoProbeDescSection =
-      Ctx->getMachOSection("__PSEUDO_PROBE", "__probe_descs",
+      Ctx->getMachOSection("__LLVM", "__probe_descs",
                            MachO::S_ATTR_DEBUG | MachO::S_ATTR_NO_DEAD_STRIP,
                            SectionKind::getMetadata());
 
@@ -369,7 +371,9 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   case Triple::aarch64_be:
   case Triple::x86_64:
     FDECFIEncoding = dwarf::DW_EH_PE_pcrel |
-                     (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
+                     ((Large || Ctx->getTargetOptions().LargeEHEncoding)
+                          ? dwarf::DW_EH_PE_sdata8
+                          : dwarf::DW_EH_PE_sdata4);
     break;
   case Triple::bpfel:
   case Triple::bpfeb:

@@ -1,7 +1,6 @@
 # Architecture & Platform Information for Compiler Writers
 
 
-
 ```{note}
 This document is a work-in-progress.  Additions and clarifications are
 welcome.

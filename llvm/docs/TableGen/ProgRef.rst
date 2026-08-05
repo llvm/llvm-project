@@ -4,6 +4,7 @@ TableGen Programmer's Reference
 
 .. sectnum::
 
+
 Introduction
 ============
 
@@ -1742,6 +1743,10 @@ and non-0 as true.
     This operator tests *cond1* and returns *val1* if the result is true.
     If false, the operator tests *cond2* and returns *val2* if the result is
     true. And so forth. An error is reported if no conditions are true.
+
+    !cond short-circuits at the first true condition, resolving to that
+    condition's corresponding value.  Subsequent conditions and values are left
+    unresolved.
 
     This example produces the sign word for an integer::
 

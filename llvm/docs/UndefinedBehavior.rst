@@ -2,6 +2,7 @@
 LLVM IR Undefined Behavior (UB) Manual
 ======================================
 
+
 Abstract
 ========
 This document describes the undefined behavior (UB) in LLVM's IR, including

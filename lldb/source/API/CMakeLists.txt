@@ -81,6 +81,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBProcessInfo.cpp
   SBProcessInfoList.cpp
   SBProgress.cpp
+  SBProtocolServer.cpp
   SBQueue.cpp
   SBQueueItem.cpp
   SBReproducer.cpp
@@ -115,6 +116,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBVariablesOptions.cpp
   SBWatchpoint.cpp
   SBWatchpointOptions.cpp
+  ScriptInterpreterBridge.cpp
   SystemInitializerFull.cpp
 
   ADDITIONAL_HEADER_DIRS

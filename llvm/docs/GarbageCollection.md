@@ -1,5 +1,6 @@
 # Garbage Collection with LLVM
 
+
 ## Abstract
 
 This document covers how to integrate LLVM into a compiler for a language which

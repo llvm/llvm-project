@@ -107,6 +107,17 @@ public:
     if (!forcedTargetABI.empty())
       fir::setTargetABI(mod, forcedTargetABI);
 
+    // If no data layout is set, derive it from the target triple to get
+    // correct target-specific alignments rather than a generic default.
+    if (!mod.getDataLayoutSpec()) {
+      llvm::Triple triple(fir::getTargetTriple(mod));
+      std::string dlStr = triple.computeDataLayout();
+      if (!dlStr.empty()) {
+        llvm::DataLayout llvmDL(dlStr);
+        fir::support::setMLIRDataLayout(mod, llvmDL);
+      }
+    }
+
     // TargetRewrite will require querying the type storage sizes, if it was
     // not set already, create a DataLayoutSpec for the ModuleOp now.
     std::optional<mlir::DataLayout> dl =
@@ -525,13 +536,13 @@ public:
     // TODO propagate/update call argument and result attributes.
     if constexpr (std::is_same_v<std::decay_t<A>, mlir::gpu::LaunchFuncOp>) {
       mlir::Value asyncToken = callOp.getAsyncToken();
-      auto newCall = A::create(*rewriter, loc, callOp.getKernel(),
-                               callOp.getGridSizeOperandValues(),
-                               callOp.getBlockSizeOperandValues(),
-                               callOp.getDynamicSharedMemorySize(), newOpers,
-                               asyncToken ? asyncToken.getType() : nullptr,
-                               callOp.getAsyncDependencies(),
-                               /*clusterSize=*/std::nullopt);
+      auto newCall = A::create(
+          *rewriter, loc, callOp.getKernel(), callOp.getGridSizeOperandValues(),
+          callOp.getBlockSizeOperandValues(),
+          callOp.getDynamicSharedMemorySize(), newOpers,
+          asyncToken ? asyncToken.getType() : nullptr,
+          callOp.getAsyncDependencies(), callOp.getAsyncObject(),
+          /*clusterSize=*/std::nullopt);
       if (callOp.getClusterSizeX())
         newCall.getClusterSizeXMutable().assign(callOp.getClusterSizeX());
       if (callOp.getClusterSizeY())

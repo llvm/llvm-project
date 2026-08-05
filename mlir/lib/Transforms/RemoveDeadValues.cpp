@@ -516,15 +516,12 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
   }
 }
 
-/// Create ub.poison ops for the given values. If a value has no uses, return
-/// an "empty" value.
-static SmallVector<Value> createPoisonedValues(OpBuilder &b,
-                                               ValueRange values) {
-  return llvm::map_to_vector(values, [&](Value value) {
-    if (value.use_empty())
-      return Value();
-    return ub::PoisonOp::create(b, value.getLoc(), value.getType()).getResult();
-  });
+/// Create a ub.poison op for the given value. If it has no uses, return an
+/// "empty" value.
+static Value createPoisonedValue(OpBuilder &b, Value value) {
+  if (value.use_empty())
+    return Value();
+  return ub::PoisonOp::create(b, value.getLoc(), value.getType()).getResult();
 }
 
 namespace {
@@ -554,7 +551,30 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
   TrackingListener listener;
   IRRewriter rewriter(ctx, &listener);
 
-  // 1. Blocks, We must remove the block arguments and successor operands before
+  // 1. Operands to replace with poison. These rewrites need the original
+  // operand values for their location and type, so they must run before any
+  // cleanup that can drop uses and leave operands temporarily null.
+  LDBG() << "Replacing dead operands with poison in " << list.operands.size()
+         << " operand lists";
+  for (OperandsToCleanup &o : list.operands) {
+    if (!o.replaceWithPoison || !o.nonLive.any())
+      continue;
+    LDBG_OS([&](raw_ostream &os) {
+      os << "Replacing non-live operands [";
+      llvm::interleaveComma(o.nonLive.set_bits(), os);
+      os << "] with poison in operation: "
+         << OpWithFlags(o.op,
+                        OpPrintingFlags().skipRegions().printGenericOpForm());
+    });
+    rewriter.setInsertionPoint(o.op);
+    for (auto deadIdx : o.nonLive.set_bits()) {
+      Value operand = o.op->getOperand(deadIdx);
+      assert(operand && "expected non-null operand for poison replacement");
+      o.op->setOperand(deadIdx, createPoisonedValue(rewriter, operand));
+    }
+  }
+
+  // 2. Blocks, We must remove the block arguments and successor operands before
   // deleting the operation, as they may reside in the region operation.
   LDBG() << "Cleaning up " << list.blocks.size() << " block argument lists";
   for (auto &b : list.blocks) {
@@ -579,7 +599,7 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
     }
   }
 
-  // 2. Successor Operands
+  // 3. Successor Operands
   LDBG() << "Cleaning up " << list.successorOperands.size()
          << " successor operand lists";
   for (auto &op : list.successorOperands) {
@@ -603,7 +623,7 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
     }
   }
 
-  // 3. Functions
+  // 4. Functions
   LDBG() << "Cleaning up " << list.functions.size() << " functions";
   // Record which function arguments were erased so we can shrink call-site
   // argument segments for CallOpInterface operations (e.g. ops using
@@ -637,9 +657,11 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
     (void)f.funcOp.eraseResults(f.nonLiveRets);
   }
 
-  // 4. Operands
+  // 5. Operands
   LDBG() << "Cleaning up " << list.operands.size() << " operand lists";
   for (OperandsToCleanup &o : list.operands) {
+    if (o.replaceWithPoison)
+      continue;
     // Handle call-specific cleanup only when we have a cached callee reference.
     // This avoids expensive symbol lookup and is defensive against future
     // changes.
@@ -682,20 +704,11 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
            << OpWithFlags(o.op,
                           OpPrintingFlags().skipRegions().printGenericOpForm());
       });
-      if (o.replaceWithPoison) {
-        rewriter.setInsertionPoint(o.op);
-        for (auto deadIdx : o.nonLive.set_bits()) {
-          o.op->setOperand(
-              deadIdx, createPoisonedValues(rewriter, o.op->getOperand(deadIdx))
-                           .front());
-        }
-      } else {
-        o.op->eraseOperands(o.nonLive);
-      }
+      o.op->eraseOperands(o.nonLive);
     }
   }
 
-  // 5. Results
+  // 6. Results
   LDBG() << "Cleaning up " << list.results.size() << " result lists";
   for (auto &r : list.results) {
     LDBG_OS([&](raw_ostream &os) {
@@ -708,7 +721,7 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
     dropUsesAndEraseResults(rewriter, r.op, r.nonLive);
   }
 
-  // 6. Operations
+  // 7. Operations
   LDBG() << "Cleaning up " << list.operations.size() << " operations";
   for (Operation *op : list.operations) {
     LDBG() << "Erasing operation: "
@@ -737,7 +750,7 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
         continue;
 
       rewriter.setInsertionPoint(op);
-      Value poisonedValue = createPoisonedValues(rewriter, opResult).front();
+      Value poisonedValue = createPoisonedValue(rewriter, opResult);
       rewriter.replaceAllUsesWith(opResult, poisonedValue);
     }
 
@@ -745,7 +758,7 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
     rewriter.eraseOp(op);
   }
 
-  // 7. Remove all dead poison ops.
+  // 8. Remove all dead poison ops.
   for (ub::PoisonOp poisonOp : listener.poisonOps) {
     if (poisonOp.use_empty())
       poisonOp.erase();

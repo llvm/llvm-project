@@ -2,6 +2,7 @@
 How To Validate a New Release
 =============================
 
+
 Introduction
 ============
 
@@ -107,6 +108,7 @@ TODO
 Test Suite
 ==========
 
+
 Follow the `LNT Quick Start Guide
 <https://llvm.org/docs/lnt/quickstart.html>`__ link on how to set-up the
 test-suite
@@ -143,6 +145,7 @@ fixed on a future date.
 Pre-Release Process
 ===================
 
+
 When the release process is announced on the mailing list, you should prepare
 for the testing, by applying the same testing you'll do on the release
 candidates, on the previous release.
@@ -169,6 +172,7 @@ when reducing the error for bug report purposes).
 
 Release Process
 ===============
+
 
 When the Release Manager sends you the release candidate, download all sources,
 unzip on the same directory (there will be sym-links from the appropriate places
@@ -200,6 +204,7 @@ and that will be the official binary.
 
 Bug Reporting Process
 =====================
+
 
 If you found regressions or failures when comparing a release candidate with the
 previous release, follow the rules below:

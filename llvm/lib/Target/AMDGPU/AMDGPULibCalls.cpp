@@ -2017,7 +2017,7 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
     }
   }
 
-  Constant *nval0, *nval1;
+  Constant *nval0 = nullptr, *nval1 = nullptr;
   if (FuncVecSize == 1) {
     nval0 = ConstantFP::get(aCI->getType(), Val0[0]);
     if (hasTwoResults)

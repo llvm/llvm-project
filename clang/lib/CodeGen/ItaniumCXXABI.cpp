@@ -3441,7 +3441,8 @@ LValue ItaniumCXXABI::EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF,
   llvm::Value *Val = CGF.CGM.GetAddrOfGlobalVar(VD);
   llvm::Function *Wrapper = getOrCreateThreadLocalWrapper(VD, Val);
 
-  llvm::CallInst *CallVal = CGF.Builder.CreateCall(Wrapper);
+  llvm::CallInst *CallVal =
+      CGF.Builder.CreateCall(Wrapper, {}, CGF.getBundlesForFunclet(Wrapper));
   CallVal->setCallingConv(Wrapper->getCallingConv());
 
   LValue LV;
@@ -3530,7 +3531,7 @@ ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
   const FunctionProtoType *FPT = MD->getType()->getAs<FunctionProtoType>();
   RequiredArgs Required = RequiredArgs::forPrototypePlus(FPT, /*this*/ 1);
   const CGFunctionInfo &CallInfo =
-      CGM.getTypes().arrangeCXXMethodCall(CallArgs, FPT, Required, 0);
+      CGM.getTypes().arrangeCXXMethodCall(CallArgs, FPT, Required, 0, MD);
   CGCallee Callee = CGCallee::forVirtual(nullptr, GlobalDecl(MD),
                                          getThisAddress(CGF), ThunkTy);
   llvm::CallBase *CallOrInvoke;

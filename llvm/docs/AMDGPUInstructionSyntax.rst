@@ -2,6 +2,7 @@
 AMDGPU Instruction Syntax
 =========================
 
+
 .. _amdgpu_syn_instructions:
 
 Instructions

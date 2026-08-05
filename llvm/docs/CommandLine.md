@@ -1,7 +1,6 @@
 # CommandLine 2.0 Library Manual
 
 
-
 ## Introduction
 
 This document describes the CommandLine argument processing library.  It will

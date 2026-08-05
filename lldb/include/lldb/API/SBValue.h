@@ -132,6 +132,22 @@ public:
 
   lldb::SBTypeSynthetic GetTypeSynthetic();
 
+  /// Override the `SBTypeSynthetic` chosen by the DataFormatter system for this
+  /// instance.
+  ///
+  /// This can be used to great effect in scripted synthetic children providers
+  /// where a child's underlying type can only be figured out by inspecting the
+  /// containing object's other members.
+  void SetTypeSynthetic(lldb::SBTypeSynthetic &synthetic);
+
+  /// This function's primary use is to ease inspecting the internal state of
+  /// scripted synthetic children providers for debugging purposes.
+  ///
+  /// An other alternative usecase is for parent synthetic children providers to
+  /// imbue their children's synthetic children providers with additional
+  /// context after creation.
+  lldb::SBScriptObject GetTypeSyntheticImplementation();
+
   lldb::SBValue GetChildAtIndex(uint32_t idx);
 
   lldb::SBValue CreateChildAtOffset(const char *name, uint32_t offset,
@@ -516,7 +532,7 @@ protected:
              bool use_synthetic, const char *name);
 
 protected:
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
 
 private:
   typedef std::shared_ptr<lldb_private::ValueImpl> ValueImplSP;

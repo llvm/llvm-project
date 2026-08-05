@@ -805,3 +805,25 @@ namespace GH206992 {
   ::~F<void> {};
   // expected-error@-1 {{destructor name 'F' does not refer to a template}}
 }; // namespace GH206992
+
+namespace GH207498_1 {
+  void foo();
+  namespace N {
+    namespace S {}
+    template <class> void foo() {}
+    // expected-note@-1 {{'N::foo' declared here}}
+  };
+  template void N::S::foo<float>();
+  // expected-error@-1 {{no template named 'foo' in namespace 'GH207498_1::N::S'; did you mean 'N::foo'?}}
+} // namespace GH207498_1
+
+namespace GH207498_2 {
+  template <class> void foo() {}
+  // expected-note@-1 {{'foo' declared here}}
+  namespace N {
+    namespace S {}
+    void foo();
+  };
+  template void N::S::foo<float>();
+  // expected-error@-1 {{no template named 'foo' in namespace 'GH207498_2::N::S'; did you mean simply 'foo'?}}
+} // namespace GH207498_2

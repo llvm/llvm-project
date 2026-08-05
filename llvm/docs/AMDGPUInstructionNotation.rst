@@ -2,6 +2,7 @@
 AMDGPU Instructions Notation
 ============================
 
+
 .. _amdgpu_syn_instruction_notation:
 
 Introduction

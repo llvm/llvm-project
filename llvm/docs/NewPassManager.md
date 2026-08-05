@@ -1,7 +1,6 @@
 # Using the New Pass Manager
 
 
-
 ## Overview
 
 For an overview of the new pass manager, see the [blog post].

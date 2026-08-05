@@ -2,6 +2,7 @@
 Symbolizer Markup Format
 ==========================
 
+
 Overview
 ========
 

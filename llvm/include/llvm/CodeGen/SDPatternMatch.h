@@ -1367,6 +1367,17 @@ inline SpecificFP_match m_SpecificFP(double V) {
   return SpecificFP_match(APFloat(V));
 }
 
+struct AnyZeroFP_match {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    if (ConstantFPSDNode *C = isConstOrConstSplatFP(N))
+      return C->isZero();
+    return false;
+  }
+};
+
+/// Match a floating-point +0.0 or -0.0 constant or splat.
+inline AnyZeroFP_match m_AnyZeroFP() { return AnyZeroFP_match(); }
+
 struct Negative_match {
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {

@@ -1,7 +1,6 @@
 # Allow Location Descriptions on the DWARF Expression Stack <!-- omit in toc -->
 
 
-
 ## 1. Extension
 
 In DWARF 5, expressions are evaluated using a typed value stack, a separate

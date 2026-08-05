@@ -2,6 +2,7 @@
 Kaleidoscope: Implementing a Parser and AST
 ===========================================
 
+
 Chapter 2 Introduction
 ======================
 
