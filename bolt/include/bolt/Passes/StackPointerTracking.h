@@ -32,10 +32,11 @@ protected:
   int getEmpty() { return EMPTY; }
 
   std::pair<int, int> getStartingStateAtBB(const BinaryBasicBlock &BB) {
-    // Entry BB start with offset 8 from CFA.
+    // The entry block starts at the target ABI's initial offset from CFA.
     // All others start with EMPTY (meaning we don't know anything).
     if (BB.isEntryPoint())
-      return std::make_pair(-8, getEmpty());
+      return std::make_pair(this->BC.MIB->getInitialStackPointerOffset(),
+                            getEmpty());
     return std::make_pair(getEmpty(), getEmpty());
   }
 

@@ -1601,7 +1601,7 @@ void ShrinkWrapping::rebuildCFIForSP() {
     }
   }
 
-  int PrevSPVal = -8;
+  int PrevSPVal = BC.MIB->getInitialStackPointerOffset();
   BinaryBasicBlock *PrevBB = nullptr;
   StackPointerTracking &SPT = Info.getStackPointerTracking();
   for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {

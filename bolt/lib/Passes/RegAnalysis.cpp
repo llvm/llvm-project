@@ -150,6 +150,11 @@ void RegAnalysis::getInstUsedRegsList(const MCInst &Inst, BitVector &RegSet,
     return;
   }
 
+  // Account for registers clobbered by the call instruction itself, such as
+  // the link register on RISC-V and AArch64.
+  if (GetClobbers)
+    BC.MIB->getClobberedRegs(Inst, RegSet);
+
   // If no call graph supplied...
   if (RegsKilledMap.size() == 0) {
     beConservative(RegSet);
