@@ -251,7 +251,7 @@ static void replaceWithDefined(Ctx &ctx, Symbol &sym, SectionBase &sec,
   sym.versionId = versionId;
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
-  sym.flags.fetch_and(NEEDS_GOT | NEED_GOT_AUTH, std::memory_order_relaxed);
+  sym.flags.fetch_and(NEEDS_GOT | NEEDS_GOT_AUTH, std::memory_order_relaxed);
 }
 
 // Reserve space in .bss or .bss.rel.ro for copy relocation.
