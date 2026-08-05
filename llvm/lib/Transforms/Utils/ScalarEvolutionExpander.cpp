@@ -2323,7 +2323,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   auto ComputeEndCheck = [&]() -> Value * {
     // Check to see if we already expanded this here.
     Value *MulV, *OfMul;
-    auto Key = std::make_tuple(TripCountVal, AbsStep, &*Loc);
+    auto Key = std::make_tuple(TripCountVal, AbsStep, Loc);
     auto I = InsertedOverflowChecks.find(Key);
     if (I != InsertedOverflowChecks.end()) {
       MulV = I->second.first;
