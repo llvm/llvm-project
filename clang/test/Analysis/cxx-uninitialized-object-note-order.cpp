@@ -5,6 +5,10 @@
 // RUN: %{run} -verify
 // RUN: %{run} 2>&1 | FileCheck %s
 
+// ATTENTION:
+// We use FileCheck to ensure that the relative order of the notes are in the expected order.
+// These notes used to be emitted in a non-deterministic order, which wasn't checked by `-verify`.
+
 struct MultipleSiblings {
   int a; // expected-note {{uninitialized field 'this->a'}}
   int b; // expected-note {{uninitialized field 'this->b'}}
@@ -66,6 +70,7 @@ void fTwoInstances() {
 
 // 'first' and 'second' have the same type, so all four notes point at the two members of Inner.
 // Ordering by source location alone does not separate them.
+// Because of this, we sort the notes by the message as well as a tie breaker.
 
 // CHECK-LABEL: warning: 4 uninitialized fields at the end of the constructor call
 // CHECK-NEXT: note: uninitialized field 'this->first.x'

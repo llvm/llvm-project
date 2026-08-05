@@ -215,20 +215,10 @@ void UninitializedObjectChecker::checkEndFunction(
     FullSourceLoc R = RHS.first.asLocation();
     if (L != R)
       return L.isBeforeInTranslationUnitThan(R);
-    // Comparing the field locs might not be enough:
-    //   struct TwoInstances {
-    //     Inner first;
-    //     Inner second;
-    //     int z;
-    //     TwoInstances() { z = 0; } // warn: 4 uninitialized fields
-    //   };
-    // Then creating an instance of `TwoInstances` would trigger 4 notes:
-    //   - note: uninitialized field 'this->first.x'  <-- FieldDecl{Inner.x}
-    //   - note: uninitialized field 'this->second.x' <-- FieldDecl{Inner.x}
-    //   - note: uninitialized field 'this->first.y'  <-- FieldDecl{Inner.y}
-    //   - note: uninitialized field 'this->second.y' <-- FieldDecl{Inner.y}
-    // Note that the FieldDecls are pairwise the same, thus we need a
-    // tie breaker: the note message.
+    // Comparing the field locs might not be enough so we might need a tie
+    // breaker.
+    // See the `cxx-uninitialized-object-note-order.cpp:fTwoInstances` test
+    // demonstrating this.
     return LHS.second < RHS.second;
   });
 
