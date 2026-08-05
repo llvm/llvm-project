@@ -1521,10 +1521,10 @@ define void @test_2xdouble_same_fcmp_predicate(ptr noalias %data) {
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[TMP0]]
-; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
-; VF2-NEXT:    [[TMP2:%.*]] = fcmp ogt <2 x double> [[WIDE_LOAD]], zeroinitializer
-; VF2-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x double> zeroinitializer, <2 x double> [[WIDE_LOAD1]]
+; VF2-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[TMP2:%.*]] = fcmp ogt <2 x double> [[WIDE_LOAD1]], zeroinitializer
+; VF2-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x double> zeroinitializer, <2 x double> [[WIDE_LOAD2]]
 ; VF2-NEXT:    store <2 x double> [[TMP3]], ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100

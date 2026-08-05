@@ -201,18 +201,18 @@ define void @test_non_unit_step_resume_values(ptr %p) #1 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP3]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x double>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x double>, ptr [[TMP6]], align 8
-; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x double>, ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x double>, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x double>, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x double>, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x double>, ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x double> [[WIDE_LOAD]], [[WIDE_LOAD4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x double> [[WIDE_LOAD1]], [[WIDE_LOAD5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x double> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x double> [[WIDE_LOAD3]], [[WIDE_LOAD7]]
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x double>, ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x double>, ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x double>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x double>, ptr [[TMP7]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x double> [[WIDE_LOAD4]], [[WIDE_LOAD8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x double> [[WIDE_LOAD5]], [[WIDE_LOAD9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x double> [[WIDE_LOAD6]], [[WIDE_LOAD10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x double> [[WIDE_LOAD7]], [[WIDE_LOAD12]]
 ; CHECK-NEXT:    store <4 x double> [[TMP8]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    store <4 x double> [[TMP9]], ptr [[TMP5]], align 8
 ; CHECK-NEXT:    store <4 x double> [[TMP10]], ptr [[TMP6]], align 8
@@ -231,9 +231,9 @@ define void @test_non_unit_step_resume_values(ptr %p) #1 {
 ; CHECK-NEXT:    [[INDEX9:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX9]], 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr double, ptr [[P]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x double>, ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x double>, ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = fadd <4 x double> [[WIDE_LOAD10]], [[WIDE_LOAD11]]
+; CHECK-NEXT:    [[WIDE_LOAD13:%.*]] = load <4 x double>, ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd <4 x double> [[WIDE_LOAD11]], [[WIDE_LOAD13]]
 ; CHECK-NEXT:    store <4 x double> [[TMP14]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT12]] = add nuw i64 [[INDEX9]], 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT12]], 99
