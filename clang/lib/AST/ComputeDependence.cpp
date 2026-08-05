@@ -637,8 +637,6 @@ ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
       if (Init->isValueDependent())
         Deps |= ExprDependence::ValueInstantiation;
     }
-
-    return Deps;
   }
 
   return Deps;
