@@ -244,6 +244,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSUB, MVT::bf16, Expand);
       // Widen scalar fadd to a v2bf16 operation with an unused high lane.
       setOperationAction(ISD::FADD, MVT::bf16, Custom);
+      // Widen scalar fcanonicalize to a v2bf16 operation with an unused high
+      // lane.
+      setOperationAction(ISD::FCANONICALIZE, MVT::bf16, Custom);
     }
 
     setOperationAction(ISD::FP_ROUND, MVT::bf16, Expand);
@@ -7676,7 +7679,6 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ABS:
   case ISD::FABS:
   case ISD::FNEG:
-  case ISD::FCANONICALIZE:
   case ISD::BSWAP:
     return splitUnaryVectorOp(Op, DAG);
   case ISD::FP_TO_SINT_SAT:
@@ -7728,6 +7730,10 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     if (Op.getValueType() == MVT::bf16)
       return lowerScalarBF16FAdd(Op, DAG);
     return splitBinaryVectorOp(Op, DAG);
+  case ISD::FCANONICALIZE:
+    if (Op.getValueType() == MVT::bf16)
+      return lowerScalarBF16FCanonicalize(Op, DAG);
+    return splitUnaryVectorOp(Op, DAG);
   case ISD::FCOPYSIGN:
     return lowerFCOPYSIGN(Op, DAG);
   case ISD::MUL:
@@ -7956,15 +7962,6 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
   EVT VT = N->getValueType(0);
   SDValue Src = N->getOperand(1);
   SDLoc SL(N);
-
-  unsigned WavefrontSize = TLI.getSubtarget()->getWavefrontSize();
-  if (VT.getScalarSizeInBits() < WavefrontSize) {
-    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-        DAG.getMachineFunction().getFunction(),
-        "ballot return type is narrower than the wavefront size",
-        SL.getDebugLoc()));
-    return DAG.getPOISON(VT);
-  }
 
   if (Src.getOpcode() == ISD::SETCC) {
     SDValue Op0 = Src.getOperand(0);
@@ -8822,6 +8819,24 @@ SDValue SITargetLowering::lowerScalarBF16FAdd(SDValue Op,
       DAG.getNode(ISD::FADD, DL, MVT::v2bf16, LHS, RHS, Op->getFlags());
 
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::bf16, Add,
+                     DAG.getConstant(0, DL, MVT::i32));
+}
+
+SDValue
+SITargetLowering::lowerScalarBF16FCanonicalize(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  assert(Subtarget->hasBF16PackedInsts());
+
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+
+  // Widen to v2bf16, canonicalize with v_pk_mul_bf16, then extract.
+  SDValue WideSrc = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2bf16, Src);
+
+  SDValue Canonicalized =
+      DAG.getNode(ISD::FCANONICALIZE, DL, MVT::v2bf16, WideSrc, Op->getFlags());
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::bf16, Canonicalized,
                      DAG.getConstant(0, DL, MVT::i32));
 }
 

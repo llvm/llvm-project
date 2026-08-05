@@ -38,11 +38,11 @@ add_libc_unittest(
     libc.hdr.types.socklen_t
     libc.hdr.types.ssize_t
     libc.hdr.types.struct_if_nameindex
+    libc.src.__support.CPP.optional
     libc.src.__support.CPP.span
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.tuple
-    libc.src.__support.CPP.type_traits
     libc.src.__support.error_or
     libc.src.__support.fixedvector
     libc.src.net.if_freenameindex
