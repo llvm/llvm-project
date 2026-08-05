@@ -8999,16 +8999,24 @@ def HLSLControlFlowHintDocs : Documentation {
   let Category = DocCatStmt;
   let Heading = "branch, flatten";
   let Content = [{
-The ``branch`` and ``flatten`` attributes can be applied to *if statements* in
-the HLSL language mode to control whether only one side of the statement is
-executed, or if both are executed and the result is chosen based on the
-condition.
+
+The ``branch`` and ``flatten`` attributes can be applied to *if* and *switch*
+statements in the HLSL language mode to provide hints for how the backend
+should execute them.
+
+- ``branch`` means that control flow is preferred. The condition should be
+  evaluated first and we should only execute the block guarded by it.
+
+- ``flatten`` means that control flow should be avoided. All blocks should be
+  executed and variables that are modified should be conditionally assigned.
 
 These control flow hints are preserved through the compilation and emitted in a
 backend-specific way.
 
-For details, see the Direct3D documentation for `if Statement
-<https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-if>`_
+For details, see the Direct3D documentation for `if Statement`_ and `switch Statement`_.
+
+.. _`if Statement`: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-if
+.. _`switch Statement`: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-switchhttps://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-switch
   }];
 }
 
