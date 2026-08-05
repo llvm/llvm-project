@@ -6,7 +6,7 @@ import importlib.util
 import os
 import unittest
 
-from lldbsuite.test.decorators import skipIfWindows
+from lldbsuite.test.decorators import skipIfWasm, skipIfWindows
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, DAPTestSession
@@ -115,6 +115,7 @@ class TestDAP_console(DAPTestCaseBase):
 
     @skipIfWindows
     @skipUnlessPsutil
+    @skipIfWasm  # the test signals the debug server, which for Wasm is the runtime
     def test_exit_status_message_sigterm(self):
         import psutil
 

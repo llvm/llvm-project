@@ -1181,15 +1181,17 @@ Linear make(const parser::OmpClause::Linear &inp,
       semantics::OmpGetUniqueModifier<parser::OmpStepSimpleModifier>(mods);
   assert((!m0 || !m1) && "Simple and complex modifiers both present");
 
-  auto *m2 = semantics::OmpGetUniqueModifier<parser::OmpLinearModifier>(mods);
+  auto *m2 = semantics::OmpGetUniqueModifier<parser::OmpLinearStep>(mods);
+  auto *m3 = semantics::OmpGetUniqueModifier<parser::OmpLinearModifier>(mods);
   auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
 
   auto &&maybeStep = m0   ? maybeApplyToV(makeExprFn(semaCtx), m0)
                      : m1 ? maybeApplyToV(makeExprFn(semaCtx), m1)
+                     : m2 ? maybeApplyToV(makeExprFn(semaCtx), m2)
                           : std::optional<Linear::StepComplexModifier>{};
 
   return Linear{{/*StepComplexModifier=*/std::move(maybeStep),
-                 /*LinearModifier=*/maybeApplyToV(convert, m2),
+                 /*LinearModifier=*/maybeApplyToV(convert, m3),
                  /*List=*/makeObjects(t1, semaCtx)}};
 }
 
@@ -1229,7 +1231,6 @@ Map make(const parser::OmpClause::Map &inp,
       // clang-format off
       MS(Always,    Always)
       MS(Close,     Close)
-      MS(Ompx_Hold, OmpxHold)
       MS(Present,   Present)
       // clang-format on
   );
