@@ -144,7 +144,7 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
   `std::array` the same as built-in arrays when `IgnoreArrays` option is enabled.
-  
+
 - Improved {doc}`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by omitting unnamed enums from the `enum class` requirement, as previously the check suggested users an ill-formed fix.
 
@@ -199,6 +199,10 @@ infrastructure are described first, followed by tool-specific sections.
 
   - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
     invalid option.
+
+  - Added support for naming lambda init-captures (e.g. `[Captured = Var]`) via
+    the new `LambdaCapture` options. Simple, non-init captures continue to follow
+    the naming style of the variable they capture.
 
 - Improved {doc}`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring
