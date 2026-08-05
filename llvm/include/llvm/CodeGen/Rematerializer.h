@@ -32,7 +32,11 @@ namespace llvm {
 /// 1. The register is virtual.
 /// 2. The register is defined within a single region---potentially over
 ///    multiple MIs---and isn't used by a MI that is not defining part of the
-///    register before its last defining MI.
+///    register before its last defining MI. This restriction essentially means
+///    that, if the rematerializer only ever rematerializes all the defs of a
+///    register together, it can treat all virtual registers as having a "single
+///    value" (the one after the last def). Relaxing this restriction would
+///    require it to track VNInfos individually rather that virtual registers.
 /// 3. All defining instructions are deemed rematerializable by the TII and
 ///    don't have any physical register use that is both non-constant and
 ///    non-ignorable.
