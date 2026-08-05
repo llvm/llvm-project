@@ -480,6 +480,14 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   MMRAMetadata::appendTags(*Inst, MMRAs);
 }
 
+void CodeGenFunction::AddAMDGPUAvailableVisibleMMRA(llvm::Instruction *Inst) {
+  if (AMDGPUAvailableVisibleMode.empty())
+    return;
+
+  constexpr const char *Tag = "amdgcn-av";
+  MMRAMetadata::appendTags(*Inst, {{Tag, AMDGPUAvailableVisibleMode}});
+}
+
 static Value *GetAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
   Constant *SpecId = ConstantInt::getAllOnesValue(CGF.Int32Ty);
 
@@ -1912,6 +1920,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     FenceInst *Fence = Builder.CreateFence(AO, SSID);
     if (E->getNumArgs() > 2)
       AddAMDGPUFenceAddressSpaceMMRA(Fence, E);
+    getTargetHooks().setTargetAtomicMetadata(*this, *Fence);
     return Fence;
   }
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
@@ -2024,6 +2033,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         Builder.CreateAtomicRMW(BinOp, Ptr, Val, AO, SSID);
     if (Volatile)
       RMW->setVolatile(true);
+    AddAMDGPUAvailableVisibleMMRA(RMW);
 
     unsigned AddrSpace = Ptr.getType()->getAddressSpace();
     if (AddrSpace != llvm::AMDGPUAS::LOCAL_ADDRESS) {
