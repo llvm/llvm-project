@@ -292,43 +292,24 @@ unsigned BalancedPartitioning::runIteration(
     SignaturesT &Signatures, UtilityNodeWeightsRefT UtilityNodeWeights,
     std::mt19937 &RNG) const {
   // Init signature cost caches
-  if constexpr (std::is_same_v<UtilityNodeWeightsRefT, std::nullptr_t>) {
-    for (auto &Signature : Signatures) {
-      if (Signature.CachedGainIsValid)
-        continue;
-      unsigned L = Signature.LeftCount;
-      unsigned R = Signature.RightCount;
-      assert((L > 0 || R > 0) && "incorrect signature");
-      float Cost = logCost(L, R);
-      Signature.CachedGainLR = 0.f;
-      Signature.CachedGainRL = 0.f;
-      if (L > 0)
-        Signature.CachedGainLR = Cost - logCost(L - 1, R + 1);
-      if (R > 0)
-        Signature.CachedGainRL = Cost - logCost(L + 1, R - 1);
-      Signature.CachedGainIsValid = true;
-    }
-  } else {
-    for (auto [I, Signature] : llvm::enumerate(Signatures)) {
-      if (Signature.CachedGainIsValid)
-        continue;
-      unsigned L = Signature.LeftCount;
-      unsigned R = Signature.RightCount;
-      assert((L > 0 || R > 0) && "incorrect signature");
-      float Cost = logCost(L, R);
-      Signature.CachedGainLR = 0.f;
-      Signature.CachedGainRL = 0.f;
-      if (L > 0)
-        Signature.CachedGainLR = Cost - logCost(L - 1, R + 1);
-      if (R > 0)
-        Signature.CachedGainRL = Cost - logCost(L + 1, R - 1);
-      // Scaling a utility's move gain is mathematically equivalent to adding
-      // Weight distinct utility nodes with the same signature, but avoids
-      // expanding the graph.
+  for (auto [I, Signature] : llvm::enumerate(Signatures)) {
+    if (Signature.CachedGainIsValid)
+      continue;
+    unsigned L = Signature.LeftCount;
+    unsigned R = Signature.RightCount;
+    assert((L > 0 || R > 0) && "incorrect signature");
+    float Cost = logCost(L, R);
+    Signature.CachedGainLR = 0.f;
+    Signature.CachedGainRL = 0.f;
+    if (L > 0)
+      Signature.CachedGainLR = Cost - logCost(L - 1, R + 1);
+    if (R > 0)
+      Signature.CachedGainRL = Cost - logCost(L + 1, R - 1);
+    if constexpr (!std::is_same_v<UtilityNodeWeightsRefT, std::nullptr_t>) {
       Signature.CachedGainLR *= static_cast<float>(UtilityNodeWeights[I]);
       Signature.CachedGainRL *= static_cast<float>(UtilityNodeWeights[I]);
-      Signature.CachedGainIsValid = true;
     }
+    Signature.CachedGainIsValid = true;
   }
 
   // Compute move gains

@@ -178,8 +178,6 @@ auto BPOrderer<D>::computeOrder(
   // Used to define the initial order for startup functions.
   DenseMap<unsigned, size_t> sectionIdxToTimestamp;
   uint64_t numProfiledFunctionRefs = 0, numResolvedProfiledFunctionRefs = 0;
-  // Weighted verbose counts saturate instead of wrapping on malformed or
-  // artificially large profile weights.
   DenseSet<CachedHashStringRef> uniqueProfiledFunctions;
   DenseSet<CachedHashStringRef> uniqueResolvedProfiledFunctions;
   std::unique_ptr<InstrProfReader> reader;
