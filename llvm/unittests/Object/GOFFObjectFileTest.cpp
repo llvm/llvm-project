@@ -66,12 +66,12 @@ protected:
     GOFFData[Pos + 50] = (char)ArchLevel;
   }
 
-  void
-  addEsdRecord(uint8_t Type, uint8_t ESDID, const std::vector<uint8_t> &Name,
-               uint8_t ParentESDID = 0, uint8_t BindingScope = 0,
-               uint8_t NameSpaceID = 0, uint8_t AdditionalFlags = 0,
-               std::array<uint8_t, 10> BehavioralAttributes = {},
-               uint32_t Length = 0) {
+  void addEsdRecord(uint8_t Type, uint8_t ESDID,
+                    const std::vector<uint8_t> &Name, uint8_t ParentESDID = 0,
+                    uint8_t BindingScope = 0, uint8_t NameSpaceID = 0,
+                    uint8_t AdditionalFlags = 0,
+                    std::array<uint8_t, 10> BehavioralAttributes = {},
+                    uint32_t Length = 0) {
     size_t Pos = GOFFData.size();
     GOFFData.resize(GOFFData.size() + GOFF::RecordLength);
     ++RecordCount;
