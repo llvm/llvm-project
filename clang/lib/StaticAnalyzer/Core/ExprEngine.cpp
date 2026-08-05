@@ -2407,10 +2407,9 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
                                                  Pred, maxBlockVisitOnPath);
       if (NewState != Pred->getState()) {
         HasGeneratedNodes = true;
-        ExplodedNode *UpdatedNode = Engine.makeNode(BE, NewState, Pred);
-        if (!UpdatedNode)
+        Pred = Engine.makeNode(BE, NewState, Pred);
+        if (!Pred)
           return nullptr;
-        Pred = UpdatedNode;
       }
     }
     // Is we are inside an unrolled loop then no need the check the counters.
