@@ -1,4 +1,5 @@
-// RUN: %libclc-compile-and-run --threads-x 64 %t
+// REQUIRES: __opencl_c_work_group_collective_functions
+// RUN: %libclc-compile-and-run --kernel test --threads-x 64 %t
 
 __kernel void test(void) {
   uint lid = get_local_id(0);
