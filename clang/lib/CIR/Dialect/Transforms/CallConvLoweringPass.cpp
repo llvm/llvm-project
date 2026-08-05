@@ -321,62 +321,27 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   return ArgClassification::getIgnore();
 }
 
-/// Whether a signature accepts arguments beyond its declared parameters, and
-/// where the declared ones end when it does.  An argument past the ellipsis is
-/// unnamed, and the x86_64 rules pass some unnamed types differently.
-///
-/// llvm::abi::FunctionInfo::create takes this boundary as an optional count,
-/// where an absent value means the signature accepts no optional arguments.
-/// Any value there makes FunctionInfo::isVariadic() answer true, so the
-/// non-variadic case has to be spelled as an absent one.  That encoding is
-/// applied where classifyX86_64Signature builds the FunctionInfo.
-///
-/// Mirrors classic CodeGen's `RequiredArgs` in `CGFunctionInfo.h`, and CIRGen's
-/// copy in `CIRGenFunctionInfo.h`.
-class RequiredArgs {
-  /// The number of leading arguments that are declared parameters, or ~0U if
-  /// the signature accepts no optional arguments.
-  unsigned numRequired;
-
-public:
-  enum All_t { All };
-
-  /// A signature with no ellipsis, where every argument is declared.
-  RequiredArgs(All_t) : numRequired(~0U) {}
-
-  /// A signature whose leading \p n arguments are declared and whose remaining
-  /// arguments pass through an ellipsis.
-  explicit RequiredArgs(unsigned n) : numRequired(n) { assert(n != ~0U); }
-
-  bool allowsOptionalArgs() const { return numRequired != ~0U; }
-
-  unsigned getNumRequiredArgs() const {
-    assert(allowsOptionalArgs() && "signature accepts no optional arguments");
-    return numRequired;
-  }
-};
-
 /// Where \p fnTy's declared parameters end and its ellipsis arguments begin.
 ///
-/// The only x86_64 rule that reads this boundary today sends an unnamed vector
-/// wider than 128 bits to memory, and isSupportedType rejects every vector, so
-/// no input that currently reaches classification can observe the difference.
-static RequiredArgs requiredArgs(cir::FuncType fnTy) {
+/// The only x86_64 rule that reads this boundary sends an unnamed vector wider
+/// than 128 bits to memory, and isSupportedType rejects every vector, so no
+/// input this bridge accepts can observe the difference.
+static llvm::abi::RequiredArgs requiredArgs(cir::FuncType fnTy) {
   if (!fnTy.isVarArg())
-    return RequiredArgs::All;
-  return RequiredArgs(fnTy.getNumInputs());
+    return llvm::abi::RequiredArgs::All;
+  return llvm::abi::RequiredArgs(fnTy.getNumInputs());
 }
 
 /// Classify an x86_64 SysV signature (return type + argument types) using the
 /// LLVM ABI library.  Shared by the cir.func path, the variadic-call path and
 /// the indirect-call path (the latter classifies from the callee function
-/// pointer's pointee FuncType).  \p required marks how many leading entries in
-/// \p inputs are declared parameters, the classifier treating the rest as
-/// arguments passed through an ellipsis.  Returns std::nullopt and emits an NYI
+/// pointer's pointee FuncType).  \p required marks where the declared
+/// parameters in \p inputs end.  The classifier treats every argument past that
+/// point as passed through an ellipsis.  Returns std::nullopt and emits an NYI
 /// error via \p emitError if the signature uses a type the bridge does not
 /// handle yet.
 static std::optional<FunctionClassification> classifyX86_64Signature(
-    mlir::Type retCIR, mlir::TypeRange inputs, RequiredArgs required,
+    mlir::Type retCIR, mlir::TypeRange inputs, llvm::abi::RequiredArgs required,
     MLIRContext *ctx, const DataLayout &dl,
     mlir::abi::ABITypeMapper &typeMapper,
     const llvm::abi::TargetInfo &targetInfo, ModuleOp modOp,
@@ -408,12 +373,8 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
   for (mlir::Type a : inputs)
     argAbi.push_back(mapCIRType(a, typeMapper, dl, modOp));
 
-  std::optional<unsigned> numRequired;
-  if (required.allowsOptionalArgs())
-    numRequired = required.getNumRequiredArgs();
-
   std::unique_ptr<llvm::abi::FunctionInfo> fi = llvm::abi::FunctionInfo::create(
-      llvm::CallingConv::C, retAbi, argAbi, numRequired);
+      llvm::CallingConv::C, retAbi, argAbi, required);
   targetInfo.computeInfo(*fi);
 
   // convertABIArgInfo returns nullopt when the classifier picks a coercion
@@ -691,17 +652,35 @@ void CallConvLoweringPass::runOnOperation() {
     return;
   }
 
-  // Rewrite each function together with every direct call to it.  By the
-  // time we move on to function F+1, F's signature and every direct call to
-  // F have already been brought into alignment, and F+1..FN are still in
-  // their original (mutually consistent) form, so the IR is verifier-clean
-  // at every outer-iteration boundary.
+  // A cir.get_global holding a function's address carries the signature the
+  // source wrote, which the verifier ties to the callee, so it goes stale when
+  // that callee is rewritten.  A function address in a global initializer is a
+  // GlobalViewAttr instead, whose recorded type the verifier does not tie to
+  // the callee and which is dropped at opaque-pointer lowering, so it needs no
+  // counterpart.
+  llvm::DenseMap<cir::FuncOp, SmallVector<cir::GetGlobalOp>> addressTakers;
+  moduleOp.walk([&](cir::GetGlobalOp getGlobal) {
+    auto ptrTy = cast<cir::PointerType>(getGlobal.getAddr().getType());
+    if (!isa<cir::FuncType>(ptrTy.getPointee()))
+      return;
+    // A get_global's pointee must equal the named symbol's type, and the
+    // GlobalOp verifier rejects a function type there, so this names a
+    // cir.func.
+    auto callee = cast<cir::FuncOp>(symbolTable.lookup(getGlobal.getName()));
+    addressTakers[callee].push_back(getGlobal);
+  });
+
+  // Rewrite each function together with every direct call to it and every op
+  // holding its address.  By the time we move on to function F+1, F's
+  // signature and every reference to F have already been brought into
+  // alignment, and F+1..FN are still in their original (mutually consistent)
+  // form, so the IR is verifier-clean at every outer-iteration boundary.
   //
   // There is still a brief inner window where F's signature has been
-  // rewritten but its callers have not yet caught up -- we have no way to
+  // rewritten but its references have not yet caught up -- we have no way to
   // mutate both sides of a call atomically.  No verifier runs inside the
   // pass, and at pass exit the module is verifier-clean.  Fusing the inner
-  // loop here keeps the invalid window per-function rather than module-wide.
+  // loops here keeps the invalid window per-function rather than module-wide.
   OpBuilder builder(ctx);
   for (auto &kv : classifications) {
     cir::FuncOp func = kv.first;
@@ -724,6 +703,8 @@ void CallConvLoweringPass::runOnOperation() {
         return;
       }
     }
+    for (cir::GetGlobalOp addrOp : addressTakers.lookup(func))
+      rewriteCtx.rewriteFunctionAddress(addrOp, func, builder);
   }
 
   // Rewrite indirect call sites.  The callee is opaque, so classify from the

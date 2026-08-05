@@ -1819,6 +1819,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_s_barrier_leave,
                     amdgcn_s_barrier_signal,
                     amdgcn_s_barrier_wait,
+                    amdgcn_s_decperflevel,
+                    amdgcn_s_incperflevel,
                     amdgcn_s_monitor_sleep,
                     amdgcn_s_nop,
                     amdgcn_s_sethalt,
@@ -1969,6 +1971,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any(
           {{UniV4S32}, {{UniInVgprV4S32}, {IntrId, Vgpr64, Vgpr32, VgprV4S32}}})
       .Any({{DivV4S32}, {{VgprV4S32}, {IntrId, Vgpr64, Vgpr32, VgprV4S32}}});
+
+  addRulesForIOpcs({amdgcn_lerp}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs(
+      {amdgcn_msad_u8, amdgcn_sad_hi_u8, amdgcn_sad_u16, amdgcn_sad_u8},
+      Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
 
   addRulesForIOpcs(
       {amdgcn_wave_reduce_add, amdgcn_wave_reduce_and, amdgcn_wave_reduce_fadd,
@@ -2513,7 +2525,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(B32, {{VgprB32}, {IntrId, VgprB32, VgprB32}})
       .Div(B64, {{VgprB64}, {IntrId, VgprB64, VgprB64}});
 
-  addRulesForIOpcs({amdgcn_sin, amdgcn_cos}, Standard)
+  addRulesForIOpcs({amdgcn_sin, amdgcn_cos, amdgcn_tanh}, Standard)
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
