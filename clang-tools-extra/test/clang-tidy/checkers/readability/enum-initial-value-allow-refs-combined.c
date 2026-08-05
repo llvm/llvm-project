@@ -26,6 +26,32 @@ enum ESeqRef {
   ESeqRef_alias = ESeqRef_a,
 };
 
+// Error: sequential + multiple self-refs, should still warn and suggest
+// removing the sequential values but not the self-refs.
+enum ESeqMultiRef {
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: sequential initial value in 'ESeqMultiRef' can be ignored
+  ESeqMultiRef_a = 1,
+  ESeqMultiRef_b = 2,
+  // CHECK-FIXES: ESeqMultiRef_b ,
+  ESeqMultiRef_c = 3,
+  // CHECK-FIXES: ESeqMultiRef_c ,
+  ESeqMultiRef_alias = ESeqMultiRef_a,
+  ESeqMultiRef_alias2 = ESeqMultiRef_b,
+};
+
+// Error: sequential + self-refs interleaved with the sequence, should still
+// warn and suggest removing the sequential values but not the self-refs.
+enum ESeqInterRef {
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: sequential initial value in 'ESeqInterRef' can be ignored
+  ESeqInterRef_a = 1,
+  ESeqInterRef_alias = ESeqInterRef_a,
+  ESeqInterRef_b = 2,
+  // CHECK-FIXES: ESeqInterRef_b ,
+  ESeqInterRef_c = 3,
+  // CHECK-FIXES: ESeqInterRef_c ,
+  ESeqInterRef_alias2 = ESeqInterRef_b,
+};
+
 // OK: none + self-ref, no warnings.
 enum ENoneRef {
   ENoneRef_a,
