@@ -25,6 +25,8 @@ include( GNUInstallDirs )
 
 set( LIBCLC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
 
+option(LIBCLC_GENERATE_BITCODE "Build and generate bitcode file" ON)
+
 option(
   LIBCLC_USE_SPIRV_BACKEND "Build SPIR-V targets with the SPIR-V backend." OFF
 )
@@ -95,7 +97,7 @@ else()
   )
 endif()
 
-if( NOT LIBCLC_USE_SPIRV_BACKEND )
+if( LIBCLC_GENERATE_BITCODE AND NOT LIBCLC_USE_SPIRV_BACKEND )
   # llvm-spirv is an optional dependency, used to build spirv-* targets when
   # the SPIR-V backend hasn't been requested. It may be provided in-tree or
   # externally.
@@ -118,17 +120,19 @@ elseif(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
   set(LIBCLC_ARCH_DIR spirv)
 endif()
 
-if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
+if(LIBCLC_GENERATE_BITCODE AND LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
   if(NOT LIBCLC_TARGET_OS STREQUAL vulkan AND NOT LIBCLC_USE_SPIRV_BACKEND AND NOT llvm-spirv_exe)
     message(FATAL_ERROR "SPIR-V backend or llvm-spirv is required for libclc ${LIBCLC_TARGET}")
   endif()
 endif()
 
-foreach( tool IN ITEMS opt llvm-link )
-  if( NOT EXISTS "${${tool}_exe}" AND "${${tool}_target}" STREQUAL "" )
-    message( FATAL_ERROR "libclc toolchain incomplete - missing tool ${tool}!" )
-  endif()
-endforeach()
+if(LIBCLC_GENERATE_BITCODE)
+  foreach( tool IN ITEMS opt llvm-link )
+    if( NOT EXISTS "${${tool}_exe}" AND "${${tool}_target}" STREQUAL "" )
+      message( FATAL_ERROR "libclc toolchain incomplete - missing tool ${tool}!" )
+    endif()
+  endforeach()
+endif()
 
 # Determine the clang target triple.
 set(clang_triple ${LIBCLC_TARGET})

@@ -125,77 +125,83 @@ function(libclc_add_library target_name)
     FOLDER "libclc/Device IR/Library"
   )
 
-  # Link the object files, using a temporary library for internalization.
-  set(linked_bc ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.linked.bc)
-  set(link_cmd ${llvm-link_exe})
-  set(link_deps ${llvm-link_target})
+  set(install_files $<TARGET_FILE:${archive_target}>)
+  add_dependencies(${ARG_PARENT_TARGET} ${archive_target})
 
-  add_library(${target_name}-src STATIC)
-  target_link_libraries(${target_name}-src PRIVATE ${ARG_SOURCE_TARGET})
-  set_target_properties(${target_name}-src PROPERTIES
-    FOLDER "libclc/Device IR/Library"
-  )
-  list(APPEND link_cmd $<TARGET_FILE:${target_name}-src>)
-  list(APPEND link_deps ${target_name}-src)
+  if(LIBCLC_GENERATE_BITCODE)
+    # Link the object files, using a temporary library for internalization.
+    set(linked_bc ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.linked.bc)
+    set(link_cmd ${llvm-link_exe})
+    set(link_deps ${llvm-link_target})
 
-  if(ARG_INTERNALIZE_LIBRARIES)
-    list(APPEND link_cmd --internalize --only-needed)
-    foreach(lib ${ARG_INTERNALIZE_LIBRARIES})
-      add_library(${target_name}-${lib} STATIC)
-      target_link_libraries(${target_name}-${lib} PRIVATE ${lib})
-      set_target_properties(${target_name}-${lib} PROPERTIES
-        FOLDER "libclc/Device IR/Library"
-      )
-      list(APPEND link_cmd $<TARGET_FILE:${target_name}-${lib}>)
-      list(APPEND link_deps ${target_name}-${lib})
-    endforeach()
-  endif()
-  list(APPEND link_cmd -o ${linked_bc})
+    add_library(${target_name}-src STATIC)
+    target_link_libraries(${target_name}-src PRIVATE ${ARG_SOURCE_TARGET})
+    set_target_properties(${target_name}-src PROPERTIES
+      FOLDER "libclc/Device IR/Library"
+    )
+    list(APPEND link_cmd $<TARGET_FILE:${target_name}-src>)
+    list(APPEND link_deps ${target_name}-src)
 
-  add_custom_command(OUTPUT ${linked_bc}
-    COMMAND ${link_cmd}
-    DEPENDS ${link_deps}
-  )
+    if(ARG_INTERNALIZE_LIBRARIES)
+      list(APPEND link_cmd --internalize --only-needed)
+      foreach(lib ${ARG_INTERNALIZE_LIBRARIES})
+        add_library(${target_name}-${lib} STATIC)
+        target_link_libraries(${target_name}-${lib} PRIVATE ${lib})
+        set_target_properties(${target_name}-${lib} PROPERTIES
+          FOLDER "libclc/Device IR/Library"
+        )
+        list(APPEND link_cmd $<TARGET_FILE:${target_name}-${lib}>)
+        list(APPEND link_deps ${target_name}-${lib})
+      endforeach()
+    endif()
+    list(APPEND link_cmd -o ${linked_bc})
 
-  string(REPLACE "-" ";" triple_parts "${ARG_TRIPLE}")
-  list(GET triple_parts 2 triple_os)
-  if(ARG_ARCH IN_LIST LIBCLC_ARCHS_SPIRV AND NOT triple_os STREQUAL vulkan)
-    # SPIR-V targets produce a .spv file from the linked bitcode.
-    set(builtins_lib ${library_dir}/${ARG_OUTPUT_FILENAME}.spv)
-    if(LIBCLC_USE_SPIRV_BACKEND)
-      add_custom_command(OUTPUT ${builtins_lib}
-        COMMAND ${CMAKE_CLC_COMPILER} -c --target=${ARG_TRIPLE}
-                -mllvm --spirv-ext=+SPV_KHR_fma
-                -x ir -o ${builtins_lib} ${linked_bc}
-        DEPENDS ${linked_bc}
-      )
+    add_custom_command(OUTPUT ${linked_bc}
+      COMMAND ${link_cmd}
+      DEPENDS ${link_deps}
+    )
+
+    string(REPLACE "-" ";" triple_parts "${ARG_TRIPLE}")
+    list(GET triple_parts 2 triple_os)
+    if(ARG_ARCH IN_LIST LIBCLC_ARCHS_SPIRV AND NOT triple_os STREQUAL vulkan)
+      # SPIR-V targets produce a .spv file from the linked bitcode.
+      set(builtins_lib ${library_dir}/${ARG_OUTPUT_FILENAME}.spv)
+      if(LIBCLC_USE_SPIRV_BACKEND)
+        add_custom_command(OUTPUT ${builtins_lib}
+          COMMAND ${CMAKE_CLC_COMPILER} -c --target=${ARG_TRIPLE}
+                  -mllvm --spirv-ext=+SPV_KHR_fma
+                  -x ir -o ${builtins_lib} ${linked_bc}
+          DEPENDS ${linked_bc}
+        )
+      else()
+        add_custom_command(OUTPUT ${builtins_lib}
+          COMMAND ${llvm-spirv_exe}
+                  --spirv-max-version=1.1
+                  --spirv-ext=+SPV_KHR_fma
+                  -o ${builtins_lib} ${linked_bc}
+          DEPENDS ${linked_bc}
+        )
+      endif()
     else()
+      # All other targets produce an optimized .bc file.
+      set(builtins_lib ${library_dir}/${ARG_OUTPUT_FILENAME}.bc)
       add_custom_command(OUTPUT ${builtins_lib}
-        COMMAND ${llvm-spirv_exe}
-                --spirv-max-version=1.1
-                --spirv-ext=+SPV_KHR_fma
-                -o ${builtins_lib} ${linked_bc}
-        DEPENDS ${linked_bc}
+        COMMAND ${opt_exe} ${ARG_OPT_FLAGS} -o ${builtins_lib} ${linked_bc}
+        DEPENDS ${opt_target} ${linked_bc}
       )
     endif()
-  else()
-    # All other targets produce an optimized .bc file.
-    set(builtins_lib ${library_dir}/${ARG_OUTPUT_FILENAME}.bc)
-    add_custom_command(OUTPUT ${builtins_lib}
-      COMMAND ${opt_exe} ${ARG_OPT_FLAGS} -o ${builtins_lib} ${linked_bc}
-      DEPENDS ${opt_target} ${linked_bc}
+
+    add_custom_target(${target_name} ALL DEPENDS ${builtins_lib})
+    set_target_properties(${target_name} PROPERTIES
+      TARGET_FILE ${builtins_lib}
+      FOLDER "libclc/Device IR/Library"
     )
+
+    add_dependencies(${ARG_PARENT_TARGET} ${target_name})
+    list(APPEND install_files ${builtins_lib})
   endif()
 
-  add_custom_target(${target_name} ALL DEPENDS ${builtins_lib})
-  set_target_properties(${target_name} PROPERTIES
-    TARGET_FILE ${builtins_lib}
-    FOLDER "libclc/Device IR/Library"
-  )
-
-  add_dependencies(${ARG_PARENT_TARGET} ${target_name} ${archive_target})
-
-  install(FILES ${builtins_lib} $<TARGET_FILE:${archive_target}>
+  install(FILES ${install_files}
     DESTINATION ${LIBCLC_INSTALL_DIR}/${ARG_TARGET_TRIPLE}
     COMPONENT ${ARG_PARENT_TARGET}
   )
