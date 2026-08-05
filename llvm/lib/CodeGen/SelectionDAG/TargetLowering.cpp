@@ -322,6 +322,18 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
                              OldRHS, Chain);
 }
 
+/// Select the libcall and the condition code to test its result against 0 for
+/// an ordered floating-point compare. \p BoolLC is the boolean helper (result
+/// is 0/1); \p TriStateLC is the three-way helper (result is -1/0/1, tested
+/// against 0 with \p TriStateCC). The boolean form is preferred when available.
+static std::pair<RTLIB::Libcall, ISD::CondCode>
+selectFPCmpLibcall(const LibcallLoweringInfo &Libcalls, RTLIB::Libcall BoolLC,
+                   RTLIB::Libcall TriStateLC, ISD::CondCode TriStateCC) {
+  if (Libcalls.getLibcallImpl(BoolLC) != RTLIB::Unsupported)
+    return {BoolLC, ISD::SETNE};
+  return {TriStateLC, TriStateCC};
+}
+
 void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
                                          SDValue &NewLHS, SDValue &NewRHS,
                                          ISD::CondCode &CCCode,
@@ -338,100 +350,110 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
 
   // Expand into one or more soft-fp libcall(s).
   RTLIB::Libcall LC1 = RTLIB::UNKNOWN_LIBCALL, LC2 = RTLIB::UNKNOWN_LIBCALL;
+  ISD::CondCode CC1 = ISD::SETCC_INVALID, CC2 = ISD::SETCC_INVALID;
   bool ShouldInvertCC = false;
+
+  // Expand a compare libcall family name (e.g. OEQ, FCMP3_PRED_OEQ) to the
+  // RTLIB::Libcall for VT.
+#define FP_CMP_LIBCALL(BASE)                                                   \
+  RTLIB::getFPLibCall(VT, RTLIB::BASE##_F32, RTLIB::BASE##_F64,                \
+                      RTLIB::UNKNOWN_LIBCALL, RTLIB::BASE##_F128,              \
+                      RTLIB::BASE##_PPCF128)
+
   switch (CCCode) {
   case ISD::SETEQ:
   case ISD::SETOEQ:
-    LC1 = (VT == MVT::f32) ? RTLIB::OEQ_F32 :
-          (VT == MVT::f64) ? RTLIB::OEQ_F64 :
-          (VT == MVT::f128) ? RTLIB::OEQ_F128 : RTLIB::OEQ_PPCF128;
+    std::tie(LC1, CC1) =
+        selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OEQ),
+                           FP_CMP_LIBCALL(FCMP3_PRED_OEQ), ISD::SETEQ);
     break;
   case ISD::SETNE:
   case ISD::SETUNE:
-    LC1 = (VT == MVT::f32) ? RTLIB::UNE_F32 :
-          (VT == MVT::f64) ? RTLIB::UNE_F64 :
-          (VT == MVT::f128) ? RTLIB::UNE_F128 : RTLIB::UNE_PPCF128;
-    // Some ABIs (e.g. AEABI) only provide an ordered-equal compare; obtain
-    // not-equal (UNE = !OEQ) by inverting the result of that call.
-    if (getLibcallImpl(LC1) == RTLIB::Unsupported) {
-      LC1 = (VT == MVT::f32)    ? RTLIB::OEQ_F32
-            : (VT == MVT::f64)  ? RTLIB::OEQ_F64
-            : (VT == MVT::f128) ? RTLIB::OEQ_F128
-                                : RTLIB::OEQ_PPCF128;
+    std::tie(LC1, CC1) =
+        selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(UNE),
+                           FP_CMP_LIBCALL(FCMP3_PRED_UNE), ISD::SETNE);
+    // Some ABIs (e.g. AEABI) provide neither a not-equal nor a three-way
+    // compare; obtain not-equal (UNE = !OEQ) by inverting ordered-equal.
+    if (DAG.getLibcalls().getLibcallImpl(LC1) == RTLIB::Unsupported) {
+      std::tie(LC1, CC1) =
+          selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OEQ),
+                             FP_CMP_LIBCALL(FCMP3_PRED_OEQ), ISD::SETEQ);
       ShouldInvertCC = true;
     }
     break;
   case ISD::SETGE:
   case ISD::SETOGE:
-    LC1 = (VT == MVT::f32) ? RTLIB::OGE_F32 :
-          (VT == MVT::f64) ? RTLIB::OGE_F64 :
-          (VT == MVT::f128) ? RTLIB::OGE_F128 : RTLIB::OGE_PPCF128;
+    std::tie(LC1, CC1) =
+        selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OGE),
+                           FP_CMP_LIBCALL(FCMP3_PRED_OGE), ISD::SETGE);
     break;
   case ISD::SETLT:
   case ISD::SETOLT:
-    LC1 = (VT == MVT::f32) ? RTLIB::OLT_F32 :
-          (VT == MVT::f64) ? RTLIB::OLT_F64 :
-          (VT == MVT::f128) ? RTLIB::OLT_F128 : RTLIB::OLT_PPCF128;
+    std::tie(LC1, CC1) =
+        selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OLT),
+                           FP_CMP_LIBCALL(FCMP3_PRED_OLT), ISD::SETLT);
     break;
   case ISD::SETLE:
   case ISD::SETOLE:
-    LC1 = (VT == MVT::f32) ? RTLIB::OLE_F32 :
-          (VT == MVT::f64) ? RTLIB::OLE_F64 :
-          (VT == MVT::f128) ? RTLIB::OLE_F128 : RTLIB::OLE_PPCF128;
+    std::tie(LC1, CC1) =
+        selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OLE),
+                           FP_CMP_LIBCALL(FCMP3_PRED_OLE), ISD::SETLE);
     break;
   case ISD::SETGT:
   case ISD::SETOGT:
-    LC1 = (VT == MVT::f32) ? RTLIB::OGT_F32 :
-          (VT == MVT::f64) ? RTLIB::OGT_F64 :
-          (VT == MVT::f128) ? RTLIB::OGT_F128 : RTLIB::OGT_PPCF128;
+    std::tie(LC1, CC1) =
+        selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OGT),
+                           FP_CMP_LIBCALL(FCMP3_PRED_OGT), ISD::SETGT);
     break;
   case ISD::SETO:
     ShouldInvertCC = true;
     [[fallthrough]];
   case ISD::SETUO:
-    LC1 = (VT == MVT::f32) ? RTLIB::UO_F32 :
-          (VT == MVT::f64) ? RTLIB::UO_F64 :
-          (VT == MVT::f128) ? RTLIB::UO_F128 : RTLIB::UO_PPCF128;
+    // Unordered is a boolean everywhere (__unordXf2 returns 0/1).
+    LC1 = FP_CMP_LIBCALL(UO);
+    CC1 = ISD::SETNE;
     break;
   case ISD::SETONE:
     // SETONE = O && UNE
     ShouldInvertCC = true;
     [[fallthrough]];
   case ISD::SETUEQ:
-    LC1 = (VT == MVT::f32) ? RTLIB::UO_F32 :
-          (VT == MVT::f64) ? RTLIB::UO_F64 :
-          (VT == MVT::f128) ? RTLIB::UO_F128 : RTLIB::UO_PPCF128;
-    LC2 = (VT == MVT::f32) ? RTLIB::OEQ_F32 :
-          (VT == MVT::f64) ? RTLIB::OEQ_F64 :
-          (VT == MVT::f128) ? RTLIB::OEQ_F128 : RTLIB::OEQ_PPCF128;
+    LC1 = FP_CMP_LIBCALL(UO);
+    CC1 = ISD::SETNE;
+    std::tie(LC2, CC2) =
+        selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OEQ),
+                           FP_CMP_LIBCALL(FCMP3_PRED_OEQ), ISD::SETEQ);
     break;
   default:
-    // Invert CC for unordered comparisons
+    // Invert CC for unordered comparisons, handled by the ordered inverse.
     ShouldInvertCC = true;
     switch (CCCode) {
     case ISD::SETULT:
-      LC1 = (VT == MVT::f32) ? RTLIB::OGE_F32 :
-            (VT == MVT::f64) ? RTLIB::OGE_F64 :
-            (VT == MVT::f128) ? RTLIB::OGE_F128 : RTLIB::OGE_PPCF128;
+      std::tie(LC1, CC1) =
+          selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OGE),
+                             FP_CMP_LIBCALL(FCMP3_PRED_OGE), ISD::SETGE);
       break;
     case ISD::SETULE:
-      LC1 = (VT == MVT::f32) ? RTLIB::OGT_F32 :
-            (VT == MVT::f64) ? RTLIB::OGT_F64 :
-            (VT == MVT::f128) ? RTLIB::OGT_F128 : RTLIB::OGT_PPCF128;
+      std::tie(LC1, CC1) =
+          selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OGT),
+                             FP_CMP_LIBCALL(FCMP3_PRED_OGT), ISD::SETGT);
       break;
     case ISD::SETUGT:
-      LC1 = (VT == MVT::f32) ? RTLIB::OLE_F32 :
-            (VT == MVT::f64) ? RTLIB::OLE_F64 :
-            (VT == MVT::f128) ? RTLIB::OLE_F128 : RTLIB::OLE_PPCF128;
+      std::tie(LC1, CC1) =
+          selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OLE),
+                             FP_CMP_LIBCALL(FCMP3_PRED_OLE), ISD::SETLE);
       break;
     case ISD::SETUGE:
-      LC1 = (VT == MVT::f32) ? RTLIB::OLT_F32 :
-            (VT == MVT::f64) ? RTLIB::OLT_F64 :
-            (VT == MVT::f128) ? RTLIB::OLT_F128 : RTLIB::OLT_PPCF128;
+      std::tie(LC1, CC1) =
+          selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OLT),
+                             FP_CMP_LIBCALL(FCMP3_PRED_OLT), ISD::SETLT);
       break;
-    default: llvm_unreachable("Do not know how to soften this setcc!");
+    default:
+      llvm_unreachable("Do not know how to soften this setcc!");
     }
   }
+
+#undef FP_CMP_LIBCALL
 
   // Use the target specific return value for comparison lib calls.
   EVT RetVT = getCmpLibcallReturnType();
@@ -444,13 +466,12 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   NewLHS = Call.first;
   NewRHS = DAG.getConstant(0, dl, RetVT);
 
-  RTLIB::LibcallImpl LC1Impl = getLibcallImpl(LC1);
-  if (LC1Impl == RTLIB::Unsupported) {
+  if (DAG.getLibcalls().getLibcallImpl(LC1) == RTLIB::Unsupported) {
     reportFatalUsageError(
         "no libcall available to soften floating-point compare");
   }
 
-  CCCode = getSoftFloatCmpLibcallPredicate(LC1Impl);
+  CCCode = CC1;
   if (ShouldInvertCC) {
     assert(RetVT.isInteger());
     CCCode = getSetCCInverse(CCCode, RetVT);
@@ -460,8 +481,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     // Update Chain.
     Chain = Call.second;
   } else {
-    RTLIB::LibcallImpl LC2Impl = getLibcallImpl(LC2);
-    if (LC2Impl == RTLIB::Unsupported) {
+    if (DAG.getLibcalls().getLibcallImpl(LC2) == RTLIB::Unsupported) {
       reportFatalUsageError(
           "no libcall available to soften floating-point compare");
     }
@@ -478,7 +498,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
 
     SDValue Tmp = DAG.getSetCC(dl, SetCCVT, NewLHS, NewRHS, CCCode);
     auto Call2 = makeLibCall(DAG, LC2, RetVT, Ops, CallOptions, dl, Chain);
-    CCCode = getSoftFloatCmpLibcallPredicate(LC2Impl);
+    CCCode = CC2;
     if (ShouldInvertCC)
       CCCode = getSetCCInverse(CCCode, RetVT);
     NewLHS = DAG.getSetCC(dl, SetCCVT, Call2.first, NewRHS, CCCode);
