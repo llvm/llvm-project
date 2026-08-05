@@ -1211,8 +1211,8 @@ static bool isL2PrefetchSupported(const NVPTXSubtarget &Subtarget,
 }
 
 static bool isL2EvictionSupported(const NVPTXSubtarget &Subtarget,
-                                  NVPTXMemCacheHintAccess Access,
-                                  NVPTX::L2Eviction Eviction) {
+                                  NVPTX::L2Eviction Eviction,
+                                  NVPTXMemCacheHintAccess Access) {
   if (Eviction == NVPTX::L2Eviction::Normal)
     return true;
 
@@ -1254,7 +1254,7 @@ std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getMemCacheHintOperands(
     if (KeyStr == "nvvm.l2_eviction") {
       auto ParsedL2 =
           parseMemCacheHintStringValue(Ctx, KeyStr, Value, parseL2Eviction);
-      if (ParsedL2 && isL2EvictionSupported(*Subtarget, Access, *ParsedL2))
+      if (ParsedL2 && isL2EvictionSupported(*Subtarget, *ParsedL2, Access))
         L2 = *ParsedL2;
       continue;
     }

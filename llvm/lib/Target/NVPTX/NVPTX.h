@@ -23,13 +23,10 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
-class Function;
 class FunctionPass;
-class MachineMemOperand;
 class MachineFunctionPass;
 class NVPTXTargetMachine;
 class PassRegistry;
-class Value;
 
 namespace NVPTXCC {
 enum CondCodes {
