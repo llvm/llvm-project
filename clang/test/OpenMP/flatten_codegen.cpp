@@ -1,0 +1,65 @@
+// Check code generation
+// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -std=c++20 -fopenmp -fopenmp-version=60 -emit-llvm %s -o - | FileCheck %s
+
+// expected-no-diagnostics
+
+#ifndef HEADER
+#define HEADER
+
+extern "C" void body(int, int);
+
+// CHECK-LABEL: define {{.*}}void @foo(
+// CHECK:   %.flatten.iv = alloca i64
+// CHECK:   %.flatten.iv.0 = alloca i32
+// CHECK:   %.flatten.iv.1 = alloca i32
+// CHECK:   store i64 0, ptr %.flatten.iv,
+// CHECK:   %[[COND_IV:.+]] = load i64, ptr %.flatten.iv,
+// CHECK:   %[[MUL:.+]] = mul nsw i64 %{{.+}}, %{{.+}}
+// CHECK:   icmp slt i64 %[[COND_IV]], %[[MUL]]
+// CHECK:   %[[DIV_IV:.+]] = load i64, ptr %.flatten.iv,
+// CHECK:   %[[DIV:.+]] = sdiv i64 %[[DIV_IV]], %{{.+}}
+// CHECK:   store i32 %{{.+}}, ptr %.flatten.iv.0
+// CHECK:   %[[REM_IV:.+]] = load i64, ptr %.flatten.iv,
+// CHECK:   %[[REM:.+]] = srem i64 %[[REM_IV]], %{{.+}}
+// CHECK:   store i32 %{{.+}}, ptr %.flatten.iv.1
+// CHECK:   %[[I_VAL:.+]] = load i32, ptr %i,
+// CHECK:   %[[J_VAL:.+]] = load i32, ptr %j,
+// CHECK:   call void @body(i32{{.*}} %[[I_VAL]], i32{{.*}} %[[J_VAL]])
+// CHECK: for.inc:
+// CHECK:   %[[INC_IV:.+]] = load i64, ptr %.flatten.iv,
+// CHECK:   %[[NEXT:.+]] = add nsw i64 %[[INC_IV]], 1
+// CHECK:   store i64 %[[NEXT]], ptr %.flatten.iv,
+// CHECK:   br label %for.cond
+extern "C" void foo(int n, int m) {
+#pragma omp flatten
+  for (int i = 0; i < n; ++i)
+    for (int j = 0; j < m; ++j)
+      body(i, j);
+}
+
+// CHECK-LABEL: define {{.*}}void @bar(
+// CHECK:   icmp slt i32 %{{.+}}, 63
+// CHECK:   sdiv i32 %{{.+}}, 9
+// CHECK:   srem i32 %{{.+}}, 9
+// CHECK:   call void @body(
+extern "C" void bar() {
+#pragma omp flatten
+  for (int i = 0; i < 7; ++i)
+    for (int j = 0; j < 9; ++j)
+      body(i, j);
+}
+
+// CHECK-LABEL: define {{.*}}void @baz(
+// CHECK:   %.flatten.iv = alloca i64
+// CHECK:   icmp slt i64 %{{.+}}, 10000000000
+// CHECK:   sdiv i64 %{{.+}}, 100000
+// CHECK:   srem i64 %{{.+}}, 100000
+// CHECK:   call void @body(
+extern "C" void baz() {
+#pragma omp flatten
+  for (int i = 0; i < 100000; ++i)
+    for (int j = 0; j < 100000; ++j)
+      body(i, j);
+}
+
+#endif
