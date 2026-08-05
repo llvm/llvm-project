@@ -4002,6 +4002,8 @@ TEST(DataLayoutTest, NVPTX) {
               testing::ElementsAre("p:32:32"));
   EXPECT_THAT(PointerLayoutSpecs(TT32.computeDataLayout("shortptr")),
               testing::ElementsAre("p:32:32"));
+  EXPECT_THAT(PointerLayoutSpecs(TT32.computeDataLayout("sharedshortptr")),
+              testing::ElementsAre("p:32:32"));
 
   // The default 64-bit target only shrinks Tensor Memory (addrspace:6).
   EXPECT_THAT(PointerLayoutSpecs(TT64.computeDataLayout("")),
@@ -4012,6 +4014,10 @@ TEST(DataLayoutTest, NVPTX) {
   EXPECT_THAT(PointerLayoutSpecs(TT64.computeDataLayout("shortptr")),
               testing::ElementsAre("p3:32:32", "p4:32:32", "p5:32:32",
                                    "p6:32:32", "p7:32:32", "p101:32:32"));
+
+  // The sharedshortptr ABI only shrinks shared and shared cluster pointers.
+  EXPECT_THAT(PointerLayoutSpecs(TT64.computeDataLayout("sharedshortptr")),
+              testing::ElementsAre("p3:32:32", "p6:32:32", "p7:32:32"));
 }
 
 TEST(DataLayoutTest, CheriRISCV32) {
