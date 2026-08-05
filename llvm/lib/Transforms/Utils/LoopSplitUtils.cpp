@@ -206,6 +206,17 @@ static std::optional<bool> computeSignedness(Loop *L,
   return std::nullopt;
 }
 
+// Prove \p Pred between \p LHS and \p RHS on entry to \p L, retrying with the
+// loop guards folded in so a bound fixed by a dominating condition is seen.
+static bool isEntryGuardedByCond(ScalarEvolution &SE, Loop *L,
+                                 ICmpInst::Predicate Pred, const SCEV *LHS,
+                                 const SCEV *RHS) {
+  if (SE.isLoopEntryGuardedByCond(L, Pred, LHS, RHS))
+    return true;
+  return SE.isLoopEntryGuardedByCond(L, Pred, SE.applyLoopGuards(LHS, L),
+                                     SE.applyLoopGuards(RHS, L));
+}
+
 // Check every structural precondition and record the induction analysis.
 bool LoopSplitUtils::isLegal() {
   // Require a bottom-tested single-exit loop in LCSSA form with a preheader.
@@ -247,6 +258,47 @@ bool LoopSplitUtils::isLegal() {
   if (InductionEnd->getType() != IndAR->getStart()->getType()) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE ": induction end/start type mismatch\n");
     return false;
+  }
+
+  bool Descending =
+      cast<SCEVConstant>(IndAR->getStepRecurrence(*SE))->getAPInt().isAllOnes();
+  unsigned BitWidth = InductionEnd->getType()->getIntegerBitWidth();
+
+  // Partition bounds and entry guards assume the space runs monotonically from
+  // start to end, so refuse one that wraps past the type extreme. A no-wrap
+  // flag on the recurrence asserts that directly.
+  bool NoWrap =
+      InductionIsSigned ? IndAR->hasNoSignedWrap() : IndAR->hasNoUnsignedWrap();
+  ICmpInst::Predicate Ordered =
+      Descending
+          ? (InductionIsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE)
+          : (InductionIsSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE);
+  if (!NoWrap &&
+      !isEntryGuardedByCond(*SE, L, Ordered, IndAR->getStart(), InductionEnd)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE
+               ": iteration space may wrap past the type extreme\n");
+    return false;
+  }
+
+  // A latch comparing the step is rebuilt inclusively (`i.next <= end`), a
+  // tautology if `end` is the last value of the iteration direction. Bounds are
+  // clamped inwards, so only the induction end itself can reach it.
+  if (LatchIndOperand != L->getInductionVariable(*SE)) {
+    APInt Extreme =
+        Descending ? (InductionIsSigned ? APInt::getSignedMinValue(BitWidth)
+                                        : APInt::getMinValue(BitWidth))
+                   : (InductionIsSigned ? APInt::getSignedMaxValue(BitWidth)
+                                        : APInt::getMaxValue(BitWidth));
+    ICmpInst::Predicate NotAtExtreme =
+        Descending
+            ? (InductionIsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT)
+            : (InductionIsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT);
+    if (!isEntryGuardedByCond(*SE, L, NotAtExtreme, InductionEnd,
+                              SE->getConstant(Extreme))) {
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                 ": induction end may saturate the inclusive latch\n");
+      return false;
+    }
   }
   return true;
 }

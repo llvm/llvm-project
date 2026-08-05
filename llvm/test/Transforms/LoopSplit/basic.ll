@@ -59,3 +59,58 @@ loop:
 exit:
   ret void
 }
+
+; The same loop with the latch compare written the other way round, so the
+; induction is the compare's second operand rather than its first.
+
+define void @reversed_latch_operand(ptr %a, i64 %n) {
+; CHECK-LABEL: define void @reversed_latch_operand(
+; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[LS_GUARD0:.*:]]
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
+; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 49)
+; CHECK-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 0, [[SMIN]]
+; CHECK-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
+; CHECK:       [[ENTRY]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i64, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    store i64 [[I]], ptr [[P]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[ITR_CHK1:%.*]] = icmp sle i64 [[I_NEXT]], [[SMIN]]
+; CHECK-NEXT:    br i1 [[ITR_CHK1]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LS_GUARD1]]
+; CHECK:       [[LS_GUARD1]]:
+; CHECK-NEXT:    [[ITR_CHK2:%.*]] = icmp sle i64 50, [[TMP0]]
+; CHECK-NEXT:    br i1 [[ITR_CHK2]], label %[[ENTRY_LS1:.*]], label %[[LS_FINAL_EXIT:.*]]
+; CHECK:       [[ENTRY_LS1]]:
+; CHECK-NEXT:    br label %[[LOOP_LS1:.*]]
+; CHECK:       [[LOOP_LS1]]:
+; CHECK-NEXT:    [[I_LS1:%.*]] = phi i64 [ 50, %[[ENTRY_LS1]] ], [ [[I_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
+; CHECK-NEXT:    [[P_LS1:%.*]] = getelementptr i64, ptr [[A]], i64 [[I_LS1]]
+; CHECK-NEXT:    store i64 [[I_LS1]], ptr [[P_LS1]], align 4
+; CHECK-NEXT:    [[I_NEXT_LS1]] = add i64 [[I_LS1]], 1
+; CHECK-NEXT:    [[ITR_CHK3:%.*]] = icmp sle i64 [[I_NEXT_LS1]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[ITR_CHK3]], label %[[LOOP_LS1]], label %[[LS_EXIT1:.*]]
+; CHECK:       [[LS_EXIT1]]:
+; CHECK-NEXT:    br label %[[LS_FINAL_EXIT]]
+; CHECK:       [[LS_FINAL_EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %p = getelementptr i64, ptr %a, i64 %i
+  store i64 %i, ptr %p
+  %i.next = add i64 %i, 1
+  %c = icmp sgt i64 %n, %i.next
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
