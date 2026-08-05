@@ -74,6 +74,11 @@ add_entrypoint_object(
   HDRS
     ../tmpfile.h
   DEPENDS
+    libc.hdr.fcntl_macros
     libc.hdr.types.FILE
+    libc.src.__support.common
     libc.src.__support.File.platform_file
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
 )
