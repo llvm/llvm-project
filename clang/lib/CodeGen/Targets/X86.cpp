@@ -13,8 +13,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/ErrorHandling.h"
-#include <cstdint>
 
 using namespace clang;
 using namespace clang::CodeGen;
