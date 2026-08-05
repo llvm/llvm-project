@@ -7127,6 +7127,56 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
   if (Types.empty() && !PIT->expandsToEmptyPack())
     Types = llvm::ArrayRef<QualType>(&Pattern, 1);
 
+  // Fast path: substitute only the selected element instead of all N. A
+  // pack-indexing type inside a pack expansion (`T...[Is]...`) is transformed
+  // once per outer element, so substituting the whole pack each time is
+  // O(N^2) in time and memory.
+  if (Types.size() == 1 && Types[0]->containsUnexpandedParameterPack() &&
+      IndexExpr.isUsable() && !IndexExpr.get()->isInstantiationDependent()) {
+    QualType T = Types[0];
+    SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+    getSema().collectUnexpandedParameterPacks(T, Unexpanded);
+    bool ShouldExpand = true, RetainExpansion = false;
+    UnsignedOrNone NumExpansions = std::nullopt;
+    if (getDerived().TryExpandParameterPacks(
+            TL.getEllipsisLoc(), SourceRange(), Unexpanded,
+            /*FailOnPackProducingTemplates=*/true, ShouldExpand, RetainExpansion,
+            NumExpansions))
+      return QualType();
+    if (ShouldExpand && !RetainExpansion) {
+      llvm::APSInt Value;
+      ExprResult CCE = SemaRef.CheckConvertedConstantExpression(
+          IndexExpr.get(), SemaRef.Context.getSizeType(), Value,
+          CCEKind::PackIndex);
+      if (!CCE.isUsable() || !Value.isRepresentableByInt64())
+        return QualType();
+      uint64_t V = Value.getZExtValue();
+      if (V < *NumExpansions) {
+        QualType Selected;
+        {
+          Sema::ArgPackSubstIndexRAII SubstIndex(getSema(),
+                                                 static_cast<unsigned>(V));
+          Selected = getDerived().TransformType(T);
+        }
+        if (Selected.isNull())
+          return QualType();
+        if (!Selected->containsUnexpandedParameterPack() &&
+            !Selected->isInstantiationDependentType()) {
+          Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), std::nullopt);
+          QualType Result = getDerived().TransformType(TLB, TL.getPatternLoc());
+          if (Result.isNull())
+            return QualType();
+          QualType Out = SemaRef.Context.getPackIndexingType(
+              Result, CCE.get(), /*FullySubstituted=*/true, {Selected},
+              /*Index=*/0u);
+          PackIndexingTypeLoc Loc = TLB.push<PackIndexingTypeLoc>(Out);
+          Loc.setEllipsisLoc(TL.getEllipsisLoc());
+          return Out;
+        }
+      }
+    }
+  }
+
   for (QualType T : Types) {
     if (!T->containsUnexpandedParameterPack()) {
       QualType Transformed = getDerived().TransformType(T);
@@ -7172,43 +7222,6 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
       }
       SubtitutedTypes.push_back(Pack);
       continue;
-    }
-    // Fast path: substitute only the selected element instead of all N. A
-    // pack-indexing type inside a pack expansion (`T...[Is]...`) is transformed
-    // once per outer element, so substituting the whole pack each time is
-    // O(N^2) in time and memory.
-    if (!RetainExpansion && Types.size() == 1 && IndexExpr.isUsable() &&
-        !IndexExpr.get()->isInstantiationDependent()) {
-      llvm::APSInt Value;
-      ExprResult CCE = SemaRef.CheckConvertedConstantExpression(
-          IndexExpr.get(), SemaRef.Context.getSizeType(), Value,
-          CCEKind::PackIndex);
-      if (!CCE.isUsable() || !Value.isRepresentableByInt64())
-        return QualType();
-      uint64_t V = Value.getZExtValue();
-      if (V < *NumExpansions) {
-        QualType Selected;
-        {
-          Sema::ArgPackSubstIndexRAII SubstIndex(getSema(),
-                                                 static_cast<unsigned>(V));
-          Selected = getDerived().TransformType(T);
-        }
-        if (Selected.isNull())
-          return QualType();
-        if (!Selected->containsUnexpandedParameterPack() &&
-            !Selected->isInstantiationDependentType()) {
-          Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), std::nullopt);
-          QualType Result = getDerived().TransformType(TLB, TL.getPatternLoc());
-          if (Result.isNull())
-            return QualType();
-          QualType Out = SemaRef.Context.getPackIndexingType(
-              Result, CCE.get(), /*FullySubstituted=*/true, {Selected},
-              /*Index=*/0u);
-          PackIndexingTypeLoc Loc = TLB.push<PackIndexingTypeLoc>(Out);
-          Loc.setEllipsisLoc(TL.getEllipsisLoc());
-          return Out;
-        }
-      }
     }
     for (unsigned I = 0; I != *NumExpansions; ++I) {
       Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), I);
