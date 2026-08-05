@@ -1116,17 +1116,13 @@ void cl::tokenizeConfigFile(StringRef Source, StringSaver &Saver,
         ++Cur;
       continue;
     }
-    // Find end of the current line. As well as splicing backslash-newline
-    // continuations, this recognizes a trailing "# comment" (a '#' that
-    // begins a new, unquoted token) and, like the whole-line comment case
-    // above, extends it to the next literal newline without honoring
-    // escapes or continuations inside the comment text.
+    // Find end of the current line, splicing backslash-newline continuations.
+    // A '#' that begins a new unquoted token starts a comment running to the
+    // next literal newline; escapes and continuations are not honored inside
+    // the comment.
     const char *Start = Cur;
     const char *LineEnd = nullptr;
-    bool InQuote = false;
-    char QuoteChar = 0;
-    // Start is known not to be whitespace or '#' (checked above), so we are
-    // logically at the start of the first token on this line.
+    char Quote = 0;
     bool AtTokenStart = true;
     for (const char *End = Source.end(); Cur != End; ++Cur) {
       char C = *Cur;
@@ -1139,30 +1135,21 @@ void cl::tokenizeConfigFile(StringRef Source, StringSaver &Saver,
             if (*Cur == '\r')
               ++Cur;
             Start = Cur + 1;
-            // AtTokenStart carries over unchanged: the spliced text abuts
-            // directly, introducing no new token boundary.
+            // Splicing does not introduce a token boundary.
             continue;
           }
         }
-        // An escaped literal character always extends the current token.
-        AtTokenStart = false;
-        continue;
-      }
-      if (InQuote) {
-        if (C == QuoteChar)
-          InQuote = false;
-        AtTokenStart = false;
-        continue;
-      }
-      if (isQuote(C)) {
-        InQuote = true;
-        QuoteChar = C;
         AtTokenStart = false;
         continue;
       }
       if (C == '\n')
         break;
-      if (C == '#' && AtTokenStart) {
+      if (Quote) {
+        if (C == Quote)
+          Quote = 0;
+      } else if (isQuote(C)) {
+        Quote = C;
+      } else if (C == '#' && AtTokenStart) {
         LineEnd = Cur;
         while (Cur != End && *Cur != '\n')
           ++Cur;
