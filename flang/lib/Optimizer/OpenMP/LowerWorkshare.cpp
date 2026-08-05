@@ -372,6 +372,17 @@ static void collectThreadLocalReads(Region &scope, ThreadLocalReads &reads) {
       reads.unknown = true;
       return;
     }
+    // TODO: An op that does not implement MemoryEffectOpInterface has
+    // unknown effects and could read a thread-local location, so the
+    // conservative choice would be to set reads.unknown here.
+    // However, we deliberately don't, because the interface-less ops we see in
+    // practice (omp.barrier, fir.declare, etc) have known, inspectable
+    // behaviour and never read program memory. Forcing a broadcast for them
+    // would defeat the read-back optimization. This assumption only holds for
+    // the FIR/HLFIR/OpenMP dialects we know about; an op from another dialect
+    // could break it. Once such ops are properly mapped (or made to model
+    // their effects), fall back to reads.unknown here for any remaining
+    // unknown-effect ops instead of ignoring them.
     auto memEffects = dyn_cast<MemoryEffectOpInterface>(op);
     if (!memEffects)
       return;
