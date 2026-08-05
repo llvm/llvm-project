@@ -58,16 +58,15 @@ struct AllocationCandidate {
 ///   - `scf.if`/`scf.for` (via RegionBranchOpInterface region/result wiring)
 ///   - `cf.br`/`cf.cond_br` (via BranchOpInterface block arguments)
 ///   - `memref.view`/subview (via ViewLikeOpInterface)
-/// `analysis.resolve(alloc)` returns the forward alias set (the alloc plus every
-/// value it may flow into); a dealloc on any of those aliases frees the alloc.
-/// For example:
+/// `analysis.resolve(alloc)` returns the forward alias set (the alloc plus
+/// every value it may flow into); a dealloc on any of those aliases frees the
+/// alloc. For example:
 ///   %0 = memref.alloc()
 ///   %2 = arith.select %c, %0, %1
 ///   memref.dealloc %2      <- covers %0 conditionally (via alias set)
 ///   %3 = scf.if %c { yield %0 } else { yield %1 }
 ///   memref.dealloc %3      <- also covers %0 conditionally
-static void collectDeallocs(Value alloc,
-                            const BufferViewFlowAnalysis &analysis,
+static void collectDeallocs(Value alloc, const BufferViewFlowAnalysis &analysis,
                             SmallVectorImpl<memref::DeallocOp> &deallocs) {
   for (Value alias : analysis.resolve(alloc))
     for (Operation *user : alias.getUsers())
@@ -154,8 +153,8 @@ static int64_t buildAllocInfos(
 static LogicalResult
 collectCandidates(FunctionOpInterface funcOp,
                   const BufferViewFlowAnalysis &analysis,
-                  llvm::Statistic &numSkipDynamic, llvm::Statistic &numSkipNested,
-                  llvm::Statistic &numEligible,
+                  llvm::Statistic &numSkipDynamic,
+                  llvm::Statistic &numSkipNested, llvm::Statistic &numEligible,
                   SmallVector<AllocationCandidate> &candidates) {
   // All candidates are planned relative to the function's entry block.
   if (funcOp.getFunctionBody().empty())
@@ -191,8 +190,7 @@ collectCandidates(FunctionOpInterface funcOp,
       // The dealloc must be anchored in the plan block (directly or via an
       // enclosing op such as an scf.if). A dealloc in a sibling block escapes.
       if (!planBlock->findAncestorOpInBlock(*d.getOperation())) {
-        allocOp.emitError("dealloc is not reachable from the alloc's block; "
-                          "run the deallocation pipeline before this pass");
+        allocOp.emitError("unstructured control flow is not supported");
         walkFailed = true;
         return WalkResult::interrupt();
       }

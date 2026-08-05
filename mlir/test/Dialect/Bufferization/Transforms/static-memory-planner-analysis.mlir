@@ -274,9 +274,9 @@ func.func @scf_if_result_aliases(%c: i1) {
     scf.yield %b : memref<1024xf32>
   }
   %1 = scf.if %c -> memref<1024xf32> {
-    scf.yield %a : memref<1024xf32>
-  } else {
     scf.yield %b : memref<1024xf32>
+  } else {
+    scf.yield %a : memref<1024xf32>
   }
   memref.dealloc %0 : memref<1024xf32>
   memref.dealloc %1 : memref<1024xf32>

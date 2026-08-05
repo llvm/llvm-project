@@ -12,10 +12,10 @@ func.func @error_no_dealloc() {
 
 // -----
 
-// Test 2: Alloc whose dealloc escapes to a sibling block (not reachable from
-// the alloc's block, even via region control flow) should be an error.
+// Test 2: Alloc whose dealloc escapes to a sibling block via unstructured
+// control flow (cf.br) should be an error.
 func.func @error_escaping_dealloc(%cond: i1) {
-  // expected-error @+1 {{dealloc is not reachable from the alloc's block; run the deallocation pipeline before this pass}}
+  // expected-error @+1 {{unstructured control flow is not supported}}
   %alloc = memref.alloc() : memref<1024xf32>
   cf.br ^bb1
 ^bb1:
