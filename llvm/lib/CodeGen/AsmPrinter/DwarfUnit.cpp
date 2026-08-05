@@ -1548,6 +1548,9 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
     if (unsigned isa = Asm->getISAEncoding())
       addUInt(SPDie, dwarf::DW_AT_APPLE_isa, dwarf::DW_FORM_flag, isa);
+  } else {
+    if (SP->isOptimized())
+      addFlag(SPDie, dwarf::DW_AT_LLVM_optimized);
   }
 
   if (SP->isLValueReference())

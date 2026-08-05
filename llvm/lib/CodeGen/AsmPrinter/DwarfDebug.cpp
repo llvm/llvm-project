@@ -1155,6 +1155,9 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     if (unsigned RVer = DIUnit->getRuntimeVersion())
       NewCU.addUInt(Die, dwarf::DW_AT_APPLE_major_runtime_vers,
                     dwarf::DW_FORM_data1, RVer);
+  } else {
+    if (DIUnit->isOptimized())
+      NewCU.addFlag(Die, dwarf::DW_AT_LLVM_optimized);
   }
 
   if (DIUnit->getDWOId()) {
