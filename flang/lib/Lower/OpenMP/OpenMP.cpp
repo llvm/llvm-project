@@ -3398,6 +3398,22 @@ static void genFuseOp(Fortran::lower::AbstractConverter &converter,
                             looprangeClause.first, looprangeClause.count);
 }
 
+// Returns true when an OpenMP construct sits between \p eval and the DO loop it
+// applies to. getNestedDoConstruct descends through such a construct to reach
+// the loop, which means the intervening construct is never lowered.
+static bool hasNestedLoopTransformation(lower::pft::Evaluation &eval) {
+  for (lower::pft::Evaluation &nested : eval.getNestedEvaluations()) {
+    if (nested.getIf<parser::CompilerDirective>() ||
+        nested.getIf<parser::NonLabelDoStmt>())
+      continue;
+    if (nested.getIf<parser::DoConstruct>())
+      return false;
+    if (nested.getIf<parser::OpenMPConstruct>())
+      return true;
+  }
+  return false;
+}
+
 static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
                         Fortran::lower::SymMap &symTable,
                         lower::StatementContext &stmtCtx,
@@ -3409,8 +3425,8 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
 
   ClauseProcessor cp(converter, semaCtx, item->clauses);
 
-  // The `full` clause is not yet implemented.
-  cp.processTODO<clause::Full>(loc, llvm::omp::Directive::OMPD_unroll);
+  // Process the `full` clause, which requests complete unrolling.
+  bool hasFull = cp.processFull();
 
   // Process the `partial` clause. If present, it may carry a constant unroll
   // factor.
@@ -3418,6 +3434,12 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
   bool hasPartial = cp.processPartial(partialFactor);
   if (hasPartial && !partialFactor.has_value())
     TODO(loc, "PARTIAL clause on UNROLL without a constant factor");
+
+  // Chaining a loop transformation onto the result of UNROLL needs the
+  // unrolled loop to be available as a generatee, which omp.unroll_* does not
+  // provide yet. Diagnose instead of silently dropping the nested construct.
+  if (hasNestedLoopTransformation(eval))
+    TODO(loc, "loop transformation nested inside an UNROLL construct");
 
   // Emit the associated loop
   llvm::SmallVector<mlir::omp::CanonicalLoopOp, 1> canonLoops;
@@ -3431,7 +3453,10 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
 
   auto cli = llvm::getSingleElement(canonLoops).getCli();
 
-  if (partialFactor.has_value()) {
+  if (hasFull) {
+    // Fully unroll the loop.
+    mlir::omp::UnrollFullOp::create(firOpBuilder, loc, cli);
+  } else if (partialFactor.has_value()) {
     // Partially unroll the loop by the given constant factor.
     mlir::omp::UnrollPartialOp::create(firOpBuilder, loc, cli,
                                        static_cast<uint64_t>(*partialFactor));
