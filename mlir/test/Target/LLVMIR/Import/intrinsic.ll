@@ -820,9 +820,9 @@ define void @coro_begin(ptr %0) {
 
 ; CHECK-LABEL:  llvm.func @coro_alloc
 define void @coro_alloc() {
-  ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
+  ; CHECK: %[[CORO_ID:.*]] = llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
-  ; CHECK: llvm.intr.coro.alloc %{{.*}} : (token) -> i1
+  ; CHECK: llvm.intr.coro.alloc %[[CORO_ID]] : (token) -> i1
   %shouldAlloc = call i1 @llvm.coro.alloc(token %id)
   ret void
 }
@@ -933,23 +933,32 @@ define void @coro_dead(ptr %0) {
 }
 
 ; CHECK-LABEL:  llvm.func @coro_await_suspend_void
-define void @coro_await_suspend_void(ptr %0, ptr %1, ptr %2) {
-  ; CHECK: llvm.intr.coro.await.suspend.void
-  call void @llvm.coro.await.suspend.void(ptr %0, ptr %1, ptr %2)
+; CHECK-SAME:  %[[AWAITER:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[HANDLE:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[SUSPEND_FUNC:[a-zA-Z0-9]+]]
+define void @coro_await_suspend_void(ptr %awaiter, ptr %handle, ptr %suspend_func) {
+  ; CHECK: llvm.intr.coro.await.suspend.void %[[AWAITER]], %[[HANDLE]], %[[SUSPEND_FUNC]]
+  call void @llvm.coro.await.suspend.void(ptr %awaiter, ptr %handle, ptr %suspend_func)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @coro_await_suspend_bool
-define void @coro_await_suspend_bool(ptr %0, ptr %1, ptr %2) {
-  ; CHECK: llvm.intr.coro.await.suspend.bool %{{.*}}, %{{.*}}, %{{.*}} : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i1
-  %4 = call i1 @llvm.coro.await.suspend.bool(ptr %0, ptr %1, ptr %2)
+; CHECK-SAME:  %[[AWAITER:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[HANDLE:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[SUSPEND_FUNC:[a-zA-Z0-9]+]]
+define void @coro_await_suspend_bool(ptr %awaiter, ptr %handle, ptr %suspend_func) {
+  ; CHECK: llvm.intr.coro.await.suspend.bool %[[AWAITER]], %[[HANDLE]], %[[SUSPEND_FUNC]] : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i1
+  %4 = call i1 @llvm.coro.await.suspend.bool(ptr %awaiter, ptr %handle, ptr %suspend_func)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @coro_await_suspend_handle
-define void @coro_await_suspend_handle(ptr %0, ptr %1, ptr %2) {
-  ; CHECK: llvm.intr.coro.await.suspend.handle
-  call void @llvm.coro.await.suspend.handle(ptr %0, ptr %1, ptr %2)
+; CHECK-SAME:  %[[AWAITER:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[HANDLE:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[SUSPEND_FUNC:[a-zA-Z0-9]+]]
+define void @coro_await_suspend_handle(ptr %awaiter, ptr %handle, ptr %suspend_func) {
+  ; CHECK: llvm.intr.coro.await.suspend.handle %[[AWAITER]], %[[HANDLE]], %[[SUSPEND_FUNC]]
+  call void @llvm.coro.await.suspend.handle(ptr %awaiter, ptr %handle, ptr %suspend_func)
   ret void
 }
 

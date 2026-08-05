@@ -846,8 +846,9 @@ llvm.func @coro_begin(%arg0: !llvm.ptr) {
 llvm.func @coro_alloc() {
   %zero = llvm.mlir.constant(0 : i32) : i32
   %null = llvm.mlir.zero : !llvm.ptr
+  // CHECK: %[[ID:.*]] = call token @llvm.coro.id
   %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
-  // CHECK: call i1 @llvm.coro.alloc
+  // CHECK: call i1 @llvm.coro.alloc(token %[[ID]])
   %0 = llvm.intr.coro.alloc %token : (token) -> i1
   llvm.return
 }
@@ -962,27 +963,36 @@ llvm.func @coro_dead(%arg0: !llvm.ptr) {
 }
 
 // CHECK-LABEL: @coro_await_suspend_void
+// CHECK-SAME:  ptr %[[AWAITER:[a-zA-Z0-9]+]]
+// CHECK-SAME:  ptr %[[HANDLE:[a-zA-Z0-9]+]]
+// CHECK-SAME:  ptr %[[SUSPEND_FUNC:[a-zA-Z0-9]+]]
 llvm.func @coro_await_suspend_void(%arg0: !llvm.ptr, %arg1: !llvm.ptr,
                                    %arg2: !llvm.ptr) {
-  // CHECK: call void @llvm.coro.await.suspend.void
+  // CHECK: call void @llvm.coro.await.suspend.void(ptr %[[AWAITER]], ptr %[[HANDLE]], ptr %[[SUSPEND_FUNC]])
   llvm.intr.coro.await.suspend.void %arg0, %arg1, %arg2
     : !llvm.ptr, !llvm.ptr, !llvm.ptr
   llvm.return
 }
 
 // CHECK-LABEL: @coro_await_suspend_bool
+// CHECK-SAME:  ptr %[[AWAITER:[a-zA-Z0-9]+]]
+// CHECK-SAME:  ptr %[[HANDLE:[a-zA-Z0-9]+]]
+// CHECK-SAME:  ptr %[[SUSPEND_FUNC:[a-zA-Z0-9]+]]
 llvm.func @coro_await_suspend_bool(%arg0: !llvm.ptr, %arg1: !llvm.ptr,
                                    %arg2: !llvm.ptr) {
-  // CHECK: call i1 @llvm.coro.await.suspend.bool
+  // CHECK: call i1 @llvm.coro.await.suspend.bool(ptr %[[AWAITER]], ptr %[[HANDLE]], ptr %[[SUSPEND_FUNC]])
   %0 = llvm.intr.coro.await.suspend.bool %arg0, %arg1, %arg2
     : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i1
   llvm.return
 }
 
 // CHECK-LABEL: @coro_await_suspend_handle
+// CHECK-SAME:  ptr %[[AWAITER:[a-zA-Z0-9]+]]
+// CHECK-SAME:  ptr %[[HANDLE:[a-zA-Z0-9]+]]
+// CHECK-SAME:  ptr %[[SUSPEND_FUNC:[a-zA-Z0-9]+]]
 llvm.func @coro_await_suspend_handle(%arg0: !llvm.ptr, %arg1: !llvm.ptr,
                                      %arg2: !llvm.ptr) {
-  // CHECK: call void @llvm.coro.await.suspend.handle
+  // CHECK: call void @llvm.coro.await.suspend.handle(ptr %[[AWAITER]], ptr %[[HANDLE]], ptr %[[SUSPEND_FUNC]])
   llvm.intr.coro.await.suspend.handle %arg0, %arg1, %arg2
     : !llvm.ptr, !llvm.ptr, !llvm.ptr
   llvm.return
