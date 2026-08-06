@@ -28,13 +28,13 @@ define void @pr58722_load_interleave_group(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP3]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP4]], align 4, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 1
-; CHECK-NEXT:    [[TMP13:%.*]] = load i24, ptr [[TMP9]], align 4, !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP13:%.*]] = load i24, ptr [[TMP9]], align 4, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i24, ptr [[TMP10]], align 4, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i24, ptr [[TMP11]], align 4, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i24, ptr [[TMP12]], align 4, !alias.scope [[META0]]
@@ -94,17 +94,52 @@ exit:
 define void @pr58722_store_interleave_group(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @pr58722_store_interleave_group(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP0]], 6
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[SRC:%.*]], i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i32 [[TMP3]]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP4]], align 4
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP5]], align 4
+; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP6]], align 4
+; CHECK-NEXT:    store i32 [[TMP3]], ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i64 1
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP6]], i64 1
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP0]] to i24
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc i32 [[TMP1]] to i24
+; CHECK-NEXT:    [[TMP14:%.*]] = trunc i32 [[TMP2]] to i24
+; CHECK-NEXT:    [[TMP15:%.*]] = trunc i32 [[TMP3]] to i24
+; CHECK-NEXT:    store i24 [[TMP12]], ptr [[TMP8]], align 4
+; CHECK-NEXT:    store i24 [[TMP13]], ptr [[TMP9]], align 4
+; CHECK-NEXT:    store i24 [[TMP14]], ptr [[TMP10]], align 4
+; CHECK-NEXT:    store i24 [[TMP15]], ptr [[TMP11]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], 5000
+; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
+; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[GEP_IV:%.*]] = getelementptr inbounds i64, ptr [[SRC:%.*]], i32 [[IV]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 10000, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP_IV:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i32 [[IV]]
 ; CHECK-NEXT:    store i32 [[IV]], ptr [[GEP_IV]], align 4
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[GEP_IV]], i64 1
 ; CHECK-NEXT:    [[TRUNC_IV:%.*]] = trunc i32 [[IV]] to i24
 ; CHECK-NEXT:    store i24 [[TRUNC_IV]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV]], 10000
-; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
