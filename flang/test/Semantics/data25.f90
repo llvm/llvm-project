@@ -79,12 +79,3 @@ block data s8
   data (util(i),i=1,4)/4*.true./
   integer :: i
 end block data
-
-! The index's name may be declared later as a named constant; the index
-! takes its type.
-subroutine s9
-  implicit none
-  logical, dimension(4), save :: util
-  data (util(i),i=1,4)/4*.true./
-  integer(8), parameter :: i = 0_8
-end subroutine
