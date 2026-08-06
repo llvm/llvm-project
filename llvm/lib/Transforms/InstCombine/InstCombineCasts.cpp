@@ -1216,6 +1216,24 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     // TODO: Mask high bits with 'and'.
   }
 
+  // trunc (lshr (add (shl X, ShAmt), AddC), ShrAmt) -->
+  //   trunc (add (shl X, ShAmt - ShrAmt), AddC >> ShrAmt)
+  {
+    const APInt *ShAmt, *AddC, *ShrAmt;
+    if (match(Src, m_OneUse(m_LShr(m_Add(m_Shl(m_Value(X), m_APInt(ShAmt)),
+                                         m_APInt(AddC)),
+                                   m_APInt(ShrAmt)))) &&
+        ShrAmt->ule(*ShAmt) &&
+        ShrAmt->getZExtValue() <= SrcWidth - DestWidth &&
+        AddC->countr_zero() >= ShrAmt->getZExtValue()) {
+      Value *NewShl = Builder.CreateShl(
+          X, ConstantInt::get(SrcTy, *ShAmt - *ShrAmt));
+      Value *NewAdd =
+          Builder.CreateAdd(NewShl, ConstantInt::get(SrcTy, AddC->lshr(*ShrAmt)));
+      return new TruncInst(NewAdd, DestTy);
+    }
+  }
+
   if (Instruction *I = narrowBinOp(Trunc))
     return I;
 
