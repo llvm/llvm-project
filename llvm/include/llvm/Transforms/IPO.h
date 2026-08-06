@@ -28,11 +28,6 @@ class raw_ostream;
 ///
 LLVM_ABI ModulePass *createDeadArgEliminationPass();
 
-/// DeadArgHacking pass - Same as DAE, but delete arguments of external
-/// functions as well.  This is definitely not safe, and should only be used by
-/// bugpoint.
-LLVM_ABI ModulePass *createDeadArgHackingPass();
-
 //===----------------------------------------------------------------------===//
 /// createBarrierNoopPass - This pass is purely a module pass barrier in a pass
 /// manager.

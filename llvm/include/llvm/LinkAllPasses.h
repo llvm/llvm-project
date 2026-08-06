@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This header file pulls in all transformation and analysis passes for tools
-// like opt and bugpoint that need this functionality.
+// like opt that need this functionality.
 //
 //===----------------------------------------------------------------------===//
 
