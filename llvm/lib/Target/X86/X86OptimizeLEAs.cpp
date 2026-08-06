@@ -326,7 +326,8 @@ bool X86OptimizeLEAsImpl::chooseBestLEA(
     const SmallVectorImpl<MachineInstr *> &List, const MachineInstr &MI,
     MachineInstr *&BestLEA, int64_t &AddrDispShift, int &Dist) {
   const MCInstrDesc &Desc = MI.getDesc();
-  int MemOpNo = X86II::getMemoryOperandIdx(Desc, /*MustExist=*/true);
+  int MemOpNo = X86II::getMemoryOperandIdx(Desc);
+  assert(MemOpNo >= 0 && "Expected a memory operand");
 
   BestLEA = nullptr;
 
@@ -646,8 +647,8 @@ bool X86OptimizeLEAsImpl::removeRedundantLEAs(MemOpMap &LEAs) {
           }
 
           // Get the number of the first memory operand.
-          int MemOpNo =
-              X86II::getMemoryOperandIdx(MI.getDesc(), /*MustExist=*/true);
+          int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc());
+          assert(MemOpNo >= 0 && "Expected a memory operand");
 
           // Update address base.
           MO.setReg(FirstVReg);

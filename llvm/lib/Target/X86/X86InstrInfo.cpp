@@ -3977,8 +3977,8 @@ bool X86InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 static int getJumpTableIndexFromAddr(const MachineInstr &MI) {
-  int MemRefBegin =
-      X86II::getMemoryOperandIdx(MI.getDesc(), /*MustExist=*/true);
+  int MemRefBegin = X86II::getMemoryOperandIdx(MI.getDesc());
+  assert(MemRefBegin >= 0 && "Expected a memory operand");
 
   const MachineOperand &MO = MI.getOperand(MemRefBegin + X86::AddrDisp);
   if (!MO.isJTI())
