@@ -11,6 +11,8 @@
 
 ! NO_DEBUG-NOT: fir.module_debug_imports
 
+! WITH_DEBUG:      fir.module_debug_imports "no_use_mod" {
+! WITH_DEBUG-NEXT: } loc("{{.*}}":[[@LINE+1]]:{{[0-9]+}})
 module no_use_mod
   integer :: mod_var
 contains
@@ -18,16 +20,14 @@ contains
     mod_var = 100
   end subroutine test_sub
 end module no_use_mod
-! WITH_DEBUG:      fir.module_debug_imports "no_use_mod" {
-! WITH_DEBUG-NEXT: } loc("{{.*}}":[[@LINE-8]]:{{[0-9]+}})
 
+! WITH_DEBUG:      fir.module_debug_imports "using_mod" {
+! WITH_DEBUG-NEXT:   fir.use_stmt "no_use_mod"
+! WITH_DEBUG:      } loc("{{.*}}":[[@LINE+1]]:{{[0-9]+}})
 module using_mod
   use no_use_mod
   real :: x
 end module using_mod
-! WITH_DEBUG:      fir.module_debug_imports "using_mod" {
-! WITH_DEBUG-NEXT:   fir.use_stmt "no_use_mod"
-! WITH_DEBUG:      } loc("{{.*}}":[[@LINE-6]]:{{[0-9]+}})
 
 program main
   use using_mod

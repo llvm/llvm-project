@@ -14,9 +14,13 @@ module {
     fir.has_value %0 : i32
   } loc(#loc_x)
 
-  // Same, but with a USE statement in the region.
+  // A module with no members of its own, only used by `with_use` below.
+  fir.module_debug_imports "other_mod" {
+  } loc(#loc_other)
+
+  // Same as `no_use`, but with a USE statement in the region.
   fir.module_debug_imports "with_use" {
-    fir.use_stmt "no_use"
+    fir.use_stmt "other_mod"
   } loc(#loc_with_use)
   fir.global @_QMwith_useEy : i32 {
     %0 = fir.zero_bits i32
@@ -31,6 +35,7 @@ module {
 }
 #loc_no_use = loc("mod.f90":4:1)
 #loc_x = loc("mod.f90":20:14)
+#loc_other = loc("mod.f90":6:1)
 #loc_with_use = loc("mod.f90":8:1)
 #loc_y = loc("mod.f90":24:14)
 #loc_z = loc("mod.f90":30:14)
