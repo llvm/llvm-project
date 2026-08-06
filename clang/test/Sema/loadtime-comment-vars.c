@@ -12,17 +12,17 @@
 //   - a preserved variable counts as used: no -Wunused-const-variable for it,
 //     while an unlisted static const variable still warns
 //
-// The quiet scenario compiles the same source for a non-AIX target: the
-// option is a silent no-op at the cc1 layer there, so no diagnostics at all are expected.
+// The NONAIX scenario invokes cc1 directly for a non-AIX target: the option
+// is rejected with an error.
 
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix -Wunused-const-variable \
 // RUN:   -mloadtime-comment-vars=vol_ptr,vol_char,vol_arr,tls_ptr,ind_ptr,const_arr,lfn,kept \
 // RUN:   -fsyntax-only -verify %s
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
-// RUN:   -mloadtime-comment-vars=vol_ptr,vol_char,vol_arr,tls_ptr,ind_ptr,const_arr,lfn,kept \
-// RUN:   -fsyntax-only -verify=quiet %s
-// quiet-no-diagnostics
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu \
+// RUN:   -mloadtime-comment-vars=sccsid \
+// RUN:   -fsyntax-only %s 2>&1 | FileCheck --check-prefix=NONAIX %s
+// NONAIX: error: unsupported option '-mloadtime-comment-vars=' for target 'x86_64-unknown-linux-gnu'
 
 // A volatile-qualified pointer is diagnosed.
 char *volatile vol_ptr = "@(#) vol ptr"; // expected-warning {{'vol_ptr' named in '-mloadtime-comment-vars=' is volatile-qualified and will not be preserved}}

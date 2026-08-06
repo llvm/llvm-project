@@ -5,9 +5,12 @@
 //     kept alive in llvm.compiler.used, even when otherwise unreferenced;
 //   * unsupported or unlisted variables are silently ignored and, when
 //     unreferenced, are not emitted at all;
-//   * on non-AIX targets the option has no effect;
 //   * names are matched against the mangled IR name: in C that is the source
 //     identifier; in C++ a file-scope static mangles (sccsid -> _ZL6sccsid).
+//
+// Non-AIX behavior is covered elsewhere: the driver warns and drops the
+// option (clang/test/Driver/mloadtime-comment-vars.c) and cc1 rejects it
+// with an error (clang/test/Sema/loadtime-comment-vars.c).
 
 
 // C, 32-bit and 64-bit AIX.
@@ -24,12 +27,6 @@
 // RUN: %clang_cc1 -x c++ -w -O2 -triple powerpc64-ibm-aix -mloadtime-comment-vars=_ZL6sccsid,_ZL7version,_ZL12build_number,_ZL14same_copyright,_ZL6active,not_defined_here,_ZL8tdefchar,_ZL4ustr,_ZL4sstr -emit-llvm -disable-llvm-passes -o %t-cxx.ll %s
 // RUN: FileCheck %s -DSCCSID=_ZL6sccsid -DVERSION=_ZL7version -DSAME=_ZL14same_copyright -DACTIVE=_ZL6active -DTYPEDEFCHAR=_ZL8tdefchar < %t-cxx.ll
 // RUN: FileCheck %s --check-prefix=NOEMIT -DCOPYRIGHT=_ZL9copyright -DBUILDNUM=_ZL12build_number -DBUILDDATA=_ZL10build_data -DUSTR=_ZL4ustr -DSSTR=_ZL4sstr < %t-cxx.ll
-
-// Non-AIX target: the option has no effect.
-// RUN: %clang_cc1 -O2 -triple x86_64-linux-gnu -mloadtime-comment-vars=sccsid,version -emit-llvm -disable-llvm-passes -o %t-linux.ll %s
-// RUN: FileCheck %s --check-prefix=LINUX < %t-linux.ll
-// RUN: FileCheck %s --check-prefix=NOEMIT -DCOPYRIGHT=copyright -DBUILDNUM=build_number -DBUILDDATA=build_data -DUSTR=ustr -DSSTR=sstr < %t-linux.ll
-// RUN: FileCheck %s --check-prefix=NOPRESERVE < %t-linux.ll
 
 // 1. A string pointer named in the list is preserved.
 static char *sccsid = "@(#) sccsid Version 1.0";
@@ -99,15 +96,3 @@ void foo() {}
 // NOEMIT-NOT: @[[USTR]]
 // NOEMIT-NOT: @[[SSTR]]
 // NOEMIT-NOT: @not_defined_here
-
-// On non-AIX targets a referenced variable is still emitted normally, just
-// not preserved.
-// LINUX: @active = internal global ptr
-// LINUX: define {{.*}}void @bar
-
-// On non-AIX targets nothing is preserved: no metadata, and the unreferenced
-// statics -- listed or not -- are not emitted.
-// NOPRESERVE-NOT: loadtime_comment
-// NOPRESERVE-NOT: @sccsid
-// NOPRESERVE-NOT: @version
-// NOPRESERVE-NOT: @same_copyright
