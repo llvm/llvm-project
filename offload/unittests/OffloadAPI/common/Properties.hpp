@@ -44,9 +44,8 @@ auto createPropertiesWithSizeContainer(
 }
 
 template <typename T>
-auto mergeProperties(
-    std::initializer_list<PropertiesWithSizeContainer<T>> Properties)
-    -> PropertiesWithSizeContainer<T> {
+auto mergeProperties(std::initializer_list<PropertiesWithSizeContainer<T>>
+                         Properties) -> PropertiesWithSizeContainer<T> {
   PropertiesWithSizeContainer<T> FinalProperties;
 
   for (auto Prop : Properties) {
@@ -114,7 +113,9 @@ inline const DeviceInfoProperties CapabilitesFlagsProperties =
 
 inline const DeviceInfoProp PropIrrelevantForHostGTCapabilities = {
     OL_DEVICE_INFO_HALF_FP_CONFIG};
-inline const DeviceInfoProperties IrrelevantForHostGTCapabilitiesProperties = createPropertiesWithSizeContainer(sizeof(ol_device_fp_capability_flags_t), PropIrrelevantForHostGTCapabilities);
+inline const DeviceInfoProperties IrrelevantForHostGTCapabilitiesProperties =
+    createPropertiesWithSizeContainer(sizeof(ol_device_fp_capability_flags_t),
+                                      PropIrrelevantForHostGTCapabilities);
 
 inline const DeviceInfoProp Prop_RelevantGTCapabilites =
     removeIrrelevantProperties(PropCapabilitiesFlags,
@@ -125,7 +126,9 @@ inline const DeviceInfoProperties RelevantGTCapabilitiesProperties =
 
 inline const DeviceInfoProp PropIrrelevantForHostGTUint32 = {
     OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF};
-inline const DeviceInfoProperties IrrelevantForHostGTUint32Properties = createPropertiesWithSizeContainer(sizeof(uint32_t), PropIrrelevantForHostGTUint32);
+inline const DeviceInfoProperties IrrelevantForHostGTUint32Properties =
+    createPropertiesWithSizeContainer(sizeof(uint32_t),
+                                      PropIrrelevantForHostGTUint32);
 
 inline const DeviceInfoProp Prop_RelevantGTUint32 =
     removeIrrelevantProperties(PropUint32, PropIrrelevantForHostGTUint32);
