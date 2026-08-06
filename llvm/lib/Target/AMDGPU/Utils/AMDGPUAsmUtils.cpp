@@ -136,7 +136,8 @@ int64_t getMsgId(StringRef Name, const MCSubtargetInfo &STI) {
 }
 
 StringRef getMsgName(uint64_t Encoding, const MCSubtargetInfo &STI) {
-  return getNameFromOperandTable(MsgOperands, Encoding, STI);
+  return getNameFromOperandTable(MsgOperands, static_cast<unsigned>(Encoding),
+                                 STI);
 }
 
 int64_t getMsgOpId(int64_t MsgId, StringRef Name, const MCSubtargetInfo &STI) {
@@ -150,8 +151,10 @@ StringRef getMsgOpName(int64_t MsgId, uint64_t Encoding,
   assert(msgRequiresOp(MsgId, STI) && "must have an operand");
 
   if (MsgId == ID_SYSMSG)
-    return getNameFromOperandTable(SysMsgOperands, Encoding, STI);
-  return getNameFromOperandTable(StreamMsgOperands, Encoding, STI);
+    return getNameFromOperandTable(SysMsgOperands,
+                                   static_cast<unsigned>(Encoding), STI);
+  return getNameFromOperandTable(StreamMsgOperands,
+                                 static_cast<unsigned>(Encoding), STI);
 }
 
 } // namespace SendMsg
@@ -168,7 +171,8 @@ static constexpr CustomOperand WaitEventOperands[] = {
 // clang-format on
 
 StringRef getWaitEventMaskName(uint64_t Encoding, const MCSubtargetInfo &STI) {
-  return getNameFromOperandTable(WaitEventOperands, Encoding, STI);
+  return getNameFromOperandTable(WaitEventOperands,
+                                 static_cast<unsigned>(Encoding), STI);
 }
 } // namespace WaitEvent
 
@@ -249,7 +253,8 @@ int64_t getHwregId(StringRef Name, const MCSubtargetInfo &STI) {
 }
 
 StringRef getHwreg(uint64_t Encoding, const MCSubtargetInfo &STI) {
-  return getNameFromOperandTable(Operands, Encoding, STI);
+  return getNameFromOperandTable(Operands, static_cast<unsigned>(Encoding),
+                                 STI);
 }
 
 } // namespace Hwreg

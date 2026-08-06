@@ -439,7 +439,7 @@ bool AMDGPUMCKernelCodeT::ParseKernelCodeT(StringRef ID, MCAsmParser &MCParser,
 
 void AMDGPUMCKernelCodeT::EmitKernelCodeT(raw_ostream &OS, MCContext &Ctx,
                                           PrintHelper Helper) {
-  const int Size = hasMCExprVersionTable().size();
+  const int Size = static_cast<int>(hasMCExprVersionTable().size());
   for (int i = 0; i < Size; ++i) {
     OS << "\t\t";
     if (hasMCExprVersionTable()[i]) {
