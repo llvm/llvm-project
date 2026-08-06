@@ -171,7 +171,11 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
   message(file);
   message(":?? : "); // FIXME: Show line number.
   message(cond);
+#if SANITIZER_AMDGPU || SANITIZER_NVPTX || SANITIZER_SPIRV
+  __builtin_trap();
+#else
   abort();
+#endif
 }
 } // namespace __sanitizer
 #endif
