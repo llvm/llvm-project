@@ -763,7 +763,9 @@ bool DwarfExpression::addExpression(
   return true;
 }
 
-/// add masking operations to stencil out a subregister.
+/// Emit shift/mask operations for the pending subregister. After the operations
+/// are emitted, consume the pending subregister description by clearing
+/// SubRegisterSizeInBits and SubRegisterOffsetInBits.
 void DwarfExpression::maskSubRegister() {
   assert(SubRegisterSizeInBits && "no subregister was registered");
   if (SubRegisterOffsetInBits > 0)
