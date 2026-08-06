@@ -286,6 +286,9 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::BFloat16:
     ID = PREDEF_TYPE_BFLOAT16_ID;
     break;
+  case BuiltinType::MetaInfo:
+    ID = PREDEF_TYPE_META_INFO_ID;
+    break;
   }
 
   return TypeIdx(0, ID);
