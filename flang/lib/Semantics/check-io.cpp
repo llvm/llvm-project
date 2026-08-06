@@ -1287,14 +1287,19 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
 // sharing one type symbol -- their defined-I/O shielding is decided per
 // instantiation (HasDefinedIo).  This is a two-color DFS:
 //   - 'onPath' holds the scopes currently on the recursion stack; a repeat
-//     entry is an F2023 C749 recursive-type cycle and is pruned without being
-//     cached, since that partial result is only valid under the ancestor.
+//     entry is a back edge from a recursive type (e.g. a component that is a
+//     pointer/allocatable to the enclosing type -- unlike
+//     FindInaccessibleComponent, such components are not skipped here) and is
+//     pruned without being cached, since that partial result is only valid
+//     under the ancestor.
 //   - 'cache' holds the result of each fully-walked subtree, giving linear
 //     cost instead of the fanout^depth of an unmemoized path-scoped walk.
-// The cache is sound because a subtree's result depends only on 'which', the
-// (fixed) outer 'scope', and the instantiated scope's contents; for the
-// acyclic type graphs that legal unformatted I/O permits, no cycle prune
-// contaminates a cached result.
+// The type graph may therefore contain cycles.  Pruning a back edge is sound
+// because every reachable scope is entered once and checks its own components
+// on entry, so the target of a back edge has already been inspected: pruning
+// it cannot hide an enumeration component from the result.  This relies on
+// stopping at the first match; revisit it if the walk is ever changed to
+// collect every offending component.
 using EnumComponentPathSet = std::unordered_set<const Scope *>;
 using EnumComponentCache = std::unordered_map<const Scope *, const Symbol *>;
 

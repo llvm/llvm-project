@@ -1293,19 +1293,26 @@ static inline Expr<SomeDerived> FoldEnumerationNextOrPrevious(
     return Expr<SomeDerived>{std::move(funcRef)};
   }
   // A boundary hit (NEXT() of the last enumerator or PREVIOUS() of the first)
-  // without STAT= is a runtime error termination, so in an ordinary expression
-  // it is left unfolded and deferred to run time.  In a required-constant
-  // context the value cannot be deferred: diagnose it and mark the reference
-  // invalid so this specific message replaces the generic
-  // "cannot be computed as a constant value".
+  // without STAT= is, in the final design, a runtime error termination.  In a
+  // required-constant context that value cannot be deferred, so it is
+  // diagnosed as out of range.  Outside a constant context the reference would
+  // otherwise be left unfolded and deferred to run time — but lowering has no
+  // NEXT/PREVIOUS support yet (IntrinsicCall.cpp aborts), so a constant
+  // boundary argument is temporarily gated here, mirroring the STAT= and
+  // non-constant guards in intrinsics.cpp, until the lowering handler lands.
   auto handleBoundary{[&]() -> Expr<SomeDerived> {
     if (context.inConstantContext()) {
       context.messages().Say(isNext
               ? "NEXT() of the last enumerator is out of range"_err_en_US
               : "PREVIOUS() of the first enumerator is out of range"_err_en_US);
-      return MakeInvalidIntrinsic<SomeDerived>(std::move(funcRef));
+    } else {
+      // TEMPORARY: gate the boundary case until lowering handler lands in PR
+      // 4/5
+      context.messages().Say(isNext
+              ? "NEXT() at the last enumerator is not yet supported"_err_en_US
+              : "PREVIOUS() at the first enumerator is not yet supported"_err_en_US);
     }
-    return Expr<SomeDerived>{std::move(funcRef)};
+    return MakeInvalidIntrinsic<SomeDerived>(std::move(funcRef));
   }};
   if (auto sc{constant->GetScalarValue()}) {
     if (auto ordExpr{sc->Find(ordSym)}) {

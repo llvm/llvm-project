@@ -139,21 +139,23 @@ subroutine test_previous_boundary_with_stat()
   pc = previous(red, stat=istat)
 end subroutine
 
-subroutine test_next_boundary_no_diagnostic()
+subroutine test_next_boundary()
   use enum_intrinsics_mod
   type(color) :: nc
-  ! NEXT at boundary without STAT is a runtime error termination, not a
-  ! compile-time error: folding leaves the call unfolded and emits no
-  ! diagnostic (the statement may never execute).
+  ! NEXT at the last enumerator without STAT is, in the final design, a runtime
+  ! error termination.  Until the lowering handler lands (PR 4/5) the constant
+  ! boundary case is temporarily rejected at compile time rather than reaching
+  ! the unimplemented lowering path.
+  !CHECK: error: NEXT() at the last enumerator is not yet supported
   nc = next(blue)
 end subroutine
 
-subroutine test_previous_boundary_no_diagnostic()
+subroutine test_previous_boundary()
   use enum_intrinsics_mod
   type(color) :: pc
-  ! PREVIOUS at boundary without STAT is a runtime error termination, not a
-  ! compile-time error: folding leaves the call unfolded and emits no
-  ! diagnostic (the statement may never execute).
+  ! PREVIOUS at the first enumerator without STAT is, in the final design, a
+  ! runtime error termination.  Temporarily rejected until lowering lands.
+  !CHECK: error: PREVIOUS() at the first enumerator is not yet supported
   pc = previous(red)
 end subroutine
 
@@ -161,21 +163,23 @@ subroutine test_next_previous_array_boundary()
   use enum_intrinsics_mod
   type(color) :: nc(2), pc(2)
   ! NEXT/PREVIOUS are elemental: a constant array with any element at the
-  ! boundary is a runtime error termination without STAT=, so folding leaves
-  ! the whole reference unfolded and emits no diagnostic (same as the scalar
-  ! boundary case).
+  ! boundary is a runtime error termination without STAT=.  Temporarily
+  ! rejected until lowering lands (same as the scalar boundary case).
+  !CHECK: error: NEXT() at the last enumerator is not yet supported
   nc = next([green, blue])
+  !CHECK: error: PREVIOUS() at the first enumerator is not yet supported
   pc = previous([red, green])
 end subroutine
 
 subroutine test_next_previous_boundary_constant()
   use enum_intrinsics_mod
-  ! In a required-constant context the boundary case cannot be deferred to
-  ! run time: the initializer must fold to a constant, so the boundary is
-  ! diagnosed at compile time.
-  !CHECK: error: NEXT() of the last enumerator is out of range
+  ! A required-constant boundary case would normally be diagnosed as out of
+  ! range at compile time.  While NEXT/PREVIOUS are temporarily gated (PR 4/5),
+  ! the runtime-context gate fires first and reports "not yet supported"
+  ! instead; this reverts to "out of range" once the lowering handler lands.
+  !CHECK: error: NEXT() at the last enumerator is not yet supported
   logical, parameter :: nb = next(blue) == green
-  !CHECK: error: PREVIOUS() of the first enumerator is out of range
+  !CHECK: error: PREVIOUS() at the first enumerator is not yet supported
   logical, parameter :: pb = previous(red) == green
 end subroutine
 
