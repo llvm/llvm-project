@@ -8,10 +8,6 @@
 !   offset  8 : zc0  (character(0), 0 bytes)
 !
 ! equivalence(c8(5:8), zc0) places c8(1) at offset 4 (= 8 - 4 bytes before zc0).
-! Before the fix (compute-offsets.cpp), zc0 had offset 0, so dep.offset (4)
-! > symbol.offset() (0) triggered the backward-extend error falsely.
-! After the fix, zc0.offset() == 8 so no backward extension occurs and no
-! error should be emitted.
 
 subroutine p09
   integer(8) :: i8
