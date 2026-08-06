@@ -5024,7 +5024,7 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
 
   if (CGF.getLangOpts().StablePointerSubtraction)
     return Builder.CreateSDiv(diffInChars, divisor, "sub.ptr.div");
-  
+
   // If the unaligned-pointer-subtraction sanitizer is on, verify at runtime
   // that the byte distance is an exact multiple of the element size.
   if (CGF.SanOpts.has(SanitizerKind::UnalignedPointerSubtraction)) {
