@@ -3,14 +3,17 @@
 
 // Properties are grouped by the data type that stores the information. As
 // queries for selected properties might have different results for either the
-// device or the host, or might be even unsupported for the host, some of the
-// tests verify only whether the function that queried the host returned success
-// rather than checking the exact value. For tests analyzing the exact value -
-// for example, verifying whether the value is greater than the given lower
-// bound - only relevant host properties are added to the container with
-// properties passed to the fixture during instantiation. The selection of
-// relevant properties is achieved by merging or removing selected properties,
-// marked as "Relevant" or "IrrelevantForHost" in their names.
+// device or the host, or might even be unsupported for the host, the properties
+// are also grouped within the data type according to the expected query results
+// for the host. If the given property is not applicable for the host, the tests
+// check only whether the function that queries the host has returned success.
+// In the case where the tests analyze the exact value - such as the tests
+// verifying whether the value is greater than the given lower bound - only
+// relevant host properties are added to the container with properties; the
+// aforementioned container is later passed to the fixture during instantiation.
+// The filtering of relevant properties is achieved by merging or removing
+// selected properties, marked as "Relevant" or "IrrelevantForHost" in their
+// names.
 
 inline constexpr size_t MAX_DEVICE_INFO_BYTES = 8;
 
