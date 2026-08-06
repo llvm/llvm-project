@@ -29477,7 +29477,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       unsigned ActualVF = std::min(MaxInst - I, VF);
 
       if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF) &&
-          !isAllowedNonPowerOf2VF(ActualVF))
+          !(ActualVF == VL.size() && isAllowedNonPowerOf2VF(ActualVF)))
         continue;
 
       if (MaxVFOnly && ActualVF < MaxVF)
