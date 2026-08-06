@@ -295,6 +295,7 @@ define void @different_type_sizes_strided_accesses_independent(ptr %dst) {
 ; CHECK-NEXT:      Expressions re-written:
 ;
 entry:
+  ; Intentionally offset both to test logic.
   %gep.2 = getelementptr nuw i8, ptr %dst, i64 2
   %gep.6 = getelementptr nuw i8, ptr %dst, i64 6
   br label %loop
@@ -343,6 +344,7 @@ define void @different_type_sizes_strided_accesses_dependent(ptr %dst) {
 ; CHECK-NEXT:      Expressions re-written:
 ;
 entry:
+  ; Intentionally offset both to test logic.
   %gep.1 = getelementptr nuw i8, ptr %dst, i64 1
   %gep.4 = getelementptr nuw i8, ptr %dst, i64 4
   br label %loop
