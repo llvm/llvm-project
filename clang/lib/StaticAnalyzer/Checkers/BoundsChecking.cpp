@@ -45,7 +45,7 @@ getSimplifiedOffsets(NonLoc Offset, nonloc::ConcreteInt Extent,
       llvm::APSInt Num = APSIntType(ExtentVal).convert(SIE->getRHS());
       switch (SIE->getOpcode()) {
       case BO_Mul:
-        // The Num should never be 0 here, becasue multiplication by zero
+        // The Num should never be 0 here, because multiplication by zero
         // is simplified by the engine.
         if ((ExtentVal % Num) != 0)
           return std::pair<NonLoc, nonloc::ConcreteInt>(Offset, Extent);
