@@ -10,4 +10,4 @@
 
 #include "src/math/ceilf128.h"
 
-LIST_CEIL_TESTS(Float128, LIBC_NAMESPACE::ceilf128)
+LIST_CEIL_TESTS(float128, LIBC_NAMESPACE::ceilf128)
