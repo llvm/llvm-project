@@ -542,10 +542,16 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, MVT::i32, Legal);
   }
 
-  if (Subtarget.hasStdExtZbc() || Subtarget.hasStdExtZbkc())
+  if (Subtarget.hasStdExtZbc() || Subtarget.hasStdExtZbkc()) {
     setOperationAction({ISD::CLMUL, ISD::CLMULH}, XLenVT, Legal);
-  if (Subtarget.hasStdExtZbc())
-    setOperationAction(ISD::CLMULR, XLenVT, Legal);
+    if (Subtarget.hasStdExtZbc())
+      setOperationAction(ISD::CLMULR, XLenVT, Legal);
+  } else if (Subtarget.hasStdExtZvbc() && Subtarget.is64Bit()) {
+    // FIXME: Support i32 on RV32 by zexting from XLEN to i64 and extracting
+    // half of the result (low for CLMUL, high for CLMULH).
+    // TODO: Zvbc32e allows us to do a lot more here.
+    setOperationAction({ISD::CLMUL, ISD::CLMULH}, XLenVT, Custom);
+  }
 
   static const unsigned FPLegalNodeTypes[] = {
       ISD::FMINNUM,       ISD::FMAXNUM,        ISD::FMINIMUMNUM,
@@ -9558,17 +9564,37 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerCTLZ_CTTZ_ZERO_POISON(Op, DAG);
   case ISD::CLMUL:
   case ISD::CLMULH: {
+    SDLoc DL(Op);
     MVT VT = Op.getSimpleValueType();
+    MVT XLenVT = Subtarget.getXLenVT();
+
+    if (!VT.isVector()) {
+      // The op needs to be performed in a vector register.
+      assert(Subtarget.hasStdExtZvbc() && Subtarget.is64Bit() && VT == XLenVT &&
+             "Unexpected custom legalisation");
+      // We can't implicitly use vector registers with noimplicitfloat.
+      if (DAG.getMachineFunction().getFunction().hasFnAttribute(
+              Attribute::NoImplicitFloat))
+        return SDValue();
+      MVT VecVT = MVT::getScalableVectorVT(VT, 1);
+      SDValue VL = DAG.getConstant(1, DL, XLenVT);
+      SDValue Op0 =
+          lowerScalarInsert(Op.getOperand(0), VL, VecVT, DL, DAG, Subtarget);
+      SDValue Op1 =
+          lowerScalarInsert(Op.getOperand(1), VL, VecVT, DL, DAG, Subtarget);
+      SDValue Res = DAG.getNode(Op.getOpcode(), DL, VecVT, Op0, Op1);
+      return DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, Res);
+    }
+
     // If the scalable vector version of this op is Legal, convert to scalable.
     if (VT.isFixedLengthVector() &&
         (VT.getVectorElementType() == MVT::i64 || Subtarget.hasStdExtZvbc32e()))
       return lowerToScalableOp(Op, DAG);
 
-    assert(Op.getOpcode() == ISD::CLMUL && VT.isVector() &&
-           Subtarget.hasStdExtZvbc() && "Unexpected custom legalisation");
+    assert(Op.getOpcode() == ISD::CLMUL && Subtarget.hasStdExtZvbc() &&
+           "Unexpected custom legalisation");
     // Promote to i64 vector.
     MVT I64VecVT = VT.changeVectorElementType(MVT::i64);
-    SDLoc DL(Op);
     SDValue Op0 = DAG.getNode(ISD::ZERO_EXTEND, DL, I64VecVT, Op.getOperand(0));
     SDValue Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, I64VecVT, Op.getOperand(1));
     SDValue CLMUL = DAG.getNode(ISD::CLMUL, DL, I64VecVT, Op0, Op1);
@@ -15730,8 +15756,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // If the FP type needs to be softened, emit a library call to lround. We'll
     // need to truncate the result. We assume any value that doesn't fit in i32
     // is allowed to return an unspecified value.
-    RTLIB::Libcall LC =
-        Op0.getValueType() == MVT::f64 ? RTLIB::LROUND_F64 : RTLIB::LROUND_F32;
+    RTLIB::Libcall LC = RTLIB::getLROUND(Op0.getValueType());
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected FP type for LROUND!");
     MakeLibCallOptions CallOptions;
     EVT OpVT = Op0.getValueType();
     CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64);
@@ -20726,6 +20752,29 @@ static SDValue performVFMADD_VLCombine(SDNode *N,
   return combineOp_VLToVWOp_VL(N, DCI, Subtarget);
 }
 
+static SDValue performVEXT_VLCombine(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     const RISCVSubtarget &Subtarget) {
+  unsigned Opcode = N->getOpcode();
+  assert((Opcode == RISCVISD::VSEXT_VL || Opcode == RISCVISD::VZEXT_VL) &&
+         "Unexpected opcode");
+
+  SDValue Inner = N->getOperand(0);
+  SDValue Mask = N->getOperand(1);
+  SDValue VL = N->getOperand(2);
+
+  // Combine (vext_vl (vext_vl x, m, vl), m, vl) -> (vext_vl x, m, vl)
+  // where vext_vl is either vsext_vl or vzext_vl.
+  using namespace SDPatternMatch;
+  SDValue Src;
+  if (!sd_match(Inner,
+                m_OneUse(m_Node(Opcode, m_Value(Src), m_Value(), m_Value()))))
+    return SDValue();
+
+  MVT DstVT = N->getSimpleValueType(0);
+  return DCI.DAG.getNode(Opcode, SDLoc(N), DstVT, Src, Mask, VL);
+}
+
 static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   assert(N->getOpcode() == ISD::SRA && "Unexpected opcode");
@@ -23505,6 +23554,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::VFWADD_W_VL:
   case RISCVISD::VFWSUB_W_VL:
     return combineOp_VLToVWOp_VL(N, DCI, Subtarget);
+  case RISCVISD::VSEXT_VL:
+  case RISCVISD::VZEXT_VL:
+    return performVEXT_VLCombine(N, DCI, Subtarget);
   case ISD::LOAD:
   case ISD::STORE: {
     if (DCI.isAfterLegalizeDAG())
