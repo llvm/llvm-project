@@ -118,14 +118,16 @@ void GCNHazardRecognizer::Reset() {
 void GCNHazardRecognizer::schedulerReset() {
   LLVM_DEBUG({
     if (CurrentCoExecStage.has_value() || CyclesUntilTRANS > 0 ||
-        CyclesUntilVALU > 0)
+        CyclesUntilVALU > 0 || CyclesUntilPermPk16Safety > 0)
       dbgs() << "  Scheduler Reset: clearing co-exec window, TRANS="
-             << CyclesUntilTRANS << ", VALU=" << CyclesUntilVALU << "\n";
+             << CyclesUntilTRANS << ", VALU=" << CyclesUntilVALU
+             << ", PermPk16=" << CyclesUntilPermPk16Safety << "\n";
   });
   CurrentCoExecStage = std::nullopt;
   CoExecWindowStartCycle = 0;
   CyclesUntilTRANS = 0;
   CyclesUntilVALU = 0;
+  CyclesUntilPermPk16Safety = 0;
   ActiveCoExecInfo = AMDGPU::CoExecInfo();
   CoExecWindowLog.fill('.');
 }
@@ -168,7 +170,7 @@ void GCNHazardRecognizer::schedulerAdvanceCycle() {
 
   LLVM_DEBUG({
     bool HasState = CurrentCoExecStage.has_value() || CyclesUntilTRANS > 0 ||
-                    CyclesUntilVALU > 0;
+                    CyclesUntilVALU > 0 || CyclesUntilPermPk16Safety > 0;
     if (HasState) {
       dbgs() << "  Scheduler AdvanceCycle:";
       if (CurrentCoExecStage.has_value()) {
@@ -184,6 +186,9 @@ void GCNHazardRecognizer::schedulerAdvanceCycle() {
                << (CyclesUntilTRANS - 1);
       if (CyclesUntilVALU > 0)
         dbgs() << " VALU=" << CyclesUntilVALU << "->" << (CyclesUntilVALU - 1);
+      if (CyclesUntilPermPk16Safety > 0)
+        dbgs() << " PermPk16=" << CyclesUntilPermPk16Safety << "->"
+               << (CyclesUntilPermPk16Safety - 1);
       dbgs() << "\n";
     }
   });
@@ -193,6 +198,8 @@ void GCNHazardRecognizer::schedulerAdvanceCycle() {
     --CyclesUntilTRANS;
   if (CyclesUntilVALU > 0)
     --CyclesUntilVALU;
+  if (CyclesUntilPermPk16Safety > 0)
+    --CyclesUntilPermPk16Safety;
 
   // Advance WMMA co-execution window.
   if (CurrentCoExecStage.has_value()) {
@@ -290,6 +297,21 @@ void GCNHazardRecognizer::updateMultiCycleVALUState(const MachineInstr &MI) {
     LLVM_DEBUG(dbgs() << "    Multi-cycle VALU: repeat=" << RepeatRate
                       << ", CyclesUntilVALU=" << CyclesUntilVALU << "\n");
   }
+}
+
+void GCNHazardRecognizer::updateVPermPk16State(const MachineInstr &MI) {
+  if (!ST.hasVPermPk16Hazard())
+    return;
+  if (!SIInstrInfo::isVPermPk16(MI.getOpcode()))
+    return;
+
+  // V_PERM_PK16 must be immediately followed by a safe instruction to clear
+  // the V_PERM_PK16 hazard. Seed to 2: schedulerAdvanceCycle decrements once
+  // before the next pick's hazard check (same convention as CyclesUntilTRANS),
+  // so the counter is observed at 1 for the immediately following candidate.
+  CyclesUntilPermPk16Safety = 2;
+  LLVM_DEBUG(
+      dbgs() << "    V_PERM_PK16 hazard set: CyclesUntilPermPk16Safety=2\n");
 }
 
 AMDGPU::CoExecMaskT
@@ -408,6 +430,18 @@ GCNHazardRecognizer::checkMultiShadowHazard(const MachineInstr &MI) const {
   return StallCycles;
 }
 
+unsigned
+GCNHazardRecognizer::checkVPermPk16Hazard(const MachineInstr &MI) const {
+  if (!CyclesUntilPermPk16Safety)
+    return 0;
+
+  if (TII.isVPermPk16SafeInstr(MI))
+    return 0;
+
+  // Prefer safe instruction over unsafe instruction.
+  return CyclesUntilPermPk16Safety;
+}
+
 void GCNHazardRecognizer::schedulerEmitInstruction(MachineInstr *MI) {
   LLVM_DEBUG({
     bool InWindow = CurrentCoExecStage.has_value();
@@ -439,6 +473,7 @@ void GCNHazardRecognizer::schedulerEmitInstruction(MachineInstr *MI) {
   updateWMMAWindowState(*MI);
   updateTRANSState(*MI);
   updateMultiCycleVALUState(*MI);
+  updateVPermPk16State(*MI);
 }
 
 void GCNHazardRecognizer::EmitInstruction(SUnit *SU) {
@@ -564,6 +599,13 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
     if (checkTRANSHazard(*MI) > 0)
       return Hazard;
     if (checkMultiCycleVALUHazard(*MI) > 0)
+      return Hazard;
+    // Post-RA the generic scheduler only consults getHazardType(), so gate the
+    // V_PERM_PK16 hazard here to bias a safe follower into the slot after a
+    // V_PERM_PK16. Pre-RA the CoExec strategy handles this as a soft cost via
+    // getHazardWaitStates() (which, unlike a hard gate, does not burn a cycle
+    // when no safe follower exists), so we do not gate it there.
+    if (isPostRA() && checkVPermPk16Hazard(*MI) > 0)
       return Hazard;
     // The remaining checks are all defined by register dependences.
     if (!hasPhysRegs())
@@ -721,6 +763,7 @@ unsigned GCNHazardRecognizer::getHazardWaitStates(MachineInstr *MI) const {
     W = std::max(W, checkTRANSHazard(*MI));
     W = std::max(W, checkMultiCycleVALUHazard(*MI));
     W = std::max(W, checkMultiShadowHazard(*MI));
+    W = std::max(W, checkVPermPk16Hazard(*MI));
     // The remaining checks are all defined by register dependences.
     if (!hasPhysRegs())
       return W;
