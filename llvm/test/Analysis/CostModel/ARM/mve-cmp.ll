@@ -6,24 +6,24 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
 define void @icmp() {
 ; CHECK-LABEL: 'icmp'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:10 Lat:20 SizeLat:20 for: %v2i8 = icmp slt <2 x i8> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:26 Lat:52 SizeLat:52 for: %v2i8 = icmp slt <2 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v4i8 = icmp slt <4 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v8i8 = icmp slt <8 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v16i8 = icmp slt <16 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:132 CodeSize:130 Lat:132 SizeLat:132 for: %v32i8 = icmp slt <32 x i8> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:10 Lat:20 SizeLat:20 for: %v2i16 = icmp slt <2 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:26 Lat:52 SizeLat:52 for: %v2i16 = icmp slt <2 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v4i16 = icmp slt <4 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v8i16 = icmp slt <8 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:68 CodeSize:66 Lat:68 SizeLat:68 for: %v16i16 = icmp slt <16 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:10 Lat:20 SizeLat:20 for: %v2i32 = icmp slt <2 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:26 Lat:52 SizeLat:52 for: %v2i32 = icmp slt <2 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v4i32 = icmp slt <4 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:34 Lat:36 SizeLat:36 for: %v8i32 = icmp slt <8 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:68 Lat:72 SizeLat:72 for: %v16i32 = icmp slt <16 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:18 Lat:36 SizeLat:36 for: %v2i64 = icmp slt <2 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:36 Lat:72 SizeLat:72 for: %v4i64 = icmp slt <4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:144 CodeSize:72 Lat:144 SizeLat:144 for: %v8i64 = icmp slt <8 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:68 CodeSize:34 Lat:68 SizeLat:68 for: %v2i128 = icmp slt <2 x i128> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:136 CodeSize:68 Lat:136 SizeLat:136 for: %v4i128 = icmp slt <4 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:84 CodeSize:42 Lat:84 SizeLat:84 for: %v2i64 = icmp slt <2 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:168 CodeSize:84 Lat:168 SizeLat:168 for: %v4i64 = icmp slt <4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:336 CodeSize:168 Lat:336 SizeLat:336 for: %v8i64 = icmp slt <8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:148 CodeSize:74 Lat:148 SizeLat:148 for: %v2i128 = icmp slt <2 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:296 CodeSize:148 Lat:296 SizeLat:296 for: %v4i128 = icmp slt <4 x i128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %v2i8 = icmp slt <2 x i8> undef, undef
@@ -76,9 +76,9 @@ define void @fcmp() {
 ; CHECK-MVEFP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v4f32 = fcmp olt <4 x float> undef, undef
 ; CHECK-MVEFP-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:34 Lat:36 SizeLat:36 for: %v8f32 = fcmp olt <8 x float> undef, undef
 ; CHECK-MVEFP-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:68 Lat:72 SizeLat:72 for: %v16f32 = fcmp olt <16 x float> undef, undef
-; CHECK-MVEFP-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %v2f64 = fcmp olt <2 x double> undef, undef
-; CHECK-MVEFP-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %v4f64 = fcmp olt <4 x double> undef, undef
-; CHECK-MVEFP-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:16 Lat:32 SizeLat:32 for: %v8f64 = fcmp olt <8 x double> undef, undef
+; CHECK-MVEFP-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:14 Lat:28 SizeLat:28 for: %v2f64 = fcmp olt <2 x double> undef, undef
+; CHECK-MVEFP-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:28 Lat:56 SizeLat:56 for: %v4f64 = fcmp olt <4 x double> undef, undef
+; CHECK-MVEFP-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:56 Lat:112 SizeLat:112 for: %v8f64 = fcmp olt <8 x double> undef, undef
 ; CHECK-MVEFP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %v2f16 = fcmp olt <2 x half> undef, undef

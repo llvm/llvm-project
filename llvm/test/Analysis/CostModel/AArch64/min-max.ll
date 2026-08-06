@@ -93,7 +93,7 @@ define void @umin() {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 2 for: %V8i32 = call <8 x i32> @llvm.umin.v8i32(<8 x i32> undef, <8 x i32> undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 2 for: %V2i64 = call <2 x i64> @llvm.umin.v2i64(<2 x i64> undef, <2 x i64> undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %V4i64 = call <4 x i64> @llvm.umin.v4i64(<4 x i64> undef, <4 x i64> undef)
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:12 Lat:16 SizeLat:16 for: %V2i128 = call <2 x i128> @llvm.umin.v2i128(<2 x i128> undef, <2 x i128> undef)
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:16 Lat:24 SizeLat:24 for: %V2i128 = call <2 x i128> @llvm.umin.v2i128(<2 x i128> undef, <2 x i128> undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-CSSC-LABEL: 'umin'
@@ -154,7 +154,7 @@ define void @umax() {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 2 for: %V8i32 = call <8 x i32> @llvm.umax.v8i32(<8 x i32> undef, <8 x i32> undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 2 for: %V2i64 = call <2 x i64> @llvm.umax.v2i64(<2 x i64> undef, <2 x i64> undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %V4i64 = call <4 x i64> @llvm.umax.v4i64(<4 x i64> undef, <4 x i64> undef)
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:12 Lat:16 SizeLat:16 for: %V2i128 = call <2 x i128> @llvm.umax.v2i128(<2 x i128> undef, <2 x i128> undef)
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:16 Lat:24 SizeLat:24 for: %V2i128 = call <2 x i128> @llvm.umax.v2i128(<2 x i128> undef, <2 x i128> undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-CSSC-LABEL: 'umax'
@@ -215,7 +215,7 @@ define void @smin() {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 2 for: %V8i32 = call <8 x i32> @llvm.smin.v8i32(<8 x i32> undef, <8 x i32> undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 2 for: %V2i64 = call <2 x i64> @llvm.smin.v2i64(<2 x i64> undef, <2 x i64> undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %V4i64 = call <4 x i64> @llvm.smin.v4i64(<4 x i64> undef, <4 x i64> undef)
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:12 Lat:16 SizeLat:16 for: %V2i128 = call <2 x i128> @llvm.smin.v2i128(<2 x i128> undef, <2 x i128> undef)
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:16 Lat:24 SizeLat:24 for: %V2i128 = call <2 x i128> @llvm.smin.v2i128(<2 x i128> undef, <2 x i128> undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-CSSC-LABEL: 'smin'
@@ -276,7 +276,7 @@ define void @smax() {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 2 for: %V8i32 = call <8 x i32> @llvm.smax.v8i32(<8 x i32> undef, <8 x i32> undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 2 for: %V2i64 = call <2 x i64> @llvm.smax.v2i64(<2 x i64> undef, <2 x i64> undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of 4 for: %V4i64 = call <4 x i64> @llvm.smax.v4i64(<4 x i64> undef, <4 x i64> undef)
-; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:12 Lat:16 SizeLat:16 for: %V2i128 = call <2 x i128> @llvm.smax.v2i128(<2 x i128> undef, <2 x i128> undef)
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:16 Lat:24 SizeLat:24 for: %V2i128 = call <2 x i128> @llvm.smax.v2i128(<2 x i128> undef, <2 x i128> undef)
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-CSSC-LABEL: 'smax'

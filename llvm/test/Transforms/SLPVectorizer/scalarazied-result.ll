@@ -5,6 +5,10 @@
 define void @test() {
 ; X86-LABEL: @test(
 ; X86-NEXT:  entry:
+; X86-NEXT:    [[TMP0:%.*]] = extractelement <8 x half> zeroinitializer, i64 1
+; X86-NEXT:    [[TOBOOL:%.*]] = fcmp une half [[TMP0]], 0.000000e+00
+; X86-NEXT:    [[TMP1:%.*]] = extractelement <8 x half> zeroinitializer, i64 1
+; X86-NEXT:    [[TOBOOL3:%.*]] = fcmp une half [[TMP1]], 0.000000e+00
 ; X86-NEXT:    ret void
 ;
 ; AARCH64-LABEL: @test(
