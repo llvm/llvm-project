@@ -105,8 +105,8 @@ function(_get_common_test_compile_options output_var c_test flags)
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
 
-function(_get_hermetic_test_compile_options output_var flags)
-  _get_common_test_compile_options(compile_options "" "${flags}")
+function(_get_hermetic_test_compile_options output_var c_test flags)
+  _get_common_test_compile_options(compile_options "${c_test}" "${flags}")
   libc_add_definition(compile_options "LIBC_TEST=HERMETIC")
 
   # null check tests are death tests, remove from hermetic tests for now.
@@ -627,7 +627,7 @@ function(add_integration_test test_name)
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
 
-  _get_hermetic_test_compile_options(compile_options "")
+  _get_hermetic_test_compile_options(compile_options "" "")
   target_compile_options(${fq_build_target_name} PRIVATE
                          ${compile_options} ${INTEGRATION_TEST_COMPILE_OPTIONS})
 
@@ -762,7 +762,7 @@ function(add_libc_hermetic test_name)
   endif()
   cmake_parse_arguments(
     "HERMETIC_TEST"
-    "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD" # Optional arguments
+    "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD;C_TEST" # Optional arguments
     "SUITE;CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
@@ -798,7 +798,7 @@ function(add_libc_hermetic test_name)
   endif()
 
   # Syscalls used by death tests.
-  if(LIBC_TEST_SUBPROCESS_TESTS)
+  if(LIBC_TEST_SUBPROCESS_TESTS AND NOT HERMETIC_TEST_C_TEST)
     list(APPEND fq_deps_list
         libc.src.poll.poll
         libc.src.signal.kill
@@ -877,7 +877,8 @@ function(add_libc_hermetic test_name)
 
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  _get_hermetic_test_compile_options(compile_options "${HERMETIC_TEST_FLAGS}")
+  _get_hermetic_test_compile_options(compile_options "${HERMETIC_TEST_C_TEST}"
+                                     "${HERMETIC_TEST_FLAGS}")
   target_compile_options(${fq_build_target_name} PRIVATE
                          ${compile_options}
                          ${HERMETIC_TEST_COMPILE_OPTIONS})

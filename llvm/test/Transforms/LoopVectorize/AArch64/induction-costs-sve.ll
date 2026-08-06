@@ -20,9 +20,8 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; DEFAULT:       [[VECTOR_MEMCHECK]]:
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 8
-; DEFAULT-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
-; DEFAULT-NEXT:    [[TMP27:%.*]] = sub i64 [[TMP5]], 1
+; DEFAULT-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP3]], 4
+; DEFAULT-NEXT:    [[TMP27:%.*]] = add i64 [[TMP9]], -1
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; DEFAULT-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP6]], 1
 ; DEFAULT-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], [[TMP27]]
@@ -126,8 +125,8 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; PRED:       [[VECTOR_MEMCHECK]]:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 8
-; PRED-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP2]], 1
+; PRED-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 3
+; PRED-NEXT:    [[TMP7:%.*]] = add i64 [[TMP2]], -1
 ; PRED-NEXT:    [[TMP3:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; PRED-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP3]], 1
 ; PRED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP7]]
@@ -599,11 +598,11 @@ define void @exit_cond_zext_iv(ptr %dst, i64 %N) {
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; DEFAULT:       [[SCALAR_PH]]:
 ; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP6]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; DEFAULT-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; DEFAULT-NEXT:    br label %[[LOOP:.*]]
 ; DEFAULT:       [[LOOP]]:
 ; DEFAULT-NEXT:    [[IV_1:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], %[[LOOP]] ]
-; DEFAULT-NEXT:    [[IV_CONV:%.*]] = phi i64 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[IV_EXT:%.*]], %[[LOOP]] ]
+; DEFAULT-NEXT:    [[IV_CONV:%.*]] = phi i64 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[IV_EXT:%.*]], %[[LOOP]] ]
 ; DEFAULT-NEXT:    [[GEP:%.*]] = getelementptr { [100 x i32], i32, i32 }, ptr [[DST]], i64 [[IV_CONV]], i32 2
 ; DEFAULT-NEXT:    store i32 0, ptr [[GEP]], align 8
 ; DEFAULT-NEXT:    [[IV_1_NEXT]] = add i32 [[IV_1]], 1
