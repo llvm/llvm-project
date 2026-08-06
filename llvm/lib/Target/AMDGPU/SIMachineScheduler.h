@@ -132,7 +132,7 @@ public:
   // This is approximative.
   // Ideally should take into accounts some instructions (rcp, etc)
   // are 4 times slower.
-  int getCost() { return SUnits.size(); }
+  int getCost() { return static_cast<int>(SUnits.size()); }
 
   // The block Predecessors and Successors must be all registered
   // before fastSchedule().

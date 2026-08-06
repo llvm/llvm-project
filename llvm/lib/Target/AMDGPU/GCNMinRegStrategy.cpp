@@ -101,7 +101,7 @@ int GCNMinRegScheduler::getReadySuccessors(const SUnit *SU) const {
 }
 
 int GCNMinRegScheduler::getNotReadySuccessors(const SUnit *SU) const {
-  return SU->Succs.size() - getReadySuccessors(SU);
+  return static_cast<int>(SU->Succs.size() - getReadySuccessors(SU));
 }
 
 template <typename Calc>
@@ -132,7 +132,7 @@ unsigned GCNMinRegScheduler::findMax(unsigned Num, Calc C) {
 
 GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
   do {
-    unsigned Num = RQ.size();
+    unsigned Num = static_cast<unsigned>(RQ.size());
     if (Num == 1) break;
 
     LLVM_DEBUG(dbgs() << "\nSelecting max priority candidates among " << Num
@@ -162,7 +162,7 @@ GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
     });
     if (Num == 1) break;
 
-    Num = Num ? Num : RQ.size();
+    Num = static_cast<unsigned>(Num ? Num : RQ.size());
     LLVM_DEBUG(
         dbgs()
         << "\nCan't find best candidate, selecting in program order among "
