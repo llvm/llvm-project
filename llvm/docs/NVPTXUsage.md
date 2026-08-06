@@ -3068,28 +3068,11 @@ Memory for the resultant matrix D will not be updated
 #### Intrinsic Design:
 
 Given the broad feature set of `tcgen05.mma` instruction modeling these
-through intrinsics is highly complex, and the following table outlines the large
-number of intrinsics required to fully support the `tcgen05.mma` instruction
-set.
-
-| variant                            | Configuration                                                                                                 | Total Variants |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------- |
-| tcgen05.mma.shared                 | 2 (space) x 2 (sp) x 4 (kind) x 2 (cta_group) x 4 (collector_usage_a) x 4 (collector_usage_b)                 | 512            |
-| tcgen05.mma.tensor.ashift          | 2 (sp) x 4 (kind) x 2 (cta_group) x 2 (collector_usage_a) x 4 (collector_usage_b)                             | 128            |
-| tcgen05.mma.scale_d                | 2 (space) x 2 (sp) x 2 (kind) x 2 (cta_group) x 4 (collector_usage_a) x 4 (collector_usage_b)                 | 512            |
-| tcgen05.mma.scale_d.tensor.ashift  | 2 (sp) x 2 (kind) x 2 (cta_group) x 2 (collector_usage_a) x 4 (collector_usage_b)                             | 64             |
-| tcgen05.mma.disable_output_lane    | 2 (space) x 2 (sp) x 4 (kind) x 2 (cta_group) x 4 (collector_usage_a) x 4 (collector_usage_b)                 | 512            |
-| tcgen05.mma.disable_output_lane... | 2 (sp) x 4 (kind) x 2 (cta_group) x 2 (collector_usage_a) x 4 (collector_usage_b)                             | 128            |
-| tcgen05.mma.block_scale            | 2 (space) x 1 (mxf4nvf4) x 2 (cta_group) x 2 (scale_vec_size) x 4 (collector_usage_a) x 4 (collector_usage_b) | 128            |
-| tcgen05.mma.block_scale            | 2 (space) x 1 (mxf4) x 2 (cta_group) x 2 (scale_vec_size) x 4 (collector_usage_a) x 4 (collector_usage_b)     | 128            |
-| tcgen05.mma.block_scale            | 2 (space) x 1 (mxf8f6f4) x 2 (cta_group) x 2 (scale_vec_size) x 4 (collector_usage_a) x 4 (collector_usage_b) | 128            |
-| tcgen05.mma.ws                     | 2 (space) x 2 (sp) x 4 (kind) x 2 (zero_col_mask) x 4 (collector_usage_op) x 4 (collector_buffer)             | 256            |
-| Total                              |                                                                                                               | 2496           |
-
-To reduce the number of possible intrinsic variations, we've modeled the
-`tcgen05.mma` instructions using flag operands. We've added range checks to
-these flags to prevent invalid values. We also expanded some flags back into
-intrinsic modifiers to avoid supporting invalid combinations of features.
+through intrinsics is highly complex, we've modeled the `tcgen05.mma`
+instructions using flag operands. We've added range checks to these flags to
+prevent invalid values. We also expanded some flags back into intrinsic
+modifiers to avoid supporting invalid combinations of features. These intrinsics
+capture ~2000+ individual PTX instruction combinations of this family.
 
 #### '`llvm.nvvm.tcgen05.mma.*`'
 
