@@ -1613,8 +1613,8 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   // meaning they remain in the range of a signed SrcTy so we won't need to
   // clear any high bits.
   bool EvaluateAsSigned =
-      Zext.hasNonNeg() &&
-      TypeEvaluationHelper::canEvaluateSExtd(Src, DestTy, true);
+      Zext.hasNonNeg() && TypeEvaluationHelper::canEvaluateSExtd(
+                              Src, DestTy, /*NoSignedWrap=*/true);
 
   // Try to extend the entire expression tree to the wide destination type.
   unsigned BitsToClear = 0;
