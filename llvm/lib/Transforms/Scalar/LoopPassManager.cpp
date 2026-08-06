@@ -199,6 +199,11 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
   PassInstrumentation PI = AM.getResult<PassInstrumentationAnalysis>(F);
 
   PreservedAnalyses PA = PreservedAnalyses::all();
+  // If there are no loops, there's no need to run any loop passes or construct
+  // the required analyses.
+  if (AM.getResult<LoopAnalysis>(F).empty())
+    return PA;
+
   // Check the PassInstrumentation's BeforePass callbacks before running the
   // canonicalization pipeline.
   if (PI.runBeforePass<Function>(LoopCanonicalizationFPM, F)) {
