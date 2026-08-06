@@ -957,14 +957,17 @@ void OmpStructureChecker::CheckDirectiveInPureProcedure(
   // nothing, error, and the loop-transforming constructs).
   bool alwaysAllowed{id == llvm::omp::Directive::OMPD_simd ||
       llvm::omp::getDirectiveCategory(id) == llvm::omp::Category::Declarative};
-  if (alwaysAllowed || (version >= 52 && llvm::omp::isDirectivePure(id))) {
+  // A directive's "pure" property is version-specific: pureSince is the
+  // OpenMP version at which the directive gained that property.
+  unsigned pureSince{llvm::omp::getDirectivePureSince(id)};
+  if (alwaysAllowed || version >= pureSince) {
     return;
   }
-  if (llvm::omp::isDirectivePure(id)) {
+  if (pureSince != 0x7FFFFFFF) {
     context_.Say(source,
         "The OpenMP directive '%s' is not allowed in a PURE procedure in %s, %s"_err_en_US,
         parser::omp::GetUpperName(id, version), ThisVersion(version),
-        TryVersion(52));
+        TryVersion(pureSince));
   } else {
     context_.Say(source,
         "The OpenMP directive '%s' is not allowed in a PURE procedure"_err_en_US,

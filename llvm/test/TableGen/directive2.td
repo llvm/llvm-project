@@ -155,11 +155,10 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  #endif
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
-// CHECK-NEXT:  constexpr bool isDirectivePure(Directive Dir) {
+// CHECK-NEXT:  constexpr unsigned getDirectivePureSince(Directive Dir) {
 // CHECK-NEXT:    switch (Dir) {
-// CHECK-NEXT:      return true;
 // CHECK-NEXT:    default:
-// CHECK-NEXT:      return false;
+// CHECK-NEXT:      return 0x7FFFFFFF;
 // CHECK-NEXT:    } // switch (Dir)
 // CHECK-NEXT:  }
 // CHECK-EMPTY:

@@ -899,22 +899,26 @@ static void generateGetDirectiveCategory(const DirectiveLanguage &DirLang,
   OS << "}\n";
 }
 
-static void generateIsDirectivePure(const DirectiveLanguage &DirLang,
-                                    raw_ostream &OS) {
-  OS << "constexpr bool isDirectivePure(Directive Dir) {\n";
+static void generateGetDirectivePureSince(const DirectiveLanguage &DirLang,
+                                          raw_ostream &OS) {
+  // Must match the sentinel in DirectiveBase.td and in
+  // OmpStructureChecker::CheckDirectiveInPureProcedure.
+  constexpr int NeverPure = 0x7FFFFFFF;
+  OS << "constexpr unsigned getDirectivePureSince(Directive Dir) {\n";
   OS << "  switch (Dir) {\n";
 
   StringRef Prefix = DirLang.getDirectivePrefix();
 
   for (const Record *R : DirLang.getDirectives()) {
     Directive D(R);
-    if (!D.isPure())
+    int PureSince = D.getPureSince();
+    if (PureSince == NeverPure)
       continue;
     OS << "  case " << getIdentifierName(R, Prefix) << ":\n";
+    OS << "    return " << PureSince << ";\n";
   }
-  OS << "    return true;\n";
   OS << "  default:\n";
-  OS << "    return false;\n";
+  OS << "    return " << NeverPure << ";\n";
   OS << "  } // switch (Dir)\n";
   OS << "}\n";
 }
@@ -1403,7 +1407,7 @@ static void emitDirectivesConstexprImpl(const DirectiveLanguage &DirLang,
   OS << "\n";
   generateGetDirectiveCategory(DirLang, OS);
   OS << "\n";
-  generateIsDirectivePure(DirLang, OS);
+  generateGetDirectivePureSince(DirLang, OS);
   OS << "\n";
   generateGetDirectiveLanguages(DirLang, OS);
 }

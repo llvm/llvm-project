@@ -268,8 +268,6 @@ class Directive<list<Spelling> ss> {
   // The languages that allow this directive. Default: all languages.
   list<SourceLanguage> languages = [L_C, L_Fortran];
 
-  // Whether the directive has the "pure" property, i.e. it is permitted to
-  // appear in a context that must be free of side effects, such as a Fortran
-  // PURE procedure. Defaults to false.
-  bit isPure = false;
+  // The OpenMP version at which the directive gained the "pure" property.
+  int pureSince = 0x7FFFFFFF;
 }

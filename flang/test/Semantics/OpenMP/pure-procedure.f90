@@ -1,9 +1,9 @@
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp -fopenmp-version=60
 
 ! Only directives that have the "pure" property are permitted to appear in a
-! Fortran PURE procedure. These are: metadirective, assume, assumes, nothing,
-! error, and the loop-transforming directives (tile, unroll, reverse,
-! interchange, fuse, split, stripe).
+! Fortran PURE procedure. These are: simd, scan, metadirective, assume,
+! assumes, nothing, error, and the loop-transforming directives (tile, unroll,
+! reverse, interchange, fuse, split, stripe).
 ! (The SPLIT directive is omitted below only because its required COUNTS clause
 ! is not yet parsed; it is still marked pure.)
 
@@ -47,6 +47,29 @@ contains
     end do
     do i = 1, n
       a(i) = a(i) + 2
+    end do
+  end subroutine
+
+  pure subroutine pure_scan(a, n)
+    integer, intent(in) :: n
+    integer, intent(inout) :: a(n)
+    integer :: i, x
+    x = 0
+    !$omp simd reduction(inscan, +: x)
+    do i = 1, n
+      x = x + a(i)
+      !$omp scan inclusive(x)
+      a(i) = x
+    end do
+  end subroutine
+
+  pure subroutine pure_simd(a, n)
+    integer, intent(in) :: n
+    integer, intent(inout) :: a(n)
+    integer :: i
+    !$omp simd
+    do i = 1, n
+      a(i) = a(i) + 1
     end do
   end subroutine
 
