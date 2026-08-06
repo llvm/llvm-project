@@ -48,6 +48,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
@@ -2021,6 +2022,91 @@ void Target::ModulesDidUnload(ModuleList &module_list, bool delete_locations) {
 
     RunModuleHooks(/*is_load=*/false);
   }
+}
+
+Status Target::ReplaceModule(ModuleSP old_module_sp,
+                             const ModuleSP &new_module_sp) {
+  if (!old_module_sp || !new_module_sp)
+    return Status::FromErrorString("invalid module");
+
+  if (old_module_sp == new_module_sp)
+    return Status::FromErrorStringWithFormatv(
+        "'{0}' is already the module being replaced",
+        new_module_sp->GetFileSpec());
+
+  // Where the old module sits, so the replacement can be given the same
+  // address. Read it before anything unloads it.
+  addr_t base_load_addr = LLDB_INVALID_ADDRESS;
+  if (ObjectFile *object_file = old_module_sp->GetObjectFile()) {
+    Address base_addr = object_file->GetBaseAddress();
+    if (base_addr.IsValid())
+      base_load_addr = base_addr.GetLoadAddress(this);
+  }
+
+  // Also keeps the old module alive across ModulesDidUnload(), which reaches
+  // its breakpoint locations through section_sp->GetModule(), a weak
+  // reference.
+  ModuleList unloaded_modules;
+  unloaded_modules.Append(old_module_sp, /*notify=*/false);
+
+  if (m_images.GetIndexForModule(old_module_sp.get()) != LLDB_INVALID_INDEX32)
+    m_images.Remove(old_module_sp, /*notify=*/false);
+
+  // Unloads its sections and deletes its breakpoint locations. Must be
+  // explicit, no notification path passes delete_locations=true.
+  ModulesDidUnload(unloaded_modules, /*delete_locations=*/true);
+
+  // Target::GetOrCreateModule() adds the module it creates, so the replacement
+  // is usually in the target already.
+  if (m_images.GetIndexForModule(new_module_sp.get()) == LLDB_INVALID_INDEX32)
+    m_images.Append(new_module_sp, /*notify=*/false);
+
+  // ModuleList keeps the executable at index 0, but the replacement was
+  // appended while the old one still held that slot. Add it again to sort it to
+  // the front.
+  if (ObjectFile *new_object_file = new_module_sp->GetObjectFile()) {
+    if (new_object_file->GetType() == ObjectFile::eTypeExecutable &&
+        m_images.GetIndexForModule(new_module_sp.get()) != 0) {
+      m_images.Remove(new_module_sp, /*notify=*/false);
+      m_images.Append(new_module_sp, /*notify=*/false);
+    }
+  }
+
+  // Generic placement, correct whenever a module is mapped in one piece. The
+  // dynamic loader corrects it below on platforms where it is not.
+  if (base_load_addr != LLDB_INVALID_ADDRESS) {
+    bool changed = false;
+    new_module_sp->SetLoadAddress(*this, base_load_addr,
+                                  /*value_is_offset=*/false, changed);
+  }
+
+  // Let the dynamic loader redo the load addresses if this platform needs it,
+  // and move over anything it tracks per module, such as the link map address
+  // thread locals are found through.
+  Status error;
+  if (m_process_sp) {
+    if (DynamicLoader *dyld = m_process_sp->GetDynamicLoader())
+      error = dyld->ReplaceModule(old_module_sp, new_module_sp);
+  }
+
+  // Sections must be in place first, resolving breakpoints into a module whose
+  // sections are not loaded yields locations with no address.
+  ModuleList added_modules;
+  added_modules.Append(new_module_sp, /*notify=*/false);
+  ModulesDidLoad(added_modules);
+
+  // Drop the old module from the shared module cache so a later lookup of the
+  // same path cannot resurrect it.
+  unloaded_modules.Clear();
+  std::weak_ptr<Module> old_module_wp(old_module_sp->weak_from_this());
+  old_module_sp.reset();
+  ModuleList::RemoveSharedModuleIfOrphaned(old_module_wp);
+
+  // Cached stack frames and register contexts can still hold the old module.
+  if (m_process_sp)
+    m_process_sp->Flush();
+
+  return error;
 }
 
 bool Target::ModuleIsExcludedForUnconstrainedSearches(

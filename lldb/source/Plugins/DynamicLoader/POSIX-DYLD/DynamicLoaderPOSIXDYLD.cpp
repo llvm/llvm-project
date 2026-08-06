@@ -211,6 +211,21 @@ DynamicLoaderPOSIXDYLD::GetLoadedModuleLinkAddr(const ModuleSP &module_sp) {
   return std::nullopt;
 }
 
+Status DynamicLoaderPOSIXDYLD::ReplaceModule(const ModuleSP &old_module_sp,
+                                             const ModuleSP &new_module_sp) {
+  // Images are mapped in one piece here, so the target's placement is already
+  // correct. Only the link map address needs moving, without it no thread local
+  // in the replacement can be resolved.
+  llvm::sys::ScopedWriter lock(m_loaded_modules_rw_mutex);
+  auto it = m_loaded_modules.find(old_module_sp);
+  if (it == m_loaded_modules.end())
+    return Status();
+  const addr_t link_map_addr = it->second;
+  m_loaded_modules.erase(it);
+  m_loaded_modules[new_module_sp] = link_map_addr;
+  return Status();
+}
+
 void DynamicLoaderPOSIXDYLD::UpdateLoadedSections(ModuleSP module,
                                                   addr_t link_map_addr,
                                                   addr_t base_addr,

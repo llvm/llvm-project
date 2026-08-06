@@ -41,6 +41,7 @@
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
@@ -3135,6 +3136,222 @@ protected:
   OptionGroupUInt64 m_slide_option;
 };
 
+#pragma mark CommandObjectTargetModulesReplace
+
+#define LLDB_OPTIONS_target_modules_replace
+#include "CommandOptions.inc"
+
+// Replace a module in the target with a different file on disk.
+
+class CommandObjectTargetModulesReplace : public CommandObjectParsed {
+public:
+  CommandObjectTargetModulesReplace(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target modules replace",
+            "Replace a module in the current target with a file that has more "
+            "complete contents, usually to resolve a placeholder module from a "
+            "core file once the real binary has been located. To attach debug "
+            "info to a module that is otherwise fine, use 'target symbols "
+            "add'.",
+            "target modules replace [--old-path <path>] [--force] <path>",
+            eCommandRequiresTarget | eCommandTryTargetAPILock |
+                eCommandProcessMustBePaused) {
+    AddSimpleArgumentList(eArgTypePath, eArgRepeatPlain);
+  }
+
+  ~CommandObjectTargetModulesReplace() override = default;
+
+  Options *GetOptions() override { return &m_options; }
+
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() = default;
+
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'o':
+        m_old_path.assign(std::string(option_arg));
+        break;
+      case 'f':
+        m_force = true;
+        break;
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+      return Status();
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_old_path.clear();
+      m_force = false;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::ArrayRef(g_target_modules_replace_options);
+    }
+
+    std::string m_old_path;
+    bool m_force = false;
+  };
+
+protected:
+  CommandOptions m_options;
+
+  // Find the module the new file is meant to stand in for. Preferred order is
+  // the path the user gave, then the UUID read out of the new file, then its
+  // basename.
+  ModuleSP FindModuleToReplace(Target &target, const FileSpec &new_file_spec,
+                               const UUID &new_uuid,
+                               CommandReturnObject &result) {
+    ModuleSpec search_spec;
+    llvm::StringRef description;
+
+    if (!m_options.m_old_path.empty()) {
+      search_spec.GetFileSpec().SetPath(m_options.m_old_path);
+      description = "the given path";
+    } else if (new_uuid.IsValid()) {
+      search_spec.GetUUID() = new_uuid;
+      description = "a matching UUID";
+    } else {
+      search_spec.GetFileSpec().SetFilename(new_file_spec.GetFilename());
+      description = "a matching name";
+    }
+
+    ModuleList matches;
+    target.GetImages().FindModules(search_spec, matches);
+
+    if (matches.IsEmpty()) {
+      // A file with a UUID that names nothing in the target is still worth
+      // trying by name, the placeholder it should replace may have been built
+      // without one.
+      if (m_options.m_old_path.empty() && new_uuid.IsValid()) {
+        ModuleSpec by_name;
+        by_name.GetFileSpec().SetFilename(new_file_spec.GetFilename());
+        target.GetImages().FindModules(by_name, matches);
+        description =
+            matches.IsEmpty() ? "a matching UUID or name" : "a matching name";
+      }
+      if (matches.IsEmpty()) {
+        result.AppendErrorWithFormatv(
+            "no module in the target was found by {0}, use the --old-path "
+            "option to name the module to replace",
+            description);
+        return ModuleSP();
+      }
+    }
+
+    if (matches.GetSize() > 1) {
+      StreamString paths;
+      for (size_t i = 0; i < matches.GetSize(); ++i)
+        paths.Format("\n  {0}", matches.GetModuleAtIndex(i)->GetFileSpec());
+      result.AppendErrorWithFormatv(
+          "{0} modules in the target were found by {1}, use the --old-path "
+          "option to name one of:{2}",
+          matches.GetSize(), description, paths.GetString());
+      return ModuleSP();
+    }
+
+    return matches.GetModuleAtIndex(0);
+  }
+
+  void DoExecute(Args &args, CommandReturnObject &result) override {
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+
+    if (args.GetArgumentCount() != 1) {
+      result.AppendError(
+          "'target modules replace' takes one argument: the path of the file "
+          "to replace a module with");
+      return;
+    }
+    llvm::StringRef new_module_path = args.GetArgumentAtIndex(0);
+
+    // Nothing below may change the target until Target::ReplaceModule() is
+    // called, so a failure can never leave the target half way through a
+    // replacement.
+    FileSpec new_file_spec(new_module_path);
+    FileSystem::Instance().Resolve(new_file_spec);
+    if (!FileSystem::Instance().Exists(new_file_spec)) {
+      std::string resolved_path = new_file_spec.GetPath();
+      if (resolved_path != new_module_path)
+        result.AppendErrorWithFormatv(
+            "invalid module path '{0}' with resolved path '{1}'",
+            new_module_path, resolved_path);
+      else
+        result.AppendErrorWithFormatv("invalid module path '{0}'",
+                                      new_module_path);
+      return;
+    }
+
+    // Read the UUID straight from the file rather than from a Module, so the
+    // module the new file should replace can be found before anything is added
+    // to the target.
+    UUID new_uuid;
+    ModuleSpecList file_specs =
+        ObjectFile::GetModuleSpecifications(new_file_spec, 0, 0);
+    if (file_specs.GetSize() > 0) {
+      ModuleSpec arch_spec;
+      arch_spec.GetArchitecture() = target->GetArchitecture();
+      ModuleSpec matching_spec;
+      if (file_specs.FindMatchingModuleSpec(arch_spec, matching_spec))
+        new_uuid = matching_spec.GetUUID();
+      else if (file_specs.GetSize() == 1)
+        new_uuid = file_specs.GetModuleSpecRefAtIndex(0).GetUUID();
+    }
+
+    ModuleSP old_module_sp =
+        FindModuleToReplace(*target, new_file_spec, new_uuid, result);
+    if (!old_module_sp)
+      return;
+
+    // Different UUIDs mean the new file is not the binary that ran, so the
+    // symbols would not describe the memory the target has.
+    const UUID &old_uuid = old_module_sp->GetUUID();
+    if (!m_options.m_force && old_uuid.IsValid() && new_uuid.IsValid() &&
+        old_uuid != new_uuid) {
+      result.AppendErrorWithFormatv(
+          "'{0}' has UUID {1}, which does not match UUID {2} of the module it "
+          "would replace, '{3}'. Use the --force option to replace it anyway",
+          new_file_spec.GetPath(), new_uuid.GetAsString(),
+          old_uuid.GetAsString(), old_module_sp->GetFileSpec().GetPath());
+      return;
+    }
+
+    ModuleSpec new_module_spec(new_file_spec);
+    if (!new_module_spec.GetArchitecture().IsValid())
+      new_module_spec.GetArchitecture() = target->GetArchitecture();
+
+    Status error;
+    ModuleSP new_module_sp =
+        target->GetOrCreateModule(new_module_spec, /*notify=*/false, &error);
+    if (!new_module_sp) {
+      if (error.Fail())
+        result.SetError(error.takeError());
+      else
+        result.AppendErrorWithFormatv("unsupported module: {0}",
+                                      new_file_spec.GetPath());
+      return;
+    }
+
+    const std::string old_module_desc = old_module_sp->GetFileSpec().GetPath();
+    Status replace_error =
+        target->ReplaceModule(std::move(old_module_sp), new_module_sp);
+    if (replace_error.Fail()) {
+      result.SetError(replace_error.takeError());
+      return;
+    }
+
+    result.AppendMessageWithFormatv("replaced '{0}' with '{1}'",
+                                    old_module_desc, new_file_spec.GetPath());
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
 #pragma mark CommandObjectTargetModulesList
 // List images with associated information
 #define LLDB_OPTIONS_target_modules_list
@@ -4230,6 +4447,9 @@ public:
     LoadSubCommand(
         "lookup",
         CommandObjectSP(new CommandObjectTargetModulesLookup(interpreter)));
+    LoadSubCommand(
+        "replace",
+        CommandObjectSP(new CommandObjectTargetModulesReplace(interpreter)));
     LoadSubCommand(
         "search-paths",
         CommandObjectSP(
