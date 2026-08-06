@@ -6238,3 +6238,154 @@ entry:
   %cmp = icmp ult i8 %p0, %p1
   ret i1 %cmp
 }
+
+;  positive-test:Basic case: both sides match the sign-mask xor pattern on i32.
+; f(x) == f(y) --> x == y
+define i1 @signmask_xor_eq_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: define i1 @signmask_xor_eq_i32(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %asr_x = ashr i32 %x, 31
+  %lsr_x = lshr i32 %asr_x, 1
+  %xor_x = xor i32 %x, %lsr_x
+  %asr_y = ashr i32 %y, 31
+  %lsr_y = lshr i32 %asr_y, 1
+  %xor_y = xor i32 %y, %lsr_y
+  %cmp = icmp eq i32 %xor_x, %xor_y
+  ret i1 %cmp
+}
+
+;  positive-test:Same as above but with ne predicate.
+; f(x) != f(y) --> x != y
+define i1 @signmask_xor_ne_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: define i1 @signmask_xor_ne_i32(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %asr_x = ashr i32 %x, 31
+  %lsr_x = lshr i32 %asr_x, 1
+  %xor_x = xor i32 %x, %lsr_x
+  %asr_y = ashr i32 %y, 31
+  %lsr_y = lshr i32 %asr_y, 1
+  %xor_y = xor i32 %y, %lsr_y
+  %cmp = icmp ne i32 %xor_x, %xor_y
+  ret i1 %cmp
+}
+
+;  positive-test:i64 variant: shift amounts are 63 and 1 for 64-bit sign-mask xor.
+define i1 @signmask_xor_eq_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: define i1 @signmask_xor_eq_i64(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %asr_x = ashr i64 %x, 63
+  %lsr_x = lshr i64 %asr_x, 1
+  %xor_x = xor i64 %x, %lsr_x
+  %asr_y = ashr i64 %y, 63
+  %lsr_y = lshr i64 %asr_y, 1
+  %xor_y = xor i64 %y, %lsr_y
+  %cmp = icmp eq i64 %xor_x, %xor_y
+  ret i1 %cmp
+}
+
+; positive-test: i64 ne predicate.
+define i1 @signmask_xor_ne_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: define i1 @signmask_xor_ne_i64(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %asr_x = ashr i64 %x, 63
+  %lsr_x = lshr i64 %asr_x, 1
+  %xor_x = xor i64 %x, %lsr_x
+  %asr_y = ashr i64 %y, 63
+  %lsr_y = lshr i64 %asr_y, 1
+  %xor_y = xor i64 %y, %lsr_y
+  %cmp = icmp ne i64 %xor_x, %xor_y
+  ret i1 %cmp
+}
+
+; positive-test: xor is commutative: lshr(...) xor x is the same pattern as x xor lshr(...).
+; matchSignMaskXor uses m_c_Xor so both orderings should fold.
+define i1 @signmask_xor_commuted_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: define i1 @signmask_xor_commuted_i32(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %asr_x = ashr i32 %x, 31
+  %lsr_x = lshr i32 %asr_x, 1
+  %xor_x = xor i32 %lsr_x, %x
+  %asr_y = ashr i32 %y, 31
+  %lsr_y = lshr i32 %asr_y, 1
+  %xor_y = xor i32 %lsr_y, %y
+  %cmp = icmp eq i32 %xor_x, %xor_y
+  ret i1 %cmp
+}
+
+; positive-test: Vector splat: m_APInt matches splat constants so the fold applies
+; element-wise to the whole vector at once.
+define <4 x i1> @signmask_xor_eq_vec_i32(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: define <4 x i1> @signmask_xor_eq_vec_i32(
+; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[X]], [[Y]]
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+  %asr_x = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
+  %lsr_x = lshr <4 x i32> %asr_x, <i32 1, i32 1, i32 1, i32 1>
+  %xor_x = xor <4 x i32> %x, %lsr_x
+  %asr_y = ashr <4 x i32> %y, <i32 31, i32 31, i32 31, i32 31>
+  %lsr_y = lshr <4 x i32> %asr_y, <i32 1, i32 1, i32 1, i32 1>
+  %xor_y = xor <4 x i32> %y, %lsr_y
+  %cmp = icmp eq <4 x i32> %xor_x, %xor_y
+  ret <4 x i1> %cmp
+}
+
+; positive-test: Vector ne predicate.
+define <4 x i1> @signmask_xor_ne_vec_i32(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: define <4 x i1> @signmask_xor_ne_vec_i32(
+; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <4 x i32> [[X]], [[Y]]
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+  %asr_x = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
+  %lsr_x = lshr <4 x i32> %asr_x, <i32 1, i32 1, i32 1, i32 1>
+  %xor_x = xor <4 x i32> %x, %lsr_x
+  %asr_y = ashr <4 x i32> %y, <i32 31, i32 31, i32 31, i32 31>
+  %lsr_y = lshr <4 x i32> %asr_y, <i32 1, i32 1, i32 1, i32 1>
+  %xor_y = xor <4 x i32> %y, %lsr_y
+  %cmp = icmp ne <4 x i32> %xor_x, %xor_y
+  ret <4 x i1> %cmp
+}
+
+; positive-test: i4 multi-use variant: icmp folds, but xor computations
+; survive because they have other uses.
+define i4 @signmask_xor_eq_multiuse_i4(i4 %x, i4 %y) {
+; CHECK-LABEL: define i4 @signmask_xor_eq_multiuse_i4(
+; CHECK-SAME: i4 [[X:%.*]], i4 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i4 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i4
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i4 [[Y]], [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = ashr i4 [[TMP3]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i4 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = xor i4 [[TMP5]], [[TMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = xor i4 [[TMP6]], [[Y]]
+; CHECK-NEXT:    [[TMP8:%.*]] = xor i4 [[TMP7]], [[X]]
+; CHECK-NEXT:    ret i4 [[TMP8]]
+;
+  %1 = ashr i4 %x, 3
+  %2 = lshr i4 %1, 1
+  %3 = xor i4 %2, %x
+  %4 = ashr i4 %y, 3
+  %5 = lshr i4 %4, 1
+  %6 = xor i4 %5, %y
+  %7 = icmp eq i4 %3, %6
+  %8 = zext i1 %7 to i4
+  %9 = xor i4 %3, %6
+  %10 = xor i4 %9, %8
+  ret i4 %10
+}
