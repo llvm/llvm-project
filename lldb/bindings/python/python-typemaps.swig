@@ -210,6 +210,16 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 // as char data instead of byte data.
 %typemap(argout) (void *char_buf, size_t size) = (char *dst, size_t dst_len);
 
+// Uses (char *dst, size_t dst_len) argout typemap.
+// Should return `str`, but annotated as `typing.List[typing.Union[int, typing.Optional[str]]]`.
+%feature("python:annotations", "0") lldb::SBProcess::GetSTDOUT;
+%feature("python:annotations", "0") lldb::SBProcess::GetSTDERR;
+%feature("python:annotations", "0") lldb::SBProcess::GetAsyncProfileData;
+%feature("python:annotations", "0") lldb::SBStructuredData::GetStringValue;
+
+// Uses (void *char_buf, size_t size) argout typemap.
+// Should return `str`, but annotated as `typing.List[typing.Union[int, typing.Optional[SWIGTYPE_p_void]]]`.
+%feature("python:annotations", "0") lldb::SBProcess::ReadCStringFromMemory;
 
 // typemap for handling an snprintf-like API like SBThread::GetStopDescription.
 %typemap(in) (char *dst_or_null, size_t dst_len) {
@@ -250,10 +260,19 @@ AND call SWIG_fail at the same time, because it will result in a double free.
   free($1);
 }
 
+// Uses (char *dst_or_null, size_t dst_len) argout typemap.
+// Should return `str`, but annotated as `typing.List[typing.Union[int, typing.Optional[str]]]`.
+%feature("python:annotations", "0") lldb::SBThread::GetStopDescription;
+
 
 // For lldb::SBFileSpec::GetPath
 %typemap(in) (char *dst_path, size_t dst_len) = (char *dst_or_null, size_t dst_len);
 %typemap(argout) (char *dst_path, size_t dst_len) = (char *dst_or_null, size_t dst_len);
+
+// Uses (char *dst_path, size_t dst_len) argout typemap.
+// Should return `str`, but annotated as `typing.List[typing.Union[int, typing.Optional[str]]]`.
+%feature("python:annotations", "0") lldb::SBFileSpec::GetPath;
+%feature("python:annotations", "0") lldb::SBFileSpec::ResolvePath;
 
 
 // typemap for an outgoing buffer
@@ -337,6 +356,12 @@ AND call SWIG_fail at the same time, because it will result in a double free.
   }
   free($1);
 }
+
+// Uses (void *buf, size_t size) argout typemap.
+// Should return `typing.Optional[bytes]`, but annotated as `typing.List[typing.Union[int, typing.Optional[SWIGTYPE_p_void]]]`.
+%feature("python:annotations", "0") lldb::SBProcess::ReadMemory;
+%feature("python:annotations", "0") lldb::SBTarget::ReadMemory;
+%feature("python:annotations", "0") lldb::SBData::ReadRawData;
 
 %{
 namespace {
@@ -464,6 +489,10 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 %typemap(freearg) (uint32_t *versions) {
   free($1);
 }
+
+// Uses (uint32_t *versions, uint32_t num_versions) argout typemap.
+// Should return `typing.List[int]`, but annotated as `typing.List[typing.Union[int, typing.Optional[SWIGTYPE_p_unsigned_int]]]`.
+%feature("python:annotations", "0") lldb::SBModule::GetVersion;
 
 // For Log::LogOutputCallback
 %typemap(in) (lldb::LogOutputCallback log_callback, void *baton) {
