@@ -25074,23 +25074,31 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_neon_tbx3:
   case Intrinsic::aarch64_neon_tbx4: {
     if (ISD::isBuildVectorAllZeros(N->getOperand(1).getNode())) {
+      SDLoc DL(N);
       unsigned TblIID = 0;
-      if (IID == Intrinsic::aarch64_neon_tbx1)
+      switch (IID) {
+      case Intrinsic::aarch64_neon_tbx1:
         TblIID = Intrinsic::aarch64_neon_tbl1;
-      else if (IID == Intrinsic::aarch64_neon_tbx2)
+        break;
+      case Intrinsic::aarch64_neon_tbx2:
         TblIID = Intrinsic::aarch64_neon_tbl2;
-      else if (IID == Intrinsic::aarch64_neon_tbx3)
+        break;
+      case Intrinsic::aarch64_neon_tbx3:
         TblIID = Intrinsic::aarch64_neon_tbl3;
-      else if (IID == Intrinsic::aarch64_neon_tbx4)
+        break;
+      case Intrinsic::aarch64_neon_tbx4:
         TblIID = Intrinsic::aarch64_neon_tbl4;
+        break;
+      default:
+        llvm_unreachable("Unexpected TBX intrinsic");
+      }
 
-      SmallVector<SDValue, 4> Ops;
-      Ops.push_back(DAG.getTargetConstant(TblIID, SDLoc(N), MVT::i32));
-      for (unsigned i = 2; i < N->getNumOperands(); ++i)
-        Ops.push_back(N->getOperand(i));
+      SmallVector<SDValue, 6> Ops;
+      Ops.push_back(DAG.getConstant(TblIID, DL, MVT::i32));
+      for (unsigned I = 2; I < N->getNumOperands(); ++I)
+        Ops.push_back(N->getOperand(I));
 
-      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(N), N->getValueType(0),
-                         Ops);
+      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0), Ops);
     }
     break;
   }
