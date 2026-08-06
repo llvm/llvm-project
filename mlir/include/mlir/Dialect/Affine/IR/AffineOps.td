@@ -543,12 +543,15 @@ def AffineLoadOp : AffineLoadOpBase<"load"> {
 
   let builders = [
     /// Builds an affine load op with the specified map and operands.
-    OpBuilder<(ins "AffineMap":$map, "ValueRange":$operands)>,
+    OpBuilder<(ins "AffineMap":$map, "ValueRange":$operands,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>,
     /// Builds an affine load op with an identity map and operands.
-    OpBuilder<(ins "Value":$memref, CArg<"ValueRange", "{}">:$indices)>,
+    OpBuilder<(ins "Value":$memref, CArg<"ValueRange", "{}">:$indices,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>,
     /// Builds an affine load op with the specified map and its operands.
     OpBuilder<(ins "Value":$memref, "AffineMap":$map,
-      "ValueRange":$mapOperands)>
+      "ValueRange":$mapOperands,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>
   ];
 
   let extraClassDeclaration = extraClassDeclarationBase;
@@ -920,9 +923,11 @@ def AffineStoreOp : AffineStoreOpBase<"store"> {
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref,
-      "ValueRange":$indices)>,
+      "ValueRange":$indices,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>,
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref, "AffineMap":$map,
-      "ValueRange":$mapOperands)>
+      "ValueRange":$mapOperands,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>
   ];
 
   let extraClassDeclaration = extraClassDeclarationBase;
@@ -1001,13 +1006,16 @@ def AffineVectorLoadOp : AffineLoadOpBase<"vector_load"> {
   let builders = [
     /// Builds an affine vector load op with the specified map and operands.
     OpBuilder<(ins "VectorType":$resultType, "AffineMap":$map,
-      "ValueRange":$operands)>,
+      "ValueRange":$operands,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>,
     /// Builds an affine vector load op with an identity map and operands.
     OpBuilder<(ins "VectorType":$resultType, "Value":$memref,
-      CArg<"ValueRange", "{}">:$indices)>,
+      CArg<"ValueRange", "{}">:$indices,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>,
     /// Builds an affine vector load op with the specified map and its operands.
     OpBuilder<(ins "VectorType":$resultType, "Value":$memref,
-      "AffineMap":$map, "ValueRange":$mapOperands)>
+      "AffineMap":$map, "ValueRange":$mapOperands,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>
   ];
 
   let extraClassDeclaration = extraClassDeclarationBase # [{
@@ -1073,9 +1081,11 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref,
-      "ValueRange":$indices)>,
+      "ValueRange":$indices,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>,
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref, "AffineMap":$map,
-      "ValueRange":$mapOperands)>
+      "ValueRange":$mapOperands,
+      CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment)>
   ];
 
   let extraClassDeclaration = extraClassDeclarationBase # [{
