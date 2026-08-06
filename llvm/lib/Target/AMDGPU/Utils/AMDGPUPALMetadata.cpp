@@ -85,7 +85,8 @@ void AMDGPUPALMetadata::readFromIR(Module &M) {
     auto *Val = mdconst::dyn_extract<ConstantInt>(Tuple->getOperand(I + 1));
     if (!Key || !Val)
       continue;
-    setRegister(Key->getZExtValue(), Val->getZExtValue());
+    setRegister(static_cast<unsigned>(Key->getZExtValue()),
+                static_cast<unsigned>(Val->getZExtValue()));
   }
 }
 
@@ -200,7 +201,7 @@ unsigned AMDGPUPALMetadata::getRegister(unsigned Reg) {
   auto N = It->second;
   if (N.getKind() != msgpack::Type::UInt)
     return 0;
-  return N.getUInt();
+  return static_cast<unsigned>(N.getUInt());
 }
 
 // Set a register in the metadata.
@@ -823,8 +824,8 @@ void AMDGPUPALMetadata::toString(std::string &String) {
     for (auto I = Regs.begin(), E = Regs.end(); I != E; ++I) {
       if (I != Regs.begin())
         Stream << ',';
-      unsigned Reg = I->first.getUInt();
-      unsigned Val = I->second.getUInt();
+      unsigned Reg = static_cast<unsigned>(I->first.getUInt());
+      unsigned Val = static_cast<unsigned>(I->second.getUInt());
       Stream << "0x" << Twine::utohexstr(Reg) << ",0x" << Twine::utohexstr(Val);
     }
     Stream << '\n';
@@ -839,7 +840,9 @@ void AMDGPUPALMetadata::toString(std::string &String) {
   RegsObj = MsgPackDoc.getMapNode();
   for (auto I : OrigRegs) {
     auto Key = I.first;
-    if (StringRef RegName = getRegisterName(Key.getUInt()); !RegName.empty()) {
+    if (StringRef RegName =
+            getRegisterName(static_cast<unsigned>(Key.getUInt()));
+        !RegName.empty()) {
       std::string KeyName = Key.toString();
       KeyName += " (";
       KeyName += RegName;
@@ -1062,7 +1065,7 @@ unsigned AMDGPUPALMetadata::getPALVersion(unsigned idx) {
   if (Version.isEmpty())
     // Default to 2.6 if there's no version info
     return idx ? 6 : 2;
-  return Version.getArray()[idx].getUInt();
+  return static_cast<unsigned>(Version.getArray()[idx].getUInt());
 }
 
 unsigned AMDGPUPALMetadata::getPALMajorVersion() { return getPALVersion(0); }
@@ -1081,7 +1084,7 @@ void AMDGPUPALMetadata::updateHwStageMaximum(unsigned CC, StringRef field,
   if (Node.isEmpty())
     Node = Val;
   else
-    Node = std::max<unsigned>(Node.getUInt(), Val);
+    Node = std::max<unsigned>(static_cast<unsigned>(Node.getUInt()), Val);
 }
 
 // Set the field in a given .hardware_stages entry

@@ -121,16 +121,17 @@ static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
 template <typename IntTy>
 static uint32_t getIntInlineImmEncoding(IntTy Imm) {
   if (Imm >= 0 && Imm <= 64)
-    return 128 + Imm;
+    return static_cast<uint32_t>(128 + Imm);
 
   if (Imm >= -16 && Imm <= -1)
-    return 192 + std::abs(Imm);
+    return static_cast<uint32_t>(192 + std::abs(Imm));
 
   return 0;
 }
 
 static uint32_t getLit16Encoding(uint16_t Val, const MCSubtargetInfo &STI) {
-  uint16_t IntImm = getIntInlineImmEncoding(static_cast<int16_t>(Val));
+  uint16_t IntImm =
+      static_cast<uint16_t>(getIntInlineImmEncoding(static_cast<int16_t>(Val)));
   if (IntImm != 0)
     return IntImm;
 
@@ -166,7 +167,8 @@ static uint32_t getLit16Encoding(uint16_t Val, const MCSubtargetInfo &STI) {
 }
 
 static uint32_t getLitBF16Encoding(uint16_t Val) {
-  uint16_t IntImm = getIntInlineImmEncoding(static_cast<int16_t>(Val));
+  uint16_t IntImm =
+      static_cast<uint16_t>(getIntInlineImmEncoding(static_cast<int16_t>(Val)));
   if (IntImm != 0)
     return IntImm;
 
@@ -480,7 +482,8 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
       auto OpType =
           static_cast<AMDGPU::OperandType>(Desc.operands()[i].OperandType);
       Imm = AMDGPU::encode32BitLiteral(Imm, OpType, IsLit);
-      support::endian::write<uint32_t>(CB, Imm, llvm::endianness::little);
+      support::endian::write<uint32_t>(CB, static_cast<uint32_t>(Imm),
+                                       llvm::endianness::little);
     }
 
     // Only one literal value allowed
@@ -614,7 +617,7 @@ void AMDGPUMCCodeEmitter::getMachineOpValue(const MCInst &MI,
     Op = Idx | (IsVGPROrAGPR << 8);
     return;
   }
-  unsigned OpNo = &MO - MI.begin();
+  unsigned OpNo = static_cast<unsigned>(&MO - MI.begin());
   getMachineOpValueCommon(MI, MO, OpNo, Op, Fixups, STI);
 }
 
