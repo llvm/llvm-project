@@ -298,6 +298,11 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     loadFiles();
 }
 
+// Add an ELF input file directly.
+void LinkerDriver::addFile(std::unique_ptr<ELFFileBase> ef) {
+  files.push_back(std::move(ef));
+}
+
 // Add a given library by searching it from input search paths.
 void LinkerDriver::addLibrary(StringRef name) {
   if (std::optional<std::string> path = searchLibrary(ctx, name))
@@ -305,11 +310,6 @@ void LinkerDriver::addLibrary(StringRef name) {
   else
     ctx.e.error("unable to find library -l" + name, ErrorTag::LibNotFound,
                 {name});
-}
-
-// Add an ELF input file directly.
-void LinkerDriver::addFile(std::unique_ptr<ELFFileBase> ef) {
-  files.push_back(std::move(ef));
 }
 
 // This function is called on startup. We need this for LTO since
@@ -3249,13 +3249,18 @@ static void postParseObjectFile(ELFFileBase *file) {
   }
 }
 
+// Objects that support Dynamic Debugging contain an ELF Dynamic Debugging
+// section that embeds an unoptimized ELF file with debug information. We
+// extract these embedded ELF files to make a consolidated unoptimized
+// relocatable ELF file to embed in an ELF Dynamic Debugging section in the
+// output. See llvm/docs/DynamicDebugging.md for more details.
 template <class ELFT> static void linkDynamicDebug(Ctx &ctx) {
-  Ctx dc;
-  LinkerScript script(dc);
-  initContext(dc, script, ctx.arg.progName, ctx.e.outs(), ctx.e.errs(),
+  Ctx dctx;
+  LinkerScript script(dctx);
+  initContext(dctx, script, ctx.arg.progName, ctx.e.outs(), ctx.e.errs(),
               ctx.e.exitEarly, ctx.e.disableOutput);
-  dc.inDynDbgLink = true;
-  dc.dynDbgRelocatable = !ctx.arg.relocatable;
+  dctx.inDynDbgLink = true;
+  dctx.dynDbgRelocatable = !ctx.arg.relocatable;
 
   for (auto *file : ctx.objectFiles) {
     auto *obj = cast<ObjFile<ELFT>>(file);
@@ -3263,7 +3268,7 @@ template <class ELFT> static void linkDynamicDebug(Ctx &ctx) {
       auto content = obj->dynDbgSec->content();
       MemoryBufferRef mb({(const char *)content.data(), content.size()},
                          obj->mb.getBufferIdentifier());
-      dc.driver.addFile(createObjFile(dc, mb));
+      dctx.driver.addFile(createObjFile(dctx, mb));
     }
   }
 
@@ -3271,17 +3276,17 @@ template <class ELFT> static void linkDynamicDebug(Ctx &ctx) {
     return;
 
   std::vector<const char *> args{
-      dc.arg.progName.data(), "-r", "-o", "-",
-      dc.saver.save(Twine("-O") + Twine(ctx.arg.optimize)).data()};
+      dctx.arg.progName.data(), "-r", "-o", "-",
+      dctx.saver.save(Twine("-O") + Twine(ctx.arg.optimize)).data()};
   if (ctx.arg.resolveGroups)
     args.push_back("--force-group-allocation");
-  dc.driver.linkerMain(args);
-  if (errCount(dc) > 0 || !dc.dynDbgOutput) {
+  dctx.driver.linkerMain(args);
+  if (errCount(dctx) > 0 || !dctx.dynDbgOutput) {
     Err(ctx) << "Failed to create relocatable dynamic debug object";
     return;
   }
 
-  ctx.dynDbgOutput.swap(dc.dynDbgOutput);
+  ctx.dynDbgOutput.swap(dctx.dynDbgOutput);
 }
 
 // Do actual linking. Note that when this function is called,

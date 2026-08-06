@@ -208,8 +208,8 @@ public:
   LinkerDriver(LinkerDriver &) = delete;
   void linkerMain(ArrayRef<const char *> args);
   void addFile(StringRef path, bool withLOption);
-  void addLibrary(StringRef name);
   void addFile(std::unique_ptr<ELFFileBase> ef);
+  void addLibrary(StringRef name);
 
 private:
   Ctx &ctx;
