@@ -1011,7 +1011,10 @@ std::string DeclTypeSpec::AsFortran() const {
                    .typeSymbol()
                    .get<DerivedTypeDetails>()
                    .isEnumerationType()) {
-      return "TYPE(" + derivedTypeSpec().typeSymbol().name().ToString() + ')';
+      // Preserve the in-scope (possibly USE-renamed) spelling so the name
+      // written to a module file resolves on readback.
+      return "TYPE(" +
+          derivedTypeSpec().originalTypeSymbol().name().ToString() + ')';
     } else {
       return "TYPE(" + derivedTypeSpec().AsFortran() + ')';
     }

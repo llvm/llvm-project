@@ -106,6 +106,13 @@ end
 ! definition (valid Fortran; distinct from the C7116 forward-reference
 ! prohibition, which only concerns enumeration-type-specs). The type block
 ! must be emitted correctly and no enumerator may leak out ahead of it.
+! 'private :: color' is an access-STATEMENT on the type name; it does NOT set
+! the enumerator default (only an access-SPEC on the ENUMERATION TYPE statement
+! does, per F2023 7.6.2p2), so red/green/blue stay PUBLIC.  The module file
+! writes the type's PRIVATE attribute inline as 'enumeration type,private', an
+! access-spec that the reader would treat as a PRIVATE enumerator default;
+! explicit 'public::' lines for each enumerator are therefore required so the
+! module reads back with the enumerators still PUBLIC.
 module m7
   private :: color
   enumeration type :: color
@@ -118,6 +125,9 @@ end
 !enumeration type,private::color
 !enumerator::red,green,blue
 !end enumeration type
+!public::red
+!public::green
+!public::blue
 !end
 
 ! Explicit PUBLIC accessibility statement overriding one enumerator of a

@@ -763,21 +763,17 @@ void ModFileWriter::PutEnumerationType(const Symbol &typeSymbol) {
     decls_ << '\n';
   }
   decls_ << "end enumeration type\n";
-  // Emit accessibility only for enumerators that differ from the default the
-  // reader will apply the ENUMERATION TYPE access-spec if present, otherwise
-  // the module default.
+  // Emit an explicit access statement for every enumerator that differs from
+  // the default the reader will reconstruct.  The reader derives that default
+  // solely from the ENUMERATION TYPE statement it reads back: PutAttrs writes
+  // the type's own PRIVATE attribute as an access-spec there, and an access-
+  // spec sets the enumerator default (F2023 7.6.2p2).  A module file never
+  // emits a bare module-default `private`, and enumeratorDefaultAccess() is
+  // not separately serialized, so the round-trip default is exactly "PRIVATE
+  // if the type itself is PRIVATE, else PUBLIC".
   if (!isSubmodule_) {
-    Attr enumDefault{Attr::PUBLIC};
-    if (const Symbol *modSym{typeSymbol.owner().symbol()}) {
-      if (const auto *modDetails{modSym->detailsIf<ModuleDetails>()}) {
-        if (modDetails->isDefaultPrivate()) {
-          enumDefault = Attr::PRIVATE;
-        }
-      }
-    }
-    if (auto a{details.enumeratorDefaultAccess()}) {
-      enumDefault = *a;
-    }
+    Attr enumDefault{
+        typeSymbol.attrs().test(Attr::PRIVATE) ? Attr::PRIVATE : Attr::PUBLIC};
     for (const auto &e : enumerators) {
       Attr actual{
           e.sym->attrs().test(Attr::PRIVATE) ? Attr::PRIVATE : Attr::PUBLIC};
