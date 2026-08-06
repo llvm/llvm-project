@@ -195,8 +195,9 @@ public:
     if (!ST->hasHardClauses())
       return false;
 
-    unsigned MaxClauseLength = MF.getFunction().getFnAttributeAsParsedInteger(
-        "amdgpu-hard-clause-length-limit", 255);
+    unsigned MaxClauseLength =
+        static_cast<unsigned>(MF.getFunction().getFnAttributeAsParsedInteger(
+            "amdgpu-hard-clause-length-limit", 255));
     if (HardClauseLengthLimit.getNumOccurrences())
       MaxClauseLength = HardClauseLengthLimit;
     MaxClauseLength = std::min(MaxClauseLength, ST->maxHardClauseLength());

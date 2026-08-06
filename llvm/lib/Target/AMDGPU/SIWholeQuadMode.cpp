@@ -109,9 +109,11 @@ public:
 static raw_ostream &operator<<(raw_ostream &OS, const PrintState &PS) {
 
   static const std::pair<char, const char *> Mapping[] = {
-      std::pair(StateWQM, "WQM"), std::pair(StateStrictWWM, "StrictWWM"),
-      std::pair(StateStrictWQM, "StrictWQM"), std::pair(StateExact, "Exact")};
-  char State = PS.State;
+      {static_cast<char>(StateWQM), "WQM"},
+      {static_cast<char>(StateStrictWWM), "StrictWWM"},
+      {static_cast<char>(StateStrictWQM), "StrictWQM"},
+      {static_cast<char>(StateExact), "Exact"}};
+  char State = static_cast<char>(PS.State);
   for (auto M : Mapping) {
     if (State & M.first) {
       OS << M.second;
@@ -1314,7 +1316,8 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, BlockInfo &BI,
   Register SavedWQMReg;
   Register SavedNonStrictReg;
   bool WQMFromExec = IsEntry;
-  char State = (IsEntry || !(BI.InNeeds & StateWQM)) ? StateExact : StateWQM;
+  char State = static_cast<char>(
+      (IsEntry || !(BI.InNeeds & StateWQM)) ? StateExact : StateWQM);
   char NonStrictState = 0;
   const TargetRegisterClass *BoolRC = TRI->getBoolRC();
 
