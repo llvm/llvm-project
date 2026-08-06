@@ -16,10 +16,6 @@
 %struct.WithFloat128 = type { fp128, i32 }
 @struct_nonzero = global %struct.WithFloat128 { fp128 0xL00000000000000004000800000000000, i32 7 }
 
-; A scalar fp128 is emitted by bufferAggregateConstant, and an all-zero
-; initializer is caught before the per-element path, so neither depends on fp128
-; being handled in bufferLEByte.
-
 ; CHECK-DAG: .visible .global .align 16 .b8 scalar_nonzero[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 63};
 @scalar_nonzero = global fp128 0xL00000000000000003FFF000000000000
 

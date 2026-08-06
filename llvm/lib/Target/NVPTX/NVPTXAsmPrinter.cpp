@@ -2229,8 +2229,6 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
   case Type::BFloatTyID:
   case Type::FloatTyID:
   case Type::DoubleTyID:
-  // An fp128 only reaches here as an aggregate element; a scalar one is
-  // emitted by bufferAggregateConstant itself.
   case Type::FP128TyID:
     AddIntToBuffer(cast<ConstantFP>(CPV)->getValueAPF().bitcastToAPInt());
     break;
