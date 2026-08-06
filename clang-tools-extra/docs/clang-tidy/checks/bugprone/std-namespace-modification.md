@@ -1,17 +1,17 @@
-.. title:: clang-tidy - bugprone-std-namespace-modification
+```{title} clang-tidy - bugprone-std-namespace-modification
+```
 
-bugprone-std-namespace-modification
-===================================
+# bugprone-std-namespace-modification
 
-Warns on modifications of the ``std`` or ``posix`` namespaces which can
+Warns on modifications of the `std` or `posix` namespaces which can
 result in undefined behavior.
 
-The ``std`` (or ``posix``) namespace is allowed to be extended with (class or
+The `std` (or `posix`) namespace is allowed to be extended with (class or
 function) template specializations that depend on an user-defined type (a type
 that is not defined in the standard system headers).
 
 The check detects the following (user provided) declarations in namespace
-``std`` or ``posix``:
+`std` or `posix`:
 
 - Anything that is not a template specialization.
 - Explicit specializations of any standard library function template or class
@@ -25,44 +25,42 @@ The check detects the following (user provided) declarations in namespace
 
 Examples:
 
-.. code-block:: c++
+```c++
+namespace std {
+  int x; // warning: modification of 'std' namespace can result in undefined behavior [bugprone-dont-modify-std-namespace]
+}
 
-  namespace std {
-    int x; // warning: modification of 'std' namespace can result in undefined behavior [bugprone-dont-modify-std-namespace]
-  }
+namespace posix::a { // warning: modification of 'posix' namespace can result in undefined behavior
+}
 
-  namespace posix::a { // warning: modification of 'posix' namespace can result in undefined behavior
+template <>
+struct ::std::hash<long> { // warning: modification of 'std' namespace can result in undefined behavior
+  unsigned long operator()(const long &K) const {
+    return K;
   }
+};
+
+struct MyData { long data; };
+
+template <>
+struct ::std::hash<MyData> { // no warning: specialization with user-defined type
+  unsigned long operator()(const MyData &K) const {
+    return K.data;
+  }
+};
+
+namespace std {
+  template <>
+  void swap<bool>(bool &a, bool &b); // warning: modification of 'std' namespace can result in undefined behavior
 
   template <>
-  struct ::std::hash<long> { // warning: modification of 'std' namespace can result in undefined behavior
-    unsigned long operator()(const long &K) const {
-      return K;
-    }
-  };
-
-  struct MyData { long data; };
-
-  template <>
-  struct ::std::hash<MyData> { // no warning: specialization with user-defined type
-    unsigned long operator()(const MyData &K) const {
-      return K.data;
-    }
-  };
-
-  namespace std {
-    template <>
-    void swap<bool>(bool &a, bool &b); // warning: modification of 'std' namespace can result in undefined behavior
-
-    template <>
-    bool less<void>::operator()<MyData &&, MyData &&>(MyData &&, MyData &&) const { // warning: modification of 'std' namespace can result in undefined behavior
-      return true;
-    }
+  bool less<void>::operator()<MyData &&, MyData &&>(MyData &&, MyData &&) const { // warning: modification of 'std' namespace can result in undefined behavior
+    return true;
   }
+}
+```
 
-References
-----------
+## References
 
 This check corresponds to the CERT C++ Coding Standard rule
-`DCL58-CPP. Do not modify the standard namespaces
-<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/declarations-and-initialization-dcl/dcl58-cpp/>`_.
+[DCL58-CPP. Do not modify the standard namespaces](https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/declarations-and-initialization-dcl/dcl58-cpp/).
