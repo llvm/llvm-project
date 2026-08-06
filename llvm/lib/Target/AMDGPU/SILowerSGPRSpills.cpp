@@ -446,6 +446,14 @@ bool SILowerSGPRSpillsLegacy::runOnMachineFunction(MachineFunction &MF) {
   return SILowerSGPRSpills(LIS, Indexes, MDT, MCI).run(MF);
 }
 
+static bool hasVPermPk16(const MachineFunction &MF) {
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      if (SIInstrInfo::isVPermPk16(MI.getOpcode()))
+        return true;
+  return false;
+}
+
 bool SILowerSGPRSpills::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
@@ -472,6 +480,9 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
   bool MadeChange = false;
   bool SpilledToVirtVGPRLanes = false;
 
+  const bool CheckVPermPk16 = ST.hasVPermPk16Hazard();
+  bool HasVPermPk16 = false;
+
   // TODO: CSR VGPRs will never be spilled to AGPRs. These can probably be
   // handled as SpilledToReg in regular PrologEpilogInserter.
   const bool HasSGPRSpillToVGPR = TRI->spillSGPRToVGPR() &&
@@ -496,6 +507,9 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
 
     for (MachineBasicBlock &MBB : MF) {
       for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+        if (CheckVPermPk16 && SIInstrInfo::isVPermPk16(MI.getOpcode()))
+          HasVPermPk16 = true;
+
         if (MI.getOpcode() == AMDGPU::ENTER_STRICT_WWM ||
             MI.getOpcode() == AMDGPU::ENTER_STRICT_WQM) {
           HasStrictWWMRegion = true;
@@ -621,9 +635,14 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
                              TRI->getHWRegIndex(FuncInfo->getSGPRForEXECCopy()))
       FuncInfo->setSGPRForEXECCopy(UnusedLowSGPR);
   } else {
-    // No SGPR spills to virtual VGPR lanes and hence there won't be any WWM
-    // spills/copies. Reset the SGPR reserved for EXEC copy.
-    FuncInfo->setSGPRForEXECCopy(AMDGPU::NoRegister);
+    const bool NeedsVPermPk16Fix =
+        CheckVPermPk16 &&
+        (HasVPermPk16 || (!HasSGPRSpillToVGPR && hasVPermPk16(MF)));
+    if (!NeedsVPermPk16Fix)
+      // No SGPR spills to virtual VGPR lanes and hence there won't be any WWM
+      // spills/copies. Also, function is not affected by the V_PERM_PK16
+      // hazard. Reset the SGPR reserved for EXEC copy.
+      FuncInfo->setSGPRForEXECCopy(AMDGPU::NoRegister);
   }
 
   SaveBlocks.clear();

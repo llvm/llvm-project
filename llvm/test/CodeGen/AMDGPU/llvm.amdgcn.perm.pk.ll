@@ -12,6 +12,10 @@ define void @test_perm_pk16_b4_u4(i32 %a, i32 %b, <2 x i32> %c, ptr %out) {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_perm_pk16_b4_u4 v[0:1], v0, v1, v[2:3]
+; GFX1250-NEXT:    s_mov_b32 s0, exec_lo
+; GFX1250-NEXT:    s_mov_b32 exec_lo, -1
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX1250-NEXT:    flat_store_b64 v[4:5], v[0:1]
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -30,6 +34,10 @@ define void @test_perm_pk16_b6_u4(i32 %a, i64 %b, <2 x i32> %c, ptr %out) {
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v6, v5
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_perm_pk16_b6_u4 v[0:2], v0, v[2:3], v[8:9]
+; GFX1250-SDAG-NEXT:    s_mov_b32 s0, exec_lo
+; GFX1250-SDAG-NEXT:    s_mov_b32 exec_lo, -1
+; GFX1250-SDAG-NEXT:    v_nop
+; GFX1250-SDAG-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX1250-SDAG-NEXT:    flat_store_b96 v[6:7], v[0:2]
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
@@ -43,6 +51,10 @@ define void @test_perm_pk16_b6_u4(i32 %a, i64 %b, <2 x i32> %c, ptr %out) {
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v5 :: v_dual_mov_b32 v5, v6
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-GISEL-NEXT:    v_perm_pk16_b6_u4 v[0:2], v0, v[8:9], v[2:3]
+; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
+; GFX1250-GISEL-NEXT:    s_mov_b32 exec_lo, -1
+; GFX1250-GISEL-NEXT:    v_nop
+; GFX1250-GISEL-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX1250-GISEL-NEXT:    flat_store_b96 v[4:5], v[0:2]
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
@@ -57,6 +69,10 @@ define void @test_perm_pk16_b8_u4(i64 %a, i64 %b, <2 x i32> %c, ptr %out) {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_perm_pk16_b8_u4 v[0:3], v[0:1], v[2:3], v[4:5]
+; GFX1250-NEXT:    s_mov_b32 s0, exec_lo
+; GFX1250-NEXT:    s_mov_b32 exec_lo, -1
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX1250-NEXT:    flat_store_b128 v[6:7], v[0:3]
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]

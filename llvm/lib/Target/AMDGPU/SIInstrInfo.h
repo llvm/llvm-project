@@ -1179,6 +1179,52 @@ public:
            Opcode == AMDGPU::V_S_SQRT_F16_e64;
   }
 
+  static bool isPseudoScalarTrans(unsigned Opcode) {
+    return isF16PseudoScalarTrans(Opcode) ||
+           Opcode == AMDGPU::V_S_EXP_F32_e64 ||
+           Opcode == AMDGPU::V_S_LOG_F32_e64 ||
+           Opcode == AMDGPU::V_S_RCP_F32_e64 ||
+           Opcode == AMDGPU::V_S_RSQ_F32_e64 ||
+           Opcode == AMDGPU::V_S_SQRT_F32_e64;
+  }
+
+  static bool isF64Trans(unsigned Opcode) {
+    return Opcode == AMDGPU::V_RCP_F64_e32 || Opcode == AMDGPU::V_RCP_F64_e64 ||
+           Opcode == AMDGPU::V_RSQ_F64_e32 || Opcode == AMDGPU::V_RSQ_F64_e64 ||
+           Opcode == AMDGPU::V_SQRT_F64_e32 || Opcode == AMDGPU::V_SQRT_F64_e64;
+  }
+
+  static bool isVPermPk16(unsigned Opcode) {
+    return Opcode == AMDGPU::V_PERM_PK16_B4_U4_e64 ||
+           Opcode == AMDGPU::V_PERM_PK16_B6_U4_e64 ||
+           Opcode == AMDGPU::V_PERM_PK16_B8_U4_e64;
+  }
+
+  // \returns true if \p MI clears the V_PERM_PK16 hazard when it immediately
+  // follows a V_PERM_PK16 (i.e. \p MI is a "safe" instruction).
+  bool isVPermPk16SafeInstr(const MachineInstr &MI) const {
+    unsigned Opc = MI.getOpcode();
+
+    // Only VALU ops issue on the pipe that clears the V_PERM_PK16 hazard.
+    if (!isVALU(MI, /*AllowLDSDMA=*/false))
+      return false;
+    // OP_XDL: matrix (WMMA/SWMMAC/DOT) ops clear the hazard.
+    if (isXDL(MI))
+      return true;
+    // Pseudo-scalar transcendentals (OP32_SCL_T) do NOT clear the hazard.
+    if (isPseudoScalarTrans(Opc))
+      return false;
+    // OP_32_T: genuine transcendentals clear the hazard, except the F64
+    // transcendentals (which belong to the multi-pass FP64 class).
+    if (isTRANS(MI))
+      return !isF64Trans(Opc);
+
+    // Everything else that is a single-pass VALU op (OP16_1, OP32_1, OP_CMACC,
+    // OP_DUAL_1) is safe. Multi-pass ops block the VALU pipe for more than one
+    // cycle (getBlockingCycles > 1) and do not clear the hazard.
+    return getBlockingCycles(MI) < 2;
+  }
+
   static bool doesNotReadTiedSource(const MachineInstr &MI) {
     return SIInstrFlags::isTiedSourceNotRead(MI);
   }

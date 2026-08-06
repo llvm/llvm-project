@@ -1781,6 +1781,8 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixShift64HighRegBug(MI);
   fixVALUMaskWriteHazard(MI);
   fixRequiredExportPriority(MI);
+  if (ST.hasVPermPk16Hazard())
+    fixVPermPk16Hazard(MI);
   if (ST.requiresWaitIdleBeforeGetReg())
     fixGetRegWaitIdle(MI);
   if (ST.hasDsAtomicAsyncBarrierArriveB64PipeBug())
@@ -4182,6 +4184,63 @@ bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
         .addImm(NormalPriority);
   }
 
+  return true;
+}
+
+// Advance past meta instructions (debug values, labels, CFI, KILL, etc.) to the
+// next instruction that actually issues. Unlike skipDebugInstructionsForward /
+// next_nodbg, this skips the full isMetaInstruction() set.
+static MachineBasicBlock::iterator
+skipMetaInstructionsForward(MachineBasicBlock::iterator I,
+                            MachineBasicBlock::iterator End) {
+  while (I != End && I->isMetaInstruction())
+    ++I;
+  return I;
+}
+
+void GCNHazardRecognizer::emitVPermPk16ExecNonZeroVNop(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt,
+    const DebugLoc &DL) {
+  MachineFunction *MFn = MBB.getParent();
+
+  const SIMachineFunctionInfo *MFI = MFn->getInfo<SIMachineFunctionInfo>();
+  Register ExecCopy = MFI->getSGPRForEXECCopy();
+  assert(ExecCopy &&
+         "Function with V_PERM_PK16 must reserve an SGPR for the EXEC copy");
+
+  // Insert V_NOP with forced non-zero EXEC.
+  TII.insertScratchExecCopy(*MFn, MBB, InsertPt, DL, ExecCopy,
+                            /*IsSCCLive=*/true, /*Indexes=*/nullptr);
+  BuildMI(MBB, InsertPt, DL, TII.get(AMDGPU::V_NOP_e32));
+  TII.restoreExec(*MFn, MBB, InsertPt, DL, ExecCopy, /*Indexes=*/nullptr);
+}
+
+bool GCNHazardRecognizer::fixVPermPk16Hazard(MachineInstr *MI) {
+  // Requirement #1 of 2:
+  // The cross-wave entry-block mitigation is delegated to the mandatory
+  // unclaused-VMEM entry prologue (GLOBAL_PREFETCH_B8 + V_NOP).
+  assert(ST.hasRequiresInitialUnclausedVmem() &&
+         "V_PERM_PK16-hazard subtarget must provide the unclaused-VMEM entry "
+         "prologue to satisfy the cross-wave entry mitigation");
+
+  if (!SIInstrInfo::isVPermPk16(MI->getOpcode()))
+    return false;
+
+  MachineBasicBlock *MBB = MI->getParent();
+
+  // Requirement #2 of 2:
+  // V_PERM_PK16 must be immediately followed by a safe instruction.
+  // Try verifying this is the case.
+  MachineBasicBlock::iterator NextI =
+      skipMetaInstructionsForward(std::next(MI->getIterator()), MBB->end());
+  if (NextI != MBB->end() && TII.isVPermPk16SafeInstr(*NextI))
+    return false;
+
+  // If the next instruction is not safe, insert a V_NOP immediately after the
+  // V_PERM_PK16. Because a V_NOP degenerates to an S_NOP under a zero EXEC
+  // mask (and would then fail to clear the hazard), force EXEC non-zero around
+  // it.
+  emitVPermPk16ExecNonZeroVNop(*MBB, NextI, MI->getDebugLoc());
   return true;
 }
 
