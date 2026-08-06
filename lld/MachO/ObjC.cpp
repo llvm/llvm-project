@@ -845,8 +845,9 @@ bool ObjcCategoryMerger::parseCatInfoToExtInfo(const InfoInputCategory &catInfo,
     else
       extInfo.baseClassName = classSym->getName().str();
   } else {
-    auto [classSym, classAddend] = tryGetSymbolReferenceAtIsecOffset(
-        catInfo.catBodyIsec, catLayout.klassOffset);
+    [[maybe_unused]] auto [classSym, classAddend] =
+        tryGetSymbolReferenceAtIsecOffset(catInfo.catBodyIsec,
+                                          catLayout.klassOffset);
     assert((extInfo.baseClass == classSym &&
             extInfo.baseClassAddend == classAddend) &&
            "Trying to parse category info into container with different base "

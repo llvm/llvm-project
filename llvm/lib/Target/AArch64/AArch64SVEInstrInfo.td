@@ -4215,6 +4215,20 @@ let Predicates = [HasSVE2_or_SME] in {
   defm UABALB_ZZZ : sve2_int_absdiff_accum_long<0b10, "uabalb", int_aarch64_sve_uabalb>;
   defm UABALT_ZZZ : sve2_int_absdiff_accum_long<0b11, "uabalt", int_aarch64_sve_uabalt>;
 
+  def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, (AArch64sabd_p (SVEAnyPredicate), nxv16i8:$Op1, nxv16i8:$Op2), (nxv16i8 (splat_vector (i32 1))))),
+            (SABALT_ZZZ_H (SABALB_ZZZ_H $Acc, $Op1, $Op2), $Op1, $Op2)>;
+  def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, (AArch64sabd_p (SVEAnyPredicate), nxv8i16:$Op1, nxv8i16:$Op2), (nxv8i16 (splat_vector (i32 1))))),
+            (SABALT_ZZZ_S (SABALB_ZZZ_S $Acc, $Op1, $Op2), $Op1, $Op2)>;
+  def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, (AArch64sabd_p (SVEAnyPredicate), nxv4i32:$Op1, nxv4i32:$Op2), (nxv4i32 (splat_vector (i32 1))))),
+            (SABALT_ZZZ_D (SABALB_ZZZ_D $Acc, $Op1, $Op2), $Op1, $Op2)>;
+
+  def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, (AArch64uabd_p (SVEAnyPredicate), nxv16i8:$Op1, nxv16i8:$Op2), (nxv16i8 (splat_vector (i32 1))))),
+            (UABALT_ZZZ_H (UABALB_ZZZ_H $Acc, $Op1, $Op2), $Op1, $Op2)>;
+  def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, (AArch64uabd_p (SVEAnyPredicate), nxv8i16:$Op1, nxv8i16:$Op2), (nxv8i16 (splat_vector (i32 1))))),
+            (UABALT_ZZZ_S (UABALB_ZZZ_S $Acc, $Op1, $Op2), $Op1, $Op2)>;
+  def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, (AArch64uabd_p (SVEAnyPredicate), nxv4i32:$Op1, nxv4i32:$Op2), (nxv4i32 (splat_vector (i32 1))))),
+            (UABALT_ZZZ_D (UABALB_ZZZ_D $Acc, $Op1, $Op2), $Op1, $Op2)>;
+
   // SVE2 integer add/subtract long with carry
   defm ADCLB_ZZZ : sve2_int_addsub_long_carry<0b00, "adclb", int_aarch64_sve_adclb>;
   defm ADCLT_ZZZ : sve2_int_addsub_long_carry<0b01, "adclt", int_aarch64_sve_adclt>;
@@ -5075,6 +5089,20 @@ let Predicates = [HasSVE2p3_or_SME2p3] in {
   // SVE2 integer absolute difference and accumulate long
   defm SABAL_ZZZ : sve2_int_two_way_absdiff_accum_long<0b0, "sabal", int_aarch64_sve_sabal>;
   defm UABAL_ZZZ : sve2_int_two_way_absdiff_accum_long<0b1, "uabal", int_aarch64_sve_uabal>;
+
+  def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, (AArch64sabd_p (SVEAnyPredicate), nxv16i8:$Op1, nxv16i8:$Op2), (nxv16i8 (splat_vector (i32 1))))),
+            (SABAL_ZZZ_BtoH $Acc, $Op1, $Op2)>;
+  def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, (AArch64sabd_p (SVEAnyPredicate), nxv8i16:$Op1, nxv8i16:$Op2), (nxv8i16 (splat_vector (i32 1))))),
+            (SABAL_ZZZ_HtoS $Acc, $Op1, $Op2)>;
+  def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, (AArch64sabd_p (SVEAnyPredicate), nxv4i32:$Op1, nxv4i32:$Op2), (nxv4i32 (splat_vector (i32 1))))),
+            (SABAL_ZZZ_StoD $Acc, $Op1, $Op2)>;
+
+  def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, (AArch64uabd_p (SVEAnyPredicate), nxv16i8:$Op1, nxv16i8:$Op2), (nxv16i8 (splat_vector (i32 1))))),
+            (UABAL_ZZZ_BtoH $Acc, $Op1, $Op2)>;
+  def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, (AArch64uabd_p (SVEAnyPredicate), nxv8i16:$Op1, nxv8i16:$Op2), (nxv8i16 (splat_vector (i32 1))))),
+            (UABAL_ZZZ_HtoS $Acc, $Op1, $Op2)>;
+  def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, (AArch64uabd_p (SVEAnyPredicate), nxv4i32:$Op1, nxv4i32:$Op2), (nxv4i32 (splat_vector (i32 1))))),
+            (UABAL_ZZZ_StoD $Acc, $Op1, $Op2)>;
 
   // SVE2 integer dot product
   defm SDOT_ZZZ_BtoH : sve2p3_two_way_dot_vv<"sdot", 0b0, int_aarch64_sve_sdot_x2>;

@@ -2629,7 +2629,7 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
         return false;
     } else {
 
-      DeclTy Source = Arg;
+      DeclOrExpr Source = Arg;
       if (FuncDecl) {
         // Try to use the parameter declaration instead of the argument
         // expression as a source.
@@ -4038,7 +4038,7 @@ bool Compiler<Emitter>::VisitOffsetOfExpr(const OffsetOfExpr *E) {
       if (IndexT == PT_IntAP || IndexT == PT_IntAPS) {
         if (!this->visit(ArrayIndexExpr))
           return false;
-        if (!this->emitCastNoOverflow(IndexT, E))
+        if (!this->emitCastAPToOffsetIndex(IndexT, E))
           return false;
         continue;
       }
@@ -5313,37 +5313,37 @@ bool Compiler<Emitter>::emitConst(const APSInt &Value, const Expr *E) {
 }
 
 template <class Emitter>
-unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclTy &&Src, PrimType Ty,
-                                                   bool IsConst,
+unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclOrExpr &&Src,
+                                                   PrimType Ty, bool IsConst,
                                                    bool IsVolatile,
                                                    ScopeKind SC) {
-  // FIXME: There are cases where Src.is<Expr*>() is wrong, e.g.
+  // FIXME: There are cases where Src.isExpr() is wrong, e.g.
   //   (int){12} in C. Consider using Expr::isTemporaryObject() instead
   //   or isa<MaterializeTemporaryExpr>().
   Descriptor *D = P.createDescriptor(Src, Ty, nullptr, Descriptor::InlineDescMD,
-                                     IsConst, isa<const Expr *>(Src),
+                                     IsConst, Src.isExpr(),
                                      /*IsMutable=*/false, IsVolatile);
   D->IsConstexprUnknown = this->VariablesAreConstexprUnknown;
   Scope::Local Local = this->createLocal(D);
-  if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>()))
+  if (auto *VD = Src.asValueDecl())
     Locals.insert({VD, Local});
   VarScope->addForScopeKind(Local, SC);
   return Local.Offset;
 }
 
 template <class Emitter>
-UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
+UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclOrExpr &&Src, QualType Ty,
                                                 ScopeKind SC) {
   const ValueDecl *Key = nullptr;
   const Expr *Init = nullptr;
   bool IsTemporary = false;
-  if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
+  if (auto *VD = Src.asValueDecl()) {
     Key = VD;
 
     if (const auto *VarD = dyn_cast<VarDecl>(VD))
       Init = VarD->getInit();
   }
-  if (auto *E = Src.dyn_cast<const Expr *>()) {
+  if (const auto *E = Src.asExpr()) {
     IsTemporary = true;
     if (Ty.isNull())
       Ty = E->getType();
@@ -8704,7 +8704,7 @@ bool Compiler<Emitter>::emitDestructionPop(const Descriptor *Desc,
 /// Create a dummy pointer for the given decl (or expr) and
 /// push a pointer to it on the stack.
 template <class Emitter>
-bool Compiler<Emitter>::emitDummyPtr(const DeclTy &D, const Expr *E, bool CU) {
+bool Compiler<Emitter>::emitDummyPtr(DeclOrExpr D, const Expr *E, bool CU) {
   assert(!DiscardResult && "Should've been checked before");
   unsigned DummyID = P.getOrCreateDummy(D, CU);
 
