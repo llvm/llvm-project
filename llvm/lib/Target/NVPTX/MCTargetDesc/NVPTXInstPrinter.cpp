@@ -468,36 +468,9 @@ void NVPTXInstPrinter::printTmaReductionMode(const MCInst *MI, int OpNum,
                                              const MCSubtargetInfo &,
                                              raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
-  using RedTy = nvvm::TMAReductionOp;
-
-  switch (static_cast<RedTy>(MO.getImm())) {
-  case RedTy::ADD:
-    O << ".add";
-    return;
-  case RedTy::MIN:
-    O << ".min";
-    return;
-  case RedTy::MAX:
-    O << ".max";
-    return;
-  case RedTy::INC:
-    O << ".inc";
-    return;
-  case RedTy::DEC:
-    O << ".dec";
-    return;
-  case RedTy::AND:
-    O << ".and";
-    return;
-  case RedTy::OR:
-    O << ".or";
-    return;
-  case RedTy::XOR:
-    O << ".xor";
-    return;
-  }
-  llvm_unreachable(
-      "Invalid Reduction Op in printCpAsyncBulkTensorReductionMode");
+  O << '.'
+    << nvvm::getTMATensorReductionOpName(
+           static_cast<nvvm::TMAReductionOp>(MO.getImm()));
 }
 
 void NVPTXInstPrinter::printCTAGroup(const MCInst *MI, int OpNum,

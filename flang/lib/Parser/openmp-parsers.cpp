@@ -1088,10 +1088,27 @@ TYPE_PARSER(
 TYPE_PARSER(
     sourced(construct<OmpEnterClause::Modifier>(Parser<OmpAutomapModifier>{})))
 
-TYPE_PARSER(sourced(construct<OmpFromClause::Modifier>(
-    sourced(construct<OmpFromClause::Modifier>(Parser<OmpExpectation>{}) ||
-        construct<OmpFromClause::Modifier>(Parser<OmpMapper>{}) ||
-        construct<OmpFromClause::Modifier>(Parser<OmpIterator>{})))))
+template <typename MotionClause> struct OmpMotionClauseModifierParser {
+  using resultType = typename MotionClause::Modifier;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    unsigned version{state.userState()->langOptions().OpenMPVersion};
+    if (version == 52) {
+      auto expect{sourced(construct<resultType>(Parser<OmpExpectation>{}))};
+      if (auto &&result{attempt(expect).Parse(state)}) {
+        return std::move(result);
+      }
+    }
+    auto parser{sourced( //
+        construct<resultType>(Parser<OmpPresentModifier>{}) ||
+        construct<resultType>(Parser<OmpMapper>{}) ||
+        construct<resultType>(Parser<OmpIterator>{}))};
+    return parser.Parse(state);
+  }
+};
+
+TYPE_PARSER(OmpMotionClauseModifierParser<OmpFromClause>{})
+TYPE_PARSER(OmpMotionClauseModifierParser<OmpToClause>{})
 
 TYPE_PARSER(sourced(
     construct<OmpGrainsizeClause::Modifier>(Parser<OmpPrescriptiveness>{})))
@@ -1175,11 +1192,6 @@ TYPE_PARSER(sourced(construct<OmpTaskReductionClause::Modifier>(
 
 TYPE_PARSER(sourced(
     construct<OmpThreadLimitClause::Modifier>(Parser<OmpDimsModifier>{})))
-
-TYPE_PARSER(sourced(construct<OmpToClause::Modifier>(
-    sourced(construct<OmpToClause::Modifier>(Parser<OmpExpectation>{}) ||
-        construct<OmpToClause::Modifier>(Parser<OmpMapper>{}) ||
-        construct<OmpToClause::Modifier>(Parser<OmpIterator>{})))))
 
 TYPE_PARSER(sourced(construct<OmpWhenClause::Modifier>( //
     Parser<OmpContextSelector>{})))
