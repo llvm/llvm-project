@@ -64,7 +64,9 @@ constexpr size_t NLMSG_BUFFER_SIZE = 8192;
 
 struct InterfaceEntry {
   unsigned int index;
-  char name[IF_NAMESIZE];
+  uint8_t name_length;        // Length of next field.
+  char name[IF_NAMESIZE - 1]; // No null terminator.
+  static_assert(IF_NAMESIZE - 1 < (1u << 8));
 };
 
 // TODO: Use ErrorOr<void> when that's a thing.
@@ -109,8 +111,8 @@ parse_netlink_messages(cpp::span<uint8_t> buf,
 
       InterfaceEntry entry;
       entry.index = static_cast<unsigned int>(ifm->ifi_index);
+      entry.name_length = static_cast<uint8_t>(name_len);
       inline_memcpy(entry.name, name_data, name_len);
-      entry.name[name_len] = '\0';
 
       if (!store.push_back(entry))
         return Error(ENOBUFS);
@@ -126,7 +128,7 @@ build_if_nameindex_list(BlockStore<InterfaceEntry, 16> &store) {
   size_t strings_size = 0;
   for (const InterfaceEntry &entry : store) {
     ++count;
-    strings_size += internal::string_length(entry.name) + 1;
+    strings_size += entry.name_length + 1;
   }
 
   size_t total_size = (count + 1) * sizeof(struct if_nameindex) + strings_size;
@@ -141,11 +143,11 @@ build_if_nameindex_list(BlockStore<InterfaceEntry, 16> &store) {
 
   size_t idx = 0;
   for (const InterfaceEntry &entry : store) {
-    size_t name_len = internal::string_length(entry.name);
     result[idx].if_index = entry.index;
     result[idx].if_name = str_ptr;
-    inline_memcpy(str_ptr, entry.name, name_len + 1);
-    str_ptr += name_len + 1;
+    inline_memcpy(str_ptr, entry.name, entry.name_length);
+    str_ptr[entry.name_length] = '\0';
+    str_ptr += entry.name_length + 1;
     ++idx;
   }
 
