@@ -21,6 +21,5 @@ void testLa32rv10() {}
 // CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="loongarch32" "target-features"="+32bit,+32s" }
 // CHECK: attributes #[[ATTR1]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="loongarch32" "target-features"="+32bit" }
 //.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

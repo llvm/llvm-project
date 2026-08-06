@@ -131,17 +131,13 @@ _CLC_DEF _CLC_OVERLOAD double __clc_fmod(double x, double y) {
   }
 
   // One more time
-  // Variable todd says whether the integer t is odd or not
   t = __clc_floor(dx / w);
-  long lt = (long)t;
-  int todd = lt & 1;
 
   p = w * t;
   pp = __clc_fma(w, t, -p);
   v = dx - p;
   dx = v + (((dx - v) - p) - pp);
   i = dx < 0.0;
-  todd ^= i;
   dx += i ? w : 0.0;
 
   // At this point, dx lies in the range [0,dy)

@@ -15,8 +15,9 @@
 #include "Utils.h"
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Optimizer/Support/FatalError.h"
+#include "flang/Parser/provenance.h"
 #include "flang/Semantics/semantics.h"
-#include "flang/Tools/CrossToolHelpers.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -28,7 +29,6 @@
 
 #include <optional>
 #include <utility>
-#include <variant>
 
 using namespace Fortran;
 
@@ -42,9 +42,9 @@ struct ConstructDecomposition {
                          llvm::omp::Directive compound,
                          const List<Clause> &clauses)
       : semaCtx(semaCtx), mod(modOp), eval(ev) {
-    tomp::ConstructDecompositionT decompose(getOpenMPVersionAttribute(modOp),
-                                            *this, compound,
-                                            llvm::ArrayRef(clauses));
+    tomp::ConstructDecompositionT decompose(
+        mlir::omp::getOpenMPVersionAttribute(modOp), *this, compound,
+        llvm::ArrayRef(clauses));
     output = std::move(decompose.output);
   }
 
@@ -84,7 +84,31 @@ ConstructQueue buildConstructQueue(
     llvm::omp::Directive compound, const List<Clause> &clauses) {
 
   ConstructDecomposition decompose(modOp, semaCtx, eval, compound, clauses);
-  assert(!decompose.output.empty() && "Construct decomposition failed");
+  // Decomposition produces no output when a clause on a compound directive
+  // cannot be assigned to any of its leaf constructs. Semantics is expected to
+  // have rejected such a directive already, but it does not catch every case,
+  // and continuing here consumes an empty queue and reads uninitialized state.
+  // Fail deterministically instead: in a release build the fall-through is
+  // undefined behaviour, which shows up as an intermittent crash rather than a
+  // diagnostic. See https://github.com/llvm/llvm-project/issues/211430.
+  if (decompose.output.empty()) {
+    mlir::Location loc = modOp.getLoc();
+    parser::AllCookedSources &cooked = semaCtx.allCookedSources();
+    if (std::optional<parser::ProvenanceRange> provenance =
+            cooked.GetProvenanceRange(source)) {
+      if (std::optional<parser::SourcePosition> pos =
+              cooked.allSources().GetSourcePosition(provenance->start()))
+        loc = mlir::FileLineColLoc::get(modOp.getContext(), pos->path.get(),
+                                        pos->line, pos->column);
+    }
+    fir::emitFatalError(
+        loc,
+        llvm::Twine("OpenMP construct decomposition failed: a clause on '") +
+            llvm::omp::getOpenMPDirectiveName(compound,
+                                              llvm::omp::FallbackVersion) +
+            "' cannot be applied to any of its leaf constructs",
+        /*genCrashDiag=*/false);
+  }
 
   for (UnitConstruct &uc : decompose.output) {
     assert(getLeafConstructs(uc.id).empty() && "unexpected compound directive");

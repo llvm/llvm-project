@@ -17,8 +17,8 @@
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
 #include "CodeGenSchedule.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -43,12 +43,13 @@ static cl::opt<unsigned>
 /// Returns the MVT that the specified TableGen
 /// record corresponds to.
 MVT llvm::getValueType(const Record *Rec) {
-  return StringSwitch<MVT>(Rec->getValueAsString("LLVMName"))
+  static const DenseMap<StringRef, MVT> ValueTypes = {
 #define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)      \
-  .Case(#Ty, MVT::Ty)
+  {#Ty, MVT::Ty},
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
-      .Case("INVALID_SIMPLE_VALUE_TYPE", MVT::INVALID_SIMPLE_VALUE_TYPE);
+      {"INVALID_SIMPLE_VALUE_TYPE", MVT::INVALID_SIMPLE_VALUE_TYPE}};
+  return ValueTypes.lookup(Rec->getValueAsString("LLVMName"));
 }
 
 StringRef llvm::getEnumName(MVT T) {
@@ -116,11 +117,11 @@ const Record *CodeGenTarget::getInstructionSet() const {
 }
 
 bool CodeGenTarget::getAllowRegisterRenaming() const {
-  return TargetRec->getValueAsInt("AllowRegisterRenaming");
+  return TargetRec->getValueAsBit("AllowRegisterRenaming");
 }
 
 bool CodeGenTarget::getRegistersAreIntervals() const {
-  return TargetRec->getValueAsInt("RegistersAreIntervals");
+  return TargetRec->getValueAsBit("RegistersAreIntervals");
 }
 
 /// getAsmParser - Return the AssemblyParser definition for this target.

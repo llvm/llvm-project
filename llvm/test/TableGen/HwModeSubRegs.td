@@ -57,19 +57,19 @@ def XPairsClass : MyClass<64, [untyped], (add XPairs)>;
 def TestTarget : Target;
 
 // CHECK-LABEL: RegisterClass XRegs:
-// CHECK: SpillSize: { Default:32 TestMode:64 }
-// CHECK: SpillAlignment: { Default:32 TestMode:64 }
+// CHECK: SpillSize: { DefaultMode:32 TestMode:64 }
+// CHECK: SpillAlignment: { DefaultMode:32 TestMode:64 }
 // CHECK: Regs: X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15
 
 // CHECK-LABEL: RegisterClass XPairsClass:
-// CHECK: SpillSize: { Default:64 TestMode:128 }
-// CHECK: SpillAlignment: { Default:32 TestMode:64 }
+// CHECK: SpillSize: { DefaultMode:64 TestMode:128 }
+// CHECK: SpillAlignment: { DefaultMode:32 TestMode:64 }
 // CHECK: CoveredBySubRegs: 1
 // CHECK: Regs: X0_X1 X2_X3 X4_X5 X6_X7 X8_X9 X10_X11 X12_X13 X14_X15
 
 // CHECK-LABEL: SubRegIndex sub_even:
-// CHECK: Offset: { Default:0 TestMode:0 }
-// CHECK: Size: { Default:32 TestMode:64 }
+// CHECK: Offset: { DefaultMode:0 TestMode:0 }
+// CHECK: Size: { DefaultMode:32 TestMode:64 }
 // CHECK-LABEL: SubRegIndex sub_odd:
-// CHECK: Offset: { Default:32 TestMode:64 }
-// CHECK: Size: { Default:32 TestMode:64 }
+// CHECK: Offset: { DefaultMode:32 TestMode:64 }
+// CHECK: Size: { DefaultMode:32 TestMode:64 }

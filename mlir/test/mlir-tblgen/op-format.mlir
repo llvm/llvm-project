@@ -488,6 +488,18 @@ test.format_infer_variadic_type_from_non_variadic %i64, %i64 : i64
 // CHECK: test.format_types_match_context %[[I64]] : i64
 %ignored_res6 = test.format_types_match_context %i64 : i64
 
+// CHECK: test.format_types_match_optional(%[[I64]] : i64)
+%ignored_res7 = test.format_types_match_optional(%i64 : i64)
+
+// CHECK: test.format_types_match_optional
+test.format_types_match_optional
+
+// CHECK: test.format_optional_operand_type
+test.format_optional_operand_type
+
+// CHECK: test.format_optional_operand_type(%[[I64]]) : i64
+test.format_optional_operand_type(%i64) : i64
+
 //===----------------------------------------------------------------------===//
 // InferTypeOpInterface type inference
 //===----------------------------------------------------------------------===//

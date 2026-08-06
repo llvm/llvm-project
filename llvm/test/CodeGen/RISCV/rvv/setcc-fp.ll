@@ -13,10 +13,10 @@
 ; RUN:     --check-prefixes=CHECK,ZVFBFMIN,ZVFHMIN,ZVFHMIN64
 ; RUN: llc -mtriple=riscv32 -mattr=+zfh,+zvfhmin,+experimental-zvfbfa,+v \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s \
-; RUN:     --check-prefixes=CHECK,ZVFBFA,ZVFHMIN,ZVFHMIN32
+; RUN:     --check-prefixes=CHECK,ZVFHMIN,ZVFHMIN32,ZVFBFA
 ; RUN: llc -mtriple=riscv64 -mattr=+zfh,+zvfhmin,+experimental-zvfbfa,+v \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s \
-; RUN:     --check-prefixes=CHECK,ZVFBFA,ZVFHMIN,ZVFHMIN64
+; RUN:     --check-prefixes=CHECK,ZVFHMIN,ZVFHMIN64,ZVFBFA
 
 ; FIXME: The scalar/vector operations ('fv' tests) should swap operands and
 ; condition codes accordingly in order to generate a 'vf' instruction.
@@ -43,9 +43,9 @@ define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vscal
 define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_oeq_vf_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfeq.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -64,9 +64,9 @@ define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
 define <vscale x 8 x i1> @fcmp_oeq_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_oeq_fv_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfeq.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -82,7 +82,7 @@ define <vscale x 8 x i1> @fcmp_oeq_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, <vscale x 8 x bfloat> nofpclass(nan) %vb) {
 ; ZVFBFMIN-LABEL: fcmp_oeq_vv_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -101,12 +101,12 @@ define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va,
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, bfloat %b) #0 {
+define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, bfloat nofpclass(nan) %b) {
 ; ZVFBFMIN-LABEL: fcmp_oeq_vf_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfeq.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -144,9 +144,9 @@ define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vscal
 define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_ogt_vf_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfgt.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -165,9 +165,9 @@ define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
 define <vscale x 8 x i1> @fcmp_ogt_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_ogt_fv_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -183,7 +183,7 @@ define <vscale x 8 x i1> @fcmp_ogt_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, <vscale x 8 x bfloat> nofpclass(nan) %vb) {
 ; ZVFBFMIN-LABEL: fcmp_ogt_vv_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -202,12 +202,12 @@ define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va,
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, bfloat %b) #0 {
+define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, bfloat nofpclass(nan) %b) {
 ; ZVFBFMIN-LABEL: fcmp_ogt_vf_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfgt.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -245,9 +245,9 @@ define <vscale x 8 x i1> @fcmp_oge_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vscal
 define <vscale x 8 x i1> @fcmp_oge_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_oge_vf_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfge.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -266,9 +266,9 @@ define <vscale x 8 x i1> @fcmp_oge_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
 define <vscale x 8 x i1> @fcmp_oge_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_oge_fv_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfle.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -284,7 +284,7 @@ define <vscale x 8 x i1> @fcmp_oge_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oge_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_oge_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, <vscale x 8 x bfloat> nofpclass(nan) %vb) {
 ; ZVFBFMIN-LABEL: fcmp_oge_vv_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -303,12 +303,12 @@ define <vscale x 8 x i1> @fcmp_oge_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va,
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oge_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, bfloat %b) #0 {
+define <vscale x 8 x i1> @fcmp_oge_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, bfloat nofpclass(nan) %b) {
 ; ZVFBFMIN-LABEL: fcmp_oge_vf_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfge.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -346,9 +346,9 @@ define <vscale x 8 x i1> @fcmp_olt_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vscal
 define <vscale x 8 x i1> @fcmp_olt_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_olt_vf_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -367,9 +367,9 @@ define <vscale x 8 x i1> @fcmp_olt_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
 define <vscale x 8 x i1> @fcmp_olt_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_olt_fv_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfgt.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -385,7 +385,7 @@ define <vscale x 8 x i1> @fcmp_olt_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_olt_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_olt_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, <vscale x 8 x bfloat> nofpclass(nan) %vb) {
 ; ZVFBFMIN-LABEL: fcmp_olt_vv_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -404,12 +404,12 @@ define <vscale x 8 x i1> @fcmp_olt_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va,
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_olt_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, bfloat %b) #0 {
+define <vscale x 8 x i1> @fcmp_olt_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, bfloat nofpclass(nan) %b) {
 ; ZVFBFMIN-LABEL: fcmp_olt_vf_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -447,9 +447,9 @@ define <vscale x 8 x i1> @fcmp_ole_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vscal
 define <vscale x 8 x i1> @fcmp_ole_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_ole_vf_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfle.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -468,9 +468,9 @@ define <vscale x 8 x i1> @fcmp_ole_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
 define <vscale x 8 x i1> @fcmp_ole_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_ole_fv_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfge.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -486,7 +486,7 @@ define <vscale x 8 x i1> @fcmp_ole_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ole_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ole_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, <vscale x 8 x bfloat> nofpclass(nan) %vb) {
 ; ZVFBFMIN-LABEL: fcmp_ole_vv_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -505,12 +505,12 @@ define <vscale x 8 x i1> @fcmp_ole_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va,
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ole_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, bfloat %b) #0 {
+define <vscale x 8 x i1> @fcmp_ole_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, bfloat nofpclass(nan) %b) {
 ; ZVFBFMIN-LABEL: fcmp_ole_vf_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfle.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -599,7 +599,7 @@ define <vscale x 8 x i1> @fcmp_one_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_one_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_one_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, <vscale x 8 x bfloat> nofpclass(nan) %vb) {
 ; ZVFBFMIN-LABEL: fcmp_one_vv_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -618,12 +618,12 @@ define <vscale x 8 x i1> @fcmp_one_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va,
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_one_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, bfloat %b) #0 {
+define <vscale x 8 x i1> @fcmp_one_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, bfloat nofpclass(nan) %b) {
 ; ZVFBFMIN-LABEL: fcmp_one_vf_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfne.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -668,14 +668,13 @@ define <vscale x 8 x i1> @fcmp_ord_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
 ; ZVFBFMIN-LABEL: fcmp_ord_vf_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; ZVFBFMIN-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; ZVFBFMIN-NEXT:    vfmv.v.f v12, fa5
-; ZVFBFMIN-NEXT:    vmfeq.vf v10, v12, fa5
-; ZVFBFMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFBFMIN-NEXT:    vfmv.v.f v8, fa5
+; ZVFBFMIN-NEXT:    vmfeq.vf v16, v8, fa5
 ; ZVFBFMIN-NEXT:    vmfeq.vv v8, v12, v12
-; ZVFBFMIN-NEXT:    vmand.mm v0, v8, v10
+; ZVFBFMIN-NEXT:    vmand.mm v0, v8, v16
 ; ZVFBFMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: fcmp_ord_vf_nxv8bf16:
@@ -696,14 +695,13 @@ define <vscale x 8 x i1> @fcmp_ord_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
 ; ZVFBFMIN-LABEL: fcmp_ord_fv_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; ZVFBFMIN-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; ZVFBFMIN-NEXT:    vfmv.v.f v12, fa5
-; ZVFBFMIN-NEXT:    vmfeq.vf v10, v12, fa5
-; ZVFBFMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFBFMIN-NEXT:    vfmv.v.f v8, fa5
+; ZVFBFMIN-NEXT:    vmfeq.vf v16, v8, fa5
 ; ZVFBFMIN-NEXT:    vmfeq.vv v8, v12, v12
-; ZVFBFMIN-NEXT:    vmand.mm v0, v10, v8
+; ZVFBFMIN-NEXT:    vmand.mm v0, v16, v8
 ; ZVFBFMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: fcmp_ord_fv_nxv8bf16:
@@ -720,7 +718,7 @@ define <vscale x 8 x i1> @fcmp_ord_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ord_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ord_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, <vscale x 8 x bfloat> nofpclass(nan) %vb) {
 ; ZVFBFMIN-LABEL: fcmp_ord_vv_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -745,18 +743,17 @@ define <vscale x 8 x i1> @fcmp_ord_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va,
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ord_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, bfloat %b) #0 {
+define <vscale x 8 x i1> @fcmp_ord_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, bfloat nofpclass(nan) %b) {
 ; ZVFBFMIN-LABEL: fcmp_ord_vf_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; ZVFBFMIN-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; ZVFBFMIN-NEXT:    vfmv.v.f v12, fa5
-; ZVFBFMIN-NEXT:    vmfeq.vf v10, v12, fa5
-; ZVFBFMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFBFMIN-NEXT:    vfmv.v.f v8, fa5
+; ZVFBFMIN-NEXT:    vmfeq.vf v16, v8, fa5
 ; ZVFBFMIN-NEXT:    vmfeq.vv v8, v12, v12
-; ZVFBFMIN-NEXT:    vmand.mm v0, v8, v10
+; ZVFBFMIN-NEXT:    vmand.mm v0, v8, v16
 ; ZVFBFMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: fcmp_ord_vf_nxv8bf16_nonans:
@@ -846,7 +843,7 @@ define <vscale x 8 x i1> @fcmp_ueq_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, <vscale x 8 x bfloat> nofpclass(nan) %vb) {
 ; ZVFBFMIN-LABEL: fcmp_ueq_vv_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -865,12 +862,12 @@ define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va,
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, bfloat %b) #0 {
+define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, bfloat nofpclass(nan) %b) {
 ; ZVFBFMIN-LABEL: fcmp_ueq_vf_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfeq.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -910,9 +907,9 @@ define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vscal
 define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_ugt_vf_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfle.vf v8, v12, fa5
 ; ZVFBFMIN-NEXT:    vmnot.m v0, v8
@@ -933,9 +930,9 @@ define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
 define <vscale x 8 x i1> @fcmp_ugt_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_ugt_fv_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfge.vf v8, v12, fa5
 ; ZVFBFMIN-NEXT:    vmnot.m v0, v8
@@ -953,7 +950,7 @@ define <vscale x 8 x i1> @fcmp_ugt_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, <vscale x 8 x bfloat> nofpclass(nan) %vb) {
 ; ZVFBFMIN-LABEL: fcmp_ugt_vv_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -972,12 +969,12 @@ define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va,
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, bfloat %b) #0 {
+define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, bfloat nofpclass(nan) %b) {
 ; ZVFBFMIN-LABEL: fcmp_ugt_vf_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfgt.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -1017,9 +1014,9 @@ define <vscale x 8 x i1> @fcmp_uge_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vscal
 define <vscale x 8 x i1> @fcmp_uge_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_uge_vf_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmflt.vf v8, v12, fa5
 ; ZVFBFMIN-NEXT:    vmnot.m v0, v8
@@ -1040,9 +1037,9 @@ define <vscale x 8 x i1> @fcmp_uge_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
 define <vscale x 8 x i1> @fcmp_uge_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_uge_fv_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfgt.vf v8, v12, fa5
 ; ZVFBFMIN-NEXT:    vmnot.m v0, v8
@@ -1060,7 +1057,7 @@ define <vscale x 8 x i1> @fcmp_uge_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uge_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_uge_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, <vscale x 8 x bfloat> nofpclass(nan) %vb) {
 ; ZVFBFMIN-LABEL: fcmp_uge_vv_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1079,12 +1076,12 @@ define <vscale x 8 x i1> @fcmp_uge_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va,
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uge_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, bfloat %b) #0 {
+define <vscale x 8 x i1> @fcmp_uge_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, bfloat nofpclass(nan) %b) {
 ; ZVFBFMIN-LABEL: fcmp_uge_vf_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfge.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -1124,9 +1121,9 @@ define <vscale x 8 x i1> @fcmp_ult_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vscal
 define <vscale x 8 x i1> @fcmp_ult_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_ult_vf_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfge.vf v8, v12, fa5
 ; ZVFBFMIN-NEXT:    vmnot.m v0, v8
@@ -1147,9 +1144,9 @@ define <vscale x 8 x i1> @fcmp_ult_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
 define <vscale x 8 x i1> @fcmp_ult_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_ult_fv_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfle.vf v8, v12, fa5
 ; ZVFBFMIN-NEXT:    vmnot.m v0, v8
@@ -1167,7 +1164,7 @@ define <vscale x 8 x i1> @fcmp_ult_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ult_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ult_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, <vscale x 8 x bfloat> nofpclass(nan) %vb) {
 ; ZVFBFMIN-LABEL: fcmp_ult_vv_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1186,12 +1183,12 @@ define <vscale x 8 x i1> @fcmp_ult_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va,
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ult_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, bfloat %b) #0 {
+define <vscale x 8 x i1> @fcmp_ult_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, bfloat nofpclass(nan) %b) {
 ; ZVFBFMIN-LABEL: fcmp_ult_vf_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -1231,9 +1228,9 @@ define <vscale x 8 x i1> @fcmp_ule_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vscal
 define <vscale x 8 x i1> @fcmp_ule_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_ule_vf_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfgt.vf v8, v12, fa5
 ; ZVFBFMIN-NEXT:    vmnot.m v0, v8
@@ -1254,9 +1251,9 @@ define <vscale x 8 x i1> @fcmp_ule_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
 define <vscale x 8 x i1> @fcmp_ule_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_ule_fv_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmflt.vf v8, v12, fa5
 ; ZVFBFMIN-NEXT:    vmnot.m v0, v8
@@ -1274,7 +1271,7 @@ define <vscale x 8 x i1> @fcmp_ule_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ule_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ule_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, <vscale x 8 x bfloat> nofpclass(nan) %vb) {
 ; ZVFBFMIN-LABEL: fcmp_ule_vv_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1293,12 +1290,12 @@ define <vscale x 8 x i1> @fcmp_ule_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va,
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ule_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, bfloat %b) #0 {
+define <vscale x 8 x i1> @fcmp_ule_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, bfloat nofpclass(nan) %b) {
 ; ZVFBFMIN-LABEL: fcmp_ule_vf_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfle.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -1336,9 +1333,9 @@ define <vscale x 8 x i1> @fcmp_une_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vscal
 define <vscale x 8 x i1> @fcmp_une_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_une_vf_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfne.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -1357,9 +1354,9 @@ define <vscale x 8 x i1> @fcmp_une_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
 define <vscale x 8 x i1> @fcmp_une_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b) {
 ; ZVFBFMIN-LABEL: fcmp_une_fv_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfne.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -1375,7 +1372,7 @@ define <vscale x 8 x i1> @fcmp_une_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_une_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_une_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, <vscale x 8 x bfloat> nofpclass(nan) %vb) {
 ; ZVFBFMIN-LABEL: fcmp_une_vv_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1394,12 +1391,12 @@ define <vscale x 8 x i1> @fcmp_une_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va,
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_une_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, bfloat %b) #0 {
+define <vscale x 8 x i1> @fcmp_une_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, bfloat nofpclass(nan) %b) {
 ; ZVFBFMIN-LABEL: fcmp_une_vf_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
+; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFMIN-NEXT:    vmfne.vf v0, v12, fa5
 ; ZVFBFMIN-NEXT:    ret
@@ -1444,14 +1441,13 @@ define <vscale x 8 x i1> @fcmp_uno_vf_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
 ; ZVFBFMIN-LABEL: fcmp_uno_vf_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; ZVFBFMIN-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; ZVFBFMIN-NEXT:    vfmv.v.f v12, fa5
-; ZVFBFMIN-NEXT:    vmfne.vf v10, v12, fa5
-; ZVFBFMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFBFMIN-NEXT:    vfmv.v.f v8, fa5
+; ZVFBFMIN-NEXT:    vmfne.vf v16, v8, fa5
 ; ZVFBFMIN-NEXT:    vmfne.vv v8, v12, v12
-; ZVFBFMIN-NEXT:    vmor.mm v0, v8, v10
+; ZVFBFMIN-NEXT:    vmor.mm v0, v8, v16
 ; ZVFBFMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: fcmp_uno_vf_nxv8bf16:
@@ -1472,14 +1468,13 @@ define <vscale x 8 x i1> @fcmp_uno_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
 ; ZVFBFMIN-LABEL: fcmp_uno_fv_nxv8bf16:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; ZVFBFMIN-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; ZVFBFMIN-NEXT:    vfmv.v.f v12, fa5
-; ZVFBFMIN-NEXT:    vmfne.vf v10, v12, fa5
-; ZVFBFMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFBFMIN-NEXT:    vfmv.v.f v8, fa5
+; ZVFBFMIN-NEXT:    vmfne.vf v16, v8, fa5
 ; ZVFBFMIN-NEXT:    vmfne.vv v8, v12, v12
-; ZVFBFMIN-NEXT:    vmor.mm v0, v10, v8
+; ZVFBFMIN-NEXT:    vmor.mm v0, v16, v8
 ; ZVFBFMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: fcmp_uno_fv_nxv8bf16:
@@ -1496,7 +1491,7 @@ define <vscale x 8 x i1> @fcmp_uno_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uno_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_uno_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, <vscale x 8 x bfloat> nofpclass(nan) %vb) {
 ; ZVFBFMIN-LABEL: fcmp_uno_vv_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1521,18 +1516,17 @@ define <vscale x 8 x i1> @fcmp_uno_vv_nxv8bf16_nonans(<vscale x 8 x bfloat> %va,
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uno_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> %va, bfloat %b) #0 {
+define <vscale x 8 x i1> @fcmp_uno_vf_nxv8bf16_nonans(<vscale x 8 x bfloat> nofpclass(nan) %va, bfloat nofpclass(nan) %b) {
 ; ZVFBFMIN-LABEL: fcmp_uno_vf_nxv8bf16_nonans:
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; ZVFBFMIN-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; ZVFBFMIN-NEXT:    vfmv.v.f v12, fa5
-; ZVFBFMIN-NEXT:    vmfne.vf v10, v12, fa5
-; ZVFBFMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFBFMIN-NEXT:    vfwcvtbf16.f.f.v v12, v8
 ; ZVFBFMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFBFMIN-NEXT:    vfmv.v.f v8, fa5
+; ZVFBFMIN-NEXT:    vmfne.vf v16, v8, fa5
 ; ZVFBFMIN-NEXT:    vmfne.vv v8, v12, v12
-; ZVFBFMIN-NEXT:    vmor.mm v0, v8, v10
+; ZVFBFMIN-NEXT:    vmor.mm v0, v8, v16
 ; ZVFBFMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: fcmp_uno_vf_nxv8bf16_nonans:
@@ -1577,9 +1571,9 @@ define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_oeq_vf_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -1598,9 +1592,9 @@ define <vscale x 8 x i1> @fcmp_oeq_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_oeq_fv_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -1610,7 +1604,7 @@ define <vscale x 8 x i1> @fcmp_oeq_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, <vscale x 8 x half> nofpclass(nan) %vb) {
 ; ZVFH-LABEL: fcmp_oeq_vv_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1629,7 +1623,7 @@ define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
+define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, half nofpclass(nan) %b) {
 ; ZVFH-LABEL: fcmp_oeq_vf_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1638,9 +1632,9 @@ define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8f16_nonans(<vscale x 8 x half> %va, ha
 ;
 ; ZVFHMIN-LABEL: fcmp_oeq_vf_nxv8f16_nonans:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -1678,9 +1672,9 @@ define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_ogt_vf_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfgt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -1699,9 +1693,9 @@ define <vscale x 8 x i1> @fcmp_ogt_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_ogt_fv_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -1711,7 +1705,7 @@ define <vscale x 8 x i1> @fcmp_ogt_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, <vscale x 8 x half> nofpclass(nan) %vb) {
 ; ZVFH-LABEL: fcmp_ogt_vv_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1730,7 +1724,7 @@ define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
+define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, half nofpclass(nan) %b) {
 ; ZVFH-LABEL: fcmp_ogt_vf_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1739,9 +1733,9 @@ define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8f16_nonans(<vscale x 8 x half> %va, ha
 ;
 ; ZVFHMIN-LABEL: fcmp_ogt_vf_nxv8f16_nonans:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfgt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -1779,9 +1773,9 @@ define <vscale x 8 x i1> @fcmp_oge_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_oge_vf_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfge.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -1800,9 +1794,9 @@ define <vscale x 8 x i1> @fcmp_oge_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_oge_fv_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -1812,7 +1806,7 @@ define <vscale x 8 x i1> @fcmp_oge_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oge_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_oge_vv_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, <vscale x 8 x half> nofpclass(nan) %vb) {
 ; ZVFH-LABEL: fcmp_oge_vv_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1831,7 +1825,7 @@ define <vscale x 8 x i1> @fcmp_oge_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oge_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
+define <vscale x 8 x i1> @fcmp_oge_vf_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, half nofpclass(nan) %b) {
 ; ZVFH-LABEL: fcmp_oge_vf_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1840,9 +1834,9 @@ define <vscale x 8 x i1> @fcmp_oge_vf_nxv8f16_nonans(<vscale x 8 x half> %va, ha
 ;
 ; ZVFHMIN-LABEL: fcmp_oge_vf_nxv8f16_nonans:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfge.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -1880,9 +1874,9 @@ define <vscale x 8 x i1> @fcmp_olt_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_olt_vf_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -1901,9 +1895,9 @@ define <vscale x 8 x i1> @fcmp_olt_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_olt_fv_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfgt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -1913,7 +1907,7 @@ define <vscale x 8 x i1> @fcmp_olt_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_olt_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_olt_vv_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, <vscale x 8 x half> nofpclass(nan) %vb) {
 ; ZVFH-LABEL: fcmp_olt_vv_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1932,7 +1926,7 @@ define <vscale x 8 x i1> @fcmp_olt_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_olt_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
+define <vscale x 8 x i1> @fcmp_olt_vf_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, half nofpclass(nan) %b) {
 ; ZVFH-LABEL: fcmp_olt_vf_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -1941,9 +1935,9 @@ define <vscale x 8 x i1> @fcmp_olt_vf_nxv8f16_nonans(<vscale x 8 x half> %va, ha
 ;
 ; ZVFHMIN-LABEL: fcmp_olt_vf_nxv8f16_nonans:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -1981,9 +1975,9 @@ define <vscale x 8 x i1> @fcmp_ole_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_ole_vf_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -2002,9 +1996,9 @@ define <vscale x 8 x i1> @fcmp_ole_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_ole_fv_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfge.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -2014,7 +2008,7 @@ define <vscale x 8 x i1> @fcmp_ole_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ole_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ole_vv_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, <vscale x 8 x half> nofpclass(nan) %vb) {
 ; ZVFH-LABEL: fcmp_ole_vv_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2033,7 +2027,7 @@ define <vscale x 8 x i1> @fcmp_ole_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ole_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
+define <vscale x 8 x i1> @fcmp_ole_vf_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, half nofpclass(nan) %b) {
 ; ZVFH-LABEL: fcmp_ole_vf_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2042,9 +2036,9 @@ define <vscale x 8 x i1> @fcmp_ole_vf_nxv8f16_nonans(<vscale x 8 x half> %va, ha
 ;
 ; ZVFHMIN-LABEL: fcmp_ole_vf_nxv8f16_nonans:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -2127,7 +2121,7 @@ define <vscale x 8 x i1> @fcmp_one_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_one_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_one_vv_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, <vscale x 8 x half> nofpclass(nan) %vb) {
 ; ZVFH-LABEL: fcmp_one_vv_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2146,7 +2140,7 @@ define <vscale x 8 x i1> @fcmp_one_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_one_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
+define <vscale x 8 x i1> @fcmp_one_vf_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, half nofpclass(nan) %b) {
 ; ZVFH-LABEL: fcmp_one_vf_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2155,9 +2149,9 @@ define <vscale x 8 x i1> @fcmp_one_vf_nxv8f16_nonans(<vscale x 8 x half> %va, ha
 ;
 ; ZVFHMIN-LABEL: fcmp_one_vf_nxv8f16_nonans:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfne.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -2205,14 +2199,13 @@ define <vscale x 8 x i1> @fcmp_ord_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-LABEL: fcmp_ord_vf_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; ZVFHMIN-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfmv.v.f v12, fa5
-; ZVFHMIN-NEXT:    vmfeq.vf v10, v12, fa5
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFHMIN-NEXT:    vfmv.v.f v8, fa5
+; ZVFHMIN-NEXT:    vmfeq.vf v16, v8, fa5
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v12, v12
-; ZVFHMIN-NEXT:    vmand.mm v0, v8, v10
+; ZVFHMIN-NEXT:    vmand.mm v0, v8, v16
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
@@ -2233,14 +2226,13 @@ define <vscale x 8 x i1> @fcmp_ord_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-LABEL: fcmp_ord_fv_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; ZVFHMIN-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfmv.v.f v12, fa5
-; ZVFHMIN-NEXT:    vmfeq.vf v10, v12, fa5
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFHMIN-NEXT:    vfmv.v.f v8, fa5
+; ZVFHMIN-NEXT:    vmfeq.vf v16, v8, fa5
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v12, v12
-; ZVFHMIN-NEXT:    vmand.mm v0, v10, v8
+; ZVFHMIN-NEXT:    vmand.mm v0, v16, v8
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
@@ -2248,7 +2240,7 @@ define <vscale x 8 x i1> @fcmp_ord_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ord_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ord_vv_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, <vscale x 8 x half> nofpclass(nan) %vb) {
 ; ZVFH-LABEL: fcmp_ord_vv_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2273,7 +2265,7 @@ define <vscale x 8 x i1> @fcmp_ord_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ord_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
+define <vscale x 8 x i1> @fcmp_ord_vf_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, half nofpclass(nan) %b) {
 ; ZVFH-LABEL: fcmp_ord_vf_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2286,14 +2278,13 @@ define <vscale x 8 x i1> @fcmp_ord_vf_nxv8f16_nonans(<vscale x 8 x half> %va, ha
 ; ZVFHMIN-LABEL: fcmp_ord_vf_nxv8f16_nonans:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; ZVFHMIN-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfmv.v.f v12, fa5
-; ZVFHMIN-NEXT:    vmfeq.vf v10, v12, fa5
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFHMIN-NEXT:    vfmv.v.f v8, fa5
+; ZVFHMIN-NEXT:    vmfeq.vf v16, v8, fa5
 ; ZVFHMIN-NEXT:    vmfeq.vv v8, v12, v12
-; ZVFHMIN-NEXT:    vmand.mm v0, v8, v10
+; ZVFHMIN-NEXT:    vmand.mm v0, v8, v16
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
@@ -2374,7 +2365,7 @@ define <vscale x 8 x i1> @fcmp_ueq_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, <vscale x 8 x half> nofpclass(nan) %vb) {
 ; ZVFH-LABEL: fcmp_ueq_vv_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2393,7 +2384,7 @@ define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
+define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, half nofpclass(nan) %b) {
 ; ZVFH-LABEL: fcmp_ueq_vf_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2402,9 +2393,9 @@ define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8f16_nonans(<vscale x 8 x half> %va, ha
 ;
 ; ZVFHMIN-LABEL: fcmp_ueq_vf_nxv8f16_nonans:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -2445,9 +2436,9 @@ define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_ugt_vf_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
@@ -2468,9 +2459,9 @@ define <vscale x 8 x i1> @fcmp_ugt_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_ugt_fv_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfge.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
@@ -2481,7 +2472,7 @@ define <vscale x 8 x i1> @fcmp_ugt_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, <vscale x 8 x half> nofpclass(nan) %vb) {
 ; ZVFH-LABEL: fcmp_ugt_vv_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2500,7 +2491,7 @@ define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
+define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, half nofpclass(nan) %b) {
 ; ZVFH-LABEL: fcmp_ugt_vf_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2509,9 +2500,9 @@ define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f16_nonans(<vscale x 8 x half> %va, ha
 ;
 ; ZVFHMIN-LABEL: fcmp_ugt_vf_nxv8f16_nonans:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfgt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -2552,9 +2543,9 @@ define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_uge_vf_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
@@ -2575,9 +2566,9 @@ define <vscale x 8 x i1> @fcmp_uge_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_uge_fv_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfgt.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
@@ -2588,7 +2579,7 @@ define <vscale x 8 x i1> @fcmp_uge_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uge_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_uge_vv_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, <vscale x 8 x half> nofpclass(nan) %vb) {
 ; ZVFH-LABEL: fcmp_uge_vv_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2607,7 +2598,7 @@ define <vscale x 8 x i1> @fcmp_uge_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
+define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, half nofpclass(nan) %b) {
 ; ZVFH-LABEL: fcmp_uge_vf_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2616,9 +2607,9 @@ define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f16_nonans(<vscale x 8 x half> %va, ha
 ;
 ; ZVFHMIN-LABEL: fcmp_uge_vf_nxv8f16_nonans:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfge.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -2659,9 +2650,9 @@ define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_ult_vf_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfge.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
@@ -2682,9 +2673,9 @@ define <vscale x 8 x i1> @fcmp_ult_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_ult_fv_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
@@ -2695,7 +2686,7 @@ define <vscale x 8 x i1> @fcmp_ult_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ult_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ult_vv_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, <vscale x 8 x half> nofpclass(nan) %vb) {
 ; ZVFH-LABEL: fcmp_ult_vv_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2714,7 +2705,7 @@ define <vscale x 8 x i1> @fcmp_ult_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
+define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, half nofpclass(nan) %b) {
 ; ZVFH-LABEL: fcmp_ult_vf_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2723,9 +2714,9 @@ define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f16_nonans(<vscale x 8 x half> %va, ha
 ;
 ; ZVFHMIN-LABEL: fcmp_ult_vf_nxv8f16_nonans:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -2766,9 +2757,9 @@ define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_ule_vf_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfgt.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
@@ -2789,9 +2780,9 @@ define <vscale x 8 x i1> @fcmp_ule_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_ule_fv_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vf v8, v12, fa5
 ; ZVFHMIN-NEXT:    vmnot.m v0, v8
@@ -2802,7 +2793,7 @@ define <vscale x 8 x i1> @fcmp_ule_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ule_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ule_vv_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, <vscale x 8 x half> nofpclass(nan) %vb) {
 ; ZVFH-LABEL: fcmp_ule_vv_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2821,7 +2812,7 @@ define <vscale x 8 x i1> @fcmp_ule_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
+define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, half nofpclass(nan) %b) {
 ; ZVFH-LABEL: fcmp_ule_vf_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2830,9 +2821,9 @@ define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f16_nonans(<vscale x 8 x half> %va, ha
 ;
 ; ZVFHMIN-LABEL: fcmp_ule_vf_nxv8f16_nonans:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfle.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -2870,9 +2861,9 @@ define <vscale x 8 x i1> @fcmp_une_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_une_vf_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfne.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -2891,9 +2882,9 @@ define <vscale x 8 x i1> @fcmp_une_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ;
 ; ZVFHMIN-LABEL: fcmp_une_fv_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfne.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -2903,7 +2894,7 @@ define <vscale x 8 x i1> @fcmp_une_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_une_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_une_vv_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, <vscale x 8 x half> nofpclass(nan) %vb) {
 ; ZVFH-LABEL: fcmp_une_vv_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2922,7 +2913,7 @@ define <vscale x 8 x i1> @fcmp_une_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_une_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
+define <vscale x 8 x i1> @fcmp_une_vf_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, half nofpclass(nan) %b) {
 ; ZVFH-LABEL: fcmp_une_vf_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -2931,9 +2922,9 @@ define <vscale x 8 x i1> @fcmp_une_vf_nxv8f16_nonans(<vscale x 8 x half> %va, ha
 ;
 ; ZVFHMIN-LABEL: fcmp_une_vf_nxv8f16_nonans:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vmfne.vf v0, v12, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -2981,14 +2972,13 @@ define <vscale x 8 x i1> @fcmp_uno_vf_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-LABEL: fcmp_uno_vf_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; ZVFHMIN-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfmv.v.f v12, fa5
-; ZVFHMIN-NEXT:    vmfne.vf v10, v12, fa5
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFHMIN-NEXT:    vfmv.v.f v8, fa5
+; ZVFHMIN-NEXT:    vmfne.vf v16, v8, fa5
 ; ZVFHMIN-NEXT:    vmfne.vv v8, v12, v12
-; ZVFHMIN-NEXT:    vmor.mm v0, v8, v10
+; ZVFHMIN-NEXT:    vmor.mm v0, v8, v16
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
@@ -3009,14 +2999,13 @@ define <vscale x 8 x i1> @fcmp_uno_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
 ; ZVFHMIN-LABEL: fcmp_uno_fv_nxv8f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; ZVFHMIN-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfmv.v.f v12, fa5
-; ZVFHMIN-NEXT:    vmfne.vf v10, v12, fa5
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFHMIN-NEXT:    vfmv.v.f v8, fa5
+; ZVFHMIN-NEXT:    vmfne.vf v16, v8, fa5
 ; ZVFHMIN-NEXT:    vmfne.vv v8, v12, v12
-; ZVFHMIN-NEXT:    vmor.mm v0, v10, v8
+; ZVFHMIN-NEXT:    vmor.mm v0, v16, v8
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
@@ -3024,7 +3013,7 @@ define <vscale x 8 x i1> @fcmp_uno_fv_nxv8f16(<vscale x 8 x half> %va, half %b) 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uno_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_uno_vv_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, <vscale x 8 x half> nofpclass(nan) %vb) {
 ; ZVFH-LABEL: fcmp_uno_vv_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -3049,7 +3038,7 @@ define <vscale x 8 x i1> @fcmp_uno_vv_nxv8f16_nonans(<vscale x 8 x half> %va, <v
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uno_vf_nxv8f16_nonans(<vscale x 8 x half> %va, half %b) #0 {
+define <vscale x 8 x i1> @fcmp_uno_vf_nxv8f16_nonans(<vscale x 8 x half> nofpclass(nan) %va, half nofpclass(nan) %b) {
 ; ZVFH-LABEL: fcmp_uno_vf_nxv8f16_nonans:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
@@ -3062,14 +3051,13 @@ define <vscale x 8 x i1> @fcmp_uno_vf_nxv8f16_nonans(<vscale x 8 x half> %va, ha
 ; ZVFHMIN-LABEL: fcmp_uno_vf_nxv8f16_nonans:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; ZVFHMIN-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; ZVFHMIN-NEXT:    vfmv.v.f v12, fa5
-; ZVFHMIN-NEXT:    vmfne.vf v10, v12, fa5
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; ZVFHMIN-NEXT:    vfmv.v.f v8, fa5
+; ZVFHMIN-NEXT:    vmfne.vf v16, v8, fa5
 ; ZVFHMIN-NEXT:    vmfne.vv v8, v12, v12
-; ZVFHMIN-NEXT:    vmor.mm v0, v8, v10
+; ZVFHMIN-NEXT:    vmor.mm v0, v8, v16
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 8 x half> poison, half %b, i32 0
   %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
@@ -3111,7 +3099,7 @@ define <vscale x 8 x i1> @fcmp_oeq_fv_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, <vscale x 8 x float> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3121,7 +3109,7 @@ define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8f32_nonans(<vscale x 8 x float> %va, float %b) #0 {
+define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, float nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_oeq_vf_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3167,7 +3155,7 @@ define <vscale x 8 x i1> @fcmp_ogt_fv_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, <vscale x 8 x float> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_ogt_vv_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3177,7 +3165,7 @@ define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8f32_nonans(<vscale x 8 x float> %va, float %b) #0 {
+define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, float nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_ogt_vf_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3223,7 +3211,7 @@ define <vscale x 8 x i1> @fcmp_oge_fv_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oge_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_oge_vv_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, <vscale x 8 x float> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_oge_vv_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3233,7 +3221,7 @@ define <vscale x 8 x i1> @fcmp_oge_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oge_vf_nxv8f32_nonans(<vscale x 8 x float> %va, float %b) #0 {
+define <vscale x 8 x i1> @fcmp_oge_vf_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, float nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_oge_vf_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3279,7 +3267,7 @@ define <vscale x 8 x i1> @fcmp_olt_fv_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_olt_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_olt_vv_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, <vscale x 8 x float> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_olt_vv_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3289,7 +3277,7 @@ define <vscale x 8 x i1> @fcmp_olt_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_olt_vf_nxv8f32_nonans(<vscale x 8 x float> %va, float %b) #0 {
+define <vscale x 8 x i1> @fcmp_olt_vf_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, float nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_olt_vf_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3335,7 +3323,7 @@ define <vscale x 8 x i1> @fcmp_ole_fv_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ole_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ole_vv_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, <vscale x 8 x float> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_ole_vv_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3345,7 +3333,7 @@ define <vscale x 8 x i1> @fcmp_ole_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ole_vf_nxv8f32_nonans(<vscale x 8 x float> %va, float %b) #0 {
+define <vscale x 8 x i1> @fcmp_ole_vf_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, float nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_ole_vf_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3397,7 +3385,7 @@ define <vscale x 8 x i1> @fcmp_one_fv_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_one_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_one_vv_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, <vscale x 8 x float> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_one_vv_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3407,7 +3395,7 @@ define <vscale x 8 x i1> @fcmp_one_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_one_vf_nxv8f32_nonans(<vscale x 8 x float> %va, float %b) #0 {
+define <vscale x 8 x i1> @fcmp_one_vf_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, float nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_one_vf_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3461,7 +3449,7 @@ define <vscale x 8 x i1> @fcmp_ord_fv_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ord_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ord_vv_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, <vscale x 8 x float> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_ord_vv_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3473,7 +3461,7 @@ define <vscale x 8 x i1> @fcmp_ord_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ord_vf_nxv8f32_nonans(<vscale x 8 x float> %va, float %b) #0 {
+define <vscale x 8 x i1> @fcmp_ord_vf_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, float nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_ord_vf_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3528,7 +3516,7 @@ define <vscale x 8 x i1> @fcmp_ueq_fv_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, <vscale x 8 x float> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_ueq_vv_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3538,7 +3526,7 @@ define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8f32_nonans(<vscale x 8 x float> %va, float %b) #0 {
+define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, float nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_ueq_vf_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3587,7 +3575,7 @@ define <vscale x 8 x i1> @fcmp_ugt_fv_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, <vscale x 8 x float> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_ugt_vv_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3597,7 +3585,7 @@ define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f32_nonans(<vscale x 8 x float> %va, float %b) #0 {
+define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, float nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_ugt_vf_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3646,7 +3634,7 @@ define <vscale x 8 x i1> @fcmp_uge_fv_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uge_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_uge_vv_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, <vscale x 8 x float> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_uge_vv_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3656,7 +3644,7 @@ define <vscale x 8 x i1> @fcmp_uge_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f32_nonans(<vscale x 8 x float> %va, float %b) #0 {
+define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, float nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_uge_vf_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3705,7 +3693,7 @@ define <vscale x 8 x i1> @fcmp_ult_fv_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ult_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ult_vv_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, <vscale x 8 x float> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_ult_vv_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3715,7 +3703,7 @@ define <vscale x 8 x i1> @fcmp_ult_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f32_nonans(<vscale x 8 x float> %va, float %b) #0 {
+define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, float nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_ult_vf_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3764,7 +3752,7 @@ define <vscale x 8 x i1> @fcmp_ule_fv_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ule_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ule_vv_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, <vscale x 8 x float> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_ule_vv_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3774,7 +3762,7 @@ define <vscale x 8 x i1> @fcmp_ule_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f32_nonans(<vscale x 8 x float> %va, float %b) #0 {
+define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, float nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_ule_vf_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3820,7 +3808,7 @@ define <vscale x 8 x i1> @fcmp_une_fv_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_une_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_une_vv_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, <vscale x 8 x float> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_une_vv_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3830,7 +3818,7 @@ define <vscale x 8 x i1> @fcmp_une_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_une_vf_nxv8f32_nonans(<vscale x 8 x float> %va, float %b) #0 {
+define <vscale x 8 x i1> @fcmp_une_vf_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, float nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_une_vf_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3884,7 +3872,7 @@ define <vscale x 8 x i1> @fcmp_uno_fv_nxv8f32(<vscale x 8 x float> %va, float %b
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uno_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_uno_vv_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, <vscale x 8 x float> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_uno_vv_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3896,7 +3884,7 @@ define <vscale x 8 x i1> @fcmp_uno_vv_nxv8f32_nonans(<vscale x 8 x float> %va, <
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uno_vf_nxv8f32_nonans(<vscale x 8 x float> %va, float %b) #0 {
+define <vscale x 8 x i1> @fcmp_uno_vf_nxv8f32_nonans(<vscale x 8 x float> nofpclass(nan) %va, float nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_uno_vf_nxv8f32_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
@@ -3945,7 +3933,7 @@ define <vscale x 8 x i1> @fcmp_oeq_fv_nxv8f64(<vscale x 8 x double> %va, double 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f64_nonans(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, <vscale x 8 x double> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -3955,7 +3943,7 @@ define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f64_nonans(<vscale x 8 x double> %va, 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8f64_nonans(<vscale x 8 x double> %va, double %b) #0 {
+define <vscale x 8 x i1> @fcmp_oeq_vf_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, double nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_oeq_vf_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4001,7 +3989,7 @@ define <vscale x 8 x i1> @fcmp_ogt_fv_nxv8f64(<vscale x 8 x double> %va, double 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8f64_nonans(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, <vscale x 8 x double> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_ogt_vv_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4011,7 +3999,7 @@ define <vscale x 8 x i1> @fcmp_ogt_vv_nxv8f64_nonans(<vscale x 8 x double> %va, 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8f64_nonans(<vscale x 8 x double> %va, double %b) #0 {
+define <vscale x 8 x i1> @fcmp_ogt_vf_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, double nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_ogt_vf_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4057,7 +4045,7 @@ define <vscale x 8 x i1> @fcmp_oge_fv_nxv8f64(<vscale x 8 x double> %va, double 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oge_vv_nxv8f64_nonans(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_oge_vv_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, <vscale x 8 x double> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_oge_vv_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4067,7 +4055,7 @@ define <vscale x 8 x i1> @fcmp_oge_vv_nxv8f64_nonans(<vscale x 8 x double> %va, 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_oge_vf_nxv8f64_nonans(<vscale x 8 x double> %va, double %b) #0 {
+define <vscale x 8 x i1> @fcmp_oge_vf_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, double nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_oge_vf_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4113,7 +4101,7 @@ define <vscale x 8 x i1> @fcmp_olt_fv_nxv8f64(<vscale x 8 x double> %va, double 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_olt_vv_nxv8f64_nonans(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_olt_vv_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, <vscale x 8 x double> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_olt_vv_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4123,7 +4111,7 @@ define <vscale x 8 x i1> @fcmp_olt_vv_nxv8f64_nonans(<vscale x 8 x double> %va, 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_olt_vf_nxv8f64_nonans(<vscale x 8 x double> %va, double %b) #0 {
+define <vscale x 8 x i1> @fcmp_olt_vf_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, double nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_olt_vf_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4169,7 +4157,7 @@ define <vscale x 8 x i1> @fcmp_ole_fv_nxv8f64(<vscale x 8 x double> %va, double 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ole_vv_nxv8f64_nonans(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ole_vv_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, <vscale x 8 x double> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_ole_vv_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4179,7 +4167,7 @@ define <vscale x 8 x i1> @fcmp_ole_vv_nxv8f64_nonans(<vscale x 8 x double> %va, 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ole_vf_nxv8f64_nonans(<vscale x 8 x double> %va, double %b) #0 {
+define <vscale x 8 x i1> @fcmp_ole_vf_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, double nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_ole_vf_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4231,7 +4219,7 @@ define <vscale x 8 x i1> @fcmp_one_fv_nxv8f64(<vscale x 8 x double> %va, double 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_one_vv_nxv8f64_nonans(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_one_vv_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, <vscale x 8 x double> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_one_vv_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4241,7 +4229,7 @@ define <vscale x 8 x i1> @fcmp_one_vv_nxv8f64_nonans(<vscale x 8 x double> %va, 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_one_vf_nxv8f64_nonans(<vscale x 8 x double> %va, double %b) #0 {
+define <vscale x 8 x i1> @fcmp_one_vf_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, double nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_one_vf_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4295,7 +4283,7 @@ define <vscale x 8 x i1> @fcmp_ord_fv_nxv8f64(<vscale x 8 x double> %va, double 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ord_vv_nxv8f64_nonans(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ord_vv_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, <vscale x 8 x double> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_ord_vv_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4307,7 +4295,7 @@ define <vscale x 8 x i1> @fcmp_ord_vv_nxv8f64_nonans(<vscale x 8 x double> %va, 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ord_vf_nxv8f64_nonans(<vscale x 8 x double> %va, double %b) #0 {
+define <vscale x 8 x i1> @fcmp_ord_vf_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, double nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_ord_vf_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4362,7 +4350,7 @@ define <vscale x 8 x i1> @fcmp_ueq_fv_nxv8f64(<vscale x 8 x double> %va, double 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8f64_nonans(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, <vscale x 8 x double> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_ueq_vv_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4372,7 +4360,7 @@ define <vscale x 8 x i1> @fcmp_ueq_vv_nxv8f64_nonans(<vscale x 8 x double> %va, 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8f64_nonans(<vscale x 8 x double> %va, double %b) #0 {
+define <vscale x 8 x i1> @fcmp_ueq_vf_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, double nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_ueq_vf_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4421,7 +4409,7 @@ define <vscale x 8 x i1> @fcmp_ugt_fv_nxv8f64(<vscale x 8 x double> %va, double 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8f64_nonans(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, <vscale x 8 x double> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_ugt_vv_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4431,7 +4419,7 @@ define <vscale x 8 x i1> @fcmp_ugt_vv_nxv8f64_nonans(<vscale x 8 x double> %va, 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f64_nonans(<vscale x 8 x double> %va, double %b) #0 {
+define <vscale x 8 x i1> @fcmp_ugt_vf_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, double nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_ugt_vf_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4480,7 +4468,7 @@ define <vscale x 8 x i1> @fcmp_uge_fv_nxv8f64(<vscale x 8 x double> %va, double 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uge_vv_nxv8f64_nonans(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_uge_vv_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, <vscale x 8 x double> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_uge_vv_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4490,7 +4478,7 @@ define <vscale x 8 x i1> @fcmp_uge_vv_nxv8f64_nonans(<vscale x 8 x double> %va, 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f64_nonans(<vscale x 8 x double> %va, double %b) #0 {
+define <vscale x 8 x i1> @fcmp_uge_vf_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, double nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_uge_vf_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4539,7 +4527,7 @@ define <vscale x 8 x i1> @fcmp_ult_fv_nxv8f64(<vscale x 8 x double> %va, double 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ult_vv_nxv8f64_nonans(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ult_vv_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, <vscale x 8 x double> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_ult_vv_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4549,7 +4537,7 @@ define <vscale x 8 x i1> @fcmp_ult_vv_nxv8f64_nonans(<vscale x 8 x double> %va, 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f64_nonans(<vscale x 8 x double> %va, double %b) #0 {
+define <vscale x 8 x i1> @fcmp_ult_vf_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, double nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_ult_vf_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4598,7 +4586,7 @@ define <vscale x 8 x i1> @fcmp_ule_fv_nxv8f64(<vscale x 8 x double> %va, double 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ule_vv_nxv8f64_nonans(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_ule_vv_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, <vscale x 8 x double> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_ule_vv_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4608,7 +4596,7 @@ define <vscale x 8 x i1> @fcmp_ule_vv_nxv8f64_nonans(<vscale x 8 x double> %va, 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f64_nonans(<vscale x 8 x double> %va, double %b) #0 {
+define <vscale x 8 x i1> @fcmp_ule_vf_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, double nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_ule_vf_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4654,7 +4642,7 @@ define <vscale x 8 x i1> @fcmp_une_fv_nxv8f64(<vscale x 8 x double> %va, double 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_une_vv_nxv8f64_nonans(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_une_vv_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, <vscale x 8 x double> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_une_vv_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4664,7 +4652,7 @@ define <vscale x 8 x i1> @fcmp_une_vv_nxv8f64_nonans(<vscale x 8 x double> %va, 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_une_vf_nxv8f64_nonans(<vscale x 8 x double> %va, double %b) #0 {
+define <vscale x 8 x i1> @fcmp_une_vf_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, double nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_une_vf_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4718,7 +4706,7 @@ define <vscale x 8 x i1> @fcmp_uno_fv_nxv8f64(<vscale x 8 x double> %va, double 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uno_vv_nxv8f64_nonans(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) #0 {
+define <vscale x 8 x i1> @fcmp_uno_vv_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, <vscale x 8 x double> nofpclass(nan) %vb) {
 ; CHECK-LABEL: fcmp_uno_vv_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4730,7 +4718,7 @@ define <vscale x 8 x i1> @fcmp_uno_vv_nxv8f64_nonans(<vscale x 8 x double> %va, 
   ret <vscale x 8 x i1> %vc
 }
 
-define <vscale x 8 x i1> @fcmp_uno_vf_nxv8f64_nonans(<vscale x 8 x double> %va, double %b) #0 {
+define <vscale x 8 x i1> @fcmp_uno_vf_nxv8f64_nonans(<vscale x 8 x double> nofpclass(nan) %va, double nofpclass(nan) %b) {
 ; CHECK-LABEL: fcmp_uno_vf_nxv8f64_nonans:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
@@ -4751,10 +4739,10 @@ define <vscale x 16 x i1> @fcmp_oeq_vf_nx16f64(<vscale x 16 x double> %va) {
 ; RV32-LABEL: fcmp_oeq_vf_nx16f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    fcvt.d.w fa5, zero
-; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vmfeq.vf v24, v16, fa5
 ; RV32-NEXT:    vmfeq.vf v0, v8, fa5
+; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    srli a0, a0, 3
 ; RV32-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vslideup.vx v0, v24, a0
@@ -4763,10 +4751,10 @@ define <vscale x 16 x i1> @fcmp_oeq_vf_nx16f64(<vscale x 16 x double> %va) {
 ; RV64-LABEL: fcmp_oeq_vf_nx16f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    fmv.d.x fa5, zero
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vmfeq.vf v24, v16, fa5
 ; RV64-NEXT:    vmfeq.vf v0, v8, fa5
+; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    srli a0, a0, 3
 ; RV64-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; RV64-NEXT:    vslideup.vx v0, v24, a0
@@ -4775,10 +4763,10 @@ define <vscale x 16 x i1> @fcmp_oeq_vf_nx16f64(<vscale x 16 x double> %va) {
 ; ZVFHMIN32-LABEL: fcmp_oeq_vf_nx16f64:
 ; ZVFHMIN32:       # %bb.0:
 ; ZVFHMIN32-NEXT:    fcvt.d.w fa5, zero
-; ZVFHMIN32-NEXT:    csrr a0, vlenb
-; ZVFHMIN32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; ZVFHMIN32-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; ZVFHMIN32-NEXT:    vmfeq.vf v24, v16, fa5
 ; ZVFHMIN32-NEXT:    vmfeq.vf v0, v8, fa5
+; ZVFHMIN32-NEXT:    csrr a0, vlenb
 ; ZVFHMIN32-NEXT:    srli a0, a0, 3
 ; ZVFHMIN32-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; ZVFHMIN32-NEXT:    vslideup.vx v0, v24, a0
@@ -4787,10 +4775,10 @@ define <vscale x 16 x i1> @fcmp_oeq_vf_nx16f64(<vscale x 16 x double> %va) {
 ; ZVFHMIN64-LABEL: fcmp_oeq_vf_nx16f64:
 ; ZVFHMIN64:       # %bb.0:
 ; ZVFHMIN64-NEXT:    fmv.d.x fa5, zero
-; ZVFHMIN64-NEXT:    csrr a0, vlenb
-; ZVFHMIN64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; ZVFHMIN64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; ZVFHMIN64-NEXT:    vmfeq.vf v24, v16, fa5
 ; ZVFHMIN64-NEXT:    vmfeq.vf v0, v8, fa5
+; ZVFHMIN64-NEXT:    csrr a0, vlenb
 ; ZVFHMIN64-NEXT:    srli a0, a0, 3
 ; ZVFHMIN64-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; ZVFHMIN64-NEXT:    vslideup.vx v0, v24, a0
@@ -4798,5 +4786,3 @@ define <vscale x 16 x i1> @fcmp_oeq_vf_nx16f64(<vscale x 16 x double> %va) {
   %vc = fcmp oeq <vscale x 16 x double> %va, zeroinitializer
   ret <vscale x 16 x i1> %vc
 }
-
-attributes #0 = { "no-nans-fp-math"="true" }

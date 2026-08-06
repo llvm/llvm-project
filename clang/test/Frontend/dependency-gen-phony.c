@@ -1,7 +1,7 @@
 // RUN: cd %S
 // RUN: %clang -MM -MP -I Inputs -Xclang -fdepfile-entry=1.extra -Xclang -fdepfile-entry=2.extra -Xclang -fdepfile-entry=2.extra dependency-gen-phony.c | \
-// RUN:   FileCheck %s %if system-darwin %{ --check-prefix=CHECK-DARWIN %} --match-full-lines --strict-whitespace --implicit-check-not=.c:
-// RUN: %clang -MM -MP -I Inputs -xc - < dependency-gen-phony.c | FileCheck %s --check-prefix=%if system-darwin %{STDIO-DARWIN %} %else %{STDIO %} --implicit-check-not=.c:
+// RUN:   FileCheck %s %if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}} %{ --check-prefix=CHECK-DARWIN %} --match-full-lines --strict-whitespace --implicit-check-not=.c:
+// RUN: %clang -MM -MP -I Inputs -xc - < dependency-gen-phony.c | FileCheck %s --check-prefix=%if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}} %{STDIO-DARWIN %} %else %{STDIO %} --implicit-check-not=.c:
 
 /// Verify that phony targets are only created for the extra dependency files,
 /// and not the input file.
@@ -25,8 +25,7 @@
 // STDIO-NEXT: {{.*}}empty.h:
 // STDIO-NOT:  {{.}}
 
-// STDIO-DARWIN:      -.o: \
-// STDIO-DARWIN-NEXT: SDKSettings.json \
+// STDIO-DARWIN:      -.o:{{.*[[:space:]].*}}SDKSettings.json
 // STDIO-DARWIN-NEXT: Inputs{{/|\\}}empty.h
 // STDIO-DARWIN-NEXT: {{.*}}SDKSettings.json:
 // STDIO-DARWIN-NEXT: {{.*}}empty.h:

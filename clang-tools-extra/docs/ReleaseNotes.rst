@@ -94,27 +94,18 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`check_clang_tidy.py` by adding support of
+  ``-std=cXX-or-earlier`` values, mirroring the existing ``-std=cXX-or-later``.
+  New construct expands to the given standard and every earlier one.
+
 New checks
 ^^^^^^^^^^
 
-- New :doc:`llvm-use-vector-utils
-  <clang-tidy/checks/llvm/use-vector-utils>` check.
+- New :doc:`performance-expensive-value-or
+  <clang-tidy/checks/performance/expensive-value-or>` check.
 
-  Finds calls to ``llvm::to_vector(llvm::map_range(...))`` and
-  ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
-  ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
-
-- New :doc:`modernize-use-string-view
-  <clang-tidy/checks/modernize/use-string-view>` check.
-
-  Looks for functions returning ``std::[w|u8|u16|u32]string`` and suggests to
-  change it to ``std::[...]string_view`` for performance reasons if possible.
-
-- New :doc:`performance-string-view-conversions
-  <clang-tidy/checks/performance/string-view-conversions>` check.
-
-  Finds and removes redundant conversions from ``std::[w|u8|u16|u32]string_view`` to
-  ``std::[...]string`` in call expressions expecting ``std::[...]string_view``.
+  Finds calls to ``value_or`` (and alternative spellings ``valueOr``,
+  ``ValueOr``) on optional types where the return type is expensive to copy.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
@@ -122,42 +113,25 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Improved :doc:`bugprone-macro-parentheses
-  <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
-  definition in the warning message if the macro is defined on command line.
+- Improved :doc:`cppcoreguidelines-pro-type-member-init
+  <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
+  ``std::array`` the same as built-in arrays when `IgnoreArrays` option is enabled.
 
-- Improved :doc:`bugprone-unsafe-functions
-  <clang-tidy/checks/bugprone/unsafe-functions>` check by adding the function
-  ``std::get_temporary_buffer`` to the default list of unsafe functions. (This
-  function is unsafe, useless, deprecated in C++17 and removed in C++20).
+- Improved :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
+  nested expressions involving different macros or a mix of macro and
+  non-macro operands.
 
-- Improved :doc:`llvm-use-ranges
-  <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
-  algorithms: ``std::accumulate``, ``std::replace_copy``, and
-  ``std::replace_copy_if``.
+- Improved :doc:`readability-named-parameter
+  <clang-tidy/checks/readability/named-parameter>` check by ignoring
+  standard tag types (e.g. ``std::in_place_t``, ``std::allocator_arg_t``,
+  ``std::nothrow_t``, iterator tags, lock tags, etc.) that are used
+  exclusively for overload resolution. Added the :option:`IgnoredTypes`
+  option to allow customizing the set of ignored types.
 
-- Improved :doc:`misc-const-correctness
-  <clang-tidy/checks/misc/const-correctness>` check:
-
-  - Added support for analyzing function parameters with the `AnalyzeParameters`
-    option.
-
-- Improved :doc:`modernize-use-std-format
-  <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
-  when an argument is part of a macro expansion.
-
-- Improved :doc:`modernize-use-using
-  <clang-tidy/checks/modernize/use-using>` check by avoiding the generation
-  of invalid code for function types with redundant parentheses.
-
-- Improved :doc:`performance-move-const-arg
-  <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
-  positives on trivially copyable types with a non-public copy constructor.
-
-- Improved :doc:`readability-enum-initial-value
-  <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
-  now uses separate note diagnostics for each uninitialized enumerator, making
-  it easier to see which specific enumerators need explicit initialization.
+- Improved :doc:`readability-use-std-min-max
+  <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
+  trailing semicolons and lost comments when the ``if`` body has no braces.
 
 Removed checks
 ^^^^^^^^^^^^^^

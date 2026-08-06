@@ -179,8 +179,7 @@ bool InstructionSelect::selectMachineFunction(MachineFunction &MF) {
                          *MI);
       return false;
     }
-  // FIXME: We could introduce new blocks and will need to fix the outer loop.
-  // Until then, keep track of the number of blocks to assert that we don't.
+  // NumBlocks is an invariant to ensure the number of blocks doesn't change.
   const size_t NumBlocks = MF.size();
 #endif
   // Keep track of selected blocks, so we can delete unreachable ones later.
@@ -243,13 +242,15 @@ bool InstructionSelect::selectMachineFunction(MachineFunction &MF) {
         continue;
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();
-      if (SrcReg.isVirtual() && DstReg.isVirtual()) {
-        auto SrcRC = MRI.getRegClass(SrcReg);
-        auto DstRC = MRI.getRegClass(DstReg);
-        if (SrcRC == DstRC) {
-          MRI.replaceRegWith(DstReg, SrcReg);
-          MI.eraseFromParent();
-        }
+      unsigned SrcSubIdx = MI.getOperand(1).getSubReg();
+      if (!SrcReg.isVirtual() || !DstReg.isVirtual() || SrcSubIdx)
+        continue;
+
+      const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
+      const TargetRegisterClass *DstRC = MRI.getRegClass(DstReg);
+      if (SrcRC == DstRC) {
+        MRI.replaceRegWith(DstReg, SrcReg);
+        MI.eraseFromParent();
       }
     }
   }
@@ -366,10 +367,11 @@ bool InstructionSelect::selectInstr(MachineInstr &MI) {
     //
     // Propagate that through to the source register.
     const TargetRegisterClass *DstRC = MRI.getRegClassOrNull(DstReg);
-    if (DstRC)
+    const TargetRegisterClass *SrcRC = MRI.getRegClassOrNull(SrcReg);
+    if (DstRC && SrcRC)
+      MRI.constrainRegClass(SrcReg, DstRC);
+    else if (DstRC)
       MRI.setRegClass(SrcReg, DstRC);
-    assert(canReplaceReg(DstReg, SrcReg, MRI) &&
-           "Must be able to replace dst with src!");
     MI.eraseFromParent();
     MRI.replaceRegWith(DstReg, SrcReg);
     return true;

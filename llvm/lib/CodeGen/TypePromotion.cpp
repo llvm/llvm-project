@@ -188,7 +188,6 @@ public:
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     AU.setPreservesCFG();
-    AU.addPreserved<LoopInfoWrapperPass>();
   }
 
   StringRef getPassName() const override { return PASS_NAME; }
@@ -732,7 +731,7 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
              !GenerateSignBits(I);
     case Instruction::GetElementPtr:
     case Instruction::Store:
-    case Instruction::Br:
+    case Instruction::CondBr:
     case Instruction::Switch:
       return true;
     case Instruction::PHI:
@@ -1058,6 +1057,5 @@ PreservedAnalyses TypePromotionPass::run(Function &F,
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<LoopAnalysis>();
   return PA;
 }

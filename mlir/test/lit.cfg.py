@@ -19,18 +19,8 @@ from lit.llvm.subst import FindTool
 # name: The name of this test suite.
 config.name = "MLIR"
 
-# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
-# See https://github.com/llvm/llvm-project/issues/106636 for more details.
-#
-# We prefer the lit internal shell which provides a better user experience on failures
-# unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0 env var.
-use_lit_shell = True
-lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if lit_shell_env:
-    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
-
 # Set the test format based on shell configuration
-config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
+config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
@@ -187,6 +177,7 @@ for dirs in tool_dirs:
     llvm_config.with_environment("PATH", dirs, append_path=True)
 
 tools = [
+    "llvm-strings",
     "mlir-tblgen",
     "mlir-translate",
     "mlir-lsp-server",
@@ -352,6 +343,9 @@ if config.enable_assertions:
     config.available_features.add("asserts")
 else:
     config.available_features.add("noasserts")
+
+if config.enable_python_stable_abi:
+    config.available_features.add("python-stable-abi")
 
 if config.expensive_checks:
     config.available_features.add("expensive_checks")

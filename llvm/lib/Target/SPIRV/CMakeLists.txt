@@ -22,13 +22,13 @@ add_llvm_target(SPIRVCodeGen
   SPIRVCallLowering.cpp
   SPIRVInlineAsmLowering.cpp
   SPIRVCommandLine.cpp
+  SPIRVCtorDtorLowering.cpp
   SPIRVEmitIntrinsics.cpp
   SPIRVGlobalRegistry.cpp
   SPIRVInstrInfo.cpp
   SPIRVInstructionSelector.cpp
   SPIRVLegalizeImplicitBinding.cpp
   SPIRVLegalizeZeroSizeArrays.cpp
-  SPIRVStripConvergentIntrinsics.cpp
   SPIRVLegalizePointerCast.cpp
   SPIRVMergeRegionExitTargets.cpp
   SPIRVISelLowering.cpp
@@ -46,11 +46,14 @@ add_llvm_target(SPIRVCodeGen
   SPIRVRegisterBankInfo.cpp
   SPIRVRegisterInfo.cpp
   SPIRVRegularizer.cpp
+  SPIRVFinalizeShaderLinkage.cpp
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
   SPIRVTargetTransformInfo.cpp
+  SPIRVTypeInst.cpp
   SPIRVUtils.cpp
-  SPIRVEmitNonSemanticDI.cpp
+  SPIRVNonSemanticDebugHandler.cpp
+  SPIRVAuxDataHandler.cpp
   SPIRVCBufferAccess.cpp
   SPIRVPushConstantAccess.cpp
 

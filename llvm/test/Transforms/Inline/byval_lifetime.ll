@@ -1,5 +1,4 @@
 ; RUN: opt -S -passes=inline < %s | FileCheck %s
-; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
 
 ; By inlining foo, an alloca is created in main to hold the byval argument, so
 ; a lifetime marker should be generated as well by default.

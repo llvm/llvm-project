@@ -11,10 +11,9 @@
 
 #include "include/llvm-libc-types/float128.h"
 
-#include "shared/libc_common.h"
-
 #ifdef LIBC_TYPES_HAS_FLOAT128
 
+#include "shared/libc_common.h"
 #include "src/__support/math/logbf128.h"
 
 namespace LIBC_NAMESPACE_DECL {

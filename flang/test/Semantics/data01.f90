@@ -62,7 +62,7 @@ subroutine CheckValue
   !OK: constant array element
   data x / a(1) /
   !C886, C887
-  !ERROR: DATA statement value 'a(int(i,kind=8))' for 'y' is not a constant
+  !ERROR: DATA statement value 'a(__builtin_int(i,kind=8))' for 'y' is not a constant
   data y / a(i) /
   !ERROR: DATA statement value 'b(1_8)' for 'z' is not a constant
   data z / b(1) /

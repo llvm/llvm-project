@@ -113,7 +113,7 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
   } else {
     // We need custom logic here to support the old method of specifying check
     // options using a list of maps containing key and value keys.
-    auto &I = reinterpret_cast<Input &>(IO);
+    const auto &I = reinterpret_cast<Input &>(IO);
     if (isa<SequenceNode>(I.getCurrentNode())) {
       MappingNormalization<NOptionMap, ClangTidyOptions::OptionMap> NOpts(IO,
                                                                           Val);
@@ -194,7 +194,7 @@ void yamlize(IO &IO, GlobListVariant &Val, bool, EmptyContext &Ctx) {
   if (!IO.outputting()) {
     // Special case for reading from YAML
     // Must support reading from both a string or a list
-    auto &I = reinterpret_cast<Input &>(IO);
+    const auto &I = reinterpret_cast<Input &>(IO);
     if (isa<ScalarNode, BlockScalarNode>(I.getCurrentNode())) {
       Val.AsString = std::string();
       yamlize(IO, *Val.AsString, true, Ctx);
@@ -324,17 +324,16 @@ ClangTidyOptions ClangTidyOptions::merge(const ClangTidyOptions &Other,
   return Result;
 }
 
-ClangTidyOptions
-ClangTidyOptionsProvider::getOptions(llvm::StringRef FileName) {
+ClangTidyOptions ClangTidyOptionsProvider::getOptions(StringRef FileName) {
   ClangTidyOptions Result;
   unsigned Priority = 0;
-  for (auto &Source : getRawOptions(FileName))
+  for (const auto &Source : getRawOptions(FileName))
     Result.mergeWith(Source.first, ++Priority);
   return Result;
 }
 
 std::vector<OptionsSource>
-DefaultOptionsProvider::getRawOptions(llvm::StringRef FileName) {
+DefaultOptionsProvider::getRawOptions(StringRef FileName) {
   std::vector<OptionsSource> Result;
   Result.emplace_back(DefaultOptions, OptionsSourceTypeDefaultBinary);
   return Result;
@@ -350,14 +349,14 @@ ConfigOptionsProvider::ConfigOptionsProvider(
       ConfigOptions(std::move(ConfigOptions)) {}
 
 std::vector<OptionsSource>
-ConfigOptionsProvider::getRawOptions(llvm::StringRef FileName) {
+ConfigOptionsProvider::getRawOptions(StringRef FileName) {
   std::vector<OptionsSource> RawOptions =
       DefaultOptionsProvider::getRawOptions(FileName);
   if (ConfigOptions.InheritParentConfig.value_or(false)) {
     LLVM_DEBUG(llvm::dbgs()
                << "Getting options for file " << FileName << "...\n");
 
-    llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
+    llvm::ErrorOr<SmallString<128>> AbsoluteFilePath =
         getNormalizedAbsolutePath(FileName);
     if (AbsoluteFilePath)
       addRawFileOptions(AbsoluteFilePath->str(), RawOptions);
@@ -390,10 +389,10 @@ FileOptionsBaseProvider::FileOptionsBaseProvider(
       OverrideOptions(std::move(OverrideOptions)),
       ConfigHandlers(std::move(ConfigHandlers)) {}
 
-llvm::ErrorOr<llvm::SmallString<128>>
-FileOptionsBaseProvider::getNormalizedAbsolutePath(llvm::StringRef Path) {
+llvm::ErrorOr<SmallString<128>>
+FileOptionsBaseProvider::getNormalizedAbsolutePath(StringRef Path) {
   assert(FS && "FS must be set.");
-  llvm::SmallString<128> NormalizedAbsolutePath = {Path};
+  SmallString<128> NormalizedAbsolutePath = {Path};
   const std::error_code Err = FS->makeAbsolute(NormalizedAbsolutePath);
   if (Err)
     return Err;
@@ -402,12 +401,12 @@ FileOptionsBaseProvider::getNormalizedAbsolutePath(llvm::StringRef Path) {
 }
 
 void FileOptionsBaseProvider::addRawFileOptions(
-    llvm::StringRef AbsolutePath, std::vector<OptionsSource> &CurOptions) {
-  auto CurSize = CurOptions.size();
+    StringRef AbsolutePath, std::vector<OptionsSource> &CurOptions) {
+  const auto CurSize = CurOptions.size();
   // Look for a suitable configuration file in all parent directories of the
   // file. Start with the immediate parent directory and move up.
   StringRef RootPath = llvm::sys::path::parent_path(AbsolutePath);
-  auto MemorizedConfigFile =
+  const auto MemorizedConfigFile =
       [this, &RootPath](StringRef CurrentPath) -> std::optional<OptionsSource> {
     const auto Iter = CachedOptions.Memorized.find(CurrentPath);
     if (Iter != CachedOptions.Memorized.end())
@@ -465,7 +464,7 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
   LLVM_DEBUG(llvm::dbgs() << "Getting options for file " << FileName
                           << "...\n");
 
-  const llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
+  const llvm::ErrorOr<SmallString<128>> AbsoluteFilePath =
       getNormalizedAbsolutePath(FileName);
   if (!AbsoluteFilePath)
     return {};

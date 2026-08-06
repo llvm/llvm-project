@@ -164,10 +164,11 @@ static bool isKnownToHaveValue(const Expr &Cond, const ASTContext &Ctx,
     } else if (const auto *UnOp = dyn_cast<UnaryOperator>(&Cond)) {
       if (UnOp->getOpcode() == UO_LNot)
         return isKnownToHaveValue(*UnOp->getSubExpr(), Ctx, !ExpectedValue);
-    } else if (const auto *Paren = dyn_cast<ParenExpr>(&Cond))
+    } else if (const auto *Paren = dyn_cast<ParenExpr>(&Cond)) {
       return isKnownToHaveValue(*Paren->getSubExpr(), Ctx, ExpectedValue);
-    else if (const auto *ImplCast = dyn_cast<ImplicitCastExpr>(&Cond))
+    } else if (const auto *ImplCast = dyn_cast<ImplicitCastExpr>(&Cond)) {
       return isKnownToHaveValue(*ImplCast->getSubExpr(), Ctx, ExpectedValue);
+    }
     return false;
   }
   bool Result = false;

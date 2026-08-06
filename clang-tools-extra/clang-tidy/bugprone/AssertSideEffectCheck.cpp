@@ -24,7 +24,7 @@ namespace clang::tidy::bugprone {
 namespace {
 
 AST_MATCHER_P2(Expr, hasSideEffect, bool, CheckFunctionCalls,
-               clang::ast_matchers::internal::Matcher<NamedDecl>,
+               ast_matchers::internal::Matcher<NamedDecl>,
                IgnoredFunctionsMatcher) {
   const Expr *E = &Node;
 
@@ -103,13 +103,13 @@ void AssertSideEffectCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void AssertSideEffectCheck::registerMatchers(MatchFinder *Finder) {
-  auto IgnoredFunctionsMatcher =
+  const auto IgnoredFunctionsMatcher =
       matchers::matchesAnyListedRegexName(IgnoredFunctions);
 
-  auto DescendantWithSideEffect =
+  const auto DescendantWithSideEffect =
       traverse(TK_AsIs, hasDescendant(expr(hasSideEffect(
                             CheckFunctionCalls, IgnoredFunctionsMatcher))));
-  auto ConditionWithSideEffect = hasCondition(DescendantWithSideEffect);
+  const auto ConditionWithSideEffect = hasCondition(DescendantWithSideEffect);
   Finder->addMatcher(
       stmt(
           anyOf(conditionalOperator(ConditionWithSideEffect),

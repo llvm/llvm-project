@@ -309,7 +309,7 @@ public:
     });
 
     rewriter.replaceAllOpUsesWith(op, producer);
-    op->erase();
+    rewriter.eraseOp(op);
 
     return success();
   }
@@ -1008,7 +1008,7 @@ public:
 
     Value buffer =
         AllocTensorOp::create(rewriter, loc, bufferTp, dstDynSizes, Value(),
-                              /*sizeHint=*/nnz, Attribute())
+                              /*size_hint=*/nnz, Attribute())
             .getResult();
 
     // Implement the sparse2sparse reshape as follows:
@@ -1380,6 +1380,46 @@ public:
 
     // Otherwise, use loop emitter to generate loops.
     const auto enc = stt.getEncoding();
+
+    // Special-case: rank-0 tensors have no dimensions to loop over.
+    // The LoopEmitter (getValPosits) requires at least one loop level, so
+    // handle scalar tensors separately.
+    if (lvlRank == 0) {
+      // Sparse rank-0 tensors are not yet supported.
+      if (enc)
+        return rewriter.notifyMatchFailure(
+            op, "foreach over rank-0 sparse tensors is not supported");
+      // Dense rank-0 tensor: bufferize and load the single element once,
+      // then inline the body without any surrounding loop.
+      LoopEmitter loopEmitter(
+          ValueRange{input},
+          StringAttr::get(getContext(), ForeachOp::getOperationName()));
+      loopEmitter.initializeLoopEmit(rewriter, loc);
+      Value vals = loopEmitter.getValBuffer()[0];
+      Value val = memref::LoadOp::create(rewriter, loc, vals, ValueRange{});
+      // Rank-0 has no coordinates; body args = [value, reductions...].
+      SmallVector<Value> args = {val};
+      args.append(reduc);
+      Block *srcBlock = op.getBody();
+      Operation *terminator = srcBlock->getTerminator();
+      SmallVector<Value> reducValue(terminator->getOperands());
+      // Remap any block-arg entries in reducValue to their post-inline values
+      // before the terminator is erased and the block is inlined, because
+      // inlineBlockBefore() will detach the block args.
+      for (Value &v : reducValue)
+        if (auto ba = dyn_cast<BlockArgument>(v))
+          if (ba.getOwner() == srcBlock)
+            v = args[ba.getArgNumber()];
+      rewriter.eraseOp(terminator);
+      Operation &last = rewriter.getBlock()->back();
+      if (llvm::isa<scf::YieldOp>(last))
+        rewriter.setInsertionPoint(&last);
+      rewriter.inlineBlockBefore(srcBlock, rewriter.getBlock(),
+                                 rewriter.getInsertionPoint(), args);
+      rewriter.setInsertionPointToEnd(rewriter.getBlock());
+      rewriter.replaceOp(op, reducValue);
+      return success();
+    }
 
     // 1. Generates loop for the sparse input.
     LoopEmitter loopEmitter(

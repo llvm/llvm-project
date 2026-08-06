@@ -1,0 +1,29 @@
+name: Zizmor GitHub Actions Analysis
+
+on:
+  push:
+    branches: ["main"]
+    paths: [".github/**"]
+  pull_request:
+    paths: [".github/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  zizmor:
+    if: github.repository_owner == 'llvm'
+    name: Run zizmor
+    runs-on: ubuntu-24.04
+    permissions:
+      security-events: write # Required for upload-sarif (used by zizmor-action) to upload SARIF files.
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2

@@ -2,6 +2,16 @@
 // RUN: -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
 // RUN: -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
 // RUN: -std=c++11 -verify  %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.UninitializedObject \
+// RUN: -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
+// RUN: -analyzer-config optin.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
+// RUN: -std=c++11 -verify  %s -DHEAP_ALLOCATION
+
+#ifdef HEAP_ALLOCATION
+#define INIT(CLS, ARGS) new CLS ARGS
+#else
+#define INIT(CLS, ARGS) (void) CLS ARGS
+#endif
 
 //===----------------------------------------------------------------------===//
 // Non-polymorphic inheritance tests
@@ -31,7 +41,7 @@ public:
 };
 
 void fNonPolymorphicInheritanceTest1() {
-  NonPolymorphicInheritanceTest1();
+  INIT(NonPolymorphicInheritanceTest1, ());
 }
 
 class NonPolymorphicBaseClass2 {
@@ -55,7 +65,7 @@ public:
 };
 
 void fNonPolymorphicInheritanceTest2() {
-  NonPolymorphicInheritanceTest2();
+  INIT(NonPolymorphicInheritanceTest2, ());
 }
 
 class NonPolymorphicBaseClass3 {
@@ -79,7 +89,7 @@ public:
 };
 
 void fNonPolymorphicInheritanceTest3() {
-  NonPolymorphicInheritanceTest3();
+  INIT(NonPolymorphicInheritanceTest3, ());
 }
 
 class NonPolymorphicBaseClass4 {
@@ -104,7 +114,7 @@ public:
 };
 
 void fNonPolymorphicInheritanceTest4() {
-  NonPolymorphicInheritanceTest4();
+  INIT(NonPolymorphicInheritanceTest4, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -136,7 +146,7 @@ public:
 };
 
 void fPolymorphicInheritanceTest1() {
-  PolymorphicInheritanceTest1();
+  INIT(PolymorphicInheritanceTest1, ());
 }
 
 class PolymorphicRight1 {
@@ -161,7 +171,7 @@ public:
 };
 
 void fPolymorphicInheritanceTest2() {
-  PolymorphicInheritanceTest2();
+  INIT(PolymorphicInheritanceTest2, ());
 }
 
 class PolymorphicBaseClass3 {
@@ -186,7 +196,7 @@ public:
 };
 
 void fPolymorphicInheritanceTest3() {
-  PolymorphicInheritanceTest3();
+  INIT(PolymorphicInheritanceTest3, ());
 }
 
 class PolymorphicBaseClass4 {
@@ -212,7 +222,7 @@ public:
 };
 
 void fPolymorphicInheritanceTest4() {
-  PolymorphicInheritanceTest4();
+  INIT(PolymorphicInheritanceTest4, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -244,7 +254,7 @@ public:
 };
 
 void fVirtualInheritanceTest1() {
-  VirtualInheritanceTest1();
+  INIT(VirtualInheritanceTest1, ());
 }
 
 class VirtualPolymorphicRight1 {
@@ -269,7 +279,7 @@ public:
 };
 
 void fVirtualInheritanceTest2() {
-  VirtualInheritanceTest2();
+  INIT(VirtualInheritanceTest2, ());
 }
 
 class VirtualPolymorphicBaseClass3 {
@@ -294,7 +304,7 @@ public:
 };
 
 void fVirtualInheritanceTest3() {
-  VirtualInheritanceTest3();
+  INIT(VirtualInheritanceTest3, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -347,9 +357,9 @@ public:
 };
 
 void fMultipleInheritanceTest1() {
-  MultipleInheritanceTest1();
-  MultipleInheritanceTest1(int());
-  MultipleInheritanceTest1(int(), int());
+  INIT(MultipleInheritanceTest1, ());
+  INIT(MultipleInheritanceTest1, (int()));
+  INIT(MultipleInheritanceTest1, (int(), int()));
 }
 
 struct Left2 {
@@ -374,7 +384,7 @@ public:
 };
 
 void fMultipleInheritanceTest2() {
-  MultipleInheritanceTest2();
+  INIT(MultipleInheritanceTest2, ());
 }
 
 struct Left3 {
@@ -399,7 +409,7 @@ public:
 };
 
 void fMultipleInheritanceTest3() {
-  MultipleInheritanceTest3();
+  INIT(MultipleInheritanceTest3, ());
 }
 
 struct Left4 {
@@ -424,7 +434,7 @@ public:
 };
 
 void fMultipleInheritanceTest4() {
-  MultipleInheritanceTest4();
+  INIT(MultipleInheritanceTest4, ());
 }
 
 struct Left5 {
@@ -448,7 +458,7 @@ public:
 };
 
 void fMultipleInheritanceTest5() {
-  MultipleInheritanceTest5();
+  INIT(MultipleInheritanceTest5, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -508,9 +518,9 @@ public:
 };
 
 void fNonVirtualDiamondInheritanceTest1() {
-  NonVirtualDiamondInheritanceTest1();
-  NonVirtualDiamondInheritanceTest1(int());
-  NonVirtualDiamondInheritanceTest1(int(), int());
+  INIT(NonVirtualDiamondInheritanceTest1, ());
+  INIT(NonVirtualDiamondInheritanceTest1, (int()));
+  INIT(NonVirtualDiamondInheritanceTest1, (int(), int()));
 }
 
 struct NonVirtualBase2 {
@@ -538,7 +548,7 @@ public:
 };
 
 void fNonVirtualDiamondInheritanceTest2() {
-  NonVirtualDiamondInheritanceTest2();
+  INIT(NonVirtualDiamondInheritanceTest2, ());
 }
 
 struct NonVirtualBase3 {
@@ -566,7 +576,7 @@ public:
 };
 
 void fNonVirtualDiamondInheritanceTest3() {
-  NonVirtualDiamondInheritanceTest3();
+  INIT(NonVirtualDiamondInheritanceTest3, ());
 }
 
 struct NonVirtualBase4 {
@@ -594,7 +604,7 @@ public:
 };
 
 void fNonVirtualDiamondInheritanceTest4() {
-  NonVirtualDiamondInheritanceTest4();
+  INIT(NonVirtualDiamondInheritanceTest4, ());
 }
 
 struct NonVirtualBase5 {
@@ -622,7 +632,7 @@ public:
 };
 
 void fNonVirtualDiamondInheritanceTest5() {
-  NonVirtualDiamondInheritanceTest5();
+  INIT(NonVirtualDiamondInheritanceTest5, ());
 }
 
 struct NonVirtualBase6 {
@@ -650,7 +660,7 @@ public:
 };
 
 void fNonVirtualDiamondInheritanceTest6() {
-  NonVirtualDiamondInheritanceTest6();
+  INIT(NonVirtualDiamondInheritanceTest6, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -706,9 +716,9 @@ public:
 };
 
 void fVirtualDiamondInheritanceTest1() {
-  VirtualDiamondInheritanceTest1();
-  VirtualDiamondInheritanceTest1(int());
-  VirtualDiamondInheritanceTest1(int(), int());
+  INIT(VirtualDiamondInheritanceTest1, ());
+  INIT(VirtualDiamondInheritanceTest1, (int()));
+  INIT(VirtualDiamondInheritanceTest1, (int(), int()));
 }
 
 struct VirtualBase2 {
@@ -747,7 +757,7 @@ public:
 };
 
 void fVirtualDiamondInheritanceTest2() {
-  VirtualDiamondInheritanceTest2();
+  INIT(VirtualDiamondInheritanceTest2, ());
 }
 
 struct VirtualBase3 {
@@ -774,7 +784,7 @@ public:
 };
 
 void fVirtualDiamondInheritanceTest3() {
-  VirtualDiamondInheritanceTest3();
+  INIT(VirtualDiamondInheritanceTest3, ());
 }
 
 //===----------------------------------------------------------------------===//
@@ -795,7 +805,7 @@ struct DynamicTypeTest1 {
 
 void fDynamicTypeTest1() {
   DynTDerived1 d;
-  DynamicTypeTest1 t(&d);
+  INIT(DynamicTypeTest1, (&d));
 };
 
 struct DynTBase2 {
@@ -814,7 +824,7 @@ struct DynamicTypeTest2 {
 
 void fDynamicTypeTest2() {
   DynTDerived2 d;
-  DynamicTypeTest2 t(&d);
+  INIT(DynamicTypeTest2, (&d));
 }
 
 struct SymbolicSuperRegionBase {
@@ -829,5 +839,5 @@ struct SymbolicSuperRegionDerived : SymbolicSuperRegionBase {
 SymbolicSuperRegionDerived *getSymbolicRegion();
 
 void fSymbolicSuperRegionTest() {
-  SymbolicSuperRegionDerived test(getSymbolicRegion());
+  INIT(SymbolicSuperRegionDerived, (getSymbolicRegion()));
 }

@@ -5,7 +5,7 @@
 ; CHECK-NOT: f.Frame Slot
 define ptr @f(i32 %x) presplitcoroutine {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %need.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.alloc, label %dyn.alloc, label %begin
 

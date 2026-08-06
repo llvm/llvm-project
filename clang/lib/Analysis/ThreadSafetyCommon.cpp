@@ -187,10 +187,15 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   }
 
   // If the attribute has no arguments, then assume the argument is "this".
-  if (!AttrExp)
+  // SelfArg may be null for non-method callees (e.g. function pointers).
+  if (!AttrExp) {
+    if (!Ctx.SelfArg)
+      return CapabilityExpr();
     return translateAttrExpr(cast<const Expr *>(Ctx.SelfArg), nullptr);
-  else  // For most attributes.
-    return translateAttrExpr(AttrExp, &Ctx);
+  }
+
+  // For most attributes.
+  return translateAttrExpr(AttrExp, &Ctx);
 }
 
 /// Translate a clang expression in an attribute to a til::SExpr.
@@ -337,15 +342,29 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
 
   // Collect all literals
   case Stmt::CharacterLiteralClass:
+    return new (Arena)
+        til::LiteralT<char32_t>(cast<CharacterLiteral>(S)->getValue());
   case Stmt::CXXNullPtrLiteralExprClass:
   case Stmt::GNUNullExprClass:
+    return new (Arena) til::LiteralT(nullptr);
   case Stmt::CXXBoolLiteralExprClass:
-  case Stmt::FloatingLiteralClass:
-  case Stmt::ImaginaryLiteralClass:
-  case Stmt::IntegerLiteralClass:
+    return new (Arena) til::LiteralT(cast<CXXBoolLiteralExpr>(S)->getValue());
+  case Stmt::IntegerLiteralClass: {
+    const auto *IL = cast<IntegerLiteral>(S);
+    const auto *BT = cast<BuiltinType>(IL->getType());
+    const llvm::APInt &Value = IL->getValue();
+    if (BT->isSignedInteger())
+      return new (Arena) til::LiteralT(Value.getSExtValue());
+    else if (BT->isUnsignedInteger())
+      return new (Arena) til::LiteralT(Value.getZExtValue());
+    else
+      llvm_unreachable("Invalid integer type");
+  }
   case Stmt::StringLiteralClass:
+    return new (Arena) til::LiteralT(cast<StringLiteral>(S)->getBytes());
   case Stmt::ObjCStringLiteralClass:
-    return new (Arena) til::Literal(cast<Expr>(S));
+    return new (Arena)
+        til::LiteralT(cast<ObjCStringLiteral>(S)->getString()->getBytes());
 
   case Stmt::DeclStmtClass:
     return translateDeclStmt(cast<DeclStmt>(S), Ctx);
@@ -360,55 +379,28 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
   return new (Arena) til::Undefined(S);
 }
 
-til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
-                                               CallingContext *Ctx) {
-  const auto *VD = cast<ValueDecl>(DRE->getDecl()->getCanonicalDecl());
-
-  // Function parameters require substitution and/or renaming.
-  if (const auto *PV = dyn_cast<ParmVarDecl>(VD)) {
-    unsigned I = PV->getFunctionScopeIndex();
-    const DeclContext *D = PV->getDeclContext();
-    if (Ctx && Ctx->FunArgs) {
-      const Decl *Canonical = Ctx->AttrDecl->getCanonicalDecl();
-      if (isa<FunctionDecl>(D)
-              ? (cast<FunctionDecl>(D)->getCanonicalDecl() == Canonical)
-              : (cast<ObjCMethodDecl>(D)->getCanonicalDecl() == Canonical)) {
-        // Substitute call arguments for references to function parameters
-        if (const Expr *const *FunArgs =
-                dyn_cast<const Expr *const *>(Ctx->FunArgs)) {
-          assert(I < Ctx->NumArgs);
-          return translate(FunArgs[I], Ctx->Prev);
-        }
-
-        assert(I == 0);
-        return cast<til::SExpr *>(Ctx->FunArgs);
-      }
+/// Helper to extract the canonical parameter declaration from a function or
+/// function pointer. This unwraps pointer and reference types to reach the
+/// underlying function prototype.
+static const ParmVarDecl *getCanonicalParamDecl(const Decl *D, unsigned I) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(D))
+    return FD->getCanonicalDecl()->getParamDecl(I);
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
+    return MD->getCanonicalDecl()->getParamDecl(I);
+  if (const auto *DD = dyn_cast<DeclaratorDecl>(D)) {
+    if (auto *TSI = DD->getTypeSourceInfo()) {
+      TypeLoc TL = TSI->getTypeLoc();
+      if (auto RTL = TL.getAsAdjusted<ReferenceTypeLoc>())
+        TL = RTL.getPointeeLoc();
+      // A function pointer can be multiple levels deep.
+      while (auto PTL = TL.getAsAdjusted<PointerTypeLoc>())
+        TL = PTL.getPointeeLoc();
+      if (auto FPTL = TL.getAsAdjusted<FunctionProtoTypeLoc>())
+        if (I < FPTL.getNumParams())
+          return FPTL.getParam(I);
     }
-    // Map the param back to the param of the original function declaration
-    // for consistent comparisons.
-    VD = isa<FunctionDecl>(D)
-             ? cast<FunctionDecl>(D)->getCanonicalDecl()->getParamDecl(I)
-             : cast<ObjCMethodDecl>(D)->getCanonicalDecl()->getParamDecl(I);
   }
-
-  if (const auto *VarD = dyn_cast<VarDecl>(VD))
-    return translateVariable(VarD, Ctx);
-
-  // For non-local variables, treat it as a reference to a named object.
-  return new (Arena) til::LiteralPtr(VD);
-}
-
-til::SExpr *SExprBuilder::translateCXXThisExpr(const CXXThisExpr *TE,
-                                               CallingContext *Ctx) {
-  // Substitute for 'this'
-  if (Ctx && Ctx->SelfArg) {
-    if (const auto *SelfArg = dyn_cast<const Expr *>(Ctx->SelfArg))
-      return translate(SelfArg, Ctx->Prev);
-    else
-      return cast<til::SExpr *>(Ctx->SelfArg);
-  }
-  assert(SelfVar && "We have no variable for 'this'!");
-  return SelfVar;
+  return nullptr;
 }
 
 static const ValueDecl *getValueDeclFromSExpr(const til::SExpr *E) {
@@ -431,6 +423,78 @@ static bool hasAnyPointerType(const til::SExpr *E) {
     return C->castOpcode() == til::CAST_objToPtr;
 
   return false;
+}
+
+til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
+                                               CallingContext *Ctx) {
+  const auto *VD = cast<ValueDecl>(DRE->getDecl()->getCanonicalDecl());
+
+  // Function parameters require substitution and/or renaming.
+  if (const auto *PV = dyn_cast<ParmVarDecl>(VD)) {
+    unsigned I = PV->getFunctionScopeIndex();
+    const DeclContext *D = PV->getDeclContext();
+    if (Ctx && Ctx->FunArgs) {
+      const Decl *Canonical = Ctx->AttrDecl->getCanonicalDecl();
+      bool Match = false;
+      if (const auto *FD = dyn_cast<FunctionDecl>(D))
+        Match = (FD->getCanonicalDecl() == Canonical);
+      else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
+        Match = (MD->getCanonicalDecl() == Canonical);
+      else if (getCanonicalParamDecl(Canonical, I) == PV->getCanonicalDecl())
+        Match = true;
+      else
+        llvm_unreachable("ParmVarDecl does not belong to current declaration");
+
+      if (Match) {
+        // Substitute call arguments for references to function parameters
+        if (const Expr *const *FunArgs =
+                dyn_cast<const Expr *const *>(Ctx->FunArgs)) {
+          assert(I < Ctx->NumArgs);
+          return translate(FunArgs[I], Ctx->Prev);
+        }
+
+        assert(I == 0);
+        return cast<til::SExpr *>(Ctx->FunArgs);
+      }
+    }
+    // Map the param back to the param of the original function declaration
+    // for consistent comparisons.
+    if (const auto *PVD = getCanonicalParamDecl(cast<Decl>(D), I))
+      VD = PVD;
+  }
+
+  if (const auto *VarD = dyn_cast<VarDecl>(VD))
+    return translateVariable(VarD, Ctx);
+
+  // FIXME: A FieldDecl reached via a DeclRefExpr should ideally be modelled as
+  // a MemberExpr with an artificial self in the AST (e.g. ImplicitThisExpr as a
+  // C equivalent of CXXThisExpr). Until such AST support is available, project
+  // the field on the current SelfArg, so implicit member references in C and in
+  // parameter attributes are not lost.
+  if (const auto *FD = dyn_cast<FieldDecl>(VD); FD && Ctx && Ctx->SelfArg) {
+    til::SExpr *BE = translateCXXThisExpr(nullptr, Ctx);
+    til::SExpr *E = new (Arena) til::SApply(BE);
+    til::Project *P = new (Arena) til::Project(E, FD);
+    if (hasAnyPointerType(BE))
+      P->setArrow(true);
+    return P;
+  }
+
+  // For non-local variables, treat it as a reference to a named object.
+  return new (Arena) til::LiteralPtr(VD);
+}
+
+til::SExpr *SExprBuilder::translateCXXThisExpr(const CXXThisExpr *TE,
+                                               CallingContext *Ctx) {
+  // Substitute for 'this'
+  if (Ctx && Ctx->SelfArg) {
+    if (const auto *SelfArg = dyn_cast<const Expr *>(Ctx->SelfArg))
+      return translate(SelfArg, Ctx->Prev);
+    else
+      return cast<til::SExpr *>(Ctx->SelfArg);
+  }
+  assert(SelfVar && "We have no variable for 'this'!");
+  return SelfVar;
 }
 
 // Grab the very first declaration of virtual method D

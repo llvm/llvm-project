@@ -94,11 +94,9 @@ function(add_gen_header target_name)
 
   set(absolute_path ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_GEN_HDR_GEN_HDR})
   file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_SOURCE_DIR} ${absolute_path})
+  set(out_file ${LIBC_INCLUDE_DIR}/${relative_path})
   if (ADD_GEN_HDR_PROXY)
-    set(out_file ${LIBC_BUILD_DIR}/hdr/${relative_path})
     set(proxy_arg "--proxy")
-  else()
-    set(out_file ${LIBC_INCLUDE_DIR}/${relative_path})
   endif()
   set(dep_file "${out_file}.d")
   set(yaml_file ${CMAKE_SOURCE_DIR}/${ADD_GEN_HDR_YAML_FILE})
@@ -109,7 +107,10 @@ function(add_gen_header target_name)
     set(entry_points "${TARGET_ENTRYPOINT_NAME_LIST}")
   endif()
 
+  # TODO: Use $<LIST:PREPEND,list,item,...> after we bump CMake to 3.27.
   list(TRANSFORM entry_points PREPEND "--entry-point=")
+  set(rsp_file "${CMAKE_CURRENT_BINARY_DIR}/${relative_path}.rsp")
+  file(GENERATE OUTPUT ${rsp_file} CONTENT "$<JOIN:${entry_points},\n>")
 
   add_custom_command(
     OUTPUT ${out_file}
@@ -119,9 +120,9 @@ function(add_gen_header target_name)
             --depfile ${dep_file}
             --write-if-changed
             ${proxy_arg}
-            ${entry_points}
             ${yaml_file}
-    DEPENDS ${yaml_file}
+            "@${rsp_file}"
+    DEPENDS ${yaml_file} ${rsp_file}
     DEPFILE ${dep_file}
     COMMENT "Generating header ${ADD_GEN_HDR_GEN_HDR} from ${yaml_file}"
   )

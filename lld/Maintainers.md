@@ -10,10 +10,22 @@ The following people are the active maintainers for the project. Please reach
 out to them for code reviews, questions about their area of expertise, or other
 assistance.
 
-### COFF, ELF backends (COFF/* ELF/*)
+### ELF backend
 
-Rui Ueyama \
-ruiu@google.com (email)
+Fangrui Song \
+i@maskray.me (email), [maskray](https://github.com/maskray) (GitHub)
+
+Peter Smith \
+peter.smith@arm.com (email), [smithp35](https://github.com/smithp35) (GitHub)
+
+### COFF backend
+
+Martin Storsjö \
+martin@martin.st (email), [mstorsjo](https://github.com/mstorsjo) (GitHub)
+
+Alexandre Ganea \
+alex_toresh@yahoo.fr (email), [aganea](https://github.com/aganea) (GitHub)
+
 
 ### Old Mach-O backend
 

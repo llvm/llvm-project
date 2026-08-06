@@ -1665,32 +1665,32 @@ body:             |
 # CHECK-NEXT: SU(12) [TopReadyCycle = 0, BottomReadyCycle = 3]:   $q1 = COPY %12:fpr128
 # CHECK-EMPTY:
 # CHECK-NEXT: ********** INTERVALS **********
-# CHECK-NEXT: B0 [0B,48r:0)[192r,224r:1) 0@0B-phi 1@192r
-# CHECK-NEXT: B1 [0B,88r:0)[208r,224r:1) 0@0B-phi 1@208r
-# CHECK-NEXT: B2 [0B,96r:0) 0@0B-phi
-# CHECK-NEXT: B0_HI [0B,48r:0)[192r,224r:1) 0@0B-phi 1@192r
-# CHECK-NEXT: H0_HI [0B,48r:0)[192r,224r:1) 0@0B-phi 1@192r
-# CHECK-NEXT: S0_HI [0B,48r:0)[192r,224r:1) 0@0B-phi 1@192r
-# CHECK-NEXT: B1_HI [0B,88r:0)[208r,224r:1) 0@0B-phi 1@208r
-# CHECK-NEXT: H1_HI [0B,88r:0)[208r,224r:1) 0@0B-phi 1@208r
-# CHECK-NEXT: S1_HI [0B,88r:0)[208r,224r:1) 0@0B-phi 1@208r
-# CHECK-NEXT: B2_HI [0B,96r:0) 0@0B-phi
-# CHECK-NEXT: H2_HI [0B,96r:0) 0@0B-phi
-# CHECK-NEXT: S2_HI [0B,96r:0) 0@0B-phi
-# CHECK-NEXT: D0_HI [0B,48r:0)[192r,224r:1) 0@0B-phi 1@192r
-# CHECK-NEXT: D1_HI [0B,88r:0)[208r,224r:1) 0@0B-phi 1@208r
-# CHECK-NEXT: D2_HI [0B,96r:0) 0@0B-phi
-# CHECK-NEXT: %0 [48r,168r:0) 0@48r  weight:0.000000e+00
-# CHECK-NEXT: %1 [88r,120r:0) 0@88r  weight:0.000000e+00
-# CHECK-NEXT: %2 [96r,128r:0) 0@96r  weight:0.000000e+00
-# CHECK-NEXT: %3 [104r,176r:0) 0@104r  weight:0.000000e+00
-# CHECK-NEXT: %6 [80r,128r:0) 0@80r  weight:0.000000e+00
-# CHECK-NEXT: %7 [128r,160r:0) 0@128r  weight:0.000000e+00
-# CHECK-NEXT: %8 [120r,136r:0) 0@120r  weight:0.000000e+00
-# CHECK-NEXT: %9 [136r,168r:0) 0@136r  weight:0.000000e+00
-# CHECK-NEXT: %10 [168r,192r:0) 0@168r  weight:0.000000e+00
-# CHECK-NEXT: %11 [160r,176r:0) 0@160r  weight:0.000000e+00
-# CHECK-NEXT: %12 [176r,208r:0) 0@176r  weight:0.000000e+00
+# CHECK-NEXT: B0 [0B,48r:0)[272r,304r:1) 0@0B-phi 1@272r
+# CHECK-NEXT: B1 [0B,96r:0)[288r,304r:1) 0@0B-phi 1@288r
+# CHECK-NEXT: B2 [0B,112r:0) 0@0B-phi
+# CHECK-NEXT: B0_HI [0B,48r:0)[272r,304r:1) 0@0B-phi 1@272r
+# CHECK-NEXT: H0_HI [0B,48r:0)[272r,304r:1) 0@0B-phi 1@272r
+# CHECK-NEXT: S0_HI [0B,48r:0)[272r,304r:1) 0@0B-phi 1@272r
+# CHECK-NEXT: B1_HI [0B,96r:0)[288r,304r:1) 0@0B-phi 1@288r
+# CHECK-NEXT: H1_HI [0B,96r:0)[288r,304r:1) 0@0B-phi 1@288r
+# CHECK-NEXT: S1_HI [0B,96r:0)[288r,304r:1) 0@0B-phi 1@288r
+# CHECK-NEXT: B2_HI [0B,112r:0) 0@0B-phi
+# CHECK-NEXT: H2_HI [0B,112r:0) 0@0B-phi
+# CHECK-NEXT: S2_HI [0B,112r:0) 0@0B-phi
+# CHECK-NEXT: D0_HI [0B,48r:0)[272r,304r:1) 0@0B-phi 1@272r
+# CHECK-NEXT: D1_HI [0B,96r:0)[288r,304r:1) 0@0B-phi 1@288r
+# CHECK-NEXT: D2_HI [0B,112r:0) 0@0B-phi
+# CHECK-NEXT: %0 [48r,240r:0) 0@48r  weight:0.000000e+00
+# CHECK-NEXT: %1 [96r,160r:0) 0@96r  weight:0.000000e+00
+# CHECK-NEXT: %2 [112r,176r:0) 0@112r  weight:0.000000e+00
+# CHECK-NEXT: %3 [128r,256r:0) 0@128r  weight:0.000000e+00
+# CHECK-NEXT: %6 [80r,176r:0) 0@80r  weight:0.000000e+00
+# CHECK-NEXT: %7 [176r,224r:0) 0@176r  weight:0.000000e+00
+# CHECK-NEXT: %8 [160r,192r:0) 0@160r  weight:0.000000e+00
+# CHECK-NEXT: %9 [192r,240r:0) 0@192r  weight:0.000000e+00
+# CHECK-NEXT: %10 [240r,272r:0) 0@240r  weight:0.000000e+00
+# CHECK-NEXT: %11 [224r,256r:0) 0@224r  weight:0.000000e+00
+# CHECK-NEXT: %12 [256r,288r:0) 0@256r  weight:0.000000e+00
 # CHECK-NEXT: RegMasks:
 # CHECK-NEXT: ********** MACHINEINSTRS **********
 # CHECK-NEXT: # Machine code for function umull_and_v8i32: IsSSA, NoPHIs, TracksLiveness
@@ -1700,17 +1700,17 @@ body:             |
 # CHECK-NEXT: 	  liveins: $q0, $q1, $q2
 # CHECK-NEXT: 48B	  %0:fpr128 = COPY $q0
 # CHECK-NEXT: 80B	  %6:fpr128 = MOVIv2d_ns 17
-# CHECK-NEXT: 88B	  %1:fpr128 = COPY $q1
-# CHECK-NEXT: 96B	  %2:fpr128 = COPY $q2
-# CHECK-NEXT: 104B	  %3:fpr128 = EXTv16i8 %0:fpr128, %0:fpr128, 8
-# CHECK-NEXT: 120B	  %8:fpr128 = ANDv16i8 %1:fpr128, %6:fpr128
-# CHECK-NEXT: 128B	  %7:fpr128 = ANDv16i8 %2:fpr128, %6:fpr128
-# CHECK-NEXT: 136B	  %9:fpr64 = XTNv4i16 %8:fpr128
-# CHECK-NEXT: 160B	  %11:fpr64 = XTNv4i16 %7:fpr128
-# CHECK-NEXT: 168B	  %10:fpr128 = UMULLv4i16_v4i32 %0.dsub:fpr128, %9:fpr64
-# CHECK-NEXT: 176B	  %12:fpr128 = UMULLv4i16_v4i32 %3.dsub:fpr128, %11:fpr64
-# CHECK-NEXT: 192B	  $q0 = COPY %10:fpr128
-# CHECK-NEXT: 208B	  $q1 = COPY %12:fpr128
-# CHECK-NEXT: 224B	  RET_ReallyLR implicit $q0, implicit $q1
+# CHECK-NEXT: 96B	  %1:fpr128 = COPY $q1
+# CHECK-NEXT: 112B	  %2:fpr128 = COPY $q2
+# CHECK-NEXT: 128B	  %3:fpr128 = EXTv16i8 %0:fpr128, %0:fpr128, 8
+# CHECK-NEXT: 160B	  %8:fpr128 = ANDv16i8 %1:fpr128, %6:fpr128
+# CHECK-NEXT: 176B	  %7:fpr128 = ANDv16i8 %2:fpr128, %6:fpr128
+# CHECK-NEXT: 192B	  %9:fpr64 = XTNv4i16 %8:fpr128
+# CHECK-NEXT: 224B	  %11:fpr64 = XTNv4i16 %7:fpr128
+# CHECK-NEXT: 240B	  %10:fpr128 = UMULLv4i16_v4i32 %0.dsub:fpr128, %9:fpr64
+# CHECK-NEXT: 256B	  %12:fpr128 = UMULLv4i16_v4i32 %3.dsub:fpr128, %11:fpr64
+# CHECK-NEXT: 272B	  $q0 = COPY %10:fpr128
+# CHECK-NEXT: 288B	  $q1 = COPY %12:fpr128
+# CHECK-NEXT: 304B	  RET_ReallyLR implicit $q0, implicit $q1
 # CHECK-EMPTY:
 # CHECK-NEXT: # End machine code for function umull_and_v8i32.
