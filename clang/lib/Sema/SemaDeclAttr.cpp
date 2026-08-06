@@ -6692,6 +6692,8 @@ public:
 
   QualType VisitMacroQualifiedType(const MacroQualifiedType *T) {
     QualType NewTy = Visit(T->desugar());
+    if (NewTy.isNull())
+      return QualType();
     return S.Context.getMacroQualifiedType(NewTy, T->getMacroIdentifier());
   }
 
