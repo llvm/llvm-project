@@ -355,14 +355,14 @@ void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
   // R600 register tuples/aliasing are fragile with large vector promotions so
   // apply architecture specific limit here.
   const int R600MaxVectorRegs = 16;
-  MaxVectorRegs = F.getFnAttributeAsParsedInteger(
+  MaxVectorRegs = static_cast<unsigned>(F.getFnAttributeAsParsedInteger(
       "amdgpu-promote-alloca-to-vector-max-regs",
-      IsAMDGCN ? PromoteAllocaToVectorMaxRegs : R600MaxVectorRegs);
+      IsAMDGCN ? PromoteAllocaToVectorMaxRegs : R600MaxVectorRegs));
   if (PromoteAllocaToVectorMaxRegs.getNumOccurrences())
     MaxVectorRegs = PromoteAllocaToVectorMaxRegs;
-  VGPRBudgetRatio = F.getFnAttributeAsParsedInteger(
+  VGPRBudgetRatio = static_cast<unsigned>(F.getFnAttributeAsParsedInteger(
       "amdgpu-promote-alloca-to-vector-vgpr-ratio",
-      PromoteAllocaToVectorVGPRRatio);
+      PromoteAllocaToVectorVGPRRatio));
   if (PromoteAllocaToVectorVGPRRatio.getNumOccurrences())
     VGPRBudgetRatio = PromoteAllocaToVectorVGPRRatio;
 }
@@ -420,7 +420,8 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
     if (AA.Vector.Ty) {
       std::optional<TypeSize> Size = AA.Alloca->getAllocationSize(DL);
       assert(Size); // Expected to succeed on non-array alloca.
-      const unsigned AllocaCost = Size->getFixedValue() * 8;
+      const unsigned AllocaCost =
+          static_cast<unsigned>(Size->getFixedValue() * 8);
       // First, check if we have enough budget to vectorize this alloca.
       if (AllocaCost <= VectorizationBudget) {
         promoteAllocaToVector(AA);
@@ -463,7 +464,8 @@ static bool isSupportedMemset(MemSetInst *I, AllocaInst *AI,
   // TODO: Now that we moved to PromoteAlloca we could handle any memsets
   // (except maybe volatile ones?) - we just need to use shufflevector if it
   // only affects a subset of the vector.
-  const unsigned Size = DL.getTypeStoreSize(AI->getAllocatedType());
+  const unsigned Size =
+      static_cast<unsigned>(DL.getTypeStoreSize(AI->getAllocatedType()));
   return I->getOperand(0) == AI &&
          match(I->getOperand(2), m_SpecificInt(Size)) && !I->isVolatile();
 }
@@ -660,7 +662,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     // Loading a subvector.
     if (isa<FixedVectorType>(AccessTy)) {
       assert(AccessSize.isKnownMultipleOf(DL.getTypeStoreSize(VecEltTy)));
-      const unsigned NumLoadedElts = AccessSize / DL.getTypeStoreSize(VecEltTy);
+      const unsigned NumLoadedElts =
+          static_cast<unsigned>(AccessSize / DL.getTypeStoreSize(VecEltTy));
       auto *SubVecTy = FixedVectorType::get(VecEltTy, NumLoadedElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
 
@@ -679,9 +682,10 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       if (!isa<ConstantInt>(Index) &&
           llvm::isPowerOf2_32(SubVecTy->getNumElements()) &&
           IsProperlyDivisible && IsAlignedLoad) {
-        IntegerType *NewElemTy = Builder.getIntNTy(NumBits);
+        IntegerType *NewElemTy =
+            Builder.getIntNTy(static_cast<unsigned>(NumBits));
         const unsigned NewNumElts =
-            DL.getTypeStoreSize(VectorTy) * 8u / NumBits;
+            static_cast<unsigned>(DL.getTypeStoreSize(VectorTy) * 8u / NumBits);
         const unsigned LShrAmt = llvm::Log2_32(SubVecTy->getNumElements());
         FixedVectorType *BitCastTy =
             FixedVectorType::get(NewElemTy, NewNumElts);
@@ -735,7 +739,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     if (isa<FixedVectorType>(AccessTy)) {
       assert(AccessSize.isKnownMultipleOf(DL.getTypeStoreSize(VecEltTy)));
       const unsigned NumWrittenElts =
-          AccessSize / DL.getTypeStoreSize(VecEltTy);
+          static_cast<unsigned>(AccessSize / DL.getTypeStoreSize(VecEltTy));
       const unsigned NumVecElts = AA.Vector.Ty->getNumElements();
       auto *SubVecTy = FixedVectorType::get(VecEltTy, NumWrittenElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
@@ -760,10 +764,11 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     if (auto *MTI = dyn_cast<MemTransferInst>(Inst)) {
       // For memcpy, we need to know curval.
       ConstantInt *Length = cast<ConstantInt>(MTI->getLength());
-      unsigned NumCopied = Length->getZExtValue() / ElementSize;
+      unsigned NumCopied =
+          static_cast<unsigned>(Length->getZExtValue() / ElementSize);
       MemTransferInfo *TI = &AA.Vector.TransferInfo[MTI];
-      unsigned SrcBegin = TI->SrcIndex->getZExtValue();
-      unsigned DestBegin = TI->DestIndex->getZExtValue();
+      unsigned SrcBegin = static_cast<unsigned>(TI->SrcIndex->getZExtValue());
+      unsigned DestBegin = static_cast<unsigned>(TI->DestIndex->getZExtValue());
 
       SmallVector<int> Mask;
       for (unsigned Idx = 0; Idx < AA.Vector.Ty->getNumElements(); ++Idx) {
@@ -783,7 +788,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       // For memset, we don't need to know the previous value because we
       // currently only allow memsets that cover the whole alloca.
       Value *Elt = MSI->getOperand(1);
-      const unsigned BytesPerElt = DL.getTypeStoreSize(VecEltTy);
+      const unsigned BytesPerElt =
+          static_cast<unsigned>(DL.getTypeStoreSize(VecEltTy));
       if (BytesPerElt > 1) {
         Value *EltBytes = Builder.CreateVectorSplat(BytesPerElt, Elt);
 
@@ -919,9 +925,11 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
     }
 
     if (VectorType::isValidElementType(ElemTy) && NumElems > 0) {
-      unsigned ElementSize = DL.getTypeSizeInBits(ElemTy) / 8;
+      unsigned ElementSize =
+          static_cast<unsigned>(DL.getTypeSizeInBits(ElemTy) / 8);
       if (ElementSize > 0) {
-        unsigned AllocaSize = DL.getTypeStoreSize(AllocaTy);
+        unsigned AllocaSize =
+            static_cast<unsigned>(DL.getTypeStoreSize(AllocaTy));
         // Expand vector if required to match padding of inner type,
         // i.e. odd size subvectors.
         // Storage size of new vector must match that of alloca for correct
@@ -929,7 +937,8 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
         if (NumElems * ElementSize != AllocaSize)
           NumElems = AllocaSize / ElementSize;
         if (NumElems > 0 && (AllocaSize % ElementSize) == 0)
-          VectorTy = FixedVectorType::get(ElemTy, NumElems);
+          VectorTy =
+              FixedVectorType::get(ElemTy, static_cast<unsigned>(NumElems));
       }
     }
   }
@@ -938,8 +947,8 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
     return nullptr;
   }
 
-  const unsigned MaxElements =
-      (MaxVectorRegs * 32) / DL.getTypeSizeInBits(VectorTy->getElementType());
+  const unsigned MaxElements = static_cast<unsigned>(
+      (MaxVectorRegs * 32) / DL.getTypeSizeInBits(VectorTy->getElementType()));
 
   if (VectorTy->getNumElements() > MaxElements ||
       VectorTy->getNumElements() < 2) {
@@ -949,7 +958,8 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   }
 
   Type *VecEltTy = VectorTy->getElementType();
-  unsigned ElementSizeInBits = DL.getTypeSizeInBits(VecEltTy);
+  unsigned ElementSizeInBits =
+      static_cast<unsigned>(DL.getTypeSizeInBits(VecEltTy));
   if (ElementSizeInBits != DL.getTypeAllocSizeInBits(VecEltTy)) {
     LLVM_DEBUG(dbgs() << "  Cannot convert to vector if the allocation size "
                          "does not match the type's size\n");
@@ -977,7 +987,8 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
   };
 
   Type *VecEltTy = AA.Vector.Ty->getElementType();
-  unsigned ElementSize = DL.getTypeSizeInBits(VecEltTy) / 8;
+  unsigned ElementSize =
+      static_cast<unsigned>(DL.getTypeSizeInBits(VecEltTy) / 8);
   assert(ElementSize > 0);
   for (auto *U : AA.Uses) {
     Instruction *Inst = cast<Instruction>(U->getUser());
@@ -1113,10 +1124,12 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   LLVM_DEBUG(dbgs() << "Promoting to vectors: " << *AA.Alloca << '\n');
   LLVM_DEBUG(dbgs() << "  type conversion: " << *AA.Alloca->getAllocatedType()
                     << " -> " << *AA.Vector.Ty << '\n');
-  const unsigned VecStoreSize = DL.getTypeStoreSize(AA.Vector.Ty);
+  const unsigned VecStoreSize =
+      static_cast<unsigned>(DL.getTypeStoreSize(AA.Vector.Ty));
 
   Type *VecEltTy = AA.Vector.Ty->getElementType();
-  const unsigned ElementSize = DL.getTypeSizeInBits(VecEltTy) / 8;
+  const unsigned ElementSize =
+      static_cast<unsigned>(DL.getTypeSizeInBits(VecEltTy) / 8);
 
   // Alloca is uninitialized memory. Imitate that by making the first value
   // undef.
@@ -1560,8 +1573,9 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
   // legalizing, which could also potentially change. We try to estimate the
   // worst case here, but we probably should fix the addresses earlier.
   for (auto Alloc : AllocatedSizes) {
-    CurrentLocalMemUsage = alignTo(CurrentLocalMemUsage, Alloc.second);
-    CurrentLocalMemUsage += Alloc.first;
+    CurrentLocalMemUsage =
+        static_cast<uint32_t>(alignTo(CurrentLocalMemUsage, Alloc.second));
+    CurrentLocalMemUsage += static_cast<uint32_t>(Alloc.first);
   }
 
   unsigned MaxOccupancy =
@@ -1612,12 +1626,13 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
   // FIXME: It is also possible that if we're allowed to use all of the memory
   // could end up using more than the maximum due to alignment padding.
 
-  uint32_t NewSize = alignTo(CurrentLocalMemUsage, Alignment);
+  uint32_t NewSize =
+      static_cast<uint32_t>(alignTo(CurrentLocalMemUsage, Alignment));
   std::optional<TypeSize> ElemSize = AA.Alloca->getAllocationSize(DL);
   if (!ElemSize || ElemSize->isScalable())
     return false;
   TypeSize AllocSize = WorkGroupSize * *ElemSize;
-  NewSize += AllocSize.getFixedValue();
+  NewSize += static_cast<uint32_t>(AllocSize.getFixedValue());
 
   if (NewSize > LocalMemLimit) {
     LLVM_DEBUG(dbgs() << "  " << AllocSize

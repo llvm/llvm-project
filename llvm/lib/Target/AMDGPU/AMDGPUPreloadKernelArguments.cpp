@@ -215,11 +215,12 @@ public:
         // FIXME: Expand handle merged loads.
         LLVMContext &Ctx = F.getContext();
         Type *LoadTy = Load->getType();
-        HiddenArg HA = getHiddenArgFromOffset(Offset);
+        HiddenArg HA = getHiddenArgFromOffset(static_cast<unsigned>(Offset));
         if (HA == END_HIDDEN_ARGS || LoadTy != getHiddenArgType(Ctx, HA))
           continue;
 
-        ImplicitArgLoads.push_back(std::make_pair(Load, Offset));
+        ImplicitArgLoads.push_back(
+            std::make_pair(Load, static_cast<unsigned>(Offset)));
       }
     }
 
@@ -235,7 +236,8 @@ public:
     // argument that we cannot preload.
     auto *PreloadEnd = llvm::find_if(
         ImplicitArgLoads, [&](const std::pair<LoadInst *, unsigned> &Load) {
-          unsigned LoadSize = DL.getTypeStoreSize(Load.first->getType());
+          unsigned LoadSize =
+              static_cast<unsigned>(DL.getTypeStoreSize(Load.first->getType()));
           unsigned LoadOffset = Load.second;
           if (!canPreloadKernArgAtOffset(LoadOffset + LoadSize +
                                          ImplicitArgsBaseOffset))
@@ -255,7 +257,8 @@ public:
       LoadInst *LoadInst = I->first;
       unsigned LoadOffset = I->second;
       unsigned HiddenArgIndex = getHiddenArgFromOffset(LoadOffset);
-      unsigned Index = NF->arg_size() - LastHiddenArgIndex + HiddenArgIndex - 1;
+      unsigned Index = static_cast<unsigned>(
+          NF->arg_size() - LastHiddenArgIndex + HiddenArgIndex - 1);
       Argument *Arg = NF->getArg(Index);
       LoadInst->replaceAllUsesWith(Arg);
     }

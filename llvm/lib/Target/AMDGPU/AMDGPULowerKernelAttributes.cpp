@@ -207,7 +207,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
     if (!Load || !Load->isSimple())
       continue;
 
-    unsigned LoadSize = DL.getTypeStoreSize(Load->getType());
+    unsigned LoadSize =
+        static_cast<unsigned>(DL.getTypeStoreSize(Load->getType()));
 
     // TODO: Handle merged loads.
     if (IsV5OrAbove) { // Base is ImplicitArgPtr.

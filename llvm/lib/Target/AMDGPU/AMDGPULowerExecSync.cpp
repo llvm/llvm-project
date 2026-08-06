@@ -129,7 +129,7 @@ static bool lowerExecSyncGlobalVariables(Module &M, GVUsesInfoTy &GVUsesInfo) {
     unsigned Offset;
     if (TargetExtType *ExtTy = isNamedBarrier(*GV)) {
       unsigned BarrierScope = ExtTy->getIntParameter(0);
-      unsigned BarCnt = GV->getGlobalSize(DL) / 16;
+      unsigned BarCnt = static_cast<unsigned>(GV->getGlobalSize(DL) / 16);
 
       unsigned BarID = allocateExecSyncID(KernelBarrierIDs, Kernels,
                                           BarrierScope, NumBarScopes, BarCnt);

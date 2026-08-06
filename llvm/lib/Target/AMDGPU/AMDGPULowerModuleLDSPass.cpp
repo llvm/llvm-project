@@ -571,7 +571,7 @@ public:
 
       for (size_t i = 0; i < OrderedKernels.size(); i++) {
         Metadata *AttrMDArgs[1] = {
-            ConstantAsMetadata::get(Builder.getInt32(i)),
+            ConstantAsMetadata::get(Builder.getInt32(static_cast<uint32_t>(i))),
         };
         OrderedKernels[i]->setMetadata("llvm.amdgcn.lds.kernel.id",
                                        MDNode::get(Ctx, AttrMDArgs));
@@ -1217,14 +1217,16 @@ public:
         if (AllocateModuleScopeStruct) {
           // Allocated at zero, recorded once on construction, not once per
           // kernel
-          Offset += MaybeModuleScopeStruct->getGlobalSize(DL);
+          Offset +=
+              static_cast<uint32_t>(MaybeModuleScopeStruct->getGlobalSize(DL));
         }
 
         if (AllocateKernelScopeStruct) {
           GlobalVariable *KernelStruct = Replacement->second.SGV;
-          Offset = alignTo(Offset, AMDGPU::getAlign(DL, KernelStruct));
+          Offset = static_cast<uint32_t>(
+              alignTo(Offset, AMDGPU::getAlign(DL, KernelStruct)));
           recordLDSAbsoluteAddress(&M, KernelStruct, Offset);
-          Offset += KernelStruct->getGlobalSize(DL);
+          Offset += static_cast<uint32_t>(KernelStruct->getGlobalSize(DL));
         }
 
         // If there is dynamic allocation, the alignment needed is included in
@@ -1233,7 +1235,8 @@ public:
         // alignment padding could be missed.
         if (AllocateDynamicVariable) {
           GlobalVariable *DynamicVariable = KernelToCreatedDynamicLDS[&Func];
-          Offset = alignTo(Offset, AMDGPU::getAlign(DL, DynamicVariable));
+          Offset = static_cast<uint32_t>(
+              alignTo(Offset, AMDGPU::getAlign(DL, DynamicVariable)));
           recordLDSAbsoluteAddress(&M, DynamicVariable, Offset);
         }
 
@@ -1404,7 +1407,7 @@ private:
       GlobalVariable *GV = LocalVars[I];
       Constant *GEPIdx[] = {ConstantInt::get(I32, 0), ConstantInt::get(I32, I)};
       Constant *GEP = ConstantExpr::getGetElementPtr(LDSTy, SGV, GEPIdx, true);
-      if (IsPaddingField[I]) {
+      if (IsPaddingField[static_cast<unsigned>(I)]) {
         assert(GV->use_empty());
         GV->eraseFromParent();
       } else {

@@ -368,7 +368,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
       Value *ExtractBits = OffsetDiff == 0 ?
         Load : Builder.CreateLShr(Load, OffsetDiff * 8);
 
-      IntegerType *ArgIntTy = Builder.getIntNTy(Size);
+      IntegerType *ArgIntTy = Builder.getIntNTy(static_cast<unsigned>(Size));
       Value *Trunc = Builder.CreateTrunc(ExtractBits, ArgIntTy);
       Value *NewVal = Builder.CreateBitCast(Trunc, ArgTy,
                                             Arg.getName() + ".load");

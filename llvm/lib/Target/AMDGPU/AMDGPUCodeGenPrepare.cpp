@@ -322,7 +322,7 @@ bool AMDGPUCodeGenPrepareImpl::isLegalFloatingTy(const Type *Ty) const {
 
 bool AMDGPUCodeGenPrepareImpl::canWidenScalarExtLoad(LoadInst &I) const {
   Type *Ty = I.getType();
-  int TySize = DL.getTypeSizeInBits(Ty);
+  int TySize = static_cast<int>(DL.getTypeSizeInBits(Ty));
   Align Alignment = DL.getValueOrABITypeAlignment(I.getAlign(), Ty);
 
   return I.isSimple() && TySize < 32 && Alignment >= 4 && UA.isUniformAtDef(&I);
@@ -361,7 +361,7 @@ static Value *insertValues(IRBuilder<> &Builder,
   }
 
   Value *NewVal = PoisonValue::get(Ty);
-  for (int I = 0, E = Values.size(); I != E; ++I)
+  for (int I = 0, E = static_cast<int>(Values.size()); I != E; ++I)
     NewVal = Builder.CreateInsertElement(NewVal, Values[I], I);
 
   return NewVal;
@@ -409,7 +409,7 @@ bool AMDGPUCodeGenPrepareImpl::replaceMulWithMul24(BinaryOperator &I) const {
   IntegerType *IntrinTy = Size > 32 ? Builder.getInt64Ty() : I32Ty;
   Type *DstTy = LHSVals[0]->getType();
 
-  for (int I = 0, E = LHSVals.size(); I != E; ++I) {
+  for (int I = 0, E = static_cast<int>(LHSVals.size()); I != E; ++I) {
     Value *LHS = IsSigned ? Builder.CreateSExtOrTrunc(LHSVals[I], I32Ty)
                           : Builder.CreateZExtOrTrunc(LHSVals[I], I32Ty);
     Value *RHS = IsSigned ? Builder.CreateSExtOrTrunc(RHSVals[I], I32Ty)
@@ -969,7 +969,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
     extractValues(Builder, RsqDenVals, RsqOp);
 
   SmallVector<Value *, 4> ResultVals(NumVals.size());
-  for (int I = 0, E = NumVals.size(); I != E; ++I) {
+  for (int I = 0, E = static_cast<int>(NumVals.size()); I != E; ++I) {
     Value *NumElt = NumVals[I];
     Value *DenElt = DenVals[I];
     Value *RsqDenElt = RsqOp ? RsqDenVals[I] : nullptr;
@@ -1563,7 +1563,7 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
       }
     }
 
-    int TySize = DL.getTypeSizeInBits(I.getType());
+    int TySize = static_cast<int>(DL.getTypeSizeInBits(I.getType()));
     Type *IntNTy = Builder.getIntNTy(TySize);
     Value *ValTrunc = Builder.CreateTrunc(WidenLoad, IntNTy);
     Value *ValOrig = Builder.CreateBitCast(ValTrunc, I.getType());
@@ -1697,7 +1697,7 @@ static bool isInterestingPHIIncomingValue(const Value *V) {
       return false;
 
     CurVal = VecSrc;
-    EltsCovered.set(Idx->getZExtValue());
+    EltsCovered.set(static_cast<unsigned>(Idx->getZExtValue()));
 
     // All elements covered.
     if (EltsCovered.all())
@@ -1897,7 +1897,7 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
     unsigned Idx = 0;
     // For 8/16 bits type, don't scalarize fully but break it up into as many
     // 32-bit slices as we can, and scalarize the tail.
-    const unsigned EltSize = DL.getTypeSizeInBits(EltTy);
+    const unsigned EltSize = static_cast<unsigned>(DL.getTypeSizeInBits(EltTy));
     const unsigned NumElts = FVT->getNumElements();
     if (EltSize == 8 || EltSize == 16) {
       const unsigned SubVecSize = (32 / EltSize);
@@ -1928,10 +1928,11 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
     S.NewPHI = B.CreatePHI(S.Ty, I.getNumIncomingValues());
 
     for (const auto &[Idx, BB] : enumerate(I.blocks())) {
-      S.NewPHI->addIncoming(S.getSlicedVal(BB, I.getIncomingValue(Idx),
-                                           "largephi.extractslice" +
-                                               std::to_string(IncNameSuffix++)),
-                            BB);
+      S.NewPHI->addIncoming(
+          S.getSlicedVal(BB, I.getIncomingValue(static_cast<unsigned>(Idx)),
+                         "largephi.extractslice" +
+                             std::to_string(IncNameSuffix++)),
+          BB);
     }
   }
 
@@ -2119,7 +2120,8 @@ Value *AMDGPUCodeGenPrepareImpl::applyFractPat(IRBuilder<> &Builder,
   SmallVector<Value *, 4> ResultVals(FractVals.size());
 
   Type *Ty = FractArg->getType()->getScalarType();
-  for (unsigned I = 0, E = FractVals.size(); I != E; ++I) {
+  for (unsigned I = 0, E = static_cast<unsigned>(FractVals.size()); I != E;
+       ++I) {
     ResultVals[I] =
         Builder.CreateIntrinsic(Intrinsic::amdgcn_fract, {Ty}, {FractVals[I]});
   }
@@ -2196,7 +2198,7 @@ bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
   extractValues(Builder, SrcVals, SrcVal);
 
   SmallVector<Value *, 4> ResultVals(SrcVals.size());
-  for (int I = 0, E = SrcVals.size(); I != E; ++I) {
+  for (int I = 0, E = static_cast<int>(SrcVals.size()); I != E; ++I) {
     if (CanTreatAsDAZ)
       ResultVals[I] = Builder.CreateCall(getSqrtF32(), SrcVals[I]);
     else

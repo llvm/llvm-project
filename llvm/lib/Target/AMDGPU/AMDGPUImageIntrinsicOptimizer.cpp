@@ -207,7 +207,7 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
 
     // Number of instructions and the number of vaddr/vdata dword transfers
     // should be reduced.
-    unsigned NumLoads = IIList.size();
+    unsigned NumLoads = static_cast<unsigned>(IIList.size());
     unsigned NumMsaas = NumElts;
     unsigned NumVAddrLoads = 3 * NumLoads;
     unsigned NumVDataLoads = divideCeil(NumElts, isD16 ? 2 : 1) * NumLoads;

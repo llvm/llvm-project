@@ -238,14 +238,17 @@ Type *LiveRegOptimizer::calculateConvertType(Type *OriginalType) {
 
   TypeSize OriginalSize = DL.getTypeSizeInBits(VTy);
   TypeSize ConvertScalarSize = DL.getTypeSizeInBits(ConvertToScalar);
-  unsigned ConvertEltCount =
-      (OriginalSize + ConvertScalarSize - 1) / ConvertScalarSize;
+  unsigned ConvertEltCount = static_cast<unsigned>(
+      (OriginalSize + ConvertScalarSize - 1) / ConvertScalarSize);
 
   if (OriginalSize <= ConvertScalarSize)
-    return IntegerType::get(Mod.getContext(), ConvertScalarSize);
+    return IntegerType::get(Mod.getContext(),
+                            static_cast<unsigned>(ConvertScalarSize));
 
-  return VectorType::get(Type::getIntNTy(Mod.getContext(), ConvertScalarSize),
-                         ConvertEltCount, false);
+  return VectorType::get(
+      Type::getIntNTy(Mod.getContext(),
+                      static_cast<unsigned>(ConvertScalarSize)),
+      ConvertEltCount, false);
 }
 
 Value *LiveRegOptimizer::convertToOptType(Instruction *V,
@@ -272,7 +275,7 @@ Value *LiveRegOptimizer::convertToOptType(Instruction *V,
     ShuffleMask.push_back(I);
 
   for (uint64_t I = OriginalElementCount; I < ExpandedVecElementCount; I++)
-    ShuffleMask.push_back(OriginalElementCount);
+    ShuffleMask.push_back(static_cast<int>(OriginalElementCount));
 
   Value *ExpandedVec = Builder.CreateShuffleVector(V, ShuffleMask);
   return Builder.CreateBitCast(ExpandedVec, NewTy, V->getName() + ".bc");
@@ -296,8 +299,8 @@ Value *LiveRegOptimizer::convertFromOptType(Type *ConvertType, Instruction *V,
   assert(OriginalSize > NewSize);
   // For wide scalars, we can just truncate the value.
   if (!V->getType()->isVectorTy()) {
-    Instruction *Trunc = cast<Instruction>(
-        Builder.CreateTrunc(V, IntegerType::get(Mod.getContext(), NewSize)));
+    Instruction *Trunc = cast<Instruction>(Builder.CreateTrunc(
+        V, IntegerType::get(Mod.getContext(), static_cast<unsigned>(NewSize))));
     return cast<Instruction>(Builder.CreateBitCast(Trunc, NewVTy));
   }
 
@@ -305,7 +308,8 @@ Value *LiveRegOptimizer::convertFromOptType(Type *ConvertType, Instruction *V,
   // type.
   VectorType *ExpandedVT = VectorType::get(
       Type::getIntNTy(Mod.getContext(), NewVTy->getScalarSizeInBits()),
-      (OriginalSize / NewVTy->getScalarSizeInBits()), false);
+      static_cast<unsigned>(OriginalSize / NewVTy->getScalarSizeInBits()),
+      false);
   Instruction *Converted =
       cast<Instruction>(Builder.CreateBitCast(V, ExpandedVT));
 
@@ -465,7 +469,7 @@ bool LiveRegOptimizer::optimizeLiveType(
           }
         }
         assert(NewVal);
-        U->setOperand(OpIdx, NewVal);
+        U->setOperand(static_cast<unsigned>(OpIdx), NewVal);
       }
     }
   }
@@ -486,7 +490,7 @@ bool AMDGPULateCodeGenPrepare::canWidenScalarExtLoad(LoadInst &LI) const {
   // Skip aggregate types.
   if (Ty->isAggregateType())
     return false;
-  unsigned TySize = DL.getTypeStoreSize(Ty);
+  unsigned TySize = static_cast<unsigned>(DL.getTypeStoreSize(Ty));
   // Only handle sub-DWORD loads.
   if (TySize >= 4)
     return false;
@@ -528,7 +532,8 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   IRBuilder<> IRB(&LI);
   IRB.SetCurrentDebugLocation(LI.getDebugLoc());
 
-  unsigned LdBits = DL.getTypeStoreSizeInBits(LI.getType());
+  unsigned LdBits =
+      static_cast<unsigned>(DL.getTypeStoreSizeInBits(LI.getType()));
   auto *IntNTy = Type::getIntNTy(LI.getContext(), LdBits);
 
   auto *NewPtr = IRB.CreateConstGEP1_64(
@@ -539,7 +544,7 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   LoadInst *NewLd = IRB.CreateAlignedLoad(IRB.getInt32Ty(), NewPtr, Align(4));
   AMDGPU::copyMetadataForWidenedLoad(*NewLd, LI);
 
-  unsigned ShAmt = Adjust * 8;
+  unsigned ShAmt = static_cast<unsigned>(Adjust * 8);
   Value *NewVal = IRB.CreateBitCast(
       IRB.CreateTrunc(IRB.CreateLShr(NewLd, ShAmt),
                       DL.typeSizeEqualsStoreSize(LI.getType()) ? IntNTy

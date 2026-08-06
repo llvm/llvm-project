@@ -204,7 +204,7 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
         continue;
       }
 
-      unsigned OpNo = &MO - &MI->getOperand(0);
+      unsigned OpNo = static_cast<unsigned>(&MO - &MI->getOperand(0));
       NewRC = MI->getRegClassConstraintEffect(OpNo, NewRC, &TII, &TRI);
       if (!NewRC || NewRC == OldRC) {
         LLVM_DEBUG(dbgs() << "User of " << printReg(Reg, &TRI)
@@ -385,8 +385,9 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryFoldCopiesToAGPR(
 
     for (MachineInstr &CopySrcDefMI : MRI.def_instructions(CopySrcReg)) {
       if (isRewriteCandidate(CopySrcDefMI) &&
-          tryReassigningMFMAChain(
-              CopySrcDefMI, CopySrcDefMI.getOperand(0).getReg(), AssignedAGPR))
+          tryReassigningMFMAChain(CopySrcDefMI,
+                                  CopySrcDefMI.getOperand(0).getReg(),
+                                  static_cast<MCPhysReg>(AssignedAGPR)))
         MadeChange = true;
     }
   }
@@ -417,8 +418,9 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryFoldCopiesFromAGPR(
 
       MachineInstr &CopyUseMI = *CopyUseMO.getParent();
       if (isRewriteCandidate(CopyUseMI)) {
-        if (tryReassigningMFMAChain(CopyUseMI, CopyDstReg,
-                                    VRM.getPhys(CopyDstReg)))
+        if (tryReassigningMFMAChain(
+                CopyUseMI, CopyDstReg,
+                static_cast<MCPhysReg>(VRM.getPhys(CopyDstReg))))
           MadeChange = true;
       }
     }

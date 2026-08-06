@@ -246,7 +246,7 @@ SetVector<Function *> AMDGPUSwLowerLDS::getOrderedIndirectLDSAccessingKernels(
       sortByName(std::vector<Function *>(Kernels.begin(), Kernels.end()));
   for (size_t i = 0; i < Kernels.size(); i++) {
     Metadata *AttrMDArgs[1] = {
-        ConstantAsMetadata::get(IRB.getInt32(i)),
+        ConstantAsMetadata::get(IRB.getInt32(static_cast<uint32_t>(i))),
     };
     Function *Func = OrderedKernels[i];
     Func->setMetadata("llvm.amdgcn.lds.kernel.id",
@@ -435,18 +435,18 @@ void AMDGPUSwLowerLDS::populateSwMetadataGlobal(Function *Func) {
           const uint64_t RightRedzoneSize =
               AMDGPU::getRedzoneSizeForGlobal(AsanScale, SizeInBytes);
           // Update MallocSize with current size and redzone size.
-          MallocSize += SizeInBytes;
+          MallocSize += static_cast<uint32_t>(SizeInBytes);
           if (!AMDGPU::isDynamicLDS(*GV))
-            LDSParams.RedzoneOffsetAndSizeVector.emplace_back(MallocSize,
-                                                              RightRedzoneSize);
-          MallocSize += RightRedzoneSize;
+            LDSParams.RedzoneOffsetAndSizeVector.emplace_back(
+                MallocSize, static_cast<uint32_t>(RightRedzoneSize));
+          MallocSize += static_cast<uint32_t>(RightRedzoneSize);
           // Align current size plus redzone.
           uint64_t AlignedSize =
               alignTo(SizeInBytes + RightRedzoneSize, MaxAlignment);
           Constant *AlignedSizeInBytesConst =
               ConstantInt::get(Int32Ty, AlignedSize);
           // Align MallocSize
-          MallocSize = alignTo(MallocSize, MaxAlignment);
+          MallocSize = static_cast<uint32_t>(alignTo(MallocSize, MaxAlignment));
           Constant *InitItem =
               ConstantStruct::get(LDSItemTy, {ItemStartOffset, SizeInBytesConst,
                                               AlignedSizeInBytesConst});
@@ -465,7 +465,7 @@ void AMDGPUSwLowerLDS::populateSwMetadataGlobal(Function *Func) {
   Type *Ty = LDSParams.SwLDS->getValueType();
   const uint64_t SizeInBytes = DL.getTypeAllocSize(Ty);
   uint64_t AlignedSize = alignTo(SizeInBytes, MaxAlignment);
-  LDSParams.LDSSize = AlignedSize;
+  LDSParams.LDSSize = static_cast<uint32_t>(AlignedSize);
   SmallString<128> MDTypeStr;
   raw_svector_ostream MDTypeOS(MDTypeStr);
   MDTypeOS << "llvm.amdgcn.sw.lds." << Func->getName() << ".md.type";
@@ -587,7 +587,7 @@ void AMDGPUSwLowerLDS::updateMallocSizeForDynamicLDS(
   assert(SwLDS && SwLDSMetadata);
   StructType *MetadataStructType =
       cast<StructType>(SwLDSMetadata->getValueType());
-  unsigned MaxAlignment = SwLDS->getAlignment();
+  unsigned MaxAlignment = static_cast<unsigned>(SwLDS->getAlignment());
   Value *MaxAlignValue = IRB.getInt32(MaxAlignment);
   Value *MaxAlignValueMinusOne = IRB.getInt32(MaxAlignment - 1);
 
@@ -883,7 +883,7 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
 
   GetUniqueLDSGlobals(LDSParams.DirectAccess.StaticLDSGlobals);
   GetUniqueLDSGlobals(LDSParams.IndirectAccess.StaticLDSGlobals);
-  unsigned NumStaticLDS = 1 + UniqueLDSGlobals.size();
+  unsigned NumStaticLDS = static_cast<unsigned>(1 + UniqueLDSGlobals.size());
   UniqueLDSGlobals.clear();
 
   if (NumStaticLDS) {
@@ -1138,7 +1138,8 @@ void AMDGPUSwLowerLDS::lowerNonKernelLDSAccesses(
   for (GlobalVariable *GV : LDSGlobals) {
     const auto *GVIt = llvm::find(OrdereLDSGlobals, GV);
     assert(GVIt != OrdereLDSGlobals.end());
-    uint32_t GVOffset = std::distance(OrdereLDSGlobals.begin(), GVIt);
+    uint32_t GVOffset =
+        static_cast<uint32_t>(std::distance(OrdereLDSGlobals.begin(), GVIt));
 
     Value *OffsetGEP = IRB.CreateInBoundsGEP(
         LDSOffsetTable->getValueType(), LDSOffsetTable,
@@ -1185,7 +1186,7 @@ void AMDGPUSwLowerLDS::initAsanInfo() {
   llvm::getAddressSanitizerParams(M.getTargetTriple(), LongSize, false, &Offset,
                                   &Scale, &OrShadowOffset);
   AsanInfo.Scale = Scale;
-  AsanInfo.Offset = Offset;
+  AsanInfo.Offset = static_cast<uint32_t>(Offset);
 }
 
 static bool hasFnWithSanitizeAddressAttr(FunctionVariableMap &LDSAccesses) {

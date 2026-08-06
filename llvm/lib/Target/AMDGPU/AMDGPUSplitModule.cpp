@@ -319,8 +319,10 @@ public:
   iterator_range<nodes_iterator> nodes() const { return Nodes; }
   const Node &getNode(unsigned ID) const { return *Nodes[ID]; }
 
-  unsigned getNumNodes() const { return Nodes.size(); }
-  BitVector createNodesBitVector() const { return BitVector(Nodes.size()); }
+  unsigned getNumNodes() const { return static_cast<unsigned>(Nodes.size()); }
+  BitVector createNodesBitVector() const {
+    return BitVector(static_cast<unsigned>(Nodes.size()));
+  }
 
   const Module &getModule() const { return M; }
 
@@ -731,7 +733,8 @@ SplitGraph::getNode(DenseMap<const GlobalValue *, Node *> &Cache,
     NonCopyable = isNonCopyable(*Fn);
     Cost = CostMap.at(Fn);
   }
-  N = new (NodesPool.Allocate()) Node(Nodes.size(), GV, Cost, NonCopyable);
+  N = new (NodesPool.Allocate())
+      Node(static_cast<unsigned>(Nodes.size()), GV, Cost, NonCopyable);
   Nodes.push_back(N);
   assert(&getNode(N->getID()) == N);
   return *N;
@@ -857,7 +860,7 @@ unsigned SplitProposal::findCheapestPartition() const {
   unsigned CurPID = InvalidPID;
   for (const auto &[Idx, Part] : enumerate(Partitions)) {
     if (Part.first <= CurCost) {
-      CurPID = Idx;
+      CurPID = static_cast<unsigned>(Idx);
       CurCost = Part.first;
     }
   }
@@ -1538,10 +1541,13 @@ static void splitAMDGPUModule(
     }
 
     if (SummariesOS)
-      printPartitionSummary(*SummariesOS, PID, *MPart, PartCost, ModuleCost);
+      printPartitionSummary(*SummariesOS, PID, *MPart,
+                            static_cast<unsigned>(PartCost),
+                            static_cast<unsigned>(ModuleCost));
 
-    LLVM_DEBUG(
-        printPartitionSummary(dbgs(), PID, *MPart, PartCost, ModuleCost));
+    LLVM_DEBUG(printPartitionSummary(dbgs(), PID, *MPart,
+                                     static_cast<unsigned>(PartCost),
+                                     static_cast<unsigned>(ModuleCost)));
 
     ModuleCallback(std::move(MPart));
   }

@@ -153,7 +153,8 @@ bool AMDGPULowerIntrinsicsImpl::visitBarrier(IntrinsicInst &I) {
   if (I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier_wait ||
       I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier_signal ||
       I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier_signal_isfirst) {
-    int BarrierID = cast<ConstantInt>(I.getArgOperand(0))->getSExtValue();
+    int BarrierID =
+        static_cast<int>(cast<ConstantInt>(I.getArgOperand(0))->getSExtValue());
     if (BarrierID == AMDGPU::Barrier::TRAP ||
         BarrierID == AMDGPU::Barrier::WORKGROUP ||
         (BarrierID >= AMDGPU::Barrier::NAMED_BARRIER_FIRST &&

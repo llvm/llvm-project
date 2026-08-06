@@ -864,8 +864,10 @@ struct AAAMDSizeRangeAttribute
   emitAttributeIfNotDefaultAfterClamp(Attributor &A,
                                       std::pair<unsigned, unsigned> Default) {
     auto [Min, Max] = Default;
-    unsigned Lower = getAssumed().getLower().getZExtValue();
-    unsigned Upper = getAssumed().getUpper().getZExtValue();
+    unsigned Lower =
+        static_cast<unsigned>(getAssumed().getLower().getZExtValue());
+    unsigned Upper =
+        static_cast<unsigned>(getAssumed().getUpper().getZExtValue());
 
     // Clamp the range to the default value.
     if (Lower < Min)
@@ -1157,10 +1159,12 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
         return false;
 
       ConstantRange Assumed = getAssumed();
-      unsigned Min = std::max(Assumed.getLower().getZExtValue(),
-                              CallerAA->getAssumed().getLower().getZExtValue());
-      unsigned Max = std::max(Assumed.getUpper().getZExtValue(),
-                              CallerAA->getAssumed().getUpper().getZExtValue());
+      unsigned Min = static_cast<unsigned>(
+          std::max(Assumed.getLower().getZExtValue(),
+                   CallerAA->getAssumed().getLower().getZExtValue()));
+      unsigned Max = static_cast<unsigned>(
+          std::max(Assumed.getUpper().getZExtValue(),
+                   CallerAA->getAssumed().getUpper().getZExtValue()));
       ConstantRange Range(APInt(32, Min), APInt(32, Max));
       IntegerRangeState RangeState(Range);
       getState() = RangeState;
@@ -1252,7 +1256,8 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
         //
         // We ought to be going through TargetLowering to get the number of
         // registers, but we should avoid the dependence on CodeGen here.
-        RegCount = divideCeil(DL.getTypeSizeInBits(Ty), 32);
+        RegCount =
+            static_cast<unsigned>(divideCeil(DL.getTypeSizeInBits(Ty), 32));
       } else {
         // Physical register reference
         auto [Kind, RegIdx, NumRegs] = AMDGPU::parseAsmConstraintPhysReg(Code);
