@@ -784,7 +784,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   return *fi;
 }
 
-const CIRGenFunctionInfo &CIRGenTypes::arrangeSYCLKernelCallerDeclaration(
+const CIRGenFunctionInfo &CIRGenTypes::arrangeDeviceKernelCallerDeclaration(
     QualType resultType, const FunctionArgList &args) {
   SmallVector<CanQualType, 16> argTypes;
   for (const VarDecl *arg : args)

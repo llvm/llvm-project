@@ -39,11 +39,9 @@ CIRGenFunction::emitSYCLKernelCallStmt(const SYCLKernelCallStmt &s) {
   return emitStmt(s.getKernelLaunchStmt(), /*useCurrentScope=*/true);
 }
 
-// Emit the body of a SYCL kernel caller offload entry point function. The body
-// is the transformed body held by the OutlinedFunctionDecl associated with the
-// sycl_kernel_entry_point attributed function. This mirrors the tail of
-// CIRGenFunction::generateCode, but is driven by an OutlinedFunctionDecl and an
-// explicit argument list rather than a FunctionDecl.
+// Emit the body of a SYCL kernel caller offload entry point. Mirrors the tail
+// of generateCode, but is driven by an OutlinedFunctionDecl and an explicit
+// argument list rather than a FunctionDecl.
 void CIRGenFunction::emitSYCLKernelCaller(
     const OutlinedFunctionDecl *outlinedFnDecl, cir::FuncOp funcOp,
     cir::FuncType funcType, FunctionArgList &args) {
@@ -51,15 +49,9 @@ void CIRGenFunction::emitSYCLKernelCaller(
   SourceLocation loc = outlinedFnDecl->getLocation();
   SourceRange bodyRange = body->getSourceRange();
 
-  // The offload entry point is synthesized and has no FunctionDecl of its own.
-  // As in classic CodeGen's EmitSYCLKernelCaller, it is emitted with an empty
-  // GlobalDecl: it is a free function (never an implicit-object member) and
-  // must not run a C++ instance-function prologue. LexicalScope's implicit
-  // return handles a null curGD (the entry point returns void).
+  // Synthesized entry point: no FunctionDecl, emitted with an empty GlobalDecl.
   curGD = GlobalDecl();
 
-  // Establish a source location for the function so that the prologue can
-  // inherit one (see CIRGenFunction::getLoc / currSrcLoc).
   SourceLocRAIIObject fnLoc{*this, loc.isValid() ? getLoc(loc)
                                                  : builder.getUnknownLoc()};
 
@@ -78,8 +70,6 @@ void CIRGenFunction::emitSYCLKernelCaller(
     finishFunction(body->getEndLoc());
   }
 
-  // Mirror the tail of generateCode: drop leftover empty/unreachable blocks the
-  // lexical-scope machinery may have created.
   eraseEmptyAndUnusedBlocks(funcOp);
 }
 
@@ -107,7 +97,7 @@ void CIRGenModule::emitSYCLKernelCaller(const FunctionDecl *kernelEntryPointFn,
 
   // Compute the function info and CIR function type.
   const CIRGenFunctionInfo &fnInfo =
-      getTypes().arrangeSYCLKernelCallerDeclaration(ctx.VoidTy, args);
+      getTypes().arrangeDeviceKernelCallerDeclaration(ctx.VoidTy, args);
   cir::FuncType funcType = getTypes().getFunctionType(fnInfo);
 
   // Retrieve the generated name for the SYCL kernel caller function.
@@ -115,33 +105,21 @@ void CIRGenModule::emitSYCLKernelCaller(const FunctionDecl *kernelEntryPointFn,
       ctx.getCanonicalType(kernelEntryPointAttr->getKernelName());
   const SYCLKernelInfo &kernelInfo = ctx.getSYCLKernelInfo(kernelNameType);
 
-  // Create the SYCL kernel caller function. Unlike an ordinary function, this
-  // offload entry point is synthesized from the OutlinedFunctionDecl held by
-  // the SYCLKernelCallStmt rather than emitted from a FunctionDecl, so it is
-  // constructed with an empty GlobalDecl.
+  // Synthesized from the OutlinedFunctionDecl, not a FunctionDecl, so create it
+  // with an empty GlobalDecl.
   cir::FuncOp funcOp = getOrCreateCIRFunction(
       kernelInfo.GetKernelName(), funcType, GlobalDecl(), /*forVTable=*/false,
       /*dontDefer=*/true, /*isThunk=*/false, ForDefinition);
-
-  // The kernel caller offload entry point has external linkage. Classic
-  // CodeGen creates it with ExternalLinkage explicitly (EmitSYCLKernelCaller);
-  // createCIRFunction already applies ExternalLinkage by default, so set it
-  // explicitly here to make the contract clear rather than rely on the default.
   funcOp.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
 
-  // Set the device kernel calling convention so the entry point is emitted as
-  // a kernel (e.g. spir_kernel) rather than an ordinary device function.
-  // Classic CodeGen derives this from the CC_DeviceKernel function info via
-  // SetLLVMFunctionAttributes; CIR does not yet route the function-info calling
-  // convention onto the FuncOp (opFuncCallingConv), so set it directly from the
-  // target hook, matching how CIRGen sets kernel calling conventions elsewhere.
+  // Emit as a device kernel (e.g. spir_kernel). Classic CodeGen derives this
+  // from CC_DeviceKernel via SetLLVMFunctionAttributes; CIR does not yet route
+  // opFuncCallingConv onto the FuncOp, so set it from the target hook.
   funcOp.setCallingConv(getTargetCIRGenInfo().getDeviceKernelCallingConv());
 
-  // TODO: The following attributes applied by classic CodeGen's
-  // EmitSYCLKernelCaller are not yet applied in CIR:
-  //  - SetSYCLKernelAttributes: norecurse and mustprogress.
-  //  - addSYCLModuleIdAttr: the "sycl-module-id" attribute.
-  //  - setDSOLocal.
+  // TODO: attributes applied by classic CodeGen not yet handled in CIR:
+  // SetSYCLKernelAttributes (norecurse, mustprogress), addSYCLModuleIdAttr,
+  // setDSOLocal.
   assert(!cir::MissingFeatures::setLLVMFunctionFEnvAttributes());
   assert(!cir::MissingFeatures::setDSOLocal());
 
@@ -155,11 +133,8 @@ void CIRGenModule::emitSYCLKernelCaller(const FunctionDecl *kernelEntryPointFn,
   curCGF = nullptr;
 
   setNonAliasAttributes(GlobalDecl(), funcOp);
-  // The SYCL kernel caller is synthesized from an OutlinedFunctionDecl rather
-  // than a FunctionDecl. Classic CodeGen passes the OutlinedFunctionDecl to
-  // SetLLVMFunctionAttributesForDefinition, but CIR's setter takes a
-  // FunctionDecl; passing nullptr here skips OutlinedFunctionDecl-derived
-  // attributes (e.g. inline hints), which are not yet handled.
+  // CIR's setter takes a FunctionDecl; nullptr skips OutlinedFunctionDecl-
+  // derived attributes (e.g. inline hints), not yet handled.
   assert(!cir::MissingFeatures::opFuncExtraAttrs());
   setCIRFunctionAttributesForDefinition(/*fd=*/nullptr, funcOp);
 }

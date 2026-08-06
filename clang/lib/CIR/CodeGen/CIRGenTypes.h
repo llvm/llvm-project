@@ -187,11 +187,11 @@ public:
   const CIRGenFunctionInfo &
   arrangeFunctionDeclaration(const clang::FunctionDecl *fd);
 
-  /// Arrange the function info for the offload kernel entry point function
-  /// generated for a SYCL kernel caller function.
+  /// Arrange the function info for a device kernel caller entry point (e.g. a
+  /// SYCL kernel caller).
   const CIRGenFunctionInfo &
-  arrangeSYCLKernelCallerDeclaration(clang::QualType resultType,
-                                     const FunctionArgList &args);
+  arrangeDeviceKernelCallerDeclaration(clang::QualType resultType,
+                                       const FunctionArgList &args);
 
   /// A builtin function is a freestanding function using the default
   /// C conventions.
