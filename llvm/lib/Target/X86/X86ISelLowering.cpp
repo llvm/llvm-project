@@ -2632,9 +2632,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
       setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
     }
-    // So we can handle bf16 in combineFP_EXTEND
+    // So we can handle bf16 in combineFP_EXTEND. Only for types that are
+    // actually legal here: marking an illegal type Custom sends it through
+    // ReplaceNodeResults, which only knows how to handle v2f32.
     for (MVT VT : {MVT::v4f32, MVT::v8f32, MVT::v16f32})
-      setOperationAction(ISD::FP_EXTEND, VT, Custom);
+      if (isTypeLegal(VT))
+        setOperationAction(ISD::FP_EXTEND, VT, Custom);
     setOperationAction(ISD::SETCC, MVT::v8bf16, Custom);
     setOperationAction(ISD::SETCC, MVT::v16bf16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
@@ -22866,8 +22869,11 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
       return Op;
     }
 
-    // Need a soft libcall if the target has not BF16.
-    if (SVT.getScalarType() == MVT::f32 || SVT.getScalarType() == MVT::f64) {
+    // Need a soft libcall if the target has not BF16. Only for scalars: a
+    // vector has to be split and scalarized by the generic legalizer first,
+    // otherwise we would emit a single scalar call for the whole vector.
+    if (!VT.isVector() &&
+        (SVT.getScalarType() == MVT::f32 || SVT.getScalarType() == MVT::f64)) {
       TargetLowering::CallLoweringInfo CLI(DAG);
       Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
 
@@ -43192,7 +43198,13 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
             BCVT.getScalarType().getTypeForEVT(*DAG.getContext()))) {
       EVT NewVT = EVT::getVectorVT(*DAG.getContext(), BCVT.getScalarType(),
                                    VT.getVectorNumElements());
-      return DAG.getBitcast(VT, DAG.getNode(X86ISD::VBROADCAST, DL, NewVT, BC));
+      // A legal scalar type does not imply the corresponding vector type is
+      // legal: bf16 is a legal scalar everywhere SSE2 is available, but
+      // v8bf16 only becomes legal with AVXNECONVERT/BF16. Broadcasting into
+      // an illegal vector type would leave the DAG unlegalizable.
+      if (TLI.isTypeLegal(NewVT))
+        return DAG.getBitcast(VT,
+                              DAG.getNode(X86ISD::VBROADCAST, DL, NewVT, BC));
     }
 
     // vbroadcast(bitcast(vbroadcast(src))) -> bitcast(vbroadcast(src))
