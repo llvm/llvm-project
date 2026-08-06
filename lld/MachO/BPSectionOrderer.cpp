@@ -152,7 +152,7 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
         continue;
       for (auto &subsec : sec->subsections) {
         addSection(subsec.isec);
-        if (subsec.isec->canonical() != subsec.isec)
+        if (subsec.isec && subsec.isec->canonical() != subsec.isec)
           addSection(subsec.isec->canonical());
       }
     }
