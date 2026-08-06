@@ -858,6 +858,27 @@ TEST(DWARFExpression, GetLocationSkipsDW_OP_call_refOperand) {
   }
 }
 
+TEST(DWARFExpression, GetLocationSkipsDW_OP_implicit_pointerOperands) {
+  // DW_OP_implicit_pointer contains an eight-byte reference in DWARF64,
+  // followed by an SLEB128 offset. The operand bytes contain false DW_OP_addr
+  // operations that detect either an address-sized reference or decoding the
+  // SLEB128 before skipping the reference.
+  uint8_t expr[] = {
+      DW_OP_implicit_pointer,
+      // Eight-byte reference with a false DW_OP_addr at byte six.
+      0x00, 0x11, 0x22, 0x33, 0x44, DW_OP_addr, 0x55, 0x66,
+      // Two-byte SLEB128 whose final byte is another false DW_OP_addr.
+      0x80, DW_OP_addr,
+      // The real address operation.
+      DW_OP_addr, 0x10, 0x20, 0x30, 0x40};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                          /*addr_size=*/4);
+  DWARFExpression dwarf_expr(extractor);
+  MockDwarfDelegate dwarf64 = MockDwarfDelegate::Dwarf64();
+  EXPECT_THAT_EXPECTED(dwarf_expr.GetLocation_DW_OP_addr(&dwarf64),
+                       llvm::HasValue(0x40302010u));
+}
+
 TEST(DWARFExpression, DW_OP_unknown) {
   EXPECT_THAT_EXPECTED(
       Evaluate({0xff}),
