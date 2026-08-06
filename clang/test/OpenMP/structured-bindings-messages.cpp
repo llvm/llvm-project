@@ -238,42 +238,6 @@ void test_constructor_with_member() {
   }
 }
 
-void test_conflicting_clauses() {
-  Point pt{1, 2};
-  auto [a, b] = pt;
-  // expected-error@+2{{bindings from the same structured binding declaration cannot have different data-sharing attributes}}
-  // expected-note@+1{{previous binding from the same declaration has 'firstprivate' attribute here}}
-#pragma omp parallel firstprivate(a) shared(b)
-  {
-    use(a);
-    use(b);
-  }
-}
-
-void test_conflicting_linear_private() {
-  Point p{1, 2};
-  auto [a, b] = p;
-  // expected-note@+1{{previous binding from the same declaration has 'linear' attribute here}}
-#pragma omp simd linear(a:2) private(b)
-  // expected-error@-1{{bindings from the same structured binding declaration cannot have different data-sharing attributes}}
-  for (int i = 0; i < 10; ++i) {
-    a += 2;
-    b = i;
-    use(a + b);
-  }
-}
-
-void test_conflicting_reduction_shared() {
-  Point p{0, 0};
-  auto [a, b] = p;
-  // expected-note@+1{{previous binding from the same declaration has 'reduction' attribute here}}
-#pragma omp parallel for reduction(+:a) shared(b)
-  // expected-error@-1{{bindings from the same structured binding declaration cannot have different data-sharing attributes}}
-  for (int i = 0; i < 10; ++i) {
-    a += i;
-    b = i;
-  }
-}
 
 void test_conflicting_capture_kinds_map_firstprivate() {
   Point p{1, 2};

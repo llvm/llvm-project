@@ -3942,29 +3942,14 @@ static void reportOriginalDsa(Sema &SemaRef, const DSAStackTy *Stack,
 /// Check for conflicting data-sharing attributes on bindings from the same
 /// structured binding declaration. Returns true if a conflict was found and
 /// diagnosed.
+/// NOTE: Bindings from the same structured binding are distinct variables
+/// and are allowed to have different data-sharing attributes.
 static bool checkDecompositionDSAConflict(Sema &SemaRef, DSAStackTy *Stack,
                                           const ValueDecl *D,
                                           SourceLocation ELoc,
                                           OpenMPClauseKind NewDSA) {
-  const auto *BD = dyn_cast<BindingDecl>(D);
-  if (!BD)
-    return false;
-
-  const auto *DD = dyn_cast<DecompositionDecl>(BD->getDecomposedDecl());
-  if (!DD)
-    return false;
-
-  if (const auto *ConflictDSA =
-          Stack->hasConflictingDecompositionDSA(DD, NewDSA)) {
-    SemaRef.Diag(
-        ELoc,
-        diag::err_omp_bindings_from_same_decomposition_with_different_dsa);
-    if (ConflictDSA->RefExpr.getPointer())
-      SemaRef.Diag(ConflictDSA->RefExpr.getPointer()->getExprLoc(),
-                   diag::note_omp_previous_dsa_for_binding)
-          << getOpenMPClauseName(ConflictDSA->Attributes);
-    return true;
-  }
+  // Bindings from the same structured binding declaration are independent
+  // variables and can have different DSA. This check is disabled.
   return false;
 }
 
@@ -4313,12 +4298,24 @@ public:
         if (!Stack->isImplicitDefaultFirstprivateFD(VD))
           return;
       VD = VD->getCanonicalDecl();
-      // Skip DecompositionDecls - they should be handled
-      // through explicit mapping of the original variable or as member
-      // expressions. When bindings are captured, the original variable
-      // is what needs to be mapped, not the decomposition itself.
-      if (isa<DecompositionDecl>(VD))
-        return;
+      // Skip DecompositionDecls (but not BindingDecls in DSA contexts) -
+      // they should be handled through explicit mapping of the original
+      // variable or as member expressions. When bindings are captured,
+      // the original variable is what needs to be mapped, not the
+      // decomposition itself. However, BindingDecls need DSA checking for
+      // default(none)/private/firstprivate contexts, but NOT in target
+      // offloading contexts (where map clause handles them).
+      if (isa<DecompositionDecl>(VD)) {
+        // For BindingDecls, continue checking only if:
+        // - We're in a DSA context (tasking/parallel/worksharing/teams), AND
+        // - We're NOT in a target offloading context
+        if (!BD || isOpenMPTargetExecutionDirective(DKind) ||
+            (!isImplicitOrExplicitTaskingRegion(DKind) &&
+             !isOpenMPParallelDirective(DKind) &&
+             !isOpenMPWorksharingDirective(DKind) &&
+             !isOpenMPTeamsDirective(DKind)))
+          return;
+      }
       // Skip internally declared variables.
       if (VD->hasLocalStorage() && CS && !CS->capturesVariable(VD) &&
           !Stack->isImplicitDefaultFirstprivateFD(VD) &&
@@ -4368,7 +4365,7 @@ public:
           InheritedDSA = DVar.CKind == OMPC_unknown;
         }
         if (InheritedDSA)
-          VarsWithInheritedDSA[VD] = E;
+          VarsWithInheritedDSA[BD ? LookupDecl : VD] = E;
         if (Stack->getDefaultDSA() == DSA_none)
           return;
       }
@@ -4400,7 +4397,7 @@ public:
                     auto ME = MapExprComponents.rend();
                     return MI != ME && MI->getAssociatedDeclaration() == VD;
                   })) {
-            VarsWithInheritedDSA[VD] = E;
+            VarsWithInheritedDSA[BD ? LookupDecl : VD] = E;
             return;
           }
         }
@@ -4506,7 +4503,7 @@ public:
       //  enclosing worksharing or parallel construct may not be accessed in an
       //  explicit task.
       DVar = Stack->hasInnermostDSA(
-          VD,
+          LookupDecl,
           [](OpenMPClauseKind C, bool AppliedToPointee) {
             return C == OMPC_reduction && !AppliedToPointee;
           },
@@ -4518,7 +4515,7 @@ public:
       if (isOpenMPTaskingDirective(DKind) && DVar.CKind == OMPC_reduction) {
         ErrorFound = true;
         SemaRef.Diag(ELoc, diag::err_omp_reduction_in_task);
-        reportOriginalDsa(SemaRef, Stack, VD, DVar);
+        reportOriginalDsa(SemaRef, Stack, BD ? LookupDecl : VD, DVar);
         return;
       }
 
