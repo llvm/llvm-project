@@ -63,8 +63,6 @@ llvm_config.add_tool_substitutions(["llvm-nm"], config.llvm_tools_dir)
 target_arch = config.libclc_target_arch.lower()
 check_prefix = "AMDGCN" if target_arch == "amdgpu" else target_arch.upper()
 
-config.available_features.add(target_arch)
-
 is_standalone = config.libclc_standalone_build.lower() == "true"
 path = os.path.join(config.libclc_library_dir, config.libclc_target, "libclc.bc")
 libclc_lib = f"--libclc-lib=:{path}" if is_standalone else ""
