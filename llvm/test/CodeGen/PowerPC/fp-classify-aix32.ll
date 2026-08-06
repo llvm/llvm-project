@@ -19,7 +19,7 @@
 ; RUN: llc -mtriple=powerpc-ibm-aix -mcpu=pwr8 -O0 < %s \
 ; RUN:   -verify-machineinstrs -ppc-asm-full-reg-names | FileCheck %s --check-prefix=PPC32-PWR8-O0
 
-; --- fcFinite (504) - actual compiler-rt crash from crt_isfinite ---
+; --- fcFinite (504) ---
 
 define zeroext i1 @test_isfinite_f64(double %x) nounwind {
 ; PPC32-PWR7-LABEL: test_isfinite_f64:
@@ -213,7 +213,7 @@ define zeroext i1 @test_isfinite_f32_strict(float %x) strictfp {
   ret i1 %result
 }
 
-; --- fcInf (516) - latent crash from crt_isinf/__builtin_isinf ---
+; --- fcInf (516) ---
 
 define zeroext i1 @test_isinf_f64(double %x) nounwind {
 ; PPC32-PWR7-LABEL: test_isinf_f64:
@@ -407,7 +407,7 @@ define zeroext i1 @test_isinf_f32_strict(float %x) strictfp {
   ret i1 %result
 }
 
-; --- fcInf|fcNan (519) - latent crash from post-legalize SimplifySetCC ---
+; --- fcInf|fcNan (519) ---
 
 define zeroext i1 @test_not_finite_f64(double %x) nounwind {
 ; PPC32-PWR7-LABEL: test_not_finite_f64:
@@ -600,13 +600,11 @@ define zeroext i1 @test_not_finite_f32_strict(float %x) strictfp {
 declare i1 @llvm.is.fpclass.f64(double, i32)
 declare i1 @llvm.is.fpclass.f32(float, i32)
 
-; --- fcNan (3) / ~fcNan (1020) at -O0 on PPC32 - illegal i1 crash (bug 3) ---
+; --- fcNan (3) / ~fcNan (1020) at -O0 on PPC32 ---
 ;
 ; At -O0 the IS_FPCLASS node is type-legalized from i1 to i32 before
-; LowerIS_FPCLASS is called.  The fix emits SELECT_CC(x,x,1,0,SETUO/SETO)
-; which materialises i32 directly via xscmpudp/fcmpu + isel, never touching
-; the illegal i1 type.  These functions use nounwind (not strictfp) so that
-; llc -O0 exercises the type-legalization path that was crashing.
+; LowerIS_FPCLASS is called.  These functions use nounwind (not strictfp) so
+; that llc -O0 exercises the type-legalization path.
 
 define zeroext i1 @test_isnan_f64_O0(double %x) nounwind {
 ; PPC32-PWR7-LABEL: test_isnan_f64_O0:
@@ -750,14 +748,10 @@ define zeroext i1 @test_isnotnan_f32_O0(float %x) nounwind {
   ret i1 %result
 }
 
-; --- fcNan (3) / ~fcNan (1020) on PPC32 - latent result-type bug from 7e1aba74 ---
+; --- fcNan (3) / ~fcNan (1020) on PPC32 with strictfp ---
 ;
-; 7e1aba74 added the fcmpu/xscmpudp path for fcNan/~fcNan but always returned
-; MVT::i1 from LowerIS_FPCLASS.  On PPC32 (useCRBits=false) the legal SETCC
-; result type is i32, so returning i1 would produce an illegal type after type
-; legalization.  The fix zero-extends the i1 CR-bit result to ResVT (i32).
-; 7e1aba74's own fp-classify-nan.ll test has no PPC32 RUN lines, so this was
-; silently untested.  These cases exercise the ZExtOrTrunc fix.
+; On PPC32 (useCRBits=false) the legal SETCC result type is i32.  These cases
+; verify that LowerIS_FPCLASS returns the correct ResVT instead of i1.
 
 define zeroext i1 @test_isnan_f64(double %x) strictfp {
 ; PPC32-PWR7-LABEL: test_isnan_f64:
