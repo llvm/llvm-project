@@ -25071,6 +25071,39 @@ static SDValue performIntrinsicCombine(SDNode *N,
   switch (IID) {
   default:
     break;
+  case Intrinsic::aarch64_neon_tbx1:
+  case Intrinsic::aarch64_neon_tbx2:
+  case Intrinsic::aarch64_neon_tbx3:
+  case Intrinsic::aarch64_neon_tbx4: {
+    if (ISD::isBuildVectorAllZeros(N->getOperand(1).getNode())) {
+      SDLoc DL(N);
+      unsigned TblIID = 0;
+      switch (IID) {
+      case Intrinsic::aarch64_neon_tbx1:
+        TblIID = Intrinsic::aarch64_neon_tbl1;
+        break;
+      case Intrinsic::aarch64_neon_tbx2:
+        TblIID = Intrinsic::aarch64_neon_tbl2;
+        break;
+      case Intrinsic::aarch64_neon_tbx3:
+        TblIID = Intrinsic::aarch64_neon_tbl3;
+        break;
+      case Intrinsic::aarch64_neon_tbx4:
+        TblIID = Intrinsic::aarch64_neon_tbl4;
+        break;
+      default:
+        llvm_unreachable("Unexpected TBX intrinsic");
+      }
+
+      SmallVector<SDValue, 6> Ops;
+      Ops.push_back(DAG.getConstant(TblIID, DL, MVT::i32));
+      for (unsigned I = 2; I < N->getNumOperands(); ++I)
+        Ops.push_back(N->getOperand(I));
+
+      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0), Ops);
+    }
+    break;
+  }
   case Intrinsic::aarch64_neon_vcvtfxs2fp:
   case Intrinsic::aarch64_neon_vcvtfxu2fp:
     return tryCombineFixedPointConvert(N, DCI, DAG);
