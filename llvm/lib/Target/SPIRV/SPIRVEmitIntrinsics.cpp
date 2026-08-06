@@ -2594,20 +2594,20 @@ SPIRVEmitIntrinsicsImpl::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   unsigned AS = I.getPointerOperand()->getType()->getPointerAddressSpace();
   SmallVector<Value *> Args(I.operands());
   Args.push_back(B.getInt32(static_cast<uint32_t>(getMemScopeForAtomic(
-      I.getContext(), I.getSyncScopeID(),
-      addressSpaceToStorageClass(AS, ST), ST.getTargetTriple().isVulkanOS()))));
+      I.getContext(), I.getSyncScopeID(), addressSpaceToStorageClass(AS, ST),
+      ST.getTargetTriple().isVulkanOS()))));
   // Per SPIR-V spec atomic ops must combine the ordering bits with the
   // storage-class bit.
   SPIRV::StorageClass::StorageClass SC = addressSpaceToStorageClass(AS, ST);
   uint32_t ScSem = static_cast<uint32_t>(getMemSemanticsForStorageClass(SC));
-  Args.push_back(B.getInt32(static_cast<uint32_t>(
-                     getMemSemanticsForAtomic(I.getSuccessOrdering(), SC,
-                                              ST.getTargetTriple().isVulkanOS())) |
-                 ScSem));
-  Args.push_back(B.getInt32(static_cast<uint32_t>(
-                     getMemSemanticsForAtomic(I.getFailureOrdering(), SC,
-                                              ST.getTargetTriple().isVulkanOS())) |
-                 ScSem));
+  Args.push_back(B.getInt32(
+      static_cast<uint32_t>(getMemSemanticsForAtomic(
+          I.getSuccessOrdering(), SC, ST.getTargetTriple().isVulkanOS())) |
+      ScSem));
+  Args.push_back(B.getInt32(
+      static_cast<uint32_t>(getMemSemanticsForAtomic(
+          I.getFailureOrdering(), SC, ST.getTargetTriple().isVulkanOS())) |
+      ScSem));
   Instruction *NewI = B.CreateIntrinsicWithoutFolding(
       Intrinsic::spv_cmpxchg, {I.getPointerOperand()->getType()}, {Args});
   replaceMemInstrUses(&I, NewI, B);

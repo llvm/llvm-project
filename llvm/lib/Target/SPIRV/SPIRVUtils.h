@@ -295,8 +295,9 @@ SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id);
 
 // Vulkan forbids CrossDevice for atomics and memory barriers. Remap it using
 // the accessed storage class when targeting Vulkan.
-SPIRV::Scope::Scope legalizeScopeForVulkan(SPIRV::Scope::Scope Scope,
-                                           SPIRV::StorageClass::StorageClass SC);
+SPIRV::Scope::Scope
+legalizeScopeForVulkan(SPIRV::Scope::Scope Scope,
+                       SPIRV::StorageClass::StorageClass SC);
 
 SPIRV::Scope::Scope getMemScopeForAtomic(LLVMContext &Ctx, SyncScope::ID Id,
                                          SPIRV::StorageClass::StorageClass SC,

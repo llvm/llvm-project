@@ -48,8 +48,8 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -403,8 +403,9 @@ class SPIRVLegalizePointerCastImpl {
     }
   }
 
-  AtomicRMWInst *createMatchingAtomicRMW(IRBuilder<> &B, AtomicRMWInst *Template,
-                                         Value *Ptr, Value *Val) {
+  AtomicRMWInst *createMatchingAtomicRMW(IRBuilder<> &B,
+                                         AtomicRMWInst *Template, Value *Ptr,
+                                         Value *Val) {
     return B.CreateAtomicRMW(Template->getOperation(), Ptr, Val,
                              Template->getAlign(), Template->getOrdering(),
                              Template->getSyncScopeID());
@@ -460,9 +461,9 @@ class SPIRVLegalizePointerCastImpl {
     if (Kind == ReinterpretKind::ByteWise) {
       if (!atomicRMWIsByteDecomposable(IllegalRMW->getOperation()))
         return false;
-      Value *Result = atomicRMWScalarToByteLayout(
-          B, IllegalRMW, OriginalPtr, IllegalRMW->getValOperand(),
-          IllegalRMW->getAlign());
+      Value *Result = atomicRMWScalarToByteLayout(B, IllegalRMW, OriginalPtr,
+                                                  IllegalRMW->getValOperand(),
+                                                  IllegalRMW->getAlign());
       GR->replaceAllUsesWith(IllegalRMW, Result, /* DeleteOld= */ true);
       DeadInstructions.push_back(IllegalRMW);
       return true;
