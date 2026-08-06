@@ -86,7 +86,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SCALAR_TO_VECTOR:  R = ScalarizeVecRes_SCALAR_TO_VECTOR(N); break;
   case ISD::VECTOR_DEINTERLEAVE:
   case ISD::VECTOR_INTERLEAVE:
-    R = ScalarizeVecRes_VECTOR_INTERLEAVE_DEINTERLEAVE(N, ResNo);
+    R = ScalarizeVecRes_VECTOR_INTERLEAVE_DEINTERLEAVE(N);
     break;
   case ISD::SIGN_EXTEND_INREG: R = ScalarizeVecRes_InregOp(N); break;
   case ISD::VSELECT:           R = ScalarizeVecRes_VSELECT(N); break;
@@ -673,17 +673,16 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N) {
   return InOp;
 }
 
-SDValue DAGTypeLegalizer::ScalarizeVecRes_VECTOR_INTERLEAVE_DEINTERLEAVE(
-    SDNode *N, unsigned ResNo) {
+SDValue
+DAGTypeLegalizer::ScalarizeVecRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N) {
   assert(N->getNumValues() == N->getNumOperands() &&
          "Expected one result per operand");
 
   // Interleaving or deinterleaving one-element vectors leaves each result
   // equal to the corresponding operand.
   for (unsigned I = 0; I != N->getNumValues(); ++I)
-    if (I != ResNo)
-      SetScalarizedVector(SDValue(N, I), GetScalarizedVector(N->getOperand(I)));
-  return GetScalarizedVector(N->getOperand(ResNo));
+    SetScalarizedVector(SDValue(N, I), GetScalarizedVector(N->getOperand(I)));
+  return SDValue();
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_VSELECT(SDNode *N) {
