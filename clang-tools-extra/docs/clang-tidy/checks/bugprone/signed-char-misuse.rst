@@ -42,10 +42,7 @@ Currently, this check warns in the following cases:
   equality/inequality operator
 - ``signed char`` is converted to an integer in the array subscript
 - ``signed char`` is passed as an argument to a ``<cctype>``/``<ctype.h>``
-  character classification or conversion function (e.g. ``isalpha``,
-  ``toupper``). These functions require their argument to be representable
-  as an ``unsigned char`` or equal to ``EOF``; any other value is undefined
-  behavior.
+  character classification or conversion function
 
 See also:
 `STR34-C. Cast characters to unsigned char before converting to larger

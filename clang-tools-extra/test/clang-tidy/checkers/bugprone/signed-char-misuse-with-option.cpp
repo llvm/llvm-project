@@ -26,6 +26,13 @@ int TypedefNotInIgnorableList() {
   return NCharacter;
 }
 
+int isalpha(int);
+
+int CctypeFunctionArgumentTypedefNotInIgnorableList(sal_Char SCharacter) {
+  return isalpha(SCharacter);
+  // CHECK-MESSAGES: [[@LINE-1]]:18: warning: 'signed char' to 'int' conversion passed to a <cctype> function; consider casting to 'unsigned char' first. [bugprone-signed-char-misuse]
+}
+
 ///////////////////////////////////////////////////////////////////
 /// Test cases correctly ignored by the check.
 
@@ -45,6 +52,10 @@ int OtherIgnorableTypedef() {
   int NCharacter = CCharacter;
 
   return NCharacter;
+}
+
+int CctypeFunctionArgumentIgnorableTypedef(sal_Int8 SCharacter) {
+  return isalpha(SCharacter);
 }
 
 ///////////////////////////////////////////////////////////////////
