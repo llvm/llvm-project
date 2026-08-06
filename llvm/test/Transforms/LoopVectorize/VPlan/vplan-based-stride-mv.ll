@@ -3,12 +3,6 @@
 ; RUN:     -vplan-print-after=multiversionForUnitStridedMemOps \
 ; RUN:     -enable-mem-access-versioning=false -enable-vplan-based-stride-mv 2>&1 | FileCheck %s
 
-; Only interested in interactions with trip counts for the scalable
-; vectorization, the rest has shared code path with fixed-width vectors.
-; RUN: llvm-extract -S -rfunc=btc < %s | opt -p loop-vectorize -force-vector-width="vscale x 4" -force-target-supports-scalable-vectors -force-target-supports-masked-memory-ops -force-target-supports-gather-scatter-ops -disable-output \
-; RUN:     -vplan-print-after=multiversionForUnitStridedMemOps \
-; RUN:     -enable-mem-access-versioning=false -enable-vplan-based-stride-mv 2>&1 | FileCheck %s --check-prefix SCALABLE
-
 define void @basic(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-LABEL: VPlan for loop in 'basic'
 ; CHECK:  VPlan ' for UF>=1' {
@@ -1572,56 +1566,6 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) {
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
-; SCALABLE-LABEL: VPlan for loop in 'non_constant_btc'
-; SCALABLE:  VPlan ' for UF>=1' {
-; SCALABLE-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
-; SCALABLE-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
-; SCALABLE-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; SCALABLE-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  ir-bb<entry>:
-; SCALABLE-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 smax %n)
-; SCALABLE-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp ne ir<%stride>, ir<1>
-; SCALABLE-NEXT:  Successor(s): scalar.ph, strides.check
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  strides.check:
-; SCALABLE-NEXT:    EMIT branch-on-cond vp<[[VP4]]>
-; SCALABLE-NEXT:  Successor(s): scalar.ph, vector.ph
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  vector.ph:
-; SCALABLE-NEXT:  Successor(s): vector loop
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  <x1> vector loop: {
-; SCALABLE-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:    vector.body:
-; SCALABLE-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
-; SCALABLE-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
-; SCALABLE-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
-; SCALABLE-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; SCALABLE-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; SCALABLE-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; SCALABLE-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
-; SCALABLE-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%n>
-; SCALABLE-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
-; SCALABLE-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
-; SCALABLE-NEXT:    No successors
-; SCALABLE-NEXT:  }
-; SCALABLE-NEXT:  Successor(s): middle.block
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  middle.block:
-; SCALABLE-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
-; SCALABLE-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
-; SCALABLE-NEXT:    EMIT branch-on-cond vp<%cmp.n>
-; SCALABLE-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  ir-bb<exit>:
-; SCALABLE-NEXT:  No successors
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  scalar.ph:
-; SCALABLE-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
-; SCALABLE-NEXT:  Successor(s): ir-bb<header>
-;
 entry:
   br label %header
 
@@ -1691,51 +1635,6 @@ define void @stride_as_btc(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
-;
-; SCALABLE-LABEL: VPlan for loop in 'stride_as_btc'
-; SCALABLE:  VPlan ' for UF>=1' {
-; SCALABLE-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
-; SCALABLE-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
-; SCALABLE-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; SCALABLE-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  ir-bb<entry>:
-; SCALABLE-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 smax %stride)
-; SCALABLE-NEXT:  Successor(s): scalar.ph, vector.ph
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  vector.ph:
-; SCALABLE-NEXT:  Successor(s): vector loop
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  <x1> vector loop: {
-; SCALABLE-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:    vector.body:
-; SCALABLE-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
-; SCALABLE-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
-; SCALABLE-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; SCALABLE-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; SCALABLE-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; SCALABLE-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; SCALABLE-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
-; SCALABLE-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%stride>
-; SCALABLE-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
-; SCALABLE-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
-; SCALABLE-NEXT:    No successors
-; SCALABLE-NEXT:  }
-; SCALABLE-NEXT:  Successor(s): middle.block
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  middle.block:
-; SCALABLE-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
-; SCALABLE-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
-; SCALABLE-NEXT:    EMIT branch-on-cond vp<%cmp.n>
-; SCALABLE-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  ir-bb<exit>:
-; SCALABLE-NEXT:  No successors
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  scalar.ph:
-; SCALABLE-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; SCALABLE-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
   br label %header
@@ -1807,57 +1706,6 @@ define void @stride_dependent_btc(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
-;
-; SCALABLE-LABEL: VPlan for loop in 'stride_dependent_btc'
-; SCALABLE:  VPlan ' for UF>=1' {
-; SCALABLE-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
-; SCALABLE-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
-; SCALABLE-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; SCALABLE-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  ir-bb<entry>:
-; SCALABLE-NEXT:    IR   %n = add i64 %stride, 1
-; SCALABLE-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV 2
-; SCALABLE-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp ne ir<%stride>, ir<1>
-; SCALABLE-NEXT:  Successor(s): scalar.ph, strides.check
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  strides.check:
-; SCALABLE-NEXT:    EMIT branch-on-cond vp<[[VP4]]>
-; SCALABLE-NEXT:  Successor(s): scalar.ph, vector.ph
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  vector.ph:
-; SCALABLE-NEXT:  Successor(s): vector loop
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  <x1> vector loop: {
-; SCALABLE-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:    vector.body:
-; SCALABLE-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
-; SCALABLE-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
-; SCALABLE-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
-; SCALABLE-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; SCALABLE-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; SCALABLE-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; SCALABLE-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
-; SCALABLE-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%n>
-; SCALABLE-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
-; SCALABLE-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
-; SCALABLE-NEXT:    No successors
-; SCALABLE-NEXT:  }
-; SCALABLE-NEXT:  Successor(s): middle.block
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  middle.block:
-; SCALABLE-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
-; SCALABLE-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
-; SCALABLE-NEXT:    EMIT branch-on-cond vp<%cmp.n>
-; SCALABLE-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  ir-bb<exit>:
-; SCALABLE-NEXT:  No successors
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  scalar.ph:
-; SCALABLE-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
-; SCALABLE-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
   %n = add i64 %stride, 1
@@ -1937,57 +1785,6 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
-; SCALABLE-LABEL: VPlan for loop in 'stride_btc_checks_order'
-; SCALABLE:  VPlan ' for UF>=1' {
-; SCALABLE-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
-; SCALABLE-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
-; SCALABLE-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; SCALABLE-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  ir-bb<entry>:
-; SCALABLE-NEXT:    IR   %n = mul i64 %m, %stride
-; SCALABLE-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 smax %m)
-; SCALABLE-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp ne ir<%stride>, ir<1>
-; SCALABLE-NEXT:  Successor(s): scalar.ph, strides.check
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  strides.check:
-; SCALABLE-NEXT:    EMIT branch-on-cond vp<[[VP4]]>
-; SCALABLE-NEXT:  Successor(s): scalar.ph, vector.ph
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  vector.ph:
-; SCALABLE-NEXT:  Successor(s): vector loop
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  <x1> vector loop: {
-; SCALABLE-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:    vector.body:
-; SCALABLE-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
-; SCALABLE-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
-; SCALABLE-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
-; SCALABLE-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; SCALABLE-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; SCALABLE-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; SCALABLE-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
-; SCALABLE-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%n>
-; SCALABLE-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
-; SCALABLE-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
-; SCALABLE-NEXT:    No successors
-; SCALABLE-NEXT:  }
-; SCALABLE-NEXT:  Successor(s): middle.block
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  middle.block:
-; SCALABLE-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
-; SCALABLE-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
-; SCALABLE-NEXT:    EMIT branch-on-cond vp<%cmp.n>
-; SCALABLE-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  ir-bb<exit>:
-; SCALABLE-NEXT:  No successors
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  scalar.ph:
-; SCALABLE-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
-; SCALABLE-NEXT:  Successor(s): ir-bb<header>
-;
 entry:
   %n = mul i64 %m, %stride
   br label %header
@@ -2063,57 +1860,6 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
-;
-; SCALABLE-LABEL: VPlan for loop in 'stride_dependent_btc_non_preventive'
-; SCALABLE:  VPlan ' for UF>=1' {
-; SCALABLE-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
-; SCALABLE-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
-; SCALABLE-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; SCALABLE-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  ir-bb<entry>:
-; SCALABLE-NEXT:    IR   %n = add i64 %stride, 3
-; SCALABLE-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV 4
-; SCALABLE-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp ne ir<%stride>, ir<1>
-; SCALABLE-NEXT:  Successor(s): scalar.ph, strides.check
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  strides.check:
-; SCALABLE-NEXT:    EMIT branch-on-cond vp<[[VP4]]>
-; SCALABLE-NEXT:  Successor(s): scalar.ph, vector.ph
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  vector.ph:
-; SCALABLE-NEXT:  Successor(s): vector loop
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  <x1> vector loop: {
-; SCALABLE-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:    vector.body:
-; SCALABLE-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
-; SCALABLE-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
-; SCALABLE-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
-; SCALABLE-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; SCALABLE-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; SCALABLE-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; SCALABLE-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
-; SCALABLE-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%n>
-; SCALABLE-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
-; SCALABLE-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
-; SCALABLE-NEXT:    No successors
-; SCALABLE-NEXT:  }
-; SCALABLE-NEXT:  Successor(s): middle.block
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  middle.block:
-; SCALABLE-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
-; SCALABLE-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
-; SCALABLE-NEXT:    EMIT branch-on-cond vp<%cmp.n>
-; SCALABLE-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  ir-bb<exit>:
-; SCALABLE-NEXT:  No successors
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  scalar.ph:
-; SCALABLE-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
-; SCALABLE-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
   %n = add i64 %stride, 3
@@ -2226,61 +1972,6 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
-;
-; SCALABLE-LABEL: VPlan for loop in 'stride_btc_independent_memdep_triple_check'
-; SCALABLE:  VPlan ' for UF>=1' {
-; SCALABLE-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
-; SCALABLE-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
-; SCALABLE-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; SCALABLE-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  ir-bb<entry>:
-; SCALABLE-NEXT:    IR   %p.out = getelementptr i8, ptr %p2, i64 %out.offset
-; SCALABLE-NEXT:    IR   %n = add i64 %stride, 3
-; SCALABLE-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV 4
-; SCALABLE-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp ne ir<%stride>, ir<1>
-; SCALABLE-NEXT:  Successor(s): scalar.ph, strides.check
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  strides.check:
-; SCALABLE-NEXT:    EMIT branch-on-cond vp<[[VP4]]>
-; SCALABLE-NEXT:  Successor(s): scalar.ph, vector.ph
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  vector.ph:
-; SCALABLE-NEXT:  Successor(s): vector loop
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  <x1> vector loop: {
-; SCALABLE-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:    vector.body:
-; SCALABLE-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
-; SCALABLE-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
-; SCALABLE-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
-; SCALABLE-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; SCALABLE-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; SCALABLE-NEXT:      EMIT ir<%gep.ld2> = getelementptr ir<%p2>, ir<%iv>
-; SCALABLE-NEXT:      EMIT-SCALAR ir<%ld2> = load ir<%gep.ld2>
-; SCALABLE-NEXT:      EMIT ir<%val> = add ir<%ld>, ir<%ld2>
-; SCALABLE-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; SCALABLE-NEXT:      EMIT store ir<%val>, ir<%gep.st>
-; SCALABLE-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%n>
-; SCALABLE-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
-; SCALABLE-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
-; SCALABLE-NEXT:    No successors
-; SCALABLE-NEXT:  }
-; SCALABLE-NEXT:  Successor(s): middle.block
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  middle.block:
-; SCALABLE-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
-; SCALABLE-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
-; SCALABLE-NEXT:    EMIT branch-on-cond vp<%cmp.n>
-; SCALABLE-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  ir-bb<exit>:
-; SCALABLE-NEXT:  No successors
-; SCALABLE-EMPTY:
-; SCALABLE-NEXT:  scalar.ph:
-; SCALABLE-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
-; SCALABLE-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
   %p.out = getelementptr i8, ptr %p2, i64 %out.offset
