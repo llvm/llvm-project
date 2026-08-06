@@ -195,11 +195,11 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
 
  // CHECK: omp.parallel allocate(
  // CHECK-SAME: private(
- // CHECK: } {allocate_private_indices = array<i64: 0>}
+ // CHECK: } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
  omp.parallel allocate(%allocator : si32 -> %data_var : memref<i32>)
      private(@parallel_allocate_private %data_var -> %private : memref<i32>) {
    omp.terminator
- } {allocate_private_indices = array<i64: 0>}
+ } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
 
  // CHECK: omp.parallel
  // CHECK-NEXT: omp.parallel if(%{{.*}})

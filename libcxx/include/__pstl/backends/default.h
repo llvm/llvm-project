@@ -27,13 +27,17 @@
 #include <__iterator/next.h>
 #include <__iterator/prev.h>
 #include <__iterator/reverse_iterator.h>
+#include <__memory/addressof.h>
+#include <__memory/construct_at.h>
+#include <__optional/comparison.h>
+#include <__optional/nullopt_t.h>
+#include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/dispatch.h>
 #include <__type_traits/desugars_to.h>
 #include <__utility/empty.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -76,6 +80,8 @@ namespace __pstl {
 //
 // for_each family
 // ---------------
+// - destroy
+// - destroy_n
 // - for_each_n
 // - fill
 // - fill_n
@@ -366,6 +372,31 @@ struct __is_sorted<__default_backend_tag, _ExecutionPolicy> {
 //////////////////////////////////////////////////////////////
 // for_each family
 //////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __destroy<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator>
+  optional<__empty> operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last) const noexcept {
+    using _ForEach = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
+    using _Ref     = __iterator_reference<_ForwardIterator>;
+    return _ForEach()(__policy, std::move(__first), std::move(__last), [&](_Ref __element) {
+      std::destroy_at(std::addressof(__element));
+    });
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __destroy_n<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Size>
+  optional<__empty> operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept {
+    using _ForEachN = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
+    using _Ref      = __iterator_reference<_ForwardIterator>;
+    return _ForEachN()(__policy, std::move(__first), __n, [&](_Ref __element) {
+      std::destroy_at(std::addressof(__element));
+    });
+  }
+};
+
 template <class _ExecutionPolicy>
 struct __for_each_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size, class _Function>
