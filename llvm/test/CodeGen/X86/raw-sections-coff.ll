@@ -8,5 +8,5 @@
 ; CHECK-DAG:    IMAGE_SCN_MEM_READ
 ; CHECK:      ]
 
-!0 = !{!"clangast", i32 8, !"\de\ad\be\ef"}
+!0 = !{!"clangast", i32 8, i32 4, !"\de\ad\be\ef"}
 !llvm.raw.sections = !{!0}

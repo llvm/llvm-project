@@ -9623,6 +9623,35 @@ for an integer access:
 Multiple TBAA operands are allowed to support merging of modules that may use
 different TBAA hierarchies (e.g., when mixing C and C++).
 
+## '`llvm.raw.sections`' Named Metadata
+
+The module-level `!llvm.raw.sections` metadata allows embedding arbitrary
+binary data into named sections of the output object file. A
+`!llvm.raw.sections` metadata node is a list of metadata nodes with the
+following fields:
+
+```
+!0 = !{!"section_name", i32 alignment, i32 section_kind, !"raw data"}
+```
+
+- **section_name**: The name of the output section.
+- **alignment**: The byte alignment of the section data.
+- **section_kind**: An integer value corresponding to the `SectionKind` type
+  declared in the `<include/llvm/MC/SectionKind.h>` header file. This field
+  specifies the nature of the section (e.g. read-only, data, metadata). Each
+  target maps this to format-appropriate section flags.
+- **raw data**: The binary contents of the section.
+
+Example:
+```
+!llvm.raw.sections = !{!0}
+!0 = !{!"__mydata", i32 8, i32 4, !"\DE\AD\BE\EF"}
+```
+
+Each of the nodes inside a `!llvm.raw.sections` metadata node gets lowered to
+a target-specific named data section. Targets that do not support arbitrary
+named sections silently skip `!llvm.raw.sections` metadata nodes.
+
 (summary)=
 
 ## ThinLTO Summary

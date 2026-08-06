@@ -25,6 +25,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/SectionKind.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Path.h"
@@ -311,10 +312,12 @@ public:
       else
         SectionName = "__clangast";
 
+      auto *Int32Ty = llvm::Type::getInt32Ty(*VMContext);
       llvm::Metadata *Ops[] = {
           llvm::MDString::get(*VMContext, SectionName),
-          llvm::ConstantAsMetadata::get(
-              llvm::ConstantInt::get(llvm::Type::getInt32Ty(*VMContext), 8)),
+          llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 8)),
+          llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+              Int32Ty, llvm::SectionKind::getReadOnly().getValue())),
           llvm::MDString::get(*VMContext,
                               StringRef(SerializedAST.data(), Size))};
       RawSections->addOperand(llvm::MDTuple::get(*VMContext, Ops));

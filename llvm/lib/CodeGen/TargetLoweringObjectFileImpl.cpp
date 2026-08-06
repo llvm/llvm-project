@@ -377,11 +377,6 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
   emitCGProfileMetadata(Streamer, M);
 }
 
-MCSection *
-TargetLoweringObjectFileELF::getNamedReadOnlySection(StringRef Name) const {
-  return getContext().getELFSection(Name, ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
-}
-
 void TargetLoweringObjectFileELF::emitLinkerDirectives(MCStreamer &Streamer,
                                                        Module &M) const {
   auto &C = getContext();
@@ -574,6 +569,14 @@ static unsigned getELFSectionFlags(SectionKind K, const Triple &T) {
     Flags |= ELF::SHF_STRINGS;
 
   return Flags;
+}
+
+MCSection *
+TargetLoweringObjectFileELF::getNamedSection(StringRef Name,
+                                             SectionKind Kind) const {
+  unsigned Type = getELFSectionType(Name, Kind);
+  unsigned Flags = getELFSectionFlags(Kind, getContext().getTargetTriple());
+  return getContext().getELFSection(Name, Type, Flags);
 }
 
 static const Comdat *getELFComdat(const GlobalValue *GV) {
@@ -1356,10 +1359,10 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
 }
 
 MCSection *
-TargetLoweringObjectFileMachO::getNamedReadOnlySection(StringRef Name) const {
+TargetLoweringObjectFileMachO::getNamedSection(StringRef Name,
+                                               SectionKind Kind) const {
   auto [Segment, SecName] = Name.split(',');
-  return getContext().getMachOSection(Segment, SecName, 0,
-                                      SectionKind::getReadOnly());
+  return getContext().getMachOSection(Segment, SecName, 0, Kind);
 }
 
 void TargetLoweringObjectFileMachO::emitLinkerDirectives(MCStreamer &Streamer,
@@ -1957,9 +1960,9 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
 }
 
 MCSection *
-TargetLoweringObjectFileCOFF::getNamedReadOnlySection(StringRef Name) const {
-  return getContext().getCOFFSection(
-      Name, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ);
+TargetLoweringObjectFileCOFF::getNamedSection(StringRef Name,
+                                              SectionKind Kind) const {
+  return getContext().getCOFFSection(Name, getCOFFSectionFlags(Kind, *TM));
 }
 
 void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
@@ -2277,8 +2280,9 @@ void TargetLoweringObjectFileWasm::getModuleMetadata(Module &M) {
 }
 
 MCSection *
-TargetLoweringObjectFileWasm::getNamedReadOnlySection(StringRef Name) const {
-  return getContext().getWasmSection(Name, SectionKind::getReadOnly());
+TargetLoweringObjectFileWasm::getNamedSection(StringRef Name,
+                                              SectionKind Kind) const {
+  return getContext().getWasmSection(Name, Kind);
 }
 
 MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(

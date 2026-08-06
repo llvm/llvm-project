@@ -5,5 +5,5 @@
 ; CHECK-NEXT: Segment: __CLANG
 ; CHECK:      Size:
 
-!0 = !{!"__CLANG,__clangast", i32 8, !"\de\ad\be\ef"}
+!0 = !{!"__CLANG,__clangast", i32 8, i32 4, !"\de\ad\be\ef"}
 !llvm.raw.sections = !{!0}

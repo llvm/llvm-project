@@ -2980,18 +2980,19 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   TLOF.emitModuleMetadata(*OutStreamer, M);
 
-  // Emit raw section data from llvm.raw.sections metadata.
+  // Emit raw section data from llvm.raw.sections metadata. Each operand is
+  // a tuple of {section_name, alignment, section_kind, data}.
   if (const NamedMDNode *RawSections =
           M.getNamedMetadata("llvm.raw.sections")) {
     for (const MDNode *Op : RawSections->operands()) {
-      assert(Op->getNumOperands() == 3 &&
-             "llvm.raw.sections metadata entry must have three operands");
       auto *SectionName = cast<MDString>(Op->getOperand(0));
       auto *AlignCI = mdconst::extract<ConstantInt>(Op->getOperand(1));
-      auto *Data = cast<MDString>(Op->getOperand(2));
+      auto *KindCI = mdconst::extract<ConstantInt>(Op->getOperand(2));
+      auto *Data = cast<MDString>(Op->getOperand(3));
 
+      SectionKind Kind = SectionKind::fromValue(KindCI->getZExtValue());
       if (MCSection *Section =
-              TLOF.getNamedReadOnlySection(SectionName->getString())) {
+              TLOF.getNamedSection(SectionName->getString(), Kind)) {
         OutStreamer->pushSection();
         OutStreamer->switchSection(Section);
         OutStreamer->emitValueToAlignment(Align(AlignCI->getZExtValue()));
