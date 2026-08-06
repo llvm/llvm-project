@@ -16,7 +16,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
-#include "mlir/Dialect/OpenMP/OpenMPUtils.h"
+#include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/IR/SymbolTable.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
