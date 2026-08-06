@@ -48,6 +48,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/TargetParser/AtomicScope.h"
 #include "llvm/Transforms/Utils/LowerAtomic.h"
 #include <optional>
 
@@ -247,6 +248,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       // Widen scalar fcanonicalize to a v2bf16 operation with an unused high
       // lane.
       setOperationAction(ISD::FCANONICALIZE, MVT::bf16, Custom);
+      // Widen scalar fmul to a v2bf16 operation with an unused high lane.
+      setOperationAction(ISD::FMUL, MVT::bf16, Custom);
     }
 
     setOperationAction(ISD::FP_ROUND, MVT::bf16, Expand);
@@ -7718,7 +7721,6 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
-  case ISD::FMUL:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
   case ISD::UADDSAT:
@@ -7727,8 +7729,9 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SSUBSAT:
     return splitBinaryVectorOp(Op, DAG);
   case ISD::FADD:
+  case ISD::FMUL:
     if (Op.getValueType() == MVT::bf16)
-      return lowerScalarBF16FAdd(Op, DAG);
+      return lowerScalarBF16BinaryOp(Op, DAG);
     return splitBinaryVectorOp(Op, DAG);
   case ISD::FCANONICALIZE:
     if (Op.getValueType() == MVT::bf16)
@@ -8797,8 +8800,8 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
                      DAG.getTargetConstant(0, DL, MVT::i32));
 }
 
-SDValue SITargetLowering::lowerScalarBF16FAdd(SDValue Op,
-                                              SelectionDAG &DAG) const {
+SDValue SITargetLowering::lowerScalarBF16BinaryOp(SDValue Op,
+                                                  SelectionDAG &DAG) const {
   assert(Subtarget->hasBF16PackedInsts());
 
   SDLoc DL(Op);
@@ -8815,10 +8818,10 @@ SDValue SITargetLowering::lowerScalarBF16FAdd(SDValue Op,
 
   SDValue LHS = WidenOperand(Op.getOperand(0));
   SDValue RHS = WidenOperand(Op.getOperand(1));
-  SDValue Add =
-      DAG.getNode(ISD::FADD, DL, MVT::v2bf16, LHS, RHS, Op->getFlags());
+  SDValue Result =
+      DAG.getNode(Op.getOpcode(), DL, MVT::v2bf16, LHS, RHS, Op->getFlags());
 
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::bf16, Add,
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::bf16, Result,
                      DAG.getConstant(0, DL, MVT::i32));
 }
 
@@ -13340,8 +13343,7 @@ SDValue SITargetLowering::widenLoad(LoadSDNode *Ld,
   SDValue NewLoad = DAG.getLoad(
       ISD::UNINDEXED, ISD::NON_EXTLOAD, MVT::i32, SL, Ld->getChain(), Ptr,
       Ld->getOffset(), Ld->getPointerInfo(), MVT::i32, Ld->getAlign(),
-      Ld->getMemOperand()->getFlags(), Ld->getAAInfo(),
-      nullptr); // Drop ranges
+      Ld->getMemOperand()->getFlags(), Ld->getAAInfo()); // Drop ranges
 
   EVT TruncVT = EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits());
   if (MemVT.isFloatingPoint()) {
@@ -20580,7 +20582,9 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   auto SSID = RMW->getSyncScopeID();
   bool HasSystemScope =
       SSID == SyncScope::System ||
-      SSID == RMW->getContext().getOrInsertSyncScopeID("one-as");
+      SSID == RMW->getContext().getOrInsertSyncScopeID(*getAtomicScopeIRString(
+                  getTargetMachine().getTargetTriple(), AtomicScope::System,
+                  /*OneAddressSpace=*/true));
 
   auto Op = RMW->getOperation();
   switch (Op) {

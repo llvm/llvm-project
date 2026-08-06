@@ -2833,16 +2833,22 @@ foreach dim = 1...5 in {
           [llvm_i1_ty],                     // Flag for cache_hint
           [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
 
-    // Intrinsics for TMA Copy with reduction
-    foreach red_op = ["add", "min", "max", "inc", "dec", "and", "or", "xor"] in
-      def int_nvvm_cp_async_bulk_tensor_reduce_ # red_op # _ # mode # _ # dim # d :
-        DefaultAttrsIntrinsicFlags<[],
-            !listconcat([llvm_shared_ptr_ty,  // src_smem_ptr
-                         llvm_ptr_ty],        // tensormap_ptr
-                         tensor_dim_args,     // actual tensor dims
-                        [llvm_i64_ty]),       // cache_hint
-          [llvm_i1_ty],                       // Flag for cache_hint
-          [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>]>;
+    defvar reduce_params =
+        !listconcat([llvm_shared_ptr_ty, // src_smem_ptr
+                     llvm_ptr_ty],       // tensormap_ptr
+                    tensor_dim_args,     // actual tensor dims
+                    [llvm_i64_ty]);      // cache_hint
+    defvar red_op_idx = !size(reduce_params);
+    def int_nvvm_cp_async_bulk_tensor_reduce_ # mode # _ # dim # d :
+      DefaultAttrsIntrinsicFlags<[],
+        reduce_params,
+        [llvm_i32_ty,    // reduction operation
+         llvm_i1_ty],    // Flag for cache_hint
+        [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+        // Allowed values for red_op are {0..7} i.e. [0, 8).
+        Range<ArgIndex<red_op_idx>, 0, 8>,
+        ArgInfo<ArgIndex<red_op_idx>, [ArgName<"red_op">,
+        ImmArgPrinter<"printTMAReductionOp">]>]>;
   }
 }
 

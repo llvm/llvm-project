@@ -20,6 +20,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -30,6 +31,7 @@
 
 namespace clang::lifetimes::internal {
 
+class FactsGenerator;
 class LoanPropagationAnalysis;
 
 using FactID = utils::ID<struct FactTag>;
@@ -390,6 +392,15 @@ public:
 
   unsigned getNumFacts() const { return NextFactID.Value; }
 
+  /// Returns the origins that are referenced from more than one basic block.
+  /// Only those need to survive block boundaries in the dataflow analyses; the
+  /// rest are block-local.
+  const llvm::BitVector &getPersistentOrigins() const {
+    assert(PersistentOrigins.size() == OriginMgr.getNumOrigins() &&
+           "persistent origins have not been computed");
+    return PersistentOrigins;
+  }
+
   LoanManager &getLoanMgr() { return LoanMgr; }
   const LoanManager &getLoanMgr() const { return LoanMgr; }
   OriginManager &getOriginMgr() { return OriginMgr; }
@@ -402,12 +413,26 @@ public:
   void setThisCapturedByLambda() { IsThisCapturedByLambda = true; }
 
 private:
+  /// Classifies every origin as persistent or block-local. Called by
+  /// `FactsGenerator` once all facts and origins have been created.
+  void computePersistentOrigins(const CFG &Cfg);
+
+  friend class FactsGenerator;
+
   FactID NextFactID{0};
   LoanManager LoanMgr;
   OriginManager OriginMgr;
   /// Facts for each CFG block, indexed by block ID.
   llvm::SmallVector<llvm::SmallVector<const Fact *>> BlockToFacts;
   llvm::BumpPtrAllocator FactAllocator;
+  /// Bit vector indexed by origin ID. If set, the origin is referenced from
+  /// more than one basic block and must participate in join operations. If
+  /// unset, the origin is block-local and can be discarded at block
+  /// boundaries.
+  ///
+  /// Shared by every analysis so that they all agree on which origins cross
+  /// block boundaries.
+  llvm::BitVector PersistentOrigins;
 
   /// Set of field declarations that are explicitly or init-captured in any
   /// lambda within the analyzed function.

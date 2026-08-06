@@ -16,6 +16,7 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOMPATIBILITYANALYSIS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOMPATIBILITYANALYSIS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -27,6 +28,7 @@
 
 namespace llvm {
 class Constant;
+class TargetLibraryInfo;
 class Value;
 } // namespace llvm
 
@@ -289,6 +291,21 @@ bool isAbsorbableCopyableFMulOrFAdd(const InstructionsState &S, Value *V);
 /// when the operands are built.
 bool hasOnlyAbsorbableCopyableFMulOrFAdds(ArrayRef<Value *> VL);
 
+/// \returns analysis of the Instructions in \p VL described in
+/// InstructionsState, the Opcode that we suppose the whole list
+/// could be vectorized even if its structure is diverse.
+InstructionsState getSameOpcode(ArrayRef<Value *> VL,
+                                const TargetLibraryInfo &TLI);
+
+/// \returns the main or alternate operation from \p S matching \p I, together
+/// with the operands of \p I adjusted to the selected operation.
+std::pair<Instruction *, SmallVector<Value *>>
+convertTo(Instruction *I, const InstructionsState &S);
+
+/// Checks if the specified instruction \p I is an alternate operation for
+/// the given \p MainOp and \p AltOp instructions.
+bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
+                            Instruction *AltOp, const TargetLibraryInfo &TLI);
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOMPATIBILITYANALYSIS_H

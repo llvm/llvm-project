@@ -369,6 +369,7 @@ features cannot lower the translation-unit ABI level;
 
 ### Bug Fixes in This Version
 
+- Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
@@ -378,6 +379,7 @@ features cannot lower the translation-unit ABI level;
   non-type template parameter. (#GH212351)
 - Fixed an assertion crash when instantiating a nested requirement with an invalid constraint. (#GH213575)
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
+- Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -396,7 +398,6 @@ features cannot lower the translation-unit ABI level;
   the `sized_by`/`sized_by_or_null` attributes. Because `sized_by` and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
-- Propagate attributes on redeclarations across modules.
 
 #### Bug Fixes to C++ Support
 
@@ -496,7 +497,16 @@ features cannot lower the translation-unit ABI level;
 
 #### CUDA/HIP Language Changes
 
+- HIP compilations now add the `include/libhipcxx` directory from the selected
+  ROCm installation to the header search path when it exists. This allows
+  libhipcxx headers to be included with paths such as `<cuda/std/atomic>`.
+  The `-nogpuinc` option disables this path together with the other HIP include
+  paths.
+
 #### CUDA Support
+
+- Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
+  (`__cudaRegisterLinkedBinary`).
 
 #### AIX Support
 
