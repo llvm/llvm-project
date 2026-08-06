@@ -60,9 +60,11 @@ private:
   bool isBundleCandidate(const MachineInstr &MI) const;
   bool isDependentLoad(const MachineInstr &MI) const;
   bool canBundle(const MachineInstr &MI, const MachineInstr &NextMI) const;
-  void reorderLoads(MachineBasicBlock &MBB,
-                    MachineBasicBlock::instr_iterator &BundleStart,
-                    MachineBasicBlock::instr_iterator Next);
+  void addDefs(MachineInstr &MI);
+  MachineBasicBlock::instr_iterator
+  reorderLoads(MachineBasicBlock &MBB,
+               MachineBasicBlock::instr_iterator BundleStart,
+               MachineBasicBlock::instr_iterator Next);
 };
 
 } // End anonymous namespace.
@@ -142,18 +144,20 @@ bool SIPostRABundler::canBundle(const MachineInstr &MI,
          !isDependentLoad(NextMI);
 }
 
-static Register getDef(MachineInstr &MI) {
-  assert(MI.getNumExplicitDefs() > 0);
-  return MI.defs().begin()->getReg();
+void SIPostRABundler::addDefs(MachineInstr &MI) {
+  for (MachineOperand &Def : MI.defs())
+    if (Def.isReg())
+      Defs.insert(Def.getReg());
 }
 
-void SIPostRABundler::reorderLoads(
-    MachineBasicBlock &MBB, MachineBasicBlock::instr_iterator &BundleStart,
-    MachineBasicBlock::instr_iterator Next) {
+MachineBasicBlock::instr_iterator
+SIPostRABundler::reorderLoads(MachineBasicBlock &MBB,
+                              MachineBasicBlock::instr_iterator BundleStart,
+                              MachineBasicBlock::instr_iterator Next) {
   // Don't reorder ALU, store or scalar clauses.
   if (!BundleStart->mayLoad() || BundleStart->mayStore() ||
       SIInstrInfo::isSMRD(*BundleStart) || !BundleStart->getNumExplicitDefs())
-    return;
+    return BundleStart;
 
   // Search to find the usage distance of each defined register in the clause.
   const unsigned SearchDistance = std::max(Defs.size(), (size_t)100);
@@ -175,7 +179,7 @@ void SIPostRABundler::reorderLoads(
   }
 
   if (UseDistance.empty())
-    return;
+    return BundleStart;
 
   LLVM_DEBUG(dbgs() << "Try bundle reordering\n");
 
@@ -189,11 +193,12 @@ void SIPostRABundler::reorderLoads(
     if (II->isKill() || II->hasOrderedMemoryRef() ||
         (!II->getNumExplicitDefs() && !II->isMetaInstruction())) {
       LLVM_DEBUG(dbgs() << " Abort\n");
-      return;
+      return BundleStart;
     }
     unsigned NewOrder = MaxDistance;
-    if (II->getNumExplicitDefs())
-      NewOrder = UseDistance.lookup_or(getDef(*II), NewOrder);
+    for (const MachineOperand &Def : II->defs())
+      if (Def.isReg())
+        NewOrder = UseDistance.lookup_or(Def.getReg(), NewOrder);
     LLVM_DEBUG(dbgs() << "  Order: " << NewOrder << "," << NativeOrder
                       << ", MI: " << *II);
     unsigned Order = (NewOrder << 16 | NativeOrder);
@@ -207,7 +212,7 @@ void SIPostRABundler::reorderLoads(
   // No reordering found.
   if (!Reordered) {
     LLVM_DEBUG(dbgs() << " No changes\n");
-    return;
+    return BundleStart;
   }
 
   // Apply sort on new ordering.
@@ -235,11 +240,15 @@ void SIPostRABundler::reorderLoads(
         break;
       }
 
-      Register DefReg = getDef(*MI);
+      // canBundle() prevents def->use and def->def chains within a bundle;
+      // however, we need to check for use->def clobbering.
       bool DefRegHasUse = false;
       for (auto SearchIt = std::next(It);
            SearchIt != Schedule.end() && !DefRegHasUse; ++SearchIt)
-        DefRegHasUse = SearchIt->first->readsRegister(DefReg, TRI);
+        DefRegHasUse = llvm::any_of(MI->defs(), [&](const MachineOperand &Def) {
+          return Def.isReg() &&
+                 SearchIt->first->readsRegister(Def.getReg(), TRI);
+        });
       if (DefRegHasUse) {
         // A future use would be clobbered; try next instruction in the
         // schedule.
@@ -275,8 +284,8 @@ void SIPostRABundler::reorderLoads(
   for (MachineInstr *MI : Clause)
     MI->moveBefore(&*Next);
 
-  // Update start of bundle.
-  BundleStart = Clause[0]->getIterator();
+  // Return new start of bundle.
+  return Clause[0]->getIterator();
 }
 
 bool SIPostRABundlerLegacy::runOnMachineFunction(MachineFunction &MF) {
@@ -320,9 +329,7 @@ bool SIPostRABundler::run(MachineFunction &MF) {
         continue;
 
       assert(Defs.empty());
-
-      if (I->getNumExplicitDefs() != 0)
-        Defs.insert(getDef(*I));
+      addDefs(*I);
 
       MachineBasicBlock::instr_iterator BundleStart = I;
       MachineBasicBlock::instr_iterator BundleEnd = I;
@@ -333,8 +340,7 @@ bool SIPostRABundler::run(MachineFunction &MF) {
         assert(BundleEnd != I);
         if (canBundle(*BundleEnd, *I)) {
           BundleEnd = I;
-          if (I->getNumExplicitDefs() != 0)
-            Defs.insert(getDef(*I));
+          addDefs(*I);
           ++ClauseLength;
         } else if (!I->isMetaInstruction() ||
                    I->getOpcode() == AMDGPU::SCHED_BARRIER) {
@@ -386,7 +392,7 @@ bool SIPostRABundler::run(MachineFunction &MF) {
           BundleUsedRegUnits.reset();
         }
 
-        reorderLoads(MBB, BundleStart, Next);
+        BundleStart = reorderLoads(MBB, BundleStart, Next);
         finalizeBundle(MBB, BundleStart, Next);
       }
 
