@@ -432,6 +432,23 @@ void CIRGenModule::emitDeferred() {
   curDeclsToEmit.swap(deferredDeclsToEmit);
 
   for (const GlobalDecl &d : curDeclsToEmit) {
+    // Functions declared with the sycl_kernel_entry_point attribute are
+    // emitted normally during host compilation. During device compilation, a
+    // SYCL kernel caller offload entry point function is generated and emitted
+    // in place of each of these functions.
+    if (const auto *fd = d.getDecl()->getAsFunction()) {
+      if (langOpts.SYCLIsDevice && fd->hasAttr<SYCLKernelEntryPointAttr>() &&
+          fd->isDefined()) {
+        // Functions with an invalid sycl_kernel_entry_point attribute are
+        // ignored during device compilation.
+        if (!fd->getAttr<SYCLKernelEntryPointAttr>()->isInvalidAttr())
+          errorNYI(fd->getSourceRange(),
+                   "SYCL kernel caller offload entry point");
+        // Do not emit the sycl_kernel_entry_point attributed function.
+        continue;
+      }
+    }
+
     emitGlobalDecl(d);
 
     // If we found out that we need to emit more decls, do that recursively.
@@ -2036,6 +2053,10 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
   // Iterate through all calls of the no-proto function.
   std::optional<mlir::SymbolTable::UseRange> symUses =
       oldFn.getSymbolUses(oldFn->getParentOp());
+
+  if (!symUses)
+    return;
+
   for (const mlir::SymbolTable::SymbolUse &use : symUses.value()) {
     mlir::OpBuilder::InsertionGuard guard(builder);
 
@@ -2347,7 +2368,7 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
       getTypes().getCIRGenRecordLayout(currentClass);
 
   // The field is declared directly in this class.
-  if (field->getParent() == currentClass) {
+  if (astContext.isSameEntity(field->getParent(), currentClass)) {
     int32_t fieldIdx;
     if (currentClass->isUnion()) {
       // For unions, getCIRFieldNo always returns 0 for every union member (all
@@ -3768,25 +3789,8 @@ void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
     const auto *vd = cast<VarDecl>(d);
     linkage = getCIRLinkageVarDefinition(vd);
   }
-
-  // Aliases that target weak symbols must themselves be marked weak.
-  if (d->hasAttr<WeakAttr>() || d->hasAttr<WeakRefAttr>() ||
-      d->isWeakImported())
-    linkage = cir::GlobalLinkageKind::WeakAnyLinkage;
-
-  // Create the alias op. If there is an existing declaration with the same
-  // name, erase it: any references to it via flat symbol reference will
-  // automatically resolve to the new alias.
-  if (entry) {
-    eraseGlobalSymbol(entry);
-    entry->erase();
-  }
-
-  // Aliases are always definitions, so the MLIR visibility should match the
-  // linkage rather than defaulting to private.
-  mlir::SymbolTable::Visibility visibility =
-      getMLIRVisibilityFromCIRLinkage(linkage);
-
+  //
+  // Create the alias op.
   // TODO(cir): Make GlobalAlias a separate op.
   cir::CIRGlobalValueInterface alias =
       isFunction ? mlir::cast<cir::CIRGlobalValueInterface>(
@@ -3796,6 +3800,30 @@ void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
                            .getOperation())
                  : mlir::cast<cir::CIRGlobalValueInterface>(
                        createGlobalOp(loc, mangledName, declTy).getOperation());
+
+  // Create the alias op. If there is an existing declaration with the same
+  // name, erase it: any references to it via flat symbol reference will
+  // automatically resolve to the new alias.
+  // However, function aliases actually change its type, so we have to replace
+  // uses of it.
+  if (entry) {
+    if (isFunction)
+      replaceUsesOfNonProtoTypeWithRealFunction(
+          entry, mlir::cast<cir::FuncOp>(alias.getOperation()));
+    eraseGlobalSymbol(entry);
+    entry->erase();
+  }
+
+  // Aliases that target weak symbols must themselves be marked weak.
+  if (d->hasAttr<WeakAttr>() || d->hasAttr<WeakRefAttr>() ||
+      d->isWeakImported())
+    linkage = cir::GlobalLinkageKind::WeakAnyLinkage;
+
+  // Aliases are always definitions, so the MLIR visibility should match the
+  // linkage rather than defaulting to private.
+  mlir::SymbolTable::Visibility visibility =
+      getMLIRVisibilityFromCIRLinkage(linkage);
+
   alias.setAliasee(aa->getAliasee());
   alias.setLinkage(linkage);
   mlir::SymbolTable::setSymbolVisibility(alias, visibility);
@@ -3935,19 +3963,6 @@ void CIRGenModule::errorUnsupported(const Decl *d, llvm::StringRef type) {
   unsigned diagId = diags.getCustomDiagID(DiagnosticsEngine::Error,
                                           "cannot compile this %0 yet");
   diags.Report(astContext.getFullLoc(d->getLocation()), diagId) << type;
-}
-
-void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,
-                                   cir::LabelOp label) {
-  [[maybe_unused]] auto result =
-      blockAddressInfoToLabel.try_emplace(blockInfo, label);
-  assert(result.second &&
-         "attempting to map a blockaddress info that is already mapped");
-}
-
-cir::LabelOp
-CIRGenModule::lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo) {
-  return blockAddressInfoToLabel.lookup(blockInfo);
 }
 
 mlir::Operation *

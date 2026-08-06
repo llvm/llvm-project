@@ -466,8 +466,7 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[UMIN]], 4294967295
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[UMIN]] to i32
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp slt i32 [[TMP10]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp slt i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i64 [[UMIN]], 4294967295
 ; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP9]], [[TMP13]]
@@ -1117,4 +1116,4 @@ attributes #4 = { "target-cpu"="haswell" }
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.vectorize.width", i32 2}
 !2 = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable"}
