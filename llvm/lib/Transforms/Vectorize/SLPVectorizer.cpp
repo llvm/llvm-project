@@ -1481,7 +1481,7 @@ public:
     CompressEntryToData.clear();
     ExternalUses.clear();
     ExternalUsesAsOriginalScalar.clear();
-    DE.clearForDeleteTree();
+    DE.clearTreeState();
     ExternalUsesWithNonUsers.clear();
     RTChecks.clear();
     HasRuntimeCheckableBlockers = false;
@@ -3327,10 +3327,39 @@ private:
     DenseMap<Value *, SmallVector<DeferredExtractType, 2>>
         DeferredScalarsToExtract;
 
-    void clearForDeleteTree() {
+    void clearTreeState() {
       ExternalUsesAsExtract.clear();
       ExternalUsesAsRematCostTmp.clear();
       ExternalUsesAsExtractCostTmp.clear();
+    }
+
+    bool isExternalUseAsExtract(Value *V) const {
+      return ExternalUsesAsExtract.contains(V);
+    }
+
+    void addDeferredScalarToExtract(Value *Scalar, Value *NewInst,
+                                    llvm::User *User) {
+      DeferredScalarsToExtract[Scalar].emplace_back(Scalar, NewInst, User);
+    }
+
+    bool hasDeferredScalarToExtract(Value *Scalar) const {
+      return DeferredScalarsToExtract.contains(Scalar);
+    }
+
+    std::optional<InstructionCost>
+    getExternalUsesAsExtractCost(const Value *V) const {
+      auto It = ExternalUsesAsExtractCost.find(V);
+      if (It == ExternalUsesAsExtractCost.end())
+        return std::nullopt;
+      return It->second;
+    }
+
+    std::optional<InstructionCost>
+    getExternalUsesAsRematCost(const Value *V) const {
+      auto It = ExternalUsesAsRematCost.find(V);
+      if (It == ExternalUsesAsRematCost.end())
+        return std::nullopt;
+      return It->second;
     }
 
     void eraseInstruction(Instruction *I, BoUpSLP &R) {
@@ -17362,14 +17391,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           if (UsedScalars.test(I))
             continue;
           if (auto *Inst = dyn_cast<Instruction>(UniqueValues[I])) {
-            if (auto It = DE.ExternalUsesAsExtractCost.find(Inst);
-                It != DE.ExternalUsesAsExtractCost.end()) {
-              RematAdjustment += It->second;
+            if (std::optional<InstructionCost> Cost =
+                    DE.getExternalUsesAsExtractCost(Inst)) {
+              RematAdjustment += *Cost;
               continue;
             }
-            if (auto It = DE.ExternalUsesAsRematCost.find(Inst);
-                It != DE.ExternalUsesAsRematCost.end()) {
-              RematAdjustment += It->second;
+            if (std::optional<InstructionCost> Cost =
+                    DE.getExternalUsesAsRematCost(Inst)) {
+              RematAdjustment += *Cost;
               continue;
             }
           }
@@ -25931,7 +25960,7 @@ Value *BoUpSLP::vectorizeTree(
       auto *EI = dyn_cast<ExtractElementInst>(Replacement);
       auto *RI = Inst;
       assert(EI && RI && "Expected to find underlying instructions");
-      if (!DE.ExternalUsesAsExtract.contains(RI) || DE.hasExtract(RI))
+      if (!DE.isExternalUseAsExtract(RI) || DE.hasExtract(RI))
         return;
       DE.transferExtractCost(Inst, RI);
       DE.logExtractRematPair(EI, RI);
@@ -26007,8 +26036,8 @@ Value *BoUpSLP::vectorizeTree(
                "Extractelements should not be replaced.");
         Scalar->replaceAllUsesWith(NewInst);
       }
-      if (DE.ExternalUsesAsExtract.contains(Scalar))
-        DE.DeferredScalarsToExtract[Scalar].emplace_back(Scalar, NewInst, User);
+      if (DE.isExternalUseAsExtract(Scalar))
+        DE.addDeferredScalarToExtract(Scalar, NewInst, User);
 
       if (IsDeferredScalar)
         TrackDeferredExtract(dyn_cast<Instruction>(Scalar), NewInst, User);
@@ -26109,9 +26138,8 @@ Value *BoUpSLP::vectorizeTree(
             !isa<StructType>(NewInst->getType())) {
           User->replaceAllUsesWith(NewInst);
           eraseInstruction(cast<Instruction>(User));
-        } else if (DE.ExternalUsesAsExtract.contains(Scalar)) {
-          DE.DeferredScalarsToExtract[Scalar].emplace_back(Scalar, NewInst,
-                                                           User);
+        } else if (DE.isExternalUseAsExtract(Scalar)) {
+          DE.addDeferredScalarToExtract(Scalar, NewInst, User);
         } else {
           User->replaceUsesOfWith(Scalar, NewInst);
         }
@@ -26279,7 +26307,7 @@ Value *BoUpSLP::vectorizeTree(
         continue;
       if (!isa<Instruction>(Scalar) || Entry->isCopyableElement(Scalar))
         continue;
-      if (DE.DeferredScalarsToExtract.contains(Scalar) || DE.hasRemat(Scalar))
+      if (DE.hasDeferredScalarToExtract(Scalar) || DE.hasRemat(Scalar))
         continue;
 #ifndef NDEBUG
       Type *Ty = Scalar->getType();
