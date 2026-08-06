@@ -910,8 +910,7 @@ void OmpStructureChecker::CheckDirectiveSpelling(
     }
     llvm::StringRef name{llvm::omp::getOpenMPDirectiveName(id, v)};
     auto [kind, versions]{llvm::omp::getOpenMPDirectiveKindAndVersions(name)};
-    if (kind != llvm::omp::Directive::OMPD_ordered &&
-        kind != llvm::omp::Directive::OMPD_ordered_blockassoc &&
+    if (kind != llvm::omp::Directive::OMPD_ordered_blockassoc &&
         kind != llvm::omp::Directive::OMPD_ordered_standalone) {
       assert(kind == id && "Directive kind mismatch");
     }
