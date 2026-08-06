@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/Rematerializer.h"
@@ -300,11 +301,10 @@ unsigned GCNSchedStrategy::getStructuralStallCycles(SchedBoundary &Zone,
   }
 
   // Query HazardRecognizer for sequence-dependent hazard penalties.
-  // AMDGPU currently installs GCNHazardRecognizer for MI scheduling only in
-  // the post-RA configuration without vreg liveness.
-  if (!DAG->hasVRegLiveness() && Zone.HazardRec &&
-      Zone.HazardRec->isEnabled()) {
-    auto *HR = static_cast<GCNHazardRecognizer *>(Zone.HazardRec);
+  // AMDGPUCoExecSchedStrategy installs a GCNHazardRecognizer in both
+  // pre-RA (PreRA mode) and post-RA configurations.
+  if (Zone.HazardRec && Zone.HazardRec->isEnabled()) {
+    auto *HR = static_cast<GCNHazardRecognizer *>(Zone.HazardRec.get());
     Stall = std::max(Stall, HR->getHazardWaitStates(MI));
   }
 
@@ -1562,7 +1562,7 @@ bool PreRARematStage::initGCNSchedStage() {
       continue;
     SlotIndex UseIdx = DAG.LIS->getInstructionIndex(*UseMI).getRegSlot(true);
     SlotIndex RefIdx =
-        DAG.LIS->getInstructionIndex(*CandReg.DefMI).getRegSlot(true);
+        DAG.LIS->getInstructionIndex(*CandReg.getLastDef()).getRegSlot(true);
     if (llvm::any_of(CandReg.Dependencies, [&](RegisterIdx DepRegIdx) {
           const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
           Register DepDefReg = DepReg.getDefReg();
@@ -2359,7 +2359,7 @@ void RewriteMFMAFormStage::resetRewriteCandsToVGPR(
 bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
   if (!static_cast<const SIInstrInfo *>(DAG.TII)->isMAI(*MI))
     return false;
-  if (AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode()) == -1)
+  if (AMDGPU::getAGPRFormOp(MI->getOpcode()) == -1)
     return false;
   // Reject candidates whose users force an unavoidable bridge copy.
   Register DstReg = MI->getOperand(0).getReg();
@@ -2397,7 +2397,7 @@ bool RewriteMFMAFormStage::initHeuristics(
       if (!isRewriteCandidate(&MI))
         continue;
 
-      int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode());
+      int ReplacementOp = AMDGPU::getAGPRFormOp(MI.getOpcode());
       assert(ReplacementOp != -1);
 
       RewriteCands.push_back({&MI, MI.getOpcode()});
@@ -2657,7 +2657,7 @@ bool RewriteMFMAFormStage::rewrite(
   }
 
   for (auto &[MI, OriginalOpcode] : RewriteCands) {
-    int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode());
+    int ReplacementOp = AMDGPU::getAGPRFormOp(MI->getOpcode());
     if (ReplacementOp == -1)
       continue;
     MI->setDesc(TII->get(ReplacementOp));
@@ -2817,6 +2817,9 @@ bool RewriteMFMAFormStage::rewrite(
     }
 
     DenseSet<MachineOperand *> &DstRegSet = ReplaceMap[DstReg];
+    // One AGPR→VGPR copy per dst register, shared by all same-block uses.
+    Register SameBlockCopyReg;
+    MachineInstr *EarliestSameBlockUse = nullptr;
     for (MachineOperand *RU : DstReachingUseCopies) {
       MachineBasicBlock *RUBlock = RU->getParent()->getParent();
       // Just keep track of the reaching use of this register by block. After we
@@ -2826,22 +2829,31 @@ bool RewriteMFMAFormStage::rewrite(
         continue;
       }
 
-      // Special case, the use is in the same block as the MFMA. Insert the copy
-      // just before the use.
-      const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
-      const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
-      Register NewUseReg = DAG.MRI.createVirtualRegister(VGPRRC);
+      // Lazily create the copy register on first same-block use.
+      if (!SameBlockCopyReg.isValid()) {
+        const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
+        const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
+        SameBlockCopyReg = DAG.MRI.createVirtualRegister(VGPRRC);
+      }
+
+      // Track the earliest use for copy insertion point.
       MachineInstr *UseInst = RU->getParent();
+      if (!EarliestSameBlockUse ||
+          SlotIndex::isEarlierInstr(
+              DAG.LIS->getInstructionIndex(*UseInst),
+              DAG.LIS->getInstructionIndex(*EarliestSameBlockUse)))
+        EarliestSameBlockUse = UseInst;
+      RU->setReg(SameBlockCopyReg);
+    }
+
+    // Insert the copy before the earliest same-block use.
+    if (SameBlockCopyReg.isValid()) {
       MachineInstrBuilder VGPRCopy =
-          BuildMI(*UseInst->getParent(), UseInst->getIterator(),
-                  UseInst->getDebugLoc(), TII->get(TargetOpcode::COPY))
-              .addDef(NewUseReg, {}, 0)
+          BuildMI(*EarliestSameBlockUse->getParent(),
+                  EarliestSameBlockUse->getIterator(), DebugLoc(),
+                  TII->get(TargetOpcode::COPY), SameBlockCopyReg)
               .addUse(DstReg, {}, 0);
       DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
-      // Since we know this use has only one reaching def, we can replace the
-      // use reg.
-      RU->setReg(NewUseReg);
-      // Track the copy source operand for r eplacement.
       DstRegSet.insert(&VGPRCopy->getOperand(1));
     }
 
@@ -2993,9 +3005,10 @@ bool PreRARematStage::ScoredRemat::maybeBeneficial(
 
 PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
     MachineFunction &MF, const GCNScheduleDAGMILive &DAG) {
-  assert(DAG.MLI && "MLI not defined in DAG");
   MachineBranchProbabilityInfo MBPI;
-  MachineBlockFrequencyInfo MBFI(MF, MBPI, *DAG.MLI);
+  MachineCycleInfo MCI;
+  MCI.compute(MF);
+  MachineBlockFrequencyInfo MBFI(MF, MBPI, MCI);
 
   const unsigned NumRegions = DAG.Regions.size();
   MinFreq = MBFI.getEntryFreq().getFrequency();

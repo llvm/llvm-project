@@ -1590,11 +1590,23 @@ public:
   }
   LLVM_ABI SDValue getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                             SDValue Ptr, MachineMemOperand *MMO);
+  LLVM_ABI SDValue getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
+                            SDValue Ptr, SDValue Offset,
+                            MachineMemOperand *MMO);
+  LLVM_ABI SDValue getTruncStore(
+      SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr, SDValue Offset,
+      MachinePointerInfo PtrInfo, EVT SVT, Align Alignment,
+      MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
+      const AAMDNodes &AAInfo = AAMDNodes());
   LLVM_ABI SDValue
   getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
                 MachinePointerInfo PtrInfo, EVT SVT, Align Alignment,
                 MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
                 const AAMDNodes &AAInfo = AAMDNodes());
+  LLVM_ABI SDValue getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
+                                 SDValue Ptr, SDValue Offset, EVT SVT,
+                                 MachineMemOperand *MMO);
+
   inline SDValue
   getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
                 MachinePointerInfo PtrInfo, EVT SVT,

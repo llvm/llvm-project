@@ -1368,7 +1368,6 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk16gslice6__initEm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk16locale14__install_ctorERKS0_PNS0_5facetEl', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk16locale2id5__getEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk16locale2id9__next_idE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk16locale3allE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk16locale4noneE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk16locale4timeE', 'size': 4, 'type': 'OBJECT'}

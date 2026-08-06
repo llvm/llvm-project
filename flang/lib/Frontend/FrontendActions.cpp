@@ -760,6 +760,10 @@ void CodeGenAction::generateLLVMIR() {
   config.PreferVectorWidth = opts.PreferVectorWidth;
 
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::OpenACC))
+    config.EnableOpenACC = true;
+
+  if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP))
     config.EnableOpenMP = true;
 
@@ -1418,6 +1422,8 @@ void CodeGenAction::executeAction() {
 
   targetMachine.Options.MCOptions.AsmVerbose = targetOpts.asmVerbose;
   targetMachine.Options.MCOptions.SplitDwarfFile = codeGenOpts.SplitDwarfFile;
+  targetMachine.Options.MCOptions.CompressDebugSections =
+      codeGenOpts.getCompressDebugSections();
 
   const llvm::Triple &theTriple = targetMachine.getTargetTriple();
 

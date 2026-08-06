@@ -323,8 +323,15 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
         MIB.setInsertPt(*MI->getParent(), MI);
         const GlobalValue *Global = MI->getOperand(1).getGlobal();
         Type *ElementTy = toTypedPointer(GR->getDeducedGlobalValueType(Global));
-        auto *Ty = TypedPointerType::get(ElementTy,
-                                         Global->getType()->getAddressSpace());
+        unsigned AddrSpace = Global->getType()->getAddressSpace();
+        // Function pointers use CodeSectionINTEL storage class in SPIR-V when
+        // the SPV_INTEL_function_pointers extension is enabled.
+        const SPIRVSubtarget &ST = MIB.getMF().getSubtarget<SPIRVSubtarget>();
+        if (isa<Function>(Global) &&
+            ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers))
+          AddrSpace =
+              storageClassToAddressSpace(SPIRV::StorageClass::CodeSectionINTEL);
+        auto *Ty = TypedPointerType::get(ElementTy, AddrSpace);
         SpvType = GR->getOrCreateSPIRVType(
             Ty, MIB, SPIRV::AccessQualifier::ReadWrite, true);
         break;
@@ -374,10 +381,20 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
             RegType.isPointer() &&
             storageClassToAddressSpace(GR->getPointerStorageClass(SpvType)) !=
                 RegType.getAddressSpace()) {
-          const SPIRVSubtarget &ST =
-              MI->getParent()->getParent()->getSubtarget<SPIRVSubtarget>();
-          auto TSC = addressSpaceToStorageClass(RegType.getAddressSpace(), ST);
-          SpvType = GR->changePointerStorageClass(SpvType, TSC, *MI);
+          // Don't correct CodeSectionINTEL back to Function for function
+          // pointer G_GLOBAL_VALUE - the LLVM register has address space 0
+          // but the SPIR-V type was intentionally set to CodeSectionINTEL.
+          bool SkipCorrection =
+              MI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE &&
+              GR->getPointerStorageClass(SpvType) ==
+                  SPIRV::StorageClass::CodeSectionINTEL;
+          if (!SkipCorrection) {
+            const SPIRVSubtarget &ST =
+                MI->getParent()->getParent()->getSubtarget<SPIRVSubtarget>();
+            auto TSC =
+                addressSpaceToStorageClass(RegType.getAddressSpace(), ST);
+            SpvType = GR->changePointerStorageClass(SpvType, TSC, *MI);
+          }
         }
         GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
       }
@@ -684,6 +701,14 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         MIB.buildAnd(MaskedReg, SrcReg, MaskReg);
 
         if (NewSrcWidth == NewDstWidth) {
+          // Rekey OrigWidth from DstReg to MaskedReg so widenSignSensitiveOps
+          // still sees the narrow original width after replaceRegWith.
+          if (auto It = SignSensitiveInfo.OrigWidth.find(DstReg);
+              It != SignSensitiveInfo.OrigWidth.end()) {
+            unsigned W = It->second;
+            SignSensitiveInfo.OrigWidth.erase(It);
+            SignSensitiveInfo.OrigWidth.try_emplace(MaskedReg, W);
+          }
           MRI.replaceRegWith(DstReg, MaskedReg);
           TruncToRemove.push_back(&MI);
         } else {
@@ -721,9 +746,13 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register Reg = MI.getOperand(1).getReg();
         MIB.setInsertPt(*MI.getParent(), MI.getIterator());
         Type *ElementTy = getMDOperandAsType(MI.getOperand(2).getMetadata(), 0);
-        SPIRVTypeInst AssignedPtrType = GR->getOrCreateSPIRVPointerType(
-            ElementTy, MI,
-            addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST));
+        auto SC = addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST);
+        if (SC == SPIRV::StorageClass::Function &&
+            isa<FunctionType>(ElementTy) &&
+            ST->canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers))
+          SC = SPIRV::StorageClass::CodeSectionINTEL;
+        SPIRVTypeInst AssignedPtrType =
+            GR->getOrCreateSPIRVPointerType(ElementTy, MI, SC);
         // The intrinsic also carries vector-of-pointer values produced by
         // scalarized vector GEPs; wrap the pointer in OpTypeVector to match
         // the vreg's LLT.
