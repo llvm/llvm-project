@@ -536,14 +536,6 @@ static InitSliceInfo getInitSliceInfo(MLIRContext *context,
 
 /// Returns true if `combinerOp` accumulates into `accumulator` by subtracting
 /// the reduced value from it, i.e. it reduces the negated inputs.
-///
-/// Subtraction is not commutative, so this is a reduction only when the
-/// accumulator is the left-hand side. Such a reduction starts from the additive
-/// neutral element, but its partial results have to be combined with an
-/// addition instead of with the combiner itself: each of the `N` partial
-/// results `p_i` holds the negated sum of its own tile, so the reduced value
-/// `init - sum(x)` is `init + p_0 + ... + p_N-1` and not
-/// `init - p_0 - ... - p_N-1`.
 static bool isSubtractingAccumulation(Operation *combinerOp,
                                       Value accumulator) {
   if (!isa<arith::SubFOp, arith::SubIOp>(combinerOp))
