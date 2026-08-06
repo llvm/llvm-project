@@ -807,10 +807,10 @@ static Constant *getConstantFloat(const ArrayRef<APFloat> Values,
 
   assert(Ty->isSingleValueType() &&
          "Type must either be a scalar or a vector.");
-  assert((!Ty->isVectorType() || Ty->isScalableTy() ||
+  assert((!Ty->isVectorTy() || Ty->isScalableTy() ||
           Values.size() == cast<FixedVectorType>(Ty)->getNumElements()) &&
          "Unexpected number of constant values.");
-  assert((Ty->isVectorType() || Values.size() == 1) &&
+  assert((Ty->isVectorTy() || Values.size() == 1) &&
          "Expected exactly one constant value");
 
   Type *ElemTy = Ty->getScalarType();
@@ -2008,7 +2008,6 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
   // max vector size is 16, and sincos will generate two results.
   SmallVector<APFloat, 16> Val0, Val1;
   int FuncVecSize = getVecSize(FInfo);
-  bool hasTwoResults = (FInfo.getId() == AMDGPULibFunc::EI_SINCOS);
   if (FuncVecSize == 1) {
     if (!evaluateScalarMathFunc(FInfo, Val0.emplace_back(0.0),
                                 Val1.emplace_back(0.0), copr0, copr1)) {
@@ -2029,10 +2028,9 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
 
   Constant *nval0 = getConstantFloat(Val0, aCI->getType());
 
+  // sincos
+  bool hasTwoResults = (FInfo.getId() == AMDGPULibFunc::EI_SINCOS);
   if (hasTwoResults) {
-    // sincos
-    assert(FInfo.getId() == AMDGPULibFunc::EI_SINCOS &&
-           "math function with ptr arg not supported yet");
     Constant *nval1 = getConstantFloat(Val1, aCI->getType());
     new StoreInst(nval1, aCI->getArgOperand(1), aCI->getIterator());
   }
