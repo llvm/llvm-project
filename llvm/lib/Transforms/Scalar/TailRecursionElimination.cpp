@@ -75,6 +75,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -84,6 +85,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <cmath>
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "tailcallelim"
 
@@ -440,6 +442,54 @@ static bool canTransformAccumulatorRecursion(Instruction *I, CallInst *CI) {
   return true;
 }
 
+/// Is \p I its own inverse, applied to a single value? Sets \p OpIdx to the
+/// operand that value occupies.
+///
+/// Not here: `xor X, -1` is already an ordinary binary accumulator, and
+/// idempotent operations (fabs) cancel to "applied at all", not to a parity.
+static bool isInvolution(const Instruction *I, unsigned &OpIdx) {
+  switch (I->getOpcode()) {
+  case Instruction::FNeg:
+    OpIdx = 0;
+    return true;
+  case Instruction::Sub:
+    // Integer negation; `sub` is neither associative nor commutative.
+    if (match(I->getOperand(0), m_Zero())) {
+      OpIdx = 1;
+      return true;
+    }
+    return false;
+  default:
+    return false;
+  }
+}
+
+/// Rebuild the involution \p Opcode over \p V. Built fresh, not cloned: the
+/// folded instruction is erased, and its flags would not hold for this value
+/// anyway (`sub nsw 0, INT_MIN` is poison).
+static Value *buildInvolution(unsigned Opcode, Value *V, IRBuilderBase &B) {
+  switch (Opcode) {
+  case Instruction::FNeg:
+    return B.CreateFNeg(V);
+  case Instruction::Sub:
+    return B.CreateSub(Constant::getNullValue(V->getType()), V);
+  default:
+    llvm_unreachable("not an involution isInvolution() accepts");
+  }
+}
+
+/// Recognize "tail recursion modulo an involution": `return -f(...)`. Not
+/// expressible as accumulator recursion, which needs a binary associative
+/// operator, but a chain of involutions is just a parity.
+static bool canTransformInvolutionRecursion(Instruction *I, CallInst *CI,
+                                            unsigned &OpIdx) {
+  if (!isInvolution(I, OpIdx) || I->getOperand(OpIdx) != CI)
+    return false;
+
+  // The only user of this instruction we allow is a single return instruction.
+  return I->hasOneUse() && isa<ReturnInst>(I->user_back());
+}
+
 namespace {
 class TailRecursionEliminator {
   Function &F;
@@ -479,6 +529,15 @@ class TailRecursionEliminator {
   // The instruction doing the accumulating.
   Instruction *AccumulatorRecursionInstr = nullptr;
 
+  // i1 PHI counting the involutions folded into the loop, parity only. Mutually
+  // exclusive with AccPN: the two cannot share one PHI.
+  PHINode *InvAccPN = nullptr;
+
+  // Which involution InvAccPN counts, as a recipe for buildInvolution. Each
+  // involution applies to one return type, so every site folded in agrees.
+  unsigned InvolutionOpcode = 0;
+  unsigned InvolutionOpIdx = 0;
+
   TailRecursionEliminator(Function &F, const TargetTransformInfo *TTI,
                           AliasAnalysis *AA, OptimizationRemarkEmitter *ORE,
                           DomTreeUpdater &DTU, BlockFrequencyInfo *BFI,
@@ -502,6 +561,10 @@ class TailRecursionEliminator {
   void createTailRecurseLoopHeader(CallInst *CI);
 
   void insertAccumulator(Instruction *AccRecInstr);
+
+  void insertInvolutionAccumulator(Instruction *InvRecInstr, unsigned OpIdx);
+
+  Value *applyAccumulator(Value *V, BasicBlock::iterator InsertPt);
 
   bool eliminateCall(CallInst *CI);
 
@@ -651,6 +714,62 @@ void TailRecursionEliminator::insertAccumulator(Instruction *AccRecInstr) {
   ++NumAccumAdded;
 }
 
+void TailRecursionEliminator::insertInvolutionAccumulator(
+    Instruction *InvRecInstr, unsigned OpIdx) {
+  assert(!InvAccPN && "Trying to insert multiple involution accumulators");
+  assert(!AccPN && "Involution and binary accumulators are mutually exclusive");
+
+  InvolutionOpcode = InvRecInstr->getOpcode();
+  InvolutionOpIdx = OpIdx;
+
+  Type *BoolType = Type::getInt1Ty(F.getContext());
+  pred_iterator PB = pred_begin(HeaderBB), PE = pred_end(HeaderBB);
+  InvAccPN = PHINode::Create(BoolType, std::distance(PB, PE) + 1, "parity.tr");
+  InvAccPN->insertBefore(HeaderBB->begin());
+
+  // As insertAccumulator does for its identity: seed the real entry, and leave
+  // edges from already-eliminated calls untouched.
+  for (pred_iterator PI = PB; PI != PE; ++PI) {
+    BasicBlock *P = *PI;
+    if (P == &F.getEntryBlock())
+      InvAccPN->addIncoming(ConstantInt::getFalse(BoolType), P);
+    else
+      InvAccPN->addIncoming(InvAccPN, P);
+  }
+
+  ++NumAccumAdded;
+}
+
+/// Apply whichever accumulator this run carries to \p V: the binary operation
+/// against AccPN, or the involution selected on InvAccPN's parity.
+Value *
+TailRecursionEliminator::applyAccumulator(Value *V,
+                                          BasicBlock::iterator InsertPt) {
+  if (AccPN) {
+    // Cloned into another branch's block, so it must not keep the original's
+    // debug location (dropping_debugloc_acc_rec_inst_rnew.ll).
+    Instruction *New = AccumulatorRecursionInstr->clone();
+    New->setName("accumulator.ret.tr");
+    New->setOperand(AccumulatorRecursionInstr->getOperand(0) == AccPN, V);
+    New->insertBefore(InsertPt);
+    New->dropLocation();
+    return New;
+  }
+
+  if (InvAccPN) {
+    IRBuilder<> B(InsertPt->getParent(), InsertPt);
+    B.SetCurrentDebugLocation(DebugLoc());
+    Value *Inv = buildInvolution(InvolutionOpcode, V, B);
+    Inv->setName("involution.val.tr");
+    SelectInst *SI =
+        SelectInst::Create(InvAccPN, Inv, V, "accumulator.ret.tr", InsertPt);
+    SI->setDebugLoc(DebugLoc::getCompilerGenerated());
+    return SI;
+  }
+
+  return V;
+}
+
 // Creates a copy of contents of ByValue operand of the specified
 // call instruction into the newly created temporarily variable.
 void TailRecursionEliminator::copyByValueOperandIntoLocalTemp(CallInst *CI,
@@ -707,6 +826,8 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   // movable to above the call itself, leaving the call next to the return.
   // Check that this is the case now.
   Instruction *AccRecInstr = nullptr;
+  Instruction *InvRecInstr = nullptr;
+  unsigned InvOpIdx = 0;
   BasicBlock::iterator BBI(CI);
   for (++BBI; &*BBI != Ret; ++BBI) {
     if (canMoveAboveCall(&*BBI, CI, AA))
@@ -716,12 +837,25 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     // is an associative and commutative operation that could be transformed
     // using accumulator recursion elimination.  Check to see if this is the
     // case, and if so, remember which instruction accumulates for later.
-    if (AccPN || !canTransformAccumulatorRecursion(&*BBI, CI))
-      return false; // We cannot eliminate the tail recursion!
+    if (!AccRecInstr && !InvRecInstr && !AccPN && !InvAccPN &&
+        canTransformAccumulatorRecursion(&*BBI, CI)) {
+      // Yes, this is accumulator recursion.  Remember which instruction
+      // accumulates.
+      AccRecInstr = &*BBI;
+      continue;
+    }
 
-    // Yes, this is accumulator recursion.  Remember which instruction
-    // accumulates.
-    AccRecInstr = &*BBI;
+    // Or an involution of the result, which folds into a parity accumulator
+    // instead. The kinds cannot be combined: that would need the involution to
+    // distribute over the binary operation, which holds for fneg over fmul but
+    // not over fadd, where the accumulated terms would need alternating signs.
+    if (!AccRecInstr && !InvRecInstr && !AccPN &&
+        canTransformInvolutionRecursion(&*BBI, CI, InvOpIdx)) {
+      InvRecInstr = &*BBI;
+      continue;
+    }
+
+    return false; // We cannot eliminate the tail recursion!
   }
 
   BasicBlock *BB = Ret->getParent();
@@ -773,9 +907,26 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     AccRecInstr->dropPoisonGeneratingFlags();
   }
 
+  // Fold the involution into the parity accumulator: the value flows through
+  // unchanged and the PHI carries the operation to the returns.
+  Value *ParityFlip = nullptr;
+  if (InvRecInstr) {
+    if (!InvAccPN)
+      insertInvolutionAccumulator(InvRecInstr, InvOpIdx);
+
+    InvRecInstr->replaceAllUsesWith(CI);
+    InvRecInstr->eraseFromParent();
+
+    ParityFlip = BinaryOperator::CreateXor(
+        InvAccPN, ConstantInt::getTrue(InvAccPN->getType()), "parity.flip.tr",
+        Ret->getIterator());
+    cast<Instruction>(ParityFlip)
+        ->setDebugLoc(DebugLoc::getCompilerGenerated());
+  }
+
   // Update our return value tracking
   if (RetPN) {
-    if (Ret->getReturnValue() == CI || AccRecInstr) {
+    if (Ret->getReturnValue() == CI || AccRecInstr || InvAccPN) {
       // Defer selecting a return value
       RetPN->addIncoming(RetPN, BB);
       RetKnownPN->addIncoming(RetKnownPN, BB);
@@ -795,6 +946,9 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
 
     if (AccPN)
       AccPN->addIncoming(AccRecInstr ? AccRecInstr : AccPN, BB);
+
+    if (InvAccPN)
+      InvAccPN->addIncoming(ParityFlip ? ParityFlip : InvAccPN, BB);
   }
 
   // Now that all of the PHI nodes are in place, remove the call and
@@ -856,22 +1010,16 @@ void TailRecursionEliminator::cleanupAndFinalize() {
       RetKnownPN->dropAllReferences();
       RetKnownPN->eraseFromParent();
 
-      if (AccPN) {
-        // We need to insert a copy of our accumulator instruction before any
-        // return in the function, and return its result instead.
-        Instruction *AccRecInstr = AccumulatorRecursionInstr;
+      if (AccPN || InvAccPN) {
+        // We need to apply our accumulator before any return in the function,
+        // and return its result instead.
         for (BasicBlock &BB : F) {
           ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator());
           if (!RI)
             continue;
 
-          Instruction *AccRecInstrNew = AccRecInstr->clone();
-          AccRecInstrNew->setName("accumulator.ret.tr");
-          AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
-                                     RI->getOperand(0));
-          AccRecInstrNew->insertBefore(RI->getIterator());
-          AccRecInstrNew->dropLocation();
-          RI->setOperand(0, AccRecInstrNew);
+          RI->setOperand(
+              0, applyAccumulator(RI->getOperand(0), RI->getIterator()));
         }
       }
     } else {
@@ -890,19 +1038,12 @@ void TailRecursionEliminator::cleanupAndFinalize() {
         RI->setOperand(0, SI);
       }
 
-      if (AccPN) {
-        // We need to insert a copy of our accumulator instruction before any
-        // of the selects we inserted, and select its result instead.
-        Instruction *AccRecInstr = AccumulatorRecursionInstr;
-        for (SelectInst *SI : RetSelects) {
-          Instruction *AccRecInstrNew = AccRecInstr->clone();
-          AccRecInstrNew->setName("accumulator.ret.tr");
-          AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
-                                     SI->getFalseValue());
-          AccRecInstrNew->insertBefore(SI->getIterator());
-          AccRecInstrNew->dropLocation();
-          SI->setFalseValue(AccRecInstrNew);
-        }
+      if (AccPN || InvAccPN) {
+        // We need to apply our accumulator before any of the selects we
+        // inserted, and select its result instead.
+        for (SelectInst *SI : RetSelects)
+          SI->setFalseValue(
+              applyAccumulator(SI->getFalseValue(), SI->getIterator()));
       }
     }
   }
