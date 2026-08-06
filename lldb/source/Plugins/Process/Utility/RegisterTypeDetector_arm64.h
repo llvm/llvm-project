@@ -76,7 +76,7 @@ private:
 
   struct RegisterEntry {
     RegisterEntry(llvm::StringRef name, unsigned size, DetectorFn detector)
-        : m_name(name), m_detector(detector) {}
+        : m_name(name), m_type(nullptr), m_detector(detector) {}
 
     llvm::StringRef m_name;
     // A raw pointer to the top level type. This pointer's lifetime is managed
