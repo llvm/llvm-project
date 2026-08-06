@@ -218,13 +218,19 @@ void processGlobalVariable(PerModuleUtils &MUtils, PerGlobalUtils &GUtils,
         MUtils.BlendIntrinsic,
         {B.CreatePointerCast(PtrLoc, MUtils.IntPtrTy), Discriminator});
 
+  // Signing a null pointer yields a non-null but invalid pointer. We'll emit a
+  // runtime guard around signing the pointer.
   Value *RawPtr = B.CreateLoad(PtrType, PtrLoc);
+  Value *RawPtrInt = B.CreatePointerCast(RawPtr, MUtils.IntPtrTy);
+  Value *NullCheck = B.CreateIsNull(RawPtrInt);
   Value *SignedPtr = B.CreateCall(
       MUtils.SignIntrinsic,
-      {B.CreatePointerCast(RawPtr, MUtils.IntPtrTy),
-       const_cast<ConstantInt *>(GUtils.PtrAuthInfo.getKey()), Discriminator});
+      {RawPtrInt, const_cast<ConstantInt *>(GUtils.PtrAuthInfo.getKey()),
+       Discriminator});
+  Value *Result = B.CreateSelect(
+      NullCheck, Constant::getNullValue(MUtils.IntPtrTy), SignedPtr);
 
-  B.CreateStore(B.CreateBitOrPointerCast(SignedPtr, PtrType), PtrLoc);
+  B.CreateStore(B.CreateBitOrPointerCast(Result, PtrType), PtrLoc);
 }
 
 void processInstruction(PerModuleUtils &MUtils, PerGlobalUtils &GUtils, Use &U,
