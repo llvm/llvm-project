@@ -6334,36 +6334,36 @@ static void TestGsymStatistics(const ExpectedGsymStats &E) {
   GR->dumpStatistics(OS, GsymReader::StatisticsFormat::PrettyJSON, DisplayPath);
 }
 
-TEST(GSYMTest, TestGsymStatistics) {
+TEST(GSYMTest, TestGsymStatisticsV1) {
   // "main" (line table + inline + call site) is folded into a merged function
   // behind "dupfunc", so the inline/call-site bytes appear in the merged
   // breakdown; v1 stores the UUID inline in the header (uuid_section == 0).
   ExpectedGsymStats E = {};
-  E.NumAddresses = 1;
-  E.FileSize = 297;
-  E.Header = 48;
-  E.GlobalDataDirectory = 0;
-  E.UUIDSection = 0;
-  E.Padding = 3;
-  E.AddressTable = 1;
-  E.AddrInfoOffsets = 4;
-  E.FileTable = 28;
-  E.StringTable = 43;
-  E.FunctionInfoData = 170;
-  E.FISizeAndName = 8;
-  E.FILineTableInfo = 32;
-  E.FIInlineInfo = 0;
-  E.FICallSiteInfo = 0;
-  E.FIMergedFuncInfo = 121;
-  E.FIEndOfList = 8;
-  E.FIPadding = 1;
-  E.MInfoTypeInfoLengthCountAndFnSize = 16;
-  E.MSizeAndName = 8;
-  E.MLineTableInfo = 32;
-  E.MInlineInfo = 32;
-  E.MCallSiteInfo = 25;
-  E.MMergedFuncInfo = 0;
-  E.MEndOfList = 8;
+  E.NumAddresses = 1;        // one address (0x1000); main+dupfunc share it
+  E.FileSize = 297;          // = sum of all byte-size fields below
+  E.Header = 48;             // fixed V1 header struct (incl. inline UUID[20])
+  E.GlobalDataDirectory = 0; // v1 has no on-disk GlobalData directory
+  E.UUIDSection = 0;         // v1 keeps the UUID inline in the header
+  E.Padding = 3;             // inter-section alignment (remainder to file_size)
+  E.AddressTable = 1;        // 1 addr * 1-byte addr offset
+  E.AddrInfoOffsets = 4;     // 1 addr * 4-byte (32-bit) info offset
+  E.FileTable = 28;          // u32 count + 3 entries * 2 strp(4B)
+  E.StringTable = 43;        // unique names+files+dirs; same bytes in v1/v2
+  E.FunctionInfoData = 170;  // the one top-level FunctionInfo (FT fields below)
+  E.FISizeAndName = 8;       // Size(u32=4) + name strp(4B)
+  E.FILineTableInfo = 32;    // LineTable TLV: 8B type+length hdr + 24B payload
+  E.FIInlineInfo = 0;        // main's inline moved into the merged inner (MT)
+  E.FICallSiteInfo = 0;     // main's call site moved into the merged inner (MT)
+  E.FIMergedFuncInfo = 121; // MergedFunctionsInfo TLV holding main (MT fields)
+  E.FIEndOfList = 8;        // terminator TLV: InfoType(0,4B) + InfoLength(0,4B)
+  E.FIPadding = 1;          // pad the top-level FunctionInfo to a 4B boundary
+  E.MInfoTypeInfoLengthCountAndFnSize = 16; // TLV hdr(8)+Count(4)+1*FnSize(4)
+  E.MSizeAndName = 8;    // inner func: Size(4) + name strp(4B)
+  E.MLineTableInfo = 32; // inner LineTable TLV: 8B hdr + 24B payload
+  E.MInlineInfo = 32;    // inner InlineInfo TLV: 8B hdr + 24B payload
+  E.MCallSiteInfo = 25;  // CallSite TLV: 8B hdr + 1 site, no regex
+  E.MMergedFuncInfo = 0; // the inner function has no further merged functions
+  E.MEndOfList = 8;      // inner func terminator TLV (4B + 4B)
   TestGsymStatistics<GsymCreatorV1>(E);
 }
 
@@ -6371,30 +6371,30 @@ TEST(GSYMTest, TestGsymStatisticsV2) {
   // Same as above, but v2 stores the UUID as its own 16-byte data section
   // (uuid_section == 16) and has an on-disk GlobalData directory.
   ExpectedGsymStats E = {};
-  E.NumAddresses = 1;
-  E.FileSize = 473;
-  E.Header = 20; // V2 header size
-  E.GlobalDataDirectory = 140;
-  E.UUIDSection = 16;
-  E.Padding = 8;
-  E.AddressTable = 1;
-  E.AddrInfoOffsets = 8;
-  E.FileTable = 52;
-  E.StringTable = 43;
-  E.FunctionInfoData = 185;
-  E.FISizeAndName = 12;
-  E.FILineTableInfo = 32;
-  E.FIInlineInfo = 0;
-  E.FICallSiteInfo = 0;
-  E.FIMergedFuncInfo = 133;
-  E.FIEndOfList = 8;
-  E.FIPadding = 0;
-  E.MInfoTypeInfoLengthCountAndFnSize = 16;
-  E.MSizeAndName = 12;
-  E.MLineTableInfo = 32;
-  E.MInlineInfo = 40;
-  E.MCallSiteInfo = 25;
-  E.MMergedFuncInfo = 0;
-  E.MEndOfList = 8;
+  E.NumAddresses = 1;          // one address (0x1000); main+dupfunc share it
+  E.FileSize = 473;            // = sum of all byte-size fields below
+  E.Header = 20;               // fixed HeaderV2 struct
+  E.GlobalDataDirectory = 140; // 7 entries * 20B: 5 sections + UUID + EndOfList
+  E.UUIDSection = 16;          // v2 stores the 16-byte UUID as its own section
+  E.Padding = 8;         // inter-section alignment (remainder to file_size)
+  E.AddressTable = 1;    // 1 addr * 1-byte addr offset
+  E.AddrInfoOffsets = 8; // 1 addr * 8-byte (64-bit) info offset
+  E.FileTable = 52;      // u32 count + 3 entries * 2 strp(8B)
+  E.StringTable = 43;    // same strings as v1 (content is version-independent)
+  E.FunctionInfoData = 185; // the one top-level FunctionInfo (FT fields below)
+  E.FISizeAndName = 12;     // Size(u32=4) + name strp(8B)
+  E.FILineTableInfo = 32;   // LineTable TLV: 8B hdr + 24B payload (no strps)
+  E.FIInlineInfo = 0;       // main's inline moved into the merged inner (MT)
+  E.FICallSiteInfo = 0;     // main's call site moved into the merged inner (MT)
+  E.FIMergedFuncInfo = 133; // MergedFunctionsInfo TLV holding main (MT fields)
+  E.FIEndOfList = 8;        // terminator TLV: InfoType(0,4B) + InfoLength(0,4B)
+  E.FIPadding = 0;          // top-level FunctionInfo already 4B aligned
+  E.MInfoTypeInfoLengthCountAndFnSize = 16; // TLV hdr(8)+Count(4)+1*FnSize(4)
+  E.MSizeAndName = 12;   // inner func: Size(4) + name strp(8B)
+  E.MLineTableInfo = 32; // inner LineTable TLV: 8B hdr + 24B payload
+  E.MInlineInfo = 40;    // inner InlineInfo TLV; +8B vs v1 (8B string offsets)
+  E.MCallSiteInfo = 25;  // CallSite TLV; version-independent (no match regex)
+  E.MMergedFuncInfo = 0; // the inner function has no further merged functions
+  E.MEndOfList = 8;      // inner func terminator TLV (4B + 4B)
   TestGsymStatistics<GsymCreatorV2>(E);
 }
