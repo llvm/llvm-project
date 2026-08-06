@@ -101,6 +101,27 @@ struct Float80 {
     fputil::FPBits<Float80> result(*this);
     result.set_sign(result.is_pos() ? Sign::NEG : Sign::POS);
     return result.get_val();
+
+    // operator overloads
+    LIBC_INLINE constexpr Float80 operator+(const Float80 &other) const {
+      return fputil::generic::add<Float80>(*this, other);
+    }
+
+    LIBC_INLINE constexpr Float80 operator-(const Float80 &other) const {
+      return fputil::generic::sub<Float80>(*this, other);
+    }
+
+    LIBC_INLINE constexpr Float80 operator*(const Float80 &other) const {
+      return fputil::generic::mul<Float80>(*this, other);
+    }
+
+    LIBC_INLINE constexpr Float80 operator/(const Float80 &other) const {
+      return fputil::generic::div<Float80>(*this, other);
+    }
+
+    LIBC_INLINE constexpr bool operator==(const Float128 &other) const {
+      return fputil::equals(*this, other);
+    }
   }
 };
 

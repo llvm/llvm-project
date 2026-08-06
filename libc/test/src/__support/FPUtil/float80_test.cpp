@@ -16,6 +16,21 @@ using LIBC_NAMESPACE::Sign;
 using LIBC_NAMESPACE::fputil::Float80;
 using FPBits = LIBC_NAMESPACE::fputil::FPBits<Float80>;
 
+TEST(LlvmLibcFloat80Test, temp) { Float80 a(1.0f); }
+
+TEST(LlvmLibcFloat80Test, Operators) {
+  Float80 a(1.0f), b(1.0f), c(2.0f), d(3.0f), pa(1.0f), na(-1.0f);
+
+  // Unary operators
+  ASSERT_TRUE(FPBits(-pa) == FPBits(na));
+
+  // Binary operators
+  ASSERT_TRUE(a + b == c);
+  ASSERT_TRUE(a - b == Float128(0.0));
+  ASSERT_TRUE(c * d == Float128(6.0));
+  ASSERT_TRUE(Float80(6.0f) / d) == Float80(2.0f);
+}
+
 TEST(LlvmLibcFloat80Test, IntegerConversion) {
   // Float80 to Integer conversion test
   ASSERT_EQ(static_cast<int>(Float80(0.0f)), 0);
