@@ -1601,11 +1601,6 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   // cleanups from the enclosing full-expression.
   PushExpressionEvaluationContextForFunction(
       ExpressionEvaluationContext::PotentiallyEvaluated, LSI->CallOperator);
-
-  // A lambda body does not inherit the immediate-function context of the
-  // enclosing lambda-expression.
-  currentEvaluationContext().InImmediateFunctionContext =
-      LSI->CallOperator->isConsteval();
 }
 
 void Sema::ActOnLambdaError(SourceLocation StartLoc, Scope *CurScope,
