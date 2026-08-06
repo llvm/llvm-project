@@ -1701,7 +1701,7 @@ module std {
     module noexcept_move_assign_container     { header "__memory/noexcept_move_assign_container.h" }
     module out_ptr                            { header "__memory/out_ptr.h" }
     module pointer_traits                     { header "__memory/pointer_traits.h" }
-    module pstl                               { header "__memory/pstl.h" }    
+    module pstl                               { header "__memory/pstl.h" }
     module ranges_construct_at                { header "__memory/ranges_construct_at.h" }
     module ranges_destroy                     { header "__memory/ranges_destroy.h" }
     module ranges_uninitialized_algorithms {
@@ -2212,6 +2212,7 @@ module std {
     module find_index               { header "__tuple/find_index.h" }
     module ignore                   { header "__tuple/ignore.h" }
     module sfinae_helpers           { header "__tuple/sfinae_helpers.h" }
+    module simple_tuple             { header "__tuple/simple_tuple.h" }
     module tuple_element            { header "__tuple/tuple_element.h" }
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
     module tuple_like               { header "__tuple/tuple_like.h" }

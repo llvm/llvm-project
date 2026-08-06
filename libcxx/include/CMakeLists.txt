@@ -619,7 +619,7 @@ set(files
   __memory/noexcept_move_assign_container.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
-  __memory/pstl.h  
+  __memory/pstl.h
   __memory/ranges_construct_at.h
   __memory/ranges_destroy.h
   __memory/ranges_uninitialized_algorithms.h
@@ -830,6 +830,7 @@ set(files
   __tuple/find_index.h
   __tuple/ignore.h
   __tuple/sfinae_helpers.h
+  __tuple/simple_tuple.h
   __tuple/tuple_element.h
   __tuple/tuple_like.h
   __tuple/tuple_like_no_subrange.h

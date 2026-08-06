@@ -15,6 +15,7 @@
 #include <cassert>
 #include <mutex>
 #include <type_traits>
+#include <utility>
 
 #include "checking_mutex.h"
 #include "test_macros.h"
