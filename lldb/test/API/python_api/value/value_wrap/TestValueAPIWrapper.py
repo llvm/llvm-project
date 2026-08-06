@@ -8,7 +8,9 @@ from lldbsuite.test import lldbutil
 
 
 class ValueAPIWrapper(TestBase):
-    def test(self):
+
+    def test_accessors(self):
+        """Test non-modifying operators (e.g. __getitem__, __add__)."""
         self.build()
 
         _, process, thread, _ = lldbutil.run_to_source_breakpoint(
@@ -48,8 +50,6 @@ class ValueAPIWrapper(TestBase):
         arr_second = lldb.value(frame.FindVariable("arr_second"))
         self.assertTrue(arr_second)
 
-        engine = lldb.value(frame.FindVariable("engine"))
-        self.assertTrue(engine)
         my_car = lldb.value(frame.FindVariable("my_car"))
         self.assertTrue(my_car)
 
@@ -188,7 +188,17 @@ class ValueAPIWrapper(TestBase):
 
         # FIXME: Missing __index__ for oct(), hex(), etc.
 
-        # Test in-place operators (__i...__(self, other)).
+    def test_in_place_modifiers(self):
+        """Test in-place operators (__i...__(self, other))."""
+        self.build()
+
+        _, process, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.c")
+        )
+        frame = thread.GetFrameAtIndex(0)
+
+        engine = lldb.value(frame.FindVariable("engine"))
+        self.assertTrue(engine)
 
         kind = engine.kind
         self.assertEqual(kind, 1)
