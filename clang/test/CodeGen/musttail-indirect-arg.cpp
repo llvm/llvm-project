@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple=aarch64-linux-gnu %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=COMMON
 // RUN: %clang_cc1 -triple=loongarch64-linux-gnu %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=COMMON
 // RUN: %clang_cc1 -triple=s390x-linux-gnu %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=COMMON
+// RUN: %clang_cc1 -std=c++23 -triple=aarch64-linux-gnu %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=CXX23
 
 // C++ side of the musttail Indirect-arg fix. The call argument is typically
 // a CXXConstructExpr invoking the trivial copy constructor; EmitCallArg
@@ -222,3 +223,105 @@ struct Big P21(struct Big a, int b) {
 // COMMON: call {{.*}} @_Z4bumpv()
 // COMMON: store {{.*}} [[VAL]], ptr %a
 // COMMON: musttail call {{.*}} @_Z3C213Bigi({{.*}}, ptr {{[^,]*}} %a,
+
+// P22: an overloaded operator keeps the built-in operand order
+// ([over.match.oper]/2), so forwarding must not defer the left operand's read
+// past the right operand's side effect.
+struct Big operator<<(struct Big x, struct Big y);
+struct Big P22(struct Big a, struct Big b) {
+  [[clang::musttail]] return a << Big{a.a = 10};
+}
+// COMMON-LABEL: define {{.*}} @_Z3P223BigS_(
+// COMMON: [[SNAP:%[0-9a-z.]+]] = load <4 x i64>, ptr %a
+// COMMON: store i64 10, ptr %a
+// COMMON: store <4 x i64> [[SNAP]], ptr %a
+// COMMON: musttail call {{.*}} @_Zls3BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
+
+// P24: [expr.assign]/1 sequences an assignment's right operand first, so the
+// deferred read of the right operand is the one that must not move.
+struct Big operator+=(struct Big x, struct Big y);
+struct Big mutate(struct Big *p);
+struct Big P24(struct Big a, struct Big b) {
+  [[clang::musttail]] return mutate(&b) += b;
+}
+// COMMON-LABEL: define {{.*}} @_Z3P243BigS_(
+// COMMON: [[SNAP:%[0-9a-z.]+]] = load <4 x i64>, ptr %b
+// COMMON: call {{.*}} @_Z6mutateP3Big(
+// COMMON: store <4 x i64> [[SNAP]], ptr %b
+// COMMON: musttail call {{.*}} @_ZpL3BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
+
+// P25: the other operand mutates the source through an opaque callee, so
+// nothing in the expression names it. Whether the source is reachable from the
+// other operand cannot decide this.
+struct Big bumpg();
+struct Big P25(struct Big a, struct Big b) {
+  [[clang::musttail]] return a << bumpg();
+}
+// COMMON-LABEL: define {{.*}} @_Z3P253BigS_(
+// COMMON: [[SNAP:%[0-9a-z.]+]] = load <4 x i64>, ptr %a
+// COMMON: call {{.*}} @_Z5bumpgv(
+// COMMON: store <4 x i64> [[SNAP]], ptr %a
+// COMMON: musttail call {{.*}} @_Zls3BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
+
+// P26: the right-operand-first rule of [expr.assign]/1 through a member
+// operator+=, so the read of %rhs must precede bumpacc().
+struct Acc {
+  unsigned long long v;
+  Acc &operator+=(struct Big rhs);
+  Acc &tailadd(struct Big rhs);
+};
+Acc &bumpacc(struct Big *p);
+Acc &Acc::tailadd(struct Big rhs) {
+  [[clang::musttail]] return bumpacc(&rhs) += rhs;
+}
+// COMMON-LABEL: define {{.*}} @_ZN3Acc7tailaddE3Big(
+// COMMON: [[SNAP:%[0-9a-z.]+]] = load <4 x i64>, ptr %rhs
+// COMMON: call {{.*}} @_Z7bumpaccP3Big(
+// COMMON: store <4 x i64> [[SNAP]], ptr %rhs
+// COMMON: musttail call {{.*}} @_ZN3AccpLE3Big({{.*}}, ptr {{[^,]*}} %rhs)
+
+// P27: the prescribed-order call is an argument inside the musttail return,
+// not the tail call itself.
+struct Big bumpbig();
+int use27(struct Big v);
+int C27(int x);
+int P27(int x) {
+  [[clang::musttail]] return C27(use27(gw.inner << bumpbig()));
+}
+// COMMON-LABEL: define {{.*}} @_Z3P27i(
+// COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} [[LHS:%agg.tmp[0-9]*]], ptr {{[^,]*}} @gw, i64 32
+// COMMON: call {{.*}} @_Z7bumpbigv(
+// COMMON: call {{.*}} @_Zls3BigS_({{.*}}, ptr {{[^,]*}} [[LHS]],
+// COMMON: musttail call {{.*}} @_Z3C27i(
+
+// P28: prescribed order with the source in the second incoming slot, so both
+// argument slots are relocated and the read still precedes the mutation.
+struct Big operator>>(struct Big x, struct Big y);
+struct Big P28(struct Big a, struct Big b) {
+  [[clang::musttail]] return b >> Big{b.a = 10};
+}
+// COMMON-LABEL: define {{.*}} @_Z3P283BigS_(
+// COMMON: [[SNAP:%[0-9a-z.]+]] = load <4 x i64>, ptr %b
+// COMMON: store i64 10, ptr %b
+// COMMON: store <4 x i64> [[SNAP]], ptr %a
+// COMMON: musttail call {{.*}} @_Zrs3BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
+
+#if __cplusplus >= 202302L
+// P23: the same rule for an operator with no explicit EvaluationOrder case.
+// A subscript operator's object parameter is sequenced before the index
+// ([expr.sub]/1).
+struct Sub {
+  unsigned long long a, b, c, d;
+  Sub operator[](this Sub self, int i);
+  Sub tail(this Sub self, int i);
+};
+int bump(Sub *p);
+Sub Sub::tail(this Sub self, int i) {
+  [[clang::musttail]] return self[bump(&self)];
+}
+// CXX23-LABEL: define {{.*}} @_ZNH3Sub4tailES_i(
+// CXX23: [[SNAP:%[0-9a-z.]+]] = load <4 x i64>, ptr %self
+// CXX23: call {{.*}} @_Z4bumpP3Sub(
+// CXX23: store <4 x i64> [[SNAP]], ptr %self
+// CXX23: musttail call {{.*}} @_ZNH3SubixES_i({{.*}}, ptr {{[^,]*}} %self, i32 {{.*}})
+#endif

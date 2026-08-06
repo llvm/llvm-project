@@ -5033,7 +5033,8 @@ static bool isObjCMethodWithTypeParams(const ObjCMethodDecl *method) {
 void CodeGenFunction::EmitCallArgs(
     CallArgList &Args, PrototypeWrapper Prototype,
     llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
-    AbstractCallee AC, unsigned ParamsToSkip, EvaluationOrder Order) {
+    AbstractCallee AC, unsigned ParamsToSkip, EvaluationOrder Order,
+    bool OperandOrderFixed) {
   SmallVector<QualType, 16> ArgTypes;
 
   assert((ParamsToSkip == 0 || Prototype.P) &&
@@ -5106,6 +5107,10 @@ void CodeGenFunction::EmitCallArgs(
           ? Order == EvaluationOrder::ForceLeftToRight
           : Order != EvaluationOrder::ForceRightToLeft;
 
+  // Order tracks only the emission direction. OperandOrderFixed additionally
+  // marks operators whose built-in form fixes the operand order.
+  bool PrescribedOrder = Order != EvaluationOrder::Default || OperandOrderFixed;
+
   auto MaybeEmitImplicitObjectSize = [&](unsigned I, const Expr *Arg,
                                          RValue EmittedArg) {
     if (!AC.hasFunctionDecl() || I >= AC.getNumParams())
@@ -5148,7 +5153,7 @@ void CodeGenFunction::EmitCallArgs(
             (isa<ObjCMethodDecl>(AC.getDecl()) &&
              isObjCMethodWithTypeParams(cast<ObjCMethodDecl>(AC.getDecl())))) &&
            "Argument and parameter types don't match");
-    EmitCallArg(Args, *Arg, ArgTypes[Idx]);
+    EmitCallArg(Args, *Arg, ArgTypes[Idx], PrescribedOrder);
     // In particular, we depend on it being the last arg in Args, and the
     // objectsize bits depend on there only being one arg if !LeftToRight.
     assert(InitialArgSize + 1 == Args.size() &&
@@ -5234,9 +5239,9 @@ void CodeGenFunction::EmitWritebacks(const CallArgList &args) {
 
 /// Whether emitting this glvalue neither has side effects nor reads mutable
 /// state, so deferring its byte read to the call boundary is equivalent to
-/// initializing the argument last, a sequencing C++17 [expr.call]/8 allows.
-/// A dereference or call in the address computation would instead split the
-/// argument's evaluation around the other arguments'.
+/// evaluating the argument last. A dereference or call in the address
+/// computation would instead split the argument's evaluation around the other
+/// arguments'.
 static bool isPureForwardableLValue(const Expr *E) {
   E = E->IgnoreParens();
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
@@ -5253,7 +5258,7 @@ static bool isPureForwardableLValue(const Expr *E) {
 }
 
 void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
-                                  QualType type) {
+                                  QualType type, bool PrescribedOrder) {
   std::optional<DisableDebugLocationUpdates> Dis;
   if (isa<CXXDefaultArgExpr>(E))
     Dis.emplace(*this);
@@ -5341,8 +5346,8 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   // address. On the device side CUDA surface/texture types are excluded:
   // they classify as Direct and forwarding would load raw record bytes
   // instead of the handle that EmitAggregateCopy materializes.
-  if (HasAggregateEvalKind && MustTailCall && type->isRecordType() &&
-      type.isTriviallyCopyableType(getContext()) &&
+  if (HasAggregateEvalKind && MustTailCall && !PrescribedOrder &&
+      type->isRecordType() && type.isTriviallyCopyableType(getContext()) &&
       !(getLangOpts().CUDAIsDevice &&
         (type->isCUDADeviceBuiltinSurfaceType() ||
          type->isCUDADeviceBuiltinTextureType()))) {
