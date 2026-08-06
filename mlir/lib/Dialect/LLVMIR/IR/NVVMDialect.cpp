@@ -5414,6 +5414,9 @@ ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
 
+  // TODO: Add support for PZO modifier
+  args.push_back(builder.getInt1(false));
+
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
     return {rndRNIds[idx], std::move(args)};
@@ -5461,6 +5464,9 @@ ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
   args.push_back(mt.lookupValue(op.getSrcLo()));
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
+
+  // TODO: Add support for PZO modifier
+  args.push_back(builder.getInt1(false));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:

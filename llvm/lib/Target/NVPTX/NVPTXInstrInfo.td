@@ -59,6 +59,13 @@ def CvtNONE_SATFINITE  : PatLeaf<(i32 0x80)>;
 def CvtRN_SATFINITE   : PatLeaf<(i32 0x85)>;
 def CvtRN_RELU_SATFINITE : PatLeaf<(i32 0xC5)>;
 
+// Derives the mode constant for one of the modes above with the PZO flag set,
+// so that the PZO variants do not need a PatLeaf of their own.
+class CvtModeWithPZO<PatLeaf mode, int pzo> {
+  int Value = !add(!getdagarg<int>(!head(mode.Fragments), 0),
+                   !mul(pzo, 0x100)); // PTXCvtMode::PZO_FLAG
+}
+
 def CvtMode : Operand<i32> {
   let PrintMethod = "printCvtMode";
 }
@@ -648,7 +655,7 @@ let hasSideEffects = false in {
     def _f32 :
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src), (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:ftz}${mode:relu}${mode:sat}." # ToType # ".f32">,
+                "cvt${mode:base}${mode:ftz}${mode:relu}${mode:sat}${mode:pzo}." # ToType # ".f32">,
       Requires<!if(!eq(ToType, "bf16"),
                    // f32->bf16 was introduced early.
                    [SM80],
@@ -676,7 +683,7 @@ let hasSideEffects = false in {
     def _f32_sf :
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src), (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}.satfinite." # ToName # ".f32">;
+                "cvt${mode:base}${mode:relu}.satfinite${mode:pzo}." # ToName # ".f32">;
   }
   defm CVT_bf16 : CVT_FROM_FLOAT_SATFINITE<"bf16", B16>;
   defm CVT_f16 : CVT_FROM_FLOAT_SATFINITE<"f16", B16>;
@@ -694,13 +701,13 @@ let hasSideEffects = false in {
     def _f32 :
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}." # FromName # ".f32">,
+                "cvt${mode:base}${mode:relu}${mode:pzo}." # FromName # ".f32">,
     Requires<[SM80]>;
     
     def _f32_sf :
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}.satfinite." # FromName # ".f32">;
+                "cvt${mode:base}${mode:relu}.satfinite${mode:pzo}." # FromName # ".f32">;
   }
 
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_SM80<"f16x2", B32>;
@@ -711,13 +718,13 @@ let hasSideEffects = false in {
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src1, B32:$src2, B32:$src3),
                 (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}." # FromName # ".f32">;
+                "cvt${mode:base}${mode:relu}${mode:pzo}." # FromName # ".f32">;
 
     def _f32_rs_sf :
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src1, B32:$src2, B32:$src3),
                 (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}.satfinite." # FromName # ".f32">;
+                "cvt${mode:base}${mode:relu}.satfinite${mode:pzo}." # FromName # ".f32">;
   }
 
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_RS<"f16x2", B32>;

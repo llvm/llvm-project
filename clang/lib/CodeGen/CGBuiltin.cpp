@@ -253,6 +253,22 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
   return GetOrCreateLLVMFunction(Name, Ty, D, /*ForVTable=*/false);
 }
 
+void appendDefaultIntrinsicArgs(SmallVectorImpl<llvm::Value *> &Args,
+                                llvm::Function *F) {
+  llvm::FunctionType *FTy = F->getFunctionType();
+  if (Args.size() == FTy->getNumParams())
+    return;
+
+  auto [FirstDefault, Defaults] =
+      Intrinsic::getAllDefaultArgValues(F->getIntrinsicID());
+  for (unsigned I = Args.size(), E = FTy->getNumParams(); I != E; ++I) {
+    if (I < FirstDefault || I - FirstDefault >= Defaults.size())
+      break;
+    Args.push_back(llvm::ConstantInt::get(FTy->getParamType(I),
+                                          Defaults[I - FirstDefault]));
+  }
+}
+
 /// Emit the conversions required to turn the given value into an
 /// integer of the given size.
 Value *EmitToInt(CodeGenFunction &CGF, llvm::Value *V,
@@ -6907,6 +6923,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
       Args.push_back(ArgValue);
     }
+
+    appendDefaultIntrinsicArgs(Args, F);
 
     Value *V = Builder.CreateCall(F, Args);
     QualType BuiltinRetType = E->getType();
