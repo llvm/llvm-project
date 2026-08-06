@@ -18,7 +18,7 @@
 
 using namespace llvm;
 
-namespace {
+namespace llvm {
   class SuperHELFObjectWriter : public MCELFObjectTargetWriter {
   public:
     SuperHELFObjectWriter(uint8_t OSABI)
@@ -33,7 +33,7 @@ namespace {
     unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
                           bool IsPCRel) const override;
 
-    bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
+    bool needsRelocateWithSymbol(const MCValue &Val, unsigned Type) const override;
   };
 }
 
@@ -43,9 +43,8 @@ unsigned SuperHELFObjectWriter::getRelocType(const MCFixup &Fixup,
   return ELF::R_SH_NONE;
 }
 
-bool SuperHELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
+bool SuperHELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
                                                    unsigned Type) const {
-  
   return false;
 }
 
