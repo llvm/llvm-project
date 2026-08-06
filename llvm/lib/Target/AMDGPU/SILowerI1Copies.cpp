@@ -346,7 +346,7 @@ private:
       }
     }
 
-    unsigned Level = CommonDominators.size();
+    unsigned Level = static_cast<unsigned>(CommonDominators.size());
     while (!Stack.empty()) {
       MachineBasicBlock *MBB = Stack.pop_back_val();
       if (!PDT.dominates(VisitedPostDom, MBB))
@@ -401,7 +401,7 @@ insertUndefLaneMask(MachineBasicBlock *MBB, MachineRegisterInfo *MRI,
 static bool isVRegCompatibleReg(const SIRegisterInfo &TRI,
                                 const MachineRegisterInfo &MRI,
                                 Register Reg) {
-  unsigned Size = TRI.getRegSizeInBits(Reg, MRI);
+  unsigned Size = static_cast<unsigned>(TRI.getRegSizeInBits(Reg, MRI));
   return Size == 1 || Size == 32;
 }
 #endif
