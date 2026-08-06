@@ -20122,53 +20122,44 @@ struct RebuildTypeWithLateParsedAttr
   // TransformLateParsedAttrType can reject nested counted_by. Recursion,
   // rebuild, and TypeLoc pushing are delegated to the base TreeTransform.
 
-  QualType TransformPointerType(TypeLocBuilder &TLB, PointerTypeLoc TL) {
-    ++PointerOrArrayDepth;
-    QualType Result = TreeTransform::TransformPointerType(TLB, TL);
-    --PointerOrArrayDepth;
+  /// Run \p Transform one pointer/array level deeper, restoring the previous
+  /// depth afterwards and marking the field invalid if the transform failed.
+  template <typename Fn> QualType TransformNested(Fn &&Transform) {
+    llvm::SaveAndRestore Depth(PointerOrArrayDepth, PointerOrArrayDepth + 1);
+    QualType Result = Transform();
     if (Result.isNull())
       FD->setInvalidDecl();
     return Result;
+  }
+
+  QualType TransformPointerType(TypeLocBuilder &TLB, PointerTypeLoc TL) {
+    return TransformNested(
+        [&] { return TreeTransform::TransformPointerType(TLB, TL); });
   }
 
   QualType TransformConstantArrayType(TypeLocBuilder &TLB,
                                       ConstantArrayTypeLoc TL) {
-    ++PointerOrArrayDepth;
-    QualType Result = TreeTransform::TransformConstantArrayType(TLB, TL);
-    --PointerOrArrayDepth;
-    if (Result.isNull())
-      FD->setInvalidDecl();
-    return Result;
+    return TransformNested(
+        [&] { return TreeTransform::TransformConstantArrayType(TLB, TL); });
   }
 
   QualType TransformIncompleteArrayType(TypeLocBuilder &TLB,
                                         IncompleteArrayTypeLoc TL) {
-    ++PointerOrArrayDepth;
-    QualType Result = TreeTransform::TransformIncompleteArrayType(TLB, TL);
-    --PointerOrArrayDepth;
-    if (Result.isNull())
-      FD->setInvalidDecl();
-    return Result;
+    return TransformNested(
+        [&] { return TreeTransform::TransformIncompleteArrayType(TLB, TL); });
   }
 
   QualType TransformVariableArrayType(TypeLocBuilder &TLB,
                                       VariableArrayTypeLoc TL) {
-    ++PointerOrArrayDepth;
-    QualType Result = TreeTransform::TransformVariableArrayType(TLB, TL);
-    --PointerOrArrayDepth;
-    if (Result.isNull())
-      FD->setInvalidDecl();
-    return Result;
+    return TransformNested(
+        [&] { return TreeTransform::TransformVariableArrayType(TLB, TL); });
   }
 
   QualType TransformDependentSizedArrayType(TypeLocBuilder &TLB,
                                             DependentSizedArrayTypeLoc TL) {
-    ++PointerOrArrayDepth;
-    QualType Result = TreeTransform::TransformDependentSizedArrayType(TLB, TL);
-    --PointerOrArrayDepth;
-    if (Result.isNull())
-      FD->setInvalidDecl();
-    return Result;
+    return TransformNested([&] {
+      return TreeTransform::TransformDependentSizedArrayType(TLB, TL);
+    });
   }
 };
 
@@ -20177,9 +20168,9 @@ void Sema::ProcessLateParsedTypeAttributes(
   for (auto *I : EnclosingDecl->decls()) {
     FieldDecl *FD = dyn_cast<FieldDecl>(I);
     IndirectFieldDecl *IFD = dyn_cast<IndirectFieldDecl>(I);
-    if (!FD && IFD) {
+    if (!FD && IFD)
       FD = IFD->getAnonField();
-    }
+
     if (!FD || !FD->getType()->hasLateParsedAttr() ||
         FD->getType()->isRecordType())
       continue;
@@ -20190,9 +20181,8 @@ void Sema::ProcessLateParsedTypeAttributes(
     if (TSI && TSI != OldTSI) {
       FD->setTypeSourceInfo(TSI);
       FD->setType(TSI->getType());
-      if (IFD) {
+      if (IFD)
         IFD->setType(TSI->getType());
-      }
     }
 
     if (auto *CAT = FD->getType()->getAs<CountAttributedType>()) {
