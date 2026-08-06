@@ -5652,12 +5652,20 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
 
     if (LoopVectorizationPlanner::getDecisionAndClampRange(
             [&](ElementCount VF) {
-              return SE->isKnownPredicate(
-                  ICmpInst::ICMP_ULT, PredicatedMaxBTC,
-                  SE->getConstant(PredicatedMaxBTC->getType(),
-                                  Plan.hasTailFolded() || VF.isScalable()
-                                      ? 1
-                                      : VF.getFixedValue() - 1));
+              auto *Ty = PredicatedMaxBTC->getType();
+              // Need at least two iterations:
+              const SCEV *MinMeaningfulBTC = SE->getOne(Ty);
+
+              // If we don't fold the tail, we need enough scalar iterations to
+              // fill the full vector. At least as of now `SE->isKnownPredicate`
+              // won't be able to reason about scalable element count so limit
+              // this refinement to fixed vectors for now:
+              if (!Plan.hasTailFolded() && !VF.isScalable())
+                MinMeaningfulBTC = SE->getAddExpr(SE->getElementCount(Ty, VF),
+                                                  SE->getMinusOne(Ty));
+
+              return SE->isKnownPredicate(ICmpInst::ICMP_ULT, PredicatedMaxBTC,
+                                          MinMeaningfulBTC);
             },
             Range))
       continue;
