@@ -53,6 +53,20 @@ using namespace MIPatternMatch;
 
 namespace {
 
+/// Returns an APFloat from Val converted to the appropriate size.
+static APFloat getAPFloatFromSize(double Val, unsigned Size) {
+  if (Size == 32)
+    return APFloat(float(Val));
+  if (Size == 64)
+    return APFloat(Val);
+  if (Size != 16)
+    llvm_unreachable("Unsupported FPConstant size");
+  bool Ignored;
+  APFloat APF(Val);
+  APF.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &Ignored);
+  return APF;
+}
+
 struct SyncScopeInfo {
   static const StringMap<unsigned> Name2Opcode;
   DenseMap<llvm::SyncScope::ID, unsigned> ID2Opcode;
