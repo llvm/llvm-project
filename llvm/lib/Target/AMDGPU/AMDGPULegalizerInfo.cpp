@@ -2305,8 +2305,8 @@ bool AMDGPULegalizerInfo::legalizeScalarBF16ToPackedBF16Op(
 
   // Widen all source operands to v2bf16
   SmallVector<Register, 3> WideSrcs;
-  for (unsigned I = 1, E = MI.getNumOperands(); I < E; ++I) {
-    Register Src = MI.getOperand(I).getReg();
+  for (const MachineOperand &MO : llvm::drop_begin(MI.operands())) {
+    Register Src = MO.getReg();
     Register WideSrc = B.buildBuildVector(V2BF16, {Src, UndefBF16}).getReg(0);
     WideSrcs.push_back(WideSrc);
   }
