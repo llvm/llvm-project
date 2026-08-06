@@ -357,3 +357,32 @@ TEST_F(SelectionDAGNodeConstructionTest, CTLS) {
   SDValue Ctlsi1 = DAG->getNode(ISD::CTLS, DL, MVT::i32, i1Op);
   EXPECT_TRUE(isNullConstant(Ctlsi1));
 }
+TEST_F(SelectionDAGNodeConstructionTest, isIdentityElement) {
+  SDLoc DL;
+  SDValue Inf =
+      DAG->getConstantFP(APFloat::getInf(APFloat::IEEEsingle()), DL, MVT::f32);
+  SDValue NegInf = DAG->getConstantFP(
+      APFloat::getInf(APFloat::IEEEsingle(), true), DL, MVT::f32);
+
+  SDNodeFlags Flags;
+
+  // FMINIMUM
+  EXPECT_TRUE(DAG->isIdentityElement(ISD::FMINIMUM, Flags, Inf, 1));
+  EXPECT_FALSE(DAG->isIdentityElement(ISD::FMINIMUM, Flags, NegInf, 1));
+
+  // FMAXIMUM
+  EXPECT_TRUE(DAG->isIdentityElement(ISD::FMAXIMUM, Flags, NegInf, 1));
+  EXPECT_FALSE(DAG->isIdentityElement(ISD::FMAXIMUM, Flags, Inf, 1));
+
+  // Flags with NoNaNs
+  SDNodeFlags FlagsNNAN;
+  FlagsNNAN.setNoNaNs(true);
+
+  // FMINNUM
+  EXPECT_FALSE(DAG->isIdentityElement(ISD::FMINNUM, Flags, Inf, 1));
+  EXPECT_TRUE(DAG->isIdentityElement(ISD::FMINNUM, FlagsNNAN, Inf, 1));
+
+  // FMAXNUM
+  EXPECT_FALSE(DAG->isIdentityElement(ISD::FMAXNUM, Flags, NegInf, 1));
+  EXPECT_TRUE(DAG->isIdentityElement(ISD::FMAXNUM, FlagsNNAN, NegInf, 1));
+}
