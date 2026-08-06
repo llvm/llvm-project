@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -26,6 +27,7 @@ namespace llvm {
 namespace orc {
 
 char ResourceTrackerDefunct::ID = 0;
+char JITDylibDefunct::ID = 0;
 char FailedToMaterialize::ID = 0;
 char SymbolsNotFound::ID = 0;
 char SymbolsCouldNotBeRemoved::ID = 0;
@@ -77,6 +79,15 @@ std::error_code ResourceTrackerDefunct::convertToErrorCode() const {
 
 void ResourceTrackerDefunct::log(raw_ostream &OS) const {
   OS << "Resource tracker " << (void *)RT.get() << " became defunct";
+}
+
+std::error_code JITDylibDefunct::convertToErrorCode() const {
+  return orcError(OrcErrorCode::UnknownORCError);
+}
+
+void JITDylibDefunct::log(raw_ostream &OS) const {
+  OS << "JITDylib " << JD->getName() << " (" << (void *)JD.get()
+     << ") is defunct";
 }
 
 FailedToMaterialize::FailedToMaterialize(
@@ -175,27 +186,6 @@ std::error_code UnexpectedSymbolDefinitions::convertToErrorCode() const {
 void UnexpectedSymbolDefinitions::log(raw_ostream &OS) const {
   OS << "Unexpected definitions in module " << ModuleName
      << ": " << Symbols;
-}
-
-void SymbolInstance::lookupAsync(LookupAsyncOnCompleteFn OnComplete) const {
-  JD->getExecutionSession().lookup(
-      LookupKind::Static, {{JD.get(), JITDylibLookupFlags::MatchAllSymbols}},
-      SymbolLookupSet(Name), SymbolState::Ready,
-      [OnComplete = std::move(OnComplete)
-#ifndef NDEBUG
-           ,
-       Name = this->Name // Captured for the assert below only.
-#endif                   // NDEBUG
-  ](Expected<SymbolMap> Result) mutable {
-        if (Result) {
-          assert(Result->size() == 1 && "Unexpected number of results");
-          assert(Result->count(Name) &&
-                 "Result does not contain expected symbol");
-          OnComplete(Result->begin()->second);
-        } else
-          OnComplete(Result.takeError());
-      },
-      NoDependenciesToRegister);
 }
 
 AsynchronousSymbolQuery::AsynchronousSymbolQuery(
@@ -377,18 +367,18 @@ void ReExportsMaterializationUnit::materialize(
     SymbolAliasMap QueryAliases;
 
     // Collect as many aliases as we can without including a chain.
-    for (auto &KV : RequestedAliases) {
+    for (auto &[Alias, AliasInfo] : RequestedAliases) {
       // Chain detected. Skip this symbol for this round.
-      if (&SrcJD == &TgtJD && (QueryAliases.count(KV.second.Aliasee) ||
-                               RequestedAliases.count(KV.second.Aliasee)))
+      if (&SrcJD == &TgtJD && (QueryAliases.count(AliasInfo.Aliasee) ||
+                               RequestedAliases.count(AliasInfo.Aliasee)))
         continue;
 
-      ResponsibilitySymbols.insert(KV.first);
-      QuerySymbols.add(KV.second.Aliasee,
-                       KV.second.AliasFlags.hasMaterializationSideEffectsOnly()
+      ResponsibilitySymbols.insert(Alias);
+      QuerySymbols.add(AliasInfo.Aliasee,
+                       AliasInfo.AliasFlags.hasMaterializationSideEffectsOnly()
                            ? SymbolLookupFlags::WeaklyReferencedSymbol
                            : SymbolLookupFlags::RequiredSymbol);
-      QueryAliases[KV.first] = std::move(KV.second);
+      QueryAliases[Alias] = std::move(AliasInfo);
     }
 
     // Remove the aliases collected this round from the RequestedAliases map.
@@ -488,8 +478,8 @@ ReExportsMaterializationUnit::extractFlags(const SymbolAliasMap &Aliases) {
   return MaterializationUnit::Interface(std::move(SymbolFlags), nullptr);
 }
 
-Expected<SymbolAliasMap> buildSimpleReexportsAliasMap(JITDylib &SourceJD,
-                                                      SymbolNameSet Symbols) {
+Expected<SymbolAliasMap>
+buildSimpleReexportsAliasMap(JITDylib &SourceJD, const SymbolNameSet &Symbols) {
   SymbolLookupSet LookupSet(Symbols);
   auto Flags = SourceJD.getExecutionSession().lookupFlags(
       LookupKind::Static, {{&SourceJD, JITDylibLookupFlags::MatchAllSymbols}},
@@ -1054,9 +1044,7 @@ void JITDylib::removeFromLinkOrder(JITDylib &JD) {
 Error JITDylib::remove(const SymbolNameSet &Names) {
   return ES.runSessionLocked([&]() -> Error {
     assert(State == Open && "JD is defunct");
-    using SymbolMaterializerItrPair =
-        std::pair<SymbolTable::iterator, UnmaterializedInfosMap::iterator>;
-    std::vector<SymbolMaterializerItrPair> SymbolsToRemove;
+    SmallVector<SymbolStringPtr, 0> SymbolsToRemove;
     SymbolNameSet Missing;
     SymbolNameSet Materializing;
 
@@ -1076,10 +1064,7 @@ Error JITDylib::remove(const SymbolNameSet &Names) {
         continue;
       }
 
-      auto UMII = I->second.hasMaterializerAttached()
-                      ? UnmaterializedInfos.find(Name)
-                      : UnmaterializedInfos.end();
-      SymbolsToRemove.push_back(std::make_pair(I, UMII));
+      SymbolsToRemove.push_back(Name);
     }
 
     // If any of the symbols are not defined, return an error.
@@ -1092,18 +1077,18 @@ Error JITDylib::remove(const SymbolNameSet &Names) {
       return make_error<SymbolsCouldNotBeRemoved>(ES.getSymbolStringPool(),
                                                   std::move(Materializing));
 
-    // Remove the symbols.
-    for (auto &SymbolMaterializerItrPair : SymbolsToRemove) {
-      auto UMII = SymbolMaterializerItrPair.second;
-
+    // Remove the symbols. Erase by key rather than holding iterators across the
+    // loop: a prior erase invalidates other stored iterators under
+    // backward-shift deletion.
+    for (const SymbolStringPtr &Name : SymbolsToRemove) {
       // If there is a materializer attached, call discard.
+      auto UMII = UnmaterializedInfos.find(Name);
       if (UMII != UnmaterializedInfos.end()) {
         UMII->second->MU->doDiscard(*this, UMII->first);
         UnmaterializedInfos.erase(UMII);
       }
 
-      auto SymI = SymbolMaterializerItrPair.first;
-      Symbols.erase(SymI);
+      Symbols.erase(Name);
     }
 
     shrinkMaterializationInfoMemory();
@@ -1566,9 +1551,16 @@ void LookupTask::printDescription(raw_ostream &OS) { OS << "Lookup task"; }
 void LookupTask::run() { LS.continueLookup(Error::success()); }
 
 ExecutionSession::ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC)
-    : EPC(std::move(EPC)) {
+    : EPC(std::move(EPC)), BootstrapJD(createBareJITDylib("<bootstrap>")) {
   // Associated EPC and this.
   this->EPC->ES = this;
+  SymbolMap BootstrapSymbols;
+  for (auto &[Name, Ptr] : this->EPC->getBootstrapSymbolsMap())
+    BootstrapSymbols[intern(Name)] =
+        ExecutorSymbolDef(Ptr, JITSymbolFlags::Exported);
+  // Can't fail: BootstrapJD is a new, empty JD and the BootstrapSymbols
+  // variable is a map, so can't contain duplicates.
+  cantFail(BootstrapJD.define(absoluteSymbols(std::move(BootstrapSymbols))));
 }
 
 ExecutionSession::~ExecutionSession() {
@@ -1580,12 +1572,15 @@ ExecutionSession::~ExecutionSession() {
 Error ExecutionSession::endSession() {
   LLVM_DEBUG(dbgs() << "Ending ExecutionSession " << this << "\n");
 
+  WaitingOnGraph::OpRecorder *GOpRecorderToEnd = nullptr;
   auto JDsToRemove = runSessionLocked([&] {
 
 #ifdef EXPENSIVE_CHECKS
     verifySessionState("Entering ExecutionSession::endSession");
 #endif
 
+    if (SessionOpen)
+      GOpRecorderToEnd = GOpRecorder;
     SessionOpen = false;
     return JDs;
   });
@@ -1595,6 +1590,9 @@ Error ExecutionSession::endSession() {
   auto Err = removeJITDylibs(std::move(JDsToRemove));
 
   Err = joinErrors(std::move(Err), EPC->disconnect());
+
+  if (GOpRecorderToEnd)
+    GOpRecorderToEnd->recordEnd();
 
   return Err;
 }
@@ -1897,9 +1895,9 @@ Error ExecutionSession::registerJITDispatchHandlers(
   return Error::success();
 }
 
-void ExecutionSession::runJITDispatchHandler(SendResultFunction SendResult,
-                                             ExecutorAddr HandlerFnTagAddr,
-                                             ArrayRef<char> ArgBuffer) {
+void ExecutionSession::runJITDispatchHandler(
+    SendResultFunction SendResult, ExecutorAddr HandlerFnTagAddr,
+    shared::WrapperFunctionBuffer ArgBytes) {
 
   std::shared_ptr<JITDispatchHandlerFunction> F;
   {
@@ -1910,9 +1908,9 @@ void ExecutionSession::runJITDispatchHandler(SendResultFunction SendResult,
   }
 
   if (F)
-    (*F)(std::move(SendResult), ArgBuffer.data(), ArgBuffer.size());
+    (*F)(std::move(SendResult), ArgBytes.data(), ArgBytes.size());
   else
-    SendResult(shared::WrapperFunctionResult::createOutOfBandError(
+    SendResult(shared::WrapperFunctionBuffer::createOutOfBandError(
         ("No function registered for tag " +
          formatv("{0:x16}", HandlerFnTagAddr))
             .str()));
@@ -2978,7 +2976,7 @@ Error ExecutionSession::OL_notifyEmitted(
           std::move(Residual), WaitingOnGraph::ContainerElementsMap()));
   }
 
-  auto SR = WaitingOnGraph::simplify(std::move(SNs));
+  auto SR = WaitingOnGraph::simplify(std::move(SNs), GOpRecorder);
 
   LLVM_DEBUG({
     dbgs() << "  Simplified dependencies:\n";
@@ -3096,6 +3094,10 @@ ExecutionSession::IL_failSymbols(JITDylib &JD,
   verifySessionState("entering ExecutionSession::IL_failSymbols");
 #endif
 
+  // Early out in the easy case.
+  if (SymbolsToFail.empty())
+    return {};
+
   JITDylib::AsynchronousSymbolQuerySet FailedQueries;
   auto Fail = [&](JITDylib *FailJD, NonOwningSymbolStringPtr FailSym) {
     auto I = FailJD->Symbols.find_as(FailSym);
@@ -3124,7 +3126,7 @@ ExecutionSession::IL_failSymbols(JITDylib &JD,
   for (auto &Sym : SymbolsToFail)
     JDToFail.insert(NonOwningSymbolStringPtr(Sym));
 
-  auto FailedSNs = G.fail(ToFail);
+  auto FailedSNs = G.fail(ToFail, GOpRecorder);
 
   for (auto &SN : FailedSNs) {
     for (auto &[FailJD, Defs] : SN->defs()) {

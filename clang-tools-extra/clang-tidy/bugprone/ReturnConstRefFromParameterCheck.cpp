@@ -65,7 +65,7 @@ static bool hasSameParameterTypes(const FunctionDecl &FD, const FunctionDecl &O,
     const ParmVarDecl *DPD = FD.getParamDecl(I);
     const QualType OPT = O.getParamDecl(I)->getType();
     if (DPD == &PD) {
-      if (!llvm::isa<RValueReferenceType>(OPT) ||
+      if (!isa<RValueReferenceType>(OPT) ||
           !isSameTypeIgnoringConstRef(DPD->getType(), OPT))
         return false;
     } else {
@@ -85,9 +85,8 @@ static const Decl *findRVRefOverload(const FunctionDecl &FD,
   // 2. forward reference
   const DeclContext::lookup_result LookupResult =
       FD.getParent()->lookup(FD.getNameInfo().getName());
-  if (LookupResult.isSingleResult()) {
+  if (LookupResult.isSingleResult())
     return nullptr;
-  }
   for (const Decl *Overload : LookupResult) {
     if (Overload == &FD)
       continue;

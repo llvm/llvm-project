@@ -121,7 +121,7 @@ struct TestVectorContractionPrepareForMMTLowering
     return "test-vector-contraction-prepare-for-mmt-lowering";
   }
   StringRef getDescription() const final {
-    return "Test vector.contraction matmul canonicalization for MMT lowering.";
+    return "Test vector.contract matmul canonicalization for MMT lowering.";
   }
   TestVectorContractionPrepareForMMTLowering() = default;
 
@@ -150,6 +150,11 @@ struct TestVectorUnrollingPatterns
     return "Test lowering patterns to unroll contract ops in the vector "
            "dialect";
   }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<vector::VectorDialect>();
+  }
+
   TestVectorUnrollingPatterns() = default;
   TestVectorUnrollingPatterns(const TestVectorUnrollingPatterns &pass)
       : PassWrapper(pass) {}
@@ -181,6 +186,14 @@ struct TestVectorUnrollingPatterns
     populateVectorUnrollPatterns(
         patterns,
         UnrollVectorOptions()
+            .setNativeShape(ArrayRef<int64_t>{8, 8})
+            .setFilterConstraint([](Operation *op) {
+              return success(
+                  isa<vector::CreateMaskOp, vector::ConstantMaskOp>(op));
+            }));
+    populateVectorUnrollPatterns(
+        patterns,
+        UnrollVectorOptions()
             .setNativeShapeFn(
                 [](Operation *op) -> std::optional<SmallVector<int64_t>> {
                   auto shapeCast = dyn_cast<vector::ShapeCastOp>(op);
@@ -194,6 +207,25 @@ struct TestVectorUnrollingPatterns
                       resultShape[1] == 32) {
                     return SmallVector<int64_t>{1, 16};
                   }
+                  if (resultShape.size() == 2 && resultShape[0] == 2 &&
+                      resultShape[1] == 1) {
+                    return SmallVector<int64_t>{1, 1};
+                  }
+                  // Multi-group cases: tile contiguous per reassociation group
+                  // but strided in the whole result.
+                  auto sourceShape = shapeCast.getSourceVectorType().getShape();
+                  if (resultShape.size() == 3 && resultShape[0] == 8 &&
+                      resultShape[1] == 1 && resultShape[2] == 32) {
+                    return SmallVector<int64_t>{8, 1, 4};
+                  }
+                  if (sourceShape.size() == 3 && resultShape.size() == 2 &&
+                      resultShape[0] == 4 && resultShape[1] == 4) {
+                    return SmallVector<int64_t>{2, 2};
+                  }
+                  if (resultShape.size() == 3 && resultShape[0] == 2 &&
+                      resultShape[1] == 8 && resultShape[2] == 4) {
+                    return SmallVector<int64_t>{2, 2, 2};
+                  }
                   // Default case: [2,4] for all tests.
                   return SmallVector<int64_t>{2, 4};
                 })
@@ -205,6 +237,24 @@ struct TestVectorUnrollingPatterns
                       .setNativeShape(ArrayRef<int64_t>{1, 3, 4, 2})
                       .setFilterConstraint([](Operation *op) {
                         return success(isa<vector::TransposeOp>(op));
+                      }));
+    populateVectorUnrollPatterns(
+        patterns, UnrollVectorOptions()
+                      .setNativeShape(ArrayRef<int64_t>{4, 4})
+                      .setFilterConstraint([](Operation *op) {
+                        return success(isa<vector::BitCastOp>(op));
+                      }));
+    populateVectorUnrollPatterns(
+        patterns, UnrollVectorOptions()
+                      .setNativeShape(ArrayRef<int64_t>{2, 4})
+                      .setFilterConstraint([](Operation *op) {
+                        return success(isa<vector::InterleaveOp>(op));
+                      }));
+    populateVectorUnrollPatterns(
+        patterns, UnrollVectorOptions()
+                      .setNativeShape(ArrayRef<int64_t>{2, 4})
+                      .setFilterConstraint([](Operation *op) {
+                        return success(isa<vector::DeinterleaveOp>(op));
                       }));
 
     if (unrollBasedOnType) {
@@ -674,9 +724,9 @@ struct TestVectorDistribution
     }
     WarpExecuteOnLane0LoweringOptions options;
     options.warpAllocationFn = allocateGlobalSharedMemory;
-    options.warpSyncronizationFn = [](Location loc, OpBuilder &builder,
-                                      gpu::WarpExecuteOnLane0Op warpOp) {
-      gpu::BarrierOp::create(builder, loc);
+    options.warpSynchronizationFn = [](Location loc, OpBuilder &builder,
+                                       gpu::WarpExecuteOnLane0Op warpOp) {
+      gpu::BarrierOp::create(builder, loc, gpu::AddressSpace::Workgroup);
     };
     // Test on one pattern in isolation.
     if (warpOpToSCF) {
@@ -771,8 +821,8 @@ struct TestVectorGatherLowering
            "loads";
   }
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<arith::ArithDialect, func::FuncDialect,
-                    memref::MemRefDialect, scf::SCFDialect,
+    registry.insert<affine::AffineDialect, arith::ArithDialect,
+                    func::FuncDialect, memref::MemRefDialect, scf::SCFDialect,
                     tensor::TensorDialect, vector::VectorDialect>();
   }
 

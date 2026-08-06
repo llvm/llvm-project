@@ -478,6 +478,11 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
   let description = [{
     Broadcast the input into the given shape by adding `dimensions`.
 
+    Each index in the `dimensions` attribute refers to a dimension of `init`
+    that is added by the operation. The indices must be unique and within the
+    rank of `init`; the sizes of the remaining (non-added) dimensions of
+    `init` must match the shape of `input`.
+
     Example:
     ```mlir
       %bcast = linalg.broadcast
@@ -881,7 +886,7 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
     AffineMapArrayAttr:$indexing_maps,
     DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
   );
-  let results = (outs Variadic<AnyShaped>:$result_tensors);
+  let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
   // NB: The only reason this op has a region - and it get populated at op build
   //     time - is that currently the LinalgOp interface exposes methods that
   //     assume a relevant region is available to be queried at any time.
@@ -889,6 +894,13 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
 
   let skipDefaultBuilders = 1;
   let builders = [
+    OpBuilder<
+      (ins "ValueRange":$inputs, "ValueRange":$outputs,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
+                          attributes, regionBuilder);
+      }]>,
     OpBuilder<(ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
       "ValueRange":$outputs, "ArrayAttr":$indexingMaps,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),

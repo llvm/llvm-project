@@ -5,5 +5,6 @@ add_lldb_unittest(AdbClientTests
   PlatformAndroidTest.cpp
 
   LINK_LIBS
+    lldbHostHelpers
     lldbPluginPlatformAndroid
   )

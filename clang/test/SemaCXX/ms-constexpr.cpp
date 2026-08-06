@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fms-compatibility -fms-compatibility-version=19.33 -std=c++20 -verify %s
+// RUN: %clang_cc1 -fms-compatibility -fms-compatibility-version=19.33 -std=c++20 -verify %s -fexperimental-new-constant-interpreter
 
 [[msvc::constexpr]] int log2(int x) { [[msvc::constexpr]] return x > 1 ? 1 + log2(x / 2) : 0; }
 constexpr bool test_log2() { [[msvc::constexpr]] return log2(32) == 5; }

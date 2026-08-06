@@ -16,7 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
-static constexpr llvm::StringRef DefaultExclusionStr =
+static constexpr StringRef DefaultExclusionStr =
     "::std::map;::std::unordered_map;::std::flat_map";
 
 ProBoundsAvoidUncheckedContainerAccessCheck::
@@ -95,7 +95,7 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::registerMatchers(
               cxxMethodDecl(
                   hasOverloadedOperatorName("[]"),
                   anyOf(parameterCountIs(0), parameterCountIs(1)),
-                  unless(matchers::matchesAnyListedName(ExcludedClasses)))
+                  unless(matchers::matchesAnyListedRegexName(ExcludedClasses)))
                   .bind("operator")))
           .bind("caller"),
       this);
@@ -153,11 +153,12 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::check(
           MatchedExpr->getDirectCallee()->getNumParams() == 0;
 
       if (EmptySubscript) {
-        auto D = diag(MatchedExpr->getCallee()->getBeginLoc(),
-                      "possibly unsafe 'operator[]'%select{, use safe "
-                      "function '%1() instead|}0")
-                 << FixFunctionEmptyArgs.empty() << FixFunctionEmptyArgs.str()
-                 << MatchedExpr->getCallee()->getSourceRange();
+        const auto D = diag(MatchedExpr->getCallee()->getBeginLoc(),
+                            "possibly unsafe 'operator[]'%select{, use safe "
+                            "function '%1() instead|}0")
+                       << FixFunctionEmptyArgs.empty()
+                       << FixFunctionEmptyArgs.str()
+                       << MatchedExpr->getCallee()->getSourceRange();
         if (!FixFunctionEmptyArgs.empty()) {
           D << FixItHint::CreateInsertion(OCE->getArg(0)->getBeginLoc(),
                                           FixFunctionEmptyArgs.str() + "(")
@@ -176,7 +177,7 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::check(
     }
   } else if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(MatchedExpr)) {
     // Case: a.operator[](i) or a->operator[](i)
-    const auto *Callee = dyn_cast<MemberExpr>(MCE->getCallee());
+    const auto *Callee = cast<MemberExpr>(MCE->getCallee());
 
     if (FixMode == At) {
       // Cases: a.operator[](i) => a.at(i) and a->operator[](i) => a->at(i)
@@ -214,16 +215,17 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::check(
           "(";
 
       if (Callee->isArrow())
-        BeginInsertion += "*";
+        BeginInsertion += '*';
 
       // Since C++23, the subscript operator may also be called without an
       // argument, which makes the following distinction necessary
       if (EmptySubscript) {
-        auto D = diag(MatchedExpr->getCallee()->getBeginLoc(),
-                      "possibly unsafe 'operator[]'%select{, use safe "
-                      "function '%1()' instead|}0")
-                 << FixFunctionEmptyArgs.empty() << FixFunctionEmptyArgs.str()
-                 << Callee->getSourceRange();
+        const auto D = diag(MatchedExpr->getCallee()->getBeginLoc(),
+                            "possibly unsafe 'operator[]'%select{, use safe "
+                            "function '%1()' instead|}0")
+                       << FixFunctionEmptyArgs.empty()
+                       << FixFunctionEmptyArgs.str()
+                       << Callee->getSourceRange();
 
         if (!FixFunctionEmptyArgs.empty()) {
           D << FixItHint::CreateInsertion(MatchedExpr->getBeginLoc(),

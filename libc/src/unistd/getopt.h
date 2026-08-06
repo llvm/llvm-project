@@ -15,6 +15,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+extern char *optarg;
+extern int optind;
+extern int optopt;
+extern int opterr;
+
 namespace impl {
 void set_getopt_state(char **, int *, int *, unsigned *, int *, FILE *);
 }

@@ -237,32 +237,38 @@ end program
 
 ! CHECK-LABEL:   func.func private @_QFPsub_select_rank(
 ! CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<*:i32>> {fir.bindc_name = "arr"}) {{.*}} {
-! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
-! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 5 : i32
-! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 4 : i8
-! CHECK:           %[[CONSTANT_3:.*]] = arith.constant 1 : i8
+! CHECK-DAG:       %[[CONSTANT_0:.*]] = arith.constant 1 : index
+! CHECK-DAG:       %[[CONSTANT_1:.*]] = arith.constant 5 : i32
+! CHECK-DAG:       %[[CONSTANT_2:.*]] = arith.constant 4 : i8
+! CHECK-DAG:       %[[CONSTANT_3:.*]] = arith.constant 1 : i8
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VOLATILE_CAST_0:.*]] = fir.volatile_cast %[[ARG0]] : (!fir.box<!fir.array<*:i32>>) -> !fir.box<!fir.array<*:i32>, volatile>
 ! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]] dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFsub_select_rankEarr"} : (!fir.box<!fir.array<*:i32>, volatile>, !fir.dscope) -> (!fir.box<!fir.array<*:i32>, volatile>, !fir.box<!fir.array<*:i32>, volatile>)
 ! CHECK:           %[[VOLATILE_CAST_1:.*]] = fir.volatile_cast %[[DECLARE_0]]#0 : (!fir.box<!fir.array<*:i32>, volatile>) -> !fir.box<!fir.array<*:i32>>
 ! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[VOLATILE_CAST_1]] : (!fir.box<!fir.array<*:i32>>) -> !fir.box<none>
 ! CHECK:           %[[CALL_0:.*]] = fir.call @_FortranAIsAssumedSize(%[[CONVERT_0]]) : (!fir.box<none>) -> i1
-! CHECK:           cf.cond_br %[[CALL_0]], ^bb4, ^bb1
+! CHECK:           cf.cond_br %[[CALL_0]], ^bb5, ^bb1
 ! CHECK:         ^bb1:
 ! CHECK:           %[[BOX_RANK_0:.*]] = fir.box_rank %[[DECLARE_0]]#0 : (!fir.box<!fir.array<*:i32>, volatile>) -> i8
-! CHECK:           fir.select_case %[[BOX_RANK_0]] : i8 [#fir.point, %[[CONSTANT_3]], ^bb2, #fir.point, %[[CONSTANT_2]], ^bb3, unit, ^bb4]
+! `fir.select_case` for rank dispatch is now expanded into an arith.cmpi +
+! cf.cond_br ladder by --fir-select-ops-conversion during the pipeline.
+! CHECK:           %[[CMP_R1:.*]] = arith.cmpi eq, %[[BOX_RANK_0]], %[[CONSTANT_3]] : i8
+! CHECK:           cf.cond_br %[[CMP_R1]], ^bb3, ^bb2
 ! CHECK:         ^bb2:
+! CHECK:           %[[CMP_R4:.*]] = arith.cmpi eq, %[[BOX_RANK_0]], %[[CONSTANT_2]] : i8
+! CHECK:           cf.cond_br %[[CMP_R4]], ^bb4, ^bb5
+! CHECK:         ^bb3:
 ! CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[DECLARE_0]]#0 : (!fir.box<!fir.array<*:i32>, volatile>) -> !fir.box<!fir.array<?xi32>, volatile>
 ! CHECK:           %[[DECLARE_1:.*]]:2 = hlfir.declare %[[CONVERT_1]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFsub_select_rankEarr"} : (!fir.box<!fir.array<?xi32>, volatile>) -> (!fir.box<!fir.array<?xi32>, volatile>, !fir.box<!fir.array<?xi32>, volatile>)
 ! CHECK:           %[[DESIGNATE_0:.*]] = hlfir.designate %[[DECLARE_1]]#0 (%[[CONSTANT_0]])  : (!fir.box<!fir.array<?xi32>, volatile>, index) -> !fir.ref<i32, volatile>
 ! CHECK:           hlfir.assign %[[CONSTANT_1]] to %[[DESIGNATE_0]] : i32, !fir.ref<i32, volatile>
-! CHECK:           cf.br ^bb4
-! CHECK:         ^bb3:
+! CHECK:           cf.br ^bb5
+! CHECK:         ^bb4:
 ! CHECK:           %[[CONVERT_2:.*]] = fir.convert %[[DECLARE_0]]#0 : (!fir.box<!fir.array<*:i32>, volatile>) -> !fir.box<!fir.array<?x?x?x?xi32>, volatile>
 ! CHECK:           %[[DECLARE_2:.*]]:2 = hlfir.declare %[[CONVERT_2]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFsub_select_rankEarr"} : (!fir.box<!fir.array<?x?x?x?xi32>, volatile>) -> (!fir.box<!fir.array<?x?x?x?xi32>, volatile>, !fir.box<!fir.array<?x?x?x?xi32>, volatile>)
 ! CHECK:           %[[DESIGNATE_1:.*]] = hlfir.designate %[[DECLARE_2]]#0 (%[[CONSTANT_0]], %[[CONSTANT_0]], %[[CONSTANT_0]], %[[CONSTANT_0]])  : (!fir.box<!fir.array<?x?x?x?xi32>, volatile>, index, index, index, index) -> !fir.ref<i32, volatile>
 ! CHECK:           hlfir.assign %[[CONSTANT_1]] to %[[DESIGNATE_1]] : i32, !fir.ref<i32, volatile>
-! CHECK:           cf.br ^bb4
-! CHECK:         ^bb4:
+! CHECK:           cf.br ^bb5
+! CHECK:         ^bb5:
 ! CHECK:           return
 ! CHECK:         }

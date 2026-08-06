@@ -18,7 +18,7 @@ end subroutine circular
 !ERROR: Procedure 'foo' is recursively defined.  Procedures in the cycle: 'foo', 'r'
 function foo() result(r)
   !ERROR: Procedure 'r' is recursively defined.  Procedures in the cycle: 'foo', 'r'
-  procedure(foo), pointer :: r 
+  procedure(foo), pointer :: r
 end function foo
 
 subroutine iface

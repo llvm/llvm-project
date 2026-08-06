@@ -17,6 +17,7 @@
 #include "Basic/CodeGenIntrinsics.h"
 #include "Basic/SDNodeProperties.h"
 #include "CodeGenTarget.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -29,7 +30,6 @@
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
 #include <array>
-#include <functional>
 #include <map>
 #include <numeric>
 #include <vector>
@@ -191,7 +191,7 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   SetType &getOrCreate(unsigned Mode) { return Map[Mode]; }
 
   bool isValueTypeByHwMode(bool AllowEmpty) const;
-  ValueTypeByHwMode getValueTypeByHwMode() const;
+  ValueTypeByHwMode getValueTypeByHwMode(bool SkipEmpty = false) const;
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool isMachineValueType() const {
@@ -237,15 +237,6 @@ raw_ostream &operator<<(raw_ostream &OS, const TypeSetByHwMode &T);
 
 struct TypeInfer {
   TypeInfer(TreePattern &T) : TP(T) {}
-
-  bool isConcrete(const TypeSetByHwMode &VTS, bool AllowEmpty) const {
-    return VTS.isValueTypeByHwMode(AllowEmpty);
-  }
-  ValueTypeByHwMode getConcrete(const TypeSetByHwMode &VTS,
-                                bool AllowEmpty) const {
-    assert(VTS.isValueTypeByHwMode(AllowEmpty));
-    return VTS.getValueTypeByHwMode();
-  }
 
   /// The protocol in the following functions (Merge*, force*, Enforce*,
   /// expand*) is to return "true" if a change has been made, "false"
@@ -683,7 +674,7 @@ public:
   // Type accessors.
   unsigned getNumTypes() const { return Types.size(); }
   ValueTypeByHwMode getType(unsigned ResNo) const {
-    return Types[ResNo].getValueTypeByHwMode();
+    return Types[ResNo].getValueTypeByHwMode(/*SkipEmpty=*/true);
   }
   const std::vector<TypeSetByHwMode> &getExtTypes() const { return Types; }
   const TypeSetByHwMode &getExtType(unsigned ResNo) const {
@@ -928,7 +919,6 @@ public:
   const std::vector<TreePatternNodePtr> &getTrees() const { return Trees; }
   unsigned getNumTrees() const { return Trees.size(); }
   const TreePatternNodePtr &getTree(unsigned i) const { return Trees[i]; }
-  void setTree(unsigned i, TreePatternNodePtr Tree) { Trees[i] = Tree; }
   const TreePatternNodePtr &getOnlyTree() const {
     assert(Trees.size() == 1 && "Doesn't have exactly one pattern!");
     return Trees[0];
@@ -1112,6 +1102,7 @@ private:
   const RecordKeeper &Records;
   CodeGenTarget Target;
   CodeGenIntrinsicTable Intrinsics;
+  DenseMap<const Record *, unsigned> IntrinsicIDs;
 
   std::map<const Record *, SDNodeInfo, LessRecordByID> SDNodes;
 
@@ -1134,14 +1125,10 @@ private:
   TypeSetByHwMode LegalVTS;
   TypeSetByHwMode LegalPtrVTS;
 
-  using PatternRewriterFn = std::function<void(TreePattern *)>;
-  PatternRewriterFn PatternRewriter;
-
   unsigned NumScopes = 0;
 
 public:
-  CodeGenDAGPatterns(const RecordKeeper &R,
-                     PatternRewriterFn PatternRewriter = nullptr);
+  CodeGenDAGPatterns(const RecordKeeper &R, bool ExpandHwMode = true);
 
   CodeGenTarget &getTargetInfo() { return Target; }
   const CodeGenTarget &getTargetInfo() const { return Target; }
@@ -1170,10 +1157,7 @@ public:
   }
 
   const CodeGenIntrinsic &getIntrinsic(const Record *R) const {
-    for (const CodeGenIntrinsic &Intrinsic : Intrinsics)
-      if (Intrinsic.TheDef == R)
-        return Intrinsic;
-    llvm_unreachable("Unknown intrinsic!");
+    return Intrinsics[getIntrinsicID(R)];
   }
 
   const CodeGenIntrinsic &getIntrinsicInfo(unsigned IID) const {
@@ -1183,10 +1167,9 @@ public:
   }
 
   unsigned getIntrinsicID(const Record *R) const {
-    for (unsigned i = 0, e = Intrinsics.size(); i != e; ++i)
-      if (Intrinsics[i].TheDef == R)
-        return i;
-    llvm_unreachable("Unknown intrinsic!");
+    auto I = IntrinsicIDs.find(R);
+    assert(I != IntrinsicIDs.end() && "Unknown intrinsic!");
+    return I->second;
   }
 
   const DAGDefaultOperand &getDefaultOperand(const Record *R) const {

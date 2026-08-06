@@ -1395,7 +1395,7 @@ std::optional<float> RootSignatureParser::handleFloatLiteral(bool Negated) {
   llvm::APFloat::opStatus Status(Literal.GetFloatValue(Val, DXCRoundingMode));
 
   // Note: we do not error when opStatus::opInexact by itself as this just
-  // denotes that rounding occured but not that it is invalid
+  // denotes that rounding occurred but not that it is invalid
   assert(!(Status & llvm::APFloat::opStatus::opInvalidOp) &&
          "NumSpelling consists only of [0-9.ef+-]. Any malformed NumSpelling "
          "will be caught and reported by NumericLiteralParser.");
@@ -1556,7 +1556,7 @@ void HandleRootSignatureTarget(Sema &S, StringRef EntryRootSig) {
 
   bool HaveLexer = S.getPreprocessor().getCurrentLexer();
   if (HaveLexer) {
-    P->Initialize();
+    P->ConsumeToken();
     S.ActOnStartOfTranslationUnit();
 
     // Skim through the file to parse to find the define

@@ -21,6 +21,7 @@ unittest("GlobalISelTests") {
     "GISelAliasTest.cpp",
     "GISelMITest.cpp",
     "GISelUtilsTest.cpp",
+    "IRTranslatorBF16Test.cpp",
     "InstructionSelectTest.cpp",
     "KnownBitsTest.cpp",
     "KnownBitsVectorTest.cpp",

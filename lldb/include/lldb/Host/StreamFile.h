@@ -24,7 +24,7 @@ namespace lldb_private {
 
 class StreamFile : public Stream {
 public:
-  StreamFile(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order);
+  StreamFile(uint32_t flags, lldb::ByteOrder byte_order);
 
   StreamFile(int fd, bool transfer_ownership);
 
@@ -92,7 +92,10 @@ public:
   /// Unsafe accessors to get the underlying File without a lock. Exists for
   /// legacy reasons.
   /// @{
-  File &GetUnlockedFile() { return *m_file_sp; }
+  File &GetUnlockedFile() {
+    assert(m_file_sp && "GetUnlockedFile requires a valid FileSP");
+    return *m_file_sp;
+  }
   std::shared_ptr<File> GetUnlockedFileSP() { return m_file_sp; }
   /// @}
 

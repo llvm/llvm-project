@@ -33,7 +33,6 @@
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -79,24 +78,19 @@ char LiveDebugVariablesWrapperLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(LiveDebugVariablesWrapperLegacy, DEBUG_TYPE,
                       "Debug Variable Analysis", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(LiveDebugVariablesWrapperLegacy, DEBUG_TYPE,
                     "Debug Variable Analysis", false, true)
 
 void LiveDebugVariablesWrapperLegacy::getAnalysisUsage(
     AnalysisUsage &AU) const {
-  AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequiredTransitive<LiveIntervalsWrapperPass>();
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 LiveDebugVariablesWrapperLegacy::LiveDebugVariablesWrapperLegacy()
-    : MachineFunctionPass(ID) {
-  initializeLiveDebugVariablesWrapperLegacyPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 enum : unsigned { UndefLocNo = ~0U };
 

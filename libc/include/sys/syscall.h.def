@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SYS_SYSCALL_H
 #define LLVM_LIBC_SYS_SYSCALL_H
 
-//TODO: Handle non-linux syscalls
+#if defined(__linux__)
 
 #include <asm/unistd.h>
 
@@ -1637,6 +1637,10 @@
 #define SYS_recvmmsg __NR_recvmmsg
 #endif
 
+#ifdef __NR_recvmmsg_time64
+#define SYS_recvmmsg_time64 __NR_recvmmsg_time64
+#endif
+
 #ifdef __NR_recvmsg
 #define SYS_recvmsg __NR_recvmsg
 #endif
@@ -2361,5 +2365,6 @@
 #define SYS_writev __NR_writev
 #endif
 
+#endif // __linux__
 
 #endif // LLVM_LIBC_SYS_SYSCALL_H

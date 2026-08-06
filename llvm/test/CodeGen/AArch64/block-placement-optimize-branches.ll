@@ -8,21 +8,14 @@
 define i8 @foo_optsize(i32 %v4) optsize {
 ; CHECK-LABEL: foo_optsize:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cbz wzr, .LBB0_2
-; CHECK-NEXT:  .LBB0_1:
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_2: // %b1
-; CHECK-NEXT:    cbnz w0, .LBB0_4
-; CHECK-NEXT:  .LBB0_3: // %b2
+; CHECK-NEXT:    cbnz w0, .LBB0_2
+; CHECK-NEXT:  // %bb.1: // %b2
 ; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_4: // %b1
+; CHECK-NEXT:  .LBB0_2: // %b1
 ; CHECK-NEXT:    cmp w0, #1
-; CHECK-NEXT:    b.ne .LBB0_1
-; CHECK-NEXT:  // %bb.5: // %b3
-; CHECK-NEXT:    cbz wzr, .LBB0_1
-; CHECK-NEXT:    b .LBB0_3
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ret
 entry:
   %v2 = icmp eq i32 0, 0
   br i1 %v2, label %b1, label %b4
@@ -48,21 +41,14 @@ b4:
 define i8 @foo_optspeed(i32 %v4) {
 ; CHECK-LABEL: foo_optspeed:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cbz wzr, .LBB1_2
-; CHECK-NEXT:  .LBB1_1:
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_2: // %b1
-; CHECK-NEXT:    cbnz w0, .LBB1_4
-; CHECK-NEXT:  .LBB1_3: // %b2
+; CHECK-NEXT:    cbnz w0, .LBB1_2
+; CHECK-NEXT:  // %bb.1: // %b2
 ; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_4: // %b1
+; CHECK-NEXT:  .LBB1_2: // %b1
 ; CHECK-NEXT:    cmp w0, #1
-; CHECK-NEXT:    b.ne .LBB1_1
-; CHECK-NEXT:  // %bb.5: // %b3
-; CHECK-NEXT:    cbnz wzr, .LBB1_3
-; CHECK-NEXT:    b .LBB1_1
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ret
 entry:
   %v2 = icmp eq i32 0, 0
   br i1 %v2, label %b1, label %b4

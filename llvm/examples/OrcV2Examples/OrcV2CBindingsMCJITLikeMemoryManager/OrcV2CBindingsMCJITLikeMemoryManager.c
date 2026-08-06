@@ -158,16 +158,17 @@ LLVMOrcThreadSafeModuleRef createDemoModule(void) {
 
   // Add a "sum" function":
   //  - Create the function type and function instance.
-  LLVMTypeRef ParamTypes[] = {LLVMInt32Type(), LLVMInt32Type()};
-  LLVMTypeRef SumFunctionType =
-      LLVMFunctionType(LLVMInt32Type(), ParamTypes, 2, 0);
+  LLVMTypeRef Int32Type = LLVMInt32TypeInContext(Ctx);
+  LLVMTypeRef ParamTypes[] = {Int32Type, Int32Type};
+  LLVMTypeRef SumFunctionType = LLVMFunctionType(Int32Type, ParamTypes, 2, 0);
   LLVMValueRef SumFunction = LLVMAddFunction(M, "sum", SumFunctionType);
 
   //  - Add a basic block to the function.
-  LLVMBasicBlockRef EntryBB = LLVMAppendBasicBlock(SumFunction, "entry");
+  LLVMBasicBlockRef EntryBB =
+      LLVMAppendBasicBlockInContext(Ctx, SumFunction, "entry");
 
   //  - Add an IR builder and point it at the end of the basic block.
-  LLVMBuilderRef Builder = LLVMCreateBuilder();
+  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(Ctx);
   LLVMPositionBuilderAtEnd(Builder, EntryBB);
 
   //  - Get the two function arguments and use them co construct an "add"

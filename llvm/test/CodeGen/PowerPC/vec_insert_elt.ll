@@ -9,7 +9,7 @@
 ; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names \
 ; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-P9
 ; RUN: llc -mcpu=pwr8 -verify-machineinstrs -ppc-vsr-nums-as-vr \
-; RUN:   -ppc-asm-full-reg-names -mtriple=powerpc64-ibm-aix-xcoff < %s | \
+; RUN:   -ppc-asm-full-reg-names -mtriple=powerpc64-ibm-aix-xcoff --code-model=small < %s | \
 ; RUN: FileCheck %s --check-prefixes=AIX-P8,AIX-P8-64
 ; RUN: llc -mcpu=pwr8 -verify-machineinstrs -ppc-vsr-nums-as-vr \
 ; RUN:   -ppc-asm-full-reg-names -mtriple=powerpc-ibm-aix-xcoff < %s | \
@@ -241,12 +241,12 @@ define <2 x i64> @testDoubleword(<2 x i64> %a, i64 %b, i64 %idx) {
 ;
 ; AIX-P8-32-LABEL: testDoubleword:
 ; AIX-P8-32:       # %bb.0: # %entry
-; AIX-P8-32-NEXT:    add r6, r6, r6
 ; AIX-P8-32-NEXT:    addi r5, r1, -16
-; AIX-P8-32-NEXT:    rlwinm r7, r6, 2, 28, 29
+; AIX-P8-32-NEXT:    rlwinm r7, r6, 3, 28, 28
 ; AIX-P8-32-NEXT:    stxvd2x v2, 0, r5
 ; AIX-P8-32-NEXT:    stwx r3, r5, r7
-; AIX-P8-32-NEXT:    addi r3, r6, 1
+; AIX-P8-32-NEXT:    slwi r3, r6, 1
+; AIX-P8-32-NEXT:    addi r3, r3, 1
 ; AIX-P8-32-NEXT:    rlwinm r3, r3, 2, 28, 29
 ; AIX-P8-32-NEXT:    stwx r4, r5, r3
 ; AIX-P8-32-NEXT:    lxvd2x v2, 0, r5
@@ -928,25 +928,21 @@ entry:
 define <2 x double> @testDoubleImm1(<2 x double> %a, double %b) {
 ; CHECK-LABEL: testDoubleImm1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxmrghd v2, v2, vs1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: testDoubleImm1:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-BE-NEXT:    xxpermdi v2, vs1, v2, 1
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testDoubleImm1:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-P9-NEXT:    xxpermdi v2, vs1, v2, 1
 ; CHECK-P9-NEXT:    blr
 ;
 ; AIX-P8-LABEL: testDoubleImm1:
 ; AIX-P8:       # %bb.0: # %entry
-; AIX-P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; AIX-P8-NEXT:    xxpermdi v2, vs1, v2, 1
 ; AIX-P8-NEXT:    blr
 entry:

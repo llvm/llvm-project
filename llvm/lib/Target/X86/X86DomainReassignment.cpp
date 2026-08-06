@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -32,6 +33,7 @@ using namespace llvm;
 #define DEBUG_TYPE "x86-domain-reassignment"
 
 STATISTIC(NumClosuresConverted, "Number of closures converted by the pass");
+STATISTIC(NumClosuresBuilt, "Number of closures built by the pass");
 
 static cl::opt<bool> DisableX86DomainReassignment(
     "disable-x86-domain-reassignment", cl::Hidden,
@@ -336,13 +338,9 @@ public:
 
   LLVM_DUMP_METHOD void dump(const MachineRegisterInfo *MRI) const {
     dbgs() << "Registers: ";
-    bool First = true;
-    for (Register Reg : Edges) {
-      if (!First)
-        dbgs() << ", ";
-      First = false;
-      dbgs() << printReg(Reg, MRI->getTargetRegisterInfo(), 0, MRI);
-    }
+    ListSeparator LS;
+    for (Register Reg : Edges)
+      dbgs() << LS << printReg(Reg, MRI->getTargetRegisterInfo(), 0, MRI);
     dbgs() << "\n" << "Instructions:";
     for (MachineInstr *MI : Instrs) {
       dbgs() << "\n  ";
@@ -357,7 +355,11 @@ public:
 
 };
 
-class X86DomainReassignment : public MachineFunctionPass {
+class X86DomainReassignmentImpl {
+public:
+  bool runOnMachineFunction(MachineFunction &MF);
+
+private:
   const X86Subtarget *STI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   const X86InstrInfo *TII = nullptr;
@@ -368,23 +370,6 @@ class X86DomainReassignment : public MachineFunctionPass {
   /// All instructions that are included in some closure.
   DenseMap<MachineInstr *, unsigned> EnclosedInstrs;
 
-public:
-  static char ID;
-
-  X86DomainReassignment() : MachineFunctionPass(ID) { }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  StringRef getPassName() const override {
-    return "X86 Domain Reassignment Pass";
-  }
-
-private:
   /// A map of available Instruction Converters.
   InstrConverterBaseMap Converters;
 
@@ -413,13 +398,31 @@ private:
   double calculateCost(const Closure &C, RegDomain Domain) const;
 };
 
-char X86DomainReassignment::ID = 0;
+class X86DomainReassignmentLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  X86DomainReassignmentLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  StringRef getPassName() const override {
+    return "X86 Domain Reassignment Pass";
+  }
+};
+
+char X86DomainReassignmentLegacy::ID = 0;
 
 } // End anonymous namespace.
 
-bool X86DomainReassignment::visitRegister(Closure &C, Register Reg,
-                                          RegDomain &Domain,
-                                          SmallVectorImpl<Register> &Worklist) {
+bool X86DomainReassignmentImpl::visitRegister(
+    Closure &C, Register Reg, RegDomain &Domain,
+    SmallVectorImpl<Register> &Worklist) {
   if (!Reg.isVirtual())
     return true;
 
@@ -447,7 +450,7 @@ bool X86DomainReassignment::visitRegister(Closure &C, Register Reg,
   return true;
 }
 
-bool X86DomainReassignment::encloseInstr(Closure &C, MachineInstr *MI) {
+bool X86DomainReassignmentImpl::encloseInstr(Closure &C, MachineInstr *MI) {
   auto [I, Inserted] = EnclosedInstrs.try_emplace(MI, C.getID());
   if (!Inserted) {
     if (I->second != C.getID()) {
@@ -474,8 +477,8 @@ bool X86DomainReassignment::encloseInstr(Closure &C, MachineInstr *MI) {
   return C.hasLegalDstDomain();
 }
 
-double X86DomainReassignment::calculateCost(const Closure &C,
-                                            RegDomain DstDomain) const {
+double X86DomainReassignmentImpl::calculateCost(const Closure &C,
+                                                RegDomain DstDomain) const {
   assert(C.isLegal(DstDomain) && "Cannot calculate cost for illegal closure");
 
   double Cost = 0.0;
@@ -485,12 +488,13 @@ double X86DomainReassignment::calculateCost(const Closure &C,
   return Cost;
 }
 
-bool X86DomainReassignment::isReassignmentProfitable(const Closure &C,
-                                                     RegDomain Domain) const {
+bool X86DomainReassignmentImpl::isReassignmentProfitable(
+    const Closure &C, RegDomain Domain) const {
   return calculateCost(C, Domain) < 0.0;
 }
 
-void X86DomainReassignment::reassign(const Closure &C, RegDomain Domain) const {
+void X86DomainReassignmentImpl::reassign(const Closure &C,
+                                         RegDomain Domain) const {
   assert(C.isLegal(Domain) && "Cannot convert illegal closure");
 
   // Iterate all instructions in the closure, convert each one using the
@@ -540,7 +544,7 @@ static bool usedAsAddr(const MachineInstr &MI, Register Reg,
   return false;
 }
 
-void X86DomainReassignment::buildClosure(Closure &C, Register Reg) {
+void X86DomainReassignmentImpl::buildClosure(Closure &C, Register Reg) {
   SmallVector<Register, 4> Worklist;
   RegDomain Domain = NoDomain;
   visitRegister(C, Reg, Domain, Worklist);
@@ -550,7 +554,7 @@ void X86DomainReassignment::buildClosure(Closure &C, Register Reg) {
     // Register already in this closure.
     if (!C.insertEdge(CurReg))
       continue;
-    EnclosedEdges[Reg] = C.getID();
+    EnclosedEdges[CurReg] = C.getID();
 
     MachineInstr *DefMI = MRI->getVRegDef(CurReg);
     if (!encloseInstr(C, DefMI))
@@ -604,7 +608,7 @@ void X86DomainReassignment::buildClosure(Closure &C, Register Reg) {
   }
 }
 
-void X86DomainReassignment::initConverters() {
+void X86DomainReassignmentImpl::initConverters() {
   Converters[{MaskDomain, TargetOpcode::PHI}] =
       std::make_unique<InstrIgnore>(TargetOpcode::PHI);
 
@@ -759,9 +763,7 @@ void X86DomainReassignment::initConverters() {
 #undef GET_EGPR_IF_ENABLED
 }
 
-bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
+bool X86DomainReassignmentImpl::runOnMachineFunction(MachineFunction &MF) {
   if (DisableX86DomainReassignment)
     return false;
 
@@ -811,6 +813,7 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
     // Calculate closure starting with Reg.
     Closure C(ClosureID++, {MaskDomain});
     buildClosure(C, Reg);
+    ++NumClosuresBuilt;
 
     // Collect all closures that can potentially be converted.
     if (!C.empty() && C.isLegal(MaskDomain))
@@ -833,10 +836,29 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-INITIALIZE_PASS(X86DomainReassignment, "x86-domain-reassignment",
+bool X86DomainReassignmentLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  X86DomainReassignmentImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+INITIALIZE_PASS(X86DomainReassignmentLegacy, "x86-domain-reassignment",
                 "X86 Domain Reassignment Pass", false, false)
 
 /// Returns an instance of the Domain Reassignment pass.
-FunctionPass *llvm::createX86DomainReassignmentPass() {
-  return new X86DomainReassignment();
+FunctionPass *llvm::createX86DomainReassignmentLegacyPass() {
+  return new X86DomainReassignmentLegacy();
+}
+
+PreservedAnalyses
+X86DomainReassignmentPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  X86DomainReassignmentImpl Impl;
+  bool Changed = Impl.runOnMachineFunction(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

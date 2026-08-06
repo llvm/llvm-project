@@ -10,6 +10,7 @@
 #   int j = 2;
 #   return add(i, j);
 # }
+# Additional imports have been manually added and indexes adjusted after compiling
 --- !WASM
 FileHeader:
   Version:         0x1
@@ -29,6 +30,21 @@ Sections:
         ParamTypes:      []
         ReturnTypes:
           - I32
+  - Type:            IMPORT
+    Imports:
+      - Module:          env
+        Field:           foo
+        Kind:            FUNCTION
+        SigIndex:        0
+      - Module:          env
+        Field:           another_import
+        Kind:            FUNCTION
+        SigIndex:        0
+      - Module:          env
+        Field:           bar
+        Kind:            GLOBAL
+        GlobalType:      I32
+        GlobalMutable:   true
   - Type:            FUNCTION
     FunctionTypes:   [ 0, 1, 2, 1 ]
   - Type:            TABLE
@@ -44,30 +60,24 @@ Sections:
       - Minimum:         0x2
   - Type:            GLOBAL
     Globals:
-      - Index:           0
+      - Index:           1
         Type:            I32
         Mutable:         true
         InitExpr:
           Opcode:          I32_CONST
           Value:           66576
-      - Index:           1
-        Type:            I32
-        Mutable:         false
-        InitExpr:
-          Opcode:          I32_CONST
-          Value:           1036
       - Index:           2
         Type:            I32
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           1024
+          Value:           1036
       - Index:           3
         Type:            I32
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           1040
+          Value:           1024
       - Index:           4
         Type:            I32
         Mutable:         false
@@ -79,38 +89,44 @@ Sections:
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           66576
+          Value:           1040
       - Index:           6
         Type:            I32
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           1024
+          Value:           66576
       - Index:           7
         Type:            I32
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           66576
+          Value:           1024
       - Index:           8
         Type:            I32
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           131072
+          Value:           66576
       - Index:           9
         Type:            I32
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           0
+          Value:           131072
       - Index:           10
         Type:            I32
         Mutable:         false
         InitExpr:
           Opcode:          I32_CONST
-          Value:           1
+          Value:           0
       - Index:           11
+        Type:            I32
+        Mutable:         false
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           1
+      - Index:           12
         Type:            I32
         Mutable:         false
         InitExpr:
@@ -123,16 +139,16 @@ Sections:
         Index:           0
       - Name:            __wasm_call_ctors
         Kind:            FUNCTION
-        Index:           0
+        Index:           2
       - Name:            add
         Kind:            FUNCTION
-        Index:           1
+        Index:           3
       - Name:            __original_main
         Kind:            FUNCTION
-        Index:           2
+        Index:           4
       - Name:            main
         Kind:            FUNCTION
-        Index:           3
+        Index:           5
       - Name:            str
         Kind:            GLOBAL
         Index:           1
@@ -174,20 +190,20 @@ Sections:
         Index:           11
   - Type:            CODE
     Functions:
-      - Index:           0
+      - Index:           2
         Locals:          []
         Body:            0B
-      - Index:           1
+      - Index:           3
         Locals:
           - Type:            I32
             Count:           1
         Body:            23808080800041106B21022002200036020C20022001360208200228020C20022802086A0F0B
-      - Index:           2
+      - Index:           4
         Locals:
           - Type:            I32
             Count:           2
         Body:            23808080800041106B210020002480808080002000410036020C2000410136020820004102360204200028020820002802041081808080002101200041106A24808080800020010F0B
-      - Index:           3
+      - Index:           5
         Locals:          []
         Body:            1082808080000F0B
   - Type:            DATA
@@ -208,15 +224,19 @@ Sections:
     Name:            name
     FunctionNames:
       - Index:           0
-        Name:            __wasm_call_ctors
+        Name:            foo
       - Index:           1
-        Name:            add
+        Name:            another_import
       - Index:           2
-        Name:            __original_main
+        Name:            __wasm_call_ctors
       - Index:           3
+        Name:            add
+      - Index:           4
+        Name:            __original_main
+      - Index:           5
         Name:            main
     GlobalNames:
-      - Index:           0
+      - Index:           1
         Name:            __stack_pointer
     DataSegmentNames:
       - Index:           0

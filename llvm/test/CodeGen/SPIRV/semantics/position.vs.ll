@@ -21,8 +21,8 @@ entry:
   store <4 x float> %0, ptr addrspace(8) @SV_Position, align 16
   ret void
 
-; CHECK: %[[#TMP:]] = OpLoad %[[#v4]] %[[#INPUT]] Aligned 16
-; CHECK:              OpStore %[[#OUTPUT]] %[[#TMP]] Aligned 16
+; CHECK: %[[#TMP:]] = OpLoad %[[#v4]] %[[#INPUT]]
+; CHECK:              OpStore %[[#OUTPUT]] %[[#TMP]]
 }
 
 !0 = !{!1}

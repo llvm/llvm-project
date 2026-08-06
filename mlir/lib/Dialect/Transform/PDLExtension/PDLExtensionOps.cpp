@@ -174,7 +174,7 @@ transform::WithPDLPatternsOp::apply(transform::TransformRewriter &rewriter,
   }
 
   state.addExtension<PatternApplicatorExtension>(getOperation());
-  auto guard = llvm::make_scope_exit(
+  llvm::scope_exit guard(
       [&]() { state.removeExtension<PatternApplicatorExtension>(); });
 
   auto scope = state.make_region_scope(getBody());

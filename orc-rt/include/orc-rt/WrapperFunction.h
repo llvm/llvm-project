@@ -34,7 +34,7 @@ public:
   /// Create a WrapperFunctionBuffer from a WrapperFunctionBuffer. This
   /// instance takes ownership of the result object and will automatically
   /// call dispose on the result upon destruction.
-  WrapperFunctionBuffer(orc_rt_WrapperFunctionBuffer B) : B(B) {}
+  explicit WrapperFunctionBuffer(orc_rt_WrapperFunctionBuffer B) : B(B) {}
 
   WrapperFunctionBuffer(const WrapperFunctionBuffer &) = delete;
   WrapperFunctionBuffer &operator=(const WrapperFunctionBuffer &) = delete;
@@ -78,22 +78,25 @@ public:
   /// Create a WrapperFunctionBuffer with the given size and return a pointer
   /// to the underlying memory.
   static WrapperFunctionBuffer allocate(size_t Size) {
-    return orc_rt_WrapperFunctionBufferAllocate(Size);
+    return WrapperFunctionBuffer(orc_rt_WrapperFunctionBufferAllocate(Size));
   }
 
   /// Copy from the given char range.
   static WrapperFunctionBuffer copyFrom(const char *Source, size_t Size) {
-    return orc_rt_CreateWrapperFunctionBufferFromRange(Source, Size);
+    return WrapperFunctionBuffer(
+        orc_rt_CreateWrapperFunctionBufferFromRange(Source, Size));
   }
 
   /// Copy from the given null-terminated string (includes the null-terminator).
   static WrapperFunctionBuffer copyFrom(const char *Source) {
-    return orc_rt_CreateWrapperFunctionBufferFromString(Source);
+    return WrapperFunctionBuffer(
+        orc_rt_CreateWrapperFunctionBufferFromString(Source));
   }
 
   /// Create an out-of-band error by copying the given string.
   static WrapperFunctionBuffer createOutOfBandError(const char *Msg) {
-    return orc_rt_CreateWrapperFunctionBufferFromOutOfBandError(Msg);
+    return WrapperFunctionBuffer(
+        orc_rt_CreateWrapperFunctionBufferFromOutOfBandError(Msg));
   }
 
   /// If this value is an out-of-band error then this returns the error message,
@@ -132,19 +135,22 @@ struct WFHandlerTraitsImpl {
   }
 };
 
+template <bool /* is_const */, bool /* is_noexcept */, typename... Ts>
+struct WFHandlerTraitsImplAdapter : WFHandlerTraitsImpl<Ts...> {};
+
 template <typename C>
-using WFHandlerTraits = CallableTraitsHelper<WFHandlerTraitsImpl, C>;
+using WFHandlerTraits = CallableTraitsHelper<WFHandlerTraitsImplAdapter, C>;
 
 template <typename Serializer> class StructuredYieldBase {
 public:
-  StructuredYieldBase(orc_rt_SessionRef S, uint64_t CallId,
-                      orc_rt_WrapperFunctionReturn Return, Serializer &&Z)
-      : S(S), CallId(CallId), Return(Return), Z(std::forward<Serializer>(Z)) {}
+  StructuredYieldBase(orc_rt_SessionRef S, orc_rt_WrapperFunctionReturn Return,
+                      uint64_t CallId, Serializer &&Z)
+      : S(S), Return(Return), CallId(CallId), Z(std::forward<Serializer>(Z)) {}
 
 protected:
   orc_rt_SessionRef S;
-  uint64_t CallId;
   orc_rt_WrapperFunctionReturn Return;
+  uint64_t CallId;
   std::decay_t<Serializer> Z;
 };
 
@@ -157,12 +163,13 @@ public:
   using StructuredYieldBase<Serializer>::StructuredYieldBase;
   void operator()(RetT &&R) {
     if (auto ResultBytes = this->Z.result().serialize(std::forward<RetT>(R)))
-      this->Return(this->S, this->CallId, ResultBytes->release());
+      this->Return(this->S, ResultBytes->release(), this->CallId);
     else
-      this->Return(this->S, this->CallId,
+      this->Return(this->S,
                    WrapperFunctionBuffer::createOutOfBandError(
                        "Could not serialize wrapper function result data")
-                       .release());
+                       .release(),
+                   this->CallId);
   }
 };
 
@@ -172,7 +179,7 @@ class StructuredYield<std::tuple<>, Serializer>
 public:
   using StructuredYieldBase<Serializer>::StructuredYieldBase;
   void operator()() {
-    this->Return(this->S, this->CallId, WrapperFunctionBuffer().release());
+    this->Return(this->S, WrapperFunctionBuffer().release(), this->CallId);
   }
 };
 
@@ -249,12 +256,11 @@ struct WrapperFunction {
   ///
   ///
   ///   static void adder_add_async_sps_wrapper(
-  ///       orc_rt_SessionRef S, uint64_t CallId,
-  ///       orc_rt_WrapperFunctionReturn Return,
-  ///       orc_rt_WrapperFunctionBuffer ArgBytes) {
+  ///       orc_rt_SessionRef S, orc_rt_WrapperFunctionBuffer ArgBytes,
+  ///       orc_rt_WrapperFunctionReturn Return, uint64_t CallId) {
   ///     using SPSSig = SPSString(SPSExecutorAddr, int32_t, bool);
   ///     SPSWrapperFunction<SPSSig>::handle(
-  ///         S, CallId, Return, ArgBytes,
+  ///         S, ArgBytes, Return, CallId,
   ///         WrapperFunction::handleWithAsyncMethod(&MyClass::myMethod));
   ///   }
   ///   @endcode
@@ -311,12 +317,11 @@ struct WrapperFunction {
   ///
   ///
   ///   static void adder_add_sync_sps_wrapper(
-  ///       orc_rt_SessionRef S, uint64_t CallId,
-  ///       orc_rt_WrapperFunctionReturn Return,
-  ///       orc_rt_WrapperFunctionBuffer ArgBytes) {
+  ///       orc_rt_SessionRef S, orc_rt_WrapperFunctionBuffer ArgBytes,
+  ///       orc_rt_WrapperFunctionReturn Return, uint64_t CallId) {
   ///     using SPSSig = SPSString(SPSExecutorAddr, int32_t, bool);
   ///     SPSWrapperFunction<SPSSig>::handle(
-  ///         S, CallId, Return, ArgBytes,
+  ///         S, ArgBytes, Return, CallId,
   ///         WrapperFunction::handleWithSyncMethod(&Adder::addSync));
   ///   }
   ///   @endcode
@@ -365,10 +370,9 @@ struct WrapperFunction {
   /// This utility deserializes and serializes arguments and return values
   /// (using the given Serializer), and calls the given handler.
   template <typename Serializer, typename Handler>
-  static void handle(orc_rt_SessionRef S, uint64_t CallId,
-                     orc_rt_WrapperFunctionReturn Return,
-                     WrapperFunctionBuffer ArgBytes, Serializer &&Z,
-                     Handler &&H) {
+  static void handle(orc_rt_SessionRef S, WrapperFunctionBuffer ArgBytes,
+                     orc_rt_WrapperFunctionReturn Return, uint64_t CallId,
+                     Serializer &&Z, Handler &&H) {
     typedef detail::WFHandlerTraits<Handler> HandlerTraits;
     typedef typename HandlerTraits::ArgTupleType ArgTuple;
     typedef typename HandlerTraits::YieldType Yield;
@@ -377,19 +381,20 @@ struct WrapperFunction {
     typedef typename CallableArgInfo<Yield>::args_tuple_type RetTupleType;
 
     if (ArgBytes.getOutOfBandError())
-      return Return(S, CallId, ArgBytes.release());
+      return Return(S, ArgBytes.release(), CallId);
 
     if (auto Args = Z.arguments().template deserialize<ArgTuple>(ArgBytes))
       std::apply(HandlerTraits::forwardArgsAsRequested(bind_front(
                      std::forward<Handler>(H),
                      detail::StructuredYield<RetTupleType, Serializer>(
-                         S, CallId, Return, std::move(Z)))),
+                         S, Return, CallId, std::move(Z)))),
                  *Args);
     else
-      Return(S, CallId,
+      Return(S,
              WrapperFunctionBuffer::createOutOfBandError(
                  "Could not deserialize wrapper function arg data")
-                 .release());
+                 .release(),
+             CallId);
   }
 };
 

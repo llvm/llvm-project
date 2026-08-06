@@ -210,6 +210,14 @@ public:
   AnyResourceExtType(const AnyResourceExtType &) = delete;
   AnyResourceExtType &operator=(const AnyResourceExtType &) = delete;
 
+  Type *getResourceType() const {
+    // Sampler and feedback resources do not have an underlying type.
+    if (isa<SamplerExtType>(this) || isa<FeedbackTextureExtType>(this))
+      return nullptr;
+    // All other resources store the type in a parameter.
+    return getTypeParameter(0);
+  }
+
   static bool classof(const TargetExtType *T) {
     return isa<RawBufferExtType>(T) || isa<TypedBufferExtType>(T) ||
            isa<TextureExtType>(T) || isa<MSTextureExtType>(T) ||
@@ -376,13 +384,18 @@ public:
       return !(*this == RHS);
     }
     bool operator<(const ResourceBinding &RHS) const {
-      return std::tie(RecordID, Space, LowerBound, Size) <
-             std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
+      // a size of 0 indicates unbounded. Accounting for when the size is 0
+      // guarantees a well ordered results.
+      const bool LHSIsUnbounded = Size == 0;
+      const bool RHSIsUnbounded = RHS.Size == 0;
+      return std::tie(RecordID, Space, LowerBound, LHSIsUnbounded, Size) <
+             std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHSIsUnbounded,
+                      RHS.Size);
     }
     bool overlapsWith(const ResourceBinding &RHS) const {
       if (Space != RHS.Space)
         return false;
-      if (Size == UINT32_MAX)
+      if (Size == 0)
         return LowerBound < RHS.LowerBound;
       return LowerBound + Size - 1 >= RHS.LowerBound;
     }
@@ -397,6 +410,7 @@ private:
 public:
   bool GloballyCoherent = false;
   ResourceCounterDirection CounterDirection = ResourceCounterDirection::Unknown;
+  bool HasAtomic64Use = false;
 
   ResourceInfo(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
                uint32_t Size, TargetExtType *HandleTy, StringRef Name = "",
@@ -501,8 +515,11 @@ class DXILResourceMap {
   void populate(Module &M, DXILResourceTypeMap &DRTM);
   /// Populate the map given the resource binding calls in the given module.
   void populateResourceInfos(Module &M, DXILResourceTypeMap &DRTM);
-  /// Analyze and populate the directions of the resource counters.
-  void populateCounterDirections(Module &M);
+  /// Analyze uses to fill in per-resource dynamic state — counter directions
+  /// and 64-bit atomic use.
+  void populateFromInstructions(Module &M);
+  void populateAtomicUses(Instruction &I);
+  void populateRecordCounterDirection(Instruction &I);
 
   /// Resolves a resource handle into a vector of ResourceInfos that
   /// represent the possible unique creations of the handle. Certain cases are
@@ -609,15 +626,14 @@ public:
 };
 
 /// Printer pass for the \c DXILResourceAnalysis results.
-class DXILResourcePrinterPass : public PassInfoMixin<DXILResourcePrinterPass> {
+class DXILResourcePrinterPass
+    : public RequiredPassInfoMixin<DXILResourcePrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit DXILResourcePrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI DXILResourceWrapperPass : public ModulePass {

@@ -4,10 +4,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// REQUIRES: has-unix-headers
+// REQUIRES: can-test-hardening-assertions-extensive
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <mdspan>
 
@@ -43,7 +41,7 @@ int main(int, char**) {
     assert(map.required_span_size() == static_cast<signed char>(12));
     // 100 x 3 exceeds 256
     {
-      TEST_LIBCPP_ASSERT_FAILURE(([=] { mds.size(); }()), "mdspan: size() is not representable as size_type");
+      TEST_LIBCPP_ASSERT_FAILURE(([=] { (void)mds.size(); }()), "mdspan: size() is not representable as size_type");
     }
   }
   return 0;

@@ -73,6 +73,15 @@ SBFileSpec SBProcessInfo::GetExecutableFile() {
   return file_spec;
 }
 
+const char *SBProcessInfo::GetArg0() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!m_opaque_up)
+    return nullptr;
+
+  return ConstString(m_opaque_up->GetArg0()).GetCString();
+}
+
 lldb::pid_t SBProcessInfo::GetProcessID() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -183,5 +192,25 @@ const char *SBProcessInfo::GetTriple() {
   if (!arch.IsValid())
     return nullptr;
 
-  return ConstString(arch.GetTriple().getTriple().c_str()).GetCString();
+  return ConstString(arch.GetTriple().getTriple()).GetCString();
+}
+
+uint32_t SBProcessInfo::GetNumArguments() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!m_opaque_up)
+    return 0;
+
+  const Args &args = m_opaque_up->GetArguments();
+  return args.GetArgumentCount();
+}
+
+const char *SBProcessInfo::GetArgumentAtIndex(uint32_t idx) const {
+  LLDB_INSTRUMENT_VA(this, idx);
+
+  if (!m_opaque_up)
+    return nullptr;
+
+  const Args &args = m_opaque_up->GetArguments();
+  return ConstString(args.GetArgumentAtIndex(idx)).GetCString();
 }

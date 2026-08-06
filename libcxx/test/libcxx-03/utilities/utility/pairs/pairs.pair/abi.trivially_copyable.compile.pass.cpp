@@ -52,13 +52,8 @@ static_assert(!std::is_trivially_copyable<std::pair<int, char> >::value, "");
 static_assert(!std::is_trivially_copyable<std::pair<char, int> >::value, "");
 static_assert(!std::is_trivially_copyable<std::pair<std::pair<char, char>, int> >::value, "");
 static_assert(!std::is_trivially_copyable<std::pair<trivially_copyable, int> >::value, "");
-#if TEST_STD_VER == 03 // Known ABI difference
 static_assert(!std::is_trivially_copyable<std::pair<trivially_copyable_no_copy_assignment, int> >::value, "");
 static_assert(!std::is_trivially_copyable<std::pair<trivially_copyable_no_move_assignment, int> >::value, "");
-#else
-static_assert(std::is_trivially_copyable<std::pair<trivially_copyable_no_copy_assignment, int> >::value, "");
-static_assert(std::is_trivially_copyable<std::pair<trivially_copyable_no_move_assignment, int> >::value, "");
-#endif
 static_assert(!std::is_trivially_copyable<std::pair<trivially_copyable_no_construction, int> >::value, "");
 
 static_assert(std::is_trivially_copy_constructible<std::pair<int, int> >::value, "");

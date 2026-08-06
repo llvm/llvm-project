@@ -812,7 +812,7 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
 
   module.walk([&](Operation *op) {
     TypeSwitch<Operation *>(op)
-        .Case<math::CountLeadingZerosOp>([&](math::CountLeadingZerosOp op) {
+        .Case([&](math::CountLeadingZerosOp op) {
           if (!convertCtlz || !isConvertible(op))
             return;
           Type resultType = getElementTypeOrSelf(op.getResult().getType());
@@ -824,7 +824,7 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
           if (entry.second)
             entry.first->second = createCtlzFunc(&module, resultType);
         })
-        .Case<math::IPowIOp>([&](math::IPowIOp op) {
+        .Case([&](math::IPowIOp op) {
           if (!isConvertible(op))
             return;
 
@@ -837,7 +837,7 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
           if (entry.second)
             entry.first->second = createElementIPowIFunc(&module, resultType);
         })
-        .Case<math::FPowIOp>([&](math::FPowIOp op) {
+        .Case([&](math::FPowIOp op) {
           if (!isFPowIConvertible(op))
             return;
 

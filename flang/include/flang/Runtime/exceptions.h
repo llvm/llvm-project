@@ -24,12 +24,12 @@ extern "C" {
 
 // Map a set of IEEE_FLAG_TYPE exception values to a libm fenv.h excepts value.
 // This mapping is done at runtime to support cross compilation.
-std::uint32_t RTNAME(MapException)(std::uint32_t excepts);
+std::uint32_t RTDECL(MapException)(std::uint32_t excepts);
 
 // Exception processing functions that call the corresponding libm functions,
 // and also include support for denormal exceptions where available.
 void RTNAME(feclearexcept)(std::uint32_t excepts);
-void RTNAME(feraiseexcept)(std::uint32_t excepts);
+void RTDECL(feraiseexcept)(std::uint32_t excepts);
 std::uint32_t RTNAME(fetestexcept)(std::uint32_t excepts);
 void RTNAME(fedisableexcept)(std::uint32_t excepts);
 void RTNAME(feenableexcept)(std::uint32_t excepts);
@@ -46,6 +46,11 @@ void RTNAME(SetUnderflowMode)(bool flag);
 // Get the byte size of ieee_modes_type and ieee_status_type data.
 std::size_t RTNAME(GetModesTypeSize)(void);
 std::size_t RTNAME(GetStatusTypeSize)(void);
+
+// Enable trapping on the specified floating-point exceptions.
+// The excepts argument is a bitmask of IEEE_FLAG_TYPE values
+// (as used by MapException).
+void RTNAME(EnableFPETraps)(std::uint32_t excepts);
 
 } // extern "C"
 } // namespace Fortran::runtime

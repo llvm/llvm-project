@@ -7,6 +7,7 @@ from lldbsuite.test_event.build_exception import BuildError
 
 class TestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def build_and_run(self, test_file):
         """
@@ -86,6 +87,7 @@ class TestCase(TestBase):
             return
         self.expect_expr("func(1, 2, 3, 4)", result_type="int", result_value="10")
 
+    @skipIfWasm  # no expression evaluation
     def test_sysv_abi(self):
         if not self.build_and_run("sysv_abi.c"):
             return

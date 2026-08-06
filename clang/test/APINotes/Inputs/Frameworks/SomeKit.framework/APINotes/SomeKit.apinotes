@@ -45,6 +45,12 @@ Classes:
       - Name: intPropertyToMangle
         PropertyKind: Instance
         Type: 'double *'
+Protocols:
+  - Name: InitializableProtocolDUMP
+    Methods:
+      - Selector: "initWithValue:"
+        MethodKind: Instance
+        DesignatedInit: true
 Functions:
   - Name: global_int_fun
     ResultType: 'char *'

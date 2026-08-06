@@ -1,7 +1,8 @@
 {
     "Opcodes": {
         "Ret": [1, 2],
-        "Br": [3, 4],
+        "UncondBr": [3, 4],
+        "CondBr": [3, 4],
         "Switch": [5, 6],
         "IndirectBr": [7, 8],
         "Invoke": [9, 10],

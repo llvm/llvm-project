@@ -11,7 +11,9 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include <cstring>
 
 #include "lldb/Target/UnixSignals.h"
 
@@ -28,16 +30,15 @@ ProcessWasm::ProcessWasm(lldb::TargetSP target_sp, ListenerSP listener_sp)
   // Wasm doesn't have any Unix-like signals as a platform concept, but pretend
   // like it does to appease LLDB.
   m_unix_signals_sp = UnixSignals::Create(target_sp->GetArchitecture());
+  // FIXME: LLVM's RuntimeDyld doesn't support the Wasm object format, so we
+  // can't JIT expressions for this target.
+  SetCanJIT(false);
 }
 
 void ProcessWasm::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance,
-                                  DebuggerInitialize);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance,
+                                DebuggerInitialize);
 }
 
 void ProcessWasm::DebuggerInitialize(Debugger &debugger) {
@@ -85,6 +86,45 @@ std::shared_ptr<ThreadGDBRemote> ProcessWasm::CreateThread(lldb::tid_t tid) {
   return std::make_shared<ThreadWasm>(*this, tid);
 }
 
+size_t ProcessWasm::ReadGlobal(uint32_t module_id, uint32_t index, void *buf,
+                               size_t size, Status &error) {
+  // FIXME: The module id is what should select the instance holding the global,
+  // but the qWasmGlobal packet takes a frame index instead, so the selected
+  // frame has to stand in for the instance. That leaves a global in an instance
+  // with no active frame out of reach. See
+  // https://github.com/llvm/llvm-project/issues/212833.
+  ThreadSP thread = GetThreadList().GetSelectedThread();
+  StackFrameSP frame =
+      thread ? thread->GetSelectedFrame(DoNoSelectMostRelevantFrame) : nullptr;
+  if (!frame) {
+    error = Status::FromErrorStringWithFormatv(
+        "Wasm global read failed: no frame to read global {0} of module {1:x} "
+        "from",
+        index, module_id);
+    return 0;
+  }
+
+  llvm::Expected<lldb::DataBufferSP> buffer =
+      GetWasmVariable(eWasmTagGlobal, frame->GetConcreteFrameIndex(), index);
+  if (!buffer) {
+    error = Status::FromError(buffer.takeError());
+    return 0;
+  }
+
+  // A global comes back whole. Reading more than it holds would have to come
+  // from somewhere else, and the next index is not adjacent storage.
+  const size_t global_size = (*buffer)->GetByteSize();
+  if (size > global_size) {
+    error = Status::FromErrorStringWithFormatv(
+        "Wasm global read failed: requested {0} bytes from a {1}-byte global",
+        size, global_size);
+    return 0;
+  }
+
+  std::memcpy(buf, (*buffer)->GetBytes(), size);
+  return size;
+}
+
 size_t ProcessWasm::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                                Status &error) {
   wasm_addr_t wasm_addr(vm_addr);
@@ -93,12 +133,19 @@ size_t ProcessWasm::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
   case WasmAddressType::Memory:
   case WasmAddressType::Object:
     return ProcessGDBRemote::ReadMemory(vm_addr, buf, size, error);
+  case WasmAddressType::Global:
+    return ReadGlobal(wasm_addr.GetModuleID(), wasm_addr.GetOffset(), buf, size,
+                      error);
   case WasmAddressType::Invalid:
-    error.FromErrorStringWithFormat(
-        "Wasm read failed for invalid address 0x%" PRIx64, vm_addr);
-    return 0;
+    break;
   }
-  llvm_unreachable("Fully covered switch above");
+
+  error = Status::FromErrorStringWithFormatv(
+      "Wasm read failed for invalid address {0:x} (type = {1:x}, module = "
+      "{2:x}, offset = {3:x})",
+      vm_addr, wasm_addr.GetType(), wasm_addr.GetModuleID(),
+      wasm_addr.GetOffset());
+  return 0;
 }
 
 llvm::Expected<std::vector<lldb::addr_t>>

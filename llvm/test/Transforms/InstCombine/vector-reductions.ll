@@ -4,8 +4,6 @@
 declare float @llvm.vector.reduce.fadd.f32.v4f32(float, <4 x float>)
 declare float @llvm.vector.reduce.fadd.f32.v8f32(float, <8 x float>)
 declare float @llvm.vector.reduce.fmul.f32.nxv4f32(float, <vscale x 4 x float>)
-declare float @llvm.vector.reduce.fmin.f32.v4f32(float, <4 x float>)
-declare float @llvm.vector.reduce.fmax.f32.nxv4f32(float, <vscale x 4 x float>)
 declare void @use_f32(float)
 
 declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
@@ -412,12 +410,7 @@ define i64 @constant_multiplied_6xi64(i64 %0) {
 
 define i1 @constant_multiplied_8xi1(i1 %0) {
 ; CHECK-LABEL: @constant_multiplied_8xi1(
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i1> poison, i1 [[TMP0:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i1> [[TMP3]] to i8
-; CHECK-NEXT:    [[TMP5:%.*]] = call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i8 [[TMP5]] to i1
-; CHECK-NEXT:    ret i1 [[TMP6]]
+; CHECK-NEXT:    ret i1 false
 ;
   %2 = insertelement <8 x i1> poison, i1 %0, i32 0
   %3 = shufflevector <8 x i1> %2, <8 x i1> poison, <8 x i32> zeroinitializer

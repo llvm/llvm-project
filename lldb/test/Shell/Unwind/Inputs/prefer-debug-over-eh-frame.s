@@ -1,3 +1,4 @@
+        .att_syntax
         .cfi_sections .eh_frame, .debug_frame
         .text
         .globl  bar

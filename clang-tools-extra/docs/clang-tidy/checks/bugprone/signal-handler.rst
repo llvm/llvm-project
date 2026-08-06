@@ -31,10 +31,10 @@ recursively.
 
 This check implements the CERT C Coding Standard rule
 `SIG30-C. Call only asynchronous-safe functions within signal handlers
-<https://www.securecoding.cert.org/confluence/display/c/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers>`_
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/signals-sig/sig30-c/>`_
 and the rule
 `MSC54-CPP. A signal handler must be a plain old function
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/MSC54-CPP.+A+signal+handler+must+be+a+plain+old+function>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/miscellaneous-msc/msc54-cpp/>`_.
 It has the alias names ``cert-sig30-c`` and ``cert-msc54-cpp``.
 
 Options
@@ -45,11 +45,11 @@ Options
   Selects which set of functions is considered as asynchronous-safe
   (and therefore allowed in signal handlers). It can be set to the following values:
 
-  ``minimal``
+  - `minimal`
      Selects a minimal set that is defined in the CERT SIG30-C rule.
      and includes functions ``abort()``, ``_Exit()``, ``quick_exit()`` and
      ``signal()``.
-  ``POSIX``
+  - `POSIX`
      Selects a larger set of functions that is listed in POSIX.1-2017 (see `this
      link
      <https://pubs.opengroup.org/onlinepubs/9699919799/functions/V2_chap02.html#tag_15_04_03>`_
@@ -94,4 +94,4 @@ Options
      The function ``quick_exit`` is not included in the POSIX list but it
      is included here in the set of safe functions.
 
-  The default value is ``POSIX``.
+  The default value is `POSIX`.

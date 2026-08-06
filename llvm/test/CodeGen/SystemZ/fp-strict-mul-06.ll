@@ -8,13 +8,13 @@ declare float @llvm.experimental.constrained.fma.f32(float, float, float, metada
 
 define half @f0(half %f1, half %f2, half %acc) #0 {
 ; CHECK-LABEL: f0:
-; CHECK: brasl %r14, __extendhfsf2@PLT
-; CHECK: brasl %r14, __extendhfsf2@PLT
-; CHECK: brasl %r14, __extendhfsf2@PLT
-; CHECK-SCALAR: maebr %f10, %f0, %f8
-; CHECK-SCALAR: ler %f0, %f10
-; CHECK-VECTOR: wfmasb %f0, %f0, %f8, %f10
-; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: brasl %r14, __extendhfdf2@PLT
+; CHECK: brasl %r14, __extendhfdf2@PLT
+; CHECK: brasl %r14, __extendhfdf2@PLT
+; CHECK-SCALAR: madbr %f10, %f0, %f8
+; CHECK-SCALAR: ldr %f0, %f10
+; CHECK-VECTOR: wfmadb %f0, %f0, %f8, %f10
+; CHECK: brasl %r14, __truncdfhf2@PLT
 ; CHECK: br %r14
   %res = call half @llvm.experimental.constrained.fma.f16 (
                         half %f1, half %f2, half %acc,

@@ -7,6 +7,24 @@ Both provide a way of driving the analyzer, detecting compilation flags, and gen
 CodeChecker is more actively maintained, provides heuristics for working with multiple versions of popular compilers and it also comes with a web-based GUI for viewing, filtering, categorizing and suppressing the results.
 Therefore CodeChecker is recommended in case you need any of the above features or just more customizability in general.
 
+Machine-readable output
+-----------------------
+
+For a direct analysis of a source file, the ``clang`` driver can write a SARIF report::
+
+  $ clang --analyze --analyzer-output sarif -o report.sarif source.c
+
+``--analyzer-output`` selects the report format.
+The available formats are ``html``, ``plist``, ``plist-multi-file``, ``plist-html``, ``sarif``, ``sarif-html``, and ``text``.
+``sarif`` writes a SARIF JSON report to the path specified by ``-o``; ``sarif-html`` also creates HTML files for interactive inspection.
+The default format is ``plist``.
+
+This direct form analyzes a translation unit.
+For project-wide analysis, use a tool such as scan-build or CodeChecker to drive the individual compiler invocations.
+``scan-build`` can emit a SARIF report for each analyzed translation unit with its ``-sarif`` option::
+
+  $ scan-build -sarif -o reports make
+
 Comparison of CodeChecker and scan-build
 ----------------------------------------
 
@@ -16,18 +34,19 @@ It is possible, however, to invoke the static analyzer from the command line in 
 The following tools are used commonly to run the analyzer from the command line.
 Both tools are wrapper scripts to drive the analysis and the underlying invocations of the Clang compiler:
 
-1. scan-build_ is an old and simple command line tool that emits static analyzer warnings as HTML files while compiling your project. You can view the analysis results in your web browser.
+1. scan-build_ is an old and simple command line tool that emits static analyzer warnings as HTML files while compiling your project. You can view the analysis results in your web browser; the utility script ``scan-view`` can provide a trivial HTTP server that servers these result files.
+    - Is available as a part of the LLVM project (together with ``scan-view``).
     - Useful for individual developers who simply want to view static analysis results at their desk, or in a very simple collaborative environment.
     - Works on all major platforms (Windows, Linux, macOS) and is available as a package in many Linux distributions.
     - Does not include support for cross-translation-unit analysis.
 
 2. CodeChecker_ is a driver and web server that runs the static analyzer on your projects on demand and maintains a database of issues.
+    - Open source, but out-of-tree, i.e. not part of the LLVM project.
     - Perfect for managing large amounts of thee static analyzer warnings in a collaborative environment.
     - Generally much more feature-rich than scan-build.
     - Supports incremental analysis: Results can be stored in a database, subsequent analysis runs can be compared to list the newly added defects.
     - :doc:`CrossTranslationUnit` is supported fully on Linux via CodeChecker.
-    - Can run clang-tidy checkers too.
-    - Open source, but out-of-tree, i.e. not part of the LLVM project.
+    - Can also run clang-tidy checks and various other analysis tools.
 
 scan-build
 ----------

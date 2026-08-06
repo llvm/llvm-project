@@ -111,10 +111,10 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
       << Ty << E->getType();
 
   {
-    auto Diag = diag(E->getBeginLoc(),
-                     "make conversion explicit to silence this warning",
-                     DiagnosticIDs::Note)
-                << E->getSourceRange();
+    const auto Diag = diag(E->getBeginLoc(),
+                           "make conversion explicit to silence this warning",
+                           DiagnosticIDs::Note)
+                      << E->getSourceRange();
     const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         E->getEndLoc(), 0, *Result->SourceManager, getLangOpts());
     if (ShouldUseCXXStaticCast)
@@ -131,9 +131,9 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
   QualType WideExprTy;
   // Get Ty of the same signedness as ExprTy, because we only want to suggest
   // to widen the computation, but not change it's signedness domain.
-  if (Ty->isSignedIntegerType() == ETy->isSignedIntegerType())
+  if (Ty->isSignedIntegerType() == ETy->isSignedIntegerType()) {
     WideExprTy = Ty;
-  else if (Ty->isSignedIntegerType()) {
+  } else if (Ty->isSignedIntegerType()) {
     assert(ETy->isUnsignedIntegerType() &&
            "Expected source type to be signed.");
     WideExprTy = Context->getCorrespondingUnsignedType(Ty);
@@ -146,9 +146,10 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
   }
 
   {
-    auto Diag = diag(E->getBeginLoc(), "perform multiplication in a wider type",
-                     DiagnosticIDs::Note)
-                << LHS->getSourceRange();
+    const auto Diag =
+        diag(E->getBeginLoc(), "perform multiplication in a wider type",
+             DiagnosticIDs::Note)
+        << LHS->getSourceRange();
 
     if (ShouldUseCXXStaticCast)
       Diag << FixItHint::CreateInsertion(LHS->getBeginLoc(),
@@ -179,8 +180,9 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
   } else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
     PointerExpr = ASE->getLHS();
     IndexExpr = ASE->getRHS();
-  } else
+  } else {
     return;
+  }
 
   if (IndexExpr->getType()->isPointerType())
     std::swap(PointerExpr, IndexExpr);
@@ -224,10 +226,10 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
       << IndexExprType << TyAsString;
 
   {
-    auto Diag = diag(IndexExpr->getBeginLoc(),
-                     "make conversion explicit to silence this warning",
-                     DiagnosticIDs::Note)
-                << IndexExpr->getSourceRange();
+    const auto Diag = diag(IndexExpr->getBeginLoc(),
+                           "make conversion explicit to silence this warning",
+                           DiagnosticIDs::Note)
+                      << IndexExpr->getSourceRange();
     const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         IndexExpr->getEndLoc(), 0, *Result->SourceManager, getLangOpts());
     if (ShouldUseCXXStaticCast)
@@ -243,7 +245,7 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
   }
 
   {
-    auto Diag =
+    const auto Diag =
         diag(IndexExpr->getBeginLoc(), "perform multiplication in a wider type",
              DiagnosticIDs::Note)
         << LHS->getSourceRange();

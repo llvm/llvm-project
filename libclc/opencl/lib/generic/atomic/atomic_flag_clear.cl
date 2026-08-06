@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/atomic/clc_atomic_flag_clear.h>
-#include <clc/opencl/atomic/atomic_flag_clear.h>
-#include <clc/opencl/utils.h>
+#include "clc/atomic/clc_atomic_flag_clear.h"
+#include "clc/opencl/utils.h"
 
 #if defined(__opencl_c_atomic_order_seq_cst) &&                                \
     defined(__opencl_c_atomic_scope_device)

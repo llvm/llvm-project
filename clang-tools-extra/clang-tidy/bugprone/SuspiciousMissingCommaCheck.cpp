@@ -20,7 +20,7 @@ static bool isConcatenatedLiteralsOnPurpose(ASTContext *Ctx,
   //    i.e.:  const char* Array[] = { ("a" "b" "c"), "d", [...] };
 
   const TraversalKindScope RAII(*Ctx, TK_AsIs);
-  auto Parents = Ctx->getParents(*Lit);
+  const auto Parents = Ctx->getParents(*Lit);
   if (Parents.size() == 1 && Parents[0].get<ParenExpr>() != nullptr)
     return true;
 
@@ -116,7 +116,7 @@ void SuspiciousMissingCommaCheck::check(
 
   // Warn only when concatenation is not common in this initializer list.
   // The current threshold is set to less than 1/5 of the string literals.
-  if (double(Count) / Size > RatioThreshold)
+  if (static_cast<double>(Count) / Size > RatioThreshold)
     return;
 
   diag(ConcatenatedLiteral->getBeginLoc(),

@@ -83,7 +83,7 @@ void ComparisonInTempFailureRetryCheck::check(
   const auto &Inner = *Result.Nodes.getNodeAs<BinaryOperator>("inner");
   diag(Inner.getOperatorLoc(), "top-level comparison in %0") << RetryMacroName;
 
-  // FIXME: FixIts would be nice, but potentially nontrivial when nested macros
+  // FIXME: Fix-its would be nice, but potentially nontrivial when nested macros
   // happen, e.g. `TEMP_FAILURE_RETRY(IS_ZERO(foo()))`
 }
 

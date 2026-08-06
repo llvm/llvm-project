@@ -68,6 +68,25 @@ void populateExpandF8E8M0Patterns(RewritePatternSet &patterns);
 /// Add patterns to expand scaling ExtF/TruncF ops to equivalent arith ops
 void populateExpandScalingExtTruncPatterns(RewritePatternSet &patterns);
 
+/// Add patterns to expand the floating-point min/max ops (`arith.maximumf`/
+/// `minimumf`/`maxnumf`/`minnumf`) into `cmpf` + `select` sequences.
+void populateExpandMinMaxFPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand the signed/unsigned integer min/max ops
+/// (`arith.maxsi`/`maxui`/`minsi`/`minui`) into `cmpi` + `select` sequences.
+void populateExpandMinMaxIPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand both the floating-point and integer min/max ops into
+/// `cmpf`/`cmpi` + `select` sequences. These ops also have a direct
+/// arith-to-llvm lowering, so pipelines that run arith-to-llvm may prefer to
+/// skip this expansion.
+void populateExpandMinMaxPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand `arith.flush_denormals` into integer arithmetic
+/// (bitcast + bit masks + compare + select). Only matches IEEE-like
+/// floating-point types.
+void populateExpandFlushDenormalsPatterns(RewritePatternSet &patterns);
+
 /// Add patterns to expand Arith ops.
 void populateArithExpandOpsPatterns(RewritePatternSet &patterns);
 
@@ -86,6 +105,12 @@ std::unique_ptr<Pass> createIntRangeOptimizationsPass();
 void populateIntRangeNarrowingPatterns(RewritePatternSet &patterns,
                                        DataFlowSolver &solver,
                                        ArrayRef<unsigned> bitwidthsSupported);
+
+/// Add patterns for narrowing control flow values (loop bounds, steps, etc.)
+/// based on int range analysis.
+void populateControlFlowValuesNarrowingPatterns(
+    RewritePatternSet &patterns, DataFlowSolver &solver,
+    ArrayRef<unsigned> bitwidthsSupported);
 
 //===----------------------------------------------------------------------===//
 // Registration

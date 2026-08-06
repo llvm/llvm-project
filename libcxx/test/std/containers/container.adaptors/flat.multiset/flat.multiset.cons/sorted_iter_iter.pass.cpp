@@ -147,8 +147,8 @@ constexpr void test() {
   {
     // flat_multiset(sorted_equivalent_t, InputIterator, InputIterator, const key_compare&, const Allocator&);
     // explicit(false)
-    using A1 = test_allocator<short>;
-    using M  = std::flat_multiset<short, std::less<int>, KeyContainer<short, A1>>;
+    using A1 = test_allocator<long>;
+    using M  = std::flat_multiset<long, std::less<int>, KeyContainer<long, A1>>;
     int ar[] = {1, 2, 4, 4, 5};
     M m      = {std::sorted_equivalent, ar, ar + 5, {}, A1(5)}; // implicit ctor
     assert((m == M{1, 2, 4, 4, 5}));

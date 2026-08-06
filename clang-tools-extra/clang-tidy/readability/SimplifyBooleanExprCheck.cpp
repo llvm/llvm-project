@@ -56,7 +56,7 @@ static std::pair<BinaryOperatorKind, BinaryOperatorKind> Opposites[] = {
 
 static StringRef negatedOperator(const BinaryOperator *BinOp) {
   const BinaryOperatorKind Opcode = BinOp->getOpcode();
-  for (auto NegatableOp : Opposites) {
+  for (const auto NegatableOp : Opposites) {
     if (Opcode == NegatableOp.first)
       return BinaryOperator::getOpcodeStr(NegatableOp.second);
     if (Opcode == NegatableOp.second)
@@ -70,10 +70,9 @@ static std::pair<OverloadedOperatorKind, StringRef> OperatorNames[] = {
     {OO_GreaterEqual, ">="}, {OO_Greater, ">"},       {OO_LessEqual, "<="}};
 
 static StringRef getOperatorName(OverloadedOperatorKind OpKind) {
-  for (auto Name : OperatorNames) {
+  for (const auto Name : OperatorNames)
     if (Name.first == OpKind)
       return Name.second;
-  }
 
   return {};
 }
@@ -85,7 +84,7 @@ static std::pair<OverloadedOperatorKind, OverloadedOperatorKind>
 
 static StringRef negatedOperator(const CXXOperatorCallExpr *OpCall) {
   const OverloadedOperatorKind Opcode = OpCall->getOperator();
-  for (auto NegatableOp : OppositeOverloads) {
+  for (const auto NegatableOp : OppositeOverloads) {
     if (Opcode == NegatableOp.first)
       return getOperatorName(NegatableOp.second);
     if (Opcode == NegatableOp.second)
@@ -163,7 +162,8 @@ static std::string replacementExpression(const ASTContext &Context,
   if (const auto *EC = dyn_cast<ExprWithCleanups>(E))
     E = EC->getSubExpr();
 
-  const bool NeedsStaticCast = needsStaticCast(E);
+  const bool NeedsStaticCast =
+      Context.getLangOpts().CPlusPlus && needsStaticCast(E);
   if (Negated) {
     if (const auto *UnOp = dyn_cast<UnaryOperator>(E)) {
       if (UnOp->getOpcode() == UO_LNot) {
@@ -247,10 +247,9 @@ static bool containsDiscardedTokens(const ASTContext &Context,
   Lex.SetCommentRetentionState(true);
 
   Token Tok;
-  while (!Lex.LexFromRawLexer(Tok)) {
+  while (!Lex.LexFromRawLexer(Tok))
     if (Tok.is(tok::TokenKind::comment) || Tok.is(tok::TokenKind::hash))
       return true;
-  }
 
   return false;
 }
@@ -276,9 +275,8 @@ public:
   }
 
   bool dataTraverseStmtPre(Stmt *S) {
-    if (!S) {
+    if (!S)
       return true;
-    }
     if (Check->canBeBypassed(S))
       return false;
     if (!shouldIgnore(S))
@@ -397,8 +395,8 @@ public:
          */
         Expr *Var = nullptr;
         SourceLocation Loc;
-        auto VarBoolAssignmentMatcher = [&Var,
-                                         &Loc](const Stmt *S) -> DeclAndBool {
+        const auto VarBoolAssignmentMatcher =
+            [&Var, &Loc](const Stmt *S) -> DeclAndBool {
           const auto *BO = dyn_cast<BinaryOperator>(S);
           if (!BO || BO->getOpcode() != BO_Assign)
             return {};
@@ -414,7 +412,7 @@ public:
           }
           if (auto *DRE = dyn_cast<DeclRefExpr>(IgnImp))
             return {DRE->getDecl(), *RightasBool};
-          if (auto *ME = dyn_cast<MemberExpr>(IgnImp))
+          if (const auto *ME = dyn_cast<MemberExpr>(IgnImp))
             return {ME->getMemberDecl(), *RightasBool};
           return {};
         };
@@ -640,8 +638,9 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
 
   const bool BoolValue = Bool->getValue();
 
-  auto ReplaceWithExpression = [this, &Context, LHS, RHS,
-                                Bool](const Expr *ReplaceWith, bool Negated) {
+  const auto ReplaceWithExpression = [this, &Context, LHS, RHS,
+                                      Bool](const Expr *ReplaceWith,
+                                            bool Negated) {
     const std::string Replacement =
         replacementExpression(Context, Negated, ReplaceWith);
     const SourceRange Range(LHS->getBeginLoc(), RHS->getEndLoc());
@@ -808,7 +807,7 @@ void SimplifyBooleanExprCheck::replaceWithAssignment(const ASTContext &Context,
 }
 
 /// Swaps a \c BinaryOperator opcode from `&&` to `||` or vice-versa.
-static bool flipDemorganOperator(llvm::SmallVectorImpl<FixItHint> &Output,
+static bool flipDemorganOperator(SmallVectorImpl<FixItHint> &Output,
                                  const BinaryOperator *BO) {
   assert(BO->isLogicalOp());
   if (BO->getOperatorLoc().isMacroID())
@@ -920,13 +919,11 @@ static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
         FixItHint::CreateRemoval(cast<UnaryOperator>(E)->getOperatorLoc()));
     return false;
   }
-  if (const auto *BinOp = dyn_cast<BinaryOperator>(E)) {
+  if (const auto *BinOp = dyn_cast<BinaryOperator>(E))
     return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO);
-  }
   if (const auto *Paren = dyn_cast<ParenExpr>(E)) {
-    if (const auto *BinOp = dyn_cast<BinaryOperator>(Paren->getSubExpr())) {
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(Paren->getSubExpr()))
       return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO, Paren);
-    }
   }
   // Fallback case just insert a logical not operator.
   if (E->getBeginLoc().isMacroID())
@@ -971,7 +968,7 @@ bool SimplifyBooleanExprCheck::reportDeMorgan(const ASTContext &Context,
   assert(Inner);
   assert(Inner->isLogicalOp());
 
-  auto Diag =
+  const auto Diag =
       diag(Outer->getBeginLoc(),
            "boolean expression can be simplified by DeMorgan's theorem");
   Diag << Outer->getSourceRange();

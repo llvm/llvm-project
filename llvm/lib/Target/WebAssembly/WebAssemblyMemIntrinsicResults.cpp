@@ -31,11 +31,17 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -43,10 +49,31 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-mem-intrinsic-results"
 
 namespace {
-class WebAssemblyMemIntrinsicResults final : public MachineFunctionPass {
+class WebAssemblyMemIntrinsicResultsImpl {
+public:
+  WebAssemblyMemIntrinsicResultsImpl(MachineDominatorTree *MDT,
+                                     LiveIntervals *LIS,
+                                     const TargetLibraryInfo *LibInfo,
+                                     const LibcallLoweringInfo &LibCalls)
+      : MDT(MDT), LIS(LIS), LibInfo(LibInfo), LibCalls(LibCalls) {}
+  bool runOnMachineFunction(MachineFunction &MF);
+
+private:
+  MachineDominatorTree *MDT;
+  LiveIntervals *LIS;
+  const TargetLibraryInfo *LibInfo;
+  const LibcallLoweringInfo &LibCalls;
+
+  StringRef MemcpyName, MemmoveName, MemsetName;
+
+  bool optimizeCall(MachineBasicBlock &MBB, MachineInstr &MI,
+                    const MachineRegisterInfo &MRI) const;
+};
+
+class WebAssemblyMemIntrinsicResultsLegacy final : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyMemIntrinsicResults() : MachineFunctionPass(ID) {}
+  WebAssemblyMemIntrinsicResultsLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "WebAssembly Memory Intrinsic Results";
@@ -54,30 +81,26 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<LibcallLoweringInfoWrapper>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-
-private:
 };
 } // end anonymous namespace
 
-char WebAssemblyMemIntrinsicResults::ID = 0;
-INITIALIZE_PASS(WebAssemblyMemIntrinsicResults, DEBUG_TYPE,
+char WebAssemblyMemIntrinsicResultsLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyMemIntrinsicResultsLegacy, DEBUG_TYPE,
                 "Optimize memory intrinsic result values for WebAssembly",
                 false, false)
 
-FunctionPass *llvm::createWebAssemblyMemIntrinsicResults() {
-  return new WebAssemblyMemIntrinsicResults();
+FunctionPass *llvm::createWebAssemblyMemIntrinsicResultsLegacyPass() {
+  return new WebAssemblyMemIntrinsicResultsLegacy();
 }
 
 // Replace uses of FromReg with ToReg if they are dominated by MI.
@@ -145,24 +168,24 @@ static bool replaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
   return Changed;
 }
 
-static bool optimizeCall(MachineBasicBlock &MBB, MachineInstr &MI,
-                         const MachineRegisterInfo &MRI,
-                         MachineDominatorTree &MDT, LiveIntervals &LIS,
-                         const WebAssemblyTargetLowering &TLI,
-                         const TargetLibraryInfo &LibInfo) {
+bool WebAssemblyMemIntrinsicResultsImpl::optimizeCall(
+    MachineBasicBlock &MBB, MachineInstr &MI,
+    const MachineRegisterInfo &MRI) const {
   MachineOperand &Op1 = MI.getOperand(1);
   if (!Op1.isSymbol())
     return false;
 
   StringRef Name(Op1.getSymbolName());
-  bool CallReturnsInput = Name == TLI.getLibcallName(RTLIB::MEMCPY) ||
-                          Name == TLI.getLibcallName(RTLIB::MEMMOVE) ||
-                          Name == TLI.getLibcallName(RTLIB::MEMSET);
+
+  // TODO: Could generalize by parsing to LibcallImpl and checking signature
+  // attributes
+  bool CallReturnsInput =
+      Name == MemcpyName || Name == MemmoveName || Name == MemsetName;
   if (!CallReturnsInput)
     return false;
 
   LibFunc Func;
-  if (!LibInfo.getLibFunc(Name, Func))
+  if (!LibInfo->getLibFunc(Name, Func))
     return false;
 
   Register FromReg = MI.getOperand(2).getReg();
@@ -170,22 +193,25 @@ static bool optimizeCall(MachineBasicBlock &MBB, MachineInstr &MI,
   if (MRI.getRegClass(FromReg) != MRI.getRegClass(ToReg))
     report_fatal_error("Memory Intrinsic results: call to builtin function "
                        "with wrong signature, from/to mismatch");
-  return replaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT, LIS);
+  return replaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, *MDT, *LIS);
 }
 
-bool WebAssemblyMemIntrinsicResults::runOnMachineFunction(MachineFunction &MF) {
+bool WebAssemblyMemIntrinsicResultsImpl::runOnMachineFunction(
+    MachineFunction &MF) {
   LLVM_DEBUG({
     dbgs() << "********** Memory Intrinsic Results **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  const WebAssemblyTargetLowering &TLI =
-      *MF.getSubtarget<WebAssemblySubtarget>().getTargetLowering();
-  const auto &LibInfo =
-      getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(MF.getFunction());
-  auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+
+  MemcpyName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+      LibCalls.getLibcallImpl(RTLIB::MEMCPY));
+  MemmoveName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+      LibCalls.getLibcallImpl(RTLIB::MEMMOVE));
+  MemsetName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+      LibCalls.getLibcallImpl(RTLIB::MEMSET));
+
   bool Changed = false;
 
   // We don't preserve SSA form.
@@ -201,10 +227,52 @@ bool WebAssemblyMemIntrinsicResults::runOnMachineFunction(MachineFunction &MF) {
       default:
         break;
       case WebAssembly::CALL:
-        Changed |= optimizeCall(MBB, MI, MRI, MDT, LIS, TLI, LibInfo);
+        Changed |= optimizeCall(MBB, MI, MRI);
         break;
       }
   }
 
   return Changed;
+}
+
+bool WebAssemblyMemIntrinsicResultsLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  MachineDominatorTree *MDT =
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  LiveIntervals *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  const TargetLibraryInfo *LibInfo =
+      &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(MF.getFunction());
+  const WebAssemblySubtarget &Subtarget =
+      MF.getSubtarget<WebAssemblySubtarget>();
+  const LibcallLoweringInfo &LibCalls =
+      getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
+          *MF.getFunction().getParent(), Subtarget);
+  WebAssemblyMemIntrinsicResultsImpl Impl(MDT, LIS, LibInfo, LibCalls);
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+WebAssemblyMemIntrinsicResultsPass::run(MachineFunction &MF,
+                                        MachineFunctionAnalysisManager &MFAM) {
+  MachineDominatorTree *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  LiveIntervals *LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  const TargetLibraryInfo *LibInfo =
+      &MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+           .getManager()
+           .getResult<TargetLibraryAnalysis>(MF.getFunction());
+  const WebAssemblySubtarget &Subtarget =
+      MF.getSubtarget<WebAssemblySubtarget>();
+  const LibcallLoweringInfo &LibCalls =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<LibcallLoweringModuleAnalysis>(
+              *MF.getFunction().getParent())
+          ->getLibcallLowering(Subtarget);
+  WebAssemblyMemIntrinsicResultsImpl Impl(MDT, LIS, LibInfo, LibCalls);
+  bool Changed = Impl.runOnMachineFunction(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<LiveIntervalsAnalysis>()
+      .preserve<SlotIndexesAnalysis>();
 }

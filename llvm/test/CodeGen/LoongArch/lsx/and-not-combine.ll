@@ -90,9 +90,8 @@ define void @pre_not_and_not_combine_v16i8(ptr %res, ptr %a, i8 %b) nounwind {
 ; CHECK-LABEL: pre_not_and_not_combine_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    nor $a1, $a2, $zero
-; CHECK-NEXT:    vreplgr2vr.b $vr1, $a1
-; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vreplgr2vr.b $vr1, $a2
+; CHECK-NEXT:    vnor.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i8>, ptr %a
@@ -110,8 +109,7 @@ define void @post_not_and_not_combine_v16i8(ptr %res, ptr %a, i8 %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vreplgr2vr.b $vr1, $a2
-; CHECK-NEXT:    vxori.b $vr1, $vr1, 255
-; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vnor.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i8>, ptr %a
@@ -128,9 +126,8 @@ define void @pre_not_and_not_combine_v8i16(ptr %res, ptr %a, i16 %b) nounwind {
 ; CHECK-LABEL: pre_not_and_not_combine_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    nor $a1, $a2, $zero
-; CHECK-NEXT:    vreplgr2vr.h $vr1, $a1
-; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vreplgr2vr.h $vr1, $a2
+; CHECK-NEXT:    vnor.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i16>, ptr %a
@@ -148,9 +145,7 @@ define void @post_not_and_not_combine_v8i16(ptr %res, ptr %a, i16 %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vreplgr2vr.h $vr1, $a2
-; CHECK-NEXT:    vrepli.b $vr2, -1
-; CHECK-NEXT:    vxor.v $vr1, $vr1, $vr2
-; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vnor.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i16>, ptr %a
@@ -167,9 +162,8 @@ define void @pre_not_and_not_combine_v4i32(ptr %res, ptr %a, i32 %b) nounwind {
 ; CHECK-LABEL: pre_not_and_not_combine_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    nor $a1, $a2, $zero
-; CHECK-NEXT:    vreplgr2vr.w $vr1, $a1
-; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vreplgr2vr.w $vr1, $a2
+; CHECK-NEXT:    vnor.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i32>, ptr %a
@@ -187,9 +181,7 @@ define void @post_not_and_not_combine_v4i32(ptr %res, ptr %a, i32 %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vreplgr2vr.w $vr1, $a2
-; CHECK-NEXT:    vrepli.b $vr2, -1
-; CHECK-NEXT:    vxor.v $vr1, $vr1, $vr2
-; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vnor.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i32>, ptr %a
@@ -218,9 +210,8 @@ define void @pre_not_and_not_combine_v2i64(ptr %res, ptr %a, i64 %b) nounwind {
 ; LA64-LABEL: pre_not_and_not_combine_v2i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vld $vr0, $a1, 0
-; LA64-NEXT:    nor $a1, $a2, $zero
-; LA64-NEXT:    vreplgr2vr.d $vr1, $a1
-; LA64-NEXT:    vandn.v $vr0, $vr0, $vr1
+; LA64-NEXT:    vreplgr2vr.d $vr1, $a2
+; LA64-NEXT:    vnor.v $vr0, $vr0, $vr1
 ; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
   %v0 = load <2 x i64>, ptr %a
@@ -240,9 +231,7 @@ define void @post_not_and_not_combine_v2i64(ptr %res, ptr %a, i64 %b) nounwind {
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 1
 ; LA32-NEXT:    vreplvei.d $vr1, $vr1, 0
-; LA32-NEXT:    vrepli.b $vr2, -1
-; LA32-NEXT:    vxor.v $vr1, $vr1, $vr2
-; LA32-NEXT:    vandn.v $vr0, $vr0, $vr1
+; LA32-NEXT:    vnor.v $vr0, $vr0, $vr1
 ; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
@@ -250,9 +239,7 @@ define void @post_not_and_not_combine_v2i64(ptr %res, ptr %a, i64 %b) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vld $vr0, $a1, 0
 ; LA64-NEXT:    vreplgr2vr.d $vr1, $a2
-; LA64-NEXT:    vrepli.b $vr2, -1
-; LA64-NEXT:    vxor.v $vr1, $vr1, $vr2
-; LA64-NEXT:    vandn.v $vr0, $vr0, $vr1
+; LA64-NEXT:    vnor.v $vr0, $vr0, $vr1
 ; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
   %v0 = load <2 x i64>, ptr %a
@@ -269,8 +256,7 @@ define void @and_not_combine_splatimm_v16i8(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: and_not_combine_splatimm_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vrepli.b $vr1, -4
-; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vnori.b $vr0, $vr0, 3
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i8>, ptr %a0
@@ -332,10 +318,9 @@ define void @and_or_not_combine_v16i8(ptr %pa, ptr %pb, ptr %pv, ptr %dst) nounw
 ; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, 0
 ; CHECK-NEXT:    vseq.b $vr0, $vr1, $vr0
-; CHECK-NEXT:    vxori.b $vr0, $vr0, 255
 ; CHECK-NEXT:    vseq.b $vr1, $vr1, $vr2
-; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vandi.b $vr0, $vr0, 4
+; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vnori.b $vr0, $vr0, 251
 ; CHECK-NEXT:    vst $vr0, $a3, 0
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %pa
@@ -357,12 +342,10 @@ define void @and_or_not_combine_v8i16(ptr %pa, ptr %pb, ptr %pv, ptr %dst) nounw
 ; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, 0
 ; CHECK-NEXT:    vseq.h $vr0, $vr1, $vr0
-; CHECK-NEXT:    vrepli.b $vr3, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr3
 ; CHECK-NEXT:    vseq.h $vr1, $vr1, $vr2
-; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vrepli.h $vr1, 4
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vrepli.h $vr1, 4
+; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a3, 0
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %pa
@@ -384,12 +367,10 @@ define void @and_or_not_combine_v4i32(ptr %pa, ptr %pb, ptr %pv, ptr %dst) nounw
 ; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, 0
 ; CHECK-NEXT:    vseq.w $vr0, $vr1, $vr0
-; CHECK-NEXT:    vrepli.b $vr3, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr3
 ; CHECK-NEXT:    vseq.w $vr1, $vr1, $vr2
-; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vrepli.w $vr1, 4
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vrepli.w $vr1, 4
+; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a3, 0
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %pa
@@ -411,12 +392,10 @@ define void @and_or_not_combine_v2i64(ptr %pa, ptr %pb, ptr %pv, ptr %dst) nounw
 ; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, 0
 ; CHECK-NEXT:    vseq.d $vr0, $vr1, $vr0
-; CHECK-NEXT:    vrepli.b $vr3, -1
-; CHECK-NEXT:    vxor.v $vr0, $vr0, $vr3
 ; CHECK-NEXT:    vseq.d $vr1, $vr1, $vr2
-; CHECK-NEXT:    vorn.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vrepli.d $vr1, 4
 ; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vrepli.d $vr1, 4
+; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a3, 0
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %pa
