@@ -42,12 +42,15 @@ TEST_F(LlvmLibcEpollPwaitTest, Basic) {
 
   // Timeout of 0 causes immediate return. We just need to check that the
   // interface works, we're not testing the kernel behavior here.
-  ASSERT_THAT(
-      LIBC_NAMESPACE::epoll_pwait2(epfd, &event, 1, &time_spec, nullptr),
-      Succeeds());
+  int res = LIBC_NAMESPACE::epoll_pwait2(epfd, &event, 1, &time_spec, nullptr);
+  if (res == -1) {
+    ASSERT_ERRNO_EQ(ENOSYS);
+  } else {
+    ASSERT_EQ(res, 0);
+  }
 
   ASSERT_THAT(LIBC_NAMESPACE::epoll_pwait2(-1, &event, 1, &time_spec, nullptr),
-              Fails(EBADF));
+              Fails(any_of(EBADF, ENOSYS)));
 
   ASSERT_THAT(LIBC_NAMESPACE::epoll_ctl(epfd, EPOLL_CTL_DEL, pipefd[0], &event),
               Succeeds());

@@ -13,8 +13,8 @@
 namespace {
 enum { lane_size = 8, port_count = 4 };
 
-using ProcAType = LIBC_NAMESPACE::rpc::Process<false>;
-using ProcBType = LIBC_NAMESPACE::rpc::Process<true>;
+using ProcAType = rpc::Process<false>;
+using ProcBType = rpc::Process<true>;
 
 static_assert(ProcAType::inbox_offset(port_count) ==
               ProcBType::outbox_offset(port_count));
@@ -32,7 +32,7 @@ TEST(LlvmLibcRPCSmoke, SanityCheck) {
   ProcAType ProcA(port_count, buffer);
   ProcBType ProcB(port_count, buffer);
 
-  uint64_t index = 0; // any < port_count
+  uint32_t index = 0; // any < port_count
   uint64_t lane_mask = 1;
 
   // Each process has its own local lock for index
@@ -54,7 +54,7 @@ TEST(LlvmLibcRPCSmoke, SanityCheck) {
   // ProcA write to outbox
   uint32_t ProcAOutbox = ProcA.load_outbox(lane_mask, index);
   EXPECT_EQ(ProcAOutbox, 0u);
-  ProcAOutbox = ProcA.invert_outbox(index, ProcAOutbox);
+  ProcAOutbox = ProcA.invert_outbox(lane_mask, index, ProcAOutbox);
   EXPECT_EQ(ProcAOutbox, 1u);
 
   // No longer available for ProcA

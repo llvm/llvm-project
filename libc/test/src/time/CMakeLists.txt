@@ -9,7 +9,6 @@ add_header_library(
     libc.hdr.types.struct_tm
     libc.src.__support.macros.config
     libc.src.time.time_constants
-    LibcTest
 )
 
 add_libc_unittest(

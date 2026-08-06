@@ -89,7 +89,7 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.src.__support.wchar.mbstate
     libc.src.string.memset
-    libc.src.wchar.mbsrlen
+    libc.src.wchar.mbrlen
     libc.hdr.types.mbstate_t
     libc.hdr.types.wchar_t
     libc.test.UnitTest.ErrnoCheckingTest
