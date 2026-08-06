@@ -34,6 +34,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <optional>
+#include <type_traits>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTAMDGPUTOROCDLPASS
@@ -487,6 +488,14 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
       sgprOffset = createI32Constant(rewriter, loc, 0);
     sgprOffset = LLVM::MulOp::create(rewriter, loc, sgprOffset, byteWidthConst);
     args.push_back(sgprOffset);
+
+    if constexpr (!std::is_same_v<Intrinsic, ROCDL::RawPtrBufferLoadOp>) {
+      // No syncscope information is available at this level, so conservatively
+      // report an empty (unspecified) scope.
+      Value noScope = LLVM::MetadataAsValueOp::create(
+          rewriter, loc, LLVM::MDNodeAttr::get(rewriter.getContext(), {}));
+      args.push_back(noScope);
+    }
 
     llvm::SmallVector<Type, 1> resultTypes(gpuOp->getNumResults(),
                                            llvmBufferValType);

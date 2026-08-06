@@ -2075,9 +2075,10 @@ def ROCDL_RawPtrBufferStoreOp :
                   Arg<ROCDLBufferRsrc, "", [MemWrite]>:$rsrc,
                   I32:$offset,
                   I32:$soffset,
-                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux,
+                  Arg<LLVM_MetadataType, "Sync scope for the access, or an empty metadata node if unspecified">:$syncscope);
   let arguments = !con(args, baseArgs);
-  let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
+  let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) `,` $syncscope attr-dict `:` type($vdata)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc()};
@@ -2094,9 +2095,10 @@ def ROCDL_RawPtrBufferAtomicCmpSwap :
                   Arg<ROCDLBufferRsrc, "", [MemRead, MemWrite]>:$rsrc,
                   I32:$offset,
                   I32:$soffset,
-                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux,
+                  Arg<LLVM_MetadataType, "Sync scope for the access, or an empty metadata node if unspecified">:$syncscope);
   let arguments = !con(args, baseArgs);
-  let assemblyFormat = "$src `,` $cmp `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($res)";
+  let assemblyFormat = "$src `,` $cmp `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) `,` $syncscope attr-dict `:` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc()};
@@ -2111,9 +2113,10 @@ class ROCDL_RawPtrBufferAtomicRet<string op> :
                   Arg<ROCDLBufferRsrc, "", [MemRead, MemWrite]>:$rsrc,
                   I32:$offset,
                   I32:$soffset,
-                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux,
+                  Arg<LLVM_MetadataType, "Sync scope for the access, or an empty metadata node if unspecified">:$syncscope);
   let arguments = !con(args, baseArgs);
-  let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
+  let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) `,` $syncscope attr-dict `:` type($vdata)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc()};
