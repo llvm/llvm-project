@@ -114,7 +114,7 @@ Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Improved :doc:`bugprone-narrowing-conversions
-  <clang-tidy/checks/bugprone-narrowing-conversions>` check by adding the
+  <clang-tidy/checks/bugprone/narrowing-conversions>` check by adding the
   ``WarnOnTimeTNarrowingConversion`` option to diagnose conversions from
   ``time_t`` values to integer types that may not preserve the full range of
   ``time_t``. This option is disabled by the default.
