@@ -3414,9 +3414,9 @@ static std::optional<Instruction *> instCombineSVEOrr(InstCombiner &IC,
 
 static std::optional<Instruction *> instCombineSVEAnd(InstCombiner &IC,
                                                       IntrinsicInst &II) {
-  // and(cmphs(pg, C0, A), cmphs(pg, A, C1))
+  // and(cmphs(pg, ConstA, A), cmphs(pg, A, ConstB))
   // ->
-  // cmphs(pg, C0 - C1, sub(pg, A, C1))
+  // cmphs(pg, ConstA - ConstB, sub(pg, A, ConstB))
   constexpr Intrinsic::ID CmphsID = Intrinsic::aarch64_sve_cmphs;
   Value *Pg = II.getOperand(0);
   Value *LHS = II.getOperand(1);
