@@ -14,6 +14,7 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/Policy.h"
 #include "gtest/gtest.h"
 
 #include <thread>
@@ -191,5 +192,54 @@ TEST_F(TargetAPIMutexTargetTest, ResolvesFreshOnEachLockCall) {
     EXPECT_FALSE(background_lock.try_lock());
   });
   contended.join();
+  lock.unlock();
+}
+
+TEST_F(TargetAPIMutexTargetTest,
+       UnlockReplaysLockResolutionAcrossPolicyChange) {
+  // Regression test for the cross-thread bypass bug: lock() and unlock()
+  // must agree on which mutex they touch even if the calling thread's
+  // policy changes in between, because unlock() replays lock()'s
+  // resolution rather than re-resolving from the current policy.
+  TargetSP target_sp = CreateTarget();
+  ASSERT_TRUE(target_sp);
+
+  TargetAPIMutex lock(target_sp);
+  lock.lock();
+
+  // Simulate the calling thread now running inside a scripted-extension
+  // callback -- if unlock() re-resolved here, it would see the bypass
+  // and skip releasing the mutex it actually locked.
+  {
+    PolicyStack::Guard guard = PolicyStack::Get().PushScriptedExtensionCall();
+    lock.unlock();
+  }
+
+  // The real mutex must have actually been released: a fresh acquisition
+  // from a different thread (outside the bypass policy) must succeed
+  // immediately. A same-thread try_lock() would pass even if unlock() had
+  // incorrectly no-op'd, since std::recursive_mutex lets the same thread
+  // reenter a lock it still holds.
+  std::thread t([target_sp]() {
+    TargetAPIMutex background_lock(target_sp);
+    EXPECT_TRUE(background_lock.try_lock());
+    background_lock.unlock();
+  });
+  t.join();
+}
+
+TEST_F(TargetAPIMutexTargetTest, BypassPolicyMakesTryLockANoOp) {
+  TargetSP target_sp = CreateTarget();
+  ASSERT_TRUE(target_sp);
+
+  TargetAPIMutex outer_lock(target_sp);
+  outer_lock.lock();
+
+  // A handle resolved while the bypass policy is active never touches
+  // the real (already-held) mutex, so it succeeds even though the real
+  // mutex is contended.
+  PolicyStack::Guard guard = PolicyStack::Get().PushScriptedExtensionCall();
+  TargetAPIMutex lock(target_sp);
+  EXPECT_TRUE(lock.try_lock());
   lock.unlock();
 }

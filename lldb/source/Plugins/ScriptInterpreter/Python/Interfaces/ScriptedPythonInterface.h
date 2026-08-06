@@ -18,6 +18,7 @@
 #include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/Policy.h"
 
 #include "../PythonDataObjects.h"
 #include "../SWIGPythonBridge.h"
@@ -413,6 +414,9 @@ public:
       return ErrorWithMessage<T>(caller_signature, "missing script class name",
                                  error);
 
+    PolicyStack::Guard policy_guard =
+        PolicyStack::Get().PushScriptedExtensionCall();
+
     Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
                    Locker::FreeLock);
 
@@ -535,6 +539,9 @@ protected:
     if (!m_object_instance_sp)
       return ErrorWithMessage<T>(caller_signature, "python object ill-formed",
                                  error);
+
+    PolicyStack::Guard policy_guard =
+        PolicyStack::Get().PushScriptedExtensionCall();
 
     Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
                    Locker::FreeLock);

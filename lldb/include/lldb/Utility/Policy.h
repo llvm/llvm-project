@@ -50,6 +50,11 @@ struct Policy {
     bool can_run_breakpoint_actions = true;
     bool can_load_frame_providers = true;
     bool can_run_frame_recognizers = true;
+    /// Whether the current thread may bypass the target's API mutex
+    /// entirely when it re-enters it, because the thread is already
+    /// running under whatever protections its caller set up rather than
+    /// servicing a top-level SB API entry point itself.
+    bool can_bypass_target_api_mutex = false;
   };
 
   /// Why a private-state policy is being pushed. Distinguishes a PST's
@@ -75,6 +80,7 @@ struct Policy {
   static Policy CreatePrivateState(
       PrivateStatePurpose purpose = PrivateStatePurpose::Default);
   static Policy CreatePublicStateRunningExpression();
+  static Policy CreateScriptedExtensionCall();
   /// @}
 
   void Dump(Stream &s) const;
@@ -137,6 +143,11 @@ public:
 
   [[nodiscard]] Guard PushPublicStateRunningExpression() {
     Push(Policy::CreatePublicStateRunningExpression());
+    return Guard();
+  }
+
+  [[nodiscard]] Guard PushScriptedExtensionCall() {
+    Push(Policy::CreateScriptedExtensionCall());
     return Guard();
   }
 

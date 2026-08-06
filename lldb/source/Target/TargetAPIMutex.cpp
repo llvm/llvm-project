@@ -15,10 +15,14 @@ using namespace lldb_private;
 void TargetAPIMutex::lock() {
   if (m_target_sp) {
     Policy policy = PolicyStack::Get().Current();
-    std::recursive_mutex &real_mutex = policy.view == Policy::View::Private
-                                           ? m_target_sp->m_private_mutex
-                                           : m_target_sp->m_mutex;
-    m_mutex = std::shared_ptr<std::recursive_mutex>(m_target_sp, &real_mutex);
+    if (policy.capabilities.can_bypass_target_api_mutex) {
+      m_mutex = nullptr;
+    } else {
+      std::recursive_mutex &real_mutex = policy.view == Policy::View::Private
+                                             ? m_target_sp->m_private_mutex
+                                             : m_target_sp->m_mutex;
+      m_mutex = std::shared_ptr<std::recursive_mutex>(m_target_sp, &real_mutex);
+    }
   }
   if (m_mutex)
     m_mutex->lock();
@@ -27,10 +31,14 @@ void TargetAPIMutex::lock() {
 bool TargetAPIMutex::try_lock() {
   if (m_target_sp) {
     Policy policy = PolicyStack::Get().Current();
-    std::recursive_mutex &real_mutex = policy.view == Policy::View::Private
-                                           ? m_target_sp->m_private_mutex
-                                           : m_target_sp->m_mutex;
-    m_mutex = std::shared_ptr<std::recursive_mutex>(m_target_sp, &real_mutex);
+    if (policy.capabilities.can_bypass_target_api_mutex) {
+      m_mutex = nullptr;
+    } else {
+      std::recursive_mutex &real_mutex = policy.view == Policy::View::Private
+                                             ? m_target_sp->m_private_mutex
+                                             : m_target_sp->m_mutex;
+      m_mutex = std::shared_ptr<std::recursive_mutex>(m_target_sp, &real_mutex);
+    }
   }
   return m_mutex ? m_mutex->try_lock() : true;
 }
