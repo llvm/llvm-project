@@ -312,7 +312,7 @@ def main(argv: List[str]) -> int:
     parser.add_argument('--work-items', type=argparse.FileType('r'), default=sys.stdin,
         help='A file containing the plan, one JSON object per line. By default, this is read from '
              'standard input.')
-    parser.add_argument('--test-suite-commit', type=str, required=True,
+    parser.add_argument('--test-suite-commit', type=common.sha, required=True,
         help='The version of the benchmark suite to use, as a monorepo SHA. Pinning this is what '
              'makes results comparable across commits.')
     parser.add_argument('--max-in-flight', type=common.at_least(1), default=4,
