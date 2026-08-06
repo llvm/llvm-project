@@ -20,6 +20,7 @@ module std_config {
 
 module std_core {
   module cmath {
+    module lerp              { header "__cmath/lerp.h" }
     module special_functions { header "__cmath/special_functions.h" }
   }
 
