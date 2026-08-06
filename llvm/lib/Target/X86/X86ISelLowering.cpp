@@ -50625,30 +50625,35 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
       FPSclVT = MVT::f32;
     EVT FPVT = VT.changeVectorElementType(*DAG.getContext(), FPSclVT);
 
-    // Nothing will split an illegal FP type after type legalization, so halve
-    // the divide while the integer halves stay legal.
-    if (!DCI.isBeforeLegalize() &&
-        !DAG.getTargetLoweringInfo().isTypeLegal(FPVT)) {
-      EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
-      if (DAG.getTargetLoweringInfo().isTypeLegal(HalfVT))
-        return splitVectorIntBinary(SDValue(N, 0), DAG, DL);
-      return SDValue();
-    }
-
     bool IsStrict = DAG.getMachineFunction().getFunction().hasFnAttribute(
         Attribute::StrictFP);
     if (IsStrict) {
       // The SAE forms are 512-bit only. Inputs widen into a zmm below, which
-      // requires 512-bit types to be legal.
-      if (!Subtarget.useAVX512Regs())
+      // requires 512-bit types to be legal and a power of 2 lane count.
+      if (!Subtarget.useAVX512Regs() ||
+          !isPowerOf2_32(VT.getVectorNumElements()))
         return SDValue();
-      // More lanes than one zmm divide can hold so split the divide.
-      if (FPVT.getSizeInBits() > 512)
-        return splitVectorIntBinary(SDValue(N, 0), DAG, DL);
     } else if (!IsSigned && VT.getScalarSizeInBits() == 32 &&
                !Subtarget.hasAVX2()) {
       // Unsigned i32 needs FP_TO_UINT(f64->u32) which is emulated and a loss
       // for latency and code size before AVX2.
+      return SDValue();
+    }
+
+    // Nothing will split an illegal FP type after type legalization and the
+    // strict SAE divide is 512-bit only.
+    bool FPVTUsable = IsStrict
+                          ? FPVT.getSizeInBits() <= 512
+                          : DCI.isBeforeLegalize() ||
+                                DAG.getTargetLoweringInfo().isTypeLegal(FPVT);
+
+    // Halve the divide while the integer halves stay legal.
+    if (!FPVTUsable) {
+      if (VT.is256BitVector() || VT.is512BitVector()) {
+        EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+        if (DAG.getTargetLoweringInfo().isTypeLegal(HalfVT))
+          return splitVectorIntBinary(SDValue(N, 0), DAG, DL);
+      }
       return SDValue();
     }
 

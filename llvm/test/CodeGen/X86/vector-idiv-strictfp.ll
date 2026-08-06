@@ -112,3 +112,92 @@ define <16 x i32> @test_divv_16i32_strictfp(<16 x i32> %a, <16 x i32> %b) nounwi
   ret <16 x i32> %res
 }
 
+define void @test_divv_9i32_strictfp(<9 x i32> %a, <9 x i32> %b, ptr %p) nounwind strictfp {
+; CHECK-LABEL: test_divv_9i32_strictfp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtdq2pd %ymm1, %zmm2
+; CHECK-NEXT:    vcvtdq2pd %ymm0, %zmm3
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm2, %zmm3, %zmm2
+; CHECK-NEXT:    vcvttpd2dq {sae}, %zmm2, %ymm2
+; CHECK-NEXT:    vextracti32x4 $2, %zmm0, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    vextracti32x4 $2, %zmm1, %xmm0
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    cltd
+; CHECK-NEXT:    idivl %ecx
+; CHECK-NEXT:    movl %eax, 32(%rdi)
+; CHECK-NEXT:    vmovaps %ymm2, (%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %res = sdiv <9 x i32> %a, %b
+  store <9 x i32> %res, ptr %p
+  ret void
+}
+
+define void @test_divv_12i32_strictfp(<12 x i32> %a, <12 x i32> %b, ptr %p) nounwind strictfp {
+; CHECK-LABEL: test_divv_12i32_strictfp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vextractf32x4 $2, %zmm1, %xmm2
+; CHECK-NEXT:    vcvtdq2pd %xmm2, %ymm2
+; CHECK-NEXT:    vextractf32x4 $2, %zmm0, %xmm3
+; CHECK-NEXT:    vcvtdq2pd %xmm3, %ymm3
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm2, %zmm3, %zmm2
+; CHECK-NEXT:    vcvttpd2dq {sae}, %zmm2, %ymm2
+; CHECK-NEXT:    vcvtdq2pd %ymm1, %zmm1
+; CHECK-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttpd2dq {sae}, %zmm0, %ymm0
+; CHECK-NEXT:    vmovaps %ymm0, (%rdi)
+; CHECK-NEXT:    vmovaps %xmm2, 32(%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %res = sdiv <12 x i32> %a, %b
+  store <12 x i32> %res, ptr %p
+  ret void
+}
+
+define <6 x i32> @test_masked_divv_6i32_strictfp(<6 x i32> %a, <6 x i32> %b, <6 x i1> %m) nounwind strictfp {
+; CHECK-LABEL: test_masked_divv_6i32_strictfp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtdq2pd %ymm1, %zmm1
+; CHECK-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttpd2dq {sae}, %zmm0, %ymm0
+; CHECK-NEXT:    retq
+  %res = call <6 x i32> @llvm.masked.sdiv(<6 x i32> %a, <6 x i32> %b, <6 x i1> %m)
+  ret <6 x i32> %res
+}
+
+define void @test_divv_32i32_strictfp(<32 x i32> %a, <32 x i32> %b, ptr %p) nounwind strictfp {
+; CHECK-LABEL: test_divv_32i32_strictfp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtdq2pd %ymm2, %zmm4
+; CHECK-NEXT:    vcvtdq2pd %ymm0, %zmm5
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm4, %zmm5, %zmm4
+; CHECK-NEXT:    vcvttpd2dq {sae}, %zmm4, %ymm4
+; CHECK-NEXT:    vextractf64x4 $1, %zmm2, %ymm2
+; CHECK-NEXT:    vcvtdq2pd %ymm2, %zmm2
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; CHECK-NEXT:    vcvtdq2pd %ymm0, %zmm0
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm2, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttpd2dq {sae}, %zmm0, %ymm0
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm4, %zmm0
+; CHECK-NEXT:    vcvtdq2pd %ymm3, %zmm2
+; CHECK-NEXT:    vcvtdq2pd %ymm1, %zmm4
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm2, %zmm4, %zmm2
+; CHECK-NEXT:    vcvttpd2dq {sae}, %zmm2, %ymm2
+; CHECK-NEXT:    vextractf64x4 $1, %zmm3, %ymm3
+; CHECK-NEXT:    vcvtdq2pd %ymm3, %zmm3
+; CHECK-NEXT:    vextractf64x4 $1, %zmm1, %ymm1
+; CHECK-NEXT:    vcvtdq2pd %ymm1, %zmm1
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm3, %zmm1, %zmm1
+; CHECK-NEXT:    vcvttpd2dq {sae}, %zmm1, %ymm1
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm2, %zmm1
+; CHECK-NEXT:    vmovaps %zmm1, 64(%rdi)
+; CHECK-NEXT:    vmovaps %zmm0, (%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %res = sdiv <32 x i32> %a, %b
+  store <32 x i32> %res, ptr %p
+  ret void
+}
