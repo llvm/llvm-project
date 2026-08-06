@@ -351,54 +351,6 @@ static const int MinScheduleRegionSize = 16;
 /// Maximum allowed number of operands in the PHI nodes.
 static const unsigned MaxPHINumOperands = 128;
 
-/// Returns the number of elements of the given type \p Ty, not less than \p Sz,
-/// which forms type, which splits by \p TTI into whole vector types during
-/// legalization.
-static unsigned getFullVectorNumberOfElements(const TargetTransformInfo &TTI,
-                                              Type *Ty, unsigned Sz) {
-  if (!isValidElementType(Ty, SLPReVec) || isa<StructType>(Ty))
-    return bit_ceil(Sz);
-  // Find the number of elements, which forms full vectors.
-  const unsigned NumParts = TTI.getNumberOfParts(getWidenedType(Ty, Sz));
-  if (NumParts == 0 || NumParts >= Sz)
-    return bit_ceil(Sz);
-  return bit_ceil(divideCeil(Sz, NumParts)) * NumParts;
-}
-
-/// Returns the number of elements of the given type \p Ty, not greater than \p
-/// Sz, which forms type, which splits by \p TTI into whole vector types during
-/// legalization.
-static unsigned
-getFloorFullVectorNumberOfElements(const TargetTransformInfo &TTI, Type *Ty,
-                                   unsigned Sz) {
-  if (!isValidElementType(Ty, SLPReVec) || isa<StructType>(Ty))
-    return bit_floor(Sz);
-  // Find the number of elements, which forms full vectors.
-  unsigned NumParts = TTI.getNumberOfParts(getWidenedType(Ty, Sz));
-  if (NumParts == 0 || NumParts >= Sz)
-    return bit_floor(Sz);
-  unsigned RegVF = bit_ceil(divideCeil(Sz, NumParts));
-  if (RegVF > Sz)
-    return bit_floor(Sz);
-  return (Sz / RegVF) * RegVF;
-}
-
-/// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, returns the
-/// padded full-register vector type if padding is structurally possible, or
-/// nullptr if the vector already fills a register or the opcode is not
-/// div/rem. Does not check profitability; see getMaskedDivRemCost for that.
-static FixedVectorType *getMaskedDivRemType(const TargetTransformInfo &TTI,
-                                            unsigned Opcode, Type *ScalarTy,
-                                            unsigned NumElts) {
-  if (!Instruction::isIntDivRem(Opcode) || has_single_bit(NumElts))
-    return nullptr;
-  unsigned PaddedNumElts =
-      getFullVectorNumberOfElements(TTI, ScalarTy, NumElts);
-  if (PaddedNumElts == NumElts)
-    return nullptr;
-  return cast<FixedVectorType>(getWidenedType(ScalarTy, PaddedNumElts));
-}
-
 /// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, checks if
 /// padding to a full register and using the masked div/rem intrinsic is
 /// cheaper than the direct vector op. Returns the cost of the masked
@@ -538,24 +490,6 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
   // we have permutation of 2 vectors.
   return Vec2 ? TargetTransformInfo::SK_PermuteTwoSrc
               : TargetTransformInfo::SK_PermuteSingleSrc;
-}
-
-/// Returns true if widened type of \p Ty elements with size \p Sz represents
-/// full vector type, i.e. adding extra element results in extra parts upon type
-/// legalization.
-static bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
-                                     unsigned Sz) {
-  if (Sz <= 1)
-    return false;
-  if (!isValidElementType(Ty, SLPReVec) && !isa<FixedVectorType>(Ty))
-    return false;
-  if (has_single_bit(Sz))
-    return true;
-  if (isa<StructType>(Ty))
-    return false;
-  const unsigned NumParts = TTI.getNumberOfParts(getWidenedType(Ty, Sz));
-  return NumParts > 0 && NumParts < Sz && has_single_bit(Sz / NumParts) &&
-         Sz % NumParts == 0;
 }
 
 /// Returns number of parts, the type \p VecTy will be split at the codegen
