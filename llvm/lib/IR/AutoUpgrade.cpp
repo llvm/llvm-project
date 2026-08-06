@@ -7074,31 +7074,7 @@ void llvm::copyModuleAttrToFunctions(Module &M) {
   }
 }
 
-namespace {
-// Single-operand tags replacing a removed two-operand form
-// !{!"<Enable>", i1 X}: X = true selects Enable, X = false selects Disable.
-struct BooleanLoopTags {
-  StringLiteral Enable;
-  StringLiteral Disable;
-};
-} // namespace
-
-static constexpr BooleanLoopTags OldBooleanLoopTags[] = {
-    {"llvm.loop.distribute.enable", "llvm.loop.distribute.disable"},
-    {"llvm.loop.vectorize.enable", "llvm.loop.vectorize.disable"},
-    {"llvm.loop.vectorize.predicate.enable",
-     "llvm.loop.vectorize.predicate.disable"}};
-
-// Return the replacement tags for the enable tag \p Name, or nullptr.
-static const BooleanLoopTags *findBooleanLoopTags(StringRef Name) {
-  const auto *Tags =
-      find_if(OldBooleanLoopTags, [Name](const BooleanLoopTags &Candidate) {
-        return Candidate.Enable == Name;
-      });
-  return Tags == std::end(OldBooleanLoopTags) ? nullptr : Tags;
-}
-
-// Return the replacement tags if \p T still uses a removed two-operand form.
+/// Return the replacement tags if \p T still uses a removed two-operand form.
 static const BooleanLoopTags *getOldBooleanLoopTags(const MDTuple *T) {
   if (T->getNumOperands() != 2 || !mdconst::hasa<ConstantInt>(T->getOperand(1)))
     return nullptr;
@@ -7154,7 +7130,7 @@ static Metadata *upgradeLoopArgument(Metadata *MD) {
 
   LLVMContext &C = T->getContext();
 
-  // Rewrite a removed two-operand boolean form to the single-operand pair.
+  /// Rewrite a removed two-operand boolean form to the single-operand pair.
   if (const BooleanLoopTags *Tags = getOldBooleanLoopTags(T))
     return makeBooleanLoopNode(C, *Tags, T->getOperand(1));
 

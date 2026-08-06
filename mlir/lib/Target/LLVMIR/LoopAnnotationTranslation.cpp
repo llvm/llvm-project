@@ -86,7 +86,9 @@ void LoopAnnotationConversion::convertBoolNode(StringRef name, BoolAttr attr,
 }
 
 /// Emits the single-operand node of an enable/disable pair. As in
-/// convertBoolNode, \p negated ^ the attribute value is the enable bit.
+/// convertBoolNode, the attribute is tri-state: a null \p attr emits no node
+/// at all, otherwise \p negated ^ the attribute value is the enable bit and
+/// selects which of the two names is emitted.
 void LoopAnnotationConversion::convertBooleanUnitNode(StringRef enableName,
                                                       StringRef disableName,
                                                       BoolAttr attr,

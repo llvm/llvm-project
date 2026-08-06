@@ -8075,7 +8075,7 @@ node has a single operand containing the name string:
 !1 = !{!"llvm.loop.vectorize.disable"}
 ```
 
-#### '`llvm.loop.vectorize.predicate.enable`' Metadata
+#### '`llvm.loop.vectorize.predicate.enable`' and '`llvm.loop.vectorize.predicate.disable`' Metadata
 
 This metadata selectively enables or disables creating predicated instructions
 for the loop, which can enable folding of the scalar epilogue loop into the
