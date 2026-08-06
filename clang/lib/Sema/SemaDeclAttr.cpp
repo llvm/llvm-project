@@ -6811,8 +6811,17 @@ public:
     if (NewElementTy.isNull())
       return QualType();
 
-    assert(T->getPointeeType() == NewElementTy &&
-           "pre-check should have rejected count on array element");
+    // If the element type changed it means a __counted_by attribute was
+    // applied. A __counted_by like attribute on an array's element type is not
+    // supported. E.g.: 'int * __counted_by(n) p[5][10]')
+    //
+    // FIXME: This diagnostic's wording is misleading for this case (there is a
+    // single declaration and nothing "coupled") rdar://184258982.
+    if (T->getElementType() != NewElementTy) {
+      S.Diag(Loc,
+             diag::err_multiple_coupled_decls_in_bounds_safety_dynamic_count);
+      return QualType();
+    }
     return QualType(T, 0);
   }
 
@@ -7714,6 +7723,8 @@ void Sema::applyPtrCountedByEndedByAttr(Decl *D, unsigned Level,
   }
 
   if (Info.Ty->isArrayType() && Info.EffectiveLevel > 0) {
+    // FIXME: This diagnostic is misleading because it fires for complete arrays
+    // too (rdar://184258376).
     auto ErrDiag =
         Diag(Loc,
              diag::
