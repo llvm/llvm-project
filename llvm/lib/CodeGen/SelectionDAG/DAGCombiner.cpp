@@ -28274,9 +28274,11 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
           // an illegal source vector would be promoted straight back into the
           // extract_subvector we started from.
           if (NewExtEC.isScalar() &&
-              TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, ScalarVT) &&
-              (!LegalOperations ||
-               TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, SrcVT))) {
+              TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, SrcVT) &&
+              !(TLI.getTypeAction(*DAG.getContext(), NVT) ==
+                    TargetLoweringBase::TypePromoteInteger &&
+                TLI.getTypeAction(*DAG.getContext(), SrcVT) !=
+                    TargetLoweringBase::TypePromoteInteger)) {
             SDValue NewIndex = DAG.getVectorIdxConstant(IndexValScaled, DL);
             SDValue NewExtract =
                 DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT,
