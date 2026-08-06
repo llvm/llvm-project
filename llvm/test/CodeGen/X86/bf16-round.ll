@@ -11,18 +11,14 @@
 define bfloat @s_floor(bfloat %a) nounwind {
 ; AVXNC-LABEL: s_floor:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNC-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: s_floor:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
@@ -38,18 +34,14 @@ define bfloat @s_floor(bfloat %a) nounwind {
 define bfloat @s_ceil(bfloat %a) nounwind {
 ; AVXNC-LABEL: s_ceil:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNC-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: s_ceil:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
@@ -65,18 +57,14 @@ define bfloat @s_ceil(bfloat %a) nounwind {
 define bfloat @s_trunc(bfloat %a) nounwind {
 ; AVXNC-LABEL: s_trunc:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNC-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: s_trunc:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
@@ -92,18 +80,14 @@ define bfloat @s_trunc(bfloat %a) nounwind {
 define bfloat @s_rint(bfloat %a) nounwind {
 ; AVXNC-LABEL: s_rint:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNC-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: s_rint:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
@@ -119,18 +103,14 @@ define bfloat @s_rint(bfloat %a) nounwind {
 define bfloat @s_nearbyint(bfloat %a) nounwind {
 ; AVXNC-LABEL: s_nearbyint:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNC-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: s_nearbyint:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
@@ -146,18 +126,14 @@ define bfloat @s_nearbyint(bfloat %a) nounwind {
 define bfloat @s_roundeven(bfloat %a) nounwind {
 ; AVXNC-LABEL: s_roundeven:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    vroundss $8, %xmm0, %xmm0, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNC-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: s_roundeven:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vroundss $8, %xmm0, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq

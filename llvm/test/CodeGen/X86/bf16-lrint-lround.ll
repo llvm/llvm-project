@@ -9,65 +9,49 @@ define i32 @lrint_bf16(bfloat %a) nounwind {
 ; SSE2-LABEL: lrint_bf16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    callq rintf@PLT
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    cvttss2si %xmm0, %eax
 ; SSE2-NEXT:    popq %rcx
 ; SSE2-NEXT:    retq
 ;
 ; AVXNC-LABEL: lrint_bf16:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
-; AVXNC-NEXT:    vmovd %xmm0, %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    vcvttss2si %xmm0, %eax
 ; AVXNC-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: lrint_bf16:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
-; AVX512BF16-NEXT:    vmovd %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvttss2si %xmm0, %eax
 ; AVX512BF16-NEXT:    retq
 ;
 ; AVX10-2-LABEL: lrint_bf16:
 ; AVX10-2:       # %bb.0:
 ; AVX10-2-NEXT:    vrndscalebf16 $4, %xmm0, %xmm0
-; AVX10-2-NEXT:    vmovw %xmm0, %eax
-; AVX10-2-NEXT:    shll $16, %eax
-; AVX10-2-NEXT:    vmovd %eax, %xmm0
+; AVX10-2-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX10-2-NEXT:    vcvttss2si %xmm0, %eax
 ; AVX10-2-NEXT:    retq
 ;
 ; X86-LABEL: lrint_bf16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    pslld $16, %xmm0
+; X86-NEXT:    movd %xmm0, (%esp)
 ; X86-NEXT:    calll rintf
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfbf2
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm0
+; X86-NEXT:    pslld $16, %xmm0
 ; X86-NEXT:    cvttss2si %xmm0, %eax
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
@@ -79,23 +63,17 @@ define i32 @lround_bf16(bfloat %a) nounwind {
 ; SSE2-LABEL: lround_bf16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    callq roundf@PLT
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    cvttss2si %xmm0, %eax
 ; SSE2-NEXT:    popq %rcx
 ; SSE2-NEXT:    retq
 ;
 ; AVXNC-LABEL: lround_bf16:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; AVXNC-NEXT:    vpand %xmm1, %xmm0, %xmm1
 ; AVXNC-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
@@ -103,56 +81,44 @@ define i32 @lround_bf16(bfloat %a) nounwind {
 ; AVXNC-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVXNC-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
-; AVXNC-NEXT:    vmovd %xmm0, %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    vcvttss2si %xmm0, %eax
 ; AVXNC-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: lround_bf16:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
 ; AVX512BF16-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & m32bcst)
 ; AVX512BF16-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
-; AVX512BF16-NEXT:    vmovd %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvttss2si %xmm0, %eax
 ; AVX512BF16-NEXT:    retq
 ;
 ; AVX10-2-LABEL: lround_bf16:
 ; AVX10-2:       # %bb.0:
-; AVX10-2-NEXT:    vmovw %xmm0, %eax
-; AVX10-2-NEXT:    shll $16, %eax
-; AVX10-2-NEXT:    vmovd %eax, %xmm0
+; AVX10-2-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX10-2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
 ; AVX10-2-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & m32bcst)
 ; AVX10-2-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX10-2-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX10-2-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
-; AVX10-2-NEXT:    vmovw %xmm0, %eax
-; AVX10-2-NEXT:    shll $16, %eax
-; AVX10-2-NEXT:    vmovd %eax, %xmm0
+; AVX10-2-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX10-2-NEXT:    vcvttss2si %xmm0, %eax
 ; AVX10-2-NEXT:    retq
 ;
 ; X86-LABEL: lround_bf16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    pslld $16, %xmm0
+; X86-NEXT:    movd %xmm0, (%esp)
 ; X86-NEXT:    calll roundf
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfbf2
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm0
+; X86-NEXT:    pslld $16, %xmm0
 ; X86-NEXT:    cvttss2si %xmm0, %eax
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl

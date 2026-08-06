@@ -14,51 +14,54 @@ define bfloat @test(float %f, ptr %p) nounwind {
 ; SSE2-LABEL: test:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rbx
-; SSE2-NEXT:    subq $16, %rsp
+; SSE2-NEXT:    subq $32, %rsp
 ; SSE2-NEXT:    movq %rdi, %rbx
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
+; SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    #APP
 ; SSE2-NEXT:    #NO_APP
-; SSE2-NEXT:    movl %eax, (%rbx)
 ; SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; SSE2-NEXT:    addq $16, %rsp
+; SSE2-NEXT:    movss %xmm0, (%rbx)
+; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE2-NEXT:    addq $32, %rsp
 ; SSE2-NEXT:    popq %rbx
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    subq $16, %rsp
+; AVX-NEXT:    subq $32, %rsp
 ; AVX-NEXT:    movq %rdi, %rbx
 ; AVX-NEXT:    callq __truncsfbf2@PLT
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    shll $16, %eax
 ; AVX-NEXT:    #APP
 ; AVX-NEXT:    #NO_APP
-; AVX-NEXT:    movl %eax, (%rbx)
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX-NEXT:    addq $16, %rsp
+; AVX-NEXT:    vmovss %xmm0, (%rbx)
+; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX-NEXT:    addq $32, %rsp
 ; AVX-NEXT:    popq %rbx
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    pushq %rbx
-; AVX512-NEXT:    subq $16, %rsp
+; AVX512-NEXT:    subq $32, %rsp
 ; AVX512-NEXT:    movq %rdi, %rbx
 ; AVX512-NEXT:    callq __truncsfbf2@PLT
+; AVX512-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512-NEXT:    shll $16, %eax
 ; AVX512-NEXT:    #APP
 ; AVX512-NEXT:    #NO_APP
-; AVX512-NEXT:    movl %eax, (%rbx)
 ; AVX512-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
-; AVX512-NEXT:    addq $16, %rsp
+; AVX512-NEXT:    vmovss %xmm0, (%rbx)
+; AVX512-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512-NEXT:    addq $32, %rsp
 ; AVX512-NEXT:    popq %rbx
 ; AVX512-NEXT:    retq
 ;
@@ -66,22 +69,22 @@ define bfloat @test(float %f, ptr %p) nounwind {
 ; AVXNC:       # %bb.0:
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNC-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVXNC-NEXT:    vmovd %xmm0, %eax
-; AVXNC-NEXT:    shll $16, %eax
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNC-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVXNC-NEXT:    #APP
 ; AVXNC-NEXT:    #NO_APP
-; AVXNC-NEXT:    movl %eax, (%rdi)
+; AVXNC-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVXNC-NEXT:    vmovss %xmm0, (%rdi)
 ; AVXNC-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVXNC-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: test:
 ; AVX512BF16:       # %bb.0:
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm16
-; AVX512BF16-NEXT:    vmovd %xmm16, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
+; AVX512BF16-NEXT:    vpslld $16, %xmm16, %xmm17
 ; AVX512BF16-NEXT:    #APP
 ; AVX512BF16-NEXT:    #NO_APP
-; AVX512BF16-NEXT:    movl %eax, (%rdi)
+; AVX512BF16-NEXT:    vmovd %xmm17, (%rdi)
 ; AVX512BF16-NEXT:    vmovaps %xmm16, %xmm0
 ; AVX512BF16-NEXT:    retq
   %t = fptrunc float %f to bfloat

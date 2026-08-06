@@ -107,44 +107,32 @@ define bfloat @bf16_v_used(bfloat %a, bfloat %b) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    subq $40, %rsp
 ; SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE2-NEXT:    pextrw $0, %xmm1, %eax
-; SSE2-NEXT:    pextrw $0, %xmm0, %ecx
-; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm0
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
 ; SSE2-NEXT:    mulss %xmm1, %xmm0
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
 ; SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; SSE2-NEXT:    #APP
 ; SSE2-NEXT:    nop
 ; SSE2-NEXT:    #NO_APP
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    addss (%rsp), %xmm0 # 16-byte Folded Reload
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
 ; SSE2-NEXT:    addq $40, %rsp
 ; SSE2-NEXT:    retq
 ;
 ; AVXNC-LABEL: bf16_v_used:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm1, %eax
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVXNC-NEXT:    shll $16, %ecx
-; AVXNC-NEXT:    vmovd %ecx, %xmm1
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm2
-; AVXNC-NEXT:    vmulss %xmm2, %xmm1, %xmm1
-; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm1, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm2
+; AVXNC-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVXNC-NEXT:    vmulss %xmm1, %xmm2, %xmm2
+; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm2, %xmm2
 ; AVXNC-NEXT:    #APP
 ; AVXNC-NEXT:    nop
 ; AVXNC-NEXT:    #NO_APP
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
-; AVXNC-NEXT:    vaddss %xmm2, %xmm0, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNC-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNC-NEXT:    retq
 ;
@@ -152,44 +140,32 @@ define bfloat @bf16_v_used(bfloat %a, bfloat %b) nounwind {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    subq $40, %rsp
 ; AVX512F-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512F-NEXT:    vpextrw $0, %xmm1, %eax
-; AVX512F-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX512F-NEXT:    shll $16, %ecx
-; AVX512F-NEXT:    vmovd %ecx, %xmm0
-; AVX512F-NEXT:    shll $16, %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm1
-; AVX512F-NEXT:    vmovd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; AVX512F-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpslld $16, %xmm0, %xmm2
+; AVX512F-NEXT:    vpslld $16, %xmm1, %xmm0
+; AVX512F-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; AVX512F-NEXT:    vmulss %xmm0, %xmm2, %xmm0
 ; AVX512F-NEXT:    callq __truncsfbf2@PLT
 ; AVX512F-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX512F-NEXT:    #APP
 ; AVX512F-NEXT:    nop
 ; AVX512F-NEXT:    #NO_APP
-; AVX512F-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512F-NEXT:    shll $16, %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
-; AVX512F-NEXT:    vaddss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
+; AVX512F-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512F-NEXT:    vaddss (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX512F-NEXT:    callq __truncsfbf2@PLT
 ; AVX512F-NEXT:    addq $40, %rsp
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: bf16_v_used:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm1, %eax
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm1
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm2
-; AVX512BF16-NEXT:    vmulss %xmm2, %xmm1, %xmm1
-; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm1, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm2
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BF16-NEXT:    vmulss %xmm1, %xmm2, %xmm2
+; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm2, %xmm2
 ; AVX512BF16-NEXT:    #APP
 ; AVX512BF16-NEXT:    nop
 ; AVX512BF16-NEXT:    #NO_APP
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
-; AVX512BF16-NEXT:    vaddss %xmm2, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
 ;
@@ -204,16 +180,13 @@ define bfloat @bf16_v_used(bfloat %a, bfloat %b) nounwind {
 ;
 ; X86-LABEL: bf16_v_used:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $44, %esp
+; X86-NEXT:    subl $60, %esp
+; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm1
-; X86-NEXT:    movd %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    pslld $16, %xmm0
+; X86-NEXT:    pslld $16, %xmm1
+; X86-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    mulss %xmm1, %xmm0
 ; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    calll __truncsfbf2
@@ -221,13 +194,11 @@ define bfloat @bf16_v_used(bfloat %a, bfloat %b) nounwind {
 ; X86-NEXT:    #APP
 ; X86-NEXT:    nop
 ; X86-NEXT:    #NO_APP
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    addss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Folded Reload
+; X86-NEXT:    pslld $16, %xmm0
+; X86-NEXT:    addss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    calll __truncsfbf2
-; X86-NEXT:    addl $44, %esp
+; X86-NEXT:    addl $60, %esp
 ; X86-NEXT:    retl
   %m = fmul bfloat %a, %b
   %r = tail call bfloat asm "nop", "=v,v,x"(bfloat %m, bfloat %a)

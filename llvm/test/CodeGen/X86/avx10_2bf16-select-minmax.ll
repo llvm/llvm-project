@@ -5,17 +5,13 @@
 define bfloat @select_ogt_bf16(bfloat %a, bfloat %b) {
 ; AVX10_1-LABEL: select_ogt_bf16:
 ; AVX10_1:       # %bb.0:
-; AVX10_1-NEXT:    vmovw %xmm0, %eax
-; AVX10_1-NEXT:    vmovw %xmm1, %ecx
-; AVX10_1-NEXT:    movl %ecx, %edx
-; AVX10_1-NEXT:    shll $16, %edx
-; AVX10_1-NEXT:    vmovd %edx, %xmm0
-; AVX10_1-NEXT:    movl %eax, %edx
-; AVX10_1-NEXT:    shll $16, %edx
-; AVX10_1-NEXT:    vmovd %edx, %xmm1
-; AVX10_1-NEXT:    vucomiss %xmm0, %xmm1
-; AVX10_1-NEXT:    cmoval %eax, %ecx
-; AVX10_1-NEXT:    vmovw %ecx, %xmm0
+; AVX10_1-NEXT:    vmovw %xmm1, %eax
+; AVX10_1-NEXT:    vmovw %xmm0, %ecx
+; AVX10_1-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX10_1-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX10_1-NEXT:    vucomiss %xmm1, %xmm0
+; AVX10_1-NEXT:    cmoval %ecx, %eax
+; AVX10_1-NEXT:    vmovw %eax, %xmm0
 ; AVX10_1-NEXT:    retq
 ;
 ; AVX10_2-LABEL: select_ogt_bf16:

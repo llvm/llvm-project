@@ -6,16 +6,12 @@
 define float @strict_fpext_bf16_to_f32(bfloat %a) nounwind strictfp {
 ; SSE2-LABEL: strict_fpext_bf16_to_f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: strict_fpext_bf16_to_f32:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
   %r = call float @llvm.experimental.constrained.fpext.f32.bf16(bfloat %a, metadata !"fpexcept.strict")
   ret float %r
@@ -24,17 +20,13 @@ define float @strict_fpext_bf16_to_f32(bfloat %a) nounwind strictfp {
 define double @strict_fpext_bf16_to_f64(bfloat %a) nounwind strictfp {
 ; SSE2-LABEL: strict_fpext_bf16_to_f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    cvtss2sd %xmm0, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: strict_fpext_bf16_to_f64:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
   %r = call double @llvm.experimental.constrained.fpext.f64.bf16(bfloat %a, metadata !"fpexcept.strict")
@@ -44,9 +36,7 @@ define double @strict_fpext_bf16_to_f64(bfloat %a) nounwind strictfp {
 define x86_fp80 @strict_fpext_bf16_to_f80(bfloat %a) nounwind strictfp {
 ; SSE2-LABEL: strict_fpext_bf16_to_f80:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    movd %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    flds -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    wait
@@ -54,9 +44,7 @@ define x86_fp80 @strict_fpext_bf16_to_f80(bfloat %a) nounwind strictfp {
 ;
 ; AVX512BF16-LABEL: strict_fpext_bf16_to_f80:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vmovd %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512BF16-NEXT:    flds -{{[0-9]+}}(%rsp)
 ; AVX512BF16-NEXT:    wait

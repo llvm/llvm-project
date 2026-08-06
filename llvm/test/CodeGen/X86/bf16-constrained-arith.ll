@@ -20,13 +20,11 @@ define void @strict_fadd_bf16() strictfp {
 ; SSE2-NEXT:    pushq %rax
 ; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; SSE2-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; SSE2-NEXT:    movzwl (%rcx), %ecx
-; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm1
-; SSE2-NEXT:    movzwl (%rax), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pinsrw $0, (%rax), %xmm0
+; SSE2-NEXT:    movq b@GOTPCREL(%rip), %rax
+; SSE2-NEXT:    pinsrw $0, (%rax), %xmm1
+; SSE2-NEXT:    pslld $16, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
 ; SSE2-NEXT:    pextrw $0, %xmm0, %eax
@@ -41,14 +39,12 @@ define void @strict_fadd_bf16() strictfp {
 ; AVX2-NEXT:    pushq %rax
 ; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX2-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVX2-NEXT:    movzwl (%rcx), %ecx
-; AVX2-NEXT:    shll $16, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm0
-; AVX2-NEXT:    movzwl (%rax), %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
-; AVX2-NEXT:    vaddss %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX2-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVX2-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX2-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    callq __truncsfbf2@PLT
 ; AVX2-NEXT:    movq c@GOTPCREL(%rip), %rax
 ; AVX2-NEXT:    vpextrw $0, %xmm0, (%rax)
@@ -61,14 +57,12 @@ define void @strict_fadd_bf16() strictfp {
 ; AVXNC-NEXT:    pushq %rax
 ; AVXNC-NEXT:    .cfi_def_cfa_offset 16
 ; AVXNC-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVXNC-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVXNC-NEXT:    movzwl (%rcx), %ecx
-; AVXNC-NEXT:    shll $16, %ecx
-; AVXNC-NEXT:    vmovd %ecx, %xmm0
-; AVXNC-NEXT:    movzwl (%rax), %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm1
-; AVXNC-NEXT:    vaddss %xmm0, %xmm1, %xmm0
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVXNC-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNC-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVXNC-NEXT:    callq __truncsfbf2@PLT
 ; AVXNC-NEXT:    movq c@GOTPCREL(%rip), %rax
 ; AVXNC-NEXT:    vpextrw $0, %xmm0, (%rax)
@@ -81,14 +75,12 @@ define void @strict_fadd_bf16() strictfp {
 ; AVX512BF16-NEXT:    pushq %rax
 ; AVX512BF16-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512BF16-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX512BF16-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVX512BF16-NEXT:    movzwl (%rcx), %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm0
-; AVX512BF16-NEXT:    movzwl (%rax), %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
-; AVX512BF16-NEXT:    vaddss %xmm0, %xmm1, %xmm0
+; AVX512BF16-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX512BF16-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVX512BF16-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    callq __truncsfbf2@PLT
 ; AVX512BF16-NEXT:    movq c@GOTPCREL(%rip), %rax
 ; AVX512BF16-NEXT:    vpextrw $0, %xmm0, (%rax)
@@ -100,14 +92,12 @@ define void @strict_fadd_bf16() strictfp {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    movzwl b, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    movzwl a, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm1
-; X86-NEXT:    addss %xmm0, %xmm1
-; X86-NEXT:    movss %xmm1, (%esp)
+; X86-NEXT:    pinsrw $0, a, %xmm0
+; X86-NEXT:    pinsrw $0, b, %xmm1
+; X86-NEXT:    pslld $16, %xmm1
+; X86-NEXT:    pslld $16, %xmm0
+; X86-NEXT:    addss %xmm1, %xmm0
+; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    calll __truncsfbf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, c
@@ -127,13 +117,11 @@ define void @strict_fsub_bf16() strictfp {
 ; SSE2-NEXT:    pushq %rax
 ; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; SSE2-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; SSE2-NEXT:    movzwl (%rcx), %ecx
-; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm1
-; SSE2-NEXT:    movzwl (%rax), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pinsrw $0, (%rax), %xmm0
+; SSE2-NEXT:    movq b@GOTPCREL(%rip), %rax
+; SSE2-NEXT:    pinsrw $0, (%rax), %xmm1
+; SSE2-NEXT:    pslld $16, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    subss %xmm1, %xmm0
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
 ; SSE2-NEXT:    pextrw $0, %xmm0, %eax
@@ -148,14 +136,12 @@ define void @strict_fsub_bf16() strictfp {
 ; AVX2-NEXT:    pushq %rax
 ; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX2-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVX2-NEXT:    movzwl (%rcx), %ecx
-; AVX2-NEXT:    shll $16, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm0
-; AVX2-NEXT:    movzwl (%rax), %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
-; AVX2-NEXT:    vsubss %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX2-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVX2-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX2-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    callq __truncsfbf2@PLT
 ; AVX2-NEXT:    movq c@GOTPCREL(%rip), %rax
 ; AVX2-NEXT:    vpextrw $0, %xmm0, (%rax)
@@ -168,14 +154,12 @@ define void @strict_fsub_bf16() strictfp {
 ; AVXNC-NEXT:    pushq %rax
 ; AVXNC-NEXT:    .cfi_def_cfa_offset 16
 ; AVXNC-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVXNC-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVXNC-NEXT:    movzwl (%rcx), %ecx
-; AVXNC-NEXT:    shll $16, %ecx
-; AVXNC-NEXT:    vmovd %ecx, %xmm0
-; AVXNC-NEXT:    movzwl (%rax), %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm1
-; AVXNC-NEXT:    vsubss %xmm0, %xmm1, %xmm0
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVXNC-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNC-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVXNC-NEXT:    callq __truncsfbf2@PLT
 ; AVXNC-NEXT:    movq c@GOTPCREL(%rip), %rax
 ; AVXNC-NEXT:    vpextrw $0, %xmm0, (%rax)
@@ -188,14 +172,12 @@ define void @strict_fsub_bf16() strictfp {
 ; AVX512BF16-NEXT:    pushq %rax
 ; AVX512BF16-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512BF16-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX512BF16-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVX512BF16-NEXT:    movzwl (%rcx), %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm0
-; AVX512BF16-NEXT:    movzwl (%rax), %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
-; AVX512BF16-NEXT:    vsubss %xmm0, %xmm1, %xmm0
+; AVX512BF16-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX512BF16-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVX512BF16-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    callq __truncsfbf2@PLT
 ; AVX512BF16-NEXT:    movq c@GOTPCREL(%rip), %rax
 ; AVX512BF16-NEXT:    vpextrw $0, %xmm0, (%rax)
@@ -207,14 +189,12 @@ define void @strict_fsub_bf16() strictfp {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    movzwl b, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    movzwl a, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm1
-; X86-NEXT:    subss %xmm0, %xmm1
-; X86-NEXT:    movss %xmm1, (%esp)
+; X86-NEXT:    pinsrw $0, a, %xmm0
+; X86-NEXT:    pinsrw $0, b, %xmm1
+; X86-NEXT:    pslld $16, %xmm1
+; X86-NEXT:    pslld $16, %xmm0
+; X86-NEXT:    subss %xmm1, %xmm0
+; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    calll __truncsfbf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, c
@@ -234,13 +214,11 @@ define void @strict_fmul_bf16() strictfp {
 ; SSE2-NEXT:    pushq %rax
 ; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; SSE2-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; SSE2-NEXT:    movzwl (%rcx), %ecx
-; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm1
-; SSE2-NEXT:    movzwl (%rax), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pinsrw $0, (%rax), %xmm0
+; SSE2-NEXT:    movq b@GOTPCREL(%rip), %rax
+; SSE2-NEXT:    pinsrw $0, (%rax), %xmm1
+; SSE2-NEXT:    pslld $16, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    mulss %xmm1, %xmm0
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
 ; SSE2-NEXT:    pextrw $0, %xmm0, %eax
@@ -255,14 +233,12 @@ define void @strict_fmul_bf16() strictfp {
 ; AVX2-NEXT:    pushq %rax
 ; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX2-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVX2-NEXT:    movzwl (%rcx), %ecx
-; AVX2-NEXT:    shll $16, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm0
-; AVX2-NEXT:    movzwl (%rax), %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
-; AVX2-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX2-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVX2-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX2-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    callq __truncsfbf2@PLT
 ; AVX2-NEXT:    movq c@GOTPCREL(%rip), %rax
 ; AVX2-NEXT:    vpextrw $0, %xmm0, (%rax)
@@ -275,14 +251,12 @@ define void @strict_fmul_bf16() strictfp {
 ; AVXNC-NEXT:    pushq %rax
 ; AVXNC-NEXT:    .cfi_def_cfa_offset 16
 ; AVXNC-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVXNC-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVXNC-NEXT:    movzwl (%rcx), %ecx
-; AVXNC-NEXT:    shll $16, %ecx
-; AVXNC-NEXT:    vmovd %ecx, %xmm0
-; AVXNC-NEXT:    movzwl (%rax), %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm1
-; AVXNC-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVXNC-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNC-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVXNC-NEXT:    callq __truncsfbf2@PLT
 ; AVXNC-NEXT:    movq c@GOTPCREL(%rip), %rax
 ; AVXNC-NEXT:    vpextrw $0, %xmm0, (%rax)
@@ -295,14 +269,12 @@ define void @strict_fmul_bf16() strictfp {
 ; AVX512BF16-NEXT:    pushq %rax
 ; AVX512BF16-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512BF16-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX512BF16-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVX512BF16-NEXT:    movzwl (%rcx), %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm0
-; AVX512BF16-NEXT:    movzwl (%rax), %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
-; AVX512BF16-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVX512BF16-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX512BF16-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVX512BF16-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    callq __truncsfbf2@PLT
 ; AVX512BF16-NEXT:    movq c@GOTPCREL(%rip), %rax
 ; AVX512BF16-NEXT:    vpextrw $0, %xmm0, (%rax)
@@ -314,14 +286,12 @@ define void @strict_fmul_bf16() strictfp {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    movzwl b, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    movzwl a, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm1
-; X86-NEXT:    mulss %xmm0, %xmm1
-; X86-NEXT:    movss %xmm1, (%esp)
+; X86-NEXT:    pinsrw $0, a, %xmm0
+; X86-NEXT:    pinsrw $0, b, %xmm1
+; X86-NEXT:    pslld $16, %xmm1
+; X86-NEXT:    pslld $16, %xmm0
+; X86-NEXT:    mulss %xmm1, %xmm0
+; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    calll __truncsfbf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, c
@@ -341,13 +311,11 @@ define void @strict_fdiv_bf16() strictfp {
 ; SSE2-NEXT:    pushq %rax
 ; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; SSE2-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; SSE2-NEXT:    movzwl (%rcx), %ecx
-; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm1
-; SSE2-NEXT:    movzwl (%rax), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pinsrw $0, (%rax), %xmm0
+; SSE2-NEXT:    movq b@GOTPCREL(%rip), %rax
+; SSE2-NEXT:    pinsrw $0, (%rax), %xmm1
+; SSE2-NEXT:    pslld $16, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    divss %xmm1, %xmm0
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
 ; SSE2-NEXT:    pextrw $0, %xmm0, %eax
@@ -362,14 +330,12 @@ define void @strict_fdiv_bf16() strictfp {
 ; AVX2-NEXT:    pushq %rax
 ; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX2-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVX2-NEXT:    movzwl (%rcx), %ecx
-; AVX2-NEXT:    shll $16, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm0
-; AVX2-NEXT:    movzwl (%rax), %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
-; AVX2-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX2-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVX2-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX2-NEXT:    vdivss %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    callq __truncsfbf2@PLT
 ; AVX2-NEXT:    movq c@GOTPCREL(%rip), %rax
 ; AVX2-NEXT:    vpextrw $0, %xmm0, (%rax)
@@ -382,14 +348,12 @@ define void @strict_fdiv_bf16() strictfp {
 ; AVXNC-NEXT:    pushq %rax
 ; AVXNC-NEXT:    .cfi_def_cfa_offset 16
 ; AVXNC-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVXNC-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVXNC-NEXT:    movzwl (%rcx), %ecx
-; AVXNC-NEXT:    shll $16, %ecx
-; AVXNC-NEXT:    vmovd %ecx, %xmm0
-; AVXNC-NEXT:    movzwl (%rax), %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm1
-; AVXNC-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVXNC-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNC-NEXT:    vdivss %xmm1, %xmm0, %xmm0
 ; AVXNC-NEXT:    callq __truncsfbf2@PLT
 ; AVXNC-NEXT:    movq c@GOTPCREL(%rip), %rax
 ; AVXNC-NEXT:    vpextrw $0, %xmm0, (%rax)
@@ -402,14 +366,12 @@ define void @strict_fdiv_bf16() strictfp {
 ; AVX512BF16-NEXT:    pushq %rax
 ; AVX512BF16-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512BF16-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX512BF16-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVX512BF16-NEXT:    movzwl (%rcx), %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm0
-; AVX512BF16-NEXT:    movzwl (%rax), %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
-; AVX512BF16-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; AVX512BF16-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX512BF16-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVX512BF16-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vdivss %xmm1, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    callq __truncsfbf2@PLT
 ; AVX512BF16-NEXT:    movq c@GOTPCREL(%rip), %rax
 ; AVX512BF16-NEXT:    vpextrw $0, %xmm0, (%rax)
@@ -421,14 +383,12 @@ define void @strict_fdiv_bf16() strictfp {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    movzwl b, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    movzwl a, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm1
-; X86-NEXT:    divss %xmm0, %xmm1
-; X86-NEXT:    movss %xmm1, (%esp)
+; X86-NEXT:    pinsrw $0, a, %xmm0
+; X86-NEXT:    pinsrw $0, b, %xmm1
+; X86-NEXT:    pslld $16, %xmm1
+; X86-NEXT:    pslld $16, %xmm0
+; X86-NEXT:    divss %xmm1, %xmm0
+; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    calll __truncsfbf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, c
@@ -452,17 +412,14 @@ define void @strict_fma_bf16() strictfp {
 ; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    .cfi_offset %rbx, -16
 ; SSE2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; SSE2-NEXT:    movq b@GOTPCREL(%rip), %rcx
+; SSE2-NEXT:    pinsrw $0, (%rax), %xmm0
+; SSE2-NEXT:    movq b@GOTPCREL(%rip), %rax
+; SSE2-NEXT:    pinsrw $0, (%rax), %xmm1
 ; SSE2-NEXT:    movq c@GOTPCREL(%rip), %rbx
-; SSE2-NEXT:    movzwl (%rax), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    movzwl (%rcx), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    movzwl (%rbx), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm2
+; SSE2-NEXT:    pinsrw $0, (%rbx), %xmm2
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm2
 ; SSE2-NEXT:    callq fmaf@PLT
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
 ; SSE2-NEXT:    pextrw $0, %xmm0, %eax
@@ -477,17 +434,14 @@ define void @strict_fma_bf16() strictfp {
 ; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    .cfi_offset %rbx, -16
 ; AVX2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX2-NEXT:    movq b@GOTPCREL(%rip), %rcx
+; AVX2-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX2-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVX2-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
 ; AVX2-NEXT:    movq c@GOTPCREL(%rip), %rbx
-; AVX2-NEXT:    movzwl (%rax), %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    movzwl (%rcx), %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
-; AVX2-NEXT:    movzwl (%rbx), %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm2
+; AVX2-NEXT:    vpinsrw $0, (%rbx), %xmm0, %xmm2
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX2-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm2, %xmm2
 ; AVX2-NEXT:    callq fmaf@PLT
 ; AVX2-NEXT:    callq __truncsfbf2@PLT
 ; AVX2-NEXT:    vpextrw $0, %xmm0, (%rbx)
@@ -501,17 +455,14 @@ define void @strict_fma_bf16() strictfp {
 ; AVXNC-NEXT:    .cfi_def_cfa_offset 16
 ; AVXNC-NEXT:    .cfi_offset %rbx, -16
 ; AVXNC-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVXNC-NEXT:    movq b@GOTPCREL(%rip), %rcx
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVXNC-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
 ; AVXNC-NEXT:    movq c@GOTPCREL(%rip), %rbx
-; AVXNC-NEXT:    movzwl (%rax), %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
-; AVXNC-NEXT:    movzwl (%rcx), %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm1
-; AVXNC-NEXT:    movzwl (%rbx), %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm2
+; AVXNC-NEXT:    vpinsrw $0, (%rbx), %xmm0, %xmm2
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm2, %xmm2
 ; AVXNC-NEXT:    callq fmaf@PLT
 ; AVXNC-NEXT:    callq __truncsfbf2@PLT
 ; AVXNC-NEXT:    vpextrw $0, %xmm0, (%rbx)
@@ -525,18 +476,15 @@ define void @strict_fma_bf16() strictfp {
 ; AVX512BF16-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512BF16-NEXT:    .cfi_offset %rbx, -16
 ; AVX512BF16-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX512BF16-NEXT:    movq b@GOTPCREL(%rip), %rcx
+; AVX512BF16-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX512BF16-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVX512BF16-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
 ; AVX512BF16-NEXT:    movq c@GOTPCREL(%rip), %rbx
-; AVX512BF16-NEXT:    movzwl (%rbx), %edx
-; AVX512BF16-NEXT:    shll $16, %edx
-; AVX512BF16-NEXT:    vmovd %edx, %xmm1
-; AVX512BF16-NEXT:    movzwl (%rax), %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm2
-; AVX512BF16-NEXT:    movzwl (%rcx), %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
-; AVX512BF16-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm2 * xmm0) + xmm1
+; AVX512BF16-NEXT:    vpinsrw $0, (%rbx), %xmm0, %xmm2
+; AVX512BF16-NEXT:    vpslld $16, %xmm2, %xmm2
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm3
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm0
+; AVX512BF16-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm3 * xmm0) + xmm2
 ; AVX512BF16-NEXT:    callq __truncsfbf2@PLT
 ; AVX512BF16-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; AVX512BF16-NEXT:    popq %rbx
@@ -547,15 +495,15 @@ define void @strict_fma_bf16() strictfp {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    movzwl c, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movzwl b, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movzwl a, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    pinsrw $0, a, %xmm0
+; X86-NEXT:    pinsrw $0, b, %xmm1
+; X86-NEXT:    pinsrw $0, c, %xmm2
+; X86-NEXT:    pslld $16, %xmm2
+; X86-NEXT:    movd %xmm2, {{[0-9]+}}(%esp)
+; X86-NEXT:    pslld $16, %xmm1
+; X86-NEXT:    movd %xmm1, {{[0-9]+}}(%esp)
+; X86-NEXT:    pslld $16, %xmm0
+; X86-NEXT:    movd %xmm0, (%esp)
 ; X86-NEXT:    calll fmaf
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    wait
@@ -579,9 +527,8 @@ define void @strict_fsqrt_bf16() strictfp {
 ; SSE2-NEXT:    pushq %rax
 ; SSE2-NEXT:    .cfi_def_cfa_offset 16
 ; SSE2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; SSE2-NEXT:    movzwl (%rax), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pinsrw $0, (%rax), %xmm0
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    sqrtss %xmm0, %xmm0
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
 ; SSE2-NEXT:    pextrw $0, %xmm0, %eax
@@ -596,9 +543,8 @@ define void @strict_fsqrt_bf16() strictfp {
 ; AVX2-NEXT:    pushq %rax
 ; AVX2-NEXT:    .cfi_def_cfa_offset 16
 ; AVX2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX2-NEXT:    movzwl (%rax), %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
+; AVX2-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX2-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    callq __truncsfbf2@PLT
 ; AVX2-NEXT:    movq c@GOTPCREL(%rip), %rax
@@ -612,9 +558,8 @@ define void @strict_fsqrt_bf16() strictfp {
 ; AVXNC-NEXT:    pushq %rax
 ; AVXNC-NEXT:    .cfi_def_cfa_offset 16
 ; AVXNC-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVXNC-NEXT:    movzwl (%rax), %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; AVXNC-NEXT:    callq __truncsfbf2@PLT
 ; AVXNC-NEXT:    movq c@GOTPCREL(%rip), %rax
@@ -628,9 +573,8 @@ define void @strict_fsqrt_bf16() strictfp {
 ; AVX512BF16-NEXT:    pushq %rax
 ; AVX512BF16-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512BF16-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX512BF16-NEXT:    movzwl (%rax), %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    callq __truncsfbf2@PLT
 ; AVX512BF16-NEXT:    movq c@GOTPCREL(%rip), %rax
@@ -643,9 +587,8 @@ define void @strict_fsqrt_bf16() strictfp {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    movzwl a, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm0
+; X86-NEXT:    pinsrw $0, a, %xmm0
+; X86-NEXT:    pslld $16, %xmm0
 ; X86-NEXT:    sqrtss %xmm0, %xmm0
 ; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    calll __truncsfbf2
@@ -664,13 +607,11 @@ define i1 @strict_fcmp_bf16() strictfp {
 ; SSE2-LABEL: strict_fcmp_bf16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; SSE2-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; SSE2-NEXT:    movzwl (%rax), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    movzwl (%rcx), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    pinsrw $0, (%rax), %xmm0
+; SSE2-NEXT:    movq b@GOTPCREL(%rip), %rax
+; SSE2-NEXT:    pinsrw $0, (%rax), %xmm1
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm1
 ; SSE2-NEXT:    ucomiss %xmm0, %xmm1
 ; SSE2-NEXT:    seta %al
 ; SSE2-NEXT:    retq
@@ -678,13 +619,11 @@ define i1 @strict_fcmp_bf16() strictfp {
 ; AVX2-LABEL: strict_fcmp_bf16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX2-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVX2-NEXT:    movzwl (%rax), %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    movzwl (%rcx), %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
+; AVX2-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX2-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVX2-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX2-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX2-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX2-NEXT:    seta %al
 ; AVX2-NEXT:    retq
@@ -692,13 +631,11 @@ define i1 @strict_fcmp_bf16() strictfp {
 ; AVXNC-LABEL: strict_fcmp_bf16:
 ; AVXNC:       # %bb.0:
 ; AVXNC-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVXNC-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVXNC-NEXT:    movzwl (%rax), %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
-; AVXNC-NEXT:    movzwl (%rcx), %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm1
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVXNC-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVXNC-NEXT:    vucomiss %xmm0, %xmm1
 ; AVXNC-NEXT:    seta %al
 ; AVXNC-NEXT:    retq
@@ -706,25 +643,21 @@ define i1 @strict_fcmp_bf16() strictfp {
 ; AVX512BF16-LABEL: strict_fcmp_bf16:
 ; AVX512BF16:       # %bb.0:
 ; AVX512BF16-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX512BF16-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVX512BF16-NEXT:    movzwl (%rax), %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
-; AVX512BF16-NEXT:    movzwl (%rcx), %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
+; AVX512BF16-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX512BF16-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVX512BF16-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX512BF16-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX512BF16-NEXT:    seta %al
 ; AVX512BF16-NEXT:    retq
 ;
 ; X86-LABEL: strict_fcmp_bf16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzwl a, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    movzwl b, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm1
+; X86-NEXT:    pinsrw $0, a, %xmm0
+; X86-NEXT:    pinsrw $0, b, %xmm1
+; X86-NEXT:    pslld $16, %xmm0
+; X86-NEXT:    pslld $16, %xmm1
 ; X86-NEXT:    ucomiss %xmm0, %xmm1
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    retl
@@ -739,13 +672,11 @@ define i1 @strict_fcmps_bf16() strictfp {
 ; SSE2-LABEL: strict_fcmps_bf16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; SSE2-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; SSE2-NEXT:    movzwl (%rax), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    movzwl (%rcx), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    pinsrw $0, (%rax), %xmm0
+; SSE2-NEXT:    movq b@GOTPCREL(%rip), %rax
+; SSE2-NEXT:    pinsrw $0, (%rax), %xmm1
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm1
 ; SSE2-NEXT:    comiss %xmm0, %xmm1
 ; SSE2-NEXT:    seta %al
 ; SSE2-NEXT:    retq
@@ -753,13 +684,11 @@ define i1 @strict_fcmps_bf16() strictfp {
 ; AVX2-LABEL: strict_fcmps_bf16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX2-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVX2-NEXT:    movzwl (%rax), %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    movzwl (%rcx), %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
+; AVX2-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX2-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVX2-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX2-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX2-NEXT:    vcomiss %xmm0, %xmm1
 ; AVX2-NEXT:    seta %al
 ; AVX2-NEXT:    retq
@@ -767,13 +696,11 @@ define i1 @strict_fcmps_bf16() strictfp {
 ; AVXNC-LABEL: strict_fcmps_bf16:
 ; AVXNC:       # %bb.0:
 ; AVXNC-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVXNC-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVXNC-NEXT:    movzwl (%rax), %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
-; AVXNC-NEXT:    movzwl (%rcx), %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm1
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVXNC-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVXNC-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVXNC-NEXT:    vcomiss %xmm0, %xmm1
 ; AVXNC-NEXT:    seta %al
 ; AVXNC-NEXT:    retq
@@ -781,25 +708,21 @@ define i1 @strict_fcmps_bf16() strictfp {
 ; AVX512BF16-LABEL: strict_fcmps_bf16:
 ; AVX512BF16:       # %bb.0:
 ; AVX512BF16-NEXT:    movq a@GOTPCREL(%rip), %rax
-; AVX512BF16-NEXT:    movq b@GOTPCREL(%rip), %rcx
-; AVX512BF16-NEXT:    movzwl (%rax), %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
-; AVX512BF16-NEXT:    movzwl (%rcx), %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
+; AVX512BF16-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; AVX512BF16-NEXT:    movq b@GOTPCREL(%rip), %rax
+; AVX512BF16-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX512BF16-NEXT:    vcomiss %xmm0, %xmm1
 ; AVX512BF16-NEXT:    seta %al
 ; AVX512BF16-NEXT:    retq
 ;
 ; X86-LABEL: strict_fcmps_bf16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzwl a, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    movzwl b, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm1
+; X86-NEXT:    pinsrw $0, a, %xmm0
+; X86-NEXT:    pinsrw $0, b, %xmm1
+; X86-NEXT:    pslld $16, %xmm0
+; X86-NEXT:    pslld $16, %xmm1
 ; X86-NEXT:    comiss %xmm0, %xmm1
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    retl

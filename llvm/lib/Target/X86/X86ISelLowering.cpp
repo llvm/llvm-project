@@ -22757,12 +22757,23 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
                                 {F32.getValue(1), F32});
       return DAG.getMergeValues({Res, Res.getValue(1)}, DL);
     }
-
-    SDValue Res = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32,
-                              DAG.getBitcast(MVT::i16, In));
-    Res = DAG.getNode(ISD::SHL, DL, MVT::i32, Res,
-                      DAG.getShiftAmountConstant(16, MVT::i32, DL));
-    Res = DAG.getBitcast(MVT::f32, Res);
+    SDValue Res;
+    if (isTypeLegal(MVT::v8f16)) {
+      SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16,
+                                DAG.getBitcast(MVT::f16, In));
+      Vec = DAG.getNode(ISD::SHL, DL, MVT::v4i32,
+                        DAG.getBitcast(MVT::v4i32, Vec),
+                        DAG.getShiftAmountConstant(16, MVT::v4i32, DL));
+      Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32,
+                        DAG.getBitcast(MVT::v4f32, Vec),
+                        DAG.getVectorIdxConstant(0, DL));
+    } else {
+      Res = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32,
+                        DAG.getBitcast(MVT::i16, In));
+      Res = DAG.getNode(ISD::SHL, DL, MVT::i32, Res,
+                        DAG.getShiftAmountConstant(16, MVT::i32, DL));
+      Res = DAG.getBitcast(MVT::f32, Res);
+    }
 
     if (IsStrict)
       return DAG.getMergeValues({Res, Chain}, DL);

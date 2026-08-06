@@ -406,27 +406,19 @@ define <32 x bfloat> @zero_v32bf16() nounwind {
 define i1 @fcmp_oeq_bf16(bfloat %a, bfloat %b) nounwind {
 ; SSE2-LABEL: fcmp_oeq_bf16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    pextrw $0, %xmm1, %ecx
-; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm0
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    cmpeqss %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pslld $16, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    cmpeqss %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    andl $1, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: fcmp_oeq_bf16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX2-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX2-NEXT:    shll $16, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm0
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
-; AVX2-NEXT:    vcmpeqss %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX2-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
@@ -434,13 +426,9 @@ define i1 @fcmp_oeq_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; AVXNC-LABEL: fcmp_oeq_bf16:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNC-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVXNC-NEXT:    shll $16, %ecx
-; AVXNC-NEXT:    vmovd %ecx, %xmm0
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm1
-; AVXNC-NEXT:    vcmpeqss %xmm0, %xmm1, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNC-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
 ; AVXNC-NEXT:    vmovd %xmm0, %eax
 ; AVXNC-NEXT:    andl $1, %eax
 ; AVXNC-NEXT:    # kill: def $al killed $al killed $eax
@@ -448,56 +436,34 @@ define i1 @fcmp_oeq_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; AVX512BW-LABEL: fcmp_oeq_bf16:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BW-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX512BW-NEXT:    shll $16, %ecx
-; AVX512BW-NEXT:    vmovd %ecx, %xmm0
-; AVX512BW-NEXT:    shll $16, %eax
-; AVX512BW-NEXT:    vmovd %eax, %xmm1
-; AVX512BW-NEXT:    vcmpeqss %xmm0, %xmm1, %k0
+; AVX512BW-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BW-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: fcmp_oeq_bf16:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm0
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
-; AVX512BF16-NEXT:    vcmpeqss %xmm0, %xmm1, %k0
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vcmpeqss %xmm1, %xmm0, %k0
 ; AVX512BF16-NEXT:    kmovd %k0, %eax
 ; AVX512BF16-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512BF16-NEXT:    retq
 ;
 ; AVX10-2-LABEL: fcmp_oeq_bf16:
 ; AVX10-2:       # %bb.0:
-; AVX10-2-NEXT:    vmovw %xmm0, %eax
-; AVX10-2-NEXT:    vmovw %xmm1, %ecx
-; AVX10-2-NEXT:    shll $16, %ecx
-; AVX10-2-NEXT:    vmovd %ecx, %xmm0
-; AVX10-2-NEXT:    shll $16, %eax
-; AVX10-2-NEXT:    vmovd %eax, %xmm1
-; AVX10-2-NEXT:    vucomxss %xmm0, %xmm1
+; AVX10-2-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX10-2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX10-2-NEXT:    vucomxss %xmm1, %xmm0
 ; AVX10-2-NEXT:    sete %al
 ; AVX10-2-NEXT:    retq
 ;
 ; O0-LABEL: fcmp_oeq_bf16:
 ; O0:       # %bb.0:
-; O0-NEXT:    pextrw $0, %xmm1, %eax
-; O0-NEXT:    movw %ax, %cx
-; O0-NEXT:    # implicit-def: $eax
-; O0-NEXT:    movw %cx, %ax
-; O0-NEXT:    shll $16, %eax
-; O0-NEXT:    movd %eax, %xmm1
-; O0-NEXT:    pextrw $0, %xmm0, %eax
-; O0-NEXT:    movw %ax, %cx
-; O0-NEXT:    # implicit-def: $eax
-; O0-NEXT:    movw %cx, %ax
-; O0-NEXT:    shll $16, %eax
-; O0-NEXT:    movd %eax, %xmm0
+; O0-NEXT:    pslld $16, %xmm1
+; O0-NEXT:    pslld $16, %xmm0
 ; O0-NEXT:    cmpeqss %xmm1, %xmm0
 ; O0-NEXT:    movd %xmm0, %eax
 ; O0-NEXT:    andl $1, %eax
@@ -506,14 +472,12 @@ define i1 @fcmp_oeq_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; X86-SSE2-LABEL: fcmp_oeq_bf16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    cmpeqss %xmm0, %xmm1
-; X86-SSE2-NEXT:    movd %xmm1, %eax
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
+; X86-SSE2-NEXT:    pslld $16, %xmm1
+; X86-SSE2-NEXT:    pslld $16, %xmm0
+; X86-SSE2-NEXT:    cmpeqss %xmm1, %xmm0
+; X86-SSE2-NEXT:    movd %xmm0, %eax
 ; X86-SSE2-NEXT:    andl $1, %eax
 ; X86-SSE2-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-SSE2-NEXT:    retl
@@ -524,27 +488,19 @@ define i1 @fcmp_oeq_bf16(bfloat %a, bfloat %b) nounwind {
 define i1 @fcmp_une_bf16(bfloat %a, bfloat %b) nounwind {
 ; SSE2-LABEL: fcmp_une_bf16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    pextrw $0, %xmm1, %ecx
-; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm0
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    cmpneqss %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pslld $16, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    cmpneqss %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    andl $1, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: fcmp_une_bf16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX2-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX2-NEXT:    shll $16, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm0
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
-; AVX2-NEXT:    vcmpneqss %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX2-NEXT:    vcmpneqss %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
@@ -552,13 +508,9 @@ define i1 @fcmp_une_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; AVXNC-LABEL: fcmp_une_bf16:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNC-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVXNC-NEXT:    shll $16, %ecx
-; AVXNC-NEXT:    vmovd %ecx, %xmm0
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm1
-; AVXNC-NEXT:    vcmpneqss %xmm0, %xmm1, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNC-NEXT:    vcmpneqss %xmm1, %xmm0, %xmm0
 ; AVXNC-NEXT:    vmovd %xmm0, %eax
 ; AVXNC-NEXT:    andl $1, %eax
 ; AVXNC-NEXT:    # kill: def $al killed $al killed $eax
@@ -566,56 +518,34 @@ define i1 @fcmp_une_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; AVX512BW-LABEL: fcmp_une_bf16:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BW-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX512BW-NEXT:    shll $16, %ecx
-; AVX512BW-NEXT:    vmovd %ecx, %xmm0
-; AVX512BW-NEXT:    shll $16, %eax
-; AVX512BW-NEXT:    vmovd %eax, %xmm1
-; AVX512BW-NEXT:    vcmpneqss %xmm0, %xmm1, %k0
+; AVX512BW-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BW-NEXT:    vcmpneqss %xmm1, %xmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: fcmp_une_bf16:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm0
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
-; AVX512BF16-NEXT:    vcmpneqss %xmm0, %xmm1, %k0
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vcmpneqss %xmm1, %xmm0, %k0
 ; AVX512BF16-NEXT:    kmovd %k0, %eax
 ; AVX512BF16-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512BF16-NEXT:    retq
 ;
 ; AVX10-2-LABEL: fcmp_une_bf16:
 ; AVX10-2:       # %bb.0:
-; AVX10-2-NEXT:    vmovw %xmm0, %eax
-; AVX10-2-NEXT:    vmovw %xmm1, %ecx
-; AVX10-2-NEXT:    shll $16, %ecx
-; AVX10-2-NEXT:    vmovd %ecx, %xmm0
-; AVX10-2-NEXT:    shll $16, %eax
-; AVX10-2-NEXT:    vmovd %eax, %xmm1
-; AVX10-2-NEXT:    vucomxss %xmm0, %xmm1
+; AVX10-2-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX10-2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX10-2-NEXT:    vucomxss %xmm1, %xmm0
 ; AVX10-2-NEXT:    setne %al
 ; AVX10-2-NEXT:    retq
 ;
 ; O0-LABEL: fcmp_une_bf16:
 ; O0:       # %bb.0:
-; O0-NEXT:    pextrw $0, %xmm1, %eax
-; O0-NEXT:    movw %ax, %cx
-; O0-NEXT:    # implicit-def: $eax
-; O0-NEXT:    movw %cx, %ax
-; O0-NEXT:    shll $16, %eax
-; O0-NEXT:    movd %eax, %xmm1
-; O0-NEXT:    pextrw $0, %xmm0, %eax
-; O0-NEXT:    movw %ax, %cx
-; O0-NEXT:    # implicit-def: $eax
-; O0-NEXT:    movw %cx, %ax
-; O0-NEXT:    shll $16, %eax
-; O0-NEXT:    movd %eax, %xmm0
+; O0-NEXT:    pslld $16, %xmm1
+; O0-NEXT:    pslld $16, %xmm0
 ; O0-NEXT:    cmpneqss %xmm1, %xmm0
 ; O0-NEXT:    movd %xmm0, %eax
 ; O0-NEXT:    andl $1, %eax
@@ -624,14 +554,12 @@ define i1 @fcmp_une_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; X86-SSE2-LABEL: fcmp_une_bf16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    cmpneqss %xmm0, %xmm1
-; X86-SSE2-NEXT:    movd %xmm1, %eax
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
+; X86-SSE2-NEXT:    pslld $16, %xmm1
+; X86-SSE2-NEXT:    pslld $16, %xmm0
+; X86-SSE2-NEXT:    cmpneqss %xmm1, %xmm0
+; X86-SSE2-NEXT:    movd %xmm0, %eax
 ; X86-SSE2-NEXT:    andl $1, %eax
 ; X86-SSE2-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-SSE2-NEXT:    retl
@@ -642,72 +570,48 @@ define i1 @fcmp_une_bf16(bfloat %a, bfloat %b) nounwind {
 define i1 @fcmp_olt_bf16(bfloat %a, bfloat %b) nounwind {
 ; SSE2-LABEL: fcmp_olt_bf16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pextrw $0, %xmm1, %eax
-; SSE2-NEXT:    pextrw $0, %xmm0, %ecx
-; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm0
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm1
 ; SSE2-NEXT:    ucomiss %xmm0, %xmm1
 ; SSE2-NEXT:    seta %al
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: fcmp_olt_bf16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpextrw $0, %xmm1, %eax
-; AVX2-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX2-NEXT:    shll $16, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm0
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX2-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX2-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX2-NEXT:    seta %al
 ; AVX2-NEXT:    retq
 ;
 ; AVXNC-LABEL: fcmp_olt_bf16:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm1, %eax
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVXNC-NEXT:    shll $16, %ecx
-; AVXNC-NEXT:    vmovd %ecx, %xmm0
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVXNC-NEXT:    vucomiss %xmm0, %xmm1
 ; AVXNC-NEXT:    seta %al
 ; AVXNC-NEXT:    retq
 ;
 ; AVX512BW-LABEL: fcmp_olt_bf16:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpextrw $0, %xmm1, %eax
-; AVX512BW-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX512BW-NEXT:    shll $16, %ecx
-; AVX512BW-NEXT:    vmovd %ecx, %xmm0
-; AVX512BW-NEXT:    shll $16, %eax
-; AVX512BW-NEXT:    vmovd %eax, %xmm1
+; AVX512BW-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX512BW-NEXT:    seta %al
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: fcmp_olt_bf16:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm1, %eax
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm0
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX512BF16-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX512BF16-NEXT:    seta %al
 ; AVX512BF16-NEXT:    retq
 ;
 ; AVX10-2-LABEL: fcmp_olt_bf16:
 ; AVX10-2:       # %bb.0:
-; AVX10-2-NEXT:    vmovw %xmm1, %eax
-; AVX10-2-NEXT:    vmovw %xmm0, %ecx
-; AVX10-2-NEXT:    shll $16, %ecx
-; AVX10-2-NEXT:    vmovd %ecx, %xmm0
-; AVX10-2-NEXT:    shll $16, %eax
-; AVX10-2-NEXT:    vmovd %eax, %xmm1
+; AVX10-2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX10-2-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX10-2-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX10-2-NEXT:    seta %al
 ; AVX10-2-NEXT:    retq
@@ -718,31 +622,19 @@ define i1 @fcmp_olt_bf16(bfloat %a, bfloat %b) nounwind {
 ; O0-NEXT:    movaps %xmm0, %xmm1
 ; O0-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; O0-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; O0-NEXT:    pextrw $0, %xmm1, %eax
-; O0-NEXT:    movw %ax, %cx
-; O0-NEXT:    # implicit-def: $eax
-; O0-NEXT:    movw %cx, %ax
-; O0-NEXT:    shll $16, %eax
-; O0-NEXT:    movd %eax, %xmm1
-; O0-NEXT:    pextrw $0, %xmm0, %eax
-; O0-NEXT:    movw %ax, %cx
-; O0-NEXT:    # implicit-def: $eax
-; O0-NEXT:    movw %cx, %ax
-; O0-NEXT:    shll $16, %eax
-; O0-NEXT:    movd %eax, %xmm0
+; O0-NEXT:    pslld $16, %xmm1
+; O0-NEXT:    pslld $16, %xmm0
 ; O0-NEXT:    ucomiss %xmm1, %xmm0
 ; O0-NEXT:    seta %al
 ; O0-NEXT:    retq
 ;
 ; X86-SSE2-LABEL: fcmp_olt_bf16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    ucomiss %xmm0, %xmm1
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
+; X86-SSE2-NEXT:    pslld $16, %xmm1
+; X86-SSE2-NEXT:    pslld $16, %xmm0
+; X86-SSE2-NEXT:    ucomiss %xmm1, %xmm0
 ; X86-SSE2-NEXT:    seta %al
 ; X86-SSE2-NEXT:    retl
   %c = fcmp olt bfloat %a, %b
@@ -752,103 +644,67 @@ define i1 @fcmp_olt_bf16(bfloat %a, bfloat %b) nounwind {
 define i1 @fcmp_ueq_bf16(bfloat %a, bfloat %b) nounwind {
 ; SSE2-LABEL: fcmp_ueq_bf16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    pextrw $0, %xmm1, %ecx
-; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm0
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    ucomiss %xmm0, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    ucomiss %xmm1, %xmm0
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: fcmp_ueq_bf16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX2-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX2-NEXT:    shll $16, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm0
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
-; AVX2-NEXT:    vucomiss %xmm0, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX2-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    retq
 ;
 ; AVXNC-LABEL: fcmp_ueq_bf16:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNC-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVXNC-NEXT:    shll $16, %ecx
-; AVXNC-NEXT:    vmovd %ecx, %xmm0
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm1
-; AVXNC-NEXT:    vucomiss %xmm0, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNC-NEXT:    vucomiss %xmm1, %xmm0
 ; AVXNC-NEXT:    sete %al
 ; AVXNC-NEXT:    retq
 ;
 ; AVX512BW-LABEL: fcmp_ueq_bf16:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BW-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX512BW-NEXT:    shll $16, %ecx
-; AVX512BW-NEXT:    vmovd %ecx, %xmm0
-; AVX512BW-NEXT:    shll $16, %eax
-; AVX512BW-NEXT:    vmovd %eax, %xmm1
-; AVX512BW-NEXT:    vucomiss %xmm0, %xmm1
+; AVX512BW-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BW-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX512BW-NEXT:    sete %al
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: fcmp_ueq_bf16:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    vpextrw $0, %xmm1, %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm0
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
-; AVX512BF16-NEXT:    vucomiss %xmm0, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX512BF16-NEXT:    sete %al
 ; AVX512BF16-NEXT:    retq
 ;
 ; AVX10-2-LABEL: fcmp_ueq_bf16:
 ; AVX10-2:       # %bb.0:
-; AVX10-2-NEXT:    vmovw %xmm0, %eax
-; AVX10-2-NEXT:    vmovw %xmm1, %ecx
-; AVX10-2-NEXT:    shll $16, %ecx
-; AVX10-2-NEXT:    vmovd %ecx, %xmm0
-; AVX10-2-NEXT:    shll $16, %eax
-; AVX10-2-NEXT:    vmovd %eax, %xmm1
-; AVX10-2-NEXT:    vucomiss %xmm0, %xmm1
+; AVX10-2-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX10-2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX10-2-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX10-2-NEXT:    sete %al
 ; AVX10-2-NEXT:    retq
 ;
 ; O0-LABEL: fcmp_ueq_bf16:
 ; O0:       # %bb.0:
-; O0-NEXT:    pextrw $0, %xmm1, %eax
-; O0-NEXT:    movw %ax, %cx
-; O0-NEXT:    # implicit-def: $eax
-; O0-NEXT:    movw %cx, %ax
-; O0-NEXT:    shll $16, %eax
-; O0-NEXT:    movd %eax, %xmm1
-; O0-NEXT:    pextrw $0, %xmm0, %eax
-; O0-NEXT:    movw %ax, %cx
-; O0-NEXT:    # implicit-def: $eax
-; O0-NEXT:    movw %cx, %ax
-; O0-NEXT:    shll $16, %eax
-; O0-NEXT:    movd %eax, %xmm0
+; O0-NEXT:    pslld $16, %xmm1
+; O0-NEXT:    pslld $16, %xmm0
 ; O0-NEXT:    ucomiss %xmm1, %xmm0
 ; O0-NEXT:    sete %al
 ; O0-NEXT:    retq
 ;
 ; X86-SSE2-LABEL: fcmp_ueq_bf16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    ucomiss %xmm0, %xmm1
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
+; X86-SSE2-NEXT:    pslld $16, %xmm1
+; X86-SSE2-NEXT:    pslld $16, %xmm0
+; X86-SSE2-NEXT:    ucomiss %xmm1, %xmm0
 ; X86-SSE2-NEXT:    sete %al
 ; X86-SSE2-NEXT:    retl
   %c = fcmp ueq bfloat %a, %b
@@ -859,12 +715,8 @@ define i1 @fcmp_ueq_bf16(bfloat %a, bfloat %b) nounwind {
 define i32 @brcond_bf16(bfloat %a, bfloat %b) nounwind {
 ; SSE2-LABEL: brcond_bf16:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    pextrw $0, %xmm1, %eax
-; SSE2-NEXT:    pextrw $0, %xmm0, %ecx
-; SSE2-NEXT:    shll $16, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm0
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm1
 ; SSE2-NEXT:    ucomiss %xmm0, %xmm1
 ; SSE2-NEXT:    jbe .LBB11_2
 ; SSE2-NEXT:  # %bb.1: # %if.then
@@ -876,12 +728,8 @@ define i32 @brcond_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; AVX2-LABEL: brcond_bf16:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpextrw $0, %xmm1, %eax
-; AVX2-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX2-NEXT:    shll $16, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm0
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX2-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX2-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX2-NEXT:    jbe .LBB11_2
 ; AVX2-NEXT:  # %bb.1: # %if.then
@@ -893,12 +741,8 @@ define i32 @brcond_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; AVXNC-LABEL: brcond_bf16:
 ; AVXNC:       # %bb.0: # %entry
-; AVXNC-NEXT:    vpextrw $0, %xmm1, %eax
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVXNC-NEXT:    shll $16, %ecx
-; AVXNC-NEXT:    vmovd %ecx, %xmm0
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVXNC-NEXT:    vucomiss %xmm0, %xmm1
 ; AVXNC-NEXT:    jbe .LBB11_2
 ; AVXNC-NEXT:  # %bb.1: # %if.then
@@ -910,12 +754,8 @@ define i32 @brcond_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; AVX512BW-LABEL: brcond_bf16:
 ; AVX512BW:       # %bb.0: # %entry
-; AVX512BW-NEXT:    vpextrw $0, %xmm1, %eax
-; AVX512BW-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX512BW-NEXT:    shll $16, %ecx
-; AVX512BW-NEXT:    vmovd %ecx, %xmm0
-; AVX512BW-NEXT:    shll $16, %eax
-; AVX512BW-NEXT:    vmovd %eax, %xmm1
+; AVX512BW-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX512BW-NEXT:    jbe .LBB11_2
 ; AVX512BW-NEXT:  # %bb.1: # %if.then
@@ -927,12 +767,8 @@ define i32 @brcond_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; AVX512BF16-LABEL: brcond_bf16:
 ; AVX512BF16:       # %bb.0: # %entry
-; AVX512BF16-NEXT:    vpextrw $0, %xmm1, %eax
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX512BF16-NEXT:    shll $16, %ecx
-; AVX512BF16-NEXT:    vmovd %ecx, %xmm0
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX512BF16-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX512BF16-NEXT:    jbe .LBB11_2
 ; AVX512BF16-NEXT:  # %bb.1: # %if.then
@@ -959,18 +795,8 @@ define i32 @brcond_bf16(bfloat %a, bfloat %b) nounwind {
 ; O0-NEXT:    movaps %xmm0, %xmm1
 ; O0-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; O0-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; O0-NEXT:    pextrw $0, %xmm1, %eax
-; O0-NEXT:    movw %ax, %cx
-; O0-NEXT:    # implicit-def: $eax
-; O0-NEXT:    movw %cx, %ax
-; O0-NEXT:    shll $16, %eax
-; O0-NEXT:    movd %eax, %xmm1
-; O0-NEXT:    pextrw $0, %xmm0, %eax
-; O0-NEXT:    movw %ax, %cx
-; O0-NEXT:    # implicit-def: $eax
-; O0-NEXT:    movw %cx, %ax
-; O0-NEXT:    shll $16, %eax
-; O0-NEXT:    movd %eax, %xmm0
+; O0-NEXT:    pslld $16, %xmm1
+; O0-NEXT:    pslld $16, %xmm0
 ; O0-NEXT:    ucomiss %xmm1, %xmm0
 ; O0-NEXT:    jbe .LBB11_2
 ; O0-NEXT:    jmp .LBB11_1
@@ -983,13 +809,11 @@ define i32 @brcond_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; X86-SSE2-LABEL: brcond_bf16:
 ; X86-SSE2:       # %bb.0: # %entry
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm1
-; X86-SSE2-NEXT:    ucomiss %xmm0, %xmm1
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
+; X86-SSE2-NEXT:    pslld $16, %xmm1
+; X86-SSE2-NEXT:    pslld $16, %xmm0
+; X86-SSE2-NEXT:    ucomiss %xmm1, %xmm0
 ; X86-SSE2-NEXT:    jbe .LBB11_2
 ; X86-SSE2-NEXT:  # %bb.1: # %if.then
 ; X86-SSE2-NEXT:    movl $1, %eax
@@ -1100,12 +924,8 @@ define bfloat @select_fcmp_bf16(bfloat %a, bfloat %b) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pextrw $0, %xmm1, %eax
 ; SSE2-NEXT:    pextrw $0, %xmm0, %ecx
-; SSE2-NEXT:    movl %ecx, %edx
-; SSE2-NEXT:    shll $16, %edx
-; SSE2-NEXT:    movd %edx, %xmm0
-; SSE2-NEXT:    movl %eax, %edx
-; SSE2-NEXT:    shll $16, %edx
-; SSE2-NEXT:    movd %edx, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm1
 ; SSE2-NEXT:    ucomiss %xmm0, %xmm1
 ; SSE2-NEXT:    cmoval %ecx, %eax
 ; SSE2-NEXT:    pinsrw $0, %eax, %xmm0
@@ -1115,12 +935,8 @@ define bfloat @select_fcmp_bf16(bfloat %a, bfloat %b) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpextrw $0, %xmm1, %eax
 ; AVX2-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX2-NEXT:    movl %ecx, %edx
-; AVX2-NEXT:    shll $16, %edx
-; AVX2-NEXT:    vmovd %edx, %xmm0
-; AVX2-NEXT:    movl %eax, %edx
-; AVX2-NEXT:    shll $16, %edx
-; AVX2-NEXT:    vmovd %edx, %xmm1
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX2-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX2-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX2-NEXT:    cmoval %ecx, %eax
 ; AVX2-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
@@ -1130,12 +946,8 @@ define bfloat @select_fcmp_bf16(bfloat %a, bfloat %b) nounwind {
 ; AVXNC:       # %bb.0:
 ; AVXNC-NEXT:    vpextrw $0, %xmm1, %eax
 ; AVXNC-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVXNC-NEXT:    movl %ecx, %edx
-; AVXNC-NEXT:    shll $16, %edx
-; AVXNC-NEXT:    vmovd %edx, %xmm0
-; AVXNC-NEXT:    movl %eax, %edx
-; AVXNC-NEXT:    shll $16, %edx
-; AVXNC-NEXT:    vmovd %edx, %xmm1
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVXNC-NEXT:    vucomiss %xmm0, %xmm1
 ; AVXNC-NEXT:    cmoval %ecx, %eax
 ; AVXNC-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
@@ -1145,12 +957,8 @@ define bfloat @select_fcmp_bf16(bfloat %a, bfloat %b) nounwind {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpextrw $0, %xmm1, %eax
 ; AVX512BW-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX512BW-NEXT:    movl %ecx, %edx
-; AVX512BW-NEXT:    shll $16, %edx
-; AVX512BW-NEXT:    vmovd %edx, %xmm0
-; AVX512BW-NEXT:    movl %eax, %edx
-; AVX512BW-NEXT:    shll $16, %edx
-; AVX512BW-NEXT:    vmovd %edx, %xmm1
+; AVX512BW-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX512BW-NEXT:    cmoval %ecx, %eax
 ; AVX512BW-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
@@ -1160,12 +968,8 @@ define bfloat @select_fcmp_bf16(bfloat %a, bfloat %b) nounwind {
 ; AVX512BF16:       # %bb.0:
 ; AVX512BF16-NEXT:    vpextrw $0, %xmm1, %eax
 ; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX512BF16-NEXT:    movl %ecx, %edx
-; AVX512BF16-NEXT:    shll $16, %edx
-; AVX512BF16-NEXT:    vmovd %edx, %xmm0
-; AVX512BF16-NEXT:    movl %eax, %edx
-; AVX512BF16-NEXT:    shll $16, %edx
-; AVX512BF16-NEXT:    vmovd %edx, %xmm1
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX512BF16-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX512BF16-NEXT:    cmoval %ecx, %eax
 ; AVX512BF16-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
@@ -1186,21 +990,19 @@ define bfloat @select_fcmp_bf16(bfloat %a, bfloat %b) nounwind {
 ; O0-NEXT:    movaps %xmm0, %xmm1
 ; O0-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; O0-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; O0-NEXT:    pextrw $0, %xmm1, %eax
+; O0-NEXT:    movaps %xmm0, %xmm2
+; O0-NEXT:    pextrw $0, %xmm2, %eax
+; O0-NEXT:    movw %ax, %dx
+; O0-NEXT:    movaps %xmm1, %xmm2
+; O0-NEXT:    pextrw $0, %xmm2, %eax
 ; O0-NEXT:    # kill: def $ax killed $ax killed $eax
+; O0-NEXT:    pslld $16, %xmm1
+; O0-NEXT:    pslld $16, %xmm0
+; O0-NEXT:    ucomiss %xmm1, %xmm0
 ; O0-NEXT:    # implicit-def: $ecx
 ; O0-NEXT:    movw %ax, %cx
-; O0-NEXT:    movl %ecx, %eax
-; O0-NEXT:    shll $16, %eax
-; O0-NEXT:    movd %eax, %xmm1
-; O0-NEXT:    pextrw $0, %xmm0, %eax
-; O0-NEXT:    movw %ax, %dx
 ; O0-NEXT:    # implicit-def: $eax
 ; O0-NEXT:    movw %dx, %ax
-; O0-NEXT:    movl %eax, %edx
-; O0-NEXT:    shll $16, %edx
-; O0-NEXT:    movd %edx, %xmm0
-; O0-NEXT:    ucomiss %xmm1, %xmm0
 ; O0-NEXT:    cmoval %ecx, %eax
 ; O0-NEXT:    movw %ax, %cx
 ; O0-NEXT:    # implicit-def: $eax
@@ -1212,17 +1014,15 @@ define bfloat @select_fcmp_bf16(bfloat %a, bfloat %b) nounwind {
 ;
 ; X86-SSE2-LABEL: select_fcmp_bf16:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl %eax, %ecx
-; X86-SSE2-NEXT:    shll $16, %ecx
-; X86-SSE2-NEXT:    movd %ecx, %xmm0
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl %ecx, %edx
-; X86-SSE2-NEXT:    shll $16, %edx
-; X86-SSE2-NEXT:    movd %edx, %xmm1
-; X86-SSE2-NEXT:    ucomiss %xmm0, %xmm1
-; X86-SSE2-NEXT:    cmoval %eax, %ecx
-; X86-SSE2-NEXT:    pinsrw $0, %ecx, %xmm0
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
+; X86-SSE2-NEXT:    pextrw $0, %xmm1, %ecx
+; X86-SSE2-NEXT:    pslld $16, %xmm1
+; X86-SSE2-NEXT:    pslld $16, %xmm0
+; X86-SSE2-NEXT:    ucomiss %xmm1, %xmm0
+; X86-SSE2-NEXT:    cmoval %ecx, %eax
+; X86-SSE2-NEXT:    pinsrw $0, %eax, %xmm0
 ; X86-SSE2-NEXT:    retl
   %c = fcmp olt bfloat %a, %b
   %r = select i1 %c, bfloat %a, bfloat %b
@@ -1233,9 +1033,7 @@ define bfloat @freeze_bf16(bfloat %a) nounwind {
 ; SSE2-LABEL: freeze_bf16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    addss %xmm0, %xmm0
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
 ; SSE2-NEXT:    popq %rax
@@ -1244,9 +1042,7 @@ define bfloat @freeze_bf16(bfloat %a) nounwind {
 ; AVX2-LABEL: freeze_bf16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %rax
-; AVX2-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX2-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    callq __truncsfbf2@PLT
 ; AVX2-NEXT:    popq %rax
@@ -1254,9 +1050,7 @@ define bfloat @freeze_bf16(bfloat %a) nounwind {
 ;
 ; AVXNC-LABEL: freeze_bf16:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNC-NEXT:    retq
@@ -1264,9 +1058,7 @@ define bfloat @freeze_bf16(bfloat %a) nounwind {
 ; AVX512BW-LABEL: freeze_bf16:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    pushq %rax
-; AVX512BW-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BW-NEXT:    shll $16, %eax
-; AVX512BW-NEXT:    vmovd %eax, %xmm0
+; AVX512BW-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; AVX512BW-NEXT:    callq __truncsfbf2@PLT
 ; AVX512BW-NEXT:    popq %rax
@@ -1274,9 +1066,7 @@ define bfloat @freeze_bf16(bfloat %a) nounwind {
 ;
 ; AVX512BF16-LABEL: freeze_bf16:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
@@ -1289,12 +1079,7 @@ define bfloat @freeze_bf16(bfloat %a) nounwind {
 ; O0-LABEL: freeze_bf16:
 ; O0:       # %bb.0:
 ; O0-NEXT:    pushq %rax
-; O0-NEXT:    pextrw $0, %xmm0, %eax
-; O0-NEXT:    movw %ax, %cx
-; O0-NEXT:    # implicit-def: $eax
-; O0-NEXT:    movw %cx, %ax
-; O0-NEXT:    shll $16, %eax
-; O0-NEXT:    movd %eax, %xmm0
+; O0-NEXT:    pslld $16, %xmm0
 ; O0-NEXT:    addss %xmm0, %xmm0
 ; O0-NEXT:    callq __truncsfbf2@PLT
 ; O0-NEXT:    popq %rax
@@ -1303,9 +1088,8 @@ define bfloat @freeze_bf16(bfloat %a) nounwind {
 ; X86-SSE2-LABEL: freeze_bf16:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    subl $12, %esp
-; X86-SSE2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE2-NEXT:    pslld $16, %xmm0
 ; X86-SSE2-NEXT:    addss %xmm0, %xmm0
 ; X86-SSE2-NEXT:    movss %xmm0, (%esp)
 ; X86-SSE2-NEXT:    calll __truncsfbf2
@@ -1416,9 +1200,7 @@ define bfloat @fabs_bf16(bfloat %a) nounwind {
 ; SSE2-LABEL: fabs_bf16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
 ; SSE2-NEXT:    popq %rax
@@ -1427,9 +1209,7 @@ define bfloat @fabs_bf16(bfloat %a) nounwind {
 ; AVX2-LABEL: fabs_bf16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %rax
-; AVX2-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    callq __truncsfbf2@PLT
@@ -1438,9 +1218,7 @@ define bfloat @fabs_bf16(bfloat %a) nounwind {
 ;
 ; AVXNC-LABEL: fabs_bf16:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
 ; AVXNC-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
@@ -1449,9 +1227,7 @@ define bfloat @fabs_bf16(bfloat %a) nounwind {
 ; AVX512BW-LABEL: fabs_bf16:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    pushq %rax
-; AVX512BW-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BW-NEXT:    shll $16, %eax
-; AVX512BW-NEXT:    vmovd %eax, %xmm0
+; AVX512BW-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512BW-NEXT:    callq __truncsfbf2@PLT
 ; AVX512BW-NEXT:    popq %rax
@@ -1459,18 +1235,14 @@ define bfloat @fabs_bf16(bfloat %a) nounwind {
 ;
 ; AVX512BF16-LABEL: fabs_bf16:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
 ;
 ; AVX10-2-LABEL: fabs_bf16:
 ; AVX10-2:       # %bb.0:
-; AVX10-2-NEXT:    vmovw %xmm0, %eax
-; AVX10-2-NEXT:    shll $16, %eax
-; AVX10-2-NEXT:    vmovd %eax, %xmm0
+; AVX10-2-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX10-2-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX10-2-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX10-2-NEXT:    retq
@@ -1478,12 +1250,7 @@ define bfloat @fabs_bf16(bfloat %a) nounwind {
 ; O0-LABEL: fabs_bf16:
 ; O0:       # %bb.0:
 ; O0-NEXT:    pushq %rax
-; O0-NEXT:    pextrw $0, %xmm0, %eax
-; O0-NEXT:    movw %ax, %cx
-; O0-NEXT:    # implicit-def: $eax
-; O0-NEXT:    movw %cx, %ax
-; O0-NEXT:    shll $16, %eax
-; O0-NEXT:    movd %eax, %xmm0
+; O0-NEXT:    pslld $16, %xmm0
 ; O0-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
 ; O0-NEXT:    pand %xmm1, %xmm0
 ; O0-NEXT:    callq __truncsfbf2@PLT
@@ -1493,9 +1260,8 @@ define bfloat @fabs_bf16(bfloat %a) nounwind {
 ; X86-SSE2-LABEL: fabs_bf16:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    subl $12, %esp
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE2-NEXT:    pslld $16, %xmm0
 ; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    movd %xmm0, (%esp)
 ; X86-SSE2-NEXT:    calll __truncsfbf2
@@ -1509,9 +1275,7 @@ define bfloat @fneg_bf16(bfloat %a) nounwind {
 ; SSE2-LABEL: fneg_bf16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
 ; SSE2-NEXT:    popq %rax
@@ -1520,9 +1284,7 @@ define bfloat @fneg_bf16(bfloat %a) nounwind {
 ; AVX2-LABEL: fneg_bf16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %rax
-; AVX2-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX2-NEXT:    shll $16, %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
+; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    callq __truncsfbf2@PLT
@@ -1531,9 +1293,7 @@ define bfloat @fneg_bf16(bfloat %a) nounwind {
 ;
 ; AVXNC-LABEL: fneg_bf16:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vpextrw $0, %xmm0, %eax
-; AVXNC-NEXT:    shll $16, %eax
-; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; AVXNC-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
@@ -1542,9 +1302,7 @@ define bfloat @fneg_bf16(bfloat %a) nounwind {
 ; AVX512BW-LABEL: fneg_bf16:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    pushq %rax
-; AVX512BW-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BW-NEXT:    shll $16, %eax
-; AVX512BW-NEXT:    vmovd %eax, %xmm0
+; AVX512BW-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512BW-NEXT:    callq __truncsfbf2@PLT
 ; AVX512BW-NEXT:    popq %rax
@@ -1552,18 +1310,14 @@ define bfloat @fneg_bf16(bfloat %a) nounwind {
 ;
 ; AVX512BF16-LABEL: fneg_bf16:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512BF16-NEXT:    shll $16, %eax
-; AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    retq
 ;
 ; AVX10-2-LABEL: fneg_bf16:
 ; AVX10-2:       # %bb.0:
-; AVX10-2-NEXT:    vmovw %xmm0, %eax
-; AVX10-2-NEXT:    shll $16, %eax
-; AVX10-2-NEXT:    vmovd %eax, %xmm0
+; AVX10-2-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX10-2-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX10-2-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX10-2-NEXT:    retq
@@ -1571,12 +1325,7 @@ define bfloat @fneg_bf16(bfloat %a) nounwind {
 ; O0-LABEL: fneg_bf16:
 ; O0:       # %bb.0:
 ; O0-NEXT:    pushq %rax
-; O0-NEXT:    pextrw $0, %xmm0, %eax
-; O0-NEXT:    movw %ax, %cx
-; O0-NEXT:    # implicit-def: $eax
-; O0-NEXT:    movw %cx, %ax
-; O0-NEXT:    shll $16, %eax
-; O0-NEXT:    movd %eax, %xmm0
+; O0-NEXT:    pslld $16, %xmm0
 ; O0-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; O0-NEXT:    pxor %xmm1, %xmm0
 ; O0-NEXT:    callq __truncsfbf2@PLT
@@ -1586,9 +1335,8 @@ define bfloat @fneg_bf16(bfloat %a) nounwind {
 ; X86-SSE2-LABEL: fneg_bf16:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    subl $12, %esp
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    shll $16, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
+; X86-SSE2-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE2-NEXT:    pslld $16, %xmm0
 ; X86-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    movd %xmm0, (%esp)
 ; X86-SSE2-NEXT:    calll __truncsfbf2
