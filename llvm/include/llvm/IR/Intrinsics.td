@@ -173,8 +173,8 @@ class ReadNone<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
-// The immediate argument is in the union of the specified closed ranges.
-// Range entries must be ordered and non-overlapping.
+// A RangeSet specifies a union of ordered and disjoint closed ranges that an
+// immediate argument must be in.
 class RangeSet<ArgIndex idx, list<list<int>> ranges> : IntrinsicProperty {
   list<list<int>> ValidRanges = !filter(r, ranges, !eq(!size(r), 2));
 

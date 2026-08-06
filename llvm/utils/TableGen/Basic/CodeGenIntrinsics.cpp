@@ -32,12 +32,11 @@ using namespace llvm;
 // return is 257.
 static constexpr unsigned MaxNumReturn = 257;
 
-static std::pair<int64_t, int64_t>
-getHalfOpenRange(const Record *R, const ListInit *Range, StringRef AttrName) {
-  if (!Range || Range->size() != 2)
-    PrintFatalError(R->getLoc(),
-                    Twine(AttrName) + " range must have exactly two bounds");
+using ImmArgRange = CodeGenIntrinsic::ImmArgRangeSet::Range;
+using ImmArgRangeList = CodeGenIntrinsic::ImmArgRangeSet::RangeList;
 
+static ImmArgRange getHalfOpenRange(const Record *R, const ListInit *Range,
+                                    StringRef AttrName) {
   auto GetBound = [&](const Init *Bound) -> int64_t {
     if (const auto *II = dyn_cast<IntInit>(Bound))
       return II->getValue();
@@ -51,17 +50,12 @@ getHalfOpenRange(const Record *R, const ListInit *Range, StringRef AttrName) {
   if (Upper == std::numeric_limits<int64_t>::max())
     PrintFatalError(R->getLoc(),
                     Twine(AttrName) + " closed upper bound is too large");
-  return std::pair<int64_t, int64_t>(Lower, Upper + 1);
+  return ImmArgRange(Lower, Upper + 1);
 }
 
-static void
-appendHalfOpenRange(const Record *R,
-                    SmallVectorImpl<std::pair<int64_t, int64_t>> &Ranges,
-                    std::pair<int64_t, int64_t> Range) {
+static void appendHalfOpenRange(SmallVectorImpl<ImmArgRange> &Ranges,
+                                ImmArgRange Range) {
   if (!Ranges.empty()) {
-    if (Range.first < Ranges.back().second)
-      PrintFatalError(R->getLoc(),
-                      "RangeSet ranges must be ordered and non-overlapping");
     if (Range.first == Ranges.back().second) {
       Ranges.back().second = Range.second;
       return;
@@ -429,8 +423,9 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
 
   for (const ImmArgRangeSet &RangeSet : ImmArgRangeSets)
     if (!isParamImmArg(RangeSet.ArgNo))
-      PrintFatalError(TheDef->getLoc(),
-                      "RangeSet requires ImmArg for the same argument index");
+      PrintFatalError(
+          TheDef->getLoc(),
+          formatv("RangeSet requires ImmArg for argument {}", RangeSet.ArgNo));
 
   // Default values are not yet supported for overloaded intrinsics
   // (overloaded support will come in a follow-up).
@@ -613,7 +608,7 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
   } else if (R->isSubClassOf("RangeSet")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     const ListInit *RangeList = R->getValueAsListInit("Ranges");
-    SmallVector<std::pair<int64_t, int64_t>, 4> Ranges;
+    ImmArgRangeList Ranges;
 
     if (ArgNo < 1)
       PrintFatalError(R->getLoc(), "RangeSet should only apply to arguments");
@@ -626,8 +621,7 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
 
     for (const Init *Range : RangeList->getElements())
       appendHalfOpenRange(
-          R, Ranges,
-          getHalfOpenRange(R, dyn_cast<ListInit>(Range), "RangeSet"));
+          Ranges, getHalfOpenRange(R, cast<ListInit>(Range), "RangeSet"));
     addImmArgRangeSet(ParamNo, std::move(Ranges));
   } else if (R->isSubClassOf("NoFreeObj")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
@@ -700,8 +694,8 @@ void CodeGenIntrinsic::addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V,
   ArgumentAttributes[Idx].emplace_back(AK, V, V2);
 }
 
-void CodeGenIntrinsic::addImmArgRangeSet(
-    unsigned ArgNo, SmallVector<std::pair<int64_t, int64_t>, 4> Ranges) {
+void CodeGenIntrinsic::addImmArgRangeSet(unsigned ArgNo,
+                                         ImmArgRangeSet::RangeList Ranges) {
   ImmArgRangeSets.push_back({ArgNo, std::move(Ranges)});
 }
 

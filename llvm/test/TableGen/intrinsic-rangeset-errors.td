@@ -28,7 +28,7 @@ def int_rangeset_overlap : Intrinsic<
 #endif
 
 #ifdef MISSING_IMMARG
-// MISSING-IMMARG: error: RangeSet requires ImmArg for the same argument index
+// MISSING-IMMARG: error: RangeSet requires ImmArg for argument 0
 def int_rangeset_missing_immarg : Intrinsic<
     [llvm_i32_ty], [llvm_i16_ty],
     [RangeSet<ArgIndex<0>, [[0, 2]]>]>;

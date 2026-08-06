@@ -895,46 +895,127 @@ AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {{
 
 void IntrinsicEmitter::EmitImmArgRangeSetChecks(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
-  IfDefEmitter IfDef(OS, "GET_INTRINSIC_IMMARG_RANGE_SET_CHECKS");
-  OS << R"(
-bool Intrinsic::isImmArgValueInRangeSet(ID IID, unsigned ArgIdx,
-                                        const APInt &Value) {
-  using namespace Intrinsic;
-  switch (IID) {
-)";
+  using ImmArgRangeSet = CodeGenIntrinsic::ImmArgRangeSet;
+  struct RangeSetInfo {
+    uint32_t ArgNo;
+    uint32_t RangesStart;
+    uint32_t NumRanges;
+  };
+  struct RangeSetListInfo {
+    uint32_t RangeSetsStart;
+    uint32_t NumRangeSets;
+  };
+
+  SequenceToOffsetTable<ImmArgRangeSet::RangeList> RangeTable(
+      /*Terminator=*/std::nullopt);
 
   for (const CodeGenIntrinsic &Int : Ints) {
-    if (Int.ImmArgRangeSets.empty())
+    for (const ImmArgRangeSet &RangeSet : Int.ImmArgRangeSets)
+      RangeTable.add(RangeSet.Ranges);
+  }
+
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_IMMARG_RANGE_SET_CHECKS");
+  if (RangeTable.empty()) {
+    OS << R"(
+bool Intrinsic::isImmArgValueInRangeSet(ID IID, unsigned ArgIdx,
+                                        const APInt &Value) {
+  return true;
+}
+)";
+    return;
+  }
+
+  RangeTable.layout();
+
+  std::vector<RangeSetInfo> RangeSetInfos;
+  std::vector<RangeSetListInfo> PerIntrinsicRangeSetInfos;
+  PerIntrinsicRangeSetInfos.reserve(Ints.size() + 1);
+  PerIntrinsicRangeSetInfos.push_back({0, 0}); // not_intrinsic
+
+  for (const CodeGenIntrinsic &Int : Ints) {
+    uint32_t Start = static_cast<uint32_t>(RangeSetInfos.size());
+    for (const ImmArgRangeSet &RangeSet : Int.ImmArgRangeSets)
+      RangeSetInfos.push_back({RangeSet.ArgNo, RangeTable.get(RangeSet.Ranges),
+                               static_cast<uint32_t>(RangeSet.Ranges.size())});
+    PerIntrinsicRangeSetInfos.push_back(
+        {Start, static_cast<uint32_t>(Int.ImmArgRangeSets.size())});
+  }
+
+  OS << R"(
+namespace {
+struct ImmArgRange {
+  int64_t Lower, Upper;
+};
+
+struct ImmArgRangeSet {
+  uint32_t ArgIdx;
+  uint32_t RangesStart;
+  uint32_t NumRanges;
+};
+
+struct ImmArgRangeSetList {
+  uint32_t RangeSetsStart;
+  uint32_t NumRangeSets;
+};
+} // namespace
+
+static constexpr ImmArgRange ImmArgRangeTable[] = {
+)";
+  RangeTable.emit(OS, [](raw_ostream &OS, ImmArgRangeSet::Range Elem) {
+    OS << "{" << Elem.first << ", " << Elem.second << "}";
+  });
+  OS << R"(}; // ImmArgRangeTable
+
+static constexpr ImmArgRangeSet ImmArgRangeSetTable[] = {
+)";
+  for (const RangeSetInfo &Info : RangeSetInfos)
+    OS << "  {" << Info.ArgNo << ", " << Info.RangesStart << ", "
+       << Info.NumRanges << "},\n";
+  OS << R"(}; // ImmArgRangeSetTable
+
+static constexpr ImmArgRangeSetList ImmArgRangeSetListTable[] = {
+)";
+  for (const auto &[Idx, Infos] : enumerate(PerIntrinsicRangeSetInfos)) {
+    OS << "  {" << Infos.RangeSetsStart << ", " << Infos.NumRangeSets << "},";
+    if (Idx == 0)
+      OS << " // not_intrinsic\n";
+    else
+      OS << " // " << Ints[Idx - 1].Name << "\n";
+  }
+  OS << R"(}; // ImmArgRangeSetListTable
+
+static bool isValueInImmArgRange(const ImmArgRange &Range,
+                                 const APInt &Value) {
+  unsigned BitWidth = Value.getBitWidth();
+  return ConstantRange(
+             APInt(BitWidth, Range.Lower, /*isSigned=*/true,
+                   /*implicitTrunc=*/true),
+             APInt(BitWidth, Range.Upper, /*isSigned=*/true,
+                   /*implicitTrunc=*/true))
+      .contains(Value);
+}
+
+bool Intrinsic::isImmArgValueInRangeSet(ID IID, unsigned ArgIdx,
+                                        const APInt &Value) {
+  if (IID >= Intrinsic::num_intrinsics)
+    return true;
+
+  const ImmArgRangeSetList &List = ImmArgRangeSetListTable[IID];
+  ArrayRef<ImmArgRangeSet> RangeSets(
+      ImmArgRangeSetTable + List.RangeSetsStart, List.NumRangeSets);
+  for (const ImmArgRangeSet &RangeSet : RangeSets) {
+    if (RangeSet.ArgIdx != ArgIdx)
       continue;
 
-    OS << "  case " << Int.EnumName << ":\n";
-    OS << "    switch (ArgIdx) {\n";
-    for (const CodeGenIntrinsic::ImmArgRangeSet &RangeSet :
-         Int.ImmArgRangeSets) {
-      OS << "    case " << RangeSet.ArgNo << ":\n";
-      OS << "      return ";
-      interleave(
-          RangeSet.Ranges,
-          [&](const std::pair<int64_t, int64_t> &Range) {
-            OS << formatv("ConstantRange(APInt(Value.getBitWidth(), {}, "
-                          "/*isSigned=*/true, /*implicitTrunc=*/true), "
-                          "APInt(Value.getBitWidth(), {}, "
-                          "/*isSigned=*/true, "
-                          "/*implicitTrunc=*/true)).contains(Value)",
-                          Range.first, Range.second);
-          },
-          [&] { OS << " ||\n             "; });
-      OS << ";\n";
+    ArrayRef<ImmArgRange> Ranges(ImmArgRangeTable + RangeSet.RangesStart,
+                                 RangeSet.NumRanges);
+    for (const ImmArgRange &Range : Ranges) {
+      if (isValueInImmArgRange(Range, Value))
+        return true;
     }
-    OS << R"(    default:
-      return true;
-    }
-)";
+    return false;
   }
-
-  OS << R"(  default:
-    return true;
-  }
+  return true;
 }
 )";
 }

@@ -152,8 +152,11 @@ struct CodeGenIntrinsic {
   };
 
   struct ImmArgRangeSet {
+    using Range = std::pair<int64_t, int64_t>;
+    using RangeList = SmallVector<Range, 4>;
+
     unsigned ArgNo;
-    SmallVector<std::pair<int64_t, int64_t>, 4> Ranges;
+    RangeList Ranges;
   };
 
   /// Vector of attributes for each argument.
@@ -164,8 +167,7 @@ struct CodeGenIntrinsic {
 
   void addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V = 0,
                        uint64_t V2 = 0);
-  void addImmArgRangeSet(unsigned ArgNo,
-                         SmallVector<std::pair<int64_t, int64_t>, 4> Ranges);
+  void addImmArgRangeSet(unsigned ArgNo, ImmArgRangeSet::RangeList Ranges);
 
   /// Structure to store pretty print and argument information.
   struct PrettyPrintArgInfo {
