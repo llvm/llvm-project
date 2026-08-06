@@ -29,6 +29,6 @@ if (COMPILER_RT_BUILD_ORC)
   endforeach()
 endif()
 
-add_lit_testsuite(check-orc-rt "Running the ORC runtime tests"
+add_lit_testsuite(check-compiler-rt-orc-rt "Running the ORC runtime tests"
   ${ORC_TESTSUITES}
   DEPENDS ${ORC_TEST_DEPS})
