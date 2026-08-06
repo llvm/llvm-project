@@ -186,12 +186,158 @@ def Arith_RTowardZero                // Round toward 0
     : I32EnumAttrCase<"toward_zero", 3>;
 def Arith_RToNearestTiesAwayFromZero // Round to nearest, ties away from zero
     : I32EnumAttrCase<"to_nearest_away", 4>;
+def Arith_RDynamic                   // Rounding mode unknown at compile time
+    : I32EnumAttrCase<"unknown", 7>;  // Mirrors `llvm::RoundingMode::Dynamic`.
 
 def Arith_RoundingModeAttr : I32EnumAttr<
     "RoundingMode", "Floating point rounding mode",
     [Arith_RToNearestTiesToEven, Arith_RDownward, Arith_RUpward,
-     Arith_RTowardZero, Arith_RToNearestTiesAwayFromZero]> {
+     Arith_RTowardZero, Arith_RToNearestTiesAwayFromZero, Arith_RDynamic]> {
   let cppNamespace = "::mlir::arith";
+}
+
+//===----------------------------------------------------------------------===//
+// Floating-point environment enums (used by the `#arith.fenv` attribute)
+//===----------------------------------------------------------------------===//
+
+def FPExceptionMode : I32EnumAttr<
+    "FPExceptionMode", "floating-point exception mode", [
+  I32EnumAttrCase<"Unknown", 0, "unknown">,
+  I32EnumAttrCase<"Masked", 1, "masked">,
+  I32EnumAttrCase<"Unmasked", 2, "unmasked">
+]> {
+  let description = [{
+    The known floating-point exception mode at the point the instruction is
+    executed. If the actual exception mode differs from this value, the
+    behavior is undefined.
+  }];
+  let cppNamespace = "::mlir::arith";
+  let genSpecializedAttr = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// FenvAttr
+//===----------------------------------------------------------------------===//
+
+def Arith_FenvAttr : AttrDef<Arith_Dialect, "Fenv"> {
+  let mnemonic = "fenv";
+  let summary = "Describes floating-point environment constraints";
+  let description = [{
+    The `#arith.fenv` attribute describes constraints on the floating-point
+    handling of a floating-point operation. It can be attached to
+    floating-point operations to capture rounding and exception behavior. All
+    of its parameters are optional.
+
+    - `dynamic_rounding_mode`: the known dynamic rounding mode at the point the
+      instruction is executed. If the actual dynamic rounding mode when the
+      instruction is executed does not match the assumed value, the behavior is
+      undefined.
+    - `except_mode`: the known exception mode at the point the instruction is
+      executed. If the actual state of exception masking when the instruction is
+      executed does not match this value, the behavior is undefined.
+    - `strict_except`: if `false`, any case that would produce an FP exception
+      produces it non-deterministically instead (i.e. it may or may not occur).
+      This means the FP status is written non-deterministically, and, if
+      exceptions are unmasked, the instruction traps non-deterministically.
+
+    When this attribute is present on an operation, the operation is lowered to
+    the corresponding `llvm.experimental.constrained.*` intrinsic during
+    translation to LLVM IR.
+
+    The default setting for each parameter (`unknown` for
+    `dynamic_rounding_mode`, `masked` for exception_mode, and `false` for
+    `strict_except`) is canonically represented as an unset parameter.
+    Constructing an attribute whose parameters are all set to their defaults
+    therefore yields the same canonical, empty attribute as `#arith.fenv<>`.
+
+    Carrying the (possibly empty) attribute is *not* the same as having no
+    attribute at all. An operation that carries the attribute is lowered to the
+    corresponding constrained intrinsic operation in LLVM, even when every
+    parameter is at its default value. An operation with no `#arith.fenv`
+    attribute is lowered to the regular, unconstrained operation.
+
+    Examples:
+    ```mlir
+    fenv<dynamic_rounding_mode = to_nearest_even>
+    fenv<except_mode = unmasked>
+    fenv<strict_except = true>
+    fenv<dynamic_rounding_mode = upward, except_mode = unknown, strict_except = true>
+    ```
+  }];
+
+  let parameters = (ins
+    OptionalParameter<
+        "std::optional<::mlir::arith::RoundingMode>">:$dynamic_rounding_mode,
+    OptionalParameter<"std::optional<::mlir::arith::FPExceptionMode>">:$except_mode,
+    OptionalParameter<"mlir::BoolAttr">:$strict_except);
+
+  let assemblyFormat = [{
+    `<` struct($dynamic_rounding_mode, $except_mode, $strict_except) `>`
+  }];
+
+  // Replace the default builder so that constructing the attribute normalizes
+  // any parameter that is set to its default value to "unset". This keeps a
+  // single canonical representation for the default floating-point environment.
+  // Because `skipDefaultBuilders` suppresses the auto-synthesized const builder
+  // call, provide it explicitly. The `DefaultValuedAttr` form below uses a null
+  // attribute as its default, so this simply forwards its argument (a null
+  // attribute when the operation does not carry a `#arith.fenv` attribute).
+  let skipDefaultBuilders = 1;
+  let constBuilderCall = "$0";
+  let builders = [
+    AttrBuilder<(ins
+        CArg<"std::optional<::mlir::arith::RoundingMode>",
+             "std::nullopt">:$dynamicRoundingMode,
+        CArg<"std::optional<::mlir::arith::FPExceptionMode>",
+             "std::nullopt">:$exceptMode,
+        CArg<"mlir::BoolAttr", "{}">:$strictExcept), [{
+      if (dynamicRoundingMode == ::mlir::arith::RoundingMode::unknown)
+        dynamicRoundingMode = std::nullopt;
+      if (exceptMode == ::mlir::arith::FPExceptionMode::Masked)
+        exceptMode = std::nullopt;
+      if (strictExcept && !strictExcept.getValue())
+        strictExcept = {};
+      return Base::get($_ctxt, dynamicRoundingMode, exceptMode, strictExcept);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    /// The default dynamic rounding mode used when `dynamic_rounding_mode` is
+    /// unset.
+    static constexpr ::mlir::arith::RoundingMode
+    getDefaultDynamicRoundingMode() {
+      return ::mlir::arith::RoundingMode::unknown;
+    }
+
+    /// The default exception mode used when `except_mode` is unset.
+    static constexpr ::mlir::arith::FPExceptionMode getDefaultExceptionMode() {
+      return ::mlir::arith::FPExceptionMode::Masked;
+    }
+
+    /// Returns the effective dynamic rounding mode, substituting the default
+    /// when unset.
+    ::mlir::arith::RoundingMode getDynamicRoundingModeOrDefault() const {
+      return getDynamicRoundingMode().value_or(getDefaultDynamicRoundingMode());
+    }
+    /// Returns the effective exception mode, substituting the default when
+    /// unset.
+    ::mlir::arith::FPExceptionMode getExceptionModeOrDefault() const {
+      return getExceptMode().value_or(getDefaultExceptionMode());
+    }
+    /// Returns the effective `strict_except` flag.
+    bool getStrictExceptOrDefault() const {
+      ::mlir::BoolAttr attr = getStrictExcept();
+      return attr ? attr.getValue() : false;
+    }
+
+    /// Returns true if every parameter is at its default value, i.e. the
+    /// attribute describes the default floating-point environment and imposes
+    /// no constraints. Because the builder normalizes defaults to "unset", this
+    /// is equivalent to all parameters being unset.
+    bool isDefault() const {
+      return !getDynamicRoundingMode() && !getExceptMode() && !getStrictExcept();
+    }
+  }];
 }
 
 #endif // ARITH_BASE

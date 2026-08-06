@@ -349,6 +349,19 @@ func.func @scaling_truncf_propagate_rounding_mode_fast_math(%arg0 : vector<4xf16
 
 // -----
 
+func.func @scaling_truncf_propagate_fenv(%arg0 : vector<4xf16>, %arg1: vector<4xf16>) -> vector<4xf6E3M2FN> {
+    %0 = arith.scaling_truncf %arg0, %arg1 fenv<dynamic_rounding_mode = upward, except_mode = unmasked, strict_except = true> : vector<4xf16>, vector<4xf16> to vector<4xf6E3M2FN>
+    return %0 : vector<4xf6E3M2FN>
+}
+// SCHECK-LABEL: @scaling_truncf_propagate_fenv
+// SCHECK: %[[SCALEF8:.+]] = arith.truncf %arg1 fenv<dynamic_rounding_mode = upward, except_mode = unmasked, strict_except = true> : vector<4xf16> to vector<4xf8E8M0FNU>
+// SCHECK: %[[SCALEINTY:.+]] = arith.extf %[[SCALEF8]] : vector<4xf8E8M0FNU> to vector<4xf16>
+// SCHECK: %[[DIVF:.+]] = arith.divf %arg0, %[[SCALEINTY]] fenv<dynamic_rounding_mode = upward, except_mode = unmasked, strict_except = true> : vector<4xf16>
+// SCHECK: %[[TRUNCF:.+]] = arith.truncf [[_:%[a-zA-Z0-9_]+]] fenv<dynamic_rounding_mode = upward, except_mode = unmasked, strict_except = true> : vector<4xf16> to vector<4xf6E3M2FN>
+// SCHECK: return %[[TRUNCF]] : vector<4xf6E3M2FN>
+
+// -----
+
 func.func @scaling_truncf_f16_to_f4E2M1FN_using_f16_scales(%arg0: f16, %arg1 : f16) -> f4E2M1FN {
     %0 = arith.scaling_truncf %arg0, %arg1 : f16, f16 to f4E2M1FN
     return %0 : f4E2M1FN

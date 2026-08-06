@@ -93,6 +93,11 @@ class Arith_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
 
 // Base class for floating point binary operations with an optional rounding
 // mode.
+//
+// Deprecated: use `Arith_FloatBinaryOpWithFenv` instead. This class is retained
+// temporarily while floating-point operations migrate to the `#arith.fenv`
+// floating-point environment attribute, and will be removed once the migration
+// is complete.
 class Arith_FloatBinaryOpWithRoundingMode<string mnemonic,
                                           list<Trait> traits = []> :
     Arith_FloatBinaryOp<mnemonic,
@@ -125,6 +130,50 @@ class Arith_FloatBinaryOpWithRoundingMode<string mnemonic,
   ];
   let assemblyFormat = [{ $lhs `,` $rhs ($roundingmode^)?
                           (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($result) }];
+}
+
+// Base class for floating point binary operations that can carry an optional
+// floating-point environment (`#arith.fenv`) attribute. It extends
+// `Arith_FloatBinaryOpWithRoundingMode` with the `fenv` attribute and the
+// `FPEnvConstrainedOpInterface`, which provides a uniform API for querying the
+// floating-point environment constraints.
+class Arith_FloatBinaryOpWithFenv<string mnemonic, list<Trait> traits = []> :
+    Arith_FloatBinaryOpWithRoundingMode<mnemonic,
+      !listconcat([DeclareOpInterfaceMethods<FPEnvConstrainedOpInterface>],
+                  traits)> {
+  let arguments = (ins FloatLike:$lhs, FloatLike:$rhs,
+      DefaultValuedAttr<
+        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath,
+      OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
+      OptionalAttr<Arith_FenvAttr>:$fenv);
+  // With two trailing optional attributes (`roundingmode` and `fenv`), the
+  // generated builders no longer provide C++ default arguments for them, so the
+  // convenience builders must pass both explicitly.
+  let builders = [
+    OpBuilder<(ins "Value":$lhs, "Value":$rhs,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, lhs, rhs, fastmath,
+            ::mlir::arith::RoundingModeAttr{}, ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "Value":$lhs, "Value":$rhs,
+      "::mlir::arith::FastMathFlagsAttr":$fastmath), [{
+      build($_builder, $_state, lhs, rhs, fastmath,
+            ::mlir::arith::RoundingModeAttr{}, ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "Type":$type, "Value":$lhs, "Value":$rhs,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, type, lhs, rhs,
+            ::mlir::arith::FastMathFlagsAttr::get(
+                $_builder.getContext(), fastmath),
+            ::mlir::arith::RoundingModeAttr{}, ::mlir::arith::FenvAttr{});
+    }]>,
+  ];
+  let assemblyFormat = [{ $lhs `,` $rhs ($roundingmode^)?
+                          (`fastmath` `` $fastmath^)?
+                          (`fenv` `` $fenv^)?
                           attr-dict `:` type($result) }];
 }
 
@@ -1089,7 +1138,7 @@ def Arith_FlushDenormalsOp : Arith_FloatUnaryOp<"flush_denormals"> {
 // AddFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_AddFOp : Arith_FloatBinaryOpWithRoundingMode<"addf", [Commutative]> {
+def Arith_AddFOp : Arith_FloatBinaryOpWithFenv<"addf", [Commutative]> {
   let summary = "floating point addition operation";
   let description = [{
     The `addf` operation takes two operands and returns one result, each of
@@ -1121,7 +1170,7 @@ def Arith_AddFOp : Arith_FloatBinaryOpWithRoundingMode<"addf", [Commutative]> {
 // SubFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_SubFOp : Arith_FloatBinaryOpWithRoundingMode<"subf"> {
+def Arith_SubFOp : Arith_FloatBinaryOpWithFenv<"subf"> {
   let summary = "floating point subtraction operation";
   let description = [{
     The `subf` operation takes two operands and returns one result, each of
@@ -1277,7 +1326,7 @@ def Arith_MinUIOp : Arith_TotalIntBinaryOp<"minui",
 // MulFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MulFOp : Arith_FloatBinaryOpWithRoundingMode<"mulf", [Commutative]> {
+def Arith_MulFOp : Arith_FloatBinaryOpWithFenv<"mulf", [Commutative]> {
   let summary = "floating point multiplication operation";
   let description = [{
     The `mulf` operation takes two operands and returns one result, each of
@@ -1309,7 +1358,7 @@ def Arith_MulFOp : Arith_FloatBinaryOpWithRoundingMode<"mulf", [Commutative]> {
 // DivFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_DivFOp : Arith_FloatBinaryOpWithRoundingMode<"divf"> {
+def Arith_DivFOp : Arith_FloatBinaryOpWithFenv<"divf"> {
   let summary = "floating point division operation";
   let description = [{
     The `divf` operation takes two operands and returns one result, each of
@@ -1567,10 +1616,17 @@ def Arith_TruncFOp :
       [Pure, SameOperandsAndResultShape, SameInputOutputTensorDims,
        DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
        DeclareOpInterfaceMethods<ArithFastMathInterface>,
+       DeclareOpInterfaceMethods<FPEnvConstrainedOpInterface>,
        DeclareOpInterfaceMethods<CastOpInterface>]>,
     Arguments<(ins FloatLike:$in,
+                   // Deprecated: represent the rounding mode through the `fenv`
+                   // attribute instead. This attribute is retained temporarily
+                   // while floating-point operations migrate to the
+                   // `#arith.fenv` floating-point environment attribute, and
+                   // will be removed once the migration is complete.
                    OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
-                   OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
+                   OptionalAttr<Arith_FastMathAttr>:$fastmath,
+                   OptionalAttr<Arith_FenvAttr>:$fenv)>,
     Results<(outs FloatLike:$out)> {
   let summary = "cast from floating-point to narrower floating-point";
   let description = [{
@@ -1590,6 +1646,7 @@ def Arith_TruncFOp :
   let hasVerifier = 1;
   let assemblyFormat = [{ $in ($roundingmode^)?
                           (`fastmath` `` $fastmath^)?
+                          (`fenv` `` $fenv^)?
                           attr-dict `:` type($in) `to` type($out) }];
 }
 
@@ -1602,10 +1659,17 @@ def Arith_ConvertFOp :
       [Pure, SameOperandsAndResultShape, SameInputOutputTensorDims,
        DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
        DeclareOpInterfaceMethods<ArithFastMathInterface>,
+       DeclareOpInterfaceMethods<FPEnvConstrainedOpInterface>,
        DeclareOpInterfaceMethods<CastOpInterface>]>,
     Arguments<(ins FloatLike:$in,
+                   // Deprecated: represent the rounding mode through the `fenv`
+                   // attribute instead. This attribute is retained temporarily
+                   // while floating-point operations migrate to the
+                   // `#arith.fenv` floating-point environment attribute, and
+                   // will be removed once the migration is complete.
                    OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
-                   OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
+                   OptionalAttr<Arith_FastMathAttr>:$fastmath,
+                   OptionalAttr<Arith_FenvAttr>:$fenv)>,
     Results<(outs FloatLike:$out)> {
   let summary = "cast between floating-point types of the same bitwidth";
   let description = [{
@@ -1622,6 +1686,7 @@ def Arith_ConvertFOp :
   let hasVerifier = 1;
   let assemblyFormat = [{ $in ($roundingmode^)?
                           (`fastmath` `` $fastmath^)?
+                          (`fenv` `` $fenv^)?
                           attr-dict `:` type($in) `to` type($out) }];
 }
 
@@ -1634,10 +1699,17 @@ def Arith_ScalingTruncFOp
                [Pure, SameInputOutputTensorDims,
                 DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
                 DeclareOpInterfaceMethods<ArithFastMathInterface>,
+                DeclareOpInterfaceMethods<FPEnvConstrainedOpInterface>,
                 DeclareOpInterfaceMethods<CastOpInterface>]>,
       Arguments<(ins FloatLike:$in, FloatLike:$scale,
+          // Deprecated: represent the rounding mode through the `fenv`
+          // attribute instead. This attribute is retained temporarily while
+          // floating-point operations migrate to the `#arith.fenv`
+          // floating-point environment attribute, and will be removed once the
+          // migration is complete.
           OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
-          OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
+          OptionalAttr<Arith_FastMathAttr>:$fastmath,
+          OptionalAttr<Arith_FenvAttr>:$fenv)>,
       Results<(outs FloatLike:$out)> {
   let summary = "Downcasts input floating point values using provided scales "
                 "values following OCP MXFP Spec";
@@ -1691,7 +1763,8 @@ def Arith_ScalingTruncFOp
   }];
   let hasVerifier = 1;
   let assemblyFormat =
-      [{ $in `,` $scale ($roundingmode^)? (`fastmath` `` $fastmath^)? attr-dict `:`
+      [{ $in `,` $scale ($roundingmode^)? (`fastmath` `` $fastmath^)?
+      (`fenv` `` $fenv^)? attr-dict `:`
       type($in) `,` type($scale) `to` type($out)}];
 }
 

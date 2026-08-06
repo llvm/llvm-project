@@ -1305,6 +1305,29 @@ func.func @roundingmode(%arg0: f32, %arg1: f32) {
   return
 }
 
+// CHECK-LABEL: @fenv
+func.func @fenv(%arg0: f32, %arg1: f32) {
+// CHECK: {{.*}} = arith.addf %arg0, %arg1 fenv<dynamic_rounding_mode = upward> : f32
+  %0 = arith.addf %arg0, %arg1 fenv<dynamic_rounding_mode = upward> : f32
+// CHECK: {{.*}} = arith.subf %arg0, %arg1 fenv<except_mode = unmasked, strict_except = true> : f32
+  %1 = arith.subf %arg0, %arg1 fenv<except_mode = unmasked, strict_except = true> : f32
+// CHECK: {{.*}} = arith.mulf %arg0, %arg1 fenv<dynamic_rounding_mode = downward, except_mode = unknown> : f32
+  %2 = arith.mulf %arg0, %arg1 fenv<dynamic_rounding_mode = downward, except_mode = unknown> : f32
+// CHECK: {{.*}} = arith.divf %arg0, %arg1 fenv<> : f32
+  %3 = arith.divf %arg0, %arg1 fenv<> : f32
+
+  // Parameters at their default values are normalized to an unset (canonical
+  // empty) attribute.
+// CHECK: {{.*}} = arith.addf %arg0, %arg1 fenv<> : f32
+  %4 = arith.addf %arg0, %arg1 fenv<dynamic_rounding_mode = unknown> : f32
+// CHECK: {{.*}} = arith.subf %arg0, %arg1 fenv<> : f32
+  %5 = arith.subf %arg0, %arg1 fenv<except_mode = masked> : f32
+// CHECK: {{.*}} = arith.mulf %arg0, %arg1 fenv<except_mode = unmasked> : f32
+  %6 = arith.mulf %arg0, %arg1 fenv<except_mode = unmasked, strict_except = false> : f32
+
+  return
+}
+
 // CHECK-LABEL: @select_tensor
 func.func @select_tensor(%arg0 : tensor<8xi1>, %arg1 : tensor<8xi32>, %arg2 : tensor<8xi32>) -> tensor<8xi32> {
   // CHECK: = arith.select %{{.*}}, %{{.*}}, %{{.*}} : tensor<8xi1>, tensor<8xi32>

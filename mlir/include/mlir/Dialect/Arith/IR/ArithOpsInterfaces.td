@@ -186,4 +186,87 @@ def ArithRoundingModeInterface : OpInterface<"ArithRoundingModeInterface"> {
   ];
 }
 
+def FPEnvConstrainedOpInterface : OpInterface<"FPEnvConstrainedOpInterface"> {
+  let description = [{
+    This interface is implemented by floating-point operations that can carry an
+    optional `#arith.fenv` attribute describing constraints on their
+    floating-point environment. It provides a uniform API for querying the
+    attribute and its individual fields.
+
+    When the attribute is present, the operation is lowered to the corresponding
+    `llvm.experimental.constrained.*` intrinsic during translation to LLVM IR.
+  }];
+
+  let cppNamespace = "::mlir::arith";
+
+  let verify = [{
+    auto fenvOp = ::llvm::cast<::mlir::arith::FPEnvConstrainedOpInterface>($_op);
+    if (fenvOp.getFenvAttr()) {
+      if (auto roundingOp =
+              ::llvm::dyn_cast<::mlir::arith::ArithRoundingModeInterface>($_op))
+        if (roundingOp.getRoundingModeAttr())
+          return $_op->emitOpError("The `roundingmode` attribute is deprecated."
+                                   " Represent the rounding mode through the "
+                                   "`fenv` attribute instead.");
+    }
+    return ::mlir::success();
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        [{Returns the `#arith.fenv` attribute attached to the
+                         operation, or a null attribute if none is present.}],
+      /*returnType=*/  "::mlir::arith::FenvAttr",
+      /*methodName=*/  "getFenvAttr",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getFenvAttr();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        [{Returns the effective known dynamic rounding mode
+                         requested by the attribute, substituting the default
+                         (`unknown`) when the attribute is absent or does not set
+                         the field.}],
+      /*returnType=*/  "::mlir::arith::RoundingMode",
+      /*methodName=*/  "getFenvDynamicRoundingMode",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        ::mlir::arith::FenvAttr attr = $_op.getFenvAttr();
+        return attr ? attr.getDynamicRoundingModeOrDefault()
+                    : ::mlir::arith::FenvAttr::getDefaultDynamicRoundingMode();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        [{Returns the effective known exception mode requested by
+                         the attribute, substituting the default (`masked`) when
+                         the attribute is absent or does not set the field.}],
+      /*returnType=*/  "::mlir::arith::FPExceptionMode",
+      /*methodName=*/  "getFenvExceptionMode",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        ::mlir::arith::FenvAttr attr = $_op.getFenvAttr();
+        return attr ? attr.getExceptionModeOrDefault()
+                    : ::mlir::arith::FenvAttr::getDefaultExceptionMode();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        [{Returns the effective strict-exception flag requested
+                         by the attribute.}],
+      /*returnType=*/  "bool",
+      /*methodName=*/  "getFenvStrictExcept",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        ::mlir::arith::FenvAttr attr = $_op.getFenvAttr();
+        return attr ? attr.getStrictExceptOrDefault() : false;
+      }]
+      >
+  ];
+}
+
 #endif // ARITH_OPS_INTERFACES

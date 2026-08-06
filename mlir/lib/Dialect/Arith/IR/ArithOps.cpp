@@ -138,6 +138,8 @@ convertArithRoundingModeToLLVMIR(std::optional<RoundingMode> roundingMode) {
     return llvm::RoundingMode::TowardZero;
   case RoundingMode::upward:
     return llvm::RoundingMode::TowardPositive;
+  case RoundingMode::unknown:
+    return llvm::RoundingMode::Dynamic;
   }
   llvm_unreachable("Unhandled rounding mode");
 }

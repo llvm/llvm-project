@@ -485,7 +485,7 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Value result = arith::BitcastOp::create(b, f32Ty, f32Bits);
     if (resultETy.getIntOrFloatBitWidth() < 32) {
       result = arith::TruncFOp::create(b, resultTy, result, nullptr,
-                                       op.getFastmathAttr());
+                                       op.getFastmathAttr(), nullptr);
     } else if (resultETy.getIntOrFloatBitWidth() > 32) {
       result = arith::ExtFOp::create(b, resultTy, result, op.getFastmathAttr());
     }
@@ -649,8 +649,9 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     if (operandETy.getIntOrFloatBitWidth() < 32) {
       operand = arith::ExtFOp::create(b, f32Ty, operand, op.getFastmathAttr());
     } else if (operandETy.getIntOrFloatBitWidth() > 32) {
-      operand = arith::TruncFOp::create(
-          b, f32Ty, operand, op.getRoundingmodeAttr(), op.getFastmathAttr());
+      operand =
+          arith::TruncFOp::create(b, f32Ty, operand, op.getRoundingmodeAttr(),
+                                  op.getFastmathAttr(), op.getFenvAttr());
     }
     Value f32Bits = arith::BitcastOp::create(b, i32Ty, operand);
     Value cF32MantissaWidth = createConst(op->getLoc(), i32Ty, 23, rewriter);
@@ -676,7 +677,7 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
       scaleETy = b.getF8E8M0Type();
       scaleTy = cloneToShapedType(scaleTy, scaleETy);
       scaleOperand = arith::TruncFOp::create(b, scaleTy, scaleOperand, nullptr,
-                                             op.getFastmathAttr());
+                                             op.getFastmathAttr(), nullptr);
     }
     // Catch scale types like f8E5M2.
     if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
@@ -717,8 +718,9 @@ struct ScalingTruncFOpConverter
     if (scaleETy.getIntOrFloatBitWidth() >= 16) {
       scaleETy = b.getF8E8M0Type();
       scaleTy = cloneToShapedType(scaleTy, scaleETy);
-      scaleOperand = arith::TruncFOp::create(b, scaleTy, scaleOperand, nullptr,
-                                             op.getFastmathAttr());
+      scaleOperand =
+          arith::TruncFOp::create(b, scaleTy, scaleOperand, nullptr,
+                                  op.getFastmathAttr(), op.getFenvAttr());
     }
     if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
       return rewriter.notifyMatchFailure(
@@ -731,10 +733,12 @@ struct ScalingTruncFOpConverter
     // inputTy that is 2^scale and will also propagate NaNs
     scaleOperand =
         arith::ExtFOp::create(b, inputTy, scaleOperand, op.getFastmathAttr());
-    Value result = arith::DivFOp::create(b, inputOperand, scaleOperand,
-                                         op.getFastmathAttr());
-    Value resultCast = arith::TruncFOp::create(
-        b, resultTy, result, op.getRoundingmodeAttr(), op.getFastmathAttr());
+    Value result =
+        arith::DivFOp::create(b, inputOperand, scaleOperand,
+                              op.getFastmathAttr(), nullptr, op.getFenvAttr());
+    Value resultCast =
+        arith::TruncFOp::create(b, resultTy, result, op.getRoundingmodeAttr(),
+                                op.getFastmathAttr(), op.getFenvAttr());
     rewriter.replaceOp(op, resultCast);
     return success();
   }

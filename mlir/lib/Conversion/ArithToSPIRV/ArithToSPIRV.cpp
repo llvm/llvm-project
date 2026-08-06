@@ -1016,6 +1016,10 @@ convertArithRoundingModeToSPIRV(arith::RoundingMode roundingMode) {
     // SPIR-V FPRoundingMode decoration has no ties-away-from-zero mode
     // (as of SPIR-V 1.6)
     return std::nullopt;
+  case arith::RoundingMode::unknown:
+    // SPIR-V FPRoundingMode decoration has no way to explicitly describe
+    // unknown/dynamic rounding mode (as of SPIR-V 1.6)
+    return std::nullopt;
   }
   llvm_unreachable("Unhandled rounding mode");
 }
