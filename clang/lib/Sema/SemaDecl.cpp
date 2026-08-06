@@ -15549,9 +15549,8 @@ static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
   // When a module unit is compiled to object code from its serialized form,
   // CodeGen finds unreferenced module-purview variables through the
   // module-initializer lists, and CheckCompleteVariableDeclaration records
-  // only non-discardable variables there (before this attribute is attached).
-  // Record an internal-linkage variable so its definition reaches CodeGen in
-  // that compilation.
+  // only non-discardable variables there. Record an internal-linkage variable
+  // so its definition reaches CodeGen in that compilation.
   if (Module *M = S.getCurrentModule())
     if (isDiscardableGVALinkage(S.Context.GetGVALinkageForVariable(VD)))
       S.Context.addModuleInitializer(M, VD);
