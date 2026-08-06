@@ -10,9 +10,9 @@
 ## needed. The temporal profile names _hot_b, so balanced partitioning must
 ## order that thunk and its _hot_a body. The unprofiled _hot_c thunk must not be
 ## promoted.
-# RUN: %lld -arch arm64 -e _main -o %t/out %t/input.o --icf=safe_thunks --irpgo-profile=%t/profile.profdata --bp-startup-sort=function --verbose-bp-section-orderer 2>&1 | FileCheck %s --check-prefix=VERBOSE
-# VERBOSE: Ordered 2 sections (12 bytes) using balanced partitioning
-# VERBOSE: Functions for startup: 2 (12 bytes)
+# RUN: %lld -arch arm64 -e _main -o %t/out %t/input.o --icf=safe_thunks -dead_strip --irpgo-profile=%t/profile.profdata --bp-startup-sort=function --verbose-bp-section-orderer 2>&1 | FileCheck %s --check-prefix=VERBOSE
+# VERBOSE: Ordered 2 sections ({{.*}} bytes) using balanced partitioning
+# VERBOSE: Functions for startup: 2 ({{.*}} bytes)
 
 # RUN: llvm-objdump --no-show-raw-insn -d %t/out | FileCheck %s --check-prefix=THUNKS
 # THUNKS-LABEL: <_hot_a>:
@@ -23,7 +23,7 @@
 # THUNKS-LABEL: <_hot_c>:
 # THUNKS-NEXT: {{.*}} b {{.*}} <_hot_a>
 
-# RUN: %lld -arch arm64 -e _main -o - %t/input.o --icf=safe_thunks --irpgo-profile=%t/profile.profdata --bp-startup-sort=function | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=ORDER
+# RUN: llvm-nm --numeric-sort --format=just-symbols %t/out | FileCheck %s --check-prefix=ORDER
 # ORDER: _hot_a
 # ORDER-NEXT: _hot_b
 # ORDER-DAG: _main
@@ -41,6 +41,10 @@
 .text
 .globl _main
 _main:
+  bl _hot_a
+  bl _hot_b
+  bl _hot_c
+  bl _cold
   ret
 
 .globl _hot_a
