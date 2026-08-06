@@ -895,10 +895,7 @@ define <2 x i64> @freeze_vselect_knownbits(<8 x i32> %csrc, <4 x i32> %a, <4 x i
 ; X86-LABEL: freeze_vselect_knownbits:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 40(%ebp), %eax
@@ -923,7 +920,6 @@ define <2 x i64> @freeze_vselect_knownbits(<8 x i32> %csrc, <4 x i32> %a, <4 x i
 ; X86-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0 # [16,0,16,0]
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
