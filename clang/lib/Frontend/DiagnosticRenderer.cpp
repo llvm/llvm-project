@@ -34,6 +34,22 @@ DiagnosticRenderer::DiagnosticRenderer(const LangOptions &LangOpts,
 
 DiagnosticRenderer::~DiagnosticRenderer() = default;
 
+std::optional<CharSourceRange>
+clang::getExpansionRangeInFile(CharSourceRange Range, FileID FID,
+                               const SourceManager &SM) {
+  if (Range.isInvalid())
+    return std::nullopt;
+
+  SourceLocation Begin = SM.getExpansionLoc(Range.getBegin());
+  CharSourceRange EndRange = SM.getExpansionRange(Range.getEnd());
+  SourceLocation End = EndRange.getEnd();
+
+  if (SM.getFileID(Begin) != FID || SM.getFileID(End) != FID)
+    return std::nullopt;
+
+  return CharSourceRange(SourceRange(Begin, End), EndRange.isTokenRange());
+}
+
 namespace {
 
 class FixitReceiver : public edit::EditsReceiver {
