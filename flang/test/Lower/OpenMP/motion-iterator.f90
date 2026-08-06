@@ -75,8 +75,24 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtarget_update_assumed_shape_2d
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {uniq_name = "_QFtarget_update_assumed_shape_2dEa"}
+! CHECK: %[[M:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 3
+! CHECK-SAME: uniq_name = "_QFtarget_update_assumed_shape_2dEm"
+! CHECK: %[[N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 2
+! CHECK-SAME: uniq_name = "_QFtarget_update_assumed_shape_2dEn"
+! CHECK: %[[N_LB_I32:.*]] = arith.constant 1 : i32
+! CHECK: %[[N_UB_I32:.*]] = fir.load %[[N]]#0 : !fir.ref<i32>
+! CHECK: %[[N_LB:.*]] = fir.convert %[[N_LB_I32]] : (i32) -> index
+! CHECK: %[[N_UB:.*]] = fir.convert %[[N_UB_I32]] : (i32) -> index
+! CHECK: %[[N_STEP:.*]] = arith.constant 1 : index
+! CHECK: %[[M_LB_I32:.*]] = arith.constant 1 : i32
+! CHECK: %[[M_UB_I32:.*]] = fir.load %[[M]]#0 : !fir.ref<i32>
+! CHECK: %[[M_LB:.*]] = fir.convert %[[M_LB_I32]] : (i32) -> index
+! CHECK: %[[M_UB:.*]] = fir.convert %[[M_UB_I32]] : (i32) -> index
+! CHECK: %[[M_STEP:.*]] = arith.constant 1 : index
 ! CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: index,
 ! CHECK-SAME: %[[IV1:.*]]: index) =
+! CHECK-SAME: (%[[N_LB]] to %[[N_UB]] step %[[N_STEP]],
+! CHECK-SAME: %[[M_LB]] to %[[M_UB]] step %[[M_STEP]]) {
 ! CHECK: %[[IV0_I32:.*]] = fir.convert %[[IV0]] : (index) -> i32
 ! CHECK: fir.store %[[IV0_I32]] to %[[IV0_ADDR:.*]] : !fir.ref<i32>
 ! CHECK: %[[IV0_DECL:.*]]:2 = hlfir.declare %[[IV0_ADDR]]
@@ -175,8 +191,24 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtarget_update_allocatable_2d
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtarget_update_allocatable_2dEa"}
+! CHECK: %[[M:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 3
+! CHECK-SAME: uniq_name = "_QFtarget_update_allocatable_2dEm"
+! CHECK: %[[N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 2
+! CHECK-SAME: uniq_name = "_QFtarget_update_allocatable_2dEn"
+! CHECK: %[[N_LB_I32:.*]] = arith.constant 1 : i32
+! CHECK: %[[N_UB_I32:.*]] = fir.load %[[N]]#0 : !fir.ref<i32>
+! CHECK: %[[N_LB:.*]] = fir.convert %[[N_LB_I32]] : (i32) -> index
+! CHECK: %[[N_UB:.*]] = fir.convert %[[N_UB_I32]] : (i32) -> index
+! CHECK: %[[N_STEP:.*]] = arith.constant 1 : index
+! CHECK: %[[M_LB_I32:.*]] = arith.constant 1 : i32
+! CHECK: %[[M_UB_I32:.*]] = fir.load %[[M]]#0 : !fir.ref<i32>
+! CHECK: %[[M_LB:.*]] = fir.convert %[[M_LB_I32]] : (i32) -> index
+! CHECK: %[[M_UB:.*]] = fir.convert %[[M_UB_I32]] : (i32) -> index
+! CHECK: %[[M_STEP:.*]] = arith.constant 1 : index
 ! CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: index,
 ! CHECK-SAME: %[[IV1:.*]]: index) =
+! CHECK-SAME: (%[[N_LB]] to %[[N_UB]] step %[[N_STEP]],
+! CHECK-SAME: %[[M_LB]] to %[[M_UB]] step %[[M_STEP]]) {
 ! CHECK: %[[IV0_I32:.*]] = fir.convert %[[IV0]] : (index) -> i32
 ! CHECK: fir.store %[[IV0_I32]] to %[[IV0_ADDR:.*]] : !fir.ref<i32>
 ! CHECK: %[[IV0_DECL:.*]]:2 = hlfir.declare %[[IV0_ADDR]]
