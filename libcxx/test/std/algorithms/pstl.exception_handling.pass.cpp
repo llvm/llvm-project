@@ -454,6 +454,16 @@ int main(int, char**) {
           (void)std::adjacent_difference(policy, std::move(first1), std::move(last1), std::move(dest), op);
         });
       }
+
+      {
+        // uninitialized_fill(first, last, val)
+        assert_non_throwing([=, &policy] {
+          std::uninitialized_fill(policy, std::move(first1), std::move(last1), val);
+        });
+
+        // uninitialized_fill_n(first, n, val)
+        assert_non_throwing([=, &policy] { std::uninitialized_fill_n(policy, std::move(first1), n, val); });
+      }
     }
   });
 

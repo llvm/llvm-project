@@ -277,4 +277,11 @@ void f(non_forward_iterator non_fwd,
     (void)std::adjacent_difference(
         pol, non_fwd, non_fwd, it, func); // expected-error@*:* {{static assertion failed: adjacent_difference}}
   }
+
+  {
+    std::uninitialized_fill(
+        pol, non_fwd, non_fwd, val); // expected-error@*:* {{static assertion failed: uninitialized_fill}}
+    std::uninitialized_fill_n(
+        pol, non_fwd, n, val); // expected-error@*:* {{static assertion failed: uninitialized_fill_n}}
+  }
 }
