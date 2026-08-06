@@ -1,0 +1,52 @@
+# RUN: llc -march=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
+# Check that i32 vectors with an illegal number of elements are extended to the nearest legal size before extracting the element using the G_EXTRACT_VECTOR_ELT instruction.
+
+--- |
+  define pisa_kernel i32 @test_v10_32b(<10 x i32> %vec) {
+    %elem = extractelement <10 x i32> %vec, i32 5
+    ret i32 %elem
+  }
+
+  define pisa_kernel i32 @test_v20_32b(<20 x i32> %vec) {
+    %elem = extractelement <20 x i32> %vec, i32 10
+    ret i32 %elem
+  }
+...
+---
+name: test_v10_32b
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}name: test_v10_32b
+    %2:regv2_32b(<2 x i32>) = loadParam_v2i32 0, 0
+    %3:regv2_32b(<2 x i32>) = loadParam_v2i32 0, 8
+    %4:regv2_32b(<2 x i32>) = loadParam_v2i32 0, 16
+    %5:regv2_32b(<2 x i32>) = loadParam_v2i32 0, 24
+    %6:regv2_32b(<2 x i32>) = loadParam_v2i32 0, 32
+    %1:_(<10 x i32>) = G_CONCAT_VECTORS %2:regv2_32b(<2 x i32>), %3:regv2_32b(<2 x i32>), %4:regv2_32b(<2 x i32>), %5:regv2_32b(<2 x i32>), %6:regv2_32b(<2 x i32>)
+    %8:_(i32) = G_CONSTANT i32 5
+    ; CHECK: G_EXTRACT_VECTOR_ELT 
+    ; CHECK-SAME: <16 x i32>
+    %7:_(i32) = G_EXTRACT_VECTOR_ELT %1:_(<10 x i32>), %8:_(i32)
+    %9:reg32b(i32) = COPY %7:_(i32)
+    retValue_i32_r %9:reg32b(i32)
+...
+---
+name: test_v20_32b
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}name: test_v20_32b
+    %2:regv4_32b(<4 x i32>) = loadParam_v4i32 0, 0
+    %3:regv4_32b(<4 x i32>) = loadParam_v4i32 0, 16
+    %4:regv4_32b(<4 x i32>) = loadParam_v4i32 0, 32
+    %5:regv4_32b(<4 x i32>) = loadParam_v4i32 0, 48
+    %6:regv4_32b(<4 x i32>) = loadParam_v4i32 0, 64
+    %1:_(<20 x i32>) = G_CONCAT_VECTORS %2:regv4_32b(<4 x i32>), %3:regv4_32b(<4 x i32>), %4:regv4_32b(<4 x i32>), %5:regv4_32b(<4 x i32>), %6:regv4_32b(<4 x i32>)
+    %8:_(i32) = G_CONSTANT i32 10
+    ; CHECK: G_EXTRACT_VECTOR_ELT 
+    ; CHECK-SAME: <32 x i32>
+    %7:_(i32) = G_EXTRACT_VECTOR_ELT %1:_(<20 x i32>), %8:_(i32)
+    %9:reg32b(i32) = COPY %7:_(i32)
+    retValue_i32_r %9:reg32b(i32)
+...

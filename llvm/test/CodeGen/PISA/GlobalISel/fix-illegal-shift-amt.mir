@@ -1,0 +1,63 @@
+# RUN: llc -march=pisa -run-pass=pisa-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+
+# Tests for PISAPostLegalizerCombinerImpl::matchFixIllegalShiftAmt /
+# applyFixIllegalShiftAmt.
+#
+# The post-legalizer combiner fires when a G_SHL/G_LSHR/G_ASHR has a shift
+# amount whose type is not i32.  mul_to_shl and similar rules can introduce
+# such shifts.  applyFixIllegalShiftAmt corrects the amount type by:
+#   - inserting G_TRUNC if the amount type is wider than i32 (e.g. i64)
+#   - inserting G_ZEXT  if the amount type is narrower than i32 (e.g. i16)
+
+--- |
+  define i64 @test_shl_i64_i64_amt(i64 %val, i64 %amt) { ret i64 0 }
+  define i32 @test_ashr_i32_i16_amt(i32 %val, i16 %amt) { ret i32 0 }
+...
+
+# ============================================================================
+# Trunc path: shift amount is i64 (>32 bits) -> G_TRUNC inserted to i32.
+# Covers applyFixIllegalShiftAmt line 1673: MIB.buildTrunc(I32, ShAmtReg)
+# ============================================================================
+---
+name:            test_shl_i64_i64_amt
+legalized:       true
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_shl_i64_i64_amt
+    ; CHECK: %val:reg64b(i64) = functionParameter_i64 0
+    ; CHECK-NEXT: %amt:reg64b(i64) = functionParameter_i64 1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %amt(i64)
+    ; CHECK-NEXT: %result:_(i64) = G_SHL %val, [[TRUNC]](i32)
+    ; CHECK-NEXT: %r:reg64b(i64) = COPY %result(i64)
+    ; CHECK-NEXT: retValue_i64_r %r(i64)
+    %val:reg64b(i64) = functionParameter_i64 0
+    %amt:reg64b(i64) = functionParameter_i64 1
+    %result:_(i64) = G_SHL %val(i64), %amt(i64)
+    %r:reg64b(i64) = COPY %result(i64)
+    retValue_i64_r %r:reg64b(i64)
+
+# ============================================================================
+# ZExt path: shift amount is i16 (<32 bits) -> G_ZEXT inserted to i32.
+# Covers applyFixIllegalShiftAmt line 1674: MIB.buildZExt(I32, ShAmtReg)
+# ============================================================================
+---
+name:            test_ashr_i32_i16_amt
+legalized:       true
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_ashr_i32_i16_amt
+    ; CHECK: %val:reg32b(i32) = functionParameter_i32 0
+    ; CHECK-NEXT: %amt:reg16b(i16) = functionParameter_i16 1
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT %amt(i16)
+    ; CHECK-NEXT: %result:_(i32) = G_ASHR %val, [[ZEXT]](i32)
+    ; CHECK-NEXT: %r:reg32b(i32) = COPY %result(i32)
+    ; CHECK-NEXT: retValue_i32_r %r(i32)
+    %val:reg32b(i32) = functionParameter_i32 0
+    %amt:reg16b(i16) = functionParameter_i16 1
+    %result:_(i32) = G_ASHR %val(i32), %amt(i16)
+    %r:reg32b(i32) = COPY %result(i32)
+    retValue_i32_r %r:reg32b(i32)

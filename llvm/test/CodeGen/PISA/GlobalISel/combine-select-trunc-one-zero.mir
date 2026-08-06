@@ -1,0 +1,160 @@
+# RUN: llc -march=pisa -run-pass=pisa-prelegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+
+# Tests for PISAPreLegalizerCombinerImpl::matchSelectTruncOneZero.
+#
+# The combiner rewrites:
+#   select(trunc(wide -> i1), N 1, N 0) => trunc(and(wide, 1), N)
+# to avoid introducing an illegal i1 compare when lowering bool-to-int.
+
+--- |
+  define i16 @test_select_trunc_one_zero_match(i32 %wide) { ret i16 0 }
+  define i16 @test_no_fold_cond_from_icmp(i32 %a) { ret i16 0 }
+  define i16 @test_no_fold_wrong_true_val(i32 %wide) { ret i16 0 }
+  define i16 @test_no_fold_wrong_false_val(i32 %wide) { ret i16 0 }
+  define i32 @test_no_fold_dst_geq_wide(i16 %wide) { ret i32 0 }
+  define i16 @test_no_fold_nonconstant_true(i32 %wide, i16 %t) { ret i16 0 }
+...
+
+# ============================================================================
+# Positive test: condition is i1 from G_TRUNC, true=1, false=0, DstTy < WideTy.
+# Expected transform: select(trunc(i32 to i1), i16 1, i16 0) => trunc(i32 & 1, i16)
+# ============================================================================
+---
+name:            test_select_trunc_one_zero_match
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_select_trunc_one_zero_match
+    ; CHECK: %wide:reg32b(i32) = functionParameter_i32 0
+    ; CHECK: [[ONE32:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND %wide, [[ONE32]]
+    ; CHECK-NEXT: %sel:_(i16) = G_TRUNC [[AND]](i32)
+    ; CHECK-NEXT: %result:reg16b(i16) = COPY %sel(i16)
+    ; CHECK-NEXT: retValue_i16_r %result(i16)
+    %wide:reg32b(i32) = functionParameter_i32 0
+    %i1:_(i1) = G_TRUNC %wide(i32)
+    %one:_(i16) = G_CONSTANT i16 1
+    %zero:_(i16) = G_CONSTANT i16 0
+    %sel:_(i16) = G_SELECT %i1(i1), %one(i16), %zero(i16)
+    %result:reg16b(i16) = COPY %sel(i16)
+    retValue_i16_r %result(i16)
+
+# ============================================================================
+# Negative: condition is from G_ICMP (not G_TRUNC).
+# Covers matchSelectTruncOneZero line 1788: TruncMI->getOpcode() != G_TRUNC.
+# matchSelectTruncOneZero does NOT fire; no G_AND should appear.
+# ============================================================================
+---
+name:            test_no_fold_cond_from_icmp
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_no_fold_cond_from_icmp
+    ; CHECK: %a:reg32b(i32) = functionParameter_i32 0
+    ; CHECK: G_ICMP
+    ; CHECK-NOT: G_AND
+    ; CHECK: retValue_i16_r
+    %a:reg32b(i32) = functionParameter_i32 0
+    %zero32:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(ne), %a(i32), %zero32(i32)
+    %one:_(i16) = G_CONSTANT i16 1
+    %zero:_(i16) = G_CONSTANT i16 0
+    %sel:_(i16) = G_SELECT %cond(i1), %one(i16), %zero(i16)
+    %result:reg16b(i16) = COPY %sel(i16)
+    retValue_i16_r %result(i16)
+
+# ============================================================================
+# Negative: true value is 2, not 1.
+# Covers matchSelectTruncOneZero line 1806: !TrueOpt->Value.isOne().
+# matchSelectTruncOneZero does NOT fire; no G_AND should appear from it.
+# ============================================================================
+---
+name:            test_no_fold_wrong_true_val
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_no_fold_wrong_true_val
+    ; CHECK: %wide:reg32b(i32) = functionParameter_i32 0
+    ; CHECK: G_TRUNC %wide(i32)
+    ; CHECK-NOT: G_AND %wide
+    ; CHECK: retValue_i16_r
+    %wide:reg32b(i32) = functionParameter_i32 0
+    %i1:_(i1) = G_TRUNC %wide(i32)
+    %two:_(i16) = G_CONSTANT i16 2
+    %zero:_(i16) = G_CONSTANT i16 0
+    %sel:_(i16) = G_SELECT %i1(i1), %two(i16), %zero(i16)
+    %result:reg16b(i16) = COPY %sel(i16)
+    retValue_i16_r %result(i16)
+
+# ============================================================================
+# Negative: false value is 3, not 0.
+# Covers matchSelectTruncOneZero line 1806: !FalseOpt->Value.isZero().
+# No fold; G_SELECT survives.
+# ============================================================================
+---
+name:            test_no_fold_wrong_false_val
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_no_fold_wrong_false_val
+    ; CHECK: %wide:reg32b(i32) = functionParameter_i32 0
+    ; CHECK: G_TRUNC %wide(i32)
+    ; CHECK: G_SELECT %i1(i1), %one, %three
+    %wide:reg32b(i32) = functionParameter_i32 0
+    %i1:_(i1) = G_TRUNC %wide(i32)
+    %one:_(i16) = G_CONSTANT i16 1
+    %three:_(i16) = G_CONSTANT i16 3
+    %sel:_(i16) = G_SELECT %i1(i1), %one(i16), %three(i16)
+    %result:reg16b(i16) = COPY %sel(i16)
+    retValue_i16_r %result(i16)
+
+# ============================================================================
+# Negative: DstTy (i32) >= WideTy (i16).
+# Covers matchSelectTruncOneZero line 1798:
+#   DstTy.getScalarSizeInBits() >= WideTy.getScalarSizeInBits()
+# No fold from matchSelectTruncOneZero; no G_AND %wide should appear.
+# ============================================================================
+---
+name:            test_no_fold_dst_geq_wide
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_no_fold_dst_geq_wide
+    ; CHECK: %wide:reg16b(i16) = functionParameter_i16 0
+    ; CHECK: G_TRUNC %wide(i16)
+    ; CHECK-NOT: G_AND %wide
+    ; CHECK: retValue_i32_r
+    %wide:reg16b(i16) = functionParameter_i16 0
+    %i1:_(i1) = G_TRUNC %wide(i16)
+    %one:_(i32) = G_CONSTANT i32 1
+    %zero:_(i32) = G_CONSTANT i32 0
+    %sel:_(i32) = G_SELECT %i1(i1), %one(i32), %zero(i32)
+    %result:reg32b(i32) = COPY %sel(i32)
+    retValue_i32_r %result(i32)
+
+# ============================================================================
+# Negative: true operand is not a constant register.
+# Covers matchSelectTruncOneZero line 1804: !TrueOpt.
+# No fold; G_SELECT survives with the non-constant true operand.
+# ============================================================================
+---
+name:            test_no_fold_nonconstant_true
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_no_fold_nonconstant_true
+    ; CHECK: G_TRUNC
+    ; CHECK: G_SELECT {{.*}}, %true_val,
+    %wide:reg32b(i32) = functionParameter_i32 0
+    %true_val:reg16b(i16) = functionParameter_i16 1
+    %i1:_(i1) = G_TRUNC %wide(i32)
+    %zero:_(i16) = G_CONSTANT i16 0
+    %sel:_(i16) = G_SELECT %i1(i1), %true_val(i16), %zero(i16)
+    %result:reg16b(i16) = COPY %sel(i16)
+    retValue_i16_r %result(i16)

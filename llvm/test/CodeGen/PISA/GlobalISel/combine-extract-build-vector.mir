@@ -1,0 +1,88 @@
+# RUN: llc -march=pisa -run-pass=pisa-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+  define void @test_extract_build_vector(ptr %addr, ptr %addr2) {
+    %rv = load <4 x i32>, ptr %addr, align 32
+    store <4 x i32> %rv, ptr %addr2, align 32
+    ret void
+  }
+  ; Negative test: extract 2-element subvector from 8-element build_vector.
+  ; matchExtractSubvectorBuildVector requires NumDstElts == 4, so this must NOT fold.
+  define void @test_no_fold_2dst(ptr %addr) { ret void }
+  ; Negative test: source is G_LOAD, not G_BUILD_VECTOR; must NOT fold.
+  define void @test_no_fold_non_build_vector(ptr %addr, ptr %addr2) {
+    %rv = load <8 x i32>, ptr %addr, align 32
+    store <4 x i32> undef, ptr %addr2, align 16
+    ret void
+  }
+...
+---
+name:            test_extract_build_vector
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: {{^}}name: test_extract_build_vector
+    ; CHECK: (<4 x i32>) = G_LOAD %0(p0)
+    ; CHECK-NEXT: G_STORE %{{[0-9]+}}(<4 x i32>)
+    %0:reg32b(p0) = functionParameter_i32 0
+    %1:reg32b(p0) = functionParameter_i32 1
+    %20:registers(<4 x i32>) = G_LOAD %0:reg32b(p0) :: (load (<4 x i32>) from %ir.addr, align 32, addrspace 0)
+    %37:registers(i32) = G_CONSTANT i32 0
+    %21:registers(i32) = G_EXTRACT_VECTOR_ELT %20:registers(<4 x i32>), %37:registers(i32)
+    %38:registers(i32) = G_CONSTANT i32 1
+    %22:registers(i32) = G_EXTRACT_VECTOR_ELT %20:registers(<4 x i32>), %38:registers(i32)
+    %39:registers(i32) = G_CONSTANT i32 2
+    %23:registers(i32) = G_EXTRACT_VECTOR_ELT %20:registers(<4 x i32>), %39:registers(i32)
+    %40:registers(i32) = G_CONSTANT i32 3
+    %24:registers(i32) = G_EXTRACT_VECTOR_ELT %20:registers(<4 x i32>), %40:registers(i32)
+    %3:registers(<4 x i32>) = G_BUILD_VECTOR %21:registers(i32), %22:registers(i32), %23:registers(i32), %24:registers(i32)
+    G_STORE %3:registers(<4 x i32>), %1:reg32b(p0) :: (store (<4 x i32>) into %ir.addr2, align 32, addrspace 0)
+    ret
+---
+# Negative test: NumDstElts(2) != 4, so matchExtractSubvectorBuildVector must
+# return false and the G_EXTRACT_SUBVECTOR must survive unchanged.
+name:            test_no_fold_2dst
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: {{^}}name: test_no_fold_2dst
+    ; CHECK: G_BUILD_VECTOR
+    ; CHECK: G_EXTRACT_SUBVECTOR
+    %0:reg32b(p0) = functionParameter_i32 0
+    %10:registers(i32) = G_CONSTANT i32 1
+    %11:registers(i32) = G_CONSTANT i32 2
+    %12:registers(i32) = G_CONSTANT i32 3
+    %13:registers(i32) = G_CONSTANT i32 4
+    %14:registers(i32) = G_CONSTANT i32 5
+    %15:registers(i32) = G_CONSTANT i32 6
+    %16:registers(i32) = G_CONSTANT i32 7
+    %17:registers(i32) = G_CONSTANT i32 8
+    ; Build an 8-element vector.
+    %20:registers(<8 x i32>) = G_BUILD_VECTOR %10:registers(i32), %11:registers(i32), %12:registers(i32), %13:registers(i32), %14:registers(i32), %15:registers(i32), %16:registers(i32), %17:registers(i32)
+    ; Extract a 2-element subvector starting at offset 0. NumDstElts=2 != 4, no fold.
+    %30:registers(<2 x i32>) = G_EXTRACT_SUBVECTOR %20:registers(<8 x i32>), 0
+    G_STORE %30:registers(<2 x i32>), %0:reg32b(p0) :: (store (<2 x i32>) into %ir.addr, addrspace 0)
+    ret
+---
+# Negative test: source is a G_LOAD (not G_BUILD_VECTOR), so
+# matchExtractSubvectorBuildVector must return false (BV == null check).
+name:            test_no_fold_non_build_vector
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: {{^}}name: test_no_fold_non_build_vector
+    ; CHECK-NOT: G_BUILD_VECTOR
+    ; CHECK: G_EXTRACT_SUBVECTOR
+    %0:reg32b(p0) = functionParameter_i32 0
+    %1:reg32b(p0) = functionParameter_i32 1
+    ; Load an 8-element vector from memory (not a G_BUILD_VECTOR).
+    %20:registers(<8 x i32>) = G_LOAD %0:reg32b(p0) :: (load (<8 x i32>) from %ir.addr, align 32, addrspace 0)
+    ; Extract 4 elements at offset 0. Source is not G_BUILD_VECTOR: no fold.
+    %30:registers(<4 x i32>) = G_EXTRACT_SUBVECTOR %20:registers(<8 x i32>), 0
+    G_STORE %30:registers(<4 x i32>), %1:reg32b(p0) :: (store (<4 x i32>) into %ir.addr2, addrspace 0)
+    ret

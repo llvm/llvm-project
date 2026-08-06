@@ -12,6 +12,7 @@
 #include "PISASubtarget.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/Support/PISAAddrSpace.h"
 #include <memory>
 #include <optional>
 
@@ -33,13 +34,40 @@ public:
   // target-specific attributes of each function.
   const PISASubtarget *getSubtargetImpl() const = delete;
 
-  TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
+  TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
   bool usesPhysRegsForValues() const override { return false; }
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+
+  MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const override;
+
+  static int64_t getNullPointerValue(unsigned AS) {
+    return (AS == (unsigned)PISAAS::AddressSpace::PRIVATE ||
+            AS == (unsigned)PISAAS::AddressSpace::SHARED)
+               ? -1
+               : 0;
+  }
+
+  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DstAS) const override {
+    auto Sas = (SrcAS == (unsigned)PISAAS::AddressSpace::GLOBAL) ||
+               (SrcAS == (unsigned)PISAAS::AddressSpace::CONSTANT) ||
+               (SrcAS == (unsigned)PISAAS::AddressSpace::GENERIC);
+    auto Das = (DstAS == (unsigned)PISAAS::AddressSpace::GLOBAL) ||
+               (DstAS == (unsigned)PISAAS::AddressSpace::CONSTANT) ||
+               (DstAS == (unsigned)PISAAS::AddressSpace::GENERIC);
+    return Sas && Das;
+  }
+
+  unsigned getAssumedAddrSpace(const Value *V) const override;
+
+  std::pair<const Value *, unsigned>
+  getPredicatedAddrSpace(const Value *V) const override;
 };
 } // namespace llvm
 
