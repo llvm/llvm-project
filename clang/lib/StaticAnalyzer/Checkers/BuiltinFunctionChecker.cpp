@@ -43,12 +43,15 @@ QualType getSufficientTypeForOverflowOp(CheckerContext &C,
   unsigned BitWidth =
       std::max(ACtx.getIntWidth(Arg1Ty), ACtx.getIntWidth(Arg2Ty));
 
-  // A signed type with doubled bit width may not be enough for their
-  // multiplication result only when both operands are unsigned. In other
-  // words, we use a signed type if either operand is signed. Additionally,
-  // subtraction always needs a signed result. (Subtracting a negative
-  // operand falls into the prior case, so it is still fine with a signed
-  // result type. Excluding the case of 1-bit signed integer tho.)
+  // A signed type with doubled bits may not be large enough to hold the
+  // multiplication result when both operands are unsigned. In other
+  // words, if either operand is signed, a signed type with twice the bits is
+  // sufficient.
+  //
+  // Additionally, subtraction always needs a signed result. Note that
+  // subtracting a negative operand falls into the prior case, so it is still
+  // safe with a signed result type. A signed 1-bit integer is not allowed in
+  // Clang.
   bool UseSigned = Op == BO_Sub || Arg1Ty->isSignedIntegerType() ||
                    Arg2Ty->isSignedIntegerType();
   return ACtx.getBitIntType(/*Unsigned=*/!UseSigned, BitWidth * 2);
