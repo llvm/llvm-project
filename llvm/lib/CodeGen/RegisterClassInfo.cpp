@@ -157,9 +157,6 @@ void RegisterClassInfo::updateReservedRegs(const BitVector &ReservedInput) {
     if (Info.Tag != Tag)
       continue;
 
-    // Recomputed below, once every order has been narrowed.
-    Info.ProperSubClass = false;
-
     unsigned NewNumRegs = 0;
     uint8_t MinCost = uint8_t(~0u);
     uint8_t LastCost = uint8_t(~0u);
@@ -182,15 +179,8 @@ void RegisterClassInfo::updateReservedRegs(const BitVector &ReservedInput) {
     Info.NumRegs = NewNumRegs;
     Info.MinCost = MinCost;
     Info.LastCostChange = LastCostChange;
-  }
 
-  // ProperSubClass depends on both this class and its superclass counts, so
-  // calculate it only after all valid orders have been compacted.
-  for (const TargetRegisterClass &RC : TRI->regclasses()) {
-    RCInfo &Info = RegClass[RC.getID()];
-    if (Info.Tag != Tag)
-      continue;
-
+    Info.ProperSubClass = false;
     if (const TargetRegisterClass *Super =
             TRI->getLargestLegalSuperClass(&RC, *MF))
       if (Super != &RC && getNumAllocatableRegs(Super) > Info.NumRegs)
