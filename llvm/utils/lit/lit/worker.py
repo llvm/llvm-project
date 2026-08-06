@@ -5,6 +5,8 @@ Exception: in single process mode _execute is called directly.
 For efficiency, we copy all data needed to execute all tests into each worker
 and store it in global variables. This reduces the cost of each task.
 """
+from __future__ import annotations
+
 import contextlib
 import os
 import signal
@@ -47,6 +49,18 @@ def execute(test):
 
     test.setResult(result)
     return test
+
+
+def execute_batch(tests: list[lit.Test.Test]) -> list[lit.Test.Test]:
+    """Runs a batch of tests in one dispatch to a worker process.
+
+    Args:
+        tests: The tests to run.
+
+    Returns:
+        The tests, in the order given, each with its result set.
+    """
+    return [execute(test) for test in tests]
 
 
 # TODO(python3): replace with contextlib.nullcontext

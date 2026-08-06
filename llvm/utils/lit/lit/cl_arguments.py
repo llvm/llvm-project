@@ -529,6 +529,20 @@ def parse_args():
         help="Show all features used in the test suite (in XFAIL, UNSUPPORTED and REQUIRES) and exit",
         action="store_true",
     )
+    debug_group.add_argument(
+        "--experimental-dispatch-chunk-size",
+        dest="dispatch_chunk_size",
+        metavar="N",
+        help="EXPERIMENTAL: Hand tests to workers in chunks of N rather than "
+        "one at a time. A chunk goes to a single worker, which runs its tests "
+        "one after another, so the run pays one round trip to that worker for "
+        "the whole chunk instead of one per test. [Default: 1] "
+        "(NOTE: values above 1 require --order=random, stop the run up to N-1 "
+        "tests later than --max-failures and --max-time otherwise would, and "
+        "lose the rest of a chunk when a worker crashes)",
+        type=_positive_int,
+        default=1,
+    )
 
     # LIT is special: environment variables override command line arguments.
     env_args = shlex.split(os.environ.get("LIT_OPTS", ""))
@@ -546,6 +560,14 @@ def parse_args():
     if opts.time_tests is not None and opts.skip_test_time_recording:
         parser.error(
             f"argument --skip-test-time-recording: not allowed with argument {_TIME_TESTS_OPT}"
+        )
+
+    if opts.dispatch_chunk_size > 1 and TestOrder(opts.order) != TestOrder.RANDOM:
+        parser.error(
+            "argument --experimental-dispatch-chunk-size: values above 1 require "
+            "--order=random. Every other order sorts tests of similar duration "
+            "next to each other, so a chunk collects several of the slowest "
+            "tests onto one worker and leaves the rest idle."
         )
 
     # Validate command line options
