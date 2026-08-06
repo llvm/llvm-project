@@ -2,7 +2,7 @@
 Test lldb-dap stack trace response
 """
 
-from lldbsuite.test.decorators import skipIfWindows
+from lldbsuite.test.decorators import skipIfWindows, skipIf
 from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
 
