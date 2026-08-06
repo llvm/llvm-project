@@ -286,6 +286,12 @@ class RISCVUImmOp<int bitsNum> : RISCVOp {
 class RISCVUImmLeafOp<int bitsNum> :
   RISCVUImmOp<bitsNum>, ImmLeaf<XLenVT, "return isUInt<" # bitsNum # ">(Imm);">;
 
+// Variant of RISCVUImmLeafOp for memory-operand offsets that may be omitted
+// entirely, e.g. "c.lbu a0, (a1)". See OptionalMemOffsetAsmOperand.
+class OptionalUImmLeafOp<int bitsNum> : RISCVUImmLeafOp<bitsNum> {
+  let ParserMatchClass = OptionalMemOffsetAsmOperand<UImmAsmOperand<bitsNum>>;
+}
+
 class RISCVSImmOp<int bitsNum> : RISCVOp {
   let ParserMatchClass = SImmAsmOperand<bitsNum>;
   let EncoderMethod = "getImmOpValue";

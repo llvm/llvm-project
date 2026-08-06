@@ -206,10 +206,7 @@ def uimm2_opcode : RISCVUImmOp<2> {
   let ParserMatchClass = InsnCDirectiveOpcode;
 }
 
-// For memory-operand offsets that may be omitted, e.g. ".insn cl 0, 2, a0, (a1)".
-def uimm5_optional : RISCVUImmLeafOp<5> {
-  let ParserMatchClass = OptionalMemOffsetAsmOperand<UImmAsmOperand<5>>;
-}
+def uimm5_optional : OptionalUImmLeafOp<5>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
@@ -619,20 +616,6 @@ def : InstAlias<"c.ntl.pall", (C_ADD X0, X3)>;
 def : InstAlias<"c.ntl.s1", (C_ADD X0, X4)>;
 def : InstAlias<"c.ntl.all", (C_ADD X0, X5)>;
 } // Predicates = [HasStdExtZca]
-
-let EmitPriority = 0 in {
-let Predicates = [HasStdExtZca] in {
-}
-
-let Predicates = [HasStdExtZca, IsRV64] in {
-}
-
-let Predicates = [HasStdExtZcf, IsRV32] in {
-}
-
-let Predicates = [HasStdExtZcd] in {
-}
-} // EmitPriority = 0
 
 //===----------------------------------------------------------------------===//
 // .insn directive instructions

@@ -72,13 +72,6 @@ def C_SD_RV32 : CStore_rri<0b111, "c.sd", GPRPairCRV32, uimm8_lsb000_optional>,
 }// Predicates = [HasStdExtZclsd, IsRV32], DecoderNamespace = "ZcOverlap"
 
 //===----------------------------------------------------------------------===//
-// Assembler Pseudo Instructions
-//===----------------------------------------------------------------------===//
-
-let Predicates = [HasStdExtZclsd, IsRV32] in {
-}
-
-//===----------------------------------------------------------------------===//
 // Compress Instruction tablegen backend.
 //===----------------------------------------------------------------------===//
 

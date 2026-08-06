@@ -3,7 +3,7 @@
 ## FPRC
 c.flw  ft3, 8(a5) # CHECK: :[[@LINE]]:8: error: register must be a FPR
 
-## uimm8_lsb00
+## uimm8_lsb00_optional
 c.flwsp  fs1, 256(sp) # CHECK: :[[@LINE]]:15: error: immediate must be a multiple of 4 bytes in the range [0, 252]
 c.fswsp  fs2, -4(sp) # CHECK: :[[@LINE]]:15: error: immediate must be a multiple of 4 bytes in the range [0, 252]
 
