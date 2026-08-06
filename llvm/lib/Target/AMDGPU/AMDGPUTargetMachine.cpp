@@ -101,6 +101,7 @@
 #include "llvm/CodeGen/StackSlotColoring.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
+#include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Module.h"
@@ -1906,12 +1907,11 @@ void GCNPassConfig::addOptimizedRegAlloc() {
       !EnableAMDGPUFormSSAMemoryClauses)
     insertPass(EndOfPreRA, &SIFormMemoryClausesID);
 
-  // Run the SSA form of the memory clause pass before PHI elimination.
-  // MachineLoopInfo is the last pass before PHIElimination in the base
-  // pipeline, so this places the pass as late as possible while the function
-  // is still in SSA form.
+  // Run the SSA form of the memory clause pass before PHI elimination by
+  // anchoring to UnreachableMachineBlockElim, which is added once
+  // unconditionally in the base pipeline before PHI elimination.
   if (EnableAMDGPUFormSSAMemoryClauses)
-    insertPass(&MachineLoopInfoID, &AMDGPUFormSSAMemoryClausesID);
+    insertPass(&UnreachableMachineBlockElimID, &AMDGPUFormSSAMemoryClausesID);
 
   TargetPassConfig::addOptimizedRegAlloc();
 }
@@ -2713,8 +2713,16 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
 
   // This is not an essential optimization and it has a noticeable impact on
   // compilation time, so we only enable it from O2.
-  if (TM.getOptLevel() > CodeGenOptLevel::Less)
+  if (TM.getOptLevel() > CodeGenOptLevel::Less &&
+      !EnableAMDGPUFormSSAMemoryClauses)
     insertPass<MachineSchedulerPass>(SIFormMemoryClausesPass());
+
+  // Run the SSA form of the memory clause pass before PHI elimination by
+  // anchoring to UnreachableMachineBlockElim, which is added once
+  // unconditionally in the base pipeline before PHI elimination.
+  if (EnableAMDGPUFormSSAMemoryClauses)
+    insertPass<UnreachableMachineBlockElimPass>(
+        AMDGPUFormSSAMemoryClausesPass());
 
   return Base::addOptimizedRegAlloc(PMW);
 }
