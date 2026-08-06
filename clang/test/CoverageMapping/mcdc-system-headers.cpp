@@ -16,7 +16,7 @@
 // CHECK: _Z5func0i:
 int func0(int a) {
   // CHECK: Decision,File 0, [[@LINE+3]]:11 -> [[@LINE+3]]:21 = M:3, C:2
-  // W_SYS: Expansion,File 0, [[@LINE+2]]:11 -> [[@LINE+2]]:16 = #0 (Expanded file = 1)
+  // W_SYS: Expansion,File 0, [[@LINE+2]]:11 -> [[@LINE+2]]:16 = 0 (Expanded file = 1)
   // X_SYS: Branch,File 0, [[@LINE+1]]:11 -> [[@LINE+1]]:11 = #1, 0 [1,2,0]
   return (CONST && a);
   // CHECK: Branch,File 0, [[@LINE-1]]:20 -> [[@LINE-1]]:21 = #2, (#1 - #2) [2,0,0]
@@ -28,7 +28,7 @@ int func1(int a, int b) {
   // CHECK: Decision,File 0, [[@LINE+2]]:11 -> [[@LINE+2]]:21 = M:3, C:2
   // CHECK: Branch,File 0, [[@LINE+1]]:11 -> [[@LINE+1]]:12 = (#0 - #1), #1 [1,0,2]
   return (a || EXPR1(b));
-  // W_SYS: Expansion,File 0, [[@LINE-1]]:16 -> [[@LINE-1]]:21 = #1 (Expanded file = 1)
+  // W_SYS: Expansion,File 0, [[@LINE-1]]:16 -> [[@LINE-1]]:21 = 0 (Expanded file = 1)
   // W_SYS: Branch,File 1, [[@LINE-24]]:18 -> [[@LINE-24]]:21 = (#1 - #2), #2 [2,0,0]
   // X_SYS: Branch,File 0, [[@LINE-3]]:16 -> [[@LINE-3]]:16 = (#1 - #2), #2 [2,0,0]
 }
@@ -37,8 +37,8 @@ int func1(int a, int b) {
 int func2(int a, int b) {
   // W_SYS: Decision,File 0, [[@LINE+5]]:11 -> [[@LINE+5]]:28 = M:4, C:3
   // X_SYS: Decision,File 0, [[@LINE+4]]:11 -> [[@LINE+4]]:28 = M:3, C:2
-  // W_SYS: Expansion,File 0, [[@LINE+3]]:11 -> [[@LINE+3]]:16 = #0 (Expanded file = 1)
-  // W_SYS: Expansion,File 0, [[@LINE+2]]:23 -> [[@LINE+2]]:28 = #1 (Expanded file = 2)
+  // W_SYS: Expansion,File 0, [[@LINE+3]]:11 -> [[@LINE+3]]:16 = 0 (Expanded file = 1)
+  // W_SYS: Expansion,File 0, [[@LINE+2]]:23 -> [[@LINE+2]]:28 = 0 (Expanded file = 2)
   // X_SYS: Branch,File 0, [[@LINE+1]]:11 -> [[@LINE+1]]:11 = #1, (#0 - #1) [1,2,0]
   return (EXPR2(a) && EXPR1(a));
   // W_SYS: Branch,File 1, [[@LINE-35]]:19 -> [[@LINE-35]]:22 = #3, (#0 - #3) [1,3,0]
