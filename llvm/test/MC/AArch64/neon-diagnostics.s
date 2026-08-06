@@ -7151,3 +7151,33 @@
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        fabd d29, s24, d20
 // CHECK-ERROR:                  ^
+
+//----------------------------------------------------------------------
+// Vector Bitwise Extract
+//----------------------------------------------------------------------
+
+    ext v0.8b, v1.8b, v2.8b, #8
+    ext v0.8b, v1.8b, v2.8b, #12
+    ext v0.16b, v1.16b, v2.16b, #16
+    ext v0.16b, v1.16b, v2.16b, #20
+    ext v0.8b, v1.8b, v2.8b, sym
+    ext v0.16b, v1.16b, v2.16b, sym
+
+// CHECK-ERROR: error: immediate must be an integer in range [0, 7].
+// CHECK-ERROR:        ext v0.8b, v1.8b, v2.8b, #8
+// CHECK-ERROR:                                 ^
+// CHECK-ERROR: error: immediate must be an integer in range [0, 7].
+// CHECK-ERROR:        ext v0.8b, v1.8b, v2.8b, #12
+// CHECK-ERROR:                                 ^
+// CHECK-ERROR: error: immediate must be an integer in range [0, 15].
+// CHECK-ERROR:        ext v0.16b, v1.16b, v2.16b, #16
+// CHECK-ERROR:                                    ^
+// CHECK-ERROR: error: immediate must be an integer in range [0, 15].
+// CHECK-ERROR:        ext v0.16b, v1.16b, v2.16b, #20
+// CHECK-ERROR:                                    ^
+// CHECK-ERROR: error: immediate must be an integer in range [0, 7].
+// CHECK-ERROR:        ext v0.8b, v1.8b, v2.8b, sym
+// CHECK-ERROR:                                 ^
+// CHECK-ERROR: error: immediate must be an integer in range [0, 15].
+// CHECK-ERROR:        ext v0.16b, v1.16b, v2.16b, sym
+// CHECK-ERROR:                                    ^
