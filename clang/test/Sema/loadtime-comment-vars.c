@@ -13,8 +13,7 @@
 //     while an unlisted static const variable still warns
 //
 // The quiet scenario compiles the same source for a non-AIX target: the
-// option is a silent no-op at the cc1 layer there (the driver, tested
-// separately, warns and drops it), so no diagnostics at all are expected.
+// option is a silent no-op at the cc1 layer there, so no diagnostics at all are expected.
 
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix -Wunused-const-variable \
 // RUN:   -mloadtime-comment-vars=vol_ptr,vol_char,vol_arr,tls_ptr,ind_ptr,const_arr,lfn,kept \
