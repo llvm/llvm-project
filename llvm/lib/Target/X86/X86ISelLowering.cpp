@@ -2588,6 +2588,19 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
+  static constexpr unsigned PromoteBF16ToF32Ops[] = {
+      ISD::FADD,       ISD::FSUB,       ISD::FMUL,        ISD::FDIV,
+      ISD::FSQRT,      ISD::FMA,        ISD::FMINNUM,     ISD::FMAXNUM,
+      ISD::FMINIMUM,   ISD::FMAXIMUM,   ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM,
+      ISD::FFLOOR,     ISD::FCEIL,      ISD::FTRUNC,      ISD::FRINT,
+      ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND,      ISD::FCANONICALIZE};
+
+  // FREM and FPOW promote too, but only in the 128- and 256-bit forms for now.
+  // TODO: this is because it will fail to find the libcall for the 32f32
+  // type since it fails to split before searching for libcall
+  static constexpr unsigned PromoteBF16ToF32OpsLibCall[] = {
+    ISD::FREM, ISD::FPOW};
+
   if (!Subtarget.useSoftFloat() &&
       (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16())) {
     addRegisterClass(MVT::v8bf16, Subtarget.hasAVX512() ? &X86::VR128XRegClass
@@ -2611,7 +2624,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
     setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v8bf16, Legal);
     setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v16bf16, Custom);
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV}) {
+    for (unsigned Opc : PromoteBF16ToF32Ops) {
+      setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
+      setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
+    }
+    for (unsigned Opc : PromoteBF16ToF32OpsLibCall) {
       setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
       setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
     }
@@ -2629,7 +2646,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       Subtarget.useAVX512Regs()) {
     addRegisterClass(MVT::v32bf16, &X86::VR512RegClass);
     setF16Action(MVT::v32bf16, Expand);
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
+    for (unsigned Opc : PromoteBF16ToF32Ops)
       setOperationPromotedToType(Opc, MVT::v32bf16, MVT::v32f32);
     setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
@@ -64201,7 +64218,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (VConstraint && Subtarget.hasFP16())
           return std::make_pair(0U, &X86::FR16XRegClass);
         break;
-case MVT::bf16:
+      case MVT::bf16:
         if (VConstraint && Subtarget.hasVLX())
           return std::make_pair(0U, &X86::FR16XRegClass);
         return std::make_pair(0U, &X86::FR16RegClass);
