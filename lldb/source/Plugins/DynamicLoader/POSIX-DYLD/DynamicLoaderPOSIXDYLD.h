@@ -66,6 +66,10 @@ public:
       llvm::function_ref<bool(const lldb_private::Thread &)>
           save_thread_predicate) override;
 
+  lldb_private::Status
+  ReplaceModule(const lldb::ModuleSP &old_module_sp,
+                const lldb::ModuleSP &new_module_sp) override;
+
 protected:
   /// Runtime linker rendezvous structure.
   DYLDRendezvous m_rendezvous;

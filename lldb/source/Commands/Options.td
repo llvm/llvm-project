@@ -1820,6 +1820,18 @@ let Command = "target modules show unwind" in {
         Desc<"Show cached unwind information">;
 }
 
+let Command = "target modules replace" in {
+  def target_modules_replace_old_path
+      : Option<"old-path", "o">,
+        Arg<"Path">,
+        Desc<"Path of the module in the target to replace. Only needed when it "
+             "cannot be worked out from the new file.">;
+  def target_modules_replace_force
+      : Option<"force", "f">,
+        Desc<"Replace the module even when its UUID does not match the UUID of "
+             "the new file.">;
+}
+
 let Command = "target modules lookup" in {
   def target_modules_lookup_address : Option<"address", "a">,
                                       Group<1>,

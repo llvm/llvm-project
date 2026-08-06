@@ -207,6 +207,22 @@ public:
     return LLDB_INVALID_ADDRESS;
   }
 
+  /// Inform the dynamic loader that Target::ReplaceModule() has swapped one
+  /// module for another.
+  ///
+  /// \param[in] old_module_sp
+  ///     The module that was removed from the target.
+  ///
+  /// \param[in] new_module_sp
+  ///     The module that took its place.
+  ///
+  /// \return
+  ///     An error if this loader cannot place the replacement correctly.
+  virtual Status ReplaceModule(const lldb::ModuleSP &old_module_sp,
+                               const lldb::ModuleSP &new_module_sp) {
+    return Status();
+  }
+
   /// Locates or creates a module given by \p file and updates/loads the
   /// resulting module at the virtual base address \p base_addr.
   /// Note that this calls Target::GetOrCreateModule with notify being false,
