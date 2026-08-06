@@ -118,6 +118,35 @@ public:
 
   void SetObjectSize(uint64_t object_size) { m_object_size = object_size; }
 
+  /// True if this spec describes a sub-range of its file. The size alone does
+  /// not say: it defaults to the whole file.
+  bool HasObjectFileBounds() const {
+    if (m_object_offset != 0)
+      return true;
+    if (m_object_size == 0)
+      return false;
+    if (m_extractor_sp)
+      return m_object_size != m_extractor_sp->GetByteSize();
+    if (!m_file)
+      return false;
+    const uint64_t file_size = FileSystem::Instance().GetByteSize(m_file);
+    return file_size != 0 && m_object_size != file_size;
+  }
+
+  /// Whether an object at \a candidate_offset of \a candidate_size satisfies
+  /// the bounds this spec asks for. A spec that asks for no particular bounds
+  /// constrains nothing and accepts any candidate.
+  bool MatchesObjectFileSlice(uint64_t candidate_offset,
+                              uint64_t candidate_size) const {
+    if (!HasObjectFileBounds())
+      return true;
+    if (GetObjectOffset() != candidate_offset)
+      return false;
+    if (GetObjectSize() != 0 && GetObjectSize() != candidate_size)
+      return false;
+    return true;
+  }
+
   /// Get the load address of a module in process memory. If the optional
   /// has no value, there is no load address for this module spec.
   std::optional<lldb::addr_t> GetLoadAddress() const { return m_load_addr; }
@@ -277,6 +306,9 @@ public:
         match_module_spec.GetObjectName() != GetObjectName())
       return false;
     if (!FileSpec::Match(match_module_spec.GetFileSpec(), GetFileSpec()))
+      return false;
+    if (!match_module_spec.MatchesObjectFileSlice(GetObjectOffset(),
+                                                  GetObjectSize()))
       return false;
     if (GetPlatformFileSpec() &&
         !FileSpec::Match(match_module_spec.GetPlatformFileSpec(),
