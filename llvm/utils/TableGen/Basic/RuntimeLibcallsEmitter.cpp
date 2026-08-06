@@ -89,14 +89,22 @@ private:
 
   void emitSystemRuntimeLibrarySetCalls(raw_ostream &OS) const;
 
+  DenseSet<StringRef> collectLibcallNames() const;
+
+  void checkFPLibcallFamilies(ArrayRef<FPLibcallFamily> Families,
+                              const DenseSet<StringRef> &LibcallNames) const;
+
   void emitFPLibcallSelectorDecls(raw_ostream &OS,
                                   ArrayRef<FPLibcallFamily> Families) const;
 
   void emitFPLibcallSelectors(raw_ostream &OS,
-                              ArrayRef<FPLibcallFamily> Families) const;
+                              ArrayRef<FPLibcallFamily> Families,
+                              const DenseSet<StringRef> &LibcallNames) const;
 
-  void emitGetLibcallForIntrinsic(raw_ostream &OS,
-                                  ArrayRef<FPLibcallFamily> Families) const;
+  void
+  emitGetLibcallForIntrinsic(raw_ostream &OS,
+                             ArrayRef<FPLibcallFamily> Families,
+                             const DenseSet<StringRef> &LibcallNames) const;
 
 public:
   RuntimeLibcallEmitter(const RecordKeeper &R) : Records(R), Libcalls(R) {}
@@ -578,6 +586,42 @@ collectFPLibcallFamilies(const RecordKeeper &Records) {
   return Families;
 }
 
+DenseSet<StringRef> RuntimeLibcallEmitter::collectLibcallNames() const {
+  DenseSet<StringRef> LibcallNames;
+  for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList())
+    LibcallNames.insert(LC.getName());
+  return LibcallNames;
+}
+
+void RuntimeLibcallEmitter::checkFPLibcallFamilies(
+    ArrayRef<FPLibcallFamily> Families,
+    const DenseSet<StringRef> &LibcallNames) const {
+  std::vector<std::pair<StringRef, StringRef>> IntrinsicToBase;
+  for (const FPLibcallFamily &Family : Families)
+    for (StringRef Intrinsic : Family.Intrinsics)
+      IntrinsicToBase.emplace_back(Intrinsic, Family.Base);
+  llvm::sort(IntrinsicToBase);
+
+  for (size_t I = 1, E = IntrinsicToBase.size(); I < E; ++I) {
+    if (IntrinsicToBase[I].first == IntrinsicToBase[I - 1].first)
+      PrintFatalError(
+          "intrinsic '" + IntrinsicToBase[I].first +
+          "' is mapped by multiple RuntimeLibcallFamily records ('" +
+          IntrinsicToBase[I - 1].second + "' and '" +
+          IntrinsicToBase[I].second + "')");
+  }
+
+  for (const FPLibcallFamily &Family : Families) {
+    bool AnyScalarLibcall = any_of(
+        ScalarFPSuffixes, [&](const std::pair<StringRef, StringRef> &Entry) {
+          return LibcallNames.contains((Family.Base + "_" + Entry.first).str());
+        });
+    if (!AnyScalarLibcall)
+      PrintFatalError("no runtime libcall found for base name '" + Family.Base +
+                      "'");
+  }
+}
+
 /// Generate the declarations for the RTLIB::get<base>(EVT) selectors.
 void RuntimeLibcallEmitter::emitFPLibcallSelectorDecls(
     raw_ostream &OS, ArrayRef<FPLibcallFamily> Families) const {
@@ -589,16 +633,13 @@ void RuntimeLibcallEmitter::emitFPLibcallSelectorDecls(
 /// Generate the backend RTLIB::get<base>(EVT) selectors from the floating-point
 /// libcall families.
 void RuntimeLibcallEmitter::emitFPLibcallSelectors(
-    raw_ostream &OS, ArrayRef<FPLibcallFamily> Families) const {
+    raw_ostream &OS, ArrayRef<FPLibcallFamily> Families,
+    const DenseSet<StringRef> &LibcallNames) const {
   IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALL_FP_SELECTORS");
 
   // Only emit a libcall enumerator if it actually exists in the declared set.
-  DenseSet<StringRef> ExistingLibcalls;
-  for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList())
-    ExistingLibcalls.insert(LC.getName());
-
   auto scalarEnum = [&](StringRef Base, StringRef Suffix) -> std::string {
-    if (ExistingLibcalls.contains((Base + "_" + Suffix).str()))
+    if (LibcallNames.contains((Base + "_" + Suffix).str()))
       return ("RTLIB::" + Base + "_" + Suffix).str();
     return "RTLIB::UNKNOWN_LIBCALL";
   };
@@ -633,27 +674,15 @@ void RuntimeLibcallEmitter::emitFPLibcallSelectors(
 /// they may lower to, keyed by intrinsic ID and floating-point type. This is
 /// the IR-level counterpart to the backend's RTLIB::getXXX(EVT) selectors.
 void RuntimeLibcallEmitter::emitGetLibcallForIntrinsic(
-    raw_ostream &OS, ArrayRef<FPLibcallFamily> Families) const {
+    raw_ostream &OS, ArrayRef<FPLibcallFamily> Families,
+    const DenseSet<StringRef> &LibcallNames) const {
   IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALL_INTRINSIC_TO_LIBCALL");
-
-  DenseSet<StringRef> ExistingLibcalls;
-  for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList())
-    ExistingLibcalls.insert(LC.getName());
 
   std::vector<std::pair<StringRef, StringRef>> IntrinsicToBase;
   for (const FPLibcallFamily &Family : Families)
     for (StringRef Intrinsic : Family.Intrinsics)
       IntrinsicToBase.emplace_back(Intrinsic, Family.Base);
   llvm::sort(IntrinsicToBase);
-
-  for (size_t I = 1, E = IntrinsicToBase.size(); I < E; ++I)
-    if (IntrinsicToBase[I].first == IntrinsicToBase[I - 1].first) {
-      PrintFatalError(
-          "intrinsic '" + IntrinsicToBase[I].first +
-          "' is mapped by multiple RuntimeLibcallFamily records ('" +
-          IntrinsicToBase[I - 1].second + "' and '" +
-          IntrinsicToBase[I].second + "')");
-    }
 
   MapVector<StringRef, SmallVector<StringRef, 2>> BaseToIntrinsics;
   for (auto [Intrinsic, Base] : IntrinsicToBase)
@@ -678,11 +707,8 @@ void RuntimeLibcallEmitter::emitGetLibcallForIntrinsic(
   for (const auto &[Base, Intrinsics] : BaseToIntrinsics) {
     SmallVector<std::pair<StringRef, StringRef>, 5> Arms;
     for (auto [Suffix, Pred] : ScalarFPSuffixes)
-      if (ExistingLibcalls.contains((Base + "_" + Suffix).str()))
+      if (LibcallNames.contains((Base + "_" + Suffix).str()))
         Arms.emplace_back(Suffix, Pred);
-
-    if (Arms.empty())
-      PrintFatalError("no runtime libcall found for base name '" + Base + "'");
 
     for (StringRef Intrinsic : Intrinsics)
       OS << "  case Intrinsic::" << Intrinsic << ":\n";
@@ -710,9 +736,11 @@ void RuntimeLibcallEmitter::run(raw_ostream &OS) {
   }
 
   std::vector<FPLibcallFamily> FPFamilies = collectFPLibcallFamilies(Records);
+  DenseSet<StringRef> LibcallNames = collectLibcallNames();
+  checkFPLibcallFamilies(FPFamilies, LibcallNames);
   emitFPLibcallSelectorDecls(OS, FPFamilies);
-  emitFPLibcallSelectors(OS, FPFamilies);
-  emitGetLibcallForIntrinsic(OS, FPFamilies);
+  emitFPLibcallSelectors(OS, FPFamilies, LibcallNames);
+  emitGetLibcallForIntrinsic(OS, FPFamilies, LibcallNames);
 }
 
 static TableGen::Emitter::OptClass<RuntimeLibcallEmitter>

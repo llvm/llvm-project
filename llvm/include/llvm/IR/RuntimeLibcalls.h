@@ -123,8 +123,7 @@ public:
   }
 
   /// Return the runtime libcall that the floating-point math intrinsic \p ID
-  /// operating on type \p Ty may be lowered to, or RTLIB::UNKNOWN_LIBCALL if
-  /// there is no such mapping.
+  /// may be lowered to, or RTLIB::UNKNOWN_LIBCALL if there is no such mapping.
   ///
   /// \p FTy must be the intrinsic's call signature.
   LLVM_ABI static RTLIB::Libcall getLibcallForIntrinsic(Intrinsic::ID ID,

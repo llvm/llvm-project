@@ -134,6 +134,34 @@ TEST(RuntimeLibcallsTest, LibcallForIntrinsic) {
                                    ConstrainedUnarySig(Type::getDoubleTy(Ctx))),
       RTLIB::POW_F64);
 
+  // Intrinsics whose result is not the floating-point type resolve from the
+  // first floating-point argument instead.
+  Type *Dbl = Type::getDoubleTy(Ctx);
+  EXPECT_EQ(Info::getLibcallForIntrinsic(
+                Intrinsic::lround,
+                FunctionType::get(Type::getInt32Ty(Ctx), {Dbl}, false)),
+            RTLIB::LROUND_F64);
+  EXPECT_EQ(Info::getLibcallForIntrinsic(
+                Intrinsic::llround,
+                FunctionType::get(Type::getInt64Ty(Ctx), {Dbl}, false)),
+            RTLIB::LLROUND_F64);
+  EXPECT_EQ(
+      Info::getLibcallForIntrinsic(
+          Intrinsic::frexp,
+          FunctionType::get(StructType::get(Ctx, {Dbl, Type::getInt32Ty(Ctx)}),
+                            {Dbl}, false)),
+      RTLIB::FREXP_F64);
+  EXPECT_EQ(
+      Info::getLibcallForIntrinsic(
+          Intrinsic::sincos,
+          FunctionType::get(StructType::get(Ctx, {Dbl, Dbl}), {Dbl}, false)),
+      RTLIB::SINCOS_F64);
+  EXPECT_EQ(
+      Info::getLibcallForIntrinsic(
+          Intrinsic::modf,
+          FunctionType::get(StructType::get(Ctx, {Dbl, Dbl}), {Dbl}, false)),
+      RTLIB::MODF_F64);
+
   // Unmapped intrinsic.
   EXPECT_EQ(Info::getLibcallForIntrinsic(Intrinsic::fabs,
                                          UnarySig(Type::getDoubleTy(Ctx))),
@@ -142,6 +170,12 @@ TEST(RuntimeLibcallsTest, LibcallForIntrinsic) {
   // Mapped intrinsic, but a type with no matching libcall.
   EXPECT_EQ(Info::getLibcallForIntrinsic(Intrinsic::sin,
                                          UnarySig(Type::getHalfTy(Ctx))),
+            RTLIB::UNKNOWN_LIBCALL);
+
+  // Vectors are not currently mapped.
+  EXPECT_EQ(Info::getLibcallForIntrinsic(
+                Intrinsic::sin,
+                UnarySig(FixedVectorType::get(Type::getFloatTy(Ctx), 4))),
             RTLIB::UNKNOWN_LIBCALL);
 
   // Mapped intrinsic, but a signature with no floating-point argument/result.
