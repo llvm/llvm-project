@@ -41,6 +41,7 @@ plan-benchmarks --commit-list anchor-commits.txt                                
                 --machine <machine> --samples 3 > plan.jsonl
 
 # Request the corresponding workflow runs, at most 4 at a time to be a good citizen.
+export GITHUB_TOKEN=$(gh auth token)
 dispatch-benchmarks --work-items plan.jsonl --test-suite-commit <benchmark suite SHA>   \
                     --max-in-flight 4 --dry-run
 ```
@@ -52,6 +53,10 @@ get data for the missing commits, taking into account the number of samples we w
 each commit. Finally, `dispatch-benchmarks` interprets this plan and actually dispatches
 the Github workflows based on a budget, taking into account currently running workflows
 and previously failed runs, if any (to avoid requesting runs that fail indefinitely).
+
+Note that since `dispatch-benchmarks` both reads and creates workflow runs, it requires a
+GitHub token with write access to the repository. That token can either be passed as an
+argument or picked up from the `GITHUB_TOKEN` environment variable.
 
 ## Running benchmarks locally
 

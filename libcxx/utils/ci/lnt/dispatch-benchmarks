@@ -10,14 +10,14 @@
 from typing import Dict, List, NamedTuple, Optional, Sequence, TextIO
 import argparse
 import common
+import github
 import json
 import logging
+import os
 import pathlib
 import re
-import subprocess
 import sys
 import tabulate
-import urllib.parse
 
 
 class WorkflowRun(NamedTuple):
@@ -45,6 +45,10 @@ class Runs(NamedTuple):
         """How many runs are in flight on a machine, whatever they are benchmarking."""
         return sum(n for (target, n) in self.in_flight.items() if target.machine == machine)
 
+
+# The repository and the workflow this tool drives.
+REPOSITORY = 'llvm/llvm-project'
+WORKFLOW = 'libcxx-benchmark-commit.yml'
 
 # The name the benchmark workflow gives its runs. What a run is benchmarking can
 # only be recovered from its name (the inputs a workflow was dispatched with are
@@ -120,21 +124,18 @@ def target_of_run(title: str) -> Optional[common.Target]:
     return common.Target(match.group(1).lower(), match.group(2)) if match else None
 
 
-def run_gh(args: Sequence[str], stdin: Optional[str] = None) -> str:
-    command = ['gh', *args]
-    logging.debug(f'$ {" ".join(command)}')
+def connect(token: str, repository: str, workflow: str) -> github.Workflow.Workflow:
+    """Return the workflow this tool drives, as the Github API describes it."""
+    # Ask for the largest page size possible since we walk the whole run history.
+    client = github.Github(auth=github.Auth.Token(token), per_page=100)
+    logging.debug(f'looking up {workflow} in {repository}')
     try:
-        result = subprocess.run(command, check=True, text=True, input=stdin,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except FileNotFoundError:
-        raise GithubError('gh was not found. This tool needs the Github CLI to be installed.')
-    except subprocess.CalledProcessError as error:
-        raise GithubError(f'{" ".join(command)} failed with status {error.returncode}: '
-                          f'{error.stderr.strip()}')
-    return result.stdout
+        return client.get_repo(repository).get_workflow(workflow)
+    except github.GithubException as error:
+        raise GithubError(f'could not find the {workflow} workflow in {repository}: {error}')
 
 
-def workflow_runs(repo: str, workflow: str) -> List[WorkflowRun]:
+def workflow_runs(workflow: github.Workflow.Workflow) -> List[WorkflowRun]:
     """
     Return every run of a workflow whose name says what it benchmarks.
 
@@ -145,30 +146,35 @@ def workflow_runs(repo: str, workflow: str) -> List[WorkflowRun]:
     predate this tooling or don't represent expended capacity towards benchmarking
     a target.
     """
-    query = urllib.parse.urlencode({'per_page': 100})
-    # The projection also flattens paginated output into one object per line;
-    # without one, `--paginate` emits a whole JSON document per page.
-    output = run_gh(['api', '--paginate', '-q',
-                     '.workflow_runs[] | {id, display_title, status, conclusion}',
-                     f'/repos/{repo}/actions/workflows/{workflow}/runs?{query}'])
     runs: Dict[int, WorkflowRun] = {}
-    for line in output.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            data = json.loads(line)
-        except json.JSONDecodeError as error:
-            raise GithubError(f'could not parse a workflow run from gh output: {error}: {line}')
-        if 'id' not in data:
-            raise GithubError(f'a workflow run came back without an id: {line}')
-        target = target_of_run(data.get('display_title') or '')
-        if target is None or data.get('conclusion') == 'cancelled':
-            continue
-        # Deduplicate by id: pages can overlap while runs are being created.
-        runs[data['id']] = WorkflowRun(identifier=data['id'], target=target,
-                                       finished=(data.get('status') or '') == 'completed')
+    try:
+        for run in workflow.get_runs():
+            target = target_of_run(run.display_title) if run.display_title else None
+            if target is None or run.conclusion == 'cancelled':
+                continue
+            # Deduplicate by id: pages can overlap while runs are being created.
+            runs[run.id] = WorkflowRun(identifier=run.id, target=target,
+                                       finished=run.status == 'completed')
+    except github.GithubException as error:
+        raise GithubError(f'could not list the runs of {workflow.path}: {error}')
     return list(runs.values())
+
+
+def dispatch(workflow: github.Workflow.Workflow, inputs: Dict[str, str]) -> None:
+    """
+    Request one run of a workflow.
+
+    The definition on `main` is always the one that runs, whatever commit is being
+    benchmarked.
+    """
+    logging.debug(f'dispatching {workflow.path} with {inputs}')
+    try:
+        # A refused dispatch is reported by returning False rather than by raising, and
+        # the refusal reason is not surfaced. The request is all we can report.
+        if not workflow.create_dispatch(ref='main', inputs=inputs):
+            raise GithubError(f'the API refused to dispatch a run for {inputs["commit"]} on {inputs["lnt-machine"]}')
+    except github.GithubException as error:
+        raise GithubError(f'could not dispatch a run for {inputs["commit"]} on {inputs["lnt-machine"]}: {error}')
 
 
 def summarize(runs: Sequence[WorkflowRun]) -> Runs:
@@ -332,6 +338,10 @@ def main(argv: List[str]) -> int:
     parser.add_argument('--lnt-url', type=str, required=False,
         help='The LNT instance the runs should submit to. By default the workflow submits to '
              'whichever instance it defaults to.')
+    parser.add_argument('--token', type=str, required=False, # no default to avoid printing the token in --help
+        help='A Github token with write access to the repository, which is needed both to look at '
+             'the existing runs and to request new ones. Defaults to the GITHUB_TOKEN environment '
+             'variable. `gh auth token` can be used to print the token registered locally.')
     parser.add_argument('--dry-run', action='store_true',
         help='Do not request anything, just report what would be requested.')
     parser.add_argument('--output', type=pathlib.Path, default=None,
@@ -349,9 +359,14 @@ def main(argv: List[str]) -> int:
                         level=logging.DEBUG if args.verbose else
                               logging.WARNING if args.quiet else logging.INFO)
 
+    token = args.token or os.environ.get('GITHUB_TOKEN')
+    if not token:
+        raise ValueError('no Github token was provided: pass --token or set the GITHUB_TOKEN environment variable.')
+
     items = collapse(parse_plan(args.work_items))
 
-    runs = summarize(workflow_runs('llvm/llvm-project', 'libcxx-benchmark-commit.yml'))
+    workflow = connect(token, REPOSITORY, WORKFLOW)
+    runs = summarize(workflow_runs(workflow))
 
     decisions = decide(items, runs, args.max_in_flight, args.extra_attempts)
 
@@ -372,13 +387,9 @@ def main(argv: List[str]) -> int:
             if decision.action != 'dispatch':
                 continue
             inputs = workflow_inputs(args, decision.item)
-            body = json.dumps({'ref': 'main', 'inputs': inputs}) # always use the workflow on `main`
             for _ in range(decision.jobs):
                 if not args.dry_run:
-                    run_gh(['api', '-X', 'POST', '--input', '-',
-                            '/repos/llvm/llvm-project/actions/workflows/'
-                            'libcxx-benchmark-commit.yml/dispatches'],
-                           stdin=body)
+                    dispatch(workflow, inputs)
                 dispatched += 1
                 records.append(json.dumps({'commit': decision.item.commit,
                                            'machine': decision.item.machine,
@@ -405,5 +416,5 @@ def main(argv: List[str]) -> int:
 if __name__ == '__main__':
     try:
         sys.exit(main(sys.argv[1:]))
-    except (ValueError, OSError, GithubError) as error:
+    except (ValueError, OSError, GithubError, github.GithubException) as error:
         sys.exit(f'error: {error}')
