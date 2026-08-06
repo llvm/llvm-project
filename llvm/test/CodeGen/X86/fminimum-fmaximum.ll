@@ -2764,18 +2764,15 @@ define <4 x bfloat> @test_fmaximum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) {
 ;
 ; AVX512BF16-LABEL: test_fmaximum_v4bf16:
 ; AVX512BF16:       # %bb.0:
-; AVX512BF16-NEXT:    vptestnmw %xmm0, %xmm0, %k1
-; AVX512BF16-NEXT:    vpblendmw %xmm0, %xmm1, %xmm2 {%k1}
-; AVX512BF16-NEXT:    vpmovzxwd {{.*#+}} ymm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX512BF16-NEXT:    vpslld $16, %ymm3, %ymm3
-; AVX512BF16-NEXT:    vpmovzxwd {{.*#+}} ymm4 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; AVX512BF16-NEXT:    vpslld $16, %ymm4, %ymm4
-; AVX512BF16-NEXT:    vcmpltps %ymm3, %ymm4, %k1
-; AVX512BF16-NEXT:    vpblendmw %xmm0, %xmm1, %xmm0 {%k1}
-; AVX512BF16-NEXT:    vcmpunordps %ymm4, %ymm3, %k1
-; AVX512BF16-NEXT:    vmovdqu16 {{.*#+}} xmm0 {%k1} = [32704,32704,32704,32704,32704,32704,32704,32704]
-; AVX512BF16-NEXT:    vcmpeqps %ymm4, %ymm3, %k1
-; AVX512BF16-NEXT:    vmovdqu16 %xmm2, %xmm0 {%k1}
+; AVX512BF16-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512BF16-NEXT:    vpslld $16, %ymm1, %ymm1
+; AVX512BF16-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512BF16-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX512BF16-NEXT:    vmaxps %ymm1, %ymm0, %ymm1
+; AVX512BF16-NEXT:    vpternlogd {{.*#+}} ymm1 = ymm1 & (ymm0 | m32bcst)
+; AVX512BF16-NEXT:    vcmpunordps %ymm0, %ymm0, %k1
+; AVX512BF16-NEXT:    vmovaps %ymm0, %ymm1 {%k1}
+; AVX512BF16-NEXT:    vcvtneps2bf16 %ymm1, %xmm0
 ; AVX512BF16-NEXT:    vzeroupper
 ; AVX512BF16-NEXT:    retq
 ;
