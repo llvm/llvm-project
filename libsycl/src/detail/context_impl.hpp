@@ -86,6 +86,7 @@ private:
   const async_handler MAsyncHandler;
   const std::vector<DeviceImpl *> MDevices;
   ol_context_handle_t MOffloadContext{};
+  property_list MPropList;
 };
 
 } // namespace detail

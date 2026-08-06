@@ -16,8 +16,10 @@
 #ifndef _LIBSYCL___IMPL_CONTEXT_HPP
 #define _LIBSYCL___IMPL_CONTEXT_HPP
 
+#include <sycl/__impl/async_handler.hpp>
 #include <sycl/__impl/backend.hpp>
 #include <sycl/__impl/info/desc_base.hpp>
+#include <sycl/__impl/property_list.hpp>
 
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
@@ -40,6 +42,80 @@ using is_context_info_desc_t = typename is_info_desc<T, context>::return_type;
 // SYCL 2020 4.6.3. Context class
 class _LIBSYCL_EXPORT context {
 public:
+  /// @brief Constructs a SYCL context instance using an instance of
+  /// default_selector.
+  ///
+  /// @param propList SYCL properties to be associated with the context.
+  explicit context(const property_list &propList = {});
+
+  /// @brief Constructs a SYCL context instance using an instance of
+  /// device_selector.
+  ///
+  /// @param asyncHandler Async handler to be used for asynchronous error
+  /// reporting.
+  /// @param propList SYCL properties to be associated with the context.
+  explicit context(async_handler asyncHandler,
+                   const property_list &propList = {});
+
+  /// @brief Constructs a SYCL context instance using the provided device.
+  /// The context will be associated with the platform of the provided device.
+  ///
+  /// @param dev is an instance of SYCL device
+  /// @param propList SYCL properties to be associated with the context.
+  explicit context(const device &dev, const property_list &propList = {});
+
+  /// @brief Constructs a SYCL context instance using the provided device.
+  /// The context will be associated with the platform of the provided device.
+  ///
+  /// @param dev is an instance of SYCL device
+  /// @param asyncHandler Async handler to be used for asynchronous error
+  /// reporting.
+  /// @param propList SYCL properties to be associated with the context.
+  explicit context(const device &dev, async_handler asyncHandler,
+                   const property_list &propList = {});
+
+  /// @brief Constructs a SYCL context instance using the provided platform.
+  /// The context will be associated with the provided platform and with each
+  /// SYCL device that is associated with the Platform.
+  ///
+  /// @param plt is an instance of SYCL platform
+  /// @param propList SYCL properties to be associated with the context.
+  explicit context(const platform &plt, const property_list &propList = {});
+
+  /// @brief Constructs a SYCL context instance using the provided platform.
+  /// The context will be associated with the provided platform and with each
+  /// SYCL device that is associated with the Platform.
+  ///
+  /// @param plt is an instance of SYCL platform
+  /// @param asyncHandler Async handler to be used for asynchronous error
+  /// reporting.
+  /// @param propList SYCL properties to be associated with the context.
+  explicit context(const platform &plt, async_handler asyncHandler,
+                   const property_list &propList = {});
+
+  /// @brief Constructs a SYCL context instance using the provided list of
+  /// devices. The context will be associated with each SYCL device in the
+  /// deviceList. This requires that all devices in the deviceList are
+  /// associated with the same platform.
+  ///
+  /// @param deviceList is a vector of SYCL devices
+  /// @param propList SYCL properties to be associated with the context.
+  explicit context(const std::vector<device> &deviceList,
+                   const property_list &propList = {});
+
+  /// @brief Constructs a SYCL context instance using the provided list of
+  /// devices. The context will be associated with each SYCL device in the
+  /// deviceList. This requires that all devices in the deviceList are
+  /// associated with the same platform.
+  ///
+  /// @param deviceList is a vector of SYCL devices
+  /// @param asyncHandler Async handler to be used for asynchronous error
+  /// reporting.
+  /// @param propList SYCL properties to be associated with the context.
+  explicit context(const std::vector<device> &deviceList,
+                   async_handler asyncHandler,
+                   const property_list &propList = {});
+
   context(const context &rhs) = default;
 
   context(context &&rhs) = default;

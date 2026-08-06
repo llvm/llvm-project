@@ -16,9 +16,7 @@ namespace detail {
 ContextImpl::ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
                          const async_handler &AsyncHandler,
                          const property_list &PropList, Private)
-    : MAsyncHandler(AsyncHandler), MDevices(DeviceList) {
-  (void)PropList;
-
+    : MAsyncHandler(AsyncHandler), MDevices(DeviceList), MPropList(PropList) {
   assert(!MDevices.empty() && "Device list must not be empty");
 
   std::vector<ol_device_handle_t> DeviceIds;
