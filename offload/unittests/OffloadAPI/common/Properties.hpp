@@ -43,8 +43,9 @@ auto createPropertiesWithSizeContainer(
 }
 
 template <typename T>
-auto mergeProperties(std::initializer_list<PropertiesWithSizeContainer<T>>
-                         Properties) -> PropertiesWithSizeContainer<T> {
+auto mergeProperties(
+    std::initializer_list<PropertiesWithSizeContainer<T>> Properties)
+    -> PropertiesWithSizeContainer<T> {
   PropertiesWithSizeContainer<T> FinalProperties;
 
   for (auto Prop : Properties) {
