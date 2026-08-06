@@ -255,6 +255,9 @@ public:
            hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f});
   }
 
+  // Checks support for conversions involving ue5m3x2.
+  bool hasUE5M3TypeSupport() const { return hasPTXWithFamilySMs(94, {107}); }
+
   bool hasTensormapReplaceSupport() const {
     return hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f}) ||
            (PTXVersion >= 83 && hasAnyFeature({NVPTX::SM90a}));
