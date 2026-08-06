@@ -98,6 +98,9 @@ Improvements to clang-tidy
   ``-std=cXX-or-earlier`` values, mirroring the existing ``-std=cXX-or-later``.
   New construct expands to the given standard and every earlier one.
 
+- Improved :program:`clang-tidy` ``--verify-config`` by correctly handling
+  custom checks.
+
 New checks
 ^^^^^^^^^^
 
