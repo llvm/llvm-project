@@ -254,7 +254,7 @@ public:
 
     /// Whether the address of the binary should be set in the Target if it is
     /// added.  A caller that wants to set the section addresses individually
-    /// leaves this clear, and is then responsible for setting the load address
+    /// leaves this false, and is then responsible for setting the load address
     /// for the binary or its segments in the Target.
     bool set_address_in_target = false;
 
@@ -264,7 +264,7 @@ public:
     /// be no symbols mapped in memory at all.
     bool allow_memory_image_last_resort = false;
 
-    /// The module the binary was found as, or empty if it was not found.  It is
+    /// The module found for the binary, or empty if it was not found.  It is
     /// not registered with the Target until LoadBinaryInTarget.
     lldb::ModuleSP module_sp;
 
@@ -305,8 +305,10 @@ public:
   /// Search for a batch of binaries, without mutating the Target.
   ///
   /// The entries are independent: a binary that cannot be found leaves its
-  /// BinarySpec::module_sp empty and has no effect on the others.  Nothing is
-  /// registered with the Target, see LoadBinaryInTarget.
+  /// BinarySpec::module_sp empty and has no effect on the others.  Its
+  /// BinarySpec::memory_module_sp is set only when the binary's header had to
+  /// be read out of memory to get the UUID.  Nothing is registered with the
+  /// Target, see LoadBinaryInTarget.
   ///
   /// \param[in] process
   ///     The process the binaries belong to.  Used to read a binary's header
