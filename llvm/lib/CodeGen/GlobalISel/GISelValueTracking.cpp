@@ -1064,6 +1064,18 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     }
     break;
   }
+  case TargetOpcode::G_EXTRACT_SUBVECTOR: {
+    // Offset the demanded elts by the subvector index.
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+    if (SrcTy.isScalableVector())
+      break;
+    uint64_t Idx = MI.getOperand(2).getImm();
+    unsigned NumSrcElts = SrcTy.getNumElements();
+    APInt DemandedSrcElts = DemandedElts.zext(NumSrcElts).shl(Idx);
+    computeKnownBitsImpl(SrcReg, Known, DemandedSrcElts, Depth + 1);
+    break;
+  }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     APInt DemandedLHS, DemandedRHS;
     // Collect the known bits that are shared by every vector element referenced
