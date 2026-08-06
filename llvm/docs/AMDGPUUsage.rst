@@ -1906,10 +1906,16 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - 0x0002: VALU instructions may be scheduled across sched_barrier.
                                                    - 0x0004: SALU instructions may be scheduled across sched_barrier.
                                                    - 0x0008: MFMA/WMMA instructions may be scheduled across sched_barrier.
-                                                   - 0x0010: All VMEM instructions may be scheduled across sched_barrier.
-                                                   - 0x0020: VMEM read instructions may be scheduled across sched_barrier.
-                                                   - 0x0040: VMEM write instructions may be scheduled across sched_barrier.
-                                                   - 0x0080: All DS instructions may be scheduled across sched_barrier.
+                                                   - 0x0010: All VMEM instructions may be scheduled across sched_barrier. This
+                                                     includes LDSDMA instructions.
+                                                   - 0x0020: VMEM read instructions may be scheduled across sched_barrier. This
+                                                     does not include LDSDMA instructions; only loads targeting VGPRs are
+                                                     allowed.
+                                                   - 0x0040: VMEM write instructions may be scheduled across sched_barrier. This
+                                                     does not include LDSDMA instructions; only stores sourcing from VGPRs are
+                                                     allowed.
+                                                   - 0x0080: All DS instructions may be scheduled across sched_barrier. This
+                                                     includes LDSDMA instructions.
                                                    - 0x0100: All DS read instructions may be scheduled across sched_barrier.
                                                    - 0x0200: All DS write instructions may be scheduled across sched_barrier.
                                                    - 0x0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across sched_barrier.
