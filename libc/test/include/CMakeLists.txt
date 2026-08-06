@@ -113,6 +113,7 @@ add_libc_test(
     sched_test.cpp
   DEPENDS
     libc.include.sched
+    libc.src.sched.sched_getscheduler
 )
 
 add_libc_test(
