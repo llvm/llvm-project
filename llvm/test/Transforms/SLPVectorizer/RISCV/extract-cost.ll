@@ -6,11 +6,13 @@
 define double @f(ptr %p, double %c) {
 ; CHECK-LABEL: define double @f(
 ; CHECK-SAME: ptr [[P:%.*]], double [[C:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> splat (double 2.000000e+00), [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> splat (double 3.000000e+00), [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
+; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[P]], align 8
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr double, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[Q]], align 8
+; CHECK-NEXT:    [[M0:%.*]] = fmul double 2.000000e+00, [[X1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd double 3.000000e+00, [[M0]]
+; CHECK-NEXT:    [[M1:%.*]] = fmul double 2.000000e+00, [[X0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd double 3.000000e+00, [[M1]]
 ; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.fmuladd.f64(double [[C]], double [[TMP5]], double [[TMP4]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
