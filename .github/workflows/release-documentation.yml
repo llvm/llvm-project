@@ -117,14 +117,12 @@ jobs:
             $(test -n "$INPUTS_RELEASE_VERSION" && echo -release "$INPUTS_RELEASE_VERSION" || echo -srcdir llvm)
             ls -ltr
           echo "man-page-tarball-name=$(basename $(find . -iname 'llvm_man_pages-*.tar.xz'))" >> "$GITHUB_OUTPUT"
-          echo "doxygen-tarball-names=$(find . -maxdepth 1 -iname "$DOXYGEN_FILE_PATTERN" -exec basename {} \; | xargs)" >> "$GITHUB_OUTPUT"
 
       - name: Generate sha256 digest for tarballs
         id: man-page-digest
         shell: bash
         env:
           MAN_PAGE_TARBALL_NAME: ${{ steps.build.outputs.man-page-tarball-name }}
-          DOXYGEN_TARBALL_NAMES: ${{ steps.build.outputs.doxygen-tarball-names }}
         run: |
             echo "man-page-digest=$(cat "$MAN_PAGE_TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
             echo "doxygen-digest=$(cat $(xargs <<< "$DOXYGEN_FILE_PATTERN") | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
