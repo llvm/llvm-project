@@ -299,6 +299,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  useconds_t
+  HDRS
+    useconds_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.useconds_t
+)
+
+add_proxy_header_library(
   struct_timeval
   HDRS
     struct_timeval.h
@@ -600,6 +608,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_if_nameindex
+  HDRS
+    struct_if_nameindex.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_if_nameindex
+    libc.include.net_if
+)
+
+add_proxy_header_library(
   struct_sockaddr
   HDRS
     struct_sockaddr.h
@@ -701,7 +718,6 @@ add_proxy_header_library(
     libc.include.llvm-libc-types.wint_t
     libc.include.wchar
 )
-
 
 add_proxy_header_library(
   wctype_t
