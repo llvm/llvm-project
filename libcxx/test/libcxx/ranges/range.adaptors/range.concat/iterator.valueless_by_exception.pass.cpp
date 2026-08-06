@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers, libcpp-hardening-mode={{extensive|debug}}
+// REQUIRES: can-test-hardening-assertions-extensive
 // REQUIRES: std-at-least-c++26
-// UNSUPPORTED: libcpp-hardening-mode=none
 
 #include <iostream>
 #include <ranges>
