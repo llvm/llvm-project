@@ -30,8 +30,8 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
 
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "gmock/gmock.h"
 #include <string>
 
 using namespace llvm;
@@ -109,7 +109,7 @@ template <typename StrpT> static void TestFunctionInfoImpl(StrpT NameOffset) {
   const uint32_t FileIdx = 1;
   const uint32_t Line = 12;
   FI.OptLineTable = LineTable();
-  FI.OptLineTable->push(LineEntry(StartAddr, FileIdx, Line));
+  FI.OptLineTable->push(LineEntry(StartAddr,FileIdx,Line));
   EXPECT_TRUE(FI.hasRichInfo());
   FI.clear();
   EXPECT_FALSE(FI.isValid());
@@ -145,7 +145,7 @@ template <typename StrpT> static void TestFunctionInfoImpl(StrpT NameOffset) {
   FunctionInfo FISymtab(StartAddr, Size, NameOffset);
   FunctionInfo FIWithLines(StartAddr, Size, NameOffset);
   FIWithLines.OptLineTable = LineTable();
-  FIWithLines.OptLineTable->push(LineEntry(StartAddr, FileIdx, Line));
+  FIWithLines.OptLineTable->push(LineEntry(StartAddr,FileIdx,Line));
   // Test that a FunctionInfo with just a name and size is less than one
   // that has name, size and any number of line table entries
   EXPECT_LT(FISymtab, FIWithLines);
@@ -176,7 +176,7 @@ template <typename StrpT> static void TestFunctionInfoImpl(StrpT NameOffset) {
   // Test if we have an entry with lines and one with more lines for the same
   // range, the ones with more lines is greater than the one with less.
   FunctionInfo FIWithMoreLines = FIWithLines;
-  FIWithMoreLines.OptLineTable->push(LineEntry(StartAddr, FileIdx, Line + 5));
+  FIWithMoreLines.OptLineTable->push(LineEntry(StartAddr,FileIdx,Line+5));
   EXPECT_LT(FIWithLines, FIWithMoreLines);
 
   // Test that if we have the same number of lines we compare the line entries
@@ -251,7 +251,7 @@ template <typename StrpT> static void TestFunctionInfoDecodeErrors() {
       ByteOrder, OutStrm.str(), BaseAddr,
       Hex(PostInfoTypeOff) + ": missing FunctionInfo InfoType length");
   FW.fixup32(7, FixupOffset); // Write an invalid InfoType enumeration value
-  FW.writeU32(0);             // LineTableInfo InfoType data length.
+  FW.writeU32(0); // LineTableInfo InfoType data length.
   TestFunctionInfoDecodeError<StrpT>(ByteOrder, OutStrm.str(), BaseAddr,
                                      Hex(PostNameOff) +
                                          ": unsupported InfoType 7");
@@ -331,13 +331,13 @@ static void TestFunctionInfoEncodeDecode(llvm::endianness ByteOrder,
 }
 
 static void AddLines(uint64_t FuncAddr, uint32_t FileIdx, FunctionInfo &FI) {
-  FI.OptLineTable = LineTable();
-  LineEntry Line0(FuncAddr + 0x000, FileIdx, 10);
-  LineEntry Line1(FuncAddr + 0x010, FileIdx, 11);
-  LineEntry Line2(FuncAddr + 0x100, FileIdx, 1000);
-  FI.OptLineTable->push(Line0);
-  FI.OptLineTable->push(Line1);
-  FI.OptLineTable->push(Line2);
+    FI.OptLineTable = LineTable();
+    LineEntry Line0(FuncAddr + 0x000, FileIdx, 10);
+    LineEntry Line1(FuncAddr + 0x010, FileIdx, 11);
+    LineEntry Line2(FuncAddr + 0x100, FileIdx, 1000);
+    FI.OptLineTable->push(Line0);
+    FI.OptLineTable->push(Line1);
+    FI.OptLineTable->push(Line2);
 }
 
 template <typename StrpT>
@@ -602,7 +602,7 @@ template <typename StrpT> static void TestInlineInfoDecodeErrors() {
       ByteOrder, OutStrm.str(), BaseAddr,
       "0x00000000: missing InlineInfo address ranges data");
   AddressRanges Ranges;
-  Ranges.insert({BaseAddr, BaseAddr + 0x100});
+  Ranges.insert({BaseAddr, BaseAddr+0x100});
   encodeRanges(Ranges, FW, BaseAddr);
   TestInlineInfoDecodeError<StrpT>(
       ByteOrder, OutStrm.str(), BaseAddr,
@@ -843,20 +843,20 @@ TEST(GSYMTest, TestLineTable) {
   const uint64_t StartAddr = 0x1000;
   const uint32_t FileIdx = 1;
   LineTable LT;
-  LineEntry Line0(StartAddr + 0x000, FileIdx, 10);
-  LineEntry Line1(StartAddr + 0x010, FileIdx, 11);
-  LineEntry Line2(StartAddr + 0x100, FileIdx, 1000);
+  LineEntry Line0(StartAddr+0x000, FileIdx, 10);
+  LineEntry Line1(StartAddr+0x010, FileIdx, 11);
+  LineEntry Line2(StartAddr+0x100, FileIdx, 1000);
   ASSERT_TRUE(LT.empty());
   ASSERT_EQ(LT.size(), (size_t)0);
   LT.push(Line0);
   ASSERT_EQ(LT.size(), (size_t)1);
   LT.push(Line1);
   LT.push(Line2);
-  LT.push(LineEntry(StartAddr + 0x120, FileIdx, 900));
-  LT.push(LineEntry(StartAddr + 0x120, FileIdx, 2000));
-  LT.push(LineEntry(StartAddr + 0x121, FileIdx, 2001));
-  LT.push(LineEntry(StartAddr + 0x122, FileIdx, 2002));
-  LT.push(LineEntry(StartAddr + 0x123, FileIdx, 2003));
+  LT.push(LineEntry(StartAddr+0x120, FileIdx, 900));
+  LT.push(LineEntry(StartAddr+0x120, FileIdx, 2000));
+  LT.push(LineEntry(StartAddr+0x121, FileIdx, 2001));
+  LT.push(LineEntry(StartAddr+0x122, FileIdx, 2002));
+  LT.push(LineEntry(StartAddr+0x123, FileIdx, 2003));
   ASSERT_FALSE(LT.empty());
   ASSERT_EQ(LT.size(), (size_t)8);
   // Test operator[].
@@ -917,30 +917,30 @@ TEST(GSYMTest, TestLineTableDecodeErrors) {
   FileWriter FW(OutStrm, ByteOrder);
   const uint64_t BaseAddr = 0x100;
   TestLineTableDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-                           "0x00000000: missing LineTable MinDelta");
+      "0x00000000: missing LineTable MinDelta");
   FW.writeU8(1); // MinDelta (ULEB)
   TestLineTableDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-                           "0x00000001: missing LineTable MaxDelta");
+      "0x00000001: missing LineTable MaxDelta");
   FW.writeU8(10); // MaxDelta (ULEB)
   TestLineTableDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-                           "0x00000002: missing LineTable FirstLine");
+      "0x00000002: missing LineTable FirstLine");
   FW.writeU8(20); // FirstLine (ULEB)
   TestLineTableDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-                           "0x00000003: EOF found before EndSequence");
+      "0x00000003: EOF found before EndSequence");
   // Test a SetFile with the argument missing from the stream
   FW.writeU8(1); // SetFile opcode (uint8_t)
   TestLineTableDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-                           "0x00000004: EOF found before SetFile value");
+      "0x00000004: EOF found before SetFile value");
   FW.writeU8(5); // SetFile value as index (ULEB)
   // Test a AdvancePC with the argument missing from the stream
   FW.writeU8(2); // AdvancePC opcode (uint8_t)
   TestLineTableDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-                           "0x00000006: EOF found before AdvancePC value");
+      "0x00000006: EOF found before AdvancePC value");
   FW.writeU8(20); // AdvancePC value as offset (ULEB)
   // Test a AdvancePC with the argument missing from the stream
   FW.writeU8(3); // AdvanceLine opcode (uint8_t)
   TestLineTableDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-                           "0x00000008: EOF found before AdvanceLine value");
+      "0x00000008: EOF found before AdvanceLine value");
   FW.writeU8(20); // AdvanceLine value as offset (LLEB)
 }
 
@@ -957,17 +957,16 @@ TEST(GSYMTest, TestLineTableEncodeErrors) {
 
   // Try to encode a line table where a line entry has an address that is less
   // than BaseAddr and verify we get an appropriate error.
-  LineEntry Line0(BaseAddr + 0x000, FileIdx, 10);
-  LineEntry Line1(BaseAddr + 0x010, FileIdx, 11);
+  LineEntry Line0(BaseAddr+0x000, FileIdx, 10);
+  LineEntry Line1(BaseAddr+0x010, FileIdx, 11);
   LT.push(Line0);
   LT.push(Line1);
   checkError("LineEntry has address 0x1000 which is less than the function "
-             "start address 0x1010",
-             LT.encode(FW, BaseAddr + 0x10));
+             "start address 0x1010", LT.encode(FW, BaseAddr+0x10));
   LT.clear();
 
-  // Try to encode a line table where a line entries  has an address that is
-  // less than BaseAddr and verify we get an appropriate error.
+  // Try to encode a line table where a line entries  has an address that is less
+  // than BaseAddr and verify we get an appropriate error.
   LT.push(Line1);
   LT.push(Line0);
   checkError("LineEntry in LineTable not in ascending order",
@@ -1003,9 +1002,9 @@ static void InitHeader(Header &H) {
   H.UUIDSize = 16;
   H.BaseAddress = 0x1000;
   H.NumAddresses = 1;
-  H.StrtabOffset = 0x2000;
+  H.StrtabOffset= 0x2000;
   H.StrtabSize = 0x1000;
-  for (size_t i = 0; i < GSYM_MAX_UUID_SIZE; ++i) {
+  for (size_t i=0; i<GSYM_MAX_UUID_SIZE; ++i) {
     if (i < H.UUIDSize)
       H.UUID[i] = i;
     else
@@ -1153,8 +1152,8 @@ static void TestGsymCreatorEncodeErrorHelper(llvm::endianness ByteOrder,
 }
 
 template <typename CreatorT> static void TestGsymCreatorEncodeErrors() {
-  const uint8_t ValidUUID[] = {1, 2,  3,  4,  5,  6,  7,  8,
-                               9, 10, 11, 12, 13, 14, 15, 16};
+  const uint8_t ValidUUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+                               14, 15, 16};
   // Verify we get an error when trying to encode a GsymCreator with no
   // function infos. We shouldn't be saving a GSYM file in this case since
   // there is nothing inside of it.
@@ -1183,7 +1182,7 @@ template <typename CreatorT> static void TestGsymCreatorEncodeErrors() {
   // table.
   GC.forEachFunctionInfo([](FunctionInfo &FI) -> bool {
     FI.OptLineTable = LineTable(); // Invalid line table.
-    return false;                  // Stop iterating
+    return false; // Stop iterating
   });
   TestGsymCreatorEncodeErrorHelper(
       llvm::endianness::little, GC,
@@ -1193,7 +1192,7 @@ template <typename CreatorT> static void TestGsymCreatorEncodeErrors() {
   GC.forEachFunctionInfo([](FunctionInfo &FI) -> bool {
     FI.OptLineTable = std::nullopt;
     FI.Inline = InlineInfo(); // Invalid InlineInfo.
-    return false;             // Stop iterating
+    return false; // Stop iterating
   });
   TestGsymCreatorEncodeErrorHelper(
       llvm::endianness::little, GC,
@@ -1353,7 +1352,7 @@ static void TestGsymReader(llvm::endianness ByteOrder) {
   GC.setUUID(UUID);
   constexpr uint64_t BaseAddr = 0x1000;
   constexpr uint64_t Func1Addr = BaseAddr;
-  constexpr uint64_t Func2Addr = BaseAddr + 0x20;
+  constexpr uint64_t Func2Addr = BaseAddr+0x20;
   constexpr uint64_t FuncSize = 0x10;
   const uint32_t Func1Name = GC.insertString("foo");
   const uint32_t Func2Name = GC.insertString("bar");
@@ -1370,20 +1369,20 @@ static void TestGsymReader(llvm::endianness ByteOrder) {
   ASSERT_FALSE((bool)Err);
   if (auto ExpectedGR = GsymReader::copyBuffer(OutStrm.str())) {
     const GsymReader &GR = **ExpectedGR;
-    VerifyFunctionInfoError(GR, Func1Addr - 1, "address 0xfff is not in GSYM");
+    VerifyFunctionInfoError(GR, Func1Addr-1, "address 0xfff is not in GSYM");
 
     FunctionInfo Func1(Func1Addr, FuncSize, Func1Name);
     VerifyFunctionInfo(GR, Func1Addr, Func1);
-    VerifyFunctionInfo(GR, Func1Addr + 1, Func1);
-    VerifyFunctionInfo(GR, Func1Addr + FuncSize - 1, Func1);
-    VerifyFunctionInfoError(GR, Func1Addr + FuncSize,
+    VerifyFunctionInfo(GR, Func1Addr+1, Func1);
+    VerifyFunctionInfo(GR, Func1Addr+FuncSize-1, Func1);
+    VerifyFunctionInfoError(GR, Func1Addr+FuncSize,
                             "address 0x1010 is not in GSYM");
-    VerifyFunctionInfoError(GR, Func2Addr - 1, "address 0x101f is not in GSYM");
+    VerifyFunctionInfoError(GR, Func2Addr-1, "address 0x101f is not in GSYM");
     FunctionInfo Func2(Func2Addr, FuncSize, Func2Name);
     VerifyFunctionInfo(GR, Func2Addr, Func2);
-    VerifyFunctionInfo(GR, Func2Addr + 1, Func2);
-    VerifyFunctionInfo(GR, Func2Addr + FuncSize - 1, Func2);
-    VerifyFunctionInfoError(GR, Func2Addr + FuncSize,
+    VerifyFunctionInfo(GR, Func2Addr+1, Func2);
+    VerifyFunctionInfo(GR, Func2Addr+FuncSize-1, Func2);
+    VerifyFunctionInfoError(GR, Func2Addr+FuncSize,
                             "address 0x1030 is not in GSYM");
   }
 }
@@ -1451,55 +1450,50 @@ static void TestGsymLookups(llvm::endianness ByteOrder) {
   // Verify inline info is correct when doing lookups.
   auto LR = GR->lookup(0x1000);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
-  EXPECT_THAT(LR->Locations, testing::ElementsAre(
-                                 SourceLocation{"main", "/tmp", "main.c", 5}));
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 5}));
   LR = GR->lookup(0x100F);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
-  EXPECT_THAT(LR->Locations, testing::ElementsAre(SourceLocation{
-                                 "main", "/tmp", "main.c", 5, 15}));
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 5, 15}));
 
   LR = GR->lookup(0x1010);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
 
-  EXPECT_THAT(
-      LR->Locations,
-      testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 10},
-                           SourceLocation{"main", "/tmp", "main.c", 6, 16}));
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 10},
+                         SourceLocation{"main", "/tmp", "main.c", 6, 16}));
 
   LR = GR->lookup(0x1012);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
-  EXPECT_THAT(
-      LR->Locations,
-      testing::ElementsAre(SourceLocation{"inline2", "/tmp", "foo.h", 20},
-                           SourceLocation{"inline1", "/tmp", "foo.h", 33, 2},
-                           SourceLocation{"main", "/tmp", "main.c", 6, 18}));
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"inline2", "/tmp", "foo.h", 20},
+                         SourceLocation{"inline1", "/tmp", "foo.h", 33, 2},
+                         SourceLocation{"main", "/tmp", "main.c", 6, 18}));
 
   LR = GR->lookup(0x1014);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
-  EXPECT_THAT(
-      LR->Locations,
-      testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 11, 4},
-                           SourceLocation{"main", "/tmp", "main.c", 6, 20}));
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 11, 4},
+                         SourceLocation{"main", "/tmp", "main.c", 6, 20}));
 
   LR = GR->lookup(0x1016);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
-  EXPECT_THAT(
-      LR->Locations,
-      testing::ElementsAre(SourceLocation{"inline3", "/tmp", "foo.h", 30},
-                           SourceLocation{"inline1", "/tmp", "foo.h", 35, 6},
-                           SourceLocation{"main", "/tmp", "main.c", 6, 22}));
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"inline3", "/tmp", "foo.h", 30},
+                         SourceLocation{"inline1", "/tmp", "foo.h", 35, 6},
+                         SourceLocation{"main", "/tmp", "main.c", 6, 22}));
 
   LR = GR->lookup(0x1018);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
-  EXPECT_THAT(
-      LR->Locations,
-      testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 12, 8},
-                           SourceLocation{"main", "/tmp", "main.c", 6, 24}));
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "foo.h", 12, 8},
+                         SourceLocation{"main", "/tmp", "main.c", 6, 24}));
 
   LR = GR->lookup(0x1020);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
-  EXPECT_THAT(LR->Locations, testing::ElementsAre(SourceLocation{
-                                 "main", "/tmp", "main.c", 8, 32}));
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 8, 32}));
 }
 
 TEST(GSYMTest, TestGsymLookups) {
@@ -2126,44 +2120,40 @@ template <typename CreatorT> static void TestDWARFInlineInfo() {
   StringRef MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "main");
 
-  // Verify inline info is correct when doing lookups.
+    // Verify inline info is correct when doing lookups.
   auto LR = GR->lookup(0x1000);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
-  EXPECT_THAT(LR->Locations, testing::ElementsAre(
-                                 SourceLocation{"main", "/tmp", "main.c", 10}));
-  LR = GR->lookup(0x1100 - 1);
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 10}));
+  LR = GR->lookup(0x1100-1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
-  EXPECT_THAT(LR->Locations, testing::ElementsAre(SourceLocation{
-                                 "main", "/tmp", "main.c", 10, 255}));
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 10, 255}));
 
   LR = GR->lookup(0x1100);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
-  EXPECT_THAT(
-      LR->Locations,
-      testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20},
-                           SourceLocation{"main", "/tmp", "main.c", 10, 256}));
-  LR = GR->lookup(0x1180 - 1);
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20},
+                         SourceLocation{"main", "/tmp", "main.c", 10, 256}));
+  LR = GR->lookup(0x1180-1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
-              testing::ElementsAre(
-                  SourceLocation{"inline1", "/tmp", "inline.h", 20, 127},
-                  SourceLocation{"main", "/tmp", "main.c", 10, 383}));
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 20, 127},
+                         SourceLocation{"main", "/tmp", "main.c", 10, 383}));
   LR = GR->lookup(0x1180);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
-              testing::ElementsAre(
-                  SourceLocation{"inline1", "/tmp", "inline.h", 21, 128},
-                  SourceLocation{"main", "/tmp", "main.c", 10, 384}));
-  LR = GR->lookup(0x1200 - 1);
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 21, 128},
+                         SourceLocation{"main", "/tmp", "main.c", 10, 384}));
+  LR = GR->lookup(0x1200-1);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
   EXPECT_THAT(LR->Locations,
-              testing::ElementsAre(
-                  SourceLocation{"inline1", "/tmp", "inline.h", 21, 255},
-                  SourceLocation{"main", "/tmp", "main.c", 10, 511}));
+    testing::ElementsAre(SourceLocation{"inline1", "/tmp", "inline.h", 21, 255},
+                         SourceLocation{"main", "/tmp", "main.c", 10, 511}));
   LR = GR->lookup(0x1200);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
-  EXPECT_THAT(LR->Locations, testing::ElementsAre(SourceLocation{
-                                 "main", "/tmp", "main.c", 11, 512}));
+  EXPECT_THAT(LR->Locations,
+    testing::ElementsAre(SourceLocation{"main", "/tmp", "main.c", 11, 512}));
 }
 
 TEST(GSYMTest, TestDWARFInlineInfo) { TestDWARFInlineInfo<GsymCreatorV1>(); }
@@ -2766,8 +2756,7 @@ TEST(GSYMTest, TestGsymCreatorV2MultipleSymbolsWithNoSize) {
   TestGsymCreatorMultipleSymbolsWithNoSizeImpl<GsymCreatorV2>(1, 8, 8);
 }
 
-// Helper function to quickly create a FunctionInfo in a GsymCreator for
-// testing.
+// Helper function to quickly create a FunctionInfo in a GsymCreator for testing.
 static void AddFunctionInfo(GsymCreator &GC, const char *FuncName,
                             uint64_t FuncAddr, const char *SourcePath,
                             const char *HeaderPath) {
@@ -2775,21 +2764,18 @@ static void AddFunctionInfo(GsymCreator &GC, const char *FuncName,
   FI.OptLineTable = LineTable();
   const uint32_t SourceFileIdx = GC.insertFile(SourcePath);
   const uint32_t HeaderFileIdx = GC.insertFile(HeaderPath);
-  FI.OptLineTable->push(LineEntry(FuncAddr + 0x00, SourceFileIdx, 5));
-  FI.OptLineTable->push(LineEntry(FuncAddr + 0x10, HeaderFileIdx, 10));
-  FI.OptLineTable->push(LineEntry(FuncAddr + 0x12, HeaderFileIdx, 20));
-  FI.OptLineTable->push(LineEntry(FuncAddr + 0x14, HeaderFileIdx, 11));
-  FI.OptLineTable->push(LineEntry(FuncAddr + 0x16, HeaderFileIdx, 30));
-  FI.OptLineTable->push(LineEntry(FuncAddr + 0x18, HeaderFileIdx, 12));
-  FI.OptLineTable->push(LineEntry(FuncAddr + 0x20, SourceFileIdx, 8));
+  FI.OptLineTable->push(LineEntry(FuncAddr+0x00, SourceFileIdx, 5));
+  FI.OptLineTable->push(LineEntry(FuncAddr+0x10, HeaderFileIdx, 10));
+  FI.OptLineTable->push(LineEntry(FuncAddr+0x12, HeaderFileIdx, 20));
+  FI.OptLineTable->push(LineEntry(FuncAddr+0x14, HeaderFileIdx, 11));
+  FI.OptLineTable->push(LineEntry(FuncAddr+0x16, HeaderFileIdx, 30));
+  FI.OptLineTable->push(LineEntry(FuncAddr+0x18, HeaderFileIdx, 12));
+  FI.OptLineTable->push(LineEntry(FuncAddr+0x20, SourceFileIdx, 8));
   FI.Inline = InlineInfo();
 
-  std::string InlineName1(FuncName);
-  InlineName1.append("1");
-  std::string InlineName2(FuncName);
-  InlineName2.append("2");
-  std::string InlineName3(FuncName);
-  InlineName3.append("3");
+  std::string InlineName1(FuncName); InlineName1.append("1");
+  std::string InlineName2(FuncName); InlineName2.append("2");
+  std::string InlineName3(FuncName); InlineName3.append("3");
 
   FI.Inline->Name = GC.insertString(InlineName1);
   FI.Inline->CallFile = SourceFileIdx;
@@ -3005,8 +2991,7 @@ static void TestGsymSegmenting(uint64_t SegmentSize) {
       GC.createSegment(57, FuncIdx);
   ASSERT_FALSE((bool)GCError);
   checkError("a segment size of 57 is to small to fit any function infos, "
-             "specify a larger value",
-             GCError.takeError());
+             "specify a larger value", GCError.takeError());
   // Make sure that the function index didn't get incremented when we didn't
   // encode any values into the segmented GsymCreator.
   ASSERT_EQ(FuncIdx, (size_t)0);
@@ -3164,8 +3149,7 @@ static void TestGsymSegmentingNoBase(uint64_t SegmentSize) {
       GC.createSegment(57, FuncIdx);
   ASSERT_FALSE((bool)GCError);
   checkError("a segment size of 57 is to small to fit any function infos, "
-             "specify a larger value",
-             GCError.takeError());
+             "specify a larger value", GCError.takeError());
   // Make sure that the function index didn't get incremented when we didn't
   // encode any values into the segmented GsymCreator.
   ASSERT_EQ(FuncIdx, (size_t)0);
@@ -3547,19 +3531,16 @@ template <typename CreatorT> static void TestDWARFInlineRangeScopes() {
   StringRef FuncName = GR->getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
   std::vector<std::string> ExpectedLogErrors = {
-      "error: inlined function DIE at 0x0000002a has a range "
-      "[0x0000000000000fff "
-      "- 0x0000000000001001) that isn't contained in any parent address "
-      "ranges, "
-      "this inline range will be removed.",
-      "error: inlined function DIE at 0x00000058 has a range "
-      "[0x0000000000001000 "
-      "- 0x0000000000001100) that isn't contained in any parent address "
-      "ranges, "
-      "this inline range will be removed."};
+    "error: inlined function DIE at 0x0000002a has a range [0x0000000000000fff "
+    "- 0x0000000000001001) that isn't contained in any parent address ranges, "
+    "this inline range will be removed.",
+    "error: inlined function DIE at 0x00000058 has a range [0x0000000000001000 "
+    "- 0x0000000000001100) that isn't contained in any parent address ranges, "
+    "this inline range will be removed."
+  };
   // Make sure all expected errors are in the error stream for the two invalid
   // inlined functions that we removed due to invalid range scoping.
-  for (const auto &Error : ExpectedLogErrors) {
+  for (const auto &Error: ExpectedLogErrors) {
     EXPECT_TRUE(OS.str().find(Error) != std::string::npos);
   }
   // The top level inline info is for the function "foo" itself. Verify that
@@ -3572,6 +3553,7 @@ template <typename CreatorT> static void TestDWARFInlineRangeScopes() {
   EXPECT_EQ(ExpFI->Inline->CallLine, 0u);
   EXPECT_EQ(ExpFI->Inline->Children.size(), 1u);
 
+
   // The first inline function "valid1" contains two inline functions in the
   // DWARF, but one has an address range which isn't contained in any ranges
   // from "foo", so only 1 inline function be parsed.
@@ -3581,6 +3563,7 @@ template <typename CreatorT> static void TestDWARFInlineRangeScopes() {
   EXPECT_EQ(Inline1.CallFile, 1u);
   EXPECT_EQ(Inline1.CallLine, 11u);
   EXPECT_EQ(Inline1.Children.size(), 1u);
+
 
   // The second inline function "valid2" contains two inline functions in the
   // DWARF, but one has an address range which isn't contained in any ranges
@@ -3785,17 +3768,15 @@ template <typename CreatorT> static void TestDWARFEmptyInline() {
   StringRef FuncName = GR->getString(ExpFI->Name);
   EXPECT_EQ(FuncName, "foo");
   std::vector<std::string> ExpectedLogErrors = {
-      "error: inlined function DIE at 0x0000002a has a range "
-      "[0x0000000000001100"
-      " - 0x0000000000001200) that isn't contained in any parent address "
-      "ranges,"
-      " this inline range will be removed.",
-      "warning: DIE contains inline function information that has no valid "
-      "ranges, removing inline information:",
+    "error: inlined function DIE at 0x0000002a has a range [0x0000000000001100"
+    " - 0x0000000000001200) that isn't contained in any parent address ranges,"
+    " this inline range will be removed.",
+    "warning: DIE contains inline function information that has no valid "
+    "ranges, removing inline information:",
   };
   // Make sure all expected errors are in the error stream for the two invalid
   // inlined functions that we removed due to invalid range scoping.
-  for (const auto &Error : ExpectedLogErrors) {
+  for (const auto &Error: ExpectedLogErrors) {
     EXPECT_TRUE(OS.str().find(Error) != std::string::npos);
   }
 }
@@ -3834,8 +3815,7 @@ template <typename CreatorT> static void TestFinalizeForLineTables() {
   //                 DW_AT_high_pc	(0x0000000000002050)
   //
   // 0x0000003f:   NULL
-  // 0x00000040: Compile Unit: length = 0x0000003c, format = DWARF32, version =
-  // 0x0004, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000080)
+  // 0x00000040: Compile Unit: length = 0x0000003c, format = DWARF32, version = 0x0004, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000080)
   //
   // 0x0000004b: DW_TAG_compile_unit
   //               DW_AT_name	("/tmp/main.cpp")
@@ -4562,6 +4542,7 @@ template <typename CreatorT> static void TestEmptyLinkageName() {
   //                 DW_AT_high_pc   (0x0000000000001050)
   //
   // 0x0000002e:   NULL
+
 
   StringRef yamldata = R"(
   debug_str:

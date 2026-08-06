@@ -419,9 +419,10 @@ protected:
   /// AddrOffsets member variable.
   ///
   /// \returns An ArrayRef of an appropriate address offset size.
-  template <class T> ArrayRef<T> getAddrOffsets() const {
+  template <class T> ArrayRef<T>
+  getAddrOffsets() const {
     return ArrayRef<T>(reinterpret_cast<const T *>(AddrOffsets.data()),
-                       AddrOffsets.size() / sizeof(T));
+                       AddrOffsets.size()/sizeof(T));
   }
 
   /// Get an appropriate address from the address table.

@@ -146,7 +146,9 @@ struct FunctionInfo {
   /// address and name will be filled in.
   ///
   /// \returns A boolean indicating if this FunctionInfo is valid.
-  bool isValid() const { return Name != 0; }
+  bool isValid() const {
+    return Name != 0;
+  }
 
   /// Decode an object from a binary data stream.
   ///

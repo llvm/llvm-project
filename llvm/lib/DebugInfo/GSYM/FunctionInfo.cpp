@@ -45,13 +45,11 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(GsymDataExtractor &Data,
   uint64_t Offset = 0;
   if (!Data.isValidOffsetForDataOfSize(Offset, 4))
     return createStringError(std::errc::io_error,
-                             "0x%8.8" PRIx64 ": missing FunctionInfo Size",
-                             Offset);
+        "0x%8.8" PRIx64 ": missing FunctionInfo Size", Offset);
   FI.Range = {BaseAddr, BaseAddr + Data.getU32(&Offset)};
   if (!Data.isValidOffsetForDataOfSize(Offset, 4))
     return createStringError(std::errc::io_error,
-                             "0x%8.8" PRIx64 ": missing FunctionInfo Name",
-                             Offset);
+        "0x%8.8" PRIx64 ": missing FunctionInfo Name", Offset);
   FI.Name = Data.getStringOffset(&Offset);
   if (FI.Name == 0)
     return createStringError(std::errc::io_error,
@@ -61,60 +59,57 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(GsymDataExtractor &Data,
   bool Done = false;
   while (!Done) {
     if (!Data.isValidOffsetForDataOfSize(Offset, 4))
-      return createStringError(
-          std::errc::io_error,
+      return createStringError(std::errc::io_error,
           "0x%8.8" PRIx64 ": missing FunctionInfo InfoType value", Offset);
     const uint32_t IT = Data.getU32(&Offset);
     if (!Data.isValidOffsetForDataOfSize(Offset, 4))
-      return createStringError(
-          std::errc::io_error,
+      return createStringError(std::errc::io_error,
           "0x%8.8" PRIx64 ": missing FunctionInfo InfoType length", Offset);
     const uint32_t InfoLength = Data.getU32(&Offset);
     if (!Data.isValidOffsetForDataOfSize(Offset, InfoLength))
       return createStringError(std::errc::io_error,
-                               "0x%8.8" PRIx64
-                               ": missing FunctionInfo data for InfoType %u",
-                               Offset, IT);
+          "0x%8.8" PRIx64 ": missing FunctionInfo data for InfoType %u",
+          Offset, IT);
     GsymDataExtractor InfoData(Data, Offset, InfoLength);
     switch (IT) {
-    case InfoType::EndOfList:
-      Done = true;
-      break;
+      case InfoType::EndOfList:
+        Done = true;
+        break;
 
-    case InfoType::LineTableInfo:
-      if (Expected<LineTable> LT = LineTable::decode(InfoData, BaseAddr))
-        FI.OptLineTable = std::move(LT.get());
-      else
-        return LT.takeError();
-      break;
+      case InfoType::LineTableInfo:
+        if (Expected<LineTable> LT = LineTable::decode(InfoData, BaseAddr))
+          FI.OptLineTable = std::move(LT.get());
+        else
+          return LT.takeError();
+        break;
 
-    case InfoType::InlineInfo:
-      if (Expected<InlineInfo> II = InlineInfo::decode(InfoData, BaseAddr))
-        FI.Inline = std::move(II.get());
-      else
-        return II.takeError();
-      break;
+      case InfoType::InlineInfo:
+        if (Expected<InlineInfo> II = InlineInfo::decode(InfoData, BaseAddr))
+          FI.Inline = std::move(II.get());
+        else
+          return II.takeError();
+        break;
 
-    case InfoType::MergedFunctionsInfo:
-      if (Expected<MergedFunctionsInfo> MI =
-              MergedFunctionsInfo::decode(InfoData, BaseAddr))
-        FI.MergedFunctions = std::move(MI.get());
-      else
-        return MI.takeError();
-      break;
+      case InfoType::MergedFunctionsInfo:
+        if (Expected<MergedFunctionsInfo> MI =
+                MergedFunctionsInfo::decode(InfoData, BaseAddr))
+          FI.MergedFunctions = std::move(MI.get());
+        else
+          return MI.takeError();
+        break;
 
-    case InfoType::CallSiteInfo:
-      if (Expected<llvm::gsym::CallSiteInfoCollection> CI =
-              llvm::gsym::CallSiteInfoCollection::decode(InfoData))
-        FI.CallSites = std::move(CI.get());
-      else
-        return CI.takeError();
-      break;
+      case InfoType::CallSiteInfo:
+        if (Expected<llvm::gsym::CallSiteInfoCollection> CI =
+                llvm::gsym::CallSiteInfoCollection::decode(InfoData))
+          FI.CallSites = std::move(CI.get());
+        else
+          return CI.takeError();
+        break;
 
-    default:
-      return createStringError(std::errc::io_error,
-                               "0x%8.8" PRIx64 ": unsupported InfoType %u",
-                               Offset - 8, IT);
+      default:
+        return createStringError(std::errc::io_error,
+                                 "0x%8.8" PRIx64 ": unsupported InfoType %u",
+                                 Offset-8, IT);
     }
     Offset += InfoLength;
   }
@@ -141,7 +136,7 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
                                               bool NoPadding) const {
   if (!isValid())
     return createStringError(std::errc::invalid_argument,
-                             "attempted to encode invalid FunctionInfo object");
+        "attempted to encode invalid FunctionInfo object");
   // Align FunctionInfo data to a 4 byte alignment, if padding is allowed
   if (NoPadding == false)
     Out.alignTo(4);
@@ -174,8 +169,8 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
       return std::move(err);
     const auto Length = Out.tell() - StartOffset;
     if (Length > UINT32_MAX)
-      return createStringError(std::errc::invalid_argument,
-                               "LineTable length is greater than UINT32_MAX");
+        return createStringError(std::errc::invalid_argument,
+            "LineTable length is greater than UINT32_MAX");
     // Fixup the size of the LineTable data with the correct size.
     Out.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
   }
@@ -192,8 +187,8 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
       return std::move(err);
     const auto Length = Out.tell() - StartOffset;
     if (Length > UINT32_MAX)
-      return createStringError(std::errc::invalid_argument,
-                               "InlineInfo length is greater than UINT32_MAX");
+        return createStringError(std::errc::invalid_argument,
+            "InlineInfo length is greater than UINT32_MAX");
     // Fixup the size of the InlineInfo data with the correct size.
     Out.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
   }
@@ -334,13 +329,13 @@ FunctionInfo::lookup(GsymDataExtractor &Data, const GsymReader &GR,
   // "decode".
   if (!Data.isValidOffset(Offset))
     return createStringError(std::errc::io_error,
-                             "FunctionInfo data is truncated");
+                              "FunctionInfo data is truncated");
   // This function will be called with the result of a binary search of the
   // address table, we must still make sure the address does not fall into a
   // gap between functions are after the last function.
   if (LR.FuncRange.size() > 0 && !LR.FuncRange.contains(Addr))
     return createStringError(std::errc::io_error,
-                             "address 0x%" PRIx64 " is not in GSYM", Addr);
+        "address 0x%" PRIx64 " is not in GSYM", Addr);
 
   if (NameOffset == 0)
     return createStringError(std::errc::io_error,
@@ -363,49 +358,49 @@ FunctionInfo::lookup(GsymDataExtractor &Data, const GsymReader &GR,
                                "FunctionInfo data is truncated");
     GsymDataExtractor InfoData(Data, Offset, InfoLength);
     switch (IT) {
-    case InfoType::EndOfList:
-      Done = true;
-      break;
+      case InfoType::EndOfList:
+        Done = true;
+        break;
 
-    case InfoType::LineTableInfo:
-      if (auto ExpectedLE = LineTable::lookup(InfoData, FuncAddr, Addr))
-        LineEntry = ExpectedLE.get();
-      else
-        return ExpectedLE.takeError();
-      break;
+      case InfoType::LineTableInfo:
+        if (auto ExpectedLE = LineTable::lookup(InfoData, FuncAddr, Addr))
+          LineEntry = ExpectedLE.get();
+        else
+          return ExpectedLE.takeError();
+        break;
 
-    case InfoType::MergedFunctionsInfo:
-      // Store the merged functions data for later parsing, if needed.
-      if (MergedFuncsData)
-        *MergedFuncsData = InfoData;
-      break;
+      case InfoType::MergedFunctionsInfo:
+        // Store the merged functions data for later parsing, if needed.
+        if (MergedFuncsData)
+          *MergedFuncsData = InfoData;
+        break;
 
-    case InfoType::InlineInfo:
-      // We will parse the inline info after our line table, but only if
-      // we have a line entry.
-      InlineInfoData = InfoData;
-      break;
+      case InfoType::InlineInfo:
+        // We will parse the inline info after our line table, but only if
+        // we have a line entry.
+        InlineInfoData = InfoData;
+        break;
 
-    case InfoType::CallSiteInfo:
-      if (auto CSIC = CallSiteInfoCollection::decode(InfoData)) {
-        // Find matching call site based on relative offset
-        for (const auto &CS : CSIC->CallSites) {
-          // Check if the call site matches the lookup address
-          if (CS.ReturnOffset == Addr - FuncAddr) {
-            // Get regex patterns
-            for (gsym_strp_t RegexOffset : CS.MatchRegex) {
-              LR.CallSiteFuncRegex.push_back(GR.getString(RegexOffset));
+      case InfoType::CallSiteInfo:
+        if (auto CSIC = CallSiteInfoCollection::decode(InfoData)) {
+          // Find matching call site based on relative offset
+          for (const auto &CS : CSIC->CallSites) {
+            // Check if the call site matches the lookup address
+            if (CS.ReturnOffset == Addr - FuncAddr) {
+              // Get regex patterns
+              for (gsym_strp_t RegexOffset : CS.MatchRegex) {
+                LR.CallSiteFuncRegex.push_back(GR.getString(RegexOffset));
+              }
+              break;
             }
-            break;
           }
+        } else {
+          return CSIC.takeError();
         }
-      } else {
-        return CSIC.takeError();
-      }
-      break;
+        break;
 
-    default:
-      break;
+      default:
+        break;
     }
     Offset += InfoLength;
   }
@@ -423,8 +418,8 @@ FunctionInfo::lookup(GsymDataExtractor &Data, const GsymReader &GR,
   std::optional<FileEntry> LineEntryFile = GR.getFile(LineEntry->File);
   if (!LineEntryFile)
     return createStringError(std::errc::invalid_argument,
-                             "failed to extract file[%" PRIu32 "]",
-                             LineEntry->File);
+                              "failed to extract file[%" PRIu32 "]",
+                              LineEntry->File);
 
   SourceLocation SrcLoc;
   SrcLoc.Name = LR.FuncName;
@@ -438,8 +433,8 @@ FunctionInfo::lookup(GsymDataExtractor &Data, const GsymReader &GR,
     return LR;
   // We have inline information. Try to augment the lookup result with this
   // data.
-  llvm::Error Err =
-      InlineInfo::lookup(GR, *InlineInfoData, FuncAddr, Addr, LR.Locations);
+  llvm::Error Err = InlineInfo::lookup(GR, *InlineInfoData, FuncAddr, Addr,
+                                       LR.Locations);
   if (Err)
     return std::move(Err);
   return LR;
