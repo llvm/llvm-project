@@ -142,7 +142,7 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
 
     if (!Found) {
       // It may well be the case that we fail to find an affected value in the
-      // cache. In particular, if an assume call is updated via `Use::set`, we
+      // cache. In particular, if an assume call is updated via `Use::set()`, we
       // won't be notified that the affected value has changed and the cache
       // will silently go stale.
     } else if (!HasNonnull)

@@ -2,7 +2,7 @@
 
 ; Check that we don't crash on deletion from a stale assumption cache.
 ;
-; The no-op module pass initialises the assumption cache, which the SSA updater
+; The no-op module pass initialises the assumption cache, while the SSA updater
 ; in `loop-rotate` invalidates it with a call to `Use::set()`. After
 ; simplifying the CFG, we're left with a `hotcoldsplit` candidate, leading to a
 ; call to `removeAffectedValues()` on a stale cache.
