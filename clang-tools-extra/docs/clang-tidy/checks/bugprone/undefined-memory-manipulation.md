@@ -1,10 +1,10 @@
-.. title:: clang-tidy - bugprone-undefined-memory-manipulation
+```{title} clang-tidy - bugprone-undefined-memory-manipulation
+```
 
-bugprone-undefined-memory-manipulation
-======================================
+# bugprone-undefined-memory-manipulation
 
-Finds calls of memory manipulation functions ``memset()``, ``memcpy()`` and
-``memmove()`` on non-TriviallyCopyable objects resulting in undefined behavior.
+Finds calls of memory manipulation functions `memset()`, `memcpy()` and
+`memmove()` on non-TriviallyCopyable objects resulting in undefined behavior.
 
 Using memory manipulation functions on non-TriviallyCopyable objects can lead
 to a range of subtle and challenging issues in C++ code. The most immediate
@@ -15,20 +15,20 @@ diagnose the root cause. Additionally, misuse of memory manipulation functions
 can bypass essential object-specific operations, such as constructors and
 destructors, leading to resource leaks or improper initialization.
 
-For example, when using ``memcpy`` to copy ``std::string``, pointer data is
+For example, when using `memcpy` to copy `std::string`, pointer data is
 being copied, and it can result in a double free issue.
 
-.. code-block:: c++
+```c++
+#include <cstring>
+#include <string>
 
-  #include <cstring>
-  #include <string>
+int main() {
+    std::string source = "Hello";
+    std::string destination;
 
-  int main() {
-      std::string source = "Hello";
-      std::string destination;
+    std::memcpy(&destination, &source, sizeof(std::string));
 
-      std::memcpy(&destination, &source, sizeof(std::string));
-
-      // Undefined behavior may occur here, during std::string destructor call.
-      return 0;
-  }
+    // Undefined behavior may occur here, during std::string destructor call.
+    return 0;
+}
+```
