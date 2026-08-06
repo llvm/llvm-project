@@ -85,6 +85,14 @@ subroutine test_int()
   j = int(green, 8)
 end subroutine
 
+subroutine test_int_bad_kind()
+  use enum_intrinsics_mod
+  integer :: i
+  ! INT of an enumeration argument with an unsupported KIND value is rejected.
+  !CHECK: error: 'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type
+  i = int(red, kind=3)
+end subroutine
+
 subroutine test_int_parameter()
   use enum_intrinsics_mod
   ! INT(x) in parameter (constant) context
