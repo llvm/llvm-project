@@ -2029,8 +2029,7 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
   Constant *nval0 = getConstantFloat(Val0, aCI->getType());
 
   // sincos
-  bool hasTwoResults = (FInfo.getId() == AMDGPULibFunc::EI_SINCOS);
-  if (hasTwoResults) {
+  if (FInfo.getId() == AMDGPULibFunc::EI_SINCOS) {
     Constant *nval1 = getConstantFloat(Val1, aCI->getType());
     new StoreInst(nval1, aCI->getArgOperand(1), aCI->getIterator());
   }
