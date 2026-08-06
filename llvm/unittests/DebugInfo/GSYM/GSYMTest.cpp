@@ -6184,6 +6184,8 @@ static void TestGsymStatistics(const ExpectedGsymStats &E) {
           SubOpcode:       DW_LNE_end_sequence
           Data:            3584
   )";
+
+  // Create the gsym data
   auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
   ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
   std::unique_ptr<DWARFContext> DwarfContext =
@@ -6201,17 +6203,18 @@ static void TestGsymStatistics(const ExpectedGsymStats &E) {
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
 
-  // dumpStatistics() reads the total size from the reader's in-memory buffer,
-  // so an in-memory GSYM can be analyzed without ever touching the filesystem.
+  // Create a GsymReader to read the gsym data
   auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
   const std::unique_ptr<GsymReader> &GR = *GROrErr;
 
+  // Dump statistics
   const StringRef DisplayPath = "in-memory.gsym";
   std::string StatsStr;
   raw_string_ostream StatsOS(StatsStr);
   GR->dumpStatistics(StatsOS, GsymReader::StatisticsFormat::JSON, DisplayPath);
 
+  // Get the JSON object which contains the statistics
   auto ValOrErr = json::parse(StatsStr);
   ASSERT_THAT_EXPECTED(ValOrErr, Succeeded());
   const json::Object *Root = ValOrErr->getAsObject();
@@ -6317,7 +6320,7 @@ TEST(GSYMTest, TestGsymStatisticsV2) {
   ExpectedGsymStats E = {};
   E.NumAddresses = 1;
   E.FileSize = 332;
-  E.Header = 20;
+  E.Header = 20; // V2 header size
   E.GlobalDataDirectory = 120;
   E.UUIDSection = 0;
   E.Padding = 4;
