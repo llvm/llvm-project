@@ -1,4 +1,4 @@
-if (LLVM_HAVE_EMITC_LOWERING)
+if (LLVM_HAVE_MLIR_LOWERING)
   include(MLGOLower)
   mlgo_lower_models(
     "${LLVM_MLGO_MODELS}"

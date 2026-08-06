@@ -59,7 +59,7 @@ function(mlgo_lower_models models mlir_opt mlir_translate target_type
 
     # Pass pipeline to lower MLIR models to EmitC dialect
     # TODO: Simplify with builtin pipeline for translation.
-    set(EMITC_PASSES
+    set(MLIR_PASSES
       "func.func(tosa-to-linalg-named,tosa-to-linalg,tosa-to-arith,tosa-to-tensor)"
       "symbol-privatize"
       "scalarize-single-element-tensor-return"
@@ -79,7 +79,7 @@ function(mlgo_lower_models models mlir_opt mlir_translate target_type
       "convert-math-to-emitc"
       "convert-arith-to-emitc"
     )
-    string(JOIN "," PASS_PIPELINE ${EMITC_PASSES})
+    string(JOIN "," PASS_PIPELINE ${MLIR_PASSES})
     set(PASS_PIPELINE "builtin.module(${PASS_PIPELINE})")
 
     # 1. Run MLIR pipeline to lower MODEL_PATH to EmitC MLIR
