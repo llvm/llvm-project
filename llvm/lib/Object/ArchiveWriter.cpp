@@ -1115,7 +1115,6 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
 
     Pos += D.Header.size() + D.Data.size() + D.Padding.size();
   }
-
   // If there are no symbols, emit an empty symbol table, to satisfy Solaris
   // tools, older versions of which expect a symbol table in a non-empty
   // archive, regardless of whether there are any symbols in it.
