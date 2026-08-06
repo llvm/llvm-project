@@ -158,10 +158,7 @@ public:
   LLVM_ABI void cluster(BasicBlock::iterator Where);
   /// \Returns true if all nodes in the bundle are ready.
   bool ready(SchedDirection Dir) const {
-    return all_of(Nodes, [Dir](const auto *N) {
-      return Dir == SchedDirection::BottomUp ? N->readyBottomUp()
-                                             : N->readyTopDown();
-    });
+    return all_of(Nodes, [](const auto *N) { return N->ready(); });
   }
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
