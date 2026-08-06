@@ -69,84 +69,31 @@ struct Float80 {
 
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
   LIBC_INLINE constexpr explicit operator T() const {
+    constexpr T MIN_T = cpp::numeric_limits<T>::min();
+    constexpr T MAX_T = cpp::numeric_limits<T>::max();
     FPBits<Float80> x_bits(*this);
     // Raise FE_INVALID for inf and NaN
     if (x_bits.is_inf_or_nan()) {
       raise_except_if_required(FE_INVALID);
+      return x_bits.is_neg() ? MIN_T : MAX_T;
     }
-    int x_bits_exp =
-        x_bits.get_explicit_exponent() - FPBits<Float80>::FRACTION_LEN;
+    int exponent = x_bits.get_explicit_exponent();
+    constexpr int EXPONENT_LIMIT = cpp::numeric_limits<T>::digits;
+    if (exponent > EXPONENT_LIMIT) {
+      raise_except_if_required(FE_INVALID);
+      return x_bits.is_neg() ? MIN_T : MAX_T;
+    } else if (exponent == EXPONENT_LIMIT) {
+      if (x_bits.is_pos() || x_bits.get_mantissa() != 0) {
+        raise_except_if_required(FE_INVALID);
+        return x_bits.is_neg() ? MIN_T : MAX_T;
+      }
+    }
+
+    int x_bits_exp = exponent - FPBits<Float80>::FRACTION_LEN;
     // sign * 2^(exp-bias) * mantissa
     DyadicFloat<FPBits<Float80>::STORAGE_LEN> xd(
         x_bits.sign(), x_bits_exp, x_bits.get_explicit_mantissa());
     return static_cast<T>(xd.as_mantissa_type());
-  }
-
-  // unary
-  LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR Float80 operator-() const {
-    fputil::FPBits<Float80> result(*this);
-    result.set_sign(result.is_pos() ? Sign::NEG : Sign::POS);
-    return result.get_val();
-  }
-  // operator overloads
-  LIBC_INLINE constexpr Float80 operator+(const Float80 &other) const {
-    return fputil::generic::add<Float80>(*this, other);
-  }
-
-  LIBC_INLINE constexpr Float80 operator-(const Float80 &other) const {
-    return fputil::generic::sub<Float80>(*this, other);
-  }
-
-  LIBC_INLINE constexpr Float80 operator*(const Float80 &other) const {
-    return fputil::generic::mul<Float80>(*this, other);
-  }
-
-  LIBC_INLINE constexpr Float80 operator/(const Float80 &other) const {
-    return fputil::generic::div<Float80>(*this, other);
-  }
-
-  LIBC_INLINE constexpr Float80 &operator*=(const Float80 &other) {
-    *this = *this * other;
-    return *this;
-  }
-
-  LIBC_INLINE constexpr Float80 &operator+=(const Float80 &other) {
-    *this = *this + other;
-    return *this;
-  }
-
-  LIBC_INLINE constexpr Float80 &operator-=(const Float80 &other) {
-    *this = *this - other;
-    return *this;
-  }
-
-  LIBC_INLINE constexpr Float80 &operator/=(const Float80 &other) {
-    *this = *this / other;
-    return *this;
-  }
-
-  LIBC_INLINE constexpr bool operator==(const Float80 &other) const {
-    return fputil::equals(*this, other);
-  }
-
-  LIBC_INLINE constexpr bool operator!=(const Float80 &other) const {
-    return !fputil::equals(*this, other);
-  }
-
-  LIBC_INLINE constexpr bool operator<(const Float80 &other) const {
-    return fputil::less_than(*this, other);
-  }
-
-  LIBC_INLINE constexpr bool operator<=(const Float80 &other) const {
-    return fputil::less_than_or_equals(*this, other);
-  }
-
-  LIBC_INLINE constexpr bool operator>(const Float80 &other) const {
-    return fputil::greater_than(*this, other);
-  }
-
-  LIBC_INLINE constexpr bool operator>=(const Float80 &other) const {
-    return fputil::greater_than_or_equals(*this, other);
   }
 };
 
