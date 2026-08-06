@@ -397,8 +397,8 @@ public:
         // C-reuse: back-to-back WMMAs into the same C register forward the
         // accumulator in place, so the tied srcC read has no dependency. WMMA
         // implies GFX11+, so no explicit subtarget check is needed.
-        bool IsWMMACReuse = PrevWMMAVDst.isValid() &&
-                            (SII->isWMMA(MI) || SII->isSWMMAC(MI));
+        bool IsWMMACReuse =
+            PrevWMMAVDst.isValid() && (SII->isWMMA(MI) || SII->isSWMMAC(MI));
         // TODO: Scan implicit uses too?
         for (const auto &Op : MI.explicit_uses()) {
           if (Op.isReg()) {
