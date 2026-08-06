@@ -126,14 +126,9 @@ public:
   /// operating on type \p Ty may be lowered to, or RTLIB::UNKNOWN_LIBCALL if
   /// there is no such mapping.
   ///
-  /// \p Ty must be the floating-point operand type, which is not always the
-  /// intrinsic's primary/overloaded type. E.g. lround/llround/lrint/llrint are
-  /// overloaded on the integer result, powi on the integer exponent, and
-  /// frexp/modf/sincos return an aggregate. For these, pass the floating-point
-  /// argument type (e.g. the type of operand 0), not the intrinsic's return
-  /// type.
+  /// \p FTy must be the intrinsic's call signature.
   LLVM_ABI static RTLIB::Libcall getLibcallForIntrinsic(Intrinsic::ID ID,
-                                                        Type *Ty);
+                                                        FunctionType *FTy);
 
   unsigned getNumAvailableLibcallImpls() const {
     return AvailableLibcallImpls.count();

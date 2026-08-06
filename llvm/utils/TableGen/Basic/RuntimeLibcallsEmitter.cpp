@@ -54,6 +54,11 @@ struct FPLibcallFamily {
   StringRef Base;
   std::vector<StringRef> Intrinsics;
   std::vector<StringRef> VectorSuffixes;
+
+  explicit FPLibcallFamily(const Record *R)
+      : Base(R->getValueAsString("LibcallBase")),
+        Intrinsics(R->getValueAsListOfStrings("Intrinsics")),
+        VectorSuffixes(R->getValueAsListOfStrings("VectorSuffixes")) {}
 };
 } // namespace
 
@@ -565,13 +570,8 @@ static std::vector<FPLibcallFamily>
 collectFPLibcallFamilies(const RecordKeeper &Records) {
   std::vector<FPLibcallFamily> Families;
   for (const Record *R :
-       Records.getAllDerivedDefinitions("RuntimeLibcallFamily")) {
-    FPLibcallFamily Family;
-    Family.Base = R->getValueAsString("LibcallBase");
-    Family.Intrinsics = R->getValueAsListOfStrings("Intrinsics");
-    Family.VectorSuffixes = R->getValueAsListOfStrings("VectorSuffixes");
-    Families.push_back(std::move(Family));
-  }
+       Records.getAllDerivedDefinitions("RuntimeLibcallFamily"))
+    Families.emplace_back(R);
   llvm::sort(Families, [](const FPLibcallFamily &A, const FPLibcallFamily &B) {
     return A.Base < B.Base;
   });
@@ -647,12 +647,13 @@ void RuntimeLibcallEmitter::emitGetLibcallForIntrinsic(
   llvm::sort(IntrinsicToBase);
 
   for (size_t I = 1, E = IntrinsicToBase.size(); I < E; ++I)
-    if (IntrinsicToBase[I].first == IntrinsicToBase[I - 1].first)
+    if (IntrinsicToBase[I].first == IntrinsicToBase[I - 1].first) {
       PrintFatalError(
           "intrinsic '" + IntrinsicToBase[I].first +
           "' is mapped by multiple RuntimeLibcallFamily records ('" +
           IntrinsicToBase[I - 1].second + "' and '" +
           IntrinsicToBase[I].second + "')");
+    }
 
   MapVector<StringRef, SmallVector<StringRef, 2>> BaseToIntrinsics;
   for (auto [Intrinsic, Base] : IntrinsicToBase)
@@ -660,7 +661,18 @@ void RuntimeLibcallEmitter::emitGetLibcallForIntrinsic(
 
   OS << "RTLIB::Libcall "
         "llvm::RTLIB::RuntimeLibcallsInfo::getLibcallForIntrinsic("
-        "Intrinsic::ID ID, Type *Ty) {\n"
+        "Intrinsic::ID ID, FunctionType *FTy) {\n"
+        "  Type *Ty = FTy->getReturnType();\n"
+        "  if (!Ty->isFloatingPointTy()) {\n"
+        "    for (Type *ParamTy : FTy->params()) {\n"
+        "      if (ParamTy->isFloatingPointTy()) {\n"
+        "        Ty = ParamTy;\n"
+        "        break;\n"
+        "      }\n"
+        "    }\n"
+        "  }\n"
+        "  if (!Ty->isFloatingPointTy())\n"
+        "    return RTLIB::UNKNOWN_LIBCALL;\n"
         "  switch (ID) {\n";
 
   for (const auto &[Base, Intrinsics] : BaseToIntrinsics) {

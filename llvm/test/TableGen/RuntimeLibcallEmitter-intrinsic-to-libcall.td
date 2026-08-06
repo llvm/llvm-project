@@ -34,7 +34,18 @@ def : RuntimeLibcallFamily<"COS", ["cos"]>;
 // CHECK-NEXT: }
 
 // CHECK: #ifdef GET_RUNTIME_LIBCALL_INTRINSIC_TO_LIBCALL
-// CHECK: RTLIB::Libcall llvm::RTLIB::RuntimeLibcallsInfo::getLibcallForIntrinsic(Intrinsic::ID ID, Type *Ty) {
+// CHECK: RTLIB::Libcall llvm::RTLIB::RuntimeLibcallsInfo::getLibcallForIntrinsic(Intrinsic::ID ID, FunctionType *FTy) {
+// CHECK-NEXT:   Type *Ty = FTy->getReturnType();
+// CHECK-NEXT:   if (!Ty->isFloatingPointTy()) {
+// CHECK-NEXT:     for (Type *ParamTy : FTy->params()) {
+// CHECK-NEXT:       if (ParamTy->isFloatingPointTy()) {
+// CHECK-NEXT:         Ty = ParamTy;
+// CHECK-NEXT:         break;
+// CHECK-NEXT:       }
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+// CHECK-NEXT:   if (!Ty->isFloatingPointTy())
+// CHECK-NEXT:     return RTLIB::UNKNOWN_LIBCALL;
 // CHECK-NEXT:   switch (ID) {
 // CHECK-NEXT:   case Intrinsic::cos:
 // CHECK-NEXT:     if (Ty->isFP128Ty())
