@@ -751,6 +751,9 @@ protected:
   bool deferImplicitTyping_{false};
   bool skipImplicitTyping_{false};
   bool inEquivalenceStmt_{false};
+  // Whether the DATA statement whose objects are being visited appeared in
+  // a specification part (as opposed to an execution part)
+  bool dataStmtObjectInSpecPart_{false};
 
   // Some information is collected from a specification part for deferred
   // processing in DeclarationPartVisitor functions (e.g., CheckSaveStmts())
@@ -764,6 +767,11 @@ protected:
     std::vector<const std::list<parser::EquivalenceObject> *> equivalenceSets;
     // Names of all common block objects in the scope
     std::set<SourceName> commonBlockObjects;
+    // data-implied-do index variables whose typing has been deferred until
+    // the end of the specification part, since the declaration determining
+    // the type of the index's name in the scoping unit may follow the DATA
+    // statement (F'2023 19.4 p5)
+    std::vector<MutableSymbolRef> deferredDataIDoVars;
     // Info about SAVE statements and attributes in current scope
     struct {
       std::optional<SourceName> saveAll; // "SAVE" without entity list
@@ -8229,6 +8237,12 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
     auto restorer{
         common::ScopedSet(charInfo_.length, std::optional<ParamValue>{})};
     SetType(name, *declTypeSpec);
+  } else if (dataStmtObjectInSpecPart_) {
+    // F'2023 19.4 p5: this index has the type that its name would have as
+    // a variable of the scoping unit, and the declaration establishing that
+    // type may follow the DATA statement in the same specification part.
+    // Defer its typing to FinishSpecificationPart().
+    specPartState_.deferredDataIDoVars.emplace_back(symbol);
   } else {
     ApplyImplicitRules(symbol);
   }
@@ -8660,6 +8674,8 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
   // for purposes of implicit variable declaration vs. host association.
   // When a name first appears as an object in a DATA statement, it should
   // be implicitly declared locally as if it had been assigned.
+  auto specPartRestorer{
+      common::ScopedSet(dataStmtObjectInSpecPart_, inSpecificationPart_)};
   auto flagRestorer{common::ScopedSet(inSpecificationPart_, false)};
   common::visit(
       common::visitors{
@@ -10664,6 +10680,23 @@ void ResolveNamesVisitor::FinishSpecificationPart(
             context().languageFeatures().IsEnabled(
                 common::LanguageFeature::CudaPinned))
           object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+      }
+    }
+  }
+  // Define the types of data-implied-do index variables whose typing was
+  // deferred, now that the whole specification part has been visited, using
+  // the type that the index's name has in the scoping unit (F'2023 19.4 p5).
+  for (MutableSymbolRef ref : specPartState_.deferredDataIDoVars) {
+    Symbol &symbol{*ref};
+    if (!symbol.GetType()) {
+      if (const Symbol *outer{currScope().FindSymbol(symbol.name())};
+          outer && outer->GetType()) {
+        symbol.SetType(*outer->GetType());
+        // Inhibit unused-variable diagnostics: the outer declaration may
+        // exist solely to give the index its type.
+        context().NoteDefinedSymbol(*outer);
+      } else {
+        ApplyImplicitRules(symbol);
       }
     }
   }
