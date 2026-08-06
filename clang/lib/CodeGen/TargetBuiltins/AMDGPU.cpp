@@ -31,6 +31,20 @@ using namespace llvm;
 
 namespace {
 
+// Emits a raw.ptr.buffer.{store,atomic.*} intrinsic call with an appended
+// empty syncscope metadata arg, since the builtin form carries no scope info.
+static Value *emitAMDGPURawPtrBufferBuiltinWithScope(CodeGenFunction &CGF,
+                                                     const CallExpr *E,
+                                                     unsigned IntrinsicID) {
+  llvm::SmallVector<Value *, 6> Args;
+  for (unsigned I = 0; I < 5; ++I)
+    Args.push_back(CGF.EmitScalarExpr(E->getArg(I)));
+  Args.push_back(MetadataAsValue::get(CGF.getLLVMContext(),
+                                      MDNode::get(CGF.getLLVMContext(), {})));
+  Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Args[0]->getType());
+  return CGF.Builder.CreateCall(F, Args);
+}
+
 static Value *emitAMDGPUSBufferLoadBuiltin(CodeGenFunction &CGF,
                                            const CallExpr *E) {
   llvm::Type *RetTy = CGF.ConvertType(E->getType());
@@ -2090,7 +2104,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b64:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b96:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b128:
-    return emitBuiltinWithOneOverloadedType<5>(
+    return emitAMDGPURawPtrBufferBuiltinWithScope(
         *this, E, Intrinsic::amdgcn_raw_ptr_buffer_store);
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_format_v4f32:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_format_v4f16:
@@ -2155,19 +2169,19 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
             EmitScalarExpr(E->getArg(4))});
   }
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_add_i32:
-    return emitBuiltinWithOneOverloadedType<5>(
+    return emitAMDGPURawPtrBufferBuiltinWithScope(
         *this, E, Intrinsic::amdgcn_raw_ptr_buffer_atomic_add);
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16:
-    return emitBuiltinWithOneOverloadedType<5>(
+    return emitAMDGPURawPtrBufferBuiltinWithScope(
         *this, E, Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd);
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f32:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f64:
-    return emitBuiltinWithOneOverloadedType<5>(
+    return emitAMDGPURawPtrBufferBuiltinWithScope(
         *this, E, Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin);
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64:
-    return emitBuiltinWithOneOverloadedType<5>(
+    return emitAMDGPURawPtrBufferBuiltinWithScope(
         *this, E, Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmax);
   case AMDGPU::BI__builtin_amdgcn_s_buffer_load_i32:
   case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v2i32:
