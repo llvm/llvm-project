@@ -588,7 +588,6 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
 
     if (LLVM_LIKELY(sec.sh_type == SHT_PROGBITS))
       continue;
-
     if (LLVM_LIKELY(sec.sh_type == SHT_GROUP)) {
       StringRef signature = getShtGroupSignature(objSections, sec);
       ArrayRef<Elf_Word> entries =
@@ -848,8 +847,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     }
     switch (type) {
     case SHT_GROUP: {
-      // Discard groups for the embedded unoptimized dynamic debugging
-      // relocatable link.
+      // Discard groups for non-relocatable links and for embedded unoptimized
+      // dynamic debugging relocatable links.
       if (!ctx.arg.relocatable || ctx.dynDbgRelocatable)
         sections[i] = &InputSection::discarded;
       // Use the verdict parse() recorded for this group instead of repeating
