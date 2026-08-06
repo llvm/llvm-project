@@ -9,6 +9,7 @@
 // CHECK-EMPTY:
 // CHECK-NEXT: SUBCOMMANDS:
 // CHECK-EMPTY:
+// CHECK-NEXT:   multi-arch     - Operations on multi-architecture StaticLibrary and SharedLibrary artifacts
 // CHECK-NEXT:   static-library - Operations on StaticLibraries
 // CHECK-EMPTY:
 // CHECK-NEXT:   Type "clang-ssaf-linker{{(\.exe)?}} <subcommand> --help" to get more help on a specific subcommand
