@@ -1,0 +1,52 @@
+# RUN: llc -march=pisa -run-pass=pisa-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+
+# Test that the PostLegalizer does not infinite-loop on shl(or x, const), const.
+#
+# When commute_shift is enabled together with hoist_logic_op_with_same_opcode_hands
+# in the PostLegalizer, the two rules form an infinite cycle on the OR variant:
+#
+#   commute_shift:
+#     shl (or x, c1), c2  ->  or (shl x, c2), (shl c1, c2)
+#
+#   hoist_logic_op_with_same_opcode_hands:
+#     or (shl x, c2), (shl c1, c2)  ->  shl (or x, c1), c2
+#
+# Both created SHLs share the same shift-amount register, so
+# hoist_logic_op_with_same_opcode_hands recognises them as "same opcode,
+# same extra operand" and re-folds the OR through the SHL - recreating
+# the original input to commute_shift.
+#
+# commute_shift is therefore excluded from the PostLegalizer
+# (pisa_post_removed_combines).
+
+--- |
+  define i32 @shl_or_const(i32 %x) {
+    %or = or i32 %x, 4
+    %shl = shl i32 %or, 2
+    ret i32 %shl
+  }
+...
+---
+name:            shl_or_const
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    ; The pattern must survive the PostLegalizer without hanging.
+    ; With commute_shift excluded, the shl(or) stays as-is.
+    ;
+    ; CHECK-LABEL: name: shl_or_const
+    ; CHECK: %0:reg32b(i32) = functionParameter_i32 0
+    ; CHECK: %c1:reg32b(i32) = G_CONSTANT i32 4
+    ; CHECK: %c2:reg32b(i32) = G_CONSTANT i32 2
+    ; CHECK: %or:reg32b(i32) = G_OR %0, %c1
+    ; CHECK: %shl:reg32b(i32) = G_SHL %or, %c2(i32)
+    ; CHECK: retValue_i32_r %shl(i32)
+    %0:reg32b(i32) = functionParameter_i32 0
+    %c1:reg32b(i32) = G_CONSTANT i32 4
+    %c2:reg32b(i32) = G_CONSTANT i32 2
+    %or:reg32b(i32) = G_OR %0:reg32b, %c1:reg32b
+    %shl:reg32b(i32) = G_SHL %or:reg32b, %c2:reg32b(i32)
+    retValue_i32_r %shl(i32)
+...

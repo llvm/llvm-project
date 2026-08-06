@@ -1,0 +1,33 @@
+# RUN: llc -march=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
+# Check that i24 operands in phi inst are extended to i32.
+
+--- |
+  target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-n16:32-G1"
+  target triple = "pisa"
+
+  define pisa_kernel void @_ZTSN4sycl3_V16detail9reduction7MainKrnIN39reduction_without_identity_param_common6kernelIiLb1ELb0EN16reduction_common19op_without_identityIiEENS0_5rangeILi1EEELNS6_14test_case_typeE3ELi2EEELNS2_8strategyE3EJEEE() {
+  entry:
+    br label %for.body
+
+  for.body:                                    ; preds = %for.body, %entry
+    %LocalSum.sroa = phi i24 [ %LocalSum.sroa, %for.body ], [ 1, %entry ]
+    br label %for.body
+  }
+
+...
+---
+name:            _ZTSN4sycl3_V16detail9reduction7MainKrnIN39reduction_without_identity_param_common6kernelIiLb1ELb0EN16reduction_common19op_without_identityIiEENS0_5rangeILi1EEELNS6_14test_case_typeE3ELi2EEELNS2_8strategyE3EJEEE
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    ; CHECK: [[ONE:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+
+    %1:_(i24) = G_CONSTANT i24 1
+
+  bb.2.for.body:
+    ; CHECK: [[V:%[0-9]+]]:_(i32) = G_PHI [[V]](i32), %bb.1, [[ONE]](i32), %bb.0
+
+    %0:_(i24) = G_PHI %0(i24), %bb.2, %1(i24), %bb.1
+    G_BR %bb.2
+
+...
