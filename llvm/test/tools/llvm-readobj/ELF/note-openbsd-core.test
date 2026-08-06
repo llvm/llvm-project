@@ -29,7 +29,7 @@ ProgramHeaders:
     FirstSec: .note.foo
     LastSec:  .note.foo
 
-# GNU:      Displaying notes found at file offset 0x00000078 with length 0x00000074:
+# GNU:      Displaying notes found at file offset 0x00000078 with length 0x00000088:
 # GNU-NEXT:   Owner                Data size 	Description
 # GNU-NEXT:   OpenBSD              0x00000000	NT_OPENBSD_PROCINFO (procinfo structure)
 # GNU-NEXT:   OpenBSD              0x00000000	NT_OPENBSD_AUXV (ELF auxiliary vector data)
@@ -42,7 +42,7 @@ ProgramHeaders:
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: <?>
 # LLVM-NEXT:     Offset: 0x78
-# LLVM-NEXT:     Size: 0x74
+# LLVM-NEXT:     Size: 0x88
 # LLVM-NEXT:     Notes [
 # LLVM-NEXT:        {
 # LLVM-NEXT:            Owner: OpenBSD
