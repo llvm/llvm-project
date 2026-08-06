@@ -23,7 +23,7 @@
 #define DST_QUAD
 #include "fp_extend_impl.inc"
 
-#if defined(LIBC_TYPES_HAS_FLOAT16)
+#ifdef LIBC_TYPES_HAS_FLOAT16
 extern "C" COMPILER_RT_ABI dst_t __extendhftf2(src_t a) {
   return LIBC_NAMESPACE::shared::extendhftf2(__builtin_bit_cast(uint16_t, a));
 }

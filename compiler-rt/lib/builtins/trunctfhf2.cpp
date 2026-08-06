@@ -23,7 +23,7 @@
 #define DST_HALF
 #include "fp_trunc_impl.inc"
 
-#if defined(LIBC_TYPES_HAS_FLOAT16)
+#ifdef LIBC_TYPES_HAS_FLOAT16
 extern "C" COMPILER_RT_ABI dst_t __trunctfhf2(src_t a) {
   return __builtin_bit_cast(dst_t, LIBC_NAMESPACE::shared::trunctfhf2(a));
 }
