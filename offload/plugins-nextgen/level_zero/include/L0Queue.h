@@ -20,6 +20,7 @@
 #include <tuple>
 
 #include "L0CmdListManager.h"
+#include "L0Memory.h"
 #include "L0Options.h"
 
 namespace llvm::omp::target::plugin {
@@ -36,6 +37,8 @@ protected:
   L0CmdListManagerTy *CmdList = nullptr;
   /// Whether the queue is in-order or out-of-order.
   bool CreateQueueInOrder;
+  /// Host buffers that remain valid until this queue completes.
+  StagingBufferTy StagingBuffer;
 
 public:
   L0QueueTy(L0DeviceTy &Device, bool IsInorder = true)
@@ -47,8 +50,8 @@ public:
 
   Error init();
   Error deinit();
-  Error synchronize() { return synchronizeImpl(); }
-  Expected<bool> hasPendingWork() { return hasPendingWorkImpl(); }
+  Error synchronize();
+  Expected<bool> hasPendingWork();
 
   Error memoryCopy(void *Dst, const void *Src, size_t Size) {
     if (Size == 0)
@@ -67,9 +70,8 @@ public:
     return dataSubmitImpl(TgtPtr, HstPtr, Size);
   }
 
-  // Enqueue a memory fill command. Supports arbitrary pattern sizes, including
-  // non-power-of-two sizes, by falling back to a less performant software fill
-  // if necessary.
+  // Enqueue a memory fill command. Unsupported native patterns are replicated
+  // using ordered memory copies.
   Error memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
                    size_t Size);
 
@@ -141,6 +143,8 @@ public:
                                size_t PatternSize, size_t Size) {
     return CmdList->appendMemoryFill(Ptr, Pattern, PatternSize, Size);
   }
+  virtual Error memoryFillFallbackImpl(void *Ptr, const void *Pattern,
+                                       size_t PatternSize, size_t Size);
   virtual Error memoryPrefetchImpl(const void *Ptr, size_t Size) {
     return CmdList->appendMemoryPrefetch(Ptr, Size);
   }
@@ -154,12 +158,8 @@ public:
   }
 
 private:
-  /// Fallback fill for host-accessible target memory: replicate the pattern
-  /// directly on the host with std::copy_n.
-  Error memoryFillHostImpl(void *Ptr, const void *Pattern, size_t PatternSize,
-                           size_t Size);
-  /// Fallback fill for non-host-accessible target memory: seed the pattern
-  /// once and grow the filled region via device copies, doubling each time.
+  /// Fallback fill that seeds the pattern once and grows the filled region via
+  /// device copies, doubling each time.
   Error memoryFillReplicateImpl(void *Ptr, const void *Pattern,
                                 size_t PatternSize, size_t Size);
 };
@@ -267,6 +267,13 @@ public:
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
   Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
+  Error memoryFillFallbackImpl(void *Ptr, const void *Pattern,
+                               size_t PatternSize, size_t Size) override;
+
+private:
+  /// Fill host-accessible memory directly from the calling thread.
+  Error memoryFillHostImpl(void *Ptr, const void *Pattern, size_t PatternSize,
+                           size_t Size);
 };
 
 /// Simple cache for queue objects.

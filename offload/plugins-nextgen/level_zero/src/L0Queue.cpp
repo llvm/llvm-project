@@ -18,7 +18,6 @@
 #include "llvm/Support/MathExtras.h"
 
 #include <algorithm>
-#include <vector>
 
 namespace llvm::omp::target::plugin {
 
@@ -29,20 +28,44 @@ Error L0QueueTy::init() {
   if (!CmdListOrErr)
     return CmdListOrErr.takeError();
   CmdList = *CmdListOrErr;
+
+  const auto &Options = Device.getPlugin().getOptions();
+  StagingBuffer.init(
+      Device.getZeContext(),
+      std::max(Options.StagingBufferSize, L0MaxMemFillPatternSize),
+      Options.StagingBufferCount);
   return initImpl();
 }
 
 Error L0QueueTy::deinit() {
-  if (auto Err = deinitImpl())
-    return Err;
+  Error AllErrors = deinitImpl();
   reset();
+
+  if (auto Err = StagingBuffer.clear())
+    AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
 
   if (CmdList)
     if (auto Err = Device.releaseCmdListManager(CmdList))
-      return Err;
+      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
 
   CmdList = nullptr;
+  return AllErrors;
+}
+
+Error L0QueueTy::synchronize() {
+  if (auto Err = synchronizeImpl())
+    return Err;
+  StagingBuffer.reset();
   return Plugin::success();
+}
+
+Expected<bool> L0QueueTy::hasPendingWork() {
+  auto PendingWorkOrErr = hasPendingWorkImpl();
+  if (!PendingWorkOrErr)
+    return PendingWorkOrErr.takeError();
+  if (!*PendingWorkOrErr)
+    StagingBuffer.reset();
+  return *PendingWorkOrErr;
 }
 
 Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
@@ -64,6 +87,11 @@ Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
   if (Size == 0 || PatternSize == 0)
     return Plugin::success();
 
+  if (PatternSize > L0MaxMemFillPatternSize)
+    return Plugin::error(
+        ErrorCode::INVALID_SIZE,
+        "memory fill pattern size exceeds the 1024-byte maximum");
+
   if (llvm::isPowerOf2_64(PatternSize) && (Size % PatternSize == 0) &&
       PatternSize <= Device.getMaxMemFillPatternSize()) {
     // Native L0 memory fill is possible directly.
@@ -82,65 +110,41 @@ Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
   // detection of repeating power-of-two patterns could be added here to allow
   // native L0 memory fill for those cases as well.
 
-  // Native L0 fill cannot handle this pattern size, but target memory is
-  // host-accessible, so fall back to a software fill.
-  const auto TgtType = Device.getMemAllocType(Ptr);
-  if (TgtType == ZE_MEMORY_TYPE_HOST || TgtType == ZE_MEMORY_TYPE_SHARED)
-    return memoryFillHostImpl(Ptr, Pattern, PatternSize, Size);
+  return memoryFillFallbackImpl(Ptr, Pattern, PatternSize, Size);
+}
 
-  // We know at this point that TgtType == ZE_MEMORY_TYPE_DEVICE.
-  // Native fill and software fill are both impossible.
-  // Seed the pattern once and grow the filled region with device copies,
-  // doubling the amount copied each time.
+Error L0QueueTy::memoryFillFallbackImpl(void *Ptr, const void *Pattern,
+                                        size_t PatternSize, size_t Size) {
   return memoryFillReplicateImpl(Ptr, Pattern, PatternSize, Size);
 }
 
-Error L0QueueTy::memoryFillHostImpl(void *Ptr, const void *Pattern,
-                                    size_t PatternSize, size_t Size) {
-  auto *Dst = static_cast<unsigned char *>(Ptr);
-  const auto *Pat = static_cast<const unsigned char *>(Pattern);
-  // Seed the pattern once.
-  std::copy_n(Pat, PatternSize, Dst);
-  // Replicate the pattern until it fills the entire destination.
-  for (size_t Offset = PatternSize; Offset < Size; ++Offset) {
+static void extendPattern(unsigned char *Dst, size_t Size, const void *Pattern,
+                          size_t PatternSize) {
+  assert(Size >= PatternSize && Size % PatternSize == 0 &&
+         "Invalid pattern extension size");
+  std::copy_n(static_cast<const unsigned char *>(Pattern), PatternSize, Dst);
+  for (size_t Offset = PatternSize; Offset < Size; ++Offset)
     Dst[Offset] = Dst[Offset - PatternSize];
-  }
-  return Plugin::success();
-}
-
-/// Replicate the pattern in \p Buf (of \p Size bytes) on the host until it is
-/// at least \p MinExtendedSize bytes long. The result is
-/// never larger than max(Size, 2 * MinExtendedSize).
-static std::vector<unsigned char> extendPattern(unsigned char *Buf, size_t Size,
-                                                size_t MinExtendedSize) {
-  assert(Size > 0 && MinExtendedSize > 0 &&
-         "Invalid pattern size or extension size");
-  const size_t NumPatterns =
-      std::max(static_cast<size_t>(1), (MinExtendedSize + Size - 1) / Size);
-  std::vector<unsigned char> Extended(NumPatterns * Size);
-  // Seed the pattern.
-  std::copy_n(Buf, Size, Extended.begin());
-  // Replicate the pattern until we reach the desired size.
-  for (size_t Offset = Size; Offset < Extended.size(); ++Offset) {
-    Extended[Offset] = Extended[Offset - Size];
-  }
-  return Extended;
 }
 
 Error L0QueueTy::memoryFillReplicateImpl(void *Ptr, const void *Pattern,
                                          size_t PatternSize, size_t Size) {
   auto *Dst = static_cast<unsigned char *>(Ptr);
 
-  // Grow the pattern on the host first - avoids several inefficient small
-  // device copies.
-  constexpr size_t MinExtendedSeedSize = 1024;
-  const auto ExtendedPattern =
-      extendPattern(static_cast<unsigned char *>(const_cast<void *>(Pattern)),
-                    PatternSize, std::min(Size, MinExtendedSeedSize));
+  auto SeedOrErr = StagingBuffer.getNext();
+  if (!SeedOrErr)
+    return SeedOrErr.takeError();
+  auto *Seed = static_cast<unsigned char *>(*SeedOrErr);
+  if (!Seed)
+    return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                         "failed to allocate a memory fill staging buffer");
 
-  // Seed the (extended) pattern once using dataSubmit.
-  size_t BytesFilled = std::min(ExtendedPattern.size(), Size);
-  if (auto Err = dataSubmit(Dst, ExtendedPattern.data(), BytesFilled))
+  // Keep the seed pattern-aligned so each subsequent copy preserves it.
+  const size_t SeedLimit = std::min(Size, L0MaxMemFillPatternSize);
+  size_t BytesFilled = (SeedLimit / PatternSize) * PatternSize;
+  extendPattern(Seed, BytesFilled, Pattern, PatternSize);
+
+  if (auto Err = memoryCopy(Dst, Seed, BytesFilled))
     return Err;
 
   // Clone the seed, doubling each time, until it fills the entire destination.
@@ -276,7 +280,7 @@ Error L0AsyncQueueTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
       static_cast<size_t>(Size) <=
           Device.getPlugin().getOptions().StagingBufferSize &&
       Device.getMemAllocType(HstPtr) != ZE_MEMORY_TYPE_HOST) {
-    auto PtrOrErr = Device.getStagingBuffer().get(/*IsAsync*/ true);
+    auto PtrOrErr = StagingBuffer.getNext();
     if (!PtrOrErr)
       return PtrOrErr.takeError();
     DstPtr = *PtrOrErr;
@@ -307,7 +311,7 @@ Error L0AsyncQueueTy::dataSubmitImpl(void *TgtPtr, const void *HstPtr,
       static_cast<size_t>(Size) <=
           Device.getPlugin().getOptions().StagingBufferSize &&
       Device.getMemAllocType(HstPtr) != ZE_MEMORY_TYPE_HOST) {
-    auto PtrOrErr = Device.getStagingBuffer().get(/*IsAsync*/ true);
+    auto PtrOrErr = StagingBuffer.getNext();
     if (!PtrOrErr)
       return PtrOrErr.takeError();
     SrcPtr = *PtrOrErr;
@@ -455,6 +459,24 @@ Error L0SyncQueueTy::hostCallImpl(void (*Callback)(void *), void *UserData) {
   if (auto Err = L0InorderQueueTy::hostCallImpl(Callback, UserData))
     return Err;
   return CmdList->hostSynchronize();
+}
+
+Error L0SyncQueueTy::memoryFillFallbackImpl(void *Ptr, const void *Pattern,
+                                            size_t PatternSize, size_t Size) {
+  const auto TgtType = Device.getMemAllocType(Ptr);
+  if (TgtType == ZE_MEMORY_TYPE_HOST || TgtType == ZE_MEMORY_TYPE_SHARED)
+    return memoryFillHostImpl(Ptr, Pattern, PatternSize, Size);
+  return L0QueueTy::memoryFillFallbackImpl(Ptr, Pattern, PatternSize, Size);
+}
+
+Error L0SyncQueueTy::memoryFillHostImpl(void *Ptr, const void *Pattern,
+                                        size_t PatternSize, size_t Size) {
+  auto *Dst = static_cast<unsigned char *>(Ptr);
+  const auto *Pat = static_cast<const unsigned char *>(Pattern);
+  std::copy_n(Pat, PatternSize, Dst);
+  for (size_t Offset = PatternSize; Offset < Size; ++Offset)
+    Dst[Offset] = Dst[Offset - PatternSize];
+  return Plugin::success();
 }
 
 // L0QueueCache implementation.

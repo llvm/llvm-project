@@ -15,30 +15,10 @@
 
 #include "L0Event.h"
 #include "L0Memory.h"
-#include "PerThreadTable.h"
 
 namespace llvm::omp::target::plugin {
 
 class LevelZeroPluginTy;
-
-class L0ContextTLSTy {
-  StagingBufferTy StagingBuffer;
-
-public:
-  StagingBufferTy &getStagingBuffer() { return StagingBuffer; }
-  const StagingBufferTy &getStagingBuffer() const { return StagingBuffer; }
-
-  Error deinit() { return StagingBuffer.clear(); }
-};
-
-struct L0ContextTLSTableTy
-    : public PerThreadContainer<
-          std::unordered_map<ze_context_handle_t, L0ContextTLSTy>> {
-  Error deinit() {
-    return PerThreadTable::deinit(
-        [](L0ContextTLSTy &Entry) -> auto { return Entry.deinit(); });
-  }
-};
 
 /// Driver and context-specific resources. We assume a single context per
 /// driver.
@@ -88,8 +68,6 @@ public:
   Error deinit();
 
   LevelZeroPluginTy &getPlugin() const { return Plugin; }
-
-  StagingBufferTy &getStagingBuffer();
 
   /// Add imported external pointer region.
   void addImported(void *Ptr, size_t Size) {

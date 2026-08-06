@@ -463,8 +463,6 @@ public:
     return Plugin::success();
   }
 
-  bool initialized() const { return Context != nullptr; }
-
   void init(ze_context_handle_t ContextIn, size_t SizeIn, size_t CountIn) {
     Context = ContextIn;
     Size = SizeIn;
@@ -472,13 +470,6 @@ public:
   }
 
   void reset() { Offset = 0; }
-
-  /// Always return the first buffer.
-  Expected<void *> get() {
-    if (Size == 0 || Count == 0)
-      return nullptr;
-    return Buffers.empty() ? addBuffers() : Buffers.front();
-  }
 
   /// Return the next available buffer.
   Expected<void *> getNext() {
@@ -503,9 +494,6 @@ public:
     Offset += Size;
     return Ret;
   }
-
-  /// Return either a fixed buffer or next buffer.
-  Expected<void *> get(bool Next) { return Next ? getNext() : get(); }
 };
 
 } // namespace llvm::omp::target::plugin
