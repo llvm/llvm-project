@@ -35,6 +35,7 @@ add_llvm_unittest(OrcJITTests
   LinkGraphLinkingLayerTest.cpp
   LookupAndRecordAddrsTest.cpp
   MachOBuilderTest.cpp
+  MangleAndInternerTest.cpp
   MachOPlatformTest.cpp
   MapperJITLinkMemoryManagerTest.cpp
   MemoryFlagsTest.cpp
