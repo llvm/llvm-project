@@ -1416,11 +1416,20 @@ static unsigned parseSyncscopeMDArg(const CallBase &CI, unsigned ArgIdx) {
   return CI.getContext().getOrInsertSyncScopeID(Scope);
 }
 
-// Recovers the scope AMDGPULowerBufferFatPointers stashed as metadata,
-// since buffer intrinsics have no scope operand of their own.
-static std::optional<SyncScope::ID> parseAtomicScopeMD(const CallBase &CI) {
-  MDNode *ScopeMD = CI.getMetadata("amdgpu.buffer.atomic.scope");
-  if (!ScopeMD)
+// Buffer atomic/store/atomic-load intrinsics take the syncscope name as
+// their trailing metadata argument, an empty MDNode when the memory access
+// is not atomic (the system scope also has an empty name, so the MDNode
+// operand count, not string emptiness, distinguishes the two). Not every
+// intrinsic reaching this dispatch has that trailing argument, so callers
+// rely on this returning std::nullopt for those too.
+static std::optional<SyncScope::ID>
+parseBufferAtomicScopeArg(const CallBase &CI) {
+  auto *ScopeArg =
+      dyn_cast<MetadataAsValue>(CI.getArgOperand(CI.arg_size() - 1));
+  if (!ScopeArg)
+    return std::nullopt;
+  MDNode *ScopeMD = cast<MDNode>(ScopeArg->getMetadata());
+  if (ScopeMD->getNumOperands() == 0)
     return std::nullopt;
   StringRef Scope = cast<MDString>(ScopeMD->getOperand(0))->getString();
   return CI.getContext().getOrInsertSyncScopeID(Scope);
@@ -1447,7 +1456,12 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
 
     bool IsSPrefetch = IntrID == Intrinsic::amdgcn_s_buffer_prefetch_data;
     if (!IsSPrefetch) {
-      auto *Aux = cast<ConstantInt>(CI.getArgOperand(CI.arg_size() - 1));
+      // Some buffer intrinsics have a trailing syncscope metadata arg after
+      // the cachepolicy immarg.
+      unsigned AuxIdx = CI.arg_size() - 1;
+      if (isa<MetadataAsValue>(CI.getArgOperand(AuxIdx)))
+        --AuxIdx;
+      auto *Aux = cast<ConstantInt>(CI.getArgOperand(AuxIdx));
       if (Aux->getZExtValue() & AMDGPU::CPol::VOLATILE)
         Flags |= MachineMemOperand::MOVolatile;
     }
@@ -1513,7 +1527,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
         Info.memVT = getValueType(MF.getDataLayout(), DataTy);
 
       Info.flags = Flags | MachineMemOperand::MOStore;
-      if (std::optional<SyncScope::ID> SSID = parseAtomicScopeMD(CI)) {
+      if (std::optional<SyncScope::ID> SSID = parseBufferAtomicScopeArg(CI)) {
         // Pretend to be atomic so SIMemoryLegalizer::expandStore sets cache
         // bypass bits, since atomic and plain buffer stores look identical.
         Info.order = AtomicOrdering::Monotonic;
@@ -1537,7 +1551,8 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
           // XXX - Should this be volatile without known ordering?
           Info.flags |= MachineMemOperand::MOVolatile;
           Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
-          if (std::optional<SyncScope::ID> SSID = parseAtomicScopeMD(CI)) {
+          if (std::optional<SyncScope::ID> SSID =
+                  parseBufferAtomicScopeArg(CI)) {
             // Pretend to be atomic so expandAtomicCmpxchgOrRmw sets cache
             // bypass bits.
             Info.order = AtomicOrdering::Monotonic;
@@ -1583,7 +1598,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
             memVTFromLoadIntrReturn(*this, MF.getDataLayout(), CI.getType(),
                                     std::numeric_limits<unsigned>::max());
         Info.flags = Flags | MachineMemOperand::MOLoad;
-        if (std::optional<SyncScope::ID> SSID = parseAtomicScopeMD(CI)) {
+        if (std::optional<SyncScope::ID> SSID = parseBufferAtomicScopeArg(CI)) {
           // Pretend to be atomic so expandLoad sets cache bypass bits.
           Info.order = AtomicOrdering::Monotonic;
           Info.ssid = *SSID;

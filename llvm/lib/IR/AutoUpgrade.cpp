@@ -1400,6 +1400,88 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           return true;
         }
         break;
+      // Legacy buffer atomic/store/atomic-load intrinsics missed the
+      // trailing syncscope metadata operand.
+      case Intrinsic::amdgcn_raw_ptr_atomic_buffer_load:
+        if (F->arg_size() == 4) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
+      case Intrinsic::amdgcn_struct_ptr_atomic_buffer_load:
+        if (F->arg_size() == 5) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
+      case Intrinsic::amdgcn_raw_ptr_buffer_store:
+        if (F->arg_size() == 5) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
+      case Intrinsic::amdgcn_struct_ptr_buffer_store:
+        if (F->arg_size() == 6) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_swap:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_add:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_smin:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_umin:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_smax:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_umax:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmax:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_and:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_or:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_xor:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_inc:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_dec:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cond_sub_u32:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32:
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd:
+        if (F->arg_size() == 5) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
+      case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap:
+        if (F->arg_size() == 6) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_swap:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_add:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_smin:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_umin:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_smax:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_umax:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_and:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_or:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_xor:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_inc:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_dec:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cond_sub_u32:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub_clamp_u32:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmin:
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmax:
+        if (F->arg_size() == 6) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
+      case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cmpswap:
+        if (F->arg_size() == 7) {
+          NewFn = nullptr;
+          return true;
+        }
+        break;
       }
 
       if (Name.consume_front("ds.") || Name.consume_front("global.atomic.") ||
@@ -4889,6 +4971,81 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     Type *T3 = CI->getArgOperand(3)->getType();
     Type *T4 = CI->getArgOperand(5)->getType();
     return UpgradeLegacyWMMAIUIntrinsicCall(F, CI, Builder, {T1, T2, T3, T4});
+  }
+
+  // Legacy buffer atomic/store/atomic-load intrinsics missed the trailing
+  // syncscope metadata operand. Append an empty MDNode, meaning "no scope
+  // info", matching the behavior of these calls before the operand existed.
+  auto UpgradeBufferScopeIntrinsicCall =
+      [](Function *F, CallBase *CI, IRBuilder<> &Builder,
+         ArrayRef<Type *> OverloadTys) -> Value * {
+    SmallVector<Value *, 8> Args(CI->args());
+    Args.push_back(MetadataAsValue::get(Builder.getContext(),
+                                        MDNode::get(Builder.getContext(), {})));
+
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        F->getParent(), F->getIntrinsicID(), OverloadTys);
+
+    SmallVector<OperandBundleDef, 1> Bundles;
+    CI->getOperandBundlesAsDefs(Bundles);
+
+    auto *NewCall = cast<CallInst>(Builder.CreateCall(NewDecl, Args, Bundles));
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    NewCall->setCallingConv(CI->getCallingConv());
+    NewCall->setAttributes(CI->getAttributes());
+    NewCall->setDebugLoc(CI->getDebugLoc());
+    NewCall->copyMetadata(*CI);
+    NewCall->takeName(CI);
+    return NewCall;
+  };
+
+  switch (F->getIntrinsicID()) {
+  case Intrinsic::amdgcn_raw_ptr_atomic_buffer_load:
+  case Intrinsic::amdgcn_struct_ptr_atomic_buffer_load:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_swap:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_add:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_smin:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_umin:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_smax:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_umax:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmax:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_and:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_or:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_xor:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_inc:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_dec:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_swap:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_add:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_smin:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_umin:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_smax:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_umax:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_and:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_or:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_xor:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_inc:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_dec:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmin:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmax:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cmpswap:
+    return UpgradeBufferScopeIntrinsicCall(F, CI, Builder,
+                                           {F->getReturnType()});
+  case Intrinsic::amdgcn_raw_ptr_buffer_store:
+  case Intrinsic::amdgcn_struct_ptr_buffer_store:
+    return UpgradeBufferScopeIntrinsicCall(F, CI, Builder,
+                                           {CI->getArgOperand(0)->getType()});
+  default:
+    break;
   }
 
   switch (F->getIntrinsicID()) {

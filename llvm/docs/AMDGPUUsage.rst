@@ -2484,29 +2484,6 @@ whether to skip the DPP optimization.
   ; Many expected active lanes: the DPP optimization is not skipped.
   %old1 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !{i32 32}
 
-.. _amdgpu_buffer_atomic_scope:
-
-'``amdgpu.buffer.atomic.scope``' Metadata
--------------------------------------------------
-
-Internal metadata attached by ``AMDGPULowerBufferFatPointers`` to the
-buffer intrinsics it emits for atomic, and ``seq_cst`` load or store,
-accesses through ptr addrspace(7) (buffer fat pointer). Buffer
-intrinsics have no scope operand of their own, so this metadata carries
-the :ref:`synchronization scope<amdgpu-memory-scopes>` name of the
-original memory operation through to instruction selection, where
-``SITargetLowering::getTgtMemIntrinsic`` recovers it so
-``SIMemoryLegalizer`` can set the correct cache bypass bits. This
-metadata is only produced and consumed internally by the AMDGPU backend
-and is not intended to be written by front ends.
-
-.. code-block:: llvm
-
-  %old = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add(i32 %val, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0), !amdgpu.buffer.atomic.scope !0
-
-  !0 = !{!"agent"}
-
-
 LLVM IR Attributes
 ==================
 

@@ -37,22 +37,22 @@ define i32 @load_i32_align4(ptr addrspace(8) inreg %buf, i32 %off) {
 define void @store_i32_align4(i32 %data, ptr addrspace(8) inreg %buf, i32 %off) {
 ; STRICT-LABEL: define void @store_i32_align4(
 ; STRICT-SAME: i32 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1:![0-9]+]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_i32_align4(
 ; UNALIGNED_ONLY-SAME: i32 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1:![0-9]+]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_i32_align4(
 ; RELAXED_OOB_ONLY-SAME: i32 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1:![0-9]+]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_i32_align4(
 ; BOTH_FLAGS-SAME: i32 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1:![0-9]+]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
 
@@ -104,30 +104,30 @@ define void @store_i32_align2(i32 %data, ptr addrspace(8) inreg %buf, i32 %off) 
 ; STRICT-SAME: i32 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_LEGAL:%.*]] = bitcast i32 [[DATA]] to <2 x i16>
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i16> [[DATA_LEGAL]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 2
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i16> [[DATA_LEGAL]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_i32_align2(
 ; UNALIGNED_ONLY-SAME: i32 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_i32_align2(
 ; RELAXED_OOB_ONLY-SAME: i32 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast i32 [[DATA]] to <2 x i16>
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i16> [[DATA_LEGAL]], i64 0
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_1:%.*]] = add nuw i32 [[Q]], 2
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i16> [[DATA_LEGAL]], i64 1
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_i32_align2(
 ; BOTH_FLAGS-SAME: i32 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -190,42 +190,42 @@ define void @store_i32_align1(i32 %data, ptr addrspace(8) inreg %buf, i32 %off) 
 ; STRICT-SAME: i32 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_LEGAL:%.*]] = bitcast i32 [[DATA]] to <4 x i8>
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 2
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; STRICT-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 3
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_i32_align1(
 ; UNALIGNED_ONLY-SAME: i32 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_i32_align1(
 ; RELAXED_OOB_ONLY-SAME: i32 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast i32 [[DATA]] to <4 x i8>
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 0
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_1:%.*]] = add nuw i32 [[Q]], 1
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 1
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_2:%.*]] = add nuw i32 [[Q]], 2
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 2
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_3:%.*]] = add nuw i32 [[Q]], 3
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 3
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_i32_align1(
 ; BOTH_FLAGS-SAME: i32 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -264,22 +264,22 @@ define i64 @load_i64_align4(ptr addrspace(8) inreg %buf, i32 %off) {
 define void @store_i64_align4(i64 %data, ptr addrspace(8) inreg %buf, i32 %off) {
 ; STRICT-LABEL: define void @store_i64_align4(
 ; STRICT-SAME: i64 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_i64_align4(
 ; UNALIGNED_ONLY-SAME: i64 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_i64_align4(
 ; RELAXED_OOB_ONLY-SAME: i64 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_i64_align4(
 ; BOTH_FLAGS-SAME: i64 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -366,66 +366,66 @@ define void @store_i64_align1(i64 %data, ptr addrspace(8) inreg %buf, i32 %off) 
 ; STRICT-SAME: i64 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_LEGAL:%.*]] = bitcast i64 [[DATA]] to <8 x i8>
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 2
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; STRICT-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 3
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 4
 ; STRICT-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 4
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_5:%.*]] = add i32 [[Q]], 5
 ; STRICT-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 5
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 6
 ; STRICT-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 6
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_7:%.*]] = add i32 [[Q]], 7
 ; STRICT-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 7
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_i64_align1(
 ; UNALIGNED_ONLY-SAME: i64 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_i64_align1(
 ; RELAXED_OOB_ONLY-SAME: i64 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast i64 [[DATA]] to <8 x i8>
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 0
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_1:%.*]] = add nuw i32 [[Q]], 1
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 1
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_2:%.*]] = add nuw i32 [[Q]], 2
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 2
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_3:%.*]] = add nuw i32 [[Q]], 3
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 3
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_4:%.*]] = add nuw i32 [[Q]], 4
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 4
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_5:%.*]] = add nuw i32 [[Q]], 5
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 5
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_6:%.*]] = add nuw i32 [[Q]], 6
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 6
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_7:%.*]] = add nuw i32 [[Q]], 7
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 7
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_i64_align1(
 ; BOTH_FLAGS-SAME: i64 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -473,29 +473,29 @@ define void @store_v2i32_align4(<2 x i32> %data, ptr addrspace(8) inreg %buf, i3
 ; STRICT-LABEL: define void @store_v2i32_align4(
 ; STRICT-SAME: <2 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i32> [[DATA]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 4
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i32> [[DATA]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v2i32_align4(
 ; UNALIGNED_ONLY-SAME: <2 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i32> [[DATA]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 4
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i32> [[DATA]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v2i32_align4(
 ; RELAXED_OOB_ONLY-SAME: <2 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v2i32_align4(
 ; BOTH_FLAGS-SAME: <2 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -562,46 +562,46 @@ define void @store_v2i32_align2(<2 x i32> %data, ptr addrspace(8) inreg %buf, i3
 ; STRICT-SAME: <2 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <2 x i32> [[DATA]] to <4 x i16>
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <4 x i16> [[DATA_LEGAL]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 2
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <4 x i16> [[DATA_LEGAL]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 4
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <4 x i16> [[DATA_LEGAL]], i64 2
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 6
 ; STRICT-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <4 x i16> [[DATA_LEGAL]], i64 3
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_3]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_3]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v2i32_align2(
 ; UNALIGNED_ONLY-SAME: <2 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i32> [[DATA]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 4
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i32> [[DATA]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v2i32_align2(
 ; RELAXED_OOB_ONLY-SAME: <2 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <2 x i32> [[DATA]] to <4 x i16>
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <4 x i16> [[DATA_LEGAL]], i64 0
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_1:%.*]] = add nuw i32 [[Q]], 2
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <4 x i16> [[DATA_LEGAL]], i64 1
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_2:%.*]] = add nuw i32 [[Q]], 4
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <4 x i16> [[DATA_LEGAL]], i64 2
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_3:%.*]] = add nuw i32 [[Q]], 6
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <4 x i16> [[DATA_LEGAL]], i64 3
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_3]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_3]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v2i32_align2(
 ; BOTH_FLAGS-SAME: <2 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -692,70 +692,70 @@ define void @store_v2i32_align1(<2 x i32> %data, ptr addrspace(8) inreg %buf, i3
 ; STRICT-SAME: <2 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <2 x i32> [[DATA]] to <8 x i8>
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 2
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; STRICT-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 3
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 4
 ; STRICT-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 4
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_5:%.*]] = add i32 [[Q]], 5
 ; STRICT-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 5
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 6
 ; STRICT-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 6
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_7:%.*]] = add i32 [[Q]], 7
 ; STRICT-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 7
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v2i32_align1(
 ; UNALIGNED_ONLY-SAME: <2 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i32> [[DATA]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 4
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i32> [[DATA]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v2i32_align1(
 ; RELAXED_OOB_ONLY-SAME: <2 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <2 x i32> [[DATA]] to <8 x i8>
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 0
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_1:%.*]] = add nuw i32 [[Q]], 1
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 1
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_2:%.*]] = add nuw i32 [[Q]], 2
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 2
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_3:%.*]] = add nuw i32 [[Q]], 3
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 3
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_4:%.*]] = add nuw i32 [[Q]], 4
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 4
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_5:%.*]] = add nuw i32 [[Q]], 5
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 5
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_6:%.*]] = add nuw i32 [[Q]], 6
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 6
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_7:%.*]] = add nuw i32 [[Q]], 7
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 7
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v2i32_align1(
 ; BOTH_FLAGS-SAME: <2 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -809,35 +809,35 @@ define void @store_v3i32_align4(<3 x i32> %data, ptr addrspace(8) inreg %buf, i3
 ; STRICT-LABEL: define void @store_v3i32_align4(
 ; STRICT-SAME: <3 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <3 x i32> [[DATA]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 4
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <3 x i32> [[DATA]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 8
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <3 x i32> [[DATA]], i64 2
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_2]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_2]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v3i32_align4(
 ; UNALIGNED_ONLY-SAME: <3 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <3 x i32> [[DATA]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 4
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <3 x i32> [[DATA]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 8
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <3 x i32> [[DATA]], i64 2
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_2]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_2]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v3i32_align4(
 ; RELAXED_OOB_ONLY-SAME: <3 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v3i32_align4(
 ; BOTH_FLAGS-SAME: <3 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -887,29 +887,29 @@ define void @store_v3i32_align8(<3 x i32> %data, ptr addrspace(8) inreg %buf, i3
 ; STRICT-LABEL: define void @store_v3i32_align8(
 ; STRICT-SAME: <3 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <3 x i32> [[DATA]], <3 x i32> poison, <2 x i32> <i32 0, i32 1>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 8
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <3 x i32> [[DATA]], i64 2
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v3i32_align8(
 ; UNALIGNED_ONLY-SAME: <3 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <3 x i32> [[DATA]], <3 x i32> poison, <2 x i32> <i32 0, i32 1>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 8
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <3 x i32> [[DATA]], i64 2
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v3i32_align8(
 ; RELAXED_OOB_ONLY-SAME: <3 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v3i32_align8(
 ; BOTH_FLAGS-SAME: <3 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -948,22 +948,22 @@ define <3 x i32> @load_v3i32_align16(ptr addrspace(8) inreg %buf, i32 %off) {
 define void @store_v3i32_align16(<3 x i32> %data, ptr addrspace(8) inreg %buf, i32 %off) {
 ; STRICT-LABEL: define void @store_v3i32_align16(
 ; STRICT-SAME: <3 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v3i32_align16(
 ; UNALIGNED_ONLY-SAME: <3 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v3i32_align16(
 ; RELAXED_OOB_ONLY-SAME: <3 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v3i32_align16(
 ; BOTH_FLAGS-SAME: <3 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> [[DATA]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -1015,29 +1015,29 @@ define void @store_v4i32_align8(<4 x i32> %data, ptr addrspace(8) inreg %buf, i3
 ; STRICT-LABEL: define void @store_v4i32_align8(
 ; STRICT-SAME: <4 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <4 x i32> [[DATA]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 8
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = shufflevector <4 x i32> [[DATA]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v4i32_align8(
 ; UNALIGNED_ONLY-SAME: <4 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <4 x i32> [[DATA]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 8
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = shufflevector <4 x i32> [[DATA]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v4i32_align8(
 ; RELAXED_OOB_ONLY-SAME: <4 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v4i32_align8(
 ; BOTH_FLAGS-SAME: <4 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -1101,37 +1101,37 @@ define void @store_v8i32_align16(<8 x i32> %data, ptr addrspace(8) inreg %buf, i
 ; STRICT-LABEL: define void @store_v8i32_align16(
 ; STRICT-SAME: <8 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 16
 ; STRICT-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v8i32_align16(
 ; UNALIGNED_ONLY-SAME: <8 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 16
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v8i32_align16(
 ; RELAXED_OOB_ONLY-SAME: <8 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_4:%.*]] = add nuw i32 [[Q]], 16
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v8i32_align16(
 ; BOTH_FLAGS-SAME: <8 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; BOTH_FLAGS-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    [[Q_PART_4:%.*]] = add nuw i32 [[Q]], 16
 ; BOTH_FLAGS-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -1211,49 +1211,49 @@ define void @store_v8i32_align8(<8 x i32> %data, ptr addrspace(8) inreg %buf, i3
 ; STRICT-LABEL: define void @store_v8i32_align8(
 ; STRICT-SAME: <8 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <2 x i32> <i32 0, i32 1>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 8
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <2 x i32> <i32 2, i32 3>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 16
 ; STRICT-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <2 x i32> <i32 4, i32 5>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 24
 ; STRICT-NEXT:    [[DATA_SLICE_6:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <2 x i32> <i32 6, i32 7>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_6]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_6]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v8i32_align8(
 ; UNALIGNED_ONLY-SAME: <8 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <2 x i32> <i32 0, i32 1>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 8
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <2 x i32> <i32 2, i32 3>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 16
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <2 x i32> <i32 4, i32 5>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 24
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_6:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <2 x i32> <i32 6, i32 7>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_6]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_6]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v8i32_align8(
 ; RELAXED_OOB_ONLY-SAME: <8 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_4:%.*]] = add nuw i32 [[Q]], 16
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v8i32_align8(
 ; BOTH_FLAGS-SAME: <8 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; BOTH_FLAGS-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    [[Q_PART_4:%.*]] = add nuw i32 [[Q]], 16
 ; BOTH_FLAGS-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -1349,73 +1349,73 @@ define void @store_v8i32_align4(<8 x i32> %data, ptr addrspace(8) inreg %buf, i3
 ; STRICT-LABEL: define void @store_v8i32_align4(
 ; STRICT-SAME: <8 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i32> [[DATA]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 4
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i32> [[DATA]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 8
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i32> [[DATA]], i64 2
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_2]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_2]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 12
 ; STRICT-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i32> [[DATA]], i64 3
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_3]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_3]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 16
 ; STRICT-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i32> [[DATA]], i64 4
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_5:%.*]] = add i32 [[Q]], 20
 ; STRICT-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i32> [[DATA]], i64 5
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_5]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_5]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 24
 ; STRICT-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i32> [[DATA]], i64 6
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_6]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_6]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_7:%.*]] = add i32 [[Q]], 28
 ; STRICT-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i32> [[DATA]], i64 7
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_7]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_7]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v8i32_align4(
 ; UNALIGNED_ONLY-SAME: <8 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i32> [[DATA]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 4
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i32> [[DATA]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_1]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 8
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i32> [[DATA]], i64 2
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_2]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_2]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 12
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i32> [[DATA]], i64 3
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_3]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_3]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 16
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i32> [[DATA]], i64 4
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_5:%.*]] = add i32 [[Q]], 20
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i32> [[DATA]], i64 5
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_5]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_5]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 24
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i32> [[DATA]], i64 6
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_6]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_6]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_7:%.*]] = add i32 [[Q]], 28
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i32> [[DATA]], i64 7
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_7]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_SLICE_7]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v8i32_align4(
 ; RELAXED_OOB_ONLY-SAME: <8 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_4:%.*]] = add nuw i32 [[Q]], 16
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v8i32_align4(
 ; BOTH_FLAGS-SAME: <8 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; BOTH_FLAGS-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    [[Q_PART_4:%.*]] = add nuw i32 [[Q]], 16
 ; BOTH_FLAGS-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <8 x i32> [[DATA]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -1495,49 +1495,49 @@ define void @store_v10i32_align16(<10 x i32> %data, ptr addrspace(8) inreg %buf,
 ; STRICT-LABEL: define void @store_v10i32_align16(
 ; STRICT-SAME: <10 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 16
 ; STRICT-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_8:%.*]] = add i32 [[Q]], 32
 ; STRICT-NEXT:    [[DATA_SLICE_8:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 8, i32 9>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v10i32_align16(
 ; UNALIGNED_ONLY-SAME: <10 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 16
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_8:%.*]] = add i32 [[Q]], 32
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_8:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 8, i32 9>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v10i32_align16(
 ; RELAXED_OOB_ONLY-SAME: <10 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_4:%.*]] = add nuw i32 [[Q]], 16
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_8:%.*]] = add nuw i32 [[Q]], 32
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_8:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 8, i32 9>
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v10i32_align16(
 ; BOTH_FLAGS-SAME: <10 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; BOTH_FLAGS-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    [[Q_PART_4:%.*]] = add nuw i32 [[Q]], 16
 ; BOTH_FLAGS-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    [[Q_PART_8:%.*]] = add nuw i32 [[Q]], 32
 ; BOTH_FLAGS-NEXT:    [[DATA_SLICE_8:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 8, i32 9>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 16 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -1633,61 +1633,61 @@ define void @store_v10i32_align8(<10 x i32> %data, ptr addrspace(8) inreg %buf, 
 ; STRICT-LABEL: define void @store_v10i32_align8(
 ; STRICT-SAME: <10 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 0, i32 1>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 8
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 2, i32 3>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 16
 ; STRICT-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 4, i32 5>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 24
 ; STRICT-NEXT:    [[DATA_SLICE_6:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 6, i32 7>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_6]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_6]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_8:%.*]] = add i32 [[Q]], 32
 ; STRICT-NEXT:    [[DATA_SLICE_8:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 8, i32 9>
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v10i32_align8(
 ; UNALIGNED_ONLY-SAME: <10 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 0, i32 1>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 8
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 2, i32 3>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_2]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 16
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 4, i32 5>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 24
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_6:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 6, i32 7>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_6]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_6]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_8:%.*]] = add i32 [[Q]], 32
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_8:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 8, i32 9>
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v10i32_align8(
 ; RELAXED_OOB_ONLY-SAME: <10 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_4:%.*]] = add nuw i32 [[Q]], 16
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_8:%.*]] = add nuw i32 [[Q]], 32
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_8:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 8, i32 9>
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v10i32_align8(
 ; BOTH_FLAGS-SAME: <10 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; BOTH_FLAGS-NEXT:    [[DATA_SLICE_0:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    [[Q_PART_4:%.*]] = add nuw i32 [[Q]], 16
 ; BOTH_FLAGS-NEXT:    [[DATA_SLICE_4:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DATA_SLICE_4]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    [[Q_PART_8:%.*]] = add nuw i32 [[Q]], 32
 ; BOTH_FLAGS-NEXT:    [[DATA_SLICE_8:%.*]] = shufflevector <10 x i32> [[DATA]], <10 x i32> poison, <2 x i32> <i32 8, i32 9>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_SLICE_8]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q_PART_8]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -1738,30 +1738,30 @@ define void @store_i16_align1(i16 %data, ptr addrspace(8) inreg %buf, i32 %off) 
 ; STRICT-SAME: i16 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_LEGAL:%.*]] = bitcast i16 [[DATA]] to <2 x i8>
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i8> [[DATA_LEGAL]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i8> [[DATA_LEGAL]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_i16_align1(
 ; UNALIGNED_ONLY-SAME: i16 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_i16_align1(
 ; RELAXED_OOB_ONLY-SAME: i16 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast i16 [[DATA]] to <2 x i8>
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i8> [[DATA_LEGAL]], i64 0
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_1:%.*]] = add nuw i32 [[Q]], 1
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i8> [[DATA_LEGAL]], i64 1
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_i16_align1(
 ; BOTH_FLAGS-SAME: i16 [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -1809,29 +1809,29 @@ define void @store_v2i16_align4(<2 x i16> %data, ptr addrspace(8) inreg %buf, i3
 ; STRICT-LABEL: define void @store_v2i16_align4(
 ; STRICT-SAME: <2 x i16> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i16> [[DATA]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 2
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i16> [[DATA]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v2i16_align4(
 ; UNALIGNED_ONLY-SAME: <2 x i16> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i16> [[DATA]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 2
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i16> [[DATA]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v2i16_align4(
 ; RELAXED_OOB_ONLY-SAME: <2 x i16> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i16(<2 x i16> [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i16(<2 x i16> [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v2i16_align4(
 ; BOTH_FLAGS-SAME: <2 x i16> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i16(<2 x i16> [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i16(<2 x i16> [[DATA]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -1883,33 +1883,33 @@ define void @store_v2i16_align2(<2 x i16> %data, ptr addrspace(8) inreg %buf, i3
 ; STRICT-LABEL: define void @store_v2i16_align2(
 ; STRICT-SAME: <2 x i16> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i16> [[DATA]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 2
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i16> [[DATA]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v2i16_align2(
 ; UNALIGNED_ONLY-SAME: <2 x i16> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i16> [[DATA]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 2
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i16> [[DATA]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v2i16_align2(
 ; RELAXED_OOB_ONLY-SAME: <2 x i16> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i16> [[DATA]], i64 0
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_1:%.*]] = add nuw i32 [[Q]], 2
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i16> [[DATA]], i64 1
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v2i16_align2(
 ; BOTH_FLAGS-SAME: <2 x i16> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i16(<2 x i16> [[DATA]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i16(<2 x i16> [[DATA]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -1976,46 +1976,46 @@ define void @store_v2i16_align1(<2 x i16> %data, ptr addrspace(8) inreg %buf, i3
 ; STRICT-SAME: <2 x i16> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <2 x i16> [[DATA]] to <4 x i8>
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 2
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; STRICT-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 3
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v2i16_align1(
 ; UNALIGNED_ONLY-SAME: <2 x i16> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i16> [[DATA]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 2
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i16> [[DATA]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v2i16_align1(
 ; RELAXED_OOB_ONLY-SAME: <2 x i16> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <2 x i16> [[DATA]] to <4 x i8>
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 0
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_1:%.*]] = add nuw i32 [[Q]], 1
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 1
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_2:%.*]] = add nuw i32 [[Q]], 2
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 2
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_3:%.*]] = add nuw i32 [[Q]], 3
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <4 x i8> [[DATA_LEGAL]], i64 3
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v2i16_align1(
 ; BOTH_FLAGS-SAME: <2 x i16> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i16(<2 x i16> [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i16(<2 x i16> [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -2065,31 +2065,31 @@ define void @store_v2i8_align2(<2 x i8> %data, ptr addrspace(8) inreg %buf, i32 
 ; STRICT-LABEL: define void @store_v2i8_align2(
 ; STRICT-SAME: <2 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i8> [[DATA]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i8> [[DATA]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v2i8_align2(
 ; UNALIGNED_ONLY-SAME: <2 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i8> [[DATA]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i8> [[DATA]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v2i8_align2(
 ; RELAXED_OOB_ONLY-SAME: <2 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <2 x i8> [[DATA]] to i16
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_LEGAL]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_LEGAL]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v2i8_align2(
 ; BOTH_FLAGS-SAME: <2 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; BOTH_FLAGS-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <2 x i8> [[DATA]] to i16
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_LEGAL]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_LEGAL]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -2142,34 +2142,34 @@ define void @store_v2i8_align1(<2 x i8> %data, ptr addrspace(8) inreg %buf, i32 
 ; STRICT-LABEL: define void @store_v2i8_align1(
 ; STRICT-SAME: <2 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i8> [[DATA]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i8> [[DATA]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v2i8_align1(
 ; UNALIGNED_ONLY-SAME: <2 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i8> [[DATA]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i8> [[DATA]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v2i8_align1(
 ; RELAXED_OOB_ONLY-SAME: <2 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i8> [[DATA]], i64 0
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_1:%.*]] = add nuw i32 [[Q]], 1
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i8> [[DATA]], i64 1
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v2i8_align1(
 ; BOTH_FLAGS-SAME: <2 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; BOTH_FLAGS-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <2 x i8> [[DATA]] to i16
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_LEGAL]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_LEGAL]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -2231,43 +2231,43 @@ define void @store_v4i8_align4(<4 x i8> %data, ptr addrspace(8) inreg %buf, i32 
 ; STRICT-LABEL: define void @store_v4i8_align4(
 ; STRICT-SAME: <4 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <4 x i8> [[DATA]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <4 x i8> [[DATA]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <4 x i8> [[DATA]], i64 2
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; STRICT-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <4 x i8> [[DATA]], i64 3
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v4i8_align4(
 ; UNALIGNED_ONLY-SAME: <4 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <4 x i8> [[DATA]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <4 x i8> [[DATA]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <4 x i8> [[DATA]], i64 2
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <4 x i8> [[DATA]], i64 3
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v4i8_align4(
 ; RELAXED_OOB_ONLY-SAME: <4 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <4 x i8> [[DATA]] to i32
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_LEGAL]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_LEGAL]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v4i8_align4(
 ; BOTH_FLAGS-SAME: <4 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; BOTH_FLAGS-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <4 x i8> [[DATA]] to i32
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_LEGAL]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_LEGAL]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -2333,47 +2333,47 @@ define void @store_v4i8_align2(<4 x i8> %data, ptr addrspace(8) inreg %buf, i32 
 ; STRICT-LABEL: define void @store_v4i8_align2(
 ; STRICT-SAME: <4 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <4 x i8> [[DATA]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <4 x i8> [[DATA]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <4 x i8> [[DATA]], i64 2
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; STRICT-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <4 x i8> [[DATA]], i64 3
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v4i8_align2(
 ; UNALIGNED_ONLY-SAME: <4 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <4 x i8> [[DATA]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <4 x i8> [[DATA]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <4 x i8> [[DATA]], i64 2
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <4 x i8> [[DATA]], i64 3
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v4i8_align2(
 ; RELAXED_OOB_ONLY-SAME: <4 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <4 x i8> [[DATA]] to <2 x i16>
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i16> [[DATA_LEGAL]], i64 0
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_1:%.*]] = add nuw i32 [[Q]], 2
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i16> [[DATA_LEGAL]], i64 1
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v4i8_align2(
 ; BOTH_FLAGS-SAME: <4 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; BOTH_FLAGS-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <4 x i8> [[DATA]] to i32
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_LEGAL]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_LEGAL]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -2444,52 +2444,52 @@ define void @store_v4i8_align1(<4 x i8> %data, ptr addrspace(8) inreg %buf, i32 
 ; STRICT-LABEL: define void @store_v4i8_align1(
 ; STRICT-SAME: <4 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <4 x i8> [[DATA]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <4 x i8> [[DATA]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <4 x i8> [[DATA]], i64 2
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; STRICT-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <4 x i8> [[DATA]], i64 3
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v4i8_align1(
 ; UNALIGNED_ONLY-SAME: <4 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <4 x i8> [[DATA]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <4 x i8> [[DATA]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <4 x i8> [[DATA]], i64 2
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <4 x i8> [[DATA]], i64 3
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v4i8_align1(
 ; RELAXED_OOB_ONLY-SAME: <4 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <4 x i8> [[DATA]], i64 0
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_1:%.*]] = add nuw i32 [[Q]], 1
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <4 x i8> [[DATA]], i64 1
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_2:%.*]] = add nuw i32 [[Q]], 2
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <4 x i8> [[DATA]], i64 2
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_3:%.*]] = add nuw i32 [[Q]], 3
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <4 x i8> [[DATA]], i64 3
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v4i8_align1(
 ; BOTH_FLAGS-SAME: <4 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; BOTH_FLAGS-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <4 x i8> [[DATA]] to i32
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_LEGAL]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DATA_LEGAL]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -2578,68 +2578,68 @@ define void @store_v16i4_align8(<16 x i4> %data, ptr addrspace(8) inreg %buf, i3
 ; STRICT-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <8 x i8>
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 2
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; STRICT-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 3
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 4
 ; STRICT-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 4
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_5:%.*]] = add i32 [[Q]], 5
 ; STRICT-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 5
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 6
 ; STRICT-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 6
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_7:%.*]] = add i32 [[Q]], 7
 ; STRICT-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 7
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v16i4_align8(
 ; UNALIGNED_ONLY-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <8 x i8>
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 2
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 3
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 4
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 4
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_5:%.*]] = add i32 [[Q]], 5
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 5
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 6
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 6
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_7:%.*]] = add i32 [[Q]], 7
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 7
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v16i4_align8(
 ; RELAXED_OOB_ONLY-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <2 x i32>
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_LEGAL]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_LEGAL]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v16i4_align8(
 ; BOTH_FLAGS-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; BOTH_FLAGS-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <2 x i32>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_LEGAL]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_LEGAL]], ptr addrspace(8) align 8 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -2728,68 +2728,68 @@ define void @store_v16i4_align4(<16 x i4> %data, ptr addrspace(8) inreg %buf, i3
 ; STRICT-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <8 x i8>
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 2
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; STRICT-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 3
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 4
 ; STRICT-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 4
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_5:%.*]] = add i32 [[Q]], 5
 ; STRICT-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 5
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 6
 ; STRICT-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 6
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_7:%.*]] = add i32 [[Q]], 7
 ; STRICT-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 7
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v16i4_align4(
 ; UNALIGNED_ONLY-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <8 x i8>
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 2
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 3
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 4
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 4
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_5:%.*]] = add i32 [[Q]], 5
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 5
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 6
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 6
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_7:%.*]] = add i32 [[Q]], 7
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 7
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v16i4_align4(
 ; RELAXED_OOB_ONLY-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <2 x i32>
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_LEGAL]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_LEGAL]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v16i4_align4(
 ; BOTH_FLAGS-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; BOTH_FLAGS-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <2 x i32>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_LEGAL]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_LEGAL]], ptr addrspace(8) align 4 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -2888,78 +2888,78 @@ define void @store_v16i4_align2(<16 x i4> %data, ptr addrspace(8) inreg %buf, i3
 ; STRICT-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <8 x i8>
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 2
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; STRICT-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 3
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 4
 ; STRICT-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 4
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_5:%.*]] = add i32 [[Q]], 5
 ; STRICT-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 5
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 6
 ; STRICT-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 6
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_7:%.*]] = add i32 [[Q]], 7
 ; STRICT-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 7
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v16i4_align2(
 ; UNALIGNED_ONLY-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <8 x i8>
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 2
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 3
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 4
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 4
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_5:%.*]] = add i32 [[Q]], 5
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 5
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 6
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 6
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_7:%.*]] = add i32 [[Q]], 7
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 7
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v16i4_align2(
 ; RELAXED_OOB_ONLY-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <4 x i16>
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <4 x i16> [[DATA_LEGAL]], i64 0
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_1:%.*]] = add nuw i32 [[Q]], 2
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <4 x i16> [[DATA_LEGAL]], i64 1
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_2:%.*]] = add nuw i32 [[Q]], 4
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <4 x i16> [[DATA_LEGAL]], i64 2
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_2]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_3:%.*]] = add nuw i32 [[Q]], 6
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <4 x i16> [[DATA_LEGAL]], i64 3
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_3]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_3]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v16i4_align2(
 ; BOTH_FLAGS-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; BOTH_FLAGS-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <2 x i32>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_LEGAL]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_LEGAL]], ptr addrspace(8) align 2 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -3070,90 +3070,90 @@ define void @store_v16i4_align1(<16 x i4> %data, ptr addrspace(8) inreg %buf, i3
 ; STRICT-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; STRICT-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <8 x i8>
 ; STRICT-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 0
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; STRICT-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 1
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; STRICT-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 2
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; STRICT-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 3
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 4
 ; STRICT-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 4
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_5:%.*]] = add i32 [[Q]], 5
 ; STRICT-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 5
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 6
 ; STRICT-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 6
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    [[Q_PART_7:%.*]] = add i32 [[Q]], 7
 ; STRICT-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 7
-; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0)
+; STRICT-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0, metadata [[META1]])
 ; STRICT-NEXT:    ret void
 ;
 ; UNALIGNED_ONLY-LABEL: define void @store_v16i4_align1(
 ; UNALIGNED_ONLY-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; UNALIGNED_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <8 x i8>
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 0
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_1:%.*]] = add i32 [[Q]], 1
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 1
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_2:%.*]] = add i32 [[Q]], 2
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 2
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_3:%.*]] = add i32 [[Q]], 3
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 3
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_4:%.*]] = add i32 [[Q]], 4
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 4
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_5:%.*]] = add i32 [[Q]], 5
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 5
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_6:%.*]] = add i32 [[Q]], 6
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 6
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    [[Q_PART_7:%.*]] = add i32 [[Q]], 7
 ; UNALIGNED_ONLY-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 7
-; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0)
+; UNALIGNED_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0, metadata [[META1]])
 ; UNALIGNED_ONLY-NEXT:    ret void
 ;
 ; RELAXED_OOB_ONLY-LABEL: define void @store_v16i4_align1(
 ; RELAXED_OOB_ONLY-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) {
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <8 x i8>
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 0
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_1:%.*]] = add nuw i32 [[Q]], 1
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 1
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_1]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_2:%.*]] = add nuw i32 [[Q]], 2
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 2
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_2]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_3:%.*]] = add nuw i32 [[Q]], 3
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 3
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_3]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_4:%.*]] = add nuw i32 [[Q]], 4
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 4
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_4]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_5:%.*]] = add nuw i32 [[Q]], 5
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 5
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_5]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_6:%.*]] = add nuw i32 [[Q]], 6
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 6
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_6]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    [[Q_PART_7:%.*]] = add nuw i32 [[Q]], 7
 ; RELAXED_OOB_ONLY-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i8> [[DATA_LEGAL]], i64 7
-; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0)
+; RELAXED_OOB_ONLY-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q_PART_7]], i32 0, i32 0, metadata [[META1]])
 ; RELAXED_OOB_ONLY-NEXT:    ret void
 ;
 ; BOTH_FLAGS-LABEL: define void @store_v16i4_align1(
 ; BOTH_FLAGS-SAME: <16 x i4> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]], i32 [[Q:%.*]]) #[[ATTR0]] {
 ; BOTH_FLAGS-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <16 x i4> [[DATA]] to <2 x i32>
-; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_LEGAL]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0)
+; BOTH_FLAGS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA_LEGAL]], ptr addrspace(8) align 1 [[BUF]], i32 [[Q]], i32 0, i32 0, metadata [[META1]])
 ; BOTH_FLAGS-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
@@ -3278,3 +3278,12 @@ define <8 x half> @load_v8f16_align2_not_oob(ptr addrspace(1) inreg %ptr, i32 %o
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 7, !"amdgpu.buffer.oob.mode", i32 BUFFER_OOB_MODE}
+;.
+; STRICT: [[META1]] = !{}
+;.
+; UNALIGNED_ONLY: [[META1]] = !{}
+;.
+; RELAXED_OOB_ONLY: [[META1]] = !{}
+;.
+; BOTH_FLAGS: [[META1]] = !{}
+;.

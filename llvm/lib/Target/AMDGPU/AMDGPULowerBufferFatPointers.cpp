@@ -1566,10 +1566,9 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
   void setAlign(CallInst *Intr, Align A, unsigned RsrcArgIdx);
   void insertPreMemOpFence(AtomicOrdering Order, SyncScope::ID SSID);
   void insertPostMemOpFence(AtomicOrdering Order, SyncScope::ID SSID);
-  // Buffer intrinsics have no ordering/scope operand, so stash it as
-  // metadata for SIISelLowering::getTgtMemIntrinsic to recover.
-  void attachAtomicScopeMD(CallInst *Call, AtomicOrdering Order,
-                           SyncScope::ID SSID);
+  // Build the trailing syncscope metadata argument for the buffer
+  // atomic/store/atomic-load intrinsics (empty string if not atomic).
+  Value *getScopeMDArg(AtomicOrdering Order, SyncScope::ID SSID);
   Value *handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr, Type *Ty,
                           Align Alignment, AtomicOrdering Order,
                           bool IsVolatile, SyncScope::ID SSID);
@@ -1876,14 +1875,15 @@ void SplitPtrStructs::setAlign(CallInst *Intr, Align A, unsigned RsrcArgIdx) {
   Intr->addParamAttr(RsrcArgIdx, Attribute::getWithAlignment(Ctx, A));
 }
 
-void SplitPtrStructs::attachAtomicScopeMD(CallInst *Call, AtomicOrdering Order,
-                                          SyncScope::ID SSID) {
+Value *SplitPtrStructs::getScopeMDArg(AtomicOrdering Order,
+                                      SyncScope::ID SSID) {
+  LLVMContext &Ctx = IRB.getContext();
+  // An empty MDNode means not atomic. The system scope also has an empty
+  // name, so scope presence cannot be encoded by string emptiness alone.
   if (Order == AtomicOrdering::NotAtomic)
-    return;
-  LLVMContext &Ctx = Call->getContext();
+    return MetadataAsValue::get(Ctx, MDNode::get(Ctx, {}));
   StringRef Scope = Ctx.getSyncScopeName(SSID).value_or("");
-  Call->setMetadata("amdgpu.buffer.atomic.scope",
-                    MDNode::get(Ctx, MDString::get(Ctx, Scope)));
+  return MetadataAsValue::get(Ctx, MDNode::get(Ctx, MDString::get(Ctx, Scope)));
 }
 
 void SplitPtrStructs::insertPreMemOpFence(AtomicOrdering Order,
@@ -1935,12 +1935,19 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
     Aux |= AMDGPU::CPol::VOLATILE;
   Args.push_back(IRB.getInt32(Aux));
 
+  // amdgcn_raw_ptr_buffer_load has no scope operand, unlike the atomic load,
+  // store, and RMW intrinsics used below.
+  bool NeedsScopeArg = true;
+
   Intrinsic::ID IID = Intrinsic::not_intrinsic;
-  if (isa<LoadInst>(I))
-    IID = Order == AtomicOrdering::NotAtomic
-              ? Intrinsic::amdgcn_raw_ptr_buffer_load
-              : Intrinsic::amdgcn_raw_ptr_atomic_buffer_load;
-  else if (isa<StoreInst>(I))
+  if (isa<LoadInst>(I)) {
+    if (Order == AtomicOrdering::NotAtomic) {
+      IID = Intrinsic::amdgcn_raw_ptr_buffer_load;
+      NeedsScopeArg = false;
+    } else {
+      IID = Intrinsic::amdgcn_raw_ptr_atomic_buffer_load;
+    }
+  } else if (isa<StoreInst>(I))
     IID = Intrinsic::amdgcn_raw_ptr_buffer_store;
   else if (auto *RMW = dyn_cast<AtomicRMWInst>(I)) {
     switch (RMW->getOperation()) {
@@ -2035,9 +2042,11 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
     }
   }
 
+  if (NeedsScopeArg)
+    Args.push_back(getScopeMDArg(Order, SSID));
+
   CallInst *Call = IRB.CreateIntrinsicWithoutFolding(IID, Ty, Args);
   copyMetadata(Call, I);
-  attachAtomicScopeMD(Call, Order, SSID);
   setAlign(Call, Alignment, Arg ? 1 : 0);
   Call->takeName(I);
 
@@ -2106,9 +2115,8 @@ PtrParts SplitPtrStructs::visitAtomicCmpXchgInst(AtomicCmpXchgInst &AI) {
   CallInst *Call = IRB.CreateIntrinsicWithoutFolding(
       Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap, Ty,
       {AI.getNewValOperand(), AI.getCompareOperand(), Rsrc, Off,
-       IRB.getInt32(0), IRB.getInt32(Aux)});
+       IRB.getInt32(0), IRB.getInt32(Aux), getScopeMDArg(Order, SSID)});
   copyMetadata(Call, &AI);
-  attachAtomicScopeMD(Call, Order, SSID);
   setAlign(Call, AI.getAlign(), 2);
   Call->takeName(&AI);
   insertPostMemOpFence(Order, SSID);

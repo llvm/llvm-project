@@ -212,7 +212,7 @@ define i32 @load_null() {
 
 define void @store_null() {
 ; CHECK-LABEL: define void @store_null() {
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 0, ptr addrspace(8) align 4 null, i32 0, i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 0, ptr addrspace(8) align 4 null, i32 0, i32 0, i32 0, metadata [[META0:![0-9]+]])
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, ptr addrspace(7) null, align 4
@@ -230,7 +230,7 @@ define i32 @load_poison() {
 
 define void @store_poison() {
 ; CHECK-LABEL: define void @store_poison() {
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 0, ptr addrspace(8) align 4 poison, i32 poison, i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 0, ptr addrspace(8) align 4 poison, i32 poison, i32 0, i32 0, metadata [[META0]])
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, ptr addrspace(7) poison, align 4
