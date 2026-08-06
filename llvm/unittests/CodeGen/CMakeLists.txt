@@ -47,6 +47,7 @@ add_llvm_unittest(CodeGenTests
   SchedBoundary.cpp
   SelectionDAGAddressAnalysisTest.cpp
   SelectionDAGNodeConstructionTest.cpp
+  SelectionDAGOperationNameTest.cpp
   SelectionDAGPatternMatchTest.cpp
   TypeTraitsTest.cpp
   TargetOptionsTest.cpp
