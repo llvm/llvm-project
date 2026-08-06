@@ -46,7 +46,6 @@ class FoundationTestCaseNSError(TestBase):
         )
         self.runCmd("process continue")
 
-    @skipIfOutOfTreeDebugserver
     def test_runtime_types_efficient_memreads(self):
         # Test that we use an efficient reading of memory when reading
         # Objective-C method descriptions.
@@ -58,6 +57,8 @@ class FoundationTestCaseNSError(TestBase):
         self.target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, "// Break here for NSString tests", lldb.SBFileSpec("main.m", False)
         )
+
+        lldbutil.require_qsupported_capability(self, "MultiMemRead+")
 
         self.runCmd(f"proc plugin packet send StartTesting", check=False)
         self.expect('expression str = [NSString stringWithCString: "new"]')

@@ -8,6 +8,7 @@ import json
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.skip_reason import UnsupportedReason
 
 
 class SharedCacheVMRangeTestCase(TestBase):
@@ -15,7 +16,6 @@ class SharedCacheVMRangeTestCase(TestBase):
 
     @skipIfRemote
     @requireDarwin
-    @skipIfOutOfTreeDebugserver  # debugserver returns shared_cache_size
     def test_shared_cache_vm_range(self):
         """Test that the shared cache VM range contains a known libc function"""
         self.build()
@@ -44,7 +44,11 @@ class SharedCacheVMRangeTestCase(TestBase):
         response = re.search("response: (.+)", res.GetOutput()).group(1)
         json_response = json.loads(response)
         self.assertTrue("shared_cache_base_address" in json_response)
-        self.assertTrue("shared_cache_size" in json_response)
+        # Older debugservers don't report the size, so the range is unknown.
+        if "shared_cache_size" not in json_response:
+            self.skipTest(
+                UnsupportedReason("debugserver does not report shared_cache_size")
+            )
         start = json_response["shared_cache_base_address"]
         end = start + json_response["shared_cache_size"]
 
