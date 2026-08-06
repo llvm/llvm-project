@@ -373,7 +373,8 @@ public:
 
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &Bank) const {
-    return getRegClassForSizeOnBank(Ty.getSizeInBits(), Bank);
+    return getRegClassForSizeOnBank(static_cast<unsigned>(Ty.getSizeInBits()),
+                                    Bank);
   }
 
   const TargetRegisterClass *
@@ -503,8 +504,8 @@ public:
     return AMDGPUGenRegisterInfo::getSpillWeightScaleFactor(RC) *
            ((RC == &AMDGPU::VGPR_32_Lo256RegClass ||
              RC == &AMDGPU::VReg_64_Lo256_Align2RegClass)
-                ? 2.0
-                : 1.0);
+                ? 2.0f
+                : 1.0f);
   }
 };
 

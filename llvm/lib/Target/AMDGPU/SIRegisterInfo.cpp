@@ -147,7 +147,8 @@ struct SGPRSpillBuilder {
         IsWave32(IsWave32) {
     const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(SuperReg);
     SplitParts = TRI.getRegSplitParts(RC, EltSize);
-    NumSubRegs = SplitParts.empty() ? 1 : SplitParts.size();
+    NumSubRegs =
+        static_cast<unsigned>(SplitParts.empty() ? 1 : SplitParts.size());
 
     if (IsWave32) {
       ExecReg = AMDGPU::EXEC_LO;
@@ -382,7 +383,7 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
         unsigned MaxNumParts = 1024 / Size; // Maximum register is 1024 bits.
         Vec.resize(MaxNumParts);
       }
-      Vec[Pos] = Idx;
+      Vec[Pos] = static_cast<int16_t>(Idx);
     }
   };
 
@@ -401,7 +402,7 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
       unsigned TableIdx = Width - 1;
       assert(TableIdx < SubRegFromChannelTable.size());
       assert(Offset < SubRegFromChannelTable[TableIdx].size());
-      SubRegFromChannelTable[TableIdx][Offset] = Idx;
+      SubRegFromChannelTable[TableIdx][Offset] = static_cast<uint16_t>(Idx);
     }
   };
 
@@ -661,7 +662,8 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   unsigned TotalNumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
   for (const TargetRegisterClass &RC : regclasses()) {
     if (RC.isBaseClass() && isSGPRClass(&RC)) {
-      unsigned NumRegs = divideCeil(getRegSizeInBits(RC), 32);
+      unsigned NumRegs =
+          static_cast<unsigned>(divideCeil(getRegSizeInBits(RC), 32));
       for (MCPhysReg Reg : RC) {
         unsigned Index = getHWRegIndex(Reg);
         if (Index + NumRegs > MaxNumSGPRs && Index < TotalNumSGPRs &&
@@ -723,7 +725,8 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   for (const TargetRegisterClass &RC : regclasses()) {
     if (RC.isBaseClass() && isVGPRClass(&RC)) {
-      unsigned NumRegs = divideCeil(getRegSizeInBits(RC), 32);
+      unsigned NumRegs =
+          static_cast<unsigned>(divideCeil(getRegSizeInBits(RC), 32));
       for (MCPhysReg Reg : RC) {
         unsigned Index = getHWRegIndex(Reg);
         if (Index + NumRegs > MaxNumVGPRs)
@@ -737,7 +740,8 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     MaxNumAGPRs = 0;
   for (const TargetRegisterClass &RC : regclasses()) {
     if (RC.isBaseClass() && isAGPRClass(&RC)) {
-      unsigned NumRegs = divideCeil(getRegSizeInBits(RC), 32);
+      unsigned NumRegs =
+          static_cast<unsigned>(divideCeil(getRegSizeInBits(RC), 32));
       for (MCPhysReg Reg : RC) {
         unsigned Index = getHWRegIndex(Reg);
         if (Index + NumRegs > MaxNumAGPRs)
@@ -928,7 +932,7 @@ bool SIRegisterInfo::needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
 
   const SIInstrInfo *TII = ST.getInstrInfo();
   if (SIInstrInfo::isMUBUF(*MI))
-    return !TII->isLegalMUBUFImmOffset(FullOffset);
+    return !TII->isLegalMUBUFImmOffset(static_cast<unsigned>(FullOffset));
 
   return !TII->isLegalFLATOffset(FullOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                  AMDGPU::FlatAddrSpace::FlatScratch);
@@ -1109,7 +1113,8 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
   assert(SOffset->isImm() && SOffset->getImm() == 0);
 #endif
 
-  assert(TII->isLegalMUBUFImmOffset(NewOffset) && "offset should be legal");
+  assert(TII->isLegalMUBUFImmOffset(static_cast<unsigned>(NewOffset)) &&
+         "offset should be legal");
 
   FIOp->ChangeToRegister(BaseReg, false);
   OffsetOp->setImm(NewOffset);
@@ -1137,7 +1142,7 @@ bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
 
   const SIInstrInfo *TII = ST.getInstrInfo();
   if (SIInstrInfo::isMUBUF(*MI))
-    return TII->isLegalMUBUFImmOffset(NewOffset);
+    return TII->isLegalMUBUFImmOffset(static_cast<unsigned>(NewOffset));
 
   return TII->isLegalFLATOffset(NewOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                 AMDGPU::FlatAddrSpace::FlatScratch);
@@ -1716,7 +1721,7 @@ void SIRegisterInfo::buildSpillLoadStore(
   bool IsOffsetLegal =
       IsFlat ? TII->isLegalFLATOffset(MaxOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                       AMDGPU::FlatAddrSpace::FlatScratch)
-             : TII->isLegalMUBUFImmOffset(MaxOffset);
+             : TII->isLegalMUBUFImmOffset(static_cast<unsigned>(MaxOffset));
   if (!IsOffsetLegal || (IsFlat && !SOffset && !ST.hasFlatScratchSTMode())) {
     SOffset = MCRegister();
 
@@ -3412,7 +3417,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
             // TODO: Fold if use instruction is another add of a constant.
             if (IsVOP2 ||
-                AMDGPU::isInlinableLiteral32(Offset, ST.hasInv2PiInlineImm())) {
+                AMDGPU::isInlinableLiteral32(static_cast<int32_t>(Offset),
+                                             ST.hasInv2PiInlineImm())) {
               // FIXME: This can fail
               MIB.addImm(Offset);
               MIB.addReg(ScaledReg, RegState::Kill);
@@ -3489,8 +3495,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
               // to wavespace. We can right shift after the computation to
               // get back to the desired per-lane value. We are using the
               // mad_u32_u24 primarily as an add with no carry out clobber.
-              bool IsInlinableLiteral =
-                  AMDGPU::isInlinableLiteral32(Offset, ST.hasInv2PiInlineImm());
+              bool IsInlinableLiteral = AMDGPU::isInlinableLiteral32(
+                  static_cast<int32_t>(Offset), ST.hasInv2PiInlineImm());
               if (!IsInlinableLiteral) {
                 BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32),
                         TmpResultReg)
@@ -3568,7 +3574,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm();
       int64_t NewOffset = OldImm + Offset;
 
-      if (TII->isLegalMUBUFImmOffset(NewOffset) &&
+      if (TII->isLegalMUBUFImmOffset(static_cast<unsigned>(NewOffset)) &&
           buildMUBUFOffsetLoadStore(ST, FrameInfo, MI, Index, NewOffset)) {
         MI->eraseFromParent();
         return true;
@@ -3912,7 +3918,7 @@ bool SIRegisterInfo::isSGPRReg(const MachineRegisterInfo &MRI,
 
 const TargetRegisterClass *
 SIRegisterInfo::getEquivalentVGPRClass(const TargetRegisterClass *SRC) const {
-  unsigned Size = getRegSizeInBits(*SRC);
+  unsigned Size = static_cast<unsigned>(getRegSizeInBits(*SRC));
 
   switch (SRC->getID()) {
   default:
@@ -3930,7 +3936,7 @@ SIRegisterInfo::getEquivalentVGPRClass(const TargetRegisterClass *SRC) const {
 
 const TargetRegisterClass *
 SIRegisterInfo::getEquivalentAGPRClass(const TargetRegisterClass *SRC) const {
-  unsigned Size = getRegSizeInBits(*SRC);
+  unsigned Size = static_cast<unsigned>(getRegSizeInBits(*SRC));
   const TargetRegisterClass *ARC = getAGPRClassForBitWidth(Size);
   assert(ARC && "Invalid register class size");
   return ARC;
@@ -3938,7 +3944,7 @@ SIRegisterInfo::getEquivalentAGPRClass(const TargetRegisterClass *SRC) const {
 
 const TargetRegisterClass *
 SIRegisterInfo::getEquivalentAVClass(const TargetRegisterClass *SRC) const {
-  unsigned Size = getRegSizeInBits(*SRC);
+  unsigned Size = static_cast<unsigned>(getRegSizeInBits(*SRC));
   const TargetRegisterClass *ARC = getVectorSuperClassForBitWidth(Size);
   assert(ARC && "Invalid register class size");
   return ARC;
@@ -3946,7 +3952,7 @@ SIRegisterInfo::getEquivalentAVClass(const TargetRegisterClass *SRC) const {
 
 const TargetRegisterClass *
 SIRegisterInfo::getEquivalentSGPRClass(const TargetRegisterClass *VRC) const {
-  unsigned Size = getRegSizeInBits(*VRC);
+  unsigned Size = static_cast<unsigned>(getRegSizeInBits(*VRC));
   if (Size == 32)
     return &AMDGPU::SGPR_32RegClass;
   const TargetRegisterClass *SRC = getSGPRClassForBitWidth(Size);
@@ -4127,7 +4133,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     if (PairedPhys)
       // isLo(Paired) is implicitly true here from the API of
       // getMatchingSuperReg.
-      Hints.push_back(PairedPhys);
+      Hints.push_back(static_cast<unsigned short>(PairedPhys));
     return false;
   }
   case AMDGPURI::Size16: {
@@ -4142,7 +4148,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
 
     // First prefer the paired physreg.
     if (PairedPhys)
-      Hints.push_back(PairedPhys);
+      Hints.push_back(static_cast<unsigned short>(PairedPhys));
     else {
       // Add all the lo16 physregs.
       // When the Paired operand has not yet been assigned a physreg it is
@@ -4276,12 +4282,13 @@ MCPhysReg SIRegisterInfo::get32BitRegister(MCPhysReg Reg) const {
   for (const TargetRegisterClass *RC :
        {&AMDGPU::VGPR_32RegClass, &AMDGPU::SReg_32RegClass,
         &AMDGPU::AGPR_32RegClass}) {
-    if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::lo16, RC))
+    if (MCPhysReg Super =
+            static_cast<MCPhysReg>(getMatchingSuperReg(Reg, AMDGPU::lo16, RC)))
       return Super;
   }
-  if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::hi16,
-                                            &AMDGPU::VGPR_32RegClass)) {
-      return Super;
+  if (MCPhysReg Super = static_cast<MCPhysReg>(
+          getMatchingSuperReg(Reg, AMDGPU::hi16, &AMDGPU::VGPR_32RegClass))) {
+    return Super;
   }
 
   return AMDGPU::NoRegister;
@@ -4292,12 +4299,14 @@ bool SIRegisterInfo::isProperlyAlignedRC(const TargetRegisterClass &RC) const {
     return true;
 
   if (isVGPRClass(&RC))
-    return RC.hasSuperClassEq(getVGPRClassForBitWidth(getRegSizeInBits(RC)));
-  if (isAGPRClass(&RC))
-    return RC.hasSuperClassEq(getAGPRClassForBitWidth(getRegSizeInBits(RC)));
-  if (isVectorSuperClass(&RC))
     return RC.hasSuperClassEq(
-        getVectorSuperClassForBitWidth(getRegSizeInBits(RC)));
+        getVGPRClassForBitWidth(static_cast<unsigned>(getRegSizeInBits(RC))));
+  if (isAGPRClass(&RC))
+    return RC.hasSuperClassEq(
+        getAGPRClassForBitWidth(static_cast<unsigned>(getRegSizeInBits(RC))));
+  if (isVectorSuperClass(&RC))
+    return RC.hasSuperClassEq(getVectorSuperClassForBitWidth(
+        static_cast<unsigned>(getRegSizeInBits(RC))));
 
   assert(&RC != &AMDGPU::VS_64RegClass);
 

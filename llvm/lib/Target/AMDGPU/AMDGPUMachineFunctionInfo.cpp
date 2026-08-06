@@ -102,7 +102,7 @@ unsigned AMDGPUMachineFunctionInfo::allocateLDSGlobal(const DataLayout &DL,
       if (!BarAddr)
         llvm_unreachable("named barrier should have an assigned address");
       Entry.first->second = BarAddr.value();
-      unsigned BarCnt = GV.getGlobalSize(DL) / 16;
+      unsigned BarCnt = static_cast<unsigned>(GV.getGlobalSize(DL) / 16);
       recordNumNamedBarriers(BarAddr.value(), BarCnt);
       return BarAddr.value();
     }
@@ -130,7 +130,8 @@ unsigned AMDGPUMachineFunctionInfo::allocateLDSGlobal(const DataLayout &DL,
         // section, and not within some other non-absolute-address object
         // allocated here, but the extra error detection is minimal and we would
         // have to pass the Function around or cache the attribute value.
-        uint32_t ObjectEnd = ObjectStart + GV.getGlobalSize(DL);
+        uint32_t ObjectEnd =
+            static_cast<uint32_t>(ObjectStart + GV.getGlobalSize(DL));
         if (ObjectEnd > StaticLDSSize) {
           report_fatal_error(
               "Absolute address LDS variable outside of static frame");
@@ -144,18 +145,20 @@ unsigned AMDGPUMachineFunctionInfo::allocateLDSGlobal(const DataLayout &DL,
     /// TODO: We should sort these to minimize wasted space due to alignment
     /// padding. Currently the padding is decided by the first encountered use
     /// during lowering.
-    Offset = StaticLDSSize = alignTo(StaticLDSSize, Alignment);
+    Offset = StaticLDSSize =
+        static_cast<uint32_t>(alignTo(StaticLDSSize, Alignment));
 
-    StaticLDSSize += GV.getGlobalSize(DL);
+    StaticLDSSize += static_cast<uint32_t>(GV.getGlobalSize(DL));
 
     // Align LDS size to trailing, e.g. for aligning dynamic shared memory
-    LDSSize = alignTo(StaticLDSSize, Trailing);
+    LDSSize = static_cast<uint32_t>(alignTo(StaticLDSSize, Trailing));
   } else {
     assert(GV.getAddressSpace() == AMDGPUAS::REGION_ADDRESS &&
            "expected region address space");
 
-    Offset = StaticGDSSize = alignTo(StaticGDSSize, Alignment);
-    StaticGDSSize += GV.getGlobalSize(DL);
+    Offset = StaticGDSSize =
+        static_cast<uint32_t>(alignTo(StaticGDSSize, Alignment));
+    StaticGDSSize += static_cast<uint32_t>(GV.getGlobalSize(DL));
 
     // FIXME: Apply alignment of dynamic GDS
     GDSSize = StaticGDSSize;
@@ -174,7 +177,7 @@ AMDGPUMachineFunctionInfo::getLDSKernelIdMetadata(const Function &F) {
             mdconst::extract<ConstantInt>(MD->getOperand(0))) {
       uint64_t ZExt = KnownSize->getZExtValue();
       if (ZExt <= UINT32_MAX) {
-        return ZExt;
+        return static_cast<unsigned>(ZExt);
       }
     }
   }
@@ -193,7 +196,7 @@ AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(const GlobalValue &GV) {
   if (const APInt *V = AbsSymRange->getSingleElement()) {
     std::optional<uint64_t> ZExt = V->tryZExtValue();
     if (ZExt && (*ZExt <= UINT32_MAX)) {
-      return *ZExt;
+      return static_cast<unsigned>(*ZExt);
     }
   }
 
@@ -211,7 +214,7 @@ void AMDGPUMachineFunctionInfo::setDynLDSAlign(const Function &F,
   if (Alignment <= DynLDSAlign)
     return;
 
-  LDSSize = alignTo(StaticLDSSize, Alignment);
+  LDSSize = static_cast<uint32_t>(alignTo(StaticLDSSize, Alignment));
   DynLDSAlign = Alignment;
 
   // If there is a dynamic LDS variable associated with this function F, every

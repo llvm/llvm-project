@@ -257,7 +257,7 @@ GCNRewritePartialRegUsesImpl::getRegClassWithShiftedSubregs(
   unsigned MinNumBits = std::numeric_limits<unsigned>::max();
   for (unsigned ClassID : ClassMask.set_bits()) {
     auto *RC = TRI->getRegClass(ClassID);
-    unsigned NumBits = TRI->getRegSizeInBits(*RC);
+    unsigned NumBits = static_cast<unsigned>(TRI->getRegSizeInBits(*RC));
     if (NumBits < MinNumBits) {
       MinNumBits = NumBits;
       MinRC = RC;
@@ -438,7 +438,7 @@ bool GCNRewritePartialRegUsesImpl::run(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   bool Changed = false;
   for (size_t I = 0, E = MRI->getNumVirtRegs(); I < E; ++I) {
-    Changed |= rewriteReg(Register::index2VirtReg(I));
+    Changed |= rewriteReg(Register::index2VirtReg(static_cast<unsigned>(I)));
   }
   return Changed;
 }
