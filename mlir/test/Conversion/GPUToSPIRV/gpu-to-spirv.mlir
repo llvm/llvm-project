@@ -155,6 +155,24 @@ module attributes {
     #spirv.vce<v1.1, [Kernel, Addresses, NamedBarrier], []>, #spirv.resource_limits<>>
 } {
   gpu.module @kernels {
+    gpu.func @barrier_cluster_scope() kernel
+      attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 1, 1]>} {
+      // expected-error @+2 {{gpu.barrier with cluster scope is not supported in SPIR-V}}
+      // expected-error @+1 {{failed to legalize operation 'gpu.barrier'}}
+      gpu.barrier scope <cluster>
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.1, [Kernel, Addresses, NamedBarrier], []>, #spirv.resource_limits<>>
+} {
+  gpu.module @kernels {
     // CHECK-LABEL: spirv.func @named_barrier
     gpu.func @named_barrier(%member_count : i32) kernel
       attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 1, 1]>} {

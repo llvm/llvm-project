@@ -471,9 +471,11 @@ LogicalResult GPUBarrierConversion::matchAndRewrite(
 
   // Map GPU scope to SPIR-V scope.
   auto spirvScope = mapGPUBarrierScopeToSPIRV(barrierOp.getScope());
-  if (failed(spirvScope))
-    return rewriter.notifyMatchFailure(
-        barrierOp, "cluster scope is not supported in SPIR-V");
+  if (failed(spirvScope)) {
+    barrierOp.emitError()
+        << "gpu.barrier with cluster scope is not supported in SPIR-V";
+    return failure();
+  }
 
   auto scopeAttr = spirv::ScopeAttr::get(context, *spirvScope);
   auto memoryScopeAttr =
