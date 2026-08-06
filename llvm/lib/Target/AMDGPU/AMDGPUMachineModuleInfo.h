@@ -125,9 +125,9 @@ public:
         [&](SyncScope::ID SSID) -> std::optional<std::pair<unsigned, bool>> {
       for (auto [I, Cross, One] : llvm::enumerate(CrossAS, OneAS)) {
         if (Cross == SSID)
-          return std::make_pair(I, false);
+          return std::make_pair(static_cast<unsigned>(I), false);
         if (One == SSID)
-          return std::make_pair(I, true);
+          return std::make_pair(static_cast<unsigned>(I), true);
       }
       return std::nullopt;
     };
