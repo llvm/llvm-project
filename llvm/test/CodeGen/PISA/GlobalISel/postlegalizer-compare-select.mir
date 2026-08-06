@@ -1,0 +1,67 @@
+# RUN: llc -march=pisa -run-pass=pisa-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+
+# Tests the compare_select PostLegalizerCombiner rule:
+#   %cond = G_ICMP intpred(ne), %x(s32), 0
+#   %res  = G_SELECT %cond(s1), %a(s32), %b(s32)
+# =>
+#   %res  = G_PISA_SELECT %x(s32), %a(s32), %b(s32)
+
+--- |
+  define i32 @compare_select_ne(i32 %x, i32 %a, i32 %b) {
+    %cond = icmp ne i32 %x, 0
+    %res = select i1 %cond, i32 %a, i32 %b
+    ret i32 %res
+  }
+
+  define i32 @compare_select_eq(i32 %x, i32 %a, i32 %b) {
+    %cond = icmp eq i32 %x, 0
+    %res = select i1 %cond, i32 %a, i32 %b
+    ret i32 %res
+  }
+...
+---
+name:            compare_select_ne
+legalized:       true
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: compare_select_ne
+    ; CHECK:      %0:reg32b(i32) = functionParameter_i32 0
+    ; CHECK-NEXT: %1:reg32b(i32) = functionParameter_i32 1
+    ; CHECK-NEXT: %2:reg32b(i32) = functionParameter_i32 2
+    ; CHECK-NEXT: %5:_(i32) = G_PISA_SELECT %0, %1, %2
+    ; CHECK-NEXT: %6:reg32b(i32) = COPY %5(i32)
+    ; CHECK-NEXT: retValue_i32_r %6(i32)
+    %0:reg32b(i32) = functionParameter_i32 0
+    %1:reg32b(i32) = functionParameter_i32 1
+    %2:reg32b(i32) = functionParameter_i32 2
+    %3:_(i32) = G_CONSTANT i32 0
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %3(i32)
+    %5:_(i32) = G_SELECT %4(i1), %1(i32), %2(i32)
+    %6:reg32b(i32) = COPY %5(i32)
+    retValue_i32_r %6:reg32b(i32)
+...
+---
+name:            compare_select_eq
+legalized:       true
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: compare_select_eq
+    ; CHECK:      %0:reg32b(i32) = functionParameter_i32 0
+    ; CHECK-NEXT: %1:reg32b(i32) = functionParameter_i32 1
+    ; CHECK-NEXT: %2:reg32b(i32) = functionParameter_i32 2
+    ; CHECK-NEXT: %5:_(i32) = G_PISA_SELECT %0, %2, %1
+    ; CHECK-NEXT: %6:reg32b(i32) = COPY %5(i32)
+    ; CHECK-NEXT: retValue_i32_r %6(i32)
+    %0:reg32b(i32) = functionParameter_i32 0
+    %1:reg32b(i32) = functionParameter_i32 1
+    %2:reg32b(i32) = functionParameter_i32 2
+    %3:_(i32) = G_CONSTANT i32 0
+    %4:_(i1) = G_ICMP intpred(eq), %0(i32), %3(i32)
+    %5:_(i32) = G_SELECT %4(i1), %1(i32), %2(i32)
+    %6:reg32b(i32) = COPY %5(i32)
+    retValue_i32_r %6:reg32b(i32)
+...
