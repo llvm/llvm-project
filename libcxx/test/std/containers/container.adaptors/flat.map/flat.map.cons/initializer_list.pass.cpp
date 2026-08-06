@@ -37,24 +37,24 @@ struct DefaultCtableComp {
 
 template <template <class...> class KeyContainer, template <class...> class ValueContainer>
 constexpr void test() {
-  std::pair<int, short> expected[] = {{1, 1}, {2, 2}, {3, 3}, {5, 2}};
+  std::pair<int, long> expected[] = {{1, 1}, {2, 2}, {3, 3}, {5, 2}};
   {
     // flat_map(initializer_list<value_type>);
-    using M                                         = std::flat_map<int, short>;
-    std::initializer_list<std::pair<int, short>> il = {{5, 2}, {2, 2}, {2, 2}, {3, 3}, {1, 1}, {3, 3}};
+    using M                                        = std::flat_map<int, long>;
+    std::initializer_list<std::pair<int, long>> il = {{5, 2}, {2, 2}, {2, 2}, {3, 3}, {1, 1}, {3, 3}};
     M m(il);
     assert(std::equal(m.begin(), m.end(), expected, expected + 4));
   }
   {
     // flat_map(initializer_list<value_type>);
     // explicit(false)
-    using M = std::flat_map<int, short>;
+    using M = std::flat_map<int, long>;
     M m     = {{5, 2}, {2, 2}, {2, 2}, {3, 3}, {1, 1}, {3, 3}};
     assert(std::equal(m.begin(), m.end(), expected, expected + 4));
   }
   {
     // flat_map(initializer_list<value_type>);
-    using M = std::flat_map<int, short, std::greater<int>, KeyContainer<int, min_allocator<int>>>;
+    using M = std::flat_map<int, long, std::greater<int>, KeyContainer<int, min_allocator<int>>>;
     M m     = {{5, 2}, {2, 2}, {2, 2}, {3, 3}, {1, 1}, {3, 3}};
     assert(std::equal(m.rbegin(), m.rend(), expected, expected + 4));
   }
@@ -79,7 +79,7 @@ constexpr void test() {
   {
     // flat_map(initializer_list<value_type>, const key_compare&);
     using C = test_less<int>;
-    using M = std::flat_map<int, short, C>;
+    using M = std::flat_map<int, long, C>;
     auto m  = M({{5, 2}, {2, 2}, {2, 2}, {3, 3}, {1, 1}, {3, 3}}, C(10));
     assert(std::equal(m.begin(), m.end(), expected, expected + 4));
     assert(m.key_comp() == C(10));
@@ -92,7 +92,7 @@ constexpr void test() {
   if (!TEST_IS_CONSTANT_EVALUATED) {
     // flat_map(initializer_list<value_type>, const key_compare&);
     // Sorting uses the comparator that was passed in
-    using M = std::flat_map<int, short, std::function<bool(int, int)>, KeyContainer<int, min_allocator<int>>>;
+    using M = std::flat_map<int, long, std::function<bool(int, int)>, KeyContainer<int, min_allocator<int>>>;
     auto m  = M({{5, 2}, {2, 2}, {2, 2}, {3, 3}, {1, 1}, {3, 3}}, std::greater<int>());
     assert(std::equal(m.rbegin(), m.rend(), expected, expected + 4));
     assert(m.key_comp()(2, 1) == true);

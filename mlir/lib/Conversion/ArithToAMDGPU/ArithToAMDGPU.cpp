@@ -424,11 +424,11 @@ static Value getOriginalVectorValue(Value value) {
   Value current = value;
   while (Operation *definingOp = current.getDefiningOp()) {
     bool skipOp = llvm::TypeSwitch<Operation *, bool>(definingOp)
-                      .Case<vector::ShapeCastOp>([&current](auto op) {
+                      .Case([&current](vector::ShapeCastOp op) {
                         current = op.getSource();
                         return true;
                       })
-                      .Case<vector::BroadcastOp>([&current](auto op) {
+                      .Case([&current](vector::BroadcastOp op) {
                         current = op.getSource();
                         return false;
                       })
@@ -462,6 +462,11 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
   VectorType scaleVecType = dyn_cast<VectorType>(scale.getType());
 
   if (outVecType && outVecType.isScalable())
+    return failure();
+
+  if (isa<RankedTensorType>(out.getType()) ||
+      isa<RankedTensorType>(in.getType()) ||
+      isa<RankedTensorType>(scale.getType()))
     return failure();
 
   Type scaleF32Type =
@@ -575,6 +580,11 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
   VectorType outVecType = dyn_cast<VectorType>(out.getType());
   VectorType scaleVecType = dyn_cast<VectorType>(scale.getType());
   if (outVecType && outVecType.isScalable())
+    return failure();
+
+  if (isa<RankedTensorType>(out.getType()) ||
+      isa<RankedTensorType>(in.getType()) ||
+      isa<RankedTensorType>(scale.getType()))
     return failure();
 
   Type scaleF32Type =

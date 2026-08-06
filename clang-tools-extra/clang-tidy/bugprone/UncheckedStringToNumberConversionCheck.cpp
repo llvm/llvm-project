@@ -204,9 +204,8 @@ void UncheckedStringToNumberConversionCheck::check(
       return;
 
     if (const Expr *Arg = Call->getArg(Idx)->IgnoreParenImpCasts()) {
-      if (const auto *SL = dyn_cast<StringLiteral>(Arg)) {
+      if (const auto *SL = dyn_cast<StringLiteral>(Arg))
         FmtStr = SL->getString();
-      }
     }
 
     // If we could not get the format string, bail out.

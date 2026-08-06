@@ -90,6 +90,7 @@
 
 #include "llvm/Transforms/IPO/MergeFunctions.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Argument.h"
@@ -114,6 +115,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/FunctionComparator.h"
@@ -121,6 +123,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <optional>
 #include <set>
 #include <utility>
 #include <vector>
@@ -285,7 +288,9 @@ private:
   // If needed, replace G with an alias to F if possible, or a thunk to F if
   // profitable. Returns false if neither is the case. If \p G is not needed
   // (i.e. it is discardable and not used), \p G is removed directly.
-  bool writeThunkOrAliasIfNeeded(Function *F, Function *G);
+  // \p MergeProfile must be true when G's profile should be preserved, it is
+  // merged into F before G is erased or rewritten.
+  bool writeThunkOrAliasIfNeeded(Function *F, Function *G, bool MergeProfile);
 
   /// Replace function F with function G in the function tree.
   void replaceFunctionInTree(const FunctionNode &FN, Function *G);
@@ -408,7 +413,7 @@ bool MergeFunctions::doFunctionalCheck(std::vector<WeakTrackingVH> &Worklist) {
 /// instance of this would be CFI checks for function-local types.
 static bool hasDistinctMetadataIntrinsic(const Function &F) {
   for (const BasicBlock &BB : F) {
-    for (const Instruction &I : BB.instructionsWithoutDebug()) {
+    for (const Instruction &I : BB) {
       if (!isa<IntrinsicInst>(&I))
         continue;
 
@@ -428,6 +433,7 @@ static bool hasDistinctMetadataIntrinsic(const Function &F) {
 /// Check whether \p F is eligible for function merging.
 static bool isEligibleForMerging(Function &F) {
   return !F.isDeclaration() && !F.hasAvailableExternallyLinkage() &&
+         !F.hasFnAttribute(Attribute::NoIPA) &&
          !hasDistinctMetadataIntrinsic(F);
 }
 
@@ -473,7 +479,8 @@ template <typename FuncContainer> bool MergeFunctions::run(FuncContainer &M) {
       if (!I)
         continue;
       Function *F = cast<Function>(I);
-      if (!F->isDeclaration() && !F->hasAvailableExternallyLinkage()) {
+      if (!F->isDeclaration() && !F->hasAvailableExternallyLinkage() &&
+          !F->hasFnAttribute(Attribute::NoIPA)) {
         Changed |= insert(F);
       }
     }
@@ -697,10 +704,13 @@ static bool canCreateThunkFor(Function *F) {
   if (F->isVarArg())
     return false;
 
+  if (F->hasKernelCallingConv())
+    return false;
+
   // Don't merge tiny functions using a thunk, since it can just end up
   // making the function larger.
   if (F->size() == 1) {
-    if (F->front().sizeWithoutDebug() < 2) {
+    if (F->front().size() < 2) {
       LLVM_DEBUG(dbgs() << "canCreateThunkFor: " << F->getName()
                         << " is too small to bother creating a thunk for\n");
       return false;
@@ -727,6 +737,7 @@ static void copyMetadataIfPresent(Function *From, Function *To,
 // For better debugability, under MergeFunctionsPDI, we do not modify G's
 // call sites to point to F even when within the same translation unit.
 void MergeFunctions::writeThunk(Function *F, Function *G) {
+  std::optional<uint64_t> GEC = G->getEntryCount();
   BasicBlock *GEntryBlock = nullptr;
   std::vector<Instruction *> PDIUnrelatedWL;
   std::vector<DbgVariableRecord *> PDVRUnrelatedWL;
@@ -796,10 +807,13 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
                << G->getName() << "()\n");
   } else {
     NewG->copyAttributesFrom(G);
+    if (GEC)
+      NewG->setEntryCount(*GEC);
     NewG->takeName(G);
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(G, NewG, "type");
     copyMetadataIfPresent(G, NewG, "kcfi_type");
+    copyMetadataIfPresent(G, NewG, "callgraph");
     removeUsers(G);
     G->replaceAllUsesWith(NewG);
     G->eraseFromParent();
@@ -823,8 +837,9 @@ static bool canCreateAliasFor(Function *F) {
 // Replace G with an alias to F (deleting function G)
 void MergeFunctions::writeAlias(Function *F, Function *G) {
   PointerType *PtrType = G->getType();
-  auto *GA = GlobalAlias::create(G->getValueType(), PtrType->getAddressSpace(),
-                                 G->getLinkage(), "", F, G->getParent());
+  auto *GA =
+      GlobalAlias::create(G->getFunctionType(), PtrType->getAddressSpace(),
+                          G->getLinkage(), "", F, G->getParent());
 
   const MaybeAlign FAlign = F->getAlign();
   const MaybeAlign GAlign = G->getAlign();
@@ -844,23 +859,63 @@ void MergeFunctions::writeAlias(Function *F, Function *G) {
   ++NumAliasesWritten;
 }
 
+static DenseSet<GlobalValue::GUID> unionImportGUIDs(const Function &F,
+                                                    const Function &G) {
+  DenseSet<GlobalValue::GUID> AllImports = F.getImportGUIDs();
+  DenseSet<GlobalValue::GUID> GImports = G.getImportGUIDs();
+  AllImports.insert(GImports.begin(), GImports.end());
+  return AllImports;
+}
+
+static void mergeEntryCountsAndImportsInto(Function &F, Function &G) {
+  std::optional<uint64_t> FEntryCount = F.getEntryCount();
+  std::optional<uint64_t> GEntryCount = G.getEntryCount();
+  DenseSet<GlobalValue::GUID> AllImports = unionImportGUIDs(F, G);
+  if (!FEntryCount && !GEntryCount && AllImports.empty())
+    return;
+
+  // -1 is a safe placeholder here, getEntryCount() already treats it as
+  // "unknown" (same sentinel SamplePGO uses for no-sample functions), so
+  // it won't look hot to anyone reading the count back.
+  uint64_t Sum = static_cast<uint64_t>(-1);
+  if (FEntryCount || GEntryCount)
+    Sum = SaturatingAdd(FEntryCount ? *FEntryCount : uint64_t{0},
+                        GEntryCount ? *GEntryCount : uint64_t{0});
+  F.setEntryCount(Sum, AllImports.empty() ? nullptr : &AllImports);
+}
+
 // If needed, replace G with an alias to F if possible, or a thunk to F if
 // profitable. Returns false if neither is the case. If \p G is not needed (i.e.
-// it is discardable and unused), \p G is removed directly.
-bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G) {
-  if (G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI) {
+// it is discardable and unused), \p G is removed directly. If \p MergeProfile
+// is set, G's profile metadata is merged into F.
+bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G,
+                                               bool MergeProfile) {
+  bool ShouldErase =
+      G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI;
+  bool ShouldAlias = canCreateAliasFor(G);
+  bool ShouldThunk = canCreateThunkFor(F);
+
+  if (!ShouldErase && !ShouldAlias && !ShouldThunk)
+    return false;
+
+  if (MergeProfile)
+    mergeEntryCountsAndImportsInto(*F, *G);
+
+  if (ShouldErase) {
     G->eraseFromParent();
     return true;
   }
-  if (canCreateAliasFor(G)) {
+
+  if (ShouldAlias) {
     writeAlias(F, G);
     return true;
   }
-  if (canCreateThunkFor(F)) {
+  if (ShouldThunk) {
     writeThunk(F, G);
     return true;
   }
-  return false;
+
+  llvm_unreachable("Erase, alias or thunk must apply");
 }
 
 /// Returns true if \p F is either weak_odr or linkonce_odr.
@@ -870,6 +925,8 @@ static bool isODR(const Function *F) {
 
 // Merge two equivalent functions. Upon completion, Function G is deleted.
 void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
+
+  std::optional<uint64_t> FEntryCount = F->getEntryCount();
 
   // Create a new thunk that both F and G can call, if F cannot call G directly.
   // That is the case if F is either interposable or if G is either weak_odr or
@@ -896,6 +953,7 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(F, NewF, "type");
     copyMetadataIfPresent(F, NewF, "kcfi_type");
+    copyMetadataIfPresent(F, NewF, "callgraph");
     removeUsers(F);
     F->replaceAllUsesWith(NewF);
 
@@ -911,8 +969,13 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     const MaybeAlign NewFAlign = NewF->getAlign();
     const MaybeAlign GAlign = G->getAlign();
 
-    writeThunkOrAliasIfNeeded(F, G);
-    writeThunkOrAliasIfNeeded(F, NewF);
+    // Merge !prof, while G still has its body.
+    writeThunkOrAliasIfNeeded(F, G, /*MergeProfile*/ true);
+    if (FEntryCount)
+      NewF->setEntryCount(*FEntryCount);
+    // NewF becomes thunk/alias to the shared body F, it has no profile to be
+    // merged.
+    writeThunkOrAliasIfNeeded(F, NewF, /*MergeProfile*/ false);
 
     if (NewFAlign || GAlign)
       F->setAlignment(std::max(NewFAlign.valueOrOne(), GAlign.valueOrOne()));
@@ -946,14 +1009,14 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     // stop here and delete G. There's no need for a thunk. (See note on
     // MergeFunctionsPDI above).
     if (G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI) {
+      mergeEntryCountsAndImportsInto(*F, *G);
       G->eraseFromParent();
       ++NumFunctionsMerged;
       return;
     }
 
-    if (writeThunkOrAliasIfNeeded(F, G)) {
+    if (writeThunkOrAliasIfNeeded(F, G, /*MergeProfile*/ true))
       ++NumFunctionsMerged;
-    }
   }
 }
 
@@ -1027,12 +1090,16 @@ bool MergeFunctions::insert(Function *NewFunction) {
     assert(OldF.getFunc() != F && "Must have swapped the functions.");
   }
 
-  LLVM_DEBUG(dbgs() << "  " << OldF.getFunc()->getName()
+  // Capture the Function pointer before mergeTwoFunctions, which may invalidate
+  // OldF by erasing it from FnTree via removeUsers().
+  Function *OldFunc = OldF.getFunc();
+
+  LLVM_DEBUG(dbgs() << "  " << OldFunc->getName()
                     << " == " << NewFunction->getName() << '\n');
 
   Function *DeleteF = NewFunction;
-  mergeTwoFunctions(OldF.getFunc(), DeleteF);
-  this->DelToNewMap.insert({DeleteF, OldF.getFunc()});
+  mergeTwoFunctions(OldFunc, DeleteF);
+  this->DelToNewMap.insert({DeleteF, OldFunc});
   return true;
 }
 

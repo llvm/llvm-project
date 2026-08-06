@@ -26,7 +26,7 @@ entry:
   %arrayidx128.promoted = load i32, ptr %arrayidx128, align 4
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   store i32 %add12, ptr %out, align 4
   store i32 %add30, ptr %arrayidx20, align 4
   store i32 %add48, ptr %arrayidx38, align 4
@@ -37,7 +37,7 @@ for.cond.cleanup:                                 ; preds = %for.body
   store i32 %add138, ptr %arrayidx128, align 4
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %hop.0236 = phi i32 [ 0, %entry ], [ %add139, %for.body ]
   %add12220235 = phi i32 [ %out.promoted, %entry ], [ %add12, %for.body ]
   %add30221234 = phi i32 [ %arrayidx20.promoted, %entry ], [ %add30, %for.body ]
@@ -203,11 +203,11 @@ entry:
   %out.promoted = load i32, ptr %out, align 4
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   store i32 %add12, ptr %out, align 4
   ret void
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %hop.0236 = phi i32 [ 0, %entry ], [ %add139, %for.body ]
   %add12220235 = phi i32 [ %out.promoted, %entry ], [ %add12, %for.body ]
   %arrayidx = getelementptr inbounds i16, ptr %in, i32 %hop.0236
@@ -236,7 +236,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK-LABEL: predicated_test
 ; CHECK: LV: Selecting VF: 1
 ; CHECK: LV: Selecting VF: 1
-define dso_local i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
+define i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
   %2 = alloca [101 x i32], align 4
   %3 = alloca [21 x i32], align 4
   call void @llvm.lifetime.start.p0(ptr nonnull %2)
@@ -244,18 +244,18 @@ define dso_local i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
   %4 = icmp sgt i32 %0, 0
   br i1 %4, label %5, label %159
 
-5:                                                ; preds = %1
+5:
   %6 = getelementptr inbounds [21 x i32], ptr %3, i32 0, i32 5
   br label %7
 
-7:                                                ; preds = %5, %155
+7:
   %8 = phi i32 [ %10, %155 ], [ 0, %5 ]
   %9 = phi i32 [ %156, %155 ], [ 0, %5 ]
   %10 = shl i32 %8, 4
   store i32 %10, ptr %6, align 4
   br label %11
 
-11:                                               ; preds = %7, %152
+11:
   %12 = phi i32 [ 0, %7 ], [ %153, %152 ]
   %13 = lshr i32 %12, 3
   %14 = getelementptr inbounds [21 x i32], ptr %3, i32 0, i32 %13
@@ -270,7 +270,7 @@ define dso_local i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
   %23 = mul nuw nsw i32 %12, 5
   br label %24
 
-24:                                               ; preds = %11, %78
+24:
   %25 = phi i32 [ 0, %11 ], [ %79, %78 ]
   %26 = add nuw nsw i32 %25, %23
   %27 = getelementptr inbounds [101 x i32], ptr %2, i32 0, i32 %26
@@ -297,7 +297,7 @@ define dso_local i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
   %47 = icmp eq i32 %46, 0
   br i1 %31, label %48, label %62
 
-48:                                               ; preds = %24
+48:
   %49 = select i1 %33, i32 0, i32 129
   %50 = or i32 %49, 258
   %51 = select i1 %35, i32 %49, i32 %50
@@ -313,7 +313,7 @@ define dso_local i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
   %61 = select i1 %45, i32 %59, i32 %60
   br i1 %47, label %78, label %76
 
-62:                                               ; preds = %24
+62:
   %63 = select i1 %33, i32 0, i32 516
   %64 = or i32 %63, 1032
   %65 = select i1 %35, i32 %63, i32 %64
@@ -329,20 +329,20 @@ define dso_local i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
   %75 = select i1 %45, i32 %73, i32 %74
   br i1 %47, label %78, label %76
 
-76:                                               ; preds = %62, %48
+76:
   %77 = phi i32 [ %61, %48 ], [ %75, %62 ]
   store i32 %77, ptr %27, align 4
   br label %78
 
-78:                                               ; preds = %76, %62, %48
+78:
   %79 = add nuw nsw i32 %25, 1
   %80 = icmp eq i32 %79, 5
   br i1 %80, label %81, label %24
 
-81:                                               ; preds = %78
+81:
   br label %82
 
-82:                                               ; preds = %81, %149
+82:
   %83 = phi i32 [ %150, %149 ], [ 0, %81 ]
   %84 = add nuw nsw i32 %83, %23
   %85 = getelementptr inbounds [101 x i32], ptr %2, i32 0, i32 %84
@@ -406,7 +406,7 @@ define dso_local i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
   %143 = icmp eq i32 %142, 0
   br i1 %143, label %149, label %144
 
-144:                                              ; preds = %82
+144:
   %145 = shl nuw nsw i32 %139, 3
   %146 = shl nuw nsw i32 %141, 1
   %147 = or i32 %145, %146
@@ -414,25 +414,25 @@ define dso_local i32 @predicated_test(i32 noundef %0, ptr %glob) #0 {
   store i32 %148, ptr %85, align 4
   br label %149
 
-149:                                              ; preds = %82, %144
+149:
   %150 = add nuw nsw i32 %83, 1
   %151 = icmp eq i32 %150, 5
   br i1 %151, label %152, label %82
 
-152:                                              ; preds = %149
+152:
   %153 = add nuw nsw i32 %12, 1
   %154 = icmp eq i32 %153, 20
   br i1 %154, label %155, label %11
 
-155:                                              ; preds = %152
+155:
   %156 = add nuw nsw i32 %9, 1
   %157 = icmp eq i32 %156, %0
   br i1 %157, label %158, label %7
 
-158:                                              ; preds = %155
+158:
   br label %159
 
-159:                                              ; preds = %158, %1
+159:
   call void @llvm.lifetime.end.p0(ptr nonnull %3)
   call void @llvm.lifetime.end.p0(ptr nonnull %2)
   ret i32 0
@@ -447,10 +447,10 @@ entry:
   %cmp.not5 = icmp eq i32 %rem, 0
   br i1 %cmp.not5, label %while.end, label %while.body.preheader
 
-while.body.preheader:                             ; preds = %entry
+while.body.preheader:
   br label %while.body
 
-while.body:                                       ; preds = %while.body.preheader, %while.body
+while.body:
   %blkCnt.08 = phi i32 [ %dec, %while.body ], [ %rem, %while.body.preheader ]
   %pIn.07 = phi ptr [ %incdec.ptr, %while.body ], [ %pSrc, %while.body.preheader ]
   %pDst.addr.06 = phi ptr [ %incdec.ptr2, %while.body ], [ %pDst, %while.body.preheader ]
@@ -464,15 +464,13 @@ while.body:                                       ; preds = %while.body.preheade
   %cmp.not = icmp eq i32 %dec, 0
   br i1 %cmp.not, label %while.end.loopexit, label %while.body
 
-while.end.loopexit:                               ; preds = %while.body
+while.end.loopexit:
   br label %while.end
 
-while.end:                                        ; preds = %while.end.loopexit, %entry
+while.end:
   ret void
 }
 
 
-declare void @llvm.lifetime.start.p0(ptr)
-declare void @llvm.lifetime.end.p0(ptr)
 
 attributes #0 = { "target-features"="+mve.fp" }

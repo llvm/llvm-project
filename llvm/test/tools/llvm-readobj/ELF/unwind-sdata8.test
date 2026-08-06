@@ -1,0 +1,112 @@
+## Check we can parse .eh_frame_hdr with sdata8 encoding (used for large binaries).
+## Header uses eh_frame_ptr_enc=0x1c (pcrel|sdata8) and table_enc=0x3c (datarel|sdata8).
+# RUN: yaml2obj --docnum=1 %s -o %t.sdata8
+# RUN: llvm-readelf --unwind %t.sdata8 | FileCheck %s --check-prefix=SDATA8
+
+# SDATA8:      EHFrameHeader {
+# SDATA8-NEXT:   Address: 0x1000
+# SDATA8-NEXT:   Offset: 0x78
+# SDATA8-NEXT:   Size: 0x30
+# SDATA8-NEXT:   Corresponding Section: .eh_frame_hdr
+# SDATA8-NEXT:   Header {
+# SDATA8-NEXT:     version: 1
+# SDATA8-NEXT:     eh_frame_ptr_enc: 0x1c
+# SDATA8-NEXT:     fde_count_enc: 0x3
+# SDATA8-NEXT:     table_enc: 0x3c
+# SDATA8-NEXT:     eh_frame_ptr: 0x1030
+# SDATA8-NEXT:     fde_count: 2
+# SDATA8-NEXT:     entry 0 {
+# SDATA8-NEXT:       initial_location: 0x2000
+# SDATA8-NEXT:       address: 0x1048
+# SDATA8-NEXT:     }
+# SDATA8-NEXT:     entry 1 {
+# SDATA8-NEXT:       initial_location: 0x2001
+# SDATA8-NEXT:       address: 0x1068
+# SDATA8-NEXT:     }
+# SDATA8-NEXT:   }
+# SDATA8-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .eh_frame_hdr
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x1000
+    AddressAlign: 4
+## Header: version=1, eh_frame_ptr_enc=0x1c (pcrel|sdata8),
+##         fde_count_enc=0x03 (udata4), table_enc=0x3c (datarel|sdata8)
+## eh_frame_ptr: 0x2c (8 bytes) -> points to 0x1004 + 0x2c = 0x1030
+## fde_count: 2 (4 bytes)
+## entry 0: initial_location=0x1000 (0x2000-0x1000), address=0x48 (0x1048-0x1000)
+## entry 1: initial_location=0x1001 (0x2001-0x1000), address=0x68 (0x1068-0x1000)
+    Content:      011c033c2c00000000000000020000000010000000000000480000000000000001100000000000006800000000000000
+ProgramHeaders:
+  - Type:     PT_GNU_EH_FRAME
+    Flags:    [ PF_R ]
+    VAddr:    0x1000
+    PAddr:    0x1000
+    MemSize:  0x30
+    FileSize: 0x30
+    FirstSec: .eh_frame_hdr
+    LastSec:  .eh_frame_hdr
+
+## Check we can parse .eh_frame_hdr with mixed encoding: sdata8 for eh_frame_ptr, sdata4 for table.
+# RUN: yaml2obj --docnum=2 %s -o %t.mixed
+# RUN: llvm-readelf --unwind %t.mixed | FileCheck %s --check-prefix=MIXED
+
+# MIXED:      EHFrameHeader {
+# MIXED-NEXT:   Address: 0x1000
+# MIXED-NEXT:   Offset: 0x78
+# MIXED-NEXT:   Size: 0x20
+# MIXED-NEXT:   Corresponding Section: .eh_frame_hdr
+# MIXED-NEXT:   Header {
+# MIXED-NEXT:     version: 1
+# MIXED-NEXT:     eh_frame_ptr_enc: 0x1c
+# MIXED-NEXT:     fde_count_enc: 0x3
+# MIXED-NEXT:     table_enc: 0x3b
+# MIXED-NEXT:     eh_frame_ptr: 0x1020
+# MIXED-NEXT:     fde_count: 2
+# MIXED-NEXT:     entry 0 {
+# MIXED-NEXT:       initial_location: 0x2000
+# MIXED-NEXT:       address: 0x1030
+# MIXED-NEXT:     }
+# MIXED-NEXT:     entry 1 {
+# MIXED-NEXT:       initial_location: 0x2001
+# MIXED-NEXT:       address: 0x1050
+# MIXED-NEXT:     }
+# MIXED-NEXT:   }
+# MIXED-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .eh_frame_hdr
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x1000
+    AddressAlign: 4
+## Header: version=1, eh_frame_ptr_enc=0x1c (pcrel|sdata8),
+##         fde_count_enc=0x03 (udata4), table_enc=0x3b (datarel|sdata4)
+## eh_frame_ptr: 0x1c (8 bytes) -> points to 0x1004 + 0x1c = 0x1020
+## fde_count: 2 (4 bytes)
+## entry 0: initial_location=0x1000 (4 bytes), address=0x30 (4 bytes)
+## entry 1: initial_location=0x1001 (4 bytes), address=0x50 (4 bytes)
+    Content:      011c033b1c000000000000000200000000100000300000000110000050000000
+ProgramHeaders:
+  - Type:     PT_GNU_EH_FRAME
+    Flags:    [ PF_R ]
+    VAddr:    0x1000
+    PAddr:    0x1000
+    MemSize:  0x20
+    FileSize: 0x20
+    FirstSec: .eh_frame_hdr
+    LastSec:  .eh_frame_hdr

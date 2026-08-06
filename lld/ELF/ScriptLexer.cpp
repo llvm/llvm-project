@@ -52,14 +52,13 @@ ScriptLexer::Buffer::Buffer(Ctx &ctx, MemoryBufferRef mb)
 }
 
 ScriptLexer::ScriptLexer(Ctx &ctx, MemoryBufferRef mb)
-    : ctx(ctx), curBuf(ctx, mb), mbs(1, mb) {
+    : ctx(ctx), curBuf(ctx, mb) {
   activeFilenames.insert(mb.getBufferIdentifier());
 }
 
 // Returns a whole line containing the current token.
 StringRef ScriptLexer::getLine() {
-  StringRef s = getCurrentMB().getBuffer();
-
+  StringRef s(curBuf.begin, curBuf.s.end() - curBuf.begin);
   size_t pos = s.rfind('\n', prevTok.data() - s.data());
   if (pos != StringRef::npos)
     s = s.substr(pos + 1);
@@ -72,8 +71,7 @@ size_t ScriptLexer::getColumnNumber() {
 }
 
 std::string ScriptLexer::getCurrentLocation() {
-  std::string filename = std::string(getCurrentMB().getBufferIdentifier());
-  return (filename + ":" + Twine(prevTokLine)).str();
+  return (curBuf.filename + ":" + Twine(prevTokLine)).str();
 }
 
 // We don't want to record cascading errors. Keep only the first one.
@@ -93,15 +91,10 @@ void ScriptLexer::lex() {
     StringRef &s = curBuf.s;
     s = skipSpace(s);
     if (s.empty()) {
-      // If this buffer is from an INCLUDE command, switch to the "return
-      // value"; otherwise, mark EOF.
-      if (buffers.empty()) {
-        eof = true;
-        return;
-      }
-      activeFilenames.erase(curBuf.filename);
-      curBuf = buffers.pop_back_val();
-      continue;
+      // If this buffer is from an INCLUDE, the caller is responsible for
+      // popping to the parent buffer.
+      eof = true;
+      return;
     }
     curTokState = lexState;
 
@@ -124,36 +117,61 @@ void ScriptLexer::lex() {
       return;
     }
 
-    // Some operators form separate tokens.
-    if (s.starts_with("<<=") || s.starts_with(">>=")) {
-      curTok = s.substr(0, 3);
-      s = s.substr(3);
-      return;
-    }
-    if (s.size() > 1 && (s[1] == '=' && strchr("+-*/!&^|", s[0]))) {
-      curTok = s.substr(0, 2);
-      s = s.substr(2);
-      return;
-    }
+    // In Script and Expr states, recognize compound assignment operators.
+    auto recognizeAssign = [&]() -> bool {
+      if (s.starts_with("<<=") || s.starts_with(">>=")) {
+        curTok = s.substr(0, 3);
+        s = s.substr(3);
+        return true;
+      }
+      if (s.size() > 1 && (s[1] == '=' && strchr("+-*/!&^|", s[0]))) {
+        curTok = s.substr(0, 2);
+        s = s.substr(2);
+        return true;
+      }
+      return false;
+    };
 
     // Unquoted token. The non-expression token is more relaxed than tokens in
     // C-like languages, so that you can write "file-name.cpp" as one bare
     // token.
     size_t pos;
+    constexpr StringRef scriptAndVersionChars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+        "0123456789_.$/\\~=+[]*?-!^:";
+    constexpr StringRef exprChars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+        "0123456789_.$";
     switch (lexState) {
     case State::Script:
-      pos = s.find_first_not_of(
-          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-          "0123456789_.$/\\~=+[]*?-!^:");
+      if (recognizeAssign())
+        return;
+      pos = s.find_first_not_of(scriptAndVersionChars);
       break;
     case State::Expr:
-      pos = s.find_first_not_of(
-          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-          "0123456789_.$");
+      if (recognizeAssign())
+        return;
+      pos = s.find_first_not_of(exprChars);
       if (pos == 0 && s.size() >= 2 &&
           ((s[0] == s[1] && strchr("<>&|", s[0])) ||
            is_contained({"==", "!=", "<=", ">=", "<<", ">>"}, s.substr(0, 2))))
         pos = 2;
+      break;
+    case State::VersionNode:
+      // Treat `:` as a token boundary unless it's part of a scope operator `::`
+      // (for extern "C++"). This behavior resembles GNU ld and allows proper
+      // tokenization of patterns like `local:*`.
+      pos = 0;
+      for (; pos != s.size(); ++pos) {
+        if (s[pos] == ':') {
+          if (pos + 1 != s.size() && s[pos + 1] == ':') {
+            ++pos;
+            continue;
+          }
+        } else if (scriptAndVersionChars.contains(s[pos]))
+          continue;
+        break;
+      }
       break;
     }
 
@@ -249,18 +267,4 @@ ScriptLexer::Token ScriptLexer::till(StringRef tok) {
   prevTok = {};
   setError("unexpected EOF");
   return {};
-}
-
-// Returns true if S encloses T.
-static bool encloses(StringRef s, StringRef t) {
-  return s.bytes_begin() <= t.bytes_begin() && t.bytes_end() <= s.bytes_end();
-}
-
-MemoryBufferRef ScriptLexer::getCurrentMB() {
-  // Find input buffer containing the current token.
-  assert(!mbs.empty());
-  for (MemoryBufferRef mb : mbs)
-    if (encloses(mb.getBuffer(), curBuf.s))
-      return mb;
-  llvm_unreachable("getCurrentMB: failed to find a token");
 }

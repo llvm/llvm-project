@@ -143,7 +143,7 @@ if.end:
 define i32 @not_equality(i32 %a) nounwind {
 ; CHECK-LABEL: not_equality:
 ; CHECK:       ! %bb.0: ! %entry
-; CHECK-NEXT:    and %o0, 1, %o1
+; CHECK-NEXT:    add %o0, -1, %o1
 ; CHECK-NEXT:    cmp %o1, 0
 ; CHECK-NEXT:    bl .LBB4_2
 ; CHECK-NEXT:    nop
@@ -155,15 +155,15 @@ define i32 @not_equality(i32 %a) nounwind {
 ;
 ; CHECK64-LABEL: not_equality:
 ; CHECK64:       ! %bb.0: ! %entry
-; CHECK64-NEXT:    and %o0, 1, %o1
+; CHECK64-NEXT:    add %o0, -1, %o1
 ; CHECK64-NEXT:    cmp %o1, 0
 ; CHECK64-NEXT:    movl %icc, %o0, %o1
 ; CHECK64-NEXT:    retl
 ; CHECK64-NEXT:    mov %o1, %o0
 entry:
-  %and = and i32 %a, 1
-  %cmp = icmp slt i32 %and, 0
-  %cond = select i1 %cmp, i32 %a, i32 %and
+  %sub = sub i32 %a, 1
+  %cmp = icmp slt i32 %sub, 0
+  %cond = select i1 %cmp, i32 %a, i32 %sub
   ret i32 %cond
 }
 

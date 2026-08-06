@@ -103,11 +103,19 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
     llvm::Type *Res = getTypes().ConvertType(E->getType());
     assert(Res->isPointerTy() &&
            "GenericCastToPtrExplicit doesn't return a pointer");
-    llvm::CallInst *Call = Builder.CreateIntrinsic(
+    llvm::CallInst *Call = Builder.CreateIntrinsicWithoutFolding(
         /*ReturnType=*/Res, Intrinsic::spv_generic_cast_to_ptr_explicit,
         ArrayRef<Value *>{Ptr}, nullptr, "spv.generic_cast");
     Call->addRetAttr(llvm::Attribute::AttrKind::NoUndef);
     return Call;
+  }
+  case SPIRV::BI__builtin_spirv_subgroup_shuffle: {
+    Value *X = EmitScalarExpr(E->getArg(0));
+    Value *Y = EmitScalarExpr(E->getArg(1));
+    assert(E->getArg(1)->getType()->hasIntegerRepresentation());
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/getTypes().ConvertType(E->getArg(0)->getType()),
+        Intrinsic::spv_wave_readlane, {X, Y}, nullptr, "spv.shuffle");
   }
   case SPIRV::BI__builtin_spirv_num_workgroups:
     return Builder.CreateIntrinsic(
@@ -151,6 +159,14 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
         Intrinsic::spv_global_offset,
         ArrayRef<Value *>{EmitScalarExpr(E->getArg(0))}, nullptr,
         "spv.global.offset");
+  case SPIRV::BI__builtin_spirv_ddx:
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/getTypes().ConvertType(E->getType()), Intrinsic::spv_ddx,
+        ArrayRef<Value *>{EmitScalarExpr(E->getArg(0))}, nullptr, "spv.ddx");
+  case SPIRV::BI__builtin_spirv_ddy:
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/getTypes().ConvertType(E->getType()), Intrinsic::spv_ddy,
+        ArrayRef<Value *>{EmitScalarExpr(E->getArg(0))}, nullptr, "spv.ddy");
   case SPIRV::BI__builtin_spirv_fwidth:
     return Builder.CreateIntrinsic(
         /*ReturnType=*/getTypes().ConvertType(E->getType()),

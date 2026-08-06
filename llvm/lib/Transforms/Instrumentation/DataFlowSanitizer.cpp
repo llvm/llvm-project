@@ -318,6 +318,14 @@ const MemoryMapParams Linux_LoongArch64_MemoryMapParams = {
     0x100000000000, // OriginBase
 };
 
+// s390x Linux
+const MemoryMapParams Linux_S390X_MemoryMapParams = {
+    0xC00000000000, // AndMask
+    0,              // XorMask (not used)
+    0x080000000000, // ShadowBase
+    0x1C0000000000, // OriginBase
+};
+
 namespace {
 
 class DFSanABIList {
@@ -828,7 +836,7 @@ public:
   void visitSelectInst(SelectInst &I);
   void visitMemSetInst(MemSetInst &I);
   void visitMemTransferInst(MemTransferInst &I);
-  void visitBranchInst(BranchInst &BR);
+  void visitCondBrInst(CondBrInst &BR);
   void visitSwitchInst(SwitchInst &SW);
 
 private:
@@ -1146,6 +1154,9 @@ bool DataFlowSanitizer::initializeModule(Module &M) {
   case Triple::loongarch64:
     MapParams = &Linux_LoongArch64_MemoryMapParams;
     break;
+  case Triple::systemz:
+    MapParams = &Linux_S390X_MemoryMapParams;
+    break;
   default:
     report_fatal_error("unsupported architecture");
   }
@@ -1272,18 +1283,20 @@ void DataFlowSanitizer::addGlobalNameSuffix(GlobalValue *GV) {
   // corrupting asm which happens to contain the symbol name as a substring.
   // Note that the substitution for .symver assumes that the versioned symbol
   // also has an instrumented name.
-  std::string Asm = GV->getParent()->getModuleInlineAsm();
-  std::string SearchStr = ".symver " + GVName + ",";
-  size_t Pos = Asm.find(SearchStr);
-  if (Pos != std::string::npos) {
-    Asm.replace(Pos, SearchStr.size(), ".symver " + GVName + Suffix + ",");
-    Pos = Asm.find('@');
+  for (Module::GlobalAsmFragment &Frag :
+       GV->getParent()->getModuleInlineAsm()) {
+    std::string SearchStr = ".symver " + GVName + ",";
+    size_t Pos = Frag.Asm.find(SearchStr);
+    if (Pos != std::string::npos) {
+      Frag.Asm.replace(Pos, SearchStr.size(),
+                       ".symver " + GVName + Suffix + ",");
+      Pos = Frag.Asm.find('@');
 
-    if (Pos == std::string::npos)
-      report_fatal_error(Twine("unsupported .symver: ", Asm));
+      if (Pos == std::string::npos)
+        report_fatal_error(Twine("unsupported .symver: ", Frag.Asm));
 
-    Asm.replace(Pos, 1, Suffix + "@");
-    GV->getParent()->setModuleInlineAsm(Asm);
+      Frag.Asm.replace(Pos, 1, Suffix + "@");
+    }
   }
 }
 
@@ -1779,7 +1792,7 @@ bool DataFlowSanitizer::runImpl(
         Value *PrimitiveShadow = DFSF.collapseToPrimitiveShadow(V, Pos);
         Value *Ne =
             IRB.CreateICmpNE(PrimitiveShadow, DFSF.DFS.ZeroPrimitiveShadow);
-        BranchInst *BI = cast<BranchInst>(SplitBlockAndInsertIfThen(
+        UncondBrInst *BI = cast<UncondBrInst>(SplitBlockAndInsertIfThen(
             Ne, Pos, /*Unreachable=*/false, ColdCallWeights));
         IRBuilder<> ThenIRB(BI);
         ThenIRB.CreateCall(DFSF.DFS.DFSanNonzeroLabelFn, {});
@@ -2352,7 +2365,7 @@ DFSanFunction::loadShadowOrigin(Value *Addr, uint64_t Size, Align InstAlignment,
     if (ClTrackOrigins == 2) {
       IRBuilder<> IRB(Pos->getParent(), Pos);
       auto *ConstantShadow = dyn_cast<Constant>(PrimitiveShadow);
-      if (!ConstantShadow || !ConstantShadow->isZeroValue())
+      if (!ConstantShadow || !ConstantShadow->isNullValue())
         Origin = updateOriginIfTainted(PrimitiveShadow, Origin, IRB);
     }
   }
@@ -2541,7 +2554,7 @@ void DFSanFunction::storeOrigin(BasicBlock::iterator Pos, Value *Addr,
   Value *CollapsedShadow = collapseToPrimitiveShadow(Shadow, Pos);
   IRBuilder<> IRB(Pos->getParent(), Pos);
   if (auto *ConstantShadow = dyn_cast<Constant>(CollapsedShadow)) {
-    if (!ConstantShadow->isZeroValue())
+    if (!ConstantShadow->isNullValue())
       paintOrigin(IRB, updateOrigin(Origin, IRB), StoreOriginAddr, Size,
                   OriginAlignment);
     return;
@@ -2965,10 +2978,7 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   }
 }
 
-void DFSanVisitor::visitBranchInst(BranchInst &BR) {
-  if (!BR.isConditional())
-    return;
-
+void DFSanVisitor::visitCondBrInst(CondBrInst &BR) {
   DFSF.addConditionalCallbacksIfEnabled(BR, BR.getCondition());
 }
 
@@ -3373,8 +3383,7 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
     }
   }
 
-  DenseMap<Value *, Function *>::iterator UnwrappedFnIt =
-      DFSF.DFS.UnwrappedFnMap.find(CB.getCalledOperand());
+  auto UnwrappedFnIt = DFSF.DFS.UnwrappedFnMap.find(CB.getCalledOperand());
   if (UnwrappedFnIt != DFSF.DFS.UnwrappedFnMap.end())
     if (visitWrappedCallBase(*UnwrappedFnIt->second, CB))
       return;

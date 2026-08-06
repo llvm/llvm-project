@@ -18,45 +18,33 @@
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
+#include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "x86-pseudo"
+#define DEBUG_TYPE "x86-expand-pseudo"
 #define X86_EXPAND_PSEUDO_NAME "X86 pseudo instruction expansion pass"
 
 namespace {
-class X86ExpandPseudo : public MachineFunctionPass {
+class X86ExpandPseudoImpl {
 public:
-  static char ID;
-  X86ExpandPseudo() : MachineFunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addPreservedID(MachineLoopInfoID);
-    AU.addPreservedID(MachineDominatorsID);
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
   const X86Subtarget *STI = nullptr;
   const X86InstrInfo *TII = nullptr;
   const X86RegisterInfo *TRI = nullptr;
   const X86MachineFunctionInfo *X86FI = nullptr;
   const X86FrameLowering *X86FL = nullptr;
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().setNoVRegs();
-  }
-
-  StringRef getPassName() const override {
-    return "X86 pseudo instruction expansion pass";
-  }
+  bool runOnMachineFunction(MachineFunction &MF);
 
 private:
   void expandICallBranchFunnel(MachineBasicBlock *MBB,
@@ -78,14 +66,40 @@ private:
       MachineBasicBlock *EntryBlk,
       MachineBasicBlock::iterator VAStartPseudoInstr) const;
 };
-char X86ExpandPseudo::ID = 0;
 
+class X86ExpandPseudoLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  X86ExpandPseudoLegacy() : MachineFunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  const X86Subtarget *STI = nullptr;
+  const X86InstrInfo *TII = nullptr;
+  const X86RegisterInfo *TRI = nullptr;
+  const X86MachineFunctionInfo *X86FI = nullptr;
+  const X86FrameLowering *X86FL = nullptr;
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+
+  StringRef getPassName() const override {
+    return "X86 pseudo instruction expansion pass";
+  }
+};
+char X86ExpandPseudoLegacy::ID = 0;
 } // End anonymous namespace.
 
-INITIALIZE_PASS(X86ExpandPseudo, DEBUG_TYPE, X86_EXPAND_PSEUDO_NAME, false,
-                false)
+INITIALIZE_PASS(X86ExpandPseudoLegacy, DEBUG_TYPE, X86_EXPAND_PSEUDO_NAME,
+                false, false)
 
-void X86ExpandPseudo::expandICallBranchFunnel(
+void X86ExpandPseudoImpl::expandICallBranchFunnel(
     MachineBasicBlock *MBB, MachineBasicBlock::iterator MBBI) {
   MachineBasicBlock *JTMBB = MBB;
   MachineInstr *JTInst = &*MBBI;
@@ -186,8 +200,8 @@ void X86ExpandPseudo::expandICallBranchFunnel(
   JTMBB->erase(JTInst);
 }
 
-void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator MBBI) {
+void X86ExpandPseudoImpl::expandCALL_RVMARKER(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   // Expand CALL_RVMARKER pseudo to call instruction, followed by the special
   //"movq %rax, %rdi" marker.
   MachineInstr &MI = *MBBI;
@@ -257,8 +271,8 @@ void X86ExpandPseudo::expandCALL_RVMARKER(MachineBasicBlock &MBB,
 /// If \p MBBI is a pseudo instruction, this method expands
 /// it to the corresponding (sequence of) actual instruction(s).
 /// \returns true if \p MBBI has been expanded.
-bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MBBI) {
+bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
   const DebugLoc &DL = MBBI->getDebugLoc();
@@ -579,18 +593,18 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::PTILELOADDT1V:
   case X86::PTILELOADDRSV:
   case X86::PTILELOADDRST1V:
-  case X86::PTCVTROWD2PSrreV:
-  case X86::PTCVTROWD2PSrriV:
-  case X86::PTCVTROWPS2BF16HrreV:
-  case X86::PTCVTROWPS2BF16HrriV:
-  case X86::PTCVTROWPS2BF16LrreV:
-  case X86::PTCVTROWPS2BF16LrriV:
-  case X86::PTCVTROWPS2PHHrreV:
-  case X86::PTCVTROWPS2PHHrriV:
-  case X86::PTCVTROWPS2PHLrreV:
-  case X86::PTCVTROWPS2PHLrriV:
-  case X86::PTILEMOVROWrreV:
-  case X86::PTILEMOVROWrriV: {
+  case X86::PTCVTROWD2PSrteV:
+  case X86::PTCVTROWD2PSrtiV:
+  case X86::PTCVTROWPS2BF16HrteV:
+  case X86::PTCVTROWPS2BF16HrtiV:
+  case X86::PTCVTROWPS2BF16LrteV:
+  case X86::PTCVTROWPS2BF16LrtiV:
+  case X86::PTCVTROWPS2PHHrteV:
+  case X86::PTCVTROWPS2PHHrtiV:
+  case X86::PTCVTROWPS2PHLrteV:
+  case X86::PTCVTROWPS2PHLrtiV:
+  case X86::PTILEMOVROWrteV:
+  case X86::PTILEMOVROWrtiV: {
     for (unsigned i = 2; i > 0; --i)
       MI.removeOperand(i);
     unsigned Opc;
@@ -607,40 +621,40 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case X86::PTILELOADDT1V:
       Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDT1);
       break;
-    case X86::PTCVTROWD2PSrreV:
+    case X86::PTCVTROWD2PSrteV:
       Opc = X86::TCVTROWD2PSrte;
       break;
-    case X86::PTCVTROWD2PSrriV:
+    case X86::PTCVTROWD2PSrtiV:
       Opc = X86::TCVTROWD2PSrti;
       break;
-    case X86::PTCVTROWPS2BF16HrreV:
+    case X86::PTCVTROWPS2BF16HrteV:
       Opc = X86::TCVTROWPS2BF16Hrte;
       break;
-    case X86::PTCVTROWPS2BF16HrriV:
+    case X86::PTCVTROWPS2BF16HrtiV:
       Opc = X86::TCVTROWPS2BF16Hrti;
       break;
-    case X86::PTCVTROWPS2BF16LrreV:
+    case X86::PTCVTROWPS2BF16LrteV:
       Opc = X86::TCVTROWPS2BF16Lrte;
       break;
-    case X86::PTCVTROWPS2BF16LrriV:
+    case X86::PTCVTROWPS2BF16LrtiV:
       Opc = X86::TCVTROWPS2BF16Lrti;
       break;
-    case X86::PTCVTROWPS2PHHrreV:
+    case X86::PTCVTROWPS2PHHrteV:
       Opc = X86::TCVTROWPS2PHHrte;
       break;
-    case X86::PTCVTROWPS2PHHrriV:
+    case X86::PTCVTROWPS2PHHrtiV:
       Opc = X86::TCVTROWPS2PHHrti;
       break;
-    case X86::PTCVTROWPS2PHLrreV:
+    case X86::PTCVTROWPS2PHLrteV:
       Opc = X86::TCVTROWPS2PHLrte;
       break;
-    case X86::PTCVTROWPS2PHLrriV:
+    case X86::PTCVTROWPS2PHLrtiV:
       Opc = X86::TCVTROWPS2PHLrti;
       break;
-    case X86::PTILEMOVROWrreV:
+    case X86::PTILEMOVROWrteV:
       Opc = X86::TILEMOVROWrte;
       break;
-    case X86::PTILEMOVROWrriV:
+    case X86::PTILEMOVROWrtiV:
       Opc = X86::TILEMOVROWrti;
       break;
     default:
@@ -657,7 +671,6 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::PTDPBUUDV:
   case X86::PTDPBF16PSV:
   case X86::PTDPFP16PSV:
-  case X86::PTMMULTF32PSV:
   case X86::PTDPBF8PSV:
   case X86::PTDPBHF8PSV:
   case X86::PTDPHBF8PSV:
@@ -676,7 +689,6 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
-    case X86::PTMMULTF32PSV: Opc = X86::TMMULTF32PS; break;
     case X86::PTDPBF8PSV: Opc = X86::TDPBF8PS; break;
     case X86::PTDPBHF8PSV: Opc = X86::TDPBHF8PS; break;
     case X86::PTDPHBF8PSV: Opc = X86::TDPHBF8PS; break;
@@ -756,8 +768,8 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     unsigned Count = !!MI.getOperand(MemOpNo + X86::AddrSegmentReg).getReg();
     if (X86II::needSIB(Base, Index, /*In64BitMode=*/true))
       ++Count;
-    if (X86MCRegisterClasses[X86::GR32RegClassID].contains(Base) ||
-        X86MCRegisterClasses[X86::GR32RegClassID].contains(Index))
+    if (getX86MCRegisterClass(X86::GR32RegClassID).contains(Base) ||
+        getX86MCRegisterClass(X86::GR32RegClassID).contains(Index))
       ++Count;
     if (Count < 2)
       return false;
@@ -813,7 +825,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
 //        |                              |
 //        |                              |
 //
-void X86ExpandPseudo::expandVastartSaveXmmRegs(
+void X86ExpandPseudoImpl::expandVastartSaveXmmRegs(
     MachineBasicBlock *EntryBlk,
     MachineBasicBlock::iterator VAStartPseudoInstr) const {
   assert(VAStartPseudoInstr->getOpcode() == X86::VASTART_SAVE_XMM_REGS);
@@ -898,7 +910,7 @@ void X86ExpandPseudo::expandVastartSaveXmmRegs(
 
 /// Expand all pseudo instructions contained in \p MBB.
 /// \returns true if any expansion occurred for \p MBB.
-bool X86ExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
+bool X86ExpandPseudoImpl::expandMBB(MachineBasicBlock &MBB) {
   bool Modified = false;
 
   // MBBI may be invalidated by the expansion.
@@ -912,7 +924,8 @@ bool X86ExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
   return Modified;
 }
 
-bool X86ExpandPseudo::expandPseudosWhichAffectControlFlow(MachineFunction &MF) {
+bool X86ExpandPseudoImpl::expandPseudosWhichAffectControlFlow(
+    MachineFunction &MF) {
   // Currently pseudo which affects control flow is only
   // X86::VASTART_SAVE_XMM_REGS which is located in Entry block.
   // So we do not need to evaluate other blocks.
@@ -926,7 +939,7 @@ bool X86ExpandPseudo::expandPseudosWhichAffectControlFlow(MachineFunction &MF) {
   return false;
 }
 
-bool X86ExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
+bool X86ExpandPseudoImpl::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<X86Subtarget>();
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
@@ -941,6 +954,24 @@ bool X86ExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
 }
 
 /// Returns an instance of the pseudo instruction expansion pass.
-FunctionPass *llvm::createX86ExpandPseudoPass() {
-  return new X86ExpandPseudo();
+FunctionPass *llvm::createX86ExpandPseudoLegacyPass() {
+  return new X86ExpandPseudoLegacy();
+}
+
+bool X86ExpandPseudoLegacy::runOnMachineFunction(MachineFunction &MF) {
+  X86ExpandPseudoImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+X86ExpandPseudoPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  X86ExpandPseudoImpl Impl;
+  bool Changed = Impl.runOnMachineFunction(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

@@ -11,10 +11,14 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 
+using namespace clang::ast_matchers;
+
+namespace clang::tidy {
+
 // This is the minimal set of safe functions.
 // https://wiki.sei.cmu.edu/confluence/display/c/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers
-constexpr llvm::StringLiteral MinimalConformingFunctions[] = {
-    "signal", "abort", "_Exit", "quick_exit"};
+constexpr StringRef MinimalConformingFunctions[] = {"signal", "abort", "_Exit",
+                                                    "quick_exit"};
 
 // The POSIX-defined set of safe functions.
 // https://pubs.opengroup.org/onlinepubs/9699919799/functions/V2_chap02.html#tag_15_04_03
@@ -25,7 +29,7 @@ constexpr llvm::StringLiteral MinimalConformingFunctions[] = {
 // The list is repeated in bugprone-signal-handler.rst and should be kept up to
 // date.
 // clang-format off
-constexpr llvm::StringLiteral POSIXConformingFunctions[] = {
+constexpr StringRef POSIXConformingFunctions[] = {
     "_Exit",
     "_exit",
     "abort",
@@ -221,10 +225,6 @@ constexpr llvm::StringLiteral POSIXConformingFunctions[] = {
 };
 // clang-format on
 
-using namespace clang::ast_matchers;
-
-namespace clang::tidy {
-
 template <>
 struct OptionEnumMapping<
     bugprone::SignalHandlerCheck::AsyncSafeFunctionSetKind> {
@@ -352,8 +352,9 @@ bool SignalHandlerCheck::isLanguageVersionSupported(
 }
 
 void SignalHandlerCheck::registerMatchers(MatchFinder *Finder) {
-  auto SignalFunction = functionDecl(hasAnyName("::signal", "::std::signal"),
-                                     parameterCountIs(2), isStandard());
+  const auto SignalFunction =
+      functionDecl(hasAnyName("::signal", "::std::signal"), parameterCountIs(2),
+                   isStandard());
   auto HandlerExpr =
       declRefExpr(hasDeclaration(functionDecl().bind("handler_decl")),
                   unless(isExpandedFromMacro("SIG_IGN")),
@@ -488,7 +489,7 @@ bool SignalHandlerCheck::checkFunctionCPP14(
 
   bool StmtProblemsFound = false;
   ASTContext &Ctx = FBody->getASTContext();
-  auto Matches =
+  const auto Matches =
       match(decl(forEachDescendant(stmt().bind("stmt"))), *FBody, Ctx);
   for (const auto &Match : Matches) {
     const auto *FoundS = Match.getNodeAs<Stmt>("stmt");
@@ -532,7 +533,7 @@ bool SignalHandlerCheck::isStandardFunctionAsyncSafe(
 }
 
 void SignalHandlerCheck::reportHandlerChain(
-    const llvm::df_iterator<const clang::CallGraphNode *> &Itr,
+    const llvm::df_iterator<const CallGraphNode *> &Itr,
     const DeclRefExpr *HandlerRef, bool SkipPathEnd) {
   int CallLevel = Itr.getPathLength() - 2;
   assert(CallLevel >= -1 && "Empty iterator?");

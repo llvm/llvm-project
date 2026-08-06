@@ -90,3 +90,16 @@
 // CHECK: fused<#test.conditional_alias<#[[TEST_ALIAS]]>
 // CHECK: "test.op"
 "test.op"() {attr = #no_alias} : () -> () loc(fused<#no_alias>["test.mlir":0:0])
+
+// -----
+
+// Check that conflicting aliases are printed correctly in the presence of different nesting levels.
+
+// CHECK: #unique_base = #test.nested_alias<"alias_test:trailing_digit_conflict_base">
+// CHECK: #unique_base1 = #test.nested_alias<"alias_test:trailing_digit_conflict_base1">
+// CHECK: #unique_base2 = #test.nested_alias<"alias_test:trailing_digit_conflict_base_conflict", #unique_base1>
+
+// CHECK: alias_test = #test.nested_alias<"alias_test:trailing_digit_conflict_other", #unique_base>
+// CHECK-NEXT: alias_test = #unique_base2
+"test.op"() {alias_test = #test.nested_alias<"alias_test:trailing_digit_conflict_other", #test.nested_alias<"alias_test:trailing_digit_conflict_base">>} : () -> ()
+"test.op"() {alias_test = #test.nested_alias<"alias_test:trailing_digit_conflict_base_conflict", #test.nested_alias<"alias_test:trailing_digit_conflict_base1">>} : () -> ()

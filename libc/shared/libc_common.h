@@ -19,6 +19,11 @@
 #define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_SYSTEM_INLINE
 #endif // LIBC_ERRNO_MODE
 
+// Use system fenv functions in math implementations.
+#ifndef LIBC_MATH_USE_SYSTEM_FENV
+#define LIBC_MATH_USE_SYSTEM_FENV
+#endif // LIBC_MATH_USE_SYSTEM_FENV
+
 #ifndef LIBC_NAMESPACE
 #define LIBC_NAMESPACE __llvm_libc
 #endif // LIBC_NAMESPACE

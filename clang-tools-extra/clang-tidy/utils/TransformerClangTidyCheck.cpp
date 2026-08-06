@@ -9,7 +9,6 @@
 #include "TransformerClangTidyCheck.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Lex/Preprocessor.h"
-#include "llvm/ADT/STLExtras.h"
 #include <optional>
 
 namespace clang::tidy::utils {
@@ -44,7 +43,7 @@ static std::string escapeForDiagnostic(std::string ToEscape) {
   Result.append(ToEscape, 0, Pos);
   Result += '%';
 
-  for (auto N = ToEscape.size(); Pos < N; ++Pos) {
+  for (const auto N = ToEscape.size(); Pos < N; ++Pos) {
     const char C = ToEscape.at(Pos);
     Result += C;
     if (C == '%')
@@ -96,7 +95,7 @@ void TransformerClangTidyCheck::registerPPCallbacks(
 void TransformerClangTidyCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
   if (!Rule.Cases.empty())
-    for (auto &Matcher : transformer::detail::buildMatchers(Rule))
+    for (const auto &Matcher : transformer::detail::buildMatchers(Rule))
       Finder->addDynamicMatcher(Matcher, this);
 }
 

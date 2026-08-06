@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IRMapping.h"
 
 namespace mlir {
@@ -71,7 +72,16 @@ void ForLoopRangeFolding::runOnOperation() {
         op.setLowerBound(lbFold->getResult(0));
         op.setUpperBound(ubFold->getResult(0));
 
-      } else if (isa<arith::MulIOp>(user)) {
+      } else if (auto mulOp = dyn_cast<arith::MulIOp>(user)) {
+        // Only fold if the multiplier is a known strictly positive constant.
+        // Multiplying by zero or a negative value would produce an invalid
+        // step (scf.for requires a strictly positive step).
+        Value multiplier =
+            (mulOp.getLhs() == indVar) ? mulOp.getRhs() : mulOp.getLhs();
+        std::optional<int64_t> multiplierVal = getConstantIntValue(multiplier);
+        if (!multiplierVal || *multiplierVal <= 0)
+          break;
+
         Operation *lbFold = b.clone(*user, lbMap);
         Operation *ubFold = b.clone(*user, ubMap);
         Operation *stepFold = b.clone(*user, stepMap);

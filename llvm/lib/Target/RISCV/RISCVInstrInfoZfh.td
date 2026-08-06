@@ -46,6 +46,7 @@ def GPRAsFPR16 : AsmOperandClass {
   let Name = "GPRAsFPR16";
   let ParserMethod = "parseGPRAsFPR";
   let RenderMethod = "addRegOperands";
+  let DiagnosticString = "register must be a GPR when used as an FP operand";
 }
 
 def FPR16INX : RegisterOperand<GPRF16> {
@@ -381,8 +382,10 @@ foreach Ext = ZfhExts in {
   defm : PatFprFpr_m<fmaximumnum, FMAX_H, Ext>;
   defm : PatFprFpr_m<riscv_fmin, FMIN_H, Ext>;
   defm : PatFprFpr_m<riscv_fmax, FMAX_H, Ext>;
-  let Predicates = Ext.Predicates in
-  def : Pat<(f16 (fcanonicalize FPR16:$rs1)), (FMIN_H $rs1, $rs1)>;
+  let Predicates = Ext.Predicates in {
+    def : Pat<(f16 (fcanonicalize Ext.PrimaryTy:$rs1)),
+              (!cast<Instruction>("FMIN_H"#Ext.Suffix) $rs1, $rs1)>;
+  }
 }
 
 /// Setcc

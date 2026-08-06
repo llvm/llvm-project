@@ -33,8 +33,8 @@ private:
   void registerUnaryOperatorMatcher(ast_matchers::MatchFinder *Finder);
   void registerOverloadedOperatorMatcher(ast_matchers::MatchFinder *Finder);
 
-  std::vector<llvm::StringRef> BinaryOperators;
-  std::vector<llvm::StringRef> OverloadedOperators;
+  std::vector<StringRef> BinaryOperators;
+  std::vector<StringRef> OverloadedOperators;
 };
 
 } // namespace clang::tidy::readability

@@ -839,7 +839,7 @@ DISubrangeType::convertRawToBound(Metadata *IN) const {
     return BoundType();
 
   assert(isa<ConstantAsMetadata>(IN) || isa<DIVariable>(IN) ||
-         isa<DIExpression>(IN));
+         isa<DIExpression>(IN) || isa<DIDerivedType>(IN));
 
   if (auto *MD = dyn_cast<ConstantAsMetadata>(IN))
     return BoundType(cast<ConstantInt>(MD->getValue()));
@@ -849,6 +849,9 @@ DISubrangeType::convertRawToBound(Metadata *IN) const {
 
   if (auto *MD = dyn_cast<DIExpression>(IN))
     return BoundType(MD);
+
+  if (auto *DT = dyn_cast<DIDerivedType>(IN))
+    return BoundType(DT);
 
   return BoundType();
 }
@@ -870,20 +873,22 @@ DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, const APInt &Value,
 }
 
 DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
-                                  MDString *Name, Metadata *SizeInBits,
-                                  uint32_t AlignInBits, unsigned Encoding,
+                                  MDString *Name, Metadata *File,
+                                  unsigned LineNo, Metadata *Scope,
+                                  Metadata *SizeInBits, uint32_t AlignInBits,
+                                  unsigned Encoding,
                                   uint32_t NumExtraInhabitants,
                                   uint32_t DataSizeInBits, DIFlags Flags,
                                   StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIBasicType,
-                        (Tag, Name, SizeInBits, AlignInBits, Encoding,
-                         NumExtraInhabitants, DataSizeInBits, Flags));
-  Metadata *Ops[] = {nullptr, nullptr, Name, SizeInBits, nullptr};
-  DEFINE_GETIMPL_STORE(
-      DIBasicType,
-      (Tag, AlignInBits, Encoding, NumExtraInhabitants, DataSizeInBits, Flags),
-      Ops);
+  DEFINE_GETIMPL_LOOKUP(
+      DIBasicType, (Tag, Name, File, LineNo, Scope, SizeInBits, AlignInBits,
+                    Encoding, NumExtraInhabitants, DataSizeInBits, Flags));
+  Metadata *Ops[] = {File, Scope, Name, SizeInBits, nullptr};
+  DEFINE_GETIMPL_STORE(DIBasicType,
+                       (Tag, LineNo, AlignInBits, Encoding, NumExtraInhabitants,
+                        DataSizeInBits, Flags),
+                       Ops);
 }
 
 std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
@@ -903,18 +908,20 @@ std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
 
 DIFixedPointType *
 DIFixedPointType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+                          Metadata *File, unsigned LineNo, Metadata *Scope,
                           Metadata *SizeInBits, uint32_t AlignInBits,
                           unsigned Encoding, DIFlags Flags, unsigned Kind,
                           int Factor, APInt Numerator, APInt Denominator,
                           StorageType Storage, bool ShouldCreate) {
   DEFINE_GETIMPL_LOOKUP(DIFixedPointType,
-                        (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags,
-                         Kind, Factor, Numerator, Denominator));
-  Metadata *Ops[] = {nullptr, nullptr, Name, SizeInBits, nullptr};
-  DEFINE_GETIMPL_STORE(
-      DIFixedPointType,
-      (Tag, AlignInBits, Encoding, Flags, Kind, Factor, Numerator, Denominator),
-      Ops);
+                        (Tag, Name, File, LineNo, Scope, SizeInBits,
+                         AlignInBits, Encoding, Flags, Kind, Factor, Numerator,
+                         Denominator));
+  Metadata *Ops[] = {File, Scope, Name, SizeInBits, nullptr};
+  DEFINE_GETIMPL_STORE(DIFixedPointType,
+                       (Tag, LineNo, AlignInBits, Encoding, Flags, Kind, Factor,
+                        Numerator, Denominator),
+                       Ops);
 }
 
 bool DIFixedPointType::isSigned() const {
@@ -1442,16 +1449,47 @@ bool DISubprogram::describes(const Function *F) const {
   return F->getSubprogram() == this;
 }
 
+template <typename ScopeT, typename NodeT>
+static ScopeT getRawRetainedNodeScopeInternal(NodeT *N) {
+  auto getScopeLambda = [](auto *N) { return getScope(N); };
+  return DISubprogram::visitRetainedNode<ScopeT>(
+      N, getScopeLambda, getScopeLambda, getScopeLambda, getScopeLambda,
+      getScopeLambda, [](auto *N) { return nullptr; });
+}
+
 const DIScope *DISubprogram::getRawRetainedNodeScope(const MDNode *N) {
-  return visitRetainedNode<DIScope *>(
-      N, [](const DILocalVariable *LV) { return LV->getScope(); },
-      [](const DILabel *L) { return L->getScope(); },
-      [](const DIImportedEntity *IE) { return IE->getScope(); },
-      [](const Metadata *N) { return nullptr; });
+  return getRawRetainedNodeScopeInternal<const DIScope *>(N);
+}
+
+DIScope *DISubprogram::getRawRetainedNodeScope(MDNode *N) {
+  return getRawRetainedNodeScopeInternal<DIScope *>(N);
 }
 
 const DILocalScope *DISubprogram::getRetainedNodeScope(const MDNode *N) {
   return cast<DILocalScope>(getRawRetainedNodeScope(N));
+}
+
+DILocalScope *DISubprogram::getRetainedNodeScope(MDNode *N) {
+  return cast<DILocalScope>(getRawRetainedNodeScope(N));
+}
+
+void DISubprogram::cleanupRetainedNodes() {
+  // Checks if a metadata node from retainedTypes is a type belonging to
+  // this subprogram.
+  auto IsTypeInSP = [this](Metadata *N) {
+    auto *T = dyn_cast_or_null<DIType>(N);
+    if (!T)
+      return true;
+
+    DISubprogram *TypeSP = nullptr;
+    // The type might have been global in the previously loaded IR modules.
+    if (auto *LS = dyn_cast_or_null<DILocalScope>(T->getScope()))
+      TypeSP = LS->getSubprogram();
+
+    return this == TypeSP;
+  };
+
+  cleanupRetainedNodesIf(IsTypeInSP);
 }
 
 DILexicalBlockBase::DILexicalBlockBase(LLVMContext &C, unsigned ID,
@@ -1719,6 +1757,10 @@ unsigned DIExpression::ExprOperand::getSize() const {
   }
 }
 
+bool DIExpression::ExprOperand::isNonEmitting() const {
+  return getOp() == dwarf::DW_OP_LLVM_tag_offset;
+}
+
 bool DIExpression::isValid() const {
   for (auto I = expr_op_begin(), E = expr_op_end(); I != E; ++I) {
     // Check that there's space for the operand.
@@ -1840,11 +1882,12 @@ bool DIExpression::isComplex() const {
   if (getNumElements() == 0)
     return false;
 
-  // If there are any elements other than fragment or tag_offset, then some
-  // kind of complex computation occurs.
+  // Tag offsets are non-emitting. They, fragments, and location operands don't
+  // perform a computation by themselves.
   for (const auto &It : expr_ops()) {
+    if (It.isNonEmitting())
+      continue;
     switch (It.getOp()) {
-    case dwarf::DW_OP_LLVM_tag_offset:
     case dwarf::DW_OP_LLVM_fragment:
     case dwarf::DW_OP_LLVM_arg:
       continue;
@@ -2061,16 +2104,13 @@ bool DIExpression::extractIfOffset(int64_t &Offset) const {
 }
 
 bool DIExpression::extractLeadingOffset(
-    int64_t &OffsetInBytes, SmallVectorImpl<uint64_t> &RemainingOps) const {
+    ArrayRef<uint64_t> Ops, int64_t &OffsetInBytes,
+    SmallVectorImpl<uint64_t> &RemainingOps) {
   OffsetInBytes = 0;
   RemainingOps.clear();
 
-  auto SingleLocEltsOpt = getSingleLocationExpressionElements();
-  if (!SingleLocEltsOpt)
-    return false;
-
-  auto ExprOpEnd = expr_op_iterator(SingleLocEltsOpt->end());
-  auto ExprOpIt = expr_op_iterator(SingleLocEltsOpt->begin());
+  auto ExprOpEnd = expr_op_iterator(Ops.end());
+  auto ExprOpIt = expr_op_iterator(Ops.begin());
   while (ExprOpIt != ExprOpEnd) {
     uint64_t Op = ExprOpIt->getOp();
     if (Op == dwarf::DW_OP_deref || Op == dwarf::DW_OP_deref_size ||
@@ -2097,6 +2137,18 @@ bool DIExpression::extractLeadingOffset(
   }
   RemainingOps.append(ExprOpIt.getBase(), ExprOpEnd.getBase());
   return true;
+}
+
+bool DIExpression::extractLeadingOffset(
+    int64_t &OffsetInBytes, SmallVectorImpl<uint64_t> &RemainingOps) const {
+  auto SingleLocEltsOpt = getSingleLocationExpressionElements();
+  if (!SingleLocEltsOpt) {
+    OffsetInBytes = 0;
+    RemainingOps.clear();
+    return false;
+  }
+
+  return extractLeadingOffset(*SingleLocEltsOpt, OffsetInBytes, RemainingOps);
 }
 
 bool DIExpression::hasAllLocationOps(unsigned N) const {
@@ -2276,17 +2328,17 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
                       }) &&
          "Can't append this op");
 
-  // Append a DW_OP_deref after Expr's current op list if it's non-empty and
-  // has no DW_OP_stack_value.
-  //
-  // Match .* DW_OP_stack_value (DW_OP_LLVM_fragment A B)?.
-  std::optional<FragmentInfo> FI = Expr->getFragmentInfo();
-  unsigned DropUntilStackValue = FI ? 3 : 0;
-  ArrayRef<uint64_t> ExprOpsBeforeFragment =
-      Expr->getElements().drop_back(DropUntilStackValue);
-  bool NeedsDeref = (Expr->getNumElements() > DropUntilStackValue) &&
-                    (ExprOpsBeforeFragment.back() != dwarf::DW_OP_stack_value);
-  bool NeedsStackValue = NeedsDeref || ExprOpsBeforeFragment.empty();
+  // DIExpression stores opcodes and their arguments in a flat array. Walk the
+  // parsed operations to find the last opcode that determines whether the
+  // expression already ends in DW_OP_stack_value.
+  std::optional<uint64_t> LastValueOp;
+  for (auto Op : Expr->expr_ops()) {
+    if (Op.isNonEmitting() || Op.getOp() == dwarf::DW_OP_LLVM_fragment)
+      continue;
+    LastValueOp = Op.getOp();
+  }
+  bool NeedsDeref = LastValueOp && *LastValueOp != dwarf::DW_OP_stack_value;
+  bool NeedsStackValue = NeedsDeref || !LastValueOp;
 
   // Append a DW_OP_deref after Expr's current op list if needed, then append
   // the new ops, and finally ensure that a single DW_OP_stack_value is present.

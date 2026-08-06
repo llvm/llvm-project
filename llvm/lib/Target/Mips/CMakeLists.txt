@@ -17,6 +17,7 @@ tablegen(LLVM MipsGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM MipsGenMCPseudoLowering.inc -gen-pseudo-lowering)
 tablegen(LLVM MipsGenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM MipsGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM MipsGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM MipsGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM MipsGenExegesis.inc -gen-exegesis)
 
@@ -60,6 +61,7 @@ add_llvm_target(MipsCodeGen
   MipsSEISelLowering.cpp
   MipsSERegisterInfo.cpp
   MipsSelectionDAGInfo.cpp
+  MipsSetMachineRegisterFlags.cpp
   MipsSubtarget.cpp
   MipsTargetMachine.cpp
   MipsTargetObjectFile.cpp

@@ -24,9 +24,8 @@ static bool isDerivedParameterBefriended(const CXXRecordDecl *CRTP,
                                          const NamedDecl *Param) {
   return llvm::any_of(CRTP->friends(), [&](const FriendDecl *Friend) {
     const TypeSourceInfo *const FriendType = Friend->getFriendType();
-    if (!FriendType) {
+    if (!FriendType)
       return false;
-    }
 
     const auto *const TTPT =
         dyn_cast<TemplateTypeParmType>(FriendType->getType());
@@ -39,9 +38,8 @@ static bool isDerivedClassBefriended(const CXXRecordDecl *CRTP,
                                      const CXXRecordDecl *Derived) {
   return llvm::any_of(CRTP->friends(), [&](const FriendDecl *Friend) {
     const TypeSourceInfo *const FriendType = Friend->getFriendType();
-    if (!FriendType) {
+    if (!FriendType)
       return false;
-    }
 
     return declaresSameEntity(FriendType->getType()->getAsCXXRecordDecl(),
                               Derived);
@@ -106,9 +104,8 @@ void CrtpConstructorAccessibilityCheck::check(
   const CXXRecordDecl *CRTPDeclaration =
       CRTPInstantiation->getSpecializedTemplate()->getTemplatedDecl();
 
-  if (!CRTPDeclaration->hasDefinition()) {
+  if (!CRTPDeclaration->hasDefinition())
     return;
-  }
 
   const auto *DerivedTemplateParameter =
       getDerivedParameter(CRTPInstantiation, DerivedRecord);
@@ -132,8 +129,8 @@ void CrtpConstructorAccessibilityCheck::check(
         << HintFriend;
   }
 
-  auto WithFriendHintIfNeeded = [&](const DiagnosticBuilder &Diag,
-                                    bool NeedsFriend) {
+  const auto WithFriendHintIfNeeded = [&](const DiagnosticBuilder &Diag,
+                                          bool NeedsFriend) {
     if (NeedsFriend)
       Diag << HintFriend;
   };

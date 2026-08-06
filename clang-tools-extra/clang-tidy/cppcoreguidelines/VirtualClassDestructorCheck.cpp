@@ -65,7 +65,7 @@ getVirtualKeywordRange(const CXXDestructorDecl &Destructor,
   /// Range ends with \c StartOfNextToken so that any whitespace after \c
   /// virtual is included.
   std::optional<Token> NextToken =
-      Lexer::findNextToken(VirtualEndLoc, SM, LangOpts);
+      utils::lexer::findNextTokenSkippingComments(VirtualEndLoc, SM, LangOpts);
   if (!NextToken)
     return std::nullopt;
   const SourceLocation StartOfNextToken = NextToken->getLocation();
@@ -159,7 +159,7 @@ static FixItHint changePrivateDestructorVisibilityTo(
   else
     EndLocation = Destructor.getEndLoc().getLocWithOffset(1);
 
-  auto OriginalDestructorRange =
+  const auto OriginalDestructorRange =
       CharSourceRange::getCharRange(Destructor.getBeginLoc(), EndLocation);
   return FixItHint::CreateReplacement(OriginalDestructorRange,
                                       DestructorString);

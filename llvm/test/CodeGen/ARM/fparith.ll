@@ -84,18 +84,18 @@ define float @f11(float %a) {
 ;CHECK-LABEL: f11:
 ;CHECK: bic
 entry:
-	%tmp1 = call float @fabsf( float %a ) readnone	; <float> [#uses=1]
+	%tmp1 = call float @llvm.fabs.f32( float %a ) readnone	; <float> [#uses=1]
 	ret float %tmp1
 }
 
-declare float @fabsf(float)
+declare float @llvm.fabs.f32(float)
 
 define arm_aapcs_vfpcc double @f12(double %a) {
 ;CHECK-LABEL: f12:
 ;CHECK: vabs.f64
 entry:
-	%tmp1 = call double @fabs( double %a ) readnone	; <double> [#uses=1]
+	%tmp1 = call double @llvm.fabs.f64( double %a ) readnone	; <double> [#uses=1]
 	ret double %tmp1
 }
 
-declare double @fabs(double)
+declare double @llvm.fabs.f64(double)

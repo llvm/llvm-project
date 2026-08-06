@@ -13,7 +13,6 @@
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
@@ -49,6 +48,20 @@ cuf::DataAttributeAttr getDataAttr(mlir::Operation *op) {
 bool hasDataAttr(mlir::Operation *op, cuf::DataAttribute value) {
   if (auto dataAttr = getDataAttr(op))
     return dataAttr.getValue() == value;
+  return false;
+}
+
+bool isDeviceDataAttribute(cuf::DataAttribute attr) {
+  return attr == cuf::DataAttribute::Device ||
+         attr == cuf::DataAttribute::Managed ||
+         attr == cuf::DataAttribute::Constant ||
+         attr == cuf::DataAttribute::Shared ||
+         attr == cuf::DataAttribute::Unified;
+}
+
+bool hasDeviceDataAttr(mlir::Operation *op) {
+  if (auto dataAttr = getDataAttr(op))
+    return isDeviceDataAttribute(dataAttr.getValue());
   return false;
 }
 

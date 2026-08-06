@@ -51,10 +51,10 @@ void checkASTCodeBodyHasAnalysisEntryPoints() {
 }
 
 void notInvokedLambdaScope() {
-  // CHECK: note: [debug] analyzing from notInvokedLambdaScope()::(anonymous class)::operator()()
+  // CHECK: note: [debug] analyzing from notInvokedLambdaScope()::(lambda)::operator()()
   // CHECK-NEXT: |   auto notInvokedLambda = []() {
   // CHECK-NEXT: |                           ^
-  // textout-note@+1 {{[debug] analyzing from notInvokedLambdaScope()::(anonymous class)::operator()()}}
+  // textout-note@+1 {{[debug] analyzing from notInvokedLambdaScope()::(lambda)::operator()()}}
   auto notInvokedLambda = []() {
     // common-warning@+1 {{REACHABLE}} textout-note@+1 {{REACHABLE}}
     clang_analyzer_warnIfReached();

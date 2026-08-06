@@ -164,6 +164,10 @@ static OrderMap orderModule(const Module &M) {
           orderConstantValue(Op);
         if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
           orderValue(SVI->getShuffleMaskForBitcode(), OM);
+        if (auto *SI = dyn_cast<SwitchInst>(&I)) {
+          for (const auto &Case : SI->cases())
+            orderValue(Case.getCaseValue(), OM);
+        }
         orderValue(&I, OM);
       }
   }
@@ -351,7 +355,7 @@ ValueEnumerator::ValueEnumerator(const Module &M,
   // Enumerate the functions.
   for (const Function & F : M) {
     EnumerateValue(&F);
-    EnumerateType(F.getValueType());
+    EnumerateType(F.getFunctionType());
     EnumerateAttributes(F.getAttributes());
   }
 
@@ -1092,6 +1096,10 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
       }
       if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
         EnumerateValue(SVI->getShuffleMaskForBitcode());
+      if (auto *SI = dyn_cast<SwitchInst>(&I)) {
+        for (const auto &Case : SI->cases())
+          EnumerateValue(Case.getCaseValue());
+      }
     }
     BasicBlocks.push_back(&BB);
     ValueMap[&BB] = BasicBlocks.size();

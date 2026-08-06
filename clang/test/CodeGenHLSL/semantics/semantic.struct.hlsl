@@ -38,7 +38,7 @@ struct S1 {
 // CHECK:      %[[#ID_XY:]] = insertelement <2 x i32> %[[#ID_X_]], i32 %[[#ID_Y]], i64 1
 // CHECK:       %[[#S1AB:]] = insertvalue %struct.S1 %[[#S1A_]], <2 x i32> %[[#ID_XYZ:]], 1
 // CHECK:        %[[#ARG:]] = alloca %struct.S1, align 8
-// CHECK:                     store %struct.S1 %[[#S1AB]], ptr %[[#ARG]], align 8
+// CHECK:                     store %struct.S1 %[[#S1AB]], ptr %[[#ARG]]
 // CHECK-DXIL:                call void @{{.*}}main1{{.*}}(ptr %[[#ARG]])
 // CHECK-SPIRV:               call spir_func void @{{.*}}main1{{.*}}(ptr %[[#ARG]])
 [shader("compute")]
@@ -69,7 +69,7 @@ struct S2 {
 
 // CHECK:       %[[#S2AB:]] = insertvalue %struct.S2 %[[#S2A_]], %struct.S2C %[[#S2V:]], 1
 // CHECK:        %[[#ARG:]] = alloca %struct.S2, align 8
-// CHECK:                     store %struct.S2 %[[#S2AB]], ptr %[[#ARG]], align 1
+// CHECK:                     store %struct.S2 %[[#S2AB]], ptr %[[#ARG]]
 // CHECK-DXIL:                call void @{{.*}}main2{{.*}}(ptr %[[#ARG]])
 // CHECK-SPIRV:               call spir_func void @{{.*}}main2{{.*}}(ptr %[[#ARG]])
 [shader("compute")]

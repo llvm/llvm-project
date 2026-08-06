@@ -16,10 +16,9 @@
 #include "clang/Basic/Diagnostic.h"
 #include <optional>
 
-namespace clang::tidy::performance {
+using namespace clang::ast_matchers;
 
-using namespace ::clang::ast_matchers;
-using llvm::StringRef;
+namespace clang::tidy::performance {
 using utils::decl_ref_expr::allDeclRefExprs;
 using utils::decl_ref_expr::isOnlyUsedAsConst;
 
@@ -30,7 +29,7 @@ static constexpr StringRef FunctionDeclId = "functionDecl";
 static constexpr StringRef OldVarDeclId = "oldVarDecl";
 
 static void recordFixes(const VarDecl &Var, ASTContext &Context,
-                        DiagnosticBuilder &Diagnostic) {
+                        const DiagnosticBuilder &Diagnostic) {
   Diagnostic << utils::fixit::changeVarDeclToReference(Var, Context);
   if (!Var.getType().isLocalConstQualified()) {
     if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
@@ -39,30 +38,30 @@ static void recordFixes(const VarDecl &Var, ASTContext &Context,
   }
 }
 
-static std::optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
-                                                          SourceManager &SM) {
+static std::optional<SourceLocation>
+firstLocAfterNewLine(SourceLocation Loc, const SourceManager &SM) {
   bool Invalid = false;
   const char *TextAfter = SM.getCharacterData(Loc, &Invalid);
-  if (Invalid) {
+  if (Invalid)
     return std::nullopt;
-  }
   const size_t Offset = std::strcspn(TextAfter, "\n");
   return Loc.getLocWithOffset(TextAfter[Offset] == '\0' ? Offset : Offset + 1);
 }
 
 static void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
-                          DiagnosticBuilder &Diagnostic) {
-  auto &SM = Context.getSourceManager();
+                          const DiagnosticBuilder &Diagnostic) {
+  const auto &SM = Context.getSourceManager();
   // Attempt to remove trailing comments as well.
   auto Tok = utils::lexer::findNextTokenSkippingComments(Stmt.getEndLoc(), SM,
                                                          Context.getLangOpts());
   std::optional<SourceLocation> PastNewLine =
       firstLocAfterNewLine(Stmt.getEndLoc(), SM);
   if (Tok && PastNewLine) {
-    auto BeforeFirstTokenAfterComment = Tok->getLocation().getLocWithOffset(-1);
+    const auto BeforeFirstTokenAfterComment =
+        Tok->getLocation().getLocWithOffset(-1);
     // Remove until the end of the line or the end of a trailing comment which
     // ever comes first.
-    auto End =
+    const auto End =
         SM.isBeforeInTranslationUnit(*PastNewLine, BeforeFirstTokenAfterComment)
             ? *PastNewLine
             : BeforeFirstTokenAfterComment;
@@ -94,8 +93,8 @@ AST_MATCHER_FUNCTION_P(StatementMatcher,
       // Access through dereference, typically used for `operator[]`: `(*a)[3]`.
       unaryOperator(hasOperatorName("*"), hasUnaryOperand(ReceiverExpr)));
   const auto ReceiverType =
-      hasCanonicalType(recordType(hasDeclaration(namedDecl(
-          unless(matchers::matchesAnyListedName(ExcludedContainerTypes))))));
+      hasCanonicalType(recordType(hasDeclaration(namedDecl(unless(
+          matchers::matchesAnyListedRegexName(ExcludedContainerTypes))))));
 
   return expr(
       anyOf(cxxMemberCallExpr(callee(MethodDecl), on(OnExpr),
@@ -121,7 +120,7 @@ AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
 
 AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
                        std::vector<StringRef>, ExcludedContainerTypes) {
-  auto OldVarDeclRef =
+  const auto OldVarDeclRef =
       declRefExpr(to(varDecl(hasLocalStorage()).bind(OldVarDeclId)));
   return expr(
       anyOf(isConstRefReturningFunctionCall(),
@@ -160,11 +159,10 @@ static bool isInitializingVariableImmutable(
 
   // The reference or pointer is not declared and hence not initialized anywhere
   // in the function. We assume its pointee is not modified then.
-  if (!InitializingVar.isLocalVarDecl() || !InitializingVar.hasInit()) {
+  if (!InitializingVar.isLocalVarDecl() || !InitializingVar.hasInit())
     return true;
-  }
 
-  auto Matches =
+  const auto Matches =
       match(initializerReturnsReferenceToConst(ExcludedContainerTypes),
             *InitializingVar.getInit(), Context);
   // The reference is initialized from a free function without arguments
@@ -190,7 +188,7 @@ static bool isVariableUnused(const VarDecl &Var, const Stmt &BlockStmt,
 
 static const SubstTemplateTypeParmType *
 getSubstitutedType(const QualType &Type, ASTContext &Context) {
-  auto Matches = match(
+  const auto Matches = match(
       qualType(anyOf(substTemplateTypeParmType().bind("subst"),
                      hasDescendant(substTemplateTypeParmType().bind("subst")))),
       Type, Context);
@@ -217,12 +215,10 @@ static bool differentReplacedTemplateParams(const QualType &VarType,
 
 static QualType constructorArgumentType(const VarDecl *OldVar,
                                         const BoundNodes &Nodes) {
-  if (OldVar) {
+  if (OldVar)
     return OldVar->getType();
-  }
-  if (const auto *FuncDecl = Nodes.getNodeAs<FunctionDecl>(FunctionDeclId)) {
+  if (const auto *FuncDecl = Nodes.getNodeAs<FunctionDecl>(FunctionDeclId))
     return FuncDecl->getReturnType();
-  }
   const auto *MethodDecl = Nodes.getNodeAs<CXXMethodDecl>(MethodDeclId);
   return MethodDecl->getReturnType();
 }
@@ -236,7 +232,7 @@ UnnecessaryCopyInitializationCheck::UnnecessaryCopyInitializationCheck(
           Options.get("ExcludedContainerTypes", ""))) {}
 
 void UnnecessaryCopyInitializationCheck::registerMatchers(MatchFinder *Finder) {
-  auto LocalVarCopiedFrom =
+  const auto LocalVarCopiedFrom =
       [this](const ast_matchers::internal::Matcher<Expr> &CopyCtorArg) {
         return compoundStmt(
                    forEachDescendant(
@@ -250,7 +246,7 @@ void UnnecessaryCopyInitializationCheck::registerMatchers(MatchFinder *Finder) {
                                            unless(hasDeclaration(namedDecl(
                                                hasName("::std::function")))))),
                                        unless(hasDeclaration(namedDecl(
-                                           matchers::matchesAnyListedName(
+                                           matchers::matchesAnyListedRegexName(
                                                AllowedTypes)))))),
                                    unless(isImplicit()),
                                    hasInitializer(traverse(

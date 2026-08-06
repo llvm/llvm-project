@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <memory>
 
 #include "check_assertion.h"
 #include "test_execution_policies.h"
@@ -85,7 +86,7 @@ int main(int, char**) {
       auto last1       = util::throw_on_move_iterator(std::end(a), tokens[1].active() ? 1 : -1);
       auto first2      = util::throw_on_move_iterator(std::begin(b), tokens[2].active() ? 1 : -1);
       auto last2       = util::throw_on_move_iterator(std::end(b), tokens[3].active() ? 1 : -1);
-      auto dest        = util::throw_on_move_iterator(std::end(storage), tokens[4].active() ? 1 : -1);
+      auto dest        = util::throw_on_move_iterator(std::begin(storage), tokens[4].active() ? 1 : -1);
       auto maybe_throw = [](ThrowToken const& token, auto f) {
         return [&token, f](auto... args) {
           if (token.active())
@@ -125,6 +126,14 @@ int main(int, char**) {
 
         // count_if(first, last, pred)
         assert_non_throwing([=, &policy] { (void)std::count_if(policy, std::move(first1), std::move(last1), pred); });
+      }
+
+      {
+        // destroy(first, last)
+        assert_non_throwing([=, &policy] { (void)std::destroy(policy, std::move(first1), std::move(last1)); });
+
+        // destroy_n(first, n)
+        assert_non_throwing([=, &policy] { (void)std::destroy_n(policy, std::move(first1), n); });
       }
 
       {
@@ -176,6 +185,21 @@ int main(int, char**) {
       }
 
       {
+        auto pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
+
+        // find_first_of(first1, last1, first2, last2)
+        assert_non_throwing([=, &policy] {
+          (void)std::find_first_of(policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2));
+        });
+
+        // find_first_of(first1, last1, first2, last2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::find_first_of(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), pred);
+        });
+      }
+
+      {
         auto func = maybe_throw(tokens[5], [](int) {});
 
         // for_each(first, last, func)
@@ -193,6 +217,34 @@ int main(int, char**) {
 
         // generate_n(first, n, func)
         assert_non_throwing([=, &policy] { (void)std::generate_n(policy, std::move(first1), n, gen); });
+      }
+
+      {
+        auto pred = maybe_throw(tokens[5], [](int, int) -> bool { return true; });
+
+        // lexicographical_compare(first1, last1, first2, last2)
+        assert_non_throwing([=, &policy] {
+          (void)std::lexicographical_compare(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2));
+        });
+
+        // lexicographical_compare(first1, last1, first2, last2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::lexicographical_compare(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), pred);
+        });
+      }
+
+      {
+        // reverse(first, last)
+        assert_non_throwing([=, &policy] { std::reverse(policy, std::move(first1), std::move(last1)); });
+      }
+
+      {
+        // reverse_copy(first, last, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::reverse_copy(policy, std::move(first1), std::move(last1), std::move(dest));
+        });
       }
 
       {
@@ -223,6 +275,43 @@ int main(int, char**) {
               std::move(last2),
               std::move(dest),
               compare);
+        });
+      }
+
+      {
+        auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
+        // mismatch(first1, last1, first2)
+        assert_non_throwing([=, &policy] {
+          (void)std::mismatch(policy, std::move(first1), std::move(last1), std::move(first2));
+        });
+
+        // mismatch(first1, last1, first2, last2)
+        assert_non_throwing([=, &policy] {
+          (void)std::mismatch(policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2));
+        });
+
+        // mismatch(first1, last1, first2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::mismatch(policy, std::move(first1), std::move(last1), std::move(first2), compare);
+        });
+
+        // mismatch(first1, last1, first2, last2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::mismatch(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), compare);
+        });
+      }
+
+      {
+        auto pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
+
+        // adjacent_find(first, last)
+        assert_non_throwing([=, &policy] { (void)std::adjacent_find(policy, std::move(first1), std::move(last1)); });
+
+        // adjacent_find(first, last, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::adjacent_find(policy, std::move(first1), std::move(last1), pred);
         });
       }
 
@@ -282,6 +371,22 @@ int main(int, char**) {
         assert_non_throwing([=, &policy] {
           (void)std::stable_sort(policy, std::move(first1), std::move(last1), compare);
         });
+
+        // is_sorted(first, last)
+        assert_non_throwing([=, &policy] { (void)std::is_sorted(policy, std::move(first1), std::move(last1)); });
+
+        // is_sorted(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::is_sorted(policy, std::move(first1), std::move(last1), compare);
+        });
+
+        // is_sorted_until(first, last)
+        assert_non_throwing([=, &policy] { (void)std::is_sorted_until(policy, std::move(first1), std::move(last1)); });
+
+        // is_sorted_until(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::is_sorted_until(policy, std::move(first1), std::move(last1), compare);
+        });
       }
 
       {
@@ -335,6 +440,22 @@ int main(int, char**) {
           (void)std::reduce(policy, std::move(first1), std::move(last1), init, reduction);
         });
       }
+
+      {
+        auto op = maybe_throw(tokens[5], [](int x, int y) -> int { return x + y; });
+
+        // adjacent_difference(first, last, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::adjacent_difference(policy, std::move(first1), std::move(last1), std::move(dest));
+        });
+
+        // adjacent_difference(first, last, dest, op)
+        assert_non_throwing([=, &policy] {
+          (void)std::adjacent_difference(policy, std::move(first1), std::move(last1), std::move(dest), op);
+        });
+      }
     }
   });
+
+  return 0;
 }

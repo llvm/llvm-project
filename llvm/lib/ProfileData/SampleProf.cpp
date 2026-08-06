@@ -22,6 +22,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cstdint>
 #include <string>
 #include <system_error>
 
@@ -41,12 +43,12 @@ static cl::opt<bool> GenerateMergedBaseProfiles(
 
 namespace llvm {
 namespace sampleprof {
-bool FunctionSamples::ProfileIsProbeBased = false;
-bool FunctionSamples::ProfileIsCS = false;
-bool FunctionSamples::ProfileIsPreInlined = false;
-bool FunctionSamples::UseMD5 = false;
-bool FunctionSamples::HasUniqSuffix = true;
-bool FunctionSamples::ProfileIsFS = false;
+std::atomic<bool> FunctionSamples::ProfileIsProbeBased;
+std::atomic<bool> FunctionSamples::ProfileIsCS;
+std::atomic<bool> FunctionSamples::ProfileIsPreInlined;
+std::atomic<bool> FunctionSamples::UseMD5;
+std::atomic<bool> FunctionSamples::HasUniqSuffix = true;
+std::atomic<bool> FunctionSamples::ProfileIsFS;
 
 std::error_code
 serializeTypeMap(const TypeCountMap &Map,
@@ -284,7 +286,7 @@ void sampleprof::sortFuncProfiles(
 
 unsigned FunctionSamples::getOffset(const DILocation *DIL) {
   return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
-      0xffff;
+         0xffff;
 }
 
 LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
@@ -306,8 +308,8 @@ LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
 
 const FunctionSamples *FunctionSamples::findFunctionSamples(
     const DILocation *DIL, SampleProfileReaderItaniumRemapper *Remapper,
-    const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-        *FuncNameToProfNameMap) const {
+    const HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap)
+    const {
   assert(DIL);
   SmallVector<std::pair<LineLocation, StringRef>, 10> S;
 
@@ -349,8 +351,8 @@ void FunctionSamples::findAllNames(DenseSet<FunctionId> &NameSet) const {
 const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
     const LineLocation &Loc, StringRef CalleeName,
     SampleProfileReaderItaniumRemapper *Remapper,
-    const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-        *FuncNameToProfNameMap) const {
+    const HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap)
+    const {
   CalleeName = getCanonicalFnName(CalleeName);
 
   auto I = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
@@ -398,6 +400,10 @@ LLVM_DUMP_METHOD void FunctionSamples::dump() const { print(dbgs(), 0); }
 
 std::error_code ProfileSymbolList::read(const uint8_t *Data,
                                         uint64_t ListSize) {
+  // Scan forward to see how many elements we expect.
+  reserve(std::min<uint64_t>(ProfileSymbolListCutOff,
+                             std::count(Data, Data + ListSize, 0)));
+
   const char *ListStart = reinterpret_cast<const char *>(Data);
   uint64_t Size = 0;
   uint64_t StrNum = 0;

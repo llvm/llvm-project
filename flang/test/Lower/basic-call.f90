@@ -1,4 +1,4 @@
-! RUN: bbc %s -o "-" -emit-fir -hlfir=false | FileCheck %s
+! RUN: bbc %s -o "-" -emit-hlfir | FileCheck %s
 
 subroutine sub1()
 end
@@ -25,13 +25,9 @@ subroutine sub4()
 end
 
 ! CHECK-LABEL: func @_QPsub4() {
-! CHECK-DAG: %[[REAL_VALUE:.*]] = fir.alloca f32 {adapt.valuebyref}
-! CHECK-DAG: %[[INT_VALUE:.*]] = fir.alloca i32 {adapt.valuebyref}
-! CHECK:     %[[C2:.*]] = arith.constant 2 : i32
-! CHECK:     fir.store %[[C2]] to %[[INT_VALUE]] : !fir.ref<i32>
-! CHECK:     %[[C3:.*]] = arith.constant 3.000000e+00 : f32
-! CHECK:     fir.store %[[C3]] to %[[REAL_VALUE]] : !fir.ref<f32>
-! CHECK:     fir.call @_QPsub3(%[[INT_VALUE]], %[[REAL_VALUE]]) {{.*}}: (!fir.ref<i32>, !fir.ref<f32>) -> ()
+! CHECK-DAG: %[[INT_VALUE:.*]]:3 = hlfir.associate %{{.*}} {adapt.valuebyref}
+! CHECK-DAG: %[[REAL_VALUE:.*]]:3 = hlfir.associate %{{.*}} {adapt.valuebyref}
+! CHECK:     fir.call @_QPsub3(%[[INT_VALUE]]#0, %[[REAL_VALUE]]#0) {{.*}}: (!fir.ref<i32>, !fir.ref<f32>) -> ()
 
 subroutine call_fct1()
   real :: a, b, c
@@ -40,10 +36,13 @@ end
 
 ! CHECK-LABEL: func @_QPcall_fct1()
 ! CHECK:         %[[A:.*]] = fir.alloca f32 {bindc_name = "a", uniq_name = "_QFcall_fct1Ea"}
+! CHECK:         %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {{.*}}
 ! CHECK:         %[[B:.*]] = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFcall_fct1Eb"}
+! CHECK:         %[[B_DECL:.*]]:2 = hlfir.declare %[[B]] {{.*}}
 ! CHECK:         %[[C:.*]] = fir.alloca f32 {bindc_name = "c", uniq_name = "_QFcall_fct1Ec"}
-! CHECK:         %[[RES:.*]] = fir.call @_QPfct1(%[[A]], %[[B]]) {{.*}}: (!fir.ref<f32>, !fir.ref<f32>) -> f32
-! CHECK:         fir.store %[[RES]] to %[[C]] : !fir.ref<f32>
+! CHECK:         %[[C_DECL:.*]]:2 = hlfir.declare %[[C]] {{.*}}
+! CHECK:         %[[RES:.*]] = fir.call @_QPfct1(%[[A_DECL]]#0, %[[B_DECL]]#0) {{.*}}: (!fir.ref<f32>, !fir.ref<f32>) -> f32
+! CHECK:         hlfir.assign %[[RES]] to %[[C_DECL]]#0 : f32, !fir.ref<f32>
 ! CHECK:         return
 
 ! CHECK: func private @_QPfct1(!fir.ref<f32>, !fir.ref<f32>) -> f32

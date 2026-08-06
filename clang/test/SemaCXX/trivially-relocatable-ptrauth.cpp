@@ -47,49 +47,6 @@ struct UnionOfPtrauth {
 
 static_assert(!__builtin_is_cpp_trivially_relocatable(UnionOfPtrauth));
 
-struct [[clang::ptrauth_vtable_pointer(process_independent,address_discrimination,no_extra_discrimination)]] Polymorphic trivially_relocatable_if_eligible {
-  virtual ~Polymorphic();
-};
-
-struct Foo : Polymorphic {
-  Foo(const Foo&);
-  ~Foo();
-};
-
-
-static_assert(!__builtin_is_cpp_trivially_relocatable(Polymorphic));
-
-struct [[clang::ptrauth_vtable_pointer(process_independent,no_address_discrimination,no_extra_discrimination)]] NonAddressDiscriminatedPolymorphic trivially_relocatable_if_eligible {
-  virtual ~NonAddressDiscriminatedPolymorphic();
-};
-
-static_assert(__builtin_is_cpp_trivially_relocatable(NonAddressDiscriminatedPolymorphic));
-
-
-struct PolymorphicMembers {
-    Polymorphic field;
-};
-
-static_assert(!__builtin_is_cpp_trivially_relocatable(PolymorphicMembers));
-
-struct UnionOfPolymorphic {
-  union trivially_relocatable_if_eligible {
-    Polymorphic p;
-    int i;
-  } u;
-};
-
-static_assert(!__builtin_is_cpp_trivially_relocatable(UnionOfPolymorphic));
-
-
-struct UnionOfNonAddressDiscriminatedPolymorphic {
-  union trivially_relocatable_if_eligible {
-    NonAddressDiscriminatedPolymorphic p;
-    int i;
-  } u;
-};
-static_assert(!__builtin_is_cpp_trivially_relocatable(UnionOfNonAddressDiscriminatedPolymorphic));
-
 struct UnionOfNonAddressDiscriminatedPtrauth {
   union {
     NonAddressDiscPtrauth p;

@@ -13,9 +13,12 @@
 
 #include "lldb/Host/ProcessRunLock.h"
 #include "lldb/Target/StackID.h"
+#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
+
+struct StoppedExecutionContext;
 
 //===----------------------------------------------------------------------===//
 /// Execution context objects refer to objects in the execution of the program
@@ -106,29 +109,6 @@ public:
   /// selected frame). If there is no selected frame, default to the first
   /// frame.
   ExecutionContextRef(Thread *thread, bool adopt_selected);
-
-  /// Construct using an execution context scope.
-  ///
-  /// If the ExecutionContextScope object is valid and refers to a frame, make
-  /// weak references too the frame, thread, process and target. If the
-  /// ExecutionContextScope object is valid and refers to a thread, make weak
-  /// references too the thread, process and target. If the
-  /// ExecutionContextScope object is valid and refers to a process, make weak
-  /// references too the process and target. If the ExecutionContextScope
-  /// object is valid and refers to a target, make weak references too the
-  /// target.
-  ExecutionContextRef(ExecutionContextScope *exe_scope);
-
-  /// Construct using an execution context scope.
-  ///
-  /// If the ExecutionContextScope object refers to a frame, make weak
-  /// references too the frame, thread, process and target. If the
-  /// ExecutionContextScope object refers to a thread, make weak references
-  /// too the thread, process and target. If the ExecutionContextScope object
-  /// refers to a process, make weak references too the process and target. If
-  /// the ExecutionContextScope object refers to a target, make weak
-  /// references too the target.
-  ExecutionContextRef(ExecutionContextScope &exe_scope);
 
   ~ExecutionContextRef();
 
@@ -268,7 +248,13 @@ public:
     m_tid = LLDB_INVALID_THREAD_ID;
   }
 
-  void ClearFrame() { m_stack_id.Clear(); }
+  void ClearFrame() {
+    m_stack_id.Clear();
+    m_frame_list_id.reset();
+  }
+
+  friend llvm::Expected<StoppedExecutionContext>
+  GetStoppedExecutionContext(const ExecutionContextRef *exe_ctx_ref_ptr);
 
 protected:
   // Member variables
@@ -279,7 +265,11 @@ protected:
                                               ///< object refers to in case the
                                               /// backing object changes
   StackID m_stack_id; ///< The stack ID that this object refers to in case the
-                      ///backing object changes
+                      ///< backing object changes
+  /// A map of identifiers to scripted frame providers used in this thread.
+  mutable std::optional<
+      std::pair<ScriptedFrameProviderDescriptor, lldb::frame_list_id_t>>
+      m_frame_list_id;
 };
 
 /// \class ExecutionContext ExecutionContext.h

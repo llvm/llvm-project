@@ -54,18 +54,11 @@ NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
 NativeRegisterContextFreeBSD_arm64::NativeRegisterContextFreeBSD_arm64(
     const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread)
     : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfoPOSIX_arm64(target_arch, 0))
-#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
-      ,
-      m_read_dbreg(false)
-#endif
-{
+          native_thread, new RegisterInfoPOSIX_arm64(target_arch, 0)),
+      m_read_dbreg(false) {
   g_register_flags_detector.UpdateRegisterInfo(
       GetRegisterInfoInterface().GetRegisterInfo(),
       GetRegisterInfoInterface().GetRegisterCount());
-
-  ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
-  ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
 }
 
 RegisterInfoPOSIX_arm64 &
@@ -225,7 +218,6 @@ Status NativeRegisterContextFreeBSD_arm64::WriteAllRegisterValues(
 
 llvm::Error NativeRegisterContextFreeBSD_arm64::CopyHardwareWatchpointsFrom(
     NativeRegisterContextFreeBSD &source) {
-#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
   auto &r_source = static_cast<NativeRegisterContextFreeBSD_arm64 &>(source);
   llvm::Error error = r_source.ReadHardwareDebugInfo();
   if (error)
@@ -240,13 +232,9 @@ llvm::Error NativeRegisterContextFreeBSD_arm64::CopyHardwareWatchpointsFrom(
 
   // on FreeBSD this writes both breakpoints and watchpoints
   return WriteHardwareDebugRegs(eDREGTypeWATCH);
-#else
-  return llvm::Error::success();
-#endif
 }
 
 llvm::Error NativeRegisterContextFreeBSD_arm64::ReadHardwareDebugInfo() {
-#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
   Log *log = GetLog(POSIXLog::Registers);
 
   // we're fully stateful, so no need to reread control registers ever
@@ -267,16 +255,10 @@ llvm::Error NativeRegisterContextFreeBSD_arm64::ReadHardwareDebugInfo() {
 
   m_read_dbreg = true;
   return llvm::Error::success();
-#else
-  return llvm::createStringError(
-      llvm::inconvertibleErrorCode(),
-      "Hardware breakpoints/watchpoints require FreeBSD 14.0");
-#endif
 }
 
 llvm::Error
 NativeRegisterContextFreeBSD_arm64::WriteHardwareDebugRegs(DREGType) {
-#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
   assert(m_read_dbreg && "dbregs must be read before writing them back");
 
   // copy data from m_*_regs to m_dbreg before writing it back
@@ -292,11 +274,6 @@ NativeRegisterContextFreeBSD_arm64::WriteHardwareDebugRegs(DREGType) {
   return NativeProcessFreeBSD::PtraceWrapper(PT_SETDBREGS, m_thread.GetID(),
                                              &m_dbreg)
       .ToError();
-#else
-  return llvm::createStringError(
-      llvm::inconvertibleErrorCode(),
-      "Hardware breakpoints/watchpoints require FreeBSD 14.0");
-#endif
 }
 
 #endif // defined (__aarch64__)

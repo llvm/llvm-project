@@ -52,6 +52,10 @@ ArrayRef<Capability> getDirectImpliedCapabilities(Capability cap);
 /// third one will also be returned.
 SmallVector<Capability, 0> getRecursiveImpliedCapabilities(Capability cap);
 
+/// Converts a SPIR-V Decoration enum value to its snake_case string
+/// representation for use in MLIR attributes.
+std::string getDecorationString(Decoration decoration);
+
 } // namespace spirv
 } // namespace mlir
 

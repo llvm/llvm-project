@@ -1,4 +1,4 @@
-// RUN: %clang -emit-llvm -g -S %s -o - | FileCheck %s
+// RUN: %clang -emit-llvm -g -gno-simple-template-names -S %s -o - | FileCheck %s
 
 template<typename T>
 struct XF {

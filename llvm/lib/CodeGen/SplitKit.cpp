@@ -147,54 +147,6 @@ InsertPointAnalysis::getLastInsertPointIter(const LiveInterval &CurLI,
   return LIS.getInstructionFromIndex(LIP);
 }
 
-bool InsertPointAnalysis::canSplitBeforeProlog(const LiveInterval &CurLI,
-                                               const MachineBasicBlock &MBB) {
-  const TargetInstrInfo *TII = MBB.getParent()->getSubtarget().getInstrInfo();
-
-  for (auto &MI : MBB) {
-    if (MI.isPHI() || MI.isPosition() || MI.isDebugInstr() ||
-        MI.isPseudoProbe())
-      continue;
-
-    if (!TII->isBasicBlockPrologue(MI))
-      return true;
-
-    for (auto &MO : MI.operands()) {
-      if (!MO.isReg() || !MO.isDef() || !MO.getReg().isVirtual())
-        continue;
-
-      // For the AMDGPU target if a MBB contains exec mask restore preamble,
-      // SplitEditor may get state when it cannot insert a spill instruction
-      // at the begin of the MBB.
-      // E.g. for a MIR
-      // bb.100:
-      //     %1 = S_OR_SAVEEXEC_B64 %2, implicit-def $exec, implicit-def $scc,
-      //          implicit $exec
-      //     ...
-      //     use %1
-      // If the regalloc try to allocate a virtreg to the physreg already
-      // assigned to virtreg %1 and the pyhsreg is computed as the best
-      // candidate for split, it may insert COPY instruction.
-      //  bb.100:
-      //     %1 = S_OR_SAVEEXEC_B64 %2, implicit-def $exec, implicit-def $scc,
-      //          implicit $exec
-      //     %2 = COPY %orig
-      //     ...
-      //     use %1
-      // Thus %1 and %orig still have interference. We may add cost for the
-      // physreg candidate or abandon the candidate.
-      const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-      const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-      const TargetRegisterClass *RC = MRI.getRegClass(MO.getReg());
-      const TargetRegisterClass *CurRC = MRI.getRegClass(CurLI.reg());
-      if (TRI->getCommonSubClass(RC, CurRC))
-        return false;
-    }
-  }
-
-  return true;
-}
-
 //===----------------------------------------------------------------------===//
 //                                 Split Analysis
 //===----------------------------------------------------------------------===//
@@ -461,15 +413,26 @@ const LiveInterval::SubRange &getSubRangeForMaskExact(LaneBitmask LM,
 }
 
 /// Find a subrange corresponding to the lane mask @p LM, or a superset of it,
-/// in the live interval @p LI. The interval @p LI is assumed to contain such
-/// a subrange.  This function is used to find corresponding subranges between
-/// the original interval and the new intervals.
-const LiveInterval::SubRange &getSubRangeForMask(LaneBitmask LM,
-                                                 const LiveInterval &LI) {
+/// in the live interval @p LI.
+/// \return nullptr is such subrange is not found.
+const LiveInterval::SubRange *findSubRangeForMask(LaneBitmask LM,
+                                                  const LiveInterval &LI) {
   for (const LiveInterval::SubRange &S : LI.subranges())
     if ((S.LaneMask & LM) == LM)
-      return S;
-  llvm_unreachable("SubRange for this mask not found");
+      return &S;
+  return nullptr;
+}
+
+LaneBitmask getLiveLaneMaskAt(const LiveInterval &LI, SlotIndex Idx,
+                              const MachineRegisterInfo &MRI) {
+  if (!LI.hasSubRanges())
+    return MRI.getMaxLaneMaskForVReg(LI.reg());
+
+  LaneBitmask LaneMask;
+  for (const LiveInterval::SubRange &S : LI.subranges())
+    if (S.liveAt(Idx))
+      LaneMask |= S.LaneMask;
+  return LaneMask;
 }
 
 void SplitEditor::addDeadDef(LiveInterval &LI, VNInfo *VNI, bool Original) {
@@ -484,8 +447,11 @@ void SplitEditor::addDeadDef(LiveInterval &LI, VNInfo *VNI, bool Original) {
     // to only update the subranges for which the original subranges had
     // a def at this location.
     for (LiveInterval::SubRange &S : LI.subranges()) {
-      auto &PS = getSubRangeForMask(S.LaneMask, Edit->getParent());
-      VNInfo *PV = PS.getVNInfoAt(Def);
+      const LiveInterval::SubRange *PS =
+          findSubRangeForMask(S.LaneMask, Edit->getParent());
+      if (PS == nullptr)
+        continue;
+      VNInfo *PV = PS->getVNInfoAt(Def);
       if (PV != nullptr && PV->def == Def)
         S.createDeadDef(Def, LIS.getVNInfoAllocator());
     }
@@ -574,11 +540,15 @@ SlotIndex SplitEditor::buildSingleSubRegCopy(
     MachineBasicBlock::iterator InsertBefore, unsigned SubIdx,
     LiveInterval &DestLI, bool Late, SlotIndex Def, const MCInstrDesc &Desc) {
   bool FirstCopy = !Def.isValid();
-  MachineInstr *CopyMI = BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
-      .addReg(ToReg, RegState::Define | getUndefRegState(FirstCopy)
-              | getInternalReadRegState(!FirstCopy), SubIdx)
-      .addReg(FromReg, 0, SubIdx);
+  MachineInstr *CopyMI =
+      BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
+          .addReg(ToReg,
+                  RegState::Define | getUndefRegState(FirstCopy) |
+                      getInternalReadRegState(!FirstCopy),
+                  SubIdx)
+          .addReg(FromReg, {}, SubIdx);
 
+  CopyMI->setFlag(MachineInstr::LRSplit);
   SlotIndexes &Indexes = *LIS.getSlotIndexes();
   if (FirstCopy) {
     Def = Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
@@ -598,6 +568,7 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
     // The full vreg is copied.
     MachineInstr *CopyMI =
         BuildMI(MBB, InsertBefore, DebugLoc(), Desc, ToReg).addReg(FromReg);
+    CopyMI->setFlag(MachineInstr::LRSplit);
     return Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
   }
 
@@ -680,13 +651,15 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
   VNInfo *OrigVNI = OrigLI.getVNInfoAt(UseIdx);
 
   Register Reg = LI->reg();
-  if (OrigVNI) {
+  LaneBitmask LaneMask = getLiveLaneMaskAt(Edit->getParent(), UseIdx, MRI);
+  if (OrigVNI && LaneMask.any()) {
     LiveRangeEdit::Remat RM(ParentVNI);
     RM.OrigMI = LIS.getInstructionFromIndex(OrigVNI->def);
     if (RM.OrigMI && TII.isAsCheapAsAMove(*RM.OrigMI) &&
         Edit->canRematerializeAt(RM, UseIdx)) {
       if (!rematWillIncreaseRestriction(RM.OrigMI, MBB, UseIdx)) {
-        SlotIndex Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late);
+        SlotIndex Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late, 0,
+                                              nullptr, LaneMask);
         ++NumRemats;
         // Define the value in Reg.
         return defValue(RegIdx, ParentVNI, Def, false);
@@ -696,17 +669,6 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
                  << UseIdx
                  << " since it will increase register class restrictions\n");
     }
-  }
-
-  LaneBitmask LaneMask;
-  if (OrigLI.hasSubRanges()) {
-    LaneMask = LaneBitmask::getNone();
-    for (LiveInterval::SubRange &S : OrigLI.subranges()) {
-      if (S.liveAt(UseIdx))
-        LaneMask |= S.LaneMask;
-    }
-  } else {
-    LaneMask = LaneBitmask::getAll();
   }
 
   SlotIndex Def;
@@ -1515,7 +1477,6 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
     if (!LI.hasSubRanges())
       continue;
     LI.clear();
-    LI.removeEmptySubRanges();
     LIS.constructMainRangeFromSubranges(LI);
   }
 }

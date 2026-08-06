@@ -11,7 +11,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $x10, $v8, $v10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   dead [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
-  ; CHECK-NEXT:   undef [[PseudoVMV_V_I_M1_:%[0-9]+]].sub_vrm1_2:vrn8m1 = PseudoVMV_V_I_M1 undef [[PseudoVMV_V_I_M1_]].sub_vrm1_2, 0, -1, 3 /* e8 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   undef [[PseudoVMV_V_I_M1_:%[0-9]+]].sub_vrm1_2:vrn8m1 = PseudoVMV_V_I_M1 undef [[PseudoVMV_V_I_M1_]].sub_vrm1_2, 0, -1 /* vl=VLMAX */, 3 /* e8 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[PseudoVMV_V_I_M1_:%[0-9]+]].sub_vrm1_6:vrn8m1 = COPY undef [[PseudoVMV_V_I_M1_]].sub_vrm1_2
   ; CHECK-NEXT:   BNE undef [[DEF]], $x0, %bb.3
   ; CHECK-NEXT:   PseudoBR %bb.1
@@ -27,8 +27,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   dead [[DEF1:%[0-9]+]]:vr = IMPLICIT_DEF
-  ; CHECK-NEXT:   early-clobber [[PseudoVMV_V_I_M1_]].sub_vrm1_0:vrn8m1 = PseudoVRGATHER_VI_M1 undef [[PseudoVMV_V_I_M1_]].sub_vrm1_0, [[PseudoVMV_V_I_M1_]].sub_vrm1_2, 0, 0, 3 /* e8 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-  ; CHECK-NEXT:   PseudoVSSEG6E8_V_M1_MASK [[PseudoVMV_V_I_M1_]].sub_vrm1_0_sub_vrm1_1_sub_vrm1_2_sub_vrm1_3_sub_vrm1_4_sub_vrm1_5, undef [[DEF]], killed undef $v0, 0, 3 /* e8 */, implicit $vl, implicit $vtype :: (store unknown-size, align 1)
+  ; CHECK-NEXT:   early-clobber [[PseudoVMV_V_I_M1_]].sub_vrm1_0:vrn8m1 = PseudoVRGATHER_VI_M1 undef [[PseudoVMV_V_I_M1_]].sub_vrm1_0, [[PseudoVMV_V_I_M1_]].sub_vrm1_2, 0, 0 /* vl */, 3 /* e8 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   PseudoVSSEG6E8_V_M1_MASK [[PseudoVMV_V_I_M1_]].sub_vrm1_0_sub_vrm1_1_sub_vrm1_2_sub_vrm1_3_sub_vrm1_4_sub_vrm1_5, undef [[DEF]], killed undef $v0, 0 /* vl */, 3 /* e8 */, implicit $vl, implicit $vtype :: (store unknown-size, align 1)
   ; CHECK-NEXT:   PseudoRET
   bb.0:
     successors: %bb.3(0x40000000), %bb.1(0x40000000)

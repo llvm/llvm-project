@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_INTERPRETER_SCRIPTEDINTERFACEUSAGES_H
-#define LLDB_INTERPRETER_SCRIPTEDINTERFACEUSAGES_H
+#ifndef LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACEUSAGES_H
+#define LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACEUSAGES_H
 
 #include "lldb/lldb-types.h"
 
@@ -32,7 +32,7 @@ public:
 
   enum class UsageKind { CommandInterpreter, API };
 
-  void Dump(Stream &s, UsageKind kind) const;
+  void Dump(Stream &s, UsageKind kind, bool use_color = false) const;
 
 private:
   std::vector<llvm::StringRef> m_command_interpreter_usages;
@@ -40,4 +40,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // LLDB_INTERPRETER_SCRIPTEDINTERFACEUSAGES_H
+#endif // LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACEUSAGES_H

@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/atomic/clc_atomic_fetch_sub.h>
-#include <clc/opencl/atomic/atomic_sub.h>
+#include "clc/atomic/clc_atomic_fetch_sub.h"
 
 #define __CLC_IMPL(TYPE, AS)                                                   \
   _CLC_OVERLOAD _CLC_DEF TYPE atomic_sub(volatile AS TYPE *p, TYPE val) {      \
-    return __clc_atomic_fetch_sub(p, val, __ATOMIC_RELAXED,                    \
+    return __clc_atomic_fetch_sub((AS TYPE *)p, val, __ATOMIC_RELAXED,         \
                                   __MEMORY_SCOPE_DEVICE);                      \
   }
 

@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 ! Test assumed shape dummy argument on callee side
 
@@ -15,12 +15,14 @@ subroutine test_assumed_shape_1(x)
   ! CHECK: %[[c0:.*]] = arith.constant 0 : index
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %arg0, %[[c0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
   ! CHECK: %[[c1:.*]] = arith.constant 1 : index
+  ! CHECK: %[[shape_decl:.*]] = fir.shape_shift %[[c1]], %[[dims]]#1 : (index, index) -> !fir.shapeshift<1>
+  ! CHECK: %[[decl:.*]]:2 = hlfir.declare %[[addr]](%[[shape_decl]]) dummy_scope %{{.*}} arg 1 {fortran_attrs = #fir.var_attrs<contiguous>, uniq_name = "_QFtest_assumed_shape_1Ex"} : (!fir.ref<!fir.array<?xi32>>, !fir.shapeshift<1>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
 
   print *, x
   ! Test extent/lower bound use in the IO statement
   ! CHECK: %[[cookie:.*]] = fir.call @_FortranAioBeginExternalListOutput
   ! CHECK: %[[shape:.*]] = fir.shape_shift %[[c1]], %[[dims]]#1 : (index, index) -> !fir.shapeshift<1>
-  ! CHECK: %[[newbox:.*]] = fir.embox %[[addr]](%[[shape]]) : (!fir.ref<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<?xi32>>
+  ! CHECK: %[[newbox:.*]] = fir.embox %[[decl]]#1(%[[shape]]) : (!fir.ref<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<?xi32>>
   ! CHECK: %[[castedBox:.*]] = fir.convert %[[newbox]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
   ! CHECK: fir.call @_FortranAioOutputDescriptor(%[[cookie]], %[[castedBox]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
 end subroutine
@@ -29,45 +31,53 @@ end subroutine
 ! CHECK-LABEL:  func @_QPtest_assumed_shape_2(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x", fir.contiguous})
 subroutine test_assumed_shape_2(x)
   real, contiguous :: x(1:, 1:)
-  ! CHECK: fir.box_addr
-  ! CHECK: %[[dims1:.*]]:3 = fir.box_dims
-  ! CHECK: %[[dims2:.*]]:3 = fir.box_dims
+  ! CHECK: %[[addr:.*]] = fir.box_addr %arg0
+  ! CHECK: %[[dims1:.*]]:3 = fir.box_dims %arg0, %c0
+  ! CHECK: %[[dims2:.*]]:3 = fir.box_dims %arg0, %c1
+  ! CHECK: %[[shape_decl:.*]] = fir.shape %[[dims1]]#1, %[[dims2]]#1
+  ! CHECK: %[[decl:.*]]:2 = hlfir.declare %[[addr]](%[[shape_decl]]) {{.*}}
   print *, x
   ! CHECK: fir.call @_FortranAioBeginExternalListOutput
-  ! CHECK: fir.shape %[[dims1]]#1, %[[dims2]]#1
+  ! CHECK: %[[shape:.*]] = fir.shape %[[dims1]]#1, %[[dims2]]#1
+  ! CHECK: %[[newbox:.*]] = fir.embox %[[decl]]#1(%[[shape]])
 end subroutine
 
 ! explicit lower bounds different from 1
 ! CHECK-LABEL: func @_QPtest_assumed_shape_3(%arg0: !fir.box<!fir.array<?x?x?xi32>> {fir.bindc_name = "x", fir.contiguous})
 subroutine test_assumed_shape_3(x)
   integer, contiguous :: x(2:, 3:, 42:)
-  ! CHECK: fir.box_addr
-  ! CHECK: fir.box_dim
+  ! CHECK: %[[addr:.*]] = fir.box_addr %arg0
+  ! CHECK: %[[dims1:.*]]:3 = fir.box_dims %arg0, %c0
   ! CHECK: %[[c2_i64:.*]] = arith.constant 2 : i64
   ! CHECK: %[[c2:.*]] = fir.convert %[[c2_i64]] : (i64) -> index
-  ! CHECK: fir.box_dim
+  ! CHECK: %[[dims2:.*]]:3 = fir.box_dims %arg0, %c1
   ! CHECK: %[[c3_i64:.*]] = arith.constant 3 : i64
   ! CHECK: %[[c3:.*]] = fir.convert %[[c3_i64]] : (i64) -> index
-  ! CHECK: fir.box_dim
+  ! CHECK: %[[dims3:.*]]:3 = fir.box_dims %arg0, %c2
   ! CHECK: %[[c42_i64:.*]] = arith.constant 42 : i64
   ! CHECK: %[[c42:.*]] = fir.convert %[[c42_i64]] : (i64) -> index
+  ! CHECK: %[[shape_decl:.*]] = fir.shape_shift %[[c2]], %[[dims1]]#1, %[[c3]], %[[dims2]]#1, %[[c42]], %[[dims3]]#1
+  ! CHECK: %[[decl:.*]]:2 = hlfir.declare %[[addr]](%[[shape_decl]]) {{.*}}
 
   print *, x
-  ! CHECK: fir.shape_shift %[[c2]], %{{.*}}, %[[c3]], %{{.*}}, %[[c42]], %{{.*}} :
+  ! CHECK: %[[shape:.*]] = fir.shape_shift %[[c2]], %{{.*}}, %[[c3]], %{{.*}}, %[[c42]], %{{.*}} :
+  ! CHECK: fir.embox %[[decl]]#1(%[[shape]])
 end subroutine
 
 ! Constant length
-! func @_QPtest_assumed_shape_char(%arg0: !fir.box<!fir.array<?x!fir.char<1,10>>> {fir.bindc_name = "c", fir.contiguous})
+! CHECK-LABEL: func @_QPtest_assumed_shape_char(%arg0: !fir.box<!fir.array<?x!fir.char<1,10>>> {fir.bindc_name = "c", fir.contiguous})
 subroutine test_assumed_shape_char(c)
   character(10), contiguous :: c(:)
   ! CHECK: %[[addr:.*]] = fir.box_addr %arg0 : (!fir.box<!fir.array<?x!fir.char<1,10>>>) -> !fir.ref<!fir.array<?x!fir.char<1,10>>>
 
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?x!fir.char<1,10>>>, index) -> (index, index, index)
   ! CHECK: %[[c1:.*]] = arith.constant 1 : index
+  ! CHECK: %[[shape_decl:.*]] = fir.shape_shift %[[c1]], %[[dims]]#1 : (index, index) -> !fir.shapeshift<1>
+  ! CHECK: %[[decl:.*]]:2 = hlfir.declare %[[addr]](%[[shape_decl]]) {{.*}}
 
   print *, c
   ! CHECK: %[[shape:.*]] = fir.shape_shift %[[c1]], %[[dims]]#1 : (index, index) -> !fir.shapeshift<1>
-  ! CHECK: fir.embox %[[addr]](%[[shape]]) : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<?x!fir.char<1,10>>>
+  ! CHECK: fir.embox %[[decl]]#1(%[[shape]]) : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<?x!fir.char<1,10>>>
 end subroutine
 
 ! Assumed length
@@ -79,10 +89,12 @@ subroutine test_assumed_shape_char_2(c)
 
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index) -> (index, index, index)
   ! CHECK: %[[c1:.*]] = arith.constant 1 : index
+  ! CHECK: %[[shape_decl:.*]] = fir.shape_shift %[[c1]], %[[dims]]#1 : (index, index) -> !fir.shapeshift<1>
+  ! CHECK: %[[decl:.*]]:2 = hlfir.declare %[[addr]](%[[shape_decl]]) typeparams %[[len]] {{.*}}
 
   print *, c
   ! CHECK: %[[shape:.*]] = fir.shape_shift %[[c1]], %[[dims]]#1 : (index, index) -> !fir.shapeshift<1>
-  ! CHECK: fir.embox %[[addr]](%[[shape]]) typeparams %[[len]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shapeshift<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+  ! CHECK: fir.embox %[[decl]]#1(%[[shape]]) typeparams %[[len]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shapeshift<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
 end subroutine
 
 
@@ -90,11 +102,14 @@ end subroutine
 ! CHECK: func @_QPtest_assumed_shape_char_3(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.bindc_name = "c", fir.contiguous})
 subroutine test_assumed_shape_char_3(c)
   character(*), contiguous :: c(1:, 1:)
-  ! CHECK: fir.box_addr
-  ! CHECK: fir.box_elesize
-  ! CHECK: %[[dims1:.*]]:3 = fir.box_dims
-  ! CHECK: %[[dims2:.*]]:3 = fir.box_dims
+  ! CHECK: %[[addr:.*]] = fir.box_addr %arg0
+  ! CHECK: %[[len:.*]] = fir.box_elesize %arg0
+  ! CHECK: %[[dims1:.*]]:3 = fir.box_dims %arg0, %c0
+  ! CHECK: %[[dims2:.*]]:3 = fir.box_dims %arg0, %c1
+  ! CHECK: %[[shape_decl:.*]] = fir.shape %[[dims1]]#1, %[[dims2]]#1
+  ! CHECK: %[[decl:.*]]:2 = hlfir.declare %[[addr]](%[[shape_decl]]) typeparams %[[len]] {{.*}}
   print *, c
   ! CHECK: fir.call @_FortranAioBeginExternalListOutput
-  ! CHECK: fir.shape %[[dims1]]#1, %[[dims2]]#1
+  ! CHECK: %[[shape:.*]] = fir.shape %[[dims1]]#1, %[[dims2]]#1
+  ! CHECK: fir.embox %[[decl]]#1(%[[shape]]) typeparams %[[len]]
 end subroutine

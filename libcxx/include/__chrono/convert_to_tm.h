@@ -127,7 +127,10 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::tai_time<_Duration> __tp) {
 
 template <class _Tm, class _Duration>
 _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::gps_time<_Duration> __tp) {
-  return std::__convert_to_tm<_Tm>(chrono::utc_clock::to_sys(chrono::gps_clock::to_utc(__tp)));
+  using _Rp = common_type_t<_Duration, chrono::seconds>;
+  // The time between the GPS epoch (1980-01-06) and UNIX epoch (1970-01-01).
+  constexpr chrono::seconds __offset{3657 * 24 * 60 * 60};
+  return std::__convert_to_tm<_Tm>(chrono::sys_time<_Rp>{__tp.time_since_epoch() + __offset});
 }
 
 #    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB

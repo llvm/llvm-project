@@ -49,7 +49,7 @@ loadLinkableFile(StringRef Path, const Triple &TT, LoadArchives LA,
   if (!FDOrErr)
     return createFileError(Path, FDOrErr.takeError());
   sys::fs::file_t FD = *FDOrErr;
-  auto CloseFile = make_scope_exit([&]() { sys::fs::closeFile(FD); });
+  llvm::scope_exit CloseFile([&]() { sys::fs::closeFile(FD); });
 
   auto Buf =
       MemoryBuffer::getOpenFile(FD, *IdentifierOverride, /*FileSize=*/-1);
