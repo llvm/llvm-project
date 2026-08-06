@@ -918,7 +918,7 @@ static void generateGetDirectivePureSince(const DirectiveLanguage &DirLang,
     OS << "    return " << PureSince << ";\n";
   }
   OS << "  default:\n";
-  OS << "    return " << NeverPure << ";\n";
+  OS << "    return 0x7FFFFFFF;\n";
   OS << "  } // switch (Dir)\n";
   OS << "}\n";
 }
