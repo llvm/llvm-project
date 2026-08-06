@@ -31,7 +31,7 @@ c++ -std=c++17 -O1 -o $OUT/launcher inter/launcher.cpp \
 ocloc compile -file inter/$K.cl -device bmg-g21 -out_dir $OUT/ref
 
 # Stage 1: host path proof with the reference zebin.
-$OUT/launcher $OUT/ref/${K}_bmg.bin $K 128 7 2
+$OUT/launcher $OUT/ref/${K}_bmg.bin $K 128 out u32:7 | python3 inter/verify.py 'i*2+7'
 
 # Stage 2: same kernel bytes in our own zebin container.
 python3 inter/make_zebin.py extract $OUT/ref/${K}_bmg.bin $OUT/extracted
@@ -39,7 +39,7 @@ python3 inter/make_zebin.py write --kernel $K \
   --text $OUT/extracted/$K.text.bin \
   --zeinfo $OUT/extracted/zeinfo.yaml \
   --notes $OUT/extracted/note.compat.bin -o $OUT/ours.bin
-$OUT/launcher $OUT/ours.bin $K 128 7 2
+$OUT/launcher $OUT/ours.bin $K 128 out u32:7 | python3 inter/verify.py 'i*2+7'
 
 # Stage 3: hand-edited asm (shl 1 -> 2) reassembled by ocloc, our container.
 # Note: this ocloc build writes the assembled binary into the dump dir and
@@ -52,4 +52,8 @@ python3 inter/make_zebin.py write --kernel $K \
   --text $OUT/mod2x/$K.text.bin \
   --zeinfo $OUT/mod2x/zeinfo.yaml \
   --notes $OUT/mod2x/note.compat.bin -o $OUT/mod_ours.bin
-$OUT/launcher $OUT/mod_ours.bin $K 128 7 4
+$OUT/launcher $OUT/mod_ours.bin $K 128 out u32:7 | python3 inter/verify.py 'i*4+7'
+
+# Stage 4: vadd from ocloc through our container (3 pointer args).
+ocloc compile -file inter/vadd.cl -device bmg-g21 -out_dir $OUT/vaddref
+$OUT/launcher $OUT/vaddref/vadd_bmg.bin vadd 128 in:1 in:1000 out | python3 inter/verify.py 'i*1+i*1000'

@@ -48,4 +48,40 @@ def XeMachine_TargetAttr : AttrDef<XeMachineDialect, "Target"> {
   let assemblyFormat = "`<` `chip` `=` $chip `>`";
 }
 
+// Register region: <vstride;width,hstride> on sources. Destination regions
+// carry only hstride; see DstRegion.
+def XeMachine_RegionAttr : AttrDef<XeMachineDialect, "Region"> {
+  let mnemonic = "region";
+  let summary = "EU register region <v;w,h>";
+  let parameters = (ins "uint32_t":$vstride, "uint32_t":$width,
+                        "uint32_t":$hstride);
+  let assemblyFormat = "`<` $vstride `,` $width `,` $hstride `>`";
+}
+
+// Destination region: hstride only (EU dst model). Printed <h>.
+def XeMachine_DstRegionAttr : AttrDef<XeMachineDialect, "DstRegion"> {
+  let mnemonic = "dstregion";
+  let summary = "EU destination region <h>";
+  let parameters = (ins "uint32_t":$hstride);
+  let assemblyFormat = "`<` $hstride `>`";
+}
+
+def XeMachine_SendFn : I32EnumAttr<"SendFn", "shared function", [
+    I32EnumAttrCase<"ugm",  0>,
+    I32EnumAttrCase<"gtwy", 1>,
+    I32EnumAttrCase<"tgm",  2>,
+    I32EnumAttrCase<"slm",  3>,
+  ]> {
+  let cppNamespace = "::inter::xemachine";
+}
+
+def XeMachine_SyncKind : I32EnumAttr<"SyncKind", "sync function", [
+    I32EnumAttrCase<"nop",   0>,
+    I32EnumAttrCase<"allrd", 1>,
+    I32EnumAttrCase<"allwr", 2>,
+    I32EnumAttrCase<"bar",   3>,
+  ]> {
+  let cppNamespace = "::inter::xemachine";
+}
+
 #endif // INTER_DIALECT_XEMACHINE_IR_XEMACHINEBASE_TD

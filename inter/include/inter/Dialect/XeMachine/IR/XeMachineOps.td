@@ -33,10 +33,11 @@ def XeMachine_ImmOp : XeMachine_Op<"imm", [NoMemoryEffect]> {
   let assemblyFormat = "$value attr-dict `:` $elemType";
 }
 
+// Region annotations are operand-register-region strings ("<1;1,0>" etc).
+// Absent means canonical: dst <1>, src <1;1,0>. Region legality is checked
+// by a pass via RegionLegalityOpInterface, not by op verifiers.
 class XeMachine_ALUOp<string mnemonic, list<Trait> traits = []> :
     XeMachine_Op<mnemonic, traits # [NoMemoryEffect]> {
-  let arguments = (ins TypeAttr:$elemType,
-                       DefaultValuedAttr<I32Attr, "16">:$execSize);
   let cppNamespace = "::inter::xemachine";
 }
 
@@ -44,44 +45,92 @@ def XeMachine_MovOp : XeMachine_ALUOp<"mov"> {
   let summary = "register/immediate move";
   let arguments = (ins TypeAttr:$elemType,
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
+                       OptionalAttr<XeMachine_DstRegionAttr>:$dstRegion,
+                       OptionalAttr<XeMachine_RegionAttr>:$src0Region,
+                       OptionalAttr<I32Attr>:$dstSub,
+                       OptionalAttr<I32Attr>:$src0Sub,
+                       OptionalAttr<TypeAttr>:$src0Type,
+                       UnitAttr:$noMask,
+                       DefaultValuedAttr<I32Attr, "0">:$maskOffset,
                        XeMachine_RegOrImm:$src);
   let results = (outs XeMachine_RegType:$dst);
   let assemblyFormat =
       "$src attr-dict `:` `(` qualified(type($src)) `,` $elemType `)` `->` qualified(type($dst))";
 }
 
-def XeMachine_AddOp : XeMachine_ALUOp<"add"> {
-  let summary = "integer/float add";
+class XeMachine_BinOp<string mnemonic> : XeMachine_ALUOp<mnemonic> {
   let arguments = (ins TypeAttr:$elemType,
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
+                       OptionalAttr<XeMachine_DstRegionAttr>:$dstRegion,
+                       OptionalAttr<XeMachine_RegionAttr>:$src0Region,
+                       OptionalAttr<XeMachine_RegionAttr>:$src1Region,
+                       OptionalAttr<I32Attr>:$dstSub,
+                       OptionalAttr<I32Attr>:$src0Sub,
+                       OptionalAttr<I32Attr>:$src1Sub,
+                       OptionalAttr<TypeAttr>:$src0Type,
+                       OptionalAttr<TypeAttr>:$src1Type,
+                       UnitAttr:$noMask,
+                       DefaultValuedAttr<I32Attr, "0">:$maskOffset,
                        XeMachine_RegOrImm:$src0, XeMachine_RegOrImm:$src1);
   let results = (outs XeMachine_RegType:$dst);
   let assemblyFormat =
       "$src0 `,` $src1 attr-dict `:` `(` qualified(type($src0)) `,` qualified(type($src1)) `,` $elemType `)` `->` qualified(type($dst))";
 }
 
-def XeMachine_ShlOp : XeMachine_ALUOp<"shl"> {
-  let summary = "shift left";
+def XeMachine_AddOp : XeMachine_BinOp<"add"> { let summary = "add"; }
+def XeMachine_ShlOp : XeMachine_BinOp<"shl"> { let summary = "shift left"; }
+def XeMachine_AndOp : XeMachine_BinOp<"and"> { let summary = "bitwise and"; }
+def XeMachine_OrOp  : XeMachine_BinOp<"or">  { let summary = "bitwise or"; }
+
+def XeMachine_Add3Op : XeMachine_ALUOp<"add3"> {
+  let summary = "three-input add";
   let arguments = (ins TypeAttr:$elemType,
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
-                       XeMachine_RegOrImm:$src0, XeMachine_RegOrImm:$src1);
+                       OptionalAttr<XeMachine_DstRegionAttr>:$dstRegion,
+                       OptionalAttr<XeMachine_RegionAttr>:$src0Region,
+                       OptionalAttr<XeMachine_RegionAttr>:$src1Region,
+                       OptionalAttr<XeMachine_RegionAttr>:$src2Region,
+                       OptionalAttr<I32Attr>:$dstSub,
+                       OptionalAttr<I32Attr>:$src0Sub,
+                       OptionalAttr<I32Attr>:$src1Sub,
+                       OptionalAttr<I32Attr>:$src2Sub,
+                       OptionalAttr<TypeAttr>:$src0Type,
+                       OptionalAttr<TypeAttr>:$src1Type,
+                       OptionalAttr<TypeAttr>:$src2Type,
+                       UnitAttr:$noMask,
+                       DefaultValuedAttr<I32Attr, "0">:$maskOffset,
+                       XeMachine_RegOrImm:$src0, XeMachine_RegOrImm:$src1,
+                       XeMachine_RegOrImm:$src2);
   let results = (outs XeMachine_RegType:$dst);
   let assemblyFormat =
-      "$src0 `,` $src1 attr-dict `:` `(` qualified(type($src0)) `,` qualified(type($src1)) `,` $elemType `)` `->` qualified(type($dst))";
+      "$src0 `,` $src1 `,` $src2 attr-dict `:` `(` qualified(type($src0)) `,` qualified(type($src1)) `,` qualified(type($src2)) `,` $elemType `)` `->` qualified(type($dst))";
 }
 
 // Shared-function message. Null destination is a reg with widthDwords = 0
 // (stores, EOT). Descriptor immediates stay raw until the send-descriptor
 // subsystem lands.
 def XeMachine_SendOp : XeMachine_Op<"send",
-    [MemoryEffects<[MemRead, MemWrite]>]> {
+    [MemoryEffects<[MemRead, MemWrite]>, AttrSizedOperandSegments]> {
   let summary = "shared-function message";
-  let arguments = (ins I32Attr:$sfid, I32Attr:$desc, I32Attr:$exdesc,
-                       XeMachine_RegType:$payload,
-                       Optional<XeMachine_MemTokenType>:$dependency);
+  let arguments = (ins XeMachine_SendFn:$fn, I32Attr:$sfid, I32Attr:$desc,
+                       I32Attr:$exdesc,
+                       DefaultValuedAttr<I32Attr, "1">:$execSize,
+                       UnitAttr:$noMask,
+                       UnitAttr:$eot,
+                       XeMachine_RegType:$addrPayload,
+                       Optional<XeMachine_RegType>:$dataPayload,
+                       Optional<XeMachine_MemTokenType>:$dependency,
+                       OptionalAttr<I64Attr>:$swsb);
   let results = (outs XeMachine_RegType:$dst, XeMachine_MemTokenType:$token);
   let assemblyFormat =
-      "$payload (`dep` $dependency^)? attr-dict `:` qualified(type($payload)) `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
+      "$fn $addrPayload (`data` $dataPayload^)? (`dep` $dependency^)? attr-dict `:` `(` qualified(type($addrPayload)) (`,` qualified(type($dataPayload))^)? `)` `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
+}
+
+// Scoreboard/fence synchronization. kind: "nop", "allrd", "allwr", ...
+def XeMachine_SyncOp : XeMachine_Op<"sync"> {
+  let summary = "software scoreboard synchronization";
+  let arguments = (ins XeMachine_SyncKind:$kind);
+  let assemblyFormat = "$kind attr-dict";
 }
 
 // Structured control flow. exec_if = mask-stack push/pop; uniform_if =
@@ -139,6 +188,41 @@ def XeMachine_ContinueIfOp : XeMachine_Op<"continue_if",
       "$cond `:` qualified(type($cond)) attr-dict (`(` $carried^ `:` qualified(type($carried)) `)`)?";
 }
 
+def XeMachine_MulOp : XeMachine_ALUOp<"mul"> {
+  let summary = "multiply, accumulator destination";
+  let arguments = (ins TypeAttr:$elemType,
+                       DefaultValuedAttr<I32Attr, "16">:$execSize,
+                       OptionalAttr<XeMachine_DstRegionAttr>:$dstRegion,
+                       OptionalAttr<XeMachine_RegionAttr>:$src0Region,
+                       OptionalAttr<XeMachine_RegionAttr>:$src1Region,
+                       OptionalAttr<I32Attr>:$dstSub,
+                       OptionalAttr<I32Attr>:$src0Sub,
+                       OptionalAttr<I32Attr>:$src1Sub,
+                       UnitAttr:$noMask,
+                       DefaultValuedAttr<I32Attr, "0">:$maskOffset,
+                       XeMachine_RegOrImm:$src0, XeMachine_RegOrImm:$src1);
+  let results = (outs XeMachine_ARFType:$dst);
+  let assemblyFormat =
+      "$src0 `,` $src1 attr-dict `:` `(` qualified(type($src0)) `,` qualified(type($src1)) `,` $elemType `)` `->` qualified(type($dst))";
+}
+
+// Architectural register reference (r0 header, r1 inline args). The result
+// carries a fixed physical base; regalloc must not move it.
+def XeMachine_ArchRegOp : XeMachine_Op<"archreg", [NoMemoryEffect]> {
+  let summary = "reference an architectural register (r0/r1)";
+  let arguments = (ins I32Attr:$index);
+  let results = (outs XeMachine_RegType:$result);
+  let assemblyFormat = "$index attr-dict `:` qualified(type($result))";
+}
+
+// ARF register reference (acc, flags, ...).
+def XeMachine_ArfRegOp : XeMachine_Op<"arfreg", [NoMemoryEffect]> {
+  let summary = "reference an ARF register";
+  let arguments = (ins XeMachine_ARFFile:$file, I32Attr:$index);
+  let results = (outs XeMachine_ARFType:$result);
+  let assemblyFormat = "$file `,` $index attr-dict `:` qualified(type($result))";
+}
+
 // Token algebra. token: entry source. token_join: merge completions.
 // after: issue-order sequencing without a completion promise.
 def XeMachine_TokenOp : XeMachine_Op<"token", [NoMemoryEffect]> {
@@ -147,8 +231,7 @@ def XeMachine_TokenOp : XeMachine_Op<"token", [NoMemoryEffect]> {
   let assemblyFormat = "attr-dict";
 }
 
-def XeMachine_TokenJoinOp : XeMachine_Op<"token_join",
-    [NoMemoryEffect]> {
+def XeMachine_TokenJoinOp : XeMachine_Op<"token_join", [NoMemoryEffect]> {
   let summary = "merge memory-ordering tokens";
   let arguments = (ins Variadic<XeMachine_MemTokenType>:$dependencies);
   let results = (outs XeMachine_MemTokenType:$token);

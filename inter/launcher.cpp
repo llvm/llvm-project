@@ -1,9 +1,14 @@
-// Container proof launcher: wrap a zebin in an OffloadBinary, load via
-// liboffload, launch on the GPU, verify out[i] == i*mul + bias.
+// Generic zebin launcher: wraps a zebin in an OffloadBinary, loads via
+// liboffload, launches, dumps output buffers. No kernel knowledge.
 //
-// Usage: launcher <zebin.bin> <kernel-name> <num-work-items> [bias] [mul]
+// Usage: launcher <zebin.bin> <kernel-name> <n> <arg-spec>...
+//   arg-spec (in kernel arg order):
+//     out        device buffer, printed as hex after the run
+//     in:<mul>   device buffer filled with i*mul before the run
+//     u32:<v>    scalar 32-bit argument with value v
 //
-// No Level Zero calls here by design; liboffload owns the host path.
+// Output lines: "out<k>[<i>] = 0x........" for each out buffer.
+// Verification is the caller's job (see inter/verify.py).
 
 #include <OffloadAPI.h>
 
@@ -19,50 +24,40 @@
     ol_result_t res_ = (expr);                                               \
     if (res_ != OL_SUCCESS) {                                                \
       fprintf(stderr, "FAIL %s:%d: %s -> %d\n", __FILE__, __LINE__, #expr,   \
-              res_->Code);                                              \
+              res_->Code);                                                   \
       return 1;                                                              \
     }                                                                        \
   } while (0)
 
-// Wrap image bytes in an OffloadBinary (v2) container: one entry,
-// IMG_Object + spirv64 triple, matching what the L0 plugin validates.
 static std::vector<uint8_t> wrapOffloadBinary(const std::vector<uint8_t> &image) {
   static const char key[] = "triple";
   static const char triple[] = "spirv64-unknown-unknown";
 
-  const uint64_t headerSize = 40;      // magic + version + size + off + count
-  const uint64_t entrySize = 48;       // Entry struct
-  const uint64_t stringEntSize = 24;   // one StringEntry
-  const uint64_t stringsOff = headerSize + entrySize + stringEntSize; // 112
-  const uint64_t keyOff = stringsOff;                        // 112
-  const uint64_t tripleOff = keyOff + sizeof(key);           // 119
-  const uint64_t imageOff = (tripleOff + sizeof(triple) - 1 + 7) & ~7ull; // 144
+  const uint64_t headerSize = 40;
+  const uint64_t entrySize = 48;
+  const uint64_t stringEntSize = 24;
+  const uint64_t keyOff = headerSize + entrySize + stringEntSize;
+  const uint64_t tripleOff = keyOff + sizeof(key);
+  const uint64_t imageOff = (tripleOff + sizeof(triple) - 1 + 7) & ~7ull;
 
   std::vector<uint8_t> blob(imageOff + image.size(), 0);
   uint8_t *p = blob.data();
-
-  // Header.
   p[0] = 0x10; p[1] = 0xFF; p[2] = 0x10; p[3] = 0xAD;
   auto put32 = [&](uint64_t off, uint32_t v) { memcpy(p + off, &v, 4); };
   auto put64 = [&](uint64_t off, uint64_t v) { memcpy(p + off, &v, 8); };
-  put32(4, 2);                       // version
-  put64(8, blob.size());             // total size
-  put64(16, headerSize);             // entries offset
-  put64(24, 1);                      // entries count
-
-  // Entry: IMG_Object=1, OFK_SYCL=8.
-  put32(40, (uint32_t(8) << 16) | 1u);
-  put32(44, 0);                      // flags
-  put64(48, headerSize + entrySize); // string map offset (88)
-  put64(56, 1);                      // num strings
+  put32(4, 2);
+  put64(8, blob.size());
+  put64(16, headerSize);
+  put64(24, 1);
+  put32(40, (uint32_t(8) << 16) | 1u); // IMG_Object=1, OFK_SYCL=8
+  put32(44, 0);
+  put64(48, headerSize + entrySize);
+  put64(56, 1);
   put64(64, imageOff);
   put64(72, image.size());
-
-  // StringEntry.
   put64(88, keyOff);
   put64(96, tripleOff);
   put64(104, sizeof(triple) - 1);
-
   memcpy(p + keyOff, key, sizeof(key));
   memcpy(p + tripleOff, triple, sizeof(triple) - 1);
   memcpy(p + imageOff, image.data(), image.size());
@@ -104,7 +99,7 @@ static ol_device_handle_t pickL0GpuDevice() {
           return true;
         char name[256] = {0};
         olGetDeviceInfo(dev, OL_DEVICE_INFO_NAME, sizeof(name), name);
-        fprintf(stderr, "picking L0 GPU device: %s\n", name);
+        fprintf(stderr, "device: %s\n", name);
         c->found = dev;
         return false;
       },
@@ -113,28 +108,27 @@ static ol_device_handle_t pickL0GpuDevice() {
 }
 
 int main(int argc, char **argv) {
-  if (argc < 4) {
-    fprintf(stderr, "usage: %s <zebin.bin> <kernel-name> <n> [bias]\n",
+  if (argc < 5) {
+    fprintf(stderr,
+            "usage: %s <zebin.bin> <kernel> <n> <spec>...\n"
+            "  spec: out | in:<mul> | u32:<value>\n",
             argv[0]);
     return 1;
   }
   const char *zebinPath = argv[1];
   const char *kernelName = argv[2];
   size_t n = strtoul(argv[3], nullptr, 0);
-  uint32_t bias = argc > 4 ? strtoul(argv[4], nullptr, 0) : 7;
-  uint32_t mul = argc > 5 ? strtoul(argv[5], nullptr, 0) : 2;
+  int numArgs = argc - 4;
+  char **specs = argv + 4;
 
   CHECK(olInit(nullptr));
-
   ol_device_handle_t dev = pickL0GpuDevice();
   if (!dev) {
     fprintf(stderr, "FAIL: no Level Zero GPU device found\n");
     return 1;
   }
 
-  std::vector<uint8_t> zebin = readFile(zebinPath);
-  std::vector<uint8_t> blob = wrapOffloadBinary(zebin);
-
+  std::vector<uint8_t> blob = wrapOffloadBinary(readFile(zebinPath));
   bool valid = false;
   CHECK(olIsValidBinary(dev, blob.data(), blob.size(), &valid));
   fprintf(stderr, "olIsValidBinary: %s\n", valid ? "true" : "false");
@@ -143,47 +137,60 @@ int main(int argc, char **argv) {
 
   ol_program_handle_t prog;
   CHECK(olCreateProgram(dev, blob.data(), blob.size(), &prog));
-
   ol_symbol_handle_t kern;
   CHECK(olGetSymbol(prog, kernelName, OL_SYMBOL_KIND_KERNEL, &kern));
 
-  void *outBuf = nullptr;
-  CHECK(olMemAlloc(dev, OL_ALLOC_TYPE_MANAGED, n * sizeof(uint32_t), &outBuf));
-  memset(outBuf, 0xA5, n * sizeof(uint32_t));
+  std::vector<void *> argPtrsStorage(numArgs);
+  std::vector<void *> argPtrs(numArgs);
+  std::vector<size_t> argSizes(numArgs);
+  std::vector<uint32_t> scalars(numArgs);
+  std::vector<int> outIndex(numArgs, -1);
+  int numOuts = 0;
 
-  void *argPtr = outBuf;
-  void *argPtrs[2] = {&argPtr, &bias};
-  size_t argSizes[2] = {sizeof(void *), sizeof(uint32_t)};
+  for (int i = 0; i < numArgs; ++i) {
+    std::string spec = specs[i];
+    if (spec == "out" || spec.rfind("in:", 0) == 0) {
+      void *buf = nullptr;
+      CHECK(olMemAlloc(dev, OL_ALLOC_TYPE_MANAGED, n * sizeof(uint32_t), &buf));
+      auto *w = static_cast<uint32_t *>(buf);
+      if (spec == "out") {
+        for (size_t j = 0; j < n; ++j)
+          w[j] = 0xA5A5A5A5u;
+        outIndex[i] = numOuts++;
+      } else {
+        uint32_t mul = strtoul(spec.c_str() + 3, nullptr, 0);
+        for (size_t j = 0; j < n; ++j)
+          w[j] = uint32_t(j) * mul;
+      }
+      argPtrsStorage[i] = buf;
+      argPtrs[i] = &argPtrsStorage[i];
+      argSizes[i] = sizeof(void *);
+    } else if (spec.rfind("u32:", 0) == 0) {
+      scalars[i] = strtoul(spec.c_str() + 4, nullptr, 0);
+      argPtrs[i] = &scalars[i];
+      argSizes[i] = sizeof(uint32_t);
+    } else {
+      fprintf(stderr, "FAIL: bad spec '%s'\n", spec.c_str());
+      return 1;
+    }
+  }
 
   ol_kernel_launch_size_args_t lsa;
   lsa.Dimensions = 1;
-  lsa.NumGroups = {(n + 31) / 32, 1, 1};
+  lsa.NumGroups = {uint32_t((n + 31) / 32), 1, 1};
   lsa.GroupSize = {32, 1, 1};
   lsa.DynSharedMemory = 0;
+  CHECK(olLaunchKernel(nullptr, dev, kern, &lsa, nullptr, numArgs,
+                       argPtrs.data(), argSizes.data()));
 
-  CHECK(olLaunchKernel(nullptr, dev, kern, &lsa, nullptr, 2, argPtrs,
-                       argSizes));
-
-  size_t bad = 0;
-  auto *out = static_cast<uint32_t *>(outBuf);
-  for (size_t i = 0; i < n; ++i) {
-    uint32_t want = uint32_t(i) * mul + bias;
-    if (out[i] != want) {
-      if (bad < 8)
-        fprintf(stderr, "  out[%zu] = 0x%08x, want 0x%08x\n", i, out[i],
-                want);
-      ++bad;
-    }
+  for (int i = 0; i < numArgs; ++i) {
+    if (outIndex[i] < 0)
+      continue;
+    auto *w = static_cast<uint32_t *>(argPtrsStorage[i]);
+    for (size_t j = 0; j < n; ++j)
+      printf("out%d[%zu] = 0x%08x\n", outIndex[i], j, w[j]);
   }
-  if (bad) {
-    fprintf(stderr, "FAIL: %zu/%zu mismatches\n", bad, n);
-    return 1;
-  }
-  printf("PASS: %zu lanes, out[i] == i*%u + %u on %s\n", n, mul, bias,
-         kernelName);
 
-  olMemFree(outBuf);
-  olDestroyProgram(prog);
   olShutDown();
   return 0;
 }
