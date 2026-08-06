@@ -1504,23 +1504,6 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
     for (auto &I : *(Node->getBlock()))
       allocateCandidatesAndFindBasis(&I);
 
-  LLVM_DEBUG({
-    dbgs() << "RewriteCandidates after allocation (" << RewriteCandidates.size()
-           << " instructions):\n";
-    for (const auto &[Inst, Cands] : RewriteCandidates) {
-      // dbgs() << "Instruction: " << *Inst << " has " << Cands.size()
-      //        << " candidate(s)"
-      //        << (hasRewritableCandidates(Inst) ? " (rewritable)" : "
-      //        (non-rewritable)");
-      if (hasRewritableCandidates(Inst) &&
-          hasOperandsUsedInNonRewritableUsersInAnotherBlock(Inst))
-        dbgs() << "Instruction: " << *Inst
-               << " (rewritable BUT has operands used in non-rewritable users "
-                  "in another block)"
-               << "\n";
-    }
-  });
-
   // Build the dependency graph and sort candidate instructions from dependency
   // roots to leaves
   for (auto &C : Candidates) {
