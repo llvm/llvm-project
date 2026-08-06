@@ -126,12 +126,17 @@ LIBC_INLINE uint32_t scan(uint64_t lane_mask, uint32_t x) {
   return __gpu_prefix_scan_add_u32(lane_mask, x);
 }
 
+#if defined(LIBC_TARGET_ARCH_IS_SPIRV)
+LIBC_INLINE uint64_t fixed_frequency_clock() { return 0; }
+
+LIBC_INLINE uint64_t processor_clock() { return 0; }
+#else
 LIBC_INLINE uint64_t fixed_frequency_clock() {
   return __builtin_readsteadycounter();
 }
 
 LIBC_INLINE uint64_t processor_clock() { return __builtin_readcyclecounter(); }
-
+#endif
 } // namespace gpu
 } // namespace LIBC_NAMESPACE_DECL
 

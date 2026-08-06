@@ -19,6 +19,12 @@ function(add_unittest_framework_library name)
       ${TEST_LIB_SRCS}
       ${TEST_LIB_HDRS}
     )
+
+    if(LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
+      target_link_options(${lib} PRIVATE
+                          "-nostdlib" "-flto" "-emit-llvm")
+    endif()
+
     target_include_directories(${lib} PRIVATE ${LIBC_SOURCE_DIR})
     if(TARGET libc.src.time.clock)
       target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)

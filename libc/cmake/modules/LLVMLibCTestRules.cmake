@@ -127,6 +127,9 @@ function(_get_hermetic_test_compile_options output_var c_test flags)
     list(APPEND compile_options
          -Wno-multi-gpu --cuda-path=${LIBC_CUDA_ROOT}
          -nogpulib -march=${LIBC_GPU_TARGET_ARCHITECTURE} -fno-use-cxa-atexit)
+  elseif(LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
+    list(APPEND compile_options
+         -nogpulib -flto -emit-llvm)
   endif()
 
   set(${output_var} ${compile_options} PARENT_SCOPE)
@@ -604,16 +607,18 @@ function(add_integration_test test_name)
   list(REMOVE_DUPLICATES link_object_files)
 
   # Make a library of all deps
-  add_library(
-    ${fq_target_name}.__libc__
-    STATIC
-    EXCLUDE_FROM_ALL
-    ${link_object_files}
-  )
-  set_target_properties(${fq_target_name}.__libc__
-      PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-  set_target_properties(${fq_target_name}.__libc__
-      PROPERTIES ARCHIVE_OUTPUT_NAME ${fq_target_name}.libc)
+  if(NOT LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
+    add_library(
+      ${fq_target_name}.__libc__
+      STATIC
+      EXCLUDE_FROM_ALL
+      ${link_object_files}
+    )
+    set_target_properties(${fq_target_name}.__libc__
+        PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    set_target_properties(${fq_target_name}.__libc__
+        PROPERTIES ARCHIVE_OUTPUT_NAME ${fq_target_name}.libc)
+  endif()
 
   set(fq_build_target_name ${fq_target_name}.__build__)
   add_executable(
@@ -645,6 +650,10 @@ function(add_integration_test test_name)
       "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
+  elseif(LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
+    target_link_options(${fq_build_target_name} PRIVATE
+      ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
+      -nostdlib -flto -Wno-multi-gpu -emit-llvm)
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     set(link_options
       -nolibc
@@ -668,13 +677,21 @@ function(add_integration_test test_name)
     target_link_options(${fq_build_target_name} PRIVATE ${link_options})
     list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
   endif()
-  target_link_libraries(
-    ${fq_build_target_name}
-    libc.startup.${LIBC_TARGET_OS}.crt1
-    libc.test.IntegrationTest.test
-    ${fq_target_name}.__libc__
-    ${compiler_runtime}
-  )
+  if(LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
+    target_link_libraries(
+      ${fq_build_target_name}
+      ${link_object_files}
+      ${compiler_runtime}
+    )
+  else()
+    target_link_libraries(
+      ${fq_build_target_name}
+      libc.startup.${LIBC_TARGET_OS}.crt1
+      libc.test.IntegrationTest.test
+      ${fq_target_name}.__libc__
+      ${compiler_runtime}
+    )
+  endif()
   add_dependencies(${fq_build_target_name}
                    libc.test.IntegrationTest.test
                    ${INTEGRATION_TEST_DEPENDS})
@@ -842,16 +859,18 @@ function(add_libc_hermetic test_name)
   list(REMOVE_DUPLICATES link_object_files)
 
   # Make a library of all deps
-  add_library(
-    ${fq_target_name}.__libc__
-    STATIC
-    EXCLUDE_FROM_ALL
-    ${link_object_files}
-  )
-  set_target_properties(${fq_target_name}.__libc__
-      PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-  set_target_properties(${fq_target_name}.__libc__
-      PROPERTIES ARCHIVE_OUTPUT_NAME ${fq_target_name}.libc)
+  if(NOT LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
+    add_library(
+      ${fq_target_name}.__libc__
+      STATIC
+      EXCLUDE_FROM_ALL
+      ${link_object_files}
+    )
+    set_target_properties(${fq_target_name}.__libc__
+        PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    set_target_properties(${fq_target_name}.__libc__
+        PROPERTIES ARCHIVE_OUTPUT_NAME ${fq_target_name}.libc)
+  endif()
 
   if(HERMETIC_TEST_NO_RUN_POSTBUILD)
     set(fq_build_target_name ${fq_target_name})
@@ -905,6 +924,10 @@ function(add_libc_hermetic test_name)
       "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
+  elseif(LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
+    target_link_options(${fq_build_target_name} PRIVATE
+      ${LIBC_COMPILE_OPTIONS_DEFAULT}
+      -nostdlib -flto -Wno-multi-gpu -emit-llvm)
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     set(link_options
       -nolibc
@@ -928,15 +951,26 @@ function(add_libc_hermetic test_name)
     target_link_options(${fq_build_target_name} PRIVATE ${link_options})
     list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
   endif()
-  target_link_libraries(
-    ${fq_build_target_name}
-    PRIVATE
-      libc.startup.${LIBC_TARGET_OS}.crt1
-      ${link_libraries}
-      LibcHermeticTestSupport.hermetic
-      ${fq_target_name}.__libc__
-      ${compiler_runtime}
+ if(LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
+    target_link_libraries(
+      ${fq_build_target_name}
+      PRIVATE
+        ${link_libraries}
+        LibcHermeticTestSupport.hermetic
+        ${link_object_files}
+        ${compiler_runtime}
     )
+  else()
+    target_link_libraries(
+      ${fq_build_target_name}
+      PRIVATE
+        libc.startup.${LIBC_TARGET_OS}.crt1
+        ${link_libraries}
+        LibcHermeticTestSupport.hermetic
+        ${fq_target_name}.__libc__
+        ${compiler_runtime}
+    )
+  endif()
   add_dependencies(${fq_build_target_name}
                    LibcTest.hermetic
                    libc.test.UnitTest.ErrnoSetterMatcher
