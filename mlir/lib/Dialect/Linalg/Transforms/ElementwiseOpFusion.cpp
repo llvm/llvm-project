@@ -599,7 +599,7 @@ public:
       concatOps[index] = concatOp;
     }
 
-    if (concatOps.empty())
+    if (!splitLoopDim)
       return rewriter.notifyMatchFailure(genericOp, "has no concat input");
     if (!llvm::all_equal(partitionSizes))
       return rewriter.notifyMatchFailure(
