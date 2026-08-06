@@ -1,8 +1,10 @@
 #include "sanitizer_common/sanitizer_atomic.h"
 
 #include <stdint.h>
+#if !(SANITIZER_AMDGPU || SANITIZER_NVPTX || SANITIZER_SPIRV)
 #include <stdlib.h>
 #include <string.h>
+#endif
 
 #if defined(KERNEL_USE)
 extern "C" void ubsan_message(const char *msg);
@@ -169,7 +171,11 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
   message(file);
   message(":?? : "); // FIXME: Show line number.
   message(cond);
+#if SANITIZER_AMDGPU || SANITIZER_NVPTX || SANITIZER_SPIRV
+  __builtin_trap();
+#else
   abort();
+#endif
 }
 } // namespace __sanitizer
 #endif
