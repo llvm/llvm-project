@@ -1774,6 +1774,8 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixShift64HighRegBug(MI);
   fixVALUMaskWriteHazard(MI);
   fixRequiredExportPriority(MI);
+  if (ST.hasVPermPk16Hazard())
+    fixVPermPk16Hazard(MI);
   if (ST.requiresWaitIdleBeforeGetReg())
     fixGetRegWaitIdle(MI);
   if (ST.hasDsAtomicAsyncBarrierArriveB64PipeBug())
@@ -4189,6 +4191,44 @@ bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
         .addImm(NormalPriority);
   }
 
+  return true;
+}
+
+// Advance past meta instructions (debug values, labels, CFI, KILL, etc.) to the
+// next instruction that actually issues. Unlike skipDebugInstructionsForward /
+// next_nodbg, this skips the full isMetaInstruction() set.
+static MachineBasicBlock::iterator
+skipMetaInstructionsForward(MachineBasicBlock::iterator I,
+                            MachineBasicBlock::iterator End) {
+  while (I != End && I->isMetaInstruction())
+    ++I;
+  return I;
+}
+
+bool GCNHazardRecognizer::fixVPermPk16Hazard(MachineInstr *MI) {
+  // Requirement #1 of 2:
+  // The cross-wave entry-block mitigation is delegated to the mandatory
+  // unclaused-VMEM entry prologue (GLOBAL_PREFETCH_B8 + V_NOP).
+  assert(ST.hasRequiresInitialUnclausedVmem() &&
+         "V_PERM_PK16-hazard subtarget must provide the unclaused-VMEM entry "
+         "prologue to satisfy the cross-wave entry mitigation");
+
+  if (!SIInstrInfo::isVPermPk16(MI->getOpcode()))
+    return false;
+
+  MachineBasicBlock *MBB = MI->getParent();
+
+  // Requirement #2 of 2:
+  // V_PERM_PK16 must be immediately followed by a safe instruction.
+  MachineBasicBlock::iterator NextI =
+      skipMetaInstructionsForward(std::next(MI->getIterator()), MBB->end());
+  if (NextI != MBB->end() && TII.isVPermPk16SafeInstr(*NextI))
+    return false;
+
+  // EXEC is guaranteed non-zero here: V_PERM_PK16 reports unwanted effects
+  // when EXEC is empty, so s_cbranch_execz over this region is retained.
+  // A plain V_NOP is therefore a real VALU nop and clears the hazard.
+  BuildMI(*MBB, NextI, MI->getDebugLoc(), TII.get(AMDGPU::V_NOP_e32));
   return true;
 }
 

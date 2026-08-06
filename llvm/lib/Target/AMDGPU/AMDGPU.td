@@ -1276,6 +1276,11 @@ defm TransCoexecutionHazard : AMDGPUSubtargetFeature<"trans-coexecution-hazard",
   /*GenPredicate=*/0
 >;
 
+defm VPermPk16Hazard : AMDGPUSubtargetFeature<"vperm-pk16-hazard",
+  "V_PERM_PK16 must be immediately followed by a safe VALU (or an inserted V_NOP)",
+  /*GenPredicate=*/0
+>;
+
 defm WMMACoexecutionHazards : AMDGPUSubtargetFeature<"wmma-coexecution-hazards",
   "Hazards when WMMA co-executes with other WMMA/VALU instruction",
   /*GenPredicate=*/0
@@ -2468,6 +2473,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureTanhInsts,
    FeatureTensorCvtLutInsts,
    FeatureTDMInsts,
+   FeatureVPermPk16Hazard,
    FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
