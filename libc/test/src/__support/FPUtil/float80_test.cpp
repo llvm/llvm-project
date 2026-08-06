@@ -19,7 +19,9 @@ using FPBits = LIBC_NAMESPACE::fputil::FPBits<Float80>;
 TEST(LlvmLibcFloat80Test, IntegerConversion) {
   // Float80 to Integer conversion test
   ASSERT_EQ(static_cast<int>(Float80(0.0f)), 0);
+  ASSERT_EQ(static_cast<int>(Float80(-0.0f)), 0);
   ASSERT_EQ(static_cast<int>(Float80(1.0f)), 1);
+  ASSERT_EQ(static_cast<int>(Float80(-1.0f)), -1);
   ASSERT_EQ(static_cast<long long>(Float80(1000000000.0)),
             static_cast<long long>(1000000000));
   ASSERT_EQ(static_cast<unsigned>(Float80(7.0f)), 7U);

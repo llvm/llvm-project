@@ -95,6 +95,13 @@ struct Float80 {
         x_bits.sign(), x_bits_exp, x_bits.get_explicit_mantissa());
     return static_cast<T>(xd.as_mantissa_type());
   }
+
+  // unary operators
+  LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR Float80 operator-() const {
+    fputil::FPBits<Float80> result(*this);
+    result.set_sign(result.is_pos() ? Sign::NEG : Sign::POS);
+    return result.get_val();
+  }
 };
 
 static_assert(LIBC_NAMESPACE::cpp::is_trivially_constructible<
