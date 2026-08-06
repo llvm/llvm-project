@@ -165,7 +165,7 @@ TEST(IssueHashTest, EnclosingObjCInterfaceDeclUsesQualifiedName) {
     @interface Foo
     @end
   )objc",
-                      {"-fsyntax-only", "-x", "objective-c++", "-std=c++17"});
+                      {"-fsyntax-only", "-x", "objective-c++", "-std=c++20"});
   ASTContext &Ctx = AST->getASTContext();
   const auto *ID = selectFirst<ObjCInterfaceDecl>(
       "i", match(objcInterfaceDecl(hasName("Foo")).bind("i"), Ctx));
@@ -182,7 +182,7 @@ TEST(IssueHashTest, EnclosingObjCImplementationDeclUsesQualifiedName) {
     @implementation Foo
     @end
   )objc",
-                      {"-fsyntax-only", "-x", "objective-c++", "-std=c++17"});
+                      {"-fsyntax-only", "-x", "objective-c++", "-std=c++20"});
   ASTContext &Ctx = AST->getASTContext();
   const auto *ImplD = selectFirst<ObjCImplementationDecl>(
       "i", match(objcImplementationDecl(hasName("Foo")).bind("i"), Ctx));
@@ -199,7 +199,7 @@ TEST(IssueHashTest, EnclosingObjCCategoryDeclUsesQualifiedName) {
     @interface Foo (Cat)
     @end
   )objc",
-                      {"-fsyntax-only", "-x", "objective-c++", "-std=c++17"});
+                      {"-fsyntax-only", "-x", "objective-c++", "-std=c++20"});
   ASTContext &Ctx = AST->getASTContext();
   const auto *CatD = selectFirst<ObjCCategoryDecl>(
       "c", match(objcCategoryDecl(hasName("Cat")).bind("c"), Ctx));
@@ -218,7 +218,7 @@ TEST(IssueHashTest, EnclosingObjCCategoryImplDeclUsesQualifiedName) {
     @implementation Foo (Cat)
     @end
   )objc",
-                      {"-fsyntax-only", "-x", "objective-c++", "-std=c++17"});
+                      {"-fsyntax-only", "-x", "objective-c++", "-std=c++20"});
   ASTContext &Ctx = AST->getASTContext();
   const auto *CatImplD = selectFirst<ObjCCategoryImplDecl>(
       "c", match(objcCategoryImplDecl(hasName("Cat")).bind("c"), Ctx));
@@ -232,7 +232,7 @@ TEST(IssueHashTest, EnclosingObjCProtocolDeclUsesQualifiedName) {
     @protocol Proto
     @end
   )objc",
-                      {"-fsyntax-only", "-x", "objective-c++", "-std=c++17"});
+                      {"-fsyntax-only", "-x", "objective-c++", "-std=c++20"});
   ASTContext &Ctx = AST->getASTContext();
   const auto *PD = selectFirst<ObjCProtocolDecl>(
       "p", match(objcProtocolDecl(hasName("Proto")).bind("p"), Ctx));
@@ -295,7 +295,7 @@ TEST(IssueHashTest, EnclosingObjCMethodDeclUsesQualifiedName) {
     - (void)method;
     @end
   )objc",
-                      {"-fsyntax-only", "-x", "objective-c++", "-std=c++17"});
+                      {"-fsyntax-only", "-x", "objective-c++", "-std=c++20"});
   ASTContext &Ctx = AST->getASTContext();
   const auto *MD = selectFirst<ObjCMethodDecl>(
       "m", match(objcMethodDecl(hasName("method")).bind("m"), Ctx));
