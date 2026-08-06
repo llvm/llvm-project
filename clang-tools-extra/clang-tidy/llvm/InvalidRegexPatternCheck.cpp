@@ -30,25 +30,15 @@ void InvalidRegexPatternCheck::registerMatchers(MatchFinder *Finder) {
       hasDeclaration(cxxRecordDecl(hasName("::std::basic_string_view"))))));
   auto AnyCastedToStringRef = ignoringImplicit(anyOf(
       stringLiteral().bind("stringLiteral"),
-      declRefExpr(to(varDecl(hasType(IsConstStdString),
-                             hasInitializer(GetStringLiteralFromObject)))),
-      declRefExpr(to(varDecl(hasType(IsConstllvmStringRef),
-                             hasInitializer(GetStringLiteralFromObject)))),
-      declRefExpr(
-          to(varDecl(hasType(IsConstCharPtr), hasInitializer(GetStringLit)))),
-      declRefExpr(to(varDecl(hasType(IsStdStringView),
-                             hasInitializer(GetStringLiteralFromObject)))),
-      memberExpr(
-          member(fieldDecl(hasType(IsConstStdString),
-                           hasInClassInitializer(GetStringLiteralFromObject)))),
-      memberExpr(member(fieldDecl(hasType(IsConstCharPtr),
-                                  hasInClassInitializer(GetStringLit)))),
-      memberExpr(
-          member(fieldDecl(hasType(IsConstllvmStringRef),
-                           hasInClassInitializer(GetStringLiteralFromObject)))),
-      memberExpr(member(
-          fieldDecl(hasType(IsStdStringView),
-                    hasInClassInitializer(GetStringLiteralFromObject))))));
+      declRefExpr(to(varDecl(
+          hasType(qualType(anyOf(IsConstStdString, IsConstllvmStringRef,
+                                 IsStdStringView, IsConstCharPtr))),
+          hasInitializer(anyOf(GetStringLiteralFromObject, GetStringLit))))),
+      memberExpr(member(fieldDecl(
+          hasType(qualType(anyOf(IsConstStdString, IsConstllvmStringRef,
+                                 IsStdStringView, IsConstCharPtr))),
+          hasInClassInitializer(
+              anyOf(GetStringLiteralFromObject, GetStringLit)))))));
 
   auto IsRegexFlagsType = ignoringParenImpCasts(
       anyOf(integerLiteral().bind("regexFlagsInt"),
