@@ -6044,11 +6044,14 @@ void AArch64TTIImpl::getUnrollingPreferences(
 
   // A loop can have a small maximum trip count while SCEV still cannot
   // form an exact backedge count - typically a data-dependent exit, e.g.
-  // shifting a value until it reaches zero. Unrolling such a loop trades one
-  // well-predicted backedge for a chain of rarely-taken exit branches, so hold
-  // it to a lower upper bound; 5 still lets smaller early-exit loops unroll.
-  // Also disable runtime unrolling, which would clamp the unroll count to the
-  // known maximum trip count and produce the same complete unroll.
+  // shifting a value until it reaches zero. Unlike for counted loops, the
+  // unrolled body keeps an exit test per iteration, and whether that pays
+  // off depends on how many iterations the loop usually runs, which is
+  // unknown at compile time; the code growth and extra branches are certain.
+  // Be conservative and hold such loops to a lower upper bound; 5 still lets
+  // smaller early-exit loops unroll. Also disable runtime unrolling, which
+  // would clamp the unroll count to the known maximum trip count and produce
+  // the same complete unroll.
   if (L->getExitingBlock() && !SE.isBackedgeTakenCountMaxOrZero(L) &&
       isa<SCEVCouldNotCompute>(SE.getBackedgeTakenCount(L))) {
     UP.MaxUpperBound = 5;
