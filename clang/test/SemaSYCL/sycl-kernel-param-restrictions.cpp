@@ -295,7 +295,7 @@ class C {
 // nonportable-note@-1 {{within field of type 'C' declared here}}
 private:
   int *ptr;
-  // nonportable-warning@-1 {{pointers used in parameters to a SYCL kernel require a device that supports Unified Shared Memory (USM)}}
+  // nonportable-warning@-1 {{pointers used in SYCL kernel parameters require a device that supports Unified Shared Memory (USM)}}
 public:
   C(int *p) : ptr(p) {}
 };
@@ -303,7 +303,7 @@ public:
 void test() {
   int *ptr;
   kernel_single_task<class KN<25>>([=]{ (void)ptr; });
-  // nonportable-warning@-1 {{pointers used in parameters to a SYCL kernel require a device that supports Unified Shared Memory (USM)}}
+  // nonportable-warning@-1 {{pointers used in SYCL kernel parameters require a device that supports Unified Shared Memory (USM)}}
   // nonportable-note-re@-2 {{in instantiation of function template specialization 'nonportable1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
   // nonportable-note@-3 {{within capture 'ptr' of lambda expression here}}
 
