@@ -262,6 +262,8 @@ template <size_t Bits> struct DyadicFloat {
       sticky = (mantissa & sticky_mask) != 0;
 
       out_mantissa = static_cast<StorageType>(mantissa >> extra_fraction_len);
+      if constexpr (get_fp_type<T>() == FPType::X86_Binary80)
+        out_mantissa |= FPBits::EXPLICIT_BIT_MASK;
     }
 
     bool lsb = (out_mantissa & 1) != 0;
