@@ -255,3 +255,125 @@ func.func @rank_two_partial_bounds_strided_layout() {
   } {origin = "acc.parallel"}
   return
 }
+
+// CHECK-LABEL: func.func @partial_thread_x_reduction
+// CHECK: %[[C16:.*]] = arith.constant 16 : index
+// CHECK-NOT: arith.constant 31 : index
+// CHECK: gpu.launch
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C16]],
+// CHECK: gpu.all_reduce add
+func.func @partial_thread_x_reduction() {
+  %c1 = arith.constant 1 : index
+  %c16 = arith.constant 16 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %tx = acc.par_width %c16 {par_dim = #acc.par_dim<thread_x>}
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx) {
+    %c2 = arith.constant 2 : index
+    %local = memref.alloca() : memref<2xi32>
+    %bounds = acc.bounds extent(%c2 : index)
+    acc.reduction_accumulate_array %local bounds(%bounds) <add>
+        : memref<2xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
+// CHECK-LABEL: func.func @thread_y_reduction_still_aligned
+// CHECK: %[[C32:.*]] = arith.constant 32 : index
+// CHECK: gpu.launch
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C32]],
+func.func @thread_y_reduction_still_aligned() {
+  %c1 = arith.constant 1 : index
+  %c16 = arith.constant 16 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %ty = acc.par_width %c16 {par_dim = #acc.par_dim<thread_y>}
+  acc.compute_region launch(%kbx = %bx, %kty = %ty) {
+    %c0_i32 = arith.constant 0 : i32
+    %local = memref.alloca() : memref<i32>
+    acc.reduction_accumulate %c0_i32 to %local <add>
+        : i32 -> memref<i32>
+        {par_dims = #acc<par_dims[block_x, thread_y]>}
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
+// A ThreadX-only reduction still needs aligned rows when ThreadY is greater
+// than one, because a physical subgroup must not contain multiple logical rows.
+//
+// CHECK-LABEL: func.func @thread_x_reduction_with_thread_y_width
+// CHECK: %[[C32_ROWS:.*]] = arith.constant 32 : index
+// CHECK: gpu.launch
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C32_ROWS]],
+func.func @thread_x_reduction_with_thread_y_width() {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c16 = arith.constant 16 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %tx = acc.par_width %c16 {par_dim = #acc.par_dim<thread_x>}
+  %ty = acc.par_width %c2 {par_dim = #acc.par_dim<thread_y>}
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx, %kty = %ty) {
+    %c0_i32 = arith.constant 0 : i32
+    %local = memref.alloca() : memref<i32>
+    acc.reduction_accumulate %c0_i32 to %local <add>
+        : i32 -> memref<i32>
+        {par_dims = #acc<par_dims[block_x, thread_x]>}
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
+// ThreadZ rows have the same subgroup-packing constraint as ThreadY rows.
+//
+// CHECK-LABEL: func.func @thread_x_reduction_with_thread_z_width
+// CHECK: %[[C352_Z_ROWS:.*]] = arith.constant 352 : index
+// CHECK: %[[C2_Z_ROWS:.*]] = arith.constant 2 : index
+// CHECK: gpu.launch
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C352_Z_ROWS]], %{{.*}} = %{{.*}}, %{{.*}} = %[[C2_Z_ROWS]])
+func.func @thread_x_reduction_with_thread_z_width() {
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %c341 = arith.constant 341 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %tx = acc.par_width %c341 {par_dim = #acc.par_dim<thread_x>}
+  %tz = acc.par_width %c3 {par_dim = #acc.par_dim<thread_z>}
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx, %ktz = %tz) {
+    %c0_i32 = arith.constant 0 : i32
+    %local = memref.alloca() : memref<i32>
+    acc.reduction_accumulate %c0_i32 to %local <add>
+        : i32 -> memref<i32>
+        {par_dims = #acc<par_dims[block_x, thread_x]>}
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
+// Thread-only array accumulate is well-defined when the region launches no
+// block dim (single block): a within-block all_reduce is a complete reduction.
+// CHECK-LABEL: func.func @thread_only_array_reduction_single_block
+// CHECK: gpu.launch
+// CHECK-NOT: acc.reduction_accumulate_array
+// CHECK: scf.for %[[IV:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:   %[[ELT:.*]] = memref.load %[[ALLOCA:.*]][%[[IV]]] : memref<8xi32>
+// CHECK:   %[[RED:.*]] = gpu.all_reduce add %[[ELT]]
+// CHECK:   memref.store %[[RED]], %[[ALLOCA]][%[[IV]]] : memref<8xi32>
+// CHECK: }
+func.func @thread_only_array_reduction_single_block() {
+  %c128 = arith.constant 128 : index
+  %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+  acc.compute_region launch(%ktx = %tx) {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c8 = arith.constant 8 : index
+    %c0_i32 = arith.constant 0 : i32
+    %local = memref.alloca() : memref<8xi32>
+    scf.for %i = %c0 to %c8 step %c1 {
+      memref.store %c0_i32, %local[%i] : memref<8xi32>
+    }
+    %bounds = acc.bounds extent(%c8 : index)
+    acc.reduction_accumulate_array %local bounds(%bounds) <add>
+        : memref<8xi32> {par_dims = #acc<par_dims[thread_x]>}
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}

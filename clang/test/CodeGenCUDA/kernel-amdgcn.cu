@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn -fcuda-is-device -emit-llvm -x hip %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu -fcuda-is-device -emit-llvm -x hip %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -fcuda-is-device -emit-llvm -x hip %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 #include "Inputs/cuda.h"
 

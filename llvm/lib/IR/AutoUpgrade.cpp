@@ -43,9 +43,11 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
@@ -1191,6 +1193,42 @@ static Intrinsic::ID shouldUpgradeNVPTXTMAG2SIntrinsics(Function *F,
   return Intrinsic::not_intrinsic;
 }
 
+// The legacy TMA reduction intrinsics encode the reduction operator in their
+// name, while the current ones take it as an immediate argument. Map the
+// operator part of a legacy name to the corresponding immediate value.
+static std::optional<unsigned> getNVPTXTMAReductionOp(StringRef Name) {
+  return StringSwitch<std::optional<unsigned>>(Name)
+      .Case("add", static_cast<unsigned>(nvvm::TMAReductionOp::ADD))
+      .Case("min", static_cast<unsigned>(nvvm::TMAReductionOp::MIN))
+      .Case("max", static_cast<unsigned>(nvvm::TMAReductionOp::MAX))
+      .Case("inc", static_cast<unsigned>(nvvm::TMAReductionOp::INC))
+      .Case("dec", static_cast<unsigned>(nvvm::TMAReductionOp::DEC))
+      .Case("and", static_cast<unsigned>(nvvm::TMAReductionOp::AND))
+      .Case("or", static_cast<unsigned>(nvvm::TMAReductionOp::OR))
+      .Case("xor", static_cast<unsigned>(nvvm::TMAReductionOp::XOR))
+      .Default(std::nullopt);
+}
+
+static Intrinsic::ID shouldUpgradeNVPTXTMAReductionIntrinsics(StringRef Name) {
+  if (!Name.consume_front("cp.async.bulk.tensor.reduce."))
+    return Intrinsic::not_intrinsic;
+
+  auto [RedOpName, ShapeName] = Name.split('.');
+  if (!getNVPTXTMAReductionOp(RedOpName))
+    return Intrinsic::not_intrinsic;
+
+  return StringSwitch<Intrinsic::ID>(ShapeName)
+      .Case("tile.1d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_1d)
+      .Case("tile.2d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_2d)
+      .Case("tile.3d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_3d)
+      .Case("tile.4d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_4d)
+      .Case("tile.5d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_5d)
+      .Case("im2col.3d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_im2col_3d)
+      .Case("im2col.4d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_im2col_4d)
+      .Case("im2col.5d", Intrinsic::nvvm_cp_async_bulk_tensor_reduce_im2col_5d)
+      .Default(Intrinsic::not_intrinsic);
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
                                                               StringRef Name) {
   if (Name.consume_front("mapa.shared.cluster"))
@@ -1447,10 +1485,16 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
     }
 
-    if (F->arg_size() == 2 && Name == "coro.end") {
+    Intrinsic::ID CoroEndID = Intrinsic::not_intrinsic;
+    if (Name == "coro.end" &&
+        (F->arg_size() == 2 || F->getReturnType()->isIntegerTy(1)))
+      CoroEndID = Intrinsic::coro_end;
+    else if (Name == "coro.end.async" && F->getReturnType()->isIntegerTy(1))
+      CoroEndID = Intrinsic::coro_end_async;
+
+    if (CoroEndID != Intrinsic::not_intrinsic) {
       rename(F);
-      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
-                                                Intrinsic::coro_end);
+      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), CoroEndID);
       return true;
     }
 
@@ -1707,6 +1751,15 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       Intrinsic::ID IID = shouldUpgradeNVPTXSharedClusterIntrinsic(F, Name);
       if (IID != Intrinsic::not_intrinsic) {
         rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
+      }
+
+      // Upgrade TMA reduction intrinsics
+      // llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>* =>
+      // llvm.nvvm.cp.async.bulk.tensor.reduce.<shape>*
+      IID = shouldUpgradeNVPTXTMAReductionIntrinsics(Name);
+      if (IID != Intrinsic::not_intrinsic) {
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
         return true;
       }
@@ -5338,10 +5391,24 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     break;
   }
 
+  case Intrinsic::coro_end_async:
   case Intrinsic::coro_end: {
     SmallVector<Value *, 3> Args(CI->args());
-    Args.push_back(ConstantTokenNone::get(CI->getContext()));
+    if (NewFn->getIntrinsicID() == Intrinsic::coro_end && Args.size() == 2)
+      Args.push_back(ConstantTokenNone::get(CI->getContext()));
     NewCall = Builder.CreateCall(NewFn, Args);
+
+    if (!CI->getType()->isVoidTy()) {
+      if (!CI->use_empty()) {
+        Function *IsInRamp = Intrinsic::getOrInsertDeclaration(
+            CI->getModule(), Intrinsic::coro_is_in_ramp);
+        Value *InRamp = Builder.CreateCall(IsInRamp);
+        CI->replaceAllUsesWith(Builder.CreateNot(InRamp));
+      }
+      CI->eraseFromParent();
+      return;
+    }
+
     break;
   }
 
@@ -5595,6 +5662,23 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     CI->replaceAllUsesWith(NewCall);
     CI->eraseFromParent();
     return;
+  }
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_1d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_2d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_tile_5d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_im2col_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_im2col_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_im2col_5d: {
+    StringRef Name = F->getName();
+    Name.consume_front("llvm.nvvm.cp.async.bulk.tensor.reduce.");
+    auto RedOp = getNVPTXTMAReductionOp(Name.split('.').first);
+
+    SmallVector<Value *, 16> Args(CI->args());
+    Args.insert(Args.end() - 1, Builder.getInt32(*RedOp));
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
   }
   case Intrinsic::riscv_sha256sig0:
   case Intrinsic::riscv_sha256sig1:
@@ -6606,6 +6690,32 @@ bool llvm::UpgradeModuleFlags(Module &M) {
       ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
       Changed = true;
     }
+
+    // clang/PowerPC used to use "float-abi" to describe the long double format;
+    // it has been renamed to "long-double-type", with its values changed to the
+    // corresponding IR floating-point type names.
+    if (M.getTargetTriple().isPPC() && ID->getString() == "float-abi") {
+      StringRef Format;
+      if (auto *S = dyn_cast_or_null<MDString>(Op->getOperand(2)))
+        Format = S->getString();
+
+      // The "float-abi" key is now reserved for the target-independent
+      // soft/hard ABI flag, so leave a valid value alone. Map any other value
+      // (including unrecognized ones, which were never valid) to the default.
+      if (!FloatABI::parseABIType(Format)) {
+        LongDoubleFormat NewFormat =
+            StringSwitch<LongDoubleFormat>(Format)
+                .Case("ieeequad", LongDoubleFormat::IEEEquad)
+                .Case("ieeedouble", LongDoubleFormat::IEEEdouble)
+                .Default(LongDoubleFormat::PPCDoubleDouble);
+        Metadata *Ops[3] = {
+            Op->getOperand(0),
+            MDString::get(M.getContext(), "long-double-type"),
+            MDString::get(M.getContext(), getLongDoubleFormatName(NewFormat))};
+        ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
+        Changed = true;
+      }
+    }
   }
 
   // "Objective-C Class Properties" is recently added for Objective-C. We
@@ -6976,6 +7086,27 @@ static bool isOldDistributeEnable(const MDTuple *T) {
   return mdconst::hasa<ConstantInt>(T->getOperand(1));
 }
 
+/// Old two-operand form: !{!"llvm.loop.vectorize.enable", i1 X}. The new
+/// single-operand form uses "llvm.loop.vectorize.enable" for X = true and
+/// "llvm.loop.vectorize.disable" for X = false.
+static bool isOldVectorizeEnable(const MDTuple *T) {
+  if (T->getNumOperands() != 2)
+    return false;
+  auto *Tag = dyn_cast_or_null<MDString>(T->getOperand(0));
+  if (!Tag || Tag->getString() != "llvm.loop.vectorize.enable")
+    return false;
+  return mdconst::hasa<ConstantInt>(T->getOperand(1));
+}
+
+/// Build the single-operand vectorize enable/disable node that replaces a
+/// boolean operand: nonzero -> enable, zero -> disable.
+static Metadata *makeVectorizeEnableNode(LLVMContext &C, const MDOperand &Op) {
+  bool Enable = !mdconst::extract<ConstantInt>(Op)->isZero();
+  return MDTuple::get(
+      C, {MDString::get(C, Enable ? "llvm.loop.vectorize.enable"
+                                  : "llvm.loop.vectorize.disable")});
+}
+
 static bool isOldLoopArgument(Metadata *MD) {
   auto *T = dyn_cast_or_null<MDTuple>(MD);
   if (!T)
@@ -6987,7 +7118,7 @@ static bool isOldLoopArgument(Metadata *MD) {
     return false;
   if (S->getString().starts_with("llvm.vectorizer."))
     return true;
-  return isOldDistributeEnable(T);
+  return isOldDistributeEnable(T) || isOldVectorizeEnable(T);
 }
 
 static MDString *upgradeLoopTag(LLVMContext &C, StringRef OldTag) {
@@ -7022,13 +7153,26 @@ static Metadata *upgradeLoopArgument(Metadata *MD) {
                                     : "llvm.loop.distribute.disable")});
   }
 
+  // Rewrite the modern two-operand vectorize.enable form to the single-operand
+  // enable/disable pair.
+  if (isOldVectorizeEnable(T))
+    return makeVectorizeEnableNode(C, T->getOperand(1));
+
   if (!OldTag->getString().starts_with("llvm.vectorizer."))
     return MD;
 
   // This has an old tag.  Upgrade it.
+  MDString *NewTag = upgradeLoopTag(C, OldTag->getString());
+
+  // The legacy !{!"llvm.vectorizer.enable", i1 X} maps onto the single-operand
+  // vectorize.enable/disable pair, not a two-operand enable node.
+  if (NewTag->getString() == "llvm.loop.vectorize.enable" &&
+      T->getNumOperands() == 2 && mdconst::hasa<ConstantInt>(T->getOperand(1)))
+    return makeVectorizeEnableNode(C, T->getOperand(1));
+
   SmallVector<Metadata *, 8> Ops;
   Ops.reserve(T->getNumOperands());
-  Ops.push_back(upgradeLoopTag(C, OldTag->getString()));
+  Ops.push_back(NewTag);
   for (unsigned I = 1, E = T->getNumOperands(); I != E; ++I)
     Ops.push_back(T->getOperand(I));
 
@@ -7043,14 +7187,14 @@ MDNode *llvm::upgradeInstructionLoopAttachment(MDNode &N) {
   if (none_of(T->operands(), isOldLoopArgument))
     return &N;
 
-  // Fix the old two-operand llvm.loop.distribute.enable nodes in place: the
-  // Verifier rejects any MDNode carrying the distribute tag with more than one
-  // operand, so a leftover reference (from the distinct loop-ID) would still
-  // trigger a diagnostic. In-place mutation is safe on distinct MDNodes.
+  // Fix the old two-operand distribute/vectorize.enable nodes in place: the
+  // Verifier rejects any MDNode carrying those tags with more than one operand,
+  // so a leftover reference (from the distinct loop-ID) would still trigger a
+  // diagnostic. In-place mutation is safe on distinct MDNodes.
   if (T->isDistinct()) {
     for (unsigned I = 0, E = T->getNumOperands(); I < E; ++I) {
       auto *OpT = dyn_cast_or_null<MDTuple>(T->getOperand(I));
-      if (OpT && isOldDistributeEnable(OpT))
+      if (OpT && (isOldDistributeEnable(OpT) || isOldVectorizeEnable(OpT)))
         T->replaceOperandWith(I, upgradeLoopArgument(OpT));
     }
     if (none_of(T->operands(), isOldLoopArgument))

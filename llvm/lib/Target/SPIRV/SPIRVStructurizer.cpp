@@ -28,6 +28,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
+#include <optional>
 #include <stack>
 
 using namespace llvm;
@@ -35,14 +36,6 @@ using namespace SPIRV;
 
 using BlockSet = SmallPtrSet<BasicBlock *, 0>;
 using Edge = std::pair<BasicBlock *, BasicBlock *>;
-
-// Helper function to do a partial order visit from the block |Start|, calling
-// |Op| on each visited node.
-static void partialOrderVisit(BasicBlock &Start,
-                              std::function<bool(BasicBlock *)> Op) {
-  PartialOrderingVisitor V(*Start.getParent());
-  V.partialOrderVisit(Start, std::move(Op));
-}
 
 // Returns the exact convergence region in the tree defined by `Node` for which
 // `BB` is the header, nullptr otherwise.
@@ -310,24 +303,29 @@ class SPIRVStructurizerImpl {
   // the boundary of multiple constructs.
   struct Splitter {
     Function &F;
-    LoopInfo &LI;
     DomTreeBuilder::BBDomTree DT;
     DomTreeBuilder::BBPostDomTree PDT;
+    std::optional<PartialOrderingVisitor> POV;
 
-    Splitter(Function &F, LoopInfo &LI) : F(F), LI(LI) { invalidate(); }
+    Splitter(Function &F) : F(F) { invalidate(); }
 
     void invalidate() {
       PDT.recalculate(F);
-      DT.recalculate(F);
+      POV.emplace(F);
+    }
+
+    const DomTreeBuilder::BBDomTree &getDT() const {
+      return POV->getDominatorTree();
     }
 
     // Returns the list of blocks that belong to a SPIR-V loop construct,
     // including the continue construct.
     std::vector<BasicBlock *> getLoopConstructBlocks(BasicBlock *Header,
                                                      BasicBlock *Merge) {
+      const DomTreeBuilder::BBDomTree &DT = getDT();
       assert(DT.dominates(Header, Merge));
       std::vector<BasicBlock *> Output;
-      partialOrderVisit(*Header, [&](BasicBlock *BB) {
+      POV->partialOrderVisit(*Header, [&](BasicBlock *BB) {
         if (BB == Merge)
           return false;
         if (DT.dominates(Merge, BB) || !DT.dominates(Header, BB))
@@ -341,6 +339,7 @@ class SPIRVStructurizerImpl {
     // Returns the list of blocks that belong to a SPIR-V selection construct.
     std::vector<BasicBlock *>
     getSelectionConstructBlocks(DivergentConstruct *Node) {
+      const DomTreeBuilder::BBDomTree &DT = getDT();
       assert(DT.dominates(Node->Header, Node->Merge));
       BlockSet OutsideBlocks;
       OutsideBlocks.insert(Node->Merge);
@@ -353,7 +352,7 @@ class SPIRVStructurizerImpl {
       }
 
       std::vector<BasicBlock *> Output;
-      partialOrderVisit(*Node->Header, [&](BasicBlock *BB) {
+      POV->partialOrderVisit(*Node->Header, [&](BasicBlock *BB) {
         if (OutsideBlocks.count(BB) != 0)
           return false;
         if (DT.dominates(Node->Merge, BB) || !DT.dominates(Node->Header, BB))
@@ -367,10 +366,11 @@ class SPIRVStructurizerImpl {
     // Returns the list of blocks that belong to a SPIR-V switch construct.
     std::vector<BasicBlock *> getSwitchConstructBlocks(BasicBlock *Header,
                                                        BasicBlock *Merge) {
+      const DomTreeBuilder::BBDomTree &DT = getDT();
       assert(DT.dominates(Header, Merge));
 
       std::vector<BasicBlock *> Output;
-      partialOrderVisit(*Header, [&](BasicBlock *BB) {
+      POV->partialOrderVisit(*Header, [&](BasicBlock *BB) {
         // the blocks structurally dominated by a switch header,
         if (!DT.dominates(Header, BB))
           return false;
@@ -387,10 +387,11 @@ class SPIRVStructurizerImpl {
     // Returns the list of blocks that belong to a SPIR-V case construct.
     std::vector<BasicBlock *> getCaseConstructBlocks(BasicBlock *Target,
                                                      BasicBlock *Merge) {
+      const DomTreeBuilder::BBDomTree &DT = getDT();
       assert(DT.dominates(Target, Merge));
 
       std::vector<BasicBlock *> Output;
-      partialOrderVisit(*Target, [&](BasicBlock *BB) {
+      POV->partialOrderVisit(*Target, [&](BasicBlock *BB) {
         // the blocks structurally dominated by an OpSwitch Target or Default
         // block
         if (!DT.dominates(Target, BB))
@@ -873,7 +874,7 @@ class SPIRVStructurizerImpl {
   }
 
   bool splitCriticalEdges(Function &F) {
-    Splitter S(F, LI);
+    Splitter S(F);
 
     DivergentConstruct Root;
     BlockSet Visited;
@@ -1181,7 +1182,6 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<SPIRVConvergenceRegionAnalysisWrapperPass>();
 
@@ -1196,7 +1196,6 @@ char SPIRVStructurizer::ID = 0;
 INITIALIZE_PASS_BEGIN(SPIRVStructurizer, "spirv-structurizer",
                       "structurize SPIRV", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SPIRVConvergenceRegionAnalysisWrapperPass)
 
