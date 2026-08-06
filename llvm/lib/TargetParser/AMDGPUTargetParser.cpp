@@ -423,10 +423,10 @@ unsigned AMDGPU::getSGPRAllocGranule(Triple::SubArchType SubArch) {
 }
 
 // "Per CU" really means "per whatever functional block the waves of a workgroup
-// must share". A gfx10+ CU that supports WGP mode contains two SIMDs, so CU mode
-// yields two EUs and WGP mode four (a WGP spans two CUs). Everything else - pre-
-// gfx10, and gfx12.5 (gfx10-insts but CU-only, no WGP support) - has a four-SIMD
-// block.
+// must share". A gfx10+ CU that supports WGP mode contains two SIMDs, so CU
+// mode yields two EUs and WGP mode four (a WGP spans two CUs). Everything else
+// - pre- gfx10, and gfx12.5 (gfx10-insts but CU-only, no WGP support) - has a
+// four-SIMD block.
 static unsigned getEUsPerCUImpl(const AMDGPUFeatureBitset &Features,
                                 bool CuMode) {
   if (Features.test(FEAT_GFX10_INSTS) && Features.test(FEAT_SUPPORTS_WGP) &&
