@@ -4,6 +4,10 @@
 enum class ScopedEnum { kZeroS, kOneS };
 enum class ScopedEnumInt8 : int8_t { kZeroS8, kOneS8 };
 
+int array[2] = {1, 2};
+int array1[1] = {3};
+float array2[1] = {1.0};
+
 void stop() {}
 
 int main(int argc, char **argv) {
@@ -15,7 +19,6 @@ int main(int argc, char **argv) {
   int i = 1;
   int j = 2;
   int &iref = i;
-  int array[2] = {1, 2};
 
   struct S {
   } s;

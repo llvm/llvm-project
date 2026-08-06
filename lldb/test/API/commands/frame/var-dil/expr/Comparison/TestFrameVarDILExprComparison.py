@@ -102,6 +102,8 @@ class TestFrameVarComparison(TestBase):
         self.expect_var_path("p_int0 == array", value="true")
         self.expect_var_path("array < p_int1", value="true")
         self.expect_var_path("array == nullptr", value="false")
+        self.expect_var_path("array == array1", value="false")
+        self.expect_var_path("array < array1", value="true")
 
         # These are not allowed by C++, but DIL supports these for convenience.
         self.expect_var_path("(void*)1 == 1", value="true")
@@ -123,7 +125,6 @@ class TestFrameVarComparison(TestBase):
                 "invalid operands to binary expression ('void *' and 'std::nullptr_t')"
             ],
         )
-
         self.expect(
             "frame var -- 'nullptr > 0'",
             error=True,
@@ -131,7 +132,6 @@ class TestFrameVarComparison(TestBase):
                 "invalid operands to binary expression ('std::nullptr_t' and 'int')"
             ],
         )
-
         self.expect(
             "frame var -- '1 == nullptr'",
             error=True,
@@ -139,7 +139,6 @@ class TestFrameVarComparison(TestBase):
                 "invalid operands to binary expression ('int' and 'std::nullptr_t')"
             ],
         )
-
         self.expect(
             "frame var -- 'nullptr == (int)0'",
             error=True,
@@ -147,7 +146,6 @@ class TestFrameVarComparison(TestBase):
                 "invalid operands to binary expression ('std::nullptr_t' and 'int')"
             ],
         )
-
         self.expect(
             "frame var -- 'false == nullptr'",
             error=True,
@@ -155,7 +153,6 @@ class TestFrameVarComparison(TestBase):
                 "invalid operands to binary expression ('bool' and 'std::nullptr_t')"
             ],
         )
-
         self.expect(
             "frame var -- 'p_int0 > p_char1'",
             error=True,
@@ -163,11 +160,15 @@ class TestFrameVarComparison(TestBase):
                 "comparison of distinct pointer types ('int *' and 'const char *')"
             ],
         )
-
         self.expect(
             "frame var -- 'pp_void0 == p_char1'",
             error=True,
             substrs=[
                 "comparison of distinct pointer types ('void **' and 'const char *')"
             ],
+        )
+        self.expect(
+            "frame var -- 'array1 == array2'",
+            error=True,
+            substrs=["comparison of distinct pointer types ('int[1]' and 'float[1]')"],
         )
