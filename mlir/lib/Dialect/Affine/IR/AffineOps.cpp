@@ -1809,8 +1809,11 @@ template <>
 void SimplifyAffineOp<AffineLoadOp>::replaceAffineOp(
     PatternRewriter &rewriter, AffineLoadOp load, AffineMap map,
     ArrayRef<Value> mapOperands) const {
-  rewriter.replaceOpWithNewOp<AffineLoadOp>(load, load.getMemRef(), map,
-                                            mapOperands);
+  IntegerAttr align = load.getAlignmentAttr();
+  auto newOp = rewriter.replaceOpWithNewOp<AffineLoadOp>(load, load.getMemRef(),
+                                                         map, mapOperands);
+  if (align)
+    newOp.setAlignmentAttr(align);
 }
 template <>
 void SimplifyAffineOp<AffinePrefetchOp>::replaceAffineOp(
@@ -1824,24 +1827,33 @@ template <>
 void SimplifyAffineOp<AffineStoreOp>::replaceAffineOp(
     PatternRewriter &rewriter, AffineStoreOp store, AffineMap map,
     ArrayRef<Value> mapOperands) const {
-  rewriter.replaceOpWithNewOp<AffineStoreOp>(
+  IntegerAttr align = store.getAlignmentAttr();
+  auto newOp = rewriter.replaceOpWithNewOp<AffineStoreOp>(
       store, store.getValueToStore(), store.getMemRef(), map, mapOperands);
+  if (align)
+    newOp.setAlignmentAttr(align);
 }
 template <>
 void SimplifyAffineOp<AffineVectorLoadOp>::replaceAffineOp(
     PatternRewriter &rewriter, AffineVectorLoadOp vectorload, AffineMap map,
     ArrayRef<Value> mapOperands) const {
-  rewriter.replaceOpWithNewOp<AffineVectorLoadOp>(
+  IntegerAttr align = vectorload.getAlignmentAttr();
+  auto newOp = rewriter.replaceOpWithNewOp<AffineVectorLoadOp>(
       vectorload, vectorload.getVectorType(), vectorload.getMemRef(), map,
       mapOperands);
+  if (align)
+    newOp.setAlignmentAttr(align);
 }
 template <>
 void SimplifyAffineOp<AffineVectorStoreOp>::replaceAffineOp(
     PatternRewriter &rewriter, AffineVectorStoreOp vectorstore, AffineMap map,
     ArrayRef<Value> mapOperands) const {
-  rewriter.replaceOpWithNewOp<AffineVectorStoreOp>(
+  IntegerAttr align = vectorstore.getAlignmentAttr();
+  auto newOp = rewriter.replaceOpWithNewOp<AffineVectorStoreOp>(
       vectorstore, vectorstore.getValueToStore(), vectorstore.getMemRef(), map,
       mapOperands);
+  if (align)
+    newOp.setAlignmentAttr(align);
 }
 
 // Generic version for ops that don't have extra operands.
