@@ -3353,8 +3353,8 @@ void AsmPrinter::emitConstantPool() {
 
       unsigned EntrySize = CPE.getSizeInBytes(getDataLayout());
       if (MAI.hasDotTypeDotSizeDirective())
-        OutStreamer->emitELFSize(
-            Sym, MCConstantExpr::create(EntrySize, OutContext));
+        OutStreamer->emitELFSize(Sym,
+                                 MCConstantExpr::create(EntrySize, OutContext));
 
       Offset = NewOffset + EntrySize;
     }
