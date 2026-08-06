@@ -7,7 +7,7 @@ define <vscale x 16 x i1> @and_cmphs_range_lhs_pred_op1(<vscale x 16 x i1> %pg, 
 ;
 ; CHECK-LABEL: define <vscale x 16 x i1> @and_cmphs_range_lhs_pred_op1(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.sub.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[A]], <vscale x 16 x i8> splat (i8 65))
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.sub.u.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[A]], <vscale x 16 x i8> splat (i8 65))
 ; CHECK-NEXT:    [[IN_RANGE:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmphs.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 25), <vscale x 16 x i8> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[IN_RANGE]]
 ;
@@ -21,7 +21,7 @@ define <vscale x 16 x i1> @and_cmphs_range_lhs_pred_op2(<vscale x 16 x i1> %pg, 
 ;
 ; CHECK-LABEL: define <vscale x 16 x i1> @and_cmphs_range_lhs_pred_op2(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.sub.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[A]], <vscale x 16 x i8> splat (i8 65))
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.sub.u.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[A]], <vscale x 16 x i8> splat (i8 65))
 ; CHECK-NEXT:    [[IN_RANGE:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmphs.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 25), <vscale x 16 x i8> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[IN_RANGE]]
 ;
@@ -35,7 +35,7 @@ define <vscale x 16 x i1> @and_cmphs_range_i8_pred_pg(<vscale x 16 x i1> %pg, <v
 ;
 ; CHECK-LABEL: define <vscale x 16 x i1> @and_cmphs_range_i8_pred_pg(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.sub.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[A]], <vscale x 16 x i8> splat (i8 65))
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.sub.u.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[A]], <vscale x 16 x i8> splat (i8 65))
 ; CHECK-NEXT:    [[IN_RANGE:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmphs.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 25), <vscale x 16 x i8> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[IN_RANGE]]
 ;

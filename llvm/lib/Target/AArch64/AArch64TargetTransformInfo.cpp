@@ -3443,7 +3443,7 @@ static std::optional<Instruction *> instCombineSVEAnd(InstCombiner &IC,
 
   Type *VecTy = A->getType();
   Constant *Base = ConstantInt::get(VecTy, ConstB);
-  Value *Sub = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_sub, VecTy,
+  Value *Sub = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_sub_u, VecTy,
                                           {PgLHS, A, Base});
   Constant *Limit = ConstantInt::get(VecTy, ConstA - ConstB);
   Value *NewCmphs =
