@@ -62,9 +62,6 @@
 Objective-C Automatic Reference Counting (ARC)
 ==============================================
 
-.. contents::
-   :local:
-
 .. _arc.meta:
 
 About this document

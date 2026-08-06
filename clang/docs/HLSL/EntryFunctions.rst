@@ -2,9 +2,6 @@
 HLSL Entry Functions
 ====================
 
-.. contents::
-   :local:
-
 Usage
 =====
 

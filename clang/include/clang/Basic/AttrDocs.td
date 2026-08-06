@@ -34,8 +34,6 @@ def GlobalDocumentation {
 ===================
 Attributes in Clang
 ===================
-.. contents::
-   :local:
 
 .. |br| raw:: html
 

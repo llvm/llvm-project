@@ -27,10 +27,6 @@ def GlobalDocumentation {
 AMDGPU Builtins
 ===============
 
-.. contents::
-   :local:
-   :depth: 2
-
 This document describes the AMDGPU target-specific builtins available in Clang.
 Most of these builtins provide direct access to AMDGPU hardware instructions
 and intrinsics.

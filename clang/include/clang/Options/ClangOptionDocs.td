@@ -16,8 +16,6 @@ def GlobalDocumentation {
 =====================================
 Clang command line argument reference
 =====================================
-.. contents::
-   :local:
 
 Introduction
 ============

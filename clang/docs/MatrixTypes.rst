@@ -2,9 +2,6 @@
 Matrix Types
 ==================
 
-.. contents::
-   :local:
-
 .. _matrixtypes:
 
 Clang provides a C/C++ language extension that allows users to directly express

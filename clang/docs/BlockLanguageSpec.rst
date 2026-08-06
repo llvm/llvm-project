@@ -5,9 +5,6 @@
 Language Specification for Blocks
 =================================
 
-.. contents::
-   :local:
-
 Revisions
 =========
 

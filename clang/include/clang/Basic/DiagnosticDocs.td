@@ -68,8 +68,6 @@ def GlobalDocumentation {
 =========================
 Diagnostic flags in Clang
 =========================
-.. contents::
-   :local:
 
 Introduction
 ============

@@ -1,8 +1,5 @@
 # Clang nvlink Wrapper
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

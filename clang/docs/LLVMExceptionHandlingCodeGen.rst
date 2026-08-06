@@ -2,9 +2,6 @@
 LLVM IR Generation for EH and Cleanups
 ========================================
 
-.. contents::
-   :local:
-
 Overview
 ========
 

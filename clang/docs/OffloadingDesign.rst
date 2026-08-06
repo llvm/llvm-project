@@ -2,9 +2,6 @@
 Offloading Design & Internals
 =============================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

@@ -1,8 +1,5 @@
 # Allocation Tokens
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

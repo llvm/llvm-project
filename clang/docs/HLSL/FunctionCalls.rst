@@ -2,9 +2,6 @@
 HLSL Function Calls
 ===================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

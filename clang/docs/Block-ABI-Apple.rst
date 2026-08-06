@@ -2,9 +2,6 @@
 Block Implementation Specification
 ==================================
 
-.. contents::
-   :local:
-
 History
 =======
 

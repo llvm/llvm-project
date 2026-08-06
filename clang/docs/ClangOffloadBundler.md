@@ -1,8 +1,5 @@
 # Clang Offload Bundler
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

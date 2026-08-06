@@ -2,9 +2,6 @@
 HLSL Resource Types
 ===================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

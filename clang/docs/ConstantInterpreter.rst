@@ -2,9 +2,6 @@
 Constant Interpreter
 ====================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

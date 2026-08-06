@@ -2,9 +2,6 @@
 HLSL Availability Diagnostics
 =============================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

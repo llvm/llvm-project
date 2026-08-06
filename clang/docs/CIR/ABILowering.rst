@@ -2,9 +2,6 @@
 ClangIR ABI Lowering Design Document
 ====================================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 

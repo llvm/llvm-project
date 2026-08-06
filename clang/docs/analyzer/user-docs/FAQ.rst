@@ -1,9 +1,6 @@
 FAQ and How to Deal with Common False Positives
 ===============================================
 
-.. contents::
-   :local:
-
 Custom Assertions
 -----------------
 

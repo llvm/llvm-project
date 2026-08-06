@@ -2,9 +2,6 @@
 HLSL IR Reference
 =================
 
-.. contents::
-   :local:
-
 Introduction
 ============
 
