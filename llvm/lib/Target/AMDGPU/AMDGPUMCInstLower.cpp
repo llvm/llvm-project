@@ -91,8 +91,8 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
     SmallString<128> SymbolName;
     AP.getNameWithPrefix(SymbolName, GV);
     MCSymbol *Sym = Ctx.getOrCreateSymbol(SymbolName);
-    const MCExpr *Expr =
-        MCSymbolRefExpr::create(Sym, getSpecifier(MO.getTargetFlags()), Ctx);
+    const MCExpr *Expr = MCSymbolRefExpr::create(
+        Sym, static_cast<uint16_t>(getSpecifier(MO.getTargetFlags())), Ctx);
     int64_t Offset = MO.getOffset();
     if (Offset != 0) {
       Expr = MCBinaryExpr::createAdd(Expr,
@@ -103,15 +103,15 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
   }
   case MachineOperand::MO_ExternalSymbol: {
     MCSymbol *Sym = Ctx.getOrCreateSymbol(StringRef(MO.getSymbolName()));
-    const MCExpr *Expr =
-        MCSymbolRefExpr::create(Sym, getSpecifier(MO.getTargetFlags()), Ctx);
+    const MCExpr *Expr = MCSymbolRefExpr::create(
+        Sym, static_cast<uint16_t>(getSpecifier(MO.getTargetFlags())), Ctx);
     MCOp = MCOperand::createExpr(Expr);
     return true;
   }
   case MachineOperand::MO_BlockAddress: {
     MCSymbol *Sym = AP.GetBlockAddressSymbol(MO.getBlockAddress());
-    const MCSymbolRefExpr *Expr =
-        MCSymbolRefExpr::create(Sym, getSpecifier(MO.getTargetFlags()), Ctx);
+    const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(
+        Sym, static_cast<uint16_t>(getSpecifier(MO.getTargetFlags())), Ctx);
     assert(MO.getOffset() == 0);
     MCOp = MCOperand::createExpr(Expr);
     return true;
@@ -171,7 +171,8 @@ void AMDGPUMCInstLower::lowerT16D16Helper(const MachineInstr *MI,
     const MachineOperand &MO = MI->getOperand(I);
     MCOperand MCOp;
     if (I == VDstOrVDataIdx)
-      MCOp = MCOperand::createReg(TRI.get32BitRegister(MIVDstOrVData.getReg()));
+      MCOp = MCOperand::createReg(
+          TRI.get32BitRegister(static_cast<MCPhysReg>(MIVDstOrVData.getReg())));
     else
       lowerOperand(MO, MCOp);
     OutMI.addOperand(MCOp);
@@ -211,7 +212,8 @@ void AMDGPUMCInstLower::lowerT16FmaMixFP16(const MachineInstr *MI,
     const MachineOperand &MO = MI->getOperand(I);
     MCOperand MCOp;
     if (I == VDstIdx)
-      MCOp = MCOperand::createReg(TRI.get32BitRegister(VDst.getReg()));
+      MCOp = MCOperand::createReg(
+          TRI.get32BitRegister(static_cast<MCPhysReg>(VDst.getReg())));
     else
       lowerOperand(MO, MCOp);
     OutMI.addOperand(MCOp);
@@ -457,7 +459,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
         V = AMDGPU::convertSetRegImmToVgprMSBs(*MI,
                                                STI.hasSetregVGPRMSBFixup());
       else
-        V = MI->getOperand(0).getImm() & 0xff;
+        V = static_cast<unsigned>(MI->getOperand(0).getImm() & 0xff);
       if (V.has_value())
         OutStreamer->AddComment(
             " msbs: dst=" + Twine(*V >> 6) + " src0=" + Twine(*V & 3) +

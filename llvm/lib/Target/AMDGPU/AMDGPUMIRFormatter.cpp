@@ -38,7 +38,7 @@ StringLiteral LgkmcntName = "Lgkmcnt";
 StringLiteral LoadcntName = "Loadcnt";
 StringLiteral DscntName = "Dscnt";
 
-void AMDGPUMIRFormatter::printSWaitAluImm(uint64_t Imm, raw_ostream &OS) const {
+void AMDGPUMIRFormatter::printSWaitAluImm(unsigned Imm, raw_ostream &OS) const {
   bool NonePrinted = true;
   ListSeparator Delim(SWaitAluDelim);
   auto PrintFieldIfNotMax = [&](StringRef Descr, uint64_t Num, unsigned Max) {
@@ -69,7 +69,7 @@ void AMDGPUMIRFormatter::printSWaitAluImm(uint64_t Imm, raw_ostream &OS) const {
     OS << AllOff;
 }
 
-void AMDGPUMIRFormatter::printSWaitcntImm(uint64_t Imm, raw_ostream &OS) const {
+void AMDGPUMIRFormatter::printSWaitcntImm(unsigned Imm, raw_ostream &OS) const {
   const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
   bool NonePrinted = true;
   ListSeparator Delim(SWaitAluDelim);
@@ -90,7 +90,7 @@ void AMDGPUMIRFormatter::printSWaitcntImm(uint64_t Imm, raw_ostream &OS) const {
     OS << AllOff;
 }
 
-void AMDGPUMIRFormatter::printSWaitLoadcntDscntImm(uint64_t Imm,
+void AMDGPUMIRFormatter::printSWaitLoadcntDscntImm(unsigned Imm,
                                                    raw_ostream &OS) const {
   const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
   bool NonePrinted = true;
@@ -116,13 +116,13 @@ void AMDGPUMIRFormatter::printImm(raw_ostream &OS, const MachineInstr &MI,
   switch (MI.getOpcode()) {
   case AMDGPU::S_WAITCNT:
   case AMDGPU::S_WAITCNT_soft:
-    printSWaitcntImm(Imm, OS);
+    printSWaitcntImm(static_cast<unsigned>(Imm), OS);
     break;
   case AMDGPU::S_WAIT_LOADCNT_DSCNT:
-    printSWaitLoadcntDscntImm(Imm, OS);
+    printSWaitLoadcntDscntImm(static_cast<unsigned>(Imm), OS);
     break;
   case AMDGPU::S_WAITCNT_DEPCTR:
-    printSWaitAluImm(Imm, OS);
+    printSWaitAluImm(static_cast<unsigned>(Imm), OS);
     break;
   case AMDGPU::S_DELAY_ALU:
     assert(OpIdx == 0);
@@ -247,13 +247,13 @@ bool AMDGPUMIRFormatter::parseSWaitcntImmMnemonic(
     unsigned Max;
     if (Name == VmcntName) {
       Max = AMDGPU::getVmcntBitMask(Version);
-      Vmcnt = Num;
+      Vmcnt = static_cast<unsigned>(Num);
     } else if (Name == ExpcntName) {
       Max = AMDGPU::getExpcntBitMask(Version);
-      Expcnt = Num;
+      Expcnt = static_cast<unsigned>(Num);
     } else if (Name == LgkmcntName) {
       Max = AMDGPU::getLgkmcntBitMask(Version);
-      Lgkmcnt = Num;
+      Lgkmcnt = static_cast<unsigned>(Num);
     } else {
       return ErrorCallback(NamePos, "invalid counter name");
     }
@@ -312,10 +312,10 @@ bool AMDGPUMIRFormatter::parseSWaitLoadcntDscntImmMnemonic(
     unsigned Max;
     if (Name == LoadcntName) {
       Max = AMDGPU::getLoadcntBitMask(Version);
-      Loadcnt = Num;
+      Loadcnt = static_cast<unsigned>(Num);
     } else if (Name == DscntName) {
       Max = AMDGPU::getDscntBitMask(Version);
-      Dscnt = Num;
+      Dscnt = static_cast<unsigned>(Num);
     } else {
       return ErrorCallback(NamePos, "invalid counter name");
     }
@@ -380,26 +380,33 @@ bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
     unsigned Max;
     if (Name == VaVdstName) {
       Max = AMDGPU::DepCtr::getVaVdstBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldVaVdst(Imm, Num);
+      Imm = AMDGPU::DepCtr::encodeFieldVaVdst(static_cast<unsigned>(Imm),
+                                              static_cast<unsigned>(Num));
     } else if (Name == VmVsrcName) {
       Max = AMDGPU::DepCtr::getVmVsrcBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldVmVsrc(Imm, Num);
+      Imm = AMDGPU::DepCtr::encodeFieldVmVsrc(static_cast<unsigned>(Imm),
+                                              static_cast<unsigned>(Num));
     } else if (Name == VaSdstName) {
       Max = AMDGPU::DepCtr::getVaSdstBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldVaSdst(Imm, Num);
+      Imm = AMDGPU::DepCtr::encodeFieldVaSdst(static_cast<unsigned>(Imm),
+                                              static_cast<unsigned>(Num));
     } else if (Name == VaSsrcName) {
       Max = AMDGPU::DepCtr::getVaSsrcBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldVaSsrc(Imm, Num);
+      Imm = AMDGPU::DepCtr::encodeFieldVaSsrc(static_cast<unsigned>(Imm),
+                                              static_cast<unsigned>(Num));
     } else if (Name == HoldCntName) {
       const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
       Max = AMDGPU::DepCtr::getHoldCntBitMask(Version);
-      Imm = AMDGPU::DepCtr::encodeFieldHoldCnt(Imm, Num, Version);
+      Imm = AMDGPU::DepCtr::encodeFieldHoldCnt(
+          static_cast<unsigned>(Imm), static_cast<unsigned>(Num), Version);
     } else if (Name == VaVccName) {
       Max = AMDGPU::DepCtr::getVaVccBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldVaVcc(Imm, Num);
+      Imm = AMDGPU::DepCtr::encodeFieldVaVcc(static_cast<unsigned>(Imm),
+                                             static_cast<unsigned>(Num));
     } else if (Name == SaSdstName) {
       Max = AMDGPU::DepCtr::getSaSdstBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldSaSdst(Imm, Num);
+      Imm = AMDGPU::DepCtr::encodeFieldSaSdst(static_cast<unsigned>(Imm),
+                                              static_cast<unsigned>(Num));
     } else {
       return ErrorCallback(NamePos, "invalid counter name");
     }
