@@ -106,13 +106,17 @@ class MemoryManagerTy {
 
   /// A structure stores the meta data of a target pointer
   struct NodeTy {
-    /// Memory size
+    /// Final memory size, including the alignment
     const size_t Size;
-    /// Target pointer
+    /// Target pointer, returned to the caller after adjustments related to the
+    /// memory alignment (moving the pointer)
     void *Ptr;
+    /// Pointer to the originally allocated memory
+    void *BasePtr;
 
     /// Constructor
-    NodeTy(size_t Size, void *Ptr) : Size(Size), Ptr(Ptr) {}
+    NodeTy(size_t FinalSize, void *Ptr, void *BasePtr)
+        : Size(FinalSize), Ptr(Ptr), BasePtr(BasePtr) {}
   };
 
   /// To make \p NodePtrTy ordered when they're put into \p std::multiset.
@@ -171,7 +175,7 @@ class MemoryManagerTy {
       if (List.empty())
         continue;
       for (const NodeTy &N : List) {
-        if (auto Err = deleteOnDevice(N.Ptr))
+        if (auto Err = deleteOnDevice(N.BasePtr))
           return Err;
         RemoveList.push_back(N.Ptr);
       }
@@ -218,6 +222,19 @@ class MemoryManagerTy {
     return TgtPtr;
   }
 
+  void changeKeyPtr(void *FinalPtr, NodeTy *NodePtr) {
+    std::lock_guard<std::mutex> LG(MapTableLock);
+    auto NodeHandle = PtrToNodeTable.extract(NodePtr->Ptr);
+    NodeHandle.mapped().Ptr = FinalPtr;
+    NodeHandle.key() = FinalPtr;
+    PtrToNodeTable.insert(std::move(NodeHandle));
+  }
+
+  void *alignPointer(void *PtrToBeAligned, size_t Alignment) {
+    uintptr_t AlignedPointer = (uintptr_t)PtrToBeAligned;
+    return (void *)((AlignedPointer + Alignment - 1) & ~(Alignment - 1));
+  }
+
 public:
   static constexpr size_t DefaultSizeThreshold = 1U << 13;
 
@@ -234,8 +251,8 @@ public:
   /// Destructor
   ~MemoryManagerTy() {
     for (auto &PtrToNode : PtrToNodeTable) {
-      assert(PtrToNode.second.Ptr && "nullptr in map table");
-      if (auto Err = deleteOnDevice(PtrToNode.second.Ptr))
+      assert(PtrToNode.second.BasePtr && "nullptr in map table");
+      if (auto Err = deleteOnDevice(PtrToNode.second.BasePtr))
         REPORT() << "Failure to delete memory: " << toString(std::move(Err));
     }
   }
@@ -264,9 +281,22 @@ public:
       ODBG(OLDT_Alloc) << "Got target pointer " << *TgtPtrOrErr
                        << ". Return directly.";
 
+      if (Alignment > 0 && !isAddrAligned(Align(Alignment), *TgtPtrOrErr)) {
+        auto AlignErr = make_error<StringError>(
+            "Allocated address is misaligned", inconvertibleErrorCode());
+        if (auto FreeErr = deleteOnDevice(*TgtPtrOrErr)) {
+          return joinErrors(std::move(FreeErr), std::move(AlignErr));
+        }
+
+        return AlignErr;
+      }
+
       return *TgtPtrOrErr;
     }
 
+    if (Alignment > 0) {
+      Size += Alignment - 1;
+    }
     NodeTy *NodePtr = nullptr;
 
     // Try to get a node from FreeList
@@ -274,21 +304,31 @@ public:
       const int B = findBucket(Size);
       FreeListTy &List = FreeLists[B];
 
-      NodeTy TempNode(Size, nullptr);
+      NodeTy TempNode(Size, nullptr, nullptr);
       std::lock_guard<std::mutex> LG(FreeListLocks[B]);
-      auto [First, Last] = List.equal_range(TempNode);
+      auto Itr = List.find(TempNode);
 
-      auto Itr = std::find_if(First, Last, [Alignment](const NodeTy &N) {
-        return Alignment == 0 || isAddrAligned(Align(Alignment), N.Ptr);
-      });
-      if (Itr != Last) {
+      if (Itr != List.end()) {
         NodePtr = &Itr->get();
         List.erase(Itr);
       }
     }
 
-    if (NodePtr != nullptr)
+    if (NodePtr != nullptr) {
       ODBG(OLDT_Alloc) << "Find one node " << NodePtr << " in the bucket.";
+
+      if (Alignment > 0) {
+        void *AlignedPointer = alignPointer(NodePtr->BasePtr, Alignment);
+
+        if (AlignedPointer != NodePtr->Ptr) {
+          changeKeyPtr(AlignedPointer, NodePtr);
+        }
+      } else {
+        if (NodePtr->Ptr != NodePtr->BasePtr) {
+          changeKeyPtr(NodePtr->BasePtr, NodePtr);
+        }
+      }
+    }
 
     // We cannot find a valid node in FreeLists. Let's allocate on device and
     // create a node for it.
@@ -305,10 +345,16 @@ public:
       if (TgtPtr == nullptr)
         return nullptr;
 
+      void *BasePtr = TgtPtr;
+      if (Alignment > 0) {
+        TgtPtr = alignPointer(TgtPtr, Alignment);
+      }
+
       // Create a new node and add it into the map table
       {
         std::lock_guard<std::mutex> Guard(MapTableLock);
-        auto Itr = PtrToNodeTable.emplace(TgtPtr, NodeTy(Size, TgtPtr));
+        auto Itr =
+            PtrToNodeTable.emplace(TgtPtr, NodeTy(Size, TgtPtr, BasePtr));
         NodePtr = &Itr.first->second;
       }
 

@@ -339,7 +339,7 @@ struct AMDGPUMemoryPoolTy {
     // compared with the alignment of the memory allocated using the given pool.
     // If the default alignment is greater than or equal to the alignment
     // requested by the user, it would still meet the user's requirements.
-    if (Alignment > 0 && Alignment > PoolAllocationAlignment) {
+    if (Alignment > PoolAllocationAlignment) {
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "requested alignment (%lu) larger than maximum "
                            "supported pool alignment (%lu)",
@@ -348,18 +348,6 @@ struct AMDGPUMemoryPoolTy {
 
     hsa_status_t Status =
         hsa_amd_memory_pool_allocate(MemoryPool, Size, 0, PtrStorage);
-
-    if (Alignment > 0 && !isAddrAligned(Align(Alignment), *PtrStorage)) {
-      if (auto FreeErr = deallocate(*PtrStorage)) {
-        return Plugin::error(ErrorCode::UNKNOWN,
-                             "Failure in deallcation of the incorrectly "
-                             "aligned pointer; requested alignemnt: %lu",
-                             Alignment);
-      }
-
-      return Plugin::error(ErrorCode::UNSUPPORTED,
-                           "unsupported alignment size");
-    }
 
     return Plugin::check(Status, "error in hsa_amd_memory_pool_allocate: %s");
   }

@@ -590,7 +590,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
     CUdeviceptr DevicePtr;
     CUresult Res;
 
-    if (Alignment > 0 && Alignment > Granularity) {
+    if (Alignment > Granularity) {
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "requested alignment (%lu) larger than maximum "
                            "supported alignment (%lu)",
@@ -614,18 +614,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     if (auto Err = Plugin::check(Res, "error in cuMemAlloc[Host|Managed]: %s"))
       return std::move(Err);
-
-    if (Alignment > 0 && !isAddrAligned(Align(Alignment), MemAlloc)) {
-      if (auto FreeErr = free(MemAlloc, Kind)) {
-        return Plugin::error(ErrorCode::UNKNOWN,
-                             "Failure in deallcation of the incorrectly "
-                             "aligned pointer; requested alignemnt: %lu",
-                             Alignment);
-      }
-
-      return Plugin::error(ErrorCode::UNSUPPORTED,
-                           "unsupported alignment size");
-    }
 
     return MemAlloc;
   }
