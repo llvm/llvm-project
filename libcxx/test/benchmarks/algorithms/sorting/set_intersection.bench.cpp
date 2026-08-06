@@ -92,7 +92,8 @@ int main(int argc, char** argv) {
   // Every scenario is registered with 32, which is small enough that constant factors dominate, 8192,
   // which fits in cache, and 1 << 18, which does not. The std::string rows stop at 8192, because those
   // elements are large and expensive to compare and to copy, so beyond that the benchmark spends most
-  // of its time in its own setup.
+  // of its time in its own setup. Most benchmarks on std::set stop at 8192, because they are too noisy
+  // above that.
 
   {
     // The two ranges have no element in common, and every element of the first range compares less
@@ -110,7 +111,7 @@ int main(int argc, char** argv) {
     // clang-format off
     bm.operator()<std::vector<int>>("std::set_intersection(vector<int>) (disjoint)", disjoint)->Arg(32)->Arg(8192)->Arg(1 << 18);
     bm.operator()<std::deque<int>>("std::set_intersection(deque<int>) (disjoint)", disjoint)->Arg(32)->Arg(8192)->Arg(1 << 18);
-    bm.operator()<std::set<int>>("std::set_intersection(set<int>) (disjoint)", disjoint)->Arg(32)->Arg(8192)->Arg(1 << 18);
+    bm.operator()<std::set<int>>("std::set_intersection(set<int>) (disjoint)", disjoint)->Arg(32)->Arg(8192);
     bm.operator()<std::vector<std::string>>("std::set_intersection(vector<std::string>) (disjoint)", disjoint)->Arg(32)->Arg(8192);
     bm.operator()<std::set<std::string>>("std::set_intersection(set<std::string>) (disjoint)", disjoint)->Arg(32)->Arg(8192);
     // clang-format on
@@ -136,7 +137,7 @@ int main(int argc, char** argv) {
     // clang-format off
     bm.operator()<std::vector<int>>("std::set_intersection(vector<int>) (interleaved)", interleaved)->Arg(32)->Arg(8192)->Arg(1 << 18);
     bm.operator()<std::deque<int>>("std::set_intersection(deque<int>) (interleaved)", interleaved)->Arg(32)->Arg(8192)->Arg(1 << 18);
-    bm.operator()<std::set<int>>("std::set_intersection(set<int>) (interleaved)", interleaved)->Arg(32)->Arg(8192)->Arg(1 << 18);
+    bm.operator()<std::set<int>>("std::set_intersection(set<int>) (interleaved)", interleaved)->Arg(32)->Arg(8192);
     bm.operator()<std::vector<std::string>>("std::set_intersection(vector<std::string>) (interleaved)", interleaved)->Arg(32)->Arg(8192);
     bm.operator()<std::set<std::string>>("std::set_intersection(set<std::string>) (interleaved)", interleaved)->Arg(32)->Arg(8192);
     // clang-format on
@@ -148,7 +149,7 @@ int main(int argc, char** argv) {
     // clang-format off
     bm.operator()<std::vector<int>>("std::set_intersection(vector<int>) (identical)", identical)->Arg(32)->Arg(8192)->Arg(1 << 18);
     bm.operator()<std::deque<int>>("std::set_intersection(deque<int>) (identical)", identical)->Arg(32)->Arg(8192)->Arg(1 << 18);
-    bm.operator()<std::set<int>>("std::set_intersection(set<int>) (identical)", identical)->Arg(32)->Arg(8192)->Arg(1 << 18);
+    bm.operator()<std::set<int>>("std::set_intersection(set<int>) (identical)", identical)->Arg(32)->Arg(8192);
     bm.operator()<std::vector<std::string>>("std::set_intersection(vector<std::string>) (identical)", identical)->Arg(32)->Arg(8192);
     bm.operator()<std::set<std::string>>("std::set_intersection(set<std::string>) (identical)", identical)->Arg(32)->Arg(8192);
     // clang-format on
@@ -160,7 +161,7 @@ int main(int argc, char** argv) {
     // clang-format off
     bm.operator()<std::vector<int>>("std::set_intersection(vector<int>) (spread 1:8)", spread_1_8)->Arg(32)->Arg(8192)->Arg(1 << 18);
     bm.operator()<std::deque<int>>("std::set_intersection(deque<int>) (spread 1:8)", spread_1_8)->Arg(32)->Arg(8192)->Arg(1 << 18);
-    bm.operator()<std::set<int>>("std::set_intersection(set<int>) (spread 1:8)", spread_1_8)->Arg(32)->Arg(8192)->Arg(1 << 18);
+    bm.operator()<std::set<int>>("std::set_intersection(set<int>) (spread 1:8)", spread_1_8)->Arg(32)->Arg(8192);
     bm.operator()<std::vector<std::string>>("std::set_intersection(vector<std::string>) (spread 1:8)", spread_1_8)->Arg(32)->Arg(8192);
     bm.operator()<std::set<std::string>>("std::set_intersection(set<std::string>) (spread 1:8)", spread_1_8)->Arg(32)->Arg(8192);
     // clang-format on
@@ -172,7 +173,7 @@ int main(int argc, char** argv) {
     // clang-format off
     bm.operator()<std::vector<int>>("std::set_intersection(vector<int>) (spread 1:1024)", spread_1_1024)->Arg(8192)->Arg(1 << 18);
     bm.operator()<std::deque<int>>("std::set_intersection(deque<int>) (spread 1:1024)", spread_1_1024)->Arg(8192)->Arg(1 << 18);
-    bm.operator()<std::set<int>>("std::set_intersection(set<int>) (spread 1:1024)", spread_1_1024)->Arg(8192)->Arg(1 << 18);
+    bm.operator()<std::set<int>>("std::set_intersection(set<int>) (spread 1:1024)", spread_1_1024)->Arg(8192);
     bm.operator()<std::vector<std::string>>("std::set_intersection(vector<std::string>) (spread 1:1024)", spread_1_1024)->Arg(8192);
     bm.operator()<std::set<std::string>>("std::set_intersection(set<std::string>) (spread 1:1024)", spread_1_1024)->Arg(8192);
     // clang-format on
@@ -183,6 +184,8 @@ int main(int argc, char** argv) {
     // matches sit at the very front. An implementation stops as soon as it has exhausted the smaller range,
     // so the cost should be proportional to the size of the smaller range, regardless of the contents of the
     // larger range.
+    //
+    // Here we bother testing std::set with a large range since we don't actually go through the full set.
     auto prefix = []<class T>(std::type_identity<T>, std::size_t n, std::size_t ratio) {
       auto [large, sampled] = two_sorted_copies<T>(n);
       sampled.erase(sampled.begin() + std::max<std::size_t>(1, n / ratio), sampled.end());
