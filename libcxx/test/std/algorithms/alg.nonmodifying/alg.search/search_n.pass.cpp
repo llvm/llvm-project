@@ -22,11 +22,13 @@
 
 template <class Iter>
 TEST_CONSTEXPR_CXX20 bool test() {
+#if TEST_STD_VER >= 11
   { // check the return type
     int a[]  = {0};
     auto res = std::search_n(Iter(a), Iter(a + 1), 1, 0);
-    static_assert(std::is_same_v<decltype(res), Iter>);
+    static_assert(std::is_same<decltype(res), Iter>::value, "");
   }
+#endif
   { // single element range with count = 1, matching
     int a[]  = {5};
     auto ret = std::search_n(Iter(a), Iter(a + 1), 1, 5);
