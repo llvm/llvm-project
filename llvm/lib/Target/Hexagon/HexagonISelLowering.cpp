@@ -3093,7 +3093,7 @@ HexagonTargetLowering::LowerLoad(SDValue Op, SelectionDAG &DAG) const {
         LN->getAddressingMode(), ISD::ZEXTLOAD, MVT::i32, dl, LN->getChain(),
         LN->getBasePtr(), LN->getOffset(), LN->getPointerInfo(),
         /*MemoryVT*/ MVT::i8, LN->getAlign(), LN->getMemOperand()->getFlags(),
-        LN->getAAInfo(), LN->getRanges());
+        MMOMetadata(LN->getAAInfo(), LN->getRanges()));
     LN = cast<LoadSDNode>(NL.getNode());
   }
 
@@ -3220,7 +3220,7 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
     MachineFunction &MF = DAG.getMachineFunction();
     WideMMO = MF.getMachineMemOperand(
         MMO->getPointerInfo(), MMO->getFlags(), 2 * LoadLen, Align(LoadLen),
-        MMO->getAAInfo(), MMO->getRanges(), MMO->getSyncScopeID(),
+        MMOMetadata(MMO->getAAInfo(), MMO->getRanges()), MMO->getSyncScopeID(),
         MMO->getSuccessOrdering(), MMO->getFailureOrdering());
   }
 

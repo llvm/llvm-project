@@ -13343,8 +13343,7 @@ SDValue SITargetLowering::widenLoad(LoadSDNode *Ld,
   SDValue NewLoad = DAG.getLoad(
       ISD::UNINDEXED, ISD::NON_EXTLOAD, MVT::i32, SL, Ld->getChain(), Ptr,
       Ld->getOffset(), Ld->getPointerInfo(), MVT::i32, Ld->getAlign(),
-      Ld->getMemOperand()->getFlags(), Ld->getAAInfo(),
-      nullptr); // Drop ranges
+      Ld->getMemOperand()->getFlags(), Ld->getAAInfo()); // Drop ranges
 
   EVT TruncVT = EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits());
   if (MemVT.isFloatingPoint()) {
