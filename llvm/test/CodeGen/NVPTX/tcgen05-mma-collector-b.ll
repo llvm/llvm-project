@@ -9,19 +9,19 @@
 
 define void @tcgen05_mma_collector_b_f16_cta1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_f16_cta1(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 0, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 0, i32 1, i32 0, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 0, i32 1, i32 0, i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=use */ i32 3)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=fill */ i32 2)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=use */ i32 3)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 0, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 0, i32 1, i32 1, i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 0, i32 1, i32 2, i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=use */ i32 3)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=use */ i32 3, /* collector_b=fill */ i32 2)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 0, i32 1, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_f16_cta1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -74,12 +74,12 @@ define void @tcgen05_mma_collector_b_f16_cta1(ptr addrspace(6) %dtmem, ptr addrs
 
 define void @tcgen05_mma_collector_b_f16_cta2(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_f16_cta2(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 0, i32 2, i32 0, i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 0, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 0, i32 2, i32 1, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 0, i32 2, i32 1, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 0, i32 2, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_f16_cta2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -118,17 +118,17 @@ define void @tcgen05_mma_collector_b_f16_cta2(ptr addrspace(6) %dtmem, ptr addrs
 
 define void @tcgen05_mma_collector_b_tf32_cta1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_tf32_cta1(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 1, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 1, i32 1, i32 0, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 1, i32 1, i32 0, i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=use */ i32 3)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=fill */ i32 2)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=use */ i32 3)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 1, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 1, i32 1, i32 1, i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 1, i32 1, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_tf32_cta1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -177,17 +177,17 @@ define void @tcgen05_mma_collector_b_tf32_cta1(ptr addrspace(6) %dtmem, ptr addr
 
 define void @tcgen05_mma_collector_b_f8f6f4_cta1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_f8f6f4_cta1(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 2, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 2, i32 1, i32 0, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 2, i32 1, i32 0, i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=use */ i32 3)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=fill */ i32 2)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=use */ i32 3)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 2, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 2, i32 1, i32 1, i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 2, i32 1, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_f8f6f4_cta1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -236,12 +236,12 @@ define void @tcgen05_mma_collector_b_f8f6f4_cta1(ptr addrspace(6) %dtmem, ptr ad
 
 define void @tcgen05_mma_collector_b_tf32_cta2(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_tf32_cta2(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 1, i32 2, i32 0, i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 1, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 1, i32 2, i32 1, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 1, i32 2, i32 1, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 1, i32 2, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_tf32_cta2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -280,17 +280,17 @@ define void @tcgen05_mma_collector_b_tf32_cta2(ptr addrspace(6) %dtmem, ptr addr
 
 define void @tcgen05_mma_collector_b_f8f6f4_cta2(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_f8f6f4_cta2(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 2, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 2, i32 2, i32 0, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 2, i32 2, i32 0, i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=use */ i32 3)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=fill */ i32 2)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=use */ i32 3)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 2, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 2, i32 2, i32 1, i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
 ; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 2, i32 2, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_f8f6f4_cta2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -340,16 +340,16 @@ define void @tcgen05_mma_collector_b_f8f6f4_cta2(ptr addrspace(6) %dtmem, ptr ad
 
 define void @tcgen05_mma_collector_b_block_scale_mxf8f6f4_cta1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_block_scale_mxf8f6f4_cta1(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 3)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 1, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 2, i32 3)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 3, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 1, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 1, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=use */ i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=use */ i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=use */ i32 3, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_block_scale_mxf8f6f4_cta1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -398,12 +398,12 @@ define void @tcgen05_mma_collector_b_block_scale_mxf8f6f4_cta1(ptr addrspace(6) 
 
 define void @tcgen05_mma_collector_b_block_scale_mxf8f6f4_cta2(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_block_scale_mxf8f6f4_cta2(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 1, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 2, i32 3)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 2, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=fill */ i32 2, /* collector_b=use */ i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_block_scale_mxf8f6f4_cta2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -444,12 +444,12 @@ define void @tcgen05_mma_collector_b_block_scale_mxf8f6f4_cta2(ptr addrspace(6) 
 
 define void @tcgen05_mma_collector_b_block_scale_mxf4_cta1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_block_scale_mxf4_cta1(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 1, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 2, i32 3)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 2, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=use */ i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_block_scale_mxf4_cta1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -490,12 +490,12 @@ define void @tcgen05_mma_collector_b_block_scale_mxf4_cta1(ptr addrspace(6) %dtm
 
 define void @tcgen05_mma_collector_b_block_scale_mxf4nvf4_cta1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_block_scale_mxf4nvf4_cta1(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 1, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 2, i32 3)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 2, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=use */ i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_block_scale_mxf4nvf4_cta1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -536,12 +536,12 @@ define void @tcgen05_mma_collector_b_block_scale_mxf4nvf4_cta1(ptr addrspace(6) 
 
 define void @tcgen05_mma_collector_b_block_scale_mxf4_cta2(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_block_scale_mxf4_cta2(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 1, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 2, i32 3)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 2, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=fill */ i32 2, /* collector_b=use */ i32 3)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_block_scale_mxf4_cta2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -582,11 +582,11 @@ define void @tcgen05_mma_collector_b_block_scale_mxf4_cta2(ptr addrspace(6) %dtm
 
 define void @tcgen05_mma_collector_b_block_scale_mxf4_block32_cta1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_block_scale_mxf4_block32_cta1(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 1, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_block_scale_mxf4_block32_cta1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -625,11 +625,11 @@ define void @tcgen05_mma_collector_b_block_scale_mxf4_block32_cta1(ptr addrspace
 
 define void @tcgen05_mma_collector_b_block_scale_mxf4nvf4_block16_cta2(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_block_scale_mxf4nvf4_block16_cta2(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 1, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_block_scale_mxf4nvf4_block16_cta2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -668,11 +668,11 @@ define void @tcgen05_mma_collector_b_block_scale_mxf4nvf4_block16_cta2(ptr addrs
 
 define void @tcgen05_mma_collector_b_block_scale_mxf4nvf4_block32_cta1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_block_scale_mxf4nvf4_block32_cta1(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 1, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_block_scale_mxf4nvf4_block32_cta1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -711,11 +711,11 @@ define void @tcgen05_mma_collector_b_block_scale_mxf4nvf4_block32_cta1(ptr addrs
 
 define void @tcgen05_mma_collector_b_block_scale_mxf8f6f4_block32_cta1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_block_scale_mxf8f6f4_block32_cta1(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 1, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_block_scale_mxf8f6f4_block32_cta1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -754,14 +754,14 @@ define void @tcgen05_mma_collector_b_block_scale_mxf8f6f4_block32_cta1(ptr addrs
 
 define void @tcgen05_mma_collector_b_scale_d_f16_cta1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_scale_d_f16_cta1(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 1, i32 0, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 1, i32 1, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 1, i32 1, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 1, i32 0, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 1, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_scale_d_f16_cta1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -804,11 +804,11 @@ define void @tcgen05_mma_collector_b_scale_d_f16_cta1(ptr addrspace(6) %dtmem, p
 
 define void @tcgen05_mma_collector_b_scale_d_f16_cta2(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_scale_d_f16_cta2(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 2, i32 1, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 2, i32 1, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 2, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=f16 */ i32 0, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_scale_d_f16_cta2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -845,11 +845,11 @@ define void @tcgen05_mma_collector_b_scale_d_f16_cta2(ptr addrspace(6) %dtmem, p
 
 define void @tcgen05_mma_collector_b_scale_d_tf32_cta2(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_scale_d_tf32_cta2(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 1, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 1, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 1, i32 2, i32 1, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 1, i32 2, i32 1, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 1, i32 2, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_scale_d_tf32_cta2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -886,12 +886,12 @@ define void @tcgen05_mma_collector_b_scale_d_tf32_cta2(ptr addrspace(6) %dtmem, 
 
 define void @tcgen05_mma_collector_b_scale_d_tf32_cta1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_scale_d_tf32_cta1(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 1, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 1, i32 1, i32 1, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 1, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 1, i32 1, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 1, i32 1, i32 0, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 1, i32 1, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=lastuse */ i32 1, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.ashift(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, /* kind=tf32 */ i32 1, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_scale_d_tf32_cta1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -930,11 +930,11 @@ define void @tcgen05_mma_collector_b_scale_d_tf32_cta1(ptr addrspace(6) %dtmem, 
 
 define void @tcgen05_mma_collector_b_block_scale_mxf8f6f4_block32_cta2(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_block_scale_mxf8f6f4_block32_cta2(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 1, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_block_scale_mxf8f6f4_block32_cta2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -973,11 +973,11 @@ define void @tcgen05_mma_collector_b_block_scale_mxf8f6f4_block32_cta2(ptr addrs
 
 define void @tcgen05_mma_collector_b_block_scale_mxf4_block32_cta2(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_block_scale_mxf4_block32_cta2(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 1, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_block_scale_mxf4_block32_cta2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -1016,11 +1016,11 @@ define void @tcgen05_mma_collector_b_block_scale_mxf4_block32_cta2(ptr addrspace
 
 define void @tcgen05_mma_collector_b_block_scale_mxf4nvf4_block32_cta2(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b) {
 ; FORMAT-LABEL: define void @tcgen05_mma_collector_b_block_scale_mxf4nvf4_block32_cta2(
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 1, i32 2)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 1)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 0)
-; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=fill */ i32 2)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=lastuse */ i32 1)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, /* cta_group= */ i32 2, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
 ; CHECK-LABEL: tcgen05_mma_collector_b_block_scale_mxf4nvf4_block32_cta2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
