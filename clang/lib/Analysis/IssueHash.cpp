@@ -88,7 +88,7 @@ static std::string GetEnclosingDeclContextSignature(const Decl *EnclosingDecl) {
 
   if (const auto *ND = dyn_cast<NamedDecl>(EnclosingDecl)) {
     if (const auto *FD = dyn_cast<FunctionDecl>(EnclosingDecl))
-      return GetSignature(dyn_cast_or_null<FunctionDecl>(FD));
+      return GetSignature(FD);
     return ND->getQualifiedNameAsString();
   }
   return "";
