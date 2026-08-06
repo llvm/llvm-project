@@ -1825,7 +1825,6 @@ void GCNPassConfig::addFastRegAlloc() {
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
-  insertPass(&SILowerControlFlowLegacyID, &SISinkAsyncDMALegacyID);
 
   insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
 
@@ -1833,8 +1832,10 @@ void GCNPassConfig::addFastRegAlloc() {
 }
 
 void GCNPassConfig::addPreRegAlloc() {
-  if (getOptLevel() != CodeGenOptLevel::None)
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(&SISinkAsyncDMALegacyID);
     addPass(&AMDGPUPrepareAGPRAllocLegacyID);
+  }
 }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
@@ -1852,7 +1853,6 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
-  insertPass(&SILowerControlFlowLegacyID, &SISinkAsyncDMALegacyID);
 
   if (EnableRewritePartialRegUses)
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
@@ -2560,7 +2560,6 @@ void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
 
 Error AMDGPUCodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) const {
   insertPass<PHIEliminationPass>(SILowerControlFlowPass());
-  insertPass<PHIEliminationPass>(SISinkAsyncDMAPass());
 
   insertPass<TwoAddressInstructionPass>(SIWholeQuadModePass());
 
@@ -2623,7 +2622,6 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass<PHIEliminationPass>(SILowerControlFlowPass());
-  insertPass<PHIEliminationPass>(SISinkAsyncDMAPass());
 
   if (EnableRewritePartialRegUses)
     insertPass<RenameIndependentSubregsPass>(GCNRewritePartialRegUsesPass());
@@ -2647,8 +2645,12 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
 }
 
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) const {
-  if (getOptLevel() != CodeGenOptLevel::None)
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    // Still in SSA, which the PHI repair needs, and the last CFG change before
+    // SILowerControlFlow, which runs right after PHI elimination.
+    addMachineFunctionPass(SISinkAsyncDMAPass(), PMW);
     addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
+  }
 }
 
 Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(

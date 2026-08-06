@@ -70,7 +70,6 @@
 ; GCN-O0-NEXT:       reg-usage-propagation
 ; GCN-O0-NEXT:       phi-node-elimination
 ; GCN-O0-NEXT:       si-lower-control-flow
-; GCN-O0-NEXT:       si-sink-async-dma
 ; GCN-O0-NEXT:       two-address-instruction
 ; GCN-O0-NEXT:       si-wqm
 ; GCN-O0-NEXT:       amdgpu-pre-ra-long-branch-reg
@@ -104,7 +103,7 @@
 ; GCN-O0-NEXT:       amdgpu-preload-kern-arg-prolog
 ; GCN-O0-NEXT:       stack-frame-layout
 ; GCN-O0-NEXT:       amdgpu-asm-printer
-; GCN-O0-NEXT:     free-machine-function
+; GCN-O0-NEXT:     free-machine-function 
 ; GCN-O0-NEXT: amdgpu-asm-printer-end
 
 ; GCN-O2: require<MachineModuleAnalysis>
@@ -216,6 +215,7 @@
 ; GCN-O2-NEXT:   function
 ; GCN-O2-NEXT:     machine-function
 ; GCN-O2-NEXT:       reg-usage-propagation
+; GCN-O2-NEXT:       si-sink-async-dma
 ; GCN-O2-NEXT:       amdgpu-prepare-agpr-alloc
 ; GCN-O2-NEXT:       detect-dead-lanes
 ; GCN-O2-NEXT:       dead-mi-elimination
@@ -227,7 +227,6 @@
 ; GCN-O2-NEXT:       require<machine-loops>
 ; GCN-O2-NEXT:       phi-node-elimination
 ; GCN-O2-NEXT:       si-lower-control-flow
-; GCN-O2-NEXT:       si-sink-async-dma
 ; GCN-O2-NEXT:       two-address-instruction
 ; GCN-O2-NEXT:       register-coalescer
 ; GCN-O2-NEXT:       rename-independent-subregs
@@ -404,6 +403,7 @@
 ; GCN-O3-NEXT:   function
 ; GCN-O3-NEXT:     machine-function
 ; GCN-O3-NEXT:       reg-usage-propagation
+; GCN-O3-NEXT:       si-sink-async-dma
 ; GCN-O3-NEXT:       amdgpu-prepare-agpr-alloc
 ; GCN-O3-NEXT:       detect-dead-lanes
 ; GCN-O3-NEXT:       dead-mi-elimination
@@ -415,7 +415,6 @@
 ; GCN-O3-NEXT:       require<machine-loops>
 ; GCN-O3-NEXT:       phi-node-elimination
 ; GCN-O3-NEXT:       si-lower-control-flow
-; GCN-O3-NEXT:       si-sink-async-dma
 ; GCN-O3-NEXT:       two-address-instruction
 ; GCN-O3-NEXT:       register-coalescer
 ; GCN-O3-NEXT:       rename-independent-subregs

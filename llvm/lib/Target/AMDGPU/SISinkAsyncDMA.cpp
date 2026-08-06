@@ -8,35 +8,38 @@
 //
 /// \file
 /// LLVM lowers a divergent branch around global_load_async_to_lds /
-/// global_store_async_from_lds with an S_CBRANCH_EXECZ. Fully-masked waves
-/// therefore skip the DMA entirely, which makes the ASYNCcnt observed at the
-/// join point depend on whether the wave took the branch. Software-pipelined
-/// kernels must then use conservative async waitcnts.
+/// global_store_async_from_lds with an S_CBRANCH_EXECZ, so fully-masked waves
+/// skip the DMA entirely and the ASYNCcnt observed at the join depends on
+/// whether the wave took the branch. Software-pipelined kernels then have to
+/// use a conservative async waitcnt.
 ///
-/// This pass sinks each async DMA out of such a then-block into the join
-/// block, immediately before the EXEC-mask restore (the S_OR that ends the
-/// control-flow region). EXEC at the sunk slot is the same masked value that
-/// guarded the then-block, so per-lane behavior is unchanged, but every wave
-/// now issues the DMA and ASYNCcnt becomes deterministic.
+/// This pass sinks each such DMA into the join, immediately before SI_ELSE or
+/// SI_END_CF:
 ///
-/// This runs right after SILowerControlFlow so the EXEC restore anchor exists,
-/// and before waitcnt insertion so the improved counts can be used.
+///        MBB                     MBB        SI_IF sets EXEC to the then-block
+///       /   \                   /   \       mask before the branch, so both
+///   ThenBB   |               ThenBB  |      edges carry it and per-lane
+///    [DMA]   |      ==>          \  /       behavior is unchanged. But every
+///       \   /                   JoinBB      wave now issues the DMA, so
+///      JoinBB                    [DMA]      ASYNCcnt at the join no longer
+///    [SI_END_CF]                   |        depends on the branch.
+///                             [SI_END_CF]
 ///
-/// This is determinism-only: it never relaxes or rewrites a wait (an
-/// s_wait_asynccnt 0 stays 0). Correctness never depends on the transform
-/// firing; with the pass disabled the code is still correct, just conservative.
+/// The join is split so that SI_END_CF starts a block of its own, because
+/// SILowerControlFlow emits the EXEC restore at the top of the block holding
+/// it, which would otherwise place it above the sunk DMAs.
+
 //
 //===----------------------------------------------------------------------===//
 
 #include "SISinkAsyncDMA.h"
 #include "AMDGPU.h"
-#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
-#include "llvm/ADT/SmallSet.h"
-#include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineSSAUpdater.h"
 
 using namespace llvm;
 
@@ -48,16 +51,10 @@ class SISinkAsyncDMA {
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
-  LiveVariables *LV = nullptr;
-  const AMDGPU::LaneMaskConstants &LMC;
 
   bool sinkFromBlock(MachineBasicBlock &MBB);
 
 public:
-  SISinkAsyncDMA(const GCNSubtarget *ST, LiveVariables *LV)
-      : TII(ST->getInstrInfo()), TRI(&TII->getRegisterInfo()), LV(LV),
-        LMC(AMDGPU::LaneMaskConstants::get(*ST)) {}
-
   bool run(MachineFunction &MF);
 };
 
@@ -73,11 +70,12 @@ public:
     return "SI sink async DMA out of execz then-blocks";
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
-    AU.addPreserved<LiveVariablesWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setIsSSA();
+  }
+
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties().setNoPHIs();
   }
 };
 
@@ -90,136 +88,122 @@ INITIALIZE_PASS(SISinkAsyncDMALegacy, DEBUG_TYPE,
 
 char &llvm::SISinkAsyncDMALegacyID = SISinkAsyncDMALegacy::ID;
 
-/// Return the S_OR EXEC restore at the top of \p JoinBB, if present.
-static MachineInstr *findExecRestore(MachineBasicBlock &JoinBB,
-                                     const AMDGPU::LaneMaskConstants &LMC) {
-  auto I = JoinBB.getFirstNonDebugInstr();
-  return I != JoinBB.end() && I->getOpcode() == LMC.OrOpc &&
-                 I->getOperand(0).getReg() == LMC.ExecReg &&
-                 I->getOperand(1).getReg() == LMC.ExecReg
-             ? &*I
-             : nullptr;
-}
-
 static bool isAsyncDMA(const MachineInstr &MI) {
   return SIInstrInfo::isLDSDMA(MI) && SIInstrInfo::usesASYNC_CNT(MI);
+}
+
+static bool isAsyncMarker(const MachineInstr &MI) {
+  return MI.getOpcode() == AMDGPU::ASYNCMARK ||
+         MI.getOpcode() == AMDGPU::WAIT_ASYNCMARK;
 }
 
 bool SISinkAsyncDMA::sinkFromBlock(MachineBasicBlock &MBB) {
   if (MBB.succ_size() != 2)
     return false;
 
-  MachineBasicBlock *TBB = nullptr;
-  MachineBasicBlock *FBB = nullptr;
-  SmallVector<MachineOperand, 4> Cond;
-  if (TII->analyzeBranch(MBB, TBB, FBB, Cond) || !TBB || Cond.empty())
+  // A region head ends in SI_IF or SI_ELSE ($dst, $cond, $target), which define
+  // the mask the region restores in $dst and the join block in $target.
+  auto ControlMI = MBB.getFirstTerminator();
+  if (ControlMI == MBB.end() || (ControlMI->getOpcode() != AMDGPU::SI_IF &&
+                                 ControlMI->getOpcode() != AMDGPU::SI_ELSE))
     return false;
 
-  auto CondBr = find_if(MBB.terminators(), [](const MachineInstr &MI) {
-    return MI.isConditionalBranch();
-  });
-  if (CondBr == MBB.terminators().end() ||
-      CondBr->getOpcode() != AMDGPU::S_CBRANCH_EXECZ)
+  Register SavedExec = ControlMI->getOperand(0).getReg();
+  MachineBasicBlock *JoinBB = ControlMI->getOperand(2).getMBB();
+
+  if (!MBB.isSuccessor(JoinBB) || JoinBB->pred_size() != 2)
     return false;
 
-  MachineBasicBlock *JoinBB = TBB;
-  MachineBasicBlock *S0 = *MBB.succ_begin();
-  MachineBasicBlock *S1 = *std::next(MBB.succ_begin());
-  MachineBasicBlock *ThenBB = (S0 == JoinBB) ? S1 : S0;
-  if (ThenBB == JoinBB || ThenBB->succ_size() != 1 ||
-      *ThenBB->succ_begin() != JoinBB)
+  auto ThenIt = find_if(MBB.successors(),
+                        [JoinBB](MachineBasicBlock *S) { return S != JoinBB; });
+  if (ThenIt == MBB.succ_end() || (*ThenIt)->getSingleSuccessor() != JoinBB)
+    return false;
+  MachineBasicBlock *ThenBB = *ThenIt;
+
+  auto Boundary = JoinBB->getFirstNonPHI();
+  while (Boundary != JoinBB->end() && Boundary->isMetaInstruction())
+    ++Boundary;
+  if (Boundary == JoinBB->end())
     return false;
 
-  // A third incoming edge could reach the DMA under an unrelated EXEC.
-  if (JoinBB->pred_size() != 2)
+  // The boundary must consume the mask this region saved ($saved for SI_END_CF,
+  // $src for a chained SI_ELSE), otherwise it closes a different region.
+  bool IsEndCF = Boundary->getOpcode() == AMDGPU::SI_END_CF &&
+                 Boundary->getOperand(0).getReg() == SavedExec;
+  bool IsElse = ControlMI->getOpcode() == AMDGPU::SI_IF &&
+                Boundary->getOpcode() == AMDGPU::SI_ELSE &&
+                Boundary->getOperand(1).getReg() == SavedExec;
+  if (!IsEndCF && !IsElse)
     return false;
 
-  MachineInstr *ExecRestore = findExecRestore(*JoinBB, LMC);
-  if (!ExecRestore)
-    return false;
-
+  // Scan bottom-up so everything a DMA moves across is already accumulated when
+  // the DMA is reached. Instructions above the topmost DMA are never crossed,
+  // so an unsafe one only matters once a DMA turns up above it.
   SmallVector<MachineInstr *, 4> ToSink;
-  for (MachineInstr &TMI : *ThenBB) {
-    if (TMI.isMetaInstruction() || TMI.isTerminator())
-      continue;
-    if (TII->hasUnwantedEffectsWhenEXECEmpty(TMI))
+  bool CrossedUnsafe = false;
+  bool CrossedM0Write = false;
+
+  for (MachineInstr &TMI : reverse(*ThenBB)) {
+    if (isAsyncMarker(TMI))
       return false;
+    if (TMI.isMetaInstruction())
+      continue;
+
     if (isAsyncDMA(TMI)) {
+      // A cluster load takes its mask from M0.
+      if (CrossedUnsafe ||
+          (CrossedM0Write && TMI.readsRegister(AMDGPU::M0, TRI)))
+        return false;
       ToSink.push_back(&TMI);
       continue;
     }
-    if (TMI.modifiesRegister(AMDGPU::EXEC, TRI) ||
-        TMI.hasUnmodeledSideEffects())
-      return false;
 
-    if (ToSink.empty())
-      continue;
-    if (TMI.mayStore())
-      return false;
-    if (TMI.mayLoad() && !TMI.isDereferenceableInvariantLoad())
-      return false;
-
-    // Reject dependencies with earlier DMAs that would cross this instruction.
-    for (const MachineOperand &MO : TMI.operands()) {
-      if (!MO.isReg() || !MO.getReg() || (!MO.isDef() && !MO.readsReg()) ||
-          TRI->regsOverlap(MO.getReg(), AMDGPU::EXEC))
-        continue;
-      if (any_of(ToSink, [&](const MachineInstr *DmaMI) {
-            return DmaMI->readsRegister(MO.getReg(), TRI) ||
-                   DmaMI->modifiesRegister(MO.getReg(), TRI);
-          }))
-        return false;
-    }
+    CrossedUnsafe |= TII->hasUnwantedEffectsWhenEXECEmpty(TMI) ||
+                     TMI.modifiesRegister(AMDGPU::EXEC, TRI) ||
+                     TMI.hasUnmodeledSideEffects() || TMI.mayStore() ||
+                     (TMI.mayLoad() && !TMI.isDereferenceableInvariantLoad());
+    CrossedM0Write |= TMI.modifiesRegister(AMDGPU::M0, TRI);
   }
   if (ToSink.empty())
     return false;
 
-  SmallSet<Register, 4> NeedsImpDef;
-  SmallSet<Register, 8> LiveThroughThen;
-  for (const MachineInstr *DmaMI : ToSink) {
-    for (const MachineOperand &MO : DmaMI->uses()) {
+  std::reverse(ToSink.begin(), ToSink.end());
+
+  MachineSSAUpdater Updater(*MBB.getParent());
+  SmallDenseMap<Register, Register, 4> MergedRegs;
+  for (MachineInstr *DmaMI : ToSink) {
+    for (MachineOperand &MO : DmaMI->uses()) {
       if (!MO.isReg() || !MO.readsReg() || !MO.getReg().isVirtual())
         continue;
       Register Reg = MO.getReg();
-      MachineInstr *Def = MRI->getUniqueVRegDef(Reg);
-      if (!Def)
-        return false;
-      if (Def->getParent() == ThenBB) {
-        if (!isAsyncDMA(*Def))
-          NeedsImpDef.insert(Reg);
-      } else {
-        LiveThroughThen.insert(Reg);
+      if (MRI->getVRegDef(Reg)->getParent() != ThenBB)
+        continue;
+      Register &Merged = MergedRegs[Reg];
+      if (!Merged) {
+        Updater.Initialize(Reg);
+        Updater.AddAvailableValue(ThenBB, Reg);
+        Merged = Updater.GetValueInMiddleOfBlock(JoinBB);
       }
+      MO.setReg(Merged);
     }
-  }
 
-  auto FirstTerm = MBB.getFirstTerminator();
-  for (Register Reg : NeedsImpDef)
-    BuildMI(MBB, FirstTerm, FirstTerm->getDebugLoc(),
-            TII->get(TargetOpcode::IMPLICIT_DEF), Reg);
-
-  for (MachineInstr *DmaMI : ToSink) {
     LLVM_DEBUG(dbgs() << "Sinking async DMA out of execz then-block: "
                       << *DmaMI);
-    DmaMI->moveBefore(ExecRestore);
-    for (const MachineOperand &MO : DmaMI->uses()) {
-      if (!MO.isReg() || !MO.readsReg())
-        continue;
-      Register Reg = MO.getReg();
-      if (Reg.isPhysical() && Reg != LMC.ExecReg)
-        JoinBB->addLiveIn(Reg);
-    }
+    DmaMI->moveBefore(&*Boundary);
   }
 
-  if (LV)
-    for (Register Reg : LiveThroughThen)
-      LV->getVarInfo(Reg).AliveBlocks.set(ThenBB->getNumber());
+  JoinBB->splitAt(*ToSink.back(), /*UpdateLiveIns=*/true);
 
-  JoinBB->sortUniqueLiveIns();
   return true;
 }
 
 bool SISinkAsyncDMA::run(MachineFunction &MF) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  if (!ST.hasAsynccnt())
+    return false;
+
+  TII = ST.getInstrInfo();
+  TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
 
   bool Changed = false;
@@ -230,24 +214,16 @@ bool SISinkAsyncDMA::run(MachineFunction &MF) {
 }
 
 bool SISinkAsyncDMALegacy::runOnMachineFunction(MachineFunction &MF) {
-  const GCNSubtarget *ST = &MF.getSubtarget<GCNSubtarget>();
-  auto *LVWrapper = getAnalysisIfAvailable<LiveVariablesWrapperPass>();
-  LiveVariables *LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
-  return SISinkAsyncDMA(ST, LV).run(MF);
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  return SISinkAsyncDMA().run(MF);
 }
 
-PreservedAnalyses
-SISinkAsyncDMAPass::run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM) {
-  const GCNSubtarget *ST = &MF.getSubtarget<GCNSubtarget>();
-  LiveVariables *LV = MFAM.getCachedResult<LiveVariablesAnalysis>(MF);
+PreservedAnalyses SISinkAsyncDMAPass::run(MachineFunction &MF,
+                                          MachineFunctionAnalysisManager &) {
+  MFPropsModifier _(*this, MF);
 
-  bool Changed = SISinkAsyncDMA(ST, LV).run(MF);
-  if (!Changed)
-    return PreservedAnalyses::all();
-
-  auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  PA.preserve<LiveVariablesAnalysis>();
-  return PA;
+  return SISinkAsyncDMA().run(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                  : PreservedAnalyses::all();
 }
