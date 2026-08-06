@@ -82,11 +82,11 @@ static std::string GetSignature(const FunctionDecl *Target) {
   return Signature;
 }
 
-static std::string GetEnclosingDeclContextSignature(const Decl *D) {
-  if (!D)
+static std::string GetEnclosingDeclContextSignature(const Decl *EnclosingDecl) {
+  if (!EnclosingDecl)
     return "";
 
-  if (const auto *ND = dyn_cast<NamedDecl>(D)) {
+  if (const auto *ND = dyn_cast<NamedDecl>(EnclosingDecl)) {
     std::string DeclName;
 
     switch (ND->getKind()) {
