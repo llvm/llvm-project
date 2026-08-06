@@ -33116,16 +33116,16 @@ static SDValue LowerCMP_SWAP(SDValue Op, const X86Subtarget &Subtarget,
                      cpOut, Success, EFLAGS.getValue(1));
 }
 
-// Create MOVMSKB, taking into account whether we need to split for AVX1.
-static SDValue getPMOVMSKB(const SDLoc &DL, SDValue V, SelectionDAG &DAG,
-                           const X86Subtarget &Subtarget) {
+// Create X86ISD::MOVMSK, taking into account whether we need to split.
+static SDValue getMOVMSK(const SDLoc &DL, SDValue V, SelectionDAG &DAG,
+                         const X86Subtarget &Subtarget) {
   MVT InVT = V.getSimpleValueType();
 
   if (InVT == MVT::v64i8) {
     SDValue Lo, Hi;
     std::tie(Lo, Hi) = DAG.SplitVector(V, DL);
-    Lo = getPMOVMSKB(DL, Lo, DAG, Subtarget);
-    Hi = getPMOVMSKB(DL, Hi, DAG, Subtarget);
+    Lo = getMOVMSK(DL, Lo, DAG, Subtarget);
+    Hi = getMOVMSK(DL, Hi, DAG, Subtarget);
     Lo = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Lo);
     Hi = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Hi);
     Hi = DAG.getNode(ISD::SHL, DL, MVT::i64, Hi,
@@ -33142,6 +33142,12 @@ static SDValue getPMOVMSKB(const SDLoc &DL, SDValue V, SelectionDAG &DAG,
     return DAG.getNode(ISD::OR, DL, MVT::i32, Lo, Hi);
   }
 
+  assert(((InVT == MVT::v16i8 || InVT == MVT::v4i32 || InVT == MVT::v2i64 ||
+           InVT == MVT::v4f32 || InVT == MVT::v2f64) ||
+          (Subtarget.hasAVX() && (InVT == MVT::v8i32 || InVT == MVT::v4i64 ||
+                                  InVT == MVT::v8f32 || InVT == MVT::v4f64)) ||
+          (Subtarget.hasInt256() && InVT == MVT::v32i8)) &&
+         "Unexpected MOVMSK type");
   return DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V);
 }
 
@@ -33170,7 +33176,7 @@ static SDValue LowerBITCAST(SDValue Op, const X86Subtarget &Subtarget,
     MVT SExtVT = SrcVT == MVT::v16i1 ? MVT::v16i8 : MVT::v32i8;
     SDLoc DL(Op);
     SDValue V = DAG.getSExtOrTrunc(Src, DL, SExtVT);
-    V = getPMOVMSKB(DL, V, DAG, Subtarget);
+    V = getMOVMSK(DL, V, DAG, Subtarget);
     return DAG.getZExtOrTrunc(V, DL, DstVT);
   }
 
@@ -46511,7 +46517,7 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
                             : DAG.getNode(ISD::SIGN_EXTEND, DL, SExtVT, Src);
 
   if (SExtVT == MVT::v16i8 || SExtVT == MVT::v32i8 || SExtVT == MVT::v64i8) {
-    V = getPMOVMSKB(DL, V, DAG, Subtarget);
+    V = getMOVMSK(DL, V, DAG, Subtarget);
   } else {
     if (SExtVT == MVT::v8i16) {
       V = widenSubVector(V, false, Subtarget, DAG, DL, 256);
@@ -47276,7 +47282,7 @@ static SDValue combineVECREDUCE_LOGIC(SDNode *Reduce, SelectionDAG &DAG,
       MaskSrcVT = MVT::getVectorVT(MVT::i8, MatchSizeInBits / 8);
 
     SDValue BitcastLogicOp = DAG.getBitcast(MaskSrcVT, Match);
-    Movmsk = getPMOVMSKB(DL, BitcastLogicOp, DAG, Subtarget);
+    Movmsk = getMOVMSK(DL, BitcastLogicOp, DAG, Subtarget);
     NumElts = MaskSrcVT.getVectorNumElements();
   }
   assert((NumElts <= 32 || NumElts == 64) &&
@@ -48598,11 +48604,12 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
     return DAG.getSelect(DL, LHS.getValueType(), NewCond, RHS, LHS);
 
   // Invert the setcc for all users and commute all vselects.
-  DAG.ReplaceAllUsesOfValueWith(Cond, NewCond);
-  for (SDNode *User : NewCond->users()) {
+  for (SDNode *User : llvm::make_early_inc_range(Cond->users())) {
     SDValue UserLHS = User->getOperand(1);
     SDValue UserRHS = User->getOperand(2);
-    DAG.UpdateNodeOperands(User, NewCond, UserRHS, UserLHS);
+    [[maybe_unused]] SDNode *Updated =
+        DAG.UpdateNodeOperands(User, NewCond, UserRHS, UserLHS);
+    assert(Updated == User && "Unexpected CSE in commuteSelect");
   }
   return SDValue(N, 0);
 }
@@ -49611,11 +49618,11 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
             if (EltBits == 16) {
               MVT MovmskVT = BCVT.is128BitVector() ? MVT::v16i8 : MVT::v32i8;
               Res = DAG.getBitcast(MovmskVT, Res);
-              Res = getPMOVMSKB(DL, Res, DAG, Subtarget);
+              Res = getMOVMSK(DL, Res, DAG, Subtarget);
               Res = DAG.getNode(ISD::AND, DL, MVT::i32, Res,
                                 DAG.getConstant(0xAAAAAAAA, DL, MVT::i32));
             } else {
-              Res = getPMOVMSKB(DL, Res, DAG, Subtarget);
+              Res = getMOVMSK(DL, Res, DAG, Subtarget);
             }
             return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Res,
                                DAG.getConstant(0, DL, MVT::i32));
@@ -51015,7 +51022,7 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
         } else if (VecVT == MVT::v8i16) {
           V = DAG.getNode(X86ISD::PACKSS, DL, MVT::v16i8, V, V);
         }
-        V = getPMOVMSKB(DL, V, DAG, Subtarget);
+        V = getMOVMSK(DL, V, DAG, Subtarget);
         V = DAG.getSetCC(DL, MVT::i8, V, DAG.getConstant(0, DL, MVT::i32), CC);
         return DAG.getZExtOrTrunc(V, DL, VT);
       }

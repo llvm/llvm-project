@@ -329,7 +329,27 @@ test-tools)
 6cc8d54a75939b18b72cc631d457613de3bef3a4
 d179176f3e3505044ad14be19ccb3459a70206a9
 EOF
-      diff "${BUILD_DIR}/anchors-expected.txt" "${BUILD_DIR}/anchors.txt"
+    diff "${BUILD_DIR}/anchors-expected.txt" "${BUILD_DIR}/anchors.txt"
+
+    # Exercise LNT tooling with --dry-run. Doing a real run is time consuming and would
+    # submit to a LNT instance, which we obviously don't want.
+    step "Run benchmarks using the LNT flow (dry-run)"
+    "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/run-benchmarks" \
+        --dry-run -vv \
+        --git-repo "${MONOREPO_ROOT}" \
+        --benchmark-commit HEAD \
+        --test-suite-commit HEAD \
+        --machine test-tools \
+        --compiler "${CXX}" \
+        --filter hash.bench.cpp \
+        --output "${BUILD_DIR}/report.json"
+
+    step "Submit a LNT report (dry-run)"
+    "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/submit-benchmarks" \
+        --dry-run -vv \
+        --lnt-url http://localhost:8000 \
+        --test-suite libcxx \
+        "${BUILD_DIR}/report.json"
 ;;
 #
 # Various Standard modes

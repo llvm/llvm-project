@@ -1136,19 +1136,21 @@ getFCMPLibcallDesc(const CmpInst::Predicate Pred, unsigned Size) {
     }                                                                          \
   } while (0)
 
+  // These use the three-way (-1/0/1) compare libcalls, whose result is tested
+  // against 0 with a signed integer predicate. Unordered (UO) is a boolean.
   switch (Pred) {
   case CmpInst::FCMP_OEQ:
-    RTLIBCASE_CMP(OEQ_F, CmpInst::ICMP_EQ);
+    RTLIBCASE_CMP(FCMP3_PRED_OEQ_F, CmpInst::ICMP_EQ);
   case CmpInst::FCMP_UNE:
-    RTLIBCASE_CMP(UNE_F, CmpInst::ICMP_NE);
+    RTLIBCASE_CMP(FCMP3_PRED_UNE_F, CmpInst::ICMP_NE);
   case CmpInst::FCMP_OGE:
-    RTLIBCASE_CMP(OGE_F, CmpInst::ICMP_SGE);
+    RTLIBCASE_CMP(FCMP3_PRED_OGE_F, CmpInst::ICMP_SGE);
   case CmpInst::FCMP_OLT:
-    RTLIBCASE_CMP(OLT_F, CmpInst::ICMP_SLT);
+    RTLIBCASE_CMP(FCMP3_PRED_OLT_F, CmpInst::ICMP_SLT);
   case CmpInst::FCMP_OLE:
-    RTLIBCASE_CMP(OLE_F, CmpInst::ICMP_SLE);
+    RTLIBCASE_CMP(FCMP3_PRED_OLE_F, CmpInst::ICMP_SLE);
   case CmpInst::FCMP_OGT:
-    RTLIBCASE_CMP(OGT_F, CmpInst::ICMP_SGT);
+    RTLIBCASE_CMP(FCMP3_PRED_OGT_F, CmpInst::ICMP_SGT);
   case CmpInst::FCMP_UNO:
     RTLIBCASE_CMP(UO_F, CmpInst::ICMP_NE);
   default:
@@ -4930,13 +4932,13 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     auto InsertionPointImm = MI.getOperand(3).getImm();
 
     LLT VectorTy = MRI.getType(Vector);
-    LLT SubvectorTy = MRI.getType(Subvector);
+    LLT DstTy = MRI.getType(Subvector);
     // If so, -> concat(subvector, extract(half of vector))
     // (Operands can be either way round depending on insertion point
-    if (VectorTy.getSizeInBits() == SubvectorTy.getSizeInBits() * 2) {
+    if (VectorTy.getSizeInBits() == DstTy.getSizeInBits() * 2) {
       bool InsertInLowHalf = InsertionPointImm == 0;
       auto Extract = MIRBuilder.buildExtractSubvector(
-          SubvectorTy, Vector,
+          DstTy, Vector,
           (uint64_t)(InsertInLowHalf ? VectorTy.getNumElements() / 2 : 0));
 
       auto LowHalf = InsertInLowHalf ? Subvector : Extract.getReg(0);
@@ -4958,7 +4960,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
       for (int i = 0; i < VectorTy.getNumElements(); i++) {
         // If this index is within bounds, put subvector's index into mask
         if (i >= InsertionPointImm &&
-            i < InsertionPointImm + SubvectorTy.getNumElements())
+            i < InsertionPointImm + DstTy.getNumElements())
           Mask.push_back(VectorTy.getNumElements() + i - InsertionPointImm);
         else
           Mask.push_back(i);
@@ -4970,6 +4972,34 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
       MI.eraseFromParent();
       return Legalized;
     }
+  }
+  case G_EXTRACT_SUBVECTOR: {
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+    uint64_t ExtractionPointImm = MI.getOperand(2).getImm();
+
+    LLT SrcTy = MRI.getType(SrcReg);
+    LLT DstTy = MRI.getType(DstReg);
+
+    if (SrcTy.isScalable() || DstTy.isScalable())
+      return UnableToLegalize;
+
+    if (SrcTy.getScalarType() != DstTy.getScalarType())
+      return UnableToLegalize;
+
+    // extract_subvector = build_vector(extract_element, extract_element, ...)
+    SmallVector<Register> ExtractedElements;
+    for (uint64_t i = 0; i < DstTy.getNumElements(); i++) {
+      ExtractedElements.push_back(
+          MIRBuilder
+              .buildExtractVectorElementConstant(SrcTy.getScalarType(), SrcReg,
+                                                 ExtractionPointImm + i)
+              .getReg(0));
+    }
+
+    MIRBuilder.buildBuildVector(DstReg, ExtractedElements);
+    MI.eraseFromParent();
+    return Legalized;
   }
   case G_STACKSAVE:
     return lowerStackSave(MI);
@@ -5838,6 +5868,34 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     if (TypeIdx != 1) // TODO: This probably does work as expected already.
       return UnableToLegalize;
     return fewerElementsVectorMerge(MI, TypeIdx, NarrowTy);
+  case G_EXTRACT_SUBVECTOR: {
+    Register DstReg = MI.getOperand(0).getReg();
+    LLT DstTy = MRI.getType(DstReg);
+    Register SrcReg = MI.getOperand(1).getReg();
+    uint64_t InsertionPointImm = MI.getOperand(2).getImm();
+
+    // If Dst > NarrowTy bits, then cannot legalize
+    if (DstTy.getSizeInBits() > NarrowTy.getSizeInBits())
+      return UnableToLegalize;
+
+    // If DstTy's size is not a multiple of NarrowTy's, then cannot legalize
+    if (!DstTy.getElementCount().isKnownMultipleOf(NarrowTy.getElementCount()))
+      return UnableToLegalize;
+
+    auto Unmerge = MIRBuilder.buildUnmerge(NarrowTy, SrcReg);
+    uint64_t RequiredSubvectorIndex =
+        InsertionPointImm / NarrowTy.getNumElements();
+    // If Dst and Narrow are both same size, convert to a copy
+    if (DstTy.getNumElements() == NarrowTy.getNumElements())
+      MIRBuilder.buildCopy(DstReg, Unmerge.getReg(RequiredSubvectorIndex));
+    else
+      MIRBuilder.buildExtractSubvector(
+          DstReg, Unmerge.getReg(RequiredSubvectorIndex),
+          InsertionPointImm % NarrowTy.getNumElements());
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case G_EXTRACT_VECTOR_ELT:
   case G_INSERT_VECTOR_ELT:
     return fewerElementsVectorExtractInsertVectorElt(MI, TypeIdx, NarrowTy);
@@ -9221,7 +9279,7 @@ LegalizerHelper::lowerFCopySign(MachineInstr &MI) {
     auto ShiftAmt = MIRBuilder.buildConstant(Src0IntTy, Src0Size - Src1Size);
     auto Zext = MIRBuilder.buildZExt(Src0IntTy, Src1Int);
     auto Shift = MIRBuilder.buildShl(Src0IntTy, Zext, ShiftAmt);
-    And1 = MIRBuilder.buildAnd(Src0Ty, Shift, SignBitMask).getReg(0);
+    And1 = MIRBuilder.buildAnd(Src0IntTy, Shift, SignBitMask).getReg(0);
   } else {
     auto ShiftAmt = MIRBuilder.buildConstant(Src1IntTy, Src1Size - Src0Size);
     auto Shift = MIRBuilder.buildLShr(Src1IntTy, Src1Int, ShiftAmt);

@@ -588,7 +588,7 @@ static InstructionCost getHistogramCost(const AArch64Subtarget *ST,
   //        using ptrue with a specific VL.
   if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy)) {
     unsigned EC = VTy->getElementCount().getKnownMinValue();
-    if (!isPowerOf2_64(EC) || !VTy->isScalableTy())
+    if (!isPowerOf2_64(EC) || !VTy->isScalableTy() || EC == 1)
       return InstructionCost::getInvalid();
 
     // HistCnt only supports 32b and 64b element types
@@ -3392,6 +3392,26 @@ static std::optional<Instruction *> instCombineSVEUMin(InstCombiner &IC,
   return std::nullopt;
 }
 
+static std::optional<Instruction *> instCombineSVEOrr(InstCombiner &IC,
+                                                      IntrinsicInst &II) {
+  // orr(umin(A, 1), umin(B, 1)) -> umin(orr(A, B), 1)
+  constexpr Intrinsic::ID UMinID = Intrinsic::aarch64_sve_umin_u;
+  Value *Pg = II.getOperand(0);
+
+  Value *A, *B;
+  if (!match(II.getOperand(1), m_OneUse(m_Intrinsic<UMinID>(
+                                   m_Specific(Pg), m_Value(A), m_One()))) ||
+      !match(II.getOperand(2), m_OneUse(m_Intrinsic<UMinID>(
+                                   m_Specific(Pg), m_Value(B), m_One()))))
+    return std::nullopt;
+
+  Value *NewOrr = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_orr_u,
+                                             II.getType(), {Pg, A, B});
+  Value *NewUMin = IC.Builder.CreateIntrinsic(
+      UMinID, II.getType(), {Pg, NewOrr, ConstantInt::get(II.getType(), 1)});
+  return IC.replaceInstUsesWith(II, NewUMin);
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -3513,6 +3533,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineInStreamingMode(IC, II);
   case Intrinsic::aarch64_sve_umin_u:
     return instCombineSVEUMin(IC, II);
+  case Intrinsic::aarch64_sve_orr_u:
+    return instCombineSVEOrr(IC, II);
   }
 
   return std::nullopt;
@@ -5918,7 +5940,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
     UP.AddAdditionalAccumulators = true;
   }
 
-  // Try to unroll small loops, of few-blocks with low budget, if they have
+  // Try to unroll small, single-block loops with low budget, if they have
   // load/store dependencies, to expose more parallel memory access streams,
   // or if they do little work inside a block (i.e. load -> X -> store pattern).
   BasicBlock *Header = L->getHeader();

@@ -167,7 +167,6 @@ endif()
 
 add_fp_unittest(
   sprintf_test
-  UNIT_TEST_ONLY
   SUITE
     libc_stdio_unittests
   SRCS
@@ -250,7 +249,6 @@ add_libc_test(
 
 add_fp_unittest(
   vsprintf_test
-  UNIT_TEST_ONLY
   SUITE
     libc_stdio_unittests
   SRCS

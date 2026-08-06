@@ -41,6 +41,13 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Check Permissions
+      uses: $/.github/workflows/require-team-membership
+      with:
+        team-slug: llvm-release-managers
+        LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ inputs.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+        LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ inputs.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+
     - name: Validate Input
       uses: $/.github/workflows/validate-release-version
       with:
@@ -94,19 +101,23 @@ runs:
         name: ${{ inputs.attestation-name }}
         path: |
           *.jsonl
+    
+    # Checkout the files used by this action.
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      if: inputs.upload == 'true'
+      with:
+        persist-credentials: false
+        path: upload-release-artifact
+        sparse-checkout: |
+           llvm/utils/release/github-upload-release.py
+           llvm/utils/git/requirements.txt
+        sparse-checkout-cone-mode: false
 
     - name: Install Python Requirements
       if: inputs.upload == 'true'
       shell: bash
       run: |
-        pip install --require-hashes -r ./llvm/utils/git/requirements.txt
-
-    - name: Check Permissions
-      uses: $/.github/workflows/require-team-membership
-      with:
-        team-slug: llvm-release-managers
-        LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ inputs.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
-        LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ inputs.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+        pip install --require-hashes -r ./upload-release-artifact/llvm/utils/git/requirements.txt
 
     - name: Upload Release
       shell: bash
@@ -115,7 +126,7 @@ runs:
         INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         DOWNLOAD_PATH: ${{ steps.download-artifact.outputs.download-path }}
       run: |
-        ./llvm/utils/release/github-upload-release.py \
+        ./upload-release-artifact/llvm/utils/release/github-upload-release.py \
         --token ${{ github.token }} \
         --release "$INPUTS_RELEASE_VERSION" \
         upload \

@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/Rematerializer.h"
@@ -300,11 +301,10 @@ unsigned GCNSchedStrategy::getStructuralStallCycles(SchedBoundary &Zone,
   }
 
   // Query HazardRecognizer for sequence-dependent hazard penalties.
-  // AMDGPU currently installs GCNHazardRecognizer for MI scheduling only in
-  // the post-RA configuration without vreg liveness.
-  if (!DAG->hasVRegLiveness() && Zone.HazardRec &&
-      Zone.HazardRec->isEnabled()) {
-    auto *HR = static_cast<GCNHazardRecognizer *>(Zone.HazardRec);
+  // AMDGPUCoExecSchedStrategy installs a GCNHazardRecognizer in both
+  // pre-RA (PreRA mode) and post-RA configurations.
+  if (Zone.HazardRec && Zone.HazardRec->isEnabled()) {
+    auto *HR = static_cast<GCNHazardRecognizer *>(Zone.HazardRec.get());
     Stall = std::max(Stall, HR->getHazardWaitStates(MI));
   }
 
@@ -1562,7 +1562,7 @@ bool PreRARematStage::initGCNSchedStage() {
       continue;
     SlotIndex UseIdx = DAG.LIS->getInstructionIndex(*UseMI).getRegSlot(true);
     SlotIndex RefIdx =
-        DAG.LIS->getInstructionIndex(*CandReg.DefMI).getRegSlot(true);
+        DAG.LIS->getInstructionIndex(*CandReg.getLastDef()).getRegSlot(true);
     if (llvm::any_of(CandReg.Dependencies, [&](RegisterIdx DepRegIdx) {
           const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
           Register DepDefReg = DepReg.getDefReg();
@@ -1643,29 +1643,34 @@ bool PreRARematStage::initGCNSchedStage() {
 #ifdef EXPENSIVE_CHECKS
       // All uses are known to be available / live at the remat point. Thus,
       // the uses should already be live in to the using region.
-      for (MachineOperand &MO : Reg.DefMI->operands()) {
-        if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
-          continue;
+      for (const MachineInstr *DefMI : Reg.Defs) {
+        for (const MachineOperand &MO : DefMI->operands()) {
+          // Exclude the defined register. We are rematerializing all
+          // instructions defining it so we don't care that its value is
+          // available at the remat point.
+          if (!MO.isReg() || !MO.getReg() || !MO.readsReg() || MO.isDef())
+            continue;
 
-        Register UseReg = MO.getReg();
-        if (!UseReg.isVirtual())
-          continue;
+          Register UseReg = MO.getReg();
+          if (!UseReg.isVirtual())
+            continue;
 
-        LiveInterval &LI = DAG.LIS->getInterval(UseReg);
-        LaneBitmask LM = DAG.MRI.getMaxLaneMaskForVReg(MO.getReg());
-        if (LI.hasSubRanges() && MO.getSubReg())
-          LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
+          LiveInterval &LI = DAG.LIS->getInterval(UseReg);
+          LaneBitmask LM = DAG.MRI.getMaxLaneMaskForVReg(MO.getReg());
+          if (LI.hasSubRanges() && MO.getSubReg())
+            LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
 
-        const unsigned UseRegion = Reg.Uses.begin()->first;
-        LaneBitmask LiveInMask = DAG.LiveIns[UseRegion].at(UseReg);
-        LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
-        // If this register has lanes not covered by the LiveIns, be sure they
-        // do not map to any subrange. ref:
-        // machine-scheduler-sink-trivial-remats.mir::omitted_subrange
-        if (UncoveredLanes.any()) {
-          assert(LI.hasSubRanges());
-          for (LiveInterval::SubRange &SR : LI.subranges())
-            assert((SR.LaneMask & UncoveredLanes).none());
+          const unsigned UseRegion = Reg.Uses.begin()->first;
+          LaneBitmask LiveInMask = DAG.LiveIns[UseRegion].at(UseReg);
+          LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
+          // If this register has lanes not covered by the LiveIns, be sure they
+          // do not map to any subrange. ref:
+          // machine-scheduler-sink-trivial-remats.mir::omitted_subrange
+          if (UncoveredLanes.any()) {
+            assert(LI.hasSubRanges());
+            for (LiveInterval::SubRange &SR : LI.subranges())
+              assert((SR.LaneMask & UncoveredLanes).none());
+          }
         }
       }
 #endif
@@ -3005,9 +3010,10 @@ bool PreRARematStage::ScoredRemat::maybeBeneficial(
 
 PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
     MachineFunction &MF, const GCNScheduleDAGMILive &DAG) {
-  assert(DAG.MLI && "MLI not defined in DAG");
   MachineBranchProbabilityInfo MBPI;
-  MachineBlockFrequencyInfo MBFI(MF, MBPI, *DAG.MLI);
+  MachineCycleInfo MCI;
+  MCI.compute(MF);
+  MachineBlockFrequencyInfo MBFI(MF, MBPI, MCI);
 
   const unsigned NumRegions = DAG.Regions.size();
   MinFreq = MBFI.getEntryFreq().getFrequency();

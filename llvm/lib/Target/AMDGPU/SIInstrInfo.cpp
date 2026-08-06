@@ -181,7 +181,72 @@ bool SIInstrInfo::isReMaterializableImpl(
       return true;
   }
 
-  return TargetInstrInfo::isReMaterializableImpl(MI);
+  // Everything below copied from TargetInstrInfo::isReMaterializableImpl. The
+  // only difference is that we allow operations that perform read-modify-write
+  // on sub-registers.
+
+  // Remat clients assume operand 0 is the defined register.
+  if (!MI.getNumOperands() || !MI.getOperand(0).isReg())
+    return false;
+  Register DefReg = MI.getOperand(0).getReg();
+
+  const MachineFunction &MF = *MI.getMF();
+
+  // A load from a fixed stack slot can be rematerialized. This may be
+  // redundant with subsequent checks, but it's target-independent,
+  // simple, and a common case.
+  int FrameIdx = 0;
+  if (isLoadFromStackSlot(MI, FrameIdx) &&
+      MF.getFrameInfo().isImmutableObjectIndex(FrameIdx))
+    return true;
+
+  // Avoid instructions obviously unsafe for remat.
+  if (MI.isNotDuplicable() || MI.mayStore() || MI.mayRaiseFPException() ||
+      MI.hasUnmodeledSideEffects())
+    return false;
+
+  // Don't remat inline asm. We have no idea how expensive it is
+  // even if it's side effect free.
+  if (MI.isInlineAsm())
+    return false;
+
+  // Avoid instructions which load from potentially varying memory.
+  if (MI.mayLoad() && !MI.isDereferenceableInvariantLoad())
+    return false;
+
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  // If any of the registers accessed are non-constant, conservatively assume
+  // the instruction is not rematerializable.
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg())
+      continue;
+    Register Reg = MO.getReg();
+    if (Reg == 0)
+      continue;
+
+    // Check for a well-behaved physical register.
+    if (Reg.isPhysical()) {
+      if (MO.isUse()) {
+        // If the physreg has no defs anywhere, it's just an ambient register
+        // and we can freely move its uses. Alternatively, if it's allocatable,
+        // it could get allocated to something with a def during allocation.
+        if (!MRI.isConstantPhysReg(Reg))
+          return false;
+      } else {
+        // A physreg def. We can't remat it.
+        return false;
+      }
+      continue;
+    }
+
+    // Only allow one virtual-register def.  There may be multiple defs of the
+    // same virtual register, though.
+    if (MO.isDef() && Reg != DefReg)
+      return false;
+  }
+
+  return true;
 }
 
 // Returns true if the result of a VALU instruction depends on exec.
@@ -10172,7 +10237,8 @@ SIInstrInfo::CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
 ScheduleHazardRecognizer *
 SIInstrInfo::CreateTargetPostRAHazardRecognizer(const MachineFunction &MF,
                                                 MachineLoopInfo *MLI) const {
-  return new GCNHazardRecognizer(MF, MLI);
+  return new GCNHazardRecognizer(
+      MF, GCNHazardRecognizer::OperatingMode::HazardRecognizerMode, MLI);
 }
 
 // Called during:
@@ -11603,6 +11669,24 @@ void SIInstrInfo::enforceOperandRCAlignment(MachineInstr &MI,
   Op.setReg(NewVR);
   Op.setSubReg(AMDGPU::sub0);
   MI.addOperand(MachineOperand::CreateReg(NewVR, false, true));
+}
+
+unsigned SIInstrInfo::getRepeatRate(const MachineInstr &MI) const {
+  if (!SchedModel.hasInstrSchedModel())
+    return 0;
+
+  // The repeat rate is the throughput-limiting resource occupancy: the largest
+  // number of cycles any written processor resource is held.
+  const MCSchedClassDesc *SCDesc = SchedModel.resolveSchedClass(&MI);
+  unsigned RepeatRate = 0;
+  for (TargetSchedModel::ProcResIter
+           PI = SchedModel.getWriteProcResBegin(SCDesc),
+           PE = SchedModel.getWriteProcResEnd(SCDesc);
+       PI != PE; ++PI) {
+    RepeatRate = std::max(RepeatRate, (unsigned)PI->ReleaseAtCycle);
+  }
+
+  return RepeatRate;
 }
 
 bool SIInstrInfo::isGlobalMemoryObject(const MachineInstr *MI) const {
