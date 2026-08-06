@@ -742,9 +742,10 @@ func.func private @collapse_scalar(%src : memref<1x1x1xi64>) {
   return
 }
 
-// CHECK-LABEL: func.func private @expand_vector(
+/// 1x999 is effectively a 1D MemRef
+// CHECK-LABEL: func.func private @expand_1D(
 // CHECK-SAME:    %[[SRC:.*]]: memref<1x999xf32>) {
-func.func private @expand_vector(
+func.func private @expand_1D(
     %src : memref<1x999xf32>) {
   // CHECK-DAG:   %[[IDX_1:.*]] = arith.constant 0 : index
   // CHECK-DAG:   %[[IDX_2:.*]] = arith.constant 13 : index
@@ -760,9 +761,9 @@ func.func private @expand_vector(
   return
 }
 
-// CHECK-LABEL: func.func private @collapse_vector(
+// CHECK-LABEL: func.func private @collapse_1D(
 // CHECK-SAME:    %[[SRC:.*]]: memref<1x1x999xf32>) {
-func.func private @collapse_vector(
+func.func private @collapse_1D(
     %src : memref<1x1x999xf32>) {
   // CHECK-DAG:   %[[IDX_1:.*]] = arith.constant 0 : index
   // CHECK-DAG:   %[[IDX_2:.*]] = arith.constant 13 : index
@@ -777,10 +778,10 @@ func.func private @collapse_vector(
   return
 }
 
-// CHECK-LABEL: func.func private @expand_vector_dynamic_index(
+// CHECK-LABEL: func.func private @expand_1D_dynamic_index(
 // CHECK-SAME:    %[[I:.*]]: index
 // CHECK-SAME:    %[[SRC:.*]]: memref<1x999xi64>) {
-func.func private @expand_vector_dynamic_index(%i : index,
+func.func private @expand_1D_dynamic_index(%i : index,
     %src : memref<1x999xi64>) {
   // CHECK:       %[[IDX:.*]] = arith.constant 0 : index
   %idx = arith.constant 0 : index
@@ -793,10 +794,10 @@ func.func private @expand_vector_dynamic_index(%i : index,
   return
 }
 
-// CHECK-LABEL: func.func private @collapse_vector_dynamic_index(
+// CHECK-LABEL: func.func private @collapse_1D_dynamic_index(
 // CHECK-SAME:    %[[I:.*]]: index
 // CHECK-SAME:    %[[SRC:.*]]: memref<1x1x999xi64>) {
-func.func private @collapse_vector_dynamic_index(%i : index,
+func.func private @collapse_1D_dynamic_index(%i : index,
     %src : memref<1x1x999xi64>) {
   // CHECK-DAG:   %[[IDX:.*]] = arith.constant 0 : index
   %idx = arith.constant 0 : index
