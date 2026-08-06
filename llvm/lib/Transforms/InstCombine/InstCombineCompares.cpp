@@ -3024,6 +3024,15 @@ Instruction *InstCombinerImpl::foldICmpSubConstant(ICmpInst &Cmp,
   ICmpInst::Predicate Pred = Cmp.getPredicate();
   Type *Ty = Sub->getType();
 
+  // D: (X - (X urem D)) is D*(X/D), a multiple of D, so it is >= D exactly when
+  // X >= D.
+  //   (icmp ugt (sub X, (urem X, D)), D-1) --> (icmp ugt X, D-1)
+  const APInt *D;
+  if (Pred == ICmpInst::ICMP_UGT &&
+      match(Y, m_URem(m_Specific(X), m_APInt(D))) && !D->isZero() &&
+      C == (*D - 1))
+    return new ICmpInst(ICmpInst::ICMP_UGT, X, ConstantInt::get(Ty, C));
+
   // (SubC - Y) == C) --> Y == (SubC - C)
   // (SubC - Y) != C) --> Y != (SubC - C)
   Constant *SubC;
