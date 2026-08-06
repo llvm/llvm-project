@@ -7598,6 +7598,21 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_BPFPreserveStaticOffset:
     handleSimpleAttribute<BPFPreserveStaticOffsetAttr>(S, D, AL);
     break;
+  case ParsedAttr::AT_EngagedTrait:
+    handleSimpleAttribute<EngagedTraitAttr>(S, D, AL);
+    break;
+  case ParsedAttr::AT_DisengagedTrait:
+    handleSimpleAttribute<DisengagedTraitAttr>(S, D, AL);
+    break;
+  case ParsedAttr::AT_AssumeEngagedTrait:
+    handleSimpleAttribute<AssumeEngagedTraitAttr>(S, D, AL);
+    break;
+  case ParsedAttr::AT_TestEngagedTrait:
+    handleSimpleAttribute<TestEngagedTraitAttr>(S, D, AL);
+    break;
+  case ParsedAttr::AT_TestDisengagedTrait:
+    handleSimpleAttribute<TestDisengagedTraitAttr>(S, D, AL);
+    break;
   case ParsedAttr::AT_AnalyzeAsClass:
     handleAnalyzeAsClass(S, D, AL);
     break;
