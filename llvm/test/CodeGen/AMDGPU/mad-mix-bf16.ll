@@ -1417,6 +1417,18 @@ define float @v_mad_mix_f32_absbf16hi_fsub_bf16hi(i32 %src0, i32 %src1)  {
   ret float %result
 }
 
+define float @v_mad_mix_f32_f32_sub_bf16lo(float %src0, bfloat %src1)  {
+; GFX1250-LABEL: v_mad_mix_f32_f32_sub_bf16lo:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_fma_mix_f32_bf16 v0, -v1, 1.0, v0 op_sel:[0,1,0] op_sel_hi:[1,1,0]
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %src1.ext = fpext bfloat %src1 to float
+  %result = fsub float %src0, %src1.ext
+  ret float %result
+}
+
 declare bfloat @llvm.fabs.bf16(bfloat) #2
 declare <2 x bfloat> @llvm.fabs.v2bf16(<2 x bfloat>) #2
 declare float @llvm.fabs.f32(float) #2
