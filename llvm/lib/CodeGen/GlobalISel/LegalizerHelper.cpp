@@ -9223,7 +9223,7 @@ LegalizerHelper::lowerFCopySign(MachineInstr &MI) {
     auto ShiftAmt = MIRBuilder.buildConstant(Src0IntTy, Src0Size - Src1Size);
     auto Zext = MIRBuilder.buildZExt(Src0IntTy, Src1Int);
     auto Shift = MIRBuilder.buildShl(Src0IntTy, Zext, ShiftAmt);
-    And1 = MIRBuilder.buildAnd(Src0Ty, Shift, SignBitMask).getReg(0);
+    And1 = MIRBuilder.buildAnd(Src0IntTy, Shift, SignBitMask).getReg(0);
   } else {
     auto ShiftAmt = MIRBuilder.buildConstant(Src1IntTy, Src1Size - Src0Size);
     auto Shift = MIRBuilder.buildLShr(Src1IntTy, Src1Int, ShiftAmt);
