@@ -8221,8 +8221,15 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
     // an explicit "integer(k)::" in an implied DO.
     context().NoteDefinedSymbol(*prev);
     name.symbol = nullptr; // undo the "FindSymbol()" above
-    // F'2023 19.4 p5 ambiguous rule about outer declarations
-    declTypeSpec = prev->GetType();
+    if (!dataStmtObjectInSpecPart_ || type) {
+      // F'2023 19.4 p5 ambiguous rule about outer declarations.  For a
+      // DATA statement in a specification part with no integer-type-spec,
+      // don't take the outer declaration's type here: typing is deferred
+      // to FinishSpecificationPart(), whose look-up prefers a declaration
+      // in the innermost scoping unit -- which may follow the DATA
+      // statement -- over the outer one.
+      declTypeSpec = prev->GetType();
+    }
   }
   Symbol &symbol{DeclareEntity<ObjectEntityDetails>(name, {})};
   if (!symbol.has<ObjectEntityDetails>()) {
@@ -10686,6 +10693,8 @@ void ResolveNamesVisitor::FinishSpecificationPart(
   // Define the types of data-implied-do index variables whose typing was
   // deferred, now that the whole specification part has been visited, using
   // the type that the index's name has in the scoping unit (F'2023 19.4 p5).
+  // Symbol::SetType (rather than DeclarationVisitor::SetType) suffices:
+  // the symbol is known to be untyped, so no conflict diagnostics can arise.
   for (MutableSymbolRef ref : specPartState_.deferredDataIDoVars) {
     Symbol &symbol{*ref};
     if (!symbol.GetType()) {

@@ -37,3 +37,54 @@ subroutine s4
   data (util(i),i=1,4)/4*.true./
   character :: i
 end subroutine
+
+! Execution-part DATA statement (obsolescent placement): the whole
+! specification part precedes it, so an undeclared index is still an error.
+subroutine s5
+  implicit none
+  logical, dimension(4), save :: util
+  continue
+  !ERROR: No explicit type declared for 'i'
+  data (util(i),i=1,4)/4*.true./
+end subroutine
+
+! DATA in a BLOCK construct's specification part: the index may be
+! declared later in the same block specification part.
+subroutine s6
+  implicit none
+  block
+    logical, dimension(4), save :: util
+    data (util(i),i=1,4)/4*.true./
+    integer :: i
+  end block
+end subroutine
+
+! The deferral is confined to the DATA statement's object list: a
+! standalone ac-implied-do in a later declaration's initializer does not
+! acquire it.
+subroutine s7
+  implicit none
+  integer :: i
+  logical, dimension(4), save :: util
+  data (util(i),i=1,4)/4*.true./
+  !ERROR: No explicit type declared for 'j'
+  integer :: a(4) = [(j, j=1,4)]
+end subroutine
+
+! DATA in a BLOCK DATA subprogram.
+block data s8
+  implicit none
+  logical, dimension(4) :: util
+  common /cb/ util
+  data (util(i),i=1,4)/4*.true./
+  integer :: i
+end block data
+
+! The index's name may be declared later as a named constant; the index
+! takes its type.
+subroutine s9
+  implicit none
+  logical, dimension(4), save :: util
+  data (util(i),i=1,4)/4*.true./
+  integer(8), parameter :: i = 0_8
+end subroutine
