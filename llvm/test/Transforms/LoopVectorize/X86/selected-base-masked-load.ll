@@ -47,11 +47,11 @@ define void @selected_base_unit_stride(ptr noalias readonly %conditions,
 ; TAIL: [[FROM_B:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 1 {{.*}}, <8 x i1> [[ACTIVE_B]], <8 x i32> poison)
 ; TAIL: select <8 x i1> [[MASK]], <8 x i32> [[FROM_A]], <8 x i32> [[FROM_B]]
 ;
-; VPLAN-LABEL: VPlan for loop in 'selected_base_unit_stride' after widenSelectedBaseLoads
-; VPLAN: EMIT ir<%src.ptr>.1 = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN: EMIT ir<%src.ptr>.2 = getelementptr inbounds ir<%b>, ir<%iv>
-; VPLAN: [[A_PTR:vp<%[0-9]+>]] = vector-pointer inbounds i32, ir<%src.ptr>.1, ir<1>
-; VPLAN: [[B_PTR:vp<%[0-9]+>]] = vector-pointer inbounds i32, ir<%src.ptr>.2, ir<1>
+; VPLAN-LABEL: VPlan for loop in 'selected_base_unit_stride' after VPlanTransforms::widenSelectedBaseLoads
+; VPLAN: CLONE ir<%src.ptr>.1 = getelementptr inbounds ir<%a>, ir<%iv>
+; VPLAN: CLONE ir<%src.ptr>.2 = getelementptr inbounds ir<%b>, ir<%iv>
+; VPLAN: [[A_PTR:vp<%[0-9]+>]] = vector-pointer i32, ir<%src.ptr>.1, ir<1>
+; VPLAN: [[B_PTR:vp<%[0-9]+>]] = vector-pointer i32, ir<%src.ptr>.2, ir<1>
 ; VPLAN: [[NOT_MASK:vp<%[0-9]+>]] = not ir<%cmp>
 ; VPLAN: WIDEN ir<%value> = load [[A_PTR]], ir<%cmp>
 ; VPLAN: WIDEN ir<%value>.1 = load [[B_PTR]], [[NOT_MASK]]
@@ -163,10 +163,10 @@ define void @selected_base_stride_two(ptr noalias readonly %conditions,
 ; CHECK-NOT: @llvm.masked.load
 ; CHECK: ret void
 ;
-; VPLAN-LABEL: VPlan for loop in 'selected_base_stride_two' after widenSelectedBaseLoads
-; VPLAN: EMIT ir<%src.ptr> = getelementptr inbounds ir<%base>, ir<%index>
+; VPLAN-LABEL: VPlan for loop in 'selected_base_stride_two' after VPlanTransforms::widenSelectedBaseLoads
+; VPLAN: WIDEN-GEP ir<%src.ptr> = getelementptr inbounds ir<%base>, ir<%index>
 ; VPLAN-NOT: vector-pointer
-; VPLAN: EMIT-SCALAR ir<%value> = load ir<%src.ptr>
+; VPLAN: WIDEN ir<%value> = load ir<%src.ptr>
 entry:
   br label %loop
 

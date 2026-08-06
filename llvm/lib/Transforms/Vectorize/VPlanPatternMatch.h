@@ -1126,7 +1126,8 @@ inline GetElementPtr_match m_GetElementPtr(Type *&SourceElementType,
 ///
 ///   load (gep (select Cond, TrueBase, FalseBase), Indices...)
 struct SelectedBaseLoadPattern {
-  VPInstruction *Addr = nullptr;
+  VPValue *Addr = nullptr;
+  Type *SourceElementType = nullptr;
   SmallVector<VPValue *> GEPOperands;
   VPValue *Cond = nullptr;
   VPValue *TrueBase = nullptr;
@@ -1138,19 +1139,18 @@ struct SelectedBaseLoadPattern {
 struct SelectedBaseLoad_match {
   SelectedBaseLoadPattern &Pattern;
 
-  bool match(const VPInstruction *Load) const {
-    if (Load->getOpcode() != Instruction::Load)
+  bool matchLoad(const Instruction *I, VPValue *Addr) const {
+    auto *LI = dyn_cast<LoadInst>(I);
+    if (!LI || !LI->isSimple())
       return false;
 
-    auto *LI = dyn_cast_or_null<LoadInst>(Load->getUnderlyingInstr());
-    if (!LI || !LI->isSimple())
+    if (!isa<VPWidenGEPRecipe, VPInstruction>(Addr))
       return false;
 
     Type *SourceElementTy = nullptr;
     ArrayRef<VPValue *> GEPOperands;
     if (!VPlanPatternMatch::match(
-            Load->getOperand(0),
-            m_GetElementPtr(SourceElementTy, GEPOperands)) ||
+            Addr, m_GetElementPtr(SourceElementTy, GEPOperands)) ||
         GEPOperands.size() < 2)
       return false;
 
@@ -1163,13 +1163,20 @@ struct SelectedBaseLoad_match {
         !Cond->getScalarType()->isIntegerTy(1) || TrueBase == FalseBase)
       return false;
 
-    auto *Addr = dyn_cast<VPInstruction>(Load->getOperand(0));
-    if (!Addr)
-      return false;
-
-    Pattern = {Addr, SmallVector<VPValue *>(GEPOperands), Cond, TrueBase,
-               FalseBase};
+    Pattern = {Addr, SourceElementTy, SmallVector<VPValue *>(GEPOperands),
+               Cond, TrueBase,        FalseBase};
     return true;
+  }
+
+  bool match(const VPInstruction *Load) const {
+    if (Load->getOpcode() != Instruction::Load)
+      return false;
+    return matchLoad(dyn_cast_or_null<LoadInst>(Load->getUnderlyingInstr()),
+                     Load->getOperand(0));
+  }
+
+  bool match(const VPWidenLoadRecipe *Load) const {
+    return matchLoad(&Load->getIngredient(), Load->getAddr());
   }
 };
 
