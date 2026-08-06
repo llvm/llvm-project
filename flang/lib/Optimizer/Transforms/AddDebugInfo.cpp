@@ -554,7 +554,7 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
   // declared inside a procedure, is not visible outside this compilation unit.
   // It also needs no linkage name because there is no external symbol for a
   // debugger to match it against.
-  bool isLocalToUnit = globalOp.getLinkName() == "internal";
+  const bool isLocalToUnit = globalOp.getLinkName() == "internal";
   mlir::StringAttr linkageName =
       isLocalToUnit ? mlir::StringAttr()
                     : mlir::StringAttr::get(context, globalOp.getName());
