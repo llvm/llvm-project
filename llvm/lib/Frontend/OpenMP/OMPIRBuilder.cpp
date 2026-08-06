@@ -5807,9 +5807,18 @@ CanonicalLoopInfo *OpenMPIRBuilder::createLoopSkeleton(
   Builder.CreateBr(Latch);
 
   Builder.SetInsertPoint(Latch);
-  Value *Next = Builder.CreateAdd(IndVarPHI, ConstantInt::get(IndVarTy, 1),
-                                  "omp_" + Name + ".next", /*HasNUW=*/true,
-                                  /*HasNSW=*/Config.hasNoSignedWrap());
+  bool HasNSW = Config.hasNoSignedWrap();
+  if (HasNSW) {
+    if (auto *CI = dyn_cast<ConstantInt>(TripCount)) {
+      unsigned BitWidth = CI->getType()->getIntegerBitWidth();
+      APInt SignedMax = APInt::getSignedMaxValue(BitWidth);
+      if (CI->getValue().ugt(SignedMax))
+        HasNSW = false;
+    }
+  }
+  Value *Next =
+      Builder.CreateAdd(IndVarPHI, ConstantInt::get(IndVarTy, 1),
+                        "omp_" + Name + ".next", /*HasNUW=*/true, HasNSW);
   Builder.CreateBr(Header);
   IndVarPHI->addIncoming(Next, Latch);
 
