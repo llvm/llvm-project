@@ -9,6 +9,7 @@
 
 from typing import Dict, List, NamedTuple, Optional, Sequence, TextIO
 import argparse
+import common
 import json
 import logging
 import pathlib
@@ -19,88 +20,16 @@ import tabulate
 import urllib.parse
 
 
-class WorkItem(NamedTuple):
-    """
-    One line of the plan as produced by `plan-benchmarks`.
-    """
-    commit: str
-    machine: str
-    samples_have: int
-    samples_want: int
-    reason: str = ''
-
-    @staticmethod
-    def parse(line: str) -> 'WorkItem':
-        """
-        Read one line of a plan, validating every field.
-
-        A plan is normally produced by `plan-benchmarks`, but it can also be
-        hand-written, so we are careful about validating the data here.
-        """
-        item = json.loads(line)
-        if not isinstance(item, dict):
-            raise ValueError(f'expected a JSON object, got {type(item).__name__}')
-
-        def field(name: str, types, required: bool = True, default=None):
-            if name not in item:
-                if required:
-                    raise ValueError(f'missing required field {name}')
-                return default
-            value = item[name]
-            if isinstance(value, bool) or not isinstance(value, types):
-                raise ValueError(f'{name} has the wrong type: {value!r}')
-            return value
-
-        commit = field('commit', str)
-        if not is_sha(commit):
-            raise ValueError(f'commit is not a full 40-character SHA: {commit!r}')
-        machine = field('machine', str)
-        if not machine:
-            raise ValueError('machine is empty')
-        samples_have = field('samples_have', int)
-        samples_want = field('samples_want', int)
-        if samples_have < 0:
-            raise ValueError(f'samples_have is negative: {samples_have}')
-        if samples_want <= samples_have:
-            raise ValueError(f'samples_want {samples_want} is not more than samples_have '
-                             f'{samples_have}, so there is nothing to request')
-        return WorkItem(commit=commit.lower(),
-                        machine=machine,
-                        samples_have=samples_have,
-                        samples_want=samples_want,
-                        reason=field('reason', str, required=False, default=''))
-
-    @property
-    def target(self) -> 'Target':
-        """The unit of work this item is about."""
-        return Target(self.commit, self.machine)
-
-    @property
-    def runs_to_request(self) -> int:
-        """How many more runs this item is asking for."""
-        return self.samples_want - self.samples_have
-
-
-class Target(NamedTuple):
-    """
-    A unit of work: one commit benchmarked on one machine.
-
-    Plans, workflow runs and retry budgets are all keyed by this pair.
-    """
-    commit: str
-    machine: str
-
-
 class WorkflowRun(NamedTuple):
     """A run of the benchmark workflow, as the Github API describes it."""
     identifier: int
-    target: Target
+    target: common.Target
     finished: bool
 
 
 class Decision(NamedTuple):
     """What to do with one work item, and why."""
-    item: WorkItem
+    item: common.WorkItem
     action: str # 'dispatch', 'skip' or 'defer'
     jobs: int   # how many runs to request now
     reason: str
@@ -108,9 +37,9 @@ class Decision(NamedTuple):
 
 class Runs(NamedTuple):
     """What the workflow is currently doing, counted per target."""
-    in_flight: Dict[Target, int]
-    completed: Dict[Target, int]
-    ids: Dict[Target, List[int]]      # in-flight run ids, for the summary
+    in_flight: Dict[common.Target, int]
+    completed: Dict[common.Target, int]
+    ids: Dict[common.Target, List[int]]      # in-flight run ids, for the summary
 
     def in_flight_on(self, machine: str) -> int:
         """How many runs are in flight on a machine, whatever they are benchmarking."""
@@ -129,9 +58,6 @@ class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
                     argparse.RawDescriptionHelpFormatter):
     """Show defaults, but keep the paragraphs of the description intact."""
 
-def is_sha(string: str) -> bool:
-    return len(string) == 40 and all(c in '0123456789abcdef' for c in string.lower())
-
 def positive(string: str) -> int:
     value = int(string)
     if value < 1:
@@ -148,35 +74,35 @@ class GithubError(Exception):
     pass
 
 
-def parse_plan(stream: TextIO) -> List[WorkItem]:
+def parse_plan(stream: TextIO) -> List[common.WorkItem]:
     """Parse a plan into a list of work items, in the order they were written."""
-    items: List[WorkItem] = []
+    items: List[common.WorkItem] = []
     for (number, line) in enumerate(stream, start=1):
         line = line.strip()
         if not line:
             continue
         try:
-            items.append(WorkItem.parse(line))
+            items.append(common.WorkItem.parse(line))
         except ValueError as error:
             raise ValueError(f'line {number} of the plan is not a valid work item: {error}')
     return items
 
 
-def collapse(items: Sequence[WorkItem]) -> List[WorkItem]:
+def collapse(items: Sequence[common.WorkItem]) -> List[common.WorkItem]:
     """
     Keep one item per commit and machine, the one asking for the most runs.
 
     A plan can be concatenated from multiple sources or handwritten, so we
     de-duplicate commits against the same machine to avoid duplicate work.
     """
-    best: Dict[Target, WorkItem] = {}
+    best: Dict[common.Target, common.WorkItem] = {}
     for item in items:
         existing = best.get(item.target)
         if existing is None or item.runs_to_request > existing.runs_to_request:
             best[item.target] = item
     # Preserve the order of the plan: it is the order the work should be done in.
     seen = set()
-    ordered: List[WorkItem] = []
+    ordered: List[common.WorkItem] = []
     for item in items:
         if item.target not in seen:
             seen.add(item.target)
@@ -184,14 +110,14 @@ def collapse(items: Sequence[WorkItem]) -> List[WorkItem]:
     return ordered
 
 
-def target_of_run(title: str) -> Optional[Target]:
+def target_of_run(title: str) -> Optional[common.Target]:
     """
     Return what a workflow run is benchmarking, or None if it can't be told.
 
     The name has to match the workflow's `run-name` exactly.
     """
     match = RUN_NAME.match(title.strip())
-    return Target(match.group(1).lower(), match.group(2)) if match else None
+    return common.Target(match.group(1).lower(), match.group(2)) if match else None
 
 
 def run_gh(args: Sequence[str], stdin: Optional[str] = None) -> str:
@@ -247,9 +173,9 @@ def workflow_runs(repo: str, workflow: str) -> List[WorkflowRun]:
 
 def summarize(runs: Sequence[WorkflowRun]) -> Runs:
     """Count what the workflow is doing, per target."""
-    in_flight: Dict[Target, int] = {}
-    completed: Dict[Target, int] = {}
-    ids: Dict[Target, List[int]] = {}
+    in_flight: Dict[common.Target, int] = {}
+    completed: Dict[common.Target, int] = {}
+    ids: Dict[common.Target, List[int]] = {}
     for run in runs:
         if run.finished:
             completed[run.target] = completed.get(run.target, 0) + 1
@@ -259,7 +185,7 @@ def summarize(runs: Sequence[WorkflowRun]) -> Runs:
     return Runs(in_flight=in_flight, completed=completed, ids=ids)
 
 
-def decide(items: Sequence[WorkItem],
+def decide(items: Sequence[common.WorkItem],
            runs: Runs,
            max_in_flight: int,
            extra_attempts: int) -> List[Decision]:
@@ -283,7 +209,7 @@ def decide(items: Sequence[WorkItem],
                  for machine in {item.machine for item in items}}
     decisions: List[Decision] = []
 
-    def in_flight_detail(target: Target, running: int) -> str:
+    def in_flight_detail(target: common.Target, running: int) -> str:
         ids = ', '.join(str(i) for i in runs.ids.get(target, [])[:3])
         return f'{running} already in flight' + (f' (run {ids})' if ids else '')
 
@@ -318,7 +244,7 @@ def decide(items: Sequence[WorkItem],
     return decisions
 
 
-def workflow_inputs(args: argparse.Namespace, item: WorkItem) -> Dict[str, str]:
+def workflow_inputs(args: argparse.Namespace, item: common.WorkItem) -> Dict[str, str]:
     """Return the inputs to dispatch the workflow with for a work item."""
     inputs = {'commit': item.commit,
               'lnt-machine': item.machine,

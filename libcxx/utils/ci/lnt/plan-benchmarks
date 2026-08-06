@@ -7,8 +7,9 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from typing import Dict, List, Optional, Sequence, TypedDict
+from typing import Dict, List, Optional, Sequence
 import argparse
+import common
 import json
 import logging
 import pathlib
@@ -22,21 +23,10 @@ import urllib.request
 # LNT instances can be slow: timeout after that many seconds.
 TIMEOUT_SECONDS = 120
 
-# One line of the produced plan.
-class WorkItem(TypedDict):
-    commit: str
-    machine: str
-    samples_have: int
-    samples_want: int
-    reason: str
-
 
 class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
                     argparse.RawDescriptionHelpFormatter):
     """Show defaults, but keep the paragraphs of the description intact."""
-
-def is_sha(string: str) -> bool:
-    return len(string) == 40 and all(c in '0123456789abcdef' for c in string.lower())
 
 def positive(string: str) -> int:
     value = int(string)
@@ -93,23 +83,23 @@ def benchmarked_commits(lnt_url: str, test_suite: str, machine: str) -> Optional
 def plan(commits: Sequence[str],
          have: Dict[str, int],
          want: int,
-         machine: str) -> List[WorkItem]:
+         machine: str) -> List[common.WorkItem]:
     """
     Return the work items needed to bring every commit up to `want` runs.
 
     The order of the input is preserved. A commit repeated on the input is
     planned once, at the position it first appeared.
     """
-    items: List[WorkItem] = []
+    items: List[common.WorkItem] = []
     for commit in dict.fromkeys(commits):
         existing = have.get(commit, 0)
         if existing >= want:
             continue
-        items.append({'commit': commit,
-                      'machine': machine,
-                      'samples_have': existing,
-                      'samples_want': want,
-                      'reason': f'{existing}/{want} runs'})
+        items.append(common.WorkItem(commit=commit,
+                                     machine=machine,
+                                     samples_have=existing,
+                                     samples_want=want,
+                                     reason=f'{existing}/{want} runs'))
     return items
 
 
@@ -171,7 +161,7 @@ def main(argv: List[str]) -> int:
                               logging.WARNING if args.quiet else logging.INFO)
 
     requested = [c.lower() for line in args.commit_list for c in line.split()] # normalize commit SHAs
-    invalid = [c for c in requested if not is_sha(c)]
+    invalid = [c for c in requested if not common.is_sha(c)]
     if invalid:
         raise ValueError(f'expected full 40-character SHAs on the input, got {invalid[0]!r}')
 
@@ -188,7 +178,6 @@ def main(argv: List[str]) -> int:
     items = plan(requested, have, args.samples, args.machine)
 
     if not args.quiet:
-        runs_to_request = lambda item: item['samples_want'] - item['samples_have']
         unique = list(dict.fromkeys(requested))
         complete = sum(1 for c in unique if have.get(c, 0) >= args.samples)
         partial = sum(1 for c in unique if 0 < have.get(c, 0) < args.samples)
@@ -196,24 +185,24 @@ def main(argv: List[str]) -> int:
         print(f'Requested commits: {len(unique)}   '
               f'({len(unique) - complete - partial} with no data, {partial} partial, {complete} complete)',
               file=sys.stderr)
-        planned = {i['commit']: i for i in items}
+        planned = {i.commit: i for i in items}
         rows = []
         for commit in unique:
             item = planned.get(commit)
             if item is None and not args.verbose:
                 continue
-            action = f'request {runs_to_request(item)}' if item else 'ok'
+            action = f'request {item.runs_to_request}' if item else 'ok'
             rows.append((commit[:12], have.get(commit, 0), args.samples, action))
         if rows:
             print(tabulate.tabulate(rows, headers=['COMMIT', 'HAVE', 'WANT', 'ACTION'],
                                     tablefmt='plain', disable_numparse=True,
                                     colalign=('left', 'right', 'right', 'left')),
                   file=sys.stderr)
-        print(f'Plan: {sum(runs_to_request(i) for i in items)} runs across {len(items)} commits',
+        print(f'Plan: {sum(i.runs_to_request for i in items)} runs across {len(items)} commits',
               file=sys.stderr)
 
     # Write the output all at once at the end, to avoid partial output in case of failure.
-    contents = ''.join(json.dumps(i, sort_keys=True) + '\n' for i in items)
+    contents = ''.join(i.serialize() + '\n' for i in items)
     if args.output is None:
         sys.stdout.write(contents)
     else:
