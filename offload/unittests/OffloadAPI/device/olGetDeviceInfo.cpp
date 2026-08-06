@@ -12,8 +12,8 @@
 
 DeviceInfoProperties JustSupportedProperties = mergeProperties(
     {BoolProperties,
-     {propertiesTypes.at(OL_DEVICE_INFO_HALF_FP_CONFIG),
-      propertiesTypes.at(OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF)}});
+     IrrelevantGTCapabilitiesProperties,
+      IrrelevantGTUint32Properties});
 
 DeviceInfoProperties NonZeroProperties =
     mergeProperties({RelevantGTCapabilitiesProperties,

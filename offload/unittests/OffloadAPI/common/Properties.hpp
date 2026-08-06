@@ -27,8 +27,6 @@ template <typename T> using PropertiesContainer = std::set<T>;
 // that require them
 template <typename T>
 using PropertiesWithSizeContainer = std::vector<SizedProperty<T>>;
-template <typename T>
-using PropertiesTypes = std::unordered_map<T, SizedProperty<T>>;
 
 template <typename T>
 auto createPropertiesWithSizeContainer(
@@ -68,24 +66,9 @@ removeIrrelevantProperties(PropertiesContainer<T> Base,
   return Res;
 }
 
-template <typename T>
-PropertiesTypes<T> inline createTypesMap(
-    std::initializer_list<PropertiesWithSizeContainer<T>> Properties) {
-  PropertiesTypes<T> Res;
-
-  for (auto Container : Properties) {
-    for (auto Prop : Container) {
-      Res.insert({Prop.Property, Prop});
-    }
-  }
-
-  return Res;
-}
-
 // ol_device_info_t
 using DeviceInfoProp = PropertiesContainer<ol_device_info_t>;
 using DeviceInfoProperties = PropertiesWithSizeContainer<ol_device_info_t>;
-using DeviceInfoPropertiesTypes = PropertiesTypes<ol_device_info_t>;
 
 inline const DeviceInfoProp PropBool{OL_DEVICE_INFO_SINGLE_FP_SUPPORT,
                                      OL_DEVICE_INFO_DOUBLE_FP_SUPPORT,
@@ -128,6 +111,8 @@ inline const DeviceInfoProperties CapabilitesFlagsProperties =
 
 inline const DeviceInfoProp PropIrrelevantGTCapabilities = {
     OL_DEVICE_INFO_HALF_FP_CONFIG};
+inline const DeviceInfoProperties IrrelevantGTCapabilitiesProperties = createPropertiesWithSizeContainer(sizeof(ol_device_fp_capability_flags_t), PropIrrelevantGTCapabilities);
+
 inline const DeviceInfoProp Prop_RelevantGTCapabilites =
     removeIrrelevantProperties(PropCapabilitiesFlags,
                                PropIrrelevantGTCapabilities);
@@ -137,6 +122,8 @@ inline const DeviceInfoProperties RelevantGTCapabilitiesProperties =
 
 inline const DeviceInfoProp PropIrrelevantGTUint32 = {
     OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF};
+inline const DeviceInfoProperties IrrelevantGTUint32Properties = createPropertiesWithSizeContainer(sizeof(uint32_t), PropIrrelevantGTUint32);
+
 inline const DeviceInfoProp Prop_RelevantGTUint32 =
     removeIrrelevantProperties(PropUint32, PropIrrelevantGTUint32);
 inline const DeviceInfoProperties RelevantGTUint32Properties =
@@ -162,10 +149,6 @@ inline const DeviceInfoProp PropDimensions{
     OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION};
 inline const DeviceInfoProperties DimensionsProperties =
     createPropertiesWithSizeContainer(sizeof(ol_dimensions_t), PropDimensions);
-
-inline const DeviceInfoPropertiesTypes propertiesTypes =
-    createTypesMap({BoolProperties, Uint32Properties, Uint64Properties,
-                    CapabilitesFlagsProperties});
 
 inline bool defaultCheckIsNonZero(char *Buffer) {
   return memcmp(Buffer, ZeroArray, MAX_DEVICE_INFO_BYTES) != 0;
