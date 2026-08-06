@@ -138,13 +138,13 @@ define i32 @reduce_i16(i32 %arg) {
 
 define i32 @reduce_i8(i32 %arg) {
 ; SSE-LABEL: 'reduce_i8'
-; SSE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:11 Lat:10 SizeLat:11 for: %V2 = call i8 @llvm.vector.reduce.or.v2i8(<2 x i8> undef)
-; SSE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:11 Lat:10 SizeLat:11 for: %V4 = call i8 @llvm.vector.reduce.or.v4i8(<4 x i8> undef)
-; SSE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:11 Lat:10 SizeLat:11 for: %V8 = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> undef)
-; SSE-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:11 Lat:10 SizeLat:11 for: %V16 = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> undef)
-; SSE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:12 Lat:11 SizeLat:12 for: %V32 = call i8 @llvm.vector.reduce.or.v32i8(<32 x i8> undef)
-; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:14 Lat:13 SizeLat:14 for: %V64 = call i8 @llvm.vector.reduce.or.v64i8(<64 x i8> undef)
-; SSE-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:18 Lat:17 SizeLat:18 for: %V128 = call i8 @llvm.vector.reduce.or.v128i8(<128 x i8> undef)
+; SSE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:11 Lat:10 SizeLat:11 for: %V2 = call i8 @llvm.vector.reduce.or.v2i8(<2 x i8> undef)
+; SSE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:11 Lat:10 SizeLat:11 for: %V4 = call i8 @llvm.vector.reduce.or.v4i8(<4 x i8> undef)
+; SSE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:11 Lat:10 SizeLat:11 for: %V8 = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> undef)
+; SSE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:11 Lat:10 SizeLat:11 for: %V16 = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> undef)
+; SSE-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:12 Lat:11 SizeLat:12 for: %V32 = call i8 @llvm.vector.reduce.or.v32i8(<32 x i8> undef)
+; SSE-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:14 Lat:13 SizeLat:14 for: %V64 = call i8 @llvm.vector.reduce.or.v64i8(<64 x i8> undef)
+; SSE-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:18 Lat:17 SizeLat:18 for: %V128 = call i8 @llvm.vector.reduce.or.v128i8(<128 x i8> undef)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX1-LABEL: 'reduce_i8'

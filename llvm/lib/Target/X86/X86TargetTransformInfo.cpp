@@ -5723,15 +5723,15 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     { ISD::AND,   MVT::v2i64,   {2, 2, 3, 3} },
     { ISD::AND,   MVT::v4i32,   {3, 4, 5, 5} },
     { ISD::AND,   MVT::v8i16,   {4, 7, 8, 8} },
-    { ISD::AND,   MVT::v16i8,   {5,10,11,11} },
+    { ISD::AND,   MVT::v16i8,   {6,10,11,11} },
     { ISD::OR,    MVT::v2i64,   {2, 2, 3, 3} },
     { ISD::OR,    MVT::v4i32,   {3, 4, 5, 5} },
     { ISD::OR,    MVT::v8i16,   {4, 7, 8, 8} },
-    { ISD::OR,    MVT::v16i8,   {5,10,11,11} },
+    { ISD::OR,    MVT::v16i8,   {6,10,11,11} },
     { ISD::XOR,   MVT::v2i64,   {2, 2, 3, 3} },
     { ISD::XOR,   MVT::v4i32,   {3, 4, 5, 5} },
     { ISD::XOR,   MVT::v8i16,   {4, 7, 8, 8} },
-    { ISD::XOR,   MVT::v16i8,   {5,10,11,11} },
+    { ISD::XOR,   MVT::v16i8,   {6,10,11,11} },
   };
 
   static const CostKindTblEntry AVX1CostTbl[] = {
