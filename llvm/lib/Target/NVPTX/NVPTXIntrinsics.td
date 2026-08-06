@@ -6247,7 +6247,7 @@ foreach dim = ["x", "y", "z"] in {
 //
 
 class Tcgen05MMABase<bit IsSparse, string ASpace, string Kind, int CtaGroup,
-                     string CollectorUsage, string CollectorUsageB = ""> :
+                     string CollectorUsage, string CollectorUsageB = "discard"> :
         NVPTXInst<(outs), (ins), "?", []>,
         Requires<[]> {
 
@@ -6266,13 +6266,12 @@ class Tcgen05MMABase<bit IsSparse, string ASpace, string Kind, int CtaGroup,
                   !eq(Kind, "i8"): 3,
                 );
 
-  bit HasCollectorB = !ne(CollectorUsageB, "");
+  bit HasCollectorBQualifier = !ne(CollectorUsageB, "discard");
   int CollectorUsageBVal = !cond(
     !eq(CollectorUsageB, "discard"): 0,
     !eq(CollectorUsageB, "lastuse"): 1,
     !eq(CollectorUsageB, "fill"): 2,
-    !eq(CollectorUsageB, "use"): 3,
-    true: 0
+    !eq(CollectorUsageB, "use"): 3
   );
 
   dag SparseMetadataIns = !if(IsSparse, (ins B32:$spmetadata), (ins));
@@ -6315,7 +6314,7 @@ class Tcgen05MMAInst<bit IsSparse, string ASpace, string Kind, int CtaGroup,
         Tcgen05MMABase<IsSparse, ASpace, Kind, CtaGroup, CollectorUsageA,
                        CollectorUsageB> {
   let Predicates = !listconcat(
-    !if(HasCollectorB, [callSubtarget<"hasTcgen05RubinFamily">], []),
+    !if(HasCollectorBQualifier, [callSubtarget<"hasTcgen05RubinFamily">], []),
     !cond(
       IsScaleInputD : [callSubtarget<"hasTcgen05MMAScaleInputDImm">],
       !eq(Kind, "i8") : [callSubtarget<"hasTcgen05MMAI8Kind">],
@@ -6337,7 +6336,7 @@ class Tcgen05MMAInst<bit IsSparse, string ASpace, string Kind, int CtaGroup,
                   # SpCtaKindStr
                   # !if(IsAShift, ".ashift", "")
                   # ".collector::a::" # CollectorUsageA
-                  # !if(HasCollectorB, ".collector::b::" # CollectorUsageB, "")
+                  # !if(HasCollectorBQualifier, ".collector::b::" # CollectorUsageB, "")
                   # BaseOperandsStr
                   # InputDStr
                   # ScaleInpStr
@@ -6361,7 +6360,7 @@ foreach sparse = [0, 1] in {
           foreach scale_input_d = !if(!or(!eq(kind, "f16"),
                                           !eq(kind, "tf32")), [0, 1], [0]) in {
             foreach ashift = !if(!eq(space, "tensor"), [0, 1], [0]) in {
-              foreach collector_usage_b = ["", "discard", "lastuse", "fill", "use"] in {
+              foreach collector_usage_b = ["discard", "lastuse", "fill", "use"] in {
                 def : Tcgen05MMAInst<sparse, space, kind, cta_group,
                                     collector_usage_a, collector_usage_b,
                                     scale_input_d, ashift>;
@@ -6421,7 +6420,7 @@ class Tcgen05MMADisableOutputLaneInst<bit IsSparse, string ASpace, string Kind,
         Tcgen05MMABase<IsSparse, ASpace, Kind, CtaGroup, CollectorUsageA,
                        CollectorUsageB> {
   let Predicates = !listconcat(
-    !if(HasCollectorB, [callSubtarget<"hasTcgen05RubinFamily">], []),
+    !if(HasCollectorBQualifier, [callSubtarget<"hasTcgen05RubinFamily">], []),
     !cond(
       IsScaleInputD : [callSubtarget<"hasTcgen05MMAScaleInputDImm">],
       !eq(Kind, "i8") : [callSubtarget<"hasTcgen05MMAI8Kind">],
@@ -6467,7 +6466,7 @@ class Tcgen05MMADisableOutputLaneInst<bit IsSparse, string ASpace, string Kind,
                   # SpCtaKindStr
                   # !if(IsAShift, ".ashift", "")
                   # ".collector::a::" # CollectorUsageA
-                  # !if(HasCollectorB, ".collector::b::" # CollectorUsageB, "")
+                  # !if(HasCollectorBQualifier, ".collector::b::" # CollectorUsageB, "")
                   # BaseOperandsStr
                   # ", " # DisableOutputLaneStr
                   # InputDStr
@@ -6493,7 +6492,7 @@ foreach sparse = [0, 1] in {
           foreach scale_input_d = !if(!or(!eq(kind, "f16"),
                                           !eq(kind, "tf32")), [0, 1], [0]) in {
             foreach ashift = !if(!eq(space, "tensor"), [0, 1], [0]) in {
-              foreach collector_usage_b = ["", "discard", "lastuse", "fill", "use"] in {
+              foreach collector_usage_b = ["discard", "lastuse", "fill", "use"] in {
                 def :
                   Tcgen05MMADisableOutputLaneInst<sparse, space, kind, cta_group,
                                                   collector_usage_a, collector_usage_b,
@@ -6517,7 +6516,7 @@ class Tcgen05MMABlockScaleInst<bit IsSparse, string ASpace, string Kind,
         Tcgen05MMABase<IsSparse, ASpace, Kind, CtaGroup, CollectorUsageA,
                        CollectorUsageB> {
   let Predicates = !listconcat(
-    !if(HasCollectorB, [callSubtarget<"hasTcgen05RubinFamily">], []),
+    !if(HasCollectorBQualifier, [callSubtarget<"hasTcgen05RubinFamily">], []),
     !cond(
       !and(IsSparse,
            !eq(Kind, "mxf4")) : [callSubtarget<"hasTcgen05MMASparseMxf4">],
@@ -6544,7 +6543,7 @@ class Tcgen05MMABlockScaleInst<bit IsSparse, string ASpace, string Kind,
                   # SpCtaKindStr
                   # ".block_scale" # ScaleVecSize
                   # ".collector::a::" # CollectorUsageA
-                  # !if(HasCollectorB, ".collector::b::" # CollectorUsageB, "")
+                  # !if(HasCollectorBQualifier, ".collector::b::" # CollectorUsageB, "")
                   # BaseOperandsStr
                   # ", [$scale_a], [$scale_b]"
                   # InputDStr
@@ -6567,7 +6566,7 @@ foreach sparse = [0, 1] in {
       foreach scale_vec_size = ["", ".block16", ".block32"] in {
         foreach cta_group = [1, 2] in {
           foreach collector_usage_a = ["fill", "use", "lastuse", "discard"] in {
-            foreach collector_usage_b = ["", "discard", "lastuse", "fill", "use"] in {
+            foreach collector_usage_b = ["discard", "lastuse", "fill", "use"] in {
               if NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<kind, scale_vec_size>.ret then {
                 def : Tcgen05MMABlockScaleInst<sparse, space, kind, cta_group,
                                                scale_vec_size, collector_usage_a,
