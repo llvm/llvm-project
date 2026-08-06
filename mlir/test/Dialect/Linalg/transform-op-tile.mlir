@@ -127,7 +127,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func @tile_linalg_matmul_packed_tile_sizes_loop_result_arity_mismatch(
+func.func @negative_tile_linalg_matmul_packed_tile_sizes_loop_result_arity_mismatch(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> tensor<128x128xf32> {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -241,7 +241,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func @tile_linalg_matmul(
+func.func @negative_tile_linalg_matmul_param_value_count_mismatch(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> (tensor<128x128xf32>, tensor<128x128xf32>) {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -268,7 +268,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func @tile_linalg_matmul(
+func.func @negative_tile_linalg_matmul_size_producer_count_mismatch(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> (tensor<128x128xf32>, tensor<128x128xf32>) {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -378,7 +378,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-func.func @too_many_tiles(%arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>,
+func.func @negative_too_many_tiles(%arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>,
                           %arg2: tensor<128x128xf32>) ->  tensor<128x128xf32> {
   // expected-note @below {{target op}}
   %0 = linalg.matmul ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -406,7 +406,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func @tile_linalg_matmul(
+func.func @negative_tile_linalg_matmul_loop_result_arity_mismatch(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> tensor<128x128xf32> {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -427,7 +427,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func @tile_linalg_matmul_interchange_length_exceeds_rank(
+func.func @negative_tile_linalg_matmul_interchange_length_exceeds_rank(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> tensor<128x128xf32> {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -448,7 +448,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func @tile_linalg_matmul_interchange_out_of_range(
+func.func @negative_tile_linalg_matmul_interchange_out_of_range(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> tensor<128x128xf32> {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -469,7 +469,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func @tile_linalg_matmul_interchange_duplicate_value(
+func.func @negative_tile_linalg_matmul_interchange_duplicate_value(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> tensor<128x128xf32> {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -491,7 +491,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func @tile_linalg_matmul_dynamic_valued_interchange_out_of_range(
+func.func @negative_tile_linalg_matmul_dynamic_valued_interchange_out_of_range(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> tensor<128x128xf32> {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -513,7 +513,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func @tile_linalg_matmul_dynamic_valued_interchange_duplicate_value(
+func.func @negative_tile_linalg_matmul_dynamic_valued_interchange_duplicate_value(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> tensor<128x128xf32> {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -536,7 +536,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func @tile_linalg_matmul_dynamic_valued_interchange_duplicate_value_from_two_constant_params(
+func.func @negative_tile_linalg_matmul_dynamic_valued_interchange_duplicate_value_from_two_constant_params(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> tensor<128x128xf32> {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -558,7 +558,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func @tile_linalg_matmul_packed_interchange_non_integer_param(
+func.func @negative_tile_linalg_matmul_packed_interchange_non_integer_param(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> tensor<128x128xf32> {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
@@ -578,7 +578,7 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func @tile_linalg_matmul(
+func.func @negative_tile_linalg_matmul_zero_tiles_loop_result_arity_mismatch(
   %arg0: tensor<128x128xf32>, %arg1: tensor<128x128xf32>, %arg2: tensor<128x128xf32>)
     -> tensor<128x128xf32> {
   %0 = linalg.matmul  ins(%arg0, %arg1: tensor<128x128xf32>, tensor<128x128xf32>)
