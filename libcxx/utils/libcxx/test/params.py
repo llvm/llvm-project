@@ -484,7 +484,6 @@ DEFAULT_PARAMETERS = [
                 AddCompileFlag("-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_OBSERVE")       if assertion_semantic == "observe" else None,
                 AddCompileFlag("-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE") if assertion_semantic == "quick_enforce" else None,
                 AddCompileFlag("-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_ENFORCE")       if assertion_semantic == "enforce" else None,
-                AddFeature("libcpp-assertion-semantic={}".format(assertion_semantic))                   if assertion_semantic != "undefined" else None,
             ],
         ),
     ),

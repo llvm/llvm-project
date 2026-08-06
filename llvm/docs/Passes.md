@@ -589,15 +589,6 @@ eliminating loops with non-infinite computable trip counts that have no side
 effects or volatile instructions, and do not contribute to the computation of
 the function's return value.
 
-(passes-loop-extract)=
-
-### `loop-extract`: Extract loops into new functions
-
-A pass wrapper around the `ExtractLoop()` scalar transformation to extract
-each top-level loop into its own new function.  If the loop is the *only* loop
-in a given function, it is not touched.  This is a pass most useful for
-debugging via bugpoint.
-
 ### `loop-fusion`: Loop Fusion
 
 Merges adjacent loops when it can prove the transformation preserves the
@@ -896,10 +887,9 @@ algorithm:
 
 This section describes the LLVM Utility Passes.
 
-### `extract-blocks`: Extract Basic Blocks From Module (for bugpoint use)
+### `extract-blocks`: Extract Basic Blocks From Module
 
-This pass is used by bugpoint to extract all blocks from the module into their
-own functions.
+This pass extracts all blocks from the module into their own functions.
 
 ### `instnamer`: Assign names to anonymous instructions
 

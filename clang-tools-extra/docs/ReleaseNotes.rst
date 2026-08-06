@@ -122,6 +122,12 @@ Changes in existing checks
   nested expressions involving different macros or a mix of macro and
   non-macro operands.
 
+- Improved :doc:`modernize-return-braced-init-list
+  <clang-tidy/checks/modernize/return-braced-init-list>` check to no longer
+  rewrite the return value when the constructed type has a
+  ``std::initializer_list`` constructor, as the braced form could select a
+  different constructor.
+
 - Improved :doc:`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring
   standard tag types (e.g. ``std::in_place_t``, ``std::allocator_arg_t``,

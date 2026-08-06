@@ -902,14 +902,14 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
   for (const auto &Arg : FI.arguments())
     MappedArgTypes.push_back(AbiMapper->convertType(Arg.type));
 
-  std::optional<unsigned> NumRequired;
   RequiredArgs Required = FI.getRequiredArgs();
+  llvm::abi::RequiredArgs AbiRequired = llvm::abi::RequiredArgs::All;
   if (Required.allowsOptionalArgs())
-    NumRequired = Required.getNumRequiredArgs();
+    AbiRequired = llvm::abi::RequiredArgs(Required.getNumRequiredArgs());
 
   auto AbiFI = llvm::abi::FunctionInfo::create(
       FI.getCallingConvention(), AbiMapper->convertType(FI.getReturnType()),
-      MappedArgTypes, NumRequired);
+      MappedArgTypes, AbiRequired);
 
   getLLVMABITargetInfo(AbiMapper->getTypeBuilder()).computeInfo(*AbiFI);
 

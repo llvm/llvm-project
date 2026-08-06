@@ -6709,16 +6709,29 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
     // and can try to read load commands and find a UUID.
     if (image.uuid.IsValid() ||
         (!value_is_offset && value != LLDB_INVALID_ADDRESS)) {
-      const bool set_load_address = image.segment_load_addresses.size() == 0;
-      const bool notify = false;
+      DynamicLoader::BinarySpec bin_spec;
+      bin_spec.name = image.filename;
+      bin_spec.uuid = image.uuid;
+      bin_spec.value = value;
+      bin_spec.value_is_offset = value_is_offset;
+      bin_spec.force_symbol_search = image.currently_executing;
+      bin_spec.notify = false;
       // Userland Darwin binaries will have segment load addresses via
       // the `all image infos` LC_NOTE.
-      const bool allow_memory_image_last_resort =
-          image.segment_load_addresses.size();
-      module_sp = DynamicLoader::LoadBinaryWithUUIDAndAddress(
-          &process, image.filename, image.uuid, value, value_is_offset,
-          image.currently_executing, notify, set_load_address,
-          allow_memory_image_last_resort);
+      bin_spec.set_address_in_target = image.segment_load_addresses.empty();
+      bin_spec.allow_memory_image_last_resort =
+          !image.segment_load_addresses.empty();
+      if (llvm::Expected<ModuleSP> located =
+              DynamicLoader::LocateAndLoadBinary(&process, bin_spec)) {
+        module_sp = *located;
+      } else if (bin_spec.force_symbol_search) {
+        *process.GetTarget().GetDebugger().GetAsyncErrorStream()
+            << llvm::toString(located.takeError()) << "\n";
+      } else {
+        // A corefile image that isn't on this machine is routine, and
+        // LocateAndLoadBinary has already logged it.
+        llvm::consumeError(located.takeError());
+      }
     }
 
     // We have a ModuleSP to load in the Target.  Load it at the

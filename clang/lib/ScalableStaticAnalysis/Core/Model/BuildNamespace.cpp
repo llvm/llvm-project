@@ -20,6 +20,10 @@ BuildNamespace::makeCompilationUnit(llvm::StringRef CompilationId) {
                         CompilationId.str()};
 }
 
+BuildNamespace BuildNamespace::withKind(BuildNamespaceKind Kind) const {
+  return BuildNamespace{Kind, Name};
+}
+
 bool BuildNamespace::operator==(const BuildNamespace &Other) const {
   return asTuple() == Other.asTuple();
 }

@@ -57,4 +57,6 @@ int main(int argc, char** argv) {
     return 1;
 
   benchmark::RunSpecifiedBenchmarks();
+
+  return 0;
 }

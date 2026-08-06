@@ -150,6 +150,7 @@ void FactsGenerator::run() {
                              EscapesInCurrentBlock.end());
     FactMgr.addBlockFacts(Block, CurrentBlockFacts);
   }
+  FactMgr.computePersistentOrigins(Cfg);
 }
 
 /// Simulates LValueToRValue conversion by peeling the outer lvalue origin

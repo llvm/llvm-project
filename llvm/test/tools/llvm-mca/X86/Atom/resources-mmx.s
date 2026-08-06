@@ -167,11 +167,11 @@ pxor        (%rax), %mm2
 # CHECK-NEXT:  1      5     2.50    *      *      U     emms
 # CHECK-NEXT:  1      1     1.00                        movd	%eax, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   movd	(%rax), %mm2
-# CHECK-NEXT:  1      3     3.00                        movd	%mm0, %ecx
+# CHECK-NEXT:  1      4     2.00                        movd	%mm0, %ecx
 # CHECK-NEXT:  1      1     1.00           *      U     movd	%mm0, (%rax)
 # CHECK-NEXT:  1      1     1.00                        movq	%rax, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   movq	(%rax), %mm2
-# CHECK-NEXT:  1      3     3.00                        movq	%mm0, %rcx
+# CHECK-NEXT:  1      4     2.00                        movq	%mm0, %rcx
 # CHECK-NEXT:  1      1     1.00           *            movq	%mm0, (%rax)
 # CHECK-NEXT:  1      1     1.00                        packsswb	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   packsswb	(%rax), %mm2
@@ -276,18 +276,18 @@ pxor        (%rax), %mm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 106.50 38.50
+# CHECK-NEXT: 104.50 38.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
 # CHECK-NEXT: 2.50   2.50   emms
 # CHECK-NEXT: 1.00    -     movd	%eax, %mm2
 # CHECK-NEXT: 1.00    -     movd	(%rax), %mm2
-# CHECK-NEXT: 3.00    -     movd	%mm0, %ecx
+# CHECK-NEXT: 2.00    -     movd	%mm0, %ecx
 # CHECK-NEXT: 1.00    -     movd	%mm0, (%rax)
 # CHECK-NEXT: 1.00    -     movq	%rax, %mm2
 # CHECK-NEXT: 1.00    -     movq	(%rax), %mm2
-# CHECK-NEXT: 3.00    -     movq	%mm0, %rcx
+# CHECK-NEXT: 2.00    -     movq	%mm0, %rcx
 # CHECK-NEXT: 1.00    -     movq	%mm0, (%rax)
 # CHECK-NEXT: 1.00    -     packsswb	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     packsswb	(%rax), %mm2

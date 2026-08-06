@@ -1477,12 +1477,12 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
   OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   Type type = convertType(alias->getValueType());
-  AliasOp aliasOp = AliasOp::create(builder, mlirModule.getLoc(), type,
-                                    convertLinkageFromLLVM(alias->getLinkage()),
-                                    alias->getName(),
-                                    /*dsoLocal=*/alias->isDSOLocal(),
-                                    /*thread_local=*/alias->isThreadLocal(),
-                                    /*attrs=*/ArrayRef<NamedAttribute>());
+  AliasOp aliasOp = AliasOp::create(
+      builder, mlirModule.getLoc(), type,
+      convertLinkageFromLLVM(alias->getLinkage()), alias->getName(),
+      /*dsoLocal=*/alias->isDSOLocal(),
+      convertThreadLocalModeFromLLVM(alias->getThreadLocalMode()),
+      /*attrs=*/ArrayRef<NamedAttribute>());
   globalInsertionOp = aliasOp;
 
   clearRegionState();
@@ -1622,7 +1622,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
       convertLinkageFromLLVM(globalVar->getLinkage()), StringRef(globalName),
       valueAttr, alignment, /*addrSpace=*/globalVar->getAddressSpace(),
       /*dsoLocal=*/globalVar->isDSOLocal(),
-      /*thread_local=*/globalVar->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
+      convertThreadLocalModeFromLLVM(globalVar->getThreadLocalMode()),
+      /*comdat=*/SymbolRefAttr(),
       /*attrs=*/ArrayRef<NamedAttribute>(), /*dbgExprs=*/globalExpressionAttrs);
   globalInsertionOp = globalOp;
 

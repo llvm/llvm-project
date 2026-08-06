@@ -856,38 +856,59 @@ def TMAReductionFlags : Operand<i32> {
   let PrintMethod = "printTmaReductionMode";
 }
 
+def tma_tensor_reduction_imm :
+    TImmLeaf<i32, [{ return Imm >= 0 && Imm < 8; }]>;
+
 // TMA Copy from Shared to Global memory with Reduction
-multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, bit shared32, string mode> {
+multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode> {
   defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
   defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
   defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
-  defvar rc = !if(shared32, B32, B64);
 
   // For im2col mode, the actual asm_str is "im2col_no_offs"
   defvar mode_asm_str = !if(!eq(mode, "im2col"),
                             "im2col_no_offs", mode);
-  defvar prefix = "cp.reduce.async.bulk.tensor" # "." # dim # "d" # ".global.shared::cta";
+  defvar prefix = "cp.reduce.async.bulk.tensor"
+                  # "." # dim # "d"
+                  # ".global.shared::cta";
   defvar suffix = "." # mode_asm_str # ".bulk_group";
 
+  defvar intr = !cast<Intrinsic>(
+    "int_nvvm_cp_async_bulk_tensor_reduce_" # mode # "_" # dim # "d"
+  );
+
+  defvar intr_dag = !con(
+    (intr addr:$src, B64:$tmap),
+    !setdagop(dims_dag, intr),
+    (intr (i64 srcvalue), tma_tensor_reduction_imm:$red_op, 0)
+  );
+
+  defvar intr_dag_with_ch = !con(
+    (intr addr:$src, B64:$tmap),
+    !setdagop(dims_dag, intr),
+    (intr B64:$ch, tma_tensor_reduction_imm:$red_op, -1)
+  );
+
   def "" : NVPTXInst<(outs),
-            !con((ins rc:$src, B64:$tmap), dims_dag, (ins TMAReductionFlags:$red_op)),
-            !strconcat(prefix, "${red_op}", suffix, asm_str, ";")>,
+            !con((ins ADDR:$src, B64:$tmap), dims_dag,
+                 (ins TMAReductionFlags:$red_op)),
+            !strconcat(prefix, "${red_op}", suffix, asm_str, ";"),
+            [intr_dag]>,
             Requires<[hasPTX<80>, hasSM<90>]>;
   def _CH : NVPTXInst<(outs),
-                  !con((ins rc:$src, B64:$tmap), dims_dag, (ins B64:$ch, TMAReductionFlags:$red_op)),
-                  !strconcat(prefix, "${red_op}", suffix, ".L2::cache_hint", asm_str, ", $ch;")>,
-                  Requires<[hasPTX<80>, hasSM<90>]>;
+              !con((ins ADDR:$src, B64:$tmap), dims_dag,
+                   (ins B64:$ch, TMAReductionFlags:$red_op)),
+              !strconcat(prefix, "${red_op}", suffix,
+                         ".L2::cache_hint", asm_str, ", $ch;"),
+              [intr_dag_with_ch]>,
+              Requires<[hasPTX<80>, hasSM<90>]>;
 }
 
-foreach dim = [1, 2, 3, 4, 5] in {
-  foreach shared32 = [true, false] in {
-    foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
-      defvar suffix = dim # "D"
-                      # !if(shared32, "_SHARED32", "")
-                      # "_" # !toupper(mode);
-      defm CP_ASYNC_BULK_TENSOR_RED_ # suffix :
-        CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, shared32, mode>;
-    }
+foreach dim = 1...5 in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    defvar suffix = dim # "D_" # !toupper(mode);
+    defm CP_ASYNC_BULK_TENSOR_RED_ # suffix :
+      CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, mode>;
   }
 }
 

@@ -346,7 +346,7 @@ the machine-dependent representation of each LLVM function in the program.
 
 Code generator passes are registered and initialized specially by
 `TargetMachine::addPassesToEmitFile` and similar routines, so they cannot
-generally be run from the {program}`opt` or {program}`bugpoint` commands.
+generally be run from the {program}`opt`.
 
 A `MachineFunctionPass` is also a `FunctionPass`, so all the restrictions
 that apply to a `FunctionPass` also apply to it.  `MachineFunctionPass`es

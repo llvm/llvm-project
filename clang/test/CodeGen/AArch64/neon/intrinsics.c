@@ -7251,7 +7251,6 @@ float64x2_t test_vrndnq_f64(float64x2_t a) {
 // LLVM-LABEL: @test_vrndns_f32(
 // CIR-LABEL: @vrndns_f32(
 float32_t test_vrndns_f32(float32_t a) {
-// CIR: cir.load {{.*}} : !cir.ptr<!cir.float>, !cir.float
 // CIR: [[LOAD:%.*]] = cir.load {{.*}} : !cir.ptr<!cir.float>, !cir.float
 // CIR: cir.roundeven [[LOAD]] : !cir.float
 

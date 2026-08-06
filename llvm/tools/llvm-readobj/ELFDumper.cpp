@@ -6255,6 +6255,8 @@ const NoteType OpenBSDCoreNoteTypes[] = {
     {ELF::NT_OPENBSD_REGS, "NT_OPENBSD_REGS (regular registers)"},
     {ELF::NT_OPENBSD_FPREGS, "NT_OPENBSD_FPREGS (floating point registers)"},
     {ELF::NT_OPENBSD_WCOOKIE, "NT_OPENBSD_WCOOKIE (window cookie)"},
+    {ELF::NT_OPENBSD_PACMASK,
+     "NT_OPENBSD_PACMASK (AArch64 Pointer Authentication Code mask)"},
 };
 
 const NoteType AMDNoteTypes[] = {

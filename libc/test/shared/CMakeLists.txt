@@ -867,7 +867,6 @@ add_fp_unittest(
 if(NOT LLVM_LIBC_FULL_BUILD)
 add_libc_test(
   shared_rpc_test
-  UNIT_TEST_ONLY
   SUITE
     libc-shared-tests
   SRCS

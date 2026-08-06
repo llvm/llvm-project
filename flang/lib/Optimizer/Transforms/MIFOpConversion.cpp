@@ -472,12 +472,11 @@ struct MIFThisImageOpConversion
     mlir::Type i64Ty = builder.getI64Type();
     mlir::Type i32Ty = builder.getI32Type();
     mlir::Type boxTy = fir::BoxType::get(rewriter.getNoneType());
+    mlir::Type refTy = builder.getRefType(rewriter.getNoneType());
 
     mlir::Value teamArg = op.getTeam();
     if (!op.getTeam())
-      teamArg = fir::AbsentOp::create(builder, loc, boxTy);
-    else
-      teamArg = builder.createBox(loc, teamArg);
+      teamArg = fir::AbsentOp::create(builder, loc, refTy);
 
     if (op.getCoarray()) {
       llvm::SmallVector<mlir::Value> args;
@@ -494,7 +493,7 @@ struct MIFThisImageOpConversion
         ftype = mlir::FunctionType::get(builder.getContext(),
                                         /*inputs*/
                                         {boxTy, builder.getRefType(i32Ty),
-                                         boxTy, builder.getRefType(i64Ty)},
+                                         refTy, builder.getRefType(i64Ty)},
                                         /*results*/ {});
         funcOp = builder.createFunction(
             loc, getPRIFProcName("this_image_with_dim"), ftype);
@@ -510,7 +509,7 @@ struct MIFThisImageOpConversion
         result = builder.createBox(loc, builder.createTemporary(loc, resTy));
         ftype = mlir::FunctionType::get(
             builder.getContext(),
-            /*inputs*/ {boxTy, boxTy, fir::BoxType::get(resTy)},
+            /*inputs*/ {boxTy, refTy, fir::BoxType::get(resTy)},
             /*results*/ {});
         funcOp = builder.createFunction(
             loc, getPRIFProcName("this_image_with_coarray"), ftype);
@@ -529,7 +528,7 @@ struct MIFThisImageOpConversion
       mlir::Value result = builder.createTemporary(loc, i32Ty);
       mlir::FunctionType ftype = mlir::FunctionType::get(
           builder.getContext(),
-          /*inputs*/ {boxTy, builder.getRefType(i32Ty)}, /*results*/ {});
+          /*inputs*/ {refTy, builder.getRefType(i32Ty)}, /*results*/ {});
       mlir::func::FuncOp funcOp = builder.createFunction(
           loc, getPRIFProcName("this_image_no_coarray"), ftype);
 
@@ -557,7 +556,7 @@ struct MIFNumImagesOpConversion
 
     mlir::Type i32Ty = builder.getI32Type();
     mlir::Type i64Ty = builder.getI64Type();
-    mlir::Type boxTy = fir::BoxType::get(rewriter.getNoneType());
+    mlir::Type refTy = builder.getRefType(rewriter.getNoneType());
     mlir::Value result = builder.createTemporary(loc, i32Ty);
 
     mlir::func::FuncOp funcOp;
@@ -574,7 +573,7 @@ struct MIFNumImagesOpConversion
         mlir::FunctionType ftype =
             mlir::FunctionType::get(builder.getContext(),
                                     /*inputs*/
-                                    {boxTy, builder.getRefType(i32Ty)},
+                                    {refTy, builder.getRefType(i32Ty)},
                                     /*results*/ {});
         funcOp = builder.createFunction(
             loc, getPRIFProcName("num_images_with_team"), ftype);
@@ -722,11 +721,11 @@ struct MIFSyncTeamOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
-    mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+    mlir::Type refTy = builder.getRefType(builder.getNoneType());
     mlir::Type errmsgTy = getPRIFErrmsgType(builder);
     mlir::FunctionType ftype = mlir::FunctionType::get(
         builder.getContext(),
-        /*inputs*/ {boxTy, getPRIFStatType(builder), errmsgTy, errmsgTy},
+        /*inputs*/ {refTy, getPRIFStatType(builder), errmsgTy, errmsgTy},
         /*results*/ {});
     mlir::func::FuncOp funcOp =
         builder.createFunction(loc, getPRIFProcName("sync_team"), ftype);
@@ -882,11 +881,11 @@ struct MIFFormTeamOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
     mlir::Type errmsgTy = getPRIFErrmsgType(builder);
-    mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+    mlir::Type refTy = builder.getRefType(builder.getNoneType());
     mlir::FunctionType ftype = mlir::FunctionType::get(
         builder.getContext(),
         /*inputs*/
-        {builder.getRefType(builder.getI64Type()), boxTy,
+        {builder.getRefType(builder.getI64Type()), refTy,
          builder.getRefType(builder.getI32Type()), getPRIFStatType(builder),
          errmsgTy, errmsgTy},
         /*results*/ {});
@@ -960,10 +959,10 @@ struct MIFChangeTeamOpConversion
 
     mlir::Location loc = op.getLoc();
     mlir::Type errmsgTy = getPRIFErrmsgType(builder);
-    mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+    mlir::Type refTy = builder.getRefType(builder.getNoneType());
     mlir::FunctionType ftype = mlir::FunctionType::get(
         builder.getContext(),
-        /*inputs*/ {boxTy, getPRIFStatType(builder), errmsgTy, errmsgTy},
+        /*inputs*/ {refTy, getPRIFStatType(builder), errmsgTy, errmsgTy},
         /*results*/ {});
     mlir::func::FuncOp funcOp =
         builder.createFunction(loc, getPRIFProcName("change_team"), ftype);
@@ -1019,11 +1018,11 @@ struct MIFGetTeamOpConversion : public mlir::OpRewritePattern<mif::GetTeamOp> {
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
-    mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+    mlir::Type refTy = builder.getRefType(builder.getNoneType());
     mlir::Type lvlTy = builder.getRefType(builder.getI32Type());
     mlir::FunctionType ftype =
         mlir::FunctionType::get(builder.getContext(),
-                                /*inputs*/ {lvlTy, boxTy},
+                                /*inputs*/ {lvlTy, refTy},
                                 /*results*/ {});
     mlir::func::FuncOp funcOp =
         builder.createFunction(loc, getPRIFProcName("get_team"), ftype);
@@ -1042,13 +1041,12 @@ struct MIFGetTeamOpConversion : public mlir::OpRewritePattern<mif::GetTeamOp> {
     mlir::Type resultType = op.getResult().getType();
     mlir::Type baseTy = fir::unwrapRefType(resultType);
     mlir::Value team = builder.createTemporary(loc, baseTy);
-    fir::EmboxOp box = fir::EmboxOp::create(builder, loc, resultType, team);
 
     llvm::SmallVector<mlir::Value> args =
-        fir::runtime::createArguments(builder, loc, ftype, level, box);
+        fir::runtime::createArguments(builder, loc, ftype, level, team);
     fir::CallOp::create(builder, loc, funcOp, args);
 
-    rewriter.replaceOp(op, box);
+    rewriter.replaceOp(op, team);
     return mlir::success();
   }
 };
@@ -1065,17 +1063,17 @@ struct MIFTeamNumberOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
     mlir::Type i64Ty = builder.getI64Type();
-    mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+    mlir::Type refTy = builder.getRefType(builder.getNoneType());
     mlir::FunctionType ftype =
         mlir::FunctionType::get(builder.getContext(),
-                                /*inputs*/ {boxTy, builder.getRefType(i64Ty)},
+                                /*inputs*/ {refTy, builder.getRefType(i64Ty)},
                                 /*results*/ {});
     mlir::func::FuncOp funcOp =
         builder.createFunction(loc, getPRIFProcName("team_number"), ftype);
 
     mlir::Value team = op.getTeam();
     if (!team)
-      team = fir::AbsentOp::create(builder, loc, boxTy);
+      team = fir::AbsentOp::create(builder, loc, refTy);
 
     mlir::Value result = builder.createTemporary(loc, i64Ty);
     llvm::SmallVector<mlir::Value> args =
@@ -1336,14 +1334,12 @@ struct MIFImageIndexOpConversion
       std::string imageIndexName =
           op.getTeamNumber() ? getPRIFProcName("image_index_with_team_number")
                              : getPRIFProcName("image_index_with_team");
-      mlir::Type teamTy = boxTy;
+      mlir::Type teamTy = builder.getRefType(builder.getNoneType());
       if (op.getTeamNumber()) {
         teamTy = builder.getRefType(i64Ty);
         mlir::Value t = builder.createConvert(loc, i64Ty, team);
         team = builder.createTemporary(loc, i64Ty);
         fir::StoreOp::create(builder, loc, t, team);
-      } else {
-        team = builder.createBox(loc, team);
       }
       mlir::FunctionType ftype = mlir::FunctionType::get(
           builder.getContext(),

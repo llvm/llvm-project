@@ -215,6 +215,18 @@ llvm.mlir.global @has_dso_local(42 : i64) {dso_local} : i64
 llvm.mlir.global thread_local @has_thr_local(42 : i64) : i64
 // CHECK: @has_thr_local = thread_local global i64 42
 
+llvm.mlir.global thread_local(generaldynamic) @has_thr_local_gd(42 : i64) : i64
+// CHECK: @has_thr_local_gd = thread_local global i64 42
+
+llvm.mlir.global thread_local(localdynamic) @has_thr_local_ld(42 : i64) : i64
+// CHECK: @has_thr_local_ld = thread_local(localdynamic) global i64 42
+
+llvm.mlir.global thread_local(initialexec) @has_thr_local_ie(42 : i64) : i64
+// CHECK: @has_thr_local_ie = thread_local(initialexec) global i64 42
+
+llvm.mlir.global thread_local(localexec) @has_thr_local_le(42 : i64) : i64
+// CHECK: @has_thr_local_le = thread_local(localexec) global i64 42
+
 //
 // Section attribute.
 //

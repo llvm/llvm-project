@@ -48,6 +48,10 @@ class LoopOp;
 } // namespace acc
 } // namespace mlir
 
+namespace clang {
+class SYCLKernelCallStmt;
+} // namespace clang
+
 namespace clang::CIRGen {
 
 struct CGCoroData;
@@ -2294,6 +2298,8 @@ public:
   mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
                                      bool buildingTopLevelCase);
   mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
+
+  mlir::LogicalResult emitSYCLKernelCallStmt(const SYCLKernelCallStmt &s);
 
   std::optional<mlir::Value>
   emitTargetBuiltinExpr(unsigned builtinID, const clang::CallExpr *e,

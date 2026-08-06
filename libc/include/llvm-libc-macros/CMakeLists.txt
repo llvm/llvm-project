@@ -241,6 +241,8 @@ add_macro_header(
   sys_epoll_macros
   HDR
     sys-epoll-macros.h
+  DEPENDS
+    .fcntl_macros
 )
 
 add_macro_header(

@@ -536,7 +536,8 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
         setOpenMPTargetDebug, setOpenMPTeamSubscription,
         setOpenMPThreadSubscription, setOpenMPNoThreadState,
         setOpenMPNoNestedParallelism, enableOpenMPDevice, enableOpenMPGPU,
-        enableOpenMPForceUSM, setOpenMPVersion, "", targetTriples, setNoGPULib);
+        enableOpenMPForceUSM, setOpenMPVersion, /*hostIRFile=*/"",
+        targetTriples, setNoGPULib);
     mlir::omp::setOffloadModuleInterfaceAttributes(mlirModule,
                                                    offloadModuleOpts);
     mlir::omp::setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);

@@ -5412,6 +5412,25 @@ TEST(Hover, HLSLInvalidVectorSwizzleNoCrash) {
   EXPECT_FALSE(H);
 }
 
+TEST(Hover, HLSLRegisterAttributeRange) {
+  Annotations T(R"hlsl(
+    Texture2D tex : [[^register]]([[^t1]]);
+  )hlsl");
+
+  TestTU TU = TestTU::withCode(T.code());
+  configureHLSL(TU);
+
+  auto AST = TU.build();
+
+  for (const auto &P : T.points()) {
+    auto H = getHover(AST, P, format::getLLVMStyle(), nullptr);
+
+    ASSERT_TRUE(H);
+    EXPECT_EQ(H->Name, "register");
+    EXPECT_FALSE(H->Documentation.empty());
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

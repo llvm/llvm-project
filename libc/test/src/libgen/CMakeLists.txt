@@ -23,7 +23,6 @@ add_libc_test(
 if (NOT LLVM_USE_SANITIZER AND LIBC_TEST_SUBPROCESS_TESTS)
   add_libc_test(
     basename_death_test
-    UNIT_TEST_ONLY
     SUITE
       libc-libgen-tests
     SRCS
@@ -34,7 +33,6 @@ if (NOT LLVM_USE_SANITIZER AND LIBC_TEST_SUBPROCESS_TESTS)
 
   add_libc_test(
     dirname_death_test
-    UNIT_TEST_ONLY
     SUITE
       libc-libgen-tests
     SRCS

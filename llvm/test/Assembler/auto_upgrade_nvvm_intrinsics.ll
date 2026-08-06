@@ -125,6 +125,22 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(3) %d, 
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
 
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.1d(ptr addrspace(3), ptr, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.2d(ptr addrspace(3), ptr, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.min.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.max.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.inc.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.dec.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.and.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.or.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.xor.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.4d(ptr addrspace(3), ptr, i32, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.5d(ptr addrspace(3), ptr, i32, i32, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.4d(ptr addrspace(3), ptr, i32, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.5d(ptr addrspace(3), ptr, i32, i32, i32, i32, i32, i64, i1)
+
 declare void @llvm.nvvm.barrier0()
 declare void @llvm.nvvm.barrier.n(i32)
 declare void @llvm.nvvm.bar.sync(i32)
@@ -479,6 +495,46 @@ define void @nvvm_cp_async_bulk_tensor_g2s_tile(ptr addrspace(3) %d, ptr addrspa
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 0, i64 0, i1 0, i1 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 0, i64 0, i1 0, i1 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 0, i64 0, i1 0, i1 0)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_reduce_ops
+define void @nvvm_cp_async_bulk_tensor_reduce_ops(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch) {
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=add */ i32 0, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 true)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=min */ i32 1, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.min.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 false)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=max */ i32 2, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.max.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 true)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=inc */ i32 3, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.inc.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 false)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=dec */ i32 4, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.dec.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 true)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=and */ i32 5, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.and.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 false)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=or */ i32 6, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.or.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 true)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=xor */ i32 7, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.xor.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 false)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_reduce_shapes
+define void @nvvm_cp_async_bulk_tensor_reduce_shapes(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch) {
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.1d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i64 %ch, /* red_op=add */ i32 0, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.1d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i64 %ch, i1 false)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.2d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i64 %ch, /* red_op=add */ i32 0, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.2d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i64 %ch, i1 true)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.4d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i64 %ch, /* red_op=add */ i32 0, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.4d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i64 %ch, i1 false)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.5d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, /* red_op=add */ i32 0, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.5d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 true)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=add */ i32 0, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 false)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.4d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i64 %ch, /* red_op=add */ i32 0, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.4d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i64 %ch, i1 true)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.5d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, /* red_op=add */ i32 0, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.5d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 false)
   ret void
 }
 
