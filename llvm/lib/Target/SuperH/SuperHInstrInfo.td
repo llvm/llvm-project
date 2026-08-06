@@ -65,78 +65,123 @@ def SHRet 		    : SDNode<"SHISD::RET", SHSDT_Ret,
                              [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 //===----------------------------------------------------------------------===//
-// Operands
+// Operand Classes
 //===----------------------------------------------------------------------===//
 
-class ImmAsmOperand<int width> : AsmOperandClass {
-    let Name = "Imm" # width;
+// Base Operand Class
+class SHOpClass<string name, 
+                list<AsmOperandClass> superClasses = []> : AsmOperandClass {
+  let Name = name;
+  let ParserMethod = "parseOperand";
+  let SuperClasses = superClasses;
+}
+
+// Immediates
+class SHImmClass<int width> : SHOpClass<"Imm" # width> {
+    let PredicateMethod = "isImm";
     let RenderMethod = "addImmOperands";
 }
 
-def imm8 : Operand<i8>, ImmLeaf<i32, [{return isInt<8>(Imm);}]> {
-    let ParserMatchClass = ImmAsmOperand<8>;
+// Displacements
+class SHDispClass<int width> : SHOpClass<"Disp" # width> {
+    let PredicateMethod = "isDisp";
+    let RenderMethod = "addDispOperands";
+}
+
+// Memory Ops
+class SHMemClass : SHOpClass<"Mem"> {
+    let PredicateMethod = "isMem";
+    let RenderMethod = "addMemOperands";
+}
+
+//===----------------------------------------------------------------------===//
+// Operands
+//===----------------------------------------------------------------------===//
+
+// Immediate
+class SHImmOp<int width, ValueType vt>
+      : Operand<vt> {
+    let ParserMatchClass = SHImmClass<width>;
+    let OperandType = "OPERAND_IMMEDIATE";
     let MCOperandPredicate = [{
         int64_t Imm;
         if (MCOp.evaluateAsConstantImm(Imm))
-            return isInt<8>(Imm);
+            return isInt<#width>(Imm);
         return MCOp.isBareSymbolRef();
     }];
 }
+
+def imm8    : SHImmOp<8, i8>;
+
+// Displacement
+class SHDispOp<int width, ValueType vt>
+      : Operand<vt> {
+    let ParserMatchClass = SHDispClass<width>;
+    let OperandType = "OPERAND_IMMEDIATE";
+    let MCOperandPredicate = [{
+        int64_t Imm;
+        if (MCOp.evaluateAsConstantImm(Imm))
+            return isInt<#width>(Imm);
+        return MCOp.isBareSymbolRef();
+    }];
+}
+def disp4   : SHDispOp<4, i4>;
+def disp8   : SHDispOp<8, i8>;
+def disp12  : SHDispOp<12, i16>;
+
+
+
+// Memory
+class SHMemRegOp<RegisterClass regClass> 
+      : RegisterOperand<regClass> {
+    let ParserMatchClass = SHMemClass<>;
+    let OperandType = "OPERAND_MEMORY";
+}
+def GPRMem : SHMemRegOp<GPR>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
 
     // No-arg instruction
     class Op<bits<16> op, string opcodestr>
         : SHInstOP<op, (outs), (ins), opcodestr>;
 
     // Rn
-    class Op_r<bits<16> op, string opcodestr>
-        : SHInstOP_N4<op, (outs GPR:$n), (ins),
-                         !strconcat(opcodestr, " $n")>;
+    class Op_Rn<bits<16> op, string opcodestr>
+        : SHInstOP_N4<op, (outs GPR:$Rn), (ins),
+                         !strconcat(opcodestr, " $Rn")>;
 
-    // R0, Rn
-    class Op_rr0<bits<16> op, string opcodestr>
-        : SHInstOP_N4<op, (outs GPR:$n), (ins),
-                         !strconcat(opcodestr, " r0, $n")>;
+    // R0 -> (OP) -> Rn
+    class Op_R0_Rn<bits<16> op, string opcodestr>
+        : SHInstOP_N4<op, (outs GPR:$Rn), (ins),
+                         !strconcat(opcodestr, " r0,$Rn")>;
 
-    // imm -> Sign Extension -> Rn
-    class Op_ir<bits<16> op, string opcodestr>
-        : SHInstOP_N4_I8<op, (outs GPR:$n), (ins imm8:$imm),
-                         !strconcat(opcodestr, " $imm, $n")>;
+    // Rm -> (OP) -> Rn
+    class Op_Rm_Rn<bits<16> op, string opcodestr>
+        : SHInstOP_N4_M4<op, (outs GPR:$Rn), (ins GPR:$Rm),
+                         !strconcat(opcodestr, " $Rm,$Rn")>;
 
-    // Rm -> Rn
-    class Op_rr<bits<16> op, string opcodestr>
-        : SHInstOP_N4_M4<op, (outs GPR:$n), (ins GPR:$m),
-                         !strconcat(opcodestr, " $m, $n")>;
+    // imm -> (OP) -> Rn
+    class Op_Imm_Rn<bits<16> op, string opcodestr>
+        : SHInstOP_N4_I8<op, (outs GPR:$Rn), (ins imm8:$imm),
+                         !strconcat(opcodestr, " $imm,$Rn")>;
+
+    // imm -> (OP) -> Rn
+    class Op_Imm_R0<bits<16> op, string opcodestr>
+        : SHInstOP_I8<op, (outs), (ins imm8:$imm),
+                      !strconcat(opcodestr, " $imm,R0")>;
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
-
-    // Rm -> (Rn)
-    class Store_rr<bits<16> op, string opcodestr>
-        : SHInstOP_N4_M4<op, (outs GPR:$n), (ins GPR:$m),
-                         !strconcat(opcodestr, " $m, $n")>;
-}
-
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
-
-    // (Rm) -> Sign Extension -> Rn
-    class Load_rr<bits<16> op, string opcodestr>
-        : SHInstOP_N4_M4<op, (outs GPR:$n), (ins GPR:$m),
-                         !strconcat(opcodestr, " $m, $n")>;
-}
 
 //===----------------------------------------------------------------------===//
 // Basic Instructions
 //===----------------------------------------------------------------------===//
 
 // NOP instruction, does nothing.
-def NOP : Op<0b0000000000000000, "nop">;
-def RTS : Op<0b0000000000001011, "rts">;
+def NOP : Op<0b0000000000001001, "nop">;
 
 //===----------------------------------------------------------------------===//
 // Subsystems
@@ -144,6 +189,7 @@ def RTS : Op<0b0000000000001011, "rts">;
 
 include "SuperHInstrData.td"
 include "SuperHInstrArithmetic.td"
+include "SuperHInstrBranch.td"
 
 //===----------------------------------------------------------------------===//
 // Pseudo instructions

@@ -24,4 +24,6 @@ SuperHMCAsmInfo::SuperHMCAsmInfo(const Triple &TheTriple,
   this->IsLittleEndian = TheTriple.isLittleEndian();
   this->CommentString = ";";
   this->SeparatorString = "\n";
+  this->InternalSymbolPrefix = ".L";
+  this->PrivateLabelPrefix = ".L";
 }

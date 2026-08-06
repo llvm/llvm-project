@@ -84,45 +84,45 @@ class MTRXReg<bits<16> Enc, string n> : SHReg<Enc, n>;
 let Namespace = "SH" in {
 
   // General Purpose Registers
-  def R0  : GPRReg<0,  "r0">,   DwarfRegNum<[0]>;
-  def R1  : GPRReg<1,  "r1">,   DwarfRegNum<[1]>;
-  def R2  : GPRReg<2,  "r2">,   DwarfRegNum<[2]>;
-  def R3  : GPRReg<3,  "r3">,   DwarfRegNum<[3]>;
-  def R4  : GPRReg<4,  "r4">,   DwarfRegNum<[4]>;
-  def R5  : GPRReg<5,  "r5">,   DwarfRegNum<[5]>;
-  def R6  : GPRReg<6,  "r6">,   DwarfRegNum<[6]>;
-  def R7  : GPRReg<7,  "r7">,   DwarfRegNum<[7]>;
-  def R8  : GPRReg<8,  "r8">,   DwarfRegNum<[8]>;
-  def R9  : GPRReg<9,  "r9">,   DwarfRegNum<[9]>;
-  def R10 : GPRReg<10, "r10">,  DwarfRegNum<[10]>;
-  def R11 : GPRReg<11, "r11">,  DwarfRegNum<[11]>;
-  def R12 : GPRReg<12, "r12">,  DwarfRegNum<[12]>;
-  def R13 : GPRReg<13, "r13">,  DwarfRegNum<[13]>;
-  def R14 : GPRReg<14, "r14">,  DwarfRegNum<[14]>;
-  def R15 : GPRReg<15, "r15">,  DwarfRegNum<[15]>;
+  def R0  : GPRReg<0,  "r0">,     DwarfRegNum<[0]>;
+  def R1  : GPRReg<1,  "r1">,     DwarfRegNum<[1]>;
+  def R2  : GPRReg<2,  "r2">,     DwarfRegNum<[2]>;
+  def R3  : GPRReg<3,  "r3">,     DwarfRegNum<[3]>;
+  def R4  : GPRReg<4,  "r4">,     DwarfRegNum<[4]>;
+  def R5  : GPRReg<5,  "r5">,     DwarfRegNum<[5]>;
+  def R6  : GPRReg<6,  "r6">,     DwarfRegNum<[6]>;
+  def R7  : GPRReg<7,  "r7">,     DwarfRegNum<[7]>;
+  def R8  : GPRReg<8,  "r8">,     DwarfRegNum<[8]>;
+  def R9  : GPRReg<9,  "r9">,     DwarfRegNum<[9]>;
+  def R10 : GPRReg<10, "r10">,    DwarfRegNum<[10]>;
+  def R11 : GPRReg<11, "r11">,    DwarfRegNum<[11]>;
+  def R12 : GPRReg<12, "r12">,    DwarfRegNum<[12]>;
+  def R13 : GPRReg<13, "r13">,    DwarfRegNum<[13]>;
+  def R14 : GPRReg<14, "r14">,    DwarfRegNum<[14]>;
+  def R15 : GPRReg<15, "r15">,    DwarfRegNum<[15]>;
 
   // Control Registers
-  def SR  : CtrlReg<0, "sr">;   // Status Register
-  def GBR : CtrlReg<0, "gbr">;  // Global Base Register
-  def VBR : CtrlReg<0, "vbr">;  // Vector Base Register
-  def SGR : CtrlReg<0, "sgr">;  // Saved General Register
-  def DBR : CtrlReg<0, "dbr">;  // Debug Base Register
-  def SSR : CtrlReg<0, "ssr">;  // Saved Status Register
-  def SPC : CtrlReg<0, "spc">;  // Saved Program Counter
+  def SR  : CtrlReg<0, "sr">,     DwarfRegNum<[22]>;   // Status Register
+  def GBR : CtrlReg<0, "gbr">,    DwarfRegNum<[18]>;   // Global Base Register
+  def VBR : CtrlReg<0, "vbr">,    DwarfRegNum<[19]>;   // Vector Base Register
+  def SGR : CtrlReg<0, "sgr">,    DwarfRegNum<[60]>;   // Saved General Register
+  def DBR : CtrlReg<0, "dbr">,    DwarfRegNum<[59]>;   // Debug Base Register
+  def SSR : CtrlReg<0, "ssr">,    DwarfRegNum<[41]>;   // Saved Status Register
+  def SPC : CtrlReg<0, "spc">,    DwarfRegNum<[42]>;   // Saved Program Counter
 
   // System Registers
-  def PR    : SysReg<0, "pr">;    // Procedure Register
-  def PC    : SysReg<0, "pc">;    // Program Counter
-  def MACL  : SysReg<0, "macl">;  // Mult & Accum Low
-  def MACH  : SysReg<1, "mach">;  // Mult & Accum Hi
-  def FPSCR : SysReg<0, "fpscr">; // FPU Status/Control Register
-  def FPUL  : SysReg<0, "fpul">;  // FPU Comms Register
+  def PC    : SysReg<0, "pc">,    DwarfRegNum<[16]>;   // Program Counter
+  def PR    : SysReg<0, "pr">,    DwarfRegNum<[17]>;   // Procedure Register
+  def MACH  : SysReg<1, "mach">,  DwarfRegNum<[20]>;   // Mult & Accum Hi
+  def MACL  : SysReg<0, "macl">,  DwarfRegNum<[21]>;   // Mult & Accum Low
+  def FPUL  : SysReg<0, "fpul">,  DwarfRegNum<[23]>;   // FPU Comms Register
+  def FPSCR : SysReg<0, "fpscr">, DwarfRegNum<[24]>;   // FPU Status/Control Register
 
   // 32-bit floating point registers
   foreach I = 0-15 in
-    def FR#I : FRReg<I, "fr"#I>, DwarfRegNum<[!add(I, 16)]>;
+    def FR#I : FRReg<I, "fr"#I>, DwarfRegNum<[!add(I, 25)]>;
   foreach I = 0-15 in
-    def XF#I : FRReg<!add(I, 16), "xf"#I>, DwarfRegNum<[!add(I, 32)]>;
+    def XF#I : FRReg<!add(I, 16), "xf"#I>, DwarfRegNum<[!add(I, 61)]>;
 
   // 64-bit floating point registers
   foreach I = 0-7 in
@@ -189,3 +189,12 @@ def CTRL : RegisterClass<"SH", [ i32 ], 32,
 // System registers.
 def SYS : RegisterClass<"SH", [ i32 ], 32, 
   (add PR, PC, MACL, MACH, FPSCR, FPUL)>, Unallocatable;
+
+// Program Counter
+def R_PC : RegisterClass<"SH", [ i32 ], 32, (add PC)>, Unallocatable;
+
+// GBR
+def R_GBR : RegisterClass<"SH", [ i32 ], 32, (add GBR)>, Unallocatable;
+
+// R0 Register
+def R_R0 : RegisterClass<"SH", [ i32 ], 32, (add R0)>, Unallocatable;

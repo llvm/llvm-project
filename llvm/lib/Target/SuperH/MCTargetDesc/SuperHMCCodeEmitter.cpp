@@ -28,6 +28,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
+#include <cstdint>
 
 
 using namespace llvm;
@@ -63,6 +64,10 @@ public:
   unsigned getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
+
+  unsigned getExprOpValue(const MCInst &MI, const MCExpr *Expr,
+                          SmallVectorImpl<MCFixup> &Fixups,
+                          const MCSubtargetInfo &STI) const;
 };
 
 } // end namespace
@@ -83,6 +88,31 @@ void SuperHMCCodeEmitter::encodeInstruction(const MCInst &MI,
   ++MCNumEmitted;
 }
 
+unsigned SuperHMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Expr,
+                                             SmallVectorImpl<MCFixup> &Fixups,
+                                             const MCSubtargetInfo &STI) const {
+  MCExpr::ExprKind Kind = Expr->getKind();
+
+  // Binary Op
+  if (Kind == MCExpr::Binary) {
+    Expr = static_cast<const MCBinaryExpr *>(Expr)->getLHS();
+    Kind = Expr->getKind();
+  }
+
+  // Symbol Reference
+  if (Kind == MCExpr::SymbolRef) {
+    Fixups.push_back(MCFixup::create(0, Expr, FK_Data_2, true));
+    return 0;
+  }
+
+  // Constant immediate.
+  int64_t Result;
+  if (Expr->evaluateAsAbsolute(Result))
+    return Result;
+
+  return 0;
+}
+
 unsigned SuperHMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const {
@@ -92,7 +122,8 @@ unsigned SuperHMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperan
   if (MO.isImm())
     return MO.getImm();
 
-  return 0;
+  assert(MO.isExpr() && "Expected Expression");
+  return getExprOpValue(MI, MO.getExpr(), Fixups, STI);
 }
 
 MCCodeEmitter *llvm::createSuperHMCCodeEmitter(const MCInstrInfo &MCII,
