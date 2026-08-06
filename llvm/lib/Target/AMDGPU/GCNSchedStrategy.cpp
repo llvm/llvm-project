@@ -1562,7 +1562,7 @@ bool PreRARematStage::initGCNSchedStage() {
       continue;
     SlotIndex UseIdx = DAG.LIS->getInstructionIndex(*UseMI).getRegSlot(true);
     SlotIndex RefIdx =
-        DAG.LIS->getInstructionIndex(*CandReg.DefMI).getRegSlot(true);
+        DAG.LIS->getInstructionIndex(*CandReg.getLastDef()).getRegSlot(true);
     if (llvm::any_of(CandReg.Dependencies, [&](RegisterIdx DepRegIdx) {
           const Rematerializer::Reg &DepReg = Remater.getReg(DepRegIdx);
           Register DepDefReg = DepReg.getDefReg();
