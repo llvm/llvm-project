@@ -1787,6 +1787,9 @@ SDValue SelectionDAGLegalize::ExpandFABS(SDNode *Node) const {
     return DAG.getNode(ISD::FCOPYSIGN, DL, FloatVT, Value, Zero);
   }
 
+  if (FloatVT.isVector())
+    return DAG.UnrollVectorOp(Node);
+
   // Transform value to integer, clear the sign bit and transform back.
   FloatSignAsInt ValueAsInt;
   getSignAsIntValue(ValueAsInt, DL, Value);
