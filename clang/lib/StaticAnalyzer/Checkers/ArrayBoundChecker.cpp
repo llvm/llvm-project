@@ -469,7 +469,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
             bounds::compareValueToThreshold(State, SVB, ByteOffset, *Extent,
                                             /*CheckEquality=*/true);
         if (EqualsToThreshold && !NotEqualToThreshold) {
-          C.addTransition(EqualsToThreshold, T);
+          C.addTransition(EqualsToThreshold);
           return;
         }
       }
