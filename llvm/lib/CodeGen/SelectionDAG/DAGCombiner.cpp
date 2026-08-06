@@ -14025,10 +14025,11 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
   // FIXME: Can we do this for indexed, expanding, or extending loads?
   if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()) && MLD->isUnindexed() &&
       !MLD->isExpandingLoad() && MLD->getExtensionType() == ISD::NON_EXTLOAD) {
-    SDValue NewLd = DAG.getLoad(
-        N->getValueType(0), SDLoc(N), MLD->getChain(), MLD->getBasePtr(),
-        MLD->getPointerInfo(), MLD->getBaseAlign(),
-        MLD->getMemOperand()->getFlags(), MLD->getAAInfo(), MLD->getRanges());
+    SDValue NewLd =
+        DAG.getLoad(N->getValueType(0), SDLoc(N), MLD->getChain(),
+                    MLD->getBasePtr(), MLD->getPointerInfo(),
+                    MLD->getBaseAlign(), MLD->getMemOperand()->getFlags(),
+                    MMOMetadata(MLD->getAAInfo(), MLD->getRanges()));
     return CombineTo(N, NewLd, NewLd.getValue(1));
   }
 
@@ -17178,7 +17179,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
     Load = DAG.getLoad(VT, DL, LN0->getChain(), NewPtr,
                        LN0->getPointerInfo().getWithOffset(PtrOff),
                        LN0->getBaseAlign(), LN0->getMemOperand()->getFlags(),
-                       LN0->getAAInfo(), NewRanges);
+                       MMOMetadata(LN0->getAAInfo(), NewRanges));
   } else
     Load = DAG.getExtLoad(ExtType, DL, VT, LN0->getChain(), NewPtr,
                           LN0->getPointerInfo().getWithOffset(PtrOff), ExtVT,
