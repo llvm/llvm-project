@@ -2822,8 +2822,9 @@ public:
 
     const TargetLoweringBase *TLI = getTLI();
 
-    // pdep/pext are not lane-separable
-    bool BitManipSplit = (ISD == ISD::PDEP || ISD == ISD::PEXT) && LT.first > 1;
+    // Scalar pdep/pext are not lane-separable
+    bool BitManipSplit = (ISD == ISD::PDEP || ISD == ISD::PEXT) &&
+                         LT.first > 1 && !LT.second.isVector();
 
     if (!BitManipSplit && TLI->isOperationLegalOrPromote(ISD, LT.second)) {
       if (IID == Intrinsic::fabs && LT.second.isFloatingPoint() &&
