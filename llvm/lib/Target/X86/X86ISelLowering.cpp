@@ -64200,6 +64200,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (VConstraint && Subtarget.hasFP16())
           return std::make_pair(0U, &X86::FR16XRegClass);
         break;
+case MVT::bf16:
+        if (VConstraint && Subtarget.hasVLX())
+          return std::make_pair(0U, &X86::FR16XRegClass);
+        return std::make_pair(0U, &X86::FR16RegClass);
       case MVT::f32:
       case MVT::i32:
         if (VConstraint && Subtarget.hasVLX())
