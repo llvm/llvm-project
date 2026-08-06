@@ -866,9 +866,14 @@ void RTDEF(AssignSimple)(Descriptor &to, const Descriptor &from,
         to.rank(), from.rank());
   }
   if (to.ElementBytes() != from.ElementBytes()) {
-    terminator.Crash("AssignSimple: ElementBytes mismatch (to.ElementBytes=%d, "
-                     "from.ElementBytes=%d)",
+    terminator.Crash("AssignSimple: ElementBytes mismatch (to.ElementBytes=%zu, "
+                     "from.ElementBytes=%zu)",
         to.ElementBytes(), from.ElementBytes());
+  }
+  if (to.type() != from.type()) {
+    terminator.Crash(
+        "AssignSimple: mismatching types (to code %d != from code %d)",
+        to.type().raw(), from.type().raw());
   }
   if (to.type().IsDerived()) {
     terminator.Crash("AssignSimple: Cannot assign to derived type");
