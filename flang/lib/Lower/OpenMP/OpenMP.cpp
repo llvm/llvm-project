@@ -3475,7 +3475,7 @@ genOrderedOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
              mlir::Location loc, const ConstructQueue &queue,
              ConstructQueue::const_iterator item) {
   if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(loc, "OMPD_ordered");
+    TODO(loc, "OMPD_ordered_standalone");
   return nullptr;
 }
 
@@ -3490,7 +3490,7 @@ genOrderedRegionOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   return genOpWithBody<mlir::omp::OrderedRegionOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
-                        llvm::omp::Directive::OMPD_ordered),
+                        llvm::omp::Directive::OMPD_ordered_blockassoc),
       queue, item, clauseOps);
 }
 
@@ -4983,7 +4983,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   case llvm::omp::Directive::OMPD_master:
     newOp = genMasterOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
-  case llvm::omp::Directive::OMPD_ordered:
+  case llvm::omp::Directive::OMPD_ordered_blockassoc:
     // Block-associated "ordered" construct.
     newOp = genOrderedRegionOp(converter, symTable, semaCtx, eval, loc, queue,
                                item);
@@ -5109,9 +5109,10 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
       // leafs and loop transformation constructs.
       llvm::omp::DirectiveSet combinableDirs =
           (llvm::omp::blockConstructSet &
-           ~llvm::omp::DirectiveSet{llvm::omp::Directive::OMPD_ordered,
-                                    llvm::omp::Directive::OMPD_scope,
-                                    llvm::omp::Directive::OMPD_taskgroup}) |
+           ~llvm::omp::DirectiveSet{
+               llvm::omp::Directive::OMPD_ordered_blockassoc,
+               llvm::omp::Directive::OMPD_scope,
+               llvm::omp::Directive::OMPD_taskgroup}) |
           (llvm::omp::loopConstructSet & ~llvm::omp::loopTransformationSet);
       const auto &ompEval = nestedEval->get<parser::OpenMPConstruct>();
       llvm::omp::Directive nestedDir =
@@ -6283,7 +6284,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
                           eval, directive.source, directive.v, clauses)};
-  if (directive.v == llvm::omp::Directive::OMPD_ordered) {
+  if (directive.v == llvm::omp::Directive::OMPD_ordered_standalone) {
     // Standalone "ordered" directive.
     genOrderedOp(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
