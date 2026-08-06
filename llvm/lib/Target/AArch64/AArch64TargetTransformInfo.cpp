@@ -966,6 +966,14 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return TTI::TCC_Free;
     break;
   }
+  case Intrinsic::vector_interleave2: {
+    // Interleaving predicates by a factor of 2 requires a single TRN1.
+    if (RetTy->isIntOrIntVectorTy(1) &&
+        getElementCount(RetTy).getKnownMinValue() <= 16) {
+      return InstructionCost(1);
+    }
+    break;
+  }
   case Intrinsic::bitreverse: {
     static const CostTblEntry BitreverseTbl[] = {
         {Intrinsic::bitreverse, MVT::i32, 1},
