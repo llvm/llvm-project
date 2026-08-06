@@ -20,7 +20,7 @@ using namespace lldb_private::wasm;
 
 Unwind &ThreadWasm::GetUnwinder() {
   if (!m_unwinder_up) {
-    assert(IsWasmArchitecture(CalculateTarget()->GetArchitecture()));
+    assert(CalculateTarget()->GetArchitecture().GetTriple().isWasm());
     m_unwinder_up.reset(new wasm::UnwindWasm(*this));
   }
   return *m_unwinder_up;

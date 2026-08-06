@@ -16,11 +16,6 @@
 namespace lldb_private {
 namespace wasm {
 
-inline bool IsWasmArchitecture(const ArchSpec &arch) {
-  const llvm::Triple::ArchType machine = arch.GetMachine();
-  return machine == llvm::Triple::wasm32 || machine == llvm::Triple::wasm64;
-}
-
 /// ProcessWasm provides the access to the Wasm program state
 /// retrieved from the Wasm engine.
 class ProcessWasm : public process_gdb_remote::ProcessGDBRemote {
