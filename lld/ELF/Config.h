@@ -452,7 +452,6 @@ struct Config {
   bool zRodynamic;
   bool zSectionHeader;
   bool zShstk;
-  bool zSortThunks;
   bool zStartStopGC;
   uint8_t zStartStopVisibility;
   bool zText;
@@ -770,6 +769,10 @@ struct Ctx : CommonLinkerContext {
   // before a possible `sym = expr;`.
   unsigned scriptSymOrderCounter = 1;
   llvm::DenseMap<const Symbol *, unsigned> scriptSymOrder;
+
+  // Used to assert removeUnusedSyntheticSections-removed sections cannot become
+  // needed again.
+  SmallVector<SyntheticSection *, 0> removedSyntheticSections;
 
   // The set of TOC entries (.toc + addend) for which we should not apply
   // toc-indirect to toc-relative relaxation. const Symbol * refers to the
