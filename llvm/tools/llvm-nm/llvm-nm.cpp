@@ -2045,9 +2045,40 @@ static bool checkMachOAndArchFlags(SymbolicFile *O, StringRef Filename) {
   return true;
 }
 
-static void printArchiveMap(iterator_range<Archive::symbol_iterator> &map,
-                            StringRef Filename) {
-  for (auto I : map) {
+/// Decode the low 3 bits of a z/OS archive symbol attribute word into a
+/// human-readable string, e.g. "[64-bit + XPLink]".
+/// Any bits above the known 3-bit mask produce a trailing "?" flag.
+static std::string decodeZOSAttributes(uint32_t Attrs) {
+  bool Unknown = (Attrs & ~Archive::Symbol::ZOSKnownAttrMask) != 0;
+  bool Is64Bit = (Attrs & Archive::Symbol::ZOSAttr64Bit) != 0;
+  bool IsXPLink = (Attrs & Archive::Symbol::ZOSAttrXPLink) != 0;
+  bool IsWSA = (Attrs & Archive::Symbol::ZOSAttrWSA) != 0;
+
+  std::string Result = "[";
+  bool NeedPlus = false;
+  auto append = [&](const char *S) {
+    if (NeedPlus)
+      Result += " + ";
+    Result += S;
+    NeedPlus = true;
+  };
+  if (Is64Bit)
+    append("64-bit");
+  if (IsXPLink)
+    append("XPLink");
+  if (IsWSA)
+    append("WSA");
+  if (Unknown)
+    append("?");
+  if (!NeedPlus)
+    append("none");
+  Result += "]";
+  return Result;
+}
+
+static void printArchiveMap(iterator_range<Archive::symbol_iterator> &Map,
+                            StringRef Filename, bool PrintZOSAttrs = false) {
+  for (auto I : Map) {
     Expected<Archive::Child> C = I.getMember();
     if (!C) {
       error(C.takeError(), Filename);
@@ -2059,7 +2090,15 @@ static void printArchiveMap(iterator_range<Archive::symbol_iterator> &map,
       break;
     }
     StringRef SymName = I.getName();
-    outs() << SymName << " in " << FileNameOrErr.get() << "\n";
+    outs() << SymName << " in " << FileNameOrErr.get();
+    if (PrintZOSAttrs) {
+      uint32_t Attrs = I.getZOSAttributes();
+      std::string AttrsStr;
+      llvm::raw_string_ostream(AttrsStr) << format("0x%08x", Attrs);
+      outs() << " (flags: " << AttrsStr << " " << decodeZOSAttributes(Attrs)
+             << ")";
+    }
+    outs() << "\n";
   }
 
   outs() << "\n";
@@ -2069,7 +2108,7 @@ static void dumpArchiveMap(Archive *A, StringRef Filename) {
   auto Map = A->symbols();
   if (!Map.empty()) {
     outs() << "Archive map\n";
-    printArchiveMap(Map, Filename);
+    printArchiveMap(Map, Filename, A->kind() == Archive::K_ZOS);
   }
 
   auto ECMap = A->ec_symbols();
