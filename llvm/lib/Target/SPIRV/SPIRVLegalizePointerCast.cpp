@@ -49,6 +49,7 @@
 #include "SPIRVUtils.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -387,6 +388,93 @@ class SPIRVLegalizePointerCastImpl {
     buildAssignType(B, AccessTy, LI);
     GR->replaceAllUsesWith(IllegalLoad, LI, /* DeleteOld= */ true);
     DeadInstructions.push_back(IllegalLoad);
+    return true;
+  }
+
+  static bool atomicRMWIsByteDecomposable(AtomicRMWInst::BinOp Op) {
+    switch (Op) {
+    case AtomicRMWInst::Or:
+    case AtomicRMWInst::And:
+    case AtomicRMWInst::Xor:
+    case AtomicRMWInst::Xchg:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  AtomicRMWInst *createMatchingAtomicRMW(IRBuilder<> &B, AtomicRMWInst *Template,
+                                         Value *Ptr, Value *Val) {
+    return B.CreateAtomicRMW(Template->getOperation(), Ptr, Val,
+                             Template->getAlign(), Template->getOrdering(),
+                             Template->getSyncScopeID());
+  }
+
+  Value *atomicRMWScalarToByteLayout(IRBuilder<> &B, AtomicRMWInst *Template,
+                                     Value *OriginalPtr, Value *Val,
+                                     Align Alignment) {
+    LLVMContext &Ctx = B.getContext();
+    Type *I8Ty = Type::getInt8Ty(Ctx);
+    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    Type *AccessTy = Val->getType();
+    Value *IntVal = bitcastScalarToInt(B, Val);
+    unsigned NumBytes = DL.getTypeStoreSize(AccessTy);
+    Type *IntTy = IntegerType::get(Ctx, DL.getTypeStoreSizeInBits(AccessTy));
+    Value *OldIntVal = ConstantInt::get(IntTy, 0);
+
+    for (unsigned I = 0; I < NumBytes; ++I) {
+      Value *Shifted =
+          I == 0 ? IntVal
+                 : B.CreateLShr(IntVal, ConstantInt::get(IntTy, 8 * I));
+      Value *Byte = B.CreateTrunc(Shifted, I8Ty);
+      buildAssignType(B, I8Ty, Byte);
+      Value *Ptr = gepByteOffset(B, OriginalPtr, I);
+      AtomicRMWInst *OldByte = createMatchingAtomicRMW(B, Template, Ptr, Byte);
+      OldByte->setAlignment(commonAlignment(Alignment, I));
+      buildAssignType(B, I8Ty, OldByte);
+      Value *Extended = B.CreateZExt(OldByte, IntTy);
+      buildAssignType(B, IntTy, Extended);
+      Value *ShiftedOld =
+          I == 0 ? Extended
+                 : B.CreateShl(Extended, ConstantInt::get(IntTy, 8 * I));
+      if (I != 0)
+        buildAssignType(B, IntTy, ShiftedOld);
+      OldIntVal = I == 0 ? ShiftedOld : B.CreateOr(OldIntVal, ShiftedOld);
+      buildAssignType(B, IntTy, OldIntVal);
+    }
+
+    Value *Result = bitcastIntToScalar(B, OldIntVal, AccessTy);
+    if (Result != OldIntVal)
+      buildAssignType(B, AccessTy, Result);
+    return Result;
+  }
+
+  bool tryReinterpretAtomicRMW(IRBuilder<> &B, AtomicRMWInst *IllegalRMW,
+                               Value *OriginalPtr, Value *CastedPtr) {
+    Type *AccessTy = IllegalRMW->getValOperand()->getType();
+    ReinterpretKind Kind =
+        classifyReinterpretAccess(B, AccessTy, OriginalPtr, CastedPtr);
+    if (Kind == ReinterpretKind::None)
+      return false;
+
+    if (Kind == ReinterpretKind::ByteWise) {
+      if (!atomicRMWIsByteDecomposable(IllegalRMW->getOperation()))
+        return false;
+      Value *Result = atomicRMWScalarToByteLayout(
+          B, IllegalRMW, OriginalPtr, IllegalRMW->getValOperand(),
+          IllegalRMW->getAlign());
+      GR->replaceAllUsesWith(IllegalRMW, Result, /* DeleteOld= */ true);
+      DeadInstructions.push_back(IllegalRMW);
+      return true;
+    }
+
+    GR->buildAssignPtr(B, AccessTy, OriginalPtr);
+    AtomicRMWInst *NewRMW = createMatchingAtomicRMW(
+        B, IllegalRMW, OriginalPtr, IllegalRMW->getValOperand());
+    NewRMW->setAlignment(IllegalRMW->getAlign());
+    buildAssignType(B, AccessTy, NewRMW);
+    GR->replaceAllUsesWith(IllegalRMW, NewRMW, /* DeleteOld= */ true);
+    DeadInstructions.push_back(IllegalRMW);
     return true;
   }
 
@@ -769,6 +857,14 @@ class SPIRVLegalizePointerCastImpl {
     DeadInstructions.push_back(IllegalStore);
   }
 
+  void transformAtomicRMW(IRBuilder<> &B, AtomicRMWInst *IllegalRMW,
+                          Value *CastedOperand, Value *OriginalOperand) {
+    B.SetInsertPoint(IllegalRMW);
+    if (tryReinterpretAtomicRMW(B, IllegalRMW, OriginalOperand, CastedOperand))
+      return;
+    llvm_unreachable("Failed to legalize atomicrmw through ptrcast.");
+  }
+
   void legalizePointerCast(IntrinsicInst *II) {
     Value *CastedOperand = II;
     Value *OriginalOperand = II->getOperand(0);
@@ -787,6 +883,11 @@ class SPIRVLegalizePointerCastImpl {
       if (StoreInst *SI = dyn_cast<StoreInst>(User)) {
         transformStore(B, SI, SI->getValueOperand(), OriginalOperand,
                        CastedOperand, SI->getAlign());
+        continue;
+      }
+
+      if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(User)) {
+        transformAtomicRMW(B, RMW, CastedOperand, OriginalOperand);
         continue;
       }
 
