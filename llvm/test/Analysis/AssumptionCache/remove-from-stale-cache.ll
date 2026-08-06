@@ -7,13 +7,12 @@
 ; simplifying the CFG, we're left with a `hotcoldsplit` candidate, leading to a
 ; call to `removeAffectedValues()` on a stale cache.
 
-define void @dont_crash(i1 %cond.1) {
+define void @dont_crash(i1 %cond.1, ptr %ptr) {
 entry:
-  %load = load ptr, ptr null, align 8
   br i1 %cond.1, label %loop.cond, label %assume
 
 loop.cond:
-  %phi = phi ptr [ null, %loop.body ], [ %load, %entry ]
+  %phi = phi ptr [ null, %loop.body ], [ %ptr, %entry ]
   %cond.2 = phi i1 [ false, %loop.body ], [ true, %entry ]
   br i1 %cond.2, label %loop.body, label %dead
 
@@ -29,7 +28,7 @@ loop.body:
   br label %loop.cond
 
 assume:
-  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %load, i64 8) ]
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %ptr, i64 8) ]
   ret void
 
 dead:
