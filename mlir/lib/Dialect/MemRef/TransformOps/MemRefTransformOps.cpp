@@ -137,13 +137,15 @@ checkAllocToGlobalPreconditions(AllocLikeOp allocLikeOp) {
   MemRefType memrefType = allocLikeOp.getType();
   if (!memrefType.hasStaticShape()) {
     return emitSilenceableFailure(allocLikeOp)
-           << "global ops require statically shaped memrefs, but got "
+           << "converstion to a global op requires statically shaped memrefs, "
+              "but got "
            << memrefType;
   }
 
   if (!allocLikeOp.getSymbolOperands().empty()) {
     return emitSilenceableFailure(allocLikeOp)
-           << "global ops do not support symbol operands, but got "
+           << "conversion to a global op does not support symbol operands, but "
+              "got "
            << memrefType;
   }
 
@@ -151,11 +153,13 @@ checkAllocToGlobalPreconditions(AllocLikeOp allocLikeOp) {
   SmallVector<int64_t, 4> strides;
   if (failed(memrefType.getStridesAndOffset(strides, offset))) {
     return emitSilenceableFailure(allocLikeOp)
-           << "global ops require strided layout, but got " << memrefType;
+           << "conversion to a global op requires strided layout, but got "
+           << memrefType;
   }
   if (!ShapedType::isStatic(offset) || !ShapedType::isStaticShape(strides)) {
     return emitSilenceableFailure(allocLikeOp)
-           << "global ops do not support dynamic offset or strides, but got "
+           << "conversion to a global op does not support dynamic offset or "
+              "strides, but got "
            << memrefType;
   }
 
