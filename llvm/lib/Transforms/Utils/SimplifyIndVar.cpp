@@ -272,7 +272,8 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
   SmallVector<Instruction *, 4> Users;
   for (auto *U : ICmp->users()) {
     Users.push_back(cast<Instruction>(U));
-    if (isa<CondBrInst>(U))
+    auto *BB = cast<Instruction>(U)->getParent();
+    if (L->contains(BB) && L->isLoopExiting(BB))
       IsExitCond = true;
   }
   const Instruction *CtxI = findCommonDominator(Users, *DT);
