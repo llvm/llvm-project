@@ -2028,14 +2028,12 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
   }
 
   Constant *nval0 = getConstantFloat(Val0, aCI->getType());
-  Constant *nval1 = nullptr;
-  if (hasTwoResults)
-    nval1 = getConstantFloat(Val1, aCI->getType());
 
   if (hasTwoResults) {
     // sincos
     assert(FInfo.getId() == AMDGPULibFunc::EI_SINCOS &&
            "math function with ptr arg not supported yet");
+    Constant *nval1 = getConstantFloat(Val1, aCI->getType());
     new StoreInst(nval1, aCI->getArgOperand(1), aCI->getIterator());
   }
 
