@@ -1606,11 +1606,21 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   if (SrcTy->isIntOrIntVectorTy(1) && Zext.hasNonNeg())
     return replaceInstUsesWith(Zext, Constant::getNullValue(Zext.getType()));
 
+  // zext nneg means Src is non-negative and we can treat this as an sext, and
+  // if no signed wrapping occurs we know that Src evaluated as a signed
+  // DestTy will also be non-negative. Evaluating as a signed type means that
+  // any constant operands will be sign-extended instead of zero-extended,
+  // meaning they remain in the range of a signed SrcTy so we won't need to
+  // clear any high bits.
+  bool EvaluateAsSigned =
+      Zext.hasNonNeg() &&
+      TypeEvaluationHelper::canEvaluateSExtd(Src, DestTy, true);
+
   // Try to extend the entire expression tree to the wide destination type.
-  unsigned BitsToClear;
+  unsigned BitsToClear = 0;
   if (shouldChangeType(SrcTy, DestTy) &&
-      TypeEvaluationHelper::canEvaluateZExtd(Src, DestTy, BitsToClear, *this,
-                                             &Zext)) {
+      (EvaluateAsSigned || TypeEvaluationHelper::canEvaluateZExtd(
+                               Src, DestTy, BitsToClear, *this, &Zext))) {
     assert(BitsToClear <= SrcTy->getScalarSizeInBits() &&
            "Can't clear more bits than in SrcTy");
 
@@ -1619,16 +1629,6 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
         dbgs() << "ICE: EvaluateInDifferentType converting expression type"
                   " to avoid zero extend: "
                << Zext << '\n');
-
-    // zext nneg means Src is non-negative and we can treat this as an sext, and
-    // if no signed wrapping occurs we know that Src evaluated as a signed
-    // DestTy will also be non-negative. Evaluating as a signed type means that
-    // any constant operands will be sign-extended instead of zero-extended,
-    // meaning they remain in the range of a signed SrcTy so we won't need to
-    // clear any high bits.
-    bool EvaluateAsSigned =
-        Zext.hasNonNeg() &&
-        TypeEvaluationHelper::canEvaluateSExtd(Src, DestTy, true);
 
     Value *Res = EvaluateInDifferentType(Src, DestTy, EvaluateAsSigned);
     assert(Res->getType() == DestTy);
