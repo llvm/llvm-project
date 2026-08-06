@@ -593,6 +593,12 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
   CC1Args.push_back("-idirafter");
   CC1Args.push_back(DriverArgs.MakeArgString(getIncludePath()));
+  SmallString<128> LibHipCxxPath(getIncludePath());
+  llvm::sys::path::append(LibHipCxxPath, "libhipcxx");
+  if (D.getVFS().exists(LibHipCxxPath)) {
+    CC1Args.push_back("-idirafter");
+    CC1Args.push_back(DriverArgs.MakeArgString(LibHipCxxPath));
+  }
   if (UsesRuntimeWrapper)
     CC1Args.append({"-include", "__clang_hip_runtime_wrapper.h"});
   if (HasHipStdPar)
@@ -661,7 +667,8 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                                      const llvm::Triple &Triple,
                                      const llvm::opt::ArgList &Args,
-                                     std::vector<StringRef> &Features) {
+                                     std::vector<StringRef> &Features,
+                                     bool ForAS) {
   if (Args.hasFlag(options::OPT_mwavefrontsize64,
                    options::OPT_mno_wavefrontsize64, false))
     Features.push_back("+wavefrontsize64");
@@ -669,6 +676,22 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
   if (Args.hasFlag(options::OPT_mamdgpu_precise_memory_op,
                    options::OPT_mno_amdgpu_precise_memory_op, false))
     Features.push_back("+precise-memory");
+
+  // When assembling, the xnack/sramecc mode cannot come from a module flag
+  // (there is no module), so forward it to the assembler as a feature.
+  if (ForAS) {
+    if (Arg *A = Args.getLastArg(options::OPT_mxnack, options::OPT_mno_xnack)) {
+      Features.push_back(
+          A->getOption().matches(options::OPT_mxnack) ? "+xnack" : "-xnack");
+    }
+
+    if (Arg *A =
+            Args.getLastArg(options::OPT_msramecc, options::OPT_mno_sramecc)) {
+      Features.push_back(A->getOption().matches(options::OPT_msramecc)
+                             ? "+sramecc"
+                             : "-sramecc");
+    }
+  }
 
   handleTargetFeaturesGroup(D, Triple, Args, Features,
                             options::OPT_m_amdgpu_Features_Group);

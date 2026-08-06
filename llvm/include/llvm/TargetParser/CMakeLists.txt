@@ -13,5 +13,8 @@ tablegen(LLVM PPCGenTargetFeatures.inc -gen-target-features EXTRA_INCLUDES ${PRO
 set(LLVM_TARGET_DEFINITIONS ${PROJECT_SOURCE_DIR}/lib/Target/AMDGPU/R600.td)
 tablegen(LLVM R600TargetParserDef.inc -gen-amdgpu-target-def EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/lib/Target/AMDGPU)
 
+set(LLVM_TARGET_DEFINITIONS ${PROJECT_SOURCE_DIR}/lib/Target/AMDGPU/AMDGPU.td)
+tablegen(LLVM AMDGPUTargetParserDef.inc -gen-amdgpu-target-def EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/lib/Target/AMDGPU)
+
 # This covers all of the tablegen calls above.
 add_public_tablegen_target(target_parser_gen)

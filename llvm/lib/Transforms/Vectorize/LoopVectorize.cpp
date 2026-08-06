@@ -1657,15 +1657,8 @@ public:
 
       auto DiffChecks = RtPtrChecking.getDiffChecks();
       if (DiffChecks) {
-        Value *RuntimeVF = nullptr;
         MemRuntimeCheckCond = addDiffRuntimeChecks(
-            MemCheckBlock->getTerminator(), *DiffChecks, MemCheckExp,
-            [VF, &RuntimeVF](IRBuilderBase &B, unsigned Bits) {
-              if (!RuntimeVF)
-                RuntimeVF = getRuntimeVF(B, B.getIntNTy(Bits), VF);
-              return RuntimeVF;
-            },
-            IC);
+            MemCheckBlock->getTerminator(), *DiffChecks, MemCheckExp, VF, IC);
       } else {
         MemRuntimeCheckCond = addRuntimeChecks(
             MemCheckBlock->getTerminator(), L, RtPtrChecking.getChecks(),
@@ -5557,18 +5550,18 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       // Collect the instructions (and their associated costs) that will be more
       // profitable to scalarize.
       CM.collectNonVectorizedAndSetWideningDecisions(UserVF);
+      buildVPlans(*VPlan1, UserVF, UserVF);
       ElementCount EpilogueUserVF = EpilogueVectorizationForceVF;
       if (EpilogueUserVF.isVector() &&
           ElementCount::isKnownLT(EpilogueUserVF, UserVF)) {
         CM.collectNonVectorizedAndSetWideningDecisions(EpilogueUserVF);
         buildVPlans(*VPlan1, EpilogueUserVF, EpilogueUserVF);
       }
-      buildVPlans(*VPlan1, UserVF, UserVF);
-      if (!VPlans.empty() && VPlans.back()->getSingleVF() == UserVF) {
+      if (!VPlans.empty() && VPlans.front()->getSingleVF() == UserVF) {
         // For scalar VF, skip VPlan cost check as VPlan cost is designed for
         // vector VFs only.
         if (UserVF.isScalar() ||
-            cost(*VPlans.back(), UserVF, /*RU=*/nullptr).isValid()) {
+            cost(*VPlans.front(), UserVF, /*RU=*/nullptr).isValid()) {
           LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
           LLVM_DEBUG(printPlans(dbgs()));
           return;
@@ -5663,7 +5656,36 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // former case) later on, if they exist, to avoid counting them twice.
   // Similarly we pre-compute the cost of any optimized truncates.
   // TODO: Switch to more accurate costing based on VPlan.
+
+  // If the vector loop gets executed exactly once with the given VF, ignore the
+  // costs of comparison and induction instructions, as they'll get simplified
+  // away.
+  // TODO: Remove this code after stepping away from the legacy cost model and
+  // adding code to simplify VPlans before calculating their costs.
+  auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
+  bool IsFullyUnrolled = TC == VF && !Plan.hasTailFolded();
+  SmallPtrSet<const Value *, 4> WidenedIVs;
+  bool HasTruncatedIV = false;
+  if (IsFullyUnrolled) {
+    addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
+                                         CostCtx.SkipCostComputation);
+  } else {
+    // Inductions represented by a VPWidenIntOrFpInductionRecipe have their cost
+    // computed by the recipe, so collect their phis to skip the legacy
+    // increment cost below. If any induction is truncated the VPlan-based cost
+    // will diverge. Still fall back to the legacy cost model for now.
+    VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+    for (VPRecipeBase &R : *LoopRegion->getEntryBasicBlock())
+      if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
+        HasTruncatedIV |= WideIV->getTruncInst() != nullptr;
+        if (PHINode *IVPhi = WideIV->getPHINode())
+          WidenedIVs.insert(IVPhi);
+      }
+  }
+
   for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
+    if (!HasTruncatedIV && WidenedIVs.contains(IV))
+      continue;
     Instruction *IVInc = cast<Instruction>(
         IV->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
     SmallVector<Instruction *> IVInsts = {IVInc};
@@ -5682,16 +5704,6 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
         continue;
       IVInsts.push_back(CI);
     }
-
-    // If the vector loop gets executed exactly once with the given VF, ignore
-    // the costs of comparison and induction instructions, as they'll get
-    // simplified away.
-    // TODO: Remove this code after stepping away from the legacy cost model and
-    // adding code to simplify VPlans before calculating their costs.
-    auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
-    if (TC == VF && !Plan.hasTailFolded())
-      addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
-                                           CostCtx.SkipCostComputation);
 
     for (Instruction *IVInst : IVInsts) {
       if (CostCtx.skipCostComputation(IVInst, VF.isVector()))
@@ -5731,7 +5743,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // accounted for here using the legacy cost model. However, some opcodes
   // are excluded from these precomputed scalarization costs and are instead
   // modeled later by the VPlan cost model (see UseVPlanCostModel below).
-  for (Instruction *ForcedScalar : CM.ForcedScalars[VF]) {
+  for (Instruction *ForcedScalar : CostCtx.CM.ForcedScalars[VF]) {
     if (CostCtx.skipCostComputation(ForcedScalar, VF.isVector()))
       continue;
     CostCtx.SkipCostComputation.insert(ForcedScalar);
@@ -5742,6 +5754,11 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     });
     Cost += ForcedCost;
   }
+
+  // Don't apply legacy scalarization costs if nothing remains scalar &
+  // predicated.
+  if (!hasReplicatorRegion(Plan))
+    return Cost;
 
   auto UseVPlanCostModel = [](Instruction *I) -> bool {
     switch (I->getOpcode()) {
@@ -5754,7 +5771,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       return false;
     }
   };
-  for (const auto &[Scalarized, ScalarCost] : CM.InstsToScalarize[VF]) {
+  for (const auto &[Scalarized, ScalarCost] : CostCtx.CM.InstsToScalarize[VF]) {
     if (UseVPlanCostModel(Scalarized) ||
         CostCtx.skipCostComputation(Scalarized, VF.isVector()))
       continue;
@@ -5825,11 +5842,11 @@ LoopVectorizationPlanner::computeBestVF() {
 
   if (hasPlanWithVF(UserVF) && hasForcedEpilogueVF()) {
     assert(VPlans.size() == 2 && "Must have exactly 2 VPlans built");
-    assert(VPlans[0]->getSingleVF() == EpilogueVectorizationForceVF &&
-           "expected first plan to be for the forced epilogue VF");
-    assert(VPlans[1]->getSingleVF() == UserVF &&
+    assert(VPlans[0]->getSingleVF() == UserVF &&
            "expected second plan to be for the forced UserVF");
-    return {VectorizationFactor(UserVF, 0, 0), VPlans[1].get()};
+    assert(VPlans[1]->getSingleVF() == EpilogueVectorizationForceVF &&
+           "expected first plan to be for the forced epilogue VF");
+    return {VectorizationFactor(UserVF, 0, 0), VPlans[0].get()};
   }
 
   LLVM_DEBUG(dbgs() << "LV: Computing best VF using cost kind: "
@@ -6056,6 +6073,14 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       SE.forgetLcssaPhiWithNewPredecessor(OrigLoop,
                                           &cast<VPIRPhi>(PhiR).getIRPhi());
   }
+
+  // Query whether the target wants loops it vectorizes to remain eligible for
+  // runtime unrolling. Do this here, on the original loop and before its SCEV
+  // is forgotten below.
+  TargetTransformInfo::UnrollingPreferences UP;
+  TTI.getUnrollingPreferences(OrigLoop, SE, UP, ORE);
+  bool UnrollVectorizedLoop = UP.UnrollVectorizedLoop;
+
   // Forget the original loop and block dispositions.
   SE.forgetLoop(OrigLoop);
   SE.forgetBlockAndLoopDispositions();
@@ -6094,7 +6119,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       EpilogueVecKind == EpilogueVectorizationKind::Epilogue, LID,
       OrigAverageTripCount, OrigLoopInvocationWeight,
       estimateElementCount(BestVF * BestUF, Config.getVScaleForTuning()),
-      DisableRuntimeUnroll);
+      DisableRuntimeUnroll, UnrollVectorizedLoop);
 
   // 3. Fix the vectorized code: take care of header phi's, live-outs,
   //    predication, updating analyses.

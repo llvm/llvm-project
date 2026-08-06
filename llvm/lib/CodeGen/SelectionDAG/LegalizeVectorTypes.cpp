@@ -84,6 +84,10 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::LOAD:           R = ScalarizeVecRes_LOAD(cast<LoadSDNode>(N));break;
   case ISD::SCALAR_TO_VECTOR:  R = ScalarizeVecRes_SCALAR_TO_VECTOR(N); break;
+  case ISD::VECTOR_DEINTERLEAVE:
+  case ISD::VECTOR_INTERLEAVE:
+    R = ScalarizeVecRes_VECTOR_INTERLEAVE_DEINTERLEAVE(N);
+    break;
   case ISD::SIGN_EXTEND_INREG: R = ScalarizeVecRes_InregOp(N); break;
   case ISD::VSELECT:           R = ScalarizeVecRes_VSELECT(N); break;
   case ISD::SELECT:            R = ScalarizeVecRes_SELECT(N); break;
@@ -569,7 +573,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOAD(LoadSDNode *N) {
   SDValue Result = DAG.getLoad(
       ISD::UNINDEXED, N->getExtensionType(),
       N->getValueType(0).getVectorElementType(), SDLoc(N), N->getChain(),
-      N->getBasePtr(), DAG.getUNDEF(N->getBasePtr().getValueType()),
+      N->getBasePtr(), DAG.getPOISON(N->getBasePtr().getValueType()),
       N->getPointerInfo(), N->getMemoryVT().getVectorElementType(),
       N->getBaseAlign(), N->getMemOperand()->getFlags(), N->getAAInfo());
 
@@ -667,6 +671,18 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N) {
   if (InOp.getValueType() != EltVT)
     return DAG.getNode(ISD::TRUNCATE, SDLoc(N), EltVT, InOp);
   return InOp;
+}
+
+SDValue
+DAGTypeLegalizer::ScalarizeVecRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N) {
+  assert(N->getNumValues() == N->getNumOperands() &&
+         "Expected one result per operand");
+
+  // Interleaving or deinterleaving one-element vectors leaves each result
+  // equal to the corresponding operand.
+  for (unsigned I = 0; I != N->getNumValues(); ++I)
+    SetScalarizedVector(SDValue(N, I), GetScalarizedVector(N->getOperand(I)));
+  return SDValue();
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_VSELECT(SDNode *N) {
@@ -2425,7 +2441,7 @@ void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
   ISD::LoadExtType ExtType = LD->getExtensionType();
   SDValue Ch = LD->getChain();
   SDValue Ptr = LD->getBasePtr();
-  SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
+  SDValue Offset = DAG.getPOISON(Ptr.getValueType());
   EVT MemoryVT = LD->getMemoryVT();
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
   AAMDNodes AAInfo = LD->getAAInfo();
@@ -3858,6 +3874,12 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VSELECT:
     Res = SplitVecOp_VSELECT(N, OpNo);
     break;
+  case ISD::MASKED_UDIV:
+  case ISD::MASKED_SDIV:
+  case ISD::MASKED_UREM:
+  case ISD::MASKED_SREM:
+    Res = SplitVecOp_MaskedBinOp(N, OpNo);
+    break;
   case ISD::VECTOR_COMPRESS:
     Res = SplitVecOp_VECTOR_COMPRESS(N, OpNo);
     break;
@@ -4051,6 +4073,22 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSELECT(SDNode *N, unsigned OpNo) {
     DAG.getNode(ISD::VSELECT, DL, HiOpVT, HiMask, HiOp0, HiOp1);
 
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, Src0VT, LoSelect, HiSelect);
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_MaskedBinOp(SDNode *N, unsigned OpNo) {
+  assert(OpNo == 2 && "Illegal operand must be mask");
+
+  SDLoc DL(N);
+  auto [LHSLo, LHSHi] = DAG.SplitVector(N->getOperand(0), DL);
+  auto [RHSLo, RHSHi] = DAG.SplitVector(N->getOperand(1), DL);
+  SDValue MaskLo, MaskHi;
+  GetSplitVector(N->getOperand(2), MaskLo, MaskHi);
+
+  SDValue Lo = DAG.getNode(N->getOpcode(), DL, LHSLo.getValueType(), LHSLo,
+                           RHSLo, MaskLo, N->getFlags());
+  SDValue Hi = DAG.getNode(N->getOpcode(), DL, LHSHi.getValueType(), LHSHi,
+                           RHSHi, MaskHi, N->getFlags());
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0), Lo, Hi);
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_COMPRESS(SDNode *N, unsigned OpNo) {
