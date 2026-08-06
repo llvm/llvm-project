@@ -24,6 +24,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <list>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
