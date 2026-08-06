@@ -219,6 +219,12 @@ static Value *peekThroughBitcasts(Value *V) {
   return V;
 }
 
+/// Helper to peek through bitcasts to the same value.
+static bool isEquivBitcast(Value *X, Value *Y) {
+  return X->getType() == Y->getType() &&
+          peekThroughBitcasts(X) == peekThroughBitcasts(Y);
+}
+
 static bool canWidenLoad(LoadInst *Load, const TargetTransformInfo &TTI) {
   // Do not widen load if atomic/volatile or under asan/hwasan/memtag/tsan.
   // The widened load may load data from dirty regions or create data races
@@ -3740,19 +3746,13 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
     if (!FrontV)
       return false;
 
-    // Helper to peek through bitcasts to the same value.
-    auto IsEquiv = [&](Value *X, Value *Y) {
-      return X->getType() == Y->getType() &&
-             peekThroughBitcasts(X) == peekThroughBitcasts(Y);
-    };
-
     // Look for an identity value.
     if (FrontLane == 0 &&
         cast<FixedVectorType>(FrontV->getType())->getNumElements() ==
             Item.size() &&
-        all_of(drop_begin(enumerate(Item)), [IsEquiv, Item](const auto &E) {
+        all_of(drop_begin(enumerate(Item)), [Item](const auto &E) {
           Value *FrontV = Item.front().first;
-          return !E.value().first || (IsEquiv(E.value().first, FrontV) &&
+          return !E.value().first || (isEquivBitcast(E.value().first, FrontV) &&
                                       E.value().second == (int)E.index());
         })) {
       IdentityLeafs.insert(std::make_pair(FrontV, From));
@@ -4263,12 +4263,6 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     APInt Elts;
   };
   std::optional<ReductionCut> Cut;
-  auto AreEquivalentBitcastSources = [](Value *V1, Value *V2) {
-    auto *C1 = dyn_cast<BitCastInst>(V1);
-    auto *C2 = dyn_cast<BitCastInst>(V2);
-    return C1 && C2 && C1->getType() == C2->getType() &&
-           C1->getOperand(0) == C2->getOperand(0);
-  };
   for (Value *S : Sources) {
     auto It = Demands.find(S);
     if (It == Demands.end() || It->second.Lanes.isZero())
@@ -4281,7 +4275,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       Cut = ReductionCut{S, It->second.Lanes};
       continue;
     }
-    if (!AreEquivalentBitcastSources(Cut->Src, S)) {
+    if (!isEquivBitcast(Cut->Src, S)) {
       Cut.reset();
       break;
     }
