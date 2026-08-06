@@ -1953,12 +1953,16 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const SIInstrInfo *TII = ST.getInstrInfo();
   bool NeedExecCopyReservedReg = false;
 
+  // Functions affected by the V_PERM_PK16 hazard need SGPRForEXECCopy.
+  const bool CheckVPermPk16 = ST.hasVPermPk16Hazard();
+
   MachineInstr *ReturnMI = nullptr;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       // TODO: Walking through all MBBs here would be a bad heuristic. Better
       // handle them elsewhere.
-      if (TII->isWWMRegSpillOpcode(MI.getOpcode()))
+      if (TII->isWWMRegSpillOpcode(MI.getOpcode()) ||
+          (CheckVPermPk16 && SIInstrInfo::isVPermPk16(MI.getOpcode())))
         NeedExecCopyReservedReg = true;
       else if (MI.getOpcode() == AMDGPU::SI_RETURN ||
                MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||

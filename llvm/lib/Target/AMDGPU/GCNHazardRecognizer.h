@@ -231,6 +231,10 @@ private:
   bool isCoexecutionHazardFor(const MachineInstr &I,
                               const MachineInstr &MI) const;
   bool fixShift64HighRegBug(MachineInstr *MI);
+  bool fixVPermPk16Hazard(MachineInstr *MI);
+  void emitVPermPk16ExecNonZeroVNop(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator InsertPt,
+                                    const DebugLoc &DL);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);
   bool fixGetRegWaitIdle(MachineInstr *MI);

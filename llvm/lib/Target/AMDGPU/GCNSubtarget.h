@@ -998,6 +998,15 @@ public:
     return HasGFX1250Insts && getGeneration() == GFX12;
   }
 
+  // V_PERM_PK16 leaves a hazard that must be cleared by an immediately
+  // following "safe" instruction (or an inserted V_NOP). The V_PERM_PK16
+  // instructions are available whenever the tensor convert LUT instructions are
+  // available, but the hazard only affects the GFX12 (gfx1250) part; gfx13
+  // issues them safely.
+  bool hasVPermPk16Hazard() const {
+    return hasTensorCvtLutInsts() && getGeneration() == GFX12;
+  }
+
   /// \returns true if the subtarget requires a wait for xcnt before VMEM
   /// accesses that must never be repeated in the event of a page fault/re-try.
   /// Atomic stores/rmw and all volatile accesses fall under this criteria.
