@@ -6038,21 +6038,25 @@ struct ExpectedGsymStats {
   int64_t MEndOfList;
 };
 
-// Build a small GSYM from canned DWARF (a single function with a line table and
-// inline info), then exercise GsymReader::dumpStatistics() and verify that
-// every reported byte size matches the exact value determined by the YAML
-// input, and that the sizes account for every byte of the file exactly once at
-// each nesting level. Works for both GSYM v1 and v2.
+// Build a small GSYM from canned DWARF that exercises every statistics bucket -
+// a function with a line table, inline info, a call site, a merged function,
+// and a UUID - then exercise GsymReader::dumpStatistics() and verify that every
+// reported byte size matches the exact value determined by the YAML input, and
+// that the sizes account for every byte of the file exactly once at each
+// nesting level. Works for both GSYM v1 and v2.
 template <typename CreatorT>
 static void TestGsymStatistics(const ExpectedGsymStats &E) {
-  // A single compile unit with one function ("main") that has a line table and
-  // one inlined subroutine ("inline1").
+  // A single compile unit with a function "main" that has a line table, one
+  // inlined subroutine ("inline1"), and a call site. A second subprogram
+  // ("dupfunc") shares main's address range so it gets folded into a merged
+  // function. A UUID is set on the creator further below.
   StringRef yamldata = R"(
   debug_str:
     - ''
     - /tmp/main.c
     - main
     - inline1
+    - dupfunc
   debug_abbrev:
     - Table:
         - Code:            0x00000001
@@ -6093,6 +6097,22 @@ static void TestGsymStatistics(const ExpectedGsymStats &E) {
               Form:            DW_FORM_data4
             - Attribute:       DW_AT_call_line
               Form:            DW_FORM_data4
+        - Code:            0x00000004
+          Tag:             DW_TAG_call_site
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_call_return_pc
+              Form:            DW_FORM_addr
+        - Code:            0x00000005
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
   debug_info:
     - Version:         4
       AddrSize:        8
@@ -6116,7 +6136,15 @@ static void TestGsymStatistics(const ExpectedGsymStats &E) {
             - Value:           0x0000000000000100
             - Value:           0x0000000000000001
             - Value:           0x000000000000000A
+        - AbbrCode:        0x00000004
+          Values:
+            - Value:           0x0000000000001010
         - AbbrCode:        0x00000000
+        - AbbrCode:        0x00000005
+          Values:
+            - Value:           0x000000000000001A
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
         - AbbrCode:        0x00000000
   debug_line:
     - Length:          96
@@ -6194,8 +6222,18 @@ static void TestGsymStatistics(const ExpectedGsymStats &E) {
   auto &OS = llvm::nulls();
   OutputAggregator OSAgg(&OS);
   CreatorT GC;
-  DwarfTransformer DT(*DwarfContext, GC);
+  // Give the GSYM a 16-byte UUID (only v2 stores this as a data section; v1
+  // keeps it inline in the header).
+  const uint8_t UUIDBytes[16] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab,
+                                 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98,
+                                 0x76, 0x54, 0x32, 0x10};
+  GC.setUUID(UUIDBytes);
+  // Load DW_TAG_call_site DIEs so the call-site bucket is populated.
+  DwarfTransformer DT(*DwarfContext, GC, /*LoadDwarfCallSites=*/true,
+                      /*IsMachO=*/false);
   ASSERT_THAT_ERROR(DT.convert(/*ThreadCount=*/1, OSAgg), Succeeded());
+  // Fold same-range functions ("main" and "dupfunc") into a merged function.
+  GC.prepareMergedFunctions(OSAgg);
   ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
@@ -6224,6 +6262,10 @@ static void TestGsymStatistics(const ExpectedGsymStats &E) {
   auto Path = Root->getString("path");
   ASSERT_TRUE(Path.has_value());
   EXPECT_EQ(*Path, DisplayPath);
+  // The UUID we set on the creator is reported the same way in v1 and v2.
+  auto UUID = Root->getString("uuid");
+  ASSERT_TRUE(UUID.has_value());
+  EXPECT_EQ(*UUID, "01234567-89AB-CDEF-FEDC-BA9876543210");
   auto NumAddrs = Root->getInteger("num_addresses");
   ASSERT_TRUE(NumAddrs.has_value());
   EXPECT_EQ(static_cast<uint64_t>(*NumAddrs), GR->getNumAddresses());
@@ -6293,9 +6335,12 @@ static void TestGsymStatistics(const ExpectedGsymStats &E) {
 }
 
 TEST(GSYMTest, TestGsymStatistics) {
+  // "main" (line table + inline + call site) is folded into a merged function
+  // behind "dupfunc", so the inline/call-site bytes appear in the merged
+  // breakdown; v1 stores the UUID inline in the header (uuid_section == 0).
   ExpectedGsymStats E = {};
   E.NumAddresses = 1;
-  E.FileSize = 200;
+  E.FileSize = 297;
   E.Header = 48;
   E.GlobalDataDirectory = 0;
   E.UUIDSection = 0;
@@ -6303,39 +6348,53 @@ TEST(GSYMTest, TestGsymStatistics) {
   E.AddressTable = 1;
   E.AddrInfoOffsets = 4;
   E.FileTable = 28;
-  E.StringTable = 35;
-  E.FunctionInfoData = 81;
+  E.StringTable = 43;
+  E.FunctionInfoData = 170;
   E.FISizeAndName = 8;
   E.FILineTableInfo = 32;
-  E.FIInlineInfo = 32;
+  E.FIInlineInfo = 0;
   E.FICallSiteInfo = 0;
-  E.FIMergedFuncInfo = 0;
+  E.FIMergedFuncInfo = 121;
   E.FIEndOfList = 8;
   E.FIPadding = 1;
-  // No merged functions in this GSYM.
+  E.MInfoTypeInfoLengthCountAndFnSize = 16;
+  E.MSizeAndName = 8;
+  E.MLineTableInfo = 32;
+  E.MInlineInfo = 32;
+  E.MCallSiteInfo = 25;
+  E.MMergedFuncInfo = 0;
+  E.MEndOfList = 8;
   TestGsymStatistics<GsymCreatorV1>(E);
 }
 
 TEST(GSYMTest, TestGsymStatisticsV2) {
+  // Same as above, but v2 stores the UUID as its own 16-byte data section
+  // (uuid_section == 16) and has an on-disk GlobalData directory.
   ExpectedGsymStats E = {};
   E.NumAddresses = 1;
-  E.FileSize = 332;
+  E.FileSize = 473;
   E.Header = 20; // V2 header size
-  E.GlobalDataDirectory = 120;
-  E.UUIDSection = 0;
-  E.Padding = 4;
+  E.GlobalDataDirectory = 140;
+  E.UUIDSection = 16;
+  E.Padding = 8;
   E.AddressTable = 1;
   E.AddrInfoOffsets = 8;
   E.FileTable = 52;
-  E.StringTable = 35;
-  E.FunctionInfoData = 92;
+  E.StringTable = 43;
+  E.FunctionInfoData = 185;
   E.FISizeAndName = 12;
   E.FILineTableInfo = 32;
-  E.FIInlineInfo = 40;
+  E.FIInlineInfo = 0;
   E.FICallSiteInfo = 0;
-  E.FIMergedFuncInfo = 0;
+  E.FIMergedFuncInfo = 133;
   E.FIEndOfList = 8;
   E.FIPadding = 0;
-  // No merged functions in this GSYM.
+  E.MInfoTypeInfoLengthCountAndFnSize = 16;
+  E.MSizeAndName = 12;
+  E.MLineTableInfo = 32;
+  E.MInlineInfo = 40;
+  E.MCallSiteInfo = 25;
+  E.MMergedFuncInfo = 0;
+  E.MEndOfList = 8;
   TestGsymStatistics<GsymCreatorV2>(E);
 }
