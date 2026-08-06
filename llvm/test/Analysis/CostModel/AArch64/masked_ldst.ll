@@ -252,23 +252,23 @@ define void @scalable_ext_loads() {
 
 define void @scalable_nxv1() {
 ; CHECK-LABEL: 'scalable_nxv1'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv1i8 = call <vscale x 1 x i8> @llvm.masked.load.nxv1i8.p0(ptr undef, <vscale x 1 x i1> undef, <vscale x 1 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv1i16 = call <vscale x 1 x i16> @llvm.masked.load.nxv1i16.p0(ptr undef, <vscale x 1 x i1> undef, <vscale x 1 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv1i32 = call <vscale x 1 x i32> @llvm.masked.load.nxv1i32.p0(ptr undef, <vscale x 1 x i1> undef, <vscale x 1 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr undef, <vscale x 1 x i1> undef, <vscale x 1 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv1f16 = call <vscale x 1 x half> @llvm.masked.load.nxv1f16.p0(ptr undef, <vscale x 1 x i1> undef, <vscale x 1 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv1f32 = call <vscale x 1 x float> @llvm.masked.load.nxv1f32.p0(ptr undef, <vscale x 1 x i1> undef, <vscale x 1 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv1f64 = call <vscale x 1 x double> @llvm.masked.load.nxv1f64.p0(ptr undef, <vscale x 1 x i1> undef, <vscale x 1 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv1i8 = call <vscale x 1 x i8> @llvm.masked.load.nxv1i8.p0(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv1i16 = call <vscale x 1 x i16> @llvm.masked.load.nxv1i16.p0(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv1i32 = call <vscale x 1 x i32> @llvm.masked.load.nxv1i32.p0(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x i64> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv1f16 = call <vscale x 1 x half> @llvm.masked.load.nxv1f16.p0(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x half> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv1f32 = call <vscale x 1 x float> @llvm.masked.load.nxv1f32.p0(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv1f64 = call <vscale x 1 x double> @llvm.masked.load.nxv1f64.p0(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x double> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 entry:
-  %nxv1i8 = call <vscale x 1 x i8> @llvm.masked.load.nxv1i8.p0(ptr undef, <vscale x 1 x i1> undef, <vscale x 1 x i8> undef)
-  %nxv1i16 = call <vscale x 1 x i16> @llvm.masked.load.nxv1i16.p0(ptr undef, <vscale x 1 x i1> undef, <vscale x 1 x i16> undef)
-  %nxv1i32 = call <vscale x 1 x i32> @llvm.masked.load.nxv1i32.p0(ptr undef, <vscale x 1 x i1> undef, <vscale x 1 x i32> undef)
-  %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr undef, <vscale x 1 x i1> undef, <vscale x 1 x i64> undef)
-  %nxv1f16 = call <vscale x 1 x half> @llvm.masked.load.nxv1f16.p0(ptr undef, <vscale x 1 x i1> undef, <vscale x 1 x half> undef)
-  %nxv1f32 = call <vscale x 1 x float> @llvm.masked.load.nxv1f32.p0(ptr undef, <vscale x 1 x i1> undef, <vscale x 1 x float> undef)
-  %nxv1f64 = call <vscale x 1 x double> @llvm.masked.load.nxv1f64.p0(ptr undef, <vscale x 1 x i1> undef, <vscale x 1 x double> undef)
+  %nxv1i8 = call <vscale x 1 x i8> @llvm.masked.load.nxv1i8.p0(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x i8> poison)
+  %nxv1i16 = call <vscale x 1 x i16> @llvm.masked.load.nxv1i16.p0(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x i16> poison)
+  %nxv1i32 = call <vscale x 1 x i32> @llvm.masked.load.nxv1i32.p0(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x i32> poison)
+  %nxv1i64 = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x i64> poison)
+  %nxv1f16 = call <vscale x 1 x half> @llvm.masked.load.nxv1f16.p0(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x half> poison)
+  %nxv1f32 = call <vscale x 1 x float> @llvm.masked.load.nxv1f32.p0(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x float> poison)
+  %nxv1f64 = call <vscale x 1 x double> @llvm.masked.load.nxv1f64.p0(ptr poison, <vscale x 1 x i1> poison, <vscale x 1 x double> poison)
 
   ret void
 }
