@@ -2,7 +2,7 @@
 // RUN: split-file %s %t
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps \
 // RUN:   -fmodules-cache-path=%t/mcache -triple arm64-apple-macosx10.7.0 \
-// RUN:   -I%t/headers -fsyntax-only %t/test.c -verify
+// RUN:   -I%t/headers -fsyntax-only %t/test.cpp -verify
 
 // Check more cases of attribute merging across multiple modules.
 
@@ -17,11 +17,25 @@ module Second {
 void additiveAttr(void) __attribute__((availability(macos,unavailable)));
 void exclusiveAttr(void) __attribute__((hot));
 
+namespace N {
+inline namespace with_tag __attribute__((__abi_tag__("a"))) {
+  struct First {};
+}
+inline namespace with_tag {
+}
+}
+
 //--- headers/second.h
 void additiveAttr(void) __attribute__((availability(ios,introduced=4.0)));
 void exclusiveAttr(void) __attribute__((cold));
 
-//--- test.c
+namespace N {
+inline namespace with_tag {
+  struct Second {};
+}
+}
+
+//--- test.cpp
 #include <first.h>
 #include <second.h>
 
@@ -35,4 +49,6 @@ void test(void) {
   exclusiveAttr();
   // expected-error@second.h:* {{'cold' and 'hot' attributes are not compatible}}
   // expected-note@first.h:* {{conflicting attribute is here}}
+
+  N::Second second;
 }
