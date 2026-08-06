@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='expand-reductions,x86-partial-reduction' -mtriple=x86_64-unknown-unknown -mattr=+sse2 -S | FileCheck %s
+; RUN: opt < %s -passes='expand-reductions,x86-partial-reduction' -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -S | FileCheck %s
 
 ; Verify that X86PartialReduction::tryByteSumReplacement carries the
 ; original add instruction's !dbg location onto the freshly emitted
