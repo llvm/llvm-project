@@ -1062,17 +1062,23 @@ OMPOrderedDirective *OMPOrderedDirective::Create(const ASTContext &C,
                                                  SourceLocation EndLoc,
                                                  ArrayRef<OMPClause *> Clauses,
                                                  Stmt *AssociatedStmt) {
-  return createDirective<OMPOrderedDirective>(
+  auto *D = createDirective<OMPOrderedDirective>(
       C, Clauses, cast_or_null<CapturedStmt>(AssociatedStmt),
       /*NumChildren=*/0, StartLoc, EndLoc);
+  if (AssociatedStmt)
+    D->setDirectiveKind(OMPD_ordered_blockassoc);
+  return D;
 }
 
 OMPOrderedDirective *OMPOrderedDirective::CreateEmpty(const ASTContext &C,
                                                       unsigned NumClauses,
                                                       bool IsStandalone,
                                                       EmptyShell) {
-  return createEmptyDirective<OMPOrderedDirective>(C, NumClauses,
-                                                   !IsStandalone);
+  auto *D =
+      createEmptyDirective<OMPOrderedDirective>(C, NumClauses, !IsStandalone);
+  if (!IsStandalone)
+    D->setDirectiveKind(OMPD_ordered_blockassoc);
+  return D;
 }
 
 OMPAtomicDirective *

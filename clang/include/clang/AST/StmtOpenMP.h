@@ -554,6 +554,9 @@ public:
   }
 
   OpenMPDirectiveKind getDirectiveKind() const { return Kind; }
+  void setDirectiveKind(OpenMPDirectiveKind D) const {
+    const_cast<OMPExecutableDirective *>(this)->Kind = D;
+  }
 
   static bool classof(const Stmt *S) {
     return S->getStmtClass() >= firstOMPExecutableDirectiveConstant &&
@@ -2947,14 +2950,15 @@ class OMPOrderedDirective : public OMPExecutableDirective {
   ///
   OMPOrderedDirective(SourceLocation StartLoc, SourceLocation EndLoc)
       : OMPExecutableDirective(OMPOrderedDirectiveClass,
-                               llvm::omp::OMPD_ordered, StartLoc, EndLoc) {}
+                               llvm::omp::OMPD_ordered_standalone, StartLoc,
+                               EndLoc) {}
 
   /// Build an empty directive.
   ///
   explicit OMPOrderedDirective()
       : OMPExecutableDirective(OMPOrderedDirectiveClass,
-                               llvm::omp::OMPD_ordered, SourceLocation(),
-                               SourceLocation()) {}
+                               llvm::omp::OMPD_ordered_standalone,
+                               SourceLocation(), SourceLocation()) {}
 
 public:
   /// Creates directive.
