@@ -35,6 +35,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/TargetParser/AtomicScope.h"
 #include <optional>
 
 using namespace llvm;
@@ -57,7 +58,7 @@ namespace {
 
 struct NVPTXScopes {
   NVPTXScopes() = default;
-  NVPTXScopes(LLVMContext &C);
+  NVPTXScopes(LLVMContext &C, const Triple &T);
   NVPTX::Scope operator[](SyncScope::ID ID) const;
   bool empty() const;
 
@@ -173,7 +174,8 @@ NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
 
 bool NVPTXDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<NVPTXSubtarget>();
-  Scopes = NVPTXScopes(MF.getFunction().getContext());
+  Scopes = NVPTXScopes(MF.getFunction().getContext(),
+                       MF.getTarget().getTargetTriple());
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
 
@@ -1873,12 +1875,15 @@ bool NVPTXDAGToDAGISel::tryFence(SDNode *N) {
   return true;
 }
 
-NVPTXScopes::NVPTXScopes(LLVMContext &C) : Context(&C) {
-  Scopes[C.getOrInsertSyncScopeID("singlethread")] = NVPTX::Scope::Thread;
-  Scopes[C.getOrInsertSyncScopeID("")] = NVPTX::Scope::System;
-  Scopes[C.getOrInsertSyncScopeID("block")] = NVPTX::Scope::Block;
-  Scopes[C.getOrInsertSyncScopeID("cluster")] = NVPTX::Scope::Cluster;
-  Scopes[C.getOrInsertSyncScopeID("device")] = NVPTX::Scope::Device;
+NVPTXScopes::NVPTXScopes(LLVMContext &C, const Triple &T) : Context(&C) {
+  auto ScopeID = [&](AtomicScope Scope) {
+    return C.getOrInsertSyncScopeID(*getAtomicScopeIRString(T, Scope));
+  };
+  Scopes[ScopeID(AtomicScope::Single)] = NVPTX::Scope::Thread;
+  Scopes[ScopeID(AtomicScope::System)] = NVPTX::Scope::System;
+  Scopes[ScopeID(AtomicScope::Workgroup)] = NVPTX::Scope::Block;
+  Scopes[ScopeID(AtomicScope::Cluster)] = NVPTX::Scope::Cluster;
+  Scopes[ScopeID(AtomicScope::Device)] = NVPTX::Scope::Device;
 }
 
 NVPTX::Scope NVPTXScopes::operator[](SyncScope::ID ID) const {
