@@ -10,26 +10,26 @@
 ;       A[(int)x] = B[(int)x];
 ;   }
 
-define void @foo(ptr %A, ptr %B, ptr %Limit) {
+define void @foo(ptr %a, ptr %b, ptr %limit) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NOT:   vector.body
 ; CHECK-NOT:   .bound.pre
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %fiv = phi float [ 0.0, %entry ], [ %fiv.next, %for.body ]
-  %gep.b = getelementptr inbounds i32, ptr %B, i64 %iv
-  %b = load i32, ptr %gep.b, align 4
-  %gep.a = getelementptr inbounds i32, ptr %A, i64 %iv
-  store i32 %b, ptr %gep.a, align 4
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fiv = phi float [ 0.0, %entry ], [ %fiv.next, %loop ]
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %b.val = load i32, ptr %gep.b, align 4
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  store i32 %b.val, ptr %gep.a, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %fiv.next = fadd float %fiv, 1.0
-  %lim = load float, ptr %Limit, align 4
-  %cmp = fcmp olt float %fiv.next, %lim
-  br i1 %cmp, label %for.body, label %for.exit
+  %lim = load float, ptr %limit, align 4
+  %ec = fcmp olt float %fiv.next, %lim
+  br i1 %ec, label %loop, label %exit
 
-for.exit:
+exit:
   ret void
 }

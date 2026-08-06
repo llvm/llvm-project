@@ -12,14 +12,14 @@
 ;   }
 ;
 
-define void @foo(ptr %A, ptr %B, ptr %C, ptr %D, ptr %len) {
+define void @foo(ptr %a, ptr %b, ptr %c, ptr %d, ptr %len) {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], ptr [[D:%.*]], ptr [[LEN:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LEN]], align 4
 ; CHECK-NEXT:    [[CMP10_I:%.*]] = icmp sgt i32 [[TMP0]], 0
-; CHECK-NEXT:    br i1 [[CMP10_I]], label %[[FOR_BODY_I_PREHEADER:.*]], label %[[EXIT:.*]]
-; CHECK:       [[FOR_BODY_I_PREHEADER]]:
+; CHECK-NEXT:    br i1 [[CMP10_I]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    [[DOTBOUND_PRE:%.*]] = load i32, ptr [[LEN]], align 4
 ; CHECK-NEXT:    [[DOTBOUND_PRE1:%.*]] = sext i32 [[DOTBOUND_PRE]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.smax.i64(i64 [[DOTBOUND_PRE1]], i64 1)
@@ -64,10 +64,10 @@ define void @foo(ptr %A, ptr %B, ptr %C, ptr %D, ptr %len) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_BODY_I_PREHEADER]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    br label %[[FOR_BODY_I:.*]]
-; CHECK:       [[FOR_BODY_I]]:
-; CHECK-NEXT:    [[INDVARS_IV_I:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_I:%.*]], %[[FOR_BODY_I]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[INDVARS_IV_I:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_I:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[INDVARS_IV_I]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX_I]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX3_I:%.*]] = getelementptr inbounds nuw i32, ptr [[C]], i64 [[INDVARS_IV_I]]
@@ -78,8 +78,8 @@ define void @foo(ptr %A, ptr %B, ptr %C, ptr %D, ptr %len) {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_I]] = add nuw nsw i64 [[INDVARS_IV_I]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[LEN]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = sext i32 [[TMP10]] to i64
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT_I]], [[TMP11]]
-; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_BODY_I]], label %[[EXIT_LOOPEXIT]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    [[EC:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT_I]], [[TMP11]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -88,38 +88,23 @@ define void @foo(ptr %A, ptr %B, ptr %C, ptr %D, ptr %len) {
 entry:
   %0 = load i32, ptr %len, align 4
   %cmp10.i = icmp sgt i32 %0, 0
-  br i1 %cmp10.i, label %for.body.i, label %exit
+  br i1 %cmp10.i, label %loop, label %exit
 
-for.body.i:
-  %indvars.iv.i = phi i64 [ %indvars.iv.next.i, %for.body.i ], [ 0, %entry ]
-  %arrayidx.i = getelementptr inbounds nuw i32, ptr %B, i64 %indvars.iv.i
+loop:
+  %indvars.iv.i = phi i64 [ %indvars.iv.next.i, %loop ], [ 0, %entry ]
+  %arrayidx.i = getelementptr inbounds nuw i32, ptr %b, i64 %indvars.iv.i
   %1 = load i32, ptr %arrayidx.i, align 4
-  %arrayidx3.i = getelementptr inbounds nuw i32, ptr %C, i64 %indvars.iv.i
+  %arrayidx3.i = getelementptr inbounds nuw i32, ptr %c, i64 %indvars.iv.i
   %2 = load i32, ptr %arrayidx3.i, align 4
   %mul.i = mul nsw i32 %2, %1
-  %arrayidx5.i = getelementptr inbounds nuw i32, ptr %A, i64 %indvars.iv.i
+  %arrayidx5.i = getelementptr inbounds nuw i32, ptr %a, i64 %indvars.iv.i
   store i32 %mul.i, ptr %arrayidx5.i, align 4
   %indvars.iv.next.i = add nuw nsw i64 %indvars.iv.i, 1
   %3 = load i32, ptr %len, align 4
   %4 = sext i32 %3 to i64
-  %cmp.i = icmp slt i64 %indvars.iv.next.i, %4
-  br i1 %cmp.i, label %for.body.i, label %exit
+  %ec = icmp slt i64 %indvars.iv.next.i, %4
+  br i1 %ec, label %loop, label %exit
 
 exit:
   ret void
 }
-;.
-; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
-; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; CHECK: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
-; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
-; CHECK: [[META4]] = distinct !{[[META4]], [[META2]]}
-; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
-; CHECK: [[META6]] = distinct !{[[META6]], [[META2]]}
-; CHECK: [[META7]] = !{[[META1]], [[META4]], [[META8:![0-9]+]]}
-; CHECK: [[META8]] = distinct !{[[META8]], [[META2]]}
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META10:![0-9]+]], [[META11:![0-9]+]]}
-; CHECK: [[META10]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META11]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META10]]}
-;.

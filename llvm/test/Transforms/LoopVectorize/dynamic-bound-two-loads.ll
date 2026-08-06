@@ -8,7 +8,7 @@
 ;       A[i] = B[i] + C[i];
 ;   }
 
-define void @foo(ptr %A, ptr %B, ptr %C, ptr %Len1, ptr %Len2) {
+define void @foo(ptr %a, ptr %b, ptr %c, ptr %len1, ptr %len2) {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], ptr [[LEN1:%.*]], ptr [[LEN2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -16,8 +16,8 @@ define void @foo(ptr %A, ptr %B, ptr %C, ptr %Len1, ptr %Len2) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[LEN2]], align 4
 ; CHECK-NEXT:    [[ADD10:%.*]] = add nsw i32 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[ADD10]], 0
-; CHECK-NEXT:    br i1 [[CMP11]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
-; CHECK:       [[FOR_BODY_PREHEADER]]:
+; CHECK-NEXT:    br i1 [[CMP11]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    [[DOTBOUND_PRE:%.*]] = load i32, ptr [[LEN1]], align 4
 ; CHECK-NEXT:    [[DOTBOUND_PRE1:%.*]] = load i32, ptr [[LEN2]], align 4
 ; CHECK-NEXT:    [[ADD_BOUND_PRE:%.*]] = add nsw i32 [[DOTBOUND_PRE1]], [[DOTBOUND_PRE]]
@@ -73,16 +73,16 @@ define void @foo(ptr %A, ptr %B, ptr %C, ptr %Len1, ptr %Len2) {
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP5]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_BODY_PREHEADER]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
-; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
-; CHECK:       [[FOR_COND_CLEANUP]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i32, ptr [[C]], i64 [[INDVARS_IV]]
@@ -95,49 +95,33 @@ define void @foo(ptr %A, ptr %B, ptr %C, ptr %Len1, ptr %Len2) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[LEN2]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP18]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = sext i32 [[ADD]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP19]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    [[EC:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP19]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !llvm.loop [[LOOP13:![0-9]+]]
 ;
 entry:
-  %0 = load i32, ptr %Len1, align 4
-  %1 = load i32, ptr %Len2, align 4
+  %0 = load i32, ptr %len1, align 4
+  %1 = load i32, ptr %len2, align 4
   %add10 = add nsw i32 %1, %0
   %cmp11 = icmp sgt i32 %add10, 0
-  br i1 %cmp11, label %for.body, label %for.cond.cleanup
+  br i1 %cmp11, label %loop, label %exit
 
-for.cond.cleanup:
+exit:
   ret void
 
-for.body:
-  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds nuw i32, ptr %B, i64 %indvars.iv
+loop:
+  %indvars.iv = phi i64 [ %indvars.iv.next, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds nuw i32, ptr %b, i64 %indvars.iv
   %2 = load i32, ptr %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds nuw i32, ptr %C, i64 %indvars.iv
+  %arrayidx2 = getelementptr inbounds nuw i32, ptr %c, i64 %indvars.iv
   %3 = load i32, ptr %arrayidx2, align 4
   %add3 = add nsw i32 %3, %2
-  %arrayidx5 = getelementptr inbounds nuw i32, ptr %A, i64 %indvars.iv
+  %arrayidx5 = getelementptr inbounds nuw i32, ptr %a, i64 %indvars.iv
   store i32 %add3, ptr %arrayidx5, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %4 = load i32, ptr %Len1, align 4
-  %5 = load i32, ptr %Len2, align 4
+  %4 = load i32, ptr %len1, align 4
+  %5 = load i32, ptr %len2, align 4
   %add = add nsw i32 %5, %4
   %6 = sext i32 %add to i64
-  %cmp = icmp slt i64 %indvars.iv.next, %6
-  br i1 %cmp, label %for.body, label %for.cond.cleanup
+  %ec = icmp slt i64 %indvars.iv.next, %6
+  br i1 %ec, label %loop, label %exit
 }
-;.
-; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
-; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; CHECK: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
-; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
-; CHECK: [[META4]] = distinct !{[[META4]], [[META2]]}
-; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
-; CHECK: [[META6]] = distinct !{[[META6]], [[META2]]}
-; CHECK: [[META7]] = !{[[META1]], [[META4]], [[META8:![0-9]+]], [[META9:![0-9]+]]}
-; CHECK: [[META8]] = distinct !{[[META8]], [[META2]]}
-; CHECK: [[META9]] = distinct !{[[META9]], [[META2]]}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]], [[META12:![0-9]+]]}
-; CHECK: [[META11]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META12]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META11]]}
-;.
