@@ -1641,6 +1641,24 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::clmul: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (!LT.second.isVector() && ST->hasStdExtZvbc() && !ST->hasStdExtZbc() &&
+        !ST->hasStdExtZbkc()) {
+      // TODO: Once custom lowering in this case for RV32 is added, this guard
+      // should be removed and the cost model should be updated.
+      if (!ST->is64Bit() || LT.second != MVT::i64)
+        break;
+      // vmv.s.x v8, a0
+      // vclmul.vx v8, v8, a1
+      // vmv.x.s a0, v8
+      MVT VecVT = MVT::getScalableVectorVT(LT.second, 1);
+      return LT.first * getRISCVInstructionCost(
+                            {RISCV::VMV_S_X, RISCV::VCLMUL_VX, RISCV::VMV_X_S},
+                            VecVT, CostKind);
+    }
+    break;
+  }
   case Intrinsic::masked_udiv:
     return getArithmeticInstrCost(Instruction::UDiv, ICA.getReturnType(),
                                   CostKind);
@@ -3642,26 +3660,15 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   if (!ST->hasStdExtZbb() && !ST->hasStdExtZbkb() && !IsZeroCmp)
     return Options;
 
-  // Even if the target does not support unaligned scalar memory access,
-  // expansion is still possible when both pointers are statically known to be
-  // sufficiently aligned. ExpandMemCmp queries the target for each load size
-  // and keeps only the ones the target can actually access at the known
-  // per-call-site alignment, falling back to the libcall when none fits.
-  // Overlapping loads and merged tail expansions produce accesses that need
-  // not be naturally aligned, so they are only offered when unaligned scalar
-  // access is supported.
-  bool UnalignedScalar = ST->enableUnalignedScalarMem();
-  Options.AllowOverlappingLoads = UnalignedScalar;
+  Options.AllowOverlappingLoads = true;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   Options.NumLoadsPerBlock = Options.MaxNumLoads;
   if (ST->is64Bit()) {
     Options.LoadSizes = {8, 4, 2, 1};
-    if (UnalignedScalar)
-      Options.AllowedTailExpansions = {3, 5, 6};
+    Options.AllowedTailExpansions = {3, 5, 6};
   } else {
     Options.LoadSizes = {4, 2, 1};
-    if (UnalignedScalar)
-      Options.AllowedTailExpansions = {3};
+    Options.AllowedTailExpansions = {3};
   }
 
   if (IsZeroCmp && ST->hasVInstructions()) {

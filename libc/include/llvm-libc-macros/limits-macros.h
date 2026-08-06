@@ -1,9 +1,14 @@
-//===-- Definition of macros from limits.h --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Definition of macros from limits.h.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_MACROS_LIMITS_MACROS_H
@@ -247,6 +252,10 @@
 #define PTHREAD_DESTRUCTOR_ITERATIONS _POSIX_THREAD_DESTRUCTOR_ITERATIONS
 #endif
 
+#ifndef _POSIX_HOST_NAME_MAX
+#define _POSIX_HOST_NAME_MAX 255
+#endif
+
 #ifdef __linux__
 
 #ifndef PATH_MAX
@@ -256,6 +265,10 @@
 #ifndef NAME_MAX
 #define NAME_MAX 255
 #endif // NAME_MAX
+
+#ifndef HOST_NAME_MAX
+#define HOST_NAME_MAX 64
+#endif // HOST_NAME_MAX
 
 #endif // __linux__
 

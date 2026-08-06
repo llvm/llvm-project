@@ -78,12 +78,6 @@ public:
     return TargetABI == ARM::ARM_ABI_AAPCS16;
   }
 
-  bool isTargetHardFloat() const {
-    // -target-abi=aapcs16 overrides the triple default.
-    return TargetABI == ARM::ARM_ABI_AAPCS16 ||
-           TargetTriple.getDefaultFloatABI() == FloatABI::Hard;
-  }
-
   bool targetSchedulesPostRAScheduling() const override { return true; };
 
   MachineFunctionInfo *
@@ -105,15 +99,6 @@ public:
     // even for GVs that are known to be local to the dso.
     if (getTargetTriple().isOSBinFormatMachO() && isPositionIndependent() &&
         (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
-      return true;
-
-    // In ELF PIC mode, weak symbols referenced via the constant pool use a
-    // PC-relative expression (e.g. .long xxx-(.LPC+8)) that the assembler
-    // eagerly resolves when both the symbol and label are in the same section.
-    // This prevents the linker from overriding a weak definition with a
-    // non-weak one. Use GOT indirection for weak symbols to avoid this.
-    if (getTargetTriple().isOSBinFormatELF() && isPositionIndependent() &&
-        GV->isWeakForLinker())
       return true;
 
     return false;
