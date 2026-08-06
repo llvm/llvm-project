@@ -5773,9 +5773,11 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d:
   case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_ashift:
   case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1_ashift:
+  case Intrinsic::
+      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1_ashift:
   case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
+  case Intrinsic::
+      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
   case Intrinsic::nvvm_tcgen05_mma_tensor:
   case Intrinsic::nvvm_tcgen05_mma_tensor_ashift:
   case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1:
@@ -5791,9 +5793,11 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d:
   case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_ashift:
   case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1_ashift:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1_ashift:
   case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2_ashift: {
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2_ashift: {
     SmallVector<Value *, 12> Args(CI->args());
     Args.push_back(Builder.getInt32(0)); // collector_usage_b = discard(0)
     NewCall = Builder.CreateCall(NewFn, Args);
