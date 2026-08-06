@@ -13,11 +13,13 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
-using LIBC_NAMESPACE::fputil::Float128;
+#ifndef LIBC_TYPES_HAS_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_FLOAT128
 
 namespace LIBC_NAMESPACE_DECL {
 
-Float128 ceilf128(Float128 x);
+float128 ceilf128(float128 x);
 
 } // namespace LIBC_NAMESPACE_DECL
 
