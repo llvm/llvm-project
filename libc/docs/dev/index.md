@@ -8,6 +8,7 @@ Navigate to the links below for information on the respective topics:
 :maxdepth: 1
 
 building_docs
+code_coverage
 code_style
 source_tree_layout
 entrypoints
