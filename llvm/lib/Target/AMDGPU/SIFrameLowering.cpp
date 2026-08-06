@@ -1091,6 +1091,7 @@ bool SIFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
   case TargetStackID::ScalableVector:
   case TargetStackID::ScalablePredicateVector:
   case TargetStackID::WasmLocal:
+  case TargetStackID::PISAShared:
     return false;
   }
   llvm_unreachable("Invalid TargetStackID::Value");
