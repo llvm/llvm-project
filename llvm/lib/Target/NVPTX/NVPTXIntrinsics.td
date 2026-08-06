@@ -856,38 +856,59 @@ def TMAReductionFlags : Operand<i32> {
   let PrintMethod = "printTmaReductionMode";
 }
 
+def tma_tensor_reduction_imm :
+    TImmLeaf<i32, [{ return Imm >= 0 && Imm < 8; }]>;
+
 // TMA Copy from Shared to Global memory with Reduction
-multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, bit shared32, string mode> {
+multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode> {
   defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
   defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
   defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
-  defvar rc = !if(shared32, B32, B64);
 
   // For im2col mode, the actual asm_str is "im2col_no_offs"
   defvar mode_asm_str = !if(!eq(mode, "im2col"),
                             "im2col_no_offs", mode);
-  defvar prefix = "cp.reduce.async.bulk.tensor" # "." # dim # "d" # ".global.shared::cta";
+  defvar prefix = "cp.reduce.async.bulk.tensor"
+                  # "." # dim # "d"
+                  # ".global.shared::cta";
   defvar suffix = "." # mode_asm_str # ".bulk_group";
 
+  defvar intr = !cast<Intrinsic>(
+    "int_nvvm_cp_async_bulk_tensor_reduce_" # mode # "_" # dim # "d"
+  );
+
+  defvar intr_dag = !con(
+    (intr addr:$src, B64:$tmap),
+    !setdagop(dims_dag, intr),
+    (intr (i64 srcvalue), tma_tensor_reduction_imm:$red_op, 0)
+  );
+
+  defvar intr_dag_with_ch = !con(
+    (intr addr:$src, B64:$tmap),
+    !setdagop(dims_dag, intr),
+    (intr B64:$ch, tma_tensor_reduction_imm:$red_op, -1)
+  );
+
   def "" : NVPTXInst<(outs),
-            !con((ins rc:$src, B64:$tmap), dims_dag, (ins TMAReductionFlags:$red_op)),
-            !strconcat(prefix, "${red_op}", suffix, asm_str, ";")>,
+            !con((ins ADDR:$src, B64:$tmap), dims_dag,
+                 (ins TMAReductionFlags:$red_op)),
+            !strconcat(prefix, "${red_op}", suffix, asm_str, ";"),
+            [intr_dag]>,
             Requires<[hasPTX<80>, hasSM<90>]>;
   def _CH : NVPTXInst<(outs),
-                  !con((ins rc:$src, B64:$tmap), dims_dag, (ins B64:$ch, TMAReductionFlags:$red_op)),
-                  !strconcat(prefix, "${red_op}", suffix, ".L2::cache_hint", asm_str, ", $ch;")>,
-                  Requires<[hasPTX<80>, hasSM<90>]>;
+              !con((ins ADDR:$src, B64:$tmap), dims_dag,
+                   (ins B64:$ch, TMAReductionFlags:$red_op)),
+              !strconcat(prefix, "${red_op}", suffix,
+                         ".L2::cache_hint", asm_str, ", $ch;"),
+              [intr_dag_with_ch]>,
+              Requires<[hasPTX<80>, hasSM<90>]>;
 }
 
-foreach dim = [1, 2, 3, 4, 5] in {
-  foreach shared32 = [true, false] in {
-    foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
-      defvar suffix = dim # "D"
-                      # !if(shared32, "_SHARED32", "")
-                      # "_" # !toupper(mode);
-      defm CP_ASYNC_BULK_TENSOR_RED_ # suffix :
-        CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, shared32, mode>;
-    }
+foreach dim = 1...5 in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    defvar suffix = dim # "D_" # !toupper(mode);
+    defm CP_ASYNC_BULK_TENSOR_RED_ # suffix :
+      CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, mode>;
   }
 }
 
@@ -2749,31 +2770,61 @@ def LD_GLOBAL_NC_v4i32 : VLDG_G_ELE_V4<B32>;
 def LD_GLOBAL_NC_v4i64 : VLDG_G_ELE_V4<B64>;
 def LD_GLOBAL_NC_v8i32 : VLDG_G_ELE_V8<B32>;
 
-multiclass NG_TO_G<string Str, bit Supports32 = 1, list<Predicate> Preds = []> {
-  if Supports32 then
-    def "" : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
-             "cvta." # Str # ".u32">, Requires<Preds>;
-  
-  def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
-              "cvta." # Str # ".u64">, Requires<Preds>;
+class addrspacecast_spaces<NVPTXAddressSpace src_space,
+                           NVPTXAddressSpace dst_space> :
+  PatFrag<(ops node:$a), (addrspacecast node:$a),
+    "const auto *ASC = cast<AddrSpaceCastSDNode>(N);" #
+      "return ASC->getSrcAddressSpace() == " # src_space.Enum #
+         " && ASC->getDestAddressSpace() == " # dst_space.Enum # ";">;
+
+
+multiclass CvtaFromInsts<NVPTXAddressSpace as, list<Predicate> preds,
+                         bit supports_32> {
+  defvar asc_pat = addrspacecast_spaces<as, AddrSpaceGeneric>;
+  let Predicates = preds in {
+    if supports_32 then
+      def _32 : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
+              "cvta" # as.Suffix # ".u32",
+              [(set i32:$result, (asc_pat i32:$src))]>;
+
+    def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
+                "cvta" # as.Suffix # ".u64",
+                [(set i64:$result, (asc_pat i64:$src))]>;
+
+    def : Pat<(i64 (asc_pat i32:$src)),
+              (!cast<Instruction>(NAME # "_64") (CVT_u64_u32 $src, CvtNONE))>;
+  }
 }
 
-multiclass G_TO_NG<string Str, bit Supports32 = 1, list<Predicate> Preds = []> {
-  if Supports32 then
-    def "" : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
-            "cvta.to." # Str # ".u32">, Requires<Preds>;
-  
-  def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
-            "cvta.to." # Str # ".u64">, Requires<Preds>;
+multiclass CvtaToInsts<NVPTXAddressSpace as, list<Predicate> preds,
+                       bit supports_32> {
+  defvar asc_pat = addrspacecast_spaces<AddrSpaceGeneric, as>;
+  let Predicates = preds in {
+    if supports_32 then
+      def _32 : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
+              "cvta.to" # as.Suffix # ".u32",
+              [(set i32:$result, (asc_pat i32:$src))]>;
+
+    def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
+              "cvta.to" # as.Suffix # ".u64",
+              [(set i64:$result, (asc_pat i64:$src))]>;
+
+    def : Pat<(i32 (asc_pat i64:$src)),
+              (CVT_u32_u64 (!cast<Instruction>(NAME # "_64") $src), CvtNONE)>;
+  }
 }
 
-foreach space = ["local", "shared", "global", "const", "param"] in {
-  defm cvta_#space : NG_TO_G<space>;
-  defm cvta_to_#space : G_TO_NG<space>;
+multiclass CvtaInsts<NVPTXAddressSpace as, list<Predicate> preds = [],
+                     bit supports_32 = true> {
+  defm _ # as.Name : CvtaFromInsts<as, preds, supports_32>;
+  defm _to_ # as.Name : CvtaToInsts<as, preds, supports_32>;
 }
 
-defm cvta_shared_cluster : NG_TO_G<"shared::cluster", false, [hasClusters]>;
-defm cvta_to_shared_cluster : G_TO_NG<"shared::cluster", false, [hasClusters]>;
+foreach as = [AddrSpaceLocal, AddrSpaceShared, AddrSpaceGlobal, AddrSpaceConst] in
+  defm cvta : CvtaInsts<as>;
+
+defm cvta : CvtaInsts<AddrSpaceParam, [hasPTX<77>, hasSM<70>]>;
+defm cvta : CvtaInsts<AddrSpaceSharedCluster, [hasClusters], supports_32=false>;
 
 
 // nvvm.move intrinsicc

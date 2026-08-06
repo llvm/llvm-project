@@ -208,7 +208,8 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
       return false;
     }
 
-    if (!Ptr.isLive() || !Ptr.getFieldDesc()->isPrimitiveArray())
+    if (!Ptr.isLive() || !Ptr.isInitialized() || Ptr.isUnknownSizeArray() ||
+        !Ptr.getFieldDesc()->isPrimitiveArray())
       return false;
 
     // Must be char.
@@ -571,7 +572,6 @@ bool Context::Run(State &Parent, const Function *Func) {
   return false;
 }
 
-// TODO: Virtual bases?
 const CXXMethodDecl *
 Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
                                const CXXRecordDecl *StaticDecl,

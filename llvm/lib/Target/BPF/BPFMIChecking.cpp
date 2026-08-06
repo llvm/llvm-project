@@ -15,8 +15,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPF.h"
+#include "BPFRegisterInfo.h"
 #include "BPFTargetMachine.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/Debug.h"
 
@@ -26,37 +29,16 @@ using namespace llvm;
 
 namespace {
 
-struct BPFMIPreEmitChecking : public MachineFunctionPass {
+struct BPFMIPreEmitCheckingLegacy : public MachineFunctionPass {
 
   static char ID;
-  MachineFunction *MF;
-  const TargetRegisterInfo *TRI;
 
-  BPFMIPreEmitChecking() : MachineFunctionPass(ID) {}
-
-private:
-  // Initialize class variables.
-  void initialize(MachineFunction &MFParm);
-
-  void processAtomicInsts();
+  BPFMIPreEmitCheckingLegacy() : MachineFunctionPass(ID) {}
 
 public:
   // Main entry point for this pass.
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    if (!skipFunction(MF.getFunction())) {
-      initialize(MF);
-      processAtomicInsts();
-    }
-    return false;
-  }
+  bool runOnMachineFunction(MachineFunction &MF) override;
 };
-
-// Initialize class variables.
-void BPFMIPreEmitChecking::initialize(MachineFunction &MFParm) {
-  MF = &MFParm;
-  TRI = MF->getSubtarget<BPFSubtarget>().getRegisterInfo();
-  LLVM_DEBUG(dbgs() << "*** BPF PreEmit checking pass ***\n\n");
-}
 
 // Make sure all Defs of XADD are dead, meaning any result of XADD insn is not
 // used.
@@ -147,12 +129,18 @@ static bool hasLiveDefs(const MachineInstr &MI, const TargetRegisterInfo *TRI) {
   return false;
 }
 
-void BPFMIPreEmitChecking::processAtomicInsts() {
-  if (MF->getSubtarget<BPFSubtarget>().getHasJmp32())
+} // namespace
+
+static void processAtomicInsts(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "*** BPF PreEmit checking pass ***\n\n");
+
+  if (MF.getSubtarget<BPFSubtarget>().getHasJmp32())
     return;
 
+  const BPFRegisterInfo *TRI =
+      MF.getSubtarget<BPFSubtarget>().getRegisterInfo();
   // Only check for cpu version 1 and 2.
-  for (MachineBasicBlock &MBB : *MF) {
+  for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       if (MI.getOpcode() != BPF::XADDW && MI.getOpcode() != BPF::XADDD)
         continue;
@@ -160,7 +148,7 @@ void BPFMIPreEmitChecking::processAtomicInsts() {
       LLVM_DEBUG(MI.dump());
       if (hasLiveDefs(MI, TRI)) {
         const DebugLoc &DL = MI.getDebugLoc();
-        const Function &F = MF->getFunction();
+        const Function &F = MF.getFunction();
         F.getContext().diagnose(DiagnosticInfoUnsupported{
             F, "Invalid usage of the XADD return value", DL});
       }
@@ -168,12 +156,24 @@ void BPFMIPreEmitChecking::processAtomicInsts() {
   }
 }
 
-} // namespace
+bool BPFMIPreEmitCheckingLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  processAtomicInsts(MF);
+  return false;
+}
 
-INITIALIZE_PASS(BPFMIPreEmitChecking, "bpf-mi-pemit-checking",
+PreservedAnalyses
+BPFMIPreEmitCheckingPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  processAtomicInsts(MF);
+  return PreservedAnalyses::all();
+}
+
+INITIALIZE_PASS(BPFMIPreEmitCheckingLegacy, "bpf-mi-checking",
                 "BPF PreEmit Checking", false, false)
 
-char BPFMIPreEmitChecking::ID = 0;
-FunctionPass *llvm::createBPFMIPreEmitCheckingPass() {
-  return new BPFMIPreEmitChecking();
+char BPFMIPreEmitCheckingLegacy::ID = 0;
+FunctionPass *llvm::createBPFMIPreEmitCheckingLegacyPass() {
+  return new BPFMIPreEmitCheckingLegacy();
 }

@@ -5,17 +5,22 @@ Test lldb-dap module request
 import platform
 import re
 
-from lldbsuite.test.decorators import skipIfWindows, skipUnlessDarwin
+from lldbsuite.test.decorators import (
+    skipIfTargetDoesNotSupportSharedLibraries,
+    skipIfWindows,
+    skipUnlessDarwin,
+)
 from lldbsuite.test.lldbtest import line_number
-from lldbsuite.test.tools.lldb_dap.dap_types import (
+from lldbsuite.test.tools.lldb_dap.types import (
     CompileUnitsArgs,
     LaunchArgs,
     ModuleEvent,
     ModuleReason,
 )
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestDAP_module(DAPTestCaseBase):
     def run_test(self, symbol_basename: str, expect_debug_info_size: bool):
         session = self.build_and_create_session()

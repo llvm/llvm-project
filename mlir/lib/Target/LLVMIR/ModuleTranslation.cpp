@@ -31,6 +31,7 @@
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -1581,6 +1582,59 @@ static llvm::MDNode *convertIntegerArrayToMDNode(llvm::LLVMContext &context,
   return llvm::MDNode::get(context, mdValues);
 }
 
+FailureOr<llvm::Metadata *> ModuleTranslation::convertMetadataAttr(
+    Attribute attr, function_ref<InFlightDiagnostic()> emitError) {
+  llvm::LLVMContext &llvmContext = getLLVMContext();
+
+  return llvm::TypeSwitch<Attribute, FailureOr<llvm::Metadata *>>(attr)
+      .Case([&](MDStringAttr a) -> FailureOr<llvm::Metadata *> {
+        return llvm::MDString::get(llvmContext, a.getValue().getValue());
+      })
+      .Case([&](MDConstantAttr a) -> FailureOr<llvm::Metadata *> {
+        IntegerAttr intAttr = llvm::dyn_cast<IntegerAttr>(a.getValue());
+        if (!intAttr) {
+          return emitError()
+                 << "expected integer attribute in metadata constant";
+        }
+        return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+            llvm::Type::getIntNTy(llvmContext,
+                                  intAttr.getType().getIntOrFloatBitWidth()),
+            intAttr.getValue()));
+      })
+      .Case([&](MDGlobalValueAttr a) -> FailureOr<llvm::Metadata *> {
+        if (llvm::Function *fn = lookupFunction(a.getName().getValue()))
+          return llvm::ValueAsMetadata::get(fn);
+        if (llvm::GlobalValue *global = lookupGlobal(a.getName().getValue()))
+          return llvm::ValueAsMetadata::get(global);
+        Operation *symbol =
+            symbolTable().lookupSymbolIn(mlirModule, a.getName());
+        if (auto alias = dyn_cast_if_present<LLVM::AliasOp>(symbol)) {
+          if (llvm::GlobalValue *global = lookupAlias(alias))
+            return llvm::ValueAsMetadata::get(global);
+        }
+        if (auto ifunc = dyn_cast_if_present<LLVM::IFuncOp>(symbol)) {
+          if (llvm::GlobalValue *global = lookupIFunc(ifunc))
+            return llvm::ValueAsMetadata::get(global);
+        }
+        return emitError() << "could not resolve metadata reference '"
+                           << a.getName() << "'";
+      })
+      .Case([&](MDNodeAttr a) -> FailureOr<llvm::Metadata *> {
+        SmallVector<llvm::Metadata *> operands;
+        for (Attribute operand : a.getOperands()) {
+          FailureOr<llvm::Metadata *> md =
+              convertMetadataAttr(operand, emitError);
+          if (failed(md))
+            return failure();
+          operands.push_back(*md);
+        }
+        return llvm::MDNode::get(llvmContext, operands);
+      })
+      .Default([&](Attribute attr) -> FailureOr<llvm::Metadata *> {
+        return emitError() << "unsupported LLVM metadata attribute " << attr;
+      });
+}
+
 LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   // Clear the block, branch value mappings, they are only relevant within one
   // function.
@@ -2018,8 +2072,19 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     convertFunctionKernelAttributes(function, llvmFunc, *this);
 
     // Convert function_entry_count attribute to metadata.
-    if (std::optional<uint64_t> entryCount = function.getFunctionEntryCount())
-      llvmFunc->setEntryCount(entryCount.value());
+    if (auto entryCount = function.getFunctionEntryCountAttr()) {
+      ArrayRef<uint64_t> imports = entryCount.getImports();
+      llvm::DenseSet<llvm::GlobalValue::GUID> importGUIDs;
+      if (!imports.empty())
+        importGUIDs.insert(imports.begin(), imports.end());
+      llvm::MDBuilder metadataBuilder(llvmFunc->getContext());
+      llvmFunc->setMetadata(
+          llvm::LLVMContext::MD_prof,
+          metadataBuilder.createFunctionEntryCount(
+              entryCount.getEntryCount(),
+              entryCount.getCountType() == ProfileCountType::Synthetic,
+              imports.empty() ? nullptr : &importGUIDs));
+    }
 
     // Convert result attributes.
     if (ArrayAttr allResultAttrs = function.getAllResultAttrs()) {

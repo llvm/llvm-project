@@ -2,7 +2,6 @@ static_library("clang-doc") {
   output_name = "clangDoc"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
-    "markdown",
     "support",
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
@@ -25,10 +24,8 @@ static_library("clang-doc") {
     "HTMLGenerator.cpp",
     "JSONGenerator.cpp",
     "MDGenerator.cpp",
-    "MDMustacheGenerator.cpp",
     "Mapper.cpp",
     "Representation.cpp",
     "Serialize.cpp",
-    "YAMLGenerator.cpp",
   ]
 }

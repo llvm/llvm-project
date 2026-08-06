@@ -21,16 +21,19 @@ functions:
     arguments:
       - type: const char*
       - type: const struct timeval*
-
   - name: setitimer
     return_type: int
     arguments:
       - type: int
       - type: const struct itimerval *__restrict
       - type: struct itimerval *__restrict
-  
   - name: getitimer
     return_type: int
     arguments:
       - type: int
       - type: struct itimerval *
+  - name: gettimeofday
+    return_type: int
+    arguments:
+      - type: struct timeval *
+      - type: void *

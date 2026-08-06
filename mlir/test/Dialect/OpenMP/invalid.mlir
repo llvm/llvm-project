@@ -3255,6 +3255,91 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
 
 // -----
 
+func.func @omp_target_in_reduction_unresolved(%ptr: !llvm.ptr) {
+  // expected-error @below {{op expected symbol reference @add_f32 to point to a reduction declaration}}
+  omp.target kernel_type(generic) in_reduction(@add_f32 %ptr : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.declare_reduction @add_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = arith.constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = arith.addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+
+func.func @omp_target_in_reduction_duplicate(%ptr: !llvm.ptr) {
+  // expected-error @below {{op accumulator variable used more than once}}
+  omp.target kernel_type(generic) in_reduction(@add_f32 %ptr, @add_f32 %ptr : !llvm.ptr, !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.declare_reduction @add_i32 : i32
+init {
+^bb0(%arg: i32):
+  %0 = arith.constant 0 : i32
+  omp.yield (%0 : i32)
+}
+combiner {
+^bb1(%arg0: i32, %arg1: i32):
+  %1 = arith.addi %arg0, %arg1 : i32
+  omp.yield (%1 : i32)
+}
+atomic {
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> i32
+  llvm.atomicrmw add %arg2, %2 monotonic : !llvm.ptr, i32
+  omp.yield
+}
+
+func.func @omp_target_in_reduction_type_mismatch(%mem: memref<1xf32>) {
+  // expected-error @below {{op expected accumulator ('memref<1xf32>') to be the same type as reduction declaration ('!llvm.ptr')}}
+  omp.target kernel_type(generic) in_reduction(@add_i32 %mem : memref<1xf32>) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.declare_reduction @add_missing_map_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = arith.constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = arith.addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+
+func.func @omp_target_in_reduction_missing_map(%ptr: !llvm.ptr) {
+  // An in_reduction operand on omp.target has no dedicated block argument; it
+  // is accessed inside the body through a matching map_entries block argument.
+  // With no map_entries entry capturing it, the verifier must reject the op.
+  // expected-error @below {{in_reduction variable must be captured by a matching map_entries entry}}
+  omp.target kernel_type(generic) in_reduction(@add_missing_map_f32 %ptr : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
 func.func @omp_distribute_schedule(%chunk_size : i32, %lb : i32, %ub : i32, %step : i32) -> () {
   // expected-error @below {{op chunk size set without dist_schedule_static being present}}
   "omp.distribute"(%chunk_size) <{operandSegmentSizes = array<i32: 0, 0, 1, 0>}> ({
@@ -3273,6 +3358,140 @@ func.func @omp_distribute_allocate(%data_var : memref<i32>, %lb : i32, %ub : i32
       "omp.yield"() : () -> ()
     }
   }) : (memref<i32>) -> ()
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_empty_map() {
+  // expected-error @below {{unexpected allocate private indices without allocate variables}}
+  omp.parallel {
+    omp.terminator
+  } {allocate_private_indices = array<i64>}
+  return
+}
+
+// -----
+
+func.func @omp_parallel_allocate_empty_alignments() {
+  // expected-error @below {{unexpected allocate alignments without allocate variables}}
+  omp.parallel {
+    omp.terminator
+  } {allocate_alignments = array<i64>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_alignment_size(
+    %allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected as many allocate alignments as allocate variables}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_alignments = array<i64: 64, 128>, allocate_private_indices = array<i64: 0>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_negative_alignment(
+    %allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected non-negative allocate alignments}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_alignments = array<i64: -64>, allocate_private_indices = array<i64: 0>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_non_power_of_two_alignment(
+    %allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected positive allocate alignments to be powers of two}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_alignments = array<i64: 24>, allocate_private_indices = array<i64: 0>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_missing_map(%allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected an allocate private index for each allocate variable}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_map_size(%allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected as many allocate private indices as allocate variables}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_private_indices = array<i64: 0, 0>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_map_range(%allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{allocate private index is out of range}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_private_indices = array<i64: 1>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @x_private : i32
+omp.private {type = private} @y_private : i32
+
+func.func @omp_parallel_allocate_map_duplicate(
+    %allocator : i64, %x : !llvm.ptr, %y : !llvm.ptr) {
+  // expected-error @below {{allocate private index refers to a private variable more than once}}
+  omp.parallel allocate(%allocator : i64 -> %x : !llvm.ptr,
+                        %allocator : i64 -> %y : !llvm.ptr)
+      private(@x_private %x -> %x_private,
+              @y_private %y -> %y_private : !llvm.ptr, !llvm.ptr) {
+    omp.terminator
+  } {allocate_private_indices = array<i64: 0, 0>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_type_mismatch(
+    %allocator : i64, %allocate_var : i64, %private_var : !llvm.ptr) {
+  // expected-error @below {{type mismatch between allocate variable and private variable at index 0}}
+  omp.parallel allocate(%allocator : i64 -> %allocate_var : i64)
+      private(@allocate_private %private_var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_private_indices = array<i64: 0>}
+  return
 }
 
 // -----
@@ -4826,5 +5045,12 @@ func.func @omp_unroll_partial_factor_zero(%cli : !omp.cli) -> () {
 func.func @omp_unroll_partial_factor_negative(%cli : !omp.cli) -> () {
   // expected-error @below {{op attribute 'unroll_factor' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
   omp.unroll_partial(%cli) {unroll_factor = -1 : i64}
+  return
+}
+
+// -----
+func.func @omp_error_message_and_message_expr(%msg : !llvm.ptr) -> () {
+  // expected-error @below {{the message must be provided either as a constant `message` attribute or as a `message_expr` operand, but not both}}
+  omp.error severity(warning) message("a warning") message_expr(%msg : !llvm.ptr)
   return
 }

@@ -156,6 +156,12 @@ public:
     return true;
   }
 
+  bool isProfitableToCombineMinNumMaxNum(EVT VT) const override {
+    // We have instructions for pseudo min/max, no need to convert them to
+    // minnum/maxnum.
+    return false;
+  }
+
   // This function currently returns cost for srl/ipm/cc sequence for merging.
   CondMergingParams
   getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
@@ -465,6 +471,8 @@ private:
   MachineBasicBlock *emitMemMemWrapper(MachineInstr &MI, MachineBasicBlock *BB,
                                        unsigned Opcode,
                                        bool IsMemset = false) const;
+  MachineBasicBlock *emitMemmoveImm(MachineInstr &MI,
+                                    MachineBasicBlock *BB) const;
   MachineBasicBlock *emitStringWrapper(MachineInstr &MI, MachineBasicBlock *BB,
                                        unsigned Opcode) const;
   MachineBasicBlock *emitTransactionBegin(MachineInstr &MI,
