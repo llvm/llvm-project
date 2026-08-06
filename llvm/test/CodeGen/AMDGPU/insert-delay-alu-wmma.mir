@@ -1,11 +1,12 @@
+# RUN: llc -mtriple=amdgpu11.70 -start-before=amdgpu-insert-delay-alu %s -o - | FileCheck %s
 # RUN: llc -mtriple=amdgpu12.00 -start-before=amdgpu-insert-delay-alu %s -o - | FileCheck %s
 
 ---
-name: wmma_c_reuse_no_delay_gfx12
+name: wmma_c_reuse_no_delay
 tracksRegLiveness: true
 body: |
   bb.0:
-    ; CHECK-LABEL: {{^}}wmma_c_reuse_no_delay_gfx12:
+    ; CHECK-LABEL: {{^}}wmma_c_reuse_no_delay:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_wmma_f32_16x16x16_f16 v[0:7], v[8:11], v[12:15], v[0:7]
     ; CHECK-NEXT: v_wmma_f32_16x16x16_f16 v[0:7], v[16:19], v[20:23], v[0:7]
@@ -15,11 +16,11 @@ body: |
 ...
 
 ---
-name: wmma_no_c_reuse_when_interrupted_gfx12
+name: wmma_no_c_reuse_when_interrupted
 tracksRegLiveness: true
 body: |
   bb.0:
-    ; CHECK-LABEL: {{^}}wmma_no_c_reuse_when_interrupted_gfx12:
+    ; CHECK-LABEL: {{^}}wmma_no_c_reuse_when_interrupted:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_wmma_f32_16x16x16_f16 v[0:7], v[8:11], v[12:15], v[0:7]
     ; CHECK-NEXT: v_add_nc_u32_e32 v24, v24, v25
