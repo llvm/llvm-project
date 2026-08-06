@@ -337,6 +337,27 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
   return itOp.getResult();
 }
 
+// Return whether an iterator map object has a supported array-reference shape.
+static bool isSupportedIteratorMapObject(const omp::Object &object) {
+  const std::optional<evaluate::Expr<evaluate::SomeType>> &ref = object.ref();
+  if (!ref)
+    return false;
+
+  std::optional<evaluate::DataRef> dataRef = evaluate::ExtractDataRef(*ref);
+  if (!dataRef)
+    return false;
+  const auto *arrayRef = std::get_if<evaluate::ArrayRef>(&dataRef->u);
+  if (!arrayRef || arrayRef->subscript().empty())
+    return false;
+
+  for (const auto &subscript : arrayRef->subscript()) {
+    if (!std::holds_alternative<evaluate::Triplet>(subscript.u) &&
+        subscript.Rank() > 0)
+      return false;
+  }
+  return true;
+}
+
 // Build an omp.iterator op that yields a MapInfoOp for a single
 // iterated object.
 static mlir::Value buildIteratedMapEntry(
@@ -2033,6 +2054,8 @@ void ClauseProcessor::processMapObjectsWithIterator(
       if (hasUnsupportedReferenceModifier)
         TODO(clauseLocation,
              "iterator modifier with reference or attach modifier");
+      if (!isSupportedIteratorMapObject(object))
+        TODO(clauseLocation, "object type not supported by iterator modifier");
       if (getBaseObject(object, semaCtx) && !isMapperVariable)
         TODO(clauseLocation, "iterator modifier with derived type member map");
       if (declareMapper && !isMapperVariable)
