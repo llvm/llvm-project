@@ -23,7 +23,8 @@ void mlir::omp::setOffloadModuleInterfaceAttributes(
     offloadMod.setIsTargetDevice(opts.isTargetDevice);
     offloadMod.setIsGPU(opts.isGPU);
     if (opts.forceUSM)
-      offloadMod.setRequires(ClauseRequires::unified_shared_memory);
+      offloadMod.setRequires(offloadMod.getRequires() |
+                             ClauseRequires::unified_shared_memory);
     offloadMod.setFlags(opts.targetDebugKind, opts.assumeTeamsOversubscription,
                         opts.assumeThreadsOversubscription,
                         opts.assumeNoThreadState,
