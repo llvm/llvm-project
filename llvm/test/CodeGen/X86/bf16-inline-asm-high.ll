@@ -3,13 +3,6 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -mattr=+avx512bf16,+avx512vl -verify-machineinstrs | FileCheck %s --check-prefixes=AVX512BF16
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -mattr=+avx10.2 -verify-machineinstrs | FileCheck %s --check-prefixes=AVX10-2
 
-; The case the VLX predicate in getRegForInlineAsmConstraint's `case MVT::bf16:`
-; is actually about. With xmm0-xmm15 all clobbered, a 'v' constraint has to
-; reach xmm16-xmm31, which is only possible via the wide FR16X class. The f32
-; and f64 cases gate that class on hasVLX() rather than hasAVX512() because the
-; high registers can only be named in a 128-bit EVEX operand with AVX512VL; bf16
-; follows them.
-
 define bfloat @bf16_v_high(bfloat %a) nounwind {
 ; AVX512VL-LABEL: bf16_v_high:
 ; AVX512VL:       # %bb.0:
