@@ -681,11 +681,10 @@ static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
         } else if (ObjectMode == "32" || ObjectMode == "32_64" ||
                    ObjectMode == "any") {
           // OBJECT_MODE setting can be overridden by -maix64/-m64
-          if (Args.hasArg(options::OPT_maix64, options::OPT_m64)) {
+          if (Args.hasArg(options::OPT_maix64, options::OPT_m64))
             AT = Target.get64BitArchVariant().getArch();
-          } else {
+          else
             D.Diag(diag::err_drv_compile_mode_unsupported_aix);
-          }
         } else {
           D.Diag(diag::err_drv_invalid_object_mode) << ObjectMode;
         }
@@ -693,13 +692,12 @@ static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
         // Silently accept '32_64' and 'any'
         const bool OtherAllowedMode =
             ObjectMode == "32_64" || ObjectMode == "any";
-        if (ObjectMode == "64") {
+        if (ObjectMode == "64")
           AT = Target.get64BitArchVariant().getArch();
-        } else if (ObjectMode == "32") {
+        else if (ObjectMode == "32")
           AT = Target.get32BitArchVariant().getArch();
-        } else if (!OtherAllowedMode) {
+        else if (!OtherAllowedMode)
           D.Diag(diag::err_drv_invalid_object_mode) << ObjectMode;
-        }
       }
 
       if (AT != llvm::Triple::UnknownArch && AT != Target.getArch()) {
@@ -708,8 +706,8 @@ static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
       }
     } else if (D.IsFlangMode() &&
                !Args.hasArg(options::OPT_maix64, options::OPT_m64)) {
-      // For flang on AIX, if OBJECT_MODE is unset and compile
-      // without -maix64/-m64 issue an error.
+      // For flang on AIX, if OBJECT_MODE is unset and neither
+      // -maix64 nor -m64 is specified, issue an error.
       D.Diag(diag::err_drv_compile_mode_unsupported_aix);
     }
   }
