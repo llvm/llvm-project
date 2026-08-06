@@ -28300,17 +28300,19 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
 
   auto CacheAndReturn = [&](bool Result) -> bool {
     StlfConflictCache[Key] = Result;
-    // No conflict at VF implies none at any smaller power-of-2 VF, so seed
-    // those entries too. Conflicts do not propagate downward.
-    if (!Result && isPowerOf2_32(VF))
-      for (unsigned V = VF / 2; V >= 2; V /= 2)
-        StlfConflictCache.try_emplace(std::make_pair(FirstStore, V), false);
+    // No conflict at VF implies none at any smaller VF that divides VF, so seed
+    // those entries too. The recency window is VF-independent (so it stays
+    // satisfied for any smaller width), and the distance remains a multiple of
+    // V * ElementSize only for divisors of VF. This covers the power-of-2
+    // ladder (each smaller power of 2 divides the larger) and any
+    // non-power-of-2 VF the caller may probe. Conflicts do not propagate
+    // downward.
+    if (!Result)
+      for (unsigned V = 2; V < VF; ++V)
+        if (VF % V == 0)
+          StlfConflictCache.try_emplace(std::make_pair(FirstStore, V), false);
     return Result;
   };
-
-  Loop *L = LI->getLoopFor(FirstStore->getParent());
-  if (!L)
-    return CacheAndReturn(false);
 
   Type *ValueTy = FirstStore->getValueOperand()->getType();
   TypeSize StoreSize = DL->getTypeStoreSize(ValueTy);
@@ -28319,39 +28321,33 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
   uint64_t ElementSize = StoreSize.getFixedValue();
   if (ElementSize == 0)
     return CacheAndReturn(false);
-  uint64_t VectorStoreBytes = uint64_t(VF) * ElementSize;
+
+  // Store-to-load forwarding hazards are a loop-carried concern.
+  if (!LI->getLoopFor(FirstStore->getParent()))
+    return CacheAndReturn(false);
+
+  uint64_t VectorStoreBytes = VF * ElementSize;
   LLVM_DEBUG(dbgs() << "SLP: STLF check: VF=" << VF
                     << " ElementSize=" << ElementSize
                     << " VectorStoreBytes=" << VectorStoreBytes << "\n");
 
-  // Enumerate candidate loads from the tree, not the whole loop. A conflicting
-  // load feeds the vectorized nodes, so it is reachable by walking operands
-  // from the tree scalars (including through gather leaves such as splats).
-  // Stay inside the loop to bound the walk by the tree's cone.
+  // Enumerate candidate loads directly from the tree's load and gather nodes: a
+  // conflicting load is either widened (a load node) or packed into a gather
+  // leaf (e.g. a splat), so scanning those node kinds is sufficient.
   Value *StoreBase = getUnderlyingObject(FirstStore->getPointerOperand());
   SmallPtrSet<LoadInst *, 8> CandidateLoads;
-  SmallPtrSet<const Value *, 32> Visited;
-  SmallVector<Value *, 32> Worklist;
   for (const std::unique_ptr<TreeEntry> &TEPtr : VectorizableTree) {
     const TreeEntry *TE = TEPtr.get();
     if (DeletedNodes.contains(TE))
       continue;
-    Worklist.append(TE->Scalars.begin(), TE->Scalars.end());
-  }
-  while (!Worklist.empty()) {
-    Value *V = Worklist.pop_back_val();
-    if (!Visited.insert(V).second)
+    if (!TE->isGather() &&
+        !(TE->hasState() && TE->getOpcode() == Instruction::Load))
       continue;
-    if (auto *LoadI = dyn_cast<LoadInst>(V)) {
-      if (LoadI->isSimple() &&
-          getUnderlyingObject(LoadI->getPointerOperand()) == StoreBase)
-        CandidateLoads.insert(LoadI);
-      continue;
-    }
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I || !L->contains(I))
-      continue;
-    Worklist.append(I->op_begin(), I->op_end());
+    for (Value *V : TE->Scalars)
+      if (auto *LoadI = dyn_cast<LoadInst>(V))
+        if (LoadI->isSimple() &&
+            getUnderlyingObject(LoadI->getPointerOperand()) == StoreBase)
+          CandidateLoads.insert(LoadI);
   }
 
   if (CandidateLoads.empty())
