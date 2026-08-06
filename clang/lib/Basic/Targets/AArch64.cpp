@@ -1862,23 +1862,13 @@ MinGWARM64TargetInfo::MinGWARM64TargetInfo(const llvm::Triple &Triple,
 UEFIAArch64TargetInfo::UEFIAArch64TargetInfo(const llvm::Triple &Triple,
                                              const TargetOptions &Opts)
     : UEFITargetInfo<AArch64leTargetInfo>(Triple, Opts) {
-  // UEFI images are PE/COFF and follow the Microsoft ARM64 ABI. The UEFI spec
-  // does not mandate a specific C++ ABI or integer model, so we match the
-  // Windows ARM64 target -- the only supported way to produce AArch64 EFI
-  // binaries with Clang/LLVM today.
-  TheCXXABI.set(TargetCXXABI::Microsoft);
-
-  // LLP64 data model: int:4, long:4, long long:8, long double:8.
-  IntWidth = IntAlign = 32;
-  LongWidth = LongAlign = 32;
-  DoubleAlign = LongLongAlign = 64;
-  LongDoubleWidth = LongDoubleAlign = 64;
-  LongDoubleFormat = &llvm::APFloat::IEEEdouble();
-  IntMaxType = SignedLongLong;
-  Int64Type = SignedLongLong;
-  SizeType = UnsignedLongLong;
-  PtrDiffType = SignedLongLong;
-  IntPtrType = SignedLongLong;
+  // UEFI images are PE/COFF, but we keep the AArch64 LP64 data model (inherited
+  // from the freestanding ELF base) rather than the Windows LLP64 model. The
+  // UEFI spec does not mandate a C integer model, a freestanding Swift firmware
+  // does not interop with UEFI/Windows C `long`, and LP64 keeps `long` == word
+  // size, which is what higher-level toolchains (e.g. Swift's Int <-> C integer
+  // mapping) assume. Only the object format and CFI are Windows-like -- see
+  // setDataLayout() below and the AArch64 frame lowering.
 }
 
 void UEFIAArch64TargetInfo::setDataLayout() {
