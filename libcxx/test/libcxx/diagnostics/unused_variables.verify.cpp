@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // Make sure that we warn on unused variables of libc++ classes which behave like value types.
-
-// The test suite doesn't necessarily enable that warning, so make sure we always do.
 // ADDITIONAL_COMPILE_FLAGS: -Wunused-variable
 
 #include <deque>
