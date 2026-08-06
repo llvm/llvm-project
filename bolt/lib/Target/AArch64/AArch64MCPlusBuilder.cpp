@@ -2255,6 +2255,7 @@ public:
         Code.emplace_back(MCInstBuilder(AArch64::Bcc)
                               .addImm(getInvertedCC(Inst.getOpcode()))
                               .addExpr(MCSymbolRefExpr::create(TBB, *Ctx)));
+        moveAnnotations(std::move(Inst), Code.back());
         return Code;
       }
       Inst.setOpcode(InvertedOpcode);

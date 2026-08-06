@@ -9,7 +9,7 @@
 #ifndef BOLT_PASSES_BRANCHLIVENESSUTILS_H
 #define BOLT_PASSES_BRANCHLIVENESSUTILS_H
 
-#include "bolt/Core/BranchLiveness.h"
+#include "bolt/Core/BranchLivenessInfo.h"
 
 namespace llvm {
 namespace bolt {

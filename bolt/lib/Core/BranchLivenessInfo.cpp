@@ -1,4 +1,4 @@
-//===- bolt/Core/BranchLiveness.cpp --------------------------------------===//
+//===- bolt/Core/BranchLivenessInfo.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bolt/Core/BranchLiveness.h"
+#include "bolt/Core/BranchLivenessInfo.h"
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
@@ -55,6 +55,12 @@ bool BranchLivenessInfo::mustPreserveFlags(const MCInst &Inst) const {
     return true;
 
   return !BF->getBinaryContext().MIB->hasAnnotation(Inst, AnnotationIndex);
+}
+
+void BranchLivenessInfo::removeAnnotation(MCInst &Inst) const {
+  assert(BF && "branch liveness info is not initialized");
+
+  BF->getBinaryContext().MIB->removeAnnotation(Inst, AnnotationIndex);
 }
 
 void BranchLivenessInfo::setFlagsDead(MCInst &Inst) {

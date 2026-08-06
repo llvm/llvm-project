@@ -1,4 +1,4 @@
-//===- bolt/Core/BranchLiveness.h -------------------------------*- C++ -*-===//
+//===- bolt/Core/BranchLivenessInfo.h ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef BOLT_CORE_BRANCHLIVENESS_H
-#define BOLT_CORE_BRANCHLIVENESS_H
+#ifndef BOLT_CORE_BRANCHLIVENESSINFO_H
+#define BOLT_CORE_BRANCHLIVENESSINFO_H
 
 namespace llvm {
 class MCInst;
@@ -33,6 +33,7 @@ public:
   BranchLivenessInfo &operator=(BranchLivenessInfo &&Other) noexcept;
 
   bool mustPreserveFlags(const MCInst &Inst) const;
+  void removeAnnotation(MCInst &Inst) const;
   void setFlagsDead(MCInst &Inst);
 };
 

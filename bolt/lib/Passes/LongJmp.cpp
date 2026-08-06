@@ -797,6 +797,7 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
       BinaryBasicBlock::BinaryBranchInfo BI;
       BinaryBasicBlock *TargetBB = BB->getSuccessor(TargetSymbol, BI);
 
+      // Erasing the unconditional branch shrinks BB by one instruction.
       BinaryBasicBlock *TrampolineBB =
           addTrampolineAfter(BB, TargetBB, BI.Count, /*Offset=*/-4);
       BB->replaceSuccessor(TargetBB, TrampolineBB, BI.Count);
@@ -860,6 +861,8 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
         BB->swapConditionalSuccessors();
         {
           auto L = BC.scopeLock();
+          if (BLI)
+            BLI->removeAnnotation(Inst);
           InstructionListType Code = MIB->reverseBranchCondition(
               Inst, NextBB->getLabel(), BC.Ctx.get(), PreserveFlags);
           BB->replaceInstruction(BB->findInstruction(&Inst), Code);

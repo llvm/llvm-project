@@ -573,7 +573,7 @@ Error FixupBranches::runOnFunctions(BinaryContext &BC) {
     if (!BC.shouldEmit(BF) || !BF.isSimple())
       continue;
 
-    if (!RA) {
+    if (!RA || !needsBranchLiveness(BF)) {
       BF.fixBranches();
       continue;
     }
@@ -994,7 +994,7 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
             MIB->reverseBranchCondition(*CondBranch, CalleeSymbol, Ctx);
         auto II = PredBB->replaceInstruction(
             PredBB->findInstruction(CondBranch), Code);
-        CondBranch = &*(II);
+        CondBranch = &*(II + Code.size() - 1);
         // Since we reversed the condition on the branch we need to change
         // the target for the unconditional branch or add a unconditional
         // branch to the old target.  This has to be done manually since

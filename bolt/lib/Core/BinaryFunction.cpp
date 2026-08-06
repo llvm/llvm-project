@@ -12,7 +12,7 @@
 
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/BinaryBasicBlock.h"
-#include "bolt/Core/BranchLiveness.h"
+#include "bolt/Core/BranchLivenessInfo.h"
 #include "bolt/Core/DynoStats.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/MCPlusBuilder.h"
@@ -3747,6 +3747,8 @@ void BinaryFunction::fixBranches(const BranchLivenessInfo *BLI) {
         std::swap(TSuccessor, FSuccessor);
         BB->swapConditionalSuccessors();
         auto L = BC.scopeLock();
+        if (BLI)
+          BLI->removeAnnotation(*CondBranch);
         InstructionListType Code = MIB->reverseBranchCondition(
             *CondBranch, TSuccessor->getLabel(), Ctx, PreserveFlags);
         BB->replaceInstruction(BB->findInstruction(CondBranch), Code);
