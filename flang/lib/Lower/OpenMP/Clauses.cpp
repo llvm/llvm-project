@@ -152,6 +152,18 @@ Object makeObject(const parser::OmpObject &object,
   if (auto *desg = parser::omp::GetDesignatorFromObj(object))
     return makeObject(*desg, semaCtx);
   if (auto *locator = parser::omp::GetLocatorFromObj(object)) {
+    // Module files are name-resolved but do not pass through
+    // RewriteParseTree. Recover array elements that consequently remain
+    // parsed as function references before converting them for lowering.
+    if (auto *ref = std::get_if<parser::FunctionReference>(&locator->u);
+        ref && semantics::CheckMisparsedArrayElement(semaCtx, *ref)) {
+      auto &mutableObject = const_cast<parser::OmpObject &>(object);
+      auto &mutableLocator = std::get<parser::OmpLocator>(mutableObject.u);
+      auto &mutableRef = std::get<parser::FunctionReference>(mutableLocator.u);
+      mutableObject.u = mutableRef.ConvertToArrayElementRef();
+      return makeObject(std::get<parser::Designator>(mutableObject.u), semaCtx);
+    }
+
     return common::visit( //
         common::visitors{
             [&](const parser::OmpReservedIdentifier &x) {
