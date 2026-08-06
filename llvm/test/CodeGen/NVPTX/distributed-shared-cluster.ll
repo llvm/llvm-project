@@ -58,22 +58,60 @@ entry:
 define void @test_distributed_shared_cluster_float_atomic(ptr addrspace(7) %dsmem_ptr) local_unnamed_addr {
 ; CHECK-LABEL: test_distributed_shared_cluster_float_atomic(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b16 %rs<7>;
+; CHECK-NEXT:    .reg .b32 %r<22>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_distributed_shared_cluster_float_atomic_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_distributed_shared_cluster_float_atomic_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    mov.b16 %rs1, 0x3C00;
-; CHECK-NEXT:    atom.acquire.sys.shared::cluster.add.noftz.f16 %rs2, [%rd1], %rs1;
+; CHECK-NEXT:    and.b64 %rd1, %rd2, -4;
+; CHECK-NEXT:    cvt.u32.u64 %r5, %rd2;
+; CHECK-NEXT:    and.b32 %r6, %r5, 3;
+; CHECK-NEXT:    shl.b32 %r1, %r6, 3;
+; CHECK-NEXT:    mov.b32 %r7, 65535;
+; CHECK-NEXT:    shl.b32 %r8, %r7, %r1;
+; CHECK-NEXT:    not.b32 %r2, %r8;
+; CHECK-NEXT:    ld.relaxed.sys.shared::cluster.b32 %r20, [%rd1];
+; CHECK-NEXT:  $L__BB1_1: // %atomicrmw.start10
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    shr.u32 %r9, %r20, %r1;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r9;
+; CHECK-NEXT:    mov.b16 %rs2, 0x3C00;
+; CHECK-NEXT:    add.rn.f16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    cvt.u32.u16 %r10, %rs3;
+; CHECK-NEXT:    shl.b32 %r11, %r10, %r1;
+; CHECK-NEXT:    and.b32 %r12, %r20, %r2;
+; CHECK-NEXT:    or.b32 %r13, %r12, %r11;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b32 %r3, [%rd1], %r20, %r13;
+; CHECK-NEXT:    setp.ne.b32 %p1, %r3, %r20;
+; CHECK-NEXT:    mov.b32 %r20, %r3;
+; CHECK-NEXT:    @%p1 bra $L__BB1_1;
+; CHECK-NEXT:  // %bb.2: // %atomicrmw.end9
+; CHECK-NEXT:    fence.acq_rel.sys;
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    mov.b16 %rs3, 0x3F80;
-; CHECK-NEXT:    atom.acquire.sys.shared::cluster.add.noftz.bf16 %rs4, [%rd1], %rs3;
+; CHECK-NEXT:    ld.relaxed.sys.shared::cluster.b32 %r21, [%rd1];
+; CHECK-NEXT:  $L__BB1_3: // %atomicrmw.start
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    shr.u32 %r14, %r21, %r1;
+; CHECK-NEXT:    cvt.u16.u32 %rs4, %r14;
+; CHECK-NEXT:    mov.b16 %rs5, 0x3F80;
+; CHECK-NEXT:    add.rn.bf16 %rs6, %rs4, %rs5;
+; CHECK-NEXT:    cvt.u32.u16 %r15, %rs6;
+; CHECK-NEXT:    shl.b32 %r16, %r15, %r1;
+; CHECK-NEXT:    and.b32 %r17, %r21, %r2;
+; CHECK-NEXT:    or.b32 %r18, %r17, %r16;
+; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b32 %r4, [%rd1], %r21, %r18;
+; CHECK-NEXT:    setp.ne.b32 %p2, %r4, %r21;
+; CHECK-NEXT:    mov.b32 %r21, %r4;
+; CHECK-NEXT:    @%p2 bra $L__BB1_3;
+; CHECK-NEXT:  // %bb.4: // %atomicrmw.end
+; CHECK-NEXT:    fence.acq_rel.sys;
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    atom.acquire.sys.shared::cluster.add.f32 %r1, [%rd1], 0f3F800000;
+; CHECK-NEXT:    atom.acquire.sys.shared::cluster.add.f32 %r19, [%rd2], 0f3F800000;
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    atom.acquire.sys.shared::cluster.add.f64 %rd2, [%rd1], 0d3FF0000000000000;
+; CHECK-NEXT:    atom.acquire.sys.shared::cluster.add.f64 %rd3, [%rd2], 0d3FF0000000000000;
 ; CHECK-NEXT:    ret;
 entry:
   ; Floating point atomic operations
