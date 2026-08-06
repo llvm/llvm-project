@@ -21,3 +21,19 @@ subroutine p09
   equivalence (c8(5:8), zc0)
   call use(c8, i8)
 end subroutine
+
+! A genuine backward extension through a zero-size member must still error.
+! Block /blk2/ layout:
+!   offset  0 : zc0  (character(0), 0 bytes)
+!   offset  0 : i8   (integer(8), 8 bytes)
+!
+! equivalence(c8(5:8), zc0) would place c8(1) at offset -4 -- before the
+! block base -- which is a true backward extension and must be rejected.
+subroutine backward
+  integer(8) :: i8
+  character(0) :: zc0
+  character(8) :: c8
+  !ERROR: 'zc0' cannot backward-extend COMMON block /blk2/ via EQUIVALENCE with 'c8'
+  common /blk2/ zc0, i8
+  equivalence (c8(5:8), zc0)
+end subroutine
