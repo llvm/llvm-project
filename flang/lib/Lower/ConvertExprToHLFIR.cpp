@@ -1774,10 +1774,22 @@ private:
         Fortran::lower::getFIRType(builder.getContext(), R::category, R::kind,
                                    /*params=*/{});
     // TODO: "merge" shape, get cst shape from front-end if possible.
+    // Prefer a compile-time constant shape to get a statically shaped result.
+    auto hasConstantShape = [](hlfir::Entity entity) -> bool {
+      if (!entity.isArray())
+        return false;
+      auto seqTy =
+          mlir::dyn_cast<fir::SequenceType>(entity.getElementOrSequenceType());
+      return seqTy && !fir::sequenceWithNonConstantShape(seqTy);
+    };
     mlir::Value shape;
-    if (left.isArray()) {
+    if (hasConstantShape(left))
       shape = hlfir::genShape(loc, builder, left);
-    } else {
+    else if (hasConstantShape(right))
+      shape = hlfir::genShape(loc, builder, right);
+    else if (left.isArray())
+      shape = hlfir::genShape(loc, builder, left);
+    else {
       assert(right.isArray() && "must have at least one array operand");
       shape = hlfir::genShape(loc, builder, right);
     }

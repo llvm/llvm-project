@@ -144,7 +144,7 @@ if(DEFINED LIBOMPTARGET_BUILD_CUDA_PLUGIN OR
 endif()
 
 if(WIN32)
-  set(LIBOMPTARGET_ALL_PLUGIN_TARGETS "")
+  set(LIBOMPTARGET_ALL_PLUGIN_TARGETS level_zero)
 
   set(LIBOMPTARGET_PLUGINS_TO_BUILD "" CACHE STRING
       "Semicolon-separated list of plugins to use: level_zero or \"all\".")
@@ -159,9 +159,9 @@ if(WIN32)
     endif()
   endforeach()
 else()
-  set(LIBOMPTARGET_ALL_PLUGIN_TARGETS amdgpu cuda)
+  set(LIBOMPTARGET_ALL_PLUGIN_TARGETS amdgpu cuda level_zero)
   set(LIBOMPTARGET_PLUGINS_TO_BUILD "all" CACHE STRING
-      "Semicolon-separated list of plugins to use: cuda, amdgpu or \"all\".")
+      "Semicolon-separated list of plugins to use: cuda, amdgpu, level_zero or \"all\".")
 
   if(LIBOMPTARGET_PLUGINS_TO_BUILD STREQUAL "all")
     set(LIBOMPTARGET_PLUGINS_TO_BUILD ${LIBOMPTARGET_ALL_PLUGIN_TARGETS})
