@@ -35,6 +35,8 @@
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 
+#include <limits>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-vl-optimizer"
@@ -1094,6 +1096,24 @@ getMinimumVLForVSLIDEDOWN_VX(const MachineOperand &UserOp,
   return SlideAmtDef->getOperand(1);
 }
 
+static DemandedVL doubleVL(DemandedVL MinimumVL) {
+  if (!MinimumVL.VL.isImm())
+    return DemandedVL::vlmax();
+
+  int64_t VL = MinimumVL.VL.getImm();
+  if (VL < 0 || VL > std::numeric_limits<int64_t>::max() / 2)
+    return DemandedVL::vlmax();
+  return MachineOperand::CreateImm(VL * 2);
+}
+
+static DemandedVL getMinimumVLForVUNZIP(const MachineOperand &UserOp,
+                                        DemandedVL MinimumVL) {
+  const MachineInstr &MI = *UserOp.getParent();
+  const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
+  unsigned VS2OpNo = HasPassthru ? 2 : 1;
+  return UserOp.getOperandNo() == VS2OpNo ? doubleVL(MinimumVL) : MinimumVL;
+}
+
 DemandedVL
 RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   const MachineInstr &UserMI = *UserOp.getParent();
@@ -1111,8 +1131,9 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   if (auto VL = getMinimumVLForVSLIDEDOWN_VX(UserOp, MRI))
     return *VL;
 
-  if (RISCVII::readsPastVL(
-          TII->get(RISCV::getRVVMCOpcode(UserMI.getOpcode())).TSFlags)) {
+  unsigned RVVOpc = RISCV::getRVVMCOpcode(UserMI.getOpcode());
+  bool IsVUNZIP = RVVOpc == RISCV::VUNZIPE_V || RVVOpc == RISCV::VUNZIPO_V;
+  if (!IsVUNZIP && RISCVII::readsPastVL(TII->get(RVVOpc).TSFlags)) {
     LLVM_DEBUG(dbgs() << "  Abort because used by unsafe instruction\n");
     return DemandedVL::vlmax();
   }
@@ -1144,10 +1165,14 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
 
   // If we know the demanded VL of UserMI, then we can reduce the VL it
   // requires.
+  DemandedVL MinimumVL = VLOp;
   if (RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp))
-    return DemandedVLs.lookup(&UserMI);
+    MinimumVL = DemandedVLs.lookup(&UserMI);
 
-  return VLOp;
+  if (IsVUNZIP)
+    return getMinimumVLForVUNZIP(UserOp, MinimumVL);
+
+  return MinimumVL;
 }
 
 /// Return true if MI is an instruction used for assembling registers
