@@ -149,7 +149,7 @@ static int insertNamedMCOperand(MCInst &MI, const MCOperand &Op,
   return OpIdx;
 }
 
-static DecodeStatus decodeSOPPBrTarget(MCInst &Inst, unsigned Imm,
+static DecodeStatus decodeSOPPBrTarget(MCInst &Inst, uint64_t Imm,
                                        uint64_t Addr,
                                        const MCDisassembler *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
@@ -162,7 +162,7 @@ static DecodeStatus decodeSOPPBrTarget(MCInst &Inst, unsigned Imm,
   return addOperand(Inst, MCOperand::createImm(Imm));
 }
 
-static DecodeStatus decodeSMEMOffset(MCInst &Inst, unsigned Imm, uint64_t Addr,
+static DecodeStatus decodeSMEMOffset(MCInst &Inst, uint64_t Imm, uint64_t Addr,
                                      const MCDisassembler *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   int64_t Offset;
@@ -176,59 +176,64 @@ static DecodeStatus decodeSMEMOffset(MCInst &Inst, unsigned Imm, uint64_t Addr,
   return addOperand(Inst, MCOperand::createImm(Offset));
 }
 
-static DecodeStatus decodeBoolReg(MCInst &Inst, unsigned Val, uint64_t Addr,
+static DecodeStatus decodeBoolReg(MCInst &Inst, uint64_t Val, uint64_t Addr,
                                   const MCDisassembler *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  return addOperand(Inst, DAsm->decodeBoolReg(Inst, Val));
+  return addOperand(Inst,
+                    DAsm->decodeBoolReg(Inst, static_cast<unsigned>(Val)));
 }
 
-static DecodeStatus decodeSplitBarrier(MCInst &Inst, unsigned Val,
+static DecodeStatus decodeSplitBarrier(MCInst &Inst, uint64_t Val,
                                        uint64_t Addr,
                                        const MCDisassembler *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  return addOperand(Inst, DAsm->decodeSplitBarrier(Inst, Val));
+  return addOperand(Inst,
+                    DAsm->decodeSplitBarrier(Inst, static_cast<unsigned>(Val)));
 }
 
-static DecodeStatus decodeDpp8FI(MCInst &Inst, unsigned Val, uint64_t Addr,
+static DecodeStatus decodeDpp8FI(MCInst &Inst, uint64_t Val, uint64_t Addr,
                                  const MCDisassembler *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  return addOperand(Inst, DAsm->decodeDpp8FI(Val));
+  return addOperand(Inst, DAsm->decodeDpp8FI(static_cast<unsigned>(Val)));
 }
 
 #define DECODE_OPERAND(StaticDecoderName, DecoderName)                         \
-  static DecodeStatus StaticDecoderName(MCInst &Inst, unsigned Imm,            \
+  static DecodeStatus StaticDecoderName(MCInst &Inst, uint64_t Imm,            \
                                         uint64_t /*Addr*/,                     \
                                         const MCDisassembler *Decoder) {       \
     auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);              \
-    return addOperand(Inst, DAsm->DecoderName(Imm));                           \
+    return addOperand(Inst, DAsm->DecoderName(static_cast<unsigned>(Imm)));    \
   }
 
 // Decoder for registers, decode directly using RegClassID. Imm(8-bit) is
 // number of register. Used by VGPR only and AGPR only operands.
 #define DECODE_OPERAND_REG_8(RegClass)                                         \
   static DecodeStatus Decode##RegClass##RegisterClass(                         \
-      MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,                           \
+      MCInst &Inst, uint64_t Imm, uint64_t /*Addr*/,                           \
       const MCDisassembler *Decoder) {                                         \
     assert(Imm < (1 << 8) && "8-bit encoding");                                \
     auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);              \
-    return addOperand(                                                         \
-        Inst, DAsm->createRegOperand(AMDGPU::RegClass##RegClassID, Imm));      \
+    return addOperand(Inst,                                                    \
+                      DAsm->createRegOperand(AMDGPU::RegClass##RegClassID,     \
+                                             static_cast<unsigned>(Imm)));     \
   }
 
 #define DECODE_SrcOp(Name, EncSize, OpWidth, EncImm)                           \
-  static DecodeStatus Name(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,      \
+  static DecodeStatus Name(MCInst &Inst, uint64_t Imm, uint64_t /*Addr*/,      \
                            const MCDisassembler *Decoder) {                    \
     assert(Imm < (1 << EncSize) && #EncSize "-bit encoding");                  \
     auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);              \
-    return addOperand(Inst, DAsm->decodeSrcOp(Inst, OpWidth, EncImm));         \
+    return addOperand(Inst, DAsm->decodeSrcOp(Inst, OpWidth,                   \
+                                              static_cast<unsigned>(EncImm))); \
   }
 
 static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
-                                unsigned OpWidth, unsigned Imm, unsigned EncImm,
+                                unsigned OpWidth, uint64_t Imm, uint64_t EncImm,
                                 const MCDisassembler *Decoder) {
   assert(Imm < (1U << EncSize) && "Operand doesn't fit encoding!");
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  return addOperand(Inst, DAsm->decodeSrcOp(Inst, OpWidth, EncImm));
+  return addOperand(
+      Inst, DAsm->decodeSrcOp(Inst, OpWidth, static_cast<unsigned>(EncImm)));
 }
 
 // Decoder for registers. Imm(7-bit) is number of register, uses decodeSrcOp to
@@ -244,7 +249,7 @@ static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
 // Set Imm{8} to 1 (IS_VGPR) to decode using 'enum10' from decodeSrcOp.
 // Used by AV_ register classes (AGPR or VGPR only register operands).
 template <unsigned OpWidth>
-static DecodeStatus decodeAV10(MCInst &Inst, unsigned Imm, uint64_t /* Addr */,
+static DecodeStatus decodeAV10(MCInst &Inst, uint64_t Imm, uint64_t /* Addr */,
                                const MCDisassembler *Decoder) {
   return decodeSrcOp(Inst, 10, OpWidth, Imm, Imm | AMDGPU::EncValues::IS_VGPR,
                      Decoder);
@@ -252,7 +257,7 @@ static DecodeStatus decodeAV10(MCInst &Inst, unsigned Imm, uint64_t /* Addr */,
 
 // Decoder for Src(9-bit encoding) registers only.
 template <unsigned OpWidth>
-static DecodeStatus decodeSrcReg9(MCInst &Inst, unsigned Imm,
+static DecodeStatus decodeSrcReg9(MCInst &Inst, uint64_t Imm,
                                   uint64_t /* Addr */,
                                   const MCDisassembler *Decoder) {
   return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm, Decoder);
@@ -262,7 +267,7 @@ static DecodeStatus decodeSrcReg9(MCInst &Inst, unsigned Imm,
 // Imm{9} to 1 (set acc) and decode using 'enum10' from decodeSrcOp, registers
 // only.
 template <unsigned OpWidth>
-static DecodeStatus decodeSrcA9(MCInst &Inst, unsigned Imm, uint64_t /* Addr */,
+static DecodeStatus decodeSrcA9(MCInst &Inst, uint64_t Imm, uint64_t /* Addr */,
                                 const MCDisassembler *Decoder) {
   return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm | 512, Decoder);
 }
@@ -270,7 +275,7 @@ static DecodeStatus decodeSrcA9(MCInst &Inst, unsigned Imm, uint64_t /* Addr */,
 // Decoder for 'enum10' from decodeSrcOp, Imm{0-8} is 9-bit Src encoding
 // Imm{9} is acc, registers only.
 template <unsigned OpWidth>
-static DecodeStatus decodeSrcAV10(MCInst &Inst, unsigned Imm,
+static DecodeStatus decodeSrcAV10(MCInst &Inst, uint64_t Imm,
                                   uint64_t /* Addr */,
                                   const MCDisassembler *Decoder) {
   return decodeSrcOp(Inst, 10, OpWidth, Imm, Imm, Decoder);
@@ -282,7 +287,7 @@ static DecodeStatus decodeSrcAV10(MCInst &Inst, unsigned Imm,
 // decoded into constant matching the OperandType (important for floating point
 // types).
 template <unsigned OpWidth>
-static DecodeStatus decodeSrcRegOrImm9(MCInst &Inst, unsigned Imm,
+static DecodeStatus decodeSrcRegOrImm9(MCInst &Inst, uint64_t Imm,
                                        uint64_t /* Addr */,
                                        const MCDisassembler *Decoder) {
   return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm, Decoder);
@@ -291,7 +296,7 @@ static DecodeStatus decodeSrcRegOrImm9(MCInst &Inst, unsigned Imm,
 // Decoder for Src(9-bit encoding) AGPR or immediate. Set Imm{9} to 1 (set acc)
 // and decode using 'enum10' from decodeSrcOp.
 template <unsigned OpWidth>
-static DecodeStatus decodeSrcRegOrImmA9(MCInst &Inst, unsigned Imm,
+static DecodeStatus decodeSrcRegOrImmA9(MCInst &Inst, uint64_t Imm,
                                         uint64_t /* Addr */,
                                         const MCDisassembler *Decoder) {
   return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm | 512, Decoder);
@@ -338,31 +343,31 @@ DECODE_OPERAND_REG_8(AReg_256)
 DECODE_OPERAND_REG_8(AReg_512)
 DECODE_OPERAND_REG_8(AReg_1024)
 
-static DecodeStatus DecodeVGPR_16RegisterClass(MCInst &Inst, unsigned Imm,
+static DecodeStatus DecodeVGPR_16RegisterClass(MCInst &Inst, uint64_t Imm,
                                                uint64_t /*Addr*/,
                                                const MCDisassembler *Decoder) {
   assert(isUInt<10>(Imm) && "10-bit encoding expected");
   assert((Imm & (1 << 8)) == 0 && "Imm{8} should not be used");
 
   bool IsHi = Imm & (1 << 9);
-  unsigned RegIdx = Imm & 0xff;
+  unsigned RegIdx = static_cast<unsigned>(Imm & 0xff);
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
 }
 
 static DecodeStatus
-DecodeVGPR_16_Lo128RegisterClass(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,
+DecodeVGPR_16_Lo128RegisterClass(MCInst &Inst, uint64_t Imm, uint64_t /*Addr*/,
                                  const MCDisassembler *Decoder) {
   assert(isUInt<8>(Imm) && "8-bit encoding expected");
 
   bool IsHi = Imm & (1 << 7);
-  unsigned RegIdx = Imm & 0x7f;
+  unsigned RegIdx = static_cast<unsigned>(Imm & 0x7f);
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
 }
 
 template <unsigned OpWidth>
-static DecodeStatus decodeOperand_VSrcT16_Lo128(MCInst &Inst, unsigned Imm,
+static DecodeStatus decodeOperand_VSrcT16_Lo128(MCInst &Inst, uint64_t Imm,
                                                 uint64_t /*Addr*/,
                                                 const MCDisassembler *Decoder) {
   assert(isUInt<9>(Imm) && "9-bit encoding expected");
@@ -370,14 +375,16 @@ static DecodeStatus decodeOperand_VSrcT16_Lo128(MCInst &Inst, unsigned Imm,
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   if (Imm & AMDGPU::EncValues::IS_VGPR) {
     bool IsHi = Imm & (1 << 7);
-    unsigned RegIdx = Imm & 0x7f;
+    unsigned RegIdx = static_cast<unsigned>(Imm & 0x7f);
     return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
   }
-  return addOperand(Inst, DAsm->decodeNonVGPRSrcOp(Inst, OpWidth, Imm & 0xFF));
+  return addOperand(
+      Inst, DAsm->decodeNonVGPRSrcOp(Inst, OpWidth,
+                                     static_cast<unsigned>(Imm & 0xFF)));
 }
 
 template <unsigned OpWidth>
-static DecodeStatus decodeOperand_VSrcT16(MCInst &Inst, unsigned Imm,
+static DecodeStatus decodeOperand_VSrcT16(MCInst &Inst, uint64_t Imm,
                                           uint64_t /*Addr*/,
                                           const MCDisassembler *Decoder) {
   assert(isUInt<10>(Imm) && "10-bit encoding expected");
@@ -385,13 +392,15 @@ static DecodeStatus decodeOperand_VSrcT16(MCInst &Inst, unsigned Imm,
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   if (Imm & AMDGPU::EncValues::IS_VGPR) {
     bool IsHi = Imm & (1 << 9);
-    unsigned RegIdx = Imm & 0xff;
+    unsigned RegIdx = static_cast<unsigned>(Imm & 0xff);
     return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
   }
-  return addOperand(Inst, DAsm->decodeNonVGPRSrcOp(Inst, OpWidth, Imm & 0xFF));
+  return addOperand(
+      Inst, DAsm->decodeNonVGPRSrcOp(Inst, OpWidth,
+                                     static_cast<unsigned>(Imm & 0xFF)));
 }
 
-static DecodeStatus decodeOperand_VGPR_16(MCInst &Inst, unsigned Imm,
+static DecodeStatus decodeOperand_VGPR_16(MCInst &Inst, uint64_t Imm,
                                           uint64_t /*Addr*/,
                                           const MCDisassembler *Decoder) {
   assert(isUInt<10>(Imm) && "10-bit encoding expected");
@@ -400,15 +409,16 @@ static DecodeStatus decodeOperand_VGPR_16(MCInst &Inst, unsigned Imm,
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
 
   bool IsHi = Imm & (1 << 9);
-  unsigned RegIdx = Imm & 0xff;
+  unsigned RegIdx = static_cast<unsigned>(Imm & 0xff);
   return addOperand(Inst, DAsm->createVGPR16Operand(RegIdx, IsHi));
 }
 
-static DecodeStatus decodeOperand_KImmFP(MCInst &Inst, unsigned Imm,
+static DecodeStatus decodeOperand_KImmFP(MCInst &Inst, uint64_t Imm,
                                          uint64_t Addr,
                                          const MCDisassembler *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  return addOperand(Inst, DAsm->decodeMandatoryLiteralConstant(Imm));
+  return addOperand(
+      Inst, DAsm->decodeMandatoryLiteralConstant(static_cast<unsigned>(Imm)));
 }
 
 static DecodeStatus decodeOperand_KImmFP64(MCInst &Inst, uint64_t Imm,
@@ -418,31 +428,34 @@ static DecodeStatus decodeOperand_KImmFP64(MCInst &Inst, uint64_t Imm,
   return addOperand(Inst, DAsm->decodeMandatoryLiteral64Constant(Imm));
 }
 
-static DecodeStatus decodeOperandVOPDDstY(MCInst &Inst, unsigned Val,
+static DecodeStatus decodeOperandVOPDDstY(MCInst &Inst, uint64_t Val,
                                           uint64_t Addr, const void *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  return addOperand(Inst, DAsm->decodeVOPDDstYOp(Inst, Val));
+  return addOperand(Inst,
+                    DAsm->decodeVOPDDstYOp(Inst, static_cast<unsigned>(Val)));
 }
 
-static DecodeStatus decodeAVLdSt(MCInst &Inst, unsigned Imm, unsigned Opw,
+static DecodeStatus decodeAVLdSt(MCInst &Inst, uint64_t Imm, unsigned Opw,
                                  const MCDisassembler *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  return addOperand(Inst, DAsm->decodeSrcOp(Inst, Opw, Imm | 256));
+  return addOperand(
+      Inst, DAsm->decodeSrcOp(Inst, Opw, static_cast<unsigned>(Imm | 256)));
 }
 
 template <unsigned Opw>
-static DecodeStatus decodeAVLdSt(MCInst &Inst, unsigned Imm,
+static DecodeStatus decodeAVLdSt(MCInst &Inst, uint64_t Imm,
                                  uint64_t /* Addr */,
                                  const MCDisassembler *Decoder) {
   return decodeAVLdSt(Inst, Imm, Opw, Decoder);
 }
 
-static DecodeStatus decodeOperand_VSrc_f64(MCInst &Inst, unsigned Imm,
+static DecodeStatus decodeOperand_VSrc_f64(MCInst &Inst, uint64_t Imm,
                                            uint64_t Addr,
                                            const MCDisassembler *Decoder) {
   assert(Imm < (1 << 9) && "9-bit encoding");
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  return addOperand(Inst, DAsm->decodeSrcOp(Inst, 64, Imm));
+  return addOperand(Inst,
+                    DAsm->decodeSrcOp(Inst, 64, static_cast<unsigned>(Imm)));
 }
 
 #define DECODE_SDWA(DecName) \
@@ -452,11 +465,11 @@ DECODE_SDWA(Src32)
 DECODE_SDWA(Src16)
 DECODE_SDWA(VopcDst)
 
-static DecodeStatus decodeVersionImm(MCInst &Inst, unsigned Imm,
+static DecodeStatus decodeVersionImm(MCInst &Inst, uint64_t Imm,
                                      uint64_t /* Addr */,
                                      const MCDisassembler *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  return addOperand(Inst, DAsm->decodeVersionImm(Imm));
+  return addOperand(Inst, DAsm->decodeVersionImm(static_cast<unsigned>(Imm)));
 }
 
 #include "AMDGPUGenDisassemblerTables.inc"
