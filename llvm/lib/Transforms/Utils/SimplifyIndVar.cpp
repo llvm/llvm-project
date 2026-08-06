@@ -267,20 +267,22 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
   const SCEV *X = SE->getSCEVAtScope(ICmp->getOperand(1 - IVOperIdx), ICmpLoop);
 
   bool IsExitCond = false;
-  if (ICmp == L->getLatchCmpInst())
-    IsExitCond = true;
   // If the condition is always true or always false in the given context,
   // replace it with a constant value.
   SmallVector<Instruction *, 4> Users;
-  for (auto *U : ICmp->users())
+  for (auto *U : ICmp->users()) {
     Users.push_back(cast<Instruction>(U));
+    if (isa<CondBrInst>(U))
+      IsExitCond = true;
+  }
   const Instruction *CtxI = findCommonDominator(Users, *DT);
   if (auto Ev = SE->evaluatePredicateAt(Pred, S, X, CtxI)) {
     SE->forgetValue(ICmp);
     ICmp->replaceAllUsesWith(ConstantInt::getBool(ICmp->getContext(), *Ev));
     DeadInsts.emplace_back(ICmp);
     if (IsExitCond)
-      SE->forgetLoop(L);
+      SE->forgetTopmostLoop(L);
+
     LLVM_DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');
     ++NumElimCmp;
     Changed = true;
