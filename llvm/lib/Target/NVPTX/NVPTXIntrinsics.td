@@ -2718,16 +2718,20 @@ def LDU_GLOBAL_v4i32 : VLDU_G_ELE_V4<B32>;
 // Support for ldg on sm_35 or later
 //-----------------------------------
 
+defvar CacheHintQualifiers =
+    "${evictionAndPrefetchHint:l1}${evictionAndPrefetchHint:l2}${evictionAndPrefetchHint:prefetch}";
+
 // Don't annotate ld.global.nc as mayLoad, because these loads go through the
 // non-coherent texture cache, and therefore the values read must be read-only
 // during the lifetime of the kernel.
-
 class LDG_G<NVPTXRegClass regclass>
   : NVPTXInst<(outs regclass:$result),
               (ins AtomicCode:$Sign, i32imm:$fromWidth,
-                   UsedBytesMask:$usedBytes, ADDR:$src),
-               "${usedBytes}"
-               "ld.global.nc.${Sign:sign}$fromWidth \t$result, [$src];">;
+                   UsedBytesMask:$usedBytes, ADDR:$src,
+                   EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+                   CachePolicy:$policy),
+               !strconcat("${usedBytes}", "ld.global.nc", CacheHintQualifiers,
+                          ".${Sign:sign}$fromWidth \t$result, [$src]${policy};")>;
 
 def LD_GLOBAL_NC_i16 : LDG_G<B16>;
 def LD_GLOBAL_NC_i32 : LDG_G<B32>;
@@ -2739,25 +2743,29 @@ def LD_GLOBAL_NC_i64 : LDG_G<B64>;
 class VLDG_G_ELE_V2<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
             (ins AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
-             ADDR:$src),
-            "${usedBytes}"
-            "ld.global.nc.v2.${Sign:sign}$fromWidth \t{{$dst1, $dst2}}, [$src];">;
-
+             ADDR:$src, EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+             CachePolicy:$policy),
+            !strconcat("${usedBytes}", "ld.global.nc", CacheHintQualifiers,
+                       ".v2.${Sign:sign}$fromWidth \t{{$dst1, $dst2}}, [$src]${policy};")>;
 
 class VLDG_G_ELE_V4<NVPTXRegClass regclass> :
-  NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4), 
+  NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
+                 regclass:$dst4),
             (ins AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
-             ADDR:$src),
-            "${usedBytes}"
-            "ld.global.nc.v4.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];">;
+             ADDR:$src, EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+             CachePolicy:$policy),
+            !strconcat("${usedBytes}", "ld.global.nc", CacheHintQualifiers,
+                       ".v4.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4}}, [$src]${policy};")>;
 
 class VLDG_G_ELE_V8<NVPTXRegClass regclass> :
-  NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4,
-                  regclass:$dst5, regclass:$dst6, regclass:$dst7, regclass:$dst8),
+  NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
+                 regclass:$dst4, regclass:$dst5, regclass:$dst6,
+                 regclass:$dst7, regclass:$dst8),
             (ins AtomicCode:$Sign, i32imm:$fromWidth, UsedBytesMask:$usedBytes,
-             ADDR:$src),
-            "${usedBytes}"
-             "ld.global.nc.v8.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, [$src];">;
+             ADDR:$src, EvictionAndPrefetchHint:$evictionAndPrefetchHint,
+             CachePolicy:$policy),
+            !strconcat("${usedBytes}", "ld.global.nc", CacheHintQualifiers,
+                       ".v8.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, [$src]${policy};")>;
 
 // FIXME: 8-bit LDG should be fixed once LDG/LDU nodes are made into proper loads.
 def LD_GLOBAL_NC_v2i16 : VLDG_G_ELE_V2<B16>;
