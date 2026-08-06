@@ -359,17 +359,18 @@ int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
 /// Resolve \p NumArgs (base pointer, offset) pairs into a flattened array of
 /// argument-value pointers suitable for a kernel launch, writing the result
 /// into \p LaunchArgs.NumArgs/Args.
-static void resolveKernelLaunchParams(void **TgtArgs, ptrdiff_t *TgtOffsets,
+static void resolveKernelLaunchParams(void ** const TgtArgs,
+                                      ptrdiff_t * const TgtOffsets,
                                       uint32_t NumArgs,
                                       llvm::SmallVector<void *> &Args,
                                       llvm::SmallVector<void *> &Ptrs,
                                       KernelLaunchArgsTy &LaunchArgs) {
   LaunchArgs.NumArgs = NumArgs;
-  if (NumArgs == 0)
-    return;
-
   Args.resize(NumArgs);
   Ptrs.resize(NumArgs);
+
+  if (NumArgs == 0)
+    return;
 
   for (uint32_t I = 0; I < NumArgs; ++I) {
     Args[I] = reinterpret_cast<void *>(reinterpret_cast<intptr_t>(TgtArgs[I]) +
