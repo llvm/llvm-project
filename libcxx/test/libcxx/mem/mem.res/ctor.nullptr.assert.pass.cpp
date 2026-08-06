@@ -10,10 +10,8 @@
 
 // Test hardening assertions for std::pmr::polymorphic_allocator.
 
-// REQUIRES: has-unix-headers
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
+// REQUIRES: can-test-hardening-assertions-extensive
 // UNSUPPORTED: c++03, c++11, c++14
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // We're testing nullptr assertions
 // ADDITIONAL_COMPILE_FLAGS: -Wno-nonnull
