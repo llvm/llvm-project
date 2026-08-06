@@ -2483,7 +2483,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FROUNDEVEN,    MVT::f16, Legal);
     setOperationAction(ISD::FP_ROUND,             MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FP_ROUND,      MVT::f16, Custom);
-    // Need custom lowering for bf16 since matching only happens on return type
     setOperationAction(ISD::FP_EXTEND,            MVT::f32, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND,     MVT::f32, Custom);
     setOperationAction(ISD::LRINT,                MVT::f16, Legal);
@@ -2598,8 +2597,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // FREM and FPOW promote too, but only in the 128- and 256-bit forms for now.
   // TODO: this is because it will fail to find the libcall for the 32f32
   // type since it fails to split before searching for libcall
-  static constexpr unsigned PromoteBF16ToF32OpsLibCall[] = {
-    ISD::FREM, ISD::FPOW};
+  static constexpr unsigned PromoteBF16ToF32OpsLibCall[] = {ISD::FREM,
+                                                            ISD::FPOW};
 
   if (!Subtarget.useSoftFloat() &&
       (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16())) {
@@ -22747,10 +22746,9 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
     // bf16 shares f32's exponent layout, so widening is a 16-bit left shift.
     // Anything wider than f32 extends again from there.
     if (VT != MVT::f32) {
-      SDValue F32 =
-          IsStrict ? DAG.getNode(ISD::STRICT_FP_EXTEND, DL,
-                                 {MVT::f32, MVT::Other}, {Chain, In})
-                   : DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, In);
+      SDValue F32 = IsStrict ? DAG.getNode(ISD::STRICT_FP_EXTEND, DL,
+                                           {MVT::f32, MVT::Other}, {Chain, In})
+                             : DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, In);
       if (!IsStrict)
         return DAG.getNode(ISD::FP_EXTEND, DL, VT, F32);
       SDValue Res = DAG.getNode(ISD::STRICT_FP_EXTEND, DL, {VT, MVT::Other},
@@ -22761,9 +22759,9 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
     if (isTypeLegal(MVT::v8f16)) {
       SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16,
                                 DAG.getBitcast(MVT::f16, In));
-      Vec = DAG.getNode(ISD::SHL, DL, MVT::v4i32,
-                        DAG.getBitcast(MVT::v4i32, Vec),
-                        DAG.getShiftAmountConstant(16, MVT::v4i32, DL));
+      Vec =
+          DAG.getNode(ISD::SHL, DL, MVT::v4i32, DAG.getBitcast(MVT::v4i32, Vec),
+                      DAG.getShiftAmountConstant(16, MVT::v4i32, DL));
       Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32,
                         DAG.getBitcast(MVT::v4f32, Vec),
                         DAG.getVectorIdxConstant(0, DL));
@@ -25218,7 +25216,7 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   ISD::CondCode CC =
       cast<CondCodeSDNode>(Op.getOperand(IsStrict ? 3 : 2))->get();
 
- if (isSoftF16(Op0.getValueType(), Subtarget))
+  if (isSoftF16(Op0.getValueType(), Subtarget))
     return SDValue();
 
   // Handle f128 first, since one possible outcome is a normal integer
