@@ -432,7 +432,8 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
 
     if (Load->getOpcode() == AMDGPU::G_ZEXTLOAD) {
       const MachineMemOperand *MMO = *Load->memoperands_begin();
-      unsigned LoadSize = MMO->getSizeInBits().getValue();
+      unsigned LoadSize =
+          static_cast<unsigned>(MMO->getSizeInBits().getValue());
       if (LoadSize == 8)
         return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_U8, MI, Load, Dst);
       if (LoadSize == 16)
@@ -470,7 +471,8 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
 
     if (Load->getOpcode() == AMDGPU::G_ZEXTLOAD) {
       const MachineMemOperand *MMO = *Load->memoperands_begin();
-      unsigned LoadSize = MMO->getSizeInBits().getValue();
+      unsigned LoadSize =
+          static_cast<unsigned>(MMO->getSizeInBits().getValue());
       if (LoadSize == 8)
         return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_U8, MI, Load, Dst);
       if (LoadSize == 16)
