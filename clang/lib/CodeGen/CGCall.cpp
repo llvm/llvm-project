@@ -5903,8 +5903,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // permutations safely, the source value is captured into a scratch
       // alloca here (Phase 1); the write to the incoming-param destination
       // is deferred until after all sources have been read (Phase 2 below).
-      // IndirectAliased uses the existing fallback (different source-AS).
-      if (IsMustTail && ArgInfo.isIndirect()) {
+      // IndirectAliased (different source-AS) and non-relocatable types fall
+      // back to the pre-existing path, which still allows a dangling temporary.
+      // trivial_abi opts in despite having a non-trivial copy constructor.
+      const auto *ArgRD = I->Ty->getAsCXXRecordDecl();
+      bool ByteRelocatable = I->Ty.isTriviallyCopyableType(getContext()) ||
+                             (ArgRD && ArgRD->hasAttr<TrivialABIAttr>());
+      if (IsMustTail && ArgInfo.isIndirect() && ByteRelocatable) {
         llvm::Argument *IncomingArg = CurFn->arg_begin() + FirstIRArg;
         llvm::Value *Dst = IncomingArg;
         Address SrcAddr = Address::invalid();

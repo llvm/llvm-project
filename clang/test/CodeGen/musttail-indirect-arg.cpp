@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -triple=loongarch64-linux-gnu %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=COMMON
 // RUN: %clang_cc1 -triple=s390x-linux-gnu %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=COMMON
 // RUN: %clang_cc1 -std=c++23 -triple=aarch64-linux-gnu %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=CXX23
+// RUN: %clang_cc1 -triple=arm64e-apple-ios -fptrauth-calls -fptrauth-intrinsics %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=PTRAUTH
 
 // C++ side of the musttail Indirect-arg fix. The call argument is typically
 // a CXXConstructExpr invoking the trivial copy constructor; EmitCallArg
@@ -44,19 +45,99 @@ struct Big P3(struct Big a, struct Big b) {
 // COMMON: store {{.*}} [[SAVED]], ptr %b,
 // COMMON: musttail call {{.*}} @_Z2C33BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
-// P4: non-trivial copy constructor. The trivial-copy gate must NOT engage;
-// the user-defined copy ctor IS called. Dangling-stack bug in this corner
-// remains (out of scope).
+// P4: no trivial copy or move operation, so the argument is not relocated.
+// Keep operator= declared: without it the implicit copy assignment stays
+// trivial and EmitAggregateCopy would accept a bytewise copy.
 struct NonTrivial {
   unsigned long long parts[4];
   NonTrivial(const NonTrivial &);
+  NonTrivial &operator=(const NonTrivial &);
 };
 NonTrivial C4(NonTrivial a);
 NonTrivial P4(NonTrivial a) {
   [[clang::musttail]] return C4(a);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P410NonTrivial(
-// COMMON: call {{.*}} @_ZN10NonTrivialC1ERKS_
+// COMMON: call {{.*}} @_ZN10NonTrivialC1ERKS_(ptr {{[^,]*}} [[TMP:%agg.tmp[0-9]*]], ptr {{[^,]*}} %a
+// COMMON-NOT: musttail.copy
+// COMMON: musttail call {{.*}} @_Z2C410NonTrivial({{.*}}, ptr {{[^,]*}} [[TMP]])
+
+// P4b: only a copy ctor, so the implicit copy assignment is trivial. Still not
+// relocatable: a copy ctor can record the object's own address.
+struct CtorOnly {
+  unsigned long long parts[4];
+  CtorOnly(const CtorOnly &);
+};
+CtorOnly C4b(CtorOnly x, CtorOnly y);
+CtorOnly P4b(CtorOnly a, CtorOnly b) {
+  [[clang::musttail]] return C4b(b, a);
+}
+// COMMON-LABEL: define {{.*}} @_Z3P4b8CtorOnlyS_(
+// COMMON-NOT: musttail.copy
+// COMMON: musttail call {{.*}} @_Z3C4b8CtorOnlyS_(
+
+// P4c: trivial_abi marks the type ABI-trivial, so relocation is allowed
+// despite the non-trivial copy ctor.
+struct __attribute__((trivial_abi)) TrivialAbi {
+  unsigned long long parts[4];
+  TrivialAbi(const TrivialAbi &);
+};
+TrivialAbi C4c(TrivialAbi x, TrivialAbi y);
+TrivialAbi P4c(TrivialAbi a, TrivialAbi b) {
+  [[clang::musttail]] return C4c(b, a);
+}
+// COMMON-LABEL: define {{.*}} @_Z3P4c10TrivialAbiS_(
+// COMMON: [[SLOT0:%agg.tmp[0-9]*]] = alloca
+// COMMON: [[SLOT1:%musttail.copy[0-9a-z.]*]] = alloca
+// COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{[^,]*}} [[SLOT0]], i64 32
+// COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %b, ptr {{[^,]*}} [[SLOT1]], i64 32
+// COMMON: musttail call {{.*}} @_Z3C4c10TrivialAbiS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
+
+// P4d: a virtual function makes the type non-trivially copyable. Pins the
+// boundary so widening the relocation predicate has to update this.
+struct Poly {
+  unsigned long long parts[4];
+  virtual void f();
+};
+Poly C4d(Poly x, Poly y);
+Poly P4d(Poly a, Poly b) {
+  [[clang::musttail]] return C4d(b, a);
+}
+// COMMON-LABEL: define {{.*}} @_Z3P4d4PolyS_(
+// COMMON-NOT: musttail.copy
+// COMMON: musttail call {{.*}} @_Z3C4d4PolyS_(
+
+// P4e: a union is enough for EmitAggregateCopy, but the user copy operations
+// still rule out a relocation.
+union UnionCopy {
+  unsigned long long parts[4];
+  UnionCopy(const UnionCopy &);
+  UnionCopy &operator=(const UnionCopy &);
+};
+UnionCopy C4e(UnionCopy x, UnionCopy y);
+UnionCopy P4e(UnionCopy a, UnionCopy b) {
+  [[clang::musttail]] return C4e(b, a);
+}
+// COMMON-LABEL: define {{.*}} @_Z3P4e9UnionCopyS_(
+// COMMON-NOT: musttail.copy
+// COMMON: musttail call {{.*}} @_Z3C4e9UnionCopyS_(
+
+#ifdef __PTRAUTH__
+// P4f: an address-discriminated __ptrauth member is signed with the object's
+// own address, so relocating the bytes would leave the signature bound to the
+// old one.
+struct Signed {
+  int *__ptrauth(2, 1, 42) p;
+  unsigned long long a, b, c;
+};
+Signed C4f(Signed x, Signed y);
+Signed P4f(Signed a, Signed b) {
+  [[clang::musttail]] return C4f(b, a);
+}
+// PTRAUTH-LABEL: define {{.*}} @_Z3P4f6SignedS_(
+// PTRAUTH-NOT: musttail.copy
+// PTRAUTH: musttail call {{.*}} @_Z3C4f6SignedS_(
+#endif
 
 // P5: modify-then-forward.
 struct Big C5(struct Big a);
