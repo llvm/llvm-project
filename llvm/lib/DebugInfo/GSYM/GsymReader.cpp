@@ -545,14 +545,27 @@ void GsymReader::dumpStatistics(StringRef GSYMPath, raw_ostream &OS,
   // synthesizes its GlobalData entries and has no on-disk directory.
   const uint64_t GlobalDataDirSize =
       getVersion() >= 2 ? (GlobalDataSections.size() + 1) * 20 : 0;
-  // Everything not covered by the sections above (the file header, an optional
-  // UUID, and inter-section padding) is reported as header/overhead. Keeps the
-  // output consistent across versions.
-  const uint64_t KnownSectionsSize = GlobalDataDirSize + AddrTableSize +
-                                     AddrInfoOffsetsSize + FileTableSize +
-                                     StrtabSize + FuncInfoSize;
-  const uint64_t HeaderSize =
-      FileSize > KnownSectionsSize ? FileSize - KnownSectionsSize : 0;
+  // In V2 the UUID is its own data section; report its payload separately. In
+  // V1 the UUID lives inline in the fixed header, so it is already counted
+  // there.
+  const uint64_t UUIDSize =
+      getVersion() >= 2 ? SectionSize(GlobalInfoType::UUID) : 0;
+  // The fixed file header precedes the GlobalData directory (V2) and the data
+  // sections. Its V2 size is a constant; in V1 (no on-disk directory) the
+  // header ends where the earliest data section begins.
+  uint64_t HeaderSize = HeaderV2::getEncodedSize();
+  if (getVersion() < 2) {
+    uint64_t MinSectionOffset = FileSize;
+    for (const auto &KV : GlobalDataSections)
+      MinSectionOffset = std::min(MinSectionOffset, KV.second.FileOffset);
+    HeaderSize = MinSectionOffset;
+  }
+  // Anything left over (alignment padding between sections) is reported as
+  // padding so that the byte-sizes sum exactly to the file size.
+  const uint64_t KnownSize = HeaderSize + GlobalDataDirSize + UUIDSize +
+                             AddrTableSize + AddrInfoOffsetsSize +
+                             FileTableSize + StrtabSize + FuncInfoSize;
+  const uint64_t PaddingSize = FileSize > KnownSize ? FileSize - KnownSize : 0;
   const uint64_t NumAddresses = getNumAddresses();
 
   // Walk every FunctionInfo to accumulate the per-field byte sizes.
@@ -604,6 +617,8 @@ void GsymReader::dumpStatistics(StringRef GSYMPath, raw_ostream &OS,
         {"file_size", static_cast<int64_t>(FileSize)},
         {"header", static_cast<int64_t>(HeaderSize)},
         {"global_data_directory", static_cast<int64_t>(GlobalDataDirSize)},
+        {"uuid_section", static_cast<int64_t>(UUIDSize)},
+        {"padding", static_cast<int64_t>(PaddingSize)},
         {"address_table", static_cast<int64_t>(AddrTableSize)},
         {"addr_info_offsets", static_cast<int64_t>(AddrInfoOffsetsSize)},
         {"file_table", static_cast<int64_t>(FileTableSize)},
@@ -648,6 +663,8 @@ void GsymReader::dumpStatistics(StringRef GSYMPath, raw_ostream &OS,
      << Pct(HeaderSize) << "\n";
   OS << "  Global data dir:     " << Fmt(GlobalDataDirSize) << " bytes "
      << Pct(GlobalDataDirSize) << "\n";
+  OS << "  UUID section:        " << Fmt(UUIDSize) << " bytes " << Pct(UUIDSize)
+     << "\n";
   OS << "  Address table:       " << Fmt(AddrTableSize) << " bytes "
      << Pct(AddrTableSize) << "\n";
   OS << "  Addr info offsets:   " << Fmt(AddrInfoOffsetsSize) << " bytes "
@@ -687,6 +704,8 @@ void GsymReader::dumpStatistics(StringRef GSYMPath, raw_ostream &OS,
      << Pct(Merged.MergedFuncInfo) << "\n";
   OS << "      End of list:     " << Fmt(Merged.EndOfList) << " bytes "
      << Pct(Merged.EndOfList) << "\n";
+  OS << "  Padding:             " << Fmt(PaddingSize) << " bytes "
+     << Pct(PaddingSize) << "\n";
 }
 
 void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI,
