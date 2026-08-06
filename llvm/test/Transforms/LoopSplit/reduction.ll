@@ -69,3 +69,136 @@ exit:
   %sum.lcssa = phi i64 [ %sum.next, %loop ]
   ret i64 %sum.lcssa
 }
+
+; A live-out that is computed in the loop but is not a carried header PHI value.
+; It has no value before any partition runs, so its chain entry is poison rather
+; than a PHI's initial value.
+
+define i64 @non_carried_live_out(ptr %a, i64 %n) {
+; CHECK-LABEL: define i64 @non_carried_live_out(
+; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[LS_GUARD0:.*]]:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
+; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 49)
+; CHECK-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 0, [[SMIN]]
+; CHECK-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
+; CHECK:       [[ENTRY]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SCALED:%.*]] = mul i64 [[I]], 3
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i64, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    store i64 [[SCALED]], ptr [[P]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[ITR_CHK1:%.*]] = icmp sle i64 [[I_NEXT]], [[SMIN]]
+; CHECK-NEXT:    br i1 [[ITR_CHK1]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LS_GUARD1]]
+; CHECK:       [[LS_GUARD1]]:
+; CHECK-NEXT:    [[SCALED5:%.*]] = phi i64 [ [[SCALED]], %[[EXIT]] ], [ poison, %[[LS_GUARD0]] ]
+; CHECK-NEXT:    [[ITR_CHK2:%.*]] = icmp sle i64 50, [[TMP0]]
+; CHECK-NEXT:    br i1 [[ITR_CHK2]], label %[[ENTRY_LS1:.*]], label %[[LS_FINAL_EXIT:.*]]
+; CHECK:       [[ENTRY_LS1]]:
+; CHECK-NEXT:    br label %[[LOOP_LS1:.*]]
+; CHECK:       [[LOOP_LS1]]:
+; CHECK-NEXT:    [[I_LS1:%.*]] = phi i64 [ 50, %[[ENTRY_LS1]] ], [ [[I_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
+; CHECK-NEXT:    [[SCALED_LS1:%.*]] = mul i64 [[I_LS1]], 3
+; CHECK-NEXT:    [[P_LS1:%.*]] = getelementptr i64, ptr [[A]], i64 [[I_LS1]]
+; CHECK-NEXT:    store i64 [[SCALED_LS1]], ptr [[P_LS1]], align 4
+; CHECK-NEXT:    [[I_NEXT_LS1]] = add i64 [[I_LS1]], 1
+; CHECK-NEXT:    [[ITR_CHK3:%.*]] = icmp sle i64 [[I_NEXT_LS1]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[ITR_CHK3]], label %[[LOOP_LS1]], label %[[LS_EXIT1:.*]]
+; CHECK:       [[LS_EXIT1]]:
+; CHECK-NEXT:    br label %[[LS_FINAL_EXIT]]
+; CHECK:       [[LS_FINAL_EXIT]]:
+; CHECK-NEXT:    [[SCALED4:%.*]] = phi i64 [ [[SCALED_LS1]], %[[LS_EXIT1]] ], [ [[SCALED5]], %[[LS_GUARD1]] ]
+; CHECK-NEXT:    ret i64 [[SCALED4]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %scaled = mul i64 %i, 3
+  %p = getelementptr i64, ptr %a, i64 %i
+  store i64 %scaled, ptr %p
+  %i.next = add i64 %i, 1
+  %c = icmp slt i64 %i.next, %n
+  br i1 %c, label %loop, label %exit
+
+exit:
+  %scaled.lcssa = phi i64 [ %scaled, %loop ]
+  ret i64 %scaled.lcssa
+}
+
+; A non-induction header PHI whose backedge value is also its initial value. It
+; holds the same value in every iteration, so there is nothing to carry into a
+; later partition.
+
+define i64 @invariant_carried_phi(ptr %a, i64 %n, i64 %m) {
+; CHECK-LABEL: define i64 @invariant_carried_phi(
+; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
+; CHECK-NEXT:  [[LS_GUARD0:.*]]:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
+; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 49)
+; CHECK-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 0, [[SMIN]]
+; CHECK-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
+; CHECK:       [[ENTRY]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[INV:%.*]] = phi i64 [ [[M]], %[[ENTRY]] ], [ [[M]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i64, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 4
+; CHECK-NEXT:    [[SCALED:%.*]] = mul i64 [[V]], [[INV]]
+; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[SUM]], [[SCALED]]
+; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[ITR_CHK1:%.*]] = icmp sle i64 [[I_NEXT]], [[SMIN]]
+; CHECK-NEXT:    br i1 [[ITR_CHK1]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LS_GUARD1]]
+; CHECK:       [[LS_GUARD1]]:
+; CHECK-NEXT:    [[SUM_NEXT5:%.*]] = phi i64 [ [[SUM_NEXT]], %[[EXIT]] ], [ 0, %[[LS_GUARD0]] ]
+; CHECK-NEXT:    [[ITR_CHK2:%.*]] = icmp sle i64 50, [[TMP0]]
+; CHECK-NEXT:    br i1 [[ITR_CHK2]], label %[[ENTRY_LS1:.*]], label %[[LS_FINAL_EXIT:.*]]
+; CHECK:       [[ENTRY_LS1]]:
+; CHECK-NEXT:    br label %[[LOOP_LS1:.*]]
+; CHECK:       [[LOOP_LS1]]:
+; CHECK-NEXT:    [[I_LS1:%.*]] = phi i64 [ 50, %[[ENTRY_LS1]] ], [ [[I_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
+; CHECK-NEXT:    [[INV_LS1:%.*]] = phi i64 [ [[M]], %[[ENTRY_LS1]] ], [ [[M]], %[[LOOP_LS1]] ]
+; CHECK-NEXT:    [[SUM_LS1:%.*]] = phi i64 [ [[SUM_NEXT5]], %[[ENTRY_LS1]] ], [ [[SUM_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
+; CHECK-NEXT:    [[P_LS1:%.*]] = getelementptr i64, ptr [[A]], i64 [[I_LS1]]
+; CHECK-NEXT:    [[V_LS1:%.*]] = load i64, ptr [[P_LS1]], align 4
+; CHECK-NEXT:    [[SCALED_LS1:%.*]] = mul i64 [[V_LS1]], [[INV_LS1]]
+; CHECK-NEXT:    [[SUM_NEXT_LS1]] = add i64 [[SUM_LS1]], [[SCALED_LS1]]
+; CHECK-NEXT:    [[I_NEXT_LS1]] = add i64 [[I_LS1]], 1
+; CHECK-NEXT:    [[ITR_CHK3:%.*]] = icmp sle i64 [[I_NEXT_LS1]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[ITR_CHK3]], label %[[LOOP_LS1]], label %[[LS_EXIT1:.*]]
+; CHECK:       [[LS_EXIT1]]:
+; CHECK-NEXT:    br label %[[LS_FINAL_EXIT]]
+; CHECK:       [[LS_FINAL_EXIT]]:
+; CHECK-NEXT:    [[SUM_NEXT4:%.*]] = phi i64 [ [[SUM_NEXT_LS1]], %[[LS_EXIT1]] ], [ [[SUM_NEXT5]], %[[LS_GUARD1]] ]
+; CHECK-NEXT:    ret i64 [[SUM_NEXT4]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %inv = phi i64 [ %m, %entry ], [ %m, %loop ]
+  %sum = phi i64 [ 0, %entry ], [ %sum.next, %loop ]
+  %p = getelementptr i64, ptr %a, i64 %i
+  %v = load i64, ptr %p
+  %scaled = mul i64 %v, %inv
+  %sum.next = add i64 %sum, %scaled
+  %i.next = add i64 %i, 1
+  %c = icmp slt i64 %i.next, %n
+  br i1 %c, label %loop, label %exit
+
+exit:
+  %sum.lcssa = phi i64 [ %sum.next, %loop ]
+  ret i64 %sum.lcssa
+}

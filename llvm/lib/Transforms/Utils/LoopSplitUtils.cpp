@@ -364,13 +364,23 @@ void LoopSplitUtils::collectEscapingValues(SplitState &S) {
     assert(LCSSAPhi.getNumIncomingValues() == 1 &&
            "exit block not in LCSSA form");
     Value *LiveOutDef = LCSSAPhi.getIncomingValue(0);
+    LCSSAPhi.replaceAllUsesWith(LiveOutDef);
+    LCSSAPhi.eraseFromParent();
+
+    // A live-out not defined inside the loop (constant or loop-invariant) holds
+    // the same value in every partition, so the replaceAllUsesWith above is
+    // already correct and it needs no per-partition reconstruction. Skipping it
+    // also avoids walking uses() on a constant (which has no use list) and
+    // rewriting any pre-loop uses of an outside definition.
+    auto *DefInst = dyn_cast<Instruction>(LiveOutDef);
+    if (!DefInst || !L->contains(DefInst))
+      continue;
+
     auto Existing = CarriedDefToEscapingIdx.find(LiveOutDef);
     auto &EV = Existing != CarriedDefToEscapingIdx.end()
                    ? S.Escaping[Existing->second]
                    : S.addEscaping(LiveOutDef);
     EV.EscapesOutside = true;
-    LCSSAPhi.replaceAllUsesWith(LiveOutDef);
-    LCSSAPhi.eraseFromParent();
   }
 
   // Seed partition 0 with the originals; later partitions are filled when
