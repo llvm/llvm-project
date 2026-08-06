@@ -235,5 +235,5 @@ compiled, not LLVM.
 Once you determine that the program itself is not buggy, you should work on
 reducing the inputs required to reproduce the miscompilation. The
 :doc:`OptBisect <OptBisect>` page shows how to find the optimization pass
-causing the miscompile. You can use :doc:`llvm-reduce <llvm-reduce>` to
-minimize the bitcode necessary to reproduce the miscompilation.
+causing the miscompile. You can use :doc:`llvm-reduce <CommandGuide/llvm-reduce>`
+to minimize the bitcode necessary to reproduce the miscompilation.

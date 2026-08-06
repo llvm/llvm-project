@@ -1700,6 +1700,7 @@ module std {
     module noexcept_move_assign_container     { header "__memory/noexcept_move_assign_container.h" }
     module out_ptr                            { header "__memory/out_ptr.h" }
     module pointer_traits                     { header "__memory/pointer_traits.h" }
+    module pstl                               { header "__memory/pstl.h" }    
     module ranges_construct_at                { header "__memory/ranges_construct_at.h" }
     module ranges_destroy                     { header "__memory/ranges_destroy.h" }
     module ranges_uninitialized_algorithms {
