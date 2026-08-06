@@ -107,8 +107,6 @@ New checks
   Detects dangerous initialization of smart pointers with raw pointers that are
   already owned elsewhere, which can lead to double deletion.
 
-- New :doc:`llvm-type-switch-case-types
-  <clang-tidy/checks/llvm/type-switch-case-types>` check.
 - New :doc:`performance-expensive-value-or
   <clang-tidy/checks/performance/expensive-value-or>` check.
 
