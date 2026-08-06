@@ -43,7 +43,6 @@ void imprecise(ColorInt c) {
   // CHECK-FIXES: unsigned S = static_cast<unsigned>(c);
 }
 
-// Cases that must never be flagged.
 void negatives(ColorInt c, Unscoped u) {
   bool Truthy = static_cast<bool>(c);      // truthiness test, not underlying
   double Dbl = static_cast<double>(c);     // non-integer destination

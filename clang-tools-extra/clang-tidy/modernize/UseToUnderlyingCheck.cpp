@@ -113,7 +113,6 @@ void UseToUnderlyingCheck::check(const MatchFinder::MatchResult &Result) {
   if (DestType->isBooleanType() && !IsPrecise)
     return;
 
-  // Ignore imprecise casts if asked to do so.
   if (!IsPrecise && ImpreciseCasts == ImpreciseCastsKind::Ignore)
     return;
 
@@ -122,7 +121,6 @@ void UseToUnderlyingCheck::check(const MatchFinder::MatchResult &Result) {
                    "underlying type")
               << ReplacementFunction;
 
-  // In Warn mode an imprecise cast is diagnosed without a fix-it
   if (!IsPrecise && ImpreciseCasts == ImpreciseCastsKind::Warn)
     return;
 
@@ -137,14 +135,10 @@ void UseToUnderlyingCheck::check(const MatchFinder::MatchResult &Result) {
   const bool ReplaceWholeCast =
       IsPrecise || ImpreciseCasts == ImpreciseCastsKind::UseUnderlyingType;
   if (ReplaceWholeCast) {
-    // Replace the whole cast: ``static_cast<int>(e)`` -> ``to_underlying(e)``.
-    // For an imprecise cast this changes the resulting type to the underlying
-    // type.
+    // `static_cast<long>(e)` -> `to_underlying(e)`
     Diag << tooling::fixit::createReplacement(*Cast, Call);
   } else {
-    // Preserve the intended (wider or differently-signed) destination type by
-    // wrapping only the operand: ``static_cast<long>(e)`` ->
-    // ``static_cast<long>(to_underlying(e))``.
+    // `static_cast<long>(e)` -> `static_cast<long>(to_underlying(e))`
     Diag << tooling::fixit::createReplacement(*Operand, Call);
   }
 

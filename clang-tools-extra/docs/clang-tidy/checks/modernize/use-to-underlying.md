@@ -63,9 +63,9 @@ regardless of this option. Possible values:
 
 - `Ignore`: Do not diagnose imprecise casts.
 
-- `Warn` *(default)*: Diagnose imprecise casts but do not offer a fix-it.
-  Neither automatic rewrite is applied because both change the meaning of the
-  code in ways that may not be intended.
+- `Warn`: Diagnose imprecise casts but do not offer a fix-it. Neither automatic
+  rewrite is applied because both change the meaning of the code in ways that
+  may not be intended.
 
 - `PreserveType`: Wrap the operand in a call to the replacement function,
   keeping the original destination type:
@@ -86,24 +86,25 @@ regardless of this option. Possible values:
   // becomes:
   long l = std::to_underlying(E{});
   ```
+
+Default is `Warn`.
 ````
 
 ```{option} ReplacementFunction
 
-The fully qualified name of the function used in the replacement. Defaults to
-`std::to_underlying`. Set this to use a hand-rolled equivalent (for example
-`llvm::to_underlying`) when targeting a language standard before C++23. When
-the value is `std::to_underlying`, the check only runs in C++23 or later; with
-any other value it runs from C++11 onwards.
+The fully qualified name of the function used in the replacement. Set this to
+use a hand-rolled equivalent (for example `llvm::to_underlying`) when targeting
+a language standard before C++23. When the value is `std::to_underlying`, the
+check only runs in C++23 or later; with any other value it runs from C++11
+onwards. Default is `std::to_underlying`.
 ```
 
 ```{option} ReplacementFunctionHeader
 
-The header to include when the replacement function is used. Defaults to
-`<utility>` when {option}`ReplacementFunction` is set to `std::to_underlying`,
-and is otherwise empty (no include is added). When the value is enclosed in
-angle brackets the include directive uses angle brackets, otherwise it uses
-quotes.
+The header to include when the replacement function is used. When the value is
+enclosed in angle brackets the include directive uses angle brackets, otherwise
+it uses quotes. Default is `<utility>` when {option}`ReplacementFunction` is set
+to `std::to_underlying`, and otherwise empty (no include is added).
 ```
 
 ```{option} IncludeStyle
