@@ -38,7 +38,7 @@ def at_least(minimum: int) -> Callable[[str], int]:
         except ValueError:
             raise argparse.ArgumentTypeError(f'expected an integer, got {string!r}')
         if value < minimum:
-            raise argparse.ArgumentTypeError(f'expected an integer no smaller than {minimum}, 'got {string}')
+            raise argparse.ArgumentTypeError(f'expected an integer no smaller than {minimum}, got {string}')
         return value
     return parse
 
