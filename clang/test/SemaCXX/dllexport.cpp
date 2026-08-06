@@ -759,6 +759,19 @@ struct ClassWithNestedClassTemplateMultipleDefaultCtors {
     __declspec(dllexport) Nested(int = 30, ...) {} // ms-note{{declared here}}
   };
 };
+template struct ClassWithNestedClassTemplateMultipleDefaultCtors::Nested<int>;
+template struct ClassWithNestedClassTemplateMultipleDefaultCtors::Nested<double>;
+
+template <typename T>
+struct ClassTemplateWithNestedClassTemplateMultipleDefaultCtors {
+  __declspec(dllexport)
+  ClassTemplateWithNestedClassTemplateMultipleDefaultCtors(int = 40) {}
+  template <typename R> struct Nested {
+    __declspec(dllexport) Nested(int = 30) {}      // ms-error{{'__declspec(dllexport)' cannot be applied to more than one default constructor}}
+    __declspec(dllexport) Nested(int = 20, ...) {} // ms-note{{declared here}}
+  };
+};
+template struct ClassTemplateWithNestedClassTemplateMultipleDefaultCtors<int>;
 
 template <typename T> struct HasDefaults {
   HasDefaults(int x = sizeof(T)) {} // ms-error {{invalid application of 'sizeof'}}
