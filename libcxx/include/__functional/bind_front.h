@@ -58,15 +58,14 @@ struct __nttp_bind_front_t;
 
 template <auto _Fn, size_t... _Indices, class... _BoundArgs>
 struct __nttp_bind_front_t<_Fn, index_sequence<_Indices...>, _BoundArgs...> {
-  tuple<_BoundArgs...> __bound_args_;
+  using _TupleT _LIBCPP_NODEBUG = __simple_tuple<_BoundArgs...>;
+  _TupleT __bound_args_;
 
   template <class _Self, class... _Args>
-  constexpr auto operator()(this _Self&& __self, _Args&&... __args) noexcept(noexcept(std::invoke(
-      _Fn, std::get<_Indices>(std::forward<_Self>(__self).__bound_args_)..., std::forward<_Args>(__args)...)))
-      -> decltype(std::invoke(
-          _Fn, std::get<_Indices>(std::forward<_Self>(__self).__bound_args_)..., std::forward<_Args>(__args)...)) {
-    return std::invoke(
-        _Fn, std::get<_Indices>(std::forward<_Self>(__self).__bound_args_)..., std::forward<_Args>(__args)...);
+  constexpr auto operator()(this _Self&& __self, _Args&&... __args) noexcept(
+      noexcept(_TupleT::__apply(std::forward<_Self>(__self).__bound_args_, _Fn, std::forward<_Args>(__args)...)))
+      -> decltype(_TupleT::__apply(std::forward<_Self>(__self).__bound_args_, _Fn, std::forward<_Args>(__args)...)) {
+    return _TupleT::__apply(std::forward<_Self>(__self).__bound_args_, _Fn, std::forward<_Args>(__args)...);
   }
 };
 

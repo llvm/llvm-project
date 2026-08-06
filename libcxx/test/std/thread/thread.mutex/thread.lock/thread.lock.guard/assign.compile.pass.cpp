@@ -13,6 +13,7 @@
 // lock_guard& operator=(lock_guard const&) = delete;
 
 #include <mutex>
+#include <type_traits>
 
 #include "types.h"
 

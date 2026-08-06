@@ -656,8 +656,8 @@ public:
             // the two conditions below are not in spec. The purpose is to disable the UTypes Ctor when copy/move Ctor
             // can work. Otherwise, is_constructible can trigger hard error in those cases
             // https://godbolt.org/z/M94cGdKcE
-            _Not<is_same<_OtherTuple, const tuple&> >,
-            _Not<is_same<_OtherTuple, tuple&&> >,
+            _IsNotSame<_OtherTuple, const tuple&>,
+            _IsNotSame<_OtherTuple, tuple&&>,
             is_constructible<_Tp, __copy_cvref_t<_OtherTuple, _Up> >...,
             _Or<_BoolConstant<sizeof...(_Tp) != 1>,
                 // _Tp and _Up are 1-element packs - the pack expansions look
