@@ -11,8 +11,6 @@
 defvar ArchFeaturesW64Xnack = [FEATURE_FAST_FMA_F32, FEATURE_FAST_DENORMAL_F32,
                               FEATURE_XNACK, FEATURE_XNACK_ON_OFF_MODES];
 defvar ArchFeaturesW64XnackSramEcc = ArchFeaturesW64Xnack # [FEATURE_SRAMECC];
-defvar ArchFeaturesW64XnackSramEccAgprs =
-    ArchFeaturesW64XnackSramEcc # [FEATURE_AGPRS_UNIFIED_FILE];
 defvar ArchFeaturesW32XnackWgp = [FEATURE_FAST_FMA_F32, FEATURE_FAST_DENORMAL_F32,
                                  FEATURE_WAVE32, FEATURE_XNACK,
                                  FEATURE_XNACK_ON_OFF_MODES, FEATURE_WGP];
@@ -172,7 +170,7 @@ def GFX909 : AMDGPUProcessorModel<"gfx909", SIQuarterSpeedModel,
 
 def GFX90A : AMDGPUProcessorModel<"gfx90a", SIDPFullSpeedModel,
   FeatureISAVersion9_0_A.Features, [9, 0, 0xa]> {
-  let ArchFeatures = ArchFeaturesW64XnackSramEccAgprs;
+  let ArchFeatures = ArchFeaturesW64XnackSramEcc;
 }
 
 def GFX90C : AMDGPUProcessorModel<"gfx90c", SIQuarterSpeedModel,
@@ -182,12 +180,12 @@ def GFX90C : AMDGPUProcessorModel<"gfx90c", SIQuarterSpeedModel,
 
 def GFX942 : AMDGPUProcessorModel<"gfx942", SIDPGFX942FullSpeedModel,
   FeatureISAVersion9_4_2.Features, [9, 4, 2]> {
-  let ArchFeatures = ArchFeaturesW64XnackSramEccAgprs;
+  let ArchFeatures = ArchFeaturesW64XnackSramEcc;
 }
 
 def GFX950 : AMDGPUProcessorModel<"gfx950", SIDPGFX950FullSpeedModel,
   FeatureISAVersion9_5_0.Features, [9, 5, 0]> {
-  let ArchFeatures = ArchFeaturesW64XnackSramEccAgprs;
+  let ArchFeatures = ArchFeaturesW64XnackSramEcc;
 }
 
 def GFX9_GENERIC : AMDGPUProcessorModel<"gfx9-generic", SIQuarterSpeedModel,
@@ -198,7 +196,7 @@ def GFX9_GENERIC : AMDGPUProcessorModel<"gfx9-generic", SIQuarterSpeedModel,
 
 def GFX9_4_GENERIC : AMDGPUProcessorModel<"gfx9-4-generic", SIDPGFX942FullSpeedModel,
   FeatureISAVersion9_4_Generic.Features, [9, 4, 0]> {
-  let ArchFeatures = ArchFeaturesW64XnackSramEccAgprs;
+  let ArchFeatures = ArchFeaturesW64XnackSramEcc;
   let CoveredGPUs = [GFX942, GFX950];
 }
 

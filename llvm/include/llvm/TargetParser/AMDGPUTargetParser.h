@@ -98,10 +98,7 @@ enum ArchFeatureKind : uint32_t {
   FEATURE_XNACK_ON_OFF_MODES = 1 << 6,
 
   // VI SGPR initialization bug requiring a fixed SGPR allocation size.
-  FEATURE_SGPR_INIT_BUG = 1 << 7,
-
-  // AGPRs share a unified register file with VGPRs (gfx90a-insts).
-  FEATURE_AGPRS_UNIFIED_FILE = 1 << 8
+  FEATURE_SGPR_INIT_BUG = 1 << 7
 };
 
 enum FeatureError : uint32_t {
