@@ -6,12 +6,32 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from typing import NamedTuple
+from typing import Callable, NamedTuple
+import argparse
 import json
 
 
 def is_sha(string: str) -> bool:
     return len(string) == 40 and all(c in '0123456789abcdef' for c in string.lower())
+
+
+def at_least(minimum: int) -> Callable[[str], int]:
+    """
+    Return an argparse type that accepts integers no smaller than `minimum`.
+
+    A value that is not an integer at all is rejected by raising too, since argparse
+    otherwise describes that failure using the name of the callable it was handed,
+    which is an implementation detail.
+    """
+    def parse(string: str) -> int:
+        try:
+            value = int(string)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f'expected an integer, got {string!r}')
+        if value < minimum:
+            raise argparse.ArgumentTypeError(f'expected an integer no smaller than {minimum}, 'got {string}')
+        return value
+    return parse
 
 
 class Target(NamedTuple):

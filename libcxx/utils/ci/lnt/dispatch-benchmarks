@@ -62,18 +62,6 @@ class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
                     argparse.RawDescriptionHelpFormatter):
     """Show defaults, but keep the paragraphs of the description intact."""
 
-def positive(string: str) -> int:
-    value = int(string)
-    if value < 1:
-        raise argparse.ArgumentTypeError(f'expected a positive integer, got {string}')
-    return value
-
-def non_negative(string: str) -> int:
-    value = int(string)
-    if value < 0:
-        raise argparse.ArgumentTypeError(f'expected a non-negative integer, got {string}')
-    return value
-
 class GithubError(Exception):
     pass
 
@@ -327,10 +315,10 @@ def main(argv: List[str]) -> int:
     parser.add_argument('--test-suite-commit', type=str, required=True,
         help='The version of the benchmark suite to use, as a monorepo SHA. Pinning this is what '
              'makes results comparable across commits.')
-    parser.add_argument('--max-in-flight', type=positive, default=4,
+    parser.add_argument('--max-in-flight', type=common.at_least(1), default=4,
         help='The largest number of workflow runs allowed to exist at once for a single LNT machine. '
              'This counts runs that are queued but not yet started.')
-    parser.add_argument('--extra-attempts', type=non_negative, default=2,
+    parser.add_argument('--extra-attempts', type=common.at_least(0), default=2,
         help='How many runs beyond the desired number of samples a commit may consume on a machine '
              'before it is given up on. This bounds the cost of a job that keeps dying before it '
              'can submit, since such a run leaves no trace in LNT and would otherwise be requested '

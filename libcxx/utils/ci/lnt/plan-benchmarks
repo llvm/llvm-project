@@ -28,12 +28,6 @@ class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
                     argparse.RawDescriptionHelpFormatter):
     """Show defaults, but keep the paragraphs of the description intact."""
 
-def positive(string: str) -> int:
-    value = int(string)
-    if value < 1:
-        raise argparse.ArgumentTypeError(f'expected a positive integer, got {string}')
-    return value
-
 class LNTError(Exception):
     pass
 
@@ -139,7 +133,7 @@ def main(argv: List[str]) -> int:
         help='The LNT test suite holding the benchmark data.')
     parser.add_argument('--machine', type=str, required=True,
         help='The LNT machine to plan work for.')
-    parser.add_argument('--samples', type=positive, default=3,
+    parser.add_argument('--samples', type=common.at_least(1), default=3,
         help='How many benchmark runs each commit should have.')
     parser.add_argument('--allow-missing-machine', action='store_true',
         help='Accept that the LNT instance has no such machine, and plan despite that. '
