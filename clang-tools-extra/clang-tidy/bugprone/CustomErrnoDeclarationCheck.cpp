@@ -13,26 +13,30 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+CustomErrnoDeclarationCheck::CustomErrnoDeclarationCheck(StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      Inserter(Options.getLocalOrGlobal("IncludeStyle", utils::IncludeSorter::IS_LLVM), areDiagsSelfContained()) {}
+
+void CustomErrnoDeclarationCheck::registerPPCallbacks(const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  Inserter.registerPreprocessor(PP);
+}
+
 void CustomErrnoDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(varDecl(hasType(asString("int")), hasName("errno"), hasExternalFormalLinkage()).bind("errnoDecl"), this);
 }
 
 void CustomErrnoDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *MatchedDecl = Result.Nodes.getNodeAs<VarDecl>("errnoDecl"); // NULL?
+  const auto *MatchedDecl = Result.Nodes.getNodeAs<VarDecl>("errnoDecl");
   const SourceManager &SM = *Result.SourceManager;
   const auto Location = MatchedDecl->getLocation();
   const auto FileID = SM.getFileID(Location);
 
   unsigned Line = SM.getSpellingLineNumber(MatchedDecl->getBeginLoc());
+  StringRef Header = Result.Context->getLangOpts().CPlusPlus ? "<cerrno>" : "<errno.h>";
 
-  const auto Diag = diag(Location, "errno declaration detected, include cerrno instead")
-      << FixItHint::CreateRemoval(CharSourceRange::getCharRange(SM.translateLineCol(FileID, Line, 1), SM.translateLineCol(FileID, Line + 1, 1)));
-
-  if (alreadyInserted)
-    return;
-
-  Diag << FixItHint::CreateInsertion(SM.getLocForStartOfFile(FileID), "#include <cerrno>\n");
-  alreadyInserted = true;
+  diag(Location, "errno declaration detected, include cerrno instead")
+      << FixItHint::CreateRemoval(CharSourceRange::getCharRange(SM.translateLineCol(FileID, Line, 1), SM.translateLineCol(FileID, Line + 1, 1)))
+      << Inserter.createIncludeInsertion(FileID, Header);
 }
 
 } // namespace clang::tidy::bugprone
