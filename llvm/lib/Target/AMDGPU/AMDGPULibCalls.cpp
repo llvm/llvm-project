@@ -804,6 +804,15 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
 
 static Constant *getConstantFloat(const ArrayRef<APFloat> Values,
                                   const Type *Ty) {
+
+  assert(Ty->isSingleValueType() &&
+         "Type must either be a scalar or a vector.");
+  assert((!Ty->isVectorType() || Ty->isScalableTy() ||
+          Values.size() == cast<FixedVectorType>(Ty)->getNumElements()) &&
+         "Unexpected number of constant values.");
+  assert((Ty->isVectorType() || Values.size() == 1) &&
+         "Expected exactly one constant value");
+
   Type *ElemTy = Ty->getScalarType();
   const fltSemantics &FltSem = ElemTy->getFltSemantics();
 
@@ -815,12 +824,7 @@ static Constant *getConstantFloat(const ArrayRef<APFloat> Values,
     ConstValues.push_back(ConstantFP::get(ElemTy, APF));
   }
 
-  if (!Ty->isVectorTy()) {
-    assert(Values.size() == 1 && "Expected exactly one constant value");
-    return ConstValues[0];
-  }
-
-  return ConstantVector::get(ConstValues);
+  return Ty->isVectorTy() ? ConstantVector::get(ConstValues) : ConstValues[0];
 }
 
 bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
