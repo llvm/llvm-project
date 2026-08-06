@@ -145,9 +145,12 @@ define fp128 @exp10_f128(fp128 %x) #0 {
 ; CHECK-LABEL: exp10_f128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     allocframe(r29,#32):raw
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r29 = and(r29,#-16)
 ; CHECK-NEXT:     r16 = r0
-; CHECK-NEXT:     memd(r29+#-16) = r17:16
-; CHECK-NEXT:     allocframe(#24)
+; CHECK-NEXT:     memd(r30+#-8) = r17:16
 ; CHECK-NEXT:    } // 8-byte Folded Spill
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     call exp10l
@@ -162,8 +165,8 @@ define fp128 @exp10_f128(fp128 %x) #0 {
 ; CHECK-NEXT:     memd(r16+#0) = r1:0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r17:16 = memd(r29+#16)
-; CHECK-NEXT:     dealloc_return
+; CHECK-NEXT:     r17:16 = memd(r30+#-8)
+; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
 ; CHECK-NEXT:    } // 8-byte Folded Reload
   %r = call fp128 @llvm.exp10.f128(fp128 %x)
   ret fp128 %r
@@ -173,19 +176,22 @@ define <2 x fp128> @exp10_v2f128(<2 x fp128> %x) #0 {
 ; CHECK-LABEL: exp10_v2f128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     allocframe(r29,#64):raw
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r29 = and(r29,#-16)
 ; CHECK-NEXT:     r16 = r0
-; CHECK-NEXT:     memd(r29+#-16) = r17:16
-; CHECK-NEXT:     allocframe(#56)
+; CHECK-NEXT:     memd(r30+#-8) = r17:16
+; CHECK-NEXT:     memd(r30+#-16) = r19:18
 ; CHECK-NEXT:    } // 8-byte Folded Spill
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = add(r29,#16)
-; CHECK-NEXT:     memd(r29+#40) = r19:18
-; CHECK-NEXT:     memd(r29+#32) = r21:20
-; CHECK-NEXT:    } // 8-byte Folded Spill
+; CHECK-NEXT:     r19:18 = memd(r30+#8)
+; CHECK-NEXT:     memd(r30+#-24) = r21:20
+; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     call exp10l
-; CHECK-NEXT:     r19:18 = memd(r29+#64)
-; CHECK-NEXT:     r21:20 = memd(r29+#72)
+; CHECK-NEXT:     r21:20 = memd(r30+#16)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     call exp10l
@@ -210,12 +216,12 @@ define <2 x fp128> @exp10_v2f128(<2 x fp128> %x) #0 {
 ; CHECK-NEXT:     memd(r16+#0) = r1:0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r17:16 = memd(r29+#48)
-; CHECK-NEXT:     r19:18 = memd(r29+#40)
+; CHECK-NEXT:     r17:16 = memd(r30+#-8)
+; CHECK-NEXT:     r19:18 = memd(r30+#-16)
 ; CHECK-NEXT:    } // 8-byte Folded Reload
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r21:20 = memd(r29+#32)
-; CHECK-NEXT:     dealloc_return
+; CHECK-NEXT:     r21:20 = memd(r30+#-24)
+; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
 ; CHECK-NEXT:    } // 8-byte Folded Reload
   %r = call <2 x fp128> @llvm.exp10.v2f128(<2 x fp128> %x)
   ret <2 x fp128> %r

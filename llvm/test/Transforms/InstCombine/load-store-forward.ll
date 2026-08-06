@@ -458,7 +458,7 @@ define i32 @load_after_memset_0_clobber(ptr %a) {
 define i256 @load_after_memset_0_too_small(ptr %a) {
 ; CHECK-LABEL: @load_after_memset_0_too_small(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
-; CHECK-NEXT:    [[V:%.*]] = load i256, ptr [[A]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i256, ptr [[A]], align 16
 ; CHECK-NEXT:    ret i256 [[V]]
 ;
   call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
@@ -469,7 +469,7 @@ define i256 @load_after_memset_0_too_small(ptr %a) {
 define i129 @load_after_memset_0_too_small_by_one_bit(ptr %a) {
 ; CHECK-LABEL: @load_after_memset_0_too_small_by_one_bit(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
-; CHECK-NEXT:    [[V:%.*]] = load i129, ptr [[A]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i129, ptr [[A]], align 16
 ; CHECK-NEXT:    ret i129 [[V]]
 ;
   call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)

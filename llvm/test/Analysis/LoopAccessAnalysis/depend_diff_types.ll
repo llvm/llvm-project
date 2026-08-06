@@ -373,7 +373,7 @@ define void @different_type_sizes_strided_accesses_store_size_exceeds_depdist(pt
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        IndirectUnsafe:
 ; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
-; CHECK-NEXT:            store i128 1, ptr %gep.10.iv, align 4
+; CHECK-NEXT:            store i128 1, ptr %gep.10.iv, align 16
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:

@@ -180,22 +180,23 @@ define amdgpu_kernel void @v6i32_arg(<6 x i32> %in) nounwind {
 define amdgpu_kernel void @i65_arg(ptr addrspace(1) nocapture %out, i65 %in) #0 {
 ; GCN-LABEL: i65_arg:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s4, s[8:9], 0x10
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-NEXT:    s_load_dword s4, s[8:9], 0x18
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x10
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_and_b32 s4, s4, 1
 ; GCN-NEXT:    v_mov_b32_e32 v3, s4
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-NEXT:    global_store_byte v2, v3, s[0:1] offset:8
-; GCN-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    global_store_byte v2, v3, s[2:3] offset:8
+; GCN-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; GCN-NEXT:    s_endpgm
 entry:
   store i65 %in, ptr addrspace(1) %out, align 4
   ret void
 }
-; GCN: .amdhsa_kernarg_size 24
+; GCN: .amdhsa_kernarg_size 32
 
 define amdgpu_kernel void @empty_struct_arg({} %in) #0 {
 ; GCN-LABEL: empty_struct_arg:

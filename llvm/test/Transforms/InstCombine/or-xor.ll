@@ -125,7 +125,7 @@ define i8 @test5_extra_use_not(i8 %x, i8 %y, ptr %dst) {
 define i65 @test5_extra_use_xor(i65 %x, i65 %y, ptr %dst) {
 ; CHECK-LABEL: @test5_extra_use_xor(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i65 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    store i65 [[XOR]], ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    store i65 [[XOR]], ptr [[DST:%.*]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i65 [[X]], [[Y]]
 ; CHECK-NEXT:    [[Z:%.*]] = xor i65 [[TMP1]], -1
 ; CHECK-NEXT:    ret i65 [[Z]]

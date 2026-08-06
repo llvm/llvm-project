@@ -1841,13 +1841,13 @@ define i32 @test_frexp_f128_i32_only_use_exp(fp128 %a) nounwind {
 ; RV32IFD-NEXT:    lw a4, 4(a0)
 ; RV32IFD-NEXT:    lw a5, 8(a0)
 ; RV32IFD-NEXT:    lw a6, 12(a0)
-; RV32IFD-NEXT:    addi a0, sp, 24
-; RV32IFD-NEXT:    addi a1, sp, 8
+; RV32IFD-NEXT:    addi a0, sp, 16
+; RV32IFD-NEXT:    mv a1, sp
 ; RV32IFD-NEXT:    addi a2, sp, 40
-; RV32IFD-NEXT:    sw a3, 8(sp)
-; RV32IFD-NEXT:    sw a4, 12(sp)
-; RV32IFD-NEXT:    sw a5, 16(sp)
-; RV32IFD-NEXT:    sw a6, 20(sp)
+; RV32IFD-NEXT:    sw a3, 0(sp)
+; RV32IFD-NEXT:    sw a4, 4(sp)
+; RV32IFD-NEXT:    sw a5, 8(sp)
+; RV32IFD-NEXT:    sw a6, 12(sp)
 ; RV32IFD-NEXT:    call frexpl
 ; RV32IFD-NEXT:    lw a0, 40(sp)
 ; RV32IFD-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
@@ -1873,13 +1873,13 @@ define i32 @test_frexp_f128_i32_only_use_exp(fp128 %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    lw a4, 4(a0)
 ; RV32IZFINXZDINX-NEXT:    lw a5, 8(a0)
 ; RV32IZFINXZDINX-NEXT:    lw a6, 12(a0)
-; RV32IZFINXZDINX-NEXT:    addi a0, sp, 24
-; RV32IZFINXZDINX-NEXT:    addi a1, sp, 8
+; RV32IZFINXZDINX-NEXT:    addi a0, sp, 16
+; RV32IZFINXZDINX-NEXT:    mv a1, sp
 ; RV32IZFINXZDINX-NEXT:    addi a2, sp, 40
-; RV32IZFINXZDINX-NEXT:    sw a3, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a4, 12(sp)
-; RV32IZFINXZDINX-NEXT:    sw a5, 16(sp)
-; RV32IZFINXZDINX-NEXT:    sw a6, 20(sp)
+; RV32IZFINXZDINX-NEXT:    sw a3, 0(sp)
+; RV32IZFINXZDINX-NEXT:    sw a4, 4(sp)
+; RV32IZFINXZDINX-NEXT:    sw a5, 8(sp)
+; RV32IZFINXZDINX-NEXT:    sw a6, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    call frexpl
 ; RV32IZFINXZDINX-NEXT:    lw a0, 40(sp)
 ; RV32IZFINXZDINX-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
@@ -1905,13 +1905,13 @@ define i32 @test_frexp_f128_i32_only_use_exp(fp128 %a) nounwind {
 ; RV32I-NEXT:    lw a4, 4(a0)
 ; RV32I-NEXT:    lw a5, 8(a0)
 ; RV32I-NEXT:    lw a6, 12(a0)
-; RV32I-NEXT:    addi a0, sp, 24
-; RV32I-NEXT:    addi a1, sp, 8
+; RV32I-NEXT:    addi a0, sp, 16
+; RV32I-NEXT:    mv a1, sp
 ; RV32I-NEXT:    addi a2, sp, 40
-; RV32I-NEXT:    sw a3, 8(sp)
-; RV32I-NEXT:    sw a4, 12(sp)
-; RV32I-NEXT:    sw a5, 16(sp)
-; RV32I-NEXT:    sw a6, 20(sp)
+; RV32I-NEXT:    sw a3, 0(sp)
+; RV32I-NEXT:    sw a4, 4(sp)
+; RV32I-NEXT:    sw a5, 8(sp)
+; RV32I-NEXT:    sw a6, 12(sp)
 ; RV32I-NEXT:    call frexpl
 ; RV32I-NEXT:    lw a0, 40(sp)
 ; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload

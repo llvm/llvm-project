@@ -1348,11 +1348,11 @@ define ptr @test85(i1 %flag) {
 ; CHECK-LABEL: define ptr @test85(
 ; CHECK-SAME: i1 [[FLAG:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = alloca [2 x ptr], align 8
-; CHECK-NEXT:    [[Y:%.*]] = alloca i128, align 8
+; CHECK-NEXT:    [[Y:%.*]] = alloca i128, align 16
 ; CHECK-NEXT:    call void @scribble_on_i128(ptr nonnull [[X]])
 ; CHECK-NEXT:    call void @scribble_on_i128(ptr nonnull [[Y]])
-; CHECK-NEXT:    [[T:%.*]] = load i128, ptr [[X]], align 4
-; CHECK-NEXT:    store i128 [[T]], ptr [[Y]], align 4
+; CHECK-NEXT:    [[T:%.*]] = load i128, ptr [[X]], align 16
+; CHECK-NEXT:    store i128 [[T]], ptr [[Y]], align 16
 ; CHECK-NEXT:    [[X_VAL:%.*]] = load ptr, ptr [[X]], align 8
 ; CHECK-NEXT:    [[Y_VAL:%.*]] = load ptr, ptr [[Y]], align 8
 ; CHECK-NEXT:    [[V:%.*]] = select i1 [[FLAG]], ptr [[X_VAL]], ptr [[Y_VAL]]
@@ -1376,14 +1376,13 @@ define i128 @test86(i1 %flag) {
 ; CHECK-LABEL: define i128 @test86(
 ; CHECK-SAME: i1 [[FLAG:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = alloca [2 x ptr], align 8
-; CHECK-NEXT:    [[Y:%.*]] = alloca i128, align 8
+; CHECK-NEXT:    [[Y:%.*]] = alloca i128, align 16
 ; CHECK-NEXT:    call void @scribble_on_i128(ptr nonnull [[X]])
 ; CHECK-NEXT:    call void @scribble_on_i128(ptr nonnull [[Y]])
 ; CHECK-NEXT:    [[T:%.*]] = load ptr, ptr [[X]], align 8
 ; CHECK-NEXT:    store ptr [[T]], ptr [[Y]], align 8
-; CHECK-NEXT:    [[X_VAL:%.*]] = load i128, ptr [[X]], align 4
-; CHECK-NEXT:    [[Y_VAL:%.*]] = load i128, ptr [[Y]], align 4
-; CHECK-NEXT:    [[V:%.*]] = select i1 [[FLAG]], i128 [[X_VAL]], i128 [[Y_VAL]]
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[FLAG]], ptr [[X]], ptr [[Y]]
+; CHECK-NEXT:    [[V:%.*]] = load i128, ptr [[P]], align 16
 ; CHECK-NEXT:    ret i128 [[V]]
 ;
   %x = alloca [2 x ptr]

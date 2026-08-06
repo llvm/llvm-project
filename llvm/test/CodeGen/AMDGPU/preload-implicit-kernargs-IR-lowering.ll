@@ -30,7 +30,7 @@ define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) %out) {
 define amdgpu_kernel void @no_free_sgprs_block_count_x(ptr addrspace(1) %out, i512) {
 ; NO-PRELOAD-LABEL: define amdgpu_kernel void @no_free_sgprs_block_count_x(
 ; NO-PRELOAD-SAME: ptr addrspace(1) [[OUT:%.*]], i512 [[TMP0:%.*]]) #[[ATTR0]] {
-; NO-PRELOAD-NEXT:    [[NO_FREE_SGPRS_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(328) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[NO_FREE_SGPRS_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(336) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_FREE_SGPRS_BLOCK_COUNT_X_KERNARG_SEGMENT]], i64 0
 ; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -40,7 +40,7 @@ define amdgpu_kernel void @no_free_sgprs_block_count_x(ptr addrspace(1) %out, i5
 ;
 ; PRELOAD-LABEL: define amdgpu_kernel void @no_free_sgprs_block_count_x(
 ; PRELOAD-SAME: ptr addrspace(1) inreg [[OUT:%.*]], i512 [[TMP0:%.*]]) #[[ATTR0]] {
-; PRELOAD-NEXT:    [[NO_FREE_SGPRS_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(328) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-NEXT:    [[NO_FREE_SGPRS_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(336) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(4) [[IMP_ARG_PTR]], align 4
 ; PRELOAD-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4

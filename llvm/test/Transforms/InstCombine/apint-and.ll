@@ -105,7 +105,7 @@ define i117 @test12(i117 %A, ptr %P) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i117 [[A:%.*]], -4
 ; CHECK-NEXT:    [[C:%.*]] = xor i117 [[TMP1]], 15
-; CHECK-NEXT:    store i117 [[C]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store i117 [[C]], ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret i117 3
 ;
   %B = or i117 %A, 3

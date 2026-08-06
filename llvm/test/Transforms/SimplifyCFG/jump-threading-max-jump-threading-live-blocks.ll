@@ -21,11 +21,11 @@ define void @testB(ptr %ptrA, ptr %ptrB, i64 %a, i64 %b, i64 %c) {
 ; CHECK_LIMIT_3-NEXT:    br i1 [[COND2]], label %[[IFB_ARM1:.*]], label %[[IFB_ARM2:.*]]
 ; CHECK_LIMIT_3:       [[IFB_ARM1]]:
 ; CHECK_LIMIT_3-NEXT:    [[PTR_ARM1:%.*]] = getelementptr i64, ptr [[PTRB]], i64 8
-; CHECK_LIMIT_3-NEXT:    store i128 0, ptr [[PTR_ARM1]], align 4
+; CHECK_LIMIT_3-NEXT:    store i128 0, ptr [[PTR_ARM1]], align 16
 ; CHECK_LIMIT_3-NEXT:    br label %[[IFB_JOIN:.*]]
 ; CHECK_LIMIT_3:       [[IFB_ARM2]]:
 ; CHECK_LIMIT_3-NEXT:    [[PTR_ARM2:%.*]] = getelementptr i64, ptr [[PTRB]], i64 16
-; CHECK_LIMIT_3-NEXT:    store i128 0, ptr [[PTR_ARM2]], align 4
+; CHECK_LIMIT_3-NEXT:    store i128 0, ptr [[PTR_ARM2]], align 16
 ; CHECK_LIMIT_3-NEXT:    br label %[[IFB_JOIN]]
 ; CHECK_LIMIT_3:       [[IFB_JOIN]]:
 ; CHECK_LIMIT_3-NEXT:    [[PTRC:%.*]] = phi ptr [ [[PTR_ARM1]], %[[IFB_ARM1]] ], [ [[PTR_ARM2]], %[[IFB_ARM2]] ]
@@ -45,11 +45,11 @@ define void @testB(ptr %ptrA, ptr %ptrB, i64 %a, i64 %b, i64 %c) {
 ; CHECK_LIMIT_4-NEXT:    br i1 [[COND2]], label %[[IFB_ARM1:.*]], label %[[IFB_ARM2:.*]]
 ; CHECK_LIMIT_4:       [[IFB_ARM1]]:
 ; CHECK_LIMIT_4-NEXT:    [[PTR_ARM1:%.*]] = getelementptr i64, ptr [[PTRB]], i64 8
-; CHECK_LIMIT_4-NEXT:    store i128 0, ptr [[PTR_ARM1]], align 4
+; CHECK_LIMIT_4-NEXT:    store i128 0, ptr [[PTR_ARM1]], align 16
 ; CHECK_LIMIT_4-NEXT:    br label %[[IFB_JOIN:.*]]
 ; CHECK_LIMIT_4:       [[IFB_ARM2]]:
 ; CHECK_LIMIT_4-NEXT:    [[PTR_ARM2:%.*]] = getelementptr i64, ptr [[PTRB]], i64 16
-; CHECK_LIMIT_4-NEXT:    store i128 0, ptr [[PTR_ARM2]], align 4
+; CHECK_LIMIT_4-NEXT:    store i128 0, ptr [[PTR_ARM2]], align 16
 ; CHECK_LIMIT_4-NEXT:    br label %[[IFB_JOIN]]
 ; CHECK_LIMIT_4:       [[IFB_JOIN]]:
 ; CHECK_LIMIT_4-NEXT:    [[PTRC:%.*]] = phi ptr [ [[PTR_ARM1]], %[[IFB_ARM1]] ], [ [[PTR_ARM2]], %[[IFB_ARM2]] ]

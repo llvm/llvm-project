@@ -293,12 +293,23 @@ define i32 @access_i65(ptr byval(i65) %0) "cmse_nonsecure_entry" {
 ; V8M-COMMON-LABEL: access_i65:
 ; V8M-COMMON:       @ %bb.0: @ %entry
 ; V8M-COMMON-NEXT:    sub sp, #16
-; V8M-COMMON-NEXT:    stm.w sp, {r0, r1, r2, r3}
-; V8M-LE-NEXT:        ldrb.w r0, [sp, #8]
+; V8M-COMMON-NEXT:    push {r4, r6, r7, lr}
+; V8M-COMMON-NEXT:    add r7, sp, #8
+; V8M-COMMON-NEXT:    mov r4, sp
+; V8M-COMMON-NEXT:    bfc r4, #0, #4
+; V8M-COMMON-NEXT:    mov sp, r4
+; V8M-LE-NEXT:        add.w r12, r7, #8
+; V8M-LE-NEXT:        sub.w r4, r7, #8
+; V8M-BE-NEXT:        sub.w r4, r7, #8
+; V8M-BE-NEXT:        add.w r12, r7, #8
+; V8M-COMMON-NEXT:    stm.w r12, {r0, r1, r2, r3}
+; V8M-LE-NEXT:        ldrb r0, [r7, #16]
 ; V8M-LE-NEXT:        and r0, r0, #1
 ; V8M-LE-NEXT:        rsbs r0, r0, #0
 ; V8M-BE-NEXT:        movs r1, #0
 ; V8M-BE-NEXT:        sub.w r0, r1, r0, lsr #24
+; V8M-COMMON-NEXT:    mov sp, r4
+; V8M-COMMON-NEXT:    pop.w {r4, r6, r7, lr}
 ; V8M-COMMON-NEXT:    add sp, #16
 ; V8M-COMMON-NEXT:    mov r1, lr
 ; V8M-COMMON-NEXT:    mov r2, lr
@@ -311,14 +322,24 @@ define i32 @access_i65(ptr byval(i65) %0) "cmse_nonsecure_entry" {
 ; V81M-COMMON:       @ %bb.0: @ %entry
 ; V81M-COMMON-NEXT:    vstr fpcxtns, [sp, #-4]!
 ; V81M-COMMON-NEXT:    sub sp, #16
+; V81M-COMMON-NEXT:    push {r4, r6, r7, lr}
+; V81M-COMMON-NEXT:    add r7, sp, #12
 ; V81M-COMMON-NEXT:    add sp, #4
-; V81M-COMMON-NEXT:    stm.w sp, {r0, r1, r2, r3}
-; V81M-LE-NEXT:        ldrb.w r0, [sp, #8]
+; V81M-COMMON-NEXT:    mov r4, sp
+; V81M-COMMON-NEXT:    bfc r4, #0, #4
+; V81M-COMMON-NEXT:    mov sp, r4
+; V81M-LE-NEXT:        add.w r12, r7, #8
+; V81M-LE-NEXT:        sub.w r4, r7, #12
+; V81M-BE-NEXT:        sub.w r4, r7, #12
+; V81M-BE-NEXT:        add.w r12, r7, #8
+; V81M-COMMON-NEXT:    stm.w r12, {r0, r1, r2, r3}
+; V81M-LE-NEXT:        ldrb r0, [r7, #16]
 ; V81M-LE-NEXT:        and r0, r0, #1
 ; V81M-LE-NEXT:        rsbs r0, r0, #0
 ; V81M-BE-NEXT:        movs r1, #0
 ; V81M-BE-NEXT:        sub.w r0, r1, r0, lsr #24
-; V81M-COMMON-NEXT:    sub sp, #4
+; V81M-COMMON-NEXT:    mov sp, r4
+; V81M-COMMON-NEXT:    pop.w {r4, r6, r7, lr}
 ; V81M-COMMON-NEXT:    add sp, #16
 ; V81M-COMMON-NEXT:    vscclrm {s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, vpr}
 ; V81M-COMMON-NEXT:    vldr fpcxtns, [sp], #4
@@ -335,9 +356,20 @@ define i32 @access_u65(ptr byval(i65) %0) "cmse_nonsecure_entry" {
 ; V8M-COMMON-LABEL: access_u65:
 ; V8M-COMMON:       @ %bb.0: @ %entry
 ; V8M-COMMON-NEXT:    sub sp, #16
-; V8M-COMMON-NEXT:    stm.w sp, {r0, r1, r2, r3}
-; V8M-LE-NEXT:        ldrb.w r0, [sp, #8]
+; V8M-COMMON-NEXT:    push {r4, r6, r7, lr}
+; V8M-COMMON-NEXT:    add r7, sp, #8
+; V8M-COMMON-NEXT:    mov r4, sp
+; V8M-COMMON-NEXT:    bfc r4, #0, #4
+; V8M-COMMON-NEXT:    mov sp, r4
+; V8M-LE-NEXT:        add.w r12, r7, #8
+; V8M-LE-NEXT:        sub.w r4, r7, #8
+; V8M-BE-NEXT:        sub.w r4, r7, #8
+; V8M-BE-NEXT:        add.w r12, r7, #8
+; V8M-COMMON-NEXT:    stm.w r12, {r0, r1, r2, r3}
+; V8M-LE-NEXT:        ldrb r0, [r7, #16]
 ; V8M-BE-NEXT:        lsrs r0, r0, #24
+; V8M-COMMON-NEXT:    mov sp, r4
+; V8M-COMMON-NEXT:    pop.w {r4, r6, r7, lr}
 ; V8M-COMMON-NEXT:    add sp, #16
 ; V8M-COMMON-NEXT:    mov r1, lr
 ; V8M-COMMON-NEXT:    mov r2, lr
@@ -350,11 +382,21 @@ define i32 @access_u65(ptr byval(i65) %0) "cmse_nonsecure_entry" {
 ; V81M-COMMON:       @ %bb.0: @ %entry
 ; V81M-COMMON-NEXT:    vstr fpcxtns, [sp, #-4]!
 ; V81M-COMMON-NEXT:    sub sp, #16
+; V81M-COMMON-NEXT:    push {r4, r6, r7, lr}
+; V81M-COMMON-NEXT:    add r7, sp, #12
 ; V81M-COMMON-NEXT:    add sp, #4
-; V81M-COMMON-NEXT:    stm.w sp, {r0, r1, r2, r3}
-; V81M-LE-NEXT:        ldrb.w r0, [sp, #8]
+; V81M-COMMON-NEXT:    mov r4, sp
+; V81M-COMMON-NEXT:    bfc r4, #0, #4
+; V81M-COMMON-NEXT:    mov sp, r4
+; V81M-LE-NEXT:        add.w r12, r7, #8
+; V81M-LE-NEXT:        sub.w r4, r7, #12
+; V81M-BE-NEXT:        sub.w r4, r7, #12
+; V81M-BE-NEXT:        add.w r12, r7, #8
+; V81M-COMMON-NEXT:    stm.w r12, {r0, r1, r2, r3}
+; V81M-LE-NEXT:        ldrb r0, [r7, #16]
 ; V81M-BE-NEXT:        lsrs r0, r0, #24
-; V81M-COMMON-NEXT:    sub sp, #4
+; V81M-COMMON-NEXT:    mov sp, r4
+; V81M-COMMON-NEXT:    pop.w {r4, r6, r7, lr}
 ; V81M-COMMON-NEXT:    add sp, #16
 ; V81M-COMMON-NEXT:    vscclrm {s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, vpr}
 ; V81M-COMMON-NEXT:    vldr fpcxtns, [sp], #4

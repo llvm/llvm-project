@@ -228,44 +228,44 @@ define i128 @test_i128(i128 %p1, i128 %p2) {
 ; CHECK-LABEL: define i128 @test_i128(
 ; CHECK-SAME: i128 [[P1:%.*]], i128 [[P2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca i128, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca i128, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca i128, align 8
-; CHECK-NEXT:    store i128 [[P1]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    store i128 [[P2]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca i128, align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca i128, align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca i128, align 16
+; CHECK-NEXT:    store i128 [[P1]], ptr [[TMP2]], align 16
+; CHECK-NEXT:    store i128 [[P2]], ptr [[TMP1]], align 16
 ; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 14, ptr [[TMP2]], ptr [[TMP1]], i64 0, i32 26) #[[ATTR0]]
 ; CHECK-NEXT:    [[A1:%.*]] = add i128 [[P1]], [[P2]]
-; CHECK-NEXT:    store i128 [[A1]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    store i128 [[A1]], ptr [[TMP0]], align 16
 ; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 14, ptr [[TMP2]], ptr [[TMP1]], ptr [[TMP0]], i64 0, i32 -26) #[[ATTR0]]
-; CHECK-NEXT:    store i128 [[P1]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    store i128 [[A1]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    store i128 [[P1]], ptr [[TMP2]], align 16
+; CHECK-NEXT:    store i128 [[A1]], ptr [[TMP0]], align 16
 ; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 18, ptr [[TMP2]], ptr [[TMP0]], i64 0, i32 27) #[[ATTR0]]
 ; CHECK-NEXT:    [[A2:%.*]] = mul i128 [[P1]], [[A1]]
-; CHECK-NEXT:    store i128 [[A2]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    store i128 [[A2]], ptr [[TMP1]], align 16
 ; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 18, ptr [[TMP2]], ptr [[TMP0]], ptr [[TMP1]], i64 0, i32 -27) #[[ATTR0]]
-; CHECK-NEXT:    store i128 [[A2]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    store i128 [[P2]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    store i128 [[A2]], ptr [[TMP2]], align 16
+; CHECK-NEXT:    store i128 [[P2]], ptr [[TMP1]], align 16
 ; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 24, ptr [[TMP2]], ptr [[TMP1]], i64 0, i32 28) #[[ATTR0]]
 ; CHECK-NEXT:    [[A3:%.*]] = srem i128 [[A2]], [[P2]]
-; CHECK-NEXT:    store i128 [[A3]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    store i128 [[A3]], ptr [[TMP0]], align 16
 ; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 24, ptr [[TMP2]], ptr [[TMP1]], ptr [[TMP0]], i64 0, i32 -28) #[[ATTR0]]
-; CHECK-NEXT:    store i128 [[A3]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    store i128 [[A1]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    store i128 [[A3]], ptr [[TMP2]], align 16
+; CHECK-NEXT:    store i128 [[A1]], ptr [[TMP0]], align 16
 ; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 16, ptr [[TMP2]], ptr [[TMP0]], i64 1, i32 29) #[[ATTR0]]
 ; CHECK-NEXT:    [[A4:%.*]] = sub nsw i128 [[A3]], [[A1]]
-; CHECK-NEXT:    store i128 [[A4]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    store i128 [[A4]], ptr [[TMP1]], align 16
 ; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 16, ptr [[TMP2]], ptr [[TMP0]], ptr [[TMP1]], i64 1, i32 -29) #[[ATTR0]]
-; CHECK-NEXT:    store i128 [[A4]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    store i128 [[A2]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    store i128 [[A4]], ptr [[TMP2]], align 16
+; CHECK-NEXT:    store i128 [[A2]], ptr [[TMP1]], align 16
 ; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 30, ptr [[TMP2]], ptr [[TMP1]], i64 32, i32 30) #[[ATTR0]]
 ; CHECK-NEXT:    [[A5:%.*]] = or disjoint i128 [[A4]], [[A2]]
-; CHECK-NEXT:    store i128 [[A5]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    store i128 [[A5]], ptr [[TMP0]], align 16
 ; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 30, ptr [[TMP2]], ptr [[TMP1]], ptr [[TMP0]], i64 32, i32 -30) #[[ATTR0]]
-; CHECK-NEXT:    store i128 [[A5]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    store i128 [[A3]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    store i128 [[A5]], ptr [[TMP2]], align 16
+; CHECK-NEXT:    store i128 [[A3]], ptr [[TMP0]], align 16
 ; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 26, ptr [[TMP2]], ptr [[TMP0]], i64 0, i32 31) #[[ATTR0]]
 ; CHECK-NEXT:    [[A6:%.*]] = shl i128 [[A5]], [[A3]]
-; CHECK-NEXT:    store i128 [[A6]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    store i128 [[A6]], ptr [[TMP1]], align 16
 ; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 26, ptr [[TMP2]], ptr [[TMP0]], ptr [[TMP1]], i64 0, i32 -31) #[[ATTR0]]
 ; CHECK-NEXT:    ret i128 [[A6]]
 ;

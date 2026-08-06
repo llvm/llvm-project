@@ -7421,7 +7421,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTask) {
   ConstantInt *SharedsSize =
       dyn_cast<ConstantInt>(TaskAllocCall->getOperand(4));
   EXPECT_EQ(SharedsSize->getSExtValue(),
-            24); // 64-bit pointer + 128-bit integer
+            32); // 64-bit pointer + padding + 128-bit integer
 
   // Verify Wrapper function
   Function *OutlinedFn =

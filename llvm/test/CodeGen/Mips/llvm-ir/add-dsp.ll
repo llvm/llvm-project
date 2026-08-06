@@ -23,50 +23,78 @@ entry:
 define i128 @m(i128 zeroext %a, i128 zeroext %b) {
 ; DSP-LABEL: m:
 ; DSP:       # %bb.0: # %entry
-; DSP-NEXT:    lw $1, 28($sp)
-; DSP-NEXT:    lw $2, 24($sp)
+; DSP-NEXT:    addiu $sp, $sp, -16
+; DSP-NEXT:    .cfi_def_cfa_offset 16
+; DSP-NEXT:    sw $ra, 12($sp) # 4-byte Folded Spill
+; DSP-NEXT:    sw $fp, 8($sp) # 4-byte Folded Spill
+; DSP-NEXT:    .cfi_offset 31, -4
+; DSP-NEXT:    .cfi_offset 30, -8
+; DSP-NEXT:    move $fp, $sp
+; DSP-NEXT:    .cfi_def_cfa_register 30
+; DSP-NEXT:    addiu $1, $zero, -16
+; DSP-NEXT:    and $sp, $sp, $1
+; DSP-NEXT:    lw $1, 44($fp)
+; DSP-NEXT:    lw $2, 40($fp)
 ; DSP-NEXT:    addsc $1, $1, $7
 ; DSP-NEXT:    addwc $6, $2, $6
 ; DSP-NEXT:    rddsp $2, 1
 ; DSP-NEXT:    ext $3, $2, 20, 1
 ; DSP-NEXT:    ins $3, $2, 6, 1
 ; DSP-NEXT:    ins $3, $zero, 20, 1
-; DSP-NEXT:    lw $2, 20($sp)
+; DSP-NEXT:    lw $2, 36($fp)
 ; DSP-NEXT:    wrdsp $3, 1
 ; DSP-NEXT:    addwc $3, $2, $5
 ; DSP-NEXT:    rddsp $2, 1
 ; DSP-NEXT:    ext $5, $2, 20, 1
-; DSP-NEXT:    lw $7, 16($sp)
+; DSP-NEXT:    lw $7, 32($fp)
 ; DSP-NEXT:    ins $5, $2, 6, 1
 ; DSP-NEXT:    ins $5, $zero, 20, 1
 ; DSP-NEXT:    wrdsp $5, 1
 ; DSP-NEXT:    addwc $2, $7, $4
 ; DSP-NEXT:    move $4, $6
-; DSP-NEXT:    jr $ra
 ; DSP-NEXT:    move $5, $1
+; DSP-NEXT:    move $sp, $fp
+; DSP-NEXT:    lw $fp, 8($sp) # 4-byte Folded Reload
+; DSP-NEXT:    lw $ra, 12($sp) # 4-byte Folded Reload
+; DSP-NEXT:    jr $ra
+; DSP-NEXT:    addiu $sp, $sp, 16
 ;
 ; MMDSP-LABEL: m:
 ; MMDSP:       # %bb.0: # %entry
-; MMDSP-NEXT:    lw $1, 28($sp)
-; MMDSP-NEXT:    lw $2, 24($sp)
+; MMDSP-NEXT:    addiusp -16
+; MMDSP-NEXT:    .cfi_def_cfa_offset 16
+; MMDSP-NEXT:    sw $ra, 12($sp) # 4-byte Folded Spill
+; MMDSP-NEXT:    sw $fp, 8($sp) # 4-byte Folded Spill
+; MMDSP-NEXT:    .cfi_offset 31, -4
+; MMDSP-NEXT:    .cfi_offset 30, -8
+; MMDSP-NEXT:    move $fp, $sp
+; MMDSP-NEXT:    .cfi_def_cfa_register 30
+; MMDSP-NEXT:    addiu $1, $zero, -16
+; MMDSP-NEXT:    and $sp, $sp, $1
+; MMDSP-NEXT:    lw $1, 44($fp)
+; MMDSP-NEXT:    lw $2, 40($fp)
 ; MMDSP-NEXT:    addsc $1, $1, $7
 ; MMDSP-NEXT:    addwc $6, $2, $6
 ; MMDSP-NEXT:    rddsp $2, 1
 ; MMDSP-NEXT:    ext $3, $2, 20, 1
 ; MMDSP-NEXT:    ins $3, $2, 6, 1
 ; MMDSP-NEXT:    ins $3, $zero, 20, 1
-; MMDSP-NEXT:    lw $2, 20($sp)
+; MMDSP-NEXT:    lw $2, 36($fp)
 ; MMDSP-NEXT:    wrdsp $3, 1
 ; MMDSP-NEXT:    addwc $3, $2, $5
 ; MMDSP-NEXT:    rddsp $2, 1
 ; MMDSP-NEXT:    ext $5, $2, 20, 1
-; MMDSP-NEXT:    lw $7, 16($sp)
+; MMDSP-NEXT:    lw $7, 32($fp)
 ; MMDSP-NEXT:    ins $5, $2, 6, 1
 ; MMDSP-NEXT:    ins $5, $zero, 20, 1
 ; MMDSP-NEXT:    wrdsp $5, 1
 ; MMDSP-NEXT:    addwc $2, $7, $4
 ; MMDSP-NEXT:    move $4, $6
 ; MMDSP-NEXT:    move $5, $1
+; MMDSP-NEXT:    move $sp, $fp
+; MMDSP-NEXT:    lw $fp, 8($sp) # 4-byte Folded Reload
+; MMDSP-NEXT:    lw $ra, 12($sp) # 4-byte Folded Reload
+; MMDSP-NEXT:    addiusp 16
 ; MMDSP-NEXT:    jrc $ra
 entry:
   %add = add i128 %b, %a

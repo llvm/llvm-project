@@ -297,7 +297,7 @@ define i65 @i65_func_void() #0 {
   ; CHECK-LABEL: name: i65_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i65) = G_LOAD [[DEF]](p1) :: (load (i65) from `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i65) = G_LOAD [[DEF]](p1) :: (load (i65) from `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i96) = G_ANYEXT [[LOAD]](i65)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[ANYEXT]](i96)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
@@ -312,7 +312,7 @@ define signext i65 @i65_signext_func_void() #0 {
   ; CHECK-LABEL: name: i65_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i65) = G_LOAD [[DEF]](p1) :: (load (i65) from `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i65) = G_LOAD [[DEF]](p1) :: (load (i65) from `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(i96) = G_SEXT [[LOAD]](i65)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[SEXT]](i96)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
@@ -327,7 +327,7 @@ define zeroext i65 @i65_zeroext_func_void() #0 {
   ; CHECK-LABEL: name: i65_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i65) = G_LOAD [[DEF]](p1) :: (load (i65) from `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i65) = G_LOAD [[DEF]](p1) :: (load (i65) from `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i96) = G_ZEXT [[LOAD]](i65)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[ZEXT]](i96)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
@@ -1157,7 +1157,7 @@ define i1022 @i1022_func_void() #0 {
   ; CHECK-LABEL: name: i1022_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i1022) = G_LOAD [[DEF]](p1) :: (load (i1022) from `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i1022) = G_LOAD [[DEF]](p1) :: (load (i1022) from `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i1024) = G_ANYEXT [[LOAD]](i1022)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32), [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32), [[UV6:%[0-9]+]]:_(i32), [[UV7:%[0-9]+]]:_(i32), [[UV8:%[0-9]+]]:_(i32), [[UV9:%[0-9]+]]:_(i32), [[UV10:%[0-9]+]]:_(i32), [[UV11:%[0-9]+]]:_(i32), [[UV12:%[0-9]+]]:_(i32), [[UV13:%[0-9]+]]:_(i32), [[UV14:%[0-9]+]]:_(i32), [[UV15:%[0-9]+]]:_(i32), [[UV16:%[0-9]+]]:_(i32), [[UV17:%[0-9]+]]:_(i32), [[UV18:%[0-9]+]]:_(i32), [[UV19:%[0-9]+]]:_(i32), [[UV20:%[0-9]+]]:_(i32), [[UV21:%[0-9]+]]:_(i32), [[UV22:%[0-9]+]]:_(i32), [[UV23:%[0-9]+]]:_(i32), [[UV24:%[0-9]+]]:_(i32), [[UV25:%[0-9]+]]:_(i32), [[UV26:%[0-9]+]]:_(i32), [[UV27:%[0-9]+]]:_(i32), [[UV28:%[0-9]+]]:_(i32), [[UV29:%[0-9]+]]:_(i32), [[UV30:%[0-9]+]]:_(i32), [[UV31:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[ANYEXT]](i1024)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
@@ -1201,7 +1201,7 @@ define signext i1022 @i1022_signext_func_void() #0 {
   ; CHECK-LABEL: name: i1022_signext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i1022) = G_LOAD [[DEF]](p1) :: (load (i1022) from `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i1022) = G_LOAD [[DEF]](p1) :: (load (i1022) from `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(i1024) = G_SEXT [[LOAD]](i1022)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32), [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32), [[UV6:%[0-9]+]]:_(i32), [[UV7:%[0-9]+]]:_(i32), [[UV8:%[0-9]+]]:_(i32), [[UV9:%[0-9]+]]:_(i32), [[UV10:%[0-9]+]]:_(i32), [[UV11:%[0-9]+]]:_(i32), [[UV12:%[0-9]+]]:_(i32), [[UV13:%[0-9]+]]:_(i32), [[UV14:%[0-9]+]]:_(i32), [[UV15:%[0-9]+]]:_(i32), [[UV16:%[0-9]+]]:_(i32), [[UV17:%[0-9]+]]:_(i32), [[UV18:%[0-9]+]]:_(i32), [[UV19:%[0-9]+]]:_(i32), [[UV20:%[0-9]+]]:_(i32), [[UV21:%[0-9]+]]:_(i32), [[UV22:%[0-9]+]]:_(i32), [[UV23:%[0-9]+]]:_(i32), [[UV24:%[0-9]+]]:_(i32), [[UV25:%[0-9]+]]:_(i32), [[UV26:%[0-9]+]]:_(i32), [[UV27:%[0-9]+]]:_(i32), [[UV28:%[0-9]+]]:_(i32), [[UV29:%[0-9]+]]:_(i32), [[UV30:%[0-9]+]]:_(i32), [[UV31:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[SEXT]](i1024)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
@@ -1245,7 +1245,7 @@ define zeroext i1022 @i1022_zeroext_func_void() #0 {
   ; CHECK-LABEL: name: i1022_zeroext_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i1022) = G_LOAD [[DEF]](p1) :: (load (i1022) from `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i1022) = G_LOAD [[DEF]](p1) :: (load (i1022) from `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i1024) = G_ZEXT [[LOAD]](i1022)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32), [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32), [[UV6:%[0-9]+]]:_(i32), [[UV7:%[0-9]+]]:_(i32), [[UV8:%[0-9]+]]:_(i32), [[UV9:%[0-9]+]]:_(i32), [[UV10:%[0-9]+]]:_(i32), [[UV11:%[0-9]+]]:_(i32), [[UV12:%[0-9]+]]:_(i32), [[UV13:%[0-9]+]]:_(i32), [[UV14:%[0-9]+]]:_(i32), [[UV15:%[0-9]+]]:_(i32), [[UV16:%[0-9]+]]:_(i32), [[UV17:%[0-9]+]]:_(i32), [[UV18:%[0-9]+]]:_(i32), [[UV19:%[0-9]+]]:_(i32), [[UV20:%[0-9]+]]:_(i32), [[UV21:%[0-9]+]]:_(i32), [[UV22:%[0-9]+]]:_(i32), [[UV23:%[0-9]+]]:_(i32), [[UV24:%[0-9]+]]:_(i32), [[UV25:%[0-9]+]]:_(i32), [[UV26:%[0-9]+]]:_(i32), [[UV27:%[0-9]+]]:_(i32), [[UV28:%[0-9]+]]:_(i32), [[UV29:%[0-9]+]]:_(i32), [[UV30:%[0-9]+]]:_(i32), [[UV31:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[ZEXT]](i1024)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)

@@ -228,17 +228,17 @@ define fp128 @exp10_f128(fp128 %x) #0 {
 ; LA32-NEXT:    ld.w $a4, $a1, 8
 ; LA32-NEXT:    ld.w $a1, $a1, 12
 ; LA32-NEXT:    move $fp, $a0
-; LA32-NEXT:    st.w $a1, $sp, 20
-; LA32-NEXT:    st.w $a4, $sp, 16
-; LA32-NEXT:    st.w $a3, $sp, 12
-; LA32-NEXT:    addi.w $a0, $sp, 24
-; LA32-NEXT:    addi.w $a1, $sp, 8
-; LA32-NEXT:    st.w $a2, $sp, 8
+; LA32-NEXT:    st.w $a1, $sp, 12
+; LA32-NEXT:    st.w $a4, $sp, 8
+; LA32-NEXT:    st.w $a3, $sp, 4
+; LA32-NEXT:    addi.w $a0, $sp, 16
+; LA32-NEXT:    addi.w $a1, $sp, 0
+; LA32-NEXT:    st.w $a2, $sp, 0
 ; LA32-NEXT:    bl exp10l
-; LA32-NEXT:    ld.w $a0, $sp, 36
-; LA32-NEXT:    ld.w $a1, $sp, 32
-; LA32-NEXT:    ld.w $a2, $sp, 28
-; LA32-NEXT:    ld.w $a3, $sp, 24
+; LA32-NEXT:    ld.w $a0, $sp, 28
+; LA32-NEXT:    ld.w $a1, $sp, 24
+; LA32-NEXT:    ld.w $a2, $sp, 20
+; LA32-NEXT:    ld.w $a3, $sp, 16
 ; LA32-NEXT:    st.w $a0, $fp, 12
 ; LA32-NEXT:    st.w $a1, $fp, 8
 ; LA32-NEXT:    st.w $a2, $fp, 4
@@ -280,28 +280,28 @@ define <2 x fp128> @exp10_v2f128(<2 x fp128> %x) #0 {
 ; LA32-NEXT:    ld.w $a4, $a1, 8
 ; LA32-NEXT:    ld.w $a1, $a1, 12
 ; LA32-NEXT:    move $fp, $a0
-; LA32-NEXT:    st.w $a1, $sp, 20
-; LA32-NEXT:    st.w $a4, $sp, 16
-; LA32-NEXT:    st.w $a3, $sp, 12
-; LA32-NEXT:    addi.w $a0, $sp, 24
-; LA32-NEXT:    addi.w $a1, $sp, 8
-; LA32-NEXT:    st.w $a2, $sp, 8
+; LA32-NEXT:    st.w $a1, $sp, 12
+; LA32-NEXT:    st.w $a4, $sp, 8
+; LA32-NEXT:    st.w $a3, $sp, 4
+; LA32-NEXT:    addi.w $a0, $sp, 16
+; LA32-NEXT:    addi.w $a1, $sp, 0
+; LA32-NEXT:    st.w $a2, $sp, 0
 ; LA32-NEXT:    bl exp10l
-; LA32-NEXT:    st.w $s3, $sp, 52
-; LA32-NEXT:    st.w $s2, $sp, 48
-; LA32-NEXT:    st.w $s1, $sp, 44
-; LA32-NEXT:    addi.w $a0, $sp, 56
-; LA32-NEXT:    addi.w $a1, $sp, 40
-; LA32-NEXT:    st.w $s0, $sp, 40
+; LA32-NEXT:    st.w $s3, $sp, 44
+; LA32-NEXT:    st.w $s2, $sp, 40
+; LA32-NEXT:    st.w $s1, $sp, 36
+; LA32-NEXT:    addi.w $a0, $sp, 48
+; LA32-NEXT:    addi.w $a1, $sp, 32
+; LA32-NEXT:    st.w $s0, $sp, 32
 ; LA32-NEXT:    bl exp10l
-; LA32-NEXT:    ld.w $a0, $sp, 24
-; LA32-NEXT:    ld.w $a1, $sp, 28
-; LA32-NEXT:    ld.w $a2, $sp, 32
-; LA32-NEXT:    ld.w $a3, $sp, 36
-; LA32-NEXT:    ld.w $a4, $sp, 68
-; LA32-NEXT:    ld.w $a5, $sp, 64
-; LA32-NEXT:    ld.w $a6, $sp, 60
-; LA32-NEXT:    ld.w $a7, $sp, 56
+; LA32-NEXT:    ld.w $a0, $sp, 16
+; LA32-NEXT:    ld.w $a1, $sp, 20
+; LA32-NEXT:    ld.w $a2, $sp, 24
+; LA32-NEXT:    ld.w $a3, $sp, 28
+; LA32-NEXT:    ld.w $a4, $sp, 60
+; LA32-NEXT:    ld.w $a5, $sp, 56
+; LA32-NEXT:    ld.w $a6, $sp, 52
+; LA32-NEXT:    ld.w $a7, $sp, 48
 ; LA32-NEXT:    st.w $a4, $fp, 28
 ; LA32-NEXT:    st.w $a5, $fp, 24
 ; LA32-NEXT:    st.w $a6, $fp, 20

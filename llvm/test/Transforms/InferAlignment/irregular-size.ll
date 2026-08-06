@@ -4,9 +4,9 @@
 define void @non_pow2_size(i177 %X) {
 ; CHECK-LABEL: define void @non_pow2_size
 ; CHECK-SAME: (i177 [[X:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = alloca i177, align 8
-; CHECK-NEXT:    [[L1:%.*]] = load i177, ptr [[A]], align 8
-; CHECK-NEXT:    store i177 [[X]], ptr [[A]], align 8
+; CHECK-NEXT:    [[A:%.*]] = alloca i177, align 16
+; CHECK-NEXT:    [[L1:%.*]] = load i177, ptr [[A]], align 16
+; CHECK-NEXT:    store i177 [[X]], ptr [[A]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca i177, align 1

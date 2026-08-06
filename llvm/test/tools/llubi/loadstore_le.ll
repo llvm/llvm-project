@@ -166,7 +166,7 @@ define void @main() {
   store ptr %alloc_ptr_array, ptr %ptr_array_2
   %ptr_array_2_middle = getelementptr i8, ptr %alloc_ptr_array, i64 20
   store i8 0, ptr %ptr_array_2_middle
-  %mixed_alloc = load b256, ptr %alloc_ptr_array
+  %mixed_alloc = load b256, ptr %alloc_ptr_array, align 8
 
   ret void
 }

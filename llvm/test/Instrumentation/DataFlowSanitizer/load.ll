@@ -114,7 +114,7 @@ define i128 @load128(ptr %p) {
   ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
   ; CHECK-NEXT:            %[[#SHADOW:]] = trunc i64 %[[#WIDE_SHADOW]] to i8
   ; COMBINE_LOAD_PTR-NEXT: %[[#SHADOW:]] = or i8 %[[#SHADOW]], %[[#PS]]
-  ; CHECK-NEXT:            %a = load i128, ptr %p, align 8
+  ; CHECK-NEXT:            %a = load i128, ptr %p, align 16
   ; CHECK-NEXT:            store i8 %[[#SHADOW]], ptr @__dfsan_retval_tls, align [[ALIGN]]
   ; CHECK-NEXT:            ret i128 %a
 

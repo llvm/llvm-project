@@ -218,7 +218,7 @@ define void @bitcast_2x2_v4f64_to_v8i32(ptr %in, ptr %out) {
 
 define void @bitcast_2x2_i256_to_v4i64(ptr %in, ptr %out) {
 ; CHECK-LABEL: @bitcast_2x2_i256_to_v4i64(
-; CHECK-NEXT:    [[INV:%.*]] = load i256, ptr [[IN:%.*]], align 4
+; CHECK-NEXT:    [[INV:%.*]] = load i256, ptr [[IN:%.*]], align 16
 ; CHECK-NEXT:    [[OP:%.*]] = bitcast i256 [[INV]] to <4 x double>
 ; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <4 x double> [[OP]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <4 x double> [[OP]], <4 x double> poison, <2 x i32> <i32 2, i32 3>
@@ -240,7 +240,7 @@ define void @bitcast_2x2_4i64_to_i256(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> [[COL_LOAD1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[OP:%.*]] = bitcast <4 x double> [[TMP1]] to i256
-; CHECK-NEXT:    store i256 [[OP]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    store i256 [[OP]], ptr [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %inv = call <4 x double> @llvm.matrix.column.major.load(ptr %in, i64 2, i1 false, i32 2, i32 2)
