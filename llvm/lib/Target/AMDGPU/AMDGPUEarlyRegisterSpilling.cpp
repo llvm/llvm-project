@@ -736,11 +736,14 @@ AMDGPUEarlyRegisterSpilling::getCandidates(MachineInstr *CurMI,
          !CandidateLoop->contains(CurLoop) &&
          !OutermostLoopOfCurLoop->contains(CandidateLoop));
 
+    bool IsRestore = TII->isVGPRSpill(CandidateMI->getOpcode()) &&
+                     CandidateMI->mayLoad() && EnableRestoreOptimization;
     // If the high register pressure point is inside a loop, then we spill loop
     // live-ins and loop live-thoughs.
     // We spill values that are defined inside a loop in the exit block of the
     // loop when the high register pressure point is outside of the loop.
-    if (CandidateLoop && OutermostLoopOfCurLoop && !AreIndependentLoops)
+    if (CandidateLoop && OutermostLoopOfCurLoop && !AreIndependentLoops &&
+        !IsRestore)
       continue;
 
     SmallVector<const MachineOperand *> UsesForNextUseDistCalculation;
