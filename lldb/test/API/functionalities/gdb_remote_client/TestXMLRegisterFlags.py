@@ -1097,3 +1097,77 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
         )
 
         self.expect("register read x0", patterns=[r"\(foo = foo_1, foo = foo_0\)$"])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_duplicate_ids_between_features(self):
+        self.setup_multidoc_test(
+            {
+                "target.xml": dedent(
+                    """\
+              <?xml version="1.0"?>
+              <target version="1.0">
+                <architecture>aarch64</architecture>
+                <feature name="org.gnu.gdb.aarch64.other_feature">
+                  <flags id="x0_flags" size="8">
+                    <field name="first_flags_set" start="0" end="0"/>
+                  </flags>
+                </feature>
+                <feature name="org.gnu.gdb.aarch64.core">
+                  <flags id="x0_flags" size="8">
+                    <field name="second_flags_set" start="0" end="0"/>
+                  </flags>
+                  <reg name="pc" bitsize="64"/>
+                  <reg name="x0" regnum="0" bitsize="64" type="x0_flags"/>
+                </feature>
+              </target>"""
+                )
+            }
+        )
+
+        # We incorrectly assume that ids are unique across all feature elements.
+        # https://github.com/llvm/llvm-project/issues/214444
+        # This means that the x0_flags from other_feature makes us ignore the
+        # x0_flags in core. Which is the one that we should be using.
+        self.expect("register read x0", substrs=["(first_flags_set = 1)"])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_duplicate_ids_between_documents(self):
+        self.setup_multidoc_test(
+            {
+                "target.xml": dedent(
+                    """\
+              <?xml version="1.0"?>
+              <target version="1.0">
+                <architecture>aarch64</architecture>
+                <xi:include href="flags.xml"/>
+                <feature name="org.gnu.gdb.aarch64.core">
+                  <flags id="x0_flags" size="8">
+                    <field name="core_flags_set" start="0" end="0"/>
+                  </flags>
+                  <reg name="pc" bitsize="64"/>
+                  <reg name="x0" regnum="0" bitsize="64" type="x0_flags"/>
+                </feature>
+              </target>"""
+                ),
+                "flags.xml": dedent(
+                    """\
+                <feature name="org.gnu.gdb.aarch64.other_feature">
+                  <flags id="x0_flags" size="8">
+                    <field name="included_flags_set" start="0" end="0"/>
+                  </flags>
+                </feature>
+                    """
+                ),
+            }
+        )
+
+        # Everything in the first document is parsed before the included document.
+        # This means that the flags in target.xml are seen first and the ones
+        # in flags.xml are ignored.
+        # FIXME: It is likely that we are supposed to parse the included file at
+        # the point where it is included, before parsing the rest of the current
+        # file.
+        # https://github.com/llvm/llvm-project/issues/214444
+        self.expect("register read x0", substrs=["(core_flags_set = 1)"])
