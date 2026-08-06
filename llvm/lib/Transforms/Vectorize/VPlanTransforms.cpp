@@ -5654,7 +5654,7 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
 
     StridePredicates = StridePredicates.getUnionWith(NewPred, *SE);
 
-    auto ReplaceMVUses = [&](Value *V) {
+    auto ReplaceUsesInVectorLoop = [&](Value *V) {
       VPValue *From = Plan.getLiveIn(V);
       if (!From)
         return;
@@ -5666,16 +5666,14 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
       // uses inside the vector loop that we guard with the checks.
       From->replaceUsesWithIf(To, [&](VPUser &U, unsigned) {
         auto *R = cast<VPRecipeBase>(&U);
-        return R->getRegion() ||
-               R->getParent() ==
-                   Plan.getVectorLoopRegion()->getSinglePredecessor();
+        return R->getRegion() || R->getParent() == Plan.getVectorPreheader();
       });
     };
 
-    ReplaceMVUses(StrideVal);
+    ReplaceUsesInVectorLoop(StrideVal);
     for (auto *U : StrideVal->users())
       if (isa<SExtInst, ZExtInst, TruncInst>(U))
-        ReplaceMVUses(U);
+        ReplaceUsesInVectorLoop(U);
   }
 
   if (StridePredicates.isAlwaysTrue())
