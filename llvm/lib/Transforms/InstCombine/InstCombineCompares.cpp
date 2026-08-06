@@ -3952,7 +3952,6 @@ Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
   return nullptr;
 }
 
-/// Fold an icmp with LLVM intrinsics
 static Instruction *
 foldICmpIntrinsicWithIntrinsic(ICmpInst &Cmp,
                                InstCombiner::BuilderTy &Builder) {
@@ -7741,6 +7740,24 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
   }
 
   const SimplifyQuery Q = SQ.getWithInstruction(&CxtI);
+
+  {
+    Value *Y;
+    // For Y != 0:
+    // usub.sat(X, Y) == X  --> X == 0
+    // usub.sat(X, Y) != X  --> X != 0
+    // usub.sat(X, Y) <  X  --> X != 0
+    if (match(Op0, m_Intrinsic<Intrinsic::usub_sat>(m_Specific(Op1),
+                                                    m_Value(Y))) &&
+        (CmpInst::isEquality(Pred) || Pred == ICmpInst::ICMP_ULT) &&
+        isKnownNonZero(Y, Q)) {
+      ICmpInst::Predicate NewPred =
+          CmpInst::isEquality(Pred) ? Pred.dropSameSign() : ICmpInst::ICMP_NE;
+      return new ICmpInst(NewPred, Op1,
+                          Constant::getNullValue(Op1->getType()));
+    }
+  }
+
   if (Value *V = foldICmpWithLowBitMaskedVal(Pred, Op0, Op1, Q, *this))
     return replaceInstUsesWith(CxtI, V);
 
