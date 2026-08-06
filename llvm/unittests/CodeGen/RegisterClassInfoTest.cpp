@@ -1,0 +1,128 @@
+//===- RegisterClassInfoTest.cpp - RegisterClassInfo tests ----------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/CodeGen/RegisterClassInfo.h"
+#include "CodeGenTestBase.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/Config/Targets.h"
+#include "llvm/MC/MCRegister.h"
+#include "llvm/Support/TargetSelect.h"
+#include "gtest/gtest.h"
+
+using namespace llvm;
+
+namespace {
+
+class RegisterClassInfoTest : public CodeGenTestBase {
+public:
+  static void SetUpTestCase() {
+#if LLVM_HAS_AMDGPU_TARGET
+    LLVMInitializeAMDGPUTargetInfo();
+    LLVMInitializeAMDGPUTarget();
+    LLVMInitializeAMDGPUTargetMC();
+#else
+    GTEST_SKIP();
+#endif
+  }
+
+  void SetUp() override { setUpImpl("amdgcn-amd-amdhsa", "gfx900", /*FS=*/""); }
+};
+
+static void materializeAll(RegisterClassInfo &RCI,
+                           const TargetRegisterInfo &TRI) {
+  for (const TargetRegisterClass &RC : TRI.regclasses()) {
+    (void)RCI.getOrder(&RC);
+    (void)RCI.getNumAllocatableRegs(&RC);
+    (void)RCI.isProperSubClass(&RC);
+    (void)RCI.getMinCost(&RC);
+    (void)RCI.getLastCostChange(&RC);
+  }
+
+  for (unsigned I = 0; I != TRI.getNumRegPressureSets(); ++I)
+    (void)RCI.getRegPressureSetLimit(I);
+}
+
+static void expectEqual(RegisterClassInfo &Incremental,
+                        RegisterClassInfo &Recomputed,
+                        const TargetRegisterInfo &TRI) {
+  for (const TargetRegisterClass &RC : TRI.regclasses()) {
+    SCOPED_TRACE(TRI.getRegClassName(&RC));
+    EXPECT_EQ(Incremental.getOrder(&RC), Recomputed.getOrder(&RC));
+    EXPECT_EQ(Incremental.getNumAllocatableRegs(&RC),
+              Recomputed.getNumAllocatableRegs(&RC));
+    EXPECT_EQ(Incremental.isProperSubClass(&RC),
+              Recomputed.isProperSubClass(&RC));
+    EXPECT_EQ(Incremental.getMinCost(&RC), Recomputed.getMinCost(&RC));
+    EXPECT_EQ(Incremental.getLastCostChange(&RC),
+              Recomputed.getLastCostChange(&RC));
+  }
+
+  for (unsigned I = 0; I != TRI.getNumRegPressureSets(); ++I) {
+    SCOPED_TRACE(I);
+    EXPECT_EQ(Incremental.getRegPressureSetLimit(I),
+              Recomputed.getRegPressureSetLimit(I));
+  }
+}
+
+static MCRegister findRegisterByName(const TargetRegisterInfo &TRI,
+                                     StringRef Name) {
+  for (unsigned I = MCRegister::FirstPhysicalReg; I != TRI.getNumRegs(); ++I) {
+    MCRegister Reg = MCRegister::from(I);
+    if (Name == TRI.getName(Reg))
+      return Reg;
+  }
+  return MCRegister();
+}
+
+TEST_F(RegisterClassInfoTest, IncrementalUpdateMatchesRecompute) {
+  ASSERT_TRUE(parseMIR(R"MIR(
+---
+name: func
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    S_ENDPGM 0
+...
+)MIR"));
+
+  MachineFunction &MF = getMF("func");
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  MRI.freezeReservedRegs();
+
+  RegisterClassInfo Incremental;
+  Incremental.runOnMachineFunction(MF);
+  // Populate every cache entry so the update exercises incremental compaction
+  // for every register class instead of lazy recomputation.
+  materializeAll(Incremental, TRI);
+
+  MCRegister VGPR0 = findRegisterByName(TRI, "VGPR0");
+  ASSERT_TRUE(VGPR0.isValid());
+  ASSERT_FALSE(MRI.isReserved(VGPR0));
+  ASSERT_TRUE(
+      llvm::any_of(TRI.regclasses(), [&](const TargetRegisterClass &RC) {
+        return llvm::is_contained(Incremental.getOrder(&RC),
+                                  static_cast<MCPhysReg>(VGPR0.id()));
+      }));
+
+  MRI.reserveReg(VGPR0, &TRI);
+  Incremental.updateReservedRegs(MRI.getReservedRegs());
+
+  // Construct an independent baseline from the updated reserved-register set.
+  RegisterClassInfo Recomputed;
+  Recomputed.runOnMachineFunction(MF);
+
+  expectEqual(Incremental, Recomputed, TRI);
+}
+
+} // namespace
