@@ -1,0 +1,49 @@
+# RUN: llc -march=pisa -run-pass=pisa-prelegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+
+--- |
+  define i64 @zext_and_mask_rhs(i32 %x) {
+    ret i64 0
+  }
+  define i64 @zext_and_mask_lhs(i32 %x) {
+    ret i64 0
+  }
+...
+
+# --- canonical: G_AND (G_ZEXT x), C ---
+---
+name:            zext_and_mask_rhs
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: zext_and_mask_rhs
+    ; The combiner rewrites G_AND(G_ZEXT(x),C) to G_ZEXT(G_AND(x,trunc(C))).
+    ; CHECK:     [[AND:%[0-9]+]]:_(i32) = G_AND
+    ; CHECK:     [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[AND]](i32)
+    ; CHECK:     retValue_i64_r
+    %0:reg32b(i32) = functionParameter_i32 0
+    %1:_(i64) = G_ZEXT %0:reg32b(i32)
+    %mask:_(i64) = G_CONSTANT i64 255
+    %2:_(i64) = G_AND %1:_(i64), %mask:_(i64)
+    %3:reg64b(i64) = COPY %2:_(i64)
+    retValue_i64_r %3:reg64b(i64)
+...
+
+# --- swapped: G_AND C, (G_ZEXT x) -- exercises operand-swap branch ---
+---
+name:            zext_and_mask_lhs
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: zext_and_mask_lhs
+    ; CHECK:     [[AND2:%[0-9]+]]:_(i32) = G_AND
+    ; CHECK:     [[ZEXT2:%[0-9]+]]:_(i64) = G_ZEXT [[AND2]](i32)
+    ; CHECK:     retValue_i64_r
+    %0:reg32b(i32) = functionParameter_i32 0
+    %1:_(i64) = G_ZEXT %0:reg32b(i32)
+    %mask:_(i64) = G_CONSTANT i64 65535
+    %2:_(i64) = G_AND %mask:_(i64), %1:_(i64)
+    %3:reg64b(i64) = COPY %2:_(i64)
+    retValue_i64_r %3:reg64b(i64)
+...
