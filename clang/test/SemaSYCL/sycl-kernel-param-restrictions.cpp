@@ -197,7 +197,7 @@ template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
 void kernel_single_task(T t) {}
 // expected-note-re@-1 4{{within parameter 't' of type '(lambda at {{.*}})' declared here}}
-// expected-note@-5 {{within parameter 't' of type 'atomic1::Kernel' declared here}}
+// expected-note@-2 {{within parameter 't' of type 'atomic1::Kernel' declared here}}
 
 struct Sa { 
   int a;
@@ -288,8 +288,7 @@ struct S {
 // nonportable-note@-1 {{within field of type 'S' declared here}}
 // nonportable-note@-2 {{within field of type 'S' declared here}}          
   int *ptr;
-  // nonportable-warning@-1 {{pointers used in parameters to a SYCL kernel require a device that supports Unified Shared Memory (USM)}}
-  // nonportable-warning@-2 {{pointers used in parameters to a SYCL kernel require a device that supports Unified Shared Memory (USM)}}
+  // nonportable-warning@-1 2{{pointers used in SYCL kernel parameters require a device that supports Unified Shared Memory (USM)}}
 };
 
 class C {
