@@ -1971,8 +1971,10 @@ allocatePrivateVars(T op, llvm::IRBuilderBase &builder,
   SmallVector<int64_t> allocateItemForPrivate(privateVarsInfo.blockArgs.size(),
                                               -1);
   ValueRange allocatorVars;
+  DenseI64ArrayAttr allocateAlignments;
   if constexpr (std::is_same_v<T, omp::ParallelOp>) {
     allocatorVars = op.getAllocatorVars();
+    allocateAlignments = op.getAllocateAlignmentsAttr();
     if (auto privateIndices = op.getAllocatePrivateIndicesAttr())
       for (auto [allocateIndex, privateIndex] :
            llvm::enumerate(privateIndices.asArrayRef()))
@@ -2016,8 +2018,26 @@ allocatePrivateVars(T op, llvm::IRBuilderBase &builder,
         return llvm::createStringError(
             "failed to find converted OpenMP allocator operand");
       llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-      llvmPrivateVar = ompBuilder->createOMPAlloc(
-          ompLoc, sizeValue, allocator->second, "omp.private.alloc");
+      int64_t alignment =
+          allocateAlignments ? allocateAlignments[allocateIndex] : 0;
+      if (alignment != 0) {
+        // The allocation must be aligned to at least the maximum of the
+        // requested alignment and the alignment the base language requires
+        // for the type being allocated.
+        uint64_t alignmentValue = std::max<uint64_t>(
+            static_cast<uint64_t>(alignment),
+            dataLayout.getABITypeAlign(llvmAllocType).value());
+        if (!llvm::isUIntN(sizeTy->getBitWidth(), alignmentValue))
+          return llvm::createStringError(
+              "OpenMP allocation alignment cannot be represented by the "
+              "target size type");
+        llvmPrivateVar = ompBuilder->createOMPAlignedAlloc(
+            ompLoc, llvm::ConstantInt::get(sizeTy, alignmentValue), sizeValue,
+            allocator->second, "omp.private.alloc");
+      } else {
+        llvmPrivateVar = ompBuilder->createOMPAlloc(
+            ompLoc, sizeValue, allocator->second, "omp.private.alloc");
+      }
       if (!llvmPrivateVar)
         return llvm::createStringError(
             "failed to create OpenMP private allocation");

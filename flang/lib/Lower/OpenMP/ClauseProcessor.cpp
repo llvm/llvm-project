@@ -94,11 +94,11 @@ getSimdModifier(const omp::clause::Schedule &clause) {
   return mlir::omp::ScheduleModifier::none;
 }
 
-static void
-genAllocateClause(lower::AbstractConverter &converter,
-                  const omp::clause::Allocate &clause,
-                  llvm::SmallVectorImpl<mlir::Value> &allocatorOperands,
-                  llvm::SmallVectorImpl<mlir::Value> &allocateOperands) {
+static void genAllocateClause(
+    lower::AbstractConverter &converter, const omp::clause::Allocate &clause,
+    llvm::SmallVectorImpl<mlir::Value> &allocatorOperands,
+    llvm::SmallVectorImpl<mlir::Value> &allocateOperands,
+    llvm::SmallVectorImpl<int64_t> &alignments, bool supportAlignment) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
   lower::StatementContext stmtCtx;
@@ -106,9 +106,17 @@ genAllocateClause(lower::AbstractConverter &converter,
   auto &objects = std::get<omp::ObjectList>(clause.t);
 
   using Allocate = omp::clause::Allocate;
-  // ALIGN in this context is unimplemented
-  if (std::get<std::optional<Allocate::AlignModifier>>(clause.t))
+  auto &align = std::get<std::optional<Allocate::AlignModifier>>(clause.t);
+  if (align && !supportAlignment)
     TODO(currentLocation, "OmpAllocateClause ALIGN modifier");
+
+  if (align) {
+    if (alignments.empty())
+      alignments.resize(allocateOperands.size(), 0);
+    alignments.append(objects.size(), evaluate::ToInt64(align->v).value());
+  } else if (!alignments.empty()) {
+    alignments.append(objects.size(), 0);
+  }
 
   // Use a null handle to select the binding task's default allocator.
   using ComplexModifier = Allocate::AllocatorComplexModifier;
@@ -1136,12 +1144,13 @@ bool ClauseProcessor::processAligned(
       });
 }
 
-bool ClauseProcessor::processAllocate(
-    mlir::omp::AllocateClauseOps &result) const {
+bool ClauseProcessor::processAllocate(mlir::omp::AllocateClauseOps &result,
+                                      bool supportAlignment) const {
   return findRepeatableClause<omp::clause::Allocate>(
       [&](const omp::clause::Allocate &clause, const parser::CharBlock &) {
         genAllocateClause(converter, clause, result.allocatorVars,
-                          result.allocateVars);
+                          result.allocateVars, result.allocateAlignments,
+                          supportAlignment);
       });
 }
 

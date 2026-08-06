@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/Rematerializer.h"
@@ -300,11 +301,10 @@ unsigned GCNSchedStrategy::getStructuralStallCycles(SchedBoundary &Zone,
   }
 
   // Query HazardRecognizer for sequence-dependent hazard penalties.
-  // AMDGPU currently installs GCNHazardRecognizer for MI scheduling only in
-  // the post-RA configuration without vreg liveness.
-  if (!DAG->hasVRegLiveness() && Zone.HazardRec &&
-      Zone.HazardRec->isEnabled()) {
-    auto *HR = static_cast<GCNHazardRecognizer *>(Zone.HazardRec);
+  // AMDGPUCoExecSchedStrategy installs a GCNHazardRecognizer in both
+  // pre-RA (PreRA mode) and post-RA configurations.
+  if (Zone.HazardRec && Zone.HazardRec->isEnabled()) {
+    auto *HR = static_cast<GCNHazardRecognizer *>(Zone.HazardRec.get());
     Stall = std::max(Stall, HR->getHazardWaitStates(MI));
   }
 
@@ -3005,9 +3005,10 @@ bool PreRARematStage::ScoredRemat::maybeBeneficial(
 
 PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
     MachineFunction &MF, const GCNScheduleDAGMILive &DAG) {
-  assert(DAG.MLI && "MLI not defined in DAG");
   MachineBranchProbabilityInfo MBPI;
-  MachineBlockFrequencyInfo MBFI(MF, MBPI, *DAG.MLI);
+  MachineCycleInfo MCI;
+  MCI.compute(MF);
+  MachineBlockFrequencyInfo MBFI(MF, MBPI, MCI);
 
   const unsigned NumRegions = DAG.Regions.size();
   MinFreq = MBFI.getEntryFreq().getFrequency();

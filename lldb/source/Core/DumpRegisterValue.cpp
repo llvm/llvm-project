@@ -11,7 +11,7 @@
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/RegisterFlags.h"
+#include "lldb/Utility/RegisterTypeFlags.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -22,7 +22,7 @@
 using namespace lldb;
 
 template <typename T>
-static void dump_type_value(const lldb_private::RegisterFlags &flags_type,
+static void dump_type_value(const lldb_private::RegisterTypeFlags &flags_type,
                             lldb_private::CompilerType &fields_compiler_type,
                             T value,
                             lldb_private::ExecutionContextScope *exe_scope,
@@ -123,8 +123,8 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
                     0,                    // item_bit_offset
                     exe_scope);
 
-  const RegisterFlags *flags_type =
-      llvm::dyn_cast_if_present<RegisterFlags>(reg_info.register_type);
+  const RegisterTypeFlags *flags_type =
+      llvm::dyn_cast_if_present<RegisterTypeFlags>(reg_info.register_type);
   if (!print_flags || !flags_type || !exe_scope || !target_sp ||
       (reg_info.byte_size != 4 && reg_info.byte_size != 8))
     return;
