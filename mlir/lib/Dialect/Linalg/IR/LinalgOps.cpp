@@ -2018,6 +2018,9 @@ LogicalResult ReduceOp::verify() {
 
 namespace {
 
+/// Reduction kinds supported by the reduce-of-broadcast fold.
+/// Only the simplest reduce op are supported now.
+/// TODO: We can extend the list in the future.
 enum class BroadcastReduceKind {
   MaxSI,
   MaxUI,
@@ -2025,6 +2028,7 @@ enum class BroadcastReduceKind {
   MinUI,
 };
 
+/// Match a supported max/min reduction body and return its reduction kind.
 static std::optional<BroadcastReduceKind>
 matchBroadcastReduceBody(ReduceOp reduceOp) {
   if (reduceOp.getNumDpsInputs() != 1 || reduceOp.getNumDpsInits() != 1 ||
@@ -2041,14 +2045,10 @@ matchBroadcastReduceBody(ReduceOp reduceOp) {
       !llvm::hasSingleElement(block.without_terminator()))
     return std::nullopt;
 
-  auto yieldOp = dyn_cast<YieldOp>(block.getTerminator());
-  if (!yieldOp || yieldOp.getNumOperands() != 1)
-    return std::nullopt;
+  auto yieldOp = cast<YieldOp>(block.getTerminator());
 
   Operation *combineOp = yieldOp.getOperand(0).getDefiningOp();
-  if (!combineOp || combineOp->getNumOperands() != 2 ||
-      combineOp->getOperand(0).getType() != block.getArgument(0).getType() ||
-      combineOp->getOperand(1).getType() != block.getArgument(1).getType())
+  if (!combineOp || combineOp->getNumOperands() != 2)
     return std::nullopt;
 
   // Checks that the combine op **only** used the block arguments and
@@ -2074,6 +2074,7 @@ matchBroadcastReduceBody(ReduceOp reduceOp) {
       });
 }
 
+/// Return whether `init` is the identity value for `kind`.
 static bool hasBroadcastReduceIdentity(Value init, BroadcastReduceKind kind) {
   auto initAttr = getScalarConstantAttrFromDenseSplat(init);
   if (!initAttr)
@@ -2097,11 +2098,11 @@ static bool hasBroadcastReduceIdentity(Value init, BroadcastReduceKind kind) {
   llvm_unreachable("unknown broadcast reduction kind");
 }
 
-// Fold cases like:
-//
-//  maxsi(broadcast(x)) -> x
-//  minsi(broadcast(y)) -> y
-//
+/// Fold cases like:
+///
+///  maxsi(broadcast(x)) -> x
+///  minsi(broadcast(y)) -> y
+///
 // TODO: We can add other op. e.g., add, mul, and, or, xor.
 struct FoldReduceBroadcast : public OpRewritePattern<linalg::ReduceOp> {
   using OpRewritePattern<linalg::ReduceOp>::OpRewritePattern;
