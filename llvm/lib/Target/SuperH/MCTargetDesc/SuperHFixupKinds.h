@@ -1,4 +1,4 @@
-//===-- SuperHFixupKinds.h - AVR Specific Fixup Entries ---------*- C++ -*-===//
+//===-- SuperHFixupKinds.h - SuperH Specific Fixup Entries ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,23 +21,42 @@ namespace SuperH {
 /// to be uniquely named.
 ///
 /// \note This table *must* be in the same order of
-///       MCFixupKindInfo Infos[AVR::NumTargetFixupKinds]
-///       in `AVRAsmBackend.cpp`.
+///       MCFixupKindInfo Infos[SuperH::NumTargetFixupKinds]
+///       in `SuperHAsmBackend.cpp`.
 enum Fixups {
+  // The following fields follow the instructions in the C ABI Specification
+  // which can be found at https://www.renesas.com/en/document/mat/superh-cc-compiler-package-v904-users-manual?r=1169516
+  //
+  //
+  //  Name                 Value          Field           Calculation
 
-  // Fixup which uses 12 bits and is PC relative.
-  // Used in specific displacement operands.
-  fixup_12_pcrel = FirstTargetFixupKind,
+  /// R_SH_GOT32           160            word32          G + A
+  fixup_got32 = FirstTargetFixupKind,
 
-  // Fixup which uses 8 bits and is PC relative.
-  fixup_8_pcrel,
+  /// R_SH_GOT_LOW16       169            T_32s10for16    (G + A) & 65535
+  fixup_got_low16,
 
-  // Fixup which uses 4 bits and is PC relative.
-  fixup_4_pcrel,
+  /// R_SH_GOT_MEDLOW16    170            T_32u10for16    ((G + A) >> 16) & 65535
+  fixup_got_medlow16,
+
+  /// R_SH_GOT_MEDHI16     171            T_32u10for16    ((G + A) >> 32) & 65535
+  fixup_got_medhi16,
+
+  /// R_SH_GOT_HI16        172            T_32u10for16    ((G + A) >> 48) & 65535
+  fixup_got_hi16,
+
+  /// R_SH_GOT10BY4        189            V_32s10for10    (G + A) / 4
+  fixup_got10by4,
+
+  /// R_SH_GOT10BY8        191            V_32s10for10    (G + A) / 8
+  fixup_got10by8,
+
+  /// R_SH_PLT32           161            word32          L + A - P
+  fixup_plt32,
 
   // Marker
   LastTargetFixupKind,
-  NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind
+  NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind,
 };
 
 } // namespace SuperH

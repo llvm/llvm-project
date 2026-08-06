@@ -62,15 +62,15 @@ class BrOpRet<bits<16> op, string opcodestr>
 //===-----------------------------------------------------------------------===//
 
 let Namespace = "SH" in {
-	def BF_Disp			 : BrOp_Disp8<0b1000101100000000, "bf">;
-	def BFS_Disp	  : BrOpD_Disp8<0b1000111100000000, "bf/s">;
-	def BT_Disp			 : BrOp_Disp8<0b1000100100000000, "bt">;
-	def BTS_Disp	  : BrOpD_Disp8<0b1000110100000000, "bt/s">;
-	def BRA_Disp		: BrOp_Disp12<0b1010000000000000, "bra">;
-	def BRAF_Rm 	      : BrOp_Rm<0b0000000000100011, "braf">;
-	def BSR_Disp		: BrOp_Disp12<0b1011000000000000, "bsr">;
-	def BSRF_Rm 	      : BrOp_Rm<0b0000000000000011, "bsrf">;
-	def JMP_Rmi        : BrOp_Rmi<0b0100000000101011, "jmp">;
-	def JSR_Rmi    : BrOpCall_Rmi<0b0100000000001011, "jsr">;
-	def RTS 						: BrOpRet<0b0000000000001011, "rts">;
+  def BF_Disp      : BrOp_Disp8<0b1000101100000000, "bf">;
+  def BFS_Disp    : BrOpD_Disp8<0b1000111100000000, "bf/s">;
+  def BT_Disp      : BrOp_Disp8<0b1000100100000000, "bt">;
+  def BTS_Disp    : BrOpD_Disp8<0b1000110100000000, "bt/s">;
+  def BRA_Disp    : BrOp_Disp12<0b1010000000000000, "bra">;
+  def BRAF_Rm         : BrOp_Rm<0b0000000000100011, "braf">;
+  def BSR_Disp    : BrOp_Disp12<0b1011000000000000, "bsr">;
+  def BSRF_Rm         : BrOp_Rm<0b0000000000000011, "bsrf">;
+  def JMP_Rmi        : BrOp_Rmi<0b0100000000101011, "jmp">;
+  def JSR_Rmi    : BrOpCall_Rmi<0b0100000000001011, "jsr">;
+  def RTS             : BrOpRet<0b0000000000001011, "rts">;
 }
