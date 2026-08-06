@@ -192,9 +192,6 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
   func.func @test4(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "b"}, %arg2: !fir.ref<i32> {fir.bindc_name = "n1"}, %arg3: !fir.ref<i32> {fir.bindc_name = "m1"}) {
     %0 = fir.alloca index {bindc_name = ".buff.pos"}
     %1 = fir.alloca index {bindc_name = ".buff.size"}
-    %c0 = arith.constant 0 : index
-    %2:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-    %3 = fir.array_load %arg0 : (!fir.box<!fir.array<?xf32>>) -> !fir.array<?xf32>
     %c0_0 = arith.constant 0 : index
     fir.store %c0_0 to %0 : !fir.ref<index>
     %c32 = arith.constant 32 : index
@@ -243,18 +240,6 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
       fir.result %26 : !fir.heap<f32>
     }
     %13 = fir.convert %12 : (!fir.heap<f32>) -> !fir.heap<!fir.array<?xf32>>
-    %14 = fir.load %0 : !fir.ref<index>
-    %15 = fir.shape %14 : (index) -> !fir.shape<1>
-    %16 = fir.array_load %13(%15) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.array<?xf32>
-    %c1 = arith.constant 1 : index
-    %c0_1 = arith.constant 0 : index
-    %17 = arith.subi %2#1, %c1 : index
-    %18 = fir.do_loop %arg4 = %c0_1 to %17 step %c1 unordered iter_args(%arg5 = %3) -> (!fir.array<?xf32>) {
-      %19 = fir.array_fetch %16, %arg4 : (!fir.array<?xf32>, index) -> f32
-      %20 = fir.array_update %arg5, %19, %arg4 : (!fir.array<?xf32>, f32, index) -> !fir.array<?xf32>
-      fir.result %20 : !fir.array<?xf32>
-    }
-    fir.array_merge_store %3, %18 to %arg0 : !fir.array<?xf32>, !fir.array<?xf32>, !fir.box<!fir.array<?xf32>>
     fir.freemem %13 : !fir.heap<!fir.array<?xf32>>
     return
   }

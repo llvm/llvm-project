@@ -333,7 +333,6 @@ void sequence_container_benchmarks(std::string container) {
           };
 
           std::vector<Container> c(BatchSize, at_capacity(Container(in.begin(), in.end())));
-          std::vector<Container> const original = c;
 
           while (st.KeepRunningBatch(BatchSize)) {
             for (std::size_t i = 0; i != BatchSize; ++i) {

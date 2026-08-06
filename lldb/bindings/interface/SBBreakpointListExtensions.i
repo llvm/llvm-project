@@ -7,7 +7,8 @@
 
     def __iter__(self):
         '''Iterate over all breakpoints in a lldb.SBBreakpointList object.'''
-        return lldb_iter(self, 'GetSize', 'GetBreakpointAtIndex')
+        for i in range(self.GetSize()):
+            yield self.GetBreakpointAtIndex(i)
 
     def __getitem__(self, idx):
         '''Get the breakpoint at a given index in an lldb.SBBreakpointList object.'''

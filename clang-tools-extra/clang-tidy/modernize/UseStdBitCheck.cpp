@@ -123,9 +123,9 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
           Result.Nodes.getNodeAs<BinaryOperator>("has_single_bit_expr")) {
     const auto *MatchedVarDecl = Result.Nodes.getNodeAs<VarDecl>("v");
 
-    auto Diag =
+    const auto Diag =
         diag(MatchedExpr->getBeginLoc(), "use 'std::has_single_bit' instead");
-    if (auto R = MatchedExpr->getSourceRange();
+    if (const auto R = MatchedExpr->getSourceRange();
         !R.getBegin().isMacroID() && !R.getEnd().isMacroID()) {
       Diag << FixItHint::CreateReplacement(
                   MatchedExpr->getSourceRange(),
@@ -144,8 +144,9 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
     const uint64_t MatchedVarSize = Context.getTypeSize(MatchedArg->getType());
     if (BitsetSize < MatchedVarSize)
       return;
-    auto Diag = diag(MatchedExpr->getBeginLoc(), "use 'std::popcount' instead");
-    if (auto R = MatchedExpr->getSourceRange();
+    const auto Diag =
+        diag(MatchedExpr->getBeginLoc(), "use 'std::popcount' instead");
+    if (const auto R = MatchedExpr->getSourceRange();
         !R.getBegin().isMacroID() && !R.getEnd().isMacroID()) {
       Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
                   MatchedArg->getEndLoc().getLocWithOffset(1),
@@ -195,9 +196,9 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
     const StringRef ReplacementFuncName = IsRotl ? "rotl" : "rotr";
     const uint64_t ReplacementShiftAmount =
         (IsRotl ? ShiftLeftAmount : ShiftRightAmount).getZExtValue();
-    auto Diag = diag(MatchedExpr->getBeginLoc(), "use 'std::%0' instead")
-                << ReplacementFuncName;
-    if (auto R = MatchedExpr->getSourceRange();
+    const auto Diag = diag(MatchedExpr->getBeginLoc(), "use 'std::%0' instead")
+                      << ReplacementFuncName;
+    if (const auto R = MatchedExpr->getSourceRange();
         R.getBegin().isMacroID() || R.getEnd().isMacroID())
       return;
 

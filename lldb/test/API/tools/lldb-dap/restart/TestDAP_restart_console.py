@@ -2,13 +2,20 @@
 Test lldb-dap RestartRequest.
 """
 
-from lldbsuite.test.decorators import skipIf, skipIfAsan, skipIfBuildType, skipIfWindows
+from lldbsuite.test.decorators import (
+    skipIf,
+    skipIfAsan,
+    skipIfBuildType,
+    skipIfWasm,
+    skipIfWindows,
+)
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import Console, LaunchArgs
 
 
 @skipIfBuildType(["debug"])
+@skipIfWasm  # runInTerminal has the client run the program, and a Wasm module is not executable
 class TestDAP_restart_console(DAPTestCaseBase):
     @skipIfAsan
     @skipIfWindows  # https://github.com/llvm/llvm-project/issues/200840

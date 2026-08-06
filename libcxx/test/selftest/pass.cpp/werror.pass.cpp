@@ -19,4 +19,5 @@
 
 int main(int, char**) {
     int foo;
+    return 0;
 }

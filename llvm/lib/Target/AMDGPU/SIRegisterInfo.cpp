@@ -752,14 +752,14 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     reserveRegisterTuples(Reserved, MFI->getVGPRForAGPRCopy());
   }
 
-  // During wwm-regalloc, reserve the registers for perlane VGPR allocation. The
-  // MFI->getNonWWMRegMask() field will have a valid bitmask only during
+  // During wwm-regalloc, reserve the registers for per-lane VGPR allocation.
+  // The MFI->getPerLaneVGPRMask() field will have a valid bitmask only during
   // wwm-regalloc and it would be empty otherwise.
-  BitVector NonWWMRegMask = MFI->getNonWWMRegMask();
-  if (!NonWWMRegMask.empty()) {
+  BitVector PerLaneVGPRMask = MFI->getPerLaneVGPRMask();
+  if (!PerLaneVGPRMask.empty()) {
     for (unsigned RegI = AMDGPU::VGPR0, RegE = AMDGPU::VGPR0 + MaxNumVGPRs;
          RegI < RegE; ++RegI) {
-      if (NonWWMRegMask.test(RegI))
+      if (PerLaneVGPRMask.test(RegI))
         reserveRegisterTuples(Reserved, RegI);
     }
   }

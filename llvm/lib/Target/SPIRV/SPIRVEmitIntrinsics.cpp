@@ -2591,8 +2591,8 @@ SPIRVEmitIntrinsicsImpl::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
   SmallVector<Value *> Args(I.operands());
-  Args.push_back(B.getInt32(
-      static_cast<uint32_t>(getMemScope(I.getContext(), I.getSyncScopeID()))));
+  Args.push_back(B.getInt32(static_cast<uint32_t>(
+      getMemScope(TM.getTargetTriple(), I.getContext(), I.getSyncScopeID()))));
   // Per SPIR-V spec atomic ops must combine the ordering bits with the
   // storage-class bit.
   const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());

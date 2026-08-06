@@ -104,7 +104,8 @@ void RedundantBranchConditionCheck::check(
   if (hasPtrOrReferenceInFunc(Func, CondVar))
     return;
 
-  auto Diag = diag(InnerIf->getBeginLoc(), "redundant condition %0") << CondVar;
+  const auto Diag = diag(InnerIf->getBeginLoc(), "redundant condition %0")
+                    << CondVar;
 
   // For standalone condition variables and for "or" binary operations we simply
   // remove the inner `if`.

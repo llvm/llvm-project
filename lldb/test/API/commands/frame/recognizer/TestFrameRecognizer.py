@@ -14,6 +14,7 @@ import recognizer
 class FrameRecognizerTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfWasm  # the recognizer reads the arguments from $argN, and Wasm has no argument registers
     def test_frame_recognizer_1(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -162,6 +163,7 @@ class FrameRecognizerTestCase(TestBase):
                     substrs=['*a = 78'])
         """
 
+    @skipIfWasm  # the recognizer reads the arguments from $argN, and Wasm has no argument registers
     def test_recognized_args_filtered_by_name(self):
         """Test that 'frame variable <name>' only prints matching recognized args."""
         self.build()

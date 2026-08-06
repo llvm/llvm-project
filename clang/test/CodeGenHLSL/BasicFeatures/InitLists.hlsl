@@ -1231,7 +1231,7 @@ void case26(TwoInts TI) {
   float3 F2 = float3(3, TI);
 }
 
-using handle_float_t = __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::contained_type(float)]];
+using handle_float_t = __hlsl_resource_t [[hlsl::resource_class("UAV")]] [[hlsl::contained_type(float)]];
 
 struct CustomResource {
   handle_float_t h;

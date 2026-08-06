@@ -10,6 +10,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
@@ -510,32 +511,11 @@ StringRef AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
                   Scope <= SyncScope::OpenCLSubGroup &&
                   Ordering != llvm::AtomicOrdering::SequentiallyConsistent);
 
-  switch (Scope) {
-  case SyncScope::HIPSingleThread:
-  case SyncScope::SingleScope:
-    return IsOneAs ? "singlethread-one-as" : "singlethread";
-  case SyncScope::HIPWavefront:
-  case SyncScope::OpenCLSubGroup:
-  case SyncScope::WavefrontScope:
-    return IsOneAs ? "wavefront-one-as" : "wavefront";
-  case SyncScope::HIPCluster:
-  case SyncScope::ClusterScope:
-    assert(!IsOneAs && "OpenCL does not have cluster scope");
-    return "cluster";
-  case SyncScope::HIPWorkgroup:
-  case SyncScope::OpenCLWorkGroup:
-  case SyncScope::WorkgroupScope:
-    return IsOneAs ? "workgroup-one-as" : "workgroup";
-  case SyncScope::HIPAgent:
-  case SyncScope::OpenCLDevice:
-  case SyncScope::DeviceScope:
-    return IsOneAs ? "agent-one-as" : "agent";
-  case SyncScope::SystemScope:
-  case SyncScope::HIPSystem:
-  case SyncScope::OpenCLAllSVMDevices:
-    return IsOneAs ? "one-as" : "";
-  }
-  llvm_unreachable("Unknown SyncScope enum");
+  llvm::AtomicScope AS = getAtomicScope(Scope);
+  assert((AS != llvm::AtomicScope::Cluster || !IsOneAs) &&
+         "OpenCL does not have cluster scope");
+  return *llvm::getAtomicScopeIRString(getABIInfo().getTarget().getTriple(), AS,
+                                       IsOneAs);
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
@@ -559,6 +539,8 @@ void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
         llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS + 1));
     AtomicInst.setMetadata(llvm::LLVMContext::MD_noalias_addrspace, ASRange);
   }
+
+  CGF.AddAMDGPUAvailableVisibleMMRA(&AtomicInst);
 
   if (!RMW)
     return;

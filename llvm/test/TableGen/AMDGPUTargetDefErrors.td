@@ -9,6 +9,8 @@
 // RUN:   | FileCheck %t/bad-isa-version.td -DFILE=%t/bad-isa-version.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/bad-stepping.td 2>&1 \
 // RUN:   | FileCheck %t/bad-stepping.td -DFILE=%t/bad-stepping.td --implicit-check-not="error:"
+// RUN: not llvm-tblgen -gen-amdgpu-target-def -I %p/../../include %t/generic-feature-superset.td 2>&1 \
+// RUN:   | FileCheck %t/generic-feature-superset.td -DFILE=%t/generic-feature-superset.td --implicit-check-not="error:"
 
 // Verify the validation performed by the -gen-amdgpu-target-def backend.
 
@@ -89,3 +91,31 @@ class AMDGPUGPUInfo<list<int> isa = []> {
 // triple subarch name (e.g. "amdgpu9.0c").
 // CHECK: [[FILE]]:[[#@LINE+1]]:1: error: GPU 'gfx900' stepping must be a single hex digit
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 16]>;
+
+//--- generic-feature-superset.td
+include "llvm/Target/Target.td"
+def MyTarget : Target;
+class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
+class AMDGPUGPUInfo<list<int> isa = []> {
+  list<AMDGPUArchFeature> ArchFeatures = [];
+  list<int> IsaVersion = isa;
+  list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
+}
+
+def FeatureFoo : SubtargetFeature<"foo", "HasFoo", "true", "Foo">;
+
+// The generic check only considers frontend-visible features.
+def AMDGPUFrontendVisibleFeatures {
+  list<SubtargetFeature> Features = [FeatureFoo];
+}
+
+def GFX900 : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
+
+// A generic target must not expose a feature a covered GPU lacks: gfx900 does
+// not have 'foo'.
+// CHECK: [[FILE]]:[[#@LINE+1]]:1: error: generic target 'gfx9-generic' exposes feature 'foo' not supported by covered GPU 'gfx900'
+def : ProcessorModel<"gfx9-generic", NoSchedModel, [FeatureFoo]>,
+      AMDGPUGPUInfo<[9, 0, 0]> {
+  let CoveredGPUs = [GFX900];
+}

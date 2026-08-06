@@ -48,6 +48,9 @@ public:
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
+  /// Check whether an alignment fragment needs linker relaxation.
+  static bool shouldRelaxAlign(const MCFragment &F);
+
   bool relaxAlign(MCFragment &F, unsigned &Size) override;
   bool relaxDwarfLineAddr(MCFragment &) const override;
   bool relaxDwarfCFA(MCFragment &) const override;

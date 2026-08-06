@@ -571,7 +571,7 @@ class _LIBCPP_NO_SPECIALIZATIONS tuple {
 
 public:
   using __trivially_relocatable _LIBCPP_NODEBUG =
-      __conditional_t<_And<__libcpp_is_trivially_relocatable<_Tp>...>::value, tuple, void>;
+      __conditional_t<__all<__is_trivially_relocatable_v<_Tp>...>::value, tuple, void>;
 
   // [tuple.cnstr]
 
@@ -1435,15 +1435,6 @@ _LIBCPP_POP_MACROS
 
 // clang-format on
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <cstddef>
-#    include <exception>
-#    include <iosfwd>
-#    include <new>
-#    include <type_traits>
-#    include <typeinfo>
-#    include <utility>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_TUPLE

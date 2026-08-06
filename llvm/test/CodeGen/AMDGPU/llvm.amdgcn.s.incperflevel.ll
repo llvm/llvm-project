@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=GCN %s
 
 declare void @llvm.amdgcn.s.incperflevel(i32) #0
 

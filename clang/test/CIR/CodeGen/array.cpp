@@ -105,6 +105,29 @@ int h[16] = {1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0};
 // OGCG-SAME:               i32 5, i32 6, i32 7, i32 8],
 // OGCG-SAME:             [8 x i32] zeroinitializer }>
 
+struct Pair {
+  int a;
+  int b;
+  constexpr Pair(int x) : a(x), b(x * x) {}
+};
+Pair pairs[3] = {Pair(2), Pair(3), Pair(4)};
+
+// CIR: cir.global external @pairs = #cir.const_array<[#cir.const_record<{#cir.int<2> : !s32i, #cir.int<4> : !s32i}> : !rec_Pair, #cir.const_record<{#cir.int<3> : !s32i, #cir.int<9> : !s32i}> : !rec_Pair, #cir.const_record<{#cir.int<4> : !s32i, #cir.int<16> : !s32i}> : !rec_Pair]> : !cir.array<!rec_Pair x 3>
+
+// LLVM: @pairs = global [3 x %struct.Pair] [%struct.Pair { i32 2, i32 4 }, %struct.Pair { i32 3, i32 9 }, %struct.Pair { i32 4, i32 16 }]
+// OGCG: @pairs = global [3 x %struct.Pair] [%struct.Pair { i32 2, i32 4 }, %struct.Pair { i32 3, i32 9 }, %struct.Pair { i32 4, i32 16 }]
+
+struct Flagged {
+  int value;
+  bool active = true;
+};
+Flagged items[2] = {{10}, {20}};
+
+// CIR: cir.global external @items = #cir.const_array<[#cir.const_record<{#cir.int<10> : !s32i, #true, #cir.zero : !cir.array<!u8i x 3>}> : !rec_Flagged, #cir.const_record<{#cir.int<20> : !s32i, #true, #cir.zero : !cir.array<!u8i x 3>}> : !rec_Flagged]> : !cir.array<!rec_Flagged x 2>
+
+// LLVM: @items = global [2 x %struct.Flagged] [%struct.Flagged <{ i32 10, i8 1, [3 x i8] zeroinitializer }>, %struct.Flagged <{ i32 20, i8 1, [3 x i8] zeroinitializer }>]
+// OGCG: @items = global [2 x { i32, i8 }] [{ i32, i8 } { i32 10, i8 1 }, { i32, i8 } { i32 20, i8 1 }]
+
 char huge[0x1FFFFFFFFFFFFFFFULL];
 // CIR: cir.global external @huge = #cir.zero : !cir.array<!s8i x 2305843009213693951>
 // LLVM: @huge = global [2305843009213693951 x i8] zeroinitializer

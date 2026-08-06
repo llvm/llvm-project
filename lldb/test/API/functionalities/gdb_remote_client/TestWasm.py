@@ -408,6 +408,45 @@ class TestWasm(GDBRemoteTestBase):
 
     @skipIfAsan
     @skipIfXmlSupportMissing
+    def test_max_backtrace_depth(self):
+        """Test that a Wasm backtrace stops at the depth the target sets, so
+        that a stack recursing without end is not walked to its end."""
+
+        yaml_path = "simple.yaml"
+        yaml_base, _ = os.path.splitext(yaml_path)
+        obj_path = self.getBuildArtifact(yaml_base)
+        self.yaml2obj(yaml_path, obj_path)
+
+        call_stacks = [
+            WasmCallStack(
+                [WasmStackFrame(0x019C), WasmStackFrame(0x01E5), WasmStackFrame(0x01FE)]
+            ),
+        ]
+        self.server.responder = MyResponder(obj_path, "test_wasm", call_stacks)
+
+        target = self.dbg.CreateTarget("")
+        process = self.connect(target, "wasm")
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
+
+        thread = process.GetThreadAtIndex(0)
+        self.assertTrue(thread.IsValid())
+        self.assertTrue(thread.GetFrameAtIndex(0).IsValid())
+
+        # A depth set after a stop still applies to the frames a backtrace has
+        # not reported yet, which is when a user lowers it.
+        self.runCmd("settings set target.process.thread.max-backtrace-depth 2")
+
+        # The stub reported three frames, and the innermost two are the ones
+        # kept.
+        self.assertEqual(2, thread.GetNumFrames())
+        self.assertEqual(thread.GetFrameAtIndex(0).GetPC(), LOAD_ADDRESS | 0x019C)
+        self.assertEqual(thread.GetFrameAtIndex(1).GetPC(), LOAD_ADDRESS | 0x01E5)
+        self.assertFalse(thread.GetFrameAtIndex(2).IsValid())
+
+    @skipIfAsan
+    @skipIfXmlSupportMissing
     def test_read_global(self):
         """Test that a WebAssembly global can be read through the address its
         module gives it, and that a read it cannot serve fails instead of

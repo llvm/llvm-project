@@ -16,7 +16,7 @@ Clang-Tidy Alphabetical Order Checker
 Normalize Clang-Tidy documentation with deterministic sorting for linting/tests.
 
 Behavior:
-- Sort entries in docs/clang-tidy/checks/list.rst csv-table.
+- Sort entries in docs/clang-tidy/checks/list.md Markdown tables.
 - Sort key sections in docs/ReleaseNotes.rst.
 - Detect duplicated entries in 'Changes in existing checks'.
 
@@ -47,16 +47,16 @@ from typing import (
 # items by their label.
 DOC_LABEL_RN_RE: Final = re.compile(r":doc:`(?P<label>[^`<]+)\s*(?:<[^>]+>)?`")
 
-# Matches a single csv-table row line in list.rst that begins with a :doc:
-# reference, capturing the label. Used to extract the sort key per row.
-DOC_LINE_RE: Final = re.compile(r"^\s*:doc:`(?P<label>[^`<]+?)\s*<[^>]+>`.*$")
+# Matches a single Markdown table row line in list.md that begins with a
+# {doc} reference, capturing the label. Used to extract the sort key per row.
+DOC_LINE_RE: Final = re.compile(r"^\|\s*\{doc\}`(?P<label>[^`<]+?)\s*<[^>]+>`.*$")
 
 
 EXTRA_DIR: Final = os.path.join(os.path.dirname(__file__), "../..")
 DOCS_DIR: Final = os.path.join(EXTRA_DIR, "docs")
 CLANG_TIDY_DOCS_DIR: Final = os.path.join(DOCS_DIR, "clang-tidy")
 CHECKS_DOCS_DIR: Final = os.path.join(CLANG_TIDY_DOCS_DIR, "checks")
-LIST_DOC: Final = os.path.join(CHECKS_DOCS_DIR, "list.rst")
+LIST_DOC: Final = os.path.join(CHECKS_DOCS_DIR, "list.md")
 RELEASE_NOTES_DOC: Final = os.path.join(DOCS_DIR, "ReleaseNotes.rst")
 
 
@@ -136,8 +136,16 @@ def write_text(path: str, content: str) -> None:
         f.write(content)
 
 
-def _normalize_list_rst_lines(lines: Sequence[str]) -> List[str]:
-    """Return normalized content of checks list.rst as a list of lines."""
+def _is_markdown_table_header(lines: Sequence[str], index: int) -> bool:
+    return (
+        index + 1 < len(lines)
+        and lines[index].startswith("| Name |")
+        and lines[index + 1].startswith("| ---")
+    )
+
+
+def _normalize_list_md_lines(lines: Sequence[str]) -> List[str]:
+    """Return normalized content of checks list.md as a list of lines."""
     out: List[str] = []
     i = 0
     n = len(lines)
@@ -148,19 +156,13 @@ def _normalize_list_rst_lines(lines: Sequence[str]) -> List[str]:
         return (1, "")
 
     while i < n:
-        line = lines[i]
-        if line.lstrip().startswith(".. csv-table::"):
-            out.append(line)
-            i += 1
-
-            while i < n and (lines[i].startswith(" ") or lines[i].strip() == ""):
-                if DOC_LINE_RE.match(lines[i]):
-                    break
-                out.append(lines[i])
-                i += 1
+        if _is_markdown_table_header(lines, i):
+            out.append(lines[i])
+            out.append(lines[i + 1])
+            i += 2
 
             entries: List[str] = []
-            while i < n and lines[i].startswith(" "):
+            while i < n and lines[i].startswith("| "):
                 entries.append(lines[i])
                 i += 1
 
@@ -168,16 +170,16 @@ def _normalize_list_rst_lines(lines: Sequence[str]) -> List[str]:
             out.extend(entries_sorted)
             continue
 
-        out.append(line)
+        out.append(lines[i])
         i += 1
 
     return out
 
 
-def normalize_list_rst(data: str) -> str:
-    """Normalize list.rst content and return a string."""
+def normalize_list_md(data: str) -> str:
+    """Normalize list.md content and return a string."""
     lines = data.splitlines(True)
-    return "".join(_normalize_list_rst_lines(lines))
+    return "".join(_normalize_list_md_lines(lines))
 
 
 def find_heading(lines: Sequence[str], title: str) -> Optional[int]:
@@ -395,11 +397,11 @@ def process_release_notes(out_path: str, rn_doc: str) -> int:
 
 def process_checks_list(out_path: str, list_doc: str) -> int:
     text = read_text(list_doc)
-    normalized = normalize_list_rst(text)
+    normalized = normalize_list_md(text)
 
     if text != normalized:
         sys.stderr.write(
-            "\nChecks in 'clang-tools-extra/docs/clang-tidy/checks/list.rst' csv-table are not alphabetically sorted.\n"
+            "\nChecks in 'clang-tools-extra/docs/clang-tidy/checks/list.md' tables are not alphabetically sorted.\n"
             "Fix the ordering by applying diff printed below.\n\n"
         )
 

@@ -44,7 +44,7 @@ for.cond.cleanup.loopexit:
 ; CHECK:         load i32, ptr %scevgep, align 4, !alias.scope !2, !noalias !5
 
 ; CHECK:       !0 = distinct !{!0, !1}
-; CHECK:       !1 = !{!"llvm.loop.vectorize.enable", i32 0}
+; CHECK:       !1 = !{!"llvm.loop.vectorize.disable"}
 ; CHECK:       !2 = !{!3}
 ; CHECK:       !3 = distinct !{!3, !4, !"polly.alias.scope.MemRef_d"}
 ; CHECK:       !4 = distinct !{!4, !"polly.alias.scope.domain"}

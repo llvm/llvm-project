@@ -57,9 +57,8 @@ define <8 x i8> @trunc_qb_512_maskz(<8 x i64> %i, i8 %m) #0 {
 ;
 ; SKX-LABEL: trunc_qb_512_maskz:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpmovqb %zmm0, %xmm0
 ; SKX-NEXT:    kmovd %edi, %k1
-; SKX-NEXT:    vmovdqu8 %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    vpmovqb %zmm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %x = trunc <8 x i64> %i to <8 x i8>
@@ -1463,4 +1462,60 @@ define void @test_trunc_v2i16_v2i8(ptr %dst, ptr %src) {
   %2 = trunc <2 x i16> %1 to <2 x i8>
   store <2 x i8> %2, ptr %dst
   ret void
+}
+
+; Test vselect(mask, vtrunc(x), 0) to vmtrunc for masked vpmovqb. PR212865
+define <8 x i8> @test_mask_vpmovqb(<8 x i64> %0, <8 x i64> %1) {
+; KNL-LABEL: test_mask_vpmovqb:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; KNL-NEXT:    vpbroadcastb {{.*#+}} ymm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; KNL-NEXT:    vpand %ymm2, %ymm1, %ymm3
+; KNL-NEXT:    vbroadcasti128 {{.*#+}} ymm4 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; KNL-NEXT:    ## ymm4 = mem[0,1,0,1]
+; KNL-NEXT:    vpshufb %ymm3, %ymm4, %ymm3
+; KNL-NEXT:    vpsrlw $4, %ymm1, %ymm1
+; KNL-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; KNL-NEXT:    vpshufb %ymm1, %ymm4, %ymm1
+; KNL-NEXT:    vpaddb %ymm3, %ymm1, %ymm1
+; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; KNL-NEXT:    vpsadbw %ymm3, %ymm1, %ymm1
+; KNL-NEXT:    vpand %ymm2, %ymm0, %ymm5
+; KNL-NEXT:    vpshufb %ymm5, %ymm4, %ymm5
+; KNL-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; KNL-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; KNL-NEXT:    vpshufb %ymm0, %ymm4, %ymm0
+; KNL-NEXT:    vpaddb %ymm5, %ymm0, %ymm0
+; KNL-NEXT:    vpsadbw %ymm3, %ymm0, %ymm0
+; KNL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; KNL-NEXT:    vpmovqb %zmm0, %xmm0
+; KNL-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
+; KNL-NEXT:    vpmovdb %zmm1, %xmm1
+; KNL-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_mask_vpmovqb:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpcmpeqq %zmm1, %zmm0, %k1
+; SKX-NEXT:    vpbroadcastb {{.*#+}} zmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; SKX-NEXT:    vpandq %zmm1, %zmm0, %zmm2
+; SKX-NEXT:    vbroadcasti32x4 {{.*#+}} zmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; SKX-NEXT:    ## zmm3 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; SKX-NEXT:    vpshufb %zmm2, %zmm3, %zmm2
+; SKX-NEXT:    vpsrlw $4, %zmm0, %zmm0
+; SKX-NEXT:    vpandq %zmm1, %zmm0, %zmm0
+; SKX-NEXT:    vpshufb %zmm0, %zmm3, %zmm0
+; SKX-NEXT:    vpaddb %zmm2, %zmm0, %zmm0
+; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; SKX-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
+; SKX-NEXT:    vpmovqb %zmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+  %3 = icmp eq <8 x i64> %0, %1
+  %4 = tail call range(i64 0, 65) <8 x i64> @llvm.ctpop.v8i64(<8 x i64> %0)
+  %5 = trunc nuw nsw <8 x i64> %4 to <8 x i8>
+  %6 = select <8 x i1> %3, <8 x i8> %5, <8 x i8> zeroinitializer
+  ret <8 x i8> %6
 }

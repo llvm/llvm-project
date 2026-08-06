@@ -1136,6 +1136,42 @@ DataExtractor ObjectFileWasm::ReadImageData(offset_t offset, uint32_t size) {
   return data;
 }
 
+UUID ObjectFileWasm::GetUUID() {
+  if (m_uuid)
+    return m_uuid;
+
+  // A Wasm module carries the identifier a linker gave it in a custom section,
+  // as a vector of bytes. It is the only thing that tells one build of a module
+  // from another, so a module linked without one cannot be identified at all.
+  static constexpr llvm::StringLiteral g_sect_name_build_id("build_id");
+  for (const section_info &sect_info : m_sect_infos) {
+    if (g_sect_name_build_id != sect_info.name)
+      continue;
+
+    DataExtractor section_data =
+        ReadImageData(sect_info.offset, sect_info.size);
+    llvm::DataExtractor data = section_data.GetAsLLVM();
+    llvm::DataExtractor::Cursor c(0);
+    llvm::Expected<uint32_t> length = GetULEB32(data, c);
+    if (!length) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Object), length.takeError(),
+                     "failed to parse the build id length: {0}");
+      return m_uuid;
+    }
+    llvm::SmallVector<uint8_t, 32> id(*length, 0);
+    data.getU8(c, id.data(), id.size());
+    if (!c) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Object), c.takeError(),
+                     "failed to parse the build id: {0}");
+      return m_uuid;
+    }
+    m_uuid = UUID(id);
+    break;
+  }
+
+  return m_uuid;
+}
+
 std::optional<FileSpec> ObjectFileWasm::GetExternalDebugInfoFileSpec() {
   static ConstString g_sect_name_external_debug_info("external_debug_info");
 

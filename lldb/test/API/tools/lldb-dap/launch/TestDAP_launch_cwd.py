@@ -4,10 +4,12 @@ Test lldb-dap launch request.
 
 import os
 
+from lldbsuite.test.decorators import skipIfWasm
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
+@skipIfWasm  # WASI gives the inferior no working directory and no file system
 class TestDAP_launch_cwd(DAPTestCaseBase):
     """
     Tests the default launch of a simple program with a current working

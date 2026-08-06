@@ -303,6 +303,7 @@ add_header_library(
     .comparison_operations
     .dyadic_float
     libc.hdr.stdint_proxy
+    libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.FPUtil.generic.div

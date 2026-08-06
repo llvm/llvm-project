@@ -458,6 +458,7 @@ CUresult cuMemAllocHost(void **, size_t);
 CUresult cuMemAllocManaged(CUdeviceptr *, size_t, unsigned int);
 CUresult cuMemAllocAsync(CUdeviceptr *, size_t, CUstream);
 
+CUresult cuMemcpyAsync(CUdeviceptr, CUdeviceptr, size_t, CUstream);
 CUresult cuMemcpyDtoDAsync(CUdeviceptr, CUdeviceptr, size_t, CUstream);
 CUresult cuMemcpyDtoH(void *, CUdeviceptr, size_t);
 CUresult cuMemcpyDtoHAsync(void *, CUdeviceptr, size_t, CUstream);

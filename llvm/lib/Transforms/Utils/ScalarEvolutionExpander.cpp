@@ -2321,14 +2321,25 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   // negative. If Step is known to be positive or negative, only create
   // either 1. or 2.
   auto ComputeEndCheck = [&]() -> Value * {
-    // Get the backedge taken count and truncate or extended to the AR type.
-    Value *TruncTripCount = Builder.CreateZExtOrTrunc(TripCountVal, Ty);
+    // Check to see if we already expanded this here.
+    Value *MulV, *OfMul;
+    auto Key = std::make_tuple(TripCountVal, AbsStep, Loc);
+    auto I = InsertedOverflowChecks.find(Key);
+    if (I != InsertedOverflowChecks.end()) {
+      MulV = I->second.first;
+      OfMul = I->second.second;
+    } else {
+      // Get the backedge taken count and truncate or extended to the AR type.
+      Value *TruncTripCount = Builder.CreateZExtOrTrunc(TripCountVal, Ty);
+      Value *Mul = Builder.CreateIntrinsic(Intrinsic::umul_with_overflow, Ty,
+                                           {AbsStep, TruncTripCount},
+                                           /*FMFSource=*/nullptr, "mul");
+      MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
+      OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
 
-    Value *Mul = Builder.CreateIntrinsic(Intrinsic::umul_with_overflow, Ty,
-                                         {AbsStep, TruncTripCount},
-                                         /*FMFSource=*/nullptr, "mul");
-    Value *MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
-    Value *OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
+      // The type Ty is already encoded in AbsStep.
+      InsertedOverflowChecks[Key] = std::pair<Value *, Value *>(MulV, OfMul);
+    }
 
     Value *Add = nullptr, *Sub = nullptr;
     bool NeedPosCheck = !SE.isKnownNegative(Step);

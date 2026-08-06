@@ -414,8 +414,7 @@ class _LIBCPP_DECLSPEC_EMPTY_BASES optional
 public:
   using value_type = __libcpp_remove_reference_t<_Tp>;
 
-  using __trivially_relocatable _LIBCPP_NODEBUG =
-      conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value, optional, void>;
+  using __trivially_relocatable _LIBCPP_NODEBUG = conditional_t<__is_trivially_relocatable_v<_Tp>, optional, void>;
 
 private:
   static_assert(!is_same_v<remove_cv_t<_Tp>, in_place_t>, "instantiation of optional with in_place_t is ill-formed");

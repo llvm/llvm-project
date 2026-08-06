@@ -335,3 +335,31 @@ func.func @fold_to_non_operand_value(%x: i64, %cond: i1) -> i64 {
   %cast2 = builtin.unrealized_conversion_cast %cast1 : index to i64
   return %cast2 : i64
 }
+
+// -----
+
+// Regression test: SCCP must revert in-place folds. The `vector.extract`
+// folder rewrites a constant dynamic position into a static one in place, but
+// the constants SCCP feeds into `fold` are speculative: on the first visit of
+// ^bb1 %iv is Constant 0, before the back edge widens it to overdefined.
+// Without the revert, the dynamic extract would permanently read element 0.
+
+// CHECK-LABEL: func @no_inplace_extract_fold_of_speculative_constant
+func.func @no_inplace_extract_fold_of_speculative_constant(%a: f32, %b: f32) -> f32 {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c2_i32 = arith.constant 2 : i32
+  %v = vector.from_elements %a, %b : vector<2xf32>
+  cf.br ^bb1(%c0_i32 : i32)
+// CHECK: ^bb1(%[[IV:.*]]: i32):
+^bb1(%iv: i32):
+  // CHECK: %[[IDX:.*]] = arith.index_cast %[[IV]] : i32 to index
+  %idx = arith.index_cast %iv : i32 to index
+  // CHECK: vector.extract %{{.*}}[%[[IDX]]] : f32 from vector<2xf32>
+  %e = vector.extract %v[%idx] : f32 from vector<2xf32>
+  %next = arith.addi %iv, %c1_i32 : i32
+  %cond = arith.cmpi ne, %next, %c2_i32 : i32
+  cf.cond_br %cond, ^bb1(%next : i32), ^bb2
+^bb2:
+  return %e : f32
+}

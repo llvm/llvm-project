@@ -1785,12 +1785,12 @@ llvm::Value *ItaniumCXXABI::emitExactDynamicCast(
     PerformPostCastAuthentication = CGF.getLangOpts().PointerAuthCalls;
     CGPointerAuthInfo StrippingAuthInfo(0, PointerAuthenticationMode::Strip,
                                         false, false, nullptr);
-    Address VTablePtrPtr = ThisAddr.withElementType(CGF.VoidPtrPtrTy);
+    Address VTablePtrPtr = ThisAddr.withElementType(CGM.GlobalsInt8PtrTy);
     VTable = CGF.Builder.CreateLoad(VTablePtrPtr, "vtable");
     if (PerformPostCastAuthentication)
       VTable = CGF.EmitPointerAuthAuth(StrippingAuthInfo, VTable);
   } else
-    VTable = CGF.GetVTablePtr(ThisAddr, CGF.DefaultPtrTy, SrcDecl);
+    VTable = CGF.GetVTablePtr(ThisAddr, CGM.GlobalsInt8PtrTy, SrcDecl);
 
   // Compare the vptr against the expected vptr for the destination type at
   // this offset.
@@ -3441,7 +3441,8 @@ LValue ItaniumCXXABI::EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF,
   llvm::Value *Val = CGF.CGM.GetAddrOfGlobalVar(VD);
   llvm::Function *Wrapper = getOrCreateThreadLocalWrapper(VD, Val);
 
-  llvm::CallInst *CallVal = CGF.Builder.CreateCall(Wrapper);
+  llvm::CallInst *CallVal =
+      CGF.Builder.CreateCall(Wrapper, {}, CGF.getBundlesForFunclet(Wrapper));
   CallVal->setCallingConv(Wrapper->getCallingConv());
 
   LValue LV;

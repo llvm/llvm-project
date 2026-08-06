@@ -598,4 +598,4 @@ exit:
 !11 = !{i32 2, !"Debug Info Version", i32 3}
 !12 = distinct !{!12, !13, !14}
 !13 = !{!"llvm.loop.vectorize.width", i32 2}
-!14 = !{!"llvm.loop.vectorize.enable", i1 true}
+!14 = !{!"llvm.loop.vectorize.enable"}

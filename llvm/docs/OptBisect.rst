@@ -21,13 +21,10 @@ allocation.
 
 The ``-opt-bisect-limit`` option can be used with any tool, including front ends
 such as clang, that uses the core LLVM library for optimization and code
-generation.  The exact syntax for invoking the option is discussed below.
-
-This feature is not intended to replace other debugging tools such as bugpoint.
-Rather it provides an alternate course of action when reproducing the problem
-requires a complex build infrastructure that would make using bugpoint
-impractical or when reproducing the failure requires a sequence of
-transformations that is difficult to replicate with tools like opt and llc.
+generation.  The exact syntax for invoking the option is discussed below. This
+makes ``-opt-bisect-limit`` easy to use in situations that require complex
+build infrastructure or when a full pass pipeline is needed that is difficult
+to replace in opt or llc.
 
 
 Getting Started

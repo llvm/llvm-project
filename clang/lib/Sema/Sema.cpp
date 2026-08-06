@@ -573,14 +573,9 @@ void Sema::Initialize() {
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
   }
 
-  if (Context.getTargetInfo().getTriple().isAMDGPU() ||
-      (Context.getTargetInfo().getTriple().isSPIRV() &&
-       Context.getTargetInfo().getTriple().getVendor() == llvm::Triple::AMD) ||
+  if (Context.getTargetInfo().hasAMDGPUTypes() ||
       (Context.getAuxTargetInfo() &&
-       (Context.getAuxTargetInfo()->getTriple().isAMDGPU() ||
-        (Context.getAuxTargetInfo()->getTriple().isSPIRV() &&
-         Context.getAuxTargetInfo()->getTriple().getVendor() ==
-             llvm::Triple::AMD)))) {
+       (Context.getAuxTargetInfo()->hasAMDGPUTypes()))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/AMDGPUTypes.def"
@@ -2410,6 +2405,9 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
       ARM().checkSVETypeSupport(Ty, Loc, FD, CallerFeatureMap);
     }
+
+    if (TI.hasAMDGPUTypes())
+      AMDGPU().checkAMDGPUTypeSupport(Ty, Loc);
 
     if (auto *VT = Ty->getAs<VectorType>();
         VT && FD &&

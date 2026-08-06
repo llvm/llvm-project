@@ -394,11 +394,12 @@ public:
   // and this chunk is considered as dead.
   SectionChunk *repl;
 
+  void replace(SectionChunk *other);
+
 private:
   SectionChunk *assocChildren = nullptr;
 
   // Used for ICF (Identical COMDAT Folding)
-  void replace(SectionChunk *other);
   uint32_t eqClass[2] = {0, 0};
 
   // Relocations for this section. Size is stored below.

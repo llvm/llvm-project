@@ -2,7 +2,7 @@
 Test lldb-dap output events
 """
 
-from lldbsuite.test.decorators import skipIfWindows
+from lldbsuite.test.decorators import skipIfWasm, skipIfWindows
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
@@ -10,6 +10,7 @@ from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 class TestDAP_output(DAPTestCaseBase):
     @skipIfWindows
+    @skipIfWasm  # WASI block buffers a redirected stdout, so the writes arrive out of order
     def test_output(self):
         """
         Test output handling for the running process.

@@ -2270,6 +2270,9 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
     return ub::PoisonAttr::get(getContext());
 
   /// Bitcast integer or float to integer or float.
+  if (!llvm::isa<FloatAttr, IntegerAttr>(operand))
+    return {};
+
   APInt bits = llvm::isa<FloatAttr>(operand)
                    ? llvm::cast<FloatAttr>(operand).getValue().bitcastToAPInt()
                    : llvm::cast<IntegerAttr>(operand).getValue();

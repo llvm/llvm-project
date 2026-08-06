@@ -11,6 +11,7 @@
 #include "llvm/ExecutionEngine/Orc/COFF.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/Calls.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/WindowsDriver/MSVCPaths.h"
 
@@ -123,26 +124,28 @@ Error COFFVCRuntimeBootstrapper::initializeStaticVCRuntime(JITDylib &JD) {
             &jit_scrt_initialize_default_local_stdio_options}}))
     return Err;
 
-  auto RunVoidInitFunc = [&](ExecutorAddr Addr) -> Error {
-    if (auto Res = ES.getExecutorProcessControl().runAsVoidFunction(Addr))
-      return Error::success();
-    else
-      return Res.takeError();
-  };
+  auto CallInt32Void = rt::sps::Int32VoidCaller::Create(ES);
+  if (!CallInt32Void)
+    return CallInt32Void.takeError();
 
-  auto R =
-      ES.getExecutorProcessControl().runAsIntFunction(jit_scrt_initialize, 0);
+  auto CallInt32Int32 = rt::sps::Int32Int32Caller::Create(ES);
+  if (!CallInt32Int32)
+    return CallInt32Int32.takeError();
+
+  auto R = (*CallInt32Int32)(jit_scrt_initialize, 0);
   if (!R)
     return R.takeError();
 
-  if (auto Err = RunVoidInitFunc(jit_scrt_dllmain_before_initialize_c))
+  if (auto Err =
+          (*CallInt32Void)(jit_scrt_dllmain_before_initialize_c).takeError())
     return Err;
 
-  if (auto Err = RunVoidInitFunc(jit_scrt_initialize_type_info))
+  if (auto Err = (*CallInt32Void)(jit_scrt_initialize_type_info).takeError())
     return Err;
 
   if (auto Err =
-          RunVoidInitFunc(jit_scrt_initialize_default_local_stdio_options))
+          (*CallInt32Void)(jit_scrt_initialize_default_local_stdio_options)
+              .takeError())
     return Err;
 
   SymbolAliasMap Alias;

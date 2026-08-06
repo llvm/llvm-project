@@ -455,7 +455,7 @@ int bar(int a){
 // TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi100EE3fooEv", i32 {{[0-9]+}}, i32 0, i32 {{[0-9]+}}}
 // TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SCC1Ev", i32 {{[0-9]+}}, i32 0, i32 {{[0-9]+}}}
 
-// TCHECK-DAG: !{!"llvm.loop.vectorize.enable", i1 true}
-// CHECK-DAG: !{!"llvm.loop.vectorize.enable", i1 true}
+// TCHECK-DAG: !{!"llvm.loop.vectorize.enable"}
+// CHECK-DAG: !{!"llvm.loop.vectorize.enable"}
 
 #endif

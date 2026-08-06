@@ -308,3 +308,91 @@ outer.latch:
 exit:
   ret void
 }
+
+define void @stride2_store_load_preventing_forwarding(ptr %A) {
+; CHECK-LABEL: 'stride2_store_load_preventing_forwarding'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Backward loop carried data dependence that prevents store-to-load forwarding.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        BackwardVectorizableButPreventsForwarding:
+; CHECK-NEXT:            %ld = load i32, ptr %gep.ld, align 4 ->
+; CHECK-NEXT:            store i32 %ld, ptr %gep.st, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %A.offset = getelementptr i32, ptr %A, i64 6
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+
+  %iv.x2 = mul i64 %iv, 2
+  %gep.ld = getelementptr i32, ptr %A, i64 %iv.x2
+  %ld = load i32, ptr %gep.ld, align 4
+  %gep.st = getelementptr i32, ptr %A.offset, i64 %iv.x2
+  store i32 %ld, ptr %gep.st, align 4
+
+  %iv.next = add i64 %iv, 1
+  %cmp = icmp ne i64 %iv, 1024
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; FIXME: VF 2 is safe for store-load forwarding:
+;                 idx |  0 |  1 |  2 |  3 |  4 |  5 |  6 |  7 |  8 |  9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 |
+; v/iter 0 load  lane |  0 |    |    |  1 |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+; v/iter 0 store lane |    |    |    |    |    |    |  0 |    |    |  1 |    |    |    |    |    |    |    |    |    |
+; -------------------------------------------------------------------------------------------------------------------|
+; v/iter 1 load  lane |    |    |    |    |    |    |  0 |    |    |  1 |    |    |    |    |    |    |    |    |    |
+; v/iter 1 store lane |    |    |    |    |    |    |    |    |    |    |    |    |  0 |    |    |  1 |    |    |    |
+; -------------------------------------------------------------------------------------------------------------------|
+; v/iter 2 load  lane |    |    |    |    |    |    |    |    |    |    |    |    |  0 |    |    |  1 |    |    |    |
+; v/iter 2 store lane |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |  0 |
+define void @stride3_store_load_forwarding_safe_dist(ptr %A) {
+; CHECK-LABEL: 'stride3_store_load_forwarding_safe_dist'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Backward loop carried data dependence that prevents store-to-load forwarding.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        BackwardVectorizableButPreventsForwarding:
+; CHECK-NEXT:            %ld = load i32, ptr %gep.ld, align 4 ->
+; CHECK-NEXT:            store i32 %ld, ptr %gep.st, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %A.offset = getelementptr i32, ptr %A, i64 6
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+
+  %iv.x2 = mul i64 %iv, 3
+  %gep.ld = getelementptr i32, ptr %A, i64 %iv.x2
+  %ld = load i32, ptr %gep.ld, align 4
+  %gep.st = getelementptr i32, ptr %A.offset, i64 %iv.x2
+  store i32 %ld, ptr %gep.st, align 4
+
+  %iv.next = add i64 %iv, 1
+  %cmp = icmp ne i64 %iv, 1024
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}

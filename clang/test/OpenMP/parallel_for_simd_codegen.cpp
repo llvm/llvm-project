@@ -798,16 +798,16 @@ for (int i = 0; i < 10; ++i);
 // OMP50: omp.inner.for.body:
 // OMP50: %{{[0-9]+}} = atomicrmw add ptr %{{[0-9]+}}, i32 1 monotonic, align 4, !llvm.access.group !{{[0-9]+}}
 
-// OMP45-NOT: !{!"llvm.loop.vectorize.enable", i1 false}
+// OMP45-NOT: !{!"llvm.loop.vectorize.disable"}
 // OMP45-DAG: ![[VECT]] = distinct !{![[VECT]], ![[PA:.+]], ![[VM:.+]]}
 // OMP45-DAG: ![[PA]] = !{!"llvm.loop.parallel_accesses", !{{.+}}}
-// OMP45-DAG: ![[VM]] = !{!"llvm.loop.vectorize.enable", i1 true}
-// OMP45-NOT: !{!"llvm.loop.vectorize.enable", i1 false}
+// OMP45-DAG: ![[VM]] = !{!"llvm.loop.vectorize.enable"}
+// OMP45-NOT: !{!"llvm.loop.vectorize.disable"}
 // OMP50-DAG: ![[VECT]] = distinct !{![[VECT]], ![[PA:.+]], ![[VM:.+]]}
 // OMP50-DAG  ![[PA]] = !{!"llvm.loop.parallel_accesses", !{{.+}}}
-// OMP50-DAG: ![[VM]] = !{!"llvm.loop.vectorize.enable", i1 true}
+// OMP50-DAG: ![[VM]] = !{!"llvm.loop.vectorize.enable"}
 // OMP50-DAG: ![[NOVECT]] = distinct !{![[NOVECT]], ![[NOVM:.+]]}
-// OMP50-DAG: ![[NOVM]] = !{!"llvm.loop.vectorize.enable", i1 false}
+// OMP50-DAG: ![[NOVM]] = !{!"llvm.loop.vectorize.disable"}
 
 // TERM_DEBUG-LABEL: bar
 int bar() { extern void mayThrow(); mayThrow(); return 0; };

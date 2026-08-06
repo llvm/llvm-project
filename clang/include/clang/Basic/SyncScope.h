@@ -17,6 +17,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/AtomicScope.h"
 #include <memory>
 
 namespace clang {
@@ -240,15 +241,15 @@ public:
 class AtomicScopeGenericModel : public AtomicScopeModel {
 public:
   /// The enum values match predefined built-in macros __MEMORY_SCOPE_*.
-  /// These may be present in pch files or bitcode so preserve existing values
-  /// when adding a new ID.
+  /// These are ABI-sensitive (they may be present in pch files or bitcode) so
+  /// existing values must be preserved.
   enum ID {
-    System = 0,
-    Device = 1,
-    Workgroup = 2,
-    Wavefront = 3,
-    Single = 4,
-    Cluster = 5,
+    System = static_cast<unsigned>(llvm::AtomicScope::System),
+    Device = static_cast<unsigned>(llvm::AtomicScope::Device),
+    Workgroup = static_cast<unsigned>(llvm::AtomicScope::Workgroup),
+    Wavefront = static_cast<unsigned>(llvm::AtomicScope::Wavefront),
+    Single = static_cast<unsigned>(llvm::AtomicScope::Single),
+    Cluster = static_cast<unsigned>(llvm::AtomicScope::Cluster),
     Count,
     Last = Count - 1
   };

@@ -19,6 +19,26 @@
 
 #if TEST_STD_VER >= 26
 
+struct tester {};
+
+template <class T, std::enable_if_t<std::is_class_v<T>, int> = 0> // intentionally underconstrained
+constexpr bool operator>(const tester& a, const T& t) {
+  return t.compare(a) < 0;
+}
+template <class T, std::enable_if_t<std::is_class_v<T>, int> = 0> // intentionally underconstrained
+constexpr bool operator>(const T& t, const tester& a) {
+  return t.compare(a) > 0;
+}
+
+template <class T, class U>
+constexpr std::optional<bool> try_cmp_gt(const T& t, const U& u) {
+  if constexpr (requires { t > u; }) {
+    return t > u;
+  } else {
+    return {};
+  }
+}
+
 // Test SFINAE.
 static_assert(HasOperatorGreaterThan<std::optional<ThreeWayComparable>, int>);
 static_assert(HasOperatorGreaterThan<std::optional<ThreeWayComparable>, ThreeWayComparable>);
@@ -35,8 +55,8 @@ static_assert(!HasOperatorGreaterThan<NonComparable, std::optional<ThreeWayCompa
 static_assert(!HasOperatorGreaterThan<ThreeWayComparable, std::optional<NonComparable>>);
 
 // LWG4072: avoid ambiguity with optional's own comparison operators
-static_assert(!HasOperatorGreaterThan<std::optional<void*>, std::optional<int>>);
-static_assert(!HasOperatorGreaterThan<std::optional<int>, std::optional<void*>>);
+static_assert(try_cmp_gt(std::optional<int>{}, std::optional<tester>{}) == std::optional<bool>{});
+static_assert(try_cmp_gt(std::optional<int>{}, std::optional<int>{}) == std::optional<bool>{false});
 
 #endif
 

@@ -1103,13 +1103,9 @@ def VOPProfileMAI_I32_V4I32_X16_VCD : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I3
 
 
 class MFMATable <bit is_mac, string Kind, string Name,
-                 string AGPROpName = NAME> {
+                 string AGPROpName = NAME> : AGPRFormTable<Kind, AGPROpName> {
   bit IsMac = is_mac;
   string FMAOp = Name;
-  string AGPROp = AGPROpName;
-
-  // Does this MFMA use "AGPR" or "VGPR" for srcC/vdst
-  string MFMAKind = Kind;
 }
 
 class MFMA_F8F6F4_WithSizeTable<int A, int B, Instruction ThisVariant, Instruction F8F8Variant> {

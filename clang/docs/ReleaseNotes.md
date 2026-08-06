@@ -62,6 +62,17 @@ honored, and calls use the caller's features, matching GCC. Per-function
 features cannot lower the translation-unit ABI level;
 `-fclang-abi-compat=23` restores the previous behavior. (#GH193298)
 
+- On SPARC, a `_Complex` value with an integer element type is now passed and
+  returned packed into the one or two integer registers it fits in, matching GCC.
+  Clang previously passed such a value indirectly and returned it with one part
+  per register. 
+  `-fclang-abi-compat=23` restores the previous behavior. (#GH212340)
+
+- On SPARC64, a `_Complex char` or `_Complex short` is now
+  right-justified in its slot in the parameter array, like every other scalar
+  narrower than a slot, rather than left-justified the way a small struct is.
+  `-fclang-abi-compat=23` restores the previous behavior. (#GH212340)
+
 - On MIPS, a `_Complex` value with an integer element type is now returned packed
   into a single integer register when it fits in one, matching GCC. A `_Complex char` or
   `_Complex short`, and on N32/N64 also a `_Complex int`, is no longer returned
@@ -358,6 +369,7 @@ features cannot lower the translation-unit ABI level;
 
 ### Bug Fixes in This Version
 
+- Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
@@ -365,6 +377,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
+- Fixed an assertion crash when instantiating a nested requirement with an invalid constraint. (#GH213575)
+- Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
+- Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -374,6 +389,8 @@ features cannot lower the translation-unit ABI level;
   format warnings to errors. (#GH211943)
 
 #### Bug Fixes to Attribute Support
+
+- Fixed crash (assertion) when the `alloc_align` attribute was applied to a declaration whose type has a `FunctionProtoType` but which is not itself a `FunctionDecl`, such as a function-pointer variable. (#GH122058)
 
 - The `counted_by`/`counted_by_or_null` diagnostic that rejects a pointer whose
   pointee is a struct with a flexible array member (e.g.
@@ -417,6 +434,12 @@ features cannot lower the translation-unit ABI level;
 - A workaround that was introduced to fix an issue with the `<format>` header present in some versions of
   libstdc++15 has been extended to support preprocessed input. Previously, splitting the preprocessing and
   compilation step would result in the fix not being applied. (#GH160314)
+
+- A defaulted copy or move assignment operator for a union was left with an
+  empty body and copied nothing when the operator was actually called, for
+  example through a pointer to member. Clang now synthesizes a whole-object
+  copy so the union's object representation is copied, matching the defaulted
+  union copy constructor.
 
 #### Bug Fixes to AST Handling
 
@@ -476,6 +499,9 @@ features cannot lower the translation-unit ABI level;
 #### CUDA/HIP Language Changes
 
 #### CUDA Support
+
+- Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
+  (`__cudaRegisterLinkedBinary`).
 
 #### AIX Support
 
@@ -540,6 +566,11 @@ features cannot lower the translation-unit ABI level;
 
 - Added parsing and semantic support for `dims` modifier in `num_teams` and
   `thread_limit` clauses for OpenMP 6.1 or later.
+- Map-type-modifying modifiers applied to a list item with a user-defined mapper
+  are now propagated onto the maps the mapper expands to.
+- Mapping of expressions with base-pointers through a user-defined mapper (e.g.
+  `map(s.p[0:n])`) now conforms to OpenMP's conditional pointer-attachment,
+  matching the behavior of such maps outside a mapper.
 
 ### SYCL Support
 

@@ -1695,9 +1695,15 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
 
   // Lambda that emits the init sequence: cleanup setup, cookie init,
   // bitcast + initializer, and cleanup deactivation.
+  //
+  // \p conditional is non-null when this new-expression is null-checked.
+  // ConditionalEvaluation is activated only around emitNewInitializer so that
+  // temporaries created there get conditional cleanups, while the operator
+  // delete cleanup (which is entered and left entirely inside the null-check
+  // branch) stays on the cheaper unconditional path.
   Address result = Address::invalid();
   Address resultPtr = Address::invalid();
-  auto emitInit = [&]() {
+  auto emitInit = [&](ConditionalEvaluation *conditional) {
     EHScopeStack::stable_iterator operatorDeleteCleanup;
     mlir::Operation *cleanupDominator = nullptr;
     if (useNewDeleteCleanup) {
@@ -1739,8 +1745,12 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
 
     assert(!cir::MissingFeatures::sanitizers());
 
+    if (conditional)
+      conditional->beginEvaluation();
     emitNewInitializer(*this, e, allocType, elementTy, result, numElements,
                        allocSizeWithoutCookie);
+    if (conditional)
+      conditional->endEvaluation();
 
     // Deactivate the 'operator delete' cleanup if we finished
     // initialization.
@@ -1755,17 +1765,23 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
 
   cir::IfOp nullCheckOp;
   if (nullCheck) {
+    // The initializer is only run if the allocation succeeds, so any
+    // temporaries created while emitting the initializer must be cleaned up
+    // conditionally (with an active flag) after the branch. The enclosing
+    // FullExprCleanupScope detects this via ConditionalEvaluationFinder and
+    // provides the cleanup region for the deferred destructors.
+    ConditionalEvaluation eval(*this);
     mlir::Value isNotNull = builder.createPtrIsNotNull(allocation.getPointer());
     nullCheckOp =
         cir::IfOp::create(builder, getLoc(e->getSourceRange()), isNotNull,
                           /*withElseRegion=*/false,
                           /*thenBuilder=*/
                           [&](mlir::OpBuilder &, mlir::Location loc) {
-                            emitInit();
+                            emitInit(&eval);
                             builder.createYield(loc);
                           });
   } else {
-    emitInit();
+    emitInit(/*conditional=*/nullptr);
   }
 
   mlir::Value resultValue = result.getPointer();

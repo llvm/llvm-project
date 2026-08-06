@@ -73,10 +73,12 @@ add_unittest_framework_library(
   LibcTest
   SRCS
     CmakeFilePath.cpp
+    LibcCTest.cpp
     LibcTest.cpp
     LibcTestMain.cpp
     TestLogger.cpp
   HDRS
+    LibcCTest.h
     LibcTest.h
     Test.h
     TestLogger.h

@@ -3569,8 +3569,9 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     } while (TryConsumeToken(tok::comma));
     RLoc = Tok.getLocation();
     T.consumeClose();
-    Clause = Actions.OpenMP().ActOnOpenMPDirectivePresenceClause(
-        CKind, DKVec, Loc, LLoc, RLoc);
+    if (!WrongDirective)
+      Clause = Actions.OpenMP().ActOnOpenMPDirectivePresenceClause(
+          CKind, DKVec, Loc, LLoc, RLoc);
     break;
   }
   case OMPC_no_openmp:
@@ -3584,8 +3585,9 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       ErrorFound = true;
     }
     SourceLocation Loc = ConsumeToken();
-    Clause = Actions.OpenMP().ActOnOpenMPNullaryAssumptionClause(
-        CKind, Loc, Tok.getLocation());
+    if (!WrongDirective)
+      Clause = Actions.OpenMP().ActOnOpenMPNullaryAssumptionClause(
+          CKind, Loc, Tok.getLocation());
     break;
   }
   case OMPC_ompx_attribute:

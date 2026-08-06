@@ -27,7 +27,7 @@ template <class BlockT> class BlockFrequencyInfoImpl;
 class MachineBasicBlock;
 class MachineBranchProbabilityInfo;
 class MachineFunction;
-class MachineLoopInfo;
+class MachineCycleInfo;
 class raw_ostream;
 
 /// MachineBlockFrequencyInfo pass uses BlockFrequencyInfoImpl implementation
@@ -40,7 +40,7 @@ public:
   LLVM_ABI MachineBlockFrequencyInfo(); // Legacy pass manager only.
   LLVM_ABI explicit MachineBlockFrequencyInfo(
       const MachineFunction &F, const MachineBranchProbabilityInfo &MBPI,
-      const MachineLoopInfo &MLI);
+      const MachineCycleInfo &MCI);
   LLVM_ABI MachineBlockFrequencyInfo(MachineBlockFrequencyInfo &&);
   LLVM_ABI ~MachineBlockFrequencyInfo();
 
@@ -51,7 +51,7 @@ public:
   /// calculate - compute block frequency info for the given function.
   LLVM_ABI void calculate(const MachineFunction &F,
                           const MachineBranchProbabilityInfo &MBPI,
-                          const MachineLoopInfo &MLI);
+                          const MachineCycleInfo &MCI);
 
   LLVM_ABI void print(raw_ostream &OS);
 

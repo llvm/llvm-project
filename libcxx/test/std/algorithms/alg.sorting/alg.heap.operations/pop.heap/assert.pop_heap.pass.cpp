@@ -6,10 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: c++03
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// XFAIL: availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-extensive
 
 // <algorithm>
 

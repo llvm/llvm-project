@@ -7451,7 +7451,7 @@ class BaseSIMDDifferentThreeVectorTied<bit U, bits<3> size, bits<4> opcode,
 //        the high elements of the result register rather than the low
 //        elements). Until that's fixed, we can't code-gen those.
 multiclass SIMDNarrowThreeVectorBHS<bit U, bits<4> opc, string asm,
-                                    Intrinsic IntOp> {
+                                    SDPatternOperator IntOp> {
   def v8i16_v8i8   : BaseSIMDDifferentThreeVector<U, 0b000, opc,
                                                   V64, V128, V128,
                                                   asm, ".8b", ".8h", ".8h",

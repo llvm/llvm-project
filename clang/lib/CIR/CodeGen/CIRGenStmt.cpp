@@ -20,6 +20,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/SaveAndRestore.h"
 
@@ -210,6 +211,8 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitIndirectGotoStmt(cast<IndirectGotoStmt>(*s));
   case Stmt::CoreturnStmtClass:
     return emitCoreturnStmt(cast<CoreturnStmt>(*s));
+  case Stmt::SYCLKernelCallStmtClass:
+    return emitSYCLKernelCallStmt(cast<SYCLKernelCallStmt>(*s));
   case Stmt::OpenACCComputeConstructClass:
     return emitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*s));
   case Stmt::OpenACCLoopConstructClass:
@@ -431,7 +434,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::DefaultStmtClass:
   case Stmt::CaseStmtClass:
   case Stmt::SEHLeaveStmtClass:
-  case Stmt::SYCLKernelCallStmtClass:
   case Stmt::ObjCAtTryStmtClass:
   case Stmt::ObjCAtThrowStmtClass:
   case Stmt::ObjCAtSynchronizedStmtClass:
@@ -870,6 +872,11 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
   mlir::ArrayAttr value;
   llvm::APSInt intVal = s.getLHS()->EvaluateKnownConstInt(getContext());
 
+  // Coerce a bool to an i1 for a switch, so we can just treat all its elements
+  // as an int later on.
+  if (isa<cir::BoolType>(condType))
+    condType = builder.getUIntNTy(1);
+
   // If the case statement has an RHS value, it is representing a GNU
   // case range statement, where LHS is the beginning of the range
   // and RHS is the end of the range.
@@ -1278,6 +1285,13 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
       emitDecl(*s.getConditionVariable(), /*evaluateConditionDecl=*/true);
 
     mlir::Value condV = emitScalarExpr(s.getCond());
+
+    // Coerce bool values to an i1. There is no real sensible reason we need to
+    // represent a 'switch' of scoped-enum-with-bool-backing-type specially
+    // here.  It is a rarely used thing, and would result in a lot of work to
+    // properly handle this everywhere.
+    if (isa<cir::BoolType>(condV.getType()))
+      condV = builder.createBoolToInt(condV, builder.getUIntNTy(1));
 
     // TODO: PGO and likelihood (e.g. PGO.haveRegionCounts())
     assert(!cir::MissingFeatures::pgoUse());

@@ -136,6 +136,14 @@
 #define CLD_STOPPED 5   // child has stopped
 #define CLD_CONTINUED 6 // stopped child has continued
 
+// SIGPOLL si_codes
+#define POLL_IN 1  // Data input available
+#define POLL_OUT 2 // Output buffers available
+#define POLL_MSG 3 // Input message available
+#define POLL_ERR 4 // I/O error
+#define POLL_PRI 5 // High priority input available
+#define POLL_HUP 6 // Device disconnected
+
 // Other si_codes.
 #define SI_USER 0       // Sent by kill()
 #define SI_QUEUE (-1)   // Sent by sigqueue()

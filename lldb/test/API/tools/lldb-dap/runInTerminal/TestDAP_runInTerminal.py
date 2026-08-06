@@ -66,6 +66,7 @@ def read_pipe_message(pipe):
 
 
 @skipIfBuildType(["debug"])
+@skipIfWasm  # runInTerminal has the client run the program, and a Wasm module is not executable
 class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 

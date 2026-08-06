@@ -94,11 +94,11 @@ getSimdModifier(const omp::clause::Schedule &clause) {
   return mlir::omp::ScheduleModifier::none;
 }
 
-static void
-genAllocateClause(lower::AbstractConverter &converter,
-                  const omp::clause::Allocate &clause,
-                  llvm::SmallVectorImpl<mlir::Value> &allocatorOperands,
-                  llvm::SmallVectorImpl<mlir::Value> &allocateOperands) {
+static void genAllocateClause(
+    lower::AbstractConverter &converter, const omp::clause::Allocate &clause,
+    llvm::SmallVectorImpl<mlir::Value> &allocatorOperands,
+    llvm::SmallVectorImpl<mlir::Value> &allocateOperands,
+    llvm::SmallVectorImpl<int64_t> &alignments, bool supportAlignment) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
   lower::StatementContext stmtCtx;
@@ -106,20 +106,26 @@ genAllocateClause(lower::AbstractConverter &converter,
   auto &objects = std::get<omp::ObjectList>(clause.t);
 
   using Allocate = omp::clause::Allocate;
-  // ALIGN in this context is unimplemented
-  if (std::get<std::optional<Allocate::AlignModifier>>(clause.t))
+  auto &align = std::get<std::optional<Allocate::AlignModifier>>(clause.t);
+  if (align && !supportAlignment)
     TODO(currentLocation, "OmpAllocateClause ALIGN modifier");
 
-  // Check if allocate clause has allocator specified. If so, add it
-  // to list of allocators, otherwise, add default allocator to
-  // list of allocators.
+  if (align) {
+    if (alignments.empty())
+      alignments.resize(allocateOperands.size(), 0);
+    alignments.append(objects.size(), evaluate::ToInt64(align->v).value());
+  } else if (!alignments.empty()) {
+    alignments.append(objects.size(), 0);
+  }
+
+  // Use a null handle to select the binding task's default allocator.
   using ComplexModifier = Allocate::AllocatorComplexModifier;
   if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
     mlir::Value operand = fir::getBase(converter.genExprValue(mod->v, stmtCtx));
     allocatorOperands.append(objects.size(), operand);
   } else {
     mlir::Value operand = firOpBuilder.createIntegerConstant(
-        currentLocation, firOpBuilder.getI32Type(), 1);
+        currentLocation, firOpBuilder.getI32Type(), mlir::omp::kNullAllocator);
     allocatorOperands.append(objects.size(), operand);
   }
 
@@ -1138,12 +1144,13 @@ bool ClauseProcessor::processAligned(
       });
 }
 
-bool ClauseProcessor::processAllocate(
-    mlir::omp::AllocateClauseOps &result) const {
+bool ClauseProcessor::processAllocate(mlir::omp::AllocateClauseOps &result,
+                                      bool supportAlignment) const {
   return findRepeatableClause<omp::clause::Allocate>(
       [&](const omp::clause::Allocate &clause, const parser::CharBlock &) {
         genAllocateClause(converter, clause, result.allocatorVars,
-                          result.allocateVars);
+                          result.allocateVars, result.allocateAlignments,
+                          supportAlignment);
       });
 }
 

@@ -890,6 +890,20 @@ private:
       default:
         State = IES_ERROR;
         break;
+      case IES_DIVIDE:
+        if (TmpInt == 0) {
+          ErrMsg = "division by zero in assembly expression";
+          State = IES_ERROR;
+          return true;
+        }
+        [[fallthrough]];
+      case IES_MOD:
+        if (TmpInt == 0) {
+          ErrMsg = "modulo by zero in assembly expression";
+          State = IES_ERROR;
+          return true;
+        }
+        [[fallthrough]];
       case IES_PLUS:
       case IES_MINUS:
       case IES_NOT:
@@ -904,8 +918,6 @@ private:
       case IES_GE:
       case IES_LSHIFT:
       case IES_RSHIFT:
-      case IES_DIVIDE:
-      case IES_MOD:
       case IES_MULTIPLY:
       case IES_LPAREN:
       case IES_INIT:

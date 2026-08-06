@@ -440,7 +440,7 @@ define internal void @__omp_outlined__(ptr noalias %.global_tid., ptr noalias %.
 ; AMDGPU:       [[FOR_BODY]]:
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; AMDGPU-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr null, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
 ; AMDGPU-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP16:![0-9]+]]
 ;
@@ -460,7 +460,7 @@ define internal void @__omp_outlined__(ptr noalias %.global_tid., ptr noalias %.
 ; NVPTX:       [[FOR_BODY]]:
 ; NVPTX-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; NVPTX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr null, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
 ; NVPTX-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP16:![0-9]+]]
 ;
@@ -925,7 +925,7 @@ define internal void @__omp_outlined__2(ptr noalias %.global_tid., ptr noalias %
 ; AMDGPU:       [[FOR_BODY]]:
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; AMDGPU-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr null, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
 ; AMDGPU-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP19:![0-9]+]]
 ;
@@ -947,7 +947,7 @@ define internal void @__omp_outlined__2(ptr noalias %.global_tid., ptr noalias %
 ; NVPTX:       [[FOR_BODY]]:
 ; NVPTX-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
+; NVPTX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr null, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 0, i32 0)
 ; NVPTX-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP19:![0-9]+]]
 ;
@@ -1423,7 +1423,7 @@ define internal void @__omp_outlined__4(ptr noalias %.global_tid., ptr noalias %
 ; AMDGPU-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20:![0-9]+]]
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; AMDGPU-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr null, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
 ; AMDGPU-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP22:![0-9]+]]
 ;
@@ -1444,7 +1444,7 @@ define internal void @__omp_outlined__4(ptr noalias %.global_tid., ptr noalias %
 ; NVPTX-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20:![0-9]+]]
 ; NVPTX-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; NVPTX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr null, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
 ; NVPTX-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP22:![0-9]+]]
 ;
@@ -1963,7 +1963,7 @@ define internal void @__omp_outlined__6(ptr noalias %.global_tid., ptr noalias %
 ; AMDGPU-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared.1 to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20]]
 ; AMDGPU-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; AMDGPU-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[TMP2]], align 4, !tbaa [[INT_TBAA12]]
-; AMDGPU-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; AMDGPU-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr null, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
 ; AMDGPU-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; AMDGPU-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP23:![0-9]+]]
 ;
@@ -1998,7 +1998,7 @@ define internal void @__omp_outlined__6(ptr noalias %.global_tid., ptr noalias %
 ; NVPTX-NEXT:    store ptr addrspacecast (ptr addrspace(3) @x_shared1 to ptr), ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[ANYPTR_TBAA20]]
 ; NVPTX-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[DOTGLOBAL_TID_]] to ptr addrspace(5)
 ; NVPTX-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[TMP2]], align 4, !tbaa [[INT_TBAA12]]
-; NVPTX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
+; NVPTX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr null, ptr [[CAPTURED_VARS_ADDRS_CAST]], i64 1, i32 0)
 ; NVPTX-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; NVPTX-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP23:![0-9]+]]
 ;

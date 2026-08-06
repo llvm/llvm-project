@@ -724,18 +724,15 @@ StructType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
   return computeStructAlignment(dataLayout);
 }
 
+// Sums the storage member (if present) with the padding field (if present).
+// A union whose member list came out empty has no storage type, so its whole
+// size lives in the padding, which lowerUnion sizes from the ASTRecordLayout.
 llvm::TypeSize
 UnionType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                              mlir::DataLayoutEntryListRef params) const {
-  mlir::Type storage = getUnionStorageType(dataLayout);
-  if (!storage)
-    return llvm::TypeSize::getFixed(0);
-  // The padding field holds enough bytes to bring the total up to the AST
-  // layout size (set by lowerUnion from the ASTRecordLayout).  Include it so
-  // getTypeSize agrees with the {storage, padding} LLVM struct that
-  // LowerToLLVM emits; without it a containing record adds spurious tail
-  // padding via insertPadding, making sizeof and array GEPs wrong.
-  llvm::TypeSize size = dataLayout.getTypeSizeInBits(storage);
+  llvm::TypeSize size = llvm::TypeSize::getFixed(0);
+  if (mlir::Type storage = getUnionStorageType(dataLayout))
+    size += dataLayout.getTypeSizeInBits(storage);
   if (mlir::Type pad = getPadding())
     size += dataLayout.getTypeSizeInBits(pad);
   return size;

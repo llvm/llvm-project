@@ -522,32 +522,40 @@ public:
 
     std::optional<cir::CastKind> castKind;
 
+    // Start with a null fenv attr. If this is a floating point cast, we will
+    // get the attribute from the builder.
+    cir::FenvAttr fenvAttr;
+
     if (mlir::isa<cir::BoolType>(srcTy)) {
       if (opts.treatBooleanAsSigned)
         cgf.getCIRGenModule().errorNYI("signed bool");
-      if (cgf.getBuilder().isInt(dstTy))
+      if (cgf.getBuilder().isInt(dstTy)) {
         castKind = cir::CastKind::bool_to_int;
-      else if (mlir::isa<cir::FPTypeInterface>(dstTy))
+      } else if (mlir::isa<cir::FPTypeInterface>(dstTy)) {
+        fenvAttr = cgf.getBuilder().getConstrainedFPAttr();
         castKind = cir::CastKind::bool_to_float;
-      else
+      } else {
         llvm_unreachable("Internal error: Cast to unexpected type");
+      }
     } else if (cgf.getBuilder().isInt(srcTy)) {
-      if (cgf.getBuilder().isInt(dstTy))
+      if (cgf.getBuilder().isInt(dstTy)) {
         castKind = cir::CastKind::integral;
-      else if (mlir::isa<cir::FPTypeInterface>(dstTy))
+      } else if (mlir::isa<cir::FPTypeInterface>(dstTy)) {
+        fenvAttr = cgf.getBuilder().getConstrainedFPAttr();
         castKind = cir::CastKind::int_to_float;
-      else if (mlir::isa<cir::BoolType>(dstTy))
+      } else if (mlir::isa<cir::BoolType>(dstTy)) {
         castKind = cir::CastKind::int_to_bool;
-      else
+      } else {
         llvm_unreachable("Internal error: Cast to unexpected type");
+      }
     } else if (mlir::isa<cir::FPTypeInterface>(srcTy)) {
+      fenvAttr = cgf.getBuilder().getConstrainedFPAttr();
       if (cgf.getBuilder().isInt(dstTy)) {
         // If we can't recognize overflow as undefined behavior, assume that
         // overflow saturates. This protects against normal optimizations if we
         // are compiling with non-standard FP semantics.
         if (!cgf.cgm.getCodeGenOpts().StrictFloatCastOverflow)
           cgf.getCIRGenModule().errorNYI("strict float cast overflow");
-        assert(!cir::MissingFeatures::fpConstraints());
         castKind = cir::CastKind::float_to_int;
       } else if (mlir::isa<cir::FPTypeInterface>(dstTy)) {
         // TODO: split this to createFPExt/createFPTrunc
@@ -563,7 +571,7 @@ public:
 
     assert(castKind.has_value() && "Internal error: CastKind not set.");
     return builder.createOrFold<cir::CastOp>(src.getLoc(), fullDstTy, *castKind,
-                                             src);
+                                             src, fenvAttr);
   }
 
   mlir::Value
@@ -1059,8 +1067,7 @@ public:
       result.compType = vecType->getElementType();
     result.opcode = e->getOpcode();
     result.loc = e->getSourceRange();
-    // TODO(cir): Result.FPFeatures
-    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+    result.fpFeatures = e->getFPFeaturesInEffect(cgf.getLangOpts());
     result.e = e;
     return result;
   }
@@ -2192,6 +2199,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
   Expr *subExpr = ce->getSubExpr();
   QualType destTy = ce->getType();
   CastKind kind = ce->getCastKind();
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ce);
 
   // These cases are generally not written to ignore the result of evaluating
   // their sub-expressions, so we clear this now.

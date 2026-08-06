@@ -19,6 +19,31 @@
 
 #if TEST_STD_VER >= 26
 
+template <class, class, class = void>
+constexpr bool has_cmp_lteq = false;
+template <class T, class U>
+constexpr bool has_cmp_lteq<T, U, std::void_t<decltype(std::declval<T>() <= std::declval<U>())>> = true;
+
+struct tester {};
+
+template <class T, std::enable_if_t<std::is_class_v<T>, int> = 0> // intentionally underconstrained
+constexpr bool operator<=(const tester& a, const T& t) {
+  return t.compare(a) >= 0;
+}
+template <class T, std::enable_if_t<std::is_class_v<T>, int> = 0> // intentionally underconstrained
+constexpr bool operator<=(const T& t, const tester& a) {
+  return t.compare(a) <= 0;
+}
+
+template <class T, class U>
+constexpr std::optional<bool> try_cmp_lteq(const T& t, const U& u) {
+  if constexpr (requires { t <= u; }) {
+    return t <= u;
+  } else {
+    return {};
+  }
+}
+
 // Test SFINAE.
 static_assert(HasOperatorLessThanEqual<std::optional<ThreeWayComparable>, int>);
 static_assert(HasOperatorLessThanEqual<std::optional<ThreeWayComparable>, ThreeWayComparable>);
@@ -35,8 +60,8 @@ static_assert(!HasOperatorLessThanEqual<NonComparable, std::optional<ThreeWayCom
 static_assert(!HasOperatorLessThanEqual<ThreeWayComparable, std::optional<NonComparable>>);
 
 // LWG4072: avoid ambiguity with optional's own comparison operators
-static_assert(!HasOperatorLessThanEqual<std::optional<void*>, std::optional<int>>);
-static_assert(!HasOperatorLessThanEqual<std::optional<int>, std::optional<void*>>);
+static_assert(try_cmp_lteq(std::optional<int>{}, std::optional<tester>{}) == std::optional<bool>{});
+static_assert(try_cmp_lteq(std::optional<int>{}, std::optional<int>{}) == std::optional<bool>{true});
 
 #endif
 

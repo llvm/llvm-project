@@ -10,6 +10,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/Calls.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -30,23 +31,6 @@ Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
   int64_t Result = 0;
   if (auto Err = callSPSWrapper<rt::SPSRunAsMainSignature>(
           RunAsMainAddr, Result, MainFnAddr, Args))
-    return std::move(Err);
-  return Result;
-}
-
-Expected<int32_t> SimpleRemoteEPC::runAsVoidFunction(ExecutorAddr VoidFnAddr) {
-  int32_t Result = 0;
-  if (auto Err = callSPSWrapper<rt::SPSRunAsVoidFunctionSignature>(
-          RunAsVoidFunctionAddr, Result, VoidFnAddr))
-    return std::move(Err);
-  return Result;
-}
-
-Expected<int32_t> SimpleRemoteEPC::runAsIntFunction(ExecutorAddr IntFnAddr,
-                                                    int Arg) {
-  int32_t Result = 0;
-  if (auto Err = callSPSWrapper<rt::SPSRunAsIntFunctionSignature>(
-          RunAsIntFunctionAddr, Result, IntFnAddr, Arg))
     return std::move(Err);
   return Result;
 }
@@ -343,10 +327,8 @@ Error SimpleRemoteEPC::setup() {
   BootstrapSymbols[rt::DispatchCtxName] =
       BootstrapSymbols[ExecutorSessionObjectName];
 
-  if (auto Err = getBootstrapSymbols(
-          {{RunAsMainAddr, rt::RunAsMainWrapperName},
-           {RunAsVoidFunctionAddr, rt::RunAsVoidFunctionWrapperName},
-           {RunAsIntFunctionAddr, rt::RunAsIntFunctionWrapperName}}))
+  if (auto Err =
+          getBootstrapSymbols({{RunAsMainAddr, rt::sps::CallMainCIName}}))
     return Err;
 
   return Error::success();

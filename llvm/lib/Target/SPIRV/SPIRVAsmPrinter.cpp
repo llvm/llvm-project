@@ -322,16 +322,24 @@ void SPIRVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   SPIRV_MC::verifyInstructionPredicates(MI->getOpcode(),
                                         getSubtargetInfo().getFeatureBits());
 
-  if (!MAI->getSkipEmission(MI))
+  bool InstructionEmitted = !MAI->getSkipEmission(MI);
+  if (InstructionEmitted)
     outputInstruction(MI);
 
   // Output OpLabel after OpFunction and OpFunctionParameter in the first MBB.
   const MachineInstr *NextMI = MI->getNextNode();
-  if (!LabeledMBB.contains(MI->getParent()) && isFuncOrHeaderInstr(MI, TII) &&
-      (!NextMI || !isFuncOrHeaderInstr(NextMI, TII))) {
+  bool BlockHasLabel = LabeledMBB.contains(MI->getParent());
+  bool IsFunctionPreambleInstruction = isFuncOrHeaderInstr(MI, TII);
+  bool IsNextInstructionFunctionPreamble =
+      NextMI && isFuncOrHeaderInstr(NextMI, TII);
+  bool ShouldEmitEntryLabel = !BlockHasLabel && IsFunctionPreambleInstruction &&
+                              !IsNextInstructionFunctionPreamble;
+  if (ShouldEmitEntryLabel) {
     assert(MI->getParent()->getNumber() == MF->front().getNumber() &&
            "OpFunction is not in the front MBB of MF");
     emitOpLabel(*MI->getParent());
+    if (NSDebugHandler && !isHidden())
+      NSDebugHandler->notifyEntryLabelEmitted(*MF);
   }
 }
 

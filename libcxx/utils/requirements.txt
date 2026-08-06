@@ -1,5 +1,6 @@
 click
 GitPython
+llvm-lnt
 numpy
 pandas
 plotly

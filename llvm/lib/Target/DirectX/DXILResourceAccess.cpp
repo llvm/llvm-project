@@ -823,6 +823,8 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
          "Couldn't retrieve indices. This is guaranteed by getAccessIndices");
 
   IRBuilder<> Builder(Ptr);
+  if (isa<PHINode>(Ptr))
+    Builder.SetInsertPoint(Ptr->getParent()->getFirstNonPHIIt());
   IntrinsicInst *Handle = cast<IntrinsicInst>(OldHandle->clone());
   Handle->setArgOperand(/*Index=*/3, AccessIdx.HandleIdx);
   Builder.Insert(Handle);

@@ -1075,6 +1075,11 @@ CStringChecker::getStringRefAtRegion(const MemRegion *R) {
   const StringLiteral *Lit = getStringLiteralFromRegion(Base);
   if (!Lit)
     return std::nullopt;
+  // getBytes() exposes the literal's raw storage, which for wide literals holds
+  // the code units in host byte order (see StringLiteral::getCodeUnit()).
+  // Only narrow literals can be interpreted as a target byte string.
+  if (Lit->getCharByteWidth() != 1)
+    return std::nullopt;
   StringRef S = Lit->getBytes();
   if (Offset > S.size())
     return std::nullopt;

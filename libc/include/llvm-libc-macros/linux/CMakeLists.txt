@@ -101,6 +101,12 @@ add_header(
 )
 
 add_header(
+  sys_statfs_macros
+  HDR
+    sys-statfs-macros.h
+)
+
+add_header(
   sys_time_macros
   HDR
     sys-time-macros.h

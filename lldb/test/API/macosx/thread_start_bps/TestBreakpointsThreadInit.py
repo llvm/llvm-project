@@ -8,7 +8,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestInterruptThreadNames(TestBase):
-    @skipUnlessDarwin
+    @requireDarwin
     def test_internal_bps_resolved(self):
         self.build()
 
@@ -36,7 +36,7 @@ class TestInterruptThreadNames(TestBase):
             num_resolved += bp.GetNumResolvedLocations()
         self.assertGreater(num_resolved, 0)
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_internal_bps_deleted_on_relaunch(self):
         self.build()
 

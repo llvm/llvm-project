@@ -615,7 +615,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   unsigned CallOp;
-  if (Info.CB->isIndirectCall()) {
+  if (Info.CB && Info.CB->isIndirectCall()) {
     if (!ST->canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers))
       report_fatal_error("An indirect call is encountered but SPIR-V without "
                          "extensions does not support it",
@@ -662,6 +662,9 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
     MIB.addUse(Arg.Regs[0]);
   }
+
+  if (Info.CB)
+    MIB.getInstr()->copyIRFlags(*Info.CB);
 
   if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing)) {
     // Process aliasing metadata.

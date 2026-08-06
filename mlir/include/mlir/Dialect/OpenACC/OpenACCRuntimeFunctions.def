@@ -1,0 +1,57 @@
+//===- OpenACCRuntimeFunctions.def - ACC runtime catalog --------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+/// \file
+///
+/// X-macro catalog of OpenACC compiler-to-runtime entry points
+/// (`__tgt_acc_*`). Include this file after defining ACC_RTL.
+///
+/// ACC_RTL(Enum, NameStr, IsVarArg, ReturnType, ...)
+///   Enum       - enumerator used as RuntimeFunction::Enum
+///   NameStr    - default runtime symbol name
+///   IsVarArg   - whether the function is variadic
+///   ReturnType - MLIR LLVM return type token (e.g. Void, Int32, Ptr)
+///   ...        - MLIR LLVM parameter type tokens
+///
+/// Use __ACC_RTL(Name, ...), which expands to
+/// ACC_RTL(ACCRTL_##Name, "__" #Name, ...).
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef ACC_RTL
+#error "define ACC_RTL before including OpenACCRuntimeFunctions.def"
+#endif
+
+#define __ACC_RTL(Name, IsVarArg, ReturnType, ...)                             \
+  ACC_RTL(ACCRTL_##Name, "__" #Name, IsVarArg, ReturnType, __VA_ARGS__)
+
+// void __tgt_acc_init(ident_t *, int64_t flags, int64_t device_type,
+//                     int64_t device_num);
+__ACC_RTL(tgt_acc_init, false, Void, Ptr, Int64, Int64, Int64)
+
+// void __tgt_acc_shutdown(ident_t *, int64_t flags, int64_t device_type,
+//                         int64_t device_num);
+__ACC_RTL(tgt_acc_shutdown, false, Void, Ptr, Int64, Int64, Int64)
+
+// int32_t __tgt_acc_wait(ident_t *, int64_t flags, int64_t device_type,
+//                        int32_t device_num, int32_t wait_num, int64_t *waits,
+//                        int64_t async_queue);
+__ACC_RTL(tgt_acc_wait, false, Int32, Ptr, Int64, Int64, Int32, Int32, Ptr,
+          Int64)
+
+// void __tgt_acc_set_default_async(ident_t *, int64_t async_queue);
+__ACC_RTL(tgt_acc_set_default_async, false, Void, Ptr, Int64)
+
+// void __tgt_acc_set_device_num(ident_t *, int64_t flags, int64_t device_type,
+//                               int64_t device_num);
+__ACC_RTL(tgt_acc_set_device_num, false, Void, Ptr, Int64, Int64, Int64)
+
+// void __tgt_acc_set_device_type(ident_t *, int64_t flags, int64_t device_type);
+__ACC_RTL(tgt_acc_set_device_type, false, Void, Ptr, Int64, Int64)
+
+#undef __ACC_RTL
+#undef ACC_RTL

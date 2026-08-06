@@ -116,12 +116,12 @@ c.swsp  ra, -4(sp)
 ## uimm7_lsb00
 c.lw  s0, -4(sp)
 # CHECK: :[[#@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[#@LINE-2]]:11: note: invalid operand for instruction
+# CHECK: :[[#@LINE-2]]:11: note: expected '('
 # CHECK: :[[#@LINE-3]]:11: note: immediate must be a multiple of 4 bytes in the range [0, 124]
 
 c.sw  s0, 128(sp)
 # CHECK: :[[#@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[#@LINE-2]]:11: note: invalid operand for instruction
+# CHECK: :[[#@LINE-2]]:11: note: expected '('
 # CHECK: :[[#@LINE-3]]:11: note: immediate must be a multiple of 4 bytes in the range [0, 124]
 
 ## simm9_lsb0

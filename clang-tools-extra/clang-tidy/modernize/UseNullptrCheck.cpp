@@ -55,7 +55,7 @@ void UseNullptrCheck::registerMatchers(MatchFinder *Finder) {
       unless(hasImplicitDestinationType(
           qualType(matchers::matchesAnyListedTypeName(IgnoredTypes)))));
 
-  auto IsOrHasDescendant = [](const auto &InnerMatcher) {
+  const auto IsOrHasDescendant = [](const auto &InnerMatcher) {
     return anyOf(InnerMatcher, hasDescendant(InnerMatcher));
   };
 

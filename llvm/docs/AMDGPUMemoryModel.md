@@ -199,7 +199,7 @@ operation with scope `syncscope`.
 Any access to `addrspace(3)` (aka LDS or local) always results in a *store-available* or
 *load-visible* operation with scope "workgroup".
 
-Any access to `addrspace(0)` (aka flat or global) always results in a
+Any access to `addrspace(0)` (aka flat or generic) always results in a
 *store-available* or *load-visible* operation with scope "workgroup", if the
 flat address resolves to `addrspace(3)`.
 

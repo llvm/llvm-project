@@ -10,6 +10,7 @@
 #include "Compiler.h"
 #include "support/Logger.h"
 #include "clang/DependencyScanning/DependencyScanningService.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Tooling/DependencyScanningTool.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/SmallString.h"

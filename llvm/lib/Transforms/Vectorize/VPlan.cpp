@@ -1762,7 +1762,7 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
     bool VectorizingEpilogue, MDNode *OrigLoopID,
     std::optional<unsigned> OrigAverageTripCount,
     unsigned OrigLoopInvocationWeight, unsigned EstimatedVFxUF,
-    bool DisableRuntimeUnroll) {
+    bool DisableRuntimeUnroll, bool UnrollVectorizedLoop) {
   // Update the metadata of the scalar loop. Skip the update when vectorizing
   // the epilogue loop to ensure it is updated only once. Also skip the update
   // when the scalar loop became unreachable.
@@ -1811,9 +1811,7 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
   // emit when remarks are enabled.
   if (ORE->enabled())
     VectorLoop->addIntLoopAttribute("llvm.loop.vectorize.body", 1);
-  TargetTransformInfo::UnrollingPreferences UP;
-  TTI.getUnrollingPreferences(VectorLoop, *PSE.getSE(), UP, ORE);
-  if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)
+  if (!UnrollVectorizedLoop || VectorizingEpilogue)
     addRuntimeUnrollDisableMetaData(VectorLoop);
 
   // Set/update profile weights for the vector and remainder loops as original

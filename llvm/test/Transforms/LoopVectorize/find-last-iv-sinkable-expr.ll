@@ -1069,3 +1069,115 @@ loop:
 done:
   ret i64 %sel
 }
+
+; The multiplier of the sinkable expression %expr is loop-invariant and
+; non-negative, but may be zero, so the step of %expr is not known to be
+; positive. Must not use a min/max reduction of %expr.
+define i32 @findlast_sinkable_expr_step_unknown_sign(ptr %a, i8 %m) {
+; CHECK-LABEL: define i32 @findlast_sinkable_expr_step_unknown_sign(
+; CHECK-SAME: ptr [[A:%.*]], i8 [[M:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[MUL_OP:%.*]] = zext i8 [[M]] to i32
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 -2147483648), %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 42)
+; CHECK-NEXT:    [[TMP2]] = select <4 x i1> [[TMP1]], <4 x i32> [[VEC_IND]], <4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 8
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP35:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP2]])
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP4]], [[MUL_OP]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP4]], -2147483648
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i32 [[TMP5]], i32 -1
+; CHECK-NEXT:    br label %[[DONE:.*]]
+; CHECK:       [[DONE]]:
+; CHECK-NEXT:    ret i32 [[TMP7]]
+;
+entry:
+  %mul.op = zext i8 %m to i32
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i32 [ -1, %entry ], [ %sel, %loop ]
+  %gep = getelementptr inbounds i32, ptr %a, i32 %iv
+  %load = load i32, ptr %gep, align 4
+  %cmp = icmp eq i32 %load, 42
+  %expr = mul i32 %iv, %mul.op
+  %sel = select i1 %cmp, i32 %expr, i32 %rdx
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit = icmp eq i32 %iv.next, 8
+  br i1 %exit, label %done, label %loop
+
+done:
+  ret i32 %sel
+}
+
+; %step is known to be non-zero (its low bit is set), but its sign is unknown,
+; so %iv2 may be increasing or decreasing. Must not use a min/max reduction.
+; Test for https://github.com/llvm/llvm-project/issues/213424.
+define i32 @findlast_iv_step_nonzero_unknown_sign(ptr %a, i32 %x) {
+; CHECK-LABEL: define i32 @findlast_iv_step_nonzero_unknown_sign(
+; CHECK-SAME: ptr [[A:%.*]], i32 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[STEP:%.*]] = or i32 [[X]], 1
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[STEP]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i32 [[STEP]], 2
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[TMP0]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 -1), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 42)
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
+; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP6]], <4 x i1> [[TMP4]], <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP8]] = select i1 [[TMP6]], <4 x i32> [[VEC_IND]], <4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], 8
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP8]], <4 x i1> [[TMP7]], i32 -1)
+; CHECK-NEXT:    br label %[[DONE:.*]]
+; CHECK:       [[DONE]]:
+; CHECK-NEXT:    ret i32 [[TMP10]]
+;
+entry:
+  %step = or i32 %x, 1
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv2 = phi i32 [ 0, %entry ], [ %iv2.next, %loop ]
+  %rdx = phi i32 [ -1, %entry ], [ %sel, %loop ]
+  %gep = getelementptr inbounds i32, ptr %a, i32 %iv
+  %load = load i32, ptr %gep, align 4
+  %cmp = icmp eq i32 %load, 42
+  %sel = select i1 %cmp, i32 %iv2, i32 %rdx
+  %iv2.next = add nsw i32 %iv2, %step
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit = icmp eq i32 %iv.next, 8
+  br i1 %exit, label %done, label %loop
+
+done:
+  ret i32 %sel
+}

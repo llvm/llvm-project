@@ -38,6 +38,8 @@ BootstrapInfo::CreateDefault(Session &S,
       return std::move(Err);
 
   ValueMap InitialValues;
+  InitialValues["orc-rt.Executor.SubtargetFeatures"] =
+      S.processInfo().targetCPUFeatures();
   if (AddInitialValues)
     if (auto Err = AddInitialValues(InitialValues))
       return std::move(Err);

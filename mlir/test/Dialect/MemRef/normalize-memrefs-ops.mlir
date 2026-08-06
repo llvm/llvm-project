@@ -127,6 +127,20 @@ func.func @test_norm_ret(%arg0: memref<1x16x14x14xf32, #map_tile>) -> (memref<1x
     // CHECK-NEXT: return %[[v1]], %[[v2]] : memref<1x16x1x1x32x32xf32>, memref<1x16x14x14xf32>
 }
 
+// Test with op_norm_ret, where results are consumed by a non-normalizable op.
+
+// CHECK-LABEL: test_norm_ret_denorm
+// CHECK-SAME: (%[[ARG0:.*]]: memref<1x16x1x1x32x32xf32>)
+func.func @test_norm_ret_denorm(%arg0: memref<1x16x14x14xf32, #map_tile>) {
+    %0, %1 = "test.op_norm_ret"(%arg0) : (memref<1x16x14x14xf32, #map_tile>) -> (memref<1x16x14x14xf32, #map_tile>, memref<1x16x14x14xf32, #map_tile>)
+    // CHECK: %[[v0:.*]], %[[v1:.*]] = "test.op_norm_ret"(%[[ARG0]]) : (memref<1x16x1x1x32x32xf32>) -> (memref<1x16x14x14xf32, #[[MAP:.*]]>, memref<1x16x14x14xf32, #[[MAP]]>)
+    "test.op_nonnorm"(%0, %0) : (memref<1x16x14x14xf32, #map_tile>, memref<1x16x14x14xf32, #map_tile>) -> ()
+    // CHECK: "test.op_nonnorm"(%[[v0]], %[[v0]]) : (memref<1x16x14x14xf32, #[[MAP]]>, memref<1x16x14x14xf32, #[[MAP]]>) -> ()
+    memref.dealloc %1 : memref<1x16x14x14xf32, #map_tile>
+    // CHECK: memref.dealloc %[[v1]] : memref<1x16x14x14xf32, #[[MAP]]>
+    return
+}
+
 // Test with an arbitrary op that references the function symbol.
 
 "test.op_funcref"() {func = @test_norm_mix} : () -> ()

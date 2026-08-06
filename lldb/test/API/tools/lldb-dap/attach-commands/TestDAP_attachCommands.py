@@ -2,13 +2,14 @@
 Test lldb-dap attach commands
 """
 
-from lldbsuite.test.decorators import skipIfNetBSD
+from lldbsuite.test.decorators import skipIfNetBSD, skipIfWasm
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import AttachArgs, PauseArgs
 
 
 class TestDAP_attachCommands(DAPTestCaseBase):
     @skipIfNetBSD  # Hangs on NetBSD as well
+    @skipIfWasm  # the test releases the inferior with an expression
     def test_commands(self):
         """
         Tests the "initCommands", "preRunCommands", "stopCommands",

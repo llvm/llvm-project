@@ -2076,6 +2076,11 @@ static void printConstant(OpAsmPrinter &p, Attribute value) {
 }
 
 mlir::LogicalResult cir::GlobalOp::verify() {
+  // A function is not an object, so it cannot be the type of a global.  A
+  // global that holds a function's address carries a pointer type instead.
+  if (mlir::isa<cir::FuncType>(getSymType()))
+    return emitOpError("global type cannot be a function type");
+
   // Verify that the initial value, if present, is either a unit attribute or
   // an attribute CIR supports.
   if (getInitialValue().has_value()) {

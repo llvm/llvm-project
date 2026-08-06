@@ -889,6 +889,25 @@ func.func @reshape_splat() -> tensor<6x5x4xi32> {
 
 // -----
 
+// CHECK-LABEL: @reshape_dense_resource
+func.func @reshape_dense_resource() -> tensor<4xf32> {
+  // CHECK: %[[RESHAPED:.+]] = "tosa.const"() <{values = dense_resource<reshape_resource> : tensor<4xf32>}> : () -> tensor<4xf32>
+  %input = "tosa.const"() <{values = dense_resource<reshape_resource> : tensor<2x2xf32>}> : () -> tensor<2x2xf32>
+  %shape = tosa.const_shape {values = dense<4> : tensor<1xindex>} : () -> !tosa.shape<1>
+  %reshape = tosa.reshape %input, %shape : (tensor<2x2xf32>, !tosa.shape<1>) -> tensor<4xf32>
+  // CHECK: return %[[RESHAPED]]
+  return %reshape : tensor<4xf32>
+}
+{-#
+  dialect_resources: {
+    builtin: {
+      reshape_resource: "0x040000003f800000400000004040000040800000"
+    }
+  }
+#-}
+
+// -----
+
 // CHECK-LABEL: @slice_splat
 func.func @slice_splat() -> tensor<1x1x1xi32> {
   // CHECK: %[[SLICE:.+]] = "tosa.const"() <{values = dense<42> : tensor<1x1x1xi32>}

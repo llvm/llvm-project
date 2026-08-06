@@ -26,6 +26,8 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/IR/IRMapping.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/Support/CommandLine.h"
 #include <type_traits>
 
@@ -738,6 +740,165 @@ bool ReductionProcessor::doReductionByRef(mlir::Value reductionVar) {
   return doReductionByRef(reductionVar.getType());
 }
 
+static bool baseInitReadsOrig(mlir::Block &initBlock) {
+  bool reads = false;
+  initBlock.walk([&](hlfir::DeclareOp declOp) {
+    std::optional<llvm::StringRef> name = declOp.getUniqName();
+    if (name && *name == "omp_orig" &&
+        (!declOp.getResult(0).use_empty() || !declOp.getResult(1).use_empty()))
+      reads = true;
+  });
+  return reads;
+}
+
+// A single init value is broadcast to every array element, so an initializer
+// that evaluates a call (once, not per element) cannot be broadcast safely.
+static bool baseInitHasCall(mlir::Region &region) {
+  bool hasCall = false;
+  region.walk([&](mlir::Operation *op) {
+    if (mlir::isa<mlir::CallOpInterface>(op))
+      hasCall = true;
+  });
+  return hasCall;
+}
+
+template <typename OpType>
+static OpType getOrCreateBoxedUserReduction(
+    lower::AbstractConverter &converter, semantics::SemanticsContext *semaCtx,
+    const semantics::Symbol &redSym, mlir::Type redType, mlir::Location loc) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::ModuleOp module = builder.getModule();
+
+  // Boxed op name encodes the full boxed type (..._byref_box_heap_i32),
+  // distinct from the base element op.
+  std::string boxedName = ReductionProcessor::getScopedUserReductionName(
+      converter, redSym, redType, /*isByRef=*/true);
+  if (auto existing = module.lookupSymbol<OpType>(boxedName))
+    return existing;
+
+  // Base op is named from the scalar element type (identical for scalar and
+  // array); materialize on demand for separate compilation.
+  mlir::Type elementType = unwrapSeqOrBoxedType(fir::unwrapRefType(redType));
+  const bool baseByRef = ReductionProcessor::doReductionByRef(elementType);
+  std::string baseName = ReductionProcessor::getScopedUserReductionName(
+      converter, redSym, elementType, baseByRef);
+  auto baseDecl = module.lookupSymbol<OpType>(baseName);
+  if (!baseDecl && semaCtx && redSym.owner().symbol() &&
+      redSym.owner().symbol()->test(semantics::Symbol::Flag::ModFile)) {
+    Fortran::lower::materializeUserReduction(converter, *semaCtx, redSym,
+                                             baseName, elementType, baseByRef);
+    baseDecl = module.lookupSymbol<OpType>(baseName);
+  }
+  if (!baseDecl)
+    return {};
+
+  // Only a by-value base op can be wrapped (its init/combiner yield scalars).
+  mlir::Region &baseInitRegion = baseDecl.getInitializerRegion();
+  mlir::Region &baseCombinerRegion = baseDecl.getReductionRegion();
+  mlir::Block &baseInitBlock = baseInitRegion.front();
+  if (fir::isa_ref_type(baseInitBlock.getArgument(0).getType()) ||
+      fir::isa_ref_type(baseCombinerRegion.front().getArgument(0).getType()))
+    return {};
+  const bool initReadsOrig = baseInitReadsOrig(baseInitBlock);
+
+  // Clone the region's entry block (up to its terminator) mapping block args to
+  // \p args; return the yielded value.
+  auto cloneBody = [](fir::FirOpBuilder &b, mlir::Region &region,
+                      mlir::ValueRange args) -> mlir::Value {
+    mlir::Block &block = region.front();
+    mlir::IRMapping mapper;
+    for (auto [blockArg, val] : llvm::zip(block.getArguments(), args))
+      mapper.map(blockArg, val);
+    for (mlir::Operation &op : block.without_terminator())
+      b.clone(op, mapper);
+    mlir::Operation *term = block.getTerminator();
+    if (term && term->getNumOperands() > 0)
+      return mapper.lookupOrDefault(term->getOperand(0));
+    return {};
+  };
+
+  auto genInitValueCB = [&](fir::FirOpBuilder &b, mlir::Location loc,
+                            mlir::Type ty, mlir::Value moldArg,
+                            mlir::Value /*privArg*/) -> mlir::Value {
+    mlir::Type scalarTy = unwrapSeqOrBoxedType(ty);
+    auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(fir::unwrapRefType(ty));
+    auto seqTy = boxTy ? mlir::dyn_cast_or_null<fir::SequenceType>(
+                             fir::unwrapRefType(boxTy.getEleTy()))
+                       : nullptr;
+    // An array init value is broadcast to every element, so it must be a
+    // constant identity; reading omp_orig or evaluating a call cannot be
+    // broadcast.
+    if (seqTy && (initReadsOrig || baseInitHasCall(baseInitRegion)))
+      TODO(loc,
+           "OpenMP user-defined reduction on an allocatable/pointer array "
+           "whose initializer reads omp_orig or evaluates a function call");
+    llvm::SmallVector<mlir::Value> initArgs;
+    if (initReadsOrig) {
+      // Scalar (arrays handled above): feed the original element to omp_orig.
+      mlir::Value box = fir::LoadOp::create(b, loc, moldArg);
+      mlir::Value addr = fir::BoxAddrOp::create(b, loc, box);
+      initArgs.push_back(fir::LoadOp::create(b, loc, addr));
+    } else {
+      // orig-independent: a placeholder feeds the base's dead temporary stores.
+      initArgs.push_back(fir::UndefOp::create(b, loc, scalarTy));
+    }
+    return cloneBody(b, baseInitRegion, initArgs);
+  };
+
+  auto genCombinerCB = [&](fir::FirOpBuilder &b, mlir::Location loc,
+                           mlir::Type type, mlir::Value op1, mlir::Value op2,
+                           bool /*isByRef*/) {
+    auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(fir::unwrapRefType(type));
+    if (!boxTy) {
+      TODO(loc, "OpenMP user-defined reduction on unsupported boxed type");
+      return;
+    }
+    auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(
+        fir::unwrapRefType(boxTy.getEleTy()));
+
+    mlir::Value lhsBox = fir::LoadOp::create(b, loc, op1);
+    mlir::Value rhsBox = fir::LoadOp::create(b, loc, op2);
+
+    if (!seqTy) {
+      // Scalar allocatable/pointer: combine the single element in place.
+      mlir::Value lhsAddr = fir::BoxAddrOp::create(b, loc, lhsBox);
+      mlir::Value rhsAddr = fir::BoxAddrOp::create(b, loc, rhsBox);
+      mlir::Value lhsEle = fir::LoadOp::create(b, loc, lhsAddr);
+      mlir::Value rhsEle = fir::LoadOp::create(b, loc, rhsAddr);
+      if (mlir::Value res = cloneBody(b, baseCombinerRegion, {lhsEle, rhsEle}))
+        fir::StoreOp::create(b, loc, res, lhsAddr);
+    } else {
+      // Array allocatable/pointer: apply the scalar combiner element-wise.
+      fir::ShapeShiftOp shapeShift =
+          getShapeShift(b, loc, lhsBox,
+                        /*cannotHaveNonDefaultLowerBounds=*/false,
+                        /*useDefaultLowerBounds=*/true);
+      hlfir::LoopNest nest = hlfir::genLoopNest(loc, b, shapeShift.getExtents(),
+                                                /*isUnordered=*/true);
+      b.setInsertionPointToStart(nest.body);
+      mlir::Type eleTy = seqTy.getEleTy();
+      mlir::Type refTy =
+          fir::ReferenceType::get(eleTy, fir::isa_volatile_type(eleTy));
+      auto lhsEleAddr = fir::ArrayCoorOp::create(
+          b, loc, refTy, lhsBox, shapeShift, /*slice=*/mlir::Value{},
+          nest.oneBasedIndices, /*typeparms=*/mlir::ValueRange{});
+      auto rhsEleAddr = fir::ArrayCoorOp::create(
+          b, loc, refTy, rhsBox, shapeShift, /*slice=*/mlir::Value{},
+          nest.oneBasedIndices, /*typeparms=*/mlir::ValueRange{});
+      mlir::Value lhsEle = fir::LoadOp::create(b, loc, lhsEleAddr);
+      mlir::Value rhsEle = fir::LoadOp::create(b, loc, rhsEleAddr);
+      if (mlir::Value res = cloneBody(b, baseCombinerRegion, {lhsEle, rhsEle}))
+        fir::StoreOp::create(b, loc, res, lhsEleAddr);
+      b.setInsertionPointAfter(nest.outerOp);
+    }
+    genYield<OpType>(b, loc, op1);
+  };
+
+  return ReductionProcessor::createDeclareReductionHelper<OpType>(
+      converter, boxedName, redType, loc, /*isByRef=*/true, genCombinerCB,
+      genInitValueCB, /*sym=*/nullptr);
+}
+
 template <typename OpType, typename RedOperatorListTy>
 bool ReductionProcessor::processReductionArguments(
     mlir::Location currentLocation, lower::AbstractConverter &converter,
@@ -925,6 +1086,14 @@ bool ReductionProcessor::processReductionArguments(
       const bool isBoxedTrivialReduction =
           mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(redType)) &&
           fir::isa_trivial(namingType);
+      // Like isBoxedTrivialReduction but gated on the trivial *element* type,
+      // so array allocatables/pointers (whose namingType is a non-trivial
+      // sequence) are also wrapped around the scalar base op (#186765).
+      mlir::Type boxedElementType =
+          unwrapSeqOrBoxedType(fir::unwrapRefType(redType));
+      const bool isBoxedTrivialElemReduction =
+          mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(redType)) &&
+          fir::isa_trivial(boxedElementType);
       if (const auto &redDefinedOp =
               std::get_if<omp::clause::DefinedOperator>(&redOperator.u)) {
         if (const auto *definedOpName =
@@ -990,6 +1159,16 @@ bool ReductionProcessor::processReductionArguments(
           // is the canonical reduction element type (allocatable/pointer
           // storage wrappers stripped), matching the type the op was named and
           // created from on the directive side.
+          if (isBoxedTrivialElemReduction) {
+            // Trivial-element allocatable/pointer: synthesize the boxed op.
+            if (OpType boxedDecl = getOrCreateBoxedUserReduction<OpType>(
+                    converter, semaCtx, *ultimate, redType, currentLocation)) {
+              reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+                  builder.getContext(), boxedDecl.getSymName()));
+              ++idx;
+              continue;
+            }
+          }
           if (!existingDecl ||
               fir::unwrapRefType(existingDecl.getType()) !=
                   fir::unwrapRefType(namingType) ||
@@ -1061,6 +1240,16 @@ bool ReductionProcessor::processReductionArguments(
               Fortran::lower::materializeUserReduction(
                   converter, *semaCtx, ultimate, opName, namingType, isByRef);
               existingDecl = module.lookupSymbol<OpType>(opName);
+            }
+            if (isBoxedTrivialElemReduction) {
+              // Trivial-element allocatable/pointer: synthesize the boxed op.
+              if (OpType boxedDecl = getOrCreateBoxedUserReduction<OpType>(
+                      converter, semaCtx, ultimate, redType, currentLocation)) {
+                reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+                    builder.getContext(), boxedDecl.getSymName()));
+                ++idx;
+                continue;
+              }
             }
             if (!existingDecl ||
                 fir::unwrapRefType(existingDecl.getType()) !=
@@ -1156,6 +1345,17 @@ bool ReductionProcessor::processReductionArguments(
           //     op was created; better an error here than binding a wrong op.
           //   - isBoxedTrivialReduction: an allocatable/pointer reduction of a
           //     trivial element type, deferred to #186765.
+          if (isBoxedTrivialElemReduction) {
+            // Trivial-element allocatable/pointer: synthesize the boxed op.
+            if (OpType boxedDecl = getOrCreateBoxedUserReduction<OpType>(
+                    converter, semaCtx, namedUltimate, redType,
+                    currentLocation)) {
+              reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+                  builder.getContext(), boxedDecl.getSymName()));
+              ++idx;
+              continue;
+            }
+          }
           if (!existingDecl ||
               fir::unwrapRefType(existingDecl.getType()) !=
                   fir::unwrapRefType(namingType) ||
@@ -1219,6 +1419,16 @@ bool ReductionProcessor::processReductionArguments(
               Fortran::lower::materializeUserReduction(
                   converter, *semaCtx, ultimate, opName, namingType, isByRef);
               existingDecl = module.lookupSymbol<OpType>(opName);
+            }
+            if (isBoxedTrivialElemReduction) {
+              // Trivial-element allocatable/pointer: synthesize the boxed op.
+              if (OpType boxedDecl = getOrCreateBoxedUserReduction<OpType>(
+                      converter, semaCtx, ultimate, redType, currentLocation)) {
+                reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+                    builder.getContext(), boxedDecl.getSymName()));
+                ++idx;
+                continue;
+              }
             }
             if (!existingDecl ||
                 fir::unwrapRefType(existingDecl.getType()) !=

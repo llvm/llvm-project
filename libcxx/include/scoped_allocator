@@ -564,19 +564,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <atomic>
-#    include <climits>
-#    include <concepts>
-#    include <cstring>
-#    include <ctime>
-#    include <iterator>
-#    include <memory>
-#    include <ratio>
-#    include <stdexcept>
-#    include <type_traits>
-#    include <variant>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_SCOPED_ALLOCATOR

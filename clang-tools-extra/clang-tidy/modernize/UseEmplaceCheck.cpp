@@ -150,13 +150,14 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   // because this requires special treatment (it could cause performance
   // regression)
   // + match for emplace calls that should be replaced with insertion
-  auto CallPushBack =
+  const auto CallPushBack =
       cxxMemberCallExprOnContainer("push_back", ContainersWithPushBack);
-  auto CallPush = cxxMemberCallExprOnContainer("push", ContainersWithPush);
-  auto CallPushFront =
+  const auto CallPush =
+      cxxMemberCallExprOnContainer("push", ContainersWithPush);
+  const auto CallPushFront =
       cxxMemberCallExprOnContainer("push_front", ContainersWithPushFront);
 
-  auto CallEmplacy = cxxMemberCallExpr(
+  const auto CallEmplacy = cxxMemberCallExpr(
       hasDeclaration(
           functionDecl(hasAnyNameIgnoringTemplates(EmplacyFunctions))),
       on(hasTypeOrPointeeType(
@@ -195,7 +196,7 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
 
   // FIXME: Discard 0/NULL (as nullptr), static inline const data members,
   // overloaded functions and template names.
-  auto SoughtConstructExpr =
+  const auto SoughtConstructExpr =
       cxxConstructExpr(
           unless(anyOf(IsCtorOfSmartPtr, HasInitList, BitFieldAsArgument,
                        InitializerListAsArgument, NewExprAsArgument,
@@ -214,7 +215,7 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
       anyOf(has(cxxBindTemporaryExpr(HasConstructInitListExpr)),
             HasConstructInitListExpr);
 
-  auto MakeTuple = ignoringImplicit(
+  const auto MakeTuple = ignoringImplicit(
       callExpr(callee(expr(ignoringImplicit(declRefExpr(
                    unless(hasExplicitTemplateArgs()),
                    to(functionDecl(hasAnyName(TupleMakeFunctions))))))))
@@ -222,11 +223,11 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
 
   // make_something can return type convertible to container's element type.
   // Allow the conversion only on containers of pairs.
-  auto MakeTupleCtor = ignoringImplicit(cxxConstructExpr(
+  const auto MakeTupleCtor = ignoringImplicit(cxxConstructExpr(
       has(materializeTemporaryExpr(MakeTuple)),
       hasDeclaration(cxxConstructorDecl(ofClass(hasAnyName(TupleTypes))))));
 
-  auto SoughtParam =
+  const auto SoughtParam =
       materializeTemporaryExpr(
           anyOf(has(MakeTuple), has(MakeTupleCtor), HasConstructExpr,
                 HasBracedInitListExpr,
@@ -247,7 +248,7 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
                                has(initListExpr(hasType(hasCanonicalType(
                                    type(equalsBoundNode("value_type")))))))));
 
-  auto HasConstructExprWithValueTypeTypeAsLastArgument = hasLastArgument(
+  const auto HasConstructExprWithValueTypeTypeAsLastArgument = hasLastArgument(
       materializeTemporaryExpr(
           anyOf(HasConstructExprWithValueTypeType,
                 HasBracedInitListWithValueTypeType,
@@ -330,7 +331,7 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
   const auto FunctionNameSourceRange = CharSourceRange::getCharRange(
       Call->getExprLoc(), Call->getArg(0)->getExprLoc());
 
-  auto Diag =
+  const auto Diag =
       EmplacyCall
           ? diag(TemporaryExpr ? TemporaryExpr->getBeginLoc()
                  : CtorCall    ? CtorCall->getBeginLoc()

@@ -1,0 +1,280 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - 2>/dev/null \
+// RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | FileCheck %s --check-prefix=LLVM
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!u8i = !cir.int<u, 8>
+!rec_UIntFloat = !cir.union<"UIntFloat" {!s32i, !cir.float}>
+!rec_UFloatInt = !cir.union<"UFloatInt" {!cir.float, !s32i}>
+!rec_ULongDouble = !cir.union<"ULongDouble" {!s64i, !cir.double}>
+!rec_UDoubleLong = !cir.union<"UDoubleLong" {!cir.double, !s64i}>
+!rec_UFloats = !cir.union<"UFloats" {!cir.float, !cir.float}>
+!rec_UThree = !cir.union<"UThree" {!cir.array<!s8i x 3>}>
+!rec_UNarrowStorage = !cir.union<"UNarrowStorage" {!s32i, !cir.array<!s8i x 8>}, padding = {!cir.array<!u8i x 4>}>
+!rec_UTwoEightbytes = !cir.union<"UTwoEightbytes" {!s64i, !cir.array<!s8i x 16>}, padding = {!cir.array<!u8i x 8>}>
+!rec_UBig = !cir.union<"UBig" {!cir.array<!s8i x 32>}>
+!rec_UBigOverAligned = !cir.union<"UBigOverAligned" {!cir.array<!s8i x 32>}>
+!rec_SOverAligned = !cir.struct<"SOverAligned" {!cir.array<!s8i x 32>}>
+!rec_UEmpty = !cir.union<"UEmpty" {}, padding = {!u8i}>
+!rec_UNoRegs = !cir.union<"UNoRegs" {!s32i, !cir.float}>
+!rec_SWithUnion = !cir.struct<"SWithUnion" {!rec_UIntFloat, !s32i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  cir.record_layouts = {
+    UNoRegs = #cir.record_layout<
+      arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
+      record_align = 4>,
+    UBigOverAligned = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 32>,
+    SOverAligned = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 32>},
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i16, dense<16>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<f32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<f64, dense<64>: vector<2xi64>>>
+} {
+
+  // Every union member sits at offset zero, so a 4-byte union of an int and a
+  // float classifies INTEGER on its single eightbyte and coerces to i32.
+  cir.func @take_int_float(%arg0: !rec_UIntFloat) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_int_float(%arg0: !s32i)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!s32i>
+  // CHECK:   cir.store %arg0, %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!s32i> -> !cir.ptr<!rec_UIntFloat>
+  // CHECK:   %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!rec_UIntFloat>, !rec_UIntFloat
+
+  // Same members as take_int_float in the opposite declaration order.  The
+  // classifier merges eightbyte classes across every member (INTEGER beats
+  // SSE), so which member is listed first does not change the class: this
+  // still coerces to a 32-bit integer, not to the float that comes first.
+  // The coercion type is unsigned where take_int_float's is signed.  On a tie
+  // for widest member the classifier's reduction keeps the first field (float
+  // here), and resolving an integer coercion from a float storage type falls
+  // through to a byte-size fallback that is always unsigned.  That difference
+  // is confined to CIR: LLVM integers have no signedness, so both lower to
+  // i32, which the LLVM checks at the end of this file pin.
+  cir.func @take_float_int(%arg0: !rec_UFloatInt) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_float_int(%arg0: !u32i)
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u32i> -> !cir.ptr<!rec_UFloatInt>
+
+  // An 8-byte union fills its eightbyte and coerces to i64.
+  cir.func @take_long_double(%arg0: !rec_ULongDouble) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_long_double(%arg0: !s64i)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!s64i>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!s64i> -> !cir.ptr<!rec_ULongDouble>
+
+  // Same class-merge point at 8 bytes: double-first still coerces to a
+  // 64-bit integer, unsigned for the same reduction-tie reason as
+  // take_float_int above.
+  cir.func @take_double_long(%arg0: !rec_UDoubleLong) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_double_long(%arg0: !u64i)
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u64i> -> !cir.ptr<!rec_UDoubleLong>
+
+  // A union of floats classifies SSE, so the coercion is a float register
+  // rather than an integer one.
+  cir.func @take_floats(%arg0: !rec_UFloats) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_floats(%arg0: !cir.float)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!cir.float>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!cir.float> -> !cir.ptr<!rec_UFloats>
+
+  // A 3-byte union coerces to the i24 that spans it.
+  cir.func @take_three(%arg0: !rec_UThree) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_three(%arg0: !cir.int<u, 24>)
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.int<u, 24>> -> !cir.ptr<!rec_UThree>
+
+  // The highest-aligned member (the int) is narrower than the union, whose
+  // 8-byte size comes from the char array.  The eightbyte is sized from the
+  // union, not from that member, so this coerces to i64 rather than i32.
+  cir.func @take_narrow_storage(%arg0: !rec_UNarrowStorage) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_narrow_storage(%arg0: !u64i)
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u64i> -> !cir.ptr<!rec_UNarrowStorage>
+
+  // A 16-byte union is two INTEGER eightbytes, flattened into one argument per
+  // eightbyte.
+  cir.func @take_two_eightbytes(%arg0: !rec_UTwoEightbytes) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_two_eightbytes(%arg0: !s64i, %arg1: !u64i)
+  // CHECK:   cir.alloca "coerce" align(8) : !cir.ptr<!rec_anon_struct>
+  // CHECK:   %[[FLAT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_anon_struct>
+  // CHECK:   %[[E0:.*]] = cir.get_member %[[FLAT]][0] {{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!s64i>
+  // CHECK:   cir.store %arg0, %[[E0]] : !s64i, !cir.ptr<!s64i>
+  // CHECK:   %[[E1:.*]] = cir.get_member %[[FLAT]][1] {{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
+  // CHECK:   cir.store %arg1, %[[E1]] : !u64i, !cir.ptr<!u64i>
+  // CHECK:   %{{.*}} = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_UTwoEightbytes>
+
+  // A union too large for registers is passed byval.
+  cir.func @take_big(%arg0: !rec_UBig) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_UBig> {llvm.align = 8 : i64, llvm.byval = !rec_UBig, llvm.noalias, llvm.noundef})
+  // CHECK:   %{{.*}} = cir.load %arg0 : !cir.ptr<!rec_UBig>, !rec_UBig
+
+  // The byval alignment comes from the record's declared alignment, which the
+  // layout metadata carries because the members alone cannot express an
+  // alignment attribute.  Same members as take_big, alignment 32 rather than 8.
+  cir.func @take_big_over_aligned(%arg0: !rec_UBigOverAligned) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_big_over_aligned(%arg0: !cir.ptr<!rec_UBigOverAligned> {llvm.align = 32 : i64, llvm.byval = !rec_UBigOverAligned, llvm.noalias, llvm.noundef})
+
+  // The same declared-alignment source feeds every accepted record, not just
+  // unions: an over-aligned STRUCT gets the same byval alignment fix, since
+  // mapCIRType's alignment lookup is on the shared record path.
+  cir.func @take_struct_over_aligned(%arg0: !rec_SOverAligned) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_struct_over_aligned(%arg0: !cir.ptr<!rec_SOverAligned> {llvm.align = 32 : i64, llvm.byval = !rec_SOverAligned, llvm.noalias, llvm.noundef})
+
+  // A union with no members classifies Ignore and is dropped from the
+  // signature.
+  cir.func @take_empty(%arg0: !rec_UEmpty) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty()
+
+  // An empty-union return is dropped too: the function returns void while its
+  // local storage slot survives.
+  cir.func @ret_empty() -> !rec_UEmpty {
+    %0 = cir.alloca "u" align(1) : !cir.ptr<!rec_UEmpty>
+    %1 = cir.load %0 : !cir.ptr<!rec_UEmpty>, !rec_UEmpty
+    cir.return %1 : !rec_UEmpty
+  }
+
+  // CHECK: cir.func{{.*}} @ret_empty()
+  // CHECK:   cir.alloca "u" align(1) : !cir.ptr<!rec_UEmpty>
+  // CHECK:   cir.return{{$}}
+
+  // A union the record layout marks as unable to pass in registers goes
+  // indirect without byval, however small it is.
+  cir.func @take_no_regs(%arg0: !rec_UNoRegs) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_no_regs(%arg0: !cir.ptr<!rec_UNoRegs> {llvm.align = 4 : i64, llvm.byref = !rec_UNoRegs})
+
+  // A struct member that is itself a union is mapped through the same union
+  // handling, so the enclosing 8-byte struct coerces to one i64.
+  cir.func @take_struct_with_union(%arg0: !rec_SWithUnion) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_struct_with_union(%arg0: !u64i)
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u64i> -> !cir.ptr<!rec_SWithUnion>
+
+  // A coerced union return round-trips through the coercion type.
+  cir.func @ret_int_float(%arg0: !rec_UIntFloat) -> !rec_UIntFloat {
+    %0 = cir.alloca "u" align(4) : !cir.ptr<!rec_UIntFloat>
+    cir.store %arg0, %0 : !rec_UIntFloat, !cir.ptr<!rec_UIntFloat>
+    %1 = cir.load %0 : !cir.ptr<!rec_UIntFloat>, !rec_UIntFloat
+    cir.return %1 : !rec_UIntFloat
+  }
+
+  // CHECK: cir.func{{.*}} @ret_int_float(%arg0: !s32i) -> !s32i
+  // CHECK:   %[[RETSLOT:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_UIntFloat>
+  // CHECK:   cir.store %{{.*}}, %[[RETSLOT]] : !rec_UIntFloat, !cir.ptr<!rec_UIntFloat>
+  // CHECK:   %[[RETCAST:.*]] = cir.cast bitcast %[[RETSLOT]] : !cir.ptr<!rec_UIntFloat> -> !cir.ptr<!s32i>
+  // CHECK:   %[[RET:.*]] = cir.load %[[RETCAST]] : !cir.ptr<!s32i>, !s32i
+  // CHECK:   cir.return %[[RET]] : !s32i
+
+  // A union return too large for registers uses the caller's sret slot.
+  cir.func @ret_big(%arg0: !rec_UBig) -> !rec_UBig {
+    %0 = cir.alloca "u" align(1) : !cir.ptr<!rec_UBig>
+    cir.store %arg0, %0 : !rec_UBig, !cir.ptr<!rec_UBig>
+    %1 = cir.load %0 : !cir.ptr<!rec_UBig>, !rec_UBig
+    cir.return %1 : !rec_UBig
+  }
+
+  // CHECK: cir.func{{.*}} @ret_big(%arg0: !cir.ptr<!rec_UBig> {llvm.align = 1 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_UBig, llvm.writable}, %arg1: !cir.ptr<!rec_UBig> {llvm.align = 8 : i64, llvm.byval = !rec_UBig, llvm.noalias, llvm.noundef})
+  // CHECK:   %[[VAL:.*]] = cir.load %arg1 : !cir.ptr<!rec_UBig>, !rec_UBig
+  // CHECK:   cir.store %[[VAL]], %arg0 : !rec_UBig, !cir.ptr<!rec_UBig>
+
+  // The call site coerces the union argument the same way the callee expects
+  // it.
+  cir.func @call_int_float(%arg0: !rec_UIntFloat) {
+    cir.call @take_int_float(%arg0) : (!rec_UIntFloat) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_int_float(%arg0: !s32i)
+  // CHECK:   %[[ARGSLOT:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_UIntFloat>
+  // CHECK:   cir.store %{{.*}}, %[[ARGSLOT]] : !rec_UIntFloat, !cir.ptr<!rec_UIntFloat>
+  // CHECK:   %[[ARGCAST:.*]] = cir.cast bitcast %[[ARGSLOT]] : !cir.ptr<!rec_UIntFloat> -> !cir.ptr<!s32i>
+  // CHECK:   %[[ARG:.*]] = cir.load %[[ARGCAST]] : !cir.ptr<!s32i>, !s32i
+  // CHECK:   cir.call @take_int_float(%[[ARG]]) : (!s32i) -> ()
+
+  // Both eightbytes are decomposed at the call site.
+  cir.func @call_two_eightbytes(%arg0: !rec_UTwoEightbytes) {
+    cir.call @take_two_eightbytes(%arg0) : (!rec_UTwoEightbytes) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_two_eightbytes(%arg0: !s64i, %arg1: !u64i)
+  // CHECK:   %[[CALLSLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_UTwoEightbytes>
+  // CHECK:   %[[CALLCAST:.*]] = cir.cast bitcast %[[CALLSLOT]] : !cir.ptr<!rec_UTwoEightbytes> -> !cir.ptr<!rec_anon_struct>
+  // CHECK:   %[[G0:.*]] = cir.get_member %[[CALLCAST]][0] {{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!s64i>
+  // CHECK:   %[[A0:.*]] = cir.load %[[G0]] : !cir.ptr<!s64i>, !s64i
+  // CHECK:   %[[G1:.*]] = cir.get_member %[[CALLCAST]][1] {{.*}} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
+  // CHECK:   %[[A1:.*]] = cir.load %[[G1]] : !cir.ptr<!u64i>, !u64i
+  // CHECK:   cir.call @take_two_eightbytes(%[[A0]], %[[A1]]) : (!s64i, !u64i) -> ()
+}
+
+// LLVM: define void @take_int_float(i32 %{{.+}})
+// Declaration order does not reach the lowered signature: the CIR-level
+// signedness difference from the reduction tie disappears here, and both
+// orders land on the same integer register the class merge picked.
+// LLVM: define void @take_float_int(i32 %{{.+}})
+// LLVM: define void @take_long_double(i64 %{{.+}})
+// LLVM: define void @take_double_long(i64 %{{.+}})
+// LLVM: define void @take_floats(float %{{.+}})
+// LLVM: define void @take_three(i24 %{{.+}})
+// LLVM: define void @take_narrow_storage(i64 %{{.+}})
+// LLVM: define void @take_two_eightbytes(i64 %{{.+}}, i64 %{{.+}})
+// LLVM: define void @take_big(ptr noalias noundef byval(%union.UBig) align 8 %{{.+}})
+// LLVM: define void @take_big_over_aligned(ptr noalias noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
+// LLVM: define void @take_struct_over_aligned(ptr noalias noundef byval(%struct.SOverAligned) align 32 %{{.+}})
+// LLVM: define void @take_empty()
+// LLVM: define void @ret_empty()
+// LLVM: define void @take_no_regs(ptr byref(%union.UNoRegs) align 4 %{{.+}})
+// LLVM: define void @take_struct_with_union(i64 %{{.+}})
+// LLVM: define i32 @ret_int_float(i32 %{{.+}})
+// LLVM: define void @ret_big(ptr dead_on_unwind noalias writable sret(%union.UBig) align 1 %{{.+}}, ptr noalias noundef byval(%union.UBig) align 8 %{{.+}})
+// LLVM: define void @call_int_float(i32 %{{.+}})
+// LLVM:   call void @take_int_float(i32 %{{.+}})
+// LLVM: define void @call_two_eightbytes(i64 %{{.+}}, i64 %{{.+}})
+// LLVM:   call void @take_two_eightbytes(i64 %{{.+}}, i64 %{{.+}})

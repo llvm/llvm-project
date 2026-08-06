@@ -595,8 +595,7 @@ the function's return value.
 
 A pass wrapper around the `ExtractLoop()` scalar transformation to extract
 each top-level loop into its own new function.  If the loop is the *only* loop
-in a given function, it is not touched.  This is a pass most useful for
-debugging via bugpoint.
+in a given function, it is not touched.
 
 ### `loop-fusion`: Loop Fusion
 
@@ -896,10 +895,9 @@ algorithm:
 
 This section describes the LLVM Utility Passes.
 
-### `extract-blocks`: Extract Basic Blocks From Module (for bugpoint use)
+### `extract-blocks`: Extract Basic Blocks From Module
 
-This pass is used by bugpoint to extract all blocks from the module into their
-own functions.
+This pass extracts all blocks from the module into their own functions.
 
 ### `instnamer`: Assign names to anonymous instructions
 

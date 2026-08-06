@@ -1342,14 +1342,53 @@ Interpreter::Visit(const BitFieldExtractionNode &node) {
     return llvm::make_error<DILDiagnosticError>(
         m_expr, "could not get the index as an integer", node.GetLocation());
 
+  // Reject negative indices before the swap below, so the diagnostic reports
+  // the range as the user wrote it. A negative index would also wrap to a huge
+  // offset in the uint32_t GetSyntheticBitFieldChild call below.
+  if (first_index < 0 || last_index < 0) {
+    std::string message =
+        llvm::formatv("bitfield range {0}:{1} is not valid (negative index)",
+                      first_index, last_index);
+    return llvm::make_error<DILDiagnosticError>(m_expr, message,
+                                                node.GetLocation());
+  }
+
   // if the format given is [high-low], swap range
   if (first_index > last_index)
     std::swap(first_index, last_index);
+
+  // GetMaxU64Bitfield in the data layer only supports up to 64 bits (it asserts
+  // bitfield_bit_size <= 64 and otherwise shifts out of bounds), so reject a
+  // wider range here.
+  if (last_index - first_index >= 64) {
+    std::string message =
+        llvm::formatv("bitfield range {0}:{1} is not valid (more than 64 bits)",
+                      first_index, last_index);
+    return llvm::make_error<DILDiagnosticError>(m_expr, message,
+                                                node.GetLocation());
+  }
 
   auto base_or_err = EvaluateAndDereference(node.GetBase());
   if (!base_or_err)
     return base_or_err;
   lldb::ValueObjectSP base = *base_or_err;
+
+  // The high index must lie within the base object's storage; a bit index past
+  // its bit size shifts out of bounds when the child is later read or formatted
+  // (GetMaxU64Bitfield).
+  llvm::Expected<uint64_t> base_bit_size =
+      base->GetCompilerType().GetBitSize(&m_stack_frame);
+  if (!base_bit_size)
+    return base_bit_size.takeError();
+  if (static_cast<uint64_t>(last_index) >= *base_bit_size) {
+    std::string message = llvm::formatv(
+        "bitfield range {0}:{1} is not valid for \"({2}) {3}\"", first_index,
+        last_index, base->GetTypeName().AsCString("<invalid type>"),
+        base->GetName().GetStringRef());
+    return llvm::make_error<DILDiagnosticError>(m_expr, message,
+                                                node.GetLocation());
+  }
+
   lldb::ValueObjectSP child_valobj_sp =
       base->GetSyntheticBitFieldChild(first_index, last_index, true);
   if (!child_valobj_sp) {

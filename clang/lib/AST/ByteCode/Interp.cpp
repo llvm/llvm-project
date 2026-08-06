@@ -2166,9 +2166,13 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
 
     CXXBasePaths Paths;
     getRecord(P.getBase())->isDerivedFrom(getRecord(P), Paths);
-    assert(std::distance(Paths.begin(), Paths.end()) == 1);
 
-    return Paths.front().Access == AS_private;
+    // Through virtual bases, there might be more than one "direct" base. They
+    // can have different access specifiers. They must all be private to be
+    // considered private.
+    return llvm::all_of(Paths, [](const CXXBasePath &P) -> bool {
+      return P.Access == AS_private;
+    });
   };
 
   enum {

@@ -432,6 +432,23 @@ void CIRGenModule::emitDeferred() {
   curDeclsToEmit.swap(deferredDeclsToEmit);
 
   for (const GlobalDecl &d : curDeclsToEmit) {
+    // Functions declared with the sycl_kernel_entry_point attribute are
+    // emitted normally during host compilation. During device compilation, a
+    // SYCL kernel caller offload entry point function is generated and emitted
+    // in place of each of these functions.
+    if (const auto *fd = d.getDecl()->getAsFunction()) {
+      if (langOpts.SYCLIsDevice && fd->hasAttr<SYCLKernelEntryPointAttr>() &&
+          fd->isDefined()) {
+        // Functions with an invalid sycl_kernel_entry_point attribute are
+        // ignored during device compilation.
+        if (!fd->getAttr<SYCLKernelEntryPointAttr>()->isInvalidAttr())
+          errorNYI(fd->getSourceRange(),
+                   "SYCL kernel caller offload entry point");
+        // Do not emit the sycl_kernel_entry_point attributed function.
+        continue;
+      }
+    }
+
     emitGlobalDecl(d);
 
     // If we found out that we need to emit more decls, do that recursively.

@@ -542,6 +542,8 @@ public:
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
+                       AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                          void *DstPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
@@ -576,7 +578,7 @@ public:
     V = 0;
     return Plugin::success();
   }
-  Expected<GenericKernelTy &> constructKernel(const char *Name) override;
+  Expected<GenericKernelTy &> constructKernel(StringRef Name) override;
 
   Error callGlobalConstructors(GenericPluginTy &Plugin,
                                DeviceImageTy &Image) override;

@@ -14,5 +14,6 @@
 // RV64: #define __GCC_DESTRUCTIVE_SIZE 64
 
 // NETBSD: #define __SIG_ATOMIC_MIN__ (-__SIG_ATOMIC_MAX__ - 1)
+// NETBSD: #define __SIG_ATOMIC_TYPE__ int
 // NETBSD: #define __WCHAR_MIN__ (-__WCHAR_MAX__ - 1)
 // NETBSD: #define __WINT_MIN__ 0U

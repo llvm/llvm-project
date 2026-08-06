@@ -52,7 +52,7 @@ skipLParensBackwards(SourceLocation Start, const ASTContext &Context) {
   if (locDangerous(Start))
     return std::nullopt;
 
-  auto PreviousTokenLParen = [&Start, &Context]() {
+  const auto PreviousTokenLParen = [&Start, &Context]() {
     const std::optional<Token> T = lexer::getPreviousToken(
         Start, Context.getSourceManager(), Context.getLangOpts());
     return T && T->is(tok::l_paren);

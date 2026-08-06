@@ -2488,6 +2488,9 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Allocate &x) {
       if (const auto &v{GetIntValue(align->v)}; !v || *v <= 0) {
         context_.Say(OmpGetModifierSource(modifiers, align),
             "The alignment value should be a constant positive integer"_err_en_US);
+      } else if (!llvm::isPowerOf2_64(*v)) {
+        context_.Say(OmpGetModifierSource(modifiers, align),
+            "The alignment value should be a power of 2"_err_en_US);
       }
     }
   }

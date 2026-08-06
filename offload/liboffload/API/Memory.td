@@ -191,7 +191,7 @@ def olMemcpy : Function {
     let desc = "Enqueue a memcpy operation.";
     let details = [
         "For host pointers, use the host device belonging to the OL_PLATFORM_BACKEND_HOST platform.",
-        "If a queue is specified, at least one device must be a non-host device",
+        "If both pointers are on the host and a queue is specified, the memcpy is ordered with other work in the queue.",
         "If a queue is not specified, the memcpy happens synchronously"
     ];
     let params = [
