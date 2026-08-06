@@ -3828,6 +3828,9 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPSingleDefRecipe,
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadSC);
 
+  /// Returns the opcode of the widened load.
+  unsigned getOpcode() const { return Instruction::Load; }
+
   /// Generate a wide load or gather.
   void execute(VPTransformState &State) override;
 

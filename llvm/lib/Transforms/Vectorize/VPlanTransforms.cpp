@@ -2232,7 +2232,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
                              C->second == Instruction::ExtractValue)))
       return false;
 
-    // Widened loads only read memory; the cse() driver guards their reuse with
+    // Widened loads only read memory; the cse() routine guards their reuse with
     // an aliasing check. Reject anything that may write, and any other recipe
     // that reads memory.
     if (Def->mayWriteToMemory())
@@ -2326,15 +2326,13 @@ void VPlanTransforms::cse(VPlan &Plan) {
           continue;
         // Reuse an earlier widened load only if no aliasing write lies between
         // the two loads.
-        if (auto *Load = dyn_cast<VPWidenLoadRecipe>(Def)) {
-          auto *EarlierLoad = cast<VPWidenLoadRecipe>(V);
-          std::optional<MemoryLocation> Loc = vputils::getMemoryLocation(*Load);
-          if (!Loc || !canCSEWithNoAliasCheck(*Loc, EarlierLoad, Load))
+        if (auto *EarlierLoad = dyn_cast<VPWidenLoadRecipe>(V)) {
+          auto *Load = cast<VPWidenLoadRecipe>(Def);
+          auto Loc = vputils::getMemoryLocation(*EarlierLoad);
+          if (!canCSEWithNoAliasCheck(*Loc, EarlierLoad, Load))
             continue;
           // Keep only metadata common to both loads on the survivor.
           EarlierLoad->intersect(*Load);
-          Load->replaceAllUsesWith(EarlierLoad);
-          continue;
         }
         // Only keep flags present on both V and Def.
         if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(V))

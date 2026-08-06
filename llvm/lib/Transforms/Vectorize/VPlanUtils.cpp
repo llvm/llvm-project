@@ -359,9 +359,8 @@ bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
 unsigned vputils::getOpcode(const VPValue *V) {
   return TypeSwitch<const VPValue *, unsigned>(V)
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
-            VPReplicateRecipe, VPWidenPHIRecipe>(
+            VPReplicateRecipe, VPWidenPHIRecipe, VPWidenLoadRecipe>(
           [](auto *I) { return I->getOpcode(); })
-      .Case<VPWidenLoadRecipe>([](auto *) { return Instruction::Load; })
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
           [](auto *I) {
             // For recipes that do not directly map to LLVM IR instructions,

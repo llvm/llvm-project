@@ -313,6 +313,50 @@ exit:
   ret void
 }
 
+; A store without alias metadata cannot be proven not to alias the loaded
+; address, so the second load is not CSE'd.
+define void @no_cse_across_store_without_scopes(ptr noalias %a, ptr noalias %b) {
+; CHECK-LABEL: define void @no_cse_across_store_without_scopes(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4, !alias.scope [[META8]], !noalias [[META11]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4, !alias.scope [[META8]], !noalias [[META11]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  %x = load i32, ptr %gep.a, align 4, !alias.scope !0, !noalias !3
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  store i32 %x, ptr %gep.b, align 4
+  %y = load i32, ptr %gep.a, align 4, !alias.scope !0, !noalias !3
+  %sum = add i32 %x, %y
+  store i32 %sum, ptr %gep.b, align 4
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop
+exit:
+  ret void
+}
+
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"scope_a"}
 !2 = distinct !{!2, !"domain"}
