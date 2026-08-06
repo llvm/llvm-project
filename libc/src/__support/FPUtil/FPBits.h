@@ -127,11 +127,11 @@ template <> struct FPLayout<FPType::IEEE754_Binary128> {
 };
 
 template <> struct FPLayout<FPType::X86_Binary80> {
-  // #if __SIZEOF_LONG_DOUBLE__ == 12
-  //   using StorageType = UInt<__SIZEOF_LONG_DOUBLE__ * CHAR_BIT>;
-  // #else
+  #if __SIZEOF_LONG_DOUBLE__ == 12
+    using StorageType = UInt<__SIZEOF_LONG_DOUBLE__ * CHAR_BIT>;
+  #else
   using StorageType = UInt128;
-  // #endif
+  #endif
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 15;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 64;
@@ -817,7 +817,7 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
   else if constexpr (cpp::is_same_v<UnqualT, Float128>)
     return FPType::IEEE754_Binary128;
   else if constexpr (cpp::is_same_v<UnqualT, Float80>)
-    return FPType::IEEE754_Binary128;
+    return FPType::IEEE754_Binary80;
   else
     static_assert(cpp::always_false<UnqualT>, "Unsupported type");
 }
