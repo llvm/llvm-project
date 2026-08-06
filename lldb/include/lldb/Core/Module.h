@@ -530,6 +530,8 @@ public:
 
   uint64_t GetObjectOffset() const { return m_object_offset; }
 
+  uint64_t GetObjectSize() const { return m_object_size; }
+
   /// Get the object file representation for the current architecture.
   ///
   /// If the object file has not been located or parsed yet, this function
@@ -1076,6 +1078,7 @@ protected:
       m_memory_module_addr; ///< For a Module read from memory,
                             ///  the address it was read from.
   uint64_t m_object_offset = 0;
+  uint64_t m_object_size = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
 
   /// DataExtractor containing the module image, if it was provided at

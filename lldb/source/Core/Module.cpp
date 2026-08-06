@@ -153,9 +153,19 @@ Module::Module(const ModuleSpec &module_spec)
     file_size = extractor_sp->GetByteSize();
 
   // First extract all module specifications from the file using the local file
-  // path. If there are no specifications, then don't fill anything in
+  // path. If there are no specifications, then don't fill anything in.
+  //
+  // A spec with bounds describes an object embedded in a larger file, so
+  // enumerate from there. A named object is an archive member: its offset
+  // points into the archive, which only parses from the start, so those still
+  // enumerate the whole file and are picked out by name below.
+  const bool use_explicit_bounds =
+      module_spec.HasObjectFileBounds() && !module_spec.GetObjectName();
   ModuleSpecList modules_specs = ObjectFile::GetModuleSpecifications(
-      module_spec.GetFileSpec(), 0, file_size, extractor_sp);
+      module_spec.GetFileSpec(),
+      use_explicit_bounds ? module_spec.GetObjectOffset() : 0,
+      use_explicit_bounds ? module_spec.GetObjectSize() : file_size,
+      extractor_sp);
   if (modules_specs.GetSize() == 0)
     return;
 
@@ -225,6 +235,7 @@ Module::Module(const ModuleSpec &module_spec)
   // (for mod time in a BSD static archive) of from the matching module
   // specification
   m_object_offset = matching_module_spec.GetObjectOffset();
+  m_object_size = matching_module_spec.GetObjectSize();
   m_object_mod_time = matching_module_spec.GetObjectModificationTime();
 }
 
@@ -1470,6 +1481,9 @@ bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
 
   const FileSpec &platform_file_spec = module_ref.GetPlatformFileSpec();
   if (!FileSpec::Match(platform_file_spec, GetPlatformFileSpec()))
+    return false;
+
+  if (!module_ref.MatchesObjectFileSlice(m_object_offset, m_object_size))
     return false;
 
   const ArchSpec &arch = module_ref.GetArchitecture();
