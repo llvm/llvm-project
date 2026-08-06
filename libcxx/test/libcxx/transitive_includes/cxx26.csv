@@ -1,6 +1,5 @@
 algorithm cctype
 algorithm climits
-algorithm compare
 algorithm cstdint
 algorithm cstring
 algorithm ctime
@@ -11,7 +10,6 @@ algorithm iosfwd
 algorithm limits
 algorithm ratio
 algorithm stdexcept
-algorithm tuple
 algorithm version
 any cstdint
 any initializer_list
@@ -649,19 +647,16 @@ memory_resource tuple
 memory_resource version
 mutex cerrno
 mutex climits
-mutex compare
 mutex cstdint
 mutex cstring
 mutex ctime
 mutex limits
 mutex ratio
-mutex tuple
 mutex version
 new version
 numbers version
 numeric cctype
 numeric climits
-numeric compare
 numeric cstdint
 numeric cstring
 numeric ctime
@@ -670,7 +665,6 @@ numeric cwctype
 numeric initializer_list
 numeric limits
 numeric ratio
-numeric tuple
 numeric version
 optional compare
 optional cstdint

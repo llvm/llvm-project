@@ -40,8 +40,7 @@ void f() {
       F f;
       static_cast<void>(std::async(f));
       // expected-error@*:* {{static assertion failed}}
-      // expected-error@*:* {{no matching constructor for initialization}}
-      // expected-error@*:* 0-1 {{call to deleted constructor}}
+      // expected-error@*:* 0-2 {{call to deleted constructor}}
     }
 
     { // Mandates: is_constructible_v<decay_t<F>, F>
@@ -55,8 +54,7 @@ void f() {
 
       static_cast<void>(std::async(F{}));
       // expected-error@*:* {{static assertion failed}}
-      // expected-error@*:* {{no matching constructor for initialization}}
-      // expected-error@*:* 0-1 {{call to deleted constructor}}
+      // expected-error@*:* 0-2 {{call to deleted constructor}}
     }
 
     { // Mandates: (is_constructible_v<decay_t<Args>, Args> && ...)
