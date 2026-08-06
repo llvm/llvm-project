@@ -50,6 +50,9 @@ class VecDesc {
   StringRef VABIPrefix;
   /// Encoded calling convention: 0 means absent (std::nullopt), otherwise
   /// stores CallingConv::ID + 1 so an explicit C (0) remains representable.
+  /// TODO: Since C++20 standard becomes default in LLVM we can return back to
+  /// use std::optional<CallingConv::ID> instead of unsigned and value_or()
+  /// in default constructor.
   unsigned CC;
 
 public:
