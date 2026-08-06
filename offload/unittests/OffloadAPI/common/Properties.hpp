@@ -10,7 +10,7 @@
 // bound - only relevant host properties are added to the container with
 // properties passed to the fixture during instantiation. The selection of
 // relevant properties is achieved by merging or removing selected properties,
-// marked as "Relevant" or "Irrelevant" in their names.
+// marked as "Relevant" or "IrrelevantForHost" in their names.
 
 inline constexpr size_t MAX_DEVICE_INFO_BYTES = 8;
 
@@ -109,23 +109,23 @@ inline const DeviceInfoProperties CapabilitesFlagsProperties =
     createPropertiesWithSizeContainer(sizeof(ol_device_fp_capability_flags_t),
                                       PropCapabilitiesFlags);
 
-inline const DeviceInfoProp PropIrrelevantGTCapabilities = {
+inline const DeviceInfoProp PropIrrelevantForHostGTCapabilities = {
     OL_DEVICE_INFO_HALF_FP_CONFIG};
-inline const DeviceInfoProperties IrrelevantGTCapabilitiesProperties = createPropertiesWithSizeContainer(sizeof(ol_device_fp_capability_flags_t), PropIrrelevantGTCapabilities);
+inline const DeviceInfoProperties IrrelevantForHostGTCapabilitiesProperties = createPropertiesWithSizeContainer(sizeof(ol_device_fp_capability_flags_t), PropIrrelevantForHostGTCapabilities);
 
 inline const DeviceInfoProp Prop_RelevantGTCapabilites =
     removeIrrelevantProperties(PropCapabilitiesFlags,
-                               PropIrrelevantGTCapabilities);
+                               PropIrrelevantForHostGTCapabilities);
 inline const DeviceInfoProperties RelevantGTCapabilitiesProperties =
     createPropertiesWithSizeContainer(sizeof(ol_device_fp_capability_flags_t),
                                       Prop_RelevantGTCapabilites);
 
-inline const DeviceInfoProp PropIrrelevantGTUint32 = {
+inline const DeviceInfoProp PropIrrelevantForHostGTUint32 = {
     OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF};
-inline const DeviceInfoProperties IrrelevantGTUint32Properties = createPropertiesWithSizeContainer(sizeof(uint32_t), PropIrrelevantGTUint32);
+inline const DeviceInfoProperties IrrelevantForHostGTUint32Properties = createPropertiesWithSizeContainer(sizeof(uint32_t), PropIrrelevantForHostGTUint32);
 
 inline const DeviceInfoProp Prop_RelevantGTUint32 =
-    removeIrrelevantProperties(PropUint32, PropIrrelevantGTUint32);
+    removeIrrelevantProperties(PropUint32, PropIrrelevantForHostGTUint32);
 inline const DeviceInfoProperties RelevantGTUint32Properties =
     createPropertiesWithSizeContainer(sizeof(uint32_t), Prop_RelevantGTUint32);
 
