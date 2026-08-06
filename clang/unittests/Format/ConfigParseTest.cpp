@@ -1052,6 +1052,12 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("IndentGotoLabels: true", IndentGotoLabels,
               FormatStyle::IGLS_OuterIndent);
 
+  Style.PPScopeIndent = FormatStyle::PPSIS_All;
+  CHECK_PARSE("PPScopeIndent: None", PPScopeIndent, FormatStyle::PPSIS_None);
+  CHECK_PARSE("PPScopeIndent: Pragmas", PPScopeIndent,
+              FormatStyle::PPSIS_Pragmas);
+  CHECK_PARSE("PPScopeIndent: All", PPScopeIndent, FormatStyle::PPSIS_All);
+
   Style.BitFieldColonSpacing = FormatStyle::BFCS_None;
   CHECK_PARSE("BitFieldColonSpacing: Both", BitFieldColonSpacing,
               FormatStyle::BFCS_Both);

@@ -106,6 +106,7 @@ public:
     Parser.Line = std::make_unique<UnwrappedLine>();
     Parser.Line->Level = PreBlockLine->Level;
     Parser.Line->PPLevel = PreBlockLine->PPLevel;
+    Parser.Line->PPScopeLevel = PreBlockLine->PPScopeLevel;
     Parser.Line->InPPDirective = PreBlockLine->InPPDirective;
     Parser.Line->InMacroBody = PreBlockLine->InMacroBody;
     Parser.Line->UnbracedBodyLevel = PreBlockLine->UnbracedBodyLevel;
@@ -181,6 +182,7 @@ void UnwrappedLineParser::reset() {
   NestedTooDeep.clear();
   NestedLambdas.clear();
   PPStack.clear();
+  PPScopeLevelStack.clear();
   Line->FirstStartColumn = FirstStartColumn;
 
   if (!Unexpanded.empty())
@@ -1064,6 +1066,9 @@ void UnwrappedLineParser::conditionalCompilationCondition(bool Unreachable) {
 }
 
 void UnwrappedLineParser::conditionalCompilationStart(bool Unreachable) {
+  // Remember where the #if sits so that the rest of the conditional can be
+  // aligned with it even if the braces in between are unbalanced.
+  PPScopeLevelStack.push_back(Line->PPScopeLevel);
   ++PPBranchLevel;
   assert(PPBranchLevel >= 0 && PPBranchLevel <= (int)PPLevelBranchIndex.size());
   if (PPBranchLevel == (int)PPLevelBranchIndex.size()) {
@@ -1076,6 +1081,8 @@ void UnwrappedLineParser::conditionalCompilationStart(bool Unreachable) {
 }
 
 void UnwrappedLineParser::conditionalCompilationAlternative() {
+  if (!PPScopeLevelStack.empty())
+    Line->PPScopeLevel = PPScopeLevelStack.back();
   if (!PPStack.empty())
     PPStack.pop_back();
   assert(PPBranchLevel < (int)PPLevelBranchIndex.size());
@@ -1087,6 +1094,10 @@ void UnwrappedLineParser::conditionalCompilationAlternative() {
 }
 
 void UnwrappedLineParser::conditionalCompilationEnd() {
+  if (!PPScopeLevelStack.empty()) {
+    Line->PPScopeLevel = PPScopeLevelStack.back();
+    PPScopeLevelStack.pop_back();
+  }
   assert(PPBranchLevel < (int)PPLevelBranchIndex.size());
   if (PPBranchLevel >= 0 && !PPChainBranchIndex.empty()) {
     if (PPChainBranchIndex.top() + 1 > PPLevelBranchCount[PPBranchLevel])
@@ -5032,6 +5043,18 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
               static_cast<unsigned>(-LevelDifference) <= Line->Level) &&
              "LevelDifference makes Line->Level negative");
       Line->Level += LevelDifference;
+      // Remember the indent level of the enclosing code block before any
+      // preprocessor nesting is mixed into Level, so that PPScopeIndent can add
+      // it back as an independent offset. Recovering it from Level afterwards
+      // is what made the reverted D92753 underflow inside #if/#endif.
+      unsigned CodeLevel = Line->Level;
+      // In Whitesmiths mode parseBlock() moves Level to the indentation of the
+      // block before the opening brace, so LevelDifference counts it a second
+      // time for a directive that directly follows that brace.
+      if (LevelDifference > 0 &&
+          Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
+        CodeLevel -= LevelDifference;
+      }
       // Comments stored before the preprocessor directive need to be output
       // before the preprocessor directive, at the same level as the
       // preprocessor directive, as we consider them to apply to the directive.
@@ -5041,6 +5064,9 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       }
       assert(Line->Level >= Line->UnbracedBodyLevel);
       Line->Level -= Line->UnbracedBodyLevel;
+      Line->PPScopeLevel = CodeLevel >= Line->UnbracedBodyLevel
+                               ? CodeLevel - Line->UnbracedBodyLevel
+                               : 0;
       flushComments(isOnNewLine(*FormatTok));
       const bool IsEndIf = Tokens->peekNextToken()->is(tok::pp_endif);
       parsePPDirective();

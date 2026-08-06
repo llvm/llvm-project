@@ -524,6 +524,9 @@ features cannot lower the translation-unit ABI level;
 
 - Add `SpacesInBlockComments` option to control spacing after `/*` and
   before `*/` in ordinary block comments.
+- Add `PPScopeIndent` option to indent preprocessor directives to the scope of
+  the surrounding code, either for `#pragma` only or for all directives, in
+  addition to the indentation given by `IndentPPDirectives`.
 
 ### libclang
 

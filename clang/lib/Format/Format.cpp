@@ -665,6 +665,16 @@ struct ScalarEnumerationTraits<FormatStyle::PPDirectiveIndentStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::PPDirectiveScopeIndentStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::PPDirectiveScopeIndentStyle &Value) {
+    IO.enumCase(Value, "None", FormatStyle::PPSIS_None);
+    IO.enumCase(Value, "Pragmas", FormatStyle::PPSIS_Pragmas);
+    IO.enumCase(Value, "All", FormatStyle::PPSIS_All);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::QualifierAlignmentStyle> {
   static void enumeration(IO &IO, FormatStyle::QualifierAlignmentStyle &Value) {
     IO.enumCase(Value, "Leave", FormatStyle::QAS_Leave);
@@ -1460,6 +1470,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.PenaltyReturnTypeOnItsOwnLine);
     IO.mapOptional("PointerAlignment", Style.PointerAlignment);
     IO.mapOptional("PPIndentWidth", Style.PPIndentWidth);
+    IO.mapOptional("PPScopeIndent", Style.PPScopeIndent);
     IO.mapOptional("QualifierAlignment", Style.QualifierAlignment);
     // Default Order for Left/Right based Qualifier alignment.
     if (Style.QualifierAlignment == FormatStyle::QAS_Right)
@@ -2002,6 +2013,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                               /*BreakAfter=*/0};
   LLVMStyle.PointerAlignment = FormatStyle::PAS_Right;
   LLVMStyle.PPIndentWidth = -1;
+  LLVMStyle.PPScopeIndent = FormatStyle::PPSIS_None;
   LLVMStyle.QualifierAlignment = FormatStyle::QAS_Leave;
   LLVMStyle.ReferenceAlignment = FormatStyle::RAS_Pointer;
   LLVMStyle.ReflowComments = FormatStyle::RCS_Always;

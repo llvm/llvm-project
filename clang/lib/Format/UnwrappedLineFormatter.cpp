@@ -32,6 +32,30 @@ bool isRecordLBrace(const FormatToken &Tok) {
                      TT_StructLBrace, TT_UnionLBrace);
 }
 
+/// Returns the number of columns \p Line must be shifted by to follow the
+/// indentation of the code block that encloses it, or 0 if it must not be.
+///
+/// This is an offset added on top of the indentation that
+/// \c FormatStyle::IndentPPDirectives gives a directive relative to the other
+/// directives, and is independent of it: \c AnnotatedLine::Level counts
+/// preprocessor nesting, \c AnnotatedLine::PPScopeLevel counts the enclosing
+/// braces.
+unsigned getPPScopeIndent(const FormatStyle &Style, const AnnotatedLine &Line) {
+  if (Style.PPScopeIndent == FormatStyle::PPSIS_None || !Line.InPPDirective)
+    return 0;
+  // AfterHash keeps the hash in the first column by design, and Leave preserves
+  // the original indentation; neither combines with a scope indent.
+  if (Style.IndentPPDirectives == FormatStyle::PPDIS_AfterHash ||
+      Style.IndentPPDirectives == FormatStyle::PPDIS_Leave) {
+    return 0;
+  }
+  if (Style.PPScopeIndent == FormatStyle::PPSIS_Pragmas &&
+      !Line.InPragmaDirective) {
+    return 0;
+  }
+  return Line.PPScopeLevel * Style.IndentWidth;
+}
+
 /// Tracks the indent level of \c AnnotatedLines across levels.
 ///
 /// \c nextLine must be called for each \c AnnotatedLine, after which \c
@@ -58,6 +82,7 @@ public:
   /// next.
   void nextLine(const AnnotatedLine &Line) {
     Offset = getIndentOffset(Line);
+    const unsigned PPScopeIndent = getPPScopeIndent(Style, Line);
     // Update the indent level cache size so that we can rely on it
     // having the right size in adjustToUnmodifiedline.
     if (Line.Level >= IndentForLevel.size())
@@ -89,6 +114,11 @@ public:
       }
       Indent = getIndent(Line.Level);
     }
+    // Shift the directive by the indentation of the code block it appears in,
+    // on top of the indentation it got relative to the other directives. This
+    // applies to the whole directive, so a macro body stays attached to its
+    // #define.
+    Indent += PPScopeIndent;
     if (static_cast<int>(Indent) + Offset >= 0)
       Indent += Offset;
     if (Line.IsContinuation)
@@ -1766,7 +1796,8 @@ void UnwrappedLineFormatter::formatFirstToken(
   if (!Style.isJavaScript() &&
       Style.IndentPPDirectives < FormatStyle::PPDIS_BeforeHash &&
       (Line.Type == LT_PreprocessorDirective ||
-       Line.Type == LT_ImportStatement)) {
+       Line.Type == LT_ImportStatement) &&
+      getPPScopeIndent(Style, Line) == 0) {
     Indent = 0;
   }
 

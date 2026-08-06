@@ -5904,6 +5904,180 @@ TEST_F(FormatTest, IndentsPPDirectiveWithPPIndentWidth) {
                style);
 }
 
+TEST_F(FormatTest, IndentsPPDirectivesToScope) {
+  auto Style = getLLVMStyle();
+  Style.PPScopeIndent = FormatStyle::PPSIS_Pragmas;
+
+  // Only pragmas follow the enclosing scope; other directives are untouched.
+  verifyFormat("#include <omp.h>\n"
+               "void f() {\n"
+               "  #pragma omp parallel\n"
+               "  {\n"
+               "    g();\n"
+               "\n"
+               "    #pragma omp critical\n"
+               "    {\n"
+               "      h();\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               "#include <omp.h>\n"
+               "void f() {\n"
+               "#pragma omp parallel\n"
+               "  {\n"
+               "    g();\n"
+               "\n"
+               "#pragma omp critical\n"
+               "    {\n"
+               "      h();\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+
+  // Conditionals keep their own indentation while the pragma follows the scope.
+  verifyFormat("void f() {\n"
+               "#ifdef SIMD\n"
+               "  #pragma omp simd\n"
+               "#endif\n"
+               "  for (int i = 0; i < 4; ++i) {\n"
+               "  }\n"
+               "}",
+               Style);
+
+  // All directives follow the enclosing scope.
+  Style.PPScopeIndent = FormatStyle::PPSIS_All;
+  verifyFormat("void f() {\n"
+               "  if (a) {\n"
+               "    #ifdef SIMD\n"
+               "    #pragma omp simd\n"
+               "    #endif\n"
+               "    for (int i = 0; i < 4; ++i) {\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+
+  // A directive at file scope inside a conditional must stay in the first
+  // column. Deriving the scope level from Line->Level instead of tracking it
+  // separately is what made the reverted D92753 underflow here.
+  verifyFormat("#ifdef A\n"
+               "#pragma pack()\n"
+               "#endif",
+               Style);
+
+  // #endif is aligned with the #if that opened the conditional, even when the
+  // braces in between are unbalanced and the two are in different scopes.
+  // Without that, the #endif below would be indented by one level.
+  verifyNoChange("#ifdef A\n"
+                 "void f() {\n"
+                 "#endif\n"
+                 "  g();\n"
+                 "}",
+                 Style);
+
+  // A macro body stays attached to its #define.
+  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_Left;
+  verifyFormat("void f() {\n"
+               "  #ifdef A\n"
+               "    #define B \\\n"
+               "      c;      \\\n"
+               "      d;\n"
+               "  #endif\n"
+               "}",
+               Style);
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_Right;
+
+  // BeforeHash indents the directives relative to each other and the scope
+  // indent is added on top of that, using IndentWidth.
+  verifyFormat("void f() {\n"
+               "  if (a) {\n"
+               "    #ifdef SIMD\n"
+               "      #pragma omp simd\n"
+               "    #endif\n"
+               "    for (int i = 0; i < 4; ++i) {\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               "void f() {\n"
+               "  if (a) {\n"
+               "#ifdef SIMD\n"
+               "  #pragma omp simd\n"
+               "#endif\n"
+               "    for (int i = 0; i < 4; ++i) {\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+
+  // AfterHash keeps the hash in the first column by design, so the scope indent
+  // does not apply.
+  Style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
+  verifyFormat("void f() {\n"
+               "  if (a) {\n"
+               "#ifdef SIMD\n"
+               "#  pragma omp simd\n"
+               "#endif\n"
+               "    for (int i = 0; i < 4; ++i) {\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+
+  // Leave preserves the original indentation, so the scope indent does not
+  // apply either.
+  Style.IndentPPDirectives = FormatStyle::PPDIS_Leave;
+  verifyNoChange("void f() {\n"
+                 "  if (a) {\n"
+                 "#pragma omp simd\n"
+                 "    for (int i = 0; i < 4; ++i) {\n"
+                 "    }\n"
+                 "  }\n"
+                 "}",
+                 Style);
+
+  // In Whitesmiths mode the level is moved to the block's indentation before
+  // the opening brace, so a directive that directly follows that brace must not
+  // be indented by that block twice.
+  Style.IndentPPDirectives = FormatStyle::PPDIS_None;
+  Style.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
+  verifyFormat("void f()\n"
+               "  {\n"
+               "  if (a)\n"
+               "    {\n"
+               "    #pragma omp simd\n"
+               "    g();\n"
+               "    }\n"
+               "  }",
+               Style);
+  // The same directive after a statement, and after a closing brace.
+  verifyFormat("void f()\n"
+               "  {\n"
+               "  if (a)\n"
+               "    {\n"
+               "    g();\n"
+               "    #pragma omp simd\n"
+               "    h();\n"
+               "    }\n"
+               "  #pragma omp barrier\n"
+               "  }",
+               Style);
+  Style.BreakBeforeBraces = FormatStyle::BS_Attach;
+
+  // Without the option nothing changes.
+  Style.PPScopeIndent = FormatStyle::PPSIS_None;
+  Style.IndentPPDirectives = FormatStyle::PPDIS_None;
+  verifyFormat("void f() {\n"
+               "  if (a) {\n"
+               "#pragma omp simd\n"
+               "    for (int i = 0; i < 4; ++i) {\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTest, IndentsPPDirectiveInReducedSpace) {
   verifyFormat("#define A(BB)", getLLVMStyleWithColumns(13));
   verifyFormat("#define A( \\\n    BB)", getLLVMStyleWithColumns(12));

@@ -42,6 +42,16 @@ struct UnwrappedLine {
   /// \c InMacroBody line, and 0 otherwise.
   unsigned PPLevel = 0;
 
+  /// The indent level of the code block enclosing this preprocessor directive,
+  /// and 0 if this line is not part of one.
+  ///
+  /// For a directive, \c Level counts preprocessor nesting only, because the
+  /// enclosing code indentation is discarded when the directive is parsed (see
+  /// \c ScopedMacroState). This keeps that indentation available as a separate
+  /// axis, so that \c FormatStyle::PPScopeIndent can add it back without having
+  /// to recover it from \c Level.
+  unsigned PPScopeLevel = 0;
+
   /// Whether this \c UnwrappedLine is part of a preprocessor directive.
   bool InPPDirective = false;
   /// Whether this \c UnwrappedLine is part of a pramga directive.
@@ -391,6 +401,12 @@ private:
   // This is used to update PPLevelBranchCount at the end of a branch
   // sequence.
   std::stack<int> PPChainBranchIndex;
+
+  // Contains the enclosing code indent level of the #if that opened each
+  // conditional currently being parsed. Used to align #else/#elif/#endif with
+  // their #if when FormatStyle::PPScopeIndent is enabled, so that a conditional
+  // spanning an unbalanced brace does not indent its parts inconsistently.
+  SmallVector<unsigned, 8> PPScopeLevelStack;
 
   // Include guard search state. Used to fixup preprocessor indent levels
   // so that include guards do not participate in indentation.
