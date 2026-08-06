@@ -1989,9 +1989,9 @@ void ClauseProcessor::processMapObjectsWithIterator(
     return;
   }
 
+  auto declareMapper = mlir::dyn_cast_if_present<mlir::omp::DeclareMapperOp>(
+      converter.getFirOpBuilder().getRegion().getParentOp());
   auto isDeclareMapperVariable = [&](const omp::Object &object) {
-    auto declareMapper = mlir::dyn_cast_if_present<mlir::omp::DeclareMapperOp>(
-        converter.getFirOpBuilder().getRegion().getParentOp());
     if (!declareMapper)
       return false;
 
@@ -2029,11 +2029,15 @@ void ClauseProcessor::processMapObjectsWithIterator(
   // iterator variables, so handle each object separately.
   for (const omp::Object &object : objects) {
     if (hasIteratorIVReference(object, *ivSyms)) {
+      bool isMapperVariable = isDeclareMapperVariable(object);
       if (hasUnsupportedReferenceModifier)
         TODO(clauseLocation,
              "iterator modifier with reference or attach modifier");
-      if (getBaseObject(object, semaCtx) && !isDeclareMapperVariable(object))
+      if (getBaseObject(object, semaCtx) && !isMapperVariable)
         TODO(clauseLocation, "iterator modifier with derived type member map");
+      if (declareMapper && !isMapperVariable)
+        TODO(clauseLocation,
+             "iterator modifier with locator outside declare mapper variable");
       if (const auto *symbol{object.sym()};
           symbol && semantics::IsOptional(*symbol))
         TODO(clauseLocation, "iterator modifier with optional locator");
