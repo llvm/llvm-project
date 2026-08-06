@@ -727,15 +727,15 @@ enum {
 #undef ELF_RISCV_NONSTANDARD_RELOC
 };
 
-// ELF Relocation types for SuperH
-enum {
-#include "ELFRelocs/SuperH.def"
-};
-
 enum {
   // Symbol may follow different calling convention than the standard calling
   // convention.
   STO_RISCV_VARIANT_CC = 0x80
+};
+
+// ELF Relocation types for SuperH
+enum {
+#include "ELFRelocs/SuperH.def"
 };
 
 // ELF Relocation types for S390/zSeries
