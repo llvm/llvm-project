@@ -378,6 +378,11 @@ Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
   return Plugin::success();
 }
 
+Error L0DeviceTy::dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
+                                 AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  return enqueueMemCopy(DstPtr, SrcPtr, Size, AsyncInfoWrapper);
+}
+
 Error L0DeviceTy::enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
                                       AsyncInfoWrapperTy &AsyncInfoWrapper) {
   __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
@@ -554,7 +559,7 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   return Info;
 }
 
-Expected<GenericKernelTy &> L0DeviceTy::constructKernel(const char *Name) {
+Expected<GenericKernelTy &> L0DeviceTy::constructKernel(StringRef Name) {
   // Allocate and construct the L0 kernel.
   L0KernelTy *L0Kernel = getPlugin().allocate<L0KernelTy>();
   if (!L0Kernel)

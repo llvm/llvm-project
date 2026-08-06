@@ -83,6 +83,16 @@ libc_test_library(
 )
 
 libc_test_library(
+    name = "LibcCTest",
+    srcs = ["LibcCTest.cpp"],
+    hdrs = ["LibcCTest.h"],
+    deps = [
+        ":LibcUnitTest",
+        "//libc:public_headers_deps",
+    ],
+)
+
+libc_test_library(
     name = "fp_test_helpers",
     srcs = [
         "FEnvSafeTest.cpp",

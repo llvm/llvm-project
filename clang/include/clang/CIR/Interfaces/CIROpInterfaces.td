@@ -35,6 +35,14 @@ let cppNamespace = "::cir" in {
           "Return the number of operands, accounts for indirect call or "
           "exception info",
           "unsigned", "getNumArgOperands", (ins)>,
+      InterfaceMethod<
+          "Return whether the callee is a value resolved at run time rather "
+          "than a symbol named by the op",
+          "bool", "isIndirect", (ins)>,
+      InterfaceMethod<
+          "Return the callee pointer of an indirect call.  Only valid when "
+          "isIndirect() is true",
+          "mlir::Value", "getIndirectCall", (ins)>,
       InterfaceMethod<"Return whether the callee is nothrow",
                       "bool", "getNothrow", (ins)>,
       InterfaceMethod<"Return the side effects of the call operation",
@@ -209,6 +217,47 @@ let cppNamespace = "::cir" in {
       bool hasDefaultVisibility();
       bool canBenefitFromLocalAlias();
     }];
+  }
+
+  def CIR_FPEnvConstrainedOpInterface
+      : OpInterface<"FPEnvConstrainedOpInterface"> {
+    let description = [{
+      Interface for floating-point operations that carry an optional
+      `#cir.fenv` attribute. It provides effective values for each field,
+      substituting the floating-point environment defaults for absent fields.
+    }];
+
+    let methods = [
+      InterfaceMethod<
+        "Return the `#cir.fenv` attribute, or a null attribute if absent.",
+        "cir::FenvAttr", "getFenvAttr", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getFenvAttr();
+        }]>,
+      InterfaceMethod<
+        "Return the effective dynamic rounding mode.",
+        "cir::FPDynamicRoundingMode", "getFenvDynamicRoundingMode", (ins),
+        [{}], /*defaultImplementation=*/[{
+          cir::FenvAttr fenv = $_op.getFenvAttr();
+          return fenv ? fenv.getDynamicRoundingModeOrDefault()
+                      : cir::FenvAttr::getDefaultDynamicRoundingMode();
+        }]>,
+      InterfaceMethod<
+        "Return the effective floating-point exception mode.",
+        "cir::FPExceptionMode", "getFenvExceptionMode", (ins), [{}],
+        /*defaultImplementation=*/[{
+          cir::FenvAttr fenv = $_op.getFenvAttr();
+          return fenv ? fenv.getExceptionModeOrDefault()
+                      : cir::FenvAttr::getDefaultExceptionMode();
+        }]>,
+      InterfaceMethod<
+        "Return the effective strict-exception flag.",
+        "bool", "getFenvStrictExcept", (ins), [{}],
+        /*defaultImplementation=*/[{
+          cir::FenvAttr fenv = $_op.getFenvAttr();
+          return fenv ? fenv.getStrictExceptOrDefault() : false;
+        }]>,
+    ];
   }
 
   def CIR_BinaryOpInterface : OpInterface<"BinaryOpInterface"> {
