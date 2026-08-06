@@ -52,6 +52,25 @@ enum ESeqInterRef {
   ESeqInterRef_alias2 = ESeqInterRef_b,
 };
 
+// Error: sequential, but an enumerator immediately follows a run of self-refs
+// whose value breaks the natural progression. Removing its explicit value
+// would silently change it, so it must be kept.
+enum ESeqRefBreak {
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: sequential initial value in 'ESeqRefBreak' can be ignored
+  ESeqRefBreak_a = 1,
+  ESeqRefBreak_alias = ESeqRefBreak_a,
+  ESeqRefBreak_b = 2,
+  // CHECK-FIXES: ESeqRefBreak_b ,
+  ESeqRefBreak_c = 3,
+  // CHECK-FIXES: ESeqRefBreak_c ,
+  ESeqRefBreak_alias2 = ESeqRefBreak_b,
+  ESeqRefBreak_alias3 = ESeqRefBreak_a,
+  ESeqRefBreak_d = 4,
+  // CHECK-FIXES: ESeqRefBreak_d = 4,
+  ESeqRefBreak_e = 5,
+  // CHECK-FIXES: ESeqRefBreak_e ,
+};
+
 // OK: none + self-ref, no warnings.
 enum ENoneRef {
   ENoneRef_a,

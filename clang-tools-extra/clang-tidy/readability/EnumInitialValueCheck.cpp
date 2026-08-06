@@ -246,9 +246,21 @@ void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
         diag(Enum->getBeginLoc(),
              "sequential initial value in '%0' can be ignored")
         << getName(Enum);
-    for (const EnumConstantDecl *ECD : llvm::drop_begin(Enum->enumerators()))
-      if (!isAllowedSelfReference(ECD, AllowReferencedInitialValues))
-        cleanInitialValue(Diag, ECD, *Result.SourceManager, getLangOpts());
+    // Only remove the explicit value of an enumerator when the preceding
+    // declared enumerator equals `current - 1`, so the implicit value stays
+    // the same. An interleaved self-reference can break this, in which case
+    // the value must be kept.
+    const EnumConstantDecl *PrevECD = nullptr;
+    for (const EnumConstantDecl *ECD : Enum->enumerators()) {
+      if (PrevECD != nullptr &&
+          !isAllowedSelfReference(ECD, AllowReferencedInitialValues)) {
+        llvm::APSInt Expected = PrevECD->getInitVal();
+        ++Expected;
+        if (llvm::APSInt::isSameValue(Expected, ECD->getInitVal()))
+          cleanInitialValue(Diag, ECD, *Result.SourceManager, getLangOpts());
+      }
+      PrevECD = ECD;
+    }
     return;
   }
 }
