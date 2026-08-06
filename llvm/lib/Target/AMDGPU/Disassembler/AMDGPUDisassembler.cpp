@@ -567,13 +567,13 @@ bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
     if (!IsSrc && OpDesc.OperandType != MCOI::OPERAND_REGISTER)
       continue;
 
-    MCOperand &Op = MI.getOperand(OpNo);
+    MCOperand &Op = MI.getOperand(static_cast<unsigned>(OpNo));
     if (!Op.isImm())
       continue;
     int64_t Imm = Op.getImm();
     if (AMDGPU::EncValues::INLINE_INTEGER_C_MIN <= Imm &&
         Imm <= AMDGPU::EncValues::INLINE_INTEGER_C_MAX) {
-      Op = decodeIntImmed(Imm);
+      Op = decodeIntImmed(static_cast<unsigned>(Imm));
       continue;
     }
 
@@ -586,30 +586,33 @@ bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
 
     if (AMDGPU::EncValues::INLINE_FLOATING_C_MIN <= Imm &&
         Imm <= AMDGPU::EncValues::INLINE_FLOATING_C_MAX) {
+      // The range check above bounds Imm to an inline constant encoding, which
+      // the getInlineImmVal* helpers take as an unsigned.
+      const unsigned Enc = static_cast<unsigned>(Imm);
       switch (OpDesc.OperandType) {
       case AMDGPU::OPERAND_REG_IMM_BF16:
       case AMDGPU::OPERAND_REG_IMM_V2BF16:
       case AMDGPU::OPERAND_REG_INLINE_C_BF16:
       case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
-        Imm = getInlineImmValBF16(Imm);
+        Imm = getInlineImmValBF16(Enc);
         break;
       case AMDGPU::OPERAND_REG_IMM_FP16:
       case AMDGPU::OPERAND_REG_INLINE_C_FP16:
-        Imm = getInlineImmValF16(Imm);
+        Imm = getInlineImmValF16(Enc);
         break;
       case AMDGPU::OPERAND_REG_IMM_V2FP16:
       case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-        Imm = getInlineImmValF16(Imm);
+        Imm = getInlineImmValF16(Enc);
         break;
       case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT: {
         // V_PK_FMAC_F16 on GFX11+ duplicates the f16 inline constant to both
         // halves, so we need to produce the duplicated value for correct
         // round-trip.
         if (isGFX11Plus()) {
-          int64_t F16Val = getInlineImmValF16(Imm);
+          int64_t F16Val = getInlineImmValF16(Enc);
           Imm = (F16Val << 16) | (F16Val & 0xFFFF);
         } else {
-          Imm = getInlineImmValF16(Imm);
+          Imm = getInlineImmValF16(Enc);
         }
         break;
       }
@@ -620,10 +623,10 @@ bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
       case AMDGPU::OPERAND_REG_INLINE_C_INT64:
       case AMDGPU::OPERAND_REG_IMM_V2FP64:
       case AMDGPU::OPERAND_REG_IMM_V2INT64:
-        Imm = getInlineImmVal64(Imm);
+        Imm = getInlineImmVal64(Enc);
         break;
       default:
-        Imm = getInlineImmVal32(Imm);
+        Imm = getInlineImmVal32(Enc);
       }
       Op.setImm(Imm);
     }
@@ -635,7 +638,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                 ArrayRef<uint8_t> Bytes_,
                                                 uint64_t Address,
                                                 raw_ostream &CS) const {
-  unsigned MaxInstBytesNum = std::min((size_t)TargetMaxInstBytes, Bytes_.size());
+  unsigned MaxInstBytesNum = static_cast<unsigned>(
+      std::min((size_t)TargetMaxInstBytes, Bytes_.size()));
   Bytes = Bytes_.slice(0, MaxInstBytesNum);
 
   // In case the opcode is not recognized we'll assume a Size of 4 bytes (unless
@@ -919,7 +923,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     int OffsetIdx =
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::offset);
     if (OffsetIdx != -1) {
-      uint32_t Imm = MI.getOperand(OffsetIdx).getImm();
+      uint32_t Imm = static_cast<uint32_t>(MI.getOperand(OffsetIdx).getImm());
       int64_t SignedOffset = SignExtend64<24>(Imm);
       if (SignedOffset < 0)
         return MCDisassembler::Fail;
@@ -1134,8 +1138,8 @@ bool AMDGPUDisassembler::convertMAIInst(MCInst &MI) const {
   int CbszIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::cbsz);
 
-  unsigned CBSZ = MI.getOperand(CbszIdx).getImm();
-  unsigned BLGP = MI.getOperand(BlgpIdx).getImm();
+  unsigned CBSZ = static_cast<unsigned>(MI.getOperand(CbszIdx).getImm());
+  unsigned BLGP = static_cast<unsigned>(MI.getOperand(BlgpIdx).getImm());
 
   const AMDGPU::MFMA_F8F6F4_Info *AdjustedRegClassOpcode =
       AMDGPU::getMFMA_F8F6F4_WithFormatArgs(CBSZ, BLGP, MI.getOpcode());
@@ -1163,8 +1167,8 @@ bool AMDGPUDisassembler::convertWMMAInst(MCInst &MI) const {
   int FmtBIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::matrix_b_fmt);
 
-  unsigned FmtA = MI.getOperand(FmtAIdx).getImm();
-  unsigned FmtB = MI.getOperand(FmtBIdx).getImm();
+  unsigned FmtA = static_cast<unsigned>(MI.getOperand(FmtAIdx).getImm());
+  unsigned FmtB = static_cast<unsigned>(MI.getOperand(FmtBIdx).getImm());
 
   const AMDGPU::MFMA_F8F6F4_Info *AdjustedRegClassOpcode =
       AMDGPU::getWMMA_F8F6F4_WithFormatArgs(FmtA, FmtB, MI.getOpcode());
@@ -1205,7 +1209,7 @@ static VOPModifiers collectVOPModifiers(const MCInst &MI,
     if (OpIdx == -1)
       continue;
 
-    unsigned Val = MI.getOperand(OpIdx).getImm();
+    unsigned Val = static_cast<unsigned>(MI.getOperand(OpIdx).getImm());
 
     Modifiers.OpSel |= !!(Val & SISrcMods::OP_SEL_0) << J;
     if (IsVOP3P) {
@@ -1247,7 +1251,7 @@ void AMDGPUDisassembler::convertTrue16OpSel(MCInst &MI) const {
       continue;
     unsigned OpEnc = MRI.getEncodingValue(Op.getReg());
     const MCOperand &OpMods = MI.getOperand(OpModsIdx);
-    unsigned ModVal = OpMods.getImm();
+    unsigned ModVal = static_cast<unsigned>(OpMods.getImm());
     if (ModVal & OpSelMask) { // isHi
       unsigned RegIdx = OpEnc & AMDGPU::HWEncoding::REG_IDX_MASK;
       Op.setReg(ConversionRC.getRegister(RegIdx * 2 + 1));
@@ -1397,8 +1401,8 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dim);
     int A16Idx =
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::a16);
-    const AMDGPU::MIMGDimInfo *Dim =
-        AMDGPU::getMIMGDimInfoByEncoding(MI.getOperand(DimIdx).getImm());
+    const AMDGPU::MIMGDimInfo *Dim = AMDGPU::getMIMGDimInfoByEncoding(
+        static_cast<uint8_t>(MI.getOperand(DimIdx).getImm()));
     const bool IsA16 = (A16Idx != -1 && MI.getOperand(A16Idx).getImm());
 
     AddrSize =
@@ -1678,7 +1682,8 @@ MCOperand
 AMDGPUDisassembler::decodeMandatoryLiteral64Constant(uint64_t Val) const {
   if (HasLiteral) {
     if (Literal != Val)
-      return errOperand(Val, "More than one unique literal is illegal");
+      return errOperand(static_cast<unsigned>(Val),
+                        "More than one unique literal is illegal");
   }
   HasLiteral = true;
   Literal = Val;
@@ -1717,31 +1722,35 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
   case AMDGPU::OPERAND_REG_IMM_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
-    UseLit = AMDGPU::isInlinableLiteralBF16(Val, HasInv2Pi);
+    UseLit =
+        AMDGPU::isInlinableLiteralBF16(static_cast<int16_t>(Val), HasInv2Pi);
     break;
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
-    UseLit = AMDGPU::isInlinableLiteralV2BF16(Val);
+    UseLit = AMDGPU::isInlinableLiteralV2BF16(static_cast<uint32_t>(Val));
     break;
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-    UseLit = AMDGPU::isInlinableLiteralFP16(Val, HasInv2Pi);
+    UseLit =
+        AMDGPU::isInlinableLiteralFP16(static_cast<int16_t>(Val), HasInv2Pi);
     break;
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
-    UseLit = AMDGPU::isInlinableLiteralV2F16(Val);
+    UseLit = AMDGPU::isInlinableLiteralV2F16(static_cast<uint32_t>(Val));
     break;
   case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
-    UseLit = AMDGPU::isPKFMACF16InlineConstant(Val, isGFX11Plus());
+    UseLit = AMDGPU::isPKFMACF16InlineConstant(static_cast<uint32_t>(Val),
+                                               isGFX11Plus());
     break;
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     break;
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
-    UseLit = AMDGPU::isInlinableLiteralI16(Val, HasInv2Pi);
+    UseLit =
+        AMDGPU::isInlinableLiteralI16(static_cast<int32_t>(Val), HasInv2Pi);
     break;
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
-    UseLit = AMDGPU::isInlinableLiteralV2I16(Val);
+    UseLit = AMDGPU::isInlinableLiteralV2I16(static_cast<uint32_t>(Val));
     break;
   case AMDGPU::OPERAND_REG_IMM_FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
@@ -1752,7 +1761,7 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
   case AMDGPU::OPERAND_REG_IMM_V2INT32:
   case AMDGPU::OPERAND_KIMM32:
-    UseLit = AMDGPU::isInlinableLiteral32(Val, HasInv2Pi);
+    UseLit = AMDGPU::isInlinableLiteral32(static_cast<int32_t>(Val), HasInv2Pi);
     break;
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
