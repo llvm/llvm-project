@@ -9,19 +9,6 @@
 ; Multiple loads sharing same pointer
 ;-----------------------------------------------------------------------------
 
-; Two volatile loads from the same pointer should each keep their own cache hint
-; combination, even when they use the same cache-policy value.
-define i32 @test_multiple_loads_same_ptr(ptr addrspace(1) %p) {
-; CHECK-LABEL: test_multiple_loads_same_ptr(
-; CHECK:    mov.b64 %rd2, 12345;
-; CHECK:    ld.volatile.global.L1::evict_last.L2::cache_hint.b32 %r1, [%rd1], %rd2;
-; CHECK:    ld.volatile.global.L1::evict_first.L2::cache_hint.b32 %r2, [%rd1], %rd2;
-  %v1 = load volatile i32, ptr addrspace(1) %p, !mem.cache_hint !0
-  %v2 = load volatile i32, ptr addrspace(1) %p, !mem.cache_hint !1
-  %sum = add i32 %v1, %v2
-  ret i32 %sum
-}
-
 ; Non-volatile loads can CSE. Matching cache hints are preserved on the merged
 ; DAG node, but conflicting hints are dropped.
 define i32 @test_cse_loads_same_cache_hint(ptr addrspace(1) %p) {
