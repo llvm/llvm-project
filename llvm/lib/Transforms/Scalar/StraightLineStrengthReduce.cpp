@@ -1331,7 +1331,6 @@ void StraightLineStrengthReduce::rewriteCandidate(const Candidate &C) {
   Value *Reduced = nullptr; // equivalent to but weaker than C.Ins
   // If delta is 0, C is a fully redundant of Basis, and Bump is nullptr,
   // just replace C.Ins with Basis.Ins
-  LLVM_DEBUG(dbgs() << "== Replacing " << *C.Ins);
   if (!Bump)
     Reduced = Basis.Ins;
   else {
@@ -1371,7 +1370,6 @@ void StraightLineStrengthReduce::rewriteCandidate(const Candidate &C) {
     };
     Reduced->takeName(C.Ins);
   }
-  LLVM_DEBUG(dbgs() << " with " << *Reduced << "\n");
   C.Ins->replaceAllUsesWith(Reduced);
   DeadInstructions.push_back(C.Ins);
 }
@@ -1386,8 +1384,9 @@ bool StraightLineStrengthReduceLegacyPass::runOnFunction(Function &F) {
   return StraightLineStrengthReduce(DL, DT, SE, TTI).runOnFunction(F);
 }
 
-// go through all operands of instruction, and check if any operand is used in
-// another block different from the instruction's block.
+// Go through all operands of instruction, and check if any operand is used in
+// another block different from the instruction's block and the another use is
+// not rewritable. return true if such operand is found, otherwise return false.
 bool StraightLineStrengthReduce::
     hasOperandsUsedInNonRewritableUsersInAnotherBlock(
         llvm::Instruction *Inst) const {
@@ -1403,14 +1402,14 @@ bool StraightLineStrengthReduce::
     for (const User *U : OpInst->users())
       if (auto *UI = dyn_cast<Instruction>(U))
         if (UI->getParent() != InstBB && !hasRewritableCandidates(UI)) {
-          auto *UserBB = UI->getParent();
           LLVM_DEBUG(dbgs()
                      << "Inst's operand is used in another block "
                      << "("
                      << (InstBB->hasName() ? InstBB->getName() : "unnamed")
                      << " -> "
-                     << (UserBB && UserBB->hasName() ? UserBB->getName()
-                                                     : "unnamed")
+                     << (UI->getParent() && UI->getParent()->hasName()
+                             ? UI->getParent()->getName()
+                             : "unnamed")
                      << ") " << *UI << "\n");
           return true;
         }
@@ -1424,7 +1423,6 @@ bool StraightLineStrengthReduce::hasRewritableCandidates(
     return false;
 
   for (const Candidate *C : RewriteCandidates.at(Inst))
-    // TODO: may need to make sure the delta is constant.
     if (C->Basis)
       return true;
 
@@ -1432,7 +1430,7 @@ bool StraightLineStrengthReduce::hasRewritableCandidates(
 }
 
 // Assign a monotonically increasing index to each (non-debug/pseudo)
-// instruction in BB so in-block distances can be queried in O(1).
+// instruction in BB so in-block distances can be queried in O(1) once built.
 static DenseMap<const Instruction *, int>
 buildBlockIndexMap(const BasicBlock &BB) {
   DenseMap<const Instruction *, int> IndexMap;
@@ -1448,7 +1446,7 @@ buildBlockIndexMap(const BasicBlock &BB) {
 }
 
 // Return true
-// 1. if C.Basis used only in C.Ins's block
+// 1. if C.Basis used only in C.Ins's block before C.Ins
 // AND
 // 2. if any use of C.Basis before C.Ins and C.Ins exceeds
 // SLSRBasisDistanceThreshold.
@@ -1461,7 +1459,7 @@ bool StraightLineStrengthReduce::basisTooFarInSameBlock(
   assert(Inst == I);
   Instruction *BasisInst = C.Basis ? C.Basis->Ins : nullptr;
   if (!BasisInst)
-    return false; // true
+    return false;
 
   const BasicBlock *BB = Inst->getParent();
   auto [It, Inserted] = IndexCache.try_emplace(BB);
@@ -1481,9 +1479,11 @@ bool StraightLineStrengthReduce::basisTooFarInSameBlock(
     const auto *UI = dyn_cast<Instruction>(U);
     if (!UI)
       continue;
-    if (UI->getParent() != BB) // && BB dominates UI's block
+    // If one of the uses is not in the same block, return false.
+    if (UI->getParent() != BB)
       return false;
     auto UseIt = IndexMap.find(UI);
+    // If any same block use is later than Inst, return false.
     if (UseIt == IndexMap.end() || UseIt->second >= InstIdx)
       return false;
     FoundSameBlockUse = true;
@@ -1536,41 +1536,39 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   // another block"
   //    -- checked by hasOperandsUsedInNonRewritableUsersInAnotherBlock(Inst)
   //    -- This means the candidate's Inst's original operands are live in
-  //    another block, thus
-  //    -- even if rewrite the Inst, the operands are still live in another
-  //    block.
+  //    another block, so even if rewrite the Inst, the operands may be still
+  //    live out to another block.
   //    -- Thus, rewriting the Inst based on Basis might add another long live
-  //    range from the Basis.
-  //    -- This might need a refinement to check that "another block" is
-  //    properly dominated by the candidate's Inst's block.
-  // 2. If the candidate's Basis's used in the the same block and its last is
-  // before the candidate's Inst and
-  //    the difference between the two is larger than a threshold.
-  //    -- If the candidate's Basis doesn't have a use in the same block, this
-  //    condition should be ignored (met).
-  //    -- This might need a refinement to check if the Basis is only used in
-  //    the same block.
+  //    range from the Basis by increasing the live range of the Basis.
+  //    -- TODO: If needed, a refinement to check that "another block" is
+  //    properly dominated by the candidate's Inst's block can be added.
+  // 2. When the candidate's Basis's should beused only in the the same block
+  // and its last use is before the candidate's Inst, the difference between the
+  // last use of Basis and the Inst is larger than a threshold.
+  //    -- This is also for avoiding increasing the live range of the Basis by
+  //    rewriting the Inst.
   //
   // A candidate satisfies both conditions 1 and 2 should be removed.
 
-  // Pre-rewrite: collect candidates likely to increase register pressure.
+  // Collect candidates likely to increase register pressure.
   // Evaluate on the original IR, before any rewriteCandidate mutates it
-  // (rewriting inserts instructions and does replaceAllUsesWith, which would
-  // invalidate both the in-block index map and operands' user sets).
-  DenseSet<Instruction *> ToSkip;
+  // Done before rewriting: rewriting inserts instructions and does
+  // replaceAllUsesWith, which would invalidate both the in-block index map and
+  // operands' user sets.
+  DenseSet<Instruction *> ToSkipRewrite;
   {
     DenseMap<const BasicBlock *, DenseMap<const Instruction *, int>> IndexCache;
     for (Instruction *I : SortedCandidateInsts)
       if (Candidate *C = pickRewriteCandidate(I))
         if (hasOperandsUsedInNonRewritableUsersInAnotherBlock(I) &&
             basisTooFarInSameBlock(*C, IndexCache, I))
-          ToSkip.insert(I);
+          ToSkipRewrite.insert(I);
   }
 
   // Rewrite candidates in the topological order that rewrites a Candidate
   // always before rewriting its Basis
   for (Instruction *I : reverse(SortedCandidateInsts)) {
-    if (ToSkip.contains(I))
+    if (ToSkipRewrite.contains(I))
       continue;
     if (Candidate *C = pickRewriteCandidate(I))
       rewriteCandidate(*C);
