@@ -1,4 +1,4 @@
-//===- IssueHashTest.cpp - IssueHash unit tests --------------------------===//
+//===- IssueHashTest.cpp - IssueHash unit tests ---------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,9 +17,9 @@
 #include <memory>
 #include <string>
 
-namespace clang {
 namespace {
 
+using namespace clang;  
 using namespace ast_matchers;
 
 std::unique_ptr<ASTUnit> buildAST(llvm::StringRef Code,
@@ -34,14 +34,13 @@ std::unique_ptr<ASTUnit> buildAST(llvm::StringRef Code,
 // out in isolation so these tests don't have to hardcode the unrelated
 // column number and source-line fields.
 std::string getEnclosingDeclSignature(ASTContext &Ctx, const Decl *IssueDecl) {
-  FullSourceLoc Loc(Ctx.getSourceManager().getLocForStartOfFile(
-                        Ctx.getSourceManager().getMainFileID()),
-                    Ctx.getSourceManager());
-  std::string Full =
+  SourceManager &SM = Ctx.getSourceManager();
+  FullSourceLoc Loc(SM.getLocForStartOfFile(SM.getMainFileID()), SM);
+  std::string HashableStr =
       getIssueString(Loc, "checker", "message", IssueDecl, Ctx.getLangOpts());
-  size_t FirstDollar = Full.find('$');
-  size_t SecondDollar = Full.find('$', FirstDollar + 1);
-  return Full.substr(FirstDollar + 1, SecondDollar - FirstDollar - 1);
+  StringRef HashableStrRef = HashableStr;
+
+  return HashableStrRef.split('$').second.split('$').first.str();
 }
 
 TEST(IssueHashTest, EnclosingVarDeclUsesQualifiedName) {
@@ -53,7 +52,7 @@ TEST(IssueHashTest, EnclosingVarDeclUsesQualifiedName) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *VD = selectFirst<VarDecl>(
       "v", match(varDecl(hasName("global_var")).bind("v"), Ctx));
-  ASSERT_NE(VD, nullptr);
+  ASSERT_TRUE(VD != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, VD), "ns::global_var");
 }
@@ -67,7 +66,7 @@ TEST(IssueHashTest, EnclosingFieldDeclUsesQualifiedName) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *FD = selectFirst<FieldDecl>(
       "f", match(fieldDecl(hasName("field")).bind("f"), Ctx));
-  ASSERT_NE(FD, nullptr);
+  ASSERT_TRUE(FD != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, FD), "S::field");
 }
@@ -79,7 +78,7 @@ TEST(IssueHashTest, EnclosingEnumConstantDeclUsesQualifiedName) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *ECD = selectFirst<EnumConstantDecl>(
       "e", match(enumConstantDecl(hasName("Red")).bind("e"), Ctx));
-  ASSERT_NE(ECD, nullptr);
+  ASSERT_TRUE(ECD != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, ECD), "Color::Red");
 }
@@ -91,7 +90,7 @@ TEST(IssueHashTest, EnclosingFunctionDeclUsesSignatureNotQualifiedName) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *Fn = selectFirst<FunctionDecl>(
       "fn", match(functionDecl(hasName("foo")).bind("fn"), Ctx));
-  ASSERT_NE(Fn, nullptr);
+  ASSERT_TRUE(Fn != nullptr);
 
   // Functions (and methods/constructors/destructors) still get the full
   // signature, not just the qualified name, so overloads don't collide.
@@ -107,7 +106,7 @@ TEST(IssueHashTest, EnclosingCXXRecordDeclUsesQualifiedName) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *RD = selectFirst<CXXRecordDecl>(
       "r", match(cxxRecordDecl(hasName("Widget")).bind("r"), Ctx));
-  ASSERT_NE(RD, nullptr);
+  ASSERT_TRUE(RD != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, RD), "ns::Widget");
 }
@@ -126,7 +125,7 @@ TEST(IssueHashTest, EnclosingNamespaceDeclUsesQualifiedName) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *NS = selectFirst<NamespaceDecl>(
       "n", match(namespaceDecl(hasName("inner")).bind("n"), Ctx));
-  ASSERT_NE(NS, nullptr);
+  ASSERT_TRUE(NS != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, NS), "outer::inner");
 }
@@ -141,7 +140,7 @@ TEST(IssueHashTest, EnclosingRecordDeclUsesQualifiedName) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *RD = selectFirst<RecordDecl>(
       "r", match(recordDecl(hasName("S")).bind("r"), Ctx));
-  ASSERT_NE(RD, nullptr);
+  ASSERT_TRUE(RD != nullptr);
   ASSERT_FALSE(isa<CXXRecordDecl>(RD));
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, RD), "S");
@@ -154,7 +153,7 @@ TEST(IssueHashTest, EnclosingEnumDeclUsesQualifiedName) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *ED = selectFirst<EnumDecl>(
       "e", match(enumDecl(hasName("Color")).bind("e"), Ctx));
-  ASSERT_NE(ED, nullptr);
+  ASSERT_TRUE(ED != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, ED), "Color");
 }
@@ -169,7 +168,7 @@ TEST(IssueHashTest, EnclosingObjCInterfaceDeclUsesQualifiedName) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *ID = selectFirst<ObjCInterfaceDecl>(
       "i", match(objcInterfaceDecl(hasName("Foo")).bind("i"), Ctx));
-  ASSERT_NE(ID, nullptr);
+  ASSERT_TRUE(ID != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, ID), "Foo");
 }
@@ -186,7 +185,7 @@ TEST(IssueHashTest, EnclosingObjCImplementationDeclUsesQualifiedName) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *ImplD = selectFirst<ObjCImplementationDecl>(
       "i", match(objcImplementationDecl(hasName("Foo")).bind("i"), Ctx));
-  ASSERT_NE(ImplD, nullptr);
+  ASSERT_TRUE(ImplD != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, ImplD), "Foo");
 }
@@ -203,7 +202,7 @@ TEST(IssueHashTest, EnclosingObjCCategoryDeclUsesQualifiedName) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *CatD = selectFirst<ObjCCategoryDecl>(
       "c", match(objcCategoryDecl(hasName("Cat")).bind("c"), Ctx));
-  ASSERT_NE(CatD, nullptr);
+  ASSERT_TRUE(CatD != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, CatD), "Cat");
 }
@@ -222,7 +221,7 @@ TEST(IssueHashTest, EnclosingObjCCategoryImplDeclUsesQualifiedName) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *CatImplD = selectFirst<ObjCCategoryImplDecl>(
       "c", match(objcCategoryImplDecl(hasName("Cat")).bind("c"), Ctx));
-  ASSERT_NE(CatImplD, nullptr);
+  ASSERT_TRUE(CatImplD != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, CatImplD), "Cat");
 }
@@ -236,7 +235,7 @@ TEST(IssueHashTest, EnclosingObjCProtocolDeclUsesQualifiedName) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *PD = selectFirst<ObjCProtocolDecl>(
       "p", match(objcProtocolDecl(hasName("Proto")).bind("p"), Ctx));
-  ASSERT_NE(PD, nullptr);
+  ASSERT_TRUE(PD != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, PD), "Proto");
 }
@@ -248,7 +247,7 @@ TEST(IssueHashTest, EnclosingCXXConstructorDeclUsesSignature) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *Ctor = selectFirst<CXXConstructorDecl>(
       "c", match(cxxConstructorDecl(ofClass(hasName("S"))).bind("c"), Ctx));
-  ASSERT_NE(Ctor, nullptr);
+  ASSERT_TRUE(Ctor != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, Ctor), "S::S(int)");
 }
@@ -260,7 +259,7 @@ TEST(IssueHashTest, EnclosingCXXDestructorDeclUsesSignature) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *Dtor = selectFirst<CXXDestructorDecl>(
       "d", match(cxxDestructorDecl(ofClass(hasName("S"))).bind("d"), Ctx));
-  ASSERT_NE(Dtor, nullptr);
+  ASSERT_TRUE(Dtor != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, Dtor), "S::~S()");
 }
@@ -272,7 +271,7 @@ TEST(IssueHashTest, EnclosingCXXConversionDeclUsesSignature) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *Conv = selectFirst<CXXConversionDecl>(
       "cv", match(cxxConversionDecl().bind("cv"), Ctx));
-  ASSERT_NE(Conv, nullptr);
+  ASSERT_TRUE(Conv != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, Conv), "S::operator int()");
 }
@@ -284,7 +283,7 @@ TEST(IssueHashTest, EnclosingCXXMethodDeclUsesSignature) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *M = selectFirst<CXXMethodDecl>(
       "m", match(cxxMethodDecl(hasName("method")).bind("m"), Ctx));
-  ASSERT_NE(M, nullptr);
+  ASSERT_TRUE(M != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, M), "void S::method(int)");
 }
@@ -299,7 +298,7 @@ TEST(IssueHashTest, EnclosingObjCMethodDeclUsesQualifiedName) {
   ASTContext &Ctx = AST->getASTContext();
   const auto *MD = selectFirst<ObjCMethodDecl>(
       "m", match(objcMethodDecl(hasName("method")).bind("m"), Ctx));
-  ASSERT_NE(MD, nullptr);
+  ASSERT_TRUE(MD != nullptr);
 
   EXPECT_EQ(getEnclosingDeclSignature(Ctx, MD), "Foo::method");
 }
@@ -312,4 +311,3 @@ TEST(IssueHashTest, NullDeclProducesEmptySignature) {
 }
 
 } // namespace
-} // namespace clang
