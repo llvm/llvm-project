@@ -60,9 +60,6 @@ private:
   // Symbol for the function end, used by ICache prefetch MCExprs.
   // Created early in emitFunctionBodyStart when prefetch is enabled.
   MCSymbol *PrefetchEndSym = nullptr;
-  // Symbol for the first prefetch instruction, used by ICache prefetch MCExprs.
-  // Created early in emitFunctionBodyStart when prefetch is enabled.
-  MCSymbol *PrefetchBlockStartSym = nullptr;
 
   // When appropriate, add a _dvgpr$ symbol.
   void emitDVgprSymbol(MachineFunction &MF);
@@ -167,9 +164,6 @@ public:
 
   /// Get the symbol for the function end, used for ICache prefetch MCExprs.
   MCSymbol *getPrefetchEndSym() const { return PrefetchEndSym; }
-  /// Get the symbol for the first prefetch instruction, used for ICache
-  /// prefetch MCExprs.
-  MCSymbol *getPrefetchBlockStartSym() const { return PrefetchBlockStartSym; }
 
   /// Get the code size estimate from SIProgramInfo.
   uint64_t getCodeSize() { return CurrentProgramInfo.getFunctionCodeSize(*MF); }

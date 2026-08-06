@@ -480,10 +480,10 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
         // The sdata operand contains the slot index [0, N) set by the pass.
         int64_t SlotIndex = TmpInst.getOperand(SdataIdx).getImm();
 
-        // If this is the first slot, emit the prefetch block start symbol
-        // before the instruction.
-        if (SlotIndex == 0)
-          OutStreamer->emitLabel(getPrefetchBlockStartSym());
+        // Emit a symbol for each prefetch instruction to calculate the offset.
+        MCSymbol *InstOffsetSym =
+            createTempSymbol("pref_inst_offset_" + Twine(SlotIndex));
+        OutStreamer->emitLabel(InstOffsetSym);
 
         // Create MCExpr for code size using label subtraction.
         // This gives the exact code size at assembly time.
@@ -495,18 +495,18 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
         const MCExpr *SlotIndexExpr =
             MCConstantExpr::create(SlotIndex, OutContext);
 
-        // Create MCExpr for the offset of the first prefetch instruction in the
+        // Create an MCExpr for this prefetch instruction's offset in the
         // function.
-        const MCExpr *PrefetchBlockOffset = MCBinaryExpr::createSub(
-            MCSymbolRefExpr::create(getPrefetchBlockStartSym(), OutContext),
+        const MCExpr *PrefetchInstOffset = MCBinaryExpr::createSub(
+            MCSymbolRefExpr::create(InstOffsetSym, OutContext),
             MCSymbolRefExpr::create(CurrentFnSym, OutContext), OutContext);
 
         // Create MCExprs that will be evaluated at fixup time when symbol
         // positions are known.
         const MCExpr *CachelinesExpr = AMDGPUMCExpr::createPrefetchCachelines(
-            SlotIndexExpr, CodeSizeExpr, PrefetchBlockOffset, OutContext);
+            SlotIndexExpr, CodeSizeExpr, PrefetchInstOffset, OutContext);
         const MCExpr *OffsetExpr = AMDGPUMCExpr::createPrefetchOffset(
-            SlotIndexExpr, CodeSizeExpr, PrefetchBlockOffset, OutContext);
+            SlotIndexExpr, CodeSizeExpr, PrefetchInstOffset, OutContext);
 
         // Replace the offset and sdata operands with MCExprs.
         TmpInst.getOperand(OffsetIdx) = MCOperand::createExpr(OffsetExpr);
