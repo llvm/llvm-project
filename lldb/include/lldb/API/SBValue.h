@@ -532,7 +532,7 @@ protected:
              bool use_synthetic, const char *name);
 
 protected:
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
 
 private:
   typedef std::shared_ptr<lldb_private::ValueImpl> ValueImplSP;

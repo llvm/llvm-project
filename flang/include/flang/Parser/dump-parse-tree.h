@@ -677,6 +677,7 @@ public:
   NODE(OmpLinearClause, Modifier)
   NODE(parser, OmpLinearModifier)
   NODE_ENUM(OmpLinearModifier, Value)
+  NODE(parser, OmpLinearStep)
   NODE(parser, OmpLocator)
   NODE(parser, OmpLooprangeClause)
   NODE(parser, OmpLowerBound)

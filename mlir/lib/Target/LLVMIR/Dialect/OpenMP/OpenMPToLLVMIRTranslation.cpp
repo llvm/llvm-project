@@ -36,6 +36,7 @@
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
@@ -582,7 +583,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkReduction(op, result);
       })
       .Case([&](omp::ParallelOp op) {
-        checkAllocate(op, result);
         checkReduction(op, result);
         checkNumThreads(op, result);
       })
@@ -1006,6 +1006,11 @@ convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
 /// A util to collect info needed to convert delayed privatizers from MLIR to
 /// LLVM.
 struct PrivateVarsInfo {
+  struct AllocatorPrivateInfo {
+    llvm::Value *allocatedPtr;
+    llvm::Value *allocator;
+  };
+
   template <typename OP>
   PrivateVarsInfo(OP op)
       : blockArgs(
@@ -1022,6 +1027,8 @@ struct PrivateVarsInfo {
   SmallVector<mlir::Value> mlirVars;
   SmallVector<llvm::Value *> llvmVars;
   SmallVector<omp::PrivateClauseOp> privatizers;
+  llvm::DenseMap<Value, llvm::Value *> convertedAllocators;
+  SmallVector<AllocatorPrivateInfo> allocatorPrivates;
 
 private:
   /// Populates `privatizations` with privatization declarations used for the
@@ -1961,14 +1968,83 @@ allocatePrivateVars(T op, llvm::IRBuilderBase &builder,
                                ->getDataLayout()
                                .getProgramAddressSpace();
 
-  for (auto [privDecl, mlirPrivVar, blockArg] :
-       llvm::zip_equal(privateVarsInfo.privatizers, privateVarsInfo.mlirVars,
-                       privateVarsInfo.blockArgs)) {
+  SmallVector<int64_t> allocateItemForPrivate(privateVarsInfo.blockArgs.size(),
+                                              -1);
+  ValueRange allocatorVars;
+  DenseI64ArrayAttr allocateAlignments;
+  if constexpr (std::is_same_v<T, omp::ParallelOp>) {
+    allocatorVars = op.getAllocatorVars();
+    allocateAlignments = op.getAllocateAlignmentsAttr();
+    if (auto privateIndices = op.getAllocatePrivateIndicesAttr())
+      for (auto [allocateIndex, privateIndex] :
+           llvm::enumerate(privateIndices.asArrayRef()))
+        allocateItemForPrivate[privateIndex] = allocateIndex;
+  }
+
+  for (auto [privateIndex, tuple] : llvm::enumerate(llvm::zip_equal(
+           privateVarsInfo.privatizers, privateVarsInfo.mlirVars,
+           privateVarsInfo.blockArgs))) {
+    auto [privDecl, mlirPrivVar, blockArg] = tuple;
     llvm::Type *llvmAllocType =
         moduleTranslation.convertType(privDecl.getType());
     builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
     llvm::Value *llvmPrivateVar = nullptr;
-    if (mightUseDeviceSharedMem && omp::allocaUsesRequireSharedMem(blockArg)) {
+    int64_t allocateIndex = allocateItemForPrivate[privateIndex];
+    if (allocateIndex >= 0) {
+      if (mightUseDeviceSharedMem ||
+          op->template getParentOfType<omp::TargetOp>())
+        return llvm::createStringError(
+            "allocate clause on a device parallel region is not supported");
+      if (!llvmAllocType->isSized())
+        return llvm::createStringError(
+            "allocate clause private type must have a fixed size");
+      llvm::TypeSize size = dataLayout.getTypeAllocSize(llvmAllocType);
+      if (size.isScalable())
+        return llvm::createStringError(
+            "allocate clause private type must have a fixed size");
+      llvm::IntegerType *sizeTy =
+          moduleTranslation.getLLVMModule()->getDataLayout().getIntPtrType(
+              moduleTranslation.getLLVMModule()->getContext());
+      if (!llvm::isUIntN(sizeTy->getBitWidth(), size.getFixedValue()))
+        return llvm::createStringError(
+            "OpenMP allocation size cannot be represented by the target size "
+            "type");
+      llvm::Value *sizeValue =
+          llvm::ConstantInt::get(sizeTy, size.getFixedValue());
+
+      Value allocatorVar = allocatorVars[allocateIndex];
+      auto allocator = privateVarsInfo.convertedAllocators.find(allocatorVar);
+      if (allocator == privateVarsInfo.convertedAllocators.end())
+        return llvm::createStringError(
+            "failed to find converted OpenMP allocator operand");
+      llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+      int64_t alignment =
+          allocateAlignments ? allocateAlignments[allocateIndex] : 0;
+      if (alignment != 0) {
+        // The allocation must be aligned to at least the maximum of the
+        // requested alignment and the alignment the base language requires
+        // for the type being allocated.
+        uint64_t alignmentValue = std::max<uint64_t>(
+            static_cast<uint64_t>(alignment),
+            dataLayout.getABITypeAlign(llvmAllocType).value());
+        if (!llvm::isUIntN(sizeTy->getBitWidth(), alignmentValue))
+          return llvm::createStringError(
+              "OpenMP allocation alignment cannot be represented by the "
+              "target size type");
+        llvmPrivateVar = ompBuilder->createOMPAlignedAlloc(
+            ompLoc, llvm::ConstantInt::get(sizeTy, alignmentValue), sizeValue,
+            allocator->second, "omp.private.alloc");
+      } else {
+        llvmPrivateVar = ompBuilder->createOMPAlloc(
+            ompLoc, sizeValue, allocator->second, "omp.private.alloc");
+      }
+      if (!llvmPrivateVar)
+        return llvm::createStringError(
+            "failed to create OpenMP private allocation");
+      privateVarsInfo.allocatorPrivates.push_back(
+          {llvmPrivateVar, allocator->second});
+    } else if (mightUseDeviceSharedMem &&
+               omp::allocaUsesRequireSharedMem(blockArg)) {
       llvmPrivateVar = ompBuilder->createOMPAllocShared(builder, llvmAllocType);
     } else {
       llvmPrivateVar = builder.CreateAlloca(
@@ -2108,6 +2184,7 @@ cleanupPrivateVars(T op, llvm::IRBuilderBase &builder,
                                     /*shouldLoadCleanupRegionArg=*/false)))
     return mlir::emitError(loc, "failed to inline `dealloc` region of an "
                                 "`omp.private` op in");
+  setInsertPointForPossiblyEmptyBlock(builder);
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   bool mightUseDeviceSharedMem = omp::opInSharedDeviceContext(*op);
@@ -2120,6 +2197,12 @@ cleanupPrivateVars(T op, llvm::IRBuilderBase &builder,
           moduleTranslation.convertType(privDecl.getType()));
     }
   }
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  for (const PrivateVarsInfo::AllocatorPrivateInfo &allocation :
+       llvm::reverse(privateVarsInfo.allocatorPrivates))
+    ompBuilder->createOMPFree(ompLoc, allocation.allocatedPtr,
+                              allocation.allocator);
 
   return success();
 }
@@ -4780,6 +4863,24 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   PrivateVarsInfo privateVarsInfo(opInst);
+  for (Value allocatorVar : opInst.getAllocatorVars()) {
+    if (privateVarsInfo.convertedAllocators.contains(allocatorVar))
+      continue;
+
+    llvm::Value *allocator = moduleTranslation.lookupValue(allocatorVar);
+    if (!allocator)
+      return opInst.emitError("failed to translate OpenMP allocator operand");
+    if (allocator->getType()->isIntegerTy())
+      allocator = builder.CreateIntToPtr(allocator, builder.getPtrTy());
+    else if (allocator->getType()->isPointerTy())
+      allocator = builder.CreatePointerBitCastOrAddrSpaceCast(
+          allocator, builder.getPtrTy());
+    else
+      return opInst.emitError(
+          "OpenMP allocator operand must have integer or pointer type");
+
+    privateVarsInfo.convertedAllocators.try_emplace(allocatorVar, allocator);
+  }
 
   // Collect reduction declarations
   SmallVector<omp::DeclareReductionOp> reductionDecls;
@@ -8083,27 +8184,16 @@ convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
   if (attribute.getNoGpuLib())
     return success();
 
-  ompBuilder->createGlobalFlag(
-      attribute.getDebugKind() /*LangOpts().OpenMPTargetDebug*/,
-      "__omp_rtl_debug_kind");
-  ompBuilder->createGlobalFlag(
-      attribute
-          .getAssumeTeamsOversubscription() /*LangOpts().OpenMPTeamSubscription*/
-      ,
-      "__omp_rtl_assume_teams_oversubscription");
-  ompBuilder->createGlobalFlag(
-      attribute
-          .getAssumeThreadsOversubscription() /*LangOpts().OpenMPThreadSubscription*/
-      ,
-      "__omp_rtl_assume_threads_oversubscription");
-  ompBuilder->createGlobalFlag(
-      attribute.getAssumeNoThreadState() /*LangOpts().OpenMPNoThreadState*/,
-      "__omp_rtl_assume_no_thread_state");
-  ompBuilder->createGlobalFlag(
-      attribute
-          .getAssumeNoNestedParallelism() /*LangOpts().OpenMPNoNestedParallelism*/
-      ,
-      "__omp_rtl_assume_no_nested_parallelism");
+  ompBuilder->createGlobalFlag(attribute.getDebugKind(),
+                               "__omp_rtl_debug_kind");
+  ompBuilder->createGlobalFlag(attribute.getAssumeTeamsOversubscription(),
+                               "__omp_rtl_assume_teams_oversubscription");
+  ompBuilder->createGlobalFlag(attribute.getAssumeThreadsOversubscription(),
+                               "__omp_rtl_assume_threads_oversubscription");
+  ompBuilder->createGlobalFlag(attribute.getAssumeNoThreadState(),
+                               "__omp_rtl_assume_no_thread_state");
+  ompBuilder->createGlobalFlag(attribute.getAssumeNoNestedParallelism(),
+                               "__omp_rtl_assume_no_nested_parallelism");
   return success();
 }
 
