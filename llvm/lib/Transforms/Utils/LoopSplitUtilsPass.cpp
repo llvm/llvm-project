@@ -37,6 +37,11 @@ static cl::list<unsigned>
                          "at which to split each loop"),
                 cl::CommaSeparated);
 
+static cl::opt<bool> SplitOuterLoops(
+    "loop-split-outer",
+    cl::desc("Split the top-level loops instead of the innermost ones"),
+    cl::init(false));
+
 static cl::list<unsigned> UnguardedPartitions(
     "loop-split-unguarded",
     cl::desc("Partition indices whose entry guard is omitted (the caller "
@@ -134,9 +139,17 @@ PreservedAnalyses LoopSplitUtilsPass::run(Function &F,
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
 
-  // Collect the original top-level loops up front; the transform creates new
-  // sub-loops that we must not revisit.
-  SmallVector<Loop *, 4> Worklist(LI.begin(), LI.end());
+  // Collect the original loops up front; the transform creates new sub-loops
+  // that we must not revisit. Innermost loops are the interesting default: they
+  // are what a client splits, and their new blocks land in a containing loop.
+  SmallVector<Loop *, 4> Worklist;
+  if (SplitOuterLoops) {
+    Worklist.assign(LI.begin(), LI.end());
+  } else {
+    for (Loop *L : LI.getLoopsInPreorder())
+      if (L->isInnermost())
+        Worklist.push_back(L);
+  }
 
   bool Changed = false;
   for (Loop *L : Worklist) {
