@@ -2407,7 +2407,7 @@ bool SITargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return true;
 }
 
-SITargetLowering::ExtractSubvectorCost
+TargetLowering::ExtractSubvectorCost
 SITargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
                                           unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))

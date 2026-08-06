@@ -2141,7 +2141,7 @@ bool HexagonTargetLowering::shouldExpandBuildVectorWithShuffles(EVT VT,
   return false;
 }
 
-HexagonTargetLowering::ExtractSubvectorCost
+TargetLowering::ExtractSubvectorCost
 HexagonTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
                                                unsigned Index) const {
   assert(ResVT.getVectorElementType() == SrcVT.getVectorElementType());

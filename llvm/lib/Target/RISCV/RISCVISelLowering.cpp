@@ -2871,7 +2871,7 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
 }
 
 // TODO: This is very conservative.
-RISCVTargetLowering::ExtractSubvectorCost
+TargetLowering::ExtractSubvectorCost
 RISCVTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
                                              unsigned Index) const {
   if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() &&

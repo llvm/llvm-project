@@ -11787,7 +11787,7 @@ bool LoongArchTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
   return isOperationLegalOrCustomOrPromote(Opc, ScalarVT);
 }
 
-LoongArchTargetLowering::ExtractSubvectorCost
+TargetLowering::ExtractSubvectorCost
 LoongArchTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
                                                  unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))

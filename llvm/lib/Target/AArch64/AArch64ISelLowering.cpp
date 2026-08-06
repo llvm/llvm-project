@@ -20309,7 +20309,7 @@ bool AArch64TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return Shift < 3;
 }
 
-AArch64TargetLowering::ExtractSubvectorCost
+TargetLowering::ExtractSubvectorCost
 AArch64TargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
                                                unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))

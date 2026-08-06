@@ -3608,7 +3608,7 @@ bool X86TargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
          (1 - MulC).isPowerOf2() || (-(MulC + 1)).isPowerOf2();
 }
 
-X86TargetLowering::ExtractSubvectorCost
+TargetLowering::ExtractSubvectorCost
 X86TargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
                                            unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
