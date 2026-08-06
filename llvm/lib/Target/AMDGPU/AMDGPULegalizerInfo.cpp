@@ -2312,7 +2312,9 @@ bool AMDGPULegalizerInfo::legalizeScalarBF16ToPackedBF16Op(
   }
 
   // Build the wide operation
-  auto MIB = B.buildInstr(Opc).addDef(MRI.createGenericVirtualRegister(V2BF16));
+  auto MIB = B.buildInstr(Opc)
+                 .addDef(MRI.createGenericVirtualRegister(V2BF16))
+                 .setMIFlags(MI.getFlags());
   for (Register WideSrc : WideSrcs)
     MIB.addUse(WideSrc);
   Register WideResult = MIB.getReg(0);
