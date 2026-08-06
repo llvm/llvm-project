@@ -455,31 +455,6 @@ compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
   return {nullptr, nullptr};
 }
 
-static std::string getRegionName(const MemSpaceRegion *Space,
-                                 const SubRegion *Region) {
-  if (std::string RegName = Region->getDescriptiveName(); !RegName.empty())
-    return RegName;
-
-  // Field regions only have descriptive names when their parent has a
-  // descriptive name; so we provide a fallback representation for them:
-  if (const auto *FR = Region->getAs<FieldRegion>()) {
-    if (StringRef Name = FR->getDecl()->getName(); !Name.empty())
-      return formatv("the field '{0}'", Name);
-    return "the unnamed field";
-  }
-
-  if (isa<AllocaRegion>(Region))
-    return "the memory returned by 'alloca'";
-
-  if (isa<SymbolicRegion>(Region) && isa<HeapSpaceRegion>(Space))
-    return "the heap area";
-
-  if (isa<StringRegion>(Region))
-    return "the string literal";
-
-  return "the region";
-}
-
 static std::optional<int64_t> getConcreteValue(NonLoc SV) {
   if (auto ConcreteVal = SV.getAs<nonloc::ConcreteInt>()) {
     return ConcreteVal->getValue()->tryExtValue();
@@ -681,7 +656,8 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
     return;
   }
 
-  std::string RegName = getRegionName(Space, Reg);
+  std::string RegName =
+      Reg->getDescriptiveName(/*UseQuotes=*/true, /*AllowFallback=*/true);
 
   const NoteTag *T = nullptr;
   if (Res.mayBeInvalid()) {
