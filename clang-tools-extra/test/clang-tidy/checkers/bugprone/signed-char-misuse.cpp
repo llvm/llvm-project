@@ -13,6 +13,16 @@ struct array {
 };
 } // namespace std
 
+int isalpha(int);
+int toupper(int);
+namespace std {
+using ::isalpha;
+using ::toupper;
+// Declared directly in namespace std, as in some standard library
+// implementations.
+int islower(int);
+} // namespace std
+
 int SimpleVarDeclaration() {
   signed char CCharacter = -5;
   int NCharacter = CCharacter;
@@ -108,6 +118,32 @@ int SignedCharCArraySubscript(signed char SCharacter) {
 
 int SignedCharSTDArraySubscript(std::array<int, 3> Array, signed char SCharacter) {
   return Array[static_cast<unsigned int>(SCharacter)]; // CHECK-MESSAGES: [[@LINE]]:42: warning: 'signed char' to 'unsigned int' conversion in array subscript; consider casting to 'unsigned char' first. [bugprone-signed-char-misuse]
+}
+
+int SignedCharCArraySubscriptWithConstant(int *Values) {
+  constexpr signed char SCharacter = -1;
+  return Values[static_cast<unsigned int>(SCharacter)]; // CHECK-MESSAGES: [[@LINE]]:43: warning: 'signed char' to 'unsigned int' conversion in array subscript; consider casting to 'unsigned char' first. [bugprone-signed-char-misuse]
+}
+
+int CctypeFunctionArgument(signed char SCharacter) {
+  return isalpha(SCharacter);
+  // CHECK-MESSAGES: [[@LINE-1]]:18: warning: 'signed char' to 'int' conversion passed to a <cctype> function; consider casting to 'unsigned char' first. [bugprone-signed-char-misuse]
+}
+
+int CctypeFunctionArgumentStdNamespace(signed char SCharacter) {
+  return std::toupper(SCharacter);
+  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: 'signed char' to 'int' conversion passed to a <cctype> function; consider casting to 'unsigned char' first. [bugprone-signed-char-misuse]
+}
+
+int CctypeFunctionArgumentStdDeclared(signed char SCharacter) {
+  return std::islower(SCharacter);
+  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: 'signed char' to 'int' conversion passed to a <cctype> function; consider casting to 'unsigned char' first. [bugprone-signed-char-misuse]
+}
+
+int CctypeFunctionArgumentNegativeConstant() {
+  constexpr signed char SCharacter = -1;
+  return isalpha(SCharacter);
+  // CHECK-MESSAGES: [[@LINE-1]]:18: warning: 'signed char' to 'int' conversion passed to a <cctype> function; consider casting to 'unsigned char' first. [bugprone-signed-char-misuse]
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -246,4 +282,36 @@ int UnsignedCharSTDArraySubscript(std::array<int, 3> Array, unsigned char USChar
 
 int CastedSTDArraySubscript(std::array<int, 3> Array, signed char SCharacter) {
   return Array[static_cast<unsigned char>(SCharacter)];
+}
+
+int CctypeFunctionArgumentUnsignedChar(unsigned char USCharacter) {
+  return isalpha(USCharacter);
+}
+
+int CctypeFunctionArgumentCasted(signed char SCharacter) {
+  return isalpha(static_cast<unsigned char>(SCharacter));
+}
+
+int CctypeFunctionArgumentAsciiLiteral() {
+  return isalpha('a');
+}
+
+int CctypeFunctionArgumentAlreadyInt(int ICharacter) {
+  return isalpha(ICharacter);
+}
+
+namespace custom {
+int isalpha(int);
+} // namespace custom
+
+struct Classifier {
+  static int toupper(int);
+};
+
+int CctypeFunctionArgumentUnrelatedNamespace(signed char SCharacter) {
+  return custom::isalpha(SCharacter);
+}
+
+int CctypeFunctionArgumentUnrelatedClass(signed char SCharacter) {
+  return Classifier::toupper(SCharacter);
 }

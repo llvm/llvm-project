@@ -113,6 +113,12 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-signed-char-misuse
+  <clang-tidy/checks/bugprone/signed-char-misuse>` check by adding a
+  diagnostic for ``signed char`` values passed as an argument to a
+  ``<cctype>``/``<ctype.h>`` character classification or conversion
+  function.
+
 - Improved :doc:`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
   ``std::array`` the same as built-in arrays when `IgnoreArrays` option is enabled.

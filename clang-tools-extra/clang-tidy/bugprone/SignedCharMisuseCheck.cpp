@@ -18,6 +18,16 @@ namespace clang::tidy::bugprone {
 
 static constexpr int UnsignedASCIIUpperBound = 127;
 
+static constexpr StringRef CctypeFunctions[] = {
+    "::isalnum", "::std::isalnum", "::isalpha",  "::std::isalpha",
+    "::isblank", "::std::isblank", "::iscntrl",  "::std::iscntrl",
+    "::isdigit", "::std::isdigit", "::isgraph",  "::std::isgraph",
+    "::islower", "::std::islower", "::isprint",  "::std::isprint",
+    "::ispunct", "::std::ispunct", "::isspace",  "::std::isspace",
+    "::isupper", "::std::isupper", "::isxdigit", "::std::isxdigit",
+    "::tolower", "::std::tolower", "::toupper",  "::std::toupper",
+};
+
 SignedCharMisuseCheck::SignedCharMisuseCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -125,14 +135,45 @@ void SignedCharMisuseCheck::registerMatchers(MatchFinder *Finder) {
           .bind("arraySubscript");
 
   Finder->addMatcher(STDArraySubscript, this);
+
+  // Catch signed char values passed to a <cctype>/<ctype.h> function; values
+  // not representable as unsigned char (except EOF) are undefined behavior.
+  const auto IntTypedef = qualType(hasDeclaration(typedefDecl(
+      hasAnyName(utils::options::parseStringList(CharTypedefsToIgnoreList)))));
+  const auto CctypeFunctionArgument = callExpr(
+      callee(functionDecl(hasAnyName(CctypeFunctions),
+                          hasParameter(0, parmVarDecl(hasType(IntegerType))))),
+      hasArgument(0, expr(hasType(qualType(isAnyCharacter(), isSignedInteger(),
+                                           unless(IntTypedef))))
+                         .bind("cctypeArgument")));
+
+  Finder->addMatcher(CctypeFunctionArgument, this);
 }
 
 void SignedCharMisuseCheck::check(const MatchFinder::MatchResult &Result) {
+  const auto *IntegerType = Result.Nodes.getNodeAs<QualType>("integerType");
+  assert(IntegerType);
+
+  // A <cctype> argument is handled separately: hasArgument() strips implicit
+  // casts, so the bound node is the argument itself, not a cast node.
+  if (const auto *CctypeArgument =
+          Result.Nodes.getNodeAs<Expr>("cctypeArgument")) {
+    Expr::EvalResult EVResult;
+    if (!CctypeArgument->isValueDependent() &&
+        CctypeArgument->EvaluateAsInt(EVResult, *Result.Context) &&
+        EVResult.Val.getInt().isNonNegative())
+      return;
+
+    diag(CctypeArgument->getBeginLoc(),
+         "'signed char' to %0 conversion passed to a <cctype> function; "
+         "consider casting to 'unsigned char' first.")
+        << *IntegerType;
+    return;
+  }
+
   const auto *SignedCastExpression =
       Result.Nodes.getNodeAs<ImplicitCastExpr>("signedCastExpression");
-  const auto *IntegerType = Result.Nodes.getNodeAs<QualType>("integerType");
   assert(SignedCastExpression);
-  assert(IntegerType);
 
   // Ignore the match if we know that the signed char's value is not negative.
   // The potential misinterpretation happens for negative values only.
