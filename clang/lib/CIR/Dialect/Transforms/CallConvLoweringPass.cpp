@@ -68,10 +68,11 @@ namespace {
 // SysV x86_64 classifier, and converts the result back into the
 // dialect-agnostic mlir::abi::FunctionClassification that CIRABIRewriteContext
 // consumes.  Integer (including `_BitInt` up to 128 bits) / pointer / bool /
-// f32 / f64 scalars and struct / array aggregates are handled.  Unions,
-// `_Complex`, vectors, wider floats, and packed or padded records are reported
-// NYI by classifyX86_64Function so an unsupported signature fails the pass
-// instead of being misclassified.
+// f32 / f64 scalars and struct / union / array aggregates are handled.
+// `_Complex`, vectors, wider floats, packed or padded records, and a union no
+// member of which spans its declared size are reported NYI by
+// classifyX86_64Function so an unsupported signature fails the pass instead of
+// being misclassified.
 //===----------------------------------------------------------------------===//
 
 /// Whether a struct's declared argument-passing kind (from the module's
@@ -79,27 +80,32 @@ namespace {
 /// no layout entry (e.g. an anonymous struct) has no C++ non-trivial reason to
 /// be forced to memory, so it defaults to can-pass-in-registers.
 static bool recordCanPassInRegs(ModuleOp modOp, cir::RecordType recTy) {
-  mlir::StringAttr name = recTy.getName();
-  if (!name)
-    return true;
-  auto dict = modOp->getAttrOfType<DictionaryAttr>(
-      cir::CIRDialect::getRecordLayoutsAttrName());
-  if (!dict)
-    return true;
-  auto layout = dict.getAs<cir::RecordLayoutAttr>(name);
+  auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
   if (!layout)
     return true;
   return layout.getArgPassingKind() == cir::ArgPassingKind::CanPassInRegs;
 }
 
+/// A record's declared alignment, which the ABI uses for the byval and sret
+/// alignment of an indirect argument.  DataLayout derives alignment from the
+/// members, so it cannot see `__attribute__((aligned(N)))`.  The declared value
+/// comes from the module's record-layout metadata instead.  CIRGen emits an
+/// entry for every record it names, so the computed fallback only serves
+/// hand-written CIR.
+static llvm::Align recordDeclaredAlign(ModuleOp modOp, cir::RecordType recTy,
+                                       const DataLayout &dl) {
+  auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
+  if (!layout)
+    return llvm::Align(dl.getTypeABIAlignment(recTy));
+  return llvm::Align(layout.getRecordAlign());
+}
+
 /// The CIR types the x86_64 bridge handles.  Scalars: an integer up to 128
 /// bits (including `_BitInt` and `__int128`), pointer, bool, void, f32, or f64.
-/// Aggregates: a complete struct whose fields are all themselves supported, or
-/// an array of a supported element type.  A `_BitInt` wider than 128 bits,
-/// unions, `_Complex`, vectors, wider floats, and packed or padded records are
-/// not handled and are reported NYI at the reject() choke point in
-/// classifyX86_64Function.
-static bool isSupportedType(mlir::Type ty) {
+/// Aggregates: a complete struct or union whose members are all themselves
+/// supported, or an array of a supported element type.  Everything else is
+/// reported NYI at the reject() choke point in classifyX86_64Function.
+static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   // A pointer is only handled in the default address space (null) or an
   // already-lowered target address space.  A LangAddressSpaceAttr must be
   // lowered before this pass, so reject it rather than silently dropping it.
@@ -124,21 +130,40 @@ static bool isSupportedType(mlir::Type ty) {
     return intTy.getWidth() <= 64 || intTy.getWidth() == 128;
   }
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
-    return isSupportedType(arrTy.getElementType());
+    return isSupportedType(arrTy.getElementType(), dl);
   if (auto recTy = dyn_cast<cir::RecordType>(ty)) {
-    // Unions and packed / padded records each need classification this bridge
-    // does not implement (a union widen fixup and pad-aware eightbyte
-    // classification), so reject them here and report NYI rather than
-    // misclassify.  A zero-field record (a C empty struct) classifies as
-    // Ignore and is dropped from the lowered signature.  CIRGen lays out an
-    // empty C++ class as a single padded byte, which the padded check rejects.
-    // A real one-byte struct such as `{char[1]}` has a field and is not
-    // padded, so it is classified normally.
-    if (recTy.isUnion() || !recTy.isComplete() || recTy.getPacked() ||
-        recTy.getPadded())
+    // An incomplete record has no layout to classify, and a packed one needs
+    // pad-aware eightbyte classification this bridge does not implement.
+    if (!recTy.isComplete() || recTy.getPacked())
       return false;
+    if (recTy.isUnion()) {
+      // The classifier sizes a union's eightbytes from the union itself, which
+      // is only sound when some member spans that size.  Short of that, the
+      // remaining bytes are either tail padding or the rest of a bitfield
+      // storage unit, and the CIR type cannot tell those apart even though
+      // classic CodeGen coerces them to i32 and i8 respectively.
+      llvm::ArrayRef<mlir::Type> members = recTy.getMembers();
+      uint64_t recordBits = dl.getTypeSizeInBits(recTy).getFixedValue();
+      if (members.empty()) {
+        // A member-less union is all padding, which classifies Ignore up to two
+        // eightbytes.  Past that SysV says MEMORY regardless of content, and
+        // there is no member here to build the Indirect coercion from.
+        if (recordBits > 128)
+          return false;
+      } else {
+        auto spansRecord = [&](mlir::Type m) {
+          return dl.getTypeSizeInBits(m).getFixedValue() == recordBits;
+        };
+        if (!llvm::any_of(members, spansRecord))
+          return false;
+      }
+    } else if (recTy.getPadded()) {
+      // A struct's padding is a member the classifier would have to recognize
+      // as padding rather than data, which is not implemented.
+      return false;
+    }
     return llvm::all_of(recTy.getMembers(),
-                        [](mlir::Type m) { return isSupportedType(m); });
+                        [&](mlir::Type m) { return isSupportedType(m, dl); });
   }
   return false;
 }
@@ -220,11 +245,28 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                                dl.getTypeSizeInBits(type).getFixedValue());
       })
       .Case([&](cir::RecordType recTy) -> const llvm::abi::Type * {
-        // isSupportedType rejects unions, packed / padded, and empty-for-ABI
-        // records, so this handles a plain struct: map each field at its
-        // naturally-aligned offset.
+        llvm::abi::RecordFlags flags = llvm::abi::RecordFlags::None;
+        if (recordCanPassInRegs(modOp, recTy))
+          flags = flags | llvm::abi::RecordFlags::CanPassInRegisters;
+        llvm::TypeSize sizeBits = llvm::TypeSize::getFixed(
+            dl.getTypeSizeInBits(type).getFixedValue());
+        llvm::Align align = recordDeclaredAlign(modOp, recTy, dl);
         SmallVector<llvm::abi::FieldInfo> fields;
         fields.reserve(recTy.getMembers().size());
+
+        // The size passed here spans the tail padding, so an eightbyte covers
+        // the whole union rather than just the member the classifier reduces
+        // it to.
+        if (recTy.isUnion()) {
+          for (mlir::Type fieldTy : recTy.getMembers())
+            fields.push_back(llvm::abi::FieldInfo(
+                mapCIRType(fieldTy, typeMapper, dl, modOp)));
+          return tb.getUnionType(fields, sizeBits, align,
+                                 llvm::abi::StructPacking::Default, flags);
+        }
+
+        // isSupportedType rejects packed and padded structs, so every field
+        // here sits at its naturally-aligned offset.
         uint64_t offsetBits = 0;
         for (mlir::Type fieldTy : recTy.getMembers()) {
           const llvm::abi::Type *mappedField =
@@ -234,16 +276,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           fields.push_back(llvm::abi::FieldInfo(mappedField, offsetBits));
           offsetBits += dl.getTypeSizeInBits(fieldTy).getFixedValue();
         }
-        llvm::abi::RecordFlags flags = llvm::abi::RecordFlags::None;
-        if (recordCanPassInRegs(modOp, recTy))
-          flags = flags | llvm::abi::RecordFlags::CanPassInRegisters;
-        return tb.getRecordType(fields,
-                                llvm::TypeSize::getFixed(
-                                    dl.getTypeSizeInBits(type).getFixedValue()),
-                                llvm::Align(dl.getTypeABIAlignment(type)),
-                                llvm::abi::StructPacking::Default,
-                                /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{},
-                                flags);
+        return tb.getRecordType(
+            fields, sizeBits, align, llvm::abi::StructPacking::Default,
+            /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{}, flags);
       })
       .Default([](mlir::Type) -> const llvm::abi::Type * {
         llvm_unreachable(
@@ -353,7 +388,7 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
   bool voidRet = isa<cir::VoidType>(retCIR);
 
   auto reject = [&](mlir::Type t) -> bool {
-    if (isSupportedType(t))
+    if (isSupportedType(t, dl))
       return false;
     emitError()
         << "x86_64 calling-convention lowering not yet implemented for type "

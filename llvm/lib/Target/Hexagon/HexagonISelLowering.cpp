@@ -1116,9 +1116,10 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   if (ResTy.isVector())
     return Op;
 
-  // Comparisons of short integers should use sign-extend, not zero-extend,
-  // since we can represent small negative values in the compare instructions.
-  // The LLVM default is to use zero-extend arbitrarily in these cases.
+  // Equality comparisons of short integers should use sign-extend, not
+  // zero-extend, since we can represent small negative values in the compare
+  // instructions.  The LLVM default is to use zero-extend arbitrarily in
+  // these cases.
   auto isSExtFree = [this](SDValue N) {
     switch (N.getOpcode()) {
       case ISD::TRUNCATE: {
@@ -1141,7 +1142,14 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     return false;
   };
 
-  if (OpTy == MVT::i8 || OpTy == MVT::i16) {
+  // Only do this for equality comparisons.  Signed comparisons are already
+  // sign-extended by the generic operand promotion, and for unsigned
+  // comparisons a sign-extension is never profitable: it does not change the
+  // result (sign-extension preserves the unsigned ordering of the values of
+  // the narrower type), but it turns constants with the sign bit of the
+  // narrower type set into large 32-bit values, which then have to be
+  // materialized in a register or use a constant extender.
+  if ((OpTy == MVT::i8 || OpTy == MVT::i16) && ISD::isIntEqualitySetCC(CC)) {
     ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS);
     bool IsNegative = C && C->getAPIntValue().isNegative();
     if (IsNegative || isSExtFree(LHS) || isSExtFree(RHS))

@@ -247,14 +247,6 @@ MODULE_PASS_WITH_PARAMS(
     "ipsccp", "IPSCCPPass", [](IPSCCPOptions Opts) { return IPSCCPPass(Opts); },
     parseIPSCCPOptions, "no-func-spec;func-spec")
 MODULE_PASS_WITH_PARAMS(
-    "loop-extract", "LoopExtractorPass",
-    [](bool Single) {
-      if (Single)
-        return LoopExtractorPass(1);
-      return LoopExtractorPass();
-    },
-    parseLoopExtractorPassOptions, "single")
-MODULE_PASS_WITH_PARAMS(
     "memprof-use", "MemProfUsePass",
     [](std::string Opts) { return MemProfUsePass(Opts); },
     parseMemProfUsePassOptions, "profile-filename=S")
