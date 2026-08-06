@@ -6591,6 +6591,8 @@ public:
 
   QualType VisitParenType(const ParenType *T) {
     QualType InnerTy = Visit(T->getInnerType());
+    if (InnerTy.isNull())
+      return QualType();
     return S.Context.getParenType(InnerTy);
   }
 
