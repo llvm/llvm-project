@@ -1425,7 +1425,7 @@ protected:
         &(m_options.m_files), false, m_options.m_hardware,
         m_python_class_options.GetStructuredData(), &error);
     if (error.Fail()) {
-      result.AppendErrorWithFormat("error creating scripted breakpoint: %s",
+      result.AppendErrorWithFormat("cannot create scripted breakpoint: %s",
                                    error.AsCString());
       return;
     }
@@ -1973,7 +1973,7 @@ protected:
           &(m_options.m_filenames), false, m_options.m_hardware,
           m_python_class_options.GetStructuredData(), &error);
       if (error.Fail()) {
-        result.AppendErrorWithFormat("Error creating scripted breakpoint: %s",
+        result.AppendErrorWithFormat("cannot create scripted breakpoint: %s",
                                      error.AsCString());
         return;
       }

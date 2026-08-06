@@ -1446,7 +1446,7 @@ Status Target::CreateBreakpointsFromFile(const FileSpec &file,
         shared_from_this(), bkpt_data_sp, error);
     if (!error.Success()) {
       error = Status::FromErrorStringWithFormat(
-          "Error restoring breakpoint %zu from %s: %s", i,
+          "error restoring breakpoint %zu from %s: %s", i,
           file.GetPath().c_str(), error.AsCString());
       return error;
     }

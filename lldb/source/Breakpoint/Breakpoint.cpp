@@ -202,7 +202,7 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
       target.CreateBreakpoint(filter_sp, resolver_sp, false, hardware, true);
   if (!bp_or_err) {
     error = Status::FromErrorStringWithFormatv(
-        "Error creating breakpoint from data: {0}.",
+        "error creating breakpoint from data: {0}.",
         llvm::toString(bp_or_err.takeError()));
     return {};
   }

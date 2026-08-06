@@ -60,7 +60,7 @@ class TestScriptedResolver(TestBase):
             "breakpoint set -P resolver.DoesNotExist",
             error=True,
             substrs=[
-                "Error creating scripted breakpoint",
+                "cannot create scripted breakpoint",
                 "Could not find script class: resolver.DoesNotExist",
             ],
         )
