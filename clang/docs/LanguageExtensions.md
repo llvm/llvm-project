@@ -6632,7 +6632,6 @@ the named source variables in place using `.ref` directives. Both sets of
 strings appear in the final object file independently.
 
 (langext-evaluating-object-size)=
-
 ## Evaluating Object Size
 
 Clang supports the builtins `__builtin_object_size` and

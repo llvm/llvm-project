@@ -15458,11 +15458,6 @@ void Sema::CheckThreadLocalForLargeAlignment(VarDecl *VD) {
 /// string variables so CodeGen preserves them as loadtime identifying
 /// strings, and warn when a named variable cannot be preserved.
 static void processForLoadTimeCommentVar(Sema &S, VarDecl *VD) {
-  // The driver restricts the option to AIX, but cc1 can be invoked directly
-  // with any triple, so the target is checked here rather than inherited from
-  // driver gating.
-  if (!S.Context.getTargetInfo().getTriple().isOSAIX())
-    return;
   // Declarations that cannot be name-matched are silently skipped: an
   // automatic variable has no symbol of its own, and neither does a template
   // pattern (only its specializations do, and those are processed
