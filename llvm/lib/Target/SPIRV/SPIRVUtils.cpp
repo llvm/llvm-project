@@ -448,6 +448,24 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   llvm_unreachable(nullptr);
 }
 
+SPIRV::MemorySemantics::MemorySemantics
+getMemSemanticsForAtomic(AtomicOrdering Ord,
+                         SPIRV::StorageClass::StorageClass SC,
+                         bool IsVulkan) {
+  SPIRV::MemorySemantics::MemorySemantics Sem = getMemSemantics(Ord);
+  if (!IsVulkan || Sem != SPIRV::MemorySemantics::None)
+    return Sem;
+
+  switch (getMemSemanticsForStorageClass(SC)) {
+  case SPIRV::MemorySemantics::UniformMemory:
+  case SPIRV::MemorySemantics::WorkgroupMemory:
+  case SPIRV::MemorySemantics::ImageMemory:
+    return SPIRV::MemorySemantics::AcquireRelease;
+  default:
+    return Sem;
+  }
+}
+
 SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
   // Named by
   // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_scope_id.
@@ -472,6 +490,24 @@ SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
   else if (Id == Device)
     return SPIRV::Scope::Device;
   return SPIRV::Scope::CrossDevice;
+}
+
+SPIRV::Scope::Scope legalizeScopeForVulkan(SPIRV::Scope::Scope Scope,
+                                           SPIRV::StorageClass::StorageClass SC) {
+  if (Scope != SPIRV::Scope::CrossDevice)
+    return Scope;
+  if (SC == SPIRV::StorageClass::Workgroup)
+    return SPIRV::Scope::Workgroup;
+  return SPIRV::Scope::Device;
+}
+
+SPIRV::Scope::Scope getMemScopeForAtomic(LLVMContext &Ctx, SyncScope::ID Id,
+                                         SPIRV::StorageClass::StorageClass SC,
+                                         bool IsVulkan) {
+  SPIRV::Scope::Scope Scope = getMemScope(Ctx, Id);
+  if (!IsVulkan)
+    return Scope;
+  return legalizeScopeForVulkan(Scope, SC);
 }
 
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
