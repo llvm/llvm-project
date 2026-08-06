@@ -54,11 +54,12 @@ module attributes {omp.integer_wrap_around = #omp.integer_wrap_around<integer_wr
 // Case 3: Collapsed loop with dynamic trip count
 //-------------------------------------------------------------------------//
 
-// CHECK-LABEL: define void @collapsed_dynamic_with_nsw
+// CHECK-LABEL: define void @collapsed_dynamic_no_nsw
 // CHECK: omp_collapsed.inc:
-// CHECK: %omp_collapsed.next = add nuw nsw i32 %omp_collapsed.iv, 1
+// CHECK: %omp_collapsed.next = add nuw i32 %omp_collapsed.iv, 1
+// CHECK-NOT: nsw
 module attributes {omp.integer_wrap_around = #omp.integer_wrap_around<integer_wrap_around = false>} {
-  llvm.func @collapsed_dynamic_with_nsw(%lb : i32, %ub1 : i32, %ub2 : i32, %step : i32) {
+  llvm.func @collapsed_dynamic_no_nsw(%lb : i32, %ub1 : i32, %ub2 : i32, %step : i32) {
     omp.wsloop {
       omp.loop_nest (%iv1, %iv2) : i32 = (%lb, %lb) to (%ub1, %ub2) step (%step, %step) collapse(2) {
         omp.yield

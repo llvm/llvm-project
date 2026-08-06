@@ -5766,7 +5766,7 @@ void OpenMPIRBuilder::createScanBBs(ScanInfo *ScanRedInfo) {
 }
 CanonicalLoopInfo *OpenMPIRBuilder::createLoopSkeleton(
     DebugLoc DL, Value *TripCount, Function *F, BasicBlock *PreInsertBefore,
-    BasicBlock *PostInsertBefore, const Twine &Name) {
+    BasicBlock *PostInsertBefore, const Twine &Name, bool IsCollapsed) {
   Module *M = F->getParent();
   LLVMContext &Ctx = M->getContext();
   Type *IndVarTy = TripCount->getType();
@@ -5807,6 +5807,15 @@ CanonicalLoopInfo *OpenMPIRBuilder::createLoopSkeleton(
   Builder.CreateBr(Latch);
 
   Builder.SetInsertPoint(Latch);
+  // Decide whether the induction variable increment can carry nsw.
+  //
+  // Single loops: nsw is always kept (matching Clang). Any Fortran program
+  // whose trip count overflows i32 is non-conforming per F2018 11.1.7.4.1, so
+  // for valid programs 0 <= count <= INT_MAX always holds.
+  //
+  // Collapsed loops: the trip count is a product that can overflow i32 even for
+  // a conforming program, so nsw is kept only when the product is a constant
+  // that provably fits, dropped otherwise.
   bool HasNSW = Config.hasNoSignedWrap();
   if (HasNSW) {
     if (auto *CI = dyn_cast<ConstantInt>(TripCount)) {
@@ -5814,6 +5823,8 @@ CanonicalLoopInfo *OpenMPIRBuilder::createLoopSkeleton(
       APInt SignedMax = APInt::getSignedMaxValue(BitWidth);
       if (CI->getValue().ugt(SignedMax))
         HasNSW = false;
+    } else if (IsCollapsed) {
+      HasNSW = false;
     }
   }
   Value *Next =
@@ -7018,7 +7029,8 @@ OpenMPIRBuilder::collapseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
   // Create the collapsed loop control flow.
   CanonicalLoopInfo *Result =
       createLoopSkeleton(DL, CollapsedTripCount, F,
-                         OrigPreheader->getNextNode(), OrigAfter, "collapsed");
+                         OrigPreheader->getNextNode(), OrigAfter, "collapsed",
+                         /*IsCollapsed=*/true);
 
   // Build the collapsed loop body code.
   // Start with deriving the input loop induction variables from the collapsed
