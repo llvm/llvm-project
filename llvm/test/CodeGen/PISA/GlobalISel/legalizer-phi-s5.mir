@@ -1,0 +1,66 @@
+# RUN: llc -march=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
+# Check that i5 phi operand is extended to i16.
+--- |
+  target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-n16:32-G1"
+  target triple = "pisa"
+
+  %"class.sycl::_V1::vec" = type { <4 x float> }
+
+  define pisa_kernel void @_ZTSZZ13MatchSiftDataR8SiftDataS0_RN4sycl3_V15queueERfENKUlRNS2_7handlerEE4_clES7_EUlNS2_7nd_itemILi3EEEE_(ptr addrspace(3) %0, i1 %1) {
+    br i1 %1, label %.preheader, label %._crit_edge29
+
+  .preheader:                                       ; preds = %2
+    br label %3
+
+  ._crit_edge29:                                    ; preds = %2
+    ret void
+
+  3:                                                ; preds = %.preheader, %3
+    %lsr.iv = phi i5 [ %lsr.iv.next2, %3 ], [ 0, %.preheader ]
+    %4 = zext i5 %lsr.iv to i32
+    %5 = getelementptr %"class.sycl::_V1::vec", ptr addrspace(3) %0, i32 %4
+    %lsr.iv.next2 = add i5 %lsr.iv, 1
+    br label %3
+  }
+
+...
+---
+name:            _ZTSZZ13MatchSiftDataR8SiftDataS0_RN4sycl3_V15queueERfENKUlRNS2_7handlerEE4_clES7_EUlNS2_7nd_itemILi3EEEE_
+tracksRegLiveness: true
+body:             |
+  bb.1 (%ir-block.2):
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+
+    %0:reg32b(p3) = loadParam_i32 0, 0
+    %2:reg8b(i8) = loadParam_i8 1, 0
+    %1:reg8b(i1) = G_TRUNC %2(i8)
+    %9:_(i5) = G_CONSTANT i5 1
+    %11:_(i5) = G_CONSTANT i5 0
+    %12:_(i1) = G_CONSTANT i1 true
+    %13:_(i1) = G_XOR %1, %12
+    G_BRCOND %13(i1), %bb.3
+    G_BR %bb.2
+
+  bb.2..preheader:
+    successors: %bb.4(0x80000000)
+
+    ; CHECK-LABEL: bb.{{.*}}..preheader
+    ; CHECK: [[ZERO:%[0-9]+]]:_(i16) = G_CONSTANT i16 0
+
+    G_BR %bb.4
+
+  bb.3.._crit_edge29:
+    ret
+
+  bb.4 (%ir-block.3):
+    successors: %bb.4(0x80000000)
+
+    ; CHECK: [[PHI:%[0-9]+]]:_(i16) = G_PHI [[INC:%[0-9]+]](i16), %bb.3, [[ZERO]](i16), %bb.1
+    ; CHECK: [[ONE:%[0-9]+]]:_(i16) = G_CONSTANT i16 1
+    ; CHECK: [[INC]]:_(i16) = G_ADD [[PHI]], [[ONE]]
+
+    %3:_(i5) = G_PHI %10(i5), %bb.4, %11(i5), %bb.2
+    %10:_(i5) = G_ADD %3, %9
+    G_BR %bb.4
+
+...
