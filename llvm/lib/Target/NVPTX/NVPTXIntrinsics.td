@@ -867,7 +867,7 @@ def tma_tensor_reduction_imm :
 
 // TMA Copy from Shared to Global memory with Reduction
 multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode,
-                                            list<Predicate> pred = [hasPTX<80>, hasSM<90>]> {
+                                            list<Predicate> pred = [hasPTX<80>, SM90]> {
   defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
   defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
   defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";

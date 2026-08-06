@@ -2052,7 +2052,7 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.5d(..., i32 %d0, i32 %d1
 ##### Overview:
 
 The '`@llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.[3-5]d`' intrinsics
-correspond to the `cp.async.bulk.tensor.[3-5]d.*` set of PTX instructions.
+correspond to the `cp.async.bulk.tensor.im2col_no_offs.[3-5]d.*` set of PTX instructions.
 These instructions initiate an asynchronous copy of tensor data from
 shared::cta to global memory (indicated by the `s2g` prefix) in `im2col`
 mode. In this mode, the tensor has to be at least three-dimensional. Unlike the
@@ -2076,7 +2076,7 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.5d(..., i32 %d0, i32 %
 ##### Overview:
 
 The '`@llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.[3-5]d`' intrinsics
-correspond to the `cp.async.bulk.tensor.[3-5]d.*` set of PTX instructions.
+correspond to the `cp.async.bulk.tensor.im2col_no_offs::w.[3-5]d.*` set of PTX instructions.
 These instructions initiate an asynchronous copy of tensor data from
 shared::cta to global memory (indicated by the `s2g` prefix) in `im2col_w`
 mode. In this mode, the tensor has to be at least three-dimensional. Unlike the
@@ -2144,7 +2144,7 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.5d(..., i32 %d0, i32 
 ##### Overview:
 
 The '`@llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.[3-5]d`' intrinsics
-correspond to the `cp.reduce.async.bulk.tensor.[3-5]d.global.shared::cta.*`
+correspond to the `cp.reduce.async.bulk.tensor.im2col_no_offs.[3-5]d.global.shared::cta.*`
 set of PTX instructions. These instructions initiate an asynchronous reduction
 operation of tensor data in global memory with the tensor data in shared::cta
 memory, using `im2col` mode. In this mode, the tensor has to be at least
@@ -2168,7 +2168,7 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.5d(..., i32 %d0, i3
 ##### Overview:
 
 The '`@llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.[3-5]d`'
-intrinsics correspond to the `cp.reduce.async.bulk.tensor.[3-5]d.*` set of PTX
+intrinsics correspond to the `cp.reduce.async.bulk.tensor.im2col_no_offs::w.[3-5]d.*` set of PTX
 instructions. These instructions initiate an asynchronous reduction operation of
 tensor data in global memory with the tensor data in shared\{::cta} memory, using
 `im2col_w` mode. In this mode, the tensor has to be at least three-dimensional.
