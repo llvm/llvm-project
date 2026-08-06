@@ -184,6 +184,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  erfcf_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    erfcf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.erfcf
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   erff_test
   NO_RUN_POSTBUILD
   NEED_MPFR
