@@ -158,5 +158,8 @@ struct A : B {
 }
 
 struct InvalidGlobalQualifier : Base1 {
-  ::__super::; // expected-error {{expected unqualified-id}}
+  // A parser that drops the global qualifier is left with the valid
+  // declaration `__super::XXX x;` and accepts this line silently; expecting
+  // a diagnostic here catches that even in builds without assertions.
+  ::__super::XXX x; // expected-error {{expected unqualified-id}}
 };
