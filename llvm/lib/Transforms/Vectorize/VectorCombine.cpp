@@ -5958,70 +5958,76 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
       if (II->hasOperandBundles() ||
           !isTriviallyVectorizable(II->getIntrinsicID()))
         return false;
+      assert(!getInterleaveIntrinsicFactor(II->getIntrinsicID()) &&
+             "vector.interleave must not be treated as a trivially "
+             "vectorizable operation.");
     } else if (!isa<BinaryOperator, UnaryOperator, CastInst, CmpInst,
                     SelectInst, FreezeInst>(Inst)) {
       return false;
     }
 
-    // Reject operations such as element-count-changing bitcasts.
+    // Reject operations that change the element-count.
     for (unsigned Op = 0, E = getNumDataOperands(Inst); Op != E; ++Op) {
       auto *OperandTy = dyn_cast<VectorType>(Inst->getOperand(Op)->getType());
-      if (OperandTy &&
-          OperandTy->getElementCount() != ResultTy->getElementCount())
+      if (any_of(Inst->operands(), [&](Value *Operand) {
+            auto *OperandTy = dyn_cast<VectorType>(Operand->getType());
+            return OperandTy &&
+                   OperandTy->getElementCount() != ResultTy->getElementCount();
+          }))
         return false;
     }
 
     return true;
   };
 
-  // Follow the chains until they reach the matching interleave.
+  // Traverse the Factor use chains with a breadth-first search.
+  // At each level, expect every chain to perform the same operation with the
+  // preceding chain value at the same operand position, until they all reach
+  // the matching interleave.
+  SmallVector<unsigned, 8> OperandNumbers(CurrentInsts.size());
   while (NumVisited + Factor <= MaxInstrsToScan) {
     NumVisited += Factor;
 
-    SmallVector<Instruction *, 8> NextInsts;
-    SmallVector<unsigned, 8> OperandNumbers;
-    NextInsts.reserve(Factor);
-    OperandNumbers.reserve(Factor);
-
-    for (Instruction *Current : CurrentInsts) {
+    for (auto [Current, OpNumber] : zip_equal(CurrentInsts, OperandNumbers)) {
       Use *U = Current->getSingleUndroppableUse();
       auto *Next = U ? dyn_cast<Instruction>(U->getUser()) : nullptr;
       if (!Next)
         return false;
 
-      NextInsts.push_back(Next);
-      OperandNumbers.push_back(U->getOperandNo());
+      Current = Next;
+      OpNumber = U->getOperandNo();
     }
 
     // Check whether every chain has reached the same interleave.
-    if (auto *II = dyn_cast<IntrinsicInst>(NextInsts.front());
+    if (auto *II = dyn_cast<IntrinsicInst>(CurrentInsts.front());
         II && II->getIntrinsicID() == InterleaveIID) {
       if (II->hasOperandBundles())
         return false;
 
       for (unsigned Index = 0; Index != Factor; ++Index)
-        if (NextInsts[Index] != II || OperandNumbers[Index] != Index)
+        if (CurrentInsts[Index] != II || OperandNumbers[Index] != Index)
           return false;
 
       Interleave = II;
       break;
     }
 
-    Instruction *FirstInst = NextInsts.front();
+    Instruction *FirstInst = CurrentInsts.front();
     unsigned ChainOperand = OperandNumbers.front();
 
     if (!isSupportedElementwise(FirstInst))
       return false;
 
     for (unsigned Index = 1; Index != Factor; ++Index) {
-      Instruction *Inst = NextInsts[Index];
+      Instruction *Inst = CurrentInsts[Index];
       if (OperandNumbers[Index] != ChainOperand ||
           !FirstInst->isSameOperationAs(Inst))
         return false;
     }
 
     // Non-chain operands must be either the same scalar or splats of that
-    // scalar.
+    // scalr. This intentionally rejects differing poison/undef or non-splat
+    // vector operands between chains.
     auto getSplatOrScalar = [](Value *V) -> Value * {
       return isa<VectorType>(V->getType()) ? getSplatValue(V) : V;
     };
@@ -6030,16 +6036,15 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
       if (Op == ChainOperand)
         continue;
 
-      Value *CommonValue = getSplatOrScalar(FirstInst->getOperand(Op));
-      if (!CommonValue || any_of(drop_begin(NextInsts), [&](Instruction *Inst) {
-            return getSplatOrScalar(Inst->getOperand(Op)) != CommonValue;
-          }))
+      auto SplatOrScalars = map_range(CurrentInsts, [&](Instruction *Inst) {
+        return getSplatOrScalar(Inst->getOperand(Op));
+      });
+
+      if (!*SplatOrScalars.begin() || !all_equal(SplatOrScalars))
         return false;
     }
 
-    CurrentInsts.assign(NextInsts.begin(), NextInsts.end());
-
-    Steps.push_back(ElementwiseStep{std::move(NextInsts), ChainOperand});
+    Steps.push_back(ElementwiseStep{CurrentInsts, ChainOperand});
   }
 
   if (!Interleave)
@@ -6049,8 +6054,7 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
   Value *WideValue = Deinterleave->getArgOperand(0);
 
   ElementCount WideEC =
-      cast<VectorType>(Deinterleave->getArgOperand(0)->getType())
-          ->getElementCount();
+      cast<VectorType>(WideValue->getType())->getElementCount();
 
   for (const ElementwiseStep &Step : Steps) {
     Instruction *NarrowInst = Step.Insts.front();
