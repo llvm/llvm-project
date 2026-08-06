@@ -6003,11 +6003,48 @@ TEST(GSYMTest, TestDWARFTypedefCycleDoesNotCrash) {
   EXPECT_EQ(GR->getNumAddresses(), 1u);
 }
 
+// The exact byte-size values dumpStatistics() should report for the canned
+// DWARF below. They differ between v1 and v2 (e.g. wider addr-info offsets and
+// string offsets in v2, and the v2-only GlobalData directory), so each version
+// supplies its own set. Every value is fully determined by the YAML input.
+struct ExpectedGsymStats {
+  uint64_t NumAddresses;
+  // byte-sizes (top level)
+  int64_t FileSize;
+  int64_t Header;
+  int64_t GlobalDataDirectory;
+  int64_t UUIDSection;
+  int64_t Padding;
+  int64_t AddressTable;
+  int64_t AddrInfoOffsets;
+  int64_t FileTable;
+  int64_t StringTable;
+  int64_t FunctionInfoData;
+  // function_info_type_sizes
+  int64_t FISizeAndName;
+  int64_t FILineTableInfo;
+  int64_t FIInlineInfo;
+  int64_t FICallSiteInfo;
+  int64_t FIMergedFuncInfo;
+  int64_t FIEndOfList;
+  int64_t FIPadding;
+  // merged_func_info_type_sizes
+  int64_t MInfoTypeInfoLengthCountAndFnSize;
+  int64_t MSizeAndName;
+  int64_t MLineTableInfo;
+  int64_t MInlineInfo;
+  int64_t MCallSiteInfo;
+  int64_t MMergedFuncInfo;
+  int64_t MEndOfList;
+};
+
 // Build a small GSYM from canned DWARF (a single function with a line table and
-// inline info), then exercise GsymReader::dumpStatistics() and verify that the
-// reported byte sizes account for every byte of the file exactly once at each
-// nesting level. Works for both GSYM v1 and v2.
-template <typename CreatorT> static void TestGsymStatistics() {
+// inline info), then exercise GsymReader::dumpStatistics() and verify that
+// every reported byte size matches the exact value determined by the YAML
+// input, and that the sizes account for every byte of the file exactly once at
+// each nesting level. Works for both GSYM v1 and v2.
+template <typename CreatorT>
+static void TestGsymStatistics(const ExpectedGsymStats &E) {
   // A single compile unit with one function ("main") that has a line table and
   // one inlined subroutine ("inline1").
   StringRef yamldata = R"(
@@ -6187,59 +6224,115 @@ template <typename CreatorT> static void TestGsymStatistics() {
   auto NumAddrs = Root->getInteger("num_addresses");
   ASSERT_TRUE(NumAddrs.has_value());
   EXPECT_EQ(static_cast<uint64_t>(*NumAddrs), GR->getNumAddresses());
-  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  EXPECT_EQ(static_cast<uint64_t>(*NumAddrs), E.NumAddresses);
 
   const json::Object *BS = Root->getObject("byte-sizes");
   ASSERT_NE(BS, nullptr);
-  // Helper that fetches an integer field and fails the test if it is missing.
-  auto Get = [](const json::Object *O, StringRef Key) -> int64_t {
-    std::optional<int64_t> V = O->getInteger(Key);
-    EXPECT_TRUE(V.has_value()) << "missing byte-size field: " << Key.str();
-    return V.value_or(0);
-  };
-
-  // Level 1: every top-level section must sum to the total file size.
-  const int64_t FileSize = Get(BS, "file_size");
-  const int64_t TopSum =
-      Get(BS, "header") + Get(BS, "global_data_directory") +
-      Get(BS, "uuid_section") + Get(BS, "padding") + Get(BS, "address_table") +
-      Get(BS, "addr_info_offsets") + Get(BS, "file_table") +
-      Get(BS, "string_table") + Get(BS, "function_info_data");
-  EXPECT_EQ(TopSum, FileSize);
-
-  // Level 2: the FunctionInfo type breakdown must sum to function_info_data.
   const json::Object *FT = BS->getObject("function_info_type_sizes");
   ASSERT_NE(FT, nullptr);
-  const int64_t FuncInfoData = Get(BS, "function_info_data");
-  const int64_t FuncSum =
-      Get(FT, "size_and_name") + Get(FT, "line_table_info") +
-      Get(FT, "inline_info") + Get(FT, "call_site_info") +
-      Get(FT, "merged_func_info") + Get(FT, "end_of_list") + Get(FT, "padding");
-  EXPECT_EQ(FuncSum, FuncInfoData);
-
-  // Level 3: the merged-function breakdown must sum to merged_func_info.
   const json::Object *MT = FT->getObject("merged_func_info_type_sizes");
   ASSERT_NE(MT, nullptr);
-  const int64_t MergedSum =
-      Get(MT, "infotype_infolength_count_and_fnsize") +
-      Get(MT, "size_and_name") + Get(MT, "line_table_info") +
-      Get(MT, "inline_info") + Get(MT, "call_site_info") +
-      Get(MT, "merged_func_info") + Get(MT, "end_of_list");
-  EXPECT_EQ(MergedSum, Get(FT, "merged_func_info"));
 
-  // The canned function has a name, a line table, and inline info, so those
-  // buckets must be non-zero.
-  EXPECT_GT(Get(FT, "size_and_name"), 0);
-  EXPECT_GT(Get(FT, "line_table_info"), 0);
-  EXPECT_GT(Get(FT, "inline_info"), 0);
-  EXPECT_GT(Get(FT, "end_of_list"), 0);
-  // This GSYM has no merged functions.
-  EXPECT_EQ(Get(FT, "merged_func_info"), 0);
+  // Assert an integer field is present and equals its expected value.
+  auto ExpectField = [](const json::Object *O, StringRef Key,
+                        int64_t Expected) {
+    std::optional<int64_t> V = O->getInteger(Key);
+    ASSERT_TRUE(V.has_value()) << "missing field: " << Key.str();
+    EXPECT_EQ(*V, Expected) << "field: " << Key.str();
+  };
+
+  // Every field's exact value is determined by the canned YAML above.
+  ExpectField(BS, "file_size", E.FileSize);
+  ExpectField(BS, "header", E.Header);
+  ExpectField(BS, "global_data_directory", E.GlobalDataDirectory);
+  ExpectField(BS, "uuid_section", E.UUIDSection);
+  ExpectField(BS, "padding", E.Padding);
+  ExpectField(BS, "address_table", E.AddressTable);
+  ExpectField(BS, "addr_info_offsets", E.AddrInfoOffsets);
+  ExpectField(BS, "file_table", E.FileTable);
+  ExpectField(BS, "string_table", E.StringTable);
+  ExpectField(BS, "function_info_data", E.FunctionInfoData);
+
+  ExpectField(FT, "size_and_name", E.FISizeAndName);
+  ExpectField(FT, "line_table_info", E.FILineTableInfo);
+  ExpectField(FT, "inline_info", E.FIInlineInfo);
+  ExpectField(FT, "call_site_info", E.FICallSiteInfo);
+  ExpectField(FT, "merged_func_info", E.FIMergedFuncInfo);
+  ExpectField(FT, "end_of_list", E.FIEndOfList);
+  ExpectField(FT, "padding", E.FIPadding);
+
+  ExpectField(MT, "infotype_infolength_count_and_fnsize",
+              E.MInfoTypeInfoLengthCountAndFnSize);
+  ExpectField(MT, "size_and_name", E.MSizeAndName);
+  ExpectField(MT, "line_table_info", E.MLineTableInfo);
+  ExpectField(MT, "inline_info", E.MInlineInfo);
+  ExpectField(MT, "call_site_info", E.MCallSiteInfo);
+  ExpectField(MT, "merged_func_info", E.MMergedFuncInfo);
+  ExpectField(MT, "end_of_list", E.MEndOfList);
+
+  // Cross-check the byte-to-byte completeness invariants hold at each level.
+  EXPECT_EQ(E.Header + E.GlobalDataDirectory + E.UUIDSection + E.Padding +
+                E.AddressTable + E.AddrInfoOffsets + E.FileTable +
+                E.StringTable + E.FunctionInfoData,
+            E.FileSize);
+  EXPECT_EQ(E.FISizeAndName + E.FILineTableInfo + E.FIInlineInfo +
+                E.FICallSiteInfo + E.FIMergedFuncInfo + E.FIEndOfList +
+                E.FIPadding,
+            E.FunctionInfoData);
+  EXPECT_EQ(E.MInfoTypeInfoLengthCountAndFnSize + E.MSizeAndName +
+                E.MLineTableInfo + E.MInlineInfo + E.MCallSiteInfo +
+                E.MMergedFuncInfo + E.MEndOfList,
+            E.FIMergedFuncInfo);
 
   // The text and pretty-JSON formats must not crash on the same input.
   GR->dumpStatistics(OS, GsymReader::StatisticsFormat::Text, DisplayPath);
   GR->dumpStatistics(OS, GsymReader::StatisticsFormat::PrettyJSON, DisplayPath);
 }
 
-TEST(GSYMTest, TestGsymStatistics) { TestGsymStatistics<GsymCreatorV1>(); }
-TEST(GSYMTest, TestGsymStatisticsV2) { TestGsymStatistics<GsymCreatorV2>(); }
+TEST(GSYMTest, TestGsymStatistics) {
+  ExpectedGsymStats E = {};
+  E.NumAddresses = 1;
+  E.FileSize = 200;
+  E.Header = 48;
+  E.GlobalDataDirectory = 0;
+  E.UUIDSection = 0;
+  E.Padding = 3;
+  E.AddressTable = 1;
+  E.AddrInfoOffsets = 4;
+  E.FileTable = 28;
+  E.StringTable = 35;
+  E.FunctionInfoData = 81;
+  E.FISizeAndName = 8;
+  E.FILineTableInfo = 32;
+  E.FIInlineInfo = 32;
+  E.FICallSiteInfo = 0;
+  E.FIMergedFuncInfo = 0;
+  E.FIEndOfList = 8;
+  E.FIPadding = 1;
+  // No merged functions in this GSYM.
+  TestGsymStatistics<GsymCreatorV1>(E);
+}
+
+TEST(GSYMTest, TestGsymStatisticsV2) {
+  ExpectedGsymStats E = {};
+  E.NumAddresses = 1;
+  E.FileSize = 332;
+  E.Header = 20;
+  E.GlobalDataDirectory = 120;
+  E.UUIDSection = 0;
+  E.Padding = 4;
+  E.AddressTable = 1;
+  E.AddrInfoOffsets = 8;
+  E.FileTable = 52;
+  E.StringTable = 35;
+  E.FunctionInfoData = 92;
+  E.FISizeAndName = 12;
+  E.FILineTableInfo = 32;
+  E.FIInlineInfo = 40;
+  E.FICallSiteInfo = 0;
+  E.FIMergedFuncInfo = 0;
+  E.FIEndOfList = 8;
+  E.FIPadding = 0;
+  // No merged functions in this GSYM.
+  TestGsymStatistics<GsymCreatorV2>(E);
+}
