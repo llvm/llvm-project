@@ -62,11 +62,18 @@ static CharUnits getTypeAllocSize(CodeGenModule &CGM, llvm::Type *type) {
 }
 
 void SwiftAggLowering::addTypedData(QualType type, CharUnits begin) {
+  decomposeTypedData(type, begin, [this](const StorageEntry &entry) {
+    addDecomposedData(entry);
+  });
+}
+
+void SwiftAggLowering::decomposeTypedData(
+    QualType type, CharUnits begin, DecompositionCallback callback) const {
   // Deal with various aggregate types as special cases:
 
   // Record types.
   if (auto recType = type->getAsCanonical<RecordType>()) {
-    addTypedData(recType->getDecl(), begin);
+    decomposeTypedData(recType->getDecl(), begin, callback);
 
     // Array types.
   } else if (type->isArrayType()) {
@@ -78,7 +85,7 @@ void SwiftAggLowering::addTypedData(QualType type, CharUnits begin) {
     QualType eltType = arrayType->getElementType();
     auto eltSize = CGM.getContext().getTypeSizeInChars(eltType);
     for (uint64_t i = 0, e = arrayType->getZExtSize(); i != e; ++i) {
-      addTypedData(eltType, begin + i * eltSize);
+      decomposeTypedData(eltType, begin + i * eltSize, callback);
     }
 
   // Complex types.
@@ -86,13 +93,17 @@ void SwiftAggLowering::addTypedData(QualType type, CharUnits begin) {
     auto eltType = complexType->getElementType();
     auto eltSize = CGM.getContext().getTypeSizeInChars(eltType);
     auto eltLLVMType = CGM.getTypes().ConvertType(eltType);
-    addTypedData(eltLLVMType, begin, begin + eltSize);
-    addTypedData(eltLLVMType, begin + eltSize, begin + 2 * eltSize);
+    StorageEntry first{begin, begin + eltSize, eltLLVMType};
+    callback(first);
+    StorageEntry second{begin + eltSize, begin + 2 * eltSize, eltLLVMType};
+    callback(second);
 
   // Member pointer types.
   } else if (type->getAs<MemberPointerType>()) {
-    // Just add it all as opaque.
-    addOpaqueData(begin, begin + CGM.getContext().getTypeSizeInChars(type));
+    // Just emit it all as opaque.
+    StorageEntry entry{begin, begin + CGM.getContext().getTypeSizeInChars(type),
+                       nullptr};
+    callback(entry);
 
     // Atomic types.
   } else if (const auto *atomicType = type->getAs<AtomicType>()) {
@@ -100,35 +111,56 @@ void SwiftAggLowering::addTypedData(QualType type, CharUnits begin) {
     auto atomicSize = CGM.getContext().getTypeSizeInChars(atomicType);
     auto valueSize = CGM.getContext().getTypeSizeInChars(valueType);
 
-    addTypedData(atomicType->getValueType(), begin);
+    decomposeTypedData(atomicType->getValueType(), begin, callback);
 
     // Add atomic padding.
     auto atomicPadding = atomicSize - valueSize;
-    if (atomicPadding > CharUnits::Zero())
-      addOpaqueData(begin + valueSize, begin + atomicSize);
+    if (atomicPadding > CharUnits::Zero()) {
+      StorageEntry padding{begin + valueSize, begin + atomicSize, nullptr};
+      callback(padding);
+    }
 
     // Everything else is scalar and should not convert as an LLVM aggregate.
   } else {
     // We intentionally convert as !ForMem because we want to preserve
     // that a type was an i1.
     auto *llvmType = CGM.getTypes().ConvertType(type);
-    addTypedData(llvmType, begin);
+    StorageEntry entry{begin, begin + getTypeStoreSize(CGM, llvmType),
+                       llvmType};
+    callback(entry);
   }
 }
 
 void SwiftAggLowering::addTypedData(const RecordDecl *record, CharUnits begin) {
-  addTypedData(record, begin, CGM.getContext().getASTRecordLayout(record));
+  decomposeTypedData(record, begin, [this](const StorageEntry &entry) {
+    addDecomposedData(entry);
+  });
 }
 
 void SwiftAggLowering::addTypedData(const RecordDecl *record, CharUnits begin,
                                     const ASTRecordLayout &layout) {
+  decomposeTypedData(record, begin, layout, [this](const StorageEntry &entry) {
+    addDecomposedData(entry);
+  });
+}
+
+void SwiftAggLowering::decomposeTypedData(
+    const RecordDecl *record, CharUnits begin,
+    DecompositionCallback callback) const {
+  decomposeTypedData(record, begin, CGM.getContext().getASTRecordLayout(record),
+                     callback);
+}
+
+void SwiftAggLowering::decomposeTypedData(
+    const RecordDecl *record, CharUnits begin, const ASTRecordLayout &layout,
+    DecompositionCallback callback) const {
   // Unions are a special case.
   if (record->isUnion()) {
     for (auto *field : record->fields()) {
       if (field->isBitField()) {
-        addBitFieldData(field, begin, 0);
+        decomposeBitFieldData(field, begin, 0, callback);
       } else {
-        addTypedData(field->getType(), begin);
+        decomposeTypedData(field->getType(), begin, callback);
       }
     }
     return;
@@ -143,7 +175,9 @@ void SwiftAggLowering::addTypedData(const RecordDecl *record, CharUnits begin,
   if (cxxRecord) {
     //   - a v-table pointer, if the class adds its own
     if (layout.hasOwnVFPtr()) {
-      addTypedData(CGM.Int8PtrTy, begin);
+      StorageEntry entry{begin, begin + getTypeStoreSize(CGM, CGM.Int8PtrTy),
+                         CGM.Int8PtrTy};
+      callback(entry);
     }
 
     //   - non-virtual bases
@@ -151,12 +185,17 @@ void SwiftAggLowering::addTypedData(const RecordDecl *record, CharUnits begin,
       if (baseSpecifier.isVirtual()) continue;
 
       auto baseRecord = baseSpecifier.getType()->getAsCXXRecordDecl();
-      addTypedData(baseRecord, begin + layout.getBaseClassOffset(baseRecord));
+      decomposeTypedData(
+          baseRecord, begin + layout.getBaseClassOffset(baseRecord), callback);
     }
 
     //   - a vbptr if the class adds its own
     if (layout.hasOwnVBPtr()) {
-      addTypedData(CGM.Int8PtrTy, begin + layout.getVBPtrOffset());
+      auto vbPtrBegin = begin + layout.getVBPtrOffset();
+      StorageEntry entry{vbPtrBegin,
+                         vbPtrBegin + getTypeStoreSize(CGM, CGM.Int8PtrTy),
+                         CGM.Int8PtrTy};
+      callback(entry);
     }
   }
 
@@ -164,10 +203,12 @@ void SwiftAggLowering::addTypedData(const RecordDecl *record, CharUnits begin,
   for (auto *field : record->fields()) {
     auto fieldOffsetInBits = layout.getFieldOffset(field->getFieldIndex());
     if (field->isBitField()) {
-      addBitFieldData(field, begin, fieldOffsetInBits);
+      decomposeBitFieldData(field, begin, fieldOffsetInBits, callback);
     } else {
-      addTypedData(field->getType(),
-              begin + CGM.getContext().toCharUnitsFromBits(fieldOffsetInBits));
+      decomposeTypedData(
+          field->getType(),
+          begin + CGM.getContext().toCharUnitsFromBits(fieldOffsetInBits),
+          callback);
     }
   }
 
@@ -176,14 +217,25 @@ void SwiftAggLowering::addTypedData(const RecordDecl *record, CharUnits begin,
     //   - virtual bases
     for (auto &vbaseSpecifier : cxxRecord->vbases()) {
       auto baseRecord = vbaseSpecifier.getType()->getAsCXXRecordDecl();
-      addTypedData(baseRecord, begin + layout.getVBaseClassOffset(baseRecord));
+      decomposeTypedData(
+          baseRecord, begin + layout.getVBaseClassOffset(baseRecord), callback);
     }
   }
 }
 
-void SwiftAggLowering::addBitFieldData(const FieldDecl *bitfield,
-                                       CharUnits recordBegin,
-                                       uint64_t bitfieldBitBegin) {
+void SwiftAggLowering::addDecomposedData(const StorageEntry &entry,
+                                         CharUnits additionalOffset) {
+  auto begin = entry.Begin + additionalOffset;
+  auto end = entry.End + additionalOffset;
+  if (entry.Type)
+    addTypedData(entry.Type, begin, end);
+  else
+    addOpaqueData(begin, end);
+}
+
+void SwiftAggLowering::decomposeBitFieldData(
+    const FieldDecl *bitfield, CharUnits recordBegin, uint64_t bitfieldBitBegin,
+    DecompositionCallback callback) const {
   assert(bitfield->isBitField());
   auto &ctx = CGM.getContext();
   auto width = bitfield->getBitWidthValue();
@@ -200,8 +252,9 @@ void SwiftAggLowering::addBitFieldData(const FieldDecl *bitfield,
   uint64_t bitfieldBitLast = bitfieldBitBegin + width - 1;
   CharUnits bitfieldByteEnd =
     ctx.toCharUnitsFromBits(bitfieldBitLast) + CharUnits::One();
-  addOpaqueData(recordBegin + bitfieldByteBegin,
-                recordBegin + bitfieldByteEnd);
+  StorageEntry entry{recordBegin + bitfieldByteBegin,
+                     recordBegin + bitfieldByteEnd, nullptr};
+  callback(entry);
 }
 
 void SwiftAggLowering::addTypedData(llvm::Type *type, CharUnits begin) {

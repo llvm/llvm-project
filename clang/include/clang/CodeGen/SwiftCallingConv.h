@@ -41,6 +41,7 @@ namespace swiftcall {
 class SwiftAggLowering {
   CodeGenModule &CGM;
 
+public:
   struct StorageEntry {
     CharUnits Begin;
     CharUnits End;
@@ -50,10 +51,15 @@ class SwiftAggLowering {
       return End - Begin;
     }
   };
+
+private:
   SmallVector<StorageEntry, 4> Entries;
   bool Finished = false;
 
 public:
+  using DecompositionCallback =
+      llvm::function_ref<void(const StorageEntry &entry)>;
+
   SwiftAggLowering(CodeGenModule &CGM) : CGM(CGM) {}
 
   void addOpaqueData(CharUnits begin, CharUnits end) {
@@ -66,6 +72,16 @@ public:
                     const ASTRecordLayout &layout);
   void addTypedData(llvm::Type *type, CharUnits begin);
   void addTypedData(llvm::Type *type, CharUnits begin, CharUnits end);
+
+  void decomposeTypedData(QualType type, CharUnits begin,
+                          DecompositionCallback callback) const;
+  void decomposeTypedData(const RecordDecl *record, CharUnits begin,
+                          DecompositionCallback callback) const;
+  void decomposeTypedData(const RecordDecl *record, CharUnits begin,
+                          const ASTRecordLayout &layout,
+                          DecompositionCallback callback) const;
+  void addDecomposedData(const StorageEntry &entry,
+                         CharUnits additionalOffset = CharUnits::Zero());
 
   void finish();
 
@@ -110,8 +126,9 @@ public:
   std::pair<llvm::StructType*, llvm::Type*> getCoerceAndExpandTypes() const;
 
 private:
-  void addBitFieldData(const FieldDecl *field, CharUnits begin,
-                       uint64_t bitOffset);
+  void decomposeBitFieldData(const FieldDecl *field, CharUnits begin,
+                             uint64_t bitOffset,
+                             DecompositionCallback callback) const;
   void addLegalTypedData(llvm::Type *type, CharUnits begin, CharUnits end);
   void addEntry(llvm::Type *type, CharUnits begin, CharUnits end);
   void splitVectorEntry(unsigned index);
