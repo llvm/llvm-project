@@ -680,6 +680,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FDIV, MVT::bf16, Promote);
     setOperationAction(ISD::SELECT_CC, MVT::bf16, Expand);
     setOperationAction(ISD::BR_CC, MVT::bf16, Expand);
+    setOperationAction(ISD::FCANONICALIZE, MVT::bf16, Expand);
 
     setOperationAction(ISD::STRICT_FADD, MVT::bf16, Promote);
     setOperationAction(ISD::STRICT_FSUB, MVT::bf16, Promote);
