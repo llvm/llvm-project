@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CUSTOMERRNODECLARATIONCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "../utils/IncludeInserter.h"
 
 namespace clang::tidy::bugprone {
 
@@ -19,15 +20,15 @@ namespace clang::tidy::bugprone {
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/custom-errno-declaration.html
 class CustomErrnoDeclarationCheck : public ClangTidyCheck {
 public:
-  CustomErrnoDeclarationCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  CustomErrnoDeclarationCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus;
+    return !LangOpts.ObjC;
   }
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) override;
 private:
-  bool alreadyInserted = false;
+  utils::IncludeInserter Inserter;
 };
 
 } // namespace clang::tidy::bugprone
