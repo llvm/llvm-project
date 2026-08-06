@@ -2091,8 +2091,8 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
   const MachineMemOperand &MemOp = **I.memoperands_begin();
   assert(MemOp.isAtomic());
 
-  uint32_t Scope =
-      static_cast<uint32_t>(getMemScope(Context, MemOp.getSyncScopeID()));
+  uint32_t Scope = static_cast<uint32_t>(
+      getMemScope(STI.getTargetTriple(), Context, MemOp.getSyncScopeID()));
   Register ScopeReg = buildI32Constant(Scope, I);
 
   AtomicOrdering AO = MemOp.getSuccessOrdering();
@@ -2240,8 +2240,8 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
   const MachineMemOperand &MemOp = **I.memoperands_begin();
   assert(MemOp.isAtomic());
 
-  uint32_t Scope =
-      static_cast<uint32_t>(getMemScope(Context, MemOp.getSyncScopeID()));
+  uint32_t Scope = static_cast<uint32_t>(
+      getMemScope(STI.getTargetTriple(), Context, MemOp.getSyncScopeID()));
   Register ScopeReg = buildI32Constant(Scope, I);
 
   AtomicOrdering AO = MemOp.getSuccessOrdering();
@@ -2515,8 +2515,9 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
                                                unsigned NegateOpcode) const {
   assert(I.hasOneMemOperand());
   const MachineMemOperand *MemOp = *I.memoperands_begin();
-  uint32_t Scope = static_cast<uint32_t>(getMemScope(
-      GR.CurMF->getFunction().getContext(), MemOp->getSyncScopeID()));
+  uint32_t Scope = static_cast<uint32_t>(
+      getMemScope(STI.getTargetTriple(), GR.CurMF->getFunction().getContext(),
+                  MemOp->getSyncScopeID()));
   Register ScopeReg = buildI32Constant(Scope, I);
 
   Register Ptr = I.getOperand(1).getReg();
@@ -2642,8 +2643,8 @@ bool SPIRVInstructionSelector::selectFence(MachineInstr &I) const {
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
   Register MemSemReg = buildI32Constant(MemSem, I);
   SyncScope::ID Ord = SyncScope::ID(I.getOperand(1).getImm());
-  uint32_t Scope = static_cast<uint32_t>(
-      getMemScope(GR.CurMF->getFunction().getContext(), Ord));
+  uint32_t Scope = static_cast<uint32_t>(getMemScope(
+      STI.getTargetTriple(), GR.CurMF->getFunction().getContext(), Ord));
   Register ScopeReg = buildI32Constant(Scope, I);
   MachineBasicBlock &BB = *I.getParent();
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemoryBarrier))

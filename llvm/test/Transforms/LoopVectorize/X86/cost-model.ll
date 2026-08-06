@@ -466,8 +466,7 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[UMIN]], 4294967295
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[UMIN]] to i32
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp slt i32 [[TMP10]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp slt i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i64 [[UMIN]], 4294967295
 ; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP9]], [[TMP13]]
