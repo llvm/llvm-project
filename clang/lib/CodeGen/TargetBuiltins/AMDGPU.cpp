@@ -24,6 +24,7 @@
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/TargetParser/AtomicScope.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -380,11 +381,17 @@ static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
   return CGF.Builder.CreateCall(F, {Src0, Src1});
 }
 
-static inline StringRef mapScopeToSPIRV(StringRef AMDGCNScope) {
-  if (AMDGCNScope == "agent")
-    return "device";
-  if (AMDGCNScope == "wavefront")
-    return "subgroup";
+// When the target is SPIR-V (spirv64-amd-amdhsa) re-spell the scope for that
+// target by parsing as AMDGPU and re-emitting it.
+static inline StringRef mapScopeToSPIRV(const llvm::Triple &TargetTriple,
+                                        StringRef AMDGCNScope) {
+  static const llvm::Triple AMDGPU("amdgcn-amd-amdhsa");
+  if (auto Parsed = llvm::parseAtomicScopeIRString(AMDGPU, AMDGCNScope)) {
+    auto [Scope, IsSingleAddressSpace] = *Parsed;
+    if (auto Str = llvm::getAtomicScopeIRString(TargetTriple, Scope,
+                                                IsSingleAddressSpace))
+      return *Str;
+  }
   return AMDGCNScope;
 }
 
@@ -446,10 +453,11 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   AO = mapCABIAtomicOrdering(ord);
 
   // Some of the atomic builtins take the scope as a string name.
+  const llvm::Triple &TargetTriple = getTarget().getTriple();
   StringRef scp;
   if (llvm::getConstantStringInfo(Scope, scp)) {
-    if (getTarget().getTriple().isSPIRV())
-      scp = mapScopeToSPIRV(scp);
+    if (TargetTriple.isSPIRV())
+      scp = mapScopeToSPIRV(TargetTriple, scp);
     SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
     return;
   }
@@ -2013,10 +2021,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       //
       // The global/flat cases need to use agent scope to consistently produce
       // the native instruction instead of a cmpxchg expansion.
-      if (getTarget().getTriple().isSPIRV())
-        SSID = getLLVMContext().getOrInsertSyncScopeID("device");
-      else
-        SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
+      SSID =
+          getLLVMContext().getOrInsertSyncScopeID(*llvm::getAtomicScopeIRString(
+              getTarget().getTriple(), llvm::AtomicScope::Device));
       AO = AtomicOrdering::Monotonic;
 
       // The v2bf16 builtin uses i16 instead of a natural bfloat type.
