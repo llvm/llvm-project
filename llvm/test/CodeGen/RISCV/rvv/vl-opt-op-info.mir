@@ -2429,7 +2429,7 @@ name:            vzip_vv_vd
 body:             |
   bb.0:
     ; CHECK-LABEL: name: vzip_vv_vd
-    ; CHECK: early-clobber %0:vrm2 = PseudoVZIP_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK: early-clobber %0:vrm2 = PseudoVZIP_VV_M1 $noreg, $noreg, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[PseudoVADD_VV_M2_:%[0-9]+]]:vrm2 = PseudoVADD_VV_M2 $noreg, %0, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m2 = COPY [[PseudoVADD_VV_M2_]]
     early-clobber %0:vrm2 = PseudoVZIP_VV_M1 $noreg, $noreg, $noreg, -1, 5, 0
@@ -2453,7 +2453,7 @@ name:            vunzipe_v
 body:             |
   bb.0:
     ; CHECK-LABEL: name: vunzipe_v
-    ; CHECK: early-clobber %0:vr = PseudoVUNZIPE_V_M1 $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK: early-clobber %0:vr = PseudoVUNZIPE_V_M1 $noreg, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, %0, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVADD_VV_M1_]]
     early-clobber %0:vr = PseudoVUNZIPE_V_M1 $noreg, $noreg, -1, 5, 0
@@ -2465,7 +2465,7 @@ name:            vunzipo_v
 body:             |
   bb.0:
     ; CHECK-LABEL: name: vunzipo_v
-    ; CHECK: early-clobber %0:vr = PseudoVUNZIPO_V_M1 $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK: early-clobber %0:vr = PseudoVUNZIPO_V_M1 $noreg, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, %0, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVADD_VV_M1_]]
     early-clobber %0:vr = PseudoVUNZIPO_V_M1 $noreg, $noreg, -1, 5, 0
@@ -2489,7 +2489,7 @@ name:            vunzipe_src_propagate
 body:             |
   bb.0:
     ; CHECK-LABEL: name: vunzipe_src_propagate
-    ; CHECK: %src:vrm2 = PseudoVADD_VV_M2 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK: %src:vrm2 = PseudoVADD_VV_M2 $noreg, $noreg, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: early-clobber %1:vr = PseudoVUNZIPE_V_M1 $noreg, %src, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY %1
     %src:vrm2 = PseudoVADD_VV_M2 $noreg, $noreg, $noreg, -1, 5, 0
@@ -2501,7 +2501,7 @@ name:            vpaire_vv
 body:             |
   bb.0:
     ; CHECK-LABEL: name: vpaire_vv
-    ; CHECK: early-clobber %0:vr = PseudoVPAIRE_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK: early-clobber %0:vr = PseudoVPAIRE_VV_M1 $noreg, $noreg, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, %0, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVADD_VV_M1_]]
     early-clobber %0:vr = PseudoVPAIRE_VV_M1 $noreg, $noreg, $noreg, -1, 5, 0
@@ -2513,7 +2513,7 @@ name:            vpairo_vv
 body:             |
   bb.0:
     ; CHECK-LABEL: name: vpairo_vv
-    ; CHECK: early-clobber %0:vr = PseudoVPAIRO_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK: early-clobber %0:vr = PseudoVPAIRO_VV_M1 $noreg, $noreg, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, %0, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVADD_VV_M1_]]
     early-clobber %0:vr = PseudoVPAIRO_VV_M1 $noreg, $noreg, $noreg, -1, 5, 0
