@@ -4860,6 +4860,12 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   if (MI.isCall() || MI.isInlineAsm())
     return true; // conservative assumption
 
+  // V_PERM_PK16 must issue with EXEC != 0 so its follower (or an inserted
+  // V_NOP) actually runs on the VALU pipe. Returning true here keeps the
+  // s_cbranch_execz that skips this region when EXEC is empty.
+  if (ST.hasVPermPk16Hazard() && isVPermPk16(Opcode))
+    return true;
+
   // Assume that barrier interactions are only intended with active lanes.
   if (isBarrier(Opcode))
     return true;
