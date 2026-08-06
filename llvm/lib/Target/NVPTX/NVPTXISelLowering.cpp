@@ -2137,8 +2137,7 @@ SDValue NVPTXTargetLowering::LowerShiftRightParts(SDValue Op,
 
     SDValue Ops[2] = { Lo, Hi };
     return DAG.getMergeValues(Ops, dl);
-  }
-  else {
+  } else {
     // {dHi, dLo} = {aHi, aLo} >> Amt
     // - if (Amt>=size) then
     //      dLo = aHi >> (Amt-size)
@@ -2197,8 +2196,7 @@ SDValue NVPTXTargetLowering::LowerShiftLeftParts(SDValue Op,
 
     SDValue Ops[2] = { Lo, Hi };
     return DAG.getMergeValues(Ops, dl);
-  }
-  else {
+  } else {
     // {dHi, dLo} = {aHi, aLo} << Amt
     // - if (Amt>=size) then
     //      dLo = aLo << Amt (all 0)
