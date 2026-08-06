@@ -347,6 +347,8 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
       dump();
     }
   });
+  if (Ctx.RecipeCosts)
+    Ctx.recordRecipeCost(this, RecipeCost);
   return RecipeCost;
 }
 
