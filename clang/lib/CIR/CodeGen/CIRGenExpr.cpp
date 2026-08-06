@@ -699,6 +699,12 @@ LValue CIRGenFunction::emitLValueForFieldInitialization(
 mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
   if (auto *atomicTy = ty->getAs<AtomicType>())
     ty = atomicTy->getValueType();
+
+  if (ty->isConstantMatrixBoolType()) {
+    cgm.errorNYI("emitToMemory: ConstantMatrixBoolType");
+    return {};
+  }
+
   // Unlike in classic codegen CIR, bools are kept as `cir.bool` and BitInts are
   // kept as `cir.int<N>` until further lowering
   return value;
