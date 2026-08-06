@@ -398,7 +398,6 @@ features cannot lower the translation-unit ABI level;
   the `sized_by`/`sized_by_or_null` attributes. Because `sized_by` and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
-- Propagate attributes on redeclarations across modules.
 
 #### Bug Fixes to C++ Support
 
@@ -497,6 +496,12 @@ features cannot lower the translation-unit ABI level;
 #### RISC-V Support
 
 #### CUDA/HIP Language Changes
+
+- HIP compilations now add the `include/libhipcxx` directory from the selected
+  ROCm installation to the header search path when it exists. This allows
+  libhipcxx headers to be included with paths such as `<cuda/std/atomic>`.
+  The `-nogpuinc` option disables this path together with the other HIP include
+  paths.
 
 #### CUDA Support
 
