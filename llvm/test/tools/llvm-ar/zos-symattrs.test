@@ -1,0 +1,73 @@
+## Test that llvm-ar correctly writes z/OS archive symbol attribute bits,
+## and that llvm-nm --print-armap reads them back correctly.
+##
+## The three attribute bits come from GOFF ESD record fields:
+##   bit 2 (0x4): 64-bit  - AMODE == ESD_AMODE_64
+##   bit 1 (0x2): XPLink  - LinkageType == ESD_LT_XPLink
+##   bit 0 (0x1): WSA     - parent ED NameSpaceId == ESD_NS_Parts
+##
+## GOFF objects are produced by compiling embedded .ll files with llc.
+
+# REQUIRES: systemz-registered-target
+
+# RUN: rm -rf %t.dir && mkdir -p %t.dir
+# RUN: split-file %s %t.dir
+
+## Compile each .ll file into a GOFF object.
+# RUN: llc -mtriple=s390x-ibm-zos -filetype=obj %t.dir/func.ll -o %t.dir/func.o
+# RUN: llc -mtriple=s390x-ibm-zos -filetype=obj %t.dir/data.ll -o %t.dir/data.o
+
+## Build a z/OS archive containing both objects.
+# RUN: llvm-ar rcD --format=zos %t.dir/test.a %t.dir/func.o %t.dir/data.o
+
+## 1. Check the archive map shows each symbol with the correct inline flags.
+# RUN: llvm-nm --print-armap %t.dir/test.a | FileCheck %s --check-prefix=ARMAP
+
+# ARMAP:      Archive map
+# ARMAP-NEXT: s_func in func.o (flags: 0x00000006 [64-bit + XPLink])
+# ARMAP-NEXT: s_data in data.o (flags: 0x00000003 [XPLink + WSA])
+
+## 2. Test that basic archive operations still work on a GOFF archive.
+##    llvm-ar t should list all member names.
+# RUN: llvm-ar t %t.dir/test.a | FileCheck %s --check-prefix=LIST
+
+# LIST:      func.o
+# LIST-NEXT: data.o
+
+## 3. Test mixed archive: one GOFF object and one bitcode object together.
+##    The bitcode member should produce attribute of 0 (no GOFF ESD data available).
+# RUN: llc -mtriple=s390x-ibm-zos -filetype=obj %t.dir/func2.ll -o %t.dir/func2.o
+# RUN: llvm-as %t.dir/mixed.ll -o %t.dir/mixed.bc
+# RUN: llvm-ar rcD --format=zos %t.dir/mixed.a %t.dir/func2.o %t.dir/mixed.bc
+# RUN: llvm-nm --print-armap %t.dir/mixed.a | FileCheck %s --check-prefix=MIXED
+
+# MIXED:      Archive map
+# MIXED-NEXT: s_func2 in func2.o (flags: 0x00000006 [64-bit + XPLink])
+# MIXED-NEXT: mixed_sym in mixed.bc (flags: 0x00000000 [none])
+
+#--- func.ll
+target triple = "s390x-ibm-zos"
+
+define void @s_func() {
+entry:
+  ret void
+}
+
+#--- data.ll
+target triple = "s390x-ibm-zos"
+
+@s_data = global i32 0, align 4
+
+#--- func2.ll
+target triple = "s390x-ibm-zos"
+
+define void @s_func2() {
+entry:
+  ret void
+}
+
+#--- mixed.ll
+define i32 @mixed_sym() {
+entry:
+  ret i32 0
+}

@@ -368,6 +368,9 @@ printMemberHeader(raw_ostream &Out, uint64_t Pos, raw_ostream &StringTable,
 namespace {
 struct MemberData {
   std::vector<unsigned> Symbols;
+  // z/OS archive attribute bits per symbol. Entry i of SymbolAttrs corresponds
+  // to Symbols[i]. These attributes are empty for non-z/OS archives.
+  std::vector<uint32_t> SymbolAttrs;
   std::string Header;
   StringRef Data;
   StringRef Padding;
@@ -386,7 +389,7 @@ static MemberData computeStringTable(StringRef Names) {
   printWithSpacePadding(Out, "//", 48);
   printWithSpacePadding(Out, Size + Pad, 10);
   Out << "`\n";
-  return {{}, std::move(Header), Names, Pad ? "\n" : ""};
+  return {{}, {}, std::move(Header), Names, Pad ? "\n" : ""};
 }
 
 static sys::TimePoint<std::chrono::seconds> now(bool Deterministic) {
@@ -677,13 +680,12 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
       }
     }
 
-    for (unsigned StringOffset : M.Symbols) {
+    for (size_t I = 0, E = M.Symbols.size(); I != E; ++I) {
       if (isBSDLike(Kind))
-        printNBits(Out, Kind, StringOffset);
+        printNBits(Out, Kind, M.Symbols[I]);
       printNBits(Out, Kind, Pos); // member offset
-      // FIXME: Properly handle symbol attributes for z/OS archives.
       if (isZOSArchive(Kind))
-        printNBits(Out, Kind, 0); // symbol flags
+        printNBits(Out, Kind, M.SymbolAttrs[I]); // symbol attribute flags
     }
     Pos += M.Header.size() + M.Data.size() + M.Padding.size();
   }
@@ -1078,21 +1080,42 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
       if (!SymbolsOrErr)
         return createFileError(MemberName, SymbolsOrErr.takeError());
       D.Symbols = std::move(*SymbolsOrErr);
+      // For z/OS, populate SymbolAttrs in lockstep with Symbols so that
+      // writeSymbolTable() can emit the per-symbol attribute word.
+      if (isZOSArchive(Kind)) {
+        auto *GOFFObj = dyn_cast_or_null<GOFFObjectFile>(D.SymFile.get());
+        if (GOFFObj) {
+          for (const object::BasicSymbolRef &S : GOFFObj->symbols()) {
+            if (!isArchiveSymbol(S))
+              continue;
+            D.SymbolAttrs.push_back(
+                GOFFObj->getZOSSymbolArchiveAttributes(S.getRawDataRefImpl()));
+          }
+        } else {
+          // For non-GOFF symbolic files (e.g. bitcode/IR), there is no z/OS
+          // archive attribute data available. Pad SymbolAttrs to stay in sync
+          // with Symbols.
+          D.SymbolAttrs.resize(D.Symbols.size(), 0);
+        }
+      }
       if (D.SymFile)
         HasObject = true;
-    }
-    // On z/OS, when there are no symbols, add a dummy blank symbol
-    // into the symbol table. This is done since the z/OS binder:
-    //   - emits an error if there is no symbol table in the archive
-    //   - emits an error if the symbol table has 0 symbols
-    //   - should not find any references to a blank symbol
-    if ((LastZosObjIndex == Index) && (SymNames.tell() == 0)) {
-      D.Symbols.push_back(0);
-      SymNames << ' ' << '\0';
+      // On z/OS, when there are no symbols, add a dummy blank symbol
+      // into the symbol table. This is done since the z/OS binder:
+      //   - emits an error if there is no symbol table in the archive
+      //   - emits an error if the symbol table has 0 symbols
+      //   - should not find any references to a blank symbol
+      if (isZOSArchive(Kind) && (LastZosObjIndex == Index) &&
+          (SymNames.tell() == 0)) {
+        D.Symbols.push_back(0);
+        D.SymbolAttrs.push_back(0);
+        SymNames << ' ' << '\0';
+      }
     }
 
     Pos += D.Header.size() + D.Data.size() + D.Padding.size();
   }
+
   // If there are no symbols, emit an empty symbol table, to satisfy Solaris
   // tools, older versions of which expect a symbol table in a non-empty
   // archive, regardless of whether there are any symbols in it.
