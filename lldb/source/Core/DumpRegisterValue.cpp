@@ -129,18 +129,20 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
       (reg_info.byte_size != 4 && reg_info.byte_size != 8))
     return;
 
-  CompilerType fields_compiler_type = target_sp->GetRegisterType(
-      reg_info.name, *flags_type, reg_info.byte_size);
+  CompilerType register_compiler_type = target_sp->GetRegisterType(
+      reg_info.name, *reg_info.register_type, reg_info.byte_size);
+  if (!register_compiler_type.IsValid())
+    return;
 
   // Use a new stream so we can remove a trailing newline later.
-  StreamString fields_stream;
+  StreamString register_type_stream;
 
   if (reg_info.byte_size == 4) {
-    dump_type_value(*flags_type, fields_compiler_type, reg_val.GetAsUInt32(),
-                    exe_scope, fields_stream);
+    dump_type_value(*flags_type, register_compiler_type, reg_val.GetAsUInt32(),
+                    exe_scope, register_type_stream);
   } else {
-    dump_type_value(*flags_type, fields_compiler_type, reg_val.GetAsUInt64(),
-                    exe_scope, fields_stream);
+    dump_type_value(*flags_type, register_compiler_type, reg_val.GetAsUInt64(),
+                    exe_scope, register_type_stream);
   }
 
   // Registers are indented like:
@@ -150,16 +152,18 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
 
   // First drop the extra newline that the value printer added. The register
   // command will add one itself.
-  llvm::StringRef fields_str = fields_stream.GetString().drop_back();
+  llvm::StringRef register_type_str =
+      register_type_stream.GetString().drop_back();
 
   // End the line that contains "    foo = 0x12345678".
   s.EOL();
 
   // Then split the value lines and indent each one.
   bool first = true;
-  while (fields_str.size()) {
-    std::pair<llvm::StringRef, llvm::StringRef> split = fields_str.split('\n');
-    fields_str = split.second;
+  while (register_type_str.size()) {
+    std::pair<llvm::StringRef, llvm::StringRef> split =
+        register_type_str.split('\n');
+    register_type_str = split.second;
     // Indent as much as the stream does.
     s.Indent();
     // Indent further to match where the register name finishes.
@@ -174,7 +178,7 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
 
     // On the last line we don't want a newline because the command will add
     // one too.
-    if (fields_str.size())
+    if (register_type_str.size())
       s.EOL();
   }
 }

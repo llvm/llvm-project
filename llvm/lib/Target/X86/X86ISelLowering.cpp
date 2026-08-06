@@ -48604,11 +48604,12 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
     return DAG.getSelect(DL, LHS.getValueType(), NewCond, RHS, LHS);
 
   // Invert the setcc for all users and commute all vselects.
-  DAG.ReplaceAllUsesOfValueWith(Cond, NewCond);
-  for (SDNode *User : NewCond->users()) {
+  for (SDNode *User : llvm::make_early_inc_range(Cond->users())) {
     SDValue UserLHS = User->getOperand(1);
     SDValue UserRHS = User->getOperand(2);
-    DAG.UpdateNodeOperands(User, NewCond, UserRHS, UserLHS);
+    [[maybe_unused]] SDNode *Updated =
+        DAG.UpdateNodeOperands(User, NewCond, UserRHS, UserLHS);
+    assert(Updated == User && "Unexpected CSE in commuteSelect");
   }
   return SDValue(N, 0);
 }
