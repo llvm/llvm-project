@@ -31,7 +31,8 @@ static bool isExport(const SUnit &SU) {
 
 static bool isPositionExport(const SIInstrInfo *TII, SUnit *SU) {
   const MachineInstr *MI = SU->getInstr();
-  unsigned Imm = TII->getNamedOperand(*MI, AMDGPU::OpName::tgt)->getImm();
+  unsigned Imm = static_cast<unsigned>(
+      TII->getNamedOperand(*MI, AMDGPU::OpName::tgt)->getImm());
   return Imm >= AMDGPU::Exp::ET_POS0 && Imm <= AMDGPU::Exp::ET_POS_LAST;
 }
 
@@ -59,7 +60,8 @@ static void buildCluster(ArrayRef<SUnit *> Exports, ScheduleDAGInstrs *DAG) {
   SUnit *ChainHead = Exports.front();
 
   // Now construct cluster from chain by adding new edges.
-  for (unsigned Idx = 0, End = Exports.size() - 1; Idx < End; ++Idx) {
+  for (unsigned Idx = 0, End = static_cast<unsigned>(Exports.size() - 1);
+       Idx < End; ++Idx) {
     SUnit *SUa = Exports[Idx];
     SUnit *SUb = Exports[Idx + 1];
 
