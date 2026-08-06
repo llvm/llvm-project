@@ -10,6 +10,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringRef.h"
@@ -87,39 +88,10 @@ static std::string GetEnclosingDeclContextSignature(const Decl *EnclosingDecl) {
     return "";
 
   if (const auto *ND = dyn_cast<NamedDecl>(EnclosingDecl)) {
-    std::string DeclName;
-
-    switch (ND->getKind()) {
-    case Decl::Namespace:
-    case Decl::Record:
-    case Decl::CXXRecord:
-    case Decl::Enum:
-    case Decl::ObjCInterface:
-    case Decl::ObjCImplementation:
-    case Decl::ObjCCategory:
-    case Decl::ObjCCategoryImpl:
-    case Decl::ObjCProtocol:
-      DeclName = ND->getQualifiedNameAsString();
-      break;
-    case Decl::CXXConstructor:
-    case Decl::CXXDestructor:
-    case Decl::CXXConversion:
-    case Decl::CXXMethod:
-    case Decl::Function:
-      DeclName = GetSignature(dyn_cast_or_null<FunctionDecl>(ND));
-      break;
-    case Decl::ObjCMethod:
-      // ObjC Methods can not be overloaded, qualified name uniquely identifies
-      // the method.
-      DeclName = ND->getQualifiedNameAsString();
-      break;
-    default:
-      break;
-    }
-
-    return DeclName;
+    if (const auto *FD = dyn_cast<FunctionDecl>(EnclosingDecl))
+      return GetSignature(dyn_cast_or_null<FunctionDecl>(FD));
+    return ND->getQualifiedNameAsString();
   }
-
   return "";
 }
 
