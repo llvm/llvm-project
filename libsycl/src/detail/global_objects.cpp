@@ -8,6 +8,8 @@
 
 #include <detail/global_objects.hpp>
 #include <detail/platform_impl.hpp>
+#include <detail/program_manager.hpp>
+#include <detail/queue_impl.hpp>
 
 #ifdef _WIN32
 #  include <windows.h>
@@ -17,10 +19,34 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
+// libsycl follows SYCL 2020 specification that doesn't declare any
+// init/shutdown methods that can help to avoid usage of static variables.
+// liboffload uses static variables too. In the first call of get_platforms
+// we call liboffload's iterateDevices that leads to liboffload static
+// storage initialization. Then we initialize our own local static var of
+// StaticVarShutdownHandler type to be able to call our shutdown methods
+// earlier and before the liboffload objects are destructed at the end of
+// program. See documentation of std::exit for local objects with static
+// storage duration.
+struct StaticVarShutdownHandler {
+  StaticVarShutdownHandler(const StaticVarShutdownHandler &) = delete;
+  StaticVarShutdownHandler &
+  operator=(const StaticVarShutdownHandler &) = delete;
+  ~StaticVarShutdownHandler() {
+    ProgramAndKernelManager::getInstance().releaseResources();
+    // No error reporting in shutdown
+    std::ignore = olShutDown();
+  }
+};
 
-std::vector<detail::OffloadTopology> &getOffloadTopologies() {
-  static std::vector<detail::OffloadTopology> Topologies(
-      OL_PLATFORM_BACKEND_LAST);
+void registerStaticVarShutdownHandler() {
+  static StaticVarShutdownHandler handler{};
+}
+
+std::array<detail::OffloadTopology, OL_PLATFORM_BACKEND_LAST> &
+getOffloadTopologies() {
+  static std::array<detail::OffloadTopology, OL_PLATFORM_BACKEND_LAST>
+      Topologies{};
   return Topologies;
 }
 
@@ -29,43 +55,42 @@ std::vector<PlatformImplUPtr> &getPlatformCache() {
   return PlatformCache;
 }
 
-void shutdown() {
-  // No error reporting in shutdown
-  std::ignore = olShutDown();
+InstanceWithLock<AsyncExceptionsContainer> &getAsyncExceptionList() {
+  static InstanceWithLock<AsyncExceptionsContainer> AsyncExceptionList;
+  return AsyncExceptionList;
 }
 
-#ifdef _WIN32
-extern "C" _LIBSYCL_EXPORT BOOL WINAPI DllMain(HINSTANCE hinstDLL,
-                                               DWORD fdwReason,
-                                               LPVOID lpReserved) {
-  // Perform actions based on the reason for calling.
-  switch (fdwReason) {
-  case DLL_PROCESS_DETACH:
-    try {
-      shutdown();
-    } catch (std::exception &e) {
-      // TODO: Investigate how to handle and report errors that occur during
-      // shutdown.
+void recordAsyncException(const std::shared_ptr<QueueImpl> &QueuePtr,
+                          const std::exception_ptr &ExceptionPtr) {
+  auto &[AsyncExceptions, AsyncExceptionsMutex] = getAsyncExceptionList();
+  std::lock_guard<SpinLock> Lock(AsyncExceptionsMutex);
+  addAsyncException(AsyncExceptions[QueuePtr], ExceptionPtr);
+}
+
+void flushAsyncExceptions() {
+  auto &[AsyncExceptions, AsyncExceptionsMutex] = getAsyncExceptionList();
+  AsyncExceptionsContainer AsyncExceptionsSwap;
+  {
+    std::lock_guard<SpinLock> Lock(AsyncExceptionsMutex);
+    std::swap(AsyncExceptions, AsyncExceptionsSwap);
+  }
+
+  for (auto &[EntryKey, ExceptionList] : AsyncExceptionsSwap) {
+    exception_list Exceptions = std::move(ExceptionList);
+
+    if (Exceptions.size() == 0)
+      continue;
+
+    if (std::shared_ptr<QueueImpl> Queue = EntryKey.lock();
+        Queue && Queue->getAsyncHandler()) {
+      Queue->getAsyncHandler()(std::move(Exceptions));
+      continue;
     }
 
-    break;
-  case DLL_PROCESS_ATTACH:
-    break;
-  case DLL_THREAD_ATTACH:
-    break;
-  case DLL_THREAD_DETACH:
-    break;
+    // If the queue is dead, use the default handler.
+    defaultAsyncHandler(std::move(Exceptions));
   }
-  return TRUE; // Successful DLL_PROCESS_ATTACH.
 }
-#else
 
-// `syclUnload()` is declared as a low priority destructor to ensure it runs
-// after all other global destructors. Priorities 0-100 are reserved for use
-// by the compiler and C and C++ standard libraries. SYCL applications may use
-// priorities in the range 101-109 to schedule destructors to run after libsycl
-// finalization.
-__attribute__((destructor(110))) static void syclUnload() { shutdown(); }
-#endif
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL

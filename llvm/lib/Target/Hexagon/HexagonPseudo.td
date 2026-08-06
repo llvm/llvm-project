@@ -335,6 +335,12 @@ let Defs = [R29], hasSideEffects = 1 in
 def PS_alloca: Pseudo <(outs IntRegs:$Rd),
                        (ins IntRegs:$Rs, u32_0Imm:$A), "", []>;
 
+// Probed stack allocation pseudo. Expanded in inlineStackProbe() into a
+// compare-and-branch loop that touches each page.
+let Defs = [R29, P0], Uses = [R29], hasSideEffects = 1, mayStore = 1,
+    isCodeGenOnly = 1 in
+def PS_probed_stackalloc : Pseudo<(outs), (ins IntRegs:$target), "", []>;
+
 // Load predicate.
 let isExtendable = 1, opExtendable = 2, isExtentSigned = 1, opExtentBits = 13,
     isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
@@ -349,6 +355,16 @@ def LDriw_ctr : LDInst<(outs CtrRegs:$dst),
                         (ins IntRegs:$addr, s32_0Imm:$off),
                         ".error \"should not emit\"", []>;
 
+let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 1 in {
+  def PS_readcr : InstHexagon<(outs IntRegs:$Rd32), (ins CtrRegs:$Cs32),
+                              ".error \"should not emit\" ", [], "",
+                              A2_tfrcrr.Itinerary, TypeCR>;
+
+  def PS_readcr64
+      : InstHexagon<(outs DoubleRegs:$Rdd32), (ins CtrRegs64:$Css32),
+                    ".error \"should not emit\" ", [], "", A4_tfrcpp.Itinerary,
+                    TypeCR>;
+}
 
 let isCodeGenOnly = 1, isPseudo = 1 in
 def PS_pselect: InstHexagon<(outs DoubleRegs:$Rd),
@@ -610,6 +626,16 @@ defm PS_storerd : NewCircularStore<DoubleRegs, WordAccess>;
 // __builtin_trap.
 let hasSideEffects = 1, isPseudo = 1, isCodeGenOnly = 1, isSolo = 1 in
 def PS_crash: InstHexagon<(outs), (ins), "", [], "", PSEUDO, TypePSEUDO>;
+
+// KCFI type check pseudo -- lowered in the AsmPrinter to a
+// load-compare-trap sequence before indirect calls. On mismatch, a
+// misaligned load faults.
+// Defs: R6/R7 default scratch (R8 fallback if AddrReg conflicts), P0 for
+// compare, D13 for the crash load.
+let hasSideEffects = 1, mayLoad = 1, isPseudo = 1, isCodeGenOnly = 1,
+    Defs = [R6, R7, R8, P0, D13], Size = 28 in
+def KCFI_CHECK : InstHexagon<(outs), (ins IntRegs:$ptr, i32imm:$type),
+                              "", [], "", PSEUDO, TypePSEUDO>;
 
 // This is actual trap1 instruction from before v65. It's here since it is
 // no longer included in DepInstrInfo.td.

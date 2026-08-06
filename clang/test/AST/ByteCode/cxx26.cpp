@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++26 -fsyntax-only -fcxx-exceptions -verify=ref,both %s
-// RUN: %clang_cc1 -std=c++26 -fsyntax-only -fcxx-exceptions -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++26 -fsyntax-only -Wunreachable-code -verify=ref,both      %s
+// RUN: %clang_cc1 -std=c++26 -fsyntax-only -Wunreachable-code -verify=expected,both %s -fexperimental-new-constant-interpreter
 
 namespace std {
   using size_t = decltype(sizeof(0));
@@ -49,7 +49,7 @@ static_assert(*f == 12);
 namespace ExplicitThisInBacktrace {
   struct S {
     constexpr void foo(this const S& self) {
-      throw; // both-note {{not valid in a constant expression}}
+      __builtin_abort(); // both-note {{not valid in a constant expression}}
     }
   };
 
@@ -61,4 +61,45 @@ namespace ExplicitThisInBacktrace {
 
   static_assert(test()); // both-error {{not an integral constant expression}} \
                          // both-note {{in call to}}
+}
+
+namespace ConstexprUnknownNestedVariables {
+  struct T { constexpr int a() const { return 42; } };
+  constexpr const T& f(const T& t) noexcept { return t; }
+  constexpr int f() {
+      const T& range = f(T());
+      return [&] consteval { return range.a(); }();
+  }
+
+  static_assert(f() == 42);
+}
+
+namespace ConstexprUnknownReference {
+
+  struct expected {
+    int val;
+  };
+
+  extern void __assert_fail();
+  bool test() {
+    expected e(5);
+
+    const int &x = e.val;
+    /// We used to get a warning for an always-true comparison.
+    &(static_cast<const int&>(x)) == &e.val ? void() : __assert_fail();
+    return true;
+  }
+
+}
+
+namespace UnknownSizeArrayString {
+  constexpr const char foo[] = {bar}; // both-error {{use of undeclared identifier}} \
+                                      // ref-note {{declared here}}
+  struct S {
+    constexpr int size() const { return 4; }
+    constexpr const char *data() const { return foo; }
+  };
+  static_assert(false, S{}); // both-error {{the message in a static assertion must be produced by a constant expression}} \
+                             // ref-note {{initializer of 'foo' is unknown}} \
+                             // both-error {{static assertion failed}}
 }

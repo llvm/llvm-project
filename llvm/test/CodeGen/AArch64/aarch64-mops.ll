@@ -60,31 +60,17 @@ entry:
 }
 
 define void @memset_10_zeroval(ptr %dst) {
-; GISel-WITHOUT-MOPS-O0-LABEL: memset_10_zeroval:
-; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
-; GISel-WITHOUT-MOPS-O0-NEXT:    str xzr, [x0]
-; GISel-WITHOUT-MOPS-O0-NEXT:    mov w8, wzr
-; GISel-WITHOUT-MOPS-O0-NEXT:    strh w8, [x0, #8]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+; GISel-WITHOUT-MOPS-LABEL: memset_10_zeroval:
+; GISel-WITHOUT-MOPS:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-NEXT:    str xzr, [x0]
+; GISel-WITHOUT-MOPS-NEXT:    strh wzr, [x0, #8]
+; GISel-WITHOUT-MOPS-NEXT:    ret
 ;
-; GISel-WITHOUT-MOPS-O3-LABEL: memset_10_zeroval:
-; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
-; GISel-WITHOUT-MOPS-O3-NEXT:    str xzr, [x0]
-; GISel-WITHOUT-MOPS-O3-NEXT:    strh wzr, [x0, #8]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ret
-;
-; GISel-MOPS-O0-LABEL: memset_10_zeroval:
-; GISel-MOPS-O0:       // %bb.0: // %entry
-; GISel-MOPS-O0-NEXT:    str xzr, [x0]
-; GISel-MOPS-O0-NEXT:    mov w8, wzr
-; GISel-MOPS-O0-NEXT:    strh w8, [x0, #8]
-; GISel-MOPS-O0-NEXT:    ret
-;
-; GISel-MOPS-O3-LABEL: memset_10_zeroval:
-; GISel-MOPS-O3:       // %bb.0: // %entry
-; GISel-MOPS-O3-NEXT:    str xzr, [x0]
-; GISel-MOPS-O3-NEXT:    strh wzr, [x0, #8]
-; GISel-MOPS-O3-NEXT:    ret
+; GISel-MOPS-LABEL: memset_10_zeroval:
+; GISel-MOPS:       // %bb.0: // %entry
+; GISel-MOPS-NEXT:    str xzr, [x0]
+; GISel-MOPS-NEXT:    strh wzr, [x0, #8]
+; GISel-MOPS-NEXT:    ret
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memset_10_zeroval:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
@@ -103,31 +89,17 @@ entry:
 }
 
 define void @memset_10_zeroval_volatile(ptr %dst) {
-; GISel-WITHOUT-MOPS-O0-LABEL: memset_10_zeroval_volatile:
-; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
-; GISel-WITHOUT-MOPS-O0-NEXT:    str xzr, [x0]
-; GISel-WITHOUT-MOPS-O0-NEXT:    mov w8, wzr
-; GISel-WITHOUT-MOPS-O0-NEXT:    strh w8, [x0, #8]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+; GISel-WITHOUT-MOPS-LABEL: memset_10_zeroval_volatile:
+; GISel-WITHOUT-MOPS:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-NEXT:    str xzr, [x0]
+; GISel-WITHOUT-MOPS-NEXT:    strh wzr, [x0, #8]
+; GISel-WITHOUT-MOPS-NEXT:    ret
 ;
-; GISel-WITHOUT-MOPS-O3-LABEL: memset_10_zeroval_volatile:
-; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
-; GISel-WITHOUT-MOPS-O3-NEXT:    str xzr, [x0]
-; GISel-WITHOUT-MOPS-O3-NEXT:    strh wzr, [x0, #8]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ret
-;
-; GISel-MOPS-O0-LABEL: memset_10_zeroval_volatile:
-; GISel-MOPS-O0:       // %bb.0: // %entry
-; GISel-MOPS-O0-NEXT:    str xzr, [x0]
-; GISel-MOPS-O0-NEXT:    mov w8, wzr
-; GISel-MOPS-O0-NEXT:    strh w8, [x0, #8]
-; GISel-MOPS-O0-NEXT:    ret
-;
-; GISel-MOPS-O3-LABEL: memset_10_zeroval_volatile:
-; GISel-MOPS-O3:       // %bb.0: // %entry
-; GISel-MOPS-O3-NEXT:    str xzr, [x0]
-; GISel-MOPS-O3-NEXT:    strh wzr, [x0, #8]
-; GISel-MOPS-O3-NEXT:    ret
+; GISel-MOPS-LABEL: memset_10_zeroval_volatile:
+; GISel-MOPS:       // %bb.0: // %entry
+; GISel-MOPS-NEXT:    str xzr, [x0]
+; GISel-MOPS-NEXT:    strh wzr, [x0, #8]
+; GISel-MOPS-NEXT:    ret
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memset_10_zeroval_volatile:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
@@ -459,16 +431,16 @@ define void @memset_10(ptr %dst, i32 %value) {
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memset_10:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
-; SDAG-WITHOUT-MOPS-O2-NEXT:    dup	v0.16b, w1
-; SDAG-WITHOUT-MOPS-O2-NEXT:    str	h0, [x0, #8]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    str	d0, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    dup v0.16b, w1
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str h0, [x0, #8]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str d0, [x0]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
 ;
 ; SDAG-MOPS-O2-LABEL: memset_10:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
-; SDAG-MOPS-O2-NEXT:    dup	v0.16b, w1
-; SDAG-MOPS-O2-NEXT:    str	h0, [x0, #8]
-; SDAG-MOPS-O2-NEXT:    str	d0, [x0]
+; SDAG-MOPS-O2-NEXT:    dup v0.16b, w1
+; SDAG-MOPS-O2-NEXT:    str h0, [x0, #8]
+; SDAG-MOPS-O2-NEXT:    str d0, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
@@ -519,16 +491,16 @@ define void @memset_10_volatile(ptr %dst, i32 %value) {
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memset_10_volatile:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
-; SDAG-WITHOUT-MOPS-O2-NEXT:    dup	v0.16b, w1
-; SDAG-WITHOUT-MOPS-O2-NEXT:    str	h0, [x0, #8]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    str	d0, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    dup v0.16b, w1
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str h0, [x0, #8]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str d0, [x0]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
 ;
 ; SDAG-MOPS-O2-LABEL: memset_10_volatile:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
-; SDAG-MOPS-O2-NEXT:    dup	v0.16b, w1
-; SDAG-MOPS-O2-NEXT:    str	h0, [x0, #8]
-; SDAG-MOPS-O2-NEXT:    str	d0, [x0]
+; SDAG-MOPS-O2-NEXT:    dup v0.16b, w1
+; SDAG-MOPS-O2-NEXT:    str h0, [x0, #8]
+; SDAG-MOPS-O2-NEXT:    str d0, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
@@ -960,6 +932,88 @@ entry:
   ret void
 }
 
+define void @memcpy_7(ptr %dst, ptr %src, i32 %value) {
+; GISel-WITHOUT-MOPS-LABEL: memcpy_7:
+; GISel-WITHOUT-MOPS:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-NEXT:    ldr w8, [x1]
+; GISel-WITHOUT-MOPS-NEXT:    str w8, [x0]
+; GISel-WITHOUT-MOPS-NEXT:    ldur w8, [x1, #3]
+; GISel-WITHOUT-MOPS-NEXT:    stur w8, [x0, #3]
+; GISel-WITHOUT-MOPS-NEXT:    ret
+;
+; GISel-MOPS-LABEL: memcpy_7:
+; GISel-MOPS:       // %bb.0: // %entry
+; GISel-MOPS-NEXT:    ldr w8, [x1]
+; GISel-MOPS-NEXT:    str w8, [x0]
+; GISel-MOPS-NEXT:    ldur w8, [x1, #3]
+; GISel-MOPS-NEXT:    stur w8, [x0, #3]
+; GISel-MOPS-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memcpy_7:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldur w8, [x1, #3]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr w9, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stur w8, [x0, #3]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str w9, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memcpy_7:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    ldur w8, [x1, #3]
+; SDAG-MOPS-O2-NEXT:    ldr w9, [x1]
+; SDAG-MOPS-O2-NEXT:    stur w8, [x0, #3]
+; SDAG-MOPS-O2-NEXT:    str w9, [x0]
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 7, i1 false)
+  ret void
+}
+
+define void @memcpy_7_volatile(ptr %dst, ptr %src, i32 %value) {
+; GISel-WITHOUT-MOPS-LABEL: memcpy_7_volatile:
+; GISel-WITHOUT-MOPS:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-NEXT:    ldr w8, [x1]
+; GISel-WITHOUT-MOPS-NEXT:    str w8, [x0]
+; GISel-WITHOUT-MOPS-NEXT:    ldrh w8, [x1, #4]
+; GISel-WITHOUT-MOPS-NEXT:    strh w8, [x0, #4]
+; GISel-WITHOUT-MOPS-NEXT:    ldrb w8, [x1, #6]
+; GISel-WITHOUT-MOPS-NEXT:    strb w8, [x0, #6]
+; GISel-WITHOUT-MOPS-NEXT:    ret
+;
+; GISel-MOPS-LABEL: memcpy_7_volatile:
+; GISel-MOPS:       // %bb.0: // %entry
+; GISel-MOPS-NEXT:    ldr w8, [x1]
+; GISel-MOPS-NEXT:    str w8, [x0]
+; GISel-MOPS-NEXT:    ldrh w8, [x1, #4]
+; GISel-MOPS-NEXT:    strh w8, [x0, #4]
+; GISel-MOPS-NEXT:    ldrb w8, [x1, #6]
+; GISel-MOPS-NEXT:    strb w8, [x0, #6]
+; GISel-MOPS-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memcpy_7_volatile:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr w8, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrh w9, [x1, #4]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrb w10, [x1, #6]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    strb w10, [x0, #6]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    strh w9, [x0, #4]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str w8, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memcpy_7_volatile:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    ldr w8, [x1]
+; SDAG-MOPS-O2-NEXT:    ldrh w9, [x1, #4]
+; SDAG-MOPS-O2-NEXT:    ldrb w10, [x1, #6]
+; SDAG-MOPS-O2-NEXT:    strb w10, [x0, #6]
+; SDAG-MOPS-O2-NEXT:    strh w9, [x0, #4]
+; SDAG-MOPS-O2-NEXT:    str w8, [x0]
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 7, i1 true)
+  ret void
+}
+
 define void @memcpy_10(ptr %dst, ptr %src, i32 %value) {
 ; GISel-WITHOUT-MOPS-LABEL: memcpy_10:
 ; GISel-WITHOUT-MOPS:       // %bb.0: // %entry
@@ -1230,7 +1284,6 @@ entry:
   ret void
 }
 
-
 define void @memcpy_inline_0(ptr %dst, ptr %src, i32 %value) {
 ; GISel-WITHOUT-MOPS-LABEL: memcpy_inline_0:
 ; GISel-WITHOUT-MOPS:       // %bb.0: // %entry
@@ -1270,6 +1323,88 @@ define void @memcpy_inline_0_volatile(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    ret
 entry:
   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 0, i1 true)
+  ret void
+}
+
+define void @memcpy_inline_7(ptr %dst, ptr %src, i32 %value) {
+; GISel-WITHOUT-MOPS-LABEL: memcpy_inline_7:
+; GISel-WITHOUT-MOPS:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-NEXT:    ldr w8, [x1]
+; GISel-WITHOUT-MOPS-NEXT:    str w8, [x0]
+; GISel-WITHOUT-MOPS-NEXT:    ldur w8, [x1, #3]
+; GISel-WITHOUT-MOPS-NEXT:    stur w8, [x0, #3]
+; GISel-WITHOUT-MOPS-NEXT:    ret
+;
+; GISel-MOPS-LABEL: memcpy_inline_7:
+; GISel-MOPS:       // %bb.0: // %entry
+; GISel-MOPS-NEXT:    ldr w8, [x1]
+; GISel-MOPS-NEXT:    str w8, [x0]
+; GISel-MOPS-NEXT:    ldur w8, [x1, #3]
+; GISel-MOPS-NEXT:    stur w8, [x0, #3]
+; GISel-MOPS-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memcpy_inline_7:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldur w8, [x1, #3]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr w9, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stur w8, [x0, #3]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str w9, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memcpy_inline_7:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    ldur w8, [x1, #3]
+; SDAG-MOPS-O2-NEXT:    ldr w9, [x1]
+; SDAG-MOPS-O2-NEXT:    stur w8, [x0, #3]
+; SDAG-MOPS-O2-NEXT:    str w9, [x0]
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 7, i1 false)
+  ret void
+}
+
+define void @memcpy_inline_7_volatile(ptr %dst, ptr %src, i32 %value) {
+; GISel-WITHOUT-MOPS-LABEL: memcpy_inline_7_volatile:
+; GISel-WITHOUT-MOPS:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-NEXT:    ldr w8, [x1]
+; GISel-WITHOUT-MOPS-NEXT:    str w8, [x0]
+; GISel-WITHOUT-MOPS-NEXT:    ldrh w8, [x1, #4]
+; GISel-WITHOUT-MOPS-NEXT:    strh w8, [x0, #4]
+; GISel-WITHOUT-MOPS-NEXT:    ldrb w8, [x1, #6]
+; GISel-WITHOUT-MOPS-NEXT:    strb w8, [x0, #6]
+; GISel-WITHOUT-MOPS-NEXT:    ret
+;
+; GISel-MOPS-LABEL: memcpy_inline_7_volatile:
+; GISel-MOPS:       // %bb.0: // %entry
+; GISel-MOPS-NEXT:    ldr w8, [x1]
+; GISel-MOPS-NEXT:    str w8, [x0]
+; GISel-MOPS-NEXT:    ldrh w8, [x1, #4]
+; GISel-MOPS-NEXT:    strh w8, [x0, #4]
+; GISel-MOPS-NEXT:    ldrb w8, [x1, #6]
+; GISel-MOPS-NEXT:    strb w8, [x0, #6]
+; GISel-MOPS-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memcpy_inline_7_volatile:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr w8, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrh w9, [x1, #4]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrb w10, [x1, #6]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    strb w10, [x0, #6]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    strh w9, [x0, #4]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str w8, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memcpy_inline_7_volatile:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    ldr w8, [x1]
+; SDAG-MOPS-O2-NEXT:    ldrh w9, [x1, #4]
+; SDAG-MOPS-O2-NEXT:    ldrb w10, [x1, #6]
+; SDAG-MOPS-O2-NEXT:    strb w10, [x0, #6]
+; SDAG-MOPS-O2-NEXT:    strh w9, [x0, #4]
+; SDAG-MOPS-O2-NEXT:    str w8, [x0]
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 7, i1 true)
   ret void
 }
 
@@ -1526,28 +1661,28 @@ define void @memcpy_inline_300(ptr %dst, ptr %src, i32 %value) {
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memcpy_inline_300:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp	q1, q0, [x1, #32]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    add	x8, x1, #284
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp	q2, q3, [x1]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp	q1, q0, [x0, #32]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp	q2, q3, [x0]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp	q1, q0, [x1, #96]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp	q2, q3, [x1, #64]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp	q1, q0, [x0, #96]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp	q2, q3, [x0, #64]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp	q1, q0, [x1, #160]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp	q2, q3, [x1, #128]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp	q1, q0, [x0, #160]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp	q2, q3, [x0, #128]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp	q1, q0, [x1, #224]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp	q2, q3, [x1, #192]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp	q1, q0, [x0, #224]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp	q2, q3, [x0, #192]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp	q2, q1, [x1, #256]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr	q0, [x8]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    add	x8, x0, #284
-; SDAG-WITHOUT-MOPS-O2-NEXT:    str	q0, [x8]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp	q2, q1, [x0, #256]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp q1, q0, [x1, #32]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    add x8, x1, #284
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp q2, q3, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q1, q0, [x0, #32]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q2, q3, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp q1, q0, [x1, #96]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp q2, q3, [x1, #64]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q1, q0, [x0, #96]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q2, q3, [x0, #64]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp q1, q0, [x1, #160]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp q2, q3, [x1, #128]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q1, q0, [x0, #160]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q2, q3, [x0, #128]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp q1, q0, [x1, #224]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp q2, q3, [x1, #192]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q1, q0, [x0, #224]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q2, q3, [x0, #192]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp q2, q1, [x1, #256]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr q0, [x8]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    add x8, x0, #284
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str q0, [x8]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q2, q1, [x0, #256]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
 ;
 ; SDAG-MOPS-O2-LABEL: memcpy_inline_300:
@@ -1708,80 +1843,52 @@ entry:
 }
 
 define void @memcpy_inline_65(ptr %dst, ptr %src, i32 %value) {
-; GISel-WITHOUT-MOPS-O0-LABEL: memcpy_inline_65:
-; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr	q0, [x1]
-; GISel-WITHOUT-MOPS-O0-NEXT:    str	q0, [x0]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr	q0, [x1, #16]
-; GISel-WITHOUT-MOPS-O0-NEXT:    str	q0, [x0, #16]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr	q0, [x1, #32]
-; GISel-WITHOUT-MOPS-O0-NEXT:    str	q0, [x0, #32]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr	q0, [x1, #48]
-; GISel-WITHOUT-MOPS-O0-NEXT:    str	q0, [x0, #48]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldrb	w8, [x1, #64]
-; GISel-WITHOUT-MOPS-O0-NEXT:    strb	w8, [x0, #64]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+; GISel-WITHOUT-MOPS-LABEL: memcpy_inline_65:
+; GISel-WITHOUT-MOPS:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-NEXT:    ldr q0, [x1]
+; GISel-WITHOUT-MOPS-NEXT:    str q0, [x0]
+; GISel-WITHOUT-MOPS-NEXT:    ldr q0, [x1, #16]
+; GISel-WITHOUT-MOPS-NEXT:    str q0, [x0, #16]
+; GISel-WITHOUT-MOPS-NEXT:    ldr q0, [x1, #32]
+; GISel-WITHOUT-MOPS-NEXT:    str q0, [x0, #32]
+; GISel-WITHOUT-MOPS-NEXT:    ldr q0, [x1, #48]
+; GISel-WITHOUT-MOPS-NEXT:    str q0, [x0, #48]
+; GISel-WITHOUT-MOPS-NEXT:    ldrb w8, [x1, #64]
+; GISel-WITHOUT-MOPS-NEXT:    strb w8, [x0, #64]
+; GISel-WITHOUT-MOPS-NEXT:    ret
 ;
-; GISel-WITHOUT-MOPS-O3-LABEL: memcpy_inline_65:
-; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldr	q0, [x1]
-; GISel-WITHOUT-MOPS-O3-NEXT:    str	q0, [x0]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldr	q0, [x1, #16]
-; GISel-WITHOUT-MOPS-O3-NEXT:    str	q0, [x0, #16]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldr	q0, [x1, #32]
-; GISel-WITHOUT-MOPS-O3-NEXT:    str	q0, [x0, #32]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldr	q0, [x1, #48]
-; GISel-WITHOUT-MOPS-O3-NEXT:    str	q0, [x0, #48]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldrb	w8, [x1, #64]
-; GISel-WITHOUT-MOPS-O3-NEXT:    strb	w8, [x0, #64]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ret
-;
-; GISel-MOPS-O0-LABEL: memcpy_inline_65:
-; GISel-MOPS-O0:       // %bb.0: // %entry
-; GISel-MOPS-O0-NEXT:    ldr	q0, [x1]
-; GISel-MOPS-O0-NEXT:    str	q0, [x0]
-; GISel-MOPS-O0-NEXT:    ldr	q0, [x1, #16]
-; GISel-MOPS-O0-NEXT:    str	q0, [x0, #16]
-; GISel-MOPS-O0-NEXT:    ldr	q0, [x1, #32]
-; GISel-MOPS-O0-NEXT:    str	q0, [x0, #32]
-; GISel-MOPS-O0-NEXT:    ldr	q0, [x1, #48]
-; GISel-MOPS-O0-NEXT:    str	q0, [x0, #48]
-; GISel-MOPS-O0-NEXT:    ldrb	w8, [x1, #64]
-; GISel-MOPS-O0-NEXT:    strb	w8, [x0, #64]
-; GISel-MOPS-O0-NEXT:    ret
-;
-; GISel-MOPS-O3-LABEL: memcpy_inline_65:
-; GISel-MOPS-O3:       // %bb.0: // %entry
-; GISel-MOPS-O3-NEXT:    ldr	q0, [x1]
-; GISel-MOPS-O3-NEXT:    str	q0, [x0]
-; GISel-MOPS-O3-NEXT:    ldr	q0, [x1, #16]
-; GISel-MOPS-O3-NEXT:    str	q0, [x0, #16]
-; GISel-MOPS-O3-NEXT:    ldr	q0, [x1, #32]
-; GISel-MOPS-O3-NEXT:    str	q0, [x0, #32]
-; GISel-MOPS-O3-NEXT:    ldr	q0, [x1, #48]
-; GISel-MOPS-O3-NEXT:    str	q0, [x0, #48]
-; GISel-MOPS-O3-NEXT:    ldrb	w8, [x1, #64]
-; GISel-MOPS-O3-NEXT:    strb	w8, [x0, #64]
-; GISel-MOPS-O3-NEXT:    ret
+; GISel-MOPS-LABEL: memcpy_inline_65:
+; GISel-MOPS:       // %bb.0: // %entry
+; GISel-MOPS-NEXT:    ldr q0, [x1]
+; GISel-MOPS-NEXT:    str q0, [x0]
+; GISel-MOPS-NEXT:    ldr q0, [x1, #16]
+; GISel-MOPS-NEXT:    str q0, [x0, #16]
+; GISel-MOPS-NEXT:    ldr q0, [x1, #32]
+; GISel-MOPS-NEXT:    str q0, [x0, #32]
+; GISel-MOPS-NEXT:    ldr q0, [x1, #48]
+; GISel-MOPS-NEXT:    str q0, [x0, #48]
+; GISel-MOPS-NEXT:    ldrb w8, [x1, #64]
+; GISel-MOPS-NEXT:    strb w8, [x0, #64]
+; GISel-MOPS-NEXT:    ret
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memcpy_inline_65:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp	q1, q0, [x1, #32]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp	q2, q3, [x1]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp	q1, q0, [x0, #32]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp	q2, q3, [x0]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrb	w8, [x1, #64]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    strb	w8, [x0, #64]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp q1, q0, [x1, #32]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp q2, q3, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q1, q0, [x0, #32]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q2, q3, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrb w8, [x1, #64]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    strb w8, [x0, #64]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
 ;
 ; SDAG-MOPS-O2-LABEL: memcpy_inline_65:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
-; SDAG-MOPS-O2-NEXT:    ldp	q1, q0, [x1, #32]
-; SDAG-MOPS-O2-NEXT:    ldp	q2, q3, [x1]
-; SDAG-MOPS-O2-NEXT:    stp	q1, q0, [x0, #32]
-; SDAG-MOPS-O2-NEXT:    stp	q2, q3, [x0]
-; SDAG-MOPS-O2-NEXT:    ldrb	w8, [x1, #64]
-; SDAG-MOPS-O2-NEXT:    strb	w8, [x0, #64]
+; SDAG-MOPS-O2-NEXT:    ldp q1, q0, [x1, #32]
+; SDAG-MOPS-O2-NEXT:    ldp q2, q3, [x1]
+; SDAG-MOPS-O2-NEXT:    stp q1, q0, [x0, #32]
+; SDAG-MOPS-O2-NEXT:    stp q2, q3, [x0]
+; SDAG-MOPS-O2-NEXT:    ldrb w8, [x1, #64]
+; SDAG-MOPS-O2-NEXT:    strb w8, [x0, #64]
 ; SDAG-MOPS-O2-NEXT:    ret
 entry:
   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 65, i1 false)
@@ -1789,68 +1896,44 @@ entry:
 }
 
 define void @memcpy_inline_64(ptr %dst, ptr %src, i32 %value) {
-; GISel-WITHOUT-MOPS-O0-LABEL: memcpy_inline_64:
-; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr	q0, [x1]
-; GISel-WITHOUT-MOPS-O0-NEXT:    str	q0, [x0]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr	q0, [x1, #16]
-; GISel-WITHOUT-MOPS-O0-NEXT:    str	q0, [x0, #16]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr	q0, [x1, #32]
-; GISel-WITHOUT-MOPS-O0-NEXT:    str	q0, [x0, #32]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr	q0, [x1, #48]
-; GISel-WITHOUT-MOPS-O0-NEXT:    str	q0, [x0, #48]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+; GISel-WITHOUT-MOPS-LABEL: memcpy_inline_64:
+; GISel-WITHOUT-MOPS:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-NEXT:    ldr q0, [x1]
+; GISel-WITHOUT-MOPS-NEXT:    str q0, [x0]
+; GISel-WITHOUT-MOPS-NEXT:    ldr q0, [x1, #16]
+; GISel-WITHOUT-MOPS-NEXT:    str q0, [x0, #16]
+; GISel-WITHOUT-MOPS-NEXT:    ldr q0, [x1, #32]
+; GISel-WITHOUT-MOPS-NEXT:    str q0, [x0, #32]
+; GISel-WITHOUT-MOPS-NEXT:    ldr q0, [x1, #48]
+; GISel-WITHOUT-MOPS-NEXT:    str q0, [x0, #48]
+; GISel-WITHOUT-MOPS-NEXT:    ret
 ;
-; GISel-WITHOUT-MOPS-O3-LABEL: memcpy_inline_64:
-; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldr	q0, [x1]
-; GISel-WITHOUT-MOPS-O3-NEXT:    str	q0, [x0]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldr	q0, [x1, #16]
-; GISel-WITHOUT-MOPS-O3-NEXT:    str	q0, [x0, #16]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldr	q0, [x1, #32]
-; GISel-WITHOUT-MOPS-O3-NEXT:    str	q0, [x0, #32]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldr	q0, [x1, #48]
-; GISel-WITHOUT-MOPS-O3-NEXT:    str	q0, [x0, #48]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ret
-;
-; GISel-MOPS-O0-LABEL: memcpy_inline_64:
-; GISel-MOPS-O0:       // %bb.0: // %entry
-; GISel-MOPS-O0-NEXT:    ldr	q0, [x1]
-; GISel-MOPS-O0-NEXT:    str	q0, [x0]
-; GISel-MOPS-O0-NEXT:    ldr	q0, [x1, #16]
-; GISel-MOPS-O0-NEXT:    str	q0, [x0, #16]
-; GISel-MOPS-O0-NEXT:    ldr	q0, [x1, #32]
-; GISel-MOPS-O0-NEXT:    str	q0, [x0, #32]
-; GISel-MOPS-O0-NEXT:    ldr	q0, [x1, #48]
-; GISel-MOPS-O0-NEXT:    str	q0, [x0, #48]
-; GISel-MOPS-O0-NEXT:    ret
-;
-; GISel-MOPS-O3-LABEL: memcpy_inline_64:
-; GISel-MOPS-O3:       // %bb.0: // %entry
-; GISel-MOPS-O3-NEXT:    ldr	q0, [x1]
-; GISel-MOPS-O3-NEXT:    str	q0, [x0]
-; GISel-MOPS-O3-NEXT:    ldr	q0, [x1, #16]
-; GISel-MOPS-O3-NEXT:    str	q0, [x0, #16]
-; GISel-MOPS-O3-NEXT:    ldr	q0, [x1, #32]
-; GISel-MOPS-O3-NEXT:    str	q0, [x0, #32]
-; GISel-MOPS-O3-NEXT:    ldr	q0, [x1, #48]
-; GISel-MOPS-O3-NEXT:    str	q0, [x0, #48]
-; GISel-MOPS-O3-NEXT:    ret
+; GISel-MOPS-LABEL: memcpy_inline_64:
+; GISel-MOPS:       // %bb.0: // %entry
+; GISel-MOPS-NEXT:    ldr q0, [x1]
+; GISel-MOPS-NEXT:    str q0, [x0]
+; GISel-MOPS-NEXT:    ldr q0, [x1, #16]
+; GISel-MOPS-NEXT:    str q0, [x0, #16]
+; GISel-MOPS-NEXT:    ldr q0, [x1, #32]
+; GISel-MOPS-NEXT:    str q0, [x0, #32]
+; GISel-MOPS-NEXT:    ldr q0, [x1, #48]
+; GISel-MOPS-NEXT:    str q0, [x0, #48]
+; GISel-MOPS-NEXT:    ret
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memcpy_inline_64:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp	q1, q0, [x1, #32]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp	q2, q3, [x1]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp	q1, q0, [x0, #32]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp	q2, q3, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp q1, q0, [x1, #32]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp q2, q3, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q1, q0, [x0, #32]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q2, q3, [x0]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
 ;
 ; SDAG-MOPS-O2-LABEL: memcpy_inline_64:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
-; SDAG-MOPS-O2-NEXT:    ldp	q1, q0, [x1, #32]
-; SDAG-MOPS-O2-NEXT:    ldp	q2, q3, [x1]
-; SDAG-MOPS-O2-NEXT:    stp	q1, q0, [x0, #32]
-; SDAG-MOPS-O2-NEXT:    stp	q2, q3, [x0]
+; SDAG-MOPS-O2-NEXT:    ldp q1, q0, [x1, #32]
+; SDAG-MOPS-O2-NEXT:    ldp q2, q3, [x1]
+; SDAG-MOPS-O2-NEXT:    stp q1, q0, [x0, #32]
+; SDAG-MOPS-O2-NEXT:    stp q2, q3, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
 entry:
   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 64, i1 false)
@@ -1858,72 +1941,48 @@ entry:
 }
 
 define void @memcpy_inline_63(ptr %dst, ptr %src, i32 %value) {
-; GISel-WITHOUT-MOPS-O0-LABEL: memcpy_inline_63:
-; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr	q0, [x1]
-; GISel-WITHOUT-MOPS-O0-NEXT:    str	q0, [x0]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr	q0, [x1, #16]
-; GISel-WITHOUT-MOPS-O0-NEXT:    str	q0, [x0, #16]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldr	q0, [x1, #32]
-; GISel-WITHOUT-MOPS-O0-NEXT:    str	q0, [x0, #32]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ldur	q0, [x1, #47]
-; GISel-WITHOUT-MOPS-O0-NEXT:    stur	q0, [x0, #47]
-; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+; GISel-WITHOUT-MOPS-LABEL: memcpy_inline_63:
+; GISel-WITHOUT-MOPS:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-NEXT:    ldr q0, [x1]
+; GISel-WITHOUT-MOPS-NEXT:    str q0, [x0]
+; GISel-WITHOUT-MOPS-NEXT:    ldr q0, [x1, #16]
+; GISel-WITHOUT-MOPS-NEXT:    str q0, [x0, #16]
+; GISel-WITHOUT-MOPS-NEXT:    ldr q0, [x1, #32]
+; GISel-WITHOUT-MOPS-NEXT:    str q0, [x0, #32]
+; GISel-WITHOUT-MOPS-NEXT:    ldur q0, [x1, #47]
+; GISel-WITHOUT-MOPS-NEXT:    stur q0, [x0, #47]
+; GISel-WITHOUT-MOPS-NEXT:    ret
 ;
-; GISel-WITHOUT-MOPS-O3-LABEL: memcpy_inline_63:
-; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldr	q0, [x1]
-; GISel-WITHOUT-MOPS-O3-NEXT:    str	q0, [x0]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldr	q0, [x1, #16]
-; GISel-WITHOUT-MOPS-O3-NEXT:    str	q0, [x0, #16]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldr	q0, [x1, #32]
-; GISel-WITHOUT-MOPS-O3-NEXT:    str	q0, [x0, #32]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ldur	q0, [x1, #47]
-; GISel-WITHOUT-MOPS-O3-NEXT:    stur	q0, [x0, #47]
-; GISel-WITHOUT-MOPS-O3-NEXT:    ret
-;
-; GISel-MOPS-O0-LABEL: memcpy_inline_63:
-; GISel-MOPS-O0:       // %bb.0: // %entry
-; GISel-MOPS-O0-NEXT:    ldr	q0, [x1]
-; GISel-MOPS-O0-NEXT:    str	q0, [x0]
-; GISel-MOPS-O0-NEXT:    ldr	q0, [x1, #16]
-; GISel-MOPS-O0-NEXT:    str	q0, [x0, #16]
-; GISel-MOPS-O0-NEXT:    ldr	q0, [x1, #32]
-; GISel-MOPS-O0-NEXT:    str	q0, [x0, #32]
-; GISel-MOPS-O0-NEXT:    ldur	q0, [x1, #47]
-; GISel-MOPS-O0-NEXT:    stur	q0, [x0, #47]
-; GISel-MOPS-O0-NEXT:    ret
-;
-; GISel-MOPS-O3-LABEL: memcpy_inline_63:
-; GISel-MOPS-O3:       // %bb.0: // %entry
-; GISel-MOPS-O3-NEXT:    ldr	q0, [x1]
-; GISel-MOPS-O3-NEXT:    str	q0, [x0]
-; GISel-MOPS-O3-NEXT:    ldr	q0, [x1, #16]
-; GISel-MOPS-O3-NEXT:    str	q0, [x0, #16]
-; GISel-MOPS-O3-NEXT:    ldr	q0, [x1, #32]
-; GISel-MOPS-O3-NEXT:    str	q0, [x0, #32]
-; GISel-MOPS-O3-NEXT:    ldur	q0, [x1, #47]
-; GISel-MOPS-O3-NEXT:    stur	q0, [x0, #47]
-; GISel-MOPS-O3-NEXT:    ret
+; GISel-MOPS-LABEL: memcpy_inline_63:
+; GISel-MOPS:       // %bb.0: // %entry
+; GISel-MOPS-NEXT:    ldr q0, [x1]
+; GISel-MOPS-NEXT:    str q0, [x0]
+; GISel-MOPS-NEXT:    ldr q0, [x1, #16]
+; GISel-MOPS-NEXT:    str q0, [x0, #16]
+; GISel-MOPS-NEXT:    ldr q0, [x1, #32]
+; GISel-MOPS-NEXT:    str q0, [x0, #32]
+; GISel-MOPS-NEXT:    ldur q0, [x1, #47]
+; GISel-MOPS-NEXT:    stur q0, [x0, #47]
+; GISel-MOPS-NEXT:    ret
 ;
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memcpy_inline_63:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp	q3, q1, [x1, #16]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldur	q0, [x1, #47]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr	q2, [x1]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stur	q0, [x0, #47]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp	q3, q1, [x0, #16]
-; SDAG-WITHOUT-MOPS-O2-NEXT:    str	q2, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldp q3, q1, [x1, #16]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldur q0, [x1, #47]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr q2, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stur q0, [x0, #47]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q3, q1, [x0, #16]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str q2, [x0]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
 ;
 ; SDAG-MOPS-O2-LABEL: memcpy_inline_63:
 ; SDAG-MOPS-O2:       // %bb.0: // %entry
-; SDAG-MOPS-O2-NEXT:    ldp	q3, q1, [x1, #16]
-; SDAG-MOPS-O2-NEXT:    ldur	q0, [x1, #47]
-; SDAG-MOPS-O2-NEXT:    ldr	q2, [x1]
-; SDAG-MOPS-O2-NEXT:    stur	q0, [x0, #47]
-; SDAG-MOPS-O2-NEXT:    stp	q3, q1, [x0, #16]
-; SDAG-MOPS-O2-NEXT:    str	q2, [x0]
+; SDAG-MOPS-O2-NEXT:    ldp q3, q1, [x1, #16]
+; SDAG-MOPS-O2-NEXT:    ldur q0, [x1, #47]
+; SDAG-MOPS-O2-NEXT:    ldr q2, [x1]
+; SDAG-MOPS-O2-NEXT:    stur q0, [x0, #47]
+; SDAG-MOPS-O2-NEXT:    stp q3, q1, [x0, #16]
+; SDAG-MOPS-O2-NEXT:    str q2, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
 entry:
   call void @llvm.memcpy.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 63, i1 false)
@@ -1969,6 +2028,124 @@ define void @memmove_0_volatile(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 0, i1 true)
+  ret void
+}
+
+define void @memmove_7(ptr %dst, ptr %src, i32 %value) {
+; GISel-WITHOUT-MOPS-O0-LABEL: memmove_7:
+; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr w9, [x1]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldur w8, [x1, #3]
+; GISel-WITHOUT-MOPS-O0-NEXT:    str w9, [x0]
+; GISel-WITHOUT-MOPS-O0-NEXT:    stur w8, [x0, #3]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+;
+; GISel-WITHOUT-MOPS-O3-LABEL: memmove_7:
+; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldr w8, [x1]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldur w9, [x1, #3]
+; GISel-WITHOUT-MOPS-O3-NEXT:    str w8, [x0]
+; GISel-WITHOUT-MOPS-O3-NEXT:    stur w9, [x0, #3]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ret
+;
+; GISel-MOPS-O0-LABEL: memmove_7:
+; GISel-MOPS-O0:       // %bb.0: // %entry
+; GISel-MOPS-O0-NEXT:    ldr w9, [x1]
+; GISel-MOPS-O0-NEXT:    ldur w8, [x1, #3]
+; GISel-MOPS-O0-NEXT:    str w9, [x0]
+; GISel-MOPS-O0-NEXT:    stur w8, [x0, #3]
+; GISel-MOPS-O0-NEXT:    ret
+;
+; GISel-MOPS-O3-LABEL: memmove_7:
+; GISel-MOPS-O3:       // %bb.0: // %entry
+; GISel-MOPS-O3-NEXT:    ldr w8, [x1]
+; GISel-MOPS-O3-NEXT:    ldur w9, [x1, #3]
+; GISel-MOPS-O3-NEXT:    str w8, [x0]
+; GISel-MOPS-O3-NEXT:    stur w9, [x0, #3]
+; GISel-MOPS-O3-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memmove_7:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldur w8, [x1, #3]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr w9, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stur w8, [x0, #3]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str w9, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memmove_7:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    ldur w8, [x1, #3]
+; SDAG-MOPS-O2-NEXT:    ldr w9, [x1]
+; SDAG-MOPS-O2-NEXT:    stur w8, [x0, #3]
+; SDAG-MOPS-O2-NEXT:    str w9, [x0]
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 7, i1 false)
+  ret void
+}
+
+define void @memmove_7_volatile(ptr %dst, ptr %src, i32 %value) {
+; GISel-WITHOUT-MOPS-O0-LABEL: memmove_7_volatile:
+; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr w10, [x1]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldrh w9, [x1, #4]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldrb w8, [x1, #6]
+; GISel-WITHOUT-MOPS-O0-NEXT:    str w10, [x0]
+; GISel-WITHOUT-MOPS-O0-NEXT:    strh w9, [x0, #4]
+; GISel-WITHOUT-MOPS-O0-NEXT:    strb w8, [x0, #6]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+;
+; GISel-WITHOUT-MOPS-O3-LABEL: memmove_7_volatile:
+; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldr w8, [x1]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldrh w9, [x1, #4]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldrb w10, [x1, #6]
+; GISel-WITHOUT-MOPS-O3-NEXT:    str w8, [x0]
+; GISel-WITHOUT-MOPS-O3-NEXT:    strh w9, [x0, #4]
+; GISel-WITHOUT-MOPS-O3-NEXT:    strb w10, [x0, #6]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ret
+;
+; GISel-MOPS-O0-LABEL: memmove_7_volatile:
+; GISel-MOPS-O0:       // %bb.0: // %entry
+; GISel-MOPS-O0-NEXT:    ldr w10, [x1]
+; GISel-MOPS-O0-NEXT:    ldrh w9, [x1, #4]
+; GISel-MOPS-O0-NEXT:    ldrb w8, [x1, #6]
+; GISel-MOPS-O0-NEXT:    str w10, [x0]
+; GISel-MOPS-O0-NEXT:    strh w9, [x0, #4]
+; GISel-MOPS-O0-NEXT:    strb w8, [x0, #6]
+; GISel-MOPS-O0-NEXT:    ret
+;
+; GISel-MOPS-O3-LABEL: memmove_7_volatile:
+; GISel-MOPS-O3:       // %bb.0: // %entry
+; GISel-MOPS-O3-NEXT:    ldr w8, [x1]
+; GISel-MOPS-O3-NEXT:    ldrh w9, [x1, #4]
+; GISel-MOPS-O3-NEXT:    ldrb w10, [x1, #6]
+; GISel-MOPS-O3-NEXT:    str w8, [x0]
+; GISel-MOPS-O3-NEXT:    strh w9, [x0, #4]
+; GISel-MOPS-O3-NEXT:    strb w10, [x0, #6]
+; GISel-MOPS-O3-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memmove_7_volatile:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr w8, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrh w9, [x1, #4]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrb w10, [x1, #6]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    strb w10, [x0, #6]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    strh w9, [x0, #4]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str w8, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memmove_7_volatile:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    ldr w8, [x1]
+; SDAG-MOPS-O2-NEXT:    ldrh w9, [x1, #4]
+; SDAG-MOPS-O2-NEXT:    ldrb w10, [x1, #6]
+; SDAG-MOPS-O2-NEXT:    strb w10, [x0, #6]
+; SDAG-MOPS-O2-NEXT:    strh w9, [x0, #4]
+; SDAG-MOPS-O2-NEXT:    str w8, [x0]
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 7, i1 true)
   ret void
 }
 
@@ -2271,5 +2448,393 @@ define void @memmove_n_volatile(ptr %dst, ptr %src, i64 %size, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 %size, i1 true)
+  ret void
+}
+
+define void @memmove_inline_0(ptr %dst, ptr %src, i32 %value) {
+; GISel-WITHOUT-MOPS-LABEL: memmove_inline_0:
+; GISel-WITHOUT-MOPS:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-NEXT:    ret
+;
+; GISel-MOPS-LABEL: memmove_inline_0:
+; GISel-MOPS:       // %bb.0: // %entry
+; GISel-MOPS-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memmove_inline_0:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memmove_inline_0:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memmove.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 0, i1 false)
+  ret void
+}
+
+define void @memmove_inline_0_volatile(ptr %dst, ptr %src, i32 %value) {
+; GISel-WITHOUT-MOPS-LABEL: memmove_inline_0_volatile:
+; GISel-WITHOUT-MOPS:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-NEXT:    ret
+;
+; GISel-MOPS-LABEL: memmove_inline_0_volatile:
+; GISel-MOPS:       // %bb.0: // %entry
+; GISel-MOPS-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memmove_inline_0_volatile:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memmove_inline_0_volatile:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memmove.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 0, i1 true)
+  ret void
+}
+
+define void @memmove_inline_7(ptr %dst, ptr %src, i32 %value) {
+; GISel-WITHOUT-MOPS-O0-LABEL: memmove_inline_7:
+; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr w9, [x1]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldur w8, [x1, #3]
+; GISel-WITHOUT-MOPS-O0-NEXT:    str w9, [x0]
+; GISel-WITHOUT-MOPS-O0-NEXT:    stur w8, [x0, #3]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+;
+; GISel-WITHOUT-MOPS-O3-LABEL: memmove_inline_7:
+; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldr w8, [x1]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldur w9, [x1, #3]
+; GISel-WITHOUT-MOPS-O3-NEXT:    str w8, [x0]
+; GISel-WITHOUT-MOPS-O3-NEXT:    stur w9, [x0, #3]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ret
+;
+; GISel-MOPS-O0-LABEL: memmove_inline_7:
+; GISel-MOPS-O0:       // %bb.0: // %entry
+; GISel-MOPS-O0-NEXT:    ldr w9, [x1]
+; GISel-MOPS-O0-NEXT:    ldur w8, [x1, #3]
+; GISel-MOPS-O0-NEXT:    str w9, [x0]
+; GISel-MOPS-O0-NEXT:    stur w8, [x0, #3]
+; GISel-MOPS-O0-NEXT:    ret
+;
+; GISel-MOPS-O3-LABEL: memmove_inline_7:
+; GISel-MOPS-O3:       // %bb.0: // %entry
+; GISel-MOPS-O3-NEXT:    ldr w8, [x1]
+; GISel-MOPS-O3-NEXT:    ldur w9, [x1, #3]
+; GISel-MOPS-O3-NEXT:    str w8, [x0]
+; GISel-MOPS-O3-NEXT:    stur w9, [x0, #3]
+; GISel-MOPS-O3-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memmove_inline_7:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldur w8, [x1, #3]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr w9, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stur w8, [x0, #3]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str w9, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memmove_inline_7:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    ldur w8, [x1, #3]
+; SDAG-MOPS-O2-NEXT:    ldr w9, [x1]
+; SDAG-MOPS-O2-NEXT:    stur w8, [x0, #3]
+; SDAG-MOPS-O2-NEXT:    str w9, [x0]
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memmove.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 7, i1 false)
+  ret void
+}
+
+define void @memmove_inline_7_volatile(ptr %dst, ptr %src, i32 %value) {
+; GISel-WITHOUT-MOPS-O0-LABEL: memmove_inline_7_volatile:
+; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr w10, [x1]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldrh w9, [x1, #4]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldrb w8, [x1, #6]
+; GISel-WITHOUT-MOPS-O0-NEXT:    str w10, [x0]
+; GISel-WITHOUT-MOPS-O0-NEXT:    strh w9, [x0, #4]
+; GISel-WITHOUT-MOPS-O0-NEXT:    strb w8, [x0, #6]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+;
+; GISel-WITHOUT-MOPS-O3-LABEL: memmove_inline_7_volatile:
+; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldr w8, [x1]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldrh w9, [x1, #4]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldrb w10, [x1, #6]
+; GISel-WITHOUT-MOPS-O3-NEXT:    str w8, [x0]
+; GISel-WITHOUT-MOPS-O3-NEXT:    strh w9, [x0, #4]
+; GISel-WITHOUT-MOPS-O3-NEXT:    strb w10, [x0, #6]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ret
+;
+; GISel-MOPS-O0-LABEL: memmove_inline_7_volatile:
+; GISel-MOPS-O0:       // %bb.0: // %entry
+; GISel-MOPS-O0-NEXT:    ldr w10, [x1]
+; GISel-MOPS-O0-NEXT:    ldrh w9, [x1, #4]
+; GISel-MOPS-O0-NEXT:    ldrb w8, [x1, #6]
+; GISel-MOPS-O0-NEXT:    str w10, [x0]
+; GISel-MOPS-O0-NEXT:    strh w9, [x0, #4]
+; GISel-MOPS-O0-NEXT:    strb w8, [x0, #6]
+; GISel-MOPS-O0-NEXT:    ret
+;
+; GISel-MOPS-O3-LABEL: memmove_inline_7_volatile:
+; GISel-MOPS-O3:       // %bb.0: // %entry
+; GISel-MOPS-O3-NEXT:    ldr w8, [x1]
+; GISel-MOPS-O3-NEXT:    ldrh w9, [x1, #4]
+; GISel-MOPS-O3-NEXT:    ldrb w10, [x1, #6]
+; GISel-MOPS-O3-NEXT:    str w8, [x0]
+; GISel-MOPS-O3-NEXT:    strh w9, [x0, #4]
+; GISel-MOPS-O3-NEXT:    strb w10, [x0, #6]
+; GISel-MOPS-O3-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memmove_inline_7_volatile:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr w8, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrh w9, [x1, #4]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrb w10, [x1, #6]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    strb w10, [x0, #6]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    strh w9, [x0, #4]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str w8, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memmove_inline_7_volatile:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    ldr w8, [x1]
+; SDAG-MOPS-O2-NEXT:    ldrh w9, [x1, #4]
+; SDAG-MOPS-O2-NEXT:    ldrb w10, [x1, #6]
+; SDAG-MOPS-O2-NEXT:    strb w10, [x0, #6]
+; SDAG-MOPS-O2-NEXT:    strh w9, [x0, #4]
+; SDAG-MOPS-O2-NEXT:    str w8, [x0]
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memmove.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 7, i1 true)
+  ret void
+}
+
+define void @memmove_inline_10(ptr %dst, ptr %src, i32 %value) {
+; GISel-WITHOUT-MOPS-O0-LABEL: memmove_inline_10:
+; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x9, [x1]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldrh w8, [x1, #8]
+; GISel-WITHOUT-MOPS-O0-NEXT:    str x9, [x0]
+; GISel-WITHOUT-MOPS-O0-NEXT:    strh w8, [x0, #8]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+;
+; GISel-WITHOUT-MOPS-O3-LABEL: memmove_inline_10:
+; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldr x8, [x1]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldrh w9, [x1, #8]
+; GISel-WITHOUT-MOPS-O3-NEXT:    str x8, [x0]
+; GISel-WITHOUT-MOPS-O3-NEXT:    strh w9, [x0, #8]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ret
+;
+; GISel-MOPS-O0-LABEL: memmove_inline_10:
+; GISel-MOPS-O0:       // %bb.0: // %entry
+; GISel-MOPS-O0-NEXT:    ldr x9, [x1]
+; GISel-MOPS-O0-NEXT:    ldrh w8, [x1, #8]
+; GISel-MOPS-O0-NEXT:    str x9, [x0]
+; GISel-MOPS-O0-NEXT:    strh w8, [x0, #8]
+; GISel-MOPS-O0-NEXT:    ret
+;
+; GISel-MOPS-O3-LABEL: memmove_inline_10:
+; GISel-MOPS-O3:       // %bb.0: // %entry
+; GISel-MOPS-O3-NEXT:    ldr x8, [x1]
+; GISel-MOPS-O3-NEXT:    ldrh w9, [x1, #8]
+; GISel-MOPS-O3-NEXT:    str x8, [x0]
+; GISel-MOPS-O3-NEXT:    strh w9, [x0, #8]
+; GISel-MOPS-O3-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memmove_inline_10:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrh w8, [x1, #8]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr x9, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    strh w8, [x0, #8]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str x9, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memmove_inline_10:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    ldrh w8, [x1, #8]
+; SDAG-MOPS-O2-NEXT:    ldr x9, [x1]
+; SDAG-MOPS-O2-NEXT:    strh w8, [x0, #8]
+; SDAG-MOPS-O2-NEXT:    str x9, [x0]
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memmove.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 10, i1 false)
+  ret void
+}
+
+define void @memmove_inline_10_volatile(ptr %dst, ptr %src, i32 %value) {
+; GISel-WITHOUT-MOPS-O0-LABEL: memmove_inline_10_volatile:
+; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x9, [x1]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldrh w8, [x1, #8]
+; GISel-WITHOUT-MOPS-O0-NEXT:    str x9, [x0]
+; GISel-WITHOUT-MOPS-O0-NEXT:    strh w8, [x0, #8]
+; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+;
+; GISel-WITHOUT-MOPS-O3-LABEL: memmove_inline_10_volatile:
+; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldr x8, [x1]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldrh w9, [x1, #8]
+; GISel-WITHOUT-MOPS-O3-NEXT:    str x8, [x0]
+; GISel-WITHOUT-MOPS-O3-NEXT:    strh w9, [x0, #8]
+; GISel-WITHOUT-MOPS-O3-NEXT:    ret
+;
+; GISel-MOPS-O0-LABEL: memmove_inline_10_volatile:
+; GISel-MOPS-O0:       // %bb.0: // %entry
+; GISel-MOPS-O0-NEXT:    ldr x9, [x1]
+; GISel-MOPS-O0-NEXT:    ldrh w8, [x1, #8]
+; GISel-MOPS-O0-NEXT:    str x9, [x0]
+; GISel-MOPS-O0-NEXT:    strh w8, [x0, #8]
+; GISel-MOPS-O0-NEXT:    ret
+;
+; GISel-MOPS-O3-LABEL: memmove_inline_10_volatile:
+; GISel-MOPS-O3:       // %bb.0: // %entry
+; GISel-MOPS-O3-NEXT:    ldr x8, [x1]
+; GISel-MOPS-O3-NEXT:    ldrh w9, [x1, #8]
+; GISel-MOPS-O3-NEXT:    str x8, [x0]
+; GISel-MOPS-O3-NEXT:    strh w9, [x0, #8]
+; GISel-MOPS-O3-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memmove_inline_10_volatile:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr x8, [x1]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldrh w9, [x1, #8]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    strh w9, [x0, #8]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str x8, [x0]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memmove_inline_10_volatile:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    ldr x8, [x1]
+; SDAG-MOPS-O2-NEXT:    ldrh w9, [x1, #8]
+; SDAG-MOPS-O2-NEXT:    strh w9, [x0, #8]
+; SDAG-MOPS-O2-NEXT:    str x8, [x0]
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memmove.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 10, i1 true)
+  ret void
+}
+
+define void @memmove_inline_300(ptr %dst, ptr %src, i32 %value) {
+; GISel-WITHOUT-MOPS-O0-LABEL: memmove_inline_300:
+; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O0-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_def_cfa_offset 16
+; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_offset w30, -16
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w8, #300 // =0x12c
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w2, w8
+; GISel-WITHOUT-MOPS-O0-NEXT:    bl memmove
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+;
+; GISel-WITHOUT-MOPS-O3-LABEL: memmove_inline_300:
+; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O3-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O3-NEXT:    .cfi_def_cfa_offset 16
+; GISel-WITHOUT-MOPS-O3-NEXT:    .cfi_offset w30, -16
+; GISel-WITHOUT-MOPS-O3-NEXT:    mov w2, #300 // =0x12c
+; GISel-WITHOUT-MOPS-O3-NEXT:    bl memmove
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISel-WITHOUT-MOPS-O3-NEXT:    ret
+;
+; GISel-MOPS-O0-LABEL: memmove_inline_300:
+; GISel-MOPS-O0:       // %bb.0: // %entry
+; GISel-MOPS-O0-NEXT:    mov w8, #300 // =0x12c
+; GISel-MOPS-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-MOPS-O0-NEXT:    cpyp [x0]!, [x1]!, x8!
+; GISel-MOPS-O0-NEXT:    cpym [x0]!, [x1]!, x8!
+; GISel-MOPS-O0-NEXT:    cpye [x0]!, [x1]!, x8!
+; GISel-MOPS-O0-NEXT:    ret
+;
+; GISel-MOPS-O3-LABEL: memmove_inline_300:
+; GISel-MOPS-O3:       // %bb.0: // %entry
+; GISel-MOPS-O3-NEXT:    mov w8, #300 // =0x12c
+; GISel-MOPS-O3-NEXT:    cpyp [x0]!, [x1]!, x8!
+; GISel-MOPS-O3-NEXT:    cpym [x0]!, [x1]!, x8!
+; GISel-MOPS-O3-NEXT:    cpye [x0]!, [x1]!, x8!
+; GISel-MOPS-O3-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memmove_inline_300:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_def_cfa_offset 16
+; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_offset w30, -16
+; SDAG-WITHOUT-MOPS-O2-NEXT:    mov w2, #300 // =0x12c
+; SDAG-WITHOUT-MOPS-O2-NEXT:    bl memmove
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memmove_inline_300:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    mov w8, #300 // =0x12c
+; SDAG-MOPS-O2-NEXT:    cpyp [x0]!, [x1]!, x8!
+; SDAG-MOPS-O2-NEXT:    cpym [x0]!, [x1]!, x8!
+; SDAG-MOPS-O2-NEXT:    cpye [x0]!, [x1]!, x8!
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memmove.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 300, i1 false)
+  ret void
+}
+
+define void @memmove_inline_300_volatile(ptr %dst, ptr %src, i32 %value) {
+; GISel-WITHOUT-MOPS-O0-LABEL: memmove_inline_300_volatile:
+; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O0-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_def_cfa_offset 16
+; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_offset w30, -16
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w8, #300 // =0x12c
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w2, w8
+; GISel-WITHOUT-MOPS-O0-NEXT:    bl memmove
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+;
+; GISel-WITHOUT-MOPS-O3-LABEL: memmove_inline_300_volatile:
+; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O3-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O3-NEXT:    .cfi_def_cfa_offset 16
+; GISel-WITHOUT-MOPS-O3-NEXT:    .cfi_offset w30, -16
+; GISel-WITHOUT-MOPS-O3-NEXT:    mov w2, #300 // =0x12c
+; GISel-WITHOUT-MOPS-O3-NEXT:    bl memmove
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISel-WITHOUT-MOPS-O3-NEXT:    ret
+;
+; GISel-MOPS-O0-LABEL: memmove_inline_300_volatile:
+; GISel-MOPS-O0:       // %bb.0: // %entry
+; GISel-MOPS-O0-NEXT:    mov w8, #300 // =0x12c
+; GISel-MOPS-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-MOPS-O0-NEXT:    cpyp [x0]!, [x1]!, x8!
+; GISel-MOPS-O0-NEXT:    cpym [x0]!, [x1]!, x8!
+; GISel-MOPS-O0-NEXT:    cpye [x0]!, [x1]!, x8!
+; GISel-MOPS-O0-NEXT:    ret
+;
+; GISel-MOPS-O3-LABEL: memmove_inline_300_volatile:
+; GISel-MOPS-O3:       // %bb.0: // %entry
+; GISel-MOPS-O3-NEXT:    mov w8, #300 // =0x12c
+; GISel-MOPS-O3-NEXT:    cpyp [x0]!, [x1]!, x8!
+; GISel-MOPS-O3-NEXT:    cpym [x0]!, [x1]!, x8!
+; GISel-MOPS-O3-NEXT:    cpye [x0]!, [x1]!, x8!
+; GISel-MOPS-O3-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memmove_inline_300_volatile:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_def_cfa_offset 16
+; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_offset w30, -16
+; SDAG-WITHOUT-MOPS-O2-NEXT:    mov w2, #300 // =0x12c
+; SDAG-WITHOUT-MOPS-O2-NEXT:    bl memmove
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memmove_inline_300_volatile:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    mov w8, #300 // =0x12c
+; SDAG-MOPS-O2-NEXT:    cpyp [x0]!, [x1]!, x8!
+; SDAG-MOPS-O2-NEXT:    cpym [x0]!, [x1]!, x8!
+; SDAG-MOPS-O2-NEXT:    cpye [x0]!, [x1]!, x8!
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memmove.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 300, i1 true)
   ret void
 }

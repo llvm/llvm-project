@@ -1,7 +1,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-merge-blocks -verify-diagnostics %s | FileCheck %s
 
 // CHECK-LABEL: @merge_blocks
-func.func @merge_blocks(%arg0: i32, %arg1 : i32) -> () {
+func.func @merge_blocks(%arg0: i32, %arg1 : i32) -> (i32, i32) {
   //      CHECK: "test.merge_blocks"() ({
   // CHECK-NEXT:   "test.return"
   // CHECK-NEXT: })

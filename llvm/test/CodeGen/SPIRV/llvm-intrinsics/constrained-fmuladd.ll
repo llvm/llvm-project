@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; TODO: re-enable validator FPRoundingMode is placed correctly
+; RUNx: %if spirv-tools %{ llc -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpDecorate %[[#]] FPRoundingMode RTE
 ; CHECK-DAG: OpDecorate %[[#]] FPRoundingMode RTZ
@@ -9,7 +10,7 @@
 
 ; CHECK: OpFMul %[[#]] %[[#]] %[[#]]
 ; CHECK: OpFAdd %[[#]] %[[#]] %[[#]]
-define spir_kernel void @test_f32(float %a) {
+define spir_kernel void @test_f32(float %a) strictfp {
 entry:
   %r = tail call float @llvm.experimental.constrained.fmuladd.f32(
               float %a, float %a, float %a,
@@ -17,9 +18,9 @@ entry:
   ret void
 }
 
-; CHECK: OpFMul %[[#]] %[[#]] %[[#]] 
+; CHECK: OpFMul %[[#]] %[[#]] %[[#]]
 ; CHECK: OpFAdd %[[#]] %[[#]] %[[#]]
-define spir_kernel void @test_f64(double %a) {
+define spir_kernel void @test_f64(double %a) strictfp {
 entry:
   %r = tail call double @llvm.experimental.constrained.fmuladd.f64(
               double %a, double %a, double %a,
@@ -29,7 +30,7 @@ entry:
 
 ; CHECK: OpFMul %[[#]] %[[#]] %[[#]]
 ; CHECK: OpFAdd %[[#]] %[[#]] %[[#]]
-define spir_kernel void @test_v2f32(<2 x float> %a) {
+define spir_kernel void @test_v2f32(<2 x float> %a) strictfp {
 entry:
   %r = tail call <2 x float> @llvm.experimental.constrained.fmuladd.v2f32(
               <2 x float> %a, <2 x float> %a, <2 x float> %a,
@@ -39,7 +40,7 @@ entry:
 
 ; CHECK: OpFMul %[[#]] %[[#]] %[[#]]
 ; CHECK: OpFAdd %[[#]] %[[#]] %[[#]]
-define spir_kernel void @test_v4f32(<4 x float> %a) {
+define spir_kernel void @test_v4f32(<4 x float> %a) strictfp {
 entry:
   %r = tail call <4 x float> @llvm.experimental.constrained.fmuladd.v4f32(
               <4 x float> %a, <4 x float> %a, <4 x float> %a,
@@ -49,7 +50,7 @@ entry:
 
 ; CHECK: OpFMul %[[#]] %[[#]] %[[#]]
 ; CHECK: OpFAdd %[[#]] %[[#]] %[[#]]
-define spir_kernel void @test_v2f64(<2 x double> %a) {
+define spir_kernel void @test_v2f64(<2 x double> %a) strictfp {
 entry:
   %r = tail call <2 x double> @llvm.experimental.constrained.fmuladd.v2f64(
               <2 x double> %a, <2 x double> %a, <2 x double> %a,

@@ -112,6 +112,19 @@ public:
     return result;
   }
 
+  template <typename T> bool operator()(const ConditionalExpr<T> &x) const {
+    // A conditional expression is a primary.  Therefore, only the selected
+    // branch must be constant. If the condition is a constant expression
+    // whose value cannot yet be determined, both branches must be constant.
+    if (!(*this)(x.condition())) {
+      return false;
+    } else if (auto condVal{ToLogical(x.condition())}) {
+      return *condVal ? (*this)(x.thenValue()) : (*this)(x.elseValue());
+    } else {
+      return (*this)(x.thenValue()) && (*this)(x.elseValue());
+    }
+  }
+
 private:
   bool IsConstantStructureConstructorComponent(
       const Symbol &, const Expr<SomeType> &) const;
@@ -358,6 +371,10 @@ public:
   bool operator()(const Operation<D, R, O...> &) const {
     return false;
   }
+  template <typename T> bool operator()(const ConditionalExpr<T> &) const {
+    // A conditional expression cannot be an initial data target
+    return false;
+  }
   template <typename T> bool operator()(const Parentheses<T> &x) const {
     return (*this)(x.left());
   }
@@ -563,10 +580,15 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
         int symRank{symTS->Rank()};
         if (IsImpliedShape(symbol)) {
           if (folded.Rank() == symRank) {
-            return ArrayConstantBoundChanger{
-                std::move(*AsConstantExtents(
-                    context, GetRawLowerBounds(context, NamedEntity{symbol})))}
-                .ChangeLbounds(std::move(folded));
+            if (auto lbounds{AsConstantExtents(context,
+                    GetRawLowerBounds(context, NamedEntity{symbol}))}) {
+              return ArrayConstantBoundChanger{std::move(*lbounds)}
+                  .ChangeLbounds(std::move(folded));
+            } else {
+              context.messages().Say(symbol.name(),
+                  "The lower bounds of the parameter '%s' are not constant"_err_en_US,
+                  symbol.name());
+            }
           } else {
             context.messages().Say(
                 "Implied-shape parameter '%s' has rank %d but its initializer has rank %d"_err_en_US,
@@ -1188,6 +1210,12 @@ public:
 
   Result operator()(const NullPointer &) const { return true; }
 
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) {
+    // Conditional expressions are never variables; expression results are
+    // always contiguous.
+    return true;
+  }
+
 private:
   // Returns "true" for a provably empty or simply contiguous array section;
   // return "false" for a provably nonempty discontiguous section or for use
@@ -1621,6 +1649,21 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     // Expressions are copy-in, but not copy-out.
     return forCopyIn;
   }
+  if (forCopyOut) {
+    // F2023 8.5.10 C846/p2/p6: a nonpointer INTENT(IN) dummy and its
+    // subobjects may not be defined. Suppress copy-out when the actual
+    // argument is a subobject of a nonpointer INTENT(IN) dummy.
+    // Exception: a data-ref that goes through a pointer component defines the
+    // pointer's target, which is not a subobject of the dummy (F2023 9.4.2
+    // p5), so copy-out is still needed in that case.
+    if (const auto dataRef{ExtractDataRef(*actual)}) {
+      const Symbol &firstSym{dataRef->GetFirstSymbol()};
+      if (semantics::IsIntentIn(firstSym) && !IsPointer(firstSym) &&
+          !GetLastPointerSymbol(*dataRef)) {
+        return false;
+      }
+    }
+  }
   auto maybeContigActual{IsContiguous(*actual, fc)};
   if (dummyObj) { // Explict interface
     CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
@@ -1665,4 +1708,127 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
   return std::nullopt;
 }
 
+// CollectUsedSymbolValues()
+
+class CollectUsedSymbolValuesHelper
+    : public SetTraverse<CollectUsedSymbolValuesHelper,
+          semantics::UnorderedSymbolSet> {
+public:
+  using Result = semantics::UnorderedSymbolSet;
+  using Base = SetTraverse<CollectUsedSymbolValuesHelper, Result>;
+  explicit CollectUsedSymbolValuesHelper(
+      semantics::SemanticsContext &c, bool isDefinition = false)
+      : Base{*this}, context_{c}, isDefinition_{isDefinition} {}
+  using Base::operator();
+
+  Result operator()(const semantics::Symbol &symbol) const {
+    Result result;
+    if (!isDefinition_) {
+      const Symbol &root{semantics::GetAssociationRoot(symbol)};
+      switch (root.owner().kind()) {
+      case semantics::Scope::Kind::Subprogram:
+      case semantics::Scope::Kind::MainProgram:
+      case semantics::Scope::Kind::BlockConstruct:
+        if ((root.has<semantics::ObjectEntityDetails>() ||
+                IsProcedurePointer(root))) {
+          result.insert(root);
+          if (root.test(semantics::Symbol::Flag::CrayPointee)) {
+            result.insert(semantics::GetCrayPointer(root));
+          }
+        }
+        break;
+      default:
+        break;
+      }
+    }
+    return result;
+  }
+
+  Result operator()(const Subscript &subscript) {
+    auto restorer{common::ScopedSet(isDefinition_, false)};
+    return (*this)(subscript.u);
+  }
+
+  template <typename T> Result operator()(const FunctionRef<T> &fRef) {
+    return (*this)(static_cast<ProcedureRef>(fRef));
+  }
+  Result operator()(const ProcedureRef &call) {
+    auto restorer{common::ScopedSet(isDefinition_, false)};
+    Result result{(*this)(call.proc())};
+    int skipLeading{0};
+    if (const auto *intrinsic{call.proc().GetSpecificIntrinsic()}) {
+      if (context_.intrinsics().GetIntrinsicClass(intrinsic->name) ==
+          IntrinsicClass::inquiryFunction) {
+        skipLeading = 1; // first argument to inquiry doesn't count as a use
+      }
+    }
+    for (const auto &maybeArg : call.arguments()) {
+      if (skipLeading) {
+        --skipLeading;
+      } else if (maybeArg) {
+        if (const auto *expr{maybeArg->UnwrapExpr()}) {
+          if (IsBindingUsedAsProcedure(*expr)) {
+            // Ignore procedure bindings being used as actual procedures
+            // (a local extension).
+          } else {
+            result = Combine(std::move(result), (*this)(*expr));
+          }
+        }
+      }
+    }
+    return result;
+  }
+
+  Result operator()(const Assignment &assignment) {
+    auto restorer{common::ScopedSet(isDefinition_, true)};
+    Result result{(*this)(assignment.lhs)};
+    if (IsBindingUsedAsProcedure(assignment.rhs)) {
+      // Don't look at the RHS, we're just using its binding (extension).
+    } else {
+      auto restorer{common::ScopedSet(isDefinition_, false)};
+      result = Combine(std::move(result), (*this)(assignment.rhs));
+    }
+    return result;
+  }
+
+  Result operator()(const TypeParamInquiry &) const {
+    return {}; // doesn't count as a use
+  }
+  Result operator()(const DescriptorInquiry &) const {
+    return {}; // doesn't count as a use
+  }
+
+  template <typename T> Result operator()(const ConditionalExpr<T> &condExpr) {
+    auto restorer{common::ScopedSet(isDefinition_, false)};
+    return Combine((*this)(condExpr.condition()),
+        Combine((*this)(condExpr.thenValue()), (*this)(condExpr.elseValue())));
+  }
+
+private:
+  static bool IsBindingUsedAsProcedure(const Expr<SomeType> &expr) {
+    if (const auto *pd{std::get_if<ProcedureDesignator>(&expr.u)}) {
+      if (const Symbol *symbol{pd->GetSymbol()}) {
+        return symbol->has<semantics::ProcBindingDetails>();
+      }
+    }
+    return false;
+  }
+
+  semantics::SemanticsContext &context_;
+  bool isDefinition_{false};
+};
+
+semantics::UnorderedSymbolSet CollectUsedSymbolValues(
+    semantics::SemanticsContext &context, const Expr<SomeType> &expr,
+    bool isDefinition) {
+  return CollectUsedSymbolValuesHelper{context, isDefinition}(expr);
+}
+semantics::UnorderedSymbolSet CollectUsedSymbolValues(
+    semantics::SemanticsContext &context, const ProcedureRef &call) {
+  return CollectUsedSymbolValuesHelper{context}(call);
+}
+semantics::UnorderedSymbolSet CollectUsedSymbolValues(
+    semantics::SemanticsContext &context, const Assignment &assignment) {
+  return CollectUsedSymbolValuesHelper{context}(assignment);
+}
 } // namespace Fortran::evaluate

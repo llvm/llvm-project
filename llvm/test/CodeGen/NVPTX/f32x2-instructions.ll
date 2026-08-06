@@ -20,7 +20,6 @@ define <2 x float> @test_ret_const() #0 {
 ; CHECK-LABEL: test_ret_const(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {0f3F800000, 0f40000000};
 ; CHECK-NEXT:    ret;
@@ -3004,4 +3003,4 @@ define void @test_trunc_to_v2f16(<2 x float> %a, ptr %p) {
 
 
 attributes #0 = { nounwind }
-attributes #2 = { "denormal-fp-math"="preserve-sign" }
+attributes #2 = { denormal_fpenv(preservesign) }

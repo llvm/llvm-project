@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-namelist.h"
+#include "flang/Semantics/tools.h"
 
 namespace Fortran::semantics {
 
@@ -26,6 +27,13 @@ void NamelistChecker::Leave(const parser::NamelistStmt &nmlStmt) {
             context_.Say(nmlObjName.source,
                 "A PRIVATE namelist group object '%s' must not be in a "
                 "PUBLIC namelist"_err_en_US,
+                nmlObjSymbol->name());
+          }
+          // `namelist-group-object` may only contain variables.
+          if (IsNamedConstant(*nmlObjSymbol)) {
+            context_.Warn(common::UsageWarning::NamelistParameter,
+                nmlObjName.source,
+                "A namelist group object '%s' should not be a PARAMETER"_port_en_US,
                 nmlObjSymbol->name());
           }
         }

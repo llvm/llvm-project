@@ -180,5 +180,14 @@ std::optional<parser::Message> CheckStatementFunction(
 std::optional<bool> ActualArgNeedsCopy(const ActualArgument *,
     const characteristics::DummyArgument *, FoldingContext &, bool forCopyOut);
 
+// Scan expressions and note uses of values of symbols.
+semantics::UnorderedSymbolSet CollectUsedSymbolValues(
+    semantics::SemanticsContext &, const Expr<SomeType> &,
+    bool isDefinition = false);
+semantics::UnorderedSymbolSet CollectUsedSymbolValues(
+    semantics::SemanticsContext &, const ProcedureRef &);
+semantics::UnorderedSymbolSet CollectUsedSymbolValues(
+    semantics::SemanticsContext &, const Assignment &);
+
 } // namespace Fortran::evaluate
 #endif

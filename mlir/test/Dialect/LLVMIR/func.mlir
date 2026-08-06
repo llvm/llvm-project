@@ -384,6 +384,42 @@ module {
     llvm.return
   }
 
+  llvm.func @alloc_size_one(%arg: i32, %arg2: i32, %arg3: i32, %args4: i32) attributes { allocsize = array<i32: 3>} {
+    // CHECK: @alloc_size_one
+    // CHECK-SAME: attributes {allocsize = array<i32: 3>}
+    llvm.return
+  }
+
+  llvm.func @alloc_size_two(%arg: i32, %arg2: i32, %arg3: i32, %args4: i32) attributes { allocsize = array<i32:3, 1> } {
+    // CHECK: @alloc_size_two
+    // CHECK-SAME: attributes {allocsize = array<i32: 3, 1>}
+    llvm.return
+  }
+
+  llvm.func @minsize_optsize() attributes { minsize, optsize } {
+    // CHECK: @minsize_optsize
+    // CHECK-SAME: attributes {minsize, optsize}
+    llvm.return
+  }
+
+  llvm.func @save_reg_params() attributes { save_reg_params } {
+    // CHECK: @save_reg_params
+    // CHECK-SAME: attributes {save_reg_params}
+    llvm.return
+  }
+
+  llvm.func @zero_call_used_regs() attributes { zero_call_used_regs="used-gpr-arg"} {
+    // CHECK: @zero_call_used_regs
+    // CHECK-SAME: attributes {zero_call_used_regs = "used-gpr-arg"}
+    llvm.return
+  }
+
+  llvm.func @default_func_attrs() attributes {default_func_attrs={key="value",justKey}} {
+    // CHECK: @default_func_attrs    
+    // CHECK-SAME: attributes {default_func_attrs = {justKey, key = "value"}}
+    llvm.return
+  }
+
 }
 
 // -----

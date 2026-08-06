@@ -1,9 +1,14 @@
-//===-- Unittests for freelist_heap ---------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for freelist_heap.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/span.h"
@@ -11,6 +16,7 @@
 #include "src/__support/macros/config.h"
 #include "src/string/memcmp.h"
 #include "src/string/memcpy.h"
+#include "src/string/memory_utils/inline_memset.h"
 #include "test/UnitTest/Test.h"
 
 asm(R"(
@@ -22,7 +28,7 @@ _end:
 __llvm_libc_heap_limit:
 )");
 
-using LIBC_NAMESPACE::Block;
+using LIBC_NAMESPACE::BlockRef;
 using LIBC_NAMESPACE::freelist_heap;
 using LIBC_NAMESPACE::FreeListHeap;
 using LIBC_NAMESPACE::FreeListHeapBuffer;
@@ -123,12 +129,12 @@ TEST_FOR_EACH_ALLOCATOR(ReturnedPointersAreAligned, 2048) {
   void *ptr1 = allocator.allocate(1);
 
   uintptr_t ptr1_start = reinterpret_cast<uintptr_t>(ptr1);
-  EXPECT_EQ(ptr1_start % Block::MIN_ALIGN, static_cast<size_t>(0));
+  EXPECT_EQ(ptr1_start % BlockRef::MIN_ALIGN, static_cast<size_t>(0));
 
   void *ptr2 = allocator.allocate(1);
   uintptr_t ptr2_start = reinterpret_cast<uintptr_t>(ptr2);
 
-  EXPECT_EQ(ptr2_start % Block::MIN_ALIGN, static_cast<size_t>(0));
+  EXPECT_EQ(ptr2_start % BlockRef::MIN_ALIGN, static_cast<size_t>(0));
 }
 
 TEST_FOR_EACH_ALLOCATOR(CanRealloc, 2048) {
@@ -180,8 +186,52 @@ TEST_FOR_EACH_ALLOCATOR(ReallocSmallerSize, 2048) {
   void *ptr1 = allocator.allocate(ALLOC_SIZE);
   void *ptr2 = allocator.realloc(ptr1, kNewAllocSize);
 
-  // For smaller sizes, realloc will not shrink the block.
+  // For smaller sizes, realloc will shrink the block in-place, returning the
+  // same pointer.
   EXPECT_EQ(ptr1, ptr2);
+}
+
+constexpr size_t SMALL_HEAP_SIZE = 512;
+
+TEST_FOR_EACH_ALLOCATOR(ReallocShrinkAndAllocateTrailing, SMALL_HEAP_SIZE) {
+  constexpr size_t ALLOC_SIZE = (SMALL_HEAP_SIZE * 3) / 4;
+  constexpr size_t NEW_ALLOC_SIZE = SMALL_HEAP_SIZE / 4;
+  constexpr size_t TRAILING_ALLOC_SIZE = SMALL_HEAP_SIZE / 2;
+
+  void *ptr1 = allocator.allocate(ALLOC_SIZE);
+  ASSERT_NE(ptr1, static_cast<void *>(nullptr));
+
+  // Fill the block with a pattern to verify data preservation.
+  LIBC_NAMESPACE::inline_memset(ptr1, 0x5A, ALLOC_SIZE);
+
+  // Shrink the block in-place.
+  void *ptr2 = allocator.realloc(ptr1, NEW_ALLOC_SIZE);
+  EXPECT_EQ(ptr1, ptr2);
+
+  // Verify that the data in the shrunk block is preserved.
+  unsigned char *uptr2 = static_cast<unsigned char *>(ptr2);
+  for (size_t i = 0; i < NEW_ALLOC_SIZE; ++i)
+    EXPECT_EQ(uptr2[i], static_cast<unsigned char>(0x5A));
+
+  // Allocate another trailing block from the newly split/freed space.
+  void *ptr3 = allocator.allocate(TRAILING_ALLOC_SIZE);
+  ASSERT_NE(ptr3, static_cast<void *>(nullptr));
+
+  // Verify that the trailing block does not overlap with the shrunk block.
+  uintptr_t addr2 = reinterpret_cast<uintptr_t>(ptr2);
+  uintptr_t addr3 = reinterpret_cast<uintptr_t>(ptr3);
+  EXPECT_GE(addr3, addr2 + NEW_ALLOC_SIZE);
+
+  // Verify that writing to the trailing block works without corrupting the
+  // shrunk block.
+  LIBC_NAMESPACE::inline_memset(ptr3, 0xAA, TRAILING_ALLOC_SIZE);
+
+  for (size_t i = 0; i < NEW_ALLOC_SIZE; ++i)
+    EXPECT_EQ(uptr2[i], static_cast<unsigned char>(0x5A));
+
+  // Free the allocations.
+  allocator.free(ptr2);
+  allocator.free(ptr3);
 }
 
 TEST_FOR_EACH_ALLOCATOR(ReallocTooLarge, 2048) {
@@ -295,4 +345,24 @@ TEST_FOR_EACH_ALLOCATOR(InvalidAlignedAllocAlignment, 2048) {
   // Don't accept zero alignment.
   ptr = allocator.aligned_allocate(0, 8);
   EXPECT_EQ(ptr, static_cast<void *>(nullptr));
+}
+
+TEST_FOR_EACH_ALLOCATOR(AllocationSize, 2048) {
+  constexpr size_t ALLOC_SIZE = 256;
+
+  // 1. Null pointer returns 0.
+  EXPECT_EQ(allocator.allocation_size(nullptr), size_t(0));
+
+  // 2. Invalid pointer (outside heap) returns 0.
+  int dummy = 0;
+  EXPECT_EQ(allocator.allocation_size(&dummy), size_t(0));
+
+  // 3. Valid pointer returns >= allocation size.
+  void *ptr = allocator.allocate(ALLOC_SIZE);
+  ASSERT_NE(ptr, static_cast<void *>(nullptr));
+  EXPECT_GE(allocator.allocation_size(ptr), ALLOC_SIZE);
+
+  // 4. Freed pointer returns 0.
+  allocator.free(ptr);
+  EXPECT_EQ(allocator.allocation_size(ptr), size_t(0));
 }

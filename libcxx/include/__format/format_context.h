@@ -12,6 +12,7 @@
 
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__format/buffer.h>
 #include <__format/format_arg.h>
 #include <__format/format_arg_store.h>
@@ -25,8 +26,9 @@
 #include <__variant/monostate.h>
 
 #if _LIBCPP_HAS_LOCALIZATION
-#  include <__locale>
-#  include <optional>
+#  include <__locale_dir/locale.h>
+#  include <__optional/nullopt_t.h>
+#  include <__optional/optional.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -39,10 +41,6 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
-
-template <class _OutIt, class _CharT>
-  requires output_iterator<_OutIt, const _CharT&>
-class basic_format_context;
 
 #  if _LIBCPP_HAS_LOCALIZATION
 /**
@@ -71,14 +69,15 @@ using wformat_context = basic_format_context< back_insert_iterator<__format::__o
 #  endif
 
 template <class _OutIt, class _CharT>
-  requires output_iterator<_OutIt, const _CharT&>
-class _LIBCPP_PREFERRED_NAME(format_context)
-    _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wformat_context)) basic_format_context {
+class _LIBCPP_PREFERRED_NAME(format_context) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wformat_context))
+    basic_format_context {
 public:
   using iterator  = _OutIt;
   using char_type = _CharT;
   template <class _Tp>
   using formatter_type = formatter<_Tp, _CharT>;
+
+  static_assert(output_iterator<_OutIt, const _CharT&>, "[format.context]/p3 requires OutIt to be an output_iterator");
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI basic_format_arg<basic_format_context> arg(size_t __id) const noexcept {
     return __args_.get(__id);

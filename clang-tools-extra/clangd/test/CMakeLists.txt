@@ -2,6 +2,7 @@ set(CLANGD_TEST_DEPS
   clangd
   ClangdTests
   clangd-indexer
+  clangd-remap
   split-file
   )
 

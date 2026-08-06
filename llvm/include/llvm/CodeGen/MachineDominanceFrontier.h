@@ -20,22 +20,22 @@
 namespace llvm {
 
 class MachineDominanceFrontier
-    : public ForwardDominanceFrontierBase<MachineBasicBlock> {
+    : public DominanceFrontierBase<MachineBasicBlock, false> {
 public:
  using DomTreeT = DomTreeBase<MachineBasicBlock>;
  using DomTreeNodeT = DomTreeNodeBase<MachineBasicBlock>;
- using DomSetType = DominanceFrontierBase<MachineBasicBlock, false>::DomSetType;
- using iterator = DominanceFrontierBase<MachineBasicBlock, false>::iterator;
- using const_iterator =
-     DominanceFrontierBase<MachineBasicBlock, false>::const_iterator;
+ using DomSetType = MachineDominanceFrontier::DomSetType;
+ using iterator = MachineDominanceFrontier::iterator;
+ using const_iterator = MachineDominanceFrontier ::const_iterator;
 
  MachineDominanceFrontier() = default;
 
- bool invalidate(MachineFunction &F, const PreservedAnalyses &PA,
-                 MachineFunctionAnalysisManager::Invalidator &);
+ LLVM_ABI bool invalidate(MachineFunction &F, const PreservedAnalyses &PA,
+                          MachineFunctionAnalysisManager::Invalidator &);
 };
 
-class MachineDominanceFrontierWrapperPass : public MachineFunctionPass {
+class LLVM_ABI MachineDominanceFrontierWrapperPass
+    : public MachineFunctionPass {
 private:
   MachineDominanceFrontier MDF;
 
@@ -66,7 +66,8 @@ class MachineDominanceFrontierAnalysis
 public:
   using Result = MachineDominanceFrontier;
 
-  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
 };
 
 } // end namespace llvm

@@ -44,15 +44,9 @@
 //   nonnull, and use optionals where necessary.
 //
 
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
-
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
-// LLDB Python header must be included first
 #include "lldb-python.h"
 
 #include "lldb/Host/File.h"
@@ -621,6 +615,15 @@ public:
 
   llvm::Expected<ArgInfo> GetArgInfo() const;
 
+  // Always derives ArgInfo via a Python-level inspect.signature() call,
+  // regardless of whether the callable's argument count/varargs bit could
+  // have been read directly off its data attributes. GetArgInfo() prefers
+  // the cheaper attribute-based path and only falls back to this for
+  // callables it can't introspect that way (e.g. builtins); exposed
+  // separately so that fallback behavior can be tested directly.
+  static llvm::Expected<ArgInfo>
+  GetArgInfoFromInspectSignature(const PythonCallable &callable);
+
   PythonObject operator()();
 
   PythonObject operator()(std::initializer_list<PyObject *> args);
@@ -780,6 +783,4 @@ int RunSimpleString(const char *str);
 } // namespace python
 } // namespace lldb_private
 
-#endif
-
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H

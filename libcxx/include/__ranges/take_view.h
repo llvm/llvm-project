@@ -69,8 +69,7 @@ public:
     requires default_initializable<_View>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23
-  take_view(_View __base, range_difference_t<_View> __count)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit take_view(_View __base, range_difference_t<_View> __count)
       : __base_(std::move(__base)), __count_(__count) {
     _LIBCPP_ASSERT_UNCATEGORIZED(__count >= 0, "count has to be greater than or equal to zero");
   }
@@ -166,13 +165,15 @@ class take_view<_View>::__sentinel {
   using _Iter _LIBCPP_NODEBUG                        = counted_iterator<iterator_t<__maybe_const<_OtherConst, _View>>>;
   _LIBCPP_NO_UNIQUE_ADDRESS sentinel_t<_Base> __end_ = sentinel_t<_Base>();
 
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(sentinel_t<_Base> __end) : __end_(std::move(__end)) {}
+
+  friend class take_view<_View>;
+
   template <bool>
   friend class take_view<_View>::__sentinel;
 
 public:
   _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(sentinel_t<_Base> __end) : __end_(std::move(__end)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr __sentinel(__sentinel<!_Const> __s)
     requires _Const && convertible_to<sentinel_t<_View>, sentinel_t<_Base>>

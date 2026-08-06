@@ -102,10 +102,12 @@ TEST_F(RISCVSelectionDAGTest, computeKnownBits_SRLW) {
   // The DAG created below is derived from this
   SDLoc Loc;
   auto Int64VT = EVT::getIntegerVT(Context, 64);
-  auto Px = DAG->getRegister(0, Int64VT);
+  auto Px = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                Register::index2VirtReg(0), Int64VT);
   auto Py = DAG->getConstant(2147483647, Loc, Int64VT);
   auto N1 = DAG->getNode(ISD::AND, Loc, Int64VT, Px, Py);
-  auto Qx = DAG->getRegister(0, Int64VT);
+  auto Qx = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                Register::index2VirtReg(1), Int64VT);
   auto N2 = DAG->getNode(RISCVISD::SRLW, Loc, Int64VT, N1, Qx);
   auto Py2 = DAG->getConstant(4294967295, Loc, Int64VT);
   auto N3 = DAG->getNode(ISD::AND, Loc, Int64VT, N2, Py2);

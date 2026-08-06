@@ -21,6 +21,7 @@
 
 #include "benchmark/benchmark.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 namespace support {
@@ -56,7 +57,7 @@ void sequence_container_benchmarks(std::string container) {
   static constexpr std::size_t BatchSize = 32;
 
   auto bench = [&](std::string operation, auto f) {
-    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(32)->Arg(1024)->Arg(8192);
+    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(32)->Arg(8192);
   };
 
   /////////////////////////
@@ -64,7 +65,7 @@ void sequence_container_benchmarks(std::string container) {
   /////////////////////////
   if constexpr (std::is_constructible_v<Container, std::size_t>) {
     // not all containers provide this constructor
-    bench("ctor(size)", [](auto& st) {
+    bench("ctor(size_type)", [](auto& st) {
       auto const size = st.range(0);
 
       for ([[maybe_unused]] auto _ : st) {
@@ -75,7 +76,7 @@ void sequence_container_benchmarks(std::string container) {
   }
 
   for (auto gen : generators)
-    bench("ctor(size, value_type)" + tostr(gen), [gen](auto& st) {
+    bench("ctor(size_type, const value_type&)" + tostr(gen), [gen](auto& st) {
       auto const size = st.range(0);
       ValueType value = gen();
       benchmark::DoNotOptimize(value);
@@ -117,7 +118,7 @@ void sequence_container_benchmarks(std::string container) {
 #endif
 
   for (auto gen : generators)
-    bench("ctor(const&)" + tostr(gen), [gen](auto& st) {
+    bench("ctor(const Self&)" + tostr(gen), [gen](auto& st) {
       auto const size = st.range(0);
       Container in;
       std::generate_n(std::back_inserter(in), size, gen);
@@ -134,7 +135,7 @@ void sequence_container_benchmarks(std::string container) {
   // Assignment
   /////////////////////////
   for (auto gen : generators)
-    bench("operator=(const&)" + tostr(gen), [gen](auto& st) {
+    bench("operator=(const Self&)" + tostr(gen), [gen](auto& st) {
       auto const size = st.range(0);
       Container in1, in2;
       std::generate_n(std::back_inserter(in1), size, gen);
@@ -332,7 +333,6 @@ void sequence_container_benchmarks(std::string container) {
           };
 
           std::vector<Container> c(BatchSize, at_capacity(Container(in.begin(), in.end())));
-          std::vector<Container> const original = c;
 
           while (st.KeepRunningBatch(BatchSize)) {
             for (std::size_t i = 0; i != BatchSize; ++i) {
@@ -371,9 +371,7 @@ void sequence_container_benchmarks(std::string container) {
             }
             DoNotOptimizeData(c);
 
-            st.PauseTiming();
             c.erase(c.end() - BatchSize, c.end());
-            st.ResumeTiming();
           }
         });
     }
@@ -395,7 +393,7 @@ void sequence_container_benchmarks(std::string container) {
           DoNotOptimizeData(c);
 
           st.PauseTiming();
-          c.clear();
+          c = Container();
           st.ResumeTiming();
         }
       });

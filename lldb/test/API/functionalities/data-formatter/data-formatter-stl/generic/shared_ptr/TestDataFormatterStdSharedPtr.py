@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
     TEST_WITH_PDB_DEBUG_INFO = True
+    SHARED_BUILD_TESTCASE = False
 
     def do_test(self):
         """Test `frame variable` output for `std::shared_ptr` types."""
@@ -28,7 +29,8 @@ class TestCase(TestBase):
         )
 
         self.expect(
-            "frame variable *sp_empty", substrs=["(int) *sp_empty = <parent is NULL>"]
+            "frame variable *sp_empty",
+            patterns=[r"\(int\) \*sp_empty = <parent is NULL>\n\Z"],
         )
 
         valobj = self.expect_var_path(

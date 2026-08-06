@@ -462,7 +462,7 @@ public:
 
   void addDirectiveHandler(StringRef Directive,
                            ExtensionDirectiveHandler Handler) override {
-    ExtensionDirectiveMap[Directive] = Handler;
+    ExtensionDirectiveMap[Directive] = std::move(Handler);
     DirectiveKindMap.try_emplace(Directive, DK_HANDLER_DIRECTIVE);
   }
 
@@ -624,6 +624,9 @@ private:
   StringRef parseStringToEndOfStatement() override;
 
   bool parseTextItem(std::string &Data);
+  bool parseTextList(std::string &Result, StringRef IDVal);
+  bool setTextVariable(Variable &Var, StringRef Name, StringRef Value,
+                       SMLoc NameLoc, Variable::RedefinableKind Redefinable);
 
   unsigned getBinOpPrecedence(AsmToken::TokenKind K,
                               MCBinaryExpr::Opcode &Kind);
@@ -717,6 +720,7 @@ private:
     DK_END,
     DK_PUSHFRAME,
     DK_PUSHREG,
+    DK_PUSH2REGS,
     DK_SAVEREG,
     DK_SAVEXMM128,
     DK_SETFRAME,
@@ -749,6 +753,7 @@ private:
     BI_DATASIZE,
     BI_MODEL,
     BI_STACK,
+    BI_UNWINDVERSION,
   };
 
   /// Maps builtin name --> BuiltinSymbol enum, for builtins handled by this
@@ -1203,7 +1208,7 @@ const AsmToken MasmParser::peekTok(bool ShouldSkipSpace) {
 bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Create the initial section, if requested.
   if (!NoInitialTextSection)
-    Out.initSections(false, getTargetParser().getSTI());
+    Out.initSections(getTargetParser().getSTI());
 
   // Prime the lexer.
   Lex();
@@ -1273,7 +1278,7 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 bool MasmParser::checkForValidSection() {
   if (!ParsingMSInlineAsm && !(getStreamer().getCurrentFragment() &&
                                getStreamer().getCurrentSectionOnly())) {
-    Out.initSections(false, getTargetParser().getSTI());
+    Out.initSections(getTargetParser().getSTI());
     return Error(getTok().getLoc(),
                  "expected section directive before assembly directive");
   }
@@ -2195,8 +2200,10 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     break;
   case DK_ASSIGN:
   case DK_EQU:
-  case DK_TEXTEQU:
     Lex();
+    return parseDirectiveEquate(nextVal, IDVal, DirKind, IDLoc);
+  case DK_TEXTEQU:
+    Lex(DoNotExpandMacros);
     return parseDirectiveEquate(nextVal, IDVal, DirKind, IDLoc);
   case DK_BYTE:
     if (afterNextTok.is(AsmToken::Identifier) &&
@@ -2396,12 +2403,8 @@ void MasmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
 
   // Like SourceMgr::printMessage() we need to print the include stack if any
   // before printing the message.
-  unsigned DiagCurBuffer = DiagSrcMgr.FindBufferContainingLoc(DiagLoc);
-  if (!Parser->SavedDiagHandler && DiagCurBuffer &&
-      DiagCurBuffer != DiagSrcMgr.getMainFileID()) {
-    SMLoc ParentIncludeLoc = DiagSrcMgr.getParentIncludeLoc(DiagCurBuffer);
-    DiagSrcMgr.PrintIncludeStack(ParentIncludeLoc, OS);
-  }
+  if (!Parser->SavedDiagHandler)
+    DiagSrcMgr.printIncludeStackForDiagnostic(DiagLoc, OS);
 
   // If we have not parsed a cpp hash line filename comment or the source
   // manager changed or buffer changed (like in a nested include) then just
@@ -2925,46 +2928,27 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
   }
 
   SMLoc StartLoc = Lexer.getLoc();
-  if (DirKind == DK_EQU || DirKind == DK_TEXTEQU) {
-    // "equ" and "textequ" both allow text expressions.
+
+  switch (DirKind) {
+  case DK_TEXTEQU: {
+    // textMacroDir: TEXTEQU/CATSTR accept a textList.
     std::string Value;
-    std::string TextItem;
-    if (!parseTextItem(TextItem)) {
-      Value += TextItem;
-
-      // Accept a text-list, not just one text-item.
-      auto parseItem = [&]() -> bool {
-        if (parseTextItem(TextItem))
-          return TokError("expected text item");
-        Value += TextItem;
-        return false;
-      };
-      if (parseOptionalToken(AsmToken::Comma) && parseMany(parseItem))
-        return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
-
-      if (!Var.IsText || Var.TextValue != Value) {
-        switch (Var.Redefinable) {
-        case Variable::NOT_REDEFINABLE:
-          return Error(getTok().getLoc(), "invalid variable redefinition");
-        case Variable::WARN_ON_REDEFINITION:
-          if (Warning(NameLoc, "redefining '" + Name +
-                                   "', already defined on the command line")) {
-            return true;
-          }
-          break;
-        default:
-          break;
-        }
-      }
-      Var.IsText = true;
-      Var.TextValue = Value;
-      Var.Redefinable = Variable::REDEFINABLE;
-
-      return false;
-    }
-  }
-  if (DirKind == DK_TEXTEQU)
+    if (!parseTextList(Value, IDVal))
+      return setTextVariable(Var, Name, Value, NameLoc, Variable::REDEFINABLE);
     return TokError("expected <text> in '" + Twine(IDVal) + "' directive");
+  }
+  case DK_EQU: {
+    // equDir: EQU accepts equType ::= immExpr | textLiteral.
+    // Only try textLiteral (angle-bracket syntax) for the text path;
+    // otherwise fall through to expression parsing.
+    std::string Value;
+    if (!parseAngleBracketString(Value))
+      return setTextVariable(Var, Name, Value, NameLoc, Variable::REDEFINABLE);
+    break;
+  }
+  default:
+    break;
+  }
 
   // Parse as expression assignment.
   const MCExpr *Expr;
@@ -2983,26 +2967,8 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
           {StartLoc, EndLoc});
 
     // Not an absolute expression; define as a text replacement.
-    if (!Var.IsText || Var.TextValue != ExprAsString) {
-      switch (Var.Redefinable) {
-      case Variable::NOT_REDEFINABLE:
-        return Error(getTok().getLoc(), "invalid variable redefinition");
-      case Variable::WARN_ON_REDEFINITION:
-        if (Warning(NameLoc, "redefining '" + Name +
-                                 "', already defined on the command line")) {
-          return true;
-        }
-        break;
-      default:
-        break;
-      }
-    }
-
-    Var.IsText = true;
-    Var.TextValue = ExprAsString.str();
-    Var.Redefinable = Variable::REDEFINABLE;
-
-    return false;
+    return setTextVariable(Var, Name, ExprAsString, NameLoc,
+                           Variable::REDEFINABLE);
   }
 
   auto *Sym = static_cast<MCSymbolCOFF *>(getContext().parseSymbol(Var.Name));
@@ -3016,9 +2982,8 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
       return Error(getTok().getLoc(), "invalid variable redefinition");
     case Variable::WARN_ON_REDEFINITION:
       if (Warning(NameLoc, "redefining '" + Name +
-                               "', already defined on the command line")) {
+                               "', already defined on the command line"))
         return true;
-      }
       break;
     default:
       break;
@@ -3158,6 +3123,46 @@ bool MasmParser::parseTextItem(std::string &Data) {
   }
   }
   llvm_unreachable("unhandled token kind");
+}
+
+/// textList ::= textItem | textList , [ ;; ] textItem
+bool MasmParser::parseTextList(std::string &Result, StringRef IDVal) {
+  std::string TextItem;
+  if (parseTextItem(TextItem))
+    return true;
+  Result += TextItem;
+  while (getTok().is(AsmToken::Comma)) {
+    Lex(DoNotExpandMacros);
+    if (getTok().is(AsmToken::EndOfStatement))
+      Lex(DoNotExpandMacros);
+    if (parseTextItem(TextItem))
+      return TokError("expected text item in '" + Twine(IDVal) + "' directive");
+    Result += TextItem;
+  }
+  return false;
+}
+
+/// Check redefinition rules and assign a text variable.
+bool MasmParser::setTextVariable(Variable &Var, StringRef Name, StringRef Value,
+                                 SMLoc NameLoc,
+                                 Variable::RedefinableKind Redefinable) {
+  if (!Var.IsText || Var.TextValue != Value) {
+    switch (Var.Redefinable) {
+    case Variable::NOT_REDEFINABLE:
+      return Error(getTok().getLoc(), "invalid variable redefinition");
+    case Variable::WARN_ON_REDEFINITION:
+      if (Warning(NameLoc, "redefining '" + Name +
+                               "', already defined on the command line"))
+        return true;
+      break;
+    default:
+      break;
+    }
+  }
+  Var.IsText = true;
+  Var.TextValue = Value.str();
+  Var.Redefinable = Redefinable;
+  return false;
 }
 
 /// parseDirectiveAscii:
@@ -4098,7 +4103,7 @@ bool MasmParser::parseDirectiveEnds(StringRef Name, SMLoc NameLoc) {
   // and the size of its largest field.
   Structure.Size = llvm::alignTo(
       Structure.Size, std::min(Structure.Alignment, Structure.AlignmentSize));
-  Structs[Name.lower()] = Structure;
+  Structs[Name.lower()] = std::move(Structure);
 
   if (parseEOL())
     return addErrorSuffix(" in ENDS directive");
@@ -4225,7 +4230,7 @@ bool MasmParser::emitAlignTo(int64_t Alignment) {
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     if (MAI.useCodeAlign(*Section)) {
       getStreamer().emitCodeAlignment(Align(Alignment),
-                                      &getTargetParser().getSTI(),
+                                      getTargetParser().getSTI(),
                                       /*MaxBytesToEmit=*/0);
     } else {
       // FIXME: Target specific behavior about how the "extra" bytes are filled.
@@ -5271,6 +5276,10 @@ void MasmParser::initializeDirectiveKindMap() {
   // DirectiveKindMap[".cfi_def_cfa_register"] = DK_CFI_DEF_CFA_REGISTER;
   // DirectiveKindMap[".cfi_offset"] = DK_CFI_OFFSET;
   // DirectiveKindMap[".cfi_rel_offset"] = DK_CFI_REL_OFFSET;
+  // DirectiveKindMap[".cfi_llvm_register_pair"] = DK_CFI_LLVM_REGISTER_PAIR;
+  // DirectiveKindMap[".cfi_llvm_vector_registers"] =
+  //   DK_CFI_LLVM_VECTOR_REGISTERS;
+  // DirectiveKindMap[".cfi_llvm_vector_offset"] = DK_CFI_LLVM_VECTOR_OFFSET;
   // DirectiveKindMap[".cfi_personality"] = DK_CFI_PERSONALITY;
   // DirectiveKindMap[".cfi_lsda"] = DK_CFI_LSDA;
   // DirectiveKindMap[".cfi_remember_state"] = DK_CFI_REMEMBER_STATE;
@@ -5302,9 +5311,15 @@ void MasmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".errnz"] = DK_ERRNZ;
   DirectiveKindMap[".pushframe"] = DK_PUSHFRAME;
   DirectiveKindMap[".pushreg"] = DK_PUSHREG;
+  DirectiveKindMap[".push2reg"] = DK_PUSH2REGS;
+  DirectiveKindMap[".pop2reg"] = DK_PUSH2REGS;
+  DirectiveKindMap[".popreg"] = DK_PUSHREG;
   DirectiveKindMap[".savereg"] = DK_SAVEREG;
+  DirectiveKindMap[".restorereg"] = DK_SAVEREG;
   DirectiveKindMap[".savexmm128"] = DK_SAVEXMM128;
+  DirectiveKindMap[".restorexmm128"] = DK_SAVEXMM128;
   DirectiveKindMap[".setframe"] = DK_SETFRAME;
+  DirectiveKindMap[".unsetframe"] = DK_SETFRAME;
   DirectiveKindMap[".radix"] = DK_RADIX;
   DirectiveKindMap["db"] = DK_DB;
   DirectiveKindMap["dd"] = DK_DD;
@@ -5752,19 +5767,10 @@ static int rewritesSort(const AsmRewrite *AsmRewriteA,
 
 bool MasmParser::defineMacro(StringRef Name, StringRef Value) {
   Variable &Var = Variables[Name.lower()];
-  if (Var.Name.empty()) {
+  if (Var.Name.empty())
     Var.Name = Name;
-  } else if (Var.Redefinable == Variable::NOT_REDEFINABLE) {
-    return Error(SMLoc(), "invalid variable redefinition");
-  } else if (Var.Redefinable == Variable::WARN_ON_REDEFINITION &&
-             Warning(SMLoc(), "redefining '" + Name +
-                                  "', already defined on the command line")) {
-    return true;
-  }
-  Var.Redefinable = Variable::WARN_ON_REDEFINITION;
-  Var.IsText = true;
-  Var.TextValue = Value.str();
-  return false;
+  return setTextVariable(Var, Name, Value, SMLoc(),
+                         Variable::WARN_ON_REDEFINITION);
 }
 
 bool MasmParser::lookUpField(StringRef Name, AsmFieldInfo &Info) const {
@@ -6070,7 +6076,7 @@ bool MasmParser::parseMSInlineAsm(
         OS << "]";
       break;
     case AOK_Label:
-      OS << Ctx.getAsmInfo()->getPrivateLabelPrefix() << AR.Label;
+      OS << Ctx.getAsmInfo().getInternalSymbolPrefix() << AR.Label;
       break;
     case AOK_Input:
       OS << '$' << InputIdx++;
@@ -6100,7 +6106,7 @@ bool MasmParser::parseMSInlineAsm(
       // MS alignment directives are measured in bytes. If the native assembler
       // measures alignment in bytes, we can pass it straight through.
       OS << ".align";
-      if (getContext().getAsmInfo()->getAlignmentIsInBytes())
+      if (getContext().getAsmInfo().getAlignmentIsInBytes())
         break;
 
       // Alignment is in log2 form, so print that instead and skip the original
@@ -6135,6 +6141,7 @@ void MasmParser::initializeBuiltinSymbolMaps() {
   // Numeric built-ins (supported in all versions)
   BuiltinSymbolMap["@version"] = BI_VERSION;
   BuiltinSymbolMap["@line"] = BI_LINE;
+  BuiltinSymbolMap["@unwindversion"] = BI_UNWINDVERSION;
 
   // Text built-ins (supported in all versions)
   BuiltinSymbolMap["@date"] = BI_DATE;
@@ -6182,6 +6189,9 @@ const MCExpr *MasmParser::evaluateBuiltinValue(BuiltinSymbol Symbol,
                                    ActiveMacros.front()->ExitBuffer);
     return MCConstantExpr::create(Line, getContext());
   }
+  case BI_UNWINDVERSION:
+    return MCConstantExpr::create(getStreamer().getDefaultWinCFIUnwindVersion(),
+                                  getContext());
   }
   llvm_unreachable("unhandled built-in symbol");
 }

@@ -73,7 +73,7 @@ bool ExplodedGraph::shouldCollect(const ExplodedNode *node) {
   // (4) There is no 'tag' for the ProgramPoint.
   // (5) The 'store' is the same as the predecessor.
   // (6) The 'GDM' is the same as the predecessor.
-  // (7) The LocationContext is the same as the predecessor.
+  // (7) The StackFrame is the same as the predecessor.
   // (8) Expressions that are *not* lvalue expressions.
   // (9) The PostStmt isn't for a non-consumed Stmt or Expr.
   // (10) The successor is neither a CallExpr StmtPoint nor a CallEnter or
@@ -111,7 +111,7 @@ bool ExplodedGraph::shouldCollect(const ExplodedNode *node) {
   ProgramStateRef state = node->getState();
   ProgramStateRef pred_state = pred->getState();
   if (state->store != pred_state->store || state->GDM != pred_state->GDM ||
-      progPoint.getLocationContext() != pred->getLocationContext())
+      progPoint.getStackFrame() != pred->getStackFrame())
     return false;
 
   // All further checks require expressions. As per #3, we know that we have
@@ -130,7 +130,7 @@ bool ExplodedGraph::shouldCollect(const ExplodedNode *node) {
   // Do not collect nodes for non-consumed Stmt or Expr to ensure precise
   // diagnostic generation; specifically, so that we could anchor arrows
   // pointing to the beginning of statements (as written in code).
-  const ParentMap &PM = progPoint.getLocationContext()->getParentMap();
+  const ParentMap &PM = progPoint.getStackFrame()->getParentMap();
   if (!PM.isConsumedExpr(Ex))
     return false;
 
@@ -292,36 +292,33 @@ const CFGBlock *ExplodedNode::getCFGBlock() const {
   // FIXME: getStmtForDiagnostics() does nasty things in order to provide
   // a valid statement for body farms, do we need this behavior here?
   if (const Stmt *S = getStmtForDiagnostics())
-    return getLocationContext()
-        ->getAnalysisDeclContext()
-        ->getCFGStmtMap()
-        ->getBlock(S);
+    return getStackFrame()->getAnalysisDeclContext()->getCFGStmtMap()->getBlock(
+        S);
 
   return nullptr;
 }
 
-static const LocationContext *
-findTopAutosynthesizedParentContext(const LocationContext *LC) {
-  assert(LC->getAnalysisDeclContext()->isBodyAutosynthesized());
-  const LocationContext *ParentLC = LC->getParent();
-  assert(ParentLC && "We don't start analysis from autosynthesized code");
-  while (ParentLC->getAnalysisDeclContext()->isBodyAutosynthesized()) {
-    LC = ParentLC;
-    ParentLC = LC->getParent();
-    assert(ParentLC && "We don't start analysis from autosynthesized code");
+static const StackFrame *
+findTopAutosynthesizedParentStackFrame(const StackFrame *SF) {
+  assert(SF->getAnalysisDeclContext()->isBodyAutosynthesized());
+  const StackFrame *ParentSF = SF->getParent();
+  assert(ParentSF && "We don't start analysis from autosynthesized code");
+  while (ParentSF->getAnalysisDeclContext()->isBodyAutosynthesized()) {
+    SF = ParentSF;
+    ParentSF = SF->getParent();
+    assert(ParentSF && "We don't start analysis from autosynthesized code");
   }
-  return LC;
+  return SF;
 }
 
 const Stmt *ExplodedNode::getStmtForDiagnostics() const {
   // We cannot place diagnostics on autosynthesized code.
   // Put them onto the call site through which we jumped into autosynthesized
   // code for the first time.
-  const LocationContext *LC = getLocationContext();
-  if (LC->getAnalysisDeclContext()->isBodyAutosynthesized()) {
+  const StackFrame *SF = getStackFrame();
+  if (SF->getAnalysisDeclContext()->isBodyAutosynthesized()) {
     // It must be a stack frame because we only autosynthesize functions.
-    return cast<StackFrameContext>(findTopAutosynthesizedParentContext(LC))
-        ->getCallSite();
+    return findTopAutosynthesizedParentStackFrame(SF)->getCallSite();
   }
   // Otherwise, see if the node's program point directly points to a statement.
   // FIXME: Refactor into a ProgramPoint method?
@@ -333,13 +330,15 @@ const Stmt *ExplodedNode::getStmtForDiagnostics() const {
   if (auto CE = P.getAs<CallEnter>())
     return CE->getCallExpr();
   if (auto CEE = P.getAs<CallExitEnd>())
-    return CEE->getCalleeContext()->getCallSite();
+    return CEE->getCalleeStackFrame()->getCallSite();
   if (auto PIPP = P.getAs<PostInitializer>())
     return PIPP->getInitializer()->getInit();
   if (auto CEB = P.getAs<CallExitBegin>())
     return CEB->getReturnStmt();
   if (auto FEP = P.getAs<FunctionExitPoint>())
     return FEP->getStmt();
+  if (auto LE = P.getAs<LifetimeEnd>())
+    return LE->getTriggerStmt();
 
   return nullptr;
 }

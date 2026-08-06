@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- -- -I %clang_tidy_headers
+// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t
 
 #include "integral_constant.h"
 #include <cstddef>
@@ -185,7 +185,7 @@ void macros() {
 
 // Check that user-defined literals do not cause any diags.
 
-unsigned long long int operator"" _ull(unsigned long long int);
+unsigned long long int operator""_ull(unsigned long long int);
 void user_defined_literals() {
   1_ull;
 }

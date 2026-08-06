@@ -318,9 +318,8 @@ bool GlobalModuleIndex::lookupIdentifier(StringRef Name, HitSet &Hits) {
     return false;
   }
 
-  SmallVector<unsigned, 2> ModuleIDs = *Known;
-  for (unsigned I = 0, N = ModuleIDs.size(); I != N; ++I) {
-    if (ModuleFile *MF = Modules[ModuleIDs[I]].File)
+  for (unsigned ModuleID : *Known) {
+    if (ModuleFile *MF = Modules[ModuleID].File)
       Hits.insert(MF);
   }
 
@@ -342,8 +341,7 @@ bool GlobalModuleIndex::loadedModuleFile(ModuleFile *File) {
   //  If the size and modification time match what we expected, record this
   // module file.
   bool Failed = true;
-  if (File->File.getSize() == Info.Size &&
-      File->File.getModificationTime() == Info.ModTime) {
+  if (File->Size == Info.Size && File->ModTime == Info.ModTime) {
     Info.File = File;
     ModulesByFile[File] = Known->second;
 
@@ -638,6 +636,7 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(FileEntryRef File) {
       // Load stored size/modification time.
       off_t StoredSize = (off_t)Record[Idx++];
       time_t StoredModTime = (time_t)Record[Idx++];
+      (void)Record[Idx++]; // ImplicitModuleSuffixLength
 
       // Skip the stored signature.
       // FIXME: we could read the signature out of the import and validate it.

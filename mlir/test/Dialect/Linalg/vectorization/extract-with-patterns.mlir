@@ -684,3 +684,39 @@ func.func @vectorize_nd_tensor_extract_transfer_read_basic_column(
 // CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%[[C0]], %[[C0]], %[[C0]]], %[[PV]] : tensor<3x3x3xf32>, vector<f32>
 // CHECK:           %[[READ_BCAST:.*]] = vector.broadcast %[[READ]] : vector<f32> to vector<3x1x1xf32>
 // CHECK:           vector.transfer_write %[[READ_BCAST]], %[[INIT]]{{\[}}%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<3x1x1xf32>, tensor<3x1x1xf32>
+
+// -----
+
+// Rank-0 linalg.generic with tensor.extract using a data-dependent index.
+// The tensor.extract should be classified as ScalarBroadcast (not Gather),
+// producing a vector.transfer_read of a 0-D vector.
+
+func.func @rank0_tensor_extract_data_dependent_index(
+    %src: tensor<2xi64>,
+    %idx_tensor: tensor<i64>) -> tensor<i64> {
+
+  %init = tensor.empty() : tensor<i64>
+  %res = linalg.generic {
+    indexing_maps = [affine_map<() -> ()>, affine_map<() -> ()>],
+    iterator_types = []}
+    ins(%idx_tensor : tensor<i64>) outs(%init : tensor<i64>) {
+  ^bb0(%in: i64, %out: i64):
+    %idx = arith.index_cast %in : i64 to index
+    %val = tensor.extract %src[%idx] : tensor<2xi64>
+    linalg.yield %val : i64
+  } -> tensor<i64>
+
+  return %res : tensor<i64>
+}
+
+// CHECK-LABEL: func.func @rank0_tensor_extract_data_dependent_index(
+// CHECK-SAME:      %[[SRC:.*]]: tensor<2xi64>,
+// CHECK-SAME:      %[[IDX_TENSOR:.*]]: tensor<i64>) -> tensor<i64> {
+// CHECK-DAG:       %[[INIT:.*]] = tensor.empty() : tensor<i64>
+// CHECK-DAG:       %[[PAD:.*]] = ub.poison : i64
+// CHECK:           %[[READ_IDX:.*]] = vector.transfer_read %[[IDX_TENSOR]][], %[[PAD]] : tensor<i64>, vector<i64>
+// CHECK:           %[[SCALAR_IDX:.*]] = vector.extract %[[READ_IDX]][] : i64 from vector<i64>
+// CHECK:           %[[INDEX:.*]] = arith.index_cast %[[SCALAR_IDX]] : i64 to index
+// CHECK:           %[[READ_VAL:.*]] = vector.transfer_read %[[SRC]][%[[INDEX]]], %{{.*}} : tensor<2xi64>, vector<i64>
+// CHECK:           %[[WRITE:.*]] = vector.transfer_write %[[READ_VAL]], %[[INIT]][] : vector<i64>, tensor<i64>
+// CHECK:           return %[[WRITE]] : tensor<i64>

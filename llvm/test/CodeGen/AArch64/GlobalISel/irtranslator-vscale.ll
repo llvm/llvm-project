@@ -4,8 +4,8 @@
 define i64 @call_vscale_i64() {
   ; CHECK-LABEL: name: call_vscale_i64
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(s64) = G_VSCALE i64 1
-  ; CHECK-NEXT:   $x0 = COPY [[VSCALE]](s64)
+  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(i64) = G_VSCALE i64 1
+  ; CHECK-NEXT:   $x0 = COPY [[VSCALE]](i64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
 entry:
   %vscale = call i64 @llvm.vscale.64()
@@ -15,9 +15,9 @@ entry:
 define i64 @call_vscale_i32() {
   ; CHECK-LABEL: name: call_vscale_i32
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(s32) = G_VSCALE i32 1
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[VSCALE]](s32)
-  ; CHECK-NEXT:   $x0 = COPY [[ZEXT]](s64)
+  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(i32) = G_VSCALE i32 1
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[VSCALE]](i32)
+  ; CHECK-NEXT:   $x0 = COPY [[ZEXT]](i64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
 entry:
   %vscale = call i32 @llvm.vscale.32()
@@ -28,9 +28,9 @@ entry:
 define i64 @call_vscale_i16() {
   ; CHECK-LABEL: name: call_vscale_i16
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(s16) = G_VSCALE i16 1
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[VSCALE]](s16)
-  ; CHECK-NEXT:   $x0 = COPY [[ZEXT]](s64)
+  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(i16) = G_VSCALE i16 1
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[VSCALE]](i16)
+  ; CHECK-NEXT:   $x0 = COPY [[ZEXT]](i64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
 entry:
   %vscale = call i16 @llvm.vscale.16()
@@ -41,9 +41,9 @@ entry:
 define i64 @call_vscale_i8() {
   ; CHECK-LABEL: name: call_vscale_i8
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(s8) = G_VSCALE i8 1
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[VSCALE]](s8)
-  ; CHECK-NEXT:   $x0 = COPY [[ZEXT]](s64)
+  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(i8) = G_VSCALE i8 1
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[VSCALE]](i8)
+  ; CHECK-NEXT:   $x0 = COPY [[ZEXT]](i64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
 entry:
   %vscale = call i8 @llvm.vscale.8()

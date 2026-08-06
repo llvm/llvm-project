@@ -4,7 +4,17 @@
 # RUN: %clangxx %cxxflags -g -gdwarf-4 -gsplit-dwarf %t/main.s %t/callee.s -o main.exe
 # RUN: llvm-dwp -e %t/main.exe -o %t/main.exe.dwp
 # RUN: llvm-bolt %t/main.exe -o %t/main.exe.bolt -update-debug-sections  2>&1 | FileCheck %s
-
+## Test that BOLT does not crash when a DWP file contains a section (e.g.
+## .debug_line.dwo) whose kind is not tracked as a column in the CU index.
+## This triggers a null pointer dereference in getSliceData() where
+## getContribution() returns nullptr because the section kind has no column.
+# RUN: rm -rf %t && mkdir -p %t && cd %t
+# RUN: split-file %p/dwarf4-dwp-x86.s %t
+# RUN: %clangxx %cxxflags -g -gdwarf-4 -gsplit-dwarf %t/main.s %t/callee.s -o %t/main.exe
+# RUN: llvm-dwp -e %t/main.exe -o %t/main.exe.dwp
+# RUN: printf '\x00' > %t/line.bin
+# RUN: llvm-objcopy --add-section=.debug_line.dwo=%t/line.bin %t/main.exe.dwp
+# RUN: llvm-bolt %t/main.exe -o %t/main.exe.bolt -update-debug-sections  2>&1 | FileCheck %s
 # CHECK-NOT: Assertion
 
 #--- main.s

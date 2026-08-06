@@ -18,6 +18,7 @@
 namespace llvm {
 class DomTreeUpdater;
 class BasicBlock;
+class ConstantInt;
 class Value;
 class Loop;
 class LoopInfo;
@@ -70,9 +71,9 @@ struct TileInfo {
   /// for ColumnLoop.Index = 0..NumColumns
   ///   for RowLoop.Index = 0..NumRows
   ///     for InnerLoop.Index = 0..NumInner
-  BasicBlock *CreateTiledLoops(BasicBlock *Start, BasicBlock *End,
-                               IRBuilderBase &B, DomTreeUpdater &DTU,
-                               LoopInfo &LI);
+  LLVM_ABI BasicBlock *CreateTiledLoops(BasicBlock *Start, BasicBlock *End,
+                                        IRBuilderBase &B, DomTreeUpdater &DTU,
+                                        LoopInfo &LI);
 
 private:
   /// Creates a new loop with header, body and latch blocks that iterates from
@@ -80,9 +81,9 @@ private:
   /// Exit as exit block.  Adds the new loop blocks to \L and applies dominator
   /// tree updates to \p DTU.
   static BasicBlock *CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
-                                Value *Bound, Value *Step, StringRef Name,
-                                IRBuilderBase &B, DomTreeUpdater &DTU, Loop *L,
-                                LoopInfo &LI);
+                                ConstantInt *Bound, ConstantInt *Step,
+                                StringRef Name, IRBuilderBase &B,
+                                DomTreeUpdater &DTU, Loop *L, LoopInfo &LI);
 };
 } // namespace llvm
 

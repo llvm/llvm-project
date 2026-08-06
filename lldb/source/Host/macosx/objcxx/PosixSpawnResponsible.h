@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_POSIXSPAWNRESPONSIBLE_H
-#define LLDB_HOST_POSIXSPAWNRESPONSIBLE_H
+#ifndef LLDB_SOURCE_HOST_MACOSX_OBJCXX_POSIXSPAWNRESPONSIBLE_H
+#define LLDB_SOURCE_HOST_MACOSX_OBJCXX_POSIXSPAWNRESPONSIBLE_H
 
 #include <spawn.h>
 
@@ -31,4 +31,4 @@ static inline int setup_posix_spawn_responsible_flag(posix_spawnattr_t *attr) {
   return 0;
 }
 
-#endif // LLDB_HOST_POSIXSPAWNRESPONSIBLE_H
+#endif // LLDB_SOURCE_HOST_MACOSX_OBJCXX_POSIXSPAWNRESPONSIBLE_H

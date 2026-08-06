@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 
 #include <string>
+#include <type_traits>
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
@@ -26,6 +27,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -105,9 +107,30 @@ static LogicalResult checkConstantOperandConvOps(Operation *op,
 
 static LogicalResult checkConstantOperandMatMul(Operation *op,
                                                 const TargetEnv &env) {
-  if (!env.allows(Extension::dynamic) && isa<tosa::MatMulOp>(op)) {
+  if (!env.allows(Extension::dynamic) &&
+      isa<tosa::MatMulOp, tosa::MatMulTOp>(op)) {
     // Check 'A_zp' and 'B_zp'
     return checkConstantOperands(op, {2, 3});
+  }
+  return success();
+}
+
+static LogicalResult
+checkConstantOperandRowGatherBlockScaled(Operation *op, const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) &&
+      isa<tosa::RowGatherBlockScaledOp>(op)) {
+    auto rowGatherOp = cast<tosa::RowGatherBlockScaledOp>(op);
+    const unsigned rowCountIndex = rowGatherOp.getValues().size() + 1;
+    return checkConstantOperands(op, {rowCountIndex});
+  }
+  return success();
+}
+
+static LogicalResult checkConstantOperandRowGather(Operation *op,
+                                                   const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::RowGatherOp>(op)) {
+    // Check 'row_count'
+    return checkConstantOperands(op, {2});
   }
   return success();
 }
@@ -116,6 +139,17 @@ static LogicalResult checkConstantOperandAvgPool2d(Operation *op,
                                                    const TargetEnv &env) {
   if (!env.allows(Extension::dynamic) && isa<tosa::AvgPool2dOp>(op)) {
     // Check 'input_zp' and 'output_zp'
+    return checkConstantOperands(op, {1, 2});
+  }
+  return success();
+}
+
+static LogicalResult
+checkConstantOperandAvgPool2dAdaptive(Operation *op, const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::AvgPool2dAdaptiveOp>(op)) {
+    // Check 'input_zp' and 'output_zp'.
+    // Note: 'kernel', 'stride', and 'pad' (operands 3, 4, 5) are not checked
+    // as they are tosa.shape types.
     return checkConstantOperands(op, {1, 2});
   }
   return success();
@@ -163,6 +197,7 @@ public:
     return success();
   }
 
+  LogicalResult applyFunctionSignatureCheck(func::FuncOp op);
   LogicalResult applyLevelCheck(Operation *op);
   LogicalResult applyAttributeCheck(Operation *op);
 
@@ -185,7 +220,10 @@ private:
     constCheckers.emplace_back(
         checkConstantOperandConvOps<tosa::TransposeConv2DOp>);
     constCheckers.emplace_back(checkConstantOperandMatMul);
+    constCheckers.emplace_back(checkConstantOperandRowGather);
+    constCheckers.emplace_back(checkConstantOperandRowGatherBlockScaled);
     constCheckers.emplace_back(checkConstantOperandAvgPool2d);
+    constCheckers.emplace_back(checkConstantOperandAvgPool2dAdaptive);
     constCheckers.emplace_back(checkConstantOperandNegate);
     constCheckers.emplace_back(checkConstantOperandSilceShape);
   }
@@ -340,6 +378,44 @@ private:
         }
       }
     }
+    return success();
+  }
+
+  template <typename T>
+  static constexpr bool IsSupportedAdaptivePoolOp =
+      std::is_same_v<T, tosa::AvgPool2dAdaptiveOp> ||
+      std::is_same_v<T, tosa::MaxPool2dAdaptiveOp>;
+
+  template <typename T, typename std::enable_if<IsSupportedAdaptivePoolOp<T>,
+                                                int>::type = 0>
+  LogicalResult levelCheckAdaptivePool(Operation *op) {
+    auto poolOp = dyn_cast<T>(op);
+    if (!poolOp)
+      return success();
+
+    SmallVector<int64_t> kernelValues;
+    if (tosa::getConstShapeValues(poolOp.getKernel().getDefiningOp(),
+                                  kernelValues)) {
+      for (const auto k : kernelValues)
+        if (failed(levelCheckKernel(op, k, "kernel")))
+          return failure();
+    }
+
+    SmallVector<int64_t> strideValues;
+    if (tosa::getConstShapeValues(poolOp.getStride().getDefiningOp(),
+                                  strideValues)) {
+      for (const auto s : strideValues)
+        if (failed(levelCheckStride(op, s, "stride")))
+          return failure();
+    }
+
+    SmallVector<int64_t> padValues;
+    if (tosa::getConstShapeValues(poolOp.getPad().getDefiningOp(), padValues)) {
+      for (const auto p : padValues)
+        if (failed(levelCheckKernel(op, p, "pad")))
+          return failure();
+    }
+
     return success();
   }
 
@@ -593,7 +669,10 @@ private:
 
   LogicalResult CheckVariable(Operation *op);
   LogicalResult CheckVariableReadOrWrite(Operation *op);
-  bool isValidElementType(Type type, const bool allowUnsigned = false);
+  LogicalResult validateValidElementType(Operation *op, Type type,
+                                         bool allowUnsigned = false);
+  LogicalResult validateOperationElementTypes(Operation *op,
+                                              bool allowUnsigned = false);
 
   SmallVector<
       std::function<LogicalResult(Operation *, const tosa::TargetEnv &)>>
@@ -728,6 +807,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS_AND_SIZES(Concat);
   CHECK_RANKS_AND_SIZES(Pad);
   CHECK_RANKS_AND_SIZES(Reshape);
+  CHECK_RANKS_AND_SIZES(ReshapeBlockScaled);
   CHECK_RANKS_AND_SIZES(Reverse);
   CHECK_RANKS_AND_SIZES(Slice);
   CHECK_RANKS_AND_SIZES(Tile);
@@ -754,6 +834,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
 
   // Tensor Operators
   CHECK_SIZES(AvgPool2d);
+  CHECK_SIZES(AvgPool2dAdaptive);
   CHECK_SIZES(Conv2D);
   CHECK_SIZES(Conv2DBlockScaled);
   CHECK_SIZES(Conv3D);
@@ -761,11 +842,14 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_SIZES(TransposeConv2D);
   CHECK_SIZES(FFT2d);
   CHECK_SIZES(MatMul);
+  CHECK_SIZES(MatMulT);
   CHECK_SIZES(MatmulTBlockScaled);
   CHECK_SIZES(MaxPool2d);
+  CHECK_SIZES(MaxPool2dAdaptive);
   CHECK_SIZES(RFFT2d);
   // Scatter/Gather Operators
   CHECK_SIZES(Gather);
+  CHECK_SIZES(RowGather);
   CHECK_SIZES(Scatter);
   // Image Operators
   CHECK_SIZES(Resize);
@@ -812,7 +896,7 @@ LogicalResult TosaValidation::levelCheckSize(Operation *op,
     for (auto dim : shape) {
       const bool dimIsDynamic = mlir::ShapedType::isDynamic(dim);
       const TosaSpecificationVersion targetVersion = targetEnv.getSpecVersion();
-      const TosaSpecificationVersion minRequiredVersion(1, 1);
+      const TosaSpecificationVersion minRequiredVersion(1, 1, true);
       if (targetVersion.isBackwardsCompatibleWith(minRequiredVersion) &&
           dimIsDynamic)
         // TOSA 1.1 and above supports dynamic dimensions, however, they must be
@@ -858,11 +942,13 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
     return failure();
 
   if (failed(levelCheckPool<tosa::AvgPool2dOp>(op)) ||
+      failed(levelCheckAdaptivePool<tosa::AvgPool2dAdaptiveOp>(op)) ||
       failed(levelCheckConv<tosa::Conv2DOp>(op)) ||
       failed(levelCheckConv<tosa::Conv3DOp>(op)) ||
       failed(levelCheckConv<tosa::DepthwiseConv2DOp>(op)) ||
       failed(levelCheckFFT<tosa::FFT2dOp>(op)) ||
       failed(levelCheckPool<tosa::MaxPool2dOp>(op)) ||
+      failed(levelCheckAdaptivePool<tosa::MaxPool2dAdaptiveOp>(op)) ||
       failed(levelCheckFFT<tosa::RFFT2dOp>(op)) ||
       failed(levelCheckTransposeConv2d(op)) || failed(levelCheckResize(op)) ||
       failed(levelCheckConv2DBlockScaled(op))) {
@@ -1214,6 +1300,50 @@ LogicalResult checkErrorIfPad(Operation *op) {
   return success();
 }
 
+LogicalResult checkErrorIfReshape(Operation *op) {
+  auto reshapeOp = dyn_cast<tosa::ReshapeOp>(op);
+  if (!reshapeOp)
+    return success();
+
+  SmallVector<int64_t> shapeValues;
+  if (!tosa::getConstShapeValues(reshapeOp.getShape().getDefiningOp(),
+                                 shapeValues))
+    return success();
+
+  if (llvm::is_contained(shapeValues, kInferableDimSize))
+    return op->emitOpError("shape input contains inferable dimension (")
+           << kInferableDimSize
+           << ") "
+              "which does not conform to the TOSA specification";
+
+  return success();
+}
+
+LogicalResult checkErrorIfSlice(Operation *op) {
+  auto sliceOp = dyn_cast<tosa::SliceOp>(op);
+  if (!sliceOp)
+    return success();
+
+  SmallVector<int64_t> startValues;
+  SmallVector<int64_t> sizeValues;
+  const bool hasStartValues = tosa::getConstShapeValues(
+      sliceOp.getStart().getDefiningOp(), startValues);
+  const bool hasSizeValues =
+      tosa::getConstShapeValues(sliceOp.getSize().getDefiningOp(), sizeValues);
+
+  if (hasStartValues && llvm::is_contained(startValues, kInferableDimSize))
+    return op->emitOpError("start input contains inferable dimension (")
+           << kInferableDimSize
+           << ") which does not conform to the TOSA specification";
+  if (hasSizeValues && llvm::is_contained(sizeValues, kInferableDimSize))
+    return op->emitOpError("size input contains inferable dimension (")
+           << kInferableDimSize
+           << ") which "
+              "does not conform to the TOSA specification";
+
+  return success();
+}
+
 static bool isOpIsolatedWithinRegion(Operation *op, Region *region) {
   return llvm::all_of(op->getOperands(), [&](auto operand) {
     Region *operandRegion = operand.getParentRegion();
@@ -1321,17 +1451,33 @@ LogicalResult checkErrorIfScatter(Operation *op) {
 LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   if (failed(checkErrorIfResize(op)) || failed(checkErrorIfMul(op)) ||
       failed(checkErrorIfTable(op)) || failed(checkErrorIfRescale(op)) ||
-      failed(checkErrorIfPad(op)) || failed(checkErrorIfCondIf(op)) ||
+      failed(checkErrorIfPad(op)) || failed(checkErrorIfReshape(op)) ||
+      failed(checkErrorIfSlice(op)) || failed(checkErrorIfCondIf(op)) ||
       failed(checkErrorIfWhileLoop(op)) || failed(checkErrorIfScatter(op)))
     return failure();
   return success();
 }
 
-bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
+LogicalResult TosaValidation::applyFunctionSignatureCheck(func::FuncOp op) {
+  const auto isShapeType = [](Type type) { return isa<tosa::shapeType>(type); };
+  if (llvm::any_of(op.getArgumentTypes(), isShapeType))
+    return op.emitOpError()
+           << "Function argument types must be a tensor type to be TOSA "
+              "compliant, got !tosa.shape type";
+  if (llvm::any_of(op.getResultTypes(), isShapeType))
+    return op.emitOpError()
+           << "Function return types must be a tensor type to be TOSA "
+              "compliant, got !tosa.shape type";
+  return success();
+}
+
+LogicalResult TosaValidation::validateValidElementType(Operation *op, Type type,
+                                                       bool allowUnsigned) {
   if (isa<FloatType>(type)) {
-    return isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
-               Float8E5M2Type, Float4E2M1FNType, Float6E2M3FNType,
-               Float6E3M2FNType, Float8E8M0FNUType>(type);
+    if (isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
+            Float8E5M2Type, Float4E2M1FNType, Float6E2M3FNType,
+            Float6E3M2FNType, Float8E8M0FNUType>(type))
+      return success();
   } else if (auto intTy = dyn_cast<IntegerType>(type)) {
     if (intTy.isSignless()) {
       switch (intTy.getWidth()) {
@@ -1342,21 +1488,47 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
       case 32:
       case 48:
       case 64:
-        return true;
+        return success();
       }
     } else if (allowUnsigned && intTy.isUnsigned()) {
       switch (intTy.getWidth()) {
       case 8:
       case 16:
       case 32:
-        return true;
+        return success();
       }
     }
   } else if (isa<tosa::shapeType>(type))
-    return true;
-  else if (isa<tosa::mxint8Type>(type))
-    return true;
-  return false;
+    return success();
+  else if (isa<tosa::mxint8Type, tosa::BlockScaledType>(type))
+    return success();
+
+  return op->emitOpError() << "is not profile-aligned: element type " << type
+                           << " is not legal";
+}
+
+LogicalResult
+TosaValidation::validateOperationElementTypes(Operation *op,
+                                              bool allowUnsigned) {
+  for (Value operand : op->getOperands()) {
+    Type elementTy = getElementTypeOrSelf(operand);
+    if (failed(validateValidElementType(op, elementTy, allowUnsigned)))
+      return failure();
+  }
+
+  for (Type resultTy : op->getResultTypes()) {
+    Type elementTy = getElementTypeOrSelf(resultTy);
+    if (failed(validateValidElementType(op, elementTy, allowUnsigned)))
+      return failure();
+  }
+
+  if (auto variableOp = dyn_cast<tosa::VariableOp>(op)) {
+    if (failed(
+            validateValidElementType(op, variableOp.getType(), allowUnsigned)))
+      return failure();
+  }
+
+  return success();
 }
 
 void TosaValidation::runOnOperation() {
@@ -1372,6 +1544,12 @@ void TosaValidation::runOnOperation() {
     return signalPassFailure();
   targetEnv = *maybeTargetEnv;
 
+  const auto functions = modOp.getOps<func::FuncOp>();
+  if (llvm::any_of(functions, [&](func::FuncOp func) {
+        return failed(applyFunctionSignatureCheck(func));
+      }))
+    return signalPassFailure();
+
   modOp.walk([&](Operation *op) {
     if (op->getDialect() != tosaDialect)
       return;
@@ -1383,22 +1561,8 @@ void TosaValidation::runOnOperation() {
     //   protect rest of code against quantized element types
     const bool allowUnsigned =
         !strictOpSpecAlignment && isa<tosa::RescaleOp>(op);
-    for (Value operand : op->getOperands()) {
-      auto elementTy = getElementTypeOrSelf(operand);
-      if (!isValidElementType(elementTy, allowUnsigned)) {
-        op->emitOpError() << "is not profile-aligned: element type "
-                          << elementTy << " is not legal";
-        return signalPassFailure();
-      }
-    }
-    for (Type resultTy : op->getResultTypes()) {
-      auto elementTy = getElementTypeOrSelf(resultTy);
-      if (!isValidElementType(elementTy, allowUnsigned)) {
-        op->emitOpError() << "is not profile-aligned: element type "
-                          << elementTy << " is not legal";
-        return signalPassFailure();
-      }
-    }
+    if (failed(validateOperationElementTypes(op, allowUnsigned)))
+      return signalPassFailure();
 
     if (strictOpSpecAlignment &&
         failed(profileComp.checkProfile(op, targetEnv)))

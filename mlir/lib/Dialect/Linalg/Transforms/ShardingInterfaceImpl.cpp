@@ -55,7 +55,7 @@ static ReductionKind getReductionKind(Operation *op) {
       .Case([](arith::AddIOp op) { return ReductionKind::Sum; })
       .Case([](arith::OrIOp op) { return ReductionKind::BitwiseOr; })
       .Case([](arith::XOrIOp op) { return ReductionKind::BitwiseXor; })
-      .Case([](arith::AndIOp op) { return ReductionKind::Sum; })
+      .Case([](arith::AndIOp op) { return ReductionKind::BitwiseAnd; })
       // TODO: handle signless, signed and unsigned types properly.
       // It is assumed that the element type of the collective operands and
       // result drive the meaning of the reduction kind, whether it is signed
@@ -334,7 +334,7 @@ void registerShardingInterfaceExternalModels(DialectRegistry &registry) {
     registry.insert<affine::AffineDialect, arith::ArithDialect, scf::SCFDialect,
                     tensor::TensorDialect>();
     ctx->appendDialectRegistry(registry);
-    for (StringRef name : registry.getDialectNames())
+    for (StringRef name : registry.getRegisteredDialectNames())
       ctx->getOrLoadDialect(name);
 
     registerOne<linalg::GenericOp>(ctx);

@@ -137,6 +137,10 @@ void TokenLexer::destroy() {
   if (ActualArgs) ActualArgs->destroy(PP);
 }
 
+static bool hasVaOptSupport(const LangOptions &LangOpts) {
+  return LangOpts.C23 || LangOpts.CPlusPlus20;
+}
+
 bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
     SmallVectorImpl<Token> &ResultToks, bool HasPasteOperator, MacroInfo *Macro,
     unsigned MacroArgNo, Preprocessor &PP) {
@@ -164,8 +168,10 @@ bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
     return false;
 
   // Issue an extension diagnostic for the paste operator.
-  if (HasPasteOperator)
-    PP.Diag(ResultToks.back().getLocation(), diag::ext_paste_comma);
+  if (HasPasteOperator) {
+    PP.Diag(ResultToks.back().getLocation(), diag::ext_paste_comma)
+        << hasVaOptSupport(PP.getLangOpts());
+  }
 
   // Remove the comma.
   ResultToks.pop_back();
@@ -523,7 +529,16 @@ void TokenLexer::ExpandFunctionArguments() {
           Macro->isVariadic()) {
         VaArgsPseudoPaste = true;
         // Remove the paste operator, report use of the extension.
-        PP.Diag(ResultToks.pop_back_val().getLocation(), diag::ext_paste_comma);
+        bool VaOptSupport = hasVaOptSupport(PP.getLangOpts());
+        auto Diag = PP.Diag(ResultToks.pop_back_val().getLocation(),
+                            diag::ext_paste_comma)
+                    << VaOptSupport;
+        if (VaOptSupport) {
+          Diag << FixItHint::CreateReplacement(
+              SourceRange(ResultToks.back().getLocation(),
+                          CurTok.getLocation()),
+              " __VA_OPT__(,) __VA_ARGS__");
+        }
       }
 
       ResultToks.append(ArgToks, ArgToks+NumToks);

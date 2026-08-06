@@ -1308,8 +1308,11 @@ bool mlir::linalg::isDimSequencePreserved(AffineMap indexingMap,
                                           ReassociationIndicesRef dimSequence) {
   assert(!dimSequence.empty() &&
          "expected non-empty list for dimension sequence");
-  assert(indexingMap.isProjectedPermutation() &&
-         "expected indexing map to be projected permutation");
+
+  // Dimension sequences can only be preserved in projected permutation maps.
+  if (!indexingMap.isProjectedPermutation()) {
+    return false;
+  }
 
   llvm::SmallDenseSet<unsigned, 4> sequenceElements;
   sequenceElements.insert_range(dimSequence);

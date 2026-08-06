@@ -8,6 +8,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@skipIfWasm  # no expression evaluation
 class TestCase(TestBase):
     def getFormatted(self, format, expr):
         """
@@ -119,7 +120,7 @@ class TestCase(TestBase):
         self.assertIn("= 0x1p1\n", self.getFormatted("hex float", "2.0"))
         # FIXME: long double not supported.
         # on Darwin arm64, long double is 8 bytes, same as long.
-        if self.getArchitecture() != "arm64":
+        if "arm64" not in self.getArchitecture():
             self.assertIn(
                 "= error: unsupported byte size (16) for hex float format\n",
                 self.getFormatted("hex float", "2.0l"),
@@ -223,10 +224,19 @@ class TestCase(TestBase):
 
         # unicode16
         self.assertIn("= U+5678 U+1234\n", self.getFormatted("unicode16", "0x12345678"))
+        self.assertIn(
+            "= U+ABCD\n", self.getFormatted("unicode16", "(unsigned short)0xabcd")
+        )
 
         # unicode32
+        # Values in the valid code point range (up to U+10FFFF) use the "U+"
+        # notation with four to six uppercase hex digits; larger values are not
+        # code points and fall back to a plain hex display.
+        self.assertIn("= U+20E3\n", self.getFormatted("unicode32", "0x20e3"))
+        self.assertIn("= U+10FFFF\n", self.getFormatted("unicode32", "0x10FFFF"))
+        self.assertIn("= 0x00110000\n", self.getFormatted("unicode32", "0x110000"))
         self.assertIn(
-            "= U+0x89abcdef U+0x01234567\n",
+            "= 0x89abcdef 0x01234567\n",
             self.getFormatted("unicode32", "(__UINT64_TYPE__)0x123456789ABCDEFll"),
         )
 

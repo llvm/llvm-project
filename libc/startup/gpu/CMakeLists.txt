@@ -27,29 +27,29 @@ function(add_startup_object name)
       OUTPUT_NAME ${name}.o
   )
 
-  # Make an executable target of relocatable bitcode for clang if needed.
+  # Make a relocatable bitcode object for clang if needed.
   if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
-    add_executable(${fq_target_name}.exe $<TARGET_OBJECTS:${fq_target_name}>)
-    set_target_properties(${fq_target_name}.exe PROPERTIES
-      RUNTIME_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR}
-      RUNTIME_OUTPUT_NAME ${name}.o)
-    target_link_options(${fq_target_name}.exe PRIVATE
-                        "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
+    llvm_link_bitcode(${fq_target_name}.exe
+      OUTPUT ${LIBC_LIBRARY_DIR}/${name}.o
+      INPUTS $<TARGET_OBJECTS:${fq_target_name}>
+      DEPENDS ${fq_target_name}
+    )
   endif()
 endfunction()
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
-  add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
-else()
-  message(WARNING "Cannot build 'crt1.o' for ${LIBC_TARGET_ARCHITECTURE} yet.")
-  return()
-endif()
-
 add_startup_object(
   crt1
-  ALIAS
+  SRC
+    start.cpp
   DEPENDS
-  .${LIBC_TARGET_ARCHITECTURE}.crt1
+    libc.config.app_h
+    libc.src.__support.RPC.rpc_client
+    libc.src.__support.GPU.utils
+    libc.src.stdlib.exit
+    libc.src.stdlib.atexit
+  COMPILE_OPTIONS
+    -ffreestanding # To avoid compiler warnings about calling the main function.
+    -fno-builtin
 )
 
 add_custom_target(libc-startup)

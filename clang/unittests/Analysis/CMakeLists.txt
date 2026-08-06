@@ -1,4 +1,6 @@
 add_clang_unittest(ClangAnalysisTests
+  AnyCallTest.cpp
+  CFGBackEdgesTest.cpp
   CFGDominatorTree.cpp
   CFGTest.cpp
   CloneDetectionTest.cpp
@@ -26,4 +28,3 @@ add_clang_unittest(ClangAnalysisTests
   )
 
 add_subdirectory(FlowSensitive)
-add_subdirectory(Scalable)

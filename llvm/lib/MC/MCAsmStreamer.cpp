@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/MC/MCAsmStreamer.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -19,6 +20,8 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCLFI.h"
+#include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCPseudoProbe.h"
@@ -39,19 +42,133 @@
 
 using namespace llvm;
 
+MCAsmBaseStreamer::MCAsmBaseStreamer(MCContext &Context,
+                                     std::unique_ptr<MCCodeEmitter> Emitter,
+                                     std::unique_ptr<MCAsmBackend> AsmBackend)
+    : MCStreamer(Context),
+      Assembler(std::make_unique<MCAssembler>(
+          Context, std::move(AsmBackend), std::move(Emitter),
+          (AsmBackend) ? AsmBackend->createObjectWriter(NullStream) : nullptr)),
+      CommentStream(CommentToEmit) {}
+
+void MCAsmBaseStreamer::addEncodingComment(const MCInst &Inst,
+                                           const MCSubtargetInfo &STI) {
+  raw_ostream &OS = getCommentOS();
+  SmallString<256> Code;
+  SmallVector<MCFixup, 4> Fixups;
+
+  // If we have no code emitter, don't emit code.
+  if (!getAssembler().getEmitterPtr())
+    return;
+
+  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
+
+  // RISC-V instructions are always little-endian, even on BE systems.
+  bool ForceLE = getContext().getTargetTriple().isRISCV();
+
+  const MCAsmInfo &MAI = getContext().getAsmInfo();
+
+  // If we are showing fixups, create symbolic markers in the encoded
+  // representation. We do this by making a per-bit map to the fixup item index,
+  // then trying to display it as nicely as possible.
+  SmallVector<uint8_t, 64> FixupMap;
+  FixupMap.resize(Code.size() * 8);
+  for (unsigned I = 0, E = Code.size() * 8; I != E; ++I)
+    FixupMap[I] = 0;
+
+  for (unsigned I = 0, E = Fixups.size(); I != E; ++I) {
+    MCFixup &F = Fixups[I];
+    MCFixupKindInfo Info =
+        getAssembler().getBackend().getFixupKindInfo(F.getKind());
+    for (unsigned J = 0; J != Info.TargetSize; ++J) {
+      unsigned Index = F.getOffset() * 8 + Info.TargetOffset + J;
+      assert(Index < Code.size() * 8 && "Invalid offset in fixup!");
+      FixupMap[Index] = 1 + I;
+    }
+  }
+
+  // FIXME: Note the fixup comments for Thumb2 are completely bogus since the
+  // high order halfword of a 32-bit Thumb2 instruction is emitted first.
+  OS << "encoding: [";
+  for (unsigned I = 0, E = Code.size(); I != E; ++I) {
+    if (I)
+      OS << ',';
+
+    // See if all bits are the same map entry.
+    uint8_t MapEntry = FixupMap[I * 8 + 0];
+    for (unsigned J = 1; J != 8; ++J) {
+      if (FixupMap[I * 8 + J] == MapEntry)
+        continue;
+
+      MapEntry = uint8_t(~0U);
+      break;
+    }
+
+    if (MapEntry != uint8_t(~0U)) {
+      if (MapEntry == 0) {
+        OS << format("0x%02x", uint8_t(Code[I]));
+      } else {
+        if (Code[I]) {
+          // FIXME: Some of the 8 bits require fix up.
+          OS << format("0x%02x", uint8_t(Code[I])) << '\''
+             << char('A' + MapEntry - 1) << '\'';
+        } else
+          OS << char('A' + MapEntry - 1);
+      }
+    } else {
+      // Otherwise, write out in binary.
+      OS << "0b";
+      for (unsigned J = 8; J--;) {
+        unsigned Bit = (Code[I] >> J) & 1;
+
+        unsigned FixupBit;
+        // RISC-V instructions are always little-endian.
+        // The FixupMap is indexed by actual bit positions in the LE
+        // instruction.
+        if (MAI.isLittleEndian() || ForceLE)
+          FixupBit = I * 8 + J;
+        else
+          FixupBit = I * 8 + (7 - J);
+
+        if (uint8_t MapEntry = FixupMap[FixupBit]) {
+          assert(Bit == 0 && "Encoder wrote into fixed up bit!");
+          OS << char('A' + MapEntry - 1);
+        } else
+          OS << Bit;
+      }
+    }
+  }
+  OS << "]\n";
+
+  for (unsigned I = 0, E = Fixups.size(); I != E; ++I) {
+    MCFixup &F = Fixups[I];
+    OS << "  fixup " << char('A' + I) << " - "
+       << "offset: " << F.getOffset() << ", value: ";
+    MAI.printExpr(OS, *F.getValue());
+    auto Kind = F.getKind();
+    if (mc::isRelocation(Kind))
+      OS << ", relocation type: " << Kind;
+    else {
+      OS << ", kind: ";
+      auto Info = getAssembler().getBackend().getFixupKindInfo(Kind);
+      if (F.isPCRel() && StringRef(Info.Name).starts_with("FK_Data_"))
+        OS << "FK_PCRel_" << (Info.TargetSize / 8);
+      else
+        OS << Info.Name;
+    }
+    OS << '\n';
+  }
+}
+
 namespace {
 
-class MCAsmStreamer final : public MCStreamer {
+class MCAsmStreamer final : public MCAsmBaseStreamer {
   std::unique_ptr<formatted_raw_ostream> OSOwner;
   formatted_raw_ostream &OS;
   const MCAsmInfo *MAI;
   std::unique_ptr<MCInstPrinter> InstPrinter;
-  std::unique_ptr<MCAssembler> Assembler;
 
   SmallString<128> ExplicitCommentToEmit;
-  SmallString<128> CommentToEmit;
-  raw_svector_ostream CommentStream;
-  raw_null_ostream NullStream;
 
   bool EmittedSectionDirective = false;
 
@@ -69,6 +186,9 @@ class MCAsmStreamer final : public MCStreamer {
                                raw_svector_ostream &OS) const;
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
+  void emitBundleAlignMode(Align Alignment) override;
+  void emitBundleLock(bool AlignToEnd, const MCSubtargetInfo &STI) override;
+  void emitBundleUnlock(const MCSubtargetInfo &STI) override;
 
   /// Helper to emit common .loc directive flags, isa, and discriminator.
   void emitDwarfLocDirectiveFlags(unsigned Flags, unsigned Isa,
@@ -86,27 +206,21 @@ public:
                 std::unique_ptr<MCInstPrinter> printer,
                 std::unique_ptr<MCCodeEmitter> emitter,
                 std::unique_ptr<MCAsmBackend> asmbackend)
-      : MCStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
-        MAI(Context.getAsmInfo()), InstPrinter(std::move(printer)),
-        Assembler(std::make_unique<MCAssembler>(
-            Context, std::move(asmbackend), std::move(emitter),
-            (asmbackend) ? asmbackend->createObjectWriter(NullStream)
-                         : nullptr)),
-        CommentStream(CommentToEmit) {
+      : MCAsmBaseStreamer(Context, std::move(emitter), std::move(asmbackend)),
+        OSOwner(std::move(os)), OS(*OSOwner), MAI(&Context.getAsmInfo()),
+        InstPrinter(std::move(printer)) {
     assert(InstPrinter);
     if (Assembler->getBackendPtr())
       setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
 
     Context.setUseNamesOnTempLabels(true);
 
-    auto *TO = Context.getTargetOptions();
-    if (!TO)
-      return;
-    IsVerboseAsm = TO->AsmVerbose;
+    const MCTargetOptions &TO = Context.getTargetOptions();
+    IsVerboseAsm = TO.AsmVerbose;
     if (IsVerboseAsm)
       InstPrinter->setCommentStream(CommentStream);
-    ShowInst = TO->ShowMCInst;
-    switch (TO->MCUseDwarfDirectory) {
+    ShowInst = TO.ShowMCInst;
+    switch (TO.MCUseDwarfDirectory) {
     case MCTargetOptions::DisableDwarfDirectory:
       UseDwarfDirectory = false;
       break;
@@ -115,12 +229,11 @@ public:
       break;
     case MCTargetOptions::DefaultDwarfDirectory:
       UseDwarfDirectory =
-          Context.getAsmInfo()->enableDwarfFileDirectoryDefault();
+          Context.getAsmInfo().enableDwarfFileDirectoryDefault();
       break;
     }
   }
 
-  MCAssembler &getAssembler() { return *Assembler; }
   MCAssembler *getAssemblerPtr() override { return nullptr; }
 
   inline void EmitEOL() {
@@ -148,18 +261,6 @@ public:
   /// output of the compiler more readable. This only affects the MCAsmStreamer
   /// and only when verbose assembly output is enabled.
   void AddComment(const Twine &T, bool EOL = true) override;
-
-  /// Add a comment showing the encoding of an instruction.
-  void AddEncodingComment(const MCInst &Inst, const MCSubtargetInfo &);
-
-  /// Return a raw_ostream that comments can be written to.
-  /// Unlike AddComment, you are required to terminate comments with \n if you
-  /// use this method.
-  raw_ostream &getCommentOS() override {
-    if (!IsVerboseAsm)
-      return nulls();  // Discard comments unless in verbose asm mode.
-    return CommentStream;
-  }
 
   void emitRawComment(const Twine &T, bool TabPrefix = true) override;
 
@@ -201,6 +302,7 @@ public:
   void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
                                            unsigned Minor, unsigned Update,
                                            VersionTuple SDKVersion) override;
+  void emitTargetTriple(StringRef TargetTriple) override;
 
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitConditionalAssignment(MCSymbol *Symbol,
@@ -283,9 +385,10 @@ public:
                             uint8_t FillLen = 1,
                             unsigned MaxBytesToEmit = 0) override;
 
-  void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
+  void emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                          unsigned MaxBytesToEmit = 0) override;
-  void emitPrefAlign(Align Alignment) override;
+  void emitPrefAlign(Align Alignment, const MCSymbol &End, bool EmitNops,
+                     uint8_t Fill, const MCSubtargetInfo &STI) override;
 
   void emitValueToOffset(const MCExpr *Offset,
                          unsigned char Value,
@@ -358,6 +461,10 @@ public:
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       codeview::DefRangeFramePointerRelHeader DRHdr) override;
 
+  void emitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      codeview::DefRangeRegisterRelIndirHeader DRHdr) override;
+
   void emitCVStringTableDirective() override;
   void emitCVFileChecksumsDirective() override;
   void emitCVFileChecksumOffsetDirective(unsigned FileNo) override;
@@ -390,7 +497,25 @@ public:
   void emitCFIWindowSave(SMLoc Loc) override;
   void emitCFINegateRAState(SMLoc Loc) override;
   void emitCFINegateRAStateWithPC(SMLoc Loc) override;
+  void emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
+                             SMLoc Loc) override;
+  void emitCFILLVMSetRAState(unsigned State, int64_t Offset,
+                             SMLoc Loc) override;
   void emitCFIReturnColumn(int64_t Register) override;
+  void emitCFILLVMRegisterPair(int64_t Register, int64_t R1, int64_t R1Size,
+                               int64_t R2, int64_t R2Size, SMLoc Loc) override;
+  void emitCFILLVMVectorRegisters(
+      int64_t Register, ArrayRef<MCCFIInstruction::VectorRegisterWithLane> VRs,
+      SMLoc Loc) override;
+  void emitCFILLVMVectorOffset(int64_t Register, int64_t RegisterSize,
+                               int64_t MaskRegister, int64_t MaskRegisterSize,
+                               int64_t Offset, SMLoc Loc) override;
+  void emitCFILLVMVectorRegisterMask(int64_t Register, int64_t SpillRegister,
+                                     int64_t SpillRegisterLaneSizeInBits,
+                                     int64_t MaskRegister,
+                                     int64_t MaskRegisterSizeInBits,
+                                     SMLoc Loc) override;
+
   void emitCFILabelDirective(SMLoc Loc, StringRef Name) override;
   void emitCFIValOffset(int64_t Register, int64_t Offset, SMLoc Loc) override;
 
@@ -399,6 +524,8 @@ public:
   void emitWinCFIFuncletOrFuncEnd(SMLoc Loc) override;
   void emitWinCFISplitChained(SMLoc Loc) override;
   void emitWinCFIPushReg(MCRegister Register, SMLoc Loc) override;
+  void emitWinCFIPush2Regs(MCRegister Reg1, MCRegister Reg2,
+                           SMLoc Loc) override;
   void emitWinCFISetFrame(MCRegister Register, unsigned Offset,
                           SMLoc Loc) override;
   void emitWinCFIAllocStack(unsigned Size, SMLoc Loc) override;
@@ -701,6 +828,11 @@ void MCAsmStreamer::emitDarwinTargetVariantBuildVersion(
     unsigned Platform, unsigned Major, unsigned Minor, unsigned Update,
     VersionTuple SDKVersion) {
   emitBuildVersion(Platform, Major, Minor, Update, SDKVersion);
+}
+
+void MCAsmStreamer::emitTargetTriple(StringRef TargetTriple) {
+  OS << "\t.target_triple \"" << TargetTriple << '"';
+  EmitEOL();
 }
 
 void MCAsmStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
@@ -1551,7 +1683,7 @@ void MCAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
 }
 
 void MCAsmStreamer::emitCodeAlignment(Align Alignment,
-                                      const MCSubtargetInfo *STI,
+                                      const MCSubtargetInfo &STI,
                                       unsigned MaxBytesToEmit) {
   // Emit with a text fill value.
   if (MAI->getTextAlignFillValue())
@@ -1561,8 +1693,15 @@ void MCAsmStreamer::emitCodeAlignment(Align Alignment,
     emitAlignmentDirective(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
 }
 
-void MCAsmStreamer::emitPrefAlign(Align Alignment) {
-  OS << "\t.prefalign\t" << Alignment.value();
+void MCAsmStreamer::emitPrefAlign(Align Alignment, const MCSymbol &End,
+                                  bool EmitNops, uint8_t Fill,
+                                  const MCSubtargetInfo &) {
+  OS << "\t.prefalign\t" << Log2(Alignment) << ", ";
+  End.print(OS, MAI);
+  if (EmitNops)
+    OS << ", nop";
+  else
+    OS << ", " << static_cast<unsigned>(Fill);
   EmitEOL();
 }
 
@@ -1849,7 +1988,7 @@ void MCAsmStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                        bool PrologueEnd, bool IsStmt,
                                        StringRef FileName, SMLoc Loc) {
   // Validate the directive.
-  if (!checkCVLocSection(FunctionId, FileNo, Loc))
+  if (!checkCVLocSection(FunctionId, Loc))
     return;
 
   OS << "\t.cv_loc\t" << FunctionId << " " << FileNo << " " << Line << " "
@@ -1939,6 +2078,16 @@ void MCAsmStreamer::emitCVDefRangeDirective(
   PrintCVDefRangePrefix(Ranges);
   OS << ", frame_ptr_rel, ";
   OS << DRHdr.Offset;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    codeview::DefRangeRegisterRelIndirHeader DRHdr) {
+  PrintCVDefRangePrefix(Ranges);
+  OS << ", reg_rel_indir, ";
+  OS << DRHdr.Register << ", " << DRHdr.Flags << ", " << DRHdr.BasePointerOffset
+     << ", " << DRHdr.OffsetInUdt;
   EmitEOL();
 }
 
@@ -2165,6 +2314,67 @@ void MCAsmStreamer::emitCFIRegister(int64_t Register1, int64_t Register2,
   EmitEOL();
 }
 
+void MCAsmStreamer::emitCFILLVMRegisterPair(int64_t Register, int64_t R1,
+                                            int64_t R1Size, int64_t R2,
+                                            int64_t R2Size, SMLoc Loc) {
+  MCStreamer::emitCFILLVMRegisterPair(Register, R1, R1Size, R2, R2Size, Loc);
+
+  OS << "\t.cfi_llvm_register_pair ";
+  EmitRegisterName(Register);
+  OS << ", ";
+  EmitRegisterName(R1);
+  OS << ", " << R1Size << ", ";
+  EmitRegisterName(R2);
+  OS << ", " << R2Size;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMVectorRegisters(
+    int64_t Register, ArrayRef<MCCFIInstruction::VectorRegisterWithLane> VRs,
+    SMLoc Loc) {
+  MCStreamer::emitCFILLVMVectorRegisters(Register, VRs, Loc);
+
+  OS << "\t.cfi_llvm_vector_registers ";
+  EmitRegisterName(Register);
+  for (auto [Reg, Lane, Size] : VRs)
+    OS << ", " << Reg << ", " << Lane << ", " << Size;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMVectorOffset(int64_t Register,
+                                            int64_t RegisterSize,
+                                            int64_t MaskRegister,
+                                            int64_t MaskRegisterSize,
+                                            int64_t Offset, SMLoc Loc) {
+  MCStreamer::emitCFILLVMVectorOffset(Register, RegisterSize, MaskRegister,
+                                      MaskRegisterSize, Offset, Loc);
+
+  OS << "\t.cfi_llvm_vector_offset ";
+  EmitRegisterName(Register);
+  OS << ", " << RegisterSize << ", ";
+  EmitRegisterName(MaskRegister);
+  OS << ", " << MaskRegisterSize << ", " << Offset;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMVectorRegisterMask(
+    int64_t Register, int64_t SpillRegister,
+    int64_t SpillRegisterLaneSizeInBits, int64_t MaskRegister,
+    int64_t MaskRegisterSizeInBits, SMLoc Loc) {
+  MCStreamer::emitCFILLVMVectorRegisterMask(
+      Register, SpillRegister, SpillRegisterLaneSizeInBits, MaskRegister,
+      MaskRegisterSizeInBits, Loc);
+
+  OS << "\t.cfi_llvm_vector_register_mask ";
+  EmitRegisterName(Register);
+  OS << ", ";
+  EmitRegisterName(SpillRegister);
+  OS << ", " << SpillRegisterLaneSizeInBits << ", ";
+  EmitRegisterName(MaskRegister);
+  OS << ", " << MaskRegisterSizeInBits;
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitCFIWindowSave(SMLoc Loc) {
   MCStreamer::emitCFIWindowSave(Loc);
   OS << "\t.cfi_window_save";
@@ -2180,6 +2390,24 @@ void MCAsmStreamer::emitCFINegateRAState(SMLoc Loc) {
 void MCAsmStreamer::emitCFINegateRAStateWithPC(SMLoc Loc) {
   MCStreamer::emitCFINegateRAStateWithPC(Loc);
   OS << "\t.cfi_negate_ra_state_with_pc";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
+                                          SMLoc Loc) {
+  MCStreamer::emitCFILLVMSetRAState(State, PACSym, Loc);
+  OS << "\t.cfi_set_ra_state " << State << ", ";
+  if (PACSym)
+    PACSym->print(OS, MAI);
+  else
+    OS << "0";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMSetRAState(unsigned State, int64_t Offset,
+                                          SMLoc Loc) {
+  MCStreamer::emitCFILLVMSetRAState(State, Offset, Loc);
+  OS << "\t.cfi_set_ra_state " << State << ", " << Offset;
   EmitEOL();
 }
 
@@ -2293,6 +2521,17 @@ void MCAsmStreamer::emitWinCFIPushReg(MCRegister Register, SMLoc Loc) {
   EmitEOL();
 }
 
+void MCAsmStreamer::emitWinCFIPush2Regs(MCRegister Reg1, MCRegister Reg2,
+                                        SMLoc Loc) {
+  MCStreamer::emitWinCFIPush2Regs(Reg1, Reg2, Loc);
+
+  OS << "\t.seh_push2regs ";
+  InstPrinter->printRegName(OS, Reg1);
+  OS << ", ";
+  InstPrinter->printRegName(OS, Reg2);
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitWinCFISetFrame(MCRegister Register, unsigned Offset,
                                        SMLoc Loc) {
   MCStreamer::emitWinCFISetFrame(Register, Offset, Loc);
@@ -2385,115 +2624,11 @@ void MCAsmStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
   EmitEOL();
 }
 
-void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
-                                       const MCSubtargetInfo &STI) {
-  raw_ostream &OS = getCommentOS();
-  SmallString<256> Code;
-  SmallVector<MCFixup, 4> Fixups;
-
-  // If we have no code emitter, don't emit code.
-  if (!getAssembler().getEmitterPtr())
-    return;
-
-  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
-
-  // RISC-V instructions are always little-endian, even on BE systems.
-  bool ForceLE = getContext().getTargetTriple().isRISCV();
-
-  // If we are showing fixups, create symbolic markers in the encoded
-  // representation. We do this by making a per-bit map to the fixup item index,
-  // then trying to display it as nicely as possible.
-  SmallVector<uint8_t, 64> FixupMap;
-  FixupMap.resize(Code.size() * 8);
-  for (unsigned i = 0, e = Code.size() * 8; i != e; ++i)
-    FixupMap[i] = 0;
-
-  for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
-    MCFixup &F = Fixups[i];
-    MCFixupKindInfo Info =
-        getAssembler().getBackend().getFixupKindInfo(F.getKind());
-    for (unsigned j = 0; j != Info.TargetSize; ++j) {
-      unsigned Index = F.getOffset() * 8 + Info.TargetOffset + j;
-      assert(Index < Code.size() * 8 && "Invalid offset in fixup!");
-      FixupMap[Index] = 1 + i;
-    }
-  }
-
-  // FIXME: Note the fixup comments for Thumb2 are completely bogus since the
-  // high order halfword of a 32-bit Thumb2 instruction is emitted first.
-  OS << "encoding: [";
-  for (unsigned i = 0, e = Code.size(); i != e; ++i) {
-    if (i)
-      OS << ',';
-
-    // See if all bits are the same map entry.
-    uint8_t MapEntry = FixupMap[i * 8 + 0];
-    for (unsigned j = 1; j != 8; ++j) {
-      if (FixupMap[i * 8 + j] == MapEntry)
-        continue;
-
-      MapEntry = uint8_t(~0U);
-      break;
-    }
-
-    if (MapEntry != uint8_t(~0U)) {
-      if (MapEntry == 0) {
-        OS << format("0x%02x", uint8_t(Code[i]));
-      } else {
-        if (Code[i]) {
-          // FIXME: Some of the 8 bits require fix up.
-          OS << format("0x%02x", uint8_t(Code[i])) << '\''
-             << char('A' + MapEntry - 1) << '\'';
-        } else
-          OS << char('A' + MapEntry - 1);
-      }
-    } else {
-      // Otherwise, write out in binary.
-      OS << "0b";
-      for (unsigned j = 8; j--;) {
-        unsigned Bit = (Code[i] >> j) & 1;
-
-        unsigned FixupBit;
-        // RISC-V instructions are always little-endian.
-        // The FixupMap is indexed by actual bit positions in the LE
-        // instruction.
-        if (MAI->isLittleEndian() || ForceLE)
-          FixupBit = i * 8 + j;
-        else
-          FixupBit = i * 8 + (7-j);
-
-        if (uint8_t MapEntry = FixupMap[FixupBit]) {
-          assert(Bit == 0 && "Encoder wrote into fixed up bit!");
-          OS << char('A' + MapEntry - 1);
-        } else
-          OS << Bit;
-      }
-    }
-  }
-  OS << "]\n";
-
-  for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
-    MCFixup &F = Fixups[i];
-    OS << "  fixup " << char('A' + i) << " - "
-       << "offset: " << F.getOffset() << ", value: ";
-    MAI->printExpr(OS, *F.getValue());
-    auto Kind = F.getKind();
-    if (mc::isRelocation(Kind))
-      OS << ", relocation type: " << Kind;
-    else {
-      OS << ", kind: ";
-      auto Info = getAssembler().getBackend().getFixupKindInfo(Kind);
-      if (F.isPCRel() && StringRef(Info.Name).starts_with("FK_Data_"))
-        OS << "FK_PCRel_" << (Info.TargetSize / 8);
-      else
-        OS << Info.Name;
-    }
-    OS << '\n';
-  }
-}
-
 void MCAsmStreamer::emitInstruction(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
+  if (LFIRewriter && LFIRewriter->rewriteInst(Inst, *this, STI))
+    return;
+
   if (CurFrag) {
     MCSection *Sec = getCurrentSectionOnly();
     Sec->setHasInstructions(true);
@@ -2505,7 +2640,7 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
     MCDwarfLineEntry::make(this, getCurrentSectionOnly());
 
   // Show the encoding in a comment if we have a code emitter.
-  AddEncodingComment(Inst, STI);
+  addEncodingComment(Inst, STI);
 
   // Show the MCInst if enabled.
   if (ShowInst) {
@@ -2544,6 +2679,24 @@ void MCAsmStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   EmitEOL();
 }
 
+void MCAsmStreamer::emitBundleAlignMode(Align Alignment) {
+  OS << "\t.bundle_align_mode " << Log2(Alignment);
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitBundleLock(bool AlignToEnd,
+                                   const MCSubtargetInfo &STI) {
+  OS << "\t.bundle_lock";
+  if (AlignToEnd)
+    OS << " align_to_end";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitBundleUnlock(const MCSubtargetInfo &STI) {
+  OS << "\t.bundle_unlock";
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
                                        const MCExpr *Expr, SMLoc) {
   OS << "\t.reloc ";
@@ -2577,6 +2730,9 @@ void MCAsmStreamer::emitRawTextImpl(StringRef String) {
 }
 
 void MCAsmStreamer::finishImpl() {
+  if (getContext().getTargetTriple().isLFI())
+    emitLFINoteSection(*this, getContext());
+
   // If we are generating dwarf for assembly source files dump out the sections.
   if (getContext().getGenDwarfForAssembly())
     MCGenDwarfInfo::Emit(this);
@@ -2674,9 +2830,9 @@ void MCAsmStreamer::emitDwarfLineEndEntry(MCSection *Section,
 
   if (!EndLabel)
     EndLabel = TextSection->getEndSymbol(Ctx);
-  const MCAsmInfo *AsmInfo = Ctx.getAsmInfo();
+  const MCAsmInfo &AsmInfo = Ctx.getAsmInfo();
   emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, EndLabel,
-                           AsmInfo->getCodePointerSize());
+                           AsmInfo.getCodePointerSize());
 }
 
 // Generate DWARF line sections for assembly mode without .loc/.file

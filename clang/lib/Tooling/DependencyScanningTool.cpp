@@ -9,23 +9,20 @@
 #include "clang/Tooling/DependencyScanningTool.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/DependencyScanning/DependencyScannerImpl.h"
+#include "clang/DependencyScanning/DependencyScanningWorker.h"
+#include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/Utils.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 #include <optional>
 
 using namespace clang;
 using namespace tooling;
 using namespace dependencies;
-
-DependencyScanningTool::DependencyScanningTool(
-    DependencyScanningService &Service,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : Worker(Service, std::move(FS)) {}
 
 namespace {
 /// Prints out all of the gathered dependencies into a string.
@@ -39,14 +36,20 @@ public:
   }
 
   void handleFileDependency(StringRef File) override {
-    Dependencies.push_back(std::string(File));
+    SmallString<128> NormalizedFile = File;
+    llvm::sys::path::remove_dots(NormalizedFile, /*remove_dot_dot=*/true);
+    Dependencies.emplace_back(NormalizedFile.str());
   }
 
   // These are ignored for the make format as it can't support the full
   // set of deps, and handleFileDependency handles enough for implicitly
   // built modules to work.
   void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {}
-  void handleModuleDependency(ModuleDeps MD) override {}
+  void handleModuleDependency(ModuleDeps MD) override {
+    MD.forEachFileDep([this](StringRef File) {
+      DependenciesFromModules.push_back(std::string(File));
+    });
+  }
   void handleDirectModuleDependency(ModuleID ID) override {}
   void handleVisibleModule(std::string ModuleName) override {}
   void handleContextHash(std::string Hash) override {}
@@ -57,9 +60,12 @@ public:
     class DependencyPrinter : public DependencyFileGenerator {
     public:
       DependencyPrinter(DependencyOutputOptions &Opts,
-                        ArrayRef<std::string> Dependencies)
+                        ArrayRef<std::string> Dependencies,
+                        ArrayRef<std::string> ModuleDependencies)
           : DependencyFileGenerator(Opts) {
         for (const auto &Dep : Dependencies)
+          addDependency(Dep);
+        for (const auto &Dep : ModuleDependencies)
           addDependency(Dep);
       }
 
@@ -69,13 +75,14 @@ public:
       }
     };
 
-    DependencyPrinter Generator(*Opts, Dependencies);
+    DependencyPrinter Generator(*Opts, Dependencies, DependenciesFromModules);
     Generator.printDependencies(S);
   }
 
 protected:
   std::unique_ptr<DependencyOutputOptions> Opts;
   std::vector<std::string> Dependencies;
+  std::vector<std::string> DependenciesFromModules;
 };
 } // anonymous namespace
 
@@ -137,23 +144,19 @@ static bool computeDependenciesForDriverCommandLine(
     DependencyScanningWorker &Worker, StringRef WorkingDirectory,
     ArrayRef<std::string> CommandLine, DependencyConsumer &Consumer,
     DependencyActionController &Controller, DiagnosticConsumer &DiagConsumer,
-    IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr;
-  if (OverlayFS) {
-    FS = OverlayFS;
-  } else {
-    FS = &Worker.getVFS();
-    FS->setCurrentWorkingDirectory(WorkingDirectory);
-  }
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
+  auto FS = Worker.makeEffectiveVFS(WorkingDirectory, OverlayFS);
 
   // Compilation holds a non-owning a reference to the Driver, hence we need to
   // keep the Driver alive when we use Compilation. Arguments to commands may be
   // owned by Alloc when expanded from response files.
   llvm::BumpPtrAllocator Alloc;
-  auto DiagEngineWithDiagOpts =
-      DiagnosticsEngineWithDiagOpts(CommandLine, FS, DiagConsumer);
-  const auto [Driver, Compilation] = buildCompilation(
-      CommandLine, *DiagEngineWithDiagOpts.DiagEngine, FS, Alloc);
+  auto DiagOpts = createScanningDiagOptions(CommandLine);
+  auto DiagEngine =
+      CompilerInstance::createDiagnostics(*FS, *DiagOpts, &DiagConsumer,
+                                          /*ShouldOwnClient=*/false);
+  const auto [Driver, Compilation] =
+      buildCompilation(CommandLine, *DiagEngine, FS, Alloc);
   if (!Compilation)
     return false;
 
@@ -165,20 +168,14 @@ static bool computeDependenciesForDriverCommandLine(
 
   return Worker.computeDependencies(WorkingDirectory, FrontendCommandLinesView,
                                     Consumer, Controller, DiagConsumer,
-                                    OverlayFS);
-}
-
-static llvm::Error makeErrorFromDiagnosticsOS(
-    TextDiagnosticsPrinterWithOutput &DiagPrinterWithOS) {
-  return llvm::make_error<llvm::StringError>(
-      DiagPrinterWithOS.DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
+                                    std::move(OverlayFS));
 }
 
 bool tooling::computeDependencies(
     DependencyScanningWorker &Worker, StringRef WorkingDirectory,
     ArrayRef<std::string> CommandLine, DependencyConsumer &Consumer,
     DependencyActionController &Controller, DiagnosticConsumer &DiagConsumer,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
   const auto IsCC1Input = (CommandLine.size() >= 2 && CommandLine[1] == "-cc1");
   return IsCC1Input ? Worker.computeDependencies(WorkingDirectory, CommandLine,
                                                  Consumer, Controller,
@@ -188,12 +185,12 @@ bool tooling::computeDependencies(
                           Controller, DiagConsumer, OverlayFS);
 }
 
-std::optional<std::string>
-DependencyScanningTool::getDependencyFile(ArrayRef<std::string> CommandLine,
-                                          StringRef CWD,
-                                          DiagnosticConsumer &DiagConsumer) {
+std::optional<std::string> DependencyScanningTool::getDependencyFile(
+    ArrayRef<std::string> CommandLine, StringRef CWD,
+    LookupModuleOutputCallback LookupModuleOutput,
+    DiagnosticConsumer &DiagConsumer) {
   MakeDependencyPrinterConsumer DepConsumer;
-  CallbackActionController Controller(nullptr);
+  CallbackActionController Controller(LookupModuleOutput);
   if (!computeDependencies(Worker, CWD, CommandLine, DepConsumer, Controller,
                            DiagConsumer))
     return std::nullopt;
@@ -217,10 +214,10 @@ std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
     void handleProvidedAndRequiredStdCXXModules(
         std::optional<P1689ModuleInfo> Provided,
         std::vector<P1689ModuleInfo> Requires) override {
-      Rule.Provides = Provided;
+      Rule.Provides = std::move(Provided);
       if (Rule.Provides)
         Rule.Provides->SourcePath = Filename.str();
-      Rule.Requires = Requires;
+      Rule.Requires = std::move(Requires);
     }
 
     StringRef getMakeFormatDependencyOutputPath() {
@@ -241,6 +238,10 @@ std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
                                    ModuleOutputKind Kind) override {
       return "";
     }
+
+    std::unique_ptr<DependencyActionController> clone() const override {
+      return std::make_unique<P1689ActionController>();
+    }
   };
 
   P1689Rule Rule;
@@ -256,6 +257,46 @@ std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
   return Rule;
 }
 
+static std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>,
+                 std::vector<std::string>>
+initVFSForTUBufferScanning(ArrayRef<std::string> CommandLine,
+                           llvm::MemoryBufferRef TUBuffer) {
+  StringRef InputPath = TUBuffer.getBufferIdentifier();
+  auto InputBuf = llvm::MemoryBuffer::getMemBufferCopy(TUBuffer.getBuffer());
+
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  FS->addFile(InputPath, 0, std::move(InputBuf));
+
+  std::vector<std::string> ModifiedCommandLine(CommandLine);
+  ModifiedCommandLine.emplace_back(InputPath);
+
+  return std::make_pair(std::move(FS), ModifiedCommandLine);
+}
+
+static std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>,
+                 std::vector<std::string>>
+initVFSForByNameScanning(ArrayRef<std::string> CommandLine) {
+  // The fake input buffer is read-only, and it is used to produce unique source
+  // locations for the diagnostics. Therefore, sharing this global buffer across
+  // threads is ok.
+  static const std::string FakeInput(
+      DependencyScanningWorker::MaxNumOfByNameQueries, ' ');
+
+  StringRef InputPath =
+      llvm::sys::path::is_style_windows(llvm::sys::path::Style::native)
+          ? "Z:\\module-include.input"
+          : "/module-include.input";
+  auto InputBuf = llvm::MemoryBuffer::getMemBuffer(FakeInput, InputPath);
+
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  FS->addFile(InputPath, 0, std::move(InputBuf));
+
+  std::vector<std::string> ModifiedCommandLine(CommandLine);
+  ModifiedCommandLine.emplace_back(InputPath);
+
+  return std::make_pair(std::move(FS), ModifiedCommandLine);
+}
+
 std::optional<TranslationUnitDeps>
 DependencyScanningTool::getTranslationUnitDependencies(
     ArrayRef<std::string> CommandLine, StringRef CWD,
@@ -268,48 +309,30 @@ DependencyScanningTool::getTranslationUnitDependencies(
 
   // If we are scanning from a TUBuffer, create an overlay filesystem with the
   // input as an in-memory file and add it to the command line.
-  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr;
   std::vector<std::string> CommandLineWithTUBufferInput;
   if (TUBuffer) {
     std::tie(OverlayFS, CommandLineWithTUBufferInput) =
-        initVFSForTUBufferScanning(&Worker.getVFS(), CommandLine, CWD,
-                                   *TUBuffer);
+        initVFSForTUBufferScanning(CommandLine, *TUBuffer);
     CommandLine = CommandLineWithTUBufferInput;
   }
 
   if (!computeDependencies(Worker, CWD, CommandLine, Consumer, Controller,
-                           DiagConsumer, OverlayFS))
+                           DiagConsumer, std::move(OverlayFS)))
     return std::nullopt;
   return Consumer.takeTranslationUnitDeps();
 }
 
-llvm::Expected<TranslationUnitDeps>
-DependencyScanningTool::getModuleDependencies(
-    StringRef ModuleName, ArrayRef<std::string> CommandLine, StringRef CWD,
-    const llvm::DenseSet<ModuleID> &AlreadySeen,
-    LookupModuleOutputCallback LookupModuleOutput) {
-  if (auto Error =
-          initializeCompilerInstanceWithContextOrError(CWD, CommandLine))
-    return Error;
-
-  auto Result = computeDependenciesByNameWithContextOrError(
-      ModuleName, AlreadySeen, LookupModuleOutput);
-
-  if (auto Error = finalizeCompilerInstanceWithContextOrError())
-    return Error;
-
-  return Result;
-}
-
-static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
-    ArrayRef<std::string> CommandLine, DiagnosticsEngine &Diags,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> ScanFS) {
+static std::optional<SmallVector<std::string, 0>>
+getFirstCC1CommandLine(ArrayRef<std::string> CommandLine,
+                       DiagnosticsEngine &Diags,
+                       llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
   // Compilation holds a non-owning a reference to the Driver, hence we need to
   // keep the Driver alive when we use Compilation. Arguments to commands may be
   // owned by Alloc when expanded from response files.
   llvm::BumpPtrAllocator Alloc;
   const auto [Driver, Compilation] =
-      buildCompilation(CommandLine, Diags, ScanFS, Alloc);
+      buildCompilation(CommandLine, Diags, std::move(FS), Alloc);
   if (!Compilation)
     return std::nullopt;
 
@@ -323,65 +346,30 @@ static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
   return std::nullopt;
 }
 
-bool DependencyScanningTool::initializeWorkerCIWithContextFromCommandline(
-    DependencyScanningWorker &Worker, StringRef CWD,
-    ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC) {
-  if (CommandLine.size() >= 2 && CommandLine[1] == "-cc1") {
-    // The input command line is already a -cc1 invocation; initialize the
-    // compiler instance directly from it.
-    return Worker.initializeCompilerInstanceWithContext(CWD, CommandLine, DC);
+bool DependencyScanningTool::getByNameDependencies(
+    StringRef CWD, ArrayRef<std::string> CommandLine,
+    DiagnosticConsumer &DiagConsumer, DependencyActionController &Controller,
+    llvm::function_ref<std::optional<std::string>()> getNextName,
+    DependencyConsumer &DepConsumer) {
+  auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(CommandLine);
+  auto FS = Worker.makeEffectiveVFS(CWD, OverlayFS);
+  std::vector<std::string> CC1CommandLine;
+  if (ModifiedCommandLine.size() >= 2 && ModifiedCommandLine[1] == "-cc1") {
+    CC1CommandLine = std::move(ModifiedCommandLine);
+  } else {
+    // Driver-style (or ill-formed): lower to a cc1 command line, or diagnose.
+    auto DiagOpts = createScanningDiagOptions(ModifiedCommandLine);
+    auto DiagEngine =
+        CompilerInstance::createDiagnostics(*FS, *DiagOpts, &DiagConsumer,
+                                            /*ShouldOwnClient=*/false);
+    auto MaybeFirstCC1 =
+        getFirstCC1CommandLine(ModifiedCommandLine, *DiagEngine, FS);
+    if (!MaybeFirstCC1)
+      return false;
+    CC1CommandLine.assign(MaybeFirstCC1->begin(), MaybeFirstCC1->end());
   }
 
-  // The input command line is either a driver-style command line, or
-  // ill-formed. In this case, we will first call the Driver to build a -cc1
-  // command line for this compilation or diagnose any ill-formed input.
-  auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(
-      &Worker.getVFS(), CommandLine, CWD, "ScanningByName");
-  auto DiagEngineWithCmdAndOpts =
-      std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
-                                                      OverlayFS, DC);
-
-  const auto MaybeFirstCC1 = getFirstCC1CommandLine(
-      ModifiedCommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS);
-  if (!MaybeFirstCC1)
-    return false;
-
-  return Worker.initializeCompilerInstanceWithContext(
-      CWD, *MaybeFirstCC1, std::move(DiagEngineWithCmdAndOpts), OverlayFS);
-}
-
-llvm::Error
-DependencyScanningTool::initializeCompilerInstanceWithContextOrError(
-    StringRef CWD, ArrayRef<std::string> CommandLine) {
-  DiagPrinterWithOS =
-      std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
-
-  bool Result = initializeWorkerCIWithContextFromCommandline(
-      Worker, CWD, CommandLine, DiagPrinterWithOS->DiagPrinter);
-
-  if (Result)
-    return llvm::Error::success();
-  return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
-}
-
-llvm::Expected<TranslationUnitDeps>
-DependencyScanningTool::computeDependenciesByNameWithContextOrError(
-    StringRef ModuleName, const llvm::DenseSet<ModuleID> &AlreadySeen,
-    LookupModuleOutputCallback LookupModuleOutput) {
-  FullDependencyConsumer Consumer(AlreadySeen);
-  CallbackActionController Controller(LookupModuleOutput);
-  // We need to clear the DiagnosticOutput so that each by-name lookup
-  // has a clean diagnostics buffer.
-  DiagPrinterWithOS->DiagnosticOutput.clear();
-  if (Worker.computeDependenciesByNameWithContext(ModuleName, Consumer,
-                                                  Controller))
-    return Consumer.takeTranslationUnitDeps();
-  return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
-}
-
-llvm::Error
-DependencyScanningTool::finalizeCompilerInstanceWithContextOrError() {
-  if (Worker.finalizeCompilerInstanceWithContext())
-    return llvm::Error::success();
-  return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
+  return Worker.computeDependenciesByName(CWD, CC1CommandLine,
+                                          std::move(OverlayFS), DiagConsumer,
+                                          Controller, getNextName, DepConsumer);
 }

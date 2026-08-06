@@ -2,7 +2,7 @@
 ! Tests the new functionality that converts Fortran iteration constructs to acc.loop with proper IV handling.
 
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
-! RUN: bbc -fopenacc -emit-hlfir --openacc-do-loop-to-acc-loop=false %s -o - | FileCheck %s --check-prefix=CHECK-NOACCLOOP
+! RUN: bbc -fopenacc -emit-hlfir --openacc-do-loop-to-acc-loop=false --openacc-do-loop-to-acc-loop-in-acc-routine=false %s -o - | FileCheck %s --check-prefix=CHECK-NOACCLOOP
 
 ! CHECK-LABEL: func.func @_QPbasic_do_loop
 subroutine basic_do_loop()
@@ -426,5 +426,112 @@ subroutine while_like_loop()
 
 ! CHECK: acc.kernels {
 ! CHECK-NOT: acc.loop
+
+end subroutine
+
+! CHECK-LABEL: func.func @_QProutine_do_loop
+! CHECK-NOACCLOOP-LABEL: func.func @_QProutine_do_loop
+! CHECK-SAME: attributes {acc.routine_info
+! CHECK-NOACCLOOP-NOT: acc.loop
+subroutine routine_do_loop()
+  !$acc routine seq
+  integer :: i
+  integer, parameter :: n = 10
+  real, dimension(n) :: a, b
+
+  do i = 1, n
+    a(i) = b(i) + 1.0
+  end do
+
+! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: acc.loop private(%[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
+! CHECK: %[[PRIVATE_DECLARE:.*]]:2 = hlfir.declare %[[PRIVATE_IV]] {uniq_name = "_QFroutine_do_loopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: fir.store %{{.*}} to %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
+! CHECK: %{{.*}} = fir.load %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
+! CHECK: %{{.*}} = fir.load %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
+! CHECK: acc.yield
+! CHECK: attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+! CHECK-NOT: auto_ = [#acc.device_type
+! CHECK-NOT: independent = [#acc.device_type
+
+end subroutine
+
+! CHECK-LABEL: func.func @_QProutine_do_concurrent
+! CHECK-NOACCLOOP-LABEL: func.func @_QProutine_do_concurrent
+! CHECK-SAME: attributes {acc.routine_info
+! CHECK-NOACCLOOP-NOT: acc.loop
+subroutine routine_do_concurrent()
+  !$acc routine seq
+  integer :: i
+  integer, parameter :: n = 10
+  real, dimension(n) :: a, b
+
+  do concurrent (i = 1:n)
+    a(i) = b(i) + 1.0
+  end do
+
+! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: acc.loop private(%[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
+! CHECK: %[[PRIVATE_DECLARE:.*]]:2 = hlfir.declare %[[PRIVATE_IV]] {uniq_name = "_QFroutine_do_concurrentEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: fir.store %{{.*}} to %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
+! CHECK: %{{.*}} = fir.load %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
+! CHECK: %{{.*}} = fir.load %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
+! CHECK: acc.yield
+! CHECK: attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+! CHECK-NOT: independent = [#acc.device_type
+
+end subroutine
+
+! CHECK-LABEL: func.func @_QProutine_do_loop_nonseq
+! CHECK-NOACCLOOP-LABEL: func.func @_QProutine_do_loop_nonseq
+! CHECK-SAME: attributes {acc.routine_info
+! CHECK-NOACCLOOP-NOT: acc.loop
+subroutine routine_do_loop_nonseq()
+  !$acc routine
+  integer :: i
+  integer, parameter :: n = 10
+  real, dimension(n) :: a, b
+
+  do i = 1, n
+    a(i) = b(i) + 1.0
+  end do
+
+! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: acc.loop private(%[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
+! CHECK: %[[PRIVATE_DECLARE:.*]]:2 = hlfir.declare %[[PRIVATE_IV]] {uniq_name = "_QFroutine_do_loop_nonseqEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: fir.store %{{.*}} to %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
+! CHECK: %{{.*}} = fir.load %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
+! CHECK: %{{.*}} = fir.load %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
+! CHECK: acc.yield
+! CHECK: attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK-NOT: seq = [#acc.device_type
+! CHECK-NOT: independent = [#acc.device_type
+
+end subroutine
+
+! CHECK-LABEL: func.func @_QProutine_do_concurrent_nonseq
+! CHECK-NOACCLOOP-LABEL: func.func @_QProutine_do_concurrent_nonseq
+! CHECK-SAME: attributes {acc.routine_info
+! CHECK-NOACCLOOP-NOT: acc.loop
+subroutine routine_do_concurrent_nonseq()
+  !$acc routine
+  integer :: i
+  integer, parameter :: n = 10
+  real, dimension(n) :: a, b
+
+  do concurrent (i = 1:n)
+    a(i) = b(i) + 1.0
+  end do
+
+! CHECK: %[[PRIVATE_IV:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: acc.loop private(%[[PRIVATE_IV]] : !fir.ref<i32>) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32)
+! CHECK: %[[PRIVATE_DECLARE:.*]]:2 = hlfir.declare %[[PRIVATE_IV]] {uniq_name = "_QFroutine_do_concurrent_nonseqEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: fir.store %{{.*}} to %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
+! CHECK: %{{.*}} = fir.load %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
+! CHECK: %{{.*}} = fir.load %[[PRIVATE_DECLARE]]#0 : !fir.ref<i32>
+! CHECK: acc.yield
+! CHECK: attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NOT: seq = [#acc.device_type
+! CHECK-NOT: auto_ = [#acc.device_type
 
 end subroutine

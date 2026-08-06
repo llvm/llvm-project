@@ -88,7 +88,12 @@ extern "C"
     // TODO: dlsym won't work on Windows.
     void *dlsym(void* handle, const char* symbol);
     int (*ptr__tsan_get_report_loc_object_type)(void *report, unsigned long idx, const char **object_type);
-}
+#if defined(__linux__)
+#define RTLD_DEFAULT	((void *) 0)
+#else
+#define RTLD_DEFAULT	((void *) -2)
+#endif
+  }
 )";
 
 const char *thread_sanitizer_retrieve_report_data_command = R"(
@@ -161,7 +166,7 @@ struct {
     } unique_tids[REPORT_ARRAY_SIZE];
 } t = {0};
 
-ptr__tsan_get_report_loc_object_type = (typeof(ptr__tsan_get_report_loc_object_type))(void *)dlsym((void*)-2 /*RTLD_DEFAULT*/, "__tsan_get_report_loc_object_type");
+ptr__tsan_get_report_loc_object_type = (typeof(ptr__tsan_get_report_loc_object_type))(void *)dlsym(RTLD_DEFAULT, "__tsan_get_report_loc_object_type");
 
 t.report = __tsan_get_current_report();
 __tsan_get_report_data(t.report, &t.description, &t.report_count, &t.stack_count, &t.mop_count, &t.loc_count, &t.mutex_count, &t.thread_count, &t.unique_tid_count, t.sleep_trace, REPORT_TRACE_SIZE);

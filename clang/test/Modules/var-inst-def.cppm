@@ -94,8 +94,8 @@ using invoke_result_t = __invoke_result_impl<_Args...>;
 }
 
 //--- main.cpp
-#include "stl.h"
 #include "a.h"
+#include "stl.h"
 
 namespace cc {
 template <typename F>

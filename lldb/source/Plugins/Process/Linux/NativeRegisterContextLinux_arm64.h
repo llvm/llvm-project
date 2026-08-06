@@ -16,6 +16,8 @@
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
+#include "llvm/ADT/BitmaskEnum.h"
+
 #include <asm/ptrace.h>
 
 namespace lldb_private {
@@ -79,73 +81,106 @@ protected:
   lldb::addr_t FixWatchpointHitAddress(lldb::addr_t hit_addr) override;
 
 private:
-  bool m_gpr_is_valid;
-  bool m_fpu_is_valid;
-  bool m_sve_buffer_is_valid;
-  bool m_mte_ctrl_is_valid;
-  bool m_zt_buffer_is_valid;
-  bool m_fpmr_is_valid;
+  // Bit mask enum used to refer to the types of registers we support. Currently
+  // used for tracking cache validity and ReadAll/WriteAllRegister data. Will
+  // be used for much more in future.
+  enum class RegisterSetType : uint32_t {
+    // General purpose registers.
+    GPR = 1 << 0,
+    // When there is no SVE, or SVE in FPSIMD mode, or streaming only SVE that
+    // is in non-streaming mode.
+    FPR = 1 << 1,
+    // Used for SVE registers in streaming or non-streaming mode.
+    SVE = 1 << 2,
+    // Only the ptrace header for SVE.
+    SVE_HEADER = 1 << 3,
+    // Pointer authentication mask registers.
+    PAC = 1 << 4,
+    // Memory tagging control registers.
+    MTE = 1 << 5,
+    // Thread local storage registers.
+    TLS = 1 << 6,
+    // ZA only, because SVCR and SVG are pseudo registers.
+    ZA = 1 << 7,
+    // Only the ptrace header for ZA.
+    ZA_HEADER = 1 << 8,
+    // ZT only.
+    ZT = 1 << 9,
+    // Floating point mode control registers.
+    FPMR = 1 << 10,
+    // Guarded Control Stack registers.
+    GCS = 1 << 11,
+    // Permission Overlay registers.
+    POE = 1 << 12,
+    LLVM_MARK_AS_BITMASK_ENUM(POE),
+  };
 
-  bool m_sve_header_is_valid;
-  bool m_za_buffer_is_valid;
-  bool m_za_header_is_valid;
-  bool m_pac_mask_is_valid;
-  bool m_tls_is_valid;
-  size_t m_tls_size;
-  bool m_gcs_is_valid;
+  RegisterSetType m_validity = static_cast<RegisterSetType>(0);
 
-  struct user_pt_regs m_gpr_arm64; // 64-bit general purpose registers.
+  void MakeValid(RegisterSetType set) { m_validity |= set; }
 
-  RegisterInfoPOSIX_arm64::FPU
-      m_fpr; // floating-point registers including extended register sets.
+  [[nodiscard]] bool IsValid(RegisterSetType set) const {
+    return any(m_validity & set);
+  }
+
+  template <typename... Ts> void Invalidate(RegisterSetType first, Ts... rest) {
+    static_assert((std::is_same_v<Ts, RegisterSetType> && ...));
+    m_validity &= ~(first | ... | rest);
+  }
+
+  Status RestoreRegisters(void *buffer, const uint8_t **src, size_t len,
+                          const RegisterSetType set,
+                          std::function<Status()> writer);
+
+  size_t m_tls_size = 0;
+
+  /// 64-bit general purpose registers.
+  struct user_pt_regs m_gpr_arm64{};
+
+  /// Floating-point registers including extended register sets.
+  RegisterInfoPOSIX_arm64::FPU m_fpr{};
 
   SVEState m_sve_state = SVEState::Unknown;
-  struct sve::user_sve_header m_sve_header;
+  struct sve::user_sve_header m_sve_header{};
   std::vector<uint8_t> m_sve_ptrace_payload;
 
   sve::user_za_header m_za_header;
   std::vector<uint8_t> m_za_ptrace_payload;
 
-  bool m_refresh_hwdebug_info;
+  bool m_refresh_hwdebug_info = true;
 
   struct user_pac_mask {
-    uint64_t data_mask;
-    uint64_t insn_mask;
-  };
+    uint64_t data_mask = 0;
+    uint64_t insn_mask = 0;
+  } m_pac_mask;
 
-  struct user_pac_mask m_pac_mask;
-
-  uint64_t m_mte_ctrl_reg;
+  uint64_t m_mte_ctrl_reg = 0;
 
   struct sme_pseudo_regs {
-    uint64_t ctrl_reg;
-    uint64_t svg_reg;
-  };
-
-  struct sme_pseudo_regs m_sme_pseudo_regs;
+    uint64_t ctrl_reg = 0;
+    uint64_t svg_reg = 0;
+  } m_sme_pseudo_regs;
 
   struct tls_regs {
-    uint64_t tpidr_reg;
+    uint64_t tpidr_reg = 0;
     // Only valid when SME is present.
-    uint64_t tpidr2_reg;
-  };
-
-  struct tls_regs m_tls_regs;
+    uint64_t tpidr2_reg = 0;
+  } m_tls_regs;
 
   // SME2's ZT is a 512 bit register.
-  std::array<uint8_t, 64> m_zt_reg;
+  std::array<uint8_t, 64> m_zt_reg{};
 
-  uint64_t m_fpmr_reg;
+  uint64_t m_fpmr_reg = 0;
+
+  struct poe_regs {
+    uint64_t por_el0_reg = 0;
+  } m_poe_regs;
 
   struct gcs_regs {
-    uint64_t features_enabled;
-    uint64_t features_locked;
-    uint64_t gcspr_e0;
+    uint64_t features_enabled = 0;
+    uint64_t features_locked = 0;
+    uint64_t gcspr_e0 = 0;
   } m_gcs_regs;
-
-  bool IsGPR(unsigned reg) const;
-
-  bool IsFPR(unsigned reg) const;
 
   Status ReadAllSVE();
 
@@ -192,13 +227,9 @@ private:
 
   Status WriteFPMR();
 
-  bool IsSVE(unsigned reg) const;
-  bool IsSME(unsigned reg) const;
-  bool IsPAuth(unsigned reg) const;
-  bool IsMTE(unsigned reg) const;
-  bool IsTLS(unsigned reg) const;
-  bool IsFPMR(unsigned reg) const;
-  bool IsGCS(unsigned reg) const;
+  Status ReadPOE();
+
+  Status WritePOE();
 
   uint64_t GetSVERegVG() { return m_sve_header.vl / 8; }
 
@@ -226,6 +257,8 @@ private:
 
   void *GetGCSBuffer() { return &m_gcs_regs; }
 
+  void *GetPOEBuffer() { return &m_poe_regs; }
+
   size_t GetSVEHeaderSize() { return sizeof(m_sve_header); }
 
   size_t GetPACMaskSize() { return sizeof(m_pac_mask); }
@@ -250,11 +283,14 @@ private:
 
   size_t GetGCSBufferSize() { return sizeof(m_gcs_regs); }
 
+  size_t GetPOEBufferSize() { return sizeof(m_poe_regs); }
+
   llvm::Error ReadHardwareDebugInfo() override;
 
   llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
 
-  uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
+  uint32_t CalculateFprOffset(const RegisterInfo *reg_info,
+                              bool streaming_fpsimd) const;
 
   RegisterInfoPOSIX_arm64 &GetRegisterInfo() const;
 
@@ -263,6 +299,11 @@ private:
   uint32_t CalculateSVEOffset(const RegisterInfo *reg_info) const;
 
   Status CacheAllRegisters(uint32_t &cached_size);
+
+  uint8_t *AddRegisterSetType(uint8_t *dst, RegisterSetType register_set_type);
+
+  uint8_t *AddSavedRegisters(uint8_t *dst, RegisterSetType register_set_type,
+                             void *src, size_t size);
 };
 
 } // namespace process_linux

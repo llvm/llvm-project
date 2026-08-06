@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERFLAGSDETECTOR_ARM64_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERFLAGSDETECTOR_ARM64_H
 
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Utility/RegisterTypeFlags.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 
@@ -52,7 +52,7 @@ public:
   bool HasDetected() const { return m_has_detected; }
 
 private:
-  using Fields = std::vector<RegisterFlags::Field>;
+  using Fields = std::vector<RegisterTypeFlags::Field>;
   using DetectorFn = std::function<Fields(uint64_t, uint64_t, uint64_t)>;
 
   static Fields DetectCPSRFields(uint64_t hwcap, uint64_t hwcap2,
@@ -69,6 +69,8 @@ private:
                                  uint64_t hwcap3);
   static Fields DetectGCSFeatureFields(uint64_t hwcap, uint64_t hwcap2,
                                        uint64_t hwcap3);
+  static Fields DetectPOREL0Fields(uint64_t hwcap, uint64_t hwcap2,
+                                   uint64_t hwcap3);
 
   struct RegisterEntry {
     RegisterEntry(llvm::StringRef name, unsigned size, DetectorFn detector)
@@ -76,9 +78,9 @@ private:
           m_detector(detector) {}
 
     llvm::StringRef m_name;
-    RegisterFlags m_flags;
+    RegisterTypeFlags m_flags;
     DetectorFn m_detector;
-  } m_registers[8] = {
+  } m_registers[9] = {
       RegisterEntry("cpsr", 4, DetectCPSRFields),
       RegisterEntry("fpsr", 4, DetectFPSRFields),
       RegisterEntry("fpcr", 4, DetectFPCRFields),
@@ -87,6 +89,7 @@ private:
       RegisterEntry("fpmr", 8, DetectFPMRFields),
       RegisterEntry("gcs_features_enabled", 8, DetectGCSFeatureFields),
       RegisterEntry("gcs_features_locked", 8, DetectGCSFeatureFields),
+      RegisterEntry("por_el0", 8, DetectPOREL0Fields),
   };
 
   // Becomes true once field detection has been run for all registers.

@@ -19,7 +19,8 @@ def NeoverseN2Model : SchedMachineModel {
   let CompleteModel         =   1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
-    [HasSVE2p1, HasSVEB16B16, HasPAuthLR, HasCPA, HasCSSC]);
+                                                    SVE2p1Unsupported.F,
+    [HasSVE2p1, HasSVEB16B16, HasPAuthLR, HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -465,6 +466,10 @@ def N2Write_6c_2I_2L : SchedWriteRes<[N2UnitI, N2UnitI, N2UnitL, N2UnitL]> {
 def N2Write_7c_4L : SchedWriteRes<[N2UnitL, N2UnitL, N2UnitL, N2UnitL]> {
   let Latency     = 7;
   let NumMicroOps = 4;
+}
+
+def N2Write_14cyc_1L_1S : SchedWriteRes<[N2UnitL, N2UnitD]> {
+  let Latency     = 14;
 }
 
 //===----------------------------------------------------------------------===//
@@ -963,6 +968,14 @@ def : SchedAlias<WriteST,    N2Write_1c_1L01_1D>;
 def : SchedAlias<WriteSTIdx, N2Write_1c_1L01_1D_1I>;
 def : SchedAlias<WriteSTP,   N2Write_1c_1L01_1D>;
 def : SchedAlias<WriteAdr,   N2Write_1c_1I>; // copied from A57.
+
+// Atomic instructions
+// -----------------------------------------------------------------------------
+
+def : InstRW<[N2Write_14cyc_1L_1S], (instrs CASB, CASH, CASW, CASX)>;
+def : InstRW<[N2Write_14cyc_1L_1S], (instrs CASAB, CASAH, CASAW, CASAX)>;
+def : InstRW<[N2Write_14cyc_1L_1S], (instrs CASLB, CASLH, CASLW, CASLX)>;
+def : InstRW<[N2Write_14cyc_1L_1S], (instrs CASALB, CASALH, CASALW, CASALX)>;
 
 // Tag load instructions
 // -----------------------------------------------------------------------------
@@ -1877,7 +1890,8 @@ def : InstRW<[N2Write_4c_1V1], (instregex "^[SU]RSHLR?_ZPmZ_[BHSD]",
 def : InstRW<[N2Write_6c_2V1], (instregex "^(BDEP|BEXT|BGRP)_ZZZ_[BHSD]")>;
 
 // Bitwise select
-def : InstRW<[N2Write_2c_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ$")>;
+def : InstRW<[N2Write_2c_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ$",
+                                         "^(EON|NAND|NOR)_ZZZ$")>;
 
 // Count/reverse bits
 def : InstRW<[N2Write_2c_1V], (instregex "^(CLS|CLZ|CNT|RBIT)_ZPmZ_[BHSD]")>;

@@ -1,5 +1,5 @@
 /// https://bugs.llvm.org/show_bug.cgi?id=38067
-/// An abnormal exit does not clear execution counts of subsequent instructions.
+/// An abnormal exit should now clear execution counts of subsequent instructions.
 // RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clang --coverage %s -o %t -dumpdir ./
 // RUN: test -f gcov-__gcov_flush-terminate.gcno
@@ -18,6 +18,6 @@ int main(void) {                   // CHECK:      1: [[#@LINE]]:int main(void)
   __gcov_reset();                  // CHECK-NEXT: 1: [[#@LINE]]:
   i = 42;                          // CHECK-NEXT: 1: [[#@LINE]]:
   __builtin_trap();                // CHECK-NEXT: 1: [[#@LINE]]:
-  i = 84;                          // CHECK-NEXT: 1: [[#@LINE]]:
-  return 0;                        // CHECK-NEXT: 1: [[#@LINE]]:
+  i = 84;                          // CHECK-NEXT: -: [[#@LINE]]:
+  return 0;                        // CHECK-NEXT: -: [[#@LINE]]:
 }

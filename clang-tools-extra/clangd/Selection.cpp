@@ -669,6 +669,9 @@ public:
   bool TraverseConceptReference(ConceptReference *X) {
     return traverseNode(X, [&] { return Base::TraverseConceptReference(X); });
   }
+  bool TraverseOffsetOfNode(const OffsetOfNode *N) {
+    return traverseNode(N, [&] { return Base::TraverseOffsetOfNode(N); });
+  }
   // Stmt is the same, but this form allows the data recursion optimization.
   bool dataTraverseStmtPre(Stmt *X) {
     if (!X || isImplicit(X))
@@ -920,6 +923,15 @@ private:
     if (N.get<ExprWithCleanups>())
       return;
 
+    if (const auto *OON = N.get<OffsetOfNode>()) {
+      if (OON->getKind() == OffsetOfNode::Array) {
+        // Leave the array index expression to its own child nodes.
+        claimRange(OON->getBeginLoc(), Result);
+        claimRange(OON->getEndLoc(), Result);
+        return;
+      }
+    }
+
     // Declarators nest "inside out", with parent types inside child ones.
     // Instead of claiming the whole range (clobbering parent tokens), carefully
     // claim the tokens owned by this node and non-declarator children.
@@ -957,6 +969,10 @@ private:
       }
       if (auto PTL = TL->getAs<PointerTypeLoc>()) {
         claimRange(PTL.getStarLoc(), Result);
+        return;
+      }
+      if (auto MPTL = TL->getAs<MemberPointerTypeLoc>()) {
+        claimRange(MPTL.getLocalSourceRange(), Result);
         return;
       }
       if (auto FTL = TL->getAs<FunctionTypeLoc>()) {

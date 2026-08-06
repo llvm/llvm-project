@@ -123,8 +123,35 @@ function(mlir_generate_type_stubs)
     "IMPORT_PATHS;DEPENDS_TARGETS;OUTPUTS;DEPENDS_TARGET_SRC_DEPS"
     ${ARGN})
 
+  # Allow overriding the stubgen.py path or fetching a specific version
+  # from the nanobind repository, independent of the nanobind used for
+  # building. This is useful when a newer stubgen has bug fixes or features
+  # not yet available in the nanobind version used for compilation.
+  if(MLIR_NB_STUBGEN)
+    set(NB_STUBGEN "${MLIR_NB_STUBGEN}")
+  elseif(MLIR_NB_STUBGEN_VERSION)
+    set(_stubgen_path "${MLIR_BINARY_DIR}/stubgen/${MLIR_NB_STUBGEN_VERSION}/stubgen.py")
+    if(NOT EXISTS "${_stubgen_path}")
+      message(STATUS "Downloading stubgen.py from nanobind ${MLIR_NB_STUBGEN_VERSION}...")
+      file(MAKE_DIRECTORY "${MLIR_BINARY_DIR}/stubgen/${MLIR_NB_STUBGEN_VERSION}" RESULT _created_dir)
+      if(NOT _created_dir EQUAL 0)
+        list(GET _created_dir 1 _created_dir_error)
+        message(FATAL_ERROR "Failed to create parent dir for stubgen.py: ${_created_dir_error}")
+      endif()
+      file(DOWNLOAD
+        "https://raw.githubusercontent.com/wjakob/nanobind/${MLIR_NB_STUBGEN_VERSION}/src/stubgen.py"
+        "${_stubgen_path}"
+        STATUS _download_status
+      )
+      list(GET _download_status 0 _download_code)
+      if(NOT _download_code EQUAL 0)
+        list(GET _download_status 1 _download_error)
+        message(FATAL_ERROR "Failed to download stubgen.py: ${_download_error}")
+      endif()
+    endif()
+    set(NB_STUBGEN "${_stubgen_path}")
   # for people installing a distro (e.g., pip install) of nanobind
-  if(EXISTS ${nanobind_DIR}/../src/stubgen.py)
+  elseif(EXISTS ${nanobind_DIR}/../src/stubgen.py)
     set(NB_STUBGEN "${nanobind_DIR}/../src/stubgen.py")
   elseif(EXISTS ${nanobind_DIR}/../stubgen.py)
     set(NB_STUBGEN "${nanobind_DIR}/../stubgen.py")
@@ -302,27 +329,85 @@ function(_mlir_python_install_sources name source_root_dir destination)
   )
 endfunction()
 
+# Define exception handling and RTTI flags.
+macro(_mlir_python_eh_rtti_flags)
+  set(eh_rtti_enable)
+  if(MSVC)
+    set(eh_rtti_enable /EHsc /GR)
+  elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL)
+    set(eh_rtti_enable -frtti -fexceptions)
+  endif()
+endmacro()
+
 function(build_nanobind_lib)
   cmake_parse_arguments(ARG
     ""
     "INSTALL_COMPONENT;INSTALL_DESTINATION;OUTPUT_DIRECTORY;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
-    ""
+    "EXTRA_COMPILE_OPTIONS;EXTRA_LINK_LIBS"
     ${ARGN})
 
   # Only build in free-threaded mode if the Python ABI supports it.
   # See https://github.com/wjakob/nanobind/blob/4ba51fcf795971c5d603d875ae4184bc0c9bd8e6/cmake/nanobind-config.cmake#L363-L371.
-  if (NB_ABI MATCHES "[0-9]t")
+  if(NB_ABI MATCHES "[0-9]t")
     set(_ft "-ft")
+    set(_abi3 "")
+  else()
+    set(_ft "")
+    # Match nanobind_add_module's naming: with STABLE_ABI, the shared library
+    # name includes "-abi3" (e.g., "nanobind-abi3-mlir").
+    if(MLIR_ENABLE_PYTHON_STABLE_ABI)
+      set(_abi3 "-abi3")
+    else()
+      set(_abi3 "")
+    endif()
   endif()
   # nanobind does a string match on the suffix to figure out whether to build
   # the lib with free threading...
-  set(NB_LIBRARY_TARGET_NAME "nanobind${_ft}-${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
+  set(NB_LIBRARY_TARGET_NAME "nanobind${_ft}${_abi3}-${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}")
   set(NB_LIBRARY_TARGET_NAME "${NB_LIBRARY_TARGET_NAME}" PARENT_SCOPE)
   nanobind_build_library(${NB_LIBRARY_TARGET_NAME} AS_SYSINCLUDE)
   target_compile_definitions(${NB_LIBRARY_TARGET_NAME}
     PRIVATE
     NB_DOMAIN=${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
   )
+
+  if(NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES
+     AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
+    # Avoid some warnings from upstream nanobind.
+    # If a superproject set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES, let
+    # the super project handle compile options as it wishes.
+    _mlir_python_eh_rtti_flags()
+    target_compile_options(${NB_LIBRARY_TARGET_NAME}
+      PRIVATE
+        -Wno-c++98-compat-extra-semi
+        -Wno-cast-qual
+        -Wno-covered-switch-default
+        -Wno-deprecated-literal-operator
+        -Wno-nested-anon-types
+        -Wno-unused-parameter
+        -Wno-zero-length-array
+        -Wno-missing-field-initializers
+        ${eh_rtti_enable})
+  endif()
+
+  # Apply caller-provided extra options last so they have higher precedence.
+  target_compile_options(${NB_LIBRARY_TARGET_NAME}
+    PRIVATE
+      ${ARG_EXTRA_COMPILE_OPTIONS}
+  )
+  target_link_libraries(${NB_LIBRARY_TARGET_NAME}
+    PRIVATE
+      ${ARG_EXTRA_LINK_LIBS}
+  )
+  # Propagate stable ABI to the shared nanobind library. nanobind internally
+  # skips this when the interpreter is free-threaded.
+  if(MLIR_ENABLE_PYTHON_STABLE_ABI AND NOT (NB_ABI MATCHES "[0-9]t"))
+    target_compile_definitions(${NB_LIBRARY_TARGET_NAME}
+      PUBLIC
+      Py_LIMITED_API=0x030C0000
+    )
+    target_link_libraries(${NB_LIBRARY_TARGET_NAME} PRIVATE Python::SABIModule)
+  endif()
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # nanobind handles this correctly for MacOS by explicitly setting -U for all the necessary Python symbols
     # (see https://github.com/wjakob/nanobind/blob/master/cmake/darwin-ld-cpython.sym)
@@ -374,11 +459,19 @@ endfunction()
 #     DAG of source modules is included.
 #   COMMON_CAPI_LINK_LIBS: List of dylibs (typically one) to make every
 #     extension depend on (see mlir_python_add_common_capi_library).
+#   MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_COMPILE_OPTIONS: Extra compile options
+#     to add to the shared nanobind runtime library.
+#   MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_LINK_LIBS: Extra libraries to link into
+#     the shared nanobind runtime library.
+#   MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_COMPILE_OPTIONS: Extra compile options
+#     to add to every generated extension DSO.
+#   MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_LINK_LIBS: Extra libraries to link into
+#     every generated extension DSO.
 function(add_mlir_python_modules name)
   cmake_parse_arguments(ARG
     ""
     "ROOT_PREFIX;INSTALL_PREFIX;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
-    "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES"
+    "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES;MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_COMPILE_OPTIONS;MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_LINK_LIBS;MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_COMPILE_OPTIONS;MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_LINK_LIBS"
     ${ARGN})
 
   # TODO(max): do the same for MLIR_PYTHON_PACKAGE_PREFIX?
@@ -413,6 +506,10 @@ function(add_mlir_python_modules name)
       INSTALL_DESTINATION "${ARG_INSTALL_PREFIX}/_mlir_libs"
       OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
       MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+      EXTRA_COMPILE_OPTIONS
+        ${ARG_MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_COMPILE_OPTIONS}
+      EXTRA_LINK_LIBS
+        ${ARG_MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_LINK_LIBS}
     )
   endif()
 
@@ -440,6 +537,10 @@ function(add_mlir_python_modules name)
         INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
         OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
         MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+        EXTRA_COMPILE_OPTIONS
+          ${ARG_MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_COMPILE_OPTIONS}
+        EXTRA_LINK_LIBS
+          ${ARG_MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_LINK_LIBS}
         LINK_LIBS PRIVATE
           ${sources_target}
           ${ARG_COMMON_CAPI_LINK_LIBS}
@@ -472,9 +573,16 @@ function(add_mlir_python_modules name)
         INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
         OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
         MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
+        EXTRA_COMPILE_OPTIONS
+          ${ARG_MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_COMPILE_OPTIONS}
+        EXTRA_LINK_LIBS
+          ${ARG_MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_LINK_LIBS}
         _PRIVATE_SUPPORT_LIB
         LINK_LIBS PRIVATE
-          LLVMSupport
+        # LLVMSupport is intentionally removed to avoid introducing an LLVM dependency
+        # for the mlir-python bindings. Do not add new dependencies on the C++ LLVM/MLIR
+        # libraries; use the C++ standard library instead, or wrap LLVM functionality in
+        # the C API first.
           ${sources_target}
           ${ARG_COMMON_CAPI_LINK_LIBS}
       )
@@ -559,7 +667,7 @@ function(declare_mlir_dialect_python_bindings)
         set(LLVM_TARGET_DEFINITIONS ${td_file})
       endif()
       set(enum_filename "${relative_td_directory}/_${ARG_DIALECT_NAME}_enum_gen.py")
-      mlir_tablegen(${enum_filename} -gen-python-enum-bindings)
+      mlir_tablegen(${enum_filename} -gen-python-enum-bindings -bind-dialect=${ARG_DIALECT_NAME})
       list(APPEND _sources ${enum_filename})
     endif()
 
@@ -631,7 +739,7 @@ function(declare_mlir_dialect_extension_python_bindings)
         set(LLVM_TARGET_DEFINITIONS ${td_file})
       endif()
       set(enum_filename "${relative_td_directory}/_${ARG_EXTENSION_NAME}_enum_gen.py")
-      mlir_tablegen(${enum_filename} -gen-python-enum-bindings)
+      mlir_tablegen(${enum_filename} -gen-python-enum-bindings -bind-dialect=${ARG_DIALECT_NAME})
       list(APPEND _sources ${enum_filename})
     endif()
 
@@ -873,22 +981,17 @@ endfunction()
 ################################################################################
 function(add_mlir_python_extension libname extname nb_library_target_name)
   cmake_parse_arguments(ARG
-  "_PRIVATE_SUPPORT_LIB"
-  "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
-  "SOURCES;LINK_LIBS"
-  ${ARGN})
+    "_PRIVATE_SUPPORT_LIB"
+    "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY;MLIR_BINDINGS_PYTHON_NB_DOMAIN"
+    "SOURCES;LINK_LIBS;EXTRA_COMPILE_OPTIONS;EXTRA_LINK_LIBS"
+    ${ARGN})
   if(ARG_UNPARSED_ARGUMENTS)
     message(FATAL_ERROR "Unhandled arguments to add_mlir_python_extension(${libname}, ... : ${ARG_UNPARSED_ARGUMENTS}")
   endif()
 
   # The extension itself must be compiled with RTTI and exceptions enabled.
   # Also, some warning classes triggered by nanobind are disabled.
-  set(eh_rtti_enable)
-  if (MSVC)
-    set(eh_rtti_enable /EHsc /GR)
-  elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL)
-    set(eh_rtti_enable -frtti -fexceptions)
-  endif ()
+  _mlir_python_eh_rtti_flags()
 
   if(ARG__PRIVATE_SUPPORT_LIB)
     add_library(${libname} SHARED ${ARG_SOURCES})
@@ -910,9 +1013,15 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
       set_property(TARGET ${libname} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
     endif()
   else()
+    if(MLIR_ENABLE_PYTHON_STABLE_ABI)
+      set(_stable_abi_flag STABLE_ABI)
+    else()
+      set(_stable_abi_flag "")
+    endif()
     nanobind_add_module(${libname}
       NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
       FREE_THREADED
+      ${_stable_abi_flag}
       NB_SHARED
       ${ARG_SOURCES}
     )
@@ -938,18 +1047,6 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
     # Avoid some warnings from upstream nanobind.
     # If a superproject set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES, let
     # the super project handle compile options as it wishes.
-    target_compile_options(${nb_library_target_name}
-      PRIVATE
-        -Wno-c++98-compat-extra-semi
-        -Wno-cast-qual
-        -Wno-covered-switch-default
-        -Wno-deprecated-literal-operator
-        -Wno-nested-anon-types
-        -Wno-unused-parameter
-        -Wno-zero-length-array
-        -Wno-missing-field-initializers
-        ${eh_rtti_enable})
-
     target_compile_options(${libname}
       PRIVATE
         -Wno-c++98-compat-extra-semi
@@ -959,8 +1056,7 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
         -Wno-nested-anon-types
         -Wno-unused-parameter
         -Wno-zero-length-array
-        -Wno-missing-field-initializers
-        ${eh_rtti_enable})
+        -Wno-missing-field-initializers)
   endif()
 
   if(APPLE)
@@ -970,12 +1066,21 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
     # Same for the rest.
     target_link_options(${libname} PUBLIC
       "LINKER:-U,_PyClassMethod_New"
-      "LINKER:-U,_PyCode_Addr2Location"
-      "LINKER:-U,_PyFrame_GetLasti"
     )
+    if(NOT MLIR_ENABLE_PYTHON_STABLE_ABI)
+      # PyCode_Addr2Location and PyFrame_GetLasti are not part of the stable
+      # ABI and are not referenced when Py_LIMITED_API is defined.
+      target_link_options(${libname} PUBLIC
+        "LINKER:-U,_PyCode_Addr2Location"
+        "LINKER:-U,_PyFrame_GetLasti"
+      )
+    endif()
   endif()
 
   target_compile_options(${libname} PRIVATE ${eh_rtti_enable})
+
+  # Apply caller-provided extra options last so they have higher precedence.
+  target_compile_options(${libname} PRIVATE ${ARG_EXTRA_COMPILE_OPTIONS})
 
   # Quoting CMake:
   #
@@ -1012,6 +1117,7 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
   target_link_libraries(${libname}
     PRIVATE
     ${ARG_LINK_LIBS}
+    ${ARG_EXTRA_LINK_LIBS}
   )
 
   target_link_options(${libname}

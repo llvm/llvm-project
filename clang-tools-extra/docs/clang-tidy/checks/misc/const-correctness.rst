@@ -106,19 +106,31 @@ Options
   :option:`WarnPointersAsValues` and :option:`WarnPointersAsPointers`.
   Default is `true`.
 
+.. option:: AnalyzeAutoVariables
+
+  Enable or disable the analysis of variables declared with ``auto``,
+  such as ``auto i = 10;`` or ``auto *ptr = &i``. Default is `true`.
+
+.. option:: AnalyzeLambdas
+
+  Enable or disable the analysis of lambda variables, like
+  ``auto f = [] { return 10; };``. For this option to have any
+  effect, `AnalyzeAutoVariables` must be `true` as well.
+  Default is `true`.
+
 .. option:: AnalyzeParameters
 
   Enable or disable the analysis of function parameters, like
   ``void foo(int* ptr)``. Only reference and pointer parameters are analyzed.
-  Currently, member functions (including constructors) and lambdas are excluded
-  from the analysis. Default is `true`.
+  Unnamed parameters, member functions (including constructors) and lambdas are
+  excluded from the analysis. Default is `true`.
 
   .. code-block:: c++
 
     // Warning
     void function(int& param) {}
     // No warning
-    void function(const int& param) {}
+    void function(const int& param, int&) {}
 
 .. option:: WarnPointersAsValues
 

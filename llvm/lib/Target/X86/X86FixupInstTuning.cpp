@@ -1,4 +1,4 @@
-//===-- X86FixupInstTunings.cpp - replace instructions -----------===//
+//===-- X86FixupInstTuning.cpp - replace instructions -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -255,6 +255,31 @@ bool X86FixupInstTuningImpl::processInstruction(
     return ProcessUNPCKToIntDomain(NewOpc);
   };
 
+  // If we're permuting the lower halves of the 256-bit registers, use a
+  // subvector insertion instead.
+  auto ProcessVPERM2x128ToVINSERT128 = [&](unsigned InsertOpc) -> bool {
+    unsigned PermImm = MI.getOperand(NumOperands - 1).getImm();
+    // TODO: Handle 0x00/0x02/0x22 when we have test coverage.
+    if (PermImm != 0x20 || !NewOpcPreferable(InsertOpc))
+      return false;
+    Register RHSRegYMM = MI.getOperand(NumOperands - 2).getReg();
+    Register RHSRegXMM = TRI->getSubReg(RHSRegYMM, X86::sub_xmm);
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      MI.setDesc(TII->get(InsertOpc));
+      MI.removeOperand(NumOperands - 1);
+      MI.removeOperand(NumOperands - 2);
+      // Add the XMM subregister operand.
+      MI.addOperand(MachineOperand::CreateReg(RHSRegXMM, /*isDef=*/false,
+                                              /*isImp=*/false,
+                                              /*isKill=*/false));
+      // Add the immediate (1 = insert into high 128-bits).
+      MI.addOperand(MachineOperand::CreateImm(1));
+    }
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
+    return true;
+  };
+
   auto ProcessBLENDWToBLENDD = [&](unsigned MovOpc, unsigned NumElts) -> bool {
     if (!ST->hasAVX2() || !NewOpcPreferable(MovOpc))
       return false;
@@ -304,7 +329,7 @@ bool X86FixupInstTuningImpl::processInstruction(
       MI.addOperand(MI.getOperand(NumOperands - 2));
     }
     LLVM_DEBUG(dbgs() << "     With: " << MI);
-    return false;
+    return true;
   };
 
   // `vpermq ymm, ymm, 0x44` -> `vinserti128 ymm, ymm, xmm, 1`
@@ -359,6 +384,11 @@ bool X86FixupInstTuningImpl::processInstruction(
     // TODO: Add X86::VPBLENDWYrri handling
     // TODO: Add X86::VPBLENDWYrmi handling
     return ProcessBLENDWToBLENDD(X86::VPBLENDDrri, 4);
+
+  case X86::VPERM2F128rri:
+    return ProcessVPERM2x128ToVINSERT128(X86::VINSERTF128rri);
+  case X86::VPERM2I128rri:
+    return ProcessVPERM2x128ToVINSERT128(X86::VINSERTI128rri);
 
   case X86::VPERMILPDri:
     return ProcessVPERMILPDri(X86::VSHUFPDrri);

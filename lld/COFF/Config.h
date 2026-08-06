@@ -48,6 +48,7 @@ enum class ExportSource {
   Directives,
   Export,
   ModuleDefinition,
+  ExportAll,
 };
 
 enum class EmitKind { Obj, LLVM, ASM };
@@ -215,6 +216,9 @@ struct Configuration {
 
   // Used for /merge:from=to (e.g. /merge:.rdata=.text)
   std::map<StringRef, StringRef> merge;
+
+  // Used for /discard-section:.name
+  llvm::StringSet<> discardSection;
 
   // Used for /section=.name,{DEKPRSW} to set section attributes.
   std::map<StringRef, uint32_t> section;

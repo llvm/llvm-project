@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import errno
 import itertools
 import math
@@ -12,7 +10,6 @@ import signal
 import subprocess
 import sys
 import threading
-
 
 def pythonize_bool(value):
     if value is None:
@@ -161,8 +158,13 @@ def whichTools(tools, paths):
     return None
 
 
-def printHistogram(items, title="Items"):
+def printHistogram(items, slowest_limit, title="Items"):
     items.sort(key=lambda item: item[1])
+    total = len(items)
+    if slowest_limit == "all":
+        slowest_count = total
+    else:
+        slowest_count = min(slowest_limit, total)
 
     maxValue = max([v for _, v in items])
 
@@ -183,11 +185,11 @@ def printHistogram(items, title="Items"):
 
     barW = 40
     hr = "-" * (barW + 34)
-    print("Slowest %s:" % title)
+    print("Slowest %s (%d of %d):" % (title, slowest_count, total))
     print(hr)
-    for name, value in reversed(items[-20:]):
+    for name, value in reversed(items[-slowest_count:]):
         print("%.2fs: %s" % (value, name))
-    print("\n%s Times:" % title)
+    print("\nTest Times (%d):" % total)
     print(hr)
     pDigits = int(math.ceil(math.log(maxValue, 10)))
     pfDigits = max(0, 3 - pDigits)
@@ -441,3 +443,66 @@ def killProcessAndChildren(pid):
             psutilProc.kill()
         except psutil.NoSuchProcess:
             pass
+
+
+def memoize(f):
+    cache = {}  # Unbounded
+
+    def make_key(args, kwargs):
+        return args, tuple(kwargs.items())
+
+    def memoized(*args, **kwargs):
+        key = make_key(args, kwargs)
+        if key not in cache:
+            cache[key] = f(*args, **kwargs)
+        return cache[key]
+
+    return memoized
+
+
+@memoize
+def runCommandCached(lit_config, cmd, allow_failure, **kwargs):
+    """
+    Run a command with subprocess.run, with a cache global to this llvm-lit invocation
+    If allow_failure is False, lit_config.fatal will be invoked if the command fails.
+    All additional kwargs are passed to subprocess.run
+    """
+    try:
+        result = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, **kwargs
+        )
+        return result.stdout
+    except (FileNotFoundError, PermissionError) as e:
+        msg = f"Failed to run {cmd}: {e}"
+    except subprocess.CalledProcessError as e:
+        msg = f"Failed to run {cmd}\nrc:{e.returncode}\nstdout:{e.stdout}\ne.stderr{e.stderr}"
+
+    if not allow_failure:
+        lit_config.fatal(msg)
+
+    return None
+
+
+def get_windows_extended_path(path: str) -> str:
+    """
+    Return *path* in Windows extended-length (``\\\\?\\``) form.
+
+    On non-Windows platforms the path is returned unchanged. On Windows,
+    the path is made absolute and given the ``\\\\?\\`` prefix so it can
+    exceed the Win32 ``MAX_PATH`` (260-character) limit. UNC paths
+    (those beginning with ``\\\\``) are converted to the ``\\\\?\\UNC\\``
+    form instead.
+
+    Args:
+        path: The filesystem path to normalize.
+
+    Returns:
+        The original path on non-Windows platforms, otherwise the
+        absolute path in extended-length form.
+    """
+    if not platform.system() == "Windows":
+        return path
+    path = os.path.abspath(path)
+    if path.startswith("\\\\"):
+        return "\\\\?\\UNC\\{0}".format(path[2:])
+    return "\\\\?\\{0}".format(path)

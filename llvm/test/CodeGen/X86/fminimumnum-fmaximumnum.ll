@@ -81,7 +81,7 @@ define float @test_fmaximumnum(float %x, float %y) nounwind {
 ;
 ; AVX10_2-LABEL: test_fmaximumnum:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxss $17, %xmm1, %xmm0
+; AVX10_2-NEXT:    vminmaxss $21, %xmm1, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum:
@@ -102,7 +102,7 @@ define float @test_fmaximumnum(float %x, float %y) nounwind {
   ret float %1
 }
 
-define <4 x float> @test_fmaximumnum_scalarize(<4 x float> %x, <4 x float> %y) "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" {
+define <4 x float> @test_fmaximumnum_scalarize(<4 x float> %x, <4 x float> %y) {
 ; SSE2-LABEL: test_fmaximumnum_scalarize:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    maxps %xmm1, %xmm0
@@ -115,14 +115,14 @@ define <4 x float> @test_fmaximumnum_scalarize(<4 x float> %x, <4 x float> %y) "
 ;
 ; AVX10_2-LABEL: test_fmaximumnum_scalarize:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxps $17, %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxps $21, %xmm1, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum_scalarize:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    retl
-  %r = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> %x, <4 x float> %y)
+  %r = call nnan nsz <4 x float> @llvm.maximumnum.v4f32(<4 x float> %x, <4 x float> %y)
   ret <4 x float> %r
 }
 
@@ -227,7 +227,7 @@ define float @test_fmaximumnum_nnan(float %x, float %y) nounwind {
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    vaddss %xmm1, %xmm0, %xmm2
 ; AVX10_2-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; AVX10_2-NEXT:    vminmaxss $17, %xmm0, %xmm2
+; AVX10_2-NEXT:    vminmaxss $21, %xmm0, %xmm2
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum_nnan:
@@ -267,7 +267,7 @@ define double @test_fmaximumnum_zero0(double %x, double %y) nounwind {
 ; AVX10_2-LABEL: test_fmaximumnum_zero0:
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; AVX10_2-NEXT:    vminmaxsd $17, %xmm0, %xmm1
+; AVX10_2-NEXT:    vminmaxsd $21, %xmm0, %xmm1
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum_zero0:
@@ -304,7 +304,7 @@ define double @test_fmaximumnum_zero1(double %x, double %y) nounwind {
 ; AVX10_2-LABEL: test_fmaximumnum_zero1:
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX10_2-NEXT:    vminmaxsd $17, %xmm1, %xmm0
+; AVX10_2-NEXT:    vminmaxsd $21, %xmm1, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum_zero1:
@@ -349,7 +349,7 @@ define double @test_fmaximumnum_zero2(double %x, double %y) {
   ret double %1
 }
 
-define float @test_fmaximumnum_nsz(float %x, float %y) "no-signed-zeros-fp-math"="true" nounwind {
+define float @test_fmaximumnum_nsz(float %x, float %y) nounwind {
 ; SSE2-LABEL: test_fmaximumnum_nsz:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps %xmm1, %xmm2
@@ -379,7 +379,7 @@ define float @test_fmaximumnum_nsz(float %x, float %y) "no-signed-zeros-fp-math"
 ;
 ; AVX10_2-LABEL: test_fmaximumnum_nsz:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxss $17, %xmm1, %xmm0
+; AVX10_2-NEXT:    vminmaxss $21, %xmm1, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum_nsz:
@@ -394,7 +394,7 @@ define float @test_fmaximumnum_nsz(float %x, float %y) "no-signed-zeros-fp-math"
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
-  %1 = tail call float @llvm.maximumnum.f32(float %x, float %y)
+  %1 = tail call nsz float @llvm.maximumnum.f32(float %x, float %y)
   ret float %1
 }
 
@@ -446,7 +446,7 @@ define float @test_fmaximumnum_combine_cmps(float %x, float %y) nounwind {
 ; AVX10_2-LABEL: test_fmaximumnum_combine_cmps:
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    vdivss %xmm0, %xmm1, %xmm1
-; AVX10_2-NEXT:    vminmaxss $17, %xmm1, %xmm0
+; AVX10_2-NEXT:    vminmaxss $21, %xmm1, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum_combine_cmps:
@@ -528,7 +528,7 @@ define float @test_fminimumnum(float %x, float %y) nounwind {
 ;
 ; AVX10_2-LABEL: test_fminimumnum:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxss $16, %xmm1, %xmm0
+; AVX10_2-NEXT:    vminmaxss $20, %xmm1, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimumnum:
@@ -549,7 +549,7 @@ define float @test_fminimumnum(float %x, float %y) nounwind {
   ret float %1
 }
 
-define <2 x double> @test_fminimumnum_scalarize(<2 x double> %x, <2 x double> %y) "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" {
+define <2 x double> @test_fminimumnum_scalarize(<2 x double> %x, <2 x double> %y) {
 ; SSE2-LABEL: test_fminimumnum_scalarize:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    minpd %xmm1, %xmm0
@@ -562,14 +562,14 @@ define <2 x double> @test_fminimumnum_scalarize(<2 x double> %x, <2 x double> %y
 ;
 ; AVX10_2-LABEL: test_fminimumnum_scalarize:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxpd $16, %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxpd $20, %xmm1, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimumnum_scalarize:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vminpd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    retl
-  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> %y)
+  %r = call nnan nsz <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> %y)
   ret <2 x double> %r
 }
 
@@ -618,7 +618,7 @@ define float @test_fminimumnum_nan1(float %x, float %y) {
   ret float %1
 }
 
-define double @test_fminimumnum_nnan(double %x, double %y) "no-nans-fp-math"="true" nounwind {
+define double @test_fminimumnum_nnan(double %x, double %y) nounwind {
 ; SSE2-LABEL: test_fminimumnum_nnan:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movapd %xmm0, %xmm2
@@ -643,12 +643,12 @@ define double @test_fminimumnum_nnan(double %x, double %y) "no-nans-fp-math"="tr
 ;
 ; AVX512DQ-LABEL: test_fminimumnum_nnan:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vfpclasssd $5, %xmm1, %k0 # k0 = isQuietNaN(xmm1) | isNegativeZero(xmm1)
+; AVX512DQ-NEXT:    vfpclasssd $5, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isNegativeZero(xmm0)
 ; AVX512DQ-NEXT:    kmovw %k0, %k1
-; AVX512DQ-NEXT:    vmovapd %xmm0, %xmm2
-; AVX512DQ-NEXT:    vmovsd %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512DQ-NEXT:    vmovsd %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512DQ-NEXT:    vminsd %xmm2, %xmm1, %xmm0
+; AVX512DQ-NEXT:    vmovapd %xmm1, %xmm2
+; AVX512DQ-NEXT:    vmovsd %xmm0, %xmm2, %xmm2 {%k1}
+; AVX512DQ-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 {%k1}
+; AVX512DQ-NEXT:    vminsd %xmm2, %xmm0, %xmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: test_fminimumnum_nnan:
@@ -659,7 +659,7 @@ define double @test_fminimumnum_nnan(double %x, double %y) "no-nans-fp-math"="tr
 ;
 ; AVX10_2-LABEL: test_fminimumnum_nnan:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxsd $16, %xmm1, %xmm0
+; AVX10_2-NEXT:    vminmaxsd $20, %xmm1, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimumnum_nnan:
@@ -677,7 +677,7 @@ define double @test_fminimumnum_nnan(double %x, double %y) "no-nans-fp-math"="tr
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
-  %1 = tail call double @llvm.minimumnum.f64(double %x, double %y)
+  %1 = tail call nnan double @llvm.minimumnum.f64(double %x, double %y)
   ret double %1
 }
 
@@ -695,7 +695,7 @@ define double @test_fminimumnum_zero0(double %x, double %y) nounwind {
 ;
 ; AVX10_2-LABEL: test_fminimumnum_zero0:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxsd $16, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; AVX10_2-NEXT:    vminmaxsd $20, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimumnum_zero0:
@@ -728,7 +728,7 @@ define double @test_fminimumnum_zero1(double %x, double %y) nounwind {
 ;
 ; AVX10_2-LABEL: test_fminimumnum_zero1:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxsd $16, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX10_2-NEXT:    vminmaxsd $20, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimumnum_zero1:
@@ -803,7 +803,7 @@ define float @test_fminimumnum_nsz(float %x, float %y) nounwind {
 ;
 ; AVX10_2-LABEL: test_fminimumnum_nsz:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxss $16, %xmm1, %xmm0
+; AVX10_2-NEXT:    vminmaxss $20, %xmm1, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimumnum_nsz:
@@ -870,7 +870,7 @@ define float @test_fminimumnum_combine_cmps(float %x, float %y) nounwind {
 ; AVX10_2-LABEL: test_fminimumnum_combine_cmps:
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    vdivss %xmm0, %xmm1, %xmm1
-; AVX10_2-NEXT:    vminmaxss $16, %xmm1, %xmm0
+; AVX10_2-NEXT:    vminmaxss $20, %xmm1, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimumnum_combine_cmps:
@@ -944,7 +944,7 @@ define <2 x double> @test_fminimumnum_vector(<2 x double> %x, <2 x double> %y) {
 ;
 ; AVX10_2-LABEL: test_fminimumnum_vector:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxpd $16, %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxpd $20, %xmm1, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimumnum_vector:
@@ -959,7 +959,7 @@ define <2 x double> @test_fminimumnum_vector(<2 x double> %x, <2 x double> %y) {
   ret <2 x double> %r
 }
 
-define <4 x float> @test_fmaximumnum_vector(<4 x float> %x, <4 x float> %y) "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" {
+define <4 x float> @test_fmaximumnum_vector(<4 x float> %x, <4 x float> %y) {
 ; SSE2-LABEL: test_fmaximumnum_vector:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    maxps %xmm1, %xmm0
@@ -972,14 +972,14 @@ define <4 x float> @test_fmaximumnum_vector(<4 x float> %x, <4 x float> %y) "no-
 ;
 ; AVX10_2-LABEL: test_fmaximumnum_vector:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxps $17, %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxps $21, %xmm1, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum_vector:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    retl
-  %r = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> %x, <4 x float> %y)
+  %r = call nnan nsz <4 x float> @llvm.maximumnum.v4f32(<4 x float> %x, <4 x float> %y)
   ret <4 x float> %r
 }
 
@@ -1027,7 +1027,7 @@ define <2 x double> @test_fminimumnum_vector_zero(<2 x double> %x) {
 ; AVX10_2-LABEL: test_fminimumnum_vector_zero:
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX10_2-NEXT:    vminmaxpd $16, %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxpd $20, %xmm1, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimumnum_vector_zero:
@@ -1088,7 +1088,7 @@ define <4 x float> @test_fmaximumnum_vector_signed_zero(<4 x float> %x) {
 ;
 ; AVX10_2-LABEL: test_fmaximumnum_vector_signed_zero:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxps $17, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxps $21, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum_vector_signed_zero:
@@ -1156,7 +1156,7 @@ define <2 x double> @test_fminimumnum_vector_partially_zero(<2 x double> %x) {
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX10_2-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
-; AVX10_2-NEXT:    vminmaxpd $16, %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxpd $20, %xmm1, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimumnum_vector_partially_zero:
@@ -1221,7 +1221,7 @@ define <2 x double> @test_fminimumnum_vector_different_zeros(<2 x double> %x) {
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX10_2-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
-; AVX10_2-NEXT:    vminmaxpd $16, %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxpd $20, %xmm1, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimumnum_vector_different_zeros:
@@ -1249,7 +1249,7 @@ define <4 x float> @test_fmaximumnum_vector_non_zero(<4 x float> %x) {
 ;
 ; AVX10_2-LABEL: test_fmaximumnum_vector_non_zero:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxps $17, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxps $21, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum_vector_non_zero:
@@ -1314,7 +1314,7 @@ define <2 x double> @test_fminimumnum_vector_nan(<2 x double> %x) {
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX10_2-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
-; AVX10_2-NEXT:    vminmaxpd $16, %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxpd $20, %xmm1, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimumnum_vector_nan:
@@ -1373,7 +1373,7 @@ define <2 x double> @test_fminimumnum_vector_zero_first(<2 x double> %x) {
 ; AVX10_2-LABEL: test_fminimumnum_vector_zero_first:
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX10_2-NEXT:    vminmaxpd $16, %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxpd $20, %xmm1, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimumnum_vector_zero_first:
@@ -1415,7 +1415,7 @@ define <2 x double> @test_fminimumnum_vector_signed_zero(<2 x double> %x) {
 ;
 ; AVX10_2-LABEL: test_fminimumnum_vector_signed_zero:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxpd $16, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxpd $20, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fminimumnum_vector_signed_zero:
@@ -1473,7 +1473,7 @@ define <4 x float> @test_fmaximumnum_vector_signed_zero_first(<4 x float> %x) {
 ;
 ; AVX10_2-LABEL: test_fmaximumnum_vector_signed_zero_first:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxps $17, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxps $21, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum_vector_signed_zero_first:
@@ -1503,7 +1503,7 @@ define <4 x float> @test_fmaximumnum_vector_zero(<4 x float> %x) {
 ; AVX10_2-LABEL: test_fmaximumnum_vector_zero:
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX10_2-NEXT:    vminmaxps $17, %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxps $21, %xmm1, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum_vector_zero:
@@ -1577,7 +1577,7 @@ define <4 x float> @test_fmaximumnum_v4f32_splat(<4 x float> %x, float %y) {
 ; AVX10_2-LABEL: test_fmaximumnum_v4f32_splat:
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    vbroadcastss %xmm1, %xmm1
-; AVX10_2-NEXT:    vminmaxps $17, %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxps $21, %xmm1, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum_v4f32_splat:
@@ -2046,7 +2046,7 @@ define <4 x half> @test_fmaximumnum_v4f16(<4 x half> %x, <4 x half> %y) nounwind
 ;
 ; AVX10_2-LABEL: test_fmaximumnum_v4f16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxph $17, %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxph $21, %xmm1, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum_v4f16:
@@ -2266,7 +2266,7 @@ define bfloat @test_fmaximumnum_bf16(bfloat %x, bfloat %y) nounwind {
 ; AVX10_2-NEXT:    vmovd %ecx, %xmm0
 ; AVX10_2-NEXT:    shll $16, %eax
 ; AVX10_2-NEXT:    vmovd %eax, %xmm1
-; AVX10_2-NEXT:    vminmaxss $17, %xmm0, %xmm1
+; AVX10_2-NEXT:    vminmaxss $21, %xmm0, %xmm1
 ; AVX10_2-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
@@ -2840,7 +2840,7 @@ define <4 x bfloat> @test_fmaximumnum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) n
 ;
 ; AVX10_2-LABEL: test_fmaximumnum_v4bf16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxbf16 $17, %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxbf16 $21, %xmm1, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum_v4bf16:
@@ -3036,7 +3036,7 @@ define bfloat @test_fminimumnum_bf16(bfloat %x, bfloat %y) nounwind {
 ; AVX10_2-NEXT:    vmovd %ecx, %xmm0
 ; AVX10_2-NEXT:    shll $16, %eax
 ; AVX10_2-NEXT:    vmovd %eax, %xmm1
-; AVX10_2-NEXT:    vminmaxss $16, %xmm0, %xmm1
+; AVX10_2-NEXT:    vminmaxss $20, %xmm0, %xmm1
 ; AVX10_2-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;

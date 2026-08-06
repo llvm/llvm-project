@@ -41,6 +41,11 @@ class Branch_imm<bits<3> funct3, string opcodestr>
 let Predicates = [HasStdExtZibi] in {
   def BEQI : Branch_imm<0b010, "beqi">;
   def BNEI : Branch_imm<0b011, "bnei">;
+
+  // For long branch relaxation.
+  // This will be expanded into BEQI/BNEI(4 bytes) + JAL(4 bytes).
+  def PseudoLongBEQI : LongBcciPseudo<imm5_zibi, 8>;
+  def PseudoLongBNEI : LongBcciPseudo<imm5_zibi, 8>;
 } // Predicates = [HasStdExtZibi]
 
 multiclass BccImmPat<CondCode Cond, Branch_imm Inst> {

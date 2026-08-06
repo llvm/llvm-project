@@ -46,8 +46,7 @@ public:
   TpiStreamBuilder &operator=(const TpiStreamBuilder &) = delete;
 
   LLVM_ABI void setVersionHeader(PdbRaw_TpiVer Version);
-  LLVM_ABI void addTypeRecord(ArrayRef<uint8_t> Type,
-                              std::optional<uint32_t> Hash);
+  LLVM_ABI void addTypeRecord(ArrayRef<uint8_t> Type, uint32_t Hash);
   LLVM_ABI void addTypeRecords(ArrayRef<uint8_t> Types,
                                ArrayRef<uint16_t> Sizes,
                                ArrayRef<uint32_t> Hashes);

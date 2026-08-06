@@ -37,8 +37,8 @@ AST_MATCHER(CXXMethodDecl, isDependentContext) {
 
 AST_MATCHER(CXXMethodDecl, isInsideMacroDefinition) {
   const ASTContext &Ctxt = Finder->getASTContext();
-  return clang::Lexer::makeFileCharRange(
-             clang::CharSourceRange::getCharRange(
+  return Lexer::makeFileCharRange(
+             CharSourceRange::getCharRange(
                  Node.getTypeSourceInfo()->getTypeLoc().getSourceRange()),
              Ctxt.getSourceManager(), Ctxt.getLangOpts())
       .isInvalid();
@@ -224,9 +224,9 @@ void MakeMemberFunctionConstCheck::registerMatchers(MatchFinder *Finder) {
           cxxMethodDecl(
               isDefinition(), isUserProvided(),
               unless(anyOf(
-                  isExpansionInSystemHeader(), isVirtual(), isConst(),
-                  isStatic(), hasTrivialBody(), cxxConstructorDecl(),
-                  cxxDestructorDecl(), isTemplate(), isDependentContext(),
+                  isVirtual(), isConst(), isStatic(), hasTrivialBody(),
+                  cxxConstructorDecl(), cxxDestructorDecl(), isTemplate(),
+                  isDependentContext(),
                   ofClass(anyOf(isLambda(),
                                 hasAnyDependentBases()) // Method might become
                                                         // virtual depending on
@@ -244,7 +244,7 @@ static SourceLocation getConstInsertionPoint(const CXXMethodDecl *M) {
   if (!TSI)
     return {};
 
-  auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
+  const auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
   if (!FTL)
     return {};
 
@@ -257,10 +257,11 @@ void MakeMemberFunctionConstCheck::check(
 
   const auto *Declaration = Definition->getCanonicalDecl();
 
-  auto Diag = diag(Definition->getLocation(), "method %0 can be made const")
-              << Definition
-              << FixItHint::CreateInsertion(getConstInsertionPoint(Definition),
-                                            " const");
+  const auto Diag =
+      diag(Definition->getLocation(), "method %0 can be made const")
+      << Definition
+      << FixItHint::CreateInsertion(getConstInsertionPoint(Definition),
+                                    " const");
   if (Declaration != Definition) {
     Diag << FixItHint::CreateInsertion(getConstInsertionPoint(Declaration),
                                        " const");

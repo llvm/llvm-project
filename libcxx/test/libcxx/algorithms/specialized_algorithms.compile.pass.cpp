@@ -13,6 +13,7 @@
 // ADDITIONAL_COMPILE_FLAGS: -Wno-c++14-extensions -Wno-c++17-extensions
 
 #include <algorithm>
+#include <iterator>
 #include <map>
 #include <set>
 #include <vector>
@@ -81,3 +82,14 @@ static_assert(has_alg<Alg::__for_each, iter_pair<const_iter, const_iter>>);
 static_assert(has_alg<Alg::__for_each, single_range<std::multimap<int, int>>>);
 #endif
 } // namespace multimap
+
+namespace ostreambuf_iterator {
+template <class CharT>
+using obi = std::ostreambuf_iterator<CharT>;
+static_assert(has_alg<Alg::__copy, iter_pair<char*, char*>, single_iter<obi<char>>>);
+static_assert(has_alg<Alg::__copy, iter_pair<const char*, const char*>, single_iter<obi<char>>>);
+static_assert(has_alg<Alg::__copy, iter_pair<wchar_t*, wchar_t*>, single_iter<obi<wchar_t>>>);
+static_assert(has_alg<Alg::__copy, iter_pair<const wchar_t*, const wchar_t*>, single_iter<obi<wchar_t>>>);
+static_assert(!has_alg<Alg::__copy, iter_pair<char*, char*>, single_iter<obi<wchar_t>>>);
+
+} // namespace ostreambuf_iterator
