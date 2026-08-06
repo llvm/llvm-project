@@ -537,14 +537,14 @@ public:
       return failure();
 
     SmallVector<tensor::ConcatOp> concatOps(genericOp.getNumDpsInputs());
+    SmallVector<OpOperand *> nonConcatInputs;
     std::optional<unsigned> splitLoopDim;
-    // How many inputs the concat ops have. Now we limit the concat ops
-    // to have the same number of inputs for simplicity.
+    // Now we limit the concat ops to have the same number of inputs for
+    // simplicity.
     // TODO: technically, elementwise(concat(x0, x1), concat(y0, y1, y2)) ->
     // concat(elementwise(...), elementwise(...), elementwise(...)) may be
     // fine too. But that may require we create new slices, which might be
     // more complex.
-    unsigned numPartitions = 0;
     // The size in the concat dimension of different inputs. For example,
     //
     //  x0: tensor<2x3xf32>
@@ -552,20 +552,17 @@ public:
     //  x:  tensor<2x7xf32>
     //  %x = tensor.concat dim(1) %x0, %x1
     //
-    // The numPartitions in this case is 2 and partitionSizes is [3, 4].
-    // Same as above, we limit the partitionSizes to be the same for different
-    // concat ops.
-    SmallVector<int64_t> partitionSizes;
+    // The partition sizes in this case are [3, 4]. Same as above, we limit the
+    // partition sizes to be the same for different concat ops.
+    SmallVector<SmallVector<int64_t>> partitionSizes;
 
     for (auto [index, operand] :
          llvm::enumerate(genericOp.getDpsInputOperands())) {
-      auto operandType = dyn_cast<RankedTensorType>(operand->get().getType());
-      if (!operandType)
-        continue;
-
       auto concatOp = operand->get().getDefiningOp<tensor::ConcatOp>();
-      if (!concatOp)
+      if (!concatOp) {
+        nonConcatInputs.push_back(operand);
         continue;
+      }
 
       // Rewriting a concat that has other consumers could increase the amount
       // of live computation instead of just exposing fusion opportunities.
@@ -588,44 +585,32 @@ public:
             genericOp, "concat inputs partition different loop dimensions");
       splitLoopDim = currentSplitLoopDim;
 
-      if (!numPartitions) {
-        numPartitions = concatOp.getInputs().size();
-        for (Value input : concatOp.getInputs()) {
-          int64_t size = cast<RankedTensorType>(input.getType())
-                             .getDimSize(concatOp.getDim());
-          if (ShapedType::isDynamic(size))
-            return rewriter.notifyMatchFailure(
-                genericOp, "concat partition size is dynamic");
-          partitionSizes.push_back(size);
-        }
-      } else {
-        if (concatOp.getInputs().size() != numPartitions)
+      SmallVector<int64_t> currentPartitionSizes;
+      currentPartitionSizes.reserve(concatOp.getInputs().size());
+      for (Value input : concatOp.getInputs()) {
+        int64_t size = cast<RankedTensorType>(input.getType())
+                           .getDimSize(concatOp.getDim());
+        if (ShapedType::isDynamic(size))
           return rewriter.notifyMatchFailure(
-              genericOp, "concat inputs have different partition counts");
-        for (auto [input, expectedSize] :
-             llvm::zip_equal(concatOp.getInputs(), partitionSizes)) {
-          int64_t size = cast<RankedTensorType>(input.getType())
-                             .getDimSize(concatOp.getDim());
-          if (size != expectedSize)
-            return rewriter.notifyMatchFailure(
-                genericOp, "concat inputs have different partition sizes");
-        }
+              genericOp, "concat partition size is dynamic");
+        currentPartitionSizes.push_back(size);
       }
+      partitionSizes.push_back(std::move(currentPartitionSizes));
       concatOps[index] = concatOp;
     }
 
-    if (!splitLoopDim)
+    if (concatOps.empty())
       return rewriter.notifyMatchFailure(genericOp, "has no concat input");
+    if (!llvm::all_equal(partitionSizes))
+      return rewriter.notifyMatchFailure(
+          genericOp, "concat inputs have different partition sizes");
 
     // A tensor input that varies along the split dimension must itself be a
     // compatible concat. Inputs that are invariant along that dimension can be
     // reused by every split operation.
     AffineExpr splitDimExpr =
         getAffineDimExpr(*splitLoopDim, genericOp.getContext());
-    for (auto [index, operand] :
-         llvm::enumerate(genericOp.getDpsInputOperands())) {
-      if (concatOps[index])
-        continue;
+    for (OpOperand *operand : nonConcatInputs) {
       Type operandType = operand->get().getType();
       // Scalars do not vary along an iteration-space dimension and can be
       // reused in every partition. Other shaped inputs must be ranked tensors
@@ -667,7 +652,7 @@ public:
     // `elementwise(concat(x0, x1), concat(y0, y1))` becomes
     // `elementwise(x0, y0)` and `elementwise(x1, y1)`.
     for (auto [partitionIndex, partitionSize] :
-         llvm::enumerate(partitionSizes)) {
+         llvm::enumerate(partitionSizes.front())) {
       // For each partition, turn inputs `concat(x0, x1)`, `concat(y0, y1)`, and
       // `scalar` into the inputs `x0`, `y0`, and `scalar`.
       SmallVector<Value> inputs =
