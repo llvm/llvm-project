@@ -244,7 +244,6 @@ GenericKernelTy::prepareBlockMemory(GenericDeviceTy &GenericDevice,
 
 Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
                               KernelLaunchArgsTy &LaunchArgs,
-                              KernelExtraArgsTy *KernelExtraArgs,
                               AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   uint32_t EffectiveNumThreads[3] = {LaunchArgs.UserThreadLimit[0],
                                      LaunchArgs.UserThreadLimit[1],
@@ -312,8 +311,8 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
 
     // Record the kernel prologue data before kernel launch.
     auto RRHandleOrErr = RecordReplay->recordPrologue(
-        *this, LaunchArgs, KernelExtraArgs, EffectiveNumBlocks,
-        EffectiveNumThreads, DynBlockMemConf.NativeSize);
+        *this, LaunchArgs, EffectiveNumBlocks, EffectiveNumThreads,
+        DynBlockMemConf.NativeSize);
     if (!RRHandleOrErr)
       return RRHandleOrErr.takeError();
     RRHandle = *RRHandleOrErr;
@@ -1131,7 +1130,6 @@ Error GenericDeviceTy::dataPrefetch(size_t Count, const void **Mems,
 
 Error GenericDeviceTy::launchKernel(void *EntryPtr,
                                     KernelLaunchArgsTy &LaunchArgs,
-                                    KernelExtraArgsTy *KernelExtraArgs,
                                     __tgt_async_info *AsyncInfo) {
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
@@ -1150,8 +1148,7 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr,
         .emplace(&GenericKernel, std::move(StackTrace), AsyncInfo);
   }
 
-  auto Err = GenericKernel.launch(*this, LaunchArgs, KernelExtraArgs,
-                                  AsyncInfoWrapper);
+  auto Err = GenericKernel.launch(*this, LaunchArgs, AsyncInfoWrapper);
 
   AsyncInfoWrapper.finalize(Err);
 
@@ -1674,10 +1671,9 @@ int32_t GenericPluginTy::data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
 
 int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
                                        KernelLaunchArgsTy &LaunchArgs,
-                                       KernelExtraArgsTy *KernelExtraArgs,
                                        __tgt_async_info *AsyncInfoPtr) {
-  auto Err = getDevice(DeviceId).launchKernel(TgtEntryPtr, LaunchArgs,
-                                              KernelExtraArgs, AsyncInfoPtr);
+  auto Err =
+      getDevice(DeviceId).launchKernel(TgtEntryPtr, LaunchArgs, AsyncInfoPtr);
   if (Err) {
     REPORT() << "Failure to run target region " << TgtEntryPtr << " in device "
              << DeviceId << ": " << toString(std::move(Err));

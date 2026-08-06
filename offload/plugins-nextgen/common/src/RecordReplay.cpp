@@ -168,15 +168,14 @@ Error RecordReplayTy::deallocate(void *Ptr) { return Plugin::success(); }
 
 Expected<RecordReplayTy::HandleTy> RecordReplayTy::recordPrologue(
     const GenericKernelTy &Kernel, const KernelLaunchArgsTy &LaunchArgs,
-    const KernelExtraArgsTy *KernelExtraArgs, uint32_t NumTeams[3],
-    uint32_t NumThreads[3], uint32_t SharedMemorySize) {
+    uint32_t NumTeams[3], uint32_t NumThreads[3], uint32_t SharedMemorySize) {
   if (!isRecordingOrReplaying())
     return HandleTy{nullptr, false};
 
   // Register the instance and avoid recording if it is inactive or replaying.
-  auto [Instance, First] = registerInstance(
-      Kernel, NumTeams[0], NumThreads[0], SharedMemorySize,
-      (KernelExtraArgs) ? KernelExtraArgs->ReplayOutcome : nullptr);
+  auto [Instance, First] =
+      registerInstance(Kernel, NumTeams[0], NumThreads[0], SharedMemorySize,
+                       LaunchArgs.ReplayOutcome);
 
   HandleTy Handle{&Instance, First};
   if (!First)

@@ -207,7 +207,6 @@ public:
   /// instance is registered.
   Expected<HandleTy> recordPrologue(const GenericKernelTy &Kernel,
                                     const KernelLaunchArgsTy &LaunchArgs,
-                                    const KernelExtraArgsTy *KernelExtraArgs,
                                     uint32_t NumTeams[3],
                                     uint32_t NumThreads[3],
                                     uint32_t SharedMemorySize);

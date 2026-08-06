@@ -461,6 +461,9 @@ struct KernelLaunchArgsTy {
     uint64_t DynCGroupMemFallback : 2; // The fallback for dynamic cgroup mem.
     uint64_t Unused : 60;
   } Flags = {0, 0, 0, 0};
+  /// Set by the caller when replaying a previously recorded kernel launch, so
+  /// the plugin can report the outcome back; null for a normal launch.
+  KernelReplayOutcomeTy *ReplayOutcome = nullptr;
 };
 
 /// Class implementing common functionalities of offload kernels. Each plugin
@@ -485,7 +488,6 @@ struct GenericKernelTy {
   /// of it reserved for the kernel launch environment (dyn_ptr); the caller
   /// owns the storage it points into.
   Error launch(GenericDeviceTy &GenericDevice, KernelLaunchArgsTy &LaunchArgs,
-               KernelExtraArgsTy *KernelExtraArgs,
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice,
                            uint32_t NumThreads[3], uint32_t NumBlocks[3],
@@ -1134,7 +1136,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Run the kernel associated with \p EntryPtr
   Error launchKernel(void *EntryPtr, KernelLaunchArgsTy &LaunchArgs,
-                     KernelExtraArgsTy *KernelExtraArgs,
                      __tgt_async_info *AsyncInfo);
 
   /// Initialize a __tgt_async_info structure.
@@ -1749,7 +1750,6 @@ public:
   /// Begin executing a kernel on the given device.
   int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
                         KernelLaunchArgsTy &LaunchArgs,
-                        KernelExtraArgsTy *KernelExtraArgs,
                         __tgt_async_info *AsyncInfoPtr);
 
   /// Synchronize an asyncrhonous queue with the plugin runtime.

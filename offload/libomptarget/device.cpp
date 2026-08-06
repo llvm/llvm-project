@@ -371,11 +371,11 @@ static void resolveKernelLaunchParams(void **TgtArgs, ptrdiff_t *TgtOffsets,
   Args.resize(NumArgs);
   Ptrs.resize(NumArgs);
 
-  for (uint32_t I = 0; I < NumArgs; ++I)
+  for (uint32_t I = 0; I < NumArgs; ++I) {
     Args[I] = reinterpret_cast<void *>(reinterpret_cast<intptr_t>(TgtArgs[I]) +
                                        TgtOffsets[I]);
-  for (uint32_t I = 0; I < NumArgs; ++I)
     Ptrs[I] = &Args[I];
+  }
 
   LaunchArgs.Args = &Ptrs[0];
 }
@@ -383,13 +383,14 @@ static void resolveKernelLaunchParams(void **TgtArgs, ptrdiff_t *TgtOffsets,
 // Run region on device
 int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                                ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
-                               KernelExtraArgsTy *KernelExtraArgs,
+                               KernelReplayOutcomeTy *ReplayOutcome,
                                AsyncInfoTy &AsyncInfo) {
   llvm::SmallVector<void *> Args, Ptrs;
   llvm::SmallVector<int64_t> ArgSizes;
 
   KernelLaunchArgsTy LaunchArgs;
   LaunchArgs.OmpABIVersion = KernelArgs.Version;
+  LaunchArgs.ReplayOutcome = ReplayOutcome;
   LaunchArgs.ArgSizes = KernelArgs.ArgSizes;
   LaunchArgs.Tripcount = KernelArgs.Tripcount;
   LaunchArgs.DynCGroupMem = KernelArgs.DynCGroupMem;
@@ -434,8 +435,7 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
     }
   }
 
-  return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs,
-                            KernelExtraArgs, AsyncInfo);
+  return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs, AsyncInfo);
 }
 
 // Run region on device
