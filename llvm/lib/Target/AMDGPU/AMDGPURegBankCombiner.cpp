@@ -449,7 +449,8 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
                                      m_Copy(m_SpecificICst(CleanLo16))),
                               m_OneUse(m_MInstr(Load)))))) {
     if (mi_match(Load, MRI, m_GZExtLoad(ZextLoad, m_MMO(MMO)))) {
-      unsigned LoadSize = MMO->getSizeInBits().getValue();
+      unsigned LoadSize =
+          static_cast<unsigned>(MMO->getSizeInBits().getValue());
       if (LoadSize == 8)
         return TryApplyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_U8, ZextLoad);
       if (LoadSize == 16)
@@ -482,7 +483,8 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
                               m_OneUse(m_GShl(m_OneUse(m_MInstr(Load)),
                                               m_Copy(m_SpecificICst(16)))))))) {
     if (mi_match(Load, MRI, m_GZExtLoad(ZextLoad, m_MMO(MMO)))) {
-      unsigned LoadSize = MMO->getSizeInBits().getValue();
+      unsigned LoadSize =
+          static_cast<unsigned>(MMO->getSizeInBits().getValue());
       if (LoadSize == 8)
         return TryApplyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_U8, ZextLoad);
       if (LoadSize == 16)
