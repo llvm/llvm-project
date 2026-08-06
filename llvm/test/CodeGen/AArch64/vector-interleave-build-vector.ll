@@ -23,22 +23,16 @@ define <4 x i8> @interleave2_build_vector(i8 %a, i8 %b) {
 define <6 x i8> @interleave3_build_vector(i8 %a, i8 %b, i8 %c) {
 ; CHECK-LABEL: interleave3_build_vector:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movi v0.2s, #20
-; CHECK-NEXT:    add x8, sp, #8
-; CHECK-NEXT:    mov v0.s[0], w0
-; CHECK-NEXT:    movi v1.2s, #21
-; CHECK-NEXT:    mov v1.s[0], w1
-; CHECK-NEXT:    movi v2.2s, #22
-; CHECK-NEXT:    mov v2.s[0], w2
-; CHECK-NEXT:    st3 { v0.2s, v1.2s, v2.2s }, [x8]
-; CHECK-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NEXT:    ldp d0, d1, [sp, #8]
-; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI1_0]
-; CHECK-NEXT:    ldr d2, [sp, #24]
-; CHECK-NEXT:    tbl v0.8b, { v0.16b, v1.16b, v2.16b }, v3.8b
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov w8, #20 // =0x14
+; CHECK-NEXT:    mov v0.b[1], w1
+; CHECK-NEXT:    mov v0.b[2], w2
+; CHECK-NEXT:    mov v0.b[3], w8
+; CHECK-NEXT:    mov w8, #21 // =0x15
+; CHECK-NEXT:    mov v0.b[4], w8
+; CHECK-NEXT:    mov w8, #22 // =0x16
+; CHECK-NEXT:    mov v0.b[5], w8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %va = insertelement <2 x i8> <i8 poison, i8 20>, i8 %a, i64 0
   %vb = insertelement <2 x i8> <i8 poison, i8 21>, i8 %b, i64 0
@@ -51,25 +45,19 @@ define <6 x i8> @interleave3_build_vector(i8 %a, i8 %b, i8 %c) {
 define <8 x i8> @interleave4_build_vector(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-LABEL: interleave4_build_vector:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2s, #20
-; CHECK-NEXT:    movi v1.2s, #21
-; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    movi v2.2s, #22
-; CHECK-NEXT:    movi v3.2s, #23
-; CHECK-NEXT:    mov v0.s[0], w0
-; CHECK-NEXT:    mov v1.s[0], w1
-; CHECK-NEXT:    mov v2.s[0], w2
-; CHECK-NEXT:    mov v3.s[0], w3
-; CHECK-NEXT:    zip2 v4.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip2 v5.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip1 v1.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip1 v0.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip2 v19.2s, v5.2s, v4.2s
-; CHECK-NEXT:    zip1 v18.2s, v5.2s, v4.2s
-; CHECK-NEXT:    zip2 v17.2s, v0.2s, v1.2s
-; CHECK-NEXT:    zip1 v16.2s, v0.2s, v1.2s
-; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI2_0]
-; CHECK-NEXT:    tbl v0.8b, { v16.16b, v17.16b, v18.16b, v19.16b }, v0.8b
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov w8, #20 // =0x14
+; CHECK-NEXT:    mov v0.b[1], w1
+; CHECK-NEXT:    mov v0.b[2], w2
+; CHECK-NEXT:    mov v0.b[3], w3
+; CHECK-NEXT:    mov v0.b[4], w8
+; CHECK-NEXT:    mov w8, #21 // =0x15
+; CHECK-NEXT:    mov v0.b[5], w8
+; CHECK-NEXT:    mov w8, #22 // =0x16
+; CHECK-NEXT:    mov v0.b[6], w8
+; CHECK-NEXT:    mov w8, #23 // =0x17
+; CHECK-NEXT:    mov v0.b[7], w8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %va = insertelement <2 x i8> <i8 poison, i8 20>, i8 %a, i64 0
   %vb = insertelement <2 x i8> <i8 poison, i8 21>, i8 %b, i64 0
@@ -80,7 +68,7 @@ define <8 x i8> @interleave4_build_vector(i8 %a, i8 %b, i8 %c, i8 %d) {
   ret <8 x i8> %res
 }
 
-; define <10 x i8> @interleave5_build_vector(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e) {
+ define <10 x i8> @interleave5_build_vector(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e) {
 ; CHECK-LABEL: interleave5_build_vector:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s0, w0
@@ -99,65 +87,38 @@ define <8 x i8> @interleave4_build_vector(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-NEXT:    mov w8, #24 // =0x18
 ; CHECK-NEXT:    mov v0.b[9], w8
 ; CHECK-NEXT:    ret
-;  %va = insertelement <2 x i8> <i8 poison, i8 20>, i8 %a, i64 0
-;  %vb = insertelement <2 x i8> <i8 poison, i8 21>, i8 %b, i64 0
-;  %vc = insertelement <2 x i8> <i8 poison, i8 22>, i8 %c, i64 0
-;  %vd = insertelement <2 x i8> <i8 poison, i8 23>, i8 %d, i64 0
-;  %ve = insertelement <2 x i8> <i8 poison, i8 24>, i8 %e, i64 0
-;  %res = call <10 x i8> @llvm.vector.interleave5.v10i8(
-;      <2 x i8> %va, <2 x i8> %vb, <2 x i8> %vc, <2 x i8> %vd,
-;      <2 x i8> %ve)
-;  ret <10 x i8> %res
-; }
+  %va = insertelement <2 x i8> <i8 poison, i8 20>, i8 %a, i64 0
+  %vb = insertelement <2 x i8> <i8 poison, i8 21>, i8 %b, i64 0
+  %vc = insertelement <2 x i8> <i8 poison, i8 22>, i8 %c, i64 0
+  %vd = insertelement <2 x i8> <i8 poison, i8 23>, i8 %d, i64 0
+  %ve = insertelement <2 x i8> <i8 poison, i8 24>, i8 %e, i64 0
+  %res = call <10 x i8> @llvm.vector.interleave5.v10i8(
+      <2 x i8> %va, <2 x i8> %vb, <2 x i8> %vc, <2 x i8> %vd,
+      <2 x i8> %ve)
+  ret <10 x i8> %res
+ }
 
 define <12 x i8> @interleave6_build_vector(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8 %f) {
 ; CHECK-LABEL: interleave6_build_vector:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    movi v0.2s, #22
-; CHECK-NEXT:    movi v1.2s, #25
-; CHECK-NEXT:    add x8, sp, #24
-; CHECK-NEXT:    movi v2.2s, #21
-; CHECK-NEXT:    movi v3.2s, #24
-; CHECK-NEXT:    movi v4.2s, #20
-; CHECK-NEXT:    movi v5.2s, #23
-; CHECK-NEXT:    mov v0.s[0], w2
-; CHECK-NEXT:    mov v1.s[0], w5
-; CHECK-NEXT:    mov v2.s[0], w1
-; CHECK-NEXT:    mov v3.s[0], w4
-; CHECK-NEXT:    mov v4.s[0], w0
-; CHECK-NEXT:    mov v5.s[0], w3
-; CHECK-NEXT:    zip2 v18.2s, v0.2s, v1.2s
-; CHECK-NEXT:    zip1 v21.2s, v0.2s, v1.2s
-; CHECK-NEXT:    zip2 v17.2s, v2.2s, v3.2s
-; CHECK-NEXT:    zip1 v20.2s, v2.2s, v3.2s
-; CHECK-NEXT:    zip2 v16.2s, v4.2s, v5.2s
-; CHECK-NEXT:    zip1 v19.2s, v4.2s, v5.2s
-; CHECK-NEXT:    st3 { v16.2s, v17.2s, v18.2s }, [x8]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    st3 { v19.2s, v20.2s, v21.2s }, [x8]
-; CHECK-NEXT:    ldp d0, d1, [sp]
-; CHECK-NEXT:    ldp d2, d3, [sp, #16]
-; CHECK-NEXT:    ldp d4, d5, [sp, #32]
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    mov v0.b[1], w8
-; CHECK-NEXT:    mov w8, v1.s[1]
-; CHECK-NEXT:    mov v0.b[2], v1.b[0]
-; CHECK-NEXT:    mov v0.b[3], w8
-; CHECK-NEXT:    mov w8, v2.s[1]
-; CHECK-NEXT:    mov v0.b[4], v2.b[0]
-; CHECK-NEXT:    mov v0.b[5], w8
-; CHECK-NEXT:    mov w8, v3.s[1]
-; CHECK-NEXT:    mov v0.b[6], v3.b[0]
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov w8, #20 // =0x14
+; CHECK-NEXT:    mov v0.b[1], w1
+; CHECK-NEXT:    mov v0.b[2], w2
+; CHECK-NEXT:    mov v0.b[3], w3
+; CHECK-NEXT:    mov v0.b[4], w4
+; CHECK-NEXT:    mov v0.b[5], w5
+; CHECK-NEXT:    mov v0.b[6], w8
+; CHECK-NEXT:    mov w8, #21 // =0x15
 ; CHECK-NEXT:    mov v0.b[7], w8
-; CHECK-NEXT:    mov w8, v4.s[1]
-; CHECK-NEXT:    mov v0.b[8], v4.b[0]
+; CHECK-NEXT:    mov w8, #22 // =0x16
+; CHECK-NEXT:    mov v0.b[8], w8
+; CHECK-NEXT:    mov w8, #23 // =0x17
 ; CHECK-NEXT:    mov v0.b[9], w8
-; CHECK-NEXT:    mov w8, v5.s[1]
-; CHECK-NEXT:    mov v0.b[10], v5.b[0]
+; CHECK-NEXT:    mov w8, #24 // =0x18
+; CHECK-NEXT:    mov v0.b[10], w8
+; CHECK-NEXT:    mov w8, #25 // =0x19
 ; CHECK-NEXT:    mov v0.b[11], w8
-; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %va = insertelement <2 x i8> <i8 poison, i8 20>, i8 %a, i64 0
   %vb = insertelement <2 x i8> <i8 poison, i8 21>, i8 %b, i64 0
@@ -171,7 +132,7 @@ define <12 x i8> @interleave6_build_vector(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8
   ret <12 x i8> %res
 }
 
-; define <14 x i8> @interleave7_build_vector(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8 %f, i8 %g) {
+ define <14 x i8> @interleave7_build_vector(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8 %f, i8 %g) {
 ; CHECK-LABEL: interleave7_build_vector:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s0, w0
@@ -196,84 +157,45 @@ define <12 x i8> @interleave6_build_vector(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8
 ; CHECK-NEXT:    mov w8, #26 // =0x1a
 ; CHECK-NEXT:    mov v0.b[13], w8
 ; CHECK-NEXT:    ret
-;  %va = insertelement <2 x i8> <i8 poison, i8 20>, i8 %a, i64 0
-;  %vb = insertelement <2 x i8> <i8 poison, i8 21>, i8 %b, i64 0
-;  %vc = insertelement <2 x i8> <i8 poison, i8 22>, i8 %c, i64 0
-;  %vd = insertelement <2 x i8> <i8 poison, i8 23>, i8 %d, i64 0
-;  %ve = insertelement <2 x i8> <i8 poison, i8 24>, i8 %e, i64 0
-;  %vf = insertelement <2 x i8> <i8 poison, i8 25>, i8 %f, i64 0
-;  %vg = insertelement <2 x i8> <i8 poison, i8 26>, i8 %g, i64 0
-;  %res = call <14 x i8> @llvm.vector.interleave7.v14i8(
-;      <2 x i8> %va, <2 x i8> %vb, <2 x i8> %vc, <2 x i8> %vd,
-;      <2 x i8> %ve, <2 x i8> %vf, <2 x i8> %vg)
-;  ret <14 x i8> %res
-; }
+  %va = insertelement <2 x i8> <i8 poison, i8 20>, i8 %a, i64 0
+  %vb = insertelement <2 x i8> <i8 poison, i8 21>, i8 %b, i64 0
+  %vc = insertelement <2 x i8> <i8 poison, i8 22>, i8 %c, i64 0
+  %vd = insertelement <2 x i8> <i8 poison, i8 23>, i8 %d, i64 0
+  %ve = insertelement <2 x i8> <i8 poison, i8 24>, i8 %e, i64 0
+  %vf = insertelement <2 x i8> <i8 poison, i8 25>, i8 %f, i64 0
+  %vg = insertelement <2 x i8> <i8 poison, i8 26>, i8 %g, i64 0
+  %res = call <14 x i8> @llvm.vector.interleave7.v14i8(
+      <2 x i8> %va, <2 x i8> %vb, <2 x i8> %vc, <2 x i8> %vd,
+      <2 x i8> %ve, <2 x i8> %vf, <2 x i8> %vg)
+  ret <14 x i8> %res
+ }
 
 define <16 x i8> @interleave8_build_vector(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8 %f, i8 %g, i8 %h) {
 ; CHECK-LABEL: interleave8_build_vector:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2s, #20
-; CHECK-NEXT:    movi v2.2s, #21
-; CHECK-NEXT:    movi v3.2s, #22
-; CHECK-NEXT:    movi v4.2s, #23
-; CHECK-NEXT:    movi v7.2s, #27
-; CHECK-NEXT:    movi v16.2s, #24
-; CHECK-NEXT:    movi v17.2s, #25
-; CHECK-NEXT:    movi v18.2s, #26
-; CHECK-NEXT:    mov v1.s[0], w0
-; CHECK-NEXT:    mov v2.s[0], w1
-; CHECK-NEXT:    mov v3.s[0], w2
-; CHECK-NEXT:    mov v4.s[0], w3
-; CHECK-NEXT:    mov v7.s[0], w7
-; CHECK-NEXT:    mov v16.s[0], w4
-; CHECK-NEXT:    mov v17.s[0], w5
-; CHECK-NEXT:    mov v18.s[0], w6
-; CHECK-NEXT:    zip1 v6.2s, v4.2s, v7.2s
-; CHECK-NEXT:    zip1 v21.2s, v1.2s, v16.2s
-; CHECK-NEXT:    zip2 v4.2s, v4.2s, v7.2s
-; CHECK-NEXT:    zip1 v19.2s, v2.2s, v17.2s
-; CHECK-NEXT:    zip1 v20.2s, v3.2s, v18.2s
-; CHECK-NEXT:    zip2 v2.2s, v2.2s, v17.2s
-; CHECK-NEXT:    zip2 v3.2s, v3.2s, v18.2s
-; CHECK-NEXT:    zip2 v1.2s, v1.2s, v16.2s
-; CHECK-NEXT:    zip1 v5.2s, v19.2s, v6.2s
-; CHECK-NEXT:    zip1 v22.2s, v21.2s, v20.2s
-; CHECK-NEXT:    zip2 v19.2s, v19.2s, v6.2s
-; CHECK-NEXT:    zip2 v20.2s, v21.2s, v20.2s
-; CHECK-NEXT:    zip1 v16.2s, v2.2s, v4.2s
-; CHECK-NEXT:    zip1 v17.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip2 v2.2s, v2.2s, v4.2s
-; CHECK-NEXT:    zip2 v1.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip1 v0.2s, v22.2s, v5.2s
-; CHECK-NEXT:    zip2 v5.2s, v22.2s, v5.2s
-; CHECK-NEXT:    zip1 v6.2s, v20.2s, v19.2s
-; CHECK-NEXT:    zip2 v7.2s, v20.2s, v19.2s
-; CHECK-NEXT:    zip1 v18.2s, v17.2s, v16.2s
-; CHECK-NEXT:    zip2 v16.2s, v17.2s, v16.2s
-; CHECK-NEXT:    zip1 v3.2s, v1.2s, v2.2s
-; CHECK-NEXT:    zip2 v1.2s, v1.2s, v2.2s
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    mov v0.b[1], w8
-; CHECK-NEXT:    mov w8, v5.s[1]
-; CHECK-NEXT:    mov v0.b[2], v5.b[0]
-; CHECK-NEXT:    mov v0.b[3], w8
-; CHECK-NEXT:    mov w8, v6.s[1]
-; CHECK-NEXT:    mov v0.b[4], v6.b[0]
-; CHECK-NEXT:    mov v0.b[5], w8
-; CHECK-NEXT:    mov w8, v7.s[1]
-; CHECK-NEXT:    mov v0.b[6], v7.b[0]
-; CHECK-NEXT:    mov v0.b[7], w8
-; CHECK-NEXT:    mov w8, v18.s[1]
-; CHECK-NEXT:    mov v0.b[8], v18.b[0]
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov w8, #20 // =0x14
+; CHECK-NEXT:    mov v0.b[1], w1
+; CHECK-NEXT:    mov v0.b[2], w2
+; CHECK-NEXT:    mov v0.b[3], w3
+; CHECK-NEXT:    mov v0.b[4], w4
+; CHECK-NEXT:    mov v0.b[5], w5
+; CHECK-NEXT:    mov v0.b[6], w6
+; CHECK-NEXT:    mov v0.b[7], w7
+; CHECK-NEXT:    mov v0.b[8], w8
+; CHECK-NEXT:    mov w8, #21 // =0x15
 ; CHECK-NEXT:    mov v0.b[9], w8
-; CHECK-NEXT:    mov w8, v16.s[1]
-; CHECK-NEXT:    mov v0.b[10], v16.b[0]
+; CHECK-NEXT:    mov w8, #22 // =0x16
+; CHECK-NEXT:    mov v0.b[10], w8
+; CHECK-NEXT:    mov w8, #23 // =0x17
 ; CHECK-NEXT:    mov v0.b[11], w8
-; CHECK-NEXT:    mov w8, v3.s[1]
-; CHECK-NEXT:    mov v0.b[12], v3.b[0]
+; CHECK-NEXT:    mov w8, #24 // =0x18
+; CHECK-NEXT:    mov v0.b[12], w8
+; CHECK-NEXT:    mov w8, #25 // =0x19
 ; CHECK-NEXT:    mov v0.b[13], w8
-; CHECK-NEXT:    mov w8, v1.s[1]
-; CHECK-NEXT:    mov v0.b[14], v1.b[0]
+; CHECK-NEXT:    mov w8, #26 // =0x1a
+; CHECK-NEXT:    mov v0.b[14], w8
+; CHECK-NEXT:    mov w8, #27 // =0x1b
 ; CHECK-NEXT:    mov v0.b[15], w8
 ; CHECK-NEXT:    ret
   %va = insertelement <2 x i8> <i8 poison, i8 20>, i8 %a, i64 0
