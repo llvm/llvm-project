@@ -1061,8 +1061,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   auto &FNegAbs = getActionDefinitionsBuilder({G_FNEG, G_FABS});
   FNegAbs.legalFor(FPTypesPK16)
+      .legalFor({BF16, V2BF16})
       .legalFor(ST.hasAnyPackedFP32Ops(), {V2F32})
-      .clampMaxNumElementsStrict(0, F16, 2);
+      .clampMaxNumElementsStrict(0, F16, 2)
+      .clampMaxNumElementsStrict(0, BF16, 2);
   if (ST.hasAnyPackedFP32Ops())
     FNegAbs.clampMaxNumElementsStrict(0, F32, 2);
   FNegAbs.scalarize(0);
@@ -1252,7 +1254,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // clang-format on
 
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
-      .clampScalar(0, S16, S64)
+      .clampScalar(0, I16, I64)
       .scalarize(0)
       .lower();
 
@@ -1267,7 +1269,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
 
   getActionDefinitionsBuilder({G_INTRINSIC_LRINT, G_INTRINSIC_LLRINT})
-      .clampScalar(0, S16, S64)
+      .clampScalar(0, I16, I64)
       .scalarize(0)
       .lower();
 
@@ -1320,6 +1322,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(1, S32, S64)
     .scalarize(0)
     .legalIf(all(typeInSet(0, {S1, S32}), isPointer(1)));
+
+  getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
 
   auto &FCmpBuilder =
       getActionDefinitionsBuilder(G_FCMP).legalForCartesianProduct(
@@ -1818,26 +1822,22 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // TODO: v2bf16 operations, and fat buffer pointer support.
   auto &Atomic = getActionDefinitionsBuilder(G_ATOMICRMW_FADD);
   if (ST.hasLDSFPAtomicAddF32()) {
-    Atomic.legalFor({{S32, LocalPtr}, {S32, RegionPtr}});
+    Atomic.legalFor({{F32, LocalPtr}, {F32, RegionPtr}});
     if (ST.hasLdsAtomicAddF64())
-      Atomic.legalFor({{S64, LocalPtr}});
+      Atomic.legalFor({{F64, LocalPtr}});
     if (ST.hasAtomicDsPkAdd16Insts())
       Atomic.legalFor({{V2F16, LocalPtr}, {V2BF16, LocalPtr}});
   }
   if (ST.hasAtomicFaddInsts())
-    Atomic.legalFor({{S32, GlobalPtr}});
+    Atomic.legalFor({{F32, GlobalPtr}});
   if (ST.hasFlatAtomicFaddF32Inst())
-    Atomic.legalFor({{S32, FlatPtr}});
+    Atomic.legalFor({{F32, FlatPtr}});
 
   if (ST.hasGFX90AInsts() || ST.hasGFX1250Insts()) {
     // These are legal with some caveats, and should have undergone expansion in
     // the IR in most situations
     // TODO: Move atomic expansion into legalizer
-    Atomic.legalFor({
-        {S32, GlobalPtr},
-        {S64, GlobalPtr},
-        {S64, FlatPtr}
-      });
+    Atomic.legalFor({{F32, GlobalPtr}, {F64, GlobalPtr}, {F64, FlatPtr}});
   }
 
   if (ST.hasAtomicBufferGlobalPkAddF16NoRtnInsts() ||
