@@ -7,7 +7,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, NamedTuple, Optional, Sequence
 import argparse
 import datetime
 import logging
@@ -24,11 +24,17 @@ BENCHMARK_PATHS = ['libcxx/include', 'libcxx/src']
 
 GRANULARITIES = ('day', 'week', 'month')
 
-# The UTC timestamp at which a commit landed, in seconds since the epoch, and the
-# commit SHA itself. That order is deliberate: it sorts chronologically by default,
-# and comparing two of them falls back to the SHA when the timestamps are equal, which
-# makes this tool deterministic.
-Commit = Tuple[int, str]
+
+class Commit(NamedTuple):
+    """
+    A commit, and the UTC time at which it landed in seconds since the epoch.
+
+    The order of the fields is deliberate: comparing two commits orders them
+    chronologically and falls back to the SHA when the timestamps are equal,
+    which makes this tool deterministic.
+    """
+    timestamp: int
+    sha: str
 
 
 class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
@@ -68,7 +74,7 @@ def benchmarkable_commits(git_repo: pathlib.Path, rev: str,
         fields = line.split()
         if len(fields) != 2:
             raise ValueError(f'unexpected output from git log: {line!r}')
-        commits.append((int(fields[0]), fields[1]))
+        commits.append(Commit(timestamp=int(fields[0]), sha=fields[1]))
     return commits
 
 
@@ -111,16 +117,16 @@ def select_anchor_commits(commits: Sequence[Commit],
     `since` is inclusive and `until` exclusive, both interpreted as UTC dates.
     """
     buckets: Dict[datetime.date, Commit] = {}
-    for (timestamp, sha) in commits:
-        day = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc).date()
+    for commit in commits:
+        day = datetime.datetime.fromtimestamp(commit.timestamp, datetime.timezone.utc).date()
         if since is not None and day < since:
             continue
         if until is not None and day >= until:
             continue
         bucket = clamp_date(day, granularity, direction='backward')
         existing = buckets.get(bucket)
-        if existing is None or (timestamp, sha) < existing:
-            buckets[bucket] = (timestamp, sha)
+        if existing is None or commit < existing:
+            buckets[bucket] = commit
     return [anchor for (_, anchor) in sorted(buckets.items())]
 
 
@@ -186,17 +192,17 @@ def main(argv: List[str]) -> int:
               f'one per {args.every}', file=sys.stderr)
         print(f'Candidate commits: {len(commits)}   Selected: {len(anchors)}', file=sys.stderr)
         rows = []
-        for (timestamp, sha) in anchors:
-            when = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc)
+        for commit in anchors:
+            when = datetime.datetime.fromtimestamp(commit.timestamp, datetime.timezone.utc)
             bucket = clamp_date(when.date(), args.every, direction='backward')
             label = f'{bucket} ({bucket:%G-W%V})' if args.every == 'week' else str(bucket)
-            rows.append((label, sha, when.strftime('%Y-%m-%d %H:%M')))
+            rows.append((label, commit.sha, when.strftime('%Y-%m-%d %H:%M')))
         if rows:
             print(tabulate.tabulate(rows, headers=['BUCKET', 'COMMIT', 'DATE (UTC)'],
                                     tablefmt='plain', disable_numparse=True), file=sys.stderr)
 
     # Write the output all at once at the end, to avoid partial output in case of failure.
-    contents = ''.join(f'{sha}\n' for (_, sha) in anchors)
+    contents = ''.join(f'{commit.sha}\n' for commit in anchors)
     if args.output is None:
         sys.stdout.write(contents)
     else:
