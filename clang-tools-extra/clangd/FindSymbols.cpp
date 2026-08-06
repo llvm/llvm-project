@@ -148,8 +148,10 @@ bool isOverrides(const NamedDecl *ND) {
       return false;
 
     for (const auto *Overridden : MD->overridden_methods()) {
-      // Check if the overridden method is virtual but not pure virtual
-      if (Overridden->isVirtual() && !Overridden->isPureVirtual())
+      // Pure virtual method indicates that we have a bug in clang.
+      assert(Overridden->isVirtual());
+      // Check if the overridden method is virtual.
+      if (!Overridden->isPureVirtual())
         return true;
     }
   }
