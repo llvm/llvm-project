@@ -671,7 +671,8 @@ private:
   InstrIdTy calcSize(const MachineBasicBlock *BB) const {
     InstrIdTy Size = BB->size();
     if (!Cfg.CountPhis)
-      Size -= std::distance(BB->begin(), BB->getFirstNonPHI());
+      Size -= static_cast<InstrIdTy>(
+          std::distance(BB->begin(), BB->getFirstNonPHI()));
     return Size;
   }
 
