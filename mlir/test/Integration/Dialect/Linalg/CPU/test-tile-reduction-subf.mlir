@@ -2,21 +2,18 @@
 // result as the untiled reduction. The first RUN line runs the untiled
 // reduction, the second one tiles it first; both have to print the same values.
 
-// RUN: mlir-opt %s -test-transform-dialect-erase-schedule \
-// RUN: -empty-tensor-to-alloc-tensor -one-shot-bufferize="bufferize-function-boundaries" \
-// RUN: -buffer-deallocation-pipeline -convert-bufferization-to-memref -convert-linalg-to-loops -convert-scf-to-cf \
-// RUN: -expand-strided-metadata -lower-affine -convert-arith-to-llvm --finalize-memref-to-llvm -convert-func-to-llvm -convert-cf-to-llvm -reconcile-unrealized-casts | \
-// RUN: mlir-runner -e main -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils \
-// RUN: | FileCheck %s
+// DEFINE: %{mlir_options} = -test-transform-dialect-erase-schedule \
+// DEFINE: -empty-tensor-to-alloc-tensor -one-shot-bufferize="bufferize-function-boundaries" \
+// DEFINE: -buffer-deallocation-pipeline -convert-bufferization-to-memref -convert-linalg-to-loops -convert-scf-to-cf \
+// DEFINE: -expand-strided-metadata -lower-affine -convert-arith-to-llvm --finalize-memref-to-llvm -convert-func-to-llvm -convert-cf-to-llvm -reconcile-unrealized-casts
 
-// RUN: mlir-opt %s -transform-interpreter -test-transform-dialect-erase-schedule \
-// RUN: -empty-tensor-to-alloc-tensor -one-shot-bufferize="bufferize-function-boundaries" \
-// RUN: -buffer-deallocation-pipeline -convert-bufferization-to-memref -convert-linalg-to-loops -convert-scf-to-cf \
-// RUN: -expand-strided-metadata -lower-affine -convert-arith-to-llvm --finalize-memref-to-llvm -convert-func-to-llvm -convert-cf-to-llvm -reconcile-unrealized-casts | \
-// RUN: mlir-runner -e main -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils \
-// RUN: | FileCheck %s
+// DEFINE: %{run} = mlir-runner -e main -entry-point-result=void \
+// DEFINE:   -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils \
+// DEFINE: | FileCheck %s
+
+// RUN: mlir-opt %s %{mlir_options} | %{run}
+
+// RUN: mlir-opt %s -transform-interpreter %{mlir_options} | %{run}
 
 func.func private @printMemrefF32(memref<*xf32>)
 
