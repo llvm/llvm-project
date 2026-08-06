@@ -2391,7 +2391,7 @@ define void @i1_zext_stride_with_sext_use(ptr noalias %p.out, ptr %p, i1 %stride
 ; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld>, ir<1>
+; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld>, ir<-1>
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%val>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
@@ -2468,7 +2468,7 @@ define void @i1_sext_stride_with_zext_use(ptr noalias %p.out, ptr %p, i1 %stride
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
-; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<-1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
 ; CHECK-NEXT:      EMIT ir<%val> = add ir<%ld>, ir<1>

@@ -5654,13 +5654,14 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
 
     StridePredicates = StridePredicates.getUnionWith(NewPred, *SE);
 
-    auto ReplaceUsesInVectorLoop = [&](Value *V) {
+    auto ReplaceUsesInVectorLoop = [&](Value *V, const SCEV *ToSCEV) {
       VPValue *From = Plan.getLiveIn(V);
       if (!From)
         return;
-      VPValue *To = Plan.getConstantInt(
-          From->getScalarType(),
-          cast<SCEVConstant>(MVConst)->getAPInt().getLimitedValue());
+
+      assert(From->getScalarType() == ToSCEV->getType() &&
+             "Wrong type for ToSCEV!");
+      VPValue *To = Plan.getConstantInt(cast<SCEVConstant>(ToSCEV)->getAPInt());
 
       // Original scalar loop can still use `From`, make sure to only rewrite
       // uses inside the vector loop that we guard with the checks.
@@ -5670,10 +5671,14 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
       });
     };
 
-    ReplaceUsesInVectorLoop(StrideVal);
+    ReplaceUsesInVectorLoop(StrideVal, MVConst);
     for (auto *U : StrideVal->users())
-      if (isa<SExtInst, ZExtInst, TruncInst>(U))
-        ReplaceUsesInVectorLoop(U);
+      if (isa<SExtInst>(U))
+        ReplaceUsesInVectorLoop(U,
+                                SE->getSignExtendExpr(MVConst, U->getType()));
+      else if (isa<ZExtInst, TruncInst>(U))
+        ReplaceUsesInVectorLoop(
+            U, SE->getTruncateOrZeroExtend(MVConst, U->getType()));
   }
 
   if (StridePredicates.isAlwaysTrue())
