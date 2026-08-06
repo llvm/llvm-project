@@ -223,8 +223,9 @@ GetOpcodeDataSize(const DataExtractor &data, const lldb::offset_t data_offset,
     break;
 
   case DW_OP_addr:
-  case DW_OP_call_ref: // 0x9a 1 address sized offset of DIE (DWARF3)
     return data.GetAddressByteSize();
+  case DW_OP_call_ref:
+    return dwarf_cu ? dwarf_cu->GetDwarfOffsetByteSize() : LLDB_INVALID_OFFSET;
 
   // Opcodes with no arguments
   case DW_OP_deref:                // 0x06
