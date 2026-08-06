@@ -98,5 +98,8 @@ choose_expr *int_ptr8 = &integer;
 // ShuffleVectorExpr
 shuffle_expr *vec_ptr = &vec2;
 
+// ConvertFromArbitraryFPExpr
+convert_from_arbitrary_fp_expr *double_ptr7 = &floating;
+
 // GenericSelectionExpr
 generic_selection_expr *double_ptr6 = &floating;

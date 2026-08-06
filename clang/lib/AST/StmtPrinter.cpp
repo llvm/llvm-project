@@ -1995,6 +1995,17 @@ void StmtPrinter::VisitConvertVectorExpr(ConvertVectorExpr *Node) {
   OS << ")";
 }
 
+void StmtPrinter::VisitConvertFromArbitraryFPExpr(
+    ConvertFromArbitraryFPExpr *Node) {
+  OS << "__builtin_convert_from_arbitrary_fp(";
+  PrintExpr(Node->getSrcExpr());
+  OS << ", ";
+  PrintExpr(Node->getFormatExpr());
+  OS << ", ";
+  Node->getTypeSourceInfo()->getType().print(OS, Policy);
+  OS << ")";
+}
+
 void StmtPrinter::VisitInitListExpr(InitListExpr* Node) {
   if (Node->getSyntacticForm()) {
     Visit(Node->getSyntacticForm());

@@ -3610,6 +3610,61 @@ C-style cast applied to each element of the first argument.
 
 Query for this feature with `__has_builtin(__builtin_convertvector)`.
 
+(langext-__builtin_convert_from_arbitrary_fp)=
+(langext-builtin-convert-from-arbitrary-fp)=
+
+### `__builtin_convert_from_arbitrary_fp`
+
+`__builtin_convert_from_arbitrary_fp` interprets an integer as the bits of a value in a narrow floating-point format that has no corresponding C type, and converts it to a native floating-point type.
+
+**Syntax**:
+
+```c++
+__builtin_convert_from_arbitrary_fp(bits, format, dst_type)
+```
+
+**Examples**:
+
+```c++
+typedef unsigned char uchar4 __attribute__((ext_vector_type(4)));
+typedef float float4 __attribute__((ext_vector_type(4)));
+
+unsigned char b; uchar4 vb;
+
+// Interpret b as a Float8E4M3FN value and widen it to _Float16.
+__builtin_convert_from_arbitrary_fp(b, "Float8E4M3FN", _Float16)
+
+// The same, elementwise, for four Float8E5M2 values.
+__builtin_convert_from_arbitrary_fp(vb, "Float8E5M2", float4)
+```
+
+**Description**:
+
+`bits` is an integer, or a vector of integers, holding the encoded floating-point value.
+`format` must be an ordinary string literal naming the source format.
+`dst_type` must be a floating-point type, or a vector of floating-point types with the same number of elements as `bits`.
+Supported destination element semantics are IEEE half, bfloat16, IEEE single, and IEEE double.
+Other destination types, including types with x87 extended, PPC double-double, or IEEE quad semantics and the `__mfp8` type, are rejected.
+Vector source and destination operands must be fixed-length vectors; sizeless SVE and RVV vectors are rejected.
+The width of `bits` (its element width, for vectors) must equal the width of `format`.
+
+Clang's target-independent semantic analysis accepts all verifier-valid format names:
+
+- 8-bit: `"Float8E5M2"`, `"Float8E5M2FNUZ"`, `"Float8E4M3"`, `"Float8E4M3FN"`,
+  `"Float8E4M3FNUZ"`, `"Float8E4M3B11FNUZ"`, `"Float8E3M4"`, `"Float8E8M0FNU"`
+- 6-bit: `"Float6E3M2FN"`, `"Float6E2M3FN"`
+- 4-bit: `"Float4E2M1FN"`
+
+Only the signedness-free width of `bits` matters, so for an 8-bit format any of `char`, `signed char`, `unsigned char`, or `_BitInt(8)` of either signedness may be used.
+The 6-bit and 4-bit formats require a `_BitInt` of the matching width.
+Because Clang only permits `_BitInt` vector elements whose width is a power of two, vectors of the 6-bit formats cannot be expressed.
+
+This builtin maps to the `llvm.convert.from.arbitrary.fp` intrinsic; see its description in the LLVM Language Reference for the exact conversion semantics.
+Backend lowering is currently implemented only for `"Float8E5M2"`, `"Float8E4M3FN"`, `"Float6E3M2FN"`, `"Float6E2M3FN"`, and `"Float4E2M1FN"`; this does not guarantee support on any particular target.
+The other verifier-accepted formats, `"Float8E5M2FNUZ"`, `"Float8E4M3"`, `"Float8E4M3FNUZ"`, `"Float8E4M3B11FNUZ"`, `"Float8E3M4"`, and `"Float8E8M0FNU"`, can be emitted to LLVM IR but currently fail during backend lowering.
+
+Query for this feature with `__has_builtin(__builtin_convert_from_arbitrary_fp)`.
+
 ### `__builtin_bitreverse`
 
 - `__builtin_bitreverse8`

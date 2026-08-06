@@ -1403,6 +1403,17 @@ void ASTStmtWriter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
     Record.push_back(E->getStoredFPFeatures().getAsOpaqueInt());
 }
 
+void ASTStmtWriter::VisitConvertFromArbitraryFPExpr(
+    ConvertFromArbitraryFPExpr *E) {
+  VisitExpr(E);
+  Record.AddSourceLocation(E->getBuiltinLoc());
+  Record.AddSourceLocation(E->getRParenLoc());
+  Record.AddTypeSourceInfo(E->getTypeSourceInfo());
+  Record.AddStmt(E->getSrcExpr());
+  Record.AddStmt(E->getFormatExpr());
+  Code = serialization::EXPR_CONVERT_FROM_ARBITRARY_FP;
+}
+
 void ASTStmtWriter::VisitBlockExpr(BlockExpr *E) {
   VisitExpr(E);
   Record.AddDeclRef(E->getBlockDecl());

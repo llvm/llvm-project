@@ -399,3 +399,21 @@ namespace type_trait {
   // CHECK-LABEL: define {{.*}} @_ZN10type_trait1gIiEEvDTplu23__is_trivially_copyableiEcvT__EE
   template void g<int>(int);
 }
+
+namespace convert_from_arbitrary_fp {
+  template <typename T>
+  auto e5m2(T value) ->
+      decltype(__builtin_convert_from_arbitrary_fp(value, "Float8E5M2", float)) {
+    return {};
+  }
+  // CHECK-LABEL: define weak_odr noundef float @_ZN25convert_from_arbitrary_fp4e5m2IhEEDTu35__builtin_convert_from_arbitrary_fpXfp_Eu10Float8E5M2fEET_(
+  template float e5m2<unsigned char>(unsigned char);
+
+  template <typename T>
+  auto e4m3(T value) ->
+      decltype(__builtin_convert_from_arbitrary_fp(value, "Float8E4M3", float)) {
+    return {};
+  }
+  // CHECK-LABEL: define weak_odr noundef float @_ZN25convert_from_arbitrary_fp4e4m3IhEEDTu35__builtin_convert_from_arbitrary_fpXfp_Eu10Float8E4M3fEET_(
+  template float e4m3<unsigned char>(unsigned char);
+}

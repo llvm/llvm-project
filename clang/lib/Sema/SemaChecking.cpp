@@ -6662,6 +6662,120 @@ ExprResult Sema::ConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
                                    RParenLoc, CurFPFeatureOverrides());
 }
 
+const StringLiteral *Sema::CheckArbitraryFPFormatArg(Expr *E) {
+  const auto *Literal = dyn_cast<StringLiteral>(E->IgnoreParenImpCasts());
+  if (!Literal) {
+    Diag(E->getBeginLoc(), diag::err_expr_not_string_literal)
+        << E->getSourceRange();
+    return nullptr;
+  }
+
+  if (!Literal->isOrdinary()) {
+    Diag(E->getBeginLoc(), diag::err_arbitrary_fp_non_ordinary_string_literal)
+        << E->getSourceRange();
+    return nullptr;
+  }
+
+  if (!llvm::APFloatBase::isValidArbitraryFPFormat(Literal->getString())) {
+    Diag(E->getBeginLoc(), diag::err_arbitrary_fp_invalid_format)
+        << Literal->getString() << E->getSourceRange();
+    return nullptr;
+  }
+
+  return Literal;
+}
+
+ExprResult Sema::ConvertFromArbitraryFPExpr(Expr *E, Expr *Format,
+                                            TypeSourceInfo *TInfo,
+                                            SourceLocation BuiltinLoc,
+                                            SourceLocation RParenLoc) {
+  const char *BuiltinName = "__builtin_convert_from_arbitrary_fp";
+
+  // The format is never dependent, so it can always be validated here.
+  const StringLiteral *FormatLiteral = CheckArbitraryFPFormatArg(Format);
+  if (!FormatLiteral)
+    return ExprError();
+  StringRef FormatName = FormatLiteral->getString();
+
+  ExprResult ConvertedSrc = DefaultLvalueConversion(E);
+  if (ConvertedSrc.isInvalid())
+    return ExprError();
+  E = ConvertedSrc.get();
+
+  QualType DstTy = TInfo->getType();
+  QualType SrcTy = E->getType();
+
+  if (!SrcTy->isDependentType()) {
+    if (SrcTy->isSizelessVectorType())
+      return ExprError(Diag(BuiltinLoc, diag::err_arbitrary_fp_sizeless_vector)
+                       << "first" << BuiltinName);
+
+    QualType SrcEltTy = SrcTy;
+    const auto *SrcVecTy = SrcTy->getAs<VectorType>();
+    if (SrcVecTy)
+      SrcEltTy = SrcVecTy->getElementType();
+
+    if (!SrcEltTy->isIntegerType())
+      return ExprError(Diag(BuiltinLoc, diag::err_arbitrary_fp_non_int_type)
+                       << "first" << BuiltinName);
+
+    unsigned FormatBits =
+        llvm::APFloatBase::getArbitraryFPFormatSizeInBits(FormatName);
+    if (Context.getIntWidth(SrcEltTy) != FormatBits)
+      return ExprError(Diag(E->getBeginLoc(), diag::err_arbitrary_fp_int_width)
+                       << (SrcVecTy != nullptr) << SrcEltTy << FormatBits
+                       << FormatName << E->getSourceRange());
+  }
+
+  if (!DstTy->isDependentType()) {
+    if (DstTy->isSizelessVectorType())
+      return ExprError(Diag(BuiltinLoc, diag::err_arbitrary_fp_sizeless_vector)
+                       << "third" << BuiltinName);
+
+    QualType DstEltTy = DstTy;
+    if (const auto *DstVecTy = DstTy->getAs<VectorType>())
+      DstEltTy = DstVecTy->getElementType();
+
+    if (!DstEltTy->isRealFloatingType() && !DstEltTy->isMFloat8Type())
+      return ExprError(Diag(BuiltinLoc, diag::err_arbitrary_fp_non_fp_type)
+                       << "third" << BuiltinName);
+
+    bool IsSupportedDstTy = !DstEltTy->isMFloat8Type();
+    if (IsSupportedDstTy) {
+      const llvm::fltSemantics &DstSem =
+          Context.getFloatTypeSemantics(DstEltTy);
+      IsSupportedDstTy = &DstSem == &llvm::APFloat::IEEEhalf() ||
+                         &DstSem == &llvm::APFloat::BFloat() ||
+                         &DstSem == &llvm::APFloat::IEEEsingle() ||
+                         &DstSem == &llvm::APFloat::IEEEdouble();
+    }
+
+    if (!IsSupportedDstTy)
+      return ExprError(
+          Diag(BuiltinLoc, diag::err_arbitrary_fp_unsupported_dst_type)
+          << DstTy << BuiltinName);
+  }
+
+  if (!SrcTy->isDependentType() && !DstTy->isDependentType()) {
+    const auto *SrcVecTy = SrcTy->getAs<VectorType>();
+    const auto *DstVecTy = DstTy->getAs<VectorType>();
+    if (DstVecTy && !SrcVecTy)
+      return ExprError(Diag(BuiltinLoc, diag::err_builtin_non_vector_type)
+                       << "first" << BuiltinName);
+    if (SrcVecTy && !DstVecTy)
+      return ExprError(Diag(BuiltinLoc, diag::err_builtin_non_vector_type)
+                       << "third" << BuiltinName);
+    if (SrcVecTy && DstVecTy &&
+        SrcVecTy->getNumElements() != DstVecTy->getNumElements())
+      return ExprError(
+          Diag(BuiltinLoc, diag::err_arbitrary_fp_incompatible_vector)
+          << BuiltinName);
+  }
+
+  return new (Context) clang::ConvertFromArbitraryFPExpr(
+      E, Format, TInfo, DstTy, VK_PRValue, OK_Ordinary, BuiltinLoc, RParenLoc);
+}
+
 bool Sema::BuiltinPrefetch(CallExpr *TheCall) {
   unsigned NumArgs = TheCall->getNumArgs();
 
