@@ -102,8 +102,6 @@ void SuperHAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
 
   unsigned NumBits = Info.TargetSize + Info.TargetOffset;
   unsigned NumBytes = (NumBits / 8) + ((NumBits % 8) == 0 ? 0 : 1);
-
-  LDBG() << "Writing " << itostr(NumBytes) << " bytes, " << itostr(NumBits) << " bits.";
   assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
          "Invalid fixup offset!");
 
@@ -142,8 +140,6 @@ bool SuperHAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   // No target?
   if (!PCITarget.getAddSym())
     return false;
-
-  F.dump();
 
   // Evaluate as ELF.
   auto &SA = static_cast<const MCSymbolELF &>(*PCITarget.getAddSym());
