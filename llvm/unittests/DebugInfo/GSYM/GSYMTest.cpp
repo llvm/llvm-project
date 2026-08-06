@@ -26,8 +26,6 @@
 #include "llvm/DebugInfo/GSYM/OutputAggregator.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
@@ -6166,35 +6164,26 @@ template <typename CreatorT> static void TestGsymStatistics() {
   FW.setStringOffsetSize(GC.getStringOffsetSize());
   ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
 
-  // dumpStatistics() operates on a file path, so write the encoded GSYM to a
-  // temporary file and read it back to exercise the real entry point.
-  SmallString<128> GsymPath;
-  int FD = 0;
-  ASSERT_FALSE(
-      sys::fs::createTemporaryFile("gsym-stats", "gsym", FD, GsymPath));
-  FileRemover Remover(GsymPath);
-  {
-    raw_fd_ostream FileOS(FD, /*shouldClose=*/true);
-    FileOS << OutStrm.str();
-  }
-
-  auto GROrErr = GsymReader::openFile(GsymPath);
+  // dumpStatistics() reads the total size from the reader's in-memory buffer,
+  // so an in-memory GSYM can be analyzed without ever touching the filesystem.
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
   ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
   const std::unique_ptr<GsymReader> &GR = *GROrErr;
 
+  const StringRef DisplayPath = "in-memory.gsym";
   std::string StatsStr;
   raw_string_ostream StatsOS(StatsStr);
-  GR->dumpStatistics(GsymPath, StatsOS, GsymReader::StatisticsFormat::JSON);
+  GR->dumpStatistics(StatsOS, GsymReader::StatisticsFormat::JSON, DisplayPath);
 
   auto ValOrErr = json::parse(StatsStr);
   ASSERT_THAT_EXPECTED(ValOrErr, Succeeded());
   const json::Object *Root = ValOrErr->getAsObject();
   ASSERT_NE(Root, nullptr);
 
-  // Top-level fields.
+  // Top-level fields. The path is only a display label.
   auto Path = Root->getString("path");
   ASSERT_TRUE(Path.has_value());
-  EXPECT_EQ(*Path, StringRef(GsymPath));
+  EXPECT_EQ(*Path, DisplayPath);
   auto NumAddrs = Root->getInteger("num_addresses");
   ASSERT_TRUE(NumAddrs.has_value());
   EXPECT_EQ(static_cast<uint64_t>(*NumAddrs), GR->getNumAddresses());
@@ -6248,8 +6237,8 @@ template <typename CreatorT> static void TestGsymStatistics() {
   EXPECT_EQ(Get(FT, "merged_func_info"), 0);
 
   // The text and pretty-JSON formats must not crash on the same input.
-  GR->dumpStatistics(GsymPath, OS, GsymReader::StatisticsFormat::Text);
-  GR->dumpStatistics(GsymPath, OS, GsymReader::StatisticsFormat::PrettyJSON);
+  GR->dumpStatistics(OS, GsymReader::StatisticsFormat::Text, DisplayPath);
+  GR->dumpStatistics(OS, GsymReader::StatisticsFormat::PrettyJSON, DisplayPath);
 }
 
 TEST(GSYMTest, TestGsymStatistics) { TestGsymStatistics<GsymCreatorV1>(); }

@@ -918,7 +918,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       error(GSYMPath, Gsym.takeError());
 
     if (ShowStatistics) {
-      (*Gsym)->dumpStatistics(GSYMPath, OS, StatisticsFormat);
+      (*Gsym)->dumpStatistics(OS, StatisticsFormat, GSYMPath);
       continue;
     }
 

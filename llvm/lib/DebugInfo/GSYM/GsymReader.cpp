@@ -20,7 +20,6 @@
 #include "llvm/DebugInfo/GSYM/HeaderV2.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -516,15 +515,12 @@ static std::string formatGsymUUID(StringRef Bytes) {
   return Hex;
 }
 
-void GsymReader::dumpStatistics(StringRef GSYMPath, raw_ostream &OS,
-                                StatisticsFormat Format) {
-  // Get the total file size.
-  uint64_t FileSize = 0;
-  if (auto EC = sys::fs::file_size(GSYMPath, FileSize)) {
-    OS << "error: cannot stat file '" << GSYMPath << "': " << EC.message()
-       << "\n";
-    return;
-  }
+void GsymReader::dumpStatistics(raw_ostream &OS, StatisticsFormat Format,
+                                StringRef GSYMPath) {
+  // The total file size is the size of the in-memory buffer this reader was
+  // created from, so no filesystem access is required and in-memory GSYM data
+  // can be analyzed too.
+  const uint64_t FileSize = MemBuffer->getBufferSize();
 
   // Section sizes come from the GlobalData directory, which is populated for
   // both GSYM v1 and v2 readers, so the same logic works for both versions.

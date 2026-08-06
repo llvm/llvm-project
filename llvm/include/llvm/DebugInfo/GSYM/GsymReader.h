@@ -207,14 +207,15 @@ public:
 
   /// Dump statistics about the GSYM data contained in this object.
   ///
-  /// \param GSYMPath The file path used for display and to get file size.
-  ///
   /// \param OS The output stream to dump to.
   ///
   /// \param Format Output format: Text, JSON (dense), or PrettyJSON.
-  LLVM_ABI void
-  dumpStatistics(StringRef GSYMPath, raw_ostream &OS,
-                 StatisticsFormat Format = StatisticsFormat::Text);
+  ///
+  /// \param GSYMPath Optional file path, used only as a display label in the
+  /// output (empty for in-memory GSYM data).
+  LLVM_ABI void dumpStatistics(raw_ostream &OS,
+                               StatisticsFormat Format = StatisticsFormat::Text,
+                               StringRef GSYMPath = "");
 
   /// Dump a FunctionInfo object.
   ///
