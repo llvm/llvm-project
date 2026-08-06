@@ -15266,6 +15266,58 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_vpdpbusds256:
   case X86::BI__builtin_ia32_vpdpbusds512:
     return EvalVectorDotProduct(true);
+  case X86::BI__builtin_ia32_cvtpd2dq:
+  case X86::BI__builtin_ia32_cvtps2dq:
+  case X86::BI__builtin_ia32_cvttpd2dq:
+  case X86::BI__builtin_ia32_cvttps2dq:
+  case X86::BI__builtin_ia32_cvtpd2dq256:
+  case X86::BI__builtin_ia32_cvtps2dq256:
+  case X86::BI__builtin_ia32_cvttpd2dq256:
+  case X86::BI__builtin_ia32_cvttps2dq256: {
+    APValue SrcVec;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SrcVec) || !SrcVec.isVector())
+      return false;
+
+    llvm::RoundingMode RoundingMode;
+    switch (BuiltinOp) {
+    case X86::BI__builtin_ia32_cvttpd2dq:
+    case X86::BI__builtin_ia32_cvttps2dq:
+    case X86::BI__builtin_ia32_cvttpd2dq256:
+    case X86::BI__builtin_ia32_cvttps2dq256:
+      RoundingMode = llvm::RoundingMode::TowardZero;
+      break;
+    default:
+      RoundingMode = llvm::RoundingMode::NearestTiesToEven;
+      break;
+    }
+
+    unsigned NumSrcElts = SrcVec.getVectorLength();
+    SmallVector<APValue, 8> ResultElts;
+
+    for (unsigned i = 0; i < NumSrcElts; ++i) {
+      llvm::APFloat FloatElem = SrcVec.getVectorElt(i).getFloat();
+      llvm::APSInt IntResult(32, /*isUnsigned=*/false);
+      bool IsExact = false;
+
+      llvm::APFloat::opStatus Status =
+          FloatElem.convertToInteger(IntResult, RoundingMode, &IsExact);
+
+      if (Status & llvm::APFloat::opInvalidOp) {
+        IntResult = llvm::APSInt(llvm::APInt::getSignedMinValue(32),
+                                 /*isUnsigned=*/false);
+      }
+
+      ResultElts.push_back(APValue(IntResult));
+    }
+
+    if (BuiltinOp == X86::BI__builtin_ia32_cvtpd2dq ||
+        BuiltinOp == X86::BI__builtin_ia32_cvttpd2dq) {
+      llvm::APSInt ZeroInt(32, /*isUnsigned=*/false);
+      ResultElts.push_back(APValue(ZeroInt));
+      ResultElts.push_back(APValue(ZeroInt));
+    }
+    return Success(ResultElts, E);
+  }
   }
 }
 
@@ -18687,6 +18739,63 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     }
 
     return Success(APValue(RetMask), E);
+  }
+  case X86::BI__builtin_ia32_cvtss2si:
+  case X86::BI__builtin_ia32_cvtsd2si:
+  case X86::BI__builtin_ia32_cvttss2si:
+  case X86::BI__builtin_ia32_cvttsd2si:
+  case X86::BI__builtin_ia32_cvtss2si64:
+  case X86::BI__builtin_ia32_cvtsd2si64:
+  case X86::BI__builtin_ia32_cvttss2si64:
+  case X86::BI__builtin_ia32_cvttsd2si64: {
+    APValue ArgVal;
+    if (!EvaluateAsRValue(Info, E->getArg(0), ArgVal))
+      return false;
+
+    llvm::APFloat FloatElem(0.0f);
+    if (ArgVal.isVector()) {
+      FloatElem = ArgVal.getVectorElt(0).getFloat();
+    } else if (ArgVal.isFloat()) {
+      FloatElem = ArgVal.getFloat();
+    } else {
+      return false;
+    }
+
+    unsigned BitWidth = 32;
+    switch (BuiltinOp) {
+    case X86::BI__builtin_ia32_cvtss2si64:
+    case X86::BI__builtin_ia32_cvtsd2si64:
+    case X86::BI__builtin_ia32_cvttss2si64:
+    case X86::BI__builtin_ia32_cvttsd2si64:
+      BitWidth = 64;
+      break;
+    default:
+      BitWidth = 32;
+      break;
+    }
+
+    llvm::RoundingMode RoundingMode;
+    switch (BuiltinOp) {
+    case X86::BI__builtin_ia32_cvttss2si:
+    case X86::BI__builtin_ia32_cvttsd2si:
+    case X86::BI__builtin_ia32_cvttss2si64:
+    case X86::BI__builtin_ia32_cvttsd2si64:
+      RoundingMode = llvm::RoundingMode::TowardZero;
+      break;
+    default:
+      RoundingMode = llvm::RoundingMode::NearestTiesToEven;
+      break;
+    }
+
+    llvm::APSInt IntResult(BitWidth, false);
+    bool IsExact = false;
+    llvm::APFloat::opStatus Status =
+        FloatElem.convertToInteger(IntResult, RoundingMode, &IsExact);
+
+    if (Status & llvm::APFloat::opInvalidOp) {
+      IntResult = llvm::APSInt(llvm::APInt::getSignedMinValue(BitWidth), false);
+    }
+    return Success(IntResult, E);
   }
   case X86::BI__builtin_ia32_vpshufbitqmb128_mask:
   case X86::BI__builtin_ia32_vpshufbitqmb256_mask:

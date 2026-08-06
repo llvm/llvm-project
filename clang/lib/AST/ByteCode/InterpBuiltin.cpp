@@ -4668,6 +4668,61 @@ static bool interp__builtin_ia32_bmac(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool
+interp_builtin_ia32_cvt_scalar_to_int(InterpState &S, CodePtr OpPC,
+                                      const CallExpr *E, unsigned BitWidth,
+                                      llvm::RoundingMode RoundingMode) {
+  Pointer SrcVecPtr = S.Stk.pop<Pointer>();
+  Pointer Lane0Ptr = SrcVecPtr.atIndex(0);
+  const Floating &FloatElem = Lane0Ptr.deref<Floating>();
+
+  llvm::APSInt IntResult(BitWidth, /*isUnsigned=*/false);
+  bool IsExact = false;
+  llvm::APFloat::opStatus Status = FloatElem.getAPFloat().convertToInteger(
+      IntResult, RoundingMode, &IsExact);
+
+  if (Status & llvm::APFloat::opInvalidOp) {
+    IntResult = llvm::APSInt(llvm::APInt::getSignedMinValue(BitWidth),
+                             /*isUnsigned=*/false);
+  }
+  pushInteger(S, IntResult, E->getType());
+  return true;
+}
+
+static bool interp_builtin_ia32_cvt_vector_to_int(
+    InterpState &S, CodePtr OpPC, const CallExpr *E,
+    llvm::RoundingMode RoundingMode, bool zeroPad = false) {
+  Pointer SrcVecPtr = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  PrimType DstElemT = Dst.getFieldDesc()->getPrimType();
+
+  unsigned NumSrcElts = SrcVecPtr.getNumElems();
+  for (unsigned I = 0; I < NumSrcElts; ++I) {
+    const Floating &FloatElem = SrcVecPtr.atIndex(I).deref<Floating>();
+    llvm::APSInt IntResult(32, /*isUnsigned=*/false);
+    bool IsExact = false;
+
+    llvm::APFloat::opStatus Status = FloatElem.getAPFloat().convertToInteger(
+        IntResult, RoundingMode, &IsExact);
+
+    if (Status & llvm::APFloat::opInvalidOp) {
+      IntResult = llvm::APSInt(llvm::APInt::getSignedMinValue(32),
+                               /*isUnsigned=*/false);
+    }
+    INT_TYPE_SWITCH_NO_BOOL(
+        DstElemT, { Dst.elem<T>(I) = T::from(IntResult.getSExtValue()); });
+  }
+
+  if (zeroPad) {
+    INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+      Dst.elem<T>(2) = T::from(0);
+      Dst.elem<T>(3) = T::from(0);
+    });
+  }
+  Dst.initializeAllElements();
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   const ASTContext &ASTCtx = S.getASTContext();
@@ -6774,6 +6829,38 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vpdpbusds256:
   case X86::BI__builtin_ia32_vpdpbusds512:
     return interp__builtin_ia32_vpdp(S, OpPC, Call, true);
+  case X86::BI__builtin_ia32_cvtss2si:
+  case X86::BI__builtin_ia32_cvtsd2si:
+    return interp_builtin_ia32_cvt_scalar_to_int(
+        S, OpPC, Call, 32, llvm::RoundingMode::NearestTiesToEven);
+  case X86::BI__builtin_ia32_cvtss2si64:
+  case X86::BI__builtin_ia32_cvtsd2si64:
+    return interp_builtin_ia32_cvt_scalar_to_int(
+        S, OpPC, Call, 64, llvm::RoundingMode::NearestTiesToEven);
+  case X86::BI__builtin_ia32_cvttss2si:
+  case X86::BI__builtin_ia32_cvttsd2si:
+    return interp_builtin_ia32_cvt_scalar_to_int(
+        S, OpPC, Call, 32, llvm::RoundingMode::TowardZero);
+  case X86::BI__builtin_ia32_cvttss2si64:
+  case X86::BI__builtin_ia32_cvttsd2si64:
+    return interp_builtin_ia32_cvt_scalar_to_int(
+        S, OpPC, Call, 64, llvm::RoundingMode::TowardZero);
+  case X86::BI__builtin_ia32_cvtpd2dq:
+    return interp_builtin_ia32_cvt_vector_to_int(
+        S, OpPC, Call, llvm::RoundingMode::NearestTiesToEven, true);
+  case X86::BI__builtin_ia32_cvtps2dq:
+  case X86::BI__builtin_ia32_cvtpd2dq256:
+  case X86::BI__builtin_ia32_cvtps2dq256:
+    return interp_builtin_ia32_cvt_vector_to_int(
+        S, OpPC, Call, llvm::RoundingMode::NearestTiesToEven);
+  case X86::BI__builtin_ia32_cvttpd2dq:
+    return interp_builtin_ia32_cvt_vector_to_int(
+        S, OpPC, Call, llvm::RoundingMode::TowardZero, true);
+  case X86::BI__builtin_ia32_cvttps2dq:
+  case X86::BI__builtin_ia32_cvttpd2dq256:
+  case X86::BI__builtin_ia32_cvttps2dq256:
+    return interp_builtin_ia32_cvt_vector_to_int(
+        S, OpPC, Call, llvm::RoundingMode::TowardZero);
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)
