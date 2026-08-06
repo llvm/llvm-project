@@ -68,10 +68,11 @@ namespace {
 // SysV x86_64 classifier, and converts the result back into the
 // dialect-agnostic mlir::abi::FunctionClassification that CIRABIRewriteContext
 // consumes.  Integer (including `_BitInt` up to 128 bits) / pointer / bool /
-// f32 / f64 scalars and struct / array aggregates are handled.  Unions,
-// `_Complex`, vectors, wider floats, and packed or padded records are reported
-// NYI by classifyX86_64Function so an unsupported signature fails the pass
-// instead of being misclassified.
+// f32 / f64 scalars and struct / union / array aggregates are handled.
+// `_Complex`, vectors, wider floats, packed or padded records, and a union no
+// member of which spans its declared size are reported NYI by
+// classifyX86_64Function so an unsupported signature fails the pass instead of
+// being misclassified.
 //===----------------------------------------------------------------------===//
 
 /// Whether a struct's declared argument-passing kind (from the module's
@@ -79,27 +80,32 @@ namespace {
 /// no layout entry (e.g. an anonymous struct) has no C++ non-trivial reason to
 /// be forced to memory, so it defaults to can-pass-in-registers.
 static bool recordCanPassInRegs(ModuleOp modOp, cir::RecordType recTy) {
-  mlir::StringAttr name = recTy.getName();
-  if (!name)
-    return true;
-  auto dict = modOp->getAttrOfType<DictionaryAttr>(
-      cir::CIRDialect::getRecordLayoutsAttrName());
-  if (!dict)
-    return true;
-  auto layout = dict.getAs<cir::RecordLayoutAttr>(name);
+  auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
   if (!layout)
     return true;
   return layout.getArgPassingKind() == cir::ArgPassingKind::CanPassInRegs;
 }
 
+/// A record's declared alignment, which the ABI uses for the byval and sret
+/// alignment of an indirect argument.  DataLayout derives alignment from the
+/// members, so it cannot see `__attribute__((aligned(N)))`.  The declared value
+/// comes from the module's record-layout metadata instead.  CIRGen emits an
+/// entry for every record it names, so the computed fallback only serves
+/// hand-written CIR.
+static llvm::Align recordDeclaredAlign(ModuleOp modOp, cir::RecordType recTy,
+                                       const DataLayout &dl) {
+  auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
+  if (!layout)
+    return llvm::Align(dl.getTypeABIAlignment(recTy));
+  return llvm::Align(layout.getRecordAlign());
+}
+
 /// The CIR types the x86_64 bridge handles.  Scalars: an integer up to 128
 /// bits (including `_BitInt` and `__int128`), pointer, bool, void, f32, or f64.
-/// Aggregates: a complete struct whose fields are all themselves supported, or
-/// an array of a supported element type.  A `_BitInt` wider than 128 bits,
-/// unions, `_Complex`, vectors, wider floats, and packed or padded records are
-/// not handled and are reported NYI at the reject() choke point in
-/// classifyX86_64Function.
-static bool isSupportedType(mlir::Type ty) {
+/// Aggregates: a complete struct or union whose members are all themselves
+/// supported, or an array of a supported element type.  Everything else is
+/// reported NYI at the reject() choke point in classifyX86_64Function.
+static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   // A pointer is only handled in the default address space (null) or an
   // already-lowered target address space.  A LangAddressSpaceAttr must be
   // lowered before this pass, so reject it rather than silently dropping it.
@@ -124,21 +130,40 @@ static bool isSupportedType(mlir::Type ty) {
     return intTy.getWidth() <= 64 || intTy.getWidth() == 128;
   }
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
-    return isSupportedType(arrTy.getElementType());
+    return isSupportedType(arrTy.getElementType(), dl);
   if (auto recTy = dyn_cast<cir::RecordType>(ty)) {
-    // Unions and packed / padded records each need classification this bridge
-    // does not implement (a union widen fixup and pad-aware eightbyte
-    // classification), so reject them here and report NYI rather than
-    // misclassify.  A zero-field record (a C empty struct) classifies as
-    // Ignore and is dropped from the lowered signature.  CIRGen lays out an
-    // empty C++ class as a single padded byte, which the padded check rejects.
-    // A real one-byte struct such as `{char[1]}` has a field and is not
-    // padded, so it is classified normally.
-    if (recTy.isUnion() || !recTy.isComplete() || recTy.getPacked() ||
-        recTy.getPadded())
+    // An incomplete record has no layout to classify, and a packed one needs
+    // pad-aware eightbyte classification this bridge does not implement.
+    if (!recTy.isComplete() || recTy.getPacked())
       return false;
+    if (recTy.isUnion()) {
+      // The classifier sizes a union's eightbytes from the union itself, which
+      // is only sound when some member spans that size.  Short of that, the
+      // remaining bytes are either tail padding or the rest of a bitfield
+      // storage unit, and the CIR type cannot tell those apart even though
+      // classic CodeGen coerces them to i32 and i8 respectively.
+      llvm::ArrayRef<mlir::Type> members = recTy.getMembers();
+      uint64_t recordBits = dl.getTypeSizeInBits(recTy).getFixedValue();
+      if (members.empty()) {
+        // A member-less union is all padding, which classifies Ignore up to two
+        // eightbytes.  Past that SysV says MEMORY regardless of content, and
+        // there is no member here to build the Indirect coercion from.
+        if (recordBits > 128)
+          return false;
+      } else {
+        auto spansRecord = [&](mlir::Type m) {
+          return dl.getTypeSizeInBits(m).getFixedValue() == recordBits;
+        };
+        if (!llvm::any_of(members, spansRecord))
+          return false;
+      }
+    } else if (recTy.getPadded()) {
+      // A struct's padding is a member the classifier would have to recognize
+      // as padding rather than data, which is not implemented.
+      return false;
+    }
     return llvm::all_of(recTy.getMembers(),
-                        [](mlir::Type m) { return isSupportedType(m); });
+                        [&](mlir::Type m) { return isSupportedType(m, dl); });
   }
   return false;
 }
@@ -220,11 +245,28 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                                dl.getTypeSizeInBits(type).getFixedValue());
       })
       .Case([&](cir::RecordType recTy) -> const llvm::abi::Type * {
-        // isSupportedType rejects unions, packed / padded, and empty-for-ABI
-        // records, so this handles a plain struct: map each field at its
-        // naturally-aligned offset.
+        llvm::abi::RecordFlags flags = llvm::abi::RecordFlags::None;
+        if (recordCanPassInRegs(modOp, recTy))
+          flags = flags | llvm::abi::RecordFlags::CanPassInRegisters;
+        llvm::TypeSize sizeBits = llvm::TypeSize::getFixed(
+            dl.getTypeSizeInBits(type).getFixedValue());
+        llvm::Align align = recordDeclaredAlign(modOp, recTy, dl);
         SmallVector<llvm::abi::FieldInfo> fields;
         fields.reserve(recTy.getMembers().size());
+
+        // The size passed here spans the tail padding, so an eightbyte covers
+        // the whole union rather than just the member the classifier reduces
+        // it to.
+        if (recTy.isUnion()) {
+          for (mlir::Type fieldTy : recTy.getMembers())
+            fields.push_back(llvm::abi::FieldInfo(
+                mapCIRType(fieldTy, typeMapper, dl, modOp)));
+          return tb.getUnionType(fields, sizeBits, align,
+                                 llvm::abi::StructPacking::Default, flags);
+        }
+
+        // isSupportedType rejects packed and padded structs, so every field
+        // here sits at its naturally-aligned offset.
         uint64_t offsetBits = 0;
         for (mlir::Type fieldTy : recTy.getMembers()) {
           const llvm::abi::Type *mappedField =
@@ -234,16 +276,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           fields.push_back(llvm::abi::FieldInfo(mappedField, offsetBits));
           offsetBits += dl.getTypeSizeInBits(fieldTy).getFixedValue();
         }
-        llvm::abi::RecordFlags flags = llvm::abi::RecordFlags::None;
-        if (recordCanPassInRegs(modOp, recTy))
-          flags = flags | llvm::abi::RecordFlags::CanPassInRegisters;
-        return tb.getRecordType(fields,
-                                llvm::TypeSize::getFixed(
-                                    dl.getTypeSizeInBits(type).getFixedValue()),
-                                llvm::Align(dl.getTypeABIAlignment(type)),
-                                llvm::abi::StructPacking::Default,
-                                /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{},
-                                flags);
+        return tb.getRecordType(
+            fields, sizeBits, align, llvm::abi::StructPacking::Default,
+            /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{}, flags);
       })
       .Default([](mlir::Type) -> const llvm::abi::Type * {
         llvm_unreachable(
@@ -321,62 +356,27 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   return ArgClassification::getIgnore();
 }
 
-/// Whether a signature accepts arguments beyond its declared parameters, and
-/// where the declared ones end when it does.  An argument past the ellipsis is
-/// unnamed, and the x86_64 rules pass some unnamed types differently.
-///
-/// llvm::abi::FunctionInfo::create takes this boundary as an optional count,
-/// where an absent value means the signature accepts no optional arguments.
-/// Any value there makes FunctionInfo::isVariadic() answer true, so the
-/// non-variadic case has to be spelled as an absent one.  That encoding is
-/// applied where classifyX86_64Signature builds the FunctionInfo.
-///
-/// Mirrors classic CodeGen's `RequiredArgs` in `CGFunctionInfo.h`, and CIRGen's
-/// copy in `CIRGenFunctionInfo.h`.
-class RequiredArgs {
-  /// The number of leading arguments that are declared parameters, or ~0U if
-  /// the signature accepts no optional arguments.
-  unsigned numRequired;
-
-public:
-  enum All_t { All };
-
-  /// A signature with no ellipsis, where every argument is declared.
-  RequiredArgs(All_t) : numRequired(~0U) {}
-
-  /// A signature whose leading \p n arguments are declared and whose remaining
-  /// arguments pass through an ellipsis.
-  explicit RequiredArgs(unsigned n) : numRequired(n) { assert(n != ~0U); }
-
-  bool allowsOptionalArgs() const { return numRequired != ~0U; }
-
-  unsigned getNumRequiredArgs() const {
-    assert(allowsOptionalArgs() && "signature accepts no optional arguments");
-    return numRequired;
-  }
-};
-
 /// Where \p fnTy's declared parameters end and its ellipsis arguments begin.
 ///
-/// The only x86_64 rule that reads this boundary today sends an unnamed vector
-/// wider than 128 bits to memory, and isSupportedType rejects every vector, so
-/// no input that currently reaches classification can observe the difference.
-static RequiredArgs requiredArgs(cir::FuncType fnTy) {
+/// The only x86_64 rule that reads this boundary sends an unnamed vector wider
+/// than 128 bits to memory, and isSupportedType rejects every vector, so no
+/// input this bridge accepts can observe the difference.
+static llvm::abi::RequiredArgs requiredArgs(cir::FuncType fnTy) {
   if (!fnTy.isVarArg())
-    return RequiredArgs::All;
-  return RequiredArgs(fnTy.getNumInputs());
+    return llvm::abi::RequiredArgs::All;
+  return llvm::abi::RequiredArgs(fnTy.getNumInputs());
 }
 
 /// Classify an x86_64 SysV signature (return type + argument types) using the
 /// LLVM ABI library.  Shared by the cir.func path, the variadic-call path and
 /// the indirect-call path (the latter classifies from the callee function
-/// pointer's pointee FuncType).  \p required marks how many leading entries in
-/// \p inputs are declared parameters, the classifier treating the rest as
-/// arguments passed through an ellipsis.  Returns std::nullopt and emits an NYI
+/// pointer's pointee FuncType).  \p required marks where the declared
+/// parameters in \p inputs end.  The classifier treats every argument past that
+/// point as passed through an ellipsis.  Returns std::nullopt and emits an NYI
 /// error via \p emitError if the signature uses a type the bridge does not
 /// handle yet.
 static std::optional<FunctionClassification> classifyX86_64Signature(
-    mlir::Type retCIR, mlir::TypeRange inputs, RequiredArgs required,
+    mlir::Type retCIR, mlir::TypeRange inputs, llvm::abi::RequiredArgs required,
     MLIRContext *ctx, const DataLayout &dl,
     mlir::abi::ABITypeMapper &typeMapper,
     const llvm::abi::TargetInfo &targetInfo, ModuleOp modOp,
@@ -388,7 +388,7 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
   bool voidRet = isa<cir::VoidType>(retCIR);
 
   auto reject = [&](mlir::Type t) -> bool {
-    if (isSupportedType(t))
+    if (isSupportedType(t, dl))
       return false;
     emitError()
         << "x86_64 calling-convention lowering not yet implemented for type "
@@ -408,12 +408,8 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
   for (mlir::Type a : inputs)
     argAbi.push_back(mapCIRType(a, typeMapper, dl, modOp));
 
-  std::optional<unsigned> numRequired;
-  if (required.allowsOptionalArgs())
-    numRequired = required.getNumRequiredArgs();
-
   std::unique_ptr<llvm::abi::FunctionInfo> fi = llvm::abi::FunctionInfo::create(
-      llvm::CallingConv::C, retAbi, argAbi, numRequired);
+      llvm::CallingConv::C, retAbi, argAbi, required);
   targetInfo.computeInfo(*fi);
 
   // convertABIArgInfo returns nullopt when the classifier picks a coercion
@@ -691,17 +687,35 @@ void CallConvLoweringPass::runOnOperation() {
     return;
   }
 
-  // Rewrite each function together with every direct call to it.  By the
-  // time we move on to function F+1, F's signature and every direct call to
-  // F have already been brought into alignment, and F+1..FN are still in
-  // their original (mutually consistent) form, so the IR is verifier-clean
-  // at every outer-iteration boundary.
+  // A cir.get_global holding a function's address carries the signature the
+  // source wrote, which the verifier ties to the callee, so it goes stale when
+  // that callee is rewritten.  A function address in a global initializer is a
+  // GlobalViewAttr instead, whose recorded type the verifier does not tie to
+  // the callee and which is dropped at opaque-pointer lowering, so it needs no
+  // counterpart.
+  llvm::DenseMap<cir::FuncOp, SmallVector<cir::GetGlobalOp>> addressTakers;
+  moduleOp.walk([&](cir::GetGlobalOp getGlobal) {
+    auto ptrTy = cast<cir::PointerType>(getGlobal.getAddr().getType());
+    if (!isa<cir::FuncType>(ptrTy.getPointee()))
+      return;
+    // A get_global's pointee must equal the named symbol's type, and the
+    // GlobalOp verifier rejects a function type there, so this names a
+    // cir.func.
+    auto callee = cast<cir::FuncOp>(symbolTable.lookup(getGlobal.getName()));
+    addressTakers[callee].push_back(getGlobal);
+  });
+
+  // Rewrite each function together with every direct call to it and every op
+  // holding its address.  By the time we move on to function F+1, F's
+  // signature and every reference to F have already been brought into
+  // alignment, and F+1..FN are still in their original (mutually consistent)
+  // form, so the IR is verifier-clean at every outer-iteration boundary.
   //
   // There is still a brief inner window where F's signature has been
-  // rewritten but its callers have not yet caught up -- we have no way to
+  // rewritten but its references have not yet caught up -- we have no way to
   // mutate both sides of a call atomically.  No verifier runs inside the
   // pass, and at pass exit the module is verifier-clean.  Fusing the inner
-  // loop here keeps the invalid window per-function rather than module-wide.
+  // loops here keeps the invalid window per-function rather than module-wide.
   OpBuilder builder(ctx);
   for (auto &kv : classifications) {
     cir::FuncOp func = kv.first;
@@ -724,6 +738,8 @@ void CallConvLoweringPass::runOnOperation() {
         return;
       }
     }
+    for (cir::GetGlobalOp addrOp : addressTakers.lookup(func))
+      rewriteCtx.rewriteFunctionAddress(addrOp, func, builder);
   }
 
   // Rewrite indirect call sites.  The callee is opaque, so classify from the
