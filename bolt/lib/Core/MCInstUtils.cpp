@@ -24,19 +24,9 @@ static_assert(BasicBlockStorageIsVector::value);
 
 MCInstReference MCInstReference::get(const MCInst &Inst,
                                      const BinaryFunction &BF) {
-  if (BF.hasCFG()) {
-    for (BinaryBasicBlock &BB : BF) {
-      for (MCInst &MI : BB)
-        if (&MI == &Inst)
-          return MCInstReference(BB, Inst);
-    }
-    llvm_unreachable("Inst is not contained in BF");
-  }
-
-  for (auto I = BF.instrs().begin(), E = BF.instrs().end(); I != E; ++I) {
-    if (&I->second == &Inst)
-      return MCInstReference(BF, I);
-  }
+  for (auto It = BF.instr_begin(), End = BF.instr_end(); It != End; ++It)
+    if (&*It == &Inst)
+      return MCInstReference(It);
   llvm_unreachable("Inst is not contained in BF");
 }
 
