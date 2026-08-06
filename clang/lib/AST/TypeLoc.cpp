@@ -819,6 +819,10 @@ namespace {
 
     // Only these types can contain the desired 'auto' type.
 
+    TypeLoc VisitAtomicTypeLoc(AtomicTypeLoc T) {
+      return Visit(T.getValueLoc());
+    }
+
     TypeLoc VisitQualifiedTypeLoc(QualifiedTypeLoc T) {
       return Visit(T.getUnqualifiedLoc());
     }
