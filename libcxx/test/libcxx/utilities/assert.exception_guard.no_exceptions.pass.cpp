@@ -19,4 +19,6 @@
 int main(int, char**) {
   TEST_LIBCPP_ASSERT_FAILURE(
       std::__make_exception_guard([] {}), "__exception_guard not completed with exceptions disabled");
+
+  return 0;
 }
