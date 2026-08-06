@@ -4709,15 +4709,13 @@ static bool interp_builtin_ia32_cvt_vector_to_int(
       IntResult = llvm::APSInt(llvm::APInt::getSignedMinValue(32),
                                /*isUnsigned=*/false);
     }
-    INT_TYPE_SWITCH_NO_BOOL(
-        DstElemT, { Dst.elem<T>(I) = T::from(IntResult.getSExtValue()); });
+    Dst.atIndex(I).deref<Integral<32, true>>() =
+        Integral<32, true>::from(IntResult.getSExtValue());
   }
 
   if (zeroPad) {
-    INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
-      Dst.elem<T>(2) = T::from(0);
-      Dst.elem<T>(3) = T::from(0);
-    });
+    Dst.atIndex(2).deref<Integral<32, true>>() = Integral<32, true>::zero();
+    Dst.atIndex(3).deref<Integral<32, true>>() = Integral<32, true>::zero();
   }
   Dst.initializeAllElements();
   return true;
