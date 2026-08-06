@@ -28,7 +28,7 @@
           }, 2000);
         },
         function () {
-          // Fallback for older browsers
+          // Fallback for older browsers.
           var ta = document.createElement("textarea");
           ta.value = code;
           ta.style.position = "fixed";
