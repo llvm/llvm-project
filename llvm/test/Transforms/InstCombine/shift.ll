@@ -2097,8 +2097,9 @@ define i32 @shl1_cttz_extra_use(i32 %x) {
 
 define i32 @shl2_cttz(i32 %x) {
 ; CHECK-LABEL: @shl2_cttz(
-; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 2, [[TZ]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[NEG]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[SHL]]
 ;
   %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
