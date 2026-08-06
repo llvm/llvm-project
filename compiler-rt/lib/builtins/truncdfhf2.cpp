@@ -19,7 +19,7 @@
 #include "fp_libc_config.h"
 #include "shared/builtins/truncdfhf2.h"
 
-#if defined(LIBC_TYPES_HAS_FLOAT16)
+#ifdef LIBC_TYPES_HAS_FLOAT16
 extern "C" COMPILER_RT_ABI dst_t __truncdfhf2(src_t a) {
   return __builtin_bit_cast(dst_t, LIBC_NAMESPACE::shared::truncdfhf2(a));
 }
