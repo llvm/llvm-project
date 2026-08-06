@@ -116,6 +116,7 @@ class ProcessLaunchTestCase(TestBase):
         )
 
     @skipIfRemote
+    @skipIfWasm  # WASI gives the inferior no working directory and no file system
     def test_set_working_dir_existing(self):
         """Test that '-w dir' sets the working dir when running the inferior."""
         d = {"CXX_SOURCES": "print_cwd.cpp"}
@@ -210,6 +211,7 @@ class ProcessLaunchTestCase(TestBase):
         self.assertState(process.GetState(), lldb.eStateExited, PROCESS_EXITED)
 
     @skipIfRemote
+    @skipIfWasm  # WASI gives the inferior no working directory and no file system
     def test_target_launch_working_dir_prop(self):
         """Test that the setting `target.launch-working-dir` is correctly used when launching a process."""
         d = {"CXX_SOURCES": "print_cwd.cpp"}

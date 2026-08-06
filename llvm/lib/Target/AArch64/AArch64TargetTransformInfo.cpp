@@ -3366,6 +3366,52 @@ instCombineInStreamingMode(InstCombiner &IC, IntrinsicInst &II) {
   return std::nullopt;
 }
 
+static std::optional<Instruction *> instCombineSVEUMin(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  // umin(umin(A, 1), umin(B, 1)) -> umin(umin(A,B), 1)
+  constexpr Intrinsic::ID UMinID = Intrinsic::aarch64_sve_umin_u;
+  Value *A, *B;
+  Value *Pg = II.getOperand(0);
+  if (match(II.getOperand(1), m_OneUse(m_Intrinsic<UMinID>(
+                                  m_Specific(Pg), m_Value(A), m_One()))) &&
+      match(II.getOperand(2), m_OneUse(m_Intrinsic<UMinID>(
+                                  m_Specific(Pg), m_Value(B), m_One())))) {
+    Value *NewUMin =
+        IC.Builder.CreateIntrinsic(UMinID, II.getType(), {Pg, A, B});
+    Value *NewLogicalUMin = IC.Builder.CreateIntrinsic(
+        UMinID, II.getType(), {Pg, NewUMin, ConstantInt::get(II.getType(), 1)});
+    return IC.replaceInstUsesWith(II, NewLogicalUMin);
+  }
+
+  // umin(umin(A, 1), 1) -> umin(A, 1)
+  if (match(II.getOperand(1),
+            m_Intrinsic<UMinID>(m_Specific(Pg), m_Value(), m_One())) &&
+      match(II.getOperand(2), m_One()))
+    return IC.replaceInstUsesWith(II, II.getOperand(1));
+
+  return std::nullopt;
+}
+
+static std::optional<Instruction *> instCombineSVEOrr(InstCombiner &IC,
+                                                      IntrinsicInst &II) {
+  // orr(umin(A, 1), umin(B, 1)) -> umin(orr(A, B), 1)
+  constexpr Intrinsic::ID UMinID = Intrinsic::aarch64_sve_umin_u;
+  Value *Pg = II.getOperand(0);
+
+  Value *A, *B;
+  if (!match(II.getOperand(1), m_OneUse(m_Intrinsic<UMinID>(
+                                   m_Specific(Pg), m_Value(A), m_One()))) ||
+      !match(II.getOperand(2), m_OneUse(m_Intrinsic<UMinID>(
+                                   m_Specific(Pg), m_Value(B), m_One()))))
+    return std::nullopt;
+
+  Value *NewOrr = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_orr_u,
+                                             II.getType(), {Pg, A, B});
+  Value *NewUMin = IC.Builder.CreateIntrinsic(
+      UMinID, II.getType(), {Pg, NewOrr, ConstantInt::get(II.getType(), 1)});
+  return IC.replaceInstUsesWith(II, NewUMin);
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -3485,6 +3531,10 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEUxt(IC, II, 32);
   case Intrinsic::aarch64_sme_in_streaming_mode:
     return instCombineInStreamingMode(IC, II);
+  case Intrinsic::aarch64_sve_umin_u:
+    return instCombineSVEUMin(IC, II);
+  case Intrinsic::aarch64_sve_orr_u:
+    return instCombineSVEOrr(IC, II);
   }
 
   return std::nullopt;
@@ -5306,8 +5356,9 @@ AArch64TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
   case Intrinsic::masked_gather:
     return getGatherScatterOpCost(MICA, CostKind);
   case Intrinsic::masked_load:
-  case Intrinsic::masked_expandload:
   case Intrinsic::masked_store:
+  case Intrinsic::masked_expandload:
+  case Intrinsic::masked_compressstore:
     return getMaskedMemoryOpCost(MICA, CostKind);
   }
   return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
@@ -5342,6 +5393,19 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
       return InstructionCost::getInvalid();
 
     // Operation will be split into expand of masked.load
+    MemOpCost *= 2;
+  }
+
+  if (MICA.getID() == Intrinsic::masked_compressstore) {
+    if (!isLegalMaskedCompressStore(Src, MICA.getAlignment()))
+      return InstructionCost::getInvalid();
+
+    // A compress store lowers to something like:
+    //  ptrue    p1.s
+    //  compact  z0.s, p0, z0.s
+    //  cntp     x8, p1, p0.s
+    //  whilelo  p0.s, xzr, x8
+    //  st1w     { z0.s }, p0, [x0]
     MemOpCost *= 2;
   }
 
