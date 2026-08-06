@@ -53,9 +53,7 @@ class WorkItem(NamedTuple):
                     raise ValueError(f'missing required field {name}')
                 return default
             value = item[name]
-            # `bool` is a subclass of `int`, so a sample count of `true` would
-            # otherwise be accepted and then quietly behave like 1.
-            if isinstance(value, bool) or not isinstance(value, types):
+            if not isinstance(value, types):
                 raise ValueError(f'{name} has the wrong type: {value!r}')
             return value
 
