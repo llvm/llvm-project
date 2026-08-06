@@ -1293,3 +1293,29 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
 
   return mlir::success();
 }
+
+void CIRABIRewriteContext::rewriteFunctionAddress(cir::GetGlobalOp addrOp,
+                                                  cir::FuncOp funcOp,
+                                                  mlir::OpBuilder &builder) {
+  auto oldPtrTy = mlir::cast<cir::PointerType>(addrOp.getAddr().getType());
+  cir::FuncType newFuncTy = funcOp.getFunctionType();
+  // An extension rides on an argument attribute and leaves the signature
+  // alone, so such a callee still matches the written type.
+  if (newFuncTy == oldPtrTy.getPointee())
+    return;
+
+  // The verifier requires the retype even when nothing reads the address.
+  addrOp.getAddr().setType(cir::PointerType::get(newFuncTy));
+  if (addrOp.getAddr().use_empty())
+    return;
+
+  // A later indirect call through the written type stays correct, since it
+  // reclassifies from that type and coerces to the signature funcOp was
+  // rewritten to.  Ellipsis arguments are the exception the indirect-call
+  // path reports rather than lowers.
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointAfter(addrOp);
+  auto bitcast = cir::CastOp::create(builder, addrOp.getLoc(), oldPtrTy,
+                                     cir::CastKind::bitcast, addrOp.getAddr());
+  addrOp.getAddr().replaceAllUsesExcept(bitcast.getResult(), bitcast);
+}
