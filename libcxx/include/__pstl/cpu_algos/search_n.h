@@ -20,6 +20,7 @@
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__pstl/cpu_algos/find_if.h>
 #include <__type_traits/is_execution_policy.h>
+#include <__utility/convert_to_integral.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 
@@ -48,41 +49,31 @@ struct __cpu_parallel_search_n {
     if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
       typedef typename std::iterator_traits<_ForwardIterator>::difference_type _DifferenceType;
-      if (static_cast<_DifferenceType>(__count) <= 0) {
+      _DifferenceType __integral_count = std::__convert_to_integral(__count);
+      if (__integral_count <= 0) {
         return __first; // If the count is non-positive, the first iterator is returned.
       }
       _DifferenceType __size = __last - __first;
-      if (__size < static_cast<_DifferenceType>(__count)) {
+      if (__size < __integral_count) {
         return __last; // The range is too small to contain the requested number of consecutive elements.
       }
-      // We're only interested in the range where a potential match can start.
-      _DifferenceType __n      = __size - static_cast<_DifferenceType>(__count) + 1;
-      _ForwardIterator __last2 = __first + __n;
+      // Calculate the length of the tail where a potential match cannot start by definition.
+      _DifferenceType __crop = __integral_count - 1;
+      // We're only interested in the range where a potential match can start: [first, last - crop)
+      _ForwardIterator __last2 = __last - __crop;
       // Run a parallel chunked find_if, covering the range where a potential match can start.
       auto __res = __pstl::__parallel_find<_Backend>(
           __first,
           __last2,
-          [__count, &__value, &__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
-            // [__brick_first, __brick_first + __count) is guaranteed to be a valid range.
-            // __brick_first can walk past __brick_last.
-            for (; __brick_first < __brick_last; ++__brick_first) {
-              if (!__pred(*__brick_first, __value)) {
-                continue;
-              }
-              // We found a start of a potential match, now check the next __count - 1 elements.
-              _ForwardIterator __match_start = __brick_first;
-              _Size __matches                = static_cast<_Size>(0);
-              while (true) {
-                if (++__matches == __count) {
-                  return __match_start; // Found a full match, return the start of the match.
-                }
-                ++__brick_first;
-                if (!__pred(*__brick_first, __value)) {
-                  break; // The match was broken, continue searching for a new potential match.
-                }
-              }
-            }
-            return __brick_last; // No matches starting in this chunk, return the end of the chunk.
+          [__integral_count, __crop, &__value, &__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
+            // Uncrop the range to allow std::search_n to find a full match, which can go beyond __brick_last.
+            _ForwardIterator __brick_last_uncropped = __brick_last + __crop;
+            // Run a serial std::search_n inside each of the chunks in parallel.
+            _ForwardIterator __ret =
+                std::search_n(__brick_first, __brick_last_uncropped, __integral_count, __value, __pred);
+            // The returned iterator is either a match inside [__brick_first, __brick_last) or a miss encoded as
+            // __brick_last_uncropped. Return the miss as __brick_last to conform to expectations of __parallel_find().
+            return __ret == __brick_last_uncropped ? __brick_last : __ret;
           },
           less<>{}, // `less` here means the lowest index among the matches
           true      // `true` here means we want the first match, not the last
