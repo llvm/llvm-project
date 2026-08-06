@@ -177,6 +177,7 @@ void negative_size() {
   static constexpr NegativeSize n;
   template for (auto x : n) g(x); // expected-error {{expansion statement size is not a constant expression}} \
                                      old-interp-note {{constexpr evaluation hit maximum step limit}} \
+                                     old-interp-note {{use -fconstexpr-steps}} \
                                      new-interp-note {{cannot refer to element 5 of array of 4 elements in a constant expression}} \
                                      expected-note {{in call to}}
   template for (constexpr auto x : n) g(x); // expected-error {{expansion statement size is not a constant expression}} \

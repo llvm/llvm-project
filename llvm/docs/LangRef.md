@@ -2609,6 +2609,15 @@ fn -> other_fn -> other_fn ; fn is norecurse
     patchable function entry area when such a section is emitted.  If omitted,
     the default section name is `__patchable_function_entries`.
 
+`"tail-pad-to-size"`
+:   This attribute specifies a minimum size in bytes for functions. Smaller
+    functions will be padded up to this size with fill bytes inserted at the
+    end. See `tail-pad-value` for padding value.
+
+`"tail-pad-value"`
+:   This attribute specifies a byte value to use for `tail-pad-to-size` fill,
+    with default of 0 if this attribute is absent.
+
 `"probe-stack"`
 :   This attribute indicates that the function will trigger a guard region
     in the end of the stack. It ensures that accesses to the stack must be
@@ -2800,8 +2809,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
     optimizations that require assumptions about the floating-point rounding
     mode or that might alter the state of floating-point status flags that
     might otherwise be set or cleared by calling this function. LLVM will
-    not introduce any new floating-point instructions that may trap. All
-    function definitions that contain strictfp calls must be marked strictfp.
+    not introduce any new floating-point instructions that may trap.
 
 (denormal_fpenv)=
 
@@ -8059,14 +8067,12 @@ then the interleave count will be determined automatically.
 
 #### '`llvm.loop.vectorize.enable`' Metadata
 
-This metadata selectively enables or disables vectorization for the loop. The
-first operand is the string `llvm.loop.vectorize.enable` and the second operand
-is a bit. If the bit operand value is 1 vectorization is enabled. A value of
-0 disables vectorization:
+This metadata selectively enables or disables vectorization for the loop. Each
+node has a single operand containing the name string:
 
 ```llvm
-!0 = !{!"llvm.loop.vectorize.enable", i1 0}
-!1 = !{!"llvm.loop.vectorize.enable", i1 1}
+!0 = !{!"llvm.loop.vectorize.enable"}
+!1 = !{!"llvm.loop.vectorize.disable"}
 ```
 
 #### '`llvm.loop.vectorize.predicate.enable`' Metadata
@@ -9405,6 +9411,75 @@ enum is the smallest type which can represent all of its values:
 !llvm.module.flags = !{!0, !1}
 !0 = !{i32 1, !"short_wchar", i32 1}
 !1 = !{i32 1, !"short_enum", i32 0}
+```
+
+### Float ABI Module Flags Metadata
+
+This module flag describes the floating-point ABI (the calling convention used
+to pass and return floating-point values) that the module was compiled for. The
+value is an `MDString` and must be one of:
+
+```{list-table}
+:header-rows: 1
+:widths: 30 70
+* - Value
+  - Meaning
+
+* - `"soft"`
+  - The software floating-point calling convention is used: floating-point
+    values are passed in general-purpose (integer) registers. Note this is
+    independent of whether floating-point hardware is used to perform
+    operations; see the `use-soft-float` function attribute for that. For
+    instance, both ARM's soft and softfp modes would use this value, since
+    they share the same calling convention.
+
+* - `"hard"`
+  - The hardware floating-point calling convention is used: floating-point
+    values are passed in floating-point registers.
+```
+
+When the flag is absent, the target's default floating-point ABI is used. The
+flag must use the `error` merge behavior, so that linking modules with
+conflicting floating-point ABIs is rejected. For example:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"float-abi", !"hard"}
+```
+
+### Long Double Type Module Flags Metadata
+
+Describe the floating-point format used by libm for `long double`. The
+value is an `MDString` naming the corresponding IR floating-point
+type, and must be one of:
+
+```{list-table}
+:header-rows: 1
+:widths: 30 70
+* - Value
+  - Meaning
+
+* - `"float"`
+  - IEEE 754 single precision (32-bit).
+
+* - `"double"`
+  - IEEE 754 double precision (64-bit).
+
+* - `"fp128"`
+  - IEEE 754 quadruple precision (128-bit).
+
+* - `"x86_fp80"`
+  - x87 80-bit extended precision.
+
+* - `"ppc_fp128"`
+  - IBM `double-double` (a pair of IEEE doubles).
+
+```
+
+The flag must use the `error` merge behavior, so that linking modules with
+conflicting long double types is rejected. For example:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"long-double-type", !"fp128"}
 ```
 
 ### Stack Alignment Metadata
@@ -26673,6 +26748,9 @@ All function *calls* done in a function that uses constrained floating
 point intrinsics must have the `strictfp` attribute either on the
 calling instruction or on the declaration or definition of the function
 being called.
+
+All function *definitions* that use constrained floating point intrinsics
+must have the `strictfp` attribute.
 
 #### '`llvm.experimental.constrained.fadd`' Intrinsic
 

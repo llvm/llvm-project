@@ -4411,144 +4411,42 @@ CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
 NVVM::IDArgPair CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::CpAsyncBulkTensorReduceOp>(op);
-  llvm::LLVMContext &ctx = mt.getLLVMContext();
 
   llvm::SmallVector<llvm::Value *> args;
-
-  // Arguments to the intrinsic:
-  // shared_mem_ptr, tmaDesc, tensorDims
-  // cache_hint(if applicable) and flag(boolean)
   args.push_back(mt.lookupValue(thisOp.getSrcMem()));
   args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
-
   for (Value v : thisOp.getCoordinates())
     args.push_back(mt.lookupValue(v));
 
   mlir::Value cacheHint = thisOp.getL2CacheHint();
   const bool hasCacheHint = static_cast<bool>(cacheHint);
-  llvm::Value *i64ZeroValue =
-      llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), 0);
-  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64ZeroValue);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint)
+                              : builder.getInt64(0));
+  args.push_back(builder.getInt32(static_cast<uint32_t>(thisOp.getRedKind())));
   args.push_back(builder.getInt1(hasCacheHint));
 
-  const llvm::Intrinsic::ID notIntrinsic = llvm::Intrinsic::not_intrinsic;
+  using namespace llvm::Intrinsic;
+  const unsigned NI = not_intrinsic;
+  static constexpr ID IDTable[][6] = {
+      {NI, nvvm_cp_async_bulk_tensor_reduce_tile_1d,
+       nvvm_cp_async_bulk_tensor_reduce_tile_2d,
+       nvvm_cp_async_bulk_tensor_reduce_tile_3d,
+       nvvm_cp_async_bulk_tensor_reduce_tile_4d,
+       nvvm_cp_async_bulk_tensor_reduce_tile_5d},
+      {NI, NI, NI, nvvm_cp_async_bulk_tensor_reduce_im2col_3d,
+       nvvm_cp_async_bulk_tensor_reduce_im2col_4d,
+       nvvm_cp_async_bulk_tensor_reduce_im2col_5d}};
 
-  constexpr unsigned numRedKinds = 8; // ADD, MIN, MAX, INC, DEC, AND, OR, XOR
-  constexpr unsigned numLayouts = 2;  // TILE, IM2COL
-  constexpr unsigned maxDim = 5;      // 1D to 5D
-  using row = std::array<llvm::Intrinsic::ID, maxDim + 1>;
-  using layoutTable = std::array<row, numLayouts>;
-  using fullTable = std::array<layoutTable, numRedKinds>;
-  static constexpr fullTable IDTable{
-      {// RedTy::ADD
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_im2col_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_im2col_5d}}}},
-       // RedTy::MIN
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_im2col_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_im2col_5d}}}},
-       // RedTy::MAX
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_im2col_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_im2col_5d}}}},
-       // RedTy::INC
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_im2col_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_im2col_5d}}}},
-       // RedTy::DEC
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_im2col_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_im2col_5d}}}},
-       // RedTy::AND
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_im2col_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_im2col_5d}}}},
-       // RedTy::OR
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_im2col_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_im2col_5d}}}},
-       // RedTy::XOR
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_im2col_4d,
-           llvm::Intrinsic::
-               nvvm_cp_async_bulk_tensor_reduce_xor_im2col_5d}}}}}};
-
-  static_assert(getMaxEnumValForTMAReduxKind() == std::size(IDTable) - 1,
-                "TMAReduxKinds must match number of rows in IDTable");
-
-  size_t redKind = static_cast<size_t>(thisOp.getRedKind());
   size_t mode = static_cast<size_t>(thisOp.getMode());
   size_t dim = thisOp.getCoordinates().size();
-
-  assert(redKind < IDTable.size() &&
-         "Invalid redKind for CpAsyncBulkTensorReduceOp");
-  assert(mode < IDTable[redKind].size() &&
+  assert(mode < std::size(IDTable) &&
          "Invalid mode for CpAsyncBulkTensorReduceOp");
-  assert(dim < IDTable[redKind][mode].size() &&
+  assert(dim < std::size(IDTable[mode]) &&
          "Invalid dim for CpAsyncBulkTensorReduceOp");
 
-  llvm::Intrinsic::ID intrinsicID = IDTable[redKind][mode][dim];
-
-  assert(intrinsicID != notIntrinsic &&
-         "Invalid intrinsic for CpAsyncBulkTensorReduceOp.");
-
+  ID intrinsicID = IDTable[mode][dim];
+  assert(intrinsicID != NI &&
+         "Invalid intrinsic for CpAsyncBulkTensorReduceOp");
   return {intrinsicID, std::move(args)};
 }
 

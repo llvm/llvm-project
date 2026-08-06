@@ -287,9 +287,8 @@ define <2 x float> @v_mad_mix_v2f32_cvtbf16imminv2pi(<2 x bfloat> %src0, <2 x bf
 ; GFX1250-NEXT:    v_and_b32_e32 v3, 0xffff0000, v0
 ; GFX1250-NEXT:    v_dual_lshlrev_b32 v2, 16, v0 :: v_dual_lshlrev_b32 v4, 16, v1
 ; GFX1250-NEXT:    v_and_b32_e32 v5, 0xffff0000, v1
-; GFX1250-NEXT:    s_mov_b32 s0, 0x3e230000
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_pk_fma_f32 v[0:1], v[2:3], v[4:5], s[0:1] op_sel_hi:[1,1,0]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_pk_fma_f32 v[0:1], v[2:3], v[4:5], 0x3e230000 op_sel_hi:[1,1,0]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %src0.ext = fpext <2 x bfloat> %src0 to <2 x float>
   %src1.ext = fpext <2 x bfloat> %src1 to <2 x float>
@@ -604,7 +603,7 @@ define float @v_mad_mix_f32_bf16lo_cast_from_half_bf16lo_bf16lo(half %src0, bflo
 define amdgpu_kernel void @test_fma_mix_f32_bf16_src2_bf16lo(float %x, i32 %y, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_fma_mix_f32_bf16_src2_bf16lo:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv

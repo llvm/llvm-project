@@ -52,9 +52,14 @@ static bool isDanglingStackSource(const MemRegion *Source,
         })) {
       return false;
     }
-
-    if (SF == CurrentSF || !SF->isParentOf(CurrentSF))
-      return true;
+    // Only a source whose frame is still live on the current stack can
+    // dangle. If that frame is not on the stack then the source outlives
+    // the returned value. The source is still alive when the returned value
+    // is used, so it does not dangle.
+    if (is_contained(make_pointer_range(C.stackframes()), SF)) {
+      if (SF == CurrentSF || !SF->isParentOf(CurrentSF))
+        return true;
+    }
   }
   return false;
 }
@@ -69,6 +74,11 @@ std::vector<const MemRegion *> lifetime_modeling::getDanglingRegionsAfterReturn(
     }
   }
   return Regions;
+}
+
+bool lifetime_modeling::isBoundToLifetimeSource(ProgramStateRef State,
+                                                SVal Val) {
+  return State->get<LifetimeBoundMap>(Val) != nullptr;
 }
 
 bool lifetime_modeling::isDeallocated(ProgramStateRef State,
@@ -250,8 +260,9 @@ void DebugLifetimeModeling::analyzerDumpLifetimeOriginsOf(
 
     llvm::SmallString<128> Str;
     llvm::raw_svector_ostream OS(Str);
-    OS << " Origin " << ArgSVal << " bound to ";
-    llvm::interleaveComma(RegionNames, OS);
+    OS << " Origin '" << ArgSVal << "' bound to ";
+    llvm::interleaveComma(RegionNames, OS,
+                          [&](StringRef Name) { OS << "'" << Name << "'"; });
     C.emitReport(std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N));
   }
 }
