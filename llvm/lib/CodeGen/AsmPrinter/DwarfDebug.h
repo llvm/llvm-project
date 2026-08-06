@@ -871,7 +871,7 @@ public:
     return HasAppleExtensionAttributes;
   }
 
-  /// Returns whether or not to change the current debug info for split dwarf.
+  /// Returns whether or not to change the current debug info for split DWARF.
   bool useSplitDwarf() const { return HasSplitDwarf; }
 
   /// Returns whether to generate a string offsets table with (possibly shared)
