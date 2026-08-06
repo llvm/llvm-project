@@ -214,18 +214,9 @@ isunordered(_A1 __x, _A2 __y) _NOEXCEPT {
 
 #if defined(_LIBCPP_MSVCRT) && _LIBCPP_STD_VER >= 20
 namespace __ucrt {
-// The UCRT declares these as unconstrained, non-constexpr function templates, so it isn't only integer arguments that
-// need handling here: without a candidate of our own, floating-point calls resolve to the UCRT's templates too and
-// std::isfinite & friends stay non-constexpr in C++23, violating P0533R9.
-//
-// Constraining ours on is_arithmetic_v covers both. The UCRT's templates and ours have equivalent
-// parameter-type-lists, so neither is more specialized and the more-constrained one wins ([temp.func.order]), which is
-// the same mechanism the two-argument traits below already rely on.
-//
-// Note that we forward to the __math overloads but intentionally do not pull them into this namespace with a
-// using-declaration: the __math ones are constrained through a defaulted template parameter rather than a
-// requires-clause, so their template-parameter-lists are not equivalent to the UCRT's, neither is more specialized,
-// the more-constrained tiebreak does not apply, and integral calls become ambiguous.
+// The UCRT declares these as unconstrained, non-constexpr function templates.
+// In order to support constexpr addition in P0533R9, libc++ provides constrained overloads for all arithmetic types as
+// a workaround. These overloads are preferred to unconstrained ones.
 
 template <class _A1>
   requires is_arithmetic_v<_A1>
