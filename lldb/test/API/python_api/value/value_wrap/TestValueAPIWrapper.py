@@ -8,7 +8,6 @@ from lldbsuite.test import lldbutil
 
 
 class ValueAPIWrapper(TestBase):
-
     def test_accessors(self):
         """Test non-modifying operators (e.g. __getitem__, __add__)."""
         self.build()
