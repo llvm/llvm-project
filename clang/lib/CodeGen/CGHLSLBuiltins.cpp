@@ -320,8 +320,8 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
   assert(E->getArg(1)->getType()->isIntegerType() &&
          "Intrinsic InterlockedOp value operand must be an integer");
 
-  // Vulkan forbids the CrossDevice scope a scopeless atomic maps to, so pin
-  // the memory scope: Workgroup for groupshared, Device for everything else.
+  // Scopeless atomics will default to CrossDevice, which is illegal in Vulkan.
+  // Set the memory scope: Workgroup for groupshared, otherwise Device.
   StringRef ScopeName = DestLV.getAddressSpace() == LangAS::hlsl_groupshared
                             ? "workgroup"
                             : "device";
