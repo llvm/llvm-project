@@ -78,8 +78,8 @@ TEST_CONSTEXPR_CXX23 void test_sfinae() {
   // - unique_ptr's move-constructibility is correctly propagated from its deleter's.
   {
     typedef std::unique_ptr<ValueT> U;
-static_assert(!std::is_constructible<U, U const&>::value, "");
-static_assert(!std::is_constructible<U, U&>::value, "");
+    static_assert(!std::is_constructible<U, U const&>::value, "");
+    static_assert(!std::is_constructible<U, U&>::value, "");
     static_assert(std::is_move_constructible<U>::value, "");
     static_assert(!std::is_constructible<U, const U>::value, "");
   }
