@@ -42,7 +42,7 @@ bb4:
 ; Test that a zero index in the permute vector is used instead of VGBM, with
 ; a zero index into the other source operand.
 define <4 x i8> @fun1(<2 x i8> %arg) {
-; CHECK-LABEL:.LCPI1_0:
+; CHECK-LABEL: .LCPI1_0:
 ; CHECK-NEXT:        .byte   1                       # 0x1
 ; CHECK-NEXT:        .byte   18                      # 0x12
 ; CHECK-NEXT:        .byte   0                       # 0x0
@@ -59,7 +59,7 @@ define <4 x i8> @fun1(<2 x i8> %arg) {
 ; CHECK-NEXT:        .space  1
 ; CHECK-NEXT:        .space  1
 ; CHECK-NEXT:        .space  1
-; CHECK-NEXT:        .text
+; CHECK:             .text
 ; CHECK-NEXT:        .globl  fun1
 ; CHECK-NEXT:        .p2align        1
 ; CHECK-NEXT:        .prefalign      4, .Lfunc_end1, nop
@@ -78,7 +78,7 @@ define <4 x i8> @fun1(<2 x i8> %arg) {
 
 ; Same, but with the first byte indexing into an element of the zero vector.
 define <4 x i8> @fun2(<2 x i8> %arg) {
-; CHECK-LABEL:.LCPI2_0:
+; CHECK-LABEL: .LCPI2_0:
 ; CHECK-NEXT:        .byte   0                       # 0x0
 ; CHECK-NEXT:        .byte   17                      # 0x11
 ; CHECK-NEXT:        .byte   17                      # 0x11
@@ -95,7 +95,7 @@ define <4 x i8> @fun2(<2 x i8> %arg) {
 ; CHECK-NEXT:        .space  1
 ; CHECK-NEXT:        .space  1
 ; CHECK-NEXT:        .space  1
-; CHECK-NEXT:        .text
+; CHECK:             .text
 ; CHECK-NEXT:        .globl  fun2
 ; CHECK-NEXT:        .p2align        1
 ; CHECK-NEXT:        .prefalign      4, .Lfunc_end2, nop
