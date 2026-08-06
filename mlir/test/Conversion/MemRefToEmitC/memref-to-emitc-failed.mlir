@@ -72,14 +72,6 @@ func.func @non_identity_layout() {
 
 // -----
 
-func.func @zero_rank() {
-  // expected-error@+1 {{failed to legalize operation 'memref.alloca'}}
-  %0 = memref.alloca() : memref<f32>
-  return
-}
-
-// -----
-
 func.func @zero_dim_rank_1() {
   // expected-error@+1 {{failed to legalize operation 'memref.alloca'}}
   %0 = memref.alloca() : memref<0xf32>

@@ -20,16 +20,7 @@ from helper import toolchain
 # name: The name of this test suite.
 config.name = "lldb-shell"
 
-# testFormat: The test format to use to interpret tests.
-# We prefer the lit internal shell which provides a better user experience on
-# failures and is faster unless the user explicitly disables it with
-# LIT_USE_INTERNAL_SHELL=0 env var.
-use_lit_shell = True
-lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if lit_shell_env:
-    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
-
-config.test_format = toolchain.ShTestLldb(not use_lit_shell)
+config.test_format = toolchain.ShTestLldb()
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
@@ -181,8 +172,9 @@ if config.have_dia_sdk:
     config.available_features.add("diasdk")
 
 if platform.system() == "Windows":
-    if getattr(config, "lldb_use_lldb_server", False):
-        config.environment["LLDB_USE_LLDB_SERVER"] = "1"
+    config.environment["LLDB_USE_LLDB_SERVER"] = (
+        "1" if getattr(config, "lldb_use_lldb_server", False) else "0"
+    )
     # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT
     # escape sequences into the output stream, which breaks tests that check
     # for specific stdout/stderr content.

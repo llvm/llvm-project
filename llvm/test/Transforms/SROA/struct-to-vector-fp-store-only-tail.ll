@@ -31,10 +31,10 @@ define ptr @store_only_fp_tail() {
 ; NO-CANON-NEXT:    ret ptr null
 ;
 ; CANON-LABEL: define ptr @store_only_fp_tail() {
-; CANON-NEXT:    [[DST_SROA_0_0_VEC_INSERT:%.*]] = insertelement <4 x float> {{.*}}, float 0.000000e+00, i32 0
+; CANON-NEXT:    [[DST_SROA_0_0_VEC_INSERT:%.*]] = insertelement <4 x float> undef, float 0.000000e+00, i64 0
 ; CANON-NEXT:    store <4 x float> [[DST_SROA_0_0_VEC_INSERT]], ptr null, align 1
 ; CANON-NEXT:    store float 0.000000e+00, ptr getelementptr inbounds (i8, ptr null, i64 16), align 1
-; CANON-NEXT:    store <11 x float> {{.*}}, ptr getelementptr inbounds (i8, ptr null, i64 20), align 1
+; CANON-NEXT:    store <11 x float> undef, ptr getelementptr inbounds (i8, ptr null, i64 20), align 1
 ; CANON-NEXT:    ret ptr null
 ;
   %dst = alloca %class.aiMatrix4x4t, align 4

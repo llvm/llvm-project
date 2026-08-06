@@ -246,7 +246,9 @@ public:
   }
 };
 
-/// VPValues defined by a VPRegionBlock, like the canonical IV.
+/// VPValues are defined by a VPRegionBlock, like the canonical IV. They must
+/// be materialized when the containing region is dissolved, before VPlan
+/// execution.
 class VPRegionValue : public VPSymbolicValue {
   VPRegionBlock *DefiningRegion;
   DebugLoc DL;
@@ -290,13 +292,27 @@ struct VPIRValue : public VPValue {
   }
 };
 
-/// An overlay on VPIRValue for VPValues that wrap a ConstantInt. Provides
-/// convenient accessors for the underlying constant.
-struct VPConstantInt : public VPIRValue {
-  VPConstantInt(ConstantInt *CI) : VPIRValue(CI) {}
+/// An overlay on VPIRValue for VPValues that wrap a Constant. May be an
+/// integer, floating-point, or a vector constant.
+struct VPConstant : public VPIRValue {
+  VPConstant(Constant *C) : VPIRValue(C) {}
 
   static bool classof(const VPValue *V) {
-    return isa<VPIRValue>(V) && isa<ConstantInt>(V->getUnderlyingValue());
+    auto *IRV = dyn_cast<VPIRValue>(V);
+    return IRV && isa<Constant>(IRV->getValue());
+  }
+
+  const Constant *getConstant() const { return cast<Constant>(getValue()); }
+};
+
+/// An overlay on VPConstant for VPValues that wrap a ConstantInt. Provides
+/// convenient accessors for the underlying APInt.
+struct VPConstantInt : public VPConstant {
+  VPConstantInt(ConstantInt *CI) : VPConstant(CI) {}
+
+  static bool classof(const VPValue *V) {
+    auto *VPC = dyn_cast<VPConstant>(V);
+    return VPC && isa<ConstantInt>(VPC->getConstant());
   }
 
   bool isOne() const { return getAPInt().isOne(); }

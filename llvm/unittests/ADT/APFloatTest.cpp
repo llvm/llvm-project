@@ -1047,36 +1047,46 @@ TEST(APFloatTest, IsSmallestNormalized) {
       continue;
 
     EXPECT_FALSE(APFloat::getZero(Semantics, false).isSmallestNormalized());
-    EXPECT_FALSE(APFloat::getZero(Semantics, true).isSmallestNormalized());
+    if (Semantics.hasSignedRepr)
+      EXPECT_FALSE(APFloat::getZero(Semantics, true).isSmallestNormalized());
 
     if (APFloat::semanticsHasNaN(Semantics)) {
       // Types that do not support Inf will return NaN when asked for Inf.
       // (But only if they support NaN.)
       EXPECT_FALSE(APFloat::getInf(Semantics, false).isSmallestNormalized());
-      EXPECT_FALSE(APFloat::getInf(Semantics, true).isSmallestNormalized());
+      if (Semantics.hasSignedRepr)
+        EXPECT_FALSE(APFloat::getInf(Semantics, true).isSmallestNormalized());
 
       EXPECT_FALSE(APFloat::getQNaN(Semantics).isSmallestNormalized());
       EXPECT_FALSE(APFloat::getSNaN(Semantics).isSmallestNormalized());
     }
 
     EXPECT_FALSE(APFloat::getLargest(Semantics).isSmallestNormalized());
-    EXPECT_FALSE(APFloat::getLargest(Semantics, true).isSmallestNormalized());
+    if (Semantics.hasSignedRepr)
+      EXPECT_FALSE(APFloat::getLargest(Semantics, true).isSmallestNormalized());
 
     EXPECT_FALSE(APFloat::getSmallest(Semantics).isSmallestNormalized());
-    EXPECT_FALSE(APFloat::getSmallest(Semantics, true).isSmallestNormalized());
+    if (Semantics.hasSignedRepr)
+      EXPECT_FALSE(
+          APFloat::getSmallest(Semantics, true).isSmallestNormalized());
 
     EXPECT_FALSE(APFloat::getAllOnesValue(Semantics).isSmallestNormalized());
 
     APFloat PosSmallestNormalized =
         APFloat::getSmallestNormalized(Semantics, false);
-    APFloat NegSmallestNormalized =
-        APFloat::getSmallestNormalized(Semantics, true);
     EXPECT_TRUE(PosSmallestNormalized.isSmallestNormalized());
-    EXPECT_TRUE(NegSmallestNormalized.isSmallestNormalized());
     EXPECT_EQ(fcPosNormal, PosSmallestNormalized.classify());
-    EXPECT_EQ(fcNegNormal, NegSmallestNormalized.classify());
 
-    for (APFloat *Val : {&PosSmallestNormalized, &NegSmallestNormalized}) {
+    SmallVector<std::optional<APFloat>> Vals = {PosSmallestNormalized};
+    std::optional<APFloat> NegSmallestNormalized;
+    if (Semantics.hasSignedRepr) {
+      NegSmallestNormalized = APFloat::getSmallestNormalized(Semantics, true);
+      EXPECT_TRUE(NegSmallestNormalized->isSmallestNormalized());
+      EXPECT_EQ(fcNegNormal, NegSmallestNormalized->classify());
+      Vals.push_back(NegSmallestNormalized);
+    }
+
+    for (auto &Val : Vals) {
       bool OldSign = Val->isNegative();
 
       // Step down, make sure it's still not smallest normalized.
@@ -2308,6 +2318,8 @@ TEST(APFloatTest, getLargest) {
             APFloat::getLargest(APFloat::FloatTF32()).convertToFloat());
   EXPECT_EQ(1.701411834e+38f,
             APFloat::getLargest(APFloat::Float8E8M0FNU()).convertToDouble());
+  EXPECT_EQ(0x1.cp016,
+            APFloat::getLargest(APFloat::Float8E5M3FNU()).convertToDouble());
   EXPECT_EQ(28, APFloat::getLargest(APFloat::Float6E3M2FN()).convertToDouble());
   EXPECT_EQ(7.5,
             APFloat::getLargest(APFloat::Float6E2M3FN()).convertToDouble());
@@ -2397,6 +2409,13 @@ TEST(APFloatTest, getSmallest) {
   EXPECT_FALSE(test.isNegative());
   EXPECT_TRUE(test.isFiniteNonZero());
   EXPECT_FALSE(test.isDenormal());
+  EXPECT_TRUE(test.bitwiseIsEqual(expected));
+
+  test = APFloat::getSmallest(APFloat::Float8E5M3FNU(), false);
+  expected = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p-17");
+  EXPECT_FALSE(test.isNegative());
+  EXPECT_TRUE(test.isFiniteNonZero());
+  EXPECT_TRUE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 }
 
@@ -2512,6 +2531,14 @@ TEST(APFloatTest, getSmallestNormalized) {
   EXPECT_FALSE(test.isDenormal());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
   EXPECT_TRUE(test.isSmallestNormalized());
+
+  test = APFloat::getSmallestNormalized(APFloat::Float8E5M3FNU(), false);
+  expected = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p-14");
+  EXPECT_FALSE(test.isNegative());
+  EXPECT_TRUE(test.isFiniteNonZero());
+  EXPECT_FALSE(test.isDenormal());
+  EXPECT_TRUE(test.bitwiseIsEqual(expected));
+  EXPECT_TRUE(test.isSmallestNormalized());
 }
 
 TEST(APFloatTest, getZero) {
@@ -2538,6 +2565,7 @@ TEST(APFloatTest, getZero) {
       {&APFloat::Float8E5M2(), true, true, {0x80ULL, 0}, 1},
       {&APFloat::Float8E5M2FNUZ(), false, false, {0, 0}, 1},
       {&APFloat::Float8E5M2FNUZ(), true, false, {0, 0}, 1},
+      {&APFloat::Float8E5M3FNU(), false, false, {0, 0}, 1},
       {&APFloat::Float8E4M3(), false, true, {0, 0}, 1},
       {&APFloat::Float8E4M3(), true, true, {0x80ULL, 0}, 1},
       {&APFloat::Float8E4M3FN(), false, true, {0, 0}, 1},
@@ -7480,6 +7508,19 @@ TEST(APFloatTest, x87Bits) {
                   makeX87Bits(false, bias * 2 - 1, 1, 0));
     EXPECT_TRUE((pseudoDenormal * scale).bitwiseIsEqual(makeX87(1.0)));
   }
+
+  // Test pseudodenormal with non-zero significand
+  {
+    APFloat pseudoDenormal(S, makeX87Bits(false, 0, 1, 0x7FFF000000000000ull));
+    EXPECT_TRUE(pseudoDenormal.isFinite());
+    EXPECT_FALSE(pseudoDenormal.isDenormal());
+    EXPECT_TRUE(pseudoDenormal.isNormal());
+
+    // Verify the round-trip produces the normalized form
+    APInt result = pseudoDenormal.bitcastToAPInt();
+    APInt expected(80, {0xFFFF000000000000ull, 0x0001ull});
+    EXPECT_EQ(expected, result);
+  }
 }
 
 static bool isBitcastRoundtripSafe(APFloat value) {
@@ -9535,9 +9576,11 @@ TEST(APFloatTest, getExactLog2) {
 
     EXPECT_EQ(0, One.getExactLog2());
     EXPECT_EQ(INT_MIN, APFloat(Semantics, "3.0").getExactLog2());
-    EXPECT_EQ(INT_MIN, APFloat(Semantics, "-3.0").getExactLog2());
     EXPECT_EQ(INT_MIN, APFloat(Semantics, "3.0").getExactLog2Abs());
-    EXPECT_EQ(INT_MIN, APFloat(Semantics, "-3.0").getExactLog2Abs());
+    if (Semantics.hasSignedRepr) {
+      EXPECT_EQ(INT_MIN, APFloat(Semantics, "-3.0").getExactLog2());
+      EXPECT_EQ(INT_MIN, APFloat(Semantics, "-3.0").getExactLog2Abs());
+    }
 
     if (I == APFloat::S_Float6E2M3FN || I == APFloat::S_Float4E2M1FN) {
       EXPECT_EQ(2, APFloat(Semantics, "4.0").getExactLog2());
@@ -9546,32 +9589,40 @@ TEST(APFloatTest, getExactLog2) {
       EXPECT_EQ(2, APFloat(Semantics, "-4.0").getExactLog2Abs());
     } else {
       EXPECT_EQ(3, APFloat(Semantics, "8.0").getExactLog2());
-      EXPECT_EQ(INT_MIN, APFloat(Semantics, "-8.0").getExactLog2());
       EXPECT_EQ(-2, APFloat(Semantics, "0.25").getExactLog2());
       EXPECT_EQ(-2, APFloat(Semantics, "0.25").getExactLog2Abs());
-      EXPECT_EQ(INT_MIN, APFloat(Semantics, "-0.25").getExactLog2());
-      EXPECT_EQ(-2, APFloat(Semantics, "-0.25").getExactLog2Abs());
-      EXPECT_EQ(3, APFloat(Semantics, "8.0").getExactLog2Abs());
-      EXPECT_EQ(3, APFloat(Semantics, "-8.0").getExactLog2Abs());
+      if (Semantics.hasSignedRepr) {
+        EXPECT_EQ(INT_MIN, APFloat(Semantics, "-8.0").getExactLog2());
+        EXPECT_EQ(INT_MIN, APFloat(Semantics, "-0.25").getExactLog2());
+        EXPECT_EQ(-2, APFloat(Semantics, "-0.25").getExactLog2Abs());
+        EXPECT_EQ(3, APFloat(Semantics, "8.0").getExactLog2Abs());
+        EXPECT_EQ(3, APFloat(Semantics, "-8.0").getExactLog2Abs());
+      }
     }
 
     EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, false).getExactLog2());
-    EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2());
     EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, false).getExactLog2Abs());
-    EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2Abs());
+    if (Semantics.hasSignedRepr) {
+      EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2());
+      EXPECT_EQ(INT_MIN, APFloat::getZero(Semantics, true).getExactLog2Abs());
+    }
 
     if (APFloat::semanticsHasNaN(Semantics)) {
       // Types that do not support Inf will return NaN when asked for Inf.
       // (But only if they support NaN.)
       EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics).getExactLog2());
-      EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2());
       EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, false).getExactLog2());
-      EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2());
+      if (Semantics.hasSignedRepr) {
+        EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2());
+        EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2());
+      }
 
       EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics).getExactLog2Abs());
-      EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2Abs());
       EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, false).getExactLog2Abs());
-      EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2Abs());
+      if (Semantics.hasSignedRepr) {
+        EXPECT_EQ(INT_MIN, APFloat::getInf(Semantics, true).getExactLog2Abs());
+        EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2Abs());
+      }
     }
 
     EXPECT_EQ(
@@ -9858,6 +9909,276 @@ TEST(APFloatTest, ConvertDoubleToE8M0FNU) {
   EXPECT_TRUE(test.isSmallestNormalized());
   EXPECT_TRUE(losesInfo);
   EXPECT_EQ(status, APFloat::opUnderflow | APFloat::opInexact);
+}
+
+TEST(APFloatTest, Float8E5M3FNUValues) {
+  // High end of the range
+  auto test = APFloat(APFloat::Float8E5M3FNU(), "0x1.c0p16");
+  EXPECT_EQ(0x1.c0p16, test.convertToDouble());
+
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.c0p15");
+  EXPECT_EQ(0x1.cp15, test.convertToDouble());
+
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p14");
+  EXPECT_EQ(0x1.0p14, test.convertToDouble());
+
+  // tests overflow to nan
+  APFloat nan = APFloat(APFloat::Float8E5M3FNU(), "nan");
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.e0p+16");
+  EXPECT_TRUE(test.bitwiseIsEqual(nan));
+
+  // Mid of the range
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p0");
+  EXPECT_EQ(1.0, test.convertToDouble());
+
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p1");
+  EXPECT_EQ(2.0, test.convertToDouble());
+
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p2");
+  EXPECT_EQ(4.0, test.convertToDouble());
+
+  // Low end of the range
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p-12");
+  EXPECT_EQ(0x1.0p-12, test.convertToDouble());
+
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p-13");
+  EXPECT_EQ(0x1.0p-13, test.convertToDouble());
+
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p-14");
+  EXPECT_EQ(0x1.0p-14, test.convertToDouble());
+  EXPECT_TRUE(test.isSmallestNormalized());
+
+  // Value below the smallest, but clamped to the smallest
+  test = APFloat(APFloat::Float8E5M3FNU(), "0x1.0p-18");
+  EXPECT_EQ(0, test.convertToDouble());
+}
+
+TEST(APFloatTest, Float8E5M3FNUFromString) {
+  // Exactly representable
+  EXPECT_EQ(64, APFloat(APFloat::Float8E5M3FNU(), "64").convertToDouble());
+  // Overflow to NaN
+  EXPECT_TRUE(APFloat(APFloat::Float8E5M3FNU(), "0x1.0p17").isNaN());
+  // Inf converted to NaN
+  EXPECT_TRUE(APFloat(APFloat::Float8E5M3FNU(), "inf").isNaN());
+  // NaN converted to NaN
+  EXPECT_TRUE(APFloat(APFloat::Float8E5M3FNU(), "nan").isNaN());
+}
+
+TEST(APFloatTest, Float8E5M3FNUDivideByZero) {
+  APFloat x(APFloat::Float8E5M3FNU(), "1");
+  APFloat zero(APFloat::Float8E5M3FNU(), "0");
+  EXPECT_EQ(x.divide(zero, APFloat::rmNearestTiesToEven), APFloat::opDivByZero);
+  EXPECT_TRUE(x.isNaN());
+}
+
+TEST(APFloatTest, Float8E5M3FNUGetSignedValues) {
+#ifdef GTEST_HAS_DEATH_TEST
+#ifndef NDEBUG
+  EXPECT_DEATH(APFloat(APFloat::Float8E5M3FNU(), "-64"),
+               "This floating point format does not support signed values");
+  EXPECT_DEATH(APFloat(APFloat::Float8E5M3FNU(), "-0x1.0p17"),
+               "This floating point format does not support signed values");
+  EXPECT_DEATH(APFloat(APFloat::Float8E5M3FNU(), "-inf"),
+               "This floating point format does not support signed values");
+  EXPECT_DEATH(APFloat::getNaN(APFloat::Float8E5M3FNU(), true),
+               "This floating point format does not support signed values");
+  EXPECT_DEATH(APFloat::getInf(APFloat::Float8E5M3FNU(), true),
+               "This floating point format does not support signed values");
+  EXPECT_DEATH(APFloat::getSmallest(APFloat::Float8E5M3FNU(), true),
+               "This floating point format does not support signed values");
+  EXPECT_DEATH(APFloat::getSmallestNormalized(APFloat::Float8E5M3FNU(), true),
+               "This floating point format does not support signed values");
+  EXPECT_DEATH(APFloat::getLargest(APFloat::Float8E5M3FNU(), true),
+               "This floating point format does not support signed values");
+  APFloat x = APFloat(APFloat::Float8E5M3FNU(), "4");
+  APFloat y = APFloat(APFloat::Float8E5M3FNU(), "8");
+  EXPECT_DEATH(x.subtract(y, APFloat::rmNearestTiesToEven),
+               "This floating point format does not support signed values");
+#endif // NDEBUG
+#endif // GTEST_HAS_DEATH_TEST
+}
+
+TEST(APFloatTest, Float8E5M3FNUGetInf) {
+  // The Float8E5M3FNU format does not support infinity and the all ones
+  // representation is treated as NaN.
+  APFloat t = APFloat::getInf(APFloat::Float8E5M3FNU());
+  EXPECT_TRUE(t.isNaN());
+  EXPECT_FALSE(t.isInfinity());
+}
+
+TEST(APFloatTest, Float8E5M3FNUExhaustivePair) {
+  APFloat::Semantics Sem = APFloat::S_Float8E5M3FNU;
+  const llvm::fltSemantics &S = APFloat::EnumToSemantics(Sem);
+  for (int i = 0; i < 256; ++i) {
+    for (int j = 0; j < 256; ++j) {
+      SCOPED_TRACE("sem=" + std::to_string(Sem) + ",i=" + std::to_string(i) +
+                   ",j=" + std::to_string(j));
+      APFloat x(S, APInt(8, i));
+      APFloat y(S, APInt(8, j));
+
+      bool losesInfo;
+      APFloat xd = x;
+      xd.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                 &losesInfo);
+      EXPECT_FALSE(losesInfo);
+      APFloat yd = y;
+      yd.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                 &losesInfo);
+      EXPECT_FALSE(losesInfo);
+
+      APFloat z = x;
+      z.add(y, APFloat::rmNearestTiesToEven);
+      APFloat zd = xd;
+      zd.add(yd, APFloat::rmNearestTiesToEven);
+      zd.convert(S, APFloat::rmNearestTiesToEven, &losesInfo);
+      EXPECT_TRUE(z.bitwiseIsEqual(zd))
+          << "sem=" << Sem << ", i=" << i << ", j=" << j;
+
+      if (i >= j) {
+        z = x;
+        z.subtract(y, APFloat::rmNearestTiesToEven);
+        zd = xd;
+        zd.subtract(yd, APFloat::rmNearestTiesToEven);
+        zd.convert(S, APFloat::rmNearestTiesToEven, &losesInfo);
+        EXPECT_TRUE(z.bitwiseIsEqual(zd))
+            << "sem=" << Sem << ", i=" << i << ", j=" << j;
+      }
+
+      z = x;
+      z.multiply(y, APFloat::rmNearestTiesToEven);
+      zd = xd;
+      zd.multiply(yd, APFloat::rmNearestTiesToEven);
+      zd.convert(S, APFloat::rmNearestTiesToEven, &losesInfo);
+      EXPECT_TRUE(z.bitwiseIsEqual(zd))
+          << "sem=" << Sem << ", i=" << i << ", j=" << j;
+
+      z = x;
+      z.divide(y, APFloat::rmNearestTiesToEven);
+      zd = xd;
+      zd.divide(yd, APFloat::rmNearestTiesToEven);
+      zd.convert(S, APFloat::rmNearestTiesToEven, &losesInfo);
+      EXPECT_TRUE(z.bitwiseIsEqual(zd))
+          << "sem=" << Sem << ", i=" << i << ", j=" << j;
+
+      z = x;
+      z.mod(y);
+      zd = xd;
+      zd.mod(yd);
+      zd.convert(S, APFloat::rmNearestTiesToEven, &losesInfo);
+      EXPECT_TRUE(z.bitwiseIsEqual(zd))
+          << "sem=" << Sem << ", i=" << i << ", j=" << j;
+
+      // Remainder: IEEE remainder can produce negative results, which this
+      // unsigned format cannot represent. Only test when the reference
+      // result is non-negative.
+      zd = xd;
+      zd.remainder(yd);
+      if (!zd.isNegative()) {
+        z = x;
+        z.remainder(y);
+        zd.convert(S, APFloat::rmNearestTiesToEven, &losesInfo);
+        EXPECT_TRUE(z.bitwiseIsEqual(zd))
+            << "sem=" << Sem << ", i=" << i << ", j=" << j;
+      }
+    }
+  }
+}
+
+TEST(APFloatTest, Float8E5M3FNUExhaustive) {
+  for (int i = 0; i < 256; i++) {
+    APFloat test(APFloat::Float8E5M3FNU(), APInt(8, i));
+    SCOPED_TRACE("i=" + std::to_string(i));
+
+    // bitcastToAPInt
+    EXPECT_EQ(i, test.bitcastToAPInt());
+
+    // isLargest
+    if (i == 254) {
+      EXPECT_TRUE(test.isLargest());
+      EXPECT_EQ(test.convertToDouble(), 0x1.cp16);
+    } else {
+      EXPECT_FALSE(test.isLargest());
+    }
+
+    // isSmallest (smallest positive subnormal: bit pattern 0x01 = 2^-17)
+    if (i == 1) {
+      EXPECT_TRUE(test.isSmallest());
+      EXPECT_EQ(test.convertToDouble(), 0x1.0p-17);
+    } else {
+      EXPECT_FALSE(test.isSmallest());
+    }
+
+    // NaN is the all-ones bit pattern.
+    if (i == 255) {
+      EXPECT_TRUE(test.isNaN());
+      continue;
+    }
+
+    // convert to Double
+    bool losesInfo;
+    APFloat::opStatus status = test.convert(
+        APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_EQ(status, APFloat::opOK);
+    EXPECT_FALSE(losesInfo);
+
+    // Expected value:
+    //   i == 0      -> +0
+    //   1..7        -> subnormal: i * 2^-17
+    //   8..254      -> normal:    (1 + (i & 7)/8) * 2^((i >> 3) - 15)
+    double expected;
+    if (i == 0)
+      expected = 0.0;
+    else if (i < 8)
+      expected = std::ldexp(static_cast<double>(i), -17);
+    else
+      expected = std::ldexp(1.0 + (i & 7) / 8.0, (i >> 3) - 15);
+    EXPECT_EQ(test.convertToDouble(), expected);
+  }
+}
+
+TEST(APFloatTest, Float8E5M3FNUNext) {
+  APFloat test(APFloat::getSmallest(APFloat::Float8E5M3FNU()));
+  // Smallest positive value is the smallest subnormal: 2^-17.
+  EXPECT_EQ(0x1.0p-17, test.convertToDouble());
+
+  // Increment of 1 should reach the next subnormal: 2^-16.
+  EXPECT_EQ(APFloat::opOK, test.next(false));
+  EXPECT_FALSE(test.isSmallest());
+  EXPECT_EQ(0x1.0p-16, test.convertToDouble());
+
+  // Decrement of 1 should return to the smallest subnormal.
+  EXPECT_EQ(APFloat::opOK, test.next(true));
+  EXPECT_TRUE(test.isSmallest());
+
+  // Decrement again should reach +0.
+  EXPECT_EQ(APFloat::opOK, test.next(true));
+  EXPECT_TRUE(test.isPosZero());
+}
+
+TEST(APFloatTest, Float8E5M3FNUFMA) {
+  APFloat f1(APFloat::Float8E5M3FNU(), "4.0");
+  APFloat f2(APFloat::Float8E5M3FNU(), "2.0");
+  APFloat f3(APFloat::Float8E5M3FNU(), "8.0");
+
+  // Exact value: 4*2 + 8 = 16.
+  f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+  EXPECT_EQ(16.0, f1.convertToDouble());
+
+  // 4*2 + 4 = 12 (exactly representable with 3 mantissa bits).
+  f1 = APFloat(APFloat::Float8E5M3FNU(), "4.0");
+  f1.fusedMultiplyAdd(f2, f1, APFloat::rmNearestTiesToEven);
+  EXPECT_EQ(12.0, f1.convertToDouble());
+
+  // 4*8 + 2 = 34. At exponent 5 the step is 4, so 34 ties between 32 and
+  // 36 and rounds to 32 under round-to-nearest-even.
+  f1 = APFloat(APFloat::Float8E5M3FNU(), "4.0");
+  f1.fusedMultiplyAdd(f3, f2, APFloat::rmNearestTiesToEven);
+  EXPECT_EQ(32.0, f1.convertToDouble());
+
+  // All of them using the same value: 1*1 + 1 = 2.
+  f1 = APFloat(APFloat::Float8E5M3FNU(), "1.0");
+  f1.fusedMultiplyAdd(f1, f1, APFloat::rmNearestTiesToEven);
+  EXPECT_EQ(2.0, f1.convertToDouble());
 }
 
 TEST(APFloatTest, Float6E3M2FNFromString) {
@@ -10369,6 +10690,7 @@ TEST(APFloatTest, hasSignBitInMSB) {
   EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::PPCDoubleDouble()));
   EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::IEEEquad()));
   EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E8M0FNU()));
+  EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E5M3FNU()));
 }
 
 TEST(APFloatTest, FrexpQuietSNaN) {
@@ -10391,6 +10713,7 @@ TEST(APFloatTest, isValidArbitraryFPFormat) {
   EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float6E3M2FN"));
   EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float6E2M3FN"));
   EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float4E2M1FN"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E5M3FNU"));
 
   // Test invalid format strings.
   EXPECT_FALSE(APFloat::isValidArbitraryFPFormat(""));
@@ -10400,6 +10723,27 @@ TEST(APFloatTest, isValidArbitraryFPFormat) {
   EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("float8e4m3")); // Wrong case.
   EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("Float16E5M10"));
   EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("unknown"));
+}
+
+TEST(APFloatTest, getArbitraryFPFormatSizeInBits) {
+  // Every valid format reports the bit width of its semantics.
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E5M2"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E5M2FNUZ"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E4M3"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E4M3FN"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E4M3FNUZ"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E4M3B11FNUZ"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E3M4"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E8M0FNU"));
+  EXPECT_EQ(6u, APFloat::getArbitraryFPFormatSizeInBits("Float6E3M2FN"));
+  EXPECT_EQ(6u, APFloat::getArbitraryFPFormatSizeInBits("Float6E2M3FN"));
+  EXPECT_EQ(4u, APFloat::getArbitraryFPFormatSizeInBits("Float4E2M1FN"));
+
+  // Invalid formats report zero.
+  EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits(""));
+  EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("Float8"));
+  EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("float4e2m1fn"));
+  EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("unknown"));
 }
 
 TEST(APFloatTest, DecimalStringPreservesInexactStatus) {

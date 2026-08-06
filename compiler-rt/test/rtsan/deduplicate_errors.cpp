@@ -1,6 +1,6 @@
 // RUN: %clangxx -fsanitize=realtime %s -o %t
-// RUN: env RTSAN_OPTIONS="halt_on_error=false,print_stats_on_exit=true" %run %t 2>&1 | FileCheck %s
-// RUN: env RTSAN_OPTIONS="halt_on_error=false,suppress_equal_stacks=false" %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-DUPLICATES
+// RUN: %env_rtsan_opts="halt_on_error=false,print_stats_on_exit=true" %run %t 2>&1 | FileCheck %s
+// RUN: %env_rtsan_opts="halt_on_error=false,suppress_equal_stacks=false" %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-DUPLICATES
 
 // UNSUPPORTED: ios
 

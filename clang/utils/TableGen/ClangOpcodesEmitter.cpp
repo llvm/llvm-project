@@ -444,7 +444,7 @@ void ClangOpcodesEmitter::EmitEval(raw_ostream &OS, StringRef N,
                 PrintTypes(OS, TS);
                 OS << "(S";
                 if (PassOpPC)
-                  OS << ", OpPC";
+                  OS << ", CodePtr()";
                 for (size_t I = 0, N = Args.size(); I < N; ++I)
                   OS << ", A" << I;
                 OS << ");\n";

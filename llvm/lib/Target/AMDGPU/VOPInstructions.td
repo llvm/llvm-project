@@ -38,8 +38,8 @@ class VOP <string opName> {
   bit HasGFX1250BlockingCycles = false;
 }
 
-// First 13 insts from VOPDY are also VOPDX. DOT2ACC_F32_BF16 is omitted
-defvar VOPDX_Max_Index = 12;
+// First 13 insts from VOPDY are also VOPDX.
+defvar VOPDX_Max_Index = 13;
 defvar VOPD3X_Max_Index = 36;
 
 class VOPD_Component<bits<6> OpIn, string vOPDName> {

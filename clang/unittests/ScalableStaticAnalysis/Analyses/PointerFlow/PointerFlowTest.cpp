@@ -13,6 +13,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Frontend/ASTUnit.h"
+#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/ExtractorRegistry.h"
@@ -161,7 +162,8 @@ protected:
   template <typename ContributorDecl = NamedDecl,
             typename =
                 std::enable_if_t<std::is_base_of_v<NamedDecl, ContributorDecl>>>
-  bool setUpTest(StringRef Code) {
+  bool setUpTest(StringRef Code, const SSAFOptions &Opts = {}) {
+    this->Opts = Opts; // Override the options.
     AST = tooling::buildASTFromCodeWithArgs(
         Code, {"-Wno-unused-value", "-Wno-int-to-pointer-cast"});
 
@@ -172,6 +174,36 @@ protected:
       }
     }
 
+    if (!Extractor) {
+      ADD_FAILURE() << "failed to find PointerFlowTUSummaryExtractor";
+      return false;
+    }
+    Extractor->HandleTranslationUnit(AST->getASTContext());
+    return true;
+  }
+
+  // Variant that mounts a virtual `<sys.h>` header (with
+  // `#pragma clang system_header` prepended) on an `-isystem` path,
+  // letting tests exercise the system-header contributor gate.
+  // Returns true on AST build + extractor instantiation success.
+  bool setUpTestWithSystemHeader(StringRef Code, StringRef SysHeaderCode,
+                                 bool ExtractFromSystemHeaders) {
+    Opts.ExtractFromSystemHeaders = ExtractFromSystemHeaders;
+    std::string SysWithPragma =
+        ("#pragma clang system_header\n" + SysHeaderCode).str();
+    tooling::FileContentMappings VirtFiles = {{"/sysinc/sys.h", SysWithPragma}};
+    AST = tooling::buildASTFromCodeWithArgs(
+        Code,
+        {"-Wno-unused-value", "-Wno-int-to-pointer-cast", "-isystem/sysinc"},
+        "input.cc", "clang-tool", std::make_shared<PCHContainerOperations>(),
+        tooling::getClangStripDependencyFileAdjuster(), VirtFiles);
+
+    for (auto &E : clang::ssaf::TUSummaryExtractorRegistry::entries()) {
+      if (E.getName() == PointerFlowEntitySummary::Name) {
+        Extractor = E.instantiate(Builder);
+        break;
+      }
+    }
     if (!Extractor) {
       ADD_FAILURE() << "failed to find PointerFlowTUSummaryExtractor";
       return false;
@@ -1573,4 +1605,83 @@ TEST_F(PointerFlowTest, RefBindFunctionCallInitializer) {
   EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"r", 1U}, {"g", 1U, true}}}));
 }
 
+//////////////////////////////////////////////////////////////
+//          Local-entity inclusion option tests             //
+//////////////////////////////////////////////////////////////
+
+TEST_F(PointerFlowTest, LocalPointerSkippedByDefault) {
+  StringRef Code = R"cpp(
+    void foo(int *param) {
+      int *local_ptr = param;
+      local_ptr = param;
+    }
+  )cpp";
+
+  ASSERT_TRUE(setUpTest(Code));
+
+  // Without IncludeLocalEntities, the local pointer is not registered as a
+  // contributor and therefore has no entity summary of its own.
+  EXPECT_FALSE(getEntitySummary<VarDecl>("local_ptr"));
+  // The enclosing function still has its summary describing the assignment
+  // edge from `local_ptr` to `param` (via the initializer).
+  EXPECT_TRUE(getEntitySummary("foo"));
+}
+
+TEST_F(PointerFlowTest, LocalPointerReportedWhenIncluded) {
+  SSAFOptions Opts;
+  Opts.IncludeLocalEntities = true;
+  StringRef Code = R"cpp(
+    void foo(int *param) {
+      int *local_ptr = param;
+      local_ptr = param;
+    }
+  )cpp";
+
+  ASSERT_TRUE(setUpTest(Code, Opts));
+
+  // With the option enabled, the local pointer becomes a contributor and gets
+  // its own entity summary describing the same edge that was previously only
+  // observable through `foo`.
+  const auto *LocalSum = getEntitySummary<VarDecl>("local_ptr");
+  ASSERT_TRUE(LocalSum);
+  EXPECT_EQ(*LocalSum,
+            makeEdges(__LINE__, {{{"local_ptr", 1U}, {"param", 1U}}}));
+
+  EXPECT_TRUE(getEntitySummary("foo"));
+}
+
+//////////////////////////////////////////////////////////////
+//          System-header contributor opt-out gate.         //
+//          Spec: tu-summary-extraction,                    //
+//          "System-header contributor opt-out flag".       //
+//////////////////////////////////////////////////////////////
+
+// Default: ExtractFromSystemHeaders == true. A function decl in a
+// `#pragma clang system_header`-marked included header IS enumerated
+// as a contributor and produces an EntitySummary.
+TEST_F(PointerFlowTest, ExtractFromSystemHeadersByDefault) {
+  const char *SysHeader = "int *sys_gp; void sys_fn(int *p) { sys_gp = p; }\n";
+  const char *Main = R"cpp(
+    #include <sys.h>
+    int *user_gp;
+    void user_fn(int *p) { user_gp = p; }
+  )cpp";
+  ASSERT_TRUE(setUpTestWithSystemHeader(Main, SysHeader,
+                                        /*ExtractFromSystemHeaders=*/true));
+  EXPECT_TRUE(getEntitySummary("sys_fn"));
+  EXPECT_TRUE(getEntitySummary("user_fn"));
+}
+
+TEST_F(PointerFlowTest, DontExtractFromSystemHeadersWhenOverridden) {
+  const char *SysHeader = "int *sys_gp; void sys_fn(int *p) { sys_gp = p; }\n";
+  const char *Main = R"cpp(
+    #include <sys.h>
+    int *user_gp;
+    void user_fn(int *p) { user_gp = p; }
+  )cpp";
+  ASSERT_TRUE(setUpTestWithSystemHeader(Main, SysHeader,
+                                        /*ExtractFromSystemHeaders=*/false));
+  EXPECT_FALSE(getEntitySummary("sys_fn")); // 'sys_fn' is skipped.
+  EXPECT_TRUE(getEntitySummary("user_fn")); // 'user_fn' is still present.
+}
 } // namespace

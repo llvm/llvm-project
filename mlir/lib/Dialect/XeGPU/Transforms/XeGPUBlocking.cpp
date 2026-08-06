@@ -109,7 +109,7 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
 
   if (auto convertLayoutOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
     auto inputInstData =
-        convertLayoutOp.getInputLayout().getEffectiveInstDataAsInt();
+        convertLayoutOp.getEffectiveInputLayout().getEffectiveInstDataAsInt();
     auto targetInstData =
         convertLayoutOp.getTargetLayout().getEffectiveInstDataAsInt();
     // return the one with larger size
@@ -430,7 +430,7 @@ void XeGPUBlockingPass::runOnOperation() {
     // `layout_result_N` lands on the wrong (renumbered) result, corrupting the
     // count invariant and leaving the loop illegal.
     op->walk([](Operation *loopOp) {
-      if (!isa<scf::ForOp, scf::WhileOp, scf::ConditionOp>(loopOp))
+      if (!isa<scf::ForOp, scf::WhileOp, scf::ConditionOp, scf::IfOp>(loopOp))
         return;
       SmallVector<StringRef> toRemove;
       for (const NamedAttribute &attr : loopOp->getAttrs()) {
