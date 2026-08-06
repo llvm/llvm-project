@@ -15,14 +15,18 @@ We flag narrowing conversions from:
    if WarnOnIntegerNarrowingConversion Option is set,
  - an integer to a narrower floating-point (e.g. ``uint64_t`` to ``float``)
    if WarnOnIntegerToFloatingPointNarrowingConversion Option is set,
+ - a ``time_t`` value, or and expression involving ``time_t``, to an integer
+   type that may not preserve the full range of ``time_t`` if
+   WarnOnTimeTNarrowingConversion Option is set,
  - a floating-point to an integer (e.g. ``double`` to ``int``),
  - a floating-point to a narrower floating-point (e.g. ``double`` to ``float``)
    if WarnOnFloatingPointNarrowingConversion Option is set.
 
 This check will flag:
  - All narrowing conversions that are not marked by an explicit cast (c-style
-   or ``static_cast``). For example: ``int i = 0; i += 0.1;``,
-   ``void f(int); f(0.1);``,
+   or ``static_cast``), except conversions from ``time_t`` when
+   WarnOnTimeTNarrowingConversion Option is set. For example:
+   ``int i = 0; i += 0.1;``, ``void f(int); f(0.1);``,
  - All applications of binary operators with a narrowing conversions.
    For example: ``int i; i+= 0.1;``.
 
@@ -103,6 +107,23 @@ Options
     When `true`, the check will warn on assigning a floating point constant
     to an integer value even if the floating point value is exactly
     representable in the destination type (e.g. ``int i = 1.0;``).
+    `false` by default.
+
+.. option:: WarnOnTimeTNarrowingConversion
+
+    When `true`, the check will warn on conversion from ``time_t`` or a
+    typedef of ``time_t`` to an integer type that may not preserve the full
+    range of ``time_t``. This includes explicit casts.
+
+    This option is intended to help audit code for Y2038-related truncation
+    issues. For example:
+
+    .. code-block:: c++
+
+      time_t t = time(nullptr);
+      int i = t;
+      uint32_t u32 = (uint32_t)t;
+
     `false` by default.
 
 FAQ

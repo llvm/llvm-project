@@ -53,6 +53,9 @@ private:
                                 SourceLocation SourceLoc, const Expr &Lhs,
                                 const Expr &Rhs);
 
+  void diagTimeTConversion(SourceLocation SourceLoc, const Expr &Lhs,
+                           const Expr &Rhs);
+
   void handleIntegralCast(const ASTContext &Context, SourceLocation SourceLoc,
                           const Expr &Lhs, const Expr &Rhs);
 
@@ -79,6 +82,10 @@ private:
   void handleFloatingCast(const ASTContext &Context, SourceLocation SourceLoc,
                           const Expr &Lhs, const Expr &Rhs);
 
+  void handleTimeTConversion(const ASTContext &Context,
+                             SourceLocation SourceLoc, const Expr &Lhs,
+                             const Expr &Rhs);
+
   void handleBinaryOperator(const ASTContext &Context, SourceLocation SourceLoc,
                             const Expr &Lhs, const Expr &Rhs);
 
@@ -93,6 +100,8 @@ private:
   void handleBinaryOperator(const ASTContext &Context,
                             const BinaryOperator &Op);
 
+  void handleTimeTOnlyCast(const ASTContext &Context, const CastExpr &Cast);
+
   bool isWarningInhibitedByEquivalentSize(const ASTContext &Context,
                                           const BuiltinType &FromType,
                                           const BuiltinType &ToType) const;
@@ -102,6 +111,7 @@ private:
   const bool WarnOnFloatingPointNarrowingConversion;
   const bool WarnWithinTemplateInstantiation;
   const bool WarnOnEquivalentBitWidth;
+  const bool WarnOnTimeTNarrowingConversion;
   const StringRef IgnoreConversionFromTypes;
   const bool PedanticMode;
 };

@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 
+#include <algorithm>
 #include <cstdint>
 
 using namespace clang::ast_matchers;
@@ -55,6 +56,8 @@ NarrowingConversionsCheck::NarrowingConversionsCheck(StringRef Name,
       WarnWithinTemplateInstantiation(
           Options.get("WarnWithinTemplateInstantiation", false)),
       WarnOnEquivalentBitWidth(Options.get("WarnOnEquivalentBitWidth", true)),
+      WarnOnTimeTNarrowingConversion(
+          Options.get("WarnOnTimeTNarrowingConversion", false)),
       IgnoreConversionFromTypes(Options.get("IgnoreConversionFromTypes", "")),
       PedanticMode(Options.get("PedanticMode", false)) {}
 
@@ -69,6 +72,8 @@ void NarrowingConversionsCheck::storeOptions(
   Options.store(Opts, "WarnWithinTemplateInstantiation",
                 WarnWithinTemplateInstantiation);
   Options.store(Opts, "WarnOnEquivalentBitWidth", WarnOnEquivalentBitWidth);
+  Options.store(Opts, "WarnOnTimeTNarrowingConversion",
+                WarnOnTimeTNarrowingConversion);
   Options.store(Opts, "IgnoreConversionFromTypes", IgnoreConversionFromTypes);
   Options.store(Opts, "PedanticMode", PedanticMode);
 }
@@ -184,6 +189,24 @@ void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
           unless(hasOperatorName("=")))
           .bind("binary_op"),
       this);
+
+  // Explicit casts are checked only in the time_t narrowing mode,
+  // so the default behavior of this check remains unchanged.
+  if (WarnOnTimeTNarrowingConversion) {
+    Finder->addMatcher(
+        traverse(
+            TK_AsIs,
+            explicitCastExpr(
+                hasDestinationType(hasUnqualifiedDesugaredType(builtinType())),
+                hasSourceExpression(
+                    expr(hasType(hasUnqualifiedDesugaredType(builtinType())))),
+                unless(hasSourceExpression(IsCeilFloorCallExpr)),
+                WarnWithinTemplateInstantiation
+                    ? stmt()
+                    : stmt(unless(isInTemplateInstantiation())))
+                .bind("explicit_cast")),
+        this);
+  }
 }
 
 static const BuiltinType *getBuiltinType(const Expr &E) {
@@ -219,6 +242,44 @@ static bool getFloatingConstantExprValue(const ASTContext &Context,
     return false;
   Value = Constant.getFloat();
   return true;
+}
+
+static bool hasTimeTTypedef(QualType QT) {
+  while (true) {
+    const auto *T = QT.getTypePtrOrNull();
+    if (!T)
+      return false;
+
+    if (const auto *TT = dyn_cast<TypedefType>(T)) {
+      const auto *TD = TT->getDecl();
+      if (TD->getName() == "time_t" || TD->getName() == "__time_t")
+        return true;
+    }
+
+    QualType NextInChain = QT->getLocallyUnqualifiedSingleStepDesugaredType();
+    NextInChain = NextInChain.getNonReferenceType().getUnqualifiedType();
+    if (NextInChain == QT)
+      break;
+
+    QT = NextInChain;
+  }
+
+  return false;
+}
+
+static bool exprMentionsTimeT(const Expr *E) {
+  if (!E)
+    return false;
+
+  E = E->IgnoreParenImpCasts();
+
+  if (hasTimeTTypedef(E->getType()))
+    return true;
+
+  return std::any_of(E->child_begin(), E->child_end(), [](const Stmt *Child) {
+    const auto *ChildExpr = dyn_cast_or_null<Expr>(Child);
+    return ChildExpr && exprMentionsTimeT(ChildExpr);
+  });
 }
 
 namespace {
@@ -385,6 +446,55 @@ void NarrowingConversionsCheck::diagNarrowTypeOrConstant(
     diagNarrowConstant(SourceLoc, Lhs, Rhs);
   else
     diagNarrowType(SourceLoc, Lhs, Rhs);
+}
+
+void NarrowingConversionsCheck::diagTimeTConversion(SourceLocation SourceLoc,
+                                                    const Expr &Lhs,
+                                                    const Expr &Rhs) {
+  diag(SourceLoc,
+       "conversion from %0 to %1 may not preserve the full range of time_t")
+      << getUnqualifiedType(Rhs) << getUnqualifiedType(Lhs);
+}
+
+void NarrowingConversionsCheck::handleTimeTOnlyCast(const ASTContext &Context,
+                                                    const CastExpr &Cast) {
+  const Expr &Lhs = Cast;
+  const Expr &Rhs = *Cast.getSubExprAsWritten();
+
+  if (Lhs.isInstantiationDependent() || Rhs.isInstantiationDependent())
+    return;
+
+  const SourceLocation SourceLoc = Cast.getExprLoc();
+  handleTimeTConversion(Context, SourceLoc, Lhs, Rhs);
+}
+
+void NarrowingConversionsCheck::handleTimeTConversion(const ASTContext &Context,
+                                                      SourceLocation SourceLoc,
+                                                      const Expr &Lhs,
+                                                      const Expr &Rhs) {
+  if (!WarnOnTimeTNarrowingConversion)
+    return;
+
+  if (!exprMentionsTimeT(&Rhs))
+    return;
+
+  const BuiltinType *FromType = getBuiltinType(Rhs);
+  const BuiltinType *ToType = getBuiltinType(Lhs);
+
+  if (!FromType || !ToType)
+    return;
+
+  if (!ToType->isInteger() || !FromType->isInteger())
+    return;
+
+  // Usually not useful for Y2038. Keep bool conversions quiet.
+  if (ToType->getKind() == BuiltinType::Bool)
+    return;
+
+  if (isWideEnoughToHold(Context, *FromType, *ToType))
+    return;
+
+  diagTimeTConversion(SourceLoc, Lhs, Rhs);
 }
 
 void NarrowingConversionsCheck::handleIntegralCast(const ASTContext &Context,
@@ -572,6 +682,10 @@ void NarrowingConversionsCheck::handleConditionalOperatorArgument(
 
 void NarrowingConversionsCheck::handleImplicitCast(
     const ASTContext &Context, const ImplicitCastExpr &Cast) {
+  if (WarnOnTimeTNarrowingConversion) {
+    handleTimeTOnlyCast(Context, Cast);
+    return;
+  }
   if (Cast.getExprLoc().isMacroID())
     return;
   const Expr &Lhs = Cast;
@@ -626,6 +740,12 @@ void NarrowingConversionsCheck::handleBinaryOperator(const ASTContext &Context,
   const Expr &Rhs = *Op.getRHS();
   if (Lhs.isInstantiationDependent() || Rhs.isInstantiationDependent())
     return;
+
+  if (WarnOnTimeTNarrowingConversion) {
+    handleTimeTConversion(Context, Op.getExprLoc(), Lhs, Rhs);
+    return;
+  }
+
   if (handleConditionalOperator(Context, Lhs, Rhs))
     return;
   handleBinaryOperator(Context, Rhs.getBeginLoc(), Lhs, Rhs);
@@ -636,6 +756,9 @@ void NarrowingConversionsCheck::check(const MatchFinder::MatchResult &Result) {
     handleBinaryOperator(*Result.Context, *Op);
   else if (const auto *Cast = Result.Nodes.getNodeAs<ImplicitCastExpr>("cast"))
     handleImplicitCast(*Result.Context, *Cast);
+  else if (const auto *ECast =
+               Result.Nodes.getNodeAs<ExplicitCastExpr>("explicit_cast"))
+    handleTimeTOnlyCast(*Result.Context, *ECast);
   else
     llvm_unreachable("must be binary operator or cast expression");
 }
