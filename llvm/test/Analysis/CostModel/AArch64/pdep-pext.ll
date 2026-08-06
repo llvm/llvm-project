@@ -21,6 +21,9 @@ define void @pdep() {
 ; CHECK-NO-BITPERM-NEXT:  Cost Model: Found costs of Invalid for: %nxv8i16 = call <vscale x 8 x i16> @llvm.pdep.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
 ; CHECK-NO-BITPERM-NEXT:  Cost Model: Found costs of Invalid for: %nxv4i32 = call <vscale x 4 x i32> @llvm.pdep.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
 ; CHECK-NO-BITPERM-NEXT:  Cost Model: Found costs of Invalid for: %nxv2i64 = call <vscale x 2 x i64> @llvm.pdep.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found costs of Invalid for: %nxv32i8 = call <vscale x 32 x i8> @llvm.pdep.nxv32i8(<vscale x 32 x i8> poison, <vscale x 32 x i8> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found costs of Invalid for: %nxv8i32 = call <vscale x 8 x i32> @llvm.pdep.nxv8i32(<vscale x 8 x i32> poison, <vscale x 8 x i32> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found costs of Invalid for: %nxv4i64 = call <vscale x 4 x i64> @llvm.pdep.nxv4i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> poison)
 ; CHECK-NO-BITPERM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-BITPERM-LABEL: 'pdep'
@@ -37,6 +40,9 @@ define void @pdep() {
 ; CHECK-BITPERM-NEXT:  Cost Model: Found costs of 2 for: %nxv8i16 = call <vscale x 8 x i16> @llvm.pdep.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
 ; CHECK-BITPERM-NEXT:  Cost Model: Found costs of 2 for: %nxv4i32 = call <vscale x 4 x i32> @llvm.pdep.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
 ; CHECK-BITPERM-NEXT:  Cost Model: Found costs of 2 for: %nxv2i64 = call <vscale x 2 x i64> @llvm.pdep.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found costs of 4 for: %nxv32i8 = call <vscale x 32 x i8> @llvm.pdep.nxv32i8(<vscale x 32 x i8> poison, <vscale x 32 x i8> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found costs of 4 for: %nxv8i32 = call <vscale x 8 x i32> @llvm.pdep.nxv8i32(<vscale x 8 x i32> poison, <vscale x 8 x i32> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found costs of 4 for: %nxv4i64 = call <vscale x 4 x i64> @llvm.pdep.nxv4i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> poison)
 ; CHECK-BITPERM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %i8 = call i8 @llvm.pdep.i8(i8 poison, i8 poison)
@@ -52,6 +58,9 @@ define void @pdep() {
   %nxv8i16 = call <vscale x 8 x i16> @llvm.pdep.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
   %nxv4i32 = call <vscale x 4 x i32> @llvm.pdep.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
   %nxv2i64 = call <vscale x 2 x i64> @llvm.pdep.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+  %nxv32i8 = call <vscale x 32 x i8> @llvm.pdep.nxv32i8(<vscale x 32 x i8> poison, <vscale x 32 x i8> poison)
+  %nxv8i32 = call <vscale x 8 x i32> @llvm.pdep.nxv8i32(<vscale x 8 x i32> poison, <vscale x 8 x i32> poison)
+  %nxv4i64 = call <vscale x 4 x i64> @llvm.pdep.nxv4i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> poison)
   ret void
 }
 
@@ -70,6 +79,9 @@ define void @pext() {
 ; CHECK-NO-BITPERM-NEXT:  Cost Model: Found costs of Invalid for: %nxv8i16 = call <vscale x 8 x i16> @llvm.pext.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
 ; CHECK-NO-BITPERM-NEXT:  Cost Model: Found costs of Invalid for: %nxv4i32 = call <vscale x 4 x i32> @llvm.pext.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
 ; CHECK-NO-BITPERM-NEXT:  Cost Model: Found costs of Invalid for: %nxv2i64 = call <vscale x 2 x i64> @llvm.pext.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found costs of Invalid for: %nxv32i8 = call <vscale x 32 x i8> @llvm.pext.nxv32i8(<vscale x 32 x i8> poison, <vscale x 32 x i8> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found costs of Invalid for: %nxv8i32 = call <vscale x 8 x i32> @llvm.pext.nxv8i32(<vscale x 8 x i32> poison, <vscale x 8 x i32> poison)
+; CHECK-NO-BITPERM-NEXT:  Cost Model: Found costs of Invalid for: %nxv4i64 = call <vscale x 4 x i64> @llvm.pext.nxv4i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> poison)
 ; CHECK-NO-BITPERM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-BITPERM-LABEL: 'pext'
@@ -86,6 +98,9 @@ define void @pext() {
 ; CHECK-BITPERM-NEXT:  Cost Model: Found costs of 2 for: %nxv8i16 = call <vscale x 8 x i16> @llvm.pext.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
 ; CHECK-BITPERM-NEXT:  Cost Model: Found costs of 2 for: %nxv4i32 = call <vscale x 4 x i32> @llvm.pext.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
 ; CHECK-BITPERM-NEXT:  Cost Model: Found costs of 2 for: %nxv2i64 = call <vscale x 2 x i64> @llvm.pext.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found costs of 4 for: %nxv32i8 = call <vscale x 32 x i8> @llvm.pext.nxv32i8(<vscale x 32 x i8> poison, <vscale x 32 x i8> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found costs of 4 for: %nxv8i32 = call <vscale x 8 x i32> @llvm.pext.nxv8i32(<vscale x 8 x i32> poison, <vscale x 8 x i32> poison)
+; CHECK-BITPERM-NEXT:  Cost Model: Found costs of 4 for: %nxv4i64 = call <vscale x 4 x i64> @llvm.pext.nxv4i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> poison)
 ; CHECK-BITPERM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %i8 = call i8 @llvm.pext.i8(i8 poison, i8 poison)
@@ -101,5 +116,8 @@ define void @pext() {
   %nxv8i16 = call <vscale x 8 x i16> @llvm.pext.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
   %nxv4i32 = call <vscale x 4 x i32> @llvm.pext.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
   %nxv2i64 = call <vscale x 2 x i64> @llvm.pext.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+  %nxv32i8 = call <vscale x 32 x i8> @llvm.pext.nxv32i8(<vscale x 32 x i8> poison, <vscale x 32 x i8> poison)
+  %nxv8i32 = call <vscale x 8 x i32> @llvm.pext.nxv8i32(<vscale x 8 x i32> poison, <vscale x 8 x i32> poison)
+  %nxv4i64 = call <vscale x 4 x i64> @llvm.pext.nxv4i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> poison)
   ret void
 }
