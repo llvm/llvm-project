@@ -294,6 +294,8 @@ set(files
   __chrono/year_month_day.h
   __chrono/year_month_weekday.h
   __chrono/zoned_time.h
+  __cmath/lerp.h
+  __cmath/special_functions.h
   __compare/common_comparison_category.h
   __compare/compare_partial_order_fallback.h
   __compare/compare_strong_order_fallback.h
@@ -534,7 +536,6 @@ set(files
   __iterator/static_bounded_iter.h
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
-  __locale
   __locale_dir/check_grouping.h
   __locale_dir/codecvt.h
   __locale_dir/collate.h
@@ -587,7 +588,6 @@ set(files
   __math/remainder.h
   __math/roots.h
   __math/rounding_functions.h
-  __math/special_functions.h
   __math/traits.h
   __math/trigonometric_functions.h
   __mbstate_t.h
@@ -619,6 +619,7 @@ set(files
   __memory/noexcept_move_assign_container.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
+  __memory/pstl.h  
   __memory/ranges_construct_at.h
   __memory/ranges_destroy.h
   __memory/ranges_uninitialized_algorithms.h
