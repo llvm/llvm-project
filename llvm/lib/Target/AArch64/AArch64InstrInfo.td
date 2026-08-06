@@ -9567,6 +9567,39 @@ def : Pat<(shl (v4i32 (sext (v4i16 V64:$Rm))), (v4i32 (AArch64dup (i32 imm32_0_1
 def : Pat<(shl (v2i64 (sext (v2i32 V64:$Rm))), (v2i64 (AArch64dup (i64 imm0_31:$size)))),
           (SSHLLv2i32_shift V64:$Rm, (trunc_imm imm0_31:$size))>;
 
+def : Pat<(shl (v8i16 (zext (extract_high_v16i8 (v16i8 V128:$Rn)))), (v8i16 (AArch64dup (i32 imm32_0_7:$size)))),
+          (USHLLv16i8_shift V128:$Rn, (i32 imm32_0_7:$size))>;
+def : Pat<(shl (v4i32 (zext (extract_high_v8i16 (v8i16 V128:$Rn)))), (v4i32 (AArch64dup (i32 imm32_0_15:$size)))),
+          (USHLLv8i16_shift V128:$Rn, (i32 imm32_0_15:$size))>;
+def : Pat<(shl (v2i64 (zext (extract_high_v4i32 (v4i32 V128:$Rn)))), (v2i64 (AArch64dup (i64 imm0_31:$size)))),
+          (USHLLv4i32_shift V128:$Rn, (trunc_imm imm0_31:$size))>;
+ 
+def : Pat<(shl (v8i16 (sext (extract_high_v16i8 (v16i8 V128:$Rn)))), (v8i16 (AArch64dup (i32 imm32_0_7:$size)))),
+          (SSHLLv16i8_shift V128:$Rn, (i32 imm32_0_7:$size))>;
+def : Pat<(shl (v4i32 (sext (extract_high_v8i16 (v8i16 V128:$Rn)))), (v4i32 (AArch64dup (i32 imm32_0_15:$size)))),
+          (SSHLLv8i16_shift V128:$Rn, (i32 imm32_0_15:$size))>;
+def : Pat<(shl (v2i64 (sext (extract_high_v4i32 (v4i32 V128:$Rn)))), (v2i64 (AArch64dup (i64 imm0_31:$size)))),
+          (SSHLLv4i32_shift V128:$Rn, (trunc_imm imm0_31:$size))>;
+
+multiclass WidenShiftLongPats<SDPatternOperator ext> {
+  def : Pat<(shl (v8i16 (ext (v8i8 V64:$Rm))), (v8i16 (AArch64dup (i32 8)))),
+          (SHLLv8i8 V64:$Rm)>;
+  def : Pat<(shl (v4i32 (ext (v4i16 V64:$Rm))), (v4i32 (AArch64dup (i32 16)))),
+          (SHLLv4i16 V64:$Rm)>;
+  def : Pat<(shl (v2i64 (ext (v2i32 V64:$Rm))), (v2i64 (AArch64dup (i64 32)))),
+          (SHLLv2i32 V64:$Rm)>;
+  def : Pat<(shl (v8i16 (ext (extract_high_v16i8 (v16i8 V128:$Rn)))), (v8i16 (AArch64dup (i32 8)))),
+          (SHLLv16i8 V128:$Rn)>;
+  def : Pat<(shl (v4i32 (ext (extract_high_v8i16 (v8i16 V128:$Rn)))), (v4i32 (AArch64dup (i32 16)))),
+          (SHLLv8i16 V128:$Rn)>;
+  def : Pat<(shl (v2i64 (ext (extract_high_v4i32 (v4i32 V128:$Rn)))), (v2i64 (AArch64dup (i64 32)))),
+          (SHLLv4i32 V128:$Rn)>;
+}
+
+defm : WidenShiftLongPats<zext>;
+defm : WidenShiftLongPats<sext>;
+defm : WidenShiftLongPats<anyext>;
+
 // Vector sign and zero extensions are implemented with SSHLL and USSHLL.
 // Anyexts are implemented as zexts.
 def : Pat<(v8i16 (sext   (v8i8 V64:$Rn))),  (SSHLLv8i8_shift  V64:$Rn, (i32 0))>;
