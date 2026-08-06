@@ -74,17 +74,43 @@ public:
 
 #include "SuperHGenMCCodeEmitter.inc"
 
+// Some SuperH instructions are 32-bits wide.
+// In those instances we want to emit a bigger static
+// fixup.
+static bool isOpcode32(unsigned opcode) {
+  
+  // movi20 & movi20s
+  if ((opcode & 0xF00F) <= 0x0001)
+    return true;
+  
+  // Other SH2A 32-bit instructions
+  if ((opcode & 0xF00F) == 0x3001)
+    return true;
+
+  // Opcodes bigger than 0xFFFF are always 32-bits.
+  return opcode > 0xFFFF; 
+}
+
 void SuperHMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                            SmallVectorImpl<char> &CB,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
   
-  // All base instructions are 16-bit in SuperH asm
-  uint16_t Bits = (uint16_t)getBinaryCodeForInstr(MI, Fixups, STI);
-  support::endian::write(CB, Bits, Ctx.getAsmInfo().isLittleEndian()
-                                      ? llvm::endianness::little
-                                      : llvm::endianness::big);
+  // NOTE:  All base instructions are 16-bit in SH ASM
+  //        But some instructions may be 32-bit for eg. SH2A or the DSP extensions.
+  //        This is ugly, but it'll work.
+  if (isOpcode32(MI.getOpcode())) {
+    uint32_t Bits = (uint32_t)getBinaryCodeForInstr(MI, Fixups, STI);
+    support::endian::write(CB, Bits, Ctx.getAsmInfo().isLittleEndian()
+                                        ? llvm::endianness::little
+                                        : llvm::endianness::big);
+  } else {
+    uint16_t Bits = (uint16_t)getBinaryCodeForInstr(MI, Fixups, STI);
+    support::endian::write(CB, Bits, Ctx.getAsmInfo().isLittleEndian()
+                                        ? llvm::endianness::little
+                                        : llvm::endianness::big);
 
+  }
   ++MCNumEmitted;
 }
 
@@ -101,7 +127,11 @@ unsigned SuperHMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Exp
 
   // Symbol Reference
   if (Kind == MCExpr::SymbolRef) {
-    Fixups.push_back(MCFixup::create(0, Expr, FK_Data_2, true));
+
+    // NOTE:  A few (DSP and SH2A) instructions are 32-bits wide.
+    //        We handle those quite crudely.
+    Fixups.push_back(MCFixup::create(0, Expr, 
+      isOpcode32(MI.getOpcode()) ? FK_Data_4 : FK_Data_2, true));
     return 0;
   }
 

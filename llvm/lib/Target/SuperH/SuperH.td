@@ -131,8 +131,8 @@ def SuperHAsmParser : AsmParser {
 def SuperHAsmParserVariant : AsmParserVariant {
   let Variant = 0;
   let Name = "Hitachi";
-  let SeparatorCharacters = " \t,";
-  let TokenizingCharacters = "()[]*!#@-+";
+  let SeparatorCharacters = " \t,()@-+";
+  let TokenizingCharacters = "[]*!#";
   let CommentDelimiter = ";";
 }
 
