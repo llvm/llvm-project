@@ -166,7 +166,8 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
   }
 
   if (SIInstrInfo::isEXP(Inst)) {
-    unsigned Imm = TII.getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
+    unsigned Imm = static_cast<unsigned>(
+        TII.getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm());
     if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)
       return HWEvents::EXP_PARAM_ACCESS;
     if (Imm >= AMDGPU::Exp::ET_POS0 && Imm <= AMDGPU::Exp::ET_POS_LAST)

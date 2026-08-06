@@ -231,7 +231,8 @@ AMDGPUSubtarget::getReqdWorkGroupSize(const Function &Kernel,
                                       unsigned Dim) const {
   auto *Node = Kernel.getMetadata("reqd_work_group_size");
   if (Node && Node->getNumOperands() == 3)
-    return mdconst::extract<ConstantInt>(Node->getOperand(Dim))->getZExtValue();
+    return static_cast<unsigned>(
+        mdconst::extract<ConstantInt>(Node->getOperand(Dim))->getZExtValue());
   return std::nullopt;
 }
 
@@ -240,12 +241,12 @@ bool AMDGPUSubtarget::hasWavefrontsEvenlySplittingXDim(
   auto *Node = F.getMetadata("reqd_work_group_size");
   if (!Node || Node->getNumOperands() != 3)
     return false;
-  unsigned XLen =
-      mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
-  unsigned YLen =
-      mdconst::extract<ConstantInt>(Node->getOperand(1))->getZExtValue();
-  unsigned ZLen =
-      mdconst::extract<ConstantInt>(Node->getOperand(2))->getZExtValue();
+  unsigned XLen = static_cast<unsigned>(
+      mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue());
+  unsigned YLen = static_cast<unsigned>(
+      mdconst::extract<ConstantInt>(Node->getOperand(1))->getZExtValue());
+  unsigned ZLen = static_cast<unsigned>(
+      mdconst::extract<ConstantInt>(Node->getOperand(2))->getZExtValue());
 
   bool Is1D = YLen <= 1 && ZLen <= 1;
   bool IsXLargeEnough =
@@ -361,8 +362,8 @@ unsigned AMDGPUSubtarget::getImplicitArgNumBytes(const Function &F) const {
   const Module *M = F.getParent();
   unsigned NBytes =
       AMDGPU::getAMDHSACodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5 ? 256 : 56;
-  return F.getFnAttributeAsParsedInteger("amdgpu-implicitarg-num-bytes",
-                                         NBytes);
+  return static_cast<unsigned>(
+      F.getFnAttributeAsParsedInteger("amdgpu-implicitarg-num-bytes", NBytes));
 }
 
 uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
@@ -409,7 +410,7 @@ unsigned AMDGPUSubtarget::getKernArgSegmentSize(const Function &F,
   }
 
   // Being able to dereference past the end is useful for emitting scalar loads.
-  return alignTo(TotalSize, 4);
+  return static_cast<unsigned>(alignTo(TotalSize, 4));
 }
 
 AMDGPUDwarfFlavour AMDGPUSubtarget::getAMDGPUDwarfFlavour() const {
