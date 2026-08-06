@@ -1,0 +1,48 @@
+# RUN: llc -march=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
+
+# Verify that G_FREEZE is legalized successfully into two i64 parts.
+# NOTE: The intermediate widening to i128 is an internal step, and does not appear in the final output.
+
+--- |
+  define pisa_kernel void @test_freeze_s96() {
+    %a = load i96, ptr addrspace(1) null, align 16
+    %a.fr = freeze i96 %a
+    %lo = trunc i96 %a.fr to i32
+    %sh = lshr i96 %a.fr, 64
+    %hi = trunc i96 %sh to i32
+    store i32 %lo, ptr addrspace(1) null, align 4
+    store i32 %hi, ptr addrspace(1) null, align 4
+    ret void
+  }
+...
+---
+name:             test_freeze_s96
+legalized:        false
+tracksRegLiveness: true
+isSSA:            true
+body: |
+  bb.1 (%ir-block.0):
+    %1:_(p1) = G_CONSTANT i64 0
+    %4:_(i96) = G_CONSTANT i96 64
+    %8:_(i64) = G_LOAD %1(p1) :: (load (i64) from `ptr addrspace(1) null`, align 16, addrspace 1)
+    %80:_(i96) = G_ZEXT %8
+    %11:_(p1) = G_CONSTANT i64 8
+    %14:_(i32) = G_LOAD %11(p1) :: (load (i32) from `ptr addrspace(1) null` + 8, align 8, basealign 16, addrspace 1)
+    %140:_(i96) = G_ZEXT %14
+    %16:_(i96) = G_CONSTANT i96 64
+    %15:_(i96) = G_SHL %140, %16(i96)
+    %17:_(i96) = G_OR %80, %15
+    %2:_(i96) = G_FREEZE %17
+    %3:_(i32) = G_TRUNC %2(i96)
+    %5:_(i96) = G_LSHR %2, %4(i96)
+    %6:_(i32) = G_TRUNC %5(i96)
+
+    ; CHECK-LABEL: {{^}}name: test_freeze_s96
+    ; CHECK-NOT: (i96) = G_FREEZE
+    ; CHECK: (i64) = G_FREEZE
+    ; CHECK: (i64) = G_FREEZE
+
+    G_STORE %3(i32), %1(p1) :: (store (i32) into `ptr addrspace(1) null`, addrspace 1)
+    G_STORE %6(i32), %1(p1) :: (store (i32) into `ptr addrspace(1) null`, addrspace 1)
+    ret
+...

@@ -9,11 +9,21 @@
 #ifndef LLVM_LIB_TARGET_PISA_PISASUBTARGET_H
 #define LLVM_LIB_TARGET_PISA_PISASUBTARGET_H
 
+#include "PISACallLowering.h"
 #include "PISAFrameLowering.h"
+#include "PISAISelLowering.h"
 #include "PISAInstrInfo.h"
+#include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Support/PISAAddrSpace.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/PISATargetParser.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "PISAGenSubtargetInfo.inc"
@@ -21,9 +31,10 @@
 namespace llvm {
 class StringRef;
 class PISATargetMachine;
-
 class PISASubtarget : public PISAGenSubtargetInfo {
 private:
+  PISA::PISATargetInfo PISATarget;
+
   // Bool members for features defined in PISAFeatures.td.
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool ATTRIBUTE = DEFAULT;
@@ -31,6 +42,14 @@ private:
 
   PISAInstrInfo InstrInfo;
   PISAFrameLowering FrameLowering;
+  PISATargetLowering TLInfo;
+
+  // GlobalISel related APIs.
+  std::unique_ptr<CallLowering> CallLoweringInfo;
+  std::unique_ptr<InlineAsmLowering> InlineAsmLoweringInfo;
+  std::unique_ptr<RegisterBankInfo> RegBankInfo;
+  std::unique_ptr<LegalizerInfo> Legalizer;
+  std::unique_ptr<InstructionSelector> InstSelector;
 
 public:
   // This constructor initializes the data members to match that
@@ -44,9 +63,34 @@ public:
   // PISAFeatures.td.
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
+  StringRef getPISATargetName() const { return PISATarget.Name; };
+  bool supportsPISATarget(StringRef Name) const;
+
+  bool shouldPrefetchAddressSpace(unsigned AS) const override {
+    return AS == static_cast<unsigned>(PISAAS::AddressSpace::GLOBAL);
+  }
+
+  const CallLowering *getCallLowering() const override {
+    return CallLoweringInfo.get();
+  }
+  const InlineAsmLowering *getInlineAsmLowering() const override {
+    return InlineAsmLoweringInfo.get();
+  }
+  const RegisterBankInfo *getRegBankInfo() const override {
+    return RegBankInfo.get();
+  }
+  const LegalizerInfo *getLegalizerInfo() const override {
+    return Legalizer.get();
+  }
+  InstructionSelector *getInstructionSelector() const override {
+    return InstSelector.get();
+  }
   const PISAInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const PISAFrameLowering *getFrameLowering() const override {
     return &FrameLowering;
+  }
+  const PISATargetLowering *getTargetLowering() const override {
+    return &TLInfo;
   }
   const PISARegisterInfo *getRegisterInfo() const override {
     return &InstrInfo.getRegisterInfo();

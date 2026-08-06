@@ -1,0 +1,29 @@
+# RUN: llc -march=pisa -run-pass=postrapseudos -verify-machineinstrs %s -o -   | FileCheck -check-prefix=PSEUDO %s
+# RUN-CRASHES: llc -march=pisa -start-before=postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefix=ASM  %s
+--- |
+  define i32 @test_copy_pred(i32 %arg) {
+    ret i32 %arg
+  }
+...
+---
+name:            test_copy_pred
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    ; PSEUDO-LABEL: {{^}}name: test_copy_pred
+    ; ASM-LABEL: @test_copy_pred
+    ; PSEUDO: %pred:pred(i1) = G_TRUNC %0(i32)
+    ; PSEUDO: %4:reg16b(i16) = sel_16_iip %pred(i1), 1, 0
+    ; PSEUDO: %copy:pred(i1) = ucmp_ne_16b_pri %4(i16), 0
+    ; PSEUDO: %rv:reg32b(i32) = G_ANYEXT %copy(i1)
+    ; ASM:  mov.16b %r{{[0-9]+}}, 0
+    ; ASM:  and.16b %r{{[0-9]+}}, %r{{[0-9]+}}, 1
+    %0:reg32b(i32) = functionParameter_i32 0
+    %pred:pred(i1) = G_TRUNC %0(i32)
+    %copy:pred(i1) = COPY %pred(i1)
+    %rv:reg32b(i32) = G_ANYEXT %copy(i1)
+    retValue_i32_r %rv(i32)
+
+...

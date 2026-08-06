@@ -26,6 +26,16 @@ public:
                     MachineBasicBlock &MBB) const override {}
 
   bool hasFPImpl(const MachineFunction &MF) const override { return false; }
+
+  bool isSupportedStackID(TargetStackID::Value ID) const override {
+    switch (ID) {
+    default:
+      return false;
+    case TargetStackID::Default:
+    case TargetStackID::PISAShared:
+      return true;
+    }
+  }
 };
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_PISA_PISAFRAMELOWERING_H
