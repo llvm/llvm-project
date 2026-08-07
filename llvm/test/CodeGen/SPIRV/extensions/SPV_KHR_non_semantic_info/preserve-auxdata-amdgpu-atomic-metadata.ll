@@ -15,6 +15,27 @@
 ; OFF-NOT: amdgpu.no.remote.memory
 ; OFF-NOT: amdgpu.ignore.denormal.mode
 
+; Default output, with the feature off, validates.
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa \
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info %s -o - -filetype=obj \
+; RUN:   | spirv-val %}
+
+; The AuxData instructions go in the module-level section, but the Target
+; operand of InstructionMetadata is the result <id> of an atomic defined inside
+; a function body, so it is a forward reference. That is intentional -- the
+; instruction is non-semantic and its result is never consumed, and
+; NonSemantic.AuxData.asciidoc permits it -- but spirv-val implements no such
+; relaxation and rejects the module. Pin that down so the day validation starts
+; passing is not silent: drop the "not" and the CHECK-INVALID prefix once
+; SPIRV-Tools accepts the forward reference, or once the instructions are moved
+; into the function body after their target.
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa \
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \
+; RUN:   %s -o - -filetype=obj | not spirv-val 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-INVALID %}
+
+; CHECK-INVALID: has not been defined
+
 ; CHECK-DAG: %[[#auxset:]] = OpExtInstImport "NonSemantic.AuxData"
 ; CHECK-DAG: %[[#md_nfg:]] = OpString "amdgpu.no.fine.grained.memory"
 ; CHECK-DAG: %[[#md_nrm:]] = OpString "amdgpu.no.remote.memory"
