@@ -13890,7 +13890,6 @@ SDValue TargetLowering::expandVectorMatch(SDNode *N, SelectionDAG &DAG) const {
       SDValue NeedleElt = DAG.getExtractVectorElt(DL, NeedleEltVT, Needle, I);
       Splat = DAG.getNode(ISD::SPLAT_VECTOR, DL, SourceVT, NeedleElt);
     }
-
     SDValue Cmp = DAG.getSetCC(DL, CmpVT, Source, Splat, ISD::SETEQ);
     Ret = DAG.getNode(ISD::OR, DL, CmpVT, Ret, Cmp);
   }
