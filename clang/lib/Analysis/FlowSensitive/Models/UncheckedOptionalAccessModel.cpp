@@ -1309,7 +1309,11 @@ auto buildDiagnoseMatchSwitch(
               [](const CallExpr *E, const MatchFinder::MatchResult &,
                  const Environment &Env) {
                 return diagnoseUnwrapCall(E->getArg(0), Env);
-              });
+              })
+          .CaseOfCFGStmt<CXXMemberCallExpr>(
+            (cxxMemberCallExpr(callee(cxxMethodDecl(hasAttr(attr::AssumeEngagedTrait))))),
+            [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &, const Environment &Env)
+            {return diagnoseUnwrapCall(E->getImplicitObjectArgument(), Env);});
 
   auto Builder = Options.IgnoreValueCalls
                      ? std::move(DiagBuilder)
