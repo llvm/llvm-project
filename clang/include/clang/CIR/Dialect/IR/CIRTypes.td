@@ -740,7 +740,9 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     }
 
     void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
-                  bool isPadded);
+                  bool isPadded, mlir::ArrayAttr annotations = {});
+
+    mlir::ArrayAttr getAnnotations() const;
 
     uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
                               unsigned idx) const;
@@ -886,7 +888,9 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
                                           llvm::ArrayRef<mlir::Type> members);
 
     void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
-                  mlir::Type padding = {});
+                  mlir::Type padding = {}, mlir::ArrayAttr annotations = {});
+
+    mlir::ArrayAttr getAnnotations() const;
 
     uint64_t getElementOffset(const mlir::DataLayout &, unsigned) const {
       return 0;

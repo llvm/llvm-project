@@ -48,6 +48,13 @@ struct StructTypeStorage : public mlir::TypeStorage {
   bool padded;
   bool is_class;
 
+  // Array of #cir.annotation attributes, set at completion (like
+  // members/layout), not part of the type's identity: named records are
+  // uniqued by name, so there is at most one annotation set per type. Keeping
+  // them out of the key is also required so an incomplete record can be
+  // completed in place.
+  mlir::ArrayAttr annotations;
+
   StructTypeStorage(llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
                     bool incomplete, bool packed, bool padded, bool is_class)
       : members(members), name(name), incomplete(incomplete), packed(packed),
@@ -84,18 +91,20 @@ struct StructTypeStorage : public mlir::TypeStorage {
   /// Mutates the members and attributes of an identified struct/class.
   llvm::LogicalResult mutate(mlir::TypeStorageAllocator &allocator,
                              llvm::ArrayRef<mlir::Type> members, bool packed,
-                             bool padded) {
+                             bool padded, mlir::ArrayAttr annotations) {
     if (!name)
       return llvm::failure();
 
     if (!incomplete)
       return mlir::success((this->members == members) &&
                            (this->packed == packed) &&
-                           (this->padded == padded));
+                           (this->padded == padded) &&
+                           (this->annotations == annotations));
 
     this->members = allocator.copyInto(members);
     this->packed = packed;
     this->padded = padded;
+    this->annotations = annotations;
     incomplete = false;
     return llvm::success();
   }
@@ -125,6 +134,9 @@ struct UnionTypeStorage : public mlir::TypeStorage {
   bool incomplete;
   bool packed;
   mlir::Type padding;
+
+  // See StructTypeStorage::annotations.
+  mlir::ArrayAttr annotations;
 
   UnionTypeStorage(llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
                    bool incomplete, bool packed, mlir::Type padding)
@@ -162,18 +174,20 @@ struct UnionTypeStorage : public mlir::TypeStorage {
   /// Mutates the members and attributes of an identified union.
   llvm::LogicalResult mutate(mlir::TypeStorageAllocator &allocator,
                              llvm::ArrayRef<mlir::Type> members, bool packed,
-                             mlir::Type padding) {
+                             mlir::Type padding, mlir::ArrayAttr annotations) {
     if (!name)
       return llvm::failure();
 
     if (!incomplete)
       return mlir::success((this->members == members) &&
                            (this->packed == packed) &&
-                           (this->padding == padding));
+                           (this->padding == padding) &&
+                           (this->annotations == annotations));
 
     this->members = allocator.copyInto(members);
     this->packed = packed;
     this->padding = padding;
+    this->annotations = annotations;
     incomplete = false;
     return llvm::success();
   }

@@ -167,16 +167,25 @@ parseRecordBody(mlir::AsmParser &parser, bool &incomplete,
       });
 }
 
+/// Parse optional " annotations = [...]" clause.
+static mlir::ParseResult parseRecordAnnotations(mlir::AsmParser &parser,
+                                                mlir::ArrayAttr &annotations) {
+  if (parser.parseOptionalKeyword("annotations").failed())
+    return mlir::success();
+  return mlir::failure(parser.parseEqual().failed() ||
+                       parser.parseAttribute(annotations).failed());
+}
+
 /// Print a complete CIR record body:
-///   '<' ['class '] [name] ['packed '] ['padded '] body '>'
+///   '<' ['class '] [name] ['packed '] ['padded '] body [annotations] '>'
 /// where body is "incomplete" or "{members[, padding = {type}]}".
 /// RecordTy must be a mutable MLIR type (StructType or UnionType).
 template <typename RecordTy>
-static void printRecordBody(mlir::AsmPrinter &printer, RecordTy self,
-                            mlir::StringAttr name, bool hasClassPrefix,
-                            bool isPacked, bool isPadded, bool isIncomplete,
-                            llvm::ArrayRef<mlir::Type> members,
-                            mlir::Type padding = {}) {
+static void
+printRecordBody(mlir::AsmPrinter &printer, RecordTy self, mlir::StringAttr name,
+                bool hasClassPrefix, bool isPacked, bool isPadded,
+                bool isIncomplete, llvm::ArrayRef<mlir::Type> members,
+                mlir::Type padding = {}, mlir::ArrayAttr annotations = {}) {
   printer << '<';
   if (hasClassPrefix)
     printer << "class ";
@@ -208,6 +217,8 @@ static void printRecordBody(mlir::AsmPrinter &printer, RecordTy self,
       printer << '}';
     }
   }
+  if (annotations && !annotations.empty())
+    printer << " annotations = " << annotations;
   printer << '>';
 }
 
@@ -260,6 +271,10 @@ Type StructType::parse(mlir::AsmParser &parser) {
   if (parseRecordBody(parser, incomplete, members).failed())
     return {};
 
+  mlir::ArrayAttr annotations;
+  if (parseRecordAnnotations(parser, annotations).failed())
+    return {};
+
   if (parser.parseGreater())
     return {};
 
@@ -279,7 +294,7 @@ Type StructType::parse(mlir::AsmParser &parser) {
       return {};
     if (auto structTy = mlir::dyn_cast<StructType>(type))
       if (structTy.isIncomplete())
-        structTy.complete(membersRef, packed, padded);
+        structTy.complete(membersRef, packed, padded, annotations);
     assert(!cir::MissingFeatures::astRecordDeclAttr());
   } else {
     parser.emitError(loc, "anonymous records must be complete");
@@ -291,7 +306,8 @@ Type StructType::parse(mlir::AsmParser &parser) {
 
 void StructType::print(mlir::AsmPrinter &printer) const {
   printRecordBody(printer, *this, getName(), isClass(), getPacked(),
-                  getPadded(), isIncomplete(), getMembers());
+                  getPadded(), isIncomplete(), getMembers(), /*padding=*/{},
+                  getAnnotations());
 }
 
 mlir::LogicalResult
@@ -333,9 +349,14 @@ void StructType::removeABIConversionNamePrefix() {
         recordName.getType());
 }
 
-void StructType::complete(ArrayRef<Type> members, bool packed, bool padded) {
+mlir::ArrayAttr StructType::getAnnotations() const {
+  return getImpl()->annotations;
+}
+
+void StructType::complete(ArrayRef<Type> members, bool packed, bool padded,
+                          mlir::ArrayAttr annotations) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  if (mutate(members, packed, padded).failed())
+  if (mutate(members, packed, padded, annotations).failed())
     llvm_unreachable("failed to complete struct");
 }
 
@@ -407,6 +428,10 @@ Type UnionType::parse(mlir::AsmParser &parser) {
       return {};
   }
 
+  mlir::ArrayAttr annotations;
+  if (parseRecordAnnotations(parser, annotations).failed())
+    return {};
+
   if (parser.parseGreater())
     return {};
 
@@ -425,7 +450,7 @@ Type UnionType::parse(mlir::AsmParser &parser) {
       return {};
     if (auto unionTy = mlir::dyn_cast<UnionType>(type))
       if (unionTy.isIncomplete())
-        unionTy.complete(membersRef, packed, padding);
+        unionTy.complete(membersRef, packed, padding, annotations);
     assert(!cir::MissingFeatures::astRecordDeclAttr());
   } else {
     parser.emitError(loc, "anonymous records must be complete");
@@ -438,7 +463,7 @@ Type UnionType::parse(mlir::AsmParser &parser) {
 void UnionType::print(mlir::AsmPrinter &printer) const {
   printRecordBody(printer, *this, getName(), /*hasClassPrefix=*/false,
                   getPacked(), /*isPadded=*/false, isIncomplete(), getMembers(),
-                  getPadding());
+                  getPadding(), getAnnotations());
 }
 
 mlir::LogicalResult
@@ -479,10 +504,14 @@ void UnionType::removeABIConversionNamePrefix() {
         recordName.getType());
 }
 
+mlir::ArrayAttr UnionType::getAnnotations() const {
+  return getImpl()->annotations;
+}
+
 void UnionType::complete(ArrayRef<Type> members, bool packed,
-                         mlir::Type padding) {
+                         mlir::Type padding, mlir::ArrayAttr annotations) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  if (mutate(members, packed, padding).failed())
+  if (mutate(members, packed, padding, annotations).failed())
     llvm_unreachable("failed to complete union");
 }
 
@@ -559,14 +588,20 @@ std::string RecordType::getKindAsStr() const {
 std::string RecordType::getPrefixedName() const {
   return getKindAsStr() + "." + getName().getValue().str();
 }
-void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded,
-                          mlir::Type padding) {
+mlir::ArrayAttr RecordType::getAnnotations() const {
   if (auto s = mlir::dyn_cast<StructType>(*this))
-    return s.complete(members, packed, padded);
+    return s.getAnnotations();
+  return mlir::cast<UnionType>(*this).getAnnotations();
+}
+void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded,
+                          mlir::Type padding, mlir::ArrayAttr annotations) {
+  if (auto s = mlir::dyn_cast<StructType>(*this))
+    return s.complete(members, packed, padded, annotations);
   // Unions derive padded from padding; assert the caller is consistent.
   assert((!padded || padding) &&
          "padded=true requires a non-null padding type");
-  return mlir::cast<UnionType>(*this).complete(members, packed, padding);
+  return mlir::cast<UnionType>(*this).complete(members, packed, padding,
+                                               annotations);
 }
 uint64_t RecordType::getElementOffset(const mlir::DataLayout &dataLayout,
                                       unsigned idx) const {

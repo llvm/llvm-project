@@ -908,7 +908,7 @@ class CIRABITypeConverter : public mlir::TypeConverter {
       if (mlir::Type pad = u.getPadding())
         loweredPadding = convertType(pad);
     convertedType.complete(convertedMembers, type.getPacked(), type.getPadded(),
-                           loweredPadding);
+                           loweredPadding, type.getAnnotations());
     addConvertedRecordType(convertedType);
     return convertedType;
   }
