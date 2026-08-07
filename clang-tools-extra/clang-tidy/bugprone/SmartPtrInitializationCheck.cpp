@@ -81,13 +81,13 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
                 recordType(hasDeclaration(UniquePtrWithCustomDeleter)))),
             hasDeclaration(cxxConstructorDecl(ofClass(IsUniquePtrRecord)))));
 
-  auto SmartPtrConstructorMatcher =
-      cxxConstructExpr(
-          hasDeclaration(cxxConstructorDecl(ofClass(IsSmartPtrRecord))),
-          hasArgument(0, PointerArg), unless(HasCustomDeleter),
-          unless(hasArgument(0, cxxNewExpr())),
-          unless(hasArgument(0, ReleaseCallMatcher)))
-          .bind("constructor");
+  auto SmartPtrConstructorMatcher = cxxConstructExpr(
+      hasDeclaration(
+          cxxConstructorDecl(ofClass(IsSmartPtrRecord.bind("method-parent")))
+              .bind("method-decl")),
+      hasArgument(0, PointerArg), unless(HasCustomDeleter),
+      unless(hasArgument(0, cxxNewExpr())),
+      unless(hasArgument(0, ReleaseCallMatcher)));
 
   // Matcher for reset() calls
   // Exclude reset() calls with custom deleters:
@@ -101,14 +101,16 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
       on(hasType(hasUnqualifiedDesugaredType(
           recordType(hasDeclaration(UniquePtrWithCustomDeleter))))));
 
-  auto ResetCallMatcher =
-      cxxMemberCallExpr(
-          on(hasType(hasUnqualifiedDesugaredType(recordType(
-              hasDeclaration(classTemplateSpecializationDecl(IsSmartPtr)))))),
-          callee(cxxMethodDecl(hasName("reset"))), hasArgument(0, PointerArg),
-          unless(HasCustomDeleterInReset), unless(hasArgument(0, cxxNewExpr())),
-          unless(hasArgument(0, ReleaseCallMatcher)))
-          .bind("reset-call");
+  auto ResetCallMatcher = cxxMemberCallExpr(
+
+      on(hasType(hasUnqualifiedDesugaredType(recordType(
+          hasDeclaration(classTemplateSpecializationDecl(IsSmartPtr)))))),
+      callee(cxxMethodDecl(hasParent(cxxRecordDecl().bind("method-parent")),
+                           hasName("reset"))
+                 .bind("method-decl")),
+      hasArgument(0, PointerArg), unless(HasCustomDeleterInReset),
+      unless(hasArgument(0, cxxNewExpr())),
+      unless(hasArgument(0, ReleaseCallMatcher)));
 
   Finder->addMatcher(SmartPtrConstructorMatcher, this);
   Finder->addMatcher(ResetCallMatcher, this);
@@ -117,27 +119,19 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
 void SmartPtrInitializationCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *PointerArg = Result.Nodes.getNodeAs<Expr>("pointer-arg");
-  const auto *Constructor =
-      Result.Nodes.getNodeAs<CXXConstructExpr>("constructor");
-  const auto *ResetCall =
-      Result.Nodes.getNodeAs<CXXMemberCallExpr>("reset-call");
-  assert(PointerArg);
+  const auto *MethodDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("method-decl");
+  const auto *Record = Result.Nodes.getNodeAs<CXXRecordDecl>("method-parent");
 
-  const SourceLocation Loc = PointerArg->getBeginLoc();
-  const CXXMethodDecl *MethodDecl =
-      Constructor ? Constructor->getConstructor()
-                  : (ResetCall ? ResetCall->getMethodDecl() : nullptr);
   if (!MethodDecl)
     return;
 
-  const auto *Record = MethodDecl->getParent();
-  if (!Record)
-    return;
+  assert(PointerArg && Record);
 
+  const SourceLocation Loc = PointerArg->getBeginLoc();
   const std::string TypeName = Record->getQualifiedNameAsString();
   diag(Loc, "passing a raw pointer '%0' to %1%2 may cause double deletion")
       << getPointerDescription(PointerArg, *Result.Context) << TypeName
-      << (Constructor ? " constructor" : "::reset()");
+      << (isa<CXXConstructorDecl>(MethodDecl) ? " constructor" : "::reset()");
 }
 
 std::string
