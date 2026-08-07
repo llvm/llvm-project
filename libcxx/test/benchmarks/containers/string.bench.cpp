@@ -11,8 +11,9 @@
 #include <algorithm>
 #include <array>
 #include <functional>
+#include <iterator>
 #include <string>
-#include <vector>
+#include <type_traits>
 
 #include "benchmark/benchmark.h"
 #include "make_string.h"
@@ -43,24 +44,37 @@ void bench(std::string name, Func func, Mod modifier = {}) {
 #endif
 }
 
-template <typename Iterator>
-struct unoptimizable_forward_iterator : Iterator {
+template <typename It>
+struct unoptimizable_forward_iterator { // legacy forward iterator that inhibits iteration optimization
+  static_assert(std::is_base_of_v<std::forward_iterator_tag, typename std::iterator_traits<It>::iterator_category>);
+
   using iterator_category = std::forward_iterator_tag;
+  using value_type        = typename std::iterator_traits<It>::value_type;
+  using difference_type   = typename std::iterator_traits<It>::difference_type;
+  using pointer           = typename std::iterator_traits<It>::pointer;
+  using reference         = typename std::iterator_traits<It>::reference;
 
-  unoptimizable_forward_iterator(Iterator i) : Iterator{i} {}
+  unoptimizable_forward_iterator() = default;
+  explicit unoptimizable_forward_iterator(It it) : it_(it) {}
 
-  _LIBCPP_NOINLINE unoptimizable_forward_iterator& operator++() {
-    ++static_cast<Iterator&>(*this);
+  reference operator*() const { return *it_; }
+  It operator->() const { return it_; }
+
+  TEST_NOINLINE unoptimizable_forward_iterator& operator++() {
+    ++it_;
     return *this;
   }
-  unoptimizable_forward_iterator operator++(int) {
-    auto it = *this;
-    this->operator++();
-    return it;
-  }
+  unoptimizable_forward_iterator operator++(int) { return {it_++}; }
+
+  friend bool operator==(const unoptimizable_forward_iterator&, const unoptimizable_forward_iterator&) = default;
+
+  friend It base(const unoptimizable_forward_iterator& i) { return i.it_; }
+
+private:
+  It it_;
 };
-template <typename Iterator>
-unoptimizable_forward_iterator(Iterator) -> unoptimizable_forward_iterator<Iterator>;
+template <typename It>
+unoptimizable_forward_iterator(It) -> unoptimizable_forward_iterator<It>;
 
 int main(int argc, char** argv) {
   // [string.cons]
