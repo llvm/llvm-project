@@ -91,9 +91,6 @@ void initializeRISCVVectorPeepholeLegacyPass(PassRegistry &);
 FunctionPass *createRISCVOptWInstrsPass();
 void initializeRISCVOptWInstrsPass(PassRegistry &);
 
-FunctionPass *createRISCVFoldMemOffsetPass();
-void initializeRISCVFoldMemOffsetPass(PassRegistry &);
-
 FunctionPass *createRISCVMergeBaseOffsetOptPass();
 void initializeRISCVMergeBaseOffsetOptPass(PassRegistry &);
 

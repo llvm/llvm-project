@@ -133,7 +133,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPostRAExpandPseudoPass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVOptWInstrsPass(*PR);
-  initializeRISCVFoldMemOffsetPass(*PR);
+  initializeRISCVFoldMemOffsetLegacyPass(*PR);
   initializeRISCVPreRAExpandPseudoPass(*PR);
   initializeRISCVExpandPseudoPass(*PR);
   initializeRISCVVectorPeepholeLegacyPass(*PR);
