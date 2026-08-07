@@ -71,6 +71,18 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
       libc.src.string.memcpy
       libc.src.string.memory_utils.inline_memset
   )
+
+  add_libc_test(
+    freelist_heap_death_test
+    SUITE
+      libc-support-tests
+    SRCS
+      freelist_heap_death_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.span
+      libc.src.__support.freelist_heap
+    UNIT_TEST_ONLY
+  )
 endif()
 
 add_libc_test(
