@@ -1063,9 +1063,13 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:   %[[F:.*]] = linalg.fill ins(%[[I]] : f32) outs(%{{.*}} : tensor<?x5xf32>) -> tensor<?x5xf32>
 //       CHECK:   %[[L:.*]] = scf.for {{.*}} iter_args(%{{.*}} = %[[F]]) -> (tensor<?x5xf32>) {
 //       CHECK:     linalg.generic
-//       CHECK:       arith.subf
+//       CHECK:     ^bb0(%[[IN:.+]]: f32, %[[ACC:.+]]: f32):
+//       CHECK:       %[[SUB:.+]] = arith.subf %[[ACC]], %[[IN]] : f32
+//       CHECK:       linalg.yield %[[SUB]] : f32
 //       CHECK:   linalg.reduce ins(%[[L]] : tensor<?x5xf32>) outs(%{{.*}} : tensor<?xf32>) dimensions = [1]
-//       CHECK:     arith.addf
+//       CHECK:     (%[[PARTIAL:.+]]: f32, %[[INIT:.+]]: f32) {
+//       CHECK:       %[[ADD:.+]] = arith.addf %[[PARTIAL]], %[[INIT]] : f32
+//       CHECK:       linalg.yield %[[ADD]] : f32
 //       CHECK:   return
 
 // -----
@@ -1098,9 +1102,13 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:   %[[I:.*]] = arith.constant 0 : i32
 //       CHECK:   %[[F:.*]] = linalg.fill ins(%[[I]] : i32) outs(%{{.*}} : tensor<?x5xi32>) -> tensor<?x5xi32>
 //       CHECK:   %[[L:.*]] = scf.forall
-//       CHECK:       arith.subi
+//       CHECK:     ^bb0(%[[IN:.+]]: i32, %[[ACC:.+]]: i32):
+//       CHECK:       %[[SUB:.+]] = arith.subi %[[ACC]], %[[IN]] : i32
+//       CHECK:       linalg.yield %[[SUB]] : i32
 //       CHECK:   linalg.reduce ins(%[[L]] : tensor<?x5xi32>) outs(%{{.*}} : tensor<?xi32>) dimensions = [1]
-//       CHECK:     arith.addi
+//       CHECK:     (%[[PARTIAL:.+]]: i32, %[[INIT:.+]]: i32) {
+//       CHECK:       %[[ADD:.+]] = arith.addi %[[PARTIAL]], %[[INIT]] : i32
+//       CHECK:       linalg.yield %[[ADD]] : i32
 //       CHECK:   return
 
 // -----
@@ -1218,7 +1226,11 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func @reduction_tile_negated_sum_flags
 //       CHECK:   linalg.generic
-//       CHECK:     arith.subf %{{.*}}, %{{.*}} to_nearest_even fastmath<nnan,ninf> : f32
+//       CHECK:   ^bb0(%[[IN:.+]]: f32, %[[ACC:.+]]: f32):
+//       CHECK:     %[[SUB:.+]] = arith.subf %[[ACC]], %[[IN]] to_nearest_even fastmath<nnan,ninf> : f32
+//       CHECK:     linalg.yield %[[SUB]] : f32
 //       CHECK:   linalg.reduce
-//       CHECK:     arith.addf %{{.*}}, %{{.*}} to_nearest_even fastmath<nnan,ninf> : f32
+//       CHECK:     (%[[PARTIAL:.+]]: f32, %[[INIT:.+]]: f32) {
+//       CHECK:       %[[ADD:.+]] = arith.addf %[[PARTIAL]], %[[INIT]] to_nearest_even fastmath<nnan,ninf> : f32
+//       CHECK:       linalg.yield %[[ADD]] : f32
 //       CHECK:   return
