@@ -257,9 +257,7 @@ def add_release_notes(
         )
     )
     check_name_dashes = f"{module}-{check_name}"
-    filename = os.path.normpath(
-        os.path.join(module_path, "../../docs/ReleaseNotes.rst")
-    )
+    filename = os.path.normpath(os.path.join(module_path, "../../docs/ReleaseNotes.md"))
     with open(filename, "r", encoding="utf8") as f:
         lines = f.readlines()
 
