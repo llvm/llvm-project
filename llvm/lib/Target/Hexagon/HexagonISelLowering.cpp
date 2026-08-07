@@ -2149,18 +2149,21 @@ bool HexagonTargetLowering::shouldExpandBuildVectorWithShuffles(EVT VT,
   return false;
 }
 
-bool HexagonTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-      unsigned Index) const {
+TargetLowering::ExtractSubvectorCost
+HexagonTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                               unsigned Index) const {
   assert(ResVT.getVectorElementType() == SrcVT.getVectorElementType());
   if (!ResVT.isSimple() || !SrcVT.isSimple())
-    return false;
+    return ExtractSubvectorCost::Expensive;
 
   MVT ResTy = ResVT.getSimpleVT(), SrcTy = SrcVT.getSimpleVT();
   if (ResTy.getVectorElementType() != MVT::i1)
-    return true;
+    return ExtractSubvectorCost::Free;
 
   // Non-HVX bool vectors are relatively cheap.
-  return SrcTy.getVectorNumElements() <= 8;
+  if (SrcTy.getVectorNumElements() <= 8)
+    return ExtractSubvectorCost::Free;
+  return ExtractSubvectorCost::Expensive;
 }
 
 bool HexagonTargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
