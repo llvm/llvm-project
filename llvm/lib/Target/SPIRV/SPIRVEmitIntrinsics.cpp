@@ -2464,6 +2464,17 @@ SPIRVEmitIntrinsicsImpl::visitExtractValueInst(ExtractValueInst &I) {
     Args.push_back(B.getInt32(Op));
   Instruction *NewI = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_extractv,
                                                       {I.getType()}, {Args});
+  // If this aggregate extract feeds another insertvalue, the extracted
+  // composite is used as a SPIR-V value-id by llvm.spv.insertv. Keep the real
+  // aggregate type in metadata, but expose the value itself as i32 so the
+  // intrinsic signature remains valid.
+  if (NewI->getType()->isAggregateType() &&
+      any_of(I.users(), [](User *U) { return isa<InsertValueInst>(U); })) {
+    AggrConstTypes[NewI] = I.getType();
+    NewI->mutateType(B.getInt32Ty());
+    replaceMemInstrUses(&I, NewI, B);
+    return NewI;
+  }
   replaceAllUsesWithAndErase(B, &I, NewI);
   // If the aggregate result feeds a return or callsite whose type was rewritten
   // to an i32 value-id by SPIRVPrepareFunctions, mutate it to match.
