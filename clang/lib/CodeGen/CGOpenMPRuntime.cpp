@@ -3067,7 +3067,8 @@ createPrivatesRecordDecl(CodeGenModule &CGM, ArrayRef<PrivateDataTy> Privates) {
       // For BindingDecls, use the OriginalRef type (the binding's type),
       // not the VD type (which is the DecompositionDecl's type).
       QualType Type = Pair.second.OriginalRef
-                          ? Pair.second.OriginalRef->getType().getNonReferenceType()
+                          ? Pair.second.OriginalRef->getType()
+                                .getNonReferenceType()
                           : VD->getType().getNonReferenceType();
       // If the private variable is a local variable with lvalue ref type,
       // allocate the pointer instead of the pointee type.
@@ -3510,6 +3511,23 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
               CGF.MakeAddrLValue(CGF.GetAddrOfLocalVar(OriginalVD), Type);
         } else if (ForDup) {
           SharedRefLValue = CGF.EmitLValueForField(SrcBase, SharedField);
+          // For BindingDecls, access the specific binding field within the
+          // captured DecompositionDecl.
+          if (Pair.second.OriginalRef) {
+            if (const auto *DRE =
+                    dyn_cast<DeclRefExpr>(Pair.second.OriginalRef)) {
+              if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
+                if (const auto *ME =
+                        dyn_cast<MemberExpr>(BD->getBinding())) {
+                  if (const auto *FD =
+                          dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+                    SharedRefLValue =
+                        CGF.EmitLValueForField(SharedRefLValue, FD);
+                  }
+                }
+              }
+            }
+          }
           SharedRefLValue = CGF.MakeAddrLValue(
               SharedRefLValue.getAddress().withAlignment(
                   C.getDeclAlign(OriginalVD)),
