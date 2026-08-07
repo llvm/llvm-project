@@ -378,6 +378,17 @@ DEFAULT_PARAMETERS = [
         actions=lambda mode: [AddFeature(f"enable-benchmarks={mode}")],
     ),
     Parameter(
+        name="benchmark_min_time",
+        type=str,
+        default="0.2s",
+        help="The minimum amount of time each benchmark is run for, passed to GoogleBenchmark's "
+             "--benchmark_min_time flag. By default, we use a lower value than GoogleBenchmark's "
+             "default of 0.5s because that speeds up the test suite without severely impacting "
+             "noise. This can be increased to get more precise results, but running the benchmark "
+             "suite several times may reduce noise more than increasing this threshold.",
+        actions=lambda min_time: [AddSubstitution("%{benchmark_min_time}", min_time)],
+    ),
+    Parameter(
         name="spec_dir",
         type=str,
         default="none",
