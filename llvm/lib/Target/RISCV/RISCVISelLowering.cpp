@@ -14327,7 +14327,7 @@ RISCVTargetLowering::lowerFixedLengthVectorLoadToRVV(SDValue Op,
     SDValue NewLoad =
         DAG.getLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(),
                     MMO->getPointerInfo(), MMO->getBaseAlign(), MMO->getFlags(),
-                    MMO->getAAInfo(), MMO->getRanges());
+                    MMOMetadata(MMO->getAAInfo(), MMO->getRanges()));
     SDValue Result = convertFromScalableVector(VT, NewLoad, DAG, Subtarget);
     return DAG.getMergeValues({Result, NewLoad.getValue(1)}, DL);
   }
