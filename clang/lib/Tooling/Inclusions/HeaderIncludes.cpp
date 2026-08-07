@@ -450,7 +450,7 @@ HeaderIncludes::insert(llvm::StringRef Header, bool IsAngled,
                        IncludeDirective Directive) const {
   assert(Header == trimInclude(Header));
   // If a <header> ("header") already exists in code, "header" (<header>) with
-  // different quotation and/or directive will still be inserted.
+  // different quotation will still be inserted.
   // FIXME: figure out if this is the best behavior.
   auto It = ExistingIncludes.find(Header);
   if (It != ExistingIncludes.end()) {

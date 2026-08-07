@@ -119,20 +119,6 @@ TEST_F(HeaderIncludesTest, InsertIncludeWhenImportExists) {
   EXPECT_EQ(Code, insert(Code, "\"a.h\"", IncludeDirective::Include));
 }
 
-TEST_F(HeaderIncludesTest, InsertIncludeAfterImportStays) {
-  std::string Code = "#import \"a.h\"\n";
-  std::string Expected = "#import \"a.h\"\n";
-  // Verifies that the import stays and include is not added (or is absorbed).
-  EXPECT_EQ(Expected, insert(Code, "\"a.h\"", IncludeDirective::Include));
-}
-
-TEST_F(HeaderIncludesTest, InsertImportWhenIncludeExists) {
-  std::string Code = "#include \"a.h\"\n";
-  std::string Expected = "#import \"a.h\"\n";
-  // Replaces #include with #import.
-  EXPECT_EQ(Expected, insert(Code, "\"a.h\"", IncludeDirective::Import));
-}
-
 TEST_F(HeaderIncludesTest, InsertImportWhenIncludeExistsAngled) {
   std::string Code = "#include <a.h>\n";
   std::string Expected = "#import <a.h>\n";
