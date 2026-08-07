@@ -12,11 +12,11 @@
 ; RUN:     -enable-mem-access-versioning=true  2>&1 | FileCheck %s --check-prefix COMPARE-LAA-MV
 
 ; RUN: opt < %s -p loop-vectorize -force-vector-width=4 -S \
-; RUN:     -tail-predication=enabled -tail-folding-policy=must-fold-tail \
+; RUN:     -tail-folding-policy=must-fold-tail \
 ; RUN:     -enable-mem-access-versioning=false  2>&1 | FileCheck %s --check-prefix COMPARE-NO-MV-FOLD-TAIL
 
 ; RUN: opt < %s -p loop-vectorize -force-vector-width=4 -S \
-; RUN:     -tail-predication=enabled -tail-folding-policy=must-fold-tail \
+; RUN:     -tail-folding-policy=must-fold-tail \
 ; RUN:     -enable-mem-access-versioning=true  2>&1 | FileCheck %s --check-prefix COMPARE-LAA-MV-FOLD_TAIL
 
 ; RUN: opt < %s -p loop-vectorize -force-vector-width="vscale x 4" -S \
