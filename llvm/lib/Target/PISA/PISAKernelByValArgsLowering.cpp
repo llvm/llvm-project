@@ -30,7 +30,8 @@ using namespace llvm::PISAAS;
 namespace {
 class PISAKernelByValArgsLowering {
 public:
-  explicit PISAKernelByValArgsLowering(Function &F) : F(F), Ctx(F.getContext()) {
+  explicit PISAKernelByValArgsLowering(Function &F)
+      : F(F), Ctx(F.getContext()) {
     assert(F.getCallingConv() == CallingConv::PISA_KERNEL &&
            "Expected PISA_KERNEL calling convention");
     assert(F.getReturnType()->isVoidTy() && "Expected void return type");
@@ -90,8 +91,8 @@ bool PISAKernelByValArgsLowering::run() {
   return true;
 }
 
-AttributeList
-PISAKernelByValArgsLowering::getNewAttributes(const AttributeList &Attrs) const {
+AttributeList PISAKernelByValArgsLowering::getNewAttributes(
+    const AttributeList &Attrs) const {
   AttributeList NewAttrs;
 
   // Copy function attributes.
