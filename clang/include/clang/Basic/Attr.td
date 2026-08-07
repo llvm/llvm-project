@@ -924,6 +924,57 @@ def AlignValue : Attr {
   let Documentation = [AlignValueDocs];
 }
 
+def EngagedTrait : InheritableAttr {
+  let Spellings = [Clang<"engaged">];
+  let Args = [];
+  let Subjects = SubjectList<[CXXMethod], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
+def DisengagedTrait : InheritableAttr {
+  let Spellings = [Clang<"disengaged">];
+  let Args = [];
+  let Subjects = SubjectList<[CXXMethod], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
+def AssumeEngagedTrait : InheritableAttr {
+  let Spellings = [Clang<"assume_engaged">];
+  let Args = [];
+  let Subjects = SubjectList<[CXXMethod], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
+def TestEngagedTrait : InheritableAttr {
+  let Spellings = [Clang<"test_engaged">];
+  let Args = [];
+  let Subjects = SubjectList<[CXXMethod], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
+def TestDisengagedTrait : InheritableAttr {
+  let Spellings = [Clang<"test_disengaged">];
+  let Args = [];
+  let Subjects = SubjectList<[CXXMethod], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
+def AnalyzeAsClass : InheritableAttr {
+  let Spellings = [Clang<"analyze_as_class">];
+  let Args = [StringArgument<"ClassName">];
+  let Subjects = SubjectList<[Record],
+                             ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
+def AnalyzeAsMethod : InheritableAttr {
+  let Spellings = [Clang<"analyze_as_method">];
+  let Args = [StringArgument<"MethodName">];
+  let Subjects = SubjectList<[CXXMethod],
+                             ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
 def AlignMac68k : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];

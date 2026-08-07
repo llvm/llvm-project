@@ -946,7 +946,7 @@ TEST_P(UncheckedOptionalAccessTest, OptionalReturnedFromFuntionCall) {
   ExpectDiagnosticsFor(
       R"(
     #include "unchecked_optional_access_test.h"
-    
+
     struct S {
       $ns::$optional<float> x;
     } s;
@@ -2860,14 +2860,14 @@ TEST_P(
       struct B {
         const A& getA() const { return a; }
 
-        void callWithoutChanges() const { 
-          // no-op 
+        void callWithoutChanges() const {
+          // no-op
         }
 
         A a;
       };
 
-      void target(B& b) {  
+      void target(B& b) {
         if (b.getA().get().has_value()) {
           b.callWithoutChanges(); // calling const method which cannot change A
           b.getA().get().value();
@@ -2991,6 +2991,48 @@ TEST_P(UncheckedOptionalAccessTest, AssertFalseGtestMacroWithNullableValue) {
 
       ASSERT_FALSE(opt.isNull());
       EXPECT_EQ(*opt, 42);
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, TestCustomAttributeBalik) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    template <typename T>
+    class __attribute__((analyze_as_class("std::optional"))) MyOptional {
+    public:
+      bool has_value() const;
+      T& value();
+      const T& value() const;
+    };
+
+    void target(MyOptional<int> opt) {
+      opt.value(); // [[unsafe]]
+      if (opt.has_value()) {
+        opt.value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, TestCustomAttributeHicketts) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    template <typename T>
+    class __attribute__((analyze_as_class("std::optional"))) MyOptional {
+    public:
+      __attribute__((analyze_as_method("has_value"))) bool isNotNull() const;
+      __attribute__((analyze_as_method("value"))) T& unwrap();
+      __attribute__((analyze_as_method("value"))) const T& unwrap() const;
+    };
+
+    void target(MyOptional<int> opt) {
+      opt.unwrap(); // [[unsafe]]
+      if (opt.isNotNull()) {
+        opt.unwrap();
+      }
     }
   )cc");
 }

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
@@ -38,6 +39,28 @@
 namespace clang {
 namespace dataflow {
 
+// I'm not sure if the behavioural predicates belong in here.  The class name implies that it's tied to optionals
+// but some of the functions declared here (insert example) seem to be non specific to optionals
+static bool hasAnyBehaviouralRole(const CXXRecordDecl* RD)
+{
+  if(RD == nullptr || !RD->hasDefinition())
+    return false;
+
+  for(const CXXMethodDecl* method : RD->methods())
+  {
+    if(method->hasAttr<EngagedTraitAttr>()
+    || method->hasAttr<DisengagedTraitAttr>()
+    || method->hasAttr<AssumeEngagedTraitAttr>()
+    || method->hasAttr<TestEngagedTraitAttr>()
+    || method->hasAttr<TestDisengagedTraitAttr>())
+    {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // Note: the Names appear in reverse order. E.g., to check
 // if NS is foo::bar::, call isFullyQualifiedNamespaceEqualTo(NS, "bar", "foo")
 template <class... NameTypes>
@@ -51,6 +74,7 @@ static bool isFullyQualifiedNamespaceEqualTo(const NamespaceDecl &NS,
   if constexpr (sizeof...(NameTypes) > 0) {
     if (NS.getParent()->isTranslationUnit())
       return false;
+
     if (const auto *NextNS = dyn_cast_or_null<NamespaceDecl>(NS.getParent()))
       return isFullyQualifiedNamespaceEqualTo(*NextNS, Names...);
     return false;
@@ -70,6 +94,8 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
     return false;
   }
 
+  // this code could be removed if base::Optional and folly::Optional used
+  // [[clang::analyze_as_class("std::optional")]]
   if (RD.getName() == "Optional") {
     // Check whether namespace is "::base" or "::folly".
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
@@ -77,17 +103,24 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
                             isFullyQualifiedNamespaceEqualTo(*N, "folly"));
   }
 
+  // this code could be removed if Optional_Base used
+  // [[clang::analyze_as_class("std::optional")]]
   if (RD.getName() == "Optional_Base") {
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
     return N != nullptr &&
            isFullyQualifiedNamespaceEqualTo(*N, "bslstl", "BloombergLP");
   }
 
+  // this code could be removed if NullableValue used
+  // [[clang::analyze_as_class("std::optional")]]
   if (RD.getName() == "NullableValue") {
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
     return N != nullptr &&
            isFullyQualifiedNamespaceEqualTo(*N, "bdlb", "BloombergLP");
   }
+
+  if (RD.hasAttr<AnalyzeAsClassAttr>())
+    return true;
 
   return false;
 }
@@ -226,6 +259,16 @@ AST_MATCHER(CXXOperatorCallExpr, hasOptionalOperatorObjectType) {
   return hasReceiverTypeDesugaringToOptional(Node.getArg(0));
 }
 
+AST_MATCHER_P(NamedDecl, hasAnalyzeAsMethodName, std::string, MethodName) {
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(&Node)) {
+    if (const auto *Attr = MD->getAttr<AnalyzeAsMethodAttr>()) {
+      StringRef AttrValue = Attr->getMethodName();
+      return AttrValue == MethodName;
+    }
+  }
+  return false;
+}
+
 auto isOptionalMemberCallWithNameMatcher(
     ast_matchers::internal::Matcher<NamedDecl> matcher,
     const std::optional<StatementMatcher> &Ignorable = std::nullopt) {
@@ -340,7 +383,7 @@ auto isValueOrStringEmptyCall() {
       callee(cxxMethodDecl(hasName("empty"))),
       onImplicitObjectArgument(ignoringImplicit(
           cxxMemberCallExpr(on(expr(unless(cxxThisExpr()))),
-                            callee(cxxMethodDecl(hasName("value_or"),
+                            callee(cxxMethodDecl(anyOf(hasName("value_or"), hasAnalyzeAsMethodName("value_or")),
                                                  ofClass(optionalClass()))),
                             hasArgument(0, stringLiteral(hasSize(0))))
               .bind(ValueOrCallID))));
@@ -978,8 +1021,9 @@ ignorableOptional(const UncheckedOptionalAccessModelOptions &Options) {
 
 StatementMatcher
 valueCall(const std::optional<StatementMatcher> &IgnorableOptional) {
-  return isOptionalMemberCallWithNameMatcher(hasName("value"),
-                                             IgnorableOptional);
+  return isOptionalMemberCallWithNameMatcher(
+      anyOf(hasName("value"), hasAnalyzeAsMethodName("value")),
+      IgnorableOptional);
 }
 
 StatementMatcher
@@ -996,6 +1040,34 @@ auto buildTransferMatchSwitch() {
       // make_optional
       .CaseOfCFGStmt<CallExpr>(isMakeOptionalCall(), transferMakeOptionalCall)
 
+      .CaseOfCFGStmt<CXXConstructExpr>(
+          cxxConstructExpr(hasDeclaration(cxxConstructorDecl(hasAttr(attr::EngagedTrait)))),
+          [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            constructOptionalValue(*E, State.Env,
+                                   State.Env.getBoolLiteralValue(true));
+          })
+      .CaseOfCFGStmt<CXXConstructExpr>(
+          cxxConstructExpr(hasDeclaration(cxxConstructorDecl(hasAttr(attr::DisengagedTrait)))),
+          [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            constructOptionalValue(*E, State.Env,
+                                   State.Env.getBoolLiteralValue(false));
+          })
+
+      .CaseOfCFGStmt<CXXOperatorCallExpr>( // for e.g. opt<T> = T - always engaged
+          cxxOperatorCallExpr(callee(cxxMethodDecl(hasAttr(attr::EngagedTrait)))),
+          [](const CXXOperatorCallExpr *E, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+                          transferAssignment(E,
+                                   State.Env.getBoolLiteralValue(true), State);
+             })
+
+      .CaseOfCFGStmt<CXXOperatorCallExpr>( // for e.g. opt<T> = null
+          cxxOperatorCallExpr(callee(cxxMethodDecl(hasAttr(attr::DisengagedTrait)))),
+                          transferNulloptAssignment
+             )
+
       // optional::optional (in place)
       .CaseOfCFGStmt<CXXConstructExpr>(
           isOptionalInPlaceConstructor(),
@@ -1004,6 +1076,7 @@ auto buildTransferMatchSwitch() {
             constructOptionalValue(*E, State.Env,
                                    State.Env.getBoolLiteralValue(true));
           })
+
       // optional::optional(nullopt_t)
       .CaseOfCFGStmt<CXXConstructExpr>(
           isOptionalNulloptConstructor(),
@@ -1012,11 +1085,12 @@ auto buildTransferMatchSwitch() {
             constructOptionalValue(*E, State.Env,
                                    State.Env.getBoolLiteralValue(false));
           })
+
       // optional::optional (value/conversion)
       .CaseOfCFGStmt<CXXConstructExpr>(isOptionalValueOrConversionConstructor(),
                                        transferValueOrConversionConstructor)
 
-      // optional::operator=
+      // optional::operator= // for e.g. opt<T> = other_opt<T> - need to check engagement
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
           isOptionalValueOrConversionAssignment(),
           transferValueOrConversionAssignment)
@@ -1050,9 +1124,12 @@ auto buildTransferMatchSwitch() {
       // optional::has_value, optional::hasValue
       // Of the supported optionals only folly::Optional uses hasValue, but this
       // will also pass for other types
+      // "hasValue" could be removed if folly::Optional used
+      // [[clang::analyze_as_method("has_value")]] on hasValue()
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(
-              hasAnyName("has_value", "hasValue")),
+              anyOf(hasAnyName("has_value", "hasValue"),
+              hasAnalyzeAsMethodName("has_value"))),
           transferOptionalHasValueCall)
 
       // optional::operator bool
@@ -1060,12 +1137,16 @@ auto buildTransferMatchSwitch() {
           isOptionalMemberCallWithNameMatcher(hasName("operator bool")),
           transferOptionalHasValueCall)
 
+      // this code could be removed if NullableValue used
+      // [[clang::analyze_as_inverse_method("std::optional::has_value")]] on isNull() *NYI
       // NullableValue::isNull
       // Only NullableValue has isNull
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(hasName("isNull")),
           transferOptionalIsNullCall)
 
+      // this code could be removed if NullableValue used
+      // [[clang::analyze_as_method("emplace")]] on makeValue() and makeValueInplace()
       // NullableValue::makeValue, NullableValue::makeValueInplace
       // Only NullableValue has these methods, but this
       // will also pass for other types
@@ -1082,7 +1163,7 @@ auto buildTransferMatchSwitch() {
 
       // optional::emplace
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(hasName("emplace")),
+          isOptionalMemberCallWithNameMatcher(anyOf(hasName("emplace"), hasAnalyzeAsMethodName("emplace"))),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
@@ -1093,7 +1174,7 @@ auto buildTransferMatchSwitch() {
 
       // optional::reset
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(hasName("reset")),
+          isOptionalMemberCallWithNameMatcher(anyOf(hasName("reset"), hasAnalyzeAsMethodName("reset"))),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
@@ -1105,7 +1186,7 @@ auto buildTransferMatchSwitch() {
 
       // optional::swap
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithNameMatcher(hasName("swap")),
+          isOptionalMemberCallWithNameMatcher(anyOf(hasName("swap"), hasAnalyzeAsMethodName("swap"))),
           transferSwapCall)
 
       // std::swap
@@ -1258,7 +1339,11 @@ auto buildDiagnoseMatchSwitch(
               [](const CallExpr *E, const MatchFinder::MatchResult &,
                  const Environment &Env) {
                 return diagnoseUnwrapCall(E->getArg(0), Env);
-              });
+              })
+          .CaseOfCFGStmt<CXXMemberCallExpr>(
+            (cxxMemberCallExpr(callee(cxxMethodDecl(hasAttr(attr::AssumeEngagedTrait))))),
+            [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &, const Environment &Env)
+            {return diagnoseUnwrapCall(E->getImplicitObjectArgument(), Env);});
 
   auto Builder = Options.IgnoreValueCalls
                      ? std::move(DiagBuilder)
@@ -1298,12 +1383,16 @@ UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(ASTContext &Ctx,
         if (isAssertionResultType(Ty))
           return {{"success", Ctx.BoolTy}};
 
-        const CXXRecordDecl *Optional =
-            getOptionalBaseClass(Ty->getAsCXXRecordDecl());
-        if (Optional == nullptr)
+        const CXXRecordDecl *Optional = getOptionalBaseClass(Ty->getAsCXXRecordDecl());
+        if(Optional != nullptr)
+          return {{"value", valueTypeFromOptionalDecl(*Optional)},
+                  {"has_value", Ctx.BoolTy}};
+
+        if(hasAnyBehaviouralRole(Ty->getAsCXXRecordDecl()))
+          return{{"has_value", Ctx.BoolTy}};
+
           return {};
-        return {{"value", valueTypeFromOptionalDecl(*Optional)},
-                {"has_value", Ctx.BoolTy}};
+
       });
 }
 
