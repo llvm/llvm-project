@@ -1025,12 +1025,9 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
   RegSubRegPair CurSrcPair = RegSubReg;
   SmallVector<RegSubRegPair, 4> SrcToLook = {CurSrcPair};
 
-  LLVM_DEBUG(dbgs() << "EXPenter reg="
-                    << printReg(RegSubReg.Reg, TRI, RegSubReg.SubReg) << "\n");
   unsigned PHICount = 0;
-  // EXPERIMENT: remember the last suitable source so we can keep tracing past
-  // it (through REG_SEQUENCE, etc.) and still fall back if the deeper trace
-  // dead-ends.
+  // Remember the last suitable source so we can keep tracing past it (through
+  // REG_SEQUENCE, etc.) and still fall back if the deeper trace dead-ends.
   bool FoundSuitable = false;
   RegSubRegPair SuitablePair = RegSubReg;
   // Fall back to the last suitable (sub)register source we remembered while
@@ -1061,13 +1058,9 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       ValueTrackerResult Res = ValTracker.getNextSource();
       // Abort at the end of a chain (without finding a suitable source).
       if (!Res.isValid()) {
-        // EXPERIMENT: if we already passed a suitable source while trying to
-        // reach a deeper one, fall back to it instead of aborting.
+        // If we already passed a suitable source while trying to reach a deeper
+        // one, fall back to it instead of aborting.
         if (FoundSuitable) {
-          LLVM_DEBUG(dbgs()
-                     << "EXP fallback "
-                     << printReg(SuitablePair.Reg, TRI, SuitablePair.SubReg)
-                     << " (orig " << printReg(Reg, TRI) << ")\n");
           FallBackToSuitable();
           break;
         }
@@ -1138,22 +1131,16 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       if (PHICount > 0 && CurSrcPair.SubReg != 0)
         continue;
 
-      // EXPERIMENT: don't stop at the first suitable source if it is still a
-      // subregister; keep tracing to try to reach a deeper source. Remember it
-      // as a fallback.
+      // Don't stop at the first suitable source if it is still a subregister;
+      // keep tracing to try to reach a deeper source. Remember it as a
+      // fallback.
       if (CurSrcPair.SubReg != 0) {
-        LLVM_DEBUG(dbgs() << "EXP continue "
-                          << printReg(CurSrcPair.Reg, TRI, CurSrcPair.SubReg)
-                          << " (orig " << printReg(Reg, TRI) << ")\n");
         SuitablePair = CurSrcPair;
         FoundSuitable = true;
         continue;
       }
 
       // We found a suitable source, and are done with this chain.
-      LLVM_DEBUG(dbgs() << "EXP final "
-                        << printReg(CurSrcPair.Reg, TRI, CurSrcPair.SubReg)
-                        << " (orig " << printReg(Reg, TRI) << ")\n");
       break;
     }
   } while (!SrcToLook.empty());
