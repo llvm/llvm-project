@@ -32,6 +32,38 @@ define amdgpu_kernel void @dbg_clause(ptr addrspace(1) %out, ptr addrspace(1) %a
   ret void
 }
 
+; Confirm that bundles are still reordered by use order even with debug info.
+
+define amdgpu_kernel void @dbg_clause_reorder(ptr addrspace(1) %out, ptr addrspace(1) %aptr) !dbg !12 {
+; GCN-LABEL: dbg_clause_reorder:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_load_dword v1, v0, s[2:3] offset:32
+; GCN-NEXT:    ;DEBUG_VALUE: foo:b <- $vgpr1
+; GCN-NEXT:    global_load_dword v2, v0, s[2:3]
+; GCN-NEXT:    ;DEBUG_VALUE: foo:a <- $vgpr2
+; GCN-NEXT:    s_waitcnt vmcnt(1)
+; GCN-NEXT:    v_add_f32_e32 v1, 2.0, v1
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_add_f32_e32 v1, v1, v2
+; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    s_endpgm
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %gep1 = getelementptr float, ptr addrspace(1) %gep0, i32 8
+  %a = load float, ptr addrspace(1) %gep0, align 4
+  call void @llvm.dbg.value(metadata float %a, metadata !8, metadata !DIExpression()), !dbg !9
+  %b = load float, ptr addrspace(1) %gep1, align 4
+  call void @llvm.dbg.value(metadata float %b, metadata !10, metadata !DIExpression()), !dbg !11
+  %fadd.0 = fadd float %b, 2.0
+  %fadd.1 = fadd float %fadd.0, %a
+  store float %fadd.1, ptr addrspace(1) %out.gep, align 4
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
@@ -53,3 +85,4 @@ attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 !9 = !DILocation(line: 1, column: 42, scope: !4)
 !10 = !DILocalVariable(name: "b", arg: 2, scope: !4, file: !1, line: 2)
 !11 = !DILocation(line: 2, column: 42, scope: !4)
+!12 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5, scopeLine: 2, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)

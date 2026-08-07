@@ -2609,6 +2609,15 @@ fn -> other_fn -> other_fn ; fn is norecurse
     patchable function entry area when such a section is emitted.  If omitted,
     the default section name is `__patchable_function_entries`.
 
+`"tail-pad-to-size"`
+:   This attribute specifies a minimum size in bytes for functions. Smaller
+    functions will be padded up to this size with fill bytes inserted at the
+    end. See `tail-pad-value` for padding value.
+
+`"tail-pad-value"`
+:   This attribute specifies a byte value to use for `tail-pad-to-size` fill,
+    with default of 0 if this attribute is absent.
+
 `"probe-stack"`
 :   This attribute indicates that the function will trigger a guard region
     in the end of the stack. It ensures that accesses to the stack must be
@@ -2800,8 +2809,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
     optimizations that require assumptions about the floating-point rounding
     mode or that might alter the state of floating-point status flags that
     might otherwise be set or cleared by calling this function. LLVM will
-    not introduce any new floating-point instructions that may trap. All
-    function definitions that contain strictfp calls must be marked strictfp.
+    not introduce any new floating-point instructions that may trap.
 
 (denormal_fpenv)=
 
@@ -8067,18 +8075,15 @@ node has a single operand containing the name string:
 !1 = !{!"llvm.loop.vectorize.disable"}
 ```
 
-#### '`llvm.loop.vectorize.predicate.enable`' Metadata
+#### '`llvm.loop.vectorize.predicate.enable`' and '`llvm.loop.vectorize.predicate.disable`' Metadata
 
 This metadata selectively enables or disables creating predicated instructions
 for the loop, which can enable folding of the scalar epilogue loop into the
-main loop. The first operand is the string
-`llvm.loop.vectorize.predicate.enable` and the second operand is a bit. If
-the bit operand value is 1 predication is enabled. A value of 0 disables
-predication:
+main loop. Each node has a single operand containing the name string:
 
 ```llvm
-!0 = !{!"llvm.loop.vectorize.predicate.enable", i1 0}
-!1 = !{!"llvm.loop.vectorize.predicate.enable", i1 1}
+!0 = !{!"llvm.loop.vectorize.predicate.enable"}
+!1 = !{!"llvm.loop.vectorize.predicate.disable"}
 ```
 
 Additionally, enabling predication implicitly enables vectorization.
@@ -26740,6 +26745,9 @@ All function *calls* done in a function that uses constrained floating
 point intrinsics must have the `strictfp` attribute either on the
 calling instruction or on the declaration or definition of the function
 being called.
+
+All function *definitions* that use constrained floating point intrinsics
+must have the `strictfp` attribute.
 
 #### '`llvm.experimental.constrained.fadd`' Intrinsic
 
