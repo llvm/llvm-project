@@ -177,10 +177,6 @@ public:
     return hasTensormapReplaceSupport();
   }
 
-  bool hasConvertWithPZOSupport() const {
-    return hasPTXWithFamilySMs(94, {107});
-  }
-
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
   // terminates a basic block. Instead, it would assume that control flow
   // continued to the next instruction. The next instruction could be in the
