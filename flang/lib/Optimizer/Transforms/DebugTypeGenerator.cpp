@@ -682,10 +682,17 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
   // type of the underlying character. This restricts out ability to represent
   // string with non-default characters. Please see issue #95440 for more
   // details.
+  unsigned charBitSize = kindMapping.getCharacterBitsize(charTy.getFKind());
+  mlir::LLVM::DITypeAttr charTypeAttr = genBasicType(
+      context,
+      mlir::StringAttr::get(
+          context, "character(kind=" + llvm::Twine(charTy.getFKind()) + ")"),
+      charBitSize, encoding);
+
   return mlir::LLVM::DIStringTypeAttr::get(
       context, llvm::dwarf::DW_TAG_string_type,
       mlir::StringAttr::get(context, ""), sizeInBits, /*alignInBits=*/0,
-      /*stringLength=*/varAttr, lenExpr, locExpr, encoding);
+      /*stringLength=*/varAttr, lenExpr, locExpr, encoding, charTypeAttr);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(

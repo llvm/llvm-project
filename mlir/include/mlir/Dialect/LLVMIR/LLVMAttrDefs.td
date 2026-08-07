@@ -994,7 +994,8 @@ def LLVM_DIStringTypeAttr : LLVM_Attr<"DIStringType", "di_string_type",
     OptionalParameter<"DIVariableAttr">:$stringLength,
     OptionalParameter<"DIExpressionAttr">:$stringLengthExp,
     OptionalParameter<"DIExpressionAttr">:$stringLocationExp,
-    LLVM_DIEncodingParameter:$encoding
+    LLVM_DIEncodingParameter:$encoding,
+    OptionalParameter<"DITypeAttr">:$charType
   );
   let assemblyFormat = "`<` struct(params) `>`";
 
