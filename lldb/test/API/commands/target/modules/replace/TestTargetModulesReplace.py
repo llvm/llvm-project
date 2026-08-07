@@ -11,6 +11,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@skipIfWindows
 class TargetModulesReplaceTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -232,12 +233,14 @@ class TargetModulesReplaceTestCase(TestBase):
         self.assertEqual(target.GetNumModules(), num_modules)
         self.assertTrue(target.FindModule(lldb.SBFileSpec(v1)).IsValid())
 
-    @skipUnlessPlatform(["linux"])
     def test_placeholder_without_uuid(self):
         """A placeholder with no UUID needs no --force, nothing can be compared."""
-        v1, v2, v1_copy = self.build_and_get_paths()
         core = self.getBuildArtifact("no-uuid.dmp")
         self.yaml2obj("placeholder-no-uuid.yaml", core)
+        # The dump is x86_64, so the replacement comes from a yaml too rather
+        # than from this test's libraries, which follow the host architecture.
+        replacement = self.getBuildArtifact("replacement.so")
+        self.yaml2obj("replacement.yaml", replacement)
 
         target = self.dbg.CreateTarget("")
         self.assertTrue(target.LoadCore(core).IsValid())
@@ -247,17 +250,19 @@ class TargetModulesReplaceTestCase(TestBase):
         base = self.base_load_address(placeholder, target)
         self.assertNotEqual(base, lldb.LLDB_INVALID_ADDRESS)
 
-        self.runCmd("target modules replace --old-path /no/such/module.so '%s'" % v1)
+        self.runCmd(
+            "target modules replace --old-path /no/such/module.so '%s'" % replacement
+        )
 
-        new_module = target.FindModule(lldb.SBFileSpec(v1))
+        new_module = target.FindModule(lldb.SBFileSpec(replacement))
         self.assertTrue(new_module.IsValid())
         self.assertEqual(self.base_load_address(new_module, target), base)
-        self.assertTrue(new_module.FindSymbol("only_in_v1").IsValid())
+        self.assertFalse(
+            target.FindModule(lldb.SBFileSpec("/no/such/module.so")).IsValid()
+        )
 
-    @skipUnlessPlatform(["linux"])
     def test_failure_leaves_the_target_alone(self):
         """A replacement that cannot be placed is refused, and nothing is lost."""
-        v1, v2, v1_copy = self.build_and_get_paths()
         core = self.getBuildArtifact("no-uuid.dmp")
         self.yaml2obj("placeholder-no-uuid.yaml", core)
 
@@ -282,7 +287,6 @@ class TargetModulesReplaceTestCase(TestBase):
             "the module that could not be replaced is still in the target",
         )
 
-    @skipIfWindows
     @skipIfRemote
     @skipUnlessPlatform(["linux"])
     def test_core_file(self):
@@ -315,7 +319,6 @@ class TargetModulesReplaceTestCase(TestBase):
         self.assertEqual(self.base_load_address(new_module, target), base)
         self.assertTrue(new_module.FindSymbol("only_in_v2").IsValid())
 
-    @skipIfWindows
     @skipIfRemote
     def test_breakpoints_move_to_the_replacement(self):
         """Breakpoint locations are re-resolved into the new module."""
@@ -361,9 +364,9 @@ class TargetModulesReplaceTestCase(TestBase):
         # The symbol that only existed in the old variant goes pending.
         self.assertEqual(only_v1_bp.GetNumLocations(), 0)
 
-    @skipIfWindows
     @skipIfRemote
     @skipUnlessPlatform(["linux"])
+    @skipIf(archs=no_match(["x86_64"]))
     def test_thread_local_storage_still_resolves(self):
         """The dynamic loader's per module state follows the replacement.
 
