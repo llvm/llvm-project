@@ -33,7 +33,7 @@ public:
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   uint8_t *Data, uint64_t Value, bool IsResolved) override;
-  bool addReloc(const MCFragment &F, const MCFixup &Fixup,
+  bool tryAddReloc(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target, uint64_t &FixedValue,
                                bool IsResolved);
 	

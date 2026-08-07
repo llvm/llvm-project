@@ -11,6 +11,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
@@ -40,12 +41,17 @@ namespace llvm {
 unsigned SuperHELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                             const MCValue &Target,
                                             bool IsPCRel) const {
-  return ELF::R_SH_NONE;
+  auto Kind = Fixup.getKind();
+  uint8_t Specifier = Target.getSpecifier();
+  if (Kind == FK_Data_4 || Kind == FK_Data_2)
+    return ELF::R_SH_NONE;
+
+  return Specifier;
 }
 
 bool SuperHELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
                                                    unsigned Type) const {
-  return false;
+  return true;
 }
 
 std::unique_ptr<MCObjectTargetWriter>
