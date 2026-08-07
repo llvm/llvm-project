@@ -4,6 +4,10 @@
 // dependencies on the youngest producer (in-order pipe retirement covers the
 // rest), token assignment on sends, and sync.allrd as the load-consumer
 // barrier. Conservative by design; the real SWSB pass replaces this in M4.
+//
+// Control flow: exec_if/uniform_if lower to the predicated-goto + join
+// pattern IGC emits (see the reference disasms in inter/docs). Labels are
+// L1, L2, ... in emission order.
 
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
 
@@ -21,9 +25,9 @@ struct Emitter {
   llvm::raw_ostream &os;
   DenseMap<Value, Operation *> defOp;
   DenseMap<Operation *, int> insnIndex; // emitted instructions only
-  DenseMap<Value, int> immValue;
   int nextInsn = 0;
   int nextToken = 0;
+  int nextLabel = 1;
 
   StringRef typeSuffix(Type ty) {
     if (ty.isInteger(16))
@@ -47,27 +51,20 @@ struct Emitter {
     return ss.str();
   }
 
+  std::string arfRef(ARFType t, int sub) {
+    std::string s;
+    llvm::raw_string_ostream ss(s);
+    ss << stringifyARFFile(t.getFile()) << t.getIndex() << "." << sub;
+    return ss.str();
+  }
+
   std::string operandRef(Value v, int sub, Type elemTy) {
     if (auto imm = v.getDefiningOp<ImmOp>())
       return (llvm::Twine("0x") + llvm::Twine::utohexstr(imm.getValue()) + ":" +
               typeSuffix(imm.getElemType()))
           .str();
-    if (auto ar = v.getDefiningOp<ArchRegOp>())
-      return regRef(v.getType(), sub, elemTy);
-    if (auto af = v.getDefiningOp<ArfRegOp>()) {
-      auto t = cast<ARFType>(v.getType());
-      std::string s;
-      llvm::raw_string_ostream ss(s);
-      ss << stringifyARFFile(t.getFile()) << t.getIndex() << "." << sub;
-      return ss.str();
-    }
-    if (auto mul = v.getDefiningOp<MulOp>()) {
-      auto t = cast<ARFType>(v.getType());
-      std::string s;
-      llvm::raw_string_ostream ss(s);
-      ss << stringifyARFFile(t.getFile()) << t.getIndex() << "." << sub;
-      return ss.str();
-    }
+    if (isa<ARFType>(v.getType()))
+      return arfRef(cast<ARFType>(v.getType()), sub);
     return regRef(v.getType(), sub, elemTy);
   }
 
@@ -83,99 +80,125 @@ struct Emitter {
     return fallback;
   }
 
-  Attribute getAttrOrNull(Operation *op, StringRef name) {
-    return op->getAttr(name);
-  }
-
-  std::string swsbForAlu(Operation *op, ValueRange operands) {
+  // Distance to the youngest in-pipe producer among operands, if any.
+  int youngestProducerDist(Operation *op, ValueRange operands) {
     int youngest = -1;
     for (Value v : operands) {
-      Operation *def = defOp.lookup(v);
-      if (!def)
-        continue;
-      if (isa<SendOp>(def))
-        continue; // covered by sync.allrd placement
-      auto it = insnIndex.find(def);
-      if (it == insnIndex.end())
-        continue;
-      int d = insnIndex[op] - it->second;
-      if (d >= 1 && d <= 15)
-        youngest = youngest < 0 ? d : std::min(youngest, d);
-    }
-    if (youngest < 0)
-      return "";
-    return (llvm::Twine("{I@") + llvm::Twine(youngest) + "}").str();
-  }
-
-  void emit() {}
-
-  void emitFunc(func::FuncOp func) {
-    os << "L0:\n";
-    Block &blk = func.getBody().front();
-    // First pass: def indices for distance computation.
-    for (Operation &op : blk) {
-      if (isa<ImmOp, ArchRegOp, ArfRegOp>(op))
-        continue;
-      for (Value r : op.getResults())
-        defOp[r] = &op;
-    }
-    for (Operation &op : blk) {
-      if (isa<ImmOp, ArchRegOp, ArfRegOp>(op))
-        continue;
-      insnIndex[&op] = nextInsn++;
-      emitOp(&op);
-    }
-  }
-
-  void emitOp(Operation *op) {
-    if (auto sync = dyn_cast<SyncOp>(op)) {
-      os << "        sync." << stringifySyncKind(sync.getKind()) << " null\n";
-      return;
-    }
-    if (auto send = dyn_cast<SendOp>(op))
-      return emitSend(send);
-    if (auto ret = dyn_cast<func::ReturnOp>(op))
-      return;
-    emitAlu(op);
-  }
-
-  void emitSend(SendOp send) {
-    int token = nextToken++;
-    std::string annot;
-    if (send.getEot())
-      annot = "{EOT,$" + std::to_string(token) + "}";
-    else
-      annot = "{$" + std::to_string(token) + "}";
-
-    // Distance dependency for ALU-produced payloads (address/data).
-    int youngest = -1;
-    for (Value v : send.getOperands()) {
       Operation *def = defOp.lookup(v);
       if (!def || isa<SendOp>(def))
         continue;
       auto it = insnIndex.find(def);
-      if (it != insnIndex.end()) {
-        int d = insnIndex[send] - it->second;
-        if (d >= 1 && d <= 15)
-          youngest = youngest < 0 ? d : std::min(youngest, d);
-      }
+      if (it == insnIndex.end())
+        continue; // defined later in text order; should not happen pre-RA
+      int d = insnIndex[op] - it->second;
+      if (d >= 1 && d <= 15)
+        youngest = youngest < 0 ? d : std::min(youngest, d);
     }
-    if (youngest >= 0) {
-      std::string dep = (send.getEot() ? "I@" : "A@") + std::to_string(youngest);
-      annot = "{" + dep + ",$" + std::to_string(token) + "}";
-      if (send.getEot())
-        annot = "{EOT," + dep + ",$" + std::to_string(token) + "}";
+    return youngest;
+  }
+
+  void emitFunc(func::FuncOp func) {
+    os << "L0:\n";
+    func.walk([&](Operation *op) {
+      if (isa<ImmOp, ArchRegOp, ArfRegOp>(op))
+        return;
+      for (Value r : op->getResults())
+        defOp[r] = op;
+    });
+    emitBlock(func.getBody().front());
+  }
+
+  void emitBlock(Block &blk) {
+    for (Operation &op : blk) {
+      if (isa<ImmOp, ArchRegOp, ArfRegOp>(op))
+        continue;
+      if (isa<YieldOp>(op))
+        continue; // structural; merge movs carry the data
+      insnIndex[&op] = nextInsn++;
+      if (auto send = dyn_cast<SendOp>(&op))
+        emitSend(send);
+      else if (auto sync = dyn_cast<SyncOp>(&op))
+        os << "        sync." << stringifySyncKind(sync.getKind()) << " null\n";
+      else if (auto cmp = dyn_cast<CmpOp>(&op))
+        emitCmp(cmp);
+      else if (auto ifOp = dyn_cast<ExecIfOp>(&op))
+        emitIf(ifOp.getOperation());
+      else if (auto ifOp = dyn_cast<UniformIfOp>(&op))
+        emitIf(ifOp.getOperation());
+      else if (isa<func::ReturnOp>(&op))
+        continue;
+      else
+        emitAlu(&op);
     }
+  }
+
+  std::string label(int n) { return "L" + std::to_string(n); }
+
+  void emitGoto(StringRef pred, int jip, int uip) {
+    insnIndex[nullptr] = nextInsn; // control instructions occupy slots
+    os << "        ";
+    if (!pred.empty())
+      os << "(" << pred << ") ";
+    os << "goto (32|M0)  " << label(jip) << "  " << label(uip) << "\n";
+    ++nextInsn;
+  }
+
+  void emitJoin(int self, int uip) {
+    os << label(self) << ":\n";
+    os << "        join (32|M0)  " << label(uip) << "\n";
+    ++nextInsn;
+  }
+
+  // exec_if/uniform_if -> the predicated-goto + join diamond. Matches the
+  // IGC-emitted pattern:
+  //   (~f) goto L1 L1 ; then ; goto L1 L2 ; L1: join L2 ; else ; L2: join L3
+  void emitIf(Operation *ifOp) {
+    Value cond = ifOp->getOperand(0);
+    std::string flag = "~" + arfRef(cast<ARFType>(cond.getType()), 0);
+
+    int l1 = nextLabel++, l2 = nextLabel++, l3 = nextLabel++;
+    emitGoto(flag, l1, l1);
+    if (auto ifo = dyn_cast<ExecIfOp>(ifOp))
+      emitBlock(ifo.getThenRegion().front());
+    else
+      emitBlock(cast<UniformIfOp>(ifOp).getThenRegion().front());
+    emitGoto("", l1, l2);
+    emitJoin(l1, l2);
+    if (auto ifo = dyn_cast<ExecIfOp>(ifOp)) {
+      if (!ifo.getElseRegion().empty())
+        emitBlock(ifo.getElseRegion().front());
+    } else {
+      auto uifo = cast<UniformIfOp>(ifOp);
+      if (!uifo.getElseRegion().empty())
+        emitBlock(uifo.getElseRegion().front());
+    }
+    emitJoin(l2, l3);
+    os << label(l3) << ":\n";
+  }
+
+  void emitSend(SendOp send) {
+    int token = nextToken++;
+    int d = youngestProducerDist(send, send.getOperands());
+
+    std::string annot;
+    if (send.getEot())
+      annot = d >= 0 ? "{EOT,I@" + std::to_string(d) + ",$" +
+                           std::to_string(token) + "}"
+                     : "{EOT,$" + std::to_string(token) + "}";
+    else if (d >= 0)
+      annot = "{A@" + std::to_string(d) + ",$" + std::to_string(token) + "}";
+    else
+      annot = "{$" + std::to_string(token) + "}";
 
     os << (send.getNoMask() ? "(W)     " : "        ");
     os << "send." << stringifySendFn(send.getFn()) << " (" << send.getExecSize()
-       << "|M0) ";
-    // dst
+       << "|M0)  ";
     auto dstTy = cast<RegType>(send.getDst().getType());
-    os << (dstTy.getWidthDwords() == 0 ? "null" : regRef(dstTy, 0, i32Ty()));
-    os << "  ";
-    os << regRef(cast<RegType>(send.getAddrPayload().getType()), 0, i32Ty());
-    os << "  ";
+    os << (dstTy.getWidthDwords() == 0 ? "null"
+                                       : regRef(dstTy, 0, i32Ty()));
+    os << "  " << regRef(cast<RegType>(send.getAddrPayload().getType()), 0,
+                          i32Ty())
+       << "  ";
     if (Value data = send.getDataPayload()) {
       auto dt = cast<RegType>(data.getType());
       std::string ref = regRef(dt, 0, i32Ty());
@@ -190,12 +213,36 @@ struct Emitter {
        << "\n";
   }
 
+  void emitCmp(CmpOp cmp) {
+    std::string annot;
+    int d = youngestProducerDist(cmp, cmp.getOperands());
+    if (d >= 0)
+      annot = "{I@" + std::to_string(d) + "}";
+    os << "        cmp (" << cmp.getExecSize() << "|M0)  ("
+       << stringifyCondModifier(cmp.getCond()) << ")"
+       << arfRef(cast<ARFType>(cmp.getFlag().getType()), 0) << "   null<1>:"
+       << typeSuffix(cmp.getElemType()) << "  ";
+    for (auto [i, v] : llvm::enumerate(cmp.getOperands())) {
+      std::string reg = "<1;1,0>";
+      StringRef rn = i == 0 ? "src0Region" : "src1Region";
+      if (auto r = cmp->getAttrOfType<RegionAttr>(rn))
+        reg = "<" + std::to_string(r.getVstride()) + ";" +
+              std::to_string(r.getWidth()) + "," +
+              std::to_string(r.getHstride()) + ">";
+      Type st = getSrcType(cmp, i == 0 ? "src0Type" : "src1Type",
+                           cmp.getElemType());
+      os << operandRef(v, getSub(cmp, i == 0 ? "src0Sub" : "src1Sub"), st);
+      if (!isa<ImmOp>(v.getDefiningOp()))
+        os << reg << ":" << typeSuffix(st);
+      os << "  ";
+    }
+    os << annot << "\n";
+  }
+
   Type i32Ty() { return IntegerType::get(ctx, 32); }
 
   void emitAlu(Operation *op) {
-    StringRef name = op->getName().getStringRef();
-    // strip dialect prefix
-    name = name.split('.').second;
+    StringRef name = op->getName().getStringRef().split('.').second;
     int execSize = 16;
     if (auto a = op->getAttrOfType<IntegerAttr>("execSize"))
       execSize = a.getInt();
@@ -208,25 +255,16 @@ struct Emitter {
     os << (noMask ? "(W)     " : "        ");
     os << name << " (" << execSize << "|M" << maskOffset << ")  ";
 
-    // dst
     Value dst = op->getResult(0);
     Type dstTy = dst.getType();
-    std::string dstRef;
-    if (isa<ARFType>(dstTy)) {
-      auto t = cast<ARFType>(dstTy);
-      dstRef = (llvm::Twine(stringifyARFFile(t.getFile())) +
-                llvm::Twine(t.getIndex()) + "." + llvm::Twine(0))
-                   .str();
-    } else {
-      dstRef = regRef(dstTy, getSub(op, "dstSub"), elemTy);
-    }
+    std::string dstRef = isa<ARFType>(dstTy)
+                             ? arfRef(cast<ARFType>(dstTy), 0)
+                             : regRef(dstTy, getSub(op, "dstSub"), elemTy);
     std::string dstReg = "<1>";
     if (auto r = op->getAttrOfType<DstRegionAttr>("dstRegion"))
       dstReg = "<" + std::to_string(r.getHstride()) + ">";
     os << dstRef << dstReg << ":" << typeSuffix(elemTy) << "  ";
 
-    // srcs
-    std::string annot = swsbForAlu(op, op->getOperands());
     for (auto [i, v] : llvm::enumerate(op->getOperands())) {
       std::string rn = "src" + std::to_string(i) + "Region";
       std::string sn = "src" + std::to_string(i) + "Sub";
@@ -242,7 +280,10 @@ struct Emitter {
         os << reg << ":" << typeSuffix(st);
       os << "  ";
     }
-    os << annot << "\n";
+    int d = youngestProducerDist(op, op->getOperands());
+    if (d >= 0)
+      os << "{I@" << d << "}";
+    os << "\n";
   }
 };
 

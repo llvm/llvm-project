@@ -10,8 +10,13 @@
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 
+namespace mlir { std::unique_ptr<Pass> createLiftControlFlowToSCFPass(); }
+
 int main(int argc, char **argv) {
   inter::registerInterPasses();
+  mlir::registerPass([]() -> std::unique_ptr<mlir::Pass> {
+    return mlir::createLiftControlFlowToSCFPass();
+  });
   mlir::DialectRegistry registry;
   registry.insert<inter::xemachine::XeMachineDialect, mlir::func::FuncDialect,
                   mlir::scf::SCFDialect, mlir::arith::ArithDialect,

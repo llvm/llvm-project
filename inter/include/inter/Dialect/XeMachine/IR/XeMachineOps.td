@@ -206,6 +206,25 @@ def XeMachine_MulOp : XeMachine_ALUOp<"mul"> {
       "$src0 `,` $src1 attr-dict `:` `(` qualified(type($src0)) `,` qualified(type($src1)) `,` $elemType `)` `->` qualified(type($dst))";
 }
 
+// Compare: writes a flag register, no GRF destination.
+// cmp (exec|M0) (gt)f0.0 null<1>:ud src0 src1
+def XeMachine_CmpOp : XeMachine_Op<"cmp", [NoMemoryEffect]> {
+  let summary = "compare into a flag register";
+  let arguments = (ins XeMachine_CondModifier:$cond,
+                       TypeAttr:$elemType,
+                       DefaultValuedAttr<I32Attr, "16">:$execSize,
+                       OptionalAttr<XeMachine_RegionAttr>:$src0Region,
+                       OptionalAttr<XeMachine_RegionAttr>:$src1Region,
+                       OptionalAttr<I32Attr>:$src0Sub,
+                       OptionalAttr<I32Attr>:$src1Sub,
+                       OptionalAttr<TypeAttr>:$src0Type,
+                       OptionalAttr<TypeAttr>:$src1Type,
+                       XeMachine_RegOrImm:$src0, XeMachine_RegOrImm:$src1);
+  let results = (outs XeMachine_ARFType:$flag);
+  let assemblyFormat =
+      "$cond $src0 `,` $src1 attr-dict `:` `(` qualified(type($src0)) `,` qualified(type($src1)) `,` $elemType `)` `->` qualified(type($flag))";
+}
+
 // Architectural register reference (r0 header, r1 inline args). The result
 // carries a fixed physical base; regalloc must not move it.
 def XeMachine_ArchRegOp : XeMachine_Op<"archreg", [NoMemoryEffect]> {

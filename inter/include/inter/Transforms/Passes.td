@@ -11,4 +11,12 @@ def SelectToMachine : Pass<"inter-select-to-machine", "::mlir::ModuleOp"> {
   ];
 }
 
+def NormalizeCf : Pass<"inter-normalize-cf", "::mlir::ModuleOp"> {
+  let summary = "llvm.func -> func.func, llvm branches -> cf branches";
+  let dependentDialects = [
+    "mlir::func::FuncDialect",
+    "mlir::cf::ControlFlowDialect",
+  ];
+}
+
 #endif // INTER_TRANSFORMS_PASSES_TD

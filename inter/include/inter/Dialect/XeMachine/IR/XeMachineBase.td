@@ -75,6 +75,18 @@ def XeMachine_SendFn : I32EnumAttr<"SendFn", "shared function", [
   let cppNamespace = "::inter::xemachine";
 }
 
+// Compare condition modifiers (signedness comes from the operand types).
+def XeMachine_CondModifier : I32EnumAttr<"CondModifier", "compare modifier", [
+    I32EnumAttrCase<"eq", 0>,
+    I32EnumAttrCase<"ne", 1>,
+    I32EnumAttrCase<"lt", 2>,
+    I32EnumAttrCase<"le", 3>,
+    I32EnumAttrCase<"gt", 4>,
+    I32EnumAttrCase<"ge", 5>,
+  ]> {
+  let cppNamespace = "::inter::xemachine";
+}
+
 def XeMachine_SyncKind : I32EnumAttr<"SyncKind", "sync function", [
     I32EnumAttrCase<"nop",   0>,
     I32EnumAttrCase<"allrd", 1>,

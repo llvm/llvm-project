@@ -9,7 +9,7 @@ mkdir -p $OUT/dump
 
 clang-20 -target spir64-unknown-unknown -x cl -emit-llvm -S -o $OUT/vadd.ll inter/vadd.cl
 inter/build/tools/inter-translate/inter-translate $OUT/vadd.ll --import-llvm -o $OUT/vadd.mlir
-inter/build/tools/inter-opt/inter-opt $OUT/vadd.mlir --inter-select-to-machine -o $OUT/vadd.xemachine.mlir
+inter/build/tools/inter-opt/inter-opt $OUT/vadd.mlir --inter-normalize-cf --lift-cf-to-scf --inter-select-to-machine -o $OUT/vadd.xemachine.mlir
 inter/build/tools/inter-translate/inter-translate $OUT/vadd.xemachine.mlir --xemachine-to-iga -o $OUT/vadd.asm
 
 # Assemble via ocloc (needs the dump-dir structure; reuse the reference

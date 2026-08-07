@@ -9,5 +9,6 @@ target_link_libraries(inter-opt PRIVATE
   MLIRControlFlowDialect
   MLIRLLVMDialect
   MLIRDLTIDialect
+  MLIRControlFlowToSCF
 )
 mlir_check_link_libraries(inter-opt)

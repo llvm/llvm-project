@@ -11,6 +11,7 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
@@ -35,9 +36,9 @@ constexpr int kLocalIdLoadOffset = 0x20;
 struct SelectToMachine
     : public inter::impl::SelectToMachineBase<SelectToMachine> {
   void runOnOperation() override {
-    LLVM::LLVMFuncOp kernel;
-    getOperation().walk([&](LLVM::LLVMFuncOp f) {
-      if (!f.isDeclaration() && !kernel)
+    func::FuncOp kernel;
+    getOperation().walk([&](func::FuncOp f) {
+      if (f->hasAttr("xemachine.kernel") && !kernel)
         kernel = f;
     });
     if (!kernel) {
@@ -57,7 +58,7 @@ struct SelectToMachine
   Value tailValue;
   Value byteOffLo, byteOffHi;
   bool prologueEmitted = false;
-  bool dataSyncEmitted = false;
+  bool loadsPending = false;
 
   Type grf(int dwords) {
     int base = nextGRF;
@@ -98,18 +99,29 @@ struct SelectToMachine
         .getDst();
   }
 
-  LogicalResult lowerKernel(LLVM::LLVMFuncOp kernel) {
+  LogicalResult lowerKernel(func::FuncOp kernel) {
     ctx = kernel.getContext();
     loc = kernel.getLoc();
     OpBuilder moduleBuilder(kernel);
     auto func = moduleBuilder.create<func::FuncOp>(
-        kernel.getLoc(), kernel.getName(),
+        kernel.getLoc(), (kernel.getName() + "_xm").str(),
         moduleBuilder.getFunctionType({}, {}));
     func->setAttr("xemachine.target",
                   TargetAttr::get(ctx, moduleBuilder.getStringAttr("bmg")));
     b = OpBuilder::atBlockBegin(func.addEntryBlock());
 
-    for (Operation &op : kernel.getBody().front()) {
+    if (failed(lowerBlock(kernel.getBody().front())))
+      return failure();
+    func::ReturnOp::create(*b, *loc);
+    std::string name = kernel.getName().str();
+    kernel.erase();
+    func.setName(StringAttr::get(ctx, name));
+    return success();
+  }
+
+  // One dispatch step per op; regions recurse.
+  LogicalResult lowerBlock(Block &blk) {
+    for (Operation &op : blk) {
       if (auto call = dyn_cast<LLVM::CallOp>(&op)) {
         auto callee = call.getCallee();
         if (!callee || !callee->starts_with("_Z13get_global_idj"))
@@ -118,8 +130,21 @@ struct SelectToMachine
           return failure();
       } else if (isa<LLVM::AndOp>(&op)) {
         vmap[op.getResult(0)] = gidValue;
+      } else if (auto c = dyn_cast<LLVM::ConstantOp>(&op)) {
+        auto intAttr = dyn_cast<IntegerAttr>(c.getValue());
+        if (!intAttr)
+          return emitError(op.getLoc(), "non-integer constant"), failure();
+        vmap[op.getResult(0)] = imm(intAttr.getValue().getSExtValue(), i32());
       } else if (isa<LLVM::GEPOp>(&op)) {
         continue; // lowered lazily at the memory op
+      } else if (auto icmp = dyn_cast<LLVM::ICmpOp>(&op)) {
+        if (failed(emitCmp(icmp)))
+          return failure();
+      } else if (auto ifOp = dyn_cast<scf::IfOp>(&op)) {
+        if (failed(emitIf(ifOp)))
+          return failure();
+      } else if (isa<scf::YieldOp>(&op)) {
+        continue; // structural; merge movs are injected by emitIf
       } else if (auto load = dyn_cast<LLVM::LoadOp>(&op)) {
         if (failed(emitLoad(cast<LLVM::GEPOp>(load.getAddr().getDefiningOp()),
                             load.getResult())))
@@ -131,12 +156,153 @@ struct SelectToMachine
         if (failed(emitStore(cast<LLVM::GEPOp>(store.getAddr().getDefiningOp()),
                              vmap.lookup(store.getValue()))))
           return failure();
-      } else if (isa<LLVM::ReturnOp>(&op)) {
+      } else if (isa<LLVM::ReturnOp, func::ReturnOp>(&op)) {
         emitEot();
       }
     }
-    func::ReturnOp::create(*b, *loc);
-    kernel.erase();
+    return success();
+  }
+
+  // icmp predicate -> EU condition modifier; sign rides on the operand types.
+  std::optional<CondModifier> mapPredicate(LLVM::ICmpPredicate pred) {
+    switch (pred) {
+    case LLVM::ICmpPredicate::eq: return CondModifier::eq;
+    case LLVM::ICmpPredicate::ne: return CondModifier::ne;
+    case LLVM::ICmpPredicate::ugt:
+    case LLVM::ICmpPredicate::sgt: return CondModifier::gt;
+    case LLVM::ICmpPredicate::uge:
+    case LLVM::ICmpPredicate::sge: return CondModifier::ge;
+    case LLVM::ICmpPredicate::ult:
+    case LLVM::ICmpPredicate::slt: return CondModifier::lt;
+    case LLVM::ICmpPredicate::ule:
+    case LLVM::ICmpPredicate::sle: return CondModifier::le;
+    default: return std::nullopt;
+    }
+  }
+
+  // Scalar (4-byte) kernel arg from the cross-thread tail load.
+  std::pair<Value, int> scalarArg(int argIndex) {
+    int offset = kFirstArgOffset + argIndex * 8; // 8-byte arg slots
+    return {tailValue, (offset - kInlineMirrorSize) / 4};
+  }
+
+  // Resolve a cmp operand: kernel scalar args read the tail load, constants
+  // become immediates, everything else comes from the value map.
+  struct CmpOperand {
+    Value v;
+    int sub = 0;
+    RegionAttr region;
+  };
+  CmpOperand cmpOperand(Value v) {
+    if (auto barg = dyn_cast<BlockArgument>(v)) {
+      auto [tv, sub] = scalarArg(barg.getArgNumber());
+      return {tv, sub, runiform()};
+    }
+    Value mapped = vmap.lookup(v);
+    if (!mapped)
+      return {nullptr, 0, runiform()};
+    if (mapped.getDefiningOp<ImmOp>())
+      return {mapped, 0, RegionAttr()};
+    return {mapped, 0, rcanon()};
+  }
+
+  LogicalResult emitCmp(LLVM::ICmpOp icmp) {
+    CmpOperand lhs = cmpOperand(icmp.getLhs());
+    CmpOperand rhs = cmpOperand(icmp.getRhs());
+    if (!lhs.v || !rhs.v)
+      return emitError(icmp.getLoc(), "icmp operand not lowered"), failure();
+    maybeSync({lhs.v, rhs.v});
+    auto cond = mapPredicate(icmp.getPredicate());
+    if (!cond)
+      return emitError(icmp.getLoc(), "unsupported predicate"), failure();
+    Value flag = CmpOp::create(*b, *loc, ARFType::get(ctx, ARFFile::f, 2, 0),
+                               CondModifierAttr::get(ctx, *cond), ty(i32()),
+                               b->getI32IntegerAttr(32), lhs.region, rhs.region,
+                               b->getI32IntegerAttr(lhs.sub),
+                               b->getI32IntegerAttr(rhs.sub), TypeAttr(),
+                               TypeAttr(), lhs.v, rhs.v)
+                     .getResult();
+    vmap[icmp.getResult()] = flag;
+    return success();
+  }
+
+  // A value is uniform if nothing in its def chain is per-lane: loads and
+  // the gid make values varying; kernel args and constants are uniform.
+  bool isVarying(Value v, DenseSet<Value> &seen) {
+    if (v == gidValue)
+      return true;
+    if (v == tailValue)
+      return false; // cross-thread args: identical across lanes
+    if (isa_and_nonnull<BlockArgument>(v))
+      return false;
+    if (v.getDefiningOp<SendOp>())
+      return true;
+    Operation *def = v.getDefiningOp();
+    if (!def)
+      return false;
+    if (!seen.insert(v).second)
+      return false;
+    return llvm::any_of(def->getOperands(),
+                        [&](Value o) { return isVarying(o, seen); });
+  }
+
+  // scf.if -> exec_if/uniform_if. Results are pre-allocated; each region
+  // ends with movs merging yielded values into them (PHI lowering).
+  LogicalResult emitIf(scf::IfOp ifOp) {
+    Value cond = vmap.lookup(ifOp.getCondition());
+    if (!cond)
+      return emitError(ifOp.getLoc(), "if condition not lowered"), failure();
+    DenseSet<Value> seen;
+    bool varying = isVarying(cond, seen);
+
+    SmallVector<Type> resultTypes;
+    for (Value r : ifOp.getResults())
+      resultTypes.push_back(grf(32));
+
+    Operation *ifm;
+    if (varying)
+      ifm = ExecIfOp::create(*b, *loc, resultTypes, cond);
+    else
+      ifm = UniformIfOp::create(*b, *loc, resultTypes, cond);
+    for (auto [i, r] : llvm::enumerate(ifOp.getResults()))
+      vmap[r] = ifm->getResult(i);
+
+    return emitIfRegions(ifOp, ifm, varying);
+  }
+
+  LogicalResult emitIfRegions(scf::IfOp ifOp, Operation *ifm, bool varying) {
+    Region *thenR = varying ? &cast<ExecIfOp>(ifm).getThenRegion()
+                            : &cast<UniformIfOp>(ifm).getThenRegion();
+    Region *elseR = varying ? &cast<ExecIfOp>(ifm).getElseRegion()
+                            : &cast<UniformIfOp>(ifm).getElseRegion();
+    std::array<std::pair<Region *, Region *>, 2> regions = {
+        {{&ifOp.getThenRegion(), thenR}, {&ifOp.getElseRegion(), elseR}}};
+    for (auto [scfRegion, machineRegion] : regions) {
+      b->setInsertionPointToStart(&machineRegion->emplaceBlock());
+      if (failed(lowerBlock(scfRegion->front())))
+        return failure();
+      // Merge movs into the pre-allocated results; the yield carries the
+      // values for the region-branch verifier (the emitter prints no yield).
+      auto yield = cast<scf::YieldOp>(scfRegion->front().getTerminator());
+      SmallVector<Value> yieldVals;
+      for (auto [i, yielded] : llvm::enumerate(yield.getOperands())) {
+        Value v = vmap.lookup(yielded);
+        if (!v)
+          return emitError(yield.getLoc(), "yielded value not lowered"),
+                 failure();
+        // The mov result aliases the exec_if result register; yielding it
+        // keeps types consistent along the region-branch edges.
+        maybeSync({v});
+        auto merge =
+            MovOp::create(*b, *loc, ifm->getResult(i).getType(), i32(),
+                          /*execSize=*/32, dcanon(), rcanon(), IntegerAttr(),
+                          IntegerAttr(), TypeAttr(), /*noMask=*/false,
+                          /*maskOffset=*/0, v);
+        yieldVals.push_back(merge.getResult());
+      }
+      YieldOp::create(*b, *loc, yieldVals);
+    }
+    b->setInsertionPointAfter(ifm);
     return success();
   }
 
@@ -189,6 +355,7 @@ struct SelectToMachine
                               /*noMask=*/false, /*maskOffset=*/0, gidBase,
                               localX, r1)
                    .getResult();
+    emitByteOffsets(); // keep offset chains at top level: regions reference them
     return success();
   }
 
@@ -267,14 +434,26 @@ struct SelectToMachine
     Value v = emitSend(grf(32), a0, Value(), SendFn::ugm, 0x08200580, 0, 32,
                        false, false);
     vmap[result] = v;
+    loadsPending = true;
     return success();
   }
 
-  LogicalResult emitSum(Operation *op) {
-    if (!dataSyncEmitted) {
-      SyncOp::create(*b, *loc, SyncKindAttr::get(ctx, SyncKind::allrd));
-      dataSyncEmitted = true;
+  // sync.allrd between a load and its first consumer; tokens/trackers are
+  // the SWSB milestone's business.
+  void maybeSync(ValueRange vs) {
+    if (!loadsPending)
+      return;
+    for (Value v : vs) {
+      if (v && v.getDefiningOp<SendOp>()) {
+        SyncOp::create(*b, *loc, SyncKindAttr::get(ctx, SyncKind::allrd));
+        loadsPending = false;
+        return;
+      }
     }
+  }
+
+  LogicalResult emitSum(Operation *op) {
+    maybeSync({vmap.lookup(op->getOperand(0)), vmap.lookup(op->getOperand(1))});
     Value lhs = vmap.lookup(op->getOperand(0));
     Value rhs = vmap.lookup(op->getOperand(1));
     if (!lhs || !rhs)

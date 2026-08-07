@@ -9,4 +9,6 @@ config.test_exec_root = "@CMAKE_CURRENT_BINARY_DIR@"
 config.substitutions.append(
     ("inter-opt", "@CMAKE_BINARY_DIR@/tools/inter-opt/inter-opt"))
 config.substitutions.append(
+    ("inter-translate", "@CMAKE_BINARY_DIR@/tools/inter-translate/inter-translate"))
+config.substitutions.append(
     ("FileCheck", "@LLVM_TOOLS_BINARY_DIR@/FileCheck"))
