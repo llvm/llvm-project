@@ -25266,18 +25266,6 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_bic_u:
     return DAG.getNode(AArch64ISD::BIC, SDLoc(N), N->getValueType(0),
                        N->getOperand(2), N->getOperand(3));
-  case Intrinsic::aarch64_sve_saddwb:
-    return DAG.getNode(AArch64ISD::SADDWB, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2));
-  case Intrinsic::aarch64_sve_saddwt:
-    return DAG.getNode(AArch64ISD::SADDWT, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2));
-  case Intrinsic::aarch64_sve_uaddwb:
-    return DAG.getNode(AArch64ISD::UADDWB, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2));
-  case Intrinsic::aarch64_sve_uaddwt:
-    return DAG.getNode(AArch64ISD::UADDWT, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2));
   case Intrinsic::aarch64_sve_eor_u:
     return DAG.getNode(ISD::XOR, SDLoc(N), N->getValueType(0), N->getOperand(2),
                        N->getOperand(3));
@@ -34731,8 +34719,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
 
 /// Lower a PARTIAL_REDUCE_MLA node. Three cases are handled:
 /// 1. (v2i32, v16i8): widen Acc to v4i32 and fold the high half with ADDP.
-/// 2. (nx)v2i64/(nx)v16i8: accumulate in two steps via v4i32, using
-///    (U|S)ADDW(B|T) when available, otherwise add(add(Acc, ext(lo), ext(hi))).
+/// 2. (nx)v2i64/(nx)v16i8: accumulate in two steps via (nx)v4i32, using
+///    (U|S)ADALP when available, otherwise add(add(Acc, ext(lo), ext(hi))).
 /// 3. SUMLA on (v4i32, v16i8) or (v2i32, v8i8) without +i8mm: rewrite as two
 ///    UDOTs using the bias-128 identity sext(s) = zext(s ^ 128) - 128.
 SDValue
@@ -34757,6 +34745,17 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
         DAG.getNode(Op.getOpcode(), DL, MVT::v4i32, WideAcc, LHS, RHS);
     SDValue Reduced = DAG.getNode(AArch64ISD::ADDP, DL, MVT::v4i32, Wide, Wide);
     return DAG.getExtractSubvector(DL, MVT::v2i32, Reduced, 0);
+  }
+
+  // Handle (v2i64, v16i8) in two steps via v4i32 and Neon [SU]ADALP.
+  if (Subtarget->isNeonAvailable() && ResultVT == MVT::v2i64 &&
+      OpVT == MVT::v16i8) {
+    SDValue Wide = DAG.getNode(Op.getOpcode(), DL, MVT::v4i32,
+                               DAG.getConstant(0, DL, MVT::v4i32), LHS, RHS);
+    bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA;
+    unsigned Opc = IsUnsigned ? AArch64ISD::UADDLP : AArch64ISD::SADDLP;
+    return DAG.getNode(ISD::ADD, DL, ResultVT, Acc,
+                       DAG.getNode(Opc, DL, ResultVT, Wide));
   }
 
   // Lower PARTIAL_REDUCE_SUMLA on targets without +i8mm using udot via
@@ -34806,10 +34805,12 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA;
 
   if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
-    unsigned LoOpcode = IsUnsigned ? AArch64ISD::UADDWB : AArch64ISD::SADDWB;
-    unsigned HiOpcode = IsUnsigned ? AArch64ISD::UADDWT : AArch64ISD::SADDWT;
-    SDValue Lo = DAG.getNode(LoOpcode, DL, ResultVT, Acc, DotNode);
-    SDValue Res = DAG.getNode(HiOpcode, DL, ResultVT, Lo, DotNode);
+    unsigned IID = IsUnsigned ? Intrinsic::aarch64_sve_uadalp
+                              : Intrinsic::aarch64_sve_sadalp;
+    SDValue Pg = getPredicateForVector(DAG, DL, ResultVT);
+    SDValue Res =
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ResultVT,
+                    DAG.getConstant(IID, DL, MVT::i64), Pg, Acc, DotNode);
     return ConvertToScalable ? convertFromScalableVector(DAG, OrigResultVT, Res)
                              : Res;
   }
