@@ -749,20 +749,30 @@ ExprResult Parser::TryParseLambdaExpression() {
 }
 
 bool Parser::startsLambdaNotMicrosoftAttribute() {
-  // Restricted to CUDA/HIP, the only mode that allows attributes immediately
-  // after a lambda's capture list.
+  // Restricted to CUDA/HIP.
   if (!getLangOpts().CUDA || Tok.isNot(tok::l_square))
     return false;
 
   // Skip the '[...]' and any trailing attributes (e.g. CUDA/HIP's
-  // '__device__'). A lambda then continues with '(', '{' or '<', while an
-  // attribute is followed by the declaration it applies to (e.g. '[propget]
-  // int get()').
+  // '__device__'). A lambda then continues with a parameter list, body,
+  // explicit template parameter list, or lambda declarator. An attribute is
+  // followed by the declaration it applies to (e.g. '[propget] int get()').
   RevertingTentativeParsingAction TPA(*this);
   ConsumeBracket();
-  if (!SkipUntil(tok::r_square, StopAtSemi) || !TrySkipAttributes())
+  if (!SkipUntil(tok::r_square, StopAtSemi | StopAtCodeCompletion) ||
+      !TrySkipAttributes())
     return false;
-  return Tok.isOneOf(tok::l_paren, tok::l_brace, tok::less);
+
+  // C++23 allows omitting '()' before 'mutable', 'constexpr', 'consteval', and
+  // 'static'.
+  while (Tok.isOneOf(tok::kw_mutable, tok::kw_constexpr, tok::kw_consteval,
+                     tok::kw_static))
+    ConsumeToken();
+  if (!TrySkipAttributes())
+    return false;
+
+  return Tok.isOneOf(tok::l_paren, tok::l_brace, tok::less, tok::arrow,
+                     tok::kw_noexcept);
 }
 
 bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,

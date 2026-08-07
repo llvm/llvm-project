@@ -4722,8 +4722,7 @@ private:
 
   /// Returns true if the current '[' begins a CUDA/HIP lambda rather than a
   /// Microsoft '[]' attribute (enabled under -fms-extensions or HLSL).
-  /// Restricted to CUDA/HIP, the only mode that allows attributes immediately
-  /// after a lambda's capture list.
+  /// Restricted to CUDA/HIP.
   bool startsLambdaNotMicrosoftAttribute();
 
   /// Parse a lambda introducer.

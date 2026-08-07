@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -fms-extensions -DMS_EXTENSIONS -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++23 -fms-extensions -DMS_EXTENSIONS -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fcuda-is-device -fms-extensions -DMS_EXTENSIONS -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++23 -fcuda-is-device -fms-extensions -DMS_EXTENSIONS -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fcuda-is-device -fsyntax-only -verify %s
 // expected-no-diagnostics
 
@@ -12,8 +14,9 @@
 //
 // A lambda and a Microsoft attribute are told apart by what follows the
 // (possibly attributed) '[...]' introducer. A lambda continues with a parameter
-// list or body, whereas a Microsoft attribute is followed by the declaration
-// it appertains to.
+// list, body, template parameter list, or lambda declarator ending in an
+// unambiguous continuation. A Microsoft attribute is followed by the
+// declaration it appertains to.
 
 #include "Inputs/cuda.h"
 
@@ -30,6 +33,26 @@ void empty_and_defaults() {
   Wrapper d([] __device__ {});
   (void)a; (void)b; (void)c; (void)d;
 }
+
+#if __cplusplus >= 202302L
+void omitted_parameter_list() {
+  Wrapper a([] __device__ noexcept {});
+  Wrapper b([] __device__ -> int { return 1; });
+  Wrapper c([] __device__ mutable {});
+  Wrapper d([] __device__ constexpr {});
+  Wrapper e([] __device__ consteval {});
+  Wrapper f([] __device__ static {});
+  Wrapper g([] __device__ mutable constexpr noexcept -> int { return 1; });
+  Wrapper h([] __device__ mutable [[]] {});
+  (void)a; (void)b; (void)c; (void)d;
+  (void)e; (void)f; (void)g; (void)h;
+}
+
+void explicit_template_parameter_list() {
+  Wrapper a([] __device__ <typename T>(T x) { return x; });
+  (void)a;
+}
+#endif
 
 void named_captures() {
   int values[] = {1};
@@ -57,5 +80,10 @@ struct S {
 struct MicrosoftAttributeControls {
   [] static int empty;
   [propget] int get();
+#if __cplusplus >= 202302L
+  [] mutable int member;
+  [] static constexpr int constant = 1;
+  [] consteval int immediate();
+#endif
 };
 #endif
