@@ -4,6 +4,8 @@
 ; Check that we do not try to sink calls to llvm.threadlocal.address given
 ; the intrinsic can only accept a global argument.
 
+; Regression test for https://github.com/llvm/llvm-project/issues/214565.
+
 @global = external thread_local global ptr
 @global.1 = external thread_local global ptr
 
