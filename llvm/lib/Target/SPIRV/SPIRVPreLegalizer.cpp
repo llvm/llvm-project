@@ -573,12 +573,12 @@ static void widenSignSensitiveOps(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                            MachineInstr &MI) -> Register {
     unsigned NewW = widenBitWidthToNextPow2(OldW);
     LLT NewLLT = LLT::scalar(NewW);
+    MIB.setInsertPt(*MI.getParent(), MI.getIterator());
     SPIRVTypeInst SpvTy = GR->getOrCreateSPIRVIntegerType(NewW, MIB);
     Register SExted = MRI.createGenericVirtualRegister(NewLLT);
     GR->assignSPIRVTypeToVReg(SpvTy, SExted, MF);
     MRI.setRegClass(SExted, GR->getRegClass(SpvTy));
     MRI.setType(Reg, NewLLT);
-    MIB.setInsertPt(*MI.getParent(), MI.getIterator());
     MIB.buildSExtInReg(SExted, Reg, OldW);
     return SExted;
   };
