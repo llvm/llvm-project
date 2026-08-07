@@ -60,7 +60,8 @@ void InvalidRegexPatternCheck::registerMatchers(MatchFinder *Finder) {
 void InvalidRegexPatternCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *DetectedPattern =
       Result.Nodes.getNodeAs<StringLiteral>("stringLiteral");
-  if (DetectedPattern) {
+      assert(DetectedPattern && "stringLiteral must be bound in matcher");
+
     const auto *FlagInt =
         Result.Nodes.getNodeAs<IntegerLiteral>("regexFlagsInt");
     const auto *FlagEnum =
@@ -75,7 +76,6 @@ void InvalidRegexPatternCheck::check(const MatchFinder::MatchResult &Result) {
     if (!TestRegex.isValid(RegexError))
       diag(DetectedPattern->getBeginLoc(), "invalid regex pattern: %0")
           << RegexError << DetectedPattern->getSourceRange();
-  }
 }
 
 } // namespace clang::tidy::llvm_check
