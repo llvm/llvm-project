@@ -17,7 +17,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
-#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
+#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 
 #include <optional>
@@ -50,7 +50,7 @@ struct SelectToMachine
       return signalPassFailure();
     }
     DataFlowSolver solver;
-    solver.load<dataflow::DeadCodeAnalysis>();
+    dataflow::loadBaselineAnalyses(solver);
     solver.load<inter::UniformityAnalysis>();
     // Run on the kernel: sparse liveness seeds from the top op's region.
     if (failed(solver.initializeAndRun(kernel)))
