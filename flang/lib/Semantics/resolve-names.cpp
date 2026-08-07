@@ -767,10 +767,9 @@ protected:
     std::vector<const std::list<parser::EquivalenceObject> *> equivalenceSets;
     // Names of all common block objects in the scope
     std::set<SourceName> commonBlockObjects;
-    // data-implied-do index variables whose typing has been deferred until
-    // the end of the specification part, since the declaration determining
-    // the type of the index's name in the scoping unit may follow the DATA
-    // statement (F'2023 19.4 p5)
+    // data-implied-do index variables whose typing is deferred to the end
+    // of the specification part, since the declaration typing the index's
+    // name may follow the DATA statement (F'2023 19.4 p5)
     std::vector<MutableSymbolRef> deferredDataIDoVars;
     // Info about SAVE statements and attributes in current scope
     struct {
@@ -8222,17 +8221,11 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
     context().NoteDefinedSymbol(*prev);
     name.symbol = nullptr; // undo the "FindSymbol()" above
     if (!dataStmtObjectInSpecPart_ || type) {
-      // The name is declared in an enclosing scope, not (yet) locally.
-      // Flang, like other compilers, reads F'2023 19.4 p5's "the type ...
-      // that it would have if it were the name of a variable in the
-      // innermost ... scoping unit" as adopting the type of a visible
-      // declaration of the name, rather than as a hypothetical application
-      // of the implicit typing rules; see the discussion of 19.4 p5 in
-      // flang/docs/Extensions.md.  For a DATA statement in a specification
-      // part with no integer-type-spec, don't take the outer declaration's
-      // type here: typing is deferred to FinishSpecificationPart(), whose
-      // look-up prefers a declaration in the innermost scoping unit --
-      // which may follow the DATA statement -- over the outer one.
+      // F'2023 19.4 p5: the index adopts the type of a visible declaration
+      // of its name (see Extensions.md on 19.4 p5).  But for a DATA
+      // statement in a specification part, defer typing to
+      // FinishSpecificationPart(), where a local declaration following the
+      // DATA statement takes precedence over this outer one.
       declTypeSpec = prev->GetType();
     }
   }
@@ -8250,15 +8243,10 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
         common::ScopedSet(charInfo_.length, std::optional<ParamValue>{})};
     SetType(name, *declTypeSpec);
   } else if (dataStmtObjectInSpecPart_) {
-    // F'2023 19.4 p5: this index has the type that its name would have as
-    // a variable of the scoping unit, and the declaration establishing that
-    // type may follow the DATA statement in the same specification part.
-    // Defer its typing to FinishSpecificationPart().  (F'2023 8.6.7 p3's
-    // restriction on typing a DATA statement variable in a subsequent type
-    // declaration governs the data-stmt-objects, which are variables of the
-    // scoping unit; it does not apply to this index, whose appearance "is
-    // not an implicit declaration of a variable whose scope is the scoping
-    // unit" (19.4 p5).)
+    // F'2023 19.4 p5: the index takes the type its name has in the scoping
+    // unit, and that declaration may follow the DATA statement; defer
+    // typing to FinishSpecificationPart().  (8.6.7 p3 restricts only the
+    // data-stmt-objects, not this statement entity.)
     specPartState_.deferredDataIDoVars.emplace_back(symbol);
   } else {
     ApplyImplicitRules(symbol);
@@ -10700,11 +10688,10 @@ void ResolveNamesVisitor::FinishSpecificationPart(
       }
     }
   }
-  // Define the types of data-implied-do index variables whose typing was
-  // deferred, now that the whole specification part has been visited, using
-  // the type that the index's name has in the scoping unit (F'2023 19.4 p5).
-  // Symbol::SetType (rather than DeclarationVisitor::SetType) suffices:
-  // the symbol is known to be untyped, so no conflict diagnostics can arise.
+  // Type the deferred data-implied-do index variables now that the whole
+  // specification part has been visited (F'2023 19.4 p5).  Plain
+  // Symbol::SetType suffices: the symbol is untyped, so no conflict
+  // diagnostics can arise.
   for (MutableSymbolRef ref : specPartState_.deferredDataIDoVars) {
     Symbol &symbol{*ref};
     if (!symbol.GetType()) {

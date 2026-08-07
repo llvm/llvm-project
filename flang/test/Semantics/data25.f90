@@ -1,9 +1,7 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! F'2023 19.4 p5: a data-implied-do index variable without an explicit
-! integer-type-spec takes the type that its name would have as a variable
-! of the scoping unit, and the type declaration statement establishing that
-! type may appear later in the same specification part than the DATA
-! statement.
+! F'2023 19.4 p5: a data-implied-do index without an integer-type-spec
+! takes the type its name has in the scoping unit; the declaration may
+! follow the DATA statement in the same specification part.
 
 ! Index declared after the DATA statement: conforming, no error.
 subroutine s1
