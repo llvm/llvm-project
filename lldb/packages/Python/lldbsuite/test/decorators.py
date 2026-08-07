@@ -1166,7 +1166,7 @@ def requirePlatform(oslist):
     )
 
 
-def requireNotPlatform(oslist: list[str], reason: Optional[str] = None):
+def requireNotPlatform(oslist: list, reason: Optional[str] = None):
     """Mark the item as inherently inapplicable to the listed target platforms.
 
     Unlike `skipIfPlatform`, the listed platforms are reported as UNSUPPORTED
@@ -1189,7 +1189,9 @@ def requireDarwin(func):
 
 def requireNotDarwin(reason: str):
     """Mark the item as inherently inapplicable to Darwin targets."""
-    return requireNotPlatform(lldbplatform.translate(lldbplatform.darwin_all), reason=reason)
+    return requireNotPlatform(
+        lldbplatform.translate(lldbplatform.darwin_all), reason=reason
+    )
 
 
 def requireLinux(func):
