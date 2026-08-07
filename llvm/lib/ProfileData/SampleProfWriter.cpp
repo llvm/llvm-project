@@ -280,8 +280,13 @@ SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
 
 std::error_code
 SampleProfileWriterExtBinaryBase::writeFuncOffsetTable(bool IsCS) {
-  if (WriteEytzingerNameTables)
+  if (WriteEytzingerNameTables) {
+    // Eytzinger layout requires MD5 representation and does not support
+    // multi-context Context-Sensitive profiles.
+    if (!UseMD5 || FunctionSamples::ProfileIsCS)
+      return sampleprof_error::unsupported_writing_format;
     return writeEytzingerFuncOffsetTable(IsCS);
+  }
   return writeLegacyFuncOffsetTable();
 }
 
@@ -460,6 +465,9 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
   }
 
   if (UseMD5 && WriteEytzingerNameTables) {
+    // Eytzinger name tables do not support Context-Sensitive profiles.
+    if (FunctionSamples::ProfileIsCS)
+      return sampleprof_error::unsupported_writing_format;
     if (auto EC = writeEytzingerNameTableSection(ProfileMap))
       return EC;
     return sampleprof_error::success;
