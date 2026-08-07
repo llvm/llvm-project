@@ -9,9 +9,13 @@
 #ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_CONTAINEROFMODELING_H
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_CONTAINEROFMODELING_H
 
-#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 
 namespace clang::ento {
+
+class ElementRegion;
+class SubRegion;
+class SValBuilder;
 
 /// Recognize the region shape produced when a pointer to a direct field is
 /// adjusted back to the beginning of its containing record. For example,
@@ -29,7 +33,6 @@ namespace clang::ento {
 /// the region for P only when the record type, field declaration, target ABI
 /// layout, and underlying storage prove that the adjustment lands exactly at
 /// the beginning of P.
-
 const SubRegion *getContainerOfParentRegion(const ElementRegion *ContainerER,
                                             ProgramStateRef State,
                                             SValBuilder &SVB);

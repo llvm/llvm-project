@@ -1,4 +1,4 @@
-//===- ContainerOfModeling.h ------------------------------------*- C++ -*-===//
+//===- ContainerOfModeling.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,7 @@
 
 #include "clang/StaticAnalyzer/Checkers/ContainerOfModeling.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
+#include "llvm/Support/CheckedArithmetic.h"
 
 namespace clang::ento {
 
@@ -93,8 +94,7 @@ const SubRegion *getContainerOfParentRegion(const ElementRegion *ContainerER,
 
   if (const auto *CharacterER = dyn_cast<ElementRegion>(SuperRegion)) {
     QualType CharacterType = CharacterER->getElementType();
-    if (!CharacterType->isCharType() ||
-        Ctx.getTypeSizeInChars(CharacterType).getQuantity() != 1)
+    if (!CharacterType->isCharType())
       return nullptr;
 
     const auto ConcreteIndex =
@@ -142,7 +142,11 @@ const SubRegion *getContainerOfParentRegion(const ElementRegion *ContainerER,
   // the unsigned ABI field offset.
   const uint64_t BackwardOffset =
       static_cast<uint64_t>(-(CharacterIndex + 1)) + 1;
-  if (BackwardOffset != FieldOffsetBits / CharWidth)
+
+  const std::optional<uint64_t> BackwardOffsetBits =
+    llvm::checkedMulUnsigned(BackwardOffset, CharWidth);
+
+  if (!BackwardOffsetBits || *BackwardOffsetBits != FieldOffsetBits)
     return nullptr;
 
   const auto *ParentRegion = dyn_cast<SubRegion>(FieldR->getSuperRegion());
@@ -151,9 +155,9 @@ const SubRegion *getContainerOfParentRegion(const ElementRegion *ContainerER,
 
   std::optional<bool> HasSufficientExtent =
       hasSufficientContainerExtent(State, ParentRegion, ContainerType, SVB);
-  if (HasSufficientExtent && !*HasSufficientExtent)
+  if (HasSufficientExtent == false)
     return nullptr;
-  if (!HasSufficientExtent &&
+  if (HasSufficientExtent == std::nullopt &&
       !hasContainerTypeProvenance(ParentRegion, ContainerType, Ctx))
     return nullptr;
 
