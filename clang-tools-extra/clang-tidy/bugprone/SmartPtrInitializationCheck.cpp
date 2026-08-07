@@ -138,14 +138,14 @@ void SmartPtrInitializationCheck::check(
 }
 
 std::string SmartPtrInitializationCheck::getSmartPointerDescription(
-    const CXXRecordDecl *recordDecl, const ASTContext &context) {
-  clang::PrintingPolicy policy = context.getPrintingPolicy();
+    const CXXRecordDecl *RecordDecl, const ASTContext &Context) {
+  const PrintingPolicy Policy = Context.getPrintingPolicy();
 
-  std::string result;
-  llvm::raw_string_ostream os(result);
-  recordDecl->getNameForDiagnostic(os, policy, /*Qualified=*/true);
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  RecordDecl->getNameForDiagnostic(OS, Policy, /*Qualified=*/true);
 
-  return result;
+  return Result;
 }
 
 std::string SmartPtrInitializationCheck::getRawPointerDescription(
