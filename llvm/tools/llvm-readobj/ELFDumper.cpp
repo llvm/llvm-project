@@ -8765,9 +8765,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
         return Error::success();
     } else if (Name == "FDO") {
       if (std::optional<FDONote> N = getFDONote<ELFT>(Type, Descriptor)) {
-        auto f = llvm::json::parse(N->Value);
-        if (f)
-          W.printObject(N->Type, f.get());
+        auto JsonValue = llvm::json::parse(N->Value);
+        if (JsonValue)
+          W.printObject(N->Type, JsonValue.get());
         else
           W.printString(N->Type, N->Value);
         return Error::success();
