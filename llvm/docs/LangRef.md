@@ -7207,7 +7207,7 @@ Some examples of expressions:
 !DIExpression(DW_OP_deref)
 !DIExpression(DW_OP_plus_uconst, 3)
 !DIExpression(DW_OP_constu, 3, DW_OP_plus)
-!DIExpression(DW_OP_bit_piece, 3, 7)
+!DIExpression(DW_OP_LLVM_fragment, 3, 7)
 !DIExpression(DW_OP_deref, DW_OP_constu, 3, DW_OP_plus, DW_OP_LLVM_fragment, 3, 7)
 !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
 !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
@@ -8075,18 +8075,15 @@ node has a single operand containing the name string:
 !1 = !{!"llvm.loop.vectorize.disable"}
 ```
 
-#### '`llvm.loop.vectorize.predicate.enable`' Metadata
+#### '`llvm.loop.vectorize.predicate.enable`' and '`llvm.loop.vectorize.predicate.disable`' Metadata
 
 This metadata selectively enables or disables creating predicated instructions
 for the loop, which can enable folding of the scalar epilogue loop into the
-main loop. The first operand is the string
-`llvm.loop.vectorize.predicate.enable` and the second operand is a bit. If
-the bit operand value is 1 predication is enabled. A value of 0 disables
-predication:
+main loop. Each node has a single operand containing the name string:
 
 ```llvm
-!0 = !{!"llvm.loop.vectorize.predicate.enable", i1 0}
-!1 = !{!"llvm.loop.vectorize.predicate.enable", i1 1}
+!0 = !{!"llvm.loop.vectorize.predicate.enable"}
+!1 = !{!"llvm.loop.vectorize.predicate.disable"}
 ```
 
 Additionally, enabling predication implicitly enables vectorization.

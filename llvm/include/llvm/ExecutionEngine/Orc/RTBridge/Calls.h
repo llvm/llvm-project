@@ -28,7 +28,11 @@
 #include <string>
 #include <type_traits>
 
-namespace llvm::orc::rt {
+namespace llvm::orc {
+
+class ExecutionSession;
+
+namespace rt {
 
 template <typename FnT> class Caller;
 
@@ -54,7 +58,19 @@ public:
   using ErrorRetT =
       std::conditional_t<std::is_void_v<RetT>, Error, Expected<RetT>>;
 
+  Caller(ExecutionSession &ES, ExecutorAddr CalleeAddr)
+      : ES(ES), CalleeAddr(CalleeAddr) {}
+
   virtual ~Caller() = default;
+
+  /// Returns the ExecutionSession on which this call will be made.
+  ExecutionSession &executionSession() const { return ES; }
+
+  /// Returns the address of the callee in the executor.
+  const ExecutorAddr &calleeAddr() const { return CalleeAddr; }
+
+  /// Evaluates to true if the callee is non-null.
+  explicit operator bool() const { return !!CalleeAddr; }
 
   /// Asynchronously invoke the operation with the given Args, delivering its
   /// result (or an error) to OnComplete.
@@ -73,6 +89,10 @@ public:
         std::move(Args)...);
     return F.get();
   }
+
+private:
+  ExecutionSession &ES;
+  ExecutorAddr CalleeAddr;
 };
 
 /// Runtime-agnostic interface for running a main-like function
@@ -80,15 +100,14 @@ public:
 ///
 /// The function to run is given by its ExecutorAddr, its arguments as an
 /// argument vector, and its int64_t result is returned.
-class MainCaller : public Caller<int64_t(ExecutorAddr, ArrayRef<std::string>)> {
-};
+using MainCaller = Caller<int64_t(ExecutorAddr, ArrayRef<std::string>)>;
 
 /// Runtime-agnostic interface for running a void() function in the executor.
 ///
 /// The function to run is given by its ExecutorAddr.
 ///
 /// WARNING: This Caller is experimental and may be removed.
-class VoidVoidCaller : public Caller<void(ExecutorAddr)> {};
+using VoidVoidCaller = Caller<void(ExecutorAddr)>;
 
 /// Runtime-agnostic interface for running an int32_t() function in the
 /// executor.
@@ -96,7 +115,7 @@ class VoidVoidCaller : public Caller<void(ExecutorAddr)> {};
 /// The function to run is given by its ExecutorAddr.
 ///
 /// WARNING: This Caller is experimental and may be removed.
-class Int32VoidCaller : public Caller<int32_t(ExecutorAddr)> {};
+using Int32VoidCaller = Caller<int32_t(ExecutorAddr)>;
 
 /// Runtime-agnostic interface for running an int32_t(int32_t) function in the
 /// executor.
@@ -104,8 +123,9 @@ class Int32VoidCaller : public Caller<int32_t(ExecutorAddr)> {};
 /// The function to run is given by its ExecutorAddr.
 ///
 /// WARNING: This Caller is experimental and may be removed.
-class Int32Int32Caller : public Caller<int32_t(ExecutorAddr, int32_t)> {};
+using Int32Int32Caller = Caller<int32_t(ExecutorAddr, int32_t)>;
 
-} // namespace llvm::orc::rt
+} // namespace rt
+} // namespace llvm::orc
 
 #endif // LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_CALLS_H
