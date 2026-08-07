@@ -18771,7 +18771,8 @@ static SDValue canonicalizeMaskForVLPredicate(EVT MaskVT, SDValue LHS,
   using namespace SDPatternMatch;
   if (!MaskVT.isFixedLengthVector() ||
       !(CC == ISD::SETUGT || CC == ISD::SETGT || CC == ISD::SETULT ||
-        CC == ISD::SETLT))
+        CC == ISD::SETLT) ||
+      !LHS.getValueType().isInteger())
     return SDValue();
 
   // Canonicalize the comparison.
