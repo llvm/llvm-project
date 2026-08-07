@@ -452,12 +452,12 @@ OMPTileDirective *
 OMPTileDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                          SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
                          unsigned NumLoops, Stmt *AssociatedStmt,
-                         Stmt *TransformedStmt, Stmt *PreInits) {
+                         Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals) {
   OMPTileDirective *Dir = createDirective<OMPTileDirective>(
-      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
-      NumLoops);
+      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc, NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
+  Dir->setFinals(Finals);
   return Dir;
 }
 
@@ -465,20 +465,19 @@ OMPTileDirective *OMPTileDirective::CreateEmpty(const ASTContext &C,
                                                 unsigned NumClauses,
                                                 unsigned NumLoops) {
   return createEmptyDirective<OMPTileDirective>(
-      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      C, NumClauses, /*HasAssociatedStmt=*/true, FinalsOffset + 1,
       SourceLocation(), SourceLocation(), NumLoops);
 }
 
-OMPStripeDirective *
-OMPStripeDirective::Create(const ASTContext &C, SourceLocation StartLoc,
-                           SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
-                           unsigned NumLoops, Stmt *AssociatedStmt,
-                           Stmt *TransformedStmt, Stmt *PreInits) {
+OMPStripeDirective *OMPStripeDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
+    Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals) {
   OMPStripeDirective *Dir = createDirective<OMPStripeDirective>(
-      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
-      NumLoops);
+      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc, NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
+  Dir->setFinals(Finals);
   return Dir;
 }
 
@@ -486,7 +485,7 @@ OMPStripeDirective *OMPStripeDirective::CreateEmpty(const ASTContext &C,
                                                     unsigned NumClauses,
                                                     unsigned NumLoops) {
   return createEmptyDirective<OMPStripeDirective>(
-      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      C, NumClauses, /*HasAssociatedStmt=*/true, FinalsOffset + 1,
       SourceLocation(), SourceLocation(), NumLoops);
 }
 
@@ -516,31 +515,31 @@ OMPReverseDirective *
 OMPReverseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                             SourceLocation EndLoc, Stmt *AssociatedStmt,
                             unsigned NumLoops, Stmt *TransformedStmt,
-                            Stmt *PreInits) {
+                            Stmt *PreInits, Stmt *Finals) {
   OMPReverseDirective *Dir = createDirective<OMPReverseDirective>(
-      C, {}, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
-      NumLoops);
+      C, {}, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc, NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
+  Dir->setFinals(Finals);
   return Dir;
 }
 
 OMPReverseDirective *OMPReverseDirective::CreateEmpty(const ASTContext &C,
                                                       unsigned NumLoops) {
   return createEmptyDirective<OMPReverseDirective>(
-      C, /*NumClauses=*/0, /*HasAssociatedStmt=*/true,
-      TransformedStmtOffset + 1, SourceLocation(), SourceLocation(), NumLoops);
+      C, /*NumClauses=*/0, /*HasAssociatedStmt=*/true, FinalsOffset + 1,
+      SourceLocation(), SourceLocation(), NumLoops);
 }
 
 OMPInterchangeDirective *OMPInterchangeDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
-    Stmt *TransformedStmt, Stmt *PreInits) {
+    Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals) {
   OMPInterchangeDirective *Dir = createDirective<OMPInterchangeDirective>(
-      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
-      NumLoops);
+      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc, NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
+  Dir->setFinals(Finals);
   return Dir;
 }
 
@@ -548,7 +547,7 @@ OMPInterchangeDirective *
 OMPInterchangeDirective::CreateEmpty(const ASTContext &C, unsigned NumClauses,
                                      unsigned NumLoops) {
   return createEmptyDirective<OMPInterchangeDirective>(
-      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      C, NumClauses, /*HasAssociatedStmt=*/true, FinalsOffset + 1,
       SourceLocation(), SourceLocation(), NumLoops);
 }
 
@@ -576,12 +575,13 @@ OMPSplitDirective *OMPSplitDirective::CreateEmpty(const ASTContext &C,
 OMPFuseDirective *OMPFuseDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<OMPClause *> Clauses, unsigned NumGeneratedTopLevelLoops,
-    Stmt *AssociatedStmt, Stmt *TransformedStmt, Stmt *PreInits) {
+    Stmt *AssociatedStmt, Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals) {
 
   OMPFuseDirective *Dir = createDirective<OMPFuseDirective>(
-      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc);
+      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
+  Dir->setFinals(Finals);
   Dir->setNumGeneratedTopLevelLoops(NumGeneratedTopLevelLoops);
   return Dir;
 }
@@ -589,7 +589,7 @@ OMPFuseDirective *OMPFuseDirective::Create(
 OMPFuseDirective *OMPFuseDirective::CreateEmpty(const ASTContext &C,
                                                 unsigned NumClauses) {
   OMPFuseDirective *Dir = createEmptyDirective<OMPFuseDirective>(
-      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      C, NumClauses, /*HasAssociatedStmt=*/true, FinalsOffset + 1,
       SourceLocation(), SourceLocation());
   return Dir;
 }
