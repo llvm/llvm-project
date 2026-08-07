@@ -15,6 +15,7 @@
 
 #include "TreeTransform.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -113,7 +114,7 @@ public:
     // p2, which would trigger an assert "building reference to field in C?' in
     // TreeTransform::RebuildDeclRefExpr. To avoid this, we build the
     // DeclRefExprs here manually.
-    if (isa<FieldDecl>(VD)) {
+    if (isa<FieldDecl, IndirectFieldDecl>(VD)) {
       // Copy-paste from Sema::BuildDeclarationNameExpr, but without assert.
       QualType Ty = VD->getType().getNonReferenceType();
       ExprValueKind VK = VK_LValue;
