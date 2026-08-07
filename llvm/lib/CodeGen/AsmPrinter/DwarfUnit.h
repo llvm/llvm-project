@@ -317,7 +317,8 @@ public:
 
   void constructTypeDIE(DIE &Buffer, const DICompositeType *CTy);
 
-  /// Add a Dwarf section label attribute data and value.
+  /// Add a Dwarf section label attribute data and value. If the current unit
+  /// is a DWO, this function will instead emit a section delta.
   void addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
                        const MCSymbol *Label, const MCSymbol *Sec);
 
