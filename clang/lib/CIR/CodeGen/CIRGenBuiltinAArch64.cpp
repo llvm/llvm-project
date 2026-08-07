@@ -2021,6 +2021,28 @@ std::optional<mlir::Value>
 CIRGenFunction::emitARMBuiltinExpr(unsigned builtinID, const CallExpr *expr,
                                    ReturnValueSlot returnValue,
                                    llvm::Triple::ArchType arch) {
+  // Find out if any arguments are required to be integer constant
+  // expressions.
+  assert(!cir::MissingFeatures::handleBuiltinICEArguments());
+  unsigned iceArguments = 0;
+  ASTContext::GetBuiltinTypeError error;
+  getContext().GetBuiltinType(builtinID, error, &iceArguments);
+  assert(error == ASTContext::GE_None && "Should not codegen an error");
+  llvm::SmallVector<mlir::Value, 4> ops;
+
+  // Skip extra arguments used to discriminate vector types and that are
+  // intended for Sema checking.
+  //
+  // Builtins that load or store through an argument also need that pointer's
+  // alignment, which classic CodeGen captures here with
+  // EmitPointerWithAlignment. None of those are implemented yet, so the loop
+  // has no such case to handle.
+  bool hasExtraArg = hasExtraNeonArgument(builtinID);
+  unsigned numArgs = expr->getNumArgs() - (hasExtraArg ? 1 : 0);
+  for (unsigned i = 0, e = numArgs; i != e; i++)
+    ops.push_back(
+        emitScalarOrConstFoldImmArg(iceArguments, i, expr->getArg(i)));
+
   // Only the NEON lane reads are implemented so far.
   switch (builtinID) {
   case NEON::BI__builtin_neon_vget_lane_i8:
@@ -2036,12 +2058,9 @@ CIRGenFunction::emitARMBuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vgetq_lane_bf16:
   case NEON::BI__builtin_neon_vgetq_lane_f32:
   case NEON::BI__builtin_neon_vduph_lane_bf16:
-  case NEON::BI__builtin_neon_vduph_laneq_bf16: {
-    mlir::Location loc = getLoc(expr->getExprLoc());
-    mlir::Value vec = emitScalarExpr(expr->getArg(0));
-    mlir::Value index = emitScalarExpr(expr->getArg(1));
-    return cir::VecExtractOp::create(builder, loc, vec, index);
-  }
+  case NEON::BI__builtin_neon_vduph_laneq_bf16:
+    return cir::VecExtractOp::create(builder, getLoc(expr->getExprLoc()),
+                                     ops[0], ops[1]);
   default:
     break;
   }
