@@ -412,6 +412,31 @@ class DXILOp<int opcode, DXILOpClass opclass> {
 //
 // This are sorted by ascending value of the DXIL Opcodes
 
+def LoadInput : DXILOp<4, loadInput> {
+  let Doc = "Loads a scalar value from a shader input register component.";
+  let intrinsics = [IntrinSelect<int_dx_load_input,
+      [IntrinArgIndex<1>, IntrinArgIndex<2>, IntrinArgIndex<3>,
+       IntrinArgIndex<4>]>];
+  // inputSigId, rowIndex, colIndex, gsVertexOrPrimIndex
+  let arguments = [Int32Ty, Int32Ty, Int8Ty, Int32Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
+def StoreOutput : DXILOp<5, storeOutput> {
+  let Doc = "Stores a scalar value to a shader output register component.";
+  let intrinsics = [IntrinSelect<int_dx_store_output,
+      [IntrinArgIndex<1>, IntrinArgIndex<2>, IntrinArgIndex<3>,
+       IntrinArgIndex<4>]>];
+  // outputSigId, rowIndex, colIndex, value
+  let arguments = [Int32Ty, Int32Ty, Int8Ty, OverloadTy];
+  let result = VoidTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def Abs : DXILOp<6, unary> {
   let Doc = "Returns the absolute value of the input.";
   let intrinsics = [IntrinSelect<int_fabs>];

@@ -10523,7 +10523,6 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v5, 8, v0
 ; GFX10-FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-FLATSCR-NEXT:    s_clause 0xf
-; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[0:3], v5, s[38:39]
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[35:38], v5, s[38:39] offset:240
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[31:34], v5, s[38:39] offset:224
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[27:30], v5, s[38:39] offset:208
@@ -10539,7 +10538,8 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[47:50], v5, s[38:39] offset:48
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[43:46], v5, s[38:39] offset:32
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[39:42], v5, s[38:39] offset:16
-; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(15)
+; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[0:3], v5, s[38:39]
+; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    v_lshl_add_u32 v4, v0, 13, 16
 ; GFX10-FLATSCR-NEXT:    scratch_store_dword v4, v6, off
 ; GFX10-FLATSCR-NEXT:    ;;#ASMSTART
@@ -10570,7 +10570,6 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX10-FLATSCR-NEXT:    ; use s[0:7],s[8:15],s[16:23],s[24:31],s[40:43],s[34:35]
 ; GFX10-FLATSCR-NEXT:    ;;#ASMEND
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s0, 0x2010
-; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(4)
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v88, v58
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v87, v57
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v86, v56
@@ -10592,7 +10591,6 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v35, v9
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v34, v8
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v33, v7
-; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v72, v42
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v71, v41
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v70, v40
