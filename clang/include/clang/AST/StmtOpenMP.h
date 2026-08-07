@@ -554,11 +554,6 @@ public:
   }
 
   OpenMPDirectiveKind getDirectiveKind() const { return Kind; }
-  /// Horrible temporary hack to allow OMPOrderedDirective to be used
-  /// with both OMPD_ordered_standalone and OMPD_ordered_blockassoc.
-  void setDirectiveKind(OpenMPDirectiveKind D) const {
-    const_cast<OMPExecutableDirective *>(this)->Kind = D;
-  }
 
   static bool classof(const Stmt *S) {
     return S->getStmtClass() >= firstOMPExecutableDirectiveConstant &&
@@ -2950,16 +2945,16 @@ class OMPOrderedDirective : public OMPExecutableDirective {
   /// \param StartLoc Starting location of the directive kind.
   /// \param EndLoc Ending location of the directive.
   ///
-  OMPOrderedDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+  OMPOrderedDirective(SourceLocation StartLoc, SourceLocation EndLoc,
+      OpenMPDirectiveKind OrderedKind)
       : OMPExecutableDirective(OMPOrderedDirectiveClass,
-                               llvm::omp::OMPD_ordered_standalone, StartLoc,
+                               OrderedKind, StartLoc,
                                EndLoc) {}
 
   /// Build an empty directive.
   ///
-  explicit OMPOrderedDirective()
-      : OMPExecutableDirective(OMPOrderedDirectiveClass,
-                               llvm::omp::OMPD_ordered_standalone,
+  explicit OMPOrderedDirective(OpenMPDirectiveKind OrderedKind)
+      : OMPExecutableDirective(OMPOrderedDirectiveClass, OrderedKind,
                                SourceLocation(), SourceLocation()) {}
 
 public:
