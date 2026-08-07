@@ -442,7 +442,7 @@ void SwiftLanguageRuntime::ProcessModulesToAdd() {
         if (module_sp) {
           AddModuleToReflectionContext(module_sp);
           progress.Increment(
-              ++completion, module_sp->GetFileSpec().GetFilename().GetString());
+              ++completion, module_sp->GetFileSpec().GetFilename().str());
         }
         return IterationAction::Continue;
       });
@@ -601,7 +601,7 @@ GetLikelySwiftImageNamesForModule(ModuleSP module) {
     return {};
 
   auto name =
-      module->GetFileSpec().GetFileNameStrippingExtension().GetStringRef();
+      module->GetFileSpec().GetFileNameStrippingExtension();
   if (name == "libswiftCore")
     name = "Swift";
   if (name.starts_with("libswift"))
@@ -1625,7 +1625,7 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
                      swift_ast_ctx->GetIdentifier(name.GetCString()),
                      module_decl);
   var_decl->setInterfaceType(
-      llvm::expectedToStdOptional(
+      llvm::expectedToOptional(
           swift_ast_ctx->GetSwiftType(
               swift_ast_ctx->GetErrorType(swift_ast_ctx->GetManglingFlavor())))
           .value_or(swift::Type()));
@@ -1923,7 +1923,7 @@ SwiftLanguageRuntime::GetBridgedSyntheticChildProvider(ValueObject &valobj) {
     if (swift_type.IsValid()) {
       ExecutionContext exe_ctx(GetProcess());
       bool any_projected = false;
-      for (size_t idx = 0, e = llvm::expectedToStdOptional(
+      for (size_t idx = 0, e = llvm::expectedToOptional(
                                    swift_type.GetNumChildren(true, &exe_ctx))
                                    .value_or(0);
            idx < e; idx++) {
@@ -2431,8 +2431,8 @@ protected:
 
     std::string unavailable = "<unavailable>";
 
-    result.AppendMessageWithFormat(
-        "refcount data: (strong = %s, unowned = %s, weak = %s)\n",
+    result.AppendMessageWithFormatv(
+        "refcount data: (strong = {0}, unowned = {1}, weak = {2})\n",
         strong ? std::to_string(*strong).c_str() : unavailable.c_str(),
         unowned ? std::to_string(*unowned).c_str() : unavailable.c_str(),
         weak ? std::to_string(*weak).c_str() : unavailable.c_str());

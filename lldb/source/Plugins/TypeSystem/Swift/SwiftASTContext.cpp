@@ -2315,7 +2315,7 @@ static std::optional<StringRef> GetDSYMBundle(Module &module) {
   if (!obj_file)
     return {};
 
-  StringRef dir = obj_file->GetFileSpec().GetDirectory().GetStringRef();
+  StringRef dir = obj_file->GetFileSpec().GetDirectory();
   auto it = llvm::sys::path::rbegin(dir);
   auto end = llvm::sys::path::rend(dir);
   if (it == end)

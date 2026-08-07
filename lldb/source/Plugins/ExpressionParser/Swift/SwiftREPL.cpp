@@ -165,7 +165,7 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
 
   FileSpecList containingModules;
   containingModules.Append(
-      FileSpec(exe_module_sp->GetFileSpec().GetFilename().GetStringRef()));
+      FileSpec(exe_module_sp->GetFileSpec().GetFilename()));
 
   BreakpointSP main_bp_sp = target_sp->CreateBreakpoint(
       &containingModules,    // Limit to these modules
