@@ -621,6 +621,21 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}}) // FIXME RV32.
       .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}, {s128, s128}});
 
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+      .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
+      .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
+      .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
+      .customFor(ST.is64Bit() && ST.hasStdExtF(), {{s32, s32}})
+      .customFor(ST.is64Bit() && ST.hasStdExtD(), {{s32, s64}})
+      .customFor(ST.is64Bit() && ST.hasStdExtZfh(), {{s32, s16}})
+      .widenScalarIf(typeIs(1, s16), LegalizeMutations::changeTo(1, s32))
+      .libcallFor({{s32, s32},
+                   {s64, s32},
+                   {s32, s64},
+                   {s64, s64},
+                   {s32, s128},
+                   {s64, s128}});
+
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
       .legalFor(ST.hasStdExtF(), {{s32, sXLen}})
       .legalFor(ST.hasStdExtD(), {{s64, sXLen}})
@@ -1572,6 +1587,16 @@ bool RISCVLegalizerInfo::legalizeCustom(
     Helper.widenScalarDst(MI, sXLen);
     MI.setDesc(MIRBuilder.getTII().get(getRISCVWOpcode(MI.getOpcode())));
     MI.addOperand(MachineOperand::CreateImm(RISCVFPRndMode::RTZ));
+    Helper.Observer.changedInstr(MI);
+    return true;
+  }
+  case TargetOpcode::G_LROUND: {
+    // The (i32 any_lround) Pat is IsRV32-only; on RV64 lower to
+    // riscv_fcvt_w_rv64 with FRM_RMM.
+    Helper.Observer.changingInstr(MI);
+    Helper.widenScalarDst(MI, sXLen);
+    MI.setDesc(MIRBuilder.getTII().get(RISCV::G_FCVT_W_RV64));
+    MI.addOperand(MachineOperand::CreateImm(RISCVFPRndMode::RMM));
     Helper.Observer.changedInstr(MI);
     return true;
   }
