@@ -1653,7 +1653,7 @@ RedirectCallFromSinkToTrampolineFunction(llvm::Module &module,
 
   // Find the call to the sink.
   llvm::CallInst *sink_call = nullptr;
-  for (auto &I : basic_block.instructionsWithoutDebug()) {
+  for (auto &I : basic_block) {
     if (auto *call = llvm::dyn_cast<llvm::CallInst>(&I)) {
       if (call->getCalledFunction() == sink_func) {
         sink_call = call;
