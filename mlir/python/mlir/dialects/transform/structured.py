@@ -590,9 +590,11 @@ class TileUsingForOp(TileUsingForOp):
                 for v in (sizes or [])
             )
             if has_scalable_sizes:
-                dynamic_sizes, static_sizes, scalable_sizes = (
-                    _dispatch_dynamic_index_list(sizes)
-                )
+                (
+                    dynamic_sizes,
+                    static_sizes,
+                    scalable_sizes,
+                ) = _dispatch_dynamic_index_list(sizes)
             else:
                 (
                     dynamic_sizes,
