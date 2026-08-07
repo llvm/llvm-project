@@ -289,13 +289,6 @@ public:
                                  bool EmitIR);
   SPIRVTypeInst assignIntTypeToVReg(unsigned BitWidth, Register VReg,
                                     MachineInstr &I, const SPIRVInstrInfo &TII);
-  SPIRVTypeInst assignFloatTypeToVReg(unsigned BitWidth, Register VReg,
-                                      MachineInstr &I,
-                                      const SPIRVInstrInfo &TII);
-  SPIRVTypeInst assignVectTypeToVReg(SPIRVTypeInst BaseType,
-                                     unsigned NumElements, Register VReg,
-                                     MachineInstr &I,
-                                     const SPIRVInstrInfo &TII);
 
   // In cases where the SPIR-V type is already known, this function can be
   // used to map it to the given VReg.
@@ -329,8 +322,6 @@ public:
 
   // Return a pointee's type, or nullptr otherwise.
   SPIRVTypeInst getPointeeType(SPIRVTypeInst PtrType);
-  // Return a pointee's type op code, or 0 otherwise.
-  unsigned getPointeeTypeOp(Register PtrReg);
 
   // Either generate a new OpTypeXXX instruction or return an existing one
   // corresponding to the given string containing the name of the builtin type.
@@ -351,11 +342,6 @@ public:
 
   // Return the result type of the instruction defining the register.
   SPIRVTypeInst getResultType(Register VReg, MachineFunction *MF = nullptr);
-
-  // Whether the given VReg has a SPIR-V type mapped to it yet.
-  bool hasSPIRVTypeForVReg(Register VReg) const {
-    return getSPIRVTypeForVReg(VReg) != nullptr;
-  }
 
   // Return the VReg holding the result of the given OpTypeXXX instruction.
   Register getSPIRVTypeID(SPIRVTypeInst SpirvType) const;
@@ -469,9 +455,6 @@ private:
   SPIRVTypeInst getOpTypePointer(SPIRV::StorageClass::StorageClass SC,
                                  SPIRVTypeInst ElemType,
                                  MachineIRBuilder &MIRBuilder, Register Reg);
-
-  SPIRVTypeInst getOpTypeForwardPointer(SPIRV::StorageClass::StorageClass SC,
-                                        MachineIRBuilder &MIRBuilder);
 
   SPIRVTypeInst
   getOpTypeFunction(const FunctionType *Ty, SPIRVTypeInst RetType,
