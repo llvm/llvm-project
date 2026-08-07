@@ -107,10 +107,3 @@ void test_array_new() {
   sp.reset(new A);
   // This would be caught by bugprone-shared-ptr-array-mismatch checks
 }
-
-void test_array_release(std::shared_ptr<A> spa) {
-  // TODO: 
-  // std::shared_ptr<A[]> sp(spa.release()); // This is actually wrong but not our check's concern
-  // sp.reset(spa.release());
-  // This would be caught by bugprone-shared-ptr-array-mismatch checks (mismatched new/delete)
-}
