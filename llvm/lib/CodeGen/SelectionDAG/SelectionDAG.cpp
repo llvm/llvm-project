@@ -30,6 +30,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -1332,8 +1333,14 @@ SelectionDAG::AddModifiedNodeToCSEMaps(SDNode *N) {
       // to replace the dead one with the existing one.  This can cause
       // recursive merging of other unrelated nodes down the line.
       Existing->intersectFlagsWith(N->getFlags());
-      if (auto *MemNode = dyn_cast<MemSDNode>(Existing))
-        MemNode->refineRanges(cast<MemSDNode>(N)->memoperands());
+      if (auto *MemNode = dyn_cast<MemSDNode>(Existing)) {
+        ArrayRef<MachineMemOperand *> NewMMOs =
+            cast<MemSDNode>(N)->memoperands();
+        // Range and cache hint metadata are not part of the DAG CSE key because
+        // we prefer to CSE even when metadata does not match. Merge potentially
+        // differing metadata conservatively.
+        MemNode->refineMMOMetadata(NewMMOs);
+      }
       ReplaceAllUsesWith(N, Existing);
 
       // N is now dead. Inform the listeners and delete it.
@@ -2258,8 +2265,11 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
          "Invalid VECTOR_SHUFFLE");
 
   // Canonicalize shuffle undef, undef -> undef
-  if (N1.isUndef() && N2.isUndef())
+  if (N1.isUndef() && N2.isUndef()) {
+    if (N1.getOpcode() == ISD::POISON && N2.getOpcode() == ISD::POISON)
+      return getPOISON(VT);
     return getUNDEF(VT);
+  }
 
   // Validate that all indices in Mask are within the range of the elements
   // input to the shuffle.
@@ -2271,9 +2281,9 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
   // Copy the mask so we can do any needed cleanup.
   SmallVector<int, 8> MaskVec(Mask);
 
-  // Canonicalize shuffle v, v -> v, undef
+  // Canonicalize shuffle v, v -> v, poison
   if (N1 == N2) {
-    N2 = getUNDEF(VT);
+    N2 = getPOISON(VT);
     for (int i = 0; i != NElts; ++i)
       if (MaskVec[i] >= NElts) MaskVec[i] -= NElts;
   }
@@ -2312,8 +2322,8 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
       BlendSplat(N2BV, NElts);
   }
 
-  // Canonicalize all index into lhs, -> shuffle lhs, undef
-  // Canonicalize all index into rhs, -> shuffle rhs, undef
+  // Canonicalize all index into lhs, -> shuffle lhs, poison
+  // Canonicalize all index into rhs, -> shuffle rhs, poison
   bool AllLHS = true, AllRHS = true;
   bool N2Undef = N2.isUndef();
   for (int i = 0; i != NElts; ++i) {
@@ -2327,18 +2337,21 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
     }
   }
   if (AllLHS && AllRHS)
-    return getUNDEF(VT);
+    return getPOISON(VT);
   if (AllLHS && !N2Undef)
-    N2 = getUNDEF(VT);
+    N2 = getPOISON(VT);
   if (AllRHS) {
-    N1 = getUNDEF(VT);
+    N1 = getPOISON(VT);
     commuteShuffle(N1, N2, MaskVec);
   }
   // Reset our undef status after accounting for the mask.
   N2Undef = N2.isUndef();
   // Re-check whether both sides ended up undef.
-  if (N1.isUndef() && N2Undef)
+  if (N1.isUndef() && N2Undef) {
+    if (N1.getOpcode() == ISD::POISON && N2.getOpcode() == ISD::POISON)
+      return getPOISON(VT);
     return getUNDEF(VT);
+  }
 
   // If Identity shuffle return that node.
   bool Identity = true, AllSame = true;
@@ -2364,7 +2377,7 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
       SDValue Splat = BV->getSplatValue(&UndefElements);
       // If this is a splat of an undef, shuffling it is also undef.
       if (Splat && Splat.isUndef())
-        return getUNDEF(VT);
+        return Splat.getOpcode() == ISD::POISON ? getPOISON(VT) : getUNDEF(VT);
 
       bool SameNumElts =
           V.getValueType().getVectorNumElements() == VT.getVectorNumElements();
@@ -7136,6 +7149,14 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::CTPOP:
   case ISD::CTLS:
   case ISD::VECREDUCE_ADD:
+  case ISD::VECREDUCE_SMAX:
+  case ISD::VECREDUCE_SMIN:
+  case ISD::VECREDUCE_UMAX:
+  case ISD::VECREDUCE_UMIN:
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:
   case ISD::STEP_VECTOR: {
     SDValue Ops = {N1};
     if (SDValue Fold = FoldConstantArithmetic(Opcode, DL, VT, Ops))
@@ -7485,6 +7506,27 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   return V;
 }
 
+static APInt getIntegerIdentity(unsigned Opcode, unsigned BitWidth) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Unexpected integer identity opcode");
+  case ISD::ADD:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::UMAX:
+    return APInt::getZero(BitWidth);
+  case ISD::MUL:
+    return APInt(BitWidth, 1);
+  case ISD::AND:
+  case ISD::UMIN:
+    return APInt::getAllOnes(BitWidth);
+  case ISD::SMAX:
+    return APInt::getSignedMinValue(BitWidth);
+  case ISD::SMIN:
+    return APInt::getSignedMaxValue(BitWidth);
+  }
+}
+
 static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
                                       const APInt &C2) {
   switch (Opcode) {
@@ -7808,16 +7850,26 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     if (Opcode == ISD::BITCAST)
       return SDValue();
 
-    // Constant fold VECREDUCE_ADD with a BUILD_VECTOR of integer constants.
-    if (Opcode == ISD::VECREDUCE_ADD && ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
+    // Constant fold integer vector reductions with constant BUILD_VECTORs.
+    if ((Opcode == ISD::VECREDUCE_ADD || Opcode == ISD::VECREDUCE_SMAX ||
+         Opcode == ISD::VECREDUCE_SMIN || Opcode == ISD::VECREDUCE_UMAX ||
+         Opcode == ISD::VECREDUCE_UMIN || Opcode == ISD::VECREDUCE_MUL ||
+         Opcode == ISD::VECREDUCE_OR || Opcode == ISD::VECREDUCE_XOR ||
+         Opcode == ISD::VECREDUCE_AND) &&
+        ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
       unsigned EltBits = N1.getValueType().getScalarSizeInBits();
-      APInt Acc = APInt::getZero(EltBits);
+      unsigned BaseOpcode = ISD::getVecReduceBaseOpcode(Opcode);
+      APInt Acc = getIntegerIdentity(BaseOpcode, EltBits);
       for (SDValue Elt : N1->op_values()) {
         if (Elt.getOpcode() == ISD::POISON)
           return getPOISON(VT);
         if (Elt.isUndef() || cast<ConstantSDNode>(Elt)->isOpaque())
           return SDValue();
-        Acc += cast<ConstantSDNode>(Elt)->getAPIntValue().trunc(EltBits);
+        APInt Value = cast<ConstantSDNode>(Elt)->getAPIntValue().trunc(EltBits);
+        std::optional<APInt> Folded = FoldValue(BaseOpcode, Acc, Value);
+        assert(Folded &&
+               "Expected vector reduction base opcode to be foldable");
+        Acc = *Folded;
       }
       EVT EltVT = N1.getValueType().getScalarType();
       return getAnyExtOrTrunc(getConstant(Acc, DL, EltVT), DL, VT);
@@ -9460,7 +9512,8 @@ getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
                         Align SrcAlign, bool isVol, bool AlwaysInline,
                         MachinePointerInfo DstPtrInfo,
                         MachinePointerInfo SrcPtrInfo, const AAMDNodes &AAInfo,
-                        BatchAAResults *BatchAA) {
+                        BatchAAResults *BatchAA, const MDNode *DstMemCacheHint,
+                        const MDNode *SrcMemCacheHint) {
   // Turn a memcpy of undef to nop.
   // FIXME: We need to honor volatile even is Src is undef.
   if (Src.isUndef())
@@ -9568,7 +9621,8 @@ getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
         Store = DAG.getStore(
             Chain, dl, Value,
             DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
-            DstPtrInfo.getWithOffset(DstOff), DstAlign, MMOFlags, NewAAInfo);
+            DstPtrInfo.getWithOffset(DstOff), DstAlign, MMOFlags,
+            MMOMetadata(NewAAInfo, /*Ranges=*/nullptr, DstMemCacheHint));
         OutChains.push_back(Store);
       }
     }
@@ -9594,13 +9648,15 @@ getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
           ISD::EXTLOAD, dl, NVT, Chain,
           DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff)),
           SrcPtrInfo.getWithOffset(SrcOff), VT,
-          commonAlignment(SrcAlign, SrcOff), SrcMMOFlags, NewAAInfo);
+          commonAlignment(SrcAlign, SrcOff), SrcMMOFlags,
+          MMOMetadata(NewAAInfo, /*Ranges=*/nullptr, SrcMemCacheHint));
       OutLoadChains.push_back(Value.getValue(1));
 
       Store = DAG.getTruncStore(
           Chain, dl, Value,
           DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
-          DstPtrInfo.getWithOffset(DstOff), VT, DstAlign, MMOFlags, NewAAInfo);
+          DstPtrInfo.getWithOffset(DstOff), VT, DstAlign, MMOFlags,
+          MMOMetadata(NewAAInfo, /*Ranges=*/nullptr, DstMemCacheHint));
       OutStoreChains.push_back(Store);
     }
     SrcOff += VTSize;
@@ -9651,7 +9707,7 @@ getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
       }
     }
   }
-  return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
+  return DAG.getTokenFactor(dl, OutChains);
 }
 
 static SDValue getMemmoveLoadsAndStores(
@@ -9762,7 +9818,7 @@ static SDValue getMemmoveLoadsAndStores(
     LoadChains.push_back(Value.getValue(1));
     SrcOff += VTSize;
   }
-  Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
+  Chain = DAG.getTokenFactor(dl, LoadChains);
   OutChains.clear();
   uint64_t DstOff = 0;
   for (unsigned i = 0; i < NumMemOps; i++) {
@@ -9804,7 +9860,7 @@ static SDValue getMemmoveLoadsAndStores(
     DstOff += VTSize;
   }
 
-  return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
+  return DAG.getTokenFactor(dl, OutChains);
 }
 
 /// Lower the call to 'memset' intrinsic function into a series of store
@@ -9959,7 +10015,7 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   assert(Size == 0 && "Target's findOptimalMemOpLowering did not specify "
                       "stores that exactly cover the memset size");
 
-  return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
+  return DAG.getTokenFactor(dl, OutChains);
 }
 
 static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
@@ -10086,6 +10142,11 @@ SDValue SelectionDAG::getMemcpy(
     const AAMDNodes &AAInfo, BatchAAResults *BatchAA) {
   // Check to see if we should lower the memcpy to loads and stores first.
   // For cases within the target-specified limits, this is the best choice.
+  const MDNode *DstMemCacheHint =
+      CI ? getMemCacheHintMetadata(*CI, /*OperandNo=*/0) : nullptr;
+  const MDNode *SrcMemCacheHint =
+      CI ? getMemCacheHintMetadata(*CI, /*OperandNo=*/1) : nullptr;
+
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
   if (ConstantSize) {
     // Memcpy with size zero? Just return the original chain.
@@ -10094,7 +10155,8 @@ SDValue SelectionDAG::getMemcpy(
 
     SDValue Result = getMemcpyLoadsAndStores(
         *this, dl, Chain, Dst, Src, ConstantSize->getZExtValue(), DstAlign,
-        SrcAlign, isVol, false, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA);
+        SrcAlign, isVol, false, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA,
+        DstMemCacheHint, SrcMemCacheHint);
     if (Result.getNode())
       return Result;
   }
@@ -10115,7 +10177,8 @@ SDValue SelectionDAG::getMemcpy(
     assert(ConstantSize && "AlwaysInline requires a constant size!");
     return getMemcpyLoadsAndStores(
         *this, dl, Chain, Dst, Src, ConstantSize->getZExtValue(), DstAlign,
-        SrcAlign, isVol, true, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA);
+        SrcAlign, isVol, true, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA,
+        DstMemCacheHint, SrcMemCacheHint);
   }
 
   checkAddrSpaceIsValidForLibcall(TLI, DstPtrInfo.getAddrSpace());
@@ -10438,7 +10501,7 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
   void* IP = nullptr;
   if (auto *E = cast_or_null<AtomicSDNode>(FindNodeOrInsertPos(ID, dl, IP))) {
     E->refineAlignment(MMO);
-    E->refineRanges(MMO);
+    E->refineMMOMetadata(MMO);
     return SDValue(E, 0);
   }
 
@@ -10511,6 +10574,15 @@ SDValue SelectionDAG::getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl) {
   for (const SDValue &Op : Ops)
     VTs.push_back(Op.getValueType());
   return getNode(ISD::MERGE_VALUES, dl, getVTList(VTs), Ops);
+}
+
+SDValue SelectionDAG::getErrorMergeValues(ArrayRef<EVT> ResultTypes,
+                                          SDValue Chain, const SDLoc &dl) {
+  SmallVector<SDValue, 4> RetValues;
+  RetValues.reserve(ResultTypes.size());
+  for (EVT VT : ResultTypes)
+    RetValues.push_back(VT == MVT::Other ? Chain : getPOISON(VT));
+  return getMergeValues(RetValues, dl);
 }
 
 SDValue SelectionDAG::getMemIntrinsicNode(
@@ -10692,7 +10764,7 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
                               MachinePointerInfo PtrInfo, EVT MemVT,
                               Align Alignment,
                               MachineMemOperand::Flags MMOFlags,
-                              const AAMDNodes &AAInfo, const MDNode *Ranges) {
+                              const MMOMetadata &Metadata) {
   assert(Chain.getValueType() == MVT::Other &&
         "Invalid chain type");
 
@@ -10705,8 +10777,8 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
 
   TypeSize Size = MemVT.getStoreSize();
   MachineFunction &MF = getMachineFunction();
-  MachineMemOperand *MMO = MF.getMachineMemOperand(PtrInfo, MMOFlags, Size,
-                                                   Alignment, AAInfo, Ranges);
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(PtrInfo, MMOFlags, Size, Alignment, Metadata);
   return getLoad(AM, ExtType, VT, dl, Chain, Ptr, Offset, MemVT, MMO);
 }
 
@@ -10738,7 +10810,8 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
          "Range metadata and load type must match!");
 
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) && "Unindexed load with an offset!");
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
+         "Unindexed load with an offset!");
 
   SDVTList VTs = Indexed ?
     getVTList(VT, Ptr.getValueType(), MVT::Other) : getVTList(VT, MVT::Other);
@@ -10753,7 +10826,7 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
   void *IP = nullptr;
   if (auto *E = cast_or_null<LoadSDNode>(FindNodeOrInsertPos(ID, dl, IP))) {
     E->refineAlignment(MMO);
-    E->refineRanges(MMO);
+    E->refineMMOMetadata(MMO);
     return SDValue(E, 0);
   }
   auto *N = newSDNode<LoadSDNode>(dl.getIROrder(), dl.getDebugLoc(), VTs, AM,
@@ -10771,15 +10844,15 @@ SDValue SelectionDAG::getLoad(EVT VT, const SDLoc &dl, SDValue Chain,
                               SDValue Ptr, MachinePointerInfo PtrInfo,
                               MaybeAlign Alignment,
                               MachineMemOperand::Flags MMOFlags,
-                              const AAMDNodes &AAInfo, const MDNode *Ranges) {
-  SDValue Undef = getUNDEF(Ptr.getValueType());
+                              const MMOMetadata &Metadata) {
+  SDValue Undef = getPOISON(Ptr.getValueType());
   return getLoad(ISD::UNINDEXED, ISD::NON_EXTLOAD, VT, dl, Chain, Ptr, Undef,
-                 PtrInfo, VT, Alignment, MMOFlags, AAInfo, Ranges);
+                 PtrInfo, VT, Alignment, MMOFlags, Metadata);
 }
 
 SDValue SelectionDAG::getLoad(EVT VT, const SDLoc &dl, SDValue Chain,
                               SDValue Ptr, MachineMemOperand *MMO) {
-  SDValue Undef = getUNDEF(Ptr.getValueType());
+  SDValue Undef = getPOISON(Ptr.getValueType());
   return getLoad(ISD::UNINDEXED, ISD::NON_EXTLOAD, VT, dl, Chain, Ptr, Undef,
                  VT, MMO);
 }
@@ -10789,16 +10862,16 @@ SDValue SelectionDAG::getExtLoad(ISD::LoadExtType ExtType, const SDLoc &dl,
                                  MachinePointerInfo PtrInfo, EVT MemVT,
                                  MaybeAlign Alignment,
                                  MachineMemOperand::Flags MMOFlags,
-                                 const AAMDNodes &AAInfo) {
-  SDValue Undef = getUNDEF(Ptr.getValueType());
+                                 const MMOMetadata &Metadata) {
+  SDValue Undef = getPOISON(Ptr.getValueType());
   return getLoad(ISD::UNINDEXED, ExtType, VT, dl, Chain, Ptr, Undef, PtrInfo,
-                 MemVT, Alignment, MMOFlags, AAInfo);
+                 MemVT, Alignment, MMOFlags, Metadata);
 }
 
 SDValue SelectionDAG::getExtLoad(ISD::LoadExtType ExtType, const SDLoc &dl,
                                  EVT VT, SDValue Chain, SDValue Ptr, EVT MemVT,
                                  MachineMemOperand *MMO) {
-  SDValue Undef = getUNDEF(Ptr.getValueType());
+  SDValue Undef = getPOISON(Ptr.getValueType());
   return getLoad(ISD::UNINDEXED, ExtType, VT, dl, Chain, Ptr, Undef,
                  MemVT, MMO);
 }
@@ -10807,25 +10880,29 @@ SDValue SelectionDAG::getIndexedLoad(SDValue OrigLoad, const SDLoc &dl,
                                      SDValue Base, SDValue Offset,
                                      ISD::MemIndexedMode AM) {
   LoadSDNode *LD = cast<LoadSDNode>(OrigLoad);
-  assert(LD->getOffset().isUndef() && "Load is already a indexed load!");
+  assert(LD->getOffset().getOpcode() == ISD::POISON &&
+         "Load is already a indexed load!");
   // Don't propagate the invariant or dereferenceable flags.
   auto MMOFlags =
       LD->getMemOperand()->getFlags() &
       ~(MachineMemOperand::MOInvariant | MachineMemOperand::MODereferenceable);
-  return getLoad(AM, LD->getExtensionType(), OrigLoad.getValueType(), dl,
-                 LD->getChain(), Base, Offset, LD->getPointerInfo(),
-                 LD->getMemoryVT(), LD->getAlign(), MMOFlags, LD->getAAInfo());
+  return getLoad(
+      AM, LD->getExtensionType(), OrigLoad.getValueType(), dl, LD->getChain(),
+      Base, Offset, LD->getPointerInfo(), LD->getMemoryVT(), LD->getAlign(),
+      MMOFlags,
+      MMOMetadata(LD->getAAInfo(), LD->getRanges(), LD->getMemCacheHint()));
 }
 
 SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                                SDValue Ptr, MachinePointerInfo PtrInfo,
                                Align Alignment,
                                MachineMemOperand::Flags MMOFlags,
-                               const AAMDNodes &AAInfo) {
+                               const MMOMetadata &Metadata) {
   assert(Chain.getValueType() == MVT::Other && "Invalid chain type");
 
   MMOFlags |= MachineMemOperand::MOStore;
   assert((MMOFlags & MachineMemOperand::MOLoad) == 0);
+  assert(!Metadata.Ranges && "range metadata is invalid for stores");
 
   if (PtrInfo.V.isNull())
     PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr);
@@ -10833,13 +10910,13 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   MachineFunction &MF = getMachineFunction();
   TypeSize Size = Val.getValueType().getStoreSize();
   MachineMemOperand *MMO =
-      MF.getMachineMemOperand(PtrInfo, MMOFlags, Size, Alignment, AAInfo);
+      MF.getMachineMemOperand(PtrInfo, MMOFlags, Size, Alignment, Metadata);
   return getStore(Chain, dl, Val, Ptr, MMO);
 }
 
 SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                                SDValue Ptr, MachineMemOperand *MMO) {
-  SDValue Undef = getUNDEF(Ptr.getValueType());
+  SDValue Undef = getPOISON(Ptr.getValueType());
   return getStore(Chain, dl, Val, Ptr, Undef, Val.getValueType(), MMO,
                   ISD::UNINDEXED);
 }
@@ -10866,7 +10943,8 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   }
 
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) && "Unindexed store with an offset!");
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
+         "Unindexed store with an offset!");
   SDVTList VTs = Indexed ? getVTList(Ptr.getValueType(), MVT::Other)
                          : getVTList(MVT::Other);
   SDValue Ops[] = {Chain, Val, Ptr, Offset};
@@ -10880,6 +10958,7 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
     cast<StoreSDNode>(E)->refineAlignment(MMO);
+    cast<StoreSDNode>(E)->refineMMOMetadata(MMO);
     return SDValue(E, 0);
   }
   auto *N = newSDNode<StoreSDNode>(dl.getIROrder(), dl.getDebugLoc(), VTs, AM,
@@ -10894,37 +10973,55 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
 }
 
 SDValue SelectionDAG::getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
-                                    SDValue Ptr, MachinePointerInfo PtrInfo,
-                                    EVT SVT, Align Alignment,
+                                    SDValue Ptr, SDValue Offset,
+                                    MachinePointerInfo PtrInfo, EVT SVT,
+                                    Align Alignment,
                                     MachineMemOperand::Flags MMOFlags,
-                                    const AAMDNodes &AAInfo) {
+                                    const MMOMetadata &Metadata) {
   assert(Chain.getValueType() == MVT::Other &&
         "Invalid chain type");
 
   MMOFlags |= MachineMemOperand::MOStore;
   assert((MMOFlags & MachineMemOperand::MOLoad) == 0);
+  assert(!Metadata.Ranges && "range metadata is invalid for stores");
 
   if (PtrInfo.V.isNull())
     PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr);
 
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MMOFlags, SVT.getStoreSize(), Alignment, AAInfo);
-  return getTruncStore(Chain, dl, Val, Ptr, SVT, MMO);
+      PtrInfo, MMOFlags, SVT.getStoreSize(), Alignment, Metadata);
+  return getTruncStore(Chain, dl, Val, Ptr, Offset, SVT, MMO);
+}
+
+SDValue SelectionDAG::getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
+                                    SDValue Ptr, MachinePointerInfo PtrInfo,
+                                    EVT SVT, Align Alignment,
+                                    MachineMemOperand::Flags MMOFlags,
+                                    const MMOMetadata &Metadata) {
+  return getTruncStore(Chain, dl, Val, Ptr, getPOISON(Ptr.getValueType()),
+                       PtrInfo, SVT, Alignment, MMOFlags, Metadata);
+}
+
+SDValue SelectionDAG::getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
+                                    SDValue Ptr, SDValue Offset, EVT SVT,
+                                    MachineMemOperand *MMO) {
+  return getStore(Chain, dl, Val, Ptr, Offset, SVT, MMO, ISD::UNINDEXED, true);
 }
 
 SDValue SelectionDAG::getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                                     SDValue Ptr, EVT SVT,
                                     MachineMemOperand *MMO) {
-  SDValue Undef = getUNDEF(Ptr.getValueType());
-  return getStore(Chain, dl, Val, Ptr, Undef, SVT, MMO, ISD::UNINDEXED, true);
+  return getStore(Chain, dl, Val, Ptr, getPOISON(Ptr.getValueType()), SVT, MMO,
+                  ISD::UNINDEXED, true);
 }
 
 SDValue SelectionDAG::getIndexedStore(SDValue OrigStore, const SDLoc &dl,
                                       SDValue Base, SDValue Offset,
                                       ISD::MemIndexedMode AM) {
   StoreSDNode *ST = cast<StoreSDNode>(OrigStore);
-  assert(ST->getOffset().isUndef() && "Store is already a indexed store!");
+  assert(ST->getOffset().getOpcode() == ISD::POISON &&
+         "Store is already a indexed store!");
   return getStore(ST->getChain(), dl, ST->getValue(), Base, Offset,
                   ST->getMemoryVT(), ST->getMemOperand(), AM,
                   ST->isTruncatingStore());
@@ -10945,8 +11042,8 @@ SDValue SelectionDAG::getLoadVP(
 
   TypeSize Size = MemVT.getStoreSize();
   MachineFunction &MF = getMachineFunction();
-  MachineMemOperand *MMO = MF.getMachineMemOperand(PtrInfo, MMOFlags, Size,
-                                                   Alignment, AAInfo, Ranges);
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      PtrInfo, MMOFlags, Size, Alignment, MMOMetadata(AAInfo, Ranges));
   return getLoadVP(AM, ExtType, VT, dl, Chain, Ptr, Offset, Mask, EVL, MemVT,
                    MMO, IsExpanding);
 }
@@ -10963,7 +11060,8 @@ SDValue SelectionDAG::getLoadVP(ISD::MemIndexedMode AM,
          "Vector width mismatch between mask and data");
 
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) && "Unindexed load with an offset!");
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
+         "Unindexed load with an offset!");
 
   SDVTList VTs = Indexed ? getVTList(VT, Ptr.getValueType(), MVT::Other)
                          : getVTList(VT, MVT::Other);
@@ -10978,7 +11076,7 @@ SDValue SelectionDAG::getLoadVP(ISD::MemIndexedMode AM,
   void *IP = nullptr;
   if (auto *E = cast_or_null<VPLoadSDNode>(FindNodeOrInsertPos(ID, dl, IP))) {
     E->refineAlignment(MMO);
-    E->refineRanges(MMO);
+    E->refineMMOMetadata(MMO);
     return SDValue(E, 0);
   }
   auto *N = newSDNode<VPLoadSDNode>(dl.getIROrder(), dl.getDebugLoc(), VTs, AM,
@@ -10999,7 +11097,7 @@ SDValue SelectionDAG::getLoadVP(EVT VT, const SDLoc &dl, SDValue Chain,
                                 MachineMemOperand::Flags MMOFlags,
                                 const AAMDNodes &AAInfo, const MDNode *Ranges,
                                 bool IsExpanding) {
-  SDValue Undef = getUNDEF(Ptr.getValueType());
+  SDValue Undef = getPOISON(Ptr.getValueType());
   return getLoadVP(ISD::UNINDEXED, ISD::NON_EXTLOAD, VT, dl, Chain, Ptr, Undef,
                    Mask, EVL, PtrInfo, VT, Alignment, MMOFlags, AAInfo, Ranges,
                    IsExpanding);
@@ -11008,7 +11106,7 @@ SDValue SelectionDAG::getLoadVP(EVT VT, const SDLoc &dl, SDValue Chain,
 SDValue SelectionDAG::getLoadVP(EVT VT, const SDLoc &dl, SDValue Chain,
                                 SDValue Ptr, SDValue Mask, SDValue EVL,
                                 MachineMemOperand *MMO, bool IsExpanding) {
-  SDValue Undef = getUNDEF(Ptr.getValueType());
+  SDValue Undef = getPOISON(Ptr.getValueType());
   return getLoadVP(ISD::UNINDEXED, ISD::NON_EXTLOAD, VT, dl, Chain, Ptr, Undef,
                    Mask, EVL, VT, MMO, IsExpanding);
 }
@@ -11020,7 +11118,7 @@ SDValue SelectionDAG::getExtLoadVP(ISD::LoadExtType ExtType, const SDLoc &dl,
                                    MaybeAlign Alignment,
                                    MachineMemOperand::Flags MMOFlags,
                                    const AAMDNodes &AAInfo, bool IsExpanding) {
-  SDValue Undef = getUNDEF(Ptr.getValueType());
+  SDValue Undef = getPOISON(Ptr.getValueType());
   return getLoadVP(ISD::UNINDEXED, ExtType, VT, dl, Chain, Ptr, Undef, Mask,
                    EVL, PtrInfo, MemVT, Alignment, MMOFlags, AAInfo, nullptr,
                    IsExpanding);
@@ -11030,7 +11128,7 @@ SDValue SelectionDAG::getExtLoadVP(ISD::LoadExtType ExtType, const SDLoc &dl,
                                    EVT VT, SDValue Chain, SDValue Ptr,
                                    SDValue Mask, SDValue EVL, EVT MemVT,
                                    MachineMemOperand *MMO, bool IsExpanding) {
-  SDValue Undef = getUNDEF(Ptr.getValueType());
+  SDValue Undef = getPOISON(Ptr.getValueType());
   return getLoadVP(ISD::UNINDEXED, ExtType, VT, dl, Chain, Ptr, Undef, Mask,
                    EVL, MemVT, MMO, IsExpanding);
 }
@@ -11039,7 +11137,8 @@ SDValue SelectionDAG::getIndexedLoadVP(SDValue OrigLoad, const SDLoc &dl,
                                        SDValue Base, SDValue Offset,
                                        ISD::MemIndexedMode AM) {
   auto *LD = cast<VPLoadSDNode>(OrigLoad);
-  assert(LD->getOffset().isUndef() && "Load is already a indexed load!");
+  assert(LD->getOffset().getOpcode() == ISD::POISON &&
+         "Load is already a indexed load!");
   // Don't propagate the invariant or dereferenceable flags.
   auto MMOFlags =
       LD->getMemOperand()->getFlags() &
@@ -11062,7 +11161,8 @@ SDValue SelectionDAG::getStoreVP(SDValue Chain, const SDLoc &dl, SDValue Val,
          "Vector width mismatch between mask and data");
 
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) && "Unindexed vp_store with an offset!");
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
+         "Unindexed vp_store with an offset!");
   SDVTList VTs = Indexed ? getVTList(Ptr.getValueType(), MVT::Other)
                          : getVTList(MVT::Other);
   SDValue Ops[] = {Chain, Val, Ptr, Offset, Mask, EVL};
@@ -11120,7 +11220,7 @@ SDValue SelectionDAG::getTruncStoreVP(SDValue Chain, const SDLoc &dl,
 
   assert(Chain.getValueType() == MVT::Other && "Invalid chain type");
   if (VT == SVT)
-    return getStoreVP(Chain, dl, Val, Ptr, getUNDEF(Ptr.getValueType()), Mask,
+    return getStoreVP(Chain, dl, Val, Ptr, getPOISON(Ptr.getValueType()), Mask,
                       EVL, VT, MMO, ISD::UNINDEXED,
                       /*IsTruncating*/ false, IsCompressing);
 
@@ -11134,7 +11234,7 @@ SDValue SelectionDAG::getTruncStoreVP(SDValue Chain, const SDLoc &dl,
          "Cannot use trunc store to change the number of vector elements!");
 
   SDVTList VTs = getVTList(MVT::Other);
-  SDValue Undef = getUNDEF(Ptr.getValueType());
+  SDValue Undef = getPOISON(Ptr.getValueType());
   SDValue Ops[] = {Chain, Val, Ptr, Undef, Mask, EVL};
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::VP_STORE, VTs, Ops);
@@ -11164,7 +11264,8 @@ SDValue SelectionDAG::getIndexedStoreVP(SDValue OrigStore, const SDLoc &dl,
                                         SDValue Base, SDValue Offset,
                                         ISD::MemIndexedMode AM) {
   auto *ST = cast<VPStoreSDNode>(OrigStore);
-  assert(ST->getOffset().isUndef() && "Store is already an indexed store!");
+  assert(ST->getOffset().getOpcode() == ISD::POISON &&
+         "Store is already an indexed store!");
   SDVTList VTs = getVTList(Base.getValueType(), MVT::Other);
   SDValue Ops[] = {ST->getChain(), ST->getValue(), Base,
                    Offset,         ST->getMask(),  ST->getVectorLength()};
@@ -11195,7 +11296,8 @@ SDValue SelectionDAG::getStridedLoadVP(
     SDValue Chain, SDValue Ptr, SDValue Offset, SDValue Stride, SDValue Mask,
     SDValue EVL, EVT MemVT, MachineMemOperand *MMO, bool IsExpanding) {
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) && "Unindexed load with an offset!");
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
+         "Unindexed load with an offset!");
 
   SDValue Ops[] = {Chain, Ptr, Offset, Stride, Mask, EVL};
   SDVTList VTs = Indexed ? getVTList(VT, Ptr.getValueType(), MVT::Other)
@@ -11229,7 +11331,7 @@ SDValue SelectionDAG::getStridedLoadVP(EVT VT, const SDLoc &DL, SDValue Chain,
                                        SDValue Mask, SDValue EVL,
                                        MachineMemOperand *MMO,
                                        bool IsExpanding) {
-  SDValue Undef = getUNDEF(Ptr.getValueType());
+  SDValue Undef = getPOISON(Ptr.getValueType());
   return getStridedLoadVP(ISD::UNINDEXED, ISD::NON_EXTLOAD, VT, DL, Chain, Ptr,
                           Undef, Stride, Mask, EVL, VT, MMO, IsExpanding);
 }
@@ -11238,7 +11340,7 @@ SDValue SelectionDAG::getExtStridedLoadVP(
     ISD::LoadExtType ExtType, const SDLoc &DL, EVT VT, SDValue Chain,
     SDValue Ptr, SDValue Stride, SDValue Mask, SDValue EVL, EVT MemVT,
     MachineMemOperand *MMO, bool IsExpanding) {
-  SDValue Undef = getUNDEF(Ptr.getValueType());
+  SDValue Undef = getPOISON(Ptr.getValueType());
   return getStridedLoadVP(ISD::UNINDEXED, ExtType, VT, DL, Chain, Ptr, Undef,
                           Stride, Mask, EVL, MemVT, MMO, IsExpanding);
 }
@@ -11252,7 +11354,8 @@ SDValue SelectionDAG::getStridedStoreVP(SDValue Chain, const SDLoc &DL,
                                         bool IsTruncating, bool IsCompressing) {
   assert(Chain.getValueType() == MVT::Other && "Invalid chain type");
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) && "Unindexed vp_store with an offset!");
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
+         "Unindexed vp_store with an offset!");
   SDVTList VTs = Indexed ? getVTList(Ptr.getValueType(), MVT::Other)
                          : getVTList(MVT::Other);
   SDValue Ops[] = {Chain, Val, Ptr, Offset, Stride, Mask, EVL};
@@ -11289,7 +11392,7 @@ SDValue SelectionDAG::getTruncStridedStoreVP(SDValue Chain, const SDLoc &DL,
 
   assert(Chain.getValueType() == MVT::Other && "Invalid chain type");
   if (VT == SVT)
-    return getStridedStoreVP(Chain, DL, Val, Ptr, getUNDEF(Ptr.getValueType()),
+    return getStridedStoreVP(Chain, DL, Val, Ptr, getPOISON(Ptr.getValueType()),
                              Stride, Mask, EVL, VT, MMO, ISD::UNINDEXED,
                              /*IsTruncating*/ false, IsCompressing);
 
@@ -11303,7 +11406,7 @@ SDValue SelectionDAG::getTruncStridedStoreVP(SDValue Chain, const SDLoc &DL,
          "Cannot use trunc store to change the number of vector elements!");
 
   SDVTList VTs = getVTList(MVT::Other);
-  SDValue Undef = getUNDEF(Ptr.getValueType());
+  SDValue Undef = getPOISON(Ptr.getValueType());
   SDValue Ops[] = {Chain, Val, Ptr, Undef, Stride, Mask, EVL};
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::EXPERIMENTAL_VP_STRIDED_STORE, VTs, Ops);
@@ -11422,7 +11525,7 @@ SDValue SelectionDAG::getMaskedLoad(EVT VT, const SDLoc &dl, SDValue Chain,
                                     ISD::MemIndexedMode AM,
                                     ISD::LoadExtType ExtTy, bool isExpanding) {
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) &&
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
          "Unindexed masked load with an offset!");
   SDVTList VTs = Indexed ? getVTList(VT, Base.getValueType(), MVT::Other)
                          : getVTList(VT, MVT::Other);
@@ -11454,7 +11557,8 @@ SDValue SelectionDAG::getIndexedMaskedLoad(SDValue OrigLoad, const SDLoc &dl,
                                            SDValue Base, SDValue Offset,
                                            ISD::MemIndexedMode AM) {
   MaskedLoadSDNode *LD = cast<MaskedLoadSDNode>(OrigLoad);
-  assert(LD->getOffset().isUndef() && "Masked load is already a indexed load!");
+  assert(LD->getOffset().getOpcode() == ISD::POISON &&
+         "Masked load is already a indexed load!");
   return getMaskedLoad(OrigLoad.getValueType(), dl, LD->getChain(), Base,
                        Offset, LD->getMask(), LD->getPassThru(),
                        LD->getMemoryVT(), LD->getMemOperand(), AM,
@@ -11470,7 +11574,7 @@ SDValue SelectionDAG::getMaskedStore(SDValue Chain, const SDLoc &dl,
   assert(Chain.getValueType() == MVT::Other &&
         "Invalid chain type");
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) &&
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
          "Unindexed masked store with an offset!");
   SDVTList VTs = Indexed ? getVTList(Base.getValueType(), MVT::Other)
                          : getVTList(MVT::Other);
@@ -11503,7 +11607,7 @@ SDValue SelectionDAG::getIndexedMaskedStore(SDValue OrigStore, const SDLoc &dl,
                                             SDValue Base, SDValue Offset,
                                             ISD::MemIndexedMode AM) {
   MaskedStoreSDNode *ST = cast<MaskedStoreSDNode>(OrigStore);
-  assert(ST->getOffset().isUndef() &&
+  assert(ST->getOffset().getOpcode() == ISD::POISON &&
          "Masked store is already a indexed store!");
   return getMaskedStore(ST->getChain(), dl, ST->getValue(), Base, Offset,
                         ST->getMask(), ST->getMemoryVT(), ST->getMemOperand(),
@@ -14218,7 +14322,8 @@ SelectionDAG::matchBinOpReduction(SDNode *Extract, ISD::NodeType &BinOp,
     EVT OpVT = Op.getValueType();
     EVT OpSVT = OpVT.getScalarType();
     EVT SubVT = EVT::getVectorVT(*getContext(), OpSVT, NumSubElts);
-    if (!TLI->isExtractSubvectorCheap(SubVT, OpVT, 0))
+    if (TLI->getExtractSubvectorCost(SubVT, OpVT, 0) >
+        TargetLowering::ExtractSubvectorCost::Cheap)
       return SDValue();
     BinOp = (ISD::NodeType)CandidateBinOp;
     return getExtractSubvector(SDLoc(Op), SubVT, Op, 0);
@@ -14370,7 +14475,8 @@ SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {
       break;
     }
     case ISD::VSELECT:
-      Scalars.push_back(getNode(ISD::SELECT, dl, EltVT, Operands));
+      Scalars.push_back(
+          getNode(ISD::SELECT, dl, EltVT, Operands, N->getFlags()));
       break;
     case ISD::SHL:
     case ISD::SRA:
@@ -15154,16 +15260,13 @@ SDValue SelectionDAG::getIdentityElement(unsigned Opcode, const SDLoc &DL,
   case ISD::OR:
   case ISD::XOR:
   case ISD::UMAX:
-    return getConstant(0, DL, VT);
   case ISD::MUL:
-    return getConstant(1, DL, VT);
   case ISD::AND:
   case ISD::UMIN:
-    return getAllOnesConstant(DL, VT);
   case ISD::SMAX:
-    return getConstant(APInt::getSignedMinValue(VT.getSizeInBits()), DL, VT);
   case ISD::SMIN:
-    return getConstant(APInt::getSignedMaxValue(VT.getSizeInBits()), DL, VT);
+    return getConstant(getIntegerIdentity(Opcode, VT.getScalarSizeInBits()), DL,
+                       VT);
   case ISD::FADD:
     // If flags allow, prefer positive zero since it's generally cheaper
     // to materialize on most targets.

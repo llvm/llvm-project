@@ -2165,7 +2165,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     elf::elf_xword log2align =
         (header.sh_addralign == 0) ? 0 : llvm::Log2_64(header.sh_addralign);
 
-    SectionSP section_sp(new Section(
+    SectionSP section_sp = std::make_shared<Section>(
         InfoOr->Segment, GetModule(), // Module to which this section belongs.
         this,            // ObjectFile to which this section belongs and should
                          // read section data from.
@@ -2175,9 +2175,9 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         InfoOr->Range.GetRangeBase(), // VM address.
         InfoOr->Range.GetByteSize(),  // VM size in bytes of this section.
         header.sh_offset,             // Offset of this section in the file.
-        file_size,         // Size of the section as found in the file.
-        log2align,         // Alignment of the section
-        header.sh_flags)); // Flags for this section.
+        file_size,        // Size of the section as found in the file.
+        log2align,        // Alignment of the section
+        header.sh_flags); // Flags for this section.
 
     section_sp->SetPermissions(GetPermissions(header));
     section_sp->SetIsThreadSpecific(header.sh_flags & SHF_TLS);
@@ -3826,6 +3826,14 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #undef SPARC_DYNAMIC_TAG
     }
     break;
+
+  case llvm::ELF::EM_X86_64:
+    switch (Type) {
+#define X86_64_DYNAMIC_TAG(name, value) DYNAMIC_STRINGIFY_ENUM(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef X86_64_DYNAMIC_TAG
+    }
+    break;
   }
 #undef DYNAMIC_TAG
   switch (Type) {
@@ -3837,6 +3845,7 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #define PPC64_DYNAMIC_TAG(name, value)
 #define RISCV_DYNAMIC_TAG(name, value)
 #define SPARC_DYNAMIC_TAG(name, value)
+#define X86_64_DYNAMIC_TAG(name, value)
 // Also ignore marker tags such as DT_HIOS (maps to DT_VERNEEDNUM), etc.
 #define DYNAMIC_TAG_MARKER(name, value)
 #define DYNAMIC_TAG(name, value)                                               \
@@ -3851,6 +3860,7 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #undef PPC64_DYNAMIC_TAG
 #undef RISCV_DYNAMIC_TAG
 #undef SPARC_DYNAMIC_TAG
+#undef X86_64_DYNAMIC_TAG
 #undef DYNAMIC_TAG_MARKER
 #undef DYNAMIC_STRINGIFY_ENUM
   default:

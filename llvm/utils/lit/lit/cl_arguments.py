@@ -281,6 +281,16 @@ def parse_args():
         type=os.path.abspath,
     )
     execution_group.add_argument(
+        "--pass-env",
+        dest="pass_env",
+        metavar="NAME",
+        help="Pass the named environment variable through to the test"
+        " environment (in addition to the built-in allow-list). May be"
+        " specified multiple times.",
+        action="append",
+        default=[],
+    )
+    execution_group.add_argument(
         "--vg", dest="useValgrind", help="Run tests under valgrind", action="store_true"
     )
     execution_group.add_argument(

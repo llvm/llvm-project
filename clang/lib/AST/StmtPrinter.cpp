@@ -35,7 +35,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/ExpressionTraits.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/LLVM.h"
@@ -43,7 +43,6 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -160,6 +159,8 @@ namespace {
     }
 
     void VisitCXXNamedCastExpr(CXXNamedCastExpr *Node);
+
+    void VisitBinComma(BinaryOperator *Node);
 
 #define ABSTRACT_STMT(CLASS)
 #define STMT(CLASS, PARENT) \
@@ -1882,6 +1883,24 @@ void StmtPrinter::VisitMatrixElementExpr(MatrixElementExpr *Node) {
 }
 
 void StmtPrinter::VisitCStyleCastExpr(CStyleCastExpr *Node) {
+  if (QualType T = Node->getType(); Policy.PrettyEnums && T->isEnumeralType()) {
+    // special case enums to avoid producing cast expressions when naming
+    // an enumerator would suffice
+
+    const auto *IL = dyn_cast<IntegerLiteral>(Node->getSubExpr());
+    const auto *ED = T->getAsEnumDecl();
+    if (IL && ED) {
+      llvm::APInt Val = IL->getValue();
+      const auto ECD =
+          llvm::find_if(ED->enumerators(), [&](const EnumConstantDecl *ECD) {
+            return llvm::APInt::isSameValue(ECD->getInitVal(), Val);
+          });
+      if (ECD != ED->enumerator_end()) {
+        ECD->printQualifiedName(OS, Policy);
+        return;
+      }
+    }
+  }
   OS << '(';
   Node->getTypeAsWritten().print(OS, Policy);
   OS << ')';
@@ -1898,6 +1917,12 @@ void StmtPrinter::VisitCompoundLiteralExpr(CompoundLiteralExpr *Node) {
 void StmtPrinter::VisitImplicitCastExpr(ImplicitCastExpr *Node) {
   // No need to print anything, simply forward to the subexpression.
   PrintExpr(Node->getSubExpr());
+}
+
+void StmtPrinter::VisitBinComma(BinaryOperator *Node) {
+  PrintExpr(Node->getLHS());
+  OS << BinaryOperator::getOpcodeStr(Node->getOpcode()) << " ";
+  PrintExpr(Node->getRHS());
 }
 
 void StmtPrinter::VisitBinaryOperator(BinaryOperator *Node) {

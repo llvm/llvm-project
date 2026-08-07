@@ -307,6 +307,16 @@ public:
     Expensive = 2   // Negated expression is more expensive.
   };
 
+  /// Enum that specifies how expensive lowering an EXTRACT_SUBVECTOR is.
+  enum class ExtractSubvectorCost {
+    Free = 0,  // Lowers to no instruction at all, e.g. a subregister copy.
+    Cheap = 1, // Lowers to at most one instruction, and may still be free if
+               // the target can fold the extract into the instruction
+               // consuming it (e.g. a widening op that reads the high half of
+               // a register).
+    Expensive = 2 // Needs a shuffle sequence that cannot be folded away.
+  };
+
   /// Enum of different potentially desirable ways to fold (and/or (setcc ...),
   /// (setcc ...)).
   enum AndOrSETCCFoldKind : uint8_t {
@@ -2518,9 +2528,10 @@ public:
   /// AtomicExpand pass.
   virtual AtomicExpansionKind
   shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
+    Type *ValTy = RMWI->getValOperand()->getType();
     if (RMWI->getOperation() == AtomicRMWInst::Xchg &&
-        (RMWI->getValOperand()->getType()->isFloatingPointTy() ||
-         RMWI->getValOperand()->getType()->isPointerTy()))
+        (ValTy->isFloatingPointTy() || ValTy->isPointerTy() ||
+         ValTy->isVectorTy()))
       return AtomicExpansionKind::CastToInteger;
 
     return AtomicExpansionKind::None;
@@ -3539,13 +3550,16 @@ public:
     return false;
   }
 
-  /// Return true if EXTRACT_SUBVECTOR is cheap for extracting this result type
-  /// from this source type with this index. This is needed because
-  /// EXTRACT_SUBVECTOR usually has custom lowering that depends on the index of
-  /// the first element, and only the target knows which lowering is cheap.
-  virtual bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                       unsigned Index) const {
-    return false;
+  /// Return the cost of extracting a subvector of type \p ResVT from a vector
+  /// of type \p SrcVT, starting at element \p Index.
+  ///
+  /// Most callers only create a new EXTRACT_SUBVECTOR when the cost is at most
+  /// ExtractSubvectorCost::Cheap. This hook exists because EXTRACT_SUBVECTOR
+  /// usually has custom lowering that depends on the index of the first
+  /// element, so only the target knows which lowering is cheap.
+  virtual ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                                       unsigned Index) const {
+    return ExtractSubvectorCost::Expensive;
   }
 
   /// Try to convert an extract element of a vector binary operation into an
@@ -3623,8 +3637,9 @@ public:
   /// passed to the fp16 to fp conversion library function.
   virtual bool shouldKeepZExtForFP16Conv() const { return false; }
 
-  /// Should we generate fp_to_si_sat and fp_to_ui_sat from type FPVT to type VT
-  /// from min(max(fptoi)) saturation patterns.
+  /// Should we generate fp_to_si_sat and fp_to_ui_sat from type FPVT to type
+  /// VT. Used when folding idioms into a saturating fp-to-int conversion, such
+  /// as min(max(fptoi)) clamps or NaN-guarded selects.
   virtual bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const {
     return isOperationLegalOrCustom(Op, VT);
   }
@@ -3731,11 +3746,6 @@ public:
   RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
     return RuntimeLibcallInfo.getSupportedLibcallImpl(FuncName);
   }
-
-  /// Get the comparison predicate that's to be used to test the result of the
-  /// comparison libcall against zero. This should only be used with
-  /// floating-point compare libcalls.
-  ISD::CondCode getSoftFloatCmpLibcallPredicate(RTLIB::LibcallImpl Call) const;
 
   /// Get the CallingConv that should be used for the specified libcall
   /// implementation.

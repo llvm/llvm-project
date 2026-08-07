@@ -476,3 +476,28 @@ TEST_F(SelectionDAGNodeConstructionTest, DontFoldPartialReduceMLA) {
                    buildVector(MVT::v2i32, DL, {3, 4}));
   EXPECT_EQ(NonConstantResult.getOpcode(), ISD::PARTIAL_REDUCE_SMLA);
 }
+
+TEST_F(SelectionDAGNodeConstructionTest, ExpandPartialReduceSUMLA) {
+  SDLoc DL;
+  SDValue Acc = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(1), MVT::v4i32);
+  SDValue LHS = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(2), MVT::v16i8);
+  SDValue RHS = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
+                                    Register::index2VirtReg(3), MVT::v16i8);
+  SDValue PartialReduce =
+      DAG->getNode(ISD::PARTIAL_REDUCE_SUMLA, DL, MVT::v4i32, Acc, LHS, RHS);
+
+  SDValue Expanded = DAG->getTargetLoweringInfo().expandPartialReduceMLA(
+      PartialReduce.getNode(), *DAG);
+
+  unsigned NumSignExtends = 0;
+  unsigned NumZeroExtends = 0;
+  for (SDNode &N : DAG->allnodes()) {
+    NumSignExtends += N.getOpcode() == ISD::SIGN_EXTEND;
+    NumZeroExtends += N.getOpcode() == ISD::ZERO_EXTEND;
+  }
+  EXPECT_TRUE(Expanded);
+  EXPECT_EQ(NumSignExtends, 1u);
+  EXPECT_EQ(NumZeroExtends, 1u);
+}
