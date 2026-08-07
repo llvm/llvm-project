@@ -9301,8 +9301,7 @@ bool SelectionDAGBuilder::canTailCall(const CallBase &CB) const {
   // We can't tail call inside a function with a swifterror argument. Lowering
   // does not support this yet. It would have to move into the swifterror
   // register before the call.
-  if (DAG.getTargetLoweringInfo().supportSwiftError() &&
-      Caller->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
+  if (DAG.hasSwiftErrorArg())
     return false;
 
   // Check if target-independent constraints permit a tail call here.
