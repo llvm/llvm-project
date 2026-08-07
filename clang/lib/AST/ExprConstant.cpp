@@ -15303,7 +15303,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
           FloatElem.convertToInteger(IntResult, RoundingMode, &IsExact);
 
       if (Status != llvm::APFloat::opOK || !IsExact)
-          return false;
+        return false;
 
       ResultElts.push_back(APValue(IntResult));
     }
