@@ -226,6 +226,7 @@ body:             |
     %13:id(s32) = G_SELECT %10:_(s1), %1:fid, %2:fid
     %14:id(s32) = G_FADD %12:id, %13:id
     OpReturnValue %14:id(s32)
+...
 ---
 name:            faceforward_instcombine_float4_shared_dot
 tracksRegLiveness: true
@@ -260,4 +261,4 @@ body:             |
     %15:id(<4 x s32>) = G_SELECT %17:_(s1), %1:vfid, %2:vfid
     %16:id(<4 x s32>) = G_FADD %14:id, %15:id
     OpReturnValue %16:id(<4 x s32>)
-
+...

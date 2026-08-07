@@ -148,7 +148,7 @@ entry:
   ret <4 x float> %select
 }
 
-define internal noundef float @faceforward_instcombine_float_shared_dot_store(float noundef %a, float noundef %b, float noundef %c, ptr noundef %out) {
+define internal float @faceforward_instcombine_float_shared_dot_store(float %a, float %b, float %c, ptr %out) {
 entry:
   ; CHECK: %[[#]] = OpFunction %[[#float_32]] None %[[#]]
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_32]]
