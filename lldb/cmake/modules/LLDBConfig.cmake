@@ -79,6 +79,11 @@ set(LLDB_GLOBAL_INIT_DIRECTORY "" CACHE STRING
   "Path to the global lldbinit directory. Relative paths are resolved relative to the
   directory containing the LLDB library.")
 
+set(LLDB_DWO_DIAGNOSTIC_SUFFIX "Debugging will be degraded." CACHE STRING
+  "Text appended to diagnostics when LLDB cannot locate DWO debug information files. Clients can
+  customize this message with a URL or additional information to help users know how to fix or
+  troubleshoot the issue.")
+
 if (LLDB_USE_SYSTEM_DEBUGSERVER)
   # The custom target for the system debugserver has no install target, so we
   # need to remove it from the LLVM_DISTRIBUTION_COMPONENTS list.
@@ -198,7 +203,7 @@ endif()
 option(LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS "Build the script interpreter plugins as shared libraries" ${default_enable_dynamic_scriptinterpreters})
 
 if (LLDB_ENABLE_PYTHON)
-  if(CMAKE_SYSTEM_NAME MATCHES "Windows" AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+  if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     set(default_embed_python_home ON)
   else()
     set(default_embed_python_home OFF)

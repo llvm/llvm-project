@@ -231,38 +231,32 @@ define amdgpu_kernel void @constant_load_v3i16(ptr addrspace(1) %out, ptr addrsp
 ;
 ; EG-LABEL: constant_load_v3i16:
 ; EG:       ; %bb.0: ; %entry
-; EG-NEXT:    ALU 0, @12, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    TEX 2 @6
-; EG-NEXT:    ALU 19, @13, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T6.X, T7.X, 0
-; EG-NEXT:    MEM_RAT MSKOR T5.XW, T8.X
+; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    TEX 1 @6
+; EG-NEXT:    ALU 14, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T5.X, T8.X, 0
+; EG-NEXT:    MEM_RAT MSKOR T6.XW, T7.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_16 T6.X, T5.X, 0, #1
-; EG-NEXT:     VTX_READ_16 T7.X, T5.X, 2, #1
-; EG-NEXT:     VTX_READ_16 T5.X, T5.X, 4, #1
-; EG-NEXT:    ALU clause starting at 12:
+; EG-NEXT:     VTX_READ_16 T6.X, T5.X, 4, #1
+; EG-NEXT:     VTX_READ_32 T5.X, T5.X, 0, #1
+; EG-NEXT:    ALU clause starting at 10:
 ; EG-NEXT:     MOV * T5.X, KC0[2].Z,
-; EG-NEXT:    ALU clause starting at 13:
+; EG-NEXT:    ALU clause starting at 11:
 ; EG-NEXT:     ADD_INT * T0.W, KC0[2].Y, literal.x,
 ; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
 ; EG-NEXT:     AND_INT T1.W, PV.W, literal.x,
-; EG-NEXT:     AND_INT * T2.W, T5.X, literal.y,
+; EG-NEXT:     AND_INT * T2.W, T6.X, literal.y,
 ; EG-NEXT:    3(4.203895e-45), 65535(9.183409e-41)
 ; EG-NEXT:     LSHL * T1.W, PV.W, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     LSHL T5.X, T2.W, PV.W,
-; EG-NEXT:     LSHL * T5.W, literal.x, PV.W,
+; EG-NEXT:     LSHL T6.X, T2.W, PV.W,
+; EG-NEXT:     LSHL * T6.W, literal.x, PV.W,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     MOV T5.Y, 0.0,
-; EG-NEXT:     MOV * T5.Z, 0.0,
-; EG-NEXT:     LSHR T8.X, T0.W, literal.x,
-; EG-NEXT:     LSHL T0.W, T7.X, literal.y,
-; EG-NEXT:     AND_INT * T1.W, T6.X, literal.z,
-; EG-NEXT:    2(2.802597e-45), 16(2.242078e-44)
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     OR_INT T6.X, PV.W, PS,
-; EG-NEXT:     LSHR * T7.X, KC0[2].Y, literal.x,
+; EG-NEXT:     MOV T6.Y, 0.0,
+; EG-NEXT:     MOV * T6.Z, 0.0,
+; EG-NEXT:     LSHR T7.X, T0.W, literal.x,
+; EG-NEXT:     LSHR * T8.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; GFX12-LABEL: constant_load_v3i16:
@@ -779,25 +773,24 @@ define amdgpu_kernel void @constant_load_v16i16_align2(ptr addrspace(4) %ptr0) #
 ; GFX12-TRUE16-NEXT:    global_load_d16_b16 v2, v8, s[0:1] offset:8
 ; GFX12-TRUE16-NEXT:    global_load_d16_b16 v1, v8, s[0:1] offset:4
 ; GFX12-TRUE16-NEXT:    global_load_d16_b16 v0, v8, s[0:1]
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v3, v8, s[0:1] offset:14
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v7, v8, s[0:1] offset:30
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v6, v8, s[0:1] offset:26
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v5, v8, s[0:1] offset:22
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v4, v8, s[0:1] offset:18
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v2, v8, s[0:1] offset:10
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v1, v8, s[0:1] offset:6
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x7
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x5
+; GFX12-TRUE16-NEXT:    s_clause 0x2
 ; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v8, s[0:1] offset:2
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    s_clause 0x1
+; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v3, v8, s[0:1] offset:14
+; GFX12-TRUE16-NEXT:    global_load_d16_hi_b16 v2, v8, s[0:1] offset:10
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x2
 ; GFX12-TRUE16-NEXT:    global_store_b128 v[0:1], v[4:7], off
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    global_store_b128 v[0:1], v[0:3], off
 ; GFX12-TRUE16-NEXT:    s_endpgm
 ;
@@ -815,25 +808,24 @@ define amdgpu_kernel void @constant_load_v16i16_align2(ptr addrspace(4) %ptr0) #
 ; GFX12-FAKE16-NEXT:    global_load_u16 v2, v8, s[0:1] offset:8
 ; GFX12-FAKE16-NEXT:    global_load_u16 v1, v8, s[0:1] offset:4
 ; GFX12-FAKE16-NEXT:    global_load_u16 v0, v8, s[0:1]
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v3, v8, s[0:1] offset:14
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v7, v8, s[0:1] offset:30
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v6, v8, s[0:1] offset:26
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v5, v8, s[0:1] offset:22
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x6
 ; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v4, v8, s[0:1] offset:18
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
-; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v2, v8, s[0:1] offset:10
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x5
 ; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v1, v8, s[0:1] offset:6
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x7
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x5
+; GFX12-FAKE16-NEXT:    s_clause 0x2
 ; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v0, v8, s[0:1] offset:2
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    s_clause 0x1
+; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v3, v8, s[0:1] offset:14
+; GFX12-FAKE16-NEXT:    global_load_d16_hi_b16 v2, v8, s[0:1] offset:10
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x2
 ; GFX12-FAKE16-NEXT:    global_store_b128 v[0:1], v[4:7], off
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    global_store_b128 v[0:1], v[0:3], off
 ; GFX12-FAKE16-NEXT:    s_endpgm
 entry:
