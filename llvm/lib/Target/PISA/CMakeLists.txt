@@ -29,6 +29,7 @@ add_llvm_target(PISACodeGen
   PISAInstrInfo.cpp
   PISAInstructionSelector.cpp
   PISAKernelByValArgsLowering.cpp
+  PISALayout.cpp
   PISALegalizeCalls.cpp
   PISALegalizePredicates.cpp
   PISALegalizeSubregAccess.cpp
@@ -51,7 +52,6 @@ add_llvm_target(PISACodeGen
   PISAUtils.cpp
   PISAVerifier.cpp
   PISAVerifyTypes.cpp
-  PISALayout.cpp
 
   LINK_COMPONENTS
   Analysis
