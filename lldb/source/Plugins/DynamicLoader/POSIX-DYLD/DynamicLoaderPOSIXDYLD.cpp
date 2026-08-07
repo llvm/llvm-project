@@ -213,16 +213,34 @@ DynamicLoaderPOSIXDYLD::GetLoadedModuleLinkAddr(const ModuleSP &module_sp) {
 
 Status DynamicLoaderPOSIXDYLD::ReplaceModule(const ModuleSP &old_module_sp,
                                              const ModuleSP &new_module_sp) {
-  // Images are mapped in one piece here, so the target's placement is already
-  // correct. Only the link map address needs moving, without it no thread local
-  // in the replacement can be resolved.
-  llvm::sys::ScopedWriter lock(m_loaded_modules_rw_mutex);
-  auto it = m_loaded_modules.find(old_module_sp);
-  if (it == m_loaded_modules.end())
-    return Status();
-  const addr_t link_map_addr = it->second;
-  m_loaded_modules.erase(it);
-  m_loaded_modules[new_module_sp] = link_map_addr;
+  // Where the old module was mapped, read before its sections go away.
+  addr_t base_addr = LLDB_INVALID_ADDRESS;
+  if (ObjectFile *object_file = old_module_sp->GetObjectFile()) {
+    Address base = object_file->GetBaseAddress();
+    if (base.IsValid())
+      base_addr = base.GetLoadAddress(&m_process->GetTarget());
+  }
+  if (base_addr == LLDB_INVALID_ADDRESS)
+    return Status::FromErrorStringWithFormatv(
+        "'{0}' is not loaded at a known address", old_module_sp->GetFileSpec());
+
+  addr_t link_map_addr = LLDB_INVALID_ADDRESS;
+  {
+    // The link map address is what thread local lookups are found through, and
+    // it is keyed by module, so it has to be moved onto the replacement.
+    llvm::sys::ScopedWriter lock(m_loaded_modules_rw_mutex);
+    auto it = m_loaded_modules.find(old_module_sp);
+    if (it != m_loaded_modules.end()) {
+      link_map_addr = it->second;
+      m_loaded_modules.erase(it);
+    }
+  }
+
+  UnloadSections(old_module_sp);
+  // Images are mapped in one piece here, so the recorded address is where the
+  // replacement goes, not an offset to slide it by.
+  UpdateLoadedSections(new_module_sp, link_map_addr, base_addr,
+                       /*base_addr_is_offset=*/false);
   return Status();
 }
 

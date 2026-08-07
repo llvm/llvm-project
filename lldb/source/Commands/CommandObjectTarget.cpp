@@ -3152,7 +3152,11 @@ public:
             "complete contents, usually to resolve a placeholder module from a "
             "core file once the real binary has been located. To attach debug "
             "info to a module that is otherwise fine, use 'target symbols "
-            "add'.",
+            "add'.\n"
+            "The module to replace is found by the new file's UUID, or by its "
+            "basename if it has no UUID. Use --old-path when neither picks a "
+            "single module, and --force to replace a module whose UUID does "
+            "not match the new file's.",
             "target modules replace [--old-path <path>] [--force] <path>",
             eCommandRequiresTarget | eCommandTryTargetAPILock |
                 eCommandProcessMustBePaused) {
@@ -3288,21 +3292,25 @@ protected:
       return;
     }
 
-    // Read the UUID straight from the file rather than from a Module, so the
-    // module the new file should replace can be found before anything is added
-    // to the target.
-    UUID new_uuid;
-    ModuleSpecList file_specs =
+    // Read the file rather than build a Module from it, so the module it
+    // should replace can be found before anything is added to the target.
+    ModuleSpec new_module_spec(new_file_spec);
+    ModuleSpecList new_module_specs =
         ObjectFile::GetModuleSpecifications(new_file_spec, 0, 0);
-    if (file_specs.GetSize() > 0) {
+    if (new_module_specs.GetSize() > 0) {
       ModuleSpec arch_spec;
       arch_spec.GetArchitecture() = target->GetArchitecture();
       ModuleSpec matching_spec;
-      if (file_specs.FindMatchingModuleSpec(arch_spec, matching_spec))
-        new_uuid = matching_spec.GetUUID();
-      else if (file_specs.GetSize() == 1)
-        new_uuid = file_specs.GetModuleSpecRefAtIndex(0).GetUUID();
+      if (!new_module_specs.FindMatchingModuleSpec(arch_spec, matching_spec)) {
+        result.AppendErrorWithFormatv(
+            "'{0}' does not contain the target architecture {1}",
+            new_file_spec.GetPath(),
+            target->GetArchitecture().GetTriple().str());
+        return;
+      }
+      new_module_spec = matching_spec;
     }
+    const UUID &new_uuid = new_module_spec.GetUUID();
 
     ModuleSP old_module_sp =
         FindModuleToReplace(*target, new_file_spec, new_uuid, result);
@@ -3322,9 +3330,12 @@ protected:
       return;
     }
 
-    ModuleSpec new_module_spec(new_file_spec);
     if (!new_module_spec.GetArchitecture().IsValid())
       new_module_spec.GetArchitecture() = target->GetArchitecture();
+
+    // Look the file up by path alone. Asking for the UUID as well would find
+    // the module already in the target, which is the one being replaced.
+    new_module_spec.GetUUID().Clear();
 
     Status error;
     ModuleSP new_module_sp =

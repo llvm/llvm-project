@@ -1824,8 +1824,9 @@ let Command = "target modules replace" in {
   def target_modules_replace_old_path
       : Option<"old-path", "o">,
         Arg<"Path">,
-        Desc<"Path of the module in the target to replace. Only needed when it "
-             "cannot be worked out from the new file.">;
+        Desc<"Path of the module in the target to replace. This is only needed "
+             "if the new module doesn't have a valid UUID or if the basename "
+             "doesn't uniquely match any existing target modules.">;
   def target_modules_replace_force
       : Option<"force", "f">,
         Desc<"Replace the module even when its UUID does not match the UUID of "
