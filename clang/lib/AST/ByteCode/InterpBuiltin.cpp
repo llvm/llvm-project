@@ -4693,7 +4693,6 @@ static bool interp_builtin_ia32_cvt_vector_to_int(
     llvm::RoundingMode RoundingMode, bool zeroPad = false) {
   Pointer SrcVecPtr = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
-  PrimType DstElemT = Dst.getFieldDesc()->getPrimType();
 
   unsigned NumSrcElts = SrcVecPtr.getNumElems();
   llvm::SmallVector<int32_t, 8> ConvertedElts;
