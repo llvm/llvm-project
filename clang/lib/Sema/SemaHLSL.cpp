@@ -3381,12 +3381,10 @@ static bool CheckAllArgTypesAreCorrect(
 static bool CheckFloatRepresentation(Sema *S, SourceLocation Loc,
                                      int ArgOrdinal,
                                      clang::QualType PassedType) {
-  clang::QualType BaseType = PassedType;
-  if (const auto *VT = PassedType->getAs<clang::VectorType>())
-    BaseType = VT->getElementType();
-  else if (const auto *MT = PassedType->getAs<clang::MatrixType>())
-    BaseType = MT->getElementType();
-
+  clang::QualType BaseType =
+      PassedType->isVectorType()
+          ? PassedType->castAs<clang::VectorType>()->getElementType()
+          : PassedType;
   if (!BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
            << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
@@ -4463,8 +4461,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
                                    CheckFloatOrHalfRepresentation))
       return true;
-    if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(
-            TheCall, Sema::EltwiseBuiltinArgTyRestriction::FloatTy))
+    if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().BoolTy);
     break;

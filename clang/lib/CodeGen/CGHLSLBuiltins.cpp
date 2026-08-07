@@ -561,8 +561,7 @@ static Value *emitGetDimensions(CodeGenFunction &CGF, const CallExpr *E,
 static llvm::Type *getAggregateType(llvm::Type *ScalarTy, QualType ArgTy) {
   if (auto *MatTy = ArgTy->getAs<ConstantMatrixType>())
     return llvm::VectorType::get(
-        ScalarTy,
-        ElementCount::getFixed(MatTy->getNumRows() * MatTy->getNumColumns()));
+        ScalarTy, ElementCount::getFixed(MatTy->getNumElementsFlattened()));
   if (auto *VecTy = ArgTy->getAs<clang::VectorType>())
     return llvm::VectorType::get(
         ScalarTy, ElementCount::getFixed(VecTy->getNumElements()));
