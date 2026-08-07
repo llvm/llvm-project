@@ -5435,36 +5435,30 @@ TEST(Hover, HLSLParamModifiers) {
   struct {
     const char *const Code;
     const char *const ExpectedType;
-  } Cases[] = {
-      {
-          R"hlsl(
+  } Cases[] = {{
+                   R"hlsl(
             void main(out float ^result) {}
           )hlsl",
-          "out float"
-      },
-      {
-          R"hlsl(
+                   "out float"},
+               {
+                   R"hlsl(
             void main(out float result) {
               ^result = 1.0;
             }
           )hlsl",
-          "out float"
-      },
-      {
-          R"hlsl(
+                   "out float"},
+               {
+                   R"hlsl(
             void main(inout float ^result) {}
           )hlsl",
-          "inout float"
-      },
-      {
-          R"hlsl(
+                   "inout float"},
+               {
+                   R"hlsl(
             void main(inout float result) {
               ^result = 1.0;
             }
           )hlsl",
-          "inout float"
-      }
-  };
+                   "inout float"}};
 
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
