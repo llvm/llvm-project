@@ -701,8 +701,7 @@ TEST_F(GOFFObjectFileTest, GlobalSymbols) {
     // Check flags.
     Expected<uint32_t> SymbolFlagsOrErr = Symbol->getFlags();
     ASSERT_THAT_EXPECTED(SymbolFlagsOrErr, Succeeded());
-    uint32_t SymbolFlags = SymbolFlagsOrErr.get();
-    EXPECT_EQ((SymbolFlags & SymbolRef::SF_Global) != 0, IsGlobal);
+    EXPECT_EQ((*SymbolFlagsOrErr & SymbolRef::SF_Global) != 0, IsGlobal);
 
     ++Symbol;
   };
