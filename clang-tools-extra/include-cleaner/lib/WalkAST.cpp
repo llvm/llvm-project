@@ -46,7 +46,7 @@ using DeclCallback =
 class ObjCSelectorDeclMapBuilder
     : public RecursiveASTVisitor<ObjCSelectorDeclMapBuilder> {
 public:
-  ObjCSelectorMap build() && { return std::move(Map); }
+  ObjCSelectorMap takeMap() { return std::move(Map); }
 
   bool TraverseDecl(clang::Decl *D) {
     if (!D)
@@ -627,7 +627,7 @@ ObjCSelectorMap buildObjCSelectorMap(ASTContext &Ctx) {
   if (Ctx.getLangOpts().ObjC) {
     Builder.TraverseDecl(Ctx.getTranslationUnitDecl());
   }
-  return std::move(Builder).build();
+  return Builder.takeMap();
 }
 
 void walkAST(Decl &Root, const ObjCSelectorMap &SelectorDecls,
