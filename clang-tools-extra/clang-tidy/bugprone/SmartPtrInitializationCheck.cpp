@@ -55,10 +55,8 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
   const auto IsUniquePtrRecord = cxxRecordDecl(IsUniquePtr);
   const auto IsSmartPtrRecord = cxxRecordDecl(IsSmartPtr);
 
-  auto ReleaseMethod = cxxMethodDecl(hasName("release"));
-  auto ResetMethod = cxxMethodDecl(hasName("reset"));
-
-  auto ReleaseCallMatcher = cxxMemberCallExpr(callee(ReleaseMethod));
+  auto ReleaseCallMatcher =
+      cxxMemberCallExpr(callee(cxxMethodDecl(hasName("release"))));
 
   // Array automatically decays to pointer
   auto PointerArg = expr(anyOf(hasType(pointerType()), hasType(arrayType())))
@@ -107,7 +105,7 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
       cxxMemberCallExpr(
           on(hasType(hasUnqualifiedDesugaredType(recordType(
               hasDeclaration(classTemplateSpecializationDecl(IsSmartPtr)))))),
-          callee(ResetMethod), hasArgument(0, PointerArg),
+          callee(cxxMethodDecl(hasName("reset"))), hasArgument(0, PointerArg),
           unless(HasCustomDeleterInReset), unless(hasArgument(0, cxxNewExpr())),
           unless(hasArgument(0, ReleaseCallMatcher)))
           .bind("reset-call");
