@@ -580,7 +580,9 @@ class TileUsingForOp(TileUsingForOp):
     ):
         packed_tile_sizes = None
         if isinstance(sizes, (Operation, Value, OpView)):
-            dynamic_sizes, packed_tile_sizes, static_sizes = _dispatch_mixed_values(sizes)
+            dynamic_sizes, packed_tile_sizes, static_sizes = _dispatch_mixed_values(
+                sizes
+            )
             scalable_sizes = []
         else:
             has_scalable_sizes = any(
@@ -588,8 +590,8 @@ class TileUsingForOp(TileUsingForOp):
                 for v in (sizes or [])
             )
             if has_scalable_sizes:
-                dynamic_sizes, static_sizes, scalable_sizes = _dispatch_dynamic_index_list(
-                    sizes
+                dynamic_sizes, static_sizes, scalable_sizes = (
+                    _dispatch_dynamic_index_list(sizes)
                 )
             else:
                 (
