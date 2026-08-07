@@ -42,3 +42,37 @@ define <4 x i1> @ugt_v4i1(<4 x i1> %p, <4 x i1> %q) {
   %r = icmp ugt <4 x i1> %p, %q
   ret <4 x i1> %r
 }
+
+; Constant operands must fold directly, without expanding to logical ops.
+
+define i1 @ugt_i1_const(i1 %p) {
+; CHECK-LABEL: define i1 @ugt_i1_const(
+; CHECK-SAME: i1 [[P:%.*]]) {
+; CHECK-NEXT:    ret i1 [[P]]
+  %r = icmp ugt i1 %p, false
+  ret i1 %r
+}
+
+define i1 @ult_i1_const(i1 %p) {
+; CHECK-LABEL: define i1 @ult_i1_const(
+; CHECK-SAME: i1 [[P:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+  %r = icmp ult i1 %p, false
+  ret i1 %r
+}
+
+define i1 @ule_i1_const(i1 %p) {
+; CHECK-LABEL: define i1 @ule_i1_const(
+; CHECK-SAME: i1 [[P:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+  %r = icmp ule i1 %p, true
+  ret i1 %r
+}
+
+define <4 x i1> @ugt_v4i1_const(<4 x i1> %p) {
+; CHECK-LABEL: define <4 x i1> @ugt_v4i1_const(
+; CHECK-SAME: <4 x i1> [[P:%.*]]) {
+; CHECK-NEXT:    ret <4 x i1> [[P]]
+  %r = icmp ugt <4 x i1> %p, zeroinitializer
+  ret <4 x i1> %r
+}
