@@ -285,8 +285,8 @@ first argument is used to compute the value of the variable throughout the
 entire function.  The second argument is a
 {ref}`local variable <dilocalvariable>` containing a description of the
 variable. The third argument is a {ref}`complex expression <diexpression>`. The
-foruth argument is a {ref}`source location <dilocation>`. A
-`#dbg_declare_value` record describes describes the *value* of a source
+fourth argument is a {ref}`source location <dilocation>`. A
+`#dbg_declare_value` record describes the *value* of a source
 variable directly, not its address. The difference between a `#dbg_value` and
 a `#dbg_declare_value` is that, just like a `#dbg_declare`, a frontend
 should generate exactly one `#dbg_declare_value` record. The idea is to have
