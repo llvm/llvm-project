@@ -1093,10 +1093,7 @@ getMinimumVLForVSLIDEDOWN_VX(const MachineOperand &UserOp,
 
 static DemandedVL getMinimumVLForVUNZIP(const MachineOperand &UserOp,
                                         DemandedVL MinimumVL) {
-  const MachineInstr &MI = *UserOp.getParent();
-  const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
-  unsigned VS2OpNo = HasPassthru ? 2 : 1;
-  return UserOp.getOperandNo() == VS2OpNo ? doubleVL(MinimumVL) : MinimumVL;
+  return UserOp.getOperandNo() == 2 ? doubleVL(MinimumVL) : MinimumVL;
 }
 
 DemandedVL
