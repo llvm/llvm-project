@@ -62,6 +62,15 @@ static void unchecked_deref_role(HickettsOptional<int> &o) {
   o.deref(); // today: silent; -DHO_ROLES: warn
 }
 
+// No-false-positive check for assume_engaged: a guarded deref must stay silent.
+// Guarded with has_value() (automagic, recognised TODAY) so the narrowing does
+// not depend on test_engaged (M3). Expected SILENT in both modes: trait off ->
+// deref() unrecognised; trait on -> has_value() narrows, deref() sees engaged.
+static void checked_deref_role(HickettsOptional<int> &o) {
+  if (o.has_value())
+    o.deref(); // safe: guarded (expect no warning in either mode)
+}
+
 // THE test_engaged trial (positive-polarity query, role-only). Unlike the other
 // (C) cases -- which are false NEGATIVES today -- this is a false POSITIVE: the
 // guard isn't recognised, so value() warns even though it is actually safe. When
@@ -101,6 +110,7 @@ int main() {
 
   // Safe paths.
   checked_with_has_value(engaged);
+  checked_deref_role(engaged);
   checked_with_is_present(engaged);
   safe_after_construct(engaged);
   safe_after_value_ctor();
