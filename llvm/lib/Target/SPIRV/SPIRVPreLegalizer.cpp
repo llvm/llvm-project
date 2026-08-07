@@ -573,12 +573,12 @@ static void widenSignSensitiveOps(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                            MachineInstr &MI) -> Register {
     unsigned NewW = widenBitWidthToNextPow2(OldW);
     LLT NewLLT = LLT::scalar(NewW);
+    MIB.setInsertPt(*MI.getParent(), MI.getIterator());
     SPIRVTypeInst SpvTy = GR->getOrCreateSPIRVIntegerType(NewW, MIB);
     Register SExted = MRI.createGenericVirtualRegister(NewLLT);
     GR->assignSPIRVTypeToVReg(SpvTy, SExted, MF);
     MRI.setRegClass(SExted, GR->getRegClass(SpvTy));
     MRI.setType(Reg, NewLLT);
-    MIB.setInsertPt(*MI.getParent(), MI.getIterator());
     MIB.buildSExtInReg(SExted, Reg, OldW);
     return SExted;
   };
@@ -746,9 +746,13 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register Reg = MI.getOperand(1).getReg();
         MIB.setInsertPt(*MI.getParent(), MI.getIterator());
         Type *ElementTy = getMDOperandAsType(MI.getOperand(2).getMetadata(), 0);
-        SPIRVTypeInst AssignedPtrType = GR->getOrCreateSPIRVPointerType(
-            ElementTy, MI,
-            addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST));
+        auto SC = addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST);
+        if (SC == SPIRV::StorageClass::Function &&
+            isa<FunctionType>(ElementTy) &&
+            ST->canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers))
+          SC = SPIRV::StorageClass::CodeSectionINTEL;
+        SPIRVTypeInst AssignedPtrType =
+            GR->getOrCreateSPIRVPointerType(ElementTy, MI, SC);
         // The intrinsic also carries vector-of-pointer values produced by
         // scalarized vector GEPs; wrap the pointer in OpTypeVector to match
         // the vreg's LLT.
