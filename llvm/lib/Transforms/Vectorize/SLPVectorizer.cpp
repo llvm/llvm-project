@@ -3291,7 +3291,7 @@ private:
 
   /// Tracks deferred extract/rematerialization data and late cleanup actions.
   class DeferredExtractTracker {
-  public:
+  private:
     struct DeferredExtractType {
       Value *Scalar;
       Value *NewInst;
@@ -3299,16 +3299,6 @@ private:
       DeferredExtractType(Value *Scalar, Value *NewInst, llvm::User *User)
           : Scalar(Scalar), NewInst(NewInst), User(User) {}
     };
-
-    ExtractElementInst *lookupExtract(Value *V) const {
-      return CouldBeExtract.lookup(V);
-    }
-
-    Instruction *lookupRemat(Value *V) const { return CouldBeRemat.lookup(V); }
-
-    bool hasExtract(Value *V) const { return CouldBeExtract.contains(V); }
-
-    bool hasRemat(Value *V) const { return CouldBeRemat.contains(V); }
 
     /// Cases where extraction is estimated as more profitable but want to
     /// delay extraction to allow for better vectorization in the interim.
@@ -3326,6 +3316,17 @@ private:
     /// in the extract instruction.
     DenseMap<Value *, SmallVector<DeferredExtractType, 2>>
         DeferredScalarsToExtract;
+
+  public:
+    ExtractElementInst *lookupExtract(Value *V) const {
+      return CouldBeExtract.lookup(V);
+    }
+
+    Instruction *lookupRemat(Value *V) const { return CouldBeRemat.lookup(V); }
+
+    bool hasExtract(Value *V) const { return CouldBeExtract.contains(V); }
+
+    bool hasRemat(Value *V) const { return CouldBeRemat.contains(V); }
 
     void clearTreeState() {
       ExternalUsesAsExtract.clear();
