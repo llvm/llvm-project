@@ -3138,5 +3138,5 @@ for.exit:
 
 
 !6 = distinct !{!6, !7, !8}
-!7 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!7 = !{!"llvm.loop.vectorize.predicate.enable"}
 !8 = !{!"llvm.loop.vectorize.enable"}

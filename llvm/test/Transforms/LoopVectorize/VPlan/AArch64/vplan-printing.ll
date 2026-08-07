@@ -282,5 +282,5 @@ exit:
 !0 = distinct !{!0, !2, !3}
 !1 = distinct !{!1, !2, !4}
 !2 = !{!"llvm.loop.interleave.count", i32 1}
-!3 = !{!"llvm.loop.vectorize.predicate.enable", i1 false}
-!4 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.predicate.disable"}
+!4 = !{!"llvm.loop.vectorize.predicate.enable"}

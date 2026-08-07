@@ -643,7 +643,7 @@ exit:
 !1 = distinct !{!1, !2, !3, !4}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
 !3 = !{!"llvm.loop.vectorize.enable"}
-!4 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!4 = !{!"llvm.loop.vectorize.predicate.enable"}
 
 define void @wide_iv_trunc_reuse(ptr %dst) {
 ; CHECK-LABEL: define void @wide_iv_trunc_reuse(

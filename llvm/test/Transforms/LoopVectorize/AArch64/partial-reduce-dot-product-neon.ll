@@ -2394,5 +2394,5 @@ exit:
 
 !7 = distinct !{!7, !8, !9, !10}
 !8 = !{!"llvm.loop.mustprogress"}
-!9 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!9 = !{!"llvm.loop.vectorize.predicate.enable"}
 !10 = !{!"llvm.loop.vectorize.enable"}

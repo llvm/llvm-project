@@ -85,4 +85,4 @@ while.end.loopexit:
 attributes #0 = { "target-features"="+sve" }
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.predicate.enable"}
