@@ -612,7 +612,7 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   // Check for one alternate opcode from another BinaryOperator.
   // TODO - generalize to support all operators (types, calls etc.).
   Intrinsic::ID BaseID = 0;
-  SmallVector<VFInfo> BaseMappings;
+  SmallVector<VFInfo, 4> BaseMappings;
   if (auto *CallBase = dyn_cast<CallInst>(MainOp)) {
     BaseID = getVectorIntrinsicIDForCall(CallBase, &TLI);
     BaseMappings = VFDatabase(*CallBase).getMappings(*CallBase);
@@ -723,7 +723,8 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         if (ID != BaseID && Equivalent == Intrinsic::not_intrinsic)
           return InstructionsState::invalid();
         if (!ID) {
-          SmallVector<VFInfo> Mappings = VFDatabase(*Call).getMappings(*Call);
+          SmallVector<VFInfo, 4> Mappings =
+              VFDatabase(*Call).getMappings(*Call);
           if (Mappings.size() != BaseMappings.size() ||
               Mappings.front().ISA != BaseMappings.front().ISA ||
               Mappings.front().ScalarName != BaseMappings.front().ScalarName ||
