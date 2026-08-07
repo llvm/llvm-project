@@ -29442,12 +29442,11 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = R.getMinVF(Sz);
   unsigned MaxVF = std::max<unsigned>(
-      getFloorFullVectorNumberOfElements(*TTI, ScalarTy, VL.size()), MinVF);
+      isAllowedNonPowerOf2VF(VL.size())
+          ? VL.size()
+          : getFloorFullVectorNumberOfElements(*TTI, ScalarTy, VL.size()),
+      MinVF);
   MaxVF = std::min(R.getMaximumVF(Sz, S.getOpcode()), MaxVF);
-  if (isAllowedNonPowerOf2VF(VL.size()))
-    MaxVF = std::max<unsigned>(
-        MaxVF,
-        std::min<unsigned>(VL.size(), R.getMaximumVF(Sz, S.getOpcode())));
   // Standalone seeds only need one register worth of lanes.
   if (StandaloneSeeds && Sz != 0)
     MaxVF = std::min(MaxVF, std::max(MinVF, R.getMaxVecRegSize() / Sz));
