@@ -687,7 +687,8 @@ TEST_F(GOFFObjectFileTest, GlobalSymbols) {
   GOFFObjectFile *GOFFObj =
       static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
 
-  object::GOFFObjectFile::symbol_iterator_range SymbolRange = GOFFObj->symbols();
+  object::GOFFObjectFile::symbol_iterator_range SymbolRange =
+      GOFFObj->symbols();
   auto Symbol = SymbolRange.begin();
   auto ValidateGlobal = [&](StringRef Name, bool IsGlobal) {
     ASSERT_TRUE(Symbol != SymbolRange.end());
