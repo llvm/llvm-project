@@ -104,4 +104,3 @@ float fp_reassoc_call_helper(float a, float b, float c) {
 #pragma clang fp reassociate(on)
   return helper_func(a, b, c);
 }
-
