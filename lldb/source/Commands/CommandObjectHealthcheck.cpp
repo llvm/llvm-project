@@ -54,8 +54,7 @@ void CommandObjectHealthcheck::DoExecute(Args &args,
   llvm::raw_fd_ostream temp_stream(temp_fd, true, true);
   DumpSwiftHealthLog(temp_stream);
 
-  result.AppendMessageWithFormat("Health check written to %s\n",
-                                 temp_path.c_str());
+  result.AppendMessageWithFormatv("Health check written to {0}\n", temp_path);
   result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
 
 #if defined(__APPLE__)
