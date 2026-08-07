@@ -516,6 +516,63 @@ func.func @simple_arith.ceildivsi_overflow() -> (i8, i16, i32) {
 
 // -----
 
+// The divisor, rather than the dividend, is MININT here. The folder negates a
+// negative divisor, which overflows for MININT, so neither of the first two
+// operations folds even though both results are representable.
+
+// TODO: The folder should be able to fold the following by avoiding
+// intermediate operations that overflow.
+
+// CHECK-LABEL: func @simple_arith.ceildivsi_minint_divisor
+//   CHECK-DAG: %[[MIN_I8:.*]] = arith.constant -128 : i8
+//   CHECK-DAG: %[[C_7:.*]] = arith.constant 7 : i8
+//   CHECK-DAG: %[[C_M9:.*]] = arith.constant -9 : i8
+//   CHECK-DAG: %[[C_1:.*]] = arith.constant 1 : i8
+//       CHECK: %[[DIV_1:.*]] = arith.ceildivsi %[[C_7]], %[[MIN_I8]] : i8
+//  CHECK-NEXT: %[[DIV_2:.*]] = arith.ceildivsi %[[C_M9]], %[[MIN_I8]] : i8
+//  CHECK-NEXT: return %[[DIV_1]], %[[DIV_2]], %[[C_1]]
+func.func @simple_arith.ceildivsi_minint_divisor() -> (i8, i8, i8) {
+  %min_int_i8 = arith.constant -128 : i8
+  %0 = arith.constant 7 : i8
+  %1 = arith.constant -9 : i8
+
+  // ceil(7 / -128) = 0
+  %2 = arith.ceildivsi %0, %min_int_i8 : i8
+  // ceil(-9 / -128) = 1
+  %3 = arith.ceildivsi %1, %min_int_i8 : i8
+  // ceil(-128 / -128) = 1, already folded by the ceildivsi(x, x) -> 1 pattern.
+  %4 = arith.ceildivsi %min_int_i8, %min_int_i8 : i8
+
+  return %2, %3, %4 : i8, i8, i8
+}
+
+// -----
+
+// ceil(MININT / -1) is -MININT, which is not representable. Unlike the cases
+// above, these must never fold.
+
+// CHECK-LABEL: func @simple_arith.ceildivsi_minint_div_minus_one
+//       CHECK: arith.ceildivsi
+//  CHECK-NEXT: arith.ceildivsi
+//  CHECK-NEXT: arith.ceildivsi
+func.func @simple_arith.ceildivsi_minint_div_minus_one() -> (i8, i16, i32) {
+  %min_int_i8 = arith.constant -128 : i8
+  %0 = arith.constant -1 : i8
+  %1 = arith.ceildivsi %min_int_i8, %0 : i8
+
+  %min_int_i16 = arith.constant -32768 : i16
+  %2 = arith.constant -1 : i16
+  %3 = arith.ceildivsi %min_int_i16, %2 : i16
+
+  %min_int_i32 = arith.constant -2147483648 : i32
+  %4 = arith.constant -1 : i32
+  %5 = arith.ceildivsi %min_int_i32, %4 : i32
+
+  return %1, %3, %5 : i8, i16, i32
+}
+
+// -----
+
 // CHECK-LABEL: func @simple_arith.ceildivui
 func.func @simple_arith.ceildivui() -> (i32, i32, i32, i32, i32) {
   // CHECK-DAG: [[C0:%.+]] = arith.constant 0
