@@ -235,7 +235,7 @@ module attributes {transform.with_named_sequence} {
 
 module {
   func.func @fail_for_float_neutral(%arg0: tensor<?x?xf32>, %arg1: tensor<?xf32>) -> tensor<?xf32> {
-    // expected-error @below {{'linalg.generic' op Failed to get an identity value for the reduction operation.}}
+    // expected-error @below {{'linalg.generic' op failed to determine how to split the reduction operation}}
     %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<?x?xf32>) outs(%arg1 : tensor<?xf32>) {
     ^bb0(%in: f32, %out: f32):
       %1 = llvm.fmul %in, %in  : f32
@@ -1113,7 +1113,7 @@ module attributes {transform.with_named_sequence} {
 
 module {
   func.func @fail_for_rhs_accumulator(%arg0: tensor<?x?xf32>, %arg1: tensor<?xf32>) -> tensor<?xf32> {
-    // expected-error @below {{'linalg.generic' op Failed to get an identity value for the reduction operation.}}
+    // expected-error @below {{'linalg.generic' op failed to determine how to split the reduction operation}}
     %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<?x?xf32>) outs(%arg1 : tensor<?xf32>) {
     ^bb0(%in: f32, %out: f32):
       %1 = arith.subf %in, %out : f32
@@ -1143,7 +1143,7 @@ module {
 
 module {
   func.func @fail_for_nsw_overflow_flag(%arg0: tensor<?x?xi32>, %arg1: tensor<?xi32>) -> tensor<?xi32> {
-    // expected-error @below {{'linalg.generic' op Failed to get an identity value for the reduction operation.}}
+    // expected-error @below {{'linalg.generic' op failed to determine how to split the reduction operation}}
     %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<?x?xi32>) outs(%arg1 : tensor<?xi32>) {
     ^bb0(%in: i32, %out: i32):
       %1 = arith.subi %out, %in overflow<nsw> : i32
@@ -1171,7 +1171,7 @@ module {
 
 module {
   func.func @fail_for_nuw_overflow_flag(%arg0: tensor<?x?xi32>, %arg1: tensor<?xi32>) -> tensor<?xi32> {
-    // expected-error @below {{'linalg.generic' op Failed to get an identity value for the reduction operation.}}
+    // expected-error @below {{'linalg.generic' op failed to determine how to split the reduction operation}}
     %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<?x?xi32>) outs(%arg1 : tensor<?xi32>) {
     ^bb0(%in: i32, %out: i32):
       %1 = arith.subi %out, %in overflow<nuw> : i32

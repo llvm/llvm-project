@@ -26,6 +26,7 @@
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
+#include <functional>
 #include <optional>
 
 #define DEBUG_TYPE "linalg-tiling-interface-impl"
@@ -571,6 +572,45 @@ static Value createSubtractingAccumulationMerge(OpBuilder &b, Location loc,
   return arith::AddIOp::create(b, loc, lhs, rhs);
 }
 
+/// Describes how a reduction is split into partial results.
+struct SplitReductionCombiner {
+  /// Value each partial result is initialized with.
+  TypedAttr identity;
+  /// Builds the operation combining two partial results.
+  std::function<Value(OpBuilder &, Location, Value, Value)> merge;
+};
+
+/// Returns how the reduction implemented by `combinerOp`, accumulating into
+/// `accumulator`, is split into partial results, or `std::nullopt` if it cannot
+/// be split. The identity and the merge operation have to agree, so they are
+/// determined together.
+static std::optional<SplitReductionCombiner>
+getSplitReductionCombiner(Operation *combinerOp, Value accumulator) {
+  if (isSubtractingAccumulation(combinerOp, accumulator)) {
+    // Each partial result holds the negated sum of its own tile, so they are
+    // combined with an addition rather than with the subtraction itself.
+    Builder builder(combinerOp->getContext());
+    return SplitReductionCombiner{
+        builder.getZeroAttr(combinerOp->getResult(0).getType()),
+        [combinerOp](OpBuilder &b, Location loc, Value lhs, Value rhs) {
+          return createSubtractingAccumulationMerge(b, loc, combinerOp, lhs,
+                                                    rhs);
+        }};
+  }
+
+  std::optional<TypedAttr> identity = arith::getNeutralElement(combinerOp);
+  if (!identity.has_value())
+    return std::nullopt;
+  return SplitReductionCombiner{
+      *identity,
+      [combinerOp](OpBuilder &b, Location loc, Value lhs, Value rhs) {
+        Operation *clonedCombinerOp = b.clone(*combinerOp);
+        clonedCombinerOp->setOperand(0, lhs);
+        clonedCombinerOp->setOperand(1, rhs);
+        return clonedCombinerOp->getResult(0);
+      }};
+}
+
 /// External model implementation of PartialReductionInterface for
 /// LinalgOps.
 template <typename LinalgOpTy>
@@ -598,16 +638,12 @@ struct LinalgOpPartialReductionInterface
           combinerOps.size() != 1)
         return op->emitOpError("Failed to anaysis the reduction operation.");
 
-      Operation *reductionOp = combinerOps[0];
-      std::optional<TypedAttr> identity;
-      if (isSubtractingAccumulation(reductionOp,
-                                    linalgOp.getRegionOutputArgs()[initIdx]))
-        identity = b.getZeroAttr(reductionOp->getResult(0).getType());
-      else
-        identity = arith::getNeutralElement(reductionOp);
-      if (!identity.has_value())
+      std::optional<SplitReductionCombiner> combiner =
+          getSplitReductionCombiner(combinerOps[0],
+                                    linalgOp.getRegionOutputArgs()[initIdx]);
+      if (!combiner.has_value())
         return op->emitOpError(
-            "Failed to get an identity value for the reduction operation.");
+            "failed to determine how to split the reduction operation");
 
       // Append the new partial result dimensions.
       SmallVector<OpFoldResult> partialResultShape;
@@ -629,7 +665,7 @@ struct LinalgOpPartialReductionInterface
       Type elType = getElementTypeOrSelf(result.getType());
       Value emptyTensor =
           tensor::EmptyOp::create(b, loc, partialResultShape, elType);
-      Value constantOp = arith::ConstantOp::create(b, loc, *identity);
+      Value constantOp = arith::ConstantOp::create(b, loc, combiner->identity);
       auto identityTensor =
           linalg::FillOp::create(b, loc, constantOp, emptyTensor);
       inits.push_back(identityTensor.getResult(0));
@@ -765,27 +801,24 @@ struct LinalgOpPartialReductionInterface
         }
       }
 
+      // Get the combiner op. This has to happen before the merge operation is
+      // built, since the region builder below cannot report a failure.
+      SmallVector<Operation *, 4> combinerOps;
+      if (!matchReduction(linalgOp.getRegionOutputArgs(), initIdx, combinerOps))
+        return op->emitOpError("failed to match the reduction operation");
+      std::optional<SplitReductionCombiner> combiner =
+          getSplitReductionCombiner(combinerOps[0],
+                                    linalgOp.getRegionOutputArgs()[initIdx]);
+      if (!combiner.has_value())
+        return op->emitOpError(
+            "failed to determine how to split the reduction operation");
+
       auto reduction = linalg::ReduceOp::create(
           b, loc, partialResult, init, partialReductionDims,
-          [&linalgOp, &initIdx](OpBuilder &b, Location loc, ValueRange inputs) {
-            // Get the combiner op.
-            SmallVector<Operation *, 4> combinerOps;
-            matchReduction(linalgOp.getRegionOutputArgs(), initIdx,
-                           combinerOps);
-            Operation *reductionOp = combinerOps[0];
-            Value merged;
-            if (isSubtractingAccumulation(
-                    reductionOp, linalgOp.getRegionOutputArgs()[initIdx])) {
-              merged = createSubtractingAccumulationMerge(b, loc, reductionOp,
-                                                          inputs[0], inputs[1]);
-            } else {
-              Operation *clonedReductionOp = b.clone(*reductionOp);
-              // Combine the input at idx and output at numInits + idx.
-              clonedReductionOp->setOperand(0, inputs[0]);
-              clonedReductionOp->setOperand(1, inputs[1]);
-              merged = clonedReductionOp->getResult(0);
-            }
-            linalg::YieldOp::create(b, loc, merged);
+          [&combiner](OpBuilder &b, Location loc, ValueRange inputs) {
+            // Combine the input at idx and output at numInits + idx.
+            linalg::YieldOp::create(
+                b, loc, combiner->merge(b, loc, inputs[0], inputs[1]));
           });
 
       mergeOperations.push_back(reduction);
