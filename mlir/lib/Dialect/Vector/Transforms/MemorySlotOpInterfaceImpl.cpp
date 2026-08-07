@@ -61,8 +61,7 @@ isWholeBufferTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
   if (!isa<MemRefType>(xferOp.getBase().getType()))
     return false;
 
-  // Exact type match pins rank/extents/element type and rejects scalable
-  // vectors.
+  // Exact type match pins rank/extents/element type/scalable dims.
   if (xferOp.getVectorType() != slot.elemType)
     return false;
 
