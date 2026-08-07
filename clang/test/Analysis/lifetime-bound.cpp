@@ -402,7 +402,7 @@ struct F {
 F makeView(int &x [[clang::lifetimebound]]) { return F{&x}; }
 
 F whole_struct_return_lazycompoundval() {
-  int x = 5;// expected-note {{'x' initialized here}}
+  int x = 5; // expected-note {{'x' initialized here}}
   return makeView(x);
   // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
   // expected-note@-2    {{Lifetime of 'x' ended here}}
