@@ -3448,13 +3448,14 @@ private:
       }
     }
 
-    void logExtractRematPair(ExtractElementInst *EI, Instruction *RI) {
+    bool logExtractRematPair(ExtractElementInst *EI, Instruction *RI) {
       // The final scheduler may move the extract together with the remat
       // instruction, so only track pairs that are already co-located.
       if (EI->getParent() != RI->getParent())
-        return;
+        return false;
       CouldBeExtract.try_emplace(RI, EI);
       CouldBeRemat.try_emplace(EI, RI);
+      return true;
     }
 
     void replaceWithExtractCandidates(SmallVectorImpl<Value *> &VL) {
@@ -25956,7 +25957,8 @@ Value *BoUpSLP::vectorizeTree(
         if (DE.hasExtract(RI))
           return;
         DE.transferRematCost(Inst, EI);
-        DE.logExtractRematPair(EI, RI);
+        if (!DE.logExtractRematPair(EI, RI))
+          eraseInstruction(EI);
         return;
       }
       auto *EI = dyn_cast<ExtractElementInst>(Replacement);
@@ -25965,7 +25967,10 @@ Value *BoUpSLP::vectorizeTree(
       if (!DE.isExternalUseAsExtract(RI) || DE.hasExtract(RI))
         return;
       DE.transferExtractCost(Inst, RI);
-      DE.logExtractRematPair(EI, RI);
+      if (!DE.logExtractRematPair(EI, RI)) {
+        eraseInstruction(RI);
+        return;
+      }
       if (User)
         User->replaceUsesOfWith(EI, RI);
       else
