@@ -739,13 +739,13 @@ the output.
 BASIC DETAILS
 """""""""""""
 The following command prints basic details for all the logical elements
-sorted by the debug information internal offset; it includes its lexical
+sorted by unique element ID; it includes its lexical
 level and debug info format.
 
 .. code-block:: none
 
   llvm-debuginfo-analyzer --attribute=level,format
-                          --output-sort=offset
+                          --output-sort=id
                           --print=scopes,symbols,types,lines,instructions
                           test-dwarf-clang.o
 
@@ -754,7 +754,7 @@ or
 .. code-block:: none
 
   llvm-debuginfo-analyzer --attribute=level,format
-                          --output-sort=offset
+                          --output-sort=id
                           --print=elements
                           test-dwarf-clang.o
 
@@ -1980,13 +1980,13 @@ WebAssembly 32-bit target with Clang (-O0 -g --target=wasm32):
 PRINT BASIC DETAILS
 ^^^^^^^^^^^^^^^^^^^
 The following command prints basic details for all the logical elements
-sorted by the debug information internal offset; it includes its lexical
+sorted by unique element ID; it includes its lexical
 level and debug info format.
 
 .. code-block:: none
 
   llvm-debuginfo-analyzer --attribute=level,format
-                          --output-sort=offset
+                          --output-sort=id
                           --print=scopes,symbols,types,lines,instructions
                           test-clang.o
 
@@ -1995,7 +1995,7 @@ or
 .. code-block:: none
 
   llvm-debuginfo-analyzer --attribute=level,format
-                          --output-sort=offset
+                          --output-sort=id
                           --print=elements
                           test-clang.o
 
@@ -2151,13 +2151,13 @@ IR 64-bit target with Clang (-O0 -g --target=x86_64-linux):
 PRINT BASIC DETAILS
 ^^^^^^^^^^^^^^^^^^^
 The following command prints basic details for all the logical elements
-sorted by the debug information internal offset; it includes its lexical
+sorted by unique element ID; it includes its lexical
 level and debug info format.
 
 .. code-block:: none
 
   llvm-debuginfo-analyzer --attribute=level,format
-                          --output-sort=offset
+                          --output-sort=id
                           --print=scopes,symbols,types,lines,instructions
                           test-clang.ll
 
@@ -2166,7 +2166,7 @@ or
 .. code-block:: none
 
   llvm-debuginfo-analyzer --attribute=level,format
-                          --output-sort=offset
+                          --output-sort=id
                           --print=elements
                           test-clang.ll
 
