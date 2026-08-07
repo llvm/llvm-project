@@ -2157,12 +2157,11 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
     if (op->hasAttr(CIRDialect::getMustTailAttrName()))
       newOp.setTailCallKind(mlir::LLVM::TailCallKind::MustTail);
 
-	  if (std::optional<cir::InlineKind> inlineKind = call.getInlineKind()) {
-	    newOp.setNoInline(*inlineKind == cir::InlineKind::NoInline);
-	    newOp.setInlineHint(*inlineKind == cir::InlineKind::InlineHint);
-	    newOp.setAlwaysInline(*inlineKind == cir::InlineKind::AlwaysInline);
-	  }
-
+    if (std::optional<cir::InlineKind> inlineKind = call.getInlineKind()) {
+      newOp.setNoInline(*inlineKind == cir::InlineKind::NoInline);
+      newOp.setInlineHint(*inlineKind == cir::InlineKind::InlineHint);
+      newOp.setAlwaysInline(*inlineKind == cir::InlineKind::AlwaysInline);
+    }
   }
 
   return mlir::success();
