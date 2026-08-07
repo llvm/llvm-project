@@ -323,14 +323,18 @@ def int_dx_group_memory_barrier_with_group_sync
     : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
 
 def int_dx_load_input
-    : DefaultAttrsIntrinsic<[llvm_any_ty],
-                            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i8_ty,
-                             llvm_i32_ty],
-                            [IntrConvergent]>;
+    : DefaultAttrsIntrinsic<
+          [llvm_any_ty],
+          [llvm_i32_ty /*sigpointId*/, llvm_i32_ty /*sigElementId*/,
+           llvm_i32_ty /*rowIndex*/, llvm_i8_ty /*colIndex*/,
+           llvm_i32_ty /*gsVertexOrPrimIndex*/],
+          [IntrConvergent]>;
 
 def int_dx_store_output
-    : DefaultAttrsIntrinsic<[],
-                            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i8_ty,
-                             llvm_i32_ty, llvm_any_ty],
-                            [IntrConvergent]>;
+    : DefaultAttrsIntrinsic<
+          [],
+          [llvm_i32_ty /*sigpointId*/, llvm_i32_ty /*sigElementId*/,
+           llvm_i32_ty /*rowIndex*/, llvm_i8_ty /*colIndex*/,
+           llvm_any_ty /*value*/],
+          [IntrConvergent]>;
 }
