@@ -4325,6 +4325,7 @@ TypeSystemSwiftTypeRef::GetBasicTypeFromAST(lldb::BasicType basic_type) {
     break;
   case eBasicTypeDouble:
   case eBasicTypeLongDouble:
+  case eBasicTypeFloat128:
   case eBasicTypeFloatComplex:
   case eBasicTypeDoubleComplex:
   case eBasicTypeLongDoubleComplex:
