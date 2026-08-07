@@ -124,9 +124,11 @@ define amdgpu_kernel void @sqrt_v2bf16(ptr addrspace(1) %r, ptr addrspace(1) %a)
 ; GFX12-TRUE16-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-GISEL-NEXT:    s_lshr_b32 s3, s2, 16
 ; GFX12-TRUE16-GISEL-NEXT:    v_sqrt_bf16_e32 v0.l, s2
-; GFX12-TRUE16-GISEL-NEXT:    v_sqrt_bf16_e32 v1.l, s3
-; GFX12-TRUE16-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_2) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX12-TRUE16-GISEL-NEXT:    v_nop
+; GFX12-TRUE16-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(SKIP_2) | instid1(TRANS32_DEP_1)
 ; GFX12-TRUE16-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX12-TRUE16-GISEL-NEXT:    v_sqrt_bf16_e32 v1.l, s3
+; GFX12-TRUE16-GISEL-NEXT:    v_nop
 ; GFX12-TRUE16-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX12-TRUE16-GISEL-NEXT:    s_pack_ll_b32_b16 s2, s2, s3
 ; GFX12-TRUE16-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
@@ -174,9 +176,11 @@ define amdgpu_kernel void @sqrt_v2bf16(ptr addrspace(1) %r, ptr addrspace(1) %a)
 ; GFX12-FAKE16-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-GISEL-NEXT:    s_lshr_b32 s3, s2, 16
 ; GFX12-FAKE16-GISEL-NEXT:    v_sqrt_bf16_e32 v0, s2
-; GFX12-FAKE16-GISEL-NEXT:    v_sqrt_bf16_e32 v1, s3
-; GFX12-FAKE16-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_2) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX12-FAKE16-GISEL-NEXT:    v_nop
+; GFX12-FAKE16-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(SKIP_2) | instid1(TRANS32_DEP_1)
 ; GFX12-FAKE16-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX12-FAKE16-GISEL-NEXT:    v_sqrt_bf16_e32 v1, s3
+; GFX12-FAKE16-GISEL-NEXT:    v_nop
 ; GFX12-FAKE16-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX12-FAKE16-GISEL-NEXT:    s_pack_ll_b32_b16 s2, s2, s3
 ; GFX12-FAKE16-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
