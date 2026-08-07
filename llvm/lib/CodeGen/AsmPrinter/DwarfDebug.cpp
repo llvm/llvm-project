@@ -1439,10 +1439,12 @@ void DwarfDebug::finalizeModuleInfo() {
         CompileUnit.addSectionLabel(CompileUnit.getUnitDie(), MacrosAttr,
                                     U.getMacroLabelBegin(), Section);
       } else {
-        CompileUnit.addSectionLabel(
-            CompileUnit.getUnitDie(), dwarf::DW_AT_macro_info,
-            U.getMacroLabelBegin(),
-            TLOF.getDwarfMacinfoSection()->getBeginSymbol());
+        const MCSymbol *Section =
+            useSplitDwarf() ? TLOF.getDwarfMacinfoDWOSection()->getBeginSymbol()
+                            : TLOF.getDwarfMacinfoSection()->getBeginSymbol();
+        CompileUnit.addSectionLabel(CompileUnit.getUnitDie(),
+                                    dwarf::DW_AT_macro_info,
+                                    U.getMacroLabelBegin(), Section);
       }
     }
   }
