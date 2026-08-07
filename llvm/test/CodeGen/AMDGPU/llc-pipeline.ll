@@ -455,6 +455,7 @@
 ; GCN-O1-NEXT:        AMDGPU Insert waits for SGPR read hazards
 ; GCN-O1-NEXT:        AMDGPU Lower VGPR Encoding
 ; GCN-O1-NEXT:        AMDGPU Insert Delay ALU
+; GCN-O1-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-NEXT:        AMDGPU Insert ICache Prefetch
 ; GCN-O1-NEXT:        Branch relaxation pass
 ; GCN-O1-NEXT:        Register Usage Information Collector Pass
@@ -786,6 +787,7 @@
 ; GCN-O1-OPTS-NEXT:        AMDGPU Insert waits for SGPR read hazards
 ; GCN-O1-OPTS-NEXT:        AMDGPU Lower VGPR Encoding
 ; GCN-O1-OPTS-NEXT:        AMDGPU Insert Delay ALU
+; GCN-O1-OPTS-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        AMDGPU Insert ICache Prefetch
 ; GCN-O1-OPTS-NEXT:        Branch relaxation pass
 ; GCN-O1-OPTS-NEXT:        Register Usage Information Collector Pass
@@ -1122,6 +1124,7 @@
 ; GCN-O2-NEXT:        AMDGPU Insert waits for SGPR read hazards
 ; GCN-O2-NEXT:        AMDGPU Lower VGPR Encoding
 ; GCN-O2-NEXT:        AMDGPU Insert Delay ALU
+; GCN-O2-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O2-NEXT:        AMDGPU Insert ICache Prefetch
 ; GCN-O2-NEXT:        Branch relaxation pass
 ; GCN-O2-NEXT:        Register Usage Information Collector Pass
@@ -1473,6 +1476,7 @@
 ; GCN-O3-NEXT:        AMDGPU Insert waits for SGPR read hazards
 ; GCN-O3-NEXT:        AMDGPU Lower VGPR Encoding
 ; GCN-O3-NEXT:        AMDGPU Insert Delay ALU
+; GCN-O3-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O3-NEXT:        AMDGPU Insert ICache Prefetch
 ; GCN-O3-NEXT:        Branch relaxation pass
 ; GCN-O3-NEXT:        Register Usage Information Collector Pass

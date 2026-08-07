@@ -215,7 +215,8 @@ bool AMDGPUInsertICachePrefetch::run(MachineFunction &MF) {
       BuildMI(*CandBB, InsertPt, DL, TII->get(AMDGPU::S_PREFETCH_INST_PC_REL))
           .addImm(0)                 // offset (placeholder, fixed up later)
           .addReg(AMDGPU::SGPR_NULL) // soffset
-          .addImm(Prefetches);       // sdata (slot index, fixed up later)
+          .addImm(Prefetches)        // sdata (slot index, fixed up later)
+          .addImm(0);                // cpol
     }
   }
 
