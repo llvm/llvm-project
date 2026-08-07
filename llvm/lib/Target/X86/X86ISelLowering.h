@@ -561,6 +561,11 @@ namespace llvm {
     /// register, not on the X87 floating point stack.
     bool isScalarFPTypeInSSEReg(EVT VT) const;
 
+    /// Returns true if the specified scalar FP type is computed on the
+    /// X87 floating point stack. Important because the registers are always 80
+    /// bits wide, regardless of the precision of the value being computed.
+    bool isScalarFPTypeOnX87Stack(EVT VT) const;
+
     /// Returns true if it is beneficial to convert a load of a constant
     /// to just the constant itself.
     bool shouldConvertConstantLoadToIntImm(const APInt &Imm,

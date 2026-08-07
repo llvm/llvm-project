@@ -65,9 +65,18 @@ define double @fadd_f64(double %a, double %b) nounwind strictfp {
 ;
 ; X87-LABEL: fadd_f64:
 ; X87:       # %bb.0:
-; X87-NEXT:    fldl {{[0-9]+}}(%esp)
-; X87-NEXT:    faddl {{[0-9]+}}(%esp)
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    fldl 8(%ebp)
+; X87-NEXT:    fldl 16(%ebp)
+; X87-NEXT:    faddp %st, %st(1)
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl (%esp)
 ; X87-NEXT:    wait
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
 ; X87-NEXT:    retl
   %ret = call double @llvm.experimental.constrained.fadd.f64(double %a, double %b,
                                                              metadata !"round.dynamic",
@@ -110,9 +119,14 @@ define float @fadd_f32(float %a, float %b) nounwind strictfp {
 ;
 ; X87-LABEL: fadd_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
-; X87-NEXT:    fadds {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    faddp %st, %st(1)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    wait
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %ret = call float @llvm.experimental.constrained.fadd.f32(float %a, float %b,
                                                             metadata !"round.dynamic",
@@ -163,9 +177,18 @@ define double @fsub_f64(double %a, double %b) nounwind strictfp {
 ;
 ; X87-LABEL: fsub_f64:
 ; X87:       # %bb.0:
-; X87-NEXT:    fldl {{[0-9]+}}(%esp)
-; X87-NEXT:    fsubl {{[0-9]+}}(%esp)
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    fldl 8(%ebp)
+; X87-NEXT:    fldl 16(%ebp)
+; X87-NEXT:    fsubrp %st, %st(1)
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl (%esp)
 ; X87-NEXT:    wait
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
 ; X87-NEXT:    retl
   %ret = call double @llvm.experimental.constrained.fsub.f64(double %a, double %b,
                                                              metadata !"round.dynamic",
@@ -208,9 +231,14 @@ define float @fsub_f32(float %a, float %b) nounwind strictfp {
 ;
 ; X87-LABEL: fsub_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
-; X87-NEXT:    fsubs {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    fsubrp %st, %st(1)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    wait
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %ret = call float @llvm.experimental.constrained.fsub.f32(float %a, float %b,
                                                             metadata !"round.dynamic",
@@ -261,9 +289,18 @@ define double @fmul_f64(double %a, double %b) nounwind strictfp {
 ;
 ; X87-LABEL: fmul_f64:
 ; X87:       # %bb.0:
-; X87-NEXT:    fldl {{[0-9]+}}(%esp)
-; X87-NEXT:    fmull {{[0-9]+}}(%esp)
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    fldl 8(%ebp)
+; X87-NEXT:    fldl 16(%ebp)
+; X87-NEXT:    fmulp %st, %st(1)
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl (%esp)
 ; X87-NEXT:    wait
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
 ; X87-NEXT:    retl
   %ret = call double @llvm.experimental.constrained.fmul.f64(double %a, double %b,
                                                              metadata !"round.dynamic",
@@ -306,9 +343,14 @@ define float @fmul_f32(float %a, float %b) nounwind strictfp {
 ;
 ; X87-LABEL: fmul_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
-; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    fmulp %st, %st(1)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    wait
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %ret = call float @llvm.experimental.constrained.fmul.f32(float %a, float %b,
                                                             metadata !"round.dynamic",
@@ -359,9 +401,18 @@ define double @fdiv_f64(double %a, double %b) nounwind strictfp {
 ;
 ; X87-LABEL: fdiv_f64:
 ; X87:       # %bb.0:
-; X87-NEXT:    fldl {{[0-9]+}}(%esp)
-; X87-NEXT:    fdivl {{[0-9]+}}(%esp)
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    fldl 8(%ebp)
+; X87-NEXT:    fldl 16(%ebp)
+; X87-NEXT:    fdivrp %st, %st(1)
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl (%esp)
 ; X87-NEXT:    wait
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
 ; X87-NEXT:    retl
   %ret = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b,
                                                              metadata !"round.dynamic",
@@ -404,9 +455,14 @@ define float @fdiv_f32(float %a, float %b) nounwind strictfp {
 ;
 ; X87-LABEL: fdiv_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
-; X87-NEXT:    fdivs {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    fdivrp %st, %st(1)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    wait
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %ret = call float @llvm.experimental.constrained.fdiv.f32(float %a, float %b,
                                                             metadata !"round.dynamic",
@@ -548,11 +604,19 @@ define void @fsqrt_f64(ptr %a) nounwind strictfp {
 ;
 ; X87-LABEL: fsqrt_f64:
 ; X87:       # %bb.0:
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    movl 8(%ebp), %eax
 ; X87-NEXT:    fldl (%eax)
 ; X87-NEXT:    fsqrt
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl (%esp)
 ; X87-NEXT:    fstpl (%eax)
 ; X87-NEXT:    wait
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
 ; X87-NEXT:    retl
   %1 = load double, ptr %a, align 8
   %res = call double @llvm.experimental.constrained.sqrt.f64(double %1,
@@ -595,11 +659,15 @@ define void @fsqrt_f32(ptr %a) nounwind strictfp {
 ;
 ; X87-LABEL: fsqrt_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    flds (%eax)
 ; X87-NEXT:    fsqrt
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    fstps (%eax)
 ; X87-NEXT:    wait
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %1 = load float, ptr %a, align 4
   %res = call float @llvm.experimental.constrained.sqrt.f32(float %1,

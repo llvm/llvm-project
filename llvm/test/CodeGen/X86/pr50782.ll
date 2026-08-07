@@ -20,7 +20,7 @@ define void @h(float %i) {
 ; CHECK-NEXT:    .cfi_def_cfa_register %ebp
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    andl $-16, %esp
-; CHECK-NEXT:    subl $32, %esp
+; CHECK-NEXT:    subl $64, %esp
 ; CHECK-NEXT:    movl %esp, %esi
 ; CHECK-NEXT:    .cfi_offset %esi, -12
 ; CHECK-NEXT:    flds 8(%ebp)
@@ -31,50 +31,62 @@ define void @h(float %i) {
 ; CHECK-NEXT:    movl %esp, %eax
 ; CHECK-NEXT:    andl $-16, %eax
 ; CHECK-NEXT:    movl %eax, %esp
-; CHECK-NEXT:    fsts 8(%esi) # 4-byte Folded Spill
+; CHECK-NEXT:    fld %st(0)
+; CHECK-NEXT:    fstpt 36(%esi) # 10-byte Folded Spill
 ; CHECK-NEXT:    fadds _b
+; CHECK-NEXT:    fstps 32(%esi)
+; CHECK-NEXT:    flds 32(%esi)
 ; CHECK-NEXT:    fsts _d
 ; CHECK-NEXT:    fld1
 ; CHECK-NEXT:    fldz
 ; CHECK-NEXT:    testl %ecx, %ecx
-; CHECK-NEXT:    fld %st(0)
-; CHECK-NEXT:    fld %st(2)
 ; CHECK-NEXT:    je LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:    fstp %st(0)
 ; CHECK-NEXT:    fstp %st(0)
 ; CHECK-NEXT:    movl _f, %ecx
 ; CHECK-NEXT:    flds (%eax,%ecx,4)
-; CHECK-NEXT:    fld %st(3)
+; CHECK-NEXT:    fld %st(1)
+; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:  LBB0_2: # %for.cond1.preheader
 ; CHECK-NEXT:    movl _e, %ecx
-; CHECK-NEXT:    movl %ecx, 12(%esi)
-; CHECK-NEXT:    fildl 12(%esi)
+; CHECK-NEXT:    movl %ecx, 28(%esi)
+; CHECK-NEXT:    fildl 28(%esi)
 ; CHECK-NEXT:    movl _c, %edx
+; CHECK-NEXT:    fldz
+; CHECK-NEXT:    fld1
 ; CHECK-NEXT:    jmp LBB0_3
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_5: # %for.inc
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    fadd %st, %st(5)
 ; CHECK-NEXT:    fxch %st(5)
-; CHECK-NEXT:    fadd %st(4), %st
+; CHECK-NEXT:    fstps 12(%esi)
+; CHECK-NEXT:    flds 12(%esi)
 ; CHECK-NEXT:    fxch %st(5)
 ; CHECK-NEXT:  LBB0_3: # %for.cond1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    fld %st(5)
-; CHECK-NEXT:    fmul %st(4), %st
-; CHECK-NEXT:    fdiv %st(2), %st
-; CHECK-NEXT:    fadd %st(3), %st
+; CHECK-NEXT:    fmul %st(2), %st
+; CHECK-NEXT:    fstps 16(%esi)
+; CHECK-NEXT:    flds 16(%esi)
+; CHECK-NEXT:    fdiv %st(5), %st
+; CHECK-NEXT:    fstps 20(%esi)
+; CHECK-NEXT:    flds 20(%esi)
+; CHECK-NEXT:    fadd %st(4), %st
+; CHECK-NEXT:    fstps 24(%esi)
+; CHECK-NEXT:    flds 24(%esi)
 ; CHECK-NEXT:    fsts _g
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fucom %st(1)
-; CHECK-NEXT:    fstp %st(1)
+; CHECK-NEXT:    fxch %st(3)
+; CHECK-NEXT:    fucom %st(3)
+; CHECK-NEXT:    fstp %st(3)
 ; CHECK-NEXT:    fnstsw %ax
 ; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
 ; CHECK-NEXT:    sahf
 ; CHECK-NEXT:    jbe LBB0_5
 ; CHECK-NEXT:  # %bb.4: # %if.then
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    flds 8(%esi) # 4-byte Folded Reload
+; CHECK-NEXT:    fldt 36(%esi) # 10-byte Folded Reload
 ; CHECK-NEXT:    fstps (%edx,%ecx,4)
 ; CHECK-NEXT:    jmp LBB0_5
 entry:

@@ -245,10 +245,8 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X87-WIN-NEXT:    flds __real@5f000000
 ; X87-WIN-NEXT:    fucom %st(1)
 ; X87-WIN-NEXT:    fnstsw %ax
-; X87-WIN-NEXT:    xorl %edx, %edx
 ; X87-WIN-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-WIN-NEXT:    sahf
-; X87-WIN-NEXT:    setbe %al
 ; X87-WIN-NEXT:    fldz
 ; X87-WIN-NEXT:    jbe LBB0_2
 ; X87-WIN-NEXT:  # %bb.1:
@@ -257,14 +255,17 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X87-WIN-NEXT:  LBB0_2:
 ; X87-WIN-NEXT:    fstp %st(0)
 ; X87-WIN-NEXT:    fsubrp %st, %st(1)
-; X87-WIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; X87-WIN-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X87-WIN-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-WIN-NEXT:    setbe %al
+; X87-WIN-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-WIN-NEXT:    fnstcw (%esp)
+; X87-WIN-NEXT:    movzwl (%esp), %ecx
 ; X87-WIN-NEXT:    orl $3072, %ecx # imm = 0xC00
 ; X87-WIN-NEXT:    movw %cx, {{[0-9]+}}(%esp)
 ; X87-WIN-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X87-WIN-NEXT:    fistpll {{[0-9]+}}(%esp)
-; X87-WIN-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X87-WIN-NEXT:    movb %al, %dl
+; X87-WIN-NEXT:    fldcw (%esp)
+; X87-WIN-NEXT:    movzbl %al, %edx
 ; X87-WIN-NEXT:    shll $31, %edx
 ; X87-WIN-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X87-WIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -279,10 +280,8 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X87-LIN-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X87-LIN-NEXT:    fucom %st(1)
 ; X87-LIN-NEXT:    fnstsw %ax
-; X87-LIN-NEXT:    xorl %edx, %edx
 ; X87-LIN-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-LIN-NEXT:    sahf
-; X87-LIN-NEXT:    setbe %al
 ; X87-LIN-NEXT:    fldz
 ; X87-LIN-NEXT:    jbe .LBB0_2
 ; X87-LIN-NEXT:  # %bb.1:
@@ -291,14 +290,17 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X87-LIN-NEXT:  .LBB0_2:
 ; X87-LIN-NEXT:    fstp %st(0)
 ; X87-LIN-NEXT:    fsubrp %st, %st(1)
-; X87-LIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X87-LIN-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-LIN-NEXT:    setbe %al
+; X87-LIN-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-LIN-NEXT:    fnstcw (%esp)
+; X87-LIN-NEXT:    movzwl (%esp), %ecx
 ; X87-LIN-NEXT:    orl $3072, %ecx # imm = 0xC00
 ; X87-LIN-NEXT:    movw %cx, {{[0-9]+}}(%esp)
 ; X87-LIN-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X87-LIN-NEXT:    fistpll {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    movb %al, %dl
+; X87-LIN-NEXT:    fldcw (%esp)
+; X87-LIN-NEXT:    movzbl %al, %edx
 ; X87-LIN-NEXT:    shll $31, %edx
 ; X87-LIN-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X87-LIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -673,15 +675,13 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X87-WIN-NEXT:    pushl %ebp
 ; X87-WIN-NEXT:    movl %esp, %ebp
 ; X87-WIN-NEXT:    andl $-8, %esp
-; X87-WIN-NEXT:    subl $16, %esp
+; X87-WIN-NEXT:    subl $24, %esp
 ; X87-WIN-NEXT:    fldl 8(%ebp)
 ; X87-WIN-NEXT:    flds __real@5f000000
 ; X87-WIN-NEXT:    fucom %st(1)
 ; X87-WIN-NEXT:    fnstsw %ax
-; X87-WIN-NEXT:    xorl %edx, %edx
 ; X87-WIN-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-WIN-NEXT:    sahf
-; X87-WIN-NEXT:    setbe %al
 ; X87-WIN-NEXT:    fldz
 ; X87-WIN-NEXT:    jbe LBB2_2
 ; X87-WIN-NEXT:  # %bb.1:
@@ -690,6 +690,9 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X87-WIN-NEXT:  LBB2_2:
 ; X87-WIN-NEXT:    fstp %st(0)
 ; X87-WIN-NEXT:    fsubrp %st, %st(1)
+; X87-WIN-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-WIN-NEXT:    setbe %al
+; X87-WIN-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-WIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X87-WIN-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X87-WIN-NEXT:    orl $3072, %ecx # imm = 0xC00
@@ -697,7 +700,7 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X87-WIN-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X87-WIN-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X87-WIN-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X87-WIN-NEXT:    movb %al, %dl
+; X87-WIN-NEXT:    movzbl %al, %edx
 ; X87-WIN-NEXT:    shll $31, %edx
 ; X87-WIN-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X87-WIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -707,15 +710,13 @@ define i64 @d_to_u64(double %a) nounwind {
 ;
 ; X87-LIN-LABEL: d_to_u64:
 ; X87-LIN:       # %bb.0:
-; X87-LIN-NEXT:    subl $20, %esp
+; X87-LIN-NEXT:    subl $28, %esp
 ; X87-LIN-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-LIN-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X87-LIN-NEXT:    fucom %st(1)
 ; X87-LIN-NEXT:    fnstsw %ax
-; X87-LIN-NEXT:    xorl %edx, %edx
 ; X87-LIN-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-LIN-NEXT:    sahf
-; X87-LIN-NEXT:    setbe %al
 ; X87-LIN-NEXT:    fldz
 ; X87-LIN-NEXT:    jbe .LBB2_2
 ; X87-LIN-NEXT:  # %bb.1:
@@ -724,6 +725,9 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X87-LIN-NEXT:  .LBB2_2:
 ; X87-LIN-NEXT:    fstp %st(0)
 ; X87-LIN-NEXT:    fsubrp %st, %st(1)
+; X87-LIN-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-LIN-NEXT:    setbe %al
+; X87-LIN-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-LIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X87-LIN-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X87-LIN-NEXT:    orl $3072, %ecx # imm = 0xC00
@@ -731,11 +735,11 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X87-LIN-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X87-LIN-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X87-LIN-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    movb %al, %dl
+; X87-LIN-NEXT:    movzbl %al, %edx
 ; X87-LIN-NEXT:    shll $31, %edx
 ; X87-LIN-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X87-LIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X87-LIN-NEXT:    addl $20, %esp
+; X87-LIN-NEXT:    addl $28, %esp
 ; X87-LIN-NEXT:    retl
   %r = fptoui double %a to i64
   ret i64 %r

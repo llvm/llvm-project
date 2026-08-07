@@ -12,7 +12,7 @@ define void @computeJD(ptr) nounwind {
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    andl $-8, %esp
-; CHECK-NEXT:    subl $40, %esp
+; CHECK-NEXT:    subl $64, %esp
 ; CHECK-NEXT:    movl 8(%ebp), %ebx
 ; CHECK-NEXT:    movl 8(%ebx), %esi
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -49,7 +49,11 @@ define void @computeJD(ptr) nounwind {
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fildl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}
+; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
+; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -63,6 +67,8 @@ define void @computeJD(ptr) nounwind {
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    fldl 28(%ebx)
 ; CHECK-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
+; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    orl $3072, %ecx # imm = 0xC00

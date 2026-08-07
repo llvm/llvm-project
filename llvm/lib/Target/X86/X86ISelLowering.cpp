@@ -899,6 +899,21 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f80, Legal);
   }
 
+  // On x87, do rounding-sensitive arithmetic in f80, because a f32/f64 vreg on
+  // its stack doesn't generally hold a value of its own type. The promotion
+  // takes care of fp_extending, doing the op, then fp_rounding back to the
+  // narrow type.
+  for (auto VT : {MVT::f32, MVT::f64}) {
+    if (!isScalarFPTypeOnX87Stack(VT))
+      continue;
+    // Promote only ops that may need rounding (fneg/fabs are just sign flips,
+    // always exact)
+    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FSQRT,
+                         ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+                         ISD::STRICT_FDIV, ISD::STRICT_FSQRT})
+      setOperationPromotedToType(Opc, VT, MVT::f80);
+  }
+
   // f128 uses xmm registers, but most operations require libcalls.
   if (!Subtarget.useSoftFloat() && Subtarget.is64Bit() && Subtarget.hasSSE1()) {
     addRegisterClass(MVT::f128, Subtarget.hasVLX() ? &X86::VR128XRegClass
@@ -3694,6 +3709,13 @@ bool X86TargetLowering::ShouldShrinkFPConstant(EVT VT) const {
 bool X86TargetLowering::isScalarFPTypeInSSEReg(EVT VT) const {
   return (VT == MVT::f64 && Subtarget.hasSSE2()) ||
          (VT == MVT::f32 && Subtarget.hasSSE1()) || VT == MVT::f16;
+}
+
+bool X86TargetLowering::isScalarFPTypeOnX87Stack(EVT VT) const {
+  if (Subtarget.useSoftFloat() || !Subtarget.hasX87())
+    return false;
+  return (VT == MVT::f80) ||
+         ((VT == MVT::f32 || VT == MVT::f64) && !isScalarFPTypeInSSEReg(VT));
 }
 
 bool X86TargetLowering::isLoadBitCastBeneficial(EVT LoadVT, EVT BitcastVT,
