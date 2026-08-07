@@ -273,6 +273,27 @@ class RISCVUImmOp<int bitsNum> : RISCVOp {
 class RISCVUImmLeafOp<int bitsNum> :
   RISCVUImmOp<bitsNum>, ImmLeaf<XLenVT, "return isUInt<" # bitsNum # ">(Imm);">;
 
+// A N-bit unsigned immediate where the least significant bits are zero.
+class RISCVUImmLsbZeroOp<int width, int zeros>
+    : RISCVOp, ImmLeaf<XLenVT, [{return isShiftedUInt<}] # !sub(width, zeros) #
+                       [{, }] # zeros # [{>(Imm);}]> {
+
+  // Create suffix with the appropriate number of 0s to append to all names
+  defvar Suffix = !foldl("", !range(zeros), acc, ignore, !strconcat(acc, "0"));
+
+  let ParserMatchClass = UImmAsmOperand<width, "Lsb" # Suffix>;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeUImmOperand<" # width # ">";
+  let OperandType = "OPERAND_UIMM" # width # "_LSB" # Suffix;
+
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isShiftedUInt<}] # !sub(width, zeros) # [{, }] # zeros # [{>(Imm);
+  }];
+}
+
 class RISCVSImmOp<int bitsNum> : RISCVOp {
   let ParserMatchClass = SImmAsmOperand<bitsNum>;
   let EncoderMethod = "getImmOpValue";
@@ -1802,7 +1823,7 @@ def : Pat<(brind (add GPRJALRNonX7:$rs1, simm12_lo:$imm12)),
 // destination.
 // Define AsmString to print "call" when compile with -S flag.
 // Define isCodeGenOnly = 0 to support parsing assembly "call" instruction.
-let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
+let isCall = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
     mayStore = 0, mayLoad = 0 in
 def PseudoCALLReg : Pseudo<(outs GPR:$rd), (ins call_symbol:$func), [],
                            "call", "$rd, $func">,
@@ -1910,6 +1931,14 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
 def PseudoMovImm : Pseudo<(outs GPR:$dst), (ins i32imm:$imm), []>,
                    Sched<[WriteIALU]>;
 
+// Materializes "$base + (imm << 12)" as a single pseudo so that
+// MachineLateInstrsCleanup can CSE identical upper-immediate additions.
+// Expanded to LUI+ADD by RISCVPostRAExpandPseudo.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8 in
+def PseudoAddUpperImm
+    : Pseudo<(outs GPR:$dst), (ins GPR:$base, uimm20_lui:$hi), []>,
+      Sched<[WriteIALU, ReadIALU]>;
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
     isCodeGenOnly = 0 in
 def PseudoLLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
@@ -1976,7 +2005,7 @@ def tlsdesc_call_symbol : Operand<XLenVT> {
 // fourth operand to emit a relocation on a symbol relating to this instruction.
 // The relocation does not affect any bits of the instruction itself but is used
 // as a hint to the linker.
-let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
+let isCall = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
     mayStore = 0, mayLoad = 0 in
 def PseudoTLSDESCCall : Pseudo<(outs GPR:$rd),
                          (ins GPR:$rs1, simm12_lo:$imm12, tlsdesc_call_symbol:$src), [],
@@ -2370,6 +2399,10 @@ include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
 include "RISCVInstrInfoZilsd.td"
 include "RISCVInstrInfoZibi.td"
+include "RISCVInstrInfoZilx.td"
+
+// Privileged
+include "RISCVInstrInfoSmcsps.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"

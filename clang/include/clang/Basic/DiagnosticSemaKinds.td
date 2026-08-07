@@ -11057,6 +11057,12 @@ def warn_lifetime_safety_dangling_field_moved
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingFieldMoved>,
       DefaultIgnore;
+def warn_lifetime_safety_dangling_field_lambda_capture
+    : Warning<"stack memory associated with %0 may escape to the %1 which will dangle. "
+      "This could be a false positive as the field was captured by a lambda and "
+      "may have been reset before escaping">,
+      InGroup<LifetimeSafetyDanglingFieldLambdaCapture>,
+      DefaultIgnore;
 def warn_lifetime_safety_dangling_global
     : Warning<"stack memory associated with %0 escapes to the %1 which will dangle">,
       InGroup<LifetimeSafetyDanglingGlobal>,
@@ -13852,6 +13858,11 @@ def warn_hlsl_assigning_local_resource_is_not_unique
 
 def err_hlsl_push_constant_unique
     : Error<"cannot have more than one push constant block">;
+def err_hlsl_sample_double_element_type
+    : Error<"'%0' is not supported for resources containing %1">;
+def err_hlsl_sample_integer_element_type
+    : Error<"'%0' on resources containing %1 requires shader model 6.7 or "
+            "newer; the target shader model is %2">;
 def err_hlsl_samplecmp_requires_float
     : Error<"'SampleCmp' and 'SampleCmpLevelZero' require resource to contain "
             "a floating point type">;
@@ -14277,6 +14288,22 @@ def note_acc_reduction_combiner_forming
     : Note<"while forming %select{|binary operator '%1'|conditional "
            "operator|final assignment operator}0">;
 
+// AMDGCN type diagnostics
+def err_amdgpu_target_ext_type_unsupported : Error<
+  "AMDGPU built-in type %0 is not supported on target '%1'">;
+
+def err_amdgpu_invalid_field_not_a_wrapper : Error<
+  "field with barrier type %0 seen in a structure that is not a named barrier wrapper">;
+def note_amdgpu_not_a_named_barrier_wrapper_too_many_fields : Note<
+  "%0 is not a named barrier wrapper because it has more than one field">;
+
+def err_amdgpu_named_barrier_wrapper_non_standard_layout : Error<
+  "named barrier wrapper %0 must have a C++11 standard layout">;
+def note_amdgpu_named_barrier_reason_field : Note<
+  "%0 is a named barrier wrapper because it has a named barrier or named barrier wrapper field %1 found here">;
+def note_amdgpu_named_barrier_reason_inherited : Note<
+  "%0 is a named barrier wrapper because it inherits from named barrier wrapper %1">;
+
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
@@ -14323,6 +14350,13 @@ def note_amdgcn_unguarded_builtin_silence
          "this warning">;
 
 def err_amdgcn_global_or_flat_pointer_required : Error<"builtin requires a global or generic pointer">;
+
+def warn_amdgpu_av_requires_expr : Warning<
+  "%0 attribute can only be applied to an expression">,
+  InGroup<AvailableVisibleAMDGPU>;
+def warn_amdgpu_av_requires_atomic : Warning<
+  "%0 attribute only applies to atomic expressions or Clang atomic builtins">,
+  InGroup<AvailableVisibleAMDGPU>;
 
 def err_amdgcn_dmask_has_too_many_bits_set
     : Error<"dmask argument cannot have more bits set than there are elements "

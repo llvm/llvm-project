@@ -2558,6 +2558,10 @@ bool isGFX9Plus(const MCSubtargetInfo &STI) {
 
 bool isNotGFX9Plus(const MCSubtargetInfo &STI) { return !isGFX9Plus(STI); }
 
+bool hasPopsExitingWaveID(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeaturePopsExitingWaveID);
+}
+
 bool isGFX10(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX10);
 }
@@ -3728,21 +3732,21 @@ unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
   return 64; // In sync with getAddressableLocalMemorySize
 }
 
-bool isPackedFP32Inst(unsigned Opc) {
+bool isPackedSingleSGPRFP32Inst(unsigned Opc) {
   switch (Opc) {
-  case AMDGPU::V_PK_ADD_F32:
-  case AMDGPU::V_PK_ADD_F32_gfx12:
-  case AMDGPU::V_PK_MUL_F32:
-  case AMDGPU::V_PK_MUL_F32_gfx12:
-  case AMDGPU::V_PK_FMA_F32:
-  case AMDGPU::V_PK_FMA_F32_gfx12:
+  case AMDGPU::V_PK_ADD_F32_gfx1250:
+  case AMDGPU::V_PK_ADD_F32_gfx1250_gfx12:
+  case AMDGPU::V_PK_MUL_F32_gfx1250:
+  case AMDGPU::V_PK_MUL_F32_gfx1250_gfx12:
+  case AMDGPU::V_PK_FMA_F32_gfx1250:
+  case AMDGPU::V_PK_FMA_F32_gfx1250_gfx12:
     return true;
   default:
     return false;
   }
 }
 
-bool isPacked64BitInst(unsigned Opc) {
+bool isPackedSingleSGPR64BitInst(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::V_PK_ADD_F64:
   case AMDGPU::V_PK_ADD_F64_gfx1250:
@@ -3767,7 +3771,7 @@ bool isPacked64BitInst(unsigned Opc) {
 }
 
 bool isSingleSGPRReadInst(unsigned Opc) {
-  return isPackedFP32Inst(Opc) || isPacked64BitInst(Opc);
+  return isPackedSingleSGPRFP32Inst(Opc) || isPackedSingleSGPR64BitInst(Opc);
 }
 
 const std::array<unsigned, 3> &ClusterDimsAttr::getDims() const {

@@ -2651,6 +2651,18 @@ func.func @bitcastChain(%arg: i16) -> f16 {
 
 // -----
 
+// CHECK-LABEL: func @bitcastForeignConstantAttr
+func.func @bitcastForeignConstantAttr() -> f64 {
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : i64
+  // CHECK: %[[CAST:.*]] = arith.bitcast %[[UNDEF]] : i64 to f64
+  // CHECK: return %[[CAST]] : f64
+  %0 = llvm.mlir.undef : i64
+  %1 = arith.bitcast %0 : i64 to f64
+  return %1 : f64
+}
+
+// -----
+
 // CHECK-LABEL: test_maxsi
 // CHECK-DAG: %[[C0:.+]] = arith.constant 42
 // CHECK-DAG: %[[MAX_INT_CST:.+]] = arith.constant 127

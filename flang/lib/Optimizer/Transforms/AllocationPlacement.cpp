@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "StackArrays.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -232,6 +233,16 @@ void AllocationPlacementPass::runOnOperation() {
     auto allocmem = mlir::dyn_cast<fir::AllocMemOp>(op);
     if (!alloca && !allocmem)
       return;
+
+    if (alloca) {
+      // Do not touch to fir.alloca that must stay fir.alloca (e.g.
+      // the temporary alloca for array function results that will
+      // later be promoted to hidden arguments).
+      auto attr = alloca->getAttrOfType<fir::MustBeStackAttr>(
+          fir::MustBeStackAttr::getAttrName());
+      if (attr && attr.getValue())
+        return;
+    }
 
     // Only array allocations are considered.
     mlir::Type inTy = alloca ? alloca.getInType() : allocmem.getAllocatedType();

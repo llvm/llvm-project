@@ -694,6 +694,13 @@ func.func @truncf_invalid_result_size(%a: vector<8x16xf16>) {
 }
 
 // -----
+func.func @lane_shuffle_single_element(%a: vector<1xi32>) {
+  // expected-error@+1 {{op requires a source vector with at least 2 elements}}
+  %1 = xegpu.lane_shuffle %a pack : vector<1xi32>
+  return
+}
+
+// -----
 func.func @dpas_mx_acc_result_type_mismatch(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>, %acc: vector<8x16xbf16>) {
   // expected-error@+1 {{Accumulator type must match result type.}}
   %1 = xegpu.dpas_mx %a, %b, %acc : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xbf16>) -> vector<8x16xf32>

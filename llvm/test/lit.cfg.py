@@ -68,7 +68,6 @@ if config.enable_profcheck:
     config.excludes.extend(
         [
             "Attributor",
-            "IROutliner",
             "BlockExtractor",
             "CodeExtractor",
             "HotColdSplit",
@@ -296,7 +295,6 @@ tools.extend(
         "llvm-readelf",
         "llvm-readobj",
         "llvm-rtdyld",
-        "llvm-sim",
         "llvm-size",
         "llvm-split",
         "llvm-stress",
@@ -341,6 +339,7 @@ tools.extend(
         ToolSubst("OrcV2CBindingsLazy", unresolved="ignore"),
         ToolSubst("OrcV2CBindingsVeryLazy", unresolved="ignore"),
         ToolSubst("dxil-dis", unresolved="ignore"),
+        ToolSubst("llvm-calc-occupancy", unresolved="ignore"),
     ]
 )
 
