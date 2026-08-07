@@ -58,17 +58,11 @@ Both architectures designate a context register that points to a block of
 thread-local memory managed by the LFI runtime. The context register is `x25`
 on AArch64 and `r15` on X86-64. The layout is as follows:
 
-```{eval-rst}
-+--------+--------+----------------------------------------------+
-| Offset | Size   | Description                                  |
-+--------+--------+----------------------------------------------+
-| 0      | 8      | Reserved for future use.                     |
-+--------+--------+----------------------------------------------+
-| 8      | 8      | Reserved for use by the LFI runtime.         |
-+--------+--------+----------------------------------------------+
-| 16     | 8      | Virtual thread pointer (used for TP access). |
-+--------+--------+----------------------------------------------+
-```
+| Offset | Size | Description |
+| --- | --- | --- |
+| 0 | 8 | Reserved for future use. |
+| 8 | 8 | Reserved for use by the LFI runtime. |
+| 16 | 8 | Virtual thread pointer (used for TP access). |
 
 ## Linker Support
 
@@ -133,7 +127,7 @@ that must be maintained.
 - `sp`: always holds an address within the sandbox.
 - `x30`: always holds an address within the sandbox.
 - `x26`: scratch register.
-- `x25`: context register (see [Context Register]).
+- `x25`: context register (see [Context Register](#context-register)).
 
 The current design only supports 4GiB sandboxes, which requires the sandbox
 base address to be 4GiB-aligned. This is because LFI's ABI stores pointers as
@@ -160,22 +154,25 @@ update `x28` with the destination address. Since `ret` uses `x30` by
 default, which already must contain an address within the sandbox, it does not
 require any rewrite.
 
-```{eval-rst}
-+--------------------+---------------------------+
-|      Original      |         Rewritten         |
-+--------------------+---------------------------+
-| .. code-block::    | .. code-block::           |
-|                    |                           |
-|    {br,blr,ret} xN |    add x28, x27, wN, uxtw |
-|                    |    {br,blr,ret} x28       |
-|                    |                           |
-+--------------------+---------------------------+
-| .. code-block::    | .. code-block::           |
-|                    |                           |
-|    ret             |    ret                    |
-|                    |                           |
-+--------------------+---------------------------+
-```
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - ```gas
+    {br,blr,ret} xN
+    ```
+  - ```gas
+    add x28, x27, wN, uxtw
+    {br,blr,ret} x28
+    ```
+* - ```gas
+    ret
+    ```
+  - ```gas
+    ret
+    ```
+:::
 
 #### Memory accesses
 
@@ -184,101 +181,116 @@ it is available, which is automatically safe. Otherwise, rewrites fall back to
 using `x28` along with an instruction to safely load it with the target
 address.
 
-```{eval-rst}
-+---------------------------------+-------------------------------+
-|            Original             |           Rewritten           |
-+---------------------------------+-------------------------------+
-| .. code-block::                 | .. code-block::               |
-|                                 |                               |
-|    LDSTr xN, [xM]               |    LDSTr xN, [x27, wM, uxtw]  |
-|                                 |                               |
-+---------------------------------+-------------------------------+
-| .. code-block::                 | .. code-block::               |
-|                                 |                               |
-|    LDSTr xN, [xM, #I]           |    add x28, x27, wM, uxtw     |
-|                                 |    LDSTr xN, [x28, #I]        |
-|                                 |                               |
-+---------------------------------+-------------------------------+
-| .. code-block::                 | .. code-block::               |
-|                                 |                               |
-|    LDSTr xN, [xM, #I]!          |    add xM, xM, #I             |
-|                                 |    LDSTr xN, [x27, wM, uxtw]  |
-|                                 |                               |
-+---------------------------------+-------------------------------+
-| .. code-block::                 | .. code-block::               |
-|                                 |                               |
-|    LDSTr xN, [xM], #I           |    LDSTr xN, [x27, wM, uxtw]  |
-|                                 |    add xM, xM, #I             |
-|                                 |                               |
-+---------------------------------+-------------------------------+
-| .. code-block::                 | .. code-block::               |
-|                                 |                               |
-|    LDSTr xN, [xM1, xM2]         |    add x26, xM1, xM2          |
-|                                 |    LDSTr xN, [x27, w26, uxtw] |
-|                                 |                               |
-+---------------------------------+-------------------------------+
-| .. code-block::                 | .. code-block::               |
-|                                 |                               |
-|    LDSTr xN, [xM1, xM2, MOD #I] |    add x26, xM1, xM2, MOD #I  |
-|                                 |    LDSTr xN, [x27, w26, uxtw] |
-|                                 |                               |
-+---------------------------------+-------------------------------+
-| .. code-block::                 | .. code-block::               |
-|                                 |                               |
-|    LDSTx ..., [xM]              |    add x28, x27, wM, uxtw     |
-|                                 |    LDSTx ..., [x28]           |
-|                                 |                               |
-+---------------------------------+-------------------------------+
-| .. code-block::                 | .. code-block::               |
-|                                 |                               |
-|    LDSTx ..., [xM, #I]          |    add x28, x27, wM, uxtw     |
-|                                 |    LDSTx ..., [x28, #I]       |
-|                                 |                               |
-+---------------------------------+-------------------------------+
-| .. code-block::                 | .. code-block::               |
-|                                 |                               |
-|    LDSTx ..., [xM, #I]!         |    add x28, x27, wM, uxtw     |
-|                                 |    LDSTx ..., [x28, #I]       |
-|                                 |    add xM, xM, #I             |
-|                                 |                               |
-+---------------------------------+-------------------------------+
-| .. code-block::                 | .. code-block::               |
-|                                 |                               |
-|    LDSTx ..., [xM], #I          |    add x28, x27, wM, uxtw     |
-|                                 |    LDSTx ..., [x28]           |
-|                                 |    add xM, xM, #I             |
-|                                 |                               |
-+---------------------------------+-------------------------------+
-| .. code-block::                 | .. code-block::               |
-|                                 |                               |
-|    LDSTx ..., [xM1], xM2        |    add x28, x27, wM1, uxtw    |
-|                                 |    LDSTx ..., [x28]           |
-|                                 |    add xM1, xM1, xM2          |
-|                                 |                               |
-+---------------------------------+-------------------------------+
-```
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - ```gas
+    LDSTr xN, [xM]
+    ```
+  - ```gas
+    LDSTr xN, [x27, wM, uxtw]
+    ```
+* - ```gas
+    LDSTr xN, [xM, #I]
+    ```
+  - ```gas
+    add x28, x27, wM, uxtw
+    LDSTr xN, [x28, #I]
+    ```
+* - ```gas
+    LDSTr xN, [xM, #I]!
+    ```
+  - ```gas
+    add xM, xM, #I
+    LDSTr xN, [x27, wM, uxtw]
+    ```
+* - ```gas
+    LDSTr xN, [xM], #I
+    ```
+  - ```gas
+    LDSTr xN, [x27, wM, uxtw]
+    add xM, xM, #I
+    ```
+* - ```gas
+    LDSTr xN, [xM1, xM2]
+    ```
+  - ```gas
+    add x26, xM1, xM2
+    LDSTr xN, [x27, w26, uxtw]
+    ```
+* - ```gas
+    LDSTr xN, [xM1, xM2, MOD #I]
+    ```
+  - ```gas
+    add x26, xM1, xM2, MOD #I
+    LDSTr xN, [x27, w26, uxtw]
+    ```
+* - ```gas
+    LDSTx ..., [xM]
+    ```
+  - ```gas
+    add x28, x27, wM, uxtw
+    LDSTx ..., [x28]
+    ```
+* - ```gas
+    LDSTx ..., [xM, #I]
+    ```
+  - ```gas
+    add x28, x27, wM, uxtw
+    LDSTx ..., [x28, #I]
+    ```
+* - ```gas
+    LDSTx ..., [xM, #I]!
+    ```
+  - ```gas
+    add x28, x27, wM, uxtw
+    LDSTx ..., [x28, #I]
+    add xM, xM, #I
+    ```
+* - ```gas
+    LDSTx ..., [xM], #I
+    ```
+  - ```gas
+    add x28, x27, wM, uxtw
+    LDSTx ..., [x28]
+    add xM, xM, #I
+    ```
+* - ```gas
+    LDSTx ..., [xM1], xM2
+    ```
+  - ```gas
+    add x28, x27, wM1, uxtw
+    LDSTx ..., [x28]
+    add xM1, xM1, xM2
+    ```
+:::
 
 #### Stack pointer modification
 
 When the stack pointer is modified, we write the modified value to a temporary,
 before moving it back into `sp` with a safe `add`.
 
-```{eval-rst}
-+------------------------------+-------------------------------+
-|           Original           |           Rewritten           |
-+------------------------------+-------------------------------+
-| .. code-block::              | .. code-block::               |
-|                              |                               |
-|    mov sp, xN                |    add sp, x27, wN, uxtw      |
-|                              |                               |
-+------------------------------+-------------------------------+
-| .. code-block::              | .. code-block::               |
-|                              |                               |
-|    {add,sub} sp, sp, {#I,xN} |    {add,sub} x26, sp, {#I,xN} |
-|                              |    add sp, x27, w26, uxtw     |
-|                              |                               |
-+------------------------------+-------------------------------+
-```
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - ```gas
+    mov sp, xN
+    ```
+  - ```gas
+    add sp, x27, wN, uxtw
+    ```
+* - ```gas
+    {add,sub} sp, sp, {#I,xN}
+    ```
+  - ```gas
+    {add,sub} x26, sp, {#I,xN}
+    add sp, x27, w26, uxtw
+    ```
+:::
 
 #### Link register modification
 
@@ -288,27 +300,32 @@ control-flow instruction rather than emitted immediately after the
 modification. Deferral keeps a signed return address intact so that a following
 authentication instruction (such as `autiasp`) can run before the guard,
 which would otherwise destroy the pointer authentication signature. See
-[Pointer Authentication Code (PAC) support].
+[Pointer Authentication Code (PAC) support](#pointer-authentication-code-pac-support).
 
-```{eval-rst}
-+---------------------------+-------------------------------+
-|         Original          |           Rewritten           |
-+---------------------------+-------------------------------+
-| .. code-block::           | .. code-block::               |
-|                           |                               |
-|    ldr x30, [...]         |    ldr x30, [...]             |
-|    ret                    |    add x30, x27, w30, uxtw    |
-|                           |    ret                        |
-|                           |                               |
-+---------------------------+-------------------------------+
-| .. code-block::           | .. code-block::               |
-|                           |                               |
-|    ldp xN, x30, [...]     |    ldp xN, x30, [...]         |
-|    ret                    |    add x30, x27, w30, uxtw    |
-|                           |    ret                        |
-|                           |                               |
-+---------------------------+-------------------------------+
-```
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - ```gas
+    ldr x30, [...]
+    ret
+    ```
+  - ```gas
+    ldr x30, [...]
+    add x30, x27, w30, uxtw
+    ret
+    ```
+* - ```gas
+    ldp xN, x30, [...]
+    ret
+    ```
+  - ```gas
+    ldp xN, x30, [...]
+    add x30, x27, w30, uxtw
+    ret
+    ```
+:::
 
 #### Pointer Authentication Code (PAC) support
 
@@ -330,78 +347,89 @@ To gain the security benefit of PAC under LFI, the hardware must implement
 still keeps confined to the sandbox by masking it, but the mask overwrites the
 poison caused by the authentication failure.
 
-```{eval-rst}
-+-------------------+------------------------------+
-|     Original      |          Rewritten           |
-+-------------------+------------------------------+
-| .. code-block::   | .. code-block::              |
-|                   |                              |
-|    paciasp        |    paciasp                   |
-|                   |                              |
-+-------------------+------------------------------+
-| .. code-block::   | .. code-block::              |
-|                   |                              |
-|    autiasp        |    autiasp                   |
-|    ret            |    add x30, x27, w30, uxtw   |
-|                   |    ret                       |
-|                   |                              |
-+-------------------+------------------------------+
-```
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - ```gas
+    paciasp
+    ```
+  - ```gas
+    paciasp
+    ```
+* - ```gas
+    autiasp
+    ret
+    ```
+  - ```gas
+    autiasp
+    add x30, x27, w30, uxtw
+    ret
+    ```
+:::
 
 Authenticated returns (`retaa`/`retab`) combine authentication with return,
 and must be expanded during rewriting.
 
-```{eval-rst}
-+-----------------+-------------------------------+
-|    Original     |           Rewritten           |
-+-----------------+-------------------------------+
-| .. code-block:: | .. code-block::               |
-|                 |                               |
-|    retaa        |    autiasp                    |
-|                 |    add x30, x27, w30, uxtw    |
-|                 |    ret                        |
-|                 |                               |
-+-----------------+-------------------------------+
-| .. code-block:: | .. code-block::               |
-|                 |                               |
-|    retab        |    autibsp                    |
-|                 |    add x30, x27, w30, uxtw    |
-|                 |    ret                        |
-|                 |                               |
-+-----------------+-------------------------------+
-```
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - ```gas
+    retaa
+    ```
+  - ```gas
+    autiasp
+    add x30, x27, w30, uxtw
+    ret
+    ```
+* - ```gas
+    retab
+    ```
+  - ```gas
+    autibsp
+    add x30, x27, w30, uxtw
+    ret
+    ```
+:::
 
 Authenticated branches (`braa`/`brab`/`braaz`/`brabz`) and calls
 (`blraa`/`blrab`/`blraaz`/`blrabz`) combine authentication with an
 indirect branch or call. They are expanded by first authenticating the target
 register in place, then performing a normal sandboxed branch or call.
 
-```{eval-rst}
-+-------------------+-------------------------------+
-|     Original      |           Rewritten           |
-+-------------------+-------------------------------+
-| .. code-block::   | .. code-block::               |
-|                   |                               |
-|    braa xN, xM    |    autia xN, xM               |
-|                   |    add x28, x27, wN, uxtw     |
-|                   |    br x28                     |
-|                   |                               |
-+-------------------+-------------------------------+
-| .. code-block::   | .. code-block::               |
-|                   |                               |
-|    braaz xN       |    autiza xN                  |
-|                   |    add x28, x27, wN, uxtw     |
-|                   |    br x28                     |
-|                   |                               |
-+-------------------+-------------------------------+
-| .. code-block::   | .. code-block::               |
-|                   |                               |
-|    blraa xN, xM   |    autia xN, xM               |
-|                   |    add x28, x27, wN, uxtw     |
-|                   |    blr x28                    |
-|                   |                               |
-+-------------------+-------------------------------+
-```
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - ```gas
+    braa xN, xM
+    ```
+  - ```gas
+    autia xN, xM
+    add x28, x27, wN, uxtw
+    br x28
+    ```
+* - ```gas
+    braaz xN
+    ```
+  - ```gas
+    autiza xN
+    add x28, x27, wN, uxtw
+    br x28
+    ```
+* - ```gas
+    blraa xN, xM
+    ```
+  - ```gas
+    autia xN, xM
+    add x28, x27, wN, uxtw
+    blr x28
+    ```
+:::
 
 Authenticated exception returns (`eret`/`eretaa`/`eretab`) are privileged
 and are not supported: the rewriter reports an error for them.
@@ -414,41 +442,38 @@ stored at a negative offset from the sandbox base, so it can be referenced by
 `x27`. The rewrite also saves and restores the link register, since it is
 used for branching into the runtime.
 
-```{eval-rst}
-+-----------------+------------------------------+
-|    Original     |          Rewritten           |
-+-----------------+------------------------------+
-| .. code-block:: | .. code-block::              |
-|                 |                              |
-|    svc #0       |    mov x26, x30              |
-|                 |    ldur x30, [x27, #-8]      |
-|                 |    blr x30                   |
-|                 |    add x30, x27, w26, uxtw   |
-|                 |                              |
-+-----------------+------------------------------+
-```
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - ```gas
+    svc #0
+    ```
+  - ```gas
+    mov x26, x30
+    ldur x30, [x27, #-8]
+    blr x30
+    add x30, x27, w26, uxtw
+    ```
+:::
 
 #### Thread pointer (TP)
 
 TP accesses are rewritten into loads/stores from the context register
 (`x25`), which holds the virtual thread pointer at offset 16 (see
-[Context Register]).
+[Context Register](#context-register)).
 
-```{eval-rst}
-+----------------------+-------------------------+
-|       Original       |        Rewritten        |
-+----------------------+-------------------------+
-| .. code-block::      | .. code-block::         |
-|                      |                         |
-|    mrs xN, tpidr_el0 |    ldr xN, [x25, #16]   |
-|                      |                         |
-+----------------------+-------------------------+
-| .. code-block::      | .. code-block::         |
-|                      |                         |
-|    msr tpidr_el0, xN |    str xN, [x25, #16]   |
-|                      |                         |
-+----------------------+-------------------------+
-```
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - `mrs xN, tpidr_el0`
+  - `ldr xN, [x25, #16]`
+* - `msr tpidr_el0, xN`
+  - `str xN, [x25, #16]`
+:::
 
 ### Optimizations
 
@@ -458,21 +483,26 @@ If a register is guarded multiple times in the same basic block without any
 modifications to it during the intervening instructions, then subsequent guards
 can be removed.
 
-```{eval-rst}
-+---------------------------+---------------------------+
-|         Original          |         Rewritten         |
-+---------------------------+---------------------------+
-| .. code-block::           | .. code-block::           |
-|                           |                           |
-|    add x28, x27, wN, uxtw |    add x28, x27, wN, uxtw |
-|    ldur xN, [x28]         |    ldur xN, [x28]         |
-|    add x28, x27, wN, uxtw |    ldur xN, [x28, #8]     |
-|    ldur xN, [x28, #8]     |    ldur xN, [x28, #16]    |
-|    add x28, x27, wN, uxtw |                           |
-|    ldur xN, [x28, #16]    |                           |
-|                           |                           |
-+---------------------------+---------------------------+
-```
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - ```gas
+    add x28, x27, wN, uxtw
+    ldur xN, [x28]
+    add x28, x27, wN, uxtw
+    ldur xN, [x28, #8]
+    add x28, x27, wN, uxtw
+    ldur xN, [x28, #16]
+    ```
+  - ```gas
+    add x28, x27, wN, uxtw
+    ldur xN, [x28]
+    ldur xN, [x28, #8]
+    ldur xN, [x28, #16]
+    ```
+:::
 
 #### Address generation
 
@@ -484,17 +514,20 @@ generated via `adrp` followed by `ldr`. Since the address generated by
 directly target `x28` for these sequences. This allows the omission of a
 guard instruction before the `ldr`.
 
-```{eval-rst}
-+----------------------+-----------------------+
-|       Original       |       Rewritten       |
-+----------------------+-----------------------+
-| .. code-block::      | .. code-block::       |
-|                      |                       |
-|    adrp xN, target   |    adrp x28, target   |
-|    ldr xN, [xN, imm] |    ldr xN, [x28, imm] |
-|                      |                       |
-+----------------------+-----------------------+
-```
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - ```gas
+    adrp xN, target
+    ldr xN, [xN, imm]
+    ```
+  - ```gas
+    adrp x28, target
+    ldr xN, [x28, imm]
+    ```
+:::
 
 #### Stack guard elimination
 
@@ -506,19 +539,23 @@ the guard on the stack pointer modification can be removed. This is because the
 load/store is guaranteed to trap if the stack pointer has been moved outside of
 the sandbox region.
 
-```{eval-rst}
-+---------------------------+---------------------------+
-|         Original          |         Rewritten         |
-+---------------------------+---------------------------+
-| .. code-block::           | .. code-block::           |
-|                           |                           |
-|    add x26, sp, #8        |    add sp, sp, #8         |
-|    add sp, x27, w26, uxtw |    ... (same basic block) |
-|    ... (same basic block) |    ldr xN, [sp]           |
-|    ldr xN, [sp]           |                           |
-|                           |                           |
-+---------------------------+---------------------------+
-```
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - ```gas
+    add x26, sp, #8
+    add sp, x27, w26, uxtw
+    ... (same basic block)
+    ldr xN, [sp]
+    ```
+  - ```gas
+    add sp, sp, #8
+    ... (same basic block)
+    ldr xN, [sp]
+    ```
+:::
 
 #### Guard hoisting
 
@@ -526,24 +563,33 @@ the sandbox region.
 
 In certain cases, guards may be hoisted outside of loops.
 
-```{eval-rst}
-+-----------------------+-------------------------------+
-|       Original        |           Rewritten           |
-+-----------------------+-------------------------------+
-| .. code-block::       | .. code-block::               |
-|                       |                               |
-|        mov w8, #10    |        mov w8, #10            |
-|        mov w9, #0     |        mov w9, #0             |
-|    .loop:             |        add x28, x27, wM, uxtw |
-|        add w9, w9, #1 |    .loop:                     |
-|        ldr xN, [xM]   |        add w9, w9, #1         |
-|        cmp w9, w8     |        ldr xN, [x28]          |
-|        b.lt .loop     |        cmp w9, w8             |
-|    .end:              |        b.lt .loop             |
-|                       |    .end:                      |
-|                       |                               |
-+-----------------------+-------------------------------+
-```
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - ```gas
+        mov w8, #10
+        mov w9, #0
+    .loop:
+        add w9, w9, #1
+        ldr xN, [xM]
+        cmp w9, w8
+        b.lt .loop
+    .end:
+    ```
+  - ```gas
+        mov w8, #10
+        mov w9, #0
+        add x28, x27, wM, uxtw
+    .loop:
+        add w9, w9, #1
+        ldr xN, [x28]
+        cmp w9, w8
+        b.lt .loop
+    .end:
+    ```
+:::
 
 ## X86-64
 
@@ -558,7 +604,7 @@ The X86-64 LFI target reserves the following registers:
 - `gs`: always holds the sandbox base address (used as a segment register for
   memory access sandboxing).
 - `rsp`: always holds an address within the sandbox.
-- `r15`: context register (see [Context Register]).
+- `r15`: context register (see [Context Register](#context-register)).
 - `r11`: scratch register.
 
 ### Assembly Rewrites
@@ -594,62 +640,71 @@ handler table is stored at the address pointed to by `r14`. The `r11`
 register stores the return address (marked by the label `.Ltmp` in the
 block below).
 
-```{eval-rst}
-+-------------------+-------------------------------+
-|     Original      |           Rewritten           |
-+-------------------+-------------------------------+
-| .. code-block::   | .. code-block::               |
-|                   |                               |
-|    syscall        |    leaq .Ltmp(%rip), %r11     |
-|                   |    jmpq *-8(%r14)             |
-|                   |    .Ltmp:                     |
-|                   |                               |
-+-------------------+-------------------------------+
-```
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - ```gas
+    syscall
+    ```
+  - ```gas
+    leaq .Ltmp(%rip), %r11
+    jmpq *-8(%r14)
+    .Ltmp:
+    ```
+:::
 
 #### Thread pointer
 
 Thread pointer accesses via the `%fs` segment (used for TLS) are rewritten to
 use the virtual thread pointer from the context register (`r15`) at offset 16
-(see [Context Register]). The rewrite handles any load or store instruction
-with an `%fs`-segment memory operand. `Op` represents any such instruction.
+(see [Context Register](#context-register)). The rewrite handles any load or
+store instruction with an `%fs`-segment memory operand. `Op` represents any
+such instruction.
 
-```{eval-rst}
-+--------------------------------------+----------------------------------------+
-|              Original                |              Rewritten                 |
-+--------------------------------------+----------------------------------------+
-| .. code-block::                      | .. code-block::                        |
-|                                      |                                        |
-|    Op %fs:0, %rD                     |    Op 16(%r15), %rD                    |
-|                                      |                                        |
-+--------------------------------------+----------------------------------------+
-| .. code-block::                      | .. code-block::                        |
-|                                      |                                        |
-|    Op %fs:(%rX), %rD                 |    movq 16(%r15), %rD                  |
-|                                      |    Op (%rD, %rX), %rD                  |
-|                                      |                                        |
-+--------------------------------------+----------------------------------------+
-| .. code-block::                      | .. code-block::                        |
-|                                      |                                        |
-|    Op %rS, %fs:(%rX)                 |    movq 16(%r15), %r11                 |
-|                                      |    Op %rS, (%r11, %rX)                 |
-|                                      |                                        |
-+--------------------------------------+----------------------------------------+
-| .. code-block::                      | .. code-block::                        |
-|                                      |                                        |
-|    Op %fs:N(%rX, %rY, S), %rD        |    movq 16(%r15), %r11                 |
-|                                      |    leaq (%r11, %rX), %r11              |
-|                                      |    Op N(%r11, %rY, S), %rD             |
-|                                      |                                        |
-+--------------------------------------+----------------------------------------+
-| .. code-block::                      | .. code-block::                        |
-|                                      |                                        |
-|    Op %rS, %fs:N(%rX, %rY, S)        |    movq 16(%r15), %r11                 |
-|                                      |    leaq (%r11, %rX), %r11              |
-|                                      |    Op %rS, N(%r11, %rY, S)             |
-|                                      |                                        |
-+--------------------------------------+----------------------------------------+
-```
+:::{list-table}
+:header-rows: 1
+
+* - Original
+  - Rewritten
+* - ```gas
+    Op %fs:0, %rD
+    ```
+  - ```gas
+    Op 16(%r15), %rD
+    ```
+* - ```gas
+    Op %fs:(%rX), %rD
+    ```
+  - ```gas
+    movq 16(%r15), %rD
+    Op (%rD, %rX), %rD
+    ```
+* - ```gas
+    Op %rS, %fs:(%rX)
+    ```
+  - ```gas
+    movq 16(%r15), %r11
+    Op %rS, (%r11, %rX)
+    ```
+* - ```gas
+    Op %fs:N(%rX, %rY, S), %rD
+    ```
+  - ```gas
+    movq 16(%r15), %r11
+    leaq (%r11, %rX), %r11
+    Op N(%r11, %rY, S), %rD
+    ```
+* - ```gas
+    Op %rS, %fs:N(%rX, %rY, S)
+    ```
+  - ```gas
+    movq 16(%r15), %r11
+    leaq (%r11, %rX), %r11
+    Op %rS, N(%r11, %rY, S)
+    ```
+:::
 
 ## References
 
@@ -664,4 +719,3 @@ Contact info:
 - Zachary Yedidia - <mailto:zyedidia@cs.stanford.edu>
 - Tal Garfinkel - <mailto:tgarfinkel@google.com>
 - Sharjeel Khan - <mailto:sharjeelkhan@google.com>
-

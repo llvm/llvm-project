@@ -9,12 +9,12 @@ The LLVM community has always worked to be a welcoming and respectful
 community, and we want to ensure that doesn't change as we grow and evolve. To
 that end, we have a few ground rules that we ask people to adhere to:
 
-- [be friendly and patient],
-- [be welcoming],
-- [be considerate],
-- [be respectful],
-- [be careful in the words that you choose and be kind to others], and
-- [when we disagree, try to understand why].
+- [be friendly and patient](#be-friendly-and-patient),
+- [be welcoming](#be-welcoming),
+- [be considerate](#be-considerate),
+- [be respectful](#be-respectful),
+- [be careful in the words that you choose and be kind to others](#be-careful-in-the-words-that-you-choose-and-be-kind-to-others), and
+- [when we disagree, try to understand why](#when-we-disagree-try-to-understand-why).
 
 This isn't an exhaustive list of things that you can't do. Rather, take it in
 the spirit in which it's intended - a guide to make it easier to communicate
@@ -192,4 +192,3 @@ Unported License][creative commons attribution 3.0 unported license].
 [hate speech]: https://www.un.org/en/genocideprevention/documents/UN%20Strategy%20and%20Plan%20of%20Action%20on%20Hate%20Speech%2018%20June%20SYNOPSIS.pdf
 [sexual and gender-based violence]: https://hr.un.org/sites/hr.un.org/files/SEA%20Glossary%20%20%5BSecond%20Edition%20-%202017%5D%20-%20English_0.pdf
 [speak up! project]: http://speakup.io/coc.html
-

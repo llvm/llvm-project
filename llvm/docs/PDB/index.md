@@ -39,7 +39,7 @@ assume it is little endian!
 :::
 
 ```{toctree}
-:hidden: true
+:hidden:
 
 MsfFile
 PdbStream
@@ -79,67 +79,104 @@ by name, and various other information about how the program was compiled such
 as the specific toolchain used, and more. A summary of streams contained in a
 PDB file is as follows:
 
-| Name               | Stream Index                               | Contents                                                      |
-| ------------------ | ------------------------------------------ | ------------------------------------------------------------- |
-| Old Directory      | - Fixed Stream Index 0                     | - Previous MSF Stream Directory                               |
-| PDB Stream         | - Fixed Stream Index 1                     | - Basic File Information
-- Fields to match EXE to this PDB
-- Map of named streams to stream indices                                                               |
-| TPI Stream         | - Fixed Stream Index 2                     | - CodeView Type Records
-- Index of TPI Hash Stream                                                               |
-| DBI Stream         | - Fixed Stream Index 3                     | - Module/Compiland Information
-- Indices of individual module streams
-- Indices of public / global streams
-- Section Contribution Information
-- Source File Information
-- References to streams containing FPO / PGO Data                                                               |
-| IPI Stream         | - Fixed Stream Index 4                     | - CodeView Type Records
-- Index of IPI Hash Stream                                                               |
-| /LinkInfo          | - Contained in PDB Stream Named Stream map | - Unknown                                                     |
-| /src/headerblock   | - Contained in PDB Stream Named Stream map | - Summary of embedded source file content (e.g. natvis files) |
-| /names             | - Contained in PDB Stream Named Stream map | - PDB-wide global string table used for string de-duplication |
-| Module Info Stream | - Contained in DBI Stream
-- One for each compiland                                            | - CodeView Symbol Records for this module
-- Line Number Information                                                               |
-| Public Stream      | - Contained in DBI Stream                  | - Public (Exported) Symbol Records
-- Index of Public Hash Stream                                                               |
-| Global Stream      | - Contained in DBI Stream                  | - Single combined symbol-table
-- Index of Global Hash Stream                                                               |
-| TPI Hash Stream    | - Contained in TPI Stream                  | - Hash table for looking up TPI records by name               |
-| IPI Hash Stream    | - Contained in IPI Stream                  | - Hash table for looking up IPI records by name               |
+:::{list-table}
+:header-rows: 1
+
+* - Name
+  - Stream Index
+  - Contents
+* - Old Directory
+  - Fixed Stream Index 0
+  - Previous MSF Stream Directory
+* - PDB Stream
+  - Fixed Stream Index 1
+  - Basic File Information
+
+    Fields to match EXE to this PDB
+
+    Map of named streams to stream indices
+* - TPI Stream
+  - Fixed Stream Index 2
+  - CodeView Type Records
+
+    Index of TPI Hash Stream
+* - DBI Stream
+  - Fixed Stream Index 3
+  - Module/Compiland Information
+
+    Indices of individual module streams
+
+    Indices of public / global streams
+
+    Section Contribution Information
+
+    Source File Information
+
+    References to streams containing FPO / PGO Data
+* - IPI Stream
+  - Fixed Stream Index 4
+  - CodeView Type Records
+
+    Index of IPI Hash Stream
+* - /LinkInfo
+  - Contained in PDB Stream Named Stream map
+  - Unknown
+* - /src/headerblock
+  - Contained in PDB Stream Named Stream map
+  - Summary of embedded source file content (e.g. natvis files)
+* - /names
+  - Contained in PDB Stream Named Stream map
+  - PDB-wide global string table used for string de-duplication
+* - Module Info Stream
+  - Contained in DBI Stream
+
+    One for each compiland
+  - CodeView Symbol Records for this module
+
+    Line Number Information
+* - Public Stream
+  - Contained in DBI Stream
+  - Public (Exported) Symbol Records
+
+    Index of Public Hash Stream
+* - Global Stream
+  - Contained in DBI Stream
+  - Single combined symbol-table
+
+    Index of Global Hash Stream
+* - TPI Hash Stream
+  - Contained in TPI Stream
+  - Hash table for looking up TPI records by name
+* - IPI Hash Stream
+  - Contained in IPI Stream
+  - Hash table for looking up IPI records by name
+:::
 
 More information about the structure of each of these can be found on the
 following pages:
 
-{doc}`PdbStream`
-
+{doc}`PdbStream <PdbStream>`
 : Information about the PDB Info Stream and how it is used to match PDBs to EXEs.
 
-{doc}`TpiStream`
-
+{doc}`TpiStream <TpiStream>`
 : Information about the TPI stream and the CodeView records contained within.
 
-{doc}`DbiStream`
-
+{doc}`DbiStream <DbiStream>`
 : Information about the DBI stream and relevant substreams including the
   Module Substreams, source file information, and CodeView symbol records
   contained within.
 
-{doc}`ModiStream`
-
+{doc}`ModiStream <ModiStream>`
 : Information about the Module Information Stream, of which there is one for
   each compilation unit and the format of symbols contained within.
 
-{doc}`PublicStream`
-
+{doc}`PublicStream <PublicStream>`
 : Information about the Public Symbol Stream.
 
-{doc}`GlobalStream`
-
+{doc}`GlobalStream <GlobalStream>`
 : Information about the Global Symbol Stream.
 
-{doc}`HashTable`
-
+{doc}`HashTable <HashTable>`
 : Information about the serialized hash table format used internally to
   represent things such as the Named Stream Map and the Hash Adjusters in the
   {doc}`TPI/IPI Stream <TpiStream>`.
@@ -152,4 +189,3 @@ appear within the MSF file and the format of those streams, CodeView defines
 the format of **symbol and type records** that appear within specific streams.
 Refer to the pages on {doc}`CodeViewSymbols` and {doc}`CodeViewTypes` for
 more information about the CodeView format.
-

@@ -1,9 +1,5 @@
 # FatLTO
 
-```{toctree}
-:maxdepth: 1
-```
-
 ## Introduction
 
 FatLTO objects are a special type of [fat object file](https://en.wikipedia.org/wiki/Fat_binary) that contain LTO compatible IR in
@@ -101,4 +97,3 @@ Link using the LLVM bitcode from the fat object with Thin LTO:
 ```console
 $ clang -flto=thin -ffat-lto-objects -fuse-ld=lld example.o  # clang will pass --lto=thin --fat-lto-objects to ld.lld
 ```
-

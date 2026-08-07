@@ -15,14 +15,14 @@ Note this means that VLEN must be at least 64, so VLEN=32 isn't currently suppor
 
 |                  | LMUL=⅛        | LMUL=¼            | LMUL=½            | LMUL=1            | LMUL=2            | LMUL=4             | LMUL=8             |
 | ---------------- | ------------- | ----------------- | ----------------- | ----------------- | ----------------- | ------------------ | ------------------ |
-| i64 (ELEN=64)    | N/A           | N/A               | N/A               | \<v x 1 x i64>    | \<v x 2 x i64>    | \<v x 4 x i64>     | \<v x 8 x i64>     |
-| i32              | N/A           | N/A               | \<v x 1 x i32>    | \<v x 2 x i32>    | \<v x 4 x i32>    | \<v x 8 x i32>     | \<v x 16 x i32>    |
-| i16              | N/A           | \<v x 1 x i16>    | \<v x 2 x i16>    | \<v x 4 x i16>    | \<v x 8 x i16>    | \<v x 16 x i16>    | \<v x 32 x i16>    |
-| i8               | \<v x 1 x i8> | \<v x 2 x i8>     | \<v x 4 x i8>     | \<v x 8 x i8>     | \<v x 16 x i8>    | \<v x 32 x i8>     | \<v x 64 x i8>     |
-| double (ELEN=64) | N/A           | N/A               | N/A               | \<v x 1 x double> | \<v x 2 x double> | \<v x 4 x double>  | \<v x 8 x double>  |
-| float            | N/A           | N/A               | \<v x 1 x float>  | \<v x 2 x float>  | \<v x 4 x float>  | \<v x 8 x float>   | \<v x 16 x float>  |
-| half             | N/A           | \<v x 1 x half>   | \<v x 2 x half>   | \<v x 4 x half>   | \<v x 8 x half>   | \<v x 16 x half>   | \<v x 32 x half>   |
-| bfloat           | N/A           | \<v x 1 x bfloat> | \<v x 2 x bfloat> | \<v x 4 x bfloat> | \<v x 8 x bfloat> | \<v x 16 x bfloat> | \<v x 32 x bfloat> |
+| i64 (ELEN=64)    | N/A           | N/A               | N/A               | `<v x 1 x i64>`    | `<v x 2 x i64>`    | `<v x 4 x i64>`     | `<v x 8 x i64>`     |
+| i32              | N/A           | N/A               | `<v x 1 x i32>`    | `<v x 2 x i32>`    | `<v x 4 x i32>`    | `<v x 8 x i32>`     | `<v x 16 x i32>`    |
+| i16              | N/A           | `<v x 1 x i16>`    | `<v x 2 x i16>`    | `<v x 4 x i16>`    | `<v x 8 x i16>`    | `<v x 16 x i16>`    | `<v x 32 x i16>`    |
+| i8               | `<v x 1 x i8>` | `<v x 2 x i8>`     | `<v x 4 x i8>`     | `<v x 8 x i8>`     | `<v x 16 x i8>`    | `<v x 32 x i8>`     | `<v x 64 x i8>`     |
+| double (ELEN=64) | N/A           | N/A               | N/A               | `<v x 1 x double>` | `<v x 2 x double>` | `<v x 4 x double>`  | `<v x 8 x double>`  |
+| float            | N/A           | N/A               | `<v x 1 x float>`  | `<v x 2 x float>`  | `<v x 4 x float>`  | `<v x 8 x float>`   | `<v x 16 x float>`  |
+| half             | N/A           | `<v x 1 x half>`   | `<v x 2 x half>`   | `<v x 4 x half>`   | `<v x 8 x half>`   | `<v x 16 x half>`   | `<v x 32 x half>`   |
+| bfloat           | N/A           | `<v x 1 x bfloat>` | `<v x 2 x bfloat>` | `<v x 4 x bfloat>` | `<v x 8 x bfloat>` | `<v x 16 x bfloat>` | `<v x 32 x bfloat>` |
 
 (Read `<v x k x ty>` as `<vscale x k x ty>`)
 
@@ -251,7 +251,7 @@ $v0 = COPY %3:vr
 %x:vrnov0 = PseudoVADD_VV_M1_MASK %0:vrnov0, %1:vr, %2:vr, $v0, ...
 ```
 
-(rvv-register-allocation)=
+(rvv_register_allocation)=
 
 ## Register allocation
 
@@ -269,12 +269,12 @@ Performing `RISCVInsertVSETVLI` after vector register allocation imposes fewer c
 
 There are four register classes for vectors:
 
-- `VR` for vector registers (`v0`, `v1,`, ..., `v31`). Used when $\text{LMUL} \leq 1$ and mask registers.
-- `VRM2` for vector groups of length 2 i.e., $\text{LMUL}=2$ (`v0m2`, `v2m2`, ..., `v30m2`)
-- `VRM4` for vector groups of length 4 i.e., $\text{LMUL}=4$ (`v0m4`, `v4m4`, ..., `v28m4`)
-- `VRM8` for vector groups of length 8 i.e., $\text{LMUL}=8$ (`v0m8`, `v8m8`, ..., `v24m8`)
+- `VR` for vector registers (`v0`, `v1,`, ..., `v31`). Used when {math}`\text{LMUL} \leq 1` and mask registers.
+- `VRM2` for vector groups of length 2 i.e., {math}`\text{LMUL}=2` (`v0m2`, `v2m2`, ..., `v30m2`)
+- `VRM4` for vector groups of length 4 i.e., {math}`\text{LMUL}=4` (`v0m4`, `v4m4`, ..., `v28m4`)
+- `VRM8` for vector groups of length 8 i.e., {math}`\text{LMUL}=8` (`v0m8`, `v8m8`, ..., `v24m8`)
 
-$\text{LMUL} \lt 1$ types and mask types do not benefit from having a dedicated class, so `VR` is used in their case.
+{math}`\text{LMUL} \lt 1` types and mask types do not benefit from having a dedicated class, so `VR` is used in their case.
 
 Some instructions have a constraint that a register operand cannot be `V0` or overlap with `V0`, so for these cases we also have `VRNoV0` variants.
 
@@ -318,4 +318,3 @@ vadd.vv v8, v8, v10
 - [2023 LLVM Dev Mtg - Vector codegen in the RISC-V backend](https://youtu.be/-ox8iJmbp0c?feature=shared)
 - [2023 LLVM Dev Mtg - How to add an C intrinsic and code-gen it, using the RISC-V vector C intrinsics](https://youtu.be/t17O_bU1jks?feature=shared)
 - [2021 LLVM Dev Mtg “Optimizing code for scalable vector architectures”](https://youtu.be/daWLCyhwrZ8?feature=shared)
-

@@ -1,8 +1,8 @@
 # Telemetry framework in LLVM
 
-```{toctree}
-:hidden: true
-```
+:::{toctree}
+:hidden:
+:::
 
 ## Objective
 
@@ -245,4 +245,3 @@ Manager->logStartup(&Entry);
 ```
 
 Similar code can be used for logging the tool's exit.
-

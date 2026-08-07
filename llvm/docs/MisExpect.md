@@ -1,9 +1,5 @@
 # Misexpect
 
-```{toctree}
-:maxdepth: 1
-```
-
 When developers use `llvm.expect` intrinsics, i.e., through use of
 `__builtin_expect(...)`, they are trying to communicate how their code is
 expected to behave at runtime to the optimizer. These annotations, however, can
@@ -62,4 +58,3 @@ Sampling. MisExpect Diagnostics are compatible with all Profiling formats.
 | IR           | Profiling instrumentation added during by the LLVM backend                       |
 | CS-IR        | Context Sensitive IR based profiles                                              |
 | Sampling     | Profiles collected through sampling with external tools, such as `perf` on Linux |
-

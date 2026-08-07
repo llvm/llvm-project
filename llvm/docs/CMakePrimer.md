@@ -1,7 +1,7 @@
 # CMake Primer
 
 :::{warning}
-Disclaimer: This documentation is written by LLVM project contributors `not`
+Disclaimer: This documentation is written by LLVM project contributors *not*
 anyone affiliated with the CMake project. This document may contain
 inaccurate terminology, phrasing, or technical details. It is provided with
 the best intentions.
@@ -35,7 +35,7 @@ discussed later.
 ## Scripting Overview
 
 CMake's scripting language has a very simple grammar. Every language construct
-is a command that matches the pattern \_name\_(\_args\_). Commands come in three
+is a command that matches the pattern `_name_(_args_)`. Commands come in three
 primary types: language-defined (commands implemented in C++ in CMake), defined
 functions, and defined macros. The CMake distribution also contains a suite of
 CMake modules that contain definitions for useful functionality.
@@ -414,4 +414,3 @@ documentation. To highlight a few useful functions see:
 
 The full documentation for CMake commands is in the `cmake-commands` manpage
 and available on [CMake's website](https://cmake.org/cmake/help/v3.4/manual/cmake-commands.7.html)
-

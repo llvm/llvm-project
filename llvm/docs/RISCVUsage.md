@@ -48,16 +48,10 @@ RV64E are supported by the assembly-based tools only. RV128I is not supported.
 
 To specify the target triple:
 
-> ```{eval-rst}
-> .. table:: RISC-V Architectures
->
->    ============ ==============================================================
->    Architecture Description
->    ============ ==============================================================
->    ``riscv32``   RISC-V with XLEN=32 (i.e. RV32I or RV32E)
->    ``riscv64``   RISC-V with XLEN=64 (i.e. RV64I or RV64E)
->    ============ ==============================================================
-> ```
+| Architecture | Description |
+| ------------ | ----------- |
+| `riscv32` | RISC-V with XLEN=32 (i.e. RV32I or RV32E) |
+| `riscv64` | RISC-V with XLEN=64 (i.e. RV64I or RV64E) |
 
 To select an E variant ISA (e.g. RV32E instead of RV32I), use the base
 architecture string (e.g. `riscv32`) with the extension `e`.
@@ -96,177 +90,174 @@ The following table provides a status summary for extensions which have been
 ratified and thus have finalized specifications. When relevant, detailed notes
 on support follow.
 
-> ```{eval-rst}
-> .. table:: Ratified Extensions by Status
->
->    ================  =================================================================
->    Extension         Status
->    ================  =================================================================
->    ``A``             Supported
->    ``B``             Supported
->    ``C``             Supported
->    ``D``             Supported
->    ``F``             Supported
->    ``E``             Supported (`See note <#riscv-rve-note>`__)
->    ``H``             Assembly Support
->    ``M``             Supported
->    ``Q``             Assembly Support
->    ``Sdext``         Assembly Support (`See note <#riscv-debug-specification-note>`__)
->    ``Sdtrig``        Assembly Support (`See note <#riscv-debug-specification-note>`__)
->    ``Sha``           Supported
->    ``Shcounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
->    ``Shgatpa``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
->    ``Shlcofideleg``  Supported
->    ``Shtvala``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
->    ``Shvsatpa``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
->    ``Shvstvala``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
->    ``Shvstvecd``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
->    ``Smaia``         Supported
->    ``Smcdeleg``      Supported
->    ``Smcntrpmf``     Supported
->    ``Smcsrind``      Supported
->    ``Smctr``         Assembly Support
->    ``Smdbltrp``      Supported
->    ``Smepmp``        Supported
->    ``Smmpm``         Supported
->    ``Smnpm``         Supported
->    ``Smrnmi``        Supported
->    ``Smstateen``     Assembly Support
->    ``Ssaia``         Supported
->    ``Ssccfg``        Supported
->    ``Ssccptr``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
->    ``Sscofpmf``      Assembly Support
->    ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
->    ``Sscsrind``      Supported
->    ``Ssctr``         Assembly Support
->    ``Ssdbltrp``      Supported
->    ``Ssnpm``         Supported
->    ``Sspm``          Supported
->    ``Ssqosid``       Assembly Support
->    ``Ssstateen``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
->    ``Ssstrict``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
->    ``Sstc``          Assembly Support
->    ``Sstvala``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
->    ``Sstvecd``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
->    ``Ssu64xl``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
->    ``Supm``          Supported
->    ``Svade``         Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
->    ``Svadu``         Assembly Support
->    ``Svbare``        Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
->    ``Svinval``       Assembly Support
->    ``Svnapot``       Assembly Support
->    ``Svpbmt``        Supported
->    ``Svrsw60t59b``   Supported
->    ``Svvptc``        Supported
->    ``V``             Supported
->    ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
->    ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)
->    ``Zaamo``         Assembly Support
->    ``Zabha``         Supported
->    ``Zacas``         Supported (`See note <#riscv-zacas-note>`__)
->    ``Zalasr``        Supported
->    ``Zalrsc``        Assembly Support
->    ``Zama16b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
->    ``Zawrs``         Assembly Support
->    ``Zba``           Supported
->    ``Zbb``           Supported
->    ``Zbc``           Supported
->    ``Zbkb``          Supported (`See note <#riscv-scalar-crypto-note1>`__)
->    ``Zbkc``          Supported
->    ``Zbkx``          Supported (`See note <#riscv-scalar-crypto-note1>`__)
->    ``Zbs``           Supported
->    ``Zca``           Supported
->    ``Zcb``           Supported
->    ``Zcd``           Supported
->    ``Zcf``           Supported
->    ``Zclsd``         Assembly Support
->    ``Zcmop``         Supported
->    ``Zcmp``          Supported
->    ``Zcmt``          Assembly Support
->    ``Zdinx``         Supported
->    ``Zfa``           Supported
->    ``Zfbfmin``       Supported
->    ``Zfh``           Supported
->    ``Zfhmin``        Supported
->    ``Zfinx``         Supported
->    ``Zhinx``         Supported
->    ``Zhinxmin``      Supported
->    ``Zic64b``        Supported (`See note <#riscv-profiles-extensions-note>`__)
->    ``Zicbom``        Assembly Support
->    ``Zicbop``        Supported
->    ``Zicboz``        Assembly Support
->    ``Ziccamoa``      Supported (`See note <#riscv-profiles-extensions-note>`__)
->    ``Ziccamoc``      Supported (`See note <#riscv-profiles-extensions-note>`__)
->    ``Ziccid``        Supported
->    ``Ziccif``        Supported (`See note <#riscv-profiles-extensions-note>`__)
->    ``Zicclsm``       Supported (`See note <#riscv-profiles-extensions-note>`__)
->    ``Ziccrse``       Supported (`See note <#riscv-profiles-extensions-note>`__)
->    ``Zicntr``        (`See Note <#riscv-i2p1-note>`__)
->    ``Zicond``        Supported
->    ``Zicsr``         (`See Note <#riscv-i2p1-note>`__)
->    ``Zifencei``      (`See Note <#riscv-i2p1-note>`__)
->    ``Zihintntl``     Supported
->    ``Zihintpause``   Assembly Support
->    ``Zihpm``         (`See Note <#riscv-i2p1-note>`__)
->    ``Zilsd``         Supported
->    ``Zimop``         Supported
->    ``Zkn``           Supported
->    ``Zknd``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
->    ``Zkne``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
->    ``Zknh``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
->    ``Zksed``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
->    ``Zksh``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
->    ``Zk``            Supported
->    ``Zkr``           Supported
->    ``Zks``           Supported
->    ``Zkt``           Supported
->    ``Zmmul``         Supported
->    ``Ztso``          Supported
->    ``Zvbb``          Supported
->    ``Zvbc``          Supported (`See note <#riscv-vector-crypto-note>`__)
->    ``Zve32x``        (`Partially <#riscv-vlen-32-note>`__) Supported
->    ``Zve32f``        (`Partially <#riscv-vlen-32-note>`__) Supported
->    ``Zve64x``        Supported
->    ``Zve64f``        Supported
->    ``Zve64d``        Supported
->    ``Zvfbfa``        Assembly Support
->    ``Zvfbfmin``      Supported
->    ``Zvfbfwma``      Supported
->    ``Zvfh``          Supported
->    ``Zvfhmin``       Supported
->    ``Zvfofp8min``    Assembly Support
->    ``Zvkb``          Supported
->    ``Zvkg``          Supported (`See note <#riscv-vector-crypto-note>`__)
->    ``Zvkn``          Supported (`See note <#riscv-vector-crypto-note>`__)
->    ``Zvknc``         Supported (`See note <#riscv-vector-crypto-note>`__)
->    ``Zvkned``        Supported (`See note <#riscv-vector-crypto-note>`__)
->    ``Zvkng``         Supported (`See note <#riscv-vector-crypto-note>`__)
->    ``Zvknha``        Supported (`See note <#riscv-vector-crypto-note>`__)
->    ``Zvknhb``        Supported (`See note <#riscv-vector-crypto-note>`__)
->    ``Zvks``          Supported (`See note <#riscv-vector-crypto-note>`__)
->    ``Zvksc``         Supported (`See note <#riscv-vector-crypto-note>`__)
->    ``Zvksed``        Supported (`See note <#riscv-vector-crypto-note>`__)
->    ``Zvksg``         Supported (`See note <#riscv-vector-crypto-note>`__)
->    ``Zvksh``         Supported (`See note <#riscv-vector-crypto-note>`__)
->    ``Zvkt``          Supported
->    ``Zvvfmm``        Assembly Support
->    ``Zvvmm``         Assembly Support
->    ``Zvvmtls``       Assembly Support
->    ``Zvvmttls``      Assembly Support
->    ``Zvl32b``        (`Partially <#riscv-vlen-32-note>`__) Supported
->    ``Zvl64b``        Supported
->    ``Zvl128b``       Supported
->    ``Zvl256b``       Supported
->    ``Zvl512b``       Supported
->    ``Zvl1024b``      Supported
->    ``Zvl2048b``      Supported
->    ``Zvl4096b``      Supported
->    ``Zvl8192b``      Supported
->    ``Zvl16384b``     Supported
->    ``Zvl32768b``     Supported
->    ``Zvl65536b``     Supported
->    ================  =================================================================
-> ```
+:::{table} Ratified Extensions by Status
+| Extension | Status |
+| --- | --- |
+| `A` | Supported |
+| `B` | Supported |
+| `C` | Supported |
+| `D` | Supported |
+| `F` | Supported |
+| `E` | Supported ([See note](#riscv-rve-note)) |
+| `H` | Assembly Support |
+| `M` | Supported |
+| `Q` | Assembly Support |
+| `Sdext` | Assembly Support ([See note](#riscv-debug-specification-note)) |
+| `Sdtrig` | Assembly Support ([See note](#riscv-debug-specification-note)) |
+| `Sha` | Supported |
+| `Shcounterenw` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
+| `Shgatpa` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
+| `Shlcofideleg` | Supported |
+| `Shtvala` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
+| `Shvsatpa` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
+| `Shvstvala` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
+| `Shvstvecd` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
+| `Smaia` | Supported |
+| `Smcdeleg` | Supported |
+| `Smcntrpmf` | Supported |
+| `Smcsrind` | Supported |
+| `Smctr` | Assembly Support |
+| `Smdbltrp` | Supported |
+| `Smepmp` | Supported |
+| `Smmpm` | Supported |
+| `Smnpm` | Supported |
+| `Smrnmi` | Supported |
+| `Smstateen` | Assembly Support |
+| `Ssaia` | Supported |
+| `Ssccfg` | Supported |
+| `Ssccptr` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
+| `Sscofpmf` | Assembly Support |
+| `Sscounterenw` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
+| `Sscsrind` | Supported |
+| `Ssctr` | Assembly Support |
+| `Ssdbltrp` | Supported |
+| `Ssnpm` | Supported |
+| `Sspm` | Supported |
+| `Ssqosid` | Assembly Support |
+| `Ssstateen` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
+| `Ssstrict` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
+| `Sstc` | Assembly Support |
+| `Sstvala` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
+| `Sstvecd` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
+| `Ssu64xl` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
+| `Supm` | Supported |
+| `Svade` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
+| `Svadu` | Assembly Support |
+| `Svbare` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
+| `Svinval` | Assembly Support |
+| `Svnapot` | Assembly Support |
+| `Svpbmt` | Supported |
+| `Svrsw60t59b` | Supported |
+| `Svvptc` | Supported |
+| `V` | Supported |
+| `Za128rs` | Supported ([See note](#riscv-profiles-extensions-note)) |
+| `Za64rs` | Supported ([See note](#riscv-profiles-extensions-note)) |
+| `Zaamo` | Assembly Support |
+| `Zabha` | Supported |
+| `Zacas` | Supported ([See note](#riscv-zacas-note)) |
+| `Zalasr` | Supported |
+| `Zalrsc` | Assembly Support |
+| `Zama16b` | Supported ([See note](#riscv-profiles-extensions-note)) |
+| `Zawrs` | Assembly Support |
+| `Zba` | Supported |
+| `Zbb` | Supported |
+| `Zbc` | Supported |
+| `Zbkb` | Supported ([See note](#riscv-scalar-crypto-note1)) |
+| `Zbkc` | Supported |
+| `Zbkx` | Supported ([See note](#riscv-scalar-crypto-note1)) |
+| `Zbs` | Supported |
+| `Zca` | Supported |
+| `Zcb` | Supported |
+| `Zcd` | Supported |
+| `Zcf` | Supported |
+| `Zclsd` | Assembly Support |
+| `Zcmop` | Supported |
+| `Zcmp` | Supported |
+| `Zcmt` | Assembly Support |
+| `Zdinx` | Supported |
+| `Zfa` | Supported |
+| `Zfbfmin` | Supported |
+| `Zfh` | Supported |
+| `Zfhmin` | Supported |
+| `Zfinx` | Supported |
+| `Zhinx` | Supported |
+| `Zhinxmin` | Supported |
+| `Zic64b` | Supported ([See note](#riscv-profiles-extensions-note)) |
+| `Zicbom` | Assembly Support |
+| `Zicbop` | Supported |
+| `Zicboz` | Assembly Support |
+| `Ziccamoa` | Supported ([See note](#riscv-profiles-extensions-note)) |
+| `Ziccamoc` | Supported ([See note](#riscv-profiles-extensions-note)) |
+| `Ziccid` | Supported |
+| `Ziccif` | Supported ([See note](#riscv-profiles-extensions-note)) |
+| `Zicclsm` | Supported ([See note](#riscv-profiles-extensions-note)) |
+| `Ziccrse` | Supported ([See note](#riscv-profiles-extensions-note)) |
+| `Zicntr` | ([See Note](#riscv-i2p1-note)) |
+| `Zicond` | Supported |
+| `Zicsr` | ([See Note](#riscv-i2p1-note)) |
+| `Zifencei` | ([See Note](#riscv-i2p1-note)) |
+| `Zihintntl` | Supported |
+| `Zihintpause` | Assembly Support |
+| `Zihpm` | ([See Note](#riscv-i2p1-note)) |
+| `Zilsd` | Supported |
+| `Zimop` | Supported |
+| `Zkn` | Supported |
+| `Zknd` | Supported ([See note](#riscv-scalar-crypto-note2)) |
+| `Zkne` | Supported ([See note](#riscv-scalar-crypto-note2)) |
+| `Zknh` | Supported ([See note](#riscv-scalar-crypto-note2)) |
+| `Zksed` | Supported ([See note](#riscv-scalar-crypto-note2)) |
+| `Zksh` | Supported ([See note](#riscv-scalar-crypto-note2)) |
+| `Zk` | Supported |
+| `Zkr` | Supported |
+| `Zks` | Supported |
+| `Zkt` | Supported |
+| `Zmmul` | Supported |
+| `Ztso` | Supported |
+| `Zvbb` | Supported |
+| `Zvbc` | Supported ([See note](#riscv-vector-crypto-note)) |
+| `Zve32x` | ([Partially](#riscv-vlen-32-note)) Supported |
+| `Zve32f` | ([Partially](#riscv-vlen-32-note)) Supported |
+| `Zve64x` | Supported |
+| `Zve64f` | Supported |
+| `Zve64d` | Supported |
+| `Zvfbfa` | Assembly Support |
+| `Zvfbfmin` | Supported |
+| `Zvfbfwma` | Supported |
+| `Zvfh` | Supported |
+| `Zvfhmin` | Supported |
+| `Zvfofp8min` | Assembly Support |
+| `Zvkb` | Supported |
+| `Zvkg` | Supported ([See note](#riscv-vector-crypto-note)) |
+| `Zvkn` | Supported ([See note](#riscv-vector-crypto-note)) |
+| `Zvknc` | Supported ([See note](#riscv-vector-crypto-note)) |
+| `Zvkned` | Supported ([See note](#riscv-vector-crypto-note)) |
+| `Zvkng` | Supported ([See note](#riscv-vector-crypto-note)) |
+| `Zvknha` | Supported ([See note](#riscv-vector-crypto-note)) |
+| `Zvknhb` | Supported ([See note](#riscv-vector-crypto-note)) |
+| `Zvks` | Supported ([See note](#riscv-vector-crypto-note)) |
+| `Zvksc` | Supported ([See note](#riscv-vector-crypto-note)) |
+| `Zvksed` | Supported ([See note](#riscv-vector-crypto-note)) |
+| `Zvksg` | Supported ([See note](#riscv-vector-crypto-note)) |
+| `Zvksh` | Supported ([See note](#riscv-vector-crypto-note)) |
+| `Zvkt` | Supported |
+| `Zvvfmm` | Assembly Support |
+| `Zvvmm` | Assembly Support |
+| `Zvvmtls` | Assembly Support |
+| `Zvvmttls` | Assembly Support |
+| `Zvl32b` | ([Partially](#riscv-vlen-32-note)) Supported |
+| `Zvl64b` | Supported |
+| `Zvl128b` | Supported |
+| `Zvl256b` | Supported |
+| `Zvl512b` | Supported |
+| `Zvl1024b` | Supported |
+| `Zvl2048b` | Supported |
+| `Zvl4096b` | Supported |
+| `Zvl8192b` | Supported |
+| `Zvl16384b` | Supported |
+| `Zvl32768b` | Supported |
+| `Zvl65536b` | Supported |
+
+:::
 
 Assembly Support
 
@@ -280,7 +271,7 @@ Supported
 
 `E`
 
-: Support of RV32E/RV64E and ilp32e/lp64e ABIs are experimental. To be compatible with the implementation of ilp32e in GCC, we don't use aligned registers to pass variadic arguments. Furthermore, we set the stack alignment to 4 bytes for types with length of 2\*XLEN.
+: Support of RV32E/RV64E and ilp32e/lp64e ABIs are experimental. To be compatible with the implementation of ilp32e in GCC, we don't use aligned registers to pass variadic arguments. Furthermore, we set the stack alignment to 4 bytes for types with length of 2*XLEN.
 
 (riscv-scalar-crypto-note1)=
 
@@ -750,13 +741,13 @@ This is a summary of the current state of sanitizers, and not an official suppor
 
 RISC-V is highly configurable, meaning its scheduling models could be highly diversified as well. Yet we still believe it is helpful to provide a "generic" tuning processor / scheduling model that represents the "lowest common denominator" RISC-V implementation at the time. The idea is that it could serve as a "good-enough" baseline model for performance tuning purposes on some of the most common use cases.
 
-Though details of this generic scheduling model might evolve over time, we always have some \_expectations\_ on the kind of processors it is used for.
+Though details of this generic scheduling model might evolve over time, we always have some _expectations_ on the kind of processors it is used for.
 
 For example, the `generic` tuning processor is expected to target in-order, superscalar application processors designed for general-purpose computing. It is usually RVA22U64- or RVA23U64-capable intended to run Linux. The `generic-ooo` has a similar set of expectations, except it is targeting out-of-order application processors.
 
 Right now, we simply assign a scheduling model that is widely used by the community to `generic`. But in the future, we can create a standalone scheduling model for `generic`, or even create a generic model for each of the individual sectors. For example, a `generic-embedded` for embedded processors and a `generic-server` for server workloads.
 
-These future generic models could even serve as the "base" model for other scheduling models to derive from: it's not uncommon for multiple processors to share a similar set of instruction scheduling info except a few key instructions, and this is especially true for RISC-V given its highly configurable nature. If we could design the base model in a way that it can be \_parameterized\_ by subtarget tuning features, we can substitue the traditional way of creating individual scheduling models with a combination of base scheduling model + different subtarget features.
+These future generic models could even serve as the "base" model for other scheduling models to derive from: it's not uncommon for multiple processors to share a similar set of instruction scheduling info except a few key instructions, and this is especially true for RISC-V given its highly configurable nature. If we could design the base model in a way that it can be _parameterized_ by subtarget tuning features, we can substitue the traditional way of creating individual scheduling models with a combination of base scheduling model + different subtarget features.
 
 ## Processor-Specific Tuning Feature String
 
@@ -764,31 +755,31 @@ Due to RISC-V's highly configurable nature, it is often desirable to share a sin
 
 To that end, RISC-V LLVM supports a tuning feature string format, through frontend flags like `-mtune` in Clang, to help users building a performance model by "configuring" an existing tune CPU, along with its scheduling model. For example, this flag
 
-::
-
-: -mtune=sifive-x280:single-element-vec-fp64
+```text
+-mtune=sifive-x280:single-element-vec-fp64
+```
 
 takes `sifive-x280` as the "base" tune CPU and configured it with `single-element-vec-fp64`. This gives us a performance model that looks exactly like that of `sifive-x280`, except some of the 64-bit vector floating point instructions now produce only a single element per cycle due to `single-element-vec-fp64`.
 
 More formally speaking, each tuning feature string has the following format:
 
-::
-
-: \<tune-cpu>[":"\<tune-features>]?
+```text
+<tune-cpu>[":"<tune-features>]?
+```
 
 where
 
-::
+```text
+tune-cpu ::= 'tuning CPU name in lower case'
+directive ::= "[a-zA-Z0-9\_-]+"
+tune-features ::= directive ["," directive]*
+```
 
-: tune-cpu ::= 'tuning CPU name in lower case'
-  directive ::= "[a-zA-Z0-9\_-]+"
-  tune-features ::= directive ["," directive]\*
+A *directive* can and can only _enable_ or _disable_ a certain tuning feature from the tuning CPU. A **positive directive**, like the `single-element-vec-fp64` we just saw, enables an additional tuning feature in the associated tuning model. A **negative directive**, on the other hand, removes a certain tuning feature. For example, `sifive-x390` already has the `single-element-vec-fp64` feature, and we can use
 
-A *directive* can and can only \_enable\_ or \_disable\_ a certain tuning feature from the tuning CPU. A **positive directive**, like the `single-element-vec-fp64` we just saw, enables an additional tuning feature in the associated tuning model. A **negative directive**, on the other hand, removes a certain tuning feature. For example, `sifive-x390` already has the `single-element-vec-fp64` feature, and we can use
-
-::
-
-: "sifive-x390:full-vec-fp64"
+```text
+"sifive-x390:full-vec-fp64"
+```
 
 to create a new performance model that looks nearly the same as `sifive-x390` except `single-element-vec-fp64` being cut out. In this case, `full-vec-fp64` is a negative directive.
 
@@ -796,7 +787,6 @@ There are some rules for the list of directives, though:
 
 1. The same directive cannot appear more than once.
 2. The positive and negative directives that belong to the same feature cannot appear at the same time.
-3. If a feature implies other features -- for example, `short-forward-branch-imul` implies `short-forward-branch-ialu` -- then the \_implied\_ features are subject to the previous two rules, too. For example, we cannot write \_"short-forward-branch-imul,no-short-forward-branch-ialu"\_, because the feature implied by `short-forward-branch-imul` violates rule 2.
+3. If a feature implies other features -- for example, `short-forward-branch-imul` implies `short-forward-branch-ialu` -- then the _implied_ features are subject to the previous two rules, too. For example, we cannot write _"short-forward-branch-imul,no-short-forward-branch-ialu"_, because the feature implied by `short-forward-branch-imul` violates rule 2.
 
-In addition to the rules listed above, right now, this string only accepts directives that are explicitly supported by the tune CPU. For example, \_"sifive-x280:prefer-w-inst"\_ is not a valid string as `prefer-w-inst` is not supported by `sifive-x280` at this moment. Vendors of these processors are expected to maintain the compatibility of their supported directives across different versions. There have been lots of discussions on having "generic" features that are universally supported by all RISC-V CPUs, yet many concerns -- including the difficulty to maintain compatibility across \_all\_ CPU targets and versions -- make us decide to table this issue until we find a reliable process to select such features.
-
+In addition to the rules listed above, right now, this string only accepts directives that are explicitly supported by the tune CPU. For example, _"sifive-x280:prefer-w-inst"_ is not a valid string as `prefer-w-inst` is not supported by `sifive-x280` at this moment. Vendors of these processors are expected to maintain the compatibility of their supported directives across different versions. There have been lots of discussions on having "generic" features that are universally supported by all RISC-V CPUs, yet many concerns -- including the difficulty to maintain compatibility across _all_ CPU targets and versions -- make us decide to table this issue until we find a reliable process to select such features.

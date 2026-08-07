@@ -3,10 +3,8 @@
 yaml2obj takes a YAML description of an object file and converts it to a binary
 file.
 
-> \$ yaml2obj input-file
-
-```{eval-rst}
-.. program:: yaml2obj
+```console
+$ yaml2obj input-file
 ```
 
 Outputs the binary to stdout.
@@ -274,4 +272,3 @@ type: map
 ```
 
 [kwalify]: http://www.kuwata-lab.com/kwalify/ruby/users-guide.html
-
