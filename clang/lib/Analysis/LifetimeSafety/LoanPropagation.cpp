@@ -20,68 +20,9 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang::lifetimes::internal {
-
-// Prepass to find persistent origins. An origin is persistent if it is
-// referenced in more than one basic block.
-static llvm::BitVector computePersistentOrigins(const FactManager &FactMgr,
-                                                const CFG &C) {
-  llvm::TimeTraceScope TimeProfile("ComputePersistentOrigins");
-  unsigned NumOrigins = FactMgr.getOriginMgr().getNumOrigins();
-  llvm::BitVector PersistentOrigins(NumOrigins);
-
-  llvm::SmallVector<const CFGBlock *> OriginToFirstSeenBlock(NumOrigins,
-                                                             nullptr);
-  for (const CFGBlock *B : C) {
-    for (const Fact *F : FactMgr.getFacts(B)) {
-      auto CheckOrigin = [&](OriginID OID) {
-        if (PersistentOrigins.test(OID.Value))
-          return;
-        auto &FirstSeenBlock = OriginToFirstSeenBlock[OID.Value];
-        if (FirstSeenBlock == nullptr)
-          FirstSeenBlock = B;
-        if (FirstSeenBlock != B) {
-          // We saw this origin in more than one block.
-          PersistentOrigins.set(OID.Value);
-        }
-      };
-
-      switch (F->getKind()) {
-      case Fact::Kind::Issue:
-        CheckOrigin(F->getAs<IssueFact>()->getOriginID());
-        break;
-      case Fact::Kind::OriginFlow: {
-        const auto *OF = F->getAs<OriginFlowFact>();
-        CheckOrigin(OF->getDestOriginID());
-        CheckOrigin(OF->getSrcOriginID());
-        break;
-      }
-      case Fact::Kind::Use:
-        for (const OriginList *Cur = F->getAs<UseFact>()->getUsedOrigins(); Cur;
-             Cur = Cur->peelOuterOrigin())
-          CheckOrigin(Cur->getOuterOriginID());
-        break;
-      case Fact::Kind::KillOrigin:
-        CheckOrigin(F->getAs<KillOriginFact>()->getKilledOrigin());
-        break;
-      case Fact::Kind::OriginEscapes:
-        // An escaping origin is read at the exit block but defined earlier, so
-        // it spans blocks and must participate in joins.
-        CheckOrigin(F->getAs<OriginEscapesFact>()->getEscapedOriginID());
-        break;
-      case Fact::Kind::MovedOrigin:
-      case Fact::Kind::Expire:
-      case Fact::Kind::TestPoint:
-      case Fact::Kind::InvalidateOrigin:
-        break;
-      }
-    }
-  }
-  return PersistentOrigins;
-}
 
 namespace {
 
@@ -139,7 +80,7 @@ public:
                LoanSet::Factory &LoanSetFactory)
       : DataflowAnalysis(C, AC, F), OriginLoanMapFactory(OriginLoanMapFactory),
         LoanSetFactory(LoanSetFactory),
-        PersistentOrigins(computePersistentOrigins(F, C)) {}
+        PersistentOrigins(F.getPersistentOrigins()) {}
 
   using Base::transfer;
 
@@ -342,10 +283,9 @@ private:
 
   OriginLoanMap::Factory &OriginLoanMapFactory;
   LoanSet::Factory &LoanSetFactory;
-  /// Boolean vector indexed by origin ID. If true, the origin appears in
-  /// multiple basic blocks and must participate in join operations. If false,
-  /// the origin is block-local and can be discarded at block boundaries.
-  llvm::BitVector PersistentOrigins;
+  /// Origins referenced from more than one basic block; see
+  /// `FactManager::getPersistentOrigins`.
+  const llvm::BitVector &PersistentOrigins;
 };
 } // namespace
 

@@ -8184,27 +8184,16 @@ convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
   if (attribute.getNoGpuLib())
     return success();
 
-  ompBuilder->createGlobalFlag(
-      attribute.getDebugKind() /*LangOpts().OpenMPTargetDebug*/,
-      "__omp_rtl_debug_kind");
-  ompBuilder->createGlobalFlag(
-      attribute
-          .getAssumeTeamsOversubscription() /*LangOpts().OpenMPTeamSubscription*/
-      ,
-      "__omp_rtl_assume_teams_oversubscription");
-  ompBuilder->createGlobalFlag(
-      attribute
-          .getAssumeThreadsOversubscription() /*LangOpts().OpenMPThreadSubscription*/
-      ,
-      "__omp_rtl_assume_threads_oversubscription");
-  ompBuilder->createGlobalFlag(
-      attribute.getAssumeNoThreadState() /*LangOpts().OpenMPNoThreadState*/,
-      "__omp_rtl_assume_no_thread_state");
-  ompBuilder->createGlobalFlag(
-      attribute
-          .getAssumeNoNestedParallelism() /*LangOpts().OpenMPNoNestedParallelism*/
-      ,
-      "__omp_rtl_assume_no_nested_parallelism");
+  ompBuilder->createGlobalFlag(attribute.getDebugKind(),
+                               "__omp_rtl_debug_kind");
+  ompBuilder->createGlobalFlag(attribute.getAssumeTeamsOversubscription(),
+                               "__omp_rtl_assume_teams_oversubscription");
+  ompBuilder->createGlobalFlag(attribute.getAssumeThreadsOversubscription(),
+                               "__omp_rtl_assume_threads_oversubscription");
+  ompBuilder->createGlobalFlag(attribute.getAssumeNoThreadState(),
+                               "__omp_rtl_assume_no_thread_state");
+  ompBuilder->createGlobalFlag(attribute.getAssumeNoNestedParallelism(),
+                               "__omp_rtl_assume_no_nested_parallelism");
   return success();
 }
 

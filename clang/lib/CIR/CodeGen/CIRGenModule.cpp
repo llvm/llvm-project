@@ -16,7 +16,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
-#include "mlir/Dialect/OpenMP/OpenMPUtils.h"
+#include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/IR/SymbolTable.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
@@ -3070,6 +3070,14 @@ bool CIRGenModule::lookupRepresentativeDecl(StringRef mangledName,
   return true;
 }
 
+static cir::TLS_Model getCIRTLSModel(StringRef S) {
+  return llvm::StringSwitch<cir::TLS_Model>(S)
+      .Case("global-dynamic", cir::TLS_Model::GeneralDynamic)
+      .Case("local-dynamic", cir::TLS_Model::LocalDynamic)
+      .Case("initial-exec", cir::TLS_Model::InitialExec)
+      .Case("local-exec", cir::TLS_Model::LocalExec);
+}
+
 cir::TLS_Model CIRGenModule::getDefaultCIRTLSModel() const {
   switch (getCodeGenOpts().getDefaultTLSModel()) {
   case CodeGenOptions::GeneralDynamicTLSModel:
@@ -3091,8 +3099,8 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d,
   cir::TLS_Model tlm = getDefaultCIRTLSModel();
 
   // Override the TLS model if it is explicitly specified.
-  if (d.getAttr<TLSModelAttr>())
-    errorNYI(d.getSourceRange(), "TLS model attribute");
+  if (const auto *attr = d.getAttr<TLSModelAttr>())
+    tlm = getCIRTLSModel(attr->getModel());
 
   auto global = cast<cir::GlobalOp>(op);
   global.setTlsModel(tlm);

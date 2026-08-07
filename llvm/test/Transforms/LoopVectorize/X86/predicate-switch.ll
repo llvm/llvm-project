@@ -15,7 +15,7 @@ define void @switch_default_to_latch_common_dest(ptr %start, ptr %end) {
 ; COST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; COST-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COST:       [[VECTOR_PH]]:
-; COST-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
+; COST-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 3
 ; COST-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; COST-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; COST-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
@@ -67,7 +67,7 @@ define void @switch_default_to_latch_common_dest(ptr %start, ptr %end) {
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
 ; FORCED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; FORCED:       [[VECTOR_PH]]:
-; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
+; FORCED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 7
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
@@ -150,7 +150,7 @@ define void @switch_default_to_latch_common_dest_using_branches(ptr %start, ptr 
 ; COST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; COST-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COST:       [[VECTOR_PH]]:
-; COST-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
+; COST-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 3
 ; COST-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; COST-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; COST-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
@@ -205,7 +205,7 @@ define void @switch_default_to_latch_common_dest_using_branches(ptr %start, ptr 
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
 ; FORCED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; FORCED:       [[VECTOR_PH]]:
-; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
+; FORCED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 7
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
@@ -328,7 +328,7 @@ define void @switch_all_dests_distinct(ptr %start, ptr %end) {
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
 ; FORCED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; FORCED:       [[VECTOR_PH]]:
-; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
+; FORCED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 7
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
@@ -446,7 +446,7 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; COST-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; COST-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COST:       [[VECTOR_PH]]:
-; COST-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
+; COST-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 3
 ; COST-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; COST-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; COST-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
@@ -518,7 +518,7 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
 ; FORCED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; FORCED:       [[VECTOR_PH]]:
-; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
+; FORCED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 7
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
@@ -678,7 +678,7 @@ define void @switch_multiple_common_dests(ptr %start, ptr %end) {
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
 ; FORCED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; FORCED:       [[VECTOR_PH]]:
-; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
+; FORCED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 7
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
@@ -827,7 +827,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
 ; FORCED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; FORCED:       [[VECTOR_PH]]:
-; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
+; FORCED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 7
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
@@ -963,7 +963,7 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
 ; FORCED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; FORCED:       [[VECTOR_PH]]:
-; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
+; FORCED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 7
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
@@ -1116,7 +1116,7 @@ define void @br_under_switch_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
 ; FORCED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; FORCED:       [[VECTOR_PH]]:
-; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
+; FORCED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 7
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
@@ -1270,7 +1270,7 @@ define void @large_number_of_cases(ptr %start, ptr %end) {
 ; FORCED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
 ; FORCED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; FORCED:       [[VECTOR_PH]]:
-; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
+; FORCED-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 7
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; FORCED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; FORCED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
