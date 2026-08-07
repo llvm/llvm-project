@@ -210,7 +210,7 @@ The patterns in `RISCVInstrInfoVVLPatterns.td` only match masked pseudos to redu
 Any `vmset.m` can be treated as an all ones mask since the tail elements past AVL are `undef` and can be replaced with ones.
 :::
 
-(riscvvloptimizer)=
+(RISCVVLOptimizer)=
 
 ## RISCVVLOptimizer
 
@@ -278,7 +278,7 @@ There are four register classes for vectors:
 
 Some instructions have a constraint that a register operand cannot be `V0` or overlap with `V0`, so for these cases we also have `VRNoV0` variants.
 
-(riscvinsertvsetvli)=
+(RISCVInsertVSETVLI)=
 
 ## RISCVInsertVSETVLI
 
