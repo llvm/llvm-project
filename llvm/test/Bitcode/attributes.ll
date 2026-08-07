@@ -562,6 +562,11 @@ define void @f94() nodivergencesource {
   ret void;
 }
 
+; CHECK: define void @f95() [[ALWAYSUNIFORM:#[0-9]+]]
+define void @f95() alwaysuniform {
+  ret void;
+}
+
 ; CHECK: define range(i32 -1, 42) i32 @range_attribute(<4 x i32> range(i32 -1, 42) %a)
 define range(i32 -1, 42) i32 @range_attribute(<4 x i32> range(i32 -1, 42) %a) {
   ret i32 0
@@ -680,6 +685,7 @@ define linkonce_odr void @likely_module_local() likely_module_local {
 ; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
 ; CHECK: attributes [[OPTDEBUG]] = { optdebug }
 ; CHECK: attributes [[NODIVERGENCESOURCE]] = { nodivergencesource }
+; CHECK: attributes [[ALWAYSUNIFORM]] = { alwaysuniform }
 ; CHECK: attributes [[NOIPA]] = { noipa }
 ; CHECK: attributes [[SANITIZE_CONCURRENCY]] = { sanitize_concurrency }
 ; CHECK: attributes [[LIKELYMODULELOCAL]] = { likely_module_local }
