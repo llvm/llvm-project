@@ -84,6 +84,11 @@ using range_common_reference_t = iter_common_reference_t<iterator_t<_Rp>>;
 template <class _Tp>
 concept sized_range = range<_Tp> && requires(_Tp& __t) { ranges::size(__t); };
 
+template <class _Tp>
+concept __static_sized_range = sized_range<_Tp> && requires(_Tp __t) {
+  { static_cast<char (*)[std::ranges::size(__t)]>(nullptr) };
+};
+
 template <sized_range _Rp>
 using range_size_t = decltype(ranges::size(std::declval<_Rp&>()));
 

@@ -13,6 +13,7 @@
 // template<container-compatible-range<T> R>
 //   constexpr inplace_vector(from_range_t, R&& rg);
 
+#include <array>
 #include <cassert>
 #include <inplace_vector>
 #include <ranges>
@@ -39,6 +40,12 @@ constexpr bool test() {
     auto r  = std::ranges::subrange(a, a + 4);
     std::inplace_vector<int, 4> c(std::from_range, r);
     assert_inplace_vector_equal(c, a);
+  }
+  {
+    // statically sized range
+    std::array<int, 5> arr{1, 2, 3, 4, 5};
+    std::inplace_vector<int, 5> c(std::from_range, arr);
+    assert_inplace_vector_equal(arr, c);
   }
 
   return true;
