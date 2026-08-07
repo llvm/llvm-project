@@ -5,10 +5,18 @@ define float @test1(<2 x float> %retval.i69.sroa.0.0.copyload.i.i) {
 ; CHECK-LABEL: define float @test1(
 ; CHECK-SAME: <2 x float> [[RETVAL_I69_SROA_0_0_COPYLOAD_I_I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x float> [[RETVAL_I69_SROA_0_0_COPYLOAD_I_I]], <2 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float [[TMP2]], <4 x float> [[TMP1]])
+; CHECK-NEXT:    [[A_I_SROA_5_8_VEC_EXTRACT_I_I:%.*]] = extractelement <2 x float> [[RETVAL_I69_SROA_0_0_COPYLOAD_I_I]], i64 0
+; CHECK-NEXT:    [[A_I_SROA_0_0_VEC_EXTRACT_I_I:%.*]] = extractelement <2 x float> [[RETVAL_I69_SROA_0_0_COPYLOAD_I_I]], i64 0
+; CHECK-NEXT:    [[ADD_I629_I_I:%.*]] = fadd float [[A_I_SROA_0_0_VEC_EXTRACT_I_I]], 0.000000e+00
+; CHECK-NEXT:    [[A_I616_SROA_0_4_VEC_EXTRACT_I_I:%.*]] = extractelement <2 x float> [[RETVAL_I69_SROA_0_0_COPYLOAD_I_I]], i64 0
+; CHECK-NEXT:    [[ADD_I629_1_I_I:%.*]] = fadd float [[A_I616_SROA_0_4_VEC_EXTRACT_I_I]], 0.000000e+00
+; CHECK-NEXT:    [[ADD_I597_1_I_I:%.*]] = fadd float [[ADD_I629_1_I_I]], [[ADD_I629_1_I_I]]
+; CHECK-NEXT:    [[A_I616_SROA_8_12_VEC_EXTRACT_I_I:%.*]] = extractelement <2 x float> [[RETVAL_I69_SROA_0_0_COPYLOAD_I_I]], i64 0
+; CHECK-NEXT:    [[ADD_I629_3_I_I:%.*]] = fadd float [[A_I616_SROA_8_12_VEC_EXTRACT_I_I]], 0.000000e+00
+; CHECK-NEXT:    [[ADD_I629_2_I_I:%.*]] = fadd float [[A_I_SROA_5_8_VEC_EXTRACT_I_I]], 0.000000e+00
+; CHECK-NEXT:    [[ADD_I195_1_I_I:%.*]] = fadd float [[ADD_I629_I_I]], [[ADD_I597_1_I_I]]
+; CHECK-NEXT:    [[ADD_I195_2_I_I:%.*]] = fadd float [[ADD_I629_2_I_I]], [[ADD_I195_1_I_I]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd float [[ADD_I629_3_I_I]], [[ADD_I195_2_I_I]]
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
 entry:
@@ -31,13 +39,21 @@ define float @test2(<2 x float> %retval.i69.sroa.0.0.copyload.i.i) {
 ; CHECK-LABEL: define float @test2(
 ; CHECK-SAME: <2 x float> [[RETVAL_I69_SROA_0_0_COPYLOAD_I_I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x float> [[RETVAL_I69_SROA_0_0_COPYLOAD_I_I]], <2 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[TMP0]], <float -0.000000e+00, float 0.000000e+00, float 0.000000e+00, float -0.000000e+00>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> <float 0.000000e+00, float poison, float poison, float 0.000000e+00>, <4 x i32> <i32 4, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP3]], i32 0
-; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd float 1.000000e+00, [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float [[OP_RDX]], <4 x float> [[TMP3]])
+; CHECK-NEXT:    [[A_I_SROA_5_8_VEC_EXTRACT_I_I:%.*]] = extractelement <2 x float> [[RETVAL_I69_SROA_0_0_COPYLOAD_I_I]], i64 0
+; CHECK-NEXT:    [[ADD_I629_2_I_I:%.*]] = fadd float [[A_I_SROA_5_8_VEC_EXTRACT_I_I]], 0.000000e+00
+; CHECK-NEXT:    [[A_I_SROA_0_0_VEC_EXTRACT_I_I:%.*]] = extractelement <2 x float> [[RETVAL_I69_SROA_0_0_COPYLOAD_I_I]], i64 0
+; CHECK-NEXT:    [[ADD_I629_I_I:%.*]] = fadd float [[A_I_SROA_0_0_VEC_EXTRACT_I_I]], 0.000000e+00
+; CHECK-NEXT:    [[ADD_I597_I_I:%.*]] = fadd float [[ADD_I629_I_I]], [[ADD_I629_I_I]]
+; CHECK-NEXT:    [[A_I616_SROA_0_4_VEC_EXTRACT_I_I:%.*]] = extractelement <2 x float> [[RETVAL_I69_SROA_0_0_COPYLOAD_I_I]], i64 0
+; CHECK-NEXT:    [[ADD_I629_1_I_I:%.*]] = fadd float [[A_I616_SROA_0_4_VEC_EXTRACT_I_I]], 0.000000e+00
+; CHECK-NEXT:    [[ADD_I725_1_I_I:%.*]] = fadd float [[ADD_I629_1_I_I]], 1.000000e+00
+; CHECK-NEXT:    [[ADD_I597_1_I_I:%.*]] = fadd float [[ADD_I629_1_I_I]], [[ADD_I725_1_I_I]]
+; CHECK-NEXT:    [[A_I616_SROA_8_12_VEC_EXTRACT_I_I:%.*]] = extractelement <2 x float> [[RETVAL_I69_SROA_0_0_COPYLOAD_I_I]], i64 0
+; CHECK-NEXT:    [[ADD_I629_3_I_I:%.*]] = fadd float [[A_I616_SROA_8_12_VEC_EXTRACT_I_I]], 0.000000e+00
+; CHECK-NEXT:    [[ADD_I597_2_I_I:%.*]] = fadd float [[ADD_I629_2_I_I]], [[ADD_I629_2_I_I]]
+; CHECK-NEXT:    [[ADD_I195_1_I_I:%.*]] = fadd float [[ADD_I597_I_I]], [[ADD_I597_1_I_I]]
+; CHECK-NEXT:    [[ADD_I195_2_I_I:%.*]] = fadd float [[ADD_I597_2_I_I]], [[ADD_I195_1_I_I]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd float [[ADD_I629_3_I_I]], [[ADD_I195_2_I_I]]
 ; CHECK-NEXT:    ret float [[TMP5]]
 ;
 entry:

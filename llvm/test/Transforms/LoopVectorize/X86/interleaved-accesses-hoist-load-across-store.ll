@@ -16,12 +16,12 @@ define void @pr63602_1(ptr %arr) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 1, [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i64 1, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP1]], 6
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], 9
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 4, [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add nuw i64 4, [[TMP0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP5]], 6
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP5]], 9
@@ -71,12 +71,12 @@ define void @pr63602_1(ptr %arr) {
 ; CHECK-NEXT:    [[TMP48:%.*]] = insertelement <4 x i32> [[TMP47]], i32 [[TMP44]], i32 3
 ; CHECK-NEXT:    [[TMP49:%.*]] = add <4 x i32> [[TMP48]], [[TMP40]]
 ; CHECK-NEXT:    [[TMP50:%.*]] = extractelement <4 x i32> [[TMP49]], i64 0
-; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <4 x i32> [[TMP49]], i64 1
-; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i32> [[TMP49]], i64 2
-; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP49]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP50]], ptr [[TMP21]], align 4
+; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <4 x i32> [[TMP49]], i64 1
 ; CHECK-NEXT:    store i32 [[TMP51]], ptr [[TMP22]], align 4
+; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i32> [[TMP49]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP52]], ptr [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP49]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP53]], ptr [[TMP24]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP54:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
@@ -149,12 +149,12 @@ define void @pr63602_2(ptr %arr) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 1, [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i64 1, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP1]], 6
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], 9
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 4, [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add nuw i64 4, [[TMP0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP5]], 6
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP5]], 9
@@ -204,12 +204,12 @@ define void @pr63602_2(ptr %arr) {
 ; CHECK-NEXT:    [[TMP48:%.*]] = insertelement <4 x i32> [[TMP47]], i32 [[TMP44]], i32 3
 ; CHECK-NEXT:    [[TMP49:%.*]] = add <4 x i32> [[TMP40]], [[TMP48]]
 ; CHECK-NEXT:    [[TMP50:%.*]] = extractelement <4 x i32> [[TMP49]], i64 0
-; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <4 x i32> [[TMP49]], i64 1
-; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i32> [[TMP49]], i64 2
-; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP49]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP50]], ptr [[TMP21]], align 4
+; CHECK-NEXT:    [[TMP51:%.*]] = extractelement <4 x i32> [[TMP49]], i64 1
 ; CHECK-NEXT:    store i32 [[TMP51]], ptr [[TMP22]], align 4
+; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i32> [[TMP49]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP52]], ptr [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP49]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP53]], ptr [[TMP24]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP54:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16

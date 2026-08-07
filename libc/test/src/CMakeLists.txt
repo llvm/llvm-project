@@ -50,12 +50,12 @@ function(add_fp_unittest name)
     ${name}
     ${test_type}
     LINK_LIBRARIES "${MATH_UNITTEST_LINK_LIBRARIES}"
-    "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
+      "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
     DEPENDS
       libc.hdr.stdint_proxy
       "${deps}"
   )
-endfunction(add_fp_unittest)
+endfunction()
 
 add_subdirectory(__support)
 add_subdirectory(arpa)
@@ -63,8 +63,10 @@ add_subdirectory(complex)
 add_subdirectory(ctype)
 add_subdirectory(errno)
 add_subdirectory(fenv)
+add_subdirectory(libgen)
 add_subdirectory(link)
 add_subdirectory(math)
+add_subdirectory(net)
 add_subdirectory(netinet)
 add_subdirectory(search)
 add_subdirectory(setjmp)
@@ -84,6 +86,7 @@ add_subdirectory(unistd)
 add_subdirectory(inttypes)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
+  add_subdirectory(err)
   add_subdirectory(fcntl)
   add_subdirectory(poll)
   add_subdirectory(sched)
@@ -107,6 +110,7 @@ add_subdirectory(nl_types)
 add_subdirectory(signal)
 add_subdirectory(regex)
 add_subdirectory(spawn)
+add_subdirectory(pwd)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(pthread)

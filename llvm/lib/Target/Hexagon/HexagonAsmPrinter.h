@@ -68,6 +68,9 @@ class TargetMachine;
     void LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI, bool Typed);
     void EmitSled(const MachineInstr &MI, SledKind Kind);
 
+    // KCFI check lowering.
+    void LowerKCFI_CHECK(const MachineInstr &MI);
+
     void HexagonProcessInstruction(MCInst &Inst, const MachineInstr &MBB);
 
     void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);

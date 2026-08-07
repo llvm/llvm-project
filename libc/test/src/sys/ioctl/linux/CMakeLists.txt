@@ -7,6 +7,7 @@ add_libc_unittest(
   SRCS
     ioctl_test.cpp
   DEPENDS
+    libc.hdr.types.struct_winsize
     libc.hdr.sys_ioctl_macros
     libc.src.sys.ioctl.ioctl
     libc.src.errno.errno
@@ -17,4 +18,3 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
-

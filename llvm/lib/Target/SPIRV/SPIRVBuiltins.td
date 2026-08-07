@@ -896,8 +896,8 @@ class GroupBuiltin<string name, Op operation> {
 def GroupBuiltins : GenericTable {
   let FilterClass = "GroupBuiltin";
   let Fields = ["Name", "Opcode", "GroupOperation", "IsElect", "IsAllOrAny",
-                "IsAllEqual", "IsBallot", "IsInverseBallot", "IsBallotBitExtract",
-                "IsBallotFindBit", "IsLogical", "NoGroupOperation", "HasBoolArg"];
+                "IsAllEqual", "IsInverseBallot", "IsBallotBitExtract",
+                "IsLogical", "NoGroupOperation", "HasBoolArg"];
 }
 
 // Function to lookup group builtins by their name and set.
@@ -1256,6 +1256,8 @@ defm : DemangledNativeBuiltin<"clock_read_hilo_sub_group", OpenCL_std, KernelClo
 //SPV_ALTERA_blocking_pipes
 defm : DemangledNativeBuiltin<"__spirv_WritePipeBlockingINTEL", OpenCL_std, BlockingPipes, 0, 0, OpWritePipeBlockingALTERA>;
 defm : DemangledNativeBuiltin<"__spirv_ReadPipeBlockingINTEL", OpenCL_std, BlockingPipes, 0, 0, OpReadPipeBlockingALTERA>;
+defm : DemangledNativeBuiltin<"__read_pipe_2_bl", OpenCL_std, BlockingPipes, 4, 4, OpReadPipeBlockingALTERA>;
+defm : DemangledNativeBuiltin<"__write_pipe_2_bl", OpenCL_std, BlockingPipes, 4, 4, OpWritePipeBlockingALTERA>;
 defm : DemangledNativeBuiltin<"__spirv_ReadClockKHR", OpenCL_std, KernelClock, 1, 1, OpReadClockKHR>;
 
 //SPV_ALTERA_arbitrary_precision_fixed_point
@@ -1762,7 +1764,7 @@ foreach i = ["", "2", "3", "4", "8", "16"] in {
   }
   defm : DemangledVectorLoadStoreBuiltin<!strconcat("vload", i), 2, 2, 171>;
   defm : DemangledVectorLoadStoreBuiltin<!strconcat("vstore", i), 3, 3, 172>;
-  defm : DemangledVectorLoadStoreBuiltin<!strconcat("vloada_half", i), 2, 2, 174>;
+  defm : DemangledVectorLoadStoreBuiltin<!strconcat("vloada_half", i), 2, 2, 179>;
   defm : DemangledVectorLoadStoreBuiltin<!strconcat("vstorea_half", i), 3, 3, 180>;
 
   // Also create records for each rounding mode.
