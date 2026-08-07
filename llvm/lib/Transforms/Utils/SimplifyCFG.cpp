@@ -5794,6 +5794,118 @@ bool SimplifyCFGOpt::simplifyCleanupReturn(CleanupReturnInst *RI) {
   return false;
 }
 
+static bool mergeCompatibleUnreachableCalls(BasicBlock *BB,
+                                            DomTreeUpdater *DTU) {
+  if (BB->size() != 2)
+    return false;
+
+  auto *CI = dyn_cast<CallInst>(&BB->front());
+  if (!CI || CI->arg_empty() || CI->isMustTailCall() || CI->isInlineAsm())
+    return false;
+
+  Function *Callee = CI->getCalledFunction();
+  if (!Callee || !Callee->hasFnAttribute(Attribute::NoReturn))
+    return false;
+
+  Function *CurrentFn = BB->getParent();
+  SmallVector<BasicBlock *, 8> BlocksToMerge;
+  BlocksToMerge.push_back(BB);
+
+  for (User *U : Callee->users()) {
+    auto *OtherCI = dyn_cast<CallInst>(U);
+    if (!OtherCI || OtherCI == CI || OtherCI->getFunction() != CurrentFn)
+      continue;
+
+    BasicBlock *OtherBB = OtherCI->getParent();
+    if (OtherBB->size() != 2 || !isa<UnreachableInst>(OtherBB->getTerminator()))
+      continue;
+
+    if (!OtherCI->isSameOperationAs(CI,
+                                    Instruction::CompareUsingIntersectedAttrs))
+      continue;
+
+    bool CanMerge = true;
+    for (unsigned i = 0; i < CI->arg_size(); ++i) {
+      if (CI->getArgOperand(i) != OtherCI->getArgOperand(i) &&
+          !canReplaceOperandWithVariable(CI, i)) {
+        CanMerge = false;
+        break;
+      }
+    }
+    if (CanMerge)
+      BlocksToMerge.push_back(OtherBB);
+  }
+
+  if (BlocksToMerge.size() < 2)
+    return false;
+
+  BasicBlock *MergedBB =
+      BasicBlock::Create(BB->getContext(), "unreachable.merge", CurrentFn);
+  IRBuilder<> Builder(MergedBB);
+
+  CallInst *MergedCall = cast<CallInst>(CI->clone());
+  Builder.Insert(MergedCall);
+  Builder.CreateUnreachable();
+
+  DILocation *MergedLoc = nullptr;
+  SmallVector<DominatorTree::UpdateType, 8> Updates;
+  if (DTU)
+    Updates.reserve(2 * BlocksToMerge.size());
+
+  for (unsigned i = 0; i < MergedCall->arg_size(); ++i) {
+    bool NeedsPHI = false;
+    for (BasicBlock *OldBB : BlocksToMerge) {
+      auto *OldCI = cast<CallInst>(&OldBB->front());
+      if (OldCI->getArgOperand(i) != CI->getArgOperand(i)) {
+        NeedsPHI = true;
+        break;
+      }
+    }
+
+    if (NeedsPHI) {
+      PHINode *PN =
+          PHINode::Create(CI->getArgOperand(i)->getType(), BlocksToMerge.size(),
+                          "", MergedCall->getIterator());
+      for (BasicBlock *OldBB : BlocksToMerge) {
+        auto *OldCI = cast<CallInst>(&OldBB->front());
+        PN->addIncoming(OldCI->getArgOperand(i), OldBB);
+      }
+      MergedCall->setArgOperand(i, PN);
+    }
+  }
+
+  for (BasicBlock *OldBB : BlocksToMerge) {
+    auto *OldCI = cast<CallInst>(&OldBB->front());
+    auto *OldUI = cast<UnreachableInst>(OldBB->getTerminator());
+
+    if (!MergedLoc)
+      MergedLoc = OldCI->getDebugLoc();
+    else
+      MergedLoc = DebugLoc::getMergedLocation(MergedLoc, OldCI->getDebugLoc());
+
+    bool Success = MergedCall->tryIntersectAttributes(OldCI);
+    assert(Success && "Merged calls with incompatible attributes");
+    (void)Success;
+
+    if (!OldCI->use_empty())
+      OldCI->replaceAllUsesWith(PoisonValue::get(OldCI->getType()));
+    OldCI->eraseFromParent();
+    OldUI->eraseFromParent();
+
+    Builder.SetInsertPoint(OldBB);
+    Builder.CreateBr(MergedBB);
+    if (DTU)
+      Updates.push_back({DominatorTree::Insert, OldBB, MergedBB});
+  }
+
+  MergedCall->setDebugLoc(MergedLoc);
+
+  if (DTU)
+    DTU->applyUpdates(Updates);
+
+  return true;
+}
+
 // WARNING: keep in sync with InstCombinerImpl::visitUnreachableInst()!
 bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
   BasicBlock *BB = UI->getParent();
@@ -5834,6 +5946,9 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
     BBI->eraseFromParent();
     Changed = true;
   }
+
+  if (mergeCompatibleUnreachableCalls(BB, DTU))
+    return true;
 
   // If the unreachable instruction is the first in the block, take a gander
   // at all of the predecessors of this instruction, and simplify them.
