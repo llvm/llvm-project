@@ -20537,6 +20537,32 @@ runtime, then the result vector is a {ref}`poison value <poisonvalues>`. The
 `idx` parameter must be a vector index constant type (for most targets this
 will be an integer pointer type).
 
+#### '`llvm.vector.broadcast`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare <8 x i32> @llvm.vector.broadcast.v8i32.v2i32(<2 x i32> %vec)
+declare <vscale x 16 x i8> @llvm.vector.broadcast.nxv16i8.v16i8(<16 x i8> %vec)
+```
+
+##### Overview:
+
+The '`llvm.vector.broadcast.*`' intrinsic repeatedly copies the elements of
+the source vector, in order, until the result vector is filled. For example,
+broadcasting `<A, B>` to a vector with eight elements produces
+`<A, B, A, B, A, B, A, B>`.
+This intrinsic works for both fixed and scalable vectors but the recommended way
+to express this operation for fixed-width vectors is still to use a
+`shufflevector`, as that may allow for more optimization opportunities.
+
+##### Arguments:
+
+The argument and result must be vectors with the same element type. The element
+count of the result must be a known multiple of the element count of the
+argument.
+
 #### '`llvm.vector.reverse`' Intrinsic
 
 ##### Syntax:
