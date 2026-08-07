@@ -1,3 +1,4 @@
+# Test that pseudo-probe output does not depend on probe insertion order.
 # RUN: rm -rf %t && split-file %s %t
 # RUN: llvm-mc -triple=x86_64 -filetype=obj %t/forward.s -o %t/forward.o
 # RUN: llvm-mc -triple=x86_64 -filetype=obj %t/reverse.s -o %t/reverse.o
