@@ -536,23 +536,38 @@ static InitSliceInfo getInitSliceInfo(MLIRContext *context,
 
 /// Returns true if `combinerOp` accumulates into `accumulator` by subtracting
 /// the reduced value from it, i.e. it reduces the negated inputs.
+///
+/// Subtraction is not commutative, so the accumulator has to be the left-hand
+/// side: `x - acc` computes an alternating sum instead of accumulating every
+/// input with the same sign, and cannot be split into partial results.
 static bool isSubtractingAccumulation(Operation *combinerOp,
                                       Value accumulator) {
   if (!isa<arith::SubFOp, arith::SubIOp>(combinerOp))
+    return false;
+  // Overflow flags assert that the original accumulation does not wrap. Each
+  // partial result accumulates a different subset of the inputs starting from
+  // the neutral element, so that assertion does not carry over: `0 - x` wraps
+  // for every non-zero `x` under `nuw`, and for the minimum signed value under
+  // `nsw`. Leave such reductions untiled rather than propagating an assumption
+  // that no longer holds.
+  auto subIOp = dyn_cast<arith::SubIOp>(combinerOp);
+  if (subIOp && subIOp.getOverflowFlags() != arith::IntegerOverflowFlags::none)
     return false;
   return combinerOp->getOperand(0) == accumulator;
 }
 
 /// Creates the operation combining two partial results of the subtracting
 /// accumulation performed by `combinerOp`, preserving its fast-math flags and
-/// rounding mode. Integer overflow flags are dropped, since the flags of the
-/// subtraction do not carry over to the addition.
+/// rounding mode. The integer addition carries no overflow flags, since
+/// `isSubtractingAccumulation` only accepts subtractions that have none.
 static Value createSubtractingAccumulationMerge(OpBuilder &b, Location loc,
                                                 Operation *combinerOp,
                                                 Value lhs, Value rhs) {
   if (auto subFOp = dyn_cast<arith::SubFOp>(combinerOp))
     return arith::AddFOp::create(b, loc, lhs, rhs, subFOp.getFastmathAttr(),
                                  subFOp.getRoundingmodeAttr());
+  assert(isa<arith::SubIOp>(combinerOp) &&
+         "expected a subtracting accumulation combiner");
   return arith::AddIOp::create(b, loc, lhs, rhs);
 }
 
