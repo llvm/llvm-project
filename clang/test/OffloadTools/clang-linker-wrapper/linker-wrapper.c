@@ -133,6 +133,31 @@ __attribute__((visibility("protected"), used)) int x;
 // HIP: clang{{.*}} -o [[IMG_GFX908:.+]] -dumpdir a.out.amdgpu9.08.gfx908.img. --target=amdgpu9.08-amd-amdhsa -mcpu=gfx908
 // HIP: clang-offload-bundler{{.*}}-type=o -bundle-align=4096 -compress -compression-level=6 -targets=host-x86_64-unknown-linux-gnu,hip-amdgpu9.0a-amd-amdhsa--gfx90a,hip-amdgpu9.08-amd-amdhsa--gfx908 -input={{/dev/null|NUL}} -input=[[IMG_GFX90A]] -input=[[IMG_GFX908]] -output={{.*}}.hipfb
 
+// The 'amdgpu' architecture is only valid with a subarch, so it is resolved
+// against each image's architecture, including through a target ID's features.
+
+// RUN: llvm-offload-binary -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=hip,triple=amdgpu-amd-amdhsa,arch=gfx90a:xnack+ \
+// RUN:   --image=file=%t.elf.o,kind=hip,triple=amdgpu-amd-amdhsa,arch=gfx1010
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
+// RUN:   -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=HIP-SUBARCH
+
+// HIP-SUBARCH: clang-offload-bundler{{.*}}-targets=host-x86_64-unknown-linux-gnu,hip-amdgpu9.0a-amd-amdhsa--gfx90a:xnack+,hip-amdgpu10.10-amd-amdhsa--gfx1010
+
+// The legacy 'amdgcn' spelling is the one valid subarch-less form, so it must be
+// left alone.
+
+// RUN: llvm-offload-binary -o %t-legacy-hip.out \
+// RUN:   --image=file=%t.elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx90a
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t-legacy-hip.o \
+// RUN:   -fembed-offload-object=%t-legacy-hip.out
+// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=/usr/bin/ld %t-legacy-hip.o -o a.out 2>&1 | FileCheck %s --check-prefix=HIP-LEGACY
+
+// HIP-LEGACY: clang-offload-bundler{{.*}}-targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx90a
+
 // RUN: llvm-offload-binary -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgpu9.08-amd-amdhsa,arch=gfx908 \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
