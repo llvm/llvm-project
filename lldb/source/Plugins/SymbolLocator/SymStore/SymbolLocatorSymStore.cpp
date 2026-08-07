@@ -17,7 +17,9 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/UUID.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/HTTP/HTTPClient.h"
 #include "llvm/HTTP/StreamedHTTPResponseHandler.h"
 #include "llvm/Support/Caching.h"
@@ -26,6 +28,9 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <memory>
+#include <mutex>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -283,6 +288,9 @@ RequestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
     return {};
   }
 
+  // Clean up the temporary file unless we hand it off to the caller.
+  llvm::scope_exit remove_tmp_file([&] { fs::remove(tmp_file.str()); });
+
   // Server has SymStore directory structure with forward slashes as separators.
   std::string source_url =
       llvm::formatv("{0}/{1}/{2}/{1}", base_url, pdb_name, key);
@@ -309,29 +317,26 @@ RequestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
     Debugger::ReportWarning(
         llvm::formatv("failed to download from SymStore '{0}': {1}", source_url,
                       llvm::toString(std::move(Err))));
-    fs::remove(tmp_file);
     return {};
   }
   if (llvm::Error Err = Handler.commit()) {
     Debugger::ReportWarning(
         llvm::formatv("failed to download from SymStore '{0}': {1}", source_url,
                       llvm::toString(std::move(Err))));
-    fs::remove(tmp_file);
     return {};
   }
 
   unsigned responseCode = client.responseCode();
   switch (responseCode) {
   case 200:
+    remove_tmp_file.release();
     return FileSpec(tmp_file.str()); // success
   case 404:
-    fs::remove(tmp_file); // file not found
-    return {};
+    return {}; // file not found
   default:
     Debugger::ReportWarning(llvm::formatv(
         "failed to download from SymStore '{0}': response code {1}", source_url,
         responseCode));
-    fs::remove(tmp_file);
     return {};
   }
 }
@@ -347,6 +352,55 @@ std::optional<FileSpec> FindFileInLocalSymStore(llvm::StringRef root_dir,
 
   return spec;
 }
+
+/// Synchronizes lookups that resolve to the same cache entry. Lookups for
+/// different entries never contend. The map is proportional to the number of
+/// lookups in flight, not the number of symbols resolved.
+class DownloadLock {
+public:
+  DownloadLock(llvm::StringRef cache, llvm::StringRef key,
+               llvm::StringRef pdb_name)
+      : m_key(llvm::formatv("{0}/{1}/{2}", cache, key, pdb_name)) {
+    {
+      std::lock_guard<std::mutex> guard(GetMapMutex());
+      std::shared_ptr<Entry> &entry = GetMap()[m_key];
+      if (!entry)
+        entry = std::make_shared<Entry>();
+      m_entry = entry;
+    }
+    m_entry->mutex.lock();
+  }
+
+  ~DownloadLock() {
+    m_entry->mutex.unlock();
+    std::lock_guard<std::mutex> guard(GetMapMutex());
+    m_entry.reset();
+    auto it = GetMap().find(m_key);
+    if (it != GetMap().end() && it->second.use_count() == 1)
+      GetMap().erase(it);
+  }
+
+  DownloadLock(const DownloadLock &) = delete;
+  DownloadLock &operator=(const DownloadLock &) = delete;
+
+private:
+  struct Entry {
+    std::mutex mutex;
+  };
+
+  static std::mutex &GetMapMutex() {
+    static std::mutex g_mutex;
+    return g_mutex;
+  }
+
+  static llvm::StringMap<std::shared_ptr<Entry>> &GetMap() {
+    static llvm::StringMap<std::shared_ptr<Entry>> g_map;
+    return g_map;
+  }
+
+  std::string m_key;
+  std::shared_ptr<Entry> m_entry;
+};
 
 std::optional<FileSpec> MoveToLocalSymStore(llvm::StringRef cache,
                                             llvm::StringRef key,
@@ -366,11 +420,23 @@ std::optional<FileSpec> MoveToLocalSymStore(llvm::StringRef cache,
   llvm::sys::path::append(dest, dest_dir, pdb_name);
   std::error_code ec = llvm::sys::fs::rename(tmp_file.GetPath(), dest);
 
-  // Fall back to copy+delete if we move to a different volume.
+  // Fall back to copy+delete if we move to a different volume. Copy next to
+  // the destination and rename, so a concurrent lookup never observes a
+  // partially written file at the cache location.
   if (ec == std::errc::cross_device_link) {
-    ec = llvm::sys::fs::copy_file(tmp_file.GetPath(), dest);
-    if (!ec)
+    llvm::SmallString<256> staged;
+    if ((ec = llvm::sys::fs::createUniqueFile(dest + ".%%%%%%", staged))) {
+      Debugger::ReportWarning(llvm::formatv(
+          "failed to create a temporary file in SymStore cache '{0}': {1}",
+          dest_dir, ec.message()));
+      return {};
+    }
+    llvm::scope_exit remove_staged([&] { llvm::sys::fs::remove(staged); });
+    if (!(ec = llvm::sys::fs::copy_file(tmp_file.GetPath(), staged)) &&
+        !(ec = llvm::sys::fs::rename(staged, dest))) {
+      remove_staged.release();
       llvm::sys::fs::remove(tmp_file.GetPath());
+    }
   }
   if (ec) {
     Debugger::ReportWarning(
@@ -416,8 +482,14 @@ LocateSymStoreEntry(const SymbolLocatorSymStore::LookupEntry &entry,
   Log *log = GetLog(LLDBLog::Symbols);
   llvm::StringRef url = entry.source;
   if (url.starts_with("http://") || url.starts_with("https://")) {
-    // Check cache first.
     std::string cache_path = SelectSymStoreCache(entry.cache);
+
+    // Held across the cache check as well as the download, so that a thread
+    // that loses the race observes the winner's result instead of fetching
+    // the same symbol a second time.
+    DownloadLock lock(cache_path, key, pdb_name);
+
+    // Check cache first.
     if (auto spec = FindFileInLocalSymStore(cache_path, key, pdb_name)) {
       LLDB_LOG(log, "Found {0} in SymStore cache {1}", pdb_name, cache_path);
       return *spec;
