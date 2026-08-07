@@ -1688,11 +1688,9 @@ EVT TargetLoweringBase::getSetCCResultType(const DataLayout &DL, LLVMContext &,
 /// This method returns the number of registers needed, and the VT for each
 /// register.  It also returns the VT and quantity of the intermediate values
 /// before they are promoted/expanded.
-unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
-                                                    EVT VT, EVT &IntermediateVT,
-                                                    unsigned &NumIntermediates,
-                                                    MVT &RegisterVT,
-                                                    bool ForCallingConv) const {
+unsigned TargetLoweringBase::getVectorTypeBreakdownImpl(
+    LLVMContext &Context, EVT VT, EVT &IntermediateVT,
+    unsigned &NumIntermediates, MVT &RegisterVT, bool ForCallingConv) const {
   ElementCount EltCnt = VT.getVectorElementCount();
 
   // If there is a wider vector type with the same element type as this one,

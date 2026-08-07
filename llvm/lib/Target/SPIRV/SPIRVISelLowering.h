@@ -53,9 +53,9 @@ public:
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
-  unsigned getNumRegisters(LLVMContext &Context, EVT VT,
-                           std::optional<MVT> RegisterVT = std::nullopt,
-                           bool ForCallingConv = false) const override {
+  unsigned
+  getNumRegisters(LLVMContext &Context, EVT VT,
+                  std::optional<MVT> RegisterVT = std::nullopt) const override {
     return 1;
   }
 
