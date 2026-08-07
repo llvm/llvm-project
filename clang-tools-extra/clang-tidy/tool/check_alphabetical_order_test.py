@@ -132,8 +132,8 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             """
         )
         with tempfile.TemporaryDirectory() as td:
-            rn_doc = os.path.join(td, "ReleaseNotes.rst")
-            out_path = os.path.join(td, "out.rst")
+            rn_doc = os.path.join(td, "ReleaseNotes.md")
+            out_path = os.path.join(td, "out.md")
             with open(rn_doc, "w", encoding="utf-8") as f:
                 f.write(rn_text)
 
@@ -191,8 +191,8 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             """
         )
         with tempfile.TemporaryDirectory() as td:
-            rn_doc = os.path.join(td, "ReleaseNotes.rst")
-            out_path = os.path.join(td, "out.rst")
+            rn_doc = os.path.join(td, "ReleaseNotes.md")
+            out_path = os.path.join(td, "out.md")
             with open(rn_doc, "w", encoding="utf-8") as f:
                 f.write(rn_text)
 
@@ -201,7 +201,7 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
                 rc = _mod.process_release_notes(out_path, rn_doc)
             self.assertEqual(rc, 0)
             self.assertIn(
-                "Entries in 'clang-tools-extra/docs/ReleaseNotes.rst' are not alphabetically sorted.",
+                "Entries in 'clang-tools-extra/docs/ReleaseNotes.md' are not alphabetically sorted.",
                 buf.getvalue(),
             )
 
@@ -256,8 +256,8 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             """
         )
         with tempfile.TemporaryDirectory() as td:
-            rn_doc = os.path.join(td, "ReleaseNotes.rst")
-            out_path = os.path.join(td, "out.rst")
+            rn_doc = os.path.join(td, "ReleaseNotes.md")
+            out_path = os.path.join(td, "out.md")
             with open(rn_doc, "w", encoding="utf-8") as f:
                 f.write(rn_text)
 

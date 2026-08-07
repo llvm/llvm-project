@@ -17,7 +17,7 @@ Normalize Clang-Tidy documentation with deterministic sorting for linting/tests.
 
 Behavior:
 - Sort entries in docs/clang-tidy/checks/list.md Markdown tables.
-- Sort key sections in docs/ReleaseNotes.rst.
+- Sort key sections in docs/ReleaseNotes.md.
 - Detect duplicated entries in 'Changes in existing checks'.
 
 Flags:
@@ -57,7 +57,7 @@ DOCS_DIR: Final = os.path.join(EXTRA_DIR, "docs")
 CLANG_TIDY_DOCS_DIR: Final = os.path.join(DOCS_DIR, "clang-tidy")
 CHECKS_DOCS_DIR: Final = os.path.join(CLANG_TIDY_DOCS_DIR, "checks")
 LIST_DOC: Final = os.path.join(CHECKS_DOCS_DIR, "list.md")
-RELEASE_NOTES_DOC: Final = os.path.join(DOCS_DIR, "ReleaseNotes.rst")
+RELEASE_NOTES_DOC: Final = os.path.join(DOCS_DIR, "ReleaseNotes.md")
 
 
 # Label extracted from :doc:`...`.
@@ -383,7 +383,7 @@ def process_release_notes(out_path: str, rn_doc: str) -> int:
     # Prefer reporting ordering issues first; let diff fail the test.
     if text != normalized:
         sys.stderr.write(
-            "\nEntries in 'clang-tools-extra/docs/ReleaseNotes.rst' are not alphabetically sorted.\n"
+            "\nEntries in 'clang-tools-extra/docs/ReleaseNotes.md' are not alphabetically sorted.\n"
             "Fix the ordering by applying diff printed below.\n\n"
         )
         return 0
