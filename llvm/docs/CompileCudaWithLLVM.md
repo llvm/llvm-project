@@ -14,8 +14,9 @@ programming can be found in the
 
 ### Prerequisites
 
-CUDA has been supported since LLVM 3.9. Clang typically supports the recent
-major CUDA releases, though the support for the most recent versions may need
+Clang currently fully supports CUDA toolkit versions through 13.3 (see
+``FULLY_SUPPORTED`` in ``clang/include/clang/Basic/Cuda.h``). Newer toolkits may need
+Clang built from recent sources and can emit compatibility warnings.
 Clang compiled from recent sources. If clang detects a newer CUDA version,
 it will issue a warning and will make a best-effort attempt to use detected
 CUDA SDK as if it were the most recent version supported by Clang.
