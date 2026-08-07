@@ -2248,7 +2248,7 @@ void TextNodeDumper::VisitUnaryTransformType(const UnaryTransformType *T) {
   case UnaryTransformType::Enum:                                               \
     OS << " " #Trait;                                                          \
     break;
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   }
 }
 

@@ -1396,7 +1396,7 @@ void TypePrinter::printUnaryTransformBefore(const UnaryTransformType *T,
   static const llvm::DenseMap<int, const char *> Transformation = {{
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
   {UnaryTransformType::Enum, "__" #Trait},
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   }};
   OS << Transformation.lookup(T->getUTTKind()) << '(';
   print(T->getBaseType(), OS, StringRef());
