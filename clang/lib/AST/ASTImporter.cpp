@@ -10096,6 +10096,10 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
           break;
         PrevFromDi = FromDi;
         setImportDeclError(FromDi, ErrOut);
+        
+        if (const auto *FromTDi = dyn_cast<TypeDecl>(FromDi))
+          ImportedTypes.erase(FromTDi->getTypeForDecl());
+
         //FIXME Should we remove these Decls from ImportedDecls?
         // Set the error for the mapped to Decl, which is in the "to" context.
         auto Ii = ImportedDecls.find(FromDi);
