@@ -15,6 +15,8 @@
 #ifndef ORC_RT_COMPILER_H
 #define ORC_RT_COMPILER_H
 
+#include <cassert>
+
 #if defined(_WIN32)
 #define ORC_RT_INTERFACE extern "C"
 #define ORC_RT_HIDDEN
@@ -39,22 +41,6 @@
 #endif
 #endif
 
-// Use the 'nodiscard' attribute in C++17 or newer mode.
-#if defined(__cplusplus) && __cplusplus > 201402L &&                           \
-    ORC_RT_HAS_CPP_ATTRIBUTE(nodiscard)
-#define ORC_RT_NODISCARD [[nodiscard]]
-#elif ORC_RT_HAS_CPP_ATTRIBUTE(clang::warn_unused_result)
-#define ORC_RT_NODISCARD [[clang::warn_unused_result]]
-// Clang in C++14 mode claims that it has the 'nodiscard' attribute, but also
-// warns in the pedantic mode that 'nodiscard' is a C++17 extension (PR33518).
-// Use the 'nodiscard' attribute in C++14 mode only with GCC.
-// TODO: remove this workaround when PR33518 is resolved.
-#elif defined(__GNUC__) && ORC_RT_HAS_CPP_ATTRIBUTE(nodiscard)
-#define ORC_RT_NODISCARD [[nodiscard]]
-#else
-#define ORC_RT_NODISCARD
-#endif
-
 #if __has_builtin(__builtin_expect)
 #define ORC_RT_LIKELY(EXPR) __builtin_expect((bool)(EXPR), true)
 #define ORC_RT_UNLIKELY(EXPR) __builtin_expect((bool)(EXPR), false)
@@ -69,6 +55,29 @@
 #define ORC_RT_WEAK_IMPORT
 #else
 #define ORC_RT_WEAK_IMPORT __attribute__((weak))
+#endif
+
+// ORC_RT_BUILTIN_UNREACHABLE: an optimizer hint that the current location is
+// not reachable.
+#if __has_builtin(__builtin_unreachable) || defined(__GNUC__)
+#define ORC_RT_BUILTIN_UNREACHABLE __builtin_unreachable()
+#elif defined(_MSC_VER)
+#define ORC_RT_BUILTIN_UNREACHABLE __assume(false)
+#else
+#define ORC_RT_BUILTIN_UNREACHABLE
+#endif
+
+// ORC_RT_UNREACHABLE(MSG): marks a point the program must never reach. In
+// +Asserts builds it aborts with MSG; otherwise it lowers to
+// ORC_RT_BUILTIN_UNREACHABLE.
+#ifndef NDEBUG
+#define ORC_RT_UNREACHABLE(MSG)                                                \
+  do {                                                                         \
+    assert(false && (MSG));                                                    \
+    ORC_RT_BUILTIN_UNREACHABLE;                                                \
+  } while (false)
+#else
+#define ORC_RT_UNREACHABLE(MSG) ORC_RT_BUILTIN_UNREACHABLE
 #endif
 
 #endif // ORC_RT_COMPILER_H

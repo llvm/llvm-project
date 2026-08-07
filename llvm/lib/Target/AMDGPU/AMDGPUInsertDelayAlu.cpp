@@ -35,10 +35,9 @@ public:
   // Return true if MI waits for all outstanding VALU instructions to complete.
   static bool instructionWaitsForVALU(const MachineInstr &MI) {
     // These instruction types wait for VA_VDST==0 before issuing.
-    const uint64_t VA_VDST_0 = SIInstrFlags::DS | SIInstrFlags::EXP |
-                               SIInstrFlags::FLAT | SIInstrFlags::MIMG |
-                               SIInstrFlags::MTBUF | SIInstrFlags::MUBUF;
-    if (MI.getDesc().TSFlags & VA_VDST_0)
+    if (SIInstrFlags::isDS(MI) || SIInstrFlags::isEXP(MI) ||
+        SIInstrFlags::isFLAT(MI) || SIInstrFlags::isMIMG(MI) ||
+        SIInstrFlags::isBuffer(MI))
       return true;
     if (MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B32 ||
         MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B64)
@@ -51,11 +50,10 @@ public:
 
   static bool instructionWaitsForSGPRWrites(const MachineInstr &MI) {
     // These instruction types wait for VA_SDST==0 before issuing.
-    uint64_t MIFlags = MI.getDesc().TSFlags;
-    if (MIFlags & SIInstrFlags::SMRD)
+    if (SIInstrFlags::isSMRD(MI))
       return true;
 
-    if (MIFlags & SIInstrFlags::SALU) {
+    if (SIInstrFlags::isSALU(MI)) {
       for (auto &Op : MI.operands()) {
         if (Op.isReg())
           return true;
@@ -76,7 +74,7 @@ public:
     // WMMA XDL ops are treated the same as TRANS.
     if (ST->hasGFX1250Insts() && SII->isXDLWMMA(MI))
       return TRANS;
-    if (SIInstrInfo::isVALU(MI))
+    if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true))
       return VALU;
     if (SIInstrInfo::isSALU(MI))
       return SALU;
@@ -362,6 +360,10 @@ public:
 
     // FIXME: 0 is a valid register unit.
     MCRegUnit LastSGPRFromVALU = static_cast<MCRegUnit>(0);
+
+    // Destination of the preceding WMMA, for C-reuse detection.
+    Register PrevWMMAVDst;
+
     // Iterate over the contents of bundles, but don't emit any instructions
     // inside a bundle.
     for (auto &MI : MBB.instrs()) {
@@ -392,6 +394,11 @@ public:
         State = DelayState();
       } else if (Type != OTHER) {
         DelayInfo Delay;
+        // C-reuse: back-to-back WMMAs into the same C register forward the
+        // accumulator in place, so the tied srcC read has no dependency. WMMA
+        // implies GFX11+, so no explicit subtarget check is needed.
+        bool IsWMMACReuse =
+            PrevWMMAVDst.isValid() && (SII->isWMMA(MI) || SII->isSWMMAC(MI));
         // TODO: Scan implicit uses too?
         for (const auto &Op : MI.explicit_uses()) {
           if (Op.isReg()) {
@@ -399,6 +406,9 @@ public:
             // This creates the insertion of redundant delays. Hence, we have to
             // ignore this operand.
             if (MI.getOpcode() == AMDGPU::V_WRITELANE_B32 && Op.isTied())
+              continue;
+            // Skip the tied srcC of a C-reuse edge.
+            if (IsWMMACReuse && Op.isTied() && Op.getReg() == PrevWMMAVDst)
               continue;
             for (MCRegUnit Unit : TRI->regunits(Op.getReg())) {
               auto It = State.find(Unit);
@@ -410,7 +420,7 @@ public:
           }
         }
 
-        if (SII->isVALU(MI.getOpcode())) {
+        if (SII->isVALU(MI.getOpcode(), /*AllowLDSDMA=*/true)) {
           for (const auto &Op : MI.defs()) {
             Register Reg = Op.getReg();
             if (AMDGPU::isSGPR(Reg, TRI)) {
@@ -445,6 +455,15 @@ public:
       // instructions on the assumption that they will usually have to be issued
       // twice?
       State.advance(Type, Cycles);
+
+      // Track the preceding WMMA's dst for C-reuse; reset on anything else.
+      if (SII->isWMMA(MI) || SII->isSWMMAC(MI)) {
+        const MachineOperand *VDst =
+            SII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+        PrevWMMAVDst = VDst ? VDst->getReg() : Register();
+      } else {
+        PrevWMMAVDst = Register();
+      }
 
       LLVM_DEBUG(dbgs() << "  State after " << MI; State.dump(TRI););
     }

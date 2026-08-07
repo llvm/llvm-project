@@ -20,7 +20,9 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -87,6 +89,9 @@ mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
 
 mlir::LogicalResult
 CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
+
+  const CallExpr *musttail = nullptr;
+
   for (const Attr *attr : s.getAttrs()) {
     switch (attr->getKind()) {
     default:
@@ -95,12 +100,17 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
     case attr::NoInline:
     case attr::AlwaysInline:
     case attr::NoConvergent:
-    case attr::MustTail:
     case attr::Atomic:
     case attr::HLSLControlFlowHint:
       cgm.errorNYI(s.getSourceRange(),
                    "Unimplemented statement attribute: ", attr->getKind());
       break;
+    case attr::MustTail: {
+      const Stmt *sub = s.getSubStmt();
+      const ReturnStmt *ret = cast<ReturnStmt>(sub);
+      musttail = cast<CallExpr>(ret->getRetValue()->IgnoreParens());
+      break;
+    }
     case attr::CXXAssume: {
       const Expr *assumptionExpr = cast<CXXAssumeAttr>(attr)->getAssumption();
       if (getLangOpts().CXXAssumptions && builder.getInsertionBlock() &&
@@ -113,6 +123,8 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
     } break;
     }
   }
+
+  SaveAndRestore save_musttail(mustTailCall, musttail);
 
   return emitStmt(s.getSubStmt(), /*useCurrentScope=*/true, s.getAttrs());
 }
@@ -199,6 +211,8 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitIndirectGotoStmt(cast<IndirectGotoStmt>(*s));
   case Stmt::CoreturnStmtClass:
     return emitCoreturnStmt(cast<CoreturnStmt>(*s));
+  case Stmt::SYCLKernelCallStmtClass:
+    return emitSYCLKernelCallStmt(cast<SYCLKernelCallStmt>(*s));
   case Stmt::OpenACCComputeConstructClass:
     return emitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*s));
   case Stmt::OpenACCLoopConstructClass:
@@ -420,8 +434,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::DefaultStmtClass:
   case Stmt::CaseStmtClass:
   case Stmt::SEHLeaveStmtClass:
-  case Stmt::SYCLKernelCallStmtClass:
-  case Stmt::CapturedStmtClass:
   case Stmt::ObjCAtTryStmtClass:
   case Stmt::ObjCAtThrowStmtClass:
   case Stmt::ObjCAtSynchronizedStmtClass:
@@ -431,9 +443,13 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::ObjCAtCatchStmtClass:
   case Stmt::ObjCAtFinallyStmtClass:
   case Stmt::DeferStmtClass:
+  case Stmt::CXXExpansionStmtPatternClass:
+  case Stmt::CXXExpansionStmtInstantiationClass:
     cgm.errorNYI(s->getSourceRange(),
                  std::string("emitStmt: ") + s->getStmtClassName());
     return mlir::failure();
+  case Stmt::CapturedStmtClass:
+    llvm_unreachable("CapturedStmt must be handled by the parent directive");
   }
 
   llvm_unreachable("Unexpected statement class");
@@ -705,11 +721,20 @@ mlir::LogicalResult CIRGenFunction::emitGotoStmt(const clang::GotoStmt &s) {
 
 mlir::LogicalResult
 CIRGenFunction::emitIndirectGotoStmt(const IndirectGotoStmt &s) {
+  // An indirect goto with an active cleanup may leave its scope.  Determining
+  // whether its dynamic destination requires cleanup is not implemented.
+  if (ehStack.stable_begin() != prologueCleanupDepth) {
+    cgm.errorNYI(s.getSourceRange(), "indirect goto with active cleanup");
+    return mlir::success();
+  }
+
   mlir::Value val = emitScalarExpr(s.getTarget());
-  assert(indirectGotoBlock &&
-         "If you jumping to a indirect branch should be alareadye emitted");
-  cir::BrOp::create(builder, getLoc(s.getSourceRange()), indirectGotoBlock,
-                    val);
+  // Emit a symbolic indirect goto.  GotoSolver resolves it into the shared
+  // indirect-branch block after FlattenCFG merges regions, so this stays valid
+  // even when the goto sits inside a nested scope.
+  cir::IndirectGotoOp::create(builder, getLoc(s.getSourceRange()), val);
+
+  // The indirect goto ends the block; open a fresh one so codegen can resume.
   builder.createBlock(builder.getBlock()->getParent());
   return mlir::success();
 }
@@ -740,14 +765,7 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
   }
 
   builder.setInsertionPointToEnd(labelBlock);
-  cir::LabelOp label =
-      cir::LabelOp::create(builder, getLoc(d.getSourceRange()), d.getName());
-  builder.setInsertionPointToEnd(labelBlock);
-  auto func = cast<cir::FuncOp>(curFn);
-  cgm.mapBlockAddress(cir::BlockAddrInfoAttr::get(builder.getContext(),
-                                                  func.getSymNameAttr(),
-                                                  label.getLabelAttr()),
-                      label);
+  cir::LabelOp::create(builder, getLoc(d.getSourceRange()), d.getName());
   //  FIXME: emit debug info for labels, incrementProfileCounter
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::generateDebugInfo());
@@ -803,7 +821,7 @@ CIRGenFunction::emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
   // If the substmt is default stmt or case stmt, try to handle the special case
   // to make it into the simple form. e.g.
   //
-  //  swtich () {
+  //  switch () {
   //    case 1:
   //    default:
   //      ...
@@ -853,6 +871,11 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
   cir::CaseOpKind kind;
   mlir::ArrayAttr value;
   llvm::APSInt intVal = s.getLHS()->EvaluateKnownConstInt(getContext());
+
+  // Coerce a bool to an i1 for a switch, so we can just treat all its elements
+  // as an int later on.
+  if (isa<cir::BoolType>(condType))
+    condType = builder.getUIntNTy(1);
 
   // If the case statement has an RHS value, it is representing a GNU
   // case range statement, where LHS is the beginning of the range
@@ -914,11 +937,6 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
       return mlir::failure();
 
     assert(!cir::MissingFeatures::loopInfoStack());
-    // From LLVM: if there are any cleanups between here and the loop-exit
-    // scope, create a block to stage a loop exit along.
-    // We probably already do the right thing because of ScopeOp, but make
-    // sure we handle all cases.
-    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     forOp = builder.createFor(
         getLoc(s.getSourceRange()),
@@ -934,6 +952,7 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
           // https://en.cppreference.com/w/cpp/language/for
           // In C++ the scope of the init-statement and the scope of
           // statement are one and the same.
+          RunCleanupsScope bodyScope(*this);
           bool useCurrentScope = true;
           if (emitStmt(s.getLoopVarStmt(), useCurrentScope).failed())
             loopRes = mlir::failure();
@@ -982,48 +1001,66 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
       if (emitStmt(s.getInit(), /*useCurrentScope=*/true).failed())
         return mlir::failure();
     assert(!cir::MissingFeatures::loopInfoStack());
-    // In the classic codegen, if there are any cleanups between here and the
-    // loop-exit scope, a block is created to stage the loop exit. We probably
-    // already do the right thing because of ScopeOp, but we need more testing
-    // to be sure we handle all cases.
-    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
-    forOp = builder.createFor(
-        getLoc(s.getSourceRange()),
-        /*condBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          assert(!cir::MissingFeatures::createProfileWeightsForLoop());
-          assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
-          mlir::Value condVal;
-          if (s.getCond()) {
-            // If the for statement has a condition scope,
-            // emit the local variable declaration.
-            if (s.getConditionVariable())
-              emitDecl(*s.getConditionVariable());
-            // C99 6.8.5p2/p4: The first substatement is executed if the
-            // expression compares unequal to 0. The condition must be a
-            // scalar type.
-            condVal = evaluateExprAsBool(s.getCond());
-          } else {
-            condVal = cir::ConstantOp::create(b, loc, builder.getTrueAttr());
-          }
-          builder.createCondition(condVal);
-        },
-        /*bodyBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          // The scope of the for loop body is nested within the scope of the
-          // for loop's init-statement and condition.
-          if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
-            loopRes = mlir::failure();
-          emitStopPoint(&s);
-        },
-        /*stepBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          if (s.getInc())
-            if (emitStmt(s.getInc(), /*useCurrentScope=*/true).failed())
-              loopRes = mlir::failure();
-          builder.createYield(loc);
-        });
+    // If the condition variable has a non-trivial destructor, its lifetime is
+    // a single iteration, so capture its cleanup and emit it into the loop's
+    // per-iteration cleanup region. This scope is constructed after the
+    // init-statement so its cleanups are not captured.
+    const VarDecl *condVar = s.getConditionVariable();
+    bool needsCondCleanup =
+        condVar && condVar->needsDestruction(getContext()) != QualType::DK_none;
+    // We will also need cleanup if lifetime markers are enabled.
+    assert(!cir::MissingFeatures::emitLifetimeMarkers());
+    DeferredLoopConditionCleanup loopCondScope(*this, needsCondCleanup);
+
+    auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
+      assert(!cir::MissingFeatures::createProfileWeightsForLoop());
+      assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
+      mlir::Value condVal;
+      if (s.getCond()) {
+        // If the for statement declares a condition variable, emit that here.
+        if (condVar)
+          emitLoopConditionVariable(*condVar, loopCondScope);
+        // C99 6.8.5p2/p4: The first substatement is executed if the
+        // expression compares unequal to 0. The condition must be a
+        // scalar type.
+        condVal = evaluateExprAsBool(s.getCond());
+      } else {
+        condVal = cir::ConstantOp::create(b, loc, builder.getTrueAttr());
+      }
+      builder.createCondition(condVal);
+    };
+    auto bodyBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
+      // The scope of the for loop body is nested within the scope of the
+      // for loop's init-statement and condition.
+      RunCleanupsScope bodyScope(*this);
+      if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
+        loopRes = mlir::failure();
+      emitStopPoint(&s);
+    };
+    auto stepBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
+      if (s.getInc())
+        if (emitStmt(s.getInc(), /*useCurrentScope=*/true).failed())
+          loopRes = mlir::failure();
+      builder.createYield(loc);
+    };
+
+    if (needsCondCleanup) {
+      cir::CleanupKind cleanupKind = getLangOpts().Exceptions
+                                         ? cir::CleanupKind::All
+                                         : cir::CleanupKind::Normal;
+      forOp = builder.createFor(
+          getLoc(s.getSourceRange()), condBuilder, bodyBuilder, stepBuilder,
+          /*cleanupBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            loopCondScope.emitIntoLoopCleanupRegion(loc);
+            builder.createYield(loc);
+          },
+          cleanupKind);
+    } else {
+      forOp = builder.createFor(getLoc(s.getSourceRange()), condBuilder,
+                                bodyBuilder, stepBuilder);
+    }
     return loopRes;
   };
 
@@ -1050,11 +1087,6 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
   auto doStmtBuilder = [&]() -> mlir::LogicalResult {
     mlir::LogicalResult loopRes = mlir::success();
     assert(!cir::MissingFeatures::loopInfoStack());
-    // From LLVM: if there are any cleanups between here and the loop-exit
-    // scope, create a block to stage a loop exit along.
-    // We probably already do the right thing because of ScopeOp, but make
-    // sure we handle all cases.
-    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     doWhileOp = builder.createDoWhile(
         getLoc(s.getSourceRange()),
@@ -1071,6 +1103,7 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           // The scope of the do-while loop body is a nested scope.
+          RunCleanupsScope bodyScope(*this);
           if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
             loopRes = mlir::failure();
           emitStopPoint(&s);
@@ -1101,36 +1134,53 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
   auto whileStmtBuilder = [&]() -> mlir::LogicalResult {
     mlir::LogicalResult loopRes = mlir::success();
     assert(!cir::MissingFeatures::loopInfoStack());
-    // From LLVM: if there are any cleanups between here and the loop-exit
-    // scope, create a block to stage a loop exit along.
-    // We probably already do the right thing because of ScopeOp, but make
-    // sure we handle all cases.
-    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
-    whileOp = builder.createWhile(
-        getLoc(s.getSourceRange()),
-        /*condBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          assert(!cir::MissingFeatures::createProfileWeightsForLoop());
-          assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
-          mlir::Value condVal;
-          // If the for statement has a condition scope,
-          // emit the local variable declaration.
-          if (s.getConditionVariable())
-            emitDecl(*s.getConditionVariable());
-          // C99 6.8.5p2/p4: The first substatement is executed if the
-          // expression compares unequal to 0. The condition must be a
-          // scalar type.
-          condVal = evaluateExprAsBool(s.getCond());
-          builder.createCondition(condVal);
-        },
-        /*bodyBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          // The scope of the while loop body is a nested scope.
-          if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
-            loopRes = mlir::failure();
-          emitStopPoint(&s);
-        });
+    // If the condition variable has a non-trivial destructor, its lifetime is
+    // a single iteration, so capture its cleanup and emit it into the loop's
+    // per-iteration cleanup region.
+    const VarDecl *condVar = s.getConditionVariable();
+    bool needsCondCleanup =
+        condVar && condVar->needsDestruction(getContext()) != QualType::DK_none;
+    // We will also need cleanup if lifetime markers are enabled.
+    assert(!cir::MissingFeatures::emitLifetimeMarkers());
+    DeferredLoopConditionCleanup loopCondScope(*this, needsCondCleanup);
+
+    auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
+      assert(!cir::MissingFeatures::createProfileWeightsForLoop());
+      assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
+      // If the while statement declares a condition variable, emit that here.
+      if (condVar)
+        emitLoopConditionVariable(*condVar, loopCondScope);
+      // C99 6.8.5p2/p4: The first substatement is executed if the
+      // expression compares unequal to 0. The condition must be a
+      // scalar type.
+      mlir::Value condVal = evaluateExprAsBool(s.getCond());
+      builder.createCondition(condVal);
+    };
+    auto bodyBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
+      // The scope of the while loop body is a nested scope.
+      RunCleanupsScope bodyScope(*this);
+      if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
+        loopRes = mlir::failure();
+      emitStopPoint(&s);
+    };
+
+    if (needsCondCleanup) {
+      cir::CleanupKind cleanupKind = getLangOpts().Exceptions
+                                         ? cir::CleanupKind::All
+                                         : cir::CleanupKind::Normal;
+      whileOp = builder.createWhile(
+          getLoc(s.getSourceRange()), condBuilder, bodyBuilder,
+          /*cleanupBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            loopCondScope.emitIntoLoopCleanupRegion(loc);
+            builder.createYield(loc);
+          },
+          cleanupKind);
+    } else {
+      whileOp = builder.createWhile(getLoc(s.getSourceRange()), condBuilder,
+                                    bodyBuilder);
+    }
     return loopRes;
   };
 
@@ -1165,10 +1215,41 @@ mlir::LogicalResult CIRGenFunction::emitSwitchBody(const Stmt *s) {
 
   auto *compoundStmt = cast<CompoundStmt>(s);
 
-  mlir::Block *swtichBlock = builder.getBlock();
-  for (auto *c : compoundStmt->body()) {
+  ArrayRef<Stmt *> body{compoundStmt->body_begin(), compoundStmt->body_end()};
+
+  mlir::Block *switchBlock = builder.getBlock();
+
+  // Any statements appearing before the first case statement are 'unassociated'
+  // with anything. So we have to create them FIRST in their own block. After
+  // that, the 'case' regions will take care of future ones.
+  if (!body.empty() && !isa<SwitchCase>(body.front())) {
+    builder.setInsertionPointToEnd(switchBlock);
+    {
+      // This is needed to handle cleanups in a compound statement before the
+      // first case statement.
+      RunCleanupsScope preCaseScope(*this);
+      while (!body.empty() && !isa<SwitchCase>(body.front())) {
+
+        auto *c = body.front();
+        if (mlir::failed(
+                emitStmt(c, /*useCurrentScope=*/!isa<CompoundStmt>(c))))
+          return mlir::failure();
+
+        body = body.drop_front();
+      }
+    }
+
+    // Now that we've emitted ALL of the statements, we can create a new block
+    // for the actual case statements/etc to appear.
+    mlir::Block *lastBlock = builder.getBlock();
+    switchBlock = builder.createBlock(switchBlock->getParent());
+    builder.setInsertionPointToEnd(lastBlock);
+    cir::BrOp::create(builder, getLoc(s->getSourceRange()), switchBlock);
+  }
+
+  for (auto *c : body) {
     if (auto *switchCase = dyn_cast<SwitchCase>(c)) {
-      builder.setInsertionPointToEnd(swtichBlock);
+      builder.setInsertionPointToEnd(switchBlock);
       // Reset insert point automatically, so that we can attach following
       // random stmt to the region of previous built case op to try to make
       // the being generated `cir.switch` to be in simple form.
@@ -1204,6 +1285,13 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
       emitDecl(*s.getConditionVariable(), /*evaluateConditionDecl=*/true);
 
     mlir::Value condV = emitScalarExpr(s.getCond());
+
+    // Coerce bool values to an i1. There is no real sensible reason we need to
+    // represent a 'switch' of scoped-enum-with-bool-backing-type specially
+    // here.  It is a rarely used thing, and would result in a lot of work to
+    // properly handle this everywhere.
+    if (isa<cir::BoolType>(condV.getType()))
+      condV = builder.createBoolToInt(condV, builder.getUIntNTy(1));
 
     // TODO: PGO and likelihood (e.g. PGO.haveRegionCounts())
     assert(!cir::MissingFeatures::pgoUse());
@@ -1265,7 +1353,8 @@ void CIRGenFunction::emitReturnOfRValue(mlir::Location loc, RValue rv,
       emitAggregateCopy(dest, src, ty, getOverlapForReturnValue());
     }
   } else {
-    cgm.errorNYI(loc, "emitReturnOfRValue: complex return type");
+    assert(rv.isComplex() && "Unknown rvalue kind?");
+    builder.createStore(loc, rv.getComplexValue(), returnValue);
   }
 
   // Classic codegen emits a branch through any cleanups before continuing to

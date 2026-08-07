@@ -134,6 +134,15 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
                  // built-in types.
                  binaryOperation(hasOperatorName("="),
                                  hasLHS(ignoringParenImpCasts(DeclRefMatcher))),
+                 // std::tie() assignment: std::tie(a, b) = expr reinitializes
+                 // all variables passed to std::tie because the tuple
+                 // assignment writes back through the stored references.
+                 binaryOperation(
+                     hasOperatorName("="),
+                     hasLHS(ignoringImplicit(ignoringParenImpCasts(
+                         callExpr(callee(functionDecl(hasName("::std::tie"))),
+                                  hasAnyArgument(ignoringParenImpCasts(
+                                      DeclRefMatcher))))))),
                  // Declaration. We treat this as a type of reinitialization
                  // too, so we don't need to treat it separately.
                  declStmt(hasDescendant(equalsNode(MovedVariable))),
@@ -404,8 +413,8 @@ void UseAfterMoveFinder::getDeclRefs(
     if (!S)
       continue;
 
-    auto AddDeclRefs = [this, Block,
-                        DeclRefs](const ArrayRef<BoundNodes> Matches) {
+    const auto AddDeclRefs = [this, Block,
+                              DeclRefs](const ArrayRef<BoundNodes> Matches) {
       for (const auto &Match : Matches) {
         const auto *DeclRef = Match.getNodeAs<DeclRefExpr>("declref");
         const auto *Member = Match.getNodeAs<MemberExpr>("member-expr");
@@ -425,7 +434,7 @@ void UseAfterMoveFinder::getDeclRefs(
       }
     };
 
-    auto DeclRefMatcher =
+    const auto DeclRefMatcher =
         declRefExpr(hasDeclaration(equalsNode(MovedVariable)),
                     unless(inDecltypeOrTemplateArg()),
                     unless(hasParentIgnoringParenImpCasts(
@@ -500,7 +509,7 @@ static MoveType determineMoveType(const FunctionDecl *FuncDecl) {
 
 static void emitDiagnostic(const Expr *MovingCall, const DeclRefExpr *MoveArg,
                            const UseAfterMove &Use, ClangTidyCheck *Check,
-                           ASTContext *Context, MoveType Type,
+                           const ASTContext *Context, MoveType Type,
                            const FunctionDecl *MoveDecl) {
   const SourceLocation UseLoc = Use.DeclRef->getExprLoc();
   const SourceLocation MoveLoc = MovingCall->getExprLoc();
@@ -547,11 +556,14 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
   // bool to tell callers whether it moved. Ignore std::move inside
   // try_emplace to avoid false positives as we don't track uses of
   // the bool.
-  auto TryEmplaceMatcher =
+  const auto TryEmplaceMatcher =
       cxxMemberCallExpr(callee(cxxMethodDecl(hasName("try_emplace"))));
-  auto Arg = declRefExpr().bind("arg");
-  auto IsMemberCallee = callee(functionDecl(unless(isStaticStorageClass())));
-  auto CallMoveMatcher = callExpr(
+  const auto Arg = declRefExpr().bind("arg");
+  const auto IsMemberCallee =
+      callee(functionDecl(unless(isStaticStorageClass())));
+  const auto DerivedToBaseCast =
+      implicitCastExpr(hasCastKind(CK_DerivedToBase)).bind("optional-cast");
+  const auto CallMoveMatcher = callExpr(
       callee(functionDecl(getNameMatcher(InvalidationFunctions))
                  .bind("move-decl")),
       anyOf(cxxMemberCallExpr(IsMemberCallee, on(Arg)),
@@ -559,8 +571,10 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
                      hasArgument(0, Arg))),
       unless(inDecltypeOrTemplateArg()), unless(hasParent(TryEmplaceMatcher)),
       expr().bind("call-move"),
-      optionally(hasParent(implicitCastExpr(hasCastKind(CK_DerivedToBase))
-                               .bind("optional-cast"))),
+      optionally(
+          anyOf(hasParent(DerivedToBaseCast),
+                hasArgument(
+                    0, traverse(TK_AsIs, expr(hasParent(DerivedToBaseCast)))))),
       anyOf(hasAncestor(compoundStmt(
                 hasParent(lambdaExpr().bind("containing-lambda")))),
             hasAncestor(functionDecl(

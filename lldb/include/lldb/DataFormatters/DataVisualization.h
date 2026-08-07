@@ -50,13 +50,6 @@ public:
   static lldb::SyntheticChildrenSP
   GetSyntheticChildren(ValueObject &valobj, lldb::DynamicValueType use_dynamic);
 
-  static bool
-  AnyMatches(const FormattersMatchCandidate &candidate_type,
-             TypeCategoryImpl::FormatCategoryItems items =
-                 TypeCategoryImpl::ALL_ITEM_TYPES,
-             bool only_enabled = true, const char **matching_category = nullptr,
-             TypeCategoryImpl::FormatCategoryItems *matching_type = nullptr);
-
   class NamedSummaryFormats {
   public:
     static bool GetSummaryFormat(ConstString type,

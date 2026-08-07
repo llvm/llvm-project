@@ -8,11 +8,19 @@ is where libc++'s pre-defined LNT bot configurations are defined. To benchmark s
 commits:
 
 ```
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r libcxx/utils/requirements.txt
+
 libcxx/utils/ci/lnt/run-benchbot --llvm-root <monorepo> <builder> -- <commit1> <commit2> ...
 ```
 
-Results are stored as JSON files in `<llvm-root>/build/<builder>/` by default. Use
-`--build-dir <dir>` to override the output directory.
+Results are stored as LNT JSON files in `<llvm-root>/build/<builder>/` by default.
+Use `--results-dir <dir>` to override where these reports are written.
+
+By default, build artifacts are stored in a temporary directory and discarded after
+each run. Pass `--build-dir <dir>` to keep them; artifacts for each run are then stored
+under `<dir>/<builder>/<commit>`.
 
 To continuously poll for un-benchmarked commits and submit results to a LNT instance:
 

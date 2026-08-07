@@ -198,7 +198,7 @@ then:
 
 loop.latch:
   %tobool.not = icmp eq i64 %iv.next, 0
-  br i1 %tobool.not, label %exit, label %loop.header
+  br i1 %tobool.not, label %exit, label %loop.header, !llvm.loop !0
 
 exit:
   ret void
@@ -320,3 +320,8 @@ loop:
 exit:
   ret void
 }
+
+!0 = distinct !{!0, !1, !2, !3}
+!1 = !{!"llvm.loop.vectorize.width", i32 2}
+!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+!3 = !{!"llvm.loop.vectorize.enable"}

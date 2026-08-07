@@ -87,7 +87,7 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   DenseMap<std::pair<const MachineFunction *, Register>, const Value *> Reg2GO;
 
   // map of aliasing decorations to aliasing metadata
-  std::unordered_map<const MDNode *, MachineInstr *> AliasInstMDMap;
+  DenseMap<const MDNode *, MachineInstr *> AliasInstMDMap;
 
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVTypeInst createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
@@ -514,6 +514,8 @@ private:
   void addArrayStrideDecorations(Register Reg, Type *ElementType,
                                  MachineIRBuilder &MIRBuilder);
   bool hasBlockDecoration(SPIRVTypeInst Type) const;
+
+  void constrainSelectedInstRegOperands(MachineInstrBuilder &MIB) const;
 
   SPIRVTypeInst
   getOrCreateOpTypeImage(MachineIRBuilder &MIRBuilder,

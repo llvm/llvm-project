@@ -45,10 +45,17 @@
 // RUN: %clang_cl -arm64EC -marm64x -fuse-ld=link -### -- %s 2>&1 | FileCheck --check-prefix=ARM64X %s
 // ARM64X: "-machine:arm64x"
 
+// RUN: %clang -fuse-ld= --target=arm64ec-pc-windows-msvc -marm64x -### %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
+// RUN: %clang -fuse-ld= --target=aarch64-pc-windows-msvc -marm64x -### %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
+// RUN: %clang_cl -fuse-ld= -marm64x -### -- %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
+// RUN: %clang_cl -fuse-ld= -arm64EC -marm64x -### -- %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
+// ARM64X-LLD: lld-link
+// ARM64X-LLD-SAME: "-machine:arm64x"
+
 // RUN: not %clang --target=x86_64-linux-gnu -marm64x -### %s 2>&1 | FileCheck --check-prefix=HYBRID-ERR %s
 // HYBRID-ERR: error: unsupported option '-marm64x' for target 'x86_64-linux-gnu'
 
-// RUN: %clang -c -marm64x  --target=arm64ec-pc-windows-msvc -fuse-ld=link -### %s 2>&1 | \
+// RUN: %clang -S -marm64x  --target=arm64ec-pc-windows-msvc -fuse-ld=link -### %s 2>&1 | \
 // RUN:        FileCheck --check-prefix=HYBRID-WARN %s
 // HYBRID-WARN: warning: argument unused during compilation: '-marm64x' [-Wunused-command-line-argument]
 
@@ -66,6 +73,6 @@
 // RUN: %clang --target=i686-pc-windows-msvc -gdwarf-4 -fuse-ld= -### %s 2>&1 | FileCheck --check-prefix=DEBUG-LLD %s
 // RUN: %clang --target=i686-pc-windows-msvc -gdwarf-5 -fuse-ld= -### %s 2>&1 | FileCheck --check-prefix=DEBUG-LLD %s
 // RUN: %clang --target=i686-pc-windows-msvc -gdwarf-6 -fuse-ld= -### %s 2>&1 | FileCheck --check-prefix=DEBUG-LLD %s
-// DEBUG-LLD: lld-link"
+// DEBUG-LLD: lld-link{{(\.exe)?}}"
 // DEBUG-LLD-SAME: "-debug"
 // DEBUG-LLD-NOT: link.exe

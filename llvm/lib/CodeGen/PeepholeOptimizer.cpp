@@ -81,6 +81,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -574,10 +575,8 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
     AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
     if (Aggressive) {
       AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineDominatorTreeWrapperPass>();
     }
   }
 
@@ -968,8 +967,13 @@ bool PeepholeOptimizer::optimizeCmpInstr(
   if (SrcReg.isVirtual() && MRI->hasOneNonDBGUser(SrcReg)) {
     MachineInstr *FlagProducer = MRI->use_nodbg_begin(SrcReg)->getParent();
     MachineInstr *LoadMI = MRI->getVRegDef(SrcReg);
+    // No store between LoadMI and FlagProducer that could change the value.
     if (LocalMIs.count(FlagProducer) && LoadMI && LoadMI->canFoldAsLoad() &&
-        LoadMI->mayLoad() && LocalMIs.count(LoadMI))
+        LoadMI->mayLoad() && LocalMIs.count(LoadMI) &&
+        llvm::none_of(
+            make_range(std::next(LoadMI->getIterator()),
+                       FlagProducer->getIterator()),
+            [](const MachineInstr &I) { return I.isLoadFoldBarrier(); }))
       foldLoadInto(MF, *FlagProducer, SrcReg, LocalMIs);
   }
 
@@ -1717,8 +1721,6 @@ PeepholeOptimizerPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

@@ -207,18 +207,50 @@ struct ArgEntry {
   ArgEntry(const Type *T, ArgInfo A) : ABIType(T), Info(A) {}
 };
 
+/// Whether a signature accepts arguments beyond its declared parameters, and
+/// where the declared ones end when it does.  An argument past an ellipsis is
+/// unnamed, and some ABI rules pass an unnamed type differently.
+///
+/// A count and All are not interchangeable when the count equals the number of
+/// arguments.  FunctionInfo::isVariadic() is true whenever a count was given,
+/// so a signature with no ellipsis has to be spelled All.
+class RequiredArgs {
+  /// The number of leading arguments that are declared parameters, or ~0U if
+  /// the signature accepts no optional arguments.
+  unsigned NumRequired;
+
+public:
+  enum All_t { All };
+
+  /// A signature with no ellipsis, where every argument is declared.
+  RequiredArgs(All_t) : NumRequired(~0U) {}
+
+  /// A signature whose leading \p N arguments are declared and whose remaining
+  /// arguments pass through an ellipsis.
+  explicit RequiredArgs(unsigned N) : NumRequired(N) {
+    assert(N != ~0U && "~0U is reserved for a signature with no ellipsis");
+  }
+
+  bool allowsOptionalArgs() const { return NumRequired != ~0U; }
+
+  unsigned getNumRequiredArgs() const {
+    assert(allowsOptionalArgs() && "signature accepts no optional arguments");
+    return NumRequired;
+  }
+};
+
 class FunctionInfo final : private TrailingObjects<FunctionInfo, ArgEntry> {
 private:
   const Type *ReturnType;
   ArgInfo ReturnInfo;
   unsigned NumArgs;
   CallingConv::ID CC = CallingConv::C;
-  std::optional<unsigned> NumRequired;
+  RequiredArgs Required;
 
   FunctionInfo(CallingConv::ID CC, const Type *RetTy, unsigned NumArguments,
-               std::optional<unsigned> NumRequired)
+               RequiredArgs Required)
       : ReturnType(RetTy), ReturnInfo(ArgInfo::getDirect()),
-        NumArgs(NumArguments), CC(CC), NumRequired(NumRequired) {}
+        NumArgs(NumArguments), CC(CC), Required(Required) {}
 
   friend class TrailingObjects;
 
@@ -234,10 +266,10 @@ public:
 
   unsigned arg_size() const { return NumArgs; }
 
-  static std::unique_ptr<FunctionInfo>
+  LLVM_ABI static std::unique_ptr<FunctionInfo>
   create(CallingConv::ID CC, const Type *ReturnType,
          ArrayRef<const Type *> ArgTypes,
-         std::optional<unsigned> NumRequired = std::nullopt);
+         RequiredArgs Required = RequiredArgs::All);
 
   const Type *getReturnType() const { return ReturnType; }
   ArgInfo &getReturnInfo() { return ReturnInfo; }
@@ -245,10 +277,10 @@ public:
 
   CallingConv::ID getCallingConvention() const { return CC; }
 
-  bool isVariadic() const { return NumRequired.has_value(); }
+  bool isVariadic() const { return Required.allowsOptionalArgs(); }
 
   unsigned getNumRequiredArgs() const {
-    return isVariadic() ? *NumRequired : arg_size();
+    return isVariadic() ? Required.getNumRequiredArgs() : arg_size();
   }
 
   ArrayRef<ArgEntry> arguments() const {

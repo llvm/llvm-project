@@ -300,7 +300,6 @@ NativeRegisterContextLinux_x86::NativeRegisterContextLinux_x86(
     : NativeRegisterContextRegisterInfo(
           native_thread, CreateRegisterInfoInterface(target_arch).release()),
       NativeRegisterContextLinux(native_thread),
-      NativeRegisterContextDBReg_x86(native_thread),
       m_xstate_type(XStateType::Invalid), m_ymm_set(), m_mpx_set(),
       m_reg_info(), m_gpr_x86_64() {
   // Set up data about ranges of valid registers.

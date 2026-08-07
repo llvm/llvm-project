@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/Transforms/Vectorize/VPlanVerifier.h"
+#include "../lib/Transforms/Vectorize/LoopVectorizationPlanner.h"
 #include "../lib/Transforms/Vectorize/VPlan.h"
-#include "../lib/Transforms/Vectorize/VPlanCFG.h"
 #include "VPlanTestBase.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -76,7 +76,7 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
       new VPInstruction(Instruction::Sub, {DefI, Zero},
                         VPIRFlags::getDefaultFlags(Instruction::Sub));
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {UseI});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
@@ -118,7 +118,7 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
       new VPInstruction(Instruction::Add, {Zero, Zero},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {DefI});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
   auto *Blend = new VPBlendRecipe(Phi, {DefI, Plan.getTrue()}, {}, {});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -206,9 +206,9 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
       new VPInstruction(Instruction::Add, {Zero, Zero},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {I1});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
   VPInstruction *BranchOnCond2 =
-      new VPInstruction(VPInstruction::BranchOnCond, {I1});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
@@ -235,9 +235,9 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
       new VPInstruction(Instruction::Add, {Zero, Zero},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {I1});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
   VPInstruction *BranchOnCond2 =
-      new VPInstruction(VPInstruction::BranchOnCond, {I1});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
@@ -272,7 +272,7 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
       new VPInstruction(Instruction::Add, {Zero, Zero},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {DefI});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
 
   VPBB1->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
@@ -296,8 +296,8 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
 
 TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
   VPlan &Plan = getPlan();
-  VPValue *Zero = Plan.getConstantInt(32, 0);
-  auto *BranchOnCond = new VPInstruction(VPInstruction::BranchOnCond, {Zero});
+  auto *BranchOnCond =
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("header");
@@ -328,6 +328,34 @@ TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
 #endif
 
   delete PHINode;
+}
+
+TEST_F(VPVerifierTest, DerivedIVWithStartInLoopRegions) {
+  VPlan &Plan = getPlan();
+  auto *I32Ty = Type::getInt32Ty(C);
+  VPBasicBlock *Entry = Plan.getEntry();
+  VPBasicBlock *Latch = Plan.createVPBasicBlock("latch");
+
+  VPBuilder Builder(Latch);
+  VPValue *Start = Builder.createNot(Plan.getPoison(I32Ty));
+  Builder.createDerivedIV(InductionDescriptor::IK_IntInduction, nullptr, Start,
+                          Plan.getPoison(I32Ty), Plan.getPoison(I32Ty));
+  Builder.createNaryOp(VPInstruction::BranchOnCond, Plan.getTrue());
+
+  VPRegionBlock *LoopR = Plan.createLoopRegion(I32Ty, DebugLoc::getUnknown(),
+                                               "loop", Latch, Latch);
+  VPBlockUtils::connectBlocks(Entry, LoopR);
+  VPBlockUtils::connectBlocks(LoopR, Plan.getScalarHeader());
+
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+  EXPECT_STREQ(
+      "VPDerivedIVRecipe must have start value defined outside loop regions\n",
+      ::testing::internal::GetCapturedStderr().c_str());
+#endif
 }
 
 TEST_F(VPVerifierTest, testRUN_VPLAN_PASS) {
@@ -374,8 +402,8 @@ TEST_F(VPIRVerifierTest, testVerifyIRPhiInScalarHeaderVPIRBB) {
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
   auto Plan = buildVPlan(LoopHeader);
-  VPValue *Zero = Plan->getConstantInt(32, 0);
-  Plan->getScalarHeader()->front().addOperand(Zero);
+  VPValue *Zero = Plan->getConstantInt(64, 0);
+  cast<VPIRPhi>(&Plan->getScalarHeader()->front())->addIncoming(Zero);
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
@@ -416,7 +444,7 @@ TEST_F(VPIRVerifierTest, testVerifyIRPhiInExitVPIRBB) {
       new VPInstruction(VPInstruction::ExtractLastLane,
                         {HeaderBlock->front().getVPSingleValue()});
   DefI->insertBefore(Plan->getMiddleBlock()->getTerminator());
-  Plan->getExitBlocks()[0]->front().addOperand(DefI);
+  cast<VPIRPhi>(&Plan->getExitBlocks()[0]->front())->addIncoming(DefI);
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();

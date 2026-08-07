@@ -310,10 +310,10 @@ define void @fsqrt_bf16() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:30 Lat:44 SizeLat:44 for: %V16BF16 = call <16 x bfloat> @llvm.sqrt.v16bf16(<16 x bfloat> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-  %BF16 = call bfloat @llvm.sqrt.f16(bfloat poison)
-  %V4BF16 = call <4 x bfloat> @llvm.sqrt.v4f16(<4 x bfloat> poison)
-  %V8BF16 = call <8 x bfloat> @llvm.sqrt.v8f16(<8 x bfloat> poison)
-  %V16BF16 = call <16 x bfloat> @llvm.sqrt.v16f16(<16 x bfloat> poison)
+  %BF16 = call bfloat @llvm.sqrt.bf16(bfloat poison)
+  %V4BF16 = call <4 x bfloat> @llvm.sqrt.v4bf16(<4 x bfloat> poison)
+  %V8BF16 = call <8 x bfloat> @llvm.sqrt.v8bf16(<8 x bfloat> poison)
+  %V16BF16 = call <16 x bfloat> @llvm.sqrt.v16bf16(<16 x bfloat> poison)
   ret void
 }
 
@@ -325,10 +325,10 @@ define void @fabs_bf16() {
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V2BF16 = call <16 x bfloat> @llvm.fabs.v16bf16(<16 x bfloat> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-  %BF16 = call bfloat @llvm.fabs.f16(bfloat poison)
-  %V4BF16 = call <4 x bfloat> @llvm.fabs.v4f16(<4 x bfloat> poison)
-  %V8BF16 = call <8 x bfloat> @llvm.fabs.v8f16(<8 x bfloat> poison)
-  %V2BF16 = call <16 x bfloat> @llvm.fabs.v16f16(<16 x bfloat> poison)
+  %BF16 = call bfloat @llvm.fabs.bf16(bfloat poison)
+  %V4BF16 = call <4 x bfloat> @llvm.fabs.v4bf16(<4 x bfloat> poison)
+  %V8BF16 = call <8 x bfloat> @llvm.fabs.v8bf16(<8 x bfloat> poison)
+  %V2BF16 = call <16 x bfloat> @llvm.fabs.v16bf16(<16 x bfloat> poison)
   ret void
 }
 
@@ -340,10 +340,10 @@ define void @fcopysign_bf16() {
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V16BF16 = call <16 x bfloat> @llvm.copysign.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-  %BF16 = call bfloat @llvm.copysign.f16(bfloat poison, bfloat poison)
-  %V4BF16 = call <4 x bfloat> @llvm.copysign.v4f16(<4 x bfloat> poison, <4 x bfloat> poison)
-  %V8BF16 = call <8 x bfloat> @llvm.copysign.v8f16(<8 x bfloat> poison, <8 x bfloat> poison)
-  %V16BF16 = call <16 x bfloat> @llvm.copysign.v16f16(<16 x bfloat> poison, <16 x bfloat> poison)
+  %BF16 = call bfloat @llvm.copysign.bf16(bfloat poison, bfloat poison)
+  %V4BF16 = call <4 x bfloat> @llvm.copysign.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison)
+  %V8BF16 = call <8 x bfloat> @llvm.copysign.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison)
+  %V16BF16 = call <16 x bfloat> @llvm.copysign.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison)
   ret void
 }
 
@@ -369,10 +369,10 @@ define void @fma_bf16() {
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of 4 for: %V16BF16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-  %BF16 = call bfloat @llvm.fma.f16(bfloat poison, bfloat poison, bfloat poison)
-  %V4BF16 = call <4 x bfloat> @llvm.fma.v4f16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison)
-  %V8BF16 = call <8 x bfloat> @llvm.fma.v8f16(<8 x bfloat> poison, <8 x bfloat> poison, <8 x bfloat> poison)
-  %V16BF16 = call <16 x bfloat> @llvm.fma.v16f16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
+  %BF16 = call bfloat @llvm.fma.bf16(bfloat poison, bfloat poison, bfloat poison)
+  %V4BF16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison)
+  %V8BF16 = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison, <8 x bfloat> poison)
+  %V16BF16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
   ret void
 }
 
@@ -398,9 +398,9 @@ define void @fmuladd_bf16() {
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of 4 for: %V16BF16 = call <16 x bfloat> @llvm.fmuladd.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
-  %BF16 = call bfloat @llvm.fmuladd.f32(bfloat poison, bfloat poison, bfloat poison)
-  %V4BF16 = call <4 x bfloat> @llvm.fmuladd.v4f16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison)
-  %V8BF16 = call <8 x bfloat> @llvm.fmuladd.v8f16(<8 x bfloat> poison, <8 x bfloat> poison, <8 x bfloat> poison)
-  %V16BF16 = call <16 x bfloat> @llvm.fmuladd.v16f16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
+  %BF16 = call bfloat @llvm.fmuladd.bf16(bfloat poison, bfloat poison, bfloat poison)
+  %V4BF16 = call <4 x bfloat> @llvm.fmuladd.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison)
+  %V8BF16 = call <8 x bfloat> @llvm.fmuladd.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison, <8 x bfloat> poison)
+  %V16BF16 = call <16 x bfloat> @llvm.fmuladd.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
   ret void
 }
