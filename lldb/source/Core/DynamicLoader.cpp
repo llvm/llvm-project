@@ -354,9 +354,11 @@ DynamicLoader::LoadBinaryInTarget(Process *process, BinarySpec &bin_spec) {
   }
 
   // A binary was found, but a symbol server may still have had something to say
-  // about its symbols.
+  // about its symbols.  Name the binary: a symbol locator's error is not
+  // required to identify what it was asked to look for.
   if (search_error)
     *target.GetDebugger().GetAsyncErrorStream()
+        << GetBinaryDescription(bin_spec) << ": "
         << llvm::toString(std::move(search_error)) << "\n";
 
   // Ensure the Target has an architecture set in case
