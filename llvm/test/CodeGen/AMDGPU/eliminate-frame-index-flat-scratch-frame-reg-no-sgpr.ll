@@ -1,12 +1,13 @@
 ; RUN: not --crash llc -mtriple=amdgpu9.42-amd-amdhsa -amdgpu-stress-sgpr=16 < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
-; NOTE: SIRegisterInfo::eliminateFrameIndex currently asserts on a
-; flat-scratch target when a frame index used by a VALU instruction reaches the
-; generic SGPR scavenging path, the function has a frame register, and no SGPR
-; is free for the scavenger. Control then enters the branch that assumes no
-; frame register exists: it asserts !FrameReg and its SVS lowering materializes
-; the address from the offset alone, without a frame-register term.
+; Verifies SIRegisterInfo::eliminateFrameIndex on a flat-scratch target: a frame
+; index used by a VALU instruction reaches the generic SGPR scavenging path.
+; When the function has a frame register but no SGPR is free for the scavenger,
+; the fix reuses the frame register as the temporary instead of taking the SVS
+; fallback (which assumes no frame register and previously asserted here). The
+; offset is folded into the frame register in place, the subtract reads it
+; directly as an SGPR source, and the frame register is restored afterwards.
 ;
 ; The reproducer needs all of following conditions:
 ;   1. A VALU frame-index user (V_SUB_CO_U32_e32 from the addrspacecast).
@@ -20,6 +21,12 @@
 ; CHECK: there is a frame register!
 
 define fastcc i64 @no_scavengeable_sgpr_with_frame_register(
+; CHECK-LABEL: no_scavengeable_sgpr_with_frame_register:
+; Fold the frame-index offset into the frame register in place, use it directly
+; as the SGPR source of the subtract, then restore the frame register.
+; CHECK:         s_add_i32 s32, s32, 24
+; CHECK:         v_sub_co_u32_e32 v0, vcc, s32, v0
+; CHECK:         s_addk_i32 s32, 0xffe8
     ptr %p0, i32 %i0, i64 %l0, i64 %l1, i64 %l2,
     i64 %l3, i64 %l4, i16 %s0, i32 %i1, ptr %p1,
     i64 %l5, i32 %i2, i32 %i3, i32 %i4,
