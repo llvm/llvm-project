@@ -130,10 +130,9 @@ static bool readStringFromAddress(
   read_options.SetStream(&stream);
   read_options.SetSourceSize(length);
   read_options.SetHasSourceSize(true);
-  read_options.SetNeedsZeroTermination(false);
+  read_options.SetZeroTermination(StringPrinter::ZeroTermination::Ignore);
   read_options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                   lldb::eTypeSummaryUncapped);
-  read_options.SetBinaryZeroIsTerminator(false);
   read_options.SetEscapeStyle(StringPrinter::EscapeStyle::Swift);
 
   return StringPrinter::ReadStringAndDumpToStream<
@@ -365,7 +364,7 @@ static bool makeStringGutsSummary(
         buffer, count, process->GetByteOrder(), ptrSize));
     options.SetStream(&stream);
     options.SetSourceSize(count);
-    options.SetBinaryZeroIsTerminator(false);
+    options.SetZeroTermination(StringPrinter::ZeroTermination::Ignore);
     options.SetEscapeStyle(StringPrinter::EscapeStyle::Swift);
     return StringPrinter::ReadBufferAndDumpToStream<
         StringPrinter::StringElementType::UTF8>(options);
@@ -588,8 +587,7 @@ bool lldb_private::formatters::swift::StaticString_SummaryProvider(
   read_options.SetLocation(Address(start_ptr));
   read_options.SetSourceSize(size);
   read_options.SetHasSourceSize(true);
-  read_options.SetBinaryZeroIsTerminator(false);
-  read_options.SetNeedsZeroTermination(false);
+  read_options.SetZeroTermination(StringPrinter::ZeroTermination::Ignore);
   read_options.SetStream(&stream);
   read_options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                   lldb::eTypeSummaryUncapped);
@@ -1767,7 +1765,7 @@ bool lldb_private::formatters::swift::ObjC_Selector_SummaryProvider(
   read_options.SetTargetSP(valobj.GetTargetSP());
   read_options.SetStream(&stream);
   read_options.SetQuote('"');
-  read_options.SetNeedsZeroTermination(true);
+  read_options.SetZeroTermination(StringPrinter::ZeroTermination::ZeroTerminate);
   read_options.SetEscapeStyle(StringPrinter::EscapeStyle::Swift);
 
   return StringPrinter::ReadStringAndDumpToStream<
