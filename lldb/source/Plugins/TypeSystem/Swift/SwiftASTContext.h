@@ -257,8 +257,6 @@ public:
 
   swift::SearchPathOptions &GetSearchPathOptions();
 
-  std::optional<clang::DarwinSDKInfo> &GetSDKInfo();
-
   swift::SerializationOptions &GetSerializationOptions();
 
   void InitializeSearchPathOptions();

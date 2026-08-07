@@ -2370,6 +2370,12 @@ static std::string GetSDKPath(std::string m_description, XcodeSDK sdk) {
   return sdk_path;
 }
 
+/// Returns the module's filename, or a placeholder if it has none.
+static std::string GetModuleNameForLog(Module &module) {
+  llvm::StringRef name = module.GetFileSpec().GetFilename();
+  return name.empty() ? "<unknown module>" : name.str();
+}
+
 /// Force parsing of the CUs to extract the SDK info.
 static std::string GetSDKPathFromDebugInfo(std::string m_description,
                                            Module &module) {
@@ -2395,7 +2401,7 @@ static std::string GetSDKPathFromDebugInfo(std::string m_description,
         "Unsupported mixing of public and internal SDKs in "
         "'%s'. Mixed use of SDKs indicates use of different "
         "toolchains, which is not supported.",
-        module.GetFileSpec().GetFilename().AsCString("<unknown module>"));
+        GetModuleNameForLog(module).c_str());
 
   return GetSDKPath(m_description, std::move(sdk));
 }
@@ -2805,7 +2811,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     LOG_PRINTF(
         GetLog(LLDBLog::Types),
         "(\"%s\") returning NULL - couldn't create a ClangImporter",
-        module.GetFileSpec().GetFilename().AsCString("<unknown module>"));
+        GetModuleNameForLog(module).c_str());
     return {};
   }
 
@@ -2857,7 +2863,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
       LOG_PRINTF(
           GetLog(LLDBLog::Types), "((Module*)%p, \"%s\") = %p",
           static_cast<void *>(&module),
-          module.GetFileSpec().GetFilename().AsCString("<unknown module>"),
+          GetModuleNameForLog(module).c_str(),
           static_cast<void *>(swift_ast_sp.get()));
     }
   }
@@ -2873,7 +2879,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
 static bool IsUnitTestExecutable(lldb_private::Module &module) {
   static ConstString s_xctest("xctest");
   static ConstString s_XCTRunner("XCTRunner");
-  ConstString executable_name = module.GetFileSpec().GetFilename();
+  ConstString executable_name(module.GetFileSpec().GetFilename());
   return (executable_name == s_xctest || executable_name == s_XCTRunner);
 }
 
@@ -4165,7 +4171,7 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
       GetLanguageOptions(), GetTypeCheckerOptions(), GetSILOptions(),
       GetSearchPathOptions(), GetClangImporterOptions(),
       GetSymbolGraphOptions(), GetCASOptions(), GetSerializationOptions(),
-      GetSourceManager(), GetDiagnosticEngine(), GetSDKInfo(),
+      GetSourceManager(), GetDiagnosticEngine(),
       /*OutputBackend=*/nullptr));
 
   if (getenv("LLDB_SWIFT_DUMP_DIAGS")) {
@@ -4624,7 +4630,7 @@ SwiftASTContext::GetModule(const FileSpec &module_spec) {
     return llvm::createStringError("couldn't get a ClangImporter");
   }
 
-  std::string module_directory(module_spec.GetDirectory().GetCString());
+  std::string module_directory(module_spec.GetDirectory().str());
   bool add_search_path = true;
   for (auto path : ast->SearchPathOpts.getImportSearchPaths()) {
     if (path.Path == module_directory) {
@@ -5096,7 +5102,7 @@ void SwiftASTContext::RegisterSectionModules(
           "failed to parse AST section %zu/%zu in image \"%s\" "
           "(filter=\"%s\"). %s",
           n, total,
-          module.GetFileSpec().GetFilename().AsCString("<unknown module>"),
+          GetModuleNameForLog(module).c_str(),
           filter.str().c_str(), error.c_str());
       return;
     }
@@ -5109,7 +5115,7 @@ void SwiftASTContext::RegisterSectionModules(
           "parsed module \"%s\" from Swift AST section %zu/%zu in "
           "image \"%s\" (filter=\"%s\").",
           module_name.c_str(), n, total,
-          module.GetFileSpec().GetFilename().AsCString("<unknown module>"),
+          GetModuleNameForLog(module).c_str(),
           filter.str().c_str());
     }
   };
@@ -10082,7 +10088,7 @@ llvm::Error SwiftASTContext::GetCompileUnitImportsImpl(
     }
 
     std::string category = "Importing dependencies for ";
-    category += compile_unit->GetPrimaryFile().GetFilename().GetString();
+    category += compile_unit->GetPrimaryFile().GetFilename();
 
     // Load main module.
     auto module_import_progress_raii = GetModuleImportProgressRAII(category);
