@@ -2844,7 +2844,8 @@ ExpectedDecl ASTNodeImporter::VisitBindingDecl(BindingDecl *D) {
   Error Err = Error::success();
   QualType ToType = importChecked(Err, D->getType());
   Expr *ToBinding = importChecked(Err, D->getBinding());
-  ValueDecl *ToDecomposedDecl = importChecked(Err, D->getDecomposedDecl());
+  DecompositionDecl *ToDecomposedDecl =
+      importChecked(Err, D->getDecomposedDecl());
   if (Err)
     return std::move(Err);
 
