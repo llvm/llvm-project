@@ -36,14 +36,11 @@ exit:
   ret void
 }
 
-; FIXME: This is currently accepted as cost for vector is smaller than scalar.
-; Performance is poor due to poor CodeGen of using type promotion instead of
-; type widening.
-define void @tc3_smin_i8_reject(ptr noalias %a, ptr noalias %b) #0 {
-; IR-LABEL: define void @tc3_smin_i8_reject(
+define void @tc3_smin_i8_accept(ptr noalias %a, ptr noalias %b) #0 {
+; IR-LABEL: define void @tc3_smin_i8_accept(
 ; IR: vector.body
 
-; DBG-LABEL: LV: Checking a loop in 'tc3_smin_i8_reject'
+; DBG-LABEL: LV: Checking a loop in 'tc3_smin_i8_accept'
 ; DBG: LV: Picking MaxVF=2 with 1 scalar iteration remaining.
 ; DBG: LV: Scalar loop costs: 10.
 ; DBG: Cost for VF 2: 15
@@ -160,6 +157,6 @@ declare float @llvm.sin.f32(float)
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.enable"}
 !2 = distinct !{!2, !3}
 !3 = !{!"llvm.loop.interleave.count", i32 2}
