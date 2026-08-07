@@ -394,6 +394,7 @@ public:
   Instruction *visitStoreInst(StoreInst &I);
   Instruction *visitAllocaInst(AllocaInst &I);
   Instruction *visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
+  Instruction *visitAtomicRMWInst(AtomicRMWInst &I);
   Instruction *visitUnreachableInst(UnreachableInst &I);
   Instruction *visitCallInst(CallInst &I);
 
@@ -2625,6 +2626,61 @@ SPIRVEmitIntrinsicsImpl::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
       Intrinsic::spv_cmpxchg, {I.getPointerOperand()->getType()}, {Args});
   replaceMemInstrUses(&I, NewI, B);
   return NewI;
+}
+
+Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
+  auto Op = I.getOperation();
+  if (Op != AtomicRMWInst::UIncWrap && Op != AtomicRMWInst::UDecWrap)
+    return &I;
+
+  // Carrying these across the SPIR-V boundary as a call to an imported helper
+  // is an AMD extension: there is no SPIR-V opcode for them, so a consumer has
+  // to recognize the helper by name to make sense of the module. Restrict it to
+  // AMD targets and let everyone else keep the generic expansion.
+  if (!isAMDTarget(TM.getTargetTriple()))
+    return &I;
+
+  Module *M = I.getModule();
+  IRBuilder<> B(I.getParent());
+  B.SetInsertPoint(&I);
+
+  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());
+  unsigned AS = I.getPointerOperand()->getType()->getPointerAddressSpace();
+
+  uint32_t Scope = static_cast<uint32_t>(
+      getMemScope(TM.getTargetTriple(), I.getContext(), I.getSyncScopeID()));
+  uint32_t ScSem = static_cast<uint32_t>(
+      getMemSemanticsForStorageClass(addressSpaceToStorageClass(AS, ST)));
+  uint32_t MemSem =
+      static_cast<uint32_t>(getMemSemantics(I.getOrdering())) | ScSem;
+
+  std::string FuncName = (Op == AtomicRMWInst::UIncWrap)
+                             ? "__translate_spirv_atomic_uinc_wrap"
+                             : "__translate_spirv_atomic_udec_wrap";
+
+  Type *ValTy = I.getValOperand()->getType();
+  Type *PtrTy = I.getPointerOperand()->getType();
+  // Encode the address space and the value type in the name, the same way
+  // lowerLLVMIntrinsicName() does for spirv.llvm_memset_p1_i64. A module may
+  // need several mutually incompatible signatures, while SPIR-V resolves an
+  // imported function by its linkage name alone.
+  FuncName += "_p" + std::to_string(AS) + "_i" +
+              std::to_string(ValTy->getIntegerBitWidth());
+
+  Type *Int32Ty = B.getInt32Ty();
+  SmallVector<Type *, 4> ArgTys = {PtrTy, Int32Ty, Int32Ty, ValTy};
+  FunctionType *FT = FunctionType::get(ValTy, ArgTys, false);
+  FunctionCallee FC = M->getOrInsertFunction(FuncName, FT);
+  if (auto *F = dyn_cast<Function>(FC.getCallee()))
+    F->setCallingConv(CallingConv::SPIR_FUNC);
+
+  SmallVector<Value *, 4> Args = {I.getPointerOperand(), B.getInt32(Scope),
+                                  B.getInt32(MemSem), I.getValOperand()};
+  CallInst *CI = B.CreateCall(FC, Args);
+  CI->setCallingConv(CallingConv::SPIR_FUNC);
+
+  replaceAllUsesWithAndErase(B, &I, CI);
+  return CI;
 }
 
 static bool isAbortCall(const Instruction &I, const SPIRVSubtarget &ST) {
