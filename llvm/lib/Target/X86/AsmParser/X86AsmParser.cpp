@@ -461,6 +461,17 @@ private:
     SMLoc OffsetOperatorLoc;
     AsmTypeInfo CurType;
 
+    // Registers are tracked as base, index and scale rather than through the
+    // infix calculator, so a register inside parentheses that the parentheses
+    // are then scaled by loses the scale entirely. Track enough to reject
+    // those forms instead of assembling something the user did not write.
+    SmallVector<bool, 4> ParenHasReg;
+    // Did the parenthesised group that just closed contain a register?
+    bool ClosedParenHadReg = false;
+    // Depth of the innermost group that is itself an operand of * / or %,
+    // counting from one. Zero when no enclosing group is one.
+    unsigned MulParenDepth = 0;
+
     bool setSymRef(const MCExpr *Val, StringRef ID, StringRef &ErrMsg) {
       if (Sym) {
         ErrMsg = "cannot use more than one symbol in memory operand";
@@ -812,6 +823,12 @@ private:
     }
     bool onRegister(MCRegister Reg, StringRef &ErrMsg) {
       IntelExprState CurrState = State;
+      if (MulParenDepth) {
+        ErrMsg = "cannot multiply a subexpression containing a register";
+        return true;
+      }
+      if (!ParenHasReg.empty())
+        ParenHasReg.back() = true;
       switch (State) {
       default:
         State = IES_ERROR;
@@ -945,7 +962,11 @@ private:
       PrevState = CurrState;
       return false;
     }
-    void onStar() {
+    bool onStar(StringRef &ErrMsg) {
+      if (State == IES_RPAREN && ClosedParenHadReg) {
+        ErrMsg = "cannot multiply a subexpression containing a register";
+        return true;
+      }
       PrevState = State;
       switch (State) {
       default:
@@ -958,8 +979,13 @@ private:
         IC.pushOperator(IC_MULTIPLY);
         break;
       }
+      return false;
     }
-    void onDivide() {
+    bool onDivide(StringRef &ErrMsg) {
+      if (State == IES_RPAREN && ClosedParenHadReg) {
+        ErrMsg = "cannot divide a subexpression containing a register";
+        return true;
+      }
       PrevState = State;
       switch (State) {
       default:
@@ -971,8 +997,14 @@ private:
         IC.pushOperator(IC_DIVIDE);
         break;
       }
+      return false;
     }
-    void onMod() {
+    bool onMod(StringRef &ErrMsg) {
+      if (State == IES_RPAREN && ClosedParenHadReg) {
+        ErrMsg = "cannot take the remainder of a subexpression containing a "
+                 "register";
+        return true;
+      }
       PrevState = State;
       switch (State) {
       default:
@@ -984,6 +1016,7 @@ private:
         IC.pushOperator(IC_MOD);
         break;
       }
+      return false;
     }
     bool onLBrac() {
       if (BracCount)
@@ -1050,8 +1083,19 @@ private:
       PrevState = CurrState;
       return false;
     }
-    void onLParen() {
+    bool onLParen(StringRef &ErrMsg) {
       IntelExprState CurrState = State;
+      // A register can only be scaled by an immediate, so "reg * (...)" has
+      // nowhere to put the result.
+      if ((State == IES_MULTIPLY || State == IES_DIVIDE || State == IES_MOD) &&
+          PrevState == IES_REGISTER) {
+        ErrMsg = "scale must be an immediate";
+        return true;
+      }
+      if ((State == IES_MULTIPLY || State == IES_DIVIDE || State == IES_MOD) &&
+          !MulParenDepth)
+        MulParenDepth = ParenHasReg.size() + 1;
+      ParenHasReg.push_back(false);
       switch (State) {
       default:
         State = IES_ERROR;
@@ -1081,9 +1125,17 @@ private:
         break;
       }
       PrevState = CurrState;
+      return false;
     }
     bool onRParen(StringRef &ErrMsg) {
       IntelExprState CurrState = State;
+      if (!ParenHasReg.empty()) {
+        ClosedParenHadReg = ParenHasReg.pop_back_val();
+        if (ClosedParenHadReg && !ParenHasReg.empty())
+          ParenHasReg.back() = true;
+      }
+      if (MulParenDepth > ParenHasReg.size())
+        MulParenDepth = 0;
       switch (State) {
       default:
         State = IES_ERROR;
@@ -1896,7 +1948,11 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
   } else if (Name.equals_insensitive("and")) {
     SM.onAnd();
   } else if (Name.equals_insensitive("mod")) {
-    SM.onMod();
+    StringRef ErrMsg;
+    if (SM.onMod(ErrMsg)) {
+      ParseError = Error(getTok().getLoc(), ErrMsg);
+      return true;
+    }
   } else if (Name.equals_insensitive("offset")) {
     SMLoc OffsetLoc = getTok().getLoc();
     const MCExpr *Val = nullptr;
@@ -2219,9 +2275,18 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         return Error(SM.getErrorLoc(getTok().getLoc()), ErrMsg);
       break;
     case AsmToken::Tilde:   SM.onNot(); break;
-    case AsmToken::Star:    SM.onStar(); break;
-    case AsmToken::Slash:   SM.onDivide(); break;
-    case AsmToken::Percent: SM.onMod(); break;
+    case AsmToken::Star:
+      if (SM.onStar(ErrMsg))
+        return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);
+      break;
+    case AsmToken::Slash:
+      if (SM.onDivide(ErrMsg))
+        return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);
+      break;
+    case AsmToken::Percent:
+      if (SM.onMod(ErrMsg))
+        return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);
+      break;
     case AsmToken::Pipe:    SM.onOr(); break;
     case AsmToken::Caret:   SM.onXor(); break;
     case AsmToken::Amp:     SM.onAnd(); break;
@@ -2239,7 +2304,10 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);
       }
       break;
-    case AsmToken::LParen:  SM.onLParen(); break;
+    case AsmToken::LParen:
+      if (SM.onLParen(ErrMsg))
+        return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);
+      break;
     case AsmToken::RParen:
       if (SM.onRParen(ErrMsg)) {
         return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);

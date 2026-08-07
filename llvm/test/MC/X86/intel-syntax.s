@@ -919,3 +919,19 @@ lea eax, [esp+eax]
 vpgatherdq ymm0, [rdi+xmm1], ymm2
 // CHECK: vpgatherdq      %ymm2, (%rdi,%xmm1), %ymm0
 vpgatherdq ymm0, [xmm1+rdi], ymm2
+
+// Parentheses around a register are fine as long as the group itself is not
+// scaled, including when the scale sits inside the parentheses.
+
+// CHECK: leaq (%rax), %rdi
+    lea rdi, [(rax)]
+// CHECK: leaq 4(%rax), %rdi
+    lea rdi, [(rax + 4)]
+// CHECK: leaq (%rax,%rdi), %rdi
+    lea rdi, [(rax + rdi)]
+// CHECK: leaq (%rax,%rdi,4), %rdi
+    lea rdi, [rax + (rdi*4)]
+// CHECK: leaq 3(,%rax,4), %rdi
+    lea rdi, [rax*4 + (1+2)]
+// CHECK: leaq 3(,%rax,4), %rdi
+    lea rdi, [(1+2) + rax*4]

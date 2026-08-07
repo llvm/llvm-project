@@ -29,3 +29,28 @@
 // CHECK-NEXT:     lea rax, [rax - rdx]
 // CHECK-NEXT:                   ^
     lea rax, [rax - rdx]
+
+// Registers are tracked separately from the expression evaluator, so scaling a
+// parenthesised group holding one used to drop the scale silently rather than
+// reject the expression.
+
+// CHECK: [[#@LINE+3]]:27: error: cannot multiply a subexpression containing a register
+// CHECK-NEXT:     lea rax, [(rdi + rdx) * 4]
+// CHECK-NEXT:                           ^
+    lea rax, [(rdi + rdx) * 4]
+// CHECK: [[#@LINE+3]]:20: error: cannot multiply a subexpression containing a register
+// CHECK-NEXT:     lea rax, [4 * (rdi + rdx)]
+// CHECK-NEXT:                    ^
+    lea rax, [4 * (rdi + rdx)]
+// CHECK: [[#@LINE+3]]:21: error: cannot multiply a subexpression containing a register
+// CHECK-NEXT:     lea rax, [(rdi) * 4]
+// CHECK-NEXT:                     ^
+    lea rax, [(rdi) * 4]
+// CHECK: [[#@LINE+3]]:21: error: scale must be an immediate
+// CHECK-NEXT:     lea rax, [rdi * (1 + 1)]
+// CHECK-NEXT:                     ^
+    lea rax, [rdi * (1 + 1)]
+// CHECK: [[#@LINE+3]]:25: error: cannot divide a subexpression containing a register
+// CHECK-NEXT:     lea rax, [(4 * rdi) / 2]
+// CHECK-NEXT:                         ^
+    lea rax, [(4 * rdi) / 2]
