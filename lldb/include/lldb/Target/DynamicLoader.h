@@ -330,8 +330,7 @@ public:
   /// called for one binary at a time.  Call it over the batch in the order the
   /// batch was built in: that order decides the Target's module order, which
   /// binary gets to set the Target's architecture, and the order in which
-  /// messages reach the user.  LocateBinaries preserves it, whatever order the
-  /// searches themselves happen to run or finish in.
+  /// messages reach the user.
   ///
   /// Whether a failure is worth telling the user about is left to the caller,
   /// which knows whether it went looking for a binary that has to be there.  A
