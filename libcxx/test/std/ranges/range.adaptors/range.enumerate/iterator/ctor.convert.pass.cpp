@@ -57,15 +57,8 @@ struct TestIt {
     std::array array{0, 84, 2, 3, 4};
     auto view = make_enumerate_view(array.begin(), array.end());
     {
-      std::same_as<EnumerateIterator> decltype(auto) it     = view.begin();
-      std::same_as<const Iterator&> decltype(auto) itResult = it.base();
-      assert(base(base(itResult)) == std::to_address(base(array.begin())));
-
-      auto [index, value] = *(++it);
-      assert(index == 1);
-      assert(value == 84);
-    }
-    {
+      // Assigning a non-const iterator to a const-iterator-typed variable invokes
+      // the converting constructor.
       std::same_as<EnumerateConstIterator> decltype(auto) it = view.begin();
       std::same_as<const Iterator&> decltype(auto) itResult  = it.base();
       assert(base(base(itResult)) == std::to_address(base(array.begin())));
@@ -77,8 +70,7 @@ struct TestIt {
   }
 };
 
-constexpr bool
-test() {
+constexpr bool test() {
   using Iterators =
       types::type_list< cpp17_input_iterator<int*>,
                         cpp20_input_iterator<int*>,
@@ -97,7 +89,7 @@ test() {
     std::ranges::iterator_t<const decltype(v)> iter2 = iter1;
     assert(iter1 == iter2);
 
-    static_assert(!std::is_same_v<decltype(iter1), decltype(iter2)>);
+    static_assert(!std::same_as<decltype(iter1), decltype(iter2)>);
 
     // We cannot create a non-const iterator from a const iterator.
     static_assert(!std::constructible_from<decltype(iter1), decltype(iter2)>);
@@ -108,7 +100,7 @@ test() {
     auto iter1 = v.begin();
     auto iter2 = std::as_const(v).begin();
 
-    static_assert(!std::is_same_v<decltype(iter1), decltype(iter2)>);
+    static_assert(!std::same_as<decltype(iter1), decltype(iter2)>);
     static_assert(!std::constructible_from<decltype(iter1), decltype(iter2)>);
     static_assert(!std::constructible_from<decltype(iter2), decltype(iter1)>);
   }
