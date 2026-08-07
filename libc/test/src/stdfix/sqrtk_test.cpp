@@ -1,4 +1,4 @@
-//===-- Unittests for sqrtulr ---------------------------------------------===//
+//===-- Unittests for sqrtk -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,6 @@
 
 #include "SqrtTest.h"
 
-#include "src/stdfix/sqrtulr.h"
+#include "src/stdfix/sqrtk.h"
 
-LIST_SQRT_TESTS(unsigned long fract, unsigned long fract,
-                LIBC_NAMESPACE::sqrtulr);
+LIST_SQRT_TESTS(unsigned accum, accum, LIBC_NAMESPACE::sqrtk);
