@@ -1190,6 +1190,19 @@ std::string Triple::normalize(StringRef Str, CanonicalForm Form) {
   SmallVector<StringRef, 4> Components;
   Str.split(Components, '-');
 
+  // GNU/Hurd's config.guess output predates LLVM's canonical Hurd triple and
+  // uses the three-component forms *-unknown-gnu and *-pc-gnu.  Keep this
+  // special case narrow so triples such as x86_64-unknown-linux-gnu retain
+  // their normal interpretation.
+  bool IsGNUHurd = false;
+  if (Components.size() == 3 &&
+      (Components[1] == "unknown" || Components[1] == "pc") &&
+      Components[2].starts_with("gnu")) {
+    StringRef Version = Components[2].drop_front(strlen("gnu"));
+    IsGNUHurd = Version.empty() ||
+                Version.find_first_not_of("0123456789.") == StringRef::npos;
+  }
+
   // If the first component corresponds to a known architecture, preferentially
   // use it for the architecture.  If the second component corresponds to a
   // known vendor, preferentially use it for the vendor, etc.  This avoids silly
@@ -1326,6 +1339,12 @@ std::string Triple::normalize(StringRef Str, CanonicalForm Form) {
   if (Found[0] && !Found[1] && !Found[2] && Found[3] &&
       Components[1] == "none" && Components[2].empty())
     std::swap(Components[1], Components[2]);
+
+  if (IsGNUHurd) {
+    Components.resize(4);
+    Components[2] = "hurd";
+    OS = Triple::Hurd;
+  }
 
   // Replace empty components with "unknown" value.
   for (StringRef &C : Components)
