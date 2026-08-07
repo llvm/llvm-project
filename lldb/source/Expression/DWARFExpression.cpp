@@ -1457,11 +1457,6 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
     } break;
 
-    case DW_OP_xderef_size:
-      return llvm::createStringError("unimplemented opcode: DW_OP_xderef_size");
-    case DW_OP_xderef:
-      return llvm::createStringError("unimplemented opcode: DW_OP_xderef");
-
     case DW_OP_const1u:
       stack.push_back(to_generic(op->getRawOperand(0)));
       break;
@@ -1724,7 +1719,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() == tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() == tmp.GetScalar());
       break;
 
     case DW_OP_ge:
@@ -1734,7 +1730,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() >= tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() >= tmp.GetScalar());
       break;
 
     case DW_OP_gt:
@@ -1744,7 +1741,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() > tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() > tmp.GetScalar());
       break;
 
     case DW_OP_le:
@@ -1754,7 +1752,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() <= tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() <= tmp.GetScalar());
       break;
 
     case DW_OP_lt:
@@ -1764,7 +1763,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() < tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() < tmp.GetScalar());
       break;
 
     case DW_OP_ne:
@@ -1774,7 +1774,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
-      stack.back().GetScalar() = stack.back().GetScalar() != tmp.GetScalar();
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar() != tmp.GetScalar());
       break;
 
     case DW_OP_lit0:
@@ -2009,11 +2010,6 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       }
       break;
 
-    case DW_OP_call2:
-      return llvm::createStringError("unimplemented opcode DW_OP_call2");
-    case DW_OP_call4:
-      return llvm::createStringError("unimplemented opcode DW_OP_call4");
-
     case DW_OP_stack_value:
       eval_ctx.loc_desc_kind = Implicit;
       stack.back().SetValueType(Value::ValueType::Scalar);
@@ -2085,6 +2081,22 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       op = op.skipBytes(block_size);
       continue;
     }
+
+    // These opcodes are decoded but not evaluated here.
+    case DW_OP_xderef:
+    case DW_OP_xderef_size:
+    case DW_OP_call2:
+    case DW_OP_call4:
+    case DW_OP_call_ref:
+    case DW_OP_constx:
+    case DW_OP_const_type:
+    case DW_OP_regval_type:
+    case DW_OP_deref_type:
+    case DW_OP_xderef_type:
+    case DW_OP_reinterpret:
+    case DW_OP_GNU_implicit_pointer:
+      return llvm::createStringError("unimplemented opcode %s",
+                                     DW_OP_value_to_name(opcode));
 
     default:
       if (eval_ctx.dwarf_cu) {

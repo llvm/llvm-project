@@ -86,7 +86,7 @@ class Proc<FeatureSM SM>
 
 foreach sm = [20, 21, 30, 32, 35, 37, 50, 52, 53, 60,
               61, 62, 70, 72, 75, 80, 86, 87, 88, 89,
-              90, 100, 101, 103, 110, 120, 121] in {
+              90, 100, 101, 103, 107, 110, 120, 121] in {
   // Base SM version (e.g. FullSMVersion for sm_100 is 1000)
   def SM#sm : FeatureSM<""#sm, !mul(sm, 10)>;
   def : Proc<!cast<FeatureSM>("SM"#sm)>;
@@ -106,7 +106,7 @@ foreach sm = [20, 21, 30, 32, 35, 37, 50, 52, 53, 60,
 
 foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 62, 63, 64, 65, 70, 71, 72,
                    73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88,
-                   90, 91, 92, 93] in
+                   90, 91, 92, 93, 94] in
   def PTX#version : FeaturePTX<version>;
 
 def Is64Bit : Predicate<"Subtarget->getTargetTriple().getArch() == Triple::nvptx64">;

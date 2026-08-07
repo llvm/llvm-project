@@ -249,15 +249,29 @@ static SmallVector<GPUParallelDimAttr> getAncestorParDims(Operation *op) {
   ComputeRegionOp computeRegion = op->getParentOfType<ComputeRegionOp>();
   assert(computeRegion && "missing enclosing acc.compute_region");
   scf::ParallelOp parentLoop = op->getParentOfType<scf::ParallelOp>();
+  // True while parentLoop is the innermost parallel ancestor of op.
+  bool isInnermostParallelParent = true;
   while (parentLoop) {
-    if (GPUParallelDimsAttr parDimsAttr = getParDimsAttr(parentLoop))
-      for (GPUParallelDimAttr parDim : parDimsAttr.getArray())
+    bool hasNonSeqParDim = false;
+    if (GPUParallelDimsAttr parDimsAttr = getParDimsAttr(parentLoop)) {
+      for (GPUParallelDimAttr parDim : parDimsAttr.getArray()) {
         insertParDim(parDimsArray, parDim);
-    // A block-redundant loop executes on every block, so its enclosing block
-    // dimensions are active ancestors that must not be predicated away.
-    if (hasGPUBlockRedundantAttr(parentLoop))
+        if (!parDim.isSeq())
+          hasNonSeqParDim = true;
+      }
+    }
+    // Include launch dims for a block-redundant ancestor when:
+    // - it is itself worksharing (e.g. vector + gpu_block_redundant), or
+    // - it is the innermost parallel parent (sequential remnant after
+    //   partition-kernel-loops), so the body is not predicated on blockIdx.
+    // Do not include them for an outer sequential block-redundant wrapper
+    // around nested gang/worker/vector worksharing: that widens gang-private
+    // storage to per-thread.
+    if (hasGPUBlockRedundantAttr(parentLoop) &&
+        (hasNonSeqParDim || isInnermostParallelParent))
       for (GPUParallelDimAttr parDim : computeRegion.getLaunchParDims())
         insertParDim(parDimsArray, parDim);
+    isInnermostParallelParent = false;
     parentLoop = parentLoop->getParentOfType<scf::ParallelOp>();
   }
 
@@ -362,6 +376,25 @@ static Value castPointerLikeTypeIfNeeded(OpBuilder &builder, Location loc,
   emitError(loc) << "unsupported pointer-like type cast from "
                  << value.getType() << " to " << resultType;
   return value;
+}
+
+/// Walks back from a memref use to its defining `acc.private_local`, if any,
+/// looking through view/cast ops.
+static acc::PrivateLocalOp getPrivateLocalForMemref(Value memref);
+
+/// Returns the dimensions that own \p privateLocal.
+static GPUParallelDimsAttr
+getPrivateParDims(acc::PrivateLocalOp privateLocal,
+                  acc::ComputeRegionOp computeRegion);
+
+/// True when the storage backing \p privateLocal is thread_x-private. An
+/// unknown scope conservatively counts as per-thread.
+static bool storageHasThreadX(acc::PrivateLocalOp privateLocal,
+                              acc::ComputeRegionOp computeRegion) {
+  GPUParallelDimsAttr dims = getPrivateParDims(privateLocal, computeRegion);
+  return !dims || llvm::any_of(dims.getArray(), [](GPUParallelDimAttr d) {
+    return d.isThreadX();
+  });
 }
 
 /// Returns the sole user of \p v, or null if it has zero or multiple uses.
@@ -523,7 +556,8 @@ private:
   void createGPUAllReduceOp(Location loc, Value input, Value memref,
                             arith::AtomicRMWKind kind,
                             mlir::acc::GPUParallelDimsAttr parDimsAttr,
-                            ValueRange indices = {});
+                            ValueRange indices = {},
+                            bool isPerThreadPrivateTarget = false);
 
   /// Finish lowering a deferred `acc.reduction_accumulate`.
   void postprocessAccumulateOp(acc::ReductionAccumulateOp op);
@@ -731,24 +765,38 @@ static acc::ReductionAccumulateArrayOp perThreadArrayReductionAccum(Value v) {
 static void initPerThreadArrayAccum(OpBuilder &b, Location loc, Value alloca,
                                     MemRefType baseTy,
                                     arith::AtomicRMWKind kind) {
-  assert(baseTy.getRank() == 1 && baseTy.hasStaticShape() &&
-         "per-thread array reduction accumulator must be static rank-1");
+  assert(baseTy.getRank() > 0 && baseTy.hasStaticShape() &&
+         "per-thread array reduction accumulator must be static ranked");
   Value ident = createIdentityValue(b, loc, baseTy.getElementType(), kind,
                                     /*useOnlyFiniteValue=*/true);
   Value lb = arith::ConstantIndexOp::create(b, loc, 0);
-  Value ub = arith::ConstantIndexOp::create(b, loc, baseTy.getShape()[0]);
   Value step = arith::ConstantIndexOp::create(b, loc, 1);
-  auto forOp = scf::ForOp::create(b, loc, lb, ub, step);
-  OpBuilder::InsertionGuard g(b);
-  b.setInsertionPoint(forOp.getBody()->getTerminator());
-  memref::StoreOp::create(b, loc, ident, alloca, forOp.getInductionVar());
+  SmallVector<Value> indices;
+  auto buildLoopNest = [&](auto &&self, unsigned dim) -> void {
+    if (dim == baseTy.getRank()) {
+      memref::StoreOp::create(b, loc, ident, alloca, indices);
+      return;
+    }
+
+    Value ub = arith::ConstantIndexOp::create(b, loc, baseTy.getShape()[dim]);
+    auto forOp = scf::ForOp::create(b, loc, lb, ub, step);
+    OpBuilder::InsertionGuard g(b);
+    b.setInsertionPoint(forOp.getBody()->getTerminator());
+    indices.push_back(forOp.getInductionVar());
+    self(self, dim + 1);
+    indices.pop_back();
+  };
+  buildLoopNest(buildLoopNest, 0);
 }
 
 std::optional<int64_t>
 ACCCGToGPULowering::isEligibleForSharedMemory(acc::PrivateLocalOp privateLocal,
                                               MemRefType baseTy) {
-  // Cross-thread array reduction accumulators must stay per-thread.
-  if (perThreadArrayReductionAccum(privateLocal.getResult()))
+  // Cross-thread array reduction accumulators must stay per-thread when their
+  // storage scope includes thread_x. Gang-/worker-scoped array temps remain
+  // eligible for shared memory.
+  if (perThreadArrayReductionAccum(privateLocal.getResult()) &&
+      storageHasThreadX(privateLocal, computeRegion))
     return std::nullopt;
   ModuleOp module = computeRegion->getParentOfType<ModuleOp>();
   FailureOr<bool> isCandidate = isPrivateLocalSharedMemoryCandidate(
@@ -1002,12 +1050,16 @@ LogicalResult ACCCGToGPULowering::rewrite() {
     // - Subgroup reductions (gpu.all_reduce) require full subgroups
     // - Per-row workgroup barriers require blockDim.x aligned to subgroupSize
     bool isShuffleEnabled = false;
+    bool alignThreadXReduction =
+        getConstantIntValue(launch.getBlockSizeY()) != 1 ||
+        getConstantIntValue(launch.getBlockSizeZ()) != 1;
 
     launch.walk([&](gpu::AllReduceOp allReduce) -> WalkResult {
       ArrayRef<mlir::acc::GPUParallelDimAttr> parDims =
           mlir::acc::getParDimsAttr(allReduce).getArray();
       for (auto parDim : parDims) {
-        if (parDim.isThreadX() || parDim.isThreadY()) {
+        if (parDim.isThreadY() ||
+            (alignThreadXReduction && parDim.isThreadX())) {
           // Shuffle are enabled. Need to adjust the ThreadX length.
           isShuffleEnabled = true;
           return WalkResult::interrupt();
@@ -1025,7 +1077,8 @@ LogicalResult ACCCGToGPULowering::rewrite() {
             ArrayRef<mlir::acc::GPUParallelDimAttr> parDims =
                 mlir::acc::getParDimsAttr(allReduce).getArray();
             for (auto parDim : parDims) {
-              if (parDim.isThreadX() || parDim.isThreadY()) {
+              if (parDim.isThreadY() ||
+                  (alignThreadXReduction && parDim.isThreadX())) {
                 isShuffleEnabled = true;
                 return WalkResult::interrupt();
               }
@@ -1043,6 +1096,7 @@ LogicalResult ACCCGToGPULowering::rewrite() {
 
       Value curBlockDimX = launch.getBlockSizeX();
       Value curBlockDimY = launch.getBlockSizeY();
+      Value curBlockDimZ = launch.getBlockSizeZ();
 
       // Emit a report on changing parallelism.
       accSupport.emitRemark(computeRegion, [&]() {
@@ -1069,38 +1123,47 @@ LogicalResult ACCCGToGPULowering::rewrite() {
 
       std::optional<int64_t> constBlockDimX = getConstantIntValue(curBlockDimX);
       std::optional<int64_t> constBlockDimY = getConstantIntValue(curBlockDimY);
+      std::optional<int64_t> constBlockDimZ = getConstantIntValue(curBlockDimZ);
 
       // Skip subgroup alignment only when the total thread count is already
       // below a subgroup (constant blockDim.x in 2..subgroupSize-1 and
-      // constant blockDim.y == 1). If blockDim.y > 1 or is unknown, padding
-      // blockDim.x to a subgroup is still required so subgroups don't cross
-      // row boundaries for row-local shuffle/ThreadY-barrier reductions.
+      // constant blockDim.y/z == 1). If blockDim.y/z > 1 or is unknown,
+      // padding blockDim.x to a subgroup is still required so subgroups don't
+      // cross row boundaries for row-local shuffle/ThreadY-barrier reductions.
       bool skipAlign = false;
-      if (constBlockDimX && constBlockDimY && *constBlockDimX > 1 &&
-          *constBlockDimX < subgroupSize && *constBlockDimY == 1) {
+      if (constBlockDimX && constBlockDimY && constBlockDimZ &&
+          *constBlockDimX > 1 && *constBlockDimX < subgroupSize &&
+          *constBlockDimY == 1 && *constBlockDimZ == 1) {
         skipAlign = true;
       }
 
-      // Update both the ThreadX length and the number of ThreadY.
-      // When the original blockDim.x and blockDim.y are compile-time
+      // Update the ThreadX length and the numbers of ThreadY and ThreadZ.
+      // When the original block dimensions are compile-time
       // constants, compute the adjusted dimensions as constants directly so
       // that the GpuKernelOutliningPass can set `known_block_size` on the
       // outlined gpu.func.
-      Value newBlockDimX, newBlockDimY;
-      if (constBlockDimX && constBlockDimY) {
+      Value newBlockDimX, newBlockDimY, newBlockDimZ;
+      if (constBlockDimX && constBlockDimY && constBlockDimZ) {
         int64_t bdx = *constBlockDimX;
         int64_t bdy = *constBlockDimY;
+        int64_t bdz = *constBlockDimZ;
         int64_t alignedBdx =
             ((bdx + subgroupAlignMask) / subgroupSize) * subgroupSize;
-        int64_t numThreads = bdx * bdy;
-        int64_t newBdy = std::max<int64_t>(1, numThreads / alignedBdx);
+        int64_t numXYThreads = bdx * bdy;
+        int64_t numThreads = numXYThreads * bdz;
+        int64_t newBdy = std::max<int64_t>(1, numXYThreads / alignedBdx);
+        int64_t newBdz =
+            std::max<int64_t>(1, numThreads / (alignedBdx * newBdy));
         newBlockDimX =
             arith::ConstantIndexOp::create(rewriter, loc, alignedBdx);
         newBlockDimY = arith::ConstantIndexOp::create(rewriter, loc, newBdy);
+        newBlockDimZ = arith::ConstantIndexOp::create(rewriter, loc, newBdz);
       } else {
-        // numThreads = blockDim.x * blockDim.y
-        Value numThreads =
+        // numXYThreads = blockDim.x * blockDim.y
+        Value numXYThreads =
             arith::MulIOp::create(rewriter, loc, curBlockDimX, curBlockDimY);
+        Value numThreads =
+            arith::MulIOp::create(rewriter, loc, numXYThreads, curBlockDimZ);
         // blockDim.x = ((blockDim.x + mask) / subgroupSize) * subgroupSize
         Value cstMask =
             arith::ConstantIndexOp::create(rewriter, loc, subgroupAlignMask);
@@ -1112,16 +1175,23 @@ LogicalResult ACCCGToGPULowering::rewrite() {
             arith::DivUIOp::create(rewriter, loc, padded, cstSubgroupSize);
         newBlockDimX = arith::MulIOp::create(rewriter, loc, subgroupsRequired,
                                              cstSubgroupSize);
-        // blockDim.y = max(1, numThreads / blockDim.x)
+        // blockDim.y = max(1, numXYThreads / blockDim.x)
         Value quotient =
-            arith::DivUIOp::create(rewriter, loc, numThreads, newBlockDimX);
+            arith::DivUIOp::create(rewriter, loc, numXYThreads, newBlockDimX);
         Value cst1 = arith::ConstantIndexOp::create(rewriter, loc, 1);
         newBlockDimY = arith::MaxUIOp::create(rewriter, loc, cst1, quotient);
+        // blockDim.z = max(1, numThreads / (blockDim.x * blockDim.y))
+        Value newNumXYThreads =
+            arith::MulIOp::create(rewriter, loc, newBlockDimX, newBlockDimY);
+        quotient =
+            arith::DivUIOp::create(rewriter, loc, numThreads, newNumXYThreads);
+        newBlockDimZ = arith::MaxUIOp::create(rewriter, loc, cst1, quotient);
       }
 
       if (!skipAlign) {
         launch.getBlockSizeXMutable().assign(newBlockDimX);
         launch.getBlockSizeYMutable().assign(newBlockDimY);
+        launch.getBlockSizeZMutable().assign(newBlockDimZ);
       }
     }
   }
@@ -1171,6 +1241,170 @@ static bool isRedundantChainAccumulate(acc::ReductionAccumulateOp op) {
     }
   }
   return false;
+}
+
+static GPUParallelDimsAttr
+getPrivateParDims(acc::PrivateLocalOp privateLocal,
+                  acc::ComputeRegionOp computeRegion) {
+  if (GPUParallelDimsAttr parDims = acc::getParDimsAttr(privateLocal))
+    return parDims;
+  if (acc::PrivatizeOp privatize = getPrivatizeOp(privateLocal, computeRegion))
+    return privatize.getParDimsAttr();
+  return {};
+}
+
+/// True when \p privateLocal has one private slot per ThreadY row.
+static bool isThreadYPrivate(acc::PrivateLocalOp privateLocal, bool allowBlock,
+                             acc::ComputeRegionOp computeRegion) {
+  if (!privateLocal)
+    return false;
+  GPUParallelDimsAttr parDims = getPrivateParDims(privateLocal, computeRegion);
+  if (!parDims)
+    return false;
+  return llvm::any_of(parDims.getArray(),
+                      [](auto dim) { return dim.isThreadY(); }) &&
+         llvm::all_of(parDims.getArray(), [=](auto dim) {
+           return dim.isThreadY() || (allowBlock && dim.isAnyBlock());
+         });
+}
+
+struct ThreadYBroadeningInfo {
+  bool hasActiveWorkerCombine = false;
+  bool hasExplicitInactiveCombine = false;
+  bool hasBroadeningConflict = false;
+  Operation *diagnosticOp = nullptr;
+
+  void merge(const ThreadYBroadeningInfo &other) {
+    hasActiveWorkerCombine |= other.hasActiveWorkerCombine;
+    hasExplicitInactiveCombine |= other.hasExplicitInactiveCombine;
+    hasBroadeningConflict |= other.hasBroadeningConflict;
+    if (!diagnosticOp)
+      diagnosticOp = other.diagnosticOp;
+  }
+};
+
+/// True when executing \p op on additional ThreadY rows may change behavior.
+static bool hasUnsafeEffectsWhenBroadening(Operation *op) {
+  if (auto effectOp = dyn_cast<MemoryEffectOpInterface>(op)) {
+    SmallVector<MemoryEffects::EffectInstance> effects;
+    effectOp.getEffects(effects);
+    return llvm::any_of(effects, [](const auto &effect) {
+      return !isa<MemoryEffects::Read>(effect.getEffect());
+    });
+  }
+  return !op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
+}
+
+/// True when \p accumulator is the destination of a separate block-scoped
+/// combine, so it holds a distinct per-worker partial rather than a broadcast.
+static bool isFedByInnerBlockCombine(acc::PrivateLocalOp accumulator,
+                                     Operation *selfCombine) {
+  if (!accumulator)
+    return false;
+  for (Operation *user : accumulator.getResult().getUsers()) {
+    if (user == selfCombine)
+      continue;
+    auto combineOp = dyn_cast<acc::ReductionCombineOp>(user);
+    if (!combineOp ||
+        unwrapMemRefConversion(combineOp.getDestMemref()).getDefiningOp() !=
+            accumulator.getOperation())
+      continue;
+    SmallVector<mlir::acc::GPUParallelDimAttr> parDims =
+        getReductionCombineParDims(combineOp);
+    if (llvm::any_of(parDims, [](mlir::acc::GPUParallelDimAttr d) {
+          return d.isAnyBlock();
+        }))
+      return true;
+  }
+  return false;
+}
+
+/// Records whether \p combineOp requires ThreadY to remain active.
+static void classifyThreadYCombine(ThreadYBroadeningInfo &info,
+                                   Operation *combineOp, Value src, Value dest,
+                                   ArrayRef<GPUParallelDimAttr> parDims,
+                                   acc::ComputeRegionOp computeRegion) {
+  bool hasThreadY = llvm::any_of(
+      parDims, [](GPUParallelDimAttr parDim) { return parDim.isThreadY(); });
+  bool hasBlock = llvm::any_of(
+      parDims, [](GPUParallelDimAttr parDim) { return parDim.isAnyBlock(); });
+  acc::PrivateLocalOp srcPrivate =
+      unwrapMemRefConversion(src).getDefiningOp<acc::PrivateLocalOp>();
+  acc::PrivateLocalOp destPrivate =
+      unwrapMemRefConversion(dest).getDefiningOp<acc::PrivateLocalOp>();
+  bool hasPrivateDest = isa<acc::ReductionCombineOp>(combineOp) && srcPrivate &&
+                        destPrivate &&
+                        getPrivatizeOp(srcPrivate, computeRegion) !=
+                            getPrivatizeOp(destPrivate, computeRegion);
+  if (hasThreadY && hasBlock &&
+      isThreadYPrivate(srcPrivate, hasPrivateDest, computeRegion)) {
+    info.hasActiveWorkerCombine = true;
+    return;
+  }
+
+  // A block_y+thread_y accumulator fed by an inner block-scoped combine holds
+  // a distinct partial per worker row, so its combine runs on every row; a
+  // plain worker accumulate broadcasts via all_reduce and stays row-zero.
+  if (hasThreadY && hasBlock &&
+      isThreadYPrivate(srcPrivate, /*allowBlock=*/true, computeRegion) &&
+      isFedByInnerBlockCombine(srcPrivate, combineOp)) {
+    info.hasActiveWorkerCombine = true;
+    return;
+  }
+
+  info.hasExplicitInactiveCombine = true;
+  if (!info.diagnosticOp)
+    info.diagnosticOp = combineOp;
+}
+
+/// ThreadY must remain active for hierarchical combines over worker rows.
+/// Broadening is rejected when siblings require inactive ThreadY or have side
+/// effects; nested predicates enforce their own safety.
+static ThreadYBroadeningInfo
+analyzeThreadYBroadening(Block &predicateBlock,
+                         acc::ComputeRegionOp computeRegion) {
+  ThreadYBroadeningInfo info;
+  for (Operation &nestedOp : predicateBlock) {
+    if (acc::PredicateRegionOp nestedPredicate =
+            dyn_cast<acc::PredicateRegionOp>(nestedOp)) {
+      ThreadYBroadeningInfo nestedInfo = analyzeThreadYBroadening(
+          nestedPredicate.getRegion().front(), computeRegion);
+      info.hasActiveWorkerCombine |= nestedInfo.hasActiveWorkerCombine;
+      continue;
+    }
+    if (acc::ReductionCombineOp combineOp =
+            dyn_cast<acc::ReductionCombineOp>(nestedOp)) {
+      classifyThreadYCombine(
+          info, combineOp, combineOp.getSrcMemref(), combineOp.getDestMemref(),
+          getReductionCombineParDims(combineOp), computeRegion);
+      continue;
+    }
+    if (acc::ReductionCombineRegionOp combineRegionOp =
+            dyn_cast<acc::ReductionCombineRegionOp>(nestedOp)) {
+      classifyThreadYCombine(info, combineRegionOp, combineRegionOp.getSrcVar(),
+                             combineRegionOp.getDestVar(),
+                             getReductionCombineParDims(combineRegionOp),
+                             computeRegion);
+      continue;
+    }
+    if (nestedOp.getNumRegions() != 0) {
+      if (hasUnsafeEffectsWhenBroadening(&nestedOp)) {
+        info.hasBroadeningConflict = true;
+        if (!info.diagnosticOp)
+          info.diagnosticOp = &nestedOp;
+      }
+      for (Region &region : nestedOp.getRegions())
+        for (Block &nestedBlock : region)
+          info.merge(analyzeThreadYBroadening(nestedBlock, computeRegion));
+      continue;
+    }
+    if (hasUnsafeEffectsWhenBroadening(&nestedOp)) {
+      info.hasBroadeningConflict = true;
+      if (!info.diagnosticOp)
+        info.diagnosticOp = &nestedOp;
+    }
+  }
+  return info;
 }
 
 std::pair<SmallVector<mlir::acc::GPUParallelDimAttr>,
@@ -1236,6 +1470,22 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
         }
       }
     }
+    // A dynamically-shaped privatization is materialized as a strided view
+    // whose type does not reveal its parallel scope. Keep its own par_dims
+    // active so the view is materialized (and predicated) per owning
+    // thread/block. Statically-shaped privatizations are left to the stack-fit
+    // decision so only do this for dynamic shapes.
+    acc::PrivateType privTy =
+        cast<acc::PrivateType>(privateLocalOp.getPrivatized().getType());
+    MemRefType baseTy = getPrivateBaseMemRefType(
+        privTy.getBaseTy(), computeRegion->getParentOfType<ModuleOp>());
+    if (!baseTy.hasStaticShape()) {
+      GPUParallelDimsAttr ownParDims =
+          getPrivateParDims(privateLocalOp, computeRegion);
+      if (ownParDims)
+        for (GPUParallelDimAttr parDim : ownParDims.getArray())
+          mlir::acc::insertParDim(ancestorParDims, parDim);
+    }
   }
 
   bool hasBlock = false;
@@ -1246,19 +1496,35 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
   mlir::acc::GPUParallelDimAttr lowestParDim =
       mlir::acc::GPUParallelDimAttr::threadXDim(ctx);
   if (block) {
-    block->walk([&](Operation *op) {
-      // Check stores to acc.private_local - add the privatize's par_dims
-      // as active dims so predication is correct for per-worker/gang memory.
-      if (memref::StoreOp storeOp = dyn_cast<memref::StoreOp>(op)) {
-        if (auto privateLocalOp =
-                storeOp.getMemref().getDefiningOp<acc::PrivateLocalOp>()) {
-          acc::PrivatizeOp privatizeOp =
-              getPrivatizeOp(privateLocalOp, computeRegion);
-          if (mlir::acc::GPUParallelDimsAttr parDimsAttr =
-                  privatizeOp.getParDimsAttr()) {
+    ThreadYBroadeningInfo threadYInfo =
+        analyzeThreadYBroadening(*block, computeRegion);
+
+    auto applyCombineParDims =
+        [&](ArrayRef<mlir::acc::GPUParallelDimAttr> combineParDims) {
+          for (mlir::acc::GPUParallelDimAttr parDim : combineParDims)
+            mlir::acc::removeParDim(ancestorParDims, parDim);
+          return success();
+        };
+    block->walk([&](Operation *op) -> WalkResult {
+      // Writes to acc.private_local must keep the privatization's par_dims
+      // active so the write runs on all owning threads instead of being
+      // predicated to a single lane.
+      auto addPrivateStoreParDims = [&](Value target) {
+        if (auto privateLocalOp = getPrivateLocalForMemref(target)) {
+          GPUParallelDimsAttr parDimsAttr =
+              getPrivateParDims(privateLocalOp, computeRegion);
+          if (parDimsAttr)
             for (auto parDim : parDimsAttr.getArray())
               mlir::acc::insertParDim(ancestorParDims, parDim);
-          }
+        }
+      };
+      if (auto memEffects = dyn_cast<MemoryEffectOpInterface>(op)) {
+        SmallVector<MemoryEffects::EffectInstance> effects;
+        memEffects.getEffects(effects);
+        for (const MemoryEffects::EffectInstance &effect : effects) {
+          if (isa<MemoryEffects::Write>(effect.getEffect()) &&
+              effect.getValue())
+            addPrivateStoreParDims(effect.getValue());
         }
       }
       // Consider ACC routine calls; routine calls should be predicated up to
@@ -1277,17 +1543,15 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
       // kernel and loop in combined constructs.
       if (acc::ReductionCombineOp reductionCombineOp =
               dyn_cast<acc::ReductionCombineOp>(op)) {
-        for (mlir::acc::GPUParallelDimAttr parDim :
-             getReductionCombineParDims(reductionCombineOp)) {
-          mlir::acc::removeParDim(ancestorParDims, parDim);
-        }
+        if (failed(applyCombineParDims(
+                getReductionCombineParDims(reductionCombineOp))))
+          return WalkResult::interrupt();
       }
       if (acc::ReductionCombineRegionOp combineRegionOp =
               dyn_cast<acc::ReductionCombineRegionOp>(op)) {
-        for (mlir::acc::GPUParallelDimAttr parDim :
-             getReductionCombineParDims(combineRegionOp)) {
-          mlir::acc::removeParDim(ancestorParDims, parDim);
-        }
+        if (failed(applyCombineParDims(
+                getReductionCombineParDims(combineRegionOp))))
+          return WalkResult::interrupt();
       }
       // An array accumulate reduces across its par_dims via gpu.all_reduce, so
       // all those threads must execute it - treat them as active (unlike the
@@ -1301,6 +1565,23 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
       }
       return WalkResult::advance();
     });
+    mlir::acc::GPUParallelDimAttr threadY =
+        mlir::acc::GPUParallelDimAttr::threadYDim(ctx);
+    bool baselineThreadYActive = llvm::is_contained(ancestorParDims, threadY);
+    if (threadYInfo.hasActiveWorkerCombine && !baselineThreadYActive) {
+      if (threadYInfo.hasExplicitInactiveCombine ||
+          threadYInfo.hasBroadeningConflict) {
+        Operation *diagnosticOp =
+            threadYInfo.diagnosticOp ? threadYInfo.diagnosticOp : op;
+        (void)accSupport.emitNYI(
+            diagnosticOp->getLoc(),
+            "operations in the same predicate region require incompatible "
+            "ThreadY predication");
+        hasFailed = true;
+        return {};
+      }
+      mlir::acc::insertParDim(ancestorParDims, threadY);
+    }
   }
 
   // Obtain launch dimensions
@@ -1871,6 +2152,8 @@ void ACCCGToGPULowering::processPredicateRegion(
             SmallVector<mlir::acc::GPUParallelDimAttr>>
       parDimsPair = computeActiveAndInactiveParDims(
           interOp, &interOp.getRegion().front());
+  if (hasFailed)
+    return;
 
   // If ThreadY reduction exists, subgroup alignment is applied
   // (blockDim.x = subgroupSize), so ThreadX lanes exist even without explicit
@@ -2443,10 +2726,12 @@ void ACCCGToGPULowering::processPrivateLocal(
   } else {
     // Hoisted acc.privatize: allocate per-thread stack storage in the launch
     // body. Cross-thread array reduction accumulators are per-thread too, so
-    // the accumulate can reduce each element across threads.
+    // the accumulate can reduce each element across threads. Skip when storage
+    // par_dims lack thread_x (gang-/worker-scoped array temp).
     acc::ReductionAccumulateArrayOp arrayAccum =
         perThreadArrayReductionAccum(privateLocal.getResult());
-    if ((isThreadXPrivatize(privatizeOp) || arrayAccum) &&
+    if ((isThreadXPrivatize(privatizeOp) ||
+         (arrayAccum && storageHasThreadX(privateLocal, computeRegion))) &&
         canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
       Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
       if (arrayAccum) {
@@ -2535,7 +2820,8 @@ void ACCCGToGPULowering::processPrivateLocal(
   acc::ReductionAccumulateArrayOp arrayAccum =
       perThreadArrayReductionAccum(privateLocal.getResult());
   for (mlir::acc::GPUParallelDimAttr parDim : parDimsPair.first) {
-    if ((parDim.isThreadX() || arrayAccum) &&
+    if ((parDim.isThreadX() ||
+         (arrayAccum && storageHasThreadX(privateLocal, computeRegion))) &&
         canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
       Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
       if (arrayAccum) {
@@ -2613,10 +2899,17 @@ void ACCCGToGPULowering::processPrivateLocal(
   Value subview = memref::SubViewOp::create(rewriter, loc, subviewType, view,
                                             subviewOffset, subviewSizes, ones);
 
-  // Cast subview to the target type, preserving the dynamic offset.
-  // Do NOT cast to a plain memref (offset: 0) - the LLVM optimizer
-  // would fold the gang offset to zero, making all gangs share memory.
-  Value result = castPointerLikeTypeIfNeeded(rewriter, loc, subview,
+  // Pointer-like casts cannot carry memref offsets. Shift the aligned pointer
+  // so later zero-offset views retain this thread's private slice.
+  auto metadata =
+      memref::ExtractStridedMetadataOp::create(rewriter, loc, subview);
+  Value elementBytes = arith::ConstantIndexOp::create(
+      rewriter, loc, getElementSizeInBytes(loc, baseTy.getElementType()));
+  Value byteOffset =
+      arith::MulIOp::create(rewriter, loc, metadata.getOffset(), elementBytes);
+  Value privateView = memref::ViewOp::create(rewriter, loc, baseTy, memBuffer,
+                                             byteOffset, innerDynSizes);
+  Value result = castPointerLikeTypeIfNeeded(rewriter, loc, privateView,
                                              privateLocal.getType());
   mapping.map(privateLocal.getResult(), result);
 }
@@ -2948,7 +3241,8 @@ void ACCCGToGPULowering::constructAtomicAccumulation(
 
 void ACCCGToGPULowering::createGPUAllReduceOp(
     Location loc, Value input, Value memref, arith::AtomicRMWKind kind,
-    mlir::acc::GPUParallelDimsAttr parDimsAttr, ValueRange indices) {
+    mlir::acc::GPUParallelDimsAttr parDimsAttr, ValueRange indices,
+    bool isPerThreadPrivateTarget) {
   gpu::AllReduceOperationAttr attr = gpu::AllReduceOperationAttr::get(
       computeRegion->getContext(), getAllReduceOperation(kind));
   auto allReduceOp = gpu::AllReduceOp::create(rewriter, loc, input, attr, true);
@@ -2983,8 +3277,9 @@ void ACCCGToGPULowering::createGPUAllReduceOp(
   // value on all threads, so each can safely store to its own copy.
   // Detect per-thread storage by walking through conversion ops to
   // find the underlying allocation.
-  bool isPerThreadPrivate = isa_and_nonnull<memref::AllocaOp>(
-      unwrapMemRefConversion(memref).getDefiningOp());
+  bool isPerThreadPrivate = isPerThreadPrivateTarget ||
+                            isa_and_nonnull<memref::AllocaOp>(
+                                unwrapMemRefConversion(memref).getDefiningOp());
   // combine
   scf::IfOp ifOp;
   if (predicate && !isPerThreadPrivate) {
@@ -3198,6 +3493,122 @@ void ACCCGToGPULowering::processAccumulateOp(acc::ReductionAccumulateOp op) {
   }
 }
 
+/// True when \p v takes a distinct value per thread: it derives from a thread
+/// id, either directly or through the bounds of an enclosing loop. By this
+/// point a thread-mapped loop carries its mapping in its bounds rather than in
+/// `acc.par_dims`, so the bounds are what must be inspected.
+static bool isThreadVarying(Value v, ArrayRef<Value> threadIds,
+                            DenseSet<Value> &visited) {
+  if (!v || !visited.insert(v).second)
+    return false;
+  if (llvm::is_contained(threadIds, v))
+    return true;
+  if (auto arg = dyn_cast<BlockArgument>(v)) {
+    Operation *owner = arg.getOwner()->getParentOp();
+    unsigned dim = arg.getArgNumber();
+    if (auto loop = dyn_cast<scf::ParallelOp>(owner)) {
+      if (dim >= loop.getLowerBound().size())
+        return false;
+      return isThreadVarying(loop.getLowerBound()[dim], threadIds, visited) ||
+             isThreadVarying(loop.getStep()[dim], threadIds, visited);
+    }
+    if (auto loop = dyn_cast<scf::ForOp>(owner))
+      return dim == 0 &&
+             (isThreadVarying(loop.getLowerBound(), threadIds, visited) ||
+              isThreadVarying(loop.getStep(), threadIds, visited));
+    return false;
+  }
+  Operation *def = v.getDefiningOp();
+  if (!def)
+    return false;
+  if (isa<gpu::ThreadIdOp, gpu::LaneIdOp>(def))
+    return true;
+  return llvm::any_of(def->getOperands(), [&](Value o) {
+    return isThreadVarying(o, threadIds, visited);
+  });
+}
+
+/// Strips view and memory-space-cast chains to the underlying buffer.
+static Value accumulatorRoot(Value v) {
+  while (Operation *op = v.getDefiningOp()) {
+    if (auto cast = dyn_cast<memref::MemorySpaceCastOp>(op)) {
+      v = cast.getSource();
+      continue;
+    }
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(op)) {
+      if (isa<MemRefType>(viewLike.getViewSource().getType())) {
+        v = viewLike.getViewSource();
+        continue;
+      }
+    }
+    break;
+  }
+  return v;
+}
+
+/// Matches `%l = load %m[%i]` / `%c = combine(%l, %x)` / `store %c, %m[%i]` on
+/// the accumulator \p accum and returns the contributed value `%x`.
+static Value matchAccumulatorUpdate(memref::StoreOp store, Value accum) {
+  if (accumulatorRoot(store.getMemRef()) != accum)
+    return {};
+  Operation *combine = store.getValueToStore().getDefiningOp();
+  if (!combine || combine->getNumOperands() != 2)
+    return {};
+  for (unsigned i = 0; i != 2; ++i) {
+    auto load = combine->getOperand(i).getDefiningOp<memref::LoadOp>();
+    if (!load || accumulatorRoot(load.getMemRef()) != accum)
+      continue;
+    if (!llvm::equal(load.getIndices(), store.getIndices()))
+      continue;
+    return combine->getOperand(1 - i);
+  }
+  return {};
+}
+
+/// A block-shared accumulator is updated in place by the loop body, so several
+/// threads may hit the same element. Make those updates atomic unless the
+/// element index provably varies across the participating threads.
+static void atomicizeSharedAccumulatorUpdates(Value accum,
+                                              arith::AtomicRMWKind kind,
+                                              ArrayRef<Value> threadIds,
+                                              RewriterBase &rewriter) {
+  OpBuilder::InsertionGuard guard(rewriter);
+  SmallVector<memref::StoreOp> stores;
+  SmallVector<Value> worklist{accum};
+  DenseSet<Value> seen;
+  while (!worklist.empty()) {
+    Value cur = worklist.pop_back_val();
+    if (!seen.insert(cur).second)
+      continue;
+    for (Operation *user : cur.getUsers()) {
+      if (auto store = dyn_cast<memref::StoreOp>(user))
+        stores.push_back(store);
+      else if (isa<ViewLikeOpInterface, memref::MemorySpaceCastOp>(user))
+        llvm::append_range(worklist, user->getResults());
+    }
+  }
+
+  for (memref::StoreOp store : stores) {
+    Value contribution = matchAccumulatorUpdate(store, accum);
+    if (!contribution)
+      continue;
+    // A thread-varying index means each thread owns its element, so the
+    // existing plain update is already race-free.
+    if (llvm::any_of(store.getIndices(), [&](Value idx) {
+          DenseSet<Value> visited;
+          return isThreadVarying(idx, threadIds, visited);
+        }))
+      continue;
+    Operation *combine = store.getValueToStore().getDefiningOp();
+    rewriter.setInsertionPoint(store);
+    memref::AtomicRMWOp::create(rewriter, store.getLoc(), kind, contribution,
+                                store.getMemRef(), store.getIndices());
+    rewriter.eraseOp(store);
+    if (combine && combine->use_empty())
+      rewriter.eraseOp(combine);
+  }
+}
+
 void ACCCGToGPULowering::processAccumulateArrayOp(
     acc::ReductionAccumulateArrayOp op) {
   LLVM_DEBUG(llvm::dbgs() << "processing accumulate array op: " << *op << "\n");
@@ -3205,9 +3616,10 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
 
   Value memref = mapping.lookupOrDefault(op.getMemref());
   MemRefType memrefTy = dyn_cast<MemRefType>(memref.getType());
-  assert(memrefTy && memrefTy.getRank() == 1 &&
-         "array reduction accumulate expects a rank-1 memref");
-
+  if (!memrefTy) {
+    (void)accSupport.emitNYI(loc, "reduction: non-MemRefTy accumulate array");
+    return;
+  }
   FailureOr<arith::AtomicRMWKind> kindOr = getReductionKind(
       op.getReductionOperator(), memrefTy.getElementType(), loc);
   if (failed(kindOr))
@@ -3238,30 +3650,69 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
     return;
   }
 
-  // A thread-level reduction with no block owner for its elements cannot merge
-  // the cross-thread partials, so report NYI.
-  if (!reductionHasBlockContext(op)) {
+  // A thread-only accumulate merges with a within-block all_reduce, which is
+  // complete only in one block: block context, or a launch with no block dim.
+  // Multi-block thread-only still grid-strides across blocks, so stays NYI.
+  bool regionLaunchesBlocks = llvm::any_of(
+      computeRegion.getLaunchParDims(),
+      [](mlir::acc::GPUParallelDimAttr d) { return d.isAnyBlock(); });
+  if (!reductionHasBlockContext(op) && regionLaunchesBlocks) {
     (void)accSupport.emitNYI(
         loc, "reduction: thread-only array reduction accumulate");
     return;
   }
 
-  // Per-element gpu.all_reduce is only correct for a per-thread alloca; mirror
-  // processPrivateLocal's stack-fit decision rather than inspect the memref.
-  bool isPerThreadPrivate =
-      canUseStackAlloca(memrefTy, loc, options.maxThreadPrivateStack);
-  if (!isPerThreadPrivate) {
-    // Block-shared accumulator: no-op only when the accumulate spans a block
-    // dim (threads distribute distinct elements, so the block partial is in
-    // place and the atomic combine finishes it). A thread-only shared
-    // reduction, where several threads reduce into the same element, is not yet
-    // supported.
-    if (hasBlockDim) {
-      eraseDeadBounds();
-    } else {
-      (void)accSupport.emitNYI(
-          loc, "reduction: shared-memory array reduction accumulate");
+  // Per-element gpu.all_reduce is only correct when each thread owns its own
+  // accumulator copy. For a statically-shaped accumulator, classify from the
+  // operand: an explicit shared/heap allocation is block-shared regardless of
+  // size, and a stack alloca (or a view over one) is per-thread when it fits
+  // the per-thread stack budget. Storage `acc.par_dims` without thread_x means
+  // gang-/worker-scoped privacy (shared among vector lanes) even if the type
+  // would fit on the stack. For a dynamically-shaped accumulator the type
+  // conveys no size, so classify from storage/accumulate thread_x dims.
+  auto storageIsThreadXPrivate = [&](Value v) -> bool {
+    acc::PrivateLocalOp privateLocal = getPrivateLocalForMemref(v);
+    GPUParallelDimsAttr dims =
+        privateLocal ? getPrivateParDims(privateLocal, computeRegion)
+                     : GPUParallelDimsAttr();
+    if (!dims) {
+      if (Operation *root = unwrapMemRefConversion(v).getDefiningOp())
+        dims = getParDimsAttr(root);
     }
+    return !dims ||
+           llvm::any_of(dims.getArray(), [](auto d) { return d.isThreadX(); });
+  };
+  Operation *rootOp = unwrapMemRefConversion(memref).getDefiningOp();
+  bool isSharedStorage = isa_and_nonnull<memref::AllocOp>(rootOp) ||
+                         isa_and_nonnull<acc::GPUSharedMemoryOp>(rootOp);
+  if (auto addrSpace = dyn_cast_if_present<gpu::AddressSpaceAttr>(
+          memrefTy.getMemorySpace())) {
+    isSharedStorage |=
+        addrSpace.getValue() == gpu::GPUDialect::getWorkgroupAddressSpace();
+  }
+  bool isPerThreadPrivate =
+      !isSharedStorage && storageIsThreadXPrivate(op.getMemref()) &&
+      (memrefTy.hasStaticShape()
+           ? canUseStackAlloca(memrefTy, loc, options.maxThreadPrivateStack)
+           : llvm::any_of(op.getParDims().getArray(),
+                          [](mlir::acc::GPUParallelDimAttr d) {
+                            return d.isThreadX();
+                          }));
+  if (!isPerThreadPrivate) {
+    // Block-shared accumulator: the body already updated it in place, so the
+    // block partial is complete and the atomic combine finishes across blocks.
+    // Threads that share an element must not race, so their in-place updates
+    // become atomic.
+    SmallVector<Value> threadIds;
+    if (Value xId = getGPUThreadIdFor(gpu::Processor::ThreadX))
+      threadIds.push_back(xId);
+    if (Value yId = getGPUThreadIdFor(gpu::Processor::ThreadY))
+      threadIds.push_back(yId);
+    if (Value zId = getGPUThreadIdFor(gpu::Processor::ThreadZ))
+      threadIds.push_back(zId);
+    atomicizeSharedAccumulatorUpdates(accumulatorRoot(memref), kind, threadIds,
+                                      rewriter);
+    eraseDeadBounds();
     return;
   }
 
@@ -3273,19 +3724,19 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
                                       v);
   };
 
-  Value lb = boundsOp.getLowerbound()
-                 ? toIndex(boundsOp.getLowerbound())
-                 : arith::ConstantIndexOp::create(rewriter, loc, 0);
-  Value step = boundsOp.getStride()
-                   ? toIndex(boundsOp.getStride())
-                   : arith::ConstantIndexOp::create(rewriter, loc, 1);
+  Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
   Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
-  // Exclusive upper bound: prefer extent (count of elements), fall back to the
-  // inclusive upperbound.
+  Value lb =
+      boundsOp.getLowerbound() ? toIndex(boundsOp.getLowerbound()) : zero;
+  Value step = boundsOp.getStride() ? toIndex(boundsOp.getStride()) : one;
+  // Exclusive upper bound. `extent` counts elements, so the span is
+  // `extent * step` (for the common unit-stride case step is 1); fall back to
+  // the inclusive upperbound when no extent is given.
   Value ub;
   if (boundsOp.getExtent()) {
-    ub =
-        arith::AddIOp::create(rewriter, loc, lb, toIndex(boundsOp.getExtent()));
+    Value span = arith::MulIOp::create(rewriter, loc,
+                                       toIndex(boundsOp.getExtent()), step);
+    ub = arith::AddIOp::create(rewriter, loc, lb, span);
   } else {
     assert(boundsOp.getUpperbound() &&
            "acc.bounds must specify an extent or upperbound");
@@ -3299,9 +3750,27 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(forOp.getBody()->getTerminator());
     Value iv = forOp.getInductionVar();
-    Value elem = memref::LoadOp::create(rewriter, loc, memref, ValueRange{iv});
-    createGPUAllReduceOp(loc, elem, memref, kind, op.getParDims(),
-                         ValueRange{iv});
+    SmallVector<Value> indices{iv};
+    if (memrefTy.getRank() > 1) {
+      indices.resize(memrefTy.getRank());
+      Value linearIndex = iv;
+      for (int64_t dim = memrefTy.getRank() - 1; dim >= 0; --dim) {
+        Value dimSize =
+            memrefTy.isDynamicDim(dim)
+                ? memref::DimOp::create(rewriter, loc, memref, dim).getResult()
+                : arith::ConstantIndexOp::create(rewriter, loc,
+                                                 memrefTy.getDimSize(dim))
+                      .getResult();
+        indices[dim] =
+            arith::RemUIOp::create(rewriter, loc, linearIndex, dimSize);
+        if (dim != 0)
+          linearIndex =
+              arith::DivUIOp::create(rewriter, loc, linearIndex, dimSize);
+      }
+    }
+    Value elem = memref::LoadOp::create(rewriter, loc, memref, indices);
+    createGPUAllReduceOp(loc, elem, memref, kind, op.getParDims(), indices,
+                         /*isPerThreadPrivateTarget=*/true);
   }
 
   eraseDeadBounds();

@@ -40,18 +40,35 @@ using namespace llvm;
 void llvm::verifyAMDGPUModuleFlag(VerifierSupport &VS, const MDString *ID,
                                   Module::ModFlagBehavior MFB,
                                   const MDNode *Op) {
-  if (ID->getString() != "amdgpu.buffer.oob.mode" &&
-      ID->getString() != "amdgpu.tbuffer.oob.mode")
+  StringRef FlagName = ID->getString();
+  if (!FlagName.consume_front("amdgpu."))
     return;
 
-  Check(MFB == Module::Max,
-        "'" + ID->getString() + "' module flag must use 'max' merge behaviour");
-  ConstantInt *Value =
-      mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
-  Check(Value, "'" + ID->getString() +
-                   "' module flag must have a constant integer value");
-  Check(Value->getZExtValue() <= 2,
-        "'" + ID->getString() + "' module flag must be 0, 1, or 2");
+  if (FlagName == "buffer.oob.mode" || FlagName == "tbuffer.oob.mode") {
+    Check(MFB == Module::Max,
+          "'" + ID->getString() +
+              "' module flag must use 'max' merge behaviour");
+    ConstantInt *Value =
+        mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
+    Check(Value, "'" + ID->getString() +
+                     "' module flag must have a constant integer value");
+    Check(Value->getZExtValue() <= 2,
+          "'" + ID->getString() + "' module flag must be 0, 1, or 2");
+    return;
+  }
+
+  if (FlagName == "xnack" || FlagName == "sramecc") {
+    Check(MFB == Module::Error,
+          "'" + ID->getString() +
+              "' module flag must use 'error' merge behaviour");
+    ConstantInt *Value =
+        mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
+    Check(Value, "'" + ID->getString() +
+                     "' module flag must have a constant integer value");
+    Check(Value->getZExtValue() <= 1,
+          "'" + ID->getString() + "' module flag must be 0 or 1");
+    return;
+  }
 }
 
 // Verify that when a function has !reqd_work_group_size metadata, it also has

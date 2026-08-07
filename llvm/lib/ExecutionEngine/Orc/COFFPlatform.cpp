@@ -13,8 +13,9 @@
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/Calls.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
-
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Object/COFF.h"
 
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -165,8 +166,6 @@ COFFPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
                                        ES.getTargetTriple().str(),
                                    inconvertibleErrorCode());
 
-  auto &EPC = ES.getExecutorProcessControl();
-
   auto GeneratorArchive =
       object::Archive::create(OrcRuntimeArchiveBuffer->getMemBufferRef());
   if (!GeneratorArchive)
@@ -193,19 +192,17 @@ COFFPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
   if (auto Err = PlatformJD.define(symbolAliases(std::move(*RuntimeAliases))))
     return std::move(Err);
 
-  auto &HostFuncJD = ES.createBareJITDylib("$<PlatformRuntimeHostFuncJD>");
-
-  // Add JIT-dispatch function support symbols.
-  if (auto Err = HostFuncJD.define(
-          absoluteSymbols({{ES.intern("__orc_rt_jit_dispatch"),
-                            {EPC.getJITDispatchInfo().JITDispatchFunction,
-                             JITSymbolFlags::Exported}},
-                           {ES.intern("__orc_rt_jit_dispatch_ctx"),
-                            {EPC.getJITDispatchInfo().JITDispatchContext,
-                             JITSymbolFlags::Exported}}})))
-    return std::move(Err);
-
-  PlatformJD.addToLinkOrder(HostFuncJD);
+  {
+    // Add JIT dispatch reexports from bootstrap JITDylib.
+    auto Exports = buildSimpleReexportsAliasMap(
+        ES.getBootstrapJITDylib(),
+        {{ES.intern(rt::DispatchName), ES.intern(rt::DispatchCtxName)}});
+    if (!Exports)
+      return Exports.takeError();
+    if (auto Err =
+            PlatformJD.define(reexports(ES.getBootstrapJITDylib(), *Exports)))
+      return Err;
+  }
 
   // Create the instance.
   Error Err = Error::success();
@@ -666,11 +663,13 @@ Error COFFPlatform::runBootstrapInitializers(JDBootstrapState &BState) {
 Error COFFPlatform::runBootstrapSubsectionInitializers(JDBootstrapState &BState,
                                                        StringRef Start,
                                                        StringRef End) {
+  auto CallInitializer = rt::sps::Int32VoidCaller::Create(ES);
+  if (!CallInitializer)
+    return CallInitializer.takeError();
   for (auto &Initializer : BState.Initializers)
     if (Initializer.first >= Start && Initializer.first <= End &&
         Initializer.second) {
-      auto Res =
-          ES.getExecutorProcessControl().runAsVoidFunction(Initializer.second);
+      auto Res = (*CallInitializer)(Initializer.second);
       if (!Res)
         return Res.takeError();
     }
@@ -736,7 +735,10 @@ Error COFFPlatform::runSymbolIfExists(JITDylib &PlatformJD,
       ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
       {{ES.intern(SymbolName), &jit_function}});
   if (!AfterCLookupErr) {
-    auto Res = ES.getExecutorProcessControl().runAsVoidFunction(jit_function);
+    auto CallFn = rt::sps::Int32VoidCaller::Create(ES);
+    if (!CallFn)
+      return CallFn.takeError();
+    auto Res = (*CallFn)(jit_function);
     if (!Res)
       return Res.takeError();
     return Error::success();

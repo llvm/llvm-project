@@ -1,18 +1,19 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -o - %s | FileCheck %s --check-prefixes=CHECK,SRV -DTEXTURE=Texture2D -DINDEX_SIZE=2
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DArray -o - %s | FileCheck %s --check-prefixes=CHECK,SRV,SRV-ARRAY -DTEXTURE=Texture2DArray -DINDEX_SIZE=3
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2D -DRW=1 -o - %s | FileCheck %s --check-prefixes=CHECK,UAV,UAV-STORE,UAV-TRUNC -DTEXTURE=RWTexture2D -DINDEX_SIZE=2
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2DArray -DRW=1 -o - %s | FileCheck %s --check-prefixes=CHECK,UAV,UAV-ARRAY,UAV-STORE,UAV-NOTRUNC -DTEXTURE=RWTexture2DArray -DINDEX_SIZE=3
 
 // CHECK: ClassTemplateDecl {{.*}} [[TEXTURE]]
 // CHECK: TemplateTypeParmDecl {{.*}} element_type
 // CHECK: CXXRecordDecl {{.*}} [[TEXTURE]] definition
 // CHECK: FinalAttr {{.*}} Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
-// SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // SRV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // UAV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 
 // SRV: CXXMethodDecl {{.*}} operator[] 'const hlsl_device element_type &(vector<unsigned int, [[INDEX_SIZE]]>) const' inline
 // SRV-NEXT: ParmVarDecl {{.*}} Index 'vector<unsigned int, [[INDEX_SIZE]]>'
@@ -23,10 +24,10 @@
 // SRV-NEXT: CallExpr {{.*}} '<dependent type>'
 // SRV-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // SRV-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // SRV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // SRV-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// SRV-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// SRV-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // SRV-SAME: ' lvalue .__handle
 // SRV-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // SRV-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, [[INDEX_SIZE]]>' lvalue ParmVar {{.*}} 'Index' 'vector<unsigned int, [[INDEX_SIZE]]>'
@@ -41,10 +42,10 @@
 // UAV-NEXT: CallExpr {{.*}} '<dependent type>'
 // UAV-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // UAV-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // UAV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // UAV-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// UAV-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// UAV-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // UAV-SAME: ' lvalue .__handle
 // UAV-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // UAV-NEXT: DeclRefExpr {{.*}} 'vector<unsigned int, [[INDEX_SIZE]]>' lvalue ParmVar {{.*}} 'Index' 'vector<unsigned int, [[INDEX_SIZE]]>'
@@ -59,12 +60,12 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_xy' 'void (__hlsl_resource_t, unsigned int &, unsigned int &) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // SRV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // UAV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'width' 'unsigned int &__restrict'
@@ -83,12 +84,12 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_levels_xy' 'void (__hlsl_resource_t, unsigned int, unsigned int &, unsigned int &, unsigned int &) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // SRV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // UAV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'mipLevel' 'unsigned int'
@@ -106,12 +107,12 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_xy_float' 'void (__hlsl_resource_t, float &, float &) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // SRV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // UAV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'width' 'float &__restrict'
@@ -130,12 +131,12 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_levels_xy_float' 'void (__hlsl_resource_t, unsigned int, float &, float &, float &) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // SRV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // UAV-ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'mipLevel' 'unsigned int'
