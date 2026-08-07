@@ -10040,7 +10040,8 @@ static Stmt *buildPreInits(ASTContext &Context, ArrayRef<Stmt *> PreInits) {
 }
 
 /// Helper to determine if a loop should skip finalization.
-/// Returns true for range-based for loops or loops with non-arithmetic counters.
+/// Returns true for range-based for loops or loops with non-arithmetic
+/// counters.
 static bool shouldSkipLoopFinalization(Stmt *LoopStmt) {
   if (isa<CXXForRangeStmt>(LoopStmt))
     return true;
@@ -10763,8 +10764,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       // exit value. For iterator-based loops (range-based for or explicit
       // iterator loops), skip finalization entirely.
       ExprResult Final;
-      bool IsIteratorLoop = IS.IsRangeFor ||
-                            !IS.CounterVar->getType()->isArithmeticType();
+      bool IsIteratorLoop =
+          IS.IsRangeFor || !IS.CounterVar->getType()->isArithmeticType();
       if (IsIteratorLoop && isOpenMPLoopTransformationDirective(DKind)) {
         // Iterator-based loops in transformation directives don't need
         // explicit finalization - the iterator is already at the end.
@@ -10779,9 +10780,10 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
             FinalIterCount = LastIter.get();
           }
         }
-        Final = buildCounterUpdate(SemaRef, CurScope, UpdLoc, CounterVar,
-                                    IS.CounterInit, FinalIterCount, IS.CounterStep,
-                                    IS.Subtract, IS.IsNonRectangularLB, &Captures);
+        Final =
+            buildCounterUpdate(SemaRef, CurScope, UpdLoc, CounterVar,
+                               IS.CounterInit, FinalIterCount, IS.CounterStep,
+                               IS.Subtract, IS.IsNonRectangularLB, &Captures);
         if (!Final.isUsable()) {
           HasErrors = true;
           break;
@@ -15446,11 +15448,10 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
                 LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
   }
 
-  return OMPTileDirective::Create(Context, StartLoc, EndLoc, Clauses, NumLoops,
-                                  AStmt, Inner,
-                                  buildPreInits(Context, PreInits),
-                                  buildLoopFinalization(Context, LoopHelpers,
-                                                        LoopStmts));
+  return OMPTileDirective::Create(
+      Context, StartLoc, EndLoc, Clauses, NumLoops, AStmt, Inner,
+      buildPreInits(Context, PreInits),
+      buildLoopFinalization(Context, LoopHelpers, LoopStmts));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
