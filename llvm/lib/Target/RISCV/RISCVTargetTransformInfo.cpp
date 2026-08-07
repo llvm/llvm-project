@@ -2637,7 +2637,7 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
   // and vslideup + vmv.s.x to insert element to vector.
   InstructionCost BaseCost = 1;
   // When insertelement we should add the index with 1 as the input of vslideup.
-  unsigned SlideCost = Opcode == Instruction::InsertElement ? 2 : 1;
+  InstructionCost SlideCost = Opcode == Instruction::InsertElement ? 2 : 1;
 
   if (Index != -1U) {
     // The type may be split. For fixed-width vectors we can normalize the
