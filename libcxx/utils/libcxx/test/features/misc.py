@@ -121,6 +121,7 @@ features = [
     # Check for a Windows UCRT bug (fixed in UCRT/Windows 10.0.20348.0):
     # https://developercommunity.visualstudio.com/t/utf-8-locales-break-ctype-functions-for-wchar-type/1653678
     Feature(
+        # TODO: Update once https://github.com/llvm/llvm-project/pull/214797 has been merged
         name="win32-broken-utf8-wchar-ctype",
         when=lambda cfg: not "_LIBCPP_HAS_LOCALIZATION" in compilerMacros(cfg)
         or compilerMacros(cfg)["_LIBCPP_HAS_LOCALIZATION"] == "1"
