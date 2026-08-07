@@ -62,8 +62,8 @@ public:
       bool IsTestableDependencyLookup = false) override;
 
   bool canImportModule(swift::ImportPath::Module named, swift::SourceLoc loc,
-                       ModuleVersionInfo *versionInfo,
-                       bool isTestableImport = false) override;
+                       ModuleVersionInfo *versionInfo, bool isTestableImport,
+                       bool isSourceCanImport) override;
 
   swift::ModuleDecl *loadModule(swift::SourceLoc importLoc,
                                 swift::ImportPath::Module path,
