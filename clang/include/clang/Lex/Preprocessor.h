@@ -1747,7 +1747,7 @@ public:
   /// Pop the current lexer/macro exp off the top of the lexer stack.
   ///
   /// This should only be used in situations where the current state of the
-  /// top-of-stack lexer is known.
+  /// top-of-stack lexer is unknown.
   void RemoveTopOfLexerStack();
 
   /// From the point that this method is called, and until
