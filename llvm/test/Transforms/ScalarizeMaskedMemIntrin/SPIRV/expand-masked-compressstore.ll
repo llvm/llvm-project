@@ -5,9 +5,7 @@
 
 define void @scalarize_v2i64(ptr addrspace(4) %p, <2 x i1> %mask, <2 x i64> %data) {
 ; CHECK-LABEL: @scalarize_v2i64(
-; CHECK-NEXT:    [[SCALAR_MASK:%.*]] = bitcast <2 x i1> [[MASK:%.*]] to i2
-; CHECK-NEXT:    [[TMP1:%.*]] = and i2 [[SCALAR_MASK]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[MASK:%.*]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
 ; CHECK:       cond.store:
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[DATA:%.*]], i64 0
@@ -16,8 +14,7 @@ define void @scalarize_v2i64(ptr addrspace(4) %p, <2 x i1> %mask, <2 x i64> %dat
 ; CHECK-NEXT:    br label [[ELSE]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[PTR_PHI_ELSE:%.*]] = phi ptr addrspace(4) [ [[TMP4]], [[COND_STORE]] ], [ [[P]], [[TMP0:%.*]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i2 [[SCALAR_MASK]], -2
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i2 [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[MASK]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[COND_STORE1:%.*]], label [[ELSE2:%.*]]
 ; CHECK:       cond.store1:
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[DATA]], i64 1
