@@ -273,6 +273,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  timer_t
+  HDRS
+    timer_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.timer_t
+    libc.include.time
+)
+
+add_proxy_header_library(
   clockid_t
   HDRS
     clockid_t.h
