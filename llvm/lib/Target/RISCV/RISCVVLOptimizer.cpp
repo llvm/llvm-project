@@ -26,7 +26,7 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "RISCV.h"
+#include "RISCVVLOptimizer.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -63,26 +63,15 @@ struct DemandedVL {
   }
 };
 
-class RISCVVLOptimizer : public MachineFunctionPass {
+class RISCVVLOptimizerImpl {
   MachineRegisterInfo *MRI;
   const MachineDominatorTree *MDT;
   const TargetInstrInfo *TII;
 
 public:
-  static char ID;
+  RISCVVLOptimizerImpl(const MachineDominatorTree *MDT) : MDT(MDT) {}
 
-  RISCVVLOptimizer() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  StringRef getPassName() const override { return PASS_NAME; }
+  bool run(MachineFunction &MF);
 
 private:
   DemandedVL getMinimumVLForUser(const MachineOperand &UserOp) const;
@@ -105,6 +94,24 @@ private:
              RISCVRegisterInfo::isRVVRegClass(MRI->getRegClass(MO.getReg()));
     });
   }
+};
+
+class RISCVVLOptimizerLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  RISCVVLOptimizerLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  StringRef getPassName() const override { return PASS_NAME; }
 };
 
 /// Represents the EMUL and EEW of a MachineOperand.
@@ -151,13 +158,14 @@ struct OperandInfo {
 
 } // end anonymous namespace
 
-char RISCVVLOptimizer::ID = 0;
-INITIALIZE_PASS_BEGIN(RISCVVLOptimizer, DEBUG_TYPE, PASS_NAME, false, false)
+char RISCVVLOptimizerLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(RISCVVLOptimizerLegacy, DEBUG_TYPE, PASS_NAME, false,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(RISCVVLOptimizer, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS_END(RISCVVLOptimizerLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 FunctionPass *llvm::createRISCVVLOptimizerPass() {
-  return new RISCVVLOptimizer();
+  return new RISCVVLOptimizerLegacy();
 }
 
 [[maybe_unused]]
@@ -901,7 +909,7 @@ static std::optional<OperandInfo> getOperandInfo(const MachineOperand &MO) {
 static bool isTupleInsertInstr(const MachineInstr &MI);
 
 /// Return true if we can reason about demanded VLs elementwise for \p MI.
-bool RISCVVLOptimizer::isSupportedInstr(const MachineInstr &MI) const {
+bool RISCVVLOptimizerImpl::isSupportedInstr(const MachineInstr &MI) const {
   if (MI.isPHI() || MI.isFullCopy() || isTupleInsertInstr(MI))
     return true;
 
@@ -963,7 +971,7 @@ static bool isVectorOpUsedAsScalarOp(const MachineOperand &MO) {
   }
 }
 
-bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
+bool RISCVVLOptimizerImpl::isCandidate(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags))
     return false;
@@ -1045,7 +1053,7 @@ getMinimumVLForVSLIDEDOWN_VX(const MachineOperand &UserOp,
 }
 
 DemandedVL
-RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
+RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineOperand &UserOp) const {
   const MachineInstr &UserMI = *UserOp.getParent();
   const MCInstrDesc &Desc = UserMI.getDesc();
 
@@ -1148,7 +1156,7 @@ static bool isSegmentedStoreInstr(const MachineInstr &MI) {
   }
 }
 
-bool RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
+bool RISCVVLOptimizerImpl::checkUsers(const MachineInstr &MI) const {
   if (MI.isPHI() || MI.isFullCopy() || isTupleInsertInstr(MI))
     return true;
 
@@ -1223,8 +1231,8 @@ bool RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
   return true;
 }
 
-bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
-                                   MachineOperand CommonVL) const {
+bool RISCVVLOptimizerImpl::tryReduceVL(MachineInstr &MI,
+                                       MachineOperand CommonVL) const {
   LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI);
 
   unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
@@ -1297,7 +1305,7 @@ static bool isPhysical(const MachineOperand &MO) {
 }
 
 /// Look through \p MI's operands and propagate what it demands to its uses.
-void RISCVVLOptimizer::transfer(const MachineInstr &MI) {
+void RISCVVLOptimizerImpl::transfer(const MachineInstr &MI) {
   if (!isSupportedInstr(MI) || !checkUsers(MI) || any_of(MI.defs(), isPhysical))
     DemandedVLs[&MI] = DemandedVL::vlmax();
 
@@ -1310,12 +1318,8 @@ void RISCVVLOptimizer::transfer(const MachineInstr &MI) {
   }
 }
 
-bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+bool RISCVVLOptimizerImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
-  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   if (!ST.hasVInstructions())
@@ -1354,4 +1358,25 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
 
   DemandedVLs.clear();
   return MadeChange;
+}
+
+bool RISCVVLOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  auto *MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  return RISCVVLOptimizerImpl(MDT).run(MF);
+}
+
+PreservedAnalyses
+RISCVVLOptimizerPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  auto *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  bool Changed = RISCVVLOptimizerImpl(MDT).run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
