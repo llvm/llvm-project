@@ -1423,11 +1423,12 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 
   assert(!(EltVT.isVector() && ExtensionType != ISD::NON_EXTLOAD));
 
-  const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
-      LD,
-      {CodeAddrSpace, /*IsLoad=*/true,
-       /*NumElts=*/LD->getNumValues() - 1, /*EltWidth=*/FromTypeWidth, LD->isVolatile()},
-      DL);
+  const auto [EvictionAndPrefetchHint, PolicyReg] =
+      getMemCacheHintOperands(LD,
+                              {CodeAddrSpace, /*IsLoad=*/true,
+                               /*NumElts=*/LD->getNumValues() - 1,
+                               /*EltWidth=*/FromTypeWidth, LD->isVolatile()},
+                              DL);
   const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
   SDValue Ops[] = {getI32Imm(Ordering, DL),
                    getI32Imm(Scope, DL),
