@@ -237,7 +237,7 @@ void printIR(raw_ostream &OS, const MachineFunction *MF) {
   MF->print(OS);
 }
 
-std::string getIRName(Any IR, ExtendedIRContext *Ctx = nullptr) {
+std::string getIRName(Any IR, ExtendedIRContext *Context) {
   if (unwrapIR<Module>(IR))
     return "[module]";
 
@@ -254,9 +254,9 @@ std::string getIRName(Any IR, ExtendedIRContext *Ctx = nullptr) {
   if (const auto *MF = unwrapIR<MachineFunction>(IR))
     return MF->getName().str();
 
-  if (Ctx) {
+  if (Context) {
     // Go through the traits and check if any of them apply
-    for (const auto& extendedIRTraits : Ctx->traits) {
+    for (const auto& extendedIRTraits : Context->traits) {
       if (auto IRName = extendedIRTraits->getIRName(IR))
         return *IRName;
     }
@@ -420,7 +420,7 @@ void ChangeReporter<T>::handleIRAfterPass(Any IR, StringRef PassID,
                                           StringRef PassName) {
   assert(!BeforeStack.empty() && "Unexpected empty stack encountered.");
 
-  std::string Name = getIRName(IR, this);
+  std::string Name = getIRName(IR, this->context);
 
   if (isIgnored(PassID)) {
     if (VerboseMode)
@@ -824,7 +824,7 @@ void PrintIRInstrumentation::pushPassRunDescriptor(StringRef PassID, Any IR,
                                                    unsigned PassNumber) {
   const Module *M = unwrapModule(IR);
   PassRunDescriptorStack.emplace_back(M, PassNumber, getIRFileDisplayName(IR),
-                                      getIRName(IR), PassID);
+                                      getIRName(IR, this->IRContext), PassID);
 }
 
 PrintIRInstrumentation::PassRunDescriptor
@@ -872,7 +872,7 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
 
   if (shouldPrintPassNumbers())
     dbgs() << " Running pass " << CurrentPassNumber << " " << PassID
-           << " on " << getIRName(IR) << "\n";
+           << " on " << getIRName(IR, this->IRContext) << "\n";
 
   if (shouldPrintAfterCurrentPassNumber())
     pushPassRunDescriptor(PassID, IR, CurrentPassNumber);
@@ -884,7 +884,8 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
     Stream << "; *** IR Dump Before ";
     if (shouldPrintBeforeSomePassNumber())
       Stream << CurrentPassNumber << "-";
-    Stream << PassID << " on " << getIRName(IR) << " ***\n";
+    Stream << PassID << " on " << getIRName(IR, this->IRContext)
+           << " ***\n";
     unwrapAndPrint(Stream, IR);
   };
 
@@ -1013,7 +1014,8 @@ bool PrintIRInstrumentation::shouldPrintAfterSomePassNumber() {
 }
 
 void PrintIRInstrumentation::registerCallbacks(
-    PassInstrumentationCallbacks &PIC) {
+    PassInstrumentationCallbacks &PIC, ExtendedIRContext *IRContext) {
+  this->IRContext = IRContext;
   this->PIC = &PIC;
 
   // BeforePass callback is not just for printing, it also saves a Module
@@ -1038,7 +1040,8 @@ void PrintIRInstrumentation::registerCallbacks(
 }
 
 void OptNoneInstrumentation::registerCallbacks(
-    PassInstrumentationCallbacks &PIC) {
+    PassInstrumentationCallbacks &PIC, ExtendedIRContext *IRContext) {
+  this->IRContext = IRContext;
   PIC.registerShouldRunOptionalPassCallback(
       [this](StringRef P, Any IR) { return this->shouldRun(P, IR); });
 }
@@ -1053,7 +1056,8 @@ bool OptNoneInstrumentation::shouldRun(StringRef PassID, Any IR) {
     ShouldRun = !MF->getFunction().hasOptNone();
 
   if (!ShouldRun && DebugLogging) {
-    errs() << "Skipping pass " << PassID << " on " << getIRName(IR)
+    errs() << "Skipping pass " << PassID << " on "
+           << getIRName(IR, this->IRContext)
            << " due to optnone attribute\n";
   }
   return ShouldRun;
@@ -1064,7 +1068,8 @@ bool OptPassGateInstrumentation::shouldRun(StringRef PassName, Any IR) {
     return true;
 
   bool ShouldRun =
-      Context.getOptPassGate().shouldRunPass(PassName, getIRName(IR));
+      Context.getOptPassGate().shouldRunPass(PassName,
+                         getIRName(IR, this->IRContext));
   if (!ShouldRun && !this->HasWrittenIR && !OptBisectPrintIRPath.empty()) {
     // FIXME: print IR if limit is higher than number of opt-bisect
     // invocations
@@ -1081,7 +1086,8 @@ bool OptPassGateInstrumentation::shouldRun(StringRef PassName, Any IR) {
 }
 
 void OptPassGateInstrumentation::registerCallbacks(
-    PassInstrumentationCallbacks &PIC) {
+    PassInstrumentationCallbacks &PIC, ExtendedIRContext *IRContext) {
+  this->IRContext = IRContext;
   const OptPassGate &PassGate = Context.getOptPassGate();
   if (!PassGate.isEnabled())
     return;
@@ -1104,7 +1110,8 @@ raw_ostream &PrintPassInstrumentation::print() {
 }
 
 void PrintPassInstrumentation::registerCallbacks(
-    PassInstrumentationCallbacks &PIC) {
+    PassInstrumentationCallbacks &PIC, ExtendedIRContext *IRContext) {
+  this->IRContext = IRContext;
   if (!Enabled)
     return;
 
@@ -1119,7 +1126,8 @@ void PrintPassInstrumentation::registerCallbacks(
     assert(!isSpecialPass(PassID, SpecialPasses) &&
            "Unexpectedly skipping special pass");
 
-    print() << "Skipping pass: " << PassID << " on " << getIRName(IR) << "\n";
+        print() << "Skipping pass: " << PassID << " on "
+          << getIRName(IR, this->IRContext) << "\n";
   });
   PIC.registerBeforeNonSkippedPassCallback([this, SpecialPasses](
                                                StringRef PassID, Any IR) {
@@ -1127,7 +1135,8 @@ void PrintPassInstrumentation::registerCallbacks(
       return;
 
     auto &OS = print();
-    OS << "Running pass: " << PassID << " on " << getIRName(IR);
+     OS << "Running pass: " << PassID << " on "
+       << getIRName(IR, this->IRContext);
     if (const auto *F = unwrapIR<Function>(IR)) {
       unsigned Count = F->getInstructionCount();
       OS << " (" << Count << " instruction";
@@ -1162,15 +1171,15 @@ void PrintPassInstrumentation::registerCallbacks(
 
   if (!Opts.SkipAnalyses) {
     PIC.registerBeforeAnalysisCallback([this](StringRef PassID, Any IR) {
-      print() << "Running analysis: " << PassID << " on " << getIRName(IR)
-              << "\n";
+      print() << "Running analysis: " << PassID << " on "
+              << getIRName(IR, this->IRContext) << "\n";
       Indent += 2;
     });
     PIC.registerAfterAnalysisCallback(
         [this](StringRef PassID, Any IR) { Indent -= 2; });
     PIC.registerAnalysisInvalidatedCallback([this](StringRef PassID, Any IR) {
-      print() << "Invalidating analysis: " << PassID << " on " << getIRName(IR)
-              << "\n";
+      print() << "Invalidating analysis: " << PassID << " on "
+              << getIRName(IR, this->IRContext) << "\n";
     });
     PIC.registerAnalysesClearedCallback([this](StringRef IRName) {
       print() << "Clearing all analysis results for: " << IRName << "\n";
@@ -1577,7 +1586,8 @@ void InLineChangePrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
 TimeProfilingPassesHandler::TimeProfilingPassesHandler() {}
 
 void TimeProfilingPassesHandler::registerCallbacks(
-    PassInstrumentationCallbacks &PIC) {
+    PassInstrumentationCallbacks &PIC, ExtendedIRContext *IRContext) {
+  this->IRContext = IRContext;
   if (!getTimeTraceProfilerInstance())
     return;
   PIC.registerBeforeNonSkippedPassCallback(
@@ -1597,7 +1607,7 @@ void TimeProfilingPassesHandler::registerCallbacks(
 }
 
 void TimeProfilingPassesHandler::runBeforePass(StringRef PassID, Any IR) {
-  timeTraceProfilerBegin(PassID, getIRName(IR));
+  timeTraceProfilerBegin(PassID, getIRName(IR, this->IRContext));
 }
 
 void TimeProfilingPassesHandler::runAfterPass() { timeTraceProfilerEnd(); }
@@ -2519,12 +2529,13 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 }
 
 void StandardInstrumentations::registerCallbacks(
-    PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM) {
-  PrintIR.registerCallbacks(PIC);
-  PrintPass.registerCallbacks(PIC);
+    PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM,
+    ExtendedIRContext *IRContext) {
+  PrintIR.registerCallbacks(PIC, IRContext);
+  PrintPass.registerCallbacks(PIC, IRContext);
   TimePasses.registerCallbacks(PIC);
-  OptNone.registerCallbacks(PIC);
-  OptPassGate.registerCallbacks(PIC);
+  OptNone.registerCallbacks(PIC, IRContext);
+  OptPassGate.registerCallbacks(PIC, IRContext);
   PrintChangedIR.registerCallbacks(PIC);
   PseudoProbeVerification.registerCallbacks(PIC);
   if (VerifyEach)
@@ -2543,7 +2554,7 @@ void StandardInstrumentations::registerCallbacks(
   // Its 'AfterPassCallback' is put at the front of all the
   // AfterCallbacks by its `registerCallbacks`. This is necessary
   // to ensure that other callbacks are not included in the timings.
-  TimeProfilingPasses.registerCallbacks(PIC);
+  TimeProfilingPasses.registerCallbacks(PIC, IRContext);
 }
 
 template class ChangeReporter<std::string>;
