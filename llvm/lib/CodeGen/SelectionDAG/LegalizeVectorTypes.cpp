@@ -1446,6 +1446,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SETCC:
     SplitVecRes_SETCC(N, Lo, Hi);
     break;
+  case ISD::VECTOR_BROADCAST:
+    SplitVecRes_VECTOR_BROADCAST(N, Lo, Hi);
+    break;
   case ISD::VECTOR_REVERSE:
     SplitVecRes_VECTOR_REVERSE(N, Lo, Hi);
     break;
@@ -3463,6 +3466,49 @@ void DAGTypeLegalizer::SplitVecRes_FP_TO_XINT_SAT(SDNode *N, SDValue &Lo,
 
   Lo = DAG.getNode(N->getOpcode(), dl, DstVTLo, SrcLo, N->getOperand(1));
   Hi = DAG.getNode(N->getOpcode(), dl, DstVTHi, SrcHi, N->getOperand(1));
+}
+
+void DAGTypeLegalizer::SplitVecRes_VECTOR_BROADCAST(SDNode *N, SDValue &Lo,
+                                                    SDValue &Hi) {
+  EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  EVT LoVT, HiVT;
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
+  assert(LoVT == HiVT && "Expected equal split types");
+
+  // Simple case: The split type is same as SrcVT.
+  if (LoVT == SrcVT) {
+    Lo = Hi = Src;
+    return;
+  }
+
+  // Second case: Src is known to be wider than LoVT.
+  SDLoc DL(N);
+  if (LoVT.getVectorMinNumElements() >= SrcVT.getVectorMinNumElements()) {
+    Lo = Hi = DAG.getNode(ISD::VECTOR_BROADCAST, DL, LoVT, Src);
+    return;
+  }
+
+  // Final case: VT is scalable and has the same minimum EC.
+  // Use smaller even/odd source vectors so their broadcasts can be
+  // reinterleaved in the original lane order for every value of vscale.
+  assert(VT.getVectorMinNumElements() == SrcVT.getVectorMinNumElements() &&
+         VT.isScalableVector());
+  SDValue SrcLo, SrcHi;
+  std::tie(SrcLo, SrcHi) = DAG.SplitVector(Src, DL);
+  EVT SrcSplitVT = SrcLo.getValueType();
+  SDValue Deinterleaved =
+      DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
+                  DAG.getVTList(SrcSplitVT, SrcSplitVT), SrcLo, SrcHi);
+  SDValue Even =
+      DAG.getNode(ISD::VECTOR_BROADCAST, DL, LoVT, Deinterleaved.getValue(0));
+  SDValue Odd =
+      DAG.getNode(ISD::VECTOR_BROADCAST, DL, LoVT, Deinterleaved.getValue(1));
+  SDValue Interleaved = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
+                                    DAG.getVTList(LoVT, HiVT), Even, Odd);
+  Lo = Interleaved.getValue(0);
+  Hi = Interleaved.getValue(1);
 }
 
 void DAGTypeLegalizer::SplitVecRes_VECTOR_REVERSE(SDNode *N, SDValue &Lo,
