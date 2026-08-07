@@ -36,34 +36,32 @@ using namespace ento;
 // but can produce a true result when evaluated by `evalBinOp` (which follows
 // the rules of C++ and casts -1 to SIZE_MAX).
 static std::pair<NonLoc, nonloc::ConcreteInt>
-getSimplifiedOffsets(NonLoc offset, nonloc::ConcreteInt extent,
-                     SValBuilder &svalBuilder) {
-  const llvm::APSInt &extentVal = extent.getValue();
-  std::optional<nonloc::SymbolVal> SymVal = offset.getAs<nonloc::SymbolVal>();
+getSimplifiedOffsets(NonLoc Offset, nonloc::ConcreteInt Extent,
+                     SValBuilder &SVB) {
+  const llvm::APSInt &ExtentVal = Extent.getValue();
+  std::optional<nonloc::SymbolVal> SymVal = Offset.getAs<nonloc::SymbolVal>();
   if (SymVal && SymVal->isExpression()) {
     if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(SymVal->getSymbol())) {
-      llvm::APSInt constant = APSIntType(extentVal).convert(SIE->getRHS());
+      llvm::APSInt Num = APSIntType(ExtentVal).convert(SIE->getRHS());
       switch (SIE->getOpcode()) {
       case BO_Mul:
-        // The constant should never be 0 here, becasue multiplication by zero
+        // The Num should never be 0 here, because multiplication by zero
         // is simplified by the engine.
-        if ((extentVal % constant) != 0)
-          return std::pair<NonLoc, nonloc::ConcreteInt>(offset, extent);
+        if ((ExtentVal % Num) != 0)
+          return std::pair<NonLoc, nonloc::ConcreteInt>(Offset, Extent);
         else
-          return getSimplifiedOffsets(
-              nonloc::SymbolVal(SIE->getLHS()),
-              svalBuilder.makeIntVal(extentVal / constant), svalBuilder);
+          return getSimplifiedOffsets(nonloc::SymbolVal(SIE->getLHS()),
+                                      SVB.makeIntVal(ExtentVal / Num), SVB);
       case BO_Add:
-        return getSimplifiedOffsets(
-            nonloc::SymbolVal(SIE->getLHS()),
-            svalBuilder.makeIntVal(extentVal - constant), svalBuilder);
+        return getSimplifiedOffsets(nonloc::SymbolVal(SIE->getLHS()),
+                                    SVB.makeIntVal(ExtentVal - Num), SVB);
       default:
         break;
       }
     }
   }
 
-  return std::pair<NonLoc, nonloc::ConcreteInt>(offset, extent);
+  return std::pair<NonLoc, nonloc::ConcreteInt>(Offset, Extent);
 }
 
 static bool isNegative(SValBuilder &SVB, ProgramStateRef State, NonLoc Value) {
