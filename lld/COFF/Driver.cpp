@@ -2841,8 +2841,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (ctx.hybridSymtab) {
     // On ARM64X, merge tls chunks, there may be only one true _tls_start and
-    // _tls_end chunk. Additionally, both views use the same _tls_used and
-    // _tls_index.
+    // _tls_end chunk.
     auto maybeReplaceWithNative = [&](StringRef name) {
       auto nativeSym = dyn_cast_or_null<DefinedRegular>(
           ctx.hybridSymtab->findUnderscore(name));
@@ -2852,8 +2851,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
               dyn_cast_or_null<DefinedRegular>(ctx.symtab.findUnderscore(name)))
         nativeSym->getChunk()->replace(ecSym->getChunk());
     };
-    maybeReplaceWithNative("_tls_used");
-    maybeReplaceWithNative("_tls_index");
     maybeReplaceWithNative("_tls_start");
     maybeReplaceWithNative("_tls_end");
   }

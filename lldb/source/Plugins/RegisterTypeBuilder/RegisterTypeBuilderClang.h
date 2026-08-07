@@ -29,7 +29,7 @@ public:
   static lldb::RegisterTypeBuilderSP CreateInstance(Target &target);
 
   CompilerType GetRegisterType(const std::string &name,
-                               const lldb_private::RegisterTypeFlags &flags,
+                               const lldb_private::RegisterType &type_info,
                                uint32_t byte_size) override;
 
 private:
