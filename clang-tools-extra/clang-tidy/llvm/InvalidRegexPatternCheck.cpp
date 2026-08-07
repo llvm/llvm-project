@@ -33,15 +33,16 @@ void InvalidRegexPatternCheck::registerMatchers(MatchFinder *Finder) {
   auto AnyCastedToStringRef = ignoringImplicit(anyOf(
       stringLiteral().bind("stringLiteral"),
       declRefExpr(to(varDecl(
-          hasType(qualType(anyOf(IsConstStdString, IsConstllvmStringRef,
-                                 IsStdStringView, IsConstCharPtr,
-                                 IsCharArray))),
+          hasType(
+              qualType(anyOf(IsConstStdString, IsConstllvmStringRef,
+                             IsStdStringView, IsConstCharPtr, IsCharArray))),
           hasInitializer(anyOf(GetStringLiteralFromObject, GetStringLit))))),
-      memberExpr(member(fieldDecl(
-          hasType(qualType(anyOf(IsConstStdString, IsConstllvmStringRef,
-                                 IsStdStringView, IsConstCharPtr, IsCharArray))),
-          hasInClassInitializer(
-              anyOf(GetStringLiteralFromObject, GetStringLit)))))));
+      memberExpr(member(
+          fieldDecl(hasType(qualType(
+                        anyOf(IsConstStdString, IsConstllvmStringRef,
+                              IsStdStringView, IsConstCharPtr, IsCharArray))),
+                    hasInClassInitializer(
+                        anyOf(GetStringLiteralFromObject, GetStringLit)))))));
 
   auto IsRegexFlagsType = ignoringParenImpCasts(
       anyOf(integerLiteral().bind("regexFlagsInt"),
@@ -60,22 +61,21 @@ void InvalidRegexPatternCheck::registerMatchers(MatchFinder *Finder) {
 void InvalidRegexPatternCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *DetectedPattern =
       Result.Nodes.getNodeAs<StringLiteral>("stringLiteral");
-      assert(DetectedPattern && "stringLiteral must be bound in matcher");
+  assert(DetectedPattern && "stringLiteral must be bound in matcher");
 
-    const auto *FlagInt =
-        Result.Nodes.getNodeAs<IntegerLiteral>("regexFlagsInt");
-    const auto *FlagEnum =
-        Result.Nodes.getNodeAs<EnumConstantDecl>("regexFlagEnum");
-    unsigned int Flag = llvm::Regex::RegexFlags::NoFlags;
-    if (FlagInt)
-      Flag = FlagInt->getValue().getZExtValue();
-    if (FlagEnum)
-      Flag = FlagEnum->getInitVal().getZExtValue();
-    const llvm::Regex TestRegex(DetectedPattern->getString(), Flag);
-    std::string RegexError;
-    if (!TestRegex.isValid(RegexError))
-      diag(DetectedPattern->getBeginLoc(), "invalid regex pattern: %0")
-          << RegexError << DetectedPattern->getSourceRange();
+  const auto *FlagInt = Result.Nodes.getNodeAs<IntegerLiteral>("regexFlagsInt");
+  const auto *FlagEnum =
+      Result.Nodes.getNodeAs<EnumConstantDecl>("regexFlagEnum");
+  unsigned int Flag = llvm::Regex::RegexFlags::NoFlags;
+  if (FlagInt)
+    Flag = FlagInt->getValue().getZExtValue();
+  if (FlagEnum)
+    Flag = FlagEnum->getInitVal().getZExtValue();
+  const llvm::Regex TestRegex(DetectedPattern->getString(), Flag);
+  std::string RegexError;
+  if (!TestRegex.isValid(RegexError))
+    diag(DetectedPattern->getBeginLoc(), "invalid regex pattern: %0")
+        << RegexError << DetectedPattern->getSourceRange();
 }
 
 } // namespace clang::tidy::llvm_check
