@@ -1550,6 +1550,15 @@ bool PreRARematStage::initGCNSchedStage() {
     if (NumUsers != 1)
       continue;
 
+    // Rematerialization moves the defining instruction into the region of its
+    // use, which may sit under different control dependencies (e.g., across a
+    // change of EXEC). Convergent operations must not be made control-dependent
+    // on additional values, so they cannot be safely relocated this way. This
+    // mirrors the check MachineSink performs before sinking an instruction.
+    if (any_of(CandReg.Defs,
+               [](const MachineInstr *DefMI) { return DefMI->isConvergent(); }))
+      continue;
+
     // We further filter the registers that we can rematerialize based on our
     // current tracking capabilities in the stage. The user cannot itself be
     // marked rematerializable, and no register operand of the defining MI can

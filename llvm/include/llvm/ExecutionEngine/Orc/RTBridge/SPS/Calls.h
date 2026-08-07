@@ -51,38 +51,45 @@ public:
   /// Name of the controller-interface wrapper this caller targets.
   static constexpr const char *CIName = CINameV;
 
-  Caller(ExecutionSession &ES, ExecutorAddr CallerFnAddr)
-      : ES(ES), CallerFnAddr(CallerFnAddr) {}
+  using BaseT::BaseT;
+  using BaseT::operator();
 
   /// Look the wrapper up in the executor's bootstrap JITDylib and build a
   /// caller for it.
-  static Expected<Caller> Create(ExecutionSession &ES,
-                                 const char *Name = CIName) {
-    if (auto CallerSym = ES.lookup({&ES.getBootstrapJITDylib()}, Name))
-      return Caller(ES, CallerSym->getAddress());
-    else
-      return CallerSym.takeError();
+  static Expected<Caller>
+  Create(ExecutionSession &ES,
+         SymbolLookupFlags SLF = SymbolLookupFlags::RequiredSymbol,
+         const char *Name = CIName) {
+    if (auto CalleeSyms =
+            ES.lookup(makeJITDylibSearchOrder(&ES.getBootstrapJITDylib()),
+                      SymbolLookupSet{ES.intern(Name), SLF})) {
+      if (!CalleeSyms->empty())
+        return Caller(ES, CalleeSyms->begin()->second.getAddress());
+      assert(SLF == SymbolLookupFlags::WeaklyReferencedSymbol);
+      return Caller(ES, ExecutorAddr());
+    } else
+      return CalleeSyms.takeError();
   }
 
-  /// Asynchronously call the SPS wrapper at CallerFnAddr with the given Args,
+  /// Asynchronously call the SPS wrapper at CalleeAddr with the given Args,
   /// delivering the result (or an error) to OnComplete. Serialization failures
   /// are reported through OnComplete's error channel.
   static void callAsync(unique_function<void(ErrorRetT)> OnComplete,
-                        ExecutionSession &ES, ExecutorAddr CallerFnAddr,
+                        ExecutionSession &ES, ExecutorAddr CalleeAddr,
                         const ArgTs &...Args) {
     using namespace llvm::orc::shared;
     if constexpr (std::is_void_v<CalleeRetT>) {
       // Void result: the executor-side function produces no value, so the only
       // thing to report is the dispatch error (success if the call ran).
       ES.callSPSWrapperAsync<SPSSigT>(
-          CallerFnAddr,
+          CalleeAddr,
           [OnComplete = std::move(OnComplete)](Error SerErr) mutable {
             OnComplete(std::move(SerErr));
           },
           Args...);
     } else {
       ES.callSPSWrapperAsync<SPSSigT>(
-          CallerFnAddr,
+          CalleeAddr,
           [OnComplete = std::move(OnComplete)](Error SerErr,
                                                CalleeRetT Result) mutable {
             if (SerErr)
@@ -96,14 +103,9 @@ public:
 
   void operator()(unique_function<void(ErrorRetT)> OnComplete,
                   ArgTs... Args) override {
-    callAsync(std::move(OnComplete), ES, CallerFnAddr, Args...);
+    callAsync(std::move(OnComplete), this->executionSession(),
+              this->calleeAddr(), Args...);
   }
-
-  using BaseT::operator();
-
-private:
-  ExecutionSession &ES;
-  ExecutorAddr CallerFnAddr;
 };
 
 using CallMainSPSSig = int64_t(shared::SPSExecutorAddr,

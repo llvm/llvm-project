@@ -36,34 +36,32 @@ using namespace ento;
 // but can produce a true result when evaluated by `evalBinOp` (which follows
 // the rules of C++ and casts -1 to SIZE_MAX).
 static std::pair<NonLoc, nonloc::ConcreteInt>
-getSimplifiedOffsets(NonLoc offset, nonloc::ConcreteInt extent,
-                     SValBuilder &svalBuilder) {
-  const llvm::APSInt &extentVal = extent.getValue();
-  std::optional<nonloc::SymbolVal> SymVal = offset.getAs<nonloc::SymbolVal>();
+getSimplifiedOffsets(NonLoc Offset, nonloc::ConcreteInt Extent,
+                     SValBuilder &SVB) {
+  const llvm::APSInt &ExtentVal = Extent.getValue();
+  std::optional<nonloc::SymbolVal> SymVal = Offset.getAs<nonloc::SymbolVal>();
   if (SymVal && SymVal->isExpression()) {
     if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(SymVal->getSymbol())) {
-      llvm::APSInt constant = APSIntType(extentVal).convert(SIE->getRHS());
+      llvm::APSInt Num = APSIntType(ExtentVal).convert(SIE->getRHS());
       switch (SIE->getOpcode()) {
       case BO_Mul:
-        // The constant should never be 0 here, becasue multiplication by zero
+        // The Num should never be 0 here, because multiplication by zero
         // is simplified by the engine.
-        if ((extentVal % constant) != 0)
-          return std::pair<NonLoc, nonloc::ConcreteInt>(offset, extent);
+        if ((ExtentVal % Num) != 0)
+          return std::pair<NonLoc, nonloc::ConcreteInt>(Offset, Extent);
         else
-          return getSimplifiedOffsets(
-              nonloc::SymbolVal(SIE->getLHS()),
-              svalBuilder.makeIntVal(extentVal / constant), svalBuilder);
+          return getSimplifiedOffsets(nonloc::SymbolVal(SIE->getLHS()),
+                                      SVB.makeIntVal(ExtentVal / Num), SVB);
       case BO_Add:
-        return getSimplifiedOffsets(
-            nonloc::SymbolVal(SIE->getLHS()),
-            svalBuilder.makeIntVal(extentVal - constant), svalBuilder);
+        return getSimplifiedOffsets(nonloc::SymbolVal(SIE->getLHS()),
+                                    SVB.makeIntVal(ExtentVal - Num), SVB);
       default:
         break;
       }
     }
   }
 
-  return std::pair<NonLoc, nonloc::ConcreteInt>(offset, extent);
+  return std::pair<NonLoc, nonloc::ConcreteInt>(Offset, Extent);
 }
 
 static bool isNegative(SValBuilder &SVB, ProgramStateRef State, NonLoc Value) {
@@ -76,16 +74,10 @@ static bool isUnsigned(SValBuilder &SVB, NonLoc Value) {
   return T->isUnsignedIntegerType();
 }
 
-// Evaluate the comparison Value < Threshold with the help of the custom
-// simplification algorithm defined for this checker. Return a pair of states,
-// where the first one corresponds to "value below threshold" and the second
-// corresponds to "value at or above threshold". Returns {nullptr, nullptr} in
-// the case when the evaluation fails.
-// If the optional argument CheckEquality is true, then use BO_EQ instead of
-// the default BO_LT after consistently applying the same simplification steps.
-static std::pair<ProgramStateRef, ProgramStateRef>
-compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
-                        SValBuilder &SVB, bool CheckEquality = false) {
+std::pair<ProgramStateRef, ProgramStateRef>
+bounds::compareValueToThreshold(ProgramStateRef State, SValBuilder &SVB,
+                                NonLoc Value, NonLoc Threshold,
+                                bool CheckEquality) {
   if (auto ConcreteThreshold = Threshold.getAs<nonloc::ConcreteInt>()) {
     std::tie(Value, Threshold) =
         getSimplifiedOffsets(Value, *ConcreteThreshold, SVB);
@@ -143,7 +135,7 @@ bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
   // CHECK LOWER BOUND
   if (Flags.CheckUnderflow) {
     auto [PrecedesLowerBound, WithinLowerBound] =
-        compareValueToThreshold(State, Offset, SVB.makeZeroArrayIndex(), SVB);
+        compareValueToThreshold(State, SVB, Offset, SVB.makeZeroArrayIndex());
 
     if (PrecedesLowerBound) {
       // The analyzer thinks that the offset may be invalid (negative)...
@@ -198,25 +190,14 @@ bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
     // In this situation the warning message should mention both possibilities.
 
     auto [WithinUpperBound, ExceedsUpperBound] =
-        compareValueToThreshold(State, Offset, *Extent, SVB);
+        compareValueToThreshold(State, SVB, Offset, *Extent);
 
     if (ExceedsUpperBound) {
       // The offset may be invalid (>= Size)...
       Res.ExtentIfMayOverflow = Extent;
 
       if (!WithinUpperBound) {
-        // ...and it cannot be within bounds, so report an error, unless we can
-        // definitely determine that this is an idiomatic `&array[size]`
-        // expression that calculates the past-the-end pointer.
-        if (Flags.AcceptPastTheEnd) {
-          auto [EqualsToThreshold, NotEqualToThreshold] =
-              compareValueToThreshold(State, Offset, *Extent, SVB,
-                                      /*CheckEquality=*/true);
-          if (EqualsToThreshold && !NotEqualToThreshold) {
-            Res.ExtentIfMayOverflow = std::nullopt;
-            Res.InBoundsState = EqualsToThreshold;
-          }
-        }
+        // ...and it cannot be within bounds.
         return Res;
       }
     }
