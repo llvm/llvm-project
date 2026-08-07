@@ -1906,7 +1906,7 @@ bool IRTranslator::translateVectorDeinterleave2Intrinsic(
 
     return true;
   }
-  
+
   assert(ResTy.isVector() && "Expected vector result type");
   MIRBuilder.buildShuffleVector(Res[0], Op, Undef,
                                 createStrideMask(0, 2, ResTy.getNumElements()));
