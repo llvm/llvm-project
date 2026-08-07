@@ -7710,9 +7710,19 @@ bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
       if (DT.dominates(NoWrapEdge, Result->getParent()))
         continue;
 
-      for (const auto &RU : Result->uses())
+      for (const auto &RU : Result->uses()) {
+        // Users that have been created but not inserted into a basic block
+        // (e.g. temporary instructions materialized by other passes and kept
+        // off the CFG, such as ConstraintElimination's bound expressions) can
+        // still appear in a value's use list. Such a user cannot execute and
+        // has no location for a dominance query, so it never observes a
+        // wrapping value; skip it.
+        if (const auto *RUser = dyn_cast<Instruction>(RU.getUser());
+            RUser && !RUser->getParent())
+          continue;
         if (!DT.dominates(NoWrapEdge, RU))
           return false;
+      }
     }
 
     return true;
