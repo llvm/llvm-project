@@ -2195,7 +2195,7 @@ public:
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_language_swift_properties);
+    m_collection_sp->Initialize(g_language_swift_properties_def);
   }
 
   FormatEntity::Entry GetFunctionNameFormat() const {
