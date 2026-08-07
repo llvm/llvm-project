@@ -121,7 +121,7 @@ bool DeclFinderASTVisitor::VisitNamedDecl(NamedDecl *D) {
 /// Forward any declaration references to the actual check on the
 /// referenced declaration.
 bool DeclFinderASTVisitor::VisitDeclRefExpr(DeclRefExpr *DeclRef) {
-  if (auto *D = dyn_cast<NamedDecl>(DeclRef->getDecl()))
+  if (ValueDecl *D = DeclRef->getDecl())
     return VisitNamedDecl(D);
   return true;
 }

@@ -2149,18 +2149,21 @@ bool HexagonTargetLowering::shouldExpandBuildVectorWithShuffles(EVT VT,
   return false;
 }
 
-bool HexagonTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-      unsigned Index) const {
+TargetLowering::ExtractSubvectorCost
+HexagonTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                               unsigned Index) const {
   assert(ResVT.getVectorElementType() == SrcVT.getVectorElementType());
   if (!ResVT.isSimple() || !SrcVT.isSimple())
-    return false;
+    return ExtractSubvectorCost::Expensive;
 
   MVT ResTy = ResVT.getSimpleVT(), SrcTy = SrcVT.getSimpleVT();
   if (ResTy.getVectorElementType() != MVT::i1)
-    return true;
+    return ExtractSubvectorCost::Free;
 
   // Non-HVX bool vectors are relatively cheap.
-  return SrcTy.getVectorNumElements() <= 8;
+  if (SrcTy.getVectorNumElements() <= 8)
+    return ExtractSubvectorCost::Free;
+  return ExtractSubvectorCost::Expensive;
 }
 
 bool HexagonTargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
@@ -3093,7 +3096,7 @@ HexagonTargetLowering::LowerLoad(SDValue Op, SelectionDAG &DAG) const {
         LN->getAddressingMode(), ISD::ZEXTLOAD, MVT::i32, dl, LN->getChain(),
         LN->getBasePtr(), LN->getOffset(), LN->getPointerInfo(),
         /*MemoryVT*/ MVT::i8, LN->getAlign(), LN->getMemOperand()->getFlags(),
-        LN->getAAInfo(), LN->getRanges());
+        MMOMetadata(LN->getAAInfo(), LN->getRanges()));
     LN = cast<LoadSDNode>(NL.getNode());
   }
 
@@ -3220,7 +3223,7 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
     MachineFunction &MF = DAG.getMachineFunction();
     WideMMO = MF.getMachineMemOperand(
         MMO->getPointerInfo(), MMO->getFlags(), 2 * LoadLen, Align(LoadLen),
-        MMO->getAAInfo(), MMO->getRanges(), MMO->getSyncScopeID(),
+        MMOMetadata(MMO->getAAInfo(), MMO->getRanges()), MMO->getSyncScopeID(),
         MMO->getSuccessOrdering(), MMO->getFailureOrdering());
   }
 

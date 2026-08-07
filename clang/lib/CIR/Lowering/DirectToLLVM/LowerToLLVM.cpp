@@ -2597,7 +2597,7 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewriteAlias(
   mlir::Location loc = op.getLoc();
   auto aliasOp = rewriter.replaceOpWithNewOp<mlir::LLVM::AliasOp>(
       op, ty, convertLinkage(op.getLinkage()), op.getName(), op.getDsoLocal(),
-      /*threadLocal=*/false, attributes);
+      mlir::LLVM::ThreadLocalMode::NotThreadLocal, attributes);
 
   // Create the alias body
   mlir::OpBuilder builder(op.getContext());
@@ -2769,6 +2769,24 @@ CIRToLLVMGlobalOpLowering::lowerGlobalAttributes(
   return attributes;
 }
 
+static mlir::LLVM::ThreadLocalMode
+convertTlsModelAttrToLLVM(TLS_ModelAttr attr) {
+  // assert that we can just static-cast these.
+#define CHECK_ENUM(CIR, LLVM_VAL)                                              \
+  static_assert(static_cast<unsigned>(TLS_Model::CIR) ==                       \
+                static_cast<unsigned>(mlir::LLVM::ThreadLocalMode::LLVM_VAL))
+  CHECK_ENUM(GeneralDynamic, GeneralDynamic);
+  CHECK_ENUM(LocalDynamic, LocalDynamic);
+  CHECK_ENUM(InitialExec, InitialExec);
+  CHECK_ENUM(LocalExec, LocalExec);
+#undef CHECK_ENUM
+
+  if (!attr)
+    return mlir::LLVM::ThreadLocalMode::NotThreadLocal;
+
+  return static_cast<mlir::LLVM::ThreadLocalMode>(attr.getValue());
+}
+
 /// Replace CIR global with a region initialized LLVM global and update
 /// insertion point to the end of the initializer block.
 void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
@@ -2792,7 +2810,8 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
           op.getAddrSpaceAttr()))
     addrSpace = targetAS.getValue();
   const bool isDsoLocal = op.getDsoLocal();
-  const bool isThreadLocal = (bool)op.getTlsModelAttr();
+  mlir::LLVM::ThreadLocalMode threadLocalMode =
+      convertTlsModelAttrToLLVM(op.getTlsModelAttr());
   const uint64_t alignment = op.getAlignment().value_or(0);
   const mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   const StringRef symbol = op.getSymName();
@@ -2804,7 +2823,7 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   mlir::LLVM::GlobalOp newGlobalOp =
       rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
           op, llvmType, isConst, linkage, symbol, nullptr, alignment, addrSpace,
-          isDsoLocal, isThreadLocal, comdatAttr, attributes);
+          isDsoLocal, threadLocalMode, comdatAttr, attributes);
   newGlobalOp.getRegion().emplaceBlock();
   rewriter.setInsertionPointToEnd(newGlobalOp.getInitializerBlock());
 }
@@ -2871,7 +2890,8 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
           op.getAddrSpaceAttr()))
     addrSpace = targetAS.getValue();
   const bool isDsoLocal = op.getDsoLocal();
-  const bool isThreadLocal = (bool)op.getTlsModelAttr();
+  mlir::LLVM::ThreadLocalMode threadLocalMode =
+      convertTlsModelAttrToLLVM(op.getTlsModelAttr());
   const uint64_t alignment = op.getAlignment().value_or(0);
   const mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   const StringRef symbol = op.getSymName();
@@ -2882,7 +2902,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   if (std::optional<llvm::StringRef> aliasee = op.getAliasee()) {
     mlir::Location loc = op.getLoc();
     auto aliasOp = rewriter.replaceOpWithNewOp<mlir::LLVM::AliasOp>(
-        op, llvmType, linkage, symbol, isDsoLocal, isThreadLocal, attributes);
+        op, llvmType, linkage, symbol, isDsoLocal, threadLocalMode, attributes);
 
     mlir::OpBuilder builder(op.getContext());
     mlir::Block *block = builder.createBlock(&aliasOp.getInitializerRegion());
@@ -2922,7 +2942,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
           mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
           rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
               op, llvmType, isConst, linkage, symbol, bulkInit.value(),
-              alignment, addrSpace, isDsoLocal, isThreadLocal, comdatAttr,
+              alignment, addrSpace, isDsoLocal, threadLocalMode, comdatAttr,
               attributes);
           return mlir::success();
         }
@@ -2941,7 +2961,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
         mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
         rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
             op, llvmType, isConst, linkage, symbol, bulkInit.value(), alignment,
-            addrSpace, isDsoLocal, isThreadLocal, comdatAttr, attributes);
+            addrSpace, isDsoLocal, threadLocalMode, comdatAttr, attributes);
         return mlir::success();
       }
       return matchAndRewriteRegionInitializedGlobal(op, init.value(), rewriter);
@@ -2965,7 +2985,8 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
   rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
       op, llvmType, isConst, linkage, symbol, init.value_or(mlir::Attribute()),
-      alignment, addrSpace, isDsoLocal, isThreadLocal, comdatAttr, attributes);
+      alignment, addrSpace, isDsoLocal, threadLocalMode, comdatAttr,
+      attributes);
 
   return mlir::success();
 }
