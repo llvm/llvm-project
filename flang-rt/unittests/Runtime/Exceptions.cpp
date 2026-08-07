@@ -142,3 +142,19 @@ TEST(Exceptions, ClearOneLeavesOthersAlone) {
   GTEST_SKIP() << "FE_OVERFLOW and FE_INVALID required for this test";
 #endif
 }
+
+TEST(Exceptions, GetStatusTypeSizeMatchesPlatformLayout) {
+  const std::size_t sz{RTNAME(GetStatusTypeSize)()};
+#if defined(_AIX)
+  EXPECT_EQ(sz, sizeof(std::fenv_t) + sizeof(double))
+      << "expected sizeof(fenv_t)+sizeof(double)="
+      << sizeof(std::fenv_t) + sizeof(double);
+#else
+  EXPECT_EQ(sz, sizeof(std::fenv_t))
+      << "expected sizeof(fenv_t)=" << sizeof(std::fenv_t);
+#endif
+  // The size must fit in ieee_status_type.__data as integer(4) with
+  // extent _FORTRAN_RUNTIME_IEEE_FENV_T_EXTENT.
+  EXPECT_LE(sz, 32u)
+      << "GetStatusTypeSize exceeds the 32-byte ieee_status_type.__data field";
+}
