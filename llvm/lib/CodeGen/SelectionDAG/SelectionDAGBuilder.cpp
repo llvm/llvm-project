@@ -4017,6 +4017,35 @@ void SelectionDAGBuilder::visitTrunc(const User &I) {
   setValue(&I, DAG.getNode(ISD::TRUNCATE, getCurSDLoc(), DestVT, N, Flags));
 }
 
+static bool mayUseAnyExtend(const Triple &T, const Value *V) {
+  if (!T.isAArch64() || !V->getType()->isIntegerTy())
+    return false;
+  const unsigned VSize = V->getType()->getIntegerBitWidth();
+  for (const Use &U : V->uses()) {
+    const auto *CB = dyn_cast<CallBase>(U.getUser());
+    if (!CB || !CB->isArgOperand(&U))
+      return false;
+
+    const unsigned ArgNo = CB->getArgOperandNo(&U);
+
+    if (!CB->paramHasAttr(ArgNo, Attribute::NoExt))
+      return false;
+
+    Attribute BWAttr = CB->getParamAttr(ArgNo, "bitwidth");
+    if (!BWAttr.isValid())
+      return false;
+
+    unsigned BitWidth = 0;
+    if (BWAttr.getValueAsString().getAsInteger(/*Radix=*/10, BitWidth))
+      return false;
+
+    if (BitWidth > VSize)
+      return false;
+  }
+
+  return true;
+}
+
 void SelectionDAGBuilder::visitZExt(const User &I) {
   // ZExt cannot be a no-op cast because sizeof(src) < sizeof(dest).
   // ZExt also can't be a cast to bool for same reason. So, nothing much to do
@@ -4037,7 +4066,9 @@ void SelectionDAGBuilder::visitZExt(const User &I) {
     return;
   }
 
-  setValue(&I, DAG.getNode(ISD::ZERO_EXTEND, getCurSDLoc(), DestVT, N, Flags));
+  bool UseAnyExt = mayUseAnyExtend(DAG.getTarget().getTargetTriple(), &I);
+  setValue(&I, DAG.getNode(UseAnyExt ? ISD::ANY_EXTEND : ISD::ZERO_EXTEND,
+                           getCurSDLoc(), DestVT, N, Flags));
 }
 
 void SelectionDAGBuilder::visitSExt(const User &I) {

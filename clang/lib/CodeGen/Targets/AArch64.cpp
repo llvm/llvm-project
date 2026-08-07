@@ -504,6 +504,11 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
           std::max(getContext().getTypeAlign(Ty),
                    (unsigned)getTarget().getPointerWidth(LangAS::Default));
     }
+    if (Size < getDataLayout().getPointerSizeInBits() &&
+        getDataLayout().isLittleEndian())
+      return ABIArgInfo::getNoExtend(llvm::IntegerType::get(
+          getVMContext(), llvm::alignTo(Size, Alignment)));
+
     Size = llvm::alignTo(Size, Alignment);
 
     // If the Aggregate is made up of pointers, use an array of pointers for the

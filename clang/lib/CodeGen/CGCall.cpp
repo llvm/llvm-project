@@ -3112,12 +3112,17 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     // sense to do it here because parameters are so messed up.
     switch (AI.getKind()) {
     case ABIArgInfo::Extend:
-      if (AI.isSignExt())
+      if (AI.isSignExt()) {
         Attrs.addAttribute(llvm::Attribute::SExt);
-      else if (AI.isZeroExt())
+      } else if (AI.isZeroExt()) {
         Attrs.addAttribute(llvm::Attribute::ZExt);
-      else
+      } else {
         Attrs.addAttribute(llvm::Attribute::NoExt);
+        if (getTriple().isAArch64() && getTriple().isLittleEndian()) {
+          uint64_t Size = getContext().getTypeSize(ParamType);
+          Attrs.addAttribute("bitwidth", std::to_string(Size));
+        }
+      }
       [[fallthrough]];
     case ABIArgInfo::TargetSpecific:
     case ABIArgInfo::Direct:

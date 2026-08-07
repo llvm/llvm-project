@@ -575,7 +575,7 @@ void TSpp_align16(SSpp_align16 s) { *s.a.x = 1; }
 struct Sempty {
 };
 // CHECK-A64-LABEL: define dso_local void @_Z6Tempty6Sempty(
-// CHECK-A64-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64-SAME: i64 noext "bitwidth"="8" [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SEMPTY:%.*]], align 1
 // CHECK-A64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SEMPTY]], ptr [[S]], i32 0, i32 0
@@ -584,7 +584,7 @@ struct Sempty {
 // CHECK-A64-NEXT:    ret void
 //
 // CHECK-A64_32-LABEL: define void @_Z6Tempty6Sempty(
-// CHECK-A64_32-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64_32-SAME: i64 noext "bitwidth"="8" [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SEMPTY:%.*]], align 1
 // CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SEMPTY]], ptr [[S]], i32 0, i32 0
