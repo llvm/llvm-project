@@ -15,7 +15,7 @@
 # ---------------------------------------------------------------------------
 set(LLVM_ENABLE_PROJECTS "clang;lldb" CACHE STRING "")
 # compiler-rt provides the LLVM asan/tsan runtime dylibs.
-set(LLVM_ENABLE_RUNTIMES "libcxx;libcxxabi;libunwind;compiler-rt" CACHE STRING "" FORCE)
+set(LLVM_ENABLE_RUNTIMES "compiler-rt" CACHE STRING "" FORCE)
 # Only build macOS sanitizer dylibs.
 # FIXME: Support also building the other dylibs.
 set(COMPILER_RT_ENABLE_IOS     FALSE CACHE BOOL "" FORCE)
@@ -23,6 +23,11 @@ set(COMPILER_RT_ENABLE_TVOS    FALSE CACHE BOOL "" FORCE)
 set(COMPILER_RT_ENABLE_WATCHOS FALSE CACHE BOOL "" FORCE)
 # Only build the sanitizers needed by the LLDB test suite.
 set(COMPILER_RT_SANITIZERS_TO_BUILD "asan;tsan" CACHE STRING "" FORCE)
+
+# We can't run (or build) libc++ tests as Swift as we don't enable libc++.
+# Enabling libc++ makes Swift pick it up in its libc++ interop and that is only
+# supported with the Xcode libc++.
+set(LLDB_ENABLE_LIBCXX_TESTS FALSE CACHE BOOL "" FORCE)
 
 get_filename_component(_swift_root "${CMAKE_CURRENT_LIST_DIR}/../../../.." ABSOLUTE)
 
@@ -104,26 +109,4 @@ if(APPLE)
   endforeach()
 endif()
 
-
-# ---------------------------------------------------------------------------
-# Swift compiler detection
-# On macOS the default xcrun toolchain may return a swiftc that is a different
-# version from the SDK; derive the SDK-matching toolchain explicitly.
-# ---------------------------------------------------------------------------
-if(APPLE AND NOT CMAKE_Swift_COMPILER)
-  execute_process(
-    COMMAND xcrun --show-sdk-path
-    OUTPUT_VARIABLE _swift_cache_sdk  OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-  execute_process(
-    COMMAND xcode-select -p
-    OUTPUT_VARIABLE _swift_cache_xdev OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-  if(_swift_cache_sdk MATCHES "MacOSX([0-9]+\\.[0-9]+)\\.sdk")
-    set(_swift_cache_swiftc
-        "${_swift_cache_xdev}/Toolchains/OSX${CMAKE_MATCH_1}.xctoolchain/usr/bin/swiftc")
-    if(EXISTS "${_swift_cache_swiftc}")
-      set(CMAKE_Swift_COMPILER        "${_swift_cache_swiftc}" CACHE FILEPATH "" FORCE)
-      set(CMAKE_OSX_SYSROOT           "${_swift_cache_sdk}"    CACHE STRING   "" FORCE)
-      set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0"                   CACHE STRING   "" FORCE)
-    endif()
-  endif()
-endif()
+set(CMAKE_Swift_COMPILER        "/usr/bin/swiftc" CACHE FILEPATH "" FORCE)
