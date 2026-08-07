@@ -6622,7 +6622,28 @@ public:
     BoundsSafetyPointerAttributes FAttr = T->getPointerAttributes();
 
     if (FAttr.hasUpperBound() && !AutoPtrAttributed) {
-      assert(false && "pre-check should have rejected conflicting count+bound");
+      assert(Level != 0 && "wide pointer at same level as dynamic bound "
+                           "pointer should've been rejected already");
+      // We are handling a case like:
+      //
+      // int* __counted_by(count) * __bidi_indexable
+      //
+      // and we are on the outer most pointer. Currently we don't allow this
+      // situation and historically we have diagnosed this using
+      // `err_bounds_safety_conflicting_count_bound_attributes`. However, that
+      // is really confusing because that diagnostic is meant for
+      //
+      // int* __counted_by(count) __bidi_indexable
+      //
+      //
+      // Technically we could call `ValidateBoundsAttrTypeShape` here instead of
+      // emitting the diagnostic directly but that would be an abuse of the API
+      // because it would be emitting the same diagnostic because it **thinks**
+      // we want to diagnose something like `int* __counted_by(count)
+      // __bidi_indexable` instead of the nested pointer situation.
+      // FIXME: This diagnostic is confusing (rdar://184349713).
+      S.Diag(Loc, diag::err_bounds_safety_conflicting_count_bound_attributes)
+          << DiagName << (FAttr.hasLowerBound() ? 0 : 1);
       return QualType();
     }
 
