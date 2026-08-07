@@ -124,7 +124,8 @@ jobs:
           MAN_PAGE_TARBALL_NAME: ${{ steps.build.outputs.man-page-tarball-name }}
         run: |
             echo "man-page-digest=$(cat "$MAN_PAGE_TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
-            echo "doxygen-digest=$(cat $(xargs <<< "$DOXYGEN_FILE_PATTERN") | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+            echo "doxygen-digest=$(cat $DOXYGEN_FILE_PATTERN" | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+            echo $GITHUB_OUTPUT
 
       - id: man-page-artifact-upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
