@@ -3230,7 +3230,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   bool WrongDirective = false;
   unsigned OMPVersion = Actions.getLangOpts().OpenMP;
 
-  auto checkClauseValid = [&](OpenMPDirectiveKind D, OpenMPClauseKind C) {
+  auto CheckClauseValid = [&](OpenMPDirectiveKind D, OpenMPClauseKind C) {
     if (!isAllowedClauseForDirective(D, C, OMPVersion)) {
       Diag(Tok, diag::err_omp_unexpected_clause)
           << getOpenMPClauseName(C) << getOpenMPDirectiveName(D, OMPVersion);
