@@ -2241,6 +2241,8 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
 
   // Iterate over argv to process input files and positional arguments.
   std::optional<MemoryBufferRef> defaultScript;
+  nextGroupId = 0;
+  isInGroup = false;
   bool hasInput = false, hasScript = false;
   for (auto *arg : args) {
     switch (arg->getOption().getID()) {
