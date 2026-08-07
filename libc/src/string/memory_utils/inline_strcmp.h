@@ -17,6 +17,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+constexpr int PAGE_MASK = 4095;
+constexpr int PAGE_SAFE_OFFSET = 4088;
+
 LIBC_INLINE uint64_t is_null_terminated(uint64_t v) {
   return (v - 0x0101010101010101ULL) & ~v & 0x8080808080808080ULL;
 }
@@ -31,8 +34,10 @@ template <typename Comp>
 LIBC_INLINE constexpr int inline_strcmp(const char *left, const char *right,
                                         Comp &&comp) {
   // Page boundry check fallback to generic version
-  if (LIBC_UNLIKELY((reinterpret_cast<uintptr_t>(left) & 4095) > 4088 ||
-                    (reinterpret_cast<uintptr_t>(right) & 4095) > 4088)) {
+  if (LIBC_UNLIKELY((reinterpret_cast<uintptr_t>(left) & PAGE_MASK) >
+                        PAGE_SAFE_OFFSET ||
+                    (reinterpret_cast<uintptr_t>(right) & PAGE_MASK) >
+                        PAGE_SAFE_OFFSET)) {
     for (; *left && !comp(*left, *right); ++left, ++right)
       ;
     return comp(static_cast<unsigned char>(*left),
@@ -73,7 +78,9 @@ LIBC_INLINE constexpr int inline_strncmp(const char *left, const char *right,
                 static_cast<unsigned char>(*right));
   }
 
-  for (; n >= 8; n -= 8, left += 8, right += 8) {
+  constexpr size_t block_size = sizeof(uint64_t) / 8;
+  for (; n >= block_size;
+       n -= block_size, left += block_size, right += block_size) {
     uint64_t val1 = load(left);
     uint64_t val2 = load(right);
     uint64_t diff = val1 ^ val2;
