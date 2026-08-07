@@ -49,6 +49,42 @@ class BreakpointSerialization(TestBase):
         self.setup_targets_and_cleanup()
         self.do_check_extra_args()
 
+    def test_missing_scripted_resolver_deserialization(self):
+        self.build()
+        self.setup_targets_and_cleanup()
+
+        script_name = os.path.join(self.getSourceDir(), "resolver.py")
+        self.runCmd("command script import " + script_name)
+        breakpoint = self.orig_target.BreakpointCreateFromScript(
+            "resolver.Resolver",
+            lldb.SBStructuredData(),
+            lldb.SBFileSpecList(),
+            lldb.SBFileSpecList(),
+        )
+        self.assertTrue(breakpoint.IsValid())
+
+        breakpoints = lldb.SBBreakpointList(self.orig_target)
+        error = self.orig_target.BreakpointsWriteToFile(
+            self.bkpts_file_spec, breakpoints
+        )
+        self.assertSuccess(error)
+        with open(self.bkpts_file_path, encoding="utf-8") as breakpoints_file:
+            serialized = json.load(breakpoints_file)
+        serialized[0]["Breakpoint"]["BKPTResolver"]["Options"][
+            "PythonClass"
+        ] = "resolver.DoesNotExist"
+        with open(self.bkpts_file_path, "w", encoding="utf-8") as breakpoints_file:
+            json.dump(serialized, breakpoints_file)
+
+        restored = lldb.SBBreakpointList(self.copy_target)
+        error = self.copy_target.BreakpointsCreateFromFile(
+            self.bkpts_file_spec, restored
+        )
+        self.assertFailure(error)
+        self.assertIn("resolver.DoesNotExist", error.GetCString())
+        self.assertEqual(0, restored.GetSize())
+        self.assertEqual(0, self.copy_target.GetNumBreakpoints())
+
     def test_resolver_serialization(self):
         """Test that breakpoint resolvers contain the expected information"""
         self.build()

@@ -118,8 +118,9 @@ class TestScriptedExtensionsDiagnostics(TestBase):
     # ------------------------------------------------------------------
     # BreakpointResolverScripted - reports via
     # BreakpointResolverScripted::CreateImplementationIfNeeded.
-    # `m_error` is set but never surfaced to the user, so ReportError is
-    # the only user-visible channel.
+    # Target::CreateBreakpoint also propagates `m_error` back to its caller,
+    # but CopyForBreakpoint has no return channel, so ReportError stays the
+    # general diagnostic channel.
     # ------------------------------------------------------------------
 
     def test_scripted_breakpoint_resolver_init_failure(self):

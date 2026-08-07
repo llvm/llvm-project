@@ -198,8 +198,15 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
   success = breakpoint_dict->GetValueForKeyAsBoolean(
       Breakpoint::GetKey(OptionNames::Hardware), hardware);
 
-  result_sp =
+  llvm::Expected<BreakpointSP> bp_or_err =
       target.CreateBreakpoint(filter_sp, resolver_sp, false, hardware, true);
+  if (!bp_or_err) {
+    error = Status::FromErrorStringWithFormatv(
+        "error creating breakpoint from data: {0}.",
+        llvm::toString(bp_or_err.takeError()));
+    return {};
+  }
+  result_sp = *bp_or_err;
 
   if (result_sp && options_up) {
     result_sp->m_options = *options_up;
