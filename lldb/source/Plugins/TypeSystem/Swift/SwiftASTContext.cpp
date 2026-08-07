@@ -5821,7 +5821,7 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
     std::string error_str;
     llvm::Triple llvm_triple = GetTriple();
     const llvm::Target *llvm_target =
-        llvm::TargetRegistry::lookupTarget(llvm_triple.str(), error_str);
+        llvm::TargetRegistry::lookupTarget(llvm_triple, error_str);
 
     llvm::CodeGenOptLevel optimization_level = llvm::CodeGenOptLevel::None;
 
