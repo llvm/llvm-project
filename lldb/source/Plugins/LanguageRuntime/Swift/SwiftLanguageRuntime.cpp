@@ -1894,9 +1894,9 @@ protected:
   };
 
 public:
-  SyntheticChildrenFrontEnd::AutoPointer
+  SyntheticChildrenFrontEnd::UniquePointer
   GetFrontEnd(ValueObject &backend) override {
-    return SyntheticChildrenFrontEnd::AutoPointer(
+    return SyntheticChildrenFrontEnd::UniquePointer(
         new ProjectionFrontEndProvider(backend, m_projection));
   }
 };
