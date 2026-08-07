@@ -13945,6 +13945,15 @@ bool SelectionDAG::isIdentityElement(unsigned Opcode, SDNodeFlags Flags,
 
       return ConstFP->isExactlyValue(NeutralAF);
     }
+    case ISD::FMINIMUM:
+    case ISD::FMAXIMUM: {
+      // Neutral element for fminimum is Inf or FLT_MAX, depending on FMF.
+      const APFloat &VAPF = ConstFP->getValueAPF();
+      bool NeutralNegative = (Opcode == ISD::FMAXIMUM);
+      if (Flags.hasNoInfs())
+        return VAPF.isLargest() && VAPF.isNegative() == NeutralNegative;
+      return VAPF.isInfinity() && VAPF.isNegative() == NeutralNegative;
+    }
     }
   }
   return false;
