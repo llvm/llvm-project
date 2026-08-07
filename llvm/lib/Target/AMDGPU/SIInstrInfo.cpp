@@ -11464,15 +11464,29 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         OrigOpcode != AMDGPU::S_CMP_LG_U64)
       return false;
 
-    if (!RegSequence.second) { // Upper 32 bits zero
+    if (!RegSequence.second) // Lower 32 bits nonzero
+      if ((uint64_t)CmpValue > (uint64_t)UINT32_MAX) {
+        // Hard-code EQ ? 0 : 1
+        CmpInstr.setDesc(get(AMDGPU::S_CMP_EQ_U32));
+        CmpInstr.getOperand(0).ChangeToImmediate(0);
+        CmpInstr.getOperand(1).ChangeToImmediate(OrigOpcode ==
+                                                 AMDGPU::S_CMP_EQ_U64);
+      } else {
         CmpInstr.setDesc(get(OrigOpcode == AMDGPU::S_CMP_EQ_U64
                                  ? AMDGPU::S_CMP_EQ_U32
                                  : AMDGPU::S_CMP_LG_U32));
         replaceSourceReg(CmpInstr, SrcReg,
                          RegSequence.first->getOperand(0).getReg());
         SrcReg = RegSequence.first->getOperand(0).getReg();
-    }
-    else { // Lower 32 bits zero
+      }
+    else // Upper 32 bits nonzero
+      if ((uint64_t)CmpValue % ((uint64_t)UINT32_MAX + 1UL)) {
+        // Hard-code EQ ? 0 : 1
+        CmpInstr.setDesc(get(AMDGPU::S_CMP_EQ_U32));
+        CmpInstr.getOperand(0).ChangeToImmediate(0);
+        CmpInstr.getOperand(1).ChangeToImmediate(OrigOpcode ==
+                                                 AMDGPU::S_CMP_EQ_U64);
+      } else {
         CmpInstr.setDesc(get(OrigOpcode == AMDGPU::S_CMP_EQ_U64
                                  ? AMDGPU::S_CMP_EQ_U32
                                  : AMDGPU::S_CMP_LG_U32));
@@ -11482,7 +11496,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           replaceSourceRegWithImm(CmpInstr, SrcReg2, (uint64_t)CmpValue >> 32);
         SrcReg = RegSequence.first->getOperand(0).getReg();
         CmpValue = (uint64_t)CmpValue >> 32;
-    }
+      }
     return true;
   };
 
