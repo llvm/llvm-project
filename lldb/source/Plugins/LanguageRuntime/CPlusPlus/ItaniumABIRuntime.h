@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_CPLUSPLUS_ITANIUMABIRUNTIME_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_CPLUSPLUS_ITANIUMABIRUNTIME_H
 
+#include "CommonABIRuntime.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/ValueObject/ValueObject.h"
 
@@ -16,7 +17,7 @@
 
 namespace lldb_private {
 
-class ItaniumABIRuntime {
+class ItaniumABIRuntime : public CommonABIRuntime {
 public:
   ItaniumABIRuntime(Process *process);
 
@@ -50,9 +51,6 @@ private:
   using DynamicTypeCache = std::map<Address, TypeAndOrName>;
 
   DynamicTypeCache m_dynamic_type_map;
-  std::mutex m_mutex;
-
-  Process *m_process;
 };
 
 } // namespace lldb_private

@@ -682,6 +682,8 @@ public:
     if (E->getCallReturnType(CGF.getContext())->isReferenceType())
       return EmitLoadOfLValue(E);
 
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
+
     Value *V = CGF.EmitCallExpr(E).getScalarVal();
 
     EmitLValueAlignmentAssumption(E, V);
@@ -3707,8 +3709,10 @@ Value *ScalarExprEmitter::VisitMinus(const UnaryOperator *E,
     Op = Visit(E->getSubExpr());
 
   // Generate a unary FNeg for FP ops.
-  if (Op->getType()->isFPOrFPVectorTy())
+  if (Op->getType()->isFPOrFPVectorTy()) {
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
     return Builder.CreateFNeg(Op, "fneg");
+  }
 
   // Emit unary minus with EmitSub so we handle overflow cases etc.
   BinOpInfo BinOp;
