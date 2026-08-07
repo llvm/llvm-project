@@ -2667,25 +2667,14 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
       else
         New->setTypeSourceInfo(OldTD->getTypeSourceInfo());
 
-      // See https://github.com/llvm/llvm-project/issues/213299 for the case.
+      // An anonymous enum is recognized as a redeclaration only when its typedef
+      // name gets merged, at which point two distinct enum types already exist.
+      // Retype the new enumerators to the old enum type, matching the typedef
+      // merge above; otherwise the merged typedef and its enumerators disagree
+      // on the type (GH213299).
       //
-      // Ideally, we shall merge the new enum with the old enum when we
-      // creating the new enum. But the enum is anonymous and the typedef's name
-      // come after the enum body, it is too late to merge them. This is the
-      // choice 10 years ago: a523022b5384d7a0901beea7a5f36ee9c09ba339. Actually
-      // what we're merging here is the typedef decls.
-      //
-      // Then https://github.com/llvm/llvm-project/pull/114240 removes the logic
-      // to remove the new ED. This the direct trigger for the above issue of
-      // ambiguous look ups.
-      //
-      // We choose to fix the problem by setting the type of new enum to the
-      // type of old enums. This is consistent with the above call to
-      // setTypeSourceInfo.
-      //
-      // FIXME: The check `M && M->isGlobalModule()` is not necessary but we
-      // hope to limit the impact of this change. We can relax the check when we
-      // find similar issue later in other cases.
+      // FIXME: The global module restriction only limits the impact of this
+      // change; relax it if the issue shows up in other contexts.
       if (Module *M = OldTag->getOwningModule(); M && M->isGlobalModule())
         if (auto *NewEnum = dyn_cast<EnumDecl>(NewTag))
           if (auto *OldEnum = dyn_cast<EnumDecl>(OldTag)) {
