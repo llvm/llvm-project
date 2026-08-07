@@ -154,7 +154,6 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   auto *VecPreheader = Plan.getVectorPreheader();
   VPBuilder Builder(VecPreheader);
   VPValue *TC = Plan.getTripCount();
-  VPValue *VF = &Plan.getVF();
 
   // Create the wide active lane mask instruction in the VPlan preheader.
   VPValue *ALMMultiplier =
@@ -177,12 +176,9 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   // original terminator.
   VPRecipeBase *OriginalTerminator = EB->getTerminator();
   Builder.setInsertPoint(OriginalTerminator);
-  auto *InLoopIncrement = Builder.createOverflowingOp(
-      VPInstruction::CanonicalIVIncrementForPart,
-      {CanonicalIVIncrement, &Plan.getVF()}, {}, DL);
   auto *ALM = Builder.createNaryOp(VPInstruction::WideActiveLaneMask,
-                                   {InLoopIncrement, TC, ALMMultiplier}, DL,
-                                   "active.lane.mask.next");
+                                   {CanonicalIVIncrement, TC, ALMMultiplier},
+                                   DL, "active.lane.mask.next");
   ALM = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
                              {ALM, Plan.getConstantInt(64, 0)}, DL,
                              "extract.next.alm.part");
