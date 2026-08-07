@@ -96,3 +96,7 @@
 
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kcfi,function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-FUNCTION
 // CHECK-KCFI-FUNCTION: error: invalid argument '-fsanitize=kcfi' not allowed with '-fsanitize=function'
+
+// RUN: %clang --target=i386-linux-gnu -c %s -### -fsanitize=address,kcfi -fno-sanitize=kcfi -fsanitize-kcfi-arity 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-ARITY-DISABLED --implicit-check-not=error: --implicit-check-not=-fsanitize-kcfi-arity
+
+// CHECK-KCFI-ARITY-DISABLED: "-cc1"{{.*}}"-fsanitize=address"
