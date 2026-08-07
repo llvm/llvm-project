@@ -197,6 +197,7 @@ _LIBCPP_PUSH_MACROS
 #    include <__ranges/concepts.h>
 #    include <__ranges/container_compatible_range.h>
 #    include <__ranges/from_range.h>
+#    include <__ranges/size.h>
 #    include <__type_traits/is_nothrow_constructible.h>
 #    include <__type_traits/is_swappable.h>
 #    include <__type_traits/is_trivially_assignable.h>
@@ -392,6 +393,12 @@ public:
 
   template <_ContainerCompatibleRange<_Tp> _Range>
   constexpr inplace_vector(from_range_t, _Range&& __rg) : inplace_vector() {
+    if constexpr (ranges::__static_sized_range<_Range>) {
+      // LWG4396
+      static_assert(std::ranges::size(__rg) <= _Cap,
+                    "inplace_vector<Tp,N>(from_range_t, Range): Statically sized range must be <= Capacity");
+    }
+
     append_range(__rg);
   }
 
@@ -827,6 +834,12 @@ public:
 
   template <_ContainerCompatibleRange<_Tp> _Range>
   constexpr inplace_vector(from_range_t, _Range&& __rg) {
+    if constexpr (ranges::__static_sized_range<_Range>) {
+      // LWG4396
+      static_assert(
+          std::ranges::size(__rg) == 0, "inplace_vector<Tp,0>(from_range_t, Range): Statically sized range must be 0");
+    }
+
     if (std::ranges::begin(__rg) != std::ranges::end(__rg)) {
       std::__throw_bad_alloc();
     }

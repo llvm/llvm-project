@@ -212,7 +212,7 @@
 "`LWG4383 <https://wg21.link/LWG4383>`__","``constant_wrapper``\'s pseudo-mutators are underconstrained","2025-11 (Kona)","|Complete|","23","`#171370 <https://github.com/llvm/llvm-project/issues/171370>`__",""
 "`LWG4384 <https://wg21.link/LWG4384>`__","``flat_set::erase(iterator)`` is underconstrained","2025-11 (Kona)","","","`#171371 <https://github.com/llvm/llvm-project/issues/171371>`__",""
 "`LWG4388 <https://wg21.link/LWG4388>`__","Align new definition of ``va_start`` with C23","2025-11 (Kona)","","","`#171372 <https://github.com/llvm/llvm-project/issues/171372>`__",""
-"`LWG4396 <https://wg21.link/LWG4396>`__","Improve ``inplace_vector(from_range_t, R&& rg)``","2025-11 (Kona)","","","`#171373 <https://github.com/llvm/llvm-project/issues/171373>`__",""
+"`LWG4396 <https://wg21.link/LWG4396>`__","Improve ``inplace_vector(from_range_t, R&& rg)``","2025-11 (Kona)","|Complete|","24","`#171373 <https://github.com/llvm/llvm-project/issues/171373>`__",""
 "`LWG4398 <https://wg21.link/LWG4398>`__","``enable_nonlocking_formatter_optimization`` should be disabled for container adaptors","2025-11 (Kona)","","","`#171375 <https://github.com/llvm/llvm-project/issues/171375>`__",""
 "`LWG4399 <https://wg21.link/LWG4399>`__","``enable_nonlocking_formatter_optimization`` for ``pair`` and ``tuple`` needs ``remove_cvref_t``","2025-11 (Kona)","","","`#171376 <https://github.com/llvm/llvm-project/issues/171376>`__",""
 "`LWG4403 <https://wg21.link/LWG4403>`__","``simd::basic_vec`` CTAD misses difference type casting","2025-11 (Kona)","","","`#171377 <https://github.com/llvm/llvm-project/issues/171377>`__",""
