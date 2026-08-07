@@ -23,7 +23,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/BranchProbability.h"
@@ -48,7 +47,6 @@ struct ModeFieldState {
 
 class SIPreEmitPeephole {
 private:
-  const GCNSubtarget *ST = nullptr;
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
   MachineLoopInfo *MLI = nullptr;
@@ -193,7 +191,8 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
 
   bool Changed = false;
   MachineBasicBlock &MBB = *MI.getParent();
-  const bool IsWave32 = ST->isWave32();
+  const GCNSubtarget &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
+  const bool IsWave32 = ST.isWave32();
   const unsigned CondReg = TRI->getVCC();
   const unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
   const unsigned And = IsWave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
@@ -867,8 +866,8 @@ llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
 }
 
 bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
-  ST = &MF.getSubtarget<GCNSubtarget>();
-  TII = ST->getInstrInfo();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
   MLI = LoopInfo;
   bool Changed = false;
@@ -893,7 +892,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
       }
     }
 
-    if (!ST->hasVGPRIndexMode())
+    if (!ST.hasVGPRIndexMode())
       continue;
 
     MachineInstr *SetGPRMI = nullptr;
@@ -930,7 +929,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   // side effects.
 
   // Perform the extra MF scans only for supported archs
-  if (!ST->hasGFX940Insts())
+  if (!ST.hasGFX940Insts())
     return Changed;
   for (MachineBasicBlock &MBB : MF) {
     // Unpack packed instructions overlapped by MFMAs. This allows the
