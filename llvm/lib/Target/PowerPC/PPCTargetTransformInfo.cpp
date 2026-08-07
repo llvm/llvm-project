@@ -1174,7 +1174,7 @@ InstructionCost PPCTTIImpl::getPartialReductionCost(
   if (BinOp && BinOp.value() != Instruction::Mul)
     return Invalid;
 
-  EVT AccVT = TLI->getValueType(DL, AccumType,  true);
+  EVT AccVT = TLI->getValueType(DL, AccumType, true);
   if (AccVT != MVT::i32)
     return Invalid;
   if (InputTypeA != InputTypeB)
@@ -1193,7 +1193,7 @@ InstructionCost PPCTTIImpl::getPartialReductionCost(
     if (AVT != MVT::v16i8 || OpBExtend != TTI::PR_ZeroExtend)
       return Invalid;
   } else if (AVT == MVT::v16i8 && OpAExtend == TTI::PR_SignExtend) {
-      return Invalid;
+    return Invalid;
   }
 
   return vectorCostAdjustmentFactor(Instruction::Add, ATy, nullptr);
