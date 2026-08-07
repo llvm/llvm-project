@@ -2087,7 +2087,8 @@ GCNSchedStage::getScheduleMetrics(const std::vector<SUnit> &InputSchedule) {
 #ifndef NDEBUG
   LLVM_DEBUG(
       printScheduleModel(ReadyCyclesSorted);
-      dbgs() << "\n\t" << "Metric: "
+      dbgs() << "\n\t"
+             << "Metric: "
              << (SumBubbles
                      ? (SumBubbles * ScheduleMetrics::ScaleFactor) / CurrCycle
                      : 1)
@@ -2122,7 +2123,8 @@ GCNSchedStage::getScheduleMetrics(const GCNScheduleDAGMILive &DAG) {
 #ifndef NDEBUG
   LLVM_DEBUG(
       printScheduleModel(ReadyCyclesSorted);
-      dbgs() << "\n\t" << "Metric: "
+      dbgs() << "\n\t"
+             << "Metric: "
              << (SumBubbles
                      ? (SumBubbles * ScheduleMetrics::ScaleFactor) / CurrCycle
                      : 1)
