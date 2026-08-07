@@ -892,6 +892,21 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
       continue;
 
     HostDataToTargetTy *PteeEntry = FindEntry(HstPteeBegin, /*Size=*/0);
+#ifndef NDEBUG
+    // Giving the allocation up moves the pointee's device address, which would
+    // strand any pointer already attached to it. That cannot happen here: the
+    // allocation was made by this construct, so no earlier construct could have
+    // attached to it, and this pre-pass runs before any attachment is performed
+    // for this one.
+    for (auto &[AttachedPtee, AttachedPtrs] : MappingInfo.AttachedPointers) {
+      (void)AttachedPtrs;
+      assert((reinterpret_cast<uintptr_t>(AttachedPtee) <
+                  PteeEntry->HstPtrBegin ||
+              reinterpret_cast<uintptr_t>(AttachedPtee) >=
+                  PteeEntry->HstPtrEnd) &&
+             "Releasing an allocation that a pointer is already attached to");
+    }
+#endif
     if (MappingInfo.shareEntryStorageWithOriginal(HDTTMap, PteeEntry) !=
         OFFLOAD_SUCCESS)
       return OFFLOAD_FAIL;
