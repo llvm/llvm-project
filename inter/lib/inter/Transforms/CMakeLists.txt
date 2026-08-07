@@ -6,6 +6,7 @@ add_mlir_library(InterTransforms
   InterPassesIncGen
 
   LINK_LIBS PUBLIC
+  InterAnalysis
   InterXeMachine
   MLIRLLVMDialect
   MLIRControlFlowDialect

@@ -6,6 +6,8 @@
 // transform loop replaces this in M4. Address-payload contiguity for
 // scattered sends is guaranteed by allocation order.
 
+#include "inter/Analysis/UniformityAnalysis.h"
+#include "inter/Support/Builtins.h"
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
 #include "inter/Transforms/Passes.h"
 
@@ -15,6 +17,8 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
+#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
+#include "mlir/Analysis/DataFlowFramework.h"
 
 #include <optional>
 
@@ -45,11 +49,19 @@ struct SelectToMachine
       getOperation().emitError("no kernel function found");
       return signalPassFailure();
     }
+    DataFlowSolver solver;
+    solver.load<dataflow::DeadCodeAnalysis>();
+    solver.load<inter::UniformityAnalysis>();
+    // Run on the kernel: sparse liveness seeds from the top op's region.
+    if (failed(solver.initializeAndRun(kernel)))
+      return signalPassFailure();
+    uniformity = &solver;
     if (failed(lowerKernel(kernel)))
       return signalPassFailure();
   }
 
   MLIRContext *ctx = nullptr;
+  DataFlowSolver *uniformity = nullptr;
   std::optional<Location> loc;
   std::optional<OpBuilder> b;
   int nextGRF = 4; // r0-r3 reserved: r0 header, r1 inline, r2/r3 scratch
@@ -124,7 +136,7 @@ struct SelectToMachine
     for (Operation &op : blk) {
       if (auto call = dyn_cast<LLVM::CallOp>(&op)) {
         auto callee = call.getCallee();
-        if (!callee || !callee->starts_with("_Z13get_global_idj"))
+        if (!callee || !callee->starts_with(inter::builtins::kGetGlobalId))
           return emitError(op.getLoc(), "unsupported call"), failure();
         if (failed(emitPrologueAndGid()))
           return failure();
@@ -226,24 +238,13 @@ struct SelectToMachine
     return success();
   }
 
-  // A value is uniform if nothing in its def chain is per-lane: loads and
-  // the gid make values varying; kernel args and constants are uniform.
-  bool isVarying(Value v, DenseSet<Value> &seen) {
-    if (v == gidValue)
+  // Sparse dataflow uniformity analysis (design doc section 7): the
+  // condition is branch-uniform if the lattice says Const or Uniform.
+  bool isBranchVarying(Value cond) {
+    const auto *lat = uniformity->lookupState<inter::UniformityLattice>(cond);
+    if (!lat)
       return true;
-    if (v == tailValue)
-      return false; // cross-thread args: identical across lanes
-    if (isa_and_nonnull<BlockArgument>(v))
-      return false;
-    if (v.getDefiningOp<SendOp>())
-      return true;
-    Operation *def = v.getDefiningOp();
-    if (!def)
-      return false;
-    if (!seen.insert(v).second)
-      return false;
-    return llvm::any_of(def->getOperands(),
-                        [&](Value o) { return isVarying(o, seen); });
+    return !lat->getUniformity().isAtMost(inter::UniformityKind::Uniform);
   }
 
   // scf.if -> exec_if/uniform_if. Results are pre-allocated; each region
@@ -252,8 +253,7 @@ struct SelectToMachine
     Value cond = vmap.lookup(ifOp.getCondition());
     if (!cond)
       return emitError(ifOp.getLoc(), "if condition not lowered"), failure();
-    DenseSet<Value> seen;
-    bool varying = isVarying(cond, seen);
+    bool varying = isBranchVarying(ifOp.getCondition());
 
     SmallVector<Type> resultTypes;
     for (Value r : ifOp.getResults())
