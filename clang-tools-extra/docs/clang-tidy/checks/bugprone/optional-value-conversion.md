@@ -1,7 +1,7 @@
-.. title:: clang-tidy - bugprone-optional-value-conversion
+```{title} clang-tidy - bugprone-optional-value-conversion
+```
 
-bugprone-optional-value-conversion
-==================================
+# bugprone-optional-value-conversion
 
 Detects potentially unintentional and redundant conversions where a value is
 extracted from an optional-like type and then used to create a new instance of
@@ -14,63 +14,62 @@ unexpected behavior.
 
 To illustrate, consider the following problematic code snippet:
 
-.. code-block:: c++
+```c++
+#include <optional>
 
-    #include <optional>
+void print(std::optional<int>);
 
-    void print(std::optional<int>);
+int main()
+{
+  std::optional<int> opt;
+  // ...
 
-    int main()
-    {
-      std::optional<int> opt;
-      // ...
+  // Unintentional conversion from std::optional<int> to int and back to
+  // std::optional<int>:
+  print(opt.value());
 
-      // Unintentional conversion from std::optional<int> to int and back to
-      // std::optional<int>:
-      print(opt.value());
+  // ...
+}
+```
 
-      // ...
-    }
-
-A better approach would be to directly pass ``opt`` to the ``print`` function
+A better approach would be to directly pass `opt` to the `print` function
 without extracting its value:
 
-.. code-block:: c++
+```c++
+#include <optional>
 
-    #include <optional>
+void print(std::optional<int>);
 
-    void print(std::optional<int>);
+int main()
+{
+  std::optional<int> opt;
+  // ...
 
-    int main()
-    {
-      std::optional<int> opt;
-      // ...
+  // Proposed code: Directly pass the std::optional<int> to the print
+  // function.
+  print(opt);
 
-      // Proposed code: Directly pass the std::optional<int> to the print
-      // function.
-      print(opt);
+  // ...
+}
+```
 
-      // ...
-    }
-
-By passing ``opt`` directly to the print function, unnecessary conversions are
+By passing `opt` directly to the print function, unnecessary conversions are
 avoided, and potential unintended behavior or exceptions are minimized.
 
-Value extraction using ``operator *`` is matched by default.
-The support for non-standard optional types such as ``boost::optional`` or
-``absl::optional`` may be limited.
+Value extraction using `operator *` is matched by default.
+The support for non-standard optional types such as `boost::optional` or
+`absl::optional` may be limited.
 
-Options:
---------
+## Options:
 
-.. option:: OptionalTypes
+```{option} OptionalTypes
+Semicolon-separated list of (fully qualified) optional type names or regular
+expressions that match the optional types.
+Default value is `::std::optional;::absl::optional;::boost::optional`.
+```
 
-    Semicolon-separated list of (fully qualified) optional type names or regular
-    expressions that match the optional types.
-    Default value is `::std::optional;::absl::optional;::boost::optional`.
-
-.. option:: ValueMethods
-
-    Semicolon-separated list of (fully qualified) method names or regular
-    expressions that match the methods.
-    Default value is `::value$;::get$`.
+```{option} ValueMethods
+Semicolon-separated list of (fully qualified) method names or regular
+expressions that match the methods.
+Default value is `::value$;::get$`.
+```
