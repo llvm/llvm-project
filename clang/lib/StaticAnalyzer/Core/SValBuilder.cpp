@@ -66,11 +66,18 @@ DefinedOrUnknownSVal SValBuilder::makeZeroVal(QualType type) {
   if (type->isIntegralOrEnumerationType())
     return makeIntVal(0, type);
 
+  if (type->isRealFloatingType()) {
+    llvm::APFloat Zero =
+        llvm::APFloat::getZero(Context.getFloatTypeSemantics(type));
+    if (!isModeledFloatValue(Zero))
+      return UnknownVal();
+    return makeFloatVal(Zero);
+  }
+
   if (type->isArrayType() || type->isRecordType() || type->isVectorType() ||
       type->isAnyComplexType())
     return makeCompoundVal(type, BasicVals.getEmptySValList());
 
-  // FIXME: Handle floats.
   return UnknownVal();
 }
 
@@ -220,8 +227,8 @@ DefinedSVal SValBuilder::getConjuredHeapSymbolVal(ConstCFGElementRef elem,
   assert(Loc::isLocType(type));
   assert(SymbolManager::canSymbolicate(type));
   if (type->isNullPtrType()) {
-    // makeZeroVal() returns UnknownVal only in case of FP number, which
-    // is not the case.
+    // The assert above establishes this is a Loc type, for which makeZeroVal()
+    // always returns a defined value.
     return makeZeroVal(type).castAs<DefinedSVal>();
   }
 
@@ -375,8 +382,12 @@ std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
   case Stmt::IntegerLiteralClass:
     return makeIntVal(cast<IntegerLiteral>(E));
 
-  case Stmt::FloatingLiteralClass:
-    return makeFloatVal(cast<FloatingLiteral>(E));
+  case Stmt::FloatingLiteralClass: {
+    const auto *FL = cast<FloatingLiteral>(E);
+    if (!isModeledFloatValue(FL->getValue()))
+      return UnknownVal();
+    return makeFloatVal(FL);
+  }
 
   case Stmt::ObjCBoolLiteralExprClass:
     return makeBoolVal(cast<ObjCBoolLiteralExpr>(E));
@@ -396,6 +407,8 @@ std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
       break;
     case CK_ArrayToPointerDecay:
     case CK_IntegralToPointer:
+    case CK_IntegralToFloating:
+    case CK_FloatingCast:
     case CK_NoOp:
     case CK_BitCast: {
       const Expr *SE = CE->getSubExpr();
@@ -460,8 +473,8 @@ SVal SValBuilder::evalMinus(NonLoc X) {
   case nonloc::ConcreteIntKind:
     return makeIntVal(-X.castAs<nonloc::ConcreteInt>().getValue());
   case nonloc::ConcreteFloatKind: {
-    // Negation only flips the sign bit and is well-defined for all
-    // floating-point values regardless of semantics, so model it.
+    // Negation is well-defined regardless of floating-point semantics (it's
+    // just a sign bit flip).
     llvm::APFloat Value = *X.castAs<nonloc::ConcreteFloat>().getValue();
     Value.changeSign();
     return makeFloatVal(Value);
@@ -874,19 +887,28 @@ public:
     return UnknownVal();
   }
   SVal VisitConcreteFloat(nonloc::ConcreteFloat V) {
-    // Float to float.
+    // Float to float. Modeled only when the conversion is exact, which needs no
+    // rounding and so does not depend on the rounding mode in effect.
     if (CastTy->isRealFloatingType()) {
       const llvm::fltSemantics &TargetSem =
           VB.getContext().getFloatTypeSemantics(CastTy);
       llvm::APFloat Value = *V.getValue();
       bool LosesInfo = false;
       Value.convert(TargetSem, llvm::APFloat::rmNearestTiesToEven, &LosesInfo);
-      if (!LosesInfo)
+      if (!LosesInfo && SValBuilder::isModeledFloatValue(Value))
         return VB.makeFloatVal(Value);
       return UnknownVal();
     }
 
-    // Float to integer.
+    // Float to bool. Must precede integral case below since bool is also an
+    // integral but needs special handling.
+    if (CastTy->isBooleanType())
+      return VB.makeTruthVal(!V.getValue()->isZero(), CastTy);
+
+    // Float to integer. Since only finite floats are modeled, the only
+    // possible failure is if the float doesn't fit in the target, which opOK
+    // helps us catch. opInexact catches whether truncation toward zero
+    // happened, which is defined behavior, thus we model.
     if (CastTy->isIntegralOrEnumerationType()) {
       APSIntType ResultType = VB.getBasicValueFactory().getAPSIntType(CastTy);
       llvm::APSInt Result = ResultType.getValue(0);
@@ -898,10 +920,6 @@ public:
         return VB.makeIntVal(Result);
       return UnknownVal();
     }
-
-    // Float to bool.
-    if (CastTy->isBooleanType())
-      return VB.makeTruthVal(!V.getValue()->isZero(), CastTy);
 
     return UnknownVal();
   }
@@ -923,6 +941,20 @@ public:
     // Integer to pointer.
     if (Loc::isLocType(CastTy))
       return VB.makeIntLocVal(CastedValue());
+
+    // Integer to float. Modeled only when the conversion is exact.
+    if (CastTy->isRealFloatingType()) {
+      const llvm::fltSemantics &TargetSem =
+          VB.getContext().getFloatTypeSemantics(CastTy);
+      llvm::APSInt Value = V.getValue();
+      llvm::APFloat Result(TargetSem);
+      llvm::APFloat::opStatus Status = Result.convertFromAPInt(
+          Value, Value.isSigned(), llvm::APFloat::rmNearestTiesToEven);
+      if (Status == llvm::APFloat::opOK &&
+          SValBuilder::isModeledFloatValue(Result))
+        return VB.makeFloatVal(Result);
+      return UnknownVal();
+    }
 
     // Pointer to whatever else.
     return UnknownVal();
