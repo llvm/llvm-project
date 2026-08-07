@@ -7,8 +7,20 @@
 define double @foo_add(double %P) {
 ; CHECK-LABEL: foo_add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld qword ptr [esp + 4]
+; CHECK-NEXT:    push ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset ebp, -8
+; CHECK-NEXT:    mov ebp, esp
+; CHECK-NEXT:    .cfi_def_cfa_register ebp
+; CHECK-NEXT:    and esp, -8
+; CHECK-NEXT:    sub esp, 8
+; CHECK-NEXT:    fld qword ptr [ebp + 8]
 ; CHECK-NEXT:    fadd dword ptr [{{\.?LCPI[0-9]+_[0-9]+}}]
+; CHECK-NEXT:    fstp qword ptr [esp]
+; CHECK-NEXT:    fld qword ptr [esp]
+; CHECK-NEXT:    mov esp, ebp
+; CHECK-NEXT:    pop ebp
+; CHECK-NEXT:    .cfi_def_cfa esp, 4
 ; CHECK-NEXT:    ret
 	%tmp.1 = fadd double %P, 1.230000e+02		; <double> [#uses=1]
 	ret double %tmp.1
@@ -17,8 +29,20 @@ define double @foo_add(double %P) {
 define double @foo_mul(double %P) {
 ; CHECK-LABEL: foo_mul:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld qword ptr [esp + 4]
+; CHECK-NEXT:    push ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset ebp, -8
+; CHECK-NEXT:    mov ebp, esp
+; CHECK-NEXT:    .cfi_def_cfa_register ebp
+; CHECK-NEXT:    and esp, -8
+; CHECK-NEXT:    sub esp, 8
+; CHECK-NEXT:    fld qword ptr [ebp + 8]
 ; CHECK-NEXT:    fmul dword ptr [{{\.?LCPI[0-9]+_[0-9]+}}]
+; CHECK-NEXT:    fstp qword ptr [esp]
+; CHECK-NEXT:    fld qword ptr [esp]
+; CHECK-NEXT:    mov esp, ebp
+; CHECK-NEXT:    pop ebp
+; CHECK-NEXT:    .cfi_def_cfa esp, 4
 ; CHECK-NEXT:    ret
 	%tmp.1 = fmul double %P, 1.230000e+02		; <double> [#uses=1]
 	ret double %tmp.1
@@ -27,8 +51,20 @@ define double @foo_mul(double %P) {
 define double @foo_sub(double %P) {
 ; CHECK-LABEL: foo_sub:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld qword ptr [esp + 4]
+; CHECK-NEXT:    push ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset ebp, -8
+; CHECK-NEXT:    mov ebp, esp
+; CHECK-NEXT:    .cfi_def_cfa_register ebp
+; CHECK-NEXT:    and esp, -8
+; CHECK-NEXT:    sub esp, 8
+; CHECK-NEXT:    fld qword ptr [ebp + 8]
 ; CHECK-NEXT:    fadd dword ptr [{{\.?LCPI[0-9]+_[0-9]+}}]
+; CHECK-NEXT:    fstp qword ptr [esp]
+; CHECK-NEXT:    fld qword ptr [esp]
+; CHECK-NEXT:    mov esp, ebp
+; CHECK-NEXT:    pop ebp
+; CHECK-NEXT:    .cfi_def_cfa esp, 4
 ; CHECK-NEXT:    ret
 	%tmp.1 = fsub double %P, 1.230000e+02		; <double> [#uses=1]
 	ret double %tmp.1
@@ -37,8 +73,20 @@ define double @foo_sub(double %P) {
 define double @foo_subr(double %P) {
 ; CHECK-LABEL: foo_subr:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    push ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset ebp, -8
+; CHECK-NEXT:    mov ebp, esp
+; CHECK-NEXT:    .cfi_def_cfa_register ebp
+; CHECK-NEXT:    and esp, -8
+; CHECK-NEXT:    sub esp, 8
 ; CHECK-NEXT:    fld dword ptr [{{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    fsub qword ptr [esp + 4]
+; CHECK-NEXT:    fsub qword ptr [ebp + 8]
+; CHECK-NEXT:    fstp qword ptr [esp]
+; CHECK-NEXT:    fld qword ptr [esp]
+; CHECK-NEXT:    mov esp, ebp
+; CHECK-NEXT:    pop ebp
+; CHECK-NEXT:    .cfi_def_cfa esp, 4
 ; CHECK-NEXT:    ret
 	%tmp.1 = fsub double 1.230000e+02, %P		; <double> [#uses=1]
 	ret double %tmp.1
@@ -47,8 +95,20 @@ define double @foo_subr(double %P) {
 define double @foo_div(double %P) {
 ; CHECK-LABEL: foo_div:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld qword ptr [esp + 4]
+; CHECK-NEXT:    push ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset ebp, -8
+; CHECK-NEXT:    mov ebp, esp
+; CHECK-NEXT:    .cfi_def_cfa_register ebp
+; CHECK-NEXT:    and esp, -8
+; CHECK-NEXT:    sub esp, 8
+; CHECK-NEXT:    fld qword ptr [ebp + 8]
 ; CHECK-NEXT:    fdiv dword ptr [{{\.?LCPI[0-9]+_[0-9]+}}]
+; CHECK-NEXT:    fstp qword ptr [esp]
+; CHECK-NEXT:    fld qword ptr [esp]
+; CHECK-NEXT:    mov esp, ebp
+; CHECK-NEXT:    pop ebp
+; CHECK-NEXT:    .cfi_def_cfa esp, 4
 ; CHECK-NEXT:    ret
 	%tmp.1 = fdiv double %P, 1.230000e+02		; <double> [#uses=1]
 	ret double %tmp.1
@@ -57,8 +117,20 @@ define double @foo_div(double %P) {
 define double @foo_divr(double %P) {
 ; CHECK-LABEL: foo_divr:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    push ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset ebp, -8
+; CHECK-NEXT:    mov ebp, esp
+; CHECK-NEXT:    .cfi_def_cfa_register ebp
+; CHECK-NEXT:    and esp, -8
+; CHECK-NEXT:    sub esp, 8
 ; CHECK-NEXT:    fld dword ptr [{{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    fdiv qword ptr [esp + 4]
+; CHECK-NEXT:    fdiv qword ptr [ebp + 8]
+; CHECK-NEXT:    fstp qword ptr [esp]
+; CHECK-NEXT:    fld qword ptr [esp]
+; CHECK-NEXT:    mov esp, ebp
+; CHECK-NEXT:    pop ebp
+; CHECK-NEXT:    .cfi_def_cfa esp, 4
 ; CHECK-NEXT:    ret
 	%tmp.1 = fdiv double 1.230000e+02, %P		; <double> [#uses=1]
 	ret double %tmp.1

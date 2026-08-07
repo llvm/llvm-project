@@ -55,11 +55,15 @@ define void @test4(double %X) nounwind {
 define void @test5(double %X) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}
+; CHECK-NEXT:    fstpl (%esp)
+; CHECK-NEXT:    fldl (%esp)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    frob
 ; CHECK-NEXT:    ## InlineAsm End
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
   %Y = fadd double %X, 123.0
   call void asm sideeffect "frob ", "{st(0)},~{st},~{dirflag},~{fpsr},~{flags}"( double %Y)
@@ -491,10 +495,14 @@ return:
 define double @test_operand_rewrite() nounwind {
 ; CHECK-LABEL: test_operand_rewrite:
 ; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    foo %st, %st(1)
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fsubp %st, %st(1)
+; CHECK-NEXT:    fstpl (%esp)
+; CHECK-NEXT:    fldl (%esp)
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
   %0 = tail call { double, double } asm sideeffect "foo $0, $1", "={st},={st(1)},~{dirflag},~{fpsr},~{flags}"()

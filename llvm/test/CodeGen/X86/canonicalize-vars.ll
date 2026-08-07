@@ -10,8 +10,15 @@
 define float @canon_fp32_varargsf32(float %a) {
 ; X87-LABEL: canon_fp32_varargsf32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fld1
-; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
+; X87-NEXT:    fmulp %st, %st(1)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    popl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: canon_fp32_varargsf32:
@@ -167,8 +174,15 @@ entry:
 define double @canonicalize_fp64(double %a, double %b) unnamed_addr #0 {
 ; X87-LABEL: canonicalize_fp64:
 ; X87:       # %bb.0: # %start
-; X87-NEXT:    fldl {{[0-9]+}}(%esp)
-; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    .cfi_offset %ebp, -8
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    .cfi_def_cfa_register %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    fldl 8(%ebp)
+; X87-NEXT:    fldl 16(%ebp)
 ; X87-NEXT:    fucom %st(1)
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
@@ -194,6 +208,11 @@ define double @canonicalize_fp64(double %a, double %b) unnamed_addr #0 {
 ; X87-NEXT:    fstp %st(0)
 ; X87-NEXT:    fld1
 ; X87-NEXT:    fmulp %st, %st(1)
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl (%esp)
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
+; X87-NEXT:    .cfi_def_cfa %esp, 4
 ; X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: canonicalize_fp64:
@@ -292,6 +311,8 @@ start:
 define float @canonicalize_fp32(float %aa, float %bb) unnamed_addr #0 {
 ; X87-LABEL: canonicalize_fp32:
 ; X87:       # %bb.0: # %start
+; X87-NEXT:    pushl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 8
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucom %st(1)
@@ -319,6 +340,10 @@ define float @canonicalize_fp32(float %aa, float %bb) unnamed_addr #0 {
 ; X87-NEXT:    fstp %st(0)
 ; X87-NEXT:    fld1
 ; X87-NEXT:    fmulp %st, %st(1)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    popl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: canonicalize_fp32:
@@ -405,10 +430,17 @@ start:
 define void @v_test_canonicalize_var_f32(float addrspace(1)* %out) #1 {
 ; X87-LABEL: v_test_canonicalize_var_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 8
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    flds (%eax)
 ; X87-NEXT:    fld1
-; X87-NEXT:    fmuls (%eax)
+; X87-NEXT:    fmulp %st, %st(1)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    fstps (%eax)
+; X87-NEXT:    popl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: v_test_canonicalize_var_f32:
@@ -498,10 +530,23 @@ define void @v_test_canonicalize_x86_fp80(x86_fp80 addrspace(1)* %out) #1 {
 define void @v_test_canonicalize_var_f64(double addrspace(1)* %out) #1 {
 ; X87-LABEL: v_test_canonicalize_var_f64:
 ; X87:       # %bb.0:
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    .cfi_offset %ebp, -8
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    .cfi_def_cfa_register %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    movl 8(%ebp), %eax
+; X87-NEXT:    fldl (%eax)
 ; X87-NEXT:    fld1
-; X87-NEXT:    fmull (%eax)
+; X87-NEXT:    fmulp %st, %st(1)
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl (%esp)
 ; X87-NEXT:    fstpl (%eax)
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
+; X87-NEXT:    .cfi_def_cfa %esp, 4
 ; X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: v_test_canonicalize_var_f64:
@@ -580,22 +625,35 @@ define void @canonicalize_undef(double addrspace(1)* %out) {
 define <4 x float> @canon_fp32_varargsv4f32(<4 x float> %a) {
 ; X87-LABEL: canon_fp32_varargsv4f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    subl $16, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 20
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fld1
-; X87-NEXT:    fld %st(0)
-; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
-; X87-NEXT:    fld %st(1)
-; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
-; X87-NEXT:    fld %st(2)
-; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
-; X87-NEXT:    fxch %st(3)
-; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
-; X87-NEXT:    fstps 12(%eax)
-; X87-NEXT:    fxch %st(2)
-; X87-NEXT:    fstps 8(%eax)
+; X87-NEXT:    fmul %st, %st(1)
 ; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    fmul %st, %st(1)
+; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    fmul %st, %st(1)
+; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    fmulp %st, %st(1)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    fstps 12(%eax)
+; X87-NEXT:    fstps 8(%eax)
 ; X87-NEXT:    fstps 4(%eax)
 ; X87-NEXT:    fstps (%eax)
+; X87-NEXT:    addl $16, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl $4
 ;
 ; X86-SSE-LABEL: canon_fp32_varargsv4f32:
@@ -636,22 +694,41 @@ define <4 x float> @canon_fp32_varargsv4f32(<4 x float> %a) {
 define <4 x double> @canon_fp64_varargsv4f64(<4 x double> %a) {
 ; X87-LABEL: canon_fp64_varargsv4f64:
 ; X87:       # %bb.0:
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    .cfi_offset %ebp, -8
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    .cfi_def_cfa_register %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $32, %esp
+; X87-NEXT:    movl 8(%ebp), %eax
+; X87-NEXT:    fldl 36(%ebp)
+; X87-NEXT:    fldl 28(%ebp)
+; X87-NEXT:    fldl 20(%ebp)
+; X87-NEXT:    fldl 12(%ebp)
 ; X87-NEXT:    fld1
-; X87-NEXT:    fld %st(0)
-; X87-NEXT:    fmull {{[0-9]+}}(%esp)
-; X87-NEXT:    fld %st(1)
-; X87-NEXT:    fmull {{[0-9]+}}(%esp)
-; X87-NEXT:    fld %st(2)
-; X87-NEXT:    fmull {{[0-9]+}}(%esp)
-; X87-NEXT:    fxch %st(3)
-; X87-NEXT:    fmull {{[0-9]+}}(%esp)
-; X87-NEXT:    fstpl 24(%eax)
-; X87-NEXT:    fxch %st(2)
-; X87-NEXT:    fstpl 16(%eax)
+; X87-NEXT:    fmul %st, %st(1)
 ; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fmul %st, %st(1)
+; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fmul %st, %st(1)
+; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fmulp %st, %st(1)
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl (%esp)
+; X87-NEXT:    fstpl 24(%eax)
+; X87-NEXT:    fstpl 16(%eax)
 ; X87-NEXT:    fstpl 8(%eax)
 ; X87-NEXT:    fstpl (%eax)
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
+; X87-NEXT:    .cfi_def_cfa %esp, 4
 ; X87-NEXT:    retl $4
 ;
 ; X86-SSE-LABEL: canon_fp64_varargsv4f64:
@@ -750,22 +827,35 @@ define <2 x x86_fp80> @canon_fp80_varargsv2fp80(<2 x x86_fp80> %a) {
 define void @vec_canonicalize_var_v4f32(<4 x float> addrspace(1)* %out) #1 {
 ; X87-LABEL: vec_canonicalize_var_v4f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    subl $16, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 20
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    flds 12(%eax)
+; X87-NEXT:    flds 8(%eax)
+; X87-NEXT:    flds 4(%eax)
+; X87-NEXT:    flds (%eax)
 ; X87-NEXT:    fld1
-; X87-NEXT:    fld %st(0)
-; X87-NEXT:    fmuls (%eax)
-; X87-NEXT:    fld %st(1)
-; X87-NEXT:    fmuls 4(%eax)
-; X87-NEXT:    fld %st(2)
-; X87-NEXT:    fmuls 8(%eax)
-; X87-NEXT:    fxch %st(3)
-; X87-NEXT:    fmuls 12(%eax)
-; X87-NEXT:    fstps 12(%eax)
-; X87-NEXT:    fxch %st(2)
-; X87-NEXT:    fstps 8(%eax)
+; X87-NEXT:    fmul %st, %st(1)
 ; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    fmul %st, %st(1)
+; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    fmul %st, %st(1)
+; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    fmulp %st, %st(1)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps 12(%eax)
+; X87-NEXT:    fstps 8(%eax)
 ; X87-NEXT:    fstps 4(%eax)
 ; X87-NEXT:    fstps (%eax)
+; X87-NEXT:    addl $16, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: vec_canonicalize_var_v4f32:
@@ -820,22 +910,41 @@ define void @vec_canonicalize_var_v4f32(<4 x float> addrspace(1)* %out) #1 {
 define void @vec_canonicalize_var_v4f64(<4 x double> addrspace(1)* %out) #1 {
 ; X87-LABEL: vec_canonicalize_var_v4f64:
 ; X87:       # %bb.0:
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    .cfi_offset %ebp, -8
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    .cfi_def_cfa_register %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $32, %esp
+; X87-NEXT:    movl 8(%ebp), %eax
+; X87-NEXT:    fldl 24(%eax)
+; X87-NEXT:    fldl 16(%eax)
+; X87-NEXT:    fldl 8(%eax)
+; X87-NEXT:    fldl (%eax)
 ; X87-NEXT:    fld1
-; X87-NEXT:    fld %st(0)
-; X87-NEXT:    fmull (%eax)
-; X87-NEXT:    fld %st(1)
-; X87-NEXT:    fmull 8(%eax)
-; X87-NEXT:    fld %st(2)
-; X87-NEXT:    fmull 16(%eax)
-; X87-NEXT:    fxch %st(3)
-; X87-NEXT:    fmull 24(%eax)
-; X87-NEXT:    fstpl 24(%eax)
-; X87-NEXT:    fxch %st(2)
-; X87-NEXT:    fstpl 16(%eax)
+; X87-NEXT:    fmul %st, %st(1)
 ; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fmul %st, %st(1)
+; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fmul %st, %st(1)
+; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fmulp %st, %st(1)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl (%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl 24(%eax)
+; X87-NEXT:    fstpl 16(%eax)
 ; X87-NEXT:    fstpl 8(%eax)
 ; X87-NEXT:    fstpl (%eax)
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
+; X87-NEXT:    .cfi_def_cfa %esp, 4
 ; X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: vec_canonicalize_var_v4f64:

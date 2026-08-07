@@ -6,9 +6,21 @@
 define double @test_add(double %X, ptr %P) {
 ; CHECK-LABEL: test_add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mov eax, dword ptr [esp + 12]
-; CHECK-NEXT:    fld qword ptr [esp + 4]
+; CHECK-NEXT:    push ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset ebp, -8
+; CHECK-NEXT:    mov ebp, esp
+; CHECK-NEXT:    .cfi_def_cfa_register ebp
+; CHECK-NEXT:    and esp, -8
+; CHECK-NEXT:    sub esp, 8
+; CHECK-NEXT:    mov eax, dword ptr [ebp + 16]
+; CHECK-NEXT:    fld qword ptr [ebp + 8]
 ; CHECK-NEXT:    fadd qword ptr [eax]
+; CHECK-NEXT:    fstp qword ptr [esp]
+; CHECK-NEXT:    fld qword ptr [esp]
+; CHECK-NEXT:    mov esp, ebp
+; CHECK-NEXT:    pop ebp
+; CHECK-NEXT:    .cfi_def_cfa esp, 4
 ; CHECK-NEXT:    ret
 	%Y = load double, ptr %P		; <double> [#uses=1]
 	%R = fadd double %X, %Y		; <double> [#uses=1]
@@ -18,9 +30,21 @@ define double @test_add(double %X, ptr %P) {
 define double @test_mul(double %X, ptr %P) {
 ; CHECK-LABEL: test_mul:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mov eax, dword ptr [esp + 12]
-; CHECK-NEXT:    fld qword ptr [esp + 4]
+; CHECK-NEXT:    push ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset ebp, -8
+; CHECK-NEXT:    mov ebp, esp
+; CHECK-NEXT:    .cfi_def_cfa_register ebp
+; CHECK-NEXT:    and esp, -8
+; CHECK-NEXT:    sub esp, 8
+; CHECK-NEXT:    mov eax, dword ptr [ebp + 16]
+; CHECK-NEXT:    fld qword ptr [ebp + 8]
 ; CHECK-NEXT:    fmul qword ptr [eax]
+; CHECK-NEXT:    fstp qword ptr [esp]
+; CHECK-NEXT:    fld qword ptr [esp]
+; CHECK-NEXT:    mov esp, ebp
+; CHECK-NEXT:    pop ebp
+; CHECK-NEXT:    .cfi_def_cfa esp, 4
 ; CHECK-NEXT:    ret
 	%Y = load double, ptr %P		; <double> [#uses=1]
 	%R = fmul double %X, %Y		; <double> [#uses=1]
@@ -30,9 +54,21 @@ define double @test_mul(double %X, ptr %P) {
 define double @test_sub(double %X, ptr %P) {
 ; CHECK-LABEL: test_sub:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mov eax, dword ptr [esp + 12]
-; CHECK-NEXT:    fld qword ptr [esp + 4]
+; CHECK-NEXT:    push ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset ebp, -8
+; CHECK-NEXT:    mov ebp, esp
+; CHECK-NEXT:    .cfi_def_cfa_register ebp
+; CHECK-NEXT:    and esp, -8
+; CHECK-NEXT:    sub esp, 8
+; CHECK-NEXT:    mov eax, dword ptr [ebp + 16]
+; CHECK-NEXT:    fld qword ptr [ebp + 8]
 ; CHECK-NEXT:    fsub qword ptr [eax]
+; CHECK-NEXT:    fstp qword ptr [esp]
+; CHECK-NEXT:    fld qword ptr [esp]
+; CHECK-NEXT:    mov esp, ebp
+; CHECK-NEXT:    pop ebp
+; CHECK-NEXT:    .cfi_def_cfa esp, 4
 ; CHECK-NEXT:    ret
 	%Y = load double, ptr %P		; <double> [#uses=1]
 	%R = fsub double %X, %Y		; <double> [#uses=1]
@@ -42,9 +78,21 @@ define double @test_sub(double %X, ptr %P) {
 define double @test_subr(double %X, ptr %P) {
 ; CHECK-LABEL: test_subr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mov eax, dword ptr [esp + 12]
+; CHECK-NEXT:    push ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset ebp, -8
+; CHECK-NEXT:    mov ebp, esp
+; CHECK-NEXT:    .cfi_def_cfa_register ebp
+; CHECK-NEXT:    and esp, -8
+; CHECK-NEXT:    sub esp, 8
+; CHECK-NEXT:    mov eax, dword ptr [ebp + 16]
 ; CHECK-NEXT:    fld qword ptr [eax]
-; CHECK-NEXT:    fsub qword ptr [esp + 4]
+; CHECK-NEXT:    fsub qword ptr [ebp + 8]
+; CHECK-NEXT:    fstp qword ptr [esp]
+; CHECK-NEXT:    fld qword ptr [esp]
+; CHECK-NEXT:    mov esp, ebp
+; CHECK-NEXT:    pop ebp
+; CHECK-NEXT:    .cfi_def_cfa esp, 4
 ; CHECK-NEXT:    ret
 	%Y = load double, ptr %P		; <double> [#uses=1]
 	%R = fsub double %Y, %X		; <double> [#uses=1]
@@ -54,9 +102,21 @@ define double @test_subr(double %X, ptr %P) {
 define double @test_div(double %X, ptr %P) {
 ; CHECK-LABEL: test_div:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mov eax, dword ptr [esp + 12]
-; CHECK-NEXT:    fld qword ptr [esp + 4]
+; CHECK-NEXT:    push ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset ebp, -8
+; CHECK-NEXT:    mov ebp, esp
+; CHECK-NEXT:    .cfi_def_cfa_register ebp
+; CHECK-NEXT:    and esp, -8
+; CHECK-NEXT:    sub esp, 8
+; CHECK-NEXT:    mov eax, dword ptr [ebp + 16]
+; CHECK-NEXT:    fld qword ptr [ebp + 8]
 ; CHECK-NEXT:    fdiv qword ptr [eax]
+; CHECK-NEXT:    fstp qword ptr [esp]
+; CHECK-NEXT:    fld qword ptr [esp]
+; CHECK-NEXT:    mov esp, ebp
+; CHECK-NEXT:    pop ebp
+; CHECK-NEXT:    .cfi_def_cfa esp, 4
 ; CHECK-NEXT:    ret
 	%Y = load double, ptr %P		; <double> [#uses=1]
 	%R = fdiv double %X, %Y		; <double> [#uses=1]
@@ -66,9 +126,21 @@ define double @test_div(double %X, ptr %P) {
 define double @test_divr(double %X, ptr %P) {
 ; CHECK-LABEL: test_divr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mov eax, dword ptr [esp + 12]
+; CHECK-NEXT:    push ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset ebp, -8
+; CHECK-NEXT:    mov ebp, esp
+; CHECK-NEXT:    .cfi_def_cfa_register ebp
+; CHECK-NEXT:    and esp, -8
+; CHECK-NEXT:    sub esp, 8
+; CHECK-NEXT:    mov eax, dword ptr [ebp + 16]
 ; CHECK-NEXT:    fld qword ptr [eax]
-; CHECK-NEXT:    fdiv qword ptr [esp + 4]
+; CHECK-NEXT:    fdiv qword ptr [ebp + 8]
+; CHECK-NEXT:    fstp qword ptr [esp]
+; CHECK-NEXT:    fld qword ptr [esp]
+; CHECK-NEXT:    mov esp, ebp
+; CHECK-NEXT:    pop ebp
+; CHECK-NEXT:    .cfi_def_cfa esp, 4
 ; CHECK-NEXT:    ret
 	%Y = load double, ptr %P		; <double> [#uses=1]
 	%R = fdiv double %Y, %X		; <double> [#uses=1]

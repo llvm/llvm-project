@@ -13,9 +13,12 @@ declare void @opaque()
 define i32 @cmp_reload_f32(float %a, float %b, ptr %p) nounwind {
 ; X87-LABEL: cmp_reload_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fadds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    fsts (%eax)
 ; X87-NEXT:    flds (%eax)
 ; X87-NEXT:    fxch %st(1)
@@ -27,6 +30,7 @@ define i32 @cmp_reload_f32(float %a, float %b, ptr %p) nounwind {
 ; X87-NEXT:    sete %cl
 ; X87-NEXT:    andb %al, %cl
 ; X87-NEXT:    movzbl %cl, %eax
+; X87-NEXT:    popl %ecx
 ; X87-NEXT:    retl
   %add = fadd float %a, %b
   store volatile float %add, ptr %p
@@ -39,9 +43,12 @@ define i32 @cmp_reload_f32(float %a, float %b, ptr %p) nounwind {
 define i32 @cmp_reload_f64(double %a, double %b, ptr %p) nounwind {
 ; X87-LABEL: cmp_reload_f64:
 ; X87:       # %bb.0:
+; X87-NEXT:    subl $12, %esp
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    faddl {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl (%esp)
 ; X87-NEXT:    fstl (%eax)
 ; X87-NEXT:    fldl (%eax)
 ; X87-NEXT:    fxch %st(1)
@@ -53,6 +60,7 @@ define i32 @cmp_reload_f64(double %a, double %b, ptr %p) nounwind {
 ; X87-NEXT:    sete %cl
 ; X87-NEXT:    andb %al, %cl
 ; X87-NEXT:    movzbl %cl, %eax
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    retl
   %add = fadd double %a, %b
   store volatile double %add, ptr %p
@@ -67,8 +75,12 @@ define i32 @cmp_reload_f64(double %a, double %b, ptr %p) nounwind {
 define float @fadd_f32(float %a, float %b) nounwind {
 ; X87-LABEL: fadd_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fadds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %r = fadd float %a, %b
   ret float %r
@@ -77,8 +89,12 @@ define float @fadd_f32(float %a, float %b) nounwind {
 define float @fsub_f32(float %a, float %b) nounwind {
 ; X87-LABEL: fsub_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fsubs {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %r = fsub float %a, %b
   ret float %r
@@ -87,8 +103,12 @@ define float @fsub_f32(float %a, float %b) nounwind {
 define float @fmul_f32(float %a, float %b) nounwind {
 ; X87-LABEL: fmul_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %r = fmul float %a, %b
   ret float %r
@@ -97,8 +117,12 @@ define float @fmul_f32(float %a, float %b) nounwind {
 define float @fdiv_f32(float %a, float %b) nounwind {
 ; X87-LABEL: fdiv_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fdivs {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %r = fdiv float %a, %b
   ret float %r
@@ -107,8 +131,12 @@ define float @fdiv_f32(float %a, float %b) nounwind {
 define float @fsqrt_f32(float %a) nounwind {
 ; X87-LABEL: fsqrt_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fsqrt
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %r = call float @llvm.sqrt.f32(float %a)
   ret float %r
@@ -117,8 +145,12 @@ define float @fsqrt_f32(float %a) nounwind {
 define double @fadd_f64(double %a, double %b) nounwind {
 ; X87-LABEL: fadd_f64:
 ; X87:       # %bb.0:
+; X87-NEXT:    subl $12, %esp
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    faddl {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl (%esp)
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    retl
   %r = fadd double %a, %b
   ret double %r
@@ -127,8 +159,12 @@ define double @fadd_f64(double %a, double %b) nounwind {
 define double @fsqrt_f64(double %a) nounwind {
 ; X87-LABEL: fsqrt_f64:
 ; X87:       # %bb.0:
+; X87-NEXT:    subl $12, %esp
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fsqrt
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl (%esp)
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    retl
   %r = call double @llvm.sqrt.f64(double %a)
   ret double %r
@@ -152,8 +188,12 @@ define x86_fp80 @fadd_f80(x86_fp80 %a, x86_fp80 %b) nounwind {
 define float @fadd_const_f32(float %a) nounwind {
 ; X87-LABEL: fadd_const_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    fld1
 ; X87-NEXT:    fadds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %r = fadd float %a, 1.0
   ret float %r
@@ -213,12 +253,16 @@ define void @store_only_f64(double %a, double %b, ptr %p) nounwind {
 define void @store_twice_f32(float %a, float %b, ptr %p, ptr %q) nounwind {
 ; X87-LABEL: store_twice_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fadds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    fsts (%ecx)
 ; X87-NEXT:    fstps (%eax)
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %r = fadd float %a, %b
   store float %r, ptr %p
@@ -230,10 +274,14 @@ define void @store_twice_f32(float %a, float %b, ptr %p, ptr %q) nounwind {
 define float @store_and_use_f32(float %a, float %b, ptr %p) nounwind {
 ; X87-LABEL: store_and_use_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fadds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    fsts (%eax)
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %r = fadd float %a, %b
   store float %r, ptr %p
@@ -244,14 +292,16 @@ define float @store_and_use_f32(float %a, float %b, ptr %p) nounwind {
 define void @store_narrower_f32(double %a, double %b, ptr %p) nounwind {
 ; X87-LABEL: store_narrower_f32:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
+; X87-NEXT:    subl $20, %esp
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    faddl {{[0-9]+}}(%esp)
-; X87-NEXT:    fstps (%esp)
-; X87-NEXT:    flds (%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstps (%eax)
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $20, %esp
 ; X87-NEXT:    retl
   %r = fadd double %a, %b
   %t = fptrunc double %r to float
@@ -457,6 +507,8 @@ define float @spill_across_call(float %a, float %b) nounwind {
 ; X87-NEXT:    subl $12, %esp
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fadds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; X87-NEXT:    calll opaque@PLT
 ; X87-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
@@ -472,12 +524,19 @@ define float @spill_across_call(float %a, float %b) nounwind {
 define float @chain_f32(float %a, float %b, float %c, float %d) nounwind {
 ; X87-LABEL: chain_f32:
 ; X87:       # %bb.0:
-; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    subl $12, %esp
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
-; X87-NEXT:    fxch %st(1)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    faddp %st, %st(1)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    retl
   %ab = fmul float %a, %b
   %cd = fmul float %c, %d
@@ -489,9 +548,14 @@ define float @chain_f32(float %a, float %b, float %c, float %d) nounwind {
 define float @strict_fadd_f32(float %a, float %b) nounwind strictfp {
 ; X87-LABEL: strict_fadd_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
-; X87-NEXT:    fadds {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    faddp %st, %st(1)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    wait
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %r = call float @llvm.experimental.constrained.fadd.f32(float %a, float %b,
                                                           metadata !"round.dynamic",

@@ -58,8 +58,12 @@ entry:
 define float @f4(float %a, float %b) nounwind {
 ; X87-LABEL: f4:
 ; X87:       # %bb.0: # %entry
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fadds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
 ;
 ; NOSSE-NOX87-LABEL: f4:
@@ -84,8 +88,16 @@ entry:
 define double @f5(double %a, double %b) nounwind {
 ; X87-LABEL: f5:
 ; X87:       # %bb.0: # %entry
-; X87-NEXT:    fldl {{[0-9]+}}(%esp)
-; X87-NEXT:    faddl {{[0-9]+}}(%esp)
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    fldl 8(%ebp)
+; X87-NEXT:    faddl 16(%ebp)
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl (%esp)
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
 ; X87-NEXT:    retl
 ;
 ; NOSSE-NOX87-LABEL: f5:

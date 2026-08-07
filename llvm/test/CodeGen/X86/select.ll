@@ -293,30 +293,39 @@ define void @test6(i32 %C, ptr %A, ptr %B) nounwind {
 ;
 ; ATHLON-LABEL: test6:
 ; ATHLON:       ## %bb.0:
+; ATHLON-NEXT:    subl $16, %esp
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ATHLON-NEXT:    flds 12(%eax)
 ; ATHLON-NEXT:    flds 8(%eax)
 ; ATHLON-NEXT:    flds 4(%eax)
 ; ATHLON-NEXT:    flds (%eax)
+; ATHLON-NEXT:    flds 12(%ecx)
+; ATHLON-NEXT:    fmul %st, %st(0)
+; ATHLON-NEXT:    fstps {{[0-9]+}}(%esp)
+; ATHLON-NEXT:    flds 8(%ecx)
+; ATHLON-NEXT:    fmul %st, %st(0)
+; ATHLON-NEXT:    fstps {{[0-9]+}}(%esp)
+; ATHLON-NEXT:    flds 4(%ecx)
+; ATHLON-NEXT:    fmul %st, %st(0)
+; ATHLON-NEXT:    fstps {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    flds (%ecx)
 ; ATHLON-NEXT:    fmul %st, %st(0)
+; ATHLON-NEXT:    fstps (%esp)
+; ATHLON-NEXT:    flds (%esp)
 ; ATHLON-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    fxch %st(1)
 ; ATHLON-NEXT:    fcmove %st(1), %st
 ; ATHLON-NEXT:    fstp %st(1)
-; ATHLON-NEXT:    flds 4(%ecx)
-; ATHLON-NEXT:    fmul %st, %st(0)
+; ATHLON-NEXT:    flds {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    fxch %st(2)
 ; ATHLON-NEXT:    fcmove %st(2), %st
 ; ATHLON-NEXT:    fstp %st(2)
-; ATHLON-NEXT:    flds 8(%ecx)
-; ATHLON-NEXT:    fmul %st, %st(0)
+; ATHLON-NEXT:    flds {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    fxch %st(3)
 ; ATHLON-NEXT:    fcmove %st(3), %st
 ; ATHLON-NEXT:    fstp %st(3)
-; ATHLON-NEXT:    flds 12(%ecx)
-; ATHLON-NEXT:    fmul %st, %st(0)
+; ATHLON-NEXT:    flds {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    fxch %st(4)
 ; ATHLON-NEXT:    fcmove %st(4), %st
 ; ATHLON-NEXT:    fstp %st(4)
@@ -326,57 +335,62 @@ define void @test6(i32 %C, ptr %A, ptr %B) nounwind {
 ; ATHLON-NEXT:    fstps 8(%eax)
 ; ATHLON-NEXT:    fstps 4(%eax)
 ; ATHLON-NEXT:    fstps (%eax)
+; ATHLON-NEXT:    addl $16, %esp
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: test6:
 ; MCU:       # %bb.0:
-; MCU-NEXT:    pushl %eax
+; MCU-NEXT:    subl $20, %esp
 ; MCU-NEXT:    flds 12(%edx)
 ; MCU-NEXT:    fstps (%esp) # 4-byte Folded Spill
 ; MCU-NEXT:    flds 8(%edx)
 ; MCU-NEXT:    flds 4(%edx)
-; MCU-NEXT:    flds (%ecx)
-; MCU-NEXT:    flds 4(%ecx)
-; MCU-NEXT:    flds 8(%ecx)
+; MCU-NEXT:    flds (%edx)
 ; MCU-NEXT:    flds 12(%ecx)
 ; MCU-NEXT:    fmul %st, %st(0)
-; MCU-NEXT:    fxch %st(1)
+; MCU-NEXT:    fstps {{[0-9]+}}(%esp)
+; MCU-NEXT:    flds 8(%ecx)
 ; MCU-NEXT:    fmul %st, %st(0)
-; MCU-NEXT:    fxch %st(2)
+; MCU-NEXT:    fstps {{[0-9]+}}(%esp)
+; MCU-NEXT:    flds 4(%ecx)
 ; MCU-NEXT:    fmul %st, %st(0)
-; MCU-NEXT:    fxch %st(3)
+; MCU-NEXT:    fstps {{[0-9]+}}(%esp)
+; MCU-NEXT:    flds (%ecx)
 ; MCU-NEXT:    fmul %st, %st(0)
+; MCU-NEXT:    fstps {{[0-9]+}}(%esp)
+; MCU-NEXT:    flds {{[0-9]+}}(%esp)
+; MCU-NEXT:    flds {{[0-9]+}}(%esp)
+; MCU-NEXT:    flds {{[0-9]+}}(%esp)
 ; MCU-NEXT:    testl %eax, %eax
-; MCU-NEXT:    flds (%edx)
+; MCU-NEXT:    flds {{[0-9]+}}(%esp)
 ; MCU-NEXT:    je .LBB5_2
 ; MCU-NEXT:  # %bb.1:
-; MCU-NEXT:    fstp %st(1)
 ; MCU-NEXT:    fstp %st(3)
+; MCU-NEXT:    fstp %st(0)
 ; MCU-NEXT:    fstp %st(1)
 ; MCU-NEXT:    fstp %st(0)
 ; MCU-NEXT:    flds (%esp) # 4-byte Folded Reload
 ; MCU-NEXT:    fldz
 ; MCU-NEXT:    fldz
 ; MCU-NEXT:    fldz
-; MCU-NEXT:    fxch %st(1)
+; MCU-NEXT:    fxch %st(2)
 ; MCU-NEXT:    fxch %st(6)
 ; MCU-NEXT:    fxch %st(1)
 ; MCU-NEXT:    fxch %st(5)
+; MCU-NEXT:    fxch %st(2)
 ; MCU-NEXT:    fxch %st(4)
 ; MCU-NEXT:    fxch %st(1)
-; MCU-NEXT:    fxch %st(3)
 ; MCU-NEXT:    fxch %st(2)
-; MCU-NEXT:  .LBB5_2:
-; MCU-NEXT:    fstp %st(0)
-; MCU-NEXT:    fstp %st(5)
-; MCU-NEXT:    fstp %st(3)
-; MCU-NEXT:    fxch %st(2)
-; MCU-NEXT:    fstps 12(%edx)
 ; MCU-NEXT:    fxch %st(1)
+; MCU-NEXT:  .LBB5_2:
+; MCU-NEXT:    fstp %st(6)
+; MCU-NEXT:    fstp %st(4)
+; MCU-NEXT:    fstp %st(2)
+; MCU-NEXT:    fstps 12(%edx)
 ; MCU-NEXT:    fstps 8(%edx)
 ; MCU-NEXT:    fstps 4(%edx)
 ; MCU-NEXT:    fstps (%edx)
-; MCU-NEXT:    popl %eax
+; MCU-NEXT:    addl $20, %esp
 ; MCU-NEXT:    retl
   %tmp = load <4 x float>, ptr %A
   %tmp3 = load <4 x float>, ptr %B
