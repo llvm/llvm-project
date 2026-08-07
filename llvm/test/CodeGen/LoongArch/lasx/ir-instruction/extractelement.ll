@@ -247,8 +247,7 @@ define void @vextract_32xi8_zext(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: vextract_32xi8_zext:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    vpickve2gr.bu $a0, $vr0, 0
 ; CHECK-NEXT:    st.w $a0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -264,8 +263,7 @@ define void @vextract_32xi8_zext_hi(ptr %src, ptr %dst) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 14
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    andi $a0, $a0, 255
+; CHECK-NEXT:    vpickve2gr.bu $a0, $vr0, 0
 ; CHECK-NEXT:    st.w $a0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -277,21 +275,12 @@ entry:
 }
 
 define void @vextract_16xi16_zext(ptr %src, ptr %dst) nounwind {
-; LA32-LABEL: vextract_16xi16_zext:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    st.w $a0, $a1, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vextract_16xi16_zext:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    st.w $a0, $a1, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vextract_16xi16_zext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a0, 0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; CHECK-NEXT:    st.w $a0, $a1, 0
+; CHECK-NEXT:    ret
 entry:
   %0 = load volatile <16 x i16>, ptr %src
   %1 = extractelement <16 x i16> %0, i64 0
@@ -301,23 +290,13 @@ entry:
 }
 
 define void @vextract_16xi16_zext_hi(ptr %src, ptr %dst) nounwind {
-; LA32-LABEL: vextract_16xi16_zext_hi:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a0, 0
-; LA32-NEXT:    xvpermi.d $xr0, $xr0, 14
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32-NEXT:    st.w $a0, $a1, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vextract_16xi16_zext_hi:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a0, 0
-; LA64-NEXT:    xvpermi.d $xr0, $xr0, 14
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    st.w $a0, $a1, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vextract_16xi16_zext_hi:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a0, 0
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 14
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; CHECK-NEXT:    st.w $a0, $a1, 0
+; CHECK-NEXT:    ret
 entry:
   %0 = load volatile <16 x i16>, ptr %src
   %1 = extractelement <16 x i16> %0, i64 8
@@ -338,8 +317,7 @@ define void @vextract_8xi32_zext(ptr %src, ptr %dst) nounwind {
 ; LA64-LABEL: vextract_8xi32_zext:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    xvld $xr0, $a0, 0
-; LA64-NEXT:    xvpickve2gr.w $a0, $xr0, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; LA64-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; LA64-NEXT:    st.d $a0, $a1, 0
 ; LA64-NEXT:    ret
 entry:

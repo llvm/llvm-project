@@ -411,6 +411,7 @@ static std::string getAssumptionNote(bounds::CheckResult Res,
 
 void ArrayBoundChecker::handleAccessExpr(const Expr *E,
                                          CheckerContext &C) const {
+  ASTContext &ACtx = C.getASTContext();
   const SVal Location = C.getSVal(E);
 
   // The header ctype.h (from e.g. glibc) implements the isXXXXX() macros as
@@ -418,7 +419,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   // and incomplete analysis of these leads to false positives. As even
   // accurate reports would be confusing for the users, just disable reports
   // from these macros:
-  if (isFromCtypeMacro(E, C.getASTContext()))
+  if (isFromCtypeMacro(E, ACtx))
     return;
 
   ProgramStateRef State = C.getState();
@@ -446,10 +447,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   bounds::CheckFlags Flags = {
       /*CheckUnderflow=*/!(isa<SymbolicRegion>(Reg) &&
                            isa<UnknownSpaceRegion>(Space)),
-      /*OffsetObviouslyNonnegative=*/isOffsetObviouslyNonnegative(E, C),
-      /*AcceptPastTheEnd=*/isa<ArraySubscriptExpr>(E) &&
-          isInAddressOf(E, C.getASTContext()),
-  };
+      /*OffsetObviouslyNonnegative=*/isOffsetObviouslyNonnegative(E, C)};
 
   bounds::CheckResult Res = checkBounds(State, SVB, ByteOffset, Extent, Flags);
 
@@ -464,7 +462,19 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   const NoteTag *T = nullptr;
   if (Res.mayBeInvalid()) {
     if (!Res.mayBeInBounds()) {
-      SizeUnit SU = SizeUnit::forSVal(Location, C.getASTContext());
+      if (isa<ArraySubscriptExpr>(E) && isInAddressOf(E, ACtx) && Extent) {
+        // Recognize and accept the idiomatic `&array[size]` expression that
+        // forms the past-the-end pointer without actually dereferencing it.
+        auto [EqualsToThreshold, NotEqualToThreshold] =
+            bounds::compareValueToThreshold(State, SVB, ByteOffset, *Extent,
+                                            /*CheckEquality=*/true);
+        if (EqualsToThreshold && !NotEqualToThreshold) {
+          C.addTransition(EqualsToThreshold);
+          return;
+        }
+      }
+
+      SizeUnit SU = SizeUnit::forSVal(Location, ACtx);
       BugDescription Desc = describeInvalidAccess(Res, RegName, SU);
       reportOOB(C, State, Desc, ByteOffset, Res.getExtentIfMayOverflow());
       return;
