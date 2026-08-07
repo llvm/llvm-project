@@ -78,12 +78,62 @@ between standard floating-point types, integer types and packed low-precision fo
 }];
 }
 
+def DocCatAMDGPUFmaMix : DocumentationCategory<"FMA Mix Builtins"> {
+  let Content = [{
+These builtins expose the AMDGPU FMA mix instructions. Each 32-bit source is
+paired with a compile-time source selector in the range [0, 3]. Selector bit 0
+chooses the low or high half when bit 1 selects 16-bit interpretation. Bit 0
+is ignored for 32-bit interpretation. Selectors 0 and 1 select F32, selector 2
+selects the low F16 or BF16 value, and selector 3 selects the high F16 or BF16
+value.
+
+The unsigned source arguments carry raw F32, F16, or BF16 bit patterns. They
+are not numerically converted from unsigned integers.
+
+The ``mixlo`` and ``mixhi`` builtins replace one 16-bit half of ``dst`` and
+preserve the other half.
+}];
+}
+
 def DocCatAMDGPUPrefetch : DocumentationCategory<"Prefetch Builtins"> {
   let Content = [{
 These builtins provide access to AMDGPU prefetch instructions, including instructions
 for prefetching data and instructions.
 }];
 }
+
+//===----------------------------------------------------------------------===//
+// FMA mix builtins — Documentation records
+//===----------------------------------------------------------------------===//
+
+class DocFmaMix<string instruction, string result, string feature>
+    : Documentation {
+  let Category = DocCatAMDGPUFmaMix;
+  let Content = !strconcat("Computes ``src0 * src1 + src2`` and returns ",
+                           result, ". Requires target feature ``", feature,
+                           "`` and maps to the ``", instruction,
+                           "`` instruction.");
+}
+
+def DocFmaMixF32 :
+    DocFmaMix<"v_fma_mix_f32", "an F32 result", "fma-mix-insts">;
+def DocFmaMixF32BF16 :
+    DocFmaMix<"v_fma_mix_f32_bf16", "an F32 result",
+              "fma-mix-bf16-insts">;
+def DocFmaMixLoF16 :
+    DocFmaMix<"v_fma_mixlo_f16", "the packed result with its low half replaced",
+              "fma-mix-insts">;
+def DocFmaMixHiF16 :
+    DocFmaMix<"v_fma_mixhi_f16", "the packed result with its high half replaced",
+              "fma-mix-insts">;
+def DocFmaMixLoBF16 :
+    DocFmaMix<"v_fma_mixlo_bf16",
+              "the packed result with its low half replaced",
+              "fma-mix-bf16-insts">;
+def DocFmaMixHiBF16 :
+    DocFmaMix<"v_fma_mixhi_bf16",
+              "the packed result with its high half replaced",
+              "fma-mix-bf16-insts">;
 
 //===----------------------------------------------------------------------===//
 // ABI / Special Register Builtins — Documentation records

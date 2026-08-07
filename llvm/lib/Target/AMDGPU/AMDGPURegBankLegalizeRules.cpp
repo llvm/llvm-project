@@ -2004,6 +2004,19 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
 
+  addRulesForIOpcs({amdgcn_fma_mix_f32, amdgcn_fma_mix_f32_bf16}, Standard)
+      .Uni(S32,
+           {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32, Imm, Imm, Imm}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32, Imm, Imm, Imm}});
+
+  addRulesForIOpcs({amdgcn_fma_mixlo_f16, amdgcn_fma_mixhi_f16,
+                    amdgcn_fma_mixlo_bf16, amdgcn_fma_mixhi_bf16},
+                   Standard)
+      .Uni(S32, {{UniInVgprS32},
+                 {IntrId, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Imm, Imm, Imm}})
+      .Div(S32,
+           {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Imm, Imm, Imm}});
+
   addRulesForIOpcs({amdgcn_udot4, amdgcn_sdot4, amdgcn_udot8, amdgcn_sdot8,
                     amdgcn_dot4_f32_bf8_bf8, amdgcn_dot4_f32_bf8_fp8,
                     amdgcn_dot4_f32_fp8_fp8, amdgcn_dot4_f32_fp8_bf8},

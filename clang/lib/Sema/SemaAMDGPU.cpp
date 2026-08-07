@@ -444,6 +444,18 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
                                            /*High=*/0) ||
            SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/2, /*Low=*/0,
                                            /*High=*/0);
+  case AMDGPU::BI__builtin_amdgcn_fma_mix_f32:
+  case AMDGPU::BI__builtin_amdgcn_fma_mix_f32_bf16:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 3, 0, 3) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 4, 0, 3) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 5, 0, 3);
+  case AMDGPU::BI__builtin_amdgcn_fma_mixlo_f16:
+  case AMDGPU::BI__builtin_amdgcn_fma_mixhi_f16:
+  case AMDGPU::BI__builtin_amdgcn_fma_mixlo_bf16:
+  case AMDGPU::BI__builtin_amdgcn_fma_mixhi_bf16:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 4, 0, 3) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 5, 0, 3) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 6, 0, 3);
   default:
     return false;
   }

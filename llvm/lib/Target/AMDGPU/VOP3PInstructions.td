@@ -528,6 +528,44 @@ let True16Predicate = UseRealTrue16Insts in
 defm : MadFmaMixFP16Pats_t16<fma, V_FMA_MIX_BF16_t16, bf16, v2bf16>;
 } // End SubtargetPredicate = HasFmaMixBF16Insts
 
+class FmaMixF32IntrinsicPat<SDPatternOperator intrinsic,
+                            VOP3P_Pseudo instruction> : GCNPat<
+  (f32 (intrinsic i32:$src0, i32:$src1, i32:$src2,
+                  MFMALdScaleModifierOp:$src0_modifiers,
+                  MFMALdScaleModifierOp:$src1_modifiers,
+                  MFMALdScaleModifierOp:$src2_modifiers)),
+  (instruction (MFMALdScaleXForm $src0_modifiers), $src0,
+               (MFMALdScaleXForm $src1_modifiers), $src1,
+               (MFMALdScaleXForm $src2_modifiers), $src2, DSTCLAMP.NONE)>;
+
+class FmaMixPackedIntrinsicPat<SDPatternOperator intrinsic,
+                               VOP3P_Pseudo instruction> : GCNPat<
+  (i32 (intrinsic i32:$src0, i32:$src1, i32:$src2, i32:$dst,
+                  MFMALdScaleModifierOp:$src0_modifiers,
+                  MFMALdScaleModifierOp:$src1_modifiers,
+                  MFMALdScaleModifierOp:$src2_modifiers)),
+  (instruction (MFMALdScaleXForm $src0_modifiers), $src0,
+               (MFMALdScaleXForm $src1_modifiers), $src1,
+               (MFMALdScaleXForm $src2_modifiers), $src2, DSTCLAMP.NONE,
+               VGPR_32:$dst)>;
+
+let SubtargetPredicate = HasFmaMixInsts in {
+def : FmaMixF32IntrinsicPat<int_amdgcn_fma_mix_f32, V_FMA_MIX_F32>;
+def : FmaMixPackedIntrinsicPat<int_amdgcn_fma_mixlo_f16,
+                               V_FMA_MIXLO_F16>;
+def : FmaMixPackedIntrinsicPat<int_amdgcn_fma_mixhi_f16,
+                               V_FMA_MIXHI_F16>;
+}
+
+let SubtargetPredicate = HasFmaMixBF16Insts in {
+def : FmaMixF32IntrinsicPat<int_amdgcn_fma_mix_f32_bf16,
+                            V_FMA_MIX_F32_BF16>;
+def : FmaMixPackedIntrinsicPat<int_amdgcn_fma_mixlo_bf16,
+                               V_FMA_MIXLO_BF16>;
+def : FmaMixPackedIntrinsicPat<int_amdgcn_fma_mixhi_bf16,
+                               V_FMA_MIXHI_BF16>;
+}
+
 def PK_ADD_MINMAX_Profile : VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16, VOP3_PACKED> {
   let HasNeg = 0;
   let EnableClamp = 1;

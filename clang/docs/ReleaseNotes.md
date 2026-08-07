@@ -467,6 +467,9 @@ features cannot lower the translation-unit ABI level;
 
 #### AMDGPU Support
 
+- Added builtins for the `v_fma_mix_f32`, `v_fma_mixlo`, and `v_fma_mixhi`
+  instruction families.
+
 - Deprecated the following builtins in favor of `__builtin_amdgcn_ballot_w32` or
   `__builtin_amdgcn_ballot_w64`:
   - `__builtin_amdgcn_uicmp`

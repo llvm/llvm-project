@@ -588,6 +588,44 @@ def int_amdgcn_fmad_ftz :
             [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]
 >;
 
+class AMDGPUFmaMixIntrinsic<string builtin, string feature> :
+  ClangBuiltin<builtin>,
+  PureIntrinsic<[llvm_float_ty],
+                [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                 llvm_i32_ty, llvm_i32_ty],
+                [ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>,
+                 ImmArg<ArgIndex<5>>]> {
+  let TargetFeatures = feature;
+}
+
+class AMDGPUFmaMixPackedIntrinsic<string builtin, string feature> :
+  ClangBuiltin<builtin>,
+  PureIntrinsic<[llvm_i32_ty],
+                [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                 llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                [ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>,
+                 ImmArg<ArgIndex<6>>]> {
+  let TargetFeatures = feature;
+}
+
+def int_amdgcn_fma_mix_f32 :
+  AMDGPUFmaMixIntrinsic<"__builtin_amdgcn_fma_mix_f32", "fma-mix-insts">;
+def int_amdgcn_fma_mix_f32_bf16 :
+  AMDGPUFmaMixIntrinsic<"__builtin_amdgcn_fma_mix_f32_bf16",
+                        "fma-mix-bf16-insts">;
+def int_amdgcn_fma_mixlo_f16 :
+  AMDGPUFmaMixPackedIntrinsic<"__builtin_amdgcn_fma_mixlo_f16",
+                              "fma-mix-insts">;
+def int_amdgcn_fma_mixhi_f16 :
+  AMDGPUFmaMixPackedIntrinsic<"__builtin_amdgcn_fma_mixhi_f16",
+                              "fma-mix-insts">;
+def int_amdgcn_fma_mixlo_bf16 :
+  AMDGPUFmaMixPackedIntrinsic<"__builtin_amdgcn_fma_mixlo_bf16",
+                              "fma-mix-bf16-insts">;
+def int_amdgcn_fma_mixhi_bf16 :
+  AMDGPUFmaMixPackedIntrinsic<"__builtin_amdgcn_fma_mixhi_bf16",
+                              "fma-mix-bf16-insts">;
+
 let TargetFeatures = "tanh-insts" in
 def int_amdgcn_tanh : PureIntrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>]

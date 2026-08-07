@@ -1051,6 +1051,35 @@ def __builtin_amdgcn_exp2_bf16 : AMDGPUBuiltin<"__bf16(__bf16)", [Const], "bf16-
 def __builtin_amdgcn_sin_bf16 : AMDGPUBuiltin<"__bf16(__bf16)", [Const], "bf16-trans-insts">;
 def __builtin_amdgcn_cos_bf16 : AMDGPUBuiltin<"__bf16(__bf16)", [Const], "bf16-trans-insts">;
 
+class AMDGPUFmaMixBuiltin<string feature, Documentation doc>
+    : AMDGPUBuiltin<"float(unsigned int, unsigned int, unsigned int, _Constant unsigned int, _Constant unsigned int, _Constant unsigned int)",
+                    [Const], feature> {
+  let Documentation = [doc];
+  let ArgNames = ["src0", "src1", "src2", "src0_sel", "src1_sel",
+                  "src2_sel"];
+}
+
+class AMDGPUFmaMixPackedBuiltin<string feature, Documentation doc>
+    : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int, unsigned int, _Constant unsigned int, _Constant unsigned int, _Constant unsigned int)",
+                    [Const], feature> {
+  let Documentation = [doc];
+  let ArgNames = ["src0", "src1", "src2", "dst", "src0_sel", "src1_sel",
+                  "src2_sel"];
+}
+
+def __builtin_amdgcn_fma_mix_f32
+    : AMDGPUFmaMixBuiltin<"fma-mix-insts", DocFmaMixF32>;
+def __builtin_amdgcn_fma_mix_f32_bf16
+    : AMDGPUFmaMixBuiltin<"fma-mix-bf16-insts", DocFmaMixF32BF16>;
+def __builtin_amdgcn_fma_mixlo_f16
+    : AMDGPUFmaMixPackedBuiltin<"fma-mix-insts", DocFmaMixLoF16>;
+def __builtin_amdgcn_fma_mixhi_f16
+    : AMDGPUFmaMixPackedBuiltin<"fma-mix-insts", DocFmaMixHiF16>;
+def __builtin_amdgcn_fma_mixlo_bf16
+    : AMDGPUFmaMixPackedBuiltin<"fma-mix-bf16-insts", DocFmaMixLoBF16>;
+def __builtin_amdgcn_fma_mixhi_bf16
+    : AMDGPUFmaMixPackedBuiltin<"fma-mix-bf16-insts", DocFmaMixHiBF16>;
+
 def __builtin_amdgcn_cvt_sr_pk_bf16_f32 : AMDGPUBuiltin<"_ExtVector<2, __bf16>(float, float, int)", [Const], "cvt-sr-pk-bf16-f32-inst">;
 def __builtin_amdgcn_cvt_sr_pk_f16_f32 : AMDGPUBuiltin<"_ExtVector<2, _Float16>(float, float, int)", [Const], "gfx1250-insts">;
 def __builtin_amdgcn_cvt_f16_fp8 : AMDGPUBuiltin<"_Float16(int, _Constant int)", [Const], "gfx1250-insts">;
