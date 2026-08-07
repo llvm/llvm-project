@@ -12,7 +12,7 @@ if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
     "at least 3.31.0 now to avoid issues in the future.")
 endif()
 
-set(LLVM_SUBPROJECT_TITLE "Compiler-RT")
+set(LLVM_SUBPROJECT_TITLE "compiler-rt")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)

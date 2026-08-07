@@ -2171,3 +2171,30 @@ func.func @nvvm_read_sreg_clock64_wrong_type() {
   %0 = nvvm.read.ptx.sreg.clock64 : i32
   return
 }
+
+// -----
+
+// expected-error@+1{{custom op 'llvm.mlir.alias' invalid value for thread_local}}
+llvm.mlir.alias private thread_local(invalid) unnamed_addr @a30 {dso_local} : i32 {
+  %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// expected-error@+1{{expected ')'}}
+llvm.mlir.alias private thread_local(localexec, generaldynamic) unnamed_addr @a30 {dso_local} : i32 {
+  %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// expected-error@+1{{custom op 'llvm.mlir.global' invalid value for thread_local}}
+llvm.mlir.global internal thread_local(invalid) constant @thread_local(42 : i32) : i32
+
+// -----
+
+// expected-error@+1{{expected ')'}}
+llvm.mlir.global internal thread_local(generaldynamic, localexec) constant @thread_local(42 : i32) : i32
+
