@@ -105,7 +105,8 @@ std::string lifetime_modeling::getRegionName(const MemRegion *Reg) {
   return "the region";
 }
 
-// FIXME: Retrieving the MemRegions of nested struct fields is not yet supported.
+// FIXME: Retrieving the MemRegions of nested struct fields is not yet
+// supported.
 SmallVector<const MemRegion *, 4>
 lifetime_modeling::getRegionsFromAggrVal(SVal Val, CheckerContext &C) {
   SmallVector<const MemRegion *, 4> Reg;
