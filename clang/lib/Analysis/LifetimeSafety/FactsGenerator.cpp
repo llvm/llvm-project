@@ -924,10 +924,13 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
 
 void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
                                            ArrayRef<const Expr *> Args) {
-  unsigned IsInstance = 0;
+  unsigned ImplicitObjectArgOffset = 0;
+  // Constructors are excluded because Args has no object argument for them,
+  // even though isImplicitObjectMemberFunction() is true.
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-      MD && MD->isInstance() && !isa<CXXConstructorDecl>(FD)) {
-    IsInstance = 1;
+      MD && !isa<CXXConstructorDecl>(FD) &&
+      MD->isImplicitObjectMemberFunction()) {
+    ImplicitObjectArgOffset = 1;
     // std::unique_ptr::release() transfers ownership.
     // Treat it as a move to prevent false-positive warnings when the unique_ptr
     // destructor runs after ownership has been transferred.
@@ -940,10 +943,15 @@ void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
     }
   }
 
-  // Skip 'this' arg as it cannot be moved.
-  for (unsigned I = IsInstance;
-       I < Args.size() && I < FD->getNumParams() + IsInstance; ++I) {
-    const ParmVarDecl *PVD = FD->getParamDecl(I - IsInstance);
+  // Skip implicit 'this' arg as it cannot be moved.
+  for (unsigned I = ImplicitObjectArgOffset;
+       I < Args.size() && I < FD->getNumParams() + ImplicitObjectArgOffset;
+       ++I) {
+    const ParmVarDecl *PVD = FD->getParamDecl(I - ImplicitObjectArgOffset);
+    // In principle, explicit object parameters can be moved, but skip marking
+    // them as moved for consistency with implicit 'this'.
+    if (PVD->isExplicitObjectParameter())
+      continue;
     if (!PVD->getType()->isRValueReferenceType())
       continue;
     // Skip lifetime annotated r-value reference parameters. Lifetime annotation
