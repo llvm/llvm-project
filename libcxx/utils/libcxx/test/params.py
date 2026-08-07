@@ -15,7 +15,6 @@ from libcxx.test.features.compiler import _isClang, _isAppleClang, _isGCC, _isMS
 
 
 _warningFlags = [
-    "-Werror",
     "-Wall",
     "-Wctad-maybe-unsupported",
     "-Wextra",
@@ -289,14 +288,14 @@ DEFAULT_PARAMETERS = [
         actions=lambda is_system: [AddFeature("stdlib=system")] if is_system else [],
     ),
     Parameter(
-        name="enable_warnings",
+        name="enable_werror",
         choices=[True, False],
         type=bool,
         default=True,
-        help="Whether to enable warnings when compiling the test suite.",
-        actions=lambda warnings: [] if not warnings else
-            [AddOptionalWarningFlag(w) for w in _warningFlags] +
-            [AddCompileFlag("-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER")],
+        help="Whether to treat warnings as errors when compiling the test suite.",
+        actions=lambda werror: [AddOptionalWarningFlag(w) for w in _warningFlags] +
+                               [AddCompileFlag("-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER")] +
+                               ([AddCompileFlag("-Werror")] if werror else []),
     ),
     Parameter(
         name="use_sanitizer",
