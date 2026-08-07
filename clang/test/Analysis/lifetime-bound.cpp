@@ -402,13 +402,14 @@ struct F {
 F makeView(int &x [[clang::lifetimebound]]) { return F{&x}; }
 
 F whole_struct_return_lazycompoundval() {
-  int x = 5; // expected-note {{'x' initialized here}}
+  int x = 5;// expected-note {{'x' initialized here}}
   return makeView(x);
   // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
-  // expected-note@-2    {{Returning value bound to 'x' that will go out of scope}}
-  // expected-warning@-3 {{Address of stack memory associated with local variable 'x' returned to caller}}
-  // expected-note@-4    {{Address of stack memory associated with local variable 'x' returned to caller}}
-  // expected-warning@-5 {{address of stack memory associated with local variable 'x' returned}}
+  // expected-note@-2    {{Lifetime of 'x' ended here}}
+  // expected-note@-3    {{Value's lifetime bound to the lifetime of 'x' here}}
+  // expected-warning@-4 {{Address of stack memory associated with local variable 'x' returned to caller}}
+  // expected-note@-5    {{Address of stack memory associated with local variable 'x' returned to caller}}
+  // expected-warning@-6 {{address of stack memory associated with local variable 'x' returned}}
 }
 
 struct PtrPair {
@@ -426,10 +427,11 @@ PtrPair return_pair_by_value() {
   int local = 5; // expected-note {{'local' initialized here}}
   return makePair(local);
   // expected-warning@-1 {{Returning value bound to 'local' that will go out of scope}}
-  // expected-note@-2    {{Returning value bound to 'local' that will go out of scope}}
-  // expected-warning@-3 {{Address of stack memory associated with local variable 'local' returned to caller}}
-  // expected-note@-4    {{Address of stack memory associated with local variable 'local' returned to caller}}
-  // expected-warning@-5 {{address of stack memory associated with local variable 'local' returned}}
+  // expected-note@-2    {{Lifetime of 'local' ended here}}
+  // expected-note@-3    {{Value's lifetime bound to the lifetime of 'local' here}}
+  // expected-warning@-4 {{Address of stack memory associated with local variable 'local' returned to caller}}
+  // expected-note@-5    {{Address of stack memory associated with local variable 'local' returned to caller}}
+  // expected-warning@-6 {{address of stack memory associated with local variable 'local' returned}}
 }
 
 struct InnerS {
