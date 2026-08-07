@@ -1141,8 +1141,8 @@ bool Archive::Symbol::isECSymbol() const {
 }
 
 uint32_t Archive::Symbol::getZOSAttributes() const {
-  if (Parent->kind() != K_ZOS)
-    return 0;
+  assert(Parent->kind() == K_ZOS && "Cannot get z/OS attributes for non-z/OS "
+                                    "archives");
   if (SymbolIndex >= Parent->getNumberOfSymbols())
     return 0;
 
