@@ -6,7 +6,8 @@ define <16 x float> @masked_load(ptr %p, i32 signext %n, i32 signext %iv) nounwi
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vor.vx v8, v8, a2
+; CHECK-NEXT:    maxu a1, a1, a2
+; CHECK-NEXT:    sub a1, a1, a2
 ; CHECK-NEXT:    vmsltu.vx v0, v8, a1
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
@@ -26,7 +27,8 @@ define <16 x float> @masked_load_no_passthru(ptr %p, i32 signext %n, i32 signext
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vor.vx v8, v8, a2
+; CHECK-NEXT:    maxu a1, a1, a2
+; CHECK-NEXT:    sub a1, a1, a2
 ; CHECK-NEXT:    vmsltu.vx v0, v8, a1
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
@@ -45,7 +47,8 @@ define <16 x float> @masked_load_add(ptr %p, i32 signext %n, i32 signext %iv) no
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vadd.vx v8, v8, a2
+; CHECK-NEXT:    maxu a1, a1, a2
+; CHECK-NEXT:    sub a1, a1, a2
 ; CHECK-NEXT:    vmsltu.vx v0, v8, a1
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
@@ -65,7 +68,8 @@ define <16 x float> @masked_load_gt(ptr %p, i32 signext %n, i32 signext %iv) nou
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vor.vx v8, v8, a2
+; CHECK-NEXT:    maxu a1, a1, a2
+; CHECK-NEXT:    sub a1, a1, a2
 ; CHECK-NEXT:    vmsltu.vx v0, v8, a1
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
@@ -85,7 +89,8 @@ define <16 x float> @masked_load_signed_cmp(ptr %p, i32 signext %n, i32 signext 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vor.vx v8, v8, a2
+; CHECK-NEXT:    min a2, a1, a2
+; CHECK-NEXT:    sub a1, a1, a2
 ; CHECK-NEXT:    vmslt.vx v0, v8, a1
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
@@ -105,7 +110,8 @@ define <16 x float> @masked_load_sgt(ptr %p, i32 signext %n, i32 signext %iv) no
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vor.vx v8, v8, a2
+; CHECK-NEXT:    min a2, a1, a2
+; CHECK-NEXT:    sub a1, a1, a2
 ; CHECK-NEXT:    vmslt.vx v0, v8, a1
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
@@ -125,8 +131,9 @@ define <16 x float> @masked_load_get_active_lane(ptr %p, i32 signext %n, i32 sig
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    slli a2, a2, 4
-; CHECK-NEXT:    vor.vx v8, v8, a2
+; CHECK-NEXT:    slliw a2, a2, 4
+; CHECK-NEXT:    maxu a1, a1, a2
+; CHECK-NEXT:    sub a1, a1, a2
 ; CHECK-NEXT:    vmsltu.vx v0, v8, a1
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
@@ -142,17 +149,17 @@ define <64 x float> @masked_load_wide(ptr %p, i32 signext %n, i32 signext %iv) n
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vor.vx v16, v8, a2
-; CHECK-NEXT:    vmsltu.vx v0, v16, a1
-; CHECK-NEXT:    vadd.vx v24, v8, a3
-; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vid.v v24
+; CHECK-NEXT:    vadd.vx v16, v24, a3
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vor.vx v24, v24, a2
-; CHECK-NEXT:    vle32.v v8, (a0), v0.t
+; CHECK-NEXT:    maxu a1, a1, a2
+; CHECK-NEXT:    sub a1, a1, a2
+; CHECK-NEXT:    vmsltu.vx v0, v16, a1
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    addi a2, a0, 128
+; CHECK-NEXT:    vle32.v v16, (a2), v0.t
 ; CHECK-NEXT:    vmsltu.vx v0, v24, a1
-; CHECK-NEXT:    addi a0, a0, 128
-; CHECK-NEXT:    vle32.v v16, (a0), v0.t
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %11 = insertelement <64 x i32> poison, i32 %iv, i32 0
   %12 = shufflevector <64 x i32> %11, <64 x i32> poison, <64 x i32> zeroinitializer
@@ -169,18 +176,18 @@ define <64 x float> @masked_load_get_active_lane_wide(ptr %p, i32 signext %n, i3
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    slli a2, a2, 6
-; CHECK-NEXT:    vor.vx v16, v8, a2
-; CHECK-NEXT:    vmsltu.vx v0, v16, a1
-; CHECK-NEXT:    vadd.vx v24, v8, a3
-; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vid.v v24
+; CHECK-NEXT:    vadd.vx v16, v24, a3
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vor.vx v24, v24, a2
-; CHECK-NEXT:    vle32.v v8, (a0), v0.t
+; CHECK-NEXT:    slliw a2, a2, 6
+; CHECK-NEXT:    maxu a1, a1, a2
+; CHECK-NEXT:    sub a1, a1, a2
+; CHECK-NEXT:    vmsltu.vx v0, v16, a1
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    addi a2, a0, 128
+; CHECK-NEXT:    vle32.v v16, (a2), v0.t
 ; CHECK-NEXT:    vmsltu.vx v0, v24, a1
-; CHECK-NEXT:    addi a0, a0, 128
-; CHECK-NEXT:    vle32.v v16, (a0), v0.t
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %s = shl i32 %iv, 6
   %m = tail call <64 x i1> @llvm.get.active.lane.mask(i32 %s, i32 %n)
