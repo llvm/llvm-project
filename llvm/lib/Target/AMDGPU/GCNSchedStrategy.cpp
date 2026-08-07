@@ -1550,6 +1550,15 @@ bool PreRARematStage::initGCNSchedStage() {
     if (NumUsers != 1)
       continue;
 
+    // Rematerialization moves the defining instruction into the region of its
+    // use, which may sit under different control dependencies (e.g., across a
+    // change of EXEC). Convergent operations must not be made control-dependent
+    // on additional values, so they cannot be safely relocated this way. This
+    // mirrors the check MachineSink performs before sinking an instruction.
+    if (any_of(CandReg.Defs,
+               [](const MachineInstr *DefMI) { return DefMI->isConvergent(); }))
+      continue;
+
     // We further filter the registers that we can rematerialize based on our
     // current tracking capabilities in the stage. The user cannot itself be
     // marked rematerializable, and no register operand of the defining MI can
@@ -1643,29 +1652,34 @@ bool PreRARematStage::initGCNSchedStage() {
 #ifdef EXPENSIVE_CHECKS
       // All uses are known to be available / live at the remat point. Thus,
       // the uses should already be live in to the using region.
-      for (MachineOperand &MO : Reg.DefMI->operands()) {
-        if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
-          continue;
+      for (const MachineInstr *DefMI : Reg.Defs) {
+        for (const MachineOperand &MO : DefMI->operands()) {
+          // Exclude the defined register. We are rematerializing all
+          // instructions defining it so we don't care that its value is
+          // available at the remat point.
+          if (!MO.isReg() || !MO.getReg() || !MO.readsReg() || MO.isDef())
+            continue;
 
-        Register UseReg = MO.getReg();
-        if (!UseReg.isVirtual())
-          continue;
+          Register UseReg = MO.getReg();
+          if (!UseReg.isVirtual())
+            continue;
 
-        LiveInterval &LI = DAG.LIS->getInterval(UseReg);
-        LaneBitmask LM = DAG.MRI.getMaxLaneMaskForVReg(MO.getReg());
-        if (LI.hasSubRanges() && MO.getSubReg())
-          LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
+          LiveInterval &LI = DAG.LIS->getInterval(UseReg);
+          LaneBitmask LM = DAG.MRI.getMaxLaneMaskForVReg(MO.getReg());
+          if (LI.hasSubRanges() && MO.getSubReg())
+            LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
 
-        const unsigned UseRegion = Reg.Uses.begin()->first;
-        LaneBitmask LiveInMask = DAG.LiveIns[UseRegion].at(UseReg);
-        LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
-        // If this register has lanes not covered by the LiveIns, be sure they
-        // do not map to any subrange. ref:
-        // machine-scheduler-sink-trivial-remats.mir::omitted_subrange
-        if (UncoveredLanes.any()) {
-          assert(LI.hasSubRanges());
-          for (LiveInterval::SubRange &SR : LI.subranges())
-            assert((SR.LaneMask & UncoveredLanes).none());
+          const unsigned UseRegion = Reg.Uses.begin()->first;
+          LaneBitmask LiveInMask = DAG.LiveIns[UseRegion].at(UseReg);
+          LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
+          // If this register has lanes not covered by the LiveIns, be sure they
+          // do not map to any subrange. ref:
+          // machine-scheduler-sink-trivial-remats.mir::omitted_subrange
+          if (UncoveredLanes.any()) {
+            assert(LI.hasSubRanges());
+            for (LiveInterval::SubRange &SR : LI.subranges())
+              assert((SR.LaneMask & UncoveredLanes).none());
+          }
         }
       }
 #endif

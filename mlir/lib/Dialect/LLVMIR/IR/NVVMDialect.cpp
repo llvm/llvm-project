@@ -38,6 +38,7 @@
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <cmath>
 #include <optional>
 #include <string>
 
