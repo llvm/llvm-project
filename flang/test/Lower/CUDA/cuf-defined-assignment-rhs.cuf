@@ -59,3 +59,19 @@ end subroutine
 ! CHECK: %[[SECTION:.*]] = hlfir.designate %[[X]]#0 (%{{.*}}:%{{.*}}:%{{.*}})  shape %{{.*}} : (!fir.ref<!fir.array<100xf32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<99xf32>>
 ! CHECK-NOT: hlfir.region_assign
 ! CHECK: fir.call @_QMdefined_assignment_device_rhsPassign_t(%[[TEE]]#0, %{{.*}}) {{.*}}: (!fir.ref<!fir.type<_QMdefined_assignment_device_rhsTt{{.*}}>>, !fir.box<!fir.array<?xf32>>) -> ()
+
+subroutine test_device_rhs_pointer
+  use defined_assignment_device_rhs
+  real, device, target :: x(100)
+  real, device, pointer :: p(:)
+  type(t) :: tee
+
+  p => x
+  tee = p
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_device_rhs_pointer()
+! CHECK: %[[P:.*]]:2 = hlfir.declare %{{.*}} {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_device_rhs_pointerEp"}
+! CHECK: %[[TEE:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_device_rhs_pointerEtee"}
+! CHECK-NOT: hlfir.region_assign
+! CHECK: fir.call @_QMdefined_assignment_device_rhsPassign_t(%[[TEE]]#0, %{{.*}}) {{.*}}: (!fir.ref<!fir.type<_QMdefined_assignment_device_rhsTt{{.*}}>>, !fir.box<!fir.array<?xf32>>) -> ()

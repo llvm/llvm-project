@@ -5591,7 +5591,40 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
   bool isAmbiguous{false};
   if (std::optional<ProcedureRef> procRef{
           GetDefinedAssignmentProc(isAmbiguous)}) {
-    if (context_.inWhereBody() && !procRef->proc().IsElemental()) { // C1032
+    bool hasCUDADeviceRhs{false};
+    for (const semantics::Symbol &symbol : CollectCudaSymbols(rhs)) {
+      if (semantics::IsCUDADevice(symbol)) {
+        hasCUDADeviceRhs = true;
+        break;
+      }
+    }
+    const semantics::Symbol *rhsSymbol{UnwrapWholeSymbolDataRef(rhs)};
+    bool hasCUDADeviceAssociateRhs{false};
+    if (rhsSymbol) {
+      if (const auto *associate{
+              rhsSymbol->detailsIf<semantics::AssocEntityDetails>()}) {
+        if (const auto &selector{associate->expr()}) {
+          for (const semantics::Symbol &symbol :
+              CollectCudaSymbols(*selector)) {
+            if (semantics::IsCUDADevice(symbol)) {
+              hasCUDADeviceAssociateRhs = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (hasCUDADeviceRhs && context_.inWhereBody()) {
+      context_.Say(
+          "Defined assignment in WHERE with a CUDA DEVICE right-hand side is not yet implemented"_todo_en_US);
+    } else if (hasCUDADeviceRhs && procRef->proc().IsElemental()) {
+      context_.Say(
+          "Elemental defined assignment with a CUDA DEVICE right-hand side is not yet implemented"_todo_en_US);
+    } else if (hasCUDADeviceAssociateRhs) {
+      context_.Say(
+          "Defined assignment from an ASSOCIATE name with a CUDA DEVICE target is not yet implemented"_todo_en_US);
+    } else if (context_.inWhereBody() &&
+        !procRef->proc().IsElemental()) { // C1032
       context_.Say(
           "Defined assignment in WHERE must be elemental, but '%s' is not"_err_en_US,
           DEREF(procRef->proc().GetSymbol()).name());
