@@ -330,7 +330,7 @@ multiclass MadFmaMixFP16Pats<SDPatternOperator fma_like,
                        (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers))))),
     (mixlo_inst $src0_modifiers, $src0,
                 $src1_modifiers, $src1,
-                (i32 SRCMODS.NONE), (i32 0),
+                (i32 SRCMODS.NEG), (i32 0),
                 DSTCLAMP.NONE,
                 (i32 (IMPLICIT_DEF)))
   >;
@@ -340,7 +340,7 @@ multiclass MadFmaMixFP16Pats<SDPatternOperator fma_like,
                                           (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers)))))),
     (vecVT (mixhi_inst $src0_modifiers, $src0,
                        $src1_modifiers, $src1,
-                       (i32 SRCMODS.NONE), (i32 0),
+                       (i32 SRCMODS.NEG), (i32 0),
                        DSTCLAMP.NONE,
                        VGPR_32:$elt0))
   >;
@@ -394,7 +394,7 @@ multiclass MadFmaMixFP16Pats_t16<SDPatternOperator fma_like,
                        (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers))))),
     (mix_inst_16 $src0_modifiers, $src0,
                  $src1_modifiers, $src1,
-                 (i32 SRCMODS.NONE), (i32 0),
+                 (i32 SRCMODS.NEG), (i32 0),
                  DSTCLAMP.NONE)
   >;
 
