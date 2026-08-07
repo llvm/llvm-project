@@ -205,6 +205,16 @@ getEMULEqualsEEWDivSEWTimesLMUL(unsigned Log2EEW, const MachineInstr &MI) {
   return std::make_pair(Num > Denom ? Num : Denom, Denom > Num);
 }
 
+static DemandedVL doubleVL(DemandedVL MinimumVL) {
+  if (!MinimumVL.VL.isImm())
+    return DemandedVL::vlmax();
+
+  int64_t VL = MinimumVL.VL.getImm();
+  if (VL < 0 || VL > std::numeric_limits<int64_t>::max() / 2)
+    return DemandedVL::vlmax();
+  return MachineOperand::CreateImm(VL * 2);
+}
+
 static std::pair<unsigned, bool> doubleEMUL(std::pair<unsigned, bool> EMUL) {
   auto [Num, IsFractional] = EMUL;
   if (IsFractional)
@@ -1079,16 +1089,6 @@ getMinimumVLForVSLIDEDOWN_VX(const MachineOperand &UserOp,
       !SlideAmtDef->getOperand(1).getReg().isVirtual())
     return std::nullopt;
   return SlideAmtDef->getOperand(1);
-}
-
-static DemandedVL doubleVL(DemandedVL MinimumVL) {
-  if (!MinimumVL.VL.isImm())
-    return DemandedVL::vlmax();
-
-  int64_t VL = MinimumVL.VL.getImm();
-  if (VL < 0 || VL > std::numeric_limits<int64_t>::max() / 2)
-    return DemandedVL::vlmax();
-  return MachineOperand::CreateImm(VL * 2);
 }
 
 static DemandedVL getMinimumVLForVUNZIP(const MachineOperand &UserOp,
