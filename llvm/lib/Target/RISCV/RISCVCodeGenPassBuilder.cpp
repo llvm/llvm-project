@@ -12,6 +12,7 @@
 #include "RISCV.h"
 #include "RISCVAsmPrinter.h"
 #include "RISCVTargetMachine.h"
+#include "RISCVVectorPeephole.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/CodeGen/CFIInstrInserter.h"
@@ -113,7 +114,7 @@ void RISCVCodeGenPassBuilder::addMachineSSAOptimization(
     addMachineFunctionPass(RISCVVLOptimizerPass(), PMW);
   }
 
-  // TODO: RISCVVectorPeepholePass
+  addMachineFunctionPass(RISCVVectorPeepholePass(), PMW);
   // TODO: RISCVFoldMemOffsetPass
 
   Base::addMachineSSAOptimization(PMW);
