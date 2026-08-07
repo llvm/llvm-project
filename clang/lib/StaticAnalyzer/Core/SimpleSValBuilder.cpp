@@ -81,9 +81,6 @@ public:
   /// (integer) value, that value is returned. Otherwise, returns NULL.
   const llvm::APSInt *getKnownValue(ProgramStateRef state, SVal V) override;
 
-  const llvm::APFloat *getKnownFloatValue(ProgramStateRef state,
-                                          SVal V) override;
-
   /// Evaluates a given SVal by recursively evaluating and simplifying the
   /// children SVals, then returns its minimal possible (integer) value. If the
   /// constraint manager cannot provide a meaningful answer, this returns NULL.
@@ -439,9 +436,9 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
   if (auto simplifiedRhsAsNonLoc = simplifiedRhs.getAs<NonLoc>())
     rhs = *simplifiedRhsAsNonLoc;
 
-  // Handle trivial case where left-side and right-side are the same.
-  // Deliberately exclude floating-point values since x - x isn't necessarily 0
-  // (e.g., inf - inf), and x == x is false when x is NaN.
+  // Handle trivial case where left-side and right-side are the same. Exclude
+  // floating points: the ConcreteFloat case below folds these correctly
+  // instead.
   if (lhs == rhs && !lhs.getAs<nonloc::ConcreteFloat>())
     switch (op) {
       default:
@@ -566,11 +563,12 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         break;
       }
 
-      // We can model arithmetic (operators +, -, *, /) only when both operands
-      // are finite and result is exact (which needs no rounding). Inexact,
-      // non-finite, or exceptions (like overflow or div by zero) is unmodeled.
-      if (!L.isFinite() || !R.isFinite())
-        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+      // We can model arithmetic (operators +, -, *, /) only when the result is
+      // exact (which needs no rounding). The opOK guard ensures rounding or
+      // exceptional conditions (e.g., overflows and div by zero) are also not
+      // modeled.
+      assert(L.isFinite() && R.isFinite() &&
+             "A concrete float is always finite");
 
       llvm::APFloat Result = L;
       llvm::APFloat::opStatus Status;
@@ -591,7 +589,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
       }
 
-      if (Status == llvm::APFloat::opOK)
+      if (Status == llvm::APFloat::opOK && isModeledFloatValue(Result))
         return makeFloatVal(Result);
 
       return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
@@ -1294,13 +1292,6 @@ const llvm::APSInt *SimpleSValBuilder::getConcreteValue(SVal V) {
 const llvm::APSInt *SimpleSValBuilder::getKnownValue(ProgramStateRef state,
                                                      SVal V) {
   return getConstValue(state, simplifySVal(state, V));
-}
-
-const llvm::APFloat *
-SimpleSValBuilder::getKnownFloatValue(ProgramStateRef state, SVal V) {
-  if (auto X = V.getAs<nonloc::ConcreteFloat>())
-    return X->getValue().get();
-  return nullptr;
 }
 
 const llvm::APSInt *SimpleSValBuilder::getMinValue(ProgramStateRef state,

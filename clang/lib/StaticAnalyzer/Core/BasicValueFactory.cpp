@@ -130,6 +130,9 @@ APFloatPtr BasicValueFactory::getFloatValue(const llvm::APFloat &X) {
 
   using FoldNodeTy = llvm::FoldingSetNodeWrapper<llvm::APFloat>;
 
+  // ID must be unique to differentiate between nodes. Unlike integers, bit
+  // size and pattern are not sufficient, so add semantics to the ID as well.
+  ID.AddInteger(llvm::APFloat::SemanticsToEnum(X.getSemantics()));
   X.Profile(ID);
   FoldNodeTy *P = APFloatSet.FindNodeOrInsertPos(ID, InsertPos);
 
