@@ -99,10 +99,10 @@ define amdgpu_cs void @memcpy_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src)
 ; LOOP-NEXT:    v_or_b32_e32 v5, v5, v7
 ; LOOP-NEXT:    buffer_load_ubyte v7, v[2:3], s[0:3], 0 addr64 offset:25
 ; LOOP-NEXT:    v_or_b32_e32 v17, v17, v19
-; LOOP-NEXT:    buffer_load_ubyte v19, v[2:3], s[0:3], 0 addr64 offset:28
 ; LOOP-NEXT:    buffer_load_ubyte v20, v[2:3], s[0:3], 0 addr64 offset:29
-; LOOP-NEXT:    buffer_load_ubyte v21, v[2:3], s[0:3], 0 addr64 offset:30
+; LOOP-NEXT:    buffer_load_ubyte v19, v[2:3], s[0:3], 0 addr64 offset:28
 ; LOOP-NEXT:    buffer_load_ubyte v22, v[2:3], s[0:3], 0 addr64 offset:31
+; LOOP-NEXT:    buffer_load_ubyte v21, v[2:3], s[0:3], 0 addr64 offset:30
 ; LOOP-NEXT:    v_or_b32_e32 v5, v9, v5
 ; LOOP-NEXT:    v_or_b32_e32 v9, v17, v13
 ; LOOP-NEXT:    v_bfe_u32 v13, v4, 8, 8
@@ -138,8 +138,9 @@ define amdgpu_cs void @memcpy_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src)
 ; LOOP-NEXT:    v_lshlrev_b32_e32 v15, 8, v20
 ; LOOP-NEXT:    v_lshlrev_b32_e32 v7, 8, v7
 ; LOOP-NEXT:    v_or_b32_e32 v15, v15, v19
-; LOOP-NEXT:    s_waitcnt vmcnt(12)
+; LOOP-NEXT:    s_waitcnt vmcnt(13)
 ; LOOP-NEXT:    v_lshlrev_b32_e32 v19, 24, v22
+; LOOP-NEXT:    s_waitcnt vmcnt(12)
 ; LOOP-NEXT:    v_lshlrev_b32_e32 v20, 16, v21
 ; LOOP-NEXT:    v_or_b32_e32 v7, v7, v23
 ; LOOP-NEXT:    v_or_b32_e32 v19, v19, v20
