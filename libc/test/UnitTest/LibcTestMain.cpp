@@ -43,8 +43,10 @@ TestOptions parseOptions(int argc, char **argv) {
 
 } // anonymous namespace
 
-// The C++ standard forbids declaring the main function with a linkage specifier
-// outisde of 'freestanding' mode, only define the linkage for hermetic tests.
+#if defined(LLVM_LIBC_ENABLE_COVERAGE) && defined(LIBC_TARGET_OS_IS_LINUX)
+#include "Coverage.h"
+#endif
+
 #if __STDC_HOSTED__
 #define TEST_MAIN int main
 #else
@@ -56,5 +58,11 @@ TEST_MAIN(int argc, char **argv, char **envp) {
   LIBC_NAMESPACE::testing::argv = argv;
   LIBC_NAMESPACE::testing::envp = envp;
 
-  return LIBC_NAMESPACE::testing::Test::runTests(parseOptions(argc, argv));
+  int result =
+      LIBC_NAMESPACE::testing::Test::runTests(parseOptions(argc, argv));
+#if defined(LLVM_LIBC_ENABLE_COVERAGE) && defined(LIBC_TARGET_OS_IS_LINUX)
+  write_raw_profile();
+#endif
+  return result;
 }
+
