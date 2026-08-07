@@ -3704,6 +3704,25 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::INSERT_VECTOR_ELT:
     Results.push_back(ExpandINSERT_VECTOR_ELT(SDValue(Node, 0)));
     break;
+  case ISD::VECTOR_BROADCAST: {
+    EVT VT = Node->getValueType(0);
+    EVT SrcVT = Node->getOperand(0).getValueType();
+    assert(VT.isFixedLengthVector() && SrcVT.isFixedLengthVector() &&
+           "Can only expand broadcasts of fixed-length vectors");
+
+    SDValue Src = Node->getOperand(0);
+    SDValue PaddedSrc = DAG.getInsertSubvector(dl, DAG.getUNDEF(VT), Src, 0);
+
+    // Create a shuffle mask that duplicates Src.
+    unsigned NumElts = VT.getVectorNumElements();
+    unsigned SrcNumElts = SrcVT.getVectorNumElements();
+    SmallVector<int, 8> Mask;
+    for (unsigned I = 0; I != NumElts; ++I)
+      Mask.push_back(I % SrcNumElts);
+    Results.push_back(
+        DAG.getVectorShuffle(VT, dl, PaddedSrc, DAG.getUNDEF(VT), Mask));
+    break;
+  }
   case ISD::VECTOR_SHUFFLE: {
     SmallVector<int, 32> NewMask;
     ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(Node)->getMask();

@@ -735,6 +735,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ROTR, VT, Expand);
   }
 
+  for (MVT VT : MVT::fixedlen_vector_valuetypes())
+    setOperationAction(ISD::VECTOR_BROADCAST, VT, Expand);
+
   // AArch64 doesn't have i32 MULH{S|U}.
   setOperationAction(ISD::MULHU, MVT::i32, Expand);
   setOperationAction(ISD::MULHS, MVT::i32, Expand);
