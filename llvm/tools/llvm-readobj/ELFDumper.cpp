@@ -8768,8 +8768,12 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
         auto JsonValue = llvm::json::parse(N->Value);
         if (JsonValue)
           W.printObject(N->Type, JsonValue.get());
-        else
+        else {
+          // Don't care why the embedded json failed to parse, just output it
+          // as a raw string.
+          consumeError(JsonValue.takeError());
           W.printString(N->Type, N->Value);
+        }
         return Error::success();
       }
     } else if (Name == "FreeBSD") {
