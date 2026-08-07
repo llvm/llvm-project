@@ -15,6 +15,8 @@
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBExpressionOptions.h"
+#include "lldb/API/SBLanguageRuntime.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -23,7 +25,26 @@ using namespace llvm;
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 
-namespace lldb_dap {
+static lldb::LanguageType GetLanguage(lldb::SBDebugger &debugger) {
+  const lldb::SBStructuredData string_result =
+      debugger.GetSetting("target.language");
+
+  return lldb::SBLanguageRuntime::GetLanguageTypeFromString(
+      GetStringValue(string_result).c_str());
+}
+
+static lldb::DynamicValueType
+GetPreferDynamicValue(lldb::SBDebugger &debugger) {
+  const lldb::SBStructuredData string_result =
+      debugger.GetSetting("target.prefer-dynamic-value");
+
+  return llvm::StringSwitch<lldb::DynamicValueType>(
+             GetStringValue(string_result))
+      .Case("no-dynamic-values", lldb::eNoDynamicValues)
+      .Case("run-target", lldb::eDynamicCanRunTarget)
+      .Case("no-run-target", lldb::eDynamicDontRunTarget)
+      .Default(lldb::eDynamicDontRunTarget);
+}
 
 static bool RunExpressionAsLLDBCommand(DAP &dap, lldb::SBFrame &frame,
                                        std::string &expression,
@@ -50,24 +71,39 @@ static lldb::SBValue EvaluateVariableExpression(lldb::SBTarget &target,
                                                 bool run_as_expression) {
   const char *expression_cstr = expression.c_str();
 
-  lldb::SBValue value;
+  // First, try resolving as a variable path (e.g. 'foo->bar' finds 'bar'). This
+  // is more reliable than the expression parser in many cases and is faster.
   if (frame) {
-    // Check if it is a variable or an expression path for a variable. i.e.
-    // 'foo->bar' finds the 'bar' variable. It is more reliable than the
-    // expression parser in many cases and it is faster.
-    value = frame.GetValueForVariablePath(
+    const lldb::SBValue value = frame.GetValueForVariablePath(
         expression_cstr, lldb::eDynamicDontRunTarget, lldb::eDILModeLegacy);
-    if (value || !run_as_expression)
+    if (value)
       return value;
-
-    return frame.EvaluateExpression(expression_cstr);
   }
 
-  if (run_as_expression)
-    value = target.EvaluateExpression(expression_cstr);
+  if (!run_as_expression)
+    return lldb::SBValue{};
 
-  return value;
+  // Fall back to full expression evaluation.
+  lldb::SBDebugger debugger = target.GetDebugger();
+  lldb::SBExpressionOptions options;
+  options.SetUnwindOnError(true);
+  options.SetIgnoreBreakpoints(true);
+  options.SetFetchDynamicValue(GetPreferDynamicValue(debugger));
+  constexpr auto evaluate_timeout_us = lldb_dap::k_evaluate_timeout_ms * 1000;
+  options.SetTimeoutInMicroSeconds(evaluate_timeout_us);
+
+  if (frame) {
+    lldb::LanguageType eval_language = GetLanguage(debugger);
+    if (eval_language == lldb::eLanguageTypeUnknown)
+      eval_language = frame.GuessLanguage();
+    options.SetLanguage(eval_language);
+
+    return frame.EvaluateExpression(expression_cstr, options);
+  }
+  return target.EvaluateExpression(expression_cstr, options);
 }
+
+namespace lldb_dap {
 
 /// Evaluates the given expression in the context of a stack frame.
 ///

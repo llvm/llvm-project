@@ -27,6 +27,11 @@
 #include <string>
 
 namespace lldb_dap {
+#ifdef LLDB_CONFIGURATION_DEBUG
+inline constexpr uint32_t k_evaluate_timeout_ms = 500 * 10;
+#else
+inline constexpr uint32_t k_evaluate_timeout_ms = 500;
+#endif // LLDB_CONFIGURATION_DEBUG
 
 /// Run a list of LLDB commands in the LLDB command interpreter.
 ///
