@@ -12059,6 +12059,13 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
         InvResult = DAG.getSetCC(Dl, ResultVT, Abs, Inf, ISD::SETUNE);
       if (InvResult)
         return DAG.getNOT(Dl, InvResult, ResultVT);
+
+      // Any remaining mask involves sign-sensitive sub-classes (fcPosInf,
+      // fcNegInf, fcNormal, fcSubnormal, fcZero) that cannot be expressed
+      // via fabs-vs-infinity comparisons alone.  Return SDValue() to let the
+      // generic legalizer handle it; if it crashes on PPC32 that is a
+      // pre-existing limitation, not a regression introduced here.
+      return SDValue();
     }
     return SDValue();
   }
@@ -12096,8 +12103,8 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
     return Result;
   }
 
-  // !useCRBits: i1 is not a legal type.  Materialise the boolean result
-  // directly in ResVT without passing through i1.
+  // !useCRBits: i1 is not a legal type on targets where useCRBits() is false.
+  // Materialise the boolean result directly in ResVT without passing through i1.
   //
   // fcmpu/xscmpudp CR bits: EQ=1, UN=0 when not NaN; EQ=0, UN=1 when NaN.
   //   isNaN  (fcNan) : want 1 when unordered => SELECT_CC(LHS, LHS, 1, 0, UO)
