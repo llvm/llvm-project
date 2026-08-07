@@ -3611,19 +3611,26 @@ bool X86TargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
          (1 - MulC).isPowerOf2() || (-(MulC + 1)).isPowerOf2();
 }
 
-bool X86TargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                                unsigned Index) const {
+TargetLowering::ExtractSubvectorCost
+X86TargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                           unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
-    return false;
+    return ExtractSubvectorCost::Expensive;
 
   // Mask vectors support all subregister combinations and operations that
   // extract half of vector.
-  if (ResVT.getVectorElementType() == MVT::i1)
-    return Index == 0 ||
-           ((ResVT.getSizeInBits() * 2 == SrcVT.getSizeInBits()) &&
-            (Index == ResVT.getVectorNumElements()));
+  if (ResVT.getVectorElementType() == MVT::i1) {
+    if (Index == 0 || ((ResVT.getSizeInBits() * 2 == SrcVT.getSizeInBits()) &&
+                       (Index == ResVT.getVectorNumElements())))
+      return ExtractSubvectorCost::Free;
+    return ExtractSubvectorCost::Expensive;
+  }
 
-  return (Index % ResVT.getVectorNumElements()) == 0;
+  if (Index == 0)
+    return ExtractSubvectorCost::Free;
+  else if ((Index % ResVT.getVectorNumElements()) == 0)
+    return ExtractSubvectorCost::Cheap;
+  return ExtractSubvectorCost::Expensive;
 }
 
 bool X86TargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
@@ -48604,11 +48611,12 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
     return DAG.getSelect(DL, LHS.getValueType(), NewCond, RHS, LHS);
 
   // Invert the setcc for all users and commute all vselects.
-  DAG.ReplaceAllUsesOfValueWith(Cond, NewCond);
-  for (SDNode *User : NewCond->users()) {
+  for (SDNode *User : llvm::make_early_inc_range(Cond->users())) {
     SDValue UserLHS = User->getOperand(1);
     SDValue UserRHS = User->getOperand(2);
-    DAG.UpdateNodeOperands(User, NewCond, UserRHS, UserLHS);
+    [[maybe_unused]] SDNode *Updated =
+        DAG.UpdateNodeOperands(User, NewCond, UserRHS, UserLHS);
+    assert(Updated == User && "Unexpected CSE in commuteSelect");
   }
   return SDValue(N, 0);
 }
