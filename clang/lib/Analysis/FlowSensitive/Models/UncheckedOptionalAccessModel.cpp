@@ -1040,6 +1040,34 @@ auto buildTransferMatchSwitch() {
       // make_optional
       .CaseOfCFGStmt<CallExpr>(isMakeOptionalCall(), transferMakeOptionalCall)
 
+      .CaseOfCFGStmt<CXXConstructExpr>(
+          cxxConstructExpr(hasDeclaration(cxxConstructorDecl(hasAttr(attr::EngagedTrait)))),
+          [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            constructOptionalValue(*E, State.Env,
+                                   State.Env.getBoolLiteralValue(true));
+          })
+      .CaseOfCFGStmt<CXXConstructExpr>(
+          cxxConstructExpr(hasDeclaration(cxxConstructorDecl(hasAttr(attr::DisengagedTrait)))),
+          [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            constructOptionalValue(*E, State.Env,
+                                   State.Env.getBoolLiteralValue(false));
+          })
+
+      .CaseOfCFGStmt<CXXOperatorCallExpr>( // for e.g. opt<T> = T - always engaged
+          cxxOperatorCallExpr(callee(cxxMethodDecl(hasAttr(attr::EngagedTrait)))),
+          [](const CXXOperatorCallExpr *E, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+                          transferAssignment(E,
+                                   State.Env.getBoolLiteralValue(true), State);
+             })
+
+      .CaseOfCFGStmt<CXXOperatorCallExpr>( // for e.g. opt<T> = null
+          cxxOperatorCallExpr(callee(cxxMethodDecl(hasAttr(attr::DisengagedTrait)))),
+                          transferNulloptAssignment
+             )
+
       // optional::optional (in place)
       .CaseOfCFGStmt<CXXConstructExpr>(
           isOptionalInPlaceConstructor(),
@@ -1048,6 +1076,7 @@ auto buildTransferMatchSwitch() {
             constructOptionalValue(*E, State.Env,
                                    State.Env.getBoolLiteralValue(true));
           })
+
       // optional::optional(nullopt_t)
       .CaseOfCFGStmt<CXXConstructExpr>(
           isOptionalNulloptConstructor(),
@@ -1056,11 +1085,12 @@ auto buildTransferMatchSwitch() {
             constructOptionalValue(*E, State.Env,
                                    State.Env.getBoolLiteralValue(false));
           })
+
       // optional::optional (value/conversion)
       .CaseOfCFGStmt<CXXConstructExpr>(isOptionalValueOrConversionConstructor(),
                                        transferValueOrConversionConstructor)
 
-      // optional::operator=
+      // optional::operator= // for e.g. opt<T> = other_opt<T> - need to check engagement
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
           isOptionalValueOrConversionAssignment(),
           transferValueOrConversionAssignment)
