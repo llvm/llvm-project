@@ -37,11 +37,17 @@ using namespace llvm;
 using namespace llvm::dxil;
 
 extern cl::opt<bool> EmbedDebug;
-extern cl::opt<std::string> PdbDebugPath;
+extern cl::opt<bool> StripDebug;
+cl::opt<std::string> PdbDebugPath(
+    "dx-pdb-path",
+    cl::desc("Write debug information to the given file, or automatically "
+             "named file in directory when ending in '/'"),
+    cl::value_desc("filename"));
 cl::opt<bool> SourceInDebugModule(
     "dx-source-in-debug-module",
     cl::desc("Embed source code into debug module on DirectX target"),
     cl::init(false));
+extern cl::opt<bool> SlimDebug;
 
 namespace {
 class WriteDXILPass : public llvm::ModulePass {
@@ -237,14 +243,19 @@ public:
 
     bool HasDebugInfo = !M.debug_compile_units().empty();
 
-    // Enable EmbedDebug if there is debug info, but it is not being written
-    // to a PDB file.
-    if (HasDebugInfo && !EmbedDebug && PdbDebugPath.empty())
+    if (SlimDebug && EmbedDebug)
+      reportFatalUsageError("/Qembed_debug is not compatible with /Zs");
+
+    // If both StripDebug and EmbedDebug are specified, StripDebug is ignored.
+    if (StripDebug && EmbedDebug)
+      StripDebug = false;
+    // Enable EmbedDebug if there is debug info, but it is not being stripped
+    // or written to a PDB file.
+    if (HasDebugInfo && !StripDebug && !SlimDebug && PdbDebugPath.empty())
       EmbedDebug = true;
     if (!HasDebugInfo && EmbedDebug)
       reportFatalUsageError(
           "Missing debug info for embedding into the container");
-    // TODO: move this check to DXContainerPDB.cpp when /Zs is implemented.
     if (!HasDebugInfo && !PdbDebugPath.empty())
       reportFatalUsageError("Missing debug info for writing to the PDB file");
 

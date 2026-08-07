@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -228,6 +229,7 @@ void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -422,7 +424,7 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
         MBB, AfterPHIsIt, MPhi->getDebugLoc(), IncomingReg, DestReg);
   }
 
-  if (MPhi->peekDebugInstrNum()) {
+  if (MPhi->peekDebugInstrNum() && IncomingReg) {
     // If referred to by debug-info, store where this PHI was.
     MachineFunction *MF = MBB.getParent();
     unsigned ID = MPhi->peekDebugInstrNum();

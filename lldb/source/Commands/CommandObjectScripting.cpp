@@ -11,6 +11,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/Host.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
@@ -20,6 +21,8 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 #include "llvm/ADT/StringMap.h"
 
@@ -317,7 +320,7 @@ private:
     const std::string separator(
         std::min<uint64_t>(GetDebugger().GetTerminalWidth(), 80), '-');
 
-    s.Printf("Available scripted extension templates:");
+    s.PutCString("Available scripted extension templates:");
 
     auto print_field = [&](llvm::StringRef key, llvm::StringRef value,
                            const std::string &value_color = std::string()) {
@@ -371,6 +374,198 @@ private:
   CommandOptions m_options;
 };
 
+#define LLDB_OPTIONS_scripting_extension_generate
+#include "CommandOptions.inc"
+
+class CommandObjectScriptingExtensionGenerate : public CommandObjectParsed {
+public:
+  CommandObjectScriptingExtensionGenerate(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "scripting extension generate",
+                            "Generate a scripting extension template. ",
+                            "scripting extension generate") {
+    AddSimpleArgumentList(eArgTypeScriptedExtension, eArgRepeatPlus);
+  }
+
+  ~CommandObjectScriptingExtensionGenerate() override = default;
+
+  Options *GetOptions() override { return &m_options; }
+
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() = default;
+    ~CommandOptions() override = default;
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const char short_option =
+          g_scripting_extension_generate_options[option_idx].short_option;
+
+      switch (short_option) {
+      case 'a':
+        m_generate_non_abstract_methods = true;
+        break;
+      case 'l':
+        m_language = (lldb::ScriptLanguage)OptionArgParser::ToOptionEnum(
+            option_arg, GetDefinitions()[option_idx].enum_values,
+            eScriptLanguageNone, error);
+        if (!error.Success())
+          error = Status::FromErrorStringWithFormatv(
+              "unrecognized value for language '{0}'", option_arg);
+        break;
+      case 'n':
+        m_generated_class_prefix = option_arg.str();
+        break;
+      case 'o':
+        m_output_filepath = option_arg.str();
+        break;
+      case 'e': {
+        bool success;
+        m_open_editor = OptionArgParser::ToBoolean(option_arg, true, &success)
+                            ? eLazyBoolYes
+                            : eLazyBoolNo;
+        if (!success)
+          error = Status::FromErrorStringWithFormatv(
+              "invalid boolean value for -e: '{0}'", option_arg);
+      } break;
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_generate_non_abstract_methods = false;
+      m_language = lldb::eScriptLanguageNone;
+      m_generated_class_prefix.clear();
+      m_output_filepath.clear();
+      m_open_editor = eLazyBoolCalculate;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::ArrayRef(g_scripting_extension_generate_options);
+    }
+
+    bool m_generate_non_abstract_methods = false;
+    lldb::ScriptLanguage m_language = lldb::eScriptLanguageNone;
+    std::string m_generated_class_prefix;
+    std::string m_output_filepath;
+    LazyBool m_open_editor = eLazyBoolCalculate;
+  };
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    // If `-l <lang>` was already given, complete only extensions available
+    // in that language. Bare `-l` (no value yet) and any parse failures
+    // fall back to language-agnostic completion.
+    lldb::ScriptLanguage language = lldb::eScriptLanguageUnknown;
+    llvm::ArrayRef<OptionDefinition> defs = m_options.GetDefinitions();
+    for (const OptionArgElement &elem : opt_element_vector) {
+      if (elem.opt_defs_index < 0 ||
+          static_cast<size_t>(elem.opt_defs_index) >= defs.size())
+        continue;
+      if (defs[elem.opt_defs_index].short_option != 'l' ||
+          elem.opt_arg_pos <= 0)
+        continue;
+      llvm::StringRef value =
+          request.GetParsedLine().GetArgumentAtIndex(elem.opt_arg_pos);
+      Status error;
+      auto candidate =
+          static_cast<lldb::ScriptLanguage>(OptionArgParser::ToOptionEnum(
+              value, defs[elem.opt_defs_index].enum_values,
+              lldb::eScriptLanguageUnknown, error));
+      if (error.Success())
+        language = candidate;
+      break;
+    }
+    PluginManager::AutoCompleteScriptedExtension(
+        request.GetCursorArgumentPrefix(), request, language);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
+  }
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() == 0) {
+      result.SetError(
+          Status::FromErrorString("specify extension name to generate"));
+      return;
+    }
+
+    std::vector<ScriptInterpreter::ExtensionTemplateRequest> extension_requests;
+
+    for (size_t i = 0; i < command.GetArgumentCount(); i++) {
+      llvm::StringRef extension_name = command.GetArgumentAtIndex(i);
+      llvm::SmallVector<llvm::StringRef> extension_components;
+      extension_name.split(extension_components, ".");
+      lldb::ScriptedExtension extension =
+          ScriptInterpreter::StringToExtension(extension_components.back());
+      if (extension == eScriptedExtensionInvalid) {
+        result.SetError(Status::FromErrorStringWithFormatv(
+            "unknown scripted extension: '{0}'", extension_name));
+        return;
+      }
+      extension_requests.push_back({extension_name, extension_components});
+    }
+
+    lldb::ScriptLanguage language =
+        (m_options.m_language == lldb::eScriptLanguageNone)
+            ? m_interpreter.GetDebugger().GetScriptLanguage()
+            : m_options.m_language;
+
+    if (language == lldb::eScriptLanguageNone) {
+      result.AppendError(
+          "the script-lang setting is set to none - scripting not available");
+      return;
+    }
+
+    ScriptInterpreter *script_interpreter =
+        GetDebugger().GetScriptInterpreter(true, language);
+
+    if (script_interpreter == nullptr) {
+      result.AppendError("no script interpreter");
+      return;
+    }
+
+    auto generated_file_or_err = script_interpreter->GenerateExtensionTemplate(
+        m_options.m_generated_class_prefix, extension_requests,
+        m_options.m_generate_non_abstract_methods, m_options.m_output_filepath);
+    if (!generated_file_or_err) {
+      result.SetError(generated_file_or_err.takeError());
+      return;
+    }
+
+    bool should_open_editor = false;
+    switch (m_options.m_open_editor) {
+    case eLazyBoolYes:
+      should_open_editor = true;
+      break;
+    case eLazyBoolNo:
+      should_open_editor = false;
+      break;
+    case eLazyBoolCalculate:
+      should_open_editor = result.GetInteractive();
+      break;
+    }
+
+    if (should_open_editor) {
+      if (llvm::Error err = Host::OpenFileInExternalEditor(
+              "", *generated_file_or_err, 1, true)) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(err),
+                       "OpenFileInExternalEditor failed: {0}");
+      }
+    }
+    result.AppendMessageWithFormatv(
+        "Generated scripting extension template: {0}",
+        generated_file_or_err->GetPath());
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  }
+
+private:
+  CommandOptions m_options;
+};
+
 class CommandObjectMultiwordScriptingExtension : public CommandObjectMultiword {
 public:
   CommandObjectMultiwordScriptingExtension(CommandInterpreter &interpreter)
@@ -381,6 +576,9 @@ public:
     LoadSubCommand(
         "list",
         CommandObjectSP(new CommandObjectScriptingExtensionList(interpreter)));
+    LoadSubCommand("generate",
+                   CommandObjectSP(new CommandObjectScriptingExtensionGenerate(
+                       interpreter)));
   }
 
   ~CommandObjectMultiwordScriptingExtension() override = default;

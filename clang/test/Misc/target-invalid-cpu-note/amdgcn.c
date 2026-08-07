@@ -6,37 +6,19 @@
 // CHECK: error: unknown target CPU 'not-a-cpu'
 // CHECK-NEXT: note: valid target CPU values are:
 // CHECK-SAME: {{^}} gfx600
-// CHECK-SAME: {{^}}, tahiti
 // CHECK-SAME: {{^}}, gfx601
-// CHECK-SAME: {{^}}, pitcairn
-// CHECK-SAME: {{^}}, verde
 // CHECK-SAME: {{^}}, gfx602
-// CHECK-SAME: {{^}}, hainan
-// CHECK-SAME: {{^}}, oland
 // CHECK-SAME: {{^}}, gfx700
-// CHECK-SAME: {{^}}, kaveri
 // CHECK-SAME: {{^}}, gfx701
-// CHECK-SAME: {{^}}, hawaii
 // CHECK-SAME: {{^}}, gfx702
 // CHECK-SAME: {{^}}, gfx703
-// CHECK-SAME: {{^}}, kabini
-// CHECK-SAME: {{^}}, mullins
 // CHECK-SAME: {{^}}, gfx704
-// CHECK-SAME: {{^}}, bonaire
 // CHECK-SAME: {{^}}, gfx705
 // CHECK-SAME: {{^}}, gfx801
-// CHECK-SAME: {{^}}, carrizo
 // CHECK-SAME: {{^}}, gfx802
-// CHECK-SAME: {{^}}, iceland
-// CHECK-SAME: {{^}}, tonga
 // CHECK-SAME: {{^}}, gfx803
-// CHECK-SAME: {{^}}, fiji
-// CHECK-SAME: {{^}}, polaris10
-// CHECK-SAME: {{^}}, polaris11
 // CHECK-SAME: {{^}}, gfx805
-// CHECK-SAME: {{^}}, tongapro
 // CHECK-SAME: {{^}}, gfx810
-// CHECK-SAME: {{^}}, stoney
 // CHECK-SAME: {{^}}, gfx900
 // CHECK-SAME: {{^}}, gfx902
 // CHECK-SAME: {{^}}, gfx904
@@ -84,7 +66,39 @@
 // CHECK-SAME: {{^}}, gfx12-generic
 // CHECK-SAME: {{^}}, gfx12-5-generic
 // CHECK-SAME: {{^}}, gfx13-generic
+// CHECK-SAME: {{^}}, tahiti
+// CHECK-SAME: {{^}}, pitcairn
+// CHECK-SAME: {{^}}, verde
+// CHECK-SAME: {{^}}, hainan
+// CHECK-SAME: {{^}}, oland
+// CHECK-SAME: {{^}}, kaveri
+// CHECK-SAME: {{^}}, hawaii
+// CHECK-SAME: {{^}}, kabini
+// CHECK-SAME: {{^}}, mullins
+// CHECK-SAME: {{^}}, bonaire
+// CHECK-SAME: {{^}}, carrizo
+// CHECK-SAME: {{^}}, iceland
+// CHECK-SAME: {{^}}, tonga
+// CHECK-SAME: {{^}}, fiji
+// CHECK-SAME: {{^}}, polaris10
+// CHECK-SAME: {{^}}, polaris11
+// CHECK-SAME: {{^}}, tongapro
+// CHECK-SAME: {{^}}, stoney
 // CHECK-SAME: {{$}}
+
+// The pseudo targets "generic"/"generic-hsa" may not be used.
+// RUN: not %clang_cc1 -triple amdgcn--- -target-cpu generic -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GENERIC %s
+// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu generic -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GENERIC %s
+// GENERIC: error: unknown target CPU 'generic'
+// GENERIC-NEXT: note: valid target CPU values are:
+// GENERIC-NOT: {{[ ,]}}generic{{[,$]}}
+// GENERIC-NOT: generic-hsa
+
+// RUN: not %clang_cc1 -triple amdgcn--- -target-cpu generic-hsa -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GENERIC-HSA %s
+// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu generic-hsa -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GENERIC-HSA %s
+// GENERIC-HSA: error: unknown target CPU 'generic-hsa'
+// GENERIC-HSA-NEXT: note: valid target CPU values are:
+// GENERIC-HSA-NOT: generic-hsa
 
 // When the triple carries a major-family subarch, only the GPUs in that family
 // are valid (a CPU from another family is rejected).

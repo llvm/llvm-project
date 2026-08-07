@@ -852,6 +852,8 @@ static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
 StringRef ToolChain::getOSLibName() const {
   if (Triple.isOSDarwin())
     return "darwin";
+  if (Triple.isWindowsCygwinEnvironment())
+    return "cygwin";
 
   switch (Triple.getOS()) {
   case llvm::Triple::FreeBSD:
@@ -1223,6 +1225,14 @@ ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
   };
 
   AddPath({getTriple().str()});
+
+  // Handle the legacy AMDGPU triple case as well.
+  if (getTriple().getArchName() == "amdgcn") {
+    llvm::Triple Canon(getTriple());
+    Canon.setArchName("amdgpu");
+    AddPath({Canon.str()});
+  }
+
   AddPath({getOSLibName(), llvm::Triple::getArchTypeName(getArch())});
   return Paths;
 }
@@ -1625,6 +1635,16 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   }
 
   return *cxxStdlibType;
+}
+
+StringRef ToolChain::GetCXXStdlibName(const ArgList &Args) const {
+  switch (GetCXXStdlibType(Args)) {
+  case ToolChain::CST_Libcxx:
+    return "libc++";
+  case ToolChain::CST_Libstdcxx:
+    return "libstdc++";
+  }
+  llvm_unreachable("unknown C++ standard library type");
 }
 
 ToolChain::CStdlibType ToolChain::GetCStdlibType(const ArgList &Args) const {

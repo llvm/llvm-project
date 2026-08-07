@@ -365,11 +365,14 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     };
 
     if (!Args.hasArg(options::OPT_shared, options::OPT_nostartfiles,
-                     options::OPT_nostdlib, options::OPT_r))
-      CmdArgs.push_back(Args.MakeArgString(StartFile("crt1.o")));
-    else if (Args.hasArg(options::OPT_shared) &&
-             !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib,
-                          options::OPT_r))
+                     options::OPT_nostdlib, options::OPT_r)) {
+      if (IsStatic && IsPIE)
+        CmdArgs.push_back(Args.MakeArgString(StartFile("rcrt1.o")));
+      else
+        CmdArgs.push_back(Args.MakeArgString(StartFile("crt1.o")));
+    } else if (Args.hasArg(options::OPT_shared) &&
+               !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib,
+                            options::OPT_r))
       CmdArgs.push_back(Args.MakeArgString(StartFile("crti.o")));
 
     if (!MLSuffix.empty()) {

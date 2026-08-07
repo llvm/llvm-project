@@ -404,6 +404,76 @@ static bool hasSameOperatorParent(const Expr *TheExpr,
   return false;
 }
 
+static bool isSameRawIdentifierToken(const Token &T1, const Token &T2,
+                                     const SourceManager &SM) {
+  if (T1.getKind() != T2.getKind())
+    return false;
+  if (T1.isNot(tok::raw_identifier))
+    return true;
+  if (T1.getLength() != T2.getLength())
+    return false;
+  return StringRef(SM.getCharacterData(T1.getLocation()), T1.getLength()) ==
+         StringRef(SM.getCharacterData(T2.getLocation()), T2.getLength());
+}
+
+static bool isTokAtEndOfExpr(SourceRange ExprSR, Token T,
+                             const SourceManager &SM) {
+  return SM.getExpansionLoc(ExprSR.getEnd()) == T.getLocation();
+}
+
+/// Returns true if both LhsExpr and RhsExpr are
+/// macro expressions and they are expanded
+/// from different macros.
+static bool areExprsFromDifferentMacros(const Expr *LhsExpr,
+                                        const Expr *RhsExpr,
+                                        const ASTContext *AstCtx) {
+  if (!LhsExpr || !RhsExpr)
+    return false;
+  const SourceRange Lsr = LhsExpr->getSourceRange();
+  const SourceRange Rsr = RhsExpr->getSourceRange();
+  if (!Lsr.getBegin().isMacroID() || !Rsr.getBegin().isMacroID())
+    return false;
+
+  const SourceManager &SM = AstCtx->getSourceManager();
+  const LangOptions &LO = AstCtx->getLangOpts();
+
+  const std::pair<FileID, unsigned> LsrLocInfo =
+      SM.getDecomposedLoc(SM.getExpansionLoc(Lsr.getBegin()));
+  const std::pair<FileID, unsigned> RsrLocInfo =
+      SM.getDecomposedLoc(SM.getExpansionLoc(Rsr.getBegin()));
+  const llvm::MemoryBufferRef MB = SM.getBufferOrFake(LsrLocInfo.first);
+
+  const char *LTokenPos = MB.getBufferStart() + LsrLocInfo.second;
+  const char *RTokenPos = MB.getBufferStart() + RsrLocInfo.second;
+  Lexer LRawLex(SM.getLocForStartOfFile(LsrLocInfo.first), LO,
+                MB.getBufferStart(), LTokenPos, MB.getBufferEnd());
+  Lexer RRawLex(SM.getLocForStartOfFile(RsrLocInfo.first), LO,
+                MB.getBufferStart(), RTokenPos, MB.getBufferEnd());
+
+  Token LTok, RTok;
+  do { // Compare the expressions token-by-token.
+    LRawLex.LexFromRawLexer(LTok);
+    RRawLex.LexFromRawLexer(RTok);
+  } while (!LTok.is(tok::eof) && !RTok.is(tok::eof) &&
+           isSameRawIdentifierToken(LTok, RTok, SM) &&
+           !isTokAtEndOfExpr(Lsr, LTok, SM) &&
+           !isTokAtEndOfExpr(Rsr, RTok, SM));
+  return (!isTokAtEndOfExpr(Lsr, LTok, SM) ||
+          !isTokAtEndOfExpr(Rsr, RTok, SM)) ||
+         !isSameRawIdentifierToken(LTok, RTok, SM);
+}
+
+static bool areExprsMacroAndNonMacro(const Expr *&LhsExpr,
+                                     const Expr *&RhsExpr) {
+  if (!LhsExpr || !RhsExpr)
+    return false;
+
+  const SourceLocation LhsLoc = LhsExpr->getExprLoc();
+  const SourceLocation RhsLoc = RhsExpr->getExprLoc();
+
+  return LhsLoc.isMacroID() != RhsLoc.isMacroID();
+}
+
 template <typename TExpr>
 static bool
 markDuplicateOperands(const TExpr *TheExpr,
@@ -440,12 +510,17 @@ markDuplicateOperands(const TExpr *TheExpr,
       if (AllOperands[J]->HasSideEffects(Context))
         break;
 
-      if (areEquivalentExpr(AllOperands[I], AllOperands[J])) {
-        FoundDuplicates = true;
-        Duplicates.set(J);
-        Builder->setBinding(SmallString<11>(llvm::formatv("duplicate{0}", J)),
-                            DynTypedNode::create(*AllOperands[J]));
-      }
+      const Expr *Lhs = AllOperands[I];
+      const Expr *Rhs = AllOperands[J];
+      if (!areEquivalentExpr(Lhs, Rhs) ||
+          areExprsFromDifferentMacros(Lhs, Rhs, &Context) ||
+          areExprsMacroAndNonMacro(Lhs, Rhs))
+        continue;
+
+      FoundDuplicates = true;
+      Duplicates.set(J);
+      Builder->setBinding(SmallString<11>(llvm::formatv("duplicate{0}", J)),
+                          DynTypedNode::create(*Rhs));
     }
 
     if (FoundDuplicates)
@@ -764,7 +839,7 @@ static bool areSidesBinaryConstExpressions(const BinaryOperator *&BinOp,
   if (!LhsBinOp || !RhsBinOp)
     return false;
 
-  auto IsIntegerConstantExpr = [AstCtx](const Expr *E) {
+  const auto IsIntegerConstantExpr = [AstCtx](const Expr *E) {
     return !E->isValueDependent() && E->isIntegerConstantExpr(*AstCtx);
   };
 
@@ -787,7 +862,7 @@ static bool areSidesBinaryConstExpressionsOrDefinesOrIntegerConstant(
   if (!Lhs || !Rhs)
     return false;
 
-  auto IsDefineExpr = [AstCtx](const Expr *E) {
+  const auto IsDefineExpr = [AstCtx](const Expr *E) {
     const SourceRange Lsr = E->getSourceRange();
     if (!Lsr.getBegin().isMacroID() || E->isValueDependent() ||
         !E->isIntegerConstantExpr(*AstCtx))
@@ -815,7 +890,7 @@ static bool retrieveConstExprFromBothSides(const BinaryOperator *&BinOp,
   const auto *BinOpLhs = cast<BinaryOperator>(BinOp->getLHS());
   const auto *BinOpRhs = cast<BinaryOperator>(BinOp->getRHS());
 
-  auto IsIntegerConstantExpr = [AstCtx](const Expr *E) {
+  const auto IsIntegerConstantExpr = [AstCtx](const Expr *E) {
     return !E->isValueDependent() && E->isIntegerConstantExpr(*AstCtx);
   };
 
@@ -833,76 +908,6 @@ static bool retrieveConstExprFromBothSides(const BinaryOperator *&BinOp,
   SideOpcode = BinOpLhs->getOpcode();
 
   return true;
-}
-
-static bool isSameRawIdentifierToken(const Token &T1, const Token &T2,
-                                     const SourceManager &SM) {
-  if (T1.getKind() != T2.getKind())
-    return false;
-  if (T1.isNot(tok::raw_identifier))
-    return true;
-  if (T1.getLength() != T2.getLength())
-    return false;
-  return StringRef(SM.getCharacterData(T1.getLocation()), T1.getLength()) ==
-         StringRef(SM.getCharacterData(T2.getLocation()), T2.getLength());
-}
-
-static bool isTokAtEndOfExpr(SourceRange ExprSR, Token T,
-                             const SourceManager &SM) {
-  return SM.getExpansionLoc(ExprSR.getEnd()) == T.getLocation();
-}
-
-/// Returns true if both LhsExpr and RhsExpr are
-/// macro expressions and they are expanded
-/// from different macros.
-static bool areExprsFromDifferentMacros(const Expr *LhsExpr,
-                                        const Expr *RhsExpr,
-                                        const ASTContext *AstCtx) {
-  if (!LhsExpr || !RhsExpr)
-    return false;
-  const SourceRange Lsr = LhsExpr->getSourceRange();
-  const SourceRange Rsr = RhsExpr->getSourceRange();
-  if (!Lsr.getBegin().isMacroID() || !Rsr.getBegin().isMacroID())
-    return false;
-
-  const SourceManager &SM = AstCtx->getSourceManager();
-  const LangOptions &LO = AstCtx->getLangOpts();
-
-  const std::pair<FileID, unsigned> LsrLocInfo =
-      SM.getDecomposedLoc(SM.getExpansionLoc(Lsr.getBegin()));
-  const std::pair<FileID, unsigned> RsrLocInfo =
-      SM.getDecomposedLoc(SM.getExpansionLoc(Rsr.getBegin()));
-  const llvm::MemoryBufferRef MB = SM.getBufferOrFake(LsrLocInfo.first);
-
-  const char *LTokenPos = MB.getBufferStart() + LsrLocInfo.second;
-  const char *RTokenPos = MB.getBufferStart() + RsrLocInfo.second;
-  Lexer LRawLex(SM.getLocForStartOfFile(LsrLocInfo.first), LO,
-                MB.getBufferStart(), LTokenPos, MB.getBufferEnd());
-  Lexer RRawLex(SM.getLocForStartOfFile(RsrLocInfo.first), LO,
-                MB.getBufferStart(), RTokenPos, MB.getBufferEnd());
-
-  Token LTok, RTok;
-  do { // Compare the expressions token-by-token.
-    LRawLex.LexFromRawLexer(LTok);
-    RRawLex.LexFromRawLexer(RTok);
-  } while (!LTok.is(tok::eof) && !RTok.is(tok::eof) &&
-           isSameRawIdentifierToken(LTok, RTok, SM) &&
-           !isTokAtEndOfExpr(Lsr, LTok, SM) &&
-           !isTokAtEndOfExpr(Rsr, RTok, SM));
-  return (!isTokAtEndOfExpr(Lsr, LTok, SM) ||
-          !isTokAtEndOfExpr(Rsr, RTok, SM)) ||
-         !isSameRawIdentifierToken(LTok, RTok, SM);
-}
-
-static bool areExprsMacroAndNonMacro(const Expr *&LhsExpr,
-                                     const Expr *&RhsExpr) {
-  if (!LhsExpr || !RhsExpr)
-    return false;
-
-  const SourceLocation LhsLoc = LhsExpr->getExprLoc();
-  const SourceLocation RhsLoc = RhsExpr->getExprLoc();
-
-  return LhsLoc.isMacroID() != RhsLoc.isMacroID();
 }
 
 static bool areStringsSameIgnoreSpaces(const StringRef Left,
@@ -1448,7 +1453,7 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
           Result.Nodes.getNodeAs<UnaryOperator>("logical-bitwise-confusion")) {
     const SourceLocation OperatorLoc = NegateOperator->getOperatorLoc();
 
-    auto Diag =
+    const auto Diag =
         diag(OperatorLoc,
              "ineffective logical negation operator used; did you mean '~'?");
     const SourceLocation LogicalNotLocation = OperatorLoc.getLocWithOffset(1);
@@ -1481,8 +1486,8 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
     if (AndValue->getActiveBits() > *ShiftingValue)
       return;
 
-    auto Diag = diag(BinaryAndExpr->getOperatorLoc(),
-                     "ineffective bitwise and operation");
+    const auto Diag = diag(BinaryAndExpr->getOperatorLoc(),
+                           "ineffective bitwise and operation");
   }
 
   // Check for the following bound expressions:

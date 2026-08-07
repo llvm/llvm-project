@@ -14,6 +14,7 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Symbol/Block.h"
+#include "lldb/Symbol/LineEntry.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -435,10 +436,12 @@ public:
 
   lldb::LanguageType GetLanguage() const;
 
-  /// Find the file and line number of the source location of the start of the
-  /// function.  This will use the declaration if present and fall back on the
-  /// line table if that fails.  So there may NOT be a line table entry for
-  /// this source file/line combo.
+  /// Find the source file and line number for the start of the function.
+  ///
+  /// This prefers the function's declaration and only falls back to
+  /// GetStartLineTableEntry when the function has none. The declaration line
+  /// need not correspond to any line table row, which is why this reports a
+  /// bare source file and line rather than a LineEntry.
   ///
   /// \param[out] source_file
   ///     The source file.
@@ -447,6 +450,25 @@ public:
   ///     The line number.
   void GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
                               uint32_t &line_no);
+
+  /// Get the line table entry for the function's entry point.
+  ///
+  /// When the entry address is not covered by a line row, this returns the
+  /// first line entry that begins within the function's range instead.
+  ///
+  /// Unlike GetStartLineSourceInfo, this consults only the line table, never
+  /// the declaration, so the result is always a real line table entry and
+  /// carries its address range and index.
+  ///
+  /// \param[out] line_entry
+  ///     The resulting line entry.
+  ///
+  /// \param[out] index
+  ///     If non-null, set to the index of the line entry in the line table.
+  ///
+  /// \return
+  ///     True if a line entry was found, false otherwise.
+  bool GetStartLineTableEntry(LineEntry &line_entry, uint32_t *index = nullptr);
 
   using SourceRange = Range<uint32_t, uint32_t>;
   /// Find the file and line number range of the function.
