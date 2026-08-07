@@ -5917,9 +5917,6 @@ class InterleavedElementwiseChain {
       if (II->hasOperandBundles() ||
           !isTriviallyVectorizable(II->getIntrinsicID()))
         return false;
-      assert(!getInterleaveIntrinsicFactor(II->getIntrinsicID()) &&
-             "vector.interleave must not be treated as a trivially "
-             "vectorizable operation.");
     } else if (!isa<BinaryOperator, UnaryOperator, CastInst, CmpInst,
                     SelectInst, FreezeInst>(Inst)) {
       return false;
@@ -5962,6 +5959,8 @@ public:
   InterleavedElementwiseChain(IRBuilderBase &Builder, Value *Root)
       : Builder(Builder), Root(Root) {}
 
+  /// Visit a list  of instructions and check if they can be rewritten as a
+  /// single wider instruction. If so, the list is appened to \p Steps.
   bool visitInstLevel(ArrayRef<Instruction *> Insts,
                       ArrayRef<unsigned> OperandNumbers) {
     if (Insts.empty() || Insts.size() != OperandNumbers.size())
@@ -5996,6 +5995,8 @@ public:
     return true;
   }
 
+  /// Go through all the collected \p Steps and rewrite each of them as a wide
+  /// instruction.
   Value *widenInstructions() {
     Value *WideValue = Root;
     ElementCount WideEC =
