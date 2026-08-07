@@ -261,9 +261,9 @@ def add_release_notes(
     with open(filename, "r", encoding="utf8") as f:
         lines = f.readlines()
 
-    lineMatcher = re.compile("New checks")
-    nextSectionMatcher = re.compile("New check aliases")
-    checkMatcher = re.compile("- New :doc:`(.*)")
+    lineMatcher = re.compile(r"#### New checks")
+    nextSectionMatcher = re.compile(r"#### New check aliases")
+    checkMatcher = re.compile(r"- New \{doc\}`(.*)")
 
     print(f"Updating {filename}...")
     with open(filename, "w", encoding="utf8", newline="\n") as f:
@@ -286,21 +286,16 @@ def add_release_notes(
                     f.write(line)
                     continue
 
-                if line.startswith("^^^^"):
-                    f.write(line)
-                    continue
-
                 if header_found and add_note_here:
-                    if not line.startswith("^^^^"):
-                        f.write(
-                            f"""- New :doc:`{check_name_dashes}
+                    f.write(
+                        f"""- New {{doc}}`{check_name_dashes}
   <clang-tidy/checks/{module}/{check_name}>` check.
 
 {wrapped_desc}
 
 """
-                        )
-                        note_added = True
+                    )
+                    note_added = True
 
             f.write(line)
 
