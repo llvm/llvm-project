@@ -28,6 +28,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 
 using namespace llvm;
 
@@ -40,11 +41,17 @@ SuperHAsmBackend::SuperHAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI) : 
 
 bool SuperHAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const {
+  const uint16_t SH_NopEnc = 0b0000000000001001;
 
   // If the count is not 4-byte aligned, we must be writing data into the
   // text section (otherwise we have unaligned instructions, and thus have
-  // far bigger problems), so just write zeros instead.
-  OS.write_zeros(Count % 2);
+  // far bigger problems), so just write NOP instructions.
+  uint64_t NumNops = Count / 2;
+  for (uint64_t i = 0; i != NumNops; ++i)
+    support::endian::write(OS, SH_NopEnc, Endian);
+
+  // Write any straggling zeros needed.
+  OS.write_zeros(Count & 1);
   return true;
 }
 std::optional<MCFixupKind> SuperHAsmBackend::getFixupKind(StringRef Name) const {
@@ -89,9 +96,9 @@ void SuperHAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                  uint64_t Value, bool IsResolved) {
   
   // Handle Relocations
-  IsResolved = addReloc(F, Fixup, Target, Value, IsResolved);
+  IsResolved = tryAddReloc(F, Fixup, Target, Value, IsResolved);
   MCFixupKind Kind = Fixup.getKind();
-  if (mc::isRelocation(Kind))
+  if (mc::isRelocation(Kind)) 
     return;
 
   // Handle non-relocations
@@ -115,7 +122,7 @@ void SuperHAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   }
 }
 
-bool SuperHAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
+bool SuperHAsmBackend::tryAddReloc(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target, uint64_t &FixedValue,
                                bool IsResolved) {
   
@@ -126,10 +133,8 @@ bool SuperHAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   default: 
     return {};
 
-  case FK_Data_1:
   case FK_Data_2:
-  case FK_Data_4:
-  case FK_Data_8: {
+  case FK_Data_4: {
     const auto *EValue = Fixup.getValue();
     if (!EValue->evaluateAsRelocatable(PCITarget, Asm))
       return true;
@@ -150,8 +155,10 @@ bool SuperHAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   IsResolved = &SA.getSection() == F.getParent() &&
                 SA.getBinding() == ELF::STB_LOCAL &&
                 SA.getType() != ELF::STT_GNU_IFUNC;
-  if (!IsResolved)
+  if (!IsResolved) {
+    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
     return false;
+  }
 
   // Calculate fixed offset value.
   // Note that the PC relative jumps are based on the start of the address.

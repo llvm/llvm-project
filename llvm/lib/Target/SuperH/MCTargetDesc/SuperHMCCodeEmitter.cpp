@@ -13,6 +13,7 @@
 
 #include "SuperHMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -27,6 +28,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/EndianStream.h"
 #include <cstdint>
 
@@ -75,38 +77,39 @@ public:
 #include "SuperHGenMCCodeEmitter.inc"
 
 // Some SuperH instructions are 32-bits wide.
-// In those instances we want to emit a bigger static
-// fixup.
-static bool isOpcode32(unsigned opcode) {
+//
+// Checks the passed opcode for any bit patterns
+// that must be encoded as 32-bits.
+static bool isOpcode32(uint32_t Opcode) {
   
   // movi20 & movi20s
-  if ((opcode & 0xF00F) <= 0x0001)
+  if ((Opcode & 0xF00F) <= 0x0001)
     return true;
   
   // Other SH2A 32-bit instructions
-  if ((opcode & 0xF00F) == 0x3001)
+  if ((Opcode & 0xF00F) == 0x3001)
     return true;
 
   // Opcodes bigger than 0xFFFF are always 32-bits.
-  return opcode > 0xFFFF; 
+  return Opcode > 0xFFFF; 
 }
 
 void SuperHMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                            SmallVectorImpl<char> &CB,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
-  
+
+  uint32_t OpCode = getBinaryCodeForInstr(MI, Fixups, STI);
+
   // NOTE:  All base instructions are 16-bit in SH ASM
   //        But some instructions may be 32-bit for eg. SH2A or the DSP extensions.
   //        This is ugly, but it'll work.
-  if (isOpcode32(MI.getOpcode())) {
-    uint32_t Bits = (uint32_t)getBinaryCodeForInstr(MI, Fixups, STI);
-    support::endian::write(CB, Bits, Ctx.getAsmInfo().isLittleEndian()
+  if (isOpcode32(OpCode)) {
+    support::endian::write(CB, (uint32_t)OpCode, Ctx.getAsmInfo().isLittleEndian()
                                         ? llvm::endianness::little
                                         : llvm::endianness::big);
   } else {
-    uint16_t Bits = (uint16_t)getBinaryCodeForInstr(MI, Fixups, STI);
-    support::endian::write(CB, Bits, Ctx.getAsmInfo().isLittleEndian()
+    support::endian::write(CB, (uint16_t)OpCode, Ctx.getAsmInfo().isLittleEndian()
                                         ? llvm::endianness::little
                                         : llvm::endianness::big);
 
@@ -130,8 +133,8 @@ unsigned SuperHMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Exp
 
     // NOTE:  A few (DSP and SH2A) instructions are 32-bits wide.
     //        We handle those quite crudely.
-    Fixups.push_back(MCFixup::create(0, Expr, 
-      isOpcode32(MI.getOpcode()) ? FK_Data_4 : FK_Data_2, true));
+    uint32_t OpCode = getBinaryCodeForInstr(MI, Fixups, STI);
+    Fixups.push_back(MCFixup::create(0, Expr, isOpcode32(OpCode) ? FK_Data_4 : FK_Data_2, true));
     return 0;
   }
 
