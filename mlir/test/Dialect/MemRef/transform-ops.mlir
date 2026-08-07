@@ -3,8 +3,8 @@
 // CHECK-DAG: memref.global "private" @[[ALLOC0:alloc.*]] : memref<2x32xf32>
 // CHECK-DAG: memref.global "private" @[[ALLOC1:alloc.*]] : memref<2x32xf32>
 
-// CHECK-DAG: func.func @func(%[[LB:.*]]: index, %[[UB:.*]]: index)
-func.func @func(%lb: index, %ub: index) {
+// CHECK-DAG: func.func @func_alloca(%[[LB:.*]]: index, %[[UB:.*]]: index)
+func.func @func_alloca(%lb: index, %ub: index) {
   // CHECK-DAG: scf.forall (%[[ARG0:.*]], %[[ARG1:.*]]) in (%[[LB]], %[[UB]])
   scf.forall (%arg0, %arg1) in (%lb, %ub) {
     // CHECK-DAG: %[[MR0:.*]] = memref.get_global @[[ALLOC0]] : memref<2x32xf32>
@@ -63,7 +63,7 @@ module attributes {transform.with_named_sequence} {
 
 // Test failure when memref.alloc has dynamic shape.
 func.func @alloc_to_global_dynamic_shape(%arg0: index) {
-  // expected-error @below {{global ops require statically shaped memrefs, but got 'memref<?xf32>'}}
+  // expected-error @below {{conversion to a global op requires statically shaped memrefs, but got 'memref<?xf32>'}}
   %alloc = memref.alloc(%arg0) : memref<?xf32>
   return
 }
@@ -83,7 +83,7 @@ module attributes {transform.with_named_sequence} {
 
 // Test failure when memref.alloca has dynamic shape.
 func.func @alloca_to_global_dynamic_shape(%arg0: index) {
-  // expected-error @below {{global ops require statically shaped memrefs, but got 'memref<?xf32>'}}
+  // expected-error @below {{conversion to a global op requires statically shaped memrefs, but got 'memref<?xf32>'}}
   %alloca = memref.alloca(%arg0) : memref<?xf32>
   return
 }
@@ -105,7 +105,7 @@ module attributes {transform.with_named_sequence} {
 #map0 = affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>
 
 func.func @alloca_to_global_symbol_operands(%s: index) {
-  // expected-error @below {{global ops do not support symbol operands, but got 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>>'}}
+  // expected-error @below {{conversion to a global op does not support symbol operands, but got 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>>'}}
   %alloca = memref.alloca()[%s] : memref<8x8xf32, #map0>
   return
 }
@@ -127,7 +127,7 @@ module attributes {transform.with_named_sequence} {
 #map1 = affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>
 
 func.func @alloc_to_global_symbol_operands(%s: index) {
-  // expected-error @below {{global ops do not support symbol operands, but got 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>>'}}
+  // expected-error @below {{conversion to a global op does not support symbol operands, but got 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>>'}}
   %alloc = memref.alloc()[%s] : memref<8x8xf32, #map1>
   return
 }
@@ -147,7 +147,7 @@ module attributes {transform.with_named_sequence} {
 
 // Test failure when memref.alloc has dynamic offset.
 func.func @alloc_to_global_dynamic_offset(%s: index) {
-  // expected-error @below {{global ops do not support symbol operands, but got 'memref<8x8xf32, strided<[8, 1], offset: ?>>'}}
+  // expected-error @below {{conversion to a global op does not support symbol operands, but got 'memref<8x8xf32, strided<[8, 1], offset: ?>>'}}
   %alloc = memref.alloc()[%s] : memref<8x8xf32, strided<[8, 1], offset: ?>>
   return
 }
@@ -167,7 +167,7 @@ module attributes {transform.with_named_sequence} {
 
 // Test failure when memref.alloc has dynamic stride.
 func.func @alloc_to_global_dynamic_stride(%s: index) {
-  // expected-error @below {{global ops do not support symbol operands, but got 'memref<8x8xf32, strided<[?, 1]>>'}}
+  // expected-error @below {{conversion to a global op does not support symbol operands, but got 'memref<8x8xf32, strided<[?, 1]>>'}}
   %alloc = memref.alloc()[%s] : memref<8x8xf32, strided<[?, 1], offset: 0>>
   return
 }
@@ -189,7 +189,7 @@ module attributes {transform.with_named_sequence} {
 #map_non_strided = affine_map<(d0, d1) -> (d0 mod 3 + d1)>
 
 func.func @alloc_to_global_non_strided_layout() {
-  // expected-error @below {{global ops require strided layout, but got 'memref<8x8xf32, affine_map<(d0, d1) -> (d0 mod 3 + d1)>>'}}
+  // expected-error @below {{conversion to a global op requires strided layout, but got 'memref<8x8xf32, affine_map<(d0, d1) -> (d0 mod 3 + d1)>>'}}
   %alloc = memref.alloc() : memref<8x8xf32, #map_non_strided>
   return
 }

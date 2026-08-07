@@ -137,7 +137,7 @@ checkAllocToGlobalPreconditions(AllocLikeOp allocLikeOp) {
   MemRefType memrefType = allocLikeOp.getType();
   if (!memrefType.hasStaticShape()) {
     return emitSilenceableFailure(allocLikeOp)
-           << "converstion to a global op requires statically shaped memrefs, "
+           << "conversion to a global op requires statically shaped memrefs, "
               "but got "
            << memrefType;
   }
