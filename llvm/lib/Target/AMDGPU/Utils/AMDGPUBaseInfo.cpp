@@ -1177,7 +1177,7 @@ unsigned getWavefrontSize(const MCSubtargetInfo &STI) {
 }
 
 // Maximum LDS a single work-group can address. This is the fixed HW addressing
-// cap and does not depend on CU/WGP (full-SIMD) mode.
+// cap and is independent of whether a work-group runs on four SIMDs or two.
 static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
   if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
     return 32768;
@@ -1194,8 +1194,8 @@ static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
 
 // Total physical LDS on the block. On some targets a single work-group cannot
 // address the whole block, so the physical size is larger than the addressable
-// size; those set FeatureLocalMemorySize (gfx10/11/12: two 64k CUs => 128k).
-// Otherwise it defaults to the addressable size.
+// size; those set FeatureLocalMemorySize (gfx10/11/12: 128k physical vs 64k
+// addressable). Otherwise it defaults to the addressable size.
 static unsigned getPhysicalLocalMemorySize(const MCSubtargetInfo &STI) {
   if (STI.getFeatureBits().test(FeatureLocalMemorySize131072))
     return 131072;
@@ -1203,7 +1203,7 @@ static unsigned getPhysicalLocalMemorySize(const MCSubtargetInfo &STI) {
 }
 
 unsigned getLocalMemorySize(const MCSubtargetInfo &STI) {
-  // Total LDS on the block, halved in CU (half-WGP) mode.
+  // Total LDS on the block, halved when a work-group runs on two SIMDs, not four.
   unsigned Size = getPhysicalLocalMemorySize(STI);
   if (!isFullSIMDMode(STI))
     Size /= 2;
@@ -1217,7 +1217,7 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
 }
 
 unsigned getEUsPerCU(const MCSubtargetInfo &STI) {
-  // Four SIMD32s in full SIMD mode, two in CU (half-WGP) mode.
+  // Four SIMD32s when a work-group runs on all of them, two otherwise.
   return isFullSIMDMode(STI) ? 4 : 2;
 }
 

@@ -47,8 +47,8 @@ def FeatureAddressableLocalMemorySize327680 : SubtargetFeatureAddressableLocalMe
 
 // Total size of LDS on the whole block, in bytes. Set this only when it is
 // larger than the addressable size, i.e. when one workgroup cannot use the whole
-// block (e.g. gfx10/11/12: a block is two 64k CUs => 128k total). If not set, it
-// defaults to the addressable size.
+// block (e.g. gfx10/11/12: 128k physical block vs 64k addressable). If not set,
+// it defaults to the addressable size.
 class SubtargetFeatureLocalMemorySize <int Value> : SubtargetFeature<
   "localmemorysize"#Value,
   "LocalMemorySize",

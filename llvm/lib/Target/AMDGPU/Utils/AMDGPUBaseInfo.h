@@ -1514,8 +1514,8 @@ bool isGFX1250Plus(const MCSubtargetInfo &STI);
 bool isGFX13(const MCSubtargetInfo &STI);
 bool isGFX13Plus(const MCSubtargetInfo &STI);
 
-/// \returns true if waves in a work-group span all four SIMD32s (one contiguous
-/// LDS), i.e. not half-WGP/CU mode.
+/// \returns true if a work-group's waves run on all four SIMD32s (one
+/// contiguous LDS) rather than on only two.
 bool isFullSIMDMode(const MCSubtargetInfo &STI);
 
 bool supportsWGP(const MCSubtargetInfo &STI);
