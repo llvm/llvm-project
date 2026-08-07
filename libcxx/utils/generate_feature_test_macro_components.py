@@ -761,6 +761,11 @@ feature_test_macros = [
             "headers": ["forward_list", "list", "vector"],
         },
         {
+            "name": "__cpp_lib_initializer_list",
+            "values": {"c++14": 202511},
+            "headers": ["initializer_list"],
+        },
+        {
             "name": "__cpp_lib_inplace_vector",
             "values": {"c++26": 202406},  # P0843R14 inplace_vector
             "headers": ["inplace_vector"],
@@ -1314,7 +1319,6 @@ feature_test_macros = [
                 "c++26": 202306  # P1901R2 Enabling the Use of weak_ptr as Keys in Unordered Associative Containers
             },
             "headers": ["memory"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_source_location",
@@ -1514,6 +1518,11 @@ feature_test_macros = [
             "name": "__cpp_lib_unwrap_ref",
             "values": {"c++20": 201811},
             "headers": ["functional"],
+        },
+        {
+            "name": "__cpp_lib_valarray",
+            "values": {"c++14": 202511},
+            "headers": ["valarray"],
         },
         {
             "name": "__cpp_lib_variant",

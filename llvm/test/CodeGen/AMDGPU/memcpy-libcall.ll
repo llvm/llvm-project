@@ -186,14 +186,14 @@ define amdgpu_kernel void @memcpy_p0_p5_minsize(ptr %generic, ptr addrspace(5) %
 ; CHECK-NEXT:    buffer_load_dword v14, v26, s[20:23], 0 offen offset:72
 ; CHECK-NEXT:    buffer_load_dword v13, v26, s[20:23], 0 offen offset:68
 ; CHECK-NEXT:    buffer_load_dword v12, v26, s[20:23], 0 offen offset:64
-; CHECK-NEXT:    buffer_load_dword v16, v26, s[20:23], 0 offen offset:32
-; CHECK-NEXT:    buffer_load_dword v17, v26, s[20:23], 0 offen offset:36
-; CHECK-NEXT:    buffer_load_dword v18, v26, s[20:23], 0 offen offset:40
-; CHECK-NEXT:    buffer_load_dword v19, v26, s[20:23], 0 offen offset:44
 ; CHECK-NEXT:    buffer_load_dword v20, v26, s[20:23], 0 offen offset:48
 ; CHECK-NEXT:    buffer_load_dword v21, v26, s[20:23], 0 offen offset:52
 ; CHECK-NEXT:    buffer_load_dword v22, v26, s[20:23], 0 offen offset:56
 ; CHECK-NEXT:    buffer_load_dword v23, v26, s[20:23], 0 offen offset:60
+; CHECK-NEXT:    buffer_load_dword v16, v26, s[20:23], 0 offen offset:32
+; CHECK-NEXT:    buffer_load_dword v17, v26, s[20:23], 0 offen offset:36
+; CHECK-NEXT:    buffer_load_dword v18, v26, s[20:23], 0 offen offset:40
+; CHECK-NEXT:    buffer_load_dword v19, v26, s[20:23], 0 offen offset:44
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v25, s1
 ; CHECK-NEXT:    v_mov_b32_e32 v24, s0
@@ -201,14 +201,14 @@ define amdgpu_kernel void @memcpy_p0_p5_minsize(ptr %generic, ptr addrspace(5) %
 ; CHECK-NEXT:    flat_store_dwordx4 v[24:25], v[0:3] offset:112
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx4 v[24:25], v[4:7] offset:96
-; CHECK-NEXT:    buffer_load_dword v0, v26, s[20:23], 0 offen
-; CHECK-NEXT:    buffer_load_dword v1, v26, s[20:23], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v2, v26, s[20:23], 0 offen offset:8
-; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dword v4, v26, s[20:23], 0 offen offset:16
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dword v5, v26, s[20:23], 0 offen offset:20
 ; CHECK-NEXT:    buffer_load_dword v6, v26, s[20:23], 0 offen offset:24
 ; CHECK-NEXT:    buffer_load_dword v7, v26, s[20:23], 0 offen offset:28
+; CHECK-NEXT:    buffer_load_dword v0, v26, s[20:23], 0 offen
+; CHECK-NEXT:    buffer_load_dword v1, v26, s[20:23], 0 offen offset:4
+; CHECK-NEXT:    buffer_load_dword v2, v26, s[20:23], 0 offen offset:8
 ; CHECK-NEXT:    buffer_load_dword v3, v26, s[20:23], 0 offen offset:12
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_dwordx4 v[24:25], v[8:11] offset:80
@@ -474,14 +474,14 @@ define amdgpu_kernel void @memcpy_p0_p5_optsize(ptr %generic, ptr addrspace(5) %
 ; CHECK-NEXT:    buffer_load_dword v14, v26, s[20:23], 0 offen offset:72
 ; CHECK-NEXT:    buffer_load_dword v13, v26, s[20:23], 0 offen offset:68
 ; CHECK-NEXT:    buffer_load_dword v12, v26, s[20:23], 0 offen offset:64
-; CHECK-NEXT:    buffer_load_dword v16, v26, s[20:23], 0 offen offset:32
-; CHECK-NEXT:    buffer_load_dword v17, v26, s[20:23], 0 offen offset:36
-; CHECK-NEXT:    buffer_load_dword v18, v26, s[20:23], 0 offen offset:40
-; CHECK-NEXT:    buffer_load_dword v19, v26, s[20:23], 0 offen offset:44
 ; CHECK-NEXT:    buffer_load_dword v20, v26, s[20:23], 0 offen offset:48
 ; CHECK-NEXT:    buffer_load_dword v21, v26, s[20:23], 0 offen offset:52
 ; CHECK-NEXT:    buffer_load_dword v22, v26, s[20:23], 0 offen offset:56
 ; CHECK-NEXT:    buffer_load_dword v23, v26, s[20:23], 0 offen offset:60
+; CHECK-NEXT:    buffer_load_dword v16, v26, s[20:23], 0 offen offset:32
+; CHECK-NEXT:    buffer_load_dword v17, v26, s[20:23], 0 offen offset:36
+; CHECK-NEXT:    buffer_load_dword v18, v26, s[20:23], 0 offen offset:40
+; CHECK-NEXT:    buffer_load_dword v19, v26, s[20:23], 0 offen offset:44
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v25, s1
 ; CHECK-NEXT:    v_mov_b32_e32 v24, s0
@@ -489,14 +489,14 @@ define amdgpu_kernel void @memcpy_p0_p5_optsize(ptr %generic, ptr addrspace(5) %
 ; CHECK-NEXT:    flat_store_dwordx4 v[24:25], v[0:3] offset:112
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx4 v[24:25], v[4:7] offset:96
-; CHECK-NEXT:    buffer_load_dword v0, v26, s[20:23], 0 offen
-; CHECK-NEXT:    buffer_load_dword v1, v26, s[20:23], 0 offen offset:4
-; CHECK-NEXT:    buffer_load_dword v2, v26, s[20:23], 0 offen offset:8
-; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dword v4, v26, s[20:23], 0 offen offset:16
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dword v5, v26, s[20:23], 0 offen offset:20
 ; CHECK-NEXT:    buffer_load_dword v6, v26, s[20:23], 0 offen offset:24
 ; CHECK-NEXT:    buffer_load_dword v7, v26, s[20:23], 0 offen offset:28
+; CHECK-NEXT:    buffer_load_dword v0, v26, s[20:23], 0 offen
+; CHECK-NEXT:    buffer_load_dword v1, v26, s[20:23], 0 offen offset:4
+; CHECK-NEXT:    buffer_load_dword v2, v26, s[20:23], 0 offen offset:8
 ; CHECK-NEXT:    buffer_load_dword v3, v26, s[20:23], 0 offen offset:12
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    flat_store_dwordx4 v[24:25], v[8:11] offset:80

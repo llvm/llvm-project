@@ -12,6 +12,7 @@
 
 #include "X86FrameLowering.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
+#include "X86.h"
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
@@ -45,6 +46,23 @@ STATISTIC(NumFrameExtraProbe,
 STATISTIC(NumFunctionUsingPush2Pop2, "Number of functions using push2/pop2");
 
 using namespace llvm;
+
+bool llvm::requireWinX64UnwindV3(const MachineFunction &MF) {
+  const Function &Fn = MF.getFunction();
+
+  // Whole module is in V3 mode.
+  if (Fn.getParent()->getWinX64EHUnwindMode() == WinX64EHUnwindMode::V3)
+    return true;
+
+  // Otherwise promote a function that may use EGPR (R16-R31), which V1/V2
+  // unwind codes cannot encode. The per-function "+egpr" feature is the signal,
+  // so an auto-dispatch APX clone gets V3 while the baseline clone stays on the
+  // module default. We conservatively promote any egpr function rather than
+  // checking for an actual EGPR save, keeping this a cheap query. (PUSH2/POP2
+  // does not need V3: V1/V2 describe a PUSH2 as two SEH_PushReg codes.)
+  return Fn.needsUnwindTableEntry() &&
+         MF.getSubtarget<X86Subtarget>().hasEGPR();
+}
 
 static const TargetRegisterClass *
 getCalleeSavedSpillRC(MCRegister Reg, const X86Subtarget &STI,
@@ -606,7 +624,8 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
 }
 
 void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
-                                            MachineBasicBlock &MBB) const {
+                                            MachineBasicBlock &MBB,
+                                            RegScavenger *) const {
   const MachineFunction &MF = *MBB.getParent();
 
   // Insertion point.
@@ -619,12 +638,18 @@ void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   // Zero out FP stack if referenced. Do this outside of the loop below so that
   // it's done only once.
-  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   for (MCRegister Reg : RegsToZero.set_bits()) {
     if (!X86::RFP80RegClass.contains(Reg))
       continue;
 
-    unsigned NumFPRegs = ST.is64Bit() ? 8 : 7;
+    // Do not push zeros over x87 return values. X86FloatingPoint records
+    // returned values as implicit ST0/ST1 uses on the return instruction.
+    unsigned NumFPRegs = 8;
+    if (MBBI->hasRegisterImplicitUseOperand(X86::ST0))
+      --NumFPRegs;
+    if (MBBI->hasRegisterImplicitUseOperand(X86::ST1))
+      --NumFPRegs;
+
     for (unsigned i = 0; i != NumFPRegs; ++i)
       BuildMI(MBB, MBBI, DL, TII.get(X86::LD_F0));
 
@@ -1624,9 +1649,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
                      MF.getFunction().getParent()->getCodeViewFlag();
   bool NeedsWinCFI = NeedsWin64CFI || NeedsWinFPO;
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
-  bool IsWin64UnwindV3 =
-      NeedsWin64CFI &&
-      Fn.getParent()->getWinX64EHUnwindMode() == WinX64EHUnwindMode::V3;
+  bool IsWin64UnwindV3 = NeedsWin64CFI && requireWinX64UnwindV3(MF);
   Register FramePtr = TRI->getFrameRegister(MF);
   const Register MachineFramePtr =
       STI.isTarget64BitILP32() ? Register(getX86SubSuperRegister(FramePtr, 64))
@@ -1895,6 +1918,15 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
               .addImm(0)
               .setMIFlag(MachineInstr::FrameSetup);
         }
+
+        // Update CFA offset for the async-context push.
+        if (NeedsDwarfCFI && !ArgBaseReg.isValid()) {
+          BuildCFI(
+              MBB, MBBI, DL,
+              MCCFIInstruction::createAdjustCfaOffset(nullptr, -stackGrowth),
+              MachineInstr::FrameSetup);
+        }
+
         EmitSEHAfter(EmitSEHPushR14);
 
         BuildMI(MBB, MBBI, DL, TII.get(X86::LEA64r), FramePtr)
@@ -1904,6 +1936,17 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
             .addImm(8)
             .addUse(X86::NoRegister)
             .setMIFlag(MachineInstr::FrameSetup);
+
+        // Switch to an FP-relative CFA before adjusting RSP below.
+        if (NeedsDwarfCFI && !ArgBaseReg.isValid()) {
+          unsigned DwarfFramePtr = TRI->getDwarfRegNum(MachineFramePtr, true);
+          BuildCFI(MBB, MBBI, DL,
+                   MCCFIInstruction::cfiDefCfa(nullptr, DwarfFramePtr,
+                                               -2 * stackGrowth +
+                                                   (int)TailCallArgReserveSize),
+                   MachineInstr::FrameSetup);
+        }
+
         BuildMI(MBB, MBBI, DL, TII.get(X86::SUB64ri32), X86::RSP)
             .addUse(X86::RSP)
             .addImm(8)
@@ -1933,7 +1976,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
             BuildCFI(MBB, MBBI, DL,
                      MCCFIInstruction::createEscape(nullptr, CfaExpr.str()),
                      MachineInstr::FrameSetup);
-          } else {
+          } else if (!X86FI->hasSwiftAsyncContext()) {
             // Mark effective beginning of when frame pointer becomes valid.
             // Define the current CFA to use the EBP/RBP register.
             unsigned DwarfFramePtr = TRI->getDwarfRegNum(MachineFramePtr, true);
@@ -2508,9 +2551,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   // For V3 unwind, epilog SEH pseudos are emitted inline before each
   // unwind-effecting instruction.
   bool IsWin64UnwindV3 =
-      NeedsWin64CFI && MF.hasWinCFI() &&
-      MF.getFunction().getParent()->getWinX64EHUnwindMode() ==
-          WinX64EHUnwindMode::V3;
+      NeedsWin64CFI && MF.hasWinCFI() && requireWinX64UnwindV3(MF);
   bool IsFunclet = MBBI == MBB.end() ? false : isFuncletReturnInstr(*MBBI);
 
   // Get the number of bytes to allocate from the FrameInfo.
@@ -3292,9 +3333,7 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
 
   bool NeedsWin64CFI =
       isWin64Prologue(MF) && MF.getFunction().needsUnwindTableEntry();
-  bool IsWin64UnwindV3 =
-      NeedsWin64CFI && MF.getFunction().getParent()->getWinX64EHUnwindMode() ==
-                           WinX64EHUnwindMode::V3;
+  bool IsWin64UnwindV3 = NeedsWin64CFI && requireWinX64UnwindV3(MF);
 
   // Reload XMMs from stack frame.
   for (const CalleeSavedInfo &I : CSI) {
