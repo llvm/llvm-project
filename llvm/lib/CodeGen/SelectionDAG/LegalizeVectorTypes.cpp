@@ -5251,28 +5251,24 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_HISTOGRAM(SDNode *N) {
 SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo) {
   SDLoc DL(N);
 
-  if (OpNo != 1) {
-    auto SplitOperand = [&](SDValue Op, SDValue &Lo, SDValue &Hi) {
-      if (getTypeAction(Op.getValueType()) == TargetLowering::TypeSplitVector)
-        GetSplitVector(Op, Lo, Hi);
-      else
-        std::tie(Lo, Hi) = DAG.SplitVector(Op, DL);
-    };
-
+  if (OpNo == 0) {
+    EVT LoResVT, HiResVT;
+    std::tie(LoResVT, HiResVT) = DAG.GetSplitDestVTs(N->getValueType(0));
     SDValue SourceLo, SourceHi;
-    SplitOperand(N->getOperand(0), SourceLo, SourceHi);
+    std::tie(SourceLo, SourceHi) = DAG.SplitVectorOperand(N, 0);
     SDValue MaskLo, MaskHi;
-    SplitOperand(N->getOperand(2), MaskLo, MaskHi);
+    std::tie(MaskLo, MaskHi) = DAG.SplitVectorOperand(N, 2);
 
-    SDValue MatchLo =
-        DAG.getNode(ISD::VECTOR_MATCH, DL, MaskLo.getValueType(), SourceLo,
-                    N->getOperand(1), MaskLo, N->getFlags());
-    SDValue MatchHi =
-        DAG.getNode(ISD::VECTOR_MATCH, DL, MaskHi.getValueType(), SourceHi,
-                    N->getOperand(1), MaskHi, N->getFlags());
+    SDValue MatchLo = DAG.getNode(ISD::VECTOR_MATCH, DL, LoResVT, SourceLo,
+                                  N->getOperand(1), MaskLo, N->getFlags());
+    SDValue MatchHi = DAG.getNode(ISD::VECTOR_MATCH, DL, HiResVT, SourceHi,
+                                  N->getOperand(1), MaskHi, N->getFlags());
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0), MatchLo,
                        MatchHi);
   }
+
+  // Note: The Mask (OpNo == 2) should be widened with the result.
+  assert(OpNo == 1 && "Unexpected VECTOR_MATCH operand");
 
   SDValue NeedleLo, NeedleHi;
   GetSplitVector(N->getOperand(1), NeedleLo, NeedleHi);
@@ -8951,14 +8947,14 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo) {
-  if (OpNo != 1) {
+  if (OpNo == 0) {
     SDLoc DL(N);
     EVT ResVT = N->getValueType(0);
-    EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), ResVT);
     EVT SourceVT = N->getOperand(0).getValueType();
-    EVT WideSourceVT =
-        EVT::getVectorVT(*DAG.getContext(), SourceVT.getVectorElementType(),
-                         WidenVT.getVectorElementCount());
+    EVT WideSourceVT = TLI.getTypeToTransformTo(*DAG.getContext(), SourceVT);
+    EVT WidenVT =
+        EVT::getVectorVT(*DAG.getContext(), ResVT.getVectorElementType(),
+                         WideSourceVT.getVectorElementCount());
 
     SDValue WideSource = DAG.getInsertSubvector(DL, DAG.getUNDEF(WideSourceVT),
                                                 N->getOperand(0), 0);
@@ -8968,6 +8964,9 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo) {
                                     N->getOperand(1), WideMask, N->getFlags());
     return DAG.getExtractSubvector(DL, ResVT, WideMatch, 0);
   }
+
+  // Note: The Mask (OpNo == 2) should be widened with the result.
+  assert(OpNo == 1 && "Unexpected VECTOR_MATCH operand");
 
   SDLoc DL(N);
   SDValue Needle = N->getOperand(1);

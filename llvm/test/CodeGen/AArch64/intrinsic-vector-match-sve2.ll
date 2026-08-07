@@ -12,6 +12,26 @@ define <vscale x 16 x i1> @match_nxv16i8_v1i8(<vscale x 16 x i8> %op1, <1 x i8> 
   ret <vscale x 16 x i1> %r
 }
 
+define <vscale x 1 x i1> @match_nxv1i8_v8i8(<vscale x 1 x i8> %op1, <8 x i8> %op2, <vscale x 1 x i1> %mask) #0 {
+; CHECK-LABEL: match_nxv1i8_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    pfalse p1.b
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    mov z1.d, d1
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p1.s
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-NEXT:    match p1.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    punpklo p0.h, p1.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ret
+  %r = tail call <vscale x 1 x i1> @llvm.experimental.vector.match(<vscale x 1 x i8> %op1, <8 x i8> %op2, <vscale x 1 x i1> %mask)
+  ret <vscale x 1 x i1> %r
+}
+
 define <1 x i1> @match_v1i8_v1i8(<1 x i8> %op1, <1 x i8> %op2, <1 x i1> %mask) #0 {
 ; CHECK-LABEL: match_v1i8_v1i8:
 ; CHECK:       // %bb.0:
@@ -270,6 +290,29 @@ define <16 x i1> @match_v16i8_v32i8(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %m
 ; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %mask)
+  ret <16 x i1> %r
+}
+
+define <16 x i1> @match_v16i16_v8i16(<16 x i16> %op1, <8 x i16> %op2, <16 x i1> %mask) #0 {
+; CHECK-LABEL: match_v16i16_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll2 v4.8h, v3.16b, #0
+; CHECK-NEXT:    ushll v3.8h, v3.8b, #0
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    shl v4.8h, v4.8h, #15
+; CHECK-NEXT:    shl v3.8h, v3.8h, #15
+; CHECK-NEXT:    cmpne p1.h, p0/z, z4.h, #0
+; CHECK-NEXT:    cmpne p2.h, p0/z, z3.h, #0
+; CHECK-NEXT:    match p0.h, p1/z, z1.h, z2.h
+; CHECK-NEXT:    match p1.h, p2/z, z0.h, z2.h
+; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ret
+  %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i16> %op1, <8 x i16> %op2, <16 x i1> %mask)
   ret <16 x i1> %r
 }
 
