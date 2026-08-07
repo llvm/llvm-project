@@ -6608,20 +6608,22 @@ TEST_P(ErrorHandlingTest, ErrorIsPropagatedFromMemberToClass) {
   EXPECT_FALSE(ImportedOK);
 }
 
-// A member whose signature refers back to the enclosing class (e.g. a
-// copy constructor's `const Self&` parameter) can succeed and cache the
-// class's *type* before a later, failing member causes the class's own
-// Decl import to fail as a whole. Check that this doesn't leave a stale,
-// "successfully imported" entry for the class's type behind: any later,
-// independent request to import that type must also fail, not silently
-// hand back the half-built class.
-TEST_P(ErrorHandlingTest, ImportedTypeCacheIsInvalidatedOnFailure) {
+// Check that the imported types, and not only the decls, are invalidated 
+// (removed from ImportedTypes) upon an import failure. It can happen, for 
+// instance with a member whose signature refers back to the enclosing class, 
+// that the type is successfully imported and pointing to the decl being
+// imported, but that the decl import then fails further on. 
+// The decl mapping is correctly invalidated, but if the connected type is not 
+// invalidated as well, the half-built decl (which unavoidably remains 
+// in the 'To' AST) could be accessed through the type during later operations, 
+// like structural equivalence checks.
+TEST_P(ErrorHandlingTest, ImportedTypeMappingIsInvalidatedOnFailure) {
   TranslationUnitDecl *FromTU = getTuDecl(std::string(R"(
       class X {
-        void ok(const X &) {}          // Succeeds; imports X's own type
-                                        // as a side effect, before X's
-                                        // own import is known to fail.
-        void bad() { )") + ErroneousStmt + R"( }  // Fails to import.
+        void ok(const X &) {} // Succeeds; imports X's own type
+                              // as a side effect, before X's
+                              // own import is known to fail.
+        void bad() { )") + ErroneousStmt + R"(} // Fails to import.
       };
       )",
                                           Lang_CXX03);
@@ -6629,20 +6631,16 @@ TEST_P(ErrorHandlingTest, ImportedTypeCacheIsInvalidatedOnFailure) {
       FromTU, cxxRecordDecl(hasName("X")));
 
   CXXRecordDecl *ImportedX = Import(FromX, Lang_CXX03);
-  EXPECT_FALSE(ImportedX); // X itself fails to import.
+  // Class X fails to import
+  EXPECT_FALSE(ImportedX);
 
-  // The bug: without the fix, a later, independent request to import X's
-  // type silently succeeds, returning the half-built X as if nothing had
-  // gone wrong, because ASTImporter::ImportedTypes was never scrubbed
-  // when X's own Decl import failed.
   ASTImporter *Importer = findFromTU(FromX)->Importer.get();
   const Type *FromXTy =
       FromTU->getASTContext().getCanonicalTagType(FromX)->getTypePtr();
   ASSERT_TRUE(FromXTy);
   Expected<const Type *> ToTyOrErr = Importer->Import(FromXTy);
-  EXPECT_FALSE(static_cast<bool>(ToTyOrErr));
-  if (!ToTyOrErr)
-    llvm::consumeError(ToTyOrErr.takeError());
+  // And its type should fail to import as well
+  EXPECT_TRUE(ToTyOrErr.errorIsA<clang::ASTImportError>());
 }
 
 // Check that an error propagates to the dependent AST nodes.

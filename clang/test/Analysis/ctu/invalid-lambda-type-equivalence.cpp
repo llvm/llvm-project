@@ -2,18 +2,6 @@
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
 
-// Pathological case: a lambda's closure is created as a Decl before its
-// members are imported. If a member unrelated to the eventual failure
-// (e.g. the implicit copy constructor) imports successfully first, that
-// success permanently caches the closure's type as "imported", before the
-// member that actually fails is even reached. That cache was never
-// invalidated when the closure's own import later fails, so anything that
-// subsequently needs the same type (e.g. the DeclRefExpr inside
-// `decltype(func(...))` on `rudolf`, below) silently got the half-built
-// closure back instead of a clean failure, producing an inconsistent node
-// that crashed.
-
-
 // RUN: %clang_cc1 -std=c++20 -emit-pch -o %t/api.cpp.ast %t/api.cpp
 // RUN: %clang_cc1 -std=c++20 -emit-pch -o %t/isolate.cpp.ast %t/isolate.cpp
 
@@ -32,6 +20,8 @@
 // RUN:   -verify %t/main.cpp
 
 //--- main.cpp
+
+// Check that importing 'api' and then 'isolate' does not cause crash.
 
 namespace ns {
 
@@ -79,7 +69,7 @@ int import_ns;
 constexpr auto func = []<class T>(const T p) requires requires { 0; } {};
 
 // Structural equivalence of the return type accesses the closure's
-// definition through its type -- an access that assumes the closure is
+// definition through its type, an access that assumes the closure is
 // intact.
 template <class K> decltype(func(declval<K>())) rudolf(int v) { // no-crash
   (void)(42 / v);
