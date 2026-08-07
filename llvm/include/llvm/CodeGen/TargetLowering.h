@@ -4662,15 +4662,6 @@ public:
     return true;
   }
 
-  /// Return true if it is profitable to commute a constant SHL through
-  /// multiple bitwise logic operations that share an input. This can expose a
-  /// common shifted operand, but may also prevent shifts from folding into
-  /// addressing modes, so targets must opt in.
-  virtual bool shouldCommuteShiftOfLogicToExposeCSE(const SDNode *N,
-                                                    CombineLevel Level) const {
-    return false;
-  }
-
   /// GlobalISel - return true if it is profitable to move this shift by a
   /// constant amount through its operand, adjusting any immediate operands as
   /// necessary to preserve semantics. This transformation may not be desirable

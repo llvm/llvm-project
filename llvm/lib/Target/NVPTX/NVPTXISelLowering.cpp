@@ -6616,11 +6616,137 @@ static SDValue PerformMULCombine(SDNode *N,
   return PerformMULCombineWithOperands(N, N0, N1, DCI);
 }
 
+/// Commute SHL with a bitwise logic operation when doing so exposes a common
+/// shifted operand. For example:
+///
+/// Before:
+///   N            = shl (zext (Logic X, C)), ShiftAmount
+///   SiblingShift = shl (zext (SiblingLogic X, SiblingC)), ShiftAmount
+///
+/// After:
+///   ShiftedX     = shl (zext X), ShiftAmount
+///   N            = Logic ShiftedX, ShiftedC
+///   SiblingShift = SiblingLogic ShiftedX, SiblingShiftedC
+///
+/// ShiftedC = (zext C) << ShiftAmount and SiblingShiftedC =
+/// (zext SiblingC) << ShiftAmount are folded constants. This replaces two
+/// variable shifts with the single shared ShiftedX. Requiring a matching
+/// sibling avoids disrupting isolated address calculations where a shift may be
+/// folded into the addressing mode.
+static SDValue
+PerformShiftOfLogicCSECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  using namespace SDPatternMatch;
+  SelectionDAG &DAG = DCI.DAG;
+
+  struct ShiftOfLogic {
+    SDNode *Shift;
+    SDValue Logic;
+    SDValue X;
+    SDValue Constant;
+    unsigned ExtendOpcode;
+  };
+
+  // Match a logic operation, with an optional extension, inside a SHL.
+  auto matchShiftOfLogic = [&](SDNode *Shift, ShiftOfLogic &Match) {
+    if (Shift->getOpcode() != ISD::SHL || !Shift->getOperand(0).hasOneUse())
+      return false;
+
+    SDValue ShiftInput = Shift->getOperand(0);
+    unsigned ExtendOpcode = 0;
+    SDValue Logic = ShiftInput;
+    if (ISD::isExtOpcode(ShiftInput.getOpcode())) {
+      ExtendOpcode = ShiftInput.getOpcode();
+      Logic = ShiftInput.getOperand(0);
+    }
+
+    SDValue X, C;
+    if (!sd_match(Logic, m_OneUse(m_BitwiseLogic(m_Value(X),
+                                                 m_Value(C, m_ConstInt())))))
+      return false;
+
+    Match = {Shift, Logic, X, C, ExtendOpcode};
+    return true;
+  };
+
+  // Match N as the root shift-of-logic; bail if it does not fit the pattern.
+  ShiftOfLogic Root;
+  if (!matchShiftOfLogic(N, Root))
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  SDValue ShiftAmount = N->getOperand(1);
+
+  // Collect candidate shifts that share X. Reached through another user of X,
+  // the logic result feeds the shift directly or through an optional extend.
+  SmallVector<SDNode *, 4> CandidateShifts;
+  for (SDNode *CandidateLogic : Root.X->users()) {
+    if (CandidateLogic == Root.Logic.getNode())
+      continue;
+    for (SDNode *LogicUser : CandidateLogic->users()) {
+      if (ISD::isExtOpcode(LogicUser->getOpcode())) {
+        // shl (ext (logic X, C)): step through the extend to find the shift.
+        for (SDNode *ExtendUser : LogicUser->users())
+          if (ExtendUser->getOpcode() == ISD::SHL)
+            CandidateShifts.push_back(ExtendUser);
+      } else if (LogicUser->getOpcode() == ISD::SHL) {
+        // shl (logic X, C): the user is already the shift.
+        CandidateShifts.push_back(LogicUser);
+      }
+    }
+  }
+
+  // Verify each candidate against the root's pattern; those that match (same X,
+  // extend, type, and shift amount) become siblings.
+  SmallVector<ShiftOfLogic, 4> Siblings;
+  for (SDNode *CandidateShift : CandidateShifts) {
+    ShiftOfLogic Candidate;
+    if (!matchShiftOfLogic(CandidateShift, Candidate) ||
+        Candidate.X != Root.X || Candidate.ExtendOpcode != Root.ExtendOpcode ||
+        CandidateShift->getValueType(0) != VT ||
+        CandidateShift->getOperand(1) != ShiftAmount)
+      continue;
+    Siblings.push_back(Candidate);
+  }
+  if (Siblings.empty())
+    return SDValue();
+
+  // Build the shared shifted X once, then rewrite the root and every sibling
+  // into a logic op over it so the shift is CSE'd.
+  SDValue ShiftedX = DAG.getNode(
+      ISD::SHL, SDLoc(N), VT,
+      Root.ExtendOpcode ? DAG.getNode(Root.ExtendOpcode, SDLoc(N), VT, Root.X)
+                        : Root.X,
+      ShiftAmount);
+
+  // Rebuild the logic op from shared ShiftedX and a folded constant shift.
+  auto rebuild = [&](SDValue OldLogic, SDValue OldC, const SDLoc &NodeDL) {
+    SDValue NewC = OldC;
+    if (Root.ExtendOpcode)
+      NewC = DAG.getNode(Root.ExtendOpcode, NodeDL, VT, OldC);
+    SDValue ShiftedC = DAG.getNode(ISD::SHL, NodeDL, VT, NewC, ShiftAmount);
+    return DAG.getNode(OldLogic.getOpcode(), NodeDL, VT, ShiftedX, ShiftedC,
+                       OldLogic->getFlags());
+  };
+
+  for (const ShiftOfLogic &Sibling : Siblings) {
+    SDValue NewLogic =
+        rebuild(Sibling.Logic, Sibling.Constant, SDLoc(Sibling.Shift));
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Sibling.Shift, 0), NewLogic);
+    DCI.AddToWorklist(NewLogic.getNode());
+  }
+  return rebuild(Root.Logic, Root.Constant, SDLoc(N));
+}
+
 /// PerformSHLCombine - Runs PTX-specific DAG combine patterns on SHL nodes.
 static SDValue PerformSHLCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  CodeGenOptLevel OptLevel) {
   if (OptLevel > CodeGenOptLevel::None) {
+    // Expose a shared shifted operand for CSE before mul.wide folding, which
+    // would otherwise consume the shift.
+    if (SDValue Ret = PerformShiftOfLogicCSECombine(N, DCI))
+      return Ret;
+
     // Try mul.wide combining at OptLevel > 0
     if (SDValue Ret = TryMULWIDECombine(N, DCI))
       return Ret;
