@@ -83,9 +83,9 @@ public:
 
 } // end anonymous namespace
 
-static MachineBasicBlock::iterator
-findMBBInsertionPoint(MachineBasicBlock &MBB, const GCNSubtarget &ST,
-                      bool IsEntryBlock) {
+static MachineBasicBlock::iterator findMBBInsertionPoint(MachineBasicBlock &MBB,
+                                                         const GCNSubtarget &ST,
+                                                         bool IsEntryBlock) {
   MachineBasicBlock::iterator InsertPt = MBB.begin();
 
   // Skip past any instructions that must remain at the very beginning:
@@ -99,8 +99,7 @@ findMBBInsertionPoint(MachineBasicBlock &MBB, const GCNSubtarget &ST,
       !IsEntryBlock || !ST.hasRequiresInitialUnclausedVmem();
   while (InsertPt != MBB.end()) {
     if (InsertPt->isDebugValue() || InsertPt->isCFIInstruction() ||
-        (IsEntryBlock &&
-         InsertPt->getOpcode() == AMDGPU::S_SETREG_IMM32_B32)) {
+        (IsEntryBlock && InsertPt->getOpcode() == AMDGPU::S_SETREG_IMM32_B32)) {
       ++InsertPt;
       continue;
     }
@@ -156,8 +155,7 @@ bool AMDGPUInsertICachePrefetch::run(MachineFunction &MF) {
     MachineBasicBlock *CandBB = Node->getBlock();
     if (!CandBB)
       break;
-    if (CandBB == &EntryBB ||
-        !isLoopFreeEntryPostDominator(*CandBB, EntryBB))
+    if (CandBB == &EntryBB || !isLoopFreeEntryPostDominator(*CandBB, EntryBB))
       continue;
     Candidates.push_back(CandBB);
   }
@@ -202,10 +200,10 @@ bool AMDGPUInsertICachePrefetch::run(MachineFunction &MF) {
       // - PrefetchSlack: To make sure the last prefetch has the correct number
       //   of cache lines.
       // - BytesPerPrefetch: To account for the latency of the prefetch.
-      unsigned PrefetchesBeforeNext = llvm::divideCeil(
-          CandidateOffsets.lookup(Candidates[NextCand]) + PrefetchSlack +
-              BytesPerPrefetch,
-          BytesPerPrefetch);
+      unsigned PrefetchesBeforeNext =
+          llvm::divideCeil(CandidateOffsets.lookup(Candidates[NextCand]) +
+                               PrefetchSlack + BytesPerPrefetch,
+                           BytesPerPrefetch);
       PrefetchBeforeNext = std::min(PrefetchesBeforeNext, PrefetchBeforeNext);
     }
     MachineBasicBlock *CandBB = Candidates[Cand];
