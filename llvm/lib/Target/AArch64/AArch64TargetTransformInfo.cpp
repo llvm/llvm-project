@@ -3412,6 +3412,46 @@ static std::optional<Instruction *> instCombineSVEOrr(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, NewUMin);
 }
 
+static std::optional<Instruction *> instCombineSVEAnd(InstCombiner &IC,
+                                                      IntrinsicInst &II) {
+  // and(cmphs(pg, ConstA, A), cmphs(pg, A, ConstB))
+  // ->
+  // cmphs(pg, ConstA - ConstB, sub(pg, A, ConstB))
+  constexpr Intrinsic::ID CmphsID = Intrinsic::aarch64_sve_cmphs;
+  Value *Pg = II.getOperand(0);
+  Value *LHS = II.getOperand(1);
+  Value *RHS = II.getOperand(2);
+
+  Value *A, *PgLHS, *PgRHS;
+  uint64_t ConstA, ConstB;
+  if (!match(LHS, m_Intrinsic<CmphsID>(m_Value(PgLHS), m_ConstantInt(ConstA),
+                                       m_Value(A))) ||
+      !match(RHS, m_Intrinsic<CmphsID>(m_Value(PgRHS), m_Specific(A),
+                                       m_ConstantInt(ConstB))) ||
+      !LHS->hasOneUser() || !RHS->hasOneUser())
+    return std::nullopt;
+
+  // Always false regardless of predication
+  if (ConstB > ConstA)
+    return IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
+
+  // The predicate for both CMPHSs must match.
+  // The predicate for the AND can either be equal to the CMPHS predicates, or
+  // either of the CMPHS values.
+  if (PgLHS != PgRHS || (Pg != LHS && Pg != RHS && Pg != PgLHS))
+    return std::nullopt;
+
+  Type *VecTy = A->getType();
+  Constant *Base = ConstantInt::get(VecTy, ConstB);
+  Value *Sub = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_sub_u, VecTy,
+                                          {PgLHS, A, Base});
+  Constant *Limit = ConstantInt::get(VecTy, ConstA - ConstB);
+  Value *NewCmphs =
+      IC.Builder.CreateIntrinsic(CmphsID, VecTy, {PgLHS, Limit, Sub});
+
+  return IC.replaceInstUsesWith(II, NewCmphs);
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -3535,6 +3575,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEUMin(IC, II);
   case Intrinsic::aarch64_sve_orr_u:
     return instCombineSVEOrr(IC, II);
+  case Intrinsic::aarch64_sve_and_z:
+    return instCombineSVEAnd(IC, II);
   }
 
   return std::nullopt;
