@@ -253,7 +253,7 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.unistd_macros
 )
 
-if (WIN32)
+if(WIN32)
   set(windows_addtional_time_macros libc.include.llvm-libc-macros.windows.time_macros_ext)
 else()
   set(windows_addtional_time_macros "")

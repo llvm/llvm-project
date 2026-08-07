@@ -214,14 +214,14 @@ add_header(__getoptargv_t HDR __getoptargv_t.h)
 add_header(wchar_t HDR wchar_t.h)
 add_header(char8_t HDR char8_t.h)
 add_header(
-    char16_t
+  char16_t
   HDR
     char16_t.h
   DEPENDS
     libc.include.llvm-libc-macros.stdint_macros
 )
 add_header(
-    char32_t
+  char32_t
   HDR
     char32_t.h
   DEPENDS
@@ -234,7 +234,7 @@ add_header(socklen_t HDR socklen_t.h)
 add_header(struct_sockaddr HDR struct_sockaddr.h DEPENDS .sa_family_t)
 add_header(struct_sockaddr_in HDR struct_sockaddr_in.h DEPENDS .in_port_t .sa_family_t .struct_in_addr)
 add_header(
-    struct_sockaddr_in6
+  struct_sockaddr_in6
   HDR
     struct_sockaddr_in6.h
   DEPENDS
@@ -304,21 +304,21 @@ add_header(fsblkcnt_t HDR fsblkcnt_t.h)
 add_header(fsfilcnt_t HDR fsfilcnt_t.h)
 add_header(
   struct_statvfs
-HDR
-  struct_statvfs.h
-DEPENDS
-  .fsblkcnt_t
-  .fsfilcnt_t
+  HDR
+    struct_statvfs.h
+  DEPENDS
+    .fsblkcnt_t
+    .fsfilcnt_t
 )
 add_header(fsid_t HDR fsid_t.h)
 add_header(
   struct_statfs
-HDR
-  struct_statfs.h
-DEPENDS
-  .fsblkcnt_t
-  .fsfilcnt_t
-  .fsid_t
+  HDR
+    struct_statfs.h
+  DEPENDS
+    .fsblkcnt_t
+    .fsfilcnt_t
+    .fsid_t
 )
 add_header(locale_t HDR locale_t.h)
 add_header(struct_lconv HDR struct_lconv.h)
@@ -451,7 +451,7 @@ add_header(
   HDR
     Elf32_Versym.h
   DEPENDS
-  .Elf32_Half
+    .Elf32_Half
 )
 
 add_header(Elf64_Addr HDR Elf64_Addr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
@@ -575,7 +575,7 @@ add_header(
   HDR
     Elf64_Versym.h
   DEPENDS
-  .Elf64_Half
+    .Elf64_Half
 )
 
 # UEFI
@@ -702,18 +702,18 @@ add_header(EFI_SYSTEM_TABLE
     .EFI_TABLE_HEADER
     .char16_t
 )
-add_header(__action_closure_fn_t 
-  HDR 
-    __action_closure_fn_t.h 
-  DEPENDS 
-    .posix_tnode 
+add_header(__action_closure_fn_t
+  HDR
+    __action_closure_fn_t.h
+  DEPENDS
+    .posix_tnode
     .VISIT
 )
-add_header(__action_fn_t 
-  HDR 
-    __action_fn_t.h 
-  DEPENDS 
-    .posix_tnode 
+add_header(__action_fn_t
+  HDR
+    __action_fn_t.h
+  DEPENDS
+    .posix_tnode
     .VISIT
 )
 add_header(__free_fn_t HDR __free_fn_t.h)

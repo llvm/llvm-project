@@ -176,7 +176,7 @@ add_libc_test(
 )
 
 if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
-    LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
+  LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
   libc_set_definition(strfrom_test_copts "LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
 endif()
 
@@ -582,7 +582,7 @@ endif()
 
 # Only baremetal and GPU has an in-tree 'malloc' implementation.
 if((LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU) AND
-      NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+  NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
     malloc_test
     HERMETIC_TEST_ONLY

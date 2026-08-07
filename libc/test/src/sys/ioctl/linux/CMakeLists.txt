@@ -18,4 +18,3 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
-

@@ -110,7 +110,7 @@ add_libc_test(
   SUITE
     libc-support-tests
   SRCS
-  high_precision_decimal_test.cpp
+    high_precision_decimal_test.cpp
   DEPENDS
     libc.src.__support.high_precision_decimal
     libc.src.__support.uint128

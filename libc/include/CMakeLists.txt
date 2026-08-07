@@ -1110,7 +1110,7 @@ add_header_macro(
     .llvm-libc-types.struct_pollfd
     .llvm-libc-types.nfds_t
     .llvm-libc-macros.poll-macros
-  )
+)
 
 add_header_macro(
   sys_poll
@@ -1127,7 +1127,7 @@ add_header_macro(
   DEPENDS
     .llvm-libc-macros.nl_types_macros
     .llvm-libc-types.nl_catd
-  )
+)
 
 add_header_macro(
   langinfo
@@ -1138,7 +1138,7 @@ add_header_macro(
     .llvm-libc-macros.langinfo_macros
     .llvm-libc-types.nl_item
     .llvm-libc-types.locale_t
-  )
+)
 
 # UEFI spec references "Uefi.h" so we use that name for compatibility
 add_header_macro(
@@ -1170,7 +1170,7 @@ function(get_all_install_header_targets out_var)
   endforeach()
   list(REMOVE_DUPLICATES all_deps)
   set(${out_var} ${all_deps} PARENT_SCOPE)
-endfunction(get_all_install_header_targets)
+endfunction()
 
 get_all_install_header_targets(all_install_header_targets ${TARGET_PUBLIC_HEADERS})
 add_custom_target(generate-libc-headers DEPENDS ${all_install_header_targets})
@@ -1182,13 +1182,13 @@ foreach(target IN LISTS all_install_header_targets)
   get_target_property(header_file ${target} HEADER_FILE_PATH)
   if(NOT header_file)
     message(FATAL_ERROR "Installable header file '${target}' does not have the "
-                        "HEADER_FILE_PATH property set.")
+      "HEADER_FILE_PATH property set.")
   endif()
   file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_DIR} ${header_file})
   get_filename_component(nested_dir ${relative_path} DIRECTORY)
   install(FILES ${header_file}
-          DESTINATION ${LIBC_INSTALL_INCLUDE_DIR}/${nested_dir}
-          COMPONENT libc-headers)
+    DESTINATION ${LIBC_INSTALL_INCLUDE_DIR}/${nested_dir}
+    COMPONENT libc-headers)
   # The GPU optionally provides the supported declarations externally so
   # offloading languages like CUDA and OpenMP know what is supported by libc. We
   # install these in the compiler's resource directory at a preset location.
@@ -1201,19 +1201,19 @@ foreach(target IN LISTS all_install_header_targets)
     file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_DIR} ${decls_file})
     get_filename_component(nested_dir ${relative_path} DIRECTORY)
     set(install_dir
-        ${CMAKE_INSTALL_PREFIX}/${resource_dir}/llvm_libc_wrappers/${nested_dir})
+      ${CMAKE_INSTALL_PREFIX}/${resource_dir}/llvm_libc_wrappers/${nested_dir})
     install(FILES ${decls_file}
-            DESTINATION ${install_dir}
-            COMPONENT libc-headers)
+      DESTINATION ${install_dir}
+      COMPONENT libc-headers)
   endif()
 endforeach()
 
 if(LLVM_LIBC_FULL_BUILD)
   add_custom_target(install-libc-headers
-                    DEPENDS libc-headers
-                    COMMAND "${CMAKE_COMMAND}"
-                            -DCMAKE_INSTALL_COMPONENT=libc-headers
-                            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+    DEPENDS libc-headers
+    COMMAND "${CMAKE_COMMAND}"
+      -DCMAKE_INSTALL_COMPONENT=libc-headers
+      -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
   # Stripping is a no-op for headers
   add_custom_target(install-libc-headers-stripped DEPENDS install-libc-headers)
 endif()

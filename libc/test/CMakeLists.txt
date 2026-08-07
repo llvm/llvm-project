@@ -33,7 +33,7 @@ add_lit_testsuite(check-libc
 )
 add_dependencies(check-libc check-libc-build)
 
-if (TARGET check-hdrgen)
+if(TARGET check-hdrgen)
   add_dependencies(check-libc check-hdrgen)
 endif()
 
@@ -67,7 +67,7 @@ endif()
 add_subdirectory(include)
 
 if(NOT ${LIBC_TARGET_OS} STREQUAL "linux" AND
-   NOT ${LIBC_TARGET_OS} STREQUAL "gpu")
+  NOT ${LIBC_TARGET_OS} STREQUAL "gpu")
   # Integration tests are currently only available for linux and the GPU.
   return()
 endif()
