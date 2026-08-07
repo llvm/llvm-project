@@ -155,6 +155,10 @@ public:
     return hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f});
   }
 
+  // Checks Rubin family extensions support.
+  //  - TMA S2G im2col_w mode support
+  bool hasRubinFamilySupport() const { return hasAnyFeature({NVPTX::SM107f}); }
+
   // Checks tcgen05.shift instruction support.
   bool hasTcgen05ShiftSupport() const {
     return hasAnyFeature({NVPTX::SM100a, NVPTX::SM103a, NVPTX::SM110a});

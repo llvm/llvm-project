@@ -2051,10 +2051,34 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.5d(..., i32 %d0, i32 %d1
 
 ##### Overview:
 
-The '`@llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.[1-5]d`' intrinsics
-correspond to the `cp.async.bulk.tensor.[1-5]d.*` set of PTX instructions.
+The '`@llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.[3-5]d`' intrinsics
+correspond to the `cp.async.bulk.tensor.im2col_no_offs.[3-5]d.*` set of PTX instructions.
 These instructions initiate an asynchronous copy of tensor data from
 shared::cta to global memory (indicated by the `s2g` prefix) in `im2col`
+mode. In this mode, the tensor has to be at least three-dimensional. Unlike the
+`g2s` variants, there are no im2col_offsets for these intrinsics. The last
+argument to these intrinsics is a boolean flag, with the same functionality as
+described in the `s2g.tile` mode intrinsics above.
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor).
+
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.[3-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.3d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.[3-5]d`' intrinsics
+correspond to the `cp.async.bulk.tensor.im2col_no_offs::w.[3-5]d.*` set of PTX instructions.
+These instructions initiate an asynchronous copy of tensor data from
+shared::cta to global memory (indicated by the `s2g` prefix) in `im2col_w`
 mode. In this mode, the tensor has to be at least three-dimensional. Unlike the
 `g2s` variants, there are no im2col_offsets for these intrinsics. The last
 argument to these intrinsics is a boolean flag, with the same functionality as
@@ -2120,11 +2144,35 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.5d(..., i32 %d0, i32 
 ##### Overview:
 
 The '`@llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.[3-5]d`' intrinsics
-correspond to the `cp.reduce.async.bulk.tensor.[3-5]d.global.shared::cta.*`
+correspond to the `cp.reduce.async.bulk.tensor.im2col_no_offs.[3-5]d.global.shared::cta.*`
 set of PTX instructions. These instructions initiate an asynchronous reduction
 operation of tensor data in global memory with the tensor data in shared::cta
 memory, using `im2col` mode. In this mode, the tensor has to be at least
 three-dimensional. The supported reduction operations are the same as the ones
+in the `tile` mode. The `i32 %red_op` argument and the last boolean flag
+argument have the same functionality as described in the `tile` mode
+intrinsics above.
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.[3-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.3d(ptr addrspace(3) %src, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i32 %red_op, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.[3-5]d`'
+intrinsics correspond to the `cp.reduce.async.bulk.tensor.im2col_no_offs::w.[3-5]d.*` set of PTX
+instructions. These instructions initiate an asynchronous reduction operation of
+tensor data in global memory with the tensor data in shared\{::cta} memory, using
+`im2col_w` mode. In this mode, the tensor has to be at least three-dimensional.
+The supported reduction operations are the same as the ones
 in the `tile` mode. The `i32 %red_op` argument and the last boolean flag
 argument have the same functionality as described in the `tile` mode
 intrinsics above.
