@@ -782,8 +782,6 @@ bool X86InstrInfo::isReMaterializableImpl(
   case X86::AVX1_SETALLONES:
   case X86::AVX2_SETALLONES:
   case X86::AVX512_128_SET0:
-  case X86::AVX512_256_SET0:
-  case X86::AVX512_512_SET0:
   case X86::AVX512_128_SETALLONES:
   case X86::AVX512_256_SETALLONES:
   case X86::AVX512_512_SETALLONES:
@@ -791,7 +789,6 @@ bool X86InstrInfo::isReMaterializableImpl(
   case X86::AVX512_FsFLD0SH:
   case X86::AVX512_FsFLD0SS:
   case X86::AVX512_FsFLD0F128:
-  case X86::AVX_SET0:
   case X86::FsFLD0SD:
   case X86::FsFLD0SS:
   case X86::FsFLD0SH:
@@ -6374,16 +6371,6 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::FsFLD0SH:
   case X86::FsFLD0F128:
     return Expand2AddrUndef(MIB, get(HasAVX ? X86::VXORPSrr : X86::XORPSrr));
-  case X86::AVX_SET0: {
-    assert(HasAVX && "AVX not supported");
-    const TargetRegisterInfo *TRI = &getRegisterInfo();
-    Register SrcReg = MIB.getReg(0);
-    Register XReg = TRI->getSubReg(SrcReg, X86::sub_xmm);
-    MIB->getOperand(0).setReg(XReg);
-    Expand2AddrUndef(MIB, get(X86::VXORPSrr));
-    MIB.addReg(SrcReg, RegState::ImplicitDefine);
-    return true;
-  }
   case X86::AVX512_128_SET0:
   case X86::AVX512_FsFLD0SH:
   case X86::AVX512_FsFLD0SS:
@@ -6399,26 +6386,6 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     SrcReg =
         TRI->getMatchingSuperReg(SrcReg, X86::sub_xmm, &X86::VR512RegClass);
     MIB->getOperand(0).setReg(SrcReg);
-    return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
-  }
-  case X86::AVX512_256_SET0:
-  case X86::AVX512_512_SET0: {
-    bool HasVLX = Subtarget.hasVLX();
-    Register SrcReg = MIB.getReg(0);
-    const TargetRegisterInfo *TRI = &getRegisterInfo();
-    if (HasVLX || TRI->getEncodingValue(SrcReg) < 16) {
-      Register XReg = TRI->getSubReg(SrcReg, X86::sub_xmm);
-      MIB->getOperand(0).setReg(XReg);
-      Expand2AddrUndef(MIB, get(HasVLX ? X86::VPXORDZ128rr : X86::VXORPSrr));
-      MIB.addReg(SrcReg, RegState::ImplicitDefine);
-      return true;
-    }
-    if (MI.getOpcode() == X86::AVX512_256_SET0) {
-      // No VLX so we must reference a zmm.
-      MCRegister ZReg =
-          TRI->getMatchingSuperReg(SrcReg, X86::sub_ymm, &X86::VR512RegClass);
-      MIB->getOperand(0).setReg(ZReg);
-    }
     return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
   }
   case X86::MOVSHPmr:
@@ -8523,14 +8490,11 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
     Alignment = (*LoadMI.memoperands_begin())->getAlign();
   else
     switch (LoadOpc) {
-    case X86::AVX512_512_SET0:
     case X86::AVX512_512_SETALLONES:
       Alignment = Align(64);
       break;
     case X86::AVX2_SETALLONES:
     case X86::AVX1_SETALLONES:
-    case X86::AVX_SET0:
-    case X86::AVX512_256_SET0:
     case X86::AVX512_256_SETALLONES:
       Alignment = Align(32);
       break;
@@ -8594,10 +8558,7 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
   case X86::V_SETALLONES:
   case X86::AVX2_SETALLONES:
   case X86::AVX1_SETALLONES:
-  case X86::AVX_SET0:
   case X86::AVX512_128_SET0:
-  case X86::AVX512_256_SET0:
-  case X86::AVX512_512_SET0:
   case X86::AVX512_128_SETALLONES:
   case X86::AVX512_256_SETALLONES:
   case X86::AVX512_512_SETALLONES:
@@ -8654,17 +8615,10 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
     case X86::AVX512_512_SETALLONES:
       IsAllOnes = true;
       [[fallthrough]];
-    case X86::AVX512_512_SET0:
-      Ty = FixedVectorType::get(Type::getInt32Ty(MF.getFunction().getContext()),
-                                16);
-      break;
     case X86::AVX1_SETALLONES:
     case X86::AVX2_SETALLONES:
     case X86::AVX512_256_SETALLONES:
       IsAllOnes = true;
-      [[fallthrough]];
-    case X86::AVX512_256_SET0:
-    case X86::AVX_SET0:
       Ty = FixedVectorType::get(Type::getInt32Ty(MF.getFunction().getContext()),
                                 8);
 
@@ -10942,13 +10896,14 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     if (!ST.hasAVX())
       return;
 
-    BuildMI(MBB, Iter, DL, get(X86::AVX_SET0), Reg);
+    BuildMI(MBB, Iter, DL, get(X86::V_SET0), TRI.getSubReg(Reg, X86::sub_xmm));
   } else if (X86::VR512RegClass.contains(Reg)) {
     // ZMM#
     if (!ST.hasAVX512())
       return;
 
-    BuildMI(MBB, Iter, DL, get(X86::AVX512_512_SET0), Reg);
+    BuildMI(MBB, Iter, DL, get(X86::AVX512_128_SET0),
+            TRI.getSubReg(Reg, X86::sub_xmm));
   } else if (X86::VK1RegClass.contains(Reg) || X86::VK2RegClass.contains(Reg) ||
              X86::VK4RegClass.contains(Reg) || X86::VK8RegClass.contains(Reg) ||
              X86::VK16RegClass.contains(Reg)) {

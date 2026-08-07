@@ -3963,7 +3963,7 @@ define void @test_rewrite_iv_scevs(i32 %start, ptr %dst) {
 ; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
-; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; COMPARE-NO-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COMPARE-NO-MV-NEXT:    [[TMP1:%.*]] = add i64 [[START_EXT]], [[N_VEC]]
 ; COMPARE-NO-MV-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], [[START_EXT]]

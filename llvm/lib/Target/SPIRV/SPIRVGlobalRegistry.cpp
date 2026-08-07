@@ -107,24 +107,6 @@ SPIRVGlobalRegistry::assignIntTypeToVReg(unsigned BitWidth, Register VReg,
   return SpirvType;
 }
 
-SPIRVTypeInst
-SPIRVGlobalRegistry::assignFloatTypeToVReg(unsigned BitWidth, Register VReg,
-                                           MachineInstr &I,
-                                           const SPIRVInstrInfo &TII) {
-  SPIRVTypeInst SpirvType = getOrCreateSPIRVFloatType(BitWidth, I, TII);
-  assignSPIRVTypeToVReg(SpirvType, VReg, *CurMF);
-  return SpirvType;
-}
-
-SPIRVTypeInst SPIRVGlobalRegistry::assignVectTypeToVReg(
-    SPIRVTypeInst BaseType, unsigned NumElements, Register VReg,
-    MachineInstr &I, const SPIRVInstrInfo &TII) {
-  SPIRVTypeInst SpirvType =
-      getOrCreateSPIRVVectorType(BaseType, NumElements, I, TII);
-  assignSPIRVTypeToVReg(SpirvType, VReg, *CurMF);
-  return SpirvType;
-}
-
 SPIRVTypeInst SPIRVGlobalRegistry::assignTypeToVReg(
     const Type *Type, Register VReg, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
@@ -1085,16 +1067,6 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypePointer(
   });
 }
 
-SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeForwardPointer(
-    SPIRV::StorageClass::StorageClass SC, MachineIRBuilder &MIRBuilder) {
-  return createConstOrTypeAtFunctionEntry(MIRBuilder, [&](MachineIRBuilder
-                                                              &MIRBuilder) {
-    return MIRBuilder.buildInstr(SPIRV::OpTypeForwardPointer)
-        .addUse(createTypeVReg(MIRBuilder))
-        .addImm(static_cast<uint32_t>(SC));
-  });
-}
-
 SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeFunction(
     const FunctionType *Ty, SPIRVTypeInst RetType,
     const SmallVectorImpl<SPIRVTypeInst> &ArgTypes,
@@ -1480,11 +1452,6 @@ SPIRVTypeInst SPIRVGlobalRegistry::getPointeeType(SPIRVTypeInst PtrType) {
   return PtrType && PtrType->getOpcode() == SPIRV::OpTypePointer
              ? getSPIRVTypeForVReg(PtrType->getOperand(2).getReg())
              : nullptr;
-}
-
-unsigned SPIRVGlobalRegistry::getPointeeTypeOp(Register PtrReg) {
-  SPIRVTypeInst ElemType = getPointeeType(getSPIRVTypeForVReg(PtrReg));
-  return ElemType ? ElemType->getOpcode() : 0;
 }
 
 bool SPIRVGlobalRegistry::isBitcastCompatible(SPIRVTypeInst Type1,
