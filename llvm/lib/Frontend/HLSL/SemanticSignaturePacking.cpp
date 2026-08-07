@@ -24,11 +24,21 @@ static constexpr StringLiteral SignatureOverflowMessage =
 
 namespace {
 
+// Categories are ordered by the component order they must be packed in, so an
+// element may only be co-packed to the right of a lesser or equal category.
+enum class SemanticCategory {
+  NotPacked,
+  Arbitrary,
+  SystemValue,
+  SystemGeneratedValue,
+};
+
 struct SignatureRow {
   uint8_t OccupiedColumns = 0;
   unsigned ComponentWidth = 0;
   dxbc::PSV::InterpolationMode InterpMode =
       dxbc::PSV::InterpolationMode::Undefined;
+  SemanticCategory RightmostCategory = SemanticCategory::Arbitrary;
 };
 
 // Everything the packing rules need to know about the element that is being
@@ -38,6 +48,7 @@ struct ElementPlacement {
   unsigned Cols;
   unsigned ComponentWidth;
   dxbc::PSV::InterpolationMode InterpMode;
+  SemanticCategory Category;
 };
 
 } // namespace
@@ -45,6 +56,24 @@ struct ElementPlacement {
 static uint8_t getStartColumn(uint8_t ColumnMask) {
   assert(ColumnMask != 0 && "expected at least one occupied column");
   return countr_zero(ColumnMask);
+}
+
+static SemanticCategory
+getSemanticCategory(dxbc::PSV::SemanticKind SemanticKind) {
+  switch (SemanticKind) {
+  case dxbc::PSV::SemanticKind::Arbitrary:
+    return SemanticCategory::Arbitrary;
+  case dxbc::PSV::SemanticKind::Position:
+  case dxbc::PSV::SemanticKind::RenderTargetArrayIndex:
+    return SemanticCategory::SystemValue;
+  case dxbc::PSV::SemanticKind::PrimitiveID:
+  case dxbc::PSV::SemanticKind::IsFrontFace:
+    return SemanticCategory::SystemGeneratedValue;
+  case dxbc::PSV::SemanticKind::SampleIndex:
+    return SemanticCategory::NotPacked;
+  default:
+    return SemanticCategory::Arbitrary;
+  }
 }
 
 static unsigned getComponentWidth(dxil::ElementType ComponentType,
@@ -79,6 +108,8 @@ static bool canCoPack(const SignatureRow &Row,
   if (Row.InterpMode != dxbc::PSV::InterpolationMode::Undefined &&
       Row.InterpMode != Placement.InterpMode)
     return false;
+  if (Row.OccupiedColumns && Placement.Category < Row.RightmostCategory)
+    return false;
   return true;
 }
 
@@ -109,11 +140,15 @@ static void placeAt(MutableArrayRef<SignatureRow> Rows, unsigned StartRow,
                     const ElementPlacement &Placement, uint8_t ColumnMask) {
   for (unsigned ElementRow = 0; ElementRow != Placement.Rows; ++ElementRow) {
     SignatureRow &Row = Rows[StartRow + ElementRow];
-    if (!Row.OccupiedColumns)
+    const uint8_t PreviousOccupiedColumns = Row.OccupiedColumns;
+    if (!PreviousOccupiedColumns)
       Row.ComponentWidth = Placement.ComponentWidth;
     Row.OccupiedColumns |= ColumnMask;
     if (Row.InterpMode == dxbc::PSV::InterpolationMode::Undefined)
       Row.InterpMode = Placement.InterpMode;
+    // Non-overlapping masks compare according to their rightmost set bit.
+    if (!PreviousOccupiedColumns || ColumnMask > PreviousOccupiedColumns)
+      Row.RightmostCategory = Placement.Category;
   }
 }
 
@@ -148,8 +183,12 @@ Error llvm::hlsl::packSignaturePrefixStable(
 
     const unsigned ComponentWidth =
         getComponentWidth(Element.CompType, UseNative16BitTypes);
+    const SemanticCategory Category = getSemanticCategory(Element.SemanticKind);
+    if (Category == SemanticCategory::NotPacked)
+      continue;
     const ElementPlacement Placement = {Element.Rows, Element.Cols,
-                                        ComponentWidth, Element.InterpMode};
+                                        ComponentWidth, Element.InterpMode,
+                                        Category};
     if (Error E = packElement(Element, Rows, Placement))
       return E;
   }
