@@ -1359,6 +1359,8 @@ static void genCoarrayHandle(fir::FirOpBuilder &builder, mlir::ModuleOp mod,
       mlir::Type handleTy = getCoarrayHandleType(builder, loc);
       std::string globalName =
           op.getUniqName().str() + coarrayHandleSuffix.str();
+      if (builder.getNamedGlobal(globalName))
+        return;
       fir::GlobalOp global = builder.createGlobal(
           loc, handleTy, globalName, builder.createLinkOnceLinkage());
       mlir::Region &region = global.getRegion();
