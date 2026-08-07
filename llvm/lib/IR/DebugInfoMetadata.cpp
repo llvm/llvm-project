@@ -1770,7 +1770,7 @@ bool DIExpression::isValid() const {
     uint64_t Op = I->getOp();
     if ((Op >= dwarf::DW_OP_reg0 && Op <= dwarf::DW_OP_reg31) ||
         (Op >= dwarf::DW_OP_breg0 && Op <= dwarf::DW_OP_breg31))
-      return true;
+      continue;
 
     // Check that the operand is valid.
     switch (Op) {
@@ -1809,7 +1809,9 @@ bool DIExpression::isValid() const {
       auto FirstOp = expr_op_begin();
       if (FirstOp->getOp() == dwarf::DW_OP_LLVM_arg && FirstOp->getArg(0) == 0)
         ++FirstOp;
-      return I->get() == FirstOp->get() && I->getArg(0) == 1;
+      if (I->get() != FirstOp->get() || I->getArg(0) != 1)
+        return false;
+      break;
     }
     case dwarf::DW_OP_LLVM_implicit_pointer:
     case dwarf::DW_OP_LLVM_convert:
