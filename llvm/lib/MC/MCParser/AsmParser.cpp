@@ -1050,16 +1050,14 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 
         if (Sym && Sym->isTemporary() && !Sym->isVariable() &&
             !Sym->isDefined()) {
-          // To fix this issue, I introduced a `DenseMap` mechanism
-          // into the `AsmParser` private variable group to track the correct
-          // assembly syntax groups.
+          // Report the error at the first reference to the temporary symbol.
           SMLoc ErrorLoc = getTok().getLoc();
           auto It = LocalSymbolLocs.find(Sym);
           if (It != LocalSymbolLocs.end())
-              ErrorLoc = It->second;
+            ErrorLoc = It->second;
 
           printError(ErrorLoc, "assembler local symbol '" + Sym->getName() +
-                                 "' not defined");
+                                   "' not defined");
         }
       }
     }
@@ -1255,11 +1253,8 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
                                                    : SymbolName);
 
     // Store in the mapping table.
-    LocalSymbolLocs.try_emplace(Sym, FirstTokenLoc);
-
-    // If it is a local symbol, record the location of its first reference.
-    if (Sym->isTemporary()) {
-        Sym = getContext().parseSymbol(MAI.isHLASM() ? SymbolName.upper() : SymbolName);
+    if (Sym && Sym->isTemporary()) {
+      LocalSymbolLocs.try_emplace(Sym, FirstTokenLoc);
     }
 
     // If this is an absolute variable reference, substitute it now to preserve
