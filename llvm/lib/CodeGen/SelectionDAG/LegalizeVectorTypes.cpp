@@ -1749,7 +1749,13 @@ void DAGTypeLegalizer::SplitVecRes_MaskedBinOp(SDNode *N, SDValue &Lo,
   GetSplitVector(N->getOperand(0), LHSLo, LHSHi);
   SDValue RHSLo, RHSHi;
   GetSplitVector(N->getOperand(1), RHSLo, RHSHi);
-  auto [MaskLo, MaskHi] = SplitMask(N->getOperand(2));
+
+  SDValue MaskLo, MaskHi, Mask = N->getOperand(2);
+  if (Mask.getOpcode() == ISD::SETCC)
+    SplitVecRes_SETCC(Mask.getNode(), MaskLo, MaskHi);
+  else
+    std::tie(MaskLo, MaskHi) = SplitMask(Mask);
+
   SDLoc dl(N);
 
   const SDNodeFlags Flags = N->getFlags();
