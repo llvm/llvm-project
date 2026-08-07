@@ -266,7 +266,7 @@ swift::Type SwiftASTContext::GetSwiftType(opaque_compiler_type_t opaque_type) {
 
 swift::Type
 SwiftASTContext::GetSwiftTypeIgnoringErrors(CompilerType compiler_type) {
-  return llvm::expectedToStdOptional(GetSwiftType(compiler_type))
+  return llvm::expectedToOptional(GetSwiftType(compiler_type))
       .value_or(swift::Type());
 }
 
@@ -5229,7 +5229,7 @@ CompilerType
 SwiftASTContext::GetTypeFromMangledTypename(ConstString mangled_typename) {
   if (llvm::isa<SwiftASTContextForExpressions>(this))
     return GetCompilerType(
-        llvm::expectedToStdOptional(ReconstructType(mangled_typename))
+        llvm::expectedToOptional(ReconstructType(mangled_typename))
             .value_or(nullptr));
   return GetCompilerType(mangled_typename);
 }
@@ -7726,7 +7726,7 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::Protocol:
   case swift::TypeKind::ProtocolComposition:
   case swift::TypeKind::Existential:
-    return llvm::expectedToStdOptional(
+    return llvm::expectedToOptional(
                GetNumChildren(type, /*omit_empty_base_classes=*/false, nullptr))
         .value_or(0);
 
@@ -8563,7 +8563,7 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
   }
 
   case swift::TypeKind::LValue:
-    if (idx < llvm::expectedToStdOptional(
+    if (idx < llvm::expectedToOptional(
                   GetNumChildren(type, omit_empty_base_classes, exe_ctx))
                   .value_or(0)) {
       CompilerType pointee_clang_type(GetNonReferenceType(type));

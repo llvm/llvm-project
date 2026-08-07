@@ -422,7 +422,7 @@ static llvm::Error AddVariableInfo(
 
   if (log && is_self)
     if (swift::Type swift_type =
-            llvm::expectedToStdOptional(ast_context.GetSwiftType(target_type))
+            llvm::expectedToOptional(ast_context.GetSwiftType(target_type))
                 .value_or(swift::Type())) {
       std::string s;
       llvm::raw_string_ostream ss(s);
@@ -585,7 +585,7 @@ static bool CanEvaluateExpressionWithoutBindingGenericParams(
     return false;
 
   auto swift_type =
-      llvm::expectedToStdOptional(scratch_ctx.GetSwiftType(self_type))
+      llvm::expectedToOptional(scratch_ctx.GetSwiftType(self_type))
           .value_or(swift::Type());
   if (!swift_type)
     return false;
