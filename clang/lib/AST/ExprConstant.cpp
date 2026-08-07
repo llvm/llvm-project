@@ -16323,6 +16323,8 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
       return GCCTypeClass::None;
 
     case BuiltinType::Dependent:
@@ -16778,11 +16780,7 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
   return true;
 }
 
-/// Tries to evaluate the __builtin_object_size for @p E. If successful,
-/// returns true and stores the result in @p Size.
-///
-/// If @p WasError is non-null, this will report whether the failure to evaluate
-/// is to be treated as an Error in IntExprEvaluator.
+/// Tries to evaluate the __builtin_object_size for @p E.
 ///
 /// If @p IsDynamic is true (i.e. we're evaluating
 /// __builtin_dynamic_object_size) and the operand designates a flexible array

@@ -1658,15 +1658,8 @@ public:
 
       auto DiffChecks = RtPtrChecking.getDiffChecks();
       if (DiffChecks) {
-        Value *RuntimeVF = nullptr;
         MemRuntimeCheckCond = addDiffRuntimeChecks(
-            MemCheckBlock->getTerminator(), *DiffChecks, MemCheckExp,
-            [VF, &RuntimeVF](IRBuilderBase &B, unsigned Bits) {
-              if (!RuntimeVF)
-                RuntimeVF = getRuntimeVF(B, B.getIntNTy(Bits), VF);
-              return RuntimeVF;
-            },
-            IC);
+            MemCheckBlock->getTerminator(), *DiffChecks, MemCheckExp, VF, IC);
       } else {
         MemRuntimeCheckCond = addRuntimeChecks(
             MemCheckBlock->getTerminator(), L, RtPtrChecking.getChecks(),
@@ -2428,10 +2421,8 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
   }
   case Instruction::Load:
   case Instruction::Store: {
-    bool IsConsecutive =
-        Legal->getBoundForConsecutiveLoad(I) != 0 ||
-        Legal->isConsecutivePtr(getLoadStoreType(I),
-                                getLoadStorePointerOperand(I)) != 0;
+    bool IsConsecutive = Legal->isConsecutivePtr(getLoadStoreType(I),
+                                                 getLoadStorePointerOperand(I));
     return !(IsConsecutive && isLegalMaskedLoadOrStore(I, VF)) &&
            !Config.isLegalGatherOrScatter(I, VF);
   }
@@ -2671,27 +2662,29 @@ LoopVectorizationCostModel::memoryInstructionCanBeWidened(Instruction *I,
   auto *Ptr = getLoadStorePointerOperand(I);
   auto *ScalarTy = getLoadStoreType(I);
 
+  // Check for consecutive pointers. A bounded (i % 2^N) load in a read-only
+  // loop is consecutive within a single 2^N window; otherwise check
+  // isConsecutivePtr,
+  uint64_t Bound =
+      isPredicatedInst(I) ? 0 : Legal->getBoundForConsecutiveLoad(I);
+  int Stride = Bound ? 1 : Legal->isConsecutivePtr(ScalarTy, Ptr);
+  if (!Stride)
+    return std::nullopt;
+
+  // If the instruction is a store located in a predicated block, it will be
+  // scalarized.
+  if (isScalarWithPredication(I, VF))
+    return std::nullopt;
+
   // If the instruction's allocated size doesn't equal it's type size, it
   // requires padding and will be scalarized.
   auto &DL = I->getDataLayout();
   if (hasIrregularType(ScalarTy, DL))
     return std::nullopt;
 
-  // If the instruction is located in a predicated block, it will be scalarized.
-  if (isScalarWithPredication(I, VF))
-    return std::nullopt;
-
-  // Widen a bounded (i % 2^N) load in a read-only loop as a consecutive
-  // vector load when VF divides the bound, so each VF-wide load stays within a
-  // single window and does not wrap.
-  uint64_t Bound = Legal->getBoundForConsecutiveLoad(I);
-  if (Bound != 0 && VF.isFixed())
-    return ElementCount::getFixed(Bound).isKnownMultipleOf(VF)
-               ? std::optional(CM_Widen)
-               : std::nullopt;
-
-  int Stride = Legal->isConsecutivePtr(ScalarTy, Ptr);
-  if (!Stride)
+  // Each VF-wide bounded load must stay within a single 2^N window and must not
+  // wrap, so only widen for VFs dividing the bound.
+  if (Bound && !ElementCount::getFixed(Bound).isKnownMultipleOf(VF))
     return std::nullopt;
 
   return Stride == 1 ? CM_Widen : CM_Widen_Reverse;
@@ -5567,18 +5560,18 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       // Collect the instructions (and their associated costs) that will be more
       // profitable to scalarize.
       CM.collectNonVectorizedAndSetWideningDecisions(UserVF);
+      buildVPlans(*VPlan1, UserVF, UserVF);
       ElementCount EpilogueUserVF = EpilogueVectorizationForceVF;
       if (EpilogueUserVF.isVector() &&
           ElementCount::isKnownLT(EpilogueUserVF, UserVF)) {
         CM.collectNonVectorizedAndSetWideningDecisions(EpilogueUserVF);
         buildVPlans(*VPlan1, EpilogueUserVF, EpilogueUserVF);
       }
-      buildVPlans(*VPlan1, UserVF, UserVF);
-      if (!VPlans.empty() && VPlans.back()->getSingleVF() == UserVF) {
+      if (!VPlans.empty() && VPlans.front()->getSingleVF() == UserVF) {
         // For scalar VF, skip VPlan cost check as VPlan cost is designed for
         // vector VFs only.
         if (UserVF.isScalar() ||
-            cost(*VPlans.back(), UserVF, /*RU=*/nullptr).isValid()) {
+            cost(*VPlans.front(), UserVF, /*RU=*/nullptr).isValid()) {
           LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
           LLVM_DEBUG(printPlans(dbgs()));
           return;
@@ -5859,11 +5852,11 @@ LoopVectorizationPlanner::computeBestVF() {
 
   if (hasPlanWithVF(UserVF) && hasForcedEpilogueVF()) {
     assert(VPlans.size() == 2 && "Must have exactly 2 VPlans built");
-    assert(VPlans[0]->getSingleVF() == EpilogueVectorizationForceVF &&
-           "expected first plan to be for the forced epilogue VF");
-    assert(VPlans[1]->getSingleVF() == UserVF &&
+    assert(VPlans[0]->getSingleVF() == UserVF &&
            "expected second plan to be for the forced UserVF");
-    return {VectorizationFactor(UserVF, 0, 0), VPlans[1].get()};
+    assert(VPlans[1]->getSingleVF() == EpilogueVectorizationForceVF &&
+           "expected first plan to be for the forced epilogue VF");
+    return {VectorizationFactor(UserVF, 0, 0), VPlans[0].get()};
   }
 
   LLVM_DEBUG(dbgs() << "LV: Computing best VF using cost kind: "
@@ -6090,6 +6083,14 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       SE.forgetLcssaPhiWithNewPredecessor(OrigLoop,
                                           &cast<VPIRPhi>(PhiR).getIRPhi());
   }
+
+  // Query whether the target wants loops it vectorizes to remain eligible for
+  // runtime unrolling. Do this here, on the original loop and before its SCEV
+  // is forgotten below.
+  TargetTransformInfo::UnrollingPreferences UP;
+  TTI.getUnrollingPreferences(OrigLoop, SE, UP, ORE);
+  bool UnrollVectorizedLoop = UP.UnrollVectorizedLoop;
+
   // Forget the original loop and block dispositions.
   SE.forgetLoop(OrigLoop);
   SE.forgetBlockAndLoopDispositions();
@@ -6128,7 +6129,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       EpilogueVecKind == EpilogueVectorizationKind::Epilogue, LID,
       OrigAverageTripCount, OrigLoopInvocationWeight,
       estimateElementCount(BestVF * BestUF, Config.getVScaleForTuning()),
-      DisableRuntimeUnroll);
+      DisableRuntimeUnroll, UnrollVectorizedLoop);
 
   // 3. Fix the vectorized code: take care of header phi's, live-outs,
   //    predication, updating analyses.
@@ -6241,9 +6242,10 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   // reverse consecutive.
   LoopVectorizationCostModel::InstWidening Decision =
       CM.getWideningDecision(I, Range.Start);
-  assert(!(Legal->getBoundForConsecutiveLoad(I) &&
-           Decision == LoopVectorizationCostModel::CM_Widen) &&
-         "bounded loads must be widened in makeMemOpWideningDecisions");
+  assert((isPredicatedInst(I) || !Legal->getBoundForConsecutiveLoad(I) ||
+          Decision != LoopVectorizationCostModel::CM_Widen) &&
+         "unpredicated bounded loads must be widened in "
+         "makeMemOpWideningDecisions");
   bool Reverse = Decision == LoopVectorizationCostModel::CM_Widen_Reverse;
   bool Consecutive =
       Reverse || Decision == LoopVectorizationCostModel::CM_Widen;

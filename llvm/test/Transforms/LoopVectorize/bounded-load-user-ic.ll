@@ -26,10 +26,10 @@ define i32 @bounded_user_ic_exceeds_window(ptr %A, i32 %N) {
 ; IC4-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 4
 ; IC4-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 8
 ; IC4-NEXT:    [[TMP13:%.*]] = add i32 [[INDEX]], 12
-; IC4-NEXT:    [[TMP2:%.*]] = urem i32 [[INDEX]], 8
-; IC4-NEXT:    [[TMP14:%.*]] = urem i32 [[TMP0]], 8
-; IC4-NEXT:    [[TMP15:%.*]] = urem i32 [[TMP1]], 8
-; IC4-NEXT:    [[TMP16:%.*]] = urem i32 [[TMP13]], 8
+; IC4-NEXT:    [[TMP2:%.*]] = and i32 [[INDEX]], 7
+; IC4-NEXT:    [[TMP14:%.*]] = and i32 [[TMP0]], 7
+; IC4-NEXT:    [[TMP15:%.*]] = and i32 [[TMP1]], 7
+; IC4-NEXT:    [[TMP16:%.*]] = and i32 [[TMP13]], 7
 ; IC4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP2]]
 ; IC4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP14]]
 ; IC4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP15]]
@@ -86,9 +86,9 @@ define i32 @bounded_user_ic_exceeds_window(ptr %A, i32 %N) {
 ; IC3-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
 ; IC3-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 4
 ; IC3-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 8
-; IC3-NEXT:    [[TMP2:%.*]] = urem i32 [[INDEX]], 8
-; IC3-NEXT:    [[TMP11:%.*]] = urem i32 [[TMP0]], 8
-; IC3-NEXT:    [[TMP12:%.*]] = urem i32 [[TMP1]], 8
+; IC3-NEXT:    [[TMP2:%.*]] = and i32 [[INDEX]], 7
+; IC3-NEXT:    [[TMP11:%.*]] = and i32 [[TMP0]], 7
+; IC3-NEXT:    [[TMP12:%.*]] = and i32 [[TMP1]], 7
 ; IC3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP2]]
 ; IC3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP11]]
 ; IC3-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP12]]

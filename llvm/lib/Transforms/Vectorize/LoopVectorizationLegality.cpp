@@ -446,9 +446,9 @@ void LoopVectorizationLegality::collectUnitStridePredicates() const {
 
   for (BasicBlock *BB : TheLoop->blocks())
     for (Instruction &I : *BB) {
-      // Bounded loads use the fast path; skip to avoid the wrap predicate
-      // getPtrStride would register.
-      if (getBoundForConsecutiveLoad(&I))
+      // Unpredicated bounded loads are widened via their bound; skip them to
+      // avoid the wrap predicate getPtrStride would register.
+      if (!blockNeedsPredication(BB) && getBoundForConsecutiveLoad(&I))
         continue;
       if (Value *Ptr = getLoadStorePointerOperand(&I))
         isConsecutivePtr(getLoadStoreType(&I), Ptr);

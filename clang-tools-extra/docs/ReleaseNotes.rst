@@ -94,6 +94,10 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`check_clang_tidy.py` by adding support of
+  ``-std=cXX-or-earlier`` values, mirroring the existing ``-std=cXX-or-later``.
+  New construct expands to the given standard and every earlier one.
+
 New checks
 ^^^^^^^^^^
 
@@ -117,6 +121,12 @@ Changes in existing checks
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
   nested expressions involving different macros or a mix of macro and
   non-macro operands.
+
+- Improved :doc:`modernize-return-braced-init-list
+  <clang-tidy/checks/modernize/return-braced-init-list>` check to no longer
+  rewrite the return value when the constructed type has a
+  ``std::initializer_list`` constructor, as the braced form could select a
+  different constructor.
 
 - Improved :doc:`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring

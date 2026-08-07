@@ -1725,22 +1725,22 @@ uint64_t llvm::getBoundForConsecutiveLoad(const SCEV *PtrSCEV, Type *AccessTy,
 
   // `A[i % 2^N]` is modeled as `Base + ElemSize * zext({0,+,1}<iN>)` by SCEV,
   // with N being the bitwidth of the induction and ElemSize the access's
-  // allocation size. For a byte element SCEV folds the multiply away, hence the
-  // unscaled index is accepted only then. Base must be the add's operand and
-  // not SE.getPointerBase(PtrSCEV), which looks through add-recurrences and
-  // would report the invariant %A for a moving base like `{%A,+,4}<L>`.
+  // allocation size. SCEV folds away a multiply by one, hence the unscaled
+  // index is matched for byte elements. Base must be the add's operand and not
+  // SE.getPointerBase(PtrSCEV), which looks through add-recurrences and would
+  // report the invariant %A for a moving base like `{%A,+,4}<L>`.
   uint64_t AllocSize =
       SE.getDataLayout().getTypeAllocSize(AccessTy).getFixedValue();
   const SCEV *Base, *Start;
   auto Index = m_scev_ZExt(
       m_scev_AffineAddRec(m_SCEV(Start), m_scev_One(), m_SpecificLoop(L)));
-  if (!match(PtrSCEV,
-             m_scev_Add(m_scev_Mul(m_scev_SpecificInt(AllocSize), Index),
-                        m_SCEV(Base))) &&
-      !(AllocSize == 1 && match(PtrSCEV, m_scev_Add(Index, m_SCEV(Base)))))
-    return 0;
-
-  if (!Start->isZero() || !SE.isLoopInvariant(Base, L))
+  bool Matched =
+      AllocSize == 1
+          ? match(PtrSCEV, m_scev_Add(Index, m_SCEV(Base)))
+          : match(PtrSCEV,
+                  m_scev_Add(m_scev_Mul(m_scev_SpecificInt(AllocSize), Index),
+                             m_SCEV(Base)));
+  if (!Matched || !Start->isZero() || !SE.isLoopInvariant(Base, L))
     return 0;
 
   unsigned NarrowWidth = SE.getTypeSizeInBits(Start->getType());
@@ -1999,6 +1999,13 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
     uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
     MaxStoreLoadForwardSafeDistanceInBits =
         std::min(MaxStoreLoadForwardSafeDistanceInBits, MaxVFInBits);
+
+    if (MaxVF < 2) {
+      LLVM_DEBUG(
+          dbgs() << "LAA: strided access with Distance " << Distance
+                 << " that could cause a store-load forwarding conflict\n");
+      return true;
+    }
   }
   return false;
 }

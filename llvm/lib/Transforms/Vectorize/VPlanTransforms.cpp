@@ -1366,6 +1366,15 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   }
 
   const APInt *APC;
+  // TODO: Enable optimizations in the vector preheader in a follow-up PR.
+  // This check currently means we only simplify before region dissolution.
+  VPBasicBlock *Preheader = Plan->getVectorPreheader();
+  if (CanCreateNewRecipe && Preheader && Def->getParent() != Preheader &&
+      match(Def, m_URem(m_VPValue(X), m_APInt(APC))) && APC->isPowerOf2()) {
+    return Def->replaceAllUsesWith(Builder.createAnd(
+        X, Plan->getConstantInt(*APC - 1), Def->getDebugLoc()));
+  }
+
   if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_APInt(APC))) &&
       APC->isPowerOf2()) {
     auto *MulR = cast<VPRecipeWithIRFlags>(Def);
@@ -5354,32 +5363,25 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       transformToPartialReduction(Chain, Plan, Phi);
 }
 
-/// Check if \p VPI is a bounded (i % 2^N) load we can widen. This requires the
-/// vector factor to divide the bound, so that each VF-wide load stays within a
-/// single 2^N window.
-static bool canCreateBoundedLoad(VPInstruction *VPI, VFRange &Range,
-                                 VPCostContext &Ctx) {
-  if (VPI->getOpcode() != Instruction::Load)
-    return false;
-
-  Type *ScalarTy = VPI->getScalarType();
-  if (hasIrregularType(ScalarTy, Ctx.L->getHeader()->getDataLayout()))
-    return false;
-
+/// Check if the bounded (i % 2^N) load \p VPI can be widened as a consecutive
+/// load. This requires the vector factor to divide the bound, so that each
+/// VF-wide load stays within a single 2^N window.
+static bool canWidenBoundedLoad(VPInstruction *VPI, VFRange &Range,
+                                VPCostContext &Ctx) {
   const SCEV *PtrSCEV =
       vputils::getSCEVExprForVPValue(VPI->getOperand(0), Ctx.PSE, Ctx.L);
-  uint64_t Bound =
-      getBoundForConsecutiveLoad(PtrSCEV, ScalarTy, Ctx.L, *Ctx.PSE.getSE());
+  uint64_t Bound = getBoundForConsecutiveLoad(PtrSCEV, VPI->getScalarType(),
+                                              Ctx.L, *Ctx.PSE.getSE());
   if (Bound == 0)
     return false;
 
   // Only widen for VFs that divide the bound, so each VF-wide load stays within
   // a single window and does not wrap.
-  auto DividesBound = [&](ElementCount VF) {
-    return ElementCount::getFixed(Bound).isKnownMultipleOf(VF);
-  };
-  return LoopVectorizationPlanner::getDecisionAndClampRange(DividesBound,
-                                                            Range);
+  return LoopVectorizationPlanner::getDecisionAndClampRange(
+      [&](ElementCount VF) {
+        return ElementCount::getFixed(Bound).isKnownMultipleOf(VF);
+      },
+      Range);
 }
 
 void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
@@ -5503,17 +5505,15 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
   VPlanTransforms::runPass(
       "widenConsecutiveMemOps", ProcessSubset, Plan, [&](VPInstruction *VPI) {
         Instruction *I = VPI->getUnderlyingInstr();
-
-        VPBuilder Builder(VPI);
         bool IsLoad = VPI->getOpcode() == Instruction::Load;
-        if (IsLoad && !LoopHasStore &&
-            canCreateBoundedLoad(VPI, Range, CostCtx)) {
-          auto *Load = cast<LoadInst>(VPI->getUnderlyingInstr());
-          auto *LoadR = Builder.createWidenLoad(
-              *Load, VPI->getOperand(0), /*Mask=*/nullptr,
-              /*Consecutive=*/true, *VPI, Load->getDebugLoc());
-          return ReplaceWith(VPI, LoadR);
-        }
+        // A bounded load is widened without a mask, so it must not be
+        // predicated.
+        if (IsLoad && !LoopHasStore && !RecipeBuilder.isPredicatedInst(I) &&
+            canWidenBoundedLoad(VPI, Range, CostCtx))
+          return ReplaceWith(VPI, VPBuilder(VPI).createWidenLoad(
+                                      *cast<LoadInst>(I), VPI->getOperand(0),
+                                      /*Mask=*/nullptr, /*Consecutive=*/true,
+                                      *VPI, VPI->getDebugLoc()));
 
         VPValue *Ptr = VPI->getOperand(!IsLoad);
         Type *ScalarTy =
@@ -5533,6 +5533,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                 getLoadStoreAddressSpace(I)))
           return false;
 
+        VPBuilder Builder(VPI);
         VPSingleDefRecipe *VectorPtr = Builder.createConsecutiveVectorPointer(
             Ptr, ScalarTy, Reverse, VPI->getDebugLoc());
 

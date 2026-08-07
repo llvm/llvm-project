@@ -121,7 +121,7 @@ bool DeclFinderASTVisitor::VisitNamedDecl(NamedDecl *D) {
 /// Forward any declaration references to the actual check on the
 /// referenced declaration.
 bool DeclFinderASTVisitor::VisitDeclRefExpr(DeclRefExpr *DeclRef) {
-  if (auto *D = dyn_cast<NamedDecl>(DeclRef->getDecl()))
+  if (ValueDecl *D = DeclRef->getDecl())
     return VisitNamedDecl(D);
   return true;
 }
@@ -591,7 +591,7 @@ bool ForLoopIndexUseVisitor::TraverseMemberExpr(MemberExpr *Member) {
 /// operator->(). The one exception is allowing vector::at() for pseudoarrays.
 bool ForLoopIndexUseVisitor::TraverseCXXMemberCallExpr(
     CXXMemberCallExpr *MemberCall) {
-  auto *Member =
+  const auto *Member =
       dyn_cast<MemberExpr>(MemberCall->getCallee()->IgnoreParenImpCasts());
   if (!Member)
     return VisitorBase::TraverseCXXMemberCallExpr(MemberCall);
