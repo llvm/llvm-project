@@ -9,19 +9,16 @@ struct A {
 A& getA();
 A* getAPtr();
 
-// Should trigger the check for shared_ptr constructor
 void test_shared_ptr_constructor() {
   std::shared_ptr<A> a(&getA());
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: passing a raw pointer '&getA()' to std::shared_ptr constructor may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
-// Should trigger the check for unique_ptr constructor  
 void test_unique_ptr_constructor() {
   std::unique_ptr<A> b(&getA());
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: passing a raw pointer '&getA()' to std::unique_ptr constructor may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
-// Should trigger for stack variables
 void test_stack_variable() {
   int x = 5;
   std::unique_ptr<int> ptr(&x);
@@ -37,19 +34,16 @@ struct S {
   }
 };
 
-// Should trigger for pointer returned from function
 void test_function_return() {
   std::shared_ptr<A> sp(getAPtr());
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'getAPtr()' to std::shared_ptr constructor may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
-// Should NOT trigger for new expressions - these are OK
 void test_new_expression_ok() {
   std::shared_ptr<A> a(new A());
   std::unique_ptr<A> b(new A());
 }
 
-// Should NOT trigger for release() calls - ownership transfer
 void test_release_ok(std::unique_ptr<A> p1, std::shared_ptr<A> p3) {
   std::unique_ptr<A> p2(p1.release());
   std::shared_ptr<A> p4(p3.release());
@@ -59,7 +53,6 @@ struct NoopDeleter {
     void operator() (A* p) {}
 };
 
-// Should NOT trigger for custom deleters
 void test_custom_deleter_ok() {
   auto noop_deleter = [](A* p) {  };
   std::unique_ptr<A, NoopDeleter> p0(&getA());
@@ -67,13 +60,11 @@ void test_custom_deleter_ok() {
   std::shared_ptr<A> p2(&getA(), noop_deleter);
 }
 
-// Should NOT trigger for nullptr
 void test_nullptr_ok() {
   std::shared_ptr<A> a(nullptr);
   std::unique_ptr<A> b(nullptr);
 }
 
-// Should NOT trigger for copy and move constructors
 void test_copy_move_constructor_ok(std::shared_ptr<A> sp, std::unique_ptr<A> up) {
   auto sp2 = sp;
 
@@ -81,21 +72,18 @@ void test_copy_move_constructor_ok(std::shared_ptr<A> sp, std::unique_ptr<A> up)
   auto up3 = std::move(up);
 }
 
-// Should trigger the check for shared_ptr reset
 void test_shared_ptr_reset() {
   std::shared_ptr<A> a;
   a.reset(&getA());
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: passing a raw pointer '&getA()' to std::shared_ptr::reset() may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
-// Should trigger the check for unique_ptr reset
 void test_unique_ptr_reset() {
   std::unique_ptr<A> b;
   b.reset(&getA());
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: passing a raw pointer '&getA()' to std::unique_ptr::reset() may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
-// Should trigger for stack variables with reset
 void test_stack_variable_reset() {
   int x = 5;
   std::unique_ptr<int> ptr;
@@ -103,14 +91,12 @@ void test_stack_variable_reset() {
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: passing a raw pointer '&x' to std::unique_ptr::reset() may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
-// Should trigger for pointer returned from function with reset
 void test_function_return_reset() {
   std::shared_ptr<A> sp;
   sp.reset(getAPtr());
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'getAPtr()' to std::shared_ptr::reset() may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
-// Should NOT trigger for new expressions with reset - these are OK
 void test_new_expression_reset_ok() {
   std::shared_ptr<A> a;
   a.reset(new A());
@@ -118,7 +104,6 @@ void test_new_expression_reset_ok() {
   b.reset(new A());
 }
 
-// Should NOT trigger for release() calls with reset - ownership transfer
 void test_release_reset_ok(std::unique_ptr<A> p1, std::shared_ptr<A> p3) {
   std::unique_ptr<A> p2;
   p2.reset(p1.release());
@@ -126,7 +111,6 @@ void test_release_reset_ok(std::unique_ptr<A> p1, std::shared_ptr<A> p3) {
   p4.reset(p3.release());
 }
 
-// Should NOT trigger for custom deleters with reset
 void test_custom_deleter_reset_ok() {
   auto noop_deleter = [](A* p) {  };
   std::unique_ptr<A, NoopDeleter> p0;
@@ -137,7 +121,6 @@ void test_custom_deleter_reset_ok() {
   p2.reset(&getA(), noop_deleter);
 }
 
-// Should NOT trigger for nullptr with reset
 void test_nullptr_reset_ok() {
   std::shared_ptr<A> a;
   a.reset(nullptr);

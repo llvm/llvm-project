@@ -8,13 +8,11 @@ struct A {
 
 A arr[10];
 
-// Should trigger the check for unique_ptr constructor  
 void test_unique_ptr_constructor() {
   std::unique_ptr<A[]> b(arr);
   // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: passing a raw pointer 'arr' to std::unique_ptr constructor may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
-// Should trigger for stack variables
 void test_stack_variable() {
   int x[10] = {5};
   std::unique_ptr<int[]> ptr(x);
@@ -30,12 +28,10 @@ struct S {
   }
 };
 
-// Should NOT trigger for new expressions - these are OK
 void test_new_expression_ok() {
   std::unique_ptr<A[]> b(new A[10]);
 }
 
-// Should NOT trigger for release() calls - ownership transfer
 void test_release_ok(std::unique_ptr<A[]> p1) {
   std::unique_ptr<A[]> p2(p1.release());
 }
@@ -44,31 +40,26 @@ struct NoopDeleter {
     void operator() (A* p) {}
 };
 
-// Should NOT trigger for custom deleters
 void test_custom_deleter_ok() {
   auto noop_deleter = [](A* p) {  };
   std::unique_ptr<A[], NoopDeleter> p0(arr);
   std::unique_ptr<A[], decltype(noop_deleter)> p1(arr, noop_deleter);
 }
 
-// Should NOT trigger for nullptr
 void test_nullptr_ok() {
   std::unique_ptr<A[]> b(nullptr);
 }
 
-// Should NOT trigger for copy and move constructors
 void test_copy_move_constructor_ok(std::unique_ptr<A[]> up) {
   auto up3 = std::move(up);
 }
 
-// Should trigger the check for unique_ptr reset
 void test_unique_ptr_reset() {
   std::unique_ptr<A[]> b;
   b.reset(arr);
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: passing a raw pointer 'arr' to std::unique_ptr::reset() may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
-// Should trigger for stack variables with reset
 void test_stack_variable_reset() {
   int x[10] = {5};
   std::unique_ptr<int[]> ptr;
@@ -76,19 +67,16 @@ void test_stack_variable_reset() {
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: passing a raw pointer 'x' to std::unique_ptr::reset() may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
-// Should NOT trigger for new expressions with reset - these are OK
 void test_new_expression_reset_ok() {
   std::unique_ptr<A[]> b;
   b.reset(new A[10]);
 }
 
-// Should NOT trigger for release() calls with reset - ownership transfer
 void test_release_reset_ok(std::unique_ptr<A[]> p1) {
   std::unique_ptr<A[]> p2;
   p2.reset(p1.release());
 }
 
-// Should NOT trigger for custom deleters with reset
 void test_custom_deleter_reset_ok() {
   auto noop_deleter = [](A* p) {  };
   std::unique_ptr<A[], NoopDeleter> p0;
@@ -97,7 +85,6 @@ void test_custom_deleter_reset_ok() {
   p1.reset(arr, noop_deleter);
 }
 
-// Should NOT trigger for nullptr with reset
 void test_nullptr_reset_ok() {
   std::unique_ptr<A[]> b;
   b.reset(nullptr);
