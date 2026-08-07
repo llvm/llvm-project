@@ -855,6 +855,21 @@ VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Ex,
   getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, Ex, *this);
 }
 
+void ExprEngine::VisitStmtExpr(const StmtExpr *S, ExplodedNode *Pred,
+                               ExplodedNodeSet &Dst) {
+  const auto *SE = cast<StmtExpr>(S);
+  if (SE->getSubStmt()->body_empty()) {
+    // Empty statement expression.
+    assert(SE->getType() == getContext().VoidTy &&
+           "Empty statement expression must have void type.");
+  } else if (const auto *LastExpr =
+                 dyn_cast<Expr>(*SE->getSubStmt()->body_rbegin())) {
+    SVal Val = Pred->getState()->getSVal(LastExpr, Pred->getStackFrame());
+    Pred = Engine.makeNodeWithBinding(Pred, SE, Val);
+  }
+  Dst.insert(Pred);
+}
+
 void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
                                     ExplodedNodeSet &Dst) {
   // FIXME: Prechecks eventually go in ::Visit().

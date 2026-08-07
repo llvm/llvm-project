@@ -618,6 +618,9 @@ public:
   void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Ex,
                                      ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
+  void VisitStmtExpr(const StmtExpr *S, ExplodedNode *Pred,
+                     ExplodedNodeSet &Dst);
+
   /// VisitUnaryOperator - Transfer function logic for unary operators.
   void VisitUnaryOperator(const UnaryOperator* B, ExplodedNode *Pred,
                           ExplodedNodeSet &Dst);

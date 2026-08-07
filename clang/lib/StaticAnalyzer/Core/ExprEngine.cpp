@@ -2300,21 +2300,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
                                     Dst);
       break;
 
-    case Stmt::StmtExprClass: {
-      const auto *SE = cast<StmtExpr>(S);
-
-      if (SE->getSubStmt()->body_empty()) {
-        // Empty statement expression.
-        assert(SE->getType() == getContext().VoidTy
-               && "Empty statement expression must have void type.");
-      } else if (const auto *LastExpr =
-                     dyn_cast<Expr>(*SE->getSubStmt()->body_rbegin())) {
-        SVal Val = Pred->getState()->getSVal(LastExpr, Pred->getStackFrame());
-        Pred = Engine.makeNodeWithBinding(Pred, SE, Val);
-      }
-      Dst.insert(Pred);
+    case Stmt::StmtExprClass:
+      VisitStmtExpr(cast<StmtExpr>(S), Pred, Dst);
       break;
-    }
 
     case Stmt::UnaryOperatorClass: {
       const auto *U = cast<UnaryOperator>(S);
