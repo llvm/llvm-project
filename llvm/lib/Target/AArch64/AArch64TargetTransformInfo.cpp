@@ -588,7 +588,7 @@ static InstructionCost getHistogramCost(const AArch64Subtarget *ST,
   //        using ptrue with a specific VL.
   if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy)) {
     unsigned EC = VTy->getElementCount().getKnownMinValue();
-    if (!isPowerOf2_64(EC) || !VTy->isScalableTy())
+    if (!isPowerOf2_64(EC) || !VTy->isScalableTy() || EC == 1)
       return InstructionCost::getInvalid();
 
     // HistCnt only supports 32b and 64b element types
