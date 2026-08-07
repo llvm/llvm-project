@@ -1009,7 +1009,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   if (ST.hasBF16PackedInsts()) {
-    FPOpActions.customFor({BF16}).legalFor({V2BF16});
+    FPOpActions.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
+        .legalFor({V2BF16});
   }
 
   auto &MinNumMaxNumIeee =
@@ -2290,42 +2291,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   verify(*ST.getInstrInfo());
 }
 
-bool AMDGPULegalizerInfo::legalizeScalarBF16ToPackedBF16Op(
-    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
-  Register Dst = MI.getOperand(0).getReg();
-  LLT DstTy = MRI.getType(Dst);
-
-  // Only handle scalar bf16
-  if (DstTy != LLT::bfloat16())
-    return false;
-
-  unsigned Opc = MI.getOpcode();
-  LLT V2BF16 = LLT::fixed_vector(2, LLT::bfloat16());
-  Register UndefBF16 = B.buildUndef(LLT::bfloat16()).getReg(0);
-
-  // Widen all source operands to v2bf16
-  SmallVector<Register, 3> WideSrcs;
-  for (const MachineOperand &MO : llvm::drop_begin(MI.operands())) {
-    Register Src = MO.getReg();
-    Register WideSrc = B.buildBuildVector(V2BF16, {Src, UndefBF16}).getReg(0);
-    WideSrcs.push_back(WideSrc);
-  }
-
-  // Build the wide operation
-  auto MIB = B.buildInstr(Opc)
-                 .addDef(MRI.createGenericVirtualRegister(V2BF16))
-                 .setMIFlags(MI.getFlags());
-  for (Register WideSrc : WideSrcs)
-    MIB.addUse(WideSrc);
-  Register WideResult = MIB.getReg(0);
-
-  // Extract element 0
-  B.buildExtractVectorElementConstant(Dst, WideResult, 0);
-
-  MI.eraseFromParent();
-  return true;
-}
-
 bool AMDGPULegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
@@ -2429,11 +2394,6 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeTrap(MI, MRI, B);
   case TargetOpcode::G_DEBUGTRAP:
     return legalizeDebugTrap(MI, MRI, B);
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FMA:
-  case TargetOpcode::G_FCANONICALIZE:
-    return legalizeScalarBF16ToPackedBF16Op(MI, MRI, B);
   default:
     return false;
   }
