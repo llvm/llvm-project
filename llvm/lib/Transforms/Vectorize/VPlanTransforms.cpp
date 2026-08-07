@@ -5640,29 +5640,27 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
     const SCEVPredicate *NewPred =
         SE->getComparePredicate(CmpInst::ICMP_EQ, ToMultiVersion, MVConst);
 
-    // Check if new predicate implies that vectorizing a loop of such trip count
-    // is meaningless. The heuristic here could probably be improved.
     auto *PredicatedMaxBTC = SE->rewriteUsingPredicate(
         SE->getSymbolicMaxBackedgeTakenCount(CostCtx.L), CostCtx.L,
         StridePredicates.getUnionWith(NewPred, *SE)
             .getUnionWith(&CostCtx.PSE.getPredicate(), *SE));
+    Type *BTCTy = PredicatedMaxBTC->getType();
 
-    if (LoopVectorizationPlanner::getDecisionAndClampRange(
+    // If predicate implies scalar loop never takes the backedge, don't perform
+    // multiversioning.
+    if (SE->isKnownPredicate(ICmpInst::ICMP_ULT, PredicatedMaxBTC,
+                             SE->getOne(BTCTy)))
+      continue;
+
+    // If we don't fold the tail, we need enough scalar iterations to fill the
+    // full vector.
+    if (!Plan.hasTailFolded() &&
+        LoopVectorizationPlanner::getDecisionAndClampRange(
             [&](ElementCount VF) {
-              auto *Ty = PredicatedMaxBTC->getType();
-              // Need at least two iterations:
-              const SCEV *MinMeaningfulBTC = SE->getOne(Ty);
-
-              // If we don't fold the tail, we need enough scalar iterations to
-              // fill the full vector. At least as of now `SE->isKnownPredicate`
-              // won't be able to reason about scalable element count so limit
-              // this refinement to fixed vectors for now:
-              if (!Plan.hasTailFolded() && !VF.isScalable())
-                MinMeaningfulBTC = SE->getAddExpr(SE->getElementCount(Ty, VF),
-                                                  SE->getMinusOne(Ty));
-
-              return SE->isKnownPredicate(ICmpInst::ICMP_ULT, PredicatedMaxBTC,
-                                          MinMeaningfulBTC);
+              return SE->isKnownPredicate(
+                  ICmpInst::ICMP_ULT, PredicatedMaxBTC,
+                  SE->getAddExpr(SE->getElementCount(BTCTy, VF),
+                                 SE->getMinusOne(BTCTy)));
             },
             Range))
       continue;
