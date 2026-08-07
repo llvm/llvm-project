@@ -13097,7 +13097,9 @@ bool ScalarEvolution::isImpliedViaOperations(CmpPredicate Pred, const SCEV *LHS,
                                   FoundRHS, Depth + 1);
   };
 
-  if (auto *LHSAddExpr = dyn_cast<SCEVAddExpr>(LHS)) {
+  SCEVUse LL;
+  SCEVUse LR;
+  if (match(LHS, m_scev_NSWAdd(m_SCEV(LL), m_SCEV(LR)))) {
     // We want to avoid creation of any new non-constant SCEV. Since we are
     // going to compare the operands to RHS, we should be certain that we don't
     // need any size extensions for this. So let's decline all cases when the
@@ -13106,12 +13108,6 @@ bool ScalarEvolution::isImpliedViaOperations(CmpPredicate Pred, const SCEV *LHS,
     if (getTypeSizeInBits(LHS->getType()) != getTypeSizeInBits(RHS->getType()))
       return false;
 
-    // Should not overflow.
-    if (!LHSAddExpr->hasNoSignedWrap())
-      return false;
-
-    SCEVUse LL = LHSAddExpr->getOperand(0);
-    SCEVUse LR = LHSAddExpr->getOperand(1);
     auto *MinusOne = getMinusOne(RHS->getType());
 
     // Checks that S1 >= 0 && S2 > RHS, trivially or using the found context.
