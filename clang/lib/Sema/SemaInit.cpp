@@ -1362,8 +1362,8 @@ void InitListChecker::CheckExplicitInitList(const InitializedEntity &Entity,
   // Don't complain for incomplete types, since we'll get an error elsewhere.
   if ((Index < IList->getNumInits() || CurEmbed) && !T->isIncompleteType()) {
     // We have leftover initializers
-    Expr *ExtraInit = Index < IList->getNumInits() ? IList->getInit(Index)
-                                                   : CurEmbed;
+    Expr *ExtraInit =
+        Index < IList->getNumInits() ? IList->getInit(Index) : CurEmbed;
     SourceLocation ExtraInitLoc =
         ExtraInit ? ExtraInit->getBeginLoc() : IList->getEndLoc();
     SourceRange ExtraInitRange =
@@ -1373,8 +1373,7 @@ void InitListChecker::CheckExplicitInitList(const InitializedEntity &Entity,
     hadError = ExtraInitsIsError;
     if (VerifyOnly) {
       return;
-    } else if (StructuredIndex == 1 &&
-               StructuredList->getNumInits() != 0 &&
+    } else if (StructuredIndex == 1 && StructuredList->getNumInits() != 0 &&
                StructuredList->getInit(0) &&
                IsStringInit(StructuredList->getInit(0), T, SemaRef.Context) ==
                    SIF_None) {
