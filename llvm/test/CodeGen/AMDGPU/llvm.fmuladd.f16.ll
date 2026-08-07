@@ -821,22 +821,22 @@ define amdgpu_kernel void @fmuladd_v2f16(
 ; VI-FLUSH-NEXT:    s_mov_b32 s14, s10
 ; VI-FLUSH-NEXT:    s_mov_b32 s15, s11
 ; VI-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-FLUSH-NEXT:    s_mov_b32 s12, s2
-; VI-FLUSH-NEXT:    s_mov_b32 s13, s3
 ; VI-FLUSH-NEXT:    s_mov_b32 s16, s4
 ; VI-FLUSH-NEXT:    s_mov_b32 s17, s5
-; VI-FLUSH-NEXT:    s_mov_b32 s18, s10
-; VI-FLUSH-NEXT:    s_mov_b32 s19, s11
 ; VI-FLUSH-NEXT:    s_mov_b32 s4, s6
 ; VI-FLUSH-NEXT:    s_mov_b32 s5, s7
 ; VI-FLUSH-NEXT:    s_mov_b32 s6, s10
 ; VI-FLUSH-NEXT:    s_mov_b32 s7, s11
-; VI-FLUSH-NEXT:    buffer_load_dword v0, off, s[12:15], 0
+; VI-FLUSH-NEXT:    s_mov_b32 s12, s2
+; VI-FLUSH-NEXT:    s_mov_b32 s13, s3
+; VI-FLUSH-NEXT:    s_mov_b32 s18, s10
+; VI-FLUSH-NEXT:    s_mov_b32 s19, s11
 ; VI-FLUSH-NEXT:    buffer_load_dword v1, off, s[4:7], 0
+; VI-FLUSH-NEXT:    buffer_load_dword v0, off, s[12:15], 0
 ; VI-FLUSH-NEXT:    buffer_load_dword v2, off, s[16:19], 0
 ; VI-FLUSH-NEXT:    s_mov_b32 s8, s0
 ; VI-FLUSH-NEXT:    s_mov_b32 s9, s1
-; VI-FLUSH-NEXT:    s_waitcnt vmcnt(1)
+; VI-FLUSH-NEXT:    s_waitcnt vmcnt(2)
 ; VI-FLUSH-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; VI-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; VI-FLUSH-NEXT:    v_mac_f16_sdwa v3, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
