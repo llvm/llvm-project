@@ -322,6 +322,49 @@ llvm_canonicalize_cmake_booleans(
 
 set(LLDB_TEST_SWIFT_DRIVER_EXTRA_FLAGS "" CACHE STRING
     "Additional swift driver arguments for LLDB shell tests")
+
+# Swift tests require the swift compiler and the swift standard library.
+set(_check_lldb_swift_deps "")
+if(TARGET swift-frontend)
+  list(APPEND _check_lldb_swift_deps swift-frontend)
+endif()
+if(TARGET swift-stdlib-macosx)
+  list(APPEND _check_lldb_swift_deps swift-stdlib-macosx)
+endif()
+# Swift Embedded tests require the standard library.
+if(TARGET embedded-libraries)
+  list(APPEND _check_lldb_swift_deps embedded-libraries)
+endif()
+if(TARGET embedded-stdlib)
+  list(APPEND _check_lldb_swift_deps embedded-stdlib)
+endif()
+# Swift macros in LLDB tests require the plugin server.
+if(TARGET swift-plugin-server)
+  list(APPEND _check_lldb_swift_deps swift-plugin-server)
+endif()
+if(_check_lldb_swift_deps)
+  add_lldb_test_dependency(${_check_lldb_swift_deps})
+endif()
+
+# The LLDB asan/tsan tests link test programs against the sanitizer dylib found
+# in build/lib/lldb/clang/lib/darwin/ (CLANG_RT_DIR in Makefile.rules).
+# That directory is populated by the copy-clang-resource-dir build step which
+# copies build/lib/swift/clang -> build/lib/lldb/clang/.
+#
+# `runtimes` is not defined at this point (llvm/CMakeLists.txt creates it later
+# in add_subdirectory(runtimes)), so we reference it as a forward dependency.
+# FIXME: We should be able to change the directory in the tests.
+if(APPLE AND "compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  add_custom_target(lldb-copy-llvm-sanitizers
+    COMMAND "${CMAKE_COMMAND}" "-E" "copy_directory"
+            "${CMAKE_BINARY_DIR}/lib/swift/clang/lib/darwin"
+            "${CMAKE_BINARY_DIR}/lib/lldb/clang/lib/darwin"
+    COMMENT "Syncing LLVM-built sanitizer dylibs into LLDB clang resource dir"
+    VERBATIM
+  )
+  add_dependencies(lldb-copy-llvm-sanitizers runtimes)
+  add_lldb_test_dependency(lldb-copy-llvm-sanitizers)
+endif()
 # END SWIFT
 
 # Configure the individual test suites.
