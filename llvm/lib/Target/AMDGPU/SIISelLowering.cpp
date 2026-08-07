@@ -957,6 +957,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     AddPromotedToType(ISD::SELECT, MVT::v2i16, MVT::i32);
     setOperationAction(ISD::SELECT, MVT::v2f16, Promote);
     AddPromotedToType(ISD::SELECT, MVT::v2f16, MVT::i32);
+    setOperationAction(ISD::SELECT, MVT::v2bf16, Promote);
+    AddPromotedToType(ISD::SELECT, MVT::v2bf16, MVT::i32);
   } else {
     // Legalization hack.
     setOperationAction(ISD::SELECT, {MVT::v2i16, MVT::v2f16}, Custom);

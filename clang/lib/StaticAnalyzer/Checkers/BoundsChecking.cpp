@@ -74,16 +74,10 @@ static bool isUnsigned(SValBuilder &SVB, NonLoc Value) {
   return T->isUnsignedIntegerType();
 }
 
-// Evaluate the comparison Value < Threshold with the help of the custom
-// simplification algorithm defined for this checker. Return a pair of states,
-// where the first one corresponds to "value below threshold" and the second
-// corresponds to "value at or above threshold". Returns {nullptr, nullptr} in
-// the case when the evaluation fails.
-// If the optional argument CheckEquality is true, then use BO_EQ instead of
-// the default BO_LT after consistently applying the same simplification steps.
-static std::pair<ProgramStateRef, ProgramStateRef>
-compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
-                        SValBuilder &SVB, bool CheckEquality = false) {
+std::pair<ProgramStateRef, ProgramStateRef>
+bounds::compareValueToThreshold(ProgramStateRef State, SValBuilder &SVB,
+                                NonLoc Value, NonLoc Threshold,
+                                bool CheckEquality) {
   if (auto ConcreteThreshold = Threshold.getAs<nonloc::ConcreteInt>()) {
     std::tie(Value, Threshold) =
         getSimplifiedOffsets(Value, *ConcreteThreshold, SVB);
@@ -141,7 +135,7 @@ bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
   // CHECK LOWER BOUND
   if (Flags.CheckUnderflow) {
     auto [PrecedesLowerBound, WithinLowerBound] =
-        compareValueToThreshold(State, Offset, SVB.makeZeroArrayIndex(), SVB);
+        compareValueToThreshold(State, SVB, Offset, SVB.makeZeroArrayIndex());
 
     if (PrecedesLowerBound) {
       // The analyzer thinks that the offset may be invalid (negative)...
@@ -196,25 +190,14 @@ bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
     // In this situation the warning message should mention both possibilities.
 
     auto [WithinUpperBound, ExceedsUpperBound] =
-        compareValueToThreshold(State, Offset, *Extent, SVB);
+        compareValueToThreshold(State, SVB, Offset, *Extent);
 
     if (ExceedsUpperBound) {
       // The offset may be invalid (>= Size)...
       Res.ExtentIfMayOverflow = Extent;
 
       if (!WithinUpperBound) {
-        // ...and it cannot be within bounds, so report an error, unless we can
-        // definitely determine that this is an idiomatic `&array[size]`
-        // expression that calculates the past-the-end pointer.
-        if (Flags.AcceptPastTheEnd) {
-          auto [EqualsToThreshold, NotEqualToThreshold] =
-              compareValueToThreshold(State, Offset, *Extent, SVB,
-                                      /*CheckEquality=*/true);
-          if (EqualsToThreshold && !NotEqualToThreshold) {
-            Res.ExtentIfMayOverflow = std::nullopt;
-            Res.InBoundsState = EqualsToThreshold;
-          }
-        }
+        // ...and it cannot be within bounds.
         return Res;
       }
     }
