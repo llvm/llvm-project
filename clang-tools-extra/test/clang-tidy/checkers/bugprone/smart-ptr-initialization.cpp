@@ -141,3 +141,11 @@ void test_array_release(std::shared_ptr<A[]> spa) {
   sp.reset(spa.release());
   // This would be caught by bugprone-shared-ptr-array-mismatch checks (mismatched new/delete)
 }
+
+template<typename T>
+void test_shared_ptr_constructor_template() {
+  T a(&getA());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: passing a raw pointer '&getA()' to std::shared_ptr constructor may cause double deletion [bugprone-smart-ptr-initialization]
+}
+
+int a = (test_shared_ptr_constructor_template<std::shared_ptr<A>>(), 0);

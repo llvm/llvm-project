@@ -105,7 +105,7 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
 
       on(hasType(hasUnqualifiedDesugaredType(recordType(
           hasDeclaration(classTemplateSpecializationDecl(IsSmartPtr)))))),
-      callee(cxxMethodDecl(hasParent(cxxRecordDecl().bind("method-parent")),
+      callee(cxxMethodDecl(ofClass(IsSmartPtrRecord.bind("method-parent")),
                            hasName("reset"))
                  .bind("method-decl")),
       hasArgument(0, PointerArg), unless(HasCustomDeleterInReset),

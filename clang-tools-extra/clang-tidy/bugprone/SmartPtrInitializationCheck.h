@@ -25,10 +25,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
-  std::optional<TraversalKind> getCheckTraversalKind() const override {
-    return TK_IgnoreUnlessSpelledInSource;
-  }
-
 private:
   std::string getPointerDescription(const Expr *PointerExpr,
                                     ASTContext &Context);
