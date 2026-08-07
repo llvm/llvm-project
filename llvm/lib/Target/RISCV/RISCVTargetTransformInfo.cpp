@@ -2717,7 +2717,7 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
                                        RISCV::VSLIDEUP_VX},
                                       LT.second, CostKind)
             : getRISCVInstructionCost({RISCV::VSLIDEDOWN_VX, RISCV::VMV_X_S,
-                                       RISCV::VSRL_VX, RISCV::VMV_S_X},
+                                       RISCV::VSRL_VX, RISCV::VMV_X_S},
                                       LT.second, CostKind);
   }
   return BaseCost + SlideCost;
