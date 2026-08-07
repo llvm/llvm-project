@@ -126,22 +126,22 @@ public:
   }
   // Cache hint SM/PTX version requirements
   bool hasL1EvictionHint() const {
-    return getSmVersion() >= 70 && PTXVersion >= 74;
+    return hasFeature(NVPTX::SM70) && PTXVersion >= 74;
   }
   bool hasL2EvictionHint() const {
-    return getSmVersion() >= 100 && PTXVersion >= 88;
+    return hasFeature(NVPTX::SM100) && PTXVersion >= 88;
   }
   bool hasL2Prefetch64B() const {
-    return getSmVersion() >= 75 && PTXVersion >= 74;
+    return hasFeature(NVPTX::SM75) && PTXVersion >= 74;
   }
   bool hasL2Prefetch128B() const {
-    return getSmVersion() >= 75 && PTXVersion >= 74;
+    return hasFeature(NVPTX::SM75) && PTXVersion >= 74;
   }
   bool hasL2Prefetch256B() const {
-    return getSmVersion() >= 80 && PTXVersion >= 74;
+    return hasFeature(NVPTX::SM80) && PTXVersion >= 74;
   }
   bool hasL2CacheHint() const {
-    return getSmVersion() >= 80 && PTXVersion >= 74;
+    return hasFeature(NVPTX::SM80) && PTXVersion >= 74;
   }
 
   // Checks following instructions support:
