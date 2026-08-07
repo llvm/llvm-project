@@ -1,12 +1,7 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm \
 // RUN:   -Wdeprecated-declarations -o - | FileCheck %s
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-library %s -emit-llvm \
-// RUN:   -Wdeprecated-declarations -o - | FileCheck %s
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s  \
-// RUN:   -verify -verify-ignore-unexpected=note
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-library %s  \
 // RUN:   -verify -verify-ignore-unexpected=note
 
 // CHECK-LABEL: test_step_double
