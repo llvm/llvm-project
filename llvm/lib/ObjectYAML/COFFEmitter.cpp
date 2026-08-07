@@ -328,31 +328,29 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic,
 static bool writeCOFF(COFFParser &CP, ContiguousBlobAccumulator &CBA) {
   // Calculate number of symbols.
   CP.Obj.Header.NumberOfSymbols = 0;
-  for (std::vector<COFFYAML::Symbol>::iterator i = CP.Obj.Symbols.begin(),
-                                               e = CP.Obj.Symbols.end();
-       i != e; ++i) {
+  for (COFFYAML::Symbol &Sym : CP.Obj.Symbols) {
     uint32_t NumberOfAuxSymbols = 0;
-    if (i->FunctionDefinition)
+    if (Sym.FunctionDefinition)
       NumberOfAuxSymbols += 1;
-    if (i->bfAndefSymbol)
+    if (Sym.bfAndefSymbol)
       NumberOfAuxSymbols += 1;
-    if (i->WeakExternal)
+    if (Sym.WeakExternal)
       NumberOfAuxSymbols += 1;
-    if (!i->File.empty())
+    if (!Sym.File.empty())
       NumberOfAuxSymbols +=
-          (i->File.size() + CP.getSymbolSize() - 1) / CP.getSymbolSize();
-    if (i->SectionDefinition)
+          (Sym.File.size() + CP.getSymbolSize() - 1) / CP.getSymbolSize();
+    if (Sym.SectionDefinition)
       NumberOfAuxSymbols += 1;
-    if (i->CLRToken)
+    if (Sym.CLRToken)
       NumberOfAuxSymbols += 1;
-    i->Header.NumberOfAuxSymbols = NumberOfAuxSymbols;
+    Sym.Header.NumberOfAuxSymbols = NumberOfAuxSymbols;
     CP.Obj.Header.NumberOfSymbols += 1 + NumberOfAuxSymbols;
   }
 
   CP.Obj.Header.NumberOfSections = CP.Obj.Sections.size();
 
   // Save field offsets for writing back their final values.
-  uint64_t PointerToSymbolTableOffset = 0;
+  uint64_t PointerToSymbolTableOffset;
 
   if (CP.isPE()) {
     // PE files start with a DOS stub.
@@ -389,8 +387,7 @@ static bool writeCOFF(COFFParser &CP, ContiguousBlobAccumulator &CBA) {
     CBA.writeZeros(4 * sizeof(uint32_t));
     CBA.write(CP.Obj.Header.NumberOfSections, LittleEndian);
     PointerToSymbolTableOffset = CBA.getOffset();
-    // Write the initial value. The final value is written back later.
-    CBA.write(CP.Obj.Header.PointerToSymbolTable, LittleEndian);
+    CBA.writeZeros(sizeof(CP.Obj.Header.PointerToSymbolTable));
     CBA.write(CP.Obj.Header.NumberOfSymbols, LittleEndian);
   } else {
     CBA.write(CP.Obj.Header.Machine, LittleEndian);
@@ -398,8 +395,7 @@ static bool writeCOFF(COFFParser &CP, ContiguousBlobAccumulator &CBA) {
               LittleEndian);
     CBA.write(CP.Obj.Header.TimeDateStamp, LittleEndian);
     PointerToSymbolTableOffset = CBA.getOffset();
-    // Write the initial value. The final value is written back later.
-    CBA.write(CP.Obj.Header.PointerToSymbolTable, LittleEndian);
+    CBA.writeZeros(sizeof(CP.Obj.Header.PointerToSymbolTable));
     CBA.write(CP.Obj.Header.NumberOfSymbols, LittleEndian);
     CBA.write(CP.Obj.Header.SizeOfOptionalHeader, LittleEndian);
     CBA.write(CP.Obj.Header.Characteristics, LittleEndian);
