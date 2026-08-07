@@ -173,7 +173,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   using ValueVector = SmallVector<Value *, 16>;
 
   ValueVector MemInstr;
-  unsigned NumInsts = 0;
+  uint64_t NumInsts = 0;
 
   // For each block.
   for (BasicBlock *BB : L->blocks()) {
@@ -199,10 +199,13 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   // instructions. On the other hand, if the number of memory instructions is
   // not small, but the loop is large (i.e., it contains many non-memory
   // instructions), the analysis can still be affordable.
-  unsigned NumMemInstr = MemInstr.size();
+  uint64_t NumMemInstr = MemInstr.size();
   LLVM_DEBUG(dbgs() << "Found " << NumMemInstr
                     << " Loads and Stores to analyze\n");
-  if (MaxMemInstrRatio * NumInsts < NumMemInstr * NumMemInstr) {
+  // Compare in 64 bits: in 32-bit arithmetic the ratio product could wrap and
+  // spuriously reject, while the squared memory count could bypass this guard.
+  if (static_cast<uint64_t>(MaxMemInstrRatio) * NumInsts <
+      NumMemInstr * NumMemInstr) {
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoop",
                                       L->getStartLoc(), L->getHeader())
@@ -263,6 +266,18 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         if (D->isConfused()) {
           assert(Dep.empty() && "Expected empty dependency vector");
           Dep.assign(Level, '*');
+        }
+
+        // A direction vector longer than the analyzed nesting depth cannot be
+        // represented in this matrix. The invariant is asserted because both
+        // callers analyze complete chains. Retain a conservative release-mode
+        // bail for any future caller that violates it.
+        assert(Dep.size() <= Level &&
+               "Direction vector is deeper than the analyzed nest");
+        if (Dep.size() > Level) {
+          LLVM_DEBUG(dbgs() << "Direction vector is longer than the analyzed "
+                               "nesting depth; rejecting.\n");
+          return false;
         }
 
         while (Dep.size() != Level) {
