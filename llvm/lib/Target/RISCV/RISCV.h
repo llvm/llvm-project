@@ -62,9 +62,6 @@ void initializeRISCVLateBranchOptPass(PassRegistry &);
 FunctionPass *createRISCVMakeCompressibleOptPass();
 void initializeRISCVMakeCompressibleOptPass(PassRegistry &);
 
-FunctionPass *createRISCVVectorPeepholePass();
-void initializeRISCVVectorPeepholePass(PassRegistry &);
-
 FunctionPass *createRISCVOptWInstrsPass();
 void initializeRISCVOptWInstrsPass(PassRegistry &);
 
