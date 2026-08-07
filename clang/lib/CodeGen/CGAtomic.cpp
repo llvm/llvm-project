@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -529,7 +530,7 @@ static llvm::Value *EmitPostAtomicMinMax(CGBuilderTy &Builder,
                                          bool IsSigned,
                                          llvm::Value *OldVal,
                                          llvm::Value *RHS) {
-  const bool IsFP = OldVal->getType()->isFloatingPointTy();
+  const bool IsFP = OldVal->getType()->isFPOrFPVectorTy();
 
   if (IsFP) {
     llvm::Intrinsic::ID IID = (Op == AtomicExpr::AO__atomic_max_fetch ||
@@ -566,6 +567,13 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   llvm::AtomicRMWInst::BinOp Op = llvm::AtomicRMWInst::Add;
   bool PostOpMinMax = false;
   unsigned PostOp = 0;
+
+  // Atomic operations on a vector are performed elementwise, so it is the
+  // element type which selects between the integer and the floating point
+  // form of an operation.
+  QualType ElemTy = E->getValueType();
+  if (const auto *VecTy = ElemTy->getAs<VectorType>())
+    ElemTy = VecTy->getElementType();
 
   switch (E->getOp()) {
   case AtomicExpr::AO__c11_atomic_init:
@@ -666,30 +674,30 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
 
   case AtomicExpr::AO__atomic_add_fetch:
   case AtomicExpr::AO__scoped_atomic_add_fetch:
-    PostOp = E->getValueType()->isFloatingType() ? llvm::Instruction::FAdd
-                                                 : llvm::Instruction::Add;
+    PostOp = ElemTy->isFloatingType() ? llvm::Instruction::FAdd
+                                      : llvm::Instruction::Add;
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_add:
   case AtomicExpr::AO__hip_atomic_fetch_add:
   case AtomicExpr::AO__opencl_atomic_fetch_add:
   case AtomicExpr::AO__atomic_fetch_add:
   case AtomicExpr::AO__scoped_atomic_fetch_add:
-    Op = E->getValueType()->isFloatingType() ? llvm::AtomicRMWInst::FAdd
-                                             : llvm::AtomicRMWInst::Add;
+    Op = ElemTy->isFloatingType() ? llvm::AtomicRMWInst::FAdd
+                                  : llvm::AtomicRMWInst::Add;
     break;
 
   case AtomicExpr::AO__atomic_sub_fetch:
   case AtomicExpr::AO__scoped_atomic_sub_fetch:
-    PostOp = E->getValueType()->isFloatingType() ? llvm::Instruction::FSub
-                                                 : llvm::Instruction::Sub;
+    PostOp = ElemTy->isFloatingType() ? llvm::Instruction::FSub
+                                      : llvm::Instruction::Sub;
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_sub:
   case AtomicExpr::AO__hip_atomic_fetch_sub:
   case AtomicExpr::AO__opencl_atomic_fetch_sub:
   case AtomicExpr::AO__atomic_fetch_sub:
   case AtomicExpr::AO__scoped_atomic_fetch_sub:
-    Op = E->getValueType()->isFloatingType() ? llvm::AtomicRMWInst::FSub
-                                             : llvm::AtomicRMWInst::Sub;
+    Op = ElemTy->isFloatingType() ? llvm::AtomicRMWInst::FSub
+                                  : llvm::AtomicRMWInst::Sub;
     break;
 
   case AtomicExpr::AO__atomic_min_fetch:
@@ -701,23 +709,22 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__opencl_atomic_fetch_min:
   case AtomicExpr::AO__atomic_fetch_min:
   case AtomicExpr::AO__scoped_atomic_fetch_min:
-    Op = E->getValueType()->isFloatingType()
-             ? llvm::AtomicRMWInst::FMin
-             : (E->getValueType()->isSignedIntegerType()
-                    ? llvm::AtomicRMWInst::Min
-                    : llvm::AtomicRMWInst::UMin);
+    Op = ElemTy->isFloatingType() ? llvm::AtomicRMWInst::FMin
+                                  : (ElemTy->isSignedIntegerType()
+                                         ? llvm::AtomicRMWInst::Min
+                                         : llvm::AtomicRMWInst::UMin);
     break;
 
   case AtomicExpr::AO__atomic_fetch_fminimum:
   case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
-    assert(E->getValueType()->isFloatingType() &&
+    assert(ElemTy->isFloatingType() &&
            "fminimum operations only support floating-point types");
     Op = llvm::AtomicRMWInst::FMinimum;
     break;
 
   case AtomicExpr::AO__atomic_fetch_fminimum_num:
   case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
-    assert(E->getValueType()->isFloatingType() &&
+    assert(ElemTy->isFloatingType() &&
            "fminimum_num operations only support floating-point types");
     Op = llvm::AtomicRMWInst::FMinimumNum;
     break;
@@ -731,23 +738,22 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__opencl_atomic_fetch_max:
   case AtomicExpr::AO__atomic_fetch_max:
   case AtomicExpr::AO__scoped_atomic_fetch_max:
-    Op = E->getValueType()->isFloatingType()
-             ? llvm::AtomicRMWInst::FMax
-             : (E->getValueType()->isSignedIntegerType()
-                    ? llvm::AtomicRMWInst::Max
-                    : llvm::AtomicRMWInst::UMax);
+    Op = ElemTy->isFloatingType() ? llvm::AtomicRMWInst::FMax
+                                  : (ElemTy->isSignedIntegerType()
+                                         ? llvm::AtomicRMWInst::Max
+                                         : llvm::AtomicRMWInst::UMax);
     break;
 
   case AtomicExpr::AO__atomic_fetch_fmaximum:
   case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
-    assert(E->getValueType()->isFloatingType() &&
+    assert(ElemTy->isFloatingType() &&
            "fmaximum operations only support floating-point types");
     Op = llvm::AtomicRMWInst::FMaximum;
     break;
 
   case AtomicExpr::AO__atomic_fetch_fmaximum_num:
   case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
-    assert(E->getValueType()->isFloatingType() &&
+    assert(ElemTy->isFloatingType() &&
            "fmaximum_num operations only support floating-point types");
     Op = llvm::AtomicRMWInst::FMaximumNum;
     break;
@@ -840,8 +846,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   llvm::Value *Result = RMWI;
   if (PostOpMinMax)
     Result = EmitPostAtomicMinMax(CGF.Builder, E->getOp(),
-                                  E->getValueType()->isSignedIntegerType(),
-                                  RMWI, LoadVal1);
+                                  ElemTy->isSignedIntegerType(), RMWI,
+                                  LoadVal1);
   else if (PostOp)
     Result = CGF.Builder.CreateBinOp((llvm::Instruction::BinaryOps)PostOp, RMWI,
                                      LoadVal1);
@@ -868,6 +874,13 @@ EmitValToTemp(CodeGenFunction &CGF, Expr *E) {
 /// floating point operands.  TODO: Allow compare-and-exchange and FP - see
 /// comment in AtomicExpandPass.cpp.
 static bool shouldCastToInt(llvm::Type *ValTy, bool CmpXchg) {
+  // The atomic instructions operate on a vector directly, which is required for
+  // the elementwise arithmetic operations. cmpxchg has no vector form, and a
+  // vector whose size is not a power of two is not a valid atomic operand, so
+  // both are still handled as an integer of the enclosing atomic type's size.
+  if (auto *VecTy = dyn_cast<llvm::FixedVectorType>(ValTy))
+    return CmpXchg ||
+           !llvm::isPowerOf2_64(VecTy->getPrimitiveSizeInBits().getFixedValue());
   if (ValTy->isFloatingPointTy())
     return ValTy->isX86_FP80Ty() || CmpXchg;
   return !ValTy->isIntegerTy() && !ValTy->isPointerTy();
@@ -1571,10 +1584,11 @@ RValue AtomicInfo::ConvertToValueOrAtomic(llvm::Value *Val,
                                           SourceLocation Loc, bool AsValue,
                                           bool CmpXchg) const {
   // Try not to in some easy cases.
-  assert((Val->getType()->isIntegerTy() || Val->getType()->isPointerTy() ||
-          Val->getType()->isIEEELikeFPTy()) &&
-         "Expected integer, pointer or floating point value when converting "
-         "result.");
+  llvm::Type *ValScalarTy = Val->getType()->getScalarType();
+  assert((ValScalarTy->isIntegerTy() || ValScalarTy->isPointerTy() ||
+          ValScalarTy->isIEEELikeFPTy()) &&
+         "Expected integer, pointer or floating point value, or a vector "
+         "thereof, when converting result.");
   if (getEvaluationKind() == TEK_Scalar &&
       (((!LVal.isBitField() ||
          LVal.getBitFieldInfo().Size == ValueSizeInBits) &&

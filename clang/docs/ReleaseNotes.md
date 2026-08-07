@@ -172,6 +172,14 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
+- The `__atomic`, `__c11_atomic`, `__hip_atomic`, `__opencl_atomic` and
+  `__scoped_atomic` builtins now accept vector types. The operation is performed
+  elementwise by a single atomic instruction. The arithmetic operations require
+  the vector to have a power-of-two size of at most 16 bytes, as they cannot be
+  lowered to a libcall. As a result, an atomic load or store of a
+  vector, such as one written with `_Atomic` or with `#pragma omp atomic`, is now
+  emitted with the vector type rather than an integer of the same size. This
+  does not change the generated code.
 
 ### New Compiler Flags
 

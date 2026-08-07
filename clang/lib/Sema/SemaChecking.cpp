@@ -5335,6 +5335,15 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     // trivial type errors.
     auto IsAllowedValueType = [&](QualType ValType,
                                   unsigned AllowedType) -> bool {
+      // Atomic operations on a vector are performed elementwise, so it is the
+      // element type which decides whether the operation is well-formed. A
+      // vector of _Bool is rejected outright, as its elements are not
+      // individually addressable.
+      if (const auto *VecTy = ValType->getAs<VectorType>()) {
+        if (VecTy->getElementType()->isBooleanType())
+          return false;
+        ValType = VecTy->getElementType();
+      }
       bool IsX87LongDouble =
           ValType->isSpecificBuiltinType(BuiltinType::LongDouble) &&
           &Context.getTargetInfo().getLongDoubleFormat() ==
@@ -5366,6 +5375,26 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
       Diag(ExprRange.getBegin(), DID)
           << IsC11 << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
+    }
+    // An arithmetic operation on a vector is always emitted as a single
+    // atomicrmw instruction; unlike the other forms there is no libcall to fall
+    // back on for a size which cannot be handled inline. The size of the vector
+    // itself is checked here, as the type holding it is padded out when the
+    // element count is not a power of two.
+    if (Form == Arithmetic) {
+      if (const auto *VecTy = ValType->getAs<VectorType>()) {
+        // The largest size EmitAtomicExpr() emits without a libcall.
+        constexpr unsigned MaxVectorSizeInBytes = 16;
+        uint64_t VecSizeInBits = Context.getTypeSize(VecTy->getElementType()) *
+                                 VecTy->getNumElements();
+        if (!llvm::isPowerOf2_64(VecSizeInBits) ||
+            VecSizeInBits > MaxVectorSizeInBytes * Context.getCharWidth()) {
+          Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_supported_vector)
+              << MaxVectorSizeInBytes << Ptr->getType()
+              << Ptr->getSourceRange();
+          return ExprError();
+        }
+      }
     }
     if (IsC11 && ValType->isPointerType() &&
         RequireCompleteType(Ptr->getBeginLoc(), ValType->getPointeeType(),
@@ -5635,7 +5664,10 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
                 ? 0
                 : 1);
 
-  if (ValType->isBitIntType()) {
+  QualType BitIntCandidateTy = ValType;
+  if (const auto *VecTy = ValType->getAs<VectorType>())
+    BitIntCandidateTy = VecTy->getElementType();
+  if (BitIntCandidateTy->isBitIntType()) {
     Diag(Ptr->getExprLoc(), diag::err_atomic_builtin_bit_int_prohibit);
     return ExprError();
   }
