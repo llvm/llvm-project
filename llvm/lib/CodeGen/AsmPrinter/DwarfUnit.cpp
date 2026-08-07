@@ -2129,6 +2129,8 @@ void DwarfUnit::addSectionDelta(DIE &Die, dwarf::Attribute Attribute,
 
 void DwarfUnit::addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
                                 const MCSymbol *Label, const MCSymbol *Sec) {
+  // If we are in an object file and not a DWO, emit a label. Otherwise we are
+  // in a DWO and we cannot emit relocations, so emit a section delta.
   if (Asm->doesDwarfUseRelocationsAcrossSections() && !isDwoUnit())
     addLabel(Die, Attribute, DD->getDwarfSectionOffsetForm(), Label);
   else
