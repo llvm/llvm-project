@@ -222,7 +222,7 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   debugger.StartEventHandlerThread();
 
   // Destroy the process and the event handler thread after a fatal error.
-  auto cleanup = llvm::make_scope_exit([&]() {
+  auto cleanup = llvm::scope_exit([&]() {
     process_sp->Destroy(/*force_kill=*/false);
     debugger.StopEventHandlerThread();
   });

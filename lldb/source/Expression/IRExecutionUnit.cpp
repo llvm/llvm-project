@@ -389,7 +389,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
 
   JitSectionSizeRecorder size_recorder(m_section_size_map);
   m_execution_engine_up->RegisterJITEventListener(&size_recorder);
-  auto on_exit = llvm::make_scope_exit(
+  auto on_exit = llvm::scope_exit(
       [&]() { m_execution_engine_up->UnregisterJITEventListener(&size_recorder); });
 
   // Make sure we see all sections, including ones that don't have
@@ -1267,7 +1267,7 @@ void IRExecutionUnit::PopulateSymtab(lldb_private::ObjectFile *obj_file,
                                      lldb_private::Symtab &symtab) {
   // BEGIN SWIFT
   m_in_populate_symtab = true;
-  auto _ = llvm::make_scope_exit([this]() { m_in_populate_symtab = false; });
+  auto _ = llvm::scope_exit([this]() { m_in_populate_symtab = false; });
   if (m_execution_engine_up) {
     uint32_t symbol_id = 0;
     lldb_private::SectionList *section_list = obj_file->GetSectionList();

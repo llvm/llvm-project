@@ -4923,7 +4923,7 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   bool ast_child_is_base_class = false;
   bool ast_child_is_deref_of_parent = false;
   uint64_t ast_language_flags = 0;
-  auto defer = llvm::make_scope_exit([&] {
+  auto defer = llvm::scope_exit([&] {
     // Ignore if SwiftASTContext got no result.
     if (ast_child_name.empty())
       return;
@@ -5928,7 +5928,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
 
 #ifndef NDEBUG
   StreamString ast_s;
-  auto defer = llvm::make_scope_exit([&] {
+  auto defer = llvm::scope_exit([&] {
     assert(Equivalent(ConstString(ast_s.GetString()),
                       ConstString(((StreamString *)&s)->GetString())) &&
            "TypeSystemSwiftTypeRef diverges from SwiftASTContext");

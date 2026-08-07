@@ -152,7 +152,7 @@ public:
   auto PushDescriptorFinderAndPopOnExit(
       swift::reflection::DescriptorFinder *descriptor_finder) {
     m_forwader.PushExternalDescriptorFinder(descriptor_finder);
-    return llvm::make_scope_exit(
+    return llvm::scope_exit(
         [&]() { m_forwader.PopExternalDescriptorFinder(); });
   }
 
