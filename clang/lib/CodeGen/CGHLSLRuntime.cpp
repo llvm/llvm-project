@@ -1281,8 +1281,9 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
         Indices.empty() ? Value : B.CreateInsertValue(Result, Value, Indices);
 
     // Advance the multidimensional index
-    for (unsigned I = Indices.size(); I-- > 0;) {
-      if (++Indices[I] < Shape.Dimensions[I])
+    for (unsigned I = Indices.size(); I > 0; I--) {
+      Indices[I] += 1;
+      if (Indices[I] < Shape.Dimensions[I])
         break;
       Indices[I] = 0;
     }
@@ -1331,8 +1332,9 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
     B.CreateCall(IntrFn, Args, OB);
 
     // Advance the multidimensional index
-    for (unsigned I = Indices.size(); I-- > 0;) {
-      if (++Indices[I] < Shape.Dimensions[I])
+    for (unsigned I = Indices.size(); I > 0; I--) {
+      Indices[I] += 1;
+      if (Indices[I] < Shape.Dimensions[I])
         break;
       Indices[I] = 0;
     }
