@@ -39,6 +39,28 @@
 namespace clang {
 namespace dataflow {
 
+// I'm not sure if the behavioural predicates belong in here.  The class name implies that it's tied to optionals
+// but some of the functions declared here (insert example) seem to be non specific to optionals
+static bool hasAnyBehaviouralRole(const CXXRecordDecl* RD)
+{
+  if(RD == nullptr || !RD->hasDefinition())
+    return false;
+
+  for(const CXXMethodDecl* method : RD->methods())
+  {
+    if(method->hasAttr<EngagedTraitAttr>()
+    || method->hasAttr<DisengagedTraitAttr>()
+    || method->hasAttr<AssumeEngagedTraitAttr>()
+    || method->hasAttr<TestEngagedTraitAttr>()
+    || method->hasAttr<TestDisengagedTraitAttr>())
+    {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // Note: the Names appear in reverse order. E.g., to check
 // if NS is foo::bar::, call isFullyQualifiedNamespaceEqualTo(NS, "bar", "foo")
 template <class... NameTypes>
@@ -52,6 +74,7 @@ static bool isFullyQualifiedNamespaceEqualTo(const NamespaceDecl &NS,
   if constexpr (sizeof...(NameTypes) > 0) {
     if (NS.getParent()->isTranslationUnit())
       return false;
+
     if (const auto *NextNS = dyn_cast_or_null<NamespaceDecl>(NS.getParent()))
       return isFullyQualifiedNamespaceEqualTo(*NextNS, Names...);
     return false;
@@ -1326,12 +1349,16 @@ UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(ASTContext &Ctx,
         if (isAssertionResultType(Ty))
           return {{"success", Ctx.BoolTy}};
 
-        const CXXRecordDecl *Optional =
-            getOptionalBaseClass(Ty->getAsCXXRecordDecl());
-        if (Optional == nullptr)
+        const CXXRecordDecl *Optional = getOptionalBaseClass(Ty->getAsCXXRecordDecl());
+        if(Optional != nullptr)
+          return {{"value", valueTypeFromOptionalDecl(*Optional)},
+                  {"has_value", Ctx.BoolTy}};
+
+        if(hasAnyBehaviouralRole(Ty->getAsCXXRecordDecl()))
+          return{{"has_value", Ctx.BoolTy}};
+
           return {};
-        return {{"value", valueTypeFromOptionalDecl(*Optional)},
-                {"has_value", Ctx.BoolTy}};
+
       });
 }
 
