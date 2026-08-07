@@ -855,10 +855,44 @@ def : Pat<(v2f16 (build_vector (f16 (fpround_oneuse f32:$lo)),
       Requires<[hasPTX<70>, SM80, useFP16Math]>;
 
 //-----------------------------------
-// Selection instructions (selp)
+// Selection instructions (slct, selp)
 //-----------------------------------
 
-// TODO: Missing slct
+let hasSideEffects = false in {
+  multiclass SLCT_PATTERN<string TypeStr, RegTyInfo t> {
+    defvar asm_str = "slct." # TypeStr # ".s32";
+    def rr :
+      BasicNVPTXInst<(outs t.RC:$dst),
+                (ins t.RC:$a, t.RC:$b, B32:$c),
+                asm_str,
+                [(set t.Ty:$dst,
+                      (select (i1 (setgt i32:$c, -1)), t.Ty:$a, t.Ty:$b))]>;
+    def ri :
+      BasicNVPTXInst<(outs t.RC:$dst),
+                (ins t.RC:$a, t.Imm:$b, B32:$c),
+                asm_str,
+                [(set t.Ty:$dst,
+                      (select (i1 (setgt i32:$c, -1)), t.Ty:$a, t.ImmNode:$b))]>;
+    def ir :
+      BasicNVPTXInst<(outs t.RC:$dst),
+                (ins t.Imm:$a, t.RC:$b, B32:$c),
+                asm_str,
+                [(set t.Ty:$dst,
+                      (select (i1 (setgt i32:$c, -1)), t.ImmNode:$a, t.Ty:$b))]>;
+    def ii :
+      BasicNVPTXInst<(outs t.RC:$dst),
+                (ins t.Imm:$a, t.Imm:$b, B32:$c),
+                asm_str,
+                [(set t.Ty:$dst,
+                      (select (i1 (setgt i32:$c, -1)), t.ImmNode:$a, t.ImmNode:$b))]>;
+  }
+}
+
+defm SLCT_b16  : SLCT_PATTERN<"b16", I16RT>;
+defm SLCT_b32  : SLCT_PATTERN<"b32", I32RT>;
+defm SLCT_b64  : SLCT_PATTERN<"b64", I64RT>;
+defm SLCT_f32  : SLCT_PATTERN<"f32", F32RT>;
+defm SLCT_f64  : SLCT_PATTERN<"f64", F64RT>;
 
 // selp instructions that don't have any pattern matches; we explicitly use
 // them within this file.

@@ -7,7 +7,6 @@ target triple = "nvptx64-nvidia-cuda"
 define i32 @slct_b32_s32(i32 %a, i32 %b, i32 %cond) {
 ; CHECK-LABEL: slct_b32_s32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b32 %r<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -16,8 +15,7 @@ define i32 @slct_b32_s32(i32 %a, i32 %b, i32 %cond) {
 ; CHECK-NEXT:    ld.param.b32 %r3, [slct_b32_s32_param_1];
 ; CHECK-NEXT:    not.b32 %r4, %r3;
 ; CHECK-NEXT:    ld.param.b32 %r5, [slct_b32_s32_param_2];
-; CHECK-NEXT:    setp.gt.s32 %p1, %r5, -1;
-; CHECK-NEXT:    selp.b32 %r6, %r2, %r4, %p1;
+; CHECK-NEXT:    slct.b32.s32 %r6, %r2, %r4, %r5;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
   %a1 = add i32 %a, 1
@@ -30,7 +28,6 @@ define i32 @slct_b32_s32(i32 %a, i32 %b, i32 %cond) {
 define i16 @slct_b16_s32(i16 %a, i16 %b, i32 %cond) {
 ; CHECK-LABEL: slct_b16_s32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b16 %rs<6>;
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
@@ -40,8 +37,7 @@ define i16 @slct_b16_s32(i16 %a, i16 %b, i32 %cond) {
 ; CHECK-NEXT:    ld.param.b16 %rs3, [slct_b16_s32_param_1];
 ; CHECK-NEXT:    not.b16 %rs4, %rs3;
 ; CHECK-NEXT:    ld.param.b32 %r1, [slct_b16_s32_param_2];
-; CHECK-NEXT:    setp.gt.s32 %p1, %r1, -1;
-; CHECK-NEXT:    selp.b16 %rs5, %rs2, %rs4, %p1;
+; CHECK-NEXT:    slct.b16.s32 %rs5, %rs2, %rs4, %r1;
 ; CHECK-NEXT:    cvt.u32.u16 %r2, %rs5;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -55,7 +51,6 @@ define i16 @slct_b16_s32(i16 %a, i16 %b, i32 %cond) {
 define i64 @slct_b64_s32(i64 %a, i64 %b, i32 %cond) {
 ; CHECK-LABEL: slct_b64_s32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
@@ -65,8 +60,7 @@ define i64 @slct_b64_s32(i64 %a, i64 %b, i32 %cond) {
 ; CHECK-NEXT:    ld.param.b64 %rd3, [slct_b64_s32_param_1];
 ; CHECK-NEXT:    not.b64 %rd4, %rd3;
 ; CHECK-NEXT:    ld.param.b32 %r1, [slct_b64_s32_param_2];
-; CHECK-NEXT:    setp.gt.s32 %p1, %r1, -1;
-; CHECK-NEXT:    selp.b64 %rd5, %rd2, %rd4, %p1;
+; CHECK-NEXT:    slct.b64.s32 %rd5, %rd2, %rd4, %r1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd5;
 ; CHECK-NEXT:    ret;
   %a1 = add i64 %a, 1
@@ -79,7 +73,6 @@ define i64 @slct_b64_s32(i64 %a, i64 %b, i32 %cond) {
 define float @slct_f32_s32(float %a, float %b, i32 %cond) {
 ; CHECK-LABEL: slct_f32_s32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b32 %r<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -88,8 +81,7 @@ define float @slct_f32_s32(float %a, float %b, i32 %cond) {
 ; CHECK-NEXT:    ld.param.b32 %r3, [slct_f32_s32_param_1];
 ; CHECK-NEXT:    neg.f32 %r4, %r3;
 ; CHECK-NEXT:    ld.param.b32 %r5, [slct_f32_s32_param_2];
-; CHECK-NEXT:    setp.gt.s32 %p1, %r5, -1;
-; CHECK-NEXT:    selp.f32 %r6, %r2, %r4, %p1;
+; CHECK-NEXT:    slct.f32.s32 %r6, %r2, %r4, %r5;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
   %a1 = fadd float %a, 1.0
@@ -102,7 +94,6 @@ define float @slct_f32_s32(float %a, float %b, i32 %cond) {
 define double @slct_f64_s32(double %a, double %b, i32 %cond) {
 ; CHECK-LABEL: slct_f64_s32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
@@ -112,8 +103,7 @@ define double @slct_f64_s32(double %a, double %b, i32 %cond) {
 ; CHECK-NEXT:    ld.param.b64 %rd3, [slct_f64_s32_param_1];
 ; CHECK-NEXT:    neg.f64 %rd4, %rd3;
 ; CHECK-NEXT:    ld.param.b32 %r1, [slct_f64_s32_param_2];
-; CHECK-NEXT:    setp.gt.s32 %p1, %r1, -1;
-; CHECK-NEXT:    selp.f64 %rd5, %rd2, %rd4, %p1;
+; CHECK-NEXT:    slct.f64.s32 %rd5, %rd2, %rd4, %r1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd5;
 ; CHECK-NEXT:    ret;
   %a1 = fadd double %a, 1.0
@@ -126,15 +116,13 @@ define double @slct_f64_s32(double %a, double %b, i32 %cond) {
 define i32 @slct_b32_s32_ri(i32 %a, i32 %cond) {
 ; CHECK-LABEL: slct_b32_s32_ri(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [slct_b32_s32_ri_param_0];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
 ; CHECK-NEXT:    ld.param.b32 %r3, [slct_b32_s32_ri_param_1];
-; CHECK-NEXT:    setp.gt.s32 %p1, %r3, -1;
-; CHECK-NEXT:    selp.b32 %r4, %r2, 42, %p1;
+; CHECK-NEXT:    slct.b32.s32 %r4, %r2, 42, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
   %a1 = add i32 %a, 1
@@ -146,15 +134,13 @@ define i32 @slct_b32_s32_ri(i32 %a, i32 %cond) {
 define i32 @slct_b32_s32_ir(i32 %b, i32 %cond) {
 ; CHECK-LABEL: slct_b32_s32_ir(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [slct_b32_s32_ir_param_0];
 ; CHECK-NEXT:    not.b32 %r2, %r1;
 ; CHECK-NEXT:    ld.param.b32 %r3, [slct_b32_s32_ir_param_1];
-; CHECK-NEXT:    setp.gt.s32 %p1, %r3, -1;
-; CHECK-NEXT:    selp.b32 %r4, 42, %r2, %p1;
+; CHECK-NEXT:    slct.b32.s32 %r4, 42, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
   %b1 = xor i32 %b, -1
@@ -166,13 +152,11 @@ define i32 @slct_b32_s32_ir(i32 %b, i32 %cond) {
 define i32 @slct_b32_s32_ii(i32 %cond) {
 ; CHECK-LABEL: slct_b32_s32_ii(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [slct_b32_s32_ii_param_0];
-; CHECK-NEXT:    setp.gt.s32 %p1, %r1, -1;
-; CHECK-NEXT:    selp.b32 %r2, 42, 7, %p1;
+; CHECK-NEXT:    slct.b32.s32 %r2, 42, 7, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %cmp = icmp sge i32 %cond, 0

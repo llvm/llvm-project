@@ -15,11 +15,9 @@ entry:
   %tmp4 = load <2 x i32>, ptr addrspace(1) %def_a
   %tmp6 = load <2 x i32>, ptr addrspace(1) %def_c
   %tmp8 = load <2 x i32>, ptr addrspace(1) %def_b
-; CHECK:  setp.gt.s32
-; CHECK:  setp.gt.s32
   %0 = icmp sge <2 x i32> %tmp4, zeroinitializer
-; CHECK:  selp.b32
-; CHECK:  selp.b32
+; CHECK:  slct.b32.s32
+; CHECK:  slct.b32.s32
   %cond = select <2 x i1> %0, <2 x i32> %tmp6, <2 x i32> %tmp8
 ; CHECK:  st.global.v2.b32
   store <2 x i32> %cond, ptr addrspace(1) %def_c
