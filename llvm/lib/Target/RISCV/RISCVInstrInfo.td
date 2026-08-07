@@ -1823,7 +1823,7 @@ def : Pat<(brind (add GPRJALRNonX7:$rs1, simm12_lo:$imm12)),
 // destination.
 // Define AsmString to print "call" when compile with -S flag.
 // Define isCodeGenOnly = 0 to support parsing assembly "call" instruction.
-let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
+let isCall = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
     mayStore = 0, mayLoad = 0 in
 def PseudoCALLReg : Pseudo<(outs GPR:$rd), (ins call_symbol:$func), [],
                            "call", "$rd, $func">,
@@ -2005,7 +2005,7 @@ def tlsdesc_call_symbol : Operand<XLenVT> {
 // fourth operand to emit a relocation on a symbol relating to this instruction.
 // The relocation does not affect any bits of the instruction itself but is used
 // as a hint to the linker.
-let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
+let isCall = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
     mayStore = 0, mayLoad = 0 in
 def PseudoTLSDESCCall : Pseudo<(outs GPR:$rd),
                          (ins GPR:$rs1, simm12_lo:$imm12, tlsdesc_call_symbol:$src), [],
