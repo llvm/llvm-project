@@ -745,11 +745,11 @@ void test_private_plus_lastprivate() {
 // CHECK: @.offload_maptypes = private unnamed_addr constant [3 x i64] [i64 [[#0x23]], i64 [[#0x223]], i64 [[#0x120]]]
 // CHECK: @.offload_sizes.1 = private unnamed_addr constant [2 x i64] [i64 8, i64 0]
 // CHECK: @.offload_maptypes.2 = private unnamed_addr constant [2 x i64] [i64 [[#0x223]], i64 [[#0x120]]]
-// CHECK: @.offload_sizes.3 = private unnamed_addr constant [2 x i64] [i64 4, i64 0]
+// CHECK: @.offload_sizes.3 = private unnamed_addr constant [2 x i64] [i64 8, i64 0]
 // CHECK: @.offload_maptypes.4 = private unnamed_addr constant [2 x i64] [i64 [[#0x223]], i64 [[#0x120]]]
-// CHECK: @.offload_sizes.5 = private unnamed_addr constant [2 x i64] [i64 4, i64 0]
+// CHECK: @.offload_sizes.5 = private unnamed_addr constant [2 x i64] [i64 8, i64 0]
 // CHECK: @.offload_maptypes.6 = private unnamed_addr constant [2 x i64] [i64 [[#0x223]], i64 [[#0x120]]]
-// CHECK: @.offload_sizes.7 = private unnamed_addr constant [2 x i64] [i64 4, i64 0]
+// CHECK: @.offload_sizes.7 = private unnamed_addr constant [2 x i64] [i64 8, i64 0]
 // CHECK: @.offload_maptypes.8 = private unnamed_addr constant [2 x i64] [i64 [[#0x223]], i64 [[#0x120]]]
 // CHECK: @.offload_sizes.15 = private unnamed_addr constant [3 x i64] [i64 4, i64 8, i64 0]
 // CHECK: @.offload_maptypes.16 = private unnamed_addr constant [3 x i64] [i64 [[#0x23]], i64 [[#0x223]], i64 [[#0x120]]]
@@ -862,7 +862,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z20test_target_parallelv_l42(
-// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR:%.*]], align 8
@@ -872,7 +872,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z20test_target_parallelv_l42.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -910,7 +910,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z24test_target_parallel_forv_l52(
-// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR:%.*]], align 8
@@ -920,7 +920,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z24test_target_parallel_forv_l52.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -990,7 +990,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z21test_firstprivate_dsav.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[P:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[P:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -1018,7 +1018,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z15test_shared_dsav.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -1044,7 +1044,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z18test_reduction_dsav.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SUM:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SUM:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -1154,7 +1154,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z18test_parallel_for_v.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -1224,7 +1224,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z23test_parallel_for_simd_v.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -1314,7 +1314,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28test_target_teams_distributev_l113(
-// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR:%.*]], align 8
@@ -1324,7 +1324,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28test_target_teams_distributev_l113.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -1774,7 +1774,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z17test_template_basI5PointEiT_.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RESULT:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RESULT:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -1899,7 +1899,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z24test_template_3_bindingsI7Point3DEiT_.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RESULT:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RESULT:%.*]], ptr noundef nonnull align 4 dereferenceable(12) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2232,7 +2232,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z22test_reference_bindingv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2264,7 +2264,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z18test_const_bindingv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2291,7 +2291,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z22test_multiple_bindingsv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP1:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2326,7 +2326,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z32test_multiple_bindings_mixed_dsav.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP1:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[P1:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP1:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[P1:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2373,7 +2373,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z21test_array_3_elementsv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(12) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2505,7 +2505,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z20test_nested_parallelv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2516,7 +2516,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z20test_nested_parallelv.omp_outlined.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2596,7 +2596,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z37test_firstprivate_individual_bindingsv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2691,7 +2691,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z31test_simd_private_then_parallelv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2762,7 +2762,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z26test_reduction_binding_sumv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -2874,7 +2874,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z32test_reduction_binding_operatorsv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3045,7 +3045,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z24test_lastprivate_bindingv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3125,7 +3125,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z26test_reduction_binding_maxv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3302,7 +3302,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z27test_binding_name_collisionv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3398,7 +3398,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z31test_firstprivate_nontrivial_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3526,7 +3526,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z32test_firstprivate_ref_binding_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3558,7 +3558,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z38test_firstprivate_const_ref_binding_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3590,7 +3590,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z38test_firstprivate_multiple_bindings_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3647,7 +3647,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z36test_firstprivate_with_destructor_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 8 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3810,7 +3810,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z35test_firstprivate_array_bindings_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(24) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3873,7 +3873,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z34test_firstprivate_nested_struct_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -3994,7 +3994,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z46test_firstprivate_ref_binding_both_bindings_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -4036,7 +4036,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z52test_firstprivate_const_ref_binding_both_bindings_sbv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(16) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -4218,7 +4218,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z25test_taskloop_lastprivatev.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -4363,7 +4363,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z16test_task_sharedv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -4497,7 +4497,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z29test_shared_plus_firstprivatev.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -4522,7 +4522,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z26test_shared_plus_reductionv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
@@ -4631,7 +4631,7 @@ void test_private_plus_lastprivate() {
 //
 //
 // CHECK-LABEL: define internal void @_Z29test_private_plus_lastprivatev.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8

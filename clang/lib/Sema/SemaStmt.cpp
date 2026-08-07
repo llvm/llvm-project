@@ -4752,22 +4752,10 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
     // FIXME: Bail out now if the capture is not used and the initializer has
     // no side-effects.
 
-    // Build the capture field. For OpenMP BindingDecl captures redirected
-    // to their DecompositionDecl, the field type must use the
-    // DecompositionDecl's type (e.g. int[2]) not the BindingDecl's type (e.g.
-    // int).
-    FieldDecl *Field = nullptr;
-    if (RSI->CapRegionKind == CR_OpenMP && CapVar &&
-        CapVar != Cap.getVariable() && isa<DecompositionDecl>(CapVar)) {
-      assert(isa<BindingDecl>(Cap.getVariable()) &&
-             cast<BindingDecl>(Cap.getVariable())->getDecomposedDecl() ==
-                 CapVar &&
-             "OpenMP capture redirection should only happen for BindingDecl -> "
-             "DecompositionDecl");
-      Field = S.BuildCaptureField(RSI->TheRecordDecl, Cap, true);
-    } else {
-      Field = S.BuildCaptureField(RSI->TheRecordDecl, Cap);
-    }
+    // Build the capture field. For OpenMP, pass IsOpenMP=true to handle
+    // DecompositionDecl captures correctly.
+    FieldDecl *Field = S.BuildCaptureField(
+        RSI->TheRecordDecl, Cap, RSI->CapRegionKind == CR_OpenMP);
 
     // Add the capture to our list of captures.
     if (Cap.isThisCapture()) {
