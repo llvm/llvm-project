@@ -135,6 +135,13 @@ bool AMDGPUInsertICachePrefetch::run(MachineFunction &MF) {
   if (!MFI->isEntryFunction())
     return false;
 
+  // Basic block sections can be independently placed by the linker, so the
+  // function does not form the contiguous address range assumed by the
+  // prefetch offset and size calculations.
+  if (MF.hasBBSections() ||
+      MF.getTarget().getBBSectionsType() != BasicBlockSection::None)
+    return false;
+
   SIProgramInfo PI;
   uint64_t ProgramSize = PI.getFunctionCodeSize(MF);
   // The kernel descriptor can specify an instruction prefetch size of up to 256
