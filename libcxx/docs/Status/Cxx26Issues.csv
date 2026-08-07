@@ -271,7 +271,7 @@
 "`LWG3891 <https://wg21.link/LWG3891>`__","LWG3870 breaks ``std::expected<cv T, E>``","2026-03 (Croydon)","","","`#189813 <https://github.com/llvm/llvm-project/issues/189813>`__",""
 "`LWG4026 <https://wg21.link/LWG4026>`__","Assignment operators of ``std::expected`` should propagate triviality","2026-03 (Croydon)","","","`#189814 <https://github.com/llvm/llvm-project/issues/189814>`__",""
 "`LWG4090 <https://wg21.link/LWG4090>`__","Underspecified use of locale facets for locale-dependent ``std::format``","2026-03 (Croydon)","","","`#189815 <https://github.com/llvm/llvm-project/issues/189815>`__",""
-"`LWG4122 <https://wg21.link/LWG4122>`__","Ill-formed ``operator<=>`` can cause hard error when instantiating ``std::inplace_vector``","2026-03 (Croydon)","|Complete|","23","`#189816 <https://github.com/llvm/llvm-project/issues/189816>`__",""
+"`LWG4122 <https://wg21.link/LWG4122>`__","Ill-formed ``operator<=>`` can cause hard error when instantiating ``std::inplace_vector``","2026-03 (Croydon)","|Complete|","24","`#189816 <https://github.com/llvm/llvm-project/issues/189816>`__",""
 "`LWG4130 <https://wg21.link/LWG4130>`__","Preconditions for ``std::launder`` might be overly strict","2026-03 (Croydon)","","","`#189817 <https://github.com/llvm/llvm-project/issues/189817>`__",""
 "`LWG4133 <https://wg21.link/LWG4133>`__","``awaitable-receiver``'s members are potentially throwing","2026-03 (Croydon)","","","`#189818 <https://github.com/llvm/llvm-project/issues/189818>`__",""
 "`LWG4143 <https://wg21.link/LWG4143>`__","``execution::set_value/set_error/set_stopped/start`` should always return void","2026-03 (Croydon)","","","`#189819 <https://github.com/llvm/llvm-project/issues/189819>`__",""
