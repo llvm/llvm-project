@@ -15302,10 +15302,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       llvm::APFloat::opStatus Status =
           FloatElem.convertToInteger(IntResult, RoundingMode, &IsExact);
 
-      if (Status & llvm::APFloat::opInvalidOp) {
-        IntResult = llvm::APSInt(llvm::APInt::getSignedMinValue(32),
-                                 /*isUnsigned=*/false);
-      }
+      if (Status != llvm::APFloat::opOK || !IsExact)
+          return false;
 
       ResultElts.push_back(APValue(IntResult));
     }
@@ -18791,10 +18789,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     bool IsExact = false;
     llvm::APFloat::opStatus Status =
         FloatElem.convertToInteger(IntResult, RoundingMode, &IsExact);
+    if (Status != llvm::APFloat::opOK || !IsExact)
+      return false;
 
-    if (Status & llvm::APFloat::opInvalidOp) {
-      IntResult = llvm::APSInt(llvm::APInt::getSignedMinValue(BitWidth), false);
-    }
     return Success(IntResult, E);
   }
   case X86::BI__builtin_ia32_vpshufbitqmb128_mask:

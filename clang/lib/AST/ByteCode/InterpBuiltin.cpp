@@ -4681,10 +4681,9 @@ interp_builtin_ia32_cvt_scalar_to_int(InterpState &S, CodePtr OpPC,
   llvm::APFloat::opStatus Status = FloatElem.getAPFloat().convertToInteger(
       IntResult, RoundingMode, &IsExact);
 
-  if (Status & llvm::APFloat::opInvalidOp) {
-    IntResult = llvm::APSInt(llvm::APInt::getSignedMinValue(BitWidth),
-                             /*isUnsigned=*/false);
-  }
+  if (Status != llvm::APFloat::opOK || !IsExact)
+    return false;
+
   pushInteger(S, IntResult, E->getType());
   return true;
 }
@@ -4697,6 +4696,7 @@ static bool interp_builtin_ia32_cvt_vector_to_int(
   PrimType DstElemT = Dst.getFieldDesc()->getPrimType();
 
   unsigned NumSrcElts = SrcVecPtr.getNumElems();
+  llvm::SmallVector<int32_t, 8> ConvertedElts;
   for (unsigned I = 0; I < NumSrcElts; ++I) {
     const Floating &FloatElem = SrcVecPtr.atIndex(I).deref<Floating>();
     llvm::APSInt IntResult(32, /*isUnsigned=*/false);
@@ -4704,14 +4704,15 @@ static bool interp_builtin_ia32_cvt_vector_to_int(
 
     llvm::APFloat::opStatus Status = FloatElem.getAPFloat().convertToInteger(
         IntResult, RoundingMode, &IsExact);
+    if (Status != llvm::APFloat::opOK || !IsExact)
+      return false;
 
-    if (Status & llvm::APFloat::opInvalidOp) {
-      IntResult = llvm::APSInt(llvm::APInt::getSignedMinValue(32),
-                               /*isUnsigned=*/false);
-    }
-    Dst.atIndex(I).deref<Integral<32, true>>() =
-        Integral<32, true>::from(IntResult.getSExtValue());
+    ConvertedElts.push_back(IntResult.getSExtValue());
   }
+
+  for (unsigned I = 0; I < NumSrcElts; ++I)
+    Dst.atIndex(I).deref<Integral<32, true>>() =
+        Integral<32, true>::from(ConvertedElts[I]);
 
   if (zeroPad) {
     Dst.atIndex(2).deref<Integral<32, true>>() = Integral<32, true>::zero();
