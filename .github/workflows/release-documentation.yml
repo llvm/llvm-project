@@ -123,7 +123,6 @@ jobs:
         env:
           MAN_PAGE_TARBALL_NAME: ${{ steps.build.outputs.man-page-tarball-name }}
         run: |
-            set -ex
             echo "man-page-digest=$(cat "$MAN_PAGE_TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
             echo "doxygen-digest=$(cat $(xargs <<< "$DOXYGEN_FILE_PATTERN") | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
 
