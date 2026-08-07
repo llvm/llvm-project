@@ -92,6 +92,8 @@ DD-DAG:    {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] inlined_for_unopt_and_non_alloc
 DD-DAG:    {{.*}} 0 OBJECT  GLOBAL DEFAULT   UND shared_data_for_unopt
 DD-DAG:    {{.*}} 0 FUNC    GLOBAL DEFAULT   UND shared_func_for_unopt
 NO-GC-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND undef_used_by_non_alloc
+## The following symbols are only present when linking the relocatable link
+## output of the simulated dynamic debugging objects.
 REL-DAG:   {{.*}} 0 FILE    LOCAL  DEFAULT   ABS main.o
 REL-DAG:   {{.*}} 0 FILE    LOCAL  DEFAULT   ABS foo.o
 REL-DAG:   {{.*}} 0 FILE    LOCAL  DEFAULT   ABS
