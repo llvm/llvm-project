@@ -1192,26 +1192,34 @@ static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
   return 32768;
 }
 
-// Total physical LDS on the block. On some targets a single work-group cannot
-// address the whole block, so the physical size is larger than the addressable
-// size; those set FeatureLocalMemorySize (gfx10/11/12: 128k physical vs 64k
-// addressable). Otherwise it defaults to the addressable size.
+// Total LDS on the block. Larger than the addressable size when a work-group
+// cannot address the whole block. Defaults to the addressable size otherwise.
 static unsigned getPhysicalLocalMemorySize(const MCSubtargetInfo &STI) {
   if (STI.getFeatureBits().test(FeatureLocalMemorySize131072))
     return 131072;
   return getMaxHWAddressableLocalMemorySize(STI);
 }
 
+// Sizes in use, by generation (addressable / physical block):
+//   gfx6              :  32 KiB
+//   gfx7 / gfx8 / gfx9:  64 KiB
+//   gfx9.5 (gfx950)   : 160 KiB
+//   gfx10 / 11 / 12   :  64 KiB addressable, 128 KiB physical block
+//   gfx12.5 (gfx1250) : 320 KiB (always runs on four SIMDs)
+//   gfx13             : 192 KiB on four SIMDs, 96 KiB on two
+// Total available in the current mode, that is the physical size halved when a
+// work-group runs on two SIMDs.
 unsigned getLocalMemorySize(const MCSubtargetInfo &STI) {
-  // Total LDS on the block, halved when a work-group runs on two SIMDs, not four.
   unsigned Size = getPhysicalLocalMemorySize(STI);
   if (!isFullSIMDMode(STI))
     Size /= 2;
   return Size;
 }
 
+// What one work-group can allocate in the current mode. This is the HW
+// addressable cap, but no more than is available in the current mode (two SIMDs
+// / four SIMDs).
 unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
-  // HW addressing cap, but no more than is available in the current mode.
   return std::min(getMaxHWAddressableLocalMemorySize(STI),
                   getLocalMemorySize(STI));
 }
