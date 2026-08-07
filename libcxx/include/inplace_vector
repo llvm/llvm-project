@@ -192,6 +192,7 @@ _LIBCPP_PUSH_MACROS
 #    include <__memory/ranges_uninitialized_algorithms.h>
 #    include <__memory/uninitialized_algorithms.h>
 #    include <__new/exceptions.h>
+#    include <__optional/optional_ref.h>
 #    include <__ranges/access.h>
 #    include <__ranges/concepts.h>
 #    include <__ranges/container_compatible_range.h>
@@ -208,7 +209,6 @@ _LIBCPP_PUSH_MACROS
 #    include <__verbose_trap>
 #    include <initializer_list>
 #    include <limits>
-#    include <optional>
 #    include <stdexcept>
 #    include <version>
 
