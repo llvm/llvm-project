@@ -772,6 +772,10 @@ def LLVM_InvokeOp
     bool mayForwardTypeToSuccessor(unsigned index, Type type) {
       return isCompatibleType(type);
     }
+
+    /// `BranchOpInterface` and `CallOpInterface` both provide a default
+    /// `areTypesCompatible` implementation; declare it here to disambiguate.
+    bool areTypesCompatible(Type lhs, Type rhs) { return lhs == rhs; }
   }];
 }
 
