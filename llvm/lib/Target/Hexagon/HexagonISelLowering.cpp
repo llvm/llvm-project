@@ -1116,9 +1116,10 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   if (ResTy.isVector())
     return Op;
 
-  // Comparisons of short integers should use sign-extend, not zero-extend,
-  // since we can represent small negative values in the compare instructions.
-  // The LLVM default is to use zero-extend arbitrarily in these cases.
+  // Equality comparisons of short integers should use sign-extend, not
+  // zero-extend, since we can represent small negative values in the compare
+  // instructions.  The LLVM default is to use zero-extend arbitrarily in
+  // these cases.
   auto isSExtFree = [this](SDValue N) {
     switch (N.getOpcode()) {
       case ISD::TRUNCATE: {
@@ -1141,7 +1142,14 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     return false;
   };
 
-  if (OpTy == MVT::i8 || OpTy == MVT::i16) {
+  // Only do this for equality comparisons.  Signed comparisons are already
+  // sign-extended by the generic operand promotion, and for unsigned
+  // comparisons a sign-extension is never profitable: it does not change the
+  // result (sign-extension preserves the unsigned ordering of the values of
+  // the narrower type), but it turns constants with the sign bit of the
+  // narrower type set into large 32-bit values, which then have to be
+  // materialized in a register or use a constant extender.
+  if ((OpTy == MVT::i8 || OpTy == MVT::i16) && ISD::isIntEqualitySetCC(CC)) {
     ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS);
     bool IsNegative = C && C->getAPIntValue().isNegative();
     if (IsNegative || isSExtFree(LHS) || isSExtFree(RHS))
@@ -2141,18 +2149,21 @@ bool HexagonTargetLowering::shouldExpandBuildVectorWithShuffles(EVT VT,
   return false;
 }
 
-bool HexagonTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-      unsigned Index) const {
+TargetLowering::ExtractSubvectorCost
+HexagonTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                               unsigned Index) const {
   assert(ResVT.getVectorElementType() == SrcVT.getVectorElementType());
   if (!ResVT.isSimple() || !SrcVT.isSimple())
-    return false;
+    return ExtractSubvectorCost::Expensive;
 
   MVT ResTy = ResVT.getSimpleVT(), SrcTy = SrcVT.getSimpleVT();
   if (ResTy.getVectorElementType() != MVT::i1)
-    return true;
+    return ExtractSubvectorCost::Free;
 
   // Non-HVX bool vectors are relatively cheap.
-  return SrcTy.getVectorNumElements() <= 8;
+  if (SrcTy.getVectorNumElements() <= 8)
+    return ExtractSubvectorCost::Free;
+  return ExtractSubvectorCost::Expensive;
 }
 
 bool HexagonTargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
@@ -3085,7 +3096,7 @@ HexagonTargetLowering::LowerLoad(SDValue Op, SelectionDAG &DAG) const {
         LN->getAddressingMode(), ISD::ZEXTLOAD, MVT::i32, dl, LN->getChain(),
         LN->getBasePtr(), LN->getOffset(), LN->getPointerInfo(),
         /*MemoryVT*/ MVT::i8, LN->getAlign(), LN->getMemOperand()->getFlags(),
-        LN->getAAInfo(), LN->getRanges());
+        MMOMetadata(LN->getAAInfo(), LN->getRanges()));
     LN = cast<LoadSDNode>(NL.getNode());
   }
 
@@ -3212,7 +3223,7 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
     MachineFunction &MF = DAG.getMachineFunction();
     WideMMO = MF.getMachineMemOperand(
         MMO->getPointerInfo(), MMO->getFlags(), 2 * LoadLen, Align(LoadLen),
-        MMO->getAAInfo(), MMO->getRanges(), MMO->getSyncScopeID(),
+        MMOMetadata(MMO->getAAInfo(), MMO->getRanges()), MMO->getSyncScopeID(),
         MMO->getSuccessOrdering(), MMO->getFailureOrdering());
   }
 

@@ -179,11 +179,22 @@ mlir::StringAttr getTargetFunctionName(mlir::MLIRContext *context,
 
 } // namespace
 
-// Check if a global represents a module variable
-static bool isModuleVariable(fir::GlobalOp globalOp) {
+// Check if a name is that of a data object, which in Fortran is a variable or
+// a named constant.
+static bool isDataObjectName(fir::NameUniquer::NameKind kind) {
+  return kind == fir::NameUniquer::NameKind::VARIABLE ||
+         kind == fir::NameUniquer::NameKind::CONSTANT;
+}
+
+// Check if a name belongs to a module rather than to a procedure.
+static bool isModuleLevelName(const fir::NameUniquer::DeconstructedName &name) {
+  return name.procs.empty() && !name.modules.empty();
+}
+
+// Check if a global represents a data object declared in a module.
+static bool isModuleDataObject(fir::GlobalOp globalOp) {
   std::pair result = fir::NameUniquer::deconstruct(globalOp.getSymName());
-  return result.first == fir::NameUniquer::NameKind::VARIABLE &&
-         result.second.procs.empty() && !result.second.modules.empty();
+  return isDataObjectName(result.first) && isModuleLevelName(result.second);
 }
 
 // Look up DIGlobalVariable from a global symbol
@@ -377,7 +388,7 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
                                        mlir::Value dummyScope) {
   auto result = fir::NameUniquer::deconstruct(declOp.getUniqName());
 
-  if (result.first != fir::NameUniquer::NameKind::VARIABLE)
+  if (!isDataObjectName(result.first))
     return;
 
   if (createCommonBlockGlobal(declOp, result.second.name, fileAttr, scopeAttr,
@@ -440,6 +451,13 @@ mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
   if (auto iter{moduleMap.find(name)}; iter != moduleMap.end()) {
     modAttr = iter->getValue();
   } else {
+    // A module defined in this compilation unit has a fir.module_debug_imports
+    // whose location is that of the MODULE statement. Prefer it over the
+    // caller's guess, which is derived from a member's declaration.
+    if (auto iter{moduleDebugImportsByName.find(name)};
+        iter != moduleDebugImportsByName.end())
+      line = getLineFromLoc(iter->second.getLoc());
+
     // When decl is true, it means that module is only being used in this
     // compilation unit and it is defined elsewhere. But if the file/line/scope
     // fields are valid, the module is not merged with its definition and is
@@ -478,9 +496,6 @@ AddDebugInfoPass::getModuleAttrFromGlobalOp(fir::GlobalOp globalOp,
   // one). The isInitialized() seems to provide the right information
   // but inverted. It is true where module is actually defined but false where
   // it is used.
-  // FIXME: Currently we don't have the line number on which a module was
-  // declared. We are using a best guess of line - 1 where line is the source
-  // line of the first member of the module that we encounter.
   unsigned line = getLineFromLoc(globalOp.getLoc());
 
   mlir::LLVM::DISubprogramAttr sp =
@@ -506,8 +521,23 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
   mlir::OpBuilder builder(context);
 
   std::pair result = fir::NameUniquer::deconstruct(globalOp.getSymName());
-  if (result.first != fir::NameUniquer::NameKind::VARIABLE)
+  switch (result.first) {
+  case fir::NameUniquer::NameKind::VARIABLE:
+    break;
+  case fir::NameUniquer::NameKind::CONSTANT:
+    // A constant local to a procedure is described while walking that
+    // procedure, where `scope` is its DISubprogramAttr. Reaching here with any
+    // other scope means the procedure is not in the IR, typically because it
+    // was never called and got removed while its constant survived. There is
+    // no procedure to attach the constant to, and describing it at compile
+    // unit scope would wrongly make it visible everywhere.
+    if (!isModuleLevelName(result.second) &&
+        !mlir::isa<mlir::LLVM::DISubprogramAttr>(scope))
+      return;
+    break;
+  default:
     return;
+  }
 
   if (fir::NameUniquer::isSpecialSymbol(result.second.name))
     return;
@@ -518,12 +548,20 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
   if (modOpt)
     scope = *modOpt;
 
+  // An entity with internal linkage, such as a constant or a SAVE variable
+  // declared inside a procedure, is not visible outside this compilation unit.
+  // It also needs no linkage name because there is no external symbol for a
+  // debugger to match it against.
+  const bool isLocalToUnit = globalOp.getLinkName() == "internal";
+  mlir::StringAttr linkageName =
+      isLocalToUnit ? mlir::StringAttr()
+                    : mlir::StringAttr::get(context, globalOp.getName());
+
   mlir::LLVM::DITypeAttr diType =
       typeGen.convertType(globalOp.getType(), fileAttr, scope, declOp);
   auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
       context, scope, mlir::StringAttr::get(context, result.second.name),
-      mlir::StringAttr::get(context, globalOp.getName()), fileAttr, line,
-      diType, /*isLocalToUnit*/ false,
+      linkageName, fileAttr, line, diType, isLocalToUnit,
       /*isDefinition*/ globalOp.isInitialized(), /* alignInBits*/ 0);
   auto dbgExpr = mlir::LLVM::DIGlobalVariableExpressionAttr::get(
       globalOp.getContext(), gvAttr, nullptr);
@@ -1037,7 +1075,7 @@ void AddDebugInfoPass::runOnOperation() {
 
   // Process module globals early.
   // Walk through all DeclareOps in functions and process globals that are
-  // module variables. This ensures that when we process USE statements,
+  // module data objects. This ensures that when we process USE statements,
   // the DIGlobalVariable lookups will succeed.
   if (debugLevel == mlir::LLVM::DIEmissionKind::Full) {
     module.walk([&](fir::cg::XDeclareOp declOp) {
@@ -1045,8 +1083,8 @@ void AddDebugInfoPass::runOnOperation() {
       if (defOp && llvm::isa<fir::AddrOfOp>(defOp)) {
         if (auto globalOp =
                 symbolTable.lookup<fir::GlobalOp>(declOp.getUniqName())) {
-          // Only process module variables here, not SAVE variables
-          if (isModuleVariable(globalOp)) {
+          // Only process module data objects here, not SAVE variables
+          if (isModuleDataObject(globalOp)) {
             handleGlobalOp(globalOp, fileAttr, cuAttr, typeGen, &symbolTable,
                            declOp);
           }
