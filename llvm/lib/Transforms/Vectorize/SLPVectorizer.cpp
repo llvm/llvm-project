@@ -25778,8 +25778,7 @@ Value *BoUpSLP::vectorizeTree(
     Value *Vec = E->VectorizedValue;
     assert(Vec && "Can't find vectorizable value");
 
-    bool ExtractAnyways = false;
-    auto ExtractAndExtendIfNeeded = [&](Value *Vec) {
+    auto ExtractAndExtendIfNeeded = [&](Value *Vec, bool ExtractAnyways = false) {
       if (isa<InsertValueInst>(Scalar))
         return Vec;
       if (Scalar->getType() != Vec->getType()) {
@@ -25945,8 +25944,7 @@ Value *BoUpSLP::vectorizeTree(
       if (!Inst)
         return;
       if (ExternalUsesAsOriginalScalar.contains(Inst)) {
-        ExtractAnyways = true;
-        Value *ReplacedExtract = ExtractAndExtendIfNeeded(Vec);
+        Value *ReplacedExtract = ExtractAndExtendIfNeeded(Vec, /*ExtractAnyways*/true);
         auto *EI = dyn_cast<ExtractElementInst>(ReplacedExtract);
         auto *RI = dyn_cast<Instruction>(Replacement);
         assert(EI && RI && "Expected to find underlying instructions");
@@ -25954,7 +25952,6 @@ Value *BoUpSLP::vectorizeTree(
           return;
         DE.transferRematCost(Inst, EI);
         DE.logExtractRematPair(EI, RI);
-        ExtractAnyways = false;
         return;
       }
       auto *EI = dyn_cast<ExtractElementInst>(Replacement);
