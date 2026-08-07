@@ -1221,7 +1221,8 @@ static bool isL2EvictionSupported(const NVPTXSubtarget &Subtarget,
   if (Eviction == NVPTX::L2Eviction::Normal)
     return true;
 
-  return Subtarget.hasL2EvictionHint() && isGlobalOrGeneric(Access.AddrSpace) && !Access.IsVolatile &&
+  return Subtarget.hasL2EvictionHint() && isGlobalOrGeneric(Access.AddrSpace) &&
+         !Access.IsVolatile &&
          ((Access.NumElts == 8 && Access.EltWidth == 32) ||
           (Access.NumElts == 4 && Access.EltWidth == 64));
 }
@@ -1342,11 +1343,11 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
          FromTypeWidth <= 128 && "Invalid width for load");
 
   const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
-  const auto [EvictionAndPrefetchHint, PolicyReg] =
-      getMemCacheHintOperands(LD,
-                              {CodeAddrSpace, /*IsLoad=*/true,
-                               /*NumElts=*/1, /*EltWidth=*/FromTypeWidth, LD->isVolatile()},
-                              DL);
+  const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
+      LD,
+      {CodeAddrSpace, /*IsLoad=*/true,
+       /*NumElts=*/1, /*EltWidth=*/FromTypeWidth, LD->isVolatile()},
+      DL);
 
   // Create the machine instruction DAG
   SDValue Ops[] = {getI32Imm(Ordering, DL),
@@ -1491,11 +1492,12 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
            ExtensionType != ISD::NON_EXTLOAD));
 
   const auto [Base, Offset] = selectADDR(LD->getOperand(1), CurDAG);
-  const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
-      LD,
-      {NVPTX::AddressSpace::Global,
-       /*IsLoad=*/true, LD->getNumValues() - 1, FromTypeWidth, LD->isVolatile()},
-      DL);
+  const auto [EvictionAndPrefetchHint, PolicyReg] =
+      getMemCacheHintOperands(LD,
+                              {NVPTX::AddressSpace::Global,
+                               /*IsLoad=*/true, LD->getNumValues() - 1,
+                               FromTypeWidth, LD->isVolatile()},
+                              DL);
   SDValue Ops[] = {getI32Imm(FromType, DL),
                    getI32Imm(FromTypeWidth, DL),
                    getI32Imm(UsedBytesMask, DL),
@@ -1613,11 +1615,11 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   const auto [Base, Offset] = selectADDR(ST->getBasePtr(), CurDAG);
 
   // Extract eviction/prefetch hint and cache policy register.
-  const auto [EvictionAndPrefetchHint, PolicyReg] =
-      getMemCacheHintOperands(ST,
-                              {CodeAddrSpace, /*IsLoad=*/false,
-                               /*NumElts=*/1, /*EltWidth=*/ToTypeWidth, ST->isVolatile()},
-                              DL);
+  const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
+      ST,
+      {CodeAddrSpace, /*IsLoad=*/false,
+       /*NumElts=*/1, /*EltWidth=*/ToTypeWidth, ST->isVolatile()},
+      DL);
 
   SDValue Ops[] = {selectPossiblyImm(Value),
                    getI32Imm(Ordering, DL),
