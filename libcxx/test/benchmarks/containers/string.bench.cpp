@@ -533,37 +533,24 @@ int main(int argc, char** argv) {
 
   {
     static auto bench_impl =
-        []<size_t size, bool opaque, class CharT>(
-            std::integral_constant<size_t, size>,
-            std::bool_constant<opaque>,
-            std::type_identity<CharT>,
-            benchmark::State& state) {
+        []<size_t size, class CharT>(
+            std::integral_constant<size_t, size>, std::type_identity<CharT>, benchmark::State& state) {
           std::basic_string<CharT> src(size, 'a');
           std::basic_string<CharT> string = src;
           for (auto _ : state) {
             benchmark::DoNotOptimize(string);
             string.clear();
-            if constexpr (opaque)
-              benchmark::DoNotOptimize(src);
             benchmark::DoNotOptimize(
                 string.append(unoptimizable_forward_iterator(src.begin()), unoptimizable_forward_iterator(src.end())));
           }
         };
 
-    bench("std::basic_string::append(ForwardIt, ForwardIt) (opaque)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::true_type{}),
+    bench("std::basic_string::append(ForwardIt, ForwardIt)",
+          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}),
           [](auto bm) { bm->Arg(small_size); }); // for naming
 
-    bench("std::basic_string::append(ForwardIt, ForwardIt) (opaque)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::true_type{}),
-          [](auto bm) { bm->Arg(large_size); }); // for naming
-
-    bench("std::basic_string::append(ForwardIt, ForwardIt) (transparent)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, small_size>{}, std::false_type{}),
-          [](auto bm) { bm->Arg(small_size); }); // for naming
-
-    bench("std::basic_string::append(ForwardIt, ForwardIt) (transparent)",
-          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}, std::false_type{}),
+    bench("std::basic_string::append(ForwardIt, ForwardIt)",
+          std::bind_front(bench_impl, std::integral_constant<size_t, large_size>{}),
           [](auto bm) { bm->Arg(large_size); }); // for naming
   }
 
