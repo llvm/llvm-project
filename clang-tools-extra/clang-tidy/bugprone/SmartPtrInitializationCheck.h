@@ -27,7 +27,7 @@ public:
 
 private:
   std::string getPointerDescription(const Expr *PointerExpr,
-                                    ASTContext &Context);
+                                    const ASTContext &Context);
   const std::vector<StringRef> SharedPointers;
   const std::vector<StringRef> UniquePointers;
   const std::vector<StringRef> DefaultDeleters;

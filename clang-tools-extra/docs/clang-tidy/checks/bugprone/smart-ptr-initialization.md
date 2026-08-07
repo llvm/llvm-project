@@ -76,8 +76,7 @@ The check ignores legitimate cases:
 - **UniquePointers**
   
   A semicolon-separated list of (fully qualified) unique pointer type names
-  that should be checked. Default value is
-  `::std::unique_ptr`.
+  that should be checked. Default value is `::std::unique_ptr`.
 
 - **DefaultDeleters**
   

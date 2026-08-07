@@ -138,7 +138,7 @@ void SmartPtrInitializationCheck::check(
 
 std::string
 SmartPtrInitializationCheck::getPointerDescription(const Expr *PointerExpr,
-                                                   ASTContext &Context) {
+                                                   const ASTContext &Context) {
   std::string Description;
   llvm::raw_string_ostream OS(Description);
 
