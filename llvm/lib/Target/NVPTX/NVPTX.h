@@ -368,4 +368,7 @@ void initializeNVPTXDAGToDAGISelLegacyPass(PassRegistry &);
 #define GET_INSTRINFO_OPERAND_ENUM
 #include "NVPTXGenInstrInfo.inc"
 
+#define GET_SUBTARGETINFO_ENUM
+#include "NVPTXGenSubtargetInfo.inc"
+
 #endif

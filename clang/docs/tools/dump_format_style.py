@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # A tool to parse the FormatStyle struct from Format.h and update the
-# documentation in ../ClangFormatStyleOptions.rst automatically.
+# documentation in ../ClangFormatStyleOptions.md automatically.
 # Run from the directory in which this file is located to update the docs.
 
 import argparse
@@ -16,7 +16,7 @@ FORMAT_STYLE_FILE = os.path.join(CLANG_DIR, "include/clang/Format/Format.h")
 INCLUDE_STYLE_FILE = os.path.join(
     CLANG_DIR, "include/clang/Tooling/Inclusions/IncludeStyle.h"
 )
-DOC_FILE = os.path.join(CLANG_DIR, "docs/ClangFormatStyleOptions.rst")
+DOC_FILE = os.path.join(CLANG_DIR, "docs/ClangFormatStyleOptions.md")
 
 PLURALS_FILE = os.path.join(os.path.dirname(__file__), "plurals.txt")
 
