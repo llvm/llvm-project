@@ -1744,7 +1744,6 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
 
   ReductionCodeGen RedCG(VarDeclShareds, VarDeclShareds, VarDeclPrivates,
                          VarDeclReductionOps);
-  unsigned Count = 0;
   unsigned RedCGIdx = 0;
   auto *ILHS = LHSs.begin();
   auto *IRHS = RHSs.begin();
@@ -1770,7 +1769,6 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
       PrivateScope.addPrivate(LHSVD, OriginalAddr);
       PrivateScope.addPrivate(RHSVD, PrivateAddr);
 
-      ++Count;
       ++ILHS;
       ++IRHS;
       ++IPriv;
@@ -1834,7 +1832,6 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     ++ILHS;
     ++IRHS;
     ++IPriv;
-    ++Count;
     if (!BD)
       ++RedCGIdx;
   }
