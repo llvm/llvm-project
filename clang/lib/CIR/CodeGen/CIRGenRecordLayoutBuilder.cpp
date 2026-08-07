@@ -13,6 +13,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenModule.h"
 #include "CIRGenTypes.h"
+#include "TargetInfo.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -759,10 +760,12 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       hasTrivialDestructor = cxxRD->hasTrivialDestructor();
     const auto &astLayout = astContext.getASTRecordLayout(rd);
     uint64_t recordAlignInBytes = astLayout.getAlignment().getQuantity();
+    bool isEmpty =
+        isEmptyRecordForABI(astContext, astContext.getCanonicalTagType(rd));
 
     cgm.addRecordLayout(ty->getName(), cir::RecordLayoutAttr::get(
                                            mlirCtx, apk, hasTrivialDestructor,
-                                           recordAlignInBytes));
+                                           recordAlignInBytes, isEmpty));
   }
 
   auto rl = std::make_unique<CIRGenRecordLayout>(

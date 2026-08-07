@@ -69,8 +69,9 @@ namespace {
 // dialect-agnostic mlir::abi::FunctionClassification that CIRABIRewriteContext
 // consumes.  Integer (including `_BitInt` up to 128 bits) / pointer / bool /
 // f32 / f64 scalars and struct / union / array aggregates are handled.
-// `_Complex`, vectors, wider floats, packed or padded records, and a union no
-// member of which spans its declared size are reported NYI by
+// `_Complex`, vectors, wider floats, packed records, padded records the layout
+// metadata does not call empty, a union no member of which spans its declared
+// size, and a union with an empty member are reported NYI by
 // classifyX86_64Function so an unsupported signature fails the pass instead of
 // being misclassified.
 //===----------------------------------------------------------------------===//
@@ -84,6 +85,27 @@ static bool recordCanPassInRegs(ModuleOp modOp, cir::RecordType recTy) {
   if (!layout)
     return true;
   return layout.getArgPassingKind() == cir::ArgPassingKind::CanPassInRegs;
+}
+
+/// Whether a record carries no data for argument passing.  The answer has to
+/// come from the module's record-layout metadata, because an empty C++ class
+/// and a record holding one byte of data lower to the same members.  A record
+/// with no entry, such as one CXXABILowering synthesized, is treated as
+/// carrying data.
+static bool recordIsEmpty(ModuleOp modOp, cir::RecordType recTy) {
+  auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
+  return layout && layout.getIsEmpty();
+}
+
+/// Whether a union member holds no data, either because it is an empty record
+/// or an array of them.  An array is stripped because the ABI library reduces
+/// a union to a single member and coerces from that member's bytes, and it
+/// cannot see that an array of empty records supplies none.
+static bool unionMemberIsEmpty(ModuleOp modOp, mlir::Type ty) {
+  while (auto arrTy = dyn_cast<cir::ArrayType>(ty))
+    ty = arrTy.getElementType();
+  auto recTy = dyn_cast<cir::RecordType>(ty);
+  return recTy && recordIsEmpty(modOp, recTy);
 }
 
 /// A record's declared alignment, which the ABI uses for the byval and sret
@@ -105,7 +127,8 @@ static llvm::Align recordDeclaredAlign(ModuleOp modOp, cir::RecordType recTy,
 /// Aggregates: a complete struct or union whose members are all themselves
 /// supported, or an array of a supported element type.  Everything else is
 /// reported NYI at the reject() choke point in classifyX86_64Function.
-static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
+static bool isSupportedType(mlir::Type ty, const DataLayout &dl,
+                            ModuleOp modOp) {
   // A pointer is only handled in the default address space (null) or an
   // already-lowered target address space.  A LangAddressSpaceAttr must be
   // lowered before this pass, so reject it rather than silently dropping it.
@@ -130,7 +153,7 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
     return intTy.getWidth() <= 64 || intTy.getWidth() == 128;
   }
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
-    return isSupportedType(arrTy.getElementType(), dl);
+    return isSupportedType(arrTy.getElementType(), dl, modOp);
   if (auto recTy = dyn_cast<cir::RecordType>(ty)) {
     // An incomplete record has no layout to classify, and a packed one needs
     // pad-aware eightbyte classification this bridge does not implement.
@@ -156,14 +179,25 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
         };
         if (!llvm::any_of(members, spansRecord))
           return false;
+        // Classic sizes a union's coercion from the bytes that hold data, so an
+        // empty member contributes none.  The library instead reduces the union
+        // to one member, picked by alignment and then by size, and coerces from
+        // that member: an empty one can win either comparison and widen the
+        // coercion past what classic emits.
+        auto isEmptyMember = [&](mlir::Type m) {
+          return unionMemberIsEmpty(modOp, m);
+        };
+        if (llvm::any_of(members, isEmptyMember))
+          return false;
       }
-    } else if (recTy.getPadded()) {
-      // A struct's padding is a member the classifier would have to recognize
-      // as padding rather than data, which is not implemented.
+    } else if (recTy.getPadded() && !recordIsEmpty(modOp, recTy)) {
+      // Padding the classifier would have to tell apart from data is not
+      // implemented.  An empty record has no data to confuse it with.
       return false;
     }
-    return llvm::all_of(recTy.getMembers(),
-                        [&](mlir::Type m) { return isSupportedType(m, dl); });
+    return llvm::all_of(recTy.getMembers(), [&](mlir::Type m) {
+      return isSupportedType(m, dl, modOp);
+    });
   }
   return false;
 }
@@ -251,6 +285,16 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         llvm::TypeSize sizeBits = llvm::TypeSize::getFixed(
             dl.getTypeSizeInBits(type).getFixedValue());
         llvm::Align align = recordDeclaredAlign(modOp, recTy, dl);
+
+        // An empty record holds no user data, so map it with no fields and let
+        // the classifier reach Ignore on its own.  The size still decides
+        // between that and the memory class, which an empty class past two
+        // eightbytes lands in.
+        if (recordIsEmpty(modOp, recTy))
+          return tb.getRecordType(
+              /*Fields=*/{}, sizeBits, align, llvm::abi::StructPacking::Default,
+              /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{}, flags);
+
         SmallVector<llvm::abi::FieldInfo> fields;
         fields.reserve(recTy.getMembers().size());
 
@@ -265,8 +309,8 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                                  llvm::abi::StructPacking::Default, flags);
         }
 
-        // isSupportedType rejects packed and padded structs, so every field
-        // here sits at its naturally-aligned offset.
+        // An accepted non-empty struct is never padded, so every field here
+        // sits at its naturally-aligned offset.
         uint64_t offsetBits = 0;
         for (mlir::Type fieldTy : recTy.getMembers()) {
           const llvm::abi::Type *mappedField =
@@ -307,7 +351,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// Indirect: an aggregate that does not fit in registers is passed via a
 /// pointer (sret for returns, byval for arguments).
 ///
-/// Ignore: a void return, or a zero-field record dropped from the signature.
+/// Ignore: a void return, or an empty record dropped from the signature.
 static std::optional<ArgClassification>
 convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
                   mlir::Type origTy) {
@@ -388,7 +432,7 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
   bool voidRet = isa<cir::VoidType>(retCIR);
 
   auto reject = [&](mlir::Type t) -> bool {
-    if (isSupportedType(t, dl))
+    if (isSupportedType(t, dl, modOp))
       return false;
     emitError()
         << "x86_64 calling-convention lowering not yet implemented for type "

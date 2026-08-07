@@ -37,6 +37,20 @@ bool isEmptyFieldForLayout(const ASTContext &context, const FieldDecl *fd);
 /// if the [[no_unique_address]] attribute would have made them empty.
 bool isEmptyRecordForLayout(const ASTContext &context, QualType t);
 
+/// isEmptyFieldForABI - Return true if the field is "empty" for argument
+/// passing.  An unnamed bit-field of any width qualifies, as does an empty
+/// record, though a C++ one only under [[no_unique_address]] and never through
+/// an array of them.  This differs from isEmptyFieldForLayout, which counts
+/// only a zero-width bit-field, because a narrower unnamed bit-field still
+/// occupies no ABI class even though it takes up layout space.
+bool isEmptyFieldForABI(const ASTContext &context, const FieldDecl *fd);
+
+/// isEmptyRecordForABI - Return true if a record contains only empty base
+/// classes and fields, and so contributes no data to argument passing.  What
+/// that means for a signature is the caller's to decide: an empty record small
+/// enough is dropped, but one past two eightbytes is still passed indirectly.
+bool isEmptyRecordForABI(const ASTContext &context, QualType t);
+
 class CIRGenFunction;
 
 class TargetCIRGenInfo {
