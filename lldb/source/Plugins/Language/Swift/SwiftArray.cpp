@@ -403,8 +403,8 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &static_valobj) {
     if (!swift_runtime)
       return nullptr;
 
-    if (CompilerType type =
-            swift_runtime->GetTypeFromMetadata(*ts, argmetadata_ptr))
+    if (CompilerType type = swift_runtime->GetTypeFromMetadata(
+            *ts, Address(argmetadata_ptr)))
       if (auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>())
         argument_type = ts->GetGenericArgumentType(type.GetOpaqueQualType(), 0);
 
