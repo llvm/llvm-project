@@ -887,11 +887,8 @@ void SPIRVAsmPrinter::outputModuleSections() {
   MAI = &getAnalysis<SPIRVModuleAnalysis>().MAI;
   assert(ST && TII && MAI && M && "Module analysis is required");
 
-  if (!AuxDataHandler) {
-    auto Handler = std::make_unique<SPIRVAuxDataHandler>(*this, *M);
-    if (Handler->hasWork())
-      AuxDataHandler = std::move(Handler);
-  }
+  if (!AuxDataHandler && spirvPreserveAuxData())
+    AuxDataHandler = std::make_unique<SPIRVAuxDataHandler>(*this, *M);
 
   // Let the NSDI handler add its extension and ext inst import entry to MAI
   // before the module header sections are emitted.

@@ -29,7 +29,6 @@ namespace llvm {
 
 class AsmPrinter;
 class Constant;
-class Function;
 class GlobalObject;
 class Module;
 class SPIRVSubtarget;
@@ -42,13 +41,12 @@ enum AuxDataOpcode : int64_t {
   GlobalVariableMetadataOpcode = 2,
   GlobalVariableAttributeOpcode = 3,
   LinkageOpcode = 4,
+  InstructionMetadataOpcode = 5,
 };
 
 class SPIRVAuxDataHandler {
 public:
   SPIRVAuxDataHandler(AsmPrinter &AP, const Module &M);
-
-  bool hasWork() const;
 
   /// Register extension + ext-inst-set; call before output of section 1.
   void prepareModuleOutput(const SPIRVSubtarget &ST,
@@ -110,6 +108,8 @@ private:
                           MCRegister ExtSetReg, ArrayRef<MCRegister> Operands,
                           SPIRV::ModuleAnalysisInfo &MAI);
 };
+
+bool spirvPreserveAuxData();
 
 } // namespace llvm
 
