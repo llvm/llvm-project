@@ -74,7 +74,6 @@ define void @call_void() {
 ; CHECK-LABEL: call_void(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ret;
   ret void

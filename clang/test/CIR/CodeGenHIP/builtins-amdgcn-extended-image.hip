@@ -1,18 +1,15 @@
 #include "../CodeGenCUDA/Inputs/cuda.h"
 
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1100 -target-feature +extended-image-insts \
+// RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa -x hip -std=c++11 -fclangir \
 // RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1100 -target-feature +extended-image-insts \
+// RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa -x hip -std=c++11 -fclangir \
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu gfx1100 -target-feature +extended-image-insts \
+// RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa -x hip -std=c++11 \
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 

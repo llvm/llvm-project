@@ -1,9 +1,14 @@
-//===-- Linux implementation of tcsendbreak -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Linux implementation of tcsendbreak.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/termios/tcsendbreak.h"
@@ -14,11 +19,10 @@
 #include "src/__support/macros/config.h"
 
 #include <asm/ioctls.h> // Safe to include without the risk of name pollution.
-#include <termios.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(pid_t, tcsendbreak, (int fd, int /* unused duration */)) {
+LLVM_LIBC_FUNCTION(int, tcsendbreak, (int fd, int /* unused duration */)) {
   // POSIX leaves the behavior for non-zero duration implementation dependent.
   // Which means that the behavior can be the same as it is when duration is
   // zero. So, we just pass zero to the syscall.

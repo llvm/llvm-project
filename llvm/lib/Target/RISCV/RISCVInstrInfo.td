@@ -273,6 +273,27 @@ class RISCVUImmOp<int bitsNum> : RISCVOp {
 class RISCVUImmLeafOp<int bitsNum> :
   RISCVUImmOp<bitsNum>, ImmLeaf<XLenVT, "return isUInt<" # bitsNum # ">(Imm);">;
 
+// A N-bit unsigned immediate where the least significant bits are zero.
+class RISCVUImmLsbZeroOp<int width, int zeros>
+    : RISCVOp, ImmLeaf<XLenVT, [{return isShiftedUInt<}] # !sub(width, zeros) #
+                       [{, }] # zeros # [{>(Imm);}]> {
+
+  // Create suffix with the appropriate number of 0s to append to all names
+  defvar Suffix = !foldl("", !range(zeros), acc, ignore, !strconcat(acc, "0"));
+
+  let ParserMatchClass = UImmAsmOperand<width, "Lsb" # Suffix>;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeUImmOperand<" # width # ">";
+  let OperandType = "OPERAND_UIMM" # width # "_LSB" # Suffix;
+
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isShiftedUInt<}] # !sub(width, zeros) # [{, }] # zeros # [{>(Imm);
+  }];
+}
+
 class RISCVSImmOp<int bitsNum> : RISCVOp {
   let ParserMatchClass = SImmAsmOperand<bitsNum>;
   let EncoderMethod = "getImmOpValue";
@@ -1910,6 +1931,14 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
 def PseudoMovImm : Pseudo<(outs GPR:$dst), (ins i32imm:$imm), []>,
                    Sched<[WriteIALU]>;
 
+// Materializes "$base + (imm << 12)" as a single pseudo so that
+// MachineLateInstrsCleanup can CSE identical upper-immediate additions.
+// Expanded to LUI+ADD by RISCVPostRAExpandPseudo.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8 in
+def PseudoAddUpperImm
+    : Pseudo<(outs GPR:$dst), (ins GPR:$base, uimm20_lui:$hi), []>,
+      Sched<[WriteIALU, ReadIALU]>;
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
     isCodeGenOnly = 0 in
 def PseudoLLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
@@ -1951,9 +1980,13 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
 def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.gd", "$dst, $src">;
 
+defvar TLSDESCVClobbers = !listconcat(
+    !foreach(i, !range(32), !cast<Register>("V"#i)),
+    [VTYPE, VL, VXSAT, VXRM]);
+
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 32 in
 def PseudoLA_TLSDESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), []> {
-  let Defs = [X5, X10];
+  let Defs = !listconcat([X5, X10], TLSDESCVClobbers);
 }
 
 def TLSDESCCallSymbol : AsmOperandClass {
@@ -1978,7 +2011,7 @@ def PseudoTLSDESCCall : Pseudo<(outs GPR:$rd),
                          (ins GPR:$rs1, simm12_lo:$imm12, tlsdesc_call_symbol:$src), [],
                          "jalr", "$rd, ${imm12}(${rs1}), $src">,
                          Sched<[WriteJalr, ReadJalr]> {
-  let Defs = [X10];
+  let Defs = !listconcat([X10], TLSDESCVClobbers);
   let Uses = [X10];
 }
 
@@ -2366,6 +2399,10 @@ include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
 include "RISCVInstrInfoZilsd.td"
 include "RISCVInstrInfoZibi.td"
+include "RISCVInstrInfoZilx.td"
+
+// Privileged
+include "RISCVInstrInfoSmcsps.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"
