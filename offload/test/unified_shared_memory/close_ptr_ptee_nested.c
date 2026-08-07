@@ -106,12 +106,15 @@ int main() {
   // V2: In tgt: p_device == p_host
   // V2: In tgt: paddr_device != &p_host
 
-  // The close pointee (mapped by the enclosing region) has a device
-  // allocation, and p -- newly mapped on the USM host path by the inner region
-  // -- is attached to it, so its device value differs from the host address
-  // while the pointer variable itself stays on the host path (&p matches).
+  // The close pointee (mapped by the enclosing region) has a device allocation,
+  // and p is newly mapped by the inner region. Attaching p to that allocation
+  // would assign a device address to the original p, since USM otherwise shares
+  // its storage; the pointee cannot give the allocation up, because it was made
+  // by the enclosing region and may already have been handed to the program. So
+  // p, whose mapping this construct did create, is given device storage of its
+  // own (&p differs), and the attachment writes into that.
   // V3: In tgt: p_device != p_host
-  // V3: In tgt: paddr_device == &p_host
+  // V3: In tgt: paddr_device != &p_host
 
   // The host pointer must be intact afterwards and the kernel's write must be
   // visible on the host.

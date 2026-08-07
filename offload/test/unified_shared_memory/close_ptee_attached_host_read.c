@@ -11,32 +11,30 @@
 // UNSUPPORTED: intelgpu
 
 // The pointee already has device storage before the pointers are mapped, so no
-// allocation happens for it on the inner construct and there is nothing to
-// undo: the pointee is simply already on the device.
+// allocation happens for it on the inner construct and there is nothing for the
+// pointee to give up: it is simply already on the device.
 //
-// p2 is mapped without close, so its corresponding storage is the original
-// storage and attachment writes the device pointee address into the original
-// p2. The host can then observe that value for as long as p2 remains attached,
-// which under OpenMP 6.0 lasts until the pointer's storage is removed from the
-// device data environment -- there is no detachment.
+// p2 is mapped without close, so its corresponding storage would be the original
+// storage, and attaching it would write the device pointee address into the
+// original p2. The host could then observe that value for as long as p2 remained
+// attached, which under OpenMP 6.0 lasts until the pointer's storage is removed
+// from the device data environment -- there is no detachment.
 //
-// This case is therefore not fixed by declining to allocate the pointee: it is
-// about attachment through shared storage, not about the close allocation.
+// This case is therefore not resolved from the pointee's side. It is resolved
+// from the pointer's side: p2's own mapping is created by this construct, so p2
+// can be given a device allocation of its own, and the assignment then reaches
+// that instead of the original p2.
 //
 // Note what OpenMP 6.0 does and does not say here. Attachment assigns the
 // corresponding pointer (7.9.6), and the corresponding storage may share
-// storage with the original (7.9.6, 1.3.2), in which case the assignment is
-// observable on the host. Nothing preserves the original value during that
+// storage with the original (7.9.6, 1.3.2), in which case the assignment would
+// be observable on the host. Nothing preserves the original value during that
 // window, and nothing restores it: the map-exiting sequence has no detach step.
 // The one place the specification confronts the same situation, for self maps,
 // requires runtime error termination when "the list item is a pointer that
 // would be assigned a different value as a result of pointer attachment"
-// (7.9.6), which suggests the intent is for this configuration not to arise
-// rather than for the host value to be preserved.
-//
-// FIXME: the values checked below are the ones produced today; the expected
-// value is given alongside each, on the reading that a program should be able
-// to use the original pointer while it happens to be attached.
+// (7.9.6), which indicates the intent is for this configuration not to arise --
+// so the implementation has to keep it from arising.
 
 #include <stdio.h>
 
@@ -72,9 +70,8 @@ int main() {
     // CHECK: inside: p1 == &arr[0]
     printf("inside: p1 %s &arr[0]\n", p1 == &arr[0] ? "==" : "!=");
 
-    // EXPECTED: inside: p2 == &arr[0]
-    // CHECK:    inside: p2 != &arr[0]
-    // FIXME: the original p2 holds the device pointee address here.
+    // p2 was given device storage of its own, so its original is unaffected too.
+    // CHECK: inside: p2 == &arr[0]
     printf("inside: p2 %s &arr[0]\n", p2 == &arr[0] ? "==" : "!=");
   }
 
@@ -86,9 +83,7 @@ int main() {
   // CHECK: after: p1 == &arr[0]
   printf("after: p1 %s &arr[0]\n", p1 == &arr[0] ? "==" : "!=");
 
-  // EXPECTED: after: p2 == &arr[0]
-  // CHECK:    after: p2 != &arr[0]
-  // FIXME: nothing restores the original p2.
+  // CHECK: after: p2 == &arr[0]
   printf("after: p2 %s &arr[0]\n", p2 == &arr[0] ? "==" : "!=");
 
   // CHECK: Done!

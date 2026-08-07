@@ -278,19 +278,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
                // change.
                (LR.TPR.getEntry() != nullptr &&
                 (LR.Flags.IsContained || LR.Flags.ExtendsBefore ||
-                 LR.Flags.ExtendsAfter)) ||
-               // A pointer whose storage is shared with the original cannot be
-               // attached to a device allocation: the assignment would write a
-               // device address into the original pointer. When this construct
-               // will attach such a pointer to this storage, keep it on the
-               // host path, so that the address attached to the pointer is the
-               // original one.
-               //
-               // Giving the pointer a device allocation instead is not possible
-               // here, because it is already mapped and the device address of a
-               // mapped list item must not change.
-               (StateInfo &&
-                StateInfo->PointeesToKeepOnHostPath.contains(HstPtrBegin)))) ||
+                 LR.Flags.ExtendsAfter)))) ||
              (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
 
     // If unified shared memory is active, implicitly mapped variables that are
@@ -571,6 +559,79 @@ int MappingInfoTy::eraseMapEntry(HDTTMapAccessorTy &HDTTMap,
   }
 
   return OFFLOAD_SUCCESS;
+}
+
+void MappingInfoTy::recordAttachedPointer(void *HstPteeBegin,
+                                          void **HstPtrAddr) {
+  auto &Attached = AttachedPointers[HstPteeBegin];
+  if (!llvm::is_contained(Attached, HstPtrAddr))
+    Attached.push_back(HstPtrAddr);
+}
+
+int MappingInfoTy::giveEntryDeviceStorage(HDTTMapAccessorTy &HDTTMap,
+                                          HostDataToTargetTy *Entry,
+                                          AsyncInfoTy &AsyncInfo) {
+  assert(Entry && "Trying to allocate for a null entry.");
+  assert(Entry->isHostBacked() && "Entry already owns a device allocation");
+
+  void *HstPtrBegin = reinterpret_cast<void *>(Entry->HstPtrBegin);
+  int64_t Size = Entry->HstPtrEnd - Entry->HstPtrBegin;
+
+  uintptr_t TgtAllocBegin =
+      reinterpret_cast<uintptr_t>(Device.allocData(Size, HstPtrBegin));
+  if (!TgtAllocBegin) {
+    REPORT() << "Failed to allocate device memory for " << HstPtrBegin << ".";
+    return OFFLOAD_FAIL;
+  }
+
+  Entry->takeDeviceStorage(TgtAllocBegin, TgtAllocBegin);
+
+  INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
+       "Allocating device memory for map entry with HstPtrBegin=" DPxMOD
+       ", TgtPtrBegin=" DPxMOD ", Size=%" PRId64
+       ", so that its storage is not shared with the original\n",
+       DPxPTR(Entry->HstPtrBegin), DPxPTR(TgtAllocBegin), Size);
+  ODBG(ODT_Mapping) << "Allocating device memory for map entry (hst:"
+                    << HstPtrBegin
+                    << ") -> (tgt:" << reinterpret_cast<void *>(TgtAllocBegin)
+                    << "), so that its storage is not shared with the original";
+
+  // The storage was shared with the host until now, so bring its current
+  // contents over: it may hold data besides the pointer being attached.
+  if (Device.submitData(reinterpret_cast<void *>(TgtAllocBegin), HstPtrBegin,
+                        Size, AsyncInfo, Entry) != OFFLOAD_SUCCESS) {
+    REPORT() << "Copying data to device failed.";
+    return OFFLOAD_FAIL;
+  }
+
+  return Device.notifyDataMapped(HstPtrBegin, Size);
+}
+
+int MappingInfoTy::shareEntryStorageWithOriginal(HDTTMapAccessorTy &HDTTMap,
+                                                 HostDataToTargetTy *Entry) {
+  assert(Entry && "Trying to share storage of a null entry.");
+  assert(!Entry->isHostBacked() &&
+         "Entry storage is already shared with the original");
+
+  void *HstPtrBegin = reinterpret_cast<void *>(Entry->HstPtrBegin);
+  int64_t Size = Entry->HstPtrEnd - Entry->HstPtrBegin;
+  void *TgtAllocBegin = reinterpret_cast<void *>(Entry->TgtAllocBegin);
+
+  INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
+       "Releasing the device allocation of map entry with HstPtrBegin=" DPxMOD
+       ", TgtPtrBegin=" DPxMOD ", Size=%" PRId64
+       ", so that its storage is shared with the original\n",
+       DPxPTR(Entry->HstPtrBegin), DPxPTR(Entry->TgtPtrBegin), Size);
+  ODBG(ODT_Mapping) << "Releasing the device allocation of map entry (hst:"
+                    << HstPtrBegin << ") -> (tgt:" << TgtAllocBegin
+                    << "), so that its storage is shared with the original";
+
+  Entry->shareStorageWithOriginal();
+
+  if (Device.notifyDataUnmapped(HstPtrBegin))
+    return OFFLOAD_FAIL;
+
+  return Device.deleteData(TgtAllocBegin);
 }
 
 int MappingInfoTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry,

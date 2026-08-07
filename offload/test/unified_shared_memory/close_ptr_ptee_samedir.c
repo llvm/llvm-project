@@ -82,8 +82,14 @@ int main() {
 
   // ALL: Before tgt: p == p_host
 
-  // The close pointee is device-allocated and p (host path) is attached to it.
-  // V1: In tgt: p_device != p_host
+  // p shares its storage with the original under USM, so attaching it to a
+  // device-allocated pointee would assign a device address to the original p.
+  // The pointee's allocation was made by this construct, so it gives it up and
+  // shares storage with the original instead: the attached value is then the
+  // host address, and p itself needs no storage of its own (&p matches). The
+  // close request on the pointee is not honoured, which it need not be -- close
+  // is a hint, and correctness of the original pointer takes priority.
+  // V1: In tgt: p_device == p_host
   // V1: In tgt: paddr_device == &p_host
 
   // p is close-allocated (own device storage, so &p differs); the pointee is a

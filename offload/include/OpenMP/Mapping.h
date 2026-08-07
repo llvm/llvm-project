@@ -118,8 +118,35 @@ struct HostDataToTargetTy {
   const uintptr_t HstPtrEnd;       // non-inclusive.
   const map_var_info_t HstPtrName; // Optional source name of mapped variable.
 
-  const uintptr_t TgtAllocBegin; // allocated target memory
-  const uintptr_t TgtPtrBegin; // mapped target memory = TgtAllocBegin + padding
+  // Not const: an entry created for this construct can be returned to sharing
+  // storage with the original, see shareStorageWithOriginal().
+  uintptr_t TgtAllocBegin; // allocated target memory
+  uintptr_t TgtPtrBegin;   // mapped target memory = TgtAllocBegin + padding
+
+  /// Whether this entry's storage is the host storage itself, i.e. it owns no
+  /// device allocation. That is the case for the entries recorded on the
+  /// unified-shared-memory host path.
+  bool isHostBacked() const { return TgtPtrBegin == HstPtrBegin; }
+
+  /// Give this entry a device allocation, so that its storage stops being
+  /// shared with the original. The caller performs the allocation; see
+  /// MappingInfoTy::giveEntryDeviceStorage(), which is the only intended caller
+  /// and documents when this is legal.
+  void takeDeviceStorage(uintptr_t NewTgtAllocBegin, uintptr_t NewTgtPtrBegin) {
+    assert(isHostBacked() && "Entry already owns a device allocation");
+    TgtAllocBegin = NewTgtAllocBegin;
+    TgtPtrBegin = NewTgtPtrBegin;
+  }
+
+  /// Return this entry's storage to being shared with the original. The caller
+  /// releases the device allocation; see
+  /// MappingInfoTy::shareEntryStorageWithOriginal(), which is the only intended
+  /// caller and documents when this is legal.
+  void shareStorageWithOriginal() {
+    assert(!isHostBacked() && "Entry is already shared with the original");
+    TgtAllocBegin = HstPtrBegin;
+    TgtPtrBegin = HstPtrBegin;
+  }
 
 private:
   static const uint64_t INFRefCount = ~(uint64_t)0;
@@ -503,13 +530,6 @@ struct StateInfoTy {
   /// ATTACH map entries for deferred processing until all other maps are done.
   llvm::SmallVector<AttachMapInfo> AttachEntries;
 
-  /// Pointees that this construct will attach a pointer to whose own storage is
-  /// shared with the original. Such a pointee has to stay on the host path, so
-  /// that attaching the pointer does not write a device address into the
-  /// original pointer. Populated before any entry is created, since the device
-  /// address of a mapped list item must not change while it is mapped.
-  llvm::SmallPtrSet<void *, 4> PointeesToKeepOnHostPath;
-
   /// Host pointers for which new device memory was allocated.
   /// Key: host pointer, Value: allocation size.
   /// Consulted by the 'present' map-type validation.
@@ -673,6 +693,26 @@ struct MappingInfoTy {
   /// The type used to access the HDTT map.
   using HDTTMapAccessorTy = decltype(HostDataToTargetMap)::AccessorTy;
 
+  /// Which pointers are attached to a given pointee, keyed by the pointee's
+  /// original address.
+  ///
+  /// Attachment records a shadow pointer on the entry holding the pointer,
+  /// which gives a pointer's pointee but not the reverse. This index provides
+  /// the reverse direction, which is needed to tell whether giving an entry a
+  /// device allocation is permissible: a pointer that is attached to storage
+  /// within that entry designates its current address, so the entry cannot move
+  /// unless that pointer can be attached again.
+  ///
+  /// Only pointers that are actually attached are recorded, so this stays empty
+  /// for mappings that never involve pointer attachment.
+  ///
+  /// Accessed under the HDTT map accessor.
+  llvm::DenseMap<void *, llvm::SmallVector<void **, 2>> AttachedPointers;
+
+  /// Record that \p HstPtrAddr is attached to the pointee at \p HstPteeBegin.
+  /// See AttachedPointers.
+  void recordAttachedPointer(void *HstPteeBegin, void **HstPtrAddr);
+
   /// Lookup the mapping of \p HstPtrBegin in \p HDTTMap. The accessor ensures
   /// exclusive access to the HDTT map.
   LookupResult lookupMapping(HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin,
@@ -726,6 +766,34 @@ struct MappingInfoTy {
   /// HstPtrBegin uses shared memory.
   [[nodiscard]] int eraseMapEntry(HDTTMapAccessorTy &HDTTMap,
                                   HostDataToTargetTy *Entry, int64_t Size);
+
+  /// Give \p Entry, whose storage is shared with the original, a device
+  /// allocation and copy the current contents of its storage into it.
+  ///
+  /// Only legal for an entry whose mapping was created by the construct that is
+  /// currently being processed, since its device address cannot have been
+  /// observed yet. \p HDTTMap must be held by the caller.
+  [[nodiscard]] int giveEntryDeviceStorage(HDTTMapAccessorTy &HDTTMap,
+                                           HostDataToTargetTy *Entry,
+                                           AsyncInfoTy &AsyncInfo);
+
+  /// Return the storage of \p Entry to being shared with the original,
+  /// releasing the device allocation it was created with.
+  ///
+  /// This is only legal for an entry created by the construct that is currently
+  /// being processed: its device address cannot have been observed yet, whereas
+  /// changing the device address of an entry that was already present would
+  /// invalidate whatever the program obtained for it, from omp_get_mapped_ptr
+  /// or otherwise.
+  ///
+  /// Used when a pointer is to be attached to \p Entry but the pointer's own
+  /// storage is shared with the original: the attachment would then write a
+  /// device address into the original pointer, so the pointee keeps host
+  /// storage instead and the attached address is the original one.
+  ///
+  /// \p HDTTMap must be held by the caller.
+  [[nodiscard]] int shareEntryStorageWithOriginal(HDTTMapAccessorTy &HDTTMap,
+                                                  HostDataToTargetTy *Entry);
 
   /// Deallocate the \p Entry from the device memory and delete it. Return \c
   /// OFFLOAD_SUCCESS if the deallocation operations executed successfully, and
