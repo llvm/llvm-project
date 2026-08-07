@@ -10041,7 +10041,7 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
       // Scrub the imported type mapping as well. Import(Type*) can add a
       // type mapping linked to a declaration that ultimately fails.
       if (const auto *FromTD = dyn_cast<TypeDecl>(FromD))
-          ImportedTypes.erase(FromTD->getTypeForDecl());
+        ImportedTypes.erase(FromTD->getTypeForDecl());
 
       // ImportedDecls and ImportedFromDecls are not symmetric.  It may happen
       // (e.g. with namespaces) that several decls from the 'from' context are
@@ -10096,7 +10096,7 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
           break;
         PrevFromDi = FromDi;
         setImportDeclError(FromDi, ErrOut);
-        
+
         if (const auto *FromTDi = dyn_cast<TypeDecl>(FromDi))
           ImportedTypes.erase(FromTDi->getTypeForDecl());
 

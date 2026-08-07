@@ -6608,14 +6608,14 @@ TEST_P(ErrorHandlingTest, ErrorIsPropagatedFromMemberToClass) {
   EXPECT_FALSE(ImportedOK);
 }
 
-// Check that the imported types, and not only the decls, are invalidated 
-// (removed from ImportedTypes) upon an import failure. It can happen, for 
-// instance with a member whose signature refers back to the enclosing class, 
+// Check that the imported types, and not only the decls, are invalidated
+// (removed from ImportedTypes) upon an import failure. It can happen, for
+// instance with a member whose signature refers back to the enclosing class,
 // that the type is successfully imported and pointing to the decl being
-// imported, but that the decl import then fails further on. 
-// The decl mapping is correctly invalidated, but if the connected type is not 
-// invalidated as well, the half-built decl (which unavoidably remains 
-// in the 'To' AST) could be accessed through the type during later operations, 
+// imported, but that the decl import then fails further on.
+// The decl mapping is correctly invalidated, but if the connected type is not
+// invalidated as well, the half-built decl (which unavoidably remains
+// in the 'To' AST) could be accessed through the type during later operations,
 // like structural equivalence checks.
 TEST_P(ErrorHandlingTest, ImportedTypeMappingIsInvalidatedOnFailure) {
   TranslationUnitDecl *FromTU = getTuDecl(std::string(R"(
