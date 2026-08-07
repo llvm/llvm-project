@@ -119,11 +119,57 @@ bool GISelValueTracking::isKnownNeverZero(Register R, const APInt &DemandedElts,
   if (Depth >= getMaxDepth())
     return false;
 
+  const APInt ScalarDemandedElts(1, 1);
   MachineInstr &MI = *MRI.getVRegDef(R);
 
   switch (MI.getOpcode()) {
   default:
     break;
+
+  case TargetOpcode::G_BUILD_VECTOR: {
+    for (const auto &[I, MO] : enumerate(drop_begin(MI.operands()))) {
+      if (!DemandedElts[I])
+        continue;
+      if (!isKnownNeverZero(MO.getReg(), ScalarDemandedElts, Depth + 1))
+        return false;
+    }
+    return true;
+  }
+
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+    GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
+    Register InVec = Extract.getVectorReg();
+    LLT VecTy = MRI.getType(InVec);
+    if (VecTy.isScalableVector())
+      break;
+    unsigned NumSrcElts = VecTy.getNumElements();
+    // An out-of-range constant index produces poison. Keep all lanes demanded,
+    // which is poison-safe and matches SelectionDAG's conservative behavior.
+    APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
+    if (auto Idx = getIConstantVRegVal(Extract.getIndexReg(), MRI)) {
+      if (Idx->ult(NumSrcElts))
+        DemandedSrcElts = APInt::getOneBitSet(NumSrcElts, Idx->getZExtValue());
+    }
+    return isKnownNeverZero(InVec, DemandedSrcElts, Depth + 1);
+  }
+
+  case TargetOpcode::G_SHUFFLE_VECTOR: {
+    GShuffleVector &Shuf = cast<GShuffleVector>(MI);
+    LLT SrcTy = MRI.getType(Shuf.getSrc1Reg());
+    if (SrcTy.isScalableVector())
+      break;
+    APInt DemandedLHS, DemandedRHS;
+    if (!getShuffleDemandedElts(SrcTy.getNumElements(), Shuf.getMask(),
+                                DemandedElts, DemandedLHS, DemandedRHS))
+      break;
+    if (!DemandedLHS.isZero() &&
+        !isKnownNeverZero(Shuf.getSrc1Reg(), DemandedLHS, Depth + 1))
+      return false;
+    if (!DemandedRHS.isZero() &&
+        !isKnownNeverZero(Shuf.getSrc2Reg(), DemandedRHS, Depth + 1))
+      return false;
+    return true;
+  }
 
   case TargetOpcode::G_OR:
     return isKnownNeverZero(MI.getOperand(1).getReg(), DemandedElts,
@@ -2716,8 +2762,9 @@ GISelValueTrackingPrinterPass::run(MachineFunction &MF,
           continue;
         KnownBits Known = VTA.getKnownBits(Reg);
         unsigned SignedBits = VTA.computeNumSignBits(Reg);
+        bool IsKnownNeverZero = VTA.isKnownNeverZero(Reg);
         OS << "  " << MO << " KnownBits:" << Known << " SignBits:" << SignedBits
-           << '\n';
+           << " IsKnownNeverZero:" << IsKnownNeverZero << '\n';
       };
     }
   }
