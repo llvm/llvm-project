@@ -261,21 +261,31 @@ RequestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
     return {};
   }
 
-  // Download into a temporary file.
-  llvm::SmallString<128> tmp_file;
-  constexpr bool erase_on_reboot = true;
-  path::system_temp_directory(erase_on_reboot, tmp_file);
-  path::append(tmp_file, llvm::formatv("lldb_symstore_{0}_{1}", key, pdb_name));
-
-  // Server has SymStore directory structure with forward slashes as separators.
-  std::string source_url =
-      llvm::formatv("{0}/{1}/{2}/{1}", base_url, pdb_name, key);
-
   if (!llvm::HTTPClient::isAvailable()) {
     Debugger::ReportWarning(
         "HTTP client is not available for SymStore download");
     return {};
   }
+
+  // Download into a temporary file. The name must be unique: lookups for the
+  // same file can be in flight concurrently.
+  llvm::SmallString<128> tmp_model;
+  constexpr bool erase_on_reboot = true;
+  path::system_temp_directory(erase_on_reboot, tmp_model);
+  path::append(tmp_model,
+               llvm::formatv("lldb_symstore_{0}_{1}.%%%%%%", key, pdb_name));
+
+  llvm::SmallString<128> tmp_file;
+  if (std::error_code ec = fs::createUniqueFile(tmp_model, tmp_file)) {
+    Debugger::ReportWarning(llvm::formatv(
+        "failed to create a temporary file to download '{0}' into: {1}",
+        pdb_name, ec.message()));
+    return {};
+  }
+
+  // Server has SymStore directory structure with forward slashes as separators.
+  std::string source_url =
+      llvm::formatv("{0}/{1}/{2}/{1}", base_url, pdb_name, key);
 
   llvm::HTTPClient client;
   client.setTimeout(
@@ -299,25 +309,29 @@ RequestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
     Debugger::ReportWarning(
         llvm::formatv("failed to download from SymStore '{0}': {1}", source_url,
                       llvm::toString(std::move(Err))));
+    fs::remove(tmp_file);
     return {};
   }
   if (llvm::Error Err = Handler.commit()) {
     Debugger::ReportWarning(
         llvm::formatv("failed to download from SymStore '{0}': {1}", source_url,
                       llvm::toString(std::move(Err))));
+    fs::remove(tmp_file);
     return {};
   }
 
   unsigned responseCode = client.responseCode();
   switch (responseCode) {
-  case 404:
-    return {}; // file not found
   case 200:
     return FileSpec(tmp_file.str()); // success
+  case 404:
+    fs::remove(tmp_file); // file not found
+    return {};
   default:
     Debugger::ReportWarning(llvm::formatv(
         "failed to download from SymStore '{0}': response code {1}", source_url,
         responseCode));
+    fs::remove(tmp_file);
     return {};
   }
 }
