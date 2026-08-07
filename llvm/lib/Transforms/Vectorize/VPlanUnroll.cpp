@@ -480,7 +480,6 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     if (match(&R,
               m_WideActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue()))) {
       auto *ALM = cast<VPInstruction>(&R);
-      addUniformForAllParts(ALM);
       ALM->setOperand(2, getConstantInt(UF));
       continue;
     }

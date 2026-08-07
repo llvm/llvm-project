@@ -156,19 +156,11 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   VPValue *TC = Plan.getTripCount();
   VPValue *VF = &Plan.getVF();
 
-  // We can't use StartV directly in the WideActiveLaneMask
-  // VPInstruction, since we have to take unrolling into account.
-  // CanonicalIVIncrementForPart is needed so that ExtractVectorForPart
-  // is unrolled for each part, rather than each extract starting at 0.
-  auto *EntryIncrement =
-      Builder.createOverflowingOp(VPInstruction::CanonicalIVIncrementForPart,
-                                  {StartV, VF}, {}, DL, "index.part.next");
-
   // Create the wide active lane mask instruction in the VPlan preheader.
   VPValue *ALMMultiplier =
       Plan.getConstantInt(TopRegion->getCanonicalIVType(), 1);
   auto *EntryALM = Builder.createNaryOp(VPInstruction::WideActiveLaneMask,
-                                        {EntryIncrement, TC, ALMMultiplier}, DL,
+                                        {StartV, TC, ALMMultiplier}, DL,
                                         "active.lane.mask.entry");
   EntryALM = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
                                   {EntryALM, Plan.getConstantInt(64, 0)}, DL,

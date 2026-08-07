@@ -136,8 +136,7 @@ define i32 @print_partial_reduction_predication(ptr %a, ptr %b, i64 %N) "target-
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   EMIT vp<[[RDX_START:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<4>
-; CHECK-NEXT:   EMIT vp<%index.part.next> = VF * Part + ir<0>
-; CHECK-NEXT:   EMIT vp<%active.lane.mask.entry> = wide active lane mask vp<%index.part.next>, ir<%N>, ir<1>
+; CHECK-NEXT:   EMIT vp<%active.lane.mask.entry> = wide active lane mask ir<0>, ir<%N>, ir<1>
 ; CHECK-NEXT:   EMIT vp<%extract.entry.alm.part> = extract-vector-for-part vp<%active.lane.mask.entry>, ir<0>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:

@@ -18,8 +18,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-NEXT: Successor(s): scalar.ph, vector.ph
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: vector.ph:
-; VPLANS-NEXT:   EMIT vp<[[VF_PER_PART:%.+]]> = VF * Part + ir<0>
-; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%.+]]> = wide active lane mask vp<[[VF_PER_PART]]>, vp<[[TC]]>
+; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%.+]]> = wide active lane mask ir<0>, vp<[[TC]]>, ir<1>
 ; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY_EXTRACT:%.+]]> = extract-vector-for-part vp<[[LANEMASK_ENTRY]]>, ir<0>
 ; VPLANS-NEXT: Successor(s): vector loop
 ; VPLANS-EMPTY:

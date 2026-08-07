@@ -2064,8 +2064,10 @@ static bool replaceMaskWithCompare(VPlan &Plan, ElementCount BestVF) {
       Builder.setInsertPoint(Extract);
 
       if (Idx > 0)
-        Start = Builder.createAdd(
-            Start, Plan.getConstantInt(Start->getScalarType(), Idx));
+        Start = Builder.createOverflowingOp(
+            Instruction::Add,
+            {Start, Plan.getConstantInt(Start->getScalarType(), Idx)},
+            {false, false});
 
       VPValue *ICmp = Builder.createICmp(CmpInst::ICMP_ULT, Start, TC);
       Extract->replaceAllUsesWith(ICmp);
