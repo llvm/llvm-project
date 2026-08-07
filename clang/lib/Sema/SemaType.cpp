@@ -8350,7 +8350,6 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     return true;
 
   const FunctionType *fn = unwrapped.get();
-
   CallingConv CCOld = fn->getCallConv();
   Attr *CCAttr = getCCTypeAttr(S.Context, attr);
 
