@@ -287,19 +287,13 @@ static mlir::LLVM::CConv convertCallingConv(cir::CallingConv callingConv) {
   llvm_unreachable("Unknown calling convention");
 }
 
-/// Returns size_t as an integer type, mirroring CodeGenModule::SizeTy.
-static mlir::IntegerType getSizeTType(mlir::MLIRContext *ctx,
-                                      const mlir::DataLayout &dataLayout) {
-  return mlir::IntegerType::get(
-      ctx, dataLayout.getTypeSizeInBits(mlir::LLVM::LLVMPointerType::get(ctx)));
-}
-
 mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
     cir::CopyOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type lenTy = getSizeTType(rewriter.getContext(), dataLayout);
+  mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
   const mlir::Value length = mlir::LLVM::ConstantOp::create(
-      rewriter, op.getLoc(), lenTy, op.getCopySizeInBytes(dataLayout));
+      rewriter, op.getLoc(), rewriter.getI64Type(),
+      op.getCopySizeInBytes(layout));
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
 
   uint64_t dstTypeAlign = dataLayout.getTypeABIAlignment(convertTypeForMemory(
@@ -4447,11 +4441,11 @@ mlir::LogicalResult CIRToLLVMThrowOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMAllocExceptionOpLowering::matchAndRewrite(
     cir::AllocExceptionOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  // Get or create `declare ptr @__cxa_allocate_exception(size_t)`.
+  // Get or create `declare ptr @__cxa_allocate_exception(i64)`
   StringRef fnName = "__cxa_allocate_exception";
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
-  mlir::IntegerType sizeTTy = getSizeTType(rewriter.getContext(), dataLayout);
-  auto fnTy = mlir::LLVM::LLVMFunctionType::get(llvmPtrTy, {sizeTTy});
+  auto int64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
+  auto fnTy = mlir::LLVM::LLVMFunctionType::get(llvmPtrTy, {int64Ty});
 
   createLLVMFuncOpIfNotExist(rewriter, symbolTables, op, fnName, fnTy);
   auto exceptionSize = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
