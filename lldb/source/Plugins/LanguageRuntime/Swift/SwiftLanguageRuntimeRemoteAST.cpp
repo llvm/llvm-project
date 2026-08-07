@@ -536,7 +536,7 @@ SwiftLanguageRuntime::GetPromiseForTypeNameAndFrame(const char *type_name,
 
   StreamString type_metadata_ptr_var_name;
   type_metadata_ptr_var_name.Printf("$%s", type_name);
-  VariableList *var_list = frame->GetVariableList(false, nullptr);
+  VariableList *var_list = frame->GetVariableList(false, false, nullptr);
   if (!var_list)
     return nullptr;
 
