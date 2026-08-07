@@ -78,4 +78,45 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     }
     return
   }
+  // nocontext: runtime select of base/variant address, then indirect call.
+  // CHECK-LABEL: func.func @omp_dispatch_nocontext
+  func.func @omp_dispatch_nocontext(%cond : i1) {
+    // CHECK: omp.dispatch nocontext(%[[COND:.*]]) {
+    omp.dispatch nocontext(%cond) {
+      // CHECK: %[[VARIANT:.*]] = fir.address_of(@_QMfuncsPfoo_variant) : () -> ()
+      %variant = fir.address_of(@_QMfuncsPfoo_variant) : () -> ()
+      // CHECK: %[[BASE:.*]] = fir.address_of(@_QMfuncsPfoo_dispatch) : () -> ()
+      %base = fir.address_of(@_QMfuncsPfoo_dispatch) : () -> ()
+      // CHECK: %[[TARGET:.*]] = arith.select %[[COND]], %[[BASE]], %[[VARIANT]] : () -> ()
+      %target = arith.select %cond, %base, %variant : () -> ()
+      // CHECK: fir.call %[[TARGET]]()
+      fir.call %target() fastmath<contract> : () -> ()
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    return
+  }
+  // nocontext with multiple matching variants: the frontend re-resolves variant
+  // selection with the dispatch construct removed, so the runtime select picks
+  // between the two variants (device={kind(host)} vs construct={dispatch}),
+  // not the base procedure.
+  // CHECK-LABEL: func.func @omp_dispatch_nocontext_variant
+  func.func @omp_dispatch_nocontext_variant(%cond : i1) {
+    // CHECK: omp.dispatch nocontext(%[[COND:.*]]) {
+    omp.dispatch nocontext(%cond) {
+      // CHECK: %[[VARIANT:.*]] = fir.address_of(@_QMfuncsPdispatch_variant) : () -> ()
+      %variant = fir.address_of(@_QMfuncsPdispatch_variant) : () -> ()
+      // CHECK: %[[HOST:.*]] = fir.address_of(@_QMfuncsPhost_variant) : () -> ()
+      %host = fir.address_of(@_QMfuncsPhost_variant) : () -> ()
+      // CHECK: %[[TARGET:.*]] = arith.select %[[COND]], %[[HOST]], %[[VARIANT]] : () -> ()
+      %target = arith.select %cond, %host, %variant : () -> ()
+      // CHECK: fir.call %[[TARGET]]()
+      fir.call %target() fastmath<contract> : () -> ()
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    return
+  }
+  func.func private @_QMfuncsPdispatch_variant()
+  func.func private @_QMfuncsPhost_variant()
 }

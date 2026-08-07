@@ -503,6 +503,32 @@ class OpenMP_FinalClauseSkip<
 def OpenMP_FinalClause : OpenMP_FinalClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// V5.2: [7.6.2] `nocontext` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_NocontextClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    Optional<I1>:$nocontext
+  );
+
+  let optAssemblyFormat = [{
+    `nocontext` `(` $nocontext `)`
+  }];
+
+  let description = [{
+    When parameter to `nocontext` evaluates to `true`, the dispatch construct is not added
+    to the OpenMP context, so a function variant that would be selected only
+    because of the enclosing dispatch construct is not selected.
+  }];
+}
+
+def OpenMP_NocontextClause : OpenMP_NocontextClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [7.6.1] `novariants` clause
 //===----------------------------------------------------------------------===//
 

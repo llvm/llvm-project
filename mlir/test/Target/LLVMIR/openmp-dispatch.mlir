@@ -54,4 +54,19 @@ module attributes {omp.is_target_device = false, omp.is_gpu = false, omp.version
     // CHECK: omp.region.cont:
     llvm.return
   }
+  // The nocontext operand is ignored at translation; the region already holds
+  // the runtime base/variant selection.
+  // CHECK-LABEL: define void @test_dispatch_nocontext(i1
+  llvm.func @test_dispatch_nocontext(%cond : i1) {
+    // CHECK: br label %omp.dispatch.region
+    // CHECK: omp.dispatch.region:
+    omp.dispatch nocontext(%cond) {
+      // CHECK: call void @_QMfuncsPfoo_variant()
+      llvm.call @_QMfuncsPfoo_variant() : () -> ()
+      // CHECK: br label %omp.region.cont
+      omp.terminator
+    }
+    // CHECK: omp.region.cont:
+    llvm.return
+  }
 }

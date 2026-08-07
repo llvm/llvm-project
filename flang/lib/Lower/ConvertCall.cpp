@@ -580,28 +580,60 @@ Fortran::lower::genCallOpAndResult(
     funcType = *modifiedFuncType;
   }
 
-  // OpenMP dispatch `novariants`: at runtime pick base (cond true) or variant
-  // (false) via an indirect call, evaluating arguments once. Both targets share
-  // one signature; revisit if declare-variant `adjust_args`/`append_args` land.
+  // OpenMP dispatch `novariants`/`nocontext`: at runtime pick the right target
+  // via an indirect call, evaluating arguments once. All candidate procedures
+  // share one signature; revisit if declare-variant `adjust_args`/`append_args`
+  // land.
   if (funcSymbolAttr) {
-    if (mlir::Value novariantsCond =
-            Fortran::lower::omp::getEnclosingDispatchNovariants(builder)) {
-      const Fortran::semantics::Symbol *baseSym =
-          caller.getCallDescription().proc().GetSymbol();
-      const Fortran::semantics::Symbol *selectedSym =
-          caller.getProcedureSymbol();
-      if (baseSym && selectedSym &&
-          &baseSym->GetUltimate() != &selectedSym->GetUltimate()) {
-        mlir::Value variantAddr =
-            fir::AddrOfOp::create(builder, loc, funcType, funcSymbolAttr);
-        mlir::Value baseAddr =
-            fir::AddrOfOp::create(builder, loc, funcType,
-                                  builder.getSymbolRefAttr(converter.mangleName(
-                                      baseSym->GetUltimate())));
-        funcPointer = mlir::arith::SelectOp::create(
-            builder, loc, novariantsCond, baseAddr, variantAddr);
-        funcSymbolAttr = {}; // Mark as an indirect call.
+    mlir::Value novariantsCond =
+        Fortran::lower::omp::getEnclosingDispatchNovariants(builder);
+    mlir::Value nocontextCond =
+        Fortran::lower::omp::getEnclosingDispatchNocontext(builder);
+    const Fortran::semantics::Symbol *baseSym =
+        caller.getCallDescription().proc().GetSymbol();
+    const Fortran::semantics::Symbol *selectedSym = caller.getProcedureSymbol();
+    // A runtime choice is only needed when a variant was actually selected for
+    // the enclosing dispatch context (otherwise the base is already the call
+    // target and dropping the dispatch construct cannot introduce a variant).
+    if ((novariantsCond || nocontextCond) && baseSym && selectedSym &&
+        &baseSym->GetUltimate() != &selectedSym->GetUltimate()) {
+      const Fortran::semantics::Symbol &baseUlt = baseSym->GetUltimate();
+      const Fortran::semantics::Symbol &selectedUlt =
+          selectedSym->GetUltimate();
+
+      auto addrOfSym =
+          [&](const Fortran::semantics::Symbol &sym) -> mlir::Value {
+        return fir::AddrOfOp::create(
+            builder, loc, funcType,
+            builder.getSymbolRefAttr(converter.mangleName(sym)));
+      };
+
+      // Start from the variant selected with the dispatch construct in context.
+      mlir::Value target =
+          fir::AddrOfOp::create(builder, loc, funcType, funcSymbolAttr);
+
+      // `nocontext(true)`: re-select the variant with the dispatch construct
+      // removed from the OpenMP context. That may resolve to a different
+      // variant (e.g. one matching `device={kind(host)}`) or to the base
+      // procedure.
+      if (nocontextCond) {
+        const Fortran::semantics::Symbol *nocontextSym =
+            Fortran::lower::omp::resolveDeclareVariantCallee(
+                baseUlt, converter, /*excludeDispatchContext=*/true);
+        const Fortran::semantics::Symbol &nocontextUlt =
+            nocontextSym ? nocontextSym->GetUltimate() : baseUlt;
+        if (&nocontextUlt != &selectedUlt)
+          target = mlir::arith::SelectOp::create(
+              builder, loc, nocontextCond, addrOfSym(nocontextUlt), target);
       }
+
+      // `novariants(true)` takes final precedence: always call the base.
+      if (novariantsCond)
+        target = mlir::arith::SelectOp::create(builder, loc, novariantsCond,
+                                               addrOfSym(baseUlt), target);
+
+      funcPointer = target;
+      funcSymbolAttr = {}; // Mark as an indirect call.
     }
   }
 

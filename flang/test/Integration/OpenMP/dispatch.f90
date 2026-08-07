@@ -34,6 +34,18 @@
 !CHECK: br label %omp.region.cont
 !CHECK: omp.region.cont:
 
+! nocontext: runtime select of base/variant address, then indirect call.
+!CHECK-LABEL: define void @test_nocontext_(
+!CHECK-SAME: ptr noalias %[[NARG:[0-9]+]])
+!CHECK: %[[NLOAD:.*]] = load i32, ptr %[[NARG]], align 4
+!CHECK: %[[NCOND:.*]] = icmp ne i32 %[[NLOAD]], 0
+!CHECK: br label %omp.dispatch.region
+!CHECK: omp.dispatch.region:
+!CHECK: %[[NTARGET:.*]] = select i1 %[[NCOND]], ptr @_QMfuncsPfoo_dispatch, ptr @_QMfuncsPfoo_variant
+!CHECK: call void %[[NTARGET]]()
+!CHECK: br label %omp.region.cont
+!CHECK: omp.region.cont:
+
 module funcs
   implicit none
 
@@ -67,6 +79,16 @@ subroutine test_novariants(cond)
   logical :: cond
 
   !$omp dispatch novariants(cond)
+  call foo_dispatch()
+
+end subroutine
+
+subroutine test_nocontext(cond)
+  use funcs
+  implicit none
+  logical :: cond
+
+  !$omp dispatch nocontext(cond)
   call foo_dispatch()
 
 end subroutine

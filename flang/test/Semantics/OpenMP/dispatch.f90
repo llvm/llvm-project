@@ -43,3 +43,28 @@ subroutine sb6
   !$omp dispatch novariants(i)
   call foo()
 end subroutine
+
+subroutine sb7
+  logical :: c
+  integer :: r
+  ! The nocontext clause is accepted; the body validation still applies.
+  !$omp dispatch nocontext(c)
+!ERROR: The body of the DISPATCH construct should be a function or a subroutine call
+  print *, r
+end subroutine
+
+subroutine sb8
+  logical :: a, b
+  ! nocontext has the `unique` property (OpenMP 5.2, 7.6.2).
+!ERROR: At most one NOCONTEXT clause can appear on DISPATCH directive
+  !$omp dispatch nocontext(a) nocontext(b)
+  call foo()
+end subroutine
+
+subroutine sb9
+  integer :: i
+  ! nocontext requires an expression of logical type (OpenMP 5.2, 7.6.2).
+!ERROR: Must have LOGICAL type, but is INTEGER(4)
+  !$omp dispatch nocontext(i)
+  call foo()
+end subroutine

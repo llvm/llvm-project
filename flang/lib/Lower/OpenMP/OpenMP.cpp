@@ -2477,10 +2477,11 @@ static void genDispatchClauses(lower::AbstractConverter &converter,
                                const List<Clause> &clauses, mlir::Location loc,
                                mlir::omp::DispatchOperands &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processNocontext(stmtCtx, clauseOps);
   cp.processNovariants(stmtCtx, clauseOps);
   cp.processNowait(clauseOps);
-  cp.processTODO<clause::Depend, clause::Device, clause::IsDevicePtr,
-                 clause::Nocontext>(loc, llvm::omp::Directive::OMPD_dispatch);
+  cp.processTODO<clause::Depend, clause::Device, clause::IsDevicePtr>(
+      loc, llvm::omp::Directive::OMPD_dispatch);
 }
 
 static void genFlushClauses(lower::AbstractConverter &converter,

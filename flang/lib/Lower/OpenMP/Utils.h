@@ -262,10 +262,13 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
 /// Walk the already-emitted MLIR parent operations starting from \p op and
 /// collect the implied OpenMP construct traits in outermost-to-innermost
 /// order. Used by metadirective lowering and declare-variant call resolution
-/// to build the `ConstructTraits` of an `OMPContext`.
+/// to build the `ConstructTraits` of an `OMPContext`. When
+/// \p excludeNearestDispatch is set, the innermost enclosing `dispatch`
+/// construct is omitted (used to implement the `nocontext` clause).
 void collectEnclosingConstructTraits(
     mlir::Operation *op,
-    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits,
+    bool excludeNearestDispatch = false);
 
 /// Build the OpenMP variant-matching context for \p module. The device flag,
 /// host triple, offload triple, and target features are read from the module;

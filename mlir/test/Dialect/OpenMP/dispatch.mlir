@@ -82,5 +82,36 @@ func.func @omp_dispatch_novariants_nowait(%cond : i1, %x : memref<i32>) -> () {
   return
 }
 
+// nocontext clause round-trip; the frontend materializes the runtime
+// base/variant selection inside the region.
+// CHECK-LABEL: func.func @omp_dispatch_nocontext
+// CHECK-SAME: (%[[COND:.*]]: i1, %[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_nocontext(%cond : i1, %x : memref<i32>) -> () {
+  // CHECK: omp.dispatch nocontext(%[[COND]]) {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch nocontext(%cond) {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// nocontext and novariants together.
+// CHECK-LABEL: func.func @omp_dispatch_nocontext_novariants
+// CHECK-SAME: (%[[COND:.*]]: i1, %[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_nocontext_novariants(%cond : i1, %x : memref<i32>) -> () {
+  // CHECK: omp.dispatch nocontext(%[[COND]]) novariants(%[[COND]]) {
+  // CHECK-NEXT: func.call @variant(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch nocontext(%cond) novariants(%cond) {
+    func.call @variant(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
 // CHECK-LABEL: func.func private @variant(memref<i32>)
 func.func private @variant(memref<i32>) -> ()
