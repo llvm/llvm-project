@@ -2453,7 +2453,7 @@ name:            vzip_mask_propagate
 body: |
   bb.0:
     ; CHECK-LABEL: name: vzip_mask_propagate
-    ; CHECK: %mask:vmv0 = PseudoVMAND_MM_B32 $noreg, $noreg, -1 /* vl=VLMAX */, 0 /* e8 */
+    ; CHECK: %mask:vmv0 = PseudoVMAND_MM_B32 $noreg, $noreg, 2 /* vl */, 0 /* e8 */
     ; CHECK-NEXT: early-clobber %1:vrm2nov0 = PseudoVZIP_VV_M1_MASK $noreg, $noreg, $noreg, %mask, 1 /* vl */, 5 /* e32 */, 3 /* ta, ma */
     ; CHECK-NEXT: $v8m2 = COPY %1
     %mask:vmv0 = PseudoVMAND_MM_B32 $noreg, $noreg, -1, 0

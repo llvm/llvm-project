@@ -920,10 +920,8 @@ static std::optional<OperandInfo> getOperandInfo(const MachineOperand &MO) {
   // Zvzip - vzip.vv interleaves two LMUL vectors into a 2*LMUL result with
   // the same SEW. Dest (and passthru) therefore have 2 * EMUL.
   case RISCV::VZIP_VV: {
-    const bool IsMODef =
-        MO.getOperandNo() == 0 || MO.getOperandNo() == MI.getNumExplicitDefs();
     auto EMUL = getEMULEqualsEEWDivSEWTimesLMUL(*Log2EEW, MI);
-    if (IsMODef)
+    if (MO.getOperandNo() == 0 || MO.getOperandNo() == MI.getNumExplicitDefs())
       EMUL = doubleEMUL(EMUL);
     return OperandInfo(EMUL, *Log2EEW);
   }
@@ -1089,11 +1087,6 @@ getMinimumVLForVSLIDEDOWN_VX(const MachineOperand &UserOp,
   return SlideAmtDef->getOperand(1);
 }
 
-static DemandedVL getMinimumVLForVUNZIP(const MachineOperand &UserOp,
-                                        DemandedVL MinimumVL) {
-  return UserOp.getOperandNo() == 2 ? doubleVL(MinimumVL) : MinimumVL;
-}
-
 DemandedVL
 RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   const MachineInstr &UserMI = *UserOp.getParent();
@@ -1113,7 +1106,9 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
 
   unsigned RVVOpc = RISCV::getRVVMCOpcode(UserMI.getOpcode());
   bool IsVUNZIP = RVVOpc == RISCV::VUNZIPE_V || RVVOpc == RISCV::VUNZIPO_V;
-  if (!IsVUNZIP && RISCVII::readsPastVL(TII->get(RVVOpc).TSFlags)) {
+  bool IsVZIPMask = RVVOpc == RISCV::VZIP_VV && UserOp.getOperandNo() == 4;
+  if (!IsVUNZIP && !IsVZIPMask &&
+      RISCVII::readsPastVL(TII->get(RVVOpc).TSFlags)) {
     LLVM_DEBUG(dbgs() << "  Abort because used by unsafe instruction\n");
     return DemandedVL::vlmax();
   }
@@ -1149,8 +1144,8 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   if (RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp))
     MinimumVL = DemandedVLs.lookup(&UserMI);
 
-  if (IsVUNZIP)
-    return getMinimumVLForVUNZIP(UserOp, MinimumVL);
+  if ((IsVUNZIP && UserOp.getOperandNo() == 2) || IsVZIPMask)
+    MinimumVL = doubleVL(MinimumVL);
 
   return MinimumVL;
 }
