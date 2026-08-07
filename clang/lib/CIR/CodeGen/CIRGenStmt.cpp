@@ -90,6 +90,8 @@ mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
 mlir::LogicalResult
 CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
 
+  bool noinline = false;
+  bool alwaysinline = false;
   const CallExpr *musttail = nullptr;
 
   for (const Attr *attr : s.getAttrs()) {
@@ -97,13 +99,18 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
     default:
       break;
     case attr::NoMerge:
-    case attr::NoInline:
-    case attr::AlwaysInline:
     case attr::NoConvergent:
     case attr::Atomic:
+    case attr::AMDGPUAvailableVisible:
     case attr::HLSLControlFlowHint:
       cgm.errorNYI(s.getSourceRange(),
                    "Unimplemented statement attribute: ", attr->getKind());
+      break;
+    case attr::NoInline:
+      noinline = true;
+      break;
+    case attr::AlwaysInline:
+      alwaysinline = true;
       break;
     case attr::MustTail: {
       const Stmt *sub = s.getSubStmt();
@@ -123,6 +130,9 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
     } break;
     }
   }
+
+  SaveAndRestore save_noinline(inNoInlineAttributedStmt, noinline);
+  SaveAndRestore save_alwaysinline(inAlwaysInlineAttributedStmt, alwaysinline);
 
   SaveAndRestore save_musttail(mustTailCall, musttail);
 

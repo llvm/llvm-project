@@ -2044,6 +2044,7 @@ static void lowerCallAttributes(cir::CIRCallOpInterface op,
         attr.getName() == CIRDialect::getNoThrowAttrName() ||
         attr.getName() == CIRDialect::getNoUnwindAttrName() ||
         attr.getName() == CIRDialect::getNoReturnAttrName() ||
+        attr.getName() == op.getInlineKindAttrName() ||
         attr.getName() == CIRDialect::getMustTailAttrName())
       continue;
 
@@ -2155,6 +2156,12 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
     newOp.setNoreturn(noReturn);
     if (op->hasAttr(CIRDialect::getMustTailAttrName()))
       newOp.setTailCallKind(mlir::LLVM::TailCallKind::MustTail);
+
+    if (std::optional<cir::InlineKind> inlineKind = call.getInlineKind()) {
+      newOp.setNoInline(*inlineKind == cir::InlineKind::NoInline);
+      newOp.setInlineHint(*inlineKind == cir::InlineKind::InlineHint);
+      newOp.setAlwaysInline(*inlineKind == cir::InlineKind::AlwaysInline);
+    }
   }
 
   return mlir::success();
