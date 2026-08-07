@@ -77,6 +77,7 @@ struct NVPTXMemCacheHintAccess {
   bool IsLoad;
   unsigned NumElts;
   unsigned EltWidth;
+  bool IsVolatile;
 };
 
 class NVPTXDAGToDAGISel : public SelectionDAGISel {
@@ -1220,7 +1221,7 @@ static bool isL2EvictionSupported(const NVPTXSubtarget &Subtarget,
   if (Eviction == NVPTX::L2Eviction::Normal)
     return true;
 
-  return Subtarget.hasL2EvictionHint() && isGlobalOrGeneric(Access.AddrSpace) &&
+  return Subtarget.hasL2EvictionHint() && isGlobalOrGeneric(Access.AddrSpace) && !Access.IsVolatile &&
          ((Access.NumElts == 8 && Access.EltWidth == 32) ||
           (Access.NumElts == 4 && Access.EltWidth == 64));
 }
@@ -1250,7 +1251,7 @@ std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getMemCacheHintOperands(
     if (KeyStr == "nvvm.l1_eviction") {
       auto ParsedL1 =
           parseMemCacheHintStringValue(Ctx, KeyStr, Value, parseL1Eviction);
-      if (ParsedL1 && Subtarget->hasL1EvictionHint())
+      if (ParsedL1 && !Access.IsVolatile && Subtarget->hasL1EvictionHint())
         L1 = *ParsedL1;
       continue;
     }
@@ -1277,7 +1278,7 @@ std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getMemCacheHintOperands(
       if (!ValCI)
         emitInvalidMemCacheHint(
             Ctx, "'nvvm.l2_cache_hint' expects an integer value");
-      else if (isGlobalOrGeneric(Access.AddrSpace) &&
+      else if (isGlobalOrGeneric(Access.AddrSpace) && !Access.IsVolatile &&
                Subtarget->hasL2CacheHint())
         CachePolicy = ValCI->getZExtValue();
       continue;
@@ -1344,7 +1345,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   const auto [EvictionAndPrefetchHint, PolicyReg] =
       getMemCacheHintOperands(LD,
                               {CodeAddrSpace, /*IsLoad=*/true,
-                               /*NumElts=*/1, /*EltWidth=*/FromTypeWidth},
+                               /*NumElts=*/1, /*EltWidth=*/FromTypeWidth, LD->isVolatile()},
                               DL);
 
   // Create the machine instruction DAG
@@ -1493,7 +1494,7 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
   const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
       LD,
       {NVPTX::AddressSpace::Global,
-       /*IsLoad=*/true, LD->getNumValues() - 1, FromTypeWidth},
+       /*IsLoad=*/true, LD->getNumValues() - 1, FromTypeWidth, LD->isVolatile()},
       DL);
   SDValue Ops[] = {getI32Imm(FromType, DL),
                    getI32Imm(FromTypeWidth, DL),
@@ -1615,7 +1616,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   const auto [EvictionAndPrefetchHint, PolicyReg] =
       getMemCacheHintOperands(ST,
                               {CodeAddrSpace, /*IsLoad=*/false,
-                               /*NumElts=*/1, /*EltWidth=*/ToTypeWidth},
+                               /*NumElts=*/1, /*EltWidth=*/ToTypeWidth, ST->isVolatile()},
                               DL);
 
   SDValue Ops[] = {selectPossiblyImm(Value),
@@ -1676,7 +1677,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   const auto [EvictionAndPrefetchHint, PolicyReg] = getMemCacheHintOperands(
       ST,
       {CodeAddrSpace, /*IsLoad=*/false, /*NumElts=*/NumElts,
-       /*EltWidth=*/ToTypeWidth},
+       /*EltWidth=*/ToTypeWidth, ST->isVolatile()},
       DL);
 
   const auto [Base, Offset] = selectADDR(Addr, CurDAG);
