@@ -130,6 +130,17 @@ public:
                                        const MachineBasicBlock *MBB,
                                        ProfileSummaryInfo *PSI = nullptr);
 
+  /// Variants taking a precomputed \p OptForSize rather than deriving it from a
+  /// ProfileSummaryInfo.
+  LLVM_ABI static float getSpillWeight(bool isDef, bool isUse,
+                                       const MachineBlockFrequencyInfo *MBFI,
+                                       const MachineInstr &MI, bool OptForSize);
+
+  LLVM_ABI static float getSpillWeight(bool isDef, bool isUse,
+                                       const MachineBlockFrequencyInfo *MBFI,
+                                       const MachineBasicBlock *MBB,
+                                       bool OptForSize);
+
   LiveInterval &getInterval(Register Reg) {
     if (hasInterval(Reg))
       return *VirtRegIntervals[Reg.id()];
