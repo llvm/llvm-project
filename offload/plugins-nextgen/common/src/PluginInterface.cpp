@@ -598,11 +598,9 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
     GridValues.GV_Max_WG_Size =
         std::min(GridValues.GV_Max_WG_Size, uint32_t(OMP_TeamsThreadLimit));
 
-  // Enable the memory manager if required. Memory that the manager pools is
-  // not returned to the driver when it is freed, so a later access to it
-  // neither faults nor is reported by the allocation tracker. Leave the pool
-  // disabled while allocation traces are requested, so that we don't mask
-  // use-after-free (since they don't fault if the memory is still in the pool).
+  // Enable the memory manager if required. Leave the pool disabled while
+  // allocation traces are requested, so that we don't mask use-after-free
+  // (since they don't fault if the memory is still in the pool).
   auto [ThresholdMM, EnableMM] = MemoryManagerTy::getSizeThresholdFromEnv();
   if (EnableMM && !OMPX_TrackAllocationTraces) {
     if (ThresholdMM == 0)
