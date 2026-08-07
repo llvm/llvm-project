@@ -763,6 +763,20 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     handleFetchOp(cir::AtomicFetchKind::Min);
     break;
 
+  case AtomicExpr::AO__atomic_fetch_fminimum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
+    assert(expr->getValueType()->isFloatingType() &&
+           "fminimum operations only support floating-point types");
+    handleFetchOp(cir::AtomicFetchKind::Minimum);
+    break;
+
+  case AtomicExpr::AO__atomic_fetch_fminimum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
+    assert(expr->getValueType()->isFloatingType() &&
+           "fminimum_num operations only support floating-point types");
+    handleFetchOp(cir::AtomicFetchKind::MinimumNum);
+    break;
+
   case AtomicExpr::AO__atomic_max_fetch:
   case AtomicExpr::AO__scoped_atomic_max_fetch:
     fetchFirst = false;
@@ -771,6 +785,20 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__atomic_fetch_max:
   case AtomicExpr::AO__scoped_atomic_fetch_max:
     handleFetchOp(cir::AtomicFetchKind::Max);
+    break;
+
+  case AtomicExpr::AO__atomic_fetch_fmaximum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
+    assert(expr->getValueType()->isFloatingType() &&
+           "fmaximum operations only support floating-point types");
+    handleFetchOp(cir::AtomicFetchKind::Maximum);
+    break;
+
+  case AtomicExpr::AO__atomic_fetch_fmaximum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
+    assert(expr->getValueType()->isFloatingType() &&
+           "fmaximum_num operations only support floating-point types");
+    handleFetchOp(cir::AtomicFetchKind::MaximumNum);
     break;
 
   case AtomicExpr::AO__atomic_and_fetch:
@@ -877,15 +905,6 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
 
   case AtomicExpr::AO__hip_atomic_fetch_xor:
   case AtomicExpr::AO__opencl_atomic_fetch_xor:
-
-  case AtomicExpr::AO__atomic_fetch_fmaximum:
-  case AtomicExpr::AO__atomic_fetch_fmaximum_num:
-  case AtomicExpr::AO__atomic_fetch_fminimum:
-  case AtomicExpr::AO__atomic_fetch_fminimum_num:
-  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
-  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
-  case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
-  case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
 
     cgf.cgm.errorNYI(expr->getSourceRange(), "emitAtomicOp: expr op NYI");
     return;
@@ -1151,7 +1170,8 @@ static RValue emitAtomicLibCall(CIRGenFunction &cgf, llvm::StringRef funcName,
 
   cir::FuncOp fn = cgf.cgm.createRuntimeFunction(fnTy, funcName, fnAttrs);
   auto callee = CIRGenCallee::forDirect(fn);
-  return cgf.emitCall(fnInfo, callee, ReturnValueSlot(), args);
+  return cgf.emitCall(fnInfo, callee, ReturnValueSlot(), args,
+                      /*isMustTail=*/false);
 }
 
 static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
@@ -1496,6 +1516,10 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   case AtomicExpr::AO__scoped_atomic_fetch_max:
   case AtomicExpr::AO__scoped_atomic_fetch_min:
   case AtomicExpr::AO__scoped_atomic_fetch_sub:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
   case AtomicExpr::AO__scoped_atomic_add_fetch:
   case AtomicExpr::AO__scoped_atomic_max_fetch:
   case AtomicExpr::AO__scoped_atomic_min_fetch:
@@ -1532,6 +1556,10 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   case AtomicExpr::AO__atomic_fetch_udec:
   case AtomicExpr::AO__scoped_atomic_fetch_uinc:
   case AtomicExpr::AO__scoped_atomic_fetch_udec:
+  case AtomicExpr::AO__atomic_fetch_fminimum:
+  case AtomicExpr::AO__atomic_fetch_fmaximum:
+  case AtomicExpr::AO__atomic_fetch_fminimum_num:
+  case AtomicExpr::AO__atomic_fetch_fmaximum_num:
     val1 = emitValToTemp(*this, e->getVal1());
     break;
   }

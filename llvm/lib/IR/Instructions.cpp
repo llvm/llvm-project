@@ -1208,18 +1208,15 @@ UnreachableInst::UnreachableInst(LLVMContext &Context,
 //                        UncondBrInst Implementation
 //===----------------------------------------------------------------------===//
 
-// Suppress deprecation warnings from BranchInst.
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
-
 UncondBrInst::UncondBrInst(BasicBlock *Target, InsertPosition InsertBefore)
-    : BranchInst(Type::getVoidTy(Target->getContext()), Instruction::UncondBr,
-                 AllocMarker, InsertBefore) {
+    : Instruction(Type::getVoidTy(Target->getContext()), Instruction::UncondBr,
+                  AllocMarker, InsertBefore) {
   Op<-1>() = Target;
 }
 
 UncondBrInst::UncondBrInst(const UncondBrInst &BI)
-    : BranchInst(Type::getVoidTy(BI.getContext()), Instruction::UncondBr,
-                 AllocMarker) {
+    : Instruction(Type::getVoidTy(BI.getContext()), Instruction::UncondBr,
+                  AllocMarker) {
   Op<-1>() = BI.Op<-1>();
   SubclassOptionalData = BI.SubclassOptionalData;
 }
@@ -1235,8 +1232,8 @@ void CondBrInst::AssertOK() {
 
 CondBrInst::CondBrInst(Value *Cond, BasicBlock *IfTrue, BasicBlock *IfFalse,
                        InsertPosition InsertBefore)
-    : BranchInst(Type::getVoidTy(IfTrue->getContext()), Instruction::CondBr,
-                 AllocMarker, InsertBefore) {
+    : Instruction(Type::getVoidTy(IfTrue->getContext()), Instruction::CondBr,
+                  AllocMarker, InsertBefore) {
   // Assign in order of operand index to make use-list order predictable.
   Op<-3>() = Cond;
   Op<-2>() = IfTrue;
@@ -1247,8 +1244,8 @@ CondBrInst::CondBrInst(Value *Cond, BasicBlock *IfTrue, BasicBlock *IfFalse,
 }
 
 CondBrInst::CondBrInst(const CondBrInst &BI)
-    : BranchInst(Type::getVoidTy(BI.getContext()), Instruction::CondBr,
-                 AllocMarker) {
+    : Instruction(Type::getVoidTy(BI.getContext()), Instruction::CondBr,
+                  AllocMarker) {
   // Assign in order of operand index to make use-list order predictable.
   Op<-3>() = BI.Op<-3>();
   Op<-2>() = BI.Op<-2>();
@@ -1263,9 +1260,6 @@ void CondBrInst::swapSuccessors() {
   // expectations.
   swapProfMetadata();
 }
-
-// Suppress deprecation warnings from BranchInst.
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 //===----------------------------------------------------------------------===//
 //                        AllocaInst Implementation

@@ -22,7 +22,7 @@
 #include "error.h"
 #include "format_string.h"
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <windows.h>
@@ -41,7 +41,7 @@ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 namespace detail {
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 // Various C runtime versions (UCRT, or the legacy msvcrt.dll used by
 // some mingw toolchains) provide different stat function implementations,
 // with a number of limitations with respect to what we want from the
@@ -267,7 +267,7 @@ public:
   }
 };
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 using fs_time = time_util<file_time_type, int64_t, TimeSpec>;
 #else
 using fs_time = time_util<file_time_type, time_t, TimeSpec>;
@@ -301,7 +301,7 @@ inline TimeSpec extract_atime(StatT const& st) { return st.st_atim; }
 
 #if _LIBCPP_HAS_FILESYSTEM
 
-#  if !defined(_LIBCPP_WIN32API)
+#  ifndef _WIN32
 inline bool posix_utimes(const path& p, std::array<TimeSpec, 2> const& TS, error_code& ec) {
   TimeVal ConvertedTS[2] = {make_timeval(TS[0]), make_timeval(TS[1])};
   if (::utimes(p.c_str(), ConvertedTS) == -1) {
@@ -329,7 +329,7 @@ inline bool set_file_times(const path& p, std::array<TimeSpec, 2> const& TS, err
 #    endif
 }
 
-#  endif // !_LIBCPP_WIN32API
+#  endif // _WIN32
 
 inline file_time_type __extract_last_write_time(const path& p, const StatT& st, error_code* ec) {
   using detail::fs_time;

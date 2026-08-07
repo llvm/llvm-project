@@ -59,7 +59,7 @@ AST_POLYMORPHIC_MATCHER(isInMacro,
 using utils::decl_ref_expr::allDeclRefExprs;
 
 void UseStdMoveCheck::registerMatchers(MatchFinder *Finder) {
-  auto AssignOperatorExpr =
+  const auto AssignOperatorExpr =
       cxxOperatorCallExpr(
           isCopyAssignmentOperator(),
           hasArgument(0, hasType(cxxRecordDecl(

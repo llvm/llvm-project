@@ -238,6 +238,12 @@ size_t writeLoadCommandData<MachO::build_version_command>(
   return BytesWritten;
 }
 
+template <>
+size_t writeLoadCommandData<MachO::target_triple_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
 void ZeroFillBytes(raw_ostream &OS, size_t Size) {
   std::vector<uint8_t> FillData(Size, 0);
   OS.write(reinterpret_cast<char *>(FillData.data()), Size);
