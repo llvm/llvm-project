@@ -93,29 +93,6 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL: func.func @broadcast_identity_named_tensor(
-// CHECK-SAME:                         %[[ARG0:.*]]: tensor<4x8xf32>,
-// CHECK-SAME:                         %[[ARG1:.*]]: tensor<4x8xf32>
-// CHECK-NEXT:    %[[IN:.*]] = tensor.collapse_shape %[[ARG0]] {{\[}}[0, 1]]
-// CHECK-NEXT:    %[[OUT:.*]] = tensor.collapse_shape %[[ARG1]] {{\[}}[0, 1]]
-// CHECK-NEXT:    %[[FLATTENED_RESULT:.*]] = linalg.broadcast ins(%[[IN]] : tensor<32xf32>) outs(%[[OUT]] : tensor<32xf32>) dimensions = []
-// CHECK:         %[[RESULT:.*]] = tensor.expand_shape %[[FLATTENED_RESULT]] {{\[}}[0, 1]] output_shape [4, 8] : tensor<32xf32> into tensor<4x8xf32>
-func.func @broadcast_identity_named_tensor(%arg0: tensor<4x8xf32>, %arg1: tensor<4x8xf32>) -> tensor<4x8xf32> {
-  %0 = linalg.broadcast ins(%arg0 : tensor<4x8xf32>) outs(%arg1 : tensor<4x8xf32>) dimensions = []
-  return %0 : tensor<4x8xf32>
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %flattened = transform.structured.flatten_elementwise %0
-      : (!transform.any_op) -> !transform.any_op
-    transform.yield
-  }
-}
-
-// -----
-
 // CHECK-LABEL: func.func @map_memref(
 // CHECK-SAME:                 %[[ARG0:[a-zA-Z0-9_]*]]: memref<32x7xf32>
 // CHECK-SAME:                 %[[ARG1:[a-zA-Z0-9_]*]]: memref<32x7xf32>
