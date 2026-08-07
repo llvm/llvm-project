@@ -131,6 +131,7 @@ NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
 
   if (PTXVersion == 0) {
     // User didn't request a specific PTX version; use the minimum for this SM.
+    ApplyFeatureFlag(("+ptx" + Twine(MinPTX)).str());
     PTXVersion = MinPTX;
   } else if (PTXVersion < MinPTX) {
     // User explicitly requested an insufficient PTX version.
