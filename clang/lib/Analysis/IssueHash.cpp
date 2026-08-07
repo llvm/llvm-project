@@ -86,12 +86,13 @@ static std::string GetEnclosingDeclContextSignature(const Decl *EnclosingDecl) {
   if (!EnclosingDecl)
     return "";
 
-  if (const auto *ND = dyn_cast<NamedDecl>(EnclosingDecl)) {
-    if (const auto *FD = dyn_cast<FunctionDecl>(EnclosingDecl))
+  if (const auto *ND = dyn_cast_or_null<NamedDecl>(EnclosingDecl)) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
+      // To distinguish overloads we need to use the signature.
       return GetSignature(FD);
+    }
     return ND->getQualifiedNameAsString();
   }
-  return "";
 }
 
 static StringRef GetNthLineOfFile(std::optional<llvm::MemoryBufferRef> Buffer,

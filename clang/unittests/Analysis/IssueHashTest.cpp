@@ -19,7 +19,7 @@
 
 namespace {
 
-using namespace clang;  
+using namespace clang;
 using namespace ast_matchers;
 
 std::unique_ptr<ASTUnit> buildAST(llvm::StringRef Code,
