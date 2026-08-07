@@ -4069,7 +4069,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       LLT Ty = MRI.getType(MI.getOperand(0).getReg());
       unsigned Size = Ty.getSizeInBits();
       // Packed add and sub are VALU only.
-      if (Subtarget.hasPackedU64Ops() && Ty.isVector() && Size == 128)
+      if (Subtarget.hasAnyPackedU64Ops() && Ty.isVector() && Size == 128)
         return getDefaultMappingVOP(MI);
       return getDefaultMappingSOP(MI);
     }
@@ -4897,9 +4897,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rsq:
     case Intrinsic::amdgcn_sqrt: {
-      unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-      if (Subtarget.hasPseudoScalarTrans() && (Size == 16 || Size == 32) &&
-          isSALUMapping(MI))
+      LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+      unsigned Size = Ty.getSizeInBits();
+      // There is no pseudo scalar transcendental instruction for bf16.
+      if (Subtarget.hasPseudoScalarTrans() && !Ty.isBFloat16() &&
+          (Size == 16 || Size == 32) && isSALUMapping(MI))
         return getDefaultMappingSOP(MI);
       return getDefaultMappingVOP(MI);
     }

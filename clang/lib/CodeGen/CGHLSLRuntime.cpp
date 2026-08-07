@@ -1220,12 +1220,8 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
                                               std::optional<unsigned> Index) {
   // DXIL packing rules etc shall be handled here.
   // FIXME: generate proper sigpoint, index, col, row values.
-  SmallVector<Value *> Args{B.getInt32(4),
-                            B.getInt32(0),
-                            B.getInt32(0),
-                            B.getInt8(0),
-                            llvm::PoisonValue::get(B.getInt32Ty()),
-                            Source};
+  SmallVector<Value *> Args{B.getInt32(4), B.getInt32(0), B.getInt32(0),
+                            B.getInt8(0), Source};
 
   llvm::Intrinsic::ID IntrinsicID = llvm::Intrinsic::dx_store_output;
 
