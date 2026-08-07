@@ -904,7 +904,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // takes care of fp_extending, doing the op, then fp_rounding back to the
   // narrow type.
   for (auto VT : {MVT::f32, MVT::f64}) {
-    if (!isScalarFPTypeOnX87Stack(VT))
+    if (!needsX87RoundToType(VT))
       continue;
     // Promote only ops that may need rounding (fneg/fabs are just sign flips,
     // always exact)
@@ -3716,6 +3716,10 @@ bool X86TargetLowering::isScalarFPTypeOnX87Stack(EVT VT) const {
     return false;
   return (VT == MVT::f80) ||
          ((VT == MVT::f32 || VT == MVT::f64) && !isScalarFPTypeInSSEReg(VT));
+}
+
+bool X86TargetLowering::needsX87RoundToType(EVT VT) const {
+  return (VT == MVT::f32 || VT == MVT::f64) && isScalarFPTypeOnX87Stack(VT);
 }
 
 bool X86TargetLowering::isLoadBitCastBeneficial(EVT LoadVT, EVT BitcastVT,
@@ -20682,7 +20686,8 @@ std::pair<SDValue, SDValue> X86TargetLowering::BuildFILD(
   // Build the FILD
   SDVTList Tys;
   bool useSSE = isScalarFPTypeInSSEReg(DstVT);
-  if (useSSE)
+  bool needsX87Round = needsX87RoundToType(DstVT);
+  if (useSSE || needsX87Round)
     Tys = DAG.getVTList(MVT::f80, MVT::Other);
   else
     Tys = DAG.getVTList(DstVT, MVT::Other);
@@ -20693,7 +20698,7 @@ std::pair<SDValue, SDValue> X86TargetLowering::BuildFILD(
                               Alignment, MachineMemOperand::MOLoad);
   Chain = Result.getValue(1);
 
-  if (useSSE) {
+  if (useSSE || needsX87Round) {
     MachineFunction &MF = DAG.getMachineFunction();
     unsigned SSFISize = DstVT.getStoreSize();
     // The slot is private, so ABI alignment is enough. More might realign the

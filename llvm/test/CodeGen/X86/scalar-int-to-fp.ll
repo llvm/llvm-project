@@ -68,11 +68,13 @@ define float @u32_to_f(i32 %a) nounwind {
 ; X87-NEXT:    pushl %ebp
 ; X87-NEXT:    movl %esp, %ebp
 ; X87-NEXT:    andl $-8, %esp
-; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    subl $16, %esp
 ; X87-NEXT:    movl 8(%ebp), %eax
-; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X87-NEXT:    fildll (%esp)
+; X87-NEXT:    fildll {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    movl %ebp, %esp
 ; X87-NEXT:    popl %ebp
 ; X87-NEXT:    retl
@@ -111,11 +113,13 @@ define float @s32_to_f(i32 %a) nounwind {
 ;
 ; X87-LABEL: s32_to_f:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
+; X87-NEXT:    subl $8, %esp
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X87-NEXT:    movl %eax, (%esp)
-; X87-NEXT:    fildl (%esp)
-; X87-NEXT:    popl %eax
+; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fildl {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    retl
   %r = sitofp i32 %a to float
   ret float %r
@@ -166,11 +170,13 @@ define double @u32_to_d(i32 %a) nounwind {
 ; SSE1_32-NEXT:    pushl %ebp
 ; SSE1_32-NEXT:    movl %esp, %ebp
 ; SSE1_32-NEXT:    andl $-8, %esp
-; SSE1_32-NEXT:    subl $8, %esp
+; SSE1_32-NEXT:    subl $16, %esp
 ; SSE1_32-NEXT:    movl 8(%ebp), %eax
 ; SSE1_32-NEXT:    movl %eax, (%esp)
 ; SSE1_32-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; SSE1_32-NEXT:    fildll (%esp)
+; SSE1_32-NEXT:    fstpl {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; SSE1_32-NEXT:    movl %ebp, %esp
 ; SSE1_32-NEXT:    popl %ebp
 ; SSE1_32-NEXT:    retl
@@ -180,11 +186,13 @@ define double @u32_to_d(i32 %a) nounwind {
 ; X87-NEXT:    pushl %ebp
 ; X87-NEXT:    movl %esp, %ebp
 ; X87-NEXT:    andl $-8, %esp
-; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    subl $16, %esp
 ; X87-NEXT:    movl 8(%ebp), %eax
 ; X87-NEXT:    movl %eax, (%esp)
 ; X87-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X87-NEXT:    fildll (%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    movl %ebp, %esp
 ; X87-NEXT:    popl %ebp
 ; X87-NEXT:    retl
@@ -231,20 +239,24 @@ define double @s32_to_d(i32 %a) nounwind {
 ;
 ; SSE1_32-LABEL: s32_to_d:
 ; SSE1_32:       # %bb.0:
-; SSE1_32-NEXT:    pushl %eax
+; SSE1_32-NEXT:    subl $12, %esp
 ; SSE1_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE1_32-NEXT:    movl %eax, (%esp)
 ; SSE1_32-NEXT:    fildl (%esp)
-; SSE1_32-NEXT:    popl %eax
+; SSE1_32-NEXT:    fstpl {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    fldl {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    addl $12, %esp
 ; SSE1_32-NEXT:    retl
 ;
 ; X87-LABEL: s32_to_d:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
+; X87-NEXT:    subl $12, %esp
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movl %eax, (%esp)
 ; X87-NEXT:    fildl (%esp)
-; X87-NEXT:    popl %eax
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    retl
   %r = sitofp i32 %a to double
   ret double %r
@@ -476,7 +488,11 @@ define float @s64_to_f(i64 %a) nounwind {
 ;
 ; X87-LABEL: s64_to_f:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    fildll {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %r = sitofp i64 %a to float
   ret float %r
@@ -592,14 +608,16 @@ define float @s64_to_f_2(i64 %a) nounwind {
 ; X87-NEXT:    pushl %ebp
 ; X87-NEXT:    movl %esp, %ebp
 ; X87-NEXT:    andl $-8, %esp
-; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    subl $16, %esp
 ; X87-NEXT:    movl 8(%ebp), %eax
 ; X87-NEXT:    movl 12(%ebp), %ecx
 ; X87-NEXT:    addl $5, %eax
 ; X87-NEXT:    adcl $0, %ecx
-; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X87-NEXT:    fildll (%esp)
+; X87-NEXT:    fildll {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    movl %ebp, %esp
 ; X87-NEXT:    popl %ebp
 ; X87-NEXT:    retl
@@ -896,28 +914,27 @@ define double @s64_to_d(i64 %a) nounwind {
 ; AVX512F_32-NEXT:    addl $8, %esp
 ; AVX512F_32-NEXT:    retl
 ;
-; SSE2_32-LABEL: s64_to_d:
-; SSE2_32:       # %bb.0:
-; SSE2_32-NEXT:    subl $8, %esp
-; SSE2_32-NEXT:    fildll {{[0-9]+}}(%esp)
-; SSE2_32-NEXT:    fstpl (%esp)
-; SSE2_32-NEXT:    fldl (%esp)
-; SSE2_32-NEXT:    addl $8, %esp
-; SSE2_32-NEXT:    retl
+; SSE_32-LABEL: s64_to_d:
+; SSE_32:       # %bb.0:
+; SSE_32-NEXT:    subl $8, %esp
+; SSE_32-NEXT:    fildll {{[0-9]+}}(%esp)
+; SSE_32-NEXT:    fstpl (%esp)
+; SSE_32-NEXT:    fldl (%esp)
+; SSE_32-NEXT:    addl $8, %esp
+; SSE_32-NEXT:    retl
 ;
 ; SSE2_64-LABEL: s64_to_d:
 ; SSE2_64:       # %bb.0:
 ; SSE2_64-NEXT:    cvtsi2sd %rdi, %xmm0
 ; SSE2_64-NEXT:    retq
 ;
-; SSE1_32-LABEL: s64_to_d:
-; SSE1_32:       # %bb.0:
-; SSE1_32-NEXT:    fildll {{[0-9]+}}(%esp)
-; SSE1_32-NEXT:    retl
-;
 ; X87-LABEL: s64_to_d:
 ; X87:       # %bb.0:
+; X87-NEXT:    subl $8, %esp
 ; X87-NEXT:    fildll {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl (%esp)
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    retl
   %r = sitofp i64 %a to double
   ret double %r
@@ -1022,7 +1039,7 @@ define double @s64_to_d_2(i64 %a) nounwind {
 ; SSE1_32-NEXT:    pushl %ebp
 ; SSE1_32-NEXT:    movl %esp, %ebp
 ; SSE1_32-NEXT:    andl $-8, %esp
-; SSE1_32-NEXT:    subl $8, %esp
+; SSE1_32-NEXT:    subl $16, %esp
 ; SSE1_32-NEXT:    movl 8(%ebp), %eax
 ; SSE1_32-NEXT:    movl 12(%ebp), %ecx
 ; SSE1_32-NEXT:    addl $5, %eax
@@ -1030,6 +1047,8 @@ define double @s64_to_d_2(i64 %a) nounwind {
 ; SSE1_32-NEXT:    movl %eax, (%esp)
 ; SSE1_32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; SSE1_32-NEXT:    fildll (%esp)
+; SSE1_32-NEXT:    fstpl {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; SSE1_32-NEXT:    movl %ebp, %esp
 ; SSE1_32-NEXT:    popl %ebp
 ; SSE1_32-NEXT:    retl
@@ -1039,7 +1058,7 @@ define double @s64_to_d_2(i64 %a) nounwind {
 ; X87-NEXT:    pushl %ebp
 ; X87-NEXT:    movl %esp, %ebp
 ; X87-NEXT:    andl $-8, %esp
-; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    subl $16, %esp
 ; X87-NEXT:    movl 8(%ebp), %eax
 ; X87-NEXT:    movl 12(%ebp), %ecx
 ; X87-NEXT:    addl $5, %eax
@@ -1047,6 +1066,8 @@ define double @s64_to_d_2(i64 %a) nounwind {
 ; X87-NEXT:    movl %eax, (%esp)
 ; X87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X87-NEXT:    fildll (%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    movl %ebp, %esp
 ; X87-NEXT:    popl %ebp
 ; X87-NEXT:    retl

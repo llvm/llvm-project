@@ -566,6 +566,11 @@ namespace llvm {
     /// bits wide, regardless of the precision of the value being computed.
     bool isScalarFPTypeOnX87Stack(EVT VT) const;
 
+    /// Returns true if results of x87 operations on \p VT must be rounded back
+    /// to \p VT through memory instead of being left at the register's 80-bit
+    /// precision, i.e. f32/f64 on the x87 stack.
+    bool needsX87RoundToType(EVT VT) const;
+
     /// Returns true if it is beneficial to convert a load of a constant
     /// to just the constant itself.
     bool shouldConvertConstantLoadToIntImm(const APInt &Imm,

@@ -10,10 +10,12 @@ define fastcc double @sint64_to_fp(i64 %X) {
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    .cfi_def_cfa_register %ebp
 ; CHECK-NEXT:    andl $-8, %esp
-; CHECK-NEXT:    subl $8, %esp
+; CHECK-NEXT:    subl $16, %esp
 ; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %ecx, (%esp)
 ; CHECK-NEXT:    fildll (%esp)
+; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    .cfi_def_cfa %esp, 4

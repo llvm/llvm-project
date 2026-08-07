@@ -52,6 +52,8 @@ define void @h(float %i) {
 ; CHECK-NEXT:    movl _e, %ecx
 ; CHECK-NEXT:    movl %ecx, 28(%esi)
 ; CHECK-NEXT:    fildl 28(%esi)
+; CHECK-NEXT:    fstps 24(%esi)
+; CHECK-NEXT:    flds 24(%esi)
 ; CHECK-NEXT:    movl _c, %edx
 ; CHECK-NEXT:    fldz
 ; CHECK-NEXT:    fld1
@@ -61,21 +63,21 @@ define void @h(float %i) {
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    fadd %st, %st(5)
 ; CHECK-NEXT:    fxch %st(5)
-; CHECK-NEXT:    fstps 12(%esi)
-; CHECK-NEXT:    flds 12(%esi)
+; CHECK-NEXT:    fstps 8(%esi)
+; CHECK-NEXT:    flds 8(%esi)
 ; CHECK-NEXT:    fxch %st(5)
 ; CHECK-NEXT:  LBB0_3: # %for.cond1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    fld %st(5)
 ; CHECK-NEXT:    fmul %st(2), %st
+; CHECK-NEXT:    fstps 12(%esi)
+; CHECK-NEXT:    flds 12(%esi)
+; CHECK-NEXT:    fdiv %st(5), %st
 ; CHECK-NEXT:    fstps 16(%esi)
 ; CHECK-NEXT:    flds 16(%esi)
-; CHECK-NEXT:    fdiv %st(5), %st
+; CHECK-NEXT:    fadd %st(4), %st
 ; CHECK-NEXT:    fstps 20(%esi)
 ; CHECK-NEXT:    flds 20(%esi)
-; CHECK-NEXT:    fadd %st(4), %st
-; CHECK-NEXT:    fstps 24(%esi)
-; CHECK-NEXT:    flds 24(%esi)
 ; CHECK-NEXT:    fsts _g
 ; CHECK-NEXT:    fxch %st(3)
 ; CHECK-NEXT:    fucom %st(3)

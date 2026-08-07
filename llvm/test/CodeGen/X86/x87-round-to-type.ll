@@ -313,11 +313,13 @@ define void @store_narrower_f32(double %a, double %b, ptr %p) nounwind {
 define float @sitofp_i32_f32(i32 %x) nounwind {
 ; X87-LABEL: sitofp_i32_f32:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
+; X87-NEXT:    subl $8, %esp
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X87-NEXT:    movl %eax, (%esp)
-; X87-NEXT:    fildl (%esp)
-; X87-NEXT:    popl %eax
+; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fildl {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    retl
   %r = sitofp i32 %x to float
   ret float %r
@@ -326,11 +328,13 @@ define float @sitofp_i32_f32(i32 %x) nounwind {
 define double @sitofp_i32_f64(i32 %x) nounwind {
 ; X87-LABEL: sitofp_i32_f64:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
+; X87-NEXT:    subl $12, %esp
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movl %eax, (%esp)
 ; X87-NEXT:    fildl (%esp)
-; X87-NEXT:    popl %eax
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    retl
   %r = sitofp i32 %x to double
   ret double %r
@@ -339,7 +343,11 @@ define double @sitofp_i32_f64(i32 %x) nounwind {
 define float @sitofp_i64_f32(i64 %x) nounwind {
 ; X87-LABEL: sitofp_i64_f32:
 ; X87:       # %bb.0:
+; X87-NEXT:    pushl %eax
 ; X87-NEXT:    fildll {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
+; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %r = sitofp i64 %x to float
   ret float %r
@@ -350,12 +358,14 @@ define float @sitofp_i64_f32(i64 %x) nounwind {
 define float @uitofp_i32_f32(i32 %x) nounwind {
 ; X87-LABEL: uitofp_i32_f32:
 ; X87:       # %bb.0:
-; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    subl $20, %esp
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X87-NEXT:    fildll (%esp)
-; X87-NEXT:    addl $12, %esp
+; X87-NEXT:    fildll {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    addl $20, %esp
 ; X87-NEXT:    retl
   %r = uitofp i32 %x to float
   ret float %r
