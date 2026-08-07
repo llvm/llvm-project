@@ -478,35 +478,26 @@ func.func @simple_arith.ceildivsi() -> (i32, i32, i32, i32, i32) {
 
 // -----
 
-// CHECK-LABEL: func @simple_arith.ceildivsi_overflow
-func.func @simple_arith.ceildivsi_overflow() -> (i8, i16, i32) {
-  // The negative values below are MININTs for the corresponding bit-width. The
-  // folder will try to negate them (so that the division operates on two
-  // positive numbers), but that would cause overflow (negating MININT
-  // overflows). Hence folding should not happen and the original ceildivsi is
-  // preserved.
+// The dividends below are MININTs for the corresponding bit-width. Every
+// result is representable, so all of them fold.
 
-  // TODO: The folder should be able to fold the following by avoiding
-  // intermediate operations that overflow.
-
-  // CHECK-DAG: %[[C_1:.*]] = arith.constant 7 : i8
-  // CHECK-DAG: %[[MIN_I8:.*]] = arith.constant -128 : i8
-  // CHECK-DAG: %[[C_2:.*]] = arith.constant 7 : i16
-  // CHECK-DAG: %[[MIN_I16:.*]] = arith.constant -32768 : i16
-  // CHECK-DAG: %[[C_3:.*]] = arith.constant 7 : i32
-  // CHECK-DAG: %[[MIN_I32:.*]] = arith.constant -2147483648 : i32
-
-  // CHECK-NEXT: %[[CEILDIV_1:.*]] = arith.ceildivsi %[[MIN_I8]], %[[C_1]]  : i8
+// CHECK-LABEL: func @simple_arith.ceildivsi_minint_dividend
+//   CHECK-DAG: %[[CEILDIV_1:.*]] = arith.constant -18 : i8
+//   CHECK-DAG: %[[CEILDIV_2:.*]] = arith.constant -4681 : i16
+//   CHECK-DAG: %[[CEILDIV_3:.*]] = arith.constant -306783378 : i32
+//       CHECK: return %[[CEILDIV_1]], %[[CEILDIV_2]], %[[CEILDIV_3]]
+func.func @simple_arith.ceildivsi_minint_dividend() -> (i8, i16, i32) {
+  // ceil(-128 / 7) = -18
   %0 = arith.constant 7 : i8
   %min_int_i8 = arith.constant -128 : i8
   %2 = arith.ceildivsi %min_int_i8, %0 : i8
 
-  // CHECK-NEXT: %[[CEILDIV_2:.*]] = arith.ceildivsi %[[MIN_I16]], %[[C_2]]  : i16
+  // ceil(-32768 / 7) = -4681
   %3 = arith.constant 7 : i16
   %min_int_i16 = arith.constant -32768 : i16
   %5 = arith.ceildivsi %min_int_i16, %3 : i16
 
-  // CHECK-NEXT: %[[CEILDIV_2:.*]] = arith.ceildivsi %[[MIN_I32]], %[[C_3]]  : i32
+  // ceil(-2147483648 / 7) = -306783378
   %6 = arith.constant 7 : i32
   %min_int_i32 = arith.constant -2147483648 : i32
   %8 = arith.ceildivsi %min_int_i32, %6 : i32
@@ -516,21 +507,12 @@ func.func @simple_arith.ceildivsi_overflow() -> (i8, i16, i32) {
 
 // -----
 
-// The divisor, rather than the dividend, is MININT here. The folder negates a
-// negative divisor, which overflows for MININT, so neither of the first two
-// operations folds even though both results are representable.
-
-// TODO: The folder should be able to fold the following by avoiding
-// intermediate operations that overflow.
+// The divisor, rather than the dividend, is MININT here.
 
 // CHECK-LABEL: func @simple_arith.ceildivsi_minint_divisor
-//   CHECK-DAG: %[[MIN_I8:.*]] = arith.constant -128 : i8
-//   CHECK-DAG: %[[C_7:.*]] = arith.constant 7 : i8
-//   CHECK-DAG: %[[C_M9:.*]] = arith.constant -9 : i8
+//   CHECK-DAG: %[[C_0:.*]] = arith.constant 0 : i8
 //   CHECK-DAG: %[[C_1:.*]] = arith.constant 1 : i8
-//       CHECK: %[[DIV_1:.*]] = arith.ceildivsi %[[C_7]], %[[MIN_I8]] : i8
-//  CHECK-NEXT: %[[DIV_2:.*]] = arith.ceildivsi %[[C_M9]], %[[MIN_I8]] : i8
-//  CHECK-NEXT: return %[[DIV_1]], %[[DIV_2]], %[[C_1]]
+//       CHECK: return %[[C_0]], %[[C_1]], %[[C_1]]
 func.func @simple_arith.ceildivsi_minint_divisor() -> (i8, i8, i8) {
   %min_int_i8 = arith.constant -128 : i8
   %0 = arith.constant 7 : i8
