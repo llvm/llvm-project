@@ -102,15 +102,15 @@ initialized as follows:
 
 1. A `static` descriptor structure is declared and initialized as follows:
 
-> a. The `invoke` function pointer is set to a function that takes the
-> `Block` structure as its first argument and the rest of the arguments (if
-> any) to the `Block` and executes the `Block` compound statement.
->
-> b. The `size` field is set to the size of the following `Block` literal
-> structure.
->
-> c. The `copy_helper` and `dispose_helper` function pointers are set to
-> respective helper functions if they are required by the `Block` literal.
+   a. The `invoke` function pointer is set to a function that takes the
+      `Block` structure as its first argument and the rest of the arguments (if
+      any) to the `Block` and executes the `Block` compound statement.
+
+   b. The `size` field is set to the size of the following `Block` literal
+      structure.
+
+   c. The `copy_helper` and `dispose_helper` function pointers are set to
+      respective helper functions if they are required by the `Block` literal.
 
 2. A stack (or global) `Block` literal data structure is created and
    initialized as follows:
@@ -123,7 +123,7 @@ initialized as follows:
    b. The `flags` field is set to zero unless there are variables imported
    into the `Block` that need helper functions for program level
    `Block_copy()` and `Block_release()` operations, in which case the
-   (1\<<25) flags bit is set.
+     `(1<<25)` flags bit is set.
 
 As an example, the `Block` literal expression:
 
@@ -381,18 +381,18 @@ struct _block_byref_foo {
 
 The structure is initialized such that:
 
-> a. The `forwarding` pointer is set to the beginning of its enclosing
-> structure.
->
-> b. The `size` field is initialized to the total size of the enclosing
-> structure.
->
-> c. The `flags` field is set to either 0 if no helper functions are needed
-> or (1\<<25) if they are.
->
-> 4. The helper functions are initialized (if present).
-> 5. The variable itself is set to its initial value.
-> 6. The `isa` field is set to `NULL`.
+a. The `forwarding` pointer is set to the beginning of its enclosing
+   structure.
+
+b. The `size` field is initialized to the total size of the enclosing
+   structure.
+
+c. The `flags` field is set to either 0 if no helper functions are needed
+   or `(1<<25)` if they are.
+
+d. The helper functions are initialized (if present).
+e. The variable itself is set to its initial value.
+f. The `isa` field is set to `NULL`.
 
 #### Access to `__block` variables from within its lexical scope
 
@@ -826,7 +826,7 @@ for the appropriately named constructor and destructor for the class/struct
 To support member variable and function access the compiler will synthesize a
 `const` pointer to a block version of the `this` pointer.
 
-(runtimehelperfunctions)=
+(RuntimeHelperFunctions)=
 
 ## Runtime Helper Functions
 
@@ -918,4 +918,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-

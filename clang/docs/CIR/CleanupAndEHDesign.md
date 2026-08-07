@@ -36,7 +36,7 @@ given target.
 Scopes that require normal or EH cleanup will be represented using a new
 operation, `cir.cleanup.scope`.
 
-```
+```text
 cir.cleanup.scope {
   // body region
 } cleanup [normal|eh|all] {
@@ -111,7 +111,7 @@ void someFunc() {
 
 **CIR**
 
-```
+```text
 cir.func @someFunc() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.call @_ZN9SomeClassC1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -156,7 +156,7 @@ void someFunc() {
 
 **CIR**
 
-```
+```text
 cir.func @someFunc() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   %1 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c2", init]
@@ -228,7 +228,7 @@ int someFunc() {
 
 **CIR**
 
-```
+```text
 cir.func @someFunc() -> !s32i {
   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
   %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
@@ -321,7 +321,7 @@ public:
 
 **CIR**
 
-```
+```text
 cir.func @_ZN7DerivedC2Ev(%arg0: !cir.ptr<!rec_Derived>) {
   %0 = cir.alloca !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>, ["this", init]
   cir.store %arg0, %0 : !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>
@@ -371,7 +371,7 @@ The first operation in a catch handler region must be a `cir.begin_catch`
 operation. This must be followed by a `cir.cleanup.scope` operation,
 with the `cir.end_catch` operation in its cleanup region.
 
-```
+```text
 cir.try {
   cir.call exception @function() : () -> ()
   cir.yield
@@ -411,7 +411,7 @@ void someFunc() {
 
 **CIR**
 
-```
+```text
 cir.func @someFunc(){
   %0 = cir.alloca !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, ["e"]
   cir.scope {
@@ -465,7 +465,7 @@ void someFunc() {
 
 **CIR**
 
-```
+```text
 cir.func @someFunc(){
   %0 = cir.alloca !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, ["e"]
   cir.scope {
@@ -525,7 +525,7 @@ void someFunc() {
 
 **CIR**
 
-```
+```text
 cir.func @someFunc(){
   cir.scope {
     %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
@@ -575,7 +575,7 @@ void someFunc() {
 
 **CIR**
 
-```
+```text
 cir.func @someFunc(){
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   %1 = cir.alloca !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, ["e"]
@@ -638,7 +638,7 @@ high-level CIR representation, we have a single operation,
 cleanup needed is entirely within the scope of this operation, we can
 represent the cleanup by adding a cleanup region to this operation.
 
-```
+```text
 cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_SomeClass x 16>>) {
 ^bb0(%arg0: !cir.ptr<!rec_SomeClass>):
   cir.call @_ZN9SomeClassC1Ev(%arg0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -657,7 +657,7 @@ be expanded to a loop within a `cir.cleanup.scope` for the
 initialization, and a loop within the cleanup scope's cleanup region to
 perform the partial array cleanup, as follows
 
-```
+```text
 cir.scope {
   %1 = cir.const #cir.int<16> : !u64i
   %2 = cir.cast array_to_ptrdecay %0 : !cir.ptr<!cir.array<!rec_SomeClass x 16>> -> !cir.ptr<!rec_SomeClass>
@@ -741,7 +741,7 @@ cleanup, the call will be converted to a `cir.try_call` operation, with
 normal and unwind destinations. The first operation in the unwind
 destination block must be a `cir.eh.initiate` operation.
 
-```
+```text
 %eh_token = cir.eh.initiate [cleanup]
 ```
 
@@ -754,7 +754,7 @@ exception that was thrown and is passed as the argument to the
 `cir.begin_cleanup`, `cir.begin_catch`, and `cir.eh.dispatch`
 operations.
 
-```
+```text
 cir.eh.dispatch %eh_token : !cir.eh_token [
   catch (#cir.global_view<@_ZTIi> : !u32i) : ^bb6
   catch_all : ^bb7
@@ -782,7 +782,7 @@ by a branch to the cleanup block, passing the EH token as an operand to
 the block. The cleanup block will begin with a call to
 `cir.begin_cleanup` which returns a cleanup token.
 
-```
+```text
 ^bb4 (%eh_token : !cir.eh_token):
   %cleanup_token = cir.begin_cleanup %eh_token : !cir.eh_token -> !cir.cleanup_token
 ```
@@ -790,7 +790,7 @@ the block. The cleanup block will begin with a call to
 This is followed by the operations to perform the cleanup and then a
 cir.end_cleanup operation.
 
-```
+```text
 cir.end_cleanup(%cleanup_token : !cir.cleanup_token)
 ```
 
@@ -823,7 +823,7 @@ void someFunc() {
 
 **High-level CIR**
 
-```
+```text
 cir.func @someFunc(){
   cir.scope {
     %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
@@ -853,7 +853,7 @@ cir.func @someFunc(){
 
 **Flattened CIR**
 
-```
+```text
 cir.func @someFunc(){
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.try_call @_ZN9SomeClassC1Ev(%0) ^bb1, ^bb3 : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -912,7 +912,7 @@ void someFunc() {
 
 **High-level CIR**
 
-```
+```text
 cir.func @someFunc(){
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.call @_ZN9SomeClassC1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -929,7 +929,7 @@ cir.func @someFunc(){
 
 **Flattened CIR**
 
-```
+```text
 cir.func @someFunc(){
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.call @_ZN9SomeClassC1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -988,7 +988,7 @@ void someFunc() {
 
 **CIR**
 
-```
+```text
 cir.func @someFunc(){
   %0 = cir.alloca !rec_ThrowingDtor, !cir.ptr<!rec_ThrowingDtor>, ["c", init]
   cir.call @_ZN12ThrowingDtorC1Ev(%0) : (!cir.ptr<!rec_ThrowingDtor>) -> ()
@@ -1005,7 +1005,7 @@ cir.func @someFunc(){
 
 **Flattened CIR**
 
-```
+```text
 cir.func @someFunc(){
   %0 = cir.alloca !rec_ThrowingDtor, !cir.ptr<!rec_ThrowingDtor>, ["c", init]
   cir.call @_ZN12ThrowingDtorC1Ev(%0) : (!cir.ptr<!rec_ThrowingDtor>) -> ()
@@ -1061,7 +1061,7 @@ int someFunc() {
 
 **CIR**
 
-```
+```text
 cir.func @someFunc() -> !s32i {
   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
   %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
@@ -1112,7 +1112,7 @@ cir.func @someFunc() -> !s32i {
 
 **Flattened CIR**
 
-```
+```text
 cir.func @someFunc() -> !s32i {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__cleanup_dest_slot "]
@@ -1236,7 +1236,7 @@ followed by `std::terminate()`) and then an unreachable operation.
 The only operation that is specific to Itanium exception handling is
 `cir.eh.landingpad`.
 
-```
+```text
 %exn_ptr_0, %type_id = cir.eh.landingpad [@_ZTISt9exception] : !cir.ptr<!void>, !u32i
 ```
 
@@ -1249,7 +1249,7 @@ handler performs cleanup but does not catch any exceptions.
 
 **Flattened CIR**
 
-```
+```text
 cir.func @someFunc(){
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.try_call @_ZN9SomeClassC1Ev(%0) ^bb1, ^bb3 : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -1284,7 +1284,7 @@ cir.func @someFunc(){
 
 **ABI-lowered CIR**
 
-```
+```text
 cir.func @someFunc() #personality_fn = @__gxx_personality_v0 {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.try_call @_ZN9SomeClassC1Ev(%0) ^bb1, ^bb3 : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -1324,7 +1324,7 @@ normal continuation block (`^bb8`).
 
 **Flattened CIR**
 
-```
+```text
 cir.func @someFunc(){
   cir.try_call @f() ^bb1, ^bb2
 ^bb1
@@ -1357,7 +1357,7 @@ cir.func @someFunc(){
 
 **ABI-lowered CIR**
 
-```
+```text
 cir.func @someFunc() #personality_fn = @__gxx_personality_v0 {
   cir.try_call @f() ^bb1, ^bb2
 ^bb1
@@ -1413,7 +1413,7 @@ instruction in LLVM IR and have the same semantics. The first operation
 in the unwind destination of a `cir.try_call` must be either
 `cir.eh.catchswitch` or `cir.cleanuppad`.
 
-```
+```text
 %4 = cir.eh.catchswitch within none [^bb2, ^bb3] unwind to caller
 ```
 
@@ -1428,7 +1428,7 @@ handled further in the current function. This operation returns a token
 that is used as the operand for `cir.catchpad` operations associated
 with this switch.
 
-```
+```text
 %5 = cir.cleanuppad within none []
 ```
 
@@ -1440,7 +1440,7 @@ handlers, the personality function will be `__CxxFrameHandler3` and the
 argument list will be empty. This operation returns a token that is used
 as the operand for the associated `cir.cleanupret` operation.
 
-```
+```text
 cir.cleanupret from %5 unwind to ^bb7
 ```
 
@@ -1449,7 +1449,7 @@ The `cir.cleanupret` operation takes an operand which specifies the
 block at which unwinding of the current exception continues (or unwind
 to caller if there is no catch handling in the current function).
 
-```
+```text
 %8 = cir.catchpad within %4 [ptr @"??_R0H@8", i32 0, ptr %e]
 ```
 
@@ -1463,7 +1463,7 @@ operand for the associated `cir.catchret` operation or as the parent for
 any `cir.catchswitch` or `cir.cleanuppad` operations that are nested
 within this catch handler.
 
-```
+```text
 cir.catchret from %8 to ^bb8
 ```
 
@@ -1475,7 +1475,7 @@ block at which excution should be resumed.
 
 **Flattened CIR**
 
-```
+```text
 cir.func @someFunc() {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.try_call @_ZN9SomeClassC1Ev(%0) ^bb1, ^bb3 : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -1510,7 +1510,7 @@ cir.func @someFunc() {
 
 **ABI-lowered CIR**
 
-```
+```text
 cir.func @someFunc() #personality_fn = @ __CxxFrameHandler3 {
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
   cir.try_call @_ZN9SomeClassC1Ev(%0) ^bb1, ^bb4 : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -1537,7 +1537,7 @@ cir.func @someFunc() #personality_fn = @ __CxxFrameHandler3 {
 
 **Flattened CIR**
 
-```
+```text
 cir.func @someFunc(){
   cir.try_call @f() ^bb1, ^bb2
 ^bb1
@@ -1570,7 +1570,7 @@ cir.func @someFunc(){
 
 **ABI-lowered CIR**
 
-```
+```text
 cir.func @someFunc() #personality_fn = @__CxxFrameHandler3 {
   cir.try_call @f() ^bb1, ^bb2
 ^bb1
@@ -1599,4 +1599,3 @@ case will be handled by the personality function, using tables that are
 generated from the `cir.catchpad` operations. Each catch handler simply
 continues to the normal continuation block (`^bb6`) using the
 `cir.catchret` operation.
-

@@ -22,13 +22,13 @@ Tags on an inline namespace are called "implicit tags", all other tags are
 
 ## Mangling
 
-All tags that are "active" on an \<unqualified-name> are emitted after the
-\<unqualified-name>, before \<template-args> or \<discriminator>, and are part of
-the same \<substitution> the \<unqualified-name> is.
+All tags that are "active" on an `<unqualified-name>` are emitted after the
+`<unqualified-name>`, before `<template-args>` or `<discriminator>`, and are
+part of the same `<substitution>` the `<unqualified-name>` is.
 
 They are mangled as:
 
-```none
+```text
 <abi-tags> ::= <abi-tag>*   # sort by name
 <abi-tag> ::= B <tag source-name>
 ```
@@ -49,7 +49,7 @@ enum), the explicit tags are the active tags.
 For variables and functions, the active tags are the explicit tags plus any
 "required tags" which are not in the "available tags" set:
 
-```none
+```text
 derived-tags := (required-tags - available-tags)
 active-tags := explicit-tags + derived-tags
 ```
@@ -84,16 +84,16 @@ A variable requires any implicit or explicit tag used in its type.
 ## Available tags
 
 All tags used in the prefix and in the template arguments for a name are
-available. Also, for functions, all tags from the \<bare-function-type>
+available. Also, for functions, all tags from the `<bare-function-type>`
 (which might include the return type for template functions) are available.
 
-For \<local-name>s all active tags used in the local part (\<function-
-encoding>) are available, but not implicit tags which were not active.
+For `<local-name>`s all active tags used in the local part
+(`<function-encoding>`) are available, but not implicit tags which were not
+active.
 
-Implicit and explicit tags used in the \<unqualified-name> for a function (as
+Implicit and explicit tags used in the `<unqualified-name>` for a function (as
 in the type of a cast operator) are NOT available.
 
 Example: a cast operator to std::string (which is
-std::\_\_cxx11::basic_string\<...>) will use 'cxx11' as an active tag, as it is
+`std::__cxx11::basic_string<...>`) will use 'cxx11' as an active tag, as it is
 required from the return type `std::string` but not available.
-

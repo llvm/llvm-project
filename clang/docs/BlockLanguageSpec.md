@@ -1,5 +1,4 @@
-```{eval-rst}
-.. role:: block-term
+```{role} block-term
 ```
 
 # Language Specification for Blocks
@@ -344,4 +343,3 @@ normal variable of C pointer type.
 
 Member variables that are Blocks may not be overloaded by the types of
 their arguments.
-

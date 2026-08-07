@@ -36,23 +36,21 @@ struct C : A {
 The scheme will cause the virtual tables for A, B and C to be laid out
 consecutively:
 
-```{eval-rst}
-.. csv-table:: Virtual Table Layout for A, B, C
-  :header: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
-
-  A::offset-to-top, &A::rtti, &A::f1, &A::f2, &A::f3, B::offset-to-top, &B::rtti, &B::f1, &B::f2, &B::f3, C::offset-to-top, &C::rtti, &C::f1, &C::f2, &C::f3
-```
+:::{table} Virtual Table Layout for A, B, C
+| 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 |
+|---|---|---|---|---|---|---|---|---|---|----|----|----|----|----|
+| A::offset-to-top | &A::rtti | &A::f1 | &A::f2 | &A::f3 | B::offset-to-top | &B::rtti | &B::f1 | &B::f2 | &B::f3 | C::offset-to-top | &C::rtti | &C::f1 | &C::f2 | &C::f3 |
+:::
 
 The bit vector for static types A, B and C will look like this:
 
-```{eval-rst}
-.. csv-table:: Bit Vectors for A, B, C
-  :header: Class, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
-
-  A, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0
-  B, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0
-  C, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0
-```
+:::{table} Bit Vectors for A, B, C
+| Class | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 |
+|-------|---|---|---|---|---|---|---|---|---|---|----|----|----|----|----|
+| A | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
+| B | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| C | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
+:::
 
 Bit vectors are represented in the object file as byte arrays. By loading
 from indexed offsets into the byte array and applying a mask, a program can
@@ -73,7 +71,7 @@ relevant bit is set in the bit vector.
 
 For example on x86 a typical virtual call may look like this:
 
-```none
+```objdump
 ca7fbb:       48 8b 0f                mov    (%rdi),%rcx
 ca7fbe:       48 8d 15 c3 42 fb 07    lea    0x7fb42c3(%rip),%rdx
 ca7fc5:       48 89 c8                mov    %rcx,%rax
@@ -113,14 +111,13 @@ of the region covered by ones, and perform the bit vector check using a
 truncated version of the bit vector. For example, the bit vectors for our
 example class hierarchy will be emitted like this:
 
-```{eval-rst}
-.. csv-table:: Bit Vectors for A, B, C
-  :header: Class, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
-
-  A,  ,  , 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,  ,
-  B,  ,  ,  ,  ,  ,  ,  , 1,  ,  ,  ,  ,  ,  ,
-  C,  ,  ,  ,  ,  ,  ,  ,  ,  ,  ,  ,  , 1,  ,
-```
+:::{table} Bit Vectors for A, B, C
+| Class | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 |
+|-------|---|---|---|---|---|---|---|---|---|---|----|----|----|----|----|
+| A |   |   | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 1 |   |   |
+| B |   |   |   |   |   |   |   | 1 |   |   |   |   |   |   |   |
+| C |   |   |   |   |   |   |   |   |   |   |   |   | 1 |   |   |
+:::
 
 #### Short Inline Bit Vectors
 
@@ -130,7 +127,7 @@ of the bit vector.
 
 If the bit vector fits in 32 bits, the code looks like this:
 
-```none
+```objdump
  dc2:       48 8b 03                mov    (%rbx),%rax
  dc5:       48 8d 15 14 1e 00 00    lea    0x1e14(%rip),%rdx
  dcc:       48 89 c1                mov    %rax,%rcx
@@ -149,7 +146,7 @@ If the bit vector fits in 32 bits, the code looks like this:
 
 Or if the bit vector fits in 64 bits:
 
-```none
+```objdump
 11a6:       48 8b 03                mov    (%rbx),%rax
 11a9:       48 8d 15 d0 28 00 00    lea    0x28d0(%rip),%rdx
 11b0:       48 89 c1                mov    %rax,%rcx
@@ -170,7 +167,7 @@ Or if the bit vector fits in 64 bits:
 If the bit vector consists of a single bit, there is only one possible
 virtual table, and the check can consist of a single equality comparison:
 
-```none
+```objdump
 9a2:   48 8b 03                mov    (%rbx),%rax
 9a5:   48 8d 0d a4 13 00 00    lea    0x13a4(%rip),%rcx
 9ac:   48 39 c8                cmp    %rcx,%rax
@@ -221,29 +218,25 @@ struct C : A {
 
 The virtual tables will be laid out like this:
 
-```{eval-rst}
-.. csv-table:: Virtual Table Layout for A, B, C
-  :header: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
-
-  A::offset-to-top, &A::rtti, &A::f1, &A::f2, B::offset-to-top, &B::rtti, &B::f1, &B::f2, &B::f3, &B::f4, &B::f5, &B::f6, C::offset-to-top, &C::rtti, &C::f1, &C::f2
-```
+:::{table} Virtual Table Layout for A, B, C
+| 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+|---|---|---|---|---|---|---|---|---|---|----|----|----|----|----|----|
+| A::offset-to-top | &A::rtti | &A::f1 | &A::f2 | B::offset-to-top | &B::rtti | &B::f1 | &B::f2 | &B::f3 | &B::f4 | &B::f5 | &B::f6 | C::offset-to-top | &C::rtti | &C::f1 | &C::f2 |
+:::
 
 Notice that each address point for A is separated by 4 words. This lets us
 emit a compressed bit vector for A that looks like this:
 
-```{eval-rst}
-.. csv-table::
-  :header: 2, 6, 10, 14
-
-  1, 1, 0, 1
-```
+| 2 | 6 | 10 | 14 |
+|---|---|----|----|
+| 1 | 1 | 0 | 1 |
 
 At call sites, the compiler will strengthen the alignment requirements by
 using a different rotate count. For example, on a 64-bit machine where the
 address points are 4-word aligned (as in A from our example), the `rol`
 instruction may look like this:
 
-```none
+```objdump
 dd2:       48 c1 c1 3b             rol    $0x3b,%rcx
 ```
 
@@ -270,7 +263,8 @@ likely to occur if the virtual tables are padded.
 
 ### Forward-Edge CFI for Virtual Calls by Interleaving Virtual Tables
 
-Dimitar et. al. proposed a novel approach that interleaves virtual tables in [^footnote-1].
+Dimitar et. al. proposed a novel approach that interleaves virtual tables in
+[^ivtbl].
 This approach is more efficient in terms of space because padding and bit vectors are no longer needed.
 At the same time, it is also more efficient in terms of performance because in the interleaved layout
 address points of the virtual tables are consecutive, thus the validity check of a virtual
@@ -280,10 +274,10 @@ At a high level, the interleaving scheme consists of three steps: 1) split virtu
 separate virtual tables, 2) order virtual tables by a pre-order traversal of the class hierarchy
 and 3) interleave virtual tables.
 
-The interleaving scheme implemented in LLVM is inspired by [^footnote-1] but has its own
+The interleaving scheme implemented in LLVM is inspired by [^ivtbl] but has its own
 enhancements (more in [Interleave virtual tables]).
 
-[^footnote-1]: [Protecting C++ Dynamic Dispatch Through VTable Interleaving](https://cseweb.ucsd.edu/~lerner/papers/ivtbl-ndss16.pdf). Dimitar Bounov, Rami Gökhan Kıcı, Sorin Lerner.
+[^ivtbl]: [Protecting C++ Dynamic Dispatch Through VTable Interleaving](https://cseweb.ucsd.edu/~lerner/papers/ivtbl-ndss16.pdf). Dimitar Bounov, Rami Gökhan Kıcı, Sorin Lerner.
 
 #### Split virtual table groups into separate virtual tables
 
@@ -341,54 +335,46 @@ For each virtual function the distance between a virtual table entry for this fu
 address point is always the same. This property ensures that dynamic dispatch still works with the interleaving layout.
 
 Note that the interleaving scheme in the CFI implementation guarantees both properties above whereas the original scheme proposed
-in [^footnote-1] only guarantees the second property.
+in [^ivtbl] only guarantees the second property.
 
 To illustrate how the interleaving algorithm works, let us continue with the running example.
 The algorithm first separates all the virtual table entries into two work lists. To do so,
 it starts by allocating two work lists, one initialized with all the offset-to-top entries of virtual tables in the order
 computed in the last step, one initialized with all the RTTI entries in the same order.
 
-```{eval-rst}
-.. csv-table:: Work list 1 Layout
-  :header: 0, 1, 2, 3
+:::{table} Work list 1 Layout
+| 0 | 1 | 2 | 3 |
+|---|---|---|---|
+| A::offset-to-top | B::offset-to-top | D::offset-to-top | C::offset-to-top |
+:::
 
-  A::offset-to-top, B::offset-to-top, D::offset-to-top, C::offset-to-top
-
-```
-
-```{eval-rst}
-.. csv-table:: Work list 2 layout
-  :header: 0, 1, 2, 3,
-
-  &A::rtti, &B::rtti, &D::rtti, &C::rtti
-```
+:::{table} Work list 2 layout
+| 0 | 1 | 2 | 3 |
+|---|---|---|---|
+| &A::rtti | &B::rtti | &D::rtti | &C::rtti |
+:::
 
 Then for each virtual function the algorithm goes through all the virtual tables in the previously computed order
 to collect all the related entries into a virtual function list.
 After this step, there are the following virtual function lists:
 
-```{eval-rst}
-.. csv-table:: f1 list
-  :header: 0, 1, 2, 3
+:::{table} f1 list
+| 0 | 1 | 2 | 3 |
+|---|---|---|---|
+| &A::f1 | &B::f1 | &D::f1 | &C::f1 |
+:::
 
-  &A::f1, &B::f1, &D::f1, &C::f1
+:::{table} f2 list
+| 0 | 1 |
+|---|---|
+| &B::f2 | &D::f2 |
+:::
 
-```
-
-```{eval-rst}
-.. csv-table:: f2 list
-  :header: 0, 1
-
-  &B::f2, &D::f2
-
-```
-
-```{eval-rst}
-.. csv-table:: f3 list
-  :header: 0
-
-  &C::f3
-```
+:::{table} f3 list
+| 0 |
+|---|
+| &C::f3 |
+:::
 
 Next, the algorithm picks the longest remaining virtual function list and appends the whole list to the shortest work list
 until no function lists are left, and pads the shorter work list so that they are of the same length.
@@ -396,30 +382,26 @@ In the example, f1 list will be first added to work list 1, then f2 list will be
 to work list 2, and finally f3 list will be added to the work list 2. Since work list 1 now has one more entry than
 work list 2, a padding entry is added to the latter. After this step, the two work lists look like:
 
-```{eval-rst}
-.. csv-table:: Work list 1 Layout
-  :header: 0, 1, 2, 3, 4, 5, 6, 7
+:::{table} Work list 1 Layout
+| 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+|---|---|---|---|---|---|---|---|
+| A::offset-to-top | B::offset-to-top | D::offset-to-top | C::offset-to-top | &A::f1 | &B::f1 | &D::f1 | &C::f1 |
+:::
 
-  A::offset-to-top, B::offset-to-top, D::offset-to-top, C::offset-to-top, &A::f1, &B::f1, &D::f1, &C::f1
-
-```
-
-```{eval-rst}
-.. csv-table:: Work list 2 layout
-  :header: 0, 1, 2, 3, 4, 5, 6, 7
-
-  &A::rtti, &B::rtti, &D::rtti, &C::rtti, &B::f2, &D::f2, &C::f3, padding
-```
+:::{table} Work list 2 layout
+| 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+|---|---|---|---|---|---|---|---|
+| &A::rtti | &B::rtti | &D::rtti | &C::rtti | &B::f2 | &D::f2 | &C::f3 | padding |
+:::
 
 Finally, the algorithm merges the two work lists into the interleaved layout by alternatingly
 moving the head of each list to the final layout. After this step, the final interleaved layout looks like:
 
-```{eval-rst}
-.. csv-table:: Interleaved layout
-  :header: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
-
-  A::offset-to-top, &A::rtti, B::offset-to-top, &B::rtti, D::offset-to-top, &D::rtti, C::offset-to-top, &C::rtti, &A::f1, &B::f2, &B::f1, &D::f2, &D::f1, &C::f3, &C::f1, padding
-```
+:::{table} Interleaved layout
+| 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+|---|---|---|---|---|---|---|---|---|---|----|----|----|----|----|----|
+| A::offset-to-top | &A::rtti | B::offset-to-top | &B::rtti | D::offset-to-top | &D::rtti | C::offset-to-top | &C::rtti | &A::f1 | &B::f2 | &B::f1 | &D::f2 | &D::f1 | &C::f3 | &C::f1 | padding |
+:::
 
 In the above interleaved layout, each virtual table's offset-to-top and RTTI are always adjacent, which shows that the layout has the first property.
 For the second property, let us look at f2 as an example. In the interleaved layout,
@@ -452,7 +434,7 @@ In more concrete terms, suppose we have three functions `f`, `g`,
 `h` which are all of the same type, and a function foo that returns their
 addresses:
 
-```none
+```gas
 f:
 mov 0, %eax
 ret
@@ -474,7 +456,7 @@ ret
 
 Our jump table will (conceptually) look like this:
 
-```none
+```gas
 f:
 jmp .Ltmp0 ; 5 bytes
 int3       ; 1 byte
@@ -533,19 +515,21 @@ Assuming the following setup: the binary consists of several
 instrumented and several uninstrumented DSOs. Some of them may be
 dlopen-ed/dlclose-d periodically, even frequently.
 
-> - Calls made from uninstrumented DSOs are not checked and just work.
-> - Calls inside any instrumented DSO are fully protected.
-> - Calls between different instrumented DSOs are also protected, with
->   : a performance penalty (in addition to the monolithic CFI
->     overhead).
-> - Calls from an instrumented DSO to an uninstrumented one are
->   : unchecked and just work, with performance penalty.
-> - Calls from an instrumented DSO outside of any known DSO are
->   : detected as CFI violations.
+- Calls made from uninstrumented DSOs are not checked and just work.
+- Calls inside any instrumented DSO are fully protected.
+
+Calls between different instrumented DSOs are also protected, with
+: a performance penalty (in addition to the monolithic CFI overhead).
+
+Calls from an instrumented DSO to an uninstrumented one are
+: unchecked and just work, with performance penalty.
+
+Calls from an instrumented DSO outside of any known DSO are
+: detected as CFI violations.
 
 In the monolithic scheme a call site is instrumented as
 
-```none
+```text
 if (!InlinedFastCheck(f))
   abort();
 call *f
@@ -553,7 +537,7 @@ call *f
 
 In the cross-DSO scheme it becomes
 
-```none
+```text
 if (!InlinedFastCheck(f))
   __cfi_slowpath(CallSiteTypeId, f);
 call *f
@@ -568,10 +552,10 @@ mapping from a type to an identifier is an ABI detail. In the current,
 experimental, implementation the identifier of type T is calculated as
 follows:
 
-> - Obtain the mangled name for "typeinfo name for T".
-> - Calculate MD5 hash of the name as a string.
-> - Reinterpret the first 8 bytes of the hash as a little-endian
->   64-bit integer.
+- Obtain the mangled name for "typeinfo name for T".
+- Calculate MD5 hash of the name as a string.
+- Reinterpret the first 8 bytes of the hash as a little-endian
+  64-bit integer.
 
 It is possible, but unlikely, that collisions in the
 `CallSiteTypeId` hashing will result in weaker CFI checks that would
@@ -583,7 +567,7 @@ In the general case, only the target DSO knows whether the call to
 function `f` with type `CallSiteTypeId` is valid or not. To
 export this information, every DSO implements
 
-```none
+```c++
 void __cfi_check(uint64 CallSiteTypeId, void *TargetAddr, void *DiagData)
 ```
 
@@ -611,17 +595,17 @@ bytes) of memory. The table is kept readonly most of the time.
 
 There are 3 types of shadow values:
 
-> - Address in a CFI-instrumented DSO.
-> - Unchecked address (a “trusted” non-instrumented DSO). Encoded as
->   value 0xFFFF.
-> - Invalid address (everything else). Encoded as value 0.
+- Address in a CFI-instrumented DSO.
+- Unchecked address (a “trusted” non-instrumented DSO). Encoded as
+  value 0xFFFF.
+- Invalid address (everything else). Encoded as value 0.
 
 For a CFI-instrumented DSO, a shadow value encodes the address of the
 \_\_cfi_check function for all call targets in the corresponding memory
 page. If Addr is the target address, and V is the shadow value, then
 the address of \_\_cfi_check is calculated as
 
-```none
+```text
 __cfi_check = AlignUpTo(Addr, 4096) - (V + 1) * 4096
 ```
 
@@ -633,7 +617,7 @@ them.
 
 The slow path check is implemented in a runtime support library as
 
-```none
+```c++
 void __cfi_slowpath(uint64 CallSiteTypeId, void *TargetAddr)
 void __cfi_slowpath_diag(uint64 CallSiteTypeId, void *TargetAddr, void *DiagData)
 ```
@@ -751,7 +735,7 @@ and is properly aligned, and if the checks fail it will either trap (in monolith
 or call the slow path function (cross-DSO scheme).
 The bit vector lookup is probably too complex for a hardware implementation.
 
-```none
+```c++
 //  This instruction checks that 'Ptr'
 //   * is aligned by (1 << kAlignment) and
 //   * is inside [kRangeBeg, kRangeBeg+(kRangeSize<<kAlignment))
@@ -798,4 +782,3 @@ ability to protect against invalid casts between polymorphic types.
 [rfg]: https://xlab.tencent.com/en/2016/11/02/return-flow-guard
 [safestack]: https://clang.llvm.org/docs/SafeStack.html
 [type metadata]: https://llvm.org/docs/TypeMetadata.html
-

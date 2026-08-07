@@ -22,7 +22,7 @@ HLSL has 3 keywords which denote the parameter semantics (`in`, `out` and
 `inout`). In a function declaration a parameter may be annotated any of the
 following ways:
 
-1. \<no parameter annotation> - denotes input
+1. `<no parameter annotation>` - denotes input
 2. `in` - denotes input
 3. `out` - denotes output
 4. `in out` - denotes input and output
@@ -336,4 +336,3 @@ simplifies the code generation. IR generation does the following:
   \* For `out` arguments, emit an uninitialized temporary.
 - Emit the call
 - Emit the write-back BinaryOperator expression.
-

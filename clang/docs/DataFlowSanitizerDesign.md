@@ -212,7 +212,7 @@ identified by checking for nonzero labels in nominally unlabelled programs.
 
 ## Implementing the ABI list
 
-The [ABI list](DataFlowSanitizer.html#abi-list) provides a list of functions
+The {ref}`ABI list <abi-list>` provides a list of functions
 which conform to the native ABI, each of which is callable from an instrumented
 program. This is implemented by replacing each reference to a native ABI
 function with a reference to a function which uses the instrumented ABI.
@@ -265,4 +265,3 @@ of statically detecting instances of this problem is to append the suffix
 This will not catch every such problem; in particular function pointers passed
 across the instrumented-native barrier cannot be used on the other side.
 These problems could potentially be caught dynamically.
-

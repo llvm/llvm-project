@@ -54,16 +54,13 @@
 </style>
 ```
 
-```{eval-rst}
-.. role:: arc-term
+```{role} arc-term
 ```
 
-```{eval-rst}
-.. role:: revision
+```{role} revision
 ```
 
-```{eval-rst}
-.. role:: when-revised
+```{role} when-revised
 ```
 
 # Objective-C Automatic Reference Counting (ARC)
@@ -72,11 +69,11 @@
 :local: true
 ```
 
-(arc-meta)=
+(arc.meta)=
 
 ## About this document
 
-(arc-meta-purpose)=
+(arc.meta.purpose)=
 
 ### Purpose
 
@@ -89,7 +86,7 @@ The secondary purpose is to act as a rationale for why ARC was designed in this
 way. This should remain tightly focused on the technical design and should not
 stray into marketing speculation.
 
-(arc-meta-background)=
+(arc.meta.background)=
 
 ### Background
 
@@ -180,7 +177,7 @@ class that all block objects are considered to be objects of; this class
 implements `retain` by adjusting the reference count, not by calling
 `Block_copy`.
 
-(arc-meta-evolution)=
+(arc.meta.evolution)=
 
 ### Evolution
 
@@ -191,9 +188,9 @@ If a change increases the expressiveness of the language, for example by
 lifting a restriction or by adding new syntax, the change will be annotated
 with a revision marker, like so:
 
-> ARC applies to Objective-C pointer types, block pointer types, and
-> {when-revised}`[beginning Apple 8.0, LLVM 3.8]` {revision}`BPTRs declared
-> within` `extern "BCPL"` blocks.
+ARC applies to Objective-C pointer types, block pointer types, and
+{when-revised}`[beginning Apple 8.0, LLVM 3.8]` {revision}`BPTRs declared
+within` `extern "BCPL"` blocks.
 
 For now, it is sensible to version this document by the releases of its sole
 implementation (and its host project), clang. "LLVM X.Y" refers to an
@@ -207,7 +204,7 @@ imposing a new restriction, this should be taken as an oversight in the
 original specification and something to be avoided in all versions. Such
 changes are generally to be avoided.
 
-(arc-general)=
+(arc.general)=
 
 ## General
 
@@ -225,7 +222,7 @@ If ARC is enabled, `__has_feature(objc_arc)` will expand to 1 in the
 preprocessor. For more information about `__has_feature`, see the
 {ref}`language extensions <langext-__has_feature-__has_extension>` document.
 
-(arc-objects)=
+(arc.objects)=
 
 ## Retainable object pointers
 
@@ -282,7 +279,7 @@ will yield a type without the attribute, which may result in unexpected
 behavior.
 :::
 
-(arc-objects-retains)=
+(arc.objects.retains)=
 
 ### Retain count semantics
 
@@ -337,7 +334,7 @@ optimization of operations based on local knowledge of data flow. The
 semantics describe the high-level behaviors that the compiler implements, not
 an exact sequence of operations that a program will be compiled into.
 
-(arc-objects-operands)=
+(arc.objects.operands)=
 
 ### Retainable object pointers as operands and arguments
 
@@ -361,7 +358,7 @@ avoid needing to retain arguments across a large number of calls.
 The remainder of this section describes exceptions to these rules, how those
 exceptions are detected, and what those exceptions imply semantically.
 
-(arc-objects-operands-consumed)=
+(arc.objects.operands.consumed)=
 
 #### Consumed parameters
 
@@ -415,7 +412,7 @@ application of the existing C/C++ rule about calling functions through an
 incompatible function type, but it's useful to state it explicitly.
 :::
 
-(arc-object-operands-retained-return-values)=
+(arc.object.operands.retained-return-values)=
 
 #### Retained return values
 
@@ -465,7 +462,7 @@ just an application of the existing C/C++ rule about calling functions
 through an incompatible function type.
 :::
 
-(arc-objects-operands-unretained-returns)=
+(arc.objects.operands.unretained-returns)=
 
 #### Unretained return values
 
@@ -496,7 +493,7 @@ pointer which is guaranteed to be valid at least as long as the innermost
 autorelease pool. There are no additional semantics enforced in the definition
 of such a method; it merely enables optimizations in callers.
 
-(arc-objects-operands-casts)=
+(arc.objects.operands.casts)=
 
 #### Bridged casts
 
@@ -526,11 +523,11 @@ object pointers <arc.objects.restrictions.conversion>`.
 Using a `__bridge_retained` or `__bridge_transfer` cast purely to convince
 ARC to emit an unbalanced retain or release, respectively, is poor form.
 
-(arc-objects-restrictions)=
+(arc.objects.restrictions)=
 
 ### Restrictions
 
-(arc-objects-restrictions-conversion)=
+(arc.objects.restrictions.conversion)=
 
 #### Conversion of retainable object pointers
 
@@ -551,7 +548,7 @@ transfers control into or out of ARC.
 
 However, the following exceptions apply.
 
-(arc-objects-restrictions-conversion-with-known-semantics)=
+(arc.objects.restrictions.conversion.with.known.semantics)=
 
 #### Conversion to retainable object pointer type of expressions with known semantics
 
@@ -629,7 +626,7 @@ user constants might have been initialized with something dynamically
 allocated, using a global initializer.
 :::
 
-(arc-objects-restrictions-conversion-exception-contextual)=
+(arc.objects.restrictions.conversion-exception-contextual)=
 
 #### Conversion from retainable object pointer type in certain contexts
 
@@ -653,7 +650,7 @@ and it would be quite unfortunate for explicit releases to be silently
 balanced out in this way.
 :::
 
-(arc-ownership)=
+(arc.ownership)=
 
 ## Ownership qualification
 
@@ -702,7 +699,7 @@ There are four ownership qualifiers:
 A type is {arc-term}`nontrivially ownership-qualified` if it is qualified with
 `__autoreleasing`, `__strong`, or `__weak`.
 
-(arc-ownership-spelling)=
+(arc.ownership.spelling)=
 
 ### Spelling
 
@@ -745,7 +742,7 @@ before the entire declaration and have it apply in the leftmost
 sensible place.
 :::
 
-(arc-ownership-spelling-property)=
+(arc.ownership.spelling.property)=
 
 #### Property declarations
 
@@ -804,7 +801,7 @@ setter; direct accesses to the ivar (even if synthesized) still have primitive
 semantics, and the value in the ivar will not be automatically released during
 deallocation.
 
-(arc-ownership-semantics)=
+(arc.ownership.semantics)=
 
 ### Semantics
 
@@ -879,11 +876,11 @@ with primitive semantics, and then releasing the result of the load at the end
 of the current full-expression. For all other lvalues, moving is equivalent to
 reading the object.
 
-(arc-ownership-restrictions)=
+(arc.ownership.restrictions)=
 
 ### Restrictions
 
-(arc-ownership-restrictions-weak)=
+(arc.ownership.restrictions.weak)=
 
 #### Weak-unavailable types
 
@@ -912,7 +909,7 @@ attribute. A program is ill-formed if it applies the `__weak` ownership
 qualifier to a weak-unavailable type or if the value operand of a weak
 assignment operation has a weak-unavailable type.
 
-(arc-ownership-restrictions-autoreleasing)=
+(arc.ownership.restrictions.autoreleasing)=
 
 #### Storage duration of `__autoreleasing` objects
 
@@ -932,7 +929,7 @@ It is undefined behavior if a non-null pointer is assigned to an
 `__autoreleasing` object while an autorelease pool is in scope and then that
 object is read after the autorelease pool's scope is left.
 
-(arc-ownership-restrictions-conversion-indirect)=
+(arc.ownership.restrictions.conversion.indirect)=
 
 #### Conversion of pointers to ownership-qualified types
 
@@ -1027,7 +1024,7 @@ code because the non-ARC code will consider the element type to be POD.
 Such arrays that are `new[]`'d in ARC translation units cannot be
 `delete[]`'d in non-ARC translation units and vice-versa.
 
-(arc-ownership-restrictions-pass-by-writeback)=
+(arc.ownership.restrictions.pass_by_writeback)=
 
 #### Passing to an out parameter by writeback
 
@@ -1086,7 +1083,7 @@ However, it was judged unacceptably invasive to require programmers to write
 out-parameters. This was the least bad solution.
 :::
 
-(arc-ownership-restrictions-records)=
+(arc.ownership.restrictions.records)=
 
 #### Ownership-qualified fields of structs and unions
 
@@ -1206,12 +1203,12 @@ it to be enforced more strictly. The following rules apply:
 
 The *static subobjects* of a type `T` at a location `L` are:
 
-> - an object of type `T` spanning from `L` to `L + sizeof(T)`;
-> - if `T` is a struct type, then for each field `f` of that struct,
->   the static subobjects of `T` at location `L + offsetof(T, .f)`; and
-> - if `T` is the array type `E[N]`, then for each `i` satisfying
->   `0 <= i < N`, the static subobjects of `E` at location
->   `L + i * sizeof(E)`.
+- an object of type `T` spanning from `L` to `L + sizeof(T)`;
+- if `T` is a struct type, then for each field `f` of that struct,
+  the static subobjects of `T` at location `L + offsetof(T, .f)`; and
+- if `T` is the array type `E[N]`, then for each `i` satisfying
+  `0 <= i < N`, the static subobjects of `E` at location
+  `L + i * sizeof(E)`.
 
 If an l-value is converted to an r-value, then all static subobjects
 whose types are non-trivial to copy are accessed. If an l-value is
@@ -1297,10 +1294,10 @@ or between ARC and non-ARC modes) under the following conditions:
 - If two fields correspond as above, and at least one of the fields is
   ownership-qualified, then:
 
-  > - the fields must be identically qualified, or else
-  > - one type must be unqualified (and thus declared in a non-ARC mode),
-  >   and the other type must be qualified with `__unsafe_unretained`
-  >   or `__strong`.
+  - the fields must be identically qualified, or else
+  - one type must be unqualified (and thus declared in a non-ARC mode),
+    and the other type must be qualified with `__unsafe_unretained`
+    or `__strong`.
 
   Note that `__weak` fields must always be declared `__weak` because
   of the need to pin those fields in memory and keep them properly
@@ -1355,11 +1352,11 @@ force the use of the standard C++ ABI by declaring an empty (but
 non-defaulted) destructor.
 :::
 
-(arc-ownership-inference)=
+(arc.ownership.inference)=
 
 ### Ownership inference
 
-(arc-ownership-inference-variables)=
+(arc.ownership.inference.variables)=
 
 #### Objects
 
@@ -1371,7 +1368,7 @@ As a special case, if the object's base type is `Class` (possibly
 protocol-qualified), the type is adjusted to have `__unsafe_unretained`
 qualification instead.
 
-(arc-ownership-inference-indirect-parameters)=
+(arc.ownership.inference.indirect_parameters)=
 
 #### Indirect parameters
 
@@ -1403,7 +1400,7 @@ ill-formed.
 The convention is very unlikely to be intentional in template code.
 :::
 
-(arc-ownership-inference-template-arguments)=
+(arc.ownership.inference.template.arguments)=
 
 #### Template arguments
 
@@ -1420,7 +1417,7 @@ since they generally need to have a qualifier applied to the before being
 used.
 :::
 
-(arc-method-families)=
+(arc.method-families)=
 
 ## Method families
 
@@ -1482,7 +1479,7 @@ The families and their added restrictions are:
 A program is ill-formed if a method's declarations, implementations, and
 overrides do not all have the same method family.
 
-(arc-family-attribute)=
+(arc.family.attribute)=
 
 ### Explicit method family control
 
@@ -1515,7 +1512,7 @@ semantic intent, which is of use both to ARC (which, e.g., treats calls to
 `init` specially) and the static analyzer.
 :::
 
-(arc-family-semantics)=
+(arc.family.semantics)=
 
 ### Semantics of method families
 
@@ -1536,7 +1533,7 @@ to {ref}`retained objects <arc.object.operands.retained-return-values>`. This
 can be overridden by annotating the property with `ns_returns_not_retained`
 attribute.
 
-(arc-family-semantics-init)=
+(arc.family.semantics.init)=
 
 #### Semantics of `init`
 
@@ -1561,7 +1558,7 @@ It is undefined behavior for a program to cause two or more calls to `init`
 methods on the same object, except that each `init` method invocation may
 perform at most one delegate init call.
 
-(arc-family-semantics-result-type)=
+(arc.family.semantics.result_type)=
 
 #### Related result types
 
@@ -1594,7 +1591,7 @@ precise type information helps drastically lower this risk, as well as
 catching a number of latent bugs.
 :::
 
-(arc-optimization)=
+(arc.optimization)=
 
 ## Optimization
 
@@ -1665,7 +1662,7 @@ and double-released, ARC may eliminate the inner retain and release;
 it does not need to guard against code which performs an unbalanced
 release followed by a "balancing" retain.
 
-(arc-optimization-liveness)=
+(arc.optimization.liveness)=
 
 ### Object liveness
 
@@ -1744,7 +1741,7 @@ continued validity of the return value past the end of the
 full-expression.
 :::
 
-(arc-optimization-object-lifetime)=
+(arc.optimization.object_lifetime)=
 
 ### No object lifetime extension
 
@@ -1769,7 +1766,7 @@ of objects to have arbitrary side-effects, it's certainly possible.
 Hence the caveat.
 :::
 
-(arc-optimization-precise)=
+(arc.optimization.precise)=
 
 ### Precise lifetime semantics
 
@@ -1801,15 +1798,15 @@ requesting these semantics will not be burdensome, and may even make the code
 clearer.
 :::
 
-(arc-misc)=
+(arc.misc)=
 
 ## Miscellaneous
 
-(arc-misc-special-methods)=
+(arc.misc.special_methods)=
 
 ### Special methods
 
-(arc-misc-special-methods-retain)=
+(arc.misc.special_methods.retain)=
 
 #### Memory management methods
 
@@ -1857,7 +1854,7 @@ for example in a category; the implementations must obey the {ref}`semantics
 <arc.objects.retains>` laid out elsewhere in this document.
 :::
 
-(arc-misc-special-methods-dealloc)=
+(arc.misc.special_methods.dealloc)=
 
 #### `dealloc`
 
@@ -1916,7 +1913,7 @@ holistic solution is to move semantically important side-effects out of
 well-formed objects.
 :::
 
-(arc-misc-autoreleasepool)=
+(arc.misc.autoreleasepool)=
 
 ### `@autoreleasepool`
 
@@ -1946,7 +1943,7 @@ rest of the language. Not draining the pool during an unwind is apparently
 required by the Objective-C exceptions implementation.
 :::
 
-(arc-misc-externally-retained)=
+(arc.misc.externally_retained)=
 
 ### Externally-Retained Variables
 
@@ -2007,7 +2004,7 @@ You can test if your compiler has support for `objc_externally_retained` with
 #endif
 ```
 
-(arc-misc-self)=
+(arc.misc.self)=
 
 ### `self`
 
@@ -2015,7 +2012,7 @@ The `self` parameter variable of a non-init Objective-C method is considered
 {ref}`externally-retained <arc.misc.externally_retained>` by the implementation.
 It is undefined behavior, or at least dangerous, to cause an object to be
 deallocated during a message send to that object. In an init method, `self`
-follows the :ref:`init family rules <arc.family.semantics.init>`.
+follows the {ref}`init family rules <arc.family.semantics.init>`.
 
 :::{admonition} Rationale
 The cost of retaining `self` in all methods was found to be prohibitive, as
@@ -2030,7 +2027,7 @@ qualifying it with `__unsafe_unretained`), we chose to make this optimizing
 assumption and shift some amount of risk to the user.
 :::
 
-(arc-misc-enumeration)=
+(arc.misc.enumeration)=
 
 ### Fast enumeration iteration variables
 
@@ -2048,7 +2045,7 @@ qualifying the variable with `__strong`, which will make the variable
 mutable again and cause the loop to retain the objects it encounters.
 :::
 
-(arc-misc-blocks)=
+(arc.misc.blocks)=
 
 ### Blocks
 
@@ -2077,7 +2074,7 @@ on the stack won't get copied to the heap when the non-block pointer escapes.
 A block pointer is implicitly converted to `id` when it is passed to a
 function as a variadic argument.
 
-(arc-misc-exceptions)=
+(arc.misc.exceptions)=
 
 ### Exceptions
 
@@ -2121,7 +2118,7 @@ the process as this corruption is if the program does try to recover from
 exceptions.
 :::
 
-(arc-misc-interior)=
+(arc.misc.interior)=
 
 ### Interior pointers
 
@@ -2168,7 +2165,7 @@ this requires a very explicit annotation, which allows ARC to trust the user
 with good cheer.
 :::
 
-(arc-misc-c-retainable)=
+(arc.misc.c-retainable)=
 
 ### C retainable pointer types
 
@@ -2186,7 +2183,7 @@ for later tightening if a means of exhaustively marking CF types is made
 available.
 :::
 
-(arc-misc-c-retainable-audit)=
+(arc.misc.c-retainable.audit)=
 
 #### Auditing of C retainable pointer interfaces
 
@@ -2243,7 +2240,7 @@ designed to eliminate the risk of accidentally annotating some other header's
 interfaces.
 :::
 
-(arc-runtime)=
+(arc.runtime)=
 
 ## Runtime support
 
@@ -2282,7 +2279,7 @@ primarily as a code-size optimization, although in some cases there is also a
 real potential for avoiding redundant operations in the runtime.
 :::
 
-(arc-runtime-objc-autorelease)=
+(arc.runtime.objc_autorelease)=
 
 ### `id objc_autorelease(id value);`
 
@@ -2294,7 +2291,7 @@ to the innermost autorelease pool exactly as if the object had been sent the
 
 Always returns `value`.
 
-(arc-runtime-objc-autoreleasepoolpop)=
+(arc.runtime.objc_autoreleasePoolPop)=
 
 ### `void objc_autoreleasePoolPop(void *pool);`
 
@@ -2307,7 +2304,7 @@ Releases all the objects added to the given autorelease pool and any
 autorelease pools it encloses, then sets the current autorelease pool to the
 pool directly enclosing `pool`.
 
-(arc-runtime-objc-autoreleasepoolpush)=
+(arc.runtime.objc_autoreleasePoolPush)=
 
 ### `void *objc_autoreleasePoolPush(void);`
 
@@ -2320,7 +2317,7 @@ allow the implementation to just keep a stack of objects, using the stack
 depth as the opaque pool handle.
 :::
 
-(arc-runtime-objc-autoreleasereturnvalue)=
+(arc.runtime.objc_autoreleaseReturnValue)=
 
 ### `id objc_autoreleaseReturnValue(id value);`
 
@@ -2337,7 +2334,7 @@ above.
 
 Always returns `value`.
 
-(arc-runtime-objc-copyweak)=
+(arc.runtime.objc_copyWeak)=
 
 ### `void objc_copyWeak(id *dest, id *src);`
 
@@ -2356,7 +2353,7 @@ void objc_copyWeak(id *dest, id *src) {
 
 Must be atomic with respect to calls to `objc_storeWeak` on `src`.
 
-(arc-runtime-objc-destroyweak)=
+(arc.runtime.objc_destroyWeak)=
 
 ### `void objc_destroyWeak(id *object);`
 
@@ -2375,7 +2372,7 @@ void objc_destroyWeak(id *object) {
 Does not need to be atomic with respect to calls to `objc_storeWeak` on
 `object`.
 
-(arc-runtime-objc-initweak)=
+(arc.runtime.objc_initWeak)=
 
 ### `id objc_initWeak(id *object, id value);`
 
@@ -2399,7 +2396,7 @@ Returns the value of `object` after the call.
 Does not need to be atomic with respect to calls to `objc_storeWeak` on
 `object`.
 
-(arc-runtime-objc-loadweak)=
+(arc.runtime.objc_loadWeak)=
 
 ### `id objc_loadWeak(id *object);`
 
@@ -2424,7 +2421,7 @@ Loading weak references would be inherently prone to race conditions without
 the retain.
 :::
 
-(arc-runtime-objc-loadweakretained)=
+(arc.runtime.objc_loadWeakRetained)=
 
 ### `id objc_loadWeakRetained(id *object);`
 
@@ -2437,7 +2434,7 @@ that value and returns it. Otherwise returns null.
 
 Must be atomic with respect to calls to `objc_storeWeak` on `object`.
 
-(arc-runtime-objc-moveweak)=
+(arc.runtime.objc_moveWeak)=
 
 ### `void objc_moveWeak(id *dest, id *src);`
 
@@ -2452,7 +2449,7 @@ case this call is equivalent to {ref}`objc_copyWeak
 
 Must be atomic with respect to calls to `objc_storeWeak` on `src`.
 
-(arc-runtime-objc-release)=
+(arc.runtime.objc_release)=
 
 ### `void objc_release(id value);`
 
@@ -2462,7 +2459,7 @@ If `value` is null, this call has no effect. Otherwise, it performs a
 release operation exactly as if the object had been sent the `release`
 message.
 
-(arc-runtime-objc-retain)=
+(arc.runtime.objc_retain)=
 
 ### `id objc_retain(id value);`
 
@@ -2473,7 +2470,7 @@ operation exactly as if the object had been sent the `retain` message.
 
 Always returns `value`.
 
-(arc-runtime-objc-retainautorelease)=
+(arc.runtime.objc_retainAutorelease)=
 
 ### `id objc_retainAutorelease(id value);`
 
@@ -2491,7 +2488,7 @@ id objc_retainAutorelease(id value) {
 
 Always returns `value`.
 
-(arc-runtime-objc-retainautoreleasereturnvalue)=
+(arc.runtime.objc_retainAutoreleaseReturnValue)=
 
 ### `id objc_retainAutoreleaseReturnValue(id value);`
 
@@ -2510,7 +2507,7 @@ id objc_retainAutoreleaseReturnValue(id value) {
 
 Always returns `value`.
 
-(arc-runtime-objc-retainautoreleasedreturnvalue)=
+(arc.runtime.objc_retainAutoreleasedReturnValue)=
 
 ### `id objc_retainAutoreleasedReturnValue(id value);`
 
@@ -2525,7 +2522,7 @@ fails, it performs a retain operation exactly like {ref}`objc_retain
 
 Always returns `value`.
 
-(arc-runtime-objc-retainblock)=
+(arc.runtime.objc_retainBlock)=
 
 ### `id objc_retainBlock(id value);`
 
@@ -2536,7 +2533,7 @@ to by `value` is still on the stack, it is copied to the heap and the address
 of the copy is returned. Otherwise a retain operation is performed on the
 block exactly as if it had been sent the `retain` message.
 
-(arc-runtime-objc-storestrong)=
+(arc.runtime.objc_storeStrong)=
 
 ### `void objc_storeStrong(id *object, id value);`
 
@@ -2545,7 +2542,7 @@ adequately aligned for a pointer. `value` is null or a pointer to a valid
 object.
 
 Performs the complete sequence for assigning to a `__strong` object of
-non-block type [^footnote-1]. Equivalent to the following code:
+non-block type [^arc-store-strong-block]. Equivalent to the following code:
 
 ```objc
 void objc_storeStrong(id *object, id value) {
@@ -2556,12 +2553,12 @@ void objc_storeStrong(id *object, id value) {
 }
 ```
 
-[^footnote-1]: This does not imply that a `__strong` object of block type is an
-    invalid argument to this function. Rather it implies that an `objc_retain`
-    and not an `objc_retainBlock` operation will be emitted if the argument is
-    a block.
+[^arc-store-strong-block]: This does not imply that a `__strong` object of block
+    type is an invalid argument to this function. Rather it implies that an
+    `objc_retain` and not an `objc_retainBlock` operation will be emitted if the
+    argument is a block.
 
-(arc-runtime-objc-storeweak)=
+(arc.runtime.objc_storeWeak)=
 
 ### `id objc_storeWeak(id *object, id value);`
 
@@ -2576,7 +2573,7 @@ registration updated to point to `value`.
 
 Returns the value of `object` after the call.
 
-(arc-runtime-objc-unsafeclaimautoreleasedreturnvalue)=
+(arc.runtime.objc_unsafeClaimAutoreleasedReturnValue)=
 
 ### `id objc_unsafeClaimAutoreleasedReturnValue(id value);`
 
@@ -2592,4 +2589,3 @@ it performs a release operation exactly like {ref}`objc_release
 <arc.runtime.objc_release>`. If the handoff fails, this call has no effect.
 
 Always returns `value`.
-

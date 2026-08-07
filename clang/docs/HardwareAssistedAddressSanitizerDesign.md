@@ -76,7 +76,7 @@ convention that
 
 Currently, the following sequence is used:
 
-```none
+```text
 // int foo(int *a) { return *a; }
 // clang -O2 --target=aarch64-linux-android30 -fsanitize=hwaddress -S -o - load.c
 [...]
@@ -145,27 +145,27 @@ but could be optional.
 Most globals in HWASAN instrumented code are tagged. This is accomplished
 using the following mechanisms:
 
-> - The address of each global has a static tag associated with it. The first
->   defined global in a translation unit has a pseudorandom tag associated
->   with it, based on the hash of the file path. Subsequent global tags are
->   incremental from the previously-assigned tag.
-> - The global's tag is added to its symbol address in the object file's symbol
->   table. This causes the global's address to be tagged when its address is
->   taken.
-> - When the address of a global is taken directly (i.e. not via the GOT), a special
->   instruction sequence needs to be used to add the tag to the address,
->   because the tag would otherwise take the address outside of the small code
->   model (4GB on AArch64). No changes are required when the address is taken
->   via the GOT because the address stored in the GOT will contain the tag.
-> - An associated `hwasan_globals` section is emitted for each tagged global,
->   which indicates the address of the global, its size and its tag. These
->   sections are concatenated by the linker into a single `hwasan_globals`
->   section that is enumerated by the runtime (via an ELF note) when a binary
->   is loaded and the memory is tagged accordingly.
+- The address of each global has a static tag associated with it. The first
+  defined global in a translation unit has a pseudorandom tag associated
+  with it, based on the hash of the file path. Subsequent global tags are
+  incremental from the previously-assigned tag.
+- The global's tag is added to its symbol address in the object file's symbol
+  table. This causes the global's address to be tagged when its address is
+  taken.
+- When the address of a global is taken directly (i.e. not via the GOT), a special
+  instruction sequence needs to be used to add the tag to the address,
+  because the tag would otherwise take the address outside of the small code
+  model (4GB on AArch64). No changes are required when the address is taken
+  via the GOT because the address stored in the GOT will contain the tag.
+- An associated `hwasan_globals` section is emitted for each tagged global,
+  which indicates the address of the global, its size and its tag. These
+  sections are concatenated by the linker into a single `hwasan_globals`
+  section that is enumerated by the runtime (via an ELF note) when a binary
+  is loaded and the memory is tagged accordingly.
 
 A complete example is given below:
 
-```none
+```text
 // int x = 1; int *f() { return &x; }
 // clang -O2 --target=aarch64-linux-android30 -fsanitize=hwaddress -S -o - global.c
 
@@ -211,10 +211,10 @@ HWASAN uses its own LLVM IR Attribute `sanitize_hwaddress` and a matching
 C function attribute. An alternative would be to re-use ASAN's attribute
 `sanitize_address`. The reasons to use a separate attribute are:
 
-> - Users may need to disable ASAN but not HWASAN, or vise versa,
->   because the tools have different trade-offs and compatibility issues.
-> - LLVM (ideally) does not use flags to decide which pass is being used,
->   ASAN or HWASAN are being applied, based on the function attributes.
+- Users may need to disable ASAN but not HWASAN, or vise versa,
+  because the tools have different trade-offs and compatibility issues.
+- LLVM (ideally) does not use flags to decide which pass is being used,
+  ASAN or HWASAN are being applied, based on the function attributes.
 
 This does mean that users of HWASAN may need to add the new attribute
 to the code that already uses the old attribute.
@@ -287,4 +287,3 @@ implement page aliasing.
 [linear address masking]: https://software.intel.com/content/www/us/en/develop/download/intel-architecture-instruction-set-extensions-programming-reference.html
 [sparc adi]: https://lazytyped.blogspot.com/2017/09/getting-started-with-adi.html
 [watchdog]: https://www.cis.upenn.edu/acg/papers/isca12_watchdog.pdf
-

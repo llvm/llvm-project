@@ -57,7 +57,7 @@ Below is example IR that represents the planned implementation, subject to
 change as the `llvm.dx.store.output` and `llvm.dx.load.input` intrinsics are
 not yet implemented.
 
-```none
+```llvm
 ; Function Attrs: norecurse
 define void @main() #1 {
    entry:
@@ -67,4 +67,3 @@ define void @main() #1 {
    ret void
 }
 ```
-

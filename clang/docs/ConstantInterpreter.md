@@ -176,20 +176,19 @@ block types.
 
 Pointers, implemented in `Pointer.h` are represented as a tagged union.
 
-> - **BlockPointer**: used to reference memory allocated and managed by the
->   interpreter, being the only pointer kind which allows dereferencing in the
->   interpreter
-> - **TypeIDPointer**: tracks information for the opaque type returned by
->   `typeid`
-> - **IntegralPointer**: a pointer formed from an integer,
->   think `(int*)123`.
-> - **FunctionPointer**: a pointer to a function.
+- **BlockPointer**: used to reference memory allocated and managed by the
+  interpreter, being the only pointer kind which allows dereferencing in the
+  interpreter
+- **TypeIDPointer**: tracks information for the opaque type returned by
+  `typeid`
+- **IntegralPointer**: a pointer formed from an integer, think `(int*)123`.
+- **FunctionPointer**: a pointer to a function.
 
 Besides the previously mentioned union, a number of other pointer-like types
 have their own type:
 
-> - **FunctionPointer** tracks functions.
-> - **MemberPointer** tracks C++ object members
+- **FunctionPointer** tracks functions.
+- **MemberPointer** tracks C++ object members
 
 #### BlockPointer
 
@@ -227,7 +226,7 @@ In the interpreter, the object would require 240 bytes of storage and
 would have its fields interleaved with metadata. The pointers which can
 be derived to the object are illustrated in the following diagram:
 
-```
+```text
     0   16  32  40  56  64  80  96  112 120 136 144 160 176 184 200 208 224 240
 +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
 + B | D | D | x | D | y | D | D | D | a | D | b | D | D | a | D | b | D | z |
@@ -275,7 +274,7 @@ static_assert(add(1, 2) == 3);
 
 Which generates the following bytecode (this can be produced via `interp::Function::dump()`):
 
-```
+```text
 add 0x7cb97f7e2000
 [...]
 0     GetParamSint32    0
@@ -303,4 +302,3 @@ Here are a few hints when working on the bytecode interpreter:
 - Printing `APValue` instances also works via `APValue::dump()`.
 - If you want to see *everything* that's being evaluated, add debugging output to
   the `evaluate*` functions in `Context.cpp`.
-

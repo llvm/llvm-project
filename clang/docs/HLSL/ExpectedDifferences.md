@@ -138,7 +138,7 @@ precision relative to the other overloads (as FXC does) or generating code
 that will fail validation (as DXC does).
 :::
 
-(multi-argument-overloads)=
+(multi_argument_overloads)=
 
 ### Multi-Argument Overloads
 

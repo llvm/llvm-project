@@ -55,7 +55,7 @@ System V ABI, a struct containing two 64-bit integers might be "expanded" into
 two separate arguments passed in registers, rather than being passed as a single
 aggregate:
 
-```
+```text
 // High-level CIR
 func @foo(i32, struct<i64, i64>) -> i32
 
@@ -169,7 +169,7 @@ CodeGen uses QualTypeMapper; MLIR uses ABITypeMapper and the ABI lowering pass.
 At the bottom, each dialect implements `ABIRewriteContext` only; FIR is shown
 as a consumer for cdecl/C interop (e.g. calling C from Fortran).
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │  LLVM ABI Library (llvm/lib/ABI/)                               │
 │  ABIInfo, abi::Type*, target implementations (X86, AArch64,…)   │
@@ -206,7 +206,7 @@ implements only `ABIRewriteContext` for operation creation; there is no
 separate type abstraction layer in MLIR for classification—that lives in the ABI
 library.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  LLVM ABI Library (llvm/lib/ABI/) — single source of truth              │
 │  abi::Type*, ABIInfo, target implementations (X86_64, AArch64, …)       │
@@ -287,7 +287,7 @@ At this stage, the types are still in their high-level, dialect-specific form
 these types into a list that will be fed to the classification logic in the next
 step.
 
-```
+```text
 Input: func @foo(%arg0: !cir.int<u, 32>,
        %arg1: !cir.struct<{!cir.int<u, 64>,
                             !cir.int<u, 64>}>) -> !cir.int<u, 32>
@@ -392,7 +392,7 @@ Value result = ctx.createLoad(loc, sretPtr);
 The diagram below combines the three-layer architecture (Section 4.1) with the
 step-by-step flow, showing which layer owns each step.
 
-```
+```text
  ┌─────────────────────────────────────────────────────────┐
  │ Input: High-Level Function (CIR/FIR/other dialect)      │
  │   func @foo(%arg0: i32, %arg1: struct<i64,i64>) -> i32  │
@@ -605,4 +605,3 @@ scoped to C calling conventions only, or be general enough to support arbitrary
 calling conventions (e.g. vectorcall, preserve_most) via extensible interfaces.
 Clarifying this scope will guide the design of the LLVM ABI library integration
 and the MLIR pass.
-
