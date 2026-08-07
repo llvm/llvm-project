@@ -1,4 +1,5 @@
 // UNSUPPORTED: system-windows
+// REQUIRES: amdgpu-registered-target
 
 // RUN: %clang -c -### --target=x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
 // RUN:   -std=c++11 --rocm-path=%S/Inputs/rocm -nogpulib %s 2>&1 \
