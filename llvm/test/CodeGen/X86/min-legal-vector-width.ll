@@ -2062,3 +2062,4 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
   %or = or <32 x i8> %lmask, %rmask
   ret <32 x i8> %or
 }
+

@@ -240,6 +240,29 @@ define <64 x i8> @test_divconstant_64i8(<64 x i8> %a) nounwind {
 }
 
 ;
+; udiv by variable
+;
+
+define <16 x i32> @test_divv_16i32(<16 x i32> %a, <16 x i32> %b) nounwind {
+; AVX-LABEL: test_divv_16i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcvtudq2pd %ymm1, %zmm2
+; AVX-NEXT:    vcvtudq2pd %ymm0, %zmm3
+; AVX-NEXT:    vdivpd %zmm2, %zmm3, %zmm2
+; AVX-NEXT:    vcvttpd2udq %zmm2, %ymm2
+; AVX-NEXT:    vextractf64x4 $1, %zmm1, %ymm1
+; AVX-NEXT:    vcvtudq2pd %ymm1, %zmm1
+; AVX-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; AVX-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; AVX-NEXT:    vdivpd %zmm1, %zmm0, %zmm0
+; AVX-NEXT:    vcvttpd2udq %zmm0, %ymm0
+; AVX-NEXT:    vinsertf64x4 $1, %ymm0, %zmm2, %zmm0
+; AVX-NEXT:    retq
+  %res = udiv <16 x i32> %a, %b
+  ret <16 x i32> %res
+}
+
+;
 ; urem by 7
 ;
 
@@ -522,4 +545,24 @@ define <64 x i8> @test_remconstant_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    retq
   %res = urem <64 x i8> %a, <i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31, i8 32, i8 33, i8 34, i8 35, i8 36, i8 37, i8 38, i8 38, i8 37, i8 36, i8 35, i8 34, i8 33, i8 32, i8 31, i8 30, i8 29, i8 28, i8 27, i8 26, i8 25, i8 24, i8 23, i8 22, i8 21, i8 20, i8 19, i8 18, i8 17, i8 16, i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7>
   ret <64 x i8> %res
+}
+define <16 x i32> @test_remv_16i32(<16 x i32> %a, <16 x i32> %b) nounwind {
+; AVX-LABEL: test_remv_16i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcvtudq2pd %ymm1, %zmm2
+; AVX-NEXT:    vcvtudq2pd %ymm0, %zmm3
+; AVX-NEXT:    vdivpd %zmm2, %zmm3, %zmm2
+; AVX-NEXT:    vcvttpd2udq %zmm2, %ymm2
+; AVX-NEXT:    vextracti64x4 $1, %zmm1, %ymm3
+; AVX-NEXT:    vcvtudq2pd %ymm3, %zmm3
+; AVX-NEXT:    vextracti64x4 $1, %zmm0, %ymm4
+; AVX-NEXT:    vcvtudq2pd %ymm4, %zmm4
+; AVX-NEXT:    vdivpd %zmm3, %zmm4, %zmm3
+; AVX-NEXT:    vcvttpd2udq %zmm3, %ymm3
+; AVX-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm2
+; AVX-NEXT:    vpmulld %zmm1, %zmm2, %zmm1
+; AVX-NEXT:    vpsubd %zmm1, %zmm0, %zmm0
+; AVX-NEXT:    retq
+  %res = urem <16 x i32> %a, %b
+  ret <16 x i32> %res
 }
