@@ -21,11 +21,11 @@
 #include <lldb/lldb-enumerations.h>
 #include <llvm/ADT/StringRef.h>
 
-LLDB_PLUGIN_DEFINE(TypeSystemSwift)
-
 using namespace lldb;
 using namespace lldb_private;
 using llvm::StringRef;
+
+LLDB_PLUGIN_DEFINE(TypeSystemSwift)
 
 TypeSystemSwift::TypeSystemSwift() : TypeSystem() {}
 
