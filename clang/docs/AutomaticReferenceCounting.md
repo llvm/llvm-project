@@ -188,9 +188,9 @@ If a change increases the expressiveness of the language, for example by
 lifting a restriction or by adding new syntax, the change will be annotated
 with a revision marker, like so:
 
-ARC applies to Objective-C pointer types, block pointer types, and
-{when-revised}`[beginning Apple 8.0, LLVM 3.8]` {revision}`BPTRs declared
-within` `extern "BCPL"` blocks.
+> ARC applies to Objective-C pointer types, block pointer types, and
+> {when-revised}`[beginning Apple 8.0, LLVM 3.8]` {revision}`BPTRs declared
+> within` `extern "BCPL"` blocks.
 
 For now, it is sensible to version this document by the releases of its sole
 implementation (and its host project), clang. "LLVM X.Y" refers to an

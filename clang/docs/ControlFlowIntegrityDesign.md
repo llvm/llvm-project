@@ -274,10 +274,10 @@ At a high level, the interleaving scheme consists of three steps: 1) split virtu
 separate virtual tables, 2) order virtual tables by a pre-order traversal of the class hierarchy
 and 3) interleave virtual tables.
 
-The interleaving scheme implemented in LLVM is inspired by [^ivtbl] but has its own
+The interleaving scheme implemented in LLVM is inspired by
+[Protecting C++ Dynamic Dispatch Through VTable Interleaving](https://cseweb.ucsd.edu/~lerner/papers/ivtbl-ndss16.pdf)
+by Dimitar Bounov, Rami Gökhan Kıcı, and Sorin Lerner, but has its own
 enhancements (more in [Interleave virtual tables]).
-
-[^ivtbl]: [Protecting C++ Dynamic Dispatch Through VTable Interleaving](https://cseweb.ucsd.edu/~lerner/papers/ivtbl-ndss16.pdf). Dimitar Bounov, Rami Gökhan Kıcı, Sorin Lerner.
 
 #### Split virtual table groups into separate virtual tables
 
@@ -517,15 +517,12 @@ dlopen-ed/dlclose-d periodically, even frequently.
 
 - Calls made from uninstrumented DSOs are not checked and just work.
 - Calls inside any instrumented DSO are fully protected.
-
-Calls between different instrumented DSOs are also protected, with
-: a performance penalty (in addition to the monolithic CFI overhead).
-
-Calls from an instrumented DSO to an uninstrumented one are
-: unchecked and just work, with performance penalty.
-
-Calls from an instrumented DSO outside of any known DSO are
-: detected as CFI violations.
+- Calls between different instrumented DSOs are also protected, with a
+  performance penalty (in addition to the monolithic CFI overhead).
+- Calls from an instrumented DSO to an uninstrumented one are unchecked and
+  just work, with performance penalty.
+- Calls from an instrumented DSO outside of any known DSO are detected as CFI
+  violations.
 
 In the monolithic scheme a call site is instrumented as
 
@@ -718,9 +715,10 @@ This case will be handled similarly to the cross-DSO scheme using the slow path 
 ### Non-goals
 
 RCFI does not protect `RET` instructions:
-: - in non-instrumented DSOs,
-  - in instrumented DSOs for functions that are called from non-instrumented DSOs,
-  - embedded into other instructions (e.g. `0f4fc3 cmovg %ebx,%eax`).
+
+- in non-instrumented DSOs,
+- in instrumented DSOs for functions that are called from non-instrumented DSOs,
+- embedded into other instructions (e.g. `0f4fc3 cmovg %ebx,%eax`).
 
 ## Hardware support
 
