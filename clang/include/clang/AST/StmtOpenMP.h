@@ -554,6 +554,8 @@ public:
   }
 
   OpenMPDirectiveKind getDirectiveKind() const { return Kind; }
+  /// Horrible temporary hack to allow OMPOrderedDirective to be used
+  /// with both OMPD_ordered_standalone and OMPD_ordered_blockassoc.
   void setDirectiveKind(OpenMPDirectiveKind D) const {
     const_cast<OMPExecutableDirective *>(this)->Kind = D;
   }
