@@ -110,11 +110,6 @@ public:
   /// that value is returned. Otherwise, returns NULL.
   virtual const llvm::APSInt *getKnownValue(ProgramStateRef state, SVal val) = 0;
 
-  /// If the SVal represents a concrete floating-point value, returns a pointer
-  /// to that value. Otherwise, returns NULL.
-  virtual const llvm::APFloat *getKnownFloatValue(ProgramStateRef state,
-                                                  SVal val) = 0;
-
   /// Tries to get the minimal possible (integer) value of a given SVal. This
   /// always returns the value of a ConcreteInt, but may return NULL if the
   /// value is symbolic and the constraint manager cannot provide a useful
@@ -280,6 +275,23 @@ public:
                      integer->getType()->isUnsignedIntegerOrEnumerationType()));
   }
 
+  /// Whether a nonloc::ConcreteFloat may hold \p V.
+  ///
+  /// Infinities and NaNs are not modeled: the semantics of which depend on
+  /// IEC 60559 conformance which is not readily available to the analyzer, so
+  /// we leave these as unknowns. NaNs we can never model, since LangRef
+  /// dictates their bit patterns are non-deterministic. Subnormals are not
+  /// modeled because their semantics depend on hardware and compiler denormal
+  /// modes which the analyzer cannot see. IBM double-double is also not modeled
+  /// because some of its operations are inaccurately emulated.
+  static bool isModeledFloatValue(const llvm::APFloat &V) {
+    return V.isFinite() && !V.isDenormal() &&
+           llvm::APFloat::SemanticsToEnum(V.getSemantics()) !=
+               llvm::APFloat::S_PPCDoubleDouble;
+  }
+
+  /// Create a concrete floating-point value. The value must satisfy
+  /// \c isModeledFloatValue.
   nonloc::ConcreteFloat makeFloatVal(const FloatingLiteral *F) {
     return nonloc::ConcreteFloat(BasicVals.getFloatValue(F->getValue()));
   }

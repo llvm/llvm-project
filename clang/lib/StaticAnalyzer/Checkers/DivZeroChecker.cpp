@@ -91,6 +91,11 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
   if (!B->getRHS()->getType()->isScalarType())
     return;
 
+  // Floating-point divide by zero is defined when floating semantics conform
+  // to IEC 60559.
+  if (B->getRHS()->getType()->isRealFloatingType())
+    return;
+
   SVal Denom = C.getSVal(B->getRHS());
   std::optional<DefinedSVal> DV = Denom.getAs<DefinedSVal>();
 

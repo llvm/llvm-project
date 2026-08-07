@@ -48,6 +48,8 @@ static StringRef getFloatSemanticsName(const llvm::fltSemantics &Sem) {
     return "IEEEdouble";
   case llvm::APFloat::S_IEEEquad:
     return "IEEEquad";
+  case llvm::APFloat::S_PPCDoubleDouble:
+    return "PPCDoubleDouble";
   case llvm::APFloat::S_x87DoubleExtended:
     return "x87DoubleExtended";
   default:
@@ -180,6 +182,8 @@ public:
       return Context.DoubleTy;
     case llvm::APFloat::S_IEEEquad:
       return Context.Float128Ty;
+    case llvm::APFloat::S_PPCDoubleDouble:
+      return Context.Ibm128Ty;
     case llvm::APFloat::S_x87DoubleExtended:
       return Context.LongDoubleTy;
     default:
@@ -282,8 +286,7 @@ nonloc::PointerToMember::iterator nonloc::PointerToMember::end() const {
 //===----------------------------------------------------------------------===//
 
 bool SVal::isConstant() const {
-  return getAs<nonloc::ConcreteInt>() || getAs<loc::ConcreteInt>() ||
-         getAs<nonloc::ConcreteFloat>();
+  return getAs<nonloc::ConcreteInt>() || getAs<loc::ConcreteInt>();
 }
 
 bool SVal::isConstant(int I) const {
@@ -295,8 +298,6 @@ bool SVal::isConstant(int I) const {
 }
 
 bool SVal::isZeroConstant() const {
-  if (std::optional<nonloc::ConcreteFloat> FV = getAs<nonloc::ConcreteFloat>())
-    return FV->getValue()->isZero();
   return isConstant(0);
 }
 

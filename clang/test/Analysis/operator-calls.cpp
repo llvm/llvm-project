@@ -69,6 +69,7 @@ namespace RValues {
     }
   };
 
+  // 1.0 is no longer unknown. This function forces an unknown float.
   float getUnknownFloat();
 
   SmallOpaque getSmallOpaque() {
