@@ -1353,8 +1353,8 @@ public:
     void operator=(const FullExprCleanupScope &) = delete;
   };
 
-  /// Captures the destructor cleanup for a loop's condition variable so that it
-  /// can be emitted into the loop op's per-iteration cleanup region.
+  /// Captures cleanups for a loop's condition variable so that they can be
+  /// emitted into the loop op's per-iteration cleanup region.
   class DeferredLoopConditionCleanup {
     CIRGenFunction &cgf;
     EHScopeStack::stable_iterator depth;
@@ -1374,8 +1374,8 @@ public:
     public:
       explicit CaptureScope(DeferredLoopConditionCleanup &scope)
           : ehStack(scope.cgf.ehStack) {
-        // Capturing wraps only the condition variable's own destructor push,
-        // which emits no nested code, so it can never already be active.
+        // Capture scopes deliberately wrap individual cleanup-producing
+        // operations, so they must never nest.
         assert(!ehStack.isCapturingLoopConditionCleanups() &&
                "loop condition cleanup capturing should not nest");
         if (scope.active)

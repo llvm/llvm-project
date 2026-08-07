@@ -389,11 +389,11 @@ void CIRGenFunction::emitAutoVarDecl(const VarDecl &d) {
 void CIRGenFunction::emitLoopConditionVariable(
     const VarDecl &d, DeferredLoopConditionCleanup &condCleanup) {
   // A condition variable always has automatic storage duration, so this
-  // mirrors the auto-var path of emitVarDecl/emitAutoVarDecl. The alloca and
-  // initializer is emitted with capturing disabled so that any cleanups it
-  // introduces get their normal cir.cleanup.scope handling. The variable's
-  // lifetime-end and destructor cleanups are captured for the loop's
-  // per-iteration cleanup region.
+  // mirrors the auto-var path of emitVarDecl/emitAutoVarDecl. Capture the
+  // lifetime-end cleanup pushed while emitting the alloca, but emit the
+  // initializer with capturing disabled so its own cleanups get their normal
+  // cir.cleanup.scope handling. The variable's destructor cleanup is captured
+  // separately after initialization.
   assert(d.hasLocalStorage() && "loop condition variable is not local");
 
   // Mirror the diagnostic emitted by emitVarDecl on the automatic-storage path.

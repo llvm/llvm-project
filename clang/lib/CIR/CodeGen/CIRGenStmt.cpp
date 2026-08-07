@@ -1007,10 +1007,10 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
     // per-iteration cleanup region. This scope is constructed after the
     // init-statement so the init-statement's cleanups are not captured.
     const VarDecl *condVar = s.getConditionVariable();
-    bool needsCondCleanup = condVar &&
-                            (condVar->needsDestruction(getContext()) !=
-                                 QualType::DK_none ||
-                             shouldEmitLifetimeMarkersForAutoVar());
+    bool needsCondCleanup =
+        condVar &&
+        (condVar->needsDestruction(getContext()) != QualType::DK_none ||
+         shouldEmitLifetimeMarkersForAutoVar());
     DeferredLoopConditionCleanup loopCondScope(*this, needsCondCleanup);
 
     auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1139,10 +1139,10 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
     // destructor and lifetime-end cleanups and emit them into the loop's
     // per-iteration cleanup region.
     const VarDecl *condVar = s.getConditionVariable();
-    bool needsCondCleanup = condVar &&
-                            (condVar->needsDestruction(getContext()) !=
-                                 QualType::DK_none ||
-                             shouldEmitLifetimeMarkersForAutoVar());
+    bool needsCondCleanup =
+        condVar &&
+        (condVar->needsDestruction(getContext()) != QualType::DK_none ||
+         shouldEmitLifetimeMarkersForAutoVar());
     DeferredLoopConditionCleanup loopCondScope(*this, needsCondCleanup);
 
     auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {

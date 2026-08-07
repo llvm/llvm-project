@@ -175,11 +175,8 @@ void eh_cleanup() {
 // LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[X]])
 
 // A loop condition variable is destroyed and re-created on every iteration
-// (C++ [stmt.while]p2), so its lifetime.end would have to run on both the
-// loop's back edge and its exit edge. The structured cond region cannot
-// express a cleanup on both edges (a cleanup scope would trap the loop's
-// condition terminator inside it), so lifetime markers are suppressed for
-// variables declared in a while or for condition.
+// (C++ [stmt.while]p2). Its lifetime starts in the condition region and ends in
+// the loop cleanup region, which runs on both the back edge and the exit edge.
 int source();
 
 void while_condvar() {
@@ -187,25 +184,117 @@ void while_condvar() {
     use(c);
 }
 
-// CIR-LABEL: cir.func{{.*}}while_condvar
-// CIR-NOT:     cir.lifetime
+// CIR-LABEL: cir.func{{.*}} @_Z13while_condvarv
+// CIR:           %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!s32i>
+// CIR:           cir.while {
+// CIR:             cir.lifetime.start %[[C]] : !cir.ptr<!s32i>
+// CIR:           } do {
+// CIR:           } cleanup normal {
+// CIR:             cir.lifetime.end %[[C]] : !cir.ptr<!s32i>
 
-// LLVM-LABEL: define{{.*}}while_condvar
-// LLVM-NOT:    call void @llvm.lifetime
+// LLVM-LABEL: define{{.*}} void @_Z13while_condvarv
+// LLVM:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
+// LLVM:         call void @llvm.lifetime.end.p0(ptr %[[C]])
 
-// O0-LABEL: cir.func{{.*}}while_condvar
+// O0-LABEL: cir.func{{.*}} @_Z13while_condvarv
 // O0-NOT:     cir.lifetime
 
-// CIR-EH-LABEL: cir.func{{.*}}while_condvar
-// CIR-EH-NOT:     cir.lifetime
+// CIR-EH-LABEL: cir.func{{.*}} @_Z13while_condvarv
+// CIR-EH:         %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!s32i>
+// CIR-EH:         cir.while {
+// CIR-EH:           cir.lifetime.start %[[C]] : !cir.ptr<!s32i>
+// CIR-EH:         } do {
+// CIR-EH:         } cleanup all {
+// CIR-EH:           cir.lifetime.end %[[C]] : !cir.ptr<!s32i>
+
+// LLVM-EH-LABEL: define{{.*}} void @_Z13while_condvarv
+// LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
+// LLVM-EH:         landingpad { ptr, i32 }
+// LLVM-EH-NEXT:      cleanup
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
 
 void for_condvar() {
   for (; int c = source();)
     use(c);
 }
 
-// CIR-LABEL: cir.func{{.*}}for_condvar
-// CIR-NOT:     cir.lifetime
+// CIR-LABEL: cir.func{{.*}} @_Z11for_condvarv
+// CIR:           %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!s32i>
+// CIR:           cir.for : cond {
+// CIR:             cir.lifetime.start %[[C]] : !cir.ptr<!s32i>
+// CIR:           } body {
+// CIR:           } step {
+// CIR:           } cleanup normal {
+// CIR:             cir.lifetime.end %[[C]] : !cir.ptr<!s32i>
 
-// O0-LABEL: cir.func{{.*}}for_condvar
+// LLVM-LABEL: define{{.*}} void @_Z11for_condvarv
+// LLVM:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
+// LLVM:         call void @llvm.lifetime.end.p0(ptr %[[C]])
+
+// O0-LABEL: cir.func{{.*}} @_Z11for_condvarv
 // O0-NOT:     cir.lifetime
+
+// CIR-EH-LABEL: cir.func{{.*}} @_Z11for_condvarv
+// CIR-EH:         %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!s32i>
+// CIR-EH:         cir.for : cond {
+// CIR-EH:           cir.lifetime.start %[[C]] : !cir.ptr<!s32i>
+// CIR-EH:         } body {
+// CIR-EH:         } step {
+// CIR-EH:         } cleanup all {
+// CIR-EH:           cir.lifetime.end %[[C]] : !cir.ptr<!s32i>
+
+// LLVM-EH-LABEL: define{{.*}} void @_Z11for_condvarv
+// LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
+// LLVM-EH:         landingpad { ptr, i32 }
+// LLVM-EH-NEXT:      cleanup
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
+
+struct LoopCond {
+  operator bool() const;
+  ~LoopCond();
+};
+
+LoopCond make_loop_cond();
+
+// A non-trivial condition variable runs its destructor before lifetime.end in
+// the loop cleanup region.
+void while_record_condvar() {
+  while (LoopCond c = make_loop_cond()) {}
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z20while_record_condvarv
+// CIR:           %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!rec_LoopCond>
+// CIR:           cir.while {
+// CIR:             cir.lifetime.start %[[C]] : !cir.ptr<!rec_LoopCond>
+// CIR:           } do {
+// CIR:           } cleanup normal {
+// CIR:             cir.call @_ZN8LoopCondD1Ev(%[[C]])
+// CIR:             cir.lifetime.end %[[C]] : !cir.ptr<!rec_LoopCond>
+
+// LLVM-LABEL: define{{.*}} void @_Z20while_record_condvarv
+// LLVM:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
+// LLVM:         call void @_ZN8LoopCondD1Ev(ptr {{.*}} %[[C]])
+// LLVM:         call void @llvm.lifetime.end.p0(ptr %[[C]])
+
+// O0-LABEL: cir.func{{.*}} @_Z20while_record_condvarv
+// O0-NOT:     cir.lifetime
+
+// CIR-EH-LABEL: cir.func{{.*}} @_Z20while_record_condvarv
+// CIR-EH:         %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!rec_LoopCond>
+// CIR-EH:         cir.while {
+// CIR-EH:           cir.lifetime.start %[[C]] : !cir.ptr<!rec_LoopCond>
+// CIR-EH:         } do {
+// CIR-EH:         } cleanup all {
+// CIR-EH:           cir.call @_ZN8LoopCondD1Ev(%[[C]])
+// CIR-EH:           cir.lifetime.end %[[C]] : !cir.ptr<!rec_LoopCond>
+
+// LLVM-EH-LABEL: define{{.*}} void @_Z20while_record_condvarv
+// LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
+// LLVM-EH:         call void @_ZN8LoopCondD1Ev(ptr {{.*}} %[[C]])
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
+// LLVM-EH:         landingpad { ptr, i32 }
+// LLVM-EH-NEXT:      cleanup
+// LLVM-EH:         call void @_ZN8LoopCondD1Ev(ptr {{.*}} %[[C]])
+// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
