@@ -113,6 +113,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fixed a crash in :doc:`bugprone-std-namespace-modification
+  <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
+  lambda closure types used as template arguments.
+
 - Improved :doc:`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
   ``std::array`` the same as built-in arrays when `IgnoreArrays` option is enabled.
