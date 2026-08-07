@@ -9570,6 +9570,7 @@ multiclass WidenShiftImmPats<string inst, SDPatternOperator ext> {
 }
 defm : WidenShiftImmPats<"SSHLL", sext>;
 defm : WidenShiftImmPats<"USHLL", zext>;
+defm : WidenShiftImmPats<"USHLL", anyext>;
 
 multiclass WidenShiftFullWidthPats<SDPatternOperator ext> {
   def : Pat<(shl (v8i16 (ext (v8i8 V64:$Rm))), (v8i16 (AArch64dup (i32 8)))),
