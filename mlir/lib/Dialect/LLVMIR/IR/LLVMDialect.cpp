@@ -1391,13 +1391,8 @@ static ParseResult parseCallTypeAndResolveOperands(
   SmallVector<Type> argTypes;
   SmallVector<Type> resTypes;
   if (call_interface_impl::parseFunctionSignature(parser, argTypes, argAttrs,
-                                                  resTypes, resultAttrs)) {
-    if (isDirect)
-      return parser.emitError(trailingTypesLoc,
-                              "expected direct call to have 1 trailing types");
-    return parser.emitError(trailingTypesLoc,
-                            "expected trailing function type");
-  }
+                                                  resTypes, resultAttrs))
+    return failure();
 
   if (resTypes.size() > 1)
     return parser.emitError(trailingTypesLoc,

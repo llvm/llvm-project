@@ -10,6 +10,15 @@ cir.func @f1() {
 
 // -----
 
+cir.func private @f_missing_result_arrow()
+cir.func @call_missing_empty_result() {
+  // expected-error @+2 {{expected '->' followed by function result list}}
+  cir.call @f_missing_result_arrow() : ()
+  cir.return
+}
+
+// -----
+
 !u32i = !cir.int<u, 32>
 
 cir.func private @f2()
