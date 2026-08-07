@@ -55,8 +55,13 @@ ItaniumABIRuntime::GetTypeInfo(ValueObject &in_value,
       lookup_name.append(class_name.data(), class_name.size());
 
       type_info.SetName(class_name);
+      bool any_found = false;
       TypeSP type_sp = LookupTypeByName(
-          class_name, vtable_info.symbol->CalculateSymbolContextModule());
+          class_name, vtable_info.symbol->CalculateSymbolContextModule(),
+          any_found);
+      if (!any_found)
+        return TypeAndOrName(); // Type is not dynamic.
+
       if (type_sp) {
         LLDB_LOGF(log,
                   "0x%16.16" PRIx64
