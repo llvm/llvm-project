@@ -17,37 +17,37 @@ struct S {
 void main(S s) {}
 
 // float a : A -> 1 row, 1 column.
-// CHECK: %A0 = call float @llvm.dx.load.input.f32(i32 0, i32 0, i8 0, i32 poison)
-// CHECK: %[[#S:]] = insertvalue %struct.S poison, float %A0, 0
+// CHECK: %[[A:.*]] = call float @llvm.dx.load.input.f32(i32 0, i32 0, i8 0, i32 poison)
+// CHECK: %[[S0:.*]] = insertvalue %struct.S poison, float %[[A]], 0
 
 // float4 b : B -> 1 row, 4 columns.
-// CHECK: %B0 = call <4 x float> @llvm.dx.load.input.v4f32(i32 1, i32 0, i8 0, i32 poison)
-// CHECK: %[[#S:]] = insertvalue %struct.S %[[#S]], <4 x float> %B0, 1
+// CHECK: %[[B:.*]] = call <4 x float> @llvm.dx.load.input.v4f32(i32 1, i32 0, i8 0, i32 poison)
+// CHECK: %[[S1:.*]] = insertvalue %struct.S %[[S0]], <4 x float> %[[B]], 1
 
 // float d[5] : D -> 5 rows, 1 column each.
-// CHECK: %D0 = call float @llvm.dx.load.input.f32(i32 2, i32 0, i8 0, i32 poison)
-// CHECK: %[[#D:]] = insertvalue [5 x float] poison, float %D0, 0
-// CHECK: %D1 = call float @llvm.dx.load.input.f32(i32 2, i32 1, i8 0, i32 poison)
-// CHECK: %[[#D:]] = insertvalue [5 x float] %[[#D]], float %D1, 1
-// CHECK: %D2 = call float @llvm.dx.load.input.f32(i32 2, i32 2, i8 0, i32 poison)
-// CHECK: %[[#D:]] = insertvalue [5 x float] %[[#D]], float %D2, 2
-// CHECK: %D3 = call float @llvm.dx.load.input.f32(i32 2, i32 3, i8 0, i32 poison)
-// CHECK: %[[#D:]] = insertvalue [5 x float] %[[#D]], float %D3, 3
-// CHECK: %D4 = call float @llvm.dx.load.input.f32(i32 2, i32 4, i8 0, i32 poison)
-// CHECK: %[[#D:]] = insertvalue [5 x float] %[[#D]], float %D4, 4
-// CHECK: %[[#S:]] = insertvalue %struct.S %[[#S]], [5 x float] %[[#D]], 2
+// CHECK: %[[D0:.*]] = call float @llvm.dx.load.input.f32(i32 2, i32 0, i8 0, i32 poison)
+// CHECK: %[[D_ARRAY0:.*]] = insertvalue [5 x float] poison, float %[[D0]], 0
+// CHECK: %[[D1:.*]] = call float @llvm.dx.load.input.f32(i32 2, i32 1, i8 0, i32 poison)
+// CHECK: %[[D_ARRAY1:.*]] = insertvalue [5 x float] %[[D_ARRAY0]], float %[[D1]], 1
+// CHECK: %[[D2:.*]] = call float @llvm.dx.load.input.f32(i32 2, i32 2, i8 0, i32 poison)
+// CHECK: %[[D_ARRAY2:.*]] = insertvalue [5 x float] %[[D_ARRAY1]], float %[[D2]], 2
+// CHECK: %[[D3:.*]] = call float @llvm.dx.load.input.f32(i32 2, i32 3, i8 0, i32 poison)
+// CHECK: %[[D_ARRAY3:.*]] = insertvalue [5 x float] %[[D_ARRAY2]], float %[[D3]], 3
+// CHECK: %[[D4:.*]] = call float @llvm.dx.load.input.f32(i32 2, i32 4, i8 0, i32 poison)
+// CHECK: %[[D_ARRAY4:.*]] = insertvalue [5 x float] %[[D_ARRAY3]], float %[[D4]], 4
+// CHECK: %[[S2:.*]] = insertvalue %struct.S %[[S1]], [5 x float] %[[D_ARRAY4]], 2
 
 // float4 e[2][3] : E -> 6 rows (2 x 3), 4 columns each; row-major flattening.
-// CHECK: %E0 = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 0, i8 0, i32 poison)
-// CHECK: %[[#E:]] = insertvalue [2 x [3 x <4 x float>]] poison, <4 x float> %E0, 0, 0
-// CHECK: %E1 = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 1, i8 0, i32 poison)
-// CHECK: %[[#E:]] = insertvalue [2 x [3 x <4 x float>]] %[[#E]], <4 x float> %E1, 0, 1
-// CHECK: %E2 = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 2, i8 0, i32 poison)
-// CHECK: %[[#E:]] = insertvalue [2 x [3 x <4 x float>]] %[[#E]], <4 x float> %E2, 0, 2
-// CHECK: %E3 = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 3, i8 0, i32 poison)
-// CHECK: %[[#E:]] = insertvalue [2 x [3 x <4 x float>]] %[[#E]], <4 x float> %E3, 1, 0
-// CHECK: %E4 = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 4, i8 0, i32 poison)
-// CHECK: %[[#E:]] = insertvalue [2 x [3 x <4 x float>]] %[[#E]], <4 x float> %E4, 1, 1
-// CHECK: %E5 = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 5, i8 0, i32 poison)
-// CHECK: %[[#E:]] = insertvalue [2 x [3 x <4 x float>]] %[[#E]], <4 x float> %E5, 1, 2
-// CHECK: %[[#S:]] = insertvalue %struct.S %[[#S]], [2 x [3 x <4 x float>]] %[[#E]], 3
+// CHECK: %[[E0:.*]] = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 0, i8 0, i32 poison)
+// CHECK: %[[E_ARRAY0:.*]] = insertvalue [2 x [3 x <4 x float>]] poison, <4 x float> %[[E0]], 0, 0
+// CHECK: %[[E1:.*]] = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 1, i8 0, i32 poison)
+// CHECK: %[[E_ARRAY1:.*]] = insertvalue [2 x [3 x <4 x float>]] %[[E_ARRAY0]], <4 x float> %[[E1]], 0, 1
+// CHECK: %[[E2:.*]] = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 2, i8 0, i32 poison)
+// CHECK: %[[E_ARRAY2:.*]] = insertvalue [2 x [3 x <4 x float>]] %[[E_ARRAY1]], <4 x float> %[[E2]], 0, 2
+// CHECK: %[[E3:.*]] = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 3, i8 0, i32 poison)
+// CHECK: %[[E_ARRAY3:.*]] = insertvalue [2 x [3 x <4 x float>]] %[[E_ARRAY2]], <4 x float> %[[E3]], 1, 0
+// CHECK: %[[E4:.*]] = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 4, i8 0, i32 poison)
+// CHECK: %[[E_ARRAY4:.*]] = insertvalue [2 x [3 x <4 x float>]] %[[E_ARRAY3]], <4 x float> %[[E4]], 1, 1
+// CHECK: %[[E5:.*]] = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 5, i8 0, i32 poison)
+// CHECK: %[[E_ARRAY5:.*]] = insertvalue [2 x [3 x <4 x float>]] %[[E_ARRAY4]], <4 x float> %[[E5]], 1, 2
+// CHECK: %[[S3:.*]] = insertvalue %struct.S %[[S2]], [2 x [3 x <4 x float>]] %[[E_ARRAY5]], 3
