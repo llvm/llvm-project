@@ -160,6 +160,42 @@ TEST_F(VirtualMethodFamilyExtractorOverriddenMethodTest,
 }
 
 TEST_F(VirtualMethodFamilyExtractorOverriddenMethodTest,
+       EdgeTransitiveChainRecordsOnlyDirectOverride) {
+  ASSERT_TRUE(runVirtualMethodExtractor(R"cpp(
+    struct C {
+      virtual void f(int *p);
+    };
+    struct B : C {
+      void f(int *p) override;
+    };
+    struct A : B {
+      void f(int *p) override;
+    };
+  )cpp"));
+  const auto *Af = getMethodSummary(AST.fn("A::f"));
+  const auto *Bf = getMethodSummary(AST.fn("B::f"));
+  const auto *Cf = getMethodSummary(AST.fn("C::f"));
+  auto BfId = entityIdOf(AST.fn("B::f"));
+  auto CfId = entityIdOf(AST.fn("C::f"));
+  ASSERT_TRUE(Af);
+  ASSERT_TRUE(Bf);
+  ASSERT_TRUE(Cf);
+  ASSERT_TRUE(BfId.has_value());
+  ASSERT_TRUE(CfId.has_value());
+
+  // A::f overrides only its immediate base B::f, not the transitive C::f.
+  ASSERT_EQ(Af->OverriddenMethods.size(), 1u);
+  EXPECT_EQ(Af->OverriddenMethods[0], *BfId);
+
+  // B::f overrides C::f.
+  ASSERT_EQ(Bf->OverriddenMethods.size(), 1u);
+  EXPECT_EQ(Bf->OverriddenMethods[0], *CfId);
+
+  // C::f is a root and overrides nothing.
+  EXPECT_TRUE(Cf->OverriddenMethods.empty());
+}
+
+TEST_F(VirtualMethodFamilyExtractorOverriddenMethodTest,
        EdgeOverrideLinksMatchingOverloadOnly) {
   // Tricky: overloads must not be conflated. B::f(int*) overrides only the
   // f(int*) base overload, never f(char*).
