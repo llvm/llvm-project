@@ -77,10 +77,8 @@ struct GroupBuiltin {
   bool IsElect;
   bool IsAllOrAny;
   bool IsAllEqual;
-  bool IsBallot;
   bool IsInverseBallot;
   bool IsBallotBitExtract;
-  bool IsBallotFindBit;
   bool IsLogical;
   bool NoGroupOperation;
   bool HasBoolArg;
