@@ -41,6 +41,18 @@ void test_detected_faulty_patterns(){
   const llvm::StringRef badStrRef = "a*?";
   // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: invalid regex pattern: repetition-operator operand invalid
   llvm::Regex re5(badStrRef);
+  
+  static const char badConstStaticChar[] = "";
+  // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: invalid regex pattern: empty (sub)expression
+  llvm::Regex regex_badConstStaticChar(badConstStaticChar);
+
+  static char badStaticChar[] = "";
+  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: invalid regex pattern: empty (sub)expression
+  llvm::Regex regex_badStaticChar(badStaticChar);
+  
+  char badCharArray[] = "";
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: invalid regex pattern: empty (sub)expression
+  llvm::Regex regex_badCharArray(badCharArray);
 
   struct RegexPatterns {
     const char* badMemberChar = "";
@@ -54,14 +66,22 @@ void test_detected_faulty_patterns(){
 
     const llvm::StringRef badMemberStrRef = "a*?";
     // CHECK-MESSAGES: :[[@LINE-1]]:45: warning: invalid regex pattern: repetition-operator operand invalid
+
+    const char badMemberConstChar[1] = "";
+    // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: invalid regex pattern: empty (sub)expression
+    
+    char badMemberCharArray[1] = "";
+    // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: invalid regex pattern: empty (sub)expression
   };
-
+  
   RegexPatterns Pats;
-
+  
   llvm::Regex re6(Pats.badMemberChar);
   llvm::Regex re7(Pats.badMemberStr);
   llvm::Regex re8(Pats.badMemberStrView);
   llvm::Regex re9(Pats.badMemberStrRef);
+  llvm::Regex regex_badMemberConstStaticChar(Pats.badMemberConstChar);
+  llvm::Regex regex_badMemberCharArray(Pats.badMemberCharArray);
 }
 
 void test_no_detection_on_mutable(){

@@ -12,6 +12,9 @@ with a string literal, or stored in one of these non mutable container:
 - ``const char*``
 - ``const llvm::StringRef``
 - ``std::string_view``
+- ``char[]``
+- ``static char[]``
+- ``const char[]``
 
 In the event that the patterns are stored as a class member, the check verifies
 the initialization value, if defined, even if its overwritten by the constructor.

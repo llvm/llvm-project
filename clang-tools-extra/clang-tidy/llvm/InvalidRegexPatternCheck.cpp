@@ -26,17 +26,20 @@ void InvalidRegexPatternCheck::registerMatchers(MatchFinder *Finder) {
   auto GetStringLiteralFromObject =
       ignoringImplicit(cxxConstructExpr(hasAnyArgument(GetStringLit)));
   auto IsConstCharPtr = pointerType(pointee(builtinType(), isConstQualified()));
+  auto IsCharArray = qualType(
+      hasUnqualifiedDesugaredType(arrayType(hasElementType(builtinType()))));
   auto IsStdStringView = qualType(hasUnqualifiedDesugaredType(recordType(
       hasDeclaration(cxxRecordDecl(hasName("::std::basic_string_view"))))));
   auto AnyCastedToStringRef = ignoringImplicit(anyOf(
       stringLiteral().bind("stringLiteral"),
       declRefExpr(to(varDecl(
           hasType(qualType(anyOf(IsConstStdString, IsConstllvmStringRef,
-                                 IsStdStringView, IsConstCharPtr))),
+                                 IsStdStringView, IsConstCharPtr,
+                                 IsCharArray))),
           hasInitializer(anyOf(GetStringLiteralFromObject, GetStringLit))))),
       memberExpr(member(fieldDecl(
           hasType(qualType(anyOf(IsConstStdString, IsConstllvmStringRef,
-                                 IsStdStringView, IsConstCharPtr))),
+                                 IsStdStringView, IsConstCharPtr, IsCharArray))),
           hasInClassInitializer(
               anyOf(GetStringLiteralFromObject, GetStringLit)))))));
 
