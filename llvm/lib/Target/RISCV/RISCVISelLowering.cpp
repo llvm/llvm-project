@@ -20769,7 +20769,8 @@ static SDValue performMaskedLoadToVPLoadCombine(MaskedLoadSDNode *MLoad,
   if (!sd_match(MLoad->getMask(), m_SetCC(m_Value(SetCCLHS), m_Value(SetCCRHS),
                                           m_CondCode(CC))) ||
       SetCCLHS->getOpcode() != ISD::BUILD_VECTOR ||
-      !(CC == ISD::SETULT || CC == ISD::SETLT))
+      !(CC == ISD::SETULT || CC == ISD::SETLT) ||
+      !SetCCLHS.getValueType().isInteger())
     return SDValue();
   bool IsSigned = ISD::isSignedIntSetCC(CC);
 
