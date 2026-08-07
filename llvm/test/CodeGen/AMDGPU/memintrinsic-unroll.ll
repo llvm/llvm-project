@@ -201,7 +201,6 @@ define void @memcpy_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0)
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; ALIGNED-NEXT:    flat_store_byte_d16_hi v[22:23], v32 offset:28
 ; ALIGNED-NEXT:    flat_store_byte v[24:25], v32 offset:32
-; ALIGNED-NEXT:    s_waitcnt lgkmcnt(36)
 ; ALIGNED-NEXT:    buffer_store_dword v35, off, s[0:3], s32 offset:272
 ; ALIGNED-NEXT:    buffer_store_dword v36, off, s[0:3], s32 offset:276
 ; ALIGNED-NEXT:    buffer_store_dword v37, off, s[0:3], s32 offset:280
@@ -4225,12 +4224,11 @@ define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5)
 ; ALIGNED-NEXT:    buffer_load_ubyte v110, v2, s[0:3], 0 offen offset:165
 ; ALIGNED-NEXT:    buffer_load_ubyte v109, v2, s[0:3], 0 offen offset:166
 ; ALIGNED-NEXT:    buffer_load_ubyte v108, v2, s[0:3], 0 offen offset:167
-; ALIGNED-NEXT:    buffer_load_ubyte v92, v2, s[0:3], 0 offen offset:172
 ; ALIGNED-NEXT:    buffer_load_ubyte v107, v2, s[0:3], 0 offen offset:168
 ; ALIGNED-NEXT:    buffer_load_ubyte v106, v2, s[0:3], 0 offen offset:169
 ; ALIGNED-NEXT:    buffer_load_ubyte v95, v2, s[0:3], 0 offen offset:170
 ; ALIGNED-NEXT:    buffer_load_ubyte v104, v2, s[0:3], 0 offen offset:171
-; ALIGNED-NEXT:    buffer_load_ubyte v93, v2, s[0:3], 0 offen offset:172
+; ALIGNED-NEXT:    buffer_load_ubyte v92, v2, s[0:3], 0 offen offset:172
 ; ALIGNED-NEXT:    buffer_load_ubyte v89, v2, s[0:3], 0 offen offset:173
 ; ALIGNED-NEXT:    buffer_load_ubyte v79, v2, s[0:3], 0 offen offset:174
 ; ALIGNED-NEXT:    buffer_load_ubyte v88, v2, s[0:3], 0 offen offset:175
@@ -4242,12 +4240,11 @@ define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5)
 ; ALIGNED-NEXT:    buffer_load_ubyte v58, v2, s[0:3], 0 offen offset:181
 ; ALIGNED-NEXT:    buffer_load_ubyte v47, v2, s[0:3], 0 offen offset:182
 ; ALIGNED-NEXT:    buffer_load_ubyte v46, v2, s[0:3], 0 offen offset:183
-; ALIGNED-NEXT:    buffer_load_ubyte v40, v2, s[0:3], 0 offen offset:188
 ; ALIGNED-NEXT:    buffer_load_ubyte v45, v2, s[0:3], 0 offen offset:184
 ; ALIGNED-NEXT:    buffer_load_ubyte v44, v2, s[0:3], 0 offen offset:185
 ; ALIGNED-NEXT:    buffer_load_ubyte v43, v2, s[0:3], 0 offen offset:186
 ; ALIGNED-NEXT:    buffer_load_ubyte v42, v2, s[0:3], 0 offen offset:187
-; ALIGNED-NEXT:    buffer_load_ubyte v41, v2, s[0:3], 0 offen offset:188
+; ALIGNED-NEXT:    buffer_load_ubyte v40, v2, s[0:3], 0 offen offset:188
 ; ALIGNED-NEXT:    buffer_load_ubyte v119, v2, s[0:3], 0 offen offset:189
 ; ALIGNED-NEXT:    buffer_load_ubyte v117, v2, s[0:3], 0 offen offset:190
 ; ALIGNED-NEXT:    buffer_load_ubyte v118, v2, s[0:3], 0 offen offset:191
@@ -4259,11 +4256,11 @@ define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5)
 ; ALIGNED-NEXT:    buffer_load_ubyte v102, v2, s[0:3], 0 offen offset:197
 ; ALIGNED-NEXT:    buffer_load_ubyte v101, v2, s[0:3], 0 offen offset:198
 ; ALIGNED-NEXT:    buffer_load_ubyte v100, v2, s[0:3], 0 offen offset:199
-; ALIGNED-NEXT:    buffer_load_ubyte v85, v2, s[0:3], 0 offen offset:204
 ; ALIGNED-NEXT:    buffer_load_ubyte v98, v2, s[0:3], 0 offen offset:200
 ; ALIGNED-NEXT:    buffer_load_ubyte v97, v2, s[0:3], 0 offen offset:201
 ; ALIGNED-NEXT:    buffer_load_ubyte v87, v2, s[0:3], 0 offen offset:202
 ; ALIGNED-NEXT:    buffer_load_ubyte v96, v2, s[0:3], 0 offen offset:203
+; ALIGNED-NEXT:    buffer_load_ubyte v85, v2, s[0:3], 0 offen offset:204
 ; ALIGNED-NEXT:    buffer_load_ubyte v84, v2, s[0:3], 0 offen offset:205
 ; ALIGNED-NEXT:    buffer_load_ubyte v83, v2, s[0:3], 0 offen offset:206
 ; ALIGNED-NEXT:    buffer_load_ubyte v82, v2, s[0:3], 0 offen offset:207
@@ -4275,11 +4272,11 @@ define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5)
 ; ALIGNED-NEXT:    buffer_load_ubyte v67, v2, s[0:3], 0 offen offset:213
 ; ALIGNED-NEXT:    buffer_load_ubyte v65, v2, s[0:3], 0 offen offset:214
 ; ALIGNED-NEXT:    buffer_load_ubyte v66, v2, s[0:3], 0 offen offset:215
-; ALIGNED-NEXT:    buffer_load_ubyte v51, v2, s[0:3], 0 offen offset:220
 ; ALIGNED-NEXT:    buffer_load_ubyte v64, v2, s[0:3], 0 offen offset:216
 ; ALIGNED-NEXT:    buffer_load_ubyte v55, v2, s[0:3], 0 offen offset:217
 ; ALIGNED-NEXT:    buffer_load_ubyte v53, v2, s[0:3], 0 offen offset:218
 ; ALIGNED-NEXT:    buffer_load_ubyte v52, v2, s[0:3], 0 offen offset:219
+; ALIGNED-NEXT:    buffer_load_ubyte v51, v2, s[0:3], 0 offen offset:220
 ; ALIGNED-NEXT:    buffer_load_ubyte v50, v2, s[0:3], 0 offen offset:221
 ; ALIGNED-NEXT:    buffer_load_ubyte v49, v2, s[0:3], 0 offen offset:222
 ; ALIGNED-NEXT:    buffer_load_ubyte v48, v2, s[0:3], 0 offen offset:223
@@ -4296,6 +4293,7 @@ define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5)
 ; ALIGNED-NEXT:    buffer_load_ubyte v28, v2, s[0:3], 0 offen offset:233
 ; ALIGNED-NEXT:    buffer_load_ubyte v27, v2, s[0:3], 0 offen offset:234
 ; ALIGNED-NEXT:    buffer_load_ubyte v26, v2, s[0:3], 0 offen offset:235
+; ALIGNED-NEXT:    buffer_load_ubyte v25, v2, s[0:3], 0 offen offset:236
 ; ALIGNED-NEXT:    buffer_load_ubyte v24, v2, s[0:3], 0 offen offset:237
 ; ALIGNED-NEXT:    buffer_load_ubyte v23, v2, s[0:3], 0 offen offset:238
 ; ALIGNED-NEXT:    buffer_load_ubyte v22, v2, s[0:3], 0 offen offset:239
@@ -4452,6 +4450,7 @@ define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5)
 ; ALIGNED-NEXT:    buffer_load_ubyte v12, v2, s[0:3], 0 offen offset:249
 ; ALIGNED-NEXT:    buffer_load_ubyte v11, v2, s[0:3], 0 offen offset:250
 ; ALIGNED-NEXT:    buffer_load_ubyte v10, v2, s[0:3], 0 offen offset:251
+; ALIGNED-NEXT:    buffer_load_ubyte v9, v2, s[0:3], 0 offen offset:252
 ; ALIGNED-NEXT:    v_lshl_or_b32 v103, v4, 16, v3
 ; ALIGNED-NEXT:    v_lshl_or_b32 v3, v50, 8, v51
 ; ALIGNED-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
@@ -4515,8 +4514,7 @@ define void @memcpy_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5)
 ; ALIGNED-NEXT:    v_lshl_or_b32 v4, v16, 8, v20
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(8)
 ; ALIGNED-NEXT:    v_lshl_or_b32 v5, v14, 8, v15
-; ALIGNED-NEXT:    v_lshl_or_b32 v4, v5, 16, v4
-; ALIGNED-NEXT:    s_waitcnt vmcnt(3)
+; ALIGNED-NEXT:    s_waitcnt vmcnt(4)
 ; ALIGNED-NEXT:    v_lshl_or_b32 v56, v10, 8, v11
 ; ALIGNED-NEXT:    v_lshl_or_b32 v4, v5, 16, v4
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(2)
@@ -5653,7 +5651,6 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; ALIGNED-NEXT:    flat_store_byte_d16_hi v[22:23], v24 offset:28
 ; ALIGNED-NEXT:    flat_store_byte v[0:1], v24 offset:32
-; ALIGNED-NEXT:    s_waitcnt lgkmcnt(36)
 ; ALIGNED-NEXT:    buffer_store_dword v28, off, s[0:3], s32 offset:240
 ; ALIGNED-NEXT:    buffer_store_dword v29, off, s[0:3], s32 offset:244
 ; ALIGNED-NEXT:    buffer_store_dword v30, off, s[0:3], s32 offset:248
@@ -6293,7 +6290,6 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; ALIGNED-NEXT:    flat_store_byte_d16_hi v[22:23], v30 offset:28
 ; ALIGNED-NEXT:    flat_store_byte v[16:17], v30 offset:32
-; ALIGNED-NEXT:    s_waitcnt lgkmcnt(36)
 ; ALIGNED-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:496
 ; ALIGNED-NEXT:    buffer_store_dword v34, off, s[0:3], s32 offset:500
 ; ALIGNED-NEXT:    buffer_store_dword v35, off, s[0:3], s32 offset:504
@@ -13252,11 +13248,11 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_ubyte v59, v2, s[0:3], 0 offen offset:165
 ; ALIGNED-NEXT:    buffer_load_ubyte v56, v2, s[0:3], 0 offen offset:166
 ; ALIGNED-NEXT:    buffer_load_ubyte v47, v2, s[0:3], 0 offen offset:167
-; ALIGNED-NEXT:    buffer_load_ubyte v95, v2, s[0:3], 0 offen offset:172
 ; ALIGNED-NEXT:    buffer_load_ubyte v44, v2, s[0:3], 0 offen offset:168
 ; ALIGNED-NEXT:    buffer_load_ubyte v41, v2, s[0:3], 0 offen offset:169
 ; ALIGNED-NEXT:    buffer_load_ubyte v117, v2, s[0:3], 0 offen offset:170
 ; ALIGNED-NEXT:    buffer_load_ubyte v119, v2, s[0:3], 0 offen offset:171
+; ALIGNED-NEXT:    buffer_load_ubyte v95, v2, s[0:3], 0 offen offset:172
 ; ALIGNED-NEXT:    buffer_load_ubyte v113, v2, s[0:3], 0 offen offset:173
 ; ALIGNED-NEXT:    buffer_load_ubyte v103, v2, s[0:3], 0 offen offset:174
 ; ALIGNED-NEXT:    buffer_load_ubyte v100, v2, s[0:3], 0 offen offset:175
@@ -13268,11 +13264,11 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_ubyte v68, v2, s[0:3], 0 offen offset:181
 ; ALIGNED-NEXT:    buffer_load_ubyte v67, v2, s[0:3], 0 offen offset:182
 ; ALIGNED-NEXT:    buffer_load_ubyte v66, v2, s[0:3], 0 offen offset:183
-; ALIGNED-NEXT:    buffer_load_ubyte v53, v2, s[0:3], 0 offen offset:188
 ; ALIGNED-NEXT:    buffer_load_ubyte v65, v2, s[0:3], 0 offen offset:184
 ; ALIGNED-NEXT:    buffer_load_ubyte v64, v2, s[0:3], 0 offen offset:185
 ; ALIGNED-NEXT:    buffer_load_ubyte v55, v2, s[0:3], 0 offen offset:186
 ; ALIGNED-NEXT:    buffer_load_ubyte v54, v2, s[0:3], 0 offen offset:187
+; ALIGNED-NEXT:    buffer_load_ubyte v53, v2, s[0:3], 0 offen offset:188
 ; ALIGNED-NEXT:    buffer_load_ubyte v51, v2, s[0:3], 0 offen offset:189
 ; ALIGNED-NEXT:    buffer_load_ubyte v49, v2, s[0:3], 0 offen offset:190
 ; ALIGNED-NEXT:    buffer_load_ubyte v50, v2, s[0:3], 0 offen offset:191
@@ -13284,11 +13280,11 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_ubyte v34, v2, s[0:3], 0 offen offset:197
 ; ALIGNED-NEXT:    buffer_load_ubyte v33, v2, s[0:3], 0 offen offset:198
 ; ALIGNED-NEXT:    buffer_load_ubyte v32, v2, s[0:3], 0 offen offset:199
-; ALIGNED-NEXT:    buffer_load_ubyte v26, v2, s[0:3], 0 offen offset:204
 ; ALIGNED-NEXT:    buffer_load_ubyte v31, v2, s[0:3], 0 offen offset:200
 ; ALIGNED-NEXT:    buffer_load_ubyte v29, v2, s[0:3], 0 offen offset:201
 ; ALIGNED-NEXT:    buffer_load_ubyte v27, v2, s[0:3], 0 offen offset:202
 ; ALIGNED-NEXT:    buffer_load_ubyte v28, v2, s[0:3], 0 offen offset:203
+; ALIGNED-NEXT:    buffer_load_ubyte v26, v2, s[0:3], 0 offen offset:204
 ; ALIGNED-NEXT:    buffer_load_ubyte v24, v2, s[0:3], 0 offen offset:205
 ; ALIGNED-NEXT:    buffer_load_ubyte v23, v2, s[0:3], 0 offen offset:206
 ; ALIGNED-NEXT:    buffer_load_ubyte v22, v2, s[0:3], 0 offen offset:207
@@ -13300,11 +13296,11 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_ubyte v110, v2, s[0:3], 0 offen offset:229
 ; ALIGNED-NEXT:    buffer_load_ubyte v107, v2, s[0:3], 0 offen offset:230
 ; ALIGNED-NEXT:    buffer_load_ubyte v108, v2, s[0:3], 0 offen offset:231
-; ALIGNED-NEXT:    buffer_load_ubyte v90, v2, s[0:3], 0 offen offset:236
 ; ALIGNED-NEXT:    buffer_load_ubyte v104, v2, s[0:3], 0 offen offset:232
 ; ALIGNED-NEXT:    buffer_load_ubyte v105, v2, s[0:3], 0 offen offset:233
 ; ALIGNED-NEXT:    buffer_load_ubyte v94, v2, s[0:3], 0 offen offset:234
 ; ALIGNED-NEXT:    buffer_load_ubyte v92, v2, s[0:3], 0 offen offset:235
+; ALIGNED-NEXT:    buffer_load_ubyte v90, v2, s[0:3], 0 offen offset:236
 ; ALIGNED-NEXT:    buffer_load_ubyte v88, v2, s[0:3], 0 offen offset:237
 ; ALIGNED-NEXT:    s_clause 0x17
 ; ALIGNED-NEXT:    buffer_load_ubyte v78, v2, s[0:3], 0 offen offset:238
@@ -13317,11 +13313,11 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_ubyte v46, v2, s[0:3], 0 offen offset:245
 ; ALIGNED-NEXT:    buffer_load_ubyte v42, v2, s[0:3], 0 offen offset:246
 ; ALIGNED-NEXT:    buffer_load_ubyte v43, v2, s[0:3], 0 offen offset:247
-; ALIGNED-NEXT:    buffer_load_ubyte v102, v2, s[0:3], 0 offen offset:252
 ; ALIGNED-NEXT:    buffer_load_ubyte v118, v2, s[0:3], 0 offen offset:248
 ; ALIGNED-NEXT:    buffer_load_ubyte v40, v2, s[0:3], 0 offen offset:249
 ; ALIGNED-NEXT:    buffer_load_ubyte v116, v2, s[0:3], 0 offen offset:250
 ; ALIGNED-NEXT:    buffer_load_ubyte v101, v2, s[0:3], 0 offen offset:251
+; ALIGNED-NEXT:    buffer_load_ubyte v102, v2, s[0:3], 0 offen offset:252
 ; ALIGNED-NEXT:    buffer_load_ubyte v112, v2, s[0:3], 0 offen offset:253
 ; ALIGNED-NEXT:    buffer_load_ubyte v99, v2, s[0:3], 0 offen offset:254
 ; ALIGNED-NEXT:    buffer_load_ubyte v97, v2, s[0:3], 0 offen offset:255
@@ -13418,11 +13414,11 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_ubyte v15, v2, s[0:3], 0 offen offset:213
 ; ALIGNED-NEXT:    buffer_load_ubyte v13, v2, s[0:3], 0 offen offset:214
 ; ALIGNED-NEXT:    buffer_load_ubyte v14, v2, s[0:3], 0 offen offset:215
-; ALIGNED-NEXT:    buffer_load_ubyte v8, v2, s[0:3], 0 offen offset:220
 ; ALIGNED-NEXT:    buffer_load_ubyte v12, v2, s[0:3], 0 offen offset:216
 ; ALIGNED-NEXT:    buffer_load_ubyte v11, v2, s[0:3], 0 offen offset:217
 ; ALIGNED-NEXT:    buffer_load_ubyte v9, v2, s[0:3], 0 offen offset:218
 ; ALIGNED-NEXT:    buffer_load_ubyte v10, v2, s[0:3], 0 offen offset:219
+; ALIGNED-NEXT:    buffer_load_ubyte v8, v2, s[0:3], 0 offen offset:220
 ; ALIGNED-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:1424 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    v_lshl_or_b32 v0, v4, 16, v3
 ; ALIGNED-NEXT:    v_lshl_or_b32 v3, v106, 8, v109
@@ -14757,11 +14753,11 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_ubyte v95, v2, s[0:3], 0 offen offset:1957
 ; ALIGNED-NEXT:    buffer_load_ubyte v93, v2, s[0:3], 0 offen offset:1958
 ; ALIGNED-NEXT:    buffer_load_ubyte v90, v2, s[0:3], 0 offen offset:1959
-; ALIGNED-NEXT:    buffer_load_ubyte v120, v2, s[0:3], 0 offen offset:1964
 ; ALIGNED-NEXT:    buffer_load_ubyte v88, v2, s[0:3], 0 offen offset:1960
 ; ALIGNED-NEXT:    buffer_load_ubyte v79, v2, s[0:3], 0 offen offset:1961
 ; ALIGNED-NEXT:    buffer_load_ubyte v63, v2, s[0:3], 0 offen offset:1962
 ; ALIGNED-NEXT:    buffer_load_ubyte v72, v2, s[0:3], 0 offen offset:1963
+; ALIGNED-NEXT:    buffer_load_ubyte v120, v2, s[0:3], 0 offen offset:1964
 ; ALIGNED-NEXT:    buffer_load_ubyte v45, v2, s[0:3], 0 offen offset:1965
 ; ALIGNED-NEXT:    buffer_load_ubyte v117, v2, s[0:3], 0 offen offset:1966
 ; ALIGNED-NEXT:    buffer_load_ubyte v42, v2, s[0:3], 0 offen offset:1967
@@ -14773,11 +14769,11 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_ubyte v83, v2, s[0:3], 0 offen offset:1973
 ; ALIGNED-NEXT:    buffer_load_ubyte v81, v2, s[0:3], 0 offen offset:1974
 ; ALIGNED-NEXT:    buffer_load_ubyte v82, v2, s[0:3], 0 offen offset:1975
-; ALIGNED-NEXT:    buffer_load_ubyte v68, v2, s[0:3], 0 offen offset:1980
 ; ALIGNED-NEXT:    buffer_load_ubyte v80, v2, s[0:3], 0 offen offset:1976
 ; ALIGNED-NEXT:    buffer_load_ubyte v71, v2, s[0:3], 0 offen offset:1977
 ; ALIGNED-NEXT:    buffer_load_ubyte v69, v2, s[0:3], 0 offen offset:1978
 ; ALIGNED-NEXT:    buffer_load_ubyte v70, v2, s[0:3], 0 offen offset:1979
+; ALIGNED-NEXT:    buffer_load_ubyte v68, v2, s[0:3], 0 offen offset:1980
 ; ALIGNED-NEXT:    buffer_load_ubyte v66, v2, s[0:3], 0 offen offset:1981
 ; ALIGNED-NEXT:    buffer_load_ubyte v65, v2, s[0:3], 0 offen offset:1982
 ; ALIGNED-NEXT:    buffer_load_ubyte v64, v2, s[0:3], 0 offen offset:1983
@@ -14789,11 +14785,11 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_ubyte v49, v2, s[0:3], 0 offen offset:1989
 ; ALIGNED-NEXT:    buffer_load_ubyte v39, v2, s[0:3], 0 offen offset:1990
 ; ALIGNED-NEXT:    buffer_load_ubyte v48, v2, s[0:3], 0 offen offset:1991
-; ALIGNED-NEXT:    buffer_load_ubyte v33, v2, s[0:3], 0 offen offset:1996
 ; ALIGNED-NEXT:    buffer_load_ubyte v38, v2, s[0:3], 0 offen offset:1992
 ; ALIGNED-NEXT:    buffer_load_ubyte v36, v2, s[0:3], 0 offen offset:1993
 ; ALIGNED-NEXT:    buffer_load_ubyte v35, v2, s[0:3], 0 offen offset:1994
 ; ALIGNED-NEXT:    buffer_load_ubyte v34, v2, s[0:3], 0 offen offset:1995
+; ALIGNED-NEXT:    buffer_load_ubyte v33, v2, s[0:3], 0 offen offset:1996
 ; ALIGNED-NEXT:    buffer_load_ubyte v31, v2, s[0:3], 0 offen offset:1997
 ; ALIGNED-NEXT:    buffer_load_ubyte v29, v2, s[0:3], 0 offen offset:1998
 ; ALIGNED-NEXT:    buffer_load_ubyte v30, v2, s[0:3], 0 offen offset:1999
@@ -14813,21 +14809,20 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_ubyte v73, v2, s[0:3], 0 offen offset:2037
 ; ALIGNED-NEXT:    buffer_load_ubyte v61, v2, s[0:3], 0 offen offset:2038
 ; ALIGNED-NEXT:    buffer_load_ubyte v62, v2, s[0:3], 0 offen offset:2039
-; ALIGNED-NEXT:    buffer_load_ubyte v43, v2, s[0:3], 0 offen offset:2044
 ; ALIGNED-NEXT:    buffer_load_ubyte v58, v2, s[0:3], 0 offen offset:2040
 ; ALIGNED-NEXT:    buffer_load_ubyte v59, v2, s[0:3], 0 offen offset:2041
-; ALIGNED-NEXT:    s_clause 0x10
 ; ALIGNED-NEXT:    buffer_load_ubyte v56, v2, s[0:3], 0 offen offset:2042
+; ALIGNED-NEXT:    s_clause 0x10
 ; ALIGNED-NEXT:    buffer_load_ubyte v46, v2, s[0:3], 0 offen offset:2043
 ; ALIGNED-NEXT:    buffer_load_ubyte v43, v2, s[0:3], 0 offen offset:2044
 ; ALIGNED-NEXT:    buffer_load_ubyte v44, v2, s[0:3], 0 offen offset:2045
 ; ALIGNED-NEXT:    buffer_load_ubyte v41, v2, s[0:3], 0 offen offset:2046
 ; ALIGNED-NEXT:    buffer_load_ubyte v118, v2, s[0:3], 0 offen offset:2047
-; ALIGNED-NEXT:    buffer_load_ubyte v102, v2, s[0:3], 0 offen offset:1795
 ; ALIGNED-NEXT:    buffer_load_ubyte v109, v2, s[0:3], 0 offen offset:1793
 ; ALIGNED-NEXT:    buffer_load_ubyte v107, v2, s[0:3], 0 offen offset:1794
-; ALIGNED-NEXT:    buffer_load_ubyte v87, v2, s[0:3], 0 offen offset:1797
+; ALIGNED-NEXT:    buffer_load_ubyte v102, v2, s[0:3], 0 offen offset:1795
 ; ALIGNED-NEXT:    buffer_load_ubyte v105, v2, s[0:3], 0 offen offset:1796
+; ALIGNED-NEXT:    buffer_load_ubyte v87, v2, s[0:3], 0 offen offset:1797
 ; ALIGNED-NEXT:    buffer_load_ubyte v111, v2, s[0:3], 0 offen offset:1798
 ; ALIGNED-NEXT:    buffer_load_ubyte v123, v2, s[0:3], 0 offen offset:1799
 ; ALIGNED-NEXT:    buffer_load_ubyte v77, v2, s[0:3], 0 offen offset:1804
@@ -14878,9 +14873,9 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    v_lshl_or_b32 v86, v118, 8, v41
 ; ALIGNED-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:1340 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_load_ubyte v0, v2, s[0:3], 0 offen offset:1941
-; ALIGNED-NEXT:    s_waitcnt vmcnt(22)
+; ALIGNED-NEXT:    s_waitcnt vmcnt(20)
 ; ALIGNED-NEXT:    buffer_store_dword v102, off, s[0:3], s32 offset:1412 ; 4-byte Folded Spill
-; ALIGNED-NEXT:    s_waitcnt vmcnt(19)
+; ALIGNED-NEXT:    s_waitcnt vmcnt(18)
 ; ALIGNED-NEXT:    buffer_store_dword v87, off, s[0:3], s32 offset:1428 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_load_ubyte v13, v2, s[0:3], 0 offen offset:1954
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(11)
@@ -14936,11 +14931,11 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_ubyte v22, v2, s[0:3], 0 offen offset:2005
 ; ALIGNED-NEXT:    buffer_load_ubyte v21, v2, s[0:3], 0 offen offset:2006
 ; ALIGNED-NEXT:    buffer_load_ubyte v20, v2, s[0:3], 0 offen offset:2007
-; ALIGNED-NEXT:    buffer_load_ubyte v14, v2, s[0:3], 0 offen offset:2012
 ; ALIGNED-NEXT:    buffer_load_ubyte v19, v2, s[0:3], 0 offen offset:2008
 ; ALIGNED-NEXT:    buffer_load_ubyte v18, v2, s[0:3], 0 offen offset:2009
 ; ALIGNED-NEXT:    buffer_load_ubyte v17, v2, s[0:3], 0 offen offset:2010
 ; ALIGNED-NEXT:    buffer_load_ubyte v16, v2, s[0:3], 0 offen offset:2011
+; ALIGNED-NEXT:    buffer_load_ubyte v14, v2, s[0:3], 0 offen offset:2012
 ; ALIGNED-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:1400 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    v_lshl_or_b32 v0, v4, 16, v3
 ; ALIGNED-NEXT:    v_lshl_or_b32 v3, v95, 8, v12
@@ -14987,11 +14982,11 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_ubyte v0, v2, s[0:3], 0 offen offset:2021
 ; ALIGNED-NEXT:    buffer_load_ubyte v126, v2, s[0:3], 0 offen offset:2022
 ; ALIGNED-NEXT:    buffer_load_ubyte v124, v2, s[0:3], 0 offen offset:2023
-; ALIGNED-NEXT:    buffer_load_ubyte v106, v2, s[0:3], 0 offen offset:2028
 ; ALIGNED-NEXT:    buffer_load_ubyte v121, v2, s[0:3], 0 offen offset:2024
 ; ALIGNED-NEXT:    buffer_load_ubyte v122, v2, s[0:3], 0 offen offset:2025
 ; ALIGNED-NEXT:    buffer_load_ubyte v110, v2, s[0:3], 0 offen offset:2026
 ; ALIGNED-NEXT:    buffer_load_ubyte v108, v2, s[0:3], 0 offen offset:2027
+; ALIGNED-NEXT:    buffer_load_ubyte v106, v2, s[0:3], 0 offen offset:2028
 ; ALIGNED-NEXT:    v_lshl_or_b32 v125, v4, 16, v3
 ; ALIGNED-NEXT:    v_lshl_or_b32 v3, v49, 8, v54
 ; ALIGNED-NEXT:    v_lshl_or_b32 v4, v48, 8, v39
@@ -15028,13 +15023,11 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(5)
 ; ALIGNED-NEXT:    v_lshl_or_b32 v4, v124, 8, v126
 ; ALIGNED-NEXT:    v_lshl_or_b32 v15, v4, 16, v3
-; ALIGNED-NEXT:    s_waitcnt vmcnt(4)
+; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; ALIGNED-NEXT:    v_lshl_or_b32 v3, v104, 8, v106
 ; ALIGNED-NEXT:    v_lshl_or_b32 v4, v91, 8, v94
 ; ALIGNED-NEXT:    v_lshl_or_b32 v9, v4, 16, v3
-; ALIGNED-NEXT:    s_waitcnt vmcnt(2)
 ; ALIGNED-NEXT:    v_lshl_or_b32 v3, v122, 8, v121
-; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; ALIGNED-NEXT:    v_lshl_or_b32 v4, v108, 8, v110
 ; ALIGNED-NEXT:    v_lshl_or_b32 v1, v4, 16, v3
 ; ALIGNED-NEXT:    v_lshl_or_b32 v3, v89, 8, v92
