@@ -703,9 +703,16 @@ KnownFPClass KnownFPClass::asin(const KnownFPClass &KnownSrc) {
 KnownFPClass KnownFPClass::acos(const KnownFPClass &KnownSrc) {
   KnownFPClass Known;
 
-  // acos is bounded to [0, pi], never Inf or negative.
-  Known.knownNot(fcInf);
-  Known.knownNot(fcNegative);
+  // acos(x) is bounded to [0, pi] for -1 <= x <= 1, and is never negative,
+  // infinite, or subnormal. The smallest non-zero value occurs when x is
+  // close to 1.0, where acos(x) can be approximated by sqrt(2 * (1 - x)).
+  // Since sqrt cannot produce a subnormal result, we can conclude that
+  // acos(x) will also never produce a subnormal result.
+  Known.knownNot(fcNegative | fcInf | fcSubnormal);
+
+  // acos(x) == +0.0 iff x == +1.0
+  if (KnownSrc.isKnownNever(fcPosNormal))
+    Known.knownNot(fcZero);
 
   Known.propagateNonSNaN(KnownSrc);
 

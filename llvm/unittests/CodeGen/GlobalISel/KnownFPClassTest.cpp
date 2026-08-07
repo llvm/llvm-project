@@ -1604,7 +1604,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFAsinPos) {
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAcos) {
-  // acos is bounded to [0, π]: never Inf, never negative.
+  // acos is bounded to [0, π]: never infinite, negative, or subnormal.
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
     %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
@@ -1619,7 +1619,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFAcos) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPosFinite | fcNan, Known.KnownFPClasses);
+  EXPECT_EQ(fcPosZero | fcPosNormal | fcNan, Known.KnownFPClasses);
   EXPECT_EQ(std::nullopt, Known.SignBit);
 }
 
@@ -1641,7 +1641,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFAcosPos) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPosFinite | fcQNan, Known.KnownFPClasses);
+  EXPECT_EQ(fcPosZero | fcPosNormal | fcQNan, Known.KnownFPClasses);
   EXPECT_EQ(std::nullopt, Known.SignBit);
 }
 
