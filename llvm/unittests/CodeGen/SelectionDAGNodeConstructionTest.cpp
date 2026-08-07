@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SelectionDAGTestBase.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 
 using namespace llvm;
 
