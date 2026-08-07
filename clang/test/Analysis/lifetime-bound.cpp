@@ -456,3 +456,35 @@ OuterS nested_struct_return_not_yet_detected() {
   // expected-note@-2    {{Address of stack memory associated with local variable 'y' returned to caller}}
   // expected-warning@-3 {{address of stack memory associated with local variable 'y' returned}}
 }
+
+struct Hold {
+  int *ptr;
+};
+
+Hold retPtr(int &x) {
+  return Hold{&x};
+}
+// Even though there is a lifetime error in the function
+// UseAfterLifetimeEnd should not emit a warning for this
+// case since there is no annotation present in the code.
+// The warning present in the test comes from core.StackAddressEscape
+// checker.
+Hold return_by_val_no_ann() {
+  int num = 4;
+  return retPtr(num);
+  // expected-warning@-1 {{Address of stack memory associated with local variable 'num' returned to caller}}
+  // expected-note@-2    {{Address of stack memory associated with local variable 'num' returned to caller}}
+}
+
+int *unwrap(Hold i [[clang::lifetimebound]]) { return i.ptr; }
+
+// FIXME: If an annotated argument is a by-value struct then
+// Arg.getAsRegion() returns null for CompoundVal/LazyCompoundVal
+// and the dangling pointer will not be detected.
+int *arg_aggregate_lifetimebound() {
+  int local_num = 5;
+  Hold h{&local_num};
+  return unwrap(h);
+  // expected-warning@-1 {{Address of stack memory associated with local variable 'local_num' returned to caller}}
+  // expected-note@-2    {{Address of stack memory associated with local variable 'local_num' returned to caller}}
+}
