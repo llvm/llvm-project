@@ -60,7 +60,16 @@ InstructionFlavor llvm::AMDGPU::classifyFlavor(const MachineInstr &MI,
   if (SII.isLDSDMA(MI))
     return InstructionFlavor::DMA;
 
-  if (SII.isMFMAorWMMA(MI))
+  if (SII.isMFMA(MI)) {
+    // TODO: Consider further sub-classifying this (XDL, XDL2x, S/DGEMM).
+    // GFX9 SPG sub-classifies MFMA into XDL, XDL2x and S/DGEMM, because only
+    // certain sub-classes can be co-executed in certain slots. For now, we
+    // simply treat them all as one to simplify the change and leave the rest
+    // to a follow-up fine-tuning.
+    return InstructionFlavor::WMMA;
+  }
+
+  if (SII.isWMMA(MI) || SII.isSWMMAC(MI))
     return InstructionFlavor::WMMA;
 
   if (SII.isTRANS(MI))

@@ -50,7 +50,7 @@ enum class CoExecMask : uint16_t {
   DS = 1 << 4,    // LDS read/write
   VMEM = 1 << 5,  // Global memory
   SMEM = 1 << 6,  // Scalar memory
-  WMMA = 1 << 7,  // Next WMMA (V stages only)
+  WMMA = 1 << 7,  // Next WMMA (V stages only), or MFMA
   All = 0xFFFF,
 
   MEM = DS | VMEM | SMEM,
@@ -346,11 +346,179 @@ inline CoExecInfo CoExecInfo::build(unsigned TotalWindow, const char *Pattern) {
   return Info;
 }
 
+/// Get co-execution info for a gfx950 MFMA instruction.
+/// The occupancy (cycles until the next MFMA may issue) is expressed as the
+/// first stage carrying the WMMA bit.
+inline CoExecInfo getMFMACoExecInfo(const MachineInstr &MI) {
+  CoExecInfo Res;
+  for (unsigned I = 0; I < MaxCoExecStages; ++I)
+    Res.Slots[I].Mask = CoExecMask::None;
+
+  // TODO: Implement proper patterns support (for debugging purposes).
+  // Existing pattern letters are WMMA-specific and will probably be confusing
+  // if used as-is for MFMA. Inventing new MFMA-specific letters is an option,
+  // but perhaps the pattern should be instead dynamically reconstructed when
+  // needed by printing specific slots in full instead of a key for them.
+  Res.Pattern = "undefinedundefinedundefinedundefined";
+
+  // MFMA co-exec slots are incremental, i.e. for every slot N it supports all
+  // instructions which were supported by the previous slot N-1 and may support
+  // something extra.
+  auto AllowCoExec = [](CoExecInfo &Info, CoExecMaskT ExtraBits,
+                        unsigned StartIndex) {
+    for (unsigned Index = StartIndex; Index < Info.TotalWindow; ++Index)
+      Info.Slots[Index].Mask |= ExtraBits;
+  };
+
+  switch (MI.getOpcode()) {
+  // 4-cycle occupancy, 8-cycle window.
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f4_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f6_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f6_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f4_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f4_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f6_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f6_vgprcd_e64:
+  case V_MFMA_F32_16X16X32_BF16_e64:
+  case V_MFMA_F32_16X16X32_BF16_vgprcd_e64:
+  case V_MFMA_I32_16X16X64_I8_e64:
+  case V_MFMA_I32_16X16X64_I8_vgprcd_e64:
+  case V_MFMA_F32_16X16X32_F16_e64:
+  case V_MFMA_F32_16X16X32_F16_vgprcd_e64:
+    // Distinction marker to simplify mapping to the programming guide
+  case V_SMFMAC_F32_16X16X64_BF16_e64:
+  case V_SMFMAC_I32_16X16X128_I8_e64:
+  case V_SMFMAC_F32_16X16X128_BF8_BF8_e64:
+  case V_SMFMAC_F32_16X16X128_BF8_FP8_e64:
+  case V_SMFMAC_F32_16X16X128_FP8_BF8_e64:
+  case V_SMFMAC_F32_16X16X128_FP8_FP8_e64:
+  case V_SMFMAC_F32_16X16X64_F16_e64:
+    Res.TotalWindow = 8;
+    AllowCoExec(Res, CoExecMask::SALU, 1);
+    AllowCoExec(Res, CoExecMask::DS | CoExecMask::VALU, 2);
+    AllowCoExec(Res, CoExecMask::WMMA, 4);
+    return Res;
+
+  // 8-cycle occupancy, 12-cycle window.
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f8_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f8_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f8_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f8_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f4_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f4_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f6_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f6_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f8_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f8_vgprcd_e64:
+    Res.TotalWindow = 12;
+    AllowCoExec(Res, CoExecMask::SALU, 1);
+    AllowCoExec(Res, CoExecMask::DS, 2);
+    AllowCoExec(Res, CoExecMask::VALU, 3);
+    AllowCoExec(Res, CoExecMask::WMMA, 8);
+    return Res;
+
+  // 4-cycle occupancy, 8-cycle window.
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_vgprcd_e64:
+  case V_MFMA_F32_32X32X16_BF16_e64:
+  case V_MFMA_F32_32X32X16_BF16_mac_e64:
+  case V_MFMA_F32_32X32X16_BF16_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X16_BF16_vgprcd_e64:
+  case V_MFMA_I32_32X32X16I8_e64:
+  case V_MFMA_I32_32X32X16I8_mac_e64:
+  case V_MFMA_I32_32X32X16I8_mac_vgprcd_e64:
+  case V_MFMA_I32_32X32X16I8_vgprcd_e64:
+  case V_MFMA_F32_32X32X16_F16_e64:
+  case V_MFMA_F32_32X32X16_F16_mac_e64:
+  case V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X16_F16_vgprcd_e64:
+    Res.TotalWindow = 8;
+    AllowCoExec(Res, CoExecMask::SALU, 1);
+    AllowCoExec(Res, CoExecMask::DS | CoExecMask::VALU, 2);
+    AllowCoExec(Res, CoExecMask::WMMA, 4);
+    return Res;
+
+  // 16-cycle occupancy, 20-cycle window.
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_vgprcd_e64:
+    Res.TotalWindow = 20;
+    AllowCoExec(Res, CoExecMask::SALU, 1);
+    AllowCoExec(Res, CoExecMask::DS, 2);
+    AllowCoExec(Res, CoExecMask::VALU, 3);
+    AllowCoExec(Res, CoExecMask::WMMA, 16);
+    return Res;
+
+  // 9-cycle occupancy, 12-cycle window.
+  case V_SMFMAC_F32_32X32X32_BF16_e64:
+  case V_SMFMAC_I32_32X32X64_I8_e64:
+  case V_SMFMAC_F32_32X32X64_BF8_BF8_e64:
+  case V_SMFMAC_F32_32X32X64_BF8_FP8_e64:
+  case V_SMFMAC_F32_32X32X64_FP8_BF8_e64:
+  case V_SMFMAC_F32_32X32X64_FP8_FP8_e64:
+  case V_SMFMAC_F32_32X32X32_F16_e64:
+    Res.TotalWindow = 12;
+    AllowCoExec(Res, CoExecMask::SALU, 1);
+    AllowCoExec(Res, CoExecMask::DS | CoExecMask::VALU, 4);
+    AllowCoExec(Res, CoExecMask::WMMA, 9);
+    return Res;
+
+  // 18-cycle occupancy, 19-cycle window.
+  case V_MFMA_F64_16X16X4F64_e64:
+  case V_MFMA_F64_16X16X4F64_mac_e64:
+  case V_MFMA_F64_16X16X4F64_mac_vgprcd_e64:
+  case V_MFMA_F64_16X16X4F64_vgprcd_e64:
+    Res.TotalWindow = 19;
+    AllowCoExec(Res, CoExecMask::DS | CoExecMask::SALU, 0);
+    AllowCoExec(Res, CoExecMask::WMMA | CoExecMask::VALU, 18);
+    return Res;
+
+  default:
+    // Default fallback: permissive 8-cycle pattern
+    return CoExecInfo::build(9, "AAAAAAAAA");
+  }
+}
+
 /// Get co-execution info for a WMMA instruction, selecting the per-cycle slot
 /// pattern from the opcode (and operand formats for the F8F6F4 variants).
 inline CoExecInfo getCoExecInfo(const MachineInstr &MI,
                                 const SIInstrInfo &TII) {
   unsigned Opc = MI.getOpcode();
+
+  if (TII.isMFMA(MI))
+    return getMFMACoExecInfo(MI);
 
   // Scaled variants (LD_SCALE rule) absorb the next WMMA in the last I slot.
   bool HasScaling = AMDGPU::getHasMatrixScale(Opc);
