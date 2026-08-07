@@ -2301,7 +2301,7 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
 
   auto FoldBinaryOpOrIntrinsic = [&](Constant *LHS, Constant *RHS) {
     return IsIntrinsic
-               ? ConstantFoldIntrinsic(Opcode, {LHS, RHS}, LHS->getType())
+               ? ConstantFoldIntrinsic(Opcode, {LHS, RHS}, LHS->getType(), DL)
                : ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
   };
 
@@ -4511,6 +4511,35 @@ static Instruction *foldSelectNegNot(SelectInst &SI,
   return nullptr;
 }
 
+// Return true if no use can observe the sign of zero of the select result,
+// looking through phis, selects and the loop back edge to the select itself.
+static bool isSelectZeroSignInsignificant(SelectInst &SI) {
+  // Bound the number of uses to look through to keep the compile time in
+  // check.
+  constexpr unsigned MaxUsesToLookThrough = 16;
+  unsigned NumUses = 0;
+  SmallPtrSet<Instruction *, 4> Visited;
+  SmallVector<Instruction *> Worklist(1, &SI);
+  while (!Worklist.empty()) {
+    for (Use &U : Worklist.pop_back_val()->uses()) {
+      if (++NumUses > MaxUsesToLookThrough)
+        return false;
+      auto *User = cast<Instruction>(U.getUser());
+      if (User == &SI)
+        continue;
+      if (canIgnoreSignBitOfZero(U))
+        continue;
+      if (isa<PHINode, SelectInst>(User)) {
+        if (Visited.insert(User).second)
+          Worklist.push_back(User);
+        continue;
+      }
+      return false;
+    }
+  }
+  return true;
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -4785,9 +4814,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     // has the `nnan nsz` flags, which allow it to be lowered *back* to a
     // fcmp+select if that's the best way to express it on the target.
     if (FCmp && FCmp->hasNoNaNs() &&
-        (SIFPOp->hasNoSignedZeros() ||
-         (SIFPOp->hasOneUse() &&
-          canIgnoreSignBitOfZero(*SIFPOp->use_begin())))) {
+        (SIFPOp->hasNoSignedZeros() || isSelectZeroSignInsignificant(SI))) {
       Value *X, *Y;
       if (match(&SI, m_OrdOrUnordFMax(m_Value(X), m_Value(Y)))) {
         Value *BinIntr =
@@ -4798,9 +4825,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
           BinIntrInst->setHasNoInfs(FCmp->hasNoInfs());
           // The `nsz` flag is a precondition, so let's ensure it's always added
           // to the min/max operation, even if it wasn't on the select. This
-          // could happen if `canIgnoreSignBitOfZero` is true--for instance, if
-          // the select doesn't have `nsz`, but the result is being used in an
-          // operation that doesn't care about signed zero.
+          // could happen if the select doesn't have `nsz`, but no use of the
+          // result can observe the sign of zero.
           BinIntrInst->setHasNoSignedZeros(true);
           // As mentioned above, `nnan` is also a precondition, so we always set
           // the flag.
@@ -5306,12 +5332,14 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   Value *MaskedLoadPtr;
   if (match(TrueVal, m_OneUse(m_MaskedLoad(m_Value(MaskedLoadPtr),
-                                           m_Specific(CondVal), m_Value()))))
-    return replaceInstUsesWith(
-        SI, Builder.CreateMaskedLoad(
-                TrueVal->getType(), MaskedLoadPtr,
-                cast<IntrinsicInst>(TrueVal)->getParamAlign(0).valueOrOne(),
-                CondVal, FalseVal));
+                                           m_Specific(CondVal), m_Value())))) {
+    auto *LoadInst = cast<IntrinsicInst>(TrueVal);
+    Instruction *In = Builder.CreateMaskedLoad(
+        TrueVal->getType(), MaskedLoadPtr,
+        LoadInst->getParamAlign(0).valueOrOne(), CondVal, FalseVal);
+    In->setAAMetadata(LoadInst->getAAMetadata());
+    return replaceInstUsesWith(SI, In);
+  }
 
   // Canonicalize sign function ashr pattern: select (icmp slt X, 1), ashr X,
   // bitwidth-1, 1 -> scmp(X, 0)

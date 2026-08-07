@@ -12707,15 +12707,17 @@ SDValue DAGCombiner::visitCTPOP(SDNode *N) {
 }
 
 static bool isLegalToCombineMinNumMaxNum(SelectionDAG &DAG, SDValue LHS,
-                                         SDValue RHS, const SDNodeFlags Flags,
+                                         SDValue RHS,
+                                         const SDNodeFlags SelectFlags,
+                                         const SDNodeFlags CmpFlags,
                                          const TargetLowering &TLI) {
   EVT VT = LHS.getValueType();
   if (!VT.isFloatingPoint())
     return false;
 
-  return Flags.hasNoSignedZeros() &&
+  return SelectFlags.hasNoSignedZeros() &&
          TLI.isProfitableToCombineMinNumMaxNum(VT) &&
-         (Flags.hasNoNaNs() ||
+         (SelectFlags.hasNoNaNs() || CmpFlags.hasNoNaNs() ||
           (DAG.isKnownNeverNaN(RHS) && DAG.isKnownNeverNaN(LHS)));
 }
 
@@ -12724,7 +12726,11 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
                                        ISD::CondCode CC,
                                        const TargetLowering &TLI,
                                        SelectionDAG &DAG) {
-  EVT TransformVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  EVT TransformVT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), VT);
+
+  // We have checked nnan and nsz as pre-conditions for the transform.
+  SDNodeFlags Flags = SDNodeFlags::NoNaNs | SDNodeFlags::NoSignedZeros;
+
   switch (CC) {
   case ISD::SETOLT:
   case ISD::SETOLE:
@@ -12737,11 +12743,11 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
     // expanded in terms of it.
     unsigned IEEEOpcode = (LHS == True) ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
     if (TLI.isOperationLegalOrCustom(IEEEOpcode, VT))
-      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
+      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS, Flags);
 
     unsigned Opcode = (LHS == True) ? ISD::FMINNUM : ISD::FMAXNUM;
     if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
-      return DAG.getNode(Opcode, DL, VT, LHS, RHS);
+      return DAG.getNode(Opcode, DL, VT, LHS, RHS, Flags);
     return SDValue();
   }
   case ISD::SETOGT:
@@ -12752,11 +12758,11 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
   case ISD::SETUGE: {
     unsigned IEEEOpcode = (LHS == True) ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
     if (TLI.isOperationLegalOrCustom(IEEEOpcode, VT))
-      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
+      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS, Flags);
 
     unsigned Opcode = (LHS == True) ? ISD::FMAXNUM : ISD::FMINNUM;
     if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
-      return DAG.getNode(Opcode, DL, VT, LHS, RHS);
+      return DAG.getNode(Opcode, DL, VT, LHS, RHS, Flags);
     return SDValue();
   }
   default:
@@ -13338,6 +13344,72 @@ static SDValue combineSelectToPseudoMinMax(SelectionDAG &DAG, SDNode *N) {
   return DAG.getNode(Opcode, DL, VT, NewLHS, NewRHS);
 }
 
+/// Fold:
+///   select_cc (select C, TV, FV), CmpC, TrueV, FalseV, seteq
+///     -> select C, TrueV, FalseV
+///   select_cc (select C, TV, FV), CmpC, TrueV, FalseV, setne
+///     -> select C, FalseV, TrueV
+/// and the same with CmpC on the LHS of the comparison. TV and FV must be
+/// distinct integer constants. Also used for select (setcc ...).
+static SDValue foldSelectOfSelectCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
+                                     SDValue TrueV, SDValue FalseV,
+                                     const SDLoc &DL, EVT VT, SelectionDAG &DAG,
+                                     SDNodeFlags Flags) {
+  if (CC != ISD::SETEQ && CC != ISD::SETNE)
+    return SDValue();
+
+  SDValue InnerSel;
+  SDValue CmpC;
+  if (LHS.getOpcode() == ISD::SELECT) {
+    InnerSel = LHS;
+    CmpC = RHS;
+  } else if (RHS.getOpcode() == ISD::SELECT) {
+    InnerSel = RHS;
+    CmpC = LHS;
+  } else
+    return SDValue();
+
+  SDValue Cond = InnerSel.getOperand(0);
+  SDValue InnerTV = InnerSel.getOperand(1);
+  SDValue InnerFV = InnerSel.getOperand(2);
+
+  auto *CTV = dyn_cast<ConstantSDNode>(InnerTV);
+  auto *CFV = dyn_cast<ConstantSDNode>(InnerFV);
+  auto *CCnst = dyn_cast<ConstantSDNode>(CmpC);
+  if (!CTV || !CFV || !CCnst)
+    return SDValue();
+
+  // If one of the constants is opaque, the SDNodes may differ while the values
+  // are the same. Check APInt to avoid miscompiles.
+  if (CTV->getAPIntValue() == CFV->getAPIntValue())
+    return SDValue();
+
+  const APInt &CmpVal = CCnst->getAPIntValue();
+  bool MatchesTV = CmpVal == CTV->getAPIntValue();
+  bool MatchesFV = CmpVal == CFV->getAPIntValue();
+  if (!MatchesTV && !MatchesFV)
+    return SDValue();
+
+  SDValue SelTrueV = TrueV;
+  SDValue SelFalseV = FalseV;
+  if (CC == ISD::SETEQ) {
+    if (MatchesFV)
+      std::swap(SelTrueV, SelFalseV);
+  } else {
+    if (MatchesTV)
+      std::swap(SelTrueV, SelFalseV);
+  }
+
+  return DAG.getSelect(DL, VT, Cond, SelTrueV, SelFalseV, Flags);
+}
+
+static SDValue foldSelectCCOfSelect(SDNode *N, SelectionDAG &DAG) {
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
+  return foldSelectOfSelectCmp(N->getOperand(0), N->getOperand(1), CC,
+                               N->getOperand(2), N->getOperand(3), SDLoc(N),
+                               N->getValueType(0), DAG, N->getFlags());
+}
+
 SDValue DAGCombiner::visitSELECT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -13359,6 +13431,15 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
 
   if (SDValue V = foldSelectOfConstants(N))
     return V;
+
+  // select (setcc (select C, TV, FV), CmpC, cc), TrueV, FalseV
+  //   -> select C, TrueV, FalseV (or swapped FalseV/TrueV)
+  if (N0.getOpcode() == ISD::SETCC) {
+    ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+    if (SDValue R = foldSelectOfSelectCmp(N0.getOperand(0), N0.getOperand(1),
+                                          CC, N1, N2, DL, VT, DAG, Flags))
+      return R;
+  }
 
   // If we can fold this based on the true/false value, do so.
   if (SimplifySelectOps(N, N1, N2))
@@ -13469,7 +13550,8 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     // select (fcmp gt x, y), x, y -> fmaxnum x, y
     //
     // This is OK if we don't care what happens if either operand is a NaN.
-    if (N0.hasOneUse() && isLegalToCombineMinNumMaxNum(DAG, N1, N2, Flags, TLI))
+    if (N0.hasOneUse() &&
+        isLegalToCombineMinNumMaxNum(DAG, N1, N2, Flags, N0->getFlags(), TLI))
       if (SDValue FMinMax =
               combineMinNumMaxNum(DL, VT, Cond0, Cond1, N1, N2, CC))
         return FMinMax;
@@ -14531,7 +14613,8 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     // NaN.
     //
     if (N0.hasOneUse() &&
-        isLegalToCombineMinNumMaxNum(DAG, LHS, RHS, N->getFlags(), TLI)) {
+        isLegalToCombineMinNumMaxNum(DAG, LHS, RHS, N->getFlags(),
+                                     N0->getFlags(), TLI)) {
       if (SDValue FMinMax = combineMinNumMaxNum(DL, VT, LHS, RHS, N1, N2, CC))
         return FMinMax;
     }
@@ -14766,6 +14849,9 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
   // fold select_cc lhs, rhs, x, x, cc -> x
   if (N2 == N3)
     return N2;
+
+  if (SDValue R = foldSelectCCOfSelect(N, DAG))
+    return R;
 
   // select_cc bool, 0, x, y, seteq -> select bool, y, x
   if (CC == ISD::SETEQ && !LegalTypes && N0.getValueType() == MVT::i1 &&
@@ -21897,7 +21983,7 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
       bool CanSplitIdx = canSplitIdx(LD);
 
       if (!N->hasAnyUseOfValue(0) && (CanSplitIdx || !N->hasAnyUseOfValue(1))) {
-        SDValue Undef = DAG.getUNDEF(N->getValueType(0));
+        SDValue Poison = DAG.getPOISON(N->getValueType(0));
         SDValue Index;
         if (N->hasAnyUseOfValue(1) && CanSplitIdx) {
           Index = SplitIndexingFromLoad(LD);
@@ -21905,12 +21991,12 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
           // stores.
           AddUsersToWorklist(N);
         } else
-          Index = DAG.getUNDEF(N->getValueType(1));
+          Index = DAG.getPOISON(N->getValueType(1));
         LLVM_DEBUG(dbgs() << "\nReplacing.7 "; N->dump(&DAG);
-                   dbgs() << "\nWith: "; Undef.dump(&DAG);
+                   dbgs() << "\nWith: "; Poison.dump(&DAG);
                    dbgs() << " and 2 other values\n");
         WorklistRemover DeadNodes(*this);
-        DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), Undef);
+        DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), Poison);
         DAG.ReplaceAllUsesOfValueWith(SDValue(N, 1), Index);
         DAG.ReplaceAllUsesOfValueWith(SDValue(N, 2), Chain);
         deleteAndRecombine(N);
@@ -21930,8 +22016,9 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
     if (MaybeAlign Alignment = DAG.InferPtrAlign(Ptr)) {
       if (*Alignment > LD->getAlign() &&
           isAligned(*Alignment, LD->getSrcValueOffset())) {
-        SDValue NewLoad = DAG.getExtLoad(
-            LD->getExtensionType(), SDLoc(N), LD->getValueType(0), Chain, Ptr,
+        SDValue NewLoad = DAG.getLoad(
+            LD->getAddressingMode(), LD->getExtensionType(),
+            LD->getValueType(0), SDLoc(N), Chain, Ptr, LD->getOffset(),
             LD->getPointerInfo(), LD->getMemoryVT(), *Alignment,
             LD->getMemOperand()->getFlags(), LD->getAAInfo());
         // NewLoad will always be N as we are only refining the alignment
@@ -24462,10 +24549,10 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
     if (MaybeAlign Alignment = DAG.InferPtrAlign(Ptr)) {
       if (*Alignment > ST->getAlign() &&
           isAligned(*Alignment, ST->getSrcValueOffset())) {
-        SDValue NewStore =
-            DAG.getTruncStore(Chain, SDLoc(N), Value, Ptr, ST->getPointerInfo(),
-                              ST->getMemoryVT(), *Alignment,
-                              ST->getMemOperand()->getFlags(), ST->getAAInfo());
+        SDValue NewStore = DAG.getTruncStore(
+            Chain, SDLoc(N), Value, Ptr, ST->getOffset(), ST->getPointerInfo(),
+            ST->getMemoryVT(), *Alignment, ST->getMemOperand()->getFlags(),
+            ST->getAAInfo());
         // NewStore will always be N as we are only refining the alignment
         assert(NewStore.getNode() == N);
         (void)NewStore;
@@ -25303,7 +25390,12 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
         return CanonicalizeBuildVector(Ops, /*FreezeUndef=*/true);
 
       // BUILD_VECTOR - insert unused operands and build new BUILD_VECTOR.
-      if (CurVec.getOpcode() == ISD::BUILD_VECTOR && CurVec.hasOneUse()) {
+      // A multi-use base is allowed when the target prefers build_vector
+      // sources: rebuilding only re-references the base's scalar operands, and
+      // it un-shares the base so each vector is built independently.
+      if (CurVec.getOpcode() == ISD::BUILD_VECTOR &&
+          (CurVec.hasOneUse() ||
+           TLI.aggressivelyPreferBuildVectorSources(VT))) {
         for (unsigned I = 0; I != NumElts; ++I)
           AddBuildVectorOp(Ops, CurVec.getOperand(I), I);
         return CanonicalizeBuildVector(Ops);
@@ -25913,6 +26005,12 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
   if (!LegalOperations || !IndexC)
     return SDValue();
 
+  bool IsFrozen = false;
+  if (VecOp.getOpcode() == ISD::FREEZE && VecOp.hasOneUse()) {
+    VecOp = VecOp.getOperand(0);
+    IsFrozen = true;
+  }
+
   // (vextract (v4f32 load $addr), c) -> (f32 load $addr+c*size)
   // (vextract (v4f32 s2v (f32 load $addr)), c) -> (f32 load $addr+c*size)
   // (vextract (v4f32 shuffle (load $addr), <1,u,u,u>), 0) -> (f32 load $addr)
@@ -25996,6 +26094,8 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
   if (SDValue Scalarized =
           TLI.scalarizeExtractedVectorLoad(LVT, DL, VecVT, Index, LN0, DAG)) {
     ++OpsNarrowed;
+    if (IsFrozen)
+      return DAG.getFreeze(Scalarized);
     return Scalarized;
   }
 

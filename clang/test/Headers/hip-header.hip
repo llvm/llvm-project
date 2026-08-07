@@ -50,7 +50,7 @@
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
-// RUN:   -aux-triple amdgcn-amd-amdhsa -triple x86_64-unknown-unknown \
+// RUN:   -aux-triple amdgpu-amd-amdhsa -triple x86_64-unknown-unknown \
 // RUN:   -emit-llvm %s -o - \
 // RUN:   -DHIP_VERSION_MAJOR=4 -DHIP_VERSION_MINOR=5 \
 // RUN:   -disable-llvm-passes | FileCheck -check-prefixes=MALLOC-HOST %s
