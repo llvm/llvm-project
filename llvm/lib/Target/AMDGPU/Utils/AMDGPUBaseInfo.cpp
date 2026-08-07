@@ -3730,6 +3730,8 @@ unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
     return 64;
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
     return 128;
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
+    return 256;
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
     return 320;
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
