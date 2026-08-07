@@ -91,52 +91,81 @@ endif()
 set(LIBC_LINK_OPTIONS_DEFAULT "" CACHE STRING "Arguments used when linking.")
 set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all the tests.")
 
+option(LLVM_LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
+if(LLVM_LIBC_ENABLE_COVERAGE)
+  list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-fprofile-instr-generate" "-fcoverage-mapping")
+  list(APPEND LIBC_TEST_COMPILE_OPTIONS_DEFAULT "-fprofile-instr-generate" "-fcoverage-mapping")
+  list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "-fprofile-instr-generate" "-fcoverage-mapping")
+
+  # When building with -nostdlib, the compiler does not automatically link the profiling runtime.
+  # We must explicitly query the compiler for the exact architecture-specific profile library path.
+  execute_process(
+    COMMAND ${CMAKE_CXX_COMPILER} --print-libgcc-file-name --rtlib=compiler-rt
+    OUTPUT_VARIABLE COMPILER_RT_BUILTINS
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE COMPILER_RT_RETURN_CODE
+  )
+  if(COMPILER_RT_RETURN_CODE EQUAL 0)
+    string(REPLACE "builtins" "profile" COMPILER_RT_PROFILE "${COMPILER_RT_BUILTINS}")
+    if(EXISTS "${COMPILER_RT_PROFILE}")
+      list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "${COMPILER_RT_PROFILE}")
+    else()
+      message(WARNING "Coverage profiling runtime not found at ${COMPILER_RT_PROFILE}")
+    endif()
+  else()
+    message(WARNING "Failed to locate compiler-rt builtins library for coverage")
+  endif()
+endif()
+
 set(LIBC_TEST_CMD "" CACHE STRING
   "The full test command in the form <command> binary=@BINARY@, if using another program to test (e.g. QEMU)")
 set(LIBC_TEST_HERMETIC_ONLY "" OFF CACHE BOOL "Only enable hermetic tests.")
 
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 
-# Check --print-resource-dir to find the compiler resource dir if this flag
-# is supported by the compiler.
-execute_process(
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
-  RESULT_VARIABLE COMMAND_RETURN_CODE
-  OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
-)
-# Retrieve the host compiler's resource dir.
-if(COMMAND_RETURN_CODE EQUAL 0)
-  set(COMPILER_RESOURCE_DIR
-    "${COMPILER_RESOURCE_DIR}" CACHE PATH "path to compiler resource dir"
-  )
-  message(STATUS "Set COMPILER_RESOURCE_DIR to "
-                 "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
-else()
-  # Try with GCC option: -print-search-dirs, which will output in the form:
-  #   install: <path>
-  #   programs: ........
-  # So we try to capture the <path> after "install: " in the first line of the
-  # output.
+if(NOT DEFINED COMPILER_RESOURCE_DIR)
   execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
+    COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
     RESULT_VARIABLE COMMAND_RETURN_CODE
-    OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
+    OUTPUT_VARIABLE COMPILER_RESOURCE_DIR_RAW
   )
+  # Retrieve the host compiler's resource dir.
   if(COMMAND_RETURN_CODE EQUAL 0)
-    string(REPLACE " " ";" COMPILER_RESOURCE_DIR ${COMPILER_RESOURCE_DIR})
-    string(REPLACE "\n" ";" COMPILER_RESOURCE_DIR "${COMPILER_RESOURCE_DIR}")
-    list(GET COMPILER_RESOURCE_DIR 1 COMPILER_RESOURCE_DIR)
+    set(COMPILER_RESOURCE_DIR
+      "${COMPILER_RESOURCE_DIR_RAW}" CACHE PATH "path to compiler resource dir"
+    )
     message(STATUS "Set COMPILER_RESOURCE_DIR to "
-    "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
-else()
-    if (LIBC_TARGET_OS_IS_GPU)
-      message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
+                   "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
+  else()
+    # Try with GCC option: -print-search-dirs, which will output in the form:
+    #   install: <path>
+    #   programs: ........
+    # So we try to capture the <path> after "install: " in the first line of the
+    # output.
+    execute_process(
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
+      RESULT_VARIABLE COMMAND_RETURN_CODE
+      OUTPUT_VARIABLE COMPILER_RESOURCE_DIR_RAW
+    )
+    if(COMMAND_RETURN_CODE EQUAL 0)
+      string(REPLACE " " ";" COMPILER_RESOURCE_DIR_RAW ${COMPILER_RESOURCE_DIR_RAW})
+      string(REPLACE "\n" ";" COMPILER_RESOURCE_DIR_RAW "${COMPILER_RESOURCE_DIR_RAW}")
+      list(GET COMPILER_RESOURCE_DIR_RAW 1 COMPILER_RESOURCE_DIR_RAW)
+      set(COMPILER_RESOURCE_DIR
+        "${COMPILER_RESOURCE_DIR_RAW}" CACHE PATH "path to compiler resource dir"
+      )
+      message(STATUS "Set COMPILER_RESOURCE_DIR to "
+      "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
     else()
-      set(COMPILER_RESOURCE_DIR OFF)
-      message(STATUS "COMPILER_RESOURCE_DIR not set
-                      --print-resource-dir not supported by host compiler")
+      if (LIBC_TARGET_OS_IS_GPU)
+        message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
+      else()
+        set(COMPILER_RESOURCE_DIR OFF CACHE PATH "path to compiler resource dir")
+        message(STATUS "COMPILER_RESOURCE_DIR not set
+                        --print-resource-dir not supported by host compiler")
+      endif()
     endif()
   endif()
 endif()
@@ -152,11 +181,6 @@ if(LIBC_TARGET_OS_IS_GPU)
 endif()
 
 option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" ${default_to_full_build})
-if(LLVM_LIBC_FULL_BUILD)
-  set(LLVM_LIBC_OVERLAY OFF)
-else()
-  set(LLVM_LIBC_OVERLAY ON)
-endif()
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
@@ -298,10 +322,6 @@ endif()
 if(LIBC_TARGET_OS_IS_GPU)
   include(prepare_libc_gpu_build)
   set(LIBC_ENABLE_UNITTESTS OFF)
-  find_program(LIBC_LLVM_LINK llvm-link HINTS ${LLVM_TOOLS_BINARY_DIR})
-  if(NOT LIBC_LLVM_LINK)
-    message(FATAL_ERROR "llvm-link not found in ${LLVM_TOOLS_BINARY_DIR} or system path")
-  endif()
 elseif(LIBC_TARGET_OS_IS_BAREMETAL)
   set(LIBC_ENABLE_UNITTESTS OFF)
 endif()
