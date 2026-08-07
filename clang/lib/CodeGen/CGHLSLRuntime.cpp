@@ -50,6 +50,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <array>
 #include <cstdint>
 #include <optional>
 
@@ -1213,23 +1214,24 @@ static QualType getSemanticLeafType(const clang::DeclaratorDecl *Decl) {
 // Walks through the surrounding constant array types of \p Ty, collecting their
 // dimensions until reaching a scalar, vector, or matrix leaf.
 static SemanticShape getSemanticShape(ASTContext &Ctx, QualType Ty) {
-  SmallVector<unsigned> Dimensions;
-  while (const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(Ty)) {
-    Dimensions.push_back(CAT->getSize().getZExtValue());
-    Ty = CAT->getElementType();
+  SemanticShape Shape{{}, 1, Ty};
+  while (const ConstantArrayType *CAT =
+             Ctx.getAsConstantArrayType(Shape.RowType)) {
+    Shape.Dimensions.push_back(CAT->getSize().getZExtValue());
+    Shape.RowType = CAT->getElementType();
   }
 
-  unsigned Cols = 1;
-  if (const auto *VT = Ty->getAs<clang::VectorType>()) {
-    Cols = VT->getNumElements();
-  } else if (const auto *MT = Ty->getAs<clang::ConstantMatrixType>()) {
+  if (const auto *VT = Shape.RowType->getAs<clang::VectorType>()) {
+    Shape.Cols = VT->getNumElements();
+  } else if (const auto *MT =
+                 Shape.RowType->getAs<clang::ConstantMatrixType>()) {
     // FIXME: a matrix leaf lowers to one row per matrix row but if column_major
     // is specified we transpose the num rows and num cols, this depends on
     // #211977 to resolve
-    Cols = MT->getNumColumns();
+    Shape.Cols = MT->getNumColumns();
   }
 
-  return {std::move(Dimensions), Cols, Ty};
+  return Shape;
 }
 
 llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
@@ -1256,9 +1258,10 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
   llvm::Value *Result = llvm::PoisonValue::get(Type);
 
   SmallVector<unsigned> Indices(Shape.Dimensions.size());
+  const unsigned NumRows = Shape.getNumRows();
 
-  for (unsigned Row = 0; Row < Shape.getNumRows(); ++Row) {
-    SmallVector<Value *> Args{
+  for (unsigned Row = 0; Row < NumRows; ++Row) {
+    std::array<Value *, 4> Args{
         /*SigElementId=*/B.getInt32(SigId),
         /*RowIndex=*/B.getInt32(Row),
         /*ColIndex=*/B.getInt8(0),
@@ -1309,7 +1312,8 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
   unsigned SigId = DXILOutputSemanticIndex++;
 
   SmallVector<unsigned> Indices(Shape.Dimensions.size());
-  for (unsigned Row = 0; Row < Shape.getNumRows(); ++Row) {
+  const unsigned NumRows = Shape.getNumRows();
+  for (unsigned Row = 0; Row < NumRows; ++Row) {
     llvm::Value *Val =
         Indices.empty() ? Source : B.CreateExtractValue(Source, Indices);
 
@@ -1321,9 +1325,9 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
       Val = B.CreateZExt(Val, RowTy, "storedv");
     }
 
-    SmallVector<Value *> Args{/*SigElementId=*/B.getInt32(SigId),
-                              /*RowIndex=*/B.getInt32(Row),
-                              /*ColIndex=*/B.getInt8(0), /*Value=*/Val};
+    std::array<Value *, 4> Args{/*SigElementId=*/B.getInt32(SigId),
+                                /*RowIndex=*/B.getInt32(Row),
+                                /*ColIndex=*/B.getInt8(0), /*Value=*/Val};
     B.CreateCall(IntrFn, Args, OB);
 
     // Advance the multidimensional index
