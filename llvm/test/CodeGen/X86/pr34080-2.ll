@@ -12,7 +12,7 @@ define void @computeJD(ptr) nounwind {
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    andl $-8, %esp
-; CHECK-NEXT:    subl $64, %esp
+; CHECK-NEXT:    subl $72, %esp
 ; CHECK-NEXT:    movl 8(%ebp), %ebx
 ; CHECK-NEXT:    movl 8(%ebx), %esi
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -48,6 +48,8 @@ define void @computeJD(ptr) nounwind {
 ; CHECK-NEXT:    leal 257(%ecx,%edx), %eax
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fildl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)

@@ -2027,13 +2027,15 @@ entry:
 define double @sifdb(i8 %x) #0 {
 ; X87-LABEL: sifdb:
 ; X87:       # %bb.0: # %entry
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
 ; X87-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
@@ -2071,13 +2073,15 @@ entry:
 define double @sifdw(i16 %x) #0 {
 ; X87-LABEL: sifdw:
 ; X87:       # %bb.0: # %entry
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
 ; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
@@ -2115,13 +2119,15 @@ entry:
 define double @sifdi(i32 %x) #0 {
 ; X87-LABEL: sifdi:
 ; X87:       # %bb.0: # %entry
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movl %eax, (%esp)
 ; X87-NEXT:    fildl (%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
@@ -2156,13 +2162,15 @@ entry:
 define float @siffb(i8 %x) #0 {
 ; X87-LABEL: siffb:
 ; X87:       # %bb.0: # %entry
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
 ; X87-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
@@ -2200,13 +2208,15 @@ entry:
 define float @siffw(i16 %x) #0 {
 ; X87-LABEL: siffw:
 ; X87:       # %bb.0: # %entry
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
 ; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
@@ -2244,13 +2254,15 @@ entry:
 define float @siffi(i32 %x) #0 {
 ; X87-LABEL: siffi:
 ; X87:       # %bb.0: # %entry
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X87-NEXT:    movl %eax, (%esp)
-; X87-NEXT:    fildl (%esp)
+; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fildl {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
@@ -2285,8 +2297,14 @@ entry:
 define double @sifdl(i64 %x) #0 {
 ; X87-LABEL: sifdl:
 ; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
 ; X87-NEXT:    fildll {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl (%esp)
 ; X87-NEXT:    wait
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: sifdl:
@@ -2320,8 +2338,14 @@ entry:
 define float @siffl(i64 %x) #0 {
 ; X87-LABEL: siffl:
 ; X87:       # %bb.0: # %entry
+; X87-NEXT:    pushl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 8
 ; X87-NEXT:    fildll {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    wait
+; X87-NEXT:    popl %eax
+; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: siffl:
@@ -2358,13 +2382,15 @@ entry:
 define double @uifdb(i8 %x) #0 {
 ; X87-LABEL: uifdb:
 ; X87:       # %bb.0: # %entry
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
 ; X87-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
@@ -2402,13 +2428,15 @@ entry:
 define double @uifdw(i16 %x) #0 {
 ; X87-LABEL: uifdw:
 ; X87:       # %bb.0: # %entry
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
 ; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movl %eax, (%esp)
 ; X87-NEXT:    fildl (%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $12, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
@@ -2446,14 +2474,16 @@ entry:
 define double @uifdi(i32 %x) #0 {
 ; X87-LABEL: uifdi:
 ; X87:       # %bb.0: # %entry
-; X87-NEXT:    subl $12, %esp
-; X87-NEXT:    .cfi_def_cfa_offset 16
+; X87-NEXT:    subl $20, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 24
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movl %eax, (%esp)
 ; X87-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X87-NEXT:    fildll (%esp)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    addl $12, %esp
+; X87-NEXT:    addl $20, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
@@ -2580,13 +2610,15 @@ entry:
 define float @uiffb(i8 %x) #0 {
 ; X87-LABEL: uiffb:
 ; X87:       # %bb.0: # %entry
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
 ; X87-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    filds {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
@@ -2624,13 +2656,15 @@ entry:
 define float @uiffw(i16 %x) #0 {
 ; X87-LABEL: uiffw:
 ; X87:       # %bb.0: # %entry
-; X87-NEXT:    pushl %eax
-; X87-NEXT:    .cfi_def_cfa_offset 8
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
 ; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X87-NEXT:    movl %eax, (%esp)
-; X87-NEXT:    fildl (%esp)
+; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fildl {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps (%esp)
+; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    popl %eax
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;
@@ -2668,14 +2702,16 @@ entry:
 define float @uiffi(i32 %x) #0 {
 ; X87-LABEL: uiffi:
 ; X87:       # %bb.0: # %entry
-; X87-NEXT:    subl $12, %esp
-; X87-NEXT:    .cfi_def_cfa_offset 16
+; X87-NEXT:    subl $20, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 24
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X87-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X87-NEXT:    fildll (%esp)
+; X87-NEXT:    fildll {{[0-9]+}}(%esp)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    wait
-; X87-NEXT:    addl $12, %esp
+; X87-NEXT:    addl $20, %esp
 ; X87-NEXT:    .cfi_def_cfa_offset 4
 ; X87-NEXT:    retl
 ;

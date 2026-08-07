@@ -5,7 +5,7 @@
 define float @PR35982_emms(<1 x i64>) nounwind {
 ; NO-POSTRA-LABEL: PR35982_emms:
 ; NO-POSTRA:       # %bb.0:
-; NO-POSTRA-NEXT:    subl $12, %esp
+; NO-POSTRA-NEXT:    subl $20, %esp
 ; NO-POSTRA-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NO-POSTRA-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; NO-POSTRA-NEXT:    punpckhdq %mm0, %mm0 # mm0 = mm0[1,1]
@@ -13,17 +13,20 @@ define float @PR35982_emms(<1 x i64>) nounwind {
 ; NO-POSTRA-NEXT:    emms
 ; NO-POSTRA-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; NO-POSTRA-NEXT:    fildl {{[0-9]+}}(%esp)
+; NO-POSTRA-NEXT:    fstps {{[0-9]+}}(%esp)
 ; NO-POSTRA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; NO-POSTRA-NEXT:    fildl {{[0-9]+}}(%esp)
-; NO-POSTRA-NEXT:    faddp %st, %st(1)
+; NO-POSTRA-NEXT:    fstps {{[0-9]+}}(%esp)
+; NO-POSTRA-NEXT:    flds {{[0-9]+}}(%esp)
+; NO-POSTRA-NEXT:    fadds {{[0-9]+}}(%esp)
 ; NO-POSTRA-NEXT:    fstps (%esp)
 ; NO-POSTRA-NEXT:    flds (%esp)
-; NO-POSTRA-NEXT:    addl $12, %esp
+; NO-POSTRA-NEXT:    addl $20, %esp
 ; NO-POSTRA-NEXT:    retl
 ;
 ; POSTRA-LABEL: PR35982_emms:
 ; POSTRA:       # %bb.0:
-; POSTRA-NEXT:    subl $12, %esp
+; POSTRA-NEXT:    subl $20, %esp
 ; POSTRA-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; POSTRA-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; POSTRA-NEXT:    punpckhdq %mm0, %mm0 # mm0 = mm0[1,1]
@@ -31,12 +34,15 @@ define float @PR35982_emms(<1 x i64>) nounwind {
 ; POSTRA-NEXT:    emms
 ; POSTRA-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; POSTRA-NEXT:    fildl {{[0-9]+}}(%esp)
+; POSTRA-NEXT:    fstps {{[0-9]+}}(%esp)
 ; POSTRA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; POSTRA-NEXT:    fildl {{[0-9]+}}(%esp)
-; POSTRA-NEXT:    faddp %st, %st(1)
+; POSTRA-NEXT:    fstps {{[0-9]+}}(%esp)
+; POSTRA-NEXT:    flds {{[0-9]+}}(%esp)
+; POSTRA-NEXT:    fadds {{[0-9]+}}(%esp)
 ; POSTRA-NEXT:    fstps (%esp)
 ; POSTRA-NEXT:    flds (%esp)
-; POSTRA-NEXT:    addl $12, %esp
+; POSTRA-NEXT:    addl $20, %esp
 ; POSTRA-NEXT:    retl
   %2 = bitcast <1 x i64> %0 to <2 x i32>
   %3 = extractelement <2 x i32> %2, i32 0

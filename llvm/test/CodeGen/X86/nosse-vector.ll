@@ -125,7 +125,7 @@ define void @sitofp_4i64_4f32_mem(ptr %p0, ptr %p1) nounwind {
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    andl $-8, %esp
-; X32-NEXT:    subl $48, %esp
+; X32-NEXT:    subl $64, %esp
 ; X32-NEXT:    movl 8(%ebp), %edx
 ; X32-NEXT:    movl 24(%edx), %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -149,9 +149,17 @@ define void @sitofp_4i64_4f32_mem(ptr %p0, ptr %p1) nounwind {
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl 12(%ebp), %eax
 ; X32-NEXT:    fildll {{[0-9]+}}(%esp)
+; X32-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X32-NEXT:    fildll {{[0-9]+}}(%esp)
+; X32-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X32-NEXT:    fildll {{[0-9]+}}(%esp)
+; X32-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X32-NEXT:    fildll {{[0-9]+}}(%esp)
+; X32-NEXT:    fstps {{[0-9]+}}(%esp)
+; X32-NEXT:    flds {{[0-9]+}}(%esp)
+; X32-NEXT:    flds {{[0-9]+}}(%esp)
+; X32-NEXT:    flds {{[0-9]+}}(%esp)
+; X32-NEXT:    flds {{[0-9]+}}(%esp)
 ; X32-NEXT:    fstps 12(%eax)
 ; X32-NEXT:    fstps 8(%eax)
 ; X32-NEXT:    fstps 4(%eax)
@@ -174,9 +182,17 @@ define void @sitofp_4i64_4f32_mem(ptr %p0, ptr %p1) nounwind {
 ; X64-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
+; X64-NEXT:    flds -{{[0-9]+}}(%rsp)
+; X64-NEXT:    flds -{{[0-9]+}}(%rsp)
+; X64-NEXT:    flds -{{[0-9]+}}(%rsp)
+; X64-NEXT:    flds -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstps 12(%rsi)
 ; X64-NEXT:    fstps 8(%rsi)
 ; X64-NEXT:    fstps 4(%rsi)
@@ -193,26 +209,34 @@ define void @sitofp_4i32_4f32_mem(ptr %p0, ptr %p1) nounwind {
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    subl $16, %esp
+; X32-NEXT:    subl $32, %esp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl 12(%ecx), %edx
 ; X32-NEXT:    movl 8(%ecx), %esi
 ; X32-NEXT:    movl (%ecx), %edi
 ; X32-NEXT:    movl 4(%ecx), %ecx
-; X32-NEXT:    movl %edi, (%esp)
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X32-NEXT:    fildl (%esp)
 ; X32-NEXT:    fildl {{[0-9]+}}(%esp)
+; X32-NEXT:    fstps (%esp)
 ; X32-NEXT:    fildl {{[0-9]+}}(%esp)
+; X32-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X32-NEXT:    fildl {{[0-9]+}}(%esp)
+; X32-NEXT:    fstps {{[0-9]+}}(%esp)
+; X32-NEXT:    fildl {{[0-9]+}}(%esp)
+; X32-NEXT:    fstps {{[0-9]+}}(%esp)
+; X32-NEXT:    flds (%esp)
+; X32-NEXT:    flds {{[0-9]+}}(%esp)
+; X32-NEXT:    flds {{[0-9]+}}(%esp)
+; X32-NEXT:    flds {{[0-9]+}}(%esp)
 ; X32-NEXT:    fstps 12(%eax)
 ; X32-NEXT:    fstps 8(%eax)
 ; X32-NEXT:    fstps 4(%eax)
 ; X32-NEXT:    fstps (%eax)
-; X32-NEXT:    addl $16, %esp
+; X32-NEXT:    addl $32, %esp
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    retl
@@ -228,9 +252,17 @@ define void @sitofp_4i32_4f32_mem(ptr %p0, ptr %p1) nounwind {
 ; X64-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
+; X64-NEXT:    flds -{{[0-9]+}}(%rsp)
+; X64-NEXT:    flds -{{[0-9]+}}(%rsp)
+; X64-NEXT:    flds -{{[0-9]+}}(%rsp)
+; X64-NEXT:    flds -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstps 12(%rsi)
 ; X64-NEXT:    fstps 8(%rsi)
 ; X64-NEXT:    fstps 4(%rsi)
