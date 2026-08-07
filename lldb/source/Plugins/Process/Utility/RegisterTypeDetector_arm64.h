@@ -54,8 +54,8 @@ private:
   // A detector function inspects the hwcaps and builds a type for that
   // register. All types should be made using MakeType, and a raw pointer to
   // the top level type must be returned.
-  using DetectorFn = const RegisterType *(Arm64RegisterTypeDetector::*)(
-      uint64_t, uint64_t, uint64_t);
+  using DetectorFn = const RegisterType *(
+      Arm64RegisterTypeDetector::*)(uint64_t, uint64_t, uint64_t);
 
   const RegisterType *DetectCPSRType(uint64_t hwcap, uint64_t hwcap2,
                                      uint64_t hwcap3);
