@@ -147,23 +147,15 @@ defm : X86WriteRes<WriteCMPXCHG,[SKXPort06, SKXPort0156], 5, [2,3], 5>;
 defm : X86WriteRes<WriteCMPXCHGRMW,[SKXPort23,SKXPort06,SKXPort0156,SKXPort237,SKXPort4], 8, [1,2,1,1,1], 6>;
 defm : X86WriteRes<WriteXCHG,       [SKXPort0156], 2, [3], 3>;
 
-// TODO: Why isn't the SKXDivider used?
-defm : SKXWriteResPair<WriteDiv8,  [SKXPort0, SKXDivider], 25, [1,10], 1, 4>;
-defm : X86WriteRes<WriteDiv16,     [SKXPort0,SKXPort1,SKXPort5,SKXPort6,SKXPort05,SKXPort0156], 76, [7,2,8,3,1,11], 32>;
-defm : X86WriteRes<WriteDiv32,     [SKXPort0,SKXPort1,SKXPort5,SKXPort6,SKXPort05,SKXPort0156], 76, [7,2,8,3,1,11], 32>;
-defm : X86WriteRes<WriteDiv64,     [SKXPort0,SKXPort1,SKXPort5,SKXPort6,SKXPort05,SKXPort0156], 76, [7,2,8,3,1,11], 32>;
-defm : X86WriteRes<WriteDiv16Ld,   [SKXPort0,SKXPort23,SKXDivider], 29, [1,1,10], 2>;
-defm : X86WriteRes<WriteDiv32Ld,   [SKXPort0,SKXPort23,SKXDivider], 29, [1,1,10], 2>;
-defm : X86WriteRes<WriteDiv64Ld,   [SKXPort0,SKXPort23,SKXDivider], 29, [1,1,10], 2>;
+defm : SKXWriteResPair<WriteDiv8,  [SKXPort0, SKXPort5, SKXPort06, SKXPort15, SKXPort0156, SKXDivider], 25, [2, 4, 1, 1, 2, 6],  10>;
+defm : SKXWriteResPair<WriteDiv16, [SKXPort0, SKXPort5, SKXPort06, SKXPort15, SKXPort0156, SKXDivider], 24, [2, 4, 1, 1, 2, 6],  10>;
+defm : SKXWriteResPair<WriteDiv32, [SKXPort0, SKXPort5, SKXPort06, SKXPort15, SKXPort0156, SKXDivider], 28, [2, 4, 1, 1, 2, 6],  10>;
+defm : SKXWriteResPair<WriteDiv64, [SKXPort0, SKXPort1, SKXPort5, SKXPort05, SKXPort06, SKXPort015, SKXPort0156, SKXDivider], 89, [2, 1, 3, 1, 13, 8, 5, 21], 36>;
 
-defm : X86WriteRes<WriteIDiv8,     [SKXPort0, SKXDivider], 25, [1,10], 1>;
-defm : X86WriteRes<WriteIDiv16,    [SKXPort0,SKXPort1,SKXPort5,SKXPort6,SKXPort06,SKXPort0156], 102, [4,2,4,8,14,34], 66>;
-defm : X86WriteRes<WriteIDiv32,    [SKXPort0,SKXPort1,SKXPort5,SKXPort6,SKXPort06,SKXPort0156], 102, [4,2,4,8,14,34], 66>;
-defm : X86WriteRes<WriteIDiv64,    [SKXPort0,SKXPort1,SKXPort5,SKXPort6,SKXPort06,SKXPort0156], 102, [4,2,4,8,14,34], 66>;
-defm : X86WriteRes<WriteIDiv8Ld,   [SKXPort0,SKXPort5,SKXPort23,SKXPort0156], 28, [2,4,1,1], 8>;
-defm : X86WriteRes<WriteIDiv16Ld,  [SKXPort0,SKXPort5,SKXPort23,SKXPort0156], 28, [2,4,1,1], 8>;
-defm : X86WriteRes<WriteIDiv32Ld,  [SKXPort0,SKXPort5,SKXPort23,SKXPort0156], 28, [2,4,1,1], 8>;
-defm : X86WriteRes<WriteIDiv64Ld,  [SKXPort0,SKXPort5,SKXPort23,SKXPort0156], 28, [2,4,1,1], 8>;
+defm : SKXWriteResPair<WriteIDiv8,  [SKXPort0, SKXPort5, SKXPort06, SKXPort15, SKXPort0156, SKXDivider], 25, [2, 4, 1, 1, 3, 6],  11>;
+defm : SKXWriteResPair<WriteIDiv16, [SKXPort0, SKXPort5, SKXPort06, SKXPort15, SKXPort0156, SKXDivider], 24, [2, 4, 1, 1, 2, 6],  10>;
+defm : SKXWriteResPair<WriteIDiv32, [SKXPort0, SKXPort5, SKXPort06, SKXPort15, SKXPort0156, SKXDivider], 28, [2, 4, 1, 1, 2, 6],  10>;
+defm : SKXWriteResPair<WriteIDiv64, [SKXPort0, SKXPort1, SKXPort5, SKXPort01, SKXPort05, SKXPort06, SKXPort15, SKXPort015, SKXDivider], 96, [2, 1, 3, 5, 7, 27, 5, 7, 24], 57>;
 
 defm : SKXWriteResPair<WriteCRC32, [SKXPort1], 3>;
 
