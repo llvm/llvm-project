@@ -12070,27 +12070,39 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
     return SDValue();
   }
 
-  // Determine which comparison instruction to use based on vector support.
-  // On VSX targets (pwr7+) use xscmpudp for both f32 and f64; extend f32 first.
-  // On non-VSX targets use fcmpu (FCMPUD for f64, FCMPUS for f32).
+  // Determine which comparison instruction to use based on vector support
   unsigned CmpOp;
+
   if (Subtarget.hasVSX()) {
-    if (VT == MVT::f32)
+    // Use xscmpudp for VSX targets (both f32 and f64)
+    // For f32, extend to f64 first
+    if (VT == MVT::f32) {
       LHS = DAG.getNode(ISD::FP_EXTEND, Dl, MVT::f64, LHS);
+    } else if (VT != MVT::f64) {
+      return SDValue();
+    }
     CmpOp = PPC::XSCMPUDP;
   } else {
-    CmpOp = (VT == MVT::f64) ? PPC::FCMPUD : PPC::FCMPUS;
+    // Use fcmpu for non-VSX targets
+    // FCMPUS and FCMPUD both map to the same fcmpu instruction,
+    // just with different register classes (f4rc vs f8rc)
+    if (VT == MVT::f64) {
+      CmpOp = PPC::FCMPUD;
+    } else if (VT == MVT::f32) {
+      CmpOp = PPC::FCMPUS;
+    } else {
+      return SDValue();
+    }
   }
 
-  // Create the comparison: xscmpudp/fcmpu CR, LHS, LHS
-  // The CR field output will be allocated by the register allocator.
+  // Create the comparison: fcmpu/xscmpudp CR, LHS, LHS
+  // The CR field output will be allocated by the register allocator
   SDValue Cmp = SDValue(DAG.getMachineNode(CmpOp, Dl, MVT::i32, LHS, LHS), 0);
 
-  // When useCRBits() is true, i1 is a legal CR-bit type (e.g. pwr8+).
-  // Extract the relevant CR sub-register, invert, and zero-extend to ResVT.
+  // When useCRBits() is true (64-bit targets), i1 is a legal CR-bit type.
+  // Extract the relevant CR sub-register, invert via getNOT, and
+  // zero-extend to ResVT if needed (ResVT == i1 on 64-bit, so no-op there).
   if (Subtarget.useCRBits()) {
-    // isNaN  (fcNan) : FU bit set when unordered => extract sub_eq, then NOT
-    // !isNaN (~fcNan): EQ bit set when ordered   => extract sub_un, then NOT
     SDValue NanCheck = SDValue(
         DAG.getMachineNode(
             TargetOpcode::EXTRACT_SUBREG, Dl, MVT::i1, Cmp,
@@ -12103,12 +12115,17 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
     return Result;
   }
 
-  // !useCRBits: i1 is not a legal type on targets where useCRBits() is false.
-  // Materialise the boolean result directly in ResVT without passing through i1.
+  // !useCRBits: i1 is not a legal type on PPC32.  Materialise the boolean
+  // result directly in ResVT (i32) without passing through i1.
   //
-  // fcmpu/xscmpudp CR bits: EQ=1, UN=0 when not NaN; EQ=0, UN=1 when NaN.
-  //   isNaN  (fcNan) : want 1 when unordered => SELECT_CC(LHS, LHS, 1, 0, UO)
-  //   !isNaN (~fcNan): want 1 when ordered   => SELECT_CC(LHS, LHS, 1, 0, O)
+  // fcmpu/xscmpudp sets CR bits: EQ=1, UN=0 when not NaN
+  //                               EQ=0, UN=1 when NaN
+  //
+  // isNaN  (fcNan) : want 1 when unordered  =>  SELECT_CC(LHS, LHS, 1, 0, UO)
+  // !isNaN (~fcNan): want 1 when ordered    =>  SELECT_CC(LHS, LHS, 1, 0, O)
+  //
+  // LHS may be an f32 extended to f64 for the VSX path above; NaN is
+  // preserved by FP_EXTEND so using LHS here is correct for both f32 and f64.
   ISD::CondCode CC = (Category == fcNan) ? ISD::SETUO : ISD::SETO;
   return DAG.getSelectCC(Dl, LHS, LHS, DAG.getConstant(1, Dl, ResVT),
                          DAG.getConstant(0, Dl, ResVT), CC);
