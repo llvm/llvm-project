@@ -991,7 +991,7 @@ class ValueObjectWrapperSyntheticChildren : public SyntheticChildren {
         return 0;
       }
       return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
+                                     name.AsCString(nullptr));
     }
 
     lldb::ChildCacheState Update() override {

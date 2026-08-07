@@ -684,7 +684,7 @@ llvm::Expected<size_t> lldb_private::formatters::swift::
   if (m_unsafe_ptr && m_unsafe_ptr->HasPointee() && name == "pointee")
     return 0;
   return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+                                 name.AsCString(nullptr));
 }
 
 SyntheticChildrenFrontEnd *

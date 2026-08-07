@@ -113,7 +113,7 @@ std::optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffsetRemoteAST(
     LLDB_LOGF(GetLog(LLDBLog::Types),
               "[MemberVariableOffsetResolver] type is a class - trying to "
               "get metadata for valueobject %s",
-              (instance ? instance->GetName().AsCString() : "<null>"));
+              (instance ? instance->GetName().AsCString(nullptr) : "<null>"));
     if (instance) {
       lldb::addr_t pointer = instance->GetPointerValue().address;
       if (!pointer || pointer == LLDB_INVALID_ADDRESS)
@@ -139,7 +139,7 @@ std::optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffsetRemoteAST(
           LLDB_LOGF(
               GetLog(LLDBLog::Types),
               "[MemberVariableOffsetResolver] resolved non-class type = %s",
-              bound.GetTypeName().AsCString());
+              bound.GetTypeName().AsCString(nullptr));
 
           swift_type = scratch_ctx->GetCanonicalSwiftType(bound).getPointer();
           MemberID key{swift_type, ConstString(member_name).GetCString()};
@@ -487,7 +487,7 @@ CompilerType SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(
                        result.getValue().getPointer()};
     if (log)
       log->Printf("[MetadataPromise] result is type %s",
-                  m_compiler_type->GetTypeName().AsCString());
+                  m_compiler_type->GetTypeName().AsCString(nullptr));
     return m_compiler_type.value();
   } else {
     const auto &failure = result.getFailure();

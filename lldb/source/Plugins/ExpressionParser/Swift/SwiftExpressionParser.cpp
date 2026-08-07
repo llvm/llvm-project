@@ -162,7 +162,7 @@ swift::SILValue LLDBNameLookup::emitLValueForVariable(
   ConstString variable_const_string(variable_name.get());
 
   SwiftExpressionParser::SILVariableMap::iterator vi =
-      m_variable_map.find(variable_const_string.AsCString());
+      m_variable_map.find(variable_const_string.AsCString(nullptr));
 
   if (vi == m_variable_map.end())
     return swift::SILValue();
@@ -1092,7 +1092,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
         log,
         "Added persistent variable %s with flags 0x%llx to "
         "struct at offset %llu",
-        variable_metadata->m_persistent_variable_sp->GetName().AsCString(),
+        variable_metadata->m_persistent_variable_sp->GetName().AsCString(nullptr),
         (unsigned long long)
             variable_metadata->m_persistent_variable_sp->m_flags,
         (unsigned long long)offset);

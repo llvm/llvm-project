@@ -463,7 +463,7 @@ public:
 
     dump_stream.Printf("0x%" PRIx64 ": EntityPersistentVariable (%s)\n",
                        load_addr,
-                       m_persistent_variable_sp->GetName().AsCString());
+                       m_persistent_variable_sp->GetName().AsCString(nullptr));
 
     {
       dump_stream.Printf("Pointer:\n");

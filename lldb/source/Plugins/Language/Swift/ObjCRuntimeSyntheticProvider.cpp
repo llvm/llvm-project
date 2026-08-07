@@ -125,5 +125,5 @@ ObjCRuntimeSyntheticProvider::FrontEnd::GetIndexOfChildWithName(
       return idx + GetNumBases();
   }
   return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+                                 name.AsCString(nullptr));
 }
