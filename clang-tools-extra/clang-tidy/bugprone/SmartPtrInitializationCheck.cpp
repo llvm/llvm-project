@@ -129,16 +129,27 @@ void SmartPtrInitializationCheck::check(
 
   const SourceLocation Loc = PointerArg->getBeginLoc();
   if (Loc.isValid()) {
-    const std::string TypeName = Record->getQualifiedNameAsString();
     diag(Loc, "passing a raw pointer '%0' to %1%2 may cause double deletion")
-        << getPointerDescription(PointerArg, *Result.Context) << TypeName
-        << (isa<CXXConstructorDecl>(MethodDecl) ? " constructor" : "::reset()");
+        << getRawPointerDescription(PointerArg, *Result.Context)
+        << getSmartPointerDescription(Record, *Result.Context)
+        << (isa<CXXConstructorDecl>(MethodDecl) ? " constructor"
+                                                : "::reset(...)");
   }
 }
 
-std::string
-SmartPtrInitializationCheck::getPointerDescription(const Expr *PointerExpr,
-                                                   const ASTContext &Context) {
+std::string SmartPtrInitializationCheck::getSmartPointerDescription(
+    const CXXRecordDecl *recordDecl, const ASTContext &context) {
+  clang::PrintingPolicy policy = context.getPrintingPolicy();
+
+  std::string result;
+  llvm::raw_string_ostream os(result);
+  recordDecl->getNameForDiagnostic(os, policy, /*Qualified=*/true);
+
+  return result;
+}
+
+std::string SmartPtrInitializationCheck::getRawPointerDescription(
+    const Expr *PointerExpr, const ASTContext &Context) {
   std::string Description;
   llvm::raw_string_ostream OS(Description);
 

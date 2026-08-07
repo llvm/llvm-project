@@ -15,24 +15,24 @@ A* getAPtr();
 
 void test_shared_ptr_constructor_macro1() {
   SHARED_PTR_A a(&getA());
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: passing a raw pointer '&getA()' to std::shared_ptr constructor may cause double deletion [bugprone-smart-ptr-initialization]
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: passing a raw pointer '&getA()' to std::shared_ptr<A> constructor may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
 void test_unique_ptr_constructor_macro1() {
   UNIQUE_PTR_A b(&getA());
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: passing a raw pointer '&getA()' to std::unique_ptr constructor may cause double deletion [bugprone-smart-ptr-initialization]
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: passing a raw pointer '&getA()' to std::unique_ptr<A> constructor may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
 #define GET_REFERENCE_TO_GETA_RESULT &getA()
 
 void test_shared_ptr_constructor_macro2() {
   std::shared_ptr<A> a(GET_REFERENCE_TO_GETA_RESULT);
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: passing a raw pointer '&getA()' to std::shared_ptr constructor may cause double deletion [bugprone-smart-ptr-initialization]
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: passing a raw pointer '&getA()' to std::shared_ptr<A> constructor may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
 void test_unique_ptr_constructor_macro2() {
   std::unique_ptr<A> b(GET_REFERENCE_TO_GETA_RESULT);
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: passing a raw pointer '&getA()' to std::unique_ptr constructor may cause double deletion [bugprone-smart-ptr-initialization]
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: passing a raw pointer '&getA()' to std::unique_ptr<A> constructor may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
 #define SHARED_PTR_THE_WHOLE_STATEMENT_IN_MACRO std::shared_ptr<A> a(&getA());
@@ -40,12 +40,12 @@ void test_unique_ptr_constructor_macro2() {
 
 void test_shared_ptr_constructor_macro3() {
   SHARED_PTR_THE_WHOLE_STATEMENT_IN_MACRO
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: passing a raw pointer '&getA()' to std::shared_ptr constructor may cause double deletion [bugprone-smart-ptr-initialization]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: passing a raw pointer '&getA()' to std::shared_ptr<A> constructor may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
 void test_unique_ptr_constructor_macro3() {
   UNIQUE_PTR_THE_WHOLE_STATEMENT_IN_MACRO
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: passing a raw pointer '&getA()' to std::unique_ptr constructor may cause double deletion [bugprone-smart-ptr-initialization]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: passing a raw pointer '&getA()' to std::unique_ptr<A> constructor may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
 #define COMPLICATED_SOURCE_LOCATION_FOR_A a(&
@@ -53,10 +53,10 @@ void test_unique_ptr_constructor_macro3() {
 
 void test_shared_ptr_constructor_macro4() {
   std::shared_ptr<A> COMPLICATED_SOURCE_LOCATION_FOR_A getA());
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: passing a raw pointer '&getA()' to std::shared_ptr constructor may cause double deletion [bugprone-smart-ptr-initialization]
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: passing a raw pointer '&getA()' to std::shared_ptr<A> constructor may cause double deletion [bugprone-smart-ptr-initialization]
 }
 
 void test_unique_ptr_constructor_macro5() {
   std::unique_ptr<A> COMPLICATED_SOURCE_LOCATION_FOR_B getA());
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: passing a raw pointer '&getA()' to std::unique_ptr constructor may cause double deletion [bugprone-smart-ptr-initialization]
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: passing a raw pointer '&getA()' to std::unique_ptr<A> constructor may cause double deletion [bugprone-smart-ptr-initialization]
 }

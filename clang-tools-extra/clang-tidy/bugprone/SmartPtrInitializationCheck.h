@@ -26,8 +26,10 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
-  std::string getPointerDescription(const Expr *PointerExpr,
-                                    const ASTContext &Context);
+  std::string getSmartPointerDescription(const CXXRecordDecl *PointerExpr,
+                                         const ASTContext &Context);
+  std::string getRawPointerDescription(const Expr *PointerExpr,
+                                       const ASTContext &Context);
   const std::vector<StringRef> SharedPointers;
   const std::vector<StringRef> UniquePointers;
   const std::vector<StringRef> DefaultDeleters;
