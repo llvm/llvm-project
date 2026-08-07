@@ -296,10 +296,20 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_ldexp:
   case AMDGPU::BI__builtin_amdgcn_ldexpf:
   case AMDGPU::BI__builtin_amdgcn_ldexph: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    mlir::Value src0 = emitScalarExpr(expr->getArg(0));
+    mlir::Value src1 = emitScalarExpr(expr->getArg(1));
+    // For ldexph, the raw instruction has different behavior for out-of-bounds
+    // exponent values (implicit truncation instead of saturate to
+    // short_min/short_max), so truncate the exponent to i16 first.
+    mlir::Value exp =
+        builtinId == AMDGPU::BI__builtin_amdgcn_ldexph
+            ? cir::CastOp::create(builder, getLoc(expr->getExprLoc()),
+                                  builder.getSInt16Ty(),
+                                  cir::CastKind::integral, src1)
+            : src1;
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()), "ldexp",
+                                       src0.getType(),
+                                       mlir::ValueRange{src0, exp});
   }
   case AMDGPU::BI__builtin_amdgcn_frexp_mant:
   case AMDGPU::BI__builtin_amdgcn_frexp_mantf:
