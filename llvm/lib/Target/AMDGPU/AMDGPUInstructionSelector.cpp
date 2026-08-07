@@ -7267,6 +7267,40 @@ AMDGPUInstructionSelector::selectVOP3PMadMixMods(MachineOperand &Root) const {
   }};
 }
 
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3PMadMixModsExtNeg(
+    MachineOperand &Root) const {
+  Register Src;
+  unsigned Mods;
+  bool Matched;
+  std::tie(Src, Mods) = selectVOP3PMadMixModsImpl(Root, Matched);
+  if (!Matched)
+    return {};
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) {
+        MIB.addImm(Mods ^ SISrcMods::NEG);
+      } // src_mods
+  }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3PMadMixModsNeg(
+    MachineOperand &Root) const {
+  Register Src;
+  unsigned Mods;
+  bool Matched;
+  std::tie(Src, Mods) = selectVOP3PMadMixModsImpl(Root, Matched);
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) {
+        MIB.addImm(Mods ^ SISrcMods::NEG);
+      } // src_mods
+  }};
+}
+
 bool AMDGPUInstructionSelector::selectSBarrierSignalIsfirst(
     MachineInstr &I, Intrinsic::ID IntrID) const {
   MachineBasicBlock *MBB = I.getParent();
