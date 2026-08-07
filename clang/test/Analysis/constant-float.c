@@ -63,7 +63,7 @@ void testNegation(void) {
 
 // Conversions between floating points should be modeled only when they are
 // exact. 3.14 stored in a double sets mantissa bits a float cannot hold, and
-// rounding direction is implementation-specific.
+// rounding direction can change at runtime.
 void testFloatConversions(void) {
   clang_analyzer_dump_double((double)1.5f); // expected-warning{{1.5 IEEEdouble}}
   clang_analyzer_dump_float((float)3.14);   // expected-warning{{Unknown}}
@@ -136,7 +136,7 @@ void testIntToFloat(void) {
   // 2^26 can be represented, 2^26 + 1 cannot.
   long yes = 1L << 26;
   long no = yes + 1L;
-  clang_analyzer_dump_float((float)yes);  // expected-warning{{67108864}}
+  clang_analyzer_dump_float((float)yes);  // expected-warning{{67108864 IEEEsingle}}
   clang_analyzer_dump_float((float)no);   // expected-warning{{Unknown}}
 }
 

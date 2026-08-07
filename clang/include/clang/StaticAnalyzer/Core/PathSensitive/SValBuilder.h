@@ -293,10 +293,13 @@ public:
   /// Create a concrete floating-point value. The value must satisfy
   /// \c isModeledFloatValue.
   nonloc::ConcreteFloat makeFloatVal(const FloatingLiteral *F) {
+    assert(isModeledFloatValue(F->getValue()) &&
+           "ConcreteFloat must be normal and finite");
     return nonloc::ConcreteFloat(BasicVals.getFloatValue(F->getValue()));
   }
 
   nonloc::ConcreteFloat makeFloatVal(const llvm::APFloat &F) {
+    assert(isModeledFloatValue(F) && "ConcreteFloat must be normal and finite");
     return nonloc::ConcreteFloat(BasicVals.getFloatValue(F));
   }
 
