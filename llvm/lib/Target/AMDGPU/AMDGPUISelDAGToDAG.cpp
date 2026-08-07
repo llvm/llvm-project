@@ -679,25 +679,6 @@ void AMDGPUDAGToDAGISel::SelectVectorShuffle(SDNode *N) {
   CurDAG->SelectNodeTo(N, TargetOpcode::REG_SEQUENCE, VT, Ops);
 }
 
-// Extracts that LowerEXTRACT_SUBVECTOR left alone are plain subregister
-// references.
-void AMDGPUDAGToDAGISel::SelectExtractSubvector(SDNode *N) {
-  const auto &TLI =
-      static_cast<const AMDGPUTargetLowering &>(*getTargetLowering());
-
-  EVT VT = N->getValueType(0);
-  SDValue Src = N->getOperand(0);
-  unsigned SubReg = TLI.getExtractSubvectorSubReg(VT, Src.getValueType(),
-                                                  N->getConstantOperandVal(1));
-  if (SubReg == AMDGPU::NoSubRegister) {
-    SelectCode(N);
-    return;
-  }
-
-  ReplaceNode(
-      N, CurDAG->getTargetExtractSubreg(SubReg, SDLoc(N), VT, Src).getNode());
-}
-
 void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   unsigned int Opc = N->getOpcode();
   if (N->isMachineOpcode()) {
@@ -775,9 +756,6 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   }
   case ISD::VECTOR_SHUFFLE:
     SelectVectorShuffle(N);
-    return;
-  case ISD::EXTRACT_SUBVECTOR:
-    SelectExtractSubvector(N);
     return;
   case ISD::BUILD_PAIR: {
     SDValue RC, SubReg0, SubReg1;

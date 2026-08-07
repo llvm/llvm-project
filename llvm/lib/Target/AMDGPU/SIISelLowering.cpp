@@ -2440,8 +2440,20 @@ unsigned SITargetLowering::getExtractSubvectorSubReg(EVT ResVT, EVT SrcVT,
   if (SizeInBits % 32 != 0 || OffsetInBits % 32 != 0)
     return AMDGPU::NoSubRegister;
 
-  unsigned SubReg = SIRegisterInfo::getSubRegFromChannelOrNone(
-      OffsetInBits / 32, SizeInBits / 32);
+  // Isel matches this as an EXTRACT_SUBREG through patterns that have to spell
+  // out the sub register index, so a run of registers is only usable here if
+  // SIRegisterInfo.td declares an index naming it. Widths it does not declare
+  // still get an index, but only one synthesized to describe 16 bit lanes,
+  // which no pattern can refer to. Saying yes to a width the patterns do not
+  // cover leaves an unselectable extract_subvector behind, so this list has to
+  // stay a subset of SubRegTupleWidths there.
+  static constexpr unsigned NameableWidths[] = {2, 3, 4, 5, 6, 8, 16};
+  unsigned NumRegs = SizeInBits / 32;
+  if (!is_contained(NameableWidths, NumRegs))
+    return AMDGPU::NoSubRegister;
+
+  unsigned SubReg =
+      SIRegisterInfo::getSubRegFromChannelOrNone(OffsetInBits / 32, NumRegs);
   if (SubReg == AMDGPU::NoSubRegister)
     return AMDGPU::NoSubRegister;
 
