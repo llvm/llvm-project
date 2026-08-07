@@ -108,13 +108,32 @@ LLVM_ABI extern bool VerifySCEV;
 /// at runtime.  A SCEV being defined does not require the existence of any
 /// instruction within the defined scope.
 enum class SCEVNoWrapFlags {
-  FlagAnyWrap = 0,    // No guarantee.
-  FlagNW = (1 << 0),  // No self-wrap.
-  FlagNUW = (1 << 1), // No unsigned wrap.
-  FlagNSW = (1 << 2), // No signed wrap.
-  NoWrapMask = (1 << 3) - 1,
+  FlagAnyWrap = 0,     // No guarantee.
+  FlagNW = (1 << 0),   // No self-wrap.
+  FlagNUW = (1 << 1),  // No unsigned wrap.
+  FlagNSW = (1 << 2),  // No signed wrap.
+  FlagNUSW = (1 << 3), // No unsigned signed wrap.
+  NoWrapMask = (1 << 4) - 1,
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/NoWrapMask)
 };
+
+/// Convenient NoWrapFlags manipulation.
+[[nodiscard]] inline SCEVNoWrapFlags maskFlags(SCEVNoWrapFlags Flags,
+                                               SCEVNoWrapFlags Mask) {
+  return Flags & Mask;
+}
+[[nodiscard]] inline SCEVNoWrapFlags setFlags(SCEVNoWrapFlags Flags,
+                                              SCEVNoWrapFlags OnFlags) {
+  return Flags | OnFlags;
+}
+[[nodiscard]] inline SCEVNoWrapFlags clearFlags(SCEVNoWrapFlags Flags,
+                                                SCEVNoWrapFlags OffFlags) {
+  return Flags & ~OffFlags;
+}
+[[nodiscard]] inline bool hasFlags(SCEVNoWrapFlags Flags,
+                                   SCEVNoWrapFlags TestFlags) {
+  return TestFlags == maskFlags(Flags, TestFlags);
+}
 
 class SCEV;
 
@@ -278,6 +297,7 @@ public:
   static constexpr auto FlagNW = SCEVNoWrapFlags::FlagNW;
   static constexpr auto FlagNUW = SCEVNoWrapFlags::FlagNUW;
   static constexpr auto FlagNSW = SCEVNoWrapFlags::FlagNSW;
+  static constexpr auto FlagNUSW = SCEVNoWrapFlags::FlagNUSW;
   static constexpr auto NoWrapMask = SCEVNoWrapFlags::NoWrapMask;
 
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
@@ -510,50 +530,21 @@ public:
     IncrementNoWrapMask = (1 << 2) - 1
   };
 
-  /// Convenient IncrementWrapFlags manipulation methods.
-  [[nodiscard]] static SCEVWrapPredicate::IncrementWrapFlags
-  clearFlags(SCEVWrapPredicate::IncrementWrapFlags Flags,
-             SCEVWrapPredicate::IncrementWrapFlags OffFlags) {
-    assert((Flags & IncrementNoWrapMask) == Flags && "Invalid flags value!");
-    assert((OffFlags & IncrementNoWrapMask) == OffFlags &&
-           "Invalid flags value!");
-    return (SCEVWrapPredicate::IncrementWrapFlags)(Flags & ~OffFlags);
-  }
-
-  [[nodiscard]] static SCEVWrapPredicate::IncrementWrapFlags
-  maskFlags(SCEVWrapPredicate::IncrementWrapFlags Flags, int Mask) {
-    assert((Flags & IncrementNoWrapMask) == Flags && "Invalid flags value!");
-    assert((Mask & IncrementNoWrapMask) == Mask && "Invalid mask value!");
-
-    return (SCEVWrapPredicate::IncrementWrapFlags)(Flags & Mask);
-  }
-
-  [[nodiscard]] static SCEVWrapPredicate::IncrementWrapFlags
-  setFlags(SCEVWrapPredicate::IncrementWrapFlags Flags,
-           SCEVWrapPredicate::IncrementWrapFlags OnFlags) {
-    assert((Flags & IncrementNoWrapMask) == Flags && "Invalid flags value!");
-    assert((OnFlags & IncrementNoWrapMask) == OnFlags &&
-           "Invalid flags value!");
-
-    return (SCEVWrapPredicate::IncrementWrapFlags)(Flags | OnFlags);
-  }
-
   /// Returns the set of SCEVWrapPredicate no wrap flags implied by a
   /// SCEVAddRecExpr.
-  [[nodiscard]] static SCEVWrapPredicate::IncrementWrapFlags
-  getImpliedFlags(const SCEVAddRecExpr *AR, ScalarEvolution &SE);
+  [[nodiscard]] static SCEVNoWrapFlags getImpliedFlags(const SCEVAddRecExpr *AR,
+                                                       ScalarEvolution &SE);
 
 private:
   const SCEVAddRecExpr *AR;
-  IncrementWrapFlags Flags;
+  SCEVNoWrapFlags Flags;
 
 public:
   explicit SCEVWrapPredicate(const FoldingSetNodeIDRef ID,
-                             const SCEVAddRecExpr *AR,
-                             IncrementWrapFlags Flags);
+                             const SCEVAddRecExpr *AR, SCEVNoWrapFlags Flags);
 
   /// Returns the set assumed no overflow flags.
-  IncrementWrapFlags getFlags() const { return Flags; }
+  SCEVNoWrapFlags getFlags() const { return Flags; }
 
   /// Implementation of the SCEVPredicate interface
   const SCEVAddRecExpr *getExpr() const;
@@ -634,25 +625,6 @@ public:
     DoesNotDominateBlock,  ///< The SCEV does not dominate the block.
     DominatesBlock,        ///< The SCEV dominates the block.
     ProperlyDominatesBlock ///< The SCEV properly dominates the block.
-  };
-
-  /// Convenient NoWrapFlags manipulation. TODO: Replace with & operator of
-  /// enum class.
-  [[nodiscard]] static SCEV::NoWrapFlags maskFlags(SCEV::NoWrapFlags Flags,
-                                                   SCEV::NoWrapFlags Mask) {
-    return Flags & Mask;
-  }
-  [[nodiscard]] static SCEV::NoWrapFlags setFlags(SCEV::NoWrapFlags Flags,
-                                                  SCEV::NoWrapFlags OnFlags) {
-    return Flags | OnFlags;
-  }
-  [[nodiscard]] static SCEV::NoWrapFlags
-  clearFlags(SCEV::NoWrapFlags Flags, SCEV::NoWrapFlags OffFlags) {
-    return Flags & ~OffFlags;
-  }
-  [[nodiscard]] static bool hasFlags(SCEV::NoWrapFlags Flags,
-                                     SCEV::NoWrapFlags TestFlags) {
-    return TestFlags == maskFlags(Flags, TestFlags);
   };
 
   LLVM_ABI ScalarEvolution(Function &F, TargetLibraryInfo &TLI,
@@ -1520,9 +1492,8 @@ public:
                                                     const SCEV *LHS,
                                                     const SCEV *RHS);
 
-  LLVM_ABI const SCEVPredicate *
-  getWrapPredicate(const SCEVAddRecExpr *AR,
-                   SCEVWrapPredicate::IncrementWrapFlags AddedFlags);
+  LLVM_ABI const SCEVPredicate *getWrapPredicate(const SCEVAddRecExpr *AR,
+                                                 SCEVNoWrapFlags AddedFlags);
 
   /// Re-writes the SCEV according to the Predicates in \p A.
   LLVM_ABI const SCEV *rewriteUsingPredicate(const SCEV *S, const Loop *L,
@@ -2674,8 +2645,7 @@ public:
               SmallVectorImpl<const SCEVPredicate *> *WrapPredsAdded = nullptr);
 
   /// Returns true if we've statically proved that V doesn't wrap.
-  LLVM_ABI bool hasNoOverflow(Value *V,
-                              SCEVWrapPredicate::IncrementWrapFlags Flags);
+  LLVM_ABI bool hasNoOverflow(Value *V, SCEVNoWrapFlags Flags);
 
   /// Returns the ScalarEvolution analysis used.
   ScalarEvolution *getSE() const { return &SE; }

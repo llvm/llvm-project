@@ -690,7 +690,7 @@ Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
         auto NWFlags = S.getNoWrapFlags();
         // clear nsw flag if shl will produce poison value.
         if (RHS->logBase2() == RHS->getBitWidth() - 1)
-          NWFlags = ScalarEvolution::clearFlags(NWFlags, SCEV::FlagNSW);
+          NWFlags = clearFlags(NWFlags, SCEV::FlagNSW);
         Prod = InsertBinop(Instruction::Shl, Prod,
                            ConstantInt::get(Ty, RHS->logBase2()), NWFlags,
                            /*IsSafeToHoist*/ true);
@@ -842,10 +842,10 @@ bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos,
     if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
       if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
         auto *BO = cast<BinaryOperator>(I);
-        BO->setHasNoUnsignedWrap(
-            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
-        BO->setHasNoSignedWrap(
-            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
+        BO->setHasNoUnsignedWrap(maskFlags(*Flags, SCEV::FlagNUW) ==
+                                 SCEV::FlagNUW);
+        BO->setHasNoSignedWrap(maskFlags(*Flags, SCEV::FlagNSW) ==
+                               SCEV::FlagNSW);
       }
   };
 
@@ -1764,10 +1764,9 @@ void SCEVExpander::dropPoisonGeneratingAnnotationsAndReinfer(
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
     if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
       auto *BO = cast<BinaryOperator>(I);
-      BO->setHasNoUnsignedWrap(
-          ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
-      BO->setHasNoSignedWrap(
-          ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
+      BO->setHasNoUnsignedWrap(maskFlags(*Flags, SCEV::FlagNUW) ==
+                               SCEV::FlagNUW);
+      BO->setHasNoSignedWrap(maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
     }
   if (auto *NNI = dyn_cast<PossiblyNonNegInst>(I)) {
     auto *Src = NNI->getOperand(0);
@@ -2398,11 +2397,11 @@ Value *SCEVExpander::expandWrapPredicate(const SCEVWrapPredicate *Pred,
   Value *NSSWCheck = nullptr, *NUSWCheck = nullptr;
 
   // Add a check for NUSW
-  if (Pred->getFlags() & SCEVWrapPredicate::IncrementNUSW)
+  if (any(Pred->getFlags() & SCEV::FlagNUSW))
     NUSWCheck = generateOverflowCheck(A, IP, false);
 
   // Add a check for NSSW
-  if (Pred->getFlags() & SCEVWrapPredicate::IncrementNSSW)
+  if (any(Pred->getFlags() & SCEV::FlagNSW))
     NSSWCheck = generateOverflowCheck(A, IP, true);
 
   if (NUSWCheck && NSSWCheck)

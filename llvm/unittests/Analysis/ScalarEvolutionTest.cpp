@@ -442,17 +442,15 @@ TEST_F(ScalarEvolutionsTest, SCEVAddExpr) {
   EXPECT_EQ(AddWithNSW_NUW->getNumOperands(), 3u);
   EXPECT_EQ(AddWithNSW_NUW->getNoWrapFlags(), SCEV::FlagAnyWrap);
 
-  const SCEV *AddWithNSWNUW =
-      SE.getAddExpr(SE.getSCEV(A2), SE.getSCEV(A4),
-                    ScalarEvolution::setFlags(SCEV::FlagNUW, SCEV::FlagNSW));
+  const SCEV *AddWithNSWNUW = SE.getAddExpr(
+      SE.getSCEV(A2), SE.getSCEV(A4), setFlags(SCEV::FlagNUW, SCEV::FlagNSW));
   auto *AddWithNSWNUW_NUW = cast<SCEVAddExpr>(
       SE.getAddExpr(AddWithNSWNUW, SE.getSCEV(A5), SCEV::FlagNUW));
   EXPECT_EQ(AddWithNSWNUW_NUW->getNumOperands(), 3u);
   EXPECT_EQ(AddWithNSWNUW_NUW->getNoWrapFlags(), SCEV::FlagNUW);
 
-  auto *AddWithNSW_NSWNUW = cast<SCEVAddExpr>(
-      SE.getAddExpr(AddWithNSW, SE.getSCEV(A6),
-                    ScalarEvolution::setFlags(SCEV::FlagNUW, SCEV::FlagNSW)));
+  auto *AddWithNSW_NSWNUW = cast<SCEVAddExpr>(SE.getAddExpr(
+      AddWithNSW, SE.getSCEV(A6), setFlags(SCEV::FlagNUW, SCEV::FlagNSW)));
   EXPECT_EQ(AddWithNSW_NSWNUW->getNumOperands(), 3u);
   EXPECT_EQ(AddWithNSW_NSWNUW->getNoWrapFlags(), SCEV::FlagAnyWrap);
 }

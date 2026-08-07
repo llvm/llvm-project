@@ -1041,7 +1041,7 @@ isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
   if (any(AR->getNoWrapFlags(SCEV::NoWrapMask)))
     return true;
 
-  if (Ptr && PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
+  if (Ptr && PSE.hasNoOverflow(Ptr, SCEV::FlagNUSW))
     return true;
 
   // An nusw getelementptr that is an AddRec cannot wrap. If it would wrap,
@@ -1079,9 +1079,8 @@ isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
 
   if (Ptr && Predicates) {
     ScalarEvolution &SE = *PSE.getSE();
-    SCEVWrapPredicate::IncrementWrapFlags Flags = SCEVWrapPredicate::clearFlags(
-        SCEVWrapPredicate::IncrementNUSW,
-        SCEVWrapPredicate::getImpliedFlags(AR, SE));
+    SCEVNoWrapFlags Flags =
+        clearFlags(SCEV::FlagNUSW, SCEVWrapPredicate::getImpliedFlags(AR, SE));
     Predicates->push_back(SE.getWrapPredicate(AR, Flags));
     LLVM_DEBUG(dbgs() << "LAA: Pointer may wrap:\n"
                       << "LAA:   Pointer: " << *Ptr << "\n"

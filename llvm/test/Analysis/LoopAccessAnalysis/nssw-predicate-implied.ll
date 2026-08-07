@@ -25,7 +25,7 @@ define void @wrap_check_iv.3_implies_iv.2(i32 noundef %N, ptr %dst, ptr %src) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {0,+,3}<%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,3}<%loop> Added Flags: <nsw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
@@ -80,7 +80,7 @@ define void @wrap_check_iv.3_implies_iv.2_different_start(i32 noundef %N, ptr %d
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {2,+,2}<%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {2,+,2}<%loop> Added Flags: <nsw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
@@ -135,7 +135,7 @@ define void @wrap_check_iv.3_implies_iv.2_predicates_added_in_different_order(i3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {0,+,3}<%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,3}<%loop> Added Flags: <nsw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.iv.3 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.3:
@@ -189,8 +189,8 @@ define void @wrap_check_iv.3_does_not_implies_iv.2_due_to_start(i32 noundef %N, 
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {0,+,3}<%loop> Added Flags: <nssw>
-; CHECK-NEXT:      {10,+,2}<%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,3}<%loop> Added Flags: <nsw>
+; CHECK-NEXT:      {10,+,2}<%loop> Added Flags: <nsw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
@@ -244,8 +244,8 @@ define void @wrap_check_iv.3_does_not_imply_iv.2_due_to_start_negative(i32 nound
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {-1,+,3}<%loop> Added Flags: <nssw>
-; CHECK-NEXT:      {0,+,2}<%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {-1,+,3}<%loop> Added Flags: <nsw>
+; CHECK-NEXT:      {0,+,2}<%loop> Added Flags: <nsw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
@@ -299,8 +299,8 @@ define void @wrap_check_iv.3_does_not_imply_iv.2_due_to_negative_step(i32 nounde
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {0,+,-1}<%loop> Added Flags: <nssw>
-; CHECK-NEXT:      {0,+,2}<%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,-1}<%loop> Added Flags: <nsw>
+; CHECK-NEXT:      {0,+,2}<%loop> Added Flags: <nsw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
@@ -357,8 +357,8 @@ define void @wider_i32_nssw_does_not_imply_narrower_i8_nssw(ptr %dst, ptr %src, 
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i32 %N to i1) to i32) == 0
-; CHECK-NEXT:      {0,+,2}<%loop> Added Flags: <nssw>
-; CHECK-NEXT:      {0,+,1}<%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,2}<%loop> Added Flags: <nsw>
+; CHECK-NEXT:      {0,+,1}<%loop> Added Flags: <nsw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.1:
@@ -411,7 +411,7 @@ define void @narrower_i8_nssw_implies_wider_i32_nssw(ptr %dst, ptr %src, i32 %N)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {0,+,2}<%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,2}<%loop> Added Flags: <nsw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.1:

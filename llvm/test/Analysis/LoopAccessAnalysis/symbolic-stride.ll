@@ -475,7 +475,7 @@ define void @unknown_stride_equalto_tc(i32 %N, ptr %A, ptr %B, i32 %j)  {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {%j,+,%N}<%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {%j,+,%N}<%loop> Added Flags: <nsw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:
@@ -526,7 +526,7 @@ define void @unknown_stride_equalto_zext_tc(i16 zeroext %N, ptr %A, ptr %B, i32 
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {%j,+,(zext i16 %N to i32)}<nw><%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {%j,+,(zext i16 %N to i32)}<nw><%loop> Added Flags: <nsw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:
@@ -577,7 +577,7 @@ define void @unknown_stride_equalto_sext_tc(i16 %N, ptr %A, ptr %B, i32 %j) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {%j,+,(sext i16 %N to i32)}<nw><%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {%j,+,(sext i16 %N to i32)}<nw><%loop> Added Flags: <nsw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:
@@ -628,7 +628,7 @@ define void @unknown_stride_equalto_trunc_tc(i64 %N, ptr %A, ptr %B, i32 %j) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {%j,+,(trunc i64 %N to i32)}<nw><%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {%j,+,(trunc i64 %N to i32)}<nw><%loop> Added Flags: <nsw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add:

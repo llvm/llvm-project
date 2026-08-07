@@ -820,10 +820,8 @@ bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
   if (!Flags)
     return false;
 
-  BO->setHasNoUnsignedWrap(ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) ==
-                           SCEV::FlagNUW);
-  BO->setHasNoSignedWrap(ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) ==
-                         SCEV::FlagNSW);
+  BO->setHasNoUnsignedWrap(maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
+  BO->setHasNoSignedWrap(maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
 
   // The getStrengthenedNoWrapFlagsFromBinOp() check inferred additional nowrap
   // flags on addrecs while performing zero/sign extensions. We could call

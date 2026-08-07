@@ -371,7 +371,7 @@ public:
   /// to make it easier to propagate flags.
   void setNoWrapFlags(NoWrapFlags Flags) {
     if (any(Flags & (FlagNUW | FlagNSW)))
-      Flags = ScalarEvolution::setFlags(Flags, FlagNW);
+      Flags = setFlags(Flags, FlagNW);
     SubclassData |= static_cast<unsigned short>(Flags);
   }
 
