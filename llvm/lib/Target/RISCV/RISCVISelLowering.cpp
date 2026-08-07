@@ -904,6 +904,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                         ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT},
                        MVT::i32, Custom);
     setOperationAction(ISD::LROUND, MVT::i32, Custom);
+    setOperationAction(ISD::LRINT, MVT::i32, Custom);
   }
 
   if (Subtarget.hasStdExtFOrZfinx()) {
@@ -15741,7 +15742,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(Chain);
     break;
   }
-  case ISD::LROUND: {
+  case ISD::LROUND:
+  case ISD::LRINT: {
+    bool IsLRound = N->getOpcode() == ISD::LROUND;
     SDValue Op0 = N->getOperand(0);
     EVT Op0VT = Op0.getValueType();
     if (getTypeAction(*DAG.getContext(), Op0.getValueType()) !=
@@ -15753,17 +15756,21 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       if (Op0.getValueType() == MVT::f16 && !Subtarget.hasStdExtZfhOrZhinx())
         Op0 = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op0);
 
-      SDValue Res =
-          DAG.getNode(RISCVISD::FCVT_W_RV64, DL, MVT::i64, Op0,
-                      DAG.getTargetConstant(RISCVFPRndMode::RMM, DL, MVT::i64));
+      // LROUND rounds ties away from zero (RMM); LRINT uses the current
+      // rounding mode (DYN). fcvt.w saturates out-of-range results to
+      // INT32_MAX/INT32_MIN (NaN -> 0).
+      auto RndMode = IsLRound ? RISCVFPRndMode::RMM : RISCVFPRndMode::DYN;
+      SDValue Res = DAG.getNode(RISCVISD::FCVT_W_RV64, DL, MVT::i64, Op0,
+                                DAG.getTargetConstant(RndMode, DL, MVT::i64));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
-    // If the FP type needs to be softened, emit a library call to lround. We'll
-    // need to truncate the result. We assume any value that doesn't fit in i32
-    // is allowed to return an unspecified value.
-    RTLIB::Libcall LC = RTLIB::getLROUND(Op0.getValueType());
-    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected FP type for LROUND!");
+    // If the FP type needs to be softened, emit a library call to lround/lrint.
+    // We'll need to truncate the result. We assume any value that doesn't fit
+    // in i32 is allowed to return an unspecified value.
+    RTLIB::Libcall LC = IsLRound ? RTLIB::getLROUND(Op0.getValueType())
+                                 : RTLIB::getLRINT(Op0.getValueType());
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected FP type!");
     MakeLibCallOptions CallOptions;
     EVT OpVT = Op0.getValueType();
     CallOptions.setTypeListBeforeSoften(OpVT, MVT::i64);

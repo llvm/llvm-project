@@ -573,3 +573,39 @@ define i32 @lround_f128() nounwind {
   %r = call i32 @llvm.lround.f128(fp128 %1)
   ret i32 %r
 }
+
+define i32 @lrint_f128() nounwind {
+; RV32I-LABEL: lrint_f128:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -32
+; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    lui a0, %hi(x)
+; RV32I-NEXT:    lw a1, %lo(x)(a0)
+; RV32I-NEXT:    lw a2, %lo(x+4)(a0)
+; RV32I-NEXT:    lw a3, %lo(x+8)(a0)
+; RV32I-NEXT:    lw a4, %lo(x+12)(a0)
+; RV32I-NEXT:    addi a0, sp, 8
+; RV32I-NEXT:    sw a1, 8(sp)
+; RV32I-NEXT:    sw a2, 12(sp)
+; RV32I-NEXT:    sw a3, 16(sp)
+; RV32I-NEXT:    sw a4, 20(sp)
+; RV32I-NEXT:    call lrintl
+; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: lrint_f128:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    lui a1, %hi(x)
+; RV64I-NEXT:    ld a0, %lo(x)(a1)
+; RV64I-NEXT:    ld a1, %lo(x+8)(a1)
+; RV64I-NEXT:    call lrintl
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = load fp128, ptr @x, align 16
+  %r = call i32 @llvm.lrint.f128(fp128 %1)
+  ret i32 %r
+}
