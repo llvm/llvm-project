@@ -244,7 +244,7 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ExistentialRemoteAST(
       existential_address, swift::remote::RemoteAddress::DefaultAddressSpace);
   auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
   auto swift_type =
-      llvm::expectedToStdOptional(swift_ast_ctx->GetSwiftType(existential_type))
+      llvm::expectedToOptional(swift_ast_ctx->GetSwiftType(existential_type))
           .value_or(swift::Type());
   if (!swift_type)
     return {};
@@ -297,7 +297,7 @@ SwiftLanguageRuntime::BindGenericTypeParametersRemoteAST(
 
   if (base_type.GetTypeInfo() & lldb::eTypeIsSwift) {
     swift::Type target_swift_type(
-        llvm::expectedToStdOptional(swift_ast_ctx->GetSwiftType(base_type))
+        llvm::expectedToOptional(swift_ast_ctx->GetSwiftType(base_type))
             .value_or(swift::Type()));
     if (target_swift_type->hasArchetype())
       target_swift_type = target_swift_type->mapTypeOutOfEnvironment().getPointer();
@@ -429,7 +429,7 @@ SwiftLanguageRuntime::BindGenericTypeParametersRemoteAST(
 
           if (!target_concrete_type.IsValid())
             return type;
-          return llvm::expectedToStdOptional(
+          return llvm::expectedToOptional(
                      swift_ast_ctx->GetSwiftType(target_concrete_type))
               .value_or(swift::Type());
         },
