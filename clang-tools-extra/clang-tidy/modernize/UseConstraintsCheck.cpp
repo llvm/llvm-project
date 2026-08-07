@@ -68,8 +68,8 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
 
   if (const auto SpecializationLoc =
           TheType.getAs<TemplateSpecializationTypeLoc>()) {
-    const auto *Specialization =
-        dyn_cast<TemplateSpecializationType>(SpecializationLoc.getTypePtr());
+    const TemplateSpecializationType *Specialization =
+        SpecializationLoc.getTypePtr();
     if (!Specialization)
       return std::nullopt;
 
@@ -98,8 +98,8 @@ static std::optional<TemplateSpecializationTypeLoc>
 matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
   if (const auto SpecializationLoc =
           TheType.getAs<TemplateSpecializationTypeLoc>()) {
-    const auto *Specialization =
-        dyn_cast<TemplateSpecializationType>(SpecializationLoc.getTypePtr());
+    const TemplateSpecializationType *Specialization =
+        SpecializationLoc.getTypePtr();
     if (!Specialization)
       return std::nullopt;
 

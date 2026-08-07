@@ -91,7 +91,7 @@ static bool isVarPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
 static bool isVarThatIsPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
                                        const Stmt *Cond, ASTContext *Context) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
-    if (const auto *VD = dyn_cast<ValueDecl>(DRE->getDecl()))
+    if (const ValueDecl *VD = DRE->getDecl())
       return isVarPossiblyChanged(Func, LoopStmt, VD, Context);
   } else if (isa<MemberExpr, CallExpr, ObjCIvarRefExpr, ObjCPropertyRefExpr,
                  ObjCMessageExpr>(Cond)) {
