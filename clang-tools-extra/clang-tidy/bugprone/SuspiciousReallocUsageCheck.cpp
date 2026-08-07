@@ -81,9 +81,9 @@ public:
 
   bool VisitDeclStmt(const DeclStmt *S) {
     for (const Decl *D : S->getDeclGroup())
-      if (const auto *LeftVar = dyn_cast<VarDecl>(D))
-        if (LeftVar->hasInit())
-          return isAccessForVar(LeftVar->getInit());
+      if (const auto *LeftVar = dyn_cast<VarDecl>(D);
+          LeftVar && LeftVar->hasInit())
+        return isAccessForVar(LeftVar->getInit());
     return false;
   }
   bool VisitBinaryOperator(const BinaryOperator *S) {
@@ -140,9 +140,10 @@ void SuspiciousReallocUsageCheck::check(
           dyn_cast<DeclRefExpr>(PtrInputExpr->IgnoreParenImpCasts()))
     if (const auto *Var = dyn_cast<VarDecl>(DeclRef->getDecl()))
       if (const auto *Func =
-              Result.Nodes.getNodeAs<FunctionDecl>("parent_function"))
-        if (FindAssignToVarBefore{Var, DeclRef, SM}.Visit(Func->getBody()))
-          return;
+              Result.Nodes.getNodeAs<FunctionDecl>("parent_function");
+          Func &&
+          FindAssignToVarBefore{Var, DeclRef, SM}.Visit(Func->getBody()))
+        return;
 
   const StringRef CodeOfAssignedExpr = Lexer::getSourceText(
       CharSourceRange::getTokenRange(PtrResultExpr->getSourceRange()), SM,
