@@ -22,10 +22,9 @@
 #include <concepts>
 #include <memory>
 #include <ranges>
-#include <type_traits>
 #include <utility>
 
-#include "test_iterators.h"
+#include "type_algorithms.h"
 
 #include "../../range_adaptor_types.h"
 #include "../types.h"
