@@ -1,14 +1,14 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s --check-prefix=SIMPLE
 ; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s --check-prefix=SIMPLE
+; RUN: llc < %s -O0 -enable-tail-merge=0 | FileCheck %s --check-prefix=MULTI-ASM
 ; RUN: llc < %s -O0 -enable-tail-merge=0 -filetype=obj | llvm-readobj - --codeview | FileCheck %s --check-prefix=MULTI
 
 ; Check that the compatibility S_REGREL32 record used for an implicit C++
-; `this` pointer is bounded by the containing procedure's debug range. In
-; particular, the range must end before the stack frame is restored.
-;
-; A stack-based implicit `this` cannot use S_REGREL32 when a function has
-; multiple epilogues. Each epilogue must instead be represented as a gap in
-; S_DEFRANGE_REGISTER_REL.
+; `this` pointer is bounded by the containing procedure's debug range,
+; including when the function has multiple epilogues.
+
+; MULTI-ASM-LABEL: "?f@foo@@QEAAXH@Z":
+; MULTI-ASM-COUNT-3: retq
 
 ; SIMPLE:      GlobalProcIdSym {
 ; SIMPLE:        CodeSize: 0x{{[1-9A-Fa-f][0-9A-Fa-f]*}}
@@ -27,7 +27,7 @@
 ; MULTI:        DbgEnd: 0x{{[1-9A-Fa-f][0-9A-Fa-f]*}}
 ; MULTI-LABEL: DisplayName: foo::f
 ; MULTI:        LinkageName: ?f@foo@@QEAAXH@Z
-; MULTI:      RegRelativeSym {
+; MULTI-COUNT-1: RegRelativeSym {
 ; MULTI-NEXT:   Kind: S_REGREL32 (0x1111)
 ; MULTI:        VarName: this
 
