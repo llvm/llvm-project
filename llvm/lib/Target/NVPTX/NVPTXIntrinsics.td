@@ -824,6 +824,7 @@ multiclass TMA_TENSOR_S2G_INTR<int dim, string mode,
   // Fix-up the asm_str when it is im2col/scatter4.
   defvar mode_asm_str = !cond(
                           !eq(mode, "im2col") : "im2col_no_offs",
+                          !eq(mode, "im2col_w") : "im2col_no_offs::w",
                           !eq(mode, "tile_scatter4") : "tile::scatter4",
                           true : mode);
   defvar prefix = "cp.async.bulk.tensor"
@@ -849,6 +850,11 @@ foreach dim = 1...5 in {
     defm TMA_TENSOR_S2G_ # suffix : TMA_TENSOR_S2G_INTR<dim, mode>;
   }
 }
+foreach dim = 3...5 in {
+  defm TMA_TENSOR_S2G_IM2COL_W_ # dim # D
+    : TMA_TENSOR_S2G_INTR<dim, "im2col_w",
+                          [callSubtarget<"hasRubinFamilySupport">]>;
+}
 defm TMA_S2G_TILE_SCATTER4_2D : TMA_TENSOR_S2G_INTR<5, "tile_scatter4",
                                 [callSubtarget<"hasTMABlackwellSupport">]>;
 
@@ -860,14 +866,15 @@ def tma_tensor_reduction_imm :
     TImmLeaf<i32, [{ return Imm >= 0 && Imm < 8; }]>;
 
 // TMA Copy from Shared to Global memory with Reduction
-multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode> {
+multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode,
+                                            list<Predicate> pred = [hasPTX<80>, SM90]> {
   defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
   defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
   defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
 
-  // For im2col mode, the actual asm_str is "im2col_no_offs"
-  defvar mode_asm_str = !if(!eq(mode, "im2col"),
-                            "im2col_no_offs", mode);
+  defvar mode_asm_str = !cond(!eq(mode, "im2col") : "im2col_no_offs",
+                              !eq(mode, "im2col_w") : "im2col_no_offs::w",
+                              true : mode);
   defvar prefix = "cp.reduce.async.bulk.tensor"
                   # "." # dim # "d"
                   # ".global.shared::cta";
@@ -894,14 +901,14 @@ multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode> {
                  (ins TMAReductionFlags:$red_op)),
             !strconcat(prefix, "${red_op}", suffix, asm_str, ";"),
             [intr_dag]>,
-            Requires<[hasPTX<80>, SM90]>;
+            Requires<pred>;
   def _CH : NVPTXInst<(outs),
               !con((ins ADDR:$src, B64:$tmap), dims_dag,
                    (ins B64:$ch, TMAReductionFlags:$red_op)),
               !strconcat(prefix, "${red_op}", suffix,
                          ".L2::cache_hint", asm_str, ", $ch;"),
               [intr_dag_with_ch]>,
-              Requires<[hasPTX<80>, SM90]>;
+              Requires<pred>;
 }
 
 foreach dim = 1...5 in {
@@ -910,6 +917,12 @@ foreach dim = 1...5 in {
     defm CP_ASYNC_BULK_TENSOR_RED_ # suffix :
       CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, mode>;
   }
+}
+
+foreach dim = 3...5 in {
+  defm CP_ASYNC_BULK_TENSOR_RED_ # dim # D_IM2COL_W
+    : CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, "im2col_w",
+                          [callSubtarget<"hasRubinFamilySupport">]>;
 }
 
 // TMA Prefetch from Global memory to L2 cache
