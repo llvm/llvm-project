@@ -6393,11 +6393,8 @@ static void checkForMultipleExportedDefaultConstructors(Sema &S,
   CXXConstructorDecl *LastExportedDefaultCtor = nullptr;
   for (Decl *Member : Class->decls()) {
     // Nested classes finish delayed default argument parsing with the outermost
-    // class, so check each nested definition and class template pattern here.
-    CXXRecordDecl *NestedClass = dyn_cast<CXXRecordDecl>(Member);
-    if (auto *NestedTemplate = dyn_cast<ClassTemplateDecl>(Member))
-      NestedClass = NestedTemplate->getTemplatedDecl();
-    if (NestedClass) {
+    // class, so check each nested definition here.
+    if (auto *NestedClass = dyn_cast<CXXRecordDecl>(Member)) {
       if (NestedClass->isThisDeclarationADefinition())
         checkForMultipleExportedDefaultConstructors(S, NestedClass);
       continue;
