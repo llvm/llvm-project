@@ -11,6 +11,7 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
 #include <cstddef>
@@ -40,10 +41,20 @@ void CollectMainFileMacros::add(const Token &MacroNameTok, const MacroInfo *MI,
   Out.Names.insert(Name);
   size_t Start = SM.getFileOffset(Loc);
   size_t End = SM.getFileOffset(MacroNameTok.getEndLoc());
+
+  bool IsCommandLineDefined = false;
+  if (MI) {
+    const auto DefLoc = MI->getDefinitionLoc();
+    if (DefLoc.isValid())
+      IsCommandLineDefined = SM.isWrittenInCommandLineFile(DefLoc);
+  }
+
   if (auto SID = getSymbolID(Name, MI, SM))
-    Out.MacroRefs[SID].push_back({Start, End, IsDefinition, InIfCondition});
+    Out.MacroRefs[SID].push_back(
+        {Start, End, IsDefinition, InIfCondition, IsCommandLineDefined});
   else
-    Out.UnknownMacros.push_back({Start, End, IsDefinition, InIfCondition});
+    Out.UnknownMacros.push_back(
+        {Start, End, IsDefinition, InIfCondition, IsCommandLineDefined});
 }
 
 void CollectMainFileMacros::FileChanged(SourceLocation Loc, FileChangeReason,
