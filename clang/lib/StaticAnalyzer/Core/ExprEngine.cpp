@@ -1105,6 +1105,7 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   default:
     return false;
   case Stmt::CXXBindTemporaryExprClass:
+  case Stmt::OffsetOfExprClass:
     return true;
   }
 }
@@ -1114,6 +1115,7 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   default:
     return false;
   case Stmt::CXXBindTemporaryExprClass:
+  case Stmt::OffsetOfExprClass:
     return true;
   }
 }
@@ -2283,17 +2285,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       VisitReturnStmt(cast<ReturnStmt>(S), Pred, Dst);
       break;
 
-    case Stmt::OffsetOfExprClass: {
-      ExplodedNodeSet PreVisit;
-      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
-
-      ExplodedNodeSet PostVisit;
-      for (const auto Node : PreVisit)
-        VisitOffsetOfExpr(cast<OffsetOfExpr>(S), Node, PostVisit);
-
-      getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
+    case Stmt::OffsetOfExprClass:
+      VisitOffsetOfExpr(cast<OffsetOfExpr>(S), Pred, Dst);
       break;
-    }
 
     case Stmt::UnaryExprOrTypeTraitExprClass:
       VisitUnaryExprOrTypeTraitExpr(cast<UnaryExprOrTypeTraitExpr>(S), Pred,
