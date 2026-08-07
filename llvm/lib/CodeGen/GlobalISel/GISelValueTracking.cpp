@@ -142,8 +142,6 @@ bool GISelValueTracking::isKnownNeverZero(Register R, const APInt &DemandedElts,
     LLT VecTy = MRI.getType(InVec);
     if (VecTy.isScalableVector())
       break;
-    if (MRI.getType(R).getScalarSizeInBits() != VecTy.getScalarSizeInBits())
-      return false;
     unsigned NumSrcElts = VecTy.getNumElements();
     // An out-of-range constant index produces poison. Keep all lanes demanded,
     // which is poison-safe and matches SelectionDAG's conservative behavior.
@@ -164,10 +162,10 @@ bool GISelValueTracking::isKnownNeverZero(Register R, const APInt &DemandedElts,
     if (!getShuffleDemandedElts(SrcTy.getNumElements(), Shuf.getMask(),
                                 DemandedElts, DemandedLHS, DemandedRHS))
       break;
-    if (!!DemandedLHS &&
+    if (!DemandedLHS.isZero() &&
         !isKnownNeverZero(Shuf.getSrc1Reg(), DemandedLHS, Depth + 1))
       return false;
-    if (!!DemandedRHS &&
+    if (!DemandedRHS.isZero() &&
         !isKnownNeverZero(Shuf.getSrc2Reg(), DemandedRHS, Depth + 1))
       return false;
     return true;

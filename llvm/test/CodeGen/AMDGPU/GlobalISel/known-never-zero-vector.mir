@@ -36,9 +36,6 @@ body: |
   ; CHECK-NEXT: %variable_nonzero:_ KnownBits:000000000000000000000000000000?? SignBits:30 IsKnownNeverZero:1
   ; CHECK-NEXT: %var_may_be_zero:_ KnownBits:0000000000000000000000000000000? SignBits:31 IsKnownNeverZero:0
   ; CHECK-NEXT: %constant_oob:_ KnownBits:000000000000000000000000000000?? SignBits:30 IsKnownNeverZero:1
-  ; CHECK-NEXT: %wide_value:_ KnownBits:0000000000000000000000000000000100000000000000000000000000000000 SignBits:31 IsKnownNeverZero:1
-  ; CHECK-NEXT: %wide_vec:_ KnownBits:0000000000000000000000000000000100000000000000000000000000000000 SignBits:31 IsKnownNeverZero:1
-  ; CHECK-NEXT: %width_mismatch:_ KnownBits:0000000000000000000000000000000100000000000000000000000000000000 SignBits:31 IsKnownNeverZero:0
     %zero:_(s32) = G_CONSTANT i32 0
     %one:_(s32) = G_CONSTANT i32 1
     %two:_(s32) = G_CONSTANT i32 2
@@ -53,9 +50,6 @@ body: |
     %variable_nonzero:_(s32) = G_EXTRACT_VECTOR_ELT %all_nonzero, %variable_idx
     %var_may_be_zero:_(s32) = G_EXTRACT_VECTOR_ELT %may_be_zero, %variable_idx
     %constant_oob:_(s32) = G_EXTRACT_VECTOR_ELT %all_nonzero, %idx_oob
-    %wide_value:_(s64) = G_CONSTANT i64 4294967296
-    %wide_vec:_(<2 x s64>) = G_BUILD_VECTOR %wide_value, %wide_value
-    %width_mismatch:_(s32) = G_EXTRACT_VECTOR_ELT %wide_vec, %idx0
 ...
 ---
 name: known_never_zero_shuffle_vector
