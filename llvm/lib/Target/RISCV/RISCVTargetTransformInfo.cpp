@@ -2648,7 +2648,7 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
   InstructionCost BaseCost =
       getRISCVInstructionCost(MoveOpc, LT.second, CostKind);
   // When insertelement we should add the index with 1 as the input of vslideup.
-  unsigned SlideCost = Opcode == Instruction::InsertElement ? 2 : 1;
+  InstructionCost SlideCost = Opcode == Instruction::InsertElement ? 2 : 1;
 
   if (Index != -1U) {
     // The type may be split. For fixed-width vectors we can normalize the
@@ -2713,16 +2713,23 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
     // vmv.x.s a1, v8
 
     // For insertelement, we need the following instructions:
-    // vsetivli zero, 2, e32, m4, ta, mu (not count)
-    // vmv.v.i v12, 0
-    // vslide1up.vx v16, v12, a1
-    // vslide1up.vx v12, v16, a0
+    // vsetivli zero, 2, e32, m4, ta, ma (don't count)
+    // vslide1down.vx v12, v8, a0
+    // vslide1down.vx v12, v12, a1
     // addi a0, a2, 1
-    // vsetvli zero, a0, e64, m4, tu, mu (not count)
+    // vsetvli zero, a0, e64, m4, tu, ma (don't count)
     // vslideup.vx v8, v12, a2
 
     // TODO: should we count these special vsetvlis?
-    BaseCost = Opcode == Instruction::InsertElement ? 3 : 4;
+    BaseCost =
+        Opcode == Instruction::InsertElement
+            ? getRISCVInstructionCost({RISCV::VSLIDE1DOWN_VX,
+                                       RISCV::VSLIDE1DOWN_VX,
+                                       RISCV::VSLIDEUP_VX},
+                                      LT.second, CostKind)
+            : getRISCVInstructionCost({RISCV::VSLIDEDOWN_VX, RISCV::VMV_X_S,
+                                       RISCV::VSRL_VX, RISCV::VMV_X_S},
+                                      LT.second, CostKind);
   }
   return BaseCost + SlideCost;
 }
