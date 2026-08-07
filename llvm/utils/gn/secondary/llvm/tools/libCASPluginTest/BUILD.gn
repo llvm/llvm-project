@@ -16,9 +16,7 @@ shared_library("CASPluginTest") {
     "//llvm/lib/CAS",
     "//llvm/lib/Support",
   ]
-  sources = [
-    "libCASPluginTest.cpp",
-  ]
+  sources = [ "libCASPluginTest.cpp" ]
 
   if (current_os != "mac" && current_os != "win") {
     cflags = [ "-fPIC" ]

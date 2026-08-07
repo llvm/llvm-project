@@ -28,8 +28,6 @@ unittest("CASTests") {
       "ProgramTest.cpp",
       "UnifiedOnDiskCacheTest.cpp",
     ]
-    data_deps = [
-      "//llvm/tools/libCASPluginTest:CASPluginTest",
-    ]
+    data_deps = [ "//llvm/tools/libCASPluginTest:CASPluginTest" ]
   }
 }
