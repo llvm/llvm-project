@@ -126,7 +126,7 @@ bool SwiftLanguage::IsTopLevelFunction(Function &function) {
 }
 
 std::vector<Language::MethodNameVariant>
-SwiftLanguage::GetMethodNameVariants(ConstString method_name) const {
+SwiftLanguage::GetMethodNameVariants(llvm::StringRef method_name) const {
   std::vector<Language::MethodNameVariant> variant_names;
 
   // NOTE:  We need to do this because we don't have a proper parser for Swift
@@ -135,9 +135,10 @@ SwiftLanguage::GetMethodNameVariants(ConstString method_name) const {
   // version as a lookup as well.
 
   ConstString counterpart;
-  if (method_name.GetMangledCounterpart(counterpart))
+  if (ConstString(method_name).GetMangledCounterpart(counterpart))
     if (SwiftLanguageRuntime::IsSwiftMangledName(counterpart.GetStringRef()))
-      variant_names.emplace_back(counterpart, eFunctionNameTypeFull);
+      variant_names.emplace_back(counterpart.GetString(),
+                                 eFunctionNameTypeFull);
 
   // Properties can have multiple accessor blocks. This section of code supports
   // breakpoints on accessor blocks by name.
@@ -149,11 +150,12 @@ SwiftLanguage::GetMethodNameVariants(ConstString method_name) const {
   // LLDB's baseline behavior handles the first case. The second case is
   // produced here as a variant name.
   for (llvm::StringRef suffix : {".get", ".set", ".willset", ".didset"})
-    if (method_name.GetStringRef().ends_with(suffix)) {
+    if (method_name.ends_with(suffix)) {
       // The method name, complete with suffix, *is* the variant.
-      variant_names.emplace_back(method_name, eFunctionNameTypeFull |
-                                                  eFunctionNameTypeBase |
-                                                  eFunctionNameTypeMethod);
+      variant_names.emplace_back(method_name.str(),
+                                 eFunctionNameTypeFull |
+                                     eFunctionNameTypeBase |
+                                     eFunctionNameTypeMethod);
       break;
     }
 

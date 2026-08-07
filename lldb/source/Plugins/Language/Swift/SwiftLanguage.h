@@ -36,7 +36,7 @@ public:
   bool IsTopLevelFunction(Function &function) override;
 
   std::vector<Language::MethodNameVariant>
-  GetMethodNameVariants(ConstString method_name) const override;
+  GetMethodNameVariants(llvm::StringRef method_name) const override;
 
   lldb::TypeCategoryImplSP GetFormatters() override;
 
