@@ -160,11 +160,5 @@ std::optional<hlfir::EntityWithAttributes> lowerHlfirIntrinsic(
     const fir::IntrinsicArgumentLoweringRules *argLowering,
     mlir::Type stmtResultType);
 
-std::optional<hlfir::EntityWithAttributes>
-lowerPackAsReshape(fir::FirOpBuilder &builder, mlir::Location loc,
-                   const PreparedActualArguments &loweredActuals,
-                   const fir::IntrinsicArgumentLoweringRules *argLowering,
-                   mlir::Type stmtResultType);
-
 } // namespace Fortran::lower
 #endif // FORTRAN_LOWER_HLFIRINTRINSICS_H

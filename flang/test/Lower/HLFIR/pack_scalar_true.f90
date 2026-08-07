@@ -1,7 +1,7 @@
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -O2 -S %s -o - | FileCheck %s --check-prefix=OPT
 ! RUN: %flang_fc1 %s -o %t.o
 
-! PACK with scalar .TRUE. mask lowers to hlfir.reshape (not _FortranAPack).
 subroutine pack_scalar_true(a, r)
   integer :: a(:, :, :)
   integer :: r(:)
@@ -9,10 +9,11 @@ subroutine pack_scalar_true(a, r)
 end subroutine pack_scalar_true
 
 ! CHECK-LABEL: func.func @_QPpack_scalar_true
-! CHECK-NOT: _FortranAPack
-! CHECK: hlfir.reshape
+! CHECK: hlfir.pack
+! CHECK-NOT: hlfir.reshape
+! OPT-LABEL: pack_scalar_true_
+! OPT-NOT: _FortranAPack
 
-! Static explicit-shape array (gfortran torture intrinsic_pack.f90 pattern).
 subroutine pack_static_scalar_true
   integer, dimension(3, 3) :: a
   integer, dimension(9) :: r
@@ -20,10 +21,10 @@ subroutine pack_static_scalar_true
 end subroutine pack_static_scalar_true
 
 ! CHECK-LABEL: func.func @_QPpack_static_scalar_true
-! CHECK-NOT: _FortranAPack
-! CHECK: hlfir.reshape
+! CHECK: hlfir.pack
+! CHECK-NOT: hlfir.reshape
+! OPT-LABEL: pack_static_scalar_true_
 
-! Scalar logical variable mask still uses runtime PACK.
 subroutine pack_scalar_var_mask(a, m, r)
   integer :: a(:)
   logical :: m
@@ -32,9 +33,9 @@ subroutine pack_scalar_var_mask(a, m, r)
 end subroutine pack_scalar_var_mask
 
 ! CHECK-LABEL: func.func @_QPpack_scalar_var_mask
-! CHECK: fir.call @_FortranAPack
+! CHECK: hlfir.pack
+! CHECK-NOT: hlfir.reshape
 
-! Array mask uses the runtime PACK path.
 subroutine pack_array_mask(a, m, r)
   integer :: a(:)
   logical :: m(:)
@@ -43,4 +44,5 @@ subroutine pack_array_mask(a, m, r)
 end subroutine pack_array_mask
 
 ! CHECK-LABEL: func.func @_QPpack_array_mask
-! CHECK: fir.call @_FortranAPack
+! CHECK: hlfir.pack
+! CHECK-NOT: hlfir.reshape

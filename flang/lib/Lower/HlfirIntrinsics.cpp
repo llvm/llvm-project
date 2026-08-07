@@ -17,7 +17,6 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
-#include "flang/Optimizer/Builder/Runtime/Inquiry.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
@@ -210,7 +209,7 @@ protected:
             mlir::Type stmtResultType) override;
 };
 
-class HlfirPackAsReshapeLowering : public HlfirTransformationalIntrinsic {
+class HlfirPackLowering : public HlfirTransformationalIntrinsic {
 public:
   using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
 
@@ -218,35 +217,7 @@ protected:
   mlir::Value
   lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
             const fir::IntrinsicArgumentLoweringRules *argLowering,
-            mlir::Type stmtResultType) override {
-    auto operands = getOperandVector(loweredActuals, argLowering);
-    assert(operands.size() >= 2);
-    mlir::Value array = operands[0];
-    mlir::Type resultType = computeResultType(array, stmtResultType);
-    mlir::Value sizeArray = array;
-    if (!fir::isa_box_type(array.getType())) {
-      hlfir::Entity arrayEntity = loweredActuals[0]->getActual(loc, builder);
-      auto [exv, cleanup] =
-          hlfir::translateToExtendedValue(loc, builder, arrayEntity);
-      addCleanup(cleanup);
-      sizeArray = builder.createBox(loc, exv);
-    }
-    mlir::Value totalSize = fir::runtime::genSize(builder, loc, sizeArray);
-    mlir::Type indexType = builder.getIndexType();
-    mlir::Type extentType = builder.getDefaultIntegerType();
-    mlir::Type shapeSeqType = fir::SequenceType::get({1}, extentType);
-    mlir::Value shapeStorage =
-        builder.createTemporary(loc, shapeSeqType, ".pack.shape");
-    totalSize = builder.createConvert(loc, extentType, totalSize);
-    mlir::Type shapeAddrType = builder.getRefType(extentType);
-    mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
-    mlir::Value shapeAddr = fir::CoordinateOp::create(
-        builder, loc, shapeAddrType, shapeStorage, zero);
-    fir::StoreOp::create(builder, loc, totalSize, shapeAddr);
-    return createOp<hlfir::ReshapeOp>(resultType, array, shapeStorage,
-                                      /*pad=*/mlir::Value{},
-                                      /*order=*/mlir::Value{});
-  }
+            mlir::Type stmtResultType) override;
 };
 
 class HlfirIndexLowering : public HlfirTransformationalIntrinsic {
@@ -606,6 +577,17 @@ mlir::Value HlfirReshapeLowering::lowerImpl(
                                     operands[2], operands[3]);
 }
 
+mlir::Value HlfirPackLowering::lowerImpl(
+    const Fortran::lower::PreparedActualArguments &loweredActuals,
+    const fir::IntrinsicArgumentLoweringRules *argLowering,
+    mlir::Type stmtResultType) {
+  auto operands = getOperandVector(loweredActuals, argLowering);
+  assert(operands.size() >= 2);
+  mlir::Type resultType = computeResultType(operands[0], stmtResultType);
+  mlir::Value vector = operands.size() >= 3 ? operands[2] : mlir::Value{};
+  return createOp<hlfir::PackOp>(resultType, operands[0], operands[1], vector);
+}
+
 mlir::Value HlfirIndexLowering::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
@@ -689,6 +671,9 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
   if (name == "reshape")
     return HlfirReshapeLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                     stmtResultType);
+  if (name == "pack")
+    return HlfirPackLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                 stmtResultType);
   if (name == "index")
     return HlfirIndexLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                   stmtResultType);
@@ -710,18 +695,4 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
           loweredActuals, argLowering, stmtResultType);
   }
   return std::nullopt;
-}
-
-std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerPackAsReshape(
-    fir::FirOpBuilder &builder, mlir::Location loc,
-    const Fortran::lower::PreparedActualArguments &loweredActuals,
-    const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType) {
-  if (!loweredActuals[0])
-    return std::nullopt;
-  hlfir::Entity array = loweredActuals[0]->getActual(loc, builder);
-  if (!fir::isa_trivial(array.getFortranElementType()) || array.isPolymorphic())
-    return std::nullopt;
-  return HlfirPackAsReshapeLowering{builder, loc}.lower(
-      loweredActuals, argLowering, stmtResultType);
 }

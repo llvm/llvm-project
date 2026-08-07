@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
@@ -3068,6 +3069,67 @@ private:
   }
 };
 
+static mlir::Value computeArraySize(mlir::Location loc,
+                                    fir::FirOpBuilder &builder,
+                                    mlir::ValueRange extents) {
+  mlir::Type indexType = builder.getIndexType();
+  mlir::Value size = builder.createIntegerConstant(loc, indexType, 1);
+  for (mlir::Value extent : extents)
+    size = mlir::arith::MulIOp::create(
+        builder, loc, size, builder.createConvert(loc, indexType, extent));
+  return size;
+}
+
+static std::optional<bool> getLogicalConstant(mlir::Value value) {
+  if (auto convertOp = value.getDefiningOp<fir::ConvertOp>())
+    value = convertOp.getValue();
+  if (auto cst = fir::getIntIfConstant(value))
+    return *cst != 0;
+  return std::nullopt;
+}
+
+class PackAsReshapeConversion : public mlir::OpRewritePattern<hlfir::PackOp> {
+public:
+  using mlir::OpRewritePattern<hlfir::PackOp>::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::PackOp pack,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (pack.getVector())
+      return rewriter.notifyMatchFailure(pack, "PACK with VECTOR");
+    hlfir::Entity mask{pack.getMask()};
+    if (mask.getRank() != 0)
+      return rewriter.notifyMatchFailure(pack, "non-scalar mask");
+    if (!getLogicalConstant(pack.getMask()).value_or(false))
+      return rewriter.notifyMatchFailure(pack, "mask is not .TRUE.");
+    hlfir::Entity array{pack.getArray()};
+    if (!fir::isa_trivial(array.getFortranElementType()) ||
+        array.isPolymorphic())
+      return rewriter.notifyMatchFailure(pack, "unsupported array type");
+
+    mlir::Location loc = pack.getLoc();
+    fir::FirOpBuilder builder{rewriter, pack.getOperation()};
+    llvm::SmallVector<mlir::Value, Fortran::common::maxRank> extents =
+        hlfir::genExtentsVector(loc, builder, array);
+    mlir::Value totalSize = computeArraySize(loc, builder, extents);
+    mlir::Type extentType = builder.getDefaultIntegerType();
+    mlir::Type shapeSeqType = fir::SequenceType::get({1}, extentType);
+    mlir::Value shapeStorage =
+        builder.createTemporary(loc, shapeSeqType, ".pack.shape");
+    totalSize = builder.createConvert(loc, extentType, totalSize);
+    mlir::Type indexType = builder.getIndexType();
+    mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
+    mlir::Value shapeAddr = fir::CoordinateOp::create(
+        builder, loc, builder.getRefType(extentType), shapeStorage, zero);
+    fir::StoreOp::create(builder, loc, totalSize, shapeAddr);
+    auto reshape = hlfir::ReshapeOp::create(
+        builder, loc, pack.getType(), array, shapeStorage,
+        /*pad=*/mlir::Value{}, /*order=*/mlir::Value{});
+    rewriter.replaceOp(pack, reshape);
+    return mlir::success();
+  }
+};
+
 class ReshapeAsElementalConversion
     : public mlir::OpRewritePattern<hlfir::ReshapeOp> {
 public:
@@ -3268,18 +3330,6 @@ private:
     }
     return indices;
   }
-
-  /// Return size of an array given its extents.
-  static mlir::Value computeArraySize(mlir::Location loc,
-                                      fir::FirOpBuilder &builder,
-                                      mlir::ValueRange extents) {
-    mlir::Type indexType = builder.getIndexType();
-    mlir::Value size = builder.createIntegerConstant(loc, indexType, 1);
-    for (auto extent : extents)
-      size = mlir::arith::MulIOp::create(
-          builder, loc, size, builder.createConvert(loc, indexType, extent));
-    return size;
-  }
 };
 
 class SimplifyHLFIRIntrinsics
@@ -3333,6 +3383,7 @@ public:
       patterns.insert<MatmulConversion<hlfir::MatmulOp>>(context);
 
     patterns.insert<DotProductConversion>(context);
+    patterns.insert<PackAsReshapeConversion>(context);
     patterns.insert<ReshapeAsElementalConversion>(context);
 
     if (mlir::failed(mlir::applyPatternsGreedily(
