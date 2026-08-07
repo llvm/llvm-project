@@ -1241,9 +1241,9 @@ StyleKind IdentifierNamingCheck::findStyleKind(
   // C++17 structured bindings: treat each binding as if it were a variable
   // with the same storage and qualifiers as the parent DecompositionDecl.
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
-    if (const auto *Decomp = dyn_cast_or_null<VarDecl>(BD->getDecomposedDecl()))
-      if (!BD->getType().isNull())
-        return findStyleKindForVar(Decomp, BD->getType(), NamingStyles);
+    if (const auto *Decomp = dyn_cast_or_null<VarDecl>(BD->getDecomposedDecl());
+        Decomp && !BD->getType().isNull())
+      return findStyleKindForVar(Decomp, BD->getType(), NamingStyles);
     return SK_Invalid;
   }
 
@@ -1255,9 +1255,9 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     // If this method has the same name as any base method, this is likely
     // necessary even if it's not an override. e.g. CRTP.
     for (const CXXBaseSpecifier &Base : Decl->getParent()->bases())
-      if (const auto *RD = Base.getType()->getAsCXXRecordDecl())
-        if (RD->hasMemberName(Decl->getDeclName()))
-          return SK_Invalid;
+      if (const auto *RD = Base.getType()->getAsCXXRecordDecl();
+          RD && RD->hasMemberName(Decl->getDeclName()))
+        return SK_Invalid;
 
     if (Decl->isConstexpr() && NamingStyles[SK_ConstexprMethod])
       return SK_ConstexprMethod;
