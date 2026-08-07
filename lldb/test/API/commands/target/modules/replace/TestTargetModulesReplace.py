@@ -232,6 +232,89 @@ class TargetModulesReplaceTestCase(TestBase):
         self.assertEqual(target.GetNumModules(), num_modules)
         self.assertTrue(target.FindModule(lldb.SBFileSpec(v1)).IsValid())
 
+    @skipUnlessPlatform(["linux"])
+    def test_placeholder_without_uuid(self):
+        """A placeholder with no UUID needs no --force, nothing can be compared."""
+        v1, v2, v1_copy = self.build_and_get_paths()
+        core = self.getBuildArtifact("no-uuid.dmp")
+        self.yaml2obj("placeholder-no-uuid.yaml", core)
+
+        target = self.dbg.CreateTarget("")
+        self.assertTrue(target.LoadCore(core).IsValid())
+        placeholder = target.FindModule(lldb.SBFileSpec("/no/such/module.so"))
+        self.assertTrue(placeholder.IsValid())
+        self.assertFalse(placeholder.GetUUIDString(), "the placeholder has no UUID")
+        base = self.base_load_address(placeholder, target)
+        self.assertNotEqual(base, lldb.LLDB_INVALID_ADDRESS)
+
+        self.runCmd("target modules replace --old-path /no/such/module.so '%s'" % v1)
+
+        new_module = target.FindModule(lldb.SBFileSpec(v1))
+        self.assertTrue(new_module.IsValid())
+        self.assertEqual(self.base_load_address(new_module, target), base)
+        self.assertTrue(new_module.FindSymbol("only_in_v1").IsValid())
+
+    @skipUnlessPlatform(["linux"])
+    def test_failure_leaves_the_target_alone(self):
+        """A replacement that cannot be placed is refused, and nothing is lost."""
+        v1, v2, v1_copy = self.build_and_get_paths()
+        core = self.getBuildArtifact("no-uuid.dmp")
+        self.yaml2obj("placeholder-no-uuid.yaml", core)
+
+        target = self.dbg.CreateTarget("")
+        self.assertTrue(target.LoadCore(core).IsValid())
+        num_modules = target.GetNumModules()
+
+        # An object file with no loadable segments cannot go where the
+        # placeholder was.
+        unplaceable = self.getBuildArtifact("unplaceable.o")
+        self.yaml2obj("unplaceable.yaml", unplaceable)
+        self.expect(
+            "target modules replace --old-path /no/such/module.so --force '%s'"
+            % unplaceable,
+            error=True,
+            substrs=["could not be loaded at"],
+        )
+
+        self.assertEqual(target.GetNumModules(), num_modules)
+        self.assertTrue(
+            target.FindModule(lldb.SBFileSpec("/no/such/module.so")).IsValid(),
+            "the module that could not be replaced is still in the target",
+        )
+
+    @skipIfWindows
+    @skipIfRemote
+    @skipUnlessPlatform(["linux"])
+    def test_core_file(self):
+        """Replacing a module in a core file keeps it at the same address."""
+        v1, v2, v1_copy = self.build_and_get_paths()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        target.BreakpointCreateBySourceRegex(
+            "break after dlopen", lldb.SBFileSpec("main.cpp")
+        )
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetArguments([v1], True)
+        error = lldb.SBError()
+        process = target.Launch(launch_info, error)
+        self.assertSuccess(error)
+
+        core = self.getBuildArtifact("saved.core")
+        self.runCmd("process save-core --style=full '%s'" % core)
+        process.Kill()
+
+        target = self.dbg.CreateTarget("")
+        self.assertTrue(target.LoadCore(core).IsValid())
+        old_module = target.FindModule(lldb.SBFileSpec(v1))
+        self.assertTrue(old_module.IsValid())
+        base = self.base_load_address(old_module, target)
+
+        self.runCmd("target modules replace --force '%s'" % v2)
+
+        new_module = target.FindModule(lldb.SBFileSpec(v2))
+        self.assertTrue(new_module.IsValid())
+        self.assertEqual(self.base_load_address(new_module, target), base)
+        self.assertTrue(new_module.FindSymbol("only_in_v2").IsValid())
+
     @skipIfWindows
     @skipIfRemote
     def test_breakpoints_move_to_the_replacement(self):

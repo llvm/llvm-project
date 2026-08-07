@@ -2052,10 +2052,6 @@ Status Target::ReplaceModule(ModuleSP old_module_sp,
   if (m_images.GetIndexForModule(old_module_sp.get()) != LLDB_INVALID_INDEX32)
     m_images.Remove(old_module_sp, /*notify=*/false);
 
-  // Unloads its sections and deletes its breakpoint locations. Must be
-  // explicit, no notification path passes delete_locations=true.
-  ModulesDidUnload(unloaded_modules, /*delete_locations=*/true);
-
   // Target::GetOrCreateModule() adds the module it creates, so the replacement
   // is usually in the target already.
   if (m_images.GetIndexForModule(new_module_sp.get()) == LLDB_INVALID_INDEX32)
@@ -2072,22 +2068,51 @@ Status Target::ReplaceModule(ModuleSP old_module_sp,
     }
   }
 
-  // Generic placement, correct whenever a module is mapped in one piece. The
-  // dynamic loader corrects it below on platforms where it is not.
-  if (base_load_addr != LLDB_INVALID_ADDRESS) {
-    bool changed = false;
-    new_module_sp->SetLoadAddress(*this, base_load_addr,
-                                  /*value_is_offset=*/false, changed);
+  // The dynamic loader is the only thing that knows how this platform maps an
+  // image, so it moves the sections over and carries across anything it tracks
+  // per module, such as the link map address thread locals are found through.
+  // It runs before ModulesDidUnload() below, which would otherwise take the old
+  // module's load addresses away before the loader could read them.
+  Status error;
+  DynamicLoader *dyld =
+      m_process_sp ? m_process_sp->GetDynamicLoader() : nullptr;
+  if (dyld) {
+    error = dyld->ReplaceModule(old_module_sp, new_module_sp);
+  } else {
+    // Targets with no dynamic loader, a static target or most minidumps, still
+    // need the old sections taken away and the replacement put where they were.
+    UnloadModuleSections(old_module_sp);
+    if (base_load_addr != LLDB_INVALID_ADDRESS) {
+      // Module::SetLoadAddress() only reports whether there was an object file
+      // to ask, so \a loaded is what says any section was placed.
+      bool loaded = false;
+      new_module_sp->SetLoadAddress(*this, base_load_addr,
+                                    /*value_is_offset=*/false, loaded);
+      if (!loaded)
+        error = Status::FromErrorStringWithFormatv(
+            "'{0}' could not be loaded at {1:x}, where '{2}' was",
+            new_module_sp->GetFileSpec(), base_load_addr,
+            old_module_sp->GetFileSpec());
+    }
   }
 
-  // Let the dynamic loader redo the load addresses if this platform needs it,
-  // and move over anything it tracks per module, such as the link map address
-  // thread locals are found through.
-  Status error;
-  if (m_process_sp) {
-    if (DynamicLoader *dyld = m_process_sp->GetDynamicLoader())
-      error = dyld->ReplaceModule(old_module_sp, new_module_sp);
+  if (error.Fail()) {
+    // Placement got part way through at most, so leave neither module loaded.
+    // The old module goes back into the target, unloaded, so that the caller is
+    // not left short of a module it never asked to lose.
+    UnloadModuleSections(new_module_sp);
+    UnloadModuleSections(old_module_sp);
+    m_images.Remove(new_module_sp, /*notify=*/false);
+    if (m_images.GetIndexForModule(old_module_sp.get()) == LLDB_INVALID_INDEX32)
+      m_images.Append(old_module_sp, /*notify=*/false);
+    ModulesDidUnload(unloaded_modules, /*delete_locations=*/true);
+    return error;
   }
+
+  // Deletes the breakpoint locations that resolved into the old module. Must be
+  // explicit, no notification path passes delete_locations=true. Its section
+  // unload is a no-op by now.
+  ModulesDidUnload(unloaded_modules, /*delete_locations=*/true);
 
   // Sections must be in place first, resolving breakpoints into a module whose
   // sections are not loaded yields locations with no address.
@@ -2095,12 +2120,19 @@ Status Target::ReplaceModule(ModuleSP old_module_sp,
   added_modules.Append(new_module_sp, /*notify=*/false);
   ModulesDidLoad(added_modules);
 
-  // Drop the old module from the shared module cache so a later lookup of the
-  // same path cannot resurrect it.
+  // A placeholder or a module read out of memory stands for a file we could not
+  // use, so drop it from the shared module cache to stop a later lookup of the
+  // same path resurrecting it. Real files are left cached.
+  ObjectFile *old_object_file = old_module_sp->GetObjectFile();
+  const bool evict_from_cache =
+      old_object_file == nullptr ||
+      old_object_file->GetPluginName() == "placeholder" ||
+      old_object_file->GetPluginName() == "memory";
   unloaded_modules.Clear();
   std::weak_ptr<Module> old_module_wp(old_module_sp->weak_from_this());
   old_module_sp.reset();
-  ModuleList::RemoveSharedModuleIfOrphaned(old_module_wp);
+  if (evict_from_cache)
+    ModuleList::RemoveSharedModuleIfOrphaned(old_module_wp);
 
   // Cached stack frames and register contexts can still hold the old module.
   if (m_process_sp)
