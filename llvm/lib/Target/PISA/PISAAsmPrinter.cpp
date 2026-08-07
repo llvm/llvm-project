@@ -928,6 +928,7 @@ void PISAAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 // Force static initialization.
 // NOLINTNEXTLINE(readability-identifier-naming)
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializePISAAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializePISAAsmPrinter() {
   RegisterAsmPrinter<PISAAsmPrinter> Y(getThePISATarget());
 }
