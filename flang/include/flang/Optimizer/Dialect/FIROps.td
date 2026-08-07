@@ -93,8 +93,8 @@ def fir_AllocaOp : fir_Op<"alloca", [
     an optional name.  The allocation may have a dynamic repetition count
     for allocating a sequence of locations for the specified type.
 
-    A `fir.alloca` cannot be defined directly in a `builtin.module` because
-    module scope does not provide a stack allocation context.
+    A `fir.alloca` requires an ancestor operation with the
+    `AutomaticAllocationScope` trait to provide its stack allocation context.
 
     ```
       %c = ... : i64
