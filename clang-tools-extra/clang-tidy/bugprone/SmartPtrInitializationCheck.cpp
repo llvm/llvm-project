@@ -128,10 +128,12 @@ void SmartPtrInitializationCheck::check(
   assert(PointerArg && Record);
 
   const SourceLocation Loc = PointerArg->getBeginLoc();
-  const std::string TypeName = Record->getQualifiedNameAsString();
-  diag(Loc, "passing a raw pointer '%0' to %1%2 may cause double deletion")
-      << getPointerDescription(PointerArg, *Result.Context) << TypeName
-      << (isa<CXXConstructorDecl>(MethodDecl) ? " constructor" : "::reset()");
+  if (Loc.isValid()) {
+    const std::string TypeName = Record->getQualifiedNameAsString();
+    diag(Loc, "passing a raw pointer '%0' to %1%2 may cause double deletion")
+        << getPointerDescription(PointerArg, *Result.Context) << TypeName
+        << (isa<CXXConstructorDecl>(MethodDecl) ? " constructor" : "::reset()");
+  }
 }
 
 std::string
