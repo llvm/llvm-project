@@ -6,6 +6,7 @@ set(ONDISK_CAS_TEST_SOURCES
   OnDiskDataAllocatorTest.cpp
   OnDiskKeyValueDBTest.cpp
   OnDiskTrieRawHashMapTest.cpp
+  PluginCASTest.cpp
   ProgramTest.cpp
   UnifiedOnDiskCacheTest.cpp
   )
@@ -35,3 +36,7 @@ add_llvm_unittest(CASTests
   )
 
 target_link_libraries(CASTests PRIVATE LLVMTestingSupport)
+
+if (LLVM_ENABLE_ONDISK_CAS)
+  add_dependencies(CASTests CASPluginTest)
+endif()
