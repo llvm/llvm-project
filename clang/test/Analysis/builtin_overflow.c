@@ -220,7 +220,6 @@ void test_add_overflow_scratch_type_too_narrow(void) {
   int a = 32767, b = 32767;
   signed char res;
   
-  // This is a false negative. 32767 + 32767 == 65534, which does not
-  // fit in a signed char ([-128, 127]), so this should evaluate to TRUE.
+  // 32767 + 32767 == 65534, which does not fit in a signed char ([-128, 127]), so this evaluates to TRUE.
   clang_analyzer_eval(__builtin_add_overflow(a, b, &res)); // expected-warning {{TRUE}}
 }
