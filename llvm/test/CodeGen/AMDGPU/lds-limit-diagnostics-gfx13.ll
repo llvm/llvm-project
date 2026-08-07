@@ -8,7 +8,7 @@
 
 ; ERROR: error: <unknown>:0:0: local memory (196612) exceeds limit (196608) in function 'test_lds_limit'
 ; ERROR-CU: error: <unknown>:0:0: local memory (196612) exceeds limit (98304) in function 'test_lds_limit'
-@dst = addrspace(3) global [196612 x i8] undef
+@dst = addrspace(3) global [196612 x i8] poison
 
 define amdgpu_kernel void @test_lds_limit(i8 %val) {
   %gep = getelementptr [196612 x i8], ptr addrspace(3) @dst, i32 0, i32 100
