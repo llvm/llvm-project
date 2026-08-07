@@ -7769,6 +7769,26 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
+// TFE results are dword granular: value dwords followed by one status dword.
+static SDValue splitTFEValueAndStatus(SDValue Op, EVT VT, const SDLoc &DL,
+                                      SelectionDAG &DAG, SDValue &Status) {
+  LLVMContext &C = *DAG.getContext();
+  unsigned NumValueDWords = divideCeil(VT.getSizeInBits(), 32);
+  Status = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Op,
+                       DAG.getVectorIdxConstant(NumValueDWords, DL));
+  SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
+  SDValue ValueDWords =
+      NumValueDWords == 1
+          ? DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Op, ZeroIdx)
+          : DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL,
+                        EVT::getVectorVT(C, MVT::i32, NumValueDWords), Op,
+                        ZeroIdx);
+  if (!VT.isVector() && VT.getSizeInBits() < 32)
+    ValueDWords =
+        DAG.getNode(ISD::TRUNCATE, DL, VT.changeTypeToInteger(), ValueDWords);
+  return DAG.getNode(ISD::BITCAST, DL, VT, ValueDWords);
+}
+
 // Used for D16: Casts the result of an instruction into the right vector,
 // packs values if loads return unpacked values.
 static SDValue adjustLoadValueTypeImpl(SDValue Result, EVT LoadVT,
@@ -7836,10 +7856,6 @@ SDValue SITargetLowering::adjustLoadValueType(unsigned Opcode, MemSDNode *M,
   }
 
   if (IsTFE) {
-    // The hardware always returns TFE results at dword granularity: the data
-    // dwords followed by one status dword. Load that combined vector, then
-    // split it into the status and the D16 data before packing/truncating
-    // the data the same way as the non-TFE case.
     unsigned NumValueDWords = divideCeil(EquivLoadVT.getSizeInBits(), 32);
     unsigned NumLoadDWords = NumValueDWords + 1;
     EVT LoadVTList =
@@ -7847,22 +7863,8 @@ SDValue SITargetLowering::adjustLoadValueType(unsigned Opcode, MemSDNode *M,
     SDVTList VTList = DAG.getVTList(LoadVTList, MVT::Other);
     SDValue Load = DAG.getMemIntrinsicNode(
         Opcode, DL, VTList, Ops, M->getMemoryVT(), M->getMemOperand());
-    SDValue Status = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Load,
-                                 DAG.getVectorIdxConstant(NumValueDWords, DL));
-    SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
-    SDValue ValueDWords =
-        NumValueDWords == 1
-            ? DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Load, ZeroIdx)
-            : DAG.getNode(
-                  ISD::EXTRACT_SUBVECTOR, DL,
-                  EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumValueDWords),
-                  Load, ZeroIdx);
-    // A scalar D16 result (f16/i16) occupies less than a full dword, so
-    // truncate before bitcasting to the final scalar type.
-    if (!EquivLoadVT.isVector() && EquivLoadVT.getSizeInBits() < 32)
-      ValueDWords = DAG.getNode(ISD::TRUNCATE, DL,
-                                EquivLoadVT.changeTypeToInteger(), ValueDWords);
-    SDValue Value = DAG.getNode(ISD::BITCAST, DL, EquivLoadVT, ValueDWords);
+    SDValue Status;
+    SDValue Value = splitTFEValueAndStatus(Load, EquivLoadVT, DL, DAG, Status);
     SDValue Adjusted =
         adjustLoadValueTypeImpl(Value, LoadVT, DL, DAG, Unpacked);
     return DAG.getMergeValues({Adjusted, Status, SDValue(Load.getNode(), 1)},
@@ -12409,16 +12411,8 @@ SDValue SITargetLowering::getMemIntrinsicNode(unsigned Opcode, const SDLoc &DL,
         MF.getMachineMemOperand(MMO, 0, NumOpDWords * 4);
     SDValue Op = getMemIntrinsicNode(Opcode, DL, OpDWordsVTList, Ops,
                                      OpDWordsVT, OpDWordsMMO, DAG);
-    SDValue Status = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Op,
-                                 DAG.getVectorIdxConstant(NumValueDWords, DL));
-    SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
-    SDValue ValueDWords =
-        NumValueDWords == 1
-            ? DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Op, ZeroIdx)
-            : DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL,
-                          EVT::getVectorVT(C, MVT::i32, NumValueDWords), Op,
-                          ZeroIdx);
-    SDValue Value = DAG.getNode(ISD::BITCAST, DL, VT, ValueDWords);
+    SDValue Status;
+    SDValue Value = splitTFEValueAndStatus(Op, VT, DL, DAG, Status);
     return DAG.getMergeValues({Value, Status, SDValue(Op.getNode(), 1)}, DL);
   }
 
