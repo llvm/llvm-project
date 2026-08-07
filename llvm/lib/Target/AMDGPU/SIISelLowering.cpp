@@ -4348,6 +4348,13 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool IsSibCall = false;
   MachineFunction &MF = DAG.getMachineFunction();
 
+  if (!CLI.CB) {
+    std::string Msg = "unsupported libcall legalization";
+    if (const auto *G = dyn_cast<ExternalSymbolSDNode>(CLI.Callee))
+      Msg += std::string(" ") + G->getSymbol();
+    report_fatal_error(Twine(Msg), false);
+  }
+
   if (Callee.isUndef() || isNullConstant(Callee)) {
     if (!CLI.IsTailCall) {
       for (ISD::InputArg &Arg : CLI.Ins)
@@ -4361,9 +4368,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     return lowerUnhandledCall(CLI, InVals,
                               "unsupported call to variadic function ");
   }
-
-  if (!CLI.CB)
-    return lowerUnhandledCall(CLI, InVals, "unsupported libcall legalization");
 
   if (IsTailCall && MF.getTarget().Options.GuaranteedTailCallOpt) {
     return lowerUnhandledCall(CLI, InVals,
