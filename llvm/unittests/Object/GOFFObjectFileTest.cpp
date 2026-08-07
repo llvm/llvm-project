@@ -687,7 +687,7 @@ TEST_F(GOFFObjectFileTest, GlobalSymbols) {
   GOFFObjectFile *GOFFObj =
       static_cast<GOFFObjectFile *>((*GOFFObjOrErr).get());
 
-  auto SymbolRange = GOFFObj->symbols();
+  object::GOFFObjectFile::symbol_iterator_range SymbolRange = GOFFObj->symbols();
   auto Symbol = SymbolRange.begin();
   auto ValidateGlobal = [&](StringRef Name, bool IsGlobal) {
     ASSERT_TRUE(Symbol != SymbolRange.end());
@@ -695,18 +695,13 @@ TEST_F(GOFFObjectFileTest, GlobalSymbols) {
     // Check Name.
     Expected<StringRef> SymbolNameOrErr = GOFFObj->getSymbolName(*Symbol);
     ASSERT_THAT_EXPECTED(SymbolNameOrErr, Succeeded());
-    StringRef SymbolName = SymbolNameOrErr.get();
-    EXPECT_EQ(SymbolName, Name);
+    EXPECT_EQ(*SymbolNameOrErr, Name);
 
     // Check flags.
     Expected<uint32_t> SymbolFlagsOrErr = Symbol->getFlags();
     ASSERT_THAT_EXPECTED(SymbolFlagsOrErr, Succeeded());
     uint32_t SymbolFlags = SymbolFlagsOrErr.get();
-    if (IsGlobal) {
-      EXPECT_TRUE(SymbolFlags & SymbolRef::SF_Global);
-    } else {
-      EXPECT_FALSE(SymbolFlags & SymbolRef::SF_Global);
-    }
+    EXPECT_EQ((SymbolFlags & SymbolRef::SF_Global) != 0, IsGlobal);
 
     ++Symbol;
   };
