@@ -59,6 +59,14 @@ void DanglingPtrDeref::checkPostCall(const CallEvent &Call,
     return;
 
   for (unsigned Idx = 0; Idx < Call.getNumArgs(); Idx++) {
+    SmallVector<const MemRegion *, 4> AggrRegs =
+        lifetime_modeling::getRegionsFromAggrVal(Call.getArgSVal(Idx), C);
+    for (const MemRegion *I : AggrRegs) {
+      if (lifetime_modeling::isDeallocated(State, I))
+        if (ExplodedNode *N = C.generateNonFatalErrorNode())
+          reportUseAfterScope(I, Call.getArgExpr(Idx), N, C);
+    }
+
     if (const MemRegion *ArgRegion = Call.getArgSVal(Idx).getAsRegion())
       if (lifetime_modeling::isDeallocated(State, ArgRegion))
         if (ExplodedNode *N = C.generateNonFatalErrorNode())
