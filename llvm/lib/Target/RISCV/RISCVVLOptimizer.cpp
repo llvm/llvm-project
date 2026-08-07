@@ -35,8 +35,6 @@
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 
-#include <limits>
-
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-vl-optimizer"
