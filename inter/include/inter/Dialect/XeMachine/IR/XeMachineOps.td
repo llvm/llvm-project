@@ -82,6 +82,10 @@ def XeMachine_ShlOp : XeMachine_BinOp<"shl"> { let summary = "shift left"; }
 def XeMachine_AndOp : XeMachine_BinOp<"and"> { let summary = "bitwise and"; }
 def XeMachine_OrOp  : XeMachine_BinOp<"or">  { let summary = "bitwise or"; }
 
+// EU sub is add with a negated first source; the emitter prints the add
+// mnemonic with a negated src0.
+def XeMachine_SubOp : XeMachine_BinOp<"sub"> { let summary = "sub: add(-s0, s1)"; }
+
 def XeMachine_Add3Op : XeMachine_ALUOp<"add3"> {
   let summary = "three-input add";
   let arguments = (ins TypeAttr:$elemType,
@@ -126,11 +130,126 @@ def XeMachine_SendOp : XeMachine_Op<"send",
       "$fn $addrPayload (`data` $dataPayload^)? (`dep` $dependency^)? attr-dict `:` `(` qualified(type($addrPayload)) (`,` qualified(type($dataPayload))^)? `)` `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
 }
 
-// Scoreboard/fence synchronization. kind: "nop", "allrd", "allwr", ...
+// Scoreboard/fence synchronization. kind: "nop", "allrd", "allwr", "bar".
+// Token-connected like everything else that orders memory.
 def XeMachine_SyncOp : XeMachine_Op<"sync"> {
   let summary = "software scoreboard synchronization";
-  let arguments = (ins XeMachine_SyncKind:$kind);
-  let assemblyFormat = "$kind attr-dict";
+  let arguments = (ins XeMachine_SyncKind:$kind,
+                       Optional<XeMachine_MemTokenType>:$dependency);
+  let results = (outs XeMachine_MemTokenType:$token);
+  let assemblyFormat =
+      "$kind (`dep` $dependency^)? attr-dict `:` qualified(type($token))";
+}
+
+// Named message ops: the convenient aliases over raw send. Each carries its
+// message semantics; the emitter owns the descriptor encodings. Memory
+// ordering between them is explicit token edges (design doc section 9).
+class XeMachine_MsgOp<string mnemonic, list<Trait> traits = []> :
+    XeMachine_Op<mnemonic, traits> {
+  let cppNamespace = "::inter::xemachine";
+}
+
+// A64 scattered dword load: load.ugm.d32.a64.
+def XeMachine_LoadA64Op : XeMachine_MsgOp<"load_a64", [MemoryEffects<[MemRead]>]> {
+  let arguments = (ins XeMachine_RegType:$addrPayload,
+                       Optional<XeMachine_MemTokenType>:$dependency,
+                       DefaultValuedAttr<I32Attr, "32">:$execSize);
+  let results = (outs XeMachine_RegType:$dst, XeMachine_MemTokenType:$token);
+  let assemblyFormat =
+      "$addrPayload (`dep` $dependency^)? attr-dict `:` qualified(type($addrPayload)) `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
+}
+
+// A64 scattered dword store: store.ugm.d32.a64.
+def XeMachine_StoreA64Op : XeMachine_MsgOp<"store_a64", [MemoryEffects<[MemWrite]>]> {
+  let arguments = (ins XeMachine_RegType:$addrPayload,
+                       XeMachine_RegType:$dataPayload,
+                       Optional<XeMachine_MemTokenType>:$dependency,
+                       DefaultValuedAttr<I32Attr, "32">:$execSize);
+  let results = (outs XeMachine_MemTokenType:$token);
+  let assemblyFormat =
+      "$addrPayload `data` $dataPayload (`dep` $dependency^)? attr-dict `:` `(` qualified(type($addrPayload)) `,` qualified(type($dataPayload)) `)` `->` qualified(type($token))";
+}
+
+// SLM dword load/store: load/store.slm.d32.a32.
+def XeMachine_LoadSLMOp : XeMachine_MsgOp<"load_slm", [MemoryEffects<[MemRead]>]> {
+  let arguments = (ins XeMachine_RegType:$addrPayload,
+                       Optional<XeMachine_MemTokenType>:$dependency,
+                       DefaultValuedAttr<I32Attr, "32">:$execSize);
+  let results = (outs XeMachine_RegType:$dst, XeMachine_MemTokenType:$token);
+  let assemblyFormat =
+      "$addrPayload (`dep` $dependency^)? attr-dict `:` qualified(type($addrPayload)) `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
+}
+
+def XeMachine_StoreSLMOp : XeMachine_MsgOp<"store_slm", [MemoryEffects<[MemWrite]>]> {
+  let arguments = (ins XeMachine_RegType:$addrPayload,
+                       XeMachine_RegType:$dataPayload,
+                       Optional<XeMachine_MemTokenType>:$dependency,
+                       DefaultValuedAttr<I32Attr, "32">:$execSize);
+  let results = (outs XeMachine_MemTokenType:$token);
+  let assemblyFormat =
+      "$addrPayload `data` $dataPayload (`dep` $dependency^)? attr-dict `:` `(` qualified(type($addrPayload)) `,` qualified(type($dataPayload)) `)` `->` qualified(type($token))";
+}
+
+// A64 atomic iadd: atomic_iadd.ugm.d32.a64.
+def XeMachine_AtomicIAddA64Op : XeMachine_MsgOp<"atomic_iadd_a64",
+    [MemoryEffects<[MemRead, MemWrite]>]> {
+  let arguments = (ins XeMachine_RegType:$addrPayload,
+                       XeMachine_RegType:$dataPayload,
+                       Optional<XeMachine_MemTokenType>:$dependency,
+                       DefaultValuedAttr<I32Attr, "32">:$execSize);
+  let results = (outs XeMachine_RegType:$dst, XeMachine_MemTokenType:$token);
+  let assemblyFormat =
+      "$addrPayload `data` $dataPayload (`dep` $dependency^)? attr-dict `:` `(` qualified(type($addrPayload)) `,` qualified(type($dataPayload)) `)` `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
+}
+
+// a32 block (transpose) load via bti[255]; used by the payload prologue.
+// words selects the message width (8/16/32 dwords).
+def XeMachine_LoadBlockA32Op : XeMachine_MsgOp<"load_block_a32",
+    [MemoryEffects<[MemRead]>]> {
+  let arguments = (ins XeMachine_RegType:$addrPayload,
+                       Optional<XeMachine_MemTokenType>:$dependency,
+                       I32Attr:$words);
+  let results = (outs XeMachine_RegType:$dst, XeMachine_MemTokenType:$token);
+  let assemblyFormat =
+      "$addrPayload (`dep` $dependency^)? attr-dict `:` qualified(type($addrPayload)) `->` `(` qualified(type($dst)) `,` qualified(type($token)) `)`";
+}
+
+// SLM group fence: fence.slm.none.group. The readback register must be
+// drained (fence_await) before signaling.
+def XeMachine_FenceSLMOp : XeMachine_MsgOp<"fence_slm",
+    [MemoryEffects<[MemRead, MemWrite]>]> {
+  let arguments = (ins XeMachine_RegType:$addrPayload,
+                       Optional<XeMachine_MemTokenType>:$dependency);
+  let results = (outs XeMachine_RegType:$readback, XeMachine_MemTokenType:$token);
+  let assemblyFormat =
+      "$addrPayload (`dep` $dependency^)? attr-dict `:` qualified(type($addrPayload)) `->` `(` qualified(type($readback)) `,` qualified(type($token)) `)`";
+}
+
+// Fence drain: waits for the fence readback. Prints as a null-dst mov.
+def XeMachine_FenceAwaitOp : XeMachine_MsgOp<"fence_await", []> {
+  let arguments = (ins XeMachine_RegType:$readback,
+                       Optional<XeMachine_MemTokenType>:$dependency);
+  let results = (outs XeMachine_MemTokenType:$token);
+  let assemblyFormat =
+      "$readback (`dep` $dependency^)? attr-dict `:` qualified(type($readback)) `->` qualified(type($token))";
+}
+
+// Barrier signal to the thread spawner: gtwy message.
+def XeMachine_BarrierSignalOp : XeMachine_MsgOp<"barrier_signal",
+    [MemoryEffects<[MemRead, MemWrite]>]> {
+  let arguments = (ins XeMachine_RegType:$payload,
+                       Optional<XeMachine_MemTokenType>:$dependency);
+  let results = (outs XeMachine_MemTokenType:$token);
+  let assemblyFormat =
+      "$payload (`dep` $dependency^)? attr-dict `:` qualified(type($payload)) `->` qualified(type($token))";
+}
+
+// End of thread.
+def XeMachine_EotOp : XeMachine_MsgOp<"eot", []> {
+  let arguments = (ins XeMachine_RegType:$payload,
+                       Optional<XeMachine_MemTokenType>:$dependency);
+  let assemblyFormat =
+      "$payload (`dep` $dependency^)? attr-dict `:` qualified(type($payload))";
 }
 
 // Structured control flow. exec_if = mask-stack push/pop; uniform_if =

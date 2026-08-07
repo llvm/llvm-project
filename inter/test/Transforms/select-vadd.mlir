@@ -23,14 +23,13 @@ module {
 
 // Prologue: blob base and the two payload loads.
 // CHECK: xemachine.and
-// CHECK: xemachine.send ugm {{.*}}desc = 1645860096
-// CHECK: xemachine.send ugm {{.*}}desc = 1645856000
+// CHECK-COUNT-2: xemachine.load_block_a32
 // CHECK: xemachine.sync allrd
 // gid: mul into acc, add3 over local ids.
 // CHECK: xemachine.mul
 // CHECK: xemachine.add3
 // Two A64 loads and one store with a data payload.
-// CHECK-COUNT-2: xemachine.send ugm {{.*}}desc = 136316288
-// CHECK: xemachine.send ugm {{.*}}data {{.*}}desc = 134219140
+// CHECK-COUNT-2: xemachine.load_a64
+// CHECK: xemachine.store_a64 {{.*}}data
 // EOT via the gateway.
-// CHECK: xemachine.send gtwy {{.*}}eot
+// CHECK: xemachine.eot

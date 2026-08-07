@@ -11,7 +11,7 @@ func.func @k() {
   // CHECK: (W)     send.ugm (1|M0)  r8.0  r4.0  null:0  0xff000000  0x6219d500{{ *}}{A@2,$0}
   %dst, %tok = xemachine.send ugm %base {desc = 1645860096 : i32, exdesc = -16777216 : i32, noMask, sfid = 0 : i32} : (!xemachine.reg<16, 4>) -> (!xemachine.reg<16, 8>, !xemachine.mem.token)
   // CHECK: sync.allrd null
-  xemachine.sync allrd
+  %t3 = xemachine.sync allrd : !xemachine.mem.token
   // CHECK: send.ugm (32|M0)  null  r4.0  r6.0:2  0x0  0x8000584{{ *}}{A@3,$1}
   %n, %tok2 = xemachine.send ugm %base data %sum {desc = 134219140 : i32, exdesc = 0 : i32, execSize = 32 : i32, sfid = 0 : i32} : (!xemachine.reg<16, 4>, !xemachine.reg<32, 6>) -> (!xemachine.reg<0, 9>, !xemachine.mem.token)
   return

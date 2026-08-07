@@ -70,6 +70,7 @@ struct SelectToMachine
   int nextGRF = 4; // r0-r3 reserved: r0 header, r1 inline, r2/r3 scratch
   DenseMap<Value, Value> vmap;
   Value gidValue;
+  Value localXValue;
   Value tailValue;
   Value byteOffLo, byteOffHi;
   bool prologueEmitted = false;
@@ -101,17 +102,36 @@ struct SelectToMachine
         .getResult();
   }
 
-  Value emitSend(Type dstTy, Value addrPayload, Value dataPayload, SendFn fn,
-                 int desc, int exdesc, int execSize, bool noMask, bool eot) {
-    return SendOp::create(
-               *b, *loc, dstTy, MemTokenType::get(ctx),
-               SendFnAttr::get(ctx, fn), b->getI32IntegerAttr(0),
-               b->getI32IntegerAttr(desc), b->getI32IntegerAttr(exdesc),
-               b->getI32IntegerAttr(execSize),
-               noMask ? b->getUnitAttr() : UnitAttr(),
-               eot ? b->getUnitAttr() : UnitAttr(), addrPayload, dataPayload,
-               /*dependency=*/Value(), /*swsb=*/IntegerAttr())
-        .getDst();
+  // Memory ops thread an explicit token chain (total order per thread; the
+  // alias-analysis-driven synthesis prunes edges later — design doc S9).
+  Value memToken;
+
+  Value dep() { return memToken; }
+  void track(Operation *op) { memToken = op->getResult(1); }
+
+  Value emitLoadA64(Type dstTy, Value addrPayload) {
+    auto op = LoadA64Op::create(*b, *loc, dstTy, MemTokenType::get(ctx),
+                                addrPayload, dep(), 32);
+    track(op);
+    return op.getDst();
+  }
+
+  void emitStoreA64(Value addrPayload, Value dataPayload) {
+    auto op = StoreA64Op::create(*b, *loc, MemTokenType::get(ctx), addrPayload,
+                                 dataPayload, dep(), 32);
+    memToken = op.getToken();
+  }
+
+  Value emitLoadBlock(Type dstTy, Value addrPayload, int words) {
+    auto op = LoadBlockA32Op::create(*b, *loc, dstTy, MemTokenType::get(ctx),
+                                     addrPayload, dep(), words);
+    track(op);
+    return op.getDst();
+  }
+
+  void emitSync(SyncKind kind) {
+    auto op = SyncOp::create(*b, *loc, MemTokenType::get(ctx), SyncKindAttr::get(ctx, kind), dep());
+    memToken = op.getToken();
   }
 
   LogicalResult lowerKernel(func::FuncOp kernel) {
@@ -119,6 +139,7 @@ struct SelectToMachine
     loc = kernel.getLoc();
     nextGRF = 4; // r0-r3 reserved: r0 header, r1 inline, r2/r3 scratch
     vmap.clear();
+    memToken = nullptr;
     gidValue = nullptr;
     tailValue = nullptr;
     byteOffLo = byteOffHi = nullptr;
@@ -147,12 +168,34 @@ struct SelectToMachine
     for (Operation &op : blk) {
       if (auto call = dyn_cast<LLVM::CallOp>(&op)) {
         auto callee = call.getCallee();
-        if (!callee || !callee->starts_with(inter::builtins::kGetGlobalId))
+        if (!callee)
+          return emitError(op.getLoc(), "indirect call"), failure();
+        if (callee->starts_with(inter::builtins::kGetGlobalId)) {
+          if (failed(emitPrologueAndGid()))
+            return failure();
+          vmap[op.getResult(0)] = gidValue;
+        } else if (callee->starts_with(inter::builtins::kGetLocalId)) {
+          if (failed(emitPrologueAndGid()))
+            return failure();
+          // Widen the packed u16 lane ids to dwords once.
+          Value lid = MovOp::create(*b, *loc, grf(32), i32(), /*execSize=*/32,
+                                    dcanon(), rcanon(), IntegerAttr(),
+                                    IntegerAttr(), ty(i16()),
+                                    /*noMask=*/false, /*maskOffset=*/0,
+                                    localXValue)
+                          .getResult();
+          vmap[op.getResult(0)] = lid;
+        } else if (callee->starts_with(inter::builtins::kBarrier)) {
+          emitBarrier();
+        } else if (callee->starts_with(inter::builtins::kAtomicAdd)) {
+          if (failed(emitAtomicAdd(call)))
+            return failure();
+        } else {
           return emitError(op.getLoc(), "unsupported call"), failure();
-        if (failed(emitPrologueAndGid()))
-          return failure();
-      } else if (isa<LLVM::AndOp>(&op)) {
-        vmap[op.getResult(0)] = gidValue;
+        }
+      } else if (isa<LLVM::AndOp, LLVM::TruncOp, LLVM::ZExtOp>(&op)) {
+        // 64->32 id truncations: forward the mapped source value.
+        vmap[op.getResult(0)] = vmap.lookup(op.getOperand(0));
       } else if (auto c = dyn_cast<LLVM::ConstantOp>(&op)) {
         auto intAttr = dyn_cast<IntegerAttr>(c.getValue());
         if (!intAttr)
@@ -175,6 +218,24 @@ struct SelectToMachine
       } else if (isa<LLVM::AddOp>(&op)) {
         if (failed(emitSum(&op)))
           return failure();
+      } else if (auto sub = dyn_cast<LLVM::SubOp>(&op)) {
+        Value lhs = vmap.lookup(sub.getLhs());
+        Value rhs = vmap.lookup(sub.getRhs());
+        if (!lhs || !rhs)
+          return emitError(op.getLoc(), "sub operand not lowered"), failure();
+        if (lhs.getDefiningOp<ImmOp>()) {
+          // imm - x: negate via sub with imm in src1 position? For M3 the
+          // only shape is const - laneValue; handle both orders.
+        }
+        // sub a,b lowers to add(-b, a): operands are (b, a).
+        Value diff = SubOp::create(*b, *loc, grf(32), i32(), /*execSize=*/32,
+                                   dcanon(), rcanon(), rcanon(),
+                                   IntegerAttr(), IntegerAttr(),
+                                   IntegerAttr(), TypeAttr(), TypeAttr(),
+                                   /*noMask=*/false, /*maskOffset=*/0, rhs,
+                                   lhs)
+                         .getResult();
+        vmap[op.getResult(0)] = diff;
       } else if (auto store = dyn_cast<LLVM::StoreOp>(&op)) {
         if (failed(emitStore(cast<LLVM::GEPOp>(store.getAddr().getDefiningOp()),
                              vmap.lookup(store.getValue()))))
@@ -269,6 +330,10 @@ struct SelectToMachine
     SmallVector<Type> resultTypes;
     for (Value r : ifOp.getResults())
       resultTypes.push_back(grf(32));
+    // The exit memory token escapes as an extra region result: values do not
+    // leave regions except through results (design doc S9).
+    resultTypes.push_back(MemTokenType::get(ctx));
+    int tokenResultIndex = resultTypes.size() - 1;
 
     Operation *ifm;
     if (varying)
@@ -278,7 +343,10 @@ struct SelectToMachine
     for (auto [i, r] : llvm::enumerate(ifOp.getResults()))
       vmap[r] = ifm->getResult(i);
 
-    return emitIfRegions(ifOp, ifm, varying);
+    if (failed(emitIfRegions(ifOp, ifm, varying)))
+      return failure();
+    memToken = ifm->getResult(tokenResultIndex);
+    return success();
   }
 
   LogicalResult emitIfRegions(scf::IfOp ifOp, Operation *ifm, bool varying) {
@@ -288,7 +356,11 @@ struct SelectToMachine
                             : &cast<UniformIfOp>(ifm).getElseRegion();
     std::array<std::pair<Region *, Region *>, 2> regions = {
         {{&ifOp.getThenRegion(), thenR}, {&ifOp.getElseRegion(), elseR}}};
+    Value entryToken = memToken;
     for (auto [scfRegion, machineRegion] : regions) {
+      memToken = entryToken; // each region starts from the if-entry token
+      bool savedLoadsPending = loadsPending;
+      loadsPending = false;
       b->setInsertionPointToStart(&machineRegion->emplaceBlock());
       if (failed(lowerBlock(scfRegion->front())))
         return failure();
@@ -311,7 +383,10 @@ struct SelectToMachine
                           /*maskOffset=*/0, v);
         yieldVals.push_back(merge.getResult());
       }
+      if (memToken)
+        yieldVals.push_back(memToken); // exit token escapes as a result
       YieldOp::create(*b, *loc, yieldVals);
+      loadsPending = savedLoadsPending;
     }
     b->setInsertionPointAfter(ifm);
     return success();
@@ -340,12 +415,11 @@ struct SelectToMachine
             .getResult();
 
     // Local X ids: d32x16t at blob+0x20 (one GRF: 32 lanes of u16).
-    Value localX = emitSend(grf(16), perThreadAddr, Value(), SendFn::ugm,
-                            0x6219D500, 0xFF000000, 1, true, false);
+    Value localX = emitLoadBlock(grf(16), perThreadAddr, 16);
+    localXValue = localX;
     // Cross-thread tail: d32x8t at blob+0.
-    tailValue = emitSend(grf(16), base, Value(), SendFn::ugm, 0x6219C500,
-                         0xFF000000, 1, true, false);
-    SyncOp::create(*b, *loc, SyncKindAttr::get(ctx, SyncKind::allrd));
+    tailValue = emitLoadBlock(grf(16), base, 8);
+    emitSync(SyncKind::allrd);
 
     // gid base: groupX * enq_local_size.x, via the accumulator.
     Value acc = MulOp::create(*b, *loc, ARFType::get(ctx, ARFFile::acc, 16, 0),
@@ -436,14 +510,52 @@ struct SelectToMachine
     return {a0, a1};
   }
 
+  bool isSlmAddress(Value ptr) {
+    auto pt = dyn_cast<LLVM::LLVMPointerType>(ptr.getType());
+    return pt && pt.getAddressSpace() == 3;
+  }
+
+  // SLM byte address for a gep: index * 4. The index is the last gep index.
+  Value emitSlmAddress(LLVM::GEPOp gep) {
+    // GEP indices are PointerUnion<IntegerAttr, Value>; take the last one.
+    Value idx;
+    for (auto ix : gep.getIndices()) {
+      if (auto cst = dyn_cast<IntegerAttr>(ix))
+        idx = imm(cst.getInt(), i32());
+      else
+        idx = vmap.lookup(cast<Value>(ix));
+    }
+    if (!idx) {
+      emitError(gep.getLoc(), "slm index not lowered");
+      return nullptr;
+    }
+    // local-id-derived values are u16 lanes; everything else is dwords.
+    TypeAttr srcTy = idx == localXValue ? ty(i16()) : ty(i32());
+    return ShlOp::create(*b, *loc, grf(32), i32(), /*execSize=*/32, dcanon(),
+                         rcanon(), RegionAttr(), IntegerAttr(), IntegerAttr(),
+                         IntegerAttr(), srcTy, TypeAttr(), /*noMask=*/false,
+                         /*maskOffset=*/0, idx, imm(2, i16()))
+        .getResult();
+  }
+
   LogicalResult emitLoad(LLVM::GEPOp gep, Value result) {
+    if (isSlmAddress(gep.getResult())) {
+      Value addr = emitSlmAddress(gep);
+      if (!addr)
+        return failure();
+      auto op = LoadSLMOp::create(*b, *loc, grf(32), MemTokenType::get(ctx),
+                                  addr, dep(), 32);
+      track(op);
+      vmap[result] = op.getDst();
+      loadsPending = true;
+      return success();
+    }
     if (!gidValue)
       return emitError(gep.getLoc(), "memory op before global id"), failure();
     int argIndex = cast<BlockArgument>(gep.getBase()).getArgNumber();
     emitByteOffsets();
     auto [a0, a1] = emitAddress(byteOffLo, byteOffHi, argIndex);
-    Value v = emitSend(grf(32), a0, Value(), SendFn::ugm, 0x08200580, 0, 32,
-                       false, false);
+    Value v = emitLoadA64(grf(32), a0);
     vmap[result] = v;
     loadsPending = true;
     return success();
@@ -455,8 +567,9 @@ struct SelectToMachine
     if (!loadsPending)
       return;
     for (Value v : vs) {
-      if (v && v.getDefiningOp<SendOp>()) {
-        SyncOp::create(*b, *loc, SyncKindAttr::get(ctx, SyncKind::allrd));
+      if (v && (v.getDefiningOp<LoadA64Op>() || v.getDefiningOp<LoadSLMOp>() ||
+                v.getDefiningOp<LoadBlockA32Op>())) {
+        emitSync(SyncKind::allrd);
         loadsPending = false;
         return;
       }
@@ -480,9 +593,19 @@ struct SelectToMachine
   }
 
   LogicalResult emitStore(LLVM::GEPOp gep, Value data) {
+    if (isSlmAddress(gep.getResult())) {
+      Value addr = emitSlmAddress(gep);
+      if (!addr)
+        return failure();
+      maybeSync({data});
+      auto op = StoreSLMOp::create(*b, *loc, MemTokenType::get(ctx), addr,
+                                   data, dep(), 32);
+      memToken = op.getToken();
+      return success();
+    }
     int argIndex = cast<BlockArgument>(gep.getBase()).getArgNumber();
     auto [a0, a1] = emitAddress(byteOffLo, byteOffHi, argIndex);
-    emitSend(grf(0), a0, data, SendFn::ugm, 0x08000584, 0, 32, false, false);
+    emitStoreA64(a0, data);
     return success();
   }
 
@@ -492,8 +615,73 @@ struct SelectToMachine
                                   IntegerAttr(), TypeAttr(), /*noMask=*/true,
                                   /*maskOffset=*/0, archreg(0))
                         .getResult();
-    emitSend(grf(0), scratch, Value(), SendFn::gtwy, 0x02000010, 0, 1, true,
-             true);
+    EotOp::create(*b, *loc, scratch, dep());
+  }
+
+  // barrier(CLK_*_MEM_FENCE): fence.slm -> drain -> signal -> sync.bar, all
+  // token-chained (design doc: every part explicit, ordered by tokens).
+  void emitBarrier() {
+    Value r0 = archreg(0);
+    auto fence = FenceSLMOp::create(*b, *loc, grf(16), MemTokenType::get(ctx),
+                                    r0, dep());
+    track(fence);
+    auto awaitOp = FenceAwaitOp::create(*b, *loc, MemTokenType::get(ctx),
+                                        fence.getReadback(), dep());
+    memToken = awaitOp.getToken();
+
+    // Barrier payload: zero GRF with dword 2 = 0x400000 and byte 10 = r0.11.
+    Value payload = MovOp::create(*b, *loc, grf(16), i32(), /*execSize=*/16,
+                                  DstRegionAttr(), RegionAttr(), IntegerAttr(),
+                                  IntegerAttr(), TypeAttr(), /*noMask=*/true,
+                                  /*maskOffset=*/0, imm(0, i32()))
+                        .getResult();
+    payload = MovOp::create(*b, *loc, payload.getType(), i32(), /*execSize=*/1,
+                            dcanon(), RegionAttr(), b->getI32IntegerAttr(2),
+                            IntegerAttr(), TypeAttr(), /*noMask=*/true,
+                            /*maskOffset=*/0, imm(0x400000, i32()))
+                  .getResult();
+    payload = MovOp::create(*b, *loc, payload.getType(),
+                            IntegerType::get(ctx, 8), /*execSize=*/2, dcanon(),
+                            runiform(), b->getI32IntegerAttr(10),
+                            b->getI32IntegerAttr(11), TypeAttr(),
+                            /*noMask=*/true, /*maskOffset=*/0, r0)
+                  .getResult();
+    auto sig = BarrierSignalOp::create(*b, *loc, MemTokenType::get(ctx),
+                                       payload, dep());
+    memToken = sig.getToken();
+    emitSync(SyncKind::bar);
+  }
+
+  // atomic_add(ptr, 1): naive per-lane vector form; IGC's prefix-sum folding
+  // is an optimization we do not replicate.
+  LogicalResult emitAtomicAdd(LLVM::CallOp call) {
+    auto barg = dyn_cast<BlockArgument>(call.getArgOperands()[0]);
+    if (!barg)
+      return emitError(call.getLoc(), "atomic arg must be a kernel pointer"),
+             failure();
+    auto [ptr, sub] = pointerArg(barg.getArgNumber());
+    // Per-lane address payload: the uniform pointer broadcast into qwords.
+    Type i64t = i64();
+    Value a0 = MovOp::create(*b, *loc, grf(32), i64t, /*execSize=*/16,
+                             dcanon(), runiform(), IntegerAttr(),
+                             b->getI32IntegerAttr(sub), TypeAttr(),
+                             /*noMask=*/false, /*maskOffset=*/0, ptr)
+                   .getResult();
+    Value a1 = MovOp::create(*b, *loc, grf(32), i64t, /*execSize=*/16,
+                             dcanon(), runiform(), IntegerAttr(),
+                             b->getI32IntegerAttr(sub), TypeAttr(),
+                             /*noMask=*/false, /*maskOffset=*/16, ptr)
+                   .getResult();
+    Value ones = MovOp::create(*b, *loc, grf(32), i32(), /*execSize=*/32,
+                               DstRegionAttr(), RegionAttr(), IntegerAttr(),
+                               IntegerAttr(), TypeAttr(), /*noMask=*/false,
+                               /*maskOffset=*/0, imm(1, i16()))
+                     .getResult();
+    auto op = AtomicIAddA64Op::create(*b, *loc, grf(32), MemTokenType::get(ctx),
+                                      a0, ones, dep(), 32);
+    track(op);
+    vmap[call.getResult()] = op.getDst();
+    return success();
   }
 };
 

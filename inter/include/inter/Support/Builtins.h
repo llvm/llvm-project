@@ -10,6 +10,10 @@
 namespace inter::builtins {
 
 inline constexpr llvm::StringRef kGetGlobalId = "_Z13get_global_idj";
+inline constexpr llvm::StringRef kGetLocalId = "_Z12get_local_idj";
+inline constexpr llvm::StringRef kBarrier = "_Z7barrierj";
+// OpenCL C 1.2 atomic builtins (volatile pointer forms as emitted by clang).
+inline constexpr llvm::StringRef kAtomicAdd = "_Z10atomic_addPU3AS1Vjj";
 
 } // namespace inter::builtins
 
