@@ -3247,9 +3247,9 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       // Initially OMPD_ordered_standalone is used for ORDERED, before the
       // actual kind can be determined.
       if (!isAllowedClauseForDirective(DKind, CKind, OMPVersion))
-        checkClauseValid(OMPD_ordered_blockassoc, CKind);
+        CheckClauseValid(OMPD_ordered_blockassoc, CKind);
     } else {
-      checkClauseValid(DKind, CKind);
+      CheckClauseValid(DKind, CKind);
     }
   }
 
