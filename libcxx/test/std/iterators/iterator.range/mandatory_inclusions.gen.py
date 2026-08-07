@@ -51,11 +51,13 @@ headers = list(
     )
 )
 
+
 def get_standard_mode_threshold(header):
     if header == "optional":
-        return "26" # `optional` is a range only since C++26 via P3168R2.
+        return "26"  # `optional` is a range only since C++26 via P3168R2.
     else:
-        return "0" # Other related components are ranges at first.
+        return "0"  # Other related components are ranges at first.
+
 
 for header in headers:
     print(
