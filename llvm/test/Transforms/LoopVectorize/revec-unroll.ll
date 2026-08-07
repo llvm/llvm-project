@@ -15,7 +15,7 @@ define void @load_add_store(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs
 ; VF1IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; VF1IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF1IC2:       [[VECTOR_PH]]:
-; VF1IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; VF1IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; VF1IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; VF1IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF1IC2:       [[VECTOR_BODY]]:
@@ -51,8 +51,7 @@ define void @load_add_store(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs
 ; SVF1IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVF1IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVF1IC2:       [[VECTOR_PH]]:
-; SVF1IC2-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 1
-; SVF1IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP2]]
+; SVF1IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVF1IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVF1IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; SVF1IC2:       [[VECTOR_BODY]]:
@@ -71,7 +70,7 @@ define void @load_add_store(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs
 ; SVF1IC2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds <4 x i32>, ptr [[TMP5]], i64 [[TMP0]]
 ; SVF1IC2-NEXT:    store <vscale x 4 x i32> [[TMP8]], ptr [[TMP5]], align 16
 ; SVF1IC2-NEXT:    store <vscale x 4 x i32> [[TMP9]], ptr [[TMP10]], align 16
-; SVF1IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
+; SVF1IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVF1IC2-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVF1IC2-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; SVF1IC2:       [[MIDDLE_BLOCK]]:

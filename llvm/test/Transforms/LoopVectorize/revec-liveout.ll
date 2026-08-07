@@ -42,15 +42,14 @@ define <4 x i32> @vector_live_out(ptr noalias %src, i64 %n) {
 ; SVF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVF2:       [[VECTOR_PH]]:
-; SVF2-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 1
-; SVF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP2]]
+; SVF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; SVF2:       [[VECTOR_BODY]]:
 ; SVF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SVF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr [[SRC]], i64 [[INDEX]]
 ; SVF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i32>, ptr [[TMP3]], align 16
-; SVF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
+; SVF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVF2-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVF2-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; SVF2:       [[MIDDLE_BLOCK]]:
