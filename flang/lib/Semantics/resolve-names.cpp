@@ -8222,12 +8222,17 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
     context().NoteDefinedSymbol(*prev);
     name.symbol = nullptr; // undo the "FindSymbol()" above
     if (!dataStmtObjectInSpecPart_ || type) {
-      // F'2023 19.4 p5 ambiguous rule about outer declarations.  For a
-      // DATA statement in a specification part with no integer-type-spec,
-      // don't take the outer declaration's type here: typing is deferred
-      // to FinishSpecificationPart(), whose look-up prefers a declaration
-      // in the innermost scoping unit -- which may follow the DATA
-      // statement -- over the outer one.
+      // The name is declared in an enclosing scope, not (yet) locally.
+      // Flang, like other compilers, reads F'2023 19.4 p5's "the type ...
+      // that it would have if it were the name of a variable in the
+      // innermost ... scoping unit" as adopting the type of a visible
+      // declaration of the name, rather than as a hypothetical application
+      // of the implicit typing rules; see the discussion of 19.4 p5 in
+      // flang/docs/Extensions.md.  For a DATA statement in a specification
+      // part with no integer-type-spec, don't take the outer declaration's
+      // type here: typing is deferred to FinishSpecificationPart(), whose
+      // look-up prefers a declaration in the innermost scoping unit --
+      // which may follow the DATA statement -- over the outer one.
       declTypeSpec = prev->GetType();
     }
   }
@@ -8248,7 +8253,12 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
     // F'2023 19.4 p5: this index has the type that its name would have as
     // a variable of the scoping unit, and the declaration establishing that
     // type may follow the DATA statement in the same specification part.
-    // Defer its typing to FinishSpecificationPart().
+    // Defer its typing to FinishSpecificationPart().  (F'2023 8.6.7 p3's
+    // restriction on typing a DATA statement variable in a subsequent type
+    // declaration governs the data-stmt-objects, which are variables of the
+    // scoping unit; it does not apply to this index, whose appearance "is
+    // not an implicit declaration of a variable whose scope is the scoping
+    // unit" (19.4 p5).)
     specPartState_.deferredDataIDoVars.emplace_back(symbol);
   } else {
     ApplyImplicitRules(symbol);
