@@ -1,3 +1,5 @@
-:orphan:
-:template: clangd_redirect.html
-:redirect_target: https://clangd.llvm.org/
+---
+orphan: true
+redirect_target: https://clangd.llvm.org/
+template: clangd_redirect.html
+---
