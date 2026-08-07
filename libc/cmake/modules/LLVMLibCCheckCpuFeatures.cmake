@@ -28,7 +28,7 @@ endif()
 # treats -march=native as a literal string and will silently serve object
 # files compiled for a different CPU model.
 set(LIBC_COMPILE_OPTIONS_NATIVE "${_libc_native_default}" CACHE STRING
-    "Compile options for host-native builds.  Set to empty to disable -march=native.")
+  "Compile options for host-native builds.  Set to empty to disable -march=native.")
 
 # Making sure ALL_CPU_FEATURES is sorted.
 list(SORT ALL_CPU_FEATURES)

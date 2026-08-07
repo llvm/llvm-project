@@ -2041,15 +2041,43 @@ static Value *returnEdge(const PHINode *PN, Value *IntrBaseVal) {
 // Bit-reverse Load Intrinsic: Figure out the underlying object the base
 // pointer points to, for the bit-reverse load intrinsic. Setting this to
 // memoperand might help alias analysis to figure out the dependencies.
-static Value *getUnderLyingObjectForBrevLdIntr(Value *V) {
+// A bit-reverse load accesses the base pointer with its low 16 bits reversed,
+// and post-increments the base pointer by the modifier value. For a chain of
+// bit-reverse loads, the offset that a load accesses relative to the
+// underlying object is the bit-reverse of the sum of the modifiers of the
+// preceding loads in the chain. Offset is set to that value, and HasOffset is
+// set to true, when the sum is known, that is when all of those modifiers are
+// constants and the sum fits in 16 unsigned bits. Otherwise HasOffset is set
+// to false and Offset is left unchanged.
+static Value *getUnderLyingObjectForBrevLdIntr(Value *V, int &Offset,
+                                               bool &HasOffset) {
   Value *IntrBaseVal = V;
   Value *BaseVal;
+  int64_t Sum = 0;
+  HasOffset = true;
   // Loop over till we return the same Value, implies we either figure out
   // the object or we hit a PHI
   do {
     BaseVal = V;
     V = getBrevLdObject(V);
+    // Identify if this is part of a chain of bit-reverse loads, and accumulate
+    // the modifier of the preceding load in the chain.
+    if (HasOffset && BaseVal != V && isa<IntrinsicInst>(V) &&
+        isBrevLdIntrinsic(V)) {
+      Value *Modifier = cast<IntrinsicInst>(V)->getOperand(1);
+      if (auto *CN = dyn_cast<ConstantInt>(Modifier))
+        Sum += CN->getSExtValue();
+      else
+        HasOffset = false;
+    }
   } while (BaseVal != V);
+
+  // Only the low 16 bits of the base pointer take part in the bit-reverse. A
+  // sum that does not fit in them would also change the remaining bits.
+  if (HasOffset && Sum >= 0 && isUInt<16>(Sum))
+    Offset = APInt(16, Sum).reverseBits().getZExtValue();
+  else
+    HasOffset = false;
 
   // Identify the object from PHINode.
   if (const PHINode *PN = dyn_cast<PHINode>(V))
@@ -2082,10 +2110,24 @@ void HexagonTargetLowering::getTgtMemIntrinsic(
     Type *ElTy = I.getCalledFunction()->getReturnType()->getStructElementType(0);
     Info.memVT = MVT::getVT(ElTy);
     llvm::Value *BasePtrVal = I.getOperand(0);
-    Info.ptrVal = getUnderLyingObjectForBrevLdIntr(BasePtrVal);
-    // The offset value comes through Modifier register. For now, assume the
-    // offset is 0.
+    // The offset value comes through the Modifier register. Determine the
+    // offset that is going to be accessed relative to the underlying object.
+    // If it cannot be determined, leave the pointer information out of the
+    // memory operand, so that alias analysis stays conservative.
+    bool HasOffset = false;
     Info.offset = 0;
+    Value *UnderlyingObj =
+        getUnderLyingObjectForBrevLdIntr(BasePtrVal, Info.offset, HasOffset);
+    // The underlying object is unknown if the base pointer could not be traced
+    // back to a pointer value. Also, unless the object is aligned to 64K, the
+    // low 16 bits of the base pointer are not known, and reversing them can
+    // produce an address anywhere in the surrounding 64K region, possibly
+    // outside of the object.
+    if (!UnderlyingObj->getType()->isPointerTy() ||
+        UnderlyingObj->getPointerAlignment(DL) < Align(65536))
+      HasOffset = false;
+    if (HasOffset)
+      Info.ptrVal = UnderlyingObj;
     Info.align = DL.getABITypeAlign(Info.memVT.getTypeForEVT(Cont));
     Info.flags = MachineMemOperand::MOLoad;
     Infos.push_back(Info);
@@ -2149,18 +2191,21 @@ bool HexagonTargetLowering::shouldExpandBuildVectorWithShuffles(EVT VT,
   return false;
 }
 
-bool HexagonTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-      unsigned Index) const {
+TargetLowering::ExtractSubvectorCost
+HexagonTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                               unsigned Index) const {
   assert(ResVT.getVectorElementType() == SrcVT.getVectorElementType());
   if (!ResVT.isSimple() || !SrcVT.isSimple())
-    return false;
+    return ExtractSubvectorCost::Expensive;
 
   MVT ResTy = ResVT.getSimpleVT(), SrcTy = SrcVT.getSimpleVT();
   if (ResTy.getVectorElementType() != MVT::i1)
-    return true;
+    return ExtractSubvectorCost::Free;
 
   // Non-HVX bool vectors are relatively cheap.
-  return SrcTy.getVectorNumElements() <= 8;
+  if (SrcTy.getVectorNumElements() <= 8)
+    return ExtractSubvectorCost::Free;
+  return ExtractSubvectorCost::Expensive;
 }
 
 bool HexagonTargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
@@ -3093,7 +3138,7 @@ HexagonTargetLowering::LowerLoad(SDValue Op, SelectionDAG &DAG) const {
         LN->getAddressingMode(), ISD::ZEXTLOAD, MVT::i32, dl, LN->getChain(),
         LN->getBasePtr(), LN->getOffset(), LN->getPointerInfo(),
         /*MemoryVT*/ MVT::i8, LN->getAlign(), LN->getMemOperand()->getFlags(),
-        LN->getAAInfo(), LN->getRanges());
+        MMOMetadata(LN->getAAInfo(), LN->getRanges()));
     LN = cast<LoadSDNode>(NL.getNode());
   }
 
@@ -3220,7 +3265,7 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
     MachineFunction &MF = DAG.getMachineFunction();
     WideMMO = MF.getMachineMemOperand(
         MMO->getPointerInfo(), MMO->getFlags(), 2 * LoadLen, Align(LoadLen),
-        MMO->getAAInfo(), MMO->getRanges(), MMO->getSyncScopeID(),
+        MMOMetadata(MMO->getAAInfo(), MMO->getRanges()), MMO->getSyncScopeID(),
         MMO->getSuccessOrdering(), MMO->getFailureOrdering());
   }
 

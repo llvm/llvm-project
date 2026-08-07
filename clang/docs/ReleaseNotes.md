@@ -497,6 +497,12 @@ features cannot lower the translation-unit ABI level;
 
 #### CUDA/HIP Language Changes
 
+- HIP compilations now add the `include/libhipcxx` directory from the selected
+  ROCm installation to the header search path when it exists. This allows
+  libhipcxx headers to be included with paths such as `<cuda/std/atomic>`.
+  The `-nogpuinc` option disables this path together with the other HIP include
+  paths.
+
 #### CUDA Support
 
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI

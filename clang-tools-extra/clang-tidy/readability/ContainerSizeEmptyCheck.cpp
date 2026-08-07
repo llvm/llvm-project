@@ -339,13 +339,12 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     // Always true/false, no warnings for that.
-    if (Value == 0) {
-      if ((OpCode == BinaryOperatorKind::BO_GT && !ContainerIsLHS) ||
-          (OpCode == BinaryOperatorKind::BO_LT && ContainerIsLHS) ||
-          (OpCode == BinaryOperatorKind::BO_LE && !ContainerIsLHS) ||
-          (OpCode == BinaryOperatorKind::BO_GE && ContainerIsLHS))
-        return;
-    }
+    if (Value == 0 &&
+        ((OpCode == BinaryOperatorKind::BO_GT && !ContainerIsLHS) ||
+         (OpCode == BinaryOperatorKind::BO_LT && ContainerIsLHS) ||
+         (OpCode == BinaryOperatorKind::BO_LE && !ContainerIsLHS) ||
+         (OpCode == BinaryOperatorKind::BO_GE && ContainerIsLHS)))
+      return;
 
     // Do not warn for size > 1, 1 < size, size <= 1, 1 >= size.
     if (Value == 1) {

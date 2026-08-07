@@ -1,6 +1,6 @@
 if(NOT TARGET libc.src.__support.OSUtil.osutil)
   message(STATUS "libc.src.__support.OSUtil.osutil is not avaiable. "
-                 "Skip unistd targets.")
+    "Skip unistd targets.")
   return()
 endif()
 

@@ -38,76 +38,43 @@ on:
       LLVM_TOKEN_GENERATOR_PRIVATE_KEY:
         description: "Private key for our GitHub App we use for generating access tokens."
         required: true
+  # Run on pull_requests for testing purposes.
+  pull_request:
+    paths:
+      - '.github/workflows/release-documentation.yml'
+      - 'llvm/utils/release/build-docs.sh'
+    types:
+      - opened
+      - synchronize
+      - reopened
+      # When a PR is closed, we still start this workflow, but then skip
+      # all the jobs, which makes it effectively a no-op.  The reason to
+      # do this is that it allows us to take advantage of concurrency groups
+      # to cancel in progress CI jobs whenever the PR is closed.
+      - closed
+
+concurrency:
+  group: release-documentation-${{ inputs.release-version || github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
-  # This job checks permissions and validates inputs to prevent potential
-  # malicious actions.  Since the release-documentation job has contents: write
-  # permissions we need to be extra careful about who can run the job and what
-  # inputs can be provided.
-  release-man-pages-validate-input:
-    name: Release Man Pages Validate Input
-    runs-on: ubuntu-24.04
-    environment:
-      name: release
-      deployment: false
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
-          sparse-checkout: |
-            .github/workflows/
-
-      - name: Check Permissions
-        uses: ./.github/workflows/require-team-membership
-        with:
-          team-slug: llvm-release-managers
-          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
-          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
-
-      - name: Validate Input
-        uses: ./.github/workflows/validate-release-version
-        with:
-          release-version: ${{ inputs.release-version }}
-
   release-documentation:
     name: Build and Upload Release Documentation and Man Pages
     runs-on: ubuntu-24.04
-    needs:
-      - release-man-pages-validate-input
+    if: >-
+      github.repository_owner == 'llvm' &&
+      github.event.action != 'closed'
     outputs:
       man-page-digest: ${{ steps.man-page-digest.outputs.man-page-digest }}
       man-page-artifact-id: ${{ steps.man-page-artifact-upload.outputs.artifact-id }}
-
-      man-page-release-version: ${{ steps.vars.outputs.man-page-release-version }}
-      man-page-tarball-name: ${{ steps.vars.outputs.man-page-tarball-name }}
-      man-page-upload: ${{ steps.vars.outputs.man-page-upload }}
-      man-page-attestation-name: ${{ steps.vars.outputs.man-page-attestation-name }}
-    env:
-      upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
     steps:
-      - name: Collect Variables
-        id: vars
-        env:
-          INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
-          UPLOAD_MAN_PAGES: ${{ inputs.upload }}
-        shell: bash
-        run: |
-          {
-            echo "man-page-release-version=$INPUTS_RELEASE_VERSION"
-            echo "man-page-tarball-name=llvm_man_pages-$INPUTS_RELEASE_VERSION.tar.xz"
-            echo "man-page-ref=llvmorg-$INPUTS_RELEASE_VERSION"
-            echo "man-page-upload=$UPLOAD_MAN_PAGES"
-            echo "man-page-attestation-name=$RUNNER_OS-$RUNNER_ARCH-release-man-page-attestation"
-          } >> "$GITHUB_OUTPUT"
-
       - name: Checkout LLVM
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
       - name: Validate Input
+        if: inputs.release-version
         uses: ./.github/workflows/validate-release-version
         with:
           release-version: ${{ inputs.release-version }}
@@ -129,25 +96,30 @@ jobs:
           pip3 install --require-hashes --user -r ./llvm/docs/requirements.txt
 
       - name: Build Documentation
+        id: build
         env:
           GITHUB_TOKEN: ${{ github.token }}
           INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          ./llvm/utils/release/build-docs.sh -release "$INPUTS_RELEASE_VERSION" -no-doxygen
+          ./llvm/utils/release/build-docs.sh \
+            $(test -n "$INPUTS_RELEASE_VERSION" && echo -release "$INPUTS_RELEASE_VERSION" || echo -srcdir llvm) -no-doxygen
+          echo "man-page-tarball-name=$(basename $(find . -iname 'llvm_man_pages-*.tar.xz'))" >> "$GITHUB_OUTPUT"
+
 
       - name: Generate sha256 digest for man page tarball
         id: man-page-digest
         shell: bash
         env:
-          TARBALL_NAME: ${{ steps.vars.outputs.man-page-tarball-name }}
+          TARBALL_NAME: ${{ steps.build.outputs.man-page-tarball-name }}
         run: |
-            echo "man-page-digest=$(cat "$TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+            echo "man-page-digest=$(cat "$TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
 
       - id: man-page-artifact-upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
+          name: man-pages
           path: |
-            ${{ steps.vars.outputs.man-page-tarball-name }}
+            ${{ steps.build.outputs.man-page-tarball-name }}
 
       - name: Create Release Notes Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -155,8 +127,23 @@ jobs:
           name: release-notes
           path: docs-build/html-export/
 
+
+  upload-release-notes:
+    name: "Upload Release Notes"
+    runs-on: ubuntu-24.04
+    environment:
+      deployment: false
+      name: release
+    needs:
+      - release-documentation
+    if: >-
+      github.event_name != 'pull_request' &&
+      inputs.upload &&
+      !contains(inputs.release-version, 'rc')
+    permissions:
+      contents: read
+    steps:
       - name: Clone www-releases
-        if: env.upload
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: ${{ github.repository_owner }}/www-releases
@@ -165,15 +152,19 @@ jobs:
           path: www-releases
           persist-credentials: false
 
+      - name: Download Release Notes Artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        id: download-artifact
+        with:
+          name: release-notes
+          path: ${{ github.workspace }}/www-releases/${{ inputs.release-version }}
+
       - name: Upload Release Notes
-        if: env.upload
         env:
           PUSH_TOKEN: ${{ secrets.LLVMBOT_WWW_RELEASES_PUSH }}
           GH_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
           INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          mkdir -p www-releases/$INPUTS_RELEASE_VERSION
-          mv ./docs-build/html-export/* www-releases/$INPUTS_RELEASE_VERSION
           cd www-releases
           git checkout -b $INPUTS_RELEASE_VERSION
           git add $INPUTS_RELEASE_VERSION
@@ -203,10 +194,10 @@ jobs:
        id: man-page-artifact-upload
        uses: $/.github/workflows/upload-release-artifact
        with:
-         release-version: ${{ needs.release-documentation.outputs.man-page-release-version }}
+         release-version: ${{ inputs.release-version }}
          artifact-id: ${{ needs.release-documentation.outputs.man-page-artifact-id }}
-         attestation-name: ${{ needs.release-documentation.outputs.man-page-attestation-name }}
+         attestation-name: ${{ runner.os }}-${{ runner.arch }}-release-man-page-attestation
          digest: ${{ needs.release-documentation.outputs.man-page-digest }}
-         upload: ${{ needs.release-documentation.outputs.man-page-upload }}
+         upload: ${{ inputs.upload }}
          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}

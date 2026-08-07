@@ -13,6 +13,7 @@
 #ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_MEMORYMANAGER_H
 #define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_MEMORYMANAGER_H
 
+#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <list>
@@ -25,6 +26,7 @@
 #include "Shared/Utils.h"
 #include "omptarget.h"
 
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Error.h"
 
 using namespace llvm::offload::debug;
@@ -268,9 +270,12 @@ public:
 
       NodeTy TempNode(Size, nullptr);
       std::lock_guard<std::mutex> LG(FreeListLocks[B]);
-      const auto Itr = List.find(TempNode);
+      auto [First, Last] = List.equal_range(TempNode);
 
-      if (Itr != List.end()) {
+      auto Itr = std::find_if(First, Last, [Alignment](const NodeTy &N) {
+        return Alignment == 0 || isAddrAligned(Align(Alignment), N.Ptr);
+      });
+      if (Itr != Last) {
         NodePtr = &Itr->get();
         List.erase(Itr);
       }

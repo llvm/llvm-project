@@ -56,7 +56,7 @@ llvm.func @vectorizeOptions() {
 // CHECK-DAG: ![[FOLLOWUP:[0-9]+]] = distinct !{![[FOLLOWUP]], ![[NON_FORCED]]}
 // CHECK-DAG: ![[LOOP_NODE]] = distinct !{![[LOOP_NODE]], !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.enable"}
-// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+// CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.predicate.enable"}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.width", i32 16}
 // CHECK-DAG: !{{[0-9]+}} = !{!"llvm.loop.vectorize.followup_vectorized", ![[FOLLOWUP]]}

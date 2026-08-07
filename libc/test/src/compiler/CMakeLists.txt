@@ -13,4 +13,4 @@ add_libc_unittest(
     libc.src.string.memset
   COMPILE_OPTIONS
     -fstack-protector-all
-  )
+)

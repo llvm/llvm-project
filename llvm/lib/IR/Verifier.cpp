@@ -64,6 +64,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/CFG.h"
@@ -1009,18 +1010,12 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
             CurrentMD);
     }
 
-    // Enforce the single-operand form of llvm.loop.distribute metadata.
+    // Enforce the single-operand form of the loop enable/disable pairs.
     if (CurrentMD->getNumOperands() > 0 &&
-        (CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.enable") ||
-         CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.disable")))
-      Check(CurrentMD->getNumOperands() == 1,
-            "Expected one operand for llvm.loop.distribute metadata",
-            CurrentMD);
-
-    // Enforce the single-operand form of llvm.loop.vectorize.enable metadata.
-    if (CurrentMD->getNumOperands() > 0 &&
-        (CurrentMD->getOperand(0).equalsStr("llvm.loop.vectorize.enable") ||
-         CurrentMD->getOperand(0).equalsStr("llvm.loop.vectorize.disable")))
+        any_of(OldBooleanLoopTags, [CurrentMD](const BooleanLoopTags &Tags) {
+          return CurrentMD->getOperand(0).equalsStr(Tags.Enable) ||
+                 CurrentMD->getOperand(0).equalsStr(Tags.Disable);
+        }))
       Check(CurrentMD->getNumOperands() == 1,
             "Expecting only the metadata name", CurrentMD);
 

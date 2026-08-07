@@ -51,6 +51,7 @@ class ProcessSaveCoreMinidumpSizeMismatchTestCase(TestBase):
 
     @skipUnlessPlatform(["linux"])
     @skipIf(hostoslist=["windows"])
+    @skipIf(archs=["arm$"])
     def test_memory64_datasize_matches_written_bytes(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

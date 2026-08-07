@@ -11787,13 +11787,16 @@ bool LoongArchTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
   return isOperationLegalOrCustomOrPromote(Opc, ScalarVT);
 }
 
-bool LoongArchTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                                      unsigned Index) const {
+TargetLowering::ExtractSubvectorCost
+LoongArchTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                                 unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
-    return false;
+    return ExtractSubvectorCost::Expensive;
 
   // Extract a 128-bit subvector from index 0 of a 256-bit vector is free.
-  return Index == 0;
+  if (Index == 0)
+    return ExtractSubvectorCost::Free;
+  return ExtractSubvectorCost::Expensive;
 }
 
 bool LoongArchTargetLowering::isExtractVecEltCheap(EVT VT,

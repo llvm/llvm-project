@@ -502,6 +502,10 @@ public:
                                    inconvertibleErrorCode());
   }
 
+  /// Returns true if frontends should default to using the NewPM for this
+  /// specific target.
+  virtual bool shouldDefaultToNewPM() const { return false; }
+
   /// Returns true if the target is expected to pass all machine verifier
   /// checks. This is a stopgap measure to fix targets one by one. We will
   /// remove this at some point and always enable the verifier when

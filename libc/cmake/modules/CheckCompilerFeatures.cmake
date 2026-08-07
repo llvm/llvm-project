@@ -68,13 +68,13 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
   if(${feature} STREQUAL "fixed_point")
     list(APPEND compile_options "-ffixed-point")
   elseif(${feature} STREQUAL "stdc_fenv_access")
-    if (MSVC)
+    if(MSVC)
       list(APPEND compile_options "/WX")
     else()
       list(APPEND compile_options "-Wall -Werror")
     endif()
   elseif(${feature} MATCHES "^builtin_" OR
-         ${feature} STREQUAL "float16_conversion")
+      ${feature} STREQUAL "float16_conversion")
     set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
     set(link_options -nostdlib)
     # The compiler might handle calls to math builtins by generating calls to
@@ -164,4 +164,3 @@ check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)
 
 # clang-all, gcc-8+
 check_cxx_compiler_flag("-Wextra-semi" LIBC_CC_SUPPORTS_EXTRA_SEMI)
-

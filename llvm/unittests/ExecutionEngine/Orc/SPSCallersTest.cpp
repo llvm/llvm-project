@@ -256,3 +256,75 @@ TEST(SPSCallersTest, Int32VoidSync) {
 
   cantFail(ES.endSession());
 }
+
+// operator bool reflects whether the caller has a non-null callee address, and
+// the accessors return the values the caller was constructed with.
+TEST(SPSCallersTest, OperatorBoolAndAccessors) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  ExecutorAddr CalleeAddr = ExecutorAddr::fromPtr(callMainWrapper);
+  MainCaller CallMain(ES, CalleeAddr);
+  EXPECT_TRUE(static_cast<bool>(CallMain));
+  EXPECT_EQ(CallMain.calleeAddr(), CalleeAddr);
+  EXPECT_EQ(&CallMain.executionSession(), &ES);
+
+  // A caller with a null callee address is falsey.
+  MainCaller NullCall(ES, ExecutorAddr());
+  EXPECT_FALSE(static_cast<bool>(NullCall));
+
+  cantFail(ES.endSession());
+}
+
+// A weakly-referenced Create against a missing symbol succeeds, yielding a
+// caller with a null callee (falsey) rather than an error.
+TEST(SPSCallersTest, CreateWeaklyReferencedAbsent) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  // Nothing is defined for MainCaller::CIName in the bootstrap JITDylib.
+  Expected<MainCaller> CallMain =
+      MainCaller::Create(ES, SymbolLookupFlags::WeaklyReferencedSymbol);
+  ASSERT_THAT_EXPECTED(CallMain, Succeeded());
+  EXPECT_FALSE(static_cast<bool>(*CallMain));
+  EXPECT_EQ(CallMain->calleeAddr(), ExecutorAddr());
+
+  cantFail(ES.endSession());
+}
+
+// A weakly-referenced Create against a present symbol resolves it, yielding a
+// usable caller (truthy) bound to the registered address.
+TEST(SPSCallersTest, CreateWeaklyReferencedPresent) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  auto &BootstrapJD = ES.getBootstrapJITDylib();
+  ExecutorAddr CalleeAddr = ExecutorAddr::fromPtr(callMainWrapper);
+  cantFail(BootstrapJD.define(
+      absoluteSymbols({{ES.intern(MainCaller::CIName),
+                        {CalleeAddr, JITSymbolFlags::Exported}}})));
+
+  Expected<MainCaller> CallMain =
+      MainCaller::Create(ES, SymbolLookupFlags::WeaklyReferencedSymbol);
+  ASSERT_THAT_EXPECTED(CallMain, Succeeded());
+  EXPECT_TRUE(static_cast<bool>(*CallMain));
+  EXPECT_EQ(CallMain->calleeAddr(), CalleeAddr);
+
+  // The resolved caller is usable.
+  std::vector<std::string> Args = {"a", "bb"};
+  Expected<int64_t> R = (*CallMain)(ExecutorAddr::fromPtr(testMain), Args);
+  ASSERT_THAT_EXPECTED(R, Succeeded());
+  EXPECT_EQ(*R, 2 + 1); // argc == 2, strlen("a") == 1.
+
+  cantFail(ES.endSession());
+}
+
+// A required (default) Create against a missing symbol fails, rather than
+// yielding a null caller as the weakly-referenced form does.
+TEST(SPSCallersTest, CreateRequiredAbsentFails) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  // Nothing is defined for MainCaller::CIName in the bootstrap JITDylib, and
+  // the default lookup requires the symbol.
+  Expected<MainCaller> CallMain = MainCaller::Create(ES);
+  EXPECT_THAT_EXPECTED(CallMain, Failed());
+
+  cantFail(ES.endSession());
+}

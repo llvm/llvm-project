@@ -617,16 +617,14 @@ define <4 x i64> @udot_8to64(<4 x i64> %acc, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-DOT:       // %bb.0: // %entry
 ; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-DOT-NEXT:    udot v4.4s, v2.16b, v3.16b
-; CHECK-DOT-NEXT:    uaddw v0.2d, v0.2d, v4.2s
-; CHECK-DOT-NEXT:    uaddw2 v0.2d, v0.2d, v4.4s
+; CHECK-DOT-NEXT:    uadalp v0.2d, v4.4s
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: udot_8to64:
 ; CHECK-DOT-I8MM:       // %bb.0: // %entry
 ; CHECK-DOT-I8MM-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-DOT-I8MM-NEXT:    udot v4.4s, v2.16b, v3.16b
-; CHECK-DOT-I8MM-NEXT:    uaddw v0.2d, v0.2d, v4.2s
-; CHECK-DOT-I8MM-NEXT:    uaddw2 v0.2d, v0.2d, v4.4s
+; CHECK-DOT-I8MM-NEXT:    uadalp v0.2d, v4.4s
 ; CHECK-DOT-I8MM-NEXT:    ret
 entry:
   %a.wide = zext <16 x i8> %a to <16 x i64>
@@ -660,16 +658,14 @@ define <4 x i64> @sdot_8to64(<4 x i64> %acc, <16 x i8> %a, <16 x i8> %b){
 ; CHECK-DOT:       // %bb.0: // %entry
 ; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-DOT-NEXT:    sdot v4.4s, v2.16b, v3.16b
-; CHECK-DOT-NEXT:    saddw v0.2d, v0.2d, v4.2s
-; CHECK-DOT-NEXT:    saddw2 v0.2d, v0.2d, v4.4s
+; CHECK-DOT-NEXT:    sadalp v0.2d, v4.4s
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: sdot_8to64:
 ; CHECK-DOT-I8MM:       // %bb.0: // %entry
 ; CHECK-DOT-I8MM-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-DOT-I8MM-NEXT:    sdot v4.4s, v2.16b, v3.16b
-; CHECK-DOT-I8MM-NEXT:    saddw v0.2d, v0.2d, v4.2s
-; CHECK-DOT-I8MM-NEXT:    saddw2 v0.2d, v0.2d, v4.4s
+; CHECK-DOT-I8MM-NEXT:    sadalp v0.2d, v4.4s
 ; CHECK-DOT-I8MM-NEXT:    ret
 entry:
   %a.wide = sext <16 x i8> %a to <16 x i64>
@@ -714,16 +710,14 @@ define <4 x i64> @usdot_8to64(<4 x i64> %acc, <16 x i8> %a, <16 x i8> %b){
 ; CHECK-DOT-NEXT:    udot v6.4s, v4.16b, v2.16b
 ; CHECK-DOT-NEXT:    udot v5.4s, v3.16b, v2.16b
 ; CHECK-DOT-NEXT:    sub v2.4s, v5.4s, v6.4s
-; CHECK-DOT-NEXT:    saddw v0.2d, v0.2d, v2.2s
-; CHECK-DOT-NEXT:    saddw2 v0.2d, v0.2d, v2.4s
+; CHECK-DOT-NEXT:    sadalp v0.2d, v2.4s
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: usdot_8to64:
 ; CHECK-DOT-I8MM:       // %bb.0: // %entry
 ; CHECK-DOT-I8MM-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-DOT-I8MM-NEXT:    usdot v4.4s, v2.16b, v3.16b
-; CHECK-DOT-I8MM-NEXT:    saddw v0.2d, v0.2d, v4.2s
-; CHECK-DOT-I8MM-NEXT:    saddw2 v0.2d, v0.2d, v4.4s
+; CHECK-DOT-I8MM-NEXT:    sadalp v0.2d, v4.4s
 ; CHECK-DOT-I8MM-NEXT:    ret
 entry:
   %a.wide = zext <16 x i8> %a to <16 x i64>
@@ -768,16 +762,14 @@ define <4 x i64> @sudot_8to64(<4 x i64> %acc, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-DOT-NEXT:    udot v6.4s, v4.16b, v3.16b
 ; CHECK-DOT-NEXT:    udot v5.4s, v2.16b, v3.16b
 ; CHECK-DOT-NEXT:    sub v2.4s, v5.4s, v6.4s
-; CHECK-DOT-NEXT:    saddw v0.2d, v0.2d, v2.2s
-; CHECK-DOT-NEXT:    saddw2 v0.2d, v0.2d, v2.4s
+; CHECK-DOT-NEXT:    sadalp v0.2d, v2.4s
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: sudot_8to64:
 ; CHECK-DOT-I8MM:       // %bb.0: // %entry
 ; CHECK-DOT-I8MM-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-DOT-I8MM-NEXT:    usdot v4.4s, v3.16b, v2.16b
-; CHECK-DOT-I8MM-NEXT:    saddw v0.2d, v0.2d, v4.2s
-; CHECK-DOT-I8MM-NEXT:    saddw2 v0.2d, v0.2d, v4.4s
+; CHECK-DOT-I8MM-NEXT:    sadalp v0.2d, v4.4s
 ; CHECK-DOT-I8MM-NEXT:    ret
 entry:
   %a.wide = sext <16 x i8> %a to <16 x i64>
@@ -1000,8 +992,7 @@ define <4 x i64> @udot_no_bin_op_8to64(<4 x i64> %acc, <16 x i8> %a){
 ; CHECK-DOT-NEXT:    movi v3.16b, #1
 ; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-DOT-NEXT:    udot v4.4s, v2.16b, v3.16b
-; CHECK-DOT-NEXT:    uaddw v0.2d, v0.2d, v4.2s
-; CHECK-DOT-NEXT:    uaddw2 v0.2d, v0.2d, v4.4s
+; CHECK-DOT-NEXT:    uadalp v0.2d, v4.4s
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: udot_no_bin_op_8to64:
@@ -1009,8 +1000,7 @@ define <4 x i64> @udot_no_bin_op_8to64(<4 x i64> %acc, <16 x i8> %a){
 ; CHECK-DOT-I8MM-NEXT:    movi v3.16b, #1
 ; CHECK-DOT-I8MM-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-DOT-I8MM-NEXT:    udot v4.4s, v2.16b, v3.16b
-; CHECK-DOT-I8MM-NEXT:    uaddw v0.2d, v0.2d, v4.2s
-; CHECK-DOT-I8MM-NEXT:    uaddw2 v0.2d, v0.2d, v4.4s
+; CHECK-DOT-I8MM-NEXT:    uadalp v0.2d, v4.4s
 ; CHECK-DOT-I8MM-NEXT:    ret
   %a.wide = zext <16 x i8> %a to <16 x i64>
   %partial.reduce = tail call <4 x i64> @llvm.vector.partial.reduce.add.v4i64.v16i64(<4 x i64> %acc, <16 x i64> %a.wide)
@@ -1041,8 +1031,7 @@ define <4 x i64> @sdot_no_bin_op_8to64(<4 x i64> %acc, <16 x i8> %a){
 ; CHECK-DOT-NEXT:    movi v3.16b, #1
 ; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-DOT-NEXT:    sdot v4.4s, v2.16b, v3.16b
-; CHECK-DOT-NEXT:    saddw v0.2d, v0.2d, v4.2s
-; CHECK-DOT-NEXT:    saddw2 v0.2d, v0.2d, v4.4s
+; CHECK-DOT-NEXT:    sadalp v0.2d, v4.4s
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: sdot_no_bin_op_8to64:
@@ -1050,8 +1039,7 @@ define <4 x i64> @sdot_no_bin_op_8to64(<4 x i64> %acc, <16 x i8> %a){
 ; CHECK-DOT-I8MM-NEXT:    movi v3.16b, #1
 ; CHECK-DOT-I8MM-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-DOT-I8MM-NEXT:    sdot v4.4s, v2.16b, v3.16b
-; CHECK-DOT-I8MM-NEXT:    saddw v0.2d, v0.2d, v4.2s
-; CHECK-DOT-I8MM-NEXT:    saddw2 v0.2d, v0.2d, v4.4s
+; CHECK-DOT-I8MM-NEXT:    sadalp v0.2d, v4.4s
 ; CHECK-DOT-I8MM-NEXT:    ret
   %a.wide = sext <16 x i8> %a to <16 x i64>
   %partial.reduce = tail call <4 x i64> @llvm.vector.partial.reduce.add.v4i64.v16i64(<4 x i64> %acc, <16 x i64> %a.wide)
@@ -1574,16 +1562,14 @@ define <2 x i64> @usdot_v16i8tov2i64(<2 x i64> %acc, <16 x i8> %u, <16 x i8> %s)
 ; CHECK-DOT-NEXT:    udot v5.4s, v3.16b, v1.16b
 ; CHECK-DOT-NEXT:    udot v4.4s, v2.16b, v1.16b
 ; CHECK-DOT-NEXT:    sub v1.4s, v4.4s, v5.4s
-; CHECK-DOT-NEXT:    saddw v0.2d, v0.2d, v1.2s
-; CHECK-DOT-NEXT:    saddw2 v0.2d, v0.2d, v1.4s
+; CHECK-DOT-NEXT:    sadalp v0.2d, v1.4s
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: usdot_v16i8tov2i64:
 ; CHECK-DOT-I8MM:       // %bb.0: // %entry
 ; CHECK-DOT-I8MM-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-DOT-I8MM-NEXT:    usdot v3.4s, v1.16b, v2.16b
-; CHECK-DOT-I8MM-NEXT:    saddw v0.2d, v0.2d, v3.2s
-; CHECK-DOT-I8MM-NEXT:    saddw2 v0.2d, v0.2d, v3.4s
+; CHECK-DOT-I8MM-NEXT:    sadalp v0.2d, v3.4s
 ; CHECK-DOT-I8MM-NEXT:    ret
 entry:
   %u.wide = zext <16 x i8> %u to <16 x i64>

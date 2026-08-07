@@ -389,9 +389,6 @@ class value(object):
     def __init__(self, sbvalue):
         self.sbvalue = sbvalue
 
-    def __nonzero__(self):
-        return self.sbvalue.__nonzero__()
-
     def __bool__(self):
         return self.sbvalue.__bool__()
 
@@ -453,9 +450,6 @@ class value(object):
 
     def __or__(self, other):
         return int(self) | int(other)
-
-    def __div__(self, other):
-        return int(self) / int(other)
 
     def __truediv__(self, other):
         return int(self) / int(other)
@@ -555,12 +549,6 @@ class value(object):
 
     def __float__(self):
         return float (self.sbvalue.GetValueAsSigned())
-
-    def __oct__(self):
-        return '0%o' % self.sbvalue.GetValueAsUnsigned()
-
-    def __hex__(self):
-        return '0x%x' % self.sbvalue.GetValueAsUnsigned()
 
     def __len__(self):
         return self.sbvalue.GetNumChildren()

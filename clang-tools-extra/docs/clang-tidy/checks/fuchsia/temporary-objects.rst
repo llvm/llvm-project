@@ -51,3 +51,5 @@ Options
 
    A semi-colon-separated list of fully-qualified names of C++ classes that
    should not be constructed as temporaries. Default is empty string.
+
+See the features disallowed in Fuchsia at https://fuchsia.dev/fuchsia-src/development/languages/c-cpp/cxx

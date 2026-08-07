@@ -1020,7 +1020,7 @@ set(ve_SOURCES
 set(m68k_SOURCES ${GENERIC_SOURCES})
 
 add_custom_target(builtins)
-set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT/Metatargets")
+set_target_properties(builtins PROPERTIES FOLDER "compiler-rt/Metatargets")
 
 option(COMPILER_RT_ENABLE_SOFTWARE_INT128
   "Enable the int128 builtin routines for all targets."

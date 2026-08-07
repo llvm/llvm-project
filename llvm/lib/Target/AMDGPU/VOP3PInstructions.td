@@ -245,8 +245,9 @@ multiclass MadFmaMixFP32Pats<SDPatternOperator fma_like,
                              ValueType VT = f16> {
   defvar VOP3PMadMixModsPat = !if (!eq(VT, bf16), VOP3PMadMixBF16Mods, VOP3PMadMixMods);
   defvar VOP3PMadMixModsExtPat = !if (!eq(VT, bf16), VOP3PMadMixBF16ModsExt, VOP3PMadMixModsExt);
+  defvar VOP3PMadMixModsNegPat = !if (!eq(VT, bf16), VOP3PMadMixBF16ModsNeg, VOP3PMadMixModsNeg);
+  defvar VOP3PMadMixModsExtNegPat = !if (!eq(VT, bf16), VOP3PMadMixBF16ModsExtNeg, VOP3PMadMixModsExtNeg);
   defvar OneImm = !if (!eq(VT, bf16), CONST.BF16_ONE, CONST.FP16_ONE);
-  defvar NegOneImm = !if (!eq(VT, bf16), CONST.BF16_NEG_ONE, CONST.FP16_NEG_ONE);
   defvar ImmMods = !if (!eq(VT, bf16), !or(SRCMODS.OP_SEL_0, SRCMODS.OP_SEL_1), SRCMODS.OP_SEL_1);
   // At least one of the operands needs to be an fpextend of an f16
   // for this to be worthwhile, so we need three patterns here.
@@ -284,18 +285,18 @@ multiclass MadFmaMixFP32Pats<SDPatternOperator fma_like,
     (mix_inst $src0_mods, $src0, $src1_mods, $src1, (i32 SRCMODS.NEG), (i32 0),
               DSTCLAMP.NONE)>;
 
-  // (fsub x, y) -> (fma y, -1.0, x)
+  // (fsub x, y) -> (fma (-y), 1.0, x)
   def : GCNPat <
     (f32 (fsub (f32 (VOP3PMadMixModsExtPat VT:$src0, i32:$src0_mods)),
-               (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_mods)))),
-    (mix_inst $src1_mods, $src1, (i32 ImmMods), (i32 NegOneImm), $src0_mods, $src0,
+               (f32 (VOP3PMadMixModsNegPat f32:$src1, i32:$src1_mods)))),
+    (mix_inst $src1_mods, $src1, (i32 ImmMods), (i32 OneImm), $src0_mods, $src0,
               DSTCLAMP.NONE)>;
 
-  // (fsub x, y) -> (fma y, -1.0, x)
+  // (fsub x, y) -> (fma (-y), 1.0, x)
   def : GCNPat <
     (f32 (fsub (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_mods)),
-               (f32 (VOP3PMadMixModsExtPat VT:$src1, i32:$src1_mods)))),
-    (mix_inst $src1_mods, $src1, (i32 ImmMods), (i32 NegOneImm), $src0_mods, $src0,
+               (f32 (VOP3PMadMixModsExtNegPat VT:$src1, i32:$src1_mods)))),
+    (mix_inst $src1_mods, $src1, (i32 ImmMods), (i32 OneImm), $src0_mods, $src0,
               DSTCLAMP.NONE)>;
 }
 
@@ -329,7 +330,7 @@ multiclass MadFmaMixFP16Pats<SDPatternOperator fma_like,
                        (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers))))),
     (mixlo_inst $src0_modifiers, $src0,
                 $src1_modifiers, $src1,
-                (i32 SRCMODS.NONE), (i32 0),
+                (i32 SRCMODS.NEG), (i32 0),
                 DSTCLAMP.NONE,
                 (i32 (IMPLICIT_DEF)))
   >;
@@ -339,7 +340,7 @@ multiclass MadFmaMixFP16Pats<SDPatternOperator fma_like,
                                           (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers)))))),
     (vecVT (mixhi_inst $src0_modifiers, $src0,
                        $src1_modifiers, $src1,
-                       (i32 SRCMODS.NONE), (i32 0),
+                       (i32 SRCMODS.NEG), (i32 0),
                        DSTCLAMP.NONE,
                        VGPR_32:$elt0))
   >;
@@ -393,7 +394,7 @@ multiclass MadFmaMixFP16Pats_t16<SDPatternOperator fma_like,
                        (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers))))),
     (mix_inst_16 $src0_modifiers, $src0,
                  $src1_modifiers, $src1,
-                 (i32 SRCMODS.NONE), (i32 0),
+                 (i32 SRCMODS.NEG), (i32 0),
                  DSTCLAMP.NONE)
   >;
 

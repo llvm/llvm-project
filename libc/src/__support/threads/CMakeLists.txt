@@ -169,7 +169,7 @@ if(TARGET libc.src.__support.threads.futex_utils)
   )
 endif()
 
-if (LLVM_LIBC_FULL_BUILD)
+if(LLVM_LIBC_FULL_BUILD)
   set(identifier_dependency_on_thread libc.src.__support.threads.thread)
 endif()
 

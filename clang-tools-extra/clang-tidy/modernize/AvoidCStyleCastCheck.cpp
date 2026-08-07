@@ -169,16 +169,15 @@ void AvoidCStyleCastCheck::check(const MatchFinder::MatchResult &Result) {
                                DestTypeAsWritten->isRecordType() &&
                                !DestTypeAsWritten->isElaboratedTypeSpecifier();
 
-  if (CastExpr->getCastKind() == CK_NoOp && !FnToFnCast) {
-    // Function pointer/reference casts may be needed to resolve ambiguities in
-    // case of overloaded functions, so detection of redundant casts is trickier
-    // in this case. Don't emit "redundant cast" warnings for function
-    // pointer/reference types.
-    if (sameTypeAsWritten(SourceTypeAsWritten, DestTypeAsWritten)) {
-      diag(CastExpr->getBeginLoc(), "redundant cast to the same type")
-          << FixItHint::CreateRemoval(ReplaceRange);
-      return;
-    }
+  // Function pointer/reference casts may be needed to resolve ambiguities in
+  // case of overloaded functions, so detection of redundant casts is trickier
+  // in this case. Don't emit "redundant cast" warnings for function
+  // pointer/reference types.
+  if (CastExpr->getCastKind() == CK_NoOp && !FnToFnCast &&
+      sameTypeAsWritten(SourceTypeAsWritten, DestTypeAsWritten)) {
+    diag(CastExpr->getBeginLoc(), "redundant cast to the same type")
+        << FixItHint::CreateRemoval(ReplaceRange);
+    return;
   }
 
   // The rest of this check is only relevant to C++.

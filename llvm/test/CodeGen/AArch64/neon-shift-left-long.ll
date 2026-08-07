@@ -672,3 +672,126 @@ define <8 x i16> @test_ushll_cmp(<8 x i8> %a, <8 x i8> %b) #0 {
   %vmovl.i.i.i = zext <8 x i8> %vcgtz.i.i to <8 x i16>
   ret <8 x i16> %vmovl.i.i.i
 }
+
+define  <8 x i16> @mul_of_shl_zext(<8 x i8> %a, <8 x i16> %b) {
+; CHECK-LABEL: mul_of_shl_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #1
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %a.ext = zext <8 x i8> %a to <8 x i16>
+  %shl = shl <8 x i16> %a.ext, splat (i16 1)
+  %mul = mul <8 x i16> %shl, %b
+  ret <8 x i16> %mul
+}
+
+define  <8 x i16> @shl_of_mul_zext(<8 x i8> %a, <8 x i16> %b) {
+; CHECK-SD-LABEL: shl_of_mul_zext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #1
+; CHECK-SD-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: shl_of_mul_zext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #1
+; CHECK-GI-NEXT:    ret
+  %a.ext = zext <8 x i8> %a to <8 x i16>
+  %mul = mul <8 x i16> %a.ext, %b
+  %shl = shl <8 x i16> %mul, splat (i16 1)
+  ret <8 x i16> %shl
+}
+
+define  <8 x i16> @shl_of_mul_zext_zext(<8 x i8> %a, <8 x i8> %b) {
+; CHECK-SD-LABEL: shl_of_mul_zext_zext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    add v0.8h, v0.8h, v0.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: shl_of_mul_zext_zext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #1
+; CHECK-GI-NEXT:    ret
+  %a.ext = zext <8 x i8> %a to <8 x i16>
+  %b.ext = zext <8 x i8> %b to <8 x i16>
+  %mul = mul <8 x i16> %a.ext, %b.ext
+  %shl = shl <8 x i16> %mul, splat (i16 1)
+  ret <8 x i16> %shl
+}
+
+define  <8 x i16> @mul_of_shl_sext(<8 x i8> %a, <8 x i16> %b) {
+; CHECK-LABEL: mul_of_shl_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #1
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %a.ext = sext <8 x i8> %a to <8 x i16>
+  %shl = shl <8 x i16> %a.ext, splat (i16 1)
+  %mul = mul <8 x i16> %shl, %b
+  ret <8 x i16> %mul
+}
+
+define  <8 x i16> @shl_of_mul_sext(<8 x i8> %a, <8 x i16> %b) {
+; CHECK-SD-LABEL: shl_of_mul_sext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #1
+; CHECK-SD-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: shl_of_mul_sext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #1
+; CHECK-GI-NEXT:    ret
+  %a.ext = sext <8 x i8> %a to <8 x i16>
+  %mul = mul <8 x i16> %a.ext, %b
+  %shl = shl <8 x i16> %mul, splat (i16 1)
+  ret <8 x i16> %shl
+}
+
+define  <8 x i16> @shl_of_mul_sext_sext(<8 x i8> %a, <8 x i8> %b) {
+; CHECK-SD-LABEL: shl_of_mul_sext_sext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    add v0.8h, v0.8h, v0.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: shl_of_mul_sext_sext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #1
+; CHECK-GI-NEXT:    ret
+  %a.ext = sext <8 x i8> %a to <8 x i16>
+  %b.ext = sext <8 x i8> %b to <8 x i16>
+  %mul = mul <8 x i16> %a.ext, %b.ext
+  %shl = shl <8 x i16> %mul, splat (i16 1)
+  ret <8 x i16> %shl
+}
+
+define  <8 x i16> @shl_of_multi_use_mul_sext(<8 x i8> %a, <8 x i16> %b) {
+; CHECK-SD-LABEL: shl_of_multi_use_mul_sext:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    mul v1.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    add v0.8h, v1.8h, v1.8h
+; CHECK-SD-NEXT:    // fake_use: $q1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: shl_of_multi_use_mul_sext:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    mul v1.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    shl v0.8h, v1.8h, #1
+; CHECK-GI-NEXT:    // fake_use: $q1
+; CHECK-GI-NEXT:    ret
+  %a.ext = sext <8 x i8> %a to <8 x i16>
+  %mul = mul <8 x i16> %a.ext, %b
+  %shl = shl <8 x i16> %mul, splat (i16 1)
+  call void (...) @llvm.fake.use(<8 x i16> %mul)
+  ret <8 x i16> %shl
+}

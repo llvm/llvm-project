@@ -1959,9 +1959,18 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_permlane_idx_gen}, Standard)
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, SgprB32_ReadFirstLane}});
 
-  addRulesForIOpcs({amdgcn_perm}, Standard)
+  addRulesForIOpcs({amdgcn_alignbyte, amdgcn_perm}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_mqsad_pk_u16_u8, amdgcn_qsad_pk_u16_u8}, Standard)
+      .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64, Vgpr32, Vgpr64}})
+      .Div(S64, {{Vgpr64}, {IntrId, Vgpr64, Vgpr32, Vgpr64}});
+
+  addRulesForIOpcs({amdgcn_mqsad_u32_u8})
+      .Any(
+          {{UniV4S32}, {{UniInVgprV4S32}, {IntrId, Vgpr64, Vgpr32, VgprV4S32}}})
+      .Any({{DivV4S32}, {{VgprV4S32}, {IntrId, Vgpr64, Vgpr32, VgprV4S32}}});
 
   addRulesForIOpcs({amdgcn_lerp}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
@@ -2028,7 +2037,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_cvt_sr_bf8_f32, amdgcn_cvt_sr_fp8_f32,
                     amdgcn_cvt_sr_fp8_f32_e5m3, amdgcn_cvt_pk_bf8_f32,
-                    amdgcn_cvt_pk_fp8_f32, amdgcn_cvt_pk_fp8_f32_e5m3},
+                    amdgcn_cvt_pk_fp8_f32, amdgcn_cvt_pk_fp8_f32_e5m3,
+                    amdgcn_cvt_pk_u8_f32},
                    Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
@@ -2668,7 +2678,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S64, {{Vgpr64, Vcc}, {IntrId, Vgpr64, Vgpr64}})
       .Uni(S64, {{UniInVgprS64, UniInVcc}, {IntrId, Vgpr64, Vgpr64}});
 
-  addRulesForIOpcs({amdgcn_fdot2, amdgcn_sdot2, amdgcn_udot2}, Standard)
+  addRulesForIOpcs(
+      {amdgcn_fdot2, amdgcn_fdot2_f32_bf16, amdgcn_sdot2, amdgcn_udot2},
+      Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, VgprV2S16, VgprV2S16, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, VgprV2S16, VgprV2S16, Vgpr32}});
 

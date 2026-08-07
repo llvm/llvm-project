@@ -5,14 +5,14 @@
 function(add_startup_test target_name)
   if(NOT CMAKE_HOST_UNIX)
     message(
-        WARNING
-        "Test for the startup system currently assume a POSIX/Unix like "
-        "environment and may not work on your platform.")
+      WARNING
+      "Test for the startup system currently assume a POSIX/Unix like "
+      "environment and may not work on your platform.")
   endif()
 
   cmake_parse_arguments(
     "ADD_STARTUP_TEST"
-    ""    # No option arguments
+    "" # No option arguments
     "SRC" # Single value arguments
     "DEPENDS;ARGS;ENV" # Multivalue arguments.
     ${ARGN}
@@ -55,7 +55,7 @@ function(add_startup_test target_name)
   )
 
   add_dependencies(libc_startup_tests ${fq_target_name})
-endfunction(add_startup_test)
+endfunction()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${LIBC_TARGET_OS})

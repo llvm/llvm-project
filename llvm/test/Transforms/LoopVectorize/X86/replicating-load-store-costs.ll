@@ -17,7 +17,7 @@ define void @test_store_initially_interleave(i32 %n, ptr noalias %src) #0 {
 ; I64-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ule i32 [[TMP0]], 16
 ; I64-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; I64:       [[VECTOR_PH]]:
-; I64-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 16
+; I64-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP0]], 15
 ; I64-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; I64-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 16, i32 [[N_MOD_VF]]
 ; I64-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP3]]
@@ -122,7 +122,7 @@ define void @test_store_initially_interleave(i32 %n, ptr noalias %src) #0 {
 ; I64-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; I64:       [[VEC_EPILOG_PH]]:
 ; I64-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; I64-NEXT:    [[N_MOD_VF2:%.*]] = urem i32 [[TMP0]], 4
+; I64-NEXT:    [[N_MOD_VF2:%.*]] = and i32 [[TMP0]], 3
 ; I64-NEXT:    [[TMP72:%.*]] = icmp eq i32 [[N_MOD_VF2]], 0
 ; I64-NEXT:    [[TMP73:%.*]] = select i1 [[TMP72]], i32 4, i32 [[N_MOD_VF2]]
 ; I64-NEXT:    [[N_VEC3:%.*]] = sub i32 [[TMP0]], [[TMP73]]
@@ -171,7 +171,7 @@ define void @test_store_initially_interleave(i32 %n, ptr noalias %src) #0 {
 ; I32-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ule i32 [[TMP0]], 16
 ; I32-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; I32:       [[VECTOR_PH]]:
-; I32-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 16
+; I32-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP0]], 15
 ; I32-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; I32-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 16, i32 [[N_MOD_VF]]
 ; I32-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP2]]
@@ -276,7 +276,7 @@ define void @test_store_initially_interleave(i32 %n, ptr noalias %src) #0 {
 ; I32-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; I32:       [[VEC_EPILOG_PH]]:
 ; I32-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; I32-NEXT:    [[N_MOD_VF2:%.*]] = urem i32 [[TMP0]], 4
+; I32-NEXT:    [[N_MOD_VF2:%.*]] = and i32 [[TMP0]], 3
 ; I32-NEXT:    [[TMP71:%.*]] = icmp eq i32 [[N_MOD_VF2]], 0
 ; I32-NEXT:    [[TMP72:%.*]] = select i1 [[TMP71]], i32 4, i32 [[N_MOD_VF2]]
 ; I32-NEXT:    [[N_VEC3:%.*]] = sub i32 [[TMP0]], [[TMP72]]
@@ -343,7 +343,7 @@ define void @test_store_loaded_value(ptr noalias %src, ptr noalias %dst, i32 %n)
 ; I64-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N_EXT]], 4
 ; I64-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; I64:       [[VECTOR_PH]]:
-; I64-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_EXT]], 4
+; I64-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_EXT]], 3
 ; I64-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_EXT]], [[N_MOD_VF]]
 ; I64-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; I64:       [[VECTOR_BODY]]:
@@ -389,7 +389,7 @@ define void @test_store_loaded_value(ptr noalias %src, ptr noalias %dst, i32 %n)
 ; I32-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N_EXT]], 4
 ; I32-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; I32:       [[VECTOR_PH]]:
-; I32-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_EXT]], 4
+; I32-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_EXT]], 3
 ; I32-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_EXT]], [[N_MOD_VF]]
 ; I32-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; I32:       [[VECTOR_BODY]]:
@@ -710,7 +710,7 @@ define void @loaded_address_used_by_load_through_blend(i64 %start, ptr noalias %
 ; I32-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 8
 ; I32-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; I32:       [[VECTOR_PH]]:
-; I32-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 8
+; I32-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 7
 ; I32-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; I32-NEXT:    [[TMP2:%.*]] = sub i64 [[START]], [[N_VEC]]
 ; I32-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x ptr> poison, ptr [[SRC_2]], i64 0

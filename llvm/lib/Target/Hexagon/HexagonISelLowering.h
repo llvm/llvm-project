@@ -78,8 +78,8 @@ public:
   // Should we expand the build vector with shuffles?
   bool shouldExpandBuildVectorWithShuffles(EVT VT,
       unsigned DefinedValues) const override;
-  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-      unsigned Index) const override;
+  ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                               unsigned Index) const override;
 
   bool isTargetCanonicalConstantNode(SDValue Op) const override;
 

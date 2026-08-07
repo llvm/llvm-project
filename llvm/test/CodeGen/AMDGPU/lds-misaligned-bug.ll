@@ -341,14 +341,15 @@ define amdgpu_kernel void @test_flat_misaligned_v4(ptr %arg) {
 ; SPLIT-NEXT:    v_add_co_u32 v6, vcc_lo, v0, 8
 ; SPLIT-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, 0, v1, vcc_lo
 ; SPLIT-NEXT:    s_clause 0x3
-; SPLIT-NEXT:    flat_load_dword v8, v[2:3]
 ; SPLIT-NEXT:    flat_load_dword v9, v[4:5]
 ; SPLIT-NEXT:    flat_load_dword v10, v[0:1]
+; SPLIT-NEXT:    flat_load_dword v8, v[2:3]
 ; SPLIT-NEXT:    flat_load_dword v11, v[6:7]
-; SPLIT-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
+; SPLIT-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(3)
 ; SPLIT-NEXT:    flat_store_dword v[6:7], v9
-; SPLIT-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(2)
+; SPLIT-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(3)
 ; SPLIT-NEXT:    flat_store_dword v[2:3], v10
+; SPLIT-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(3)
 ; SPLIT-NEXT:    flat_store_dword v[0:1], v8
 ; SPLIT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(3)
 ; SPLIT-NEXT:    flat_store_dword v[4:5], v11

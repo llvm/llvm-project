@@ -216,12 +216,11 @@ public:
                                              lldb::addr_t base_addr,
                                              bool base_addr_is_offset);
 
-  /// A binary to find and load into a Target, and the state that finding it
-  /// produces.
+  /// A binary to find and load into a Target.
   ///
-  /// Loading a binary is split into LocateBinaries and LoadBinaryInTarget so
-  /// that a caller with many binaries can search for all of them before adding
-  /// any of them to the Target.
+  /// The leading fields are inputs, filled in by the caller.  The trailing
+  /// fields are outputs: searching for the binary records its results in them,
+  /// and loading the binary into the Target consumes them.
   struct BinarySpec {
     /// Name of the binary, if available.  If no matching binary can be found on
     /// the debug host, a module may be created out of live memory and given
@@ -286,8 +285,11 @@ public:
   /// Given an address, try to read the binary out of memory, get the UUID, find
   /// the file if possible and load it unslid, or add the memory module.
   ///
-  /// May force an expensive search on the computer to find the binary by UUID.
-  /// To load more than one binary, use LocateBinaries and LoadBinaryInTarget.
+  /// May force an expensive search on the host system to find the binary by
+  /// UUID.  To load more than one binary, use LocateBinaries and
+  /// LoadBinaryInTarget instead: the search is the expensive part, and those
+  /// let all of the searching happen before any of the binaries are added to
+  /// the Target.
   ///
   /// \param[in] process
   ///     The process to add this binary to.
@@ -304,7 +306,8 @@ public:
 
   /// Search for a batch of binaries, without mutating the Target.
   ///
-  /// The entries are independent: a binary that cannot be found leaves its
+  /// The entries are searched for independently, and stay in the order they
+  /// were given in.  A binary that cannot be found leaves its
   /// BinarySpec::module_sp empty and has no effect on the others.  Its
   /// BinarySpec::memory_module_sp is set only when the binary's header had to
   /// be read out of memory to get the UUID.  Nothing is registered with the
@@ -324,10 +327,10 @@ public:
   /// load address.
   ///
   /// This mutates the Target and may read the process' memory, so it has to be
-  /// called for one binary at a time.  Call it in the caller's own order rather
-  /// than in the order the searches finished: the order decides the Target's
-  /// module order, which binary gets to set the Target's architecture, and the
-  /// order in which messages reach the user.
+  /// called for one binary at a time.  Call it over the batch in the order the
+  /// batch was built in: that order decides the Target's module order, which
+  /// binary gets to set the Target's architecture, and the order in which
+  /// messages reach the user.
   ///
   /// Whether a failure is worth telling the user about is left to the caller,
   /// which knows whether it went looking for a binary that has to be there.  A

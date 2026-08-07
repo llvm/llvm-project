@@ -3955,6 +3955,11 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
       if (CB.getIntrinsicID() == Intrinsic::gcroot)
         return false;
 
+      // threadlocal_address is a special case as it requires its only
+      // argument to be a thread local global.
+      if (CB.getIntrinsicID() == Intrinsic::threadlocal_address)
+        return false;
+
       // Some intrinsic operands are required to be immediates.
       return !CB.paramHasAttr(OpIdx, Attribute::ImmArg);
     }

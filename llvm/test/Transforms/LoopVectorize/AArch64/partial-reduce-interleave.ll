@@ -11,7 +11,7 @@ define i32 @partial_reduce_with_non_constant_start_value(ptr %src, i32 %rdx.star
 ; IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 32
 ; IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC2:       [[VECTOR_PH]]:
-; IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 32
+; IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 31
 ; IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; IC2-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[RDX_START]], i32 0
 ; IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -62,7 +62,7 @@ define i32 @partial_reduce_with_non_constant_start_value(ptr %src, i32 %rdx.star
 ; IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 64
 ; IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC4:       [[VECTOR_PH]]:
-; IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 64
+; IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 63
 ; IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; IC4-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[RDX_START]], i32 0
 ; IC4-NEXT:    br label %[[VECTOR_BODY:.*]]

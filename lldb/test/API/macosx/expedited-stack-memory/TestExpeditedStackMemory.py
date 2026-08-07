@@ -47,6 +47,7 @@ class TestExpeditedStackMemory(TestBase):
         stub, producing memory-read packets."""
         self.check_packets_during_backtrace(disable_memory_cache=True)
 
+    @skipIfOutOfTreeDebugserver
     @requireDarwin
     def test_memory_reads_when_examining_frame0_locals(self):
         """Model an IDE stop: walk the whole stack (a backtrace / debug

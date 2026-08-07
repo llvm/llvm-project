@@ -240,6 +240,8 @@ bool Rematerializer::isRegIdenticalAtUses(Register Reg, LaneBitmask Mask,
     return true;
   const LiveInterval &LI = LIS.getInterval(Reg);
   const VNInfo *DefVN = LI.getVNInfoAt(RefSlot);
+  if (!DefVN)
+    return false;
   for (SlotIndex Use : Uses) {
     if (!isIdenticalAtUse(*DefVN, Mask, Use, LI))
       return false;
