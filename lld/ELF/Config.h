@@ -234,8 +234,8 @@ private:
 
 public:
   // See InputFile::groupId.
-  uint32_t nextGroupId = 0;
-  bool isInGroup = false;
+  uint32_t nextGroupId;
+  bool isInGroup;
   std::unique_ptr<InputFile> armCmseImpLib;
   SmallVector<std::pair<StringRef, unsigned>, 0> archiveFiles;
 };
