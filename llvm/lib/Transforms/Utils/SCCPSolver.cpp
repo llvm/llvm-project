@@ -59,11 +59,7 @@ bool SCCPSolver::isConstant(const ValueLatticeElement &LV) {
 }
 
 bool SCCPSolver::isReplaceableConstant(const ValueLatticeElement &LV) {
-  if (!isConstant(LV))
-    return false;
-  if (LV.mayHaveDifferentProvenance())
-    return false;
-  return true;
+  return isConstant(LV) && !LV.mayHaveDifferentProvenance();
 }
 
 bool SCCPSolver::isOverdefined(const ValueLatticeElement &LV) {
