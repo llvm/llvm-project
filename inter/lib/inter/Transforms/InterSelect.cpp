@@ -40,24 +40,27 @@ constexpr int kLocalIdLoadOffset = 0x20;
 struct SelectToMachine
     : public inter::impl::SelectToMachineBase<SelectToMachine> {
   void runOnOperation() override {
-    func::FuncOp kernel;
+    SmallVector<func::FuncOp> kernels;
     getOperation().walk([&](func::FuncOp f) {
-      if (f->hasAttr("xemachine.kernel") && !kernel)
-        kernel = f;
+      if (f->hasAttr("xemachine.kernel"))
+        kernels.push_back(f);
     });
-    if (!kernel) {
+    if (kernels.empty()) {
       getOperation().emitError("no kernel function found");
       return signalPassFailure();
     }
-    DataFlowSolver solver;
-    dataflow::loadBaselineAnalyses(solver);
-    solver.load<inter::UniformityAnalysis>();
-    // Run on the kernel: sparse liveness seeds from the top op's region.
-    if (failed(solver.initializeAndRun(kernel)))
-      return signalPassFailure();
-    uniformity = &solver;
-    if (failed(lowerKernel(kernel)))
-      return signalPassFailure();
+    for (func::FuncOp kernel : kernels) {
+      // Sparse liveness seeds from the top op's region: one solver per
+      // kernel.
+      DataFlowSolver solver;
+      dataflow::loadBaselineAnalyses(solver);
+      solver.load<inter::UniformityAnalysis>();
+      if (failed(solver.initializeAndRun(kernel)))
+        return signalPassFailure();
+      uniformity = &solver;
+      if (failed(lowerKernel(kernel)))
+        return signalPassFailure();
+    }
   }
 
   MLIRContext *ctx = nullptr;
@@ -114,6 +117,14 @@ struct SelectToMachine
   LogicalResult lowerKernel(func::FuncOp kernel) {
     ctx = kernel.getContext();
     loc = kernel.getLoc();
+    nextGRF = 4; // r0-r3 reserved: r0 header, r1 inline, r2/r3 scratch
+    vmap.clear();
+    gidValue = nullptr;
+    tailValue = nullptr;
+    byteOffLo = byteOffHi = nullptr;
+    prologueEmitted = false;
+    loadsPending = false;
+
     OpBuilder moduleBuilder(kernel);
     auto func = moduleBuilder.create<func::FuncOp>(
         kernel.getLoc(), (kernel.getName() + "_xm").str(),
