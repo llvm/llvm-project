@@ -598,9 +598,11 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
     GridValues.GV_Max_WG_Size =
         std::min(GridValues.GV_Max_WG_Size, uint32_t(OMP_TeamsThreadLimit));
 
-  // Enable the memory manager if required.
+  // Enable the memory manager if required. Leave the pool disabled while
+  // allocation traces are requested, so that we don't mask use-after-free
+  // (since they don't fault if the memory is still in the pool).
   auto [ThresholdMM, EnableMM] = MemoryManagerTy::getSizeThresholdFromEnv();
-  if (EnableMM) {
+  if (EnableMM && !OMPX_TrackAllocationTraces) {
     if (ThresholdMM == 0)
       ThresholdMM = getMemoryManagerSizeThreshold();
     MemoryManager = new MemoryManagerTy(*this, ThresholdMM);
@@ -674,6 +676,15 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                                                       StringRef InputTgtImage) {
   ODBG(OLDT_Init) << "Load data from image "
                   << static_cast<const void *>(InputTgtImage.bytes_begin());
+
+  // An empty image is not a valid binary. Plugins behave differently given
+  // empty binaries - e.g. CUDA will map to INVALID_BINARY, while L0 will map to
+  // INVALID_SIZE (which is also associated with invalid kernel launch dims
+  // etc.), so we guard here for consistent behavior across plugins and API
+  // consumers (liboffload and libomptarget).
+  if (InputTgtImage.empty())
+    return Plugin::error(ErrorCode::INVALID_BINARY,
+                         "provided binary image is empty");
 
   std::unique_ptr<MemoryBuffer> Buffer;
   if (identify_magic(InputTgtImage) == file_magic::bitcode) {
@@ -1134,6 +1145,18 @@ Error GenericDeviceTy::dataRetrieve(void *HstPtr, const void *TgtPtr,
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
   auto Err = dataRetrieveImpl(HstPtr, TgtPtr, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Error GenericDeviceTy::dataMemcpy(void *DstPtr, const void *SrcPtr,
+                                  int64_t Size, __tgt_async_info *AsyncInfo) {
+  if (Size == 0)
+    return Plugin::success();
+
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = dataMemcpyImpl(DstPtr, SrcPtr, Size, AsyncInfoWrapper);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }

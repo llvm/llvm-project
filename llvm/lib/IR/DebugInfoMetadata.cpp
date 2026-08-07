@@ -1451,11 +1451,10 @@ bool DISubprogram::describes(const Function *F) const {
 
 template <typename ScopeT, typename NodeT>
 static ScopeT getRawRetainedNodeScopeInternal(NodeT *N) {
-  auto getScope = [](auto *N) { return N->getScope(); };
-
+  auto getScopeLambda = [](auto *N) { return getScope(N); };
   return DISubprogram::visitRetainedNode<ScopeT>(
-      N, getScope, getScope, getScope, getScope,
-      [](auto *N) { return nullptr; });
+      N, getScopeLambda, getScopeLambda, getScopeLambda, getScopeLambda,
+      getScopeLambda, [](auto *N) { return nullptr; });
 }
 
 const DIScope *DISubprogram::getRawRetainedNodeScope(const MDNode *N) {
@@ -1475,41 +1474,22 @@ DILocalScope *DISubprogram::getRetainedNodeScope(MDNode *N) {
 }
 
 void DISubprogram::cleanupRetainedNodes() {
-  // Checks if a metadata node from retainedTypes is a type not belonging to
+  // Checks if a metadata node from retainedTypes is a type belonging to
   // this subprogram.
-  auto IsAlienType = [this](DINode *N) {
+  auto IsTypeInSP = [this](Metadata *N) {
     auto *T = dyn_cast_or_null<DIType>(N);
     if (!T)
-      return false;
+      return true;
 
     DISubprogram *TypeSP = nullptr;
     // The type might have been global in the previously loaded IR modules.
     if (auto *LS = dyn_cast_or_null<DILocalScope>(T->getScope()))
       TypeSP = LS->getSubprogram();
 
-    return this != TypeSP;
+    return this == TypeSP;
   };
 
-  // As this is expected to be called during module loading, before
-  // stripping old or incorrect debug info, perform minimal sanity check.
-  if (!isa_and_present<MDTuple>(getRawRetainedNodes()))
-    return;
-
-  MDTuple *RetainedNodes = cast<MDTuple>(getRawRetainedNodes());
-  SmallVector<Metadata *> MDs;
-  MDs.reserve(RetainedNodes->getNumOperands());
-  for (const MDOperand &Node : RetainedNodes->operands()) {
-    // Ignore malformed retainedNodes.
-    if (Node && !isa<DINode>(Node))
-      return;
-
-    auto *N = cast_or_null<DINode>(Node);
-    if (!IsAlienType(N))
-      MDs.push_back(N);
-  }
-
-  if (MDs.size() != RetainedNodes->getNumOperands())
-    replaceRetainedNodes(MDNode::get(getContext(), MDs));
+  cleanupRetainedNodesIf(IsTypeInSP);
 }
 
 DILexicalBlockBase::DILexicalBlockBase(LLVMContext &C, unsigned ID,
@@ -1777,6 +1757,10 @@ unsigned DIExpression::ExprOperand::getSize() const {
   }
 }
 
+bool DIExpression::ExprOperand::isNonEmitting() const {
+  return getOp() == dwarf::DW_OP_LLVM_tag_offset;
+}
+
 bool DIExpression::isValid() const {
   for (auto I = expr_op_begin(), E = expr_op_end(); I != E; ++I) {
     // Check that there's space for the operand.
@@ -1898,11 +1882,12 @@ bool DIExpression::isComplex() const {
   if (getNumElements() == 0)
     return false;
 
-  // If there are any elements other than fragment or tag_offset, then some
-  // kind of complex computation occurs.
+  // Tag offsets are non-emitting. They, fragments, and location operands don't
+  // perform a computation by themselves.
   for (const auto &It : expr_ops()) {
+    if (It.isNonEmitting())
+      continue;
     switch (It.getOp()) {
-    case dwarf::DW_OP_LLVM_tag_offset:
     case dwarf::DW_OP_LLVM_fragment:
     case dwarf::DW_OP_LLVM_arg:
       continue;
@@ -2343,17 +2328,17 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
                       }) &&
          "Can't append this op");
 
-  // Append a DW_OP_deref after Expr's current op list if it's non-empty and
-  // has no DW_OP_stack_value.
-  //
-  // Match .* DW_OP_stack_value (DW_OP_LLVM_fragment A B)?.
-  std::optional<FragmentInfo> FI = Expr->getFragmentInfo();
-  unsigned DropUntilStackValue = FI ? 3 : 0;
-  ArrayRef<uint64_t> ExprOpsBeforeFragment =
-      Expr->getElements().drop_back(DropUntilStackValue);
-  bool NeedsDeref = (Expr->getNumElements() > DropUntilStackValue) &&
-                    (ExprOpsBeforeFragment.back() != dwarf::DW_OP_stack_value);
-  bool NeedsStackValue = NeedsDeref || ExprOpsBeforeFragment.empty();
+  // DIExpression stores opcodes and their arguments in a flat array. Walk the
+  // parsed operations to find the last opcode that determines whether the
+  // expression already ends in DW_OP_stack_value.
+  std::optional<uint64_t> LastValueOp;
+  for (auto Op : Expr->expr_ops()) {
+    if (Op.isNonEmitting() || Op.getOp() == dwarf::DW_OP_LLVM_fragment)
+      continue;
+    LastValueOp = Op.getOp();
+  }
+  bool NeedsDeref = LastValueOp && *LastValueOp != dwarf::DW_OP_stack_value;
+  bool NeedsStackValue = NeedsDeref || !LastValueOp;
 
   // Append a DW_OP_deref after Expr's current op list if needed, then append
   // the new ops, and finally ensure that a single DW_OP_stack_value is present.

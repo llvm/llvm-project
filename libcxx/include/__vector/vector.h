@@ -86,7 +86,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
-class vector {
+class _LIBCPP_WARN_UNUSED vector {
   using __base_type _LIBCPP_NODEBUG  = __vector_layout<_Tp, _Allocator>;
   using __bound_type _LIBCPP_NODEBUG = typename __base_type::__bound_type;
   using _SplitBuffer _LIBCPP_NODEBUG = typename __base_type::_SplitBuffer;
@@ -121,10 +121,10 @@ public:
   // - pointer: may be trivially relocatable, so it's checked
   // - allocator_type: may be trivially relocatable, so it's checked
   // vector doesn't contain any self-references, so it's trivially relocatable if its members are.
-  using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
-      __libcpp_is_trivially_relocatable<pointer>::value && __libcpp_is_trivially_relocatable<allocator_type>::value,
-      vector,
-      void>;
+  using __trivially_relocatable _LIBCPP_NODEBUG =
+      __conditional_t<__is_trivially_relocatable_v<pointer> && __is_trivially_relocatable_v<allocator_type>,
+                      vector,
+                      void>;
 
   static_assert(__check_valid_allocator<allocator_type>::value, "");
   static_assert(is_same<typename allocator_type::value_type, value_type>::value,
@@ -398,7 +398,7 @@ public:
     return __layout_.__capacity();
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT {
-    return size() == 0;
+    return __layout_.__empty();
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {

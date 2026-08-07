@@ -162,10 +162,10 @@ list(APPEND wctype_utils_deps
   libc.hdr.types.wchar_t
 )
 
-if ("${LIBC_CONF_WCTYPE_MODE}" STREQUAL "LIBC_WCTYPE_MODE_UTF8")
+if("${LIBC_CONF_WCTYPE_MODE}" STREQUAL "LIBC_WCTYPE_MODE_UTF8")
   list(APPEND wctype_utils_deps
-      libc.src.__support.wctype.wctype_classification_utils
-      libc.src.__support.wctype.wctype_conversion_utils
+    libc.src.__support.wctype.wctype_classification_utils
+    libc.src.__support.wctype.wctype_conversion_utils
   )
 endif()
 
@@ -461,6 +461,8 @@ add_subdirectory(net)
 add_subdirectory(threads)
 
 add_subdirectory(File)
+
+add_subdirectory(printf_core)
 
 add_subdirectory(HashTable)
 

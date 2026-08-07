@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=amdgpu-sw-lower-lds -S -amdgpu-asan-instrument-lds=false -mtriple=amdgcn-amd-amdhsa | FileCheck %s
+; RUN: opt < %s -passes=amdgpu-sw-lower-lds -S -amdgpu-asan-instrument-lds=false -mtriple=amdgpu-amd-amdhsa | FileCheck %s
 
 ; Test that the sw-lower-lds pass moves constant-size allocas from the original
 ; entry block to the new entry block (WId), so they remain static allocas.

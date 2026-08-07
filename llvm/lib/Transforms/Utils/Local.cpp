@@ -3067,9 +3067,8 @@ static void combineMetadata(Instruction *K, const Instruction *J,
                                            MDNode::toCaptureComponents(KMD)));
         break;
       case LLVMContext::MD_alloc_token:
-        // Preserve !alloc_token if both K and J have it, and they are equal.
-        if (KMD != JMD)
-          K->setMetadata(Kind, nullptr);
+        if (!AAOnly && KMD != JMD)
+          K->setMetadata(Kind, MDNode::getMergedAllocTokenMetadata(KMD, JMD));
         break;
       }
   }
@@ -3954,6 +3953,11 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
       // gcroot is a special case, since it requires a constant argument which
       // isn't also required to be a simple ConstantInt.
       if (CB.getIntrinsicID() == Intrinsic::gcroot)
+        return false;
+
+      // threadlocal_address is a special case as it requires its only
+      // argument to be a thread local global.
+      if (CB.getIntrinsicID() == Intrinsic::threadlocal_address)
         return false;
 
       // Some intrinsic operands are required to be immediates.

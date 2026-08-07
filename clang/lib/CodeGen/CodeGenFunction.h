@@ -624,6 +624,10 @@ public:
   /// True if the current statement has noconvergent attribute.
   bool InNoConvergentAttributedStmt = false;
 
+  /// The mode string from the amdgpu_av attribute on the current statement,
+  /// or empty if the attribute is not present.
+  StringRef AMDGPUAvailableVisibleMode;
+
   /// HLSL Branch attribute.
   HLSLControlFlowHintAttr::Spelling HLSLControlFlowAttr =
       HLSLControlFlowHintAttr::SpellingNotCalculated;
@@ -2236,6 +2240,7 @@ public:
   const TargetCodeGenInfo &getTargetHooks() const {
     return CGM.getTargetCodeGenInfo();
   }
+  const FunctionDecl *getCurrentFunctionDecl() const;
 
   //===--------------------------------------------------------------------===//
   //                                  Cleanups
@@ -3306,7 +3311,8 @@ public:
 
   void EmitDeleteCall(const FunctionDecl *DeleteFD, llvm::Value *Ptr,
                       QualType DeleteTy, llvm::Value *NumElements = nullptr,
-                      CharUnits CookieSize = CharUnits());
+                      CharUnits CookieSize = CharUnits(),
+                      llvm::Constant *CalleeOverride = nullptr);
 
   RValue EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
                                   const CallExpr *TheCallExpr, bool IsDelete);
@@ -3748,6 +3754,9 @@ public:
 
   void EmitCXXForRangeStmt(const CXXForRangeStmt &S,
                            ArrayRef<const Attr *> Attrs = {});
+
+  void
+  EmitCXXExpansionStmtInstantiation(const CXXExpansionStmtInstantiation &S);
 
   /// Controls insertion of cancellation exit blocks in worksharing constructs.
   class OMPCancelStackRAII {
@@ -4358,6 +4367,12 @@ public:
       llvm::AtomicOrdering Order = llvm::AtomicOrdering::SequentiallyConsistent,
       llvm::SyncScope::ID SSID = llvm::SyncScope::System,
       const AtomicExpr *AE = nullptr);
+
+  /// Emit a fence instruction, applying relevant target-specific metadata when
+  /// applicable.
+  llvm::FenceInst *
+  emitAtomicFence(llvm::AtomicOrdering Order,
+                  llvm::SyncScope::ID SSID = llvm::SyncScope::System);
 
   void EmitAtomicUpdate(LValue LVal, llvm::AtomicOrdering AO,
                         const llvm::function_ref<RValue(RValue)> &UpdateOp,
@@ -4979,6 +4994,9 @@ public:
 
   void AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
                                       const CallExpr *E);
+  /// Attach the AMDGPU availability/visibility MMRA to \p Inst when the
+  /// amdgpu_av attribute is active on the current statement.
+  void AddAMDGPUAvailableVisibleMMRA(llvm::Instruction *Inst);
   void ProcessOrderScopeAMDGCN(llvm::Value *Order, llvm::Value *Scope,
                                llvm::AtomicOrdering &AO,
                                llvm::SyncScope::ID &SSID);
