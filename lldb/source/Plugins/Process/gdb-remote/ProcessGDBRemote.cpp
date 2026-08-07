@@ -1167,17 +1167,19 @@ void ProcessGDBRemote::LoadStubBinaries() {
   bool standalone_value_is_offset;
   if (m_gdb_comm.GetProcessStandaloneBinary(standalone_uuid, standalone_value,
                                             standalone_value_is_offset)) {
-    ModuleSP module_sp;
-
     if (standalone_uuid.IsValid()) {
-      const bool force_symbol_search = true;
-      const bool notify = true;
-      const bool set_address_in_target = true;
-      const bool allow_memory_image_last_resort = false;
-      DynamicLoader::LoadBinaryWithUUIDAndAddress(
-          this, "", standalone_uuid, standalone_value,
-          standalone_value_is_offset, force_symbol_search, notify,
-          set_address_in_target, allow_memory_image_last_resort);
+      DynamicLoader::BinarySpec bin_spec;
+      bin_spec.uuid = standalone_uuid;
+      bin_spec.value = standalone_value;
+      bin_spec.value_is_offset = standalone_value_is_offset;
+      bin_spec.force_symbol_search = true;
+      bin_spec.notify = true;
+      bin_spec.set_address_in_target = true;
+      llvm::Expected<ModuleSP> module =
+          DynamicLoader::LocateAndLoadBinary(this, bin_spec);
+      if (!module)
+        *GetTarget().GetDebugger().GetAsyncErrorStream()
+            << llvm::toString(module.takeError()) << "\n";
     }
   }
 
@@ -1191,8 +1193,6 @@ void ProcessGDBRemote::LoadStubBinaries() {
 
   std::vector<addr_t> bin_addrs = m_gdb_comm.GetProcessStandaloneBinaries();
   if (bin_addrs.size()) {
-    UUID uuid;
-    const bool value_is_slide = false;
     for (addr_t addr : bin_addrs) {
       const bool notify = true;
       // First see if this is a special platform
@@ -1204,14 +1204,17 @@ void ProcessGDBRemote::LoadStubBinaries() {
               .LoadPlatformBinaryAndSetup(this, addr, notify))
         continue;
 
-      const bool force_symbol_search = true;
-      const bool set_address_in_target = true;
-      const bool allow_memory_image_last_resort = false;
       // Second manually load this binary into the Target.
-      DynamicLoader::LoadBinaryWithUUIDAndAddress(
-          this, llvm::StringRef(), uuid, addr, value_is_slide,
-          force_symbol_search, notify, set_address_in_target,
-          allow_memory_image_last_resort);
+      DynamicLoader::BinarySpec bin_spec;
+      bin_spec.value = addr;
+      bin_spec.force_symbol_search = true;
+      bin_spec.notify = notify;
+      bin_spec.set_address_in_target = true;
+      llvm::Expected<ModuleSP> module =
+          DynamicLoader::LocateAndLoadBinary(this, bin_spec);
+      if (!module)
+        *GetTarget().GetDebugger().GetAsyncErrorStream()
+            << llvm::toString(module.takeError()) << "\n";
     }
   }
 }

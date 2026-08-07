@@ -22,7 +22,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
-#include <string>
+#include "llvm/TargetParser/NVPTXTargetParser.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "NVPTXGenSubtargetInfo.inc"
@@ -31,15 +31,15 @@ namespace llvm {
 
 class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   virtual void anchor();
-  std::string TargetName;
 
   // PTX version x.y is represented as 10*x+y, e.g. 3.1 == 31
   unsigned PTXVersion;
 
-  // FullSmVersion encoding: SM * 10 + ArchSuffixOffset
-  // ArchSuffixOffset: 0 (base), 2 ('f'), 3 ('a')
-  // e.g. sm_30 -> 300, sm_90a -> 903, sm_100f -> 1002
-  unsigned FullSmVersion;
+  NVPTX::GPUKind Arch = NVPTX::GK_NONE;
+
+  // Set by every architecture feature. Their bits are the point, so this is
+  // only here because a subtarget feature must name a field.
+  bool HasArchitecture = false;
 
   NVPTXInstrInfo InstrInfo;
   NVPTXTargetLowering TLInfo;
@@ -73,57 +73,75 @@ public:
     return TSInfo.get();
   }
 
-  // Checks PTX version and family-specific and architecture-specific SM
-  // versions. For example, sm_100{f/a} and any future variants in the same
-  // family will match for any PTX version greater than or equal to
-  // `MinPTXVersion`.
-  bool hasPTXWithFamilySMs(unsigned MinPTXVersion,
-                           ArrayRef<unsigned> SMVersions) const;
-  // Checks PTX version and architecture-specific SM versions.
-  // For example, sm_100{a} will match for any PTX version greater than or equal
-  // to `MinPTXVersion`.
-  bool hasPTXWithAccelSMs(unsigned MinPTXVersion,
-                          ArrayRef<unsigned> SMVersions) const;
+  // True when any of `Features` is enabled.
+  bool hasAnyFeature(ArrayRef<unsigned> Features) const {
+    return llvm::any_of(Features, [this](unsigned F) { return hasFeature(F); });
+  }
 
   bool has256BitVectorLoadStore(unsigned AS) const {
-    return getSmVersion() >= 100 && PTXVersion >= 88 &&
+    return hasFeature(NVPTX::SM100) && PTXVersion >= 88 &&
            AS == NVPTXAS::ADDRESS_SPACE_GLOBAL;
   }
   bool hasUsedBytesMaskPragma() const {
-    return getSmVersion() >= 50 && PTXVersion >= 83;
+    return hasFeature(NVPTX::SM50) && PTXVersion >= 83;
   }
-  bool hasAtomAddF64() const { return getSmVersion() >= 60; }
-  bool hasAtomScope() const { return getSmVersion() >= 60; }
-  bool hasAtomBitwise64() const { return getSmVersion() >= 32; }
-  bool hasAtomMinMax64() const { return getSmVersion() >= 32; }
-  bool hasAtomCas16() const { return getSmVersion() >= 70 && PTXVersion >= 63; }
+  bool hasAtomAddF64() const { return hasFeature(NVPTX::SM60); }
+  bool hasAtomScope() const { return hasFeature(NVPTX::SM60); }
+  bool hasAtomBitwise64() const { return hasFeature(NVPTX::SM32); }
+  bool hasAtomMinMax64() const { return hasFeature(NVPTX::SM32); }
+  bool hasAtomCas16() const {
+    return hasFeature(NVPTX::SM70) && PTXVersion >= 63;
+  }
   bool hasAtomSwap128() const {
-    return getSmVersion() >= 90 && PTXVersion >= 83;
+    return hasFeature(NVPTX::SM90) && PTXVersion >= 83;
   }
-  bool hasClusters() const { return getSmVersion() >= 90 && PTXVersion >= 78; }
-  bool hasLDG() const { return getSmVersion() >= 32; }
-  bool hasHWROT32() const { return getSmVersion() >= 32; }
-  bool hasBrx() const { return getSmVersion() >= 30 && PTXVersion >= 60; }
-  bool hasFP16Math() const { return getSmVersion() >= 53; }
-  bool hasBF16Math() const { return getSmVersion() >= 80; }
+  bool hasClusters() const {
+    return hasFeature(NVPTX::SM90) && PTXVersion >= 78;
+  }
+  bool hasLDG() const { return hasFeature(NVPTX::SM32); }
+  bool hasHWROT32() const { return hasFeature(NVPTX::SM32); }
+  bool hasBrx() const { return hasFeature(NVPTX::SM30) && PTXVersion >= 60; }
+  bool hasFP16Math() const { return hasFeature(NVPTX::SM53); }
+  bool hasBF16Math() const { return hasFeature(NVPTX::SM80); }
   bool allowFP16Math() const;
   bool hasMaskOperator() const { return PTXVersion >= 71; }
-  bool hasNoReturn() const { return getSmVersion() >= 30 && PTXVersion >= 64; }
+  bool hasNoReturn() const {
+    return hasFeature(NVPTX::SM30) && PTXVersion >= 64;
+  }
   // Does SM & PTX support memory orderings (weak and atomic: relaxed, acquire,
   // release, acq_rel, sc) ?
   bool hasMemoryOrdering() const {
-    return getSmVersion() >= 70 && PTXVersion >= 60;
+    return hasFeature(NVPTX::SM70) && PTXVersion >= 60;
   }
   // Does SM & PTX support .acquire and .release qualifiers for fence?
   bool hasSplitAcquireAndReleaseFences() const {
-    return getSmVersion() >= 90 && PTXVersion >= 86;
+    return hasFeature(NVPTX::SM90) && PTXVersion >= 86;
   }
   // Does SM & PTX support atomic relaxed MMIO operations ?
   bool hasRelaxedMMIO() const {
-    return getSmVersion() >= 70 && PTXVersion >= 82;
+    return hasFeature(NVPTX::SM70) && PTXVersion >= 82;
   }
   bool hasDotInstructions() const {
-    return getSmVersion() >= 61 && PTXVersion >= 50;
+    return hasFeature(NVPTX::SM61) && PTXVersion >= 50;
+  }
+  // Cache hint SM/PTX version requirements
+  bool hasL1EvictionHint() const {
+    return getSmVersion() >= 70 && PTXVersion >= 74;
+  }
+  bool hasL2EvictionHint() const {
+    return getSmVersion() >= 100 && PTXVersion >= 88;
+  }
+  bool hasL2Prefetch64B() const {
+    return getSmVersion() >= 75 && PTXVersion >= 74;
+  }
+  bool hasL2Prefetch128B() const {
+    return getSmVersion() >= 75 && PTXVersion >= 74;
+  }
+  bool hasL2Prefetch256B() const {
+    return getSmVersion() >= 80 && PTXVersion >= 74;
+  }
+  bool hasL2CacheHint() const {
+    return getSmVersion() >= 80 && PTXVersion >= 74;
   }
 
   // Checks following instructions support:
@@ -134,62 +152,49 @@ public:
   // - tcgen05.commit
   // - tcgen05.mma
   bool hasTcgen05InstSupport() const {
-    // sm_101 renamed to sm_110 in PTX 9.0
-    return hasPTXWithFamilySMs(90, {100, 110}) ||
-           hasPTXWithFamilySMs(88, {100, 101}) ||
-           hasPTXWithAccelSMs(86, {100, 101});
+    return hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f});
   }
 
   // Checks tcgen05.shift instruction support.
   bool hasTcgen05ShiftSupport() const {
-    // sm_101 renamed to sm_110 in PTX 9.0
-    return hasPTXWithAccelSMs(90, {100, 110, 103}) ||
-           hasPTXWithAccelSMs(88, {100, 101, 103}) ||
-           hasPTXWithAccelSMs(86, {100, 101});
+    return hasAnyFeature({NVPTX::SM100a, NVPTX::SM103a, NVPTX::SM110a});
   }
 
   bool hasTcgen05MMAScaleInputDImm() const {
-    return hasPTXWithFamilySMs(88, {100}) || hasPTXWithAccelSMs(86, {100});
+    return hasAnyFeature({NVPTX::SM100f});
   }
 
   bool hasTcgen05MMAI8Kind() const {
-    return hasPTXWithAccelSMs(90, {100, 110}) ||
-           hasPTXWithAccelSMs(86, {100, 101});
+    return hasAnyFeature({NVPTX::SM100a, NVPTX::SM110a});
   }
 
   bool hasTcgen05MMASparseMxf4nvf4() const {
-    return hasPTXWithAccelSMs(90, {100, 110, 103}) ||
-           hasPTXWithAccelSMs(87, {100, 101, 103});
+    return PTXVersion >= 87 &&
+           hasAnyFeature({NVPTX::SM100a, NVPTX::SM103a, NVPTX::SM110a});
   }
 
   bool hasTcgen05MMASparseMxf4() const {
-    return hasPTXWithAccelSMs(90, {100, 110, 103}) ||
-           hasPTXWithAccelSMs(86, {100, 101, 103});
+    return hasAnyFeature({NVPTX::SM100a, NVPTX::SM103a, NVPTX::SM110a});
   }
 
   bool hasTcgen05LdRedSupport() const {
-    return hasPTXWithFamilySMs(90, {110, 103}) ||
-           hasPTXWithFamilySMs(88, {101, 103});
+    return PTXVersion >= 88 && hasAnyFeature({NVPTX::SM103f, NVPTX::SM110f});
   }
 
-  bool hasReduxSyncF32() const {
-    return hasPTXWithFamilySMs(88, {100}) || hasPTXWithAccelSMs(86, {100});
-  }
+  bool hasReduxSyncF32() const { return hasAnyFeature({NVPTX::SM100f}); }
 
-  bool hasMMABlockScale() const {
-    return hasPTXWithFamilySMs(88, {120}) || hasPTXWithAccelSMs(87, {120});
-  }
+  bool hasMMABlockScale() const { return hasAnyFeature({NVPTX::SM120f}); }
 
   bool hasMMASparseBlockScaleF4() const {
-    return hasPTXWithAccelSMs(87, {120, 121});
+    return hasAnyFeature({NVPTX::SM120a, NVPTX::SM121a});
   }
 
   bool hasMMAWithMXF4NVF4Scale4xE8M0() const {
-    return hasPTXWithFamilySMs(91, {120});
+    return PTXVersion >= 91 && hasAnyFeature({NVPTX::SM120f});
   }
 
   bool hasMMASparseWithMXF4NVF4Scale4xE8M0() const {
-    return hasPTXWithAccelSMs(91, {120, 121});
+    return PTXVersion >= 91 && hasAnyFeature({NVPTX::SM120a, NVPTX::SM121a});
   }
 
   // f32x2 instructions in Blackwell family
@@ -201,18 +206,16 @@ public:
   //  - tile_gather4 mode support
   //  - tile_scatter4 mode support
   bool hasTMABlackwellSupport() const {
-    return hasPTXWithFamilySMs(90, {100, 110}) ||
-           hasPTXWithFamilySMs(88, {100, 101}) ||
-           hasPTXWithAccelSMs(86, {100, 101});
+    return hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f});
   }
 
   // Checks support for conversions involving e4m3x2 and e5m2x2.
   bool hasFP8ConversionSupport() const {
     if (PTXVersion >= 81)
-      return getSmVersion() >= 89;
+      return hasFeature(NVPTX::SM89);
 
     if (PTXVersion >= 78)
-      return getSmVersion() >= 90;
+      return hasFeature(NVPTX::SM90);
 
     return false;
   }
@@ -222,9 +225,7 @@ public:
   // - e2m1x2
   // - ue8m0x2
   bool hasNarrowFPConversionSupport() const {
-    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
-           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
-           hasPTXWithAccelSMs(86, {100, 101, 120});
+    return hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f});
   }
 
   // Checks support for conversions involving the following types:
@@ -234,64 +235,63 @@ public:
   // - f16x2 -> f4x2
   // - bf16x2 -> f4x2
   bool hasFP16X2ToNarrowFPConversionSupport() const {
-    return hasPTXWithFamilySMs(91, {100, 110, 120});
+    return PTXVersion >= 91 &&
+           hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f});
   }
 
   bool hasS2F6X2ConversionSupport() const {
-    return hasPTXWithAccelSMs(91, {100, 103, 110, 120, 121});
+    return PTXVersion >= 91 &&
+           hasAnyFeature({NVPTX::SM100a, NVPTX::SM103a, NVPTX::SM110a,
+                          NVPTX::SM120a, NVPTX::SM121a});
   }
 
   // Checks support for conversions from narrow FP types to bf16x2.
   bool hasNarrowFPToBF16x2ConversionSupport() const {
-    return hasPTXWithFamilySMs(92, {100, 110, 120});
+    return PTXVersion >= 92 &&
+           hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f});
   }
 
   bool hasTensormapReplaceSupport() const {
-    return hasPTXWithFamilySMs(90, {90, 100, 110, 120}) ||
-           hasPTXWithFamilySMs(88, {90, 100, 101, 120}) ||
-           hasPTXWithAccelSMs(83, {90, 100, 101, 120});
+    return hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f}) ||
+           (PTXVersion >= 83 && hasAnyFeature({NVPTX::SM90a}));
   }
 
   bool hasTensormapReplaceElemtypeSupport(unsigned ElemType) const {
     if (ElemType >= static_cast<unsigned>(nvvm::TensormapElemType::B4x16))
-      return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
-             hasPTXWithFamilySMs(88, {100, 101, 120}) ||
-             hasPTXWithAccelSMs(87, {100, 101, 120});
+      return (PTXVersion >= 88 &&
+              hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f})) ||
+             (PTXVersion >= 87 &&
+              hasAnyFeature({NVPTX::SM100a, NVPTX::SM110a, NVPTX::SM120a}));
 
     return hasTensormapReplaceSupport();
   }
 
   bool hasTensormapReplaceSwizzleAtomicitySupport() const {
-    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
-           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
-           hasPTXWithAccelSMs(87, {100, 101, 120});
+    return (PTXVersion >= 88 &&
+            hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f})) ||
+           (PTXVersion >= 87 &&
+            hasAnyFeature({NVPTX::SM100a, NVPTX::SM110a, NVPTX::SM120a}));
   }
 
   bool hasTensormapReplaceSwizzleModeSupport(unsigned SwizzleMode) const {
     if (SwizzleMode ==
         static_cast<unsigned>(nvvm::TensormapSwizzleMode::SWIZZLE_96B))
-      return hasPTXWithAccelSMs(88, {103});
+      return hasAnyFeature({NVPTX::SM103a});
 
     return hasTensormapReplaceSupport();
   }
 
   bool hasClusterLaunchControlTryCancelMulticastSupport() const {
-    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
-           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
-           hasPTXWithAccelSMs(86, {100, 101, 120});
+    return hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f});
   }
 
   bool hasSetMaxNRegSupport() const {
-    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
-           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
-           hasPTXWithAccelSMs(86, {100, 101, 120}) ||
-           hasPTXWithAccelSMs(80, {90});
+    return hasAnyFeature(
+        {NVPTX::SM90a, NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f});
   }
 
   bool hasLdStmatrixBlackwellSupport() const {
-    return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
-           hasPTXWithFamilySMs(88, {100, 101, 120}) ||
-           hasPTXWithAccelSMs(86, {100, 101, 120});
+    return hasAnyFeature({NVPTX::SM100f, NVPTX::SM110f, NVPTX::SM120f});
   }
 
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
@@ -302,36 +302,23 @@ public:
   // PTX ISA versions 8.3+ we can confidently say that the bug will not be
   // present.
   bool hasPTXASUnreachableBug() const { return PTXVersion < 83; }
-  bool hasCvtaParam() const { return getSmVersion() >= 70 && PTXVersion >= 77; }
+  bool hasCvtaParam() const {
+    return hasFeature(NVPTX::SM70) && PTXVersion >= 77;
+  }
   bool hasConvertWithStochasticRounding() const {
-    return hasPTXWithAccelSMs(87, {100, 103});
+    return PTXVersion >= 87 && hasAnyFeature({NVPTX::SM100a, NVPTX::SM103a});
   }
-  unsigned getFullSmVersion() const { return FullSmVersion; }
-  unsigned getSmVersion() const { return getFullSmVersion() / 10; }
-  unsigned getSmFamilyVersion() const { return getFullSmVersion() / 100; }
-  // GPUs with "a" suffix have architecture-accelerated features that are
-  // supported on the specified architecture only, hence such targets do not
-  // follow the onion layer model. hasArchAccelFeatures() allows distinguishing
-  // such GPU variants from the base GPU architecture.
-  // - false represents non-accelerated architecture.
-  // - true represents architecture-accelerated variant.
-  bool hasArchAccelFeatures() const {
-    return (getFullSmVersion() & 1) && PTXVersion >= 80;
-  }
-  // GPUs with 'f' suffix have architecture-accelerated features which are
-  // portable across all future architectures under same SM major. For example,
-  // sm_100f features will work for sm_10X*f*/sm_10X*a* future architectures.
-  // - false represents non-family-specific architecture.
-  // - true represents family-specific variant.
-  bool hasFamilySpecificFeatures() const {
-    return getFullSmVersion() % 10 == 2 ? PTXVersion >= 88
-                                        : hasArchAccelFeatures();
-  }
-  // If the user did not provide a target we default to the `sm_75` target.
-  StringRef getTargetName() const {
-    return hasTargetName() ? StringRef(TargetName) : "sm_75";
-  }
-  bool hasTargetName() const { return !TargetName.empty(); }
+  // The compute capability as a number, for __CUDA_ARCH__. This is the one
+  // place an architecture needs to be a number, and it is not an identity:
+  // sm_100, sm_100f and sm_100a all report 100.
+  unsigned getSmVersion() const { return NVPTX::getSmVersion(Arch) / 10; }
+
+  // Whether -mcpu named a target at all, as opposed to falling back to the
+  // default architecture.
+  bool hasTargetName() const { return !getCPU().empty(); }
+
+  // The architecture's name, which is what `.target` is emitted from.
+  StringRef getTargetName() const { return NVPTX::getArchName(Arch); }
 
   bool hasNativeBF16Support(unsigned Opcode) const;
 
