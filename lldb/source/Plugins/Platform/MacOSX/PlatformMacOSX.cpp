@@ -176,11 +176,11 @@ PlatformMacOSX::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
 }
 
 lldb_private::Status PlatformMacOSX::GetSharedModule(
-    const lldb_private::ModuleSpec &module_spec, Process *process,
+    const lldb_private::ModuleSpec &module_spec, Target &target,
     lldb::ModuleSP &module_sp,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
   Status error = GetSharedModuleWithLocalCache(
-      module_spec, module_sp, old_modules, did_create_ptr, process);
+      module_spec, module_sp, old_modules, did_create_ptr, target);
 
   if (module_sp) {
     if (module_spec.GetArchitecture().GetCore() ==
@@ -195,7 +195,7 @@ lldb_private::Status PlatformMacOSX::GetSharedModule(
         bool did_create = false;
         Status x86_64_error = GetSharedModuleWithLocalCache(
             module_spec_x86_64, x86_64_module_sp, &old_x86_64_modules,
-            &did_create, process);
+            &did_create, target);
         if (x86_64_module_sp && x86_64_module_sp->GetObjectFile()) {
           module_sp = x86_64_module_sp;
           if (old_modules)
@@ -210,7 +210,7 @@ lldb_private::Status PlatformMacOSX::GetSharedModule(
   }
 
   if (!module_sp) {
-    error = FindBundleBinaryInExecSearchPaths(module_spec, process, module_sp,
+    error = FindBundleBinaryInExecSearchPaths(module_spec, target, module_sp,
                                               old_modules, did_create_ptr);
   }
   return error;

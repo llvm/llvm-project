@@ -2541,8 +2541,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         // module in the shared module cache.
         if (m_platform_sp) {
           error = m_platform_sp->GetSharedModule(
-              module_spec, m_process_sp.get(), module_sp, &old_modules,
-              &did_create_module);
+              module_spec, *this, module_sp, &old_modules, &did_create_module);
         } else {
           error = Status::FromErrorString("no platform is currently set");
         }
