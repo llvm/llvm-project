@@ -1912,7 +1912,7 @@ auto OmpDirectiveSpecificationParser::Parse(ParseState &state) const
 static bool IsStandaloneOrdered(const OmpDirectiveSpecification &spec) {
   // An ORDERED directive is standalone if it has DOACROSS or DEPEND clause.
   // The directive name parser will always use OMPD_ordered_standalone
-  // for "ORDEED".
+  // for "ORDERED".
   return spec.DirId() == llvm::omp::Directive::OMPD_ordered_standalone &&
       llvm::any_of(spec.Clauses().v, [](const OmpClause &clause) {
         llvm::omp::Clause id{clause.Id()};
