@@ -6618,8 +6618,15 @@ SDValue DAGTypeLegalizer::WidenVecRes_CONCAT_VECTORS(SDNode *N) {
     }
   }
 
-  assert(!WidenVT.isScalableVector() &&
-         "Cannot use build vectors to widen CONCAT_VECTOR result");
+  if (WidenVT.isScalableVector()) {
+    SDValue WideVec = DAG.getPOISON(WidenVT);
+    unsigned NumInElts = InVT.getVectorMinNumElements();
+    for (unsigned I = 0; I < NumOperands; ++I)
+      WideVec =
+          DAG.getInsertSubvector(dl, WideVec, N->getOperand(I), I * NumInElts);
+    return WideVec;
+  }
+
   unsigned WidenNumElts = WidenVT.getVectorNumElements();
   unsigned NumInElts = InVT.getVectorNumElements();
 
