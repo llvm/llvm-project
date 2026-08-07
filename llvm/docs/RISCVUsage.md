@@ -48,10 +48,13 @@ RV64E are supported by the assembly-based tools only. RV128I is not supported.
 
 To specify the target triple:
 
+:::{table} RISC-V Architectures
 | Architecture | Description |
 | ------------ | ----------- |
 | `riscv32` | RISC-V with XLEN=32 (i.e. RV32I or RV32E) |
 | `riscv64` | RISC-V with XLEN=64 (i.e. RV64I or RV64E) |
+
+:::
 
 To select an E variant ISA (e.g. RV32E instead of RV32I), use the base
 architecture string (e.g. `riscv32`) with the extension `e`.

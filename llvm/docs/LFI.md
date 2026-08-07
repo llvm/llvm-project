@@ -716,6 +716,6 @@ For more information, please see the following resources:
 
 Contact info:
 
-- Zachary Yedidia - <mailto:zyedidia@cs.stanford.edu>
-- Tal Garfinkel - <mailto:tgarfinkel@google.com>
-- Sharjeel Khan - <mailto:sharjeelkhan@google.com>
+- Zachary Yedidia - [zyedidia@cs.stanford.edu](mailto:zyedidia@cs.stanford.edu)
+- Tal Garfinkel - [tgarfinkel@google.com](mailto:tgarfinkel@google.com)
+- Sharjeel Khan - [sharjeelkhan@google.com](mailto:sharjeelkhan@google.com)

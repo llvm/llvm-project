@@ -2,6 +2,7 @@
 % SPDX-License-Identifier: CC-BY-3.0
 
 (llvm-community-code-of-conduct)=
+(llvm community code of conduct)=
 
 # LLVM Community Code of Conduct
 
@@ -44,7 +45,7 @@ cases, affect a person's ability to participate within them, when the conduct
 amounts to an egregious violation of this code.
 
 If you believe someone is violating the code of conduct, we ask that you report
-it by emailing <mailto:conduct@llvm.org>. For more details please see the
+it by emailing [conduct@llvm.org](mailto:conduct@llvm.org). For more details please see the
 {doc}`Reporting Guide <ReportingGuide>`.
 
 (be-friendly-and-patient)=
@@ -112,7 +113,7 @@ it by emailing <mailto:conduct@llvm.org>. For more details please see the
 
 If you believe someone is violating the code of conduct you can always report
 it to the LLVM Foundation Code of Conduct Committee by emailing
-<mailto:conduct@llvm.org>. All reports will be kept confidential. This isn't a public
+[conduct@llvm.org](mailto:conduct@llvm.org). All reports will be kept confidential. This isn't a public
 list and only members of the advisory committee will receive the report. For
 details on what to include in the report, please see the {doc}`Reporting Guide
 <ReportingGuide>`.
@@ -129,7 +130,7 @@ able to help. If you cannot find one of the organizers, the venue staff can
 locate one for you. We will also post detailed contact information for specific
 events as part of each events' information. In person reports will still be
 kept confidential exactly as above, but also feel free to (anonymously if
-needed) email <mailto:conduct@llvm.org>.
+needed) email [conduct@llvm.org](mailto:conduct@llvm.org).
 
 ## Bans
 
@@ -139,7 +140,7 @@ community members from having to interact with people who are consistently not
 respecting the code of conduct. Please refer to the
 {doc}`Developer Policy<DeveloperPolicy>` section on Bans for how to handle
 interactions with former community members. If you need further guidance,
-please contact <mailto:conduct@llvm.org>.
+please contact [conduct@llvm.org](mailto:conduct@llvm.org).
 
 ## Code of Conduct Committee
 
@@ -174,7 +175,7 @@ For details about what a Transparency Report is and what it contains, please see
 ## Questions?
 
 If you have questions, please feel free to contact the LLVM Foundation Code of
-Conduct Committee by emailing <mailto:conduct@llvm.org>.
+Conduct Committee by emailing [conduct@llvm.org](mailto:conduct@llvm.org).
 
 ## Thanks!
 

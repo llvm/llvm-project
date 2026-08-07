@@ -22,15 +22,15 @@ to an incident. For example:
   will have a code of conduct response team or point of contact for CoC
   reports.
 
-These teams should determine if an {ref}`immediate response<Immediate Response
-Checklist>` is needed before sending the report to the Code of Conduct
+These teams should determine if an {ref}`immediate response <immediate-response-checklist>`
+is needed before sending the report to the Code of Conduct
 committee.
 
 (receiving-a-report)=
 
 ## Receiving a Report
 
-Reports are typically received by email (<mailto:conduct@llvm.org>) or in person from
+Reports are typically received by email ([conduct@llvm.org](mailto:conduct@llvm.org)) or in person from
 the reporter or event CoC response team.
 
 When receiving a report by email, the CoC Committee should acknowledge receipt
@@ -71,22 +71,21 @@ committee within 24 hours.
 The following is a summary of the steps the committee takes when responding to
 a reported incident.
 
-1. Determine if there is a need for an {ref}`immediate response<Immediate
-   Response Checklist>`.
-2. {ref}`Acknowledge the report<Receiving a report>` within 24 hours.
-3. {ref}`Discuss the incident report<Incident Response Assessment>`, gather
-   more information, and determine a {ref}`resolution<Resolutions>`.
+1. Determine if there is a need for an {ref}`immediate response <immediate-response-checklist>`.
+2. {ref}`Acknowledge the report <receiving-a-report>` within 24 hours.
+3. {ref}`Discuss the incident report <incident-response-assessment>`, gather
+   more information, and determine a {ref}`resolution <resolutions>`.
 4. During this process, the {ref}`reporter will be informed of the
-   resolution<Following Up With the Reportee>` and feedback is requested. This
+   resolution <following-up-with-the-reportee>` and feedback is requested. This
    feedback may or may not be used to re-evaluate the resolution.
 5. Inform the reportee of the resolution. The reportee is provided options to
-   {ref}`appeal<Appeal Process>`.
-6. The {ref}`resolution<Resolutions>` is implemented.
+   {ref}`appeal <appeal-process>`.
+6. The {ref}`resolution <resolutions>` is implemented.
 7. All reports, data, notes, and resolutions are logged in a private location
    (e.g., Google Drive or other database).
 
 The committee will never make public statements about a resolution and will
-only publish {ref}`transparency reports<Transparency Reports>`. If a public
+only publish {ref}`transparency reports <transparency-reports>`. If a public
 statement is necessary and requested by the committee, it will be given by the
 LLVM Foundation Board of Directors.
 
@@ -178,8 +177,9 @@ taken, but below is a list of possible resolutions:
 - Request that the reportee avoid any interaction with, and physical proximity
   to, another person for the remainder of the event.
 - Refusal of alcoholic beverage purchases by the reportee at LLVM events.
-- Ending a talk/tutorial/etc at an LLVM event early. See immediate response
-  checklist for further clarification.
+- Ending a talk/tutorial/etc at an LLVM event early. See
+  [immediate response checklist](#immediate-response-checklist) for further
+  clarification.
 - Not publishing the video or slides of a talk.
 - Not allowing a speaker to give (further) talks at LLVM events for a specified
   amount of time or ever.
@@ -203,7 +203,7 @@ feedback.
 
 Any individual(s) determined to have violated the CoC have the right to appeal
 a resolution decision. An appeal can be made directly to the committee by sending an
-email to <mailto:conduct@llvm.org> with subject line Code of Conduct Incident Appeal.
+email to [conduct@llvm.org](mailto:conduct@llvm.org) with subject line Code of Conduct Incident Appeal.
 
 This process is intended to consider new or different evidence from the
 initial incident investigation. The email should include documentation related
@@ -287,4 +287,3 @@ Unported License][creative commons attribution 3.0 unported license].
 [creative commons attribution 3.0 unported license]: http://creativecommons.org/licenses/by/3.0/
 [django project]: https://www.djangoproject.com/conduct/
 [write the docs response guide]: https://www.writethedocs.org/code-of-conduct/#guidelines-for-reporting-incidents
-

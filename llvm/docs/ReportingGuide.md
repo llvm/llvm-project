@@ -21,7 +21,7 @@ processes surrounding it.
 
 - For any incident involving an online platform (e.g., mailing lists, forums,
   irc/discord/slack, etc) we ask that you make any reports by emailing
-  <mailto:conduct@llvm.org>. This is received by all members of the CoC Committee.
+  [conduct@llvm.org](mailto:conduct@llvm.org). This is received by all members of the CoC Committee.
 - For LLVM Developers' Meetings, please file a report with the on-site Code
   of Conduct team. Their names and contact details are listed on the event
   webpage. You can also approach any other staff member, who can be
@@ -30,11 +30,11 @@ processes surrounding it.
   reported in-person at a LLVM Developers' Meeting will be emailed to the
   Code of Conduct Committee.
 - For meetups, please report the incident to the local meetup organizers first
-  and then email <mailto:conduct@llvm.org> with your report. Each meetup will have a
+  and then email [conduct@llvm.org](mailto:conduct@llvm.org) with your report. Each meetup will have a
   contact listed on the associated meetup page. If you feel the incident was
   not well handled by the local organizers, please include this information in
-  your email to <mailto:conduct@llvm.org>. All meetup organizers who receive an
-  in-person report are also asked to email <mailto:conduct@llvm.org> with the
+  your email to [conduct@llvm.org](mailto:conduct@llvm.org). All meetup organizers who receive an
+  in-person report are also asked to email [conduct@llvm.org](mailto:conduct@llvm.org) with the
   incident information.
 
 If you believe anyone is in physical danger, please notify appropriate law
@@ -44,7 +44,7 @@ them.
 
 ## Guidelines for Reporting Incidents
 
-Please email <mailto:conduct@llvm.org> with the following details (if possible):
+Please email [conduct@llvm.org](mailto:conduct@llvm.org) with the following details (if possible):
 
 - Your contact info (so we can get in touch with you). Include email and
   optionally a phone number.
@@ -105,4 +105,3 @@ Unported License][creative commons attribution 3.0 unported license].
 [creative commons attribution 3.0 unported license]: http://creativecommons.org/licenses/by/3.0/
 [django project]: https://www.djangoproject.com/conduct/
 [write the docs response guide]: https://www.writethedocs.org/code-of-conduct/#guidelines-for-reporting-incidents
-

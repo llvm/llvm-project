@@ -31,7 +31,7 @@ Address spaces are still used to distinguish between different kinds of pointers
 where the distinction is relevant for lowering (e.g. data vs function pointers
 have different sizes on some architectures). Opaque pointers are not changing
 anything related to address spaces and lowering. For more information, see
-[DataLayout](LangRef.html#langref-datalayout). Opaque pointers in non-default
+{ref}`DataLayout <langref_datalayout>`. Opaque pointers in non-default
 address space are spelled `ptr addrspace(N)`.
 
 This was proposed all the way back in
@@ -282,4 +282,3 @@ The following typed pointer functionality has been removed:
 The following typed pointer functionality is still to be removed:
 
 - Various APIs that are no longer relevant with opaque pointers.
-

@@ -155,28 +155,28 @@ PDB file is as follows:
 More information about the structure of each of these can be found on the
 following pages:
 
-{doc}`PdbStream <PdbStream>`
+{doc}`PdbStream`
 : Information about the PDB Info Stream and how it is used to match PDBs to EXEs.
 
-{doc}`TpiStream <TpiStream>`
+{doc}`TpiStream`
 : Information about the TPI stream and the CodeView records contained within.
 
-{doc}`DbiStream <DbiStream>`
+{doc}`DbiStream`
 : Information about the DBI stream and relevant substreams including the
   Module Substreams, source file information, and CodeView symbol records
   contained within.
 
-{doc}`ModiStream <ModiStream>`
+{doc}`ModiStream`
 : Information about the Module Information Stream, of which there is one for
   each compilation unit and the format of symbols contained within.
 
-{doc}`PublicStream <PublicStream>`
+{doc}`PublicStream`
 : Information about the Public Symbol Stream.
 
-{doc}`GlobalStream <GlobalStream>`
+{doc}`GlobalStream`
 : Information about the Global Symbol Stream.
 
-{doc}`HashTable <HashTable>`
+{doc}`HashTable`
 : Information about the serialized hash table format used internally to
   represent things such as the Named Stream Map and the Hash Adjusters in the
   {doc}`TPI/IPI Stream <TpiStream>`.
