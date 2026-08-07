@@ -27,8 +27,7 @@ define i16 @test_insert_16(i8 inreg %A, i8 inreg %B) {
 ; X86-LABEL: test_insert_16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    shll $8, %edx
-; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    movb %dl, %ah
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;

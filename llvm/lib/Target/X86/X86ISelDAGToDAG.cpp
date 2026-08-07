@@ -5430,27 +5430,45 @@ static bool isBEXTRControlOperand(SDNode *N) {
   }
 }
 
-static std::optional<std::pair<SDValue, bool>> getLoBase(SDValue V) {
+struct LoInfo {
+  SDValue Base;
+  bool NeedMovzx;
+};
+
+static std::optional<LoInfo> getLoBase(SDValue V) {
   SDValue Base;
   uint64_t Mask;
 
   if (sd_match(V, m_And(m_Value(Base), m_ConstInt(Mask)))) {
     if (Mask == 0xFF)
-      return std::make_pair(Base, true);
+      return LoInfo{Base, true};
     if (Mask == 0xFFFF00FF)
-      return std::make_pair(Base, false);
+      return LoInfo{Base, false};
   }
 
   if (sd_match(V, m_ZExt(m_Value(Base))) ||
       sd_match(V, m_AnyExt(m_Value(Base)))) {
     if (Base.getValueType() == MVT::i8)
-      return std::make_pair(Base, true);
+      return LoInfo{Base, true};
   }
 
   return std::nullopt;
 }
 
-static std::optional<SDValue> getHiBase(SDValue V, SDNode *Root) {
+static bool upperBitsAreDiscarded(SDNode *N) {
+  if (!N->hasOneUse())
+    return false;
+
+  SDNode *User = *N->user_begin();
+  if (User->getOpcode() == ISD::TRUNCATE) {
+    MVT TruncVT = User->getSimpleValueType(0);
+    return TruncVT == MVT::i16 || TruncVT == MVT::i8;
+  }
+
+  return false;
+}
+
+static std::optional<SDValue> getHiBase(SDValue V, bool UpperBitsDiscarded) {
   if (!V.hasOneUse())
     return std::nullopt;
 
@@ -5468,13 +5486,8 @@ static std::optional<SDValue> getHiBase(SDValue V, SDNode *Root) {
       return Base;
   }
 
-  // Fallback: Upper bits are ignored by BEXTR.
-  // Only bits 0-15 of the BEXTR control operand are consumed:
-  // bits 0-7 specify the start and bits 8-15 specify the length.
-  // After the shift, Src bits 8+ become bits 16+, so they are irrelevant.
-  if (isBEXTRControlOperand(Root)) {
+  if (UpperBitsDiscarded)
     return Src;
-  }
 
   return std::nullopt;
 }
@@ -5499,12 +5512,14 @@ bool X86DAGToDAGISel::tryMatchHRegisterInsert(SDNode *N) {
   if (N->getValueType(0) != MVT::i32)
     return false;
 
+  bool UpperBitsDiscarded =
+      isBEXTRControlOperand(N) || upperBitsAreDiscarded(N);
+
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
   struct MatchResult {
-    SDValue LoBase;
-    bool NeedMovzx;
+    LoInfo Lo;
     SDValue HiBase;
   };
 
@@ -5513,10 +5528,10 @@ bool X86DAGToDAGISel::tryMatchHRegisterInsert(SDNode *N) {
     auto Lo = getLoBase(LoVal);
     if (!Lo)
       return std::nullopt;
-    auto Hi = getHiBase(HiVal, N);
+    auto Hi = getHiBase(HiVal, UpperBitsDiscarded);
     if (!Hi)
       return std::nullopt;
-    return MatchResult{Lo->first, Lo->second, *Hi};
+    return MatchResult{*Lo, *Hi};
   };
 
   auto Match = tryMatch(LHS, RHS);
@@ -5531,8 +5546,8 @@ bool X86DAGToDAGISel::tryMatchHRegisterInsert(SDNode *N) {
   SDValue RC_ABCD =
       CurDAG->getTargetConstant(X86::GR32_ABCDRegClassID, dl, MVT::i32);
 
-  SDValue DestBase = Match->LoBase;
-  if (Match->NeedMovzx) {
+  SDValue DestBase = Match->Lo.Base;
+  if (Match->Lo.NeedMovzx) {
     if (DestBase.getValueType() != MVT::i8) {
       DestBase = SDValue(CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
                                                 dl, MVT::i8, DestBase, Sub8),
