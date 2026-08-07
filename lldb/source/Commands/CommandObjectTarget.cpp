@@ -3209,21 +3209,22 @@ protected:
   // Find the module the new file is meant to stand in for. Preferred order is
   // the path the user gave, then the UUID read out of the new file, then its
   // basename.
-  ModuleSP FindModuleToReplace(Target &target, const FileSpec &new_file_spec,
-                               const UUID &new_uuid,
+  ModuleSP FindModuleToReplace(Target &target,
+                               const ModuleSpec &new_module_spec,
                                CommandReturnObject &result) {
     ModuleSpec search_spec;
     llvm::StringRef description;
 
     if (!m_options.m_old_path.empty()) {
       search_spec.GetFileSpec().SetPath(m_options.m_old_path);
-      description = "the given path";
-    } else if (new_uuid.IsValid()) {
-      search_spec.GetUUID() = new_uuid;
+      description = "the specified path";
+    } else if (new_module_spec.GetUUID().IsValid()) {
+      search_spec.GetUUID() = new_module_spec.GetUUID();
       description = "a matching UUID";
     } else {
-      search_spec.GetFileSpec().SetFilename(new_file_spec.GetFilename());
-      description = "a matching name";
+      search_spec.GetFileSpec().SetFilename(
+          new_module_spec.GetFileSpec().GetFilename());
+      description = "a matching file basename";
     }
 
     ModuleList matches;
@@ -3233,12 +3234,13 @@ protected:
       // A file with a UUID that names nothing in the target is still worth
       // trying by name, the placeholder it should replace may have been built
       // without one.
-      if (m_options.m_old_path.empty() && new_uuid.IsValid()) {
+      if (m_options.m_old_path.empty() && new_module_spec.GetUUID().IsValid()) {
         ModuleSpec by_name;
-        by_name.GetFileSpec().SetFilename(new_file_spec.GetFilename());
+        by_name.GetFileSpec().SetFilename(
+            new_module_spec.GetFileSpec().GetFilename());
         target.GetImages().FindModules(by_name, matches);
-        description =
-            matches.IsEmpty() ? "a matching UUID or name" : "a matching name";
+        description = matches.IsEmpty() ? "a matching UUID or file basename"
+                                        : "a matching file basename";
       }
       if (matches.IsEmpty()) {
         result.AppendErrorWithFormatv(
@@ -3310,16 +3312,15 @@ protected:
       }
       new_module_spec = matching_spec;
     }
-    const UUID &new_uuid = new_module_spec.GetUUID();
-
     ModuleSP old_module_sp =
-        FindModuleToReplace(*target, new_file_spec, new_uuid, result);
+        FindModuleToReplace(*target, new_module_spec, result);
     if (!old_module_sp)
       return;
 
     // Different UUIDs mean the new file is not the binary that ran, so the
     // symbols would not describe the memory the target has.
     const UUID &old_uuid = old_module_sp->GetUUID();
+    const UUID &new_uuid = new_module_spec.GetUUID();
     if (!m_options.m_force && old_uuid.IsValid() && new_uuid.IsValid() &&
         old_uuid != new_uuid) {
       result.AppendErrorWithFormatv(
