@@ -19932,8 +19932,8 @@ bool AArch64TargetLowering::isLegalAddImmediate(int64_t Immed) const {
 }
 
 bool AArch64TargetLowering::isLegalAddScalableImmediate(int64_t Imm) const {
-  // We will only emit addvl/inc* instructions for SVE2
-  if (!Subtarget->hasSVE2())
+  // We will only emit addvl/inc* instructions if the subtarget allows it.
+  if (!Subtarget->useScalarIncVL())
     return false;
 
   // addvl's immediates are in terms of the number of bytes in a register.
