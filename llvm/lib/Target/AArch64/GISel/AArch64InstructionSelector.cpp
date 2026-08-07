@@ -2949,7 +2949,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     // The code below doesn't support truncating stores, so we need to split it
     // again.
-    if (isa<GStore>(LdSt) && ValTy.getSizeInBits() > MemSizeInBits) {
+    if (isa<GStore>(LdSt) && ValTy.getSizeInBits() > MemSizeInBits &&
+        RB.getID() == AArch64::FPRRegBankID) {
       unsigned SubReg;
       LLT MemTy = LdSt.getMMO().getMemoryType();
       auto *RC = getRegClassForTypeOnBank(MemTy, RB);
