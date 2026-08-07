@@ -46,6 +46,7 @@
 ; CHECK-NEXT:     riscv-isel
 ; CHECK-NEXT:     finalize-isel
 ; CHECK-NEXT:     early-machinelicm
+; CHECK-NEXT:     riscv-vl-optimizer
 ; CHECK-NEXT:     early-tailduplication
 ; CHECK-NEXT:     opt-phis
 ; CHECK-NEXT:     stack-coloring
