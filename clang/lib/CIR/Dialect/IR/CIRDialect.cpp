@@ -975,6 +975,10 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
     return cir::PoisonAttr::get(getContext(), getType());
   }
 
+  // Propagate Undef value
+  if (mlir::isa_and_present<cir::UndefAttr>(adaptor.getSrc()))
+    return cir::UndefAttr::get(getType());
+
   if (getSrc().getType() == getType()) {
     switch (getKind()) {
     case cir::CastKind::integral: {
@@ -1018,10 +1022,9 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
         return {};
 
       APInt srcValue = constIntAttr.getValue();
-      APInt newVal =
-          srcIntTy.isSigned()
-              ? srcValue.sextOrTrunc(dstIntTy.getWidth())
-              : srcValue.zextOrTrunc(dstIntTy.getWidth());
+      APInt newVal = srcIntTy.isSigned()
+                         ? srcValue.sextOrTrunc(dstIntTy.getWidth())
+                         : srcValue.zextOrTrunc(dstIntTy.getWidth());
       return cir::IntAttr::get(dstIntTy, newVal);
     }
     default:
