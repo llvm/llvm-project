@@ -11,6 +11,7 @@
 
 #include "RISCV.h"
 #include "RISCVAsmPrinter.h"
+#include "RISCVFoldMemOffset.h"
 #include "RISCVGatherScatterLowering.h"
 #include "RISCVTargetMachine.h"
 #include "RISCVVLOptimizer.h"
@@ -113,7 +114,7 @@ void RISCVCodeGenPassBuilder::addMachineSSAOptimization(
   }
 
   addMachineFunctionPass(RISCVVectorPeepholePass(), PMW);
-  // TODO: RISCVFoldMemOffsetPass
+  addMachineFunctionPass(RISCVFoldMemOffsetPass(), PMW);
 
   Base::addMachineSSAOptimization(PMW);
 
