@@ -162,11 +162,10 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       // implemented in FinallyInfo. Here we enter a new EHCatchScope.
       FinallyInfo.enter(CGF, Finally->getFinallyBody(), beginCatchFn,
                         endCatchFn, exceptionRethrowFn);
-    } else if (IsWasm) {
-      // dispatchBlock is finally.catchall
-      // emitWasmCatchPadBlock()
-      // CurrentFuncletPad = ...
-      llvm_unreachable("@finally not implemented for WASM");
+    } else {
+      CGF.ErrorUnsupported(
+          Finally,
+          "@finally is not implemented for funclet based exception handling");
     }
   }
 
@@ -203,27 +202,26 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       Catch->setHandler(I, { Handlers[I].TypeInfo, Handlers[I].Flags }, Handlers[I].Block);
   }
 
-  if (IsMSVC)
+  if (IsMSVC) {
     if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt()) {
-        CodeGenFunction HelperCGF(CGM, /*suppressNewContext=*/true);
-        if (!CGF.CurSEHParent)
-            CGF.CurSEHParent = cast<NamedDecl>(CGF.CurFuncDecl);
-        // Outline the finally block.
-        const Stmt *FinallyBlock = Finally->getFinallyBody();
-        HelperCGF.startOutlinedSEHHelper(CGF, /*isFilter*/false, FinallyBlock);
+      CodeGenFunction HelperCGF(CGM, /*suppressNewContext=*/true);
+      if (!CGF.CurSEHParent)
+        CGF.CurSEHParent = cast<NamedDecl>(CGF.CurFuncDecl);
+      // Outline the finally block.
+      const Stmt *FinallyBlock = Finally->getFinallyBody();
+      HelperCGF.startOutlinedSEHHelper(CGF, /*isFilter*/ false, FinallyBlock);
 
-        // Emit the original filter expression, convert to i32, and return.
-        HelperCGF.EmitStmt(FinallyBlock);
+      // Emit the original filter expression, convert to i32, and return.
+      HelperCGF.EmitStmt(FinallyBlock);
 
-        HelperCGF.FinishFunction(FinallyBlock->getEndLoc());
+      HelperCGF.FinishFunction(FinallyBlock->getEndLoc());
 
-        llvm::Function *FinallyFunc = HelperCGF.CurFn;
+      llvm::Function *FinallyFunc = HelperCGF.CurFn;
 
-
-        // Push a cleanup for __finally blocks.
-        CGF.pushSEHCleanup(NormalAndEHCleanup, FinallyFunc);
+      // Push a cleanup for __finally blocks.
+      CGF.pushSEHCleanup(NormalAndEHCleanup, FinallyFunc);
     }
-
+  }
 
   // Emit the try body.
   CGF.EmitStmt(S.getTryBody());
@@ -351,7 +349,7 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     CGF.EmitBranchThroughCleanup(Cont);
   }
 
-  if (IsWasm && !HasCatchAll) {
+  if (IsWasm && !HasCatchAll && WasmCatchStartBlock) {
     CGF.WasmEmitFallthroughRethrow(WasmCatchStartBlock);
   }
 

@@ -150,6 +150,8 @@ static const EHPersonality &getObjCPersonality(const TargetInfo &Target,
   const llvm::Triple &T = Target.getTriple();
   if (T.isWindowsMSVCEnvironment())
     return EHPersonality::MSVC_CxxFrameHandler3;
+  if (T.isWasm())
+    return EHPersonality::GNU_Wasm_CPlusPlus;
 
   switch (L.ObjCRuntime.getKind()) {
   case ObjCRuntime::FragileMacOSX:
@@ -161,9 +163,7 @@ static const EHPersonality &getObjCPersonality(const TargetInfo &Target,
   case ObjCRuntime::GNUstep:
     if (T.isOSCygMing())
       return EHPersonality::GNU_CPlusPlus_SEH;
-    else if (T.isWasm())
-      return EHPersonality::GNU_Wasm_CPlusPlus;
-    else if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
+    if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
       return EHPersonality::GNUstep_ObjC;
     [[fallthrough]];
   case ObjCRuntime::GCC:
@@ -205,6 +205,8 @@ static const EHPersonality &getObjCXXPersonality(const TargetInfo &Target,
   auto Triple = Target.getTriple();
   if (Triple.isWindowsMSVCEnvironment())
     return EHPersonality::MSVC_CxxFrameHandler3;
+  if (Triple.isWasm())
+    return EHPersonality::GNU_Wasm_CPlusPlus;
 
   switch (L.ObjCRuntime.getKind()) {
   // In the fragile ABI, just use C++ exception handling and hope
@@ -221,12 +223,9 @@ static const EHPersonality &getObjCXXPersonality(const TargetInfo &Target,
     return getObjCPersonality(Target, CGOpts, L);
 
   case ObjCRuntime::GNUstep:
-    if (Triple.isWasm())
-      return EHPersonality::GNU_Wasm_CPlusPlus;
-    else if (Triple.isOSCygMing())
+    if (Triple.isOSCygMing())
       return EHPersonality::GNU_CPlusPlus_SEH;
-    else
-      return EHPersonality::GNU_ObjCXX;
+    return EHPersonality::GNU_ObjCXX;
 
   // The GCC runtime's personality function inherently doesn't support
   // mixed EH.  Use the ObjC personality just to avoid returning null.
@@ -1346,7 +1345,8 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
       Builder.CreateBr(ContBB);
   }
 
-  if (EHPersonality::get(*this).isWasmPersonality() && !HasCatchAll) {
+  if (EHPersonality::get(*this).isWasmPersonality() && !HasCatchAll &&
+      WasmCatchStartBlock) {
     WasmEmitFallthroughRethrow(WasmCatchStartBlock);
   }
 

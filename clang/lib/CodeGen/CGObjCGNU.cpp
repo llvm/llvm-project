@@ -4156,7 +4156,7 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
   if (!ClassAliases.empty()) {
     llvm::Type *ArgTypes[2] = {PtrTy, PtrToInt8Ty};
     llvm::FunctionType *RegisterAliasTy =
-        llvm::FunctionType::get(BoolTy, ArgTypes, false);
+        llvm::FunctionType::get(Builder.getVoidTy(), ArgTypes, false);
     llvm::Function *RegisterAlias = llvm::Function::Create(
       RegisterAliasTy,
       llvm::GlobalValue::ExternalWeakLinkage, "class_registerAlias_np",
@@ -4338,15 +4338,14 @@ void CGObjCGNU::EmitThrowStmt(CodeGenFunction &CGF,
     // that was passed into the `@catch` block, then this code path is not
     // reached and we will instead call `objc_exception_throw` with an explicit
     // argument.
-    llvm::CallBase *Throw = CGF.EmitRuntimeCallOrInvoke(ExceptionReThrowFn);
-    Throw->setDoesNotReturn();
+    CGF.EmitNoreturnRuntimeCallOrInvoke(ExceptionReThrowFn, {});
   } else {
     ExceptionAsObject = CGF.Builder.CreateBitCast(ExceptionAsObject, IdTy);
     llvm::CallBase *Throw =
         CGF.EmitRuntimeCallOrInvoke(ExceptionThrowFn, ExceptionAsObject);
     Throw->setDoesNotReturn();
+    CGF.Builder.CreateUnreachable();
   }
-  CGF.Builder.CreateUnreachable();
   if (ClearInsertionPoint)
     CGF.Builder.ClearInsertionPoint();
 }
