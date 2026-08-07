@@ -153,6 +153,10 @@ clang_tablegen("BuiltinsAArch64") {
   args = [ "-gen-clang-builtins" ]
 }
 
+clang_tablegen("BuiltinsARM") {
+  args = [ "-gen-clang-builtins" ]
+}
+
 clang_tablegen("BuiltinsAMDGPU") {
   args = [ "-gen-clang-builtins" ]
 }
