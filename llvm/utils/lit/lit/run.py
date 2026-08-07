@@ -247,9 +247,9 @@ class Run:
             # count increases.
             completed = queue.SimpleQueue()
 
-            # Specialize submit_next() by chunk size:
+            # Specialize submit_next() by batch_size:
             # - batch_size <= 1: Avoids batch slicing and list-wrapping overhead.
-            # - batch_size > 1: Batches tests into chunks of size batch_size per future.
+            # - batch_size > 1: Batches tests into groups of size batch_size per future.
             if batch_size <= 1:
 
                 def submit_next():
@@ -266,19 +266,19 @@ class Run:
             else:
                 import itertools
 
-                chunk_index = 0
+                batch_index = 0
 
                 def submit_next():
-                    nonlocal chunk_index
+                    nonlocal batch_index
                     batch = list(itertools.islice(tests_iter, batch_size))
                     if not batch:
                         return False
                     indices, tests_batch = zip(*batch)
-                    ex = executors[chunk_index % len(executors)]
+                    ex = executors[batch_index % len(executors)]
                     future = ex.submit(lit.worker.execute_batch, list(tests_batch))
                     future_to_test[future] = list(tests_batch)
-                    future_to_index[future] = chunk_index
-                    chunk_index += 1
+                    future_to_index[future] = batch_index
+                    batch_index += 1
                     pending.add(future)
                     future.add_done_callback(completed.put)
                     return True
