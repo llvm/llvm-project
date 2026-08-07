@@ -2968,12 +2968,7 @@ _mm_cvtps_pi16(__m128 __a) {
 ///    converted values and the uppper 32 bits are set to zero.
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtps_pi8(__m128 __a) {
-  __m64 __b, __c;
-
-  __b = _mm_cvtps_pi16(__a);
-  __c = _mm_setzero_si64();
-
-  return _mm_packs_pi16(__b, __c);
+  return _mm_packs_pi16(_mm_cvtps_pi16(__a), _mm_setzero_si64());
 }
 
 /// Extracts the sign bits from each single-precision floating-point
