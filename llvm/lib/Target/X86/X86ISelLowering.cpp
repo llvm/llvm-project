@@ -52993,28 +52993,6 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // Match all-of bool scalar reductions into a bitcast/movmsk + cmp.
-  // TODO: Support multiple SrcOps.
-  if (VT == MVT::i1) {
-    SmallVector<SDValue, 2> SrcOps;
-    SmallVector<APInt, 2> SrcPartials;
-    if (matchScalarReduction(SDValue(N, 0), ISD::AND, SrcOps, &SrcPartials) &&
-        SrcOps.size() == 1) {
-      unsigned NumElts = SrcOps[0].getValueType().getVectorNumElements();
-      EVT MaskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
-      SDValue Mask = combineBitcastvxi1(DAG, MaskVT, SrcOps[0], dl, Subtarget);
-      if (!Mask && TLI.isTypeLegal(SrcOps[0].getValueType()))
-        Mask = DAG.getBitcast(MaskVT, SrcOps[0]);
-      if (Mask) {
-        assert(SrcPartials[0].getBitWidth() == NumElts &&
-               "Unexpected partial reduction mask");
-        SDValue PartialBits = DAG.getConstant(SrcPartials[0], dl, MaskVT);
-        Mask = DAG.getNode(ISD::AND, dl, MaskVT, Mask, PartialBits);
-        return DAG.getSetCC(dl, MVT::i1, Mask, PartialBits, ISD::SETEQ);
-      }
-    }
-  }
-
   // InstCombine converts:
   //    `(-x << C0) & C1`
   // to
@@ -53838,29 +53816,6 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
                           DAG.getNode(X86ISD::FOR, dl, MVT::v4f32,
                                       DAG.getBitcast(MVT::v4f32, N0),
                                       DAG.getBitcast(MVT::v4f32, N1)));
-  }
-
-  // Match any-of bool scalar reductions into a bitcast/movmsk + cmp.
-  // TODO: Support multiple SrcOps.
-  if (VT == MVT::i1) {
-    SmallVector<SDValue, 2> SrcOps;
-    SmallVector<APInt, 2> SrcPartials;
-    if (matchScalarReduction(SDValue(N, 0), ISD::OR, SrcOps, &SrcPartials) &&
-        SrcOps.size() == 1) {
-      unsigned NumElts = SrcOps[0].getValueType().getVectorNumElements();
-      EVT MaskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
-      SDValue Mask = combineBitcastvxi1(DAG, MaskVT, SrcOps[0], dl, Subtarget);
-      if (!Mask && TLI.isTypeLegal(SrcOps[0].getValueType()))
-        Mask = DAG.getBitcast(MaskVT, SrcOps[0]);
-      if (Mask) {
-        assert(SrcPartials[0].getBitWidth() == NumElts &&
-               "Unexpected partial reduction mask");
-        SDValue ZeroBits = DAG.getConstant(0, dl, MaskVT);
-        SDValue PartialBits = DAG.getConstant(SrcPartials[0], dl, MaskVT);
-        Mask = DAG.getNode(ISD::AND, dl, MaskVT, Mask, PartialBits);
-        return DAG.getSetCC(dl, MVT::i1, Mask, ZeroBits, ISD::SETNE);
-      }
-    }
   }
 
   if (SDValue SetCC = combineAndOrForCcmpCtest(N, DAG, DCI, Subtarget))
