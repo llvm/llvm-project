@@ -1299,6 +1299,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 ### Sanitizers
 
 - UndefinedBehaviorSanitizer now supports `__ubsan_default_suppressions`.
+- UndefinedBehaviorSanitizer now performs null, alignment, and array-bounds
+  checks for aggregate (as opposed to scalar) copy operations in C; for C++,
+  this applies to trivial copy/move operations and some cases remain
+  unchecked. (#GH190739, #GH203737)
 - Sanitizer Special Case Lists (`-fsanitize-ignorelist`) now support
   Version 4 of the Special Case List format, which introduces a transition
   period for leading dot-slash (`./`) canonicalization in path matching.
