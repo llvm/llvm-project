@@ -3448,6 +3448,10 @@ private:
     }
 
     void logExtractRematPair(ExtractElementInst *EI, Instruction *RI) {
+      // The final scheduler may move the extract together with the remat
+      // instruction, so only track pairs that are already co-located.
+      if (EI->getParent() != RI->getParent())
+        return;
       CouldBeExtract.try_emplace(RI, EI);
       CouldBeRemat.try_emplace(EI, RI);
     }
