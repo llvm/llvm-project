@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple \
-// RUN:   dxil-pc-shadermodel6.6-compute %s -emit-llvm -o - -verify
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.6-compute %s -emit-llvm -o - -verify
 
 // expected-note@*:* {{candidate function template not viable: 'this' object is in address space 'groupshared', but method expects object in generic address space}}
 // expected-note@*:* {{candidate function not viable: 'this' object is in address space 'groupshared', but method expects object in generic address space}}

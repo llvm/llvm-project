@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple \
-// RUN:   dxil-pc-shadermodel6.6-library %s -emit-llvm -o - -verify
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -emit-llvm -o - -verify
 
 RWBuffer<uint> In : register(u0);
 RWStructuredBuffer<uint> Out0 : register(u1);

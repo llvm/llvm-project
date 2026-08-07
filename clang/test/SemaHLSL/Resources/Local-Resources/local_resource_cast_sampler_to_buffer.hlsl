@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple \
-// RUN:   dxil-pc-shadermodel6.6-compute %s -emit-llvm -o - -verify
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.6-compute %s -emit-llvm -o - -verify
 
 // expected-note@*:* {{candidate constructor not viable: no known conversion from 'SamplerState' to 'const hlsl::RWByteAddressBuffer' for 1st argument}}
 // expected-note@*:* {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}

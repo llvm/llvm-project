@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple \
-// RUN:   dxil-pc-shadermodel6.6-compute %s -emit-llvm -o - -verify
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.6-compute %s -emit-llvm -o - -verify
 
 RWByteAddressBuffer GBuf1 : register(u1);
 RWByteAddressBuffer GBuf2 : register(u2);
