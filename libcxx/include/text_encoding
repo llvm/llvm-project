@@ -597,7 +597,7 @@ public:
 
 #    if _LIBCPP_HAS_LOCALIZATION
   [[nodiscard]] _LIBCPP_AVAILABILITY_TEXT_ENCODING_ENVIRONMENT static text_encoding environment() {
-#      if defined(_LIBCPP_WIN32API)
+#      ifdef _WIN32
     return __get_locale_encoding(nullptr);
 #      else
     return __get_locale_encoding("");

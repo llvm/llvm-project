@@ -6224,3 +6224,150 @@ define <4 x i16> @test_ppairoe_v4i16(<4 x i16> %a, <4 x i16> %b) {
   %res = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 1, i32 4, i32 3, i32 6>
   ret <4 x i16> %res
 }
+
+; The tests below swap the usual operand roles: the destination's even lanes
+; come from the second shuffle operand and its odd lanes from the first.
+
+define <8 x i8> @test_ppaire_swapped_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_ppaire_swapped_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppaire.db a0, a2, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppaire_swapped_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaire.b a0, a1, a0
+; RV64-NEXT:    ret
+  %res = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 8, i32 0, i32 10, i32 2, i32 12, i32 4, i32 14, i32 6>
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_ppairo_swapped_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_ppairo_swapped_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppairo.db a0, a2, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppairo_swapped_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppairo.b a0, a1, a0
+; RV64-NEXT:    ret
+  %res = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 9, i32 1, i32 11, i32 3, i32 13, i32 5, i32 15, i32 7>
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_ppaireo_swapped_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_ppaireo_swapped_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppaireo.db a0, a2, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppaireo_swapped_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaireo.b a0, a1, a0
+; RV64-NEXT:    ret
+  %res = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 5, i32 14, i32 7>
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_ppairoe_swapped_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_ppairoe_swapped_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppairoe.db a0, a2, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppairoe_swapped_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppairoe.b a0, a1, a0
+; RV64-NEXT:    ret
+  %res = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 9, i32 0, i32 11, i32 2, i32 13, i32 4, i32 15, i32 6>
+  ret <8 x i8> %res
+}
+
+define <4 x i16> @test_ppaire_swapped_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_ppaire_swapped_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppaire.dh a0, a2, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppaire_swapped_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaire.h a0, a1, a0
+; RV64-NEXT:    ret
+  %res = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 4, i32 0, i32 6, i32 2>
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_ppairo_swapped_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_ppairo_swapped_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppairo.dh a0, a2, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppairo_swapped_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppairo.h a0, a1, a0
+; RV64-NEXT:    ret
+  %res = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 5, i32 1, i32 7, i32 3>
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_ppaireo_swapped_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_ppaireo_swapped_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppaireo.dh a0, a2, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppaireo_swapped_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppaireo.h a0, a1, a0
+; RV64-NEXT:    ret
+  %res = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_ppairoe_swapped_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_ppairoe_swapped_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppairoe.dh a0, a2, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppairoe_swapped_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppairoe.h a0, a1, a0
+; RV64-NEXT:    ret
+  %res = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 5, i32 0, i32 7, i32 2>
+  ret <4 x i16> %res
+}
+
+; The tests below use a single operand for both the even-lane and odd-lane
+; groups (the other operand is either poison or simply unreferenced by the
+; mask), rather than splitting the groups across V1 and V2.
+
+define <8 x i8> @test_ppair_v1_used_twice_v8i8(<8 x i8> %a) {
+; RV32-LABEL: test_ppair_v1_used_twice_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppairoe.db a0, a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppair_v1_used_twice_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppairoe.b a0, a0, a0
+; RV64-NEXT:    ret
+  %res = shufflevector <8 x i8> %a, <8 x i8> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_ppair_v2_used_twice_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_ppair_v2_used_twice_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ppairoe.db a0, a2, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppair_v2_used_twice_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppairoe.b a0, a1, a1
+; RV64-NEXT:    ret
+  %res = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
+  ret <8 x i8> %res
+}

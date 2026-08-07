@@ -87,8 +87,7 @@ define void @ir_tbaa_different(ptr %base, ptr %end, ptr %src) {
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[END2]], -8
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP17]], [[BASE2]]
-; CHECK-NEXT:    [[TMP13:%.*]] = lshr i64 [[TMP12]], 3
-; CHECK-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP13]], 3
+; CHECK-NEXT:    [[TMP14:%.*]] = and i64 [[TMP12]], -8
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], 8
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC]], i64 4
@@ -97,7 +96,7 @@ define void @ir_tbaa_different(ptr %base, ptr %end, ptr %src) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP4]]
@@ -177,7 +176,7 @@ define void @noalias_metadata_from_versioning(ptr %base, ptr %end, ptr %src) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP4]]
