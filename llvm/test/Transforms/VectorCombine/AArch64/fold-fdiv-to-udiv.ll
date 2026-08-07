@@ -24,10 +24,7 @@ define <4 x i32> @fold_v4i32_constant(<4 x i32> %x) {
 ; CHECK-LABEL: define <4 x i32> @fold_v4i32_constant(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A:%.*]] = uitofp <4 x i32> [[X]] to <4 x double>
-; CHECK-NEXT:    [[B:%.*]] = uitofp <4 x i32> <i32 1, i32 2, i32 3, i32 4> to <4 x double>
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[A]], [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = fptoui <4 x double> [[R]] to <4 x i32>
+; CHECK-NEXT:    [[RES:%.*]] = udiv <4 x i32> [[X]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
 entry:
@@ -44,10 +41,7 @@ define <4 x i32> @fold_value_tracking(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[NZ:%.*]] = or <4 x i32> [[Y]], splat (i32 1)
-; CHECK-NEXT:    [[A:%.*]] = uitofp <4 x i32> [[X]] to <4 x double>
-; CHECK-NEXT:    [[B:%.*]] = uitofp <4 x i32> [[NZ]] to <4 x double>
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[A]], [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = fptoui <4 x double> [[R]] to <4 x i32>
+; CHECK-NEXT:    [[RES:%.*]] = udiv <4 x i32> [[X]], [[NZ]]
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
 entry:

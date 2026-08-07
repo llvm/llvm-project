@@ -136,6 +136,7 @@ private:
   bool scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy, Value *Ptr);
   bool scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy, Value *Ptr);
   bool scalarizeExtExtract(Instruction &I);
+  bool foldFDivToUDiv(Instruction &I);
   bool foldConcatOfBoolMasks(Instruction &I);
   bool foldPermuteOfBinops(Instruction &I);
   bool foldShuffleOfBinops(Instruction &I);
@@ -2332,6 +2333,50 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
   return true;
 }
 
+/// Fold fptoui(fdiv(uitofp(x),uitofp(y))) --> udiv(x,y)
+bool VectorCombine::foldFDivToUDiv(Instruction &I) {
+  Instruction *X, *Y;
+  if (!match(&I, m_FPToUI(m_OneUse(m_FDiv(m_OneUse(m_Instruction(X)),
+                                          m_OneUse(m_Instruction(Y)))))))
+    return false;
+  Value *SrcX;
+  if (!match(X, m_UIToFP(m_Value(SrcX))))
+    return false;
+  Value *SrcY;
+  if (!match(Y, m_UIToFP(m_Value(SrcY))))
+    return false;
+
+  Type *IntTy = SrcX->getType();
+  Type *FloatTy = X->getType();
+
+  if (IntTy != SrcY->getType() || IntTy != I.getType())
+    return false;
+
+  unsigned IntWidth = IntTy->getScalarSizeInBits();
+  unsigned Precision =
+      APFloat::semanticsPrecision(FloatTy->getScalarType()->getFltSemantics());
+
+  if (IntWidth > Precision)
+    return false;
+  if (!isKnownNonZero(SrcY, SQ.getWithInstruction(&I)))
+    return false;
+
+  // OldCost = fptoui + fdiv + 2*uitofp
+  InstructionCost OldCost =
+      TTI.getInstructionCost(&I, CostKind) +
+      TTI.getArithmeticInstrCost(Instruction::FDiv, FloatTy, CostKind) +
+      2 * TTI.getInstructionCost(X, CostKind);
+  // NewCost = udiv
+  InstructionCost NewCost =
+      TTI.getArithmeticInstrCost(Instruction::UDiv, IntTy, CostKind);
+
+  if (NewCost > OldCost)
+    return false;
+
+  Value *NewInst = Builder.CreateUDiv(SrcX, SrcY);
+  replaceValue(I, *NewInst);
+  return true;
+}
 /// Try to fold "(or (zext (bitcast X)), (shl (zext (bitcast Y)), C))"
 /// to "(bitcast (concat X, Y))"
 /// where X/Y are bitcasted from i1 mask vectors.
@@ -6541,6 +6586,9 @@ bool VectorCombine::run() {
         return true;
     if (Opcode == Instruction::BitCast)
       if (foldBitOrderReverseAndSwap(I))
+        return true;
+    if (Opcode == Instruction::FPToUI)
+      if (foldFDivToUDiv(I))
         return true;
 
     // Otherwise, try folds that improve codegen but may interfere with
