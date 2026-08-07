@@ -1188,6 +1188,51 @@ bool CheckThis(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
+bool CheckFloatStatus(InterpState &S, CodePtr OpPC, APFloat::opStatus Status,
+                      FPOptions FPO) {
+  // In a constant context, assume that any dynamic rounding mode or FP
+  // exception state matches the default floating-point environment.
+  if (S.inConstantContext())
+    return true;
+
+  // The output result is exact and no exceptions are raised.
+  if (Status == APFloat::opOK)
+    return true;
+
+  if (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic) {
+    // Some floating point exception is raised, so the output might depend on
+    // rounding mode. If the requested mode is dynamic, the evaluation cannot be
+    // made in compile time.
+    const SourceInfo &E = S.Current->getSource(OpPC);
+    S.FFDiag(E, diag::note_constexpr_dynamic_rounding);
+    return false;
+  }
+
+  // No fenv access and floating point exceptions are ignored, so it is safe to
+  // to perform compile-time evaluation.
+  if (!FPO.getAllowFEnvAccess() &&
+      FPO.getExceptionMode() == LangOptions::FPE_Ignore)
+    return true;
+
+  if (FPO.getExceptionMode() != LangOptions::FPE_Ignore) {
+    // Some floating point exception is raised and the FP mode is strict or the
+    // exceptions may be trapped.
+    const SourceInfo &E = S.Current->getSource(OpPC);
+    S.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
+    return false;
+  }
+
+  // FIXME: if:
+  // - evaluation triggered other FP exception, and
+  // - exception mode is not "ignore", and
+  // - the expression being evaluated is not a part of global variable
+  //   initializer,
+  // the evaluation probably need to be rejected.
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
+  return false;
+}
+
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
                       APFloat::opStatus Status, FPOptions FPO) {
   // [expr.pre]p4:
@@ -1201,38 +1246,7 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
     return S.noteUndefinedBehavior();
   }
 
-  // In a constant context, assume that any dynamic rounding mode or FP
-  // exception state matches the default floating-point environment.
-  if (S.inConstantContext())
-    return true;
-
-  if ((Status & APFloat::opInexact) &&
-      FPO.getRoundingMode() == llvm::RoundingMode::Dynamic) {
-    // Inexact result means that it depends on rounding mode. If the requested
-    // mode is dynamic, the evaluation cannot be made in compile time.
-    const SourceInfo &E = S.Current->getSource(OpPC);
-    S.FFDiag(E, diag::note_constexpr_dynamic_rounding);
-    return false;
-  }
-
-  if ((Status != APFloat::opOK) &&
-      (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic ||
-       FPO.getExceptionMode() != LangOptions::FPE_Ignore ||
-       FPO.getAllowFEnvAccess())) {
-    const SourceInfo &E = S.Current->getSource(OpPC);
-    S.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
-    return false;
-  }
-
-  if ((Status & APFloat::opStatus::opInvalidOp) &&
-      FPO.getExceptionMode() != LangOptions::FPE_Ignore) {
-    const SourceInfo &E = S.Current->getSource(OpPC);
-    // There is no usefully definable result.
-    S.FFDiag(E);
-    return false;
-  }
-
-  return true;
+  return CheckFloatStatus(S, OpPC, Status, FPO);
 }
 
 bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC) {

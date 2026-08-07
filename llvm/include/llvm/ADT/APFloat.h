@@ -1814,7 +1814,6 @@ inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
 }
 
 /// Implement IEEE 754-2019 exp functions
-LLVM_READONLY
 LLVM_ABI std::optional<APFloat>
 exp(const APFloat &X, RoundingMode RM = APFloat::rmNearestTiesToEven,
     APFloat::opStatus *Status = nullptr);
