@@ -3066,10 +3066,10 @@ createPrivatesRecordDecl(CodeGenModule &CGM, ArrayRef<PrivateDataTy> Privates) {
       const VarDecl *VD = Pair.second.Original;
       // For BindingDecls, use the OriginalRef type (the binding's type),
       // not the VD type (which is the DecompositionDecl's type).
-      QualType Type = Pair.second.OriginalRef
-                          ? Pair.second.OriginalRef->getType()
-                                .getNonReferenceType()
-                          : VD->getType().getNonReferenceType();
+      QualType Type =
+          Pair.second.OriginalRef
+              ? Pair.second.OriginalRef->getType().getNonReferenceType()
+              : VD->getType().getNonReferenceType();
       // If the private variable is a local variable with lvalue ref type,
       // allocate the pointer instead of the pointee type.
       if (Pair.second.isLocalPrivate()) {
@@ -3341,7 +3341,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       C.getPointerType(PrivatesQTy).withConst().withRestrict(),
       ImplicitParamKind::Other);
   Args.push_back(TaskPrivatesArg);
-  llvm::DenseMap<const ValueDecl*, unsigned> PrivateVarsPos;
+  llvm::DenseMap<const ValueDecl *, unsigned> PrivateVarsPos;
   unsigned Counter = 1;
   for (const Expr *E : Data.PrivateVars) {
     Args.push_back(ImplicitParamDecl::Create(
@@ -3350,8 +3350,8 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withConst()
             .withRestrict(),
         ImplicitParamKind::Other));
-    const ValueDecl *D = cast<ValueDecl>(
-        cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl());
+    const ValueDecl *D =
+        cast<ValueDecl>(cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl());
     PrivateVarsPos[D] = Counter;
     ++Counter;
   }
@@ -3362,8 +3362,8 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withConst()
             .withRestrict(),
         ImplicitParamKind::Other));
-    const ValueDecl *D = cast<ValueDecl>(
-        cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl());
+    const ValueDecl *D =
+        cast<ValueDecl>(cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl());
     PrivateVarsPos[D] = Counter;
     ++Counter;
   }
@@ -3374,8 +3374,8 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withConst()
             .withRestrict(),
         ImplicitParamKind::Other));
-    const ValueDecl *D = cast<ValueDecl>(
-        cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl());
+    const ValueDecl *D =
+        cast<ValueDecl>(cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl());
     PrivateVarsPos[D] = Counter;
     ++Counter;
   }
@@ -3428,11 +3428,12 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
     const ValueDecl *D;
     if (Privates[Counter].second.OriginalRef) {
       const ValueDecl *OrigDecl = cast<ValueDecl>(
-          cast<ValueDecl>(cast<DeclRefExpr>(
-              Privates[Counter].second.OriginalRef)->getDecl())
+          cast<ValueDecl>(
+              cast<DeclRefExpr>(Privates[Counter].second.OriginalRef)
+                  ->getDecl())
               ->getCanonicalDecl());
       D = isa<BindingDecl>(OrigDecl) ? OrigDecl
-                                      : Privates[Counter].second.Original;
+                                     : Privates[Counter].second.Original;
     } else {
       D = Privates[Counter].second.Original;
     }
@@ -3517,8 +3518,7 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
             if (const auto *DRE =
                     dyn_cast<DeclRefExpr>(Pair.second.OriginalRef)) {
               if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
-                if (const auto *ME =
-                        dyn_cast<MemberExpr>(BD->getBinding())) {
+                if (const auto *ME = dyn_cast<MemberExpr>(BD->getBinding())) {
                   if (const auto *FD =
                           dyn_cast<FieldDecl>(ME->getMemberDecl())) {
                     SharedRefLValue =

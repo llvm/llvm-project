@@ -4754,8 +4754,8 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
 
     // Build the capture field. For OpenMP, pass IsOpenMP=true to handle
     // DecompositionDecl captures correctly.
-    FieldDecl *Field = S.BuildCaptureField(
-        RSI->TheRecordDecl, Cap, RSI->CapRegionKind == CR_OpenMP);
+    FieldDecl *Field = S.BuildCaptureField(RSI->TheRecordDecl, Cap,
+                                           RSI->CapRegionKind == CR_OpenMP);
 
     // Add the capture to our list of captures.
     if (Cap.isThisCapture()) {
