@@ -1587,6 +1587,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivV2S64}, {{VgprV2S64}, {VgprV2S64}}});
 
   bool hasPST = ST->hasPseudoScalarTrans();
+  // Only 16-bit G_FSQRT operations are legal. F32/F64 is handled with a custom
+  // legalization in the legalizer.
   addRulesForGOpcs({G_FSQRT})
       .Any({{DivS16}, {{Vgpr16}, {Vgpr16}}})
       .Any({{UniBF16}, {{UniInVgprS16}, {Vgpr16}}})
