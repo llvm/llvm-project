@@ -2946,9 +2946,8 @@ class OMPOrderedDirective : public OMPExecutableDirective {
   /// \param EndLoc Ending location of the directive.
   ///
   OMPOrderedDirective(SourceLocation StartLoc, SourceLocation EndLoc,
-      OpenMPDirectiveKind OrderedKind)
-      : OMPExecutableDirective(OMPOrderedDirectiveClass,
-                               OrderedKind, StartLoc,
+                      OpenMPDirectiveKind OrderedKind)
+      : OMPExecutableDirective(OMPOrderedDirectiveClass, OrderedKind, StartLoc,
                                EndLoc) {}
 
   /// Build an empty directive.
