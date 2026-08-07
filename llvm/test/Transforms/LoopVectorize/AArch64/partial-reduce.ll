@@ -1285,7 +1285,7 @@ exit:
 
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.predicate.enable"}
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
 attributes #1 = { vscale_range(1,16) "target-features"="+neon,+dotprod,+sve" "target-cpu"="neoverse-v2" }
 attributes #2 = { "target-features"="+neon,+dotprod" }
