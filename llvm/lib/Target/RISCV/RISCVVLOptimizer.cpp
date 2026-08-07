@@ -205,6 +205,13 @@ getEMULEqualsEEWDivSEWTimesLMUL(unsigned Log2EEW, const MachineInstr &MI) {
   return std::make_pair(Num > Denom ? Num : Denom, Denom > Num);
 }
 
+static std::pair<unsigned, bool> doubleEMUL(std::pair<unsigned, bool> EMUL) {
+  auto [Num, IsFractional] = EMUL;
+  if (IsFractional)
+    return std::make_pair(Num / 2, Num > 2);
+  return std::make_pair(Num * 2, false);
+}
+
 /// Dest has EEW=SEW. Source EEW=SEW/Factor (i.e. F2 => EEW/2).
 /// SEW comes from TSFlags of MI.
 static unsigned getIntegerExtensionOperandEEW(unsigned Factor,
@@ -905,20 +912,11 @@ static std::optional<OperandInfo> getOperandInfo(const MachineOperand &MO) {
   // Zvzip - vzip.vv interleaves two LMUL vectors into a 2*LMUL result with
   // the same SEW. Dest (and passthru) therefore have 2 * EMUL.
   case RISCV::VZIP_VV: {
-    const MCInstrDesc &Desc = MI.getDesc();
-    const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(Desc);
     const bool IsMODef =
-        MO.getOperandNo() == 0 ||
-        (HasPassthru && MO.getOperandNo() == MI.getNumExplicitDefs());
+        MO.getOperandNo() == 0 || MO.getOperandNo() == MI.getNumExplicitDefs();
     auto EMUL = getEMULEqualsEEWDivSEWTimesLMUL(*Log2EEW, MI);
-    if (IsMODef) {
-      unsigned Num = EMUL.first;
-      bool IsFractional = EMUL.second;
-      if (IsFractional)
-        EMUL = std::make_pair(Num / 2, Num > 2);
-      else
-        EMUL = std::make_pair(Num * 2, false);
-    }
+    if (IsMODef)
+      EMUL = doubleEMUL(EMUL);
     return OperandInfo(EMUL, *Log2EEW);
   }
   // Zvzip - vunzipe.v / vunzipo.v split a 2*LMUL vector into LMUL even/odd
@@ -926,22 +924,9 @@ static std::optional<OperandInfo> getOperandInfo(const MachineOperand &MO) {
   // also LMUL sized - so only the vs2 source) has 2 * EMUL.
   case RISCV::VUNZIPE_V:
   case RISCV::VUNZIPO_V: {
-    const MCInstrDesc &Desc = MI.getDesc();
-    const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(Desc);
-    const bool IsMODef =
-        MO.getOperandNo() == 0 ||
-        (HasPassthru && MO.getOperandNo() == MI.getNumExplicitDefs());
-    unsigned VS2OpNo = HasPassthru ? 2 : 1;
-    bool IsVS2 = MO.getOperandNo() == VS2OpNo;
     auto EMUL = getEMULEqualsEEWDivSEWTimesLMUL(*Log2EEW, MI);
-    if (IsVS2 && !IsMODef) {
-      unsigned Num = EMUL.first;
-      bool IsFractional = EMUL.second;
-      if (IsFractional)
-        EMUL = std::make_pair(Num / 2, Num > 2);
-      else
-        EMUL = std::make_pair(Num * 2, false);
-    }
+    if (MO.getOperandNo() == 2)
+      EMUL = doubleEMUL(EMUL);
     return OperandInfo(EMUL, *Log2EEW);
   }
   };
