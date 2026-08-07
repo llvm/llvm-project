@@ -445,7 +445,7 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  ifdef _LIBCPP_HAS_NO_INT128
 #    define TEST_HAS_NO_INT128
 #  endif
-#elif defined(_LIBCPP_VERSION) && (defined(_LIBCPP_HAS_INT128) && !_LIBCPP_HAS_INT128)
+#elif defined(_LIBCPP_VERSION) && defined(_LIBCPP_HAS_INT128) && !_LIBCPP_HAS_INT128
 #  define TEST_HAS_NO_INT128
 #elif defined(_LIBCPP_VERSION) && defined(_LIBCPP_HAS_NO_INT128) /* old libc++ version */
 #  define TEST_HAS_NO_INT128
