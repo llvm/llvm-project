@@ -136,6 +136,66 @@ That's the "opaque key": the string is compared, never resolved.
 
 ---
 
+## 2a. Reading a matcher expression  (node → traversal → property)
+
+The first arg of every `CaseOfCFGStmt<NodeKind>(matcher, transferFn)` is an
+AST-matcher expression. It *looks* like nested function calls, but it's really a
+little tree that mirrors the shape of the AST you want to select.
+
+Take the call `o.isEngaged()`. Its AST is:
+
+```
+CXXMemberCallExpr                         o.isEngaged()
+├── callee ──► CXXMethodDecl "isEngaged"  the function being called
+└── object ──► DeclRefExpr "o"            the receiver
+```
+
+The matcher mirrors that tree, outside-in:
+
+```
+cxxMemberCallExpr(                          "a member call…
+    callee(                                  …whose called function…
+        cxxMethodDecl(                       …is a method…
+            hasAttr(attr::TestEngagedTrait)  …carrying [[clang::test_engaged]]"
+        )))
+```
+
+Read it as a sentence: *"a member call, whose callee is a method, that has the
+test_engaged attribute."*
+
+Three kinds of matcher, and they alternate **node → traversal → node → property**:
+
+| kind | asks | examples | grammar |
+|---|---|---|---|
+| **node** | "is this an X?" (and anchors the matched type) | `cxxMemberCallExpr`, `cxxMethodDecl`, `cxxConstructExpr` | noun |
+| **traversal** | "step to a related node, match *it*" | `callee`, `hasDeclaration`, `on`, `hasArgument` | preposition |
+| **property** | "does this node have property P?" | `hasAttr`, `hasName` | adjective |
+
+**Why the traversal differs by node kind** (explains the ctor vs call asymmetry):
+
+- a call *has* a callee → reach the decl with `callee(...)`:
+  `cxxMemberCallExpr(callee(cxxMethodDecl(...)))`  /  `cxxOperatorCallExpr(callee(...))`
+- a `CXXConstructExpr` isn't a "call with a callee" → reach the ctor decl with
+  `hasDeclaration(...)`: `cxxConstructExpr(hasDeclaration(cxxConstructorDecl(...)))`
+
+Same shape, different preposition.
+
+**Why the outermost node matcher matters.** `CaseOfCFGStmt<CXXMemberCallExpr>`
+demands a `Matcher<CXXMemberCallExpr>`. The outer `cxxMemberCallExpr(...)` (the
+noun) is what gives the whole expression that type. A bare `callee(...)` is only a
+traversal — a preposition with no noun — and won't reliably anchor to the node
+kind. Always lead with the node matcher.
+
+**Matcher vs transfer.** The matcher only *selects* which nodes fire; when one
+matches, `CaseOfCFGStmt` hands the matched node to the `transferFn`, which does the
+actual state change. Matcher = *which nodes*; transfer = *what happens*.
+
+Attribute-driven role cases (M1+) are just this shape with a `hasAttr(attr::…)`
+property leaf instead of a `hasName`/structural one — e.g.
+`cxxMemberCallExpr(callee(cxxMethodDecl(hasAttr(attr::AssumeEngagedTrait))))`.
+
+---
+
 ## 3. The conceptual overlay — the "two worlds"
 
 This is the mental model that untangles most of the confusion.

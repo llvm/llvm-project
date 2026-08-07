@@ -1068,6 +1068,35 @@ auto buildTransferMatchSwitch() {
                           transferNulloptAssignment
              )
 
+      // for std::vector and other non optional classes
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+      cxxMemberCallExpr(callee(cxxMethodDecl(hasAttr(attr::EngagedTrait)))),
+      [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
+         LatticeTransferState &State) {
+        if (RecordStorageLocation *Loc = getImplicitObjectLocation(*E, State.Env))
+          setHasValue(*Loc, State.Env.getBoolLiteralValue(true), State.Env);
+      })
+
+      // for std::vector and other non optional classes
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+      cxxMemberCallExpr(callee(cxxMethodDecl(hasAttr(attr::DisengagedTrait)))),
+      [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
+         LatticeTransferState &State) {
+        if (RecordStorageLocation *Loc = getImplicitObjectLocation(*E, State.Env))
+          setHasValue(*Loc, State.Env.getBoolLiteralValue(false), State.Env);
+      })
+
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+        cxxMemberCallExpr(
+          callee(cxxMethodDecl(hasAttr(attr::TestEngagedTrait)))), transferOptionalHasValueCall
+      )
+
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+        cxxMemberCallExpr
+        (
+        callee(cxxMethodDecl(hasAttr(attr::TestDisengagedTrait)))), transferOptionalIsNullCall
+        )
+
       // optional::optional (in place)
       .CaseOfCFGStmt<CXXConstructExpr>(
           isOptionalInPlaceConstructor(),
@@ -1366,6 +1395,15 @@ auto buildDiagnoseMatchSwitch(
 ast_matchers::StatementMatcher
 UncheckedOptionalAccessModel::memberCallToOptionalClass() {
   return cxxMemberCallExpr(hasOptionalReceiverType());
+}
+
+StatementMatcher UncheckedOptionalAccessModel::callToBehaviouralRoleClass() {
+  return cxxMemberCallExpr(callee(cxxMethodDecl(anyOf(
+      hasAttr(attr::EngagedTrait),
+      hasAttr(attr::DisengagedTrait),
+      hasAttr(attr::AssumeEngagedTrait),
+      hasAttr(attr::TestEngagedTrait),
+      hasAttr(attr::TestDisengagedTrait)))));
 }
 
 ast_matchers::StatementMatcher

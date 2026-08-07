@@ -66,6 +66,8 @@ public:
   static ast_matchers::StatementMatcher memberCallToOptionalClass();
   static ast_matchers::StatementMatcher operatorCallToOptionalClass();
 
+  static ast_matchers::StatementMatcher callToBehaviouralRoleClass();
+
   static UncheckedOptionalAccessLattice initialElement() { return {}; }
 
   void transfer(const CFGElement &Elt, UncheckedOptionalAccessLattice &L,
