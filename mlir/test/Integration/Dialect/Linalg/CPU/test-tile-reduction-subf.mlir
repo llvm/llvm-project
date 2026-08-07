@@ -53,7 +53,6 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// Both rows reduce to the negated sum of their elements. Merging the partial
-// results with a subtraction instead of an addition would print [36, 360].
+// Both rows reduce to the negated sum of their elements.
 // CHECK: Unranked Memref base@ = {{.*}} rank = 1 offset = 0 sizes = [2] strides = [1] data =
 // CHECK-NEXT: [-36,  -360]
