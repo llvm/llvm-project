@@ -29,15 +29,23 @@ using namespace llvm;
 #define PASS_NAME "RISC-V Zacas ABI fix"
 
 namespace {
-
-class RISCVZacasABIFix : public FunctionPass,
-                         public InstVisitor<RISCVZacasABIFix, bool> {
+class RISCVZacasABIFix : public InstVisitor<RISCVZacasABIFix, bool> {
   const RISCVSubtarget *ST;
 
 public:
+  RISCVZacasABIFix(const RISCVSubtarget *ST) : ST(ST) {}
+  bool run(Function &F);
+  bool visitInstruction(Instruction &I) { return false; }
+  bool visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
+};
+} // namespace
+
+namespace {
+class RISCVZacasABIFixLegacy : public FunctionPass {
+public:
   static char ID;
 
-  RISCVZacasABIFix() : FunctionPass(ID) {}
+  RISCVZacasABIFixLegacy() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
 
@@ -47,12 +55,8 @@ public:
     AU.setPreservesCFG();
     AU.addRequired<TargetPassConfig>();
   }
-
-  bool visitInstruction(Instruction &I) { return false; }
-  bool visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
 };
-
-} // end anonymous namespace
+} // namespace
 
 // Insert a leading fence (needed for broadest atomics ABI compatibility)
 // only if the Zacas extension is enabled and the AtomicCmpXchgInst has a
@@ -67,14 +71,7 @@ bool RISCVZacasABIFix::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   return true;
 }
 
-bool RISCVZacasABIFix::runOnFunction(Function &F) {
-  auto &TPC = getAnalysis<TargetPassConfig>();
-  auto &TM = TPC.getTM<RISCVTargetMachine>();
-  ST = &TM.getSubtarget<RISCVSubtarget>(F);
-
-  if (skipFunction(F) || !ST->hasStdExtZacas())
-    return false;
-
+bool RISCVZacasABIFix::run(Function &F) {
   bool MadeChange = false;
   for (auto &BB : F)
     for (Instruction &I : llvm::make_early_inc_range(BB))
@@ -83,12 +80,39 @@ bool RISCVZacasABIFix::runOnFunction(Function &F) {
   return MadeChange;
 }
 
-INITIALIZE_PASS_BEGIN(RISCVZacasABIFix, DEBUG_TYPE, PASS_NAME, false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(RISCVZacasABIFix, DEBUG_TYPE, PASS_NAME, false, false)
+bool RISCVZacasABIFixLegacy::runOnFunction(Function &F) {
+  auto &TPC = getAnalysis<TargetPassConfig>();
+  auto &TM = TPC.getTM<RISCVTargetMachine>();
+  auto *ST = &TM.getSubtarget<RISCVSubtarget>(F);
 
-char RISCVZacasABIFix::ID = 0;
+  if (skipFunction(F) || !ST->hasStdExtZacas())
+    return false;
+
+  return RISCVZacasABIFix(ST).run(F);
+}
+
+INITIALIZE_PASS_BEGIN(RISCVZacasABIFixLegacy, DEBUG_TYPE, PASS_NAME, false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(RISCVZacasABIFixLegacy, DEBUG_TYPE, PASS_NAME, false, false)
+
+char RISCVZacasABIFixLegacy::ID = 0;
 
 FunctionPass *llvm::createRISCVZacasABIFixPass() {
-  return new RISCVZacasABIFix();
+  return new RISCVZacasABIFixLegacy();
+}
+
+PreservedAnalyses RISCVZacasABIFixPass::run(Function &F,
+                                            FunctionAnalysisManager &FAM) {
+  auto *ST = &TM->getSubtarget<RISCVSubtarget>(F);
+  if (!ST->hasStdExtZacas())
+    return PreservedAnalyses::all();
+
+  bool Changed = RISCVZacasABIFix(ST).run(F);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
