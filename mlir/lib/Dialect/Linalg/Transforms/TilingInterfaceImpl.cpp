@@ -544,12 +544,12 @@ static bool isSubtractingAccumulation(Operation *combinerOp,
                                       Value accumulator) {
   if (!isa<arith::SubFOp, arith::SubIOp>(combinerOp))
     return false;
-  // Overflow flags assert that the original accumulation does not wrap. Each
-  // partial result accumulates a different subset of the inputs starting from
-  // the neutral element, so that assertion does not carry over: `0 - x` wraps
-  // for every non-zero `x` under `nuw`, and for the minimum signed value under
-  // `nsw`. Leave such reductions untiled rather than propagating an assumption
-  // that no longer holds.
+  // Do not tile when the subtraction carries overflow flags: they assert that
+  // the original accumulation does not wrap, which no longer holds once the
+  // partial results accumulate from the neutral element instead.
+  //   `nuw`: `0 - x` wraps for every non-zero `x`, the result being negative.
+  //   `nsw`: `0 - x` wraps for the minimum signed `x`, as `-x` is then not
+  //          representable.
   auto subIOp = dyn_cast<arith::SubIOp>(combinerOp);
   if (subIOp && subIOp.getOverflowFlags() != arith::IntegerOverflowFlags::none)
     return false;
