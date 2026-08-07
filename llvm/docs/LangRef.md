@@ -7207,7 +7207,7 @@ Some examples of expressions:
 !DIExpression(DW_OP_deref)
 !DIExpression(DW_OP_plus_uconst, 3)
 !DIExpression(DW_OP_constu, 3, DW_OP_plus)
-!DIExpression(DW_OP_bit_piece, 3, 7)
+!DIExpression(DW_OP_LLVM_fragment, 3, 7)
 !DIExpression(DW_OP_deref, DW_OP_constu, 3, DW_OP_plus, DW_OP_LLVM_fragment, 3, 7)
 !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
 !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
