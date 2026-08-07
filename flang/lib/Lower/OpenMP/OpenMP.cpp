@@ -6906,6 +6906,55 @@ void Fortran::lower::genOpenMPDeclarativeConstruct(
   genNestedEvaluations(converter, eval);
 }
 
+/// Mark a declare target module variable that is use-associated from another
+/// unit. No directive is parsed here, so \c markDeclareTarget never reaches it
+/// and the declaration would be internalized for the device.
+static void markUseAssociatedDeclareTarget(lower::AbstractConverter &converter,
+                                           const lower::pft::Variable &var) {
+  if (!var.isGlobal())
+    return;
+
+  const semantics::Symbol &ultimate = var.getSymbol().GetUltimate();
+  const auto *details = ultimate.detailsIf<semantics::ObjectEntityDetails>();
+  if (!details)
+    return;
+
+  const auto &clauses = details->ompDeclTarget();
+  if (!clauses.count())
+    return;
+
+  mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
+  mlir::Operation *op = mod.lookupSymbol(converter.mangleName(ultimate));
+  if (!op)
+    return;
+
+  auto declareTargetOp = llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(op);
+  if (!declareTargetOp || declareTargetOp.isDeclareTarget())
+    return;
+
+  // Declarations only: a definition is marked later by markDeclareTarget with
+  // the clauses as written, and it skips an already marked operation.
+  for (mlir::Region &region : op->getRegions())
+    if (!region.empty())
+      return;
+
+  // `enter` and `to` lower identically.
+  mlir::omp::DeclareTargetCaptureClause captureClause =
+      clauses.test(llvm::omp::Clause::OMPC_link)
+          ? mlir::omp::DeclareTargetCaptureClause::link
+          : mlir::omp::DeclareTargetCaptureClause::to;
+
+  mlir::omp::DeclareTargetDeviceType deviceType =
+      mlir::omp::DeclareTargetDeviceType::any;
+  if (const std::optional<common::OmpDeviceType> &dt =
+          details->ompDeclTargetDeviceType())
+    deviceType = toMLIRDeclareTargetDeviceType(*dt);
+
+  // automap is a modifier, not a clause, so it is not recoverable here.
+  declareTargetOp.setDeclareTarget(deviceType, captureClause,
+                                   /*automap=*/false);
+}
+
 void Fortran::lower::genOpenMPSymbolProperties(
     lower::AbstractConverter &converter, const lower::pft::Variable &var) {
   assert(var.hasSymbol() && "Expecting Symbol");
@@ -6917,8 +6966,10 @@ void Fortran::lower::genOpenMPSymbolProperties(
   if (sym.test(semantics::Symbol::Flag::OmpThreadprivate))
     lower::genThreadprivateOp(converter, var);
 
-  if (sym.test(semantics::Symbol::Flag::OmpDeclareTarget))
+  if (sym.test(semantics::Symbol::Flag::OmpDeclareTarget)) {
     lower::genDeclareTargetIntGlobal(converter, var);
+    markUseAssociatedDeclareTarget(converter, var);
+  }
 }
 
 void Fortran::lower::genGroupprivateOp(lower::AbstractConverter &converter,
