@@ -289,6 +289,9 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord);
 SPIRV::Scope::Scope getMemScope(const Triple &TT, LLVMContext &Ctx,
                                 SyncScope::ID Id);
 
+// Returns true if T targets an AMD SPIR-V flavour.
+bool isAMDTarget(const Triple &T);
+
 // Find def instruction for the given ConstReg, walking through
 // spv_track_constant and ASSIGN_TYPE instructions. Updates ConstReg by def
 // of OpConstant instruction.

@@ -449,6 +449,8 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   llvm_unreachable(nullptr);
 }
 
+bool isAMDTarget(const Triple &T) { return T.getVendor() == Triple::AMD; }
+
 SPIRV::Scope::Scope getMemScope(const Triple &TT, LLVMContext &Ctx,
                                 SyncScope::ID Id) {
   // Named by
