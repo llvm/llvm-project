@@ -13756,7 +13756,6 @@ bool AArch64TargetLowering::isFPImmLegalAsFMov(const APFloat &Imm,
 bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                          bool OptForSize) const {
   bool IsLegal = isFPImmLegalAsFMov(Imm, VT);
-  const APInt ImmInt = Imm.bitcastToAPInt();
 
   // If we can not materialize in immediate field for fmov, check if the
   // value can be encoded as the immediate operand of a logical instruction.
@@ -13771,15 +13770,32 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     // movw+movk is fused). So by default we limit up to 2 instructions
     // or 4 with hasFuseLiterals.
     SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
+    const APInt ImmInt = Imm.bitcastToAPInt();
     AArch64_IMM::expandMOVImm(ImmInt.getZExtValue(), VT.getSizeInBits(), Insn);
     assert(Insn.size() <= 4 &&
            "Should be able to build any value with at most 4 moves");
-    unsigned Limit = (OptForSize ? 1 : (Subtarget->hasFuseLiterals() ? 4 : 2));
+
+    unsigned Limit = OptForSize ? 1 : 2;
+
+    if (!OptForSize && Insn.size() > Limit && Subtarget->hasFuseLiterals()) {
+      // Relax the limit based on subtarget fusion capabilites
+      for (unsigned i = 0; i + 1 < Insn.size(); ++i) {
+        if (Subtarget->fusesMOVImmPair(Insn[i].Opcode, Insn[i].Op2,
+                                       Insn[i + 1].Opcode, Insn[i + 1].Op2)) {
+          ++Limit;
+          // An instruction can only be fused once, so the 2nd one of the pair
+          // cannot start another pair and is skipped.
+          ++i;
+        }
+      }
+    }
+
     IsLegal = Insn.size() <= Limit;
   }
 
   LLVM_DEBUG(dbgs() << (IsLegal ? "Legal " : "Illegal ") << VT
-                    << " imm value: "; Imm.dump(););
+                    << " imm value: ";
+             Imm.dump(););
   return IsLegal;
 }
 
