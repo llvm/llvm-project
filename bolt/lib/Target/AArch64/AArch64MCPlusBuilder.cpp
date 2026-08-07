@@ -1433,6 +1433,7 @@ public:
       return MCSpecifierExpr::create(Expr, AArch64::S_ABS, Ctx);
     } else if (isADRP(Inst) || RelType == ELF::R_AARCH64_ADR_PREL_PG_HI21 ||
                RelType == ELF::R_AARCH64_ADR_PREL_PG_HI21_NC ||
+               RelType == ELF::R_AARCH64_TLSGD_ADR_PAGE21 ||
                RelType == ELF::R_AARCH64_TLSDESC_ADR_PAGE21 ||
                RelType == ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 ||
                RelType == ELF::R_AARCH64_ADR_GOT_PAGE) {
@@ -1448,6 +1449,7 @@ public:
       case ELF::R_AARCH64_LDST32_ABS_LO12_NC:
       case ELF::R_AARCH64_LDST64_ABS_LO12_NC:
       case ELF::R_AARCH64_LDST128_ABS_LO12_NC:
+      case ELF::R_AARCH64_TLSGD_ADD_LO12_NC:
       case ELF::R_AARCH64_TLSDESC_ADD_LO12:
       case ELF::R_AARCH64_TLSDESC_LD64_LO12:
       case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
@@ -2045,6 +2047,25 @@ public:
     exit(1);
   }
 
+  unsigned getInvertedCC(unsigned Opcode) const {
+    // clang-format off
+    switch (Opcode) {
+    default:
+      llvm_unreachable("Failed to invert condition code");
+      return Opcode;
+    // Compare register with immediate and branch.
+    case AArch64::CBGTWri:  return AArch64CC::LE;
+    case AArch64::CBGTXri:  return AArch64CC::LE;
+    case AArch64::CBLTWri:  return AArch64CC::GE;
+    case AArch64::CBLTXri:  return AArch64CC::GE;
+    case AArch64::CBHIWri:  return AArch64CC::LS;
+    case AArch64::CBHIXri:  return AArch64CC::LS;
+    case AArch64::CBLOWri:  return AArch64CC::HS;
+    case AArch64::CBLOXri:  return AArch64CC::HS;
+    }
+    // clang-format on
+  }
+
   unsigned getInvertedBranchOpcode(unsigned Opcode) const {
     // clang-format off
     switch (Opcode) {
@@ -2171,38 +2192,75 @@ public:
     }
   }
 
-  bool isReversibleBranch(const MCInst &Inst) const override {
+  bool isReversibleBranch(const MCInst &Inst,
+                          bool MustPreserveFlags = true) const override {
     if (isCompAndBranch(Inst)) {
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
-      if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() == 0)
+      if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() == 0 &&
+          MustPreserveFlags)
         return false;
-      if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() == 63)
+      if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() == 63 &&
+          MustPreserveFlags)
         return false;
     }
     return MCPlusBuilder::isReversibleBranch(Inst);
   }
 
-  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
-                              MCContext *Ctx) const override {
-    if (!isReversibleBranch(Inst)) {
-      errs() << "BOLT-ERROR: Cannot reverse branch " << Inst << "\n";
-      exit(1);
-    }
+  InstructionListType
+  reverseBranchCondition(MCInst Inst, const MCSymbol *TBB, MCContext *Ctx,
+                         bool MustPreserveFlags = true) const override {
+    assert(isReversibleBranch(Inst, MustPreserveFlags) &&
+           "Irreversible branch");
 
     if (isTB(Inst) || isCB(Inst) || isCompAndBranch(Inst)) {
+      bool ImmediateOutOfBounds = false;
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
-      Inst.setOpcode(InvertedOpcode);
-      assert(Inst.getOpcode() != 0 && "Invalid branch instruction");
+      assert(InvertedOpcode != 0 && "Invalid branch instruction");
       // The FEAT_CMPBR compare-and-branch instructions cannot encode all
       // the possible condition codes, therefore we either have to adjust
       // the immediate value by +-1, or to swap the register operands
       // when reversing the branch condition.
       if (needsRegSwap(InvertedOpcode))
         std::swap(Inst.getOperand(0), Inst.getOperand(1));
-      else if (needsImmDec(InvertedOpcode))
-        Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() - 1);
-      else if (needsImmInc(InvertedOpcode))
-        Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() + 1);
+      else if (needsImmDec(InvertedOpcode)) {
+        if (Inst.getOperand(1).getImm() == 0)
+          ImmediateOutOfBounds = true;
+        else
+          Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() - 1);
+      } else if (needsImmInc(InvertedOpcode)) {
+        if (Inst.getOperand(1).getImm() == 63)
+          ImmediateOutOfBounds = true;
+        else
+          Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() + 1);
+      }
+      if (ImmediateOutOfBounds) {
+        auto is32BitVariant = [](unsigned Opcode) {
+          switch (Opcode) {
+          default:
+            return false;
+          case AArch64::CBGTWri:
+          case AArch64::CBLTWri:
+          case AArch64::CBHIWri:
+          case AArch64::CBLOWri:
+            return true;
+          }
+        };
+        InstructionListType Code;
+        MCInstBuilder Cmp =
+            is32BitVariant(InvertedOpcode)
+                ? MCInstBuilder(AArch64::SUBSWri).addReg(AArch64::WZR)
+                : MCInstBuilder(AArch64::SUBSXri).addReg(AArch64::XZR);
+        Cmp.addReg(Inst.getOperand(0).getReg())
+            .addImm(Inst.getOperand(1).getImm())
+            .addImm(0);
+        Code.emplace_back(std::move(Cmp));
+        Code.emplace_back(MCInstBuilder(AArch64::Bcc)
+                              .addImm(getInvertedCC(Inst.getOpcode()))
+                              .addExpr(MCSymbolRefExpr::create(TBB, *Ctx)));
+        moveAnnotations(std::move(Inst), Code.back());
+        return Code;
+      }
+      Inst.setOpcode(InvertedOpcode);
     } else if (Inst.getOpcode() == AArch64::Bcc) {
       Inst.getOperand(0).setImm(AArch64CC::getInvertedCondCode(
           static_cast<AArch64CC::CondCode>(Inst.getOperand(0).getImm())));
@@ -2214,6 +2272,7 @@ public:
       llvm_unreachable("Unrecognized branch instruction");
     }
     replaceBranchTarget(Inst, TBB, Ctx);
+    return {Inst};
   }
 
   int getPCRelEncodingSize(const MCInst &Inst) const override {
@@ -2274,6 +2333,23 @@ public:
                           .addReg(AArch64::XZR)
                           .addReg(RegNo)
                           .addImm(Imm)
+                          .addImm(0));
+    Code.emplace_back(MCInstBuilder(AArch64::Bcc)
+                          .addImm(AArch64CC::NE)
+                          .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
+    return Code;
+  }
+
+  // This helper function creates the snippet of code that compares a register
+  // Reg1 with a register Reg2, and jumps to Target if they are not equal.
+  InstructionListType createCmpJNEWithReg(MCPhysReg Reg1, MCPhysReg Reg2,
+                                          const MCSymbol *Target,
+                                          MCContext *Ctx) const override {
+    InstructionListType Code;
+    Code.emplace_back(MCInstBuilder(AArch64::SUBSXrs)
+                          .addReg(AArch64::XZR)
+                          .addReg(Reg1)
+                          .addReg(Reg2)
                           .addImm(0));
     Code.emplace_back(MCInstBuilder(AArch64::Bcc)
                           .addImm(AArch64CC::NE)
@@ -2948,6 +3024,8 @@ public:
     case ELF::R_AARCH64_LDST32_ABS_LO12_NC:
     case ELF::R_AARCH64_LDST64_ABS_LO12_NC:
     case ELF::R_AARCH64_LDST128_ABS_LO12_NC:
+    case ELF::R_AARCH64_TLSGD_ADD_LO12_NC:
+    case ELF::R_AARCH64_TLSGD_ADR_PAGE21:
     case ELF::R_AARCH64_TLSDESC_ADD_LO12:
     case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
     case ELF::R_AARCH64_TLSDESC_ADR_PREL21:
@@ -3327,6 +3405,136 @@ public:
     std::vector<MCInst> Insts;
     createShortJmp(Insts, TgtSym, Ctx, /*IsTailCall*/ true);
     return Insts;
+  }
+
+  BlocksVectorTy indirectCallPromotion(
+      const MCInst &CallInst, MCPhysReg Reg,
+      const std::vector<std::pair<MCSymbol *, uint64_t>> &Targets,
+      const std::vector<std::pair<MCSymbol *, uint64_t>> &VtableSyms,
+      const std::vector<MCInst *> &MethodFetchInsns,
+      const bool MinimizeCodeSize, MCContext *Ctx) override {
+    const bool IsTailCall = isTailCall(CallInst);
+    BlocksVectorTy Results;
+    if (getJumpTable(CallInst))
+      return Results;
+
+    if (!Reg)
+      return Results;
+
+    // Label for the current code block.
+    MCSymbol *NextTarget = nullptr;
+
+    // The join block which contains all the instructions following CallInst.
+    // MergeBlock remains null if CallInst is a tail call.
+    MCSymbol *MergeBlock = nullptr;
+
+    MCPhysReg FuncAddrReg = Reg;
+
+    const bool LoadElim = !VtableSyms.empty();
+    assert((!LoadElim || VtableSyms.size() == Targets.size()) &&
+           "There must be a vtable entry for every method "
+           "in the targets vector.");
+
+    // The compact old-style sequence used by X86 is not implemented for
+    // AArch64 regular call ICP. AArch64 currently emits the default sequence
+    // that branches or calls directly to the hot target.
+    if (MinimizeCodeSize && !LoadElim)
+      return Results;
+
+    assert(CallInst.getOperand(0).isReg() &&
+           "No register was found for indirect call.");
+    const MCPhysReg TargetReg = CallInst.getOperand(0).getReg();
+
+    const auto jumpToMergeBlock = [&](InstructionListType &NewCall) {
+      assert(MergeBlock);
+      NewCall.push_back(CallInst);
+      MCInst &Merge = NewCall.back();
+      Merge.clear();
+      createUncondBranch(Merge, MergeBlock, Ctx);
+    };
+
+    for (unsigned int i = 0; i < Targets.size(); ++i) {
+      Results.emplace_back(NextTarget, InstructionListType());
+      InstructionListType *NewCall = &Results.back().second;
+
+      // Compare current call target to a specific address.
+      assert(Targets[i].first && "All ICP targets must be to known symbols");
+      const MCSymbol *Sym = LoadElim ? VtableSyms[i].first : Targets[i].first;
+      const uint64_t Addend = LoadElim ? VtableSyms[i].second : 0;
+
+      // Materialize the promoted target address.
+      InstructionListType Adr =
+          materializeAddress(Sym, Ctx, FuncAddrReg, Addend);
+      NewCall->insert(NewCall->end(), Adr.begin(), Adr.end());
+
+      // Generate a label for the next compare block.
+      NextTarget = Ctx->createNamedTempSymbol();
+
+      // Jump to the next compare if the target address does not match.
+      InstructionListType CmpJmp =
+          createCmpJNEWithReg(TargetReg, FuncAddrReg, NextTarget, Ctx);
+      NewCall->insert(NewCall->end(), CmpJmp.begin(), CmpJmp.end());
+
+      // Call the promoted target directly.
+      Results.emplace_back(Ctx->createNamedTempSymbol(), InstructionListType());
+      NewCall = &Results.back().second;
+      NewCall->push_back(CallInst);
+      MCInst &CallOrJmp = NewCall->back();
+
+      CallOrJmp.clear();
+      CallOrJmp.setOpcode(IsTailCall ? AArch64::B : AArch64::BL);
+      CallOrJmp.addOperand(MCOperand::createExpr(getTargetExprFor(
+          CallOrJmp, MCSymbolRefExpr::create(Targets[i].first, *Ctx), *Ctx,
+          0)));
+
+      if (IsTailCall) {
+        setTailCall(CallOrJmp);
+      } else {
+        if (std::optional<uint32_t> Offset = getOffset(CallInst))
+          // Annotated as duplicated call.
+          setOffset(CallOrJmp, *Offset);
+      }
+
+      if (isInvoke(CallInst) && !isInvoke(CallOrJmp)) {
+        // Copy over any EH or GNU args size information from the original call.
+        std::optional<MCPlus::MCLandingPad> EHInfo = getEHInfo(CallInst);
+        if (EHInfo)
+          addEHInfo(CallOrJmp, *EHInfo);
+        int64_t GnuArgsSize = getGnuArgsSize(CallInst);
+        if (GnuArgsSize >= 0)
+          addGnuArgsSize(CallOrJmp, GnuArgsSize);
+      }
+
+      if (!IsTailCall) {
+        // The fallthrough block for the most common target should be the merge
+        // block.
+        if (i == 0) {
+          // Fallthrough to merge block. The CFG will be fixed in the ICP pass.
+          MergeBlock = Ctx->createNamedTempSymbol();
+        } else {
+          // Insert jump to the merge block if we are not doing a fallthrough.
+          jumpToMergeBlock(*NewCall);
+        }
+      }
+    }
+
+    // Cold call block
+    Results.emplace_back(NextTarget, InstructionListType());
+    InstructionListType &NewCall = Results.back().second;
+    for (const MCInst *Inst : MethodFetchInsns)
+      if (Inst != &CallInst)
+        NewCall.push_back(*Inst);
+    NewCall.push_back(CallInst);
+
+    // Jump to merge block from cold call block
+    if (!IsTailCall) {
+      jumpToMergeBlock(NewCall);
+
+      // Record merge block
+      Results.emplace_back(MergeBlock, InstructionListType());
+    }
+
+    return Results;
   }
 
   void createBTI(MCInst &Inst, BTIKind BTI) const override {

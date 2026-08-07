@@ -7,45 +7,6 @@ declare i32 @llvm.smax.i32(i32 %a, i32 %b)
 ; m2 = smax(smax((b,c), a) -> m2 = smax(m1, c)
 define i32 @smax_test1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @smax_test1(
-; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SMAX1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[SMAX3_NARY:%.*]] = call i32 @llvm.smax.i32(i32 [[SMAX1]], i32 [[C:%.*]])
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3_NARY]]
-; CHECK-NEXT:    ret i32 [[RES]]
-;
-  %c1 = icmp sgt i32 %a, %b
-  %smax1 = select i1 %c1, i32 %a, i32 %b
-  %c2 = icmp sgt i32 %b, %c
-  %smax2 = select i1 %c2, i32 %b, i32 %c
-  %c3 = icmp sgt i32 %smax2, %a
-  %smax3 = select i1 %c3, i32 %smax2, i32 %a
-  %res = add i32 %smax1, %smax3
-  ret i32 %res
-}
-
-; m1 = smax(a,b) ; has side uses
-; m2 = smax(b, (smax(a, c))) -> m2 = smax(m1, c)
-define i32 @smax_test2(i32 %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @smax_test2(
-; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SMAX1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[SMAX3_NARY:%.*]] = call i32 @llvm.smax.i32(i32 [[SMAX1]], i32 [[C:%.*]])
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3_NARY]]
-; CHECK-NEXT:    ret i32 [[RES]]
-;
-  %c1 = icmp sgt i32 %a, %b
-  %smax1 = select i1 %c1, i32 %a, i32 %b
-  %c2 = icmp sgt i32 %a, %c
-  %smax2 = select i1 %c2, i32 %a, i32 %c
-  %c3 = icmp sgt i32 %b, %smax2
-  %smax3 = select i1 %c3, i32 %b, i32 %smax2
-  %res = add i32 %smax1, %smax3
-  ret i32 %res
-}
-
-; Same test as smax_test1 but uses @llvm.smax intrinsic
-define i32 @smax_test3(i32 %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @smax_test3(
 ; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 [[B:%.*]])
 ; CHECK-NEXT:    [[SMAX3_NARY:%.*]] = call i32 @llvm.smax.i32(i32 [[SMAX1]], i32 [[C:%.*]])
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3_NARY]]
@@ -59,21 +20,33 @@ define i32 @smax_test3(i32 %a, i32 %b, i32 %c) {
 }
 
 ; m1 = smax(a,b) ; has side uses
-; m2 = smax(smax_or_eq((b,c), a) -> m2 = smax(m1, c)
-define i32 @umax_test4(i32 %a, i32 %b, i32 %c) {
-; CHECK-LABEL: @umax_test4(
-; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SMAX1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
+; m2 = smax(b, (smax(a, c))) -> m2 = smax(m1, c)
+define i32 @smax_test2(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @smax_test2(
+; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 [[B:%.*]])
 ; CHECK-NEXT:    [[SMAX3_NARY:%.*]] = call i32 @llvm.smax.i32(i32 [[SMAX1]], i32 [[C:%.*]])
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3_NARY]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
-  %c1 = icmp sgt i32 %a, %b
-  %smax1 = select i1 %c1, i32 %a, i32 %b
-  %c2 = icmp sge i32 %b, %c
-  %smax_or_eq2 = select i1 %c2, i32 %b, i32 %c
-  %c3 = icmp sgt i32 %smax_or_eq2, %a
-  %smax3 = select i1 %c3, i32 %smax_or_eq2, i32 %a
+  %smax1 = call i32 @llvm.smax.i32(i32 %a, i32 %b)
+  %smax2 = call i32 @llvm.smax.i32(i32 %a, i32 %c)
+  %smax3 = call i32 @llvm.smax.i32(i32 %b, i32 %smax2)
+  %res = add i32 %smax1, %smax3
+  ret i32 %res
+}
+
+; m1 = smax(a,b) ; has side uses
+; m2 = smax(smax_or_eq((b,c), a) -> m2 = smax(m1, c)
+define i32 @umax_test4(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @umax_test4(
+; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    [[SMAX3_NARY:%.*]] = call i32 @llvm.smax.i32(i32 [[SMAX1]], i32 [[C:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3_NARY]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %smax1 = call i32 @llvm.smax.i32(i32 %a, i32 %b)
+  %smax_or_eq2 = call i32 @llvm.smax.i32(i32 %b, i32 %c)
+  %smax3 = call i32 @llvm.smax.i32(i32 %smax_or_eq2, i32 %a)
   %res = add i32 %smax1, %smax3
   ret i32 %res
 }
@@ -82,18 +55,14 @@ define i32 @umax_test4(i32 %a, i32 %b, i32 %c) {
 ; m2 = smax_or_eq(smax((b,c), a) -> m2 = smax(m1, c)
 define i32 @smax_test5(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @smax_test5(
-; CHECK-NEXT:    [[C1:%.*]] = icmp sge i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SMAX_OR_EQ1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    [[SMAX_OR_EQ1:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 [[B:%.*]])
 ; CHECK-NEXT:    [[SMAX_OR_EQ3_NARY:%.*]] = call i32 @llvm.smax.i32(i32 [[SMAX_OR_EQ1]], i32 [[C:%.*]])
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX_OR_EQ1]], [[SMAX_OR_EQ3_NARY]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
-  %c1 = icmp sge i32 %a, %b
-  %smax_or_eq1 = select i1 %c1, i32 %a, i32 %b
-  %c2 = icmp sgt i32 %b, %c
-  %smax2 = select i1 %c2, i32 %b, i32 %c
-  %c3 = icmp sge i32 %smax2, %a
-  %smax_or_eq3 = select i1 %c3, i32 %smax2, i32 %a
+  %smax_or_eq1 = call i32 @llvm.smax.i32(i32 %a, i32 %b)
+  %smax2 = call i32 @llvm.smax.i32(i32 %b, i32 %c)
+  %smax_or_eq3 = call i32 @llvm.smax.i32(i32 %smax2, i32 %a)
   %res = add i32 %smax_or_eq1, %smax_or_eq3
   ret i32 %res
 }
@@ -102,21 +71,15 @@ define i32 @smax_test5(i32 %a, i32 %b, i32 %c) {
 ; m2 = smax(umax((b,c), a) ; check that signed and unsigned maxs are not mixed
 define i32 @smax_test6(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @smax_test6(
-; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SMAX1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[B]], [[C:%.*]]
-; CHECK-NEXT:    [[UMAX2:%.*]] = select i1 [[C2]], i32 [[B]], i32 [[C]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp sgt i32 [[UMAX2]], [[A]]
-; CHECK-NEXT:    [[SMAX3:%.*]] = select i1 [[C3]], i32 [[UMAX2]], i32 [[A]]
+; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    [[UMAX2:%.*]] = call i32 @llvm.umax.i32(i32 [[B]], i32 [[C:%.*]])
+; CHECK-NEXT:    [[SMAX3:%.*]] = call i32 @llvm.smax.i32(i32 [[UMAX2]], i32 [[A]])
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
-  %c1 = icmp sgt i32 %a, %b
-  %smax1 = select i1 %c1, i32 %a, i32 %b
-  %c2 = icmp ugt i32 %b, %c
-  %umax2 = select i1 %c2, i32 %b, i32 %c
-  %c3 = icmp sgt i32 %umax2, %a
-  %smax3 = select i1 %c3, i32 %umax2, i32 %a
+  %smax1 = call i32 @llvm.smax.i32(i32 %a, i32 %b)
+  %umax2 = call i32 @llvm.umax.i32(i32 %b, i32 %c)
+  %smax3 = call i32 @llvm.smax.i32(i32 %umax2, i32 %a)
   %res = add i32 %smax1, %smax3
   ret i32 %res
 }
@@ -125,21 +88,15 @@ define i32 @smax_test6(i32 %a, i32 %b, i32 %c) {
 ; m2 = smax(smin((b,c), a) ; check that max and min are not mixed
 define i32 @smax_test7(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @smax_test7(
-; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SMAX1:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[B]], [[C:%.*]]
-; CHECK-NEXT:    [[SMIN2:%.*]] = select i1 [[C2]], i32 [[B]], i32 [[C]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp slt i32 [[SMIN2]], [[A]]
-; CHECK-NEXT:    [[SMAX3:%.*]] = select i1 [[C3]], i32 [[SMIN2]], i32 [[A]]
+; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    [[SMIN2:%.*]] = call i32 @llvm.smin.i32(i32 [[B]], i32 [[C:%.*]])
+; CHECK-NEXT:    [[SMAX3:%.*]] = call i32 @llvm.smin.i32(i32 [[SMIN2]], i32 [[A]])
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SMAX1]], [[SMAX3]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
-  %c1 = icmp sgt i32 %a, %b
-  %smax1 = select i1 %c1, i32 %a, i32 %b
-  %c2 = icmp slt i32 %b, %c
-  %smin2 = select i1 %c2, i32 %b, i32 %c
-  %c3 = icmp slt i32 %smin2, %a
-  %smax3 = select i1 %c3, i32 %smin2, i32 %a
+  %smax1 = call i32 @llvm.smax.i32(i32 %a, i32 %b)
+  %smin2 = call i32 @llvm.smin.i32(i32 %b, i32 %c)
+  %smax3 = call i32 @llvm.smin.i32(i32 %smin2, i32 %a)
   %res = add i32 %smax1, %smax3
   ret i32 %res
 }

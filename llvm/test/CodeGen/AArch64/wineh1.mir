@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog -filetype=obj  \
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prolog-epilog -filetype=obj  \
 # RUN:   | llvm-readobj --unwind - | FileCheck %s
 # RUN: llc -o - %s -mtriple=aarch64-windows -run-pass=aarch64-ldst-opt \
 # RUN:   | FileCheck %s --check-prefix=CHECK-LDSTOPT
@@ -7,7 +7,7 @@
 # https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
 
 # Also test the generated assembler SEH directives.
-# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog -filetype=asm  \
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prolog-epilog -filetype=asm  \
 # RUN:   | FileCheck %s --check-prefix=ASM
 
 # We expect to see the following in the .xdata section:

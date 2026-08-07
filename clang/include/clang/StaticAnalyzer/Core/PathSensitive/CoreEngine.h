@@ -54,7 +54,7 @@ class CoreEngine {
 
 public:
   using BlocksExhausted =
-      std::vector<std::pair<BlockEdge, const ExplodedNode *>>;
+      std::vector<std::pair<BlockEntrance, const ExplodedNode *>>;
 
   using BlocksAborted =
       std::vector<std::pair<const CFGBlock *, const ExplodedNode *>>;

@@ -1,5 +1,4 @@
-; RUN: llc -mcpu=gfx906 -o - < %s | FileCheck --check-prefix=CHECK %s
-target triple = "amdgcn-amd-amdhsa"
+; RUN: llc -mtriple=amdgpu9.06-amd-amdhsa -o - < %s | FileCheck --check-prefix=CHECK %s
 
 ; Check the group segment has size 4, not zero.
 ; CHECK:       .amdhsa_kernel __device_start

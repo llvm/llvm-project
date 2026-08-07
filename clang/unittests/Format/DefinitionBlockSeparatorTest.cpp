@@ -137,6 +137,36 @@ TEST_F(DefinitionBlockSeparatorTest, Basic) {
                "}",
                Style);
 
+  // There should not be an extra line when formatting is disabled.
+  verifyFormat("// clang-format off\n"
+               "void function()\n"
+               "{\n"
+               "\n"
+               "}\n"
+               "// clang-format on",
+               Style,
+               "// clang-format off\n"
+               "void function()\n"
+               "{\n"
+               "\n"
+               "}\n"
+               "// clang-format on",
+               /*Inverse=*/false);
+  verifyFormat("class X {\n"
+               "  // clang-format off\n"
+               "#pragma warning(suppress : 4373)\n"
+               "  void foo() {}\n"
+               "  // clang-format on\n"
+               "};\n",
+               Style,
+               "class X {\n"
+               "  // clang-format off\n"
+               "#pragma warning(suppress : 4373)\n"
+               "  void foo() {}\n"
+               "  // clang-format on\n"
+               "};\n",
+               /*Inverse=*/false);
+
   verifyFormat("enum Foo { FOO, BAR };\n"
                "\n"
                "enum Bar { FOOBAR, BARFOO };",

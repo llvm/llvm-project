@@ -12,6 +12,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 #include <optional>
 
 using namespace clang;
@@ -106,9 +107,10 @@ legacyPlatformInfos(llvm::Triple::OSType SDKOS,
   DarwinSDKInfo::PlatformInfoStorageType PlatformInfos;
   // Synthesize platform infos for older SDKs from the first SDKs with
   // SupportedTargets: macOS 10.15 (DriverKit 19.0), iOS 13.0, tvOS 13.0,
-  // watchOS 6.0. Older SDKs (especially iOS) most likely supported armv6 and
-  // armv7 architectures that aren't listed here and are difficult to identify
-  // from the SDK.
+  // watchOS 6.0. Older macOS SDKs supported ppc and i386 architectures, and
+  // maybe ppc64. Support for those is difficult to identify from the SDK, and
+  // so aren't listed here. Other older SDKs (especially iOS) most likely
+  // supported armv6 and armv7 architectures that aren't listed here either.
   switch (SDKOS) {
   case llvm::Triple::MacOSX:
     PlatformInfos.push_back({{llvm::Triple("x86_64-apple-macosx")}, ""});
@@ -203,7 +205,7 @@ static DarwinSDKInfo::PlatformInfoStorageType parsePlatformInfos(
         SupportedTarget->getString("LLVMTargetTripleEnvironment");
     for (const auto &ArchValue : *Archs) {
       if (auto Arch = ArchValue.getAsString()) {
-        if (Environment)
+        if (Environment && !Environment->empty())
           Triples.emplace_back(*Arch, *Vendor, *OS, *Environment);
         else
           Triples.emplace_back(*Arch, *Vendor, *OS);
@@ -271,6 +273,8 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(std::string FilePath,
   PlatformInfoStorageType PlatformInfos =
       parsePlatformInfos(*Obj, XcodePlatform, OSAndEnvironment.first,
                          OSAndEnvironment.second, *Version);
+  if (PlatformInfos.empty())
+    return std::nullopt;
   llvm::DenseMap<OSEnvPair::StorageType,
                  std::optional<RelatedTargetVersionMapping>>
       VersionMappings;
@@ -349,3 +353,64 @@ DarwinSDKInfo::DarwinSDKInfo(llvm::Triple::OSType OS,
     : DarwinSDKInfo("", OS, Environment, Version, DisplayName,
                     MaximumDeploymentTarget,
                     legacyPlatformInfos(OS, Environment)) {}
+
+static DarwinSDKInfo::PlatformInfoStorageType::const_iterator
+findPlatformInfo(const DarwinSDKInfo::PlatformInfoStorageType &PlatformInfos,
+                 const llvm::Triple &Triple) {
+  auto PlatformInfoIt = llvm::find_if(
+      PlatformInfos,
+      [&Triple](const DarwinSDKInfo::SDKPlatformInfo &PlatformInfo) {
+        const auto &Triples = PlatformInfo.getTriples();
+        return llvm::find(Triples, Triple) != Triples.end();
+      });
+
+  // The SDK specifies values for Xcode to use for the -target argument. It's
+  // hard to perfectly match the triple passed to this function against those
+  // values though. The passed in triple might have been computed from just
+  // -arch, or it might have been modified by -march and several other arguments
+  // that can effect any of the triple components. It's not really possible to
+  // account for all of the triple variations, but one common modification is
+  // that "arm" gets changed to "thumb". If the passed in triple is "thumb", try
+  // mapping it back to an "arm" triple since that's what the SDK will specify.
+  if (PlatformInfoIt == PlatformInfos.end() &&
+      Triple.getArch() == llvm::Triple::thumb) {
+    StringRef ARMArch = llvm::Triple::getArchName(llvm::Triple::arm);
+
+    // Preserve the sub-arch from the triple.
+    llvm::ARM::ArchKind ArchKind = llvm::ARM::parseArch(Triple.getArchName());
+    StringRef SubArch = llvm::ARM::getSubArch(ArchKind);
+
+    llvm::Triple ARMTriple(Triple);
+    ARMTriple.setArchName((ARMArch + SubArch).str());
+    if (ARMTriple.getArch() != llvm::Triple::thumb) {
+      // Sometimes changing the architecture name in the triple doesn't change
+      // its parsed architecture. e.g. armv6m parses as thumb, so it won't help
+      // to search for armv6m if thumbv6m already failed.
+      PlatformInfoIt = findPlatformInfo(PlatformInfos, ARMTriple);
+    }
+  }
+
+  return PlatformInfoIt;
+}
+
+bool DarwinSDKInfo::supportsTriple(const llvm::Triple &Triple) const {
+  return findPlatformInfo(PlatformInfos, Triple) != PlatformInfos.end();
+}
+
+StringRef DarwinSDKInfo::getPlatformPrefix(const llvm::Triple &Triple) const {
+  auto PlatformInfoIt = findPlatformInfo(PlatformInfos, Triple);
+  if (PlatformInfoIt != PlatformInfos.end())
+    return PlatformInfoIt->getPlatformPrefix();
+
+  // This triple probably isn't supported by the SDK. However, almost every SDK
+  // just has a single prefix where all of its contents are, so return that.
+  StringRef PlatformPrefix = PlatformInfos[0].getPlatformPrefix();
+  for (PlatformInfoIt = std::next(PlatformInfos.begin());
+       PlatformInfoIt != PlatformInfos.end(); ++PlatformInfoIt) {
+    if (PlatformInfoIt->getPlatformPrefix() != PlatformPrefix) {
+      // This SDK has multiple prefixes, give up and return nothing.
+      return StringRef();
+    }
+  }
+  return PlatformPrefix;
+}

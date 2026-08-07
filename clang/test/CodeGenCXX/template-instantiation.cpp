@@ -3,9 +3,9 @@
 
 // Instantiation order varies on different C++ dialects (IE, between C++98 and C++11).
 // CHECK-DAG: @_ZN7PR100011xE ={{.*}} global
-// CHECK-DAG: @_ZTVN5test018stdio_sync_filebufIA3_iEE = weak_odr constant
+// CHECK-DAG: @_ZTVN5test018stdio_sync_filebufIA3_iEE = weak_odr unnamed_addr constant
 // CHECK-DAG: @_ZN7PR100011SIiE3arrE = linkonce_odr global [3 x i32]
-// CHECK-DAG: @_ZTVN5test018stdio_sync_filebufIA4_iEE = linkonce_odr constant
+// CHECK-DAG: @_ZTVN5test018stdio_sync_filebufIA4_iEE = linkonce_odr unnamed_addr constant
 
 // Negative checks go under prefix "CHECK2" to avoid interference with CHECK and CHECK-DAG.
 // CHECK2-NOT: @_ZN7PR100014kBarE = external global i32

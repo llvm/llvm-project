@@ -27,7 +27,6 @@
 #include "flang/Parser/char-block.h"
 #include "flang/Support/Fortran.h"
 #include <algorithm>
-#include <list>
 #include <tuple>
 #include <type_traits>
 #include <variant>

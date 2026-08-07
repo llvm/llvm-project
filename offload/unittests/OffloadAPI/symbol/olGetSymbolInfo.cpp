@@ -30,6 +30,24 @@ TEST_P(olGetSymbolInfoGlobalTest, SuccessKind) {
   ASSERT_EQ(RetrievedKind, OL_SYMBOL_KIND_GLOBAL_VARIABLE);
 }
 
+TEST_P(olGetSymbolInfoKernelTest, SuccessName) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetSymbolInfoSize(Kernel, OL_SYMBOL_INFO_NAME, &Size));
+  std::vector<char> Name(Size);
+  ASSERT_SUCCESS(
+      olGetSymbolInfo(Kernel, OL_SYMBOL_INFO_NAME, Size, Name.data()));
+  ASSERT_STREQ(Name.data(), "foo");
+}
+
+TEST_P(olGetSymbolInfoGlobalTest, SuccessName) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetSymbolInfoSize(Global, OL_SYMBOL_INFO_NAME, &Size));
+  std::vector<char> Name(Size);
+  ASSERT_SUCCESS(
+      olGetSymbolInfo(Global, OL_SYMBOL_INFO_NAME, Size, Name.data()));
+  ASSERT_STREQ(Name.data(), "global");
+}
+
 TEST_P(olGetSymbolInfoKernelTest, InvalidAddress) {
   void *RetrievedAddr;
   ASSERT_ERROR(OL_ERRC_SYMBOL_KIND,
@@ -52,8 +70,6 @@ TEST_P(olGetSymbolInfoKernelTest, InvalidSize) {
 }
 
 TEST_P(olGetSymbolInfoGlobalTest, SuccessSize) {
-  SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
-
   size_t RetrievedSize = 0;
   ASSERT_SUCCESS(olGetSymbolInfo(Global, OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE,
                                  sizeof(RetrievedSize), &RetrievedSize));

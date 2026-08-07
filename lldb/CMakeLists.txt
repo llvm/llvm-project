@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "LLDB")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
@@ -34,6 +42,7 @@ if(LLDB_BUILT_STANDALONE)
   set(CMAKE_CXX_EXTENSIONS NO)
 
   include(LLDBStandalone)
+  include(HandleDoxygen)
 endif()
 
 include(LLDBConfig)
@@ -99,13 +108,23 @@ if (LLDB_ENABLE_PYTHON)
   endif()
   if(WIN32)
     # On Windows, FindPython3 doesn't reliably expose the runtime DLL path,
-    # only the import library. CPython's DLL naming is standard, though:
-    # python3.dll for the limited API, otherwise python<MAJOR><MINOR>.dll.
+    # only the import library. CPython's DLL naming is standard.
     if(LLDB_ENABLE_PYTHON_LIMITED_API)
-      set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME "python${Python3_VERSION_MAJOR}.dll")
+      if(MINGW)
+        set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+            "libpython${Python3_VERSION_MAJOR}.dll")
+      else()
+        set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+            "python${Python3_VERSION_MAJOR}.dll")
+      endif()
     else()
-      set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
-          "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}.dll")
+      if(MINGW)
+        set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+            "libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.dll")
+      else()
+        set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+            "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}.dll")
+      endif()
     endif()
     message(STATUS "LLDB Python runtime DLL: ${LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME} "
                    "(Python3_VERSION=${Python3_VERSION}, "
@@ -158,7 +177,7 @@ if (LLDB_ENABLE_PYTHON)
   if(LLDB_BUILD_FRAMEWORK)
     set(lldb_python_target_dir "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/Resources/Python/lldb")
   else()
-    set(lldb_python_target_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_PYTHON_RELATIVE_PATH}/lldb")
+    set(lldb_python_target_dir "${LLVM_RUNTIME_OUTPUT_INTDIR}/../${LLDB_PYTHON_RELATIVE_PATH}/lldb")
   endif()
   get_target_property(lldb_python_bindings_dir swig_wrapper_python BINARY_DIR)
   finish_swig_python("lldb-python" "${lldb_python_bindings_dir}" "${lldb_python_target_dir}")

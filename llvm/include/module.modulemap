@@ -274,6 +274,7 @@ module LLVM_IR {
   extern module LLVM_Extern_IR_Intrinsics_Enum "module.extern.modulemap"
 
   // These are intended for (repeated) textual inclusion.
+  textual header "llvm/IR/BundleAttributes.def"
   textual header "llvm/IR/ConstrainedOps.def"
   textual header "llvm/IR/DebugInfoFlags.def"
   textual header "llvm/IR/FunctionProperties.def"
@@ -376,6 +377,11 @@ module TargetParserGen {
     extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
     export *
   }
+  module AMDGPUTargetParserDef {
+    header "llvm/TargetParser/AMDGPUTargetParser.h"
+    extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
+    export *
+  }
 }
 
 // A module covering ADT/ and Support/. These are intertwined and
@@ -420,12 +426,13 @@ module LLVM_Utils {
     module * { export * }
 
     // These are intended for textual inclusion.
-    textual header "llvm/TargetParser/AMDGPUTargetParser.def"
     textual header "llvm/TargetParser/ARMTargetParser.def"
     textual header "llvm/TargetParser/CSKYTargetParser.def"
     textual header "llvm/TargetParser/X86TargetParser.def"
     textual header "llvm/TargetParser/LoongArchTargetParser.def"
+    textual header "llvm/TargetParser/NVPTXTargetParser.def"
     textual header "llvm/TargetParser/PPCTargetParser.def"
+    textual header "llvm/TargetParser/TripleName.def"
     textual header "llvm/TargetParser/XtensaTargetParser.def"
   }
 

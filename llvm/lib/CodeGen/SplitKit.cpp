@@ -1477,7 +1477,6 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
     if (!LI.hasSubRanges())
       continue;
     LI.clear();
-    LI.removeEmptySubRanges();
     LIS.constructMainRangeFromSubranges(LI);
   }
 }

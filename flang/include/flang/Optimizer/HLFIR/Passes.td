@@ -104,8 +104,8 @@ def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
       "device code without inlining all array assignments.">];
 }
 
-def InlineHLFIRCopyIn : Pass<"inline-hlfir-copy-in"> {
-  let summary = "Inline hlfir.copy_in operations";
+def InlineHLFIRCopy : Pass<"inline-hlfir-copy"> {
+  let summary = "Inline hlfir.copy_in and hlfir.copy_out operations";
 }
 
 def PropagateFortranVariableAttributes : Pass<"propagate-fortran-attrs"> {
