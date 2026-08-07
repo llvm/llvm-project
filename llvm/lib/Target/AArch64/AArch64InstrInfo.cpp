@@ -10288,30 +10288,57 @@ enum MachineOutlinerMBBFlags {
   UnsafeRegsDead = 0x8
 };
 
-/// Return true when a non-leaf outlined function should save FP and LR as a
-/// frame record instead of saving LR alone.
+/// Return true if the frame-record form of the outlined prologue is enabled for
+/// the target of \p MF.
 ///
-/// This is only useful for MachO functions that need unwind info. Do not use
-/// this form if the outlined sequence reads or writes x29. The prologue sets
-/// x29 before the outlined body runs, and the epilogue restores the old x29
-/// before returning.
-static bool shouldUseCompactUnwindFrameRecordForOutlinedFunction(
-    const MachineFunction &MF, bool NeedsDwarf, bool FPAvailableInsideSeq) {
-  return UseCompactUnwindFrameRecordForOutlinedFunctions && NeedsDwarf &&
-         FPAvailableInsideSeq &&
+/// A non-leaf outlined function must save LR. On MachO, saving LR alone
+/// (str x30) has no compact unwind encoding, so we get a large DWARF FDE
+/// instead. Saving FP and LR as a frame record (stp x29, x30 ; mov x29, sp)
+/// gets the small FRAME encoding, and costs one extra instruction.
+static bool isCompactUnwindFrameRecordEnabled(const MachineFunction &MF) {
+  return UseCompactUnwindFrameRecordForOutlinedFunctions &&
          MF.getTarget().getTargetTriple().isOSBinFormatMachO();
 }
 
-/// Return true if no instruction in \p MBB reads, writes or clobbers FP.
-///
-/// Use the same LiveRegUnits query as Candidate::isAvailableInsideSeq(), so the
-/// cost estimate and the emission code make the same decision.
-static bool isFPAvailableInsideOutlinedSeq(const MachineBasicBlock &MBB,
-                                           const TargetRegisterInfo &TRI) {
-  LiveRegUnits LRU(TRI);
+/// Return true if the outlined function in \p MBB should save FP and LR as a
+/// frame record instead of saving LR alone.
+static bool shouldUseCompactUnwindFrameRecordForOutlinedFunction(
+    const MachineBasicBlock &MBB) {
+  const MachineFunction &MF = *MBB.getParent();
+
+  // Only worth it if the function has unwind info to shrink.
+  if (!isCompactUnwindFrameRecordEnabled(MF) ||
+      !MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF))
+    return false;
+
+  // Only safe if the outlined code never touches FP, since we overwrite it.
+  LiveRegUnits LRU(*MF.getSubtarget().getRegisterInfo());
   for (const MachineInstr &MI : MBB.instrs())
     LRU.accumulate(MI);
   return LRU.available(AArch64::FP);
+}
+
+/// Predict what the above will answer, for use while costing candidates. The
+/// outlined function does not exist yet, so answer from \p RepeatedSequenceLocs
+/// instead. This is only an estimate; buildOutlinedFrame() makes the call.
+static bool predictCompactUnwindFrameRecordForOutlinedFunction(
+    std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+    const TargetRegisterInfo &TRI) {
+  if (!isCompactUnwindFrameRecordEnabled(*RepeatedSequenceLocs.front().getMF()))
+    return false;
+
+  // The outlined function is nounwind only if every candidate is, so it has
+  // unwind info if any candidate does.
+  if (llvm::none_of(RepeatedSequenceLocs, [](outliner::Candidate &C) {
+        const MachineFunction &MF = *C.getMF();
+        return MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF);
+      }))
+    return false;
+
+  // FP is free in the outlined function only if it is free in every candidate.
+  return llvm::all_of(RepeatedSequenceLocs, [&TRI](outliner::Candidate &C) {
+    return C.isAvailableInsideSeq(AArch64::FP, TRI);
+  });
 }
 
 Register
@@ -10781,27 +10808,9 @@ AArch64InstrInfo::getOutliningCandidateInfo(
       // Save + restore LR.
       NumBytesToCreateFrame += 8;
 
-      bool FPAvailableInsideSeq =
-          llvm::all_of(RepeatedSequenceLocs, [&TRI](outliner::Candidate &C) {
-            return C.isAvailableInsideSeq(AArch64::FP, TRI);
-          });
-      // The outlined function does not exist yet, so use the candidates to
-      // predict whether it will need unwind info. The generic outliner uses
-      // the strongest UWTableKind from the candidates, and keeps nounwind only
-      // when every candidate is nounwind.
-      bool NeedsDwarfUnwind =
-          llvm::any_of(RepeatedSequenceLocs, [](outliner::Candidate &C) {
-            const MachineFunction &MF = *C.getMF();
-            return MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF);
-          });
-      bool UseFrameRecord =
-          shouldUseCompactUnwindFrameRecordForOutlinedFunction(
-              *RepeatedSequenceLocs.front().getMF(), NeedsDwarfUnwind,
-              FPAvailableInsideSeq);
-
-      // Account for the extra mov only when buildOutlinedFrame will use the
-      // MachO frame-record form.
-      if (UseFrameRecord)
+      // Add the extra mov if we will save a frame record instead of just LR.
+      if (predictCompactUnwindFrameRecordForOutlinedFunction(
+              RepeatedSequenceLocs, TRI))
         NumBytesToCreateFrame += 4;
     }
   }
@@ -11235,21 +11244,14 @@ void AArch64InstrInfo::buildOutlinedFrame(
         OF.FrameConstructionID == MachineOutlinerThunk)
       Et = std::prev(MBB.end());
 
-    // There is a call in the range, so we must save LR. On MachO, saving only
-    // LR cannot be described by compact unwind. Saving FP and LR as a frame
-    // record lets the compact-unwind encoder use the FRAME encoding, at the
-    // cost of one extra mov.
-    bool NeedsDwarf =
-        MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF);
-    bool UseFrameRecord = shouldUseCompactUnwindFrameRecordForOutlinedFunction(
-        MF, NeedsDwarf, isFPAvailableInsideOutlinedSeq(MBB, getRegisterInfo()));
-
-    if (UseFrameRecord) {
+    // There is a call in the range, so we must save LR. Save it as part of a
+    // frame record when that gives us a smaller compact unwind encoding.
+    if (shouldUseCompactUnwindFrameRecordForOutlinedFunction(MBB)) {
       // FP is saved here, so it must be live-in.
       if (!MBB.isLiveIn(AArch64::FP))
         MBB.addLiveIn(AArch64::FP);
 
-      // stp x29, x30, [sp, #-16]!   (STP pre-index imm is scaled by 8: -2 * 8)
+      // stp x29, x30, [sp, #-16]!   (the pre-index imm is scaled by 8: -2 * 8)
       MachineInstr *STPXpre = BuildMI(MF, DebugLoc(), get(AArch64::STPXpre))
                                   .addReg(AArch64::SP, RegState::Define)
                                   .addReg(AArch64::FP)
@@ -11258,7 +11260,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
                                   .addImm(-2);
       It = MBB.insert(It, STPXpre);
 
-      // mov x29, sp  (add x29, sp, #0) so x29 points at the saved frame record.
+      // mov x29, sp  (add x29, sp, #0), so x29 points at the frame record.
       MachineInstr *SetFP = BuildMI(MF, DebugLoc(), get(AArch64::ADDXri))
                                 .addReg(AArch64::FP, RegState::Define)
                                 .addReg(AArch64::SP)
@@ -11266,7 +11268,9 @@ void AArch64InstrInfo::buildOutlinedFrame(
                                 .addImm(0);
       MBB.insertAfter(It, SetFP);
 
-      // Standard frame-record CFI (FP is the CFA) so the encoder emits FRAME.
+      // Describe the frame record with FP as the CFA. The encoder needs all
+      // three to pick FRAME. No need to check for unwind info here: we only
+      // get here if the function has it.
       CFIInstBuilder CFIBuilder(MBB, std::next(SetFP->getIterator()),
                                 MachineInstr::FrameSetup);
       CFIBuilder.buildDefCFA(AArch64::FP, 16);
@@ -11290,7 +11294,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
                                   .addImm(-16);
       It = MBB.insert(It, STRXpre);
 
-      if (NeedsDwarf) {
+      if (MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF)) {
         CFIInstBuilder CFIBuilder(MBB, It, MachineInstr::FrameSetup);
 
         // Add a CFI saying the stack was moved 16 B down.
