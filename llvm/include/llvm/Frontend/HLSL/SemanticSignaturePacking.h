@@ -28,6 +28,9 @@ enum class SemanticSignatureKind {
   PatchConstOrPrim,
 };
 
+static constexpr unsigned MaxSignatureRows = 32;
+static constexpr unsigned MaxSignatureCols = 4;
+
 /// Iterates through Elements that belong to the signature described by
 /// ShaderStage and SignatureKind and 'packs' each element into 32 registers
 /// with 4 components by updating their StartRow and StartCol in place. An
@@ -92,11 +95,10 @@ enum class SemanticSignatureKind {
 ///
 /// Geometry Streams: For a geometry shader output signature, elements that
 /// carry different GSStream values are packed into independent grids.
-LLVM_ABI Error
-packSignaturePrefixStable(MutableArrayRef<SemanticSignatureElement> Elements,
-                          Triple::EnvironmentType ShaderStage,
-                          SemanticSignatureKind SignatureKind,
-                          bool UseNative16BitTypes);
+LLVM_ABI Error packSignaturePrefixStable(
+    MutableArrayRef<SemanticSignatureElement> Elements,
+    Triple::EnvironmentType ShaderStage, SemanticSignatureKind SignatureKind,
+    bool UseNative16BitTypes);
 
 } // namespace llvm::hlsl
 
