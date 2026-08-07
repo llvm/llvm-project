@@ -511,6 +511,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
                                            "zero-call-used-regs",
                                            zcsr.getValue()));
+    if (callOp.getUniformWorkGroupSizeAttr())
+      call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                           "uniform-work-group-size"));
     if (StringAttr trapFunc = callOp.getTrapFuncNameAttr())
       call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
                                            "trap-func-name",

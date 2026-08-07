@@ -3051,6 +3051,33 @@ llvm.func @save_reg_params_call() {
 
 llvm.func @f()
 
+// CHECK-LABEL: @uniform_work_group_size
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @uniform_work_group_size() attributes { uniform_work_group_size } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "uniform-work-group-size"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @uniform_work_group_size_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @uniform_work_group_size_call() {
+  llvm.call @f() {uniform_work_group_size} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "uniform-work-group-size"
+
+// -----
+
+llvm.func @f()
+
 // CHECK-LABEL: @zero_call_used_regs_1
 // CHECK-SAME: #[[ATTRS:[0-9]+]]
 llvm.func @zero_call_used_regs_1() attributes { zero_call_used_regs = "skip"} {

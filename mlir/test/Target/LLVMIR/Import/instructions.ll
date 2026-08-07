@@ -886,6 +886,18 @@ define void @call_save_reg_params() {
 ; CHECK: llvm.func @f()
 declare void @f()
 
+; CHECK-LABEL: @call_uniform_work_group_size
+define void @call_uniform_work_group_size() {
+; CHECK: llvm.call @f() {uniform_work_group_size}
+  call void @f() "uniform-work-group-size"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
 ; CHECK-LABEL: @call_zero_call_used_regs
 define void @call_zero_call_used_regs() {
 ; CHECK: llvm.call @f() {zero_call_used_regs = "used"}

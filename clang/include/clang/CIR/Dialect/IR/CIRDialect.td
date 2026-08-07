@@ -76,6 +76,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getZeroCallUsedRegsAttrName() { return "zero_call_used_regs"; }
     static llvm::StringRef getSaveRegParamsAttrName() { return "save_reg_params"; }
     static llvm::StringRef getDefaultFuncAttrsAttrName() { return "default_func_attrs"; }
+    static llvm::StringRef getUniformWorkGroupSizeAttrName() { return "uniform_work_group_size"; }
     static llvm::StringRef getResAttrsAttrName() { return "res_attrs"; }
     static llvm::StringRef getArgAttrsAttrName() { return "arg_attrs"; }
     static llvm::StringRef getRecordLayoutsAttrName() { return "cir.record_layouts"; }

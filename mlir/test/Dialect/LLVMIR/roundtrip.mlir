@@ -176,6 +176,9 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.call @baz() {save_reg_params} : () -> ()
   llvm.call @baz() {save_reg_params} : () -> ()
 
+// CHECK: llvm.call @baz() {uniform_work_group_size} : () -> ()
+  llvm.call @baz() {uniform_work_group_size} : () -> ()
+
 // CHECK: llvm.call @baz() {zero_call_used_regs = "all"} : () -> ()
   llvm.call @baz() {zero_call_used_regs="all"} : () -> ()
 
