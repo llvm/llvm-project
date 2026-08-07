@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # A tool to parse the output of `clang-format --help` and update the
-# documentation in ../ClangFormat.rst automatically.
+# documentation in ../ClangFormat.md automatically.
 
 import argparse
 import os
@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 PARENT_DIR = os.path.join(os.path.dirname(__file__), "..")
-DOC_FILE = os.path.join(PARENT_DIR, "ClangFormat.rst")
+DOC_FILE = os.path.join(PARENT_DIR, "ClangFormat.md")
 
 
 def substitute(text, tag, contents):
