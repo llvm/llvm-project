@@ -1033,7 +1033,11 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
       Ty = BestTy;
   } else if (auto *Ref = dyn_cast<SelectInst>(I)) {
     for (Value *Op : {Ref->getTrueValue(), Ref->getFalseValue()}) {
-      Ty = deduceElementTypeByUsersDeep(Op, Visited, UnknownElemTypeI8);
+      // A function pointer operand carries its function type directly. Other
+      // operands are deduced from their uses.
+      Ty = isa<Function>(Op)
+               ? deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8)
+               : deduceElementTypeByUsersDeep(Op, Visited, UnknownElemTypeI8);
       if (Ty)
         break;
     }
@@ -1543,7 +1547,7 @@ void SPIRVEmitIntrinsicsImpl::deduceOperandElementType(
     Value *OpTyVal = getNormalizedPoisonValue(KnownElemTy);
     Type *OpTy = Op->getType();
     // Do not let a non-pointer element type clobber an already-deduced pointer
-    // pointee.
+    // element type for the same operand.
     bool WouldClobberPtrWithNonPtr = Ty && isPointerTyOrWrapper(Ty) &&
                                      !isPointerTyOrWrapper(KnownElemTy) &&
                                      tracesToPointerAlloca(Op);
@@ -2207,10 +2211,10 @@ void SPIRVEmitIntrinsicsImpl::replacePointerOperandWithPtrCast(
     }
   }
 
-  // Never replace an already-deduced pointer pointee with a non-pointer one.
-  // The conflicting use comes from a mis-deduced expected type. Leave the
-  // operand untouched rather than emitting a ptrcast that re-introduces
-  // the collapsed type at the use site.
+  // Never replace an already-deduced pointer element type with a non-pointer
+  // one. The conflicting use comes from a mis-deduced expected type. Leave the
+  // operand untouched rather than emitting a ptrcast that re-introduces the
+  // collapsed type at the use site.
   if (PointerElemTy && isPointerTyOrWrapper(PointerElemTy) &&
       !isPointerTyOrWrapper(ExpectedElementType) &&
       tracesToPointerAlloca(Pointer))
