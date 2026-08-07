@@ -1,15 +1,20 @@
-# Flang |version| (In-Progress) Release Notes
+<!-- If you want to modify sections/contents permanently, you should modify both
+ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
-> **warning**
->
-> These are in-progress notes for the upcoming LLVM |version| release.
-> Release notes for previous releases can be found on [the Download
-> Page](https://releases.llvm.org/download.html).
+# Flang {{version}} {{in_progress}}Release Notes
+
+````{only} PreRelease
+```{warning}
+These are in-progress notes for the upcoming LLVM {{version}} release.
+Release notes for previous releases can be found on [the Download
+Page](https://releases.llvm.org/download.html).
+```
+````
 
 ## Introduction
 
 This document contains the release notes for the Flang Fortran frontend,
-part of the LLVM Compiler Infrastructure, release |version|. Here we
+part of the LLVM Compiler Infrastructure, release {{version}}. Here we
 describe the status of Flang in some detail, including major
 improvements from the previous release and new feature work. For the
 general LLVM release notes, see [the LLVM
@@ -24,13 +29,33 @@ page](https://llvm.org/releases/).
 
 ## Major New Features
 
-* Support for LOWER= argument for C_F_POINTER.
-
 ## Bug Fixes
 
 ## Non-comprehensive list of changes in this release
 
+- The legacy array-value operations (`fir.array_load`, `fir.array_fetch`,
+  `fir.array_update`, `fir.array_modify`, `fir.array_access`,
+  `fir.array_amend`, `fir.array_merge_store`) have been removed from FIR,
+  together with the `array-value-copy` pass that legalized them and its
+  `-mmlir -disable-avc` option. Nothing in flang has produced these
+  operations since the legacy (non-HLFIR) expression lowering was deleted.
+  Downstream projects that still construct them must migrate to HLFIR (or
+  their own legalization) before rebasing. `fir.array_coor` is unrelated
+  and remains supported.
+
+- Added support for compressed DWARF debug sections. Flang now supports
+  compressing DWARF debug info in ELF object files using zlib or zstd,
+  reducing debug information size in compiled binaries.
+
 ## New Compiler Flags
+- Added the gfortran-compatible `-ffpe-trap=` flag, which sets the initial
+  floating-point exception halting mode of the main program. It takes a
+  comma-separated list of `invalid`, `zero`, `overflow`, `underflow`, `inexact`,
+  and the extension `denormal`, or `none` to disable halting. See the Flang
+  command line reference for the supported targets and details.
+
+- Added `-gz` and `-gz=<format>` flags to enable compression of DWARF debug
+  sections. Supported formats are `zlib`, `zstd`, and `none`.
 
 ## Windows Support
 
@@ -39,7 +64,6 @@ page](https://llvm.org/releases/).
 ## Build System Changes
 
 ## New Issues Found
-
 
 ## Additional Information
 

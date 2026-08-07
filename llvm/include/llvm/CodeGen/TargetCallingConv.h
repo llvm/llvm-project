@@ -203,10 +203,16 @@ namespace ISD {
   ///
   struct InputArg {
     ArgFlagsTy Flags;
+    /// Legalized type of this argument part.
     MVT VT = MVT::Other;
+    /// Usually the non-legalized type of the argument, which is the EVT
+    /// corresponding to the OrigTy IR type. However, for post-legalization
+    /// libcalls, this will be a legalized type.
     EVT ArgVT;
-    Type *OrigTy = nullptr;
-    bool Used = false;
+    /// Original IR type of the argument. For aggregates, this is the type of
+    /// an individual aggregate element, not the whole aggregate.
+    Type *OrigTy;
+    bool Used;
 
     /// Index original Function's argument.
     unsigned OrigArgIndex;
@@ -218,14 +224,10 @@ namespace ISD {
     /// registers, we got 4 InputArgs with PartOffsets 0, 4, 8 and 12.
     unsigned PartOffset;
 
-    InputArg() = default;
-    InputArg(ArgFlagsTy flags, EVT vt, EVT argvt, Type *OrigTy, bool used,
-             unsigned origIdx, unsigned partOffs)
-        : Flags(flags), OrigTy(OrigTy), Used(used), OrigArgIndex(origIdx),
-          PartOffset(partOffs) {
-      VT = vt.getSimpleVT();
-      ArgVT = argvt;
-    }
+    InputArg(ArgFlagsTy Flags, MVT VT, EVT ArgVT, Type *OrigTy, bool Used,
+             unsigned OrigArgIndex, unsigned PartOffset)
+        : Flags(Flags), VT(VT), ArgVT(ArgVT), OrigTy(OrigTy), Used(Used),
+          OrigArgIndex(OrigArgIndex), PartOffset(PartOffset) {}
 
     bool isOrigArg() const {
       return OrigArgIndex != NoArgIndex;
@@ -243,9 +245,14 @@ namespace ISD {
   ///
   struct OutputArg {
     ArgFlagsTy Flags;
+    // Legalized type of this argument part.
     MVT VT;
+    /// Non-legalized type of the argument. This is the EVT corresponding to
+    /// the OrigTy IR type.
     EVT ArgVT;
-    Type *OrigTy = nullptr;
+    /// Original IR type of the argument. For aggregates, this is the type of
+    /// an individual aggregate element, not the whole aggregate.
+    Type *OrigTy;
 
     /// Index original Function's argument.
     unsigned OrigArgIndex;
@@ -255,14 +262,10 @@ namespace ISD {
     /// registers, we got 4 OutputArgs with PartOffsets 0, 4, 8 and 12.
     unsigned PartOffset;
 
-    OutputArg() = default;
-    OutputArg(ArgFlagsTy flags, MVT vt, EVT argvt, Type *OrigTy,
-              unsigned origIdx, unsigned partOffs)
-        : Flags(flags), OrigTy(OrigTy), OrigArgIndex(origIdx),
-          PartOffset(partOffs) {
-      VT = vt;
-      ArgVT = argvt;
-    }
+    OutputArg(ArgFlagsTy Flags, MVT VT, EVT ArgVT, Type *OrigTy,
+              unsigned OrigArgIndex, unsigned PartOffset)
+        : Flags(Flags), VT(VT), ArgVT(ArgVT), OrigTy(OrigTy),
+          OrigArgIndex(OrigArgIndex), PartOffset(PartOffset) {}
   };
 
 } // end namespace ISD

@@ -40,16 +40,17 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
-  auto &LegacyInfo = getLegacyLegalizerInfo();
   if (ST.isThumb1Only()) {
     // Thumb1 is not supported yet.
-    LegacyInfo.computeTables();
     verify(*ST.getInstrInfo());
     return;
   }
 
   getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
       .legalForCartesianProduct({s8, s16, s32}, {s1, s8, s16});
+
+  getActionDefinitionsBuilder(G_TRUNC).legalForCartesianProduct({s1, s8, s16},
+                                                                {s8, s16, s32});
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
@@ -133,6 +134,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
       .legalFor({{p0, s32}})
       .minScalar(1, s32);
 
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
   if (!ST.useSoftFloat() && ST.hasVFP2Base()) {
@@ -206,17 +208,17 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
 
   getActionDefinitionsBuilder({G_FREM, G_FPOW}).libcallFor({s32, s64});
 
-  if (ST.hasV5TOps()) {
+  if (ST.hasV5TOps() && !ST.isThumb1Only()) {
     getActionDefinitionsBuilder(G_CTLZ)
         .legalFor({s32, s32})
         .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
-    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON)
         .lowerFor({s32, s32})
         .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
   } else {
-    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON)
         .libcallFor({s32, s32})
         .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
@@ -226,7 +228,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
         .clampScalar(0, s32, s32);
   }
 
-  LegacyInfo.computeTables();
   verify(*ST.getInstrInfo());
 }
 
@@ -249,7 +250,8 @@ void ARMLegalizerInfo::setFCmpLibcallsAEABI() {
   FCmp32Libcalls[CmpInst::FCMP_UGT] = {{RTLIB::OLE_F32, CmpInst::ICMP_EQ}};
   FCmp32Libcalls[CmpInst::FCMP_ULE] = {{RTLIB::OGT_F32, CmpInst::ICMP_EQ}};
   FCmp32Libcalls[CmpInst::FCMP_ULT] = {{RTLIB::OGE_F32, CmpInst::ICMP_EQ}};
-  FCmp32Libcalls[CmpInst::FCMP_UNE] = {{RTLIB::UNE_F32, CmpInst::ICMP_EQ}};
+  // AEABI only provides ordered-equal; not-equal is the same call, inverted.
+  FCmp32Libcalls[CmpInst::FCMP_UNE] = {{RTLIB::OEQ_F32, CmpInst::ICMP_EQ}};
   FCmp32Libcalls[CmpInst::FCMP_UNO] = {
       {RTLIB::UO_F32, CmpInst::BAD_ICMP_PREDICATE}};
   FCmp32Libcalls[CmpInst::FCMP_ONE] = {
@@ -275,7 +277,8 @@ void ARMLegalizerInfo::setFCmpLibcallsAEABI() {
   FCmp64Libcalls[CmpInst::FCMP_UGT] = {{RTLIB::OLE_F64, CmpInst::ICMP_EQ}};
   FCmp64Libcalls[CmpInst::FCMP_ULE] = {{RTLIB::OGT_F64, CmpInst::ICMP_EQ}};
   FCmp64Libcalls[CmpInst::FCMP_ULT] = {{RTLIB::OGE_F64, CmpInst::ICMP_EQ}};
-  FCmp64Libcalls[CmpInst::FCMP_UNE] = {{RTLIB::UNE_F64, CmpInst::ICMP_EQ}};
+  // AEABI only provides ordered-equal; not-equal is the same call, inverted.
+  FCmp64Libcalls[CmpInst::FCMP_UNE] = {{RTLIB::OEQ_F64, CmpInst::ICMP_EQ}};
   FCmp64Libcalls[CmpInst::FCMP_UNO] = {
       {RTLIB::UO_F64, CmpInst::BAD_ICMP_PREDICATE}};
   FCmp64Libcalls[CmpInst::FCMP_ONE] = {
@@ -290,40 +293,64 @@ void ARMLegalizerInfo::setFCmpLibcallsGNU() {
   // FCMP_TRUE and FCMP_FALSE don't need libcalls, they should be
   // default-initialized.
   FCmp32Libcalls.resize(CmpInst::LAST_FCMP_PREDICATE + 1);
-  FCmp32Libcalls[CmpInst::FCMP_OEQ] = {{RTLIB::OEQ_F32, CmpInst::ICMP_EQ}};
-  FCmp32Libcalls[CmpInst::FCMP_OGE] = {{RTLIB::OGE_F32, CmpInst::ICMP_SGE}};
-  FCmp32Libcalls[CmpInst::FCMP_OGT] = {{RTLIB::OGT_F32, CmpInst::ICMP_SGT}};
-  FCmp32Libcalls[CmpInst::FCMP_OLE] = {{RTLIB::OLE_F32, CmpInst::ICMP_SLE}};
-  FCmp32Libcalls[CmpInst::FCMP_OLT] = {{RTLIB::OLT_F32, CmpInst::ICMP_SLT}};
+  FCmp32Libcalls[CmpInst::FCMP_OEQ] = {
+      {RTLIB::FCMP3_PRED_OEQ_F32, CmpInst::ICMP_EQ}};
+  FCmp32Libcalls[CmpInst::FCMP_OGE] = {
+      {RTLIB::FCMP3_PRED_OGE_F32, CmpInst::ICMP_SGE}};
+  FCmp32Libcalls[CmpInst::FCMP_OGT] = {
+      {RTLIB::FCMP3_PRED_OGT_F32, CmpInst::ICMP_SGT}};
+  FCmp32Libcalls[CmpInst::FCMP_OLE] = {
+      {RTLIB::FCMP3_PRED_OLE_F32, CmpInst::ICMP_SLE}};
+  FCmp32Libcalls[CmpInst::FCMP_OLT] = {
+      {RTLIB::FCMP3_PRED_OLT_F32, CmpInst::ICMP_SLT}};
   FCmp32Libcalls[CmpInst::FCMP_ORD] = {{RTLIB::UO_F32, CmpInst::ICMP_EQ}};
-  FCmp32Libcalls[CmpInst::FCMP_UGE] = {{RTLIB::OLT_F32, CmpInst::ICMP_SGE}};
-  FCmp32Libcalls[CmpInst::FCMP_UGT] = {{RTLIB::OLE_F32, CmpInst::ICMP_SGT}};
-  FCmp32Libcalls[CmpInst::FCMP_ULE] = {{RTLIB::OGT_F32, CmpInst::ICMP_SLE}};
-  FCmp32Libcalls[CmpInst::FCMP_ULT] = {{RTLIB::OGE_F32, CmpInst::ICMP_SLT}};
-  FCmp32Libcalls[CmpInst::FCMP_UNE] = {{RTLIB::UNE_F32, CmpInst::ICMP_NE}};
+  FCmp32Libcalls[CmpInst::FCMP_UGE] = {
+      {RTLIB::FCMP3_PRED_OLT_F32, CmpInst::ICMP_SGE}};
+  FCmp32Libcalls[CmpInst::FCMP_UGT] = {
+      {RTLIB::FCMP3_PRED_OLE_F32, CmpInst::ICMP_SGT}};
+  FCmp32Libcalls[CmpInst::FCMP_ULE] = {
+      {RTLIB::FCMP3_PRED_OGT_F32, CmpInst::ICMP_SLE}};
+  FCmp32Libcalls[CmpInst::FCMP_ULT] = {
+      {RTLIB::FCMP3_PRED_OGE_F32, CmpInst::ICMP_SLT}};
+  FCmp32Libcalls[CmpInst::FCMP_UNE] = {
+      {RTLIB::FCMP3_PRED_UNE_F32, CmpInst::ICMP_NE}};
   FCmp32Libcalls[CmpInst::FCMP_UNO] = {{RTLIB::UO_F32, CmpInst::ICMP_NE}};
-  FCmp32Libcalls[CmpInst::FCMP_ONE] = {{RTLIB::OGT_F32, CmpInst::ICMP_SGT},
-                                       {RTLIB::OLT_F32, CmpInst::ICMP_SLT}};
-  FCmp32Libcalls[CmpInst::FCMP_UEQ] = {{RTLIB::OEQ_F32, CmpInst::ICMP_EQ},
-                                       {RTLIB::UO_F32, CmpInst::ICMP_NE}};
+  FCmp32Libcalls[CmpInst::FCMP_ONE] = {
+      {RTLIB::FCMP3_PRED_OGT_F32, CmpInst::ICMP_SGT},
+      {RTLIB::FCMP3_PRED_OLT_F32, CmpInst::ICMP_SLT}};
+  FCmp32Libcalls[CmpInst::FCMP_UEQ] = {
+      {RTLIB::FCMP3_PRED_OEQ_F32, CmpInst::ICMP_EQ},
+      {RTLIB::UO_F32, CmpInst::ICMP_NE}};
 
   FCmp64Libcalls.resize(CmpInst::LAST_FCMP_PREDICATE + 1);
-  FCmp64Libcalls[CmpInst::FCMP_OEQ] = {{RTLIB::OEQ_F64, CmpInst::ICMP_EQ}};
-  FCmp64Libcalls[CmpInst::FCMP_OGE] = {{RTLIB::OGE_F64, CmpInst::ICMP_SGE}};
-  FCmp64Libcalls[CmpInst::FCMP_OGT] = {{RTLIB::OGT_F64, CmpInst::ICMP_SGT}};
-  FCmp64Libcalls[CmpInst::FCMP_OLE] = {{RTLIB::OLE_F64, CmpInst::ICMP_SLE}};
-  FCmp64Libcalls[CmpInst::FCMP_OLT] = {{RTLIB::OLT_F64, CmpInst::ICMP_SLT}};
+  FCmp64Libcalls[CmpInst::FCMP_OEQ] = {
+      {RTLIB::FCMP3_PRED_OEQ_F64, CmpInst::ICMP_EQ}};
+  FCmp64Libcalls[CmpInst::FCMP_OGE] = {
+      {RTLIB::FCMP3_PRED_OGE_F64, CmpInst::ICMP_SGE}};
+  FCmp64Libcalls[CmpInst::FCMP_OGT] = {
+      {RTLIB::FCMP3_PRED_OGT_F64, CmpInst::ICMP_SGT}};
+  FCmp64Libcalls[CmpInst::FCMP_OLE] = {
+      {RTLIB::FCMP3_PRED_OLE_F64, CmpInst::ICMP_SLE}};
+  FCmp64Libcalls[CmpInst::FCMP_OLT] = {
+      {RTLIB::FCMP3_PRED_OLT_F64, CmpInst::ICMP_SLT}};
   FCmp64Libcalls[CmpInst::FCMP_ORD] = {{RTLIB::UO_F64, CmpInst::ICMP_EQ}};
-  FCmp64Libcalls[CmpInst::FCMP_UGE] = {{RTLIB::OLT_F64, CmpInst::ICMP_SGE}};
-  FCmp64Libcalls[CmpInst::FCMP_UGT] = {{RTLIB::OLE_F64, CmpInst::ICMP_SGT}};
-  FCmp64Libcalls[CmpInst::FCMP_ULE] = {{RTLIB::OGT_F64, CmpInst::ICMP_SLE}};
-  FCmp64Libcalls[CmpInst::FCMP_ULT] = {{RTLIB::OGE_F64, CmpInst::ICMP_SLT}};
-  FCmp64Libcalls[CmpInst::FCMP_UNE] = {{RTLIB::UNE_F64, CmpInst::ICMP_NE}};
+  FCmp64Libcalls[CmpInst::FCMP_UGE] = {
+      {RTLIB::FCMP3_PRED_OLT_F64, CmpInst::ICMP_SGE}};
+  FCmp64Libcalls[CmpInst::FCMP_UGT] = {
+      {RTLIB::FCMP3_PRED_OLE_F64, CmpInst::ICMP_SGT}};
+  FCmp64Libcalls[CmpInst::FCMP_ULE] = {
+      {RTLIB::FCMP3_PRED_OGT_F64, CmpInst::ICMP_SLE}};
+  FCmp64Libcalls[CmpInst::FCMP_ULT] = {
+      {RTLIB::FCMP3_PRED_OGE_F64, CmpInst::ICMP_SLT}};
+  FCmp64Libcalls[CmpInst::FCMP_UNE] = {
+      {RTLIB::FCMP3_PRED_UNE_F64, CmpInst::ICMP_NE}};
   FCmp64Libcalls[CmpInst::FCMP_UNO] = {{RTLIB::UO_F64, CmpInst::ICMP_NE}};
-  FCmp64Libcalls[CmpInst::FCMP_ONE] = {{RTLIB::OGT_F64, CmpInst::ICMP_SGT},
-                                       {RTLIB::OLT_F64, CmpInst::ICMP_SLT}};
-  FCmp64Libcalls[CmpInst::FCMP_UEQ] = {{RTLIB::OEQ_F64, CmpInst::ICMP_EQ},
-                                       {RTLIB::UO_F64, CmpInst::ICMP_NE}};
+  FCmp64Libcalls[CmpInst::FCMP_ONE] = {
+      {RTLIB::FCMP3_PRED_OGT_F64, CmpInst::ICMP_SGT},
+      {RTLIB::FCMP3_PRED_OLT_F64, CmpInst::ICMP_SLT}};
+  FCmp64Libcalls[CmpInst::FCMP_UEQ] = {
+      {RTLIB::FCMP3_PRED_OEQ_F64, CmpInst::ICMP_EQ},
+      {RTLIB::UO_F64, CmpInst::ICMP_NE}};
 }
 
 ARMLegalizerInfo::FCmpLibcallsList
@@ -365,10 +392,10 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     StructType *RetTy = StructType::get(Ctx, {ArgTy, ArgTy}, /* Packed */ true);
     Register RetRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
                           OriginalResult};
-    auto Status = createLibcall(MIRBuilder, Libcall, {RetRegs, RetTy, 0},
-                                {{MI.getOperand(1).getReg(), ArgTy, 0},
-                                 {MI.getOperand(2).getReg(), ArgTy, 0}},
-                                LocObserver, &MI);
+    auto Status = Helper.createLibcall(Libcall, {RetRegs, RetTy, 0},
+                                       {{MI.getOperand(1).getReg(), ArgTy, 0},
+                                        {MI.getOperand(2).getReg(), ArgTy, 0}},
+                                       LocObserver, &MI);
     if (Status != LegalizerHelper::Legalized)
       return false;
     break;
@@ -401,11 +428,11 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     SmallVector<Register, 2> Results;
     for (auto Libcall : Libcalls) {
       auto LibcallResult = MRI.createGenericVirtualRegister(LLT::scalar(32));
-      auto Status = createLibcall(MIRBuilder, Libcall.LibcallID,
-                                  {LibcallResult, RetTy, 0},
-                                  {{MI.getOperand(2).getReg(), ArgTy, 0},
-                                   {MI.getOperand(3).getReg(), ArgTy, 0}},
-                                  LocObserver, &MI);
+      auto Status =
+          Helper.createLibcall(Libcall.LibcallID, {LibcallResult, RetTy, 0},
+                               {{MI.getOperand(2).getReg(), ArgTy, 0},
+                                {MI.getOperand(3).getReg(), ArgTy, 0}},
+                               LocObserver, &MI);
 
       if (Status != LegalizerHelper::Legalized)
         return false;

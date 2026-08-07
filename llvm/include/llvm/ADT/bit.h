@@ -104,7 +104,9 @@ template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
     return V;
   } else if constexpr (sizeof(T) == 2) {
     uint16_t UV = V;
-#if defined(_MSC_VER) && !defined(_DEBUG)
+#if __has_builtin(__builtin_bswap16)
+    return __builtin_bswap16(UV);
+#elif defined(_MSC_VER) && !defined(_DEBUG)
     // The DLL version of the runtime lacks these functions (bug!?), but in a
     // release build they're replaced with BSWAP instructions anyway.
     return _byteswap_ushort(UV);
@@ -148,8 +150,53 @@ template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
   return (Value != 0) && ((Value & (Value - 1)) == 0);
 }
 
+/// Count the number of set bits in a value.
+/// Ex. popcount(0xF000F000) = 8
+/// Returns 0 if Value is zero.
+template <typename T> [[nodiscard]] constexpr int popcount(T Value) noexcept {
+  static_assert(std::is_unsigned_v<T>, "T must be an unsigned integer type");
+  static_assert(sizeof(T) <= 8, "T must be 8 bytes or less");
+
+  if constexpr (sizeof(T) <= 4) {
+#if defined(__GNUC__)
+    return (int)__builtin_popcount(Value);
+#else
+    uint32_t V = Value;
+    V = V - ((V >> 1) & 0x55555555);
+    V = (V & 0x33333333) + ((V >> 2) & 0x33333333);
+    return int(((V + (V >> 4) & 0xF0F0F0F) * 0x1010101) >> 24);
+#endif
+  } else {
+#if defined(__GNUC__)
+    return (int)__builtin_popcountll(Value);
+#else
+    uint64_t V = Value;
+    V = V - ((V >> 1) & 0x5555555555555555ULL);
+    V = (V & 0x3333333333333333ULL) + ((V >> 2) & 0x3333333333333333ULL);
+    V = (V + (V >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
+    return int((uint64_t)(V * 0x0101010101010101ULL) >> 56);
+#endif
+  }
+}
+
 /// Count number of 0's from the least significant bit to the most
-///   stopping at the first 1.
+/// stopping at the first 1.
+///
+/// A constexpr version of countr_zero.
+///
+/// Only unsigned integral types are allowed.
+///
+/// Returns std::numeric_limits<T>::digits on an input of 0.
+template <typename T> [[nodiscard]] constexpr int countr_zero_constexpr(T Val) {
+  static_assert(std::is_unsigned_v<T>,
+                "Only unsigned integral types are allowed.");
+  // "(Val & -Val) - 1" generates a mask with all bits set up to (but not
+  // including) the least significant set bit of Val.
+  return llvm::popcount(static_cast<std::make_unsigned_t<T>>((Val & -Val) - 1));
+}
+
+/// Count number of 0's from the least significant bit to the most
+/// stopping at the first 1.
 ///
 /// Only unsigned integral types are allowed.
 ///
@@ -161,7 +208,7 @@ template <typename T> [[nodiscard]] int countr_zero(T Val) {
     return std::numeric_limits<T>::digits;
 
   // Use the intrinsic if available.
-  if constexpr (sizeof(T) == 4) {
+  if constexpr (sizeof(T) <= 4) {
 #if __has_builtin(__builtin_ctz) || defined(__GNUC__)
     return __builtin_ctz(Val);
 #elif defined(_MSC_VER)
@@ -179,17 +226,30 @@ template <typename T> [[nodiscard]] int countr_zero(T Val) {
 #endif
   }
 
-  // Fall back to the bisection method.
+  return countr_zero_constexpr(Val);
+}
+
+/// Count number of 0's from the most significant bit to the least
+///   stopping at the first 1.
+///
+/// A constexpr version of countl_zero.
+///
+/// Only unsigned integral types are allowed.
+///
+/// Returns std::numeric_limits<T>::digits on an input of 0.
+template <typename T> [[nodiscard]] constexpr int countl_zero_constexpr(T Val) {
+  static_assert(std::is_unsigned_v<T>,
+                "Only unsigned integral types are allowed.");
+  if (!Val)
+    return std::numeric_limits<T>::digits;
+
   unsigned ZeroBits = 0;
-  T Shift = std::numeric_limits<T>::digits >> 1;
-  T Mask = std::numeric_limits<T>::max() >> Shift;
-  while (Shift) {
-    if ((Val & Mask) == 0) {
-      Val >>= Shift;
+  for (T Shift = std::numeric_limits<T>::digits >> 1; Shift; Shift >>= 1) {
+    T Tmp = Val >> Shift;
+    if (Tmp)
+      Val = Tmp;
+    else
       ZeroBits |= Shift;
-    }
-    Shift >>= 1;
-    Mask >>= Shift;
   }
   return ZeroBits;
 }
@@ -203,17 +263,21 @@ template <typename T> [[nodiscard]] int countr_zero(T Val) {
 template <typename T> [[nodiscard]] int countl_zero(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
+
+  constexpr int BitWidth = std::numeric_limits<T>::digits;
+
   if (!Val)
-    return std::numeric_limits<T>::digits;
+    return BitWidth;
 
   // Use the intrinsic if available.
-  if constexpr (sizeof(T) == 4) {
+  if constexpr (sizeof(T) <= 4) {
 #if __has_builtin(__builtin_clz) || defined(__GNUC__)
-    return __builtin_clz(Val);
+    constexpr int Padding = std::numeric_limits<uint32_t>::digits - BitWidth;
+    return __builtin_clz(Val) - Padding;
 #elif defined(_MSC_VER)
     unsigned long Index;
     _BitScanReverse(&Index, Val);
-    return Index ^ 31;
+    return static_cast<int>((BitWidth - 1) - Index);
 #endif
   } else if constexpr (sizeof(T) == 8) {
 #if __has_builtin(__builtin_clzll) || defined(__GNUC__)
@@ -225,16 +289,7 @@ template <typename T> [[nodiscard]] int countl_zero(T Val) {
 #endif
   }
 
-  // Fall back to the bisection method.
-  unsigned ZeroBits = 0;
-  for (T Shift = std::numeric_limits<T>::digits >> 1; Shift; Shift >>= 1) {
-    T Tmp = Val >> Shift;
-    if (Tmp)
-      Val = Tmp;
-    else
-      ZeroBits |= Shift;
-  }
-  return ZeroBits;
+  return countl_zero_constexpr(Val);
 }
 
 /// Count the number of ones from the most significant bit to the first
@@ -273,6 +328,18 @@ template <typename T> [[nodiscard]] int bit_width(T Value) {
   return std::numeric_limits<T>::digits - llvm::countl_zero(Value);
 }
 
+/// Returns the number of bits needed to represent Value if Value is nonzero.
+/// Returns 0 otherwise.
+///
+/// A constexpr version of bit_width.
+///
+/// Ex. bit_width_constexpr(5) == 3.
+template <typename T> [[nodiscard]] constexpr int bit_width_constexpr(T Value) {
+  static_assert(std::is_unsigned_v<T>,
+                "Only unsigned integral types are allowed.");
+  return std::numeric_limits<T>::digits - llvm::countl_zero_constexpr(Value);
+}
+
 /// Returns the largest integral power of two no greater than Value if Value is
 /// nonzero.  Returns 0 otherwise.
 ///
@@ -300,62 +367,43 @@ template <typename T> [[nodiscard]] T bit_ceil(T Value) {
   return T(1) << llvm::bit_width<T>(Value - 1u);
 }
 
-/// Count the number of set bits in a value.
-/// Ex. popcount(0xF000F000) = 8
-/// Returns 0 if the word is zero.
-template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-[[nodiscard]] inline int popcount(T Value) noexcept {
-  if constexpr (sizeof(T) <= 4) {
-#if defined(__GNUC__)
-    return (int)__builtin_popcount(Value);
-#else
-    uint32_t v = Value;
-    v = v - ((v >> 1) & 0x55555555);
-    v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
-    return int(((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24);
-#endif
-  } else if constexpr (sizeof(T) <= 8) {
-#if defined(__GNUC__)
-    return (int)__builtin_popcountll(Value);
-#else
-    uint64_t v = Value;
-    v = v - ((v >> 1) & 0x5555555555555555ULL);
-    v = (v & 0x3333333333333333ULL) + ((v >> 2) & 0x3333333333333333ULL);
-    v = (v + (v >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
-    return int((uint64_t)(v * 0x0101010101010101ULL) >> 56);
-#endif
-  } else {
-    static_assert(sizeof(T) == 0, "T must be 8 bytes or less");
-  }
+/// Returns the smallest integral power of two no smaller than Value if Value is
+/// nonzero.  Returns 1 otherwise.
+///
+/// Ex. bit_ceil(5) == 8.
+///
+/// The return value is undefined if the input is larger than the largest power
+/// of two representable in T.
+template <typename T> [[nodiscard]] constexpr T bit_ceil_constexpr(T Value) {
+  static_assert(std::is_unsigned_v<T>,
+                "Only unsigned integral types are allowed.");
+  if (Value < 2)
+    return 1;
+  return T(1) << llvm::bit_width_constexpr<T>(Value - 1u);
 }
-
-// Forward-declare rotr so that rotl can use it.
-template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-[[nodiscard]] constexpr T rotr(T V, int R);
 
 template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 [[nodiscard]] constexpr T rotl(T V, int R) {
-  unsigned N = std::numeric_limits<T>::digits;
+  constexpr unsigned N = std::numeric_limits<T>::digits;
 
-  R = R % N;
-  if (!R)
+  static_assert(has_single_bit(N), "& (N - 1) is only valid for powers of two");
+  R = R & (N - 1);
+
+  if (R == 0)
     return V;
-
-  if (R < 0)
-    return llvm::rotr(V, -R);
 
   return (V << R) | (V >> (N - R));
 }
 
-template <typename T, typename> [[nodiscard]] constexpr T rotr(T V, int R) {
-  unsigned N = std::numeric_limits<T>::digits;
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] constexpr T rotr(T V, int R) {
+  constexpr unsigned N = std::numeric_limits<T>::digits;
 
-  R = R % N;
-  if (!R)
+  static_assert(has_single_bit(N), "& (N - 1) is only valid for powers of two");
+  R = R & (N - 1);
+
+  if (R == 0)
     return V;
-
-  if (R < 0)
-    return llvm::rotl(V, -R);
 
   return (V >> R) | (V << (N - R));
 }

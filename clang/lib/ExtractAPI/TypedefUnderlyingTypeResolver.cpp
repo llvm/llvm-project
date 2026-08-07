@@ -13,7 +13,7 @@
 
 #include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
 #include "clang/Basic/Module.h"
-#include "clang/Index/USRGeneration.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 
 using namespace clang;
 using namespace extractapi;
@@ -26,7 +26,7 @@ TypedefUnderlyingTypeResolver::getUnderlyingTypeDecl(QualType Type) const {
   if (TypedefTy)
     TypeDecl = TypedefTy->getDecl();
   if (const TagType *TagTy = Type->getAs<TagType>()) {
-    TypeDecl = TagTy->getOriginalDecl();
+    TypeDecl = TagTy->getDecl();
   } else if (const ObjCInterfaceType *ObjCITy =
                  Type->getAs<ObjCInterfaceType>()) {
     TypeDecl = ObjCITy->getDecl();

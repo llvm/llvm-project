@@ -175,7 +175,7 @@ entry:
 ; ARM64:      .globl __emutls_v.s1
 ; ARM64-LABEL: __emutls_v.s1:
 ; ARM64-NEXT: .xword 2
-; ARM64-NEXT: .xword 2
+; ARM64-NEXT: .xword 4
 ; ARM64-NEXT: .xword 0
 ; ARM64-NEXT: .xword __emutls_t.s1
 
@@ -186,7 +186,7 @@ entry:
 ; ARM64:      .data{{$}}
 ; ARM64-LABEL: __emutls_v.b1:
 ; ARM64-NEXT: .xword 1
-; ARM64-NEXT: .xword 1
+; ARM64-NEXT: .xword 4
 ; ARM64-NEXT: .xword 0
 ; ARM64-NEXT: .xword 0
 

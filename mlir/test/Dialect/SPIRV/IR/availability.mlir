@@ -26,7 +26,7 @@ func.func @subgroup_ballot(%predicate: i1) -> vector<4xi32> {
   // CHECK: max version: v1.6
   // CHECK: extensions: [ ]
   // CHECK: capabilities: [ [GroupNonUniformBallot] ]
-  %0 = spirv.GroupNonUniformBallot <Workgroup> %predicate : vector<4xi32>
+  %0 = spirv.GroupNonUniformBallot <Subgroup> %predicate : vector<4xi32>
   return %0: vector<4xi32>
 }
 
@@ -305,4 +305,21 @@ func.func @constant_composite_replicate() -> () {
   // CHECK: capabilities: [ [ReplicatedCompositesEXT] ]
   %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : vector<2xi32>
   spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// GraphARM ops
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: graph_arm
+spirv.ARM.Graph @graph_arm(%arg0: !spirv.arm.tensor<1x16x16x16xi8>) -> !spirv.arm.tensor<1x16x16x16xi8> {
+  // CHECK: spirv.ARM.GraphOutputs min version: v1.0
+  // CHECK: spirv.ARM.GraphOutputs max version: v1.6
+  // CHECK: spirv.ARM.GraphOutputs extensions: [ [SPV_ARM_graph, SPV_ARM_tensors] ]
+  // CHECK: spirv.ARM.GraphOutputs capabilities: [ [GraphARM] ]
+  spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<1x16x16x16xi8>
+// CHECK: spirv.ARM.Graph min version: v1.0
+// CHECK: spirv.ARM.Graph max version: v1.6
+// CHECK: spirv.ARM.Graph extensions: [ [SPV_ARM_graph, SPV_ARM_tensors] ]
+// CHECK: spirv.ARM.Graph capabilities: [ [GraphARM] ]
 }

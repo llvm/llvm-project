@@ -70,7 +70,7 @@ TEST(MemoryMapping, LoadedModuleArchAndUUID) {
         EXPECT_EQ(arch, kModuleArchI386);
       } else if (SANITIZER_WORDSIZE == 64) {
         EXPECT_TRUE(arch == kModuleArchX86_64 || arch == kModuleArchX86_64H ||
-                    arch == kModuleArchARM64);
+                    arch == kModuleArchARM64 || arch == kModuleArchARM64E);
       }
       const u8 *uuid = modules[i].uuid();
       u8 null_uuid[kModuleUUIDSize] = {0};
@@ -90,6 +90,8 @@ Size:                 12 kB
 Rss:                  12 kB
 )";
 
+#    if !SANITIZER_NETBSD
+// Test fails to link with NetBSD 10.1 /usr/bin/ld.
 TEST(MemoryMapping, ParseUnixMemoryProfile) {
   struct entry {
     uptr p;
@@ -132,6 +134,7 @@ TEST(MemoryMapping, ParseUnixMemoryProfileTruncated) {
   }
   UnmapOrDie(mem, 2 * page);
 }
+#  endif
 #  endif
 
 }  // namespace __sanitizer

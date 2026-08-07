@@ -2,9 +2,6 @@
 How To Validate a New Release
 =============================
 
-.. contents::
-   :local:
-   :depth: 1
 
 Introduction
 ============
@@ -111,8 +108,6 @@ TODO
 Test Suite
 ==========
 
-.. contents::
-   :local:
 
 Follow the `LNT Quick Start Guide
 <https://llvm.org/docs/lnt/quickstart.html>`__ link on how to set-up the
@@ -143,15 +138,13 @@ than bad code generation.
 If the errors are in LLVM itself, please report every single regression found
 as blocker, and all the other bugs as important, but not necessarily blocking
 the release to proceed. They can be set as "known failures" and to be
-fix on a future date.
+fixed on a future date.
 
 .. _pre-release-process:
 
 Pre-Release Process
 ===================
 
-.. contents::
-   :local:
 
 When the release process is announced on the mailing list, you should prepare
 for the testing, by applying the same testing you'll do on the release
@@ -180,8 +173,6 @@ when reducing the error for bug report purposes).
 Release Process
 ===============
 
-.. contents::
-   :local:
 
 When the Release Manager sends you the release candidate, download all sources,
 unzip on the same directory (there will be sym-links from the appropriate places
@@ -198,7 +189,7 @@ You should:
 * Compare the results, report all errors on Bugzilla and publish the binary blob
   where the release manager can grab it.
 
-Once the release manages announces that the latest candidate is the good one,
+Once the release manager announces that the latest candidate is the good one,
 you have to pack the ``Release`` (no Asserts) install directory on ``Phase3``
 and that will be the official binary.
 
@@ -214,8 +205,6 @@ and that will be the official binary.
 Bug Reporting Process
 =====================
 
-.. contents::
-   :local:
 
 If you found regressions or failures when comparing a release candidate with the
 previous release, follow the rules below:

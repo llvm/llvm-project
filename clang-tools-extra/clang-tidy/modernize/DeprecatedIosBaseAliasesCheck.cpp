@@ -1,4 +1,4 @@
-//===--- DeprecatedIosBaseAliasesCheck.cpp - clang-tidy--------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,22 +28,23 @@ static std::optional<const char *> getReplacementType(StringRef Type) {
 }
 
 void DeprecatedIosBaseAliasesCheck::registerMatchers(MatchFinder *Finder) {
-  auto IoStateDecl = typedefDecl(hasAnyName(DeprecatedTypes)).bind("TypeDecl");
-  auto IoStateType = typedefType(hasDeclaration(IoStateDecl));
+  const auto IoStateDecl =
+      typedefDecl(hasAnyName(DeprecatedTypes)).bind("TypeDecl");
+  const auto IoStateType = typedefType(hasDeclaration(IoStateDecl));
 
   Finder->addMatcher(typeLoc(loc(IoStateType)).bind("TypeLoc"), this);
 }
 
 void DeprecatedIosBaseAliasesCheck::check(
     const MatchFinder::MatchResult &Result) {
-  SourceManager &SM = *Result.SourceManager;
+  const SourceManager &SM = *Result.SourceManager;
 
   const auto *Typedef = Result.Nodes.getNodeAs<TypedefDecl>("TypeDecl");
-  StringRef TypeName = Typedef->getName();
+  const StringRef TypeName = Typedef->getName();
   auto Replacement = getReplacementType(TypeName);
 
   TypeLoc TL = *Result.Nodes.getNodeAs<TypeLoc>("TypeLoc");
-  if (auto QTL = TL.getAs<QualifiedTypeLoc>())
+  if (const auto QTL = TL.getAs<QualifiedTypeLoc>())
     TL = QTL.getUnqualifiedLoc();
 
   SourceLocation IoStateLoc = TL.castAs<TypedefTypeLoc>().getNameLoc();
@@ -55,19 +56,22 @@ void DeprecatedIosBaseAliasesCheck::check(
     Fix = false;
   }
 
-  SourceLocation EndLoc = IoStateLoc.getLocWithOffset(TypeName.size() - 1);
+  const SourceLocation EndLoc =
+      IoStateLoc.getLocWithOffset(TypeName.size() - 1);
 
   if (Replacement) {
     const char *FixName = *Replacement;
-    auto Builder = diag(IoStateLoc, "'std::ios_base::%0' is deprecated; use "
-                                    "'std::ios_base::%1' instead")
-                   << TypeName << FixName;
+    const auto Builder =
+        diag(IoStateLoc, "'std::ios_base::%0' is deprecated; use "
+                         "'std::ios_base::%1' instead")
+        << TypeName << FixName;
 
     if (Fix)
       Builder << FixItHint::CreateReplacement(SourceRange(IoStateLoc, EndLoc),
                                               FixName);
-  } else
+  } else {
     diag(IoStateLoc, "'std::ios_base::%0' is deprecated") << TypeName;
+  }
 }
 
 } // namespace clang::tidy::modernize

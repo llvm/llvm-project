@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_TYPES_PTHREAD_BARRIERATTR_T_H
 #define LLVM_LIBC_TYPES_PTHREAD_BARRIERATTR_T_H
 
+#include <stdbool.h>
+
 typedef struct {
   bool pshared;
 } pthread_barrierattr_t;

@@ -29,6 +29,26 @@ llvm.func @passthrough_wrong_type() attributes {
 
 // -----
 
+// expected-error @below{{LLVM attribute 'readonly' does not expect a value}}
+llvm.mlir.global external @target_specific_attrs_unexpected_value() {target_specific_attrs = [["readonly", "42"]]} : f64
+
+// -----
+
+// expected-error @below{{LLVM attribute 'alignstack' expects a value}}
+llvm.mlir.global external @target_specific_attrs_expected_value() {target_specific_attrs = ["alignstack"]} : f64
+
+// -----
+
+// expected-error @below{{expected 'target_specific_attrs' to contain string or array attributes}}
+llvm.mlir.global external @target_specific_attrs_wrong_type() {target_specific_attrs = [42]} : f64
+
+// -----
+
+// expected-error @below{{expected arrays within 'target_specific_attrs' to contain two strings}}
+llvm.mlir.global external @target_specific_attrs_wrong_type() {target_specific_attrs = [[ 42, 42 ]]} : f64
+
+// -----
+
 llvm.func @unary_float_intr_wrong_type(%arg0 : i32) -> i32 {
   // expected-error @below{{op operand #0 must be floating point LLVM type or LLVM dialect-compatible vector of floating point LLVM type}}
   %0 = "llvm.intr.exp"(%arg0) : (i32) -> i32
@@ -281,6 +301,23 @@ llvm.func @foo() {
 module attributes {} {
   // expected-error @below{{expected a module flag attribute}}
   llvm.module_flags [4 : i32]
+}
+
+// -----
+
+// expected-error @below{{failed to convert named metadata 'bad': expected integer attribute in metadata constant}}
+// expected-error @below{{LLVM Translation failed for operation: llvm.named_metadata}}
+llvm.named_metadata "bad" [
+  #llvm.md_node<#llvm.md_const<"not an integer">>
+]
+
+// -----
+
+llvm.func @bad_metadata_as_value() {
+  // expected-error @below{{llvm.mlir.metadata_as_value: cannot lower metadata attribute: expected integer attribute in metadata constant}}
+  // expected-error @below{{LLVM Translation failed for operation: llvm.mlir.metadata_as_value}}
+  %0 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_const<"not an integer">>
+  llvm.return
 }
 
 // -----

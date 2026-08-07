@@ -11,6 +11,7 @@
 // ensure that __uninitialized_allocator_copy calls the proper construct and destruct functions
 
 #include <algorithm>
+#include <cassert>
 #include <iterator>
 #include <memory>
 
@@ -64,4 +65,6 @@ int main(int, char**) {
 
   assert(constructed_count == 0);
   assert(max_constructed_count == 14);
+
+  return 0;
 }

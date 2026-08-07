@@ -48,11 +48,13 @@ private:
 
   struct AllocationSite {
     llvm::SmallVector<Allocation> Allocations;
+    unsigned NumAllocs = 0;
     Form AllocForm;
 
     AllocationSite(std::unique_ptr<std::byte[]> Memory, Form AllocForm)
         : AllocForm(AllocForm) {
       Allocations.push_back({std::move(Memory)});
+      ++NumAllocs;
     }
 
     size_t size() const { return Allocations.size(); }
@@ -78,8 +80,7 @@ public:
 
   /// Deallocate the given source+block combination.
   /// Returns \c true if anything has been deallocatd, \c false otherwise.
-  bool deallocate(const Expr *Source, const Block *BlockToDelete,
-                  InterpState &S);
+  bool deallocate(const Expr *Source, const Block *BlockToDelete);
 
   /// Checks whether the allocation done at the given source is an array
   /// allocation.

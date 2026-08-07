@@ -118,18 +118,18 @@ declare <2 x float> @llvm.matrix.transpose(<2 x float>, i32, i32)
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = distinct !DISubprogram(name: "load_fn", scope: !1, file: !1, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
 !17 = !DIFile(filename: "toplevel.c", directory: "/test")
-!16 = distinct !DISubprogram(name: "toplevel", scope: !1, file: !17, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!16 = distinct !DISubprogram(name: "toplevel", scope: !1, file: !17, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !18 = !DIFile(filename: "assign.h", directory: "/test")
-!19 = distinct !DISubprogram(name: "assign", scope: !1, file: !18, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!19 = distinct !DISubprogram(name: "assign", scope: !1, file: !18, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 
 !20 = !DIFile(filename: "add.h", directory: "/test")
-!21 = distinct !DISubprogram(name: "add_fn", scope: !1, file: !20, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!21 = distinct !DISubprogram(name: "add_fn", scope: !1, file: !20, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 
 !22 = !DIFile(filename: "store.h", directory: "/test")
-!23 = distinct !DISubprogram(name: "store_fn", scope: !1, file: !22, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!23 = distinct !DISubprogram(name: "store_fn", scope: !1, file: !22, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 
 !24 = !DIFile(filename: "transpose.h", directory: "/test")
-!25 = distinct !DISubprogram(name: "transpose", scope: !1, file: !24, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !12)
+!25 = distinct !DISubprogram(name: "transpose", scope: !1, file: !24, line: 1, type: !6, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 
 
 !6 = !DISubroutineType(types: !7)

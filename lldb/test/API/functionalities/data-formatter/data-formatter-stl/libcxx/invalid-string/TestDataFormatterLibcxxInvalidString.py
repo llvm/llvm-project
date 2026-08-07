@@ -20,7 +20,7 @@ class LibcxxInvalidStringDataFormatterTestCase(TestBase):
         frame = thread.frames[0]
 
         if not self.process().GetAddressByteSize() == 8:
-            self.skip()
+            self.skipTest("The test requires a 64-bit process")
 
         # The test assumes that std::string is in its cap-size-data layout.
         self.expect(

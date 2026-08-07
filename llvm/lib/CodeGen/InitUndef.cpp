@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -232,7 +233,7 @@ bool InitUndef::processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
       MachineOperand &UseMO = MI.getOperand(UseOpIdx);
       if (UseMO.getReg() == MCRegister::NoRegister) {
         const TargetRegisterClass *RC =
-            TII->getRegClass(MI.getDesc(), UseOpIdx, TRI, MF);
+            TII->getRegClass(MI.getDesc(), UseOpIdx);
         Register NewDest = MRI->createVirtualRegister(RC);
         // We don't have a way to update dead lanes, so keep track of the
         // new register so that we avoid querying it later.

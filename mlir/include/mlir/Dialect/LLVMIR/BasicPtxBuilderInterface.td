@@ -105,7 +105,20 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
         /*methodBody=*/"",
         /*defaultImplementation=*/"return true;"
       >,
-    
+    InterfaceMethod<
+        /*desc=*/[{
+          Return whether a memory clobber ("~{memory}") is appended to the
+          constraints of the generated inline assembly. It informs LLVM that
+          the PTX may read or write memory beyond its listed operands, so
+          optimizations must not reorder memory accesses across it.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"hasMemoryClobber",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return false;"
+      >,
+
     InterfaceMethod<
         /*desc=*/[{Helper function to generate i32 constant value.}],
         /*retType=*/"::mlir::Value",
@@ -124,19 +137,21 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
             following this order:
              1) Adds results 
              2) Adds operands 
-             3) Adds attributes             
+             3) Adds attributes
+             Returns true if the OP is going to do register mapping itself
           }],
-         /*retType=*/"void",
+         /*retType=*/"bool",
          /*methodName=*/"getAsmValues",
          /*args=*/(ins "::mlir::RewriterBase &":$rewriter, 
-         "llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>&" : $asmValues),
+         "llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>&" : $asmValues         
+         ),
          /*methodBody=*/"",
          /*defaultImpl=*/ [{         
            mlir::Operation* op = $_op;
            
            // Step 1. Add results
-           for (auto val : op->getResults()) 
-            asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Write});
+            for (auto val : op->getResults()) 
+              asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Write});
 
            // Step 2. Add operands
            for (auto val : op->getOperands()) 
@@ -149,6 +164,7 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
              asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Read});
              }
            }
+           return false; // No manual mapping needed
          }]
        >
   ];

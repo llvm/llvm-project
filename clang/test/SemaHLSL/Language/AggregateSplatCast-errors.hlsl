@@ -13,16 +13,10 @@ struct R {
   };
 };
 
-// casting types which contain bitfields is not yet supported.
-export void cantCast() {
-  S s = (S)1;
-  // expected-error@-1 {{no matching conversion for C-style cast from 'int' to 'S'}}
-}
-
 // Can't cast a union
 export void cantCast2() {
   R r = (R)1;
-  // expected-error@-1 {{no matching conversion for C-style cast from 'int' to 'R'}}
+  // expected-error@-1 {{C-style cast from 'int' to 'R' is not allowed}}
 }
 
 RWBuffer<float4> Buf;
@@ -45,5 +39,5 @@ struct X {
 
 export void cantCast5() {
   X x = (X)1;
-  // expected-error@-1 {{no matching conversion for C-style cast from 'int' to 'X'}}
+  // expected-error@-1 {{C-style cast from 'int' to 'X' is not allowed}}
 }

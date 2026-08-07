@@ -113,7 +113,6 @@ MCSymbolWasm *WebAssembly::getOrCreateFunctionTableSymbol(
     Sym = static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(Name));
     Sym->setFunctionTable(is64);
     // The default function table is synthesized by the linker.
-    Sym->setUndefined();
   }
   // MVP object files can't have symtab entries for tables.
   if (!(Subtarget && Subtarget->hasCallIndirectOverlong()))
@@ -194,4 +193,27 @@ bool WebAssembly::canLowerMultivalueReturn(
 bool WebAssembly::canLowerReturn(size_t ResultSize,
                                  const WebAssemblySubtarget *Subtarget) {
   return ResultSize <= 1 || canLowerMultivalueReturn(Subtarget);
+}
+
+MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
+                                       const WebAssemblySubtarget *Subtarget,
+                                       SDValue Chain) {
+  MVT PtrVT = Subtarget->hasAddr64() ? MVT::i64 : MVT::i32;
+
+  unsigned Opcode;
+  const char *SymName;
+  if (Subtarget->hasLibcallThreadContext()) {
+    Opcode = WebAssembly::CALL;
+    SymName = "__wasm_get_tls_base";
+  } else {
+    Opcode = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
+                               : WebAssembly::GLOBAL_GET_I32;
+    SymName = "__tls_base";
+  }
+
+  SDValue Sym = DAG.getTargetExternalSymbol(SymName, PtrVT);
+
+  if (Chain.getNode())
+    return DAG.getMachineNode(Opcode, DL, {PtrVT, MVT::Other}, {Sym, Chain});
+  return DAG.getMachineNode(Opcode, DL, PtrVT, Sym);
 }

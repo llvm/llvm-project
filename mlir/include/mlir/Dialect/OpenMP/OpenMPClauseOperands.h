@@ -40,7 +40,7 @@ struct DeviceTypeClauseOps {
 /// Clauses that correspond to operations other than omp.target, but might have
 /// to be evaluated outside of a parent target region.
 using HostEvaluatedOperands =
-    detail::Clauses<LoopRelatedClauseOps, NumTeamsClauseOps,
+    detail::Clauses<CollapseClauseOps, LoopRelatedClauseOps, NumTeamsClauseOps,
                     NumThreadsClauseOps, ThreadLimitClauseOps>;
 
 // TODO: Add `indirect` clause.
@@ -50,6 +50,12 @@ using DeclareTargetOperands = detail::Clauses<DeviceTypeClauseOps>;
 /// same clauses, so we give the structure to be shared by all of them a
 /// representative name.
 using TargetEnterExitUpdateDataOperands = TargetEnterDataOperands;
+
+/// Extended TargetOperands with kernel_type attribute.
+struct TargetExtOperands : public TargetOperands {
+  /// Kernel execution mode for the target region.
+  TargetExecModeAttr kernelType;
+};
 
 } // namespace omp
 } // namespace mlir

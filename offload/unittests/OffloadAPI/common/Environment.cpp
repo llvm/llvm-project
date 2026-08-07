@@ -11,7 +11,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <OffloadAPI.h>
+#include <cstdlib>
 #include <fstream>
+#include <optional>
 
 using namespace llvm;
 
@@ -19,8 +21,22 @@ using namespace llvm;
 // test, while having sensible lifetime for the platform environment
 #ifndef DISABLE_WRAPPER
 struct OffloadInitWrapper {
-  OffloadInitWrapper() { olInit(); }
-  ~OffloadInitWrapper() { olShutDown(); }
+  OffloadInitWrapper() {
+    if (ol_result_t Res = olInit(nullptr)) {
+      errs() << "olInit failed: "
+             << (Res->Details ? Res->Details : "(no details)") << " (code "
+             << Res->Code << ")\n";
+      std::abort();
+    }
+  }
+  ~OffloadInitWrapper() {
+    if (ol_result_t Res = olShutDown()) {
+      errs() << "olShutDown failed: "
+             << (Res->Details ? Res->Details : "(no details)") << " (code "
+             << Res->Code << ")\n";
+      std::abort();
+    }
+  }
 };
 static OffloadInitWrapper Wrapper{};
 #endif
@@ -41,9 +57,9 @@ raw_ostream &operator<<(raw_ostream &Out,
 
 raw_ostream &operator<<(raw_ostream &Out, const ol_device_handle_t &Device) {
   size_t Size;
-  olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NAME, &Size);
+  olGetDeviceInfoSize(Device, OL_DEVICE_INFO_PRODUCT_NAME, &Size);
   std::vector<char> Name(Size);
-  olGetDeviceInfo(Device, OL_DEVICE_INFO_NAME, Size, Name.data());
+  olGetDeviceInfo(Device, OL_DEVICE_INFO_PRODUCT_NAME, Size, Name.data());
   Out << Name.data();
   return Out;
 }
@@ -97,11 +113,11 @@ const std::vector<TestEnvironment::Device> &TestEnvironment::getDevices() {
             S << Platform;
             if (PlatformName == SelectedPlatform &&
                 Backend != OL_PLATFORM_BACKEND_HOST) {
+              auto *OutDevices = static_cast<decltype(Devices) *>(Data);
               std::string Name;
               raw_string_ostream NameStr(Name);
-              NameStr << PlatformName << "_" << D;
-              static_cast<std::vector<TestEnvironment::Device> *>(Data)
-                  ->push_back({D, Name});
+              NameStr << PlatformName << "_" << D << OutDevices->size();
+              OutDevices->push_back({D, Name});
             }
             return true;
           },
@@ -117,17 +133,20 @@ const std::vector<TestEnvironment::Device> &TestEnvironment::getDevices() {
             olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
                               sizeof(Backend), &Backend);
             if (Backend != OL_PLATFORM_BACKEND_HOST) {
+              auto *OutDevices = static_cast<decltype(Devices) *>(Data);
               std::string Name;
               raw_string_ostream NameStr(Name);
-              NameStr << Platform << "_" << D;
-              static_cast<std::vector<TestEnvironment::Device> *>(Data)
-                  ->push_back({D, Name});
+              NameStr << Platform << "_" << D << "_" << OutDevices->size();
+              OutDevices->push_back({D, Name});
             }
             return true;
           },
           &Devices);
     }
   }
+
+  if (Devices.size() == 0)
+    errs() << "Warning: No devices found for OffloadAPI tests.\n";
 
   return Devices;
 }
@@ -163,19 +182,24 @@ const std::string DeviceBinsDirectory = DEVICE_CODE_PATH;
 
 bool TestEnvironment::loadDeviceBinary(
     const std::string &BinaryName, ol_device_handle_t Device,
-    std::unique_ptr<MemoryBuffer> &BinaryOut) {
+    std::unique_ptr<MemoryBuffer> &BinaryOut,
+    std::optional<ol_platform_backend_t> OverrideBackend) {
+  ol_platform_backend_t DeviceBackend = OL_PLATFORM_BACKEND_UNKNOWN;
 
-  // Get the platform type
   ol_platform_handle_t Platform;
   olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM, sizeof(Platform), &Platform);
-  ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
-  olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
-                    &Backend);
+  olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(DeviceBackend),
+                    &DeviceBackend);
+
+  ol_platform_backend_t Backend = OverrideBackend.value_or(DeviceBackend);
+
   std::string FileExtension;
   if (Backend == OL_PLATFORM_BACKEND_AMDGPU) {
     FileExtension = ".amdgpu.bin";
   } else if (Backend == OL_PLATFORM_BACKEND_CUDA) {
     FileExtension = ".nvptx64.bin";
+  } else if (Backend == OL_PLATFORM_BACKEND_LEVEL_ZERO) {
+    FileExtension = ".spirv64.bin";
   } else {
     errs() << "Unsupported platform type for a device binary test.\n";
     return false;

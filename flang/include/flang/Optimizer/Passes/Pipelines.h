@@ -31,6 +31,8 @@
 
 namespace fir {
 
+class GlobalOp;
+
 using PassConstructor = std::unique_ptr<mlir::Pass>();
 
 template <typename F, typename OP>
@@ -61,11 +63,25 @@ void addNestedPassConditionally(mlir::PassManager &pm,
 }
 
 template <typename F>
-void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor);
+void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor) {
+  addNestedPassToOps<F, mlir::func::FuncOp, mlir::omp::DeclareMapperOp,
+                     mlir::omp::DeclareReductionOp, mlir::omp::PrivateClauseOp,
+                     fir::GlobalOp>(pm, ctor);
+}
 
 template <typename F>
 void addNestedPassToAllTopLevelOperationsConditionally(
-    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor);
+    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor) {
+  if (!disabled)
+    addNestedPassToAllTopLevelOperations<F>(pm, ctor);
+}
+
+template <typename F>
+void addPassToGPUModuleOperations(mlir::PassManager &pm, F ctor) {
+  mlir::OpPassManager &nestPM = pm.nest<mlir::gpu::GPUModuleOp>();
+  nestPM.addNestedPass<mlir::func::FuncOp>(ctor());
+  nestPM.addNestedPass<mlir::gpu::GPUFuncOp>(ctor());
+}
 
 /// Add MLIR Canonicalizer pass with region simplification disabled.
 /// FIR does not support the promotion of some SSA value to block arguments (or
@@ -81,9 +97,9 @@ void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm);
 void addCfgConversionPass(mlir::PassManager &pm,
                           const MLIRToLLVMPassPipelineConfig &config);
 
-void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel);
-
 void addMemoryAllocationOpt(mlir::PassManager &pm);
+
+void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays);
 
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare);
 
@@ -92,7 +108,8 @@ void addTargetRewritePass(mlir::PassManager &pm);
 mlir::LLVM::DIEmissionKind
 getEmissionKind(llvm::codegenoptions::DebugInfoKind kind);
 
-void addBoxedProcedurePass(mlir::PassManager &pm);
+void addBoxedProcedurePass(mlir::PassManager &pm,
+                           bool enableSafeTrampoline = false);
 
 void addExternalNameConversionPass(mlir::PassManager &pm,
                                    bool appendUnderscore = true);
@@ -100,9 +117,12 @@ void addExternalNameConversionPass(mlir::PassManager &pm,
 void addCompilerGeneratedNamesConversionPass(mlir::PassManager &pm);
 
 void addDebugInfoPass(mlir::PassManager &pm,
-                      llvm::codegenoptions::DebugInfoKind debugLevel,
-                      llvm::OptimizationLevel optLevel,
+                      const MLIRToLLVMPassPipelineConfig &config,
                       llvm::StringRef inputFilename);
+
+/// Create FIRToLLVMPassOptions from pipeline configuration.
+FIRToLLVMPassOptions
+getFIRToLLVMPassOptions(const MLIRToLLVMPassPipelineConfig &config);
 
 void addFIRToLLVMPass(mlir::PassManager &pm,
                       const MLIRToLLVMPassPipelineConfig &config);
@@ -112,6 +132,10 @@ void addLLVMDialectToLLVMPass(mlir::PassManager &pm, llvm::raw_ostream &output);
 /// Use inliner extension point callback to register the default inliner pass.
 void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config);
 
+/// Register the passes used in Flang's MLIR pass pipeline
+/// e.g. --mlir-print-ir-before=<pass> and similar.
+void registerFlangPipelinePasses();
+
 /// Create a pass pipeline for running default optimization passes for
 /// incremental conversion of FIR.
 ///
@@ -119,14 +143,17 @@ void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config);
 void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
                                            MLIRToLLVMPassPipelineConfig &pc);
 
+/// Select which mode to enable OpenMP support in.
+enum class EnableOpenMP { None, Simd, Full };
+
 /// Create a pass pipeline for lowering from HLFIR to FIR
 ///
 /// \param pm - MLIR pass manager that will hold the pipeline definition
-/// \param optLevel - optimization level used for creating FIR optimization
-///   passes pipeline
-void createHLFIRToFIRPassPipeline(
-    mlir::PassManager &pm, bool enableOpenMP,
-    llvm::OptimizationLevel optLevel = defaultOptLevel);
+/// \param enableOpenMP - whether OpenMP lowering is enabled
+/// \param config - pipeline config (OptLevel, fpMaxminBehavior, etc.)
+void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
+                                  EnableOpenMP enableOpenMP,
+                                  const MLIRToLLVMPassPipelineConfig &config);
 
 struct OpenMPFIRPassPipelineOpts {
   /// Whether code is being generated for a target device rather than the host
@@ -153,8 +180,7 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)
 void createDebugPasses(mlir::PassManager &pm,
-                       llvm::codegenoptions::DebugInfoKind debugLevel,
-                       llvm::OptimizationLevel OptLevel,
+                       const MLIRToLLVMPassPipelineConfig &config,
                        llvm::StringRef inputFilename);
 
 void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,

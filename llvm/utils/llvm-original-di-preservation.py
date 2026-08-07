@@ -6,6 +6,7 @@
 from __future__ import print_function
 import argparse
 import os
+import re
 import sys
 from json import loads
 from collections import defaultdict
@@ -21,6 +22,14 @@ class DILocBug:
 
     def key(self):
         return self.action + self.bb_name + self.fn_name + self.instr
+
+    def reduced_key(self, bug_pass):
+        if self.origin is not None:
+            # If we have the origin stacktrace available, we can use it to efficiently deduplicate identical errors. We
+            # just need to remove the pointer values from the string first, so that we can deduplicate across files.
+            origin_no_addr = re.sub(r"0x[0-9a-fA-F]+", "", self.origin)
+            return origin_no_addr
+        return bug_pass + self.instr
 
     def to_dict(self):
         result = {
@@ -42,6 +51,9 @@ class DISPBug:
     def key(self):
         return self.action + self.fn_name
 
+    def reduced_key(self, bug_pass):
+        return bug_pass + self.fn_name
+
     def to_dict(self):
         return {
             "fn_name": self.fn_name,
@@ -57,6 +69,9 @@ class DIVarBug:
 
     def key(self):
         return self.action + self.name + self.fn_name
+
+    def reduced_key(self, bug_pass):
+        return bug_pass + self.name
 
     def to_dict(self):
         return {
@@ -478,7 +493,11 @@ def get_json_chunk(file, start, size):
 # Parse the program arguments.
 def parse_program_args(parser):
     parser.add_argument("file_name", type=str, help="json file to process")
-    parser.add_argument("--reduce", action="store_true", help="create reduced report")
+    parser.add_argument(
+        "--reduce",
+        action="store_true",
+        help="create reduced report by deduplicating bugs within and across files",
+    )
 
     report_type_group = parser.add_mutually_exclusive_group(required=True)
     report_type_group.add_argument(
@@ -523,13 +542,10 @@ def Main():
     di_sp_bugs_summary = OrderedDict()
     di_var_bugs_summary = OrderedDict()
 
-    # Compress similar bugs.
-    # DILocBugs with same pass & instruction name.
-    di_loc_pass_instr_set = set()
-    # DISPBugs with same pass & function name.
-    di_sp_pass_fn_set = set()
-    # DIVarBugs with same pass & variable name.
-    di_var_pass_var_set = set()
+    # If we are using --reduce, use these sets to deduplicate similar bugs within and across files.
+    di_loc_reduced_set = set()
+    di_sp_reduced_set = set()
+    di_var_reduced_set = set()
 
     start_line = 0
     chunk_size = 1000000
@@ -585,9 +601,9 @@ def Main():
                     if not di_loc_bug.key() in di_loc_set:
                         di_loc_set.add(di_loc_bug.key())
                         if opts.reduce:
-                            pass_instr = bugs_pass + instr
-                            if not pass_instr in di_loc_pass_instr_set:
-                                di_loc_pass_instr_set.add(pass_instr)
+                            reduced_key = di_loc_bug.reduced_key(bugs_pass)
+                            if not reduced_key in di_loc_reduced_set:
+                                di_loc_reduced_set.add(reduced_key)
                                 di_loc_bugs.append(di_loc_bug)
                         else:
                             di_loc_bugs.append(di_loc_bug)
@@ -608,9 +624,9 @@ def Main():
                     if not di_sp_bug.key() in di_sp_set:
                         di_sp_set.add(di_sp_bug.key())
                         if opts.reduce:
-                            pass_fn = bugs_pass + name
-                            if not pass_fn in di_sp_pass_fn_set:
-                                di_sp_pass_fn_set.add(pass_fn)
+                            reduced_key = di_sp_bug.reduced_key(bugs_pass)
+                            if not reduced_key in di_sp_reduced_set:
+                                di_sp_reduced_set.add(reduced_key)
                                 di_sp_bugs.append(di_sp_bug)
                         else:
                             di_sp_bugs.append(di_sp_bug)
@@ -632,9 +648,9 @@ def Main():
                     if not di_var_bug.key() in di_var_set:
                         di_var_set.add(di_var_bug.key())
                         if opts.reduce:
-                            pass_var = bugs_pass + name
-                            if not pass_var in di_var_pass_var_set:
-                                di_var_pass_var_set.add(pass_var)
+                            reduced_key = di_var_bug.reduced_key(bugs_pass)
+                            if not reduced_key in di_var_reduced_set:
+                                di_var_reduced_set.add(reduced_key)
                                 di_var_bugs.append(di_var_bug)
                         else:
                             di_var_bugs.append(di_var_bug)

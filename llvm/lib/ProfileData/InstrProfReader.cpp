@@ -607,6 +607,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
 
   CountersDelta = swap(Header.CountersDelta);
   BitmapDelta = swap(Header.BitmapDelta);
+  UniformCountersDelta = swap(Header.UniformCountersDelta);
   NamesDelta = swap(Header.NamesDelta);
   auto NumData = swap(Header.NumData);
   auto PaddingBytesBeforeCounters = swap(Header.PaddingBytesBeforeCounters);
@@ -614,6 +615,9 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto PaddingBytesAfterCounters = swap(Header.PaddingBytesAfterCounters);
   auto NumBitmapBytes = swap(Header.NumBitmapBytes);
   auto PaddingBytesAfterBitmapBytes = swap(Header.PaddingBytesAfterBitmapBytes);
+  auto NumUniformCounters = swap(Header.NumUniformCounters);
+  auto PaddingBytesAfterUniformCounters =
+      swap(Header.PaddingBytesAfterUniformCounters);
   auto NamesSize = swap(Header.NamesSize);
   auto VTableNameSize = swap(Header.VNamesSize);
   auto NumVTables = swap(Header.NumVTables);
@@ -626,14 +630,17 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto VTableSectionSize =
       NumVTables * sizeof(RawInstrProf::VTableProfileData<IntPtrT>);
   auto PaddingBytesAfterVTableProfData = getNumPaddingBytes(VTableSectionSize);
+  auto UniformCountersSectionSize = NumUniformCounters * sizeof(uint64_t);
 
   // Profile data starts after profile header and binary ids if exist.
   ptrdiff_t DataOffset = sizeof(RawInstrProf::Header) + BinaryIdSize;
   ptrdiff_t CountersOffset = DataOffset + DataSize + PaddingBytesBeforeCounters;
   ptrdiff_t BitmapOffset =
       CountersOffset + CountersSize + PaddingBytesAfterCounters;
-  ptrdiff_t NamesOffset =
+  ptrdiff_t UniformCountersOffset =
       BitmapOffset + NumBitmapBytes + PaddingBytesAfterBitmapBytes;
+  ptrdiff_t NamesOffset = UniformCountersOffset + UniformCountersSectionSize +
+                          PaddingBytesAfterUniformCounters;
   ptrdiff_t VTableProfDataOffset =
       NamesOffset + NamesSize + PaddingBytesAfterNames;
   ptrdiff_t VTableNameOffset = VTableProfDataOffset + VTableSectionSize +
@@ -662,7 +669,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
     // These sizes in the raw file are zero because we constructed them in the
     // Correlator.
     if (!(DataSize == 0 && NamesSize == 0 && CountersDelta == 0 &&
-          NamesDelta == 0))
+          BitmapDelta == 0 && NamesDelta == 0))
       return error(instrprof_error::unexpected_correlation_info);
     Data = Correlator->getDataPointer();
     DataEnd = Data + Correlator->getDataSize();
@@ -694,6 +701,8 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   CountersEnd = CountersStart + CountersSize;
   BitmapStart = Start + BitmapOffset;
   BitmapEnd = BitmapStart + NumBitmapBytes;
+  UniformCountersStart = Start + UniformCountersOffset;
+  UniformCountersEnd = UniformCountersStart + UniformCountersSectionSize;
   ValueDataStart = reinterpret_cast<const uint8_t *>(Start + ValueDataOffset);
 
   std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
@@ -828,6 +837,52 @@ Error RawInstrProfReader<IntPtrT>::readRawBitmapBytes(InstrProfRecord &Record) {
 }
 
 template <class IntPtrT>
+Error RawInstrProfReader<IntPtrT>::readRawUniformCounters(
+    InstrProfRecord &Record) {
+  Record.UniformCounts.clear();
+
+  if (UniformCountersStart == UniformCountersEnd)
+    return success();
+
+  uint32_t NumCounters = swap(Data->NumCounters);
+
+  ptrdiff_t UniformCounterOffset =
+      swap(Data->UniformCounterPtr) - UniformCountersDelta;
+  if (UniformCounterOffset < 0)
+    return error(instrprof_error::malformed,
+                 ("uniform counter offset " + Twine(UniformCounterOffset) +
+                  " is negative")
+                     .str());
+
+  if (UniformCounterOffset >= UniformCountersEnd - UniformCountersStart)
+    return error(instrprof_error::malformed,
+                 ("uniform counter offset " + Twine(UniformCounterOffset) +
+                  " is greater than the maximum uniform counter offset " +
+                  Twine(UniformCountersEnd - UniformCountersStart - 1))
+                     .str());
+
+  uint64_t MaxNumCounters =
+      (UniformCountersEnd - (UniformCountersStart + UniformCounterOffset)) /
+      sizeof(uint64_t);
+  if (NumCounters > MaxNumCounters)
+    return error(instrprof_error::malformed,
+                 ("number of uniform counters " + Twine(NumCounters) +
+                  " is greater than the maximum number of uniform counters " +
+                  Twine(MaxNumCounters))
+                     .str());
+
+  Record.UniformCounts.reserve(NumCounters);
+  for (uint32_t I = 0; I < NumCounters; I++) {
+    const char *Ptr =
+        UniformCountersStart + UniformCounterOffset + I * sizeof(uint64_t);
+    uint64_t CounterValue = swap(*reinterpret_cast<const uint64_t *>(Ptr));
+    Record.UniformCounts.push_back(CounterValue);
+  }
+
+  return success();
+}
+
+template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::readValueProfilingData(
     InstrProfRecord &Record) {
   Record.clearValueData();
@@ -873,12 +928,18 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
   if (Error E = readFuncHash(Record))
     return error(std::move(E));
 
+  Record.OffloadDeviceWaveSize = swap(Data->OffloadDeviceWaveSize);
+
   // Read raw counts and set Record.
   if (Error E = readRawCounts(Record))
     return error(std::move(E));
 
   // Read raw bitmap bytes and set Record.
   if (Error E = readRawBitmapBytes(Record))
+    return error(std::move(E));
+
+  // Read raw uniform counters and set Record.
+  if (Error E = readRawUniformCounters(Record))
     return error(std::move(E));
 
   // Read value data and set Record.
@@ -945,11 +1006,12 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
   DataBuffer.clear();
   std::vector<uint64_t> CounterBuffer;
   std::vector<uint8_t> BitmapByteBuffer;
+  std::vector<uint8_t> UniformityBitsBuffer;
 
   const unsigned char *End = D + N;
   while (D < End) {
     // Read hash.
-    if (D + sizeof(uint64_t) >= End)
+    if (D + sizeof(uint64_t) > End)
       return data_type();
     uint64_t Hash = endian::readNext<uint64_t, llvm::endianness::little>(D);
 
@@ -977,18 +1039,51 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
       if (D + sizeof(uint64_t) > End)
         return data_type();
       BitmapBytes = endian::readNext<uint64_t, llvm::endianness::little>(D);
-      // Read bitmap byte values.
-      if (D + BitmapBytes * sizeof(uint8_t) > End)
-        return data_type();
       BitmapByteBuffer.clear();
       BitmapByteBuffer.reserve(BitmapBytes);
-      for (uint64_t J = 0; J < BitmapBytes; ++J)
-        BitmapByteBuffer.push_back(static_cast<uint8_t>(
-            endian::readNext<uint64_t, llvm::endianness::little>(D)));
+
+      if (GET_VERSION(FormatVersion) >=
+          IndexedInstrProf::ProfVersion::Version14) {
+        // Version 14+: bitmap bytes stored as uint8_t with padding.
+        uint64_t PaddedSize = alignTo(BitmapBytes, sizeof(uint64_t));
+        if (D + PaddedSize > End)
+          return data_type();
+        for (uint64_t J = 0; J < BitmapBytes; ++J)
+          BitmapByteBuffer.push_back(
+              endian::readNext<uint8_t, llvm::endianness::little>(D));
+        for (uint64_t J = BitmapBytes; J < PaddedSize; ++J)
+          (void)endian::readNext<uint8_t, llvm::endianness::little>(D);
+
+        // Read uniformity bits (AMDGPU offload profiling).
+        uint64_t UniformityBitsSize = 0;
+        if (D + sizeof(uint64_t) > End)
+          return data_type();
+        UniformityBitsSize =
+            endian::readNext<uint64_t, llvm::endianness::little>(D);
+        uint64_t PaddedUniformitySize =
+            alignTo(UniformityBitsSize, sizeof(uint64_t));
+        if (D + PaddedUniformitySize > End)
+          return data_type();
+        UniformityBitsBuffer.clear();
+        UniformityBitsBuffer.reserve(UniformityBitsSize);
+        for (uint64_t J = 0; J < UniformityBitsSize; ++J)
+          UniformityBitsBuffer.push_back(
+              endian::readNext<uint8_t, llvm::endianness::little>(D));
+        for (uint64_t J = UniformityBitsSize; J < PaddedUniformitySize; ++J)
+          (void)endian::readNext<uint8_t, llvm::endianness::little>(D);
+      } else {
+        // Version 11-13: each bitmap byte stored as a uint64_t.
+        if (D + BitmapBytes * sizeof(uint64_t) > End)
+          return data_type();
+        for (uint64_t J = 0; J < BitmapBytes; ++J)
+          BitmapByteBuffer.push_back(static_cast<uint8_t>(
+              endian::readNext<uint64_t, llvm::endianness::little>(D)));
+      }
     }
 
     DataBuffer.emplace_back(K, Hash, std::move(CounterBuffer),
-                            std::move(BitmapByteBuffer));
+                            std::move(BitmapByteBuffer),
+                            std::move(UniformityBitsBuffer));
 
     // Read value profiling data.
     if (GET_VERSION(FormatVersion) > IndexedInstrProf::ProfVersion::Version2 &&
@@ -1171,8 +1266,8 @@ bool IndexedInstrProfReader::hasFormat(const MemoryBuffer &DataBuffer) {
 
   if (DataBuffer.getBufferSize() < 8)
     return false;
-  uint64_t Magic = endian::read<uint64_t, llvm::endianness::little, aligned>(
-      DataBuffer.getBufferStart());
+  uint64_t Magic = endian::read<uint64_t, aligned>(DataBuffer.getBufferStart(),
+                                                   llvm::endianness::little);
   // Verify that it's magical.
   return Magic == IndexedInstrProf::Magic;
 }
@@ -1186,10 +1281,10 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
   if (Version >= IndexedInstrProf::Version4) {
     const IndexedInstrProf::Summary *SummaryInLE =
         reinterpret_cast<const IndexedInstrProf::Summary *>(Cur);
-    uint64_t NFields = endian::byte_swap<uint64_t, llvm::endianness::little>(
-        SummaryInLE->NumSummaryFields);
-    uint64_t NEntries = endian::byte_swap<uint64_t, llvm::endianness::little>(
-        SummaryInLE->NumCutoffEntries);
+    uint64_t NFields = endian::byte_swap<uint64_t>(
+        SummaryInLE->NumSummaryFields, llvm::endianness::little);
+    uint64_t NEntries = endian::byte_swap<uint64_t>(
+        SummaryInLE->NumCutoffEntries, llvm::endianness::little);
     uint32_t SummarySize =
         IndexedInstrProf::Summary::getSize(NFields, NEntries);
     std::unique_ptr<IndexedInstrProf::Summary> SummaryData =
@@ -1198,7 +1293,7 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
     const uint64_t *Src = reinterpret_cast<const uint64_t *>(SummaryInLE);
     uint64_t *Dst = reinterpret_cast<uint64_t *>(SummaryData.get());
     for (unsigned I = 0; I < SummarySize / sizeof(uint64_t); I++)
-      Dst[I] = endian::byte_swap<uint64_t, llvm::endianness::little>(Src[I]);
+      Dst[I] = endian::byte_swap<uint64_t>(Src[I], llvm::endianness::little);
 
     SummaryEntryVector DetailedSummary;
     for (unsigned I = 0; I < SummaryData->NumCutoffEntries; I++) {
@@ -1554,6 +1649,12 @@ memprof::AllMemProfData IndexedMemProfReader::getAllMemProfData() const {
   }
   // Populate the data access profiles for yaml output.
   if (DataAccessProfileData != nullptr) {
+    AllMemProfData.YamlifiedDataAccessProfiles.Records.reserve(
+        DataAccessProfileData->getRecords().size());
+    AllMemProfData.YamlifiedDataAccessProfiles.KnownColdSymbols.reserve(
+        DataAccessProfileData->getKnownColdSymbols().size());
+    AllMemProfData.YamlifiedDataAccessProfiles.KnownColdStrHashes.reserve(
+        DataAccessProfileData->getKnownColdHashes().size());
     for (const auto &[SymHandleRef, RecordRef] :
          DataAccessProfileData->getRecords())
       AllMemProfData.YamlifiedDataAccessProfiles.Records.push_back(
@@ -1565,6 +1666,19 @@ memprof::AllMemProfData IndexedMemProfReader::getAllMemProfData() const {
     for (uint64_t Hash : DataAccessProfileData->getKnownColdHashes())
       AllMemProfData.YamlifiedDataAccessProfiles.KnownColdStrHashes.push_back(
           Hash);
+    llvm::stable_sort(AllMemProfData.YamlifiedDataAccessProfiles.Records,
+                      [](const llvm::memprof::DataAccessProfRecord &lhs,
+                         const llvm::memprof::DataAccessProfRecord &rhs) {
+                        return lhs.AccessCount > rhs.AccessCount;
+                      });
+    llvm::stable_sort(
+        AllMemProfData.YamlifiedDataAccessProfiles.KnownColdSymbols,
+        [](const std::string &lhs, const std::string &rhs) {
+          return lhs < rhs;
+        });
+    llvm::stable_sort(
+        AllMemProfData.YamlifiedDataAccessProfiles.KnownColdStrHashes,
+        [](const uint64_t &lhs, const uint64_t &rhs) { return lhs < rhs; });
   }
   return AllMemProfData;
 }
@@ -1598,8 +1712,8 @@ Error IndexedInstrProfReader::getFunctionBitmap(StringRef FuncName,
         std::memset(W, 0, sizeof(W));
         std::memcpy(W, &BitmapBytes[I], N);
         I += N;
-        return support::endian::read<XTy, llvm::endianness::little,
-                                     support::aligned>(W);
+        return support::endian::read<XTy, support::aligned>(
+            W, llvm::endianness::little);
       },
       Bitmap, Bitmap);
   assert(I == E);

@@ -1,8 +1,44 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386 -target-feature +avx10.2-256 -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64 -target-feature +avx10.2-256 -emit-llvm -o - | FileCheck %s  --check-prefixes=CHECK
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386 -target-feature +avx10.2 -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64 -target-feature +avx10.2 -emit-llvm -o - | FileCheck %s  --check-prefixes=CHECK
 
 #include <immintrin.h>
 #include <stddef.h>
+
+int test_mm_cvtts_sd_i32(__m128d __A) {
+  // CHECK-LABEL: @test_mm_cvtts_sd_i32(
+  // CHECK: @llvm.x86.avx10.vcvttsd2sis(<2 x double>
+  return _mm_cvtts_sd_i32(__A);
+}
+
+int test_mm_cvtts_sd_si32(__m128d __A) {
+  // CHECK-LABEL: @test_mm_cvtts_sd_si32(
+  // CHECK: @llvm.x86.avx10.vcvttsd2sis(<2 x double>
+  return _mm_cvtts_sd_si32(__A);
+}
+
+unsigned int test_mm_cvtts_sd_u32(__m128d __A) {
+  // CHECK-LABEL: @test_mm_cvtts_sd_u32(
+  // CHECK: @llvm.x86.avx10.vcvttsd2usis(<2 x double>
+  return _mm_cvtts_sd_u32(__A);
+}
+
+int test_mm_cvtts_ss_i32(__m128 __A) {
+  // CHECK-LABEL: @test_mm_cvtts_ss_i32(
+  // CHECK: @llvm.x86.avx10.vcvttss2sis(<4 x float>
+  return _mm_cvtts_ss_i32(__A);
+}
+
+int test_mm_cvtts_ss_si32(__m128 __A) {
+  // CHECK-LABEL: @test_mm_cvtts_ss_si32(
+  // CHECK: @llvm.x86.avx10.vcvttss2sis(<4 x float>
+  return _mm_cvtts_ss_si32(__A);
+}
+
+unsigned int test_mm_cvtts_ss_u32(__m128 __A) {
+  // CHECK-LABEL: @test_mm_cvtts_ss_u32(
+  // CHECK: @llvm.x86.avx10.vcvttss2usis(<4 x float>
+  return _mm_cvtts_ss_u32(__A);
+}
 
 __m128i test_mm_cvtts_pd_epi32(__m128d A){
 // CHECK-LABEL: @test_mm_cvtts_pd_epi32

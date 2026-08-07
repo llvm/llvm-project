@@ -1,4 +1,4 @@
-//===----- NondeterministicPointerIterationOrderCheck.cpp - clang-tidy ----===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,11 +15,10 @@ namespace clang::tidy::bugprone {
 
 void NondeterministicPointerIterationOrderCheck::registerMatchers(
     MatchFinder *Finder) {
-
-  auto LoopVariable = varDecl(hasType(
+  const auto LoopVariable = varDecl(hasType(
       qualType(hasCanonicalType(anyOf(referenceType(), pointerType())))));
 
-  auto RangeInit = declRefExpr(to(varDecl(
+  const auto RangeInit = declRefExpr(to(varDecl(
       hasType(recordDecl(hasAnyName("std::unordered_set", "std::unordered_map",
                                     "std::unordered_multiset",
                                     "std::unordered_multimap"))
@@ -49,7 +48,7 @@ void NondeterministicPointerIterationOrderCheck::check(
   const auto *ForRangePointers =
       Result.Nodes.getNodeAs<CXXForRangeStmt>("cxxForRangeStmt");
 
-  if ((ForRangePointers) && !(ForRangePointers->getBeginLoc().isMacroID())) {
+  if (ForRangePointers && !ForRangePointers->getBeginLoc().isMacroID()) {
     const auto *RangeInit = Result.Nodes.getNodeAs<Stmt>("rangeinit");
     if (const auto *ClassTemplate =
             Result.Nodes.getNodeAs<ClassTemplateSpecializationDecl>(
@@ -60,7 +59,7 @@ void NondeterministicPointerIterationOrderCheck::check(
           TemplateArgs[0].getAsType()->isPointerType();
 
       if (IsAlgoArgPointer) {
-        SourceRange R = RangeInit->getSourceRange();
+        const SourceRange R = RangeInit->getSourceRange();
         diag(R.getBegin(), "iteration of pointers is nondeterministic") << R;
       }
     }
@@ -68,8 +67,8 @@ void NondeterministicPointerIterationOrderCheck::check(
   }
   const auto *SortPointers = Result.Nodes.getNodeAs<Stmt>("sortsemantic");
 
-  if ((SortPointers) && !(SortPointers->getBeginLoc().isMacroID())) {
-    SourceRange R = SortPointers->getSourceRange();
+  if (SortPointers && !SortPointers->getBeginLoc().isMacroID()) {
+    const SourceRange R = SortPointers->getSourceRange();
     diag(R.getBegin(), "sorting pointers is nondeterministic") << R;
   }
 }

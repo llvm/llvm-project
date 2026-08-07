@@ -23,8 +23,6 @@
 namespace llvm {
 class WebAssemblyTargetLowering;
 
-struct WasmEHFuncInfo;
-
 namespace yaml {
 struct WebAssemblyFunctionInfo;
 }
@@ -183,16 +181,13 @@ struct WebAssemblyFunctionInfo final : public yaml::MachineFunctionInfo {
   std::vector<FlowStringValue> Params;
   std::vector<FlowStringValue> Results;
   bool CFGStackified = false;
-  // The same as WasmEHFuncInfo's SrcToUnwindDest, but stored in the mapping of
-  // BB numbers
-  BBNumberMap SrcToUnwindDest;
 
   WebAssemblyFunctionInfo() = default;
   WebAssemblyFunctionInfo(const llvm::MachineFunction &MF,
                           const llvm::WebAssemblyFunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~WebAssemblyFunctionInfo() = default;
+  ~WebAssemblyFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<WebAssemblyFunctionInfo> {
@@ -200,20 +195,6 @@ template <> struct MappingTraits<WebAssemblyFunctionInfo> {
     YamlIO.mapOptional("params", MFI.Params, std::vector<FlowStringValue>());
     YamlIO.mapOptional("results", MFI.Results, std::vector<FlowStringValue>());
     YamlIO.mapOptional("isCFGStackified", MFI.CFGStackified, false);
-    YamlIO.mapOptional("wasmEHFuncInfo", MFI.SrcToUnwindDest);
-  }
-};
-
-template <> struct CustomMappingTraits<BBNumberMap> {
-  static void inputOne(IO &YamlIO, StringRef Key,
-                       BBNumberMap &SrcToUnwindDest) {
-    YamlIO.mapRequired(Key.str().c_str(),
-                       SrcToUnwindDest[std::atoi(Key.str().c_str())]);
-  }
-
-  static void output(IO &YamlIO, BBNumberMap &SrcToUnwindDest) {
-    for (auto KV : SrcToUnwindDest)
-      YamlIO.mapRequired(std::to_string(KV.first).c_str(), KV.second);
   }
 };
 

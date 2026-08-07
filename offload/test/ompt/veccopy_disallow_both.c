@@ -1,12 +1,15 @@
+// clang-format off
 // RUN: %libomptarget-compile-run-and-check-generic
 // REQUIRES: ompt
 // REQUIRES: gpu
+// clang-format on
 
 /*
  * Example OpenMP program that shows that both EMI and non-EMI
  * callbacks cannot be registered for the same type. In the
- * current implementation, the EMI callback overrides the non-EMI
- * callback.
+ * current implementation, the first registered callback takes
+ * precedence. Trying to register the other callback results in
+ * ompt_set_error for this callback.
  */
 
 #include <omp.h>
@@ -54,48 +57,51 @@ int main() {
   return rc;
 }
 
+// clang-format off
+/// CHECK: [[THREAD_ID:[0-9]+]]: Could not register callback 'ompt_callback_target_data_op'
+/// CHECK: [[THREAD_ID]]: Could not register callback 'ompt_callback_target_emi'
 /// CHECK: Callback Init:
 /// CHECK: Callback Load:
-/// CHECK: Callback Target EMI: kind=1 endpoint=1
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=1
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK: Callback Target: target_id=[[TARGET_ID:[0-9]+]] kind=ompt_target endpoint=ompt_scope_begin
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_alloc
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_alloc
 /// CHECK-NOT: dest=(nil)
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=2
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=2
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=1
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_transfer_to_device
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_transfer_to_device
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_alloc
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_alloc
 /// CHECK-NOT: dest=(nil)
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=2
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=2
-/// CHECK: Callback Submit: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] req_num_teams=1
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=3
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=3
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=3
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=3
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=4
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=4
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=4
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=4
-/// CHECK: Callback Target EMI: kind=1 endpoint=2
-/// CHECK: Callback Target EMI: kind=1 endpoint=1
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=1
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_transfer_to_device
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_transfer_to_device
+/// CHECK: Callback Submit: target_id=[[TARGET_ID]] host_op_id=[[HOST_OP_ID:[0-9]+]] req_num_teams=1
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_transfer_from_device
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_transfer_from_device
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_transfer_from_device
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_transfer_from_device
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_delete
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_delete
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_delete
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_delete
+/// CHECK: Callback Target: target_id=[[TARGET_ID]] kind=ompt_target endpoint=ompt_scope_end
+/// CHECK: Callback Target: target_id=[[TARGET_ID:[0-9]+]] kind=ompt_target endpoint=ompt_scope_begin
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_alloc
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_alloc
 /// CHECK-NOT: dest=(nil)
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=2
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=2
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=1
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_transfer_to_device
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_transfer_to_device
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_alloc
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_alloc
 /// CHECK-NOT: dest=(nil)
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=2
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=2
-/// CHECK: Callback Submit: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] req_num_teams=0
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=3
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=3
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=3
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=3
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=4
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=4
-/// CHECK: Callback DataOp EMI: endpoint=1 optype=4
-/// CHECK: Callback DataOp EMI: endpoint=2 optype=4
-/// CHECK: Callback Target EMI: kind=1 endpoint=2
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_transfer_to_device
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_transfer_to_device
+/// CHECK: Callback Submit: target_id=[[TARGET_ID]] host_op_id=[[HOST_OP_ID:[0-9]+]] req_num_teams=0
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_transfer_from_device
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_transfer_from_device
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_transfer_from_device
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_transfer_from_device
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_delete
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_delete
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_begin optype=ompt_target_data_delete
+/// CHECK: Callback DataOp EMI: endpoint=ompt_scope_end optype=ompt_target_data_delete
+/// CHECK: Callback Target: target_id=[[TARGET_ID]] kind=ompt_target endpoint=ompt_scope_end
 /// CHECK: Callback Fini:

@@ -1,4 +1,4 @@
-//===--- UseEmplaceCheck.cpp - clang-tidy----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,36 +30,29 @@ AST_MATCHER_P(NamedDecl, hasAnyNameIgnoringTemplates, std::vector<StringRef>,
   // example, it'll transform a::b<c<d>>::e<f> to simply a::b::e.
   std::string FullNameTrimmed;
   int Depth = 0;
-  for (const auto &Character : FullName) {
-    if (Character == '<') {
+  for (const auto &Character : FullName)
+    if (Character == '<')
       ++Depth;
-    } else if (Character == '>') {
+    else if (Character == '>')
       --Depth;
-    } else if (Depth == 0) {
+    else if (Depth == 0)
       FullNameTrimmed.append(1, Character);
-    }
-  }
 
   // This loop is taken from HasNameMatcher::matchesNodeFullSlow in
   // clang/lib/ASTMatchers/ASTMatchersInternal.cpp and checks whether
   // FullNameTrimmed matches any of the given Names.
   const StringRef FullNameTrimmedRef = FullNameTrimmed;
-  for (const StringRef Pattern : Names) {
-    if (Pattern.starts_with("::")) {
-      if (FullNameTrimmed == Pattern)
-        return true;
-    } else if (FullNameTrimmedRef.ends_with(Pattern) &&
-               FullNameTrimmedRef.drop_back(Pattern.size()).ends_with("::")) {
-      return true;
-    }
-  }
-
-  return false;
+  return llvm::any_of(Names, [&](const StringRef Pattern) {
+    if (Pattern.starts_with("::"))
+      return FullNameTrimmed == Pattern;
+    return FullNameTrimmedRef.ends_with(Pattern) &&
+           FullNameTrimmedRef.drop_back(Pattern.size()).ends_with("::");
+  });
 }
 
 // Checks if the given matcher is the last argument of the given CallExpr.
-AST_MATCHER_P(CallExpr, hasLastArgument,
-              clang::ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+AST_MATCHER_P(CallExpr, hasLastArgument, ast_matchers::internal::Matcher<Expr>,
+              InnerMatcher) {
   if (Node.getNumArgs() == 0)
     return false;
 
@@ -81,41 +74,44 @@ AST_MATCHER(CXXMemberCallExpr, hasSameNumArgsAsDeclNumParams) {
 AST_MATCHER(DeclRefExpr, hasExplicitTemplateArgs) {
   return Node.hasExplicitTemplateArgs();
 }
+} // namespace
 
 // Helper Matcher which applies the given QualType Matcher either directly or by
 // resolving a pointer type to its pointee. Used to match v.push_back() as well
 // as p->push_back().
-auto hasTypeOrPointeeType(
+static auto hasTypeOrPointeeType(
     const ast_matchers::internal::Matcher<QualType> &TypeMatcher) {
   return anyOf(hasType(TypeMatcher),
                hasType(pointerType(pointee(TypeMatcher))));
 }
 
 // Matches if the node has canonical type matching any of the given names.
-auto hasWantedType(llvm::ArrayRef<StringRef> TypeNames) {
+static auto hasWantedType(llvm::ArrayRef<StringRef> TypeNames) {
   return hasCanonicalType(hasDeclaration(cxxRecordDecl(hasAnyName(TypeNames))));
 }
 
 // Matches member call expressions of the named method on the listed container
 // types.
-auto cxxMemberCallExprOnContainer(StringRef MethodName,
-                                  llvm::ArrayRef<StringRef> ContainerNames) {
+static auto
+cxxMemberCallExprOnContainer(StringRef MethodName,
+                             llvm::ArrayRef<StringRef> ContainerNames) {
   return cxxMemberCallExpr(
       hasDeclaration(functionDecl(hasName(MethodName))),
       on(hasTypeOrPointeeType(hasWantedType(ContainerNames))));
 }
 
-const auto DefaultContainersWithPushBack =
+static constexpr char DefaultContainersWithPushBack[] =
     "::std::vector; ::std::list; ::std::deque";
-const auto DefaultContainersWithPush =
+static constexpr char DefaultContainersWithPush[] =
     "::std::stack; ::std::queue; ::std::priority_queue";
-const auto DefaultContainersWithPushFront =
+static constexpr char DefaultContainersWithPushFront[] =
     "::std::forward_list; ::std::list; ::std::deque";
-const auto DefaultSmartPointers =
+static constexpr char DefaultSmartPointers[] =
     "::std::shared_ptr; ::std::unique_ptr; ::std::auto_ptr; ::std::weak_ptr";
-const auto DefaultTupleTypes = "::std::pair; ::std::tuple";
-const auto DefaultTupleMakeFunctions = "::std::make_pair; ::std::make_tuple";
-const auto DefaultEmplacyFunctions =
+static constexpr char DefaultTupleTypes[] = "::std::pair; ::std::tuple";
+static constexpr char DefaultTupleMakeFunctions[] =
+    "::std::make_pair; ::std::make_tuple";
+static constexpr char DefaultEmplacyFunctions[] =
     "vector::emplace_back; vector::emplace;"
     "deque::emplace; deque::emplace_front; deque::emplace_back;"
     "forward_list::emplace_after; forward_list::emplace_front;"
@@ -129,7 +125,6 @@ const auto DefaultEmplacyFunctions =
     "unordered_multiset::emplace; unordered_multiset::emplace_hint;"
     "unordered_multimap::emplace; unordered_multimap::emplace_hint;"
     "stack::emplace; queue::emplace; priority_queue::emplace";
-} // namespace
 
 UseEmplaceCheck::UseEmplaceCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), IgnoreImplicitConstructors(Options.get(
@@ -155,13 +150,14 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   // because this requires special treatment (it could cause performance
   // regression)
   // + match for emplace calls that should be replaced with insertion
-  auto CallPushBack =
+  const auto CallPushBack =
       cxxMemberCallExprOnContainer("push_back", ContainersWithPushBack);
-  auto CallPush = cxxMemberCallExprOnContainer("push", ContainersWithPush);
-  auto CallPushFront =
+  const auto CallPush =
+      cxxMemberCallExprOnContainer("push", ContainersWithPush);
+  const auto CallPushFront =
       cxxMemberCallExprOnContainer("push_front", ContainersWithPushFront);
 
-  auto CallEmplacy = cxxMemberCallExpr(
+  const auto CallEmplacy = cxxMemberCallExpr(
       hasDeclaration(
           functionDecl(hasAnyNameIgnoringTemplates(EmplacyFunctions))),
       on(hasTypeOrPointeeType(
@@ -200,7 +196,7 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
 
   // FIXME: Discard 0/NULL (as nullptr), static inline const data members,
   // overloaded functions and template names.
-  auto SoughtConstructExpr =
+  const auto SoughtConstructExpr =
       cxxConstructExpr(
           unless(anyOf(IsCtorOfSmartPtr, HasInitList, BitFieldAsArgument,
                        InitializerListAsArgument, NewExprAsArgument,
@@ -219,7 +215,7 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
       anyOf(has(cxxBindTemporaryExpr(HasConstructInitListExpr)),
             HasConstructInitListExpr);
 
-  auto MakeTuple = ignoringImplicit(
+  const auto MakeTuple = ignoringImplicit(
       callExpr(callee(expr(ignoringImplicit(declRefExpr(
                    unless(hasExplicitTemplateArgs()),
                    to(functionDecl(hasAnyName(TupleMakeFunctions))))))))
@@ -227,11 +223,11 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
 
   // make_something can return type convertible to container's element type.
   // Allow the conversion only on containers of pairs.
-  auto MakeTupleCtor = ignoringImplicit(cxxConstructExpr(
+  const auto MakeTupleCtor = ignoringImplicit(cxxConstructExpr(
       has(materializeTemporaryExpr(MakeTuple)),
       hasDeclaration(cxxConstructorDecl(ofClass(hasAnyName(TupleTypes))))));
 
-  auto SoughtParam =
+  const auto SoughtParam =
       materializeTemporaryExpr(
           anyOf(has(MakeTuple), has(MakeTupleCtor), HasConstructExpr,
                 HasBracedInitListExpr,
@@ -252,7 +248,7 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
                                has(initListExpr(hasType(hasCanonicalType(
                                    type(equalsBoundNode("value_type")))))))));
 
-  auto HasConstructExprWithValueTypeTypeAsLastArgument = hasLastArgument(
+  const auto HasConstructExprWithValueTypeTypeAsLastArgument = hasLastArgument(
       materializeTemporaryExpr(
           anyOf(HasConstructExprWithValueTypeType,
                 HasBracedInitListWithValueTypeType,
@@ -316,15 +312,12 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<MaterializeTemporaryExpr>("temporary_expr");
 
   const CXXMemberCallExpr *Call = [&]() {
-    if (PushBackCall) {
+    if (PushBackCall)
       return PushBackCall;
-    }
-    if (PushCall) {
+    if (PushCall)
       return PushCall;
-    }
-    if (PushFrontCall) {
+    if (PushFrontCall)
       return PushFrontCall;
-    }
     return EmplacyCall;
   }();
 
@@ -338,7 +331,7 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
   const auto FunctionNameSourceRange = CharSourceRange::getCharRange(
       Call->getExprLoc(), Call->getArg(0)->getExprLoc());
 
-  auto Diag =
+  const auto Diag =
       EmplacyCall
           ? diag(TemporaryExpr ? TemporaryExpr->getBeginLoc()
                  : CtorCall    ? CtorCall->getBeginLoc()

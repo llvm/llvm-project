@@ -10,7 +10,7 @@ declare void @fakeresume1(ptr align 8)
 
 define void @g() #0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @g, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %alloc.var = alloca i64
   call void @llvm.lifetime.start.p0(ptr %alloc.var)
@@ -36,19 +36,19 @@ await.ready:
   call void @llvm.lifetime.end.p0(ptr %alloc.var)
   br label %exit
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @g.resume(
-; CHECK:      musttail call fastcc void
+; CHECK:      musttail call void
 ; CHECK-NEXT: ret void
 
 ; It has a cleanup bb.
 define void @f() #0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %alloc.var = alloca i64
   call void @llvm.lifetime.start.p0(ptr %alloc.var)
@@ -84,13 +84,13 @@ coro.free:
   br label %exit
 
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @f.resume(
-; CHECK:      musttail call fastcc void
+; CHECK:      musttail call void
 ; CHECK-NEXT: ret void
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
@@ -101,7 +101,7 @@ declare token @llvm.coro.save(ptr) #2
 declare ptr @llvm.coro.frame() #3
 declare i8 @llvm.coro.suspend(token, i1) #2
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #1
-declare i1 @llvm.coro.end(ptr, i1, token) #2
+declare void @llvm.coro.end(ptr, i1, token) #2
 declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #1
 declare ptr @malloc(i64)
 declare void @delete(ptr nonnull) #2

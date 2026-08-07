@@ -51,7 +51,9 @@ static void emutls_shutdown(emutls_address_array *array);
 
 static pthread_mutex_t emutls_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_key_t emutls_pthread_key;
+#ifdef __BIONIC__
 static bool emutls_key_created = false;
+#endif
 
 typedef unsigned int gcc_word __attribute__((mode(word)));
 typedef unsigned int gcc_pointer __attribute__((mode(pointer)));
@@ -117,7 +119,9 @@ static void emutls_key_destructor(void *ptr) {
 static __inline void emutls_init(void) {
   if (pthread_key_create(&emutls_pthread_key, emutls_key_destructor) != 0)
     abort();
+#ifdef __BIONIC__
   emutls_key_created = true;
+#endif
 }
 
 static __inline void emutls_init_once(void) {

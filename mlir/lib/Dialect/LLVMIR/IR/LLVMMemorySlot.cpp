@@ -19,6 +19,7 @@
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "sroa"
 
@@ -86,7 +87,13 @@ DenseMap<Attribute, MemorySlot> LLVM::AllocaOp::destructure(
 
   auto destructurableType = cast<DestructurableTypeInterface>(getElemType());
   DenseMap<Attribute, MemorySlot> slotMap;
-  for (Attribute index : usedIndices) {
+  // Iterate subelements in their original type order to produce allocas in a
+  // deterministic, readable order (matching appearance in the source type).
+  Type i32 = IntegerType::get(getContext(), 32);
+  for (size_t i = 0; i < slot.subelementTypes.size(); i++) {
+    Attribute index = IntegerAttr::get(i32, i);
+    if (!usedIndices.contains(index))
+      continue;
     Type elemType = destructurableType.getTypeAtIndex(index);
     assert(elemType && "used index must exist");
     auto subAlloca = LLVM::AllocaOp::create(
@@ -249,6 +256,11 @@ static Value createExtractAndCast(OpBuilder &builder, Location loc,
                                  /*narrowingConversion=*/true) &&
          "expected that the compatibility was checked before");
 
+  // Nothing has to be done if the types are already the same. This also
+  // avoids querying the bit size of scalable vector types below.
+  if (srcType == targetType)
+    return srcValue;
+
   uint64_t srcTypeSize = dataLayout.getTypeSizeInBits(srcType);
   uint64_t targetTypeSize = dataLayout.getTypeSizeInBits(targetType);
   if (srcTypeSize == targetTypeSize)
@@ -284,6 +296,12 @@ static Value createInsertAndCast(OpBuilder &builder, Location loc,
                                  srcValue.getType(),
                                  /*narrowingConversion=*/false) &&
          "expected that the compatibility was checked before");
+
+  // Nothing has to be done if the types are already the same. This also
+  // avoids querying the bit size of scalable vector types below.
+  if (srcValue.getType() == reachingDef.getType())
+    return srcValue;
+
   uint64_t valueTypeSize = dataLayout.getTypeSizeInBits(srcValue.getType());
   uint64_t slotTypeSize = dataLayout.getTypeSizeInBits(reachingDef.getType());
   if (slotTypeSize == valueTypeSize)
@@ -734,9 +752,8 @@ static std::optional<uint64_t> gepToByteOffset(const DataLayout &dataLayout,
               return false;
             })
             .Default([&](Type type) {
-              LLVM_DEBUG(llvm::dbgs()
-                         << "[sroa] Unsupported type for offset computations"
-                         << type << "\n");
+              LDBG() << "[sroa] Unsupported type for offset computations"
+                     << type;
               return true;
             });
 
@@ -1096,10 +1113,8 @@ static Value memsetGetStored(MemsetIntr op, const MemorySlot &slot,
         Value intVal = buildMemsetValue(type.getWidth());
         return LLVM::BitcastOp::create(builder, op.getLoc(), type, intVal);
       })
-      .Default([](Type) -> Value {
-        llvm_unreachable(
-            "getStored should not be called on memset to unsupported type");
-      });
+      .DefaultUnreachable(
+          "getStored should not be called on memset to unsupported type");
 }
 
 template <class MemsetIntr>
@@ -1113,7 +1128,7 @@ memsetCanUsesBeRemoved(MemsetIntr op, const MemorySlot &slot,
           .Case<IntegerType, FloatType>([](auto type) {
             return type.getWidth() % 8 == 0 && type.getWidth() > 0;
           })
-          .Default([](Type) { return false; });
+          .Default(false);
   if (!canConvertType)
     return false;
 
@@ -1587,6 +1602,9 @@ DeletionKind LLVM::MemmoveOp::rewire(const DestructurableMemorySlot &slot,
 
 std::optional<DenseMap<Attribute, Type>>
 LLVM::LLVMStructType::getSubelementIndexMap() const {
+  // Empty structs have no sub-elements and cannot be destructured.
+  if (getBody().empty())
+    return std::nullopt;
   Type i32 = IntegerType::get(getContext(), 32);
   DenseMap<Attribute, Type> destructured;
   for (const auto &[index, elemType] : llvm::enumerate(getBody()))

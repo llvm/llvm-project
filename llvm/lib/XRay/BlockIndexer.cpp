@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/XRay/BlockIndexer.h"
 
-namespace llvm {
-namespace xray {
+using namespace llvm;
+using namespace llvm::xray;
 
 Error BlockIndexer::visit(BufferExtents &) { return Error::success(); }
 
@@ -89,6 +89,3 @@ Error BlockIndexer::flush() {
   CurrentBlock.WallclockTime = nullptr;
   return Error::success();
 }
-
-} // namespace xray
-} // namespace llvm

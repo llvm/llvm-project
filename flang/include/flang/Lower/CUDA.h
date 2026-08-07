@@ -18,14 +18,16 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Semantics/tools.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
 
 namespace mlir {
 class Value;
 class Location;
 class MLIRContext;
 } // namespace mlir
+
+namespace hlfir {
+class ElementalOp;
+} // namespace hlfir
 
 namespace Fortran::lower {
 
@@ -47,9 +49,21 @@ static inline unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
   return kDefaultAllocator;
 }
 
-void initializeDeviceComponentAllocator(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::semantics::Symbol &sym, const fir::MutableBoxValue &box);
+// Under -gpu=unified, redirect a plain (unattributed)
+// allocatable/pointer from the default allocator to the unified allocator, so
+// its managed backing is carried by the descriptor and honored by every
+// allocation path (ALLOCATE, allocate-on-assignment, SOURCE=, ...). Objects
+// with an explicit CUDA data attribute keep their own allocator.
+static inline unsigned
+getAllocatorIdxForUnified(const Fortran::semantics::Symbol &sym,
+                          bool unifiedEnabled) {
+  unsigned idx = getAllocatorIdx(sym);
+  if (unifiedEnabled && idx == kDefaultAllocator &&
+      (Fortran::semantics::IsAllocatable(sym) ||
+       Fortran::semantics::IsPointer(sym)))
+    return kUnifiedAllocatorPos;
+  return idx;
+}
 
 mlir::Type gatherDeviceComponentCoordinatesAndType(
     fir::FirOpBuilder &builder, mlir::Location loc,
@@ -61,6 +75,14 @@ mlir::Type gatherDeviceComponentCoordinatesAndType(
 cuf::DataAttributeAttr
 translateSymbolCUFDataAttribute(mlir::MLIRContext *mlirContext,
                                 const Fortran::semantics::Symbol &sym);
+
+/// Check if the rhs has an implicit conversion. Return the elemental op if
+/// there is a conversion. Return null otherwise.
+std::pair<hlfir::ElementalOp, hlfir::ElementalOp>
+isTransferWithConversion(mlir::Value rhs);
+
+/// Check if the value is an allocatable with double descriptor.
+bool hasDoubleDescriptor(mlir::Value);
 
 } // end namespace Fortran::lower
 

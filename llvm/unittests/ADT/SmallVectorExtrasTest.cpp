@@ -22,6 +22,25 @@ using testing::ElementsAre;
 namespace llvm {
 namespace {
 
+TEST(SmallVectorExtrasTest, MapToVector) {
+  std::vector<int> Numbers = {1, 2, 3};
+  auto Doubled = map_to_vector(Numbers, [](int X) { return X * 2; });
+  EXPECT_THAT(Doubled, ElementsAre(2, 4, 6));
+
+  // Member pointer.
+  struct MapToVectorStruct {
+    int X;
+    int getX() const { return X; }
+  };
+  std::vector<MapToVectorStruct> Structs = {{1}, {2}, {3}};
+  EXPECT_THAT(map_to_vector(Structs, &MapToVectorStruct::X),
+              ElementsAre(1, 2, 3));
+
+  // Member function pointer.
+  EXPECT_THAT(map_to_vector(Structs, &MapToVectorStruct::getX),
+              ElementsAre(1, 2, 3));
+}
+
 TEST(SmallVectorExtrasTest, FilterToVector) {
   std::vector<int> Numbers = {0, 1, 2, 3, 4};
   auto Odd = filter_to_vector<2>(Numbers, [](int X) { return (X % 2) != 0; });

@@ -1,6 +1,7 @@
 # Enable errors for any global constructors.
 add_flag_if_supported("-Werror=global-constructors" WERROR_GLOBAL_CONSTRUCTOR)
 
+add_subdirectory(ABI)
 add_subdirectory(Analysis)
 add_subdirectory(AsmParser)
 add_subdirectory(Bytecode)
@@ -13,6 +14,7 @@ add_subdirectory(Parser)
 add_subdirectory(Pass)
 add_subdirectory(Query)
 add_subdirectory(Reducer)
+add_subdirectory(Remark)
 add_subdirectory(Rewrite)
 add_subdirectory(Support)
 add_subdirectory(TableGen)
@@ -38,6 +40,12 @@ add_mlir_library(MLIRRegisterAllPasses
   RegisterAllPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
+
+  # This TU includes dialect pass registration headers that depend on
+  # TableGen outputs (e.g. Passes.h.inc) wired into mlir-headers. Without this
+  # dependency it may compile before those headers are regenerated.
+  DEPENDS
+  mlir-headers
 
   LINK_LIBS PUBLIC
   ${dialect_libs} # Some passes are part of the dialect libs

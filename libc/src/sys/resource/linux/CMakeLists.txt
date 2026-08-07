@@ -5,9 +5,8 @@ add_entrypoint_object(
   HDRS
     ../getrlimit.h
   DEPENDS
-    libc.include.sys_resource
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.struct_rlimit
+    libc.src.__support.OSUtil.linux.syscall_wrappers.prlimit
     libc.src.errno.errno
 )
 
@@ -18,8 +17,7 @@ add_entrypoint_object(
   HDRS
     ../setrlimit.h
   DEPENDS
-    libc.include.sys_resource
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.struct_rlimit
+    libc.src.__support.OSUtil.linux.syscall_wrappers.prlimit
     libc.src.errno.errno
 )

@@ -507,7 +507,7 @@ public:
 
   lldb::Format GetFormat();
 
-  lldb::Encoding GetEncoding(uint64_t &count);
+  lldb::Encoding GetEncoding();
 
   SymbolContextScope *GetSymbolContextScope() { return m_context; }
   const SymbolContextScope *GetSymbolContextScope() const { return m_context; }
@@ -586,6 +586,7 @@ protected:
   Declaration m_decl;
   CompilerType m_compiler_type;
   ResolveState m_compiler_type_resolve_state = ResolveState::Unresolved;
+  bool m_resolving_compiler_type = false;
   /// Language-specific flags.
   Payload m_payload;
 

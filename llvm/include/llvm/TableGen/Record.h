@@ -616,6 +616,9 @@ public:
   convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
   std::optional<int64_t> convertInitializerToInt() const;
 
+  // Returns the set of known bits as a 64-bit integer.
+  uint64_t convertKnownBitsToInt() const;
+
   bool isComplete() const override;
   bool allInComplete() const;
   bool isConcrete() const override;
@@ -965,6 +968,7 @@ public:
     FIND,
     SETDAGARG,
     SETDAGNAME,
+    SORT,
   };
 
 private:
@@ -1208,7 +1212,9 @@ public:
 
   const Init *resolveReferences(Resolver &R) const override;
 
-  const Init *getBit(unsigned Bit) const override;
+  const Init *getBit(unsigned Bit) const override {
+    llvm_unreachable("Illegal bit reference off !instances");
+  }
 
   std::string getAsString() const override;
 };
@@ -1574,7 +1580,7 @@ public:
   }
 
   /// Get the source location of the point where the field was defined.
-  const SMLoc &getLoc() const { return Loc; }
+  SMLoc getLoc() const { return Loc; }
 
   /// Is this a field where nonconcrete values are okay?
   bool isNonconcreteOK() const {

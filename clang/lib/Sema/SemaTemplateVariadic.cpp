@@ -65,6 +65,41 @@ class CollectUnexpandedParameterPacksVisitor
         Unexpanded.push_back({T, Loc});
     }
 
+    bool addUnexpanded(const SubstBuiltinTemplatePackType *T,
+                       SourceLocation Loc = SourceLocation()) {
+      Unexpanded.push_back({T, Loc});
+      return true;
+    }
+
+    bool addUnexpanded(const TemplateSpecializationType *T,
+                       SourceLocation Loc = SourceLocation()) {
+      assert(T->isCanonicalUnqualified() &&
+             isPackProducingBuiltinTemplateName(T->getTemplateName()));
+      Unexpanded.push_back({T, Loc});
+      return true;
+    }
+
+    /// Returns true iff it handled the traversal. On false, the callers must
+    /// traverse themselves.
+    bool
+    TryTraverseSpecializationProducingPacks(const TemplateSpecializationType *T,
+                                            SourceLocation Loc) {
+      if (!isPackProducingBuiltinTemplateName(T->getTemplateName()))
+        return false;
+      // Canonical types are inputs to the initial substitution. Report them and
+      // do not recurse any further.
+      if (T->isCanonicalUnqualified()) {
+        addUnexpanded(T, Loc);
+        return true;
+      }
+      // For sugared types, do not use the default traversal as it would be
+      // looking at (now irrelevant) template arguments. Instead, look at the
+      // result of substitution, it usually contains SubstPackType that needs to
+      // be expanded further.
+      DynamicRecursiveASTVisitor::TraverseType(T->desugar());
+      return true;
+    }
+
   public:
     explicit CollectUnexpandedParameterPacksVisitor(
         SmallVectorImpl<UnexpandedParameterPack> &Unexpanded)
@@ -121,6 +156,23 @@ class CollectUnexpandedParameterPacksVisitor
 #endif
 
       return DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
+    }
+
+    bool
+    TraverseTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc T,
+                                          bool TraverseQualifier) override {
+      if (TryTraverseSpecializationProducingPacks(T.getTypePtr(),
+                                                  T.getBeginLoc()))
+        return true;
+      return DynamicRecursiveASTVisitor::TraverseTemplateSpecializationTypeLoc(
+          T, TraverseQualifier);
+    }
+
+    bool TraverseTemplateSpecializationType(TemplateSpecializationType *T,
+                                            bool TraverseQualfier) override {
+      if (TryTraverseSpecializationProducingPacks(T, SourceLocation()))
+        return true;
+      return DynamicRecursiveASTVisitor::TraverseTemplateSpecializationType(T);
     }
 
     /// Suppress traversal into Objective-C container literal
@@ -323,6 +375,14 @@ class CollectUnexpandedParameterPacksVisitor
           addUnexpanded(ND, E->getBeginLoc());
       }
       return DynamicRecursiveASTVisitor::TraverseUnresolvedLookupExpr(E);
+    }
+
+    bool TraverseSubstBuiltinTemplatePackType(SubstBuiltinTemplatePackType *T,
+                                              bool TraverseQualifier) override {
+      addUnexpanded(T);
+      // Do not call into base implementation to supress traversal of the
+      // substituted types.
+      return true;
     }
 
 #ifndef NDEBUG
@@ -646,6 +706,23 @@ void Sema::collectUnexpandedParameterPacks(
 }
 
 ParsedTemplateArgument
+Sema::ActOnTemplateTemplateArgument(const ParsedTemplateArgument &Arg) {
+  if (Arg.isInvalid())
+    return Arg;
+
+  // We do not allow to reference builtin templates that produce multiple
+  // values, they would not have a well-defined semantics outside template
+  // arguments.
+  auto *T = dyn_cast_or_null<BuiltinTemplateDecl>(
+      Arg.getAsTemplate().get().getAsTemplateDecl());
+  if (T && T->isPackProducingBuiltinTemplate())
+    diagnoseMissingTemplateArguments(Arg.getAsTemplate().get(),
+                                     Arg.getNameLoc());
+
+  return Arg;
+}
+
+ParsedTemplateArgument
 Sema::ActOnPackExpansion(const ParsedTemplateArgument &Arg,
                          SourceLocation EllipsisLoc) {
   if (Arg.isInvalid())
@@ -731,7 +808,7 @@ QualType Sema::CheckPackExpansion(QualType Pattern, SourceRange PatternRange,
   if (!Pattern->containsUnexpandedParameterPack() &&
       !Pattern->getContainedDeducedType()) {
     Diag(EllipsisLoc, diag::err_pack_expansion_without_parameter_packs)
-      << PatternRange;
+        << PatternRange;
     return QualType();
   }
 
@@ -765,8 +842,9 @@ ExprResult Sema::CheckPackExpansion(Expr *Pattern, SourceLocation EllipsisLoc,
 bool Sema::CheckParameterPacksForExpansion(
     SourceLocation EllipsisLoc, SourceRange PatternRange,
     ArrayRef<UnexpandedParameterPack> Unexpanded,
-    const MultiLevelTemplateArgumentList &TemplateArgs, bool &ShouldExpand,
-    bool &RetainExpansion, UnsignedOrNone &NumExpansions) {
+    const MultiLevelTemplateArgumentList &TemplateArgs,
+    bool FailOnPackProducingTemplates, bool &ShouldExpand,
+    bool &RetainExpansion, UnsignedOrNone &NumExpansions, bool Diagnose) {
   ShouldExpand = true;
   RetainExpansion = false;
   IdentifierLoc FirstPack;
@@ -781,12 +859,34 @@ bool Sema::CheckParameterPacksForExpansion(
     IdentifierInfo *Name;
     bool IsVarDeclPack = false;
     FunctionParmPackExpr *BindingPack = nullptr;
+    std::optional<unsigned> NumPrecomputedArguments;
 
-    if (const TemplateTypeParmType *TTP =
-            ParmPack.first.dyn_cast<const TemplateTypeParmType *>()) {
+    if (auto *TTP = ParmPack.first.dyn_cast<const TemplateTypeParmType *>()) {
       Depth = TTP->getDepth();
       Index = TTP->getIndex();
       Name = TTP->getIdentifier();
+    } else if (auto *TST =
+                   ParmPack.first
+                       .dyn_cast<const TemplateSpecializationType *>()) {
+      assert(isPackProducingBuiltinTemplateName(TST->getTemplateName()));
+      // Delay expansion, substitution is required to know the size.
+      ShouldExpand = false;
+      if (!FailOnPackProducingTemplates)
+        continue;
+
+      if (!Diagnose)
+        return true;
+
+      // It is not yet supported in certain contexts.
+      return Diag(PatternRange.getBegin().isValid() ? PatternRange.getBegin()
+                                                    : EllipsisLoc,
+                  diag::err_unsupported_builtin_template_pack_expansion)
+             << TST->getTemplateName();
+    } else if (auto *S =
+                   ParmPack.first
+                       .dyn_cast<const SubstBuiltinTemplatePackType *>()) {
+      Name = nullptr;
+      NumPrecomputedArguments = S->getNumArgs();
     } else {
       NamedDecl *ND = cast<NamedDecl *>(ParmPack.first);
       if (isa<VarDecl>(ND))
@@ -812,10 +912,14 @@ bool Sema::CheckParameterPacksForExpansion(
     unsigned NewPackSize, PendingPackExpansionSize = 0;
     if (IsVarDeclPack) {
       // Figure out whether we're instantiating to an argument pack or not.
+      //
+      // The instantiation may not exist; this can happen when instantiating an
+      // expansion statement that contains a pack (e.g.
+      // `template for (auto x : {{ts...}})`).
       llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
-          CurrentInstantiationScope->findInstantiationOf(
+          CurrentInstantiationScope->getInstantiationOfIfExists(
               cast<NamedDecl *>(ParmPack.first));
-      if (isa<DeclArgumentPack *>(*Instantiation)) {
+      if (Instantiation && isa<DeclArgumentPack *>(*Instantiation)) {
         // We could expand this function parameter pack.
         NewPackSize = cast<DeclArgumentPack *>(*Instantiation)->size();
       } else {
@@ -826,6 +930,8 @@ bool Sema::CheckParameterPacksForExpansion(
       }
     } else if (BindingPack) {
       NewPackSize = BindingPack->getNumExpansions();
+    } else if (NumPrecomputedArguments) {
+      NewPackSize = *NumPrecomputedArguments;
     } else {
       // If we don't have a template argument at this depth/index, then we
       // cannot expand the pack expansion. Make a note of this, but we still
@@ -916,7 +1022,9 @@ bool Sema::CheckParameterPacksForExpansion(
       // C++0x [temp.variadic]p5:
       //   All of the parameter packs expanded by a pack expansion shall have
       //   the same number of arguments specified.
-      if (HaveFirstPack)
+      if (!Diagnose)
+        ;
+      else if (HaveFirstPack)
         Diag(EllipsisLoc, diag::err_pack_expansion_length_conflict)
             << FirstPack.getIdentifierInfo() << Name << *NumExpansions
             << (LeastNewPackSize != NewPackSize) << LeastNewPackSize
@@ -942,6 +1050,8 @@ bool Sema::CheckParameterPacksForExpansion(
     if (NumExpansions && *NumExpansions < *NumPartialExpansions) {
       NamedDecl *PartialPack =
           CurrentInstantiationScope->getPartiallySubstitutedPack();
+      if (!Diagnose)
+        return true;
       Diag(EllipsisLoc, diag::err_pack_expansion_length_conflict_partial)
           << PartialPack << *NumPartialExpansions << *NumExpansions
           << SourceRange(PartiallySubstitutedPackLoc);
@@ -967,6 +1077,21 @@ UnsignedOrNone Sema::getNumArgumentsInExpansionFromUnexpanded(
             Unexpanded[I].first.dyn_cast<const TemplateTypeParmType *>()) {
       Depth = TTP->getDepth();
       Index = TTP->getIndex();
+    } else if (auto *TST =
+                   Unexpanded[I]
+                       .first.dyn_cast<const TemplateSpecializationType *>()) {
+      // This is a dependent pack, we are not ready to expand it yet.
+      assert(isPackProducingBuiltinTemplateName(TST->getTemplateName()));
+      (void)TST;
+      return std::nullopt;
+    } else if (auto *PST =
+                   Unexpanded[I]
+                       .first
+                       .dyn_cast<const SubstBuiltinTemplatePackType *>()) {
+      assert((!Result || *Result == PST->getNumArgs()) &&
+             "inconsistent pack sizes");
+      Result = PST->getNumArgs();
+      continue;
     } else {
       NamedDecl *ND = cast<NamedDecl *>(Unexpanded[I].first);
       if (isa<VarDecl>(ND)) {
@@ -1020,7 +1145,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_typeof_unqualType:
   case TST_typeofType:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case TST_##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   case TST_atomic: {
     QualType T = DS.getRepAsType().get();
     if (!T.isNull() && T->containsUnexpandedParameterPack())
@@ -1234,20 +1359,20 @@ ExprResult Sema::BuildPackIndexingExpr(Expr *PackExpression,
                                        ArrayRef<Expr *> ExpandedExprs,
                                        bool FullySubstituted) {
 
-  std::optional<int64_t> Index;
+  std::optional<uint64_t> Index;
   if (!IndexExpr->isInstantiationDependent()) {
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
 
     ExprResult Res = CheckConvertedConstantExpression(
-        IndexExpr, Context.getSizeType(), Value, CCEKind::ArrayBound);
-    if (!Res.isUsable())
+        IndexExpr, Context.getSizeType(), Value, CCEKind::PackIndex);
+    if (!Res.isUsable() || !Value.isRepresentableByInt64())
       return ExprError();
-    Index = Value.getExtValue();
+    Index = Value.getZExtValue();
     IndexExpr = Res.get();
   }
 
   if (Index && FullySubstituted) {
-    if (*Index < 0 || *Index >= int64_t(ExpandedExprs.size())) {
+    if (*Index >= ExpandedExprs.size()) {
       Diag(PackExpression->getBeginLoc(), diag::err_pack_index_out_of_bound)
           << *Index << PackExpression << ExpandedExprs.size();
       return ExprError();

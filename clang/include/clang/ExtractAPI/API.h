@@ -618,17 +618,17 @@ struct TagRecord : APIRecord, RecordContext {
   static bool classofKind(RecordKind K) {
     switch (K) {
     case RK_Enum:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_Struct:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_Union:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_CXXClass:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplate:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplateSpecialization:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplatePartialSpecialization:
       return true;
     default:
@@ -704,15 +704,15 @@ struct RecordRecord : TagRecord {
   static bool classofKind(RecordKind K) {
     switch (K) {
     case RK_Struct:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_Union:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_CXXClass:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplate:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplateSpecialization:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RK_ClassTemplatePartialSpecialization:
       return true;
     default:
@@ -1380,11 +1380,12 @@ private:
 /// This holds information associated with macro definitions.
 struct MacroDefinitionRecord : APIRecord {
   MacroDefinitionRecord(StringRef USR, StringRef Name, SymbolReference Parent,
-                        PresumedLoc Loc, DeclarationFragments Declaration,
+                        PresumedLoc Loc, const DocComment &Comment,
+                        DeclarationFragments Declaration,
                         DeclarationFragments SubHeading,
                         bool IsFromSystemHeader)
       : APIRecord(RK_MacroDefinition, USR, Name, Parent, Loc,
-                  AvailabilityInfo(), LinkageInfo(), {}, Declaration,
+                  AvailabilityInfo(), LinkageInfo(), Comment, Declaration,
                   SubHeading, IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {

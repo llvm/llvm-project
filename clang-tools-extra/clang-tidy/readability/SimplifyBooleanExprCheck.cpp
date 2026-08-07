@@ -1,4 +1,4 @@
-//===-- SimplifyBooleanExprCheck.cpp - clang-tidy -------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,19 +21,16 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-namespace {
-
-StringRef getText(const ASTContext &Context, SourceRange Range) {
+static StringRef getText(const ASTContext &Context, SourceRange Range) {
   return Lexer::getSourceText(CharSourceRange::getTokenRange(Range),
                               Context.getSourceManager(),
                               Context.getLangOpts());
 }
 
-template <typename T> StringRef getText(const ASTContext &Context, T &Node) {
+template <typename T>
+static StringRef getText(const ASTContext &Context, T &Node) {
   return getText(Context, Node.getSourceRange());
 }
-
-} // namespace
 
 static constexpr char SimplifyOperatorDiagnostic[] =
     "redundant boolean literal supplied to boolean operator";
@@ -59,7 +56,7 @@ static std::pair<BinaryOperatorKind, BinaryOperatorKind> Opposites[] = {
 
 static StringRef negatedOperator(const BinaryOperator *BinOp) {
   const BinaryOperatorKind Opcode = BinOp->getOpcode();
-  for (auto NegatableOp : Opposites) {
+  for (const auto NegatableOp : Opposites) {
     if (Opcode == NegatableOp.first)
       return BinaryOperator::getOpcodeStr(NegatableOp.second);
     if (Opcode == NegatableOp.second)
@@ -73,10 +70,9 @@ static std::pair<OverloadedOperatorKind, StringRef> OperatorNames[] = {
     {OO_GreaterEqual, ">="}, {OO_Greater, ">"},       {OO_LessEqual, "<="}};
 
 static StringRef getOperatorName(OverloadedOperatorKind OpKind) {
-  for (auto Name : OperatorNames) {
+  for (const auto Name : OperatorNames)
     if (Name.first == OpKind)
       return Name.second;
-  }
 
   return {};
 }
@@ -88,7 +84,7 @@ static std::pair<OverloadedOperatorKind, OverloadedOperatorKind>
 
 static StringRef negatedOperator(const CXXOperatorCallExpr *OpCall) {
   const OverloadedOperatorKind Opcode = OpCall->getOperator();
-  for (auto NegatableOp : OppositeOverloads) {
+  for (const auto NegatableOp : OppositeOverloads) {
     if (Opcode == NegatableOp.first)
       return getOperatorName(NegatableOp.second);
     if (Opcode == NegatableOp.second)
@@ -120,17 +116,15 @@ static bool needsZeroComparison(const Expr *E) {
 }
 
 static bool needsStaticCast(const Expr *E) {
-  if (const auto *ImpCast = dyn_cast<ImplicitCastExpr>(E)) {
-    if (ImpCast->getCastKind() == CK_UserDefinedConversion &&
-        ImpCast->getSubExpr()->getType()->isBooleanType()) {
-      if (const auto *MemCall =
-              dyn_cast<CXXMemberCallExpr>(ImpCast->getSubExpr())) {
-        if (const auto *MemDecl =
-                dyn_cast<CXXConversionDecl>(MemCall->getMethodDecl())) {
-          if (MemDecl->isExplicit())
-            return true;
-        }
-      }
+  if (const auto *ImpCast = dyn_cast<ImplicitCastExpr>(E);
+      ImpCast && ImpCast->getCastKind() == CK_UserDefinedConversion &&
+      ImpCast->getSubExpr()->getType()->isBooleanType()) {
+    if (const auto *MemCall =
+            dyn_cast<CXXMemberCallExpr>(ImpCast->getSubExpr())) {
+      if (const auto *MemDecl =
+              dyn_cast<CXXConversionDecl>(MemCall->getMethodDecl());
+          MemDecl && MemDecl->isExplicit())
+        return true;
     }
   }
 
@@ -166,18 +160,18 @@ static std::string replacementExpression(const ASTContext &Context,
   if (const auto *EC = dyn_cast<ExprWithCleanups>(E))
     E = EC->getSubExpr();
 
-  const bool NeedsStaticCast = needsStaticCast(E);
+  const bool NeedsStaticCast =
+      Context.getLangOpts().CPlusPlus && needsStaticCast(E);
   if (Negated) {
-    if (const auto *UnOp = dyn_cast<UnaryOperator>(E)) {
-      if (UnOp->getOpcode() == UO_LNot) {
-        if (needsNullPtrComparison(UnOp->getSubExpr()))
-          return compareExpressionToNullPtr(Context, UnOp->getSubExpr(), true);
+    if (const auto *UnOp = dyn_cast<UnaryOperator>(E);
+        UnOp && UnOp->getOpcode() == UO_LNot) {
+      if (needsNullPtrComparison(UnOp->getSubExpr()))
+        return compareExpressionToNullPtr(Context, UnOp->getSubExpr(), true);
 
-        if (needsZeroComparison(UnOp->getSubExpr()))
-          return compareExpressionToZero(Context, UnOp->getSubExpr(), true);
+      if (needsZeroComparison(UnOp->getSubExpr()))
+        return compareExpressionToZero(Context, UnOp->getSubExpr(), true);
 
-        return replacementExpression(Context, false, UnOp->getSubExpr());
-      }
+      return replacementExpression(Context, false, UnOp->getSubExpr());
     }
 
     if (needsNullPtrComparison(E))
@@ -193,20 +187,20 @@ static std::string replacementExpression(const ASTContext &Context,
       NegatedOperator = negatedOperator(BinOp);
       LHS = BinOp->getLHS();
       RHS = BinOp->getRHS();
-    } else if (const auto *OpExpr = dyn_cast<CXXOperatorCallExpr>(E)) {
-      if (OpExpr->getNumArgs() == 2) {
-        NegatedOperator = negatedOperator(OpExpr);
-        LHS = OpExpr->getArg(0);
-        RHS = OpExpr->getArg(1);
-      }
+    } else if (const auto *OpExpr = dyn_cast<CXXOperatorCallExpr>(E);
+               OpExpr && OpExpr->getNumArgs() == 2) {
+      NegatedOperator = negatedOperator(OpExpr);
+      LHS = OpExpr->getArg(0);
+      RHS = OpExpr->getArg(1);
     }
+
     if (!NegatedOperator.empty() && LHS && RHS)
       return (asBool((getText(Context, *LHS) + " " + NegatedOperator + " " +
                       getText(Context, *RHS))
                          .str(),
                      NeedsStaticCast));
 
-    StringRef Text = getText(Context, *E);
+    const StringRef Text = getText(Context, *E);
     if (!NeedsStaticCast && needsParensAfterUnaryNegation(E))
       return ("!(" + Text + ")").str();
 
@@ -219,14 +213,13 @@ static std::string replacementExpression(const ASTContext &Context,
     return ("!" + asBool(Text, NeedsStaticCast));
   }
 
-  if (const auto *UnOp = dyn_cast<UnaryOperator>(E)) {
-    if (UnOp->getOpcode() == UO_LNot) {
-      if (needsNullPtrComparison(UnOp->getSubExpr()))
-        return compareExpressionToNullPtr(Context, UnOp->getSubExpr(), false);
+  if (const auto *UnOp = dyn_cast<UnaryOperator>(E);
+      UnOp && UnOp->getOpcode() == UO_LNot) {
+    if (needsNullPtrComparison(UnOp->getSubExpr()))
+      return compareExpressionToNullPtr(Context, UnOp->getSubExpr(), false);
 
-      if (needsZeroComparison(UnOp->getSubExpr()))
-        return compareExpressionToZero(Context, UnOp->getSubExpr(), false);
-    }
+    if (needsZeroComparison(UnOp->getSubExpr()))
+      return compareExpressionToZero(Context, UnOp->getSubExpr(), false);
   }
 
   if (needsNullPtrComparison(E))
@@ -250,10 +243,9 @@ static bool containsDiscardedTokens(const ASTContext &Context,
   Lex.SetCommentRetentionState(true);
 
   Token Tok;
-  while (!Lex.LexFromRawLexer(Tok)) {
+  while (!Lex.LexFromRawLexer(Tok))
     if (Tok.is(tok::TokenKind::comment) || Tok.is(tok::TokenKind::hash))
       return true;
-  }
 
   return false;
 }
@@ -279,9 +271,8 @@ public:
   }
 
   bool dataTraverseStmtPre(Stmt *S) {
-    if (!S) {
+    if (!S)
       return true;
-    }
     if (Check->canBeBypassed(S))
       return false;
     if (!shouldIgnore(S))
@@ -369,7 +360,7 @@ public:
      * if (false) ThenStmt(); -> <Empty>;
      * if (false) ThenStmt(); else ElseStmt() -> ElseStmt();
      */
-    Expr *Cond = If->getCond()->IgnoreImplicit();
+    const Expr *Cond = If->getCond()->IgnoreImplicit();
     if (std::optional<bool> Bool = getAsBoolLiteral(Cond, true)) {
       if (*Bool)
         Check->replaceWithThenStatement(Context, If, Cond);
@@ -382,9 +373,9 @@ public:
        * if (Cond) return true; else return false; -> return Cond;
        * if (Cond) return false; else return true; -> return !Cond;
        */
-      if (ExprAndBool ThenReturnBool =
+      if (const ExprAndBool ThenReturnBool =
               checkSingleStatement(If->getThen(), parseReturnLiteralBool)) {
-        ExprAndBool ElseReturnBool =
+        const ExprAndBool ElseReturnBool =
             checkSingleStatement(If->getElse(), parseReturnLiteralBool);
         if (ElseReturnBool && ThenReturnBool.Bool != ElseReturnBool.Bool) {
           if (Check->ChainedConditionalReturn ||
@@ -400,8 +391,8 @@ public:
          */
         Expr *Var = nullptr;
         SourceLocation Loc;
-        auto VarBoolAssignmentMatcher = [&Var,
-                                         &Loc](const Stmt *S) -> DeclAndBool {
+        const auto VarBoolAssignmentMatcher =
+            [&Var, &Loc](const Stmt *S) -> DeclAndBool {
           const auto *BO = dyn_cast<BinaryOperator>(S);
           if (!BO || BO->getOpcode() != BO_Assign)
             return {};
@@ -417,21 +408,20 @@ public:
           }
           if (auto *DRE = dyn_cast<DeclRefExpr>(IgnImp))
             return {DRE->getDecl(), *RightasBool};
-          if (auto *ME = dyn_cast<MemberExpr>(IgnImp))
+          if (const auto *ME = dyn_cast<MemberExpr>(IgnImp))
             return {ME->getMemberDecl(), *RightasBool};
           return {};
         };
-        if (DeclAndBool ThenAssignment =
+        if (const DeclAndBool ThenAssignment =
                 checkSingleStatement(If->getThen(), VarBoolAssignmentMatcher)) {
-          DeclAndBool ElseAssignment =
+          const DeclAndBool ElseAssignment =
               checkSingleStatement(If->getElse(), VarBoolAssignmentMatcher);
           if (ElseAssignment.Item == ThenAssignment.Item &&
-              ElseAssignment.Bool != ThenAssignment.Bool) {
-            if (Check->ChainedConditionalAssignment ||
-                !isa_and_nonnull<IfStmt>(parent())) {
-              Check->replaceWithAssignment(Context, If, Var, Loc,
-                                           ElseAssignment.Bool);
-            }
+              ElseAssignment.Bool != ThenAssignment.Bool &&
+              (Check->ChainedConditionalAssignment ||
+               !isa_and_nonnull<IfStmt>(parent()))) {
+            Check->replaceWithAssignment(Context, If, Var, Loc,
+                                         ElseAssignment.Bool);
           }
         }
       }
@@ -464,7 +454,7 @@ public:
          Second != End; ++Second, ++First) {
       PrevIf = CurIf;
       CurIf = isa<IfStmt>(*First);
-      ExprAndBool TrailingReturnBool = parseReturnLiteralBool(*Second);
+      const ExprAndBool TrailingReturnBool = parseReturnLiteralBool(*Second);
       if (!TrailingReturnBool)
         continue;
 
@@ -476,7 +466,7 @@ public:
         auto *If = cast<IfStmt>(*First);
         if (!If->hasInitStorage() && !If->hasVarStorage() &&
             !If->isConsteval()) {
-          ExprAndBool ThenReturnBool =
+          const ExprAndBool ThenReturnBool =
               checkSingleStatement(If->getThen(), parseReturnLiteralBool);
           if (ThenReturnBool &&
               ThenReturnBool.Bool != TrailingReturnBool.Bool) {
@@ -500,7 +490,7 @@ public:
         auto *SubIf = dyn_cast<IfStmt>(SubStmt);
         if (SubIf && !SubIf->getElse() && !SubIf->hasInitStorage() &&
             !SubIf->hasVarStorage() && !SubIf->isConsteval()) {
-          ExprAndBool ThenReturnBool =
+          const ExprAndBool ThenReturnBool =
               checkSingleStatement(SubIf->getThen(), parseReturnLiteralBool);
           if (ThenReturnBool &&
               ThenReturnBool.Bool != TrailingReturnBool.Bool) {
@@ -568,19 +558,20 @@ public:
     if (!isExpectedBinaryOp(SubExpr))
       return Base::TraverseUnaryOperator(Op);
     const auto *BinaryOp = cast<BinaryOperator>(SubExpr);
-    if (Check->SimplifyDeMorganRelaxed ||
-        checkEitherSide(
-            BinaryOp,
-            [this](const Expr *E) { return isExpectedUnaryLNot(E); }) ||
-        checkEitherSide(
-            BinaryOp, [this](const Expr *E) { return nestedDemorgan(E, 1); })) {
-      if (Check->reportDeMorgan(Context, Op, BinaryOp, !IsProcessing, parent(),
-                                Parens) &&
-          !Check->areDiagsSelfContained()) {
-        llvm::SaveAndRestore RAII(IsProcessing, true);
-        return Base::TraverseUnaryOperator(Op);
-      }
+    if ((Check->SimplifyDeMorganRelaxed ||
+         checkEitherSide(
+             BinaryOp,
+             [this](const Expr *E) { return isExpectedUnaryLNot(E); }) ||
+         checkEitherSide(
+             BinaryOp,
+             [this](const Expr *E) { return nestedDemorgan(E, 1); })) &&
+        Check->reportDeMorgan(Context, Op, BinaryOp, !IsProcessing, parent(),
+                              Parens) &&
+        !Check->areDiagsSelfContained()) {
+      const llvm::SaveAndRestore RAII(IsProcessing, true);
+      return Base::TraverseUnaryOperator(Op);
     }
+
     return Base::TraverseUnaryOperator(Op);
   }
 
@@ -641,13 +632,14 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
   if (!isa<CXXBoolLiteralExpr>(Other) && containsBoolLiteral(Other))
     return;
 
-  bool BoolValue = Bool->getValue();
+  const bool BoolValue = Bool->getValue();
 
-  auto ReplaceWithExpression = [this, &Context, LHS, RHS,
-                                Bool](const Expr *ReplaceWith, bool Negated) {
-    std::string Replacement =
+  const auto ReplaceWithExpression = [this, &Context, LHS, RHS,
+                                      Bool](const Expr *ReplaceWith,
+                                            bool Negated) {
+    const std::string Replacement =
         replacementExpression(Context, Negated, ReplaceWith);
-    SourceRange Range(LHS->getBeginLoc(), RHS->getEndLoc());
+    const SourceRange Range(LHS->getBeginLoc(), RHS->getEndLoc());
     issueDiag(Context, Bool->getBeginLoc(), SimplifyOperatorDiagnostic, Range,
               Replacement);
   };
@@ -709,11 +701,11 @@ bool SimplifyBooleanExprCheck::issueDiag(const ASTContext &Context,
                                          StringRef Description,
                                          SourceRange ReplacementRange,
                                          StringRef Replacement) {
-  CharSourceRange CharRange =
+  const CharSourceRange CharRange =
       Lexer::makeFileCharRange(CharSourceRange::getTokenRange(ReplacementRange),
                                Context.getSourceManager(), getLangOpts());
 
-  DiagnosticBuilder Diag = diag(Loc, Description);
+  const DiagnosticBuilder Diag = diag(Loc, Description);
   const bool HasReplacement = !containsDiscardedTokens(Context, CharRange);
   if (HasReplacement)
     Diag << FixItHint::CreateReplacement(CharRange, Replacement);
@@ -740,7 +732,7 @@ void SimplifyBooleanExprCheck::replaceWithElseStatement(
 void SimplifyBooleanExprCheck::replaceWithCondition(
     const ASTContext &Context, const ConditionalOperator *Ternary,
     bool Negated) {
-  std::string Replacement =
+  const std::string Replacement =
       replacementExpression(Context, Negated, Ternary->getCond());
   issueDiag(Context, Ternary->getTrueExpr()->getBeginLoc(),
             "redundant boolean literal in ternary expression result",
@@ -750,11 +742,11 @@ void SimplifyBooleanExprCheck::replaceWithCondition(
 void SimplifyBooleanExprCheck::replaceWithReturnCondition(
     const ASTContext &Context, const IfStmt *If, const Expr *BoolLiteral,
     bool Negated) {
-  StringRef Terminator = isa<CompoundStmt>(If->getElse()) ? ";" : "";
-  std::string Condition =
+  const StringRef Terminator = isa<CompoundStmt>(If->getElse()) ? ";" : "";
+  const std::string Condition =
       replacementExpression(Context, Negated, If->getCond());
-  std::string Replacement = ("return " + Condition + Terminator).str();
-  SourceLocation Start = BoolLiteral->getBeginLoc();
+  const std::string Replacement = ("return " + Condition + Terminator).str();
+  const SourceLocation Start = BoolLiteral->getBeginLoc();
 
   const bool HasReplacement =
       issueDiag(Context, Start, SimplifyConditionalReturnDiagnostic,
@@ -798,19 +790,20 @@ void SimplifyBooleanExprCheck::replaceWithAssignment(const ASTContext &Context,
                                                      const Expr *Var,
                                                      SourceLocation Loc,
                                                      bool Negated) {
-  SourceRange Range = IfAssign->getSourceRange();
-  StringRef VariableName = getText(Context, *Var);
-  StringRef Terminator = isa<CompoundStmt>(IfAssign->getElse()) ? ";" : "";
-  std::string Condition =
+  const SourceRange Range = IfAssign->getSourceRange();
+  const StringRef VariableName = getText(Context, *Var);
+  const StringRef Terminator =
+      isa<CompoundStmt>(IfAssign->getElse()) ? ";" : "";
+  const std::string Condition =
       replacementExpression(Context, Negated, IfAssign->getCond());
-  std::string Replacement =
+  const std::string Replacement =
       (VariableName + " = " + Condition + Terminator).str();
   issueDiag(Context, Loc, "redundant boolean literal in conditional assignment",
             Range, Replacement);
 }
 
 /// Swaps a \c BinaryOperator opcode from `&&` to `||` or vice-versa.
-static bool flipDemorganOperator(llvm::SmallVectorImpl<FixItHint> &Output,
+static bool flipDemorganOperator(SmallVectorImpl<FixItHint> &Output,
                                  const BinaryOperator *BO) {
   assert(BO->isLogicalOp());
   if (BO->getOperatorLoc().isMacroID())
@@ -854,13 +847,12 @@ flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
       constexpr bool LogicalOpParentheses = true;
       if (((*OuterBO == NewOp) || (!LogicalOpParentheses &&
                                    (*OuterBO == BO_LOr && NewOp == BO_LAnd))) &&
-          Parens) {
-        if (!Parens->getLParen().isMacroID() &&
-            !Parens->getRParen().isMacroID()) {
-          Fixes.push_back(FixItHint::CreateRemoval(Parens->getLParen()));
-          Fixes.push_back(FixItHint::CreateRemoval(Parens->getRParen()));
-        }
+          Parens && !Parens->getLParen().isMacroID() &&
+          !Parens->getRParen().isMacroID()) {
+        Fixes.push_back(FixItHint::CreateRemoval(Parens->getLParen()));
+        Fixes.push_back(FixItHint::CreateRemoval(Parens->getRParen()));
       }
+
       if (*OuterBO == BO_LAnd && NewOp == BO_LOr && !Parens) {
         Fixes.push_back(FixItHint::CreateInsertion(BinOp->getBeginLoc(), "("));
         Fixes.push_back(FixItHint::CreateInsertion(
@@ -922,13 +914,11 @@ static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
         FixItHint::CreateRemoval(cast<UnaryOperator>(E)->getOperatorLoc()));
     return false;
   }
-  if (const auto *BinOp = dyn_cast<BinaryOperator>(E)) {
+  if (const auto *BinOp = dyn_cast<BinaryOperator>(E))
     return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO);
-  }
   if (const auto *Paren = dyn_cast<ParenExpr>(E)) {
-    if (const auto *BinOp = dyn_cast<BinaryOperator>(Paren->getSubExpr())) {
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(Paren->getSubExpr()))
       return flipDemorganBinaryOperator(Fixes, Ctx, BinOp, OuterBO, Paren);
-    }
   }
   // Fallback case just insert a logical not operator.
   if (E->getBeginLoc().isMacroID())
@@ -973,7 +963,7 @@ bool SimplifyBooleanExprCheck::reportDeMorgan(const ASTContext &Context,
   assert(Inner);
   assert(Inner->isLogicalOp());
 
-  auto Diag =
+  const auto Diag =
       diag(Outer->getBeginLoc(),
            "boolean expression can be simplified by DeMorgan's theorem");
   Diag << Outer->getSourceRange();

@@ -30,10 +30,14 @@ using ConvertIndexDivS = spirv::ElementwiseOpPattern<DivSOp, spirv::SDivOp>;
 using ConvertIndexDivU = spirv::ElementwiseOpPattern<DivUOp, spirv::UDivOp>;
 using ConvertIndexRemS = spirv::ElementwiseOpPattern<RemSOp, spirv::SRemOp>;
 using ConvertIndexRemU = spirv::ElementwiseOpPattern<RemUOp, spirv::UModOp>;
-using ConvertIndexMaxS = spirv::ElementwiseOpPattern<MaxSOp, spirv::GLSMaxOp>;
-using ConvertIndexMaxU = spirv::ElementwiseOpPattern<MaxUOp, spirv::GLUMaxOp>;
-using ConvertIndexMinS = spirv::ElementwiseOpPattern<MinSOp, spirv::GLSMinOp>;
-using ConvertIndexMinU = spirv::ElementwiseOpPattern<MinUOp, spirv::GLUMinOp>;
+using ConvertIndexMaxSGL = spirv::ElementwiseOpPattern<MaxSOp, spirv::GLSMaxOp>;
+using ConvertIndexMaxUGL = spirv::ElementwiseOpPattern<MaxUOp, spirv::GLUMaxOp>;
+using ConvertIndexMinSGL = spirv::ElementwiseOpPattern<MinSOp, spirv::GLSMinOp>;
+using ConvertIndexMinUGL = spirv::ElementwiseOpPattern<MinUOp, spirv::GLUMinOp>;
+using ConvertIndexMaxSCL = spirv::ElementwiseOpPattern<MaxSOp, spirv::CLSMaxOp>;
+using ConvertIndexMaxUCL = spirv::ElementwiseOpPattern<MaxUOp, spirv::CLUMaxOp>;
+using ConvertIndexMinSCL = spirv::ElementwiseOpPattern<MinSOp, spirv::CLSMinOp>;
+using ConvertIndexMinUCL = spirv::ElementwiseOpPattern<MinUOp, spirv::CLUMinOp>;
 
 using ConvertIndexShl =
     spirv::ElementwiseOpPattern<ShlOp, spirv::ShiftLeftLogicalOp>;
@@ -59,7 +63,7 @@ using ConvertIndexXor = spirv::ElementwiseOpPattern<XOrOp, spirv::BitwiseXorOp>;
 // Converts index.bool.constant operation to spirv.Constant.
 struct ConvertIndexConstantBoolOpPattern final
     : OpConversionPattern<BoolConstantOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(BoolConstantOp op, BoolConstantOpAdaptor adaptor,
@@ -77,7 +81,7 @@ struct ConvertIndexConstantBoolOpPattern final
 // Converts index.constant op to spirv.Constant. Will truncate from i64 to i32
 // when required.
 struct ConvertIndexConstantOpPattern final : OpConversionPattern<ConstantOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(ConstantOp op, ConstantOpAdaptor adaptor,
@@ -100,23 +104,23 @@ struct ConvertIndexConstantOpPattern final : OpConversionPattern<ConstantOp> {
 /// `n*m > 0 ? (n+x)/m + 1 : -(-n/m)`. Formula taken from the equivalent
 /// conversion in IndexToLLVM.
 struct ConvertIndexCeilDivSPattern final : OpConversionPattern<CeilDivSOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(CeilDivSOp op, CeilDivSOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     Value n = adaptor.getLhs();
-    Type n_type = n.getType();
+    Type nType = n.getType();
     Value m = adaptor.getRhs();
 
     // Define the constants
-    Value zero = spirv::ConstantOp::create(rewriter, loc, n_type,
-                                           IntegerAttr::get(n_type, 0));
-    Value posOne = spirv::ConstantOp::create(rewriter, loc, n_type,
-                                             IntegerAttr::get(n_type, 1));
-    Value negOne = spirv::ConstantOp::create(rewriter, loc, n_type,
-                                             IntegerAttr::get(n_type, -1));
+    Value zero = spirv::ConstantOp::create(rewriter, loc, nType,
+                                           IntegerAttr::get(nType, 0));
+    Value posOne = spirv::ConstantOp::create(rewriter, loc, nType,
+                                             IntegerAttr::get(nType, 1));
+    Value negOne = spirv::ConstantOp::create(rewriter, loc, nType,
+                                             IntegerAttr::get(nType, -1));
 
     // Compute `x`.
     Value mPos = spirv::SGreaterThanOp::create(rewriter, loc, m, zero);
@@ -150,21 +154,21 @@ struct ConvertIndexCeilDivSPattern final : OpConversionPattern<CeilDivSOp> {
 /// Convert `ceildivu(n, m)` into `n == 0 ? 0 : (n-1)/m + 1`. Formula taken
 /// from the equivalent conversion in IndexToLLVM.
 struct ConvertIndexCeilDivUPattern final : OpConversionPattern<CeilDivUOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(CeilDivUOp op, CeilDivUOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     Value n = adaptor.getLhs();
-    Type n_type = n.getType();
+    Type nType = n.getType();
     Value m = adaptor.getRhs();
 
     // Define the constants
-    Value zero = spirv::ConstantOp::create(rewriter, loc, n_type,
-                                           IntegerAttr::get(n_type, 0));
-    Value one = spirv::ConstantOp::create(rewriter, loc, n_type,
-                                          IntegerAttr::get(n_type, 1));
+    Value zero = spirv::ConstantOp::create(rewriter, loc, nType,
+                                           IntegerAttr::get(nType, 0));
+    Value one = spirv::ConstantOp::create(rewriter, loc, nType,
+                                          IntegerAttr::get(nType, 1));
 
     // Compute the non-zero result.
     Value minusOne = spirv::ISubOp::create(rewriter, loc, n, one);
@@ -186,23 +190,23 @@ struct ConvertIndexCeilDivUPattern final : OpConversionPattern<CeilDivUOp> {
 /// `n*m < 0 ? -1 - (x-n)/m : n/m`. Formula taken from the equivalent conversion
 /// in IndexToLLVM.
 struct ConvertIndexFloorDivSPattern final : OpConversionPattern<FloorDivSOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(FloorDivSOp op, FloorDivSOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     Value n = adaptor.getLhs();
-    Type n_type = n.getType();
+    Type nType = n.getType();
     Value m = adaptor.getRhs();
 
     // Define the constants
-    Value zero = spirv::ConstantOp::create(rewriter, loc, n_type,
-                                           IntegerAttr::get(n_type, 0));
-    Value posOne = spirv::ConstantOp::create(rewriter, loc, n_type,
-                                             IntegerAttr::get(n_type, 1));
-    Value negOne = spirv::ConstantOp::create(rewriter, loc, n_type,
-                                             IntegerAttr::get(n_type, -1));
+    Value zero = spirv::ConstantOp::create(rewriter, loc, nType,
+                                           IntegerAttr::get(nType, 0));
+    Value posOne = spirv::ConstantOp::create(rewriter, loc, nType,
+                                             IntegerAttr::get(nType, 1));
+    Value negOne = spirv::ConstantOp::create(rewriter, loc, nType,
+                                             IntegerAttr::get(nType, -1));
 
     // Compute `x`.
     Value mNeg = spirv::SLessThanOp::create(rewriter, loc, m, zero);
@@ -282,7 +286,7 @@ static LogicalResult rewriteCmpOp(CmpOp op, CmpOpAdaptor adaptor,
 }
 
 struct ConvertIndexCmpPattern final : OpConversionPattern<CmpOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(CmpOp op, CmpOpAdaptor adaptor,
@@ -320,7 +324,7 @@ struct ConvertIndexCmpPattern final : OpConversionPattern<CmpOp> {
 
 /// Lower `index.sizeof` to a constant with the value of the index bitwidth.
 struct ConvertIndexSizeOf final : OpConversionPattern<SizeOfOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(SizeOfOp op, SizeOfOpAdaptor adaptor,
@@ -350,10 +354,6 @@ void index::populateIndexToSPIRVPatterns(
     ConvertIndexDivU,
     ConvertIndexRemS,
     ConvertIndexRemU,
-    ConvertIndexMaxS,
-    ConvertIndexMaxU,
-    ConvertIndexMinS,
-    ConvertIndexMinU,
     ConvertIndexShl,
     ConvertIndexShrS,
     ConvertIndexShrU,
@@ -370,6 +370,15 @@ void index::populateIndexToSPIRVPatterns(
     ConvertIndexCmpPattern,
     ConvertIndexSizeOf
   >(typeConverter, patterns.getContext());
+  // clang-format on
+
+  // GLSL min/max patterns.
+  patterns.add<ConvertIndexMaxSGL, ConvertIndexMaxUGL, ConvertIndexMinSGL,
+               ConvertIndexMinUGL>(typeConverter, patterns.getContext());
+
+  // OpenCL min/max patterns.
+  patterns.add<ConvertIndexMaxSCL, ConvertIndexMaxUCL, ConvertIndexMinSCL,
+               ConvertIndexMinUCL>(typeConverter, patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -394,7 +403,7 @@ struct ConvertIndexToSPIRVPass
     Operation *op = getOperation();
     spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
     std::unique_ptr<SPIRVConversionTarget> target =
-      SPIRVConversionTarget::get(targetAttr);
+        SPIRVConversionTarget::get(targetAttr);
 
     SPIRVConversionOptions options;
     options.use64bitIndex = this->use64bitIndex;
@@ -404,8 +413,6 @@ struct ConvertIndexToSPIRVPass
     // in patterns for other dialects.
     target->addLegalOp<UnrealizedConversionCastOp>();
 
-    // Allow the spirv operations we are converting to
-    target->addLegalDialect<spirv::SPIRVDialect>();
     // Fail hard when there are any remaining 'index' ops.
     target->addIllegalDialect<index::IndexDialect>();
 

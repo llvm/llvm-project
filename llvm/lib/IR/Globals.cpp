@@ -14,6 +14,7 @@
 #include "LLVMContextImpl.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -37,8 +38,10 @@ static_assert(sizeof(GlobalValue) ==
                   sizeof(Constant) + 2 * sizeof(void *) + 2 * sizeof(unsigned),
               "unexpected GlobalValue size growth");
 
-// GlobalObject adds a comdat.
-static_assert(sizeof(GlobalObject) == sizeof(GlobalValue) + sizeof(void *),
+// GlobalObject adds a comdat and metadata index.
+static_assert(sizeof(GlobalObject) ==
+                  sizeof(GlobalValue) + sizeof(void *) +
+                      alignTo(sizeof(unsigned), alignof(void *)),
               "unexpected GlobalObject size growth");
 
 bool GlobalValue::isMaterializable() const {
@@ -78,6 +81,68 @@ GlobalValue::getGUIDAssumingExternalLinkage(StringRef GlobalIdentifier) {
   return MD5Hash(GlobalIdentifier);
 }
 
+void GlobalValue::assignGUID() {
+  if (getGUIDMetadata() != nullptr)
+    return;
+
+  const GUID G =
+      GlobalValue::getGUIDAssumingExternalLinkage(getGlobalIdentifier());
+  setMetadata(
+      LLVMContext::MD_guid,
+      MDNode::get(getContext(), {ConstantAsMetadata::get(ConstantInt::get(
+                                    Type::getInt64Ty(getContext()), G))}));
+}
+
+void GlobalValue::reassignGUID() {
+  if (!getGUIDMetadata())
+    return;
+  eraseMetadata(LLVMContext::MD_guid);
+  assignGUID();
+}
+
+GlobalValue::GUID GlobalValue::getGUID() const {
+  auto MaybeGUID = getGUIDIfAssigned();
+  assert(MaybeGUID.has_value() &&
+         "GUID was not assigned before calling GetGUID()");
+  return *MaybeGUID;
+}
+
+GlobalValue::GUID GlobalValue::getGUIDOrFallback() const {
+  if (auto MaybeGUID = getGUIDIfAssigned(); MaybeGUID)
+    return *MaybeGUID;
+  return getGUIDAssumingExternalLinkage(getGlobalIdentifier());
+}
+
+std::optional<GlobalValue::GUID> GlobalValue::getGUIDIfAssigned() const {
+  // First check the metadata.
+  auto *MD = getGUIDMetadata();
+  if (MD != nullptr)
+    return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
+                                 ->getValue()
+                                 ->stripPointerCasts())
+        ->getZExtValue();
+
+  // Handle a few special cases where we just want to compute it based on the
+  // current properties.
+  // TODO: Maybe we should use a more robust check for intrinsics than just
+  // matching on the name?
+  if (isDeclaration() || isa<GlobalAlias>(this) ||
+      getName().starts_with("llvm.")) {
+    return GlobalValue::getGUIDAssumingExternalLinkage(getGlobalIdentifier());
+  }
+
+  // Otherwise we try to look it up in the module, for cases where we've read
+  // the GUID table but not the metadata. This happens when lazy-loading a
+  // module.
+  return getParent()->getGUID(this);
+}
+
+MDNode *GlobalValue::getGUIDMetadata() const {
+  if (auto *GO = dyn_cast<GlobalObject>(this))
+    return GO->getMetadata(LLVMContext::MD_guid);
+  return nullptr;
+}
+
 void GlobalValue::removeFromParent() {
   switch (getValueID()) {
 #define HANDLE_GLOBAL_VALUE(NAME)                                              \
@@ -102,13 +167,21 @@ void GlobalValue::eraseFromParent() {
   llvm_unreachable("not a global");
 }
 
-GlobalObject::~GlobalObject() { setComdat(nullptr); }
+GlobalObject::~GlobalObject() {
+  // Remove associated metadata from context.
+  if (hasMetadata())
+    clearMetadata();
 
-bool GlobalValue::isInterposable() const {
+  setComdat(nullptr);
+}
+
+bool GlobalValue::isInterposable(bool CheckNoIPA) const {
+  if (CheckNoIPA && isNoipaFnDef())
+    return true;
   if (isInterposableLinkage(getLinkage()))
     return true;
-  return getParent() && getParent()->getSemanticInterposition() &&
-         !isDSOLocal();
+  return !isDSOLocal() && getParent() &&
+         getParent()->getSemanticInterposition();
 }
 
 bool GlobalValue::canBenefitFromLocalAlias() const {
@@ -288,10 +361,22 @@ void GlobalObject::setSection(StringRef S) {
   setGlobalObjectFlag(HasSectionHashEntryBit, !S.empty());
 }
 
-void GlobalObject::setSectionPrefix(StringRef Prefix) {
+bool GlobalObject::setSectionPrefix(StringRef Prefix) {
+  StringRef ExistingPrefix;
+  if (std::optional<StringRef> MaybePrefix = getSectionPrefix())
+    ExistingPrefix = *MaybePrefix;
+
+  if (ExistingPrefix == Prefix)
+    return false;
+
+  if (Prefix.empty()) {
+    setMetadata(LLVMContext::MD_section_prefix, nullptr);
+    return true;
+  }
   MDBuilder MDB(getContext());
   setMetadata(LLVMContext::MD_section_prefix,
               MDB.createGlobalObjectSectionPrefix(Prefix));
+  return true;
 }
 
 std::optional<StringRef> GlobalObject::getSectionPrefix() const {
@@ -311,6 +396,13 @@ bool GlobalValue::isNobuiltinFnDef() const {
   if (!F || F->empty())
     return false;
   return F->hasFnAttribute(Attribute::NoBuiltin);
+}
+
+bool GlobalValue::isNoipaFnDef() const {
+  const Function *F = dyn_cast<Function>(this);
+  if (!F || F->isDeclaration())
+    return false;
+  return F->hasFnAttribute(Attribute::NoIPA);
 }
 
 bool GlobalValue::isDeclaration() const {
@@ -376,6 +468,15 @@ bool GlobalObject::canIncreaseAlignment() const {
   return true;
 }
 
+bool GlobalObject::hasMetadataOtherThanDebugLocAndGuid() const {
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  getAllMetadata(MDs);
+  for (const auto &V : MDs)
+    if (V.first != LLVMContext::MD_dbg && V.first != LLVMContext::MD_guid)
+      return true;
+  return false;
+}
+
 template <typename Operation>
 static const GlobalObject *
 findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases,
@@ -407,6 +508,7 @@ findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases,
     case Instruction::PtrToAddr:
     case Instruction::PtrToInt:
     case Instruction::BitCast:
+    case Instruction::AddrSpaceCast:
     case Instruction::GetElementPtr:
       return findBaseObject(CE->getOperand(0), Aliases, Op);
     default:
@@ -533,6 +635,11 @@ void GlobalVariable::replaceInitializer(Constant *InitVal) {
   assert(InitVal && "Can't compute type of null initializer");
   ValueType = InitVal->getType();
   setInitializer(InitVal);
+}
+
+uint64_t GlobalVariable::getGlobalSize(const DataLayout &DL) const {
+  // We don't support scalable global variables.
+  return DL.getTypeAllocSize(getValueType()).getFixedValue();
 }
 
 /// Copy all additional attributes (those not needed to create a GlobalVariable)

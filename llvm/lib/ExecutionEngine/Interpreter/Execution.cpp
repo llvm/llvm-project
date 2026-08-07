@@ -860,7 +860,7 @@ void Interpreter::popStackAndReturnValueToCaller(Type *RetTy,
 
   if (ECStack.empty()) {  // Finished main.  Put result into exit code...
     if (RetTy && !RetTy->isVoidTy()) {          // Nonvoid return type?
-      ExitValue = Result;   // Capture the exit value of the program
+      ExitValue = std::move(Result); // Capture the exit value of the program
     } else {
       memset(&ExitValue.Untyped, 0, sizeof(ExitValue.Untyped));
     }
@@ -897,17 +897,15 @@ void Interpreter::visitUnreachableInst(UnreachableInst &I) {
   report_fatal_error("Program executed an 'unreachable' instruction!");
 }
 
-void Interpreter::visitBranchInst(BranchInst &I) {
+void Interpreter::visitUncondBrInst(UncondBrInst &I) {
   ExecutionContext &SF = ECStack.back();
-  BasicBlock *Dest;
+  SwitchToNewBasicBlock(I.getSuccessor(), SF);
+}
 
-  Dest = I.getSuccessor(0);          // Uncond branches have a fixed dest...
-  if (!I.isUnconditional()) {
-    Value *Cond = I.getCondition();
-    if (getOperandValue(Cond, SF).IntVal == 0) // If false cond...
-      Dest = I.getSuccessor(1);
-  }
-  SwitchToNewBasicBlock(Dest, SF);
+void Interpreter::visitCondBrInst(CondBrInst &I) {
+  ExecutionContext &SF = ECStack.back();
+  bool Cond = getOperandValue(I.getCondition(), SF).IntVal != 0;
+  SwitchToNewBasicBlock(I.getSuccessor(Cond ? 0 : 1), SF);
 }
 
 void Interpreter::visitSwitchInst(SwitchInst &I) {
@@ -1084,7 +1082,7 @@ void Interpreter::visitVAStartInst(VAStartInst &I) {
   GenericValue ArgIndex;
   ArgIndex.UIntPairVal.first = ECStack.size() - 1;
   ArgIndex.UIntPairVal.second = 0;
-  SetValue(&I, ArgIndex, SF);
+  SetValue(I.getArgList(), ArgIndex, SF);
 }
 
 void Interpreter::visitVAEndInst(VAEndInst &I) {
@@ -1731,7 +1729,8 @@ void Interpreter::visitVAArgInst(VAArgInst &I) {
 
   // Get the incoming valist parameter.  LLI treats the valist as a
   // (ec-stack-depth var-arg-index) pair.
-  GenericValue VAList = getOperandValue(I.getOperand(0), SF);
+  Value *V = I.getOperand(0);
+  GenericValue VAList = getOperandValue(V, SF);
   GenericValue Dest;
   GenericValue Src = ECStack[VAList.UIntPairVal.first]
                       .VarArgs[VAList.UIntPairVal.second];
@@ -1751,8 +1750,9 @@ void Interpreter::visitVAArgInst(VAArgInst &I) {
   // Set the Value of this Instruction.
   SetValue(&I, Dest, SF);
 
-  // Move the pointer to the next vararg.
+  // Move the pointer to the next vararg and set new value back.
   ++VAList.UIntPairVal.second;
+  SetValue(V, VAList, SF);
 }
 
 void Interpreter::visitExtractElementInst(ExtractElementInst &I) {

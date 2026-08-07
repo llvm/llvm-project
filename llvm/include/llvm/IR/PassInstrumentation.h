@@ -55,7 +55,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
-#include <type_traits>
 #include <vector>
 
 namespace llvm {
@@ -213,13 +212,8 @@ class PassInstrumentation {
   // created from (1). Here we want to make case (1) skippable unconditionally
   // since they are regular passes. We call PassConcept::isRequired to decide
   // for case (2).
-  template <typename PassT>
-  using has_required_t = decltype(std::declval<PassT &>().isRequired());
-
   template <typename PassT> static bool isRequired(const PassT &Pass) {
-    if constexpr (is_detected<has_required_t, PassT>::value)
-      return Pass.isRequired();
-    return false;
+    return Pass.isRequired();
   }
 
 public:

@@ -9,6 +9,9 @@ from lldbsuite.test import lldbutil
 
 
 class StdMapDataFormatterTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         TestBase.setUp(self)
         ns = "ndk" if lldbplatformutil.target_is_android() else ""

@@ -1,4 +1,4 @@
-// REQUIRES: shell
+// UNSUPPORTED: system-windows
 // RUN: sed 's/placeholder_for_f/f/' %s > %t.cpp
 // RUN: clang-tidy -checks=-*,modernize-use-override %t.cpp -- -std=c++11 | FileCheck -check-prefix=CHECK-SANITY %s
 // RUN: not diff -U0 %s %t.cpp | %clang_tidy_diff -checks=-*,modernize-use-override -- -std=c++11 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-JMAX
@@ -9,6 +9,14 @@
 
 // RUN: not diff -U0 %s %t.cpp | %clang_tidy_diff -checks=-*,modernize-use-override -j 1 -- -std=c++11 2>&1 | FileCheck %s --check-prefix=CHECK-J1
 // CHECK-J1: Running clang-tidy in 1 threads...
+
+// Test that running over multiple files don't produce blank lines in output
+// RUN: not diff -U0 %s %t.cpp > %t.diff
+// RUN: sed 's/PLACEHOLDER/a + b + 0/' %S/Inputs/clang-tidy-diff/test.cpp > %t.clean.cpp
+// RUN: not diff -U0 %S/Inputs/clang-tidy-diff/test.cpp %t.clean.cpp > %t.clean.diff
+// RUN: cat %t.clean.diff %t.diff | %clang_tidy_diff -checks=-*,modernize-use-override -j 1 -- -std=c++11 2>&1 | FileCheck %s --check-prefix=CHECK-NOBLANK
+// CHECK-NOBLANK: Running clang-tidy in 1 threads...
+// CHECK-NOBLANK-NEXT: :8: warning: annotate this
 struct A {
   virtual void f() {}
   virtual void g() {}

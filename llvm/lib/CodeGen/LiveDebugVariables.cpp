@@ -33,7 +33,6 @@
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -79,24 +78,19 @@ char LiveDebugVariablesWrapperLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(LiveDebugVariablesWrapperLegacy, DEBUG_TYPE,
                       "Debug Variable Analysis", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(LiveDebugVariablesWrapperLegacy, DEBUG_TYPE,
                     "Debug Variable Analysis", false, true)
 
 void LiveDebugVariablesWrapperLegacy::getAnalysisUsage(
     AnalysisUsage &AU) const {
-  AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequiredTransitive<LiveIntervalsWrapperPass>();
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 LiveDebugVariablesWrapperLegacy::LiveDebugVariablesWrapperLegacy()
-    : MachineFunctionPass(ID) {
-  initializeLiveDebugVariablesWrapperLegacyPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 enum : unsigned { UndefLocNo = ~0U };
 
@@ -536,12 +530,6 @@ public:
 
 namespace llvm {
 
-/// Implementation of the LiveDebugVariables pass.
-
-LiveDebugVariables::LiveDebugVariables() = default;
-LiveDebugVariables::~LiveDebugVariables() = default;
-LiveDebugVariables::LiveDebugVariables(LiveDebugVariables &&) = default;
-
 class LiveDebugVariables::LDVImpl {
   LocMap::Allocator allocator;
   MachineFunction *MF = nullptr;
@@ -682,6 +670,12 @@ public:
 
   void print(raw_ostream&);
 };
+
+/// Implementation of the LiveDebugVariables pass.
+
+LiveDebugVariables::LiveDebugVariables() = default;
+LiveDebugVariables::~LiveDebugVariables() = default;
+LiveDebugVariables::LiveDebugVariables(LiveDebugVariables &&) = default;
 
 } // namespace llvm
 
@@ -1263,7 +1257,7 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
 
 void LiveDebugVariables::LDVImpl::computeIntervals() {
   LexicalScopes LS;
-  LS.initialize(*MF);
+  LS.scanFunction(*MF);
 
   for (const auto &UV : userValues) {
     UV->computeIntervals(MF->getRegInfo(), *TRI, *LIS, LS);
@@ -1973,8 +1967,8 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
 
     if (MachineInstr *Pos = Slots->getInstructionFromIndex(Idx)) {
       // Insert at the end of any debug instructions.
-      auto PostDebug = std::next(Pos->getIterator());
-      PostDebug = skipDebugInstructionsForward(PostDebug, MBB->instr_end());
+      auto PostDebug = std::next(MachineBasicBlock::iterator(Pos));
+      PostDebug = skipDebugInstructionsForward(PostDebug, MBB->end());
       EmitInstsHere(PostDebug);
     } else {
       // Insert position disappeared; walk forwards through slots until we

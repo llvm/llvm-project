@@ -21,7 +21,13 @@
 
 namespace llvm {
 
-enum class RunOutliner { TargetDefault, AlwaysOutline, NeverOutline };
+enum class RunOutliner {
+  TargetDefault,
+  AlwaysOutline,
+  OptimisticPGO,
+  ConservativePGO,
+  NeverOutline
+};
 enum class RegAllocType { Unset, Default, Basic, Fast, Greedy, PBQP };
 
 class RegAllocTypeParser : public cl::parser<RegAllocType> {
@@ -42,7 +48,7 @@ public:
 // Not one-on-one but mostly corresponding to commandline options in
 // TargetPassConfig.cpp.
 struct CGPassBuilderOption {
-  std::optional<bool> OptimizeRegAlloc;
+  cl::boolOrDefault OptimizeRegAlloc = cl::boolOrDefault::BOU_UNSET;
   std::optional<bool> EnableIPRA;
   bool DebugPM = false;
   bool DisableVerify = false;
@@ -56,11 +62,10 @@ struct CGPassBuilderOption {
   bool EnableLoopTermFold = false;
   bool MISchedPostRA = false;
   bool EarlyLiveIntervals = false;
-  bool GCEmptyBlocks = false;
+  bool EnableGCEmptyBlocks = false;
 
   bool DisableLSR = false;
   bool DisableCGP = false;
-  bool DisableMergeICmps = false;
   bool DisablePartialLibcallInlining = false;
   bool DisableConstantHoisting = false;
   bool DisableSelectOptimize = true;
@@ -70,6 +75,7 @@ struct CGPassBuilderOption {
   bool DisableCFIFixup = false;
   bool PrintAfterISel = false;
   bool PrintISelInput = false;
+  bool PrintRegUsage = false;
   bool RequiresCodeGenSCCOrder = false;
 
   RunOutliner EnableMachineOutliner = RunOutliner::TargetDefault;
@@ -78,11 +84,11 @@ struct CGPassBuilderOption {
   std::string FSProfileFile;
   std::string FSRemappingFile;
 
-  std::optional<bool> VerifyMachineCode;
-  std::optional<bool> EnableFastISelOption;
-  std::optional<bool> EnableGlobalISelOption;
-  std::optional<bool> DebugifyAndStripAll;
-  std::optional<bool> DebugifyCheckAndStripAll;
+  cl::boolOrDefault VerifyMachineCode = cl::boolOrDefault::BOU_UNSET;
+  cl::boolOrDefault EnableFastISelOption = cl::boolOrDefault::BOU_UNSET;
+  cl::boolOrDefault EnableGlobalISelOption = cl::boolOrDefault::BOU_UNSET;
+  cl::boolOrDefault DebugifyAndStripAll = cl::boolOrDefault::BOU_UNSET;
+  cl::boolOrDefault DebugifyCheckAndStripAll = cl::boolOrDefault::BOU_UNSET;
 };
 
 LLVM_ABI CGPassBuilderOption getCGPassBuilderOption();

@@ -109,6 +109,8 @@ static void ProcessFunction(const FunctionRec &F, raw_ostream &OS) {
     }
   }
 
+  if (F.isNodiscard())
+    OS << "OL_NODISCARD ";
   OS << formatv("{0}_APIEXPORT {1}_result_t {0}_APICALL ", PrefixUpper,
                 PrefixLower);
   OS << F.getName();
@@ -129,9 +131,11 @@ static void ProcessFunction(const FunctionRec &F, raw_ostream &OS) {
 static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
   OS << CommentsHeader;
   OS << formatv("/// @brief {0}\n", Enum.getDesc());
-  OS << formatv("typedef enum {0} {{\n", Enum.getName());
+  OS << formatv("typedef enum {0}{1} {{\n",
+                Enum.isNodiscard() ? "OL_NODISCARD " : "", Enum.getName());
 
-  uint32_t EtorVal = 0;
+  // Bitfields start from 1, other enums from 0
+  uint32_t EtorVal = Enum.isBitField();
   for (const auto &EnumVal : Enum.getValues()) {
     if (Enum.isTyped()) {
       OS << MakeComment(
@@ -141,7 +145,12 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
       OS << MakeComment(EnumVal.getDesc());
     }
     OS << formatv(TAB_1 "{0}_{1} = {2},\n", Enum.getEnumValNamePrefix(),
-                  EnumVal.getName(), EtorVal++);
+                  EnumVal.getName(), EtorVal);
+    if (Enum.isBitField()) {
+      EtorVal <<= 1u;
+    } else {
+      ++EtorVal;
+    }
   }
 
   // Add last_element/force uint32 val
@@ -156,7 +165,8 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
 static void ProcessStruct(const StructRec &Struct, raw_ostream &OS) {
   OS << CommentsHeader;
   OS << formatv("/// @brief {0}\n", Struct.getDesc());
-  OS << formatv("typedef struct {0} {{\n", Struct.getName());
+  OS << formatv("typedef struct {0}{1} {{\n",
+                Struct.isNodiscard() ? "OL_NODISCARD " : "", Struct.getName());
 
   for (const auto &Member : Struct.getMembers()) {
     OS << formatv(TAB_1 "{0} {1}; {2}", Member.getType(), Member.getName(),
@@ -206,9 +216,10 @@ static void ProcessFuncWithCodeLocVariant(const FunctionRec &Func,
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of {0} that also sets source code location information
 /// @details See also ::{0}
-OL_APIEXPORT ol_result_t OL_APICALL {0}WithCodeLoc(
+{1}OL_APIEXPORT ol_result_t OL_APICALL {0}WithCodeLoc(
 )";
-  OS << formatv(FuncWithCodeLocBegin, Func.getName());
+  OS << formatv(FuncWithCodeLocBegin, Func.getName(),
+                Func.isNodiscard() ? "OL_NODISCARD " : "");
   auto Params = Func.getParams();
   for (auto &Param : Params) {
     OS << "  " << Param.getType() << " " << Param.getName();
@@ -220,31 +231,23 @@ OL_APIEXPORT ol_result_t OL_APICALL {0}WithCodeLoc(
 void EmitOffloadAPI(const RecordKeeper &Records, raw_ostream &OS) {
   OS << GenericHeader;
   OS << FileHeader;
-  // Generate main API definitions
-  for (auto *R : Records.getAllDerivedDefinitions("APIObject")) {
-    if (R->isSubClassOf("Macro")) {
-      ProcessMacro(MacroRec{R}, OS);
-    } else if (R->isSubClassOf("Typedef")) {
-      ProcessTypedef(TypedefRec{R}, OS);
-    } else if (R->isSubClassOf("Handle")) {
-      ProcessHandle(HandleRec{R}, OS);
-    } else if (R->isSubClassOf("Function")) {
-      ProcessFunction(FunctionRec{R}, OS);
-    } else if (R->isSubClassOf("Enum")) {
-      ProcessEnum(EnumRec{R}, OS);
-    } else if (R->isSubClassOf("Struct")) {
-      ProcessStruct(StructRec{R}, OS);
-    } else if (R->isSubClassOf("FptrTypedef")) {
-      ProcessFptrTypedef(FptrTypedefRec{R}, OS);
-    }
-  }
 
-  // Generate auxiliary definitions (func param structs etc)
+  // Generate main API definitions
+  for (auto *R : Records.getAllDerivedDefinitions("Macro"))
+    ProcessMacro(MacroRec{R}, OS);
+  for (auto *R : Records.getAllDerivedDefinitions("Handle"))
+    ProcessHandle(HandleRec{R}, OS);
+  for (auto *R : Records.getAllDerivedDefinitions("Enum"))
+    ProcessEnum(EnumRec{R}, OS);
+  for (auto *R : Records.getAllDerivedDefinitions("Typedef"))
+    ProcessTypedef(TypedefRec{R}, OS);
+  for (auto *R : Records.getAllDerivedDefinitions("FptrTypedef"))
+    ProcessFptrTypedef(FptrTypedefRec{R}, OS);
+  for (auto *R : Records.getAllDerivedDefinitions("Struct"))
+    ProcessStruct(StructRec{R}, OS);
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
     ProcessFuncParamStruct(FunctionRec{R}, OS);
-  }
-
-  for (auto *R : Records.getAllDerivedDefinitions("Function")) {
+    ProcessFunction(FunctionRec{R}, OS);
     ProcessFuncWithCodeLocVariant(FunctionRec{R}, OS);
   }
 

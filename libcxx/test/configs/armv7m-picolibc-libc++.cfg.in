@@ -1,5 +1,3 @@
-lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
-
 libc_linker_script = '@CMAKE_INSTALL_PREFIX@/lib/picolibcpp.ld'
 
 config.substitutions.append(('%{flags}', '--sysroot=@CMAKE_INSTALL_PREFIX@'))
@@ -13,7 +11,7 @@ config.substitutions.append(('%{compile_flags}',
     ' -Wno-atomic-alignment'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib -nostdlib++ -L %{lib-dir} -lc++ -lc++abi'
+    '-fuse-ld=lld -nostdlib -nostdlib++ -L %{lib-dir} -lc++ -lc++abi'
     ' -lc -lm -lclang_rt.builtins -lsemihost -lcrt0-semihost' +
     ' -T {}'.format(libc_linker_script) +
     ' -Wl,--defsym=__flash=0x0'
@@ -30,7 +28,7 @@ config.executor = (
     ' --cpu cortex-m3')
 config.substitutions.append(('%{exec}',
     '%{executor}'
-    ' --execdir %T'
+    ' --execdir %{temp}'
 ))
 
 import os, site

@@ -14,5 +14,7 @@ add_object_library(
     libc.hdr.stdint_proxy
     libc.src.__support.OSUtil.osutil
     libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.properties.architectures
     ${arch_specific_deps}
 )

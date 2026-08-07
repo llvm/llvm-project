@@ -2,8 +2,6 @@
 Syntax of AMDGPU Instruction Operands
 =====================================
 
-.. contents::
-   :local:
 
 Conventions
 ===========
@@ -479,6 +477,7 @@ High and low 32 bits of *xnack mask* may be accessed as separate registers:
 
 .. _amdgpu_synid_vcc:
 .. _amdgpu_synid_vcc_lo:
+.. _amdgpu_synid_vcc_hi:
 
 vcc
 ---
@@ -523,6 +522,8 @@ including register indexing and bounds checking.
     =========== ===================================================
 
 .. _amdgpu_synid_exec:
+.. _amdgpu_synid_exec_lo:
+.. _amdgpu_synid_exec_hi:
 
 exec
 ----
@@ -742,6 +743,16 @@ or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
 
 The value must be in the range 0..0xFFFFF.
 
+.. _amdgpu_synid_simm16:
+
+simm16
+------
+
+A 16-bit :ref:`integer number<amdgpu_synid_integer_number>`
+or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
+
+The value must be in the range -0x8000..0x7FFF.
+
 .. _amdgpu_synid_simm21:
 
 simm21
@@ -751,6 +762,14 @@ A 21-bit :ref:`integer number<amdgpu_synid_integer_number>`
 or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
 
 The value must be in the range -0x100000..0x0FFFFF.
+
+.. _amdgpu_synid_simm8:
+
+simm8
+-----
+
+An 8-bit :ref:`integer number<amdgpu_synid_integer_number>`
+or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
 
 .. _amdgpu_synid_off:
 

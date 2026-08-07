@@ -62,6 +62,9 @@
 //
 // template <class Func, class... Args>
 // using __invoke_result_t = invoke_result_t<Func, Args...>;
+//
+// template <class Ret, class Func, class... Args>
+// struct __is_invocable_r : is_invocable_r<Ret, Func, Args...> {};
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -112,8 +115,10 @@ inline const bool __is_invocable_r_v = __is_invocable_r_impl<_Ret, __is_invocabl
 template <bool __is_invocable, class... _Args>
 inline const bool __is_nothrow_invocable_impl = false;
 
+#  ifndef _LIBCPP_CXX03_LANG
 template <class... _Args>
 inline const bool __is_nothrow_invocable_impl<true, _Args...> = noexcept(__builtin_invoke(std::declval<_Args>()...));
+#  endif
 
 template <class... _Args>
 inline const bool __is_nothrow_invocable_v = __is_nothrow_invocable_impl<__is_invocable_v<_Args...>, _Args...>;
@@ -326,6 +331,9 @@ template <class _Func, class... _Args>
 using __invoke_result_t _LIBCPP_NODEBUG = typename __invoke_result<_Func, _Args...>::type;
 
 #endif // __has_builtin(__builtin_invoke_r)
+
+template <class _Ret, class _Func, class... _Args>
+struct __is_invocable_r : integral_constant<bool, __is_invocable_r_v<_Ret, _Func, _Args...> > {};
 
 template <class _Ret, bool = is_void<_Ret>::value>
 struct __invoke_void_return_wrapper {

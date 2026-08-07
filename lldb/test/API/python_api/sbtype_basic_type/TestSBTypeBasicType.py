@@ -28,3 +28,27 @@ class TestCase(TestBase):
         self.assertEqual(b.GetType().GetBasicType(), int_basic_type)
         self.assertEqual(c.GetType().GetBasicType(), int_basic_type)
         self.assertEqual(d.GetType().GetBasicType(), int_basic_type)
+
+        # Check the size of the chosen basic types.
+        self.assertEqual(self.target().FindFirstType("__int128").size, 16)
+        self.assertEqual(self.target().FindFirstType("unsigned __int128").size, 16)
+
+        # Check the size of the chosen aliases of basic types.
+        self.assertEqual(self.target().FindFirstType("__int128_t").size, 16)
+        self.assertEqual(self.target().FindFirstType("__uint128_t").size, 16)
+
+        self.assertFalse(self.target().FindFirstType("_BitInt"))
+        self.assertFalse(self.target().FindFirstType("unsigned _BitInt"))
+        self.assertFalse(self.target().FindFirstType("_BitInt()"))
+        self.assertFalse(self.target().FindFirstType("unsigned _BitInt()"))
+        self.assertFalse(self.target().FindFirstType("_BitInt(65"))
+        self.assertFalse(self.target().FindFirstType("unsigned _BitInt(65"))
+        self.assertFalse(self.target().FindFirstType("_BitInt(0x41)"))
+        self.assertFalse(self.target().FindFirstType("unsigned _BitInt(0x41)"))
+        self.assertEqual(self.target().FindFirstType("_BitInt(65)").name, "_BitInt(65)")
+        self.assertEqual(self.target().FindFirstType("_BitInt(65)").size, 16)
+        self.assertEqual(
+            self.target().FindFirstType("unsigned _BitInt(65)").name,
+            "unsigned _BitInt(65)",
+        )
+        self.assertEqual(self.target().FindFirstType("unsigned _BitInt(65)").size, 16)

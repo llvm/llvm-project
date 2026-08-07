@@ -1,4 +1,4 @@
-//===--- BadSignalToKillThreadCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,15 +32,22 @@ void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
     return KeyValue.first->getName() == "SIGTERM" &&
            KeyValue.first->hasMacroDefinition();
   };
+  const auto Macros = PP->macros();
   const auto TryExpandAsInteger =
-      [](Preprocessor::macro_iterator It) -> std::optional<unsigned> {
-    if (It == PP->macro_end())
+      [&](Preprocessor::macro_iterator It) -> std::optional<unsigned> {
+    if (It == Macros.end())
       return std::nullopt;
     const MacroInfo *MI = PP->getMacroInfo(It->first);
     const Token &T = MI->tokens().back();
-    if (!T.isLiteral() || !T.getLiteralData())
+
+    if (!T.isLiteral())
       return std::nullopt;
-    StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
+
+    SmallVector<char> Buffer;
+    bool Invalid = false;
+    const StringRef ValueStr = PP->getSpelling(T, Buffer, &Invalid);
+    if (Invalid)
+      return std::nullopt;
 
     llvm::APInt IntValue;
     constexpr unsigned AutoSenseRadix = 0;
@@ -49,7 +56,7 @@ void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
     return IntValue.getZExtValue();
   };
 
-  const auto SigtermMacro = llvm::find_if(PP->macros(), IsSigterm);
+  const auto SigtermMacro = llvm::find_if(Macros, IsSigterm);
 
   if (!SigtermValue && !(SigtermValue = TryExpandAsInteger(SigtermMacro)))
     return;

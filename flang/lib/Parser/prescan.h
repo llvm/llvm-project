@@ -81,6 +81,9 @@ public:
   TokenSequence TokenizePreprocessorDirective();
   Provenance GetCurrentProvenance() const { return GetProvenance(at_); }
 
+  std::optional<CharBlock> GetKeywordMacroName(const char *) const;
+  TokenSequence ExpandKeywordMacro(CharBlock, Provenance) const;
+
   const char *IsCompilerDirectiveSentinel(const char *, std::size_t) const;
   const char *IsCompilerDirectiveSentinel(CharBlock) const;
   // 'first' is the sentinel, 'second' is beginning of payload
@@ -89,6 +92,14 @@ public:
 
   template <typename... A> Message &Say(A &&...a) {
     return messages_.Say(std::forward<A>(a)...);
+  }
+  template <typename... A>
+  Message *Warn(common::UsageWarning warning, A &&...a) {
+    return messages_.Warn(false, features_, warning, std::forward<A>(a)...);
+  }
+  template <typename... A>
+  Message *Warn(common::LanguageFeature feature, A &&...a) {
+    return messages_.Warn(false, features_, feature, std::forward<A>(a)...);
   }
 
 private:
@@ -101,6 +112,7 @@ private:
       PreprocessorDirective,
       IncludeLine, // Fortran INCLUDE
       CompilerDirective,
+      CompilerDirectiveAfterMacroExpansion, // !MACRO -> !$OMP ...
       Source
     };
     LineClassification(Kind k, std::size_t po = 0, const char *s = nullptr)
@@ -148,7 +160,7 @@ private:
   }
 
   void EmitInsertedChar(TokenSequence &tokens, char ch) {
-    Provenance provenance{allSources_.CompilerInsertionProvenance(ch)};
+    Provenance provenance{allSources().CompilerInsertionProvenance(ch)};
     tokens.PutNextTokenChar(ch, provenance);
   }
 
@@ -158,11 +170,35 @@ private:
     return *at_;
   }
 
+  bool IsOpenMPConditionalLine(const char *sentinel) const {
+    return sentinel && sentinel[0] == '$' && !sentinel[1];
+  }
+  bool IsOpenACCConditionalLine(const char *sentinel) const {
+    return sentinel && sentinel[0] == '@' && sentinel[1] == 'a' &&
+        sentinel[2] == 'c' && sentinel[3] == 'c' && sentinel[4] == '\0';
+  }
+  bool IsCUDAConditionalLine(const char *sentinel) const {
+    return sentinel && sentinel[0] == '@' && sentinel[1] == 'c' &&
+        sentinel[2] == 'u' && sentinel[3] == 'f' && sentinel[4] == '\0';
+  }
   bool InCompilerDirective() const { return directiveSentinel_ != nullptr; }
   bool InOpenMPConditionalLine() const {
-    return directiveSentinel_ && directiveSentinel_[0] == '$' &&
-        !directiveSentinel_[1];
-    ;
+    return IsOpenMPConditionalLine(directiveSentinel_);
+  }
+  bool InOpenACCConditionalLine() const {
+    return IsOpenACCConditionalLine(directiveSentinel_);
+  }
+  bool InCUDAConditionalLine() const {
+    return IsCUDAConditionalLine(directiveSentinel_);
+  }
+  bool InOpenACCOrCUDAConditionalLine() const {
+    return InOpenACCConditionalLine() || InCUDAConditionalLine();
+  }
+  bool InConditionalLine() const {
+    return InOpenMPConditionalLine() || InOpenACCOrCUDAConditionalLine();
+  }
+  bool IsOpenMPDirective() const {
+    return directiveSentinel_ && std::strcmp(directiveSentinel_, "$omp") == 0;
   }
   bool InFixedFormSource() const {
     return inFixedForm_ && !inPreprocessorDirective_ && !InCompilerDirective();
@@ -216,9 +252,11 @@ private:
   LineClassification ClassifyLine(const char *) const;
   LineClassification ClassifyLine(
       TokenSequence &, Provenance newlineProvenance) const;
-  void SourceFormChange(std::string &&);
+  bool SourceFormChange(std::string &&);
   bool CompilerDirectiveContinuation(TokenSequence &, const char *sentinel);
   bool SourceLineContinuation(TokenSequence &);
+  std::optional<LineClassification>
+  IsCompilerDirectiveSentinelAfterKeywordMacro(const char *p) const;
 
   Messages &messages_;
   CookedSource &cooked_;
@@ -277,9 +315,9 @@ private:
   const std::size_t firstCookedCharacterOffset_{cooked_.BufferedBytes()};
 
   const Provenance spaceProvenance_{
-      allSources_.CompilerInsertionProvenance(' ')};
+      allSources().CompilerInsertionProvenance(' ')};
   const Provenance backslashProvenance_{
-      allSources_.CompilerInsertionProvenance('\\')};
+      allSources().CompilerInsertionProvenance('\\')};
 
   // To avoid probing the set of active compiler directive sentinel strings
   // on every comment line, they're checked first with a cheap Bloom filter.

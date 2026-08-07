@@ -107,10 +107,16 @@ LVScopeDispatch LVScope::Dispatch = {
     {LVScopeKind::IsTryBlock, &LVScope::getIsTryBlock},
     {LVScopeKind::IsUnion, &LVScope::getIsUnion}};
 
-void LVScope::addToChildren(LVElement *Element) {
-  if (!Children)
-    Children = std::make_unique<LVElements>();
-  Children->push_back(Element);
+const LVTypes LVScope::EmptyTypes{};
+const LVSymbols LVScope::EmptySymbols{};
+const LVScopes LVScope::EmptyScopes{};
+
+LVElements LVScope::getSortedChildren(LVSortFunction SortFunction) const {
+  const auto UnsortedChildren = getChildren();
+  LVElements Elements{UnsortedChildren.begin(), UnsortedChildren.end()};
+  if (SortFunction)
+    llvm::stable_sort(Elements, SortFunction);
+  return Elements;
 }
 
 void LVScope::addElement(LVElement *Element) {
@@ -175,7 +181,6 @@ void LVScope::addElement(LVScope *Scope) {
 
   // Add it to parent.
   Scopes->push_back(Scope);
-  addToChildren(Scope);
   Scope->setParent(this);
 
   // Notify the reader about the new element being added.
@@ -202,7 +207,6 @@ void LVScope::addElement(LVSymbol *Symbol) {
 
   // Add it to parent.
   Symbols->push_back(Symbol);
-  addToChildren(Symbol);
   Symbol->setParent(this);
 
   // Notify the reader about the new element being added.
@@ -229,7 +233,6 @@ void LVScope::addElement(LVType *Type) {
 
   // Add it to parent.
   Types->push_back(Type);
-  addToChildren(Type);
   Type->setParent(this);
 
   // Notify the reader about the new element being added.
@@ -277,15 +280,12 @@ bool LVScope::removeElement(LVElement *Element) {
   if (Element->getIsLine())
     return RemoveElement(Lines);
 
-  if (RemoveElement(Children)) {
-    if (Element->getIsSymbol())
-      return RemoveElement(Symbols);
-    if (Element->getIsType())
-      return RemoveElement(Types);
-    if (Element->getIsScope())
-      return RemoveElement(Scopes);
-    llvm_unreachable("Invalid element.");
-  }
+  if (Element->getIsSymbol())
+    return RemoveElement(Symbols);
+  if (Element->getIsType())
+    return RemoveElement(Types);
+  if (Element->getIsScope())
+    return RemoveElement(Scopes);
 
   return false;
 }
@@ -356,9 +356,8 @@ void LVScope::updateLevel(LVScope *Parent, bool Moved) {
   setLevel(Parent->getLevel() + 1);
 
   // Update the children.
-  if (Children)
-    for (LVElement *Element : *Children)
-      Element->updateLevel(this, Moved);
+  for (LVElement *Element : getChildren())
+    Element->updateLevel(this, Moved);
 
   // Update any lines.
   if (Lines)
@@ -374,13 +373,12 @@ void LVScope::resolve() {
   LVElement::resolve();
 
   // Resolve the children.
-  if (Children)
-    for (LVElement *Element : *Children) {
-      if (getIsGlobalReference())
-        // If the scope is a global reference, mark all its children as well.
-        Element->setIsGlobalReference();
-      Element->resolve();
-    }
+  for (LVElement *Element : getChildren()) {
+    if (getIsGlobalReference())
+      // If the scope is a global reference, mark all its children as well.
+      Element->setIsGlobalReference();
+    Element->resolve();
+  }
 }
 
 void LVScope::resolveName() {
@@ -633,14 +631,13 @@ Error LVScope::doPrint(bool Split, bool Match, bool Print, raw_ostream &OS,
         options().getPrintFormatting() &&
         getLevel() < options().getOutputLevel()) {
       // Print the children.
-      if (Children)
-        for (const LVElement *Element : *Children) {
-          if (Match && !Element->getHasPattern())
-            continue;
-          if (Error Err =
-                  Element->doPrint(Split, Match, Print, *StreamSplit, Full))
-            return Err;
-        }
+      for (const LVElement *Element : getSortedChildren()) {
+        if (Match && !Element->getHasPattern())
+          continue;
+        if (Error Err =
+                Element->doPrint(Split, Match, Print, *StreamSplit, Full))
+          return Err;
+      }
 
       // Print the line records.
       if (Lines)
@@ -692,7 +689,6 @@ void LVScope::sort() {
           Traverse(Parent->Symbols, SortFunction);
           Traverse(Parent->Scopes, SortFunction);
           Traverse(Parent->Ranges, compareRange);
-          Traverse(Parent->Children, SortFunction);
 
           if (Parent->Scopes)
             for (LVScope *Scope : *Parent->Scopes)
@@ -978,9 +974,8 @@ bool LVScope::equals(const LVScopes *References, const LVScopes *Targets) {
 void LVScope::report(LVComparePass Pass) {
   getComparator().printItem(this, Pass);
   getComparator().push(this);
-  if (Children)
-    for (LVElement *Element : *Children)
-      Element->report(Pass);
+  for (LVElement *Element : getSortedChildren())
+    Element->report(Pass);
 
   if (Lines)
     for (LVLine *Line : *Lines)
@@ -1189,10 +1184,10 @@ void LVScopeArray::printExtra(raw_ostream &OS, bool Full) const {
 void LVScopeCompileUnit::addSize(LVScope *Scope, LVOffset Lower,
                                  LVOffset Upper) {
   LLVM_DEBUG({
-    dbgs() << format(
-        "CU [0x%08" PRIx64 "], Scope [0x%08" PRIx64 "], Range [0x%08" PRIx64
-        ":0x%08" PRIx64 "], Size = %" PRId64 "\n",
-        getOffset(), Scope->getOffset(), Lower, Upper, Upper - Lower);
+    dbgs() << formatv("CU [{0:x8}], Scope [{1:x8}], Range [{2:x8}"
+                      ":{3:x8}], Size = {4}\n",
+                      getOffset(), Scope->getOffset(), Lower, Upper,
+                      Upper - Lower);
   });
 
   // There is no need to check for a previous entry, as we are traversing the
@@ -1487,7 +1482,7 @@ void LVScopeCompileUnit::printWarnings(raw_ostream &OS, bool Full) const {
   if (options().getInternalTag() && getReader().isBinaryTypeELF()) {
     PrintHeader("Unsupported DWARF Tags");
     for (LVTagOffsetsMap::const_reference Entry : DebugTags) {
-      OS << format("\n0x%02x", (unsigned)Entry.first) << ", "
+      OS << formatv("\n{0:x2}", (unsigned)Entry.first) << ", "
          << dwarf::TagString(Entry.first) << "\n";
       unsigned Count = 0;
       for (const LVOffset &Offset : Entry.second)
@@ -1503,7 +1498,7 @@ void LVScopeCompileUnit::printWarnings(raw_ostream &OS, bool Full) const {
       // Symbol basic information.
       LVSymbol *Symbol = Entry.second;
       OS << hexSquareString(Entry.first) << " {Coverage} "
-         << format("%.2f%%", Symbol->getCoveragePercentage()) << " "
+         << formatv("{0:f2}%", Symbol->getCoveragePercentage()) << " "
          << formattedKind(Symbol->kind()) << " "
          << formattedName(Symbol->getName()) << "\n";
     }
@@ -1532,8 +1527,8 @@ void LVScopeCompileUnit::printWarnings(raw_ostream &OS, bool Full) const {
 void LVScopeCompileUnit::printTotals(raw_ostream &OS) const {
   OS << "\nTotals by lexical level:\n";
   for (size_t Index = 1; Index <= MaxSeenLevel; ++Index)
-    OS << format("[%03d]: %10d (%6.2f%%)\n", Index, Totals[Index].first,
-                 Totals[Index].second);
+    OS << formatv("[{0,0+3}]: {1,10} ({2,6:f2}%)\n", Index, Totals[Index].first,
+                  Totals[Index].second);
 }
 
 void LVScopeCompileUnit::printScopeSize(const LVScope *Scope, raw_ostream &OS) {
@@ -1545,7 +1540,7 @@ void LVScopeCompileUnit::printScopeSize(const LVScope *Scope, raw_ostream &OS) {
     // implementation-defined rounding inside printing functions.
     float Percentage =
         rint((float(Size) / CUContributionSize) * 100.0 * 100.0) / 100.0;
-    OS << format("%10" PRId64 " (%6.2f%%) : ", Size, Percentage);
+    OS << formatv("{0,10} ({1,6:f2}%) : ", Size, Percentage);
     Scope->print(OS);
 
     // Keep record of the total sizes at each lexical level.
@@ -1612,11 +1607,12 @@ void LVScopeCompileUnit::printSummary(raw_ostream &OS, const LVCounter &Counter,
                                       const char *Header) const {
   std::string Separator = std::string(29, '-');
   auto PrintSeparator = [&]() { OS << Separator << "\n"; };
+  const char *Fmt = "{0,-9}{1,9}  {2,9}\n";
   auto PrintHeadingRow = [&](const char *T, const char *U, const char *V) {
-    OS << format("%-9s%9s  %9s\n", T, U, V);
+    OS << formatv(Fmt, T, U, V);
   };
   auto PrintDataRow = [&](const char *T, unsigned U, unsigned V) {
-    OS << format("%-9s%9d  %9d\n", T, U, V);
+    OS << formatv(Fmt, T, U, V);
   };
 
   OS << "\n";
@@ -1656,9 +1652,8 @@ void LVScopeCompileUnit::printMatchedElements(raw_ostream &OS,
       // Print the view for the matched scopes.
       for (const LVScope *Scope : MatchedScopes) {
         Scope->print(OS);
-        if (const LVElements *Elements = Scope->getChildren())
-          for (LVElement *Element : *Elements)
-            Element->print(OS);
+        for (LVElement *Element : Scope->getSortedChildren())
+          Element->print(OS);
       }
     }
 

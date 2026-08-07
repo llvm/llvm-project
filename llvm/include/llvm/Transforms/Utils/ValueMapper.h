@@ -113,6 +113,10 @@ enum RemapFlags {
   /// don't use this flag. It's used when remapping is known to be un-necessary
   /// to save some compile-time.
   RF_DoNotRemapAtoms = 16,
+
+  /// Indicate that we are importing functions, specifically in the context of
+  /// ThinLTO. There is some ad-hoc behavior required in this mode.
+  RF_Importing = 32,
 };
 
 inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {
@@ -204,7 +208,7 @@ public:
   LLVM_ABI void scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,
                                              unsigned MappingContextID = 0);
   LLVM_ABI void scheduleMapAppendingVariable(GlobalVariable &GV,
-                                             Constant *InitPrefix,
+                                             GlobalVariable *OldGV,
                                              bool IsOldCtorDtor,
                                              ArrayRef<Constant *> NewMembers,
                                              unsigned MappingContextID = 0);

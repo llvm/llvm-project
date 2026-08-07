@@ -58,7 +58,7 @@ define <8 x float> @foo8(<8 x float> %v, ptr%p) nounwind {
 define <4 x i32> @undef_splatmask(<4 x i32> %v) nounwind {
 ; AVX2-LABEL: undef_splatmask:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,2,2,2]
 ; AVX2-NEXT:    retq
   %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 2, i32 undef, i32 2, i32 undef>
   %res1 = shufflevector <4 x i32> %res, <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
@@ -68,7 +68,7 @@ define <4 x i32> @undef_splatmask(<4 x i32> %v) nounwind {
 define <4 x i32> @undef_splatmask2(<4 x i32> %v) nounwind {
 ; AVX2-LABEL: undef_splatmask2:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,2,2,2]
 ; AVX2-NEXT:    retq
   %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 2, i32 1, i32 2, i32 undef>
   %res1 = shufflevector <4 x i32> %res, <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
@@ -78,7 +78,7 @@ define <4 x i32> @undef_splatmask2(<4 x i32> %v) nounwind {
 define <4 x i32> @undef_splatmask3(<4 x i32> %v) nounwind {
 ; AVX2-LABEL: undef_splatmask3:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,2,2,2]
 ; AVX2-NEXT:    retq
   %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 2, i32 undef, i32 2, i32 undef>
   %res1 = shufflevector <4 x i32> %res, <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 3>
@@ -88,7 +88,7 @@ define <4 x i32> @undef_splatmask3(<4 x i32> %v) nounwind {
 define <4 x i32> @undef_splatmask4(<4 x i32> %v, ptr %p) nounwind {
 ; AVX2-LABEL: undef_splatmask4:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,2,3,3]
+; AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,2,2,2]
 ; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vmovaps %xmm0, (%rdi)
 ; AVX2-NEXT:    vmovaps %xmm1, %xmm0

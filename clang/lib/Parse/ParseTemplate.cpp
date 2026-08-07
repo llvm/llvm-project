@@ -196,7 +196,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationAfterTemplate(
   ParsingDeclSpec DS(*this, &DiagsFromTParams);
   DS.SetRangeStart(DeclSpecAttrs.Range.getBegin());
   DS.SetRangeEnd(DeclSpecAttrs.Range.getEnd());
-  DS.takeAttributesFrom(DeclSpecAttrs);
+  DS.takeAttributesAppendingingFrom(DeclSpecAttrs);
 
   ParseDeclarationSpecifiers(DS, TemplateInfo, AS,
                              getDeclSpecContextFromDeclaratorContext(Context));
@@ -533,6 +533,12 @@ bool Parser::isTypeConstraintAnnotation() {
 bool Parser::TryAnnotateTypeConstraint() {
   if (!getLangOpts().CPlusPlus20)
     return false;
+  // The type constraint may declare template parameters, notably
+  // if it contains a generic lambda, so we need to increment
+  // the template depth as these parameters would not be instantiated
+  // at the current depth.
+  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
+  ++CurTemplateDepthTracker;
   CXXScopeSpec SS;
   bool WasScopeAnnotation = Tok.is(tok::annot_cxxscope);
   if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
@@ -557,14 +563,13 @@ bool Parser::TryAnnotateTypeConstraint() {
 
     TemplateTy PossibleConcept;
     bool MemberOfUnknownSpecialization = false;
-    auto TNK = Actions.isTemplateName(getCurScope(), SS,
-                                      /*hasTemplateKeyword=*/false,
-                                      PossibleConceptName,
-                                      /*ObjectType=*/ParsedType(),
-                                      /*EnteringContext=*/false,
-                                      PossibleConcept,
-                                      MemberOfUnknownSpecialization,
-                                      /*Disambiguation=*/true);
+    auto TNK = Actions.isTemplateName(
+        getCurScope(), SS,
+        /*hasTemplateKeyword=*/false, PossibleConceptName,
+        /*ObjectType=*/ParsedType(),
+        /*EnteringContext=*/false, PossibleConcept,
+        MemberOfUnknownSpecialization,
+        /*AllowTypoCorrection=*/false);
     if (MemberOfUnknownSpecialization || !PossibleConcept ||
         TNK != TNK_Concept_template) {
       if (SS.isNotEmpty())
@@ -1309,6 +1314,8 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
       }
     }
   }
+
+  Result = Actions.ActOnTemplateTemplateArgument(Result);
 
   // If this is a pack expansion, build it as such.
   if (EllipsisLoc.isValid() && !Result.isInvalid())

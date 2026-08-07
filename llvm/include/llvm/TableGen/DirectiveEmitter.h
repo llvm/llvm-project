@@ -20,7 +20,6 @@
 #include "llvm/Frontend/Directive/Spelling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Record.h"
-#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -47,6 +46,10 @@ public:
 
   StringRef getClausePrefix() const {
     return Def->getValueAsString("clausePrefix");
+  }
+
+  StringRef getLoopModifierPrefix() const {
+    return Def->getValueAsString("loopModifierPrefix");
   }
 
   StringRef getClauseEnumSetClass() const {
@@ -83,6 +86,10 @@ public:
 
   ArrayRef<const Record *> getClauses() const {
     return Records.getAllDerivedDefinitions("Clause");
+  }
+
+  ArrayRef<const Record *> getLoopModifiers() const {
+    return Records.getAllDerivedDefinitions("LoopModifier");
   }
 
   bool HasValidityErrors() const;
@@ -263,6 +270,10 @@ public:
     return Def->getValueAsListOfDefs("languages");
   }
 
+  std::vector<const Record *> getAllowedLoopModifiers() const {
+    return Def->getValueAsListOfDefs("allowedLoopModifiers");
+  }
+
   // Clang uses a different format for names of its directives enum.
   std::string getClangAccSpelling() const {
     StringRef Name = getSpellingForIdentifier();
@@ -297,7 +308,7 @@ public:
   // ex: async -> Async
   //     num_threads -> NumThreads
   std::string getFormattedParserClassName() const {
-    StringRef Name = getSpellingForIdentifier();
+    std::string Name = getFormattedName();
     return BaseRecord::getUpperCamelName(Name, "_");
   }
 

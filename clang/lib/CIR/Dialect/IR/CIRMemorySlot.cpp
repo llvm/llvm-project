@@ -34,8 +34,8 @@ llvm::SmallVector<MemorySlot> cir::AllocaOp::getPromotableSlots() {
 
 Value cir::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                      OpBuilder &builder) {
-  return builder.create<cir::ConstantOp>(getLoc(),
-                                         cir::UndefAttr::get(slot.elemType));
+  return cir::ConstantOp::create(builder, getLoc(),
+                                 cir::UndefAttr::get(slot.elemType));
 }
 
 void cir::AllocaOp::handleBlockArgument(const MemorySlot &slot,
@@ -72,6 +72,11 @@ bool cir::LoadOp::canUsesBeRemoved(
     const DataLayout &dataLayout) {
   if (blockingUses.size() != 1)
     return false;
+
+  // Volatile load or atomic load should not be removed.
+  if (getIsVolatile() || getMemOrder().has_value())
+    return false;
+
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
          getType() == slot.elemType;
@@ -106,6 +111,11 @@ bool cir::StoreOp::canUsesBeRemoved(
     const DataLayout &dataLayout) {
   if (blockingUses.size() != 1)
     return false;
+
+  // Volatile store or atomic store should not be removed.
+  if (getIsVolatile() || getMemOrder().has_value())
+    return false;
+
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
          getValue() != slot.ptr && slot.elemType == getValue().getType();
@@ -116,6 +126,48 @@ DeletionKind cir::StoreOp::removeBlockingUses(
     OpBuilder &builder, Value reachingDefinition,
     const DataLayout &dataLayout) {
   return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for CopyOp
+//===----------------------------------------------------------------------===//
+
+bool cir::CopyOp::loadsFrom(const MemorySlot &slot) {
+  return getSrc() == slot.ptr;
+}
+
+bool cir::CopyOp::storesTo(const MemorySlot &slot) {
+  return getDst() == slot.ptr;
+}
+
+Value cir::CopyOp::getStored(const MemorySlot &slot, OpBuilder &builder,
+                             Value reachingDef, const DataLayout &dataLayout) {
+  return cir::LoadOp::create(builder, getLoc(), slot.elemType, getSrc());
+}
+
+DeletionKind cir::CopyOp::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, mlir::Value reachingDefinition,
+    const DataLayout &dataLayout) {
+  if (loadsFrom(slot))
+    cir::StoreOp::create(builder, getLoc(), reachingDefinition, getDst(),
+                         /*is_volatile=*/false,
+                         /*is_nontemporal=*/false,
+                         /*alignment=*/mlir::IntegerAttr{},
+                         /*sync_scope=*/cir::SyncScopeKindAttr(),
+                         /*mem-order=*/cir::MemOrderAttr());
+  return DeletionKind::Delete;
+}
+
+bool cir::CopyOp::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (getDst() == getSrc())
+    return false;
+
+  return getCopySizeInBytes(dataLayout) ==
+         dataLayout.getTypeSize(slot.elemType);
 }
 
 //===----------------------------------------------------------------------===//

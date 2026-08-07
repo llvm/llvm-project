@@ -22,6 +22,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -62,7 +63,7 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   // FullyQualifiedNames.
   PrintingPolicy Policy = RD->getASTContext().getPrintingPolicy();
   Policy.SuppressInlineNamespace =
-      PrintingPolicy::SuppressInlineNamespaceMode::None;
+      llvm::to_underlying(PrintingPolicy::SuppressInlineNamespaceMode::None);
 
   // Name the codegen type after the typedef name
   // if there is no tag type name available
@@ -104,8 +105,20 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
   if (T->isConstantMatrixType()) {
     const Type *Ty = Context.getCanonicalType(T).getTypePtr();
     const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
-    return llvm::ArrayType::get(ConvertType(MT->getElementType()),
-                                MT->getNumRows() * MT->getNumColumns());
+    llvm::Type *IRElemTy = ConvertType(MT->getElementType());
+    if (Context.getLangOpts().HLSL) {
+      if (T->isConstantMatrixBoolType())
+        IRElemTy = ConvertTypeForMem(Context.BoolTy);
+
+      unsigned NumRows = MT->getNumRows();
+      unsigned NumCols = MT->getNumColumns();
+      bool IsRowMajor = isMatrixRowMajor(Context.getLangOpts(), T);
+      unsigned VecLen = IsRowMajor ? NumCols : NumRows;
+      unsigned ArrayLen = IsRowMajor ? NumRows : NumCols;
+      llvm::Type *VecTy = llvm::FixedVectorType::get(IRElemTy, VecLen);
+      return llvm::ArrayType::get(VecTy, ArrayLen);
+    }
+    return llvm::ArrayType::get(IRElemTy, MT->getNumElementsFlattened());
   }
 
   llvm::Type *R = ConvertType(T);
@@ -176,6 +189,16 @@ llvm::Type *CodeGenTypes::convertTypeForLoadStore(QualType T,
   if (LLVMTy->isIntegerTy(1))
     return llvm::IntegerType::get(getLLVMContext(),
                                   (unsigned)Context.getTypeSize(T));
+
+  if (T->isConstantMatrixBoolType()) {
+    // Matrices are loaded and stored atomically as vectors. Therefore we
+    // construct a FixedVectorType here instead of returning
+    // ConvertTypeForMem(T) which would return an ArrayType instead.
+    const Type *Ty = Context.getCanonicalType(T).getTypePtr();
+    const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
+    llvm::Type *IRElemTy = ConvertTypeForMem(MT->getElementType());
+    return llvm::FixedVectorType::get(IRElemTy, MT->getNumElementsFlattened());
+  }
 
   if (T->isExtVectorBoolType())
     return ConvertTypeForMem(T);
@@ -276,30 +299,6 @@ void CodeGenTypes::RefreshTypeCacheForClass(const CXXRecordDecl *RD) {
   }
 }
 
-static llvm::Type *getTypeForFormat(llvm::LLVMContext &VMContext,
-                                    const llvm::fltSemantics &format,
-                                    bool UseNativeHalf = false) {
-  if (&format == &llvm::APFloat::IEEEhalf()) {
-    if (UseNativeHalf)
-      return llvm::Type::getHalfTy(VMContext);
-    else
-      return llvm::Type::getInt16Ty(VMContext);
-  }
-  if (&format == &llvm::APFloat::BFloat())
-    return llvm::Type::getBFloatTy(VMContext);
-  if (&format == &llvm::APFloat::IEEEsingle())
-    return llvm::Type::getFloatTy(VMContext);
-  if (&format == &llvm::APFloat::IEEEdouble())
-    return llvm::Type::getDoubleTy(VMContext);
-  if (&format == &llvm::APFloat::IEEEquad())
-    return llvm::Type::getFP128Ty(VMContext);
-  if (&format == &llvm::APFloat::PPCDoubleDouble())
-    return llvm::Type::getPPC_FP128Ty(VMContext);
-  if (&format == &llvm::APFloat::x87DoubleExtended())
-    return llvm::Type::getX86_FP80Ty(VMContext);
-  llvm_unreachable("Unknown float format!");
-}
-
 llvm::Type *CodeGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
   assert(QFT.isCanonical());
   const FunctionType *FT = cast<FunctionType>(QFT.getTypePtr());
@@ -311,12 +310,12 @@ llvm::Type *CodeGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
 
     // Force conversion of all the relevant record types, to make sure
     // we re-convert the FunctionType when appropriate.
-    if (const RecordType *RT = FT->getReturnType()->getAs<RecordType>())
-      ConvertRecordDeclType(RT->getOriginalDecl()->getDefinitionOrSelf());
+    if (const auto *RD = FT->getReturnType()->getAsRecordDecl())
+      ConvertRecordDeclType(RD);
     if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(FT))
       for (unsigned i = 0, e = FPT->getNumParams(); i != e; i++)
-        if (const RecordType *RT = FPT->getParamType(i)->getAs<RecordType>())
-          ConvertRecordDeclType(RT->getOriginalDecl()->getDefinitionOrSelf());
+        if (const auto *RD = FPT->getParamType(i)->getAsRecordDecl())
+          ConvertRecordDeclType(RD);
 
     SkippedLayout = true;
 
@@ -373,8 +372,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   }
 
   // RecordTypes are cached and processed specially.
-  if (const RecordType *RT = dyn_cast<RecordType>(Ty))
-    return ConvertRecordDeclType(RT->getOriginalDecl()->getDefinitionOrSelf());
+  if (const auto *RT = dyn_cast<RecordType>(Ty))
+    return ConvertRecordDeclType(RT->getDecl()->getDefinitionOrSelf());
 
   llvm::Type *CachedType = nullptr;
   auto TCI = TypeCache.find(Ty);
@@ -461,17 +460,15 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       break;
 
     case BuiltinType::Float16:
-      ResultType =
-          getTypeForFormat(getLLVMContext(), Context.getFloatTypeSemantics(T),
-                           /* UseNativeHalf = */ true);
+      ResultType = llvm::Type::getFloatingPointTy(
+          getLLVMContext(), Context.getFloatTypeSemantics(T));
       break;
 
     case BuiltinType::Half:
-      // Half FP can either be storage-only (lowered to i16) or native.
-      ResultType = getTypeForFormat(
-          getLLVMContext(), Context.getFloatTypeSemantics(T),
-          Context.getLangOpts().NativeHalfType ||
-              !Context.getTargetInfo().useFP16ConversionIntrinsics());
+      // Half FP can either be storage-only (lowered to i16 for ABI purposes) or
+      // native.
+      ResultType = llvm::Type::getFloatingPointTy(
+          getLLVMContext(), Context.getFloatTypeSemantics(T));
       break;
     case BuiltinType::LongDouble:
       LongDoubleReferenced = true;
@@ -481,9 +478,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::Double:
     case BuiltinType::Float128:
     case BuiltinType::Ibm128:
-      ResultType = getTypeForFormat(getLLVMContext(),
-                                    Context.getFloatTypeSemantics(T),
-                                    /* UseNativeHalf = */ false);
+      ResultType = llvm::Type::getFloatingPointTy(
+          getLLVMContext(), Context.getFloatTypeSemantics(T));
       break;
 
     case BuiltinType::NullPtr:
@@ -575,17 +571,29 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   } break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define AMDGPU_OPAQUE_PTR_TYPE(Name, Id, SingletonId, Width, Align, AS)        \
-  case BuiltinType::Id:                                                        \
-    return llvm::PointerType::get(getLLVMContext(), AS);
+  case BuiltinType::Id: {                                                      \
+    if (BuiltinType::Id == BuiltinType::AMDGPUTexture) {                       \
+      return llvm::FixedVectorType::get(                                       \
+          llvm::Type::getInt32Ty(getLLVMContext()), 8);                        \
+    }                                                                          \
+    return llvm::PointerType::get(getLLVMContext(), AS);                       \
+  }
 #define AMDGPU_NAMED_BARRIER_TYPE(Name, Id, SingletonId, Width, Align, Scope)  \
   case BuiltinType::Id:                                                        \
     return llvm::TargetExtType::get(getLLVMContext(), "amdgcn.named.barrier",  \
                                     {}, {Scope});
+#define AMDGPU_FEATURE_PREDICATE_TYPE(Name, Id, SingletonId, Width, Align)     \
+  case BuiltinType::Id:                                                        \
+    return ConvertType(getContext().getLogicalOperationType());
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
       ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
       break;
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    return llvm::TargetExtType::get(getLLVMContext(), "spirv.Event");
+#include "clang/Basic/SPIRVTypes.def"
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \
@@ -614,6 +622,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::Pointer: {
     const PointerType *PTy = cast<PointerType>(Ty);
     QualType ETy = PTy->getPointeeType();
+    if (ETy.getAddressSpace() == LangAS::wasm_funcref) {
+      ResultType = CGM.getTargetCodeGenInfo().getWasmFuncrefReferenceType();
+      break;
+    }
     unsigned AS = getTargetAddressSpace(ETy);
     ResultType = llvm::PointerType::get(getLLVMContext(), AS);
     break;
@@ -700,8 +712,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     break;
 
   case Type::Enum: {
-    const EnumDecl *ED =
-        cast<EnumType>(Ty)->getOriginalDecl()->getDefinitionOrSelf();
+    const auto *ED = Ty->castAsEnumDecl();
     if (ED->isCompleteDefinition() || ED->isFixed())
       return ConvertType(ED->getIntegerType());
     // Return a placeholder 'i32' type.  This can be changed later when the
@@ -771,6 +782,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::HLSLInlineSpirv:
     ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
     break;
+  case Type::OverflowBehavior:
+    ResultType =
+        ConvertType(dyn_cast<OverflowBehaviorType>(Ty)->getUnderlyingType());
+    break;
   }
 
   assert(ResultType && "Didn't convert a type?");
@@ -814,10 +829,7 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
   if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(RD)) {
     for (const auto &I : CRD->bases()) {
       if (I.isVirtual()) continue;
-      ConvertRecordDeclType(I.getType()
-                                ->castAs<RecordType>()
-                                ->getOriginalDecl()
-                                ->getDefinitionOrSelf());
+      ConvertRecordDeclType(I.getType()->castAsRecordDecl());
     }
   }
 
@@ -875,10 +887,8 @@ bool CodeGenTypes::isZeroInitializable(QualType T) {
 
   // Records are non-zero-initializable if they contain any
   // non-zero-initializable subobjects.
-  if (const RecordType *RT = T->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  if (const auto *RD = T->getAsRecordDecl())
     return isZeroInitializable(RD);
-  }
 
   // We have to ask the ABI about member pointers.
   if (const MemberPointerType *MPT = T->getAs<MemberPointerType>())

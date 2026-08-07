@@ -11,8 +11,8 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
 
@@ -127,8 +127,9 @@ std::string Managarm::getDynamicLinker(const ArgList &Args) const {
   case llvm::Triple::x86_64:
     return "/lib/x86_64-managarm/ld.so";
   default:
-    llvm_unreachable("unsupported architecture");
+    break;
   }
+  return "";
 }
 
 void Managarm::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
@@ -136,7 +137,7 @@ void Managarm::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   const Driver &D = getDriver();
   std::string SysRoot = computeSysRoot();
 
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   if (!DriverArgs.hasArg(options::OPT_nostdlibinc))
@@ -193,15 +194,15 @@ void Managarm::addLibStdCxxIncludePaths(
   if (!GCCInstallation.isValid())
     return;
 
-  StringRef TripleStr = GCCInstallation.getTriple().str();
-
   // Try generic GCC detection.
-  Generic_GCC::addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args, TripleStr);
+  addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args);
 }
 
-SanitizerMask Managarm::getSupportedSanitizers() const {
+SanitizerMask
+Managarm::getSupportedSanitizers(BoundArch BA,
+                                 Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::KernelAddress;

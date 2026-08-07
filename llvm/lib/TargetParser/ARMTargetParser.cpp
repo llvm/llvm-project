@@ -88,6 +88,7 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   case ArchKind::ARMV9_4A:
   case ArchKind::ARMV9_5A:
   case ArchKind::ARMV9_6A:
+  case ArchKind::ARMV9_7A:
     return 9;
   case ArchKind::INVALID:
     return 0;
@@ -127,6 +128,7 @@ static ARM::ProfileKind getProfileKind(ARM::ArchKind AK) {
   case ARM::ArchKind::ARMV9_4A:
   case ARM::ArchKind::ARMV9_5A:
   case ARM::ArchKind::ARMV9_6A:
+  case ARM::ArchKind::ARMV9_7A:
     return ARM::ProfileKind::A;
   case ARM::ArchKind::ARMV4:
   case ARM::ArchKind::ARMV4T:
@@ -235,16 +237,16 @@ ARM::NeonSupportLevel ARM::getFPUNeonSupportLevel(ARM::FPUKind FPUKind) {
 
 StringRef ARM::getFPUSynonym(StringRef FPU) {
   return StringSwitch<StringRef>(FPU)
-      .Cases("fpa", "fpe2", "fpe3", "maverick", "invalid") // Unsupported
+      .Cases({"fpa", "fpe2", "fpe3", "maverick"}, "invalid") // Unsupported
       .Case("vfp2", "vfpv2")
       .Case("vfp3", "vfpv3")
       .Case("vfp4", "vfpv4")
       .Case("vfp3-d16", "vfpv3-d16")
       .Case("vfp4-d16", "vfpv4-d16")
-      .Cases("fp4-sp-d16", "vfpv4-sp-d16", "fpv4-sp-d16")
-      .Cases("fp4-dp-d16", "fpv4-dp-d16", "vfpv4-d16")
+      .Cases({"fp4-sp-d16", "vfpv4-sp-d16"}, "fpv4-sp-d16")
+      .Cases({"fp4-dp-d16", "fpv4-dp-d16"}, "vfpv4-d16")
       .Case("fp5-sp-d16", "fpv5-sp-d16")
-      .Cases("fp5-dp-d16", "fpv5-dp-d16", "fpv5-d16")
+      .Cases({"fp5-dp-d16", "fpv5-dp-d16"}, "fpv5-d16")
       // FIXME: Clang uses it, but it's bogus, since neon defaults to vfpv3.
       .Case("neon-vfpv3", "neon")
       .Default(FPU);
@@ -567,8 +569,8 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT) {
   default:
     if (TT.isOSNetBSD())
       return "apcs-gnu";
-    if (TT.isOSFreeBSD() || TT.isOSOpenBSD() || TT.isOSHaiku() ||
-        TT.isOHOSFamily())
+    if (TT.isOSFreeBSD() || TT.isOSFuchsia() || TT.isOSOpenBSD() ||
+        TT.isOSHaiku() || TT.isOHOSFamily())
       return "aapcs-linux";
     return "aapcs";
   }
@@ -648,6 +650,8 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
     }
   case llvm::Triple::OpenBSD:
     return "cortex-a8";
+  case llvm::Triple::Fuchsia:
+    return "cortex-a53";
   default:
     switch (Triple.getEnvironment()) {
     case llvm::Triple::EABIHF:

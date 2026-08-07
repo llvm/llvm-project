@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
-
 // This test requires variable templates
 // UNSUPPORTED: gcc && c++11
 
 #include <__type_traits/desugars_to.h>
+#include <__algorithm/comp.h>
 
 struct Tag {};
 struct Operation {};
@@ -38,5 +37,23 @@ void tests() {
 
     static_assert(std::__desugars_to_v<Tag, Operation&&>, "");
     static_assert(std::__desugars_to_v<Tag, Operation const&&>, "");
+  }
+
+  // Make sure that __less<> desugars to __totally_ordered_less_tag for integral types regardless of their cv-ref
+  {
+    static_assert(std::__desugars_to_v<std::__totally_ordered_less_tag, std::__less<>, int, int>, "");
+    static_assert(std::__desugars_to_v<std::__totally_ordered_less_tag, std::__less<>, int&, int&>, "");
+    static_assert(std::__desugars_to_v<std::__totally_ordered_less_tag, std::__less<>, const int, const int>, "");
+    static_assert(std::__desugars_to_v<std::__totally_ordered_less_tag, std::__less<>, const int&, const int&>, "");
+    static_assert(
+        std::__desugars_to_v<std::__totally_ordered_less_tag, std::__less<>, volatile int&, volatile int&>, "");
+    static_assert(
+        std::__desugars_to_v<std::__totally_ordered_less_tag, std::__less<>, volatile const int&, volatile const int&>,
+        "");
+    static_assert(!std::__desugars_to_v<std::__totally_ordered_less_tag,
+                                        std::__less<>,
+                                        volatile const float&,
+                                        volatile const float&>,
+                  "");
   }
 }

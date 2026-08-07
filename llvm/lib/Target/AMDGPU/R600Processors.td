@@ -14,7 +14,7 @@ class SubtargetFeatureFetchLimit <string Value> :
 >;
 
 def FeatureR600ALUInst : SubtargetFeature<"R600ALUInst",
-  "R600ALUInst",
+  "HasR600ALUInst",
   "false",
   "Older version of ALU instructions encoding"
 >;
@@ -29,15 +29,21 @@ def FeatureVertexCache : SubtargetFeature<"HasVertexCache",
 >;
 
 def FeatureCaymanISA : SubtargetFeature<"caymanISA",
-  "CaymanISA",
+  "HasCaymanISA",
   "true",
   "Use Cayman ISA"
 >;
 
 def FeatureCFALUBug : SubtargetFeature<"cfalubug",
-  "CFALUBug",
+  "HasCFALUBug",
   "true",
   "GPU has CF_ALU bug"
+>;
+
+def FeatureMadMacF32Insts : SubtargetFeature<"mad-mac-f32-insts",
+  "HasMadMacF32Insts",
+  "true",
+  "Has v_mad_f32/v_mac_f32/v_madak_f32/v_madmk_f32 instructions"
 >;
 
 class R600SubtargetFeatureGeneration <string Value, string FeatureName,
@@ -45,41 +51,48 @@ class R600SubtargetFeatureGeneration <string Value, string FeatureName,
         SubtargetFeatureGeneration <Value, FeatureName, "R600Subtarget", Implies>;
 
 def FeatureR600 : R600SubtargetFeatureGeneration<"R600", "r600",
-  [FeatureR600ALUInst, FeatureFetchLimit8]
+  [FeatureR600ALUInst, FeatureFetchLimit8, FeatureMadMacF32Insts]
 >;
 
 def FeatureR700 : R600SubtargetFeatureGeneration<"R700", "r700",
-  [FeatureFetchLimit16]
+  [FeatureFetchLimit16, FeatureMadMacF32Insts]
 >;
 
 def FeatureEvergreen : R600SubtargetFeatureGeneration<"EVERGREEN", "evergreen",
-  [FeatureFetchLimit16, FeatureAddressableLocalMemorySize32768]
+  [FeatureFetchLimit16, FeatureAddressableLocalMemorySize32768, FeatureMadMacF32Insts]
 >;
 
 def FeatureNorthernIslands : R600SubtargetFeatureGeneration<"NORTHERN_ISLANDS",
   "northern-islands",
   [FeatureFetchLimit16, FeatureWavefrontSize64,
-   FeatureAddressableLocalMemorySize32768]
+   FeatureAddressableLocalMemorySize32768, FeatureMadMacF32Insts]
 >;
-
 
 //===----------------------------------------------------------------------===//
 // Radeon HD 2000/3000 Series (R600).
 //===----------------------------------------------------------------------===//
 
-def : Processor<"r600", R600_VLIW5_Itin,
+def : R600ProcessorModel<"r600", R600_VLIW5_Itin,
   [FeatureR600, FeatureWavefrontSize64, FeatureVertexCache]
 >;
 
-def : Processor<"r630", R600_VLIW5_Itin,
+def : ProcessorAlias<"rv630", "r600">;
+def : ProcessorAlias<"rv635", "r600">;
+
+def : R600ProcessorModel<"r630", R600_VLIW5_Itin,
   [FeatureR600, FeatureWavefrontSize32, FeatureVertexCache]
 >;
 
-def : Processor<"rs880", R600_VLIW5_Itin,
+def : ProcessorAlias<"rs780", "rs880">;
+
+def : R600ProcessorModel<"rs880", R600_VLIW5_Itin,
   [FeatureR600, FeatureWavefrontSize16]
 >;
 
-def : Processor<"rv670", R600_VLIW5_Itin,
+def : ProcessorAlias<"rv610", "rs880">;
+def : ProcessorAlias<"rv620", "rs880">;
+
+def : R600ProcessorModel<"rv670", R600_VLIW5_Itin,
   [FeatureR600, FeatureWavefrontSize64, FeatureVertexCache]
 >;
 
@@ -87,15 +100,17 @@ def : Processor<"rv670", R600_VLIW5_Itin,
 // Radeon HD 4000 Series (R700).
 //===----------------------------------------------------------------------===//
 
-def : Processor<"rv710", R600_VLIW5_Itin,
+def : R600ProcessorModel<"rv710", R600_VLIW5_Itin,
   [FeatureR700, FeatureWavefrontSize32, FeatureVertexCache]
 >;
 
-def : Processor<"rv730", R600_VLIW5_Itin,
+def : R600ProcessorModel<"rv730", R600_VLIW5_Itin,
   [FeatureR700, FeatureWavefrontSize32, FeatureVertexCache]
 >;
 
-def : Processor<"rv770", R600_VLIW5_Itin,
+def : ProcessorAlias<"rv740", "rv770">;
+
+def : R600ProcessorModel<"rv770", R600_VLIW5_Itin,
   [FeatureR700, FeatureWavefrontSize64, FeatureVertexCache]
 >;
 
@@ -103,44 +118,54 @@ def : Processor<"rv770", R600_VLIW5_Itin,
 // Radeon HD 5000 Series (Evergreen).
 //===----------------------------------------------------------------------===//
 
-def : Processor<"cedar", R600_VLIW5_Itin,
+def : R600ProcessorModel<"cedar", R600_VLIW5_Itin,
   [FeatureEvergreen, FeatureWavefrontSize32, FeatureVertexCache,
    FeatureCFALUBug]
 >;
 
-def : Processor<"cypress", R600_VLIW5_Itin,
-  [FeatureEvergreen, FeatureWavefrontSize64, FeatureVertexCache, FeatureFMA]
->;
+def : ProcessorAlias<"palm", "cedar">;
 
-def : Processor<"juniper", R600_VLIW5_Itin,
+def : R600ProcessorModel<"cypress", R600_VLIW5_Itin,
+  [FeatureEvergreen, FeatureWavefrontSize64, FeatureVertexCache, FeatureFMA]> {
+  let ArchFeatures = [R600_FEATURE_FMA];
+}
+
+def : ProcessorAlias<"hemlock", "cypress">;
+
+def : R600ProcessorModel<"juniper", R600_VLIW5_Itin,
   [FeatureEvergreen, FeatureWavefrontSize64, FeatureVertexCache]
 >;
 
-def : Processor<"redwood", R600_VLIW5_Itin,
+def : R600ProcessorModel<"redwood", R600_VLIW5_Itin,
   [FeatureEvergreen, FeatureWavefrontSize64, FeatureVertexCache,
    FeatureCFALUBug]
 >;
 
-def : Processor<"sumo", R600_VLIW5_Itin,
+def : R600ProcessorModel<"sumo", R600_VLIW5_Itin,
   [FeatureEvergreen, FeatureWavefrontSize64, FeatureCFALUBug]
 >;
+
+def : ProcessorAlias<"sumo2", "sumo">;
 
 //===----------------------------------------------------------------------===//
 // Radeon HD 6000 Series (Northern Islands).
 //===----------------------------------------------------------------------===//
 
-def : Processor<"barts", R600_VLIW5_Itin,
+def : R600ProcessorModel<"barts", R600_VLIW5_Itin,
   [FeatureNorthernIslands, FeatureVertexCache, FeatureCFALUBug]
 >;
 
-def : Processor<"caicos", R600_VLIW5_Itin,
+def : R600ProcessorModel<"caicos", R600_VLIW5_Itin,
   [FeatureNorthernIslands, FeatureCFALUBug]
 >;
 
-def : Processor<"cayman", R600_VLIW4_Itin,
-  [FeatureNorthernIslands, FeatureCaymanISA, FeatureFMA]
->;
+def : ProcessorAlias<"aruba", "cayman">;
 
-def : Processor<"turks", R600_VLIW5_Itin,
+def : R600ProcessorModel<"cayman", R600_VLIW4_Itin,
+  [FeatureNorthernIslands, FeatureCaymanISA, FeatureFMA]> {
+  let ArchFeatures = [R600_FEATURE_FMA];
+}
+
+def : R600ProcessorModel<"turks", R600_VLIW5_Itin,
   [FeatureNorthernIslands, FeatureVertexCache, FeatureCFALUBug]
 >;

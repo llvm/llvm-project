@@ -28,11 +28,13 @@ static_library("Rewrite") {
     "BuildIDRewriter.cpp",
     "DWARFRewriter.cpp",
     "ExecutableFileMemoryManager.cpp",
+    "GNUPropertyRewriter.cpp",
     "JITLinkLinker.cpp",
     "LinuxKernelRewriter.cpp",
     "MachORewriteInstance.cpp",
     "MetadataManager.cpp",
     "PseudoProbeRewriter.cpp",
+    "RSeqRewriter.cpp",
     "RewriteInstance.cpp",
     "SDTRewriter.cpp",
   ]

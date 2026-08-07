@@ -219,8 +219,18 @@ public:
     return getPopSize(Inst) == 0 ? false : true;
   }
 
+  bool isEpilogue(const BinaryBasicBlock &BB) const override {
+    return ::llvm::any_of(BB, [&](const MCInst &Instr) {
+      return isLeave(Instr) || isPop(Instr);
+    });
+  }
+
   bool isTerminateBranch(const MCInst &Inst) const override {
     return Inst.getOpcode() == X86::ENDBR32 || Inst.getOpcode() == X86::ENDBR64;
+  }
+
+  bool isX86HLT(const MCInst &Inst) const override {
+    return Inst.getOpcode() == X86::HLT;
   }
 
   int getPopSize(const MCInst &Inst) const override {
@@ -815,6 +825,12 @@ public:
     Regs.set(X86::R13);
     Regs.set(X86::R14);
     Regs.set(X86::R15);
+  }
+
+  void removeNonScavengeableRegs(BitVector &Regs) const override {
+    BitVector FP = getAliases(X86::RBP);
+    FP.flip();
+    Regs &= FP;
   }
 
   void getClassicGPRegs(BitVector &Regs) const override {
@@ -1428,7 +1444,7 @@ public:
     assert(Offset + I.DataSize <= ConstantData.size() &&
            "invalid offset for given constant data");
     int64_t ImmVal =
-        DataExtractor(ConstantData, true, 8).getSigned(&Offset, I.DataSize);
+        DataExtractor(ConstantData, true).getSigned(&Offset, I.DataSize);
 
     // Compute the new opcode.
     unsigned NewOpcode = 0;
@@ -2711,7 +2727,7 @@ public:
 
     bool FoundOne = false;
 
-    // Iterate only through src operands that arent also dest operands
+    // Iterate only through src operands that aren't also dest operands
     for (unsigned Index = InstDesc.getNumDefs() + (HasLHS ? 1 : 0),
                   E = InstDesc.getNumOperands();
          Index != E; ++Index) {
@@ -2772,6 +2788,11 @@ public:
     Inst.setOpcode(X86::TRAP);
   }
 
+  void createBreakpoint(MCInst &Inst) const override {
+    Inst.clear();
+    Inst.setOpcode(X86::INT3);
+  }
+
   void createCondBranch(MCInst &Inst, const MCSymbol *Target, unsigned CC,
                         MCContext *Ctx) const override {
     Inst.setOpcode(X86::JCC_1);
@@ -2790,13 +2811,15 @@ public:
     Inst.addOperand(MCOperand::createImm(CC));
   }
 
-  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
-                              MCContext *Ctx) const override {
+  InstructionListType
+  reverseBranchCondition(MCInst Inst, const MCSymbol *TBB, MCContext *Ctx,
+                         bool MustPreserveFlags = true) const override {
     unsigned InvCC = getInvertedCondCode(getCondCode(Inst));
     assert(InvCC != X86::COND_INVALID && "invalid branch instruction");
     Inst.getOperand(Info->get(Inst.getOpcode()).NumOperands - 1).setImm(InvCC);
     Inst.getOperand(0) =
         MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
+    return {Inst};
   }
 
   bool replaceBranchCondition(MCInst &Inst, const MCSymbol *TBB, MCContext *Ctx,
@@ -3049,9 +3072,9 @@ public:
     Inst.clear();
   }
 
-  InstructionListType
-  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
-                       unsigned CodePointerSize) const override {
+  InstructionListType createInstrIncMemory(const MCSymbol *Target,
+                                           MCContext *Ctx, bool IsLeaf,
+                                           unsigned CodePointerSize) override {
     InstructionListType Instrs(IsLeaf ? 13 : 11);
     unsigned int I = 0;
 
@@ -3113,7 +3136,7 @@ public:
 
   InstructionListType createInstrumentedIndirectCall(MCInst &&CallInst,
                                                      MCSymbol *HandlerFuncAddr,
-                                                     int CallSiteID,
+                                                     size_t CallSiteID,
                                                      MCContext *Ctx) override {
     // Check if the target address expression used in the original indirect call
     // uses the stack pointer, which we are going to clobber.
@@ -3268,7 +3291,7 @@ public:
   }
 
   BlocksVectorTy indirectCallPromotion(
-      const MCInst &CallInst,
+      const MCInst &CallInst, MCPhysReg Reg,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &Targets,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &VtableSyms,
       const std::vector<MCInst *> &MethodFetchInsns,

@@ -62,6 +62,13 @@ public:
   /// similar to ELF's "protected";  Apple Mach-O requires a "weak" attribute on
   /// declarations that can be dynamically replaced.
   bool hasProtectedVisibility() const override { return false; }
+
+  /// Apple Mach-O can autohide a vague-linkage vtable so that each image gets
+  /// its own copy, so such a vtable may have more than one address in a
+  /// program. A strong (key-function) vtable still has a unique address.
+  VTableUniquenessKind getVTableUniqueness() const override {
+    return VTableUniquenessKind::UniqueIfStrongLinkage;
+  }
 };
 
 template <typename Target>
@@ -103,6 +110,27 @@ public:
       // No TLS on DriverKit.
     } else if (Triple.isXROS())
       this->TLSSupported = true;
+    else if (Triple.isAppleFirmware()) {
+      if (Triple.isAArch64() || Triple.isARM())
+        this->TLSSupported = true;
+      else if (Triple.isThumb()) {
+        switch (Triple.getSubArch()) {
+        case llvm::Triple::NoSubArch:
+        case llvm::Triple::ARMSubArch_v4t:
+        case llvm::Triple::ARMSubArch_v5:
+        case llvm::Triple::ARMSubArch_v5te:
+        case llvm::Triple::ARMSubArch_v6:
+        case llvm::Triple::ARMSubArch_v6k:
+        case llvm::Triple::ARMSubArch_v6m:
+          // Thumb-1 doesn't support TLS.
+          break;
+
+        default:
+          this->TLSSupported = true;
+          break;
+        }
+      }
+    }
 
     this->MCountName = "\01mcount";
   }
@@ -174,6 +202,9 @@ protected:
     DefineStd(Builder, "unix", Opts);
     if (this->HasFloat128)
       Builder.defineMacro("__FLOAT128__");
+
+    if (Opts.C11)
+      Builder.defineMacro("__STDC_NO_THREADS__");
   }
 
 public:
@@ -325,9 +356,21 @@ protected:
       Builder.defineMacro("_REENTRANT");
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
+    if (this->HasFloat128)
+      Builder.defineMacro("__FLOAT128__");
   }
 public:
-  using OSTargetInfo<Target>::OSTargetInfo;
+  HurdTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {
+    switch (Triple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      this->HasFloat128 = true;
+      break;
+    }
+  }
 };
 
 // Linux target
@@ -392,6 +435,12 @@ public:
 
   const char *getStaticInitSectionSpecifier() const override {
     return ".text.startup";
+  }
+
+  // This allows template specializations, see
+  // LinuxTargetInfo<AArch64leTargetInfo>::setABI
+  bool setABI(const std::string &Name) override {
+    return OSTargetInfo<Target>::setABI(Name);
   }
 };
 
@@ -525,7 +574,7 @@ public:
     this->IntMaxType = TargetInfo::SignedLongLong;
     this->Int64Type = TargetInfo::SignedLongLong;
     this->SizeType = TargetInfo::UnsignedInt;
-    this->resetDataLayout("E-m:e-p:32:32-Fi64-i64:64-i128:128-n32:64");
+    this->resetDataLayout();
   }
 };
 
@@ -649,7 +698,6 @@ protected:
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__svr4__");
     Builder.defineMacro("__SVR4");
-    Builder.defineMacro("_XOPEN_SOURCE", "600");
     if (Opts.CPlusPlus) {
       Builder.defineMacro("__C99FEATURES__");
       Builder.defineMacro("_FILE_OFFSET_BITS", "64");
@@ -866,19 +914,16 @@ public:
   }
 };
 
+void getFuchsiaDefines(MacroBuilder &Builder, const LangOptions &Opts,
+                       const llvm::Triple &Triple);
+
 // Fuchsia Target
 template <typename Target>
 class LLVM_LIBRARY_VISIBILITY FuchsiaTargetInfo : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
-    Builder.defineMacro("__Fuchsia__");
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
-    // Required by the libc++ locale support.
-    if (Opts.CPlusPlus)
-      Builder.defineMacro("_GNU_SOURCE");
-    Builder.defineMacro("__Fuchsia_API_level__", Twine(Opts.FuchsiaAPILevel));
+    getFuchsiaDefines(Builder, Opts, Triple);
     this->PlatformName = "fuchsia";
     this->PlatformMinVersion = VersionTuple(Opts.FuchsiaAPILevel);
   }
@@ -919,14 +964,62 @@ public:
   }
 };
 
-// WASI target
+// WASIp1 target
 template <typename Target>
-class LLVM_LIBRARY_VISIBILITY WASITargetInfo
+class LLVM_LIBRARY_VISIBILITY WASIP1TargetInfo
     : public WebAssemblyOSTargetInfo<Target> {
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const final {
     WebAssemblyOSTargetInfo<Target>::getOSDefines(Opts, Triple, Builder);
     Builder.defineMacro("__wasi__");
+    Builder.defineMacro("__wasip1__");
+  }
+
+public:
+  using WebAssemblyOSTargetInfo<Target>::WebAssemblyOSTargetInfo;
+};
+
+// WASIp2 target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY WASIP2TargetInfo
+    : public WebAssemblyOSTargetInfo<Target> {
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const final {
+    WebAssemblyOSTargetInfo<Target>::getOSDefines(Opts, Triple, Builder);
+    Builder.defineMacro("__wasi__");
+    Builder.defineMacro("__wasip2__");
+  }
+
+public:
+  using WebAssemblyOSTargetInfo<Target>::WebAssemblyOSTargetInfo;
+};
+
+// WASIp3 target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY WASIP3TargetInfo
+    : public WebAssemblyOSTargetInfo<Target> {
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const final {
+    WebAssemblyOSTargetInfo<Target>::getOSDefines(Opts, Triple, Builder);
+    Builder.defineMacro("__wasi__");
+    Builder.defineMacro("__wasip3__");
+  }
+
+public:
+  using WebAssemblyOSTargetInfo<Target>::WebAssemblyOSTargetInfo;
+};
+
+// WALI target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY WALITargetInfo
+    : public WebAssemblyOSTargetInfo<Target> {
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const final {
+    WebAssemblyOSTargetInfo<Target>::getOSDefines(Opts, Triple, Builder);
+    // Linux defines; list based off of gcc output
+    DefineStd(Builder, "unix", Opts);
+    DefineStd(Builder, "linux", Opts);
+    Builder.defineMacro("__wali__");
   }
 
 public:
@@ -1017,6 +1110,53 @@ public:
 
   const char *getStaticInitSectionSpecifier() const override {
     return ".text.startup";
+  }
+};
+
+// QURT Target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY QURTTargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__qurt__");
+    if (Opts.CPlusPlus)
+      Builder.defineMacro("_GNU_SOURCE");
+  }
+
+public:
+  using OSTargetInfo<Target>::OSTargetInfo;
+};
+
+// H2 Target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY H2TargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__h2__");
+    if (Opts.CPlusPlus)
+      Builder.defineMacro("_GNU_SOURCE");
+  }
+
+public:
+  using OSTargetInfo<Target>::OSTargetInfo;
+};
+
+// SerenityOS target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY SerenityTargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__serenity__");
+    DefineStd(Builder, "unix", Opts);
+  }
+
+public:
+  SerenityTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {
+    this->WIntType = TargetInfo::UnsignedInt;
   }
 };
 

@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   IRReader
   JITLink
   Object
+  ObjectYAML
   OrcDebugging
   OrcJIT
   OrcShared
@@ -17,15 +18,24 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(OrcJITTests
+  COFFAutoImportGeneratorTest.cpp
+  CallableTraitsHelperTest.cpp
+  CallSPSViaEPCTest.cpp
   CoreAPIsTest.cpp
   ExecutorAddressTest.cpp
   ExecutionSessionWrapperFunctionCallsTest.cpp
   EPCGenericJITLinkMemoryManagerTest.cpp
   EPCGenericMemoryAccessTest.cpp
+  EPCGenericDylibManagerTest.cpp
   IndirectionUtilsTest.cpp
+  InProcessEPCTest.cpp
   JITTargetMachineBuilderTest.cpp
   LazyCallThroughAndReexportsTest.cpp
+  LibraryResolverTest.cpp
+  LinkGraphLinkingLayerTest.cpp
   LookupAndRecordAddrsTest.cpp
+  MachOBuilderTest.cpp
+  MangleAndInternerTest.cpp
   MachOPlatformTest.cpp
   MapperJITLinkMemoryManagerTest.cpp
   MemoryFlagsTest.cpp
@@ -39,9 +49,11 @@ add_llvm_unittest(OrcJITTests
   SharedMemoryMapperTest.cpp
   SimpleExecutorMemoryManagerTest.cpp
   SimplePackedSerializationTest.cpp
+  SPSCallersTest.cpp
   SymbolStringPoolTest.cpp
   TaskDispatchTest.cpp
   ThreadSafeModuleTest.cpp
+  WaitingOnGraphTest.cpp
   WrapperFunctionUtilsTest.cpp
   JITLinkRedirectionManagerTest.cpp
   ReOptimizeLayerTest.cpp

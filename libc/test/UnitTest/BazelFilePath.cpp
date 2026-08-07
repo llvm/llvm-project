@@ -20,8 +20,12 @@ namespace testing {
 CString libc_make_test_file_path_func(const char *file_name) {
   // This is the path to the folder bazel wants the test outputs written to.
   const char *UNDECLARED_OUTPUTS_PATH = getenv("TEST_UNDECLARED_OUTPUTS_DIR");
+  // Do something sensible if not run under bazel, otherwise this may segfault
+  // when constructing the string.
+  if (UNDECLARED_OUTPUTS_PATH == nullptr)
+    return cpp::string(file_name);
 
-  return cpp::string(UNDECLARED_OUTPUTS_PATH) + file_name;
+  return cpp::string(UNDECLARED_OUTPUTS_PATH) + "/" + file_name;
 }
 
 } // namespace testing

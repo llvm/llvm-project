@@ -15,39 +15,18 @@
 
 #include_next <stdlib.h>
 
-#if __has_include(<llvm-libc-decls/stdlib.h>)
-
 #if defined(__HIP__) || defined(__CUDA__)
 #define __LIBC_ATTRS __attribute__((device))
+#else
+#define __LIBC_ATTRS
 #endif
 
 #pragma omp begin declare target
 
-// The LLVM C library uses these named types so we forward declare them.
-typedef void (*__atexithandler_t)(void);
-typedef int (*__search_compare_t)(const void *, const void *);
-typedef int (*__qsortcompare_t)(const void *, const void *);
-typedef int (*__qsortrcompare_t)(const void *, const void *, void *);
-
-// Enforce ABI compatibility with the structs used by the LLVM C library.
-_Static_assert(__builtin_offsetof(div_t, quot) == 0, "ABI mismatch!");
-_Static_assert(__builtin_offsetof(ldiv_t, quot) == 0, "ABI mismatch!");
-_Static_assert(__builtin_offsetof(lldiv_t, quot) == 0, "ABI mismatch!");
-
-#if defined(__GLIBC__) && __cplusplus >= 201703L
-#define at_quick_exit atexit
-#endif
-
-#include <llvm-libc-decls/stdlib.h>
-
-#if defined(__GLIBC__) && __cplusplus >= 201703L
-#undef at_quick_exit
-#endif
+// TODO: Define these for CUDA / HIP.
 
 #pragma omp end declare target
 
 #undef __LIBC_ATTRS
-
-#endif
 
 #endif // __CLANG_LLVM_LIBC_WRAPPERS_STDLIB_H__

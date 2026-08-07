@@ -72,8 +72,6 @@ define void @store_v4i32_align2(<4 x i32> %x, ptr %ptr) {
   ret void
 }
 
-declare <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i16>)
-
 define <2 x i16> @mgather_v2i16_align1(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %passthru) {
 ; RV32-SLOW-LABEL: mgather_v2i16_align1:
 ; RV32-SLOW:       # %bb.0:
@@ -160,8 +158,6 @@ define <2 x i16> @mgather_v2i16_align1(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %
   ret <2 x i16> %v
 }
 
-declare <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i64>)
-
 define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %passthru) {
 ; RV32-SLOW-LABEL: mgather_v2i64_align4:
 ; RV32-SLOW:       # %bb.0:
@@ -244,8 +240,6 @@ define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %
   ret <2 x i64> %v
 }
 
-declare void @llvm.masked.scatter.v4i16.v4p0(<4 x i16>, <4 x ptr>, i32, <4 x i1>)
-
 define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m) {
 ; RV32-SLOW-LABEL: mscatter_v4i16_align1:
 ; RV32-SLOW:       # %bb.0:
@@ -301,12 +295,10 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m)
 ; RV32-SLOW-NEXT:  .LBB6_8: # %cond.store5
 ; RV32-SLOW-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; RV32-SLOW-NEXT:    vslidedown.vi v8, v8, 3
-; RV32-SLOW-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV32-SLOW-NEXT:    vslidedown.vi v9, v9, 3
-; RV32-SLOW-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; RV32-SLOW-NEXT:    vmv.x.s a0, v8
 ; RV32-SLOW-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV32-SLOW-NEXT:    vmv.x.s a1, v9
+; RV32-SLOW-NEXT:    vslidedown.vi v8, v9, 3
+; RV32-SLOW-NEXT:    vmv.x.s a1, v8
 ; RV32-SLOW-NEXT:    srli a2, a0, 8
 ; RV32-SLOW-NEXT:    sb a0, 0(a1)
 ; RV32-SLOW-NEXT:    sb a2, 1(a1)
@@ -365,12 +357,10 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m)
 ; RV64-SLOW-NEXT:    beqz a0, .LBB6_4
 ; RV64-SLOW-NEXT:  .LBB6_8: # %cond.store5
 ; RV64-SLOW-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
-; RV64-SLOW-NEXT:    vslidedown.vi v12, v8, 3
+; RV64-SLOW-NEXT:    vslidedown.vi v8, v8, 3
+; RV64-SLOW-NEXT:    vmv.x.s a0, v8
 ; RV64-SLOW-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV64-SLOW-NEXT:    vslidedown.vi v8, v10, 3
-; RV64-SLOW-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; RV64-SLOW-NEXT:    vmv.x.s a0, v12
-; RV64-SLOW-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV64-SLOW-NEXT:    vmv.x.s a1, v8
 ; RV64-SLOW-NEXT:    srli a2, a0, 8
 ; RV64-SLOW-NEXT:    sb a0, 0(a1)
@@ -391,8 +381,6 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m)
   call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> %m)
   ret void
 }
-
-declare void @llvm.masked.scatter.v2i32.v2p0(<2 x i32>, <2 x ptr>, i32, <2 x i1>)
 
 define void @mscatter_v2i32_align2(<2 x i32> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32-SLOW-LABEL: mscatter_v2i32_align2:
@@ -418,9 +406,9 @@ define void @mscatter_v2i32_align2(<2 x i32> %val, <2 x ptr> %ptrs, <2 x i1> %m)
 ; RV32-SLOW-NEXT:  .LBB7_4: # %cond.store1
 ; RV32-SLOW-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; RV32-SLOW-NEXT:    vslidedown.vi v8, v8, 1
-; RV32-SLOW-NEXT:    vslidedown.vi v9, v9, 1
 ; RV32-SLOW-NEXT:    vmv.x.s a0, v8
-; RV32-SLOW-NEXT:    vmv.x.s a1, v9
+; RV32-SLOW-NEXT:    vslidedown.vi v8, v9, 1
+; RV32-SLOW-NEXT:    vmv.x.s a1, v8
 ; RV32-SLOW-NEXT:    srli a2, a0, 16
 ; RV32-SLOW-NEXT:    sh a0, 0(a1)
 ; RV32-SLOW-NEXT:    sh a2, 2(a1)
@@ -450,12 +438,10 @@ define void @mscatter_v2i32_align2(<2 x i32> %val, <2 x ptr> %ptrs, <2 x i1> %m)
 ; RV64-SLOW-NEXT:  .LBB7_4: # %cond.store1
 ; RV64-SLOW-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; RV64-SLOW-NEXT:    vslidedown.vi v8, v8, 1
-; RV64-SLOW-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV64-SLOW-NEXT:    vslidedown.vi v9, v9, 1
-; RV64-SLOW-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-SLOW-NEXT:    vmv.x.s a0, v8
 ; RV64-SLOW-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV64-SLOW-NEXT:    vmv.x.s a1, v9
+; RV64-SLOW-NEXT:    vslidedown.vi v8, v9, 1
+; RV64-SLOW-NEXT:    vmv.x.s a1, v8
 ; RV64-SLOW-NEXT:    srli a2, a0, 16
 ; RV64-SLOW-NEXT:    sh a0, 0(a1)
 ; RV64-SLOW-NEXT:    sh a2, 2(a1)
@@ -476,8 +462,6 @@ define void @mscatter_v2i32_align2(<2 x i32> %val, <2 x ptr> %ptrs, <2 x i1> %m)
   ret void
 }
 
-declare <2 x i32> @llvm.masked.load.v2i32(ptr, i32, <2 x i1>, <2 x i32>)
-
 define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwind {
 ; RV32-SLOW-LABEL: masked_load_v2i32_align1:
 ; RV32-SLOW:       # %bb.0:
@@ -490,14 +474,14 @@ define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwi
 ; RV32-SLOW-NEXT:    beqz a3, .LBB8_2
 ; RV32-SLOW-NEXT:  # %bb.1: # %cond.load
 ; RV32-SLOW-NEXT:    lbu a3, 1(a0)
-; RV32-SLOW-NEXT:    lbu a4, 0(a0)
-; RV32-SLOW-NEXT:    lbu a5, 2(a0)
-; RV32-SLOW-NEXT:    lbu a6, 3(a0)
+; RV32-SLOW-NEXT:    lbu a4, 2(a0)
+; RV32-SLOW-NEXT:    lbu a5, 3(a0)
+; RV32-SLOW-NEXT:    lbu a6, 0(a0)
 ; RV32-SLOW-NEXT:    slli a3, a3, 8
-; RV32-SLOW-NEXT:    or a3, a3, a4
-; RV32-SLOW-NEXT:    slli a5, a5, 16
-; RV32-SLOW-NEXT:    slli a6, a6, 24
-; RV32-SLOW-NEXT:    or a4, a6, a5
+; RV32-SLOW-NEXT:    slli a4, a4, 16
+; RV32-SLOW-NEXT:    slli a5, a5, 24
+; RV32-SLOW-NEXT:    or a3, a3, a6
+; RV32-SLOW-NEXT:    or a4, a5, a4
 ; RV32-SLOW-NEXT:    or a3, a4, a3
 ; RV32-SLOW-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-SLOW-NEXT:    vmv.s.x v8, a3
@@ -506,15 +490,15 @@ define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwi
 ; RV32-SLOW-NEXT:    beqz a2, .LBB8_4
 ; RV32-SLOW-NEXT:  # %bb.3: # %cond.load1
 ; RV32-SLOW-NEXT:    lbu a2, 5(a0)
-; RV32-SLOW-NEXT:    lbu a3, 4(a0)
-; RV32-SLOW-NEXT:    lbu a4, 6(a0)
-; RV32-SLOW-NEXT:    lbu a0, 7(a0)
+; RV32-SLOW-NEXT:    lbu a3, 6(a0)
+; RV32-SLOW-NEXT:    lbu a4, 7(a0)
+; RV32-SLOW-NEXT:    lbu a0, 4(a0)
 ; RV32-SLOW-NEXT:    slli a2, a2, 8
-; RV32-SLOW-NEXT:    or a2, a2, a3
-; RV32-SLOW-NEXT:    slli a4, a4, 16
-; RV32-SLOW-NEXT:    slli a0, a0, 24
-; RV32-SLOW-NEXT:    or a0, a0, a4
-; RV32-SLOW-NEXT:    or a0, a0, a2
+; RV32-SLOW-NEXT:    slli a3, a3, 16
+; RV32-SLOW-NEXT:    slli a4, a4, 24
+; RV32-SLOW-NEXT:    or a0, a2, a0
+; RV32-SLOW-NEXT:    or a3, a4, a3
+; RV32-SLOW-NEXT:    or a0, a3, a0
 ; RV32-SLOW-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-SLOW-NEXT:    vmv.s.x v9, a0
 ; RV32-SLOW-NEXT:    vslideup.vi v8, v9, 1
@@ -534,14 +518,14 @@ define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwi
 ; RV64-SLOW-NEXT:    beqz a3, .LBB8_2
 ; RV64-SLOW-NEXT:  # %bb.1: # %cond.load
 ; RV64-SLOW-NEXT:    lbu a3, 1(a0)
-; RV64-SLOW-NEXT:    lbu a4, 0(a0)
-; RV64-SLOW-NEXT:    lbu a5, 2(a0)
-; RV64-SLOW-NEXT:    lb a6, 3(a0)
+; RV64-SLOW-NEXT:    lbu a4, 2(a0)
+; RV64-SLOW-NEXT:    lb a5, 3(a0)
+; RV64-SLOW-NEXT:    lbu a6, 0(a0)
 ; RV64-SLOW-NEXT:    slli a3, a3, 8
-; RV64-SLOW-NEXT:    or a3, a3, a4
-; RV64-SLOW-NEXT:    slli a5, a5, 16
-; RV64-SLOW-NEXT:    slli a6, a6, 24
-; RV64-SLOW-NEXT:    or a4, a6, a5
+; RV64-SLOW-NEXT:    slli a4, a4, 16
+; RV64-SLOW-NEXT:    slli a5, a5, 24
+; RV64-SLOW-NEXT:    or a3, a3, a6
+; RV64-SLOW-NEXT:    or a4, a5, a4
 ; RV64-SLOW-NEXT:    or a3, a4, a3
 ; RV64-SLOW-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-SLOW-NEXT:    vmv.s.x v8, a3
@@ -550,15 +534,15 @@ define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwi
 ; RV64-SLOW-NEXT:    beqz a2, .LBB8_4
 ; RV64-SLOW-NEXT:  # %bb.3: # %cond.load1
 ; RV64-SLOW-NEXT:    lbu a2, 5(a0)
-; RV64-SLOW-NEXT:    lbu a3, 4(a0)
-; RV64-SLOW-NEXT:    lbu a4, 6(a0)
-; RV64-SLOW-NEXT:    lb a0, 7(a0)
+; RV64-SLOW-NEXT:    lbu a3, 6(a0)
+; RV64-SLOW-NEXT:    lb a4, 7(a0)
+; RV64-SLOW-NEXT:    lbu a0, 4(a0)
 ; RV64-SLOW-NEXT:    slli a2, a2, 8
-; RV64-SLOW-NEXT:    or a2, a2, a3
-; RV64-SLOW-NEXT:    slli a4, a4, 16
-; RV64-SLOW-NEXT:    slli a0, a0, 24
-; RV64-SLOW-NEXT:    or a0, a0, a4
-; RV64-SLOW-NEXT:    or a0, a0, a2
+; RV64-SLOW-NEXT:    slli a3, a3, 16
+; RV64-SLOW-NEXT:    slli a4, a4, 24
+; RV64-SLOW-NEXT:    or a0, a2, a0
+; RV64-SLOW-NEXT:    or a3, a4, a3
+; RV64-SLOW-NEXT:    or a0, a3, a0
 ; RV64-SLOW-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-SLOW-NEXT:    vmv.s.x v9, a0
 ; RV64-SLOW-NEXT:    vslideup.vi v8, v9, 1
@@ -575,12 +559,10 @@ define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwi
 ; FAST-NEXT:    vse32.v v8, (a1)
 ; FAST-NEXT:    ret
   %mask = icmp eq <2 x i32> %m, zeroinitializer
-  %load = call <2 x i32> @llvm.masked.load.v2i32(ptr %a, i32 1, <2 x i1> %mask, <2 x i32> undef)
+  %load = call <2 x i32> @llvm.masked.load.v2i32(ptr %a, i32 1, <2 x i1> %mask, <2 x i32> poison)
   store <2 x i32> %load, ptr %res_ptr
   ret void
 }
-
-declare void @llvm.masked.store.v2i32.p0(<2 x i32>, ptr, i32, <2 x i1>)
 
 define void @masked_store_v2i32_align2(<2 x i32> %val, ptr %a, <2 x i32> %m) nounwind {
 ; SLOW-LABEL: masked_store_v2i32_align2:

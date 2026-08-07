@@ -370,7 +370,7 @@ static void iterateModules(PDBFile &File, LinePrinter &P, uint32_t IndentLevel,
                      Callback);
   } else {
     uint32_t Count = Modules.getModuleCount();
-    uint32_t Digits = NumDigits(Count);
+    uint32_t Digits = NumDigitsBase10(Count);
     for (uint32_t I = 0; I < Count; ++I) {
       iterateOneModule(File, P, Modules, I, Digits, IndentLevel, Callback);
     }

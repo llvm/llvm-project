@@ -84,6 +84,21 @@ def AsmATTOrIntel : LLVM_EnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
+// ProfileCountType
+//===----------------------------------------------------------------------===//
+
+def ProfileCountReal : I64EnumAttrCase<
+  /*string sym=*/"Real", /*int val=*/0, /*string str=*/"real">;
+def ProfileCountSynthetic : I64EnumAttrCase<
+  /*string sym=*/"Synthetic", /*int val=*/1, /*string str=*/"synthetic">;
+def ProfileCountTypeAttr : I64EnumAttr<
+  /*string name=*/"ProfileCountType",
+  /*string description=*/"real or synthetic function entry count",
+  /*list<I64EnumAttrCase> cases=*/[ProfileCountReal, ProfileCountSynthetic]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
 // Atomic Operations
 //===----------------------------------------------------------------------===//
 
@@ -112,6 +127,8 @@ def AtomicBinOpUSubSat : LLVM_EnumAttrCase<"usub_sat",
                                            "usub_sat", "USubSat", 18>;
 def AtomicBinOpFMaximum : LLVM_EnumAttrCase<"fmaximum", "fmaximum", "FMaximum", 19>;
 def AtomicBinOpFMinimum : LLVM_EnumAttrCase<"fminimum", "fminimum", "FMinimum", 20>;
+def AtomicBinOpFMaximumNum : LLVM_EnumAttrCase<"fmaximumnum", "fmaximumnum", "FMaximumNum", 21>;
+def AtomicBinOpFMinimumNum : LLVM_EnumAttrCase<"fminimumnum", "fminimumnum", "FMinimumNum", 22>;
 
 // A sentinel value that has no MLIR counterpart.
 def AtomicBadBinOp : LLVM_EnumAttrCase<"", "", "BAD_BINOP", 0>;
@@ -125,7 +142,8 @@ def AtomicBinOp : LLVM_EnumAttr<
      AtomicBinOpMin, AtomicBinOpUMax, AtomicBinOpUMin, AtomicBinOpFAdd,
      AtomicBinOpFSub, AtomicBinOpFMax, AtomicBinOpFMin, AtomicBinOpUIncWrap,
      AtomicBinOpUDecWrap, AtomicBinOpUSubCond, AtomicBinOpUSubSat,
-     AtomicBinOpFMaximum, AtomicBinOpFMinimum],
+     AtomicBinOpFMaximum, AtomicBinOpFMinimum, AtomicBinOpFMaximumNum,
+     AtomicBinOpFMinimumNum],
     [AtomicBadBinOp]> {
   let cppNamespace = "::mlir::LLVM";
 }
@@ -758,13 +776,16 @@ def FramePointerKindAll
     : LLVM_EnumAttrCase<"All", "all", "All", 2>;
 def FramePointerKindReserved
     : LLVM_EnumAttrCase<"Reserved", "reserved", "Reserved", 3>;
+def FramePointerKindNonLeafNoReserve
+    : LLVM_EnumAttrCase<"NonLeafNoReserve", "non-leaf-no-reserve", "NonLeafNoReserve", 4>;
 
 def FramePointerKindEnum : LLVM_EnumAttr<
     "FramePointerKind",
     "::llvm::FramePointerKind",
     "LLVM FramePointerKind",
     [FramePointerKindNone, FramePointerKindNonLeaf,
-     FramePointerKindAll, FramePointerKindReserved]> {
+     FramePointerKindAll, FramePointerKindReserved,
+     FramePointerKindNonLeafNoReserve]> {
   let cppNamespace = "::mlir::LLVM::framePointerKind";
 }
 
@@ -802,6 +823,32 @@ def RoundingModeAttr : LLVM_EnumAttr<
 }
 
 def ValidRoundingModeAttr : ConfinedAttr<RoundingModeAttr, [IntMinValue<0>]>;
+
+//===----------------------------------------------------------------------===//
+// DenormalModeKind
+//===----------------------------------------------------------------------===//
+
+def DenormalModeIEEE : LLVM_EnumAttrCase<"IEEE", "ieee", "IEEE", 0>;
+def DenormalModePreserveSign
+    : LLVM_EnumAttrCase<"PreserveSign", "preservesign", "PreserveSign", 1>;
+def DenormalModePositiveZero
+    : LLVM_EnumAttrCase<"PositiveZero", "positivezero", "PositiveZero", 2>;
+def DenormalModeDynamic : LLVM_EnumAttrCase<"Dynamic", "dynamic", "Dynamic", 3>;
+// Needed as llvm::DenormalModeKind defines this.
+def DenormalModeInvalid
+    : LLVM_EnumAttrCase<"Invalid", "invalid", "Invalid", -1>;
+
+def DenormalModeKindAttr : LLVM_EnumAttr<
+    "DenormalModeKind",
+    "::llvm::DenormalMode::DenormalModeKind",
+    "LLVM Denormal Mode Kinds",
+    [DenormalModeIEEE,
+     DenormalModePreserveSign,
+     DenormalModePositiveZero,
+     DenormalModeDynamic,
+     DenormalModeInvalid]> {
+  let cppNamespace = "::mlir::LLVM";
+}
 
 //===----------------------------------------------------------------------===//
 // FPExceptionBehavior
@@ -920,6 +967,26 @@ def GEPNoWrapFlags : I32BitEnum<
 
 def GEPNoWrapFlagsProp : EnumProp<GEPNoWrapFlags> {
   let defaultValue = interfaceType # "::none";
+}
+
+//===----------------------------------------------------------------------===//
+// TLSModel
+//===----------------------------------------------------------------------===//
+
+def LLVM_TLSMode
+    : LLVM_EnumAttr<
+          "ThreadLocalMode", "::llvm::GlobalValue::ThreadLocalMode", "TLS Mode",
+          [
+            LLVM_EnumAttrCase<"NotThreadLocal", "", "NotThreadLocal", 0>,
+            LLVM_EnumAttrCase<"GeneralDynamic", "generaldynamic",
+                              "GeneralDynamicTLSModel", 1>,
+            LLVM_EnumAttrCase<"LocalDynamic", "localdynamic",
+                              "LocalDynamicTLSModel", 2>,
+            LLVM_EnumAttrCase<"InitialExec", "initialexec",
+                              "InitialExecTLSModel", 3>,
+            LLVM_EnumAttrCase<"LocalExec", "localexec", "LocalExecTLSModel", 4>,
+          ]> {
+  let cppNamespace = "::mlir::LLVM";
 }
 
 #endif // LLVMIR_ENUMS

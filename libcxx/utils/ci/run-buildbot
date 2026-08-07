@@ -29,18 +29,45 @@ ${PROGNAME} [options] <BUILDER>
                     this is '<llvm-root>/build/<builder>'.
 
 Environment variables
-CC                  The C compiler to use, this value is used by CMake. This
+CMAKE               The cmake binary to use. This variable is optional.
+
+NINJA               The ninja binary to use, this value is used by CMake. This
                     variable is optional.
+
+CC                  The C compiler to use, this value is used by CMake. This
+                    variable is mandatory.
 
 CXX                 The C++ compiler to use, this value is used by CMake. This
-                    variable is optional.
+                    variable is mandatory.
 
-CMAKE               The CMake binary to use. This variable is optional.
-
-CLANG_FORMAT        The clang-format binary to use when generating the format
-                    ignore list.
-
+CCACHE              The ccache binary to use. This variable is optional and is only
+                    used by the bootstrapping build.
 EOF
+}
+
+function step() {
+  endstep
+  set +x
+  if [[ ! -z ${GITHUB_ACTIONS+x} ]]; then
+    echo "::group::$1"
+    export IN_GROUP=1
+  else
+    echo "--- $1"
+  fi
+  set -x
+}
+
+function endstep() {
+  set +x
+  if [[ ! -z ${GITHUB_ACTIONS+x} ]] && [[ ! -z ${IN_GROUP+x} ]]; then
+    echo "::endgroup::"
+    unset IN_GROUP
+  fi
+  set -x
+}
+
+function error() {
+    echo "::error::$1"
 }
 
 if [[ $# == 0 ]]; then
@@ -73,53 +100,32 @@ MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
 BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build/${BUILDER}}"
 INSTALL_DIR="${BUILD_DIR}/install"
 
-# If we can find Ninja/CMake provided by Xcode, use those since we know their
-# version will generally work with the Clang shipped in Xcode (e.g. if Clang
-# knows about -std=c++20, the CMake bundled in Xcode will probably know about
-# that flag too).
-if xcrun --find ninja &>/dev/null; then
-    NINJA="$(xcrun --find ninja)"
-elif which ninja &>/dev/null; then
-    # The current implementation of modules needs the absolute path to the ninja
-    # binary.
-    # TODO MODULES Is this still needed when CMake has libc++ module support?
-    NINJA="$(which ninja)"
+if [ -z ${CMAKE+x} ]; then
+    CMAKE=cmake
+fi
+
+if [ -z ${NINJA+x} ]; then
+    NINJA=ninja
 else
-    NINJA="ninja"
+    MAKE_PROGRAM=-DCMAKE_MAKE_PROGRAM=${NINJA}
 fi
 
-if [ -z "${CMAKE}" ]; then
-    if xcrun --find cmake &>/dev/null; then
-        CMAKE="$(xcrun --find cmake)"
-    else
-        CMAKE="cmake"
-    fi
+if [ -z ${CC+x} ]; then
+    error "Environment variable CC must be defined"
+    exit 1
 fi
 
-function step() {
-  endstep
-  set +x
-  if [[ ! -z ${GITHUB_ACTIONS+x} ]]; then
-    echo "::group::$1"
-    export IN_GROUP=1
-  else
-    echo "--- $1"
-  fi
-  set -x
-}
+if [ -z ${CXX+x} ]; then
+    error "Environment variable CXX must be defined"
+    exit 1
+fi
 
-function endstep() {
-  set +x
-  if [[ ! -z ${GITHUB_ACTIONS+x} ]] && [[ ! -z ${IN_GROUP+x} ]]; then
-    echo "::endgroup::"
-    unset IN_GROUP
-  fi
-  set -x
-}
-
-function error() {
-    echo "::error::$1"
-}
+# Print the version of a few tools to aid diagnostics in some cases
+step "Diagnose tools in use"
+${CMAKE} --version
+${NINJA} --version
+${CC} --version
+${CXX} --version
 
 function clean() {
     rm -rf "${BUILD_DIR}"
@@ -128,11 +134,16 @@ function clean() {
 function generate-cmake-base() {
     step "Generating CMake"
 
+    # FIXME: This should really be set in the Dockerfile
+    export CMAKE_PREFIX_PATH="/opt/compiler-explorer/clang-trunk/lib/cmake"
+    export PATH="$PATH:/opt/compiler-explorer/clang-trunk/bin"
+
     # We can remove -DCMAKE_INSTALL_MESSAGE=NEVER once https://gitlab.kitware.com/cmake/cmake/-/issues/26085 is fixed.
     ${CMAKE} \
           -S "${MONOREPO_ROOT}/runtimes" \
           -B "${BUILD_DIR}" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+          -GNinja \
+          ${MAKE_PROGRAM} \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLIBCXX_ENABLE_WERROR=YES \
@@ -152,11 +163,7 @@ function generate-cmake() {
 }
 
 function generate-cmake-libcxx-win() {
-    generate-cmake-base \
-          -DLLVM_ENABLE_RUNTIMES="libcxx" \
-          -DCMAKE_C_COMPILER=clang-cl \
-          -DCMAKE_CXX_COMPILER=clang-cl \
-          "${@}"
+    generate-cmake-base -DLLVM_ENABLE_RUNTIMES="libcxx" "${@}"
 }
 
 function generate-cmake-android() {
@@ -215,7 +222,8 @@ function test-armv7m-picolibc() {
     ${CMAKE} \
         -S "${MONOREPO_ROOT}/compiler-rt" \
         -B "${BUILD_DIR}/compiler-rt" \
-        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+        -GNinja \
+        ${MAKE_PROGRAM} \
         -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
         -DCMAKE_C_FLAGS="${flags}" \
@@ -230,6 +238,7 @@ function test-armv7m-picolibc() {
         -DLIBUNWIND_TEST_CONFIG="armv7m-picolibc-libunwind.cfg.in" \
         -DCMAKE_C_FLAGS="${flags}" \
         -DCMAKE_CXX_FLAGS="${flags}" \
+        -DRUNTIMES_USE_LIBC=picolibc \
         "${@}"
 
     step "Installing compiler-rt"
@@ -239,12 +248,6 @@ function test-armv7m-picolibc() {
 
     check-runtimes
 }
-
-# Print the version of a few tools to aid diagnostics in some cases
-step "Diagnose tools in use"
-${CMAKE} --version
-${NINJA} --version
-if [ ! -z "${CXX}" ]; then ${CXX} --version; fi
 
 case "${BUILDER}" in
 check-generated-output)
@@ -283,6 +286,57 @@ check-generated-output)
            --exclude 'transcoding.pass.cpp' \
            --exclude 'underflow.pass.cpp' \
            || false
+;;
+test-tools)
+    #
+    # This job tests libc++ tools that don't make sense to be tested inside the
+    # libc++ conformance test suite.
+    #
+    clean
+
+    step "Building and installing libc++ with build-at-commit"
+    "${MONOREPO_ROOT}/libcxx/utils/build-at-commit" \
+        --git-repo "${MONOREPO_ROOT}" \
+        --commit HEAD \
+        --install-dir "${INSTALL_DIR}" \
+        --tmp-build-dir "${BUILD_DIR}/build-at-commit" \
+        -- -DCMAKE_CXX_COMPILER="${CXX}" \
+           -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+    step "Running a benchmark through the benchmark tooling pipeline"
+    "${MONOREPO_ROOT}/libcxx/utils/test-at-commit" \
+        --git-repo "${MONOREPO_ROOT}" \
+        --libcxx-installation "${INSTALL_DIR}" \
+        --build-dir "${BUILD_DIR}/benchmarks" \
+        --compiler "${CXX}"                   \
+        -- -sv --param optimization=speed \
+        "${MONOREPO_ROOT}/libcxx/test/benchmarks/hash.bench.cpp"
+
+    step "Consolidate benchmark results"
+    "${MONOREPO_ROOT}/libcxx/utils/consolidate-benchmarks" "${BUILD_DIR}/benchmarks" > "${BUILD_DIR}/results.lnt"
+
+    step "Compare benchmark results" # perform a no-op comparison, just to run the tool
+    "${MONOREPO_ROOT}/libcxx/utils/compare-benchmarks" "${BUILD_DIR}/results.lnt" "${BUILD_DIR}/results.lnt"
+
+    # Exercise LNT tooling with --dry-run. Doing a real run is time consuming and would
+    # submit to a LNT instance, which we obviously don't want.
+    step "Run benchmarks using the LNT flow (dry-run)"
+    "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/run-benchmarks" \
+        --dry-run -vv \
+        --git-repo "${MONOREPO_ROOT}" \
+        --benchmark-commit HEAD \
+        --test-suite-commit HEAD \
+        --machine test-tools \
+        --compiler "${CXX}" \
+        --filter hash.bench.cpp \
+        --output "${BUILD_DIR}/report.json"
+
+    step "Submit a LNT report (dry-run)"
+    "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/submit-benchmarks" \
+        --dry-run -vv \
+        --lnt-url http://localhost:8000 \
+        --test-suite libcxx \
+        "${BUILD_DIR}/report.json"
 ;;
 #
 # Various Standard modes
@@ -361,6 +415,13 @@ generic-asan)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-asan.cmake"
     check-runtimes
 ;;
+generic-asan-in-tests-only)
+    # This builds the library without ASAN support, but then turns on ASAN support
+    # within the test suite.
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-asan-in-tests-only.cmake"
+    check-runtimes
+;;
 generic-msan)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-msan.cmake"
@@ -382,20 +443,26 @@ generic-ubsan)
 bootstrapping-build)
     clean
 
+    if [ ! -z ${CCACHE+x} ]; then
+        COMPILER_LAUNCHER="-DCMAKE_CXX_COMPILER_LAUNCHER=${CCACHE}"
+    fi
+
     step "Generating CMake"
     ${CMAKE} \
           -S "${MONOREPO_ROOT}/llvm" \
           -B "${BUILD_DIR}" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-          -DCMAKE_CXX_COMPILER_LAUNCHER="ccache" \
+          -GNinja \
+          ${MAKE_PROGRAM} \
+          ${COMPILER_LAUNCHER} \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_ENABLE_PROJECTS="clang;lldb" \
-          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
           -DLLVM_RUNTIME_TARGETS="$(${CXX} --print-target-triple)" \
           -DLLVM_HOST_TRIPLE="$(${CXX} --print-target-triple)" \
           -DLLVM_TARGETS_TO_BUILD="host" \
           -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
+          -DCOMPILER_RT_INCLUDE_TESTS=OFF \
           -DLLVM_ENABLE_ASSERTIONS=ON \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
@@ -454,6 +521,27 @@ generic-hardening-mode-debug)
     check-runtimes
     check-abi-list
 ;;
+generic-llvm-libc)
+    clean
+
+    # Install kernel headers from a known-good Linux kernel version to ensure
+    # the test is hermetic.
+    export LINUX_VERSION=7.0.1
+    mkdir -p "${BUILD_DIR}"
+    curl -L "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-${LINUX_VERSION}.tar.xz" --output "${BUILD_DIR}/linux.tar.xz"
+    tar -xf "${BUILD_DIR}/linux.tar.xz" -C "${BUILD_DIR}"
+    make INSTALL_HDR_PATH="${BUILD_DIR}/linux-install" -C "${BUILD_DIR}/linux-${LINUX_VERSION}" headers_install
+
+    generate-cmake-base -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-llvm-libc.cmake" \
+                        -DLIBCXX_TEST_CONFIG="llvm-libc++-llvm-libc.cfg.in" \
+                        -DLIBCXXABI_TEST_CONFIG="llvm-libc++abi-llvm-libc.cfg.in" \
+                        -DLIBC_KERNEL_HEADERS="${BUILD_DIR}/linux-install/include" \
+                        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    # Ensure we have the builtins archive built as we pass it in explicitly in
+    # the test config.
+    ${NINJA} -vC "${BUILD_DIR}" libclang_rt.builtins-x86_64.a
+    check-runtimes
+;;
 #
 # Module builds
 #
@@ -490,11 +578,6 @@ generic-no-random_device)
 generic-no-localization)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-localization.cmake"
-    check-runtimes
-;;
-generic-no-terminal)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-terminal.cmake"
     check-runtimes
 ;;
 generic-no-unicode)
@@ -575,7 +658,8 @@ apple-system|apple-system-hardened)
     ${CMAKE} \
         -S "${MONOREPO_ROOT}/runtimes" \
         -B "${BUILD_DIR}/cxx" \
-        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+        -GNinja \
+        ${MAKE_PROGRAM} \
         -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/cxx" \
         -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
@@ -591,7 +675,8 @@ apple-system|apple-system-hardened)
     ${CMAKE} \
         -S "${MONOREPO_ROOT}/runtimes" \
         -B "${BUILD_DIR}/unwind" \
-        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+        -GNinja \
+        ${MAKE_PROGRAM} \
         -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/unwind" \
         -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
@@ -714,14 +799,6 @@ mingw-static)
           -DLIBUNWIND_ENABLE_SHARED=OFF
     check-runtimes
 ;;
-mingw-dll-i686)
-    clean
-    generate-cmake \
-          -DCMAKE_C_COMPILER=i686-w64-mingw32-clang \
-          -DCMAKE_CXX_COMPILER=i686-w64-mingw32-clang++ \
-          -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
-    check-runtimes
-;;
 mingw-incomplete-sysroot)
     # When bringing up a new cross compiler from scratch, we build
     # libunwind/libcxx in a setup where the toolchain is incomplete and
@@ -765,10 +842,6 @@ android-ndk-*)
         exit 1
     fi
     ARCH=$(arch_of_emu_img ${ANDROID_EMU_IMG})
-
-    # Use the Android compiler by default.
-    export CC=${CC:-/opt/android/clang/clang-current/bin/clang}
-    export CXX=${CXX:-/opt/android/clang/clang-current/bin/clang++}
 
     # The NDK libc++_shared.so is always built against the oldest supported API
     # level. When tests are run against a device with a newer API level, test

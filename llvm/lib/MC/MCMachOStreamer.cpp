@@ -95,6 +95,7 @@ public:
   void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
                                            unsigned Minor, unsigned Update,
                                            VersionTuple SDKVersion) override;
+  void emitTargetTriple(StringRef TargetTriple) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -149,7 +150,7 @@ void MCMachOStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
                                           MCSymbol *EHSymbol) {
   auto *Sym = static_cast<const MCSymbolMachO *>(Symbol);
   getAssembler().registerSymbol(*Symbol);
-  if (Symbol->isExternal())
+  if (Sym->isExternal())
     emitSymbolAttribute(EHSymbol, MCSA_Global);
   if (Sym->isWeakDefinition())
     emitSymbolAttribute(EHSymbol, MCSA_WeakDefinition);
@@ -254,6 +255,10 @@ void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
                                            Minor, Update, SDKVersion);
 }
 
+void MCMachOStreamer::emitTargetTriple(StringRef TargetTriple) {
+  getWriter().setTargetTriple(TargetTriple);
+}
+
 bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                           MCSymbolAttr Attribute) {
   auto *Symbol = static_cast<MCSymbolMachO *>(Sym);
@@ -299,6 +304,8 @@ bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
   case MCSA_Exported:
   case MCSA_Memtag:
   case MCSA_WeakAntiDep:
+  case MCSA_OSLinkage:
+  case MCSA_XPLinkage:
     return false;
 
   case MCSA_Global:
@@ -372,12 +379,13 @@ void MCMachOStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
 
 void MCMachOStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        Align ByteAlignment) {
+  auto &Sym = static_cast<MCSymbolMachO &>(*Symbol);
   // FIXME: Darwin 'as' does appear to allow redef of a .comm by itself.
   assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
 
-  getAssembler().registerSymbol(*Symbol);
-  Symbol->setExternal(true);
-  Symbol->setCommon(Size, ByteAlignment);
+  getAssembler().registerSymbol(Sym);
+  Sym.setExternal(true);
+  Sym.setCommon(Size, ByteAlignment);
 }
 
 void MCMachOStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -421,7 +429,7 @@ void MCMachOStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
 }
 
 void MCMachOStreamer::finishImpl() {
-  emitFrames(&getAssembler().getBackend());
+  emitFrames();
 
   // We have to set the fragment atom associations so we can relax properly for
   // Mach-O.
@@ -460,7 +468,8 @@ void MCMachOStreamer::finishImpl() {
 }
 
 void MCMachOStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
-  const MCSymbol *S = &SRE->getSymbol();
+  auto *S =
+      static_cast<MCSymbolMachO *>(const_cast<MCSymbol *>(&SRE->getSymbol()));
   if (getAssembler().registerSymbol(*S))
     S->setExternal(true);
 }

@@ -14,6 +14,7 @@
 #define LLVM_IR_FMF_H
 
 #include "llvm/Support/Compiler.h"
+#include <cassert>
 
 namespace llvm {
 class raw_ostream;
@@ -25,13 +26,8 @@ private:
 
   unsigned Flags = 0;
 
-  FastMathFlags(unsigned F) : Flags(F) {}
-
 public:
-  // This is how the bits are used in Value::SubclassOptionalData so they
-  // should fit there too.
-  // WARNING: We're out of space. SubclassOptionalData only has 7 bits. New
-  // functionality will require a change in how this information is stored.
+  /// Flag bits.
   enum {
     AllowReassoc    = (1 << 0),
     NoNaNs          = (1 << 1),
@@ -42,6 +38,10 @@ public:
     ApproxFunc      = (1 << 6),
     FlagEnd         = (1 << 7)
   };
+
+  FastMathFlags(unsigned F) : Flags(F) {
+    assert(((F & 0xff) == F) && "Flags value is not legal!");
+  }
 
   constexpr static unsigned AllFlagsMask = FlagEnd - 1;
 
@@ -103,6 +103,10 @@ public:
   }
   bool operator!=(const FastMathFlags &OtherFlags) const {
     return Flags != OtherFlags.Flags;
+  }
+
+  bool operator==(const FastMathFlags &OtherFlags) const {
+    return Flags == OtherFlags.Flags;
   }
 
   /// Print fast-math flags to \p O.

@@ -13,21 +13,24 @@
 #ifndef LLVM_ASMPARSER_LLLEXER_H
 #define LLVM_ASMPARSER_LLLEXER_H
 
-#include "LLToken.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/AsmParser/LLToken.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/SourceMgr.h"
 #include <string>
 
 namespace llvm {
   class Type;
   class SMDiagnostic;
-  class SourceMgr;
   class LLVMContext;
 
   class LLLexer {
     const char *CurPtr;
     StringRef CurBuf;
+
+    /// The end (exclusive) of the previous token.
+    const char *PrevTokEnd = nullptr;
 
     enum class ErrorPriority {
       None,   // No error message present.
@@ -59,12 +62,10 @@ namespace llvm {
     bool IgnoreColonInIdentifiers = false;
 
   public:
-    explicit LLLexer(StringRef StartBuf, SourceMgr &SM, SMDiagnostic &,
-                     LLVMContext &C);
+    LLVM_ABI explicit LLLexer(StringRef StartBuf, SourceMgr &SM, SMDiagnostic &,
+                              LLVMContext &C);
 
-    lltok::Kind Lex() {
-      return CurKind = LexToken();
-    }
+    lltok::Kind Lex() { return CurKind = LexToken(); }
 
     typedef SMLoc LocTy;
     LocTy getLoc() const { return SMLoc::getFromPointer(TokStart); }
@@ -79,6 +80,19 @@ namespace llvm {
       IgnoreColonInIdentifiers = val;
     }
 
+    /// Get the line, column position of the start of the current token,
+    /// zero-indexed
+    std::pair<unsigned, unsigned> getTokLineColumnPos() {
+      auto LC = SM.getLineAndColumn(SMLoc::getFromPointer(TokStart));
+      return {LC.first - 1, LC.second - 1};
+    }
+    /// Get the line, column position of the end of the previous token,
+    /// zero-indexed exclusive
+    std::pair<unsigned, unsigned> getPrevTokEndLineColumnPos() {
+      auto LC = SM.getLineAndColumn(SMLoc::getFromPointer(PrevTokEnd));
+      return {LC.first - 1, LC.second - 1};
+    }
+
     // This returns true as a convenience for the parser functions that return
     // true on error.
     bool ParseError(LocTy ErrorLoc, const Twine &Msg) {
@@ -87,11 +101,11 @@ namespace llvm {
     }
     bool ParseError(const Twine &Msg) { return ParseError(getLoc(), Msg); }
 
-    void Warning(LocTy WarningLoc, const Twine &Msg) const;
+    LLVM_ABI void Warning(LocTy WarningLoc, const Twine &Msg) const;
     void Warning(const Twine &Msg) const { return Warning(getLoc(), Msg); }
 
   private:
-    lltok::Kind LexToken();
+    LLVM_ABI lltok::Kind LexToken();
 
     int getNextChar();
     void SkipLineComment();
@@ -112,6 +126,7 @@ namespace llvm {
     lltok::Kind Lex0x();
     lltok::Kind LexHash();
     lltok::Kind LexCaret();
+    lltok::Kind LexFloatStr();
 
     uint64_t atoull(const char *Buffer, const char *End);
     uint64_t HexIntToVal(const char *Buffer, const char *End);
@@ -119,7 +134,7 @@ namespace llvm {
     void FP80HexToIntPair(const char *Buffer, const char *End,
                           uint64_t Pair[2]);
 
-    void Error(LocTy ErrorLoc, const Twine &Msg, ErrorPriority Origin);
+    LLVM_ABI void Error(LocTy ErrorLoc, const Twine &Msg, ErrorPriority Origin);
 
     void LexError(LocTy ErrorLoc, const Twine &Msg) {
       Error(ErrorLoc, Msg, ErrorPriority::Lexer);

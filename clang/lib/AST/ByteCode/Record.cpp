@@ -14,19 +14,24 @@ using namespace clang::interp;
 
 Record::Record(const RecordDecl *Decl, BaseList &&SrcBases,
                FieldList &&SrcFields, VirtualBaseList &&SrcVirtualBases,
-               unsigned VirtualSize, unsigned BaseSize)
+               unsigned VirtualSize, unsigned BaseSize, bool HasPtrField)
     : Decl(Decl), Bases(std::move(SrcBases)), Fields(std::move(SrcFields)),
       BaseSize(BaseSize), VirtualSize(VirtualSize), IsUnion(Decl->isUnion()),
-      IsAnonymousUnion(IsUnion && Decl->isAnonymousStructOrUnion()) {
+      IsAnonymousUnion(IsUnion && Decl->isAnonymousStructOrUnion()),
+      HasPtrField(HasPtrField) {
   for (Base &V : SrcVirtualBases)
-    VirtualBases.push_back({V.Decl, V.Offset + BaseSize, V.Desc, V.R});
+    VirtualBases.emplace_back(V.Decl, V.Desc, V.R, V.Offset + BaseSize);
 
-  for (Base &B : Bases)
+  for (Base &B : Bases) {
     BaseMap[B.Decl] = &B;
-  for (Field &F : Fields)
-    FieldMap[F.Decl] = &F;
-  for (Base &V : VirtualBases)
+    if (!this->HasPtrField)
+      this->HasPtrField |= B.R->hasPtrField();
+  }
+  for (Base &V : VirtualBases) {
     VirtualBaseMap[V.Decl] = &V;
+    if (!this->HasPtrField)
+      this->HasPtrField |= V.R->hasPtrField();
+  }
 }
 
 std::string Record::getName() const {
@@ -37,28 +42,50 @@ std::string Record::getName() const {
   return Ret;
 }
 
-const Record::Field *Record::getField(const FieldDecl *FD) const {
-  auto It = FieldMap.find(FD->getFirstDecl());
-  assert(It != FieldMap.end() && "Missing field");
-  return It->second;
+bool Record::hasTrivialDtor() const {
+  if (isAnonymousUnion())
+    return true;
+  const CXXDestructorDecl *Dtor = getDestructor();
+  return !Dtor || Dtor->isTrivial();
 }
 
-const Record::Base *Record::getBase(const RecordDecl *FD) const {
-  auto It = BaseMap.find(FD);
+const Record::Field *Record::findField(unsigned Offset) const {
+  if (auto It = llvm::find_if(
+          Fields,
+          [=](const Record::Field &F) -> bool { return F.Offset == Offset; });
+      It != Fields.end())
+    return &*It;
+  return nullptr;
+}
+
+const Record::Base *Record::getBase(const RecordDecl *RD) const {
+  auto It = BaseMap.find(RD);
   assert(It != BaseMap.end() && "Missing base");
   return It->second;
 }
 
+const Record::Base *Record::getBaseOrNull(const RecordDecl *RD) const {
+  return BaseMap.lookup(RD);
+}
+
 const Record::Base *Record::getBase(QualType T) const {
-  if (auto *RT = T->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  if (auto *RD = T->getAsCXXRecordDecl())
     return BaseMap.lookup(RD);
-  }
+  return nullptr;
+}
+
+const Record::Base *Record::findBase(unsigned Offset) const {
+  if (auto It = llvm::find_if(
+          Bases,
+          [=](const Record::Base &B) -> bool { return B.Offset == Offset; });
+      It != Bases.end())
+    return &*It;
   return nullptr;
 }
 
 const Record::Base *Record::getVirtualBase(const RecordDecl *FD) const {
   auto It = VirtualBaseMap.find(FD);
-  assert(It != VirtualBaseMap.end() && "Missing virtual base");
+  if (It == VirtualBaseMap.end())
+    return nullptr;
   return It->second;
 }

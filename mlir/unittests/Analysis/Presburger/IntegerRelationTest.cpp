@@ -119,6 +119,25 @@ TEST(IntegerRelationTest, applyDomainAndRange) {
   }
 }
 
+TEST(IntegerRelationTest, composeRemoveRedundantLocalVars) {
+  // map x to  y = x + 10.
+  IntegerRelation map1 =
+      parseRelationFromSet("(x, y) : (y - x - 10 == 0)", /*numDomain=*/1);
+
+  // map y to z = y + 20.
+  IntegerRelation map2 =
+      parseRelationFromSet("(y, z) : (z - y - 20 == 0)", /*numDomain=*/1);
+
+  // composing projects out y (converting it to a local variable)
+  map1.compose(map2);
+
+  // y is fully determined by x so should be eliminated after composition
+  EXPECT_EQ(map1.getNumLocalVars(), 0u);
+  IntegerRelation expectedMap =
+      parseRelationFromSet("(x, z) : (z - x - 30 == 0)", /*numDomain=*/1);
+  EXPECT_TRUE(map1.isEqual(expectedMap));
+}
+
 TEST(IntegerRelationTest, symbolicLexmin) {
   SymbolicLexOpt lexmin =
       parseRelationFromSet("(a, x)[b] : (x - a >= 0, x - b >= 0)", 1)
@@ -713,4 +732,48 @@ TEST(IntegerRelationTest, getVarKindRange) {
     actual.push_back(var);
   }
   EXPECT_THAT(actual, ElementsAre(2, 3, 4));
+}
+
+TEST(IntegerRelationTest, addLocalModulo) {
+  IntegerRelation rel = parseRelationFromSet("(x) : (x >= 0, 100 - x >= 0)", 1);
+  unsigned result = rel.addLocalModulo({1, 0}, 32); // x % 32
+  rel.convertVarKind(VarKind::Local,
+                     result - rel.getVarKindOffset(VarKind::Local),
+                     rel.getNumVarKind(VarKind::Local), VarKind::Range);
+  for (unsigned x = 0; x <= 100; ++x) {
+    EXPECT_TRUE(rel.containsPointNoLocal({x, x % 32}));
+  }
+}
+
+TEST(IntegerRelationTest, simplify) {
+  IntegerRelation rel =
+      parseRelationFromSet("(x, y, z): (2*x + y - 4*z - 3 == 0, "
+                           "3*x - y - 3*z + 2 == 0, x + 3*y - 5*z - 8 == 0,"
+                           "x - y + z >= 0)",
+                           2);
+  IntegerRelation copy = rel;
+  rel.simplify();
+
+  EXPECT_TRUE(rel.isEqual(copy));
+  // The third equality is redundant and should be removed.
+  // It can be obtained from 2 times the first equality minus the second.
+  EXPECT_TRUE(rel.getNumEqualities() == 2);
+}
+
+TEST(IntegerRelationTest, simplifyRegression) {
+  IntegerRelation rel = parseRelationFromSet("(x, y, z): (2*x + z >= 5, "
+                                             "x + 3*z >= 7, 3*x + y >= 9)",
+                                             3);
+
+  auto simplified = rel;
+  simplified.simplify();
+  EXPECT_TRUE(rel.isEqual(simplified));
+}
+
+TEST(IntegerRelationTest, isFullDim) {
+  IntegerRelation rel = parseRelationFromSet("(x): (1 >= 0)", 1);
+  EXPECT_TRUE(rel.isFullDim());
+
+  rel = parseRelationFromSet("(x): (-1 >= 0)", 1);
+  EXPECT_FALSE(rel.isFullDim());
 }

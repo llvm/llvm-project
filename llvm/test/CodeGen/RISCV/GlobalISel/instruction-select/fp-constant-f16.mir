@@ -57,8 +57,7 @@ body:             |
     ; CHECK-LABEL: name: half_positive_zero
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
-    ; CHECK-NEXT: [[FMV_H_X:%[0-9]+]]:fpr16 = FMV_H_X [[COPY]]
+    ; CHECK-NEXT: [[FMV_H_X:%[0-9]+]]:fpr16 = FMV_H_X $x0
     ; CHECK-NEXT: $f10_h = COPY [[FMV_H_X]]
     ; CHECK-NEXT: PseudoRET implicit $f10_h
     %1:fprb(s16) = G_FCONSTANT half 0.000000e+00

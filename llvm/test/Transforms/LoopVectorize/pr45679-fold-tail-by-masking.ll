@@ -13,22 +13,21 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 define void @pr45679(ptr %A) {
 ; CHECK-LABEL: @pr45679(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE6]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 13)
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    store i32 13, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP0]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
 ; CHECK:       pred.store.if1:
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 1
@@ -36,7 +35,7 @@ define void @pr45679(ptr %A) {
 ; CHECK-NEXT:    store i32 13, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP0]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[INDEX]], 2
@@ -44,7 +43,7 @@ define void @pr45679(ptr %A) {
 ; CHECK-NEXT:    store i32 13, ptr [[TMP9]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; CHECK:       pred.store.continue4:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP0]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
 ; CHECK:       pred.store.if5:
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[INDEX]], 3
@@ -53,43 +52,33 @@ define void @pr45679(ptr %A) {
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
 ; CHECK:       pred.store.continue6:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i8> [[VEC_IND]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[RIV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[RIVPLUS1:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[RIV]]
-; CHECK-NEXT:    store i32 13, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[RIVPLUS1]] = add nuw nsw i32 [[RIV]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[RIVPLUS1]], 14
-; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
 ; VF2UF2-LABEL: @pr45679(
 ; VF2UF2-NEXT:  entry:
-; VF2UF2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF2UF2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF2UF2:       vector.ph:
 ; VF2UF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2UF2:       vector.body:
 ; VF2UF2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE7:%.*]] ]
 ; VF2UF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE7]] ]
-; VF2UF2-NEXT:    [[STEP_ADD:%.*]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
+; VF2UF2-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i32> [[VEC_IND]], splat (i32 2)
 ; VF2UF2-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i32> [[VEC_IND]], splat (i32 13)
 ; VF2UF2-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i32> [[STEP_ADD]], splat (i32 13)
-; VF2UF2-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
+; VF2UF2-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i64 0
 ; VF2UF2-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VF2UF2:       pred.store.if:
-; VF2UF2-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
-; VF2UF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[TMP3]]
+; VF2UF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
 ; VF2UF2-NEXT:    store i32 13, ptr [[TMP4]], align 1
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VF2UF2:       pred.store.continue:
-; VF2UF2-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
+; VF2UF2-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP0]], i64 1
 ; VF2UF2-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3:%.*]]
 ; VF2UF2:       pred.store.if1:
 ; VF2UF2-NEXT:    [[TMP6:%.*]] = add i32 [[INDEX]], 1
@@ -97,7 +86,7 @@ define void @pr45679(ptr %A) {
 ; VF2UF2-NEXT:    store i32 13, ptr [[TMP7]], align 1
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; VF2UF2:       pred.store.continue2:
-; VF2UF2-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
+; VF2UF2-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
 ; VF2UF2-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
 ; VF2UF2:       pred.store.if3:
 ; VF2UF2-NEXT:    [[TMP9:%.*]] = add i32 [[INDEX]], 2
@@ -105,7 +94,7 @@ define void @pr45679(ptr %A) {
 ; VF2UF2-NEXT:    store i32 13, ptr [[TMP10]], align 1
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE5]]
 ; VF2UF2:       pred.store.continue4:
-; VF2UF2-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
+; VF2UF2-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; VF2UF2-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7]]
 ; VF2UF2:       pred.store.if5:
 ; VF2UF2-NEXT:    [[TMP12:%.*]] = add i32 [[INDEX]], 3
@@ -114,41 +103,31 @@ define void @pr45679(ptr %A) {
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE7]]
 ; VF2UF2:       pred.store.continue6:
 ; VF2UF2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; VF2UF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[STEP_ADD]], splat (i32 2)
+; VF2UF2-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i32> [[STEP_ADD]], splat (i32 2)
 ; VF2UF2-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; VF2UF2-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2UF2:       middle.block:
-; VF2UF2-NEXT:    br label [[EXIT:%.*]]
-; VF2UF2:       scalar.ph:
 ; VF2UF2-NEXT:    br label [[LOOP:%.*]]
-; VF2UF2:       loop:
-; VF2UF2-NEXT:    [[RIV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[RIVPLUS1:%.*]], [[LOOP]] ]
-; VF2UF2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[RIV]]
-; VF2UF2-NEXT:    store i32 13, ptr [[ARRAYIDX]], align 1
-; VF2UF2-NEXT:    [[RIVPLUS1]] = add nuw nsw i32 [[RIV]], 1
-; VF2UF2-NEXT:    [[COND:%.*]] = icmp eq i32 [[RIVPLUS1]], 14
-; VF2UF2-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF2UF2:       exit:
 ; VF2UF2-NEXT:    ret void
 ;
 ; VF1UF4-LABEL: @pr45679(
 ; VF1UF4-NEXT:  entry:
-; VF1UF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF1UF4-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF1UF4:       vector.ph:
 ; VF1UF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF1UF4:       vector.body:
 ; VF1UF4-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
-; VF1UF4-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; VF1UF4-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
 ; VF1UF4-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 2
 ; VF1UF4-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 3
-; VF1UF4-NEXT:    [[TMP4:%.*]] = icmp ule i32 [[TMP0]], 13
+; VF1UF4-NEXT:    [[TMP4:%.*]] = icmp ule i32 [[INDEX]], 13
 ; VF1UF4-NEXT:    [[TMP5:%.*]] = icmp ule i32 [[TMP1]], 13
 ; VF1UF4-NEXT:    [[TMP6:%.*]] = icmp ule i32 [[TMP2]], 13
 ; VF1UF4-NEXT:    [[TMP7:%.*]] = icmp ule i32 [[TMP3]], 13
 ; VF1UF4-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VF1UF4:       pred.store.if:
-; VF1UF4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[TMP0]]
+; VF1UF4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
 ; VF1UF4-NEXT:    store i32 13, ptr [[TMP8]], align 1
 ; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VF1UF4:       pred.store.continue:
@@ -174,16 +153,7 @@ define void @pr45679(ptr %A) {
 ; VF1UF4-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; VF1UF4-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF1UF4:       middle.block:
-; VF1UF4-NEXT:    br label [[EXIT:%.*]]
-; VF1UF4:       scalar.ph:
 ; VF1UF4-NEXT:    br label [[LOOP:%.*]]
-; VF1UF4:       loop:
-; VF1UF4-NEXT:    [[RIV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[RIVPLUS1:%.*]], [[LOOP]] ]
-; VF1UF4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[RIV]]
-; VF1UF4-NEXT:    store i32 13, ptr [[ARRAYIDX]], align 1
-; VF1UF4-NEXT:    [[RIVPLUS1]] = add nuw nsw i32 [[RIV]], 1
-; VF1UF4-NEXT:    [[COND:%.*]] = icmp eq i32 [[RIVPLUS1]], 14
-; VF1UF4-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF1UF4:       exit:
 ; VF1UF4-NEXT:    ret void
 ;
@@ -205,23 +175,22 @@ exit:
 define void @load_variant(ptr noalias %a, ptr noalias %b) {
 ; CHECK-LABEL: @load_variant(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE6]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 13)
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    store i64 [[TMP4]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
 ; CHECK:       pred.store.if1:
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 1
@@ -230,7 +199,7 @@ define void @load_variant(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    store i64 [[TMP9]], ptr [[B]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP0]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 2
@@ -239,7 +208,7 @@ define void @load_variant(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    store i64 [[TMP14]], ptr [[B]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; CHECK:       pred.store.continue4:
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP0]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
 ; CHECK:       pred.store.if5:
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 3
@@ -249,45 +218,34 @@ define void @load_variant(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
 ; CHECK:       pred.store.continue6:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i8> [[VEC_IND]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    store i64 [[V]], ptr [[B]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 14
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
 ; VF2UF2-LABEL: @load_variant(
 ; VF2UF2-NEXT:  entry:
-; VF2UF2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF2UF2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF2UF2:       vector.ph:
 ; VF2UF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2UF2:       vector.body:
 ; VF2UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE7:%.*]] ]
 ; VF2UF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE7]] ]
-; VF2UF2-NEXT:    [[STEP_ADD:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; VF2UF2-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; VF2UF2-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i64> [[VEC_IND]], splat (i64 13)
 ; VF2UF2-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i64> [[STEP_ADD]], splat (i64 13)
-; VF2UF2-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
+; VF2UF2-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i64 0
 ; VF2UF2-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VF2UF2:       pred.store.if:
-; VF2UF2-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; VF2UF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP3]]
+; VF2UF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; VF2UF2-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
 ; VF2UF2-NEXT:    store i64 [[TMP5]], ptr [[B:%.*]], align 8
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VF2UF2:       pred.store.continue:
-; VF2UF2-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
+; VF2UF2-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP0]], i64 1
 ; VF2UF2-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3:%.*]]
 ; VF2UF2:       pred.store.if1:
 ; VF2UF2-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 1
@@ -296,7 +254,7 @@ define void @load_variant(ptr noalias %a, ptr noalias %b) {
 ; VF2UF2-NEXT:    store i64 [[TMP10]], ptr [[B]], align 8
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; VF2UF2:       pred.store.continue2:
-; VF2UF2-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
+; VF2UF2-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
 ; VF2UF2-NEXT:    br i1 [[TMP12]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
 ; VF2UF2:       pred.store.if3:
 ; VF2UF2-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 2
@@ -305,7 +263,7 @@ define void @load_variant(ptr noalias %a, ptr noalias %b) {
 ; VF2UF2-NEXT:    store i64 [[TMP15]], ptr [[B]], align 8
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE5]]
 ; VF2UF2:       pred.store.continue4:
-; VF2UF2-NEXT:    [[TMP17:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
+; VF2UF2-NEXT:    [[TMP17:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; VF2UF2-NEXT:    br i1 [[TMP17]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7]]
 ; VF2UF2:       pred.store.if5:
 ; VF2UF2-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], 3
@@ -315,42 +273,31 @@ define void @load_variant(ptr noalias %a, ptr noalias %b) {
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE7]]
 ; VF2UF2:       pred.store.continue6:
 ; VF2UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF2UF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], splat (i64 2)
+; VF2UF2-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; VF2UF2-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; VF2UF2-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF2UF2-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF2UF2:       middle.block:
-; VF2UF2-NEXT:    br label [[FOR_END:%.*]]
-; VF2UF2:       scalar.ph:
 ; VF2UF2-NEXT:    br label [[FOR_BODY:%.*]]
-; VF2UF2:       for.body:
-; VF2UF2-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; VF2UF2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; VF2UF2-NEXT:    [[V:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; VF2UF2-NEXT:    store i64 [[V]], ptr [[B]], align 8
-; VF2UF2-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; VF2UF2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 14
-; VF2UF2-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VF2UF2:       for.end:
 ; VF2UF2-NEXT:    ret void
 ;
 ; VF1UF4-LABEL: @load_variant(
 ; VF1UF4-NEXT:  entry:
-; VF1UF4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VF1UF4-NEXT:    br label [[VECTOR_PH:%.*]]
 ; VF1UF4:       vector.ph:
 ; VF1UF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF1UF4:       vector.body:
 ; VF1UF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
-; VF1UF4-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; VF1UF4-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; VF1UF4-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; VF1UF4-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
-; VF1UF4-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP0]], 13
+; VF1UF4-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[INDEX]], 13
 ; VF1UF4-NEXT:    [[TMP5:%.*]] = icmp ule i64 [[TMP1]], 13
 ; VF1UF4-NEXT:    [[TMP6:%.*]] = icmp ule i64 [[TMP2]], 13
 ; VF1UF4-NEXT:    [[TMP7:%.*]] = icmp ule i64 [[TMP3]], 13
 ; VF1UF4-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VF1UF4:       pred.store.if:
-; VF1UF4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
+; VF1UF4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; VF1UF4-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP8]], align 8
 ; VF1UF4-NEXT:    store i64 [[TMP9]], ptr [[B:%.*]], align 8
 ; VF1UF4-NEXT:    br label [[PRED_STORE_CONTINUE]]
@@ -378,19 +325,9 @@ define void @load_variant(ptr noalias %a, ptr noalias %b) {
 ; VF1UF4:       pred.store.continue6:
 ; VF1UF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF1UF4-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; VF1UF4-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF1UF4-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF1UF4:       middle.block:
-; VF1UF4-NEXT:    br label [[FOR_END:%.*]]
-; VF1UF4:       scalar.ph:
 ; VF1UF4-NEXT:    br label [[FOR_BODY:%.*]]
-; VF1UF4:       for.body:
-; VF1UF4-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; VF1UF4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; VF1UF4-NEXT:    [[V:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; VF1UF4-NEXT:    store i64 [[V]], ptr [[B]], align 8
-; VF1UF4-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; VF1UF4-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 14
-; VF1UF4-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VF1UF4:       for.end:
 ; VF1UF4-NEXT:    ret void
 ;

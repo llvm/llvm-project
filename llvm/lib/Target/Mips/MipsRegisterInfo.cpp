@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -37,30 +38,17 @@ using namespace llvm;
 #define GET_REGINFO_TARGET_DESC
 #include "MipsGenRegisterInfo.inc"
 
-MipsRegisterInfo::MipsRegisterInfo() : MipsGenRegisterInfo(Mips::RA) {
+MipsRegisterInfo::MipsRegisterInfo(const MipsSubtarget &STI)
+    : MipsGenRegisterInfo(Mips::RA), ArePtrs64bit(STI.getABI().ArePtrs64bit()) {
   MIPS_MC::initLLVMToCVRegMapping(this);
 }
 
 unsigned MipsRegisterInfo::getPICCallReg() { return Mips::T9; }
 
 const TargetRegisterClass *
-MipsRegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                     unsigned Kind) const {
-  MipsABIInfo ABI = MF.getSubtarget<MipsSubtarget>().getABI();
-  MipsPtrClass PtrClassKind = static_cast<MipsPtrClass>(Kind);
-
-  switch (PtrClassKind) {
-  case MipsPtrClass::Default:
-    return ABI.ArePtrs64bit() ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
-  case MipsPtrClass::GPR16MM:
-    return &Mips::GPRMM16RegClass;
-  case MipsPtrClass::StackPointer:
-    return ABI.ArePtrs64bit() ? &Mips::SP64RegClass : &Mips::SP32RegClass;
-  case MipsPtrClass::GlobalPointer:
-    return ABI.ArePtrs64bit() ? &Mips::GP64RegClass : &Mips::GP32RegClass;
-  }
-
-  llvm_unreachable("Unknown pointer kind");
+MipsRegisterInfo::getPointerRegClass(unsigned Kind) const {
+  assert(Kind == 0 && "this should only be used for default case");
+  return ArePtrs64bit ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
 }
 
 unsigned
@@ -88,6 +76,13 @@ MipsRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
 // Callee Saved Registers methods
 //===----------------------------------------------------------------------===//
 
+/// Check if the user has declared $gp/$28 as a global regiater.
+bool isGPUsedAsGlobalRegister(const MachineFunction &MF) {
+  const Module *Module = MF.getFunction().getParent();
+
+  return Module->getNamedMetadata("llvm.named.register.$28");
+}
+
 /// Mips Callee Saved Registers
 const MCPhysReg *
 MipsRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
@@ -102,14 +97,28 @@ MipsRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
                                      : CSR_Interrupt_32_SaveList;
   }
 
+  bool GPIsGlobal = isGPUsedAsGlobalRegister(*MF);
+  // N64 ABI
+  if (Subtarget.isABI_N64()) {
+    if (Subtarget.isSingleFloat())
+      return GPIsGlobal ? CSR_N64_SingleFloat_NoGP_SaveList
+                        : CSR_N64_SingleFloat_SaveList;
+
+    return GPIsGlobal ? CSR_N64_NoGP_SaveList : CSR_N64_SaveList;
+  }
+
+  // N32 ABI
+  if (Subtarget.isABI_N32()) {
+    if (Subtarget.isSingleFloat())
+      return GPIsGlobal ? CSR_N32_SingleFloat_NoGP_SaveList
+                        : CSR_N32_SingleFloat_SaveList;
+
+    return GPIsGlobal ? CSR_N32_NoGP_SaveList : CSR_N32_SaveList;
+  }
+
+  // O32 ABI
   if (Subtarget.isSingleFloat())
-    return CSR_SingleFloatOnly_SaveList;
-
-  if (Subtarget.isABI_N64())
-    return CSR_N64_SaveList;
-
-  if (Subtarget.isABI_N32())
-    return CSR_N32_SaveList;
+    return CSR_O32_SingleFloat_SaveList;
 
   if (Subtarget.isFP64bit())
     return CSR_O32_FP64_SaveList;
@@ -124,14 +133,25 @@ const uint32_t *
 MipsRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const {
   const MipsSubtarget &Subtarget = MF.getSubtarget<MipsSubtarget>();
-  if (Subtarget.isSingleFloat())
-    return CSR_SingleFloatOnly_RegMask;
+  // N64 ABI
+  if (Subtarget.isABI_N64()) {
+    if (Subtarget.isSingleFloat())
+      return CSR_N64_SingleFloat_RegMask;
 
-  if (Subtarget.isABI_N64())
     return CSR_N64_RegMask;
+  }
 
-  if (Subtarget.isABI_N32())
+  // N32 ABI
+  if (Subtarget.isABI_N32()) {
+    if (Subtarget.isSingleFloat())
+      return CSR_N32_SingleFloat_RegMask;
+
     return CSR_N32_RegMask;
+  }
+
+  // O32 ABI
+  if (Subtarget.isSingleFloat())
+    return CSR_O32_SingleFloat_RegMask;
 
   if (Subtarget.isFP64bit())
     return CSR_O32_FP64_RegMask;
@@ -166,7 +186,8 @@ getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(R);
 
   // For mno-abicalls, GP is a program invariant!
-  if (!Subtarget.isABICalls()) {
+  bool GPIsGlobal = isGPUsedAsGlobalRegister(MF);
+  if (!Subtarget.isABICalls() || GPIsGlobal) {
     Reserved.set(Mips::GP);
     Reserved.set(Mips::GP_64);
   }
@@ -197,6 +218,8 @@ getReservedRegs(const MachineFunction &MF) const {
       }
     }
   }
+  // Reserve fp control and status register
+  Reserved.set(Mips::FCR31);
 
   // Reserve hardware registers.
   Reserved.set(Mips::HWR29);

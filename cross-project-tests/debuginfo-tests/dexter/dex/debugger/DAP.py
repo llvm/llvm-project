@@ -18,6 +18,7 @@ import sys
 import threading
 import time
 from enum import Enum
+from typing import Dict, List, Optional, Union
 
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
@@ -51,18 +52,27 @@ class DAPMessageLogger:
         self.out_handle = None
         self.open = False
         self.lock = threading.Lock()
+        self.start_time: Optional[float] = None
 
     def _custom_enter(self):
         self.open = True
+        self.start_time = time.time()
         if self.log_file is None:
             return
         if self.log_file == "-":
             self.out_handle = sys.stdout
             return
+        if self.log_file == "-e":
+            self.out_handle = sys.stderr
+            return
         self.out_handle = open(self.log_file, "w+", encoding="utf-8")
 
     def _custom_exit(self):
-        if self.out_handle is not None and self.log_file != "-":
+        if (
+            self.out_handle is not None
+            and self.log_file != "-"
+            and self.log_file != "-e"
+        ):
             self.out_handle.close()
         self.open = False
 
@@ -87,6 +97,13 @@ class DAPMessageLogger:
 
     def write_message(self, message: dict, incoming: bool):
         prefix = self.prefix_recv if incoming else self.prefix_send
+        if self.start_time is not None:
+            message_time = time.time() - self.start_time
+            minutes = int(message_time / 60)
+            seconds = int(message_time % 60)
+            milliseconds = int((message_time % 1) * 1000)
+            prefix += f" {minutes}:{seconds:02d}:{milliseconds:03d}"
+
         # ANSI escape codes get butchered by json.dumps(), so we fix them up here.
         message_str = json.dumps(
             self._colorize_dap_message(message), indent=self.indent
@@ -98,6 +115,36 @@ class DAPMessageLogger:
             self.dexter_logger.warning(
                 f'Attempted to write message after program closed: "{prefix} {message_str}"'
             )
+
+
+# Debuggers communicate optional feature support.
+class DAPDebuggerCapabilities:
+    def __init__(self):
+        self.supportsConfigurationDoneRequest: bool = False
+        self.supportsFunctionBreakpoints: bool = False
+        self.supportsConditionalBreakpoints: bool = False
+        self.supportsHitConditionalBreakpoints: bool = False
+        self.supportsEvaluateForHovers: bool = False
+        self.supportsSetVariable: bool = False
+        self.supportsStepInTargetsRequest: bool = False
+        self.supportsModulesRequest: bool = False
+        self.supportsValueFormattingOptions: bool = False
+        self.supportsLogPoints: bool = False
+        self.supportsSetExpression: bool = False
+        self.supportsDataBreakpoints: bool = False
+        self.supportsReadMemoryRequest: bool = False
+        self.supportsWriteMemoryRequest: bool = False
+        self.supportsDisassembleRequest: bool = False
+        self.supportsCancelRequest: bool = False
+        self.supportsSteppingGranularity: bool = False
+        self.supportsInstructionBreakpoints: bool = False
+
+    def update(self, logger: Logger, feature_dict: dict):
+        for k, v in feature_dict.items():
+            if hasattr(self, k):
+                setattr(self, k, v)
+            else:
+                logger.warning(f"DAP: Unknown support flag: {k}")
 
 
 # As DAP does not give us a trivially query-able process, we are responsible for maintaining our own state information,
@@ -142,6 +189,9 @@ class DAPDebuggerState:
         # Map of DAP breakpoint IDs to resolved instruction addresses.
         self.bp_addr_map = {}
 
+        # DAP features supported by the debugger.
+        self.capabilities = DAPDebuggerCapabilities()
+
     def set_response(self, req_id: int, response: dict):
         if len(self.responses) > req_id:
             self.responses[req_id] = response
@@ -185,6 +235,10 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         self.file_to_bp = defaultdict(list)
         # { dex_breakpoint_id -> (file, line, condition) }
         self.bp_info = {}
+        # { dex_breakpoint_id -> function_name }
+        self.function_bp_info = {}
+        # { dex_breakpoint_id -> instruction_reference }
+        self.instruction_bp_info = {}
         # We don't rely on IDs returned directly from the debug adapter. Instead, we use dexter breakpoint IDs, and
         # maintain a two-way-mapping of dex_bp_id<->dap_bp_id. This also allows us to defer the setting of breakpoints
         # in the debug adapter itself until necessary.
@@ -193,6 +247,8 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         self.dex_id_to_dap_id = {}
         self.dap_id_to_dex_ids = {}
         self.pending_breakpoints: bool = False
+        self.pending_function_breakpoints: bool = False
+        self.pending_instruction_breakpoints: bool = False
         # List of breakpoints, indexed by BP ID
         # Each entry has the source file (for use in referencing desired_bps), and the DA-assigned
         # ID for that breakpoint if it has one (if it has been removed or not yet created then it will be None).
@@ -255,6 +311,26 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             {"source": {"path": source}, "breakpoints": [bp.toDict() for bp in bps]},
         )
 
+    @staticmethod
+    def make_set_function_breakpoint_request(function_names: list) -> dict:
+        # Function breakpoints may specify conditions and hit counts, though we
+        # don't use those here (though perhaps we should use native hit count,
+        # rather than emulating it ConditionalController, now that we have a
+        # shared interface (DAP)).
+        return DAP.make_request(
+            "setFunctionBreakpoints",
+            {"breakpoints": [{"name": f} for f in function_names]},
+        )
+
+    @staticmethod
+    def make_set_instruction_breakpoint_request(addrs: list) -> dict:
+        # Instruction breakpoints have additional fields we're ignoring for the
+        # moment.
+        return DAP.make_request(
+            "setInstructionBreakpoints",
+            {"breakpoints": [{"instructionReference": a} for a in addrs]},
+        )
+
     ############################################################################
     ## DAP communication & state-handling functions
 
@@ -269,6 +345,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         self._proc.stdin.flush()
         return self.seq
 
+    @staticmethod
     def _handle_message(
         message: dict, debugger_state: DAPDebuggerState, logger: Logger
     ):
@@ -315,17 +392,21 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                     and debugger_state.thread is None
                 ):
                     debugger_state.thread = event_details["threadId"]
+            elif event_type == "capabilities":
+                # Unchanged capabilites may not be included.
+                debugger_state.capabilities.update(logger, event_details)
             # There are many events we do not care about, just skip processing them.
             else:
                 pass
         elif message["type"] == "response":
-            request_seq = message["request_seq"]
-            debugger_state.set_response(request_seq, message)
             # TODO: We also receive a "continued" event, but it seems reasonable to set state based on either the
             # response or the event, since the DAP does not specify an order in which they are sent. May need revisiting
             # if there turns out to be some odd ordering issues, e.g. if we can receive messages in the order
             # ["response: continued", "event: stopped", "event: continued"].
-            if message["command"] == "continue" and message["success"] == True:
+            if (
+                message["command"] in ["continue", "stepIn", "next", "stepOut"]
+                and message["success"] == True
+            ):
                 debugger_state.is_running = True
                 # Reset all state that is invalidated upon program continue.
                 debugger_state.stopped_reason = None
@@ -338,7 +419,18 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 debugger_state.frame_map = [
                     stackframe["id"] for stackframe in message["body"]["stackFrames"]
                 ]
+            # The debugger communicates which optional DAP features are
+            # supported in its initalize response.
+            if message["command"] == "initialize" and message["success"] == True:
+                body = message.get("body")
+                if body:
+                    debugger_state.capabilities.update(logger, body)
+            # Now we've done whatever we need to do with the response, tell the
+            # receiver thread we've got it.
+            request_seq = message["request_seq"]
+            debugger_state.set_response(request_seq, message)
 
+    @staticmethod
     def _colorize_dap_message(message: dict) -> dict:
         colorized_message = copy.deepcopy(message)
         if colorized_message["type"] == "event":
@@ -352,6 +444,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             colorized_message["command"] = f"<y>{colorized_message['command']}</>"
         return colorized_message
 
+    @staticmethod
     def _read_dap_output(
         proc: subprocess.Popen,
         debugger_state: DAPDebuggerState,
@@ -374,6 +467,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 DAP._handle_message(message, debugger_state, logger)
                 buffer = rest[content_length:]
 
+    @staticmethod
     def _read_dap_err(proc: subprocess.Popen, logger: Logger):
         while True:
             err: bytes = proc.stderr.readline()
@@ -457,6 +551,29 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             time.sleep(0.001)
         return self._debugger_state.get_response(seq)
 
+    # Helper method that sends the request defined by "command" + "arguments", awaits the response, and returns the
+    # response when it arrives. An optional timeout for the response may be passed.
+    # If allow_failure is passed, then the result may instead be a str containing the fail reason if the request failed.
+    def _communicate_request(
+        self, command: str, arguments=None, timeout: float = 60.0
+    ) -> Dict:
+        req_id = self.send_message(self.make_request(command, arguments))
+        response = self._await_response(req_id, timeout)
+        if not response["success"]:
+            raise DebuggerException(
+                f"received failure response for command {command}: {response['message']}"
+            )
+        return response["body"]
+
+    def _communicate_fallible_request(
+        self, command: str, arguments=None, timeout: float = 60.0
+    ) -> Union[Dict, str]:
+        req_id = self.send_message(self.make_request(command, arguments))
+        response = self._await_response(req_id, timeout)
+        if not response["success"]:
+            return response["message"]
+        return response["body"]
+
     ## End of DAP communication methods
     ############################################################################
 
@@ -524,6 +641,22 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
     def _add_breakpoint(self, file, line):
         return self._add_conditional_breakpoint(file, line, None)
 
+    def add_function_breakpoint(self, name: str):
+        if not self._debugger_state.capabilities.supportsFunctionBreakpoints:
+            raise DebuggerException("Debugger does not support function breakpoints")
+        new_id = self.get_next_bp_id()
+        self.function_bp_info[new_id] = name
+        self.pending_function_breakpoints = True
+        return new_id
+
+    def add_instruction_breakpoint(self, addr: str):
+        if not self._debugger_state.capabilities.supportsInstructionBreakpoints:
+            raise DebuggerException("Debugger does not support instruction breakpoints")
+        new_id = self.get_next_bp_id()
+        self.instruction_bp_info[new_id] = addr
+        self.pending_instruction_breakpoints = True
+        return new_id
+
     def _add_conditional_breakpoint(self, file, line, condition):
         new_id = self.get_next_bp_id()
         self.file_to_bp[file].append(new_id)
@@ -531,38 +664,73 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         self.pending_breakpoints = True
         return new_id
 
+    def _update_breakpoint_ids_after_request(self, dex_bp_ids: list, response: dict):
+        dap_bp_ids = [bp["id"] for bp in response["body"]["breakpoints"]]
+        if len(dex_bp_ids) != len(dap_bp_ids):
+            self.context.logger.error(
+                f"Sent request to set {len(dex_bp_ids)} breakpoints, but received {len(dap_bp_ids)} in response."
+            )
+        visited_dap_ids = set()
+        for i, dex_bp_id in enumerate(dex_bp_ids):
+            dap_bp_id = dap_bp_ids[i]
+            self.dex_id_to_dap_id[dex_bp_id] = dap_bp_id
+            # We take the mappings in the response as the canonical mapping, meaning that if the debug server has
+            # simply *changed* the DAP ID for a breakpoint we overwrite the existing mapping rather than adding to
+            # it, but if we receive the same DAP ID for multiple Dex IDs *then* we store a one-to-many mapping.
+            if dap_bp_id in visited_dap_ids:
+                self.dap_id_to_dex_ids[dap_bp_id].append(dex_bp_id)
+            else:
+                self.dap_id_to_dex_ids[dap_bp_id] = [dex_bp_id]
+                visited_dap_ids.add(dap_bp_id)
+
     def _flush_breakpoints(self):
-        if not self.pending_breakpoints:
-            return
-        for file in self.file_to_bp.keys():
-            desired_bps = self._get_desired_bps(file)
+        # Normal and conditional breakpoints.
+        if self.pending_breakpoints:
+            self.pending_breakpoints = False
+            for file in self.file_to_bp.keys():
+                desired_bps = self._get_desired_bps(file)
+                request_id = self.send_message(
+                    self.make_set_breakpoint_request(file, desired_bps)
+                )
+                result = self._await_response(request_id, 10)
+                if not result["success"]:
+                    raise DebuggerException(f"could not set breakpoints for '{file}'")
+                # The debug adapter may have chosen to merge our breakpoints. From here we need to identify such cases and
+                # handle them so that our internal bookkeeping is correct.
+                dex_bp_ids = self.get_current_bps(file)
+                self._update_breakpoint_ids_after_request(dex_bp_ids, result)
+
+        # Function breakpoints.
+        if self.pending_function_breakpoints:
+            self.pending_function_breakpoints = False
+            desired_bps = list(self.function_bp_info.values())
             request_id = self.send_message(
-                self.make_set_breakpoint_request(file, desired_bps)
+                self.make_set_function_breakpoint_request(desired_bps)
             )
             result = self._await_response(request_id, 10)
             if not result["success"]:
-                raise DebuggerException(f"could not set breakpoints for '{file}'")
-            # The debug adapter may have chosen to merge our breakpoints. From here we need to identify such cases and
-            # handle them so that our internal bookkeeping is correct.
-            dex_bp_ids = self.get_current_bps(file)
-            dap_bp_ids = [bp["id"] for bp in result["body"]["breakpoints"]]
-            if len(dex_bp_ids) != len(dap_bp_ids):
-                self.context.logger.error(
-                    f"Sent request to set {len(dex_bp_ids)} breakpoints, but received {len(dap_bp_ids)} in response."
+                raise DebuggerException(
+                    f"could not set function breakpoints: '{desired_bps}'"
                 )
-            visited_dap_ids = set()
-            for i, dex_bp_id in enumerate(dex_bp_ids):
-                dap_bp_id = dap_bp_ids[i]
-                self.dex_id_to_dap_id[dex_bp_id] = dap_bp_id
-                # We take the mappings in the response as the canonical mapping, meaning that if the debug server has
-                # simply *changed* the DAP ID for a breakpoint we overwrite the existing mapping rather than adding to
-                # it, but if we receive the same DAP ID for multiple Dex IDs *then* we store a one-to-many mapping.
-                if dap_bp_id in visited_dap_ids:
-                    self.dap_id_to_dex_ids[dap_bp_id].append(dex_bp_id)
-                else:
-                    self.dap_id_to_dex_ids[dap_bp_id] = [dex_bp_id]
-                    visited_dap_ids.add(dap_bp_id)
-        self.pending_breakpoints = False
+            # We expect the breakpoint order to match in request and response.
+            dex_bp_ids = list(self.function_bp_info.keys())
+            self._update_breakpoint_ids_after_request(dex_bp_ids, result)
+
+        # Address / instruction breakpoints.
+        if self.pending_instruction_breakpoints:
+            self.pending_instruction_breakpoints = False
+            desired_bps = list(self.instruction_bp_info.values())
+            request_id = self.send_message(
+                self.make_set_instruction_breakpoint_request(desired_bps)
+            )
+            result = self._await_response(request_id, 10)
+            if not result["success"]:
+                raise DebuggerException(
+                    f"could not set instruction breakpoints: '{desired_bps}'"
+                )
+            # We expect the breakpoint order to match in request and response.
+            dex_bp_ids = list(self.instruction_bp_info.keys())
+            self._update_breakpoint_ids_after_request(dex_bp_ids, result)
 
     def _confirm_triggered_breakpoint_ids(self, dex_bp_ids):
         """Can be overridden for any specific implementations that need further processing from the debug server's
@@ -574,11 +742,12 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         # Breakpoints can only have been triggered if we've hit one.
         stop_reason = self._translate_stop_reason(self._debugger_state.stopped_reason)
         if stop_reason != StopReason.BREAKPOINT:
-            return []
+            return set()
         breakpoint_ids = set(
             [
                 dex_id
                 for dap_id in self._debugger_state.stopped_bps
+                if dap_id in self.dap_id_to_dex_ids
                 for dex_id in self.dap_id_to_dex_ids[dap_id]
             ]
         )
@@ -587,8 +756,16 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
     def delete_breakpoints(self, ids):
         per_file_deletions = defaultdict(list)
         for dex_bp_id in ids:
-            source, _, _ = self.bp_info[dex_bp_id]
-            per_file_deletions[source].append(dex_bp_id)
+            if dex_bp_id in self.bp_info:
+                source, _, _ = self.bp_info[dex_bp_id]
+                per_file_deletions[source].append(dex_bp_id)
+            elif dex_bp_id in self.function_bp_info:
+                del self.function_bp_info[dex_bp_id]
+                self.pending_function_breakpoints = True
+            elif dex_bp_id in self.instruction_bp_info:
+                del self.instruction_bp_info[dex_bp_id]
+                self.pending_instruction_breakpoints = True
+
         for file, deleted_ids in per_file_deletions.items():
             old_len = len(self.file_to_bp[file])
             self.file_to_bp[file] = [
@@ -606,27 +783,57 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         """ "Set the debugger-specific params used in a launch request."""
 
     def launch(self, cmdline):
-        assert len(self.file_to_bp.keys()) > 0
+        # FIXME: Should this be a warning or exception, rather than assert?
+        assert (
+            len(self.file_to_bp)
+            + len(self.function_bp_info)
+            + len(self.instruction_bp_info)
+            > 0
+        ), "Expected at least one breakpoint before launching"
 
         if self.context.options.target_run_args:
             cmdline += shlex.split(self.context.options.target_run_args)
 
         launch_request = self._get_launch_params(cmdline)
 
-        # For some reason, we *must* submit in the order launch->configurationDone, and then we will receive responses
-        # in the order configurationDone->launch.
-        self._flush_breakpoints()
+        # Per DAP protocol, we follow the sequence:
+        # 1. Send launch request
+        # 2. Set breakpoints
+        # 3. Send configurationDone to start the process
+        # 4. Wait for launch and configurationDone responses, and a "process" event, to confirm successful launch
+        # NB: Technically, we should also wait for the "initialized" event before sending the launch request, but in
+        # practice there are DAP implementations that do not send the initialized event until post-launch, and all
+        # adapters seem to accept us not waiting for the initialized event, so ignoring it gives maximum compatibility.
         launch_req_id = self.send_message(self.make_request("launch", launch_request))
+
+        # Wait for the initialized event; for LLDB, this will be sent after the launch request has been processed;
+        # for other debuggers, it will have been sent some time after the initialize response was sent.
+        # NB: In all currently known cases this timeout is never hit because the initialized event is usually received
+        # almost immediately after either the initialize response or the launch request/response, and otherwise this
+        # timeout is long enough for any internal debugger timeout to be hit, and so if this gets hit it probably means
+        # the debugger is hanging.
+        initialize_timeout = Timeout(60)
+        while self._proc.poll() is None and not self._debugger_state.initialized:
+            if initialize_timeout.timed_out():
+                raise TimeoutError(
+                    "Timed out while waiting for initialized event from DAP"
+                )
+            time.sleep(0.01)
+
+        # Set breakpoints after receiving launch response but before configurationDone.
+        self._flush_breakpoints()
+
+        # Send configurationDone to allow the process to start running.
         config_done_req_id = self.send_message(self.make_request("configurationDone"))
-        config_done_response = self._await_response(config_done_req_id)
-        assert config_done_response["success"], "Should simply receive an affirmative?"
         launch_response = self._await_response(launch_req_id)
         if not launch_response["success"]:
             raise DebuggerException(
                 f"failure launching debugger: \"{launch_response['body']['error']['format']}\""
             )
-        # We can't interact meaningfully with the process until we have the thread ID and confirmation that the process
-        # has finished launching.
+        config_done_response = self._await_response(config_done_req_id)
+        assert config_done_response["success"]
+
+        # Wait for the process to launch and obtain a thread ID.
         while self._debugger_state.thread is None or not self._debugger_state.launched:
             time.sleep(0.001)
 
@@ -635,20 +842,33 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
     def _post_step_hook(self):
         """Hook to be executed after completing a step request."""
 
-    def step_in(self):
+    def _step(self, step_request_string):
         self._flush_breakpoints()
         step_req_id = self.send_message(
-            self.make_request("stepIn", {"threadId": self._debugger_state.thread})
+            self.make_request(
+                step_request_string, {"threadId": self._debugger_state.thread}
+            )
         )
         response = self._await_response(step_req_id)
         if not response["success"]:
-            raise DebuggerException("failed to step")
+            raise DebuggerException(
+                f"failed to perform debugger action: '{step_request_string}'"
+            )
         # If we've "stepped" to a breakpoint, then continue to hit the breakpoint properly.
         # NB: This is an issue that only seems relevant to LLDB, but is also harmless outside of LLDB; if it turns out
         #     to cause issues for other debuggers, we can move it to a post-step hook.
         while self._debugger_state.is_running:
             time.sleep(0.001)
         self._post_step_hook()
+
+    def step_in(self):
+        self._step("stepIn")
+
+    def step_next(self):
+        self._step("next")
+
+    def step_out(self):
+        self._step("stepOut")
 
     def go(self) -> ReturnCode:
         self._flush_breakpoints()
@@ -740,6 +960,119 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             program_state=ProgramState(state_frames),
         )
 
+    def get_stack_frames(self, step_index: int) -> StepIR:
+        """Returns a StepIR with stackframes and source locations (but no watched values)."""
+        assert (
+            not self._debugger_state.is_running
+        ), "Cannot get step info while debugger is running!"
+        trace_req_id = self.send_message(
+            self.make_request("stackTrace", {"threadId": self._debugger_state.thread})
+        )
+        trace_response = self._await_response(trace_req_id)
+        if not trace_response["success"]:
+            raise DebuggerException("failed to get stack frames")
+        stackframes = trace_response["body"]["stackFrames"]
+
+        frames = []
+
+        for stackframe in stackframes:
+            # Some frames are marked "deemphasize" to indicate that they are not interesting; these frames can be
+            # skipped by Dexter.
+            # NB: This is by no means guaranteed to be set by the debug adapter, so is not a perfectly reliable check;
+            #     however, if it *is* set, it's generally a safe bet that we are not looking at user code and so can
+            #     skip this frame. We may check for more presentationHint values in future if/as we add support for more
+            #     debug adapters.
+            if stackframe.get("source", {}).get("presentationHint") == "deemphasize":
+                continue
+            # No source, skip the frame! Currently I've only observed this for frames below main, so we break here; if
+            # it happens elsewhere, then this will break more stuff and we'll come up with a better solution.
+            if stackframe.get("source", {}).get("path") is None:
+                break
+
+            loc_dict = {
+                "path": self._external_to_debug_path(stackframe["source"]["path"]),
+                "lineno": stackframe["line"],
+                "column": stackframe["column"],
+            }
+            loc = LocIR(**loc_dict)
+            frame = FrameIR(
+                function=self._sanitize_function_name(stackframe["name"]),
+                is_inlined=stackframe["name"].startswith("[Inline Frame]"),
+                loc=loc,
+                instruction_addr=stackframe.get("instructionPointerReference", None),
+            )
+
+            # We skip frames that are below "main", since we do not expect those to be user code.
+            fname = frame.function or ""  # pylint: disable=no-member
+            if any(name in fname for name in self.frames_below_main):
+                break
+
+            frames.append(frame)
+
+        if len(frames) == 1 and frames[0].function is None:
+            frames = []
+
+        reason = self._translate_stop_reason(self._debugger_state.stopped_reason)
+
+        return StepIR(
+            step_index=step_index,
+            frames=frames,
+            stop_reason=reason,
+        )
+
+    def collect_watches(
+        self, step: StepIR, frame_idx: int, watches: List[str], scope_watches: List[str]
+    ):
+        """Evaluates the provided watches and stores their evaluation results (ValueIR) in the provided step."""
+        if not watches and not scope_watches:
+            return
+        active_exprs = set(watches)
+        active_scopes = set(scope_watches)
+        frame_loc = step.frames[frame_idx].loc
+        frame_id = self._debugger_state.frame_map[frame_idx]
+        frame_scopes = self._communicate_request("scopes", {"frameId": frame_id})
+        for scope in frame_scopes["scopes"]:
+            scope_name = scope["name"]
+            if scope_name not in active_scopes:
+                continue
+            scope_vars_ref = scope["variablesReference"]
+            scope_vars = self._communicate_request(
+                "variables", {"variablesReference": scope_vars_ref}
+            )
+            assert isinstance(scope_vars, dict)
+            scope_var_values = {}
+            # Evaluate all scope variables.
+            for var in scope_vars["variables"]:
+                result = var["value"]
+                # Check to see whether this variable is in-scope yet.
+                # FIXME: This is just the best solution I can see right now, but we may want better in
+                # future (especially for languages with non-C-like declaration/scoping semantics).
+                if "declarationLocationReference" in var:
+                    declaration_loc = self._communicate_request(
+                        "locations",
+                        {"locationReference": var["declarationLocationReference"]},
+                    )
+                    if declaration_loc["line"] >= frame_loc.lineno:
+                        continue
+                value = self._evaluate_result_value(
+                    var["evaluateName"], result, var.get("type")
+                )
+                self._evaluate_subvariables(value, var["variablesReference"])
+                scope_var_values[value.expression] = value
+            step.frames[frame_idx].scope_watches[scope_name] = sorted(
+                scope_var_values.keys()
+            )
+            for var_name in sorted(step.frames[frame_idx].scope_watches[scope_name]):
+                step.frames[frame_idx].watches[var_name] = scope_var_values[var_name]
+            for expr in list(active_exprs):
+                if expr in scope_var_values:
+                    active_exprs.remove(expr)
+
+        for expr in active_exprs:
+            step.frames[frame_idx].watches[expr] = self.evaluate_expression(
+                expr, frame_idx
+            )
+
     @property
     def is_running(self):
         return self._debugger_state.is_running
@@ -754,8 +1087,40 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def _evaluate_result_value(expression: str, result_string: str) -> ValueIR:
+    def _evaluate_result_value(
+        expression: str, result_string: str, type_string: Optional[str]
+    ) -> ValueIR:
         """For the result of an "evaluate" message, return a ValueIR. Implementation must be debugger-specific."""
+
+    # For the given `value` and associated `variables_reference`, recursively requests "variables" information for all
+    # child variables and adds them as sub_values to `value`.
+    def _evaluate_subvariables(self, value: ValueIR, variables_reference: int):
+        if variables_reference == 0:
+            return
+        # DFS subvariables recursively, adding them as sub_values to their parent ValueIRs.
+        variables_irs = {variables_reference: value}
+        search_vars = [variables_reference]
+        while search_vars:
+            next_var = search_vars[0]
+            search_vars = search_vars[1:]
+            # The ValueIR for the variable/subvariable whose children we are examining.
+            variable_ir: ValueIR = variables_irs[next_var]
+            result_vars: Dict = self._communicate_request(
+                "variables", {"variablesReference": next_var, "filter": "named"}
+            )
+            for var in result_vars["variables"]:
+                new_ir = self._evaluate_result_value(
+                    var["name"], var["value"], var.get("type")
+                )
+                variable_ir.sub_values.append(new_ir)
+                new_ref = var.get("variablesReference", 0)
+                if (
+                    new_ir.could_evaluate
+                    and not new_ir.is_irretrievable
+                    and new_ref != 0
+                ):
+                    variables_irs[new_ref] = new_ir
+                    search_vars.append(new_ref)
 
     def evaluate_expression(self, expression, frame_idx=0) -> ValueIR:
         # The frame_idx passed in here needs to be translated to the debug adapter's internal frame ID.
@@ -771,10 +1136,21 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             )
         )
         eval_response = self._await_response(eval_req_id)
+        result: str = ""
         if not eval_response["success"]:
-            result: str = eval_response["message"]
+            if eval_response["body"].get("error", None):
+                result = eval_response["body"]["error"]["format"]
+            elif eval_response["message"]:
+                result = eval_response["message"]
+            else:
+                result = "<unable to evaluate expression>"
+            variables_ref = 0
         else:
-            result: str = eval_response["body"]["result"]
+            result = eval_response["body"]["result"]
+            variables_ref = eval_response["body"].get("variablesReference", 0)
         type_str = eval_response["body"].get("type")
 
-        return self._evaluate_result_value(expression, result, type_str)
+        value_ir = self._evaluate_result_value(expression, result, type_str)
+        self._evaluate_subvariables(value_ir, variables_ref)
+
+        return value_ir

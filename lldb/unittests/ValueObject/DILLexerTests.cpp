@@ -151,22 +151,32 @@ TEST(DILLexerTests, IdentifiersTest) {
     Token token = lexer.GetCurrentToken();
     EXPECT_TRUE(token.IsNot(Token::identifier));
     EXPECT_TRUE(token.IsOneOf({Token::eof, Token::coloncolon, Token::l_paren,
-                               Token::r_paren, Token::numeric_constant}));
+                               Token::r_paren, Token::integer_constant}));
   }
 }
 
 TEST(DILLexerTests, NumbersTest) {
   // These strings should lex into number tokens.
-  std::vector<std::string> valid_numbers = {"123", "0x123", "0123", "0b101"};
+  std::vector<std::string> valid_integers = {"123", "0x123", "0123", "0b101"};
+  std::vector<std::string> valid_floats = {
+      "1.2",    ".2",    "2.f",     "0x1.2",    "0x.2",      ".2e1f",
+      "2.e+1f", "0x1.f", "0x1.2P1", "0x1.p-1f", "0x1.2P+3f", "1E1",
+      "1E+1",   "0x1p1", "0x1p+1",  "0xf.fp1f"};
 
   // The lexer can lex these strings, but they should not be numbers.
-  std::vector<std::string> invalid_numbers = {"", "x123", "b123"};
+  std::vector<std::string> invalid_numbers = {"", "x123", "b123", "a.b"};
 
-  for (auto &str : valid_numbers) {
+  for (auto &str : valid_integers) {
     SCOPED_TRACE(str);
     EXPECT_THAT_EXPECTED(ExtractTokenData(str),
                          llvm::HasValue(testing::ElementsAre(
-                             testing::Pair(Token::numeric_constant, str))));
+                             testing::Pair(Token::integer_constant, str))));
+  }
+  for (auto &str : valid_floats) {
+    SCOPED_TRACE(str);
+    EXPECT_THAT_EXPECTED(ExtractTokenData(str),
+                         llvm::HasValue(testing::ElementsAre(
+                             testing::Pair(Token::float_constant, str))));
   }
   // Verify that none of the invalid numbers come out as numeric tokens.
   for (auto &str : invalid_numbers) {
@@ -175,7 +185,27 @@ TEST(DILLexerTests, NumbersTest) {
     EXPECT_THAT_EXPECTED(maybe_lexer, llvm::Succeeded());
     DILLexer lexer(*maybe_lexer);
     Token token = lexer.GetCurrentToken();
-    EXPECT_TRUE(token.IsNot(Token::numeric_constant));
+    EXPECT_TRUE(token.IsNot(Token::integer_constant));
     EXPECT_TRUE(token.IsOneOf({Token::eof, Token::identifier}));
+  }
+
+  // Verify that '-' and '+' are not lexed if they're not part of a number
+  std::vector<std::string> expressions = {"1+e",     "0x1+p",      "1.1+e",
+                                          "1.1e1+e", "0x1.1p-1-p", "1e-1+e",
+                                          "1e1+e",   "0x1p-1-p",   "0xe+e"};
+  for (auto &str : expressions) {
+    SCOPED_TRACE(str);
+    llvm::Expected<DILLexer> maybe_lexer = DILLexer::Create(str);
+    EXPECT_THAT_EXPECTED(maybe_lexer, llvm::Succeeded());
+    DILLexer lexer(*maybe_lexer);
+    Token token = lexer.GetCurrentToken();
+    EXPECT_TRUE(
+        token.IsOneOf({Token::integer_constant, Token::float_constant}));
+    lexer.Advance();
+    token = lexer.GetCurrentToken();
+    EXPECT_TRUE(token.IsOneOf({Token::plus, Token::minus}));
+    lexer.Advance();
+    token = lexer.GetCurrentToken();
+    EXPECT_TRUE(token.Is(Token::identifier));
   }
 }

@@ -25,6 +25,7 @@ executable("llvm-tblgen") {
     "CodeGenMapTable.cpp",
     "CompressInstEmitter.cpp",
     "DAGISelEmitter.cpp",
+    "DAGISelMatcher.cpp",
     "DAGISelMatcherEmitter.cpp",
     "DAGISelMatcherGen.cpp",
     "DAGISelMatcherOpt.cpp",
@@ -32,6 +33,8 @@ executable("llvm-tblgen") {
     "DFAPacketizerEmitter.cpp",
     "DXILEmitter.cpp",
     "DecoderEmitter.cpp",
+    "DecoderTableEmitter.cpp",
+    "DecoderTree.cpp",
     "DisassemblerEmitter.cpp",
     "ExegesisEmitter.cpp",
     "FastISelEmitter.cpp",
@@ -39,7 +42,6 @@ executable("llvm-tblgen") {
     "GlobalISelEmitter.cpp",
     "InstrDocsEmitter.cpp",
     "InstrInfoEmitter.cpp",
-    "llvm-tblgen.cpp",
     "MacroFusionPredicatorEmitter.cpp",
     "OptionParserEmitter.cpp",
     "OptionRSTEmitter.cpp",
@@ -56,5 +58,6 @@ executable("llvm-tblgen") {
     "X86MnemonicTables.cpp",
     "X86ModRMFilters.cpp",
     "X86RecognizableInstr.cpp",
+    "llvm-tblgen.cpp",
   ]
 }

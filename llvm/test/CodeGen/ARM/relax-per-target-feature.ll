@@ -30,5 +30,5 @@ entry:
 
 attributes #0 = { nounwind  "disable-tail-calls"="false" "target-cpu"="cortex-a53" "target-features"="+crypto,+fp-armv8,+neon,+soft-float-abi,+strict-align,+thumb-mode,-crc,-dotprod,-dsp,-hwdiv,-hwdiv-arm,-ras" "use-soft-float"="true" }
 
-attributes #2 = { nounwind  "disable-tail-calls"="false" "target-cpu"="arm7tdmi" "target-features"="+strict-align,+thumb-mode,-crc,-dotprod,-dsp,-hwdiv,-hwdiv-arm,-ras" "unsafe-fp-math"="false" "use-soft-float"="true" }
+attributes #2 = { nounwind  "disable-tail-calls"="false" "target-cpu"="arm7tdmi" "target-features"="+strict-align,+thumb-mode,-crc,-dotprod,-dsp,-hwdiv,-hwdiv-arm,-ras" "use-soft-float"="true" }
 attributes #3 = { nounwind }

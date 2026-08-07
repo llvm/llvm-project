@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 class MultipleSlidesTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfWasm  # a Wasm section sits at a fixed address in its address space, so it cannot be slid
     def test_mulitple_slides(self):
         """Test that a binary can be slid multiple times correctly."""
         self.build()
@@ -29,10 +30,13 @@ class MultipleSlidesTestCase(TestBase):
             first_sym.GetEndAddress().GetOffset()
             - first_sym.GetStartAddress().GetOffset()
         )
+        int_size = target.FindFirstType("int").GetByteSize()
+        self.assertGreaterEqual(first_size, 2048 * int_size)
         second_size = (
             second_sym.GetEndAddress().GetOffset()
             - second_sym.GetStartAddress().GetOffset()
         )
+        self.assertGreaterEqual(second_size, 2048 * int_size)
 
         # View the first element of `first` and `second` while
         # they have no load address set.

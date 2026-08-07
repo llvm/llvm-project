@@ -62,19 +62,19 @@ void testBranchingOnAddressSpaceCast(generic long* ptr) {
     if (to_global(ptr))
         (void)0;
     // CHECK:       [[P:%[0-9]+]] = call spir_func [[GLOBAL_VOID:ptr addrspace\(1\)]] @__to_global([[GENERIC_VOID:ptr addrspace\(4\)]] {{%[0-9]+}})
-    // CHECK-NEXT:  [[BOOL:%[a-z0-9]+]] = icmp ne ptr addrspace(1) [[P]], null
+    // CHECK-NEXT:  [[BOOL:%[a-z0-9]+]] = icmp ne ptr addrspace(1) [[P]], addrspacecast (ptr addrspace(4) null to ptr addrspace(1))
     // CHECK-NEXT:  br i1 [[BOOL]]
 
     if (to_local(ptr))
         (void)0;
     // CHECK:       [[P:%[0-9]+]] = call spir_func [[LOCAL_VOID:ptr addrspace\(3\)]] @__to_local([[GENERIC_VOID]] {{%[0-9]+}})
-    // CHECK-NEXT:  [[BOOL:%[a-z0-9]+]] = icmp ne ptr addrspace(3) [[P]], null
+    // CHECK-NEXT:  [[BOOL:%[a-z0-9]+]] = icmp ne ptr addrspace(3) [[P]], addrspacecast (ptr addrspace(4) null to ptr addrspace(3))
     // CHECK-NEXT:  br i1 [[BOOL]]
 
     if (to_private(ptr))
         (void)0;
     // CHECK:       [[P:%[0-9]+]] = call spir_func [[PRIVATE_VOID:ptr]] @__to_private([[GENERIC_VOID]] {{%[0-9]+}})
-    // CHECK-NEXT:  [[BOOL:%[a-z0-9]+]] = icmp ne ptr [[P]], null
+    // CHECK-NEXT:  [[BOOL:%[a-z0-9]+]] = icmp ne ptr [[P]], addrspacecast (ptr addrspace(4) null to ptr)
     // CHECK-NEXT:  br i1 [[BOOL]]
 }
 

@@ -241,11 +241,17 @@ class LLDBOptionValueParser:
             starts, you can override this to handle your special option.  """
         for key, elem in self.options_dict.items():
             elem['_value_set'] = False
+            # If there's no value_type, then there can't be a dest.
+            if not "value_type" in elem:
+                continue
+
             try:
                 object.__setattr__(self, elem["dest"], elem["default"])
             except AttributeError:
                 # It isn't an error not to have a "dest" variable name, you'll
                 # just have to manage this option's value on your own.
+                continue
+            except KeyError:
                 continue
 
     def set_enum_value(self, enum_values, input):
@@ -271,7 +277,13 @@ class LLDBOptionValueParser:
         elem = self.get_option_element(opt_name)
         if not elem:
             return False
-        
+
+        # If there's no value_type in element, then it has no value, so just mark
+        # it set and return:
+        if not "value_type" in elem:
+            elem["_value_set"] = True
+            return True
+
         if "enum_values" in elem:
             (value, error) = self.set_enum_value(elem["enum_values"], opt_value)
         else:
@@ -312,10 +324,19 @@ class LLDBOptionValueParser:
         value = self.__dict__[elem["dest"]]
         return value
 
-    def add_option(self, short_option, long_option, help, default,
-                   dest = None, required=False, groups = None,
-                   value_type=lldb.eArgTypeNone, completion_type=None,
-                   enum_values=None):
+    def add_option(
+        self,
+        short_option,
+        long_option,
+        help,
+        default=None,
+        dest=None,
+        required=False,
+        groups=None,
+        value_type=None,
+        completion_type=None,
+        enum_values=None,
+    ):
         """
         short_option: one character, must be unique, not required
         long_option: no spaces, must be unique, required
@@ -340,17 +361,27 @@ class LLDBOptionValueParser:
 
         if not completion_type:
             completion_type = self.determine_completion(value_type)
-            
-        dict = {"short_option" : short_option,
-                "required" : required,
-                "help" : help,
-                "value_type" : value_type,
-                "completion_type" : completion_type,
-                "dest" : dest,
-                "default" : default}
+
+        dict = {
+            "short_option": short_option,
+            "required": required,
+            "help": help,
+        }
 
         if enum_values:
+            if not value_type:
+                print("I am setting value type for an enum value")
+                value_type = lldb.eArgTypeNone
+            else:
+                print(f"An enum value had a type: {value_type}")
             dict["enum_values"] = enum_values
+
+        if value_type:
+            dict["value_type"] = value_type
+            dict["completion_type"] = completion_type
+            dict["dest"] = dest
+            dict["default"] = default
+
         if groups:
             dict["groups"] = groups
 

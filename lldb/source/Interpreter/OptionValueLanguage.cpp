@@ -9,8 +9,9 @@
 #include "lldb/Interpreter/OptionValueLanguage.h"
 
 #include "lldb/DataFormatters/FormatManager.h"
-#include "lldb/Target/Language.h"
+#include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Stream.h"
 
@@ -26,6 +27,12 @@ void OptionValueLanguage::DumpValue(const ExecutionContext *exe_ctx,
       strm.PutCString(" = ");
     if (m_current_value != eLanguageTypeUnknown)
       strm.PutCString(Language::GetNameForLanguageType(m_current_value));
+    if (dump_mask & eDumpOptionDefaultValue &&
+        m_current_value != m_default_value &&
+        m_default_value != eLanguageTypeUnknown) {
+      DefaultValueFormat label(strm);
+      strm.PutCString(Language::GetNameForLanguageType(m_default_value));
+    }
   }
 }
 
@@ -52,7 +59,7 @@ Status OptionValueLanguage::SetValueFromString(llvm::StringRef value,
     } else {
       StreamString error_strm;
       error_strm.Printf("invalid language type '%s', ", value.str().c_str());
-      error_strm.Printf("valid values are:\n");
+      error_strm.PutCString("valid values are:\n");
       for (int bit : languages_for_types.bitvector.set_bits()) {
         auto language = (LanguageType)bit;
         error_strm.Printf("    %s\n",

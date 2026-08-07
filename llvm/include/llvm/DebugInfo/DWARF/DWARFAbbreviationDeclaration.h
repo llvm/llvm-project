@@ -102,9 +102,7 @@ public:
   using attr_iterator_range =
       iterator_range<AttributeSpecVector::const_iterator>;
 
-  attr_iterator_range attributes() const {
-    return attr_iterator_range(AttributeSpecs.begin(), AttributeSpecs.end());
-  }
+  attr_iterator_range attributes() const { return AttributeSpecs; }
 
   dwarf::Form getFormByIndex(uint32_t idx) const {
     assert(idx < AttributeSpecs.size());

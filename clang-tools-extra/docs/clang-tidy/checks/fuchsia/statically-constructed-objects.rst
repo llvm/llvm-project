@@ -3,9 +3,9 @@
 fuchsia-statically-constructed-objects
 ======================================
 
-Warns if global, non-trivial objects with static storage are constructed, unless
-the object is statically initialized with a ``constexpr`` constructor or has no
-explicit constructor.
+Warns if global, non-trivial objects with static storage are constructed,
+unless the object is statically initialized with a ``constexpr`` constructor
+or has no explicit constructor.
 
 For example:
 
@@ -40,4 +40,4 @@ For example:
   extern int get_i();
   static C c3(get_i());// Warning, as the constructor is dynamically initialized
 
-See the features disallowed in Fuchsia at https://fuchsia.dev/fuchsia-src/development/languages/c-cpp/cxx?hl=en
+See the features disallowed in Fuchsia at https://fuchsia.dev/fuchsia-src/development/languages/c-cpp/cxx

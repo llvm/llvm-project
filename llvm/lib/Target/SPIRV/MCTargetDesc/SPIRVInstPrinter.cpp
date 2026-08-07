@@ -14,12 +14,14 @@
 #include "SPIRV.h"
 #include "SPIRVBaseInfo.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 using namespace llvm::SPIRV;
@@ -50,6 +52,26 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   unsigned IsBitwidth16 = MI->getFlags() & SPIRV::INST_PRINTER_WIDTH16;
   const unsigned NumVarOps = MI->getNumOperands() - StartIndex;
 
+  if (MI->getOpcode() == SPIRV::OpConstantI && NumVarOps > 2) {
+    // Look up the bitwidth of this int type register from
+    // IntTypeBitwidths map.
+    MCRegister IntTypeReg = MI->getOperand(1).getReg();
+    unsigned Bitwidth = IntTypeBitwidths.at(IntTypeReg);
+
+    // SPV_ALTERA_arbitrary_precision_integers allows for integer widths greater
+    // than 64, which will be encoded via multiple operands.
+    const unsigned TotalBits = NumVarOps * 32;
+    APInt Val(TotalBits, 0);
+    for (unsigned i = 0; i < NumVarOps; ++i) {
+      uint64_t Word = MI->getOperand(StartIndex + i).getImm();
+      Val |= APInt(TotalBits, Word) << (i * 32);
+    }
+    APInt ActualVal = Val.trunc(Bitwidth);
+    O << ' ';
+    ActualVal.print(O, /*isSigned=*/false);
+    return;
+  }
+
   assert((NumVarOps == 1 || NumVarOps == 2) &&
          "Unsupported number of bits for literal variable");
 
@@ -67,17 +89,27 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
     APFloat FP = NumVarOps == 1 ? APFloat(APInt(32, Imm).bitsToFloat())
                                 : APFloat(APInt(64, Imm).bitsToDouble());
 
-    // Print infinity and NaN as hex floats.
+    // Print infinity and NaN as hex floats. The exponent depends on the
+    // actual width of FP (f32 vs f64), not a fixed constant.
     // TODO: Make sure subnormal numbers are handled correctly as they may also
     // require hex float notation.
-    if (FP.isInfinity()) {
+    if (FP.isInfinity() || FP.isNaN()) {
+      unsigned MaxExp = APFloat::semanticsMaxExponent(FP.getSemantics()) + 1;
       if (FP.isNegative())
         O << '-';
-      O << "0x1p+128";
-      return;
-    }
-    if (FP.isNaN()) {
-      O << "0x1.8p+128";
+      if (FP.isInfinity()) {
+        O << "0x1p+" << MaxExp;
+      } else {
+        unsigned MantissaBits =
+            APFloat::semanticsPrecision(FP.getSemantics()) - 1;
+        uint64_t Mantissa = Imm & (maskTrailingOnes<uint64_t>(MantissaBits));
+        unsigned Pad = alignTo(MantissaBits, 4) - MantissaBits;
+        std::string Hex = utohexstr(Mantissa << Pad, /*LowerCase=*/true,
+                                    (MantissaBits + Pad) / 4);
+        while (Hex.size() > 1 && Hex.back() == '0')
+          Hex.pop_back();
+        O << "0x1." << Hex << "p+" << MaxExp;
+      }
       return;
     }
 
@@ -93,6 +125,37 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   O << Imm;
 }
 
+unsigned SPIRVInstPrinter::printMemoryOperand(const MCInst *MI, unsigned OpNo,
+                                              raw_ostream &O) {
+  O << ' ';
+  if (OpNo >= MI->getNumOperands())
+    return OpNo;
+  const uint64_t Mask = MI->getOperand(OpNo).getImm();
+  printSymbolicOperand<OperandCategory::MemoryOperandOperand>(MI, OpNo, O);
+  unsigned NextOp = OpNo + 1;
+  static constexpr uint64_t ParameterizedMasks[] = {
+      SPIRV::MemoryOperand::Aligned,
+      SPIRV::MemoryOperand::MakePointerAvailableKHR,
+      SPIRV::MemoryOperand::MakePointerVisibleKHR,
+      SPIRV::MemoryOperand::AliasScopeINTELMask,
+      SPIRV::MemoryOperand::NoAliasINTELMask,
+  };
+  for (uint64_t ParamMask : ParameterizedMasks) {
+    if (!(Mask & ParamMask))
+      continue;
+    O << ' ';
+    printOperand(MI, NextOp, O);
+    ++NextOp;
+  }
+  return NextOp;
+}
+
+void SPIRVInstPrinter::recordIntType(const MCInst *MI) {
+  MCRegister IntTypeReg = MI->getOperand(0).getReg();
+  unsigned Bitwidth = MI->getOperand(1).getImm();
+  IntTypeBitwidths[IntTypeReg] = Bitwidth;
+}
+
 void SPIRVInstPrinter::recordOpExtInstImport(const MCInst *MI) {
   MCRegister Reg = MI->getOperand(0).getReg();
   auto Name = getSPIRVStringOperand(*MI, 1);
@@ -105,8 +168,11 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                  raw_ostream &OS) {
   const unsigned OpCode = MI->getOpcode();
   printInstruction(MI, Address, OS);
+  if (OpCode == SPIRV::OpTypeInt) {
+    recordIntType(MI);
+  }
 
-  if (OpCode == SPIRV::OpDecorate) {
+  if (OpCode == SPIRV::OpDecorate || OpCode == SPIRV::OpDecorateId) {
     printOpDecorate(MI, OS);
   } else if (OpCode == SPIRV::OpExtInstImport) {
     recordOpExtInstImport(MI);
@@ -147,7 +213,8 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           break;
         case SPIRV::OpExecutionMode:
         case SPIRV::OpExecutionModeId:
-        case SPIRV::OpLoopMerge: {
+        case SPIRV::OpLoopMerge:
+        case SPIRV::OpLoopControlINTEL: {
           // Print any literals after the OPERAND_UNKNOWN argument normally.
           printRemainingVariableOps(MI, NumFixedOps, OS);
           break;
@@ -162,10 +229,37 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         switch (OpCode) {
         case SPIRV::OpLoad:
         case SPIRV::OpStore:
-          OS << ' ';
-          printSymbolicOperand<OperandCategory::MemoryOperandOperand>(
-              MI, FirstVariableIndex, OS);
-          printRemainingVariableOps(MI, FirstVariableIndex + 1, OS);
+          printMemoryOperand(MI, FirstVariableIndex, OS);
+          break;
+        case SPIRV::OpSwitch:
+          if (MI->getFlags() & SPIRV::INST_PRINTER_WIDTH64) {
+            // In binary format 64-bit types are split into two 32-bit operands,
+            // but in text format combine these into a single 64-bit value as
+            // this is what tools such as spirv-as require.
+            const unsigned NumOps = MI->getNumOperands();
+            for (unsigned OpIdx = NumFixedOps; OpIdx < NumOps;) {
+              if (OpIdx + 1 >= NumOps || !MI->getOperand(OpIdx).isImm() ||
+                  !MI->getOperand(OpIdx + 1).isImm()) {
+                llvm_unreachable("Unexpected OpSwitch operands");
+                continue;
+              }
+              OS << ' ';
+              uint64_t LowBits = MI->getOperand(OpIdx).getImm();
+              uint64_t HighBits = MI->getOperand(OpIdx + 1).getImm();
+              uint64_t CombinedValue = (HighBits << 32) | LowBits;
+              OS << formatImm(CombinedValue);
+              OpIdx += 2;
+
+              // Next should be the label
+              if (OpIdx < NumOps) {
+                OS << ' ';
+                printOperand(MI, OpIdx, OS);
+                OpIdx++;
+              }
+            }
+          } else {
+            printRemainingVariableOps(MI, NumFixedOps, OS);
+          }
           break;
         case SPIRV::OpImageSampleImplicitLod:
         case SPIRV::OpImageSampleDrefImplicitLod:
@@ -193,17 +287,8 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         case SPIRV::OpCopyMemory:
         case SPIRV::OpCopyMemorySized: {
           const unsigned NumOps = MI->getNumOperands();
-          for (unsigned i = NumFixedOps; i < NumOps; ++i) {
-            OS << ' ';
-            printSymbolicOperand<OperandCategory::MemoryOperandOperand>(MI, i,
-                                                                        OS);
-            if (MI->getOperand(i).getImm() & MemoryOperand::Aligned) {
-              assert(i + 1 < NumOps && "Missing alignment operand");
-              OS << ' ';
-              printOperand(MI, i + 1, OS);
-              i += 1;
-            }
-          }
+          for (unsigned i = NumFixedOps; i < NumOps;)
+            i = printMemoryOperand(MI, i, OS);
           break;
         }
         case SPIRV::OpConstantI:
@@ -269,6 +354,27 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           }
           break;
         }
+        case SPIRV::OpSDot:
+        case SPIRV::OpUDot:
+        case SPIRV::OpSUDot:
+        case SPIRV::OpSDotAccSat:
+        case SPIRV::OpUDotAccSat:
+        case SPIRV::OpSUDotAccSat: {
+          const unsigned NumOps = MI->getNumOperands();
+          if (NumOps > NumFixedOps) {
+            OS << ' ';
+            printSymbolicOperand<OperandCategory::PackedVectorFormatsOperand>(
+                MI, NumOps - 1, OS);
+            break;
+          }
+          break;
+        }
+        case SPIRV::OpPredicatedLoadINTEL:
+        case SPIRV::OpPredicatedStoreINTEL: {
+          if (MI->getNumOperands() > NumFixedOps)
+            printMemoryOperand(MI, NumFixedOps, OS);
+          break;
+        }
         default:
           printRemainingVariableOps(MI, NumFixedOps, OS);
           break;
@@ -312,7 +418,7 @@ void SPIRVInstPrinter::printOpDecorate(const MCInst *MI, raw_ostream &O) {
       printSymbolicOperand<OperandCategory::BuiltInOperand>(MI, NumFixedOps, O);
       break;
     case Decoration::UniformId:
-      printSymbolicOperand<OperandCategory::ScopeOperand>(MI, NumFixedOps, O);
+      printOperand(MI, NumFixedOps, O);
       break;
     case Decoration::FuncParamAttr:
       printSymbolicOperand<OperandCategory::FunctionParameterAttributeOperand>(
@@ -375,9 +481,17 @@ void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     const MCOperand &Op = MI->getOperand(OpNo);
     if (Op.isReg())
       O << '%' << (getIDFromRegister(Op.getReg().id()) + 1);
-    else if (Op.isImm())
-      O << formatImm(Op.getImm());
-    else if (Op.isDFPImm())
+    else if (Op.isImm()) {
+      int64_t Imm = Op.getImm();
+      // For OpVectorShuffle:
+      // A Component literal may also be FFFFFFFF, which means the corresponding
+      // result component has no source and is undefined.
+      // LLVM representation of poison/undef becomes -1 when lowered to MI.
+      if (MI->getOpcode() == SPIRV::OpVectorShuffle && Imm == -1)
+        O << "0xFFFFFFFF";
+      else
+        O << formatImm(Imm);
+    } else if (Op.isDFPImm())
       O << formatImm((double)Op.getDFPImm());
     else if (Op.isExpr())
       MAI.printExpr(O, *Op.getExpr());

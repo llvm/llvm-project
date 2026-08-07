@@ -10,8 +10,6 @@
 
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Dialect/AMX/AMXDialect.h"
-#include "mlir/Dialect/AMX/Transforms.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/ArmNeon/Transforms.h"
@@ -22,8 +20,8 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
-#include "mlir/Dialect/X86Vector/Transforms.h"
-#include "mlir/Dialect/X86Vector/X86VectorDialect.h"
+#include "mlir/Dialect/X86/Transforms.h"
+#include "mlir/Dialect/X86/X86Dialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -51,10 +49,8 @@ struct ConvertVectorToLLVMPass
       registry.insert<arm_neon::ArmNeonDialect>();
     if (armSVE)
       registry.insert<arm_sve::ArmSVEDialect>();
-    if (amx)
-      registry.insert<amx::AMXDialect>();
-    if (x86Vector)
-      registry.insert<x86vector::X86VectorDialect>();
+    if (x86)
+      registry.insert<x86::X86Dialect>();
   }
   void runOnOperation() override;
 };
@@ -70,7 +66,7 @@ void ConvertVectorToLLVMPass::runOnOperation() {
     populateVectorBitCastLoweringPatterns(patterns);
     populateVectorBroadcastLoweringPatterns(patterns);
     populateVectorContractLoweringPatterns(patterns, vectorContractLowering);
-    if (vectorContractLowering == vector::VectorContractLowering::Matmul) {
+    if (vectorContractLowering == vector::VectorContractLowering::LLVMIntr) {
       // This pattern creates a dependency on the LLVM dialect, hence we don't
       // include it in `populateVectorContractLoweringPatterns` that is part of
       // the Vector dialect (and should not depend on LLVM).
@@ -80,7 +76,7 @@ void ConvertVectorToLLVMPass::runOnOperation() {
     populateVectorShapeCastLoweringPatterns(patterns);
     populateVectorInterleaveLoweringPatterns(patterns);
     populateVectorTransposeLoweringPatterns(patterns, vectorTransposeLowering);
-    if (vectorTransposeLowering == vector::VectorTransposeLowering::Flat) {
+    if (vectorTransposeLowering == vector::VectorTransposeLowering::LLVMIntr) {
       // This pattern creates a dependency on the LLVM dialect, hence we don't
       // include it in `populateVectorTransposeLoweringPatterns` that is part of
       // the Vector dialect (and should not depend on LLVM).
@@ -91,20 +87,21 @@ void ConvertVectorToLLVMPass::runOnOperation() {
     populateVectorMaskMaterializationPatterns(patterns,
                                               force32BitVectorIndices);
     populateVectorInsertExtractStridedSliceTransforms(patterns);
-    populateVectorStepLoweringPatterns(patterns);
     populateVectorRankReducingFMAPattern(patterns);
     populateVectorGatherLoweringPatterns(patterns);
+    populateVectorFromElementsUnrollPatterns(patterns);
+    populateVectorToElementsUnrollPatterns(patterns);
     if (armI8MM) {
       if (armNeon)
         arm_neon::populateLowerContractionToNeonI8MMPatterns(patterns);
       if (armSVE)
-        populateLowerContractionToSVEI8MMPatterns(patterns);
+        arm_sve::populateLowerContractionToSVEI8MMPatterns(patterns);
     }
     if (armBF16) {
       if (armNeon)
         arm_neon::populateLowerContractionToNeonBFMMLAPatterns(patterns);
       if (armSVE)
-        populateLowerContractionToSVEBFMMLAPatterns(patterns);
+        arm_sve::populateLowerContractionToSVEBFMMLAPatterns(patterns);
     }
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
@@ -116,7 +113,7 @@ void ConvertVectorToLLVMPass::runOnOperation() {
   populateVectorTransferLoweringPatterns(patterns);
   populateVectorToLLVMConversionPatterns(
       converter, patterns, reassociateFPReductions, force32BitVectorIndices,
-      useVectorAlignment);
+      useVectorAlignment, enableGEPInboundsNuw);
 
   // Architecture specific augmentations.
   LLVMConversionTarget target(getContext());
@@ -134,13 +131,9 @@ void ConvertVectorToLLVMPass::runOnOperation() {
     configureArmSVELegalizeForExportTarget(target);
     populateArmSVELegalizeForLLVMExportPatterns(converter, patterns);
   }
-  if (amx) {
-    configureAMXLegalizeForExportTarget(target);
-    populateAMXLegalizeForLLVMExportPatterns(converter, patterns);
-  }
-  if (x86Vector) {
-    configureX86VectorLegalizeForExportTarget(target);
-    populateX86VectorLegalizeForLLVMExportPatterns(converter, patterns);
+  if (x86) {
+    configureX86LegalizeForExportTarget(target);
+    populateX86LegalizeForLLVMExportPatterns(converter, patterns);
   }
 
   if (failed(

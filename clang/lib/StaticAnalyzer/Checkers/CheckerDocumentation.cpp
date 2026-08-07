@@ -262,6 +262,15 @@ public:
   /// state. This callback allows a checker to provide domain specific knowledge
   /// about the particular functions it knows about.
   ///
+  /// Note that to evaluate a call, the handler MUST bind the return value if
+  /// its a non-void function. Invalidate the arguments if necessary.
+  ///
+  /// Note that in general, user-provided functions should not be eval-called
+  /// because the checker can't predict the exact semantics/contract of the
+  /// callee, and by having the eval::Call callback, we also prevent it from
+  /// getting inlined, potentially regressing analysis quality.
+  /// Consider using check::PreCall or check::PostCall to allow inlining.
+  ///
   /// \returns true if the call has been successfully evaluated
   /// and false otherwise. Note, that only one checker can evaluate a call. If
   /// more than one checker claims that they can evaluate the same call the
@@ -305,19 +314,18 @@ public:
   ///        by this change. For a simple bind, this list will be the same as
   ///        \p ExplicitRegions, since a bind does not affect the contents of
   ///        anything accessible through the base region.
-  /// \param LCtx LocationContext that is useful for getting various contextual
+  /// \param SF StackFrame that is useful for getting various contextual
   ///        info, like callstack, CFG etc.
   /// \param Call The opaque call triggering this invalidation. Will be 0 if the
   ///        change was not triggered by a call.
   ///
   /// check::RegionChanges
   ProgramStateRef
-    checkRegionChanges(ProgramStateRef State,
-                       const InvalidatedSymbols *Invalidated,
-                       ArrayRef<const MemRegion *> ExplicitRegions,
-                       ArrayRef<const MemRegion *> Regions,
-                       const LocationContext *LCtx,
-                       const CallEvent *Call) const {
+  checkRegionChanges(ProgramStateRef State,
+                     const InvalidatedSymbols *Invalidated,
+                     ArrayRef<const MemRegion *> ExplicitRegions,
+                     ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
+                     const CallEvent *Call) const {
     return State;
   }
 

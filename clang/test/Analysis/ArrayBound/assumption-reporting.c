@@ -54,7 +54,28 @@ int assumingLower(int arg) {
   if (arg >= 10)
     return 0;
   int a = TenElements[arg];
-  // expected-note@-1 {{Assuming index is non-negative}}
+  // expected-note-re@-1 {{Assuming index is non-negative{{$}}}}
+  int b = TenElements[arg + 10];
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
+  return a + b;
+}
+
+int assumingLowerOnlyUseIndex(int arg) {
+  // This testcase validates that the note tag says that the _index_ is
+  // non-negative when there is no upper bound assumption -- even in the case
+  // when the extent (which is totally irrelevant) is not an integer multiple
+  // of the element size.
+
+  char TwoAndHalfInts[10] = {0};
+  // expected-note@+2 {{Assuming 'arg' is < 2}}
+  // expected-note@+1 {{Taking false branch}}
+  if (arg >= 2)
+    return 0;
+
+  int a = ((int*)TwoAndHalfInts)[arg];
+  // expected-note-re@-1 {{Assuming index is non-negative{{$}}}}
+
   int b = TenElements[arg + 10];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
   // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
@@ -70,7 +91,7 @@ int assumingUpper(int arg) {
   // expected-note@-1 {{Assuming index is less than 10, the number of 'int' elements in 'TenElements'}}
   int b = TenElements[arg - 10];
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b;
 }
 
@@ -94,12 +115,28 @@ int assumingUpperIrrelevant(int arg) {
   return a + b;
 }
 
+int assumingLowerIrrelevant(int arg) {
+  // FIXME: Analogously to `assumingUpperIrrelevant` here the assumption
+  // "assuming index is non-negative" is irrelevant, but printed.
+  //
+  // expected-note@+2 {{Assuming 'arg' is < 10}}
+  // expected-note@+1 {{Taking false branch}}
+  if (arg >= 10)
+    return 0;
+  int a = TenElements[arg];
+  // expected-note-re@-1 {{Assuming index is non-negative{{$}}}}
+  int b = TenElements[arg - 10];
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
+  return a + b;
+}
+
 int assumingUpperUnsigned(unsigned arg) {
   int a = TenElements[arg];
   // expected-note@-1 {{Assuming index is less than 10, the number of 'int' elements in 'TenElements'}}
   int b = TenElements[(int)arg - 10];
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b;
 }
 
@@ -111,7 +148,7 @@ int assumingNothing(unsigned arg) {
   int a = TenElements[arg]; // no note here, we already know that 'arg' is in bounds
   int b = TenElements[(int)arg - 10];
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b;
 }
 
@@ -139,13 +176,15 @@ int assumingConvertedToIntP(struct foo f, int arg) {
   // result type of the subscript operator.
   int a = ((int*)(f.a))[arg];
   // expected-note@-1 {{Assuming index is non-negative and less than 2, the number of 'int' elements in 'f.a'}}
-  // However, if the extent of the memory region is not divisible by the
-  // element size, the checker measures the offset and extent in bytes.
+  // The extent of 'f.b' (5 bytes) is not divisible by the element size, so in
+  // general the checker would measure the offset and extent in bytes. Here
+  // 'arg' was already constrained to [0, 1] by the access above, so the range
+  // inferrer proves that the byte offset arg*4 is within [0, 5) and no
+  // assumption note is emitted.
   int b = ((int*)(f.b))[arg];
-  // expected-note@-1 {{Assuming byte offset is less than 5, the extent of 'f.b'}}
   int c = TenElements[arg-2];
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
   return a + b + c;
 }
 
@@ -160,10 +199,10 @@ int assumingPlainOffset(struct foo f, int arg) {
     return 0;
 
   int b = ((int*)(f.b))[arg];
-  // expected-note@-1 {{Assuming byte offset is non-negative and less than 5, the extent of 'f.b'}}
-  // FIXME: this should be {{Assuming offset is non-negative}}
-  // but the current simplification algorithm doesn't realize that arg <= 1
-  // implies that the byte offset arg*4 will be less than 5.
+  // expected-note@-1 {{Assuming index is non-negative}}
+  // Since 'arg' is known to be < 2, the range inferrer proves that the byte
+  // offset arg*4 will be less than 5, so only the lower bound needs to be
+  // assumed here (this used to also require assuming the byte offset was < 5).
 
   int c = TenElements[arg+10];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
@@ -191,8 +230,8 @@ int assumingExtent(int arg) {
 }
 
 int *extentInterestingness(int arg) {
-  // Verify that in an out-of-bounds access issue the extent is marked as
-  // interesting (so assumptions about its value are printed).
+  // Verify that in a buffer overflow issue the extent is marked as interesting
+  // (so assumptions about its value are printed).
   int *mem = (int*)malloc(arg);
 
   TenElements[arg] = 123;
@@ -201,6 +240,18 @@ int *extentInterestingness(int arg) {
   return &mem[12];
   // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
   // expected-note@-2 {{Access of 'int' element in the heap area at index 12}}
+}
+
+int *extentNonInterestingInUnderflow(int arg) {
+  // Verify that in a buffer underflow issue the extent is _not_ marked as
+  // interesting (because it does not influence anything).
+  int *mem = (int*)malloc(arg);
+
+  TenElements[arg] = 123; // no-note: arg is not interesting
+
+  return &mem[-2];
+  // expected-warning@-1 {{Out of bound access to memory preceding the heap area}}
+  // expected-note@-2 {{Access of 'int' element in the heap area at negative index -2}}
 }
 
 int triggeredByAnyReport(int arg) {

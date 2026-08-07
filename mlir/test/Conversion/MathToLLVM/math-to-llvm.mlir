@@ -3,6 +3,7 @@
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
 // RUN: mlir-opt --convert-to-llvm="filter-dialects=math" --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=math allow-pattern-rollback=0" --split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: @ops
 func.func @ops(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: i32, %arg4: f64) {
@@ -35,6 +36,17 @@ func.func @absi_0dvector(%arg0 : vector<i32>) {
   // CHECK: %[[CAST:.+]] = builtin.unrealized_conversion_cast %arg0 : vector<i32> to vector<1xi32>
   // CHECK: "llvm.intr.abs"(%[[CAST]]) <{is_int_min_poison = false}> : (vector<1xi32>) -> vector<1xi32>
   %0 = math.absi %arg0 : vector<i32>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @absi_2dvector(
+func.func @absi_2dvector(%arg0 : vector<4x3xi32>) {
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.array<4 x vector<3xi32>>
+  // CHECK: %[[ABS:.*]] = "llvm.intr.abs"(%[[EXTRACT]]) <{is_int_min_poison = false}> : (vector<3xi32>) -> vector<3xi32>
+  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[ABS]], %{{.*}}[0] : !llvm.array<4 x vector<3xi32>>
+  %0 = math.absi %arg0 : vector<4x3xi32>
   func.return
 }
 
@@ -224,6 +236,16 @@ func.func @trigonometrics(%arg0: f32) {
 
   // CHECK: llvm.intr.tan([[ARG0]]) : (f32) -> f32
   %2 = math.tan %arg0 : f32
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @sincos
+// CHECK-SAME: [[ARG0:%.+]]: f32
+func.func @sincos(%arg0: f32) {
+  // CHECK: llvm.intr.sincos([[ARG0]]) : (f32) -> !llvm.struct<(f32, f32)>
+  %0:2 = math.sincos %arg0 : f32
   func.return
 }
 
@@ -616,4 +638,57 @@ func.func @fastmath(%arg0 : f32, %arg1 : vector<4xf32>) {
   // CHECK: llvm.intr.fma(%arg0, %arg0, %arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32, f32) -> f32
   %3 = math.fma %arg0, %arg0, %arg0 fastmath<reassoc,nnan,ninf,nsz,arcp,contract,afn> : f32
   func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @unsupported_fp_type
+//       CHECK:   math.absf {{.*}} : f4E2M1FN
+//       CHECK:   math.cos {{.*}} : f4E2M1FN
+//       CHECK:   math.fma {{.*}} : f4E2M1FN
+func.func @unsupported_fp_type(%arg0: f4E2M1FN, %arg1: f4E2M1FN, %arg2: f4E2M1FN) {
+  %0 = math.absf %arg0 : f4E2M1FN
+  %1 = math.cos %arg0 : f4E2M1FN
+  %2 = math.fma %arg1, %arg1, %arg2 : f4E2M1FN
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @experimental_constrained_fma
+func.func @experimental_constrained_fma(%a : f64, %b : f64, %c : f64) {
+  // CHECK-NEXT: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} tonearest ignore : f64
+  %0 = math.fma %a, %b, %c to_nearest_even : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} downward ignore : f64
+  %1 = math.fma %a, %b, %c downward : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} upward ignore : f64
+  %2 = math.fma %a, %b, %c upward : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} towardzero ignore : f64
+  %3 = math.fma %a, %b, %c toward_zero : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} tonearestaway ignore : f64
+  %4 = math.fma %a, %b, %c to_nearest_away : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @experimental_constrained_fma_vector
+func.func @experimental_constrained_fma_vector(%a : vector<4xf32>,
+                                                %b : vector<4xf32>,
+                                                %c : vector<4xf32>) {
+  // CHECK: llvm.intr.experimental.constrained.fma {{.*}} tonearest ignore : vector<4xf32>
+  %0 = math.fma %a, %b, %c to_nearest_even : vector<4xf32>
+  return
+}
+
+// -----
+
+// Constrained intrinsics do not carry fastmath flags. The fastmath attribute
+// is dropped during the lowering.
+// CHECK-LABEL: func @constrained_fma_with_fastmath
+func.func @constrained_fma_with_fastmath(%a : f64, %b : f64, %c : f64) {
+  // CHECK-NEXT: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} tonearest ignore : f64
+  // CHECK-NOT: fastmath
+  %0 = math.fma %a, %b, %c to_nearest_even fastmath<fast> : f64
+  return
 }

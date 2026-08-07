@@ -45,7 +45,7 @@ namespace {
 class VforkChecker : public Checker<check::PreCall, check::PostCall,
                                     check::Bind, check::PreStmt<ReturnStmt>> {
   const BugType BT{this, "Dangerous construct in a vforked process"};
-  mutable llvm::SmallSet<const IdentifierInfo *, 10> VforkAllowlist;
+  mutable llvm::SmallPtrSet<const IdentifierInfo *, 10> VforkAllowlist;
   mutable const IdentifierInfo *II_vfork = nullptr;
 
   static bool isChildProcess(const ProgramStateRef State);
@@ -158,17 +158,16 @@ void VforkChecker::checkPostCall(const CallEvent &Call,
     return;
 
   // Get assigned variable.
-  const ParentMap &PM = C.getLocationContext()->getParentMap();
+  const ParentMap &PM = C.getStackFrame()->getParentMap();
   const Stmt *P = PM.getParentIgnoreParenCasts(Call.getOriginExpr());
   const VarDecl *LhsDecl;
   std::tie(LhsDecl, std::ignore) = parseAssignment(P);
 
   // Get assigned memory region.
   MemRegionManager &M = C.getStoreManager().getRegionManager();
-  const MemRegion *LhsDeclReg =
-    LhsDecl
-      ? M.getVarRegion(LhsDecl, C.getLocationContext())
-      : (const MemRegion *)VFORK_RESULT_NONE;
+  const MemRegion *LhsDeclReg = LhsDecl
+                                    ? M.getVarRegion(LhsDecl, C.getStackFrame())
+                                    : (const MemRegion *)VFORK_RESULT_NONE;
 
   // Parent branch gets nonzero return value (according to manpage).
   ProgramStateRef ParentState, ChildState;

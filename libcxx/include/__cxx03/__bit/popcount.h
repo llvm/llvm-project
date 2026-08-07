@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: __builtin_popcountg is available since Clang 19 and GCC 14. When support for older versions is dropped, we can
-//  refactor this code to exclusively use __builtin_popcountg.
-
 #ifndef _LIBCPP___CXX03___BIT_POPCOUNT_H
 #define _LIBCPP___CXX03___BIT_POPCOUNT_H
 
@@ -25,12 +22,9 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_popcount(unsigned __x) _NOEXCEPT { return __builtin_popcount(__x); }
-
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_popcount(unsigned long __x) _NOEXCEPT { return __builtin_popcountl(__x); }
-
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_popcount(unsigned long long __x) _NOEXCEPT {
-  return __builtin_popcountll(__x);
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI int __libcpp_popcount(_Tp __v) {
+  return __builtin_popcountg(__v);
 }
 
 _LIBCPP_END_NAMESPACE_STD

@@ -4,22 +4,27 @@
 
 @.str = private unnamed_addr constant [7 x i8] c"buffer\00", align 1
 
+; The i64 values in the extracts will be turned
+; into immidiate values. There should be no 64-bit
+; integers in the module.
+; CHECK-NOT:  OpTypeInt 64 0
+
 define void @main() "hlsl.shader"="pixel"  {
-; CHECK:         %25 = OpFunction %2 None %3 ; -- Begin function main
-; CHECK-NEXT:     %1 = OpLabel
-; CHECK-NEXT:    %26 = OpVariable %14 Function %23
-; CHECK-NEXT:    %27 = OpLoad %7 %24
-; CHECK-NEXT:    %28 = OpImageRead %5 %27 %16
-; CHECK-NEXT:    %29 = OpCompositeExtract %4 %28 0
-; CHECK-NEXT:    %30 = OpCompositeExtract %4 %28 1
-; CHECK-NEXT:    %31 = OpFAdd %4 %30 %29
-; CHECK-NEXT:    %32 = OpCompositeInsert %5 %31 %28 0
-; CHECK-NEXT:    %33 = OpLoad %7 %24
-; CHECK-NEXT:          OpImageWrite %33 %16 %32
+; CHECK:         %[[FUNC:[0-9]+]] = OpFunction %[[VOID:[0-9]+]] None %[[FNTYPE:[0-9]+]] ; -- Begin function main
+; CHECK-NEXT:     %[[LABEL:[0-9]+]] = OpLabel
+; CHECK-NEXT:    %[[VAR:[0-9]+]] = OpVariable %[[PTR_FN:[a-zA-Z0-9_]+]] Function %[[INIT:[a-zA-Z0-9_]+]]
+; CHECK-NEXT:    %[[LOAD1:[0-9]+]] = OpLoad %[[IMG_TYPE:[a-zA-Z0-9_]+]] %[[IMG_VAR:[a-zA-Z0-9_]+]]
+; CHECK-NEXT:    %[[READ:[0-9]+]] = OpImageRead %[[VEC4:[a-zA-Z0-9_]+]] %[[LOAD1]] %[[COORD:[a-zA-Z0-9_]+]]
+; CHECK-NEXT:    %[[EXTRACT1:[0-9]+]] = OpCompositeExtract %[[FLOAT:[a-zA-Z0-9_]+]] %[[READ]] 0
+; CHECK-NEXT:    %[[EXTRACT2:[0-9]+]] = OpCompositeExtract %[[FLOAT]] %[[READ]] 1
+; CHECK-NEXT:    %[[ADD:[0-9]+]] = OpFAdd %[[FLOAT]] %[[EXTRACT2]] %[[EXTRACT1]]
+; CHECK-NEXT:    %[[INSERT:[0-9]+]] = OpCompositeInsert %[[VEC4]] %[[ADD]] %[[READ]] 0
+; CHECK-NEXT:    %[[LOAD2:[0-9]+]] = OpLoad %[[IMG_TYPE]] %[[IMG_VAR]]
+; CHECK-NEXT:          OpImageWrite %[[LOAD2]] %[[COORD]] %[[INSERT]]
 ; CHECK-NEXT:          OpReturn
 ; CHECK-NEXT:          OpFunctionEnd
 entry:
-  %0 = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
+  %0 = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
   %1 = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 0) %0, i32 0)
   %2 = load <4 x float>, ptr addrspace(11) %1, align 16
   %3 = extractelement <4 x float> %2, i64 0
@@ -31,7 +36,7 @@ entry:
 }
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
-declare target("spirv.Image", float, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32, i32, i32, i32, i1, ptr) #0
+declare target("spirv.Image", float, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32, i32, i32, i32, ptr) #0
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
 declare ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 0), i32) #0

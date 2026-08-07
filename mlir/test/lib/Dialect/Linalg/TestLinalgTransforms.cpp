@@ -229,7 +229,7 @@ static void applyDecomposeWinogradOps(func::FuncOp funcOp) {
 
 static void applyFoldIntoPackAndUnpackPatterns(
     Operation *rootOp,
-    linalg::ControlFoldIntoPackUnpackFn controlFn = nullptr) {
+    const linalg::ControlFoldIntoPackUnpackFn &controlFn = nullptr) {
   RewritePatternSet patterns(rootOp->getContext());
   linalg::populateFoldIntoPackAndUnpackPatterns(patterns, controlFn);
   (void)applyPatternsGreedily(rootOp, std::move(patterns));
@@ -276,10 +276,8 @@ void TestLinalgTransforms::runOnOperation() {
       Operation *consumer = opOperand->getOwner();
       // If we have a pack/unpack consumer and a producer that has multiple
       // uses, do not apply the folding patterns.
-      if (isa<linalg::PackOp, linalg::UnPackOp>(consumer) &&
-          isa<TilingInterface>(producer) && !producer->hasOneUse())
-        return false;
-      return true;
+      return !(isa<linalg::PackOp, linalg::UnPackOp>(consumer) &&
+               isa<TilingInterface>(producer) && !producer->hasOneUse());
     };
     applyFoldIntoPackAndUnpackPatterns(rootOp, controlFn);
   }

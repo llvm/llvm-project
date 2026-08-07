@@ -83,7 +83,9 @@ bool R600TTIImpl::isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
   return isLegalToVectorizeMemChain(ChainSizeInBytes, Alignment, AddrSpace);
 }
 
-unsigned R600TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned
+R600TTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                    bool HasUnorderedReductions) const {
   // Disable unrolling if the loop is not vectorized.
   // TODO: Enable this again.
   if (VF.isScalar())
@@ -100,7 +102,8 @@ InstructionCost R600TTIImpl::getCFInstrCost(unsigned Opcode,
 
   // XXX - For some reason this isn't called for switch.
   switch (Opcode) {
-  case Instruction::Br:
+  case Instruction::UncondBr:
+  case Instruction::CondBr:
   case Instruction::Ret:
     return 10;
   default:
@@ -108,19 +111,17 @@ InstructionCost R600TTIImpl::getCFInstrCost(unsigned Opcode,
   }
 }
 
-InstructionCost R600TTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                                TTI::TargetCostKind CostKind,
-                                                unsigned Index,
-                                                const Value *Op0,
-                                                const Value *Op1) const {
+InstructionCost R600TTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *ValTy, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {
     unsigned EltSize =
         DL.getTypeSizeInBits(cast<VectorType>(ValTy)->getElementType());
     if (EltSize < 32) {
-      return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0,
-                                       Op1);
+      return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
+                                       VIC);
     }
 
     // Extracts are just reads of a subregister, so are free. Inserts are
@@ -131,7 +132,8 @@ InstructionCost R600TTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     return Index == ~0u ? 2 : 0;
   }
   default:
-    return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1);
+    return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
+                                     VIC);
   }
 }
 

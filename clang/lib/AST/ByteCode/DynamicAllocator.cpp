@@ -27,15 +27,7 @@ void DynamicAllocator::cleanup() {
       assert(!B->isDead());
       assert(B->isInitialized());
       B->invokeDtor();
-
-      if (B->hasPointers()) {
-        while (B->Pointers) {
-          Pointer *Next = B->Pointers->asBlockPointer().Next;
-          B->Pointers->PointeeStorage.BS.Pointee = nullptr;
-          B->Pointers = Next;
-        }
-        B->Pointers = nullptr;
-      }
+      B->removePointers();
     }
   }
 
@@ -47,9 +39,11 @@ Block *DynamicAllocator::allocate(const Expr *Source, PrimType T,
                                   Form AllocForm) {
   // Create a new descriptor for an array of the specified size and
   // element type.
-  const Descriptor *D = allocateDescriptor(
-      Source, T, Descriptor::InlineDescMD, NumElements, /*IsConst=*/false,
-      /*IsTemporary=*/false, /*IsMutable=*/false);
+  const Descriptor *D =
+      allocateDescriptor(Source, nullptr, T, Descriptor::InlineDescMD,
+                         NumElements, /*IsConst=*/false,
+                         /*IsTemporary=*/false, /*IsMutable=*/false,
+                         /*IsVolatile=*/false);
 
   return allocate(D, EvalID, AllocForm);
 }
@@ -82,7 +76,7 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
   auto Memory =
       std::make_unique<std::byte[]>(sizeof(Block) + D->getAllocSize());
   auto *B = new (Memory.get()) Block(EvalID, D, /*isStatic=*/false);
-  B->invokeCtor();
+  B->invokeCtorNoMemset();
 
   assert(D->getMetadataSize() == sizeof(InlineDescriptor));
   InlineDescriptor *ID = reinterpret_cast<InlineDescriptor *>(B->rawData());
@@ -101,18 +95,22 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
     ID->LifeState =
         AllocForm == Form::Operator ? Lifetime::Ended : Lifetime::Started;
 
-  B->IsDynamic = true;
-
-  if (auto It = AllocationSites.find(D->asExpr()); It != AllocationSites.end())
+  if (auto It = AllocationSites.find(D->asExpr());
+      It != AllocationSites.end()) {
     It->second.Allocations.emplace_back(std::move(Memory));
-  else
+    B->setDynAllocId(It->second.NumAllocs);
+    ++It->second.NumAllocs;
+  } else {
     AllocationSites.insert(
         {D->asExpr(), AllocationSite(std::move(Memory), AllocForm)});
+    B->setDynAllocId(0);
+  }
+  assert(B->isDynamic());
   return B;
 }
 
 bool DynamicAllocator::deallocate(const Expr *Source,
-                                  const Block *BlockToDelete, InterpState &S) {
+                                  const Block *BlockToDelete) {
   auto It = AllocationSites.find(Source);
   if (It == AllocationSites.end())
     return false;
@@ -125,7 +123,10 @@ bool DynamicAllocator::deallocate(const Expr *Source,
     return BlockToDelete == A.block();
   });
 
-  assert(AllocIt != Site.Allocations.end());
+  // The allocation site it fine, but this block doesn't belong to it. Must've
+  // already been deleted.
+  if (AllocIt == Site.Allocations.end())
+    return false;
 
   Block *B = AllocIt->block();
   assert(B->isInitialized());

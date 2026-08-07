@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -stop-after=prologepilog < %s | FileCheck -check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgpu12.00-amd-amdpal -stop-after=prolog-epilog < %s | FileCheck -check-prefix=CHECK %s
 
 ; Make sure we use a stack pointer and allocate 112 * 4 bytes at the beginning of the stack.
 
@@ -35,7 +35,8 @@ define amdgpu_cs void @realign_stack(<32 x i32> %x) #0 {
 ; CHECK-LABEL: {{^}}name: realign_stack
 ; CHECK: scratchReservedForDynamicVGPRs: 512
   %v = alloca <32 x i32>, align 128, addrspace(5)
-  store <32 x i32> %x, ptr addrspace(5) %v
+  ; use volatile store to avoid promotion of alloca to registers
+  store volatile <32 x i32> %x, ptr addrspace(5) %v
   call amdgpu_gfx void @callee(i32 71)
   ret void
 }

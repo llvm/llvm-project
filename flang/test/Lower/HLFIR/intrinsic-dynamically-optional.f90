@@ -128,7 +128,7 @@ end subroutine
 ! CHECK:           %[[C0_2:.*]] = arith.constant 0 : index
 ! CHECK:           %[[CMPI:.*]] = arith.cmpi sgt, %[[C20]], %[[C0_2]] : index
 ! CHECK:           %[[ALLOC_SZ:.*]] = arith.select %[[CMPI]], %[[C20]], %[[C0_2]] : index
-! CHECK:           %[[FROM_ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %[[ALLOC_SZ]] {fir.must_be_heap = true, uniq_name = "_QFtest_optional_as_addrEfrom.alloc"}
+! CHECK:           %[[FROM_ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %[[ALLOC_SZ]] {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QFtest_optional_as_addrEfrom.alloc"}
 ! CHECK:           %[[FROM_SHAPE:.*]] = fir.shape %[[ALLOC_SZ]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[FROM_BOX:.*]] = fir.embox %[[FROM_ALLOC]](%[[FROM_SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           fir.store %[[FROM_BOX]] to %[[FROM_VAR]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -166,12 +166,12 @@ end function
 ! CHECK-SAME:                                                   %[[VAL_1:.*]]: !fir.ref<!fir.array<3xf32>> {fir.bindc_name = "imaginary", fir.optional}) -> !fir.array<3xcomplex<f32>> {
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_elemental_optional_as_valueEimaginary"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_3]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_elemental_optional_as_valueEimaginary"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_6]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_elemental_optional_as_valueEreal"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_6]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_elemental_optional_as_valueEreal"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<3xf32>>, !fir.ref<!fir.array<3xf32>>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 3 : index
-! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<3xcomplex<f32>> {bindc_name = "test_elemental_optional_as_value", uniq_name = "_QFtest_elemental_optional_as_valueEtest_elemental_optional_as_value"}
+! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<3xcomplex<f32>> {bindc_name = "test_elemental_optional_as_value", fir.must_be_stack = true, uniq_name = "_QFtest_elemental_optional_as_valueEtest_elemental_optional_as_value"}
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) {uniq_name = "_QFtest_elemental_optional_as_valueEtest_elemental_optional_as_value"} : (!fir.ref<!fir.array<3xcomplex<f32>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xcomplex<f32>>>, !fir.ref<!fir.array<3xcomplex<f32>>>)
 ! CHECK:           %[[VAL_12:.*]] = fir.is_present %[[VAL_4]]#0 : (!fir.ref<!fir.array<3xf32>>) -> i1

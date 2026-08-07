@@ -38,17 +38,11 @@ define half @add_v2HalfH(<2 x half> %bin.rdx)  {
 ;
 ; CHECK-GI-NOFP16-LABEL: add_v2HalfH:
 ; CHECK-GI-NOFP16:       // %bb.0:
-; CHECK-GI-NOFP16-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NOFP16-NEXT:    fcvt s2, h0
-; CHECK-GI-NOFP16-NEXT:    fmov s1, w8
-; CHECK-GI-NOFP16-NEXT:    mov h0, v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    fadd s1, s1, s2
-; CHECK-GI-NOFP16-NEXT:    fcvt h1, s1
 ; CHECK-GI-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-GI-NOFP16-NEXT:    fadd s0, s1, s0
+; CHECK-GI-NOFP16-NEXT:    fadd s0, s0, s1
 ; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
@@ -88,19 +82,13 @@ define half @add_v3HalfH(<3 x half> %bin.rdx)  {
 ;
 ; CHECK-GI-NOFP16-LABEL: add_v3HalfH:
 ; CHECK-GI-NOFP16:       // %bb.0:
-; CHECK-GI-NOFP16-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvt s2, h0
-; CHECK-GI-NOFP16-NEXT:    fmov s1, w8
-; CHECK-GI-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-GI-NOFP16-NEXT:    fadd s1, s1, s2
-; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[1]
 ; CHECK-GI-NOFP16-NEXT:    mov h0, v0.h[2]
-; CHECK-GI-NOFP16-NEXT:    fcvt h1, s1
-; CHECK-GI-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
 ; CHECK-GI-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-GI-NOFP16-NEXT:    fadd s1, s1, s2
+; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
+; CHECK-GI-NOFP16-NEXT:    fadd s1, s2, s1
 ; CHECK-GI-NOFP16-NEXT:    fcvt h1, s1
 ; CHECK-GI-NOFP16-NEXT:    fcvt s1, h1
 ; CHECK-GI-NOFP16-NEXT:    fadd s0, s1, s0
@@ -152,17 +140,11 @@ define half @add_HalfH(<4 x half> %bin.rdx)  {
 ;
 ; CHECK-GI-NOFP16-LABEL: add_HalfH:
 ; CHECK-GI-NOFP16:       // %bb.0:
-; CHECK-GI-NOFP16-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvt s2, h0
-; CHECK-GI-NOFP16-NEXT:    fmov s1, w8
 ; CHECK-GI-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-GI-NOFP16-NEXT:    fadd s1, s1, s2
-; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    fcvt h1, s1
-; CHECK-GI-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-GI-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-GI-NOFP16-NEXT:    fadd s1, s1, s2
+; CHECK-GI-NOFP16-NEXT:    fadd s1, s2, s1
 ; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[2]
 ; CHECK-GI-NOFP16-NEXT:    mov h0, v0.h[3]
 ; CHECK-GI-NOFP16-NEXT:    fcvt h1, s1
@@ -250,16 +232,10 @@ define half @add_H(<8 x half> %bin.rdx)  {
 ;
 ; CHECK-GI-NOFP16-LABEL: add_H:
 ; CHECK-GI-NOFP16:       // %bb.0:
-; CHECK-GI-NOFP16-NEXT:    mov w8, #32768 // =0x8000
+; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvt s2, h0
-; CHECK-GI-NOFP16-NEXT:    fmov s1, w8
 ; CHECK-GI-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-GI-NOFP16-NEXT:    fadd s1, s1, s2
-; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    fcvt h1, s1
-; CHECK-GI-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-GI-NOFP16-NEXT:    fcvt s1, h1
-; CHECK-GI-NOFP16-NEXT:    fadd s1, s1, s2
+; CHECK-GI-NOFP16-NEXT:    fadd s1, s2, s1
 ; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[2]
 ; CHECK-GI-NOFP16-NEXT:    fcvt h1, s1
 ; CHECK-GI-NOFP16-NEXT:    fcvt s2, h2
@@ -448,16 +424,10 @@ define half @add_2H(<16 x half> %bin.rdx)  {
 ;
 ; CHECK-GI-NOFP16-LABEL: add_2H:
 ; CHECK-GI-NOFP16:       // %bb.0:
-; CHECK-GI-NOFP16-NEXT:    mov w8, #32768 // =0x8000
+; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[1]
 ; CHECK-GI-NOFP16-NEXT:    fcvt s3, h0
-; CHECK-GI-NOFP16-NEXT:    fmov s2, w8
 ; CHECK-GI-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-GI-NOFP16-NEXT:    fadd s2, s2, s3
-; CHECK-GI-NOFP16-NEXT:    mov h3, v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    fcvt h2, s2
-; CHECK-GI-NOFP16-NEXT:    fcvt s3, h3
-; CHECK-GI-NOFP16-NEXT:    fcvt s2, h2
-; CHECK-GI-NOFP16-NEXT:    fadd s2, s2, s3
+; CHECK-GI-NOFP16-NEXT:    fadd s2, s3, s2
 ; CHECK-GI-NOFP16-NEXT:    mov h3, v0.h[2]
 ; CHECK-GI-NOFP16-NEXT:    fcvt h2, s2
 ; CHECK-GI-NOFP16-NEXT:    fcvt s3, h3

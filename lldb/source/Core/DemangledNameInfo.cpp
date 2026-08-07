@@ -16,7 +16,7 @@ bool TrackingOutputBuffer::shouldTrack() const {
   if (!isPrintingTopLevelFunctionType())
     return false;
 
-  if (isGtInsideTemplateArgs())
+  if (isInsideTemplateArgs())
     return false;
 
   if (NameInfo.ArgumentsRange.first > 0)
@@ -29,7 +29,7 @@ bool TrackingOutputBuffer::canFinalize() const {
   if (!isPrintingTopLevelFunctionType())
     return false;
 
-  if (isGtInsideTemplateArgs())
+  if (isInsideTemplateArgs())
     return false;
 
   if (NameInfo.ArgumentsRange.first == 0)

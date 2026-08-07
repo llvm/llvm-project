@@ -6,12 +6,12 @@
 ; rdar://17628609
 
 ; CHECK: DW_TAG_compile_unit
-; CHECK: 0x[[ENUM:.*]]: DW_TAG_enumeration_type
-; CHECK-NEXT:   DW_AT_name {{.*}}"EA"
 ; CHECK: DW_TAG_subprogram
 ; CHECK: DW_AT_MIPS_linkage_name {{.*}}"_Z4topA2EA"
 ; CHECK: DW_TAG_formal_parameter
-; CHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x{{.*}} => {0x[[ENUM]]}
+; CHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x{{.*}} => {0x[[ENUM:.*]]}
+; CHECK: 0x[[ENUM]]: DW_TAG_enumeration_type
+; CHECK-NEXT:   DW_AT_name {{.*}}"EA"
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: DW_TAG_subprogram
@@ -40,7 +40,7 @@ entry:
   ret void, !dbg !27
 }
 
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0, !12}

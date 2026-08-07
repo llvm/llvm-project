@@ -58,7 +58,8 @@ protected:
   template <typename AnalysisT>
   llvm::Expected<std::vector<
       std::optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
-  runAnalysis(llvm::StringRef Code, AnalysisT (*MakeAnalysis)(ASTContext &)) {
+  runAnalysis(llvm::StringRef Code, AnalysisT (*MakeAnalysis)(ASTContext &),
+              int32_t MaxBlockVisits = MaxBlockVisitsInAnalysis) {
     AST = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++11"});
 
     auto *Func = selectFirst<FunctionDecl>(
@@ -75,7 +76,7 @@ protected:
         std::make_unique<WatchedLiteralsSolver>());
     Environment Env(*DACtx, *Func);
 
-    return runDataflowAnalysis(*ACFG, Analysis, Env);
+    return runDataflowAnalysis(*ACFG, Analysis, Env, {}, MaxBlockVisits);
   }
 
   /// Returns the `CFGBlock` containing `S` (and asserts that it exists).
@@ -450,6 +451,34 @@ TEST_F(DataflowAnalysisTest, NonConvergingAnalysis) {
             "maximum number of blocks processed");
 }
 
+TEST_F(DataflowAnalysisTest, MaxBlockVisitsWithUnreachableBlocks) {
+  std::string Code = R"(
+    void target() {
+      if (false) {
+        (void)0;
+      }
+    }
+  )";
+
+  // There are 4 blocks in the CFG:
+  //   entry, if-header, then-body, and exit.
+  // But, only 2 of them are reachable, if we do not count the entry block,
+  // which is how we count BlockVisits. So:
+  // - MaxBlockVisits = 2 should still succeed (being less than CFG.size() = 4,
+  //   shouldn't prevent the analysis from succeeding)
+  // - MaxBlockVisits = 1 should fail, as it is not enough to cover all of the
+  //   reachable blocks.
+  EXPECT_THAT_EXPECTED(
+      runAnalysis<NoopAnalysis>(
+          Code, [](ASTContext &C) { return NoopAnalysis(C); }, 2),
+      llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(
+      runAnalysis<NoopAnalysis>(
+          Code, [](ASTContext &C) { return NoopAnalysis(C); }, 1),
+      llvm::FailedWithMessage("number of blocks in cfg will lead to exceeding "
+                              "maximum number of block visits"));
+}
+
 // Regression test for joins of bool-typed lvalue expressions. The first loop
 // results in two passes through the code that follows. Each pass results in a
 // different `StorageLocation` for the pointee of `v`. Then, the second loop
@@ -691,6 +720,80 @@ TEST_F(NoreturnDestructorTest, ConditionalOperatorNestedBranchReturns) {
                         "p", HoldsFunctionCallLattice(HasCalledFunctions(
                                  UnorderedElementsAre("baz", "foo"))))));
   // FIXME: Called functions at point `p` should contain only "foo".
+}
+
+class AnalyzerNoreturnTest : public Test {
+protected:
+  template <typename Matcher>
+  void runDataflow(llvm::StringRef Code, Matcher Expectations) {
+    tooling::FileContentMappings FilesContents;
+    FilesContents.push_back(
+        std::make_pair<std::string, std::string>("noreturn_test_defs.h", R"(
+      void assertionHandler() __attribute__((analyzer_noreturn));
+
+      void trap() {}
+    )"));
+
+    ASSERT_THAT_ERROR(
+        test::checkDataflow<FunctionCallAnalysis>(
+            AnalysisInputs<FunctionCallAnalysis>(
+                Code, ast_matchers::hasName("target"),
+                [](ASTContext &C, Environment &) {
+                  return FunctionCallAnalysis(C);
+                })
+                .withASTBuildArgs({"-fsyntax-only", "-std=c++17"})
+                .withASTBuildVirtualMappedFiles(std::move(FilesContents)),
+            /*VerifyResults=*/
+            [&Expectations](
+                const llvm::StringMap<
+                    DataflowAnalysisState<FunctionCallLattice>> &Results,
+                const AnalysisOutputs &) {
+              EXPECT_THAT(Results, Expectations);
+            }),
+        llvm::Succeeded());
+  }
+};
+
+TEST_F(AnalyzerNoreturnTest, Breathing) {
+  std::string Code = R"(
+    #include "noreturn_test_defs.h"
+
+    void target() {
+      trap();
+      // [[p]]
+    }
+  )";
+  runDataflow(Code, UnorderedElementsAre(IsStringMapEntry(
+                        "p", HoldsFunctionCallLattice(HasCalledFunctions(
+                                 UnorderedElementsAre("trap"))))));
+}
+
+TEST_F(AnalyzerNoreturnTest, DirectNoReturnCall) {
+  std::string Code = R"(
+    #include "noreturn_test_defs.h"
+
+    void target() {
+      assertionHandler();
+      trap();
+      // [[p]]
+    }
+  )";
+  runDataflow(Code, IsEmpty());
+}
+
+TEST_F(AnalyzerNoreturnTest, CanonicalDeclCallCheck) {
+  std::string Code = R"(
+    #include "noreturn_test_defs.h"
+    
+    extern void assertionHandler();
+
+    void target() {
+      assertionHandler();
+      trap();
+      // [[p]]
+    }
+  )";
+  runDataflow(Code, IsEmpty());
 }
 
 // Models an analysis that uses flow conditions.
@@ -1071,6 +1174,34 @@ TEST_F(WideningTest, DistinctValuesWithDifferentPropertiesWidenedToTop) {
       });
 }
 
+TEST_F(WideningTest,
+       DistinctValuesWithDifferentPropertiesWidenedToTopGotoInsteadOfWhile) {
+  std::string Code = R"cc(
+    void target(bool Cond) {
+      int *Foo;
+      int i = 0;
+      Foo = nullptr;
+      start:
+      if (Cond) {
+        Foo = &i;
+        goto start;
+      }
+      (void)0;
+      /*[[p]]*/
+    }
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const auto &FooVal = getValueForDecl<Value>(ASTCtx, Env, "Foo");
+        ASSERT_THAT(FooVal.getProperty("is_null"), NotNull());
+        EXPECT_TRUE(areEquivalentValues(*FooVal.getProperty("is_null"),
+                                        Env.makeTopBoolValue()));
+      });
+}
+
 class FlowConditionTest : public Test {
 protected:
   template <typename Matcher>
@@ -1179,18 +1310,47 @@ TEST_F(FlowConditionTest, WhileStmt) {
 }
 
 TEST_F(FlowConditionTest, WhileStmtWithAssignmentInCondition) {
-  std::string Code = R"(
+  std::string Code = R"cc(
+    bool getBool();
+
     void target(bool Foo) {
       // This test checks whether the analysis preserves the connection between
       // the value of `Foo` and the assignment expression, despite widening.
-      // The equality operator generates a fresh boolean variable on each
-      // interpretation, which forces use of widening.
-      while ((Foo = (3 == 4))) {
+      // The return value of getBool() should have a fresh boolean variable on
+      // each interpretation, which forces use of widening.
+      while (Foo = getBool()) {
         (void)0;
         /*[[p]]*/
       }
     }
-  )";
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &FooVal = getValueForDecl<BoolValue>(ASTCtx, Env, "Foo").formula();
+        EXPECT_TRUE(Env.proves(FooVal));
+      });
+}
+
+TEST_F(FlowConditionTest, GotoLoopWithAssignmentInCondition) {
+  std::string Code = R"cc(
+    bool getBool();
+
+    void target(bool Foo) {
+      // This test checks whether the analysis preserves the connection between
+      // the value of `Foo` and the assignment expression, despite widening.
+      // The return value of getBool() should have a fresh boolean variable on
+      // each interpretation, which forces use of widening.
+      start:
+      if (Foo = getBool()) {
+        (void)0;
+        /*[[p]]*/
+        goto start;
+      }
+    }
+  )cc";
   runDataflow(
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,

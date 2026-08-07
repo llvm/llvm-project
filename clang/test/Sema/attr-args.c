@@ -29,3 +29,9 @@ __attribute__ ((__format_arg__(2))) // expected-error {{'__format_arg__' attribu
 void test (int, ...);
 
 void __attribute__ ((alloc_size (2, 3))) *test2(int, ...); // expected-error {{'alloc_size' attribute parameter 1 is out of bounds}}
+
+void gh159080_a(void);
+void *gh159080_b(void) __attribute__((malloc(gh159080_a))); // expected-error{{'malloc' argument 'gh159080_a' must take a pointer type as its first argument}}
+void gh159080_c();
+void *gh159080_d(void) __attribute__((malloc(gh159080_c))); // expected-error{{'malloc' argument 'gh159080_c' must take a pointer type as its first argument}}
+

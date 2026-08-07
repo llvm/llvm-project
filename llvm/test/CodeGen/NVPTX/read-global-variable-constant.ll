@@ -25,11 +25,11 @@ define float @test_gv_float() {
 define <2 x float> @test_gv_float2() {
 ; CHECK-LABEL: test_gv_float2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.global.nc.b64 %rd1, [gv_float2];
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ld.global.nc.v2.b32 {%r1, %r2}, [gv_float2];
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r1, %r2};
 ; CHECK-NEXT:    ret;
   %v = load <2 x float>, ptr @gv_float2
   ret <2 x float> %v
@@ -38,11 +38,11 @@ define <2 x float> @test_gv_float2() {
 define <4 x float> @test_gv_float4() {
 ; CHECK-LABEL: test_gv_float4(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.global.nc.v2.b64 {%rd1, %rd2}, [gv_float4];
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
+; CHECK-NEXT:    ld.global.nc.v4.b32 {%r1, %r2, %r3, %r4}, [gv_float4];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
   %v = load <4 x float>, ptr @gv_float4
   ret <4 x float> %v

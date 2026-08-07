@@ -449,6 +449,20 @@ func.func @test_promote_if_one_iteration(%a: index) -> index {
   return %0 : index
 }
 
+// CHECK-LABEL: func @test_promote_if_one_iteration_dynamic(
+//   CHECK-NOT:   scf.for
+//       CHECK:   %[[r:.*]] = "test.foo"
+//       CHECK:   return %[[r]]
+func.func @test_promote_if_one_iteration_dynamic(%a: index, %val: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = scf.for %j = %c0 to %val step %val iter_args(%arg0 = %a) -> index {
+    %1 = "test.foo"(%a) : (index) -> (index)
+    scf.yield %1 : index
+  }
+  return %0 : index
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["scf.for"]} in %arg1 : (!transform.any_op) -> !transform.any_op
@@ -580,4 +594,30 @@ module attributes {transform.with_named_sequence} {
     %1 = transform.loop.pipeline %0 {iteration_interval = 1 : i64, read_latency = 5 : i64,  scheduling_type = "full-loops"} : (!transform.op<"scf.for">) -> !transform.any_op
      transform.yield
  }
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/103703
+// unroll_and_jam on a loop with zero trip count used to crash because the
+// unroll factor was set to 0 (= tripCount) and then used as a SmallVector size
+// with unsigned underflow.
+
+// CHECK-LABEL: @loop_unroll_and_jam_zero_trip_count
+// CHECK:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:       scf.for %{{.*}} = %[[C0]] to %[[C0]] step %[[C0]]
+func.func @loop_unroll_and_jam_zero_trip_count() {
+  %c0 = arith.constant 0 : index
+  scf.for %arg0 = %c0 to %c0 step %c0 {
+    %0 = arith.addi %arg0, %arg0 : index
+  }
+  return
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    transform.loop.unroll_and_jam %1 {factor = 3 : i64} : !transform.op<"scf.for">
+    transform.yield
+  }
 }

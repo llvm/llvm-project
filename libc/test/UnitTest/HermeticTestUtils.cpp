@@ -25,12 +25,6 @@ void *memmove(void *dst, const void *src, size_t count);
 void *memset(void *ptr, int value, size_t count);
 int atexit(void (*func)(void));
 
-// TODO: It seems that some old test frameworks does not use
-// add_libc_hermetic_test properly. Such that they won't get correct linkage
-// against the object containing this function. We create a dummy function that
-// always returns 0 to indicate a failure.
-[[gnu::weak]] unsigned long getauxval(unsigned long id) { return 0; }
-
 } // namespace LIBC_NAMESPACE_DECL
 
 constexpr uint64_t ALIGNMENT = alignof(uintptr_t);
@@ -43,7 +37,7 @@ namespace {
 // requires. Hence, as a work around for this problem, we use a simple allocator
 // which just hands out continuous blocks from a statically allocated chunk of
 // memory.
-static constexpr uint64_t MEMORY_SIZE = 65336;
+static constexpr uint64_t MEMORY_SIZE = 1 << 20; // 1 MiB
 alignas(ALIGNMENT) static uint8_t memory[MEMORY_SIZE];
 static uint8_t *ptr = memory;
 
@@ -76,13 +70,18 @@ void *memset(void *ptr, int value, size_t count) {
 // This is needed if the test was compiled with '-fno-use-cxa-atexit'.
 int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 
-void *malloc(size_t s) {
-  // Keep the bump pointer aligned on an eight byte boundary.
-  s = ((s + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
+void *aligned_alloc(size_t align, size_t s) {
+  if (align & (align - 1)) // Must be power of 2
+    return nullptr;
+  uintptr_t ptr_val = reinterpret_cast<uintptr_t>(ptr);
+  uintptr_t aligned_ptr_val = ((ptr_val + align - 1) / align) * align;
+  ptr = reinterpret_cast<uint8_t *>(aligned_ptr_val);
   void *mem = ptr;
   ptr += s;
   return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
 }
+
+void *malloc(size_t s) { return aligned_alloc(ALIGNMENT, s); }
 
 void free(void *) {}
 
@@ -124,19 +123,17 @@ unsigned long __getauxval(unsigned long id) {
 
 } // extern "C"
 
-void *operator new(size_t size, void *ptr) { return ptr; }
+void *operator new([[maybe_unused]] size_t size, void *ptr) { return ptr; }
 
 void *operator new(size_t size) { return malloc(size); }
 
 void *operator new[](size_t size) { return malloc(size); }
 
-void operator delete(void *) {
-  // The libc runtime should not use the global delete operator. Hence,
-  // we just trap here to catch any such accidental usages.
-  __builtin_trap();
-}
+void operator delete(void *ptr) { free(ptr); }
 
-void operator delete(void *ptr, size_t size) { __builtin_trap(); }
+void operator delete[](void *ptr) { free(ptr); }
+
+void operator delete(void *ptr, size_t) { free(ptr); }
 
 // Defining members in the std namespace is not preferred. But, we do it here
 // so that we can use it to define the operator new which takes std::align_val_t
@@ -145,8 +142,8 @@ namespace std {
 enum class align_val_t : size_t {};
 } // namespace std
 
-void operator delete(void *mem, std::align_val_t) noexcept { __builtin_trap(); }
+void operator delete(void *ptr, std::align_val_t) noexcept { free(ptr); }
 
-void operator delete(void *mem, unsigned int, std::align_val_t) noexcept {
-  __builtin_trap();
+void operator delete(void *ptr, unsigned int, std::align_val_t) noexcept {
+  free(ptr);
 }

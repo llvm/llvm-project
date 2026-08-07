@@ -2,6 +2,7 @@ add_mlir_library(MLIRTransformUtils
   CFGToSCF.cpp
   CommutativityUtils.cpp
   ControlFlowSinkUtils.cpp
+  CSE.cpp
   DialectConversion.cpp
   FoldUtils.cpp
   GreedyPatternRewriteDriver.cpp
@@ -23,4 +24,5 @@ add_mlir_library(MLIRTransformUtils
   MLIRSideEffectInterfaces
   MLIRSubsetOpInterface
   MLIRRewrite
+  MLIRPass
   )

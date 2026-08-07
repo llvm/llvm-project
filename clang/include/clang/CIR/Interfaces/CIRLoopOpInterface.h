@@ -18,7 +18,10 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "llvm/ADT/APInt.h"
 
+using llvm::APInt;
 namespace cir {
 namespace detail {
 

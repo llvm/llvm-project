@@ -1022,6 +1022,30 @@ bb2:
   ret void
 }
 
+; Tests merging allocas with different sizes
+define void @mismatched_alloca_size() {
+; CHECK-LABEL: define void @mismatched_alloca_size() {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca i8, i64 24, align 4
+; CHECK-NEXT:    store [[STRUCT_FOO:%.*]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]])
+; CHECK-NEXT:    ret void
+;
+  %src = alloca i8, i64 24, align 4
+  %dest = alloca i8, i64 12, align 4
+  call void @llvm.lifetime.start.p0(ptr nocapture %src)
+  call void @llvm.lifetime.start.p0(ptr nocapture %dest)
+  store %struct.Foo { i32 10, i32 20, i32 30 }, ptr %src
+  %1 = call i32 @use_nocapture(ptr nocapture %src)
+
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dest, ptr align 4 %src, i64 12, i1 false)
+
+  %2 = call i32 @use_nocapture(ptr nocapture %dest)
+  call void @llvm.lifetime.end.p0(ptr nocapture %src)
+  call void @llvm.lifetime.end.p0(ptr nocapture %dest)
+  ret void
+}
+
 
 ; Optimization failures follow:
 
@@ -1080,6 +1104,54 @@ define void @incomplete_store() {
   %2 = load i32, ptr %src
   store i32 %2, ptr %dest
   %3 = call i32 @use_nocapture(ptr noundef nocapture %dest)
+  call void @llvm.lifetime.end.p0(ptr nocapture %src)
+  call void @llvm.lifetime.end.p0(ptr nocapture %dest)
+  ret void
+}
+
+; Tests merging allocas with different types
+define void @mismatched_alloca_type() {
+; CHECK-LABEL: define void @mismatched_alloca_type() {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca i16, i64 6, align 4
+; CHECK-NEXT:    store [[STRUCT_FOO:%.*]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]])
+; CHECK-NEXT:    ret void
+;
+  %src = alloca i16, i64 6, align 4
+  %dest = alloca i8, i64 12, align 4
+  call void @llvm.lifetime.start.p0(ptr nocapture %src)
+  call void @llvm.lifetime.start.p0(ptr nocapture %dest)
+  store %struct.Foo { i32 10, i32 20, i32 30 }, ptr %src
+  %1 = call i32 @use_nocapture(ptr nocapture %src)
+
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dest, ptr align 4 %src, i64 12, i1 false)
+
+  %2 = call i32 @use_nocapture(ptr nocapture %dest)
+  call void @llvm.lifetime.end.p0(ptr nocapture %src)
+  call void @llvm.lifetime.end.p0(ptr nocapture %dest)
+  ret void
+}
+
+; Tests merging allocas with different types and sizes
+define void @mismatched_alloca_type_size() {
+; CHECK-LABEL: define void @mismatched_alloca_type_size() {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca i16, i64 12, align 4
+; CHECK-NEXT:    store [[STRUCT_FOO:%.*]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]])
+; CHECK-NEXT:    ret void
+;
+  %src = alloca i16, i64 12, align 4
+  %dest = alloca i8, i64 12, align 4
+  call void @llvm.lifetime.start.p0(ptr nocapture %src)
+  call void @llvm.lifetime.start.p0(ptr nocapture %dest)
+  store %struct.Foo { i32 10, i32 20, i32 30 }, ptr %src
+  %1 = call i32 @use_nocapture(ptr nocapture %src)
+
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dest, ptr align 4 %src, i64 12, i1 false)
+
+  %2 = call i32 @use_nocapture(ptr nocapture %dest)
   call void @llvm.lifetime.end.p0(ptr nocapture %src)
   call void @llvm.lifetime.end.p0(ptr nocapture %dest)
   ret void
@@ -1178,35 +1250,6 @@ define void @dynamically_sized_memcpy(i64 %size) {
   ret void
 }
 
-; Tests that allocas with different sizes aren't merged together.
-define void @mismatched_alloca_size() {
-; CHECK-LABEL: define void @mismatched_alloca_size() {
-; CHECK-NEXT:    [[SRC:%.*]] = alloca i8, i64 24, align 4
-; CHECK-NEXT:    [[DEST:%.*]] = alloca i8, i64 12, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr captures(none) [[SRC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr captures(none) [[DEST]])
-; CHECK-NEXT:    store [[STRUCT_FOO:%.*]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DEST]], ptr align 4 [[SRC]], i64 12, i1 false)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr captures(none) [[DEST]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr captures(none) [[SRC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr captures(none) [[DEST]])
-; CHECK-NEXT:    ret void
-;
-  %src = alloca i8, i64 24, align 4
-  %dest = alloca i8, i64 12, align 4
-  call void @llvm.lifetime.start.p0(ptr nocapture %src)
-  call void @llvm.lifetime.start.p0(ptr nocapture %dest)
-  store %struct.Foo { i32 10, i32 20, i32 30 }, ptr %src
-  %1 = call i32 @use_nocapture(ptr nocapture %src)
-
-  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dest, ptr align 4 %src, i64 12, i1 false)
-
-  %2 = call i32 @use_nocapture(ptr nocapture %dest)
-  call void @llvm.lifetime.end.p0(ptr nocapture %src)
-  call void @llvm.lifetime.end.p0(ptr nocapture %dest)
-  ret void
-}
 
 ; Tests that allocas with mismatched address spaces aren't combined.
 define void @mismatched_alloca_addrspace() {
@@ -1728,4 +1771,62 @@ define i32 @test_ret_only_capture() {
   call void @captures_ret_only(ptr %b)
   %v = load i32, ptr %a
   ret i32 %v
+}
+
+declare ptr @captures_address_only(ptr captures(address))
+
+; Can transform: Only one address captured.
+define void @test_captures_address_captures_none() {
+; CHECK-LABEL: define void @test_captures_address_captures_none() {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
+; CHECK-NEXT:    call void @captures_address_only(ptr [[SRC]])
+; CHECK-NEXT:    call void @use_nocapture(ptr [[SRC]])
+; CHECK-NEXT:    ret void
+;
+  %src = alloca %struct.Foo, align 4
+  %dst = alloca %struct.Foo, align 4
+  store %struct.Foo { i32 10, i32 20, i32 30 }, ptr %src
+  call void @captures_address_only(ptr %src)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dst, ptr align 4 %src, i64 12, i1 false)
+  call void @use_nocapture(ptr %dst)
+  ret void
+}
+
+; Can transform: Only one address captured.
+define void @test_captures_none_and_captures_address() {
+; CHECK-LABEL: define void @test_captures_none_and_captures_address() {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
+; CHECK-NEXT:    call void @use_nocapture(ptr [[SRC]])
+; CHECK-NEXT:    call void @captures_address_only(ptr [[SRC]])
+; CHECK-NEXT:    ret void
+;
+  %src = alloca %struct.Foo, align 4
+  %dst = alloca %struct.Foo, align 4
+  store %struct.Foo { i32 10, i32 20, i32 30 }, ptr %src
+  call void @use_nocapture(ptr %src)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dst, ptr align 4 %src, i64 12, i1 false)
+  call void @captures_address_only(ptr %dst)
+  ret void
+}
+
+; Cannot transform: Both addresses captured.
+define void @test_captures_address_and_captures_address() {
+; CHECK-LABEL: define void @test_captures_address_and_captures_address() {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+; CHECK-NEXT:    [[DST:%.*]] = alloca [[STRUCT_FOO]], align 4
+; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
+; CHECK-NEXT:    call void @captures_address_only(ptr [[SRC]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DST]], ptr align 4 [[SRC]], i64 12, i1 false)
+; CHECK-NEXT:    call void @captures_address_only(ptr [[DST]])
+; CHECK-NEXT:    ret void
+;
+  %src = alloca %struct.Foo, align 4
+  %dst = alloca %struct.Foo, align 4
+  store %struct.Foo { i32 10, i32 20, i32 30 }, ptr %src
+  call void @captures_address_only(ptr %src)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dst, ptr align 4 %src, i64 12, i1 false)
+  call void @captures_address_only(ptr %dst)
+  ret void
 }

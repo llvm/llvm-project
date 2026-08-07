@@ -1,4 +1,4 @@
-//===--- UnhandledExceptionAtNewCheck.cpp - clang-tidy --------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,8 @@ namespace {
 
 AST_MATCHER_P(CXXTryStmt, hasHandlerFor,
               ast_matchers::internal::Matcher<QualType>, InnerMatcher) {
-  for (unsigned NH = Node.getNumHandlers(), I = 0; I < NH; ++I) {
+  const unsigned NH = Node.getNumHandlers();
+  for (unsigned I = 0; I < NH; ++I) {
     const CXXCatchStmt *CatchS = Node.getHandler(I);
     // Check for generic catch handler (match anything).
     if (CatchS->getCaughtType().isNull())
@@ -31,7 +32,7 @@ AST_MATCHER_P(CXXTryStmt, hasHandlerFor,
 }
 
 AST_MATCHER(CXXNewExpr, mayThrow) {
-  FunctionDecl *OperatorNew = Node.getOperatorNew();
+  const FunctionDecl *OperatorNew = Node.getOperatorNew();
   if (!OperatorNew)
     return false;
   return !OperatorNew->getType()->castAs<FunctionProtoType>()->isNothrow();
@@ -51,12 +52,13 @@ void UnhandledExceptionAtNewCheck::registerMatchers(MatchFinder *Finder) {
   auto BadAllocReferenceType = referenceType(pointee(BadAllocType));
   auto ExceptionReferenceType = referenceType(pointee(ExceptionType));
 
-  auto CatchBadAllocType =
+  const auto CatchBadAllocType =
       qualType(hasCanonicalType(anyOf(BadAllocType, BadAllocReferenceType,
                                       ExceptionType, ExceptionReferenceType)));
-  auto BadAllocCatchingTryBlock = cxxTryStmt(hasHandlerFor(CatchBadAllocType));
+  const auto BadAllocCatchingTryBlock =
+      cxxTryStmt(hasHandlerFor(CatchBadAllocType));
 
-  auto FunctionMayNotThrow = functionDecl(isNoThrow());
+  const auto FunctionMayNotThrow = functionDecl(isNoThrow());
 
   Finder->addMatcher(cxxNewExpr(mayThrow(),
                                 unless(hasAncestor(BadAllocCatchingTryBlock)),

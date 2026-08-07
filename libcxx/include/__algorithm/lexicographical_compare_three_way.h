@@ -27,9 +27,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // Fast path for random access iterators which computes the number of loop iterations up-front and
 // then skips the iterator comparisons inside the loop.
@@ -37,13 +37,13 @@ template <class _InputIterator1, class _InputIterator2, class _Cmp>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __lexicographical_compare_three_way_fast_path(
     _InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2, _Cmp& __comp)
     -> decltype(__comp(*__first1, *__first2)) {
-  static_assert(
-      signed_integral<__iter_diff_t<_InputIterator1>>, "Using a non-integral difference_type is undefined behavior.");
-  static_assert(
-      signed_integral<__iter_diff_t<_InputIterator2>>, "Using a non-integral difference_type is undefined behavior.");
+  static_assert(signed_integral<__iterator_difference_type<_InputIterator1>>,
+                "Using a non-integral difference_type is undefined behavior.");
+  static_assert(signed_integral<__iterator_difference_type<_InputIterator2>>,
+                "Using a non-integral difference_type is undefined behavior.");
 
-  using _Len1   = __iter_diff_t<_InputIterator1>;
-  using _Len2   = __iter_diff_t<_InputIterator2>;
+  using _Len1   = __iterator_difference_type<_InputIterator1>;
+  using _Len2   = __iterator_difference_type<_InputIterator2>;
   using _Common = common_type_t<_Len1, _Len2>;
 
   _Len1 __len1      = __last1 - __first1;
@@ -116,9 +116,9 @@ template <class _InputIterator1, class _InputIterator2>
       std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::compare_three_way());
 }
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

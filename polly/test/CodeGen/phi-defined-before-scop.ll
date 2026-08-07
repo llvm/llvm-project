@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
 
 ; CHECK-LABEL: polly.merge_new_and_old:
 ; CHECK-NEXT: %tmp7.ph.merge = phi ptr [ %tmp7.ph.final_reload, %polly.exiting ], [ %tmp7.ph, %bb6.region_exiting ]
@@ -14,7 +14,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @global = external global ptr, align 8
 
 ; Function Attrs: nounwind uwtable
-define void @wobble() #0 {
+define void @wobble() {
 bb:
   br label %bb1
 
@@ -40,8 +40,6 @@ bb8:                                              ; preds = %bb6
 bb9:                                              ; preds = %bb8
   unreachable
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

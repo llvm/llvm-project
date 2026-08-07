@@ -31,6 +31,13 @@ class IsHandleType<string Type> {
                 !ne(!find(Type, "_handle_t", !sub(!size(Type), 9)), -1));
 }
 
+// Does the type end with '_cb_t'?
+class IsCallbackType<string Type> {
+  // size("_cb_t") == 5
+  bit ret = !if(!lt(!size(Type), 5), 0,
+                !ne(!find(Type, "_cb_t", !sub(!size(Type), 5)), -1));
+}
+
 // Does the type end with '*'?
 class IsPointerType<string Type> {
   bit ret = !ne(!find(Type, "*", !sub(!size(Type), 1)), -1);
@@ -58,6 +65,7 @@ class Param<string Type, string Name, string Desc, bits<3> Flags = 0> {
   TypeInfo type_info = TypeInfo<"", "">;
   bit IsHandle = IsHandleType<type>.ret;
   bit IsPointer = IsPointerType<type>.ret;
+  bit IsCallback = IsCallbackType<type>.ret;
 }
 
 // A parameter whose range is described by other parameters in the function.
@@ -81,7 +89,7 @@ class ShouldCheckHandle<Param P> {
 }
 
 class ShouldCheckPointer<Param P> {
-  bit ret = !and(P.IsPointer, !eq(!and(PARAM_OPTIONAL, P.flags), 0));
+  bit ret = !and(!or(P.IsPointer, P.IsCallback), !eq(!and(PARAM_OPTIONAL, P.flags), 0));
 }
 
 // For a list of returns that contains a specific return code, find and append
@@ -137,7 +145,6 @@ defvar DefaultReturns = [Return<PREFIX#"_RESULT_SUCCESS">,
                          Return<PREFIX#"_ERRC_DEVICE_LOST">];
 
 class APIObject {
-  string name;
   string desc;
 }
 
@@ -146,6 +153,10 @@ class Function : APIObject {
   list<Return> returns;
   list<string> details = [];
   list<string> analogues = [];
+
+  // When set, the generated function declaration is marked with OL_NODISCARD
+  // so the compiler warns if the returned result is ignored.
+  bit nodiscard = 0;
 
   list<Return> returns_with_def = !listconcat(DefaultReturns, returns);
   list<Return> all_returns = AddPointerChecksToReturns<params,
@@ -168,6 +179,14 @@ class Enum : APIObject {
   // all Etor values must be TaggedEtor records
   bit is_typed = 0;
 
+  // This refers to whether the enumerator is used to name bits of a bit field,
+  // where consecutive values are bit-shifted rather than incremented.
+  bit is_bit_field = 0;
+
+  // When set, the generated enum typedef is marked with OL_NODISCARD
+  // so the compiler warns if the returned value is ignored.
+  bit nodiscard = 0;
+
   list<Etor> etors = [];
 }
 
@@ -189,6 +208,11 @@ class StructHasInheritedMembers<string BaseClass> {
 
 class Struct : APIObject {
   string base_class = "";
+
+  // When set, the generated struct typedef is marked with OL_NODISCARD
+  // so the compiler warns if the returned value is ignored.
+  bit nodiscard = 0;
+
   list<StructMember> members;
   list<StructMember> all_members =
       !if(StructHasInheritedMembers<base_class>.ret,

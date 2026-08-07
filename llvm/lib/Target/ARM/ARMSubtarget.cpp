@@ -88,18 +88,17 @@ ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
 ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS,
                            const ARMBaseTargetMachine &TM, bool IsLittle,
-                           bool MinSize)
+                           FloatABI::ABIType FloatABI, bool MinSize,
+                           DenormalMode DM)
     : ARMGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       UseMulOps(UseFusedMulOps), CPUString(CPU), OptMinSize(MinSize),
-      IsLittle(IsLittle), TargetTriple(TT), Options(TM.Options), TM(TM),
-      FrameLowering(initializeFrameLowering(CPU, FS)),
+      IsLittle(IsLittle), DM(DM), TargetTriple(TT), Options(TM.Options), TM(TM),
+      FloatABIType(FloatABI), FrameLowering(initializeFrameLowering(CPU, FS)),
       // At this point initializeSubtargetDependencies has been called so
       // we can query directly.
-      InstrInfo(isThumb1Only()
-                    ? (ARMBaseInstrInfo *)new Thumb1InstrInfo(*this)
-                    : !isThumb()
-                          ? (ARMBaseInstrInfo *)new ARMInstrInfo(*this)
-                          : (ARMBaseInstrInfo *)new Thumb2InstrInfo(*this)),
+      InstrInfo(isThumb1Only() ? (ARMBaseInstrInfo *)new Thumb1InstrInfo(*this)
+                : !isThumb() ? (ARMBaseInstrInfo *)new ARMInstrInfo(*this)
+                             : (ARMBaseInstrInfo *)new Thumb2InstrInfo(*this)),
       TLInfo(TM, *this) {
 
   CallLoweringInfo.reset(new ARMCallLowering(*getTargetLowering()));
@@ -131,8 +130,154 @@ const RegisterBankInfo *ARMSubtarget::getRegBankInfo() const {
   return RegBankInfo.get();
 }
 
+void ARMSubtarget::initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {
+  const Triple &TT = getTargetTriple();
+  if (TT.isOSBinFormatMachO()) {
+    // Uses VFP for Thumb libfuncs if available.
+    if (isThumb() && hasVFP2Base() && hasARMOps() && !useSoftFloat()) {
+      // clang-format off
+      static const struct {
+        const RTLIB::Libcall Op;
+        const RTLIB::LibcallImpl Impl;
+      } LibraryCalls[] = {
+        // Single-precision floating-point arithmetic.
+        { RTLIB::ADD_F32, RTLIB::impl___addsf3vfp },
+        { RTLIB::SUB_F32, RTLIB::impl___subsf3vfp },
+        { RTLIB::MUL_F32, RTLIB::impl___mulsf3vfp },
+        { RTLIB::DIV_F32, RTLIB::impl___divsf3vfp },
+
+        // Double-precision floating-point arithmetic.
+        { RTLIB::ADD_F64, RTLIB::impl___adddf3vfp },
+        { RTLIB::SUB_F64, RTLIB::impl___subdf3vfp },
+        { RTLIB::MUL_F64, RTLIB::impl___muldf3vfp },
+        { RTLIB::DIV_F64, RTLIB::impl___divdf3vfp },
+
+        // Single-precision comparisons.
+        { RTLIB::OEQ_F32, RTLIB::impl___eqsf2vfp },
+        { RTLIB::UNE_F32, RTLIB::impl___nesf2vfp },
+        { RTLIB::OLT_F32, RTLIB::impl___ltsf2vfp },
+        { RTLIB::OLE_F32, RTLIB::impl___lesf2vfp },
+        { RTLIB::OGE_F32, RTLIB::impl___gesf2vfp },
+        { RTLIB::OGT_F32, RTLIB::impl___gtsf2vfp },
+        { RTLIB::UO_F32,  RTLIB::impl___unordsf2vfp },
+
+        // Double-precision comparisons.
+        { RTLIB::OEQ_F64, RTLIB::impl___eqdf2vfp },
+        { RTLIB::UNE_F64, RTLIB::impl___nedf2vfp },
+        { RTLIB::OLT_F64, RTLIB::impl___ltdf2vfp },
+        { RTLIB::OLE_F64, RTLIB::impl___ledf2vfp },
+        { RTLIB::OGE_F64, RTLIB::impl___gedf2vfp },
+        { RTLIB::OGT_F64, RTLIB::impl___gtdf2vfp },
+        { RTLIB::UO_F64,  RTLIB::impl___unorddf2vfp },
+
+        // Floating-point to integer conversions.
+        // i64 conversions are done via library routines even when generating VFP
+        // instructions, so use the same ones.
+        { RTLIB::FPTOSINT_F64_I32, RTLIB::impl___fixdfsivfp },
+        { RTLIB::FPTOUINT_F64_I32, RTLIB::impl___fixunsdfsivfp },
+        { RTLIB::FPTOSINT_F32_I32, RTLIB::impl___fixsfsivfp },
+        { RTLIB::FPTOUINT_F32_I32, RTLIB::impl___fixunssfsivfp },
+
+        // Conversions between floating types.
+        { RTLIB::FPROUND_F64_F32, RTLIB::impl___truncdfsf2vfp },
+        { RTLIB::FPEXT_F32_F64,   RTLIB::impl___extendsfdf2vfp },
+
+        // Integer to floating-point conversions.
+        // i64 conversions are done via library routines even when generating VFP
+        // instructions, so use the same ones.
+        // FIXME: There appears to be some naming inconsistency in ARM libgcc:
+        // e.g., __floatunsidf vs. __floatunssidfvfp.
+        { RTLIB::SINTTOFP_I32_F64, RTLIB::impl___floatsidfvfp },
+        { RTLIB::UINTTOFP_I32_F64, RTLIB::impl___floatunssidfvfp },
+        { RTLIB::SINTTOFP_I32_F32, RTLIB::impl___floatsisfvfp },
+        { RTLIB::UINTTOFP_I32_F32, RTLIB::impl___floatunssisfvfp },
+      };
+      // clang-format on
+
+      for (const auto &LC : LibraryCalls)
+        Info.setLibcallImpl(LC.Op, LC.Impl);
+    }
+  }
+
+  static const struct {
+    const RTLIB::Libcall Op;
+    const RTLIB::LibcallImpl Impl;
+  } AEABISelected[] = {
+      // Double-precision arithmetic.
+      {RTLIB::ADD_F64, RTLIB::impl___aeabi_dadd},
+      {RTLIB::DIV_F64, RTLIB::impl___aeabi_ddiv},
+      {RTLIB::MUL_F64, RTLIB::impl___aeabi_dmul},
+      {RTLIB::SUB_F64, RTLIB::impl___aeabi_dsub},
+      // Double-precision comparisons.
+      {RTLIB::OEQ_F64, RTLIB::impl___aeabi_dcmpeq},
+      {RTLIB::OLT_F64, RTLIB::impl___aeabi_dcmplt},
+      {RTLIB::OLE_F64, RTLIB::impl___aeabi_dcmple},
+      {RTLIB::OGE_F64, RTLIB::impl___aeabi_dcmpge},
+      {RTLIB::OGT_F64, RTLIB::impl___aeabi_dcmpgt},
+      {RTLIB::UO_F64, RTLIB::impl___aeabi_dcmpun},
+      // Single-precision arithmetic.
+      {RTLIB::ADD_F32, RTLIB::impl___aeabi_fadd},
+      {RTLIB::DIV_F32, RTLIB::impl___aeabi_fdiv},
+      {RTLIB::MUL_F32, RTLIB::impl___aeabi_fmul},
+      {RTLIB::SUB_F32, RTLIB::impl___aeabi_fsub},
+      // Single-precision comparisons.
+      {RTLIB::OEQ_F32, RTLIB::impl___aeabi_fcmpeq},
+      {RTLIB::OLT_F32, RTLIB::impl___aeabi_fcmplt},
+      {RTLIB::OLE_F32, RTLIB::impl___aeabi_fcmple},
+      {RTLIB::OGE_F32, RTLIB::impl___aeabi_fcmpge},
+      {RTLIB::OGT_F32, RTLIB::impl___aeabi_fcmpgt},
+      {RTLIB::UO_F32, RTLIB::impl___aeabi_fcmpun},
+      // Floating-point to integer conversions.
+      {RTLIB::FPTOSINT_F64_I32, RTLIB::impl___aeabi_d2iz},
+      {RTLIB::FPTOUINT_F64_I32, RTLIB::impl___aeabi_d2uiz},
+      {RTLIB::FPTOSINT_F64_I64, RTLIB::impl___aeabi_d2lz},
+      {RTLIB::FPTOUINT_F64_I64, RTLIB::impl___aeabi_d2ulz},
+      {RTLIB::FPTOSINT_F32_I32, RTLIB::impl___aeabi_f2iz},
+      {RTLIB::FPTOUINT_F32_I32, RTLIB::impl___aeabi_f2uiz},
+      {RTLIB::FPTOSINT_F32_I64, RTLIB::impl___aeabi_f2lz},
+      {RTLIB::FPTOUINT_F32_I64, RTLIB::impl___aeabi_f2ulz},
+      // Integer to floating-point conversions.
+      {RTLIB::SINTTOFP_I32_F64, RTLIB::impl___aeabi_i2d},
+      {RTLIB::UINTTOFP_I32_F64, RTLIB::impl___aeabi_ui2d},
+      {RTLIB::SINTTOFP_I64_F64, RTLIB::impl___aeabi_l2d},
+      {RTLIB::UINTTOFP_I64_F64, RTLIB::impl___aeabi_ul2d},
+      {RTLIB::SINTTOFP_I32_F32, RTLIB::impl___aeabi_i2f},
+      {RTLIB::UINTTOFP_I32_F32, RTLIB::impl___aeabi_ui2f},
+      {RTLIB::SINTTOFP_I64_F32, RTLIB::impl___aeabi_l2f},
+      {RTLIB::UINTTOFP_I64_F32, RTLIB::impl___aeabi_ul2f},
+      // Long long helpers.
+      {RTLIB::MUL_I64, RTLIB::impl___aeabi_lmul},
+      {RTLIB::SHL_I64, RTLIB::impl___aeabi_llsl},
+      {RTLIB::SRL_I64, RTLIB::impl___aeabi_llsr},
+      {RTLIB::SRA_I64, RTLIB::impl___aeabi_lasr},
+      // Integer division.
+      {RTLIB::SDIV_I32, RTLIB::impl___aeabi_idiv},
+      {RTLIB::UDIV_I32, RTLIB::impl___aeabi_uidiv},
+  };
+
+  const RTLIB::RuntimeLibcallsInfo &RTLCI = Info.getRuntimeLibcallsInfo();
+  for (const auto &LC : AEABISelected) {
+    if (RTLCI.isAvailable(LC.Impl))
+      Info.setLibcallImpl(LC.Op, LC.Impl);
+  }
+
+  // AEABI provides an ordered-equal compare (__aeabi_{f,d}cmpeq) but no
+  // not-equal compare. Clear the not-equal libcalls so UNE will lower as !OEQ
+  // using the AEABI compare, rather than emitting the generic not-equal helper
+  // which would otherwise be preferred.
+  if (RTLCI.isAvailable(RTLIB::impl___aeabi_fcmpeq)) {
+    Info.setLibcallImpl(RTLIB::UNE_F32, RTLIB::Unsupported);
+    Info.setLibcallImpl(RTLIB::FCMP3_PRED_UNE_F32, RTLIB::Unsupported);
+  }
+
+  if (RTLCI.isAvailable(RTLIB::impl___aeabi_dcmpeq)) {
+    Info.setLibcallImpl(RTLIB::UNE_F64, RTLIB::Unsupported);
+    Info.setLibcallImpl(RTLIB::FCMP3_PRED_UNE_F64, RTLIB::Unsupported);
+  }
+}
+
 bool ARMSubtarget::isXRaySupported() const {
-  // We don't currently suppport Thumb, but Windows requires Thumb.
+  // We don't currently support Thumb, but Windows requires Thumb.
   return hasV6Ops() && hasARMOps() && !isTargetWindows();
 }
 
@@ -224,10 +369,14 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   // NEON f32 ops are non-IEEE 754 compliant. Darwin is ok with it by default.
   const FeatureBitset &Bits = getFeatureBits();
   if ((Bits[ARM::ProcA5] || Bits[ARM::ProcA8]) && // Where this matters
-      (Options.UnsafeFPMath || isTargetDarwin()))
+      (isTargetDarwin() || DM == DenormalMode::getPreserveSign()))
     HasNEONForFP = true;
 
-  if (isRWPI())
+  const ARM::ArchKind Arch = ARM::parseArch(TargetTriple.getArchName());
+  if (isRWPI() ||
+      (isTargetIOS() &&
+       (Arch == ARM::ArchKind::ARMV6K || Arch == ARM::ArchKind::ARMV6) &&
+       TargetTriple.isOSVersionLT(3, 0)))
     ReserveR9 = true;
 
   // If MVEVectorCostFactor is still 0 (has not been set to anything else), default it to 2
@@ -307,34 +456,25 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 }
 
 bool ARMSubtarget::isROPI() const {
+  // FIXME: This should ideally come from a function attribute, to work
+  // correctly with LTO.
   return TM.getRelocationModel() == Reloc::ROPI ||
          TM.getRelocationModel() == Reloc::ROPI_RWPI;
 }
+
 bool ARMSubtarget::isRWPI() const {
+  // FIXME: This should ideally come from a function attribute, to work
+  // correctly with LTO.
   return TM.getRelocationModel() == Reloc::RWPI ||
          TM.getRelocationModel() == Reloc::ROPI_RWPI;
 }
 
 bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
-  if (!TM.shouldAssumeDSOLocal(GV))
-    return true;
-
-  // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
-  // the section that is being relocated. This means we have to use o load even
-  // for GVs that are known to be local to the dso.
-  if (isTargetMachO() && TM.isPositionIndependent() &&
-      (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
-    return true;
-
-  return false;
+  return TM.isGVIndirectSymbol(GV);
 }
 
 bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {
   return isTargetELF() && TM.isPositionIndependent() && !GV->isDSOLocal();
-}
-
-unsigned ARMSubtarget::getMispredictionPenalty() const {
-  return SchedModel.MispredictPenalty;
 }
 
 bool ARMSubtarget::enableMachineScheduler() const {
@@ -476,7 +616,7 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   // This stack unwinding cannot be expressed with SEH unwind opcodes when done
   // with a single push, making it necessary to split the push into r4-r10, and
   // another containing r11+lr.
-  if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
       F.needsUnwindTableEntry() &&
       (MFI.hasVarSizedObjects() || getRegisterInfo()->hasStackRealignment(MF)))
     return SplitR11WindowsSEH;

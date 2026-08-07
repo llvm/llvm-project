@@ -216,6 +216,8 @@ static unsigned getInstSizeInBytes(const MachineInstr &MI,
           MI.isDebugOrPseudoInstr() || MI.isPosition() || MI.isKill() ||
           MI.isImplicitDef() || MI.getOpcode() == TargetOpcode::MEMBARRIER ||
           MI.getOpcode() == TargetOpcode::INIT_UNDEF || MI.isFakeUse() ||
+          MI.getOpcode() == TargetOpcode::RELOC_NONE ||
+          MI.getOpcode() == SystemZ::FENCE ||
           // These have a size that may be zero:
           MI.isInlineAsm() || MI.getOpcode() == SystemZ::STACKMAP ||
           MI.getOpcode() == SystemZ::PATCHPOINT ||

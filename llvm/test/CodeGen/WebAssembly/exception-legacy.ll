@@ -35,7 +35,7 @@ define void @throw(ptr %p) {
 ; CHECK:     catch     $[[EXN:[0-9]+]]=, __cpp_exception
 ; CHECK:       global.set  __stack_pointer
 ; CHECK:       i32.store __wasm_lpad_context
-; CHECK:       call       $drop=, _Unwind_CallPersonality, $[[EXN]]
+; CHECK:       call       $drop=, __gxx_wasm_personality_v0, $[[EXN]]
 ; CHECK:       block
 ; CHECK:         br_if     0
 ; CHECK:         call      $drop=, __cxa_begin_catch
@@ -429,16 +429,14 @@ unreachable:                                      ; preds = %rethrow
 ; CHECK:   try
 ; CHECK:     try
 ; CHECK:       call  __cxa_throw
-; CHECK:       catch
+; CHECK:     catch
 ; CHECK:       call  __cxa_end_catch
 ; CHECK:       try
 ; CHECK:         try
 ; Note that this rethrow targets the top-level catch_all
 ; CHECK:           rethrow   4
 ; CHECK:         catch
-; CHECK:           try
-; CHECK:             call  __cxa_end_catch
-; CHECK:           delegate    5
+; CHECK:           call  __cxa_end_catch
 ; CHECK:           return
 ; CHECK:         end_try
 ; CHECK:       delegate    3
@@ -549,7 +547,7 @@ try.cont:                                         ; preds = %entry
 declare void @foo()
 declare void @bar(ptr)
 declare void @take_i32(i32)
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 ; Function Attrs: noreturn
 declare void @llvm.wasm.throw(i32, ptr) #1
 ; Function Attrs: nounwind
@@ -573,4 +571,5 @@ attributes #0 = { nounwind }
 attributes #1 = { noreturn }
 attributes #2 = { noreturn nounwind }
 
-; CHECK: __cpp_exception:
+;; The exception tag should not be defined locally
+; CHECK-NOT: __cpp_exception:

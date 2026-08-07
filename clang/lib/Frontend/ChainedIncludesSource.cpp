@@ -22,6 +22,8 @@
 #include "clang/Sema/MultiplexExternalSemaSource.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
+#include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace clang;
@@ -65,11 +67,13 @@ createASTReader(CompilerInstance &CI, StringRef pchFile,
       /*Extensions=*/ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
       /*isysroot=*/"", DisableValidationForModuleKind::PCH);
   for (unsigned ti = 0; ti < bufNames.size(); ++ti) {
-    StringRef sr(bufNames[ti]);
-    Reader->addInMemoryBuffer(sr, std::move(MemBufs[ti]));
+    off_t MemBufSize = MemBufs[ti]->getBufferSize();
+    CI.getModuleCache().getInMemoryModuleCache().addBuiltPCM(
+        bufNames[ti], std::move(MemBufs[ti]), MemBufSize, /*ModTime=*/0);
   }
   Reader->setDeserializationListener(deserialListener);
-  switch (Reader->ReadAST(pchFile, serialization::MK_PCH, SourceLocation(),
+  switch (Reader->ReadAST(ModuleFileName::makeInMemory(pchFile),
+                          serialization::MK_PCH, SourceLocation(),
                           ASTReader::ARR_None)) {
   case ASTReader::Success:
     // Set the predefines buffer as suggested by the PCH reader.
@@ -124,11 +128,14 @@ clang::createChainedIncludesSource(CompilerInstance &CI,
 
     auto Clang = std::make_unique<CompilerInstance>(
         std::move(CInvok), CI.getPCHContainerOperations());
+    // Inherit the VFS as-is: code below does not make changes to the VFS or to
+    // the VFS-affecting options.
+    Clang->setVirtualFileSystem(CI.getVirtualFileSystemPtr());
     Clang->setDiagnostics(Diags);
     Clang->setTarget(TargetInfo::CreateTargetInfo(
         Clang->getDiagnostics(), Clang->getInvocation().getTargetOpts()));
     Clang->createFileManager();
-    Clang->createSourceManager(Clang->getFileManager());
+    Clang->createSourceManager();
     Clang->createPreprocessor(TU_Prefix);
     Clang->getDiagnosticClient().BeginSourceFile(Clang->getLangOpts(),
                                                  &Clang->getPreprocessor());

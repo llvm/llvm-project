@@ -40,7 +40,7 @@ Reports are typically received by email (conduct@llvm.org) or in person from
 the reporter or event CoC response team.
 
 When receiving a report by email, the CoC Committee should acknowledge receipt
-within 24 hours.  The acknowledgement should be understanding and compassionate
+within 24 hours.  The acknowledgment should be understanding and compassionate
 but no commitment should be made on whether this is a violation or which action
 will be taken. Specific guidance is in the checklist below.
 

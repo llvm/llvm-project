@@ -3,8 +3,8 @@
 ; Finish compiling to verify that dxil-op-lower removes the globals entirely.
 ; RUN: opt -mtriple=dxil-pc-shadermodel6.0-compute -S -dxil-op-lower %t -o - | FileCheck --check-prefixes=DXOP,CHECK %s
 ; RUN: opt -mtriple=dxil-pc-shadermodel6.6-compute -S -dxil-op-lower %t -o - | FileCheck --check-prefixes=DXOP,CHECK %s
-; RUN: llc -mtriple=dxil-pc-shadermodel6.0-compute --filetype=asm -o - %t | FileCheck --check-prefixes=DXOP,CHECK %s
-; RUN: llc -mtriple=dxil-pc-shadermodel6.6-compute --filetype=asm -o - %t | FileCheck --check-prefixes=DXOP,CHECK %s
+; RUN: llc -mtriple=dxil-pc-shadermodel6.0-compute -o - %t | FileCheck --check-prefixes=DXOP,CHECK %s
+; RUN: llc -mtriple=dxil-pc-shadermodel6.6-compute -o - %t | FileCheck --check-prefixes=DXOP,CHECK %s
 
 ; Ensure that EarlyCSE is able to eliminate unneeded loads of resource globals across typedBufferLoad.
 ; Also that DXILOpLowering eliminates the globals entirely.
@@ -21,9 +21,9 @@ define void @main() local_unnamed_addr #0 {
 entry:
   ; DXOP: [[In_h_i:%.*]] = call %dx.types.Handle @dx.op.createHandle
   ; DXOP: [[Out_h_i:%.*]] = call %dx.types.Handle @dx.op.createHandle
-  %In_h.i = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  %In_h.i = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_1_0_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
   store target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %In_h.i, ptr @In, align 4
-  %Out_h.i = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_1_0_0t(i32 4, i32 1, i32 1, i32 0, i1 false, ptr null)
+  %Out_h.i = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_1_0_0t(i32 4, i32 1, i32 1, i32 0, ptr null)
   store target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %Out_h.i, ptr @Out, align 4
   ; CSE: call i32 @llvm.dx.flattened.thread.id.in.group()
   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()

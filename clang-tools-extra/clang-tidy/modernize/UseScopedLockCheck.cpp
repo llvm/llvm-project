@@ -1,4 +1,4 @@
-//===--- UseScopedLockCheck.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,28 +27,47 @@ static bool isLockGuardDecl(const NamedDecl *Decl) {
          Decl->getName() == "lock_guard" && Decl->isInStdNamespace();
 }
 
-static bool isLockGuard(const QualType &Type) {
-  if (const auto *Record = Type->getAs<RecordType>())
-    if (const RecordDecl *Decl = Record->getOriginalDecl())
-      return isLockGuardDecl(Decl);
+static bool isScopedLockDecl(const NamedDecl *Decl) {
+  return Decl->getDeclName().isIdentifier() &&
+         Decl->getName() == "scoped_lock" && Decl->isInStdNamespace();
+}
+
+static const NamedDecl *getLockClassDecl(const QualType &Type) {
+  if (const auto *Record = Type->getAsCanonical<RecordType>())
+    return Record->getDecl();
 
   if (const auto *TemplateSpecType = Type->getAs<TemplateSpecializationType>())
-    if (const TemplateDecl *Decl =
-            TemplateSpecType->getTemplateName().getAsTemplateDecl())
-      return isLockGuardDecl(Decl);
+    return TemplateSpecType->getTemplateName().getAsTemplateDecl();
 
+  return nullptr;
+}
+
+static bool isLockGuard(const QualType &Type) {
+  if (const NamedDecl *LockDecl = getLockClassDecl(Type))
+    return isLockGuardDecl(LockDecl);
   return false;
 }
 
-static llvm::SmallVector<const VarDecl *>
-getLockGuardsFromDecl(const DeclStmt *DS) {
-  llvm::SmallVector<const VarDecl *> LockGuards;
+static bool isScopedLock(const QualType &Type) {
+  if (const NamedDecl *LockDecl = getLockClassDecl(Type))
+    return isScopedLockDecl(LockDecl);
+  return false;
+}
+
+static StringRef getLockClassName(const QualType &Type) {
+  const NamedDecl *LockDecl = getLockClassDecl(Type);
+  assert(LockDecl);
+  return LockDecl->getName();
+}
+
+static SmallVector<const VarDecl *> getLockGuardsFromDecl(const DeclStmt *DS) {
+  SmallVector<const VarDecl *> LockGuards;
 
   for (const Decl *Decl : DS->decls()) {
     if (const auto *VD = dyn_cast<VarDecl>(Decl)) {
       const QualType Type =
           VD->getType().getCanonicalType().getUnqualifiedType();
-      if (isLockGuard(Type))
+      if (isLockGuard(Type) || isScopedLock(Type))
         LockGuards.push_back(VD);
     }
   }
@@ -58,14 +77,14 @@ getLockGuardsFromDecl(const DeclStmt *DS) {
 
 // Scans through the statements in a block and groups consecutive
 // 'std::lock_guard' variable declarations together.
-static llvm::SmallVector<llvm::SmallVector<const VarDecl *>>
+static SmallVector<SmallVector<const VarDecl *>>
 findLocksInCompoundStmt(const CompoundStmt *Block,
                         const ast_matchers::MatchFinder::MatchResult &Result) {
   // store groups of consecutive 'std::lock_guard' declarations
-  llvm::SmallVector<llvm::SmallVector<const VarDecl *>> LockGuardGroups;
-  llvm::SmallVector<const VarDecl *> CurrentLockGuardGroup;
+  SmallVector<SmallVector<const VarDecl *>> LockGuardGroups;
+  SmallVector<const VarDecl *> CurrentLockGuardGroup;
 
-  auto AddAndClearCurrentGroup = [&]() {
+  const auto AddAndClearCurrentGroup = [&]() {
     if (!CurrentLockGuardGroup.empty()) {
       LockGuardGroups.push_back(CurrentLockGuardGroup);
       CurrentLockGuardGroup.clear();
@@ -74,7 +93,7 @@ findLocksInCompoundStmt(const CompoundStmt *Block,
 
   for (const Stmt *Stmt : Block->body()) {
     if (const auto *DS = dyn_cast<DeclStmt>(Stmt)) {
-      llvm::SmallVector<const VarDecl *> LockGuards = getLockGuardsFromDecl(DS);
+      const SmallVector<const VarDecl *> LockGuards = getLockGuardsFromDecl(DS);
 
       if (!LockGuards.empty()) {
         CurrentLockGuardGroup.append(LockGuards);
@@ -98,7 +117,7 @@ static SourceRange getLockGuardRange(const TypeSourceInfo *SourceInfo) {
 
 // Find the exact source range of the 'lock_guard' name token
 static SourceRange getLockGuardNameRange(const TypeSourceInfo *SourceInfo) {
-  const TemplateSpecializationTypeLoc TemplateLoc =
+  const auto TemplateLoc =
       SourceInfo->getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
   if (!TemplateLoc)
     return {};
@@ -124,28 +143,32 @@ void UseScopedLockCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
   const auto LockGuardClassDecl =
       namedDecl(hasName("lock_guard"), isInStdNamespace());
+  const auto ScopedLockClassDecl =
+      namedDecl(hasName("scoped_lock"), isInStdNamespace());
+  const auto LockClassDecl = anyOf(LockGuardClassDecl, ScopedLockClassDecl);
 
-  const auto LockGuardType =
-      qualType(anyOf(hasUnqualifiedDesugaredType(
-                         recordType(hasDeclaration(LockGuardClassDecl))),
-                     hasUnqualifiedDesugaredType(templateSpecializationType(
-                         hasDeclaration(LockGuardClassDecl)))));
+  const auto LockGuardType = qualType(hasUnqualifiedDesugaredType(
+      mapAnyOf(recordType, templateSpecializationType)
+          .with(hasDeclaration(LockGuardClassDecl))));
 
-  const auto LockVarDecl = varDecl(hasType(LockGuardType));
+  const auto LockType = qualType(hasUnqualifiedDesugaredType(
+      mapAnyOf(recordType, templateSpecializationType)
+          .with(hasDeclaration(LockClassDecl))));
+
+  const auto LockGuardVarDecl = varDecl(hasType(LockGuardType));
+  const auto LockVarDecl = varDecl(hasType(LockType));
 
   if (WarnOnSingleLocks) {
     Finder->addMatcher(
         compoundStmt(
-            unless(isExpansionInSystemHeader()),
-            has(declStmt(has(LockVarDecl)).bind("lock-decl-single")),
+            has(declStmt(has(LockGuardVarDecl)).bind("lock-decl-single")),
             unless(has(declStmt(unless(equalsBoundNode("lock-decl-single")),
                                 has(LockVarDecl))))),
         this);
   }
 
   Finder->addMatcher(
-      compoundStmt(unless(isExpansionInSystemHeader()),
-                   has(declStmt(has(LockVarDecl)).bind("lock-decl-multiple")),
+      compoundStmt(has(declStmt(has(LockVarDecl)).bind("lock-decl-multiple")),
                    has(declStmt(unless(equalsBoundNode("lock-decl-multiple")),
                                 has(LockVarDecl))))
           .bind("block-multiple"),
@@ -153,22 +176,19 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
 
   if (WarnOnUsingAndTypedef) {
     // Match 'typedef std::lock_guard<std::mutex> Lock'
-    Finder->addMatcher(typedefDecl(unless(isExpansionInSystemHeader()),
-                                   hasType(hasUnderlyingType(LockGuardType)))
+    Finder->addMatcher(typedefDecl(hasType(hasUnderlyingType(LockGuardType)))
                            .bind("lock-guard-typedef"),
                        this);
 
     // Match 'using Lock = std::lock_guard<std::mutex>'
-    Finder->addMatcher(typeAliasDecl(unless(isExpansionInSystemHeader()),
-                                     hasType(templateSpecializationType(
+    Finder->addMatcher(typeAliasDecl(hasType(templateSpecializationType(
                                          hasDeclaration(LockGuardClassDecl))))
                            .bind("lock-guard-using-alias"),
                        this);
 
     // Match 'using std::lock_guard'
     Finder->addMatcher(
-        usingDecl(unless(isExpansionInSystemHeader()),
-                  hasAnyUsingShadowDecl(hasTargetDecl(LockGuardClassDecl)))
+        usingDecl(hasAnyUsingShadowDecl(hasTargetDecl(LockGuardClassDecl)))
             .bind("lock-guard-using-decl"),
         this);
   }
@@ -176,7 +196,7 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
 
 void UseScopedLockCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *DS = Result.Nodes.getNodeAs<DeclStmt>("lock-decl-single")) {
-    llvm::SmallVector<const VarDecl *> Decls = getLockGuardsFromDecl(DS);
+    const SmallVector<const VarDecl *> Decls = getLockGuardsFromDecl(DS);
     diagOnMultipleLocks({Decls}, Result);
     return;
   }
@@ -207,7 +227,7 @@ void UseScopedLockCheck::check(const MatchFinder::MatchResult &Result) {
 
 void UseScopedLockCheck::diagOnSingleLock(
     const VarDecl *LockGuard, const MatchFinder::MatchResult &Result) {
-  auto Diag = diag(LockGuard->getBeginLoc(), UseScopedLockMessage);
+  const auto Diag = diag(LockGuard->getBeginLoc(), UseScopedLockMessage);
 
   const SourceRange LockGuardTypeRange =
       getLockGuardRange(LockGuard->getTypeSourceInfo());
@@ -217,7 +237,8 @@ void UseScopedLockCheck::diagOnSingleLock(
 
   // Create Fix-its only if we can find the constructor call to properly handle
   // 'std::lock_guard l(m, std::adopt_lock)' case.
-  const auto *CtorCall = dyn_cast<CXXConstructExpr>(LockGuard->getInit());
+  const auto *CtorCall =
+      dyn_cast_if_present<CXXConstructExpr>(LockGuard->getInit());
   if (!CtorCall)
     return;
 
@@ -252,20 +273,28 @@ void UseScopedLockCheck::diagOnSingleLock(
 }
 
 void UseScopedLockCheck::diagOnMultipleLocks(
-    const llvm::SmallVector<llvm::SmallVector<const VarDecl *>> &LockGroups,
+    const SmallVector<SmallVector<const VarDecl *>> &LockGroups,
     const ast_matchers::MatchFinder::MatchResult &Result) {
-  for (const llvm::SmallVector<const VarDecl *> &Group : LockGroups) {
+  for (const SmallVector<const VarDecl *> &Group : LockGroups) {
     if (Group.size() == 1) {
-      if (WarnOnSingleLocks)
+      if (WarnOnSingleLocks &&
+          isLockGuard(
+              Group[0]->getType().getCanonicalType().getUnqualifiedType()))
         diagOnSingleLock(Group[0], Result);
-    } else {
-      diag(Group[0]->getBeginLoc(),
-           "use single 'std::scoped_lock' instead of multiple "
-           "'std::lock_guard'");
+      continue;
+    }
 
-      for (const VarDecl *Lock : llvm::drop_begin(Group))
-        diag(Lock->getLocation(), "additional 'std::lock_guard' declared here",
-             DiagnosticIDs::Note);
+    diag(Group[0]->getBeginLoc(),
+         "use single 'std::scoped_lock' instead of multiple locks");
+
+    for (const VarDecl *Lock : llvm::drop_begin(Group)) {
+      const QualType Type =
+          Lock->getType().getCanonicalType().getUnqualifiedType();
+      diag(Lock->getLocation(),
+           (llvm::Twine("additional 'std::") + getLockClassName(Type) +
+            "' declared here")
+               .str(),
+           DiagnosticIDs::Note);
     }
   }
 }
@@ -276,7 +305,7 @@ void UseScopedLockCheck::diagOnSourceInfo(
   const TypeLoc TL = LockGuardSourceInfo->getTypeLoc();
 
   if (const auto TTL = TL.getAs<TemplateSpecializationTypeLoc>()) {
-    auto Diag = diag(TTL.getBeginLoc(), UseScopedLockMessage);
+    const auto Diag = diag(TTL.getBeginLoc(), UseScopedLockMessage);
 
     const SourceRange LockGuardRange =
         getLockGuardNameRange(LockGuardSourceInfo);

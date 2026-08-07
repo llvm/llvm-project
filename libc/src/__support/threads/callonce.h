@@ -23,14 +23,8 @@
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
-
-// Common definitions
-using CallOnceCallback = void(void);
-namespace callonce_impl {
-int callonce_slowpath(CallOnceFlag *flag, CallOnceCallback *callback);
-} // namespace callonce_impl
-
-LIBC_INLINE int callonce(CallOnceFlag *flag, CallOnceCallback *callback) {
+template <class CallOnceCallback>
+LIBC_INLINE int callonce(CallOnceFlag *flag, CallOnceCallback callback) {
   if (LIBC_LIKELY(callonce_impl::callonce_fastpath(flag)))
     return 0;
 

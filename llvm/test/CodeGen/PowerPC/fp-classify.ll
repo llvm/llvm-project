@@ -88,11 +88,9 @@ define zeroext i1 @abs_isinfornanf(float %x) {
 ; P8-LABEL: abs_isinfornanf:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    xscvdpspn 0, 1
-; P8-NEXT:    lis 4, 32639
-; P8-NEXT:    ori 4, 4, 65535
 ; P8-NEXT:    mffprwz 3, 0
-; P8-NEXT:    clrlwi 3, 3, 1
-; P8-NEXT:    sub 3, 4, 3
+; P8-NEXT:    rlwinm 3, 3, 9, 24, 31
+; P8-NEXT:    subfic 3, 3, 254
 ; P8-NEXT:    rldicl 3, 3, 1, 63
 ; P8-NEXT:    blr
 ;
@@ -113,14 +111,11 @@ define zeroext i1 @abs_isinfornan(double %x) {
 ; P8-LABEL: abs_isinfornan:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mffprd 3, 1
-; P8-NEXT:    li 4, -33
-; P8-NEXT:    rldicl 4, 4, 47, 1
-; P8-NEXT:    sradi 5, 4, 63
-; P8-NEXT:    clrldi 3, 3, 1
-; P8-NEXT:    rldicl 6, 3, 1, 63
-; P8-NEXT:    subc 3, 4, 3
-; P8-NEXT:    adde 3, 6, 5
-; P8-NEXT:    xori 3, 3, 1
+; P8-NEXT:    li 4, 2046
+; P8-NEXT:    rldicl 3, 3, 12, 53
+; P8-NEXT:    subfic 3, 3, 2046
+; P8-NEXT:    subfe 3, 4, 4
+; P8-NEXT:    neg 3, 3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: abs_isinfornan:
@@ -141,16 +136,13 @@ define zeroext i1 @abs_isinfornanq(fp128 %x) {
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    xxswapd 0, 34
 ; P8-NEXT:    addi 3, 1, -16
-; P8-NEXT:    li 4, -3
+; P8-NEXT:    li 4, 32766
 ; P8-NEXT:    stxvd2x 0, 0, 3
-; P8-NEXT:    rldicl 4, 4, 47, 1
-; P8-NEXT:    ld 3, -8(1)
-; P8-NEXT:    sradi 5, 4, 63
-; P8-NEXT:    clrldi 3, 3, 1
-; P8-NEXT:    rldicl 6, 3, 1, 63
-; P8-NEXT:    subc 3, 4, 3
-; P8-NEXT:    adde 3, 6, 5
-; P8-NEXT:    xori 3, 3, 1
+; P8-NEXT:    lhz 3, -2(1)
+; P8-NEXT:    clrldi 3, 3, 49
+; P8-NEXT:    subfic 3, 3, 32766
+; P8-NEXT:    subfe 3, 4, 4
+; P8-NEXT:    neg 3, 3
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: abs_isinfornanq:

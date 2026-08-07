@@ -129,9 +129,15 @@ void HybridMutex::lockSlow() {
             nullptr, nullptr, 0);
     V = atomic_exchange(&M, Sleeping, memory_order_acquire);
   }
+
+  if (SCUDO_DEBUG)
+    assertHeldImpl();
 }
 
 void HybridMutex::unlock() {
+  if (SCUDO_DEBUG)
+    assertHeldImpl();
+
   if (atomic_fetch_sub(&M, 1U, memory_order_release) != Locked) {
     atomic_store(&M, Unlocked, memory_order_release);
     syscall(SYS_futex, reinterpret_cast<uptr>(&M), FUTEX_WAKE_PRIVATE, 1,
@@ -192,6 +198,12 @@ bool getRandom(void *Buffer, uptr Length, UNUSED bool Blocking) {
       syscall(SYS_getrandom, Buffer, Length, Blocking ? 0 : GRND_NONBLOCK);
   if (ReadBytes == static_cast<ssize_t>(Length))
     return true;
+  // If this system call is not implemented in the kernel, then we will try
+  // and use /dev/urandom. Otherwise, if the syscall fails, return false
+  // assuming that trying to read /dev/urandom will cause a delay waiting for
+  // the random data to be usable.
+  if (errno != ENOSYS)
+    return false;
 #endif // defined(SYS_getrandom)
   // Up to 256 bytes, a read off /dev/urandom will not be interrupted.
   // Blocking is moot here, O_NONBLOCK has no effect when opening /dev/urandom.

@@ -7,8 +7,6 @@ double afn_option_test(double x) {
   // CHECK-LABEL:  define{{.*}} double @afn_option_test(double %x) #0 {
 
   // CHECK-AFN:      %{{.*}} = call afn double @{{.*}}exp{{.*}}(double %{{.*}})
-  // CHECK-AFN:      attributes #0 ={{.*}} "approx-func-fp-math"="true" {{.*}}
 
   // CHECK-NO-AFN:   %{{.*}} = call double @{{.*}}exp{{.*}}(double %{{.*}})
-  // CHECK-NO-AFN-NOT:  attributes #0 ={{.*}} "approx-func-fp-math"="true" {{.*}}
 }

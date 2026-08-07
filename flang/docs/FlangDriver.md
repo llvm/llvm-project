@@ -76,7 +76,8 @@ will ignore it when used without `Xflang`.
 As hinted above, `flang` and `flang -fc1` are two separate tools. The
 fact that these tools are accessed through one binary, `flang`, is just an
 implementation detail. Each tool has a separate list of options, albeit defined
-in the same file: `clang/include/clang/Driver/Options.td`.
+in the same files: `clang/include/clang/Options/Options.td` and
+`clang/include/clang/Options/FlangOptions.td`.
 
 The separation helps us split various tasks and allows us to implement more
 specialised tools. In particular, `flang` is not aware of various
@@ -111,9 +112,9 @@ in terms of Clang's driver library, `clangDriver`. This approach allows us to:
 * leverage Clang's ability to drive various backends available in LLVM, as well
   as linkers and assemblers.
 One implication of this dependency on Clang is that all of Flang's compiler
-options are defined alongside Clang's options in
-`clang/include/clang/Driver/Options.td`. For options that are common for both
-Flang and Clang, the corresponding definitions are shared.
+options are defined inside the Clang subproject. Flang-only options are in
+`clang/include/clang/Options/FlangOptions.td`. Options that are common to both
+Flang and Clang are defined in `clang/include/clang/Options/Options.td`.
 
 Internally, a `clangDriver` based compiler driver works by creating actions
 that correspond to various compilation phases, e.g. `PreprocessJobClass`,
@@ -235,6 +236,23 @@ is `ParseSyntaxOnlyAction`, which corresponds to `-fsyntax-only`. In other
 words, `flang -fc1 <input-file>` is equivalent to `flang -fc1 -fsyntax-only
 <input-file>`.
 
+## Dependency File Generation
+Flang can emit Makefile-style dependency rules with `-M`, `-MM`, `-MD` and
+`-MMD` (paired with `-MF`, `-MT` and `-MQ` to control the output file and the
+rule target).
+
+Both `-M`/`-MM` and `-MD`/`-MMD` run through semantic analysis (equivalent to
+`-fsyntax-only`), so `use` statements are resolved and the `.mod` files opened
+during semantic analysis are recorded and appear in the dependency rule.
+
+The one behavioural difference between `-M`/`-MM` and `-MD`/`-MMD` is the
+output destination and whether object code is emitted:
+
+* `-MD` and `-MMD` run a full compilation and emit object code; the dependency
+  file is written alongside the object file.
+* `-M` and `-MM` skip code generation and write the dependency rule to stdout
+  (or to the file named by `-MF` / `-o`).
+
 ## Adding new Compiler Options
 Adding a new compiler option in Flang consists of two steps:
 * define the new option in a dedicated TableGen file,
@@ -242,12 +260,15 @@ Adding a new compiler option in Flang consists of two steps:
 
 ### Option Definition
 All of Flang's compiler and frontend driver options are defined in
-`clang/include/clang/Driver/Options.td` in Clang. When adding a new option to
-Flang, you will either:
+`clang/include/clang/Options/FlangOptions.td` and `clang/include/clang/Options/Options.td`.
+When adding a new option to Flang, you will do one of the following:
   * extend the existing definition for an option that is already available
-    in one of Clang's drivers (e.g.  `clang`), but not yet available in Flang, or
+    in one of Clang's drivers (e.g.  `clang`), but not yet available in Flang. These
+    options will be in `clang/Options/Options.td`.
   * add a completely new definition if the option that you are adding has not
-    been defined yet.
+    been defined yet. These must be added to `clang/Options/FlangOptions.td` unless
+    they are intended to be shared with Clang, in which case they should be added
+    to `clang/Options/Options.td`.
 
 There are many predefined TableGen classes and records that you can use to fine
 tune your new option. The list of available configurations can be overwhelming
@@ -314,7 +335,7 @@ add, you will have to add a dedicated entry in that enum (e.g.
 `ParseSyntaxOnly` for `-fsyntax-only`) and a corresponding `case` in
 `ParseFrontendArgs` function in the `CompilerInvocation.cpp` file, e.g.:
 ```cpp
-    case clang::driver::options::OPT_fsyntax_only:
+    case clang::options::OPT_fsyntax_only:
       opts.programAction = ParseSyntaxOnly;
       break;
 ```
@@ -360,10 +381,8 @@ be exactly what you want to test.  In fact, you can check these additional
 flags by using the `-###` compiler driver command line option.
 
 Lastly, you can use `! REQUIRES: <feature>` for tests that will only work when
-`<feature>` is available. For example, you can use`! REQUIRES: shell` to mark a
-test as only available on Unix-like systems (i.e. systems that contain a Unix
-shell). In practice this means that the corresponding test is skipped on
-Windows.
+`<feature>` is available. For example, you can use`! REQUIRES: system-linux` to
+mark a test as only available on Linux systems.
 
 ## Frontend Driver Plugins
 Plugins are an extension to the frontend driver that make it possible to run
@@ -461,9 +480,9 @@ static FrontendPluginRegistry::Add<PrintFunctionNamesAction> X(
 ### Loading and Running a Plugin
 In order to use plugins, there are 2 command line options made available to the
 frontend driver, `flang -fc1`:
-* [`-load <dsopath>`](#the--load-dsopath-option) for loading the dynamic shared
+* [`-load <dsopath>`](#the-load-dsopath-option) for loading the dynamic shared
   object of the plugin
-* [`-plugin <name>`](#the--plugin-name-option) for calling the registered plugin
+* [`-plugin <name>`](#the-plugin-name-option) for calling the registered plugin
 
 Invocation of the example plugin is done through:
 ```bash
@@ -523,6 +542,27 @@ passes at different points of the default pass pipeline. An example use of these
 extension point callbacks is shown in `registerDefaultInlinerPass` to invoke the
 default inliner pass in `flang`.
 
+These extension points all run after HLFIR has been lowered to FIR, so the HLFIR
+intrinsic operations (`hlfir.sum`, `hlfir.matmul`, ...) are already gone. For
+transformations that need to see them, `createHLFIRToFIRPassPipeline` provides
+two more extension points:
+
+* `invokeHLFIROptEarlyEPCallbacks` runs at the start of the pipeline, before any
+  HLFIR simplification or inlining.
+* `invokeHLFIROptLastEPCallbacks` runs just before `createLowerHLFIRIntrinsics`,
+  the last point at which HLFIR intrinsic operations still exist.
+
+Drivers register passes with `registerHLFIROptEarlyEPCallbacks` and
+`registerHLFIROptLastEPCallbacks` on the `MLIRToLLVMPassPipelineConfig` (defined
+in `flang/include/flang/Tools/CrossToolHelpers.h`), for example:
+
+```c++
+config.registerHLFIROptEarlyEPCallbacks(
+    [](mlir::PassManager &pm, llvm::OptimizationLevel) {
+      pm.addPass(createMyHLFIRPass());
+    });
+```
+
 ## LLVM Pass Plugins
 
 Pass plugins are dynamic shared objects that consist of one or more LLVM IR
@@ -561,7 +601,7 @@ See the
 documentation for more details.
 
 ## Ofast and Fast Math
-`-Ofast` in Flang means `-O3 -ffast-math -fstack-arrays`.
+`-Ofast` in Flang means `-O3 -ffast-math -fstack-arrays -fno-protect-parens`.
 
 `-ffast-math` means the following:
  - `-fno-honor-infinities`
@@ -574,6 +614,9 @@ documentation for more details.
 
 These correspond to LLVM IR Fast Math attributes:
 https://llvm.org/docs/LangRef.html#fast-math-flags
+
+In addition to the above, `-ffast-math` also enables
+`-fcomplex-arithmetic=basic`.
 
 When `-ffast-math` is specified, any linker steps generated by the compiler
 driver will also link to `crtfastmath.o`, which adds a static constructor

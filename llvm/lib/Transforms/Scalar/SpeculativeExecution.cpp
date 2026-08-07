@@ -149,8 +149,6 @@ bool SpeculativeExecutionLegacyPass::runOnFunction(Function &F) {
   return Impl.runImpl(F, TTI);
 }
 
-namespace llvm {
-
 bool SpeculativeExecutionPass::runImpl(Function &F, TargetTransformInfo *TTI) {
   if (OnlyIfDivergentTarget && !TTI->hasBranchDivergence(&F)) {
     LLVM_DEBUG(dbgs() << "Not running SpeculativeExecution because "
@@ -167,12 +165,10 @@ bool SpeculativeExecutionPass::runImpl(Function &F, TargetTransformInfo *TTI) {
 }
 
 bool SpeculativeExecutionPass::runOnBasicBlock(BasicBlock &B) {
-  BranchInst *BI = dyn_cast<BranchInst>(B.getTerminator());
-  if (BI == nullptr)
+  CondBrInst *BI = dyn_cast<CondBrInst>(B.getTerminator());
+  if (!BI)
     return false;
 
-  if (BI->getNumSuccessors() != 2)
-    return false;
   BasicBlock &Succ0 = *BI->getSuccessor(0);
   BasicBlock &Succ1 = *BI->getSuccessor(1);
 
@@ -229,6 +225,7 @@ static InstructionCost ComputeSpeculationCost(const Instruction *I,
     case Instruction::Call:
     case Instruction::BitCast:
     case Instruction::PtrToInt:
+    case Instruction::PtrToAddr:
     case Instruction::IntToPtr:
     case Instruction::AddrSpaceCast:
     case Instruction::FPToUI:
@@ -328,11 +325,11 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
   return true;
 }
 
-FunctionPass *createSpeculativeExecutionPass() {
+FunctionPass *llvm::createSpeculativeExecutionPass() {
   return new SpeculativeExecutionLegacyPass();
 }
 
-FunctionPass *createSpeculativeExecutionIfHasBranchDivergencePass() {
+FunctionPass *llvm::createSpeculativeExecutionIfHasBranchDivergencePass() {
   return new SpeculativeExecutionLegacyPass(/* OnlyIfDivergentTarget = */ true);
 }
 
@@ -362,4 +359,3 @@ void SpeculativeExecutionPass::printPipeline(
     OS << "only-if-divergent-target";
   OS << '>';
 }
-}  // namespace llvm

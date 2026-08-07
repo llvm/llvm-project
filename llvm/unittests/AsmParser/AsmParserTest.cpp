@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/AsmParser/AsmParserContext.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/AsmParser/SlotMapping.h"
 #include "llvm/IR/Constants.h"
@@ -14,9 +16,13 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
+
+#define DEBUG_TYPE "unittest-asm-parser-tests"
 
 using namespace llvm;
 
@@ -82,6 +88,52 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   ASSERT_TRUE(isa<ConstantFP>(V));
   EXPECT_TRUE(cast<ConstantFP>(V)->isExactlyValue(3.5));
 
+  V = parseConstantValue("double 0x13.5p-52", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isDoubleTy());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  EXPECT_TRUE(cast<ConstantFP>(V)->isExactlyValue(0x13.5p-52));
+
+  V = parseConstantValue("fp128 1.0e-4932", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isFP128Ty());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  EXPECT_TRUE(cast<ConstantFP>(V)->getValue().isDenormal());
+
+  V = parseConstantValue("fp128 1.1897314953572317650857593266280070162e4932",
+                         Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isFP128Ty());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  EXPECT_TRUE(cast<ConstantFP>(V)->isExactlyValue(
+      APFloat::getLargest(APFloat::IEEEquad())));
+
+  V = parseConstantValue("float f0xabcdef01", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isFloatTy());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  EXPECT_TRUE(cast<ConstantFP>(V)->isExactlyValue(-0x1.9bde02p-40));
+
+  V = parseConstantValue("fp128 f0x80000000000000000000000000000000", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isFP128Ty());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  EXPECT_TRUE(cast<ConstantFP>(V)->getValue().isNegZero());
+
+  V = parseConstantValue("fp128 -inf", Error, M);
+  ASSERT_TRUE(V);
+  EXPECT_TRUE(V->getType()->isFP128Ty());
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  EXPECT_TRUE(cast<ConstantFP>(V)->getValue().isNegInfinity());
+
+  const fltSemantics &Float = APFloatBase::IEEEsingle();
+  V = parseConstantValue("float +nan(0x1)", Error, M);
+  ASSERT_TRUE(V);
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  EXPECT_TRUE(
+      cast<ConstantFP>(V)->isExactlyValue(APFloat::getNaN(Float, false, 1)));
+  EXPECT_TRUE(!cast<ConstantFP>(V)->getValue().isSignaling());
+
   V = parseConstantValue("i32 42", Error, M);
   ASSERT_TRUE(V);
   EXPECT_TRUE(V->getType()->isIntegerTy());
@@ -129,13 +181,46 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   EXPECT_EQ(Error.getMessage(), "expected type");
 
   EXPECT_FALSE(parseConstantValue("i32 3.25", Error, M));
-  EXPECT_EQ(Error.getMessage(), "floating point constant invalid for type");
+  EXPECT_EQ(Error.getMessage(), "floating-point constant invalid for type");
 
   EXPECT_FALSE(parseConstantValue("ptr @foo", Error, M));
   EXPECT_EQ(Error.getMessage(), "expected a constant value");
 
   EXPECT_FALSE(parseConstantValue("i32 3, ", Error, M));
   EXPECT_EQ(Error.getMessage(), "expected end of string");
+
+  EXPECT_FALSE(parseConstantValue("double 1.0e999999999", Error, M));
+  EXPECT_EQ(Error.getMessage(), "floating-point constant overflowed type");
+
+  EXPECT_FALSE(parseConstantValue("double 1.0e-999999999", Error, M));
+  EXPECT_EQ(Error.getMessage(), "floating-point constant underflowed type");
+
+  EXPECT_FALSE(parseConstantValue("double 0x.25p-5", Error, M));
+  EXPECT_EQ(Error.getMessage(), "expected value token");
+
+  EXPECT_FALSE(parseConstantValue("double f0x0", Error, M));
+  EXPECT_EQ(Error.getMessage(),
+            "float hex literal has incorrect number of bits");
+
+  EXPECT_FALSE(parseConstantValue("double f0x0123456789abcdef0", Error, M));
+  EXPECT_EQ(Error.getMessage(),
+            "float hex literal has incorrect number of bits");
+
+  EXPECT_FALSE(parseConstantValue("float 0x3FBCC2794DBD00E1", Error, M));
+  EXPECT_EQ(Error.getMessage(), "floating point constant invalid for type");
+
+  EXPECT_FALSE(parseConstantValue("x86_fp80 0x3FBCC2794DBD00E1", Error, M));
+  EXPECT_EQ(Error.getMessage(),
+            "floating point constant does not have type 'x86_fp80'");
+
+  EXPECT_FALSE(parseConstantValue("float +nan(0x1", Error, M));
+  EXPECT_EQ(Error.getMessage(), "unclosed nan literal");
+
+  EXPECT_FALSE(parseConstantValue("float +nan(payload)", Error, M));
+  EXPECT_EQ(Error.getMessage(), "bad payload format for nan literal");
+
+  EXPECT_FALSE(parseConstantValue("float 0xz", Error, M));
+  EXPECT_EQ(Error.getMessage(), "expected value token");
 }
 
 TEST(AsmParserTest, TypeAndConstantValueWithSlotMappingParsing) {
@@ -477,6 +562,80 @@ TEST(AsmParserTest, DIExpressionBodyAtBeginningWithSlotMappingParsing) {
   ASSERT_EQ(Error.getMessage(), "expected '(' here");
 
   ASSERT_EQ(Mapping.MetadataNodes.size(), 0u);
+}
+
+#define ASSERT_EQ_LOC(Loc1, Loc2)                                              \
+  do {                                                                         \
+    EXPECT_TRUE(Loc1.contains(Loc2) && Loc2.contains(Loc1))                    \
+        << #Loc1 " location: " << Loc1.Start.Line << ":" << Loc1.Start.Col     \
+        << " - " << Loc1.End.Line << ":" << Loc1.End.Col << "\n"               \
+        << #Loc2 " location: " << Loc2.Start.Line << ":" << Loc2.Start.Col     \
+        << " - " << Loc2.End.Line << ":" << Loc2.End.Col << "\n";              \
+  } while (false)
+
+TEST(AsmParserTest, ParserObjectLocations) {
+  StringRef Source = "define i32 @main(i32 %arg, i64) {\n"
+                     "entry:\n"
+                     "    %a = add i32 1, %arg\n"
+                     "    ret i32 %a\n"
+                     "}\n";
+  LLVMContext Ctx;
+  SMDiagnostic Error;
+  SlotMapping Mapping;
+  AsmParserContext ParserContext;
+  auto Mod = parseAssemblyString(Source, Error, Ctx, &Mapping, &ParserContext);
+
+  auto *MainFn = Mod->getFunction("main");
+  ASSERT_TRUE(MainFn != nullptr);
+
+  auto MaybeMainLoc = ParserContext.getFunctionLocation(MainFn);
+  EXPECT_TRUE(MaybeMainLoc.has_value());
+  auto MainLoc = MaybeMainLoc.value();
+  auto ExpectedMainLoc = FileLocRange(FileLoc{0, 0}, FileLoc{4, 1});
+  ASSERT_EQ_LOC(MainLoc, ExpectedMainLoc);
+  ASSERT_EQ(ParserContext.getFunctionAtLocation(MainLoc.Start),
+            ParserContext.getFunctionAtLocation(MainLoc));
+
+  auto &EntryBB = MainFn->getEntryBlock();
+  auto MaybeEntryBBLoc = ParserContext.getBlockLocation(&EntryBB);
+  ASSERT_TRUE(MaybeEntryBBLoc.has_value());
+  auto EntryBBLoc = MaybeEntryBBLoc.value();
+  auto ExpectedEntryBBLoc = FileLocRange(FileLoc{1, 0}, FileLoc{3, 14});
+  ASSERT_EQ_LOC(EntryBBLoc, ExpectedEntryBBLoc);
+  ASSERT_EQ(ParserContext.getBlockAtLocation(MaybeEntryBBLoc->Start),
+            ParserContext.getBlockAtLocation(*MaybeEntryBBLoc));
+
+  SmallVector<FileLocRange> InstructionLocations = {
+      FileLocRange(FileLoc{2, 4}, FileLoc{2, 24}),
+      FileLocRange(FileLoc{3, 4}, FileLoc{3, 14})};
+
+  for (const auto &[Inst, ExpectedLoc] : zip(EntryBB, InstructionLocations)) {
+    auto MaybeInstLoc = ParserContext.getInstructionOrArgumentLocation(&Inst);
+    ASSERT_TRUE(MaybeMainLoc.has_value());
+    auto InstLoc = MaybeInstLoc.value();
+    ASSERT_EQ_LOC(InstLoc, ExpectedLoc);
+    ASSERT_EQ(
+        ParserContext.getInstructionOrArgumentAtLocation(MaybeInstLoc->Start),
+        ParserContext.getInstructionOrArgumentAtLocation(*MaybeInstLoc));
+  }
+
+  SmallVector<std::optional<FileLocRange>> FunctionArgumentLocations = {
+      FileLocRange(FileLoc{0, 21}, FileLoc{0, 25}), std::nullopt};
+  for (const auto &[Arg, ExpectedLoc] :
+       zip(MainFn->args(), FunctionArgumentLocations)) {
+    auto MaybeArgLoc = ParserContext.getInstructionOrArgumentLocation(&Arg);
+    ASSERT_EQ(MaybeArgLoc.has_value(), ExpectedLoc.has_value());
+    if (!ExpectedLoc.has_value())
+      continue;
+    auto ArgLoc = MaybeArgLoc.value();
+    ASSERT_EQ_LOC(ArgLoc, ExpectedLoc.value());
+    ASSERT_EQ(ParserContext.getInstructionOrArgumentAtLocation(ArgLoc.Start),
+              ParserContext.getInstructionOrArgumentAtLocation(ArgLoc));
+  }
+  ASSERT_EQ(&*MainFn->arg_begin(),
+            ParserContext.getValueReferencedAtLocation(FileLoc(2, 22)));
+  ASSERT_EQ(&*EntryBB.begin(),
+            ParserContext.getValueReferencedAtLocation(FileLoc(3, 13)));
 }
 
 } // end anonymous namespace

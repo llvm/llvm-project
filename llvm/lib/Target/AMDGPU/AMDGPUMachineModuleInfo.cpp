@@ -14,23 +14,32 @@
 
 #include "AMDGPUMachineModuleInfo.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/AtomicScope.h"
 
 using namespace llvm;
 
 AMDGPUMachineModuleInfo::AMDGPUMachineModuleInfo(const MachineModuleInfo &MMI)
     : MachineModuleInfoELF(MMI) {
   LLVMContext &CTX = MMI.getModule()->getContext();
-  AgentSSID = CTX.getOrInsertSyncScopeID("agent");
-  WorkgroupSSID = CTX.getOrInsertSyncScopeID("workgroup");
-  WavefrontSSID = CTX.getOrInsertSyncScopeID("wavefront");
-  SystemOneAddressSpaceSSID =
-      CTX.getOrInsertSyncScopeID("one-as");
-  AgentOneAddressSpaceSSID =
-      CTX.getOrInsertSyncScopeID("agent-one-as");
+  const Triple &TT = MMI.getTarget().getTargetTriple();
+
+  auto InsertScope = [&](AtomicScope Scope, bool OneAS) {
+    return CTX.getOrInsertSyncScopeID(
+        *getAtomicScopeIRString(TT, Scope, OneAS));
+  };
+  AgentSSID = InsertScope(AtomicScope::Device, /*OneAS=*/false);
+  WorkgroupSSID = InsertScope(AtomicScope::Workgroup, /*OneAS=*/false);
+  WavefrontSSID = InsertScope(AtomicScope::Wavefront, /*OneAS=*/false);
+  ClusterSSID = InsertScope(AtomicScope::Cluster, /*OneAS=*/false);
+  SystemOneAddressSpaceSSID = InsertScope(AtomicScope::System, /*OneAS=*/true);
+  AgentOneAddressSpaceSSID = InsertScope(AtomicScope::Device, /*OneAS=*/true);
   WorkgroupOneAddressSpaceSSID =
-      CTX.getOrInsertSyncScopeID("workgroup-one-as");
+      InsertScope(AtomicScope::Workgroup, /*OneAS=*/true);
   WavefrontOneAddressSpaceSSID =
-      CTX.getOrInsertSyncScopeID("wavefront-one-as");
+      InsertScope(AtomicScope::Wavefront, /*OneAS=*/true);
   SingleThreadOneAddressSpaceSSID =
-      CTX.getOrInsertSyncScopeID("singlethread-one-as");
+      InsertScope(AtomicScope::Single, /*OneAS=*/true);
+  ClusterOneAddressSpaceSSID =
+      InsertScope(AtomicScope::Cluster, /*OneAS=*/true);
 }

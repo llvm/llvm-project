@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %libomp-compile && env OMP_PLACES=cores %libomp-run | FileCheck %s
 // REQUIRES: ompt, linux
+// clang-format on
 #include "callback.h"
 #include <omp.h>
 #define __USE_GNU
@@ -58,6 +60,7 @@ int main() {
            ompt_get_thread_data()->value, ompt_get_num_procs());
   }
 
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
 
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
@@ -83,6 +86,7 @@ int main() {
 
   // CHECK: {{^}}[[MASTER_ID]]: omp_get_num_procs()=[[NUM_PROCS:[-]?[0-9]+]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_get_num_procs()=[[NUM_PROCS]]
+  // clang-format on
 
   return 0;
 }

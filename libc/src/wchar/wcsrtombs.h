@@ -17,7 +17,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 size_t wcsrtombs(char *__restrict s, const wchar_t **__restrict pwcs, size_t n,
-                 mbstate_t *ps);
+                 mbstate_t *__restrict ps);
 
 } // namespace LIBC_NAMESPACE_DECL
 

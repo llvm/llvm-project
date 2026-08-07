@@ -23,7 +23,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
-#include <utility>
 
 using namespace llvm;
 

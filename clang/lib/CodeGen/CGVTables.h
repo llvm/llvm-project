@@ -122,6 +122,10 @@ public:
                          llvm::GlobalVariable::LinkageTypes Linkage,
                          const CXXRecordDecl *RD);
 
+  /// GetAddrOfVTable - Get the address of the VTable for the given record
+  /// decl.
+  llvm::GlobalVariable *GetAddrOfVTable(const CXXRecordDecl *RD);
+
   /// EmitThunks - Emit the associated thunks for the given global decl.
   void EmitThunks(GlobalDecl GD);
 
@@ -150,9 +154,6 @@ public:
 
   /// Return the type used as components for a vtable.
   llvm::Type *getVTableComponentType() const;
-
-  /// Return true if the relative vtable layout is used.
-  bool useRelativeLayout() const;
 };
 
 } // end namespace CodeGen

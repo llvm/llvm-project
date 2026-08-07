@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class StdUnorderedMapDataFormatterTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def check_ptr_or_ref(self, var_name: str):
         var = self.frame().FindVariable(var_name)
         self.assertTrue(var)
@@ -113,7 +115,6 @@ class StdUnorderedMapDataFormatterTestCase(TestBase):
         Test that pointers to std::unordered_map are formatted correctly.
         """
 
-        self.build()
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Stop here", lldb.SBFileSpec("main.cpp", False)
         )
@@ -125,11 +126,6 @@ class StdUnorderedMapDataFormatterTestCase(TestBase):
         self.check_ptr_ptr("ptr5")
         self.check_ptr_ptr("ptr6")
 
-    @expectedFailureAll(
-        bugnumber="https://github.com/llvm/llvm-project/issues/146040",
-        compiler="clang",
-        compiler_version=["<", "21"],
-    )
     @add_test_categories(["libc++"])
     def test_ptr_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})

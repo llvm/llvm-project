@@ -20,7 +20,6 @@ define <4 x i8> @test_ret_const() #0 {
 ; CHECK-LABEL: test_ret_const(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], -66911489;
 ; CHECK-NEXT:    ret;
@@ -891,31 +890,27 @@ define <4 x i8> @test_or_computed(i8 %a) {
 ; O0-LABEL: test_or_computed(
 ; O0:       {
 ; O0-NEXT:    .reg .b16 %rs<2>;
-; O0-NEXT:    .reg .b32 %r<8>;
+; O0-NEXT:    .reg .b32 %r<6>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b8 %rs1, [test_or_computed_param_0];
 ; O0-NEXT:    mov.b32 %r1, 0;
 ; O0-NEXT:    prmt.b32 %r2, %r1, 0, 0x3340U;
 ; O0-NEXT:    cvt.u32.u16 %r3, %rs1;
-; O0-NEXT:    prmt.b32 %r4, %r3, 0, 0x3340U;
+; O0-NEXT:    prmt.b32 %r4, %r3, 5, 0x3340U;
 ; O0-NEXT:    prmt.b32 %r5, %r4, %r2, 0x5410U;
-; O0-NEXT:    bfi.b32 %r6, 5, %r5, 8, 8;
-; O0-NEXT:    or.b32 %r7, %r6, %r5;
-; O0-NEXT:    st.param.b32 [func_retval0], %r7;
+; O0-NEXT:    st.param.b32 [func_retval0], %r5;
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_or_computed(
 ; O3:       {
-; O3-NEXT:    .reg .b32 %r<6>;
+; O3-NEXT:    .reg .b32 %r<4>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b8 %r1, [test_or_computed_param_0];
-; O3-NEXT:    prmt.b32 %r2, %r1, 0, 0x3340U;
+; O3-NEXT:    prmt.b32 %r2, %r1, 5, 0x3340U;
 ; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x5410U;
-; O3-NEXT:    bfi.b32 %r4, 5, %r3, 8, 8;
-; O3-NEXT:    or.b32 %r5, %r4, %r3;
-; O3-NEXT:    st.param.b32 [func_retval0], %r5;
+; O3-NEXT:    st.param.b32 [func_retval0], %r3;
 ; O3-NEXT:    ret;
   %ins.0 = insertelement <4 x i8> zeroinitializer, i8 %a, i32 0
   %ins.1 = insertelement <4 x i8> %ins.0, i8 5, i32 1
@@ -981,7 +976,7 @@ define <4 x i8> @test_xor_computed(i8 %a) {
 ; O0-LABEL: test_xor_computed(
 ; O0:       {
 ; O0-NEXT:    .reg .b16 %rs<2>;
-; O0-NEXT:    .reg .b32 %r<8>;
+; O0-NEXT:    .reg .b32 %r<9>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b8 %rs1, [test_xor_computed_param_0];
@@ -990,22 +985,24 @@ define <4 x i8> @test_xor_computed(i8 %a) {
 ; O0-NEXT:    cvt.u32.u16 %r3, %rs1;
 ; O0-NEXT:    prmt.b32 %r4, %r3, 0, 0x3340U;
 ; O0-NEXT:    prmt.b32 %r5, %r4, %r2, 0x5410U;
-; O0-NEXT:    bfi.b32 %r6, 5, %r5, 8, 8;
-; O0-NEXT:    xor.b32 %r7, %r6, %r5;
-; O0-NEXT:    st.param.b32 [func_retval0], %r7;
+; O0-NEXT:    prmt.b32 %r6, %r3, 5, 0x3340U;
+; O0-NEXT:    prmt.b32 %r7, %r6, %r2, 0x5410U;
+; O0-NEXT:    xor.b32 %r8, %r7, %r5;
+; O0-NEXT:    st.param.b32 [func_retval0], %r8;
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_xor_computed(
 ; O3:       {
-; O3-NEXT:    .reg .b32 %r<6>;
+; O3-NEXT:    .reg .b32 %r<7>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b8 %r1, [test_xor_computed_param_0];
 ; O3-NEXT:    prmt.b32 %r2, %r1, 0, 0x3340U;
 ; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x5410U;
-; O3-NEXT:    bfi.b32 %r4, 5, %r3, 8, 8;
-; O3-NEXT:    xor.b32 %r5, %r4, %r3;
-; O3-NEXT:    st.param.b32 [func_retval0], %r5;
+; O3-NEXT:    prmt.b32 %r4, %r1, 5, 0x3340U;
+; O3-NEXT:    prmt.b32 %r5, %r4, 0, 0x5410U;
+; O3-NEXT:    xor.b32 %r6, %r5, %r3;
+; O3-NEXT:    st.param.b32 [func_retval0], %r6;
 ; O3-NEXT:    ret;
   %ins.0 = insertelement <4 x i8> zeroinitializer, i8 %a, i32 0
   %ins.1 = insertelement <4 x i8> %ins.0, i8 5, i32 1
@@ -1071,7 +1068,7 @@ define <4 x i8> @test_and_computed(i8 %a) {
 ; O0-LABEL: test_and_computed(
 ; O0:       {
 ; O0-NEXT:    .reg .b16 %rs<2>;
-; O0-NEXT:    .reg .b32 %r<8>;
+; O0-NEXT:    .reg .b32 %r<6>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b8 %rs1, [test_and_computed_param_0];
@@ -1080,22 +1077,18 @@ define <4 x i8> @test_and_computed(i8 %a) {
 ; O0-NEXT:    cvt.u32.u16 %r3, %rs1;
 ; O0-NEXT:    prmt.b32 %r4, %r3, 0, 0x3340U;
 ; O0-NEXT:    prmt.b32 %r5, %r4, %r2, 0x5410U;
-; O0-NEXT:    bfi.b32 %r6, 5, %r5, 8, 8;
-; O0-NEXT:    and.b32 %r7, %r6, %r5;
-; O0-NEXT:    st.param.b32 [func_retval0], %r7;
+; O0-NEXT:    st.param.b32 [func_retval0], %r5;
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_and_computed(
 ; O3:       {
-; O3-NEXT:    .reg .b32 %r<6>;
+; O3-NEXT:    .reg .b32 %r<4>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b8 %r1, [test_and_computed_param_0];
 ; O3-NEXT:    prmt.b32 %r2, %r1, 0, 0x3340U;
 ; O3-NEXT:    prmt.b32 %r3, %r2, 0, 0x5410U;
-; O3-NEXT:    bfi.b32 %r4, 5, %r3, 8, 8;
-; O3-NEXT:    and.b32 %r5, %r4, %r3;
-; O3-NEXT:    st.param.b32 [func_retval0], %r5;
+; O3-NEXT:    st.param.b32 [func_retval0], %r3;
 ; O3-NEXT:    ret;
   %ins.0 = insertelement <4 x i8> zeroinitializer, i8 %a, i32 0
   %ins.1 = insertelement <4 x i8> %ins.0, i8 5, i32 1
@@ -1298,7 +1291,7 @@ declare <4 x i8> @test_callee(<4 x i8> %a, <4 x i8> %b) #0
 define <4 x i8> @test_call(<4 x i8> %a, <4 x i8> %b) #0 {
 ; O0-LABEL: test_call(
 ; O0:       {
-; O0-NEXT:    .reg .b32 %r<5>;
+; O0-NEXT:    .reg .b32 %r<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b32 %r2, [test_call_param_1];
@@ -1317,7 +1310,7 @@ define <4 x i8> @test_call(<4 x i8> %a, <4 x i8> %b) #0 {
 ;
 ; O3-LABEL: test_call(
 ; O3:       {
-; O3-NEXT:    .reg .b32 %r<5>;
+; O3-NEXT:    .reg .b32 %r<4>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b32 %r1, [test_call_param_0];
@@ -1340,7 +1333,7 @@ define <4 x i8> @test_call(<4 x i8> %a, <4 x i8> %b) #0 {
 define <4 x i8> @test_call_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ; O0-LABEL: test_call_flipped(
 ; O0:       {
-; O0-NEXT:    .reg .b32 %r<5>;
+; O0-NEXT:    .reg .b32 %r<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b32 %r2, [test_call_flipped_param_1];
@@ -1359,7 +1352,7 @@ define <4 x i8> @test_call_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ;
 ; O3-LABEL: test_call_flipped(
 ; O3:       {
-; O3-NEXT:    .reg .b32 %r<5>;
+; O3-NEXT:    .reg .b32 %r<4>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b32 %r1, [test_call_flipped_param_0];
@@ -1382,7 +1375,7 @@ define <4 x i8> @test_call_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 define <4 x i8> @test_tailcall_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ; O0-LABEL: test_tailcall_flipped(
 ; O0:       {
-; O0-NEXT:    .reg .b32 %r<5>;
+; O0-NEXT:    .reg .b32 %r<4>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b32 %r2, [test_tailcall_flipped_param_1];
@@ -1401,7 +1394,7 @@ define <4 x i8> @test_tailcall_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ;
 ; O3-LABEL: test_tailcall_flipped(
 ; O3:       {
-; O3-NEXT:    .reg .b32 %r<5>;
+; O3-NEXT:    .reg .b32 %r<4>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b32 %r1, [test_tailcall_flipped_param_0];
@@ -1442,16 +1435,18 @@ define <4 x i8> @test_select(<4 x i8> %a, <4 x i8> %b, i1 zeroext %c) #0 {
 ; O3:       {
 ; O3-NEXT:    .reg .pred %p<2>;
 ; O3-NEXT:    .reg .b16 %rs<3>;
-; O3-NEXT:    .reg .b32 %r<4>;
+; O3-NEXT:    .reg .b32 %r<2>;
+; O3-NEXT:    .reg .b64 %rd<4>;
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b8 %rs1, [test_select_param_2];
 ; O3-NEXT:    and.b16 %rs2, %rs1, 1;
 ; O3-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; O3-NEXT:    ld.param.b32 %r1, [test_select_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_select_param_1];
-; O3-NEXT:    selp.b32 %r3, %r1, %r2, %p1;
-; O3-NEXT:    st.param.b32 [func_retval0], %r3;
+; O3-NEXT:    mov.b64 %rd1, test_select_param_1;
+; O3-NEXT:    mov.b64 %rd2, test_select_param_0;
+; O3-NEXT:    selp.b64 %rd3, %rd2, %rd1, %p1;
+; O3-NEXT:    ld.param.b32 %r1, [%rd3];
+; O3-NEXT:    st.param.b32 [func_retval0], %r1;
 ; O3-NEXT:    ret;
   %r = select i1 %c, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %r

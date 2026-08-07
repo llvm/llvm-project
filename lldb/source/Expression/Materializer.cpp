@@ -76,10 +76,11 @@ public:
 
     const bool zero_memory = false;
     IRMemoryMap::AllocationPolicy used_policy;
-    auto address_or_error = map.Malloc(
+    const uint64_t malloc_size =
         llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
-            .value_or(0),
-        8, lldb::ePermissionsReadable | lldb::ePermissionsWritable,
+            .value_or(0);
+    auto address_or_error = map.Malloc(
+        malloc_size, 8, lldb::ePermissionsReadable | lldb::ePermissionsWritable,
         IRMemoryMap::eAllocationPolicyMirror, zero_memory, &used_policy);
     if (!address_or_error) {
       err = Status::FromErrorStringWithFormat(
@@ -90,8 +91,9 @@ public:
     }
     lldb::addr_t mem = *address_or_error;
 
-    LLDB_LOGF(log, "Allocated %s (0x%" PRIx64 ") successfully",
-              m_persistent_variable_sp->GetName().GetCString(), mem);
+    LLDB_LOGF(
+        log, "Allocated 0x%" PRIx64 "bytes for %s (0x%" PRIx64 ") successfully",
+        malloc_size, m_persistent_variable_sp->GetName().GetCString(), mem);
 
     // Put the location of the spare memory into the live data of the
     // ValueObject.
@@ -132,10 +134,9 @@ public:
         write_error);
 
     if (!write_error.Success()) {
-      err = Status::FromErrorStringWithFormat(
-          "couldn't write %s to the target: %s",
-          m_persistent_variable_sp->GetName().AsCString(),
-          write_error.AsCString());
+      err = Status::FromErrorStringWithFormatv(
+          "couldn't write {0} to the target: {1}",
+          m_persistent_variable_sp->GetName(), write_error.AsCString());
       return;
     }
   }
@@ -143,12 +144,12 @@ public:
   void DestroyAllocation(IRMemoryMap &map, Status &err) {
     Status deallocate_error;
 
-    map.Free((lldb::addr_t)m_persistent_variable_sp->m_live_sp->GetValue()
-                 .GetScalar()
-                 .ULongLong(),
+    lldb::ValueObjectSP live_valobj_sp =
+        m_persistent_variable_sp->GetLiveObject();
+    map.Free((lldb::addr_t)live_valobj_sp->GetValue().GetScalar().ULongLong(),
              deallocate_error);
 
-    m_persistent_variable_sp->m_live_sp.reset();
+    live_valobj_sp.reset();
 
     if (!deallocate_error.Success()) {
       err = Status::FromErrorStringWithFormat(
@@ -164,14 +165,11 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    if (log) {
-      LLDB_LOGF(log,
-                "EntityPersistentVariable::Materialize [address = 0x%" PRIx64
-                ", m_name = %s, m_flags = 0x%hx]",
-                (uint64_t)load_addr,
-                m_persistent_variable_sp->GetName().AsCString(),
-                m_persistent_variable_sp->m_flags);
-    }
+    LLDB_LOG(log,
+             "EntityPersistentVariable::Materialize [address = {0:x}, m_name = "
+             "{1}, m_flags = {2:x}]",
+             (uint64_t)load_addr, m_persistent_variable_sp->GetName(),
+             m_persistent_variable_sp->m_flags);
 
     if (m_persistent_variable_sp->m_flags &
         ExpressionVariable::EVNeedsAllocation) {
@@ -183,28 +181,27 @@ public:
         return;
     }
 
+    lldb::ValueObjectSP live_valobj_sp =
+        m_persistent_variable_sp->GetLiveObject();
     if ((m_persistent_variable_sp->m_flags &
              ExpressionVariable::EVIsProgramReference &&
-         m_persistent_variable_sp->m_live_sp) ||
+         live_valobj_sp) ||
         m_persistent_variable_sp->m_flags &
             ExpressionVariable::EVIsLLDBAllocated) {
       Status write_error;
 
-      map.WriteScalarToMemory(
-          load_addr,
-          m_persistent_variable_sp->m_live_sp->GetValue().GetScalar(),
-          map.GetAddressByteSize(), write_error);
+      map.WriteScalarToMemory(load_addr, live_valobj_sp->GetValue().GetScalar(),
+                              map.GetAddressByteSize(), write_error);
 
       if (!write_error.Success()) {
-        err = Status::FromErrorStringWithFormat(
-            "couldn't write the location of %s to memory: %s",
-            m_persistent_variable_sp->GetName().AsCString(),
-            write_error.AsCString());
+        err = Status::FromErrorStringWithFormatv(
+            "couldn't write the location of {0} to memory: {1}",
+            m_persistent_variable_sp->GetName(), write_error.AsCString());
       }
     } else {
-      err = Status::FromErrorStringWithFormat(
-          "no materialization happened for persistent variable %s",
-          m_persistent_variable_sp->GetName().AsCString());
+      err = Status::FromErrorStringWithFormatv(
+          "no materialization happened for persistent variable {0}",
+          m_persistent_variable_sp->GetName());
       return;
     }
   }
@@ -216,26 +213,26 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    if (log) {
-      LLDB_LOGF(log,
-                "EntityPersistentVariable::Dematerialize [address = 0x%" PRIx64
-                ", m_name = %s, m_flags = 0x%hx]",
-                (uint64_t)process_address + m_offset,
-                m_persistent_variable_sp->GetName().AsCString(),
-                m_persistent_variable_sp->m_flags);
-    }
+    LLDB_LOG(log,
+             "EntityPersistentVariable::Dematerialize [address = {0:x}, m_name "
+             "= {1}, m_flags = {2}]",
+             (uint64_t)process_address + m_offset,
+             m_persistent_variable_sp->GetName(),
+             m_persistent_variable_sp->m_flags);
 
     if (m_delegate) {
       m_delegate->DidDematerialize(m_persistent_variable_sp);
     }
 
+    lldb::ValueObjectSP live_valobj_sp =
+        m_persistent_variable_sp->GetLiveObject();
     if ((m_persistent_variable_sp->m_flags &
          ExpressionVariable::EVIsLLDBAllocated) ||
         (m_persistent_variable_sp->m_flags &
          ExpressionVariable::EVIsProgramReference)) {
       if (m_persistent_variable_sp->m_flags &
               ExpressionVariable::EVIsProgramReference &&
-          !m_persistent_variable_sp->m_live_sp) {
+          !live_valobj_sp) {
         // If the reference comes from the program, then the
         // ClangExpressionVariable's live variable data hasn't been set up yet.
         // Do this now.
@@ -255,7 +252,7 @@ public:
 
         m_persistent_variable_sp->m_live_sp = ValueObjectConstResult::Create(
             map.GetBestExecutionContextScope(),
-            m_persistent_variable_sp.get()->GetCompilerType(),
+            m_persistent_variable_sp->GetCompilerType(),
             m_persistent_variable_sp->GetName(), location, eAddressTypeLoad,
             llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
                 .value_or(0));
@@ -277,19 +274,17 @@ public:
         }
       }
 
-      lldb::addr_t mem = m_persistent_variable_sp->m_live_sp->GetValue()
-                             .GetScalar()
-                             .ULongLong();
-
-      if (!m_persistent_variable_sp->m_live_sp) {
+      if (!live_valobj_sp) {
         err = Status::FromErrorStringWithFormat(
             "couldn't find the memory area used to store %s",
             m_persistent_variable_sp->GetName().GetCString());
         return;
       }
 
-      if (m_persistent_variable_sp->m_live_sp->GetValue()
-              .GetValueAddressType() != eAddressTypeLoad) {
+      lldb::addr_t mem = live_valobj_sp->GetValue().GetScalar().ULongLong();
+
+      if (live_valobj_sp->GetValue().GetValueAddressType() !=
+          eAddressTypeLoad) {
         err = Status::FromErrorStringWithFormat(
             "the address of the memory area for %s is in an incorrect format",
             m_persistent_variable_sp->GetName().GetCString());
@@ -326,14 +321,13 @@ public:
               read_error.AsCString());
           return;
         }
-
         m_persistent_variable_sp->m_flags &=
             ~ExpressionVariable::EVNeedsFreezeDry;
       }
     } else {
-      err = Status::FromErrorStringWithFormat(
-          "no dematerialization happened for persistent variable %s",
-          m_persistent_variable_sp->GetName().AsCString());
+      err = Status::FromErrorStringWithFormatv(
+          "no dematerialization happened for persistent variable {0}",
+          m_persistent_variable_sp->GetName());
       return;
     }
 
@@ -355,19 +349,18 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    dump_stream.Printf("0x%" PRIx64 ": EntityPersistentVariable (%s)\n",
-                       load_addr,
-                       m_persistent_variable_sp->GetName().AsCString());
+    dump_stream.Format("{0:x}: EntityPersistentVariable ({1})\n", load_addr,
+                       m_persistent_variable_sp->GetName());
 
     {
-      dump_stream.Printf("Pointer:\n");
+      dump_stream.PutCString("Pointer:\n");
 
       DataBufferHeap data(m_size, 0);
 
       map.ReadMemory(data.GetBytes(), load_addr, m_size, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
                      load_addr);
@@ -377,14 +370,14 @@ public:
     }
 
     {
-      dump_stream.Printf("Target:\n");
+      dump_stream.PutCString("Target:\n");
 
       lldb::addr_t target_address;
 
       map.ReadPointerFromMemory(&target_address, load_addr, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DataBufferHeap data(
             llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
@@ -398,7 +391,7 @@ public:
             err);
 
         if (!err.Success()) {
-          dump_stream.Printf("  <could not be read>\n");
+          dump_stream.PutCString("  <could not be read>\n");
         } else {
           DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
                        target_address);
@@ -449,12 +442,10 @@ public:
     Log *log = GetLog(LLDBLog::Expressions);
 
     const lldb::addr_t load_addr = process_address + m_offset;
-    if (log) {
-      LLDB_LOGF(log,
-                "EntityVariable::Materialize [address = 0x%" PRIx64
-                ", m_variable_sp = %s]",
-                (uint64_t)load_addr, GetName().GetCString());
-    }
+    LLDB_LOGF(log,
+              "EntityVariable::Materialize [address = 0x%" PRIx64
+              ", m_variable_sp = %s]",
+              (uint64_t)load_addr, GetName().GetCString());
 
     ExecutionContextScope *scope = frame_sp.get();
 
@@ -464,16 +455,16 @@ public:
     lldb::ValueObjectSP valobj_sp = SetupValueObject(scope);
 
     if (!valobj_sp) {
-      err = Status::FromErrorStringWithFormat(
-          "couldn't get a value object for variable %s", GetName().AsCString());
+      err = Status::FromErrorStringWithFormatv(
+          "couldn't get a value object for variable {0}", GetName());
       return;
     }
 
     Status valobj_error = valobj_sp->GetError().Clone();
 
     if (valobj_error.Fail()) {
-      err = Status::FromErrorStringWithFormat(
-          "couldn't get the value of variable %s: %s", GetName().AsCString(),
+      err = Status::FromErrorStringWithFormatv(
+          "couldn't get the value of variable {0}: {1}", GetName(),
           valobj_error.AsCString());
       return;
     }
@@ -484,9 +475,9 @@ public:
       valobj_sp->GetData(valobj_extractor, extract_error);
 
       if (!extract_error.Success()) {
-        err = Status::FromErrorStringWithFormat(
-            "couldn't read contents of reference variable %s: %s",
-            GetName().AsCString(), extract_error.AsCString());
+        err = Status::FromErrorStringWithFormatv(
+            "couldn't read contents of reference variable {0}: {1}", GetName(),
+            extract_error.AsCString());
         return;
       }
 
@@ -497,10 +488,10 @@ public:
       map.WritePointerToMemory(load_addr, reference_addr, write_error);
 
       if (!write_error.Success()) {
-        err = Status::FromErrorStringWithFormat(
-            "couldn't write the contents of reference "
-            "variable %s to memory: %s",
-            GetName().AsCString(), write_error.AsCString());
+        err = Status::FromErrorStringWithFormatv(
+            "couldn't write the contents of reference variable {} to memory: "
+            "{}",
+            GetName(), write_error.AsCString());
         return;
       }
     } else {
@@ -511,9 +502,9 @@ public:
         map.WritePointerToMemory(load_addr, addr_of_valobj, write_error);
 
         if (!write_error.Success()) {
-          err = Status::FromErrorStringWithFormat(
-              "couldn't write the address of variable %s to memory: %s",
-              GetName().AsCString(), write_error.AsCString());
+          err = Status::FromErrorStringWithFormatv(
+              "couldn't write the address of variable {0} to memory: {1}",
+              GetName(), write_error.AsCString());
           return;
         }
       } else {
@@ -521,31 +512,31 @@ public:
         Status extract_error;
         valobj_sp->GetData(data, extract_error);
         if (!extract_error.Success()) {
-          err = Status::FromErrorStringWithFormat(
-              "couldn't get the value of %s: %s", GetName().AsCString(),
+          err = Status::FromErrorStringWithFormatv(
+              "couldn't get the value of {0}: {1}", GetName(),
               extract_error.AsCString());
           return;
         }
 
         if (m_temporary_allocation != LLDB_INVALID_ADDRESS) {
-          err = Status::FromErrorStringWithFormat(
-              "trying to create a temporary region for %s but one exists",
-              GetName().AsCString());
+          err = Status::FromErrorStringWithFormatv(
+              "trying to create a temporary region for {0} but one exists",
+              GetName());
           return;
         }
 
         if (data.GetByteSize() <
             llvm::expectedToOptional(GetByteSize(scope)).value_or(0)) {
           if (data.GetByteSize() == 0 && !LocationExpressionIsValid()) {
-            err = Status::FromErrorStringWithFormat(
-                "the variable '%s' has no location, "
+            err = Status::FromErrorStringWithFormatv(
+                "the variable '{0}' has no location, "
                 "it may have been optimized out",
-                GetName().AsCString());
+                GetName());
           } else {
-            err = Status::FromErrorStringWithFormat(
-                "size of variable %s (%" PRIu64
-                ") is larger than the ValueObject's size (%" PRIu64 ")",
-                GetName().AsCString(),
+            err = Status::FromErrorStringWithFormatv(
+                "size of variable {0} ({1}) is larger than the ValueObject's "
+                "size ({2})",
+                GetName(),
                 llvm::expectedToOptional(GetByteSize(scope)).value_or(0),
                 data.GetByteSize());
           }
@@ -554,8 +545,8 @@ public:
 
         std::optional<size_t> opt_bit_align = GetTypeBitAlign(scope);
         if (!opt_bit_align) {
-          err = Status::FromErrorStringWithFormat(
-              "can't get the type alignment for %s", GetName().AsCString());
+          err = Status::FromErrorStringWithFormatv(
+              "can't get the type alignment for {0}", GetName());
           return;
         }
 
@@ -568,10 +559,9 @@ public:
                 IRMemoryMap::eAllocationPolicyMirror, zero_memory)) {
           m_temporary_allocation = *address_or_error;
         } else {
-          err = Status::FromErrorStringWithFormat(
-              "couldn't allocate a temporary region for %s: %s",
-              GetName().AsCString(),
-              toString(address_or_error.takeError()).c_str());
+          err = Status::FromErrorStringWithFormatv(
+              "couldn't allocate a temporary region for {0}: {1}", GetName(),
+              toString(address_or_error.takeError()));
           return;
         }
 
@@ -586,9 +576,9 @@ public:
                         data.GetByteSize(), write_error);
 
         if (!write_error.Success()) {
-          err = Status::FromErrorStringWithFormat(
-              "couldn't write to the temporary region for %s: %s",
-              GetName().AsCString(), write_error.AsCString());
+          err = Status::FromErrorStringWithFormatv(
+              "couldn't write to the temporary region for {0}: {1}", GetName(),
+              write_error.AsCString());
           return;
         }
 
@@ -598,9 +588,9 @@ public:
                                  pointer_write_error);
 
         if (!pointer_write_error.Success()) {
-          err = Status::FromErrorStringWithFormat(
-              "couldn't write the address of the temporary region for %s: %s",
-              GetName().AsCString(), pointer_write_error.AsCString());
+          err = Status::FromErrorStringWithFormatv(
+              "couldn't write the address of the temporary region for {0}: {1}",
+              GetName(), pointer_write_error.AsCString());
         }
       }
     }
@@ -612,12 +602,10 @@ public:
     Log *log = GetLog(LLDBLog::Expressions);
 
     const lldb::addr_t load_addr = process_address + m_offset;
-    if (log) {
-      LLDB_LOGF(log,
-                "EntityVariable::Dematerialize [address = 0x%" PRIx64
-                ", m_variable_sp = %s]",
-                (uint64_t)load_addr, GetName().AsCString());
-    }
+    LLDB_LOG(
+        log,
+        "EntityVariable::Dematerialize [address = {0:x}, m_variable_sp = {1}]",
+        (uint64_t)load_addr, GetName());
 
     if (m_temporary_allocation != LLDB_INVALID_ADDRESS) {
       ExecutionContextScope *scope = frame_sp.get();
@@ -628,9 +616,8 @@ public:
       lldb::ValueObjectSP valobj_sp = SetupValueObject(scope);
 
       if (!valobj_sp) {
-        err = Status::FromErrorStringWithFormat(
-            "couldn't get a value object for variable %s",
-            GetName().AsCString());
+        err = Status::FromErrorStringWithFormatv(
+            "couldn't get a value object for variable {0}", GetName());
         return;
       }
 
@@ -644,8 +631,8 @@ public:
           extract_error);
 
       if (!extract_error.Success()) {
-        err = Status::FromErrorStringWithFormat(
-            "couldn't get the data for variable %s", GetName().AsCString());
+        err = Status::FromErrorStringWithFormatv(
+            "couldn't get the data for variable {0}", GetName());
         return;
       }
 
@@ -665,9 +652,9 @@ public:
         valobj_sp->SetData(data, set_error);
 
         if (!set_error.Success()) {
-          err = Status::FromErrorStringWithFormat(
-              "couldn't write the new contents of %s back into the variable",
-              GetName().AsCString());
+          err = Status::FromErrorStringWithFormatv(
+              "couldn't write the new contents of {0} back into the variable",
+              GetName());
           return;
         }
       }
@@ -677,9 +664,9 @@ public:
       map.Free(m_temporary_allocation, free_error);
 
       if (!free_error.Success()) {
-        err = Status::FromErrorStringWithFormat(
-            "couldn't free the temporary region for %s: %s",
-            GetName().AsCString(), free_error.AsCString());
+        err = Status::FromErrorStringWithFormatv(
+            "couldn't free the temporary region for {0}: {1}", GetName(),
+            free_error.AsCString());
         return;
       }
 
@@ -701,14 +688,14 @@ public:
     lldb::addr_t ptr = LLDB_INVALID_ADDRESS;
 
     {
-      dump_stream.Printf("Pointer:\n");
+      dump_stream.PutCString("Pointer:\n");
 
       DataBufferHeap data(m_size, 0);
 
       map.ReadMemory(data.GetBytes(), load_addr, m_size, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
                                 map.GetByteOrder(), map.GetAddressByteSize());
@@ -725,13 +712,13 @@ public:
     }
 
     if (m_temporary_allocation == LLDB_INVALID_ADDRESS) {
-      dump_stream.Printf("Points to process memory:\n");
+      dump_stream.PutCString("Points to process memory:\n");
     } else {
-      dump_stream.Printf("Temporary allocation:\n");
+      dump_stream.PutCString("Temporary allocation:\n");
     }
 
     if (ptr == LLDB_INVALID_ADDRESS) {
-      dump_stream.Printf("  <could not be be found>\n");
+      dump_stream.PutCString("  <could not be be found>\n");
     } else {
       DataBufferHeap data(m_temporary_allocation_size, 0);
 
@@ -739,7 +726,7 @@ public:
                      m_temporary_allocation_size, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
                      load_addr);
@@ -954,9 +941,8 @@ public:
 
       std::optional<size_t> opt_bit_align = m_type.GetTypeBitAlign(exe_scope);
       if (!opt_bit_align) {
-        err = Status::FromErrorStringWithFormat(
-            "can't get the alignment of type  \"%s\"",
-            m_type.GetTypeName().AsCString());
+        err = Status::FromErrorStringWithFormatv(
+            "can't get the alignment of type  \"{0}\"", m_type.GetTypeName());
         return;
       }
 
@@ -1066,10 +1052,10 @@ public:
         exe_scope, name, m_type, map.GetByteOrder(), map.GetAddressByteSize());
 
     if (!ret) {
-      err = Status::FromErrorStringWithFormat(
-          "couldn't dematerialize a result variable: "
-          "failed to make persistent variable %s",
-          name.AsCString());
+      err = Status::FromErrorStringWithFormatv(
+          "couldn't dematerialize a result variable: failed to make persistent "
+          "variable {0}",
+          name);
       return;
     }
 
@@ -1133,14 +1119,14 @@ public:
     lldb::addr_t ptr = LLDB_INVALID_ADDRESS;
 
     {
-      dump_stream.Printf("Pointer:\n");
+      dump_stream.PutCString("Pointer:\n");
 
       DataBufferHeap data(m_size, 0);
 
       map.ReadMemory(data.GetBytes(), load_addr, m_size, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DataExtractor extractor(data.GetBytes(), data.GetByteSize(),
                                 map.GetByteOrder(), map.GetAddressByteSize());
@@ -1157,13 +1143,13 @@ public:
     }
 
     if (m_temporary_allocation == LLDB_INVALID_ADDRESS) {
-      dump_stream.Printf("Points to process memory:\n");
+      dump_stream.PutCString("Points to process memory:\n");
     } else {
-      dump_stream.Printf("Temporary allocation:\n");
+      dump_stream.PutCString("Temporary allocation:\n");
     }
 
     if (ptr == LLDB_INVALID_ADDRESS) {
-      dump_stream.Printf("  <could not be be found>\n");
+      dump_stream.PutCString("  <could not be be found>\n");
     } else {
       DataBufferHeap data(m_temporary_allocation_size, 0);
 
@@ -1171,7 +1157,7 @@ public:
                      m_temporary_allocation_size, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
                      load_addr);
@@ -1234,12 +1220,8 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    if (log) {
-      LLDB_LOGF(log,
-                "EntitySymbol::Materialize [address = 0x%" PRIx64
-                ", m_symbol = %s]",
-                (uint64_t)load_addr, m_symbol.GetName().AsCString());
-    }
+    LLDB_LOG(log, "EntitySymbol::Materialize [address = {0}, m_symbol = {1}]",
+             (uint64_t)load_addr, m_symbol.GetName());
 
     const Address sym_address = m_symbol.GetAddress();
 
@@ -1253,9 +1235,9 @@ public:
       target_sp = map.GetBestExecutionContextScope()->CalculateTarget();
 
     if (!target_sp) {
-      err = Status::FromErrorStringWithFormat(
-          "couldn't resolve symbol %s because there is no target",
-          m_symbol.GetName().AsCString());
+      err = Status::FromErrorStringWithFormatv(
+          "couldn't resolve symbol {0} because there is no target",
+          m_symbol.GetName());
       return;
     }
 
@@ -1269,9 +1251,9 @@ public:
     map.WritePointerToMemory(load_addr, resolved_address, pointer_write_error);
 
     if (!pointer_write_error.Success()) {
-      err = Status::FromErrorStringWithFormat(
-          "couldn't write the address of symbol %s: %s",
-          m_symbol.GetName().AsCString(), pointer_write_error.AsCString());
+      err = Status::FromErrorStringWithFormatv(
+          "couldn't write the address of symbol {0}: {1}", m_symbol.GetName(),
+          pointer_write_error.AsCString());
       return;
     }
   }
@@ -1283,12 +1265,9 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    if (log) {
-      LLDB_LOGF(log,
-                "EntitySymbol::Dematerialize [address = 0x%" PRIx64
-                ", m_symbol = %s]",
-                (uint64_t)load_addr, m_symbol.GetName().AsCString());
-    }
+    LLDB_LOG(log,
+             "EntitySymbol::Dematerialize [address = {0:x}, m_symbol = {1}]",
+             (uint64_t)load_addr, m_symbol.GetName());
 
     // no work needs to be done
   }
@@ -1301,18 +1280,18 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    dump_stream.Printf("0x%" PRIx64 ": EntitySymbol (%s)\n", load_addr,
-                       m_symbol.GetName().AsCString());
+    dump_stream.Format("{0:x}: EntitySymbol ({1})\n", load_addr,
+                       m_symbol.GetName());
 
     {
-      dump_stream.Printf("Pointer:\n");
+      dump_stream.PutCString("Pointer:\n");
 
       DataBufferHeap data(m_size, 0);
 
       map.ReadMemory(data.GetBytes(), load_addr, m_size, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
                      load_addr);
@@ -1353,12 +1332,10 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    if (log) {
-      LLDB_LOGF(log,
-                "EntityRegister::Materialize [address = 0x%" PRIx64
-                ", m_register_info = %s]",
-                (uint64_t)load_addr, m_register_info.name);
-    }
+    LLDB_LOGF(log,
+              "EntityRegister::Materialize [address = 0x%" PRIx64
+              ", m_register_info = %s]",
+              (uint64_t)load_addr, m_register_info.name);
 
     RegisterValue reg_value;
 
@@ -1377,29 +1354,26 @@ public:
       return;
     }
 
-    DataExtractor register_data;
-
-    if (!reg_value.GetData(register_data)) {
-      err = Status::FromErrorStringWithFormat(
-          "couldn't get the data for register %s", m_register_info.name);
-      return;
-    }
-
-    if (register_data.GetByteSize() != m_register_info.byte_size) {
+    if (reg_value.GetByteSize() != m_register_info.byte_size) {
       err = Status::FromErrorStringWithFormat(
           "data for register %s had size %llu but we expected %llu",
-          m_register_info.name, (unsigned long long)register_data.GetByteSize(),
+          m_register_info.name, (unsigned long long)reg_value.GetByteSize(),
           (unsigned long long)m_register_info.byte_size);
       return;
     }
 
-    m_register_contents = std::make_shared<DataBufferHeap>(
-        register_data.GetDataStart(), register_data.GetByteSize());
+    lldb_private::DataBufferHeap buf(reg_value.GetByteSize(), 0);
+    reg_value.GetAsMemoryData(m_register_info, buf.GetBytes(),
+                              buf.GetByteSize(), map.GetByteOrder(), err);
+    if (!err.Success())
+      return;
+
+    m_register_contents = std::make_shared<DataBufferHeap>(buf);
 
     Status write_error;
 
-    map.WriteMemory(load_addr, register_data.GetDataStart(),
-                    register_data.GetByteSize(), write_error);
+    map.WriteMemory(load_addr, buf.GetBytes(), reg_value.GetByteSize(),
+                    write_error);
 
     if (!write_error.Success()) {
       err = Status::FromErrorStringWithFormat(
@@ -1416,12 +1390,10 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
-    if (log) {
-      LLDB_LOGF(log,
-                "EntityRegister::Dematerialize [address = 0x%" PRIx64
-                ", m_register_info = %s]",
-                (uint64_t)load_addr, m_register_info.name);
-    }
+    LLDB_LOGF(log,
+              "EntityRegister::Dematerialize [address = 0x%" PRIx64
+              ", m_register_info = %s]",
+              (uint64_t)load_addr, m_register_info.name);
 
     Status extract_error;
 
@@ -1479,14 +1451,14 @@ public:
                        m_register_info.name);
 
     {
-      dump_stream.Printf("Value:\n");
+      dump_stream.PutCString("Value:\n");
 
       DataBufferHeap data(m_size, 0);
 
       map.ReadMemory(data.GetBytes(), load_addr, m_size, err);
 
       if (!err.Success()) {
-        dump_stream.Printf("  <could not be read>\n");
+        dump_stream.PutCString("  <could not be read>\n");
       } else {
         DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
                      load_addr);

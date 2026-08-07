@@ -1,19 +1,13 @@
-// RUN: mlir-opt %s -convert-complex-to-rocdl-library-calls | FileCheck %s
+// RUN: mlir-opt %s --allow-unregistered-dialect -convert-complex-to-rocdl-library-calls | FileCheck %s
 
 // CHECK-DAG: @__ocml_cabs_f32(complex<f32>) -> f32
 // CHECK-DAG: @__ocml_cabs_f64(complex<f64>) -> f64
-// CHECK-DAG: @__ocml_carg_f32(complex<f32>) -> f32
-// CHECK-DAG: @__ocml_carg_f64(complex<f64>) -> f64
 // CHECK-DAG: @__ocml_ccos_f32(complex<f32>) -> complex<f32>
 // CHECK-DAG: @__ocml_ccos_f64(complex<f64>) -> complex<f64>
 // CHECK-DAG: @__ocml_cexp_f32(complex<f32>) -> complex<f32>
 // CHECK-DAG: @__ocml_cexp_f64(complex<f64>) -> complex<f64>
 // CHECK-DAG: @__ocml_clog_f32(complex<f32>) -> complex<f32>
 // CHECK-DAG: @__ocml_clog_f64(complex<f64>) -> complex<f64>
-// CHECK-DAG: @__ocml_conj_f32(complex<f32>) -> complex<f32>
-// CHECK-DAG: @__ocml_conj_f64(complex<f64>) -> complex<f64>
-// CHECK-DAG: @__ocml_cpow_f32(complex<f32>, complex<f32>) -> complex<f32>
-// CHECK-DAG: @__ocml_cpow_f64(complex<f64>, complex<f64>) -> complex<f64>
 // CHECK-DAG: @__ocml_csin_f32(complex<f32>) -> complex<f32>
 // CHECK-DAG: @__ocml_csin_f64(complex<f64>) -> complex<f64>
 // CHECK-DAG: @__ocml_csqrt_f32(complex<f32>) -> complex<f32>
@@ -31,16 +25,6 @@ func.func @abs_caller(%f: complex<f32>, %d: complex<f64>) -> (f32, f64) {
   %rd = complex.abs %d : complex<f64>
   // CHECK: return %[[RF]], %[[RD]]
   return %rf, %rd : f32, f64
-}
-
-//CHECK-LABEL: @angle_caller
-func.func @angle_caller(%f: complex<f32>, %d: complex<f64>) -> (f32, f64) {
-  // CHECK: %[[AF:.*]] = call @__ocml_carg_f32(%{{.*}})
-  %af = complex.angle %f : complex<f32>
-  // CHECK: %[[AD:.*]] = call @__ocml_carg_f64(%{{.*}})
-  %ad = complex.angle %d : complex<f64>
-  // CHECK: return %[[AF]], %[[AD]]
-  return %af, %ad : f32, f64
 }
 
 //CHECK-LABEL: @cos_caller
@@ -73,24 +57,29 @@ func.func @log_caller(%f: complex<f32>, %d: complex<f64>) -> (complex<f32>, comp
   return %lf, %ld : complex<f32>, complex<f64>
 }
 
-//CHECK-LABEL: @conj_caller
-func.func @conj_caller(%f: complex<f32>, %d: complex<f64>) -> (complex<f32>, complex<f64>) {
-  // CHECK: %[[CF:.*]] = call @__ocml_conj_f32(%{{.*}})
-  %cf2 = complex.conj %f : complex<f32>
-  // CHECK: %[[CD:.*]] = call @__ocml_conj_f64(%{{.*}})
-  %cd2 = complex.conj %d : complex<f64>
-  // CHECK: return %[[CF]], %[[CD]]
-  return %cf2, %cd2 : complex<f32>, complex<f64>
+//CHECK-LABEL: @pow_caller
+//CHECK:          (%[[Z:.*]]: complex<f32>, %[[W:.*]]: complex<f32>)
+func.func @pow_caller(%z: complex<f32>, %w: complex<f32>) -> complex<f32> {
+  // CHECK: %[[LOG:.*]] = call @__ocml_clog_f32(%[[Z]])
+  // CHECK: %[[MUL:.*]] = complex.mul %[[W]], %[[LOG]]
+  // CHECK: %[[EXP:.*]] = call @__ocml_cexp_f32(%[[MUL]])
+  // CHECK: return %[[EXP]]
+  %r = complex.pow %z, %w : complex<f32>
+  return %r : complex<f32>
 }
 
-//CHECK-LABEL: @pow_caller
-func.func @pow_caller(%f: complex<f32>, %d: complex<f64>) -> (complex<f32>, complex<f64>) {
-  // CHECK: %[[PF:.*]] = call @__ocml_cpow_f32(%{{.*}}, %{{.*}})
-  %pf = complex.pow %f, %f : complex<f32>
-  // CHECK: %[[PD:.*]] = call @__ocml_cpow_f64(%{{.*}}, %{{.*}})
-  %pd = complex.pow %d, %d : complex<f64>
-  // CHECK: return %[[PF]], %[[PD]]
-  return %pf, %pd : complex<f32>, complex<f64>
+//CHECK-LABEL: @powi_caller
+//CHECK:          (%[[Z:.*]]: complex<f32>, %[[N:.*]]: i32)
+func.func @powi_caller(%z: complex<f32>, %n: i32) -> complex<f32> {
+  // CHECK: %[[N_FP:.*]] = arith.sitofp %[[N]] : i32 to f32
+  // CHECK: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
+  // CHECK: %[[N_COMPLEX:.*]] = complex.create %[[N_FP]], %[[ZERO]] : complex<f32>
+  // CHECK: %[[LOG:.*]] = call @__ocml_clog_f32(%[[Z]]) : (complex<f32>) -> complex<f32>
+  // CHECK: %[[MUL:.*]] = complex.mul %[[N_COMPLEX]], %[[LOG]] : complex<f32>
+  // CHECK: %[[EXP:.*]] = call @__ocml_cexp_f32(%[[MUL]]) : (complex<f32>) -> complex<f32>
+  // CHECK: return %[[EXP]] : complex<f32>
+  %r = complex.powi %z, %n : complex<f32>, i32
+  return %r : complex<f32>
 }
 
 //CHECK-LABEL: @sin_caller

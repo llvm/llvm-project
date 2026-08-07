@@ -12,13 +12,13 @@ from lit.llvm import llvm_config
 # name: The name of this test suite.
 config.name = "Clang Tools"
 
-# testFormat: The test format to use to interpret tests.
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
     ".c",
     ".cpp",
+    ".cppm",
     ".hpp",
     ".m",
     ".mm",
@@ -41,13 +41,15 @@ config.test_source_root = os.path.dirname(__file__)
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = os.path.join(config.clang_tools_binary_dir, "test")
 
-# Tools need the same environment setup as clang (we don't need clang itself).
-llvm_config.clang_setup()
+# Set up clang for use in tests. Makes %clang substitution available.
+llvm_config.use_clang()
 
 if config.clang_tidy_staticanalyzer:
     config.available_features.add("static-analyzer")
-
+if config.clang_tidy_custom_check:
+    config.available_features.add("custom-check")
 python_exec = shlex.quote(config.python_executable)
+config.substitutions.append(("%python", python_exec))
 check_clang_tidy = os.path.join(
     config.test_source_root, "clang-tidy", "check_clang_tidy.py"
 )

@@ -21,7 +21,7 @@ using namespace mlir;
 namespace {
 /// A pass for testing SPIR-V op availability.
 struct PrintOpAvailability
-    : public PassWrapper<PrintOpAvailability, OperationPass<func::FuncOp>> {
+    : public PassWrapper<PrintOpAvailability, OperationPass<mlir::ModuleOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(PrintOpAvailability)
 
   void runOnOperation() override;
@@ -33,12 +33,10 @@ struct PrintOpAvailability
 } // namespace
 
 void PrintOpAvailability::runOnOperation() {
-  auto f = getOperation();
-  llvm::outs() << f.getName() << "\n";
-
+  mlir::ModuleOp moduleOp = getOperation();
   Dialect *spirvDialect = getContext().getLoadedDialect("spirv");
 
-  f->walk([&](Operation *op) {
+  auto opCallback = [&](Operation *op) {
     if (op->getDialect() != spirvDialect)
       return WalkResult::advance();
 
@@ -89,6 +87,16 @@ void PrintOpAvailability::runOnOperation() {
     os.flush();
 
     return WalkResult::advance();
+  };
+
+  moduleOp.walk([&](func::FuncOp f) {
+    llvm::outs() << f.getName() << "\n";
+    f->walk(opCallback);
+  });
+
+  moduleOp.walk([&](spirv::GraphARMOp g) {
+    llvm::outs() << g.getName() << "\n";
+    g->walk(opCallback);
   });
 }
 
@@ -160,7 +168,7 @@ struct ConvertToGroupNonUniformBallot : RewritePattern {
                                 PatternRewriter &rewriter) const override {
     Value predicate = op->getOperand(0);
     rewriter.replaceOpWithNewOp<spirv::GroupNonUniformBallotOp>(
-        op, op->getResult(0).getType(), spirv::Scope::Workgroup, predicate);
+        op, op->getResult(0).getType(), spirv::Scope::Subgroup, predicate);
     return success();
   }
 };

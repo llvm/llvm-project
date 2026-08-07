@@ -72,30 +72,6 @@ unsigned X86Disassembler::getMemOperandSize(const Record *MemRec) {
   llvm_unreachable("Memory operand's size not known!");
 }
 
-/// byteFromBitsInit - Extracts a value at most 8 bits in width from a BitsInit.
-///   Useful for switch statements and the like.
-///
-/// @param init - A reference to the BitsInit to be decoded.
-/// @return     - The field, with the first bit in the BitsInit as the lowest
-///               order bit.
-static uint8_t byteFromBitsInit(const BitsInit &init) {
-  int width = init.getNumBits();
-
-  assert(width <= 8 && "Field is too large for uint8_t!");
-
-  uint8_t mask = 0x01;
-  uint8_t ret = 0;
-
-  for (int index = 0; index < width; index++) {
-    if (cast<BitInit>(init.getBit(index))->getValue())
-      ret |= mask;
-
-    mask <<= 1;
-  }
-
-  return ret;
-}
-
 /// byteFromRec - Extract a value at most 8 bits in with from a Record given the
 ///   name of the field.
 ///
@@ -104,7 +80,7 @@ static uint8_t byteFromBitsInit(const BitsInit &init) {
 /// @return     - The field, as translated by byteFromBitsInit().
 static uint8_t byteFromRec(const Record *rec, StringRef name) {
   const BitsInit *bits = rec->getValueAsBitsInit(name);
-  return byteFromBitsInit(*bits);
+  return byteFromBitsInit(bits);
 }
 
 RecognizableInstrBase::RecognizableInstrBase(const CodeGenInstruction &insn) {
@@ -389,6 +365,8 @@ InstructionContext RecognizableInstr::insnContext() const {
       insnContext = IC_64BIT_XD;
     else if (OpPrefix == X86Local::XS)
       insnContext = IC_64BIT_XS;
+    else if (HasREX_W && ExplicitREX2Prefix)
+      insnContext = IC_64BIT_REX2_REXW;
     else if (ExplicitREX2Prefix)
       insnContext = IC_64BIT_REX2;
     else if (HasREX_W)
@@ -1163,7 +1141,6 @@ OperandType RecognizableInstr::typeFromString(StringRef Str, bool hasREX_W,
           .Case("vz64mem", TYPE_MVSIBZ)
           .Case("BNDR", TYPE_BNDR)
           .Case("TILE", TYPE_TMM)
-          .Case("TILEPair", TYPE_TMM_PAIR)
           .Default(TYPE_NONE);
   // clang-format on
 

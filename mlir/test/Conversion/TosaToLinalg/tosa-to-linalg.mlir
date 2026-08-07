@@ -666,7 +666,13 @@ func.func @test_simple_i32(%arg0: tensor<1xi32>, %unsigned: tensor<1xui32>, %uns
   // CHECK: linalg.generic
   // CHECK: ^bb0(%[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32):
   // CHECK: [[ZERO:%.+]] = arith.constant 0
-  // CHECK: arith.subi [[ZERO]], %[[ARG1]]
+  // CHECK: [[EXT:%.+]] = arith.extsi %[[IN:.*]] : i32 to i64
+  // CHECK: [[SUB:%.+]] = arith.subi [[ZERO]], [[EXT]]
+  // CHECK: [[MIN:%.+]] = arith.constant -2147483648
+  // CHECK: [[MAX:%.+]] = arith.constant 2147483647
+  // CHECK: [[LBOUND:%.+]] = arith.maxsi [[MIN]], [[SUB]]
+  // CHECK: [[UBOUND:%.+]] = arith.minsi [[MAX]], [[LBOUND]]
+  // CHECK: [[TRUNC:%.+]] = arith.trunci [[UBOUND]]
   %in_zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
   %out_zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
   %5 = tosa.negate %arg0, %in_zp, %out_zp : (tensor<1xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
@@ -698,13 +704,14 @@ func.func @test_simple_i32(%arg0: tensor<1xi32>, %unsigned: tensor<1xui32>, %uns
   // CHECK: linalg.generic
   // CHECK: arith.constant 1
   // CHECK: arith.constant 0
+  // CHECK: arith.constant false
   // CHECK: arith.constant true
   // CHECK: arith.cmpi
   // CHECK: arith.subi
   // CHECK: arith.shrsi
   // CHECK: arith.trunci
   // CHECK: and
-  // CHECK: and
+  // CHECK: arith.select
   // CHECK: arith.extui
   // CHECK: arith.addi
   %12 = tosa.arithmetic_right_shift %arg0, %arg0 {round = 1 : i1} : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
@@ -888,13 +895,51 @@ func.func @test_negate_quantized(%arg0: tensor<1xi8>) -> () {
   // CHECK: linalg.generic
   // CHECK: ^bb0(%[[BBARG0:.+]]: i8,
   // CHECK: [[ZERO:%.+]] = arith.constant 0
-  // CHECK: [[SUB:%.+]] = arith.subi [[ZERO]],
-  // CHECK: linalg.yield [[SUB]]
+  // CHECK: [[EXT:%.+]] = arith.extsi %[[IN:.*]] : i8 to i16
+  // CHECK: [[SUB:%.+]] = arith.subi [[ZERO]], [[EXT]]
+  // CHECK: [[MIN:%.+]] = arith.constant -128
+  // CHECK: [[MAX:%.+]] = arith.constant 127
+  // CHECK: [[LBOUND:%.+]] = arith.maxsi [[MIN]], [[SUB]]
+  // CHECK: [[UBOUND:%.+]] = arith.minsi [[MAX]], [[LBOUND]]
+  // CHECK: [[TRUNC:%.+]] = arith.trunci [[UBOUND]]
   %in_zp4 = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
   %out_zp4 = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
   %4 = tosa.negate %arg0, %in_zp4, %out_zp4 : (tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<1xi8>
 
   return
+}
+
+// -----
+
+// CHECK-LABEL: @test_negate_no_const_1
+func.func @test_negate_no_const_1(%arg0: tensor<50x42xf16> ,%arg1: tensor<1xf16> , %arg2: tensor<1xf16> ) -> tensor<*xf16> {
+  // CHECK: %[[GENERIC:.+]] = linalg.generic 
+  // CHECK:   ^bb0([[ARG0:%.*]]: f16, [[ARG1:%.*]]: f16, [[ARG2:%.*]]: f16, [[OUT:%.*]]: f16)
+  // CHECK:   [[ELEMENT:%.*]] = arith.negf [[ARG0]] : f16
+  %0 = tosa.negate %arg0, %arg1, %arg2 : (tensor<50x42xf16>, tensor<1xf16>, tensor<1xf16>) -> tensor<50x42xf16>
+  %cast = tensor.cast %0 : tensor<50x42xf16> to tensor<*xf16>
+  return %cast : tensor<*xf16>
+}
+
+// -----
+
+// CHECK-LABEL: @test_negate_no_const_2
+func.func @test_negate_no_const_2(%arg0: tensor<50x42xi16> ,%arg1: tensor<1xi16> , %arg2: tensor<1xi16> ) -> tensor<*xi16> {
+  // CHECK: %[[GENERIC:.+]] = linalg.generic 
+  // CHECK:   ^bb0([[ARG0:%.*]]: i16, [[ARG1:%.*]]: i16, [[ARG2:%.*]]: i16, [[OUT:%.*]]: i16)
+  // CHECK:   [[EXTSI1:%.*]] = arith.extsi [[ARG1]] : i16 to i64
+  // CHECK:   [[EXTSI2:%.*]] = arith.extsi [[ARG2]] : i16 to i64
+  // CHECK:   [[SUM:%.*]] = arith.addi [[EXTSI1]], [[EXTSI2]] : i64
+  // CHECK:   [[EXTSI0:%.*]] = arith.extsi [[ARG0]] : i16 to i64
+  // CHECK:   [[SUB:%.*]] = arith.subi [[SUM]], [[EXTSI0]] : i64
+  // CHECK:   [[C_32768:%.*]] = arith.constant -32768 : i64
+  // CHECK:   [[C32767:%.*]] = arith.constant 32767 : i64
+  // CHECK:   [[MAX:%.*]] = arith.maxsi [[C_32768]], [[SUB]] : i64
+  // CHECK:   [[MIN:%.*]] = arith.minsi [[C32767]], [[MAX]] : i64
+  // CHECK:   [[TRUNC:%.*]] = arith.trunci [[MIN]] : i64 to i16
+  %0 = tosa.negate %arg0, %arg1, %arg2 : (tensor<50x42xi16>, tensor<1xi16>, tensor<1xi16>) -> tensor<50x42xi16>
+  %cast = tensor.cast %0 : tensor<50x42xi16> to tensor<*xi16>
+  return %cast : tensor<*xi16>
 }
 
 // -----
@@ -908,6 +953,32 @@ func.func @test_identity(%arg0: tensor<1xf32>, %arg1: tensor<1xi32>) -> (tensor<
 
   // CHECK: return %[[ARG0]], %[[ARG1]]
   return %0, %1 : tensor<1xf32>, tensor<1xi32>
+}
+
+// -----
+
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
+// CHECK-LABEL: @reduce_bf16
+// CHECK-SAME: [[ARG0:%.+]]: tensor<5x4xbf16>
+func.func @reduce_bf16(%arg0: tensor<5x4xbf16>) -> () {
+  // CHECK: [[INIT:%.+]] = tensor.empty() : tensor<4xf32>
+  // CHECK: [[CST0:%.+]] = arith.constant 0.0
+  // CHECK: [[FILL:%.+]] = linalg.fill ins([[CST0]]{{.*}}outs([[INIT]]
+  // CHECK: [[REDUCE:%.+]] = linalg.reduce ins([[ARG0]] : tensor<5x4xbf16>) outs([[FILL]] : tensor<4xf32>) dimensions = [0]
+  // CHECK:  (%[[ARG1:.*]]: bf16, %[[ARG2:.*]]: f32) {
+  // CHECK:   [[EXTF:%.+]] = arith.extf %[[ARG1]] : bf16 to f32
+  // CHECK:   [[ACC:%.+]] = arith.addf [[EXTF]], %[[ARG2]] : f32
+  // CHECK:   linalg.yield [[ACC]] : f32
+  // CHECK:  }
+  // CHECK: [[INIT_RES:%.+]] = tensor.empty() : tensor<4xbf16>
+  // CHECK: [[RES:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]]], iterator_types = ["parallel"]} ins([[REDUCE]] : tensor<4xf32>) outs([[INIT_RES]] : tensor<4xbf16>)
+  // CHECK:  ^bb0(%[[IN:.*]]: f32, %[[OUT:.*]]: bf16):
+  // CHECK:   [[TRUNCF:%.+]] = arith.truncf %[[IN]] : f32 to bf16
+  // CHECK:   linalg.yield [[TRUNCF]] : bf16
+  // CHECK:  }
+  // CHECK: tensor.expand_shape [[RES]] {{\[}}[0, 1]] output_shape [1, 4] : tensor<4xbf16> into tensor<1x4xbf16>
+  %0 = tosa.reduce_sum %arg0 {axis = 0 : i32} : (tensor<5x4xbf16>) -> tensor<1x4xbf16>
+  return
 }
 
 // -----
@@ -1131,7 +1202,7 @@ func.func @rescale_i8(%arg0 : tensor<2xi8>) -> () {
   // CHECK: [[C22:%.+]] = arith.constant 22
   // CHECK-DAG: [[IN32:%.+]] = arith.extsi [[IN]]
   // CHECK-DAG: [[IN_ZEROED:%.+]] = arith.subi [[IN32]], [[C17]]
-  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[C0]], [[C1]] {rounding_mode = "SINGLE_ROUND"}
+  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[C0]], [[C1]] {rounding_mode = SINGLE_ROUND}
   // CHECK-DAG: [[SCALED_ZEROED:%.+]] = arith.addi [[SCALED]], [[C22]]
   // CHECK-DAG: [[CMIN:%.+]] = arith.constant -128
   // CHECK-DAG: [[CMAX:%.+]] = arith.constant 127
@@ -1143,7 +1214,7 @@ func.func @rescale_i8(%arg0 : tensor<2xi8>) -> () {
   %shift = "tosa.const"() {values = dense<15> : tensor<1xi8>} : () -> tensor<1xi8>
   %input_zp = "tosa.const"() {values = dense<17> : tensor<1xi8>} : () -> tensor<1xi8>
   %output_zp = "tosa.const"() {values = dense<22> : tensor<1xi8>} : () -> tensor<1xi8>
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = "SINGLE_ROUND", per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<2xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = SINGLE_ROUND, per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<2xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
 
   // CHECK: return
   return
@@ -1164,7 +1235,7 @@ func.func @rescale_i8_unsigned_output_explicit(%arg0 : tensor<2xi8>) -> () {
   // CHECK-DAG: [[C234:%.+]] = arith.constant 234
   // CHECK-DAG: [[IN32:%.+]] = arith.extsi [[IN]]
   // CHECK-DAG: [[IN_ZEROED:%.+]] = arith.subi [[IN32]], [[C17]]
-  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[C0]], [[C1]] {rounding_mode = "SINGLE_ROUND"}
+  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[C0]], [[C1]] {rounding_mode = SINGLE_ROUND}
   // CHECK-DAG: [[SCALED_ZEROED:%.+]] = arith.addi [[SCALED]], [[C234]]
   // CHECK-DAG: [[CMIN:%.+]] = arith.constant 0
   // CHECK-DAG: [[CMAX:%.+]] = arith.constant 255
@@ -1177,7 +1248,7 @@ func.func @rescale_i8_unsigned_output_explicit(%arg0 : tensor<2xi8>) -> () {
   %shift = "tosa.const"() {values = dense<15> : tensor<1xi8> } : () -> tensor<1xi8>
   %input_zp = "tosa.const"() {values = dense<17> : tensor<1xi8>} : () -> tensor<1xi8>
   %output_zp = "tosa.const"() {values = dense<-22> : tensor<1xi8>} : () -> tensor<1xi8>
-  %1 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = "SINGLE_ROUND", per_channel = false, input_unsigned = false, output_unsigned = true} : (tensor<2xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xui8>
+  %1 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = SINGLE_ROUND, per_channel = false, input_unsigned = false, output_unsigned = true} : (tensor<2xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xui8>
 
   // CHECK: return
   return
@@ -1198,7 +1269,7 @@ func.func @rescale_i8_unsigned_output_implicit(%arg0 : tensor<2xi8>) -> () {
   // CHECK-DAG: [[C234:%.+]] = arith.constant 234
   // CHECK-DAG: [[IN32:%.+]] = arith.extsi [[IN]]
   // CHECK-DAG: [[IN_ZEROED:%.+]] = arith.subi [[IN32]], [[C17]]
-  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[C0]], [[C1]] {rounding_mode = "SINGLE_ROUND"}
+  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[C0]], [[C1]] {rounding_mode = SINGLE_ROUND}
   // CHECK-DAG: [[SCALED_ZEROED:%.+]] = arith.addi [[SCALED]], [[C234]]
   // CHECK-DAG: [[CMIN:%.+]] = arith.constant 0
   // CHECK-DAG: [[CMAX:%.+]] = arith.constant 255
@@ -1211,7 +1282,7 @@ func.func @rescale_i8_unsigned_output_implicit(%arg0 : tensor<2xi8>) -> () {
   %shift = "tosa.const"() {values = dense<15> : tensor<1xi8> } : () -> tensor<1xi8>
   %input_zp = "tosa.const"() {values = dense<17> : tensor<1xi8>} : () -> tensor<1xi8>
   %output_zp = "tosa.const"() {values = dense<-22> : tensor<1xi8>} : () -> tensor<1xi8>
-  %1 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = "SINGLE_ROUND", per_channel = false, input_unsigned = false, output_unsigned = true} : (tensor<2xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
+  %1 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = SINGLE_ROUND, per_channel = false, input_unsigned = false, output_unsigned = true} : (tensor<2xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
 
   // CHECK: return
   return
@@ -1232,7 +1303,7 @@ func.func @rescale_i48_unsigned_output_implicit(%arg0 : tensor<2xi48>) -> () {
   // CHECK-DAG: [[C0:%.+]] = arith.constant 0
   // CHECK-DAG: [[C234:%.+]] = arith.constant 234
   // CHECK-DAG: [[IN_ZEROED:%.+]] = arith.subi [[IN]], [[C0]]
-  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[C19689]], [[C15]] {rounding_mode = "SINGLE_ROUND"}
+  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[C19689]], [[C15]] {rounding_mode = SINGLE_ROUND}
   // CHECK-DAG: [[SCALED_ZEROED:%.+]] = arith.addi [[SCALED]], [[C234]]
   // CHECK-DAG: [[CMIN:%.+]] = arith.constant 0
   // CHECK-DAG: [[CMAX:%.+]] = arith.constant 255
@@ -1244,7 +1315,7 @@ func.func @rescale_i48_unsigned_output_implicit(%arg0 : tensor<2xi48>) -> () {
   %shift = "tosa.const"() {values = dense<15> : tensor<1xi8> } : () -> tensor<1xi8>
   %input_zp = "tosa.const"() {values = dense<0> : tensor<1xi48>} : () -> tensor<1xi48>
   %output_zp = "tosa.const"() {values = dense<-22> : tensor<1xi8>} : () -> tensor<1xi8>
-  %1 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = "SINGLE_ROUND", per_channel = false, input_unsigned = false, output_unsigned = true} : (tensor<2xi48>, tensor<1xi16>, tensor<1xi8>, tensor<1xi48>, tensor<1xi8>) -> tensor<2xi8>
+  %1 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = SINGLE_ROUND, per_channel = false, input_unsigned = false, output_unsigned = true} : (tensor<2xi48>, tensor<1xi16>, tensor<1xi8>, tensor<1xi48>, tensor<1xi8>) -> tensor<2xi8>
 
   // CHECK: return
   return
@@ -1265,13 +1336,13 @@ func.func @rescale_i8_dyn_batch(%arg0 : tensor<?x2xi8>) -> () {
   // CHECK: %[[BATCH:.+]] = tensor.dim %[[ARG0]], %[[C0]]
   // CHECK: %[[INIT:.+]] = tensor.empty(%[[BATCH]]) : tensor<?x2xi8>
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]]], iterator_types = ["parallel", "parallel"]} ins(%[[ARG0]] : tensor<?x2xi8>) outs(%[[INIT]] : tensor<?x2xi8>)
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = "SINGLE_ROUND", per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<?x2xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<?x2xi8>
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = SINGLE_ROUND, per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<?x2xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<?x2xi8>
 
   // CHECK: %[[C0:.+]] = arith.constant 0
   // CHECK: %[[BATCH:.+]] = tensor.dim %[[ARG0]], %[[C0]]
   // CHECK: %[[INIT:.+]] = tensor.empty(%[[BATCH]]) : tensor<?x2xi8>
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]]], iterator_types = ["parallel", "parallel"]} ins(%[[ARG0]] : tensor<?x2xi8>) outs(%[[INIT]] : tensor<?x2xi8>)
-  %1 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = "SINGLE_ROUND", per_channel = false, input_unsigned = false, output_unsigned = true} : (tensor<?x2xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<?x2xi8>
+  %1 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = SINGLE_ROUND, per_channel = false, input_unsigned = false, output_unsigned = true} : (tensor<?x2xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<?x2xi8>
 
   return
 }
@@ -1293,7 +1364,7 @@ func.func @rescale_dyn(%arg0 : tensor<1x?x?x32xi32>) -> () {
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP1]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%[[ARG0]] : tensor<1x?x?x32xi32>) outs(%[[INIT]] : tensor<1x?x?x32xi8>)
   %multiplier = "tosa.const"() {values = dense<1376784203> : tensor<1xi32> } : () -> tensor<1xi32>
   %shift = "tosa.const"() {values = dense<38> : tensor<1xi8> } : () -> tensor<1xi8>
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {rounding_mode = "DOUBLE_ROUND", input_zp = 0 : i32, output_zp = 0 : i32, per_channel = false, scale32 = true, input_unsigned = false, output_unsigned = false} : (tensor<1x?x?x32xi32>, tensor<1xi32>, tensor<1xi8>, tensor<1xi32>, tensor<1xi8>) -> tensor<1x?x?x32xi8>
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {rounding_mode = DOUBLE_ROUND, per_channel = false, scale32 = true, input_unsigned = false, output_unsigned = false} : (tensor<1x?x?x32xi32>, tensor<1xi32>, tensor<1xi8>, tensor<1xi32>, tensor<1xi8>) -> tensor<1x?x?x32xi8>
   return
 }
 
@@ -1313,7 +1384,7 @@ func.func @rescale_i8_unsigned_input_explicit(%arg0 : tensor<2xui8>) -> () {
   // CHECK-DAG: [[IN_UTOI:%.+]] = builtin.unrealized_conversion_cast [[IN]] : ui8 to i8
   // CHECK-DAG: [[IN32:%.+]] = arith.extui [[IN_UTOI]]
   // CHECK-DAG: [[IN_ZEROED:%.+]] = arith.subi [[IN32]], [[C17]]
-  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[C0]], [[C1]] {rounding_mode = "SINGLE_ROUND"}
+  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[C0]], [[C1]] {rounding_mode = SINGLE_ROUND}
   // CHECK-DAG: [[SCALED_ZEROED:%.+]] = arith.addi [[SCALED]], [[C22]]
   // CHECK-DAG: [[CMIN:%.+]] = arith.constant -128
   // CHECK-DAG: [[CMAX:%.+]] = arith.constant 127
@@ -1325,7 +1396,7 @@ func.func @rescale_i8_unsigned_input_explicit(%arg0 : tensor<2xui8>) -> () {
   %shift = "tosa.const"() {values = dense<15> : tensor<1xi8> } : () -> tensor<1xi8>
   %input_zp = "tosa.const"() {values = dense<17> : tensor<1xi8>} : () -> tensor<1xi8>
   %output_zp = "tosa.const"() {values = dense<22> : tensor<1xi8>} : () -> tensor<1xi8>
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = "SINGLE_ROUND", per_channel = false, input_unsigned = true, output_unsigned = false} : (tensor<2xui8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = SINGLE_ROUND, per_channel = false, input_unsigned = true, output_unsigned = false} : (tensor<2xui8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
 
   return
 }
@@ -1346,7 +1417,7 @@ func.func @rescale_i8_unsigned_input_implicit(%arg0 : tensor<2xi8>) -> () {
   // CHECK-DAG: [[C22:%.+]] = arith.constant 22
   // CHECK-DAG: [[IN32:%.+]] = arith.extui [[IN]]
   // CHECK-DAG: [[IN_ZEROED:%.+]] = arith.subi [[IN32]], [[C128]]
-  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[C0]], [[C1]] {rounding_mode = "SINGLE_ROUND"}
+  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[C0]], [[C1]] {rounding_mode = SINGLE_ROUND}
   // CHECK-DAG: [[SCALED_ZEROED:%.+]] = arith.addi [[SCALED]], [[C22]]
   // CHECK-DAG: [[CMIN:%.+]] = arith.constant -128
   // CHECK-DAG: [[CMAX:%.+]] = arith.constant 127
@@ -1358,7 +1429,7 @@ func.func @rescale_i8_unsigned_input_implicit(%arg0 : tensor<2xi8>) -> () {
   %shift = "tosa.const"() {values = dense<15> : tensor<1xi8> } : () -> tensor<1xi8>
   %input_zp = "tosa.const"() {values = dense<-128> : tensor<1xi8>} : () -> tensor<1xi8>
   %output_zp = "tosa.const"() {values = dense<22> : tensor<1xi8>} : () -> tensor<1xi8>
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = "SINGLE_ROUND", per_channel = false, input_unsigned = true, output_unsigned = false} : (tensor<2xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = SINGLE_ROUND, per_channel = false, input_unsigned = true, output_unsigned = false} : (tensor<2xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
 
   return
 }
@@ -1379,7 +1450,7 @@ func.func @rescale_i8_unsigned_input_output_explicit(%arg0 : tensor<2xui8>) -> (
   // CHECK-DAG: [[IN_UTOI:%.+]] = builtin.unrealized_conversion_cast [[IN]] : ui8 to i8
   // CHECK-DAG: [[IN32:%.+]] = arith.extui [[IN_UTOI]]
   // CHECK-DAG: [[IN_ZEROED:%.+]] = arith.subi [[IN32]], [[C17]]
-  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[C0]], [[C1]] {rounding_mode = "SINGLE_ROUND"}
+  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[C0]], [[C1]] {rounding_mode = SINGLE_ROUND}
   // CHECK-DAG: [[SCALED_ZEROED:%.+]] = arith.addi [[SCALED]], [[C22]]
   // CHECK-DAG: [[CMIN:%.+]] = arith.constant -128
   // CHECK-DAG: [[CMAX:%.+]] = arith.constant 127
@@ -1392,7 +1463,7 @@ func.func @rescale_i8_unsigned_input_output_explicit(%arg0 : tensor<2xui8>) -> (
   %shift = "tosa.const"() {values = dense<15> : tensor<1xi8> } : () -> tensor<1xi8>
   %input_zp = "tosa.const"() {values = dense<17> : tensor<1xi8>} : () -> tensor<1xi8>
   %output_zp = "tosa.const"() {values = dense<22> : tensor<1xi8>} : () -> tensor<1xi8>
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = "SINGLE_ROUND", per_channel = false, input_unsigned = true, output_unsigned = false} : (tensor<2xui8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xui8>
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = SINGLE_ROUND, per_channel = false, input_unsigned = true, output_unsigned = false} : (tensor<2xui8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xui8>
 
   return
 }
@@ -1414,7 +1485,7 @@ func.func @rescale_per_channel(%arg0 : tensor<3xi8>) -> (tensor<3xi8>) {
 
   // CHECK-DAG: [[IN32:%.+]] = arith.extsi [[IN]]
   // CHECK-DAG: [[IN_ZEROED:%.+]] = arith.subi [[IN32]], [[C243]]
-  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[MULTIPLIER]], [[SHIFT]] {rounding_mode = "SINGLE_ROUND"}
+  // CHECK-DAG: [[SCALED:%.+]] = tosa.apply_scale [[IN_ZEROED]], [[MULTIPLIER]], [[SHIFT]] {rounding_mode = SINGLE_ROUND}
   // CHECK-DAG: [[SCALED_ZEROED:%.+]] = arith.addi [[SCALED]], [[C252]]
   // CHECK-DAG: [[CMIN:%.+]] = arith.constant -128
   // CHECK-DAG: [[CMAX:%.+]] = arith.constant 127
@@ -1426,7 +1497,7 @@ func.func @rescale_per_channel(%arg0 : tensor<3xi8>) -> (tensor<3xi8>) {
   %shift = "tosa.const"() {values = dense<[14, 15, 64]> : tensor<3xi8>} : () -> tensor<3xi8>
   %input_zp = "tosa.const"() {values = dense<43> : tensor<1xi8>} : () -> tensor<1xi8>
   %output_zp = "tosa.const"() {values = dense<52> : tensor<1xi8>} : () -> tensor<1xi8>
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = "SINGLE_ROUND", per_channel = true, input_unsigned = false, output_unsigned = false} : (tensor<3xi8>, tensor<3xi16>, tensor<3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<3xi8>
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = SINGLE_ROUND, per_channel = true, input_unsigned = false, output_unsigned = false} : (tensor<3xi8>, tensor<3xi16>, tensor<3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<3xi8>
 
   // CHECK: return [[GENERIC]]
   return %0 : tensor<3xi8>
@@ -1443,8 +1514,8 @@ func.func @rescaleDoubleRound(%arg0 : tensor<2xi8>) -> (tensor<2xi8>) {
 
   // CHECK: linalg.generic
   // CHECK: tosa.apply_scale
-  // CHECK-SAME: {rounding_mode = "DOUBLE_ROUND"}
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = true, rounding_mode = "DOUBLE_ROUND", per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<2xi8>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
+  // CHECK-SAME: {rounding_mode = DOUBLE_ROUND}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = true, rounding_mode = DOUBLE_ROUND, per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<2xi8>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
   return %0 : tensor<2xi8>
 }
 
@@ -1459,8 +1530,8 @@ func.func @rescaleUnnecessaryDoubleRound(%arg0 : tensor<2xi8>) -> (tensor<2xi8>)
 
   // CHECK: linalg.generic
   // CHECK: tosa.apply_scale
-  // CHECK-SAME:  {rounding_mode = "SINGLE_ROUND"}
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = true, rounding_mode = "DOUBLE_ROUND", per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<2xi8>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
+  // CHECK-SAME:  {rounding_mode = SINGLE_ROUND}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = true, rounding_mode = DOUBLE_ROUND, per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<2xi8>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
   return %0 : tensor<2xi8>
 }
 
@@ -1472,8 +1543,94 @@ func.func @unsupportedRescaleInexactRound(%arg0 : tensor<2xi8>) -> (tensor<2xi8>
   %input_zp = "tosa.const"() {values = dense<0> : tensor<1xi8>} : () -> tensor<1xi8>
   %output_zp = "tosa.const"() {values = dense<0> : tensor<1xi8>} : () -> tensor<1xi8>
   // expected-error@+1 {{failed to legalize operation 'tosa.rescale'}}
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {input_zp = 243 : i32, output_zp = 252 : i32, scale32 = true, rounding_mode = "INEXACT_ROUND", per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<2xi8>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = true, rounding_mode = INEXACT_ROUND, per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<2xi8>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
   return %0 : tensor<2xi8>
+}
+
+// -----
+
+// CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (d0)>
+// CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> ()>
+// CHECK-LABEL: @rescale_no_const
+// CHECK-SAME: ([[ARG0:%[0-9a-zA-Z_]*]]
+func.func @rescale_no_const(%arg0 : tensor<2xi8>, %multiplier : tensor<1xi32>, %shift : tensor<1xi8>, %input_zp : tensor<1xi8>, %output_zp : tensor<1xi8>) -> (tensor<2xi8>) {
+  // CHECK: [[MULTIPLIER:%.+]] = tensor.collapse_shape %arg1 [] : tensor<1xi32> into tensor<i32>
+  // CHECK: [[SHIFT:%.+]] = tensor.collapse_shape %arg2 [] : tensor<1xi8> into tensor<i8>
+  // CHECK: [[INPUT_ZP:%.+]] = tensor.collapse_shape %arg3 [] : tensor<1xi8> into tensor<i8>
+  // CHECK: [[OUTPUT_ZP:%.+]] = tensor.collapse_shape %arg4 [] : tensor<1xi8> into tensor<i8>
+  // CHECK: [[INIT:%.+]] = tensor.empty() : tensor<2xi8>
+  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]], #[[$MAP1]], #[[$MAP1]], #[[$MAP0]]], iterator_types = ["parallel"]} ins([[ARG0]], [[MULTIPLIER]], [[SHIFT]], [[INPUT_ZP]], [[OUTPUT_ZP]] : tensor<2xi8>, tensor<i32>, tensor<i8>, tensor<i8>, tensor<i8>) outs([[INIT]] : tensor<2xi8>) {
+  // CHECK:   ^bb0([[ARG0:%.*]]: i8, [[ARG1:%.*]]: i32, [[ARG2:%.*]]: i8, [[ARG3:%.*]]: i8, [[ARG4:%.*]]: i8, [[OUT:%.*]]: i8):
+  // CHECK:    [[INPUT_ZP_I32:%.+]] = arith.extsi [[ARG3]] : i8 to i32
+  // CHECK:    [[OUTPUT_ZP_I32:%.+]] = arith.extsi [[ARG4]] : i8 to i32
+  // CHECK:    [[ARG0_I32:%.+]] = arith.extsi [[ARG0]] : i8 to i32
+  // CHECK:    [[TMP1:%.+]] = arith.subi [[ARG0_I32]], [[INPUT_ZP_I32]] : i32
+  // CHECK:    [[TMP2:%.+]] = tosa.apply_scale [[TMP1]], [[ARG1]], [[ARG2]] {rounding_mode = DOUBLE_ROUND} : (i32, i32, i8) -> i32
+  // CHECK:    [[TMP3:%.+]] = arith.addi [[TMP2]], [[OUTPUT_ZP_I32]] : i32
+  // CHECK:    %c-128_i32 = arith.constant -128 : i32
+  // CHECK:    %c127_i32 = arith.constant 127 : i32
+  // CHECK:    [[MAX:%.+]] = arith.maxsi %c-128_i32, [[TMP3]] : i32
+  // CHECK:    [[MIN:%.+]] = arith.minsi %c127_i32, [[MAX]] : i32
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = true, rounding_mode = DOUBLE_ROUND, per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<2xi8>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
+  return %0 : tensor<2xi8>
+}
+
+// -----
+
+// CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (d0)>
+// CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> ()>
+// CHECK-LABEL: @rescale_no_const_per_channel
+// CHECK-SAME: ([[ARG0:%[0-9a-zA-Z_]*]]
+// CHECK-SAME:  [[ARG1:%[0-9a-zA-Z_]*]]
+// CHECK-SAME:  [[ARG2:%[0-9a-zA-Z_]*]]
+func.func @rescale_no_const_per_channel(%arg0 : tensor<2xi8>, %arg1 : tensor<2xi32>, %arg2 : tensor<2xi8>, %input_zp : tensor<1xi8>, %output_zp : tensor<1xi8>) -> (tensor<2xi8>) {
+  // CHECK: [[INPUT_ZP:%.+]] = tensor.collapse_shape %arg3 [] : tensor<1xi8> into tensor<i8>
+  // CHECK: [[OUTPUT_ZP:%.+]] = tensor.collapse_shape %arg4 [] : tensor<1xi8> into tensor<i8>
+  // CHECK: [[INIT:%.+]] = tensor.empty() : tensor<2xi8>
+  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]], #[[$MAP0]], #[[$MAP1]], #[[$MAP1]], #[[$MAP0]]], iterator_types = ["parallel"]} ins([[ARG0]], [[ARG1]], [[ARG2]], [[INPUT_ZP]], [[OUTPUT_ZP]] : tensor<2xi8>, tensor<2xi32>, tensor<2xi8>, tensor<i8>, tensor<i8>) outs([[INIT]] : tensor<2xi8>) {
+  // CHECK:   ^bb0([[ARG0:%.*]]: i8, [[ARG1:%.*]]: i32, [[ARG2:%.*]]: i8, [[ARG3:%.*]]: i8, [[ARG4:%.*]]: i8, [[OUT:%.*]]: i8):
+  // CHECK:    [[INPUT_ZP_I32:%.+]] = arith.extsi [[ARG3]] : i8 to i32
+  // CHECK:    [[OUTPUT_ZP_I32:%.+]] = arith.extsi [[ARG4]] : i8 to i32
+  // CHECK:    [[ARG0_I32:%.+]] = arith.extsi [[ARG0]] : i8 to i32
+  // CHECK:    [[TMP1:%.+]] = arith.subi [[ARG0_I32]], [[INPUT_ZP_I32]] : i32
+  // CHECK:    [[TMP2:%.+]] = tosa.apply_scale [[TMP1]], [[ARG1]], [[ARG2]] {rounding_mode = DOUBLE_ROUND} : (i32, i32, i8) -> i32
+  // CHECK:    [[TMP3:%.+]] = arith.addi [[TMP2]], [[OUTPUT_ZP_I32]] : i32
+  // CHECK:    %c-128_i32 = arith.constant -128 : i32
+  // CHECK:    %c127_i32 = arith.constant 127 : i32
+  // CHECK:    [[MAX:%.+]] = arith.maxsi %c-128_i32, [[TMP3]] : i32
+  // CHECK:    [[MIN:%.+]] = arith.minsi %c127_i32, [[MAX]] : i32
+    %0 = tosa.rescale %arg0, %arg1, %arg2, %input_zp, %output_zp {scale32 = true, rounding_mode = DOUBLE_ROUND, per_channel = true, input_unsigned = false, output_unsigned = false} : (tensor<2xi8>, tensor<2xi32>, tensor<2xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
+  return %0 : tensor<2xi8>
+}
+
+// -----
+
+// CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (d0)>
+// CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> ()>
+// CHECK-LABEL: @rescale_no_const_per_channel_input_output_zp_ui8
+// CHECK-SAME: ([[ARG0:%[0-9a-zA-Z_]*]]
+// CHECK-SAME:  [[ARG1:%[0-9a-zA-Z_]*]]
+// CHECK-SAME:  [[ARG2:%[0-9a-zA-Z_]*]]
+func.func @rescale_no_const_per_channel_input_output_zp_ui8(%arg0 : tensor<2xi8>, %arg1 : tensor<2xi32>, %arg2 : tensor<2xi8>, %input_zp : tensor<1xui8>, %output_zp : tensor<1xui8>) -> (tensor<2xui8>) {
+  // CHECK: [[INPUT_ZP:%.+]] = tensor.collapse_shape %arg3 [] : tensor<1xui8> into tensor<ui8>
+  // CHECK: [[OUTPUT_ZP:%.+]] = tensor.collapse_shape %arg4 [] : tensor<1xui8> into tensor<ui8>
+  // CHECK: [[INIT:%.+]] = tensor.empty() : tensor<2xui8>
+  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]], #[[$MAP0]], #[[$MAP1]], #[[$MAP1]], #[[$MAP0]]], iterator_types = ["parallel"]} ins([[ARG0]], [[ARG1]], [[ARG2]], [[INPUT_ZP]], [[OUTPUT_ZP]] : tensor<2xi8>, tensor<2xi32>, tensor<2xi8>, tensor<ui8>, tensor<ui8>) outs([[INIT]] : tensor<2xui8>) {
+  // CHECK:   ^bb0([[ARG0:%.*]]: i8, [[ARG1:%.*]]: i32, [[ARG2:%.*]]: i8, [[ARG3:%.*]]: ui8, [[ARG4:%.*]]: ui8, [[OUT:%.*]]: ui8):
+  // CHECK:    [[INPUT_ZP_I8:%.+]]  = builtin.unrealized_conversion_cast [[ARG3]] : ui8 to i8
+  // CHECK:    [[INPUT_ZP_I32:%.+]] = arith.extui [[INPUT_ZP_I8]] : i8 to i32
+  // CHECK:    [[OUTPUT_ZP_I8:%.+]]  = builtin.unrealized_conversion_cast [[ARG4]] : ui8 to i8
+  // CHECK:    [[OUTPUT_ZP_I32:%.+]] = arith.extui [[OUTPUT_ZP_I8]] : i8 to i32
+  // CHECK:    [[ARG0_I32:%.+]] = arith.extsi [[ARG0]] : i8 to i32
+  // CHECK:    [[TMP1:%.+]] = arith.subi [[ARG0_I32]], [[INPUT_ZP_I32]] : i32
+  // CHECK:    [[TMP2:%.+]] = tosa.apply_scale [[TMP1]], [[ARG1]], [[ARG2]] {rounding_mode = DOUBLE_ROUND} : (i32, i32, i8) -> i32
+  // CHECK:    [[TMP3:%.+]] = arith.addi [[TMP2]], [[OUTPUT_ZP_I32]] : i32
+  // CHECK:    %c0_i32 = arith.constant 0 : i32
+  // CHECK:    %c255_i32 = arith.constant 255 : i32
+  // CHECK:    [[MAX:%.+]] = arith.maxsi %c0_i32, [[TMP3]] : i32
+  // CHECK:    [[MIN:%.+]] = arith.minsi %c255_i32, [[MAX]] : i32
+    %0 = tosa.rescale %arg0, %arg1, %arg2, %input_zp, %output_zp {scale32 = true, rounding_mode = DOUBLE_ROUND, per_channel = true, input_unsigned = false, output_unsigned = true} : (tensor<2xi8>, tensor<2xi32>, tensor<2xi8>, tensor<1xui8>, tensor<1xui8>) -> tensor<2xui8>
+  return %0 : tensor<2xui8>
 }
 
 // -----
@@ -1891,58 +2048,70 @@ func.func @table8_dyn_table(%arg0: tensor<6xi8>, %arg1: tensor<?xi8>) -> () {
 
 // -----
 // NOTE: Assertions have been autogenerated by utils/generate-test-checks.py
-// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d3, d4)>
-// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>
-
+// CHECK: #[[$ATTR_85:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d3, d4)>
+// CHECK: #[[$ATTR_86:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>
 // CHECK-LABEL:   func.func @test_static_rfft2d(
-// CHECK-SAME:                                  %[[VAL_0:.*]]: tensor<5x4x8xf32>) -> (tensor<5x4x5xf32>, tensor<5x4x5xf32>) {
-// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_2:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_3:.*]] = arith.constant 8 : index
-// CHECK:           %[[VAL_4:.*]] = arith.constant 4 : index
-// CHECK:           %[[VAL_5:.*]] = arith.constant 5 : index
-// CHECK:           %[[VAL_6:.*]] = tensor.empty() : tensor<5x4x5xf32>
-// CHECK:           %[[VAL_7:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[VAL_8:.*]] = linalg.fill ins(%[[VAL_7]] : f32) outs(%[[VAL_6]] : tensor<5x4x5xf32>) -> tensor<5x4x5xf32>
-// CHECK:           %[[VAL_9:.*]] = tensor.empty() : tensor<5x4x5xf32>
-// CHECK:           %[[VAL_10:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[VAL_11:.*]] = linalg.fill ins(%[[VAL_10]] : f32) outs(%[[VAL_9]] : tensor<5x4x5xf32>) -> tensor<5x4x5xf32>
-// CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_13:.*]] = arith.constant 4 : index
-// CHECK:           %[[VAL_14:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_15:.*]] = arith.constant 8 : index
-// CHECK:           %[[VAL_16:.*]] = arith.constant 6.28318548 : f32
-// CHECK:           %[[VAL_17:.*]] = arith.index_castui %[[VAL_13]] : index to i32
-// CHECK:           %[[VAL_18:.*]] = arith.uitofp %[[VAL_17]] : i32 to f32
-// CHECK:           %[[VAL_19:.*]] = arith.index_castui %[[VAL_15]] : index to i32
-// CHECK:           %[[VAL_20:.*]] = arith.uitofp %[[VAL_19]] : i32 to f32
-// CHECK:           %[[VAL_21:.*]]:2 = linalg.generic {indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_1]]], iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction"]} ins(%[[VAL_0]] : tensor<5x4x8xf32>) outs(%[[VAL_8]], %[[VAL_11]] : tensor<5x4x5xf32>, tensor<5x4x5xf32>) {
-// CHECK:           ^bb0(%[[VAL_22:.*]]: f32, %[[VAL_23:.*]]: f32, %[[VAL_24:.*]]: f32):
-// CHECK:             %[[VAL_25:.*]] = linalg.index 1 : index
-// CHECK:             %[[VAL_26:.*]] = linalg.index 2 : index
-// CHECK:             %[[VAL_27:.*]] = linalg.index 3 : index
-// CHECK:             %[[VAL_28:.*]] = linalg.index 4 : index
-// CHECK:             %[[VAL_29:.*]] = index.mul %[[VAL_27]], %[[VAL_25]]
-// CHECK:             %[[VAL_30:.*]] = index.mul %[[VAL_28]], %[[VAL_26]]
-// CHECK:             %[[VAL_31:.*]] = index.remu %[[VAL_29]], %[[VAL_13]]
-// CHECK:             %[[VAL_32:.*]] = index.remu %[[VAL_30]], %[[VAL_15]]
-// CHECK:             %[[VAL_33:.*]] = arith.index_castui %[[VAL_31]] : index to i32
-// CHECK:             %[[VAL_34:.*]] = arith.uitofp %[[VAL_33]] : i32 to f32
-// CHECK:             %[[VAL_35:.*]] = arith.index_castui %[[VAL_32]] : index to i32
-// CHECK:             %[[VAL_36:.*]] = arith.uitofp %[[VAL_35]] : i32 to f32
-// CHECK:             %[[VAL_37:.*]] = arith.divf %[[VAL_34]], %[[VAL_18]] : f32
-// CHECK:             %[[VAL_38:.*]] = arith.divf %[[VAL_36]], %[[VAL_20]] : f32
-// CHECK:             %[[VAL_39:.*]] = arith.addf %[[VAL_37]], %[[VAL_38]] : f32
-// CHECK:             %[[VAL_40:.*]] = arith.mulf %[[VAL_16]], %[[VAL_39]] : f32
-// CHECK:             %[[VAL_41:.*]] = math.cos %[[VAL_40]] : f32
-// CHECK:             %[[VAL_42:.*]] = math.sin %[[VAL_40]] : f32
-// CHECK:             %[[VAL_43:.*]] = arith.mulf %[[VAL_22]], %[[VAL_41]] : f32
-// CHECK:             %[[VAL_44:.*]] = arith.mulf %[[VAL_22]], %[[VAL_42]] : f32
-// CHECK:             %[[VAL_45:.*]] = arith.addf %[[VAL_23]], %[[VAL_43]] : f32
-// CHECK:             %[[VAL_46:.*]] = arith.subf %[[VAL_24]], %[[VAL_44]] : f32
-// CHECK:             linalg.yield %[[VAL_45]], %[[VAL_46]] : f32, f32
+// CHECK-SAME:      %[[ARG0:.*]]: tensor<5x4x8xf32>) -> (tensor<5x4x5xf32>, tensor<5x4x5xf32>) {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 2 : index
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 8 : index
+// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 4 : index
+// CHECK:           %[[CONSTANT_4:.*]] = arith.constant 5 : index
+// CHECK:           %[[EMPTY_0:.*]] = tensor.empty() : tensor<5x4x5xf32>
+// CHECK:           %[[CONSTANT_5:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[FILL_0:.*]] = linalg.fill ins(%[[CONSTANT_5]] : f32) outs(%[[EMPTY_0]] : tensor<5x4x5xf32>) -> tensor<5x4x5xf32>
+// CHECK:           %[[EMPTY_1:.*]] = tensor.empty() : tensor<5x4x5xf32>
+// CHECK:           %[[CONSTANT_6:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[FILL_1:.*]] = linalg.fill ins(%[[CONSTANT_6]] : f32) outs(%[[EMPTY_1]] : tensor<5x4x5xf32>) -> tensor<5x4x5xf32>
+// CHECK:           %[[CONSTANT_7:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_8:.*]] = arith.constant 4 : index
+// CHECK:           %[[CONSTANT_9:.*]] = arith.constant 2 : index
+// CHECK:           %[[CONSTANT_10:.*]] = arith.constant 8 : index
+// CHECK:           %[[CONSTANT_11:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[CONSTANT_12:.*]] = arith.constant 6.28318548 : f32
+// CHECK:           %[[CONSTANT_13:.*]] = arith.constant 0 : index
+// CHECK:           %[[CONSTANT_14:.*]] = arith.constant 2 : index
+// CHECK:           %[[INDEX_CASTUI_0:.*]] = arith.index_castui %[[CONSTANT_8]] : index to i32
+// CHECK:           %[[UITOFP_0:.*]] = arith.uitofp %[[INDEX_CASTUI_0]] : i32 to f32
+// CHECK:           %[[INDEX_CASTUI_1:.*]] = arith.index_castui %[[CONSTANT_10]] : index to i32
+// CHECK:           %[[UITOFP_1:.*]] = arith.uitofp %[[INDEX_CASTUI_1]] : i32 to f32
+// CHECK:           %[[DIVU_0:.*]] = index.divu %[[CONSTANT_8]], %[[CONSTANT_14]]
+// CHECK:           %[[DIVU_1:.*]] = index.divu %[[CONSTANT_10]], %[[CONSTANT_14]]
+// CHECK:           %[[GENERIC_0:.*]]:2 = linalg.generic {indexing_maps = [#[[$ATTR_85]], #[[$ATTR_86]], #[[$ATTR_86]]], iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction"]} ins(%[[ARG0]] : tensor<5x4x8xf32>) outs(%[[FILL_0]], %[[FILL_1]] : tensor<5x4x5xf32>, tensor<5x4x5xf32>) {
+// CHECK:           ^bb0(%[[VAL_0:.*]]: f32, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: f32):
+// CHECK:             %[[INDEX_0:.*]] = linalg.index 1 : index
+// CHECK:             %[[INDEX_1:.*]] = linalg.index 2 : index
+// CHECK:             %[[INDEX_2:.*]] = linalg.index 3 : index
+// CHECK:             %[[INDEX_3:.*]] = linalg.index 4 : index
+// CHECK:             %[[MUL_0:.*]] = index.mul %[[INDEX_2]], %[[INDEX_0]]
+// CHECK:             %[[MUL_1:.*]] = index.mul %[[INDEX_3]], %[[INDEX_1]]
+// CHECK:             %[[REMU_0:.*]] = index.remu %[[MUL_0]], %[[CONSTANT_8]]
+// CHECK:             %[[REMU_1:.*]] = index.remu %[[MUL_1]], %[[CONSTANT_10]]
+// CHECK:             %[[INDEX_CASTUI_2:.*]] = arith.index_castui %[[REMU_0]] : index to i32
+// CHECK:             %[[UITOFP_2:.*]] = arith.uitofp %[[INDEX_CASTUI_2]] : i32 to f32
+// CHECK:             %[[INDEX_CASTUI_3:.*]] = arith.index_castui %[[REMU_1]] : index to i32
+// CHECK:             %[[UITOFP_3:.*]] = arith.uitofp %[[INDEX_CASTUI_3]] : i32 to f32
+// CHECK:             %[[DIVF_0:.*]] = arith.divf %[[UITOFP_2]], %[[UITOFP_0]] : f32
+// CHECK:             %[[DIVF_1:.*]] = arith.divf %[[UITOFP_3]], %[[UITOFP_1]] : f32
+// CHECK:             %[[ADDF_0:.*]] = arith.addf %[[DIVF_0]], %[[DIVF_1]] : f32
+// CHECK:             %[[MULF_0:.*]] = arith.mulf %[[CONSTANT_12]], %[[ADDF_0]] : f32
+// CHECK:             %[[CMPI_0:.*]] = arith.cmpi eq, %[[REMU_0]], %[[CONSTANT_13]] : index
+// CHECK:             %[[CMPI_1:.*]] = arith.cmpi eq, %[[REMU_0]], %[[DIVU_0]] : index
+// CHECK:             %[[CMPI_2:.*]] = arith.cmpi eq, %[[REMU_1]], %[[CONSTANT_13]] : index
+// CHECK:             %[[CMPI_3:.*]] = arith.cmpi eq, %[[REMU_1]], %[[DIVU_1]] : index
+// CHECK:             %[[ORI_0:.*]] = arith.ori %[[CMPI_0]], %[[CMPI_1]] : i1
+// CHECK:             %[[ORI_1:.*]] = arith.ori %[[CMPI_2]], %[[CMPI_3]] : i1
+// CHECK:             %[[ANDI_0:.*]] = arith.andi %[[ORI_0]], %[[ORI_1]] : i1
+// CHECK:             %[[COS_0:.*]] = math.cos %[[MULF_0]] : f32
+// CHECK:             %[[SIN_0:.*]] = math.sin %[[MULF_0]] : f32
+// CHECK:             %[[SELECT_0:.*]] = arith.select %[[ANDI_0]], %[[CONSTANT_11]], %[[SIN_0]] : f32
+// CHECK:             %[[MULF_1:.*]] = arith.mulf %[[VAL_0]], %[[COS_0]] : f32
+// CHECK:             %[[MULF_2:.*]] = arith.mulf %[[VAL_0]], %[[SELECT_0]] : f32
+// CHECK:             %[[ADDF_1:.*]] = arith.addf %[[VAL_1]], %[[MULF_1]] : f32
+// CHECK:             %[[SUBF_0:.*]] = arith.subf %[[VAL_2]], %[[MULF_2]] : f32
+// CHECK:             linalg.yield %[[ADDF_1]], %[[SUBF_0]] : f32, f32
 // CHECK:           } -> (tensor<5x4x5xf32>, tensor<5x4x5xf32>)
-// CHECK:           return %[[VAL_47:.*]]#0, %[[VAL_47]]#1 : tensor<5x4x5xf32>, tensor<5x4x5xf32>
+// CHECK:           return %[[VAL_3:.*]]#0, %[[VAL_3]]#1 : tensor<5x4x5xf32>, tensor<5x4x5xf32>
 // CHECK:         }
 func.func @test_static_rfft2d(%arg0: tensor<5x4x8xf32>) -> (tensor<5x4x5xf32>, tensor<5x4x5xf32>) {
   %output_real, %output_imag = "tosa.rfft2d"(%arg0) {} : (tensor<5x4x8xf32>) -> (tensor<5x4x5xf32>, tensor<5x4x5xf32>)
@@ -1951,63 +2120,75 @@ func.func @test_static_rfft2d(%arg0: tensor<5x4x8xf32>) -> (tensor<5x4x5xf32>, t
 
 // -----
 // NOTE: Assertions have been autogenerated by utils/generate-test-checks.py
-// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d3, d4)>
-// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>
-
+// CHECK: #[[$ATTR_87:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d3, d4)>
+// CHECK: #[[$ATTR_88:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2)>
 // CHECK-LABEL:   func.func @test_dynamic_rfft2d(
-// CHECK-SAME:                                   %[[VAL_0:.*]]: tensor<?x?x?xf32>) -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>) {
-// CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<?x?x?xf32>
-// CHECK:           %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_4:.*]] = tensor.dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xf32>
-// CHECK:           %[[VAL_5:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_5]] : tensor<?x?x?xf32>
-// CHECK:           %[[VAL_7:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_8:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_9:.*]] = arith.divui %[[VAL_6]], %[[VAL_8]] : index
-// CHECK:           %[[VAL_10:.*]] = arith.addi %[[VAL_9]], %[[VAL_7]] : index
-// CHECK:           %[[VAL_11:.*]] = tensor.empty(%[[VAL_2]], %[[VAL_4]], %[[VAL_10]]) : tensor<?x?x?xf32>
-// CHECK:           %[[VAL_12:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[VAL_13:.*]] = linalg.fill ins(%[[VAL_12]] : f32) outs(%[[VAL_11]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CHECK:           %[[VAL_14:.*]] = tensor.empty(%[[VAL_2]], %[[VAL_4]], %[[VAL_10]]) : tensor<?x?x?xf32>
-// CHECK:           %[[VAL_15:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[VAL_16:.*]] = linalg.fill ins(%[[VAL_15]] : f32) outs(%[[VAL_14]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CHECK:           %[[VAL_17:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_18:.*]] = tensor.dim %[[VAL_0]], %[[VAL_17]] : tensor<?x?x?xf32>
-// CHECK:           %[[VAL_19:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_20:.*]] = tensor.dim %[[VAL_0]], %[[VAL_19]] : tensor<?x?x?xf32>
-// CHECK:           %[[VAL_21:.*]] = arith.constant 6.28318548 : f32
-// CHECK:           %[[VAL_22:.*]] = arith.index_castui %[[VAL_18]] : index to i32
-// CHECK:           %[[VAL_23:.*]] = arith.uitofp %[[VAL_22]] : i32 to f32
-// CHECK:           %[[VAL_24:.*]] = arith.index_castui %[[VAL_20]] : index to i32
-// CHECK:           %[[VAL_25:.*]] = arith.uitofp %[[VAL_24]] : i32 to f32
-// CHECK:           %[[VAL_26:.*]]:2 = linalg.generic {indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_1]]], iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction"]} ins(%[[VAL_0]] : tensor<?x?x?xf32>) outs(%[[VAL_13]], %[[VAL_16]] : tensor<?x?x?xf32>, tensor<?x?x?xf32>) {
-// CHECK:           ^bb0(%[[VAL_27:.*]]: f32, %[[VAL_28:.*]]: f32, %[[VAL_29:.*]]: f32):
-// CHECK:             %[[VAL_30:.*]] = linalg.index 1 : index
-// CHECK:             %[[VAL_31:.*]] = linalg.index 2 : index
-// CHECK:             %[[VAL_32:.*]] = linalg.index 3 : index
-// CHECK:             %[[VAL_33:.*]] = linalg.index 4 : index
-// CHECK:             %[[VAL_34:.*]] = index.mul %[[VAL_32]], %[[VAL_30]]
-// CHECK:             %[[VAL_35:.*]] = index.mul %[[VAL_33]], %[[VAL_31]]
-// CHECK:             %[[VAL_36:.*]] = index.remu %[[VAL_34]], %[[VAL_18]]
-// CHECK:             %[[VAL_37:.*]] = index.remu %[[VAL_35]], %[[VAL_20]]
-// CHECK:             %[[VAL_38:.*]] = arith.index_castui %[[VAL_36]] : index to i32
-// CHECK:             %[[VAL_39:.*]] = arith.uitofp %[[VAL_38]] : i32 to f32
-// CHECK:             %[[VAL_40:.*]] = arith.index_castui %[[VAL_37]] : index to i32
-// CHECK:             %[[VAL_41:.*]] = arith.uitofp %[[VAL_40]] : i32 to f32
-// CHECK:             %[[VAL_42:.*]] = arith.divf %[[VAL_39]], %[[VAL_23]] : f32
-// CHECK:             %[[VAL_43:.*]] = arith.divf %[[VAL_41]], %[[VAL_25]] : f32
-// CHECK:             %[[VAL_44:.*]] = arith.addf %[[VAL_42]], %[[VAL_43]] : f32
-// CHECK:             %[[VAL_45:.*]] = arith.mulf %[[VAL_21]], %[[VAL_44]] : f32
-// CHECK:             %[[VAL_46:.*]] = math.cos %[[VAL_45]] : f32
-// CHECK:             %[[VAL_47:.*]] = math.sin %[[VAL_45]] : f32
-// CHECK:             %[[VAL_48:.*]] = arith.mulf %[[VAL_27]], %[[VAL_46]] : f32
-// CHECK:             %[[VAL_49:.*]] = arith.mulf %[[VAL_27]], %[[VAL_47]] : f32
-// CHECK:             %[[VAL_50:.*]] = arith.addf %[[VAL_28]], %[[VAL_48]] : f32
-// CHECK:             %[[VAL_51:.*]] = arith.subf %[[VAL_29]], %[[VAL_49]] : f32
-// CHECK:             linalg.yield %[[VAL_50]], %[[VAL_51]] : f32, f32
+// CHECK-SAME:      %[[ARG0:.*]]: tensor<?x?x?xf32>) -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>) {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIM_0:.*]] = tensor.dim %[[ARG0]], %[[CONSTANT_0]] : tensor<?x?x?xf32>
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIM_1:.*]] = tensor.dim %[[ARG0]], %[[CONSTANT_1]] : tensor<?x?x?xf32>
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 2 : index
+// CHECK:           %[[DIM_2:.*]] = tensor.dim %[[ARG0]], %[[CONSTANT_2]] : tensor<?x?x?xf32>
+// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_4:.*]] = arith.constant 2 : index
+// CHECK:           %[[DIVUI_0:.*]] = arith.divui %[[DIM_2]], %[[CONSTANT_4]] : index
+// CHECK:           %[[ADDI_0:.*]] = arith.addi %[[DIVUI_0]], %[[CONSTANT_3]] : index
+// CHECK:           %[[EMPTY_0:.*]] = tensor.empty(%[[DIM_0]], %[[DIM_1]], %[[ADDI_0]]) : tensor<?x?x?xf32>
+// CHECK:           %[[CONSTANT_5:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[FILL_0:.*]] = linalg.fill ins(%[[CONSTANT_5]] : f32) outs(%[[EMPTY_0]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+// CHECK:           %[[EMPTY_1:.*]] = tensor.empty(%[[DIM_0]], %[[DIM_1]], %[[ADDI_0]]) : tensor<?x?x?xf32>
+// CHECK:           %[[CONSTANT_6:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[FILL_1:.*]] = linalg.fill ins(%[[CONSTANT_6]] : f32) outs(%[[EMPTY_1]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+// CHECK:           %[[CONSTANT_7:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIM_3:.*]] = tensor.dim %[[ARG0]], %[[CONSTANT_7]] : tensor<?x?x?xf32>
+// CHECK:           %[[CONSTANT_8:.*]] = arith.constant 2 : index
+// CHECK:           %[[DIM_4:.*]] = tensor.dim %[[ARG0]], %[[CONSTANT_8]] : tensor<?x?x?xf32>
+// CHECK:           %[[CONSTANT_9:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[CONSTANT_10:.*]] = arith.constant 6.28318548 : f32
+// CHECK:           %[[CONSTANT_11:.*]] = arith.constant 0 : index
+// CHECK:           %[[CONSTANT_12:.*]] = arith.constant 2 : index
+// CHECK:           %[[INDEX_CASTUI_0:.*]] = arith.index_castui %[[DIM_3]] : index to i32
+// CHECK:           %[[UITOFP_0:.*]] = arith.uitofp %[[INDEX_CASTUI_0]] : i32 to f32
+// CHECK:           %[[INDEX_CASTUI_1:.*]] = arith.index_castui %[[DIM_4]] : index to i32
+// CHECK:           %[[UITOFP_1:.*]] = arith.uitofp %[[INDEX_CASTUI_1]] : i32 to f32
+// CHECK:           %[[DIVU_0:.*]] = index.divu %[[DIM_3]], %[[CONSTANT_12]]
+// CHECK:           %[[DIVU_1:.*]] = index.divu %[[DIM_4]], %[[CONSTANT_12]]
+// CHECK:           %[[GENERIC_0:.*]]:2 = linalg.generic {indexing_maps = [#[[$ATTR_87]], #[[$ATTR_88]], #[[$ATTR_88]]], iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction"]} ins(%[[ARG0]] : tensor<?x?x?xf32>) outs(%[[FILL_0]], %[[FILL_1]] : tensor<?x?x?xf32>, tensor<?x?x?xf32>) {
+// CHECK:           ^bb0(%[[VAL_0:.*]]: f32, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: f32):
+// CHECK:             %[[INDEX_0:.*]] = linalg.index 1 : index
+// CHECK:             %[[INDEX_1:.*]] = linalg.index 2 : index
+// CHECK:             %[[INDEX_2:.*]] = linalg.index 3 : index
+// CHECK:             %[[INDEX_3:.*]] = linalg.index 4 : index
+// CHECK:             %[[MUL_0:.*]] = index.mul %[[INDEX_2]], %[[INDEX_0]]
+// CHECK:             %[[MUL_1:.*]] = index.mul %[[INDEX_3]], %[[INDEX_1]]
+// CHECK:             %[[REMU_0:.*]] = index.remu %[[MUL_0]], %[[DIM_3]]
+// CHECK:             %[[REMU_1:.*]] = index.remu %[[MUL_1]], %[[DIM_4]]
+// CHECK:             %[[INDEX_CASTUI_2:.*]] = arith.index_castui %[[REMU_0]] : index to i32
+// CHECK:             %[[UITOFP_2:.*]] = arith.uitofp %[[INDEX_CASTUI_2]] : i32 to f32
+// CHECK:             %[[INDEX_CASTUI_3:.*]] = arith.index_castui %[[REMU_1]] : index to i32
+// CHECK:             %[[UITOFP_3:.*]] = arith.uitofp %[[INDEX_CASTUI_3]] : i32 to f32
+// CHECK:             %[[DIVF_0:.*]] = arith.divf %[[UITOFP_2]], %[[UITOFP_0]] : f32
+// CHECK:             %[[DIVF_1:.*]] = arith.divf %[[UITOFP_3]], %[[UITOFP_1]] : f32
+// CHECK:             %[[ADDF_0:.*]] = arith.addf %[[DIVF_0]], %[[DIVF_1]] : f32
+// CHECK:             %[[MULF_0:.*]] = arith.mulf %[[CONSTANT_10]], %[[ADDF_0]] : f32
+// CHECK:             %[[CMPI_0:.*]] = arith.cmpi eq, %[[REMU_0]], %[[CONSTANT_11]] : index
+// CHECK:             %[[CMPI_1:.*]] = arith.cmpi eq, %[[REMU_0]], %[[DIVU_0]] : index
+// CHECK:             %[[CMPI_2:.*]] = arith.cmpi eq, %[[REMU_1]], %[[CONSTANT_11]] : index
+// CHECK:             %[[CMPI_3:.*]] = arith.cmpi eq, %[[REMU_1]], %[[DIVU_1]] : index
+// CHECK:             %[[ORI_0:.*]] = arith.ori %[[CMPI_0]], %[[CMPI_1]] : i1
+// CHECK:             %[[ORI_1:.*]] = arith.ori %[[CMPI_2]], %[[CMPI_3]] : i1
+// CHECK:             %[[ANDI_0:.*]] = arith.andi %[[ORI_0]], %[[ORI_1]] : i1
+// CHECK:             %[[COS_0:.*]] = math.cos %[[MULF_0]] : f32
+// CHECK:             %[[SIN_0:.*]] = math.sin %[[MULF_0]] : f32
+// CHECK:             %[[SELECT_0:.*]] = arith.select %[[ANDI_0]], %[[CONSTANT_9]], %[[SIN_0]] : f32
+// CHECK:             %[[MULF_1:.*]] = arith.mulf %[[VAL_0]], %[[COS_0]] : f32
+// CHECK:             %[[MULF_2:.*]] = arith.mulf %[[VAL_0]], %[[SELECT_0]] : f32
+// CHECK:             %[[ADDF_1:.*]] = arith.addf %[[VAL_1]], %[[MULF_1]] : f32
+// CHECK:             %[[SUBF_0:.*]] = arith.subf %[[VAL_2]], %[[MULF_2]] : f32
+// CHECK:             linalg.yield %[[ADDF_1]], %[[SUBF_0]] : f32, f32
 // CHECK:           } -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>)
-// CHECK:           return %[[VAL_52:.*]]#0, %[[VAL_52]]#1 : tensor<?x?x?xf32>, tensor<?x?x?xf32>
+// CHECK:           return %[[VAL_3:.*]]#0, %[[VAL_3]]#1 : tensor<?x?x?xf32>, tensor<?x?x?xf32>
 // CHECK:         }
 func.func @test_dynamic_rfft2d(%arg0: tensor<?x?x?xf32>) -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>) {
   %output_real, %output_imag = "tosa.rfft2d"(%arg0) {} : (tensor<?x?x?xf32>) -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>)
@@ -2183,7 +2364,7 @@ func.func @reduce_min_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf3
   // CHECK-NOT: tensor.empty()
   // CHECK-NOT: select
   // CHECK: return
-  %3 = tosa.reduce_min %arg0 {axis = 0 : i32, nan_mode = "PROPAGATE"} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  %3 = tosa.reduce_min %arg0 {axis = 0 : i32, nan_mode = PROPAGATE} : (tensor<5x4xf32>) -> tensor<1x4xf32>
   return
 }
 
@@ -2202,7 +2383,7 @@ func.func @reduce_max_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf3
   // CHECK-NOT: tensor.empty()
   // CHECK-NOT: select
   // CHECK: return
-  %4 = tosa.reduce_max %arg0 {axis = 0 : i32, nan_mode = "PROPAGATE"} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  %4 = tosa.reduce_max %arg0 {axis = 0 : i32, nan_mode = PROPAGATE} : (tensor<5x4xf32>) -> tensor<1x4xf32>
   return
 }
 
@@ -2221,7 +2402,7 @@ func.func @reduce_min_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8
   // CHECK-NOT: tensor.empty()
   // CHECK-NOT: select
   // CHECK: return
-  %5 = tosa.reduce_min %arg0 {axis = 0 : i32, nan_mode = "IGNORE"} : (tensor<5x4xi8>) -> tensor<1x4xi8>
+  %5 = tosa.reduce_min %arg0 {axis = 0 : i32, nan_mode = IGNORE} : (tensor<5x4xi8>) -> tensor<1x4xi8>
   return
 }
 
@@ -2240,7 +2421,7 @@ func.func @reduce_max_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8
   // CHECK-NOT: tensor.empty()
   // CHECK-NOT: select
   // CHECK: return
-  %6 = tosa.reduce_max %arg0 {axis = 0 : i32, nan_mode = "IGNORE"} : (tensor<5x4xi8>) -> tensor<1x4xi8>
+  %6 = tosa.reduce_max %arg0 {axis = 0 : i32, nan_mode = IGNORE} : (tensor<5x4xi8>) -> tensor<1x4xi8>
   return
 }
 
@@ -2258,7 +2439,7 @@ func.func @reduce_min_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>)
   // CHECK: linalg.fill
   // CHECK: tensor.empty()
   // CHECK: select
-  %5 = tosa.reduce_min %arg0 {axis = 0 : i32, nan_mode = "IGNORE"} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  %5 = tosa.reduce_min %arg0 {axis = 0 : i32, nan_mode = IGNORE} : (tensor<5x4xf32>) -> tensor<1x4xf32>
   return
 }
 
@@ -2276,7 +2457,7 @@ func.func @reduce_max_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>)
   // CHECK: linalg.fill
   // CHECK: tensor.empty()
   // CHECK: select
-  %6 = tosa.reduce_max %arg0 {axis = 0 : i32, nan_mode = "IGNORE"} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  %6 = tosa.reduce_max %arg0 {axis = 0 : i32, nan_mode = IGNORE} : (tensor<5x4xf32>) -> tensor<1x4xf32>
   return
 }
 
@@ -2289,7 +2470,7 @@ func.func @minimum_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>)
   // CHECK-NOT: arith.cmpf uno
   // CHECK-NOT: arith.select
   // CHECK: linalg.yield
-  %7 = tosa.minimum %arg0, %arg1 {nan_mode = "PROPAGATE"} : (tensor<5x4xf32>, tensor<5x4xf32>) -> tensor<5x4xf32>
+  %7 = tosa.minimum %arg0, %arg1 {nan_mode = PROPAGATE} : (tensor<5x4xf32>, tensor<5x4xf32>) -> tensor<5x4xf32>
   return
 }
 
@@ -2302,7 +2483,7 @@ func.func @maximum_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>)
   // CHECK-NOT: arith.cmpf uno
   // CHECK-NOT: arith.select
   // CHECK: linalg.yield
-  %8 = tosa.maximum %arg0, %arg1 {nan_mode = "PROPAGATE"} : (tensor<5x4xf32>, tensor<5x4xf32>) -> tensor<5x4xf32>
+  %8 = tosa.maximum %arg0, %arg1 {nan_mode = PROPAGATE} : (tensor<5x4xf32>, tensor<5x4xf32>) -> tensor<5x4xf32>
   return
 }
 
@@ -2315,7 +2496,7 @@ func.func @minimum_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) 
   // CHECK-NOT: arith.cmpf uno
   // CHECK-NOT: arith.select
   // CHECK: linalg.yield
-  %9 = tosa.minimum %arg0, %arg1 {nan_mode = "IGNORE"} : (tensor<5x4xi8>, tensor<5x4xi8>) -> tensor<5x4xi8>
+  %9 = tosa.minimum %arg0, %arg1 {nan_mode = IGNORE} : (tensor<5x4xi8>, tensor<5x4xi8>) -> tensor<5x4xi8>
   return
 }
 
@@ -2328,7 +2509,7 @@ func.func @maximum_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) 
   // CHECK-NOT: arith.cmpf uno
   // CHECK-NOT: arith.select
   // CHECK: linalg.yield
-  %10 = tosa.maximum %arg0, %arg1 {nan_mode = "IGNORE"} : (tensor<5x4xi8>, tensor<5x4xi8>) -> tensor<5x4xi8>
+  %10 = tosa.maximum %arg0, %arg1 {nan_mode = IGNORE} : (tensor<5x4xi8>, tensor<5x4xi8>) -> tensor<5x4xi8>
   return
 }
 
@@ -2343,7 +2524,7 @@ func.func @minimum_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) ->
   // CHECK: arith.select
   // CHECK: arith.select
   // CHECK: linalg.yield
-  %9 = tosa.minimum %arg0, %arg1 {nan_mode = "IGNORE"} : (tensor<5x4xf32>, tensor<5x4xf32>) -> tensor<5x4xf32>
+  %9 = tosa.minimum %arg0, %arg1 {nan_mode = IGNORE} : (tensor<5x4xf32>, tensor<5x4xf32>) -> tensor<5x4xf32>
   return
 }
 
@@ -2358,7 +2539,7 @@ func.func @maximum_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) ->
   // CHECK: arith.select
   // CHECK: arith.select
   // CHECK: linalg.yield
-  %10 = tosa.maximum %arg0, %arg1 {nan_mode = "IGNORE"} : (tensor<5x4xf32>, tensor<5x4xf32>) -> tensor<5x4xf32>
+  %10 = tosa.maximum %arg0, %arg1 {nan_mode = IGNORE} : (tensor<5x4xf32>, tensor<5x4xf32>) -> tensor<5x4xf32>
   return
 }
 
@@ -2375,7 +2556,7 @@ func.func @argmax_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) 
   // CHECK-NOT: arith.cmpf uno
   // CHECK-NOT: arith.select
   // CHECK: linalg.yield
-  %11 = tosa.argmax %arg0 {axis = 0 : i32, nan_mode = "PROPAGATE"} : (tensor<5x4xf32>)  -> tensor<4xi32>
+  %11 = tosa.argmax %arg0 {axis = 0 : i32, nan_mode = PROPAGATE} : (tensor<5x4xf32>)  -> tensor<4xi32>
   return
 }
 
@@ -2392,7 +2573,7 @@ func.func @argmax_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) -
   // CHECK-NOT: arith.select
   // CHECK-NOT: arith.select
   // CHECK: linalg.yield
- %12 = tosa.argmax %arg0 {axis = 0 : i32, nan_mode = "IGNORE"} : (tensor<5x4xi8>)  -> tensor<4xi32>
+ %12 = tosa.argmax %arg0 {axis = 0 : i32, nan_mode = IGNORE} : (tensor<5x4xi8>)  -> tensor<4xi32>
   return
 }
 
@@ -2405,7 +2586,7 @@ func.func @argmax_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> 
   // CHECK: arith.select
   // CHECK: arith.select
   // CHECK: linalg.yield
-  %12 = tosa.argmax %arg0 {axis = 0 : i32, nan_mode = "IGNORE"} : (tensor<5x4xf32>)  -> tensor<4xi32>
+  %12 = tosa.argmax %arg0 {axis = 0 : i32, nan_mode = IGNORE} : (tensor<5x4xf32>)  -> tensor<4xi32>
   return
 }
 
@@ -2419,7 +2600,7 @@ func.func @clamp_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -
   // CHECK-NOT: arith.cmpf uno
   // CHECK-NOT: arith.select
   // CHECK: linalg.yield
-  %13 = tosa.clamp %arg0 {min_val =  1.0 : f32, max_val = 5.0 : f32, nan_mode = "PROPAGATE"} : (tensor<5x4xf32>) -> tensor<5x4xf32>
+  %13 = tosa.clamp %arg0 {min_val =  1.0 : f32, max_val = 5.0 : f32, nan_mode = PROPAGATE} : (tensor<5x4xf32>) -> tensor<5x4xf32>
   return
 }
 
@@ -2433,7 +2614,7 @@ func.func @clamp_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) ->
   // CHECK-NOT: arith.cmpf uno
   // CHECK-NOT: arith.select
   // CHECK: linalg.yield
-  %14 = tosa.clamp %arg0 {min_val = 1 : i8, max_val = 5 : i8, nan_mode = "IGNORE"} : (tensor<5x4xi8>) -> tensor<5x4xi8>
+  %14 = tosa.clamp %arg0 {min_val = 1 : i8, max_val = 5 : i8, nan_mode = IGNORE} : (tensor<5x4xi8>) -> tensor<5x4xi8>
   return
 }
 
@@ -2447,7 +2628,7 @@ func.func @clamp_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> (
   // CHECK: arith.cmpf uno
   // CHECK: arith.select
   // CHECK: linalg.yield
-  %14 = tosa.clamp %arg0 {min_val = 1.0 : f32, max_val = 5.0 : f32, nan_mode = "IGNORE"} : (tensor<5x4xf32>) -> tensor<5x4xf32>
+  %14 = tosa.clamp %arg0 {min_val = 1.0 : f32, max_val = 5.0 : f32, nan_mode = IGNORE} : (tensor<5x4xf32>) -> tensor<5x4xf32>
 
   return
 }
@@ -2464,10 +2645,37 @@ func.func @test_0d_input(%arg0: tensor<i32>) -> () {
   // CHECK: linalg.generic
   // CHECK: ^bb0(%[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32):
   // CHECK: [[ZERO:%.+]] = arith.constant 0
-  // CHECK: arith.subi [[ZERO]], %[[ARG1]]
+  // CHECK: [[EXT:%.+]] = arith.extsi %[[IN:.*]] : i32 to i64
+  // CHECK: [[SUB:%.+]] = arith.subi [[ZERO]], [[EXT]]
+  // CHECK: [[MIN:%.+]] = arith.constant -2147483648
+  // CHECK: [[MAX:%.+]] = arith.constant 2147483647
+  // CHECK: [[LBOUND:%.+]] = arith.maxsi [[MIN]], [[SUB]]
+  // CHECK: [[UBOUND:%.+]] = arith.minsi [[MAX]], [[LBOUND]]
+  // CHECK: [[TRUNC:%.+]] = arith.trunci [[UBOUND]]
   %in_zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
   %out_zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
   %5 = tosa.negate %arg0, %in_zp, %out_zp : (tensor<i32>, tensor<1xi32>, tensor<1xi32>) -> tensor<i32>
 
   return
+}
+
+// -----
+
+// CHECK-LABEL: @mul_no_const_shift
+func.func @mul_no_const_shift(%arg0: tensor<2x3xi32>, %arg1: tensor<2x3xi32>, %arg2: tensor<1xi8>) -> tensor<2x3xi32> {
+  // CHECK: linalg.generic
+  // CHECK: ^bb0(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i8, %[[OUT:.*]]: i32):
+  // CHECK: tosa.apply_scale %[[ARG0]], %[[ARG1]], %[[ARG2]]
+  %0 = tosa.mul %arg0, %arg1, %arg2 : (tensor<2x3xi32>, tensor<2x3xi32>, tensor<1xi8>) -> tensor<2x3xi32>
+  return %0 : tensor<2x3xi32>
+}
+// -----
+
+// CHECK-LABEL: @negate_i64_no_noop_cast
+// CHECK: linalg.generic
+// CHECK-NOT: arith.extsi {{.*}} : i64 to i64
+// CHECK-NOT: arith.trunci {{.*}} : i64 to i64
+func.func @negate_i64_no_noop_cast(%arg0: tensor<4xi64>, %in_zp: tensor<1xi64>, %out_zp: tensor<1xi64>) -> tensor<4xi64> {
+  %neg = tosa.negate %arg0, %in_zp, %out_zp : (tensor<4xi64>, tensor<1xi64>, tensor<1xi64>) -> tensor<4xi64>
+  return %neg : tensor<4xi64>
 }

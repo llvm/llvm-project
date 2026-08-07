@@ -19,11 +19,11 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
-#include <array>
 #include <set>
 #include <vector>
 
@@ -42,6 +42,12 @@ struct CpuInfo;
 static_assert(FEAT_MAX < 62,
               "Number of features in CPUFeatures are limited to 62 entries");
 
+static_assert(PRIOR_MAX < 120, "FeatPriorities is limited to 120 entries");
+
+// Emit the StringTable StrTab to which all offsets refer.
+#define EMIT_STRTAB
+#include "llvm/TargetParser/AArch64TargetParserDef.inc"
+
 // Each ArchExtKind correponds directly to a possible -target-feature.
 #define EMIT_ARCHEXTKIND_ENUM
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
@@ -53,18 +59,19 @@ using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
 // SubtargetFeature which may represent either an actual extension or some
 // internal LLVM property.
 struct ExtensionInfo {
-  StringRef UserVisibleName;      // Human readable name used in -march, -cpu
+  StringTable::Offset
+      UserVisibleName;            // Human readable name used in -march, -cpu
                                   // and target func attribute, e.g. "profile".
-  std::optional<StringRef> Alias; // An alias for this extension, if one exists.
+  StringTable::Offset Alias;      // An alias for this extension, if one exists.
   ArchExtKind ID;                 // Corresponding to the ArchExtKind, this
                                   // extensions representation in the bitfield.
-  StringRef ArchFeatureName;      // The feature name defined by the
-                                  // Architecture, e.g. FEAT_AdvSIMD.
-  StringRef Description;          // The textual description of the extension.
-  StringRef PosTargetFeature;     // -target-feature/-mattr enable string,
-                                  // e.g. "+spe".
-  StringRef NegTargetFeature;     // -target-feature/-mattr disable string,
-                                  // e.g. "-spe".
+  StringTable::Offset ArchFeatureName; // The feature name defined by the
+                                       // Architecture, e.g. FEAT_AdvSIMD.
+  StringTable::Offset Description; // The textual description of the extension.
+  StringTable::Offset PosTargetFeature; // -target-feature/-mattr enable string,
+                                        // e.g. "+spe".
+  StringTable::Offset NegTargetFeature; // -target-feature/-mattr disable
+                                        // string, e.g. "-spe".
 };
 
 #define EMIT_EXTENSIONS
@@ -72,11 +79,12 @@ struct ExtensionInfo {
 
 struct FMVInfo {
   StringRef Name;                // The target_version/target_clones spelling.
-  CPUFeatures FeatureBit;        // Index of the bit in the FMV feature bitset.
+  std::optional<CPUFeatures>
+      FeatureBit;                // Index of the bit in the FMV feature bitset.
   FeatPriorities PriorityBit;    // Index of the bit in the FMV priority bitset.
   std::optional<ArchExtKind> ID; // The architecture extension to enable.
-  FMVInfo(StringRef Name, CPUFeatures FeatureBit, FeatPriorities PriorityBit,
-          std::optional<ArchExtKind> ID)
+  FMVInfo(StringRef Name, std::optional<CPUFeatures> FeatureBit,
+          FeatPriorities PriorityBit, std::optional<ArchExtKind> ID)
       : Name(Name), FeatureBit(FeatureBit), PriorityBit(PriorityBit), ID(ID) {};
 };
 
@@ -100,8 +108,9 @@ enum ArchProfile { AProfile = 'A', RProfile = 'R', InvalidProfile = '?' };
 struct ArchInfo {
   VersionTuple Version;  // Architecture version, major + minor.
   ArchProfile Profile;   // Architecuture profile
-  StringRef Name;        // Name as supplied to -march e.g. "armv8.1-a"
-  StringRef ArchFeature; // Name as supplied to -target-feature, e.g. "+v8a"
+  StringTable::Offset Name; // Name as supplied to -march e.g. "armv8.1-a"
+  StringTable::Offset
+      ArchFeature; // Name as supplied to -target-feature, e.g. "+v8a"
   AArch64::ExtensionBitset
       DefaultExts; // bitfield of default extensions ArchExtKind
 
@@ -115,9 +124,9 @@ struct ArchInfo {
   // Defines the following partial order, indicating when an architecture is
   // a superset of another:
   //
-  // v9.6a > v9.5a > v9.4a > v9.3a > v9.2a > v9.1a > v9a;
-  //                   v       v       v       v       v
-  //                 v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > v8.4a > ... > v8a;
+  // v9.7a > v9.6a > v9.5a > v9.4a > v9.3a > v9.2a > v9.1a > v9a;
+  //                           v       v       v       v       v
+  //                         v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > ... > v8a;
   //
   // v8r has no relation to anything. This is used to determine which
   // features to enable for a given architecture. See
@@ -144,7 +153,7 @@ struct ArchInfo {
   }
 
   // Return ArchFeature without the leading "+".
-  StringRef getSubArch() const { return ArchFeature.substr(1); }
+  StringRef getSubArch() const { return StrTab[ArchFeature].substr(1); }
 
   // Search for ArchInfo by SubArch name
   LLVM_ABI static std::optional<ArchInfo> findBySubArch(StringRef SubArch);
@@ -155,14 +164,10 @@ struct ArchInfo {
 
 // Details of a specific CPU.
 struct CpuInfo {
-  StringRef Name; // Name, as written for -mcpu.
-  const ArchInfo &Arch;
+  StringTable::Offset Name; // Name, as written for -mcpu.
+  unsigned ArchIdx;
   AArch64::ExtensionBitset
       DefaultExtensions; // Default extensions for this CPU.
-
-  AArch64::ExtensionBitset getImpliedExtensions() const {
-    return DefaultExtensions;
-  }
 };
 
 #define EMIT_CPU_INFO
@@ -217,16 +222,16 @@ struct ExtensionSet {
   // Convert the set of enabled extension to an LLVM feature list, appending
   // them to Features.
   template <typename T> void toLLVMFeatureList(std::vector<T> &Features) const {
-    if (BaseArch && !BaseArch->ArchFeature.empty())
-      Features.emplace_back(T(BaseArch->ArchFeature));
+    if (BaseArch && !StrTab[BaseArch->ArchFeature].empty())
+      Features.emplace_back(T(StrTab[BaseArch->ArchFeature]));
 
     for (const auto &E : Extensions) {
-      if (E.PosTargetFeature.empty() || !Touched.test(E.ID))
+      if (!Touched.test(E.ID))
         continue;
       if (Enabled.test(E.ID))
-        Features.emplace_back(T(E.PosTargetFeature));
+        Features.emplace_back(T(StrTab[E.PosTargetFeature]));
       else
-        Features.emplace_back(T(E.NegTargetFeature));
+        Features.emplace_back(T(StrTab[E.NegTargetFeature]));
     }
   }
 
@@ -235,8 +240,8 @@ struct ExtensionSet {
 
 // Name alias.
 struct Alias {
-  StringRef AltName;
-  StringRef Name;
+  StringTable::Offset AltName;
+  StringTable::Offset Name;
 };
 
 #define EMIT_CPU_ALIAS

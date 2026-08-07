@@ -20,6 +20,7 @@
 #include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -36,7 +37,6 @@ namespace {
 
 /// Parses MSP430 assembly from a stream.
 class MSP430AsmParser : public MCTargetAsmParser {
-  const MCSubtargetInfo &STI;
   MCAsmParser &Parser;
   const MCRegisterInfo *MRI;
 
@@ -78,8 +78,8 @@ class MSP430AsmParser : public MCTargetAsmParser {
 
 public:
   MSP430AsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                  const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), STI(STI), Parser(Parser) {
+                  const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII), Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 
@@ -231,7 +231,7 @@ public:
       O << "Token " << Tok;
       break;
     case k_Reg:
-      O << "Register " << Reg;
+      O << "Register " << Reg.id();
       break;
     case k_Imm:
       O << "Immediate ";
@@ -242,10 +242,10 @@ public:
       MAI.printExpr(O, *Mem.Offset);
       break;
     case k_IndReg:
-      O << "RegInd " << Reg;
+      O << "RegInd " << Reg.id();
       break;
     case k_PostIndReg:
-      O << "PostInc " << Reg;
+      O << "PostInc " << Reg.id();
       break;
     }
   }
@@ -264,7 +264,7 @@ bool MSP430AsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
   switch (MatchResult) {
   case Match_Success:
     Inst.setLoc(Loc);
-    Out.emitInstruction(Inst, STI);
+    Out.emitInstruction(Inst, *STI);
     return false;
   case Match_MnemonicFail:
     return Error(Loc, "invalid instruction mnemonic");
@@ -577,8 +577,7 @@ unsigned MSP430AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     return Match_InvalidOperand;
 
   MCRegister Reg = Op.getReg();
-  bool isGR16 =
-      MSP430MCRegisterClasses[MSP430::GR16RegClassID].contains(Reg);
+  bool isGR16 = getMSP430MCRegisterClass(MSP430::GR16RegClassID).contains(Reg);
 
   if (isGR16 && (Kind == MCK_GR8)) {
     Op.setReg(convertGR16ToGR8(Reg));

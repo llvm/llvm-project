@@ -10,8 +10,8 @@
 ;; the entire cycle is reported as converged.
 ;;
 ;; CHECK-LABEL: UniformityInfo for function 't_header':
-;; CHECK: CYCLES ASSSUMED DIVERGENT:
-;; CHECK:   depth=1: entries(T P) S Q R
+;; CHECK: CYCLES ASSUMED DIVERGENT:
+;; CHECK:   depth=1: entries(T P) Q R S
 
 define amdgpu_kernel void @t_header(i32 %a, i32 %b, i32 %c) {
 entry:
@@ -59,7 +59,7 @@ exit:
 ;; the cycle is reported as converged.
 ;;
 ;; CHECK-LABEL: UniformityInfo for function 'p_header':
-;; CHECK-NOT: CYCLES ASSSUMED DIVERGENT:
+;; CHECK-NOT: CYCLES ASSUMED DIVERGENT:
 
 define amdgpu_kernel void @p_header(i32 %a, i32 %b, i32 %c) {
 entry:

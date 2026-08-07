@@ -50,6 +50,9 @@ struct IsVariableHelper
   Result operator()(const CoarrayRef &) const { return true; }
   Result operator()(const ComplexPart &) const { return true; }
   Result operator()(const ProcedureDesignator &) const;
+  template <typename T> Result operator()(const ConditionalExpr<T> &) const {
+    return false;
+  }
   template <typename T> Result operator()(const Expr<T> &x) const {
     if constexpr (common::HasMember<T, AllIntrinsicTypes> ||
         std::is_same_v<T, SomeDerived>) {
@@ -80,27 +83,6 @@ template <typename A> bool IsVariable(const A &x) {
   } else {
     return false;
   }
-}
-
-// Predicate: true when an expression is assumed-rank
-bool IsAssumedRank(const Symbol &);
-bool IsAssumedRank(const ActualArgument &);
-template <typename A> bool IsAssumedRank(const A &) { return false; }
-template <typename A> bool IsAssumedRank(const Designator<A> &designator) {
-  if (const auto *symbol{std::get_if<SymbolRef>(&designator.u)}) {
-    return IsAssumedRank(symbol->get());
-  } else {
-    return false;
-  }
-}
-template <typename T> bool IsAssumedRank(const Expr<T> &expr) {
-  return common::visit([](const auto &x) { return IsAssumedRank(x); }, expr.u);
-}
-template <typename A> bool IsAssumedRank(const std::optional<A> &x) {
-  return x && IsAssumedRank(*x);
-}
-template <typename A> bool IsAssumedRank(const A *x) {
-  return x && IsAssumedRank(*x);
 }
 
 // Finds the corank of an entity, possibly packaged in various ways.
@@ -771,11 +753,11 @@ Expr<SomeKind<CAT>> PromoteAndCombine(
 // one of the operands to the type of the other.  Handles special cases with
 // typeless literal operands and with REAL/COMPLEX exponentiation to INTEGER
 // powers.
-template <template <typename> class OPR, bool CAN_BE_UNSIGNED = true>
+template <template <typename> class OPR>
 std::optional<Expr<SomeType>> NumericOperation(parser::ContextualMessages &,
     Expr<SomeType> &&, Expr<SomeType> &&, int defaultRealKind);
 
-extern template std::optional<Expr<SomeType>> NumericOperation<Power, false>(
+extern template std::optional<Expr<SomeType>> NumericOperation<Power>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
     int defaultRealKind);
 extern template std::optional<Expr<SomeType>> NumericOperation<Multiply>(
@@ -1110,6 +1092,10 @@ extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SomeInteger> &);
 extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
+    const ProcedureDesignator &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
+    const Assignment &);
 
 // Collects Symbols of interest for the CUDA data transfer in an expression
 template <typename A>
@@ -1123,9 +1109,31 @@ extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
 
 // Predicate: does a variable contain a vector-valued subscript (not a triplet)?
 bool HasVectorSubscript(const Expr<SomeType> &);
+bool HasVectorSubscript(const ActualArgument &);
+
+// Predicate: is an expression a section of an array?
+bool IsArraySection(const Expr<SomeType> &expr);
 
 // Predicate: does an expression contain constant?
 bool HasConstant(const Expr<SomeType> &);
+
+// Predicate: Does an expression contain a component
+bool HasStructureComponent(const Expr<SomeType> &expr);
+
+// Predicate: does an expression contain a procedure reference?
+bool HasProcedureRef(const Expr<SomeType> &expr);
+
+// Predicate: does an expression contain a VOLATILE or ASYNCHRONOUS symbol?
+bool HasVolatileOrAsynchronousSymbol(const Expr<SomeType> &expr);
+
+// Can a scalar real RHS expression in an assignment be rewritten as a split
+// sum expression tree?
+bool CanBuildSplitSumExpressionTree(
+    const Expr<SomeType> &lhs, const Expr<SomeType> &rhs);
+
+// Try to rewrite a scalar real sum as a split sum expression tree.
+std::optional<Expr<SomeType>> TryBuildSplitSumExpressionTree(
+    const Expr<SomeType> &expr);
 
 // Utilities for attaching the location of the declaration of a symbol
 // of interest to a message.  Handles the case of USE association gracefully.
@@ -1136,6 +1144,18 @@ parser::Message *SayWithDeclaration(
     MESSAGES &messages, const Symbol &symbol, A &&...x) {
   return AttachDeclaration(messages.Say(std::forward<A>(x)...), symbol);
 }
+template <typename... A>
+parser::Message *WarnWithDeclaration(FoldingContext context,
+    const Symbol &symbol, common::LanguageFeature feature, A &&...x) {
+  return AttachDeclaration(
+      context.Warn(feature, std::forward<A>(x)...), symbol);
+}
+template <typename... A>
+parser::Message *WarnWithDeclaration(FoldingContext &context,
+    const Symbol &symbol, common::UsageWarning warning, A &&...x) {
+  return AttachDeclaration(
+      context.Warn(warning, std::forward<A>(x)...), symbol);
+}
 
 // Check for references to impure procedures; returns the name
 // of one to complain about, if any exist.
@@ -1144,15 +1164,14 @@ std::optional<std::string> FindImpureCall(
 std::optional<std::string> FindImpureCall(
     FoldingContext &, const ProcedureRef &);
 
-// Predicate: is a scalar expression suitable for naive scalar expansion
-// in the flattening of an array expression?
-// TODO: capture such scalar expansions in temporaries, flatten everything
-class UnexpandabilityFindingVisitor
-    : public AnyTraverse<UnexpandabilityFindingVisitor> {
+// Predicate: does an expression contain anything that would prevent it from
+// being duplicated so that two instances of it then appear in the same
+// expression?
+class UnsafeToCopyVisitor : public AnyTraverse<UnsafeToCopyVisitor> {
 public:
-  using Base = AnyTraverse<UnexpandabilityFindingVisitor>;
+  using Base = AnyTraverse<UnsafeToCopyVisitor>;
   using Base::operator();
-  explicit UnexpandabilityFindingVisitor(bool admitPureCall)
+  explicit UnsafeToCopyVisitor(bool admitPureCall)
       : Base{*this}, admitPureCall_{admitPureCall} {}
   template <typename T> bool operator()(const FunctionRef<T> &procRef) {
     return !admitPureCall_ || !procRef.proc().IsPure();
@@ -1163,14 +1182,22 @@ private:
   bool admitPureCall_{false};
 };
 
+template <typename A>
+bool IsSafelyCopyable(const A &x, bool admitPureCall = false) {
+  return !UnsafeToCopyVisitor{admitPureCall}(x);
+}
+
+// Predicate: is a scalar expression suitable for naive scalar expansion
+// in the flattening of an array expression?
+// TODO: capture such scalar expansions in temporaries, flatten everything
 template <typename T>
 bool IsExpandableScalar(const Expr<T> &expr, FoldingContext &context,
     const Shape &shape, bool admitPureCall = false) {
-  if (UnexpandabilityFindingVisitor{admitPureCall}(expr)) {
+  if (IsSafelyCopyable(expr, admitPureCall)) {
+    return true;
+  } else {
     auto extents{AsConstantExtents(context, shape)};
     return extents && !HasNegativeExtent(*extents) && GetSize(*extents) == 1;
-  } else {
-    return true;
   }
 }
 
@@ -1287,16 +1314,15 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
-inline bool IsCUDADeviceSymbol(const Symbol &sym) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    if (details->cudaDataAttr() &&
-        *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
-      return true;
-    }
-  }
-  return false;
-}
+// Get the symbol vectors of the expression where symbols are grouped together
+// if they are part of the same component expression.
+//
+// Example: a%b + c%d
+// Will be grouped as: [(a, b), (c, d)]
+std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr);
+
+bool IsCUDADeviceSymbol(const Symbol &sym);
+bool IsCUDADeviceOnlySymbol(const Symbol &sym);
 
 inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
   if (const auto *details =
@@ -1307,6 +1333,44 @@ inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
       return true;
     }
   }
+  return false;
+}
+
+inline bool IsCUDADataAttrSymbol(const Symbol &sym, common::CUDADataAttr attr) {
+  if (const auto *details =
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+    return details->cudaDataAttr() && *details->cudaDataAttr() == attr;
+  }
+  return false;
+}
+
+inline bool IsCUDAManagedSymbol(const Symbol &sym) {
+  return IsCUDADataAttrSymbol(sym, common::CUDADataAttr::Managed);
+}
+
+inline bool IsCUDAUnifiedSymbol(const Symbol &sym) {
+  return IsCUDADataAttrSymbol(sym, common::CUDADataAttr::Unified);
+}
+
+// Non-allocatable module-level managed/unified variables use pointer
+// indirection through a companion global in __nv_managed_data__.
+// Explicit data transfers (cudaMemcpy) must be avoided for these
+// variables since they would target the shadow address rather than
+// the actual unified memory address.
+inline bool IsNonAllocatableModuleCUDAManagedSymbol(const Symbol &sym) {
+  const Symbol &ultimate = sym.GetUltimate();
+  if (!IsCUDAManagedOrUnifiedSymbol(ultimate))
+    return false;
+  if (ultimate.attrs().test(semantics::Attr::ALLOCATABLE))
+    return false;
+  return ultimate.owner().IsModule();
+}
+
+template <typename A>
+inline bool HasNonAllocatableModuleCUDAManagedSymbols(const A &expr) {
+  for (const Symbol &sym : CollectCudaSymbols(expr))
+    if (IsNonAllocatableModuleCUDAManagedSymbol(sym))
+      return true;
   return false;
 }
 
@@ -1322,6 +1386,9 @@ template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
   return symbols.size();
 }
 
+// Get the number of unique symbols with CUDA device attribute.
+int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr);
+
 // Get the number of distinct symbols with CUDA managed or unified
 // attribute in the expression.
 template <typename A>
@@ -1335,32 +1402,131 @@ inline int GetNbOfCUDAManagedOrUnifiedSymbols(const A &expr) {
   return symbols.size();
 }
 
+// Get the number of distinct symbols with the CUDA managed attribute in the
+// expression.
+template <typename A> inline int GetNbOfCUDAManagedSymbols(const A &expr) {
+  semantics::UnorderedSymbolSet symbols;
+  for (const Symbol &sym : CollectCudaSymbols(expr)) {
+    if (IsCUDAManagedSymbol(sym)) {
+      symbols.insert(sym);
+    }
+  }
+  return symbols.size();
+}
+
+// Get the number of distinct symbols with a CUDA device attribute other than
+// unified in the expression.
+template <typename A> inline int GetNbOfCUDANonUnifiedSymbols(const A &expr) {
+  semantics::UnorderedSymbolSet symbols;
+  for (const Symbol &sym : CollectCudaSymbols(expr)) {
+    if (IsCUDADeviceSymbol(sym) && !IsCUDAUnifiedSymbol(sym)) {
+      symbols.insert(sym);
+    }
+  }
+  return symbols.size();
+}
+
 // Check if any of the symbols part of the expression has a CUDA device
 // attribute.
 template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
   return GetNbOfCUDADeviceSymbols(expr) > 0;
 }
 
-// Check if any of the symbols part of the lhs or rhs expression has a CUDA
-// device attribute.
+// Check if any of the symbols part of the expression has the CUDA managed
+// attribute.
+template <typename A> inline bool HasCUDAManagedSymbols(const A &expr) {
+  return GetNbOfCUDAManagedSymbols(expr) > 0;
+}
+
+// Check if any of the symbols part of the expression has a CUDA device
+// attribute other than unified.
+template <typename A> inline bool HasCUDANonUnifiedSymbols(const A &expr) {
+  return GetNbOfCUDANonUnifiedSymbols(expr) > 0;
+}
+
+// True for a whole reference to a managed array: a whole array variable, or a
+// whole array component that itself has the managed attribute (a%b where b is
+// managed). An array section, an array element, a component of a managed object
+// and a computed value are all false.
+template <typename A> inline bool IsWholeManagedArray(const A &expr) {
+  const Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
+  return expr.Rank() > 0 && sym && IsCUDAManagedSymbol(*sym);
+}
+
+// CUDA Fortran Programming Guide 3.4.1 defines which assignments in host code
+// are copies. A copy that reads or writes device, managed or constant data runs
+// on stream zero, so it waits for previously launched kernels.
+// - Device or constant data on one side and host data on the other is a copy,
+//   and so is device data on both sides.
+// - A whole managed variable or array is copied when the other side is a
+//   constant, a host variable, a host array or a host array section.
+// - A managed array section is assigned by host code when the other side is
+//   host or managed data.
+// - A managed variable, array or array section is copied when the other side is
+//   device data, in both directions.
+// One difference from the guide is that a managed array section is copied when
+// the other side is a whole managed array, as the reference compiler does.
+// Unified data is host memory that the device can also access, so it takes the
+// place of host data in the rules above and an assignment between unified sides
+// is host code.
+// Return true if the assignment is one of the copies above.
 template <typename A, typename B>
 inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
-  int lhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(lhs)};
-  int rhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
-  int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
+  // Unified data is left out of these counts and checks so that it is handled
+  // as host data.
+  bool lhsHasManaged{HasCUDAManagedSymbols(lhs)};
+  bool lhsIsHost{!HasCUDANonUnifiedSymbols(lhs)};
+  int rhsNbManagedSymbols{GetNbOfCUDAManagedSymbols(rhs)};
+  int rhsNbSymbols{GetNbOfCUDANonUnifiedSymbols(rhs)};
 
-  // Special case where only managed or unifed symbols are involved. This is
-  // performed on the host.
-  if (lhsNbManagedSymbols == 1 && rhsNbManagedSymbols == 1 &&
-      rhsNbSymbols == 1) {
+  if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
+    return false;
+
+  // The host can read and write managed data in place, and copying one section
+  // at a time in a loop is slow, so only whole arrays are copied.
+  bool wholeLhs{IsWholeManagedArray(lhs)};
+  bool wholeRhs{IsWholeManagedArray(rhs)};
+
+  if (wholeLhs && rhsNbSymbols == 0 && rhsNbManagedSymbols == 0 &&
+      (IsVariable(rhs) || IsConstantExpr(rhs))) {
+    return true; // Whole managed array copied from constant or host data.
+  }
+
+  // The host cannot reach device or constant data, unlike managed and unified
+  // data, so an assignment with such a side is a copy, sections included.
+  bool lhsIsDeviceOnly{!lhsHasManaged && !lhsIsHost};
+  // The right-hand side can be an expression, so one device operand is enough.
+  bool rhsHasDeviceOnly{rhsNbSymbols > rhsNbManagedSymbols};
+
+  // Assignments done on the host, with no copy.
+  // - A whole allocatable left-hand side with no device data. The assignment
+  //   may reallocate it, which is done on the host.
+  // - A managed left-hand side with no whole managed array on either side. Only
+  //   sections and elements are involved, and the host reads and writes them in
+  //   place.
+  // - A host left-hand side assigned from a managed section or element.
+  // - An expression involving managed data. Evaluating it on the host avoids a
+  //   temporary.
+  // - A managed left-hand side assigned from host data. Whole arrays are copied
+  //   by the early return above.
+  if ((IsAllocatableDesignator(lhs) && !lhsIsDeviceOnly && !rhsHasDeviceOnly &&
+          (lhsHasManaged || rhsNbManagedSymbols >= 1)) ||
+      (lhsHasManaged && !rhsHasDeviceOnly && !(wholeLhs || wholeRhs)) ||
+      (lhsIsHost && rhsNbManagedSymbols >= 1 && !rhsHasDeviceOnly &&
+          !wholeRhs) ||
+      (rhsNbManagedSymbols >= 1 && !IsVariable(rhs) && !lhsIsDeviceOnly) ||
+      (lhsHasManaged && rhsNbSymbols == 0)) {
     return false;
   }
-  return HasCUDADeviceAttrs(lhs) || rhsNbSymbols > 0;
+  return !lhsIsHost || rhsNbSymbols > 0;
 }
 
 /// Check if the expression is a mix of host and device variables that require
 /// implicit data transfer.
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr);
+
+/// Check if the expression is a mix of host and constant variables.
+bool HasOnlyCUDAConstntImplicitTransfer(const Expr<SomeType> &expr);
 
 // Checks whether the symbol on the LHS is present in the RHS expression.
 bool CheckForSymbolMatch(const Expr<SomeType> *lhs, const Expr<SomeType> *rhs);
@@ -1375,6 +1541,7 @@ enum class Operator {
   Call,
   Constant,
   Convert,
+  Conditional,
   Div,
   Eq,
   Eqv,
@@ -1519,6 +1686,14 @@ bool IsVarSubexpressionOf(
 // it returns std::nullopt.
 std::optional<Expr<SomeType>> GetConvertInput(const Expr<SomeType> &x);
 
+// How many ancestors does have a derived type have?
+std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
+
+// For an expression of enumeration type, extract the value of the hidden
+// __ordinal component.  Returns std::nullopt if the expression is not a
+// constant or structure constructor of an enumeration-type value.
+std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &);
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
@@ -1529,12 +1704,20 @@ class Scope;
 // point to its subprogram.
 const Symbol *GetMainEntry(const Symbol *);
 
+inline bool IsAlternateEntry(const Symbol *symbol) {
+  // If symbol is not alternate entry symbol, GetMainEntry() returns the same
+  // symbol.
+  return symbol && GetMainEntry(symbol) != symbol;
+}
+
 // These functions are used in Evaluate so they are defined here rather than in
 // Semantics to avoid a link-time dependency on Semantics.
 // All of these apply GetUltimate() or ResolveAssociations() to their arguments.
 bool IsVariableName(const Symbol &);
 bool IsPureProcedure(const Symbol &);
 bool IsPureProcedure(const Scope &);
+bool IsSimpleProcedure(const Symbol &);
+bool IsSimpleProcedure(const Scope &);
 bool IsExplicitlyImpureProcedure(const Symbol &);
 bool IsElementalProcedure(const Symbol &);
 bool IsFunction(const Symbol &);
@@ -1548,7 +1731,19 @@ bool IsAllocatableOrObjectPointer(const Symbol *);
 bool IsAutomatic(const Symbol &);
 bool IsSaved(const Symbol &); // saved implicitly or explicitly
 bool IsDummy(const Symbol &);
+
+bool IsAssumedRank(const Symbol &);
+template <typename A> bool IsAssumedRank(const A &x) {
+  auto *symbol{UnwrapWholeSymbolDataRef(x)};
+  return symbol && IsAssumedRank(*symbol);
+}
+
 bool IsAssumedShape(const Symbol &);
+template <typename A> bool IsAssumedShape(const A &x) {
+  auto *symbol{UnwrapWholeSymbolDataRef(x)};
+  return symbol && IsAssumedShape(*symbol);
+}
+
 bool IsDeferredShape(const Symbol &);
 bool IsFunctionResult(const Symbol &);
 bool IsKindTypeParameter(const Symbol &);
@@ -1615,6 +1810,9 @@ common::IgnoreTKRSet GetIgnoreTKR(const Symbol &);
 std::optional<int> GetDummyArgumentNumber(const Symbol *);
 
 const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule);
+
+// Given a Cray pointee symbol, returns the related Cray pointer symbol.
+const Symbol &GetCrayPointer(const Symbol &crayPointee);
 
 } // namespace Fortran::semantics
 

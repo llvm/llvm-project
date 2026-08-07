@@ -22,6 +22,9 @@
 #include "stats.h"
 #include "string_utils.h"
 #include "thread_annotations.h"
+#include "tracing.h"
+
+#include <inttypes.h>
 
 namespace scudo {
 
@@ -83,12 +86,11 @@ public:
   }
 
   static bool canAllocate(uptr Size) { return Size <= SizeClassMap::MaxSize; }
-  static bool conditionVariableEnabled() {
+  static constexpr bool conditionVariableEnabled() {
     return Config::hasConditionVariableT();
   }
-  static uptr getRegionInfoArraySize() { return sizeof(RegionInfoArray); }
-  static BlockInfo findNearestBlock(const char *RegionInfoData,
-                                    uptr Ptr) NO_THREAD_SAFETY_ANALYSIS;
+
+  BlockInfo findNearestBlock(uptr Ptr);
 
   void init(s32 ReleaseToOsInterval) NO_THREAD_SAFETY_ANALYSIS;
 
@@ -105,7 +107,7 @@ public:
                   CompactPtrT *Array, u32 Size);
 
   void disable() NO_THREAD_SAFETY_ANALYSIS;
-  void enable() NO_THREAD_SAFETY_ANALYSIS;
+  void enable(bool IsChild) NO_THREAD_SAFETY_ANALYSIS;
 
   template <typename F> void iterateOverBlocks(F Callback);
 
@@ -120,17 +122,15 @@ public:
   uptr tryReleaseToOS(uptr ClassId, ReleaseToOS ReleaseType);
   uptr releaseToOS(ReleaseToOS ReleaseType);
 
-  const char *getRegionInfoArrayAddress() const {
-    return reinterpret_cast<const char *>(RegionInfoArray);
-  }
-
   uptr getCompactPtrBaseByClassId(uptr ClassId) {
     return getRegionInfo(ClassId)->RegionBeg;
   }
+
   CompactPtrT compactPtr(uptr ClassId, uptr Ptr) {
     DCHECK_LE(ClassId, SizeClassMap::LargestClassId);
     return compactPtrInternal(getCompactPtrBaseByClassId(ClassId), Ptr);
   }
+
   void *decompactPtr(uptr ClassId, CompactPtrT CompactPtr) {
     DCHECK_LE(ClassId, SizeClassMap::LargestClassId);
     return reinterpret_cast<void *>(
@@ -180,18 +180,58 @@ private:
     HybridMutex MMLock ACQUIRED_BEFORE(FLLock);
     // `RegionBeg` is initialized before thread creation and won't be changed.
     uptr RegionBeg = 0;
-    u32 RandState GUARDED_BY(MMLock) = 0;
     BlocksInfo FreeListInfo GUARDED_BY(FLLock);
     PagesInfo MemMapInfo GUARDED_BY(MMLock);
     ReleaseToOsInfo ReleaseInfo GUARDED_BY(MMLock) = {};
     bool Exhausted GUARDED_BY(MMLock) = false;
-    bool isPopulatingFreeList GUARDED_BY(FLLock) = false;
+    bool IsPopulatingFreeList GUARDED_BY(FLLock) = false;
+    u16 NumWaiting GUARDED_BY(FLLock) = 0;
+    u32 RandState GUARDED_BY(MMLock) = 0;
   };
   struct RegionInfo : UnpaddedRegionInfo {
     char Padding[SCUDO_CACHE_LINE_SIZE -
                  (sizeof(UnpaddedRegionInfo) % SCUDO_CACHE_LINE_SIZE)] = {};
   };
   static_assert(sizeof(RegionInfo) % SCUDO_CACHE_LINE_SIZE == 0, "");
+
+  template <bool ConditionVariableEnabled = false, typename Dummy = void>
+  class SCOPED_CAPABILITY ScopedFLLockBase {
+  public:
+    ScopedFLLockBase(HybridMutex &M, UNUSED RegionInfo *Region) ACQUIRE(M)
+        : Mutex(M) {
+      Mutex.lock();
+    }
+    ~ScopedFLLockBase() RELEASE() { Mutex.unlock(); }
+
+  private:
+    HybridMutex &Mutex;
+
+    ScopedFLLockBase(const ScopedFLLockBase &) = delete;
+    void operator=(const ScopedFLLockBase &) = delete;
+  };
+
+  template <typename Dummy>
+  class SCOPED_CAPABILITY ScopedFLLockBase<true, Dummy> {
+  public:
+    ScopedFLLockBase(HybridMutex &M, RegionInfo *Region) ACQUIRE(M)
+        : Mutex(M), Region(Region) {
+      Mutex.lock();
+    }
+    ~ScopedFLLockBase() RELEASE() {
+      if (Region->NumWaiting > 0)
+        Region->FLLockCV.notifyAll(Mutex);
+      Mutex.unlock();
+    }
+
+  private:
+    HybridMutex &Mutex;
+    RegionInfo *Region;
+
+    ScopedFLLockBase(const ScopedFLLockBase &) = delete;
+    void operator=(const ScopedFLLockBase &) = delete;
+  };
+
+  using ScopedFLLock = ScopedFLLockBase<conditionVariableEnabled()>;
 
   RegionInfo *getRegionInfo(uptr ClassId) {
     DCHECK_LT(ClassId, NumClasses);
@@ -361,10 +401,12 @@ void SizeClassAllocator64<Config>::init(s32 ReleaseToOsInterval)
     shuffle(RegionInfoArray, NumClasses, &Seed);
   }
 
-  // The binding should be done after region shuffling so that it won't bind
-  // the FLLock from the wrong region.
-  for (uptr I = 0; I < NumClasses; I++)
-    getRegionInfo(I)->FLLockCV.bindTestOnly(getRegionInfo(I)->FLLock);
+  if constexpr (SCUDO_DEBUG && conditionVariableEnabled()) {
+    // The binding should be done after region shuffling so that it won't bind
+    // the FLLock from the wrong region.
+    for (uptr I = 0; I < NumClasses; I++)
+      getRegionInfo(I)->FLLockCV.bindTestOnly(getRegionInfo(I)->FLLock);
+  }
 
   // The default value in the primary config has the higher priority.
   if (Config::getDefaultReleaseToOsIntervalMs() != INT32_MIN)
@@ -424,7 +466,7 @@ void SizeClassAllocator64<Config>::verifyAllBlocksAreReleasedTestOnly() {
       continue;
     RegionInfo *Region = getRegionInfo(I);
     ScopedLock ML(Region->MMLock);
-    ScopedLock FL(Region->FLLock);
+    ScopedFLLock FL(Region->FLLock, Region);
     const uptr BlockSize = getSizeByClassId(I);
     uptr TotalBlocks = 0;
     for (BatchGroupT &BG : Region->FreeListInfo.BlockList) {
@@ -441,7 +483,7 @@ void SizeClassAllocator64<Config>::verifyAllBlocksAreReleasedTestOnly() {
 
   RegionInfo *Region = getRegionInfo(SizeClassMap::BatchClassId);
   ScopedLock ML(Region->MMLock);
-  ScopedLock FL(Region->FLLock);
+  ScopedFLLock FL(Region->FLLock, Region);
   const uptr BlockSize = getSizeByClassId(SizeClassMap::BatchClassId);
   uptr TotalBlocks = 0;
   for (BatchGroupT &BG : Region->FreeListInfo.BlockList) {
@@ -472,7 +514,7 @@ u16 SizeClassAllocator64<Config>::popBlocks(
   u16 PopCount = 0;
 
   {
-    ScopedLock L(Region->FLLock);
+    ScopedFLLock FL(Region->FLLock, Region);
     PopCount = popBlocksImpl(SizeClassAllocator, ClassId, Region, ToArray,
                              MaxBlockCount);
     if (PopCount != 0U)
@@ -481,7 +523,7 @@ u16 SizeClassAllocator64<Config>::popBlocks(
 
   bool ReportRegionExhausted = false;
 
-  if (conditionVariableEnabled()) {
+  if constexpr (conditionVariableEnabled()) {
     PopCount = popBlocksWithCV(SizeClassAllocator, ClassId, Region, ToArray,
                                MaxBlockCount, ReportRegionExhausted);
   } else {
@@ -491,7 +533,7 @@ u16 SizeClassAllocator64<Config>::popBlocks(
       // doing that, always check the freelist before mapping new pages.
       ScopedLock ML(Region->MMLock);
       {
-        ScopedLock FL(Region->FLLock);
+        ScopedFLLock FL(Region->FLLock, Region);
         PopCount = popBlocksImpl(SizeClassAllocator, ClassId, Region, ToArray,
                                  MaxBlockCount);
         if (PopCount != 0U)
@@ -535,9 +577,9 @@ u16 SizeClassAllocator64<Config>::popBlocksWithCV(
     // threads.
     bool PopulateFreeList = false;
     {
-      ScopedLock FL(Region->FLLock);
-      if (!Region->isPopulatingFreeList) {
-        Region->isPopulatingFreeList = true;
+      ScopedFLLock FL(Region->FLLock, Region);
+      if (!Region->IsPopulatingFreeList) {
+        Region->IsPopulatingFreeList = true;
         PopulateFreeList = true;
       }
     }
@@ -556,11 +598,10 @@ u16 SizeClassAllocator64<Config>::popBlocksWithCV(
         // Before reacquiring the `FLLock`, the freelist may be used up again
         // and some threads are waiting for the freelist refillment by the
         // current thread. It's important to set
-        // `Region->isPopulatingFreeList` to false so the threads about to
+        // `Region->IsPopulatingFreeList` to false so the threads about to
         // sleep will notice the status change.
-        ScopedLock FL(Region->FLLock);
-        Region->isPopulatingFreeList = false;
-        Region->FLLockCV.notifyAll(Region->FLLock);
+        ScopedFLLock FL(Region->FLLock, Region);
+        Region->IsPopulatingFreeList = false;
       }
 
       break;
@@ -568,20 +609,20 @@ u16 SizeClassAllocator64<Config>::popBlocksWithCV(
 
     // At here, there are two preconditions to be met before waiting,
     //   1. The freelist is empty.
-    //   2. Region->isPopulatingFreeList == true, i.e, someone is still doing
+    //   2. Region->IsPopulatingFreeList == true, i.e, someone is still doing
     //   `populateFreeListAndPopBlocks()`.
     //
     // Note that it has the chance that freelist is empty but
-    // Region->isPopulatingFreeList == false because all the new populated
+    // Region->IsPopulatingFreeList == false because all the new populated
     // blocks were used up right after the refillment. Therefore, we have to
     // check if someone is still populating the freelist.
-    ScopedLock FL(Region->FLLock);
+    ScopedFLLock FL(Region->FLLock, Region);
     PopCount = popBlocksImpl(SizeClassAllocator, ClassId, Region, ToArray,
                              MaxBlockCount);
     if (PopCount != 0U)
       break;
 
-    if (!Region->isPopulatingFreeList)
+    if (!Region->IsPopulatingFreeList)
       continue;
 
     // Now the freelist is empty and someone's doing the refillment. We will
@@ -589,7 +630,9 @@ u16 SizeClassAllocator64<Config>::popBlocksWithCV(
     // `populateFreeListAndPopBlocks()`. The refillment can be done by
     // `populateFreeListAndPopBlocks()`, `pushBlocks()`,
     // `pushBatchClassBlocks()` and `mergeGroupsToReleaseBack()`.
+    ++Region->NumWaiting;
     Region->FLLockCV.wait(Region->FLLock);
+    --Region->NumWaiting;
 
     PopCount = popBlocksImpl(SizeClassAllocator, ClassId, Region, ToArray,
                              MaxBlockCount);
@@ -736,8 +779,7 @@ u16 SizeClassAllocator64<Config>::populateFreeListAndPopBlocks(
   for (u32 I = 0; I < NumberOfBlocks; I++, P += Size)
     ShuffleArray[I] = compactPtrInternal(CompactPtrBase, P);
 
-  ScopedLock L(Region->FLLock);
-
+  ScopedFLLock FL(Region->FLLock, Region);
   if (ClassId != SizeClassMap::BatchClassId) {
     u32 N = 1;
     uptr CurGroup = compactPtrGroup(ShuffleArray[0]);
@@ -788,38 +830,37 @@ void SizeClassAllocator64<Config>::pushBlocks(
 
   RegionInfo *Region = getRegionInfo(ClassId);
   if (ClassId == SizeClassMap::BatchClassId) {
-    ScopedLock L(Region->FLLock);
+    ScopedFLLock FL(Region->FLLock, Region);
     pushBatchClassBlocks(Region, Array, Size);
-    if (conditionVariableEnabled())
-      Region->FLLockCV.notifyAll(Region->FLLock);
     return;
   }
 
   // TODO(chiahungduan): Consider not doing grouping if the group size is not
   // greater than the block size with a certain scale.
-
   bool SameGroup = true;
-  if (GroupSizeLog < RegionSizeLog) {
-    // Sort the blocks so that blocks belonging to the same group can be
-    // pushed together.
+  if (GroupSizeLog < RegionSizeLog && Size > 1) {
+    // Sort the blocks such that blocks belonging to the same group are
+    // ordered together.
+    uptr FirstPtrGroup = compactPtrGroup(Array[0]);
     for (u32 I = 1; I < Size; ++I) {
-      if (compactPtrGroup(Array[I - 1]) != compactPtrGroup(Array[I]))
-        SameGroup = false;
       CompactPtrT Cur = Array[I];
-      u32 J = I;
-      while (J > 0 && compactPtrGroup(Cur) < compactPtrGroup(Array[J - 1])) {
-        Array[J] = Array[J - 1];
-        --J;
+      uptr CurPtrGroup = compactPtrGroup(Cur);
+      SameGroup = SameGroup && CurPtrGroup == FirstPtrGroup;
+      if (!SameGroup) {
+        // Sorting only necessary if there are different groups.
+        u32 J = I;
+        while (J > 0 && CurPtrGroup < compactPtrGroup(Array[J - 1])) {
+          Array[J] = Array[J - 1];
+          --J;
+        }
+        Array[J] = Cur;
       }
-      Array[J] = Cur;
     }
   }
 
   {
-    ScopedLock L(Region->FLLock);
+    ScopedFLLock FL(Region->FLLock, Region);
     pushBlocksImpl(SizeClassAllocator, ClassId, Region, Array, Size, SameGroup);
-    if (conditionVariableEnabled())
-      Region->FLLockCV.notifyAll(Region->FLLock);
   }
 }
 
@@ -1065,14 +1106,34 @@ void SizeClassAllocator64<Config>::disable() NO_THREAD_SAFETY_ANALYSIS {
 }
 
 template <typename Config>
-void SizeClassAllocator64<Config>::enable() NO_THREAD_SAFETY_ANALYSIS {
-  getRegionInfo(SizeClassMap::BatchClassId)->FLLock.unlock();
-  getRegionInfo(SizeClassMap::BatchClassId)->MMLock.unlock();
+void SizeClassAllocator64<Config>::enable(bool IsChild)
+    NO_THREAD_SAFETY_ANALYSIS {
+  auto *BatchRegion = getRegionInfo(SizeClassMap::BatchClassId);
+  if constexpr (conditionVariableEnabled()) {
+    if (IsChild) {
+      BatchRegion->NumWaiting = 0;
+      BatchRegion->IsPopulatingFreeList = false;
+    } else if (BatchRegion->NumWaiting > 0) {
+      BatchRegion->FLLockCV.notifyAll(BatchRegion->FLLock);
+    }
+  }
+  BatchRegion->FLLock.unlock();
+  BatchRegion->MMLock.unlock();
+
   for (uptr I = 0; I < NumClasses; I++) {
     if (I == SizeClassMap::BatchClassId)
       continue;
-    getRegionInfo(I)->FLLock.unlock();
-    getRegionInfo(I)->MMLock.unlock();
+    auto *Region = getRegionInfo(I);
+    if constexpr (conditionVariableEnabled()) {
+      if (IsChild) {
+        Region->NumWaiting = 0;
+        Region->IsPopulatingFreeList = false;
+      } else if (Region->NumWaiting > 0) {
+        Region->FLLockCV.notifyAll(Region->FLLock);
+      }
+    }
+    Region->FLLock.unlock();
+    Region->MMLock.unlock();
   }
 }
 
@@ -1099,6 +1160,8 @@ void SizeClassAllocator64<Config>::iterateOverBlocks(F Callback) {
 template <typename Config>
 void SizeClassAllocator64<Config>::getStats(ScopedString *Str) {
   // TODO(kostyak): get the RSS per region.
+  Str->append("\nConfig Stats Primary64: ");
+  Config::getConfigValues(Str);
   uptr TotalMapped = 0;
   uptr PoppedBlocks = 0;
   uptr PushedBlocks = 0;
@@ -1109,7 +1172,7 @@ void SizeClassAllocator64<Config>::getStats(ScopedString *Str) {
       TotalMapped += Region->MemMapInfo.MappedUser;
     }
     {
-      ScopedLock L(Region->FLLock);
+      ScopedFLLock FL(Region->FLLock, Region);
       PoppedBlocks += Region->FreeListInfo.PoppedBlocks;
       PushedBlocks += Region->FreeListInfo.PushedBlocks;
     }
@@ -1122,8 +1185,8 @@ void SizeClassAllocator64<Config>::getStats(ScopedString *Str) {
 
   for (uptr I = 0; I < NumClasses; I++) {
     RegionInfo *Region = getRegionInfo(I);
-    ScopedLock L1(Region->MMLock);
-    ScopedLock L2(Region->FLLock);
+    ScopedLock MM(Region->MMLock);
+    ScopedFLLock FL(Region->FLLock, Region);
     getStats(Str, I, Region);
   }
 }
@@ -1149,13 +1212,29 @@ void SizeClassAllocator64<Config>::getStats(ScopedString *Str, uptr ClassId,
       "%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
       "inuse: %6zu total: %6zu releases attempted: %6zu last "
       "released: %6zuK latest pushed bytes: %6zuK region: 0x%zx "
-      "(0x%zx)\n",
+      "(0x%zx)",
       Region->Exhausted ? "E" : " ", ClassId, getSizeByClassId(ClassId),
       Region->MemMapInfo.MappedUser >> 10, Region->FreeListInfo.PoppedBlocks,
       Region->FreeListInfo.PushedBlocks, InUseBlocks, TotalChunks,
       Region->ReleaseInfo.NumReleasesAttempted,
       Region->ReleaseInfo.LastReleasedBytes >> 10, RegionPushedBytesDelta >> 10,
       Region->RegionBeg, getRegionBaseByClassId(ClassId));
+  const u64 CurTimeNs = getMonotonicTimeFast();
+  const u64 LastReleaseAtNs = Region->ReleaseInfo.LastReleaseAtNs;
+  if (LastReleaseAtNs != 0 && CurTimeNs != LastReleaseAtNs) {
+    const u64 DiffSinceLastReleaseNs =
+        CurTimeNs - Region->ReleaseInfo.LastReleaseAtNs;
+    const u64 LastReleaseSecAgo = DiffSinceLastReleaseNs / 1000000000;
+    const u64 LastReleaseMsAgo =
+        (DiffSinceLastReleaseNs % 1000000000) / 1000000;
+    Str->append(" Latest release: %6" PRIu64 ":%03" PRIu64 " seconds ago",
+                LastReleaseSecAgo, LastReleaseMsAgo);
+  }
+  const s64 ResidentPages = Region->MemMapInfo.MemMap.getResidentPages();
+  if (ResidentPages >= 0) {
+    Str->append(" Resident Pages: %6" PRIu64, ResidentPages);
+  }
+  Str->append("\n");
 }
 
 template <typename Config>
@@ -1181,7 +1260,7 @@ void SizeClassAllocator64<Config>::getRegionFragmentationInfo(
 
   SinglyLinkedList<BatchGroupT> GroupsToRelease;
   {
-    ScopedLock L(Region->FLLock);
+    ScopedFLLock FL(Region->FLLock, Region);
     GroupsToRelease = Region->FreeListInfo.BlockList;
     Region->FreeListInfo.BlockList.clear();
   }
@@ -1197,7 +1276,7 @@ void SizeClassAllocator64<Config>::getRegionFragmentationInfo(
     mergeGroupsToReleaseBack(Region, GroupsToRelease);
   }
 
-  ScopedLock L(Region->FLLock);
+  ScopedFLLock FL(Region->FLLock, Region);
   const uptr PageSize = getPageSizeCached();
   const uptr TotalBlocks = Region->MemMapInfo.AllocatedUser / BlockSize;
   const uptr InUseBlocks =
@@ -1229,7 +1308,7 @@ void SizeClassAllocator64<Config>::getMemoryGroupFragmentationInfoInRegion(
 
   SinglyLinkedList<BatchGroupT> GroupsToRelease;
   {
-    ScopedLock L(Region->FLLock);
+    ScopedFLLock FL(Region->FLLock, Region);
     GroupsToRelease = Region->FreeListInfo.BlockList;
     Region->FreeListInfo.BlockList.clear();
   }
@@ -1307,35 +1386,39 @@ uptr SizeClassAllocator64<Config>::tryReleaseToOS(uptr ClassId,
 
 template <typename Config>
 uptr SizeClassAllocator64<Config>::releaseToOS(ReleaseToOS ReleaseType) {
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSTraceName(ReleaseType));
+
   uptr TotalReleasedBytes = 0;
   for (uptr I = 0; I < NumClasses; I++) {
     if (I == SizeClassMap::BatchClassId)
       continue;
     RegionInfo *Region = getRegionInfo(I);
-    ScopedLock L(Region->MMLock);
-    TotalReleasedBytes += releaseToOSMaybe(Region, I, ReleaseType);
+    if (ReleaseType == ReleaseToOS::ForceFast) {
+      // Never wait for the lock, always move on if there is already
+      // a release operation in progress.
+      if (Region->MMLock.tryLock()) {
+        TotalReleasedBytes += releaseToOSMaybe(Region, I, ReleaseType);
+        Region->MMLock.unlock();
+      }
+    } else {
+      ScopedLock L(Region->MMLock);
+      TotalReleasedBytes += releaseToOSMaybe(Region, I, ReleaseType);
+    }
   }
   return TotalReleasedBytes;
 }
 
 template <typename Config>
-/* static */ BlockInfo SizeClassAllocator64<Config>::findNearestBlock(
-    const char *RegionInfoData, uptr Ptr) NO_THREAD_SAFETY_ANALYSIS {
-  const RegionInfo *RegionInfoArray =
-      reinterpret_cast<const RegionInfo *>(RegionInfoData);
-
+BlockInfo SizeClassAllocator64<Config>::findNearestBlock(uptr Ptr)
+    NO_THREAD_SAFETY_ANALYSIS {
   uptr ClassId;
   uptr MinDistance = -1UL;
   for (uptr I = 0; I != NumClasses; ++I) {
     if (I == SizeClassMap::BatchClassId)
       continue;
+
+    ScopedLock ML(RegionInfoArray[I].MMLock);
     uptr Begin = RegionInfoArray[I].RegionBeg;
-    // TODO(chiahungduan): In fact, We need to lock the RegionInfo::MMLock.
-    // However, the RegionInfoData is passed with const qualifier and lock the
-    // mutex requires modifying RegionInfoData, which means we need to remove
-    // the const qualifier. This may lead to another undefined behavior (The
-    // first one is accessing `AllocatedUser` without locking. It's better to
-    // pass `RegionInfoData` as `void *` then we can lock the mutex properly.
     uptr End = Begin + RegionInfoArray[I].MemMapInfo.AllocatedUser;
     if (Begin > End || End - Begin < SizeClassMap::getSizeByClassId(I))
       continue;
@@ -1352,22 +1435,27 @@ template <typename Config>
     if (RegionDistance < MinDistance) {
       MinDistance = RegionDistance;
       ClassId = I;
+      if (RegionDistance == 0)
+        break;
     }
   }
 
-  BlockInfo B = {};
-  if (MinDistance <= 8192) {
-    B.RegionBegin = RegionInfoArray[ClassId].RegionBeg;
-    B.RegionEnd =
-        B.RegionBegin + RegionInfoArray[ClassId].MemMapInfo.AllocatedUser;
-    B.BlockSize = SizeClassMap::getSizeByClassId(ClassId);
-    B.BlockBegin = B.RegionBegin + uptr(sptr(Ptr - B.RegionBegin) /
-                                        sptr(B.BlockSize) * sptr(B.BlockSize));
-    while (B.BlockBegin < B.RegionBegin)
-      B.BlockBegin += B.BlockSize;
-    while (B.RegionEnd < B.BlockBegin + B.BlockSize)
-      B.BlockBegin -= B.BlockSize;
+  if (MinDistance > 8192) {
+    return {};
   }
+
+  ScopedLock ML(RegionInfoArray[ClassId].MMLock);
+  BlockInfo B = {};
+  B.RegionBegin = RegionInfoArray[ClassId].RegionBeg;
+  B.RegionEnd =
+      B.RegionBegin + RegionInfoArray[ClassId].MemMapInfo.AllocatedUser;
+  B.BlockSize = SizeClassMap::getSizeByClassId(ClassId);
+  B.BlockBegin = B.RegionBegin + uptr(sptr(Ptr - B.RegionBegin) /
+                                      sptr(B.BlockSize) * sptr(B.BlockSize));
+  while (B.BlockBegin < B.RegionBegin)
+    B.BlockBegin += B.BlockSize;
+  while (B.RegionEnd < B.BlockBegin + B.BlockSize)
+    B.BlockBegin -= B.BlockSize;
   return B;
 }
 
@@ -1384,14 +1472,14 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
   SinglyLinkedList<BatchGroupT> GroupsToRelease;
 
   {
-    ScopedLock L(Region->FLLock);
+    ScopedFLLock FL(Region->FLLock, Region);
 
     BytesInFreeList =
         Region->MemMapInfo.AllocatedUser - (Region->FreeListInfo.PoppedBlocks -
                                             Region->FreeListInfo.PushedBlocks) *
                                                BlockSize;
     if (UNLIKELY(BytesInFreeList == 0))
-      return false;
+      return 0;
 
     // ==================================================================== //
     // 1. Check if we have enough free blocks and if it's worth doing a page
@@ -1439,6 +1527,12 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
   //    Then we can tell which pages are in-use by querying
   //    `PageReleaseContext`.
   // ==================================================================== //
+
+  // Only add trace point after the quick returns have occurred to avoid
+  // incurring performance penalties. Most of the time in this function
+  // will be the mark free blocks call and the actual release to OS call.
+  SCUDO_SCOPED_TRACE(GetPrimaryReleaseToOSMaybeTraceName(ReleaseType));
+
   PageReleaseContext Context =
       markFreeBlocks(Region, BlockSize, AllocatedUserEnd,
                      getCompactPtrBaseByClassId(ClassId), GroupsToRelease);
@@ -1556,6 +1650,13 @@ bool SizeClassAllocator64<Config>::hasChanceToReleasePages(
       if (DiffSinceLastReleaseNs < 2 * IntervalNs)
         return false;
     } else if (DiffSinceLastReleaseNs < IntervalNs) {
+      // `TryReleaseThreshold` is capped by (1UL << GroupSizeLog) / 2). If
+      // RegionPushedBytesDelta grows to twice the threshold, it implies some
+      // huge deallocations have happened so we better try to release some
+      // pages. Note this tends to happen for larger block sizes.
+      if (RegionPushedBytesDelta > (1ULL << GroupSizeLog))
+        return true;
+
       // In this case, we are over the threshold but we just did some page
       // release in the same release interval. This is a hint that we may want
       // a higher threshold so that we can release more memory at once.
@@ -1654,7 +1755,7 @@ SizeClassAllocator64<Config>::collectGroupsToRelease(
 
       if (!HighDensity) {
         DCHECK_LE(BytesInBG, ReleaseThreshold);
-        // The following is the usage of a memroy group,
+        // The following is the usage of a memory group,
         //
         //     BytesInBG             ReleaseThreshold
         //  /             \                 v
@@ -1829,7 +1930,7 @@ template <typename Config>
 void SizeClassAllocator64<Config>::mergeGroupsToReleaseBack(
     RegionInfo *Region, SinglyLinkedList<BatchGroupT> &GroupsToRelease)
     REQUIRES(Region->MMLock) EXCLUDES(Region->FLLock) {
-  ScopedLock L(Region->FLLock);
+  ScopedFLLock FL(Region->FLLock, Region);
 
   // After merging two freelists, we may have redundant `BatchGroup`s that
   // need to be recycled. The number of unused `BatchGroup`s is expected to be
@@ -1906,10 +2007,8 @@ void SizeClassAllocator64<Config>::mergeGroupsToReleaseBack(
 
       const u32 NeededSlots = UnusedBatch == nullptr ? 1U : 2U;
       if (UNLIKELY(Idx + NeededSlots > MaxUnusedSize)) {
-        ScopedLock L(BatchClassRegion->FLLock);
+        ScopedFLLock FL(BatchClassRegion->FLLock, BatchClassRegion);
         pushBatchClassBlocks(BatchClassRegion, Blocks, Idx);
-        if (conditionVariableEnabled())
-          BatchClassRegion->FLLockCV.notifyAll(BatchClassRegion->FLLock);
         Idx = 0;
       }
       Blocks[Idx++] =
@@ -1942,10 +2041,8 @@ void SizeClassAllocator64<Config>::mergeGroupsToReleaseBack(
   }
 
   if (Idx != 0) {
-    ScopedLock L(BatchClassRegion->FLLock);
+    ScopedFLLock FL(BatchClassRegion->FLLock, BatchClassRegion);
     pushBatchClassBlocks(BatchClassRegion, Blocks, Idx);
-    if (conditionVariableEnabled())
-      BatchClassRegion->FLLockCV.notifyAll(BatchClassRegion->FLLock);
   }
 
   if (SCUDO_DEBUG) {
@@ -1955,10 +2052,8 @@ void SizeClassAllocator64<Config>::mergeGroupsToReleaseBack(
       CHECK_LT(Prev->CompactPtrGroupBase, Cur->CompactPtrGroupBase);
     }
   }
-
-  if (conditionVariableEnabled())
-    Region->FLLockCV.notifyAll(Region->FLLock);
 }
+
 } // namespace scudo
 
 #endif // SCUDO_PRIMARY64_H_

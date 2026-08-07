@@ -502,7 +502,7 @@ define <8 x half> @stack_fold_getmantsh_maskz(<8 x half> %a0, <8 x half> %a1, pt
   ret <8 x half> %3
 }
 
-define <32 x half> @stack_fold_maxph_zmm(<32 x half> %a0, <32 x half> %a1) #0 {
+define <32 x half> @stack_fold_maxph_zmm(<32 x half> %a0, <32 x half> %a1) {
 ; CHECK-LABEL: stack_fold_maxph_zmm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -517,7 +517,7 @@ define <32 x half> @stack_fold_maxph_zmm(<32 x half> %a0, <32 x half> %a1) #0 {
 }
 declare <32 x half> @llvm.x86.avx512fp16.max.ph.512(<32 x half>, <32 x half>, i32) nounwind readnone
 
-define <32 x half> @stack_fold_maxph_zmm_commuted(<32 x half> %a0, <32 x half> %a1) #0 {
+define <32 x half> @stack_fold_maxph_zmm_commuted(<32 x half> %a0, <32 x half> %a1) {
 ; CHECK-LABEL: stack_fold_maxph_zmm_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -532,7 +532,7 @@ define <32 x half> @stack_fold_maxph_zmm_commuted(<32 x half> %a0, <32 x half> %
   ret <32 x half> %2
 }
 
-define <32 x half> @stack_fold_maxph_zmm_k(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) #0 {
+define <32 x half> @stack_fold_maxph_zmm_k(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_maxph_zmm_k:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -552,7 +552,7 @@ define <32 x half> @stack_fold_maxph_zmm_k(<32 x half> %a0, <32 x half> %a1, i32
   ret <32 x half> %5
 }
 
-define <32 x half> @stack_fold_maxph_zmm_k_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) #0 {
+define <32 x half> @stack_fold_maxph_zmm_k_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_maxph_zmm_k_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -573,7 +573,7 @@ define <32 x half> @stack_fold_maxph_zmm_k_commuted(<32 x half> %a0, <32 x half>
   ret <32 x half> %5
 }
 
-define <32 x half> @stack_fold_maxph_zmm_kz(<32 x half> %a0, <32 x half> %a1, i32 %mask) #0 {
+define <32 x half> @stack_fold_maxph_zmm_kz(<32 x half> %a0, <32 x half> %a1, i32 %mask) {
 ; CHECK-LABEL: stack_fold_maxph_zmm_kz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -590,7 +590,7 @@ define <32 x half> @stack_fold_maxph_zmm_kz(<32 x half> %a0, <32 x half> %a1, i3
   ret <32 x half> %4
 }
 
-define <32 x half> @stack_fold_maxph_zmm_kz_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask) #0 {
+define <32 x half> @stack_fold_maxph_zmm_kz_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask) {
 ; CHECK-LABEL: stack_fold_maxph_zmm_kz_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -608,7 +608,7 @@ define <32 x half> @stack_fold_maxph_zmm_kz_commuted(<32 x half> %a0, <32 x half
   ret <32 x half> %4
 }
 
-define <32 x half> @stack_fold_maxph_zmm_commutable(<32 x half> %a0, <32 x half> %a1) #1 {
+define <32 x half> @stack_fold_maxph_zmm_commutable(<32 x half> %a0, <32 x half> %a1) {
 ; CHECK-LABEL: stack_fold_maxph_zmm_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -622,7 +622,7 @@ define <32 x half> @stack_fold_maxph_zmm_commutable(<32 x half> %a0, <32 x half>
   ret <32 x half> %2
 }
 
-define <32 x half> @stack_fold_maxph_zmm_commutable_commuted(<32 x half> %a0, <32 x half> %a1) #1 {
+define <32 x half> @stack_fold_maxph_zmm_commutable_commuted(<32 x half> %a0, <32 x half> %a1) {
 ; CHECK-LABEL: stack_fold_maxph_zmm_commutable_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -632,11 +632,11 @@ define <32 x half> @stack_fold_maxph_zmm_commutable_commuted(<32 x half> %a0, <3
 ; CHECK-NEXT:    vmaxph {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <32 x half> @llvm.x86.avx512fp16.max.ph.512(<32 x half> %a1, <32 x half> %a0, i32 4)
+  %2 = call nsz nnan <32 x half> @llvm.x86.avx512fp16.max.ph.512(<32 x half> %a1, <32 x half> %a0, i32 4)
   ret <32 x half> %2
 }
 
-define <32 x half> @stack_fold_maxph_zmm_commutable_k(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) #1 {
+define <32 x half> @stack_fold_maxph_zmm_commutable_k(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_maxph_zmm_commutable_k:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -656,7 +656,7 @@ define <32 x half> @stack_fold_maxph_zmm_commutable_k(<32 x half> %a0, <32 x hal
   ret <32 x half> %5
 }
 
-define <32 x half> @stack_fold_maxph_zmm_commutable_k_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) #1 {
+define <32 x half> @stack_fold_maxph_zmm_commutable_k_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_maxph_zmm_commutable_k_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -669,14 +669,14 @@ define <32 x half> @stack_fold_maxph_zmm_commutable_k_commuted(<32 x half> %a0, 
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <32 x half> @llvm.x86.avx512fp16.max.ph.512(<32 x half> %a1, <32 x half> %a0, i32 4)
+  %2 = call nsz nnan <32 x half> @llvm.x86.avx512fp16.max.ph.512(<32 x half> %a1, <32 x half> %a0, i32 4)
   %3 = bitcast i32 %mask to <32 x i1>
   %4 = load <32 x half>, ptr %passthru
   %5 = select <32 x i1> %3, <32 x half> %2, <32 x half> %4
   ret <32 x half> %5
 }
 
-define <32 x half> @stack_fold_maxph_zmm_commutable_kz(<32 x half> %a0, <32 x half> %a1, i32 %mask) #1 {
+define <32 x half> @stack_fold_maxph_zmm_commutable_kz(<32 x half> %a0, <32 x half> %a1, i32 %mask) {
 ; CHECK-LABEL: stack_fold_maxph_zmm_commutable_kz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -693,7 +693,7 @@ define <32 x half> @stack_fold_maxph_zmm_commutable_kz(<32 x half> %a0, <32 x ha
   ret <32 x half> %4
 }
 
-define <32 x half> @stack_fold_maxph_zmm_commutable_kz_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask) #1 {
+define <32 x half> @stack_fold_maxph_zmm_commutable_kz_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask) {
 ; CHECK-LABEL: stack_fold_maxph_zmm_commutable_kz_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -704,13 +704,13 @@ define <32 x half> @stack_fold_maxph_zmm_commutable_kz_commuted(<32 x half> %a0,
 ; CHECK-NEXT:    vmaxph {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 {%k1} {z} # 64-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <32 x half> @llvm.x86.avx512fp16.max.ph.512(<32 x half> %a1, <32 x half> %a0, i32 4)
+  %2 = call nsz nnan <32 x half> @llvm.x86.avx512fp16.max.ph.512(<32 x half> %a1, <32 x half> %a0, i32 4)
   %3 = bitcast i32 %mask to <32 x i1>
   %4 = select <32 x i1> %3, <32 x half> %2, <32 x half> zeroinitializer
   ret <32 x half> %4
 }
 
-define half @stack_fold_maxsh(half %a0, half %a1) #0 {
+define half @stack_fold_maxsh(half %a0, half %a1) {
 ; CHECK-LABEL: stack_fold_maxsh:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsh %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -725,7 +725,7 @@ define half @stack_fold_maxsh(half %a0, half %a1) #0 {
   ret half %3
 }
 
-define half @stack_fold_maxsh_commuted(half %a0, half %a1) #0 {
+define half @stack_fold_maxsh_commuted(half %a0, half %a1) {
 ; CHECK-LABEL: stack_fold_maxsh_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsh %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -742,7 +742,7 @@ define half @stack_fold_maxsh_commuted(half %a0, half %a1) #0 {
   ret half %3
 }
 
-define half @stack_fold_maxsh_commutable(half %a0, half %a1) #1 {
+define half @stack_fold_maxsh_commutable(half %a0, half %a1) {
 ; CHECK-LABEL: stack_fold_maxsh_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsh %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -757,7 +757,7 @@ define half @stack_fold_maxsh_commutable(half %a0, half %a1) #1 {
   ret half %3
 }
 
-define half @stack_fold_maxsh_commutable_commuted(half %a0, half %a1) #1 {
+define half @stack_fold_maxsh_commutable_commuted(half %a0, half %a1) {
 ; CHECK-LABEL: stack_fold_maxsh_commutable_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsh %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -768,11 +768,11 @@ define half @stack_fold_maxsh_commutable_commuted(half %a0, half %a1) #1 {
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fcmp ogt half %a1, %a0
-  %3 = select i1 %2, half %a1, half %a0
+  %3 = select nsz nnan i1 %2, half %a1, half %a0
   ret half %3
 }
 
-define <8 x half> @stack_fold_maxsh_int(<8 x half> %a0, <8 x half> %a1) #0 {
+define <8 x half> @stack_fold_maxsh_int(<8 x half> %a0, <8 x half> %a1) {
 ; CHECK-LABEL: stack_fold_maxsh_int:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -820,7 +820,7 @@ define <8 x half> @stack_fold_maxsh_maskz(<8 x half> %a0, <8 x half> %a1, i8 %ma
   ret <8 x half> %2
 }
 
-define <32 x half> @stack_fold_minph_zmm(<32 x half> %a0, <32 x half> %a1) #0 {
+define <32 x half> @stack_fold_minph_zmm(<32 x half> %a0, <32 x half> %a1) {
 ; CHECK-LABEL: stack_fold_minph_zmm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -835,7 +835,7 @@ define <32 x half> @stack_fold_minph_zmm(<32 x half> %a0, <32 x half> %a1) #0 {
 }
 declare <32 x half> @llvm.x86.avx512fp16.min.ph.512(<32 x half>, <32 x half>, i32) nounwind readnone
 
-define <32 x half> @stack_fold_minph_zmm_commuted(<32 x half> %a0, <32 x half> %a1) #0 {
+define <32 x half> @stack_fold_minph_zmm_commuted(<32 x half> %a0, <32 x half> %a1) {
 ; CHECK-LABEL: stack_fold_minph_zmm_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -850,7 +850,7 @@ define <32 x half> @stack_fold_minph_zmm_commuted(<32 x half> %a0, <32 x half> %
   ret <32 x half> %2
 }
 
-define <32 x half> @stack_fold_minph_zmm_k(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) #0 {
+define <32 x half> @stack_fold_minph_zmm_k(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_minph_zmm_k:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -870,7 +870,7 @@ define <32 x half> @stack_fold_minph_zmm_k(<32 x half> %a0, <32 x half> %a1, i32
   ret <32 x half> %5
 }
 
-define <32 x half> @stack_fold_minph_zmm_k_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) #0 {
+define <32 x half> @stack_fold_minph_zmm_k_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_minph_zmm_k_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -891,7 +891,7 @@ define <32 x half> @stack_fold_minph_zmm_k_commuted(<32 x half> %a0, <32 x half>
   ret <32 x half> %5
 }
 
-define <32 x half> @stack_fold_minph_zmm_kz(<32 x half> %a0, <32 x half> %a1, i32 %mask) #0 {
+define <32 x half> @stack_fold_minph_zmm_kz(<32 x half> %a0, <32 x half> %a1, i32 %mask) {
 ; CHECK-LABEL: stack_fold_minph_zmm_kz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -908,7 +908,7 @@ define <32 x half> @stack_fold_minph_zmm_kz(<32 x half> %a0, <32 x half> %a1, i3
   ret <32 x half> %4
 }
 
-define <32 x half> @stack_fold_minph_zmm_kz_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask) #0 {
+define <32 x half> @stack_fold_minph_zmm_kz_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask) {
 ; CHECK-LABEL: stack_fold_minph_zmm_kz_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -926,7 +926,7 @@ define <32 x half> @stack_fold_minph_zmm_kz_commuted(<32 x half> %a0, <32 x half
   ret <32 x half> %4
 }
 
-define <32 x half> @stack_fold_minph_zmm_commutable(<32 x half> %a0, <32 x half> %a1) #1 {
+define <32 x half> @stack_fold_minph_zmm_commutable(<32 x half> %a0, <32 x half> %a1) {
 ; CHECK-LABEL: stack_fold_minph_zmm_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -940,7 +940,7 @@ define <32 x half> @stack_fold_minph_zmm_commutable(<32 x half> %a0, <32 x half>
   ret <32 x half> %2
 }
 
-define <32 x half> @stack_fold_minph_zmm_commutable_commuted(<32 x half> %a0, <32 x half> %a1) #1 {
+define <32 x half> @stack_fold_minph_zmm_commutable_commuted(<32 x half> %a0, <32 x half> %a1) {
 ; CHECK-LABEL: stack_fold_minph_zmm_commutable_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -950,11 +950,11 @@ define <32 x half> @stack_fold_minph_zmm_commutable_commuted(<32 x half> %a0, <3
 ; CHECK-NEXT:    vminph {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <32 x half> @llvm.x86.avx512fp16.min.ph.512(<32 x half> %a1, <32 x half> %a0, i32 4)
+  %2 = call nsz nnan <32 x half> @llvm.x86.avx512fp16.min.ph.512(<32 x half> %a1, <32 x half> %a0, i32 4)
   ret <32 x half> %2
 }
 
-define <32 x half> @stack_fold_minph_zmm_commutable_k(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) #1 {
+define <32 x half> @stack_fold_minph_zmm_commutable_k(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_minph_zmm_commutable_k:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -974,7 +974,7 @@ define <32 x half> @stack_fold_minph_zmm_commutable_k(<32 x half> %a0, <32 x hal
   ret <32 x half> %5
 }
 
-define <32 x half> @stack_fold_minph_zmm_commutable_k_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) #1 {
+define <32 x half> @stack_fold_minph_zmm_commutable_k_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask, ptr %passthru) {
 ; CHECK-LABEL: stack_fold_minph_zmm_commutable_k_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -987,14 +987,14 @@ define <32 x half> @stack_fold_minph_zmm_commutable_k_commuted(<32 x half> %a0, 
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <32 x half> @llvm.x86.avx512fp16.min.ph.512(<32 x half> %a1, <32 x half> %a0, i32 4)
+  %2 = call nsz nnan <32 x half> @llvm.x86.avx512fp16.min.ph.512(<32 x half> %a1, <32 x half> %a0, i32 4)
   %3 = bitcast i32 %mask to <32 x i1>
   %4 = load <32 x half>, ptr %passthru
   %5 = select <32 x i1> %3, <32 x half> %2, <32 x half> %4
   ret <32 x half> %5
 }
 
-define <32 x half> @stack_fold_minph_zmm_commutable_kz(<32 x half> %a0, <32 x half> %a1, i32 %mask) #1 {
+define <32 x half> @stack_fold_minph_zmm_commutable_kz(<32 x half> %a0, <32 x half> %a1, i32 %mask) {
 ; CHECK-LABEL: stack_fold_minph_zmm_commutable_kz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1011,7 +1011,7 @@ define <32 x half> @stack_fold_minph_zmm_commutable_kz(<32 x half> %a0, <32 x ha
   ret <32 x half> %4
 }
 
-define <32 x half> @stack_fold_minph_zmm_commutable_kz_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask) #1 {
+define <32 x half> @stack_fold_minph_zmm_commutable_kz_commuted(<32 x half> %a0, <32 x half> %a1, i32 %mask) {
 ; CHECK-LABEL: stack_fold_minph_zmm_commutable_kz_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -1022,13 +1022,13 @@ define <32 x half> @stack_fold_minph_zmm_commutable_kz_commuted(<32 x half> %a0,
 ; CHECK-NEXT:    vminph {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 {%k1} {z} # 64-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = call <32 x half> @llvm.x86.avx512fp16.min.ph.512(<32 x half> %a1, <32 x half> %a0, i32 4)
+  %2 = call nsz nnan <32 x half> @llvm.x86.avx512fp16.min.ph.512(<32 x half> %a1, <32 x half> %a0, i32 4)
   %3 = bitcast i32 %mask to <32 x i1>
   %4 = select <32 x i1> %3, <32 x half> %2, <32 x half> zeroinitializer
   ret <32 x half> %4
 }
 
-define half @stack_fold_minsh(half %a0, half %a1) #0 {
+define half @stack_fold_minsh(half %a0, half %a1) {
 ; CHECK-LABEL: stack_fold_minsh:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsh %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -1043,7 +1043,7 @@ define half @stack_fold_minsh(half %a0, half %a1) #0 {
   ret half %3
 }
 
-define half @stack_fold_minsh_commuted(half %a0, half %a1) #0 {
+define half @stack_fold_minsh_commuted(half %a0, half %a1) {
 ; CHECK-LABEL: stack_fold_minsh_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsh %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -1060,7 +1060,7 @@ define half @stack_fold_minsh_commuted(half %a0, half %a1) #0 {
   ret half %3
 }
 
-define half @stack_fold_minsh_commutable(half %a0, half %a1) #1 {
+define half @stack_fold_minsh_commutable(half %a0, half %a1) {
 ; CHECK-LABEL: stack_fold_minsh_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsh %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -1075,7 +1075,7 @@ define half @stack_fold_minsh_commutable(half %a0, half %a1) #1 {
   ret half %3
 }
 
-define half @stack_fold_minsh_commutable_commuted(half %a0, half %a1) #1 {
+define half @stack_fold_minsh_commutable_commuted(half %a0, half %a1) {
 ; CHECK-LABEL: stack_fold_minsh_commutable_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsh %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -1086,11 +1086,11 @@ define half @stack_fold_minsh_commutable_commuted(half %a0, half %a1) #1 {
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fcmp olt half %a1, %a0
-  %3 = select i1 %2, half %a1, half %a0
+  %3 = select nsz nnan i1 %2, half %a1, half %a0
   ret half %3
 }
 
-define <8 x half> @stack_fold_minsh_int(<8 x half> %a0, <8 x half> %a1) #0 {
+define <8 x half> @stack_fold_minsh_int(<8 x half> %a0, <8 x half> %a1) {
 ; CHECK-LABEL: stack_fold_minsh_int:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -2315,6 +2315,3 @@ define <4 x float> @stack_fold_fcmaddcsh_maskz(<4 x float> %a0, <4 x float> %a1,
   ret <4 x float> %3
 }
 declare <4 x float> @llvm.x86.avx512fp16.maskz.vfcmadd.csh(<4 x float>, <4 x float>, <4 x float>, i8, i32)
-
-attributes #0 = { "unsafe-fp-math"="false" }
-attributes #1 = { "unsafe-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }

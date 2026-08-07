@@ -94,16 +94,10 @@ define double @scvtf_f64i32_neg(<4 x i32> %x) {
  ret double %conv
 }
 
-; This test does not give the indended result of scvtf d0, s0
-; This is due to the input being loaded as a 2 item vector and
-; therefore using vector inputs that do not match the pattern
-; This test will be fixed in a future revision
 define <1 x double> @scvtf_f64i32_simple(<1 x i32> %x) {
 ; CHECK-LABEL: scvtf_f64i32_simple:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    scvtf d0, s0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NO-FPRCVT-LABEL: scvtf_f64i32_simple:
@@ -315,16 +309,10 @@ define double @ucvtf_f64i32_neg(<4 x i32> %x) {
  ret double %conv
 }
 
-; This test does not give the indended result of ucvtf d0, s0
-; This is due to the input being loaded as a 2 item vector and
-; therefore using vector inputs that do not match the pattern
-; This test will be fixed in a future revision
 define <1 x double> @ucvtf_f64i32_simple(<1 x i32> %x) {
 ; CHECK-LABEL: ucvtf_f64i32_simple:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ucvtf d0, s0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NO-FPRCVT-LABEL: ucvtf_f64i32_simple:
@@ -449,3 +437,24 @@ define <1 x float> @ucvtf_f32i64_simple(<1 x i64> %x) {
  %conv = uitofp <1 x i64> %x to <1 x float>
  ret <1 x float> %conv
 }
+
+define <1 x double> @uitofp_sext_v2i32_extract_lane0(<2 x i32> %x) {
+; CHECK-LABEL: uitofp_sext_v2i32_extract_lane0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+;
+; CHECK-NO-FPRCVT-LABEL: uitofp_sext_v2i32_extract_lane0:
+; CHECK-NO-FPRCVT:       // %bb.0:
+; CHECK-NO-FPRCVT-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NO-FPRCVT-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NO-FPRCVT-NEXT:    ret
+  %wide  = sext <2 x i32> %x to <2 x i64>
+  %fpv2  = uitofp <2 x i64> %wide to <2 x double>
+  %lane0 = shufflevector <2 x double> %fpv2, <2 x double> poison, <1 x i32> zeroinitializer
+  ret <1 x double> %lane0
+}
+

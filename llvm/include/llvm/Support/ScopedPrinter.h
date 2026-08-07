@@ -11,6 +11,8 @@
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Enum.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -22,22 +24,6 @@
 #include <type_traits>
 
 namespace llvm {
-
-template <typename T> struct EnumEntry {
-  StringRef Name;
-  // While Name suffices in most of the cases, in certain cases
-  // GNU style and LLVM style of ELFDumper do not
-  // display same string for same enum. The AltName if initialized appropriately
-  // will hold the string that GNU style emits.
-  // Example:
-  // "EM_X86_64" string on LLVM style for Elf_Ehdr->e_machine corresponds to
-  // "Advanced Micro Devices X86-64" on GNU style
-  StringRef AltName;
-  T Value;
-  constexpr EnumEntry(StringRef N, StringRef A, T V)
-      : Name(N), AltName(A), Value(V) {}
-  constexpr EnumEntry(StringRef N, T V) : Name(N), AltName(N), Value(V) {}
-};
 
 struct HexNumber {
   // To avoid sign-extension we have to explicitly cast to the appropriate
@@ -57,8 +43,7 @@ struct HexNumber {
   HexNumber(unsigned long Value) : Value(Value) {}
   HexNumber(unsigned long long Value) : Value(Value) {}
   template <typename EnumT, typename = std::enable_if_t<std::is_enum_v<EnumT>>>
-  HexNumber(EnumT Value)
-      : HexNumber(static_cast<std::underlying_type_t<EnumT>>(Value)) {}
+  HexNumber(EnumT Value) : HexNumber(llvm::to_underlying(Value)) {}
 
   uint64_t Value;
 };
@@ -84,7 +69,7 @@ struct FlagEntry {
       : Name(Name), Value(Value) {}
   template <typename EnumT, typename = std::enable_if_t<std::is_enum_v<EnumT>>>
   FlagEntry(StringRef Name, EnumT Value)
-      : FlagEntry(Name, static_cast<std::underlying_type_t<EnumT>>(Value)) {}
+      : FlagEntry(Name, llvm::to_underlying(Value)) {}
 
   StringRef Name;
   uint64_t Value;
@@ -97,25 +82,6 @@ template <class T> std::string to_string(const T &Value) {
   raw_string_ostream stream(number);
   stream << Value;
   return number;
-}
-
-template <typename T, typename TEnum>
-std::string enumToString(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
-  for (const EnumEntry<TEnum> &EnumItem : EnumValues)
-    if (EnumItem.Value == Value)
-      return std::string(EnumItem.AltName);
-  return utohexstr(Value, true);
-}
-
-/// Retrieves the Value's enum name.
-///
-/// Returns an empty StringRef when an invalid value is provided.
-template <typename T, typename TEnum>
-StringRef enumToStringRef(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
-  for (const EnumEntry<TEnum> &EnumItem : EnumValues)
-    if (EnumItem.Value == Value)
-      return EnumItem.AltName;
-  return "";
 }
 
 class LLVM_ABI ScopedPrinter {
@@ -159,49 +125,46 @@ public:
 
   template <typename T> HexNumber hex(T Value) { return HexNumber(Value); }
 
-  template <typename T, typename TEnum>
+  template <typename T, typename TEnum, unsigned NumStrs>
   void printEnum(StringRef Label, T Value,
-                 ArrayRef<EnumEntry<TEnum>> EnumValues) {
-    StringRef Name;
-    bool Found = false;
-    for (const auto &EnumItem : EnumValues) {
-      if (EnumItem.Value == Value) {
-        Name = EnumItem.Name;
-        Found = true;
-        break;
-      }
-    }
-
-    if (Found)
+                 EnumStrings<TEnum, NumStrs> EnumValues) {
+    if (StringRef Name = EnumValues.toString(Value); !Name.empty())
       printHex(Label, Name, Value);
     else
       printHex(Label, Value);
   }
 
-  template <typename T, typename TFlag>
-  void printFlags(StringRef Label, T Value, ArrayRef<EnumEntry<TFlag>> Flags,
+  template <typename T, typename TFlag, unsigned NumStrs>
+  void printFlags(StringRef Label, T Value, EnumStrings<TFlag, NumStrs> Flags,
                   TFlag EnumMask1 = {}, TFlag EnumMask2 = {},
                   TFlag EnumMask3 = {}, ArrayRef<FlagEntry> ExtraFlags = {}) {
     SmallVector<FlagEntry, 10> SetFlags(ExtraFlags);
 
     for (const auto &Flag : Flags) {
-      if (Flag.Value == TFlag{})
+      if (Flag.value() == TFlag{})
         continue;
 
       TFlag EnumMask{};
-      if ((Flag.Value & EnumMask1) != TFlag{})
+      if ((Flag.value() & EnumMask1) != TFlag{})
         EnumMask = EnumMask1;
-      else if ((Flag.Value & EnumMask2) != TFlag{})
+      else if ((Flag.value() & EnumMask2) != TFlag{})
         EnumMask = EnumMask2;
-      else if ((Flag.Value & EnumMask3) != TFlag{})
+      else if ((Flag.value() & EnumMask3) != TFlag{})
         EnumMask = EnumMask3;
-      bool IsEnum = (Flag.Value & EnumMask) != TFlag{};
-      if ((!IsEnum && (Value & Flag.Value) == Flag.Value) ||
-          (IsEnum && (Value & EnumMask) == Flag.Value)) {
-        SetFlags.emplace_back(Flag.Name, Flag.Value);
+      bool IsEnum = (Flag.value() & EnumMask) != TFlag{};
+      if ((!IsEnum && (Value & Flag.value()) == Flag.value()) ||
+          (IsEnum && (Value & EnumMask) == Flag.value())) {
+        SetFlags.emplace_back(Flag.name(), Flag.value());
       }
     }
 
+    llvm::sort(SetFlags, &flagName);
+    printFlagsImpl(Label, hex(Value), SetFlags);
+  }
+
+  template <typename T>
+  void printFlags(StringRef Label, T Value,
+                  SmallVectorImpl<FlagEntry> &SetFlags) {
     llvm::sort(SetFlags, &flagName);
     printFlagsImpl(Label, hex(Value), SetFlags);
   }
@@ -284,9 +247,11 @@ public:
     startLine() << Label << ": " << (Value ? "Yes" : "No") << '\n';
   }
 
-  template <typename... T> void printVersion(StringRef Label, T... Version) {
+  template <typename T, typename... TArgs>
+  void printVersion(StringRef Label, T MajorVersion, TArgs... MinorVersions) {
     startLine() << Label << ": ";
-    printVersionInternal(Version...);
+    getOStream() << MajorVersion;
+    ((getOStream() << '.' << MinorVersions), ...);
     getOStream() << "\n";
   }
 
@@ -454,16 +419,6 @@ public:
   virtual raw_ostream &getOStream() { return OS; }
 
 private:
-  template <typename T> void printVersionInternal(T Value) {
-    getOStream() << Value;
-  }
-
-  template <typename S, typename T, typename... TArgs>
-  void printVersionInternal(S Value, T Value2, TArgs... Args) {
-    getOStream() << Value << ".";
-    printVersionInternal(Value2, Args...);
-  }
-
   static bool flagName(const FlagEntry &LHS, const FlagEntry &RHS) {
     return LHS.Name < RHS.Name;
   }
@@ -878,7 +833,7 @@ struct DictScope : DelimitedScope {
     W.objectBegin();
   }
 
-  ~DictScope() {
+  ~DictScope() override {
     if (W)
       W->objectEnd();
   }
@@ -897,7 +852,7 @@ struct ListScope : DelimitedScope {
     W.arrayBegin();
   }
 
-  ~ListScope() {
+  ~ListScope() override {
     if (W)
       W->arrayEnd();
   }

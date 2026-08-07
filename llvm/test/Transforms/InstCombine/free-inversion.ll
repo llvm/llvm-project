@@ -563,10 +563,10 @@ define i1 @test_inv_free(i1 %c1, i1 %c2, i1 %c3, i1 %c4) {
 ; CHECK:       b2:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       b3:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[C3:%.*]], [[C4:%.*]]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[VAL_NOT:%.*]] = phi i1 [ false, [[B1]] ], [ true, [[B2]] ], [ [[C3:%.*]], [[B3]] ]
-; CHECK-NEXT:    [[COND_NOT:%.*]] = and i1 [[VAL_NOT]], [[C4:%.*]]
+; CHECK-NEXT:    [[COND_NOT:%.*]] = phi i1 [ false, [[B1]] ], [ [[C4]], [[B2]] ], [ [[TMP0]], [[B3]] ]
 ; CHECK-NEXT:    br i1 [[COND_NOT]], label [[B5:%.*]], label [[B4:%.*]]
 ; CHECK:       b4:
 ; CHECK-NEXT:    ret i1 true

@@ -440,23 +440,30 @@ Error RawCoverageMappingReader::read() {
   // Set the counters for the expansion regions.
   // i.e. Counter of expansion region = counter of the first region
   // from the expanded file.
-  // Perform multiple passes to correctly propagate the counters through
-  // all the nested expansion regions.
+  // Perform multiple passes to correctly propagate the counters through all the
+  // nested expansion regions. Iterate until no count changes.
   SmallVector<CounterMappingRegion *, 8> FileIDExpansionRegionMapping;
   FileIDExpansionRegionMapping.resize(VirtualFileMapping.size(), nullptr);
-  for (unsigned Pass = 1, S = VirtualFileMapping.size(); Pass < S; ++Pass) {
+  for (;;) {
     for (auto &R : MappingRegions) {
       if (R.Kind != CounterMappingRegion::ExpansionRegion)
         continue;
       assert(!FileIDExpansionRegionMapping[R.ExpandedFileID]);
       FileIDExpansionRegionMapping[R.ExpandedFileID] = &R;
     }
+    bool Changed = false;
     for (auto &R : MappingRegions) {
-      if (FileIDExpansionRegionMapping[R.FileID]) {
-        FileIDExpansionRegionMapping[R.FileID]->Count = R.Count;
-        FileIDExpansionRegionMapping[R.FileID] = nullptr;
+      auto *&Slot = FileIDExpansionRegionMapping[R.FileID];
+      if (Slot) {
+        if (Slot->Count != R.Count) {
+          Slot->Count = R.Count;
+          Changed = true;
+        }
+        Slot = nullptr;
       }
     }
+    if (!Changed)
+      break;
   }
 
   return Error::success();
@@ -519,7 +526,7 @@ Error InstrProfSymtab::create(SectionRef &Section) {
   return Error::success();
 }
 
-StringRef InstrProfSymtab::getFuncName(uint64_t Pointer, size_t Size) {
+StringRef InstrProfSymtab::getFuncName(uint64_t Pointer, size_t Size) const {
   if (Pointer < Address)
     return StringRef();
   auto Offset = Pointer - Address;
@@ -949,9 +956,9 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   if (Data.size() < sizeof(uint64_t))
     return make_error<CoverageMapError>(coveragemap_error::malformed,
                                         "the size of data is too small");
-  auto TestingVersion =
-      support::endian::byte_swap<uint64_t, llvm::endianness::little>(
-          *reinterpret_cast<const uint64_t *>(Data.data()));
+  auto TestingVersion = support::endian::byte_swap<uint64_t>(
+      *reinterpret_cast<const uint64_t *>(Data.data()),
+      llvm::endianness::little);
   Data = Data.substr(sizeof(uint64_t));
 
   // Read the ProfileNames data.
@@ -1232,8 +1239,7 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
       if (!CoverageRecordsOrErr)
         return CoverageRecordsOrErr.takeError();
       const auto &CoverageRecords = CoverageRecordsOrErr.get();
-      FuncRecordsBuffer = std::copy(CoverageRecords.begin(),
-                                    CoverageRecords.end(), FuncRecordsBuffer);
+      FuncRecordsBuffer = llvm::copy(CoverageRecords, FuncRecordsBuffer);
       FuncRecordsBuffer =
           std::fill_n(FuncRecordsBuffer,
                       alignAddr(FuncRecordsBuffer, RecordAlignment) -
@@ -1274,9 +1280,9 @@ BinaryCoverageReader::create(
   std::vector<std::unique_ptr<BinaryCoverageReader>> Readers;
 
   if (ObjectBuffer.getBuffer().size() > sizeof(TestingFormatMagic)) {
-    uint64_t Magic =
-        support::endian::byte_swap<uint64_t, llvm::endianness::little>(
-            *reinterpret_cast<const uint64_t *>(ObjectBuffer.getBufferStart()));
+    uint64_t Magic = support::endian::byte_swap<uint64_t>(
+        *reinterpret_cast<const uint64_t *>(ObjectBuffer.getBufferStart()),
+        llvm::endianness::little);
     if (Magic == TestingFormatMagic) {
       // This is a special format used for testing.
       auto ReaderOrErr =

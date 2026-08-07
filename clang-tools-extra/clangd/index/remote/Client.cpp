@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <grpc++/grpc++.h>
+#include <grpcpp/grpcpp.h>
 
 #include "Client.h"
 #include "Feature.h"
@@ -158,6 +158,17 @@ public:
             llvm::function_ref<void(const SymbolID &, const clangd::Symbol &)>
                 Callback) const override {
     streamRPC(Request, &remote::v1::SymbolIndex::Stub::Relations,
+              // Unpack protobuf Relation.
+              [&](std::pair<SymbolID, clangd::Symbol> SubjectAndObject) {
+                Callback(SubjectAndObject.first, SubjectAndObject.second);
+              });
+  }
+
+  void reverseRelations(
+      const clangd::RelationsRequest &Request,
+      llvm::function_ref<void(const SymbolID &, const clangd::Symbol &)>
+          Callback) const override {
+    streamRPC(Request, &remote::v1::SymbolIndex::Stub::ReverseRelations,
               // Unpack protobuf Relation.
               [&](std::pair<SymbolID, clangd::Symbol> SubjectAndObject) {
                 Callback(SubjectAndObject.first, SubjectAndObject.second);

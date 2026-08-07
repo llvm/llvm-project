@@ -1,4 +1,4 @@
-//===--- MoveConstArgCheck.cpp - clang-tidy -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,15 +14,16 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
-static void replaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
+static void replaceCallWithArg(const CallExpr *Call,
+                               const DiagnosticBuilder &Diag,
                                const SourceManager &SM,
                                const LangOptions &LangOpts) {
   const Expr *Arg = Call->getArg(0);
 
-  CharSourceRange BeforeArgumentsRange = Lexer::makeFileCharRange(
+  const CharSourceRange BeforeArgumentsRange = Lexer::makeFileCharRange(
       CharSourceRange::getCharRange(Call->getBeginLoc(), Arg->getBeginLoc()),
       SM, LangOpts);
-  CharSourceRange AfterArgumentsRange = Lexer::makeFileCharRange(
+  const CharSourceRange AfterArgumentsRange = Lexer::makeFileCharRange(
       CharSourceRange::getCharRange(Call->getEndLoc(),
                                     Call->getEndLoc().getLocWithOffset(1)),
       SM, LangOpts);
@@ -87,11 +88,10 @@ static bool isRValueReferenceParam(const Expr *Invocation,
       return true;
     if (const auto *ConstructCallExpr =
             dyn_cast<CXXConstructExpr>(Invocation)) {
-      if (const auto *ConstructorDecl = ConstructCallExpr->getConstructor()) {
-        if (!ConstructorDecl->isCopyOrMoveConstructor() &&
-            !ConstructorDecl->isDefaultConstructor())
-          return true;
-      }
+      if (const auto *ConstructorDecl = ConstructCallExpr->getConstructor();
+          ConstructorDecl && !ConstructorDecl->isCopyOrMoveConstructor() &&
+          !ConstructorDecl->isDefaultConstructor())
+        return true;
     }
   }
   return false;
@@ -114,17 +114,18 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
 
   const Expr *Arg = CallMove->getArg(0);
   const QualType ArgType = Arg->getType().getCanonicalType();
-  SourceManager &SM = Result.Context->getSourceManager();
+  const SourceManager &SM = Result.Context->getSourceManager();
 
-  CharSourceRange MoveRange =
+  const CharSourceRange MoveRange =
       CharSourceRange::getCharRange(CallMove->getSourceRange());
-  CharSourceRange FileMoveRange =
+  const CharSourceRange FileMoveRange =
       Lexer::makeFileCharRange(MoveRange, SM, getLangOpts());
   if (!FileMoveRange.isValid())
     return;
 
-  bool IsConstArg = ArgType.isConstQualified();
-  bool IsTriviallyCopyable = ArgType.isTriviallyCopyableType(*Result.Context);
+  const bool IsConstArg = ArgType.isConstQualified();
+  const bool IsTriviallyCopyable =
+      ArgType.isTriviallyCopyableType(*Result.Context);
 
   if (IsConstArg || IsTriviallyCopyable) {
     if (const CXXRecordDecl *R = ArgType->getAsCXXRecordDecl()) {
@@ -134,34 +135,34 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
       if (R->isLambda())
         return;
       // Don't warn when the type is not copyable.
-      for (const auto *Ctor : R->ctors()) {
-        if (Ctor->isCopyConstructor() && Ctor->isDeleted())
+      for (const auto *Ctor : R->ctors())
+        if (Ctor->isCopyConstructor() &&
+            (Ctor->isDeleted() || Ctor->getAccess() != AS_public))
           return;
-      }
     }
 
     if (!IsConstArg && IsTriviallyCopyable && !CheckTriviallyCopyableMove)
       return;
 
-    bool IsVariable = isa<DeclRefExpr>(Arg);
+    const bool IsVariable = isa<DeclRefExpr>(Arg);
     // std::move shouldn't be removed when an lvalue wrapped by std::move is
     // passed to the function with an rvalue reference parameter.
-    bool IsRVRefParam =
+    const bool IsRVRefParam =
         isRValueReferenceParam(ReceivingExpr, InvocationParmType, Arg);
     const auto *Var =
         IsVariable ? dyn_cast<DeclRefExpr>(Arg)->getDecl() : nullptr;
 
     {
-      auto Diag = diag(FileMoveRange.getBegin(),
-                       "std::move of the %select{|const }0"
-                       "%select{expression|variable %5}1 "
-                       "%select{|of the trivially-copyable type %6 }2"
-                       "has no effect%select{; remove std::move()|}3"
-                       "%select{| or make the variable non-const}4")
-                  << IsConstArg << IsVariable << IsTriviallyCopyable
-                  << IsRVRefParam
-                  << (IsConstArg && IsVariable && !IsTriviallyCopyable) << Var
-                  << Arg->getType();
+      const auto Diag = diag(FileMoveRange.getBegin(),
+                             "std::move of the %select{|const }0"
+                             "%select{expression|variable %5}1 "
+                             "%select{|of the trivially-copyable type %6 }2"
+                             "has no effect%select{; remove std::move()|}3"
+                             "%select{| or make the variable non-const}4")
+                        << IsConstArg << IsVariable << IsTriviallyCopyable
+                        << IsRVRefParam
+                        << (IsConstArg && IsVariable && !IsTriviallyCopyable)
+                        << Var << Arg->getType();
       if (!IsRVRefParam)
         replaceCallWithArg(CallMove, Diag, SM, getLangOpts());
     }
@@ -207,9 +208,10 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     {
-      auto Diag = diag(FileMoveRange.getBegin(),
-                       "passing result of std::move() as a const reference "
-                       "argument; no move will actually happen");
+      const auto Diag =
+          diag(FileMoveRange.getBegin(),
+               "passing result of std::move() as a const reference "
+               "argument; no move will actually happen");
 
       replaceCallWithArg(CallMove, Diag, SM, getLangOpts());
     }

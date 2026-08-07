@@ -15,7 +15,7 @@ Introduction
 tags every 8 bytes of the application memory with a 1 byte tag (using *shadow memory*),
 uses *redzones* to find buffer-overflows and
 *quarantine* to find use-after-free.
-The redzones, the quarantine, and, to a less extent, the shadow, are the
+The redzones, the quarantine, and, to a lesser extent, the shadow, are the
 sources of AddressSanitizer's memory overhead.
 See the `AddressSanitizer paper`_ for details.
 

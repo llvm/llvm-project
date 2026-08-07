@@ -21,11 +21,10 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Visitors.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -118,6 +117,8 @@ private:
   bool analyzeLoop(fir::DoLoopOp loopOperation,
                    AffineFunctionAnalysis &functionAnalysis) {
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: \n"; loopOperation.dump(););
+    if (!loopOperation.getLowerBound().getType().isIndex())
+      return false;
     return analyzeMemoryAccess(loopOperation) &&
            analysisResults(loopOperation) &&
            analyzeBody(loopOperation, functionAnalysis);
@@ -451,10 +452,10 @@ static void rewriteStore(fir::StoreOp storeOp,
 }
 
 static void rewriteMemoryOps(Block *block, mlir::PatternRewriter &rewriter) {
-  for (auto &bodyOp : block->getOperations()) {
+  for (auto &bodyOp : llvm::make_early_inc_range(block->getOperations())) {
     if (isa<fir::LoadOp>(bodyOp))
       rewriteLoad(cast<fir::LoadOp>(bodyOp), rewriter);
-    if (isa<fir::StoreOp>(bodyOp))
+    else if (isa<fir::StoreOp>(bodyOp))
       rewriteStore(cast<fir::StoreOp>(bodyOp), rewriter);
   }
 }
@@ -474,8 +475,10 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopConversion: rewriting loop:\n";
                loop.dump(););
-    LLVM_ATTRIBUTE_UNUSED auto loopAnalysis =
+    [[maybe_unused]] auto loopAnalysis =
         functionAnalysis.getChildLoopAnalysis(loop);
+    if (!loopAnalysis.canPromoteToAffine())
+      return rewriter.notifyMatchFailure(loop, "cannot promote to affine");
     auto &loopOps = loop.getBody()->getOperations();
     auto resultOp = cast<fir::ResultOp>(loop.getBody()->getTerminator());
     auto results = resultOp.getOperands();
@@ -576,12 +579,14 @@ class AffineIfConversion : public mlir::OpRewritePattern<fir::IfOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
   AffineIfConversion(mlir::MLIRContext *context, AffineFunctionAnalysis &afa)
-      : OpRewritePattern(context) {}
+      : OpRewritePattern(context), functionAnalysis(afa) {}
   llvm::LogicalResult
   matchAndRewrite(fir::IfOp op,
                   mlir::PatternRewriter &rewriter) const override {
     LLVM_DEBUG(llvm::dbgs() << "AffineIfConversion: rewriting if:\n";
                op.dump(););
+    if (!functionAnalysis.getChildIfAnalysis(op).canPromoteToAffine())
+      return rewriter.notifyMatchFailure(op, "cannot promote to affine");
     auto &ifOps = op.getThenRegion().front().getOperations();
     auto affineCondition = AffineIfCondition(op.getCondition());
     if (!affineCondition.hasIntegerSet()) {
@@ -611,6 +616,8 @@ public:
     rewriter.replaceOp(op, affineIf.getOperation()->getResults());
     return success();
   }
+
+  AffineFunctionAnalysis &functionAnalysis;
 };
 
 /// Promote fir.do_loop and fir.if to affine.for and affine.if, in the cases
@@ -627,28 +634,11 @@ public:
     mlir::RewritePatternSet patterns(context);
     patterns.insert<AffineIfConversion>(context, functionAnalysis);
     patterns.insert<AffineLoopConversion>(context, functionAnalysis);
-    mlir::ConversionTarget target = *context;
-    target.addLegalDialect<mlir::affine::AffineDialect, FIROpsDialect,
-                           mlir::scf::SCFDialect, mlir::arith::ArithDialect,
-                           mlir::func::FuncDialect>();
-    target.addDynamicallyLegalOp<IfOp>([&functionAnalysis](fir::IfOp op) {
-      return !(functionAnalysis.getChildIfAnalysis(op).canPromoteToAffine());
-    });
-    target.addDynamicallyLegalOp<DoLoopOp>([&functionAnalysis](
-                                               fir::DoLoopOp op) {
-      return !(functionAnalysis.getChildLoopAnalysis(op).canPromoteToAffine());
-    });
-
     LLVM_DEBUG(llvm::dbgs()
                    << "AffineDialectPromotion: running promotion on: \n";
                function.print(llvm::dbgs()););
     // apply the patterns
-    if (mlir::failed(mlir::applyPartialConversion(function, target,
-                                                  std::move(patterns)))) {
-      mlir::emitError(mlir::UnknownLoc::get(context),
-                      "error in converting to affine dialect\n");
-      signalPassFailure();
-    }
+    walkAndApplyPatterns(function, std::move(patterns));
   }
 };
 } // namespace

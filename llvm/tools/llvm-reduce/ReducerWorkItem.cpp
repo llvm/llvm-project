@@ -33,12 +33,13 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
+#include "llvm/Transforms/IPO/WholeProgramDevirt.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <optional>
 
@@ -61,6 +62,15 @@ static cl::opt<bool> TmpFilesAsBitcode(
     "write-tmp-files-as-bitcode",
     cl::desc("Always write temporary files as bitcode instead of textual IR"),
     cl::init(false), cl::cat(LLVMReduceOptions));
+
+static SaveRestorePoints constructSaveRestorePoints(
+    const SaveRestorePoints &SRPoints,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &BBMap) {
+  SaveRestorePoints Pts{};
+  for (auto &Src : SRPoints)
+    Pts.insert({BBMap.find(Src.first)->second, Src.second});
+  return Pts;
+}
 
 static void cloneFrameInfo(
     MachineFrameInfo &DstMFI, const MachineFrameInfo &SrcMFI,
@@ -92,11 +102,17 @@ static void cloneFrameInfo(
   DstMFI.setCVBytesOfCalleeSavedRegisters(
       SrcMFI.getCVBytesOfCalleeSavedRegisters());
 
-  if (MachineBasicBlock *SavePt = SrcMFI.getSavePoint())
-    DstMFI.setSavePoint(Src2DstMBB.find(SavePt)->second);
-  if (MachineBasicBlock *RestorePt = SrcMFI.getRestorePoint())
-    DstMFI.setRestorePoint(Src2DstMBB.find(RestorePt)->second);
+  assert(SrcMFI.getSavePoints().size() < 2 &&
+         "Multiple restore points not yet supported!");
 
+  DstMFI.setSavePoints(
+      constructSaveRestorePoints(SrcMFI.getSavePoints(), Src2DstMBB));
+
+  assert(SrcMFI.getRestorePoints().size() < 2 &&
+         "Multiple restore points not yet supported!");
+
+  DstMFI.setRestorePoints(
+      constructSaveRestorePoints(SrcMFI.getRestorePoints(), Src2DstMBB));
 
   auto CopyObjectProperties = [](MachineFrameInfo &DstMFI,
                                  const MachineFrameInfo &SrcMFI, int FI) {
@@ -223,7 +239,9 @@ static void cloneMemOperands(MachineInstr &DstMI, MachineInstr &SrcMI,
 
     MachineMemOperand *NewMMO = DstMF.getMachineMemOperand(
         NewPtrInfo, OldMMO->getFlags(), OldMMO->getMemoryType(),
-        OldMMO->getBaseAlign(), OldMMO->getAAInfo(), OldMMO->getRanges(),
+        OldMMO->getBaseAlign(),
+        MMOMetadata(OldMMO->getAAInfo(), OldMMO->getRanges(),
+                    /*MemCacheHint=*/nullptr),
         OldMMO->getSyncScopeID(), OldMMO->getSuccessOrdering(),
         OldMMO->getFailureOrdering());
     NewMMOs.push_back(NewMMO);
@@ -421,13 +439,6 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
 
   DstMF->verify(nullptr, "", &errs(), /*AbortOnError=*/true);
   return DstMF;
-}
-
-static void initializeTargetInfo() {
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
-  InitializeAllAsmPrinters();
-  InitializeAllAsmParsers();
 }
 
 void ReducerWorkItem::print(raw_ostream &ROS, void *p) const {
@@ -814,8 +825,6 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
   auto MMM = std::make_unique<ReducerWorkItem>();
 
   if (IsMIR) {
-    initializeTargetInfo();
-
     auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
     if (std::error_code EC = FileOrErr.getError()) {
       WithColor::error(errs(), ToolName) << EC.message() << '\n';
@@ -837,12 +846,15 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
       if (TheTriple.getTriple().empty())
         TheTriple.setTriple(sys::getDefaultTargetTriple());
       ExitOnError ExitOnErr(std::string(ToolName) + ": error: ");
-      TM = ExitOnErr(codegen::createTargetMachineForTriple(TheTriple.str()));
+      TM = ExitOnErr(codegen::createTargetMachineForTriple(TheTriple));
 
       return TM->createDataLayout().getStringRepresentation();
     };
 
     std::unique_ptr<Module> M = MParser->parseIRModule(SetDataLayout);
+
+    if (!TheTriple.empty())
+      M->setTargetTriple(TheTriple);
 
     MMM->MMI = std::make_unique<MachineModuleInfo>(TM.get());
     MParser->parseMachineFunctions(*M, *MMM->MMI);
@@ -868,10 +880,10 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
     } else {
       IsBitcode = true;
       MMM->readBitcode(MemoryBufferRef(**MB), Ctxt, ToolName);
-
-      if (MMM->LTOInfo->IsThinLTO && MMM->LTOInfo->EnableSplitLTOUnit)
-        initializeTargetInfo();
     }
+
+    if (MMM->LTOInfo)
+      AssignGUIDPass::runOnModule(MMM->getModule());
   }
   if (MMM->verify(&errs())) {
     WithColor::error(errs(), ToolName)

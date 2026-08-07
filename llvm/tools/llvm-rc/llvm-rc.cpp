@@ -619,7 +619,8 @@ void doRc(std::string Src, std::string Dest, RcOptions &Opts,
   StringRef Contents = FileContents->getBuffer();
 
   std::string FilteredContents = filterCppOutput(Contents);
-  std::vector<RCToken> Tokens = ExitOnErr(tokenizeRC(FilteredContents));
+  std::vector<RCToken> Tokens =
+      ExitOnErr(tokenizeRC(FilteredContents, Opts.IsWindres));
 
   if (Opts.BeVerbose) {
     const Twine TokenNames[] = {
@@ -720,6 +721,9 @@ void doCvtres(std::string Src, std::string Dest, std::string TargetTriple) {
       MachineType = COFF::IMAGE_FILE_MACHINE_ARM64EC;
     else
       MachineType = COFF::IMAGE_FILE_MACHINE_ARM64;
+    break;
+  case Triple::mipsel:
+    MachineType = COFF::IMAGE_FILE_MACHINE_R4000;
     break;
   default:
     fatalError("Unsupported architecture in target '" + Twine(TargetTriple) +

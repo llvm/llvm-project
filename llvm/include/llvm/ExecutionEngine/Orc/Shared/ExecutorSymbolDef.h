@@ -33,8 +33,8 @@ public:
     JITSymbolFlags Flags = BaseFlags;
     if (std::is_function_v<T>)
       Flags |= JITSymbolFlags::Callable;
-    return ExecutorSymbolDef(
-        ExecutorAddr::fromPtr(UP, ExecutorAddr::rawPtr<T>()), Flags);
+    return ExecutorSymbolDef(ExecutorAddr::fromPtr(UP, ExecutorAddr::rawPtr()),
+                             Flags);
   }
 
   /// Cast this ExecutorSymbolDef to a pointer of the given type.

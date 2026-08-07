@@ -10,7 +10,6 @@ module LLVM_Analysis {
 
   // This is intended for (repeated) textual inclusion.
   textual header "llvm/Analysis/ScalarFuncs.def"
-  textual header "llvm/Analysis/TargetLibraryInfo.def"
   textual header "llvm/Analysis/VecFuncs.def"
 }
 
@@ -105,6 +104,12 @@ module LLVM_BinaryFormat {
     textual header "llvm/BinaryFormat/ELFRelocs/Xtensa.def"
     textual header "llvm/BinaryFormat/WasmRelocs.def"
     textual header "llvm/BinaryFormat/MsgPack.def"
+}
+
+module LLVM_CAS {
+  requires cplusplus
+  umbrella "llvm/CAS"
+  module * { export * }
 }
 
 module LLVM_Config {
@@ -269,8 +274,10 @@ module LLVM_IR {
   extern module LLVM_Extern_IR_Intrinsics_Enum "module.extern.modulemap"
 
   // These are intended for (repeated) textual inclusion.
+  textual header "llvm/IR/BundleAttributes.def"
   textual header "llvm/IR/ConstrainedOps.def"
   textual header "llvm/IR/DebugInfoFlags.def"
+  textual header "llvm/IR/FunctionProperties.def"
   textual header "llvm/IR/Instruction.def"
   textual header "llvm/IR/Metadata.def"
   textual header "llvm/IR/FixedMetadataKinds.def"
@@ -307,6 +314,8 @@ module LLVM_Object {
   requires cplusplus
   umbrella "llvm/Object"
   module * { export * }
+
+  textual header "llvm/Object/BBAddrMap.def"
 }
 
 module LLVM_Option {
@@ -347,6 +356,8 @@ module LLVM_Transforms {
 
   // Requires DEBUG_TYPE to be defined by including file.
   exclude header "llvm/Transforms/Utils/InstructionWorklist.h"
+
+  textual header "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerIRValues.def"
 }
 
 extern module LLVM_Extern_Utils_DataTypes "module.extern.modulemap"
@@ -363,6 +374,11 @@ module TargetParserGen {
   }
   module RISCVTargetParserDef {
     header "llvm/TargetParser/RISCVTargetParser.h"
+    extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
+    export *
+  }
+  module AMDGPUTargetParserDef {
+    header "llvm/TargetParser/AMDGPUTargetParser.h"
     extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
     export *
   }
@@ -400,7 +416,7 @@ module LLVM_Utils {
     exclude header "llvm/Support/PluginLoader.h"
     exclude header "llvm/Support/Solaris/sys/regset.h"
     textual header "llvm/Support/TargetOpcodes.def"
-
+    textual header "llvm/Support/VirtualOutputConfig.def"
   }
 
   module TargetParser {
@@ -414,7 +430,10 @@ module LLVM_Utils {
     textual header "llvm/TargetParser/CSKYTargetParser.def"
     textual header "llvm/TargetParser/X86TargetParser.def"
     textual header "llvm/TargetParser/LoongArchTargetParser.def"
+    textual header "llvm/TargetParser/NVPTXTargetParser.def"
     textual header "llvm/TargetParser/PPCTargetParser.def"
+    textual header "llvm/TargetParser/TripleName.def"
+    textual header "llvm/TargetParser/XtensaTargetParser.def"
   }
 
   // This part of the module is usable from both C and C++ code.
@@ -445,4 +464,5 @@ module LLVM_SandboxIR {
   module * { export * }
 
   textual header "llvm/SandboxIR/Values.def"
+  textual header "llvm/SandboxIR/ValuesDefFilesList.def"
 }

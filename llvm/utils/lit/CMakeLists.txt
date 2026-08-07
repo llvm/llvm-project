@@ -4,6 +4,11 @@
 configure_lit_site_cfg(
   "${CMAKE_CURRENT_SOURCE_DIR}/tests/lit.site.cfg.in"
   "${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg"
+  PATHS
+  "LLVM_SOURCE_DIR"
+  "LLVM_BINARY_DIR"
+  "LLVM_TOOLS_DIR"
+  "LLVM_LIT_TOOLS_DIR"
   )
 
 # Lit's test suite creates output files next to the sources which makes the
@@ -22,7 +27,7 @@ add_custom_target(prepare-check-lit
 # Add rules for lit's own test suite
 add_lit_testsuite(check-lit "Running lit's tests"
   ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS "FileCheck" "not" "prepare-check-lit"
+  DEPENDS "FileCheck" "not" "split-file" "prepare-check-lit"
 )
 
 # For IDEs

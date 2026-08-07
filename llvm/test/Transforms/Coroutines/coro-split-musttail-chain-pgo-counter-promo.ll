@@ -1,12 +1,12 @@
 ; REQUIRES: x86-registered-target
 ; RUN: opt -passes='pgo-instr-gen,instrprof,coro-split' -do-counter-promotion=true -S < %s | FileCheck %s
 
-; CHECK-LABEL: define internal fastcc void @f.resume
-; CHECK: musttail call fastcc void 
+; CHECK-LABEL: define internal void @f.resume
+; CHECK: musttail call void 
 ; CHECK-NEXT: ret void
-; CHECK: musttail call fastcc void 
+; CHECK: musttail call void 
 ; CHECK-NEXT: ret void
-; CHECK-LABEL: define internal fastcc void @f.destroy
+; CHECK-LABEL: define internal void @f.destroy
 target triple = "x86_64-grtev4-linux-gnu"
 
 %CoroutinePromise = type { ptr, i64, [8 x i8], ptr} 
@@ -24,7 +24,7 @@ declare void @llvm.assume(i1 noundef)
 declare i64 @llvm.coro.align.i64()
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr writeonly)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 declare token @llvm.coro.save(ptr)
@@ -131,7 +131,7 @@ define ptr @f(i32 %0) presplitcoroutine align 32 {
   %48 = inttoptr i64 %40 to ptr
   %49 = call ptr @llvm.coro.subfn.addr(ptr %48, i8 0)
   %50 = ptrtoint ptr %49 to i64
-  call fastcc void %49(ptr %48) #9
+  call void %49(ptr %48) #9
   %51 = call i8 @llvm.coro.suspend(token %37, i1 true) #28
   switch i8 %51, label %61 [
     i8 0, label %53
@@ -162,7 +162,7 @@ define ptr @f(i32 %0) presplitcoroutine align 32 {
 
 61:                                               ; preds = %60, %57, %54, %47, %12
   %62 = getelementptr inbounds i8, ptr %3, i64 -16
-  %63 = call i1 @llvm.coro.end(ptr null, i1 false, token none) #28
+  call void @llvm.coro.end(ptr null, i1 false, token none) #28
   ret ptr %62
 }
 

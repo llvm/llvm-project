@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <deque>
 
 #include "test_iterators.h"
 #include "test_macros.h"
@@ -69,6 +70,22 @@ test()
     test2<Iter, float>();
     test2<Iter, double>();  // this is PR#35498
     test2<Iter, long double>();
+
+    { // A negative count is a no-op that returns the unchanged iterator.
+      // Regression test for https://llvm.org/PR193613.
+      int ia[] = {1, 2, 3};
+      assert(std::generate_n(Iter(ia), -5, gen_test()) == Iter(ia));
+      assert(ia[0] == 1 && ia[1] == 2 && ia[2] == 3);
+    }
+}
+
+void deque_test() {
+  int sizes[] = {0, 1, 2, 1023, 1024, 1025, 2047, 2048, 2049};
+  for (const int size : sizes) {
+    std::deque<int> d(size);
+    std::generate_n(d.begin(), size, gen_test());
+    assert(std::all_of(d.begin(), d.end(), [](int x) { return x == 2; }));
+  }
 }
 
 int main(int, char**)
@@ -77,6 +94,7 @@ int main(int, char**)
     test<bidirectional_iterator<int*> >();
     test<random_access_iterator<int*> >();
     test<int*>();
+    deque_test();
 
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());

@@ -23,6 +23,13 @@ Please see the `Lit Command Guide`_ for more information about LIT.
 
 .. _LIT Command Guide: https://llvm.org/docs/CommandGuide/lit.html
 
+Dependencies
+------------
+
+The libc++ test suite has a few optional dependencies. These can be installed
+with ``pip install -r libcxx/test/requirements.txt``. Installing these dependencies
+will ensure that the maximum number of tests can be run.
+
 Usage
 -----
 
@@ -419,10 +426,10 @@ writing tests easier. See `libc++-specific Lit Directives`_ for more information
      - ``// FILE_DEPENDENCIES: file, directory, /path/to/file, ...``
      - The paths given to the ``FILE_DEPENDENCIES`` directive can specify directories or specific files upon which a given test depend. For example, a test that requires some test
        input stored in a data file would use this libc++-specific Lit directive. When a test file contains the ``FILE_DEPENDENCIES`` directive, Lit will collect the named files and copy
-       them to the directory represented by the ``%T`` substitution before the test executes. The copy is performed from the directory represented by the ``%S`` substitution
+       them to the directory represented by the ``%{temp}`` substitution before the test executes. The copy is performed from the directory represented by the ``%S`` substitution
        (i.e. the source directory of the test being executed) which makes it possible to use relative paths to specify the location of dependency files. After Lit copies
-       all the dependent files to the directory specified by the ``%T`` substitution, that directory should contain *all* the necessary inputs to run. In other words,
-       it should be possible to copy the contents of the directory specified by the ``%T`` substitution to a remote host where the execution of the test will actually occur.
+       all the dependent files to the directory specified by the ``%{temp}`` substitution, that directory should contain *all* the necessary inputs to run. In other words,
+       it should be possible to copy the contents of the directory specified by the ``%{temp}`` substitution to a remote host where the execution of the test will actually occur.
    * - ``ADDITIONAL_COMPILE_FLAGS``
      - ``// ADDITIONAL_COMPILE_FLAGS: flag1 flag2 ...``
      - The additional compiler flags specified by a space-separated list to the ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific Lit directive will be added to the end of the ``%{compile_flags}``
@@ -451,7 +458,7 @@ Instead use:
 
 .. code-block:: cpp
 
-   // UNSUPPORTED: std-at-least-c++26
+   // REQUIRES: std-at-least-c++26
 
 There is no corresponding ``std-at-most-c++23``. This could be useful when
 tests are only valid for a small set of standard versions. For example, a
@@ -471,7 +478,7 @@ removed from the Standard. These tests should be written like:
 Benchmarks
 ==========
 
-Libc++'s test suite also contains benchmarks. The benchmarks are written using the `Google Benchmark`_
+Libc++'s test suite also contains benchmarks. Many benchmarks are written using the `Google Benchmark`_
 library, a copy of which is stored in the LLVM monorepo. For more information about using the Google
 Benchmark library, see the `official documentation <https://github.com/google/benchmark>`_.
 
@@ -482,7 +489,7 @@ when running the benchmarks. For example,
 
 .. code-block:: bash
 
-  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/string.bench.cpp --show-all --param optimization=speed
+  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/containers/string.bench.cpp --show-all --param optimization=speed
 
 Note that benchmarks are only dry-run when run via the ``check-cxx`` target since
 we only want to make sure they don't rot. Do not rely on the results of benchmarks
@@ -490,27 +497,56 @@ run through ``check-cxx`` for anything, instead run the benchmarks manually usin
 the instructions for running individual tests.
 
 If you want to compare the results of different benchmark runs, we recommend using the
-``libcxx-compare-benchmarks`` helper tool. First, configure CMake in a build directory
-and run the benchmark:
+``compare-benchmarks`` helper tool. Note that the script has some dependencies, which can
+be installed with:
 
 .. code-block:: bash
 
-  $ cmake -S runtimes -B <build1> [...]
-  $ libcxx/utils/libcxx-lit <build1> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+  $ python -m venv .venv && source .venv/bin/activate # Optional but recommended
+  $ pip install -r libcxx/utils/requirements.txt
 
-Then, do the same for the second configuration you want to test. Use a different build
-directory for that configuration:
-
-.. code-block:: bash
-
-  $ cmake -S runtimes -B <build2> [...]
-  $ libcxx/utils/libcxx-lit <build2> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
-
-Finally, use ``libcxx-compare-benchmarks`` to compare both:
+Once that's done, start by configuring CMake in a build directory and running one or
+more benchmarks, as usual:
 
 .. code-block:: bash
 
-  $ libcxx/utils/libcxx-compare-benchmarks <build1> <build2> libcxx/test/benchmarks/string.bench.cpp
+  $ cmake -S runtimes -B <build> [...]
+  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/containers/string.bench.cpp --param optimization=speed
+
+Then, get the consolidated benchmark output for that run using ``consolidate-benchmarks``:
+
+.. code-block:: bash
+
+  $ libcxx/utils/consolidate-benchmarks <build> > baseline.lnt
+
+The ``baseline.lnt`` file will contain a consolidation of all the benchmark results present in the build
+directory. You can then make the desired modifications to the code, run the benchmark(s) again, and then run:
+
+.. code-block:: bash
+
+  $ libcxx/utils/consolidate-benchmarks <build> > candidate.lnt
+
+Finally, use ``compare-benchmarks`` to compare both:
+
+.. code-block:: bash
+
+  $ libcxx/utils/compare-benchmarks baseline.lnt candidate.lnt
+
+  # Useful one-liner when iterating locally:
+  $ libcxx/utils/compare-benchmarks baseline.lnt <(libcxx/utils/consolidate-benchmarks <build>)
+
+The ``compare-benchmarks`` script provides some useful options like creating a chart to easily visualize
+differences in a browser window. Use ``compare-benchmarks --help`` for details.
+
+Additionally, adding a comment of the following form to a libc++ PR will cause the specified benchmarks to be run
+on our pre-commit CI infrastructure and the results to be reported in the PR by our CI system:
+
+.. code-block::
+
+    /libcxx-bot benchmark <path/to/benchmark1.bench.cpp> <path/to/benchmark2.bench.cpp> ...
+
+Note that this is currently experimental and the results should not be relied upon too strongly, since
+we do not have dedicated hardware to run the benchmarks on.
 
 .. _`Google Benchmark`: https://github.com/google/benchmark
 
@@ -520,39 +556,36 @@ Testing hardening assertions
 ============================
 
 Each hardening assertion should be tested using death tests (via the
-``TEST_LIBCPP_ASSERT_FAILURE`` macro). Use the ``libcpp-hardening-mode`` Lit
-feature to make sure the assertion is enabled in (and only in) the intended
-modes. The convention is to use `assert.` in the name of the test file to make
-it easier to identify as a hardening test, e.g. ``assert.my_func.pass.cpp``.
+``TEST_LIBCPP_ASSERT_FAILURE`` macro). The convention is to use ``assert.`` in
+the name of the test file to make it easier to identify as a hardening test, e.g.
+``assert.my_func.pass.cpp``.
+
+These tests only make sense in configurations where the death test machinery in
+``check_assertion.h`` is usable, where a failing assertion is observable, and
+where the assertion being tested is enabled in the first place. Use the various
+``can-test-hardening-assertions-<mode>`` Lit features to guard the tests accordingly.
+The bare ``can-test-hardening-assertions`` Lit feature only encodes whether the death
+test machinery is usable; it is meant for tests that select a hardening mode or an
+assertion semantic themselves (see the tests under ``libcxx/test/libcxx/assertions/``).
+
 A toy example:
 
 .. code-block:: cpp
 
-  // Note: the following three annotations are currently needed to use the
-  // `TEST_LIBCPP_ASSERT_FAILURE`.
-  // REQUIRES: has-unix-headers
-  // UNSUPPORTED: c++03
-  // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+  // Example: `std::foo(...)` uses `_LIBCPP_ASSERT_NON_NULL`, which is
+  // enabled in the `extensive` and `debug` modes.
+  // REQUIRES: can-test-hardening-assertions-extensive
 
-  // Example: only run this test in `fast`/`extensive`/`debug` modes.
-  // UNSUPPORTED: libcpp-hardening-mode=none
-  // Example: only run this test in the `debug` mode.
-  // REQUIRES: libcpp-hardening-mode=debug
-  // Example: only run this test in `extensive`/`debug` modes.
-  // REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-
-  #include <header_being_tested>
+  #include <stdfoo>
 
   #include "check_assertion.h" // Contains the `TEST_LIBCPP_ASSERT_FAILURE` macro
 
   int main(int, char**) {
-    std::type_being_tested foo;
     int bad_input = -1;
-    TEST_LIBCPP_ASSERT_FAILURE(foo.some_function_that_asserts(bad_input),
-        "The expected assertion message");
+    TEST_LIBCPP_ASSERT_FAILURE(std::foo(bad_input), "The expected assertion message");
 
     return 0;
   }
 
-Note that error messages are only tested (matched) if the ``debug``
-hardening mode is used.
+Note that error messages are only tested (matched) when the assertion semantic in
+effect logs one, i.e. ``enforce`` or ``observe``.

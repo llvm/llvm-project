@@ -25,7 +25,7 @@
 // PHASES-JIT-NEXT: 6: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp ([[TARGET:.+]])" {5}, ir
 // PHASES-JIT-NEXT: 7: backend, {6}, lto-bc, (device-openmp, {{.*}})
 // PHASES-JIT-NEXT: 8: offload, "device-openmp ([[TARGET]])" {7}, lto-bc
-// PHASES-JIT-NEXT: 9: clang-offload-packager, {8}, image, (device-openmp)
+// PHASES-JIT-NEXT: 9: llvm-offload-binary, {8}, image, (device-openmp)
 // PHASES-JIT-NEXT: 10: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (x86_64-unknown-linux-gnu)" {9}, ir
 // PHASES-JIT-NEXT: 11: backend, {10}, assembler, (host-openmp)
 // PHASES-JIT-NEXT: 12: assembler, {11}, object, (host-openmp)

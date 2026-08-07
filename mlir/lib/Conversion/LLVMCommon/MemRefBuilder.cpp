@@ -353,14 +353,9 @@ void UnrankedMemRefDescriptor::unpack(OpBuilder &builder, Location loc,
   results.push_back(d.memRefDescPtr(builder, loc));
 }
 
-void UnrankedMemRefDescriptor::computeSizes(
+Value UnrankedMemRefDescriptor::computeSize(
     OpBuilder &builder, Location loc, const LLVMTypeConverter &typeConverter,
-    ArrayRef<UnrankedMemRefDescriptor> values, ArrayRef<unsigned> addressSpaces,
-    SmallVectorImpl<Value> &sizes) {
-  if (values.empty())
-    return;
-  assert(values.size() == addressSpaces.size() &&
-         "must provide address space for each descriptor");
+    UnrankedMemRefDescriptor desc, unsigned addressSpace) {
   // Cache the index type.
   Type indexType = typeConverter.getIndexType();
 
@@ -371,34 +366,31 @@ void UnrankedMemRefDescriptor::computeSizes(
       builder, loc, indexType,
       llvm::divideCeil(typeConverter.getIndexTypeBitwidth(), 8));
 
-  sizes.reserve(sizes.size() + values.size());
-  for (auto [desc, addressSpace] : llvm::zip(values, addressSpaces)) {
-    // Emit IR computing the memory necessary to store the descriptor. This
-    // assumes the descriptor to be
-    //   { type*, type*, index, index[rank], index[rank] }
-    // and densely packed, so the total size is
-    //   2 * sizeof(pointer) + (1 + 2 * rank) * sizeof(index).
-    // TODO: consider including the actual size (including eventual padding due
-    // to data layout) into the unranked descriptor.
-    Value pointerSize = createIndexAttrConstant(
-        builder, loc, indexType,
-        llvm::divideCeil(typeConverter.getPointerBitwidth(addressSpace), 8));
-    Value doublePointerSize =
-        LLVM::MulOp::create(builder, loc, indexType, two, pointerSize);
+  // Emit IR computing the memory necessary to store the descriptor. This
+  // assumes the descriptor to be
+  //   { type*, type*, index, index[rank], index[rank] }
+  // and densely packed, so the total size is
+  //   2 * sizeof(pointer) + (1 + 2 * rank) * sizeof(index).
+  // TODO: consider including the actual size (including eventual padding due
+  // to data layout) into the unranked descriptor.
+  Value pointerSize = createIndexAttrConstant(
+      builder, loc, indexType,
+      llvm::divideCeil(typeConverter.getPointerBitwidth(addressSpace), 8));
+  Value doublePointerSize =
+      LLVM::MulOp::create(builder, loc, indexType, two, pointerSize);
 
-    // (1 + 2 * rank) * sizeof(index)
-    Value rank = desc.rank(builder, loc);
-    Value doubleRank = LLVM::MulOp::create(builder, loc, indexType, two, rank);
-    Value doubleRankIncremented =
-        LLVM::AddOp::create(builder, loc, indexType, doubleRank, one);
-    Value rankIndexSize = LLVM::MulOp::create(builder, loc, indexType,
-                                              doubleRankIncremented, indexSize);
+  // (1 + 2 * rank) * sizeof(index)
+  Value rank = desc.rank(builder, loc);
+  Value doubleRank = LLVM::MulOp::create(builder, loc, indexType, two, rank);
+  Value doubleRankIncremented =
+      LLVM::AddOp::create(builder, loc, indexType, doubleRank, one);
+  Value rankIndexSize = LLVM::MulOp::create(builder, loc, indexType,
+                                            doubleRankIncremented, indexSize);
 
-    // Total allocation size.
-    Value allocationSize = LLVM::AddOp::create(
-        builder, loc, indexType, doublePointerSize, rankIndexSize);
-    sizes.push_back(allocationSize);
-  }
+  // Total allocation size.
+  Value allocationSize = LLVM::AddOp::create(builder, loc, indexType,
+                                             doublePointerSize, rankIndexSize);
+  return allocationSize;
 }
 
 Value UnrankedMemRefDescriptor::allocatedPtr(

@@ -21,6 +21,11 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 
+#include <cstddef>
+#include <functional>
+#include <optional>
+#include <string>
+
 using AccDirectiveSet = Fortran::common::EnumSet<llvm::acc::Directive,
     llvm::acc::Directive_enumSize>;
 
@@ -32,9 +37,13 @@ using AccClauseSet =
 
 namespace Fortran::semantics {
 
+template <>
+void IterateOverMembers(
+    const AccClauseSet &set, std::function<void(llvm::acc::Clause)> func);
+
 class AccStructureChecker
     : public DirectiveStructureChecker<llvm::acc::Directive, llvm::acc::Clause,
-          parser::AccClause, llvm::acc::Clause_enumSize> {
+          parser::AccClause, AccClauseSet> {
 public:
   AccStructureChecker(SemanticsContext &context)
       : DirectiveStructureChecker(context,
@@ -78,6 +87,8 @@ public:
   void Enter(const parser::SeparateModuleSubprogram &);
   void Enter(const parser::DoConstruct &);
   void Leave(const parser::DoConstruct &);
+  void Enter(const parser::CallStmt &);
+  void Enter(const parser::FunctionReference &);
 
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenACC/ACC.inc"
@@ -101,11 +112,12 @@ private:
   bool IsLoopConstruct(llvm::acc::Directive directive) const;
   std::optional<llvm::acc::Directive> getParentComputeConstruct() const;
   bool IsInsideComputeConstruct() const;
-  bool IsInsideParallelConstruct() const;
+  bool IsInsideKernelsConstruct() const;
   void CheckNotInComputeConstruct();
   std::optional<std::int64_t> getGangDimensionSize(
       DirectiveContext &dirContext);
   void CheckNotInSameOrSubLevelLoopConstruct();
+  void CheckRoutineCallInLoop(const Symbol &);
   void CheckMultipleOccurrenceInDeclare(
       const parser::AccObjectList &, llvm::acc::Clause);
   void CheckMultipleOccurrenceInDeclare(

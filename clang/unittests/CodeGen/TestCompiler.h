@@ -33,16 +33,21 @@ struct TestCompiler {
   unsigned PtrSize = 0;
 
   TestCompiler(clang::LangOptions LO,
-               clang::CodeGenOptions CGO = clang::CodeGenOptions()) {
+               clang::CodeGenOptions CGO = clang::CodeGenOptions(),
+               llvm::StringRef TripleStr = "") {
     compiler.getLangOpts() = LO;
     compiler.getCodeGenOpts() = CGO;
-    compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+    compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+    compiler.createDiagnostics();
 
-    std::string TrStr = llvm::Triple::normalize(llvm::sys::getProcessTriple());
-    llvm::Triple Tr(TrStr);
-    Tr.setOS(Triple::Linux);
-    Tr.setVendor(Triple::VendorType::UnknownVendor);
-    Tr.setEnvironment(Triple::EnvironmentType::UnknownEnvironment);
+    llvm::Triple Tr(TripleStr.empty()
+                        ? llvm::Triple::normalize(llvm::sys::getProcessTriple())
+                        : llvm::Triple::normalize(TripleStr));
+    if (TripleStr.empty()) {
+      Tr.setOS(Triple::Linux);
+      Tr.setVendor(Triple::VendorType::UnknownVendor);
+      Tr.setEnvironment(Triple::EnvironmentType::UnknownEnvironment);
+    }
     compiler.getTargetOpts().Triple = Tr.getTriple();
     compiler.setTarget(clang::TargetInfo::CreateTargetInfo(
         compiler.getDiagnostics(), compiler.getTargetOpts()));
@@ -51,15 +56,12 @@ struct TestCompiler {
     PtrSize = TInfo.getPointerWidth(clang::LangAS::Default) / 8;
 
     compiler.createFileManager();
-    compiler.createSourceManager(compiler.getFileManager());
+    compiler.createSourceManager();
     compiler.createPreprocessor(clang::TU_Prefix);
 
     compiler.createASTContext();
 
-    CG.reset(CreateLLVMCodeGen(
-        compiler.getDiagnostics(), "main-module",
-        compiler.getVirtualFileSystemPtr(), compiler.getHeaderSearchOpts(),
-        compiler.getPreprocessorOpts(), compiler.getCodeGenOpts(), Context));
+    CG = CreateLLVMCodeGen(compiler, "main-module", Context);
   }
 
   void init(const char *TestProgram,

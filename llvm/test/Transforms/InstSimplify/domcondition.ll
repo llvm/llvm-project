@@ -278,3 +278,210 @@ end:
 }
 
 declare void @foo(i32)
+
+
+define i1 @simplify_fcmp_implied_by_dom_cond_range_true(float %x) {
+; CHECK-LABEL: @simplify_fcmp_implied_by_dom_cond_range_true(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp olt float %x, 0.0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %cmp2 = fcmp olt float %x, 1.0
+  ret i1 %cmp2
+
+if.else:
+  ret i1 false
+}
+
+define i1 @simplify_fcmp_in_else_implied_by_dom_cond_range_true(float %x) {
+; CHECK-LABEL: @simplify_fcmp_in_else_implied_by_dom_cond_range_true(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = fcmp olt float %x, 1.0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  ret i1 true
+
+if.else:
+  %cmp2 = fcmp uge float %x, 0.5
+  ret i1 %cmp2
+}
+
+define i1 @simplify_fcmp_implied_by_dom_cond_range_false(float %x) {
+; CHECK-LABEL: @simplify_fcmp_implied_by_dom_cond_range_false(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp olt float %x, 0.0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %cmp2 = fcmp ogt float %x, 1.0
+  ret i1 %cmp2
+
+if.else:
+  ret i1 false
+}
+
+define i1 @simplify_fcmp_implied_by_dom_cond_pred_true(float %x, float %y) {
+; CHECK-LABEL: @simplify_fcmp_implied_by_dom_cond_pred_true(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp olt float %x, %y
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %cmp2 = fcmp ole float %x, %y
+  ret i1 %cmp2
+
+if.else:
+  ret i1 false
+}
+
+define i1 @simplify_fcmp_implied_by_dom_cond_pred_false(float %x, float %y) {
+; CHECK-LABEL: @simplify_fcmp_implied_by_dom_cond_pred_false(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp olt float %x, %y
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %cmp2 = fcmp ogt float %x, %y
+  ret i1 %cmp2
+
+if.else:
+  ret i1 false
+}
+
+define i1 @simplify_fcmp_implied_by_dom_cond_pred_commuted(float %x, float %y) {
+; CHECK-LABEL: @simplify_fcmp_implied_by_dom_cond_pred_commuted(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp olt float %x, %y
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %cmp2 = fcmp oge float %y, %x
+  ret i1 %cmp2
+
+if.else:
+  ret i1 false
+}
+
+; Negative tests
+
+define i1 @simplify_fcmp_implied_by_dom_cond_wrong_range(float %x) {
+; CHECK-LABEL: @simplify_fcmp_implied_by_dom_cond_wrong_range(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[X]], -1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp olt float %x, 0.0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %cmp2 = fcmp olt float %x, -1.0
+  ret i1 %cmp2
+
+if.else:
+  ret i1 false
+}
+
+define i1 @simplify_fcmp_implied_by_dom_cond_range_mismatched_operand(float %x, float %y) {
+; CHECK-LABEL: @simplify_fcmp_implied_by_dom_cond_range_mismatched_operand(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[Y:%.*]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp olt float %x, 0.0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %cmp2 = fcmp olt float %y, 1.0
+  ret i1 %cmp2
+
+if.else:
+  ret i1 false
+}
+
+define i1 @simplify_fcmp_implied_by_dom_cond_wrong_pred(float %x, float %y) {
+; CHECK-LABEL: @simplify_fcmp_implied_by_dom_cond_wrong_pred(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ole float %x, %y
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %cmp2 = fcmp olt float %x, %y
+  ret i1 %cmp2
+
+if.else:
+  ret i1 false
+}
+
+define i1 @simplify_fcmp_implied_by_dom_cond_pred_mismatched_operand(float %x, float %y, float %z) {
+; CHECK-LABEL: @simplify_fcmp_implied_by_dom_cond_pred_mismatched_operand(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ole float [[X]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp olt float %x, %y
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %cmp2 = fcmp ole float %x, %z
+  ret i1 %cmp2
+
+if.else:
+  ret i1 false
+}

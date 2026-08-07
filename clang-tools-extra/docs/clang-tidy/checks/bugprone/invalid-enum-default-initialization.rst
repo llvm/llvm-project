@@ -19,6 +19,9 @@ The check emits a warning only if an ``enum`` variable is default-initialized
 value of 0. The type can be a scoped or non-scoped ``enum``. Unions are not
 handled by the check (if it contains a member of enumeration type).
 
+Note that the ``enum`` ``std::errc`` is always ignored because it is expected
+to be default initialized, despite not defining an enumerator with the value 0.
+
 .. code-block:: c++
 
   enum class Enum1: int {
@@ -70,3 +73,12 @@ enum type) are set to 0.
   enum Enum1 Array3[2][2] = {{Enum1_A, Enum1_A}}; // warn: elements of second array are initialized to 0
 
   struct Struct1 S1 = {1}; // warn: element 'b' is initialized to 0
+
+
+Options
+-------
+
+.. option:: IgnoredEnums
+
+  Semicolon-separated list of regexes specifying enums for which this check won't be
+  enforced. Default is `::std::errc`.

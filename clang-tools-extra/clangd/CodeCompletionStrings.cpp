@@ -112,7 +112,7 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
   std::string Doc;
 
   if (Cfg.Documentation.CommentFormat == Config::CommentFormatPolicy::Doxygen &&
-      isa<ParmVarDecl>(Decl)) {
+      isa<ParmVarDecl, TemplateTypeParmDecl>(Decl)) {
     // Parameters are documented in their declaration context (function or
     // template function).
     const NamedDecl *ND = dyn_cast<NamedDecl>(Decl.getDeclContext());
@@ -127,15 +127,20 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
     // not write them into PCH, because they are racy and slow to load.
     assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
 
-    comments::FullComment *FC = RC->parse(Ctx, /*PP=*/nullptr, ND);
-    if (!FC)
+    std::string DeclDoc =
+        RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+    if (!looksLikeDocComment(DeclDoc))
       return "";
 
-    SymbolDocCommentVisitor V(FC, Ctx.getLangOpts().CommentOpts);
+    SymbolDocCommentVisitor V(DeclDoc, Ctx.getLangOpts().CommentOpts);
     std::string RawDoc;
     llvm::raw_string_ostream OS(RawDoc);
 
-    V.parameterDocToString(dyn_cast<ParmVarDecl>(&Decl)->getName(), OS);
+    if (auto *PVD = dyn_cast<ParmVarDecl>(&Decl))
+      V.parameterDocToString(PVD->getName(), OS);
+    else
+      V.templateTypeParmDocToString(
+          cast<TemplateTypeParmDecl>(&Decl)->getName(), OS);
 
     Doc = StringRef(RawDoc).trim().str();
   } else {

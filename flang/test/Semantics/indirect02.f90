@@ -1,7 +1,7 @@
 ! This test checks the lowering of OpenMP Indirect Clause when used with the Declare Target directive
 
-! RUN: not flang -fopenmp -fopenmp-version=50 %s 2>&1 | FileCheck %s --check-prefix="CHECK-50"
-! RUN: not flang -fopenmp -fopenmp-version=52 %s 2>&1 | FileCheck %s --check-prefix="CHECK-52"
+! RUN: not %flang -fopenmp -fopenmp-version=50 %s 2>&1 | FileCheck %s --check-prefix="CHECK-50"
+! RUN: not %flang -fopenmp -fopenmp-version=52 %s 2>&1 | FileCheck %s --check-prefix="CHECK-52"
 
 module functions
   implicit none
@@ -14,7 +14,7 @@ module functions
 
 contains
   function func1() result(i)
-    !CHECK-50: INDIRECT clause is not allowed on directive DECLARE TARGET in OpenMP v5.0, try -fopenmp-version=51
+    !CHECK-50: INDIRECT clause is not allowed on DECLARE TARGET directive in OpenMP v5.0, try -fopenmp-version=51
     !CHECK-52: not yet implemented: Unhandled clause INDIRECT in DECLARE TARGET construct
     !$omp declare target enter(func1) indirect(.true.)
     character(1) :: i

@@ -17,7 +17,6 @@
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include <cstdint>
-#include <vector>
 
 namespace llvm {
 
@@ -38,7 +37,7 @@ struct FileHeader {
 
 struct Object {
   FileHeader Header;
-  Object();
+  LLVM_ABI Object();
 };
 } // end namespace GOFFYAML
 } // end namespace llvm

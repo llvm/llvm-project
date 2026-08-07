@@ -6,12 +6,6 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 
 */
 
-%inline %{
-
-#include "../bindings/python/python-typemaps.h"
-
-%}
-
 %typemap(in) char ** {
   /* Check if is a list  */
   if (PythonList::Check($input)) {
@@ -58,6 +52,8 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 %typemap(freearg) char** {
   free((char *) $1);
 }
+
+%typemap(pytyping, out="typing.List[str]") char** "typing.Optional[typing.List[str]]"
 
 %typecheck(SWIG_TYPECHECK_POINTER) lldb::ScriptObjectPtr {
   PythonObject obj(PyRefType::Borrowed, $input);
@@ -128,6 +124,8 @@ AND call SWIG_fail at the same time, because it will result in a double free.
   Py_INCREF($result);
 }
 
+%typemap(pytyping) lldb::ScriptObjectPtr "typing.Any"
+
 %typemap(out) lldb::SBScriptObject {
   $result = nullptr;
   if (const void* impl = $1.GetPointer())
@@ -139,6 +137,8 @@ AND call SWIG_fail at the same time, because it will result in a double free.
     Py_INCREF($result);
   }
 }
+
+%typemap(pytyping) lldb::SBScriptObject "typing.Any"
 
 %typemap(out) char** {
   int len;
@@ -210,6 +210,16 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 // as char data instead of byte data.
 %typemap(argout) (void *char_buf, size_t size) = (char *dst, size_t dst_len);
 
+// Uses (char *dst, size_t dst_len) argout typemap.
+// Should return `str`, but annotated as `typing.List[typing.Union[int, typing.Optional[str]]]`.
+%feature("python:annotations", "0") lldb::SBProcess::GetSTDOUT;
+%feature("python:annotations", "0") lldb::SBProcess::GetSTDERR;
+%feature("python:annotations", "0") lldb::SBProcess::GetAsyncProfileData;
+%feature("python:annotations", "0") lldb::SBStructuredData::GetStringValue;
+
+// Uses (void *char_buf, size_t size) argout typemap.
+// Should return `str`, but annotated as `typing.List[typing.Union[int, typing.Optional[SWIGTYPE_p_void]]]`.
+%feature("python:annotations", "0") lldb::SBProcess::ReadCStringFromMemory;
 
 // typemap for handling an snprintf-like API like SBThread::GetStopDescription.
 %typemap(in) (char *dst_or_null, size_t dst_len) {
@@ -224,6 +234,24 @@ AND call SWIG_fail at the same time, because it will result in a double free.
   }
   $1 = (char *)malloc($2);
 }
+
+// Disable default type checking for this method to avoid SWIG dispatch issues.
+// 
+// Problem: SBThread::GetStopDescription has two overloads:
+//   1. GetStopDescription(char* dst_or_null, size_t dst_len) 
+//   2. GetStopDescription(lldb::SBStream& stream)
+//
+// SWIG generates a dispatch function to select the correct overload based on argument types.
+// see https://www.swig.org/Doc4.0/SWIGDocumentation.html#Typemaps_overloading.
+// However, this dispatcher doesn't consider typemaps that transform function signatures.
+//
+// In Python, our typemap converts GetStopDescription(char*, size_t) to GetStopDescription(int).
+// The dispatcher still checks against the original (char*, size_t) signature instead of 
+// the transformed (int) signature, causing type matching to fail.
+// This only affects SBThread::GetStopDescription since the type check also matches 
+// the argument name, which is unique to this function.
+%typemap(typecheck, precedence=SWIG_TYPECHECK_POINTER) (char *dst_or_null, size_t dst_len) ""
+
 %typemap(argout) (char *dst_or_null, size_t dst_len) {
   Py_XDECREF($result); /* Blow away any previous result */
   llvm::StringRef ref($1);
@@ -231,6 +259,20 @@ AND call SWIG_fail at the same time, because it will result in a double free.
   $result = string.release();
   free($1);
 }
+
+// Uses (char *dst_or_null, size_t dst_len) argout typemap.
+// Should return `str`, but annotated as `typing.List[typing.Union[int, typing.Optional[str]]]`.
+%feature("python:annotations", "0") lldb::SBThread::GetStopDescription;
+
+
+// For lldb::SBFileSpec::GetPath
+%typemap(in) (char *dst_path, size_t dst_len) = (char *dst_or_null, size_t dst_len);
+%typemap(argout) (char *dst_path, size_t dst_len) = (char *dst_or_null, size_t dst_len);
+
+// Uses (char *dst_path, size_t dst_len) argout typemap.
+// Should return `str`, but annotated as `typing.List[typing.Union[int, typing.Optional[str]]]`.
+%feature("python:annotations", "0") lldb::SBFileSpec::GetPath;
+%feature("python:annotations", "0") lldb::SBFileSpec::ResolvePath;
 
 
 // typemap for an outgoing buffer
@@ -255,6 +297,10 @@ AND call SWIG_fail at the same time, because it will result in a double free.
     SWIG_fail;
   }
 }
+
+%typemap(pytyping) (const char *cstr, uint32_t cstr_len),
+                   (const char *src, size_t src_len) "typing.Union[str, bytes, bytearray]"
+
 // For SBProcess::WriteMemory, SBTarget::GetInstructions and SBDebugger::DispatchInput.
 %typemap(in) (const void *buf, size_t size),
              (const void *data, size_t data_len),
@@ -276,6 +322,10 @@ AND call SWIG_fail at the same time, because it will result in a double free.
     SWIG_fail;
   }
 }
+
+%typemap(pytyping) (const void *buf, size_t size),
+                   (const void *data, size_t data_len),
+                   (const void *buf, uint64_t size) "typing.Union[str, bytes, bytearray]"
 
 // typemap for an incoming buffer
 // See also SBProcess::ReadMemory.
@@ -306,6 +356,12 @@ AND call SWIG_fail at the same time, because it will result in a double free.
   }
   free($1);
 }
+
+// Uses (void *buf, size_t size) argout typemap.
+// Should return `typing.Optional[bytes]`, but annotated as `typing.List[typing.Union[int, typing.Optional[SWIGTYPE_p_void]]]`.
+%feature("python:annotations", "0") lldb::SBProcess::ReadMemory;
+%feature("python:annotations", "0") lldb::SBTarget::ReadMemory;
+%feature("python:annotations", "0") lldb::SBData::ReadRawData;
 
 %{
 namespace {
@@ -393,6 +449,12 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   free($1);
 }
 
+%typemap(pytyping) (uint64_t* array, size_t array_len),
+                   (uint32_t* array, size_t array_len),
+                   (int64_t* array, size_t array_len),
+                   (int32_t* array, size_t array_len) "typing.Optional[typing.List[int]]"
+%typemap(pytyping) (double* array, size_t array_len) "typing.Optional[typing.List[float]]"
+
 // these typemaps wrap SBModule::GetVersion() from requiring a memory buffer
 // to the more Pythonic style where a list is returned and no previous allocation
 // is necessary - this will break if more than 50 versions are ever returned
@@ -428,6 +490,10 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   free($1);
 }
 
+// Uses (uint32_t *versions, uint32_t num_versions) argout typemap.
+// Should return `typing.List[int]`, but annotated as `typing.List[typing.Union[int, typing.Optional[SWIGTYPE_p_unsigned_int]]]`.
+%feature("python:annotations", "0") lldb::SBModule::GetVersion;
+
 // For Log::LogOutputCallback
 %typemap(in) (lldb::LogOutputCallback log_callback, void *baton) {
   if (!($input == Py_None ||
@@ -451,6 +517,8 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   $1 = $input == Py_None;
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
 }
+
+%typemap(pytyping) (lldb::LogOutputCallback log_callback, void *baton) "typing.Optional[typing.Callable[[str], None]]"
 
 // For lldb::SBDebuggerDestroyCallback
 %typemap(in) (lldb::SBDebuggerDestroyCallback destroy_callback, void *baton) {
@@ -476,6 +544,8 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
 }
 
+%typemap(pytyping) (lldb::SBDebuggerDestroyCallback destroy_callback, void *baton) "typing.Optional[typing.Callable[[int], None]]"
+
 // For lldb::SBCommandPrintCallback
 %typemap(in) (lldb::SBCommandPrintCallback callback, void *baton) {
   if (!($input == Py_None ||
@@ -495,6 +565,8 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
 }
 
+%typemap(pytyping) (lldb::SBCommandPrintCallback callback, void *baton) "typing.Optional[typing.Callable[[SBCommandReturnObject], int]]"
+
 %typemap(in) (lldb::CommandOverrideCallback callback, void *baton) {
   if (!($input == Py_None ||
         PyCallable_Check(reinterpret_cast<PyObject *>($input)))) {
@@ -511,6 +583,8 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   $1 = $input == Py_None;
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
 }
+
+%typemap(pytyping) (lldb::CommandOverrideCallback callback, void *baton) "typing.Optional[typing.Callable[[typing.List[str]], bool]]"
 
 %typemap(in) lldb::FileSP {
   PythonFile py_file(PyRefType::Borrowed, $input);
@@ -587,6 +661,8 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   }
 }
 
+%typemap(pytyping) lldb::FileSP "typing.IO"
+
 %typemap(in) (const char* string, int len) {
   if ($input == Py_None) {
     $1 = NULL;
@@ -611,49 +687,39 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   }
 }
 
-// These two pybuffer macros are copied out of swig/Lib/python/pybuffer.i,
-// and fixed so they will not crash if PyObject_GetBuffer fails.
-// https://github.com/swig/swig/issues/1640
-//
-// I've also moved the call to PyBuffer_Release to the end of the SWIG wrapper,
-// doing it right away is not legal according to the python buffer protocol.
+%typemap(pytyping) (const char* string, int len) "typing.Optional[typing.List[str]]"
 
-%define %pybuffer_mutable_binary(TYPEMAP, SIZE)
-%typemap(in) (TYPEMAP, SIZE) (Py_buffer_RAII view) {
-  int res;
-  Py_ssize_t size = 0;
-  void *buf = 0;
-  res = PyObject_GetBuffer($input, &view.buffer, PyBUF_WRITABLE);
-  if (res < 0) {
-    PyErr_Clear();
-    %argument_fail(res, "(TYPEMAP, SIZE)", $symname, $argnum);
+// Typemap for SBFile::Write.
+%typemap(in) (const uint8_t *buf, size_t num_bytes) {
+  if (PythonByteArray::Check($input)) {
+    PythonByteArray bytearray(PyRefType::Borrowed, $input);
+    $1 = (uint8_t *)bytearray.GetBytes().data();
+    $2 = bytearray.GetSize();
+  } else if (PythonBytes::Check($input)) {
+    PythonBytes bytes(PyRefType::Borrowed, $input);
+    $1 = (uint8_t *)bytes.GetBytes().data();
+    $2 = bytes.GetSize();
+  } else {
+    PyErr_SetString(PyExc_ValueError, "Expecting a bytes or bytearray object");
+    SWIG_fail;
   }
-  size = view.buffer.len;
-  buf = view.buffer.buf;
-  $1 = ($1_ltype)buf;
-  $2 = ($2_ltype)(size / sizeof($*1_type));
 }
-%enddef
 
-%define %pybuffer_binary(TYPEMAP, SIZE)
-%typemap(in) (TYPEMAP, SIZE) (Py_buffer_RAII view) {
-  int res;
-  Py_ssize_t size = 0;
-  const void *buf = 0;
-  res = PyObject_GetBuffer($input, &view.buffer, PyBUF_CONTIG_RO);
-  if (res < 0) {
-    PyErr_Clear();
-    %argument_fail(res, "(TYPEMAP, SIZE)", $symname, $argnum);
+%typemap(pytyping) (const uint8_t *buf, size_t num_bytes) "typing.Union[bytes, bytearray]"
+
+// Typemap for SBFile::Read.
+%typemap(in) (uint8_t *buf, size_t num_bytes) {
+  if (PythonByteArray::Check($input)) {
+    PythonByteArray bytearray(PyRefType::Borrowed, $input);
+    $1 = (uint8_t *)bytearray.GetBytes().data();
+    $2 = bytearray.GetSize();
+  } else {
+    PyErr_SetString(PyExc_ValueError, "Expecting a bytearray");
+    SWIG_fail;
   }
-  size = view.buffer.len;
-  buf = view.buffer.buf;
-  $1 = ($1_ltype)buf;
-  $2 = ($2_ltype)(size / sizeof($*1_type));
 }
-%enddef
 
-%pybuffer_binary(const uint8_t *buf, size_t num_bytes);
-%pybuffer_mutable_binary(uint8_t *buf, size_t num_bytes);
+%typemap(pytyping) (uint8_t *buf, size_t num_bytes) "bytearray"
 
 %typemap(in) (const char **symbol_name, uint32_t num_names) {
   using namespace lldb_private;
@@ -681,6 +747,8 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
     return NULL;
   }
 }
+
+%typemap(pytyping) (const char **symbol_name, uint32_t num_names) "typing.Optional[typing.List[str]]"
 
 // For lldb::SBPlatformLocateModuleCallback
 %typemap(in) (lldb::SBPlatformLocateModuleCallback callback,
@@ -732,3 +800,7 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   $1 = $input == Py_None;
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
 }
+
+%typemap(pytyping)
+  (lldb::SBPlatformLocateModuleCallback callback, void *callback_baton)
+  "typing.Optional[typing.Callable[[SBModuleSpec, SBFileSpec, SBFileSpec], SBError]]"

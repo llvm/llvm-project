@@ -1,4 +1,4 @@
-//===--- SuspiciousReallocUsageCheck.cpp - clang-tidy----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -44,7 +44,7 @@ public:
       return false;
     if (!check(E1->getBase(), E2->getBase()))
       return false;
-    DeclAccessPair FD = E1->getFoundDecl();
+    const DeclAccessPair FD = E1->getFoundDecl();
     return isa<FieldDecl>(FD.getDecl()) && FD == E2->getFoundDecl();
   }
 
@@ -81,9 +81,9 @@ public:
 
   bool VisitDeclStmt(const DeclStmt *S) {
     for (const Decl *D : S->getDeclGroup())
-      if (const auto *LeftVar = dyn_cast<VarDecl>(D))
-        if (LeftVar->hasInit())
-          return isAccessForVar(LeftVar->getInit());
+      if (const auto *LeftVar = dyn_cast<VarDecl>(D);
+          LeftVar && LeftVar->hasInit())
+        return isAccessForVar(LeftVar->getInit());
     return false;
   }
   bool VisitBinaryOperator(const BinaryOperator *S) {
@@ -92,10 +92,9 @@ public:
     return false;
   }
   bool VisitStmt(const Stmt *S) {
-    for (const Stmt *Child : S->children())
-      if (Child && Visit(Child))
-        return true;
-    return false;
+    return llvm::any_of(S->children(), [this](const Stmt *Child) {
+      return Child && Visit(Child);
+    });
   }
 };
 
@@ -105,13 +104,13 @@ namespace clang::tidy::bugprone {
 
 void SuspiciousReallocUsageCheck::registerMatchers(MatchFinder *Finder) {
   // void *realloc(void *ptr, size_t size);
-  auto ReallocDecl =
+  const auto ReallocDecl =
       functionDecl(hasName("::realloc"), parameterCountIs(2),
                    hasParameter(0, hasType(pointerType(pointee(voidType())))),
                    hasParameter(1, hasType(isInteger())))
           .bind("realloc");
 
-  auto ReallocCall =
+  const auto ReallocCall =
       callExpr(callee(ReallocDecl), hasArgument(0, expr().bind("ptr_input")),
                hasAncestor(functionDecl().bind("parent_function")))
           .bind("call");
@@ -141,11 +140,12 @@ void SuspiciousReallocUsageCheck::check(
           dyn_cast<DeclRefExpr>(PtrInputExpr->IgnoreParenImpCasts()))
     if (const auto *Var = dyn_cast<VarDecl>(DeclRef->getDecl()))
       if (const auto *Func =
-              Result.Nodes.getNodeAs<FunctionDecl>("parent_function"))
-        if (FindAssignToVarBefore{Var, DeclRef, SM}.Visit(Func->getBody()))
-          return;
+              Result.Nodes.getNodeAs<FunctionDecl>("parent_function");
+          Func &&
+          FindAssignToVarBefore{Var, DeclRef, SM}.Visit(Func->getBody()))
+        return;
 
-  StringRef CodeOfAssignedExpr = Lexer::getSourceText(
+  const StringRef CodeOfAssignedExpr = Lexer::getSourceText(
       CharSourceRange::getTokenRange(PtrResultExpr->getSourceRange()), SM,
       getLangOpts());
   diag(Call->getBeginLoc(), "'%0' may be set to null if 'realloc' fails, which "

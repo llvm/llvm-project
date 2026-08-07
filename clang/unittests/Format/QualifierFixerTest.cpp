@@ -86,7 +86,7 @@ TEST_F(QualifierFixerTest, FailQualifierEmptyOrder) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_Cpp;
   FAIL_PARSE("QualifierAlignment: Custom\nQualifierOrder: []", QualifierOrder,
-             std::vector<std::string>({}));
+             std::vector<std::string>{});
 }
 
 TEST_F(QualifierFixerTest, FailQualifierMissingOrder) {
@@ -215,6 +215,8 @@ TEST_F(QualifierFixerTest, RightQualifier) {
                Style);
   verifyFormat("void foo() const override;", Style);
   verifyFormat("void foo() const override LLVM_READONLY;", Style);
+  verifyFormat("MOCK_METHOD(ReturnType, myMethod, (int), (const override));",
+               Style);
   verifyFormat("void foo() const final;", Style);
   verifyFormat("void foo() const final LLVM_READONLY;", Style);
   verifyFormat("void foo() const LLVM_READONLY;", Style);
@@ -1124,15 +1126,15 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
 TEST_F(QualifierFixerTest, IsMacro) {
   auto Tokens = annotate("INT INTPR Foo int");
   ASSERT_EQ(Tokens.size(), 5u) << Tokens;
-  EXPECT_TRUE(isPossibleMacro(Tokens[0]));
-  EXPECT_TRUE(isPossibleMacro(Tokens[1]));
-  EXPECT_FALSE(isPossibleMacro(Tokens[2]));
-  EXPECT_FALSE(isPossibleMacro(Tokens[3]));
+  EXPECT_TRUE(Tokens[0]->isPossibleMacro());
+  EXPECT_TRUE(Tokens[1]->isPossibleMacro());
+  EXPECT_FALSE(Tokens[2]->isPossibleMacro());
+  EXPECT_FALSE(Tokens[3]->isPossibleMacro());
 
   Tokens = annotate("FOO::BAR");
   ASSERT_EQ(Tokens.size(), 4u) << Tokens;
-  EXPECT_FALSE(isPossibleMacro(Tokens[0]));
-  EXPECT_FALSE(isPossibleMacro(Tokens[2]));
+  EXPECT_FALSE(Tokens[0]->isPossibleMacro());
+  EXPECT_FALSE(Tokens[2]->isPossibleMacro());
 }
 
 TEST_F(QualifierFixerTest, OverlappingQualifier) {
@@ -1192,6 +1194,41 @@ TEST_F(QualifierFixerTest, QualifiersBrokenUpByPPDirectives) {
                "    constexpr\n"
                "#endif\n"
                "    int i = 0;",
+               Style);
+}
+
+TEST_F(QualifierFixerTest, QualifierOrderingAfterPreprocessorDirectives) {
+  auto Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"static", "inline", "const", "type"};
+
+  verifyFormat("#if 1\n"
+               "void foo(const int par);\n"
+               "const int var1;\n"
+               "#endif\n"
+               "\n"
+               "const int var2;\n"
+               "const int var3;",
+               "#if 1\n"
+               "void foo(int const par);\n"
+               "int const var1;\n"
+               "#endif\n"
+               "\n"
+               "int const var2;\n"
+               "int const var3;",
+               Style);
+  verifyFormat("#if defined(FOO)\n"
+               "static const int x = 1;\n"
+               "#else\n"
+               "static const int x = 2;\n"
+               "#endif\n"
+               "static const int y = 3;",
+               "#if defined(FOO)\n"
+               "const static int x = 1;\n"
+               "#else\n"
+               "const static int x = 2;\n"
+               "#endif\n"
+               "const static int y = 3;",
                Style);
 }
 
@@ -1292,6 +1329,25 @@ TEST_F(QualifierFixerTest, WithCpp11Attribute) {
                Style);
   verifyFormat("[[maybe_unused]] static constexpr int A",
                "[[maybe_unused]] constexpr static int A", Style);
+}
+
+TEST_F(QualifierFixerTest, WithPointerQualifierKeywords) {
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"type", "const", "volatile"};
+
+  verifyFormat("T const *_Nullable const a;", Style);
+  verifyFormat("T const *_Nonnull const b;", Style);
+  verifyFormat("T const *_Null_unspecified const c;", Style);
+  verifyFormat("T const *__ptr32 const d;", Style);
+  verifyFormat("T const *__ptr64 const e;", Style);
+  verifyFormat("T const *__funcref const f;", Style);
+  verifyFormat("T const *_Nullable const a = x;", Style);
+
+  verifyFormat("T *_Nullable const a;", "T *const _Nullable a;", Style);
+  verifyFormat("T const *_Nullable const volatile g;", Style);
+  verifyFormat("T const *_Nullable const volatile g;",
+               "T const *_Nullable volatile const g;", Style);
 }
 
 TEST_F(QualifierFixerTest, WithQualifiedTypeName) {

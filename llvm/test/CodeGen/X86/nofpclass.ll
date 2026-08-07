@@ -23,3 +23,45 @@ entry:
   store <2 x float> %e.coerce, ptr @gf, align 8
   ret void
 }
+
+define i32 @load_metadata(ptr %0) nounwind {
+; NOSSE-LABEL: load_metadata:
+; NOSSE:       # %bb.0:
+; NOSSE-NEXT:    movl (%rdi), %eax
+; NOSSE-NEXT:    retq
+;
+; SSE-LABEL: load_metadata:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movl (%rdi), %eax
+; SSE-NEXT:    retq
+  %f = load float, ptr %0, align 4, !nofpclass !{i32 3}
+  %i = bitcast float %f to i32
+  ret i32 %i
+}
+
+define i32 @load_metadata_fmaximumnum(ptr %0, ptr %1) nounwind {
+; NOSSE-LABEL: load_metadata_fmaximumnum:
+; NOSSE:       # %bb.0:
+; NOSSE-NEXT:    flds (%rdi)
+; NOSSE-NEXT:    flds (%rsi)
+; NOSSE-NEXT:    fxch %st(1)
+; NOSSE-NEXT:    fucomi %st(1), %st
+; NOSSE-NEXT:    fxch %st(1)
+; NOSSE-NEXT:    fcmovnbe %st(1), %st
+; NOSSE-NEXT:    fstp %st(1)
+; NOSSE-NEXT:    fstps -{{[0-9]+}}(%rsp)
+; NOSSE-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; NOSSE-NEXT:    retq
+;
+; SSE-LABEL: load_metadata_fmaximumnum:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    maxss (%rsi), %xmm0
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    retq
+  %f0 = load float, ptr %0, align 4, !nofpclass !{i32 99} ; 99 == (fcNan | fcZero)
+  %f1 = load float, ptr %1, align 4, !nofpclass !{i32 99} ; 99 == (fcNan | fcZero)
+  %min = call float @llvm.maximumnum.f32(float %f0, float %f1);
+  %i = bitcast float %min to i32
+  ret i32 %i
+}

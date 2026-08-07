@@ -9,7 +9,6 @@
 #include "compute-offsets.h"
 #include "flang/Evaluate/fold-designator.h"
 #include "flang/Evaluate/fold.h"
-#include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Semantics/scope.h"
@@ -239,7 +238,9 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
   std::size_t minAlignment{0};
   UnorderedSymbolSet previous;
   for (auto object : details.objects()) {
-    Symbol &symbol{*object};
+    // Allow for host association when the common block is
+    // OpenMP firstprivate.
+    Symbol &symbol{object->GetUltimate()};
     auto errorSite{
         commonBlock.name().empty() ? symbol.name() : commonBlock.name()};
     if (std::size_t padding{DoSymbol(symbol.GetUltimate())}) {
@@ -396,6 +397,12 @@ std::size_t ComputeOffsetsHelper::DoSymbol(
   }
   SizeAndAlignment s{GetSizeAndAlignment(symbol, true)};
   if (s.size == 0) {
+    // Zero-size symbols (e.g. CHARACTER*0) still occupy their sequential
+    // position in a COMMON block or derived-type sequence. Record the current
+    // offset so that LOC() and storage-association checks see the correct
+    // address rather than always returning the block base (offset 0).
+    symbol.set_size(0);
+    symbol.set_offset(offset_);
     return 0;
   }
   std::size_t previousOffset{offset_};

@@ -136,12 +136,12 @@ define <16 x i8> @produceShuffleVectorForByte(i8 zeroext %0) nounwind {
 ; X64-SSE42:       # %bb.0: # %entry
 ; X64-SSE42-NEXT:    movd %edi, %xmm0
 ; X64-SSE42-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X64-SSE42-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,0,0,0,4,5,6,7]
+; X64-SSE42-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; X64-SSE42-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE42-NEXT:    pxor %xmm1, %xmm1
+; X64-SSE42-NEXT:    pcmpeqb %xmm0, %xmm1
+; X64-SSE42-NEXT:    movdqa %xmm1, %xmm0
 ; X64-SSE42-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; X64-SSE42-NEXT:    pxor %xmm0, %xmm0
-; X64-SSE42-NEXT:    pcmpeqb %xmm1, %xmm0
-; X64-SSE42-NEXT:    movdqa {{.*#+}} xmm1 = [17,17,17,17,17,17,17,17,u,u,u,u,u,u,u,u]
-; X64-SSE42-NEXT:    pand %xmm0, %xmm1
 ; X64-SSE42-NEXT:    movq %xmm1, %rax
 ; X64-SSE42-NEXT:    movabsq $1229782938247303440, %rcx # imm = 0x1111111111111110
 ; X64-SSE42-NEXT:    movabsq $76861433640456465, %rdx # imm = 0x111111111111111

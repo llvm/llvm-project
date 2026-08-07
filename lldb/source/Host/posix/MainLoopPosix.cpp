@@ -9,6 +9,7 @@
 #include "lldb/Host/posix/MainLoopPosix.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/PosixApi.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Errno.h"
@@ -387,10 +388,16 @@ void MainLoopPosix::ProcessSignal(int signo) {
   }
 }
 
-void MainLoopPosix::Interrupt() {
+bool MainLoopPosix::Interrupt() {
   if (m_interrupting.exchange(true))
-    return;
+    return true;
 
   char c = '.';
-  cantFail(m_interrupt_pipe.Write(&c, 1));
+  llvm::Expected<size_t> result_or_err = m_interrupt_pipe.Write(&c, 1);
+  if (!result_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Host), result_or_err.takeError(),
+                   "interrupt pipe write failed: {0}");
+    return false;
+  }
+  return *result_or_err != 0;
 }

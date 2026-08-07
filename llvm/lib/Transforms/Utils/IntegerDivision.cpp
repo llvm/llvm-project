@@ -16,8 +16,14 @@
 #include "llvm/Transforms/Utils/IntegerDivision.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -235,11 +241,37 @@ static Value *generateUnsignedDivisionCode(Value *Dividend, Value *Divisor,
   Value *Tmp1 = Builder.CreateCall(CTLZ, {Dividend, True});
   Value *SR          = Builder.CreateSub(Tmp0, Tmp1);
   Value *Ret0_4      = Builder.CreateICmpUGT(SR, MSB);
+
+  // Add 'unlikely' branch weights. We mark the case where either the divisor
+  // or the dividend is equal to zero as unlikely.
   Value *Ret0        = Builder.CreateLogicalOr(Ret0_3, Ret0_4);
+  applyProfMetadataIfEnabled(Ret0, [&](Instruction *Inst) {
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
+  });
   Value *RetDividend = Builder.CreateICmpEQ(SR, MSB);
+
+  // Conservatively, we treat the case |divisor| > |dividend| as unknown
   Value *RetVal      = Builder.CreateSelect(Ret0, Zero, Dividend);
+  applyProfMetadataIfEnabled(RetVal, [&](Instruction *Inst) {
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE, F);
+  });
   Value *EarlyRet    = Builder.CreateLogicalOr(Ret0, RetDividend);
-  Builder.CreateCondBr(EarlyRet, End, BB1);
+  applyProfMetadataIfEnabled(EarlyRet, [&](Instruction *Inst) {
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE, F);
+  });
+
+  // The condition of this branch is based on `EarlyRet`. `EarlyRet` is true
+  // only for special cases like dividend or divisor being zero, or the divisor
+  // being greater than the dividend. Thus, the branch to `End` is unlikely,
+  // and we expect to more frequently enter `BB1`.
+  Value *ConBrSpecialCases = Builder.CreateCondBr(EarlyRet, End, BB1);
+  applyProfMetadataIfEnabled(ConBrSpecialCases, [&](Instruction *Inst) {
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
+  });
 
   // ; bb1:                                             ; preds = %special-cases
   // ;   %sr_1     = add i32 %sr, 1
@@ -251,8 +283,17 @@ static Value *generateUnsignedDivisionCode(Value *Dividend, Value *Divisor,
   Value *SR_1     = Builder.CreateAdd(SR, One);
   Value *Tmp2     = Builder.CreateSub(MSB, SR);
   Value *Q        = Builder.CreateShl(Dividend, Tmp2);
+  // We assume that in the common case, the dividend's magnitude is larger than
+  // the divisor's magnitude such that the loop counter (SR) is non-zero.
+  // Specifically, if |dividend| >= 2 * |divisor|, then SR >= 1, ensuring SR_1
+  // >= 2. The case where SR_1 == 0 is thus considered unlikely.
   Value *SkipLoop = Builder.CreateICmpEQ(SR_1, Zero);
-  Builder.CreateCondBr(SkipLoop, LoopExit, Preheader);
+  Value *ConBrBB1 = Builder.CreateCondBr(SkipLoop, LoopExit, Preheader);
+  applyProfMetadataIfEnabled(ConBrBB1, [&](Instruction *Inst) {
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
+  });
 
   // ; preheader:                                           ; preds = %bb1
   // ;   %tmp3 = lshr i32 %dividend, %sr_1
@@ -298,7 +339,15 @@ static Value *generateUnsignedDivisionCode(Value *Dividend, Value *Divisor,
   Value *R     = Builder.CreateSub(Tmp7, Tmp11);
   Value *SR_2  = Builder.CreateAdd(SR_3, NegOne);
   Value *Tmp12 = Builder.CreateICmpEQ(SR_2, Zero);
-  Builder.CreateCondBr(Tmp12, LoopExit, DoWhile);
+  // The loop implements the core bit-by-bit binary long division algorithm.
+  // The branch is unlikely to exit the loop early until it has processed all
+  // significant bits.
+  Value *ConBrDoWhile = Builder.CreateCondBr(Tmp12, LoopExit, DoWhile);
+  applyProfMetadataIfEnabled(ConBrDoWhile, [&](Instruction *Inst) {
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
+  });
 
   // ; loop-exit:                                      ; preds = %do-while, %bb1
   // ;   %carry_2 = phi i32 [ 0, %bb1 ], [ %carry, %do-while ]

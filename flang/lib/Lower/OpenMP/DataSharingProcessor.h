@@ -19,6 +19,8 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <variant>
 
 namespace mlir {
@@ -96,8 +98,6 @@ private:
   // Symbols in private, firstprivate, and/or lastprivate clauses.
   llvm::SetVector<const semantics::Symbol *> explicitlyPrivatizedSymbols;
   llvm::SetVector<const semantics::Symbol *> defaultSymbols;
-  llvm::SetVector<const semantics::Symbol *> implicitSymbols;
-  llvm::SetVector<const semantics::Symbol *> preDeterminedSymbols;
   llvm::SetVector<const semantics::Symbol *> allPrivatizedSymbols;
 
   lower::AbstractConverter &converter;
@@ -107,14 +107,23 @@ private:
   lower::pft::Evaluation &eval;
   bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
-  llvm::SmallSet<const semantics::Symbol *, 16> mightHaveReadHostSym;
+  bool forceHeapAllocationForPrivateDynamicArrays = false;
+  llvm::SmallPtrSet<const semantics::Symbol *, 16> mightHaveReadHostSym;
+  llvm::SmallPtrSet<const semantics::Symbol *, 4>
+      symbolsCoveredByReductionElements;
   lower::SymMap &symTable;
   bool isTargetPrivatization;
   OMPConstructSymbolVisitor visitor;
 
   bool needBarrier();
-  void collectSymbols(semantics::Symbol::Flag flag,
-                      llvm::SetVector<const semantics::Symbol *> &symbols);
+  void collectPrivatizedSymbols(
+      std::optional<semantics::Symbol::Flag> flag,
+      const llvm::SetVector<const semantics::Symbol *> &allSymbols,
+      const llvm::SetVector<const semantics::Symbol *> &symbolsInNestedRegions,
+      llvm::SetVector<const semantics::Symbol *> *symbols = nullptr);
+  void
+  collectSymbols(semantics::Symbol::Flag flag,
+                 llvm::SetVector<const semantics::Symbol *> *symbols = nullptr);
   void collectSymbolsInNestedRegions(
       lower::pft::Evaluation &eval, semantics::Symbol::Flag flag,
       llvm::SetVector<const semantics::Symbol *> &symbolsInNestedRegions);
@@ -122,11 +131,14 @@ private:
       const omp::ObjectList &objects,
       llvm::SetVector<const semantics::Symbol *> &symbolSet);
   void collectSymbolsForPrivatization();
+  bool isCoveredByReductionElement(const semantics::Symbol *sym) const;
   void insertBarrier(mlir::omp::PrivateClauseOps *clauseOps);
   void collectDefaultSymbols();
   void collectImplicitSymbols();
   void collectPreDeterminedSymbols();
-  void privatize(mlir::omp::PrivateClauseOps *clauseOps);
+  void collectIndirectReferences();
+  void privatize(mlir::omp::PrivateClauseOps *clauseOps,
+                 std::optional<llvm::omp::Directive> dir = std::nullopt);
   void copyLastPrivatize(mlir::Operation *op);
   void insertLastPrivateCompare(mlir::Operation *op);
   void cloneSymbol(const semantics::Symbol *sym);
@@ -148,13 +160,17 @@ public:
                        lower::pft::Evaluation &eval,
                        bool shouldCollectPreDeterminedSymbols,
                        bool useDelayedPrivatization, lower::SymMap &symTable,
-                       bool isTargetPrivatization = false);
+                       bool isTargetPrivatization = false,
+                       llvm::ArrayRef<const semantics::Symbol *>
+                           symbolsCoveredByReductionElements = {});
 
   DataSharingProcessor(lower::AbstractConverter &converter,
                        semantics::SemanticsContext &semaCtx,
                        lower::pft::Evaluation &eval,
                        bool useDelayedPrivatization, lower::SymMap &symTable,
-                       bool isTargetPrivatization = false);
+                       bool isTargetPrivatization = false,
+                       llvm::ArrayRef<const semantics::Symbol *>
+                           symbolsCoveredByReductionElements = {});
 
   // Privatisation is split into two steps.
   // Step1 performs cloning of all privatisation clauses and copying for
@@ -167,10 +183,15 @@ public:
   // Step2 performs the copying for lastprivates and requires knowledge of the
   // MLIR operation to insert the last private update. Step2 adds
   // dealocation code as well.
-  void processStep1(mlir::omp::PrivateClauseOps *clauseOps = nullptr);
+  void processStep1(mlir::omp::PrivateClauseOps *clauseOps = nullptr,
+                    std::optional<llvm::omp::Directive> dir = std::nullopt);
   void processStep2(mlir::Operation *op, bool isLoop);
 
   void pushLoopIV(mlir::Value iv) { loopIVs.push_back(iv); }
+
+  void setForceHeapAllocationForPrivateDynamicArrays(bool value = true) {
+    forceHeapAllocationForPrivateDynamicArrays = value;
+  }
 
   const llvm::SetVector<const semantics::Symbol *> &
   getAllSymbolsToPrivatize() const {
@@ -184,7 +205,8 @@ public:
   }
 
   void privatizeSymbol(const semantics::Symbol *symToPrivatize,
-                       mlir::omp::PrivateClauseOps *clauseOps);
+                       mlir::omp::PrivateClauseOps *clauseOps,
+                       std::optional<llvm::omp::Directive> dir = std::nullopt);
 };
 
 } // namespace omp

@@ -123,7 +123,7 @@ def DirectiveTypeValid : TestFormat_Op<[{
 
 // CHECK-NOT: error
 def LiteralValid : TestFormat_Op<[{
-  `_` `:` `,` `=` `<` `>` `(` `)` `[` `]` `?` `+` `*` ` ` `` `->` `\n` `abc$._`
+  `_` `:` `,` `=` `<` `>` `(` `)` `[` `]` `?` `+` `-` `*` ` ` `` `->` `\n` `abc$._`
   attr-dict
 }]>;
 
@@ -175,7 +175,7 @@ def StringValid : TestFormat_Op<[{ custom<Foo>("foo") attr-dict }]>;
 
 // CHECK-NOT: error:
 def VariableValidA : TestFormat_Op<[{
-  $attr `:` attr-dict
+  ($attr^)? `:` attr-dict
 }]>, Arguments<(ins OptionalAttr<I1Attr>:$attr)>;
 def VariableValidB : TestFormat_Op<[{
   (`foo` $attr^)? `:` attr-dict

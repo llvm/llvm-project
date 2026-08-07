@@ -173,7 +173,7 @@ namespace {
 //===----------------------------------------------------------------------===//
 
 struct ConvertConstant final : OpConversionPattern<arith::ConstantOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::ConstantOp op, OpAdaptor,
@@ -235,7 +235,7 @@ struct ConvertConstant final : OpConversionPattern<arith::ConstantOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertAddI final : OpConversionPattern<arith::AddIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::AddIOp op, OpAdaptor adaptor,
@@ -325,7 +325,7 @@ static arith::CmpIPredicate toUnsignedPredicate(arith::CmpIPredicate pred) {
 }
 
 struct ConvertCmpI final : OpConversionPattern<arith::CmpIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
@@ -381,7 +381,7 @@ struct ConvertCmpI final : OpConversionPattern<arith::CmpIOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertMulI final : OpConversionPattern<arith::MulIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::MulIOp op, OpAdaptor adaptor,
@@ -422,7 +422,7 @@ struct ConvertMulI final : OpConversionPattern<arith::MulIOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertExtSI final : OpConversionPattern<arith::ExtSIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::ExtSIOp op, OpAdaptor adaptor,
@@ -460,7 +460,7 @@ struct ConvertExtSI final : OpConversionPattern<arith::ExtSIOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertExtUI final : OpConversionPattern<arith::ExtUIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::ExtUIOp op, OpAdaptor adaptor,
@@ -598,7 +598,7 @@ struct ConvertIndexCastIndexToInt final : OpConversionPattern<CastOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertSelect final : OpConversionPattern<arith::SelectOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::SelectOp op, OpAdaptor adaptor,
@@ -631,7 +631,7 @@ struct ConvertSelect final : OpConversionPattern<arith::SelectOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertShLI final : OpConversionPattern<arith::ShLIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::ShLIOp op, OpAdaptor adaptor,
@@ -720,7 +720,7 @@ struct ConvertShLI final : OpConversionPattern<arith::ShLIOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertShRUI final : OpConversionPattern<arith::ShRUIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::ShRUIOp op, OpAdaptor adaptor,
@@ -809,7 +809,7 @@ struct ConvertShRUI final : OpConversionPattern<arith::ShRUIOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertShRSI final : OpConversionPattern<arith::ShRSIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::ShRSIOp op, OpAdaptor adaptor,
@@ -872,7 +872,7 @@ struct ConvertShRSI final : OpConversionPattern<arith::ShRSIOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertSubI final : OpConversionPattern<arith::SubIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::SubIOp op, OpAdaptor adaptor,
@@ -890,18 +890,18 @@ struct ConvertSubI final : OpConversionPattern<arith::SubIOp> {
     auto [rhsElem0, rhsElem1] =
         extractLastDimHalves(rewriter, loc, adaptor.getRhs());
 
-    // Emulates LHS - RHS by [LHS0 - RHS0, LHS1 - RHS1 - CARRY] where
-    // CARRY is 1 or 0.
-    Value low = arith::SubIOp::create(rewriter, loc, lhsElem0, rhsElem0);
-    // We have a carry if lhsElem0 < rhsElem0.
-    Value carry0 = arith::CmpIOp::create(
-        rewriter, loc, arith::CmpIPredicate::ult, lhsElem0, rhsElem0);
-    Value carryVal = arith::ExtUIOp::create(rewriter, loc, newElemTy, carry0);
+    // Emulates LHS - RHS by [LHS0 - RHS0, LHS1 - RHS1 - BORROW] where
+    // BORROW is 1 or 0.
+    auto lowDiff =
+        arith::SubUIExtendedOp::create(rewriter, loc, lhsElem0, rhsElem0);
+    Value borrowVal =
+        arith::ExtUIOp::create(rewriter, loc, newElemTy, lowDiff.getBorrow());
 
-    Value high0 = arith::SubIOp::create(rewriter, loc, lhsElem1, carryVal);
+    Value high0 = arith::SubIOp::create(rewriter, loc, lhsElem1, borrowVal);
     Value high = arith::SubIOp::create(rewriter, loc, high0, rhsElem1);
 
-    Value resultVec = constructResultVector(rewriter, loc, newTy, {low, high});
+    Value resultVec =
+        constructResultVector(rewriter, loc, newTy, {lowDiff.getDiff(), high});
     rewriter.replaceOp(op, resultVec);
     return success();
   }
@@ -912,7 +912,7 @@ struct ConvertSubI final : OpConversionPattern<arith::SubIOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertSIToFP final : OpConversionPattern<arith::SIToFPOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::SIToFPOp op, OpAdaptor adaptor,
@@ -951,7 +951,7 @@ struct ConvertSIToFP final : OpConversionPattern<arith::SIToFPOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertUIToFP final : OpConversionPattern<arith::UIToFPOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::UIToFPOp op, OpAdaptor adaptor,
@@ -1015,7 +1015,7 @@ struct ConvertUIToFP final : OpConversionPattern<arith::UIToFPOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertFPToSI final : OpConversionPattern<arith::FPToSIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::FPToSIOp op, OpAdaptor adaptor,
@@ -1065,7 +1065,7 @@ struct ConvertFPToSI final : OpConversionPattern<arith::FPToSIOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertFPToUI final : OpConversionPattern<arith::FPToUIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::FPToUIOp op, OpAdaptor adaptor,
@@ -1137,7 +1137,7 @@ struct ConvertFPToUI final : OpConversionPattern<arith::FPToUIOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertTruncI final : OpConversionPattern<arith::TruncIOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::TruncIOp op, OpAdaptor adaptor,
@@ -1166,7 +1166,7 @@ struct ConvertTruncI final : OpConversionPattern<arith::TruncIOp> {
 //===----------------------------------------------------------------------===//
 
 struct ConvertVectorPrint final : OpConversionPattern<vector::PrintOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::PrintOp op, OpAdaptor adaptor,

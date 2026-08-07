@@ -28,7 +28,7 @@ namespace aarch32 {
 
 /// Check whether the given target flags are set for this Symbol.
 bool hasTargetFlags(Symbol &Sym, TargetFlagsType Flags) {
-  return static_cast<TargetFlagsType>(Sym.getTargetFlags()) & Flags;
+  return Sym.getTargetFlags() & Flags;
 }
 
 /// Encode 22-bit immediate value for branch instructions without J1J2 range
@@ -341,32 +341,16 @@ const FixupInfoBase *FixupInfoBase::getDynFixupInfo(Edge::Kind K) {
 }
 
 template <EdgeKind_aarch32 Kind>
-bool checkRegister(const ThumbRelocation &R, HalfWords Reg) {
+[[maybe_unused]] bool checkRegister(const ThumbRelocation &R, HalfWords Reg) {
   uint16_t Hi = R.Hi & FixupInfo<Kind>::RegMask.Hi;
   uint16_t Lo = R.Lo & FixupInfo<Kind>::RegMask.Lo;
   return Hi == Reg.Hi && Lo == Reg.Lo;
 }
 
 template <EdgeKind_aarch32 Kind>
-bool checkRegister(const ArmRelocation &R, uint32_t Reg) {
+[[maybe_unused]] bool checkRegister(const ArmRelocation &R, uint32_t Reg) {
   uint32_t Wd = R.Wd & FixupInfo<Kind>::RegMask;
   return Wd == Reg;
-}
-
-template <EdgeKind_aarch32 Kind>
-void writeRegister(WritableThumbRelocation &R, HalfWords Reg) {
-  static constexpr HalfWords Mask = FixupInfo<Kind>::RegMask;
-  assert((Mask.Hi & Reg.Hi) == Reg.Hi && (Mask.Lo & Reg.Lo) == Reg.Lo &&
-         "Value bits exceed bit range of given mask");
-  R.Hi = (R.Hi & ~Mask.Hi) | Reg.Hi;
-  R.Lo = (R.Lo & ~Mask.Lo) | Reg.Lo;
-}
-
-template <EdgeKind_aarch32 Kind>
-void writeRegister(WritableArmRelocation &R, uint32_t Reg) {
-  static constexpr uint32_t Mask = FixupInfo<Kind>::RegMask;
-  assert((Mask & Reg) == Reg && "Value bits exceed bit range of given mask");
-  R.Wd = (R.Wd & ~Mask) | Reg;
 }
 
 template <EdgeKind_aarch32 Kind>

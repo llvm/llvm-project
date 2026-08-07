@@ -1,4 +1,4 @@
-//===--- SuspiciousMemoryComparisonCheck.cpp - clang-tidy -----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -44,28 +44,27 @@ void SuspiciousMemoryComparisonCheck::check(
 
   for (unsigned int ArgIndex = 0; ArgIndex < 2; ++ArgIndex) {
     const Expr *ArgExpr = CE->getArg(ArgIndex);
-    QualType ArgType = ArgExpr->IgnoreImplicit()->getType();
+    const QualType ArgType = ArgExpr->IgnoreImplicit()->getType();
     const Type *PointeeType = ArgType->getPointeeOrArrayElementType();
     assert(PointeeType != nullptr && "PointeeType should always be available.");
-    QualType PointeeQualifiedType(PointeeType, 0);
+    const QualType PointeeQualifiedType(PointeeType, 0);
 
     if (PointeeType->isRecordType()) {
       if (const RecordDecl *RD =
               PointeeType->getAsRecordDecl()->getDefinition()) {
-        if (const auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD)) {
-          if (!CXXDecl->isStandardLayout()) {
-            diag(CE->getBeginLoc(),
-                 "comparing object representation of non-standard-layout type "
-                 "%0; consider using a comparison operator instead")
-                << PointeeQualifiedType;
-            break;
-          }
+        if (const auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD);
+            CXXDecl && !CXXDecl->isStandardLayout()) {
+          diag(CE->getBeginLoc(),
+               "comparing object representation of non-standard-layout type "
+               "%0; consider using a comparison operator instead")
+              << PointeeQualifiedType;
+          break;
         }
       }
     }
 
     if (!PointeeType->isIncompleteType()) {
-      uint64_t PointeeSize = Ctx.getTypeSize(PointeeType);
+      const uint64_t PointeeSize = Ctx.getTypeSize(PointeeType);
       if (ComparedBits && *ComparedBits >= PointeeSize &&
           !Ctx.hasUniqueObjectRepresentations(PointeeQualifiedType)) {
         diag(CE->getBeginLoc(),

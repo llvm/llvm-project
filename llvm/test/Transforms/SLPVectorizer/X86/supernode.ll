@@ -10,10 +10,8 @@ define void @test_supernode_add(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Sarr
 ; ENABLED-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY:%.*]], align 8
-; ENABLED-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; ENABLED-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP1]], [[TMP3]]
-; ENABLED-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; ENABLED-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP5]]
+; ENABLED-NEXT:    [[TMP3:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP1]]
+; ENABLED-NEXT:    [[TMP6:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP3]], [[TMP2]]
 ; ENABLED-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY:%.*]], align 8
 ; ENABLED-NEXT:    ret void
 ;
@@ -51,10 +49,8 @@ define void @test_supernode_addsub(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %S
 ; ENABLED-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY:%.*]], align 8
-; ENABLED-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; ENABLED-NEXT:    [[TMP4:%.*]] = fsub fast <2 x double> [[TMP3]], [[TMP1]]
-; ENABLED-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; ENABLED-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP5]]
+; ENABLED-NEXT:    [[TMP3:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP2]]
+; ENABLED-NEXT:    [[TMP6:%.*]] = fsub reassoc nsz arcp contract afn <2 x double> [[TMP3]], [[TMP1]]
 ; ENABLED-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY:%.*]], align 8
 ; ENABLED-NEXT:    ret void
 ;
@@ -163,10 +159,10 @@ define void @supernode_scheduling(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %Da
 ; ENABLED-NEXT:    [[D:%.*]] = load double, ptr [[DARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY:%.*]], align 8
-; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[C]], i32 0
-; ENABLED-NEXT:    [[TMP3:%.*]] = fadd fast <2 x double> [[TMP0]], [[TMP2]]
-; ENABLED-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP1]], double [[D]], i32 1
-; ENABLED-NEXT:    [[TMP5:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP4]]
+; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[C]], i64 0
+; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[D]], i64 1
+; ENABLED-NEXT:    [[TMP4:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP3]]
+; ENABLED-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP4]], [[TMP1]]
 ; ENABLED-NEXT:    store <2 x double> [[TMP5]], ptr [[SARRAY:%.*]], align 8
 ; ENABLED-NEXT:    ret void
 ;
@@ -214,19 +210,19 @@ define void @supernode_scheduling_cross_block(ptr %Aarray, ptr %Barray, ptr %Sar
 ; ENABLED-NEXT:  entry:
 ; ENABLED-NEXT:    [[IDXA1:%.*]] = getelementptr inbounds double, ptr [[AARRAY:%.*]], i64 1
 ; ENABLED-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds double, ptr [[BARRAY:%.*]], i64 1
+; ENABLED-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds double, ptr [[SARRAY:%.*]], i64 1
 ; ENABLED-NEXT:    [[A0:%.*]] = load double, ptr [[AARRAY]], align 8
 ; ENABLED-NEXT:    [[B1:%.*]] = load double, ptr [[IDXB1]], align 8
-; ENABLED-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
-; ENABLED-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[B1]], i32 1
-; ENABLED-NEXT:    [[TMP2:%.*]] = fadd fast <2 x double> [[TMP1]], splat (double 2.000000e+00)
+; ENABLED-NEXT:    [[TMP0:%.*]] = fadd fast double [[A0]], 2.000000e+00
+; ENABLED-NEXT:    [[TMP1:%.*]] = fadd fast double [[B1]], 2.000000e+00
 ; ENABLED-NEXT:    br label [[BB:%.*]]
 ; ENABLED:       bb:
 ; ENABLED-NEXT:    [[A1:%.*]] = load double, ptr [[IDXA1]], align 8
 ; ENABLED-NEXT:    [[B0:%.*]] = load double, ptr [[BARRAY]], align 8
-; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[B0]], i32 0
-; ENABLED-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[A1]], i32 1
-; ENABLED-NEXT:    [[TMP5:%.*]] = fadd fast <2 x double> [[TMP2]], [[TMP4]]
-; ENABLED-NEXT:    store <2 x double> [[TMP5]], ptr [[SARRAY:%.*]], align 8
+; ENABLED-NEXT:    [[SUM0:%.*]] = fadd fast double [[TMP0]], [[B0]]
+; ENABLED-NEXT:    [[SUM1:%.*]] = fadd fast double [[TMP1]], [[A1]]
+; ENABLED-NEXT:    store double [[SUM0]], ptr [[SARRAY]], align 8
+; ENABLED-NEXT:    store double [[SUM1]], ptr [[IDXS1]], align 8
 ; ENABLED-NEXT:    ret void
 ;
 entry:

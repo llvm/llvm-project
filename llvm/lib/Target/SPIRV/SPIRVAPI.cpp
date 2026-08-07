@@ -59,7 +59,7 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   static const std::string DefaultTriple = "spirv64-unknown-unknown";
   static const std::string DefaultMArch = "";
 
-  std::set<SPIRV::Extension::Extension> AllowedExtIds;
+  ExtensionSet AllowedExtIds;
   StringRef UnknownExt =
       SPIRVExtensionsParser::checkExtensions(AllowExtNames, AllowedExtIds);
   if (!UnknownExt.empty()) {

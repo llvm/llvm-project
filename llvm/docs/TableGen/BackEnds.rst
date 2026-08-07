@@ -2,8 +2,6 @@
 TableGen BackEnds
 =================
 
-.. contents::
-   :local:
 
 Introduction
 ============
@@ -48,7 +46,7 @@ the TableGen files, the back-ends and their users.
 For instance, a global contract is that each back-end produces macro-guarded
 sections. Based on whether the file is included by a header or a source file,
 or even in which context of each file the include is being used, you have
-todefine a macro just before including it, to get the right output:
+to define a macro just before including it, to get the right output:
 
 .. code-block:: c++
 
@@ -80,8 +78,8 @@ in the TableGen files.
 CodeEmitter
 -----------
 
-**Purpose**: CodeEmitterGen uses the descriptions of instructions and their fields to
-construct an automated code emitter: a function that, given a MachineInstr,
+**Purpose**: ``CodeEmitterGen`` uses the descriptions of instructions and their fields to
+construct an automated code emitter: a function that, given a ``MachineInstr``,
 returns the (currently, 32-bit unsigned) value of the instruction.
 
 **Output**: C++ code, implementing the target's CodeEmitter
@@ -130,7 +128,7 @@ AsmMatcher
 ----------
 
 **Purpose**: Emits a target specifier matcher for
-converting parsed assembly operands in the MCInst structures. It also
+converting parsed assembly operands in the ``MCInst`` structures. It also
 emits a matcher for custom operand parsing. Extensive documentation is
 written on the ``AsmMatcherEmitter.cpp`` file.
 
@@ -167,7 +165,7 @@ CallingConv
 conventions supported by this target.
 
 **Output**: Implement static functions to deal with calling conventions
-chained by matching styles, returning false on no match.
+chained by matching styles, returning ``false`` on no match.
 
 **Usage**: Used in ISelLowering and FastIsel as function pointers to
 implementation returned by a CC selection function.
@@ -200,7 +198,7 @@ FastISel
 
 **Purpose**: This tablegen backend emits code for use by the "fast"
 instruction selection algorithm. See the comments at the top of
-lib/CodeGen/SelectionDAG/FastISel.cpp for background. This file
+``lib/CodeGen/SelectionDAG/FastISel.cpp`` for background. This file
 scans through the target's tablegen instruction-info files
 and extracts instructions with obvious-looking patterns, and it emits
 code to look up these instructions by type and operator.
@@ -270,23 +268,23 @@ This file is included as part of ``Attr.h``.
 ClangAttrParserStringSwitches
 -----------------------------
 
-**Purpose**: Creates AttrParserStringSwitches.inc, which contains
-StringSwitch::Case statements for parser-related string switches. Each switch
+**Purpose**: Creates ``AttrParserStringSwitches.inc``, which contains
+``StringSwitch::Case`` statements for parser-related string switches. Each switch
 is given its own macro (such as ``CLANG_ATTR_ARG_CONTEXT_LIST``, or
 ``CLANG_ATTR_IDENTIFIER_ARG_LIST``), which is expected to be defined before
-including AttrParserStringSwitches.inc, and undefined after.
+including ``AttrParserStringSwitches.inc``, and undefined after.
 
 ClangAttrImpl
 -------------
 
-**Purpose**: Creates AttrImpl.inc, which contains semantic attribute class
+**Purpose**: Creates ``AttrImpl.inc``, which contains semantic attribute class
 definitions for any attribute in ``Attr.td`` that has not set ``ASTNode = 0``.
 This file is included as part of ``AttrImpl.cpp``.
 
 ClangAttrList
 -------------
 
-**Purpose**: Creates AttrList.inc, which is used when a list of semantic
+**Purpose**: Creates ``AttrList.inc``, which is used when a list of semantic
 attribute identifiers is required. For instance, ``AttrKinds.h`` includes this
 file to generate the list of ``attr::Kind`` enumeration values. This list is
 separated out into multiple categories: attributes, inheritable attributes, and
@@ -297,25 +295,25 @@ functionality required for ``dyn_cast`` and similar APIs.
 ClangAttrPCHRead
 ----------------
 
-**Purpose**: Creates AttrPCHRead.inc, which is used to deserialize attributes
+**Purpose**: Creates ``AttrPCHRead.inc``, which is used to deserialize attributes
 in the ``ASTReader::ReadAttributes`` function.
 
 ClangAttrPCHWrite
 -----------------
 
-**Purpose**: Creates AttrPCHWrite.inc, which is used to serialize attributes in
+**Purpose**: Creates ``AttrPCHWrite.inc``, which is used to serialize attributes in
 the ``ASTWriter::WriteAttributes`` function.
 
 ClangAttrSpellings
 ---------------------
 
-**Purpose**: Creates AttrSpellings.inc, which is used to implement the
+**Purpose**: Creates ``AttrSpellings.inc``, which is used to implement the
 ``__has_attribute`` feature test macro.
 
 ClangAttrSpellingListIndex
 --------------------------
 
-**Purpose**: Creates AttrSpellingListIndex.inc, which is used to map parsed
+**Purpose**: Creates ``AttrSpellingListIndex.inc``, which is used to map parsed
 attribute spellings (including which syntax or scope was used) to an attribute
 spelling list index. These spelling list index values are internal
 implementation details exposed via
@@ -324,26 +322,26 @@ implementation details exposed via
 ClangAttrVisitor
 -------------------
 
-**Purpose**: Creates AttrVisitor.inc, which is used when implementing
+**Purpose**: Creates ``AttrVisitor.inc``, which is used when implementing
 recursive AST visitors.
 
 ClangAttrTemplateInstantiate
 ----------------------------
 
-**Purpose**: Creates AttrTemplateInstantiate.inc, which implements the
+**Purpose**: Creates ``AttrTemplateInstantiate.inc``, which implements the
 ``instantiateTemplateAttribute`` function, used when instantiating a template
 that requires an attribute to be cloned.
 
 ClangAttrParsedAttrList
 -----------------------
 
-**Purpose**: Creates AttrParsedAttrList.inc, which is used to generate the
+**Purpose**: Creates ``AttrParsedAttrList.inc``, which is used to generate the
 ``AttributeList::Kind`` parsed attribute enumeration.
 
 ClangAttrParsedAttrImpl
 -----------------------
 
-**Purpose**: Creates AttrParsedAttrImpl.inc, which is used by
+**Purpose**: Creates ``AttrParsedAttrImpl.inc``, which is used by
 ``AttributeList.cpp`` to implement several functions on the ``AttributeList``
 class. This functionality is implemented via the ``AttrInfoMap ParsedAttrInfo``
 array, which contains one element per parsed attribute object.
@@ -351,14 +349,21 @@ array, which contains one element per parsed attribute object.
 ClangAttrParsedAttrKinds
 ------------------------
 
-**Purpose**: Creates AttrParsedAttrKinds.inc, which is used to implement the
+**Purpose**: Creates ``AttrParsedAttrKinds.inc``, which is used to implement the
 ``AttributeList::getKind`` function, mapping a string (and syntax) to a parsed
 attribute ``AttributeList::Kind`` enumeration.
+
+ClangAttrIsTypeDependent
+------------------------
+
+**Purpose**: Creates ``AttrIsTypeDependent.inc``, which is used to implement the
+``Sema::CheckAttributesOnDeducedType`` function, mapping an attribute kind to a
+Sema function if it exists.
 
 ClangAttrDump
 -------------
 
-**Purpose**: Creates AttrDump.inc, which dumps information about an attribute.
+**Purpose**: Creates ``AttrDump.inc``, which dumps information about an attribute.
 It is used to implement ``ASTDumper::dumpAttr``.
 
 ClangDiagsDefs
@@ -424,7 +429,7 @@ Generate list of commands that are used in documentation comments.
 ArmNeon
 -------
 
-Generate arm_neon.h for clang.
+Generate ``arm_neon.h`` for clang.
 
 ArmNeonSema
 -----------
@@ -473,7 +478,7 @@ to a built-in backend.
 
 **Output**:
 
-The root of the output file is a JSON object (i.e. dictionary),
+The root of the output file is a JSON object (i.e., dictionary),
 containing the following fixed keys:
 
 * ``!tablegen_json_version``: a numeric version field that will
@@ -520,7 +525,7 @@ conventions described below.
 Some TableGen data types are translated directly into the
 corresponding JSON type:
 
-* A completely undefined value (e.g. for a variable declared without
+* A completely undefined value (e.g., for a variable declared without
   initializer in some superclass of this record, and never initialized
   by the record itself or any other superclass) is emitted as the JSON
   ``null`` value.
@@ -622,6 +627,10 @@ using the ``let`` statement.
   field, it will be assigned an integer value. Values are assigned in
   alphabetical order starting with 0.
 
+* ``string UnderlyingType``. The name of the underlying C++ data type
+  of the enum. If a record has no such field, there will be no specification
+  in the generated enum.
+
 Here is an example where the values of the elements are specified
 explicitly, as a template argument to the ``BEntry`` class. The resulting
 C++ code is shown.
@@ -663,6 +672,7 @@ by element name.
 
   def CEnum : GenericEnum {
     let FilterClass = "CEnum";
+    let UnderlyingType = "uint32_t";
   }
 
   class CEnum;
@@ -674,7 +684,7 @@ by element name.
 .. code-block:: text
 
   #ifdef GET_CEnum_DECL
-  enum CEnum {
+  enum CEnum : uint32_t {
     CBar = 0,
     CBaz = 1,
     CFoo = 2,
@@ -690,7 +700,7 @@ TableGen produces C++ code to define the table entries and also produces
 the declaration and definition of a function to search the table based on a
 primary key. To define the table, define a record whose parent class is
 ``GenericTable`` and whose name is the name of the global table of entries.
-This class provides six fields.
+This class provides the following fields.
 
 * ``string FilterClass``. The table will have one entry for each record
   that derives from this class.
@@ -722,6 +732,11 @@ This class provides six fields.
   object. This feature proves useful when multiple objects meet the criteria
   specified by the lookup function. Currently, it is supported only for primary
   lookup functions. Refer to the second example below for further details.
+
+* ``bit DisallowSparseTable``. When set to 1 (the default), prevents the
+  emitter from generating a sparse direct-lookup array for this table. Set to
+  0 to allow the emitter to emit a sparse directly-indexed array when the
+  primary key qualifies (see below).
 
 TableGen attempts to deduce the type of each of the table fields so that it
 can format the C++ initializers in the emitted table. It can deduce ``bit``,
@@ -823,9 +838,24 @@ The table entries in ``ATable`` are sorted in order by ``Val1``, and within
 each of those values, by ``Val2``. This allows a binary search of the table,
 which is performed in the lookup function by ``std::lower_bound``. The
 lookup function returns a reference to the found table entry, or the null
-pointer if no entry is found. If the table has a single primary key field
-which is integral and densely numbered, a direct lookup is generated rather
-than a binary search.
+pointer if no entry is found.
+
+The emitter selects the lookup strategy automatically based on the primary key:
+
+* **Dense direct lookup**: used when the primary key is a single integral field
+  whose values form a contiguous range. A compact array is emitted and the
+  lookup function indexes into it directly.
+
+* **Sparse direct lookup**: used when ``DisallowSparseTable = 0``, the primary
+  key is a single ``bits<N>`` field with N ≤ 12, ``PrimaryKeyReturnRange`` is
+  false, and the table has no secondary search indexes. The emitter allocates a
+  directly-indexed array of ``2^N`` entries. Empty slots are filled with a
+  sentinel value in the key field such that the in-place key comparison in the
+  lookup function returns ``nullptr`` for them. This trades memory for
+  O(1) lookup.
+
+* **Binary search**: the default for all other cases. Entries are sorted by the
+  primary key and ``std::lower_bound`` is used in the lookup function.
 
 This example includes a field whose type TableGen cannot deduce. The ``Kind``
 field uses the enumerated type ``CEnum`` defined above. To inform TableGen
@@ -964,7 +994,7 @@ Here is the modified lookup function.
 
 The new lookup function will return an iterator range with first pointer to the
 first result and the last pointer to the last matching result from the table.
-However, please note that the support for emitting modified definition exists
+However, please note that the support for emitting a modified definition exists
 for ``PrimaryKeyName`` only.
 
 The ``PrimaryKeyEarlyOut`` field, when set to 1, modifies the lookup
@@ -1055,6 +1085,62 @@ The generated tables are:
     { 0x7 }, // 3
     { 0x9 }, // 4
   };
+
+Here is an example of a sparse direct-lookup table. ``FTable`` uses a 4-bit
+primary key (``bits<4>``), so the emitter allocates an array of
+``2^4 = 16`` entries.
+
+.. code-block:: text
+
+  def FTable : GenericTable {
+    let FilterClass = "FEntry";
+    let Fields = ["Key", "Val"];
+    let PrimaryKey = ["Key"];
+    let PrimaryKeyName = "lookupFTableByKey";
+    let DisallowSparseTable = false;
+  }
+
+Here is the generated C++ code. The declaration of ``lookupFTableByKey`` is
+guarded by ``GET_FTable_DECL``, while the definitions are guarded by
+``GET_FTable_IMPL``.
+
+.. code-block:: text
+
+  #ifdef GET_FTable_DECL
+  const FEntry *lookupFTableByKey(uint8_t Key);
+  #endif
+
+  #ifdef GET_FTable_IMPL
+  constexpr FEntry FTable[] = {
+    { 0xF, 0x0 }, // 0
+    { 0xE, 0x0 }, // 1
+    { 0x2, 0xA }, // 2
+    { 0xC, 0x0 }, // 3
+    { 0xB, 0x0 }, // 4
+    { 0x5, 0x14 }, // 5
+    { 0x9, 0x0 }, // 6
+    { 0x8, 0x0 }, // 7
+    { 0x7, 0x0 }, // 8
+    { 0x6, 0x0 }, // 9
+    { 0x5, 0x0 }, // 10
+    { 0x4, 0x0 }, // 11
+    { 0x3, 0x0 }, // 12
+    { 0xD, 0x1E }, // 13
+    { 0x1, 0x0 }, // 14
+    { 0x0, 0x0 }, // 15
+  };
+
+  const FEntry *lookupFTableByKey(uint8_t Key) {
+    if (Key >= 16)
+      return nullptr;
+    const auto *Entry = &FTable[Key];
+    return Entry->Key == Key ? Entry : nullptr;
+  }
+  #endif
+
+Empty slots are filled with a sentinel value in the ``Key`` field
+(``(15 ^ Idx)``) so that the in-place comparison ``Entry->Key == Key``
+returns ``nullptr`` for them without a separate presence array.
 
 Search Indexes
 ~~~~~~~~~~~~~~

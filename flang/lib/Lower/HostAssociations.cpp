@@ -22,8 +22,6 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Semantics/tools.h"
-#include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Debug.h"
 #include <optional>
 
 #define DEBUG_TYPE "flang-host-assoc"
@@ -74,11 +72,8 @@ static void bindCapturedSymbol(const Fortran::semantics::Symbol &sym,
                                fir::ExtendedValue val,
                                Fortran::lower::AbstractConverter &converter,
                                Fortran::lower::SymMap &symMap) {
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
-    Fortran::lower::genDeclareSymbol(converter, symMap, sym, val,
-                                     fir::FortranVariableFlagsEnum::host_assoc);
-  else
-    symMap.addSymbol(sym, val);
+  Fortran::lower::genDeclareSymbol(converter, symMap, sym, val,
+                                   fir::FortranVariableFlagsEnum::host_assoc);
 }
 
 namespace {
@@ -431,7 +426,7 @@ public:
     mlir::Value box = args.valueInTuple;
     mlir::IndexType idxTy = builder.getIndexType();
     llvm::SmallVector<mlir::Value> lbounds;
-    if (!ba.lboundIsAllOnes() && !Fortran::evaluate::IsAssumedRank(sym)) {
+    if (!ba.lboundIsAllOnes() && !Fortran::semantics::IsAssumedRank(sym)) {
       if (ba.isStaticArray()) {
         for (std::int64_t lb : ba.staticLBound())
           lbounds.emplace_back(builder.createIntegerConstant(loc, idxTy, lb));
@@ -490,7 +485,7 @@ private:
     bool isPolymorphic = type && type->IsPolymorphic();
     return isScalarOrContiguous && !isPolymorphic &&
            !isDerivedWithLenParameters(sym) &&
-           !Fortran::evaluate::IsAssumedRank(sym);
+           !Fortran::semantics::IsAssumedRank(sym);
   }
 };
 } // namespace

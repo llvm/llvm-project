@@ -9,6 +9,9 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self):
         """Test `frame variable` output for `std::shared_ptr` types."""
         (_, process, _, bkpt) = lldbutil.run_to_source_breakpoint(
@@ -26,7 +29,8 @@ class TestCase(TestBase):
         )
 
         self.expect(
-            "frame variable *sp_empty", substrs=["(int) *sp_empty = <parent is NULL>"]
+            "frame variable *sp_empty",
+            patterns=[r"\(int\) \*sp_empty = <parent is NULL>\n\Z"],
         )
 
         valobj = self.expect_var_path(
@@ -62,7 +66,7 @@ class TestCase(TestBase):
         valobj = self.expect_var_path("sp_user", type="std::shared_ptr<User>")
         self.assertRegex(
             valobj.summary,
-            "element_type @ 0x0*[1-9a-f][0-9a-f]+( strong=1)? weak=0",
+            f"{'User' if self.getDebugInfo() == 'pdb' else 'element_type'} @ 0x0*[1-9a-f][0-9a-f]+( strong=1)? weak=0",
         )
         self.assertNotEqual(valobj.child[0].unsigned, 0)
 
@@ -77,7 +81,15 @@ class TestCase(TestBase):
         self.assertEqual(str(valobj), '(User) *pointer = (id = 30, name = "steph")')
 
         self.expect_var_path("sp_user->id", type="int", value="30")
-        self.expect_var_path("sp_user->name", type="std::string", summary='"steph"')
+        self.expect_var_path(
+            "sp_user->name",
+            type=(
+                "std::basic_string<char, std::char_traits<char>, std::allocator<char>>"
+                if self.getDebugInfo() == "pdb"
+                else "std::string"
+            ),
+            summary='"steph"',
+        )
 
         valobj = self.expect_var_path(
             "si", type="std::shared_ptr<int>", summary="47 strong=2 weak=0"

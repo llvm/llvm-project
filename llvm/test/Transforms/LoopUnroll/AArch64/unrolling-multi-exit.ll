@@ -10,10 +10,10 @@ define i1 @multi_2_exiting_find_i8_loop_same_exit(ptr %vec, i8 %tgt) {
 ; UNROLL4-SAME: ptr [[VEC:%.*]], i8 [[TGT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; UNROLL4-NEXT:  [[ENTRY:.*]]:
 ; UNROLL4-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
-; UNROLL4-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; UNROLL4-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; UNROLL4-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 1
 ; UNROLL4-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
-; UNROLL4-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; UNROLL4-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; UNROLL4-NEXT:    [[TMP0:%.*]] = sub i64 [[END1]], [[START2]]
 ; UNROLL4-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; UNROLL4-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], -1
@@ -70,7 +70,7 @@ define i1 @multi_2_exiting_find_i8_loop_same_exit(ptr %vec, i8 %tgt) {
 ; UNROLL4-NEXT:    [[C_2_3:%.*]] = icmp eq ptr [[PTR_IV_NEXT_3]], [[END]]
 ; UNROLL4-NEXT:    br i1 [[C_2_3]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_HEADER]]
 ; UNROLL4:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
-; UNROLL4-NEXT:    [[RES_PH_PH:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[PTR_IV_NEXT]], %[[LOOP_LATCH]] ], [ [[PTR_IV_NEXT_1]], %[[LOOP_LATCH_1]] ], [ [[PTR_IV_NEXT_2]], %[[LOOP_LATCH_2]] ], [ [[END]], %[[LOOP_LATCH_3]] ]
+; UNROLL4-NEXT:    [[RES_PH_PH:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH_3]] ], [ [[PTR_IV_NEXT]], %[[LOOP_LATCH]] ], [ [[PTR_IV_NEXT_2]], %[[LOOP_LATCH_2]] ], [ [[PTR_IV_NEXT_1]], %[[LOOP_LATCH_1]] ]
 ; UNROLL4-NEXT:    br label %[[EXIT_UNR_LCSSA:.*]]
 ; UNROLL4:       [[EXIT_UNR_LCSSA_LOOPEXIT3]]:
 ; UNROLL4-NEXT:    [[RES_PH_PH4:%.*]] = phi ptr [ [[PTR_IV_PROL]], %[[LOOP_HEADER_PROL]] ]
@@ -133,10 +133,10 @@ define i1 @multi_2_exiting_find_i8_loop_diff_exit(ptr %vec, i8 %tgt) {
 ; UNROLL4-SAME: ptr [[VEC:%.*]], i8 [[TGT:%.*]]) #[[ATTR0]] {
 ; UNROLL4-NEXT:  [[ENTRY:.*]]:
 ; UNROLL4-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
-; UNROLL4-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; UNROLL4-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; UNROLL4-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 1
 ; UNROLL4-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
-; UNROLL4-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; UNROLL4-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; UNROLL4-NEXT:    [[TMP0:%.*]] = sub i64 [[END1]], [[START2]]
 ; UNROLL4-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; UNROLL4-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], -1
@@ -252,11 +252,11 @@ define i1 @multi_2_exiting_find_ptr_loop_same_exit(ptr %vec, ptr %tgt) {
 ; UNROLL4-SAME: ptr [[VEC:%.*]], ptr [[TGT:%.*]]) #[[ATTR0]] {
 ; UNROLL4-NEXT:  [[ENTRY:.*]]:
 ; UNROLL4-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
-; UNROLL4-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; UNROLL4-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; UNROLL4-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[START]], i64 8) ]
 ; UNROLL4-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 8
 ; UNROLL4-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
-; UNROLL4-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; UNROLL4-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; UNROLL4-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
 ; UNROLL4-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
 ; UNROLL4-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
@@ -317,7 +317,7 @@ define i1 @multi_2_exiting_find_ptr_loop_same_exit(ptr %vec, ptr %tgt) {
 ; UNROLL4-NEXT:    [[C_2_3:%.*]] = icmp eq ptr [[PTR_IV_NEXT_3]], [[END]]
 ; UNROLL4-NEXT:    br i1 [[C_2_3]], label %[[EXIT_UNR_LCSSA_LOOPEXIT]], label %[[LOOP_HEADER]]
 ; UNROLL4:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
-; UNROLL4-NEXT:    [[RES_PH_PH:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[PTR_IV_NEXT]], %[[LOOP_LATCH]] ], [ [[PTR_IV_NEXT_1]], %[[LOOP_LATCH_1]] ], [ [[PTR_IV_NEXT_2]], %[[LOOP_LATCH_2]] ], [ [[END]], %[[LOOP_LATCH_3]] ]
+; UNROLL4-NEXT:    [[RES_PH_PH:%.*]] = phi ptr [ [[PTR_IV]], %[[LOOP_HEADER]] ], [ [[END]], %[[LOOP_LATCH_3]] ], [ [[PTR_IV_NEXT]], %[[LOOP_LATCH]] ], [ [[PTR_IV_NEXT_2]], %[[LOOP_LATCH_2]] ], [ [[PTR_IV_NEXT_1]], %[[LOOP_LATCH_1]] ]
 ; UNROLL4-NEXT:    br label %[[EXIT_UNR_LCSSA:.*]]
 ; UNROLL4:       [[EXIT_UNR_LCSSA_LOOPEXIT3]]:
 ; UNROLL4-NEXT:    [[RES_PH_PH4:%.*]] = phi ptr [ [[PTR_IV_PROL]], %[[LOOP_HEADER_PROL]] ]
@@ -387,11 +387,11 @@ define ptr @multi_2_exiting_find_ptr_loop_diff_exit(ptr %vec, ptr %tgt) {
 ; UNROLL4-SAME: ptr [[VEC:%.*]], ptr [[TGT:%.*]]) #[[ATTR0]] {
 ; UNROLL4-NEXT:  [[ENTRY:.*]]:
 ; UNROLL4-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
-; UNROLL4-NEXT:    [[START3:%.*]] = ptrtoint ptr [[START]] to i64
+; UNROLL4-NEXT:    [[START3:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; UNROLL4-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[START]], i64 8) ]
 ; UNROLL4-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 8
 ; UNROLL4-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
-; UNROLL4-NEXT:    [[END2:%.*]] = ptrtoint ptr [[END]] to i64
+; UNROLL4-NEXT:    [[END2:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; UNROLL4-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
 ; UNROLL4-NEXT:    [[TMP0:%.*]] = add i64 [[END2]], -8
 ; UNROLL4-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START3]]

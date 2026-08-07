@@ -1,4 +1,4 @@
-//===--- ParentVirtualCallCheck.cpp - clang-tidy---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,13 +12,12 @@
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include <cctype>
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-using BasesVector = llvm::SmallVector<const CXXRecordDecl *, 5>;
+using BasesVector = SmallVector<const CXXRecordDecl *, 5>;
 
 static bool isParentOf(const CXXRecordDecl &Parent,
                        const CXXRecordDecl &ThisClass) {
@@ -66,8 +65,7 @@ static std::string getNameAsString(const NamedDecl *Decl) {
 
 // Returns E as written in the source code. Used to handle 'using' and
 // 'typedef'ed names of grand-parent classes.
-static std::string getExprAsString(const clang::Expr &E,
-                                   clang::ASTContext &AC) {
+static std::string getExprAsString(const Expr &E, const ASTContext &AC) {
   std::string Text = tooling::fixit::getText(E, AC).str();
   llvm::erase_if(Text, [](char C) {
     return llvm::isSpace(static_cast<unsigned char>(C));
@@ -129,11 +127,12 @@ void ParentVirtualCallCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   assert(Member->getQualifierLoc().getSourceRange().getBegin().isValid());
-  auto Diag = diag(Member->getQualifierLoc().getSourceRange().getBegin(),
-                   "qualified name '%0' refers to a member overridden "
-                   "in %plural{1:subclass|:subclasses}1; did you mean %2?")
-              << getExprAsString(*Member, *Result.Context)
-              << static_cast<unsigned>(Parents.size()) << ParentsStr;
+  const auto Diag =
+      diag(Member->getQualifierLoc().getSourceRange().getBegin(),
+           "qualified name '%0' refers to a member overridden "
+           "in %plural{1:subclass|:subclasses}1; did you mean %2?")
+      << getExprAsString(*Member, *Result.Context)
+      << static_cast<unsigned>(Parents.size()) << ParentsStr;
 
   // Propose a fix if there's only one parent class...
   if (Parents.size() == 1 &&

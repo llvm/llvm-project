@@ -6,21 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONINTERFACES_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONINTERFACES_H
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTINTERPRETERPYTHONINTERFACES_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTINTERPRETERPYTHONINTERFACES_H
 
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Host/Config.h"
 #include "lldb/lldb-private.h"
-
-#if LLDB_ENABLE_PYTHON
 
 #include "OperatingSystemPythonInterface.h"
 #include "ScriptedBreakpointPythonInterface.h"
+#include "ScriptedCommandPythonInterface.h"
+#include "ScriptedFrameProviderPythonInterface.h"
+#include "ScriptedFramePythonInterface.h"
+#include "ScriptedHookPythonInterface.h"
 #include "ScriptedPlatformPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
-#include "ScriptedStopHookPythonInterface.h"
+#include "ScriptedStackFrameRecognizerPythonInterface.h"
+#include "ScriptedStringSummaryPythonInterface.h"
+#include "ScriptedSyntheticChildrenPythonInterface.h"
 #include "ScriptedThreadPlanPythonInterface.h"
+#include "ScriptedThreadPythonInterface.h"
 
 namespace lldb_private {
 class ScriptInterpreterPythonInterfaces : public PluginInterface {
@@ -34,5 +38,4 @@ public:
 };
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONINTERFACES_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTINTERPRETERPYTHONINTERFACES_H

@@ -31,9 +31,9 @@ define <2 x ptr> @vectorindex3() {
 
 define ptr @bitcast_vec_to_array_gep(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_vec_to_array_gep(
-; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr [7 x i32], ptr [[X:%.*]], i64 [[Y:%.*]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [7 x i32], ptr [[GEP_SPLIT]], i64 0, i64 [[Z:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
+; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr [28 x i8], ptr [[X:%.*]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr [4 x i8], ptr [[GEP_SPLIT]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP1]]
 ;
   %gep = getelementptr [7 x i32], ptr %x, i64 %y, i64 %z
   ret ptr %gep
@@ -43,9 +43,9 @@ define ptr @bitcast_vec_to_array_gep(ptr %x, i64 %y, i64 %z) {
 
 define ptr @bitcast_array_to_vec_gep(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_array_to_vec_gep(
-; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr inbounds <3 x i32>, ptr [[X:%.*]], i64 [[Y:%.*]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <3 x i32>, ptr [[GEP_SPLIT]], i64 0, i64 [[Z:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
+; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr inbounds [16 x i8], ptr [[X:%.*]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[GEP_SPLIT]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP1]]
 ;
   %gep = getelementptr inbounds <3 x i32>, ptr %x, i64 %y, i64 %z
   ret ptr %gep
@@ -55,9 +55,9 @@ define ptr @bitcast_array_to_vec_gep(ptr %x, i64 %y, i64 %z) {
 
 define ptr @bitcast_vec_to_array_gep_matching_alloc_size(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_vec_to_array_gep_matching_alloc_size(
-; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr [4 x i32], ptr [[X:%.*]], i64 [[Y:%.*]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i32], ptr [[GEP_SPLIT]], i64 0, i64 [[Z:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
+; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr [16 x i8], ptr [[X:%.*]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr [4 x i8], ptr [[GEP_SPLIT]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP1]]
 ;
   %gep = getelementptr [4 x i32], ptr %x, i64 %y, i64 %z
   ret ptr %gep
@@ -67,9 +67,9 @@ define ptr @bitcast_vec_to_array_gep_matching_alloc_size(ptr %x, i64 %y, i64 %z)
 
 define ptr @bitcast_array_to_vec_gep_matching_alloc_size(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_array_to_vec_gep_matching_alloc_size(
-; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 [[Y:%.*]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x i32>, ptr [[GEP_SPLIT]], i64 0, i64 [[Z:%.*]]
-; CHECK-NEXT:    ret ptr [[GEP]]
+; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr inbounds [16 x i8], ptr [[X:%.*]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[GEP_SPLIT]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP1]]
 ;
   %gep = getelementptr inbounds <4 x i32>, ptr %x, i64 %y, i64 %z
   ret ptr %gep
@@ -80,8 +80,8 @@ define ptr @bitcast_array_to_vec_gep_matching_alloc_size(ptr %x, i64 %y, i64 %z)
 define ptr addrspace(3) @bitcast_vec_to_array_addrspace(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_vec_to_array_addrspace(
 ; CHECK-NEXT:    [[ASC:%.*]] = addrspacecast ptr [[X:%.*]] to ptr addrspace(3)
-; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr [7 x i32], ptr addrspace(3) [[ASC]], i64 [[Y:%.*]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [7 x i32], ptr addrspace(3) [[GEP_SPLIT]], i64 0, i64 [[Z:%.*]]
+; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr [28 x i8], ptr addrspace(3) [[ASC]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr addrspace(3) [[GEP_SPLIT]], i64 [[Z:%.*]]
 ; CHECK-NEXT:    ret ptr addrspace(3) [[GEP]]
 ;
   %asc = addrspacecast ptr %x to ptr addrspace(3)
@@ -94,8 +94,8 @@ define ptr addrspace(3) @bitcast_vec_to_array_addrspace(ptr %x, i64 %y, i64 %z) 
 define ptr addrspace(3) @inbounds_bitcast_vec_to_array_addrspace(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @inbounds_bitcast_vec_to_array_addrspace(
 ; CHECK-NEXT:    [[ASC:%.*]] = addrspacecast ptr [[X:%.*]] to ptr addrspace(3)
-; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr inbounds [7 x i32], ptr addrspace(3) [[ASC]], i64 [[Y:%.*]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [7 x i32], ptr addrspace(3) [[GEP_SPLIT]], i64 0, i64 [[Z:%.*]]
+; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr inbounds [28 x i8], ptr addrspace(3) [[ASC]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i8], ptr addrspace(3) [[GEP_SPLIT]], i64 [[Z:%.*]]
 ; CHECK-NEXT:    ret ptr addrspace(3) [[GEP]]
 ;
   %asc = addrspacecast ptr %x to ptr addrspace(3)
@@ -108,8 +108,8 @@ define ptr addrspace(3) @inbounds_bitcast_vec_to_array_addrspace(ptr %x, i64 %y,
 define ptr addrspace(3) @bitcast_vec_to_array_addrspace_matching_alloc_size(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_vec_to_array_addrspace_matching_alloc_size(
 ; CHECK-NEXT:    [[ASC:%.*]] = addrspacecast ptr [[X:%.*]] to ptr addrspace(3)
-; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr [4 x i32], ptr addrspace(3) [[ASC]], i64 [[Y:%.*]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i32], ptr addrspace(3) [[GEP_SPLIT]], i64 0, i64 [[Z:%.*]]
+; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[ASC]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr addrspace(3) [[GEP_SPLIT]], i64 [[Z:%.*]]
 ; CHECK-NEXT:    ret ptr addrspace(3) [[GEP]]
 ;
   %asc = addrspacecast ptr %x to ptr addrspace(3)
@@ -122,8 +122,8 @@ define ptr addrspace(3) @bitcast_vec_to_array_addrspace_matching_alloc_size(ptr 
 define ptr addrspace(3) @inbounds_bitcast_vec_to_array_addrspace_matching_alloc_size(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @inbounds_bitcast_vec_to_array_addrspace_matching_alloc_size(
 ; CHECK-NEXT:    [[ASC:%.*]] = addrspacecast ptr [[X:%.*]] to ptr addrspace(3)
-; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(3) [[ASC]], i64 [[Y:%.*]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(3) [[GEP_SPLIT]], i64 0, i64 [[Z:%.*]]
+; CHECK-NEXT:    [[GEP_SPLIT:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(3) [[ASC]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i8], ptr addrspace(3) [[GEP_SPLIT]], i64 [[Z:%.*]]
 ; CHECK-NEXT:    ret ptr addrspace(3) [[GEP]]
 ;
   %asc = addrspacecast ptr %x to ptr addrspace(3)

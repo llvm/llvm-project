@@ -11,10 +11,12 @@ static_library("Instrumentation") {
   ]
   sources = [
     "AddressSanitizer.cpp",
+    "AllocToken.cpp",
     "BlockCoverageInference.cpp",
     "BoundsChecking.cpp",
     "CGProfile.cpp",
     "ControlHeightReduction.cpp",
+    "CopyProf.cpp",
     "DataFlowSanitizer.cpp",
     "GCOVProfiling.cpp",
     "HWAddressSanitizer.cpp",

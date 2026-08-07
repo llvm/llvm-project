@@ -1,6 +1,11 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, Int16, Int64], []> {
   spirv.func @math(%arg0 : f32, %arg1 : f32, %arg2 : i32) "None" {
     // CHECK: {{%.*}} = spirv.GL.Exp {{%.*}} : f32
     %0 = spirv.GL.Exp %arg0 : f32
@@ -18,6 +23,8 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %7 = spirv.GL.Asin %arg0 : f32
     // CHECK: {{%.*}} = spirv.GL.Atan {{%.*}} : f32
     %8 = spirv.GL.Atan %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Atan2 {{%.*}}, {{%.*}} : f32
+    %atan2 = spirv.GL.Atan2 %arg0, %arg1 : f32
     // CHECK: {{%.*}} = spirv.GL.Sinh {{%.*}} : f32
     %9 = spirv.GL.Sinh %arg0 : f32
     // CHECK: {{%.*}} = spirv.GL.Cosh {{%.*}} : f32
@@ -26,6 +33,8 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %11 = spirv.GL.Pow %arg0, %arg1 : f32
     // CHECK: {{%.*}} = spirv.GL.Round {{%.*}} : f32
     %12 = spirv.GL.Round %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Trunc {{%.*}} : f32
+    %trunc = spirv.GL.Trunc %arg0 : f32
     // CHECK: {{%.*}} = spirv.GL.FrexpStruct {{%.*}} : f32 -> !spirv.struct<(f32, i32)>
     %13 = spirv.GL.FrexpStruct %arg0 : f32 -> !spirv.struct<(f32, i32)>
     // CHECK: {{%.*}} = spirv.GL.Ldexp {{%.*}} : f32, {{%.*}} : i32 -> f32
@@ -46,6 +55,10 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %21 = spirv.GL.Tanh %arg0 : f32
     // CHECK: {{%.*}} = spirv.GL.Exp2 {{%.*}} : f32
     %22 = spirv.GL.Exp2 %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Radians {{%.*}} : f32
+    %23 = spirv.GL.Radians %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Degrees {{%.*}} : f32
+    %24 = spirv.GL.Degrees %arg0 : f32
     spirv.Return
   }
 
@@ -63,12 +76,23 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %5 = spirv.GL.SMin %arg2, %arg3 : i32
     // CHECK: {{%.*}} = spirv.GL.UMin {{%.*}}, {{%.*}} : i32
     %6 = spirv.GL.UMin %arg2, %arg3 : i32
+
+    // CHECK: {{%.*}} = spirv.GL.NMax {{%.*}}, {{%.*}} : f32
+    %7 = spirv.GL.NMax %arg0, %arg1 : f32
+    // CHECK: {{%.*}} = spirv.GL.NMin {{%.*}}, {{%.*}} : f32
+    %8 = spirv.GL.NMin %arg0, %arg1 : f32
     spirv.Return
   }
 
   spirv.func @fclamp(%arg0 : f32, %arg1 : f32, %arg2 : f32) "None" {
     // CHECK: spirv.GL.FClamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
     %13 = spirv.GL.FClamp %arg0, %arg1, %arg2 : f32
+    spirv.Return
+  }
+
+  spirv.func @nclamp(%arg0 : f32, %arg1 : f32, %arg2 : f32) "None" {
+    // CHECK: spirv.GL.NClamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
+    %13 = spirv.GL.NClamp %arg0, %arg1, %arg2 : f32
     spirv.Return
   }
 
@@ -95,6 +119,25 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %2 = spirv.GL.FindILsb %arg0 : i32
     spirv.Return
   }
+
+  spirv.func @findilsb_i64(%arg0 : i64) "None" {
+    // CHECK: spirv.GL.FindILsb {{%.*}} : i64
+    %0 = spirv.GL.FindILsb %arg0 : i64
+    spirv.Return
+  }
+
+  spirv.func @findilsb_i16(%arg0 : i16) "None" {
+    // CHECK: spirv.GL.FindILsb {{%.*}} : i16
+    %0 = spirv.GL.FindILsb %arg0 : i16
+    spirv.Return
+  }
+
+  spirv.func @findilsb_vector_i64(%arg0 : vector<2xi64>) "None" {
+    // CHECK: spirv.GL.FindILsb {{%.*}} : vector<2xi64>
+    %0 = spirv.GL.FindILsb %arg0 : vector<2xi64>
+    spirv.Return
+  }
+
   spirv.func @findsmsb(%arg0 : i32) "None" {
     // CHECK: spirv.GL.FindSMsb {{%.*}} : i32
     %2 = spirv.GL.FindSMsb %arg0 : i32
@@ -140,6 +183,26 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %0 = spirv.GL.UnpackHalf2x16 %arg0 : i32 -> vector<2xf32>
     // CHECK: {{%.*}} = spirv.GL.PackHalf2x16 {{%.*}} : vector<2xf32> -> i32
     %1 = spirv.GL.PackHalf2x16 %0 : vector<2xf32> -> i32
+    spirv.Return
+  }
+
+  spirv.func @pack_snorm_4x8(%arg0 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.GL.UnpackSnorm4x8 {{%.*}} : i32 -> vector<4xf32>
+    %0 = spirv.GL.UnpackSnorm4x8 %arg0 : i32 -> vector<4xf32>
+    // CHECK: {{%.*}} = spirv.GL.PackSnorm4x8 {{%.*}} : vector<4xf32> -> i32
+    %1 = spirv.GL.PackSnorm4x8 %0 : vector<4xf32> -> i32
+    spirv.Return
+  }
+
+  spirv.func @step(%arg0 : f32, %arg1 : f32) "None" {
+    // CHECK: spirv.GL.Step {{%[^,]*}}, {{%[^,]*}} : f32
+    %0 = spirv.GL.Step %arg0, %arg1 : f32
+    spirv.Return
+  }
+
+  spirv.func @smoothstep(%arg0 : f32, %arg1 : f32, %arg2 : f32) "None" {
+    // CHECK: spirv.GL.SmoothStep {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
+    %0 = spirv.GL.SmoothStep %arg0, %arg1, %arg2 : f32
     spirv.Return
   }
 }

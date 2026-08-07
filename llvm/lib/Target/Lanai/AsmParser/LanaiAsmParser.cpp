@@ -20,6 +20,7 @@
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -83,9 +84,9 @@ class LanaiAsmParser : public MCTargetAsmParser {
 
 public:
   LanaiAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                 const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), Parser(Parser),
-        Lexer(Parser.getLexer()), SubtargetInfo(STI) {
+                 const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII), Parser(Parser), Lexer(Parser.getLexer()),
+        SubtargetInfo(STI) {
     setAvailableFeatures(
         ComputeAvailableFeatures(SubtargetInfo.getFeatureBits()));
   }
@@ -559,7 +560,7 @@ public:
       OS << "Token: " << getToken() << "\n";
       break;
     case REGISTER:
-      OS << "Reg: %r" << getReg() << "\n";
+      OS << "Reg: %r" << getReg().id() << "\n";
       break;
     case MEMORY_IMM:
       OS << "MemImm: ";
@@ -567,14 +568,14 @@ public:
       OS << '\n';
       break;
     case MEMORY_REG_IMM:
-      OS << "MemRegImm: " << getMemBaseReg() << "+";
+      OS << "MemRegImm: " << getMemBaseReg().id() << "+";
       MAI.printExpr(OS, *getMemOffset());
       OS << '\n';
       break;
     case MEMORY_REG_REG:
       assert(getMemOffset() == nullptr);
-      OS << "MemRegReg: " << getMemBaseReg() << "+"
-         << "%r" << getMemOffsetReg() << "\n";
+      OS << "MemRegReg: " << getMemBaseReg().id() << "+"
+         << "%r" << getMemOffsetReg().id() << "\n";
       break;
     }
   }

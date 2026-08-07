@@ -143,6 +143,12 @@ struct sanitizer_kernel_sockaddr {
   char sa_data[14];
 };
 
+struct sanitizer_kernel_open_how {
+  u64 flags;
+  u64 mode;
+  u64 resolve;
+};
+
 // Real sigset size is always passed as a syscall argument.
 // Declare it "void" to catch sizeof(kernel_sigset_t).
 typedef void kernel_sigset_t;
@@ -411,7 +417,7 @@ POST_SYSCALL(setsid)(long res) {}
 
 PRE_SYSCALL(setgroups)(long gidsetsize, __sanitizer___kernel_gid_t *grouplist) {
   if (grouplist)
-    POST_WRITE(grouplist, gidsetsize * sizeof(*grouplist));
+    PRE_READ(grouplist, gidsetsize * sizeof(*grouplist));
 }
 
 POST_SYSCALL(setgroups)
@@ -1504,7 +1510,7 @@ PRE_SYSCALL(readlink)(const void *path, void *buf, long bufsiz) {
 POST_SYSCALL(readlink)(long res, const void *path, void *buf, long bufsiz) {
   if (res >= 0) {
     if (buf)
-      POST_WRITE(buf, __sanitizer::internal_strlen((const char *)buf) + 1);
+      POST_WRITE(buf, res);
   }
 }
 
@@ -1657,7 +1663,7 @@ POST_SYSCALL(getgroups16)
 PRE_SYSCALL(setgroups16)
 (long gidsetsize, __sanitizer___kernel_old_gid_t *grouplist) {
   if (grouplist)
-    POST_WRITE(grouplist, gidsetsize * sizeof(*grouplist));
+    PRE_READ(grouplist, gidsetsize * sizeof(*grouplist));
 }
 
 POST_SYSCALL(setgroups16)
@@ -1899,11 +1905,13 @@ PRE_SYSCALL(getsockopt)
 POST_SYSCALL(getsockopt)
 (long res, long fd, long level, long optname, void *optval, void *optlen) {
   if (res >= 0) {
-    if (optval)
-      POST_WRITE(optval,
-                 __sanitizer::internal_strlen((const char *)optval) + 1);
-    if (optlen)
+    // getsockopt cannot succeed with a null optlen, but guard it before
+    // dereferencing since the hook is called with raw, untrusted arguments.
+    if (optlen) {
       POST_WRITE(optlen, sizeof(int));
+      if (optval)
+        POST_WRITE(optval, *(unsigned int*)optlen);
+    }
   }
 }
 
@@ -2843,6 +2851,18 @@ PRE_SYSCALL(openat)(long dfd, const void *filename, long flags, long mode) {
 POST_SYSCALL(openat)
 (long res, long dfd, const void *filename, long flags, long mode) {}
 
+PRE_SYSCALL(openat2)(long dfd, const void* filename,
+                     const sanitizer_kernel_open_how* how, uptr howlen) {
+  if (filename)
+    PRE_READ(filename, __sanitizer::internal_strlen((const char*)filename) + 1);
+
+  if (how)
+    PRE_READ(how, howlen);
+}
+
+POST_SYSCALL(openat2)(long res, long dfd, const void* filename,
+                      const sanitizer_kernel_open_how* how, uptr howlen) {}
+
 PRE_SYSCALL(newfstatat)
 (long dfd, const void *filename, void *statbuf, long flag) {
   if (filename)
@@ -2882,7 +2902,7 @@ POST_SYSCALL(readlinkat)
 (long res, long dfd, const void *path, void *buf, long bufsiz) {
   if (res >= 0) {
     if (buf)
-      POST_WRITE(buf, __sanitizer::internal_strlen((const char *)buf) + 1);
+      POST_WRITE(buf, res);
   }
 }
 

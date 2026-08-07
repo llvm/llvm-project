@@ -16,12 +16,13 @@
 #include <__functional/operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__optional/nullopt_t.h>
+#include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -119,7 +120,7 @@ struct __cpu_parallel_find_if {
           true);
     } else if constexpr (__is_unsequenced_execution_policy_v<_RawExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      using __diff_t = __iter_diff_t<_ForwardIterator>;
+      using __diff_t = __iterator_difference_type<_ForwardIterator>;
       return __pstl::__simd_first<_Backend>(
           __first, __diff_t(0), __last - __first, [&__pred](_ForwardIterator __iter, __diff_t __i) {
             return __pred(__iter[__i]);

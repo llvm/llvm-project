@@ -10,14 +10,8 @@
 #define FORTRAN_SEMANTICS_CHECK_DATA_H_
 
 #include "data-to-inits.h"
-#include "flang/Common/interval.h"
-#include "flang/Evaluate/fold-designator.h"
-#include "flang/Evaluate/initial-image.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
-#include <list>
-#include <map>
-#include <vector>
 
 namespace Fortran::parser {
 struct DataStmtRepeat;
@@ -37,10 +31,7 @@ public:
   void Enter(const parser::DataImpliedDo &);
   void Leave(const parser::DataImpliedDo &);
   void Leave(const parser::DataStmtSet &);
-  // These cases are for legacy DATA-like /initializations/
-  void Leave(const parser::ComponentDecl &);
   void Leave(const parser::EntityDecl &);
-
   // After all DATA statements have been processed, converts their
   // initializations into per-symbol static initializers.
   void CompileDataInitializationsIntoInitializers();

@@ -53,7 +53,8 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
   // GPU code generation.
   const bool gpuCodegen = options.gpuTriple.hasValue();
   if (gpuCodegen) {
-    pm.addPass(createSparseGPUCodegenPass());
+    pm.addPass(createSparseGPUCodegenPass(options.gpuNumThreads,
+                                          options.enableRuntimeLibrary));
     pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createSCFToControlFlowPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createConvertGpuOpsToNVVMOps());
@@ -71,7 +72,6 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
   pm.addPass(createLowerAffinePass());
   pm.addPass(
       createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
-  pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   pm.addNestedPass<func::FuncOp>(createConvertComplexToStandardPass());
   pm.addNestedPass<func::FuncOp>(arith::createArithExpandOpsPass());
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
@@ -79,12 +79,6 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
   pm.addPass(createConvertComplexToLibm());
   pm.addPass(
       createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
-  pm.addPass(createConvertComplexToLLVMPass());
-  pm.addPass(
-      createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
-  pm.addPass(createConvertFuncToLLVMPass());
-  pm.addPass(createArithToLLVMConversionPass());
-  pm.addPass(createConvertControlFlowToLLVMPass());
 
   // Finalize GPU code generation.
   if (gpuCodegen) {
@@ -99,8 +93,8 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
     pm.addPass(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
   }
 
-  // Convert poison values.
-  pm.addPass(createUBToLLVMConversionPass());
+  // Convert to LLVM.
+  pm.addPass(createConvertToLLVMPass());
 
   // Ensure all casts are realized.
   pm.addPass(createReconcileUnrealizedCastsPass());

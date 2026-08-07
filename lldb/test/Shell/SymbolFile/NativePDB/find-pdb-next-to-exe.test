@@ -1,0 +1,76 @@
+# REQUIRES: lld, target-windows
+
+# Test where LLDB looks for PDBs.
+# RUN: split-file %s %t
+
+# RUN: mkdir -p %t/build
+# RUN: mkdir -p %t/dir1
+# RUN: mkdir -p %t/dir2
+# RUN: mkdir -p %t/dir3
+
+# RUN: echo "settings append target.debug-file-search-paths %t/dir2" >> %t/init.input
+# RUN: echo "settings append target.debug-file-search-paths %t/dir3" >> %t/init.input
+
+# RUN: %build --compiler=clang-cl --nodefaultlib --output=%t/build/a.exe %t/main.cpp
+
+# Regular setup - PDB is at the original path
+# RUN: %lldb -S %t/init.input -s %t/check.input %t/build/a.exe | FileCheck --check-prefix=BOTH-ORIG %s
+# BOTH-ORIG: (lldb) target create
+# BOTH-ORIG-NEXT: Loading {{.*[/\\]}}build{{[/\\]}}a.pdb for {{.*[/\\]}}build{{[/\\]}}a.exe
+# BOTH-ORIG: (A) a = (x = 47)
+
+# Move the executable to a different directory but keep the PDB.
+# RUN: mv %t/build/a.exe %t/dir1
+# RUN: %lldb -S %t/init.input -s %t/check.input %t/dir1/a.exe | FileCheck --check-prefix=PDB-ORIG %s
+# PDB-ORIG: (lldb) target create
+# PDB-ORIG-NEXT: Loading {{.*[/\\]}}build{{[/\\]}}a.pdb for {{.*[/\\]}}dir1{{[/\\]}}a.exe
+# PDB-ORIG: (A) a = (x = 47)
+
+# Copy the PDB to the same directory and all search dirs. LLDB should prefer the original PDB.
+# RUN: cp %t/build/a.pdb %t/dir1
+# RUN: cp %t/build/a.pdb %t/dir2
+# RUN: cp %t/build/a.pdb %t/dir3
+# RUN: %lldb -S %t/init.input -s %t/check.input %t/dir1/a.exe | FileCheck --check-prefix=PDB-ORIG %s
+
+# Remove the original PDB. LLDB should now use the one next to the exe.
+# RUN: rm %t/build/a.pdb
+# RUN: %lldb -S %t/init.input -s %t/check.input %t/dir1/a.exe | FileCheck --check-prefix=NEXT-TO-EXE %s
+# NEXT-TO-EXE: (lldb) target create
+# NEXT-TO-EXE-NEXT: Loading {{.*[/\\]}}dir1{{[/\\]}}a.pdb for {{.*[/\\]}}dir1{{[/\\]}}a.exe
+# NEXT-TO-EXE: (A) a = (x = 47)
+
+# Remove the PDB next to the exe. LLDB should now use the one in dir2 (first in list).
+# RUN: rm %t/dir1/a.pdb
+# RUN: %lldb -S %t/init.input -s %t/check.input %t/dir1/a.exe | FileCheck --check-prefix=DIR2 %s
+# DIR2: (lldb) target create
+# DIR2-NEXT: Loading {{.*[/\\]}}dir2{{[/\\]}}a.pdb for {{.*[/\\]}}dir1{{[/\\]}}a.exe
+# DIR2: (A) a = (x = 47)
+
+# Remove the PDB in dir2. LLDB should now use the one in dir3 (second in list).
+# RUN: rm %t/dir2/a.pdb
+# RUN: %lldb -S %t/init.input -s %t/check.input %t/dir1/a.exe | FileCheck --check-prefix=DIR3 %s
+# DIR3: (lldb) target create
+# DIR3-NEXT: Loading {{.*[/\\]}}dir3{{[/\\]}}a.pdb for {{.*[/\\]}}dir1{{[/\\]}}a.exe
+# DIR3: (A) a = (x = 47)
+
+# Remove the last PDB in dir3. Now, there's no matching PDB anymore.
+# RUN: rm %t/dir3/a.pdb
+# RUN: %lldb -S %t/init.input -s %t/check.input -f %t/dir1/a.exe 2>&1 | FileCheck --check-prefix=NOPDB %s
+# NOPDB: error: can't find global variable 'a'
+
+#--- main.cpp
+
+struct A {
+  int x = 47;
+};
+A a;
+int main() {}
+
+#--- init.input
+
+log enable lldb symbol
+
+#--- check.input
+
+target variable a
+q

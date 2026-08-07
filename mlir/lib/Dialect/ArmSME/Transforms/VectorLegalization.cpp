@@ -247,7 +247,7 @@ struct LegalizeVectorOuterProductOpsByDecomposition
           !accSMETiles.empty() ? accSMETiles[index] : Value{},
           outerProductOp.getKind());
 
-      auto maskedOuterProduct =
+      auto *maskedOuterProduct =
           vector::maskOperation(rewriter, smeOuterProduct, smeMask);
       resultSMETiles.push_back(maskedOuterProduct->getResult(0));
     }
@@ -542,7 +542,7 @@ struct FoldExtractFromVectorOfSMELikeCreateMasks
                                 PatternRewriter &rewriter) const override {
     auto loc = extractOp.getLoc();
     auto createMaskOp =
-        extractOp.getVector().getDefiningOp<vector::CreateMaskOp>();
+        extractOp.getSource().getDefiningOp<vector::CreateMaskOp>();
     if (!createMaskOp)
       return rewriter.notifyMatchFailure(
           extractOp, "extract not from vector.create_mask op");
@@ -943,7 +943,9 @@ struct LowerColumnTransferReadToLoops
     auto upperBound = createVscaleMultiple(numRows);
     auto step = arith::ConstantIndexOp::create(rewriter, loc, 1);
     Value init = arith::ConstantOp::create(
-        rewriter, loc, newResType, DenseElementsAttr::get(newResType, 0.0f));
+        rewriter, loc, newResType,
+        DenseElementsAttr::get(newResType,
+                               rewriter.getZeroAttr(resType.getElementType())));
 
     scf::ForOp loadLoop;
     {
