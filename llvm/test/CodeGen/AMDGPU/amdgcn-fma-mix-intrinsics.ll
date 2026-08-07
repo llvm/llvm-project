@@ -1,8 +1,8 @@
 ; NOTE: Checks are intentionally hand-written to verify only instruction selection.
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck %s
-; RUN: llc -global-isel=1 -global-isel-abort=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck %s
-; RUN: not llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=null < %s 2>&1 | FileCheck --check-prefix=ERR %s
-; RUN: not llc -global-isel=1 -global-isel-abort=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=null < %s 2>&1 | FileCheck --check-prefix=ERR %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.50-amd-amdhsa < %s | FileCheck %s
+; RUN: llc -global-isel=1 -global-isel-abort=1 -mtriple=amdgpu12.50-amd-amdhsa < %s | FileCheck %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu9.00-amd-amdhsa -filetype=null < %s 2>&1 | FileCheck --check-prefix=ERR %s
+; RUN: not llc -global-isel=1 -global-isel-abort=0 -mtriple=amdgpu9.00-amd-amdhsa -filetype=null < %s 2>&1 | FileCheck --check-prefix=ERR %s
 
 ; ERR: error: <unknown>:0:0: in function @fma_mix_f32 float (i32, i32, i32): llvm.amdgcn.fma.mix.f32 requires target feature 'fma-mix-insts'
 ; ERR: error: <unknown>:0:0: in function @fma_mix_f32_bf16 float (i32, i32, i32): llvm.amdgcn.fma.mix.f32.bf16 requires target feature 'fma-mix-bf16-insts'
