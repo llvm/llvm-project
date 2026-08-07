@@ -100,7 +100,7 @@ define i32 @mul(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N_RND_UP:%.*]], 16
 ; IF-EVL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
+; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 15
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> splat (i32 1), i32 [[START:%.*]], i32 0
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
@@ -144,7 +144,7 @@ define i32 @mul(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 16
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> splat (i32 1), i32 [[START:%.*]], i32 0
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -903,7 +903,7 @@ define float @fmul(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N_RND_UP:%.*]], 16
 ; IF-EVL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
+; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 15
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = insertelement <8 x float> splat (float 1.000000e+00), float [[START:%.*]], i32 0
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
@@ -947,7 +947,7 @@ define float @fmul(ptr %a, i64 %n, float %start) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 16
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP0:%.*]] = insertelement <8 x float> splat (float 1.000000e+00), float [[START:%.*]], i32 0
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -1191,7 +1191,7 @@ define float @fminimum(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N_RND_UP:%.*]], 16
 ; IF-EVL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
+; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 15
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <8 x float> poison, float [[START:%.*]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT2]], <8 x float> poison, <8 x i32> zeroinitializer
@@ -1236,7 +1236,7 @@ define float @fminimum(ptr %a, i64 %n, float %start) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 16
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x float> poison, float [[START:%.*]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT]], <8 x float> poison, <8 x i32> zeroinitializer
@@ -1299,7 +1299,7 @@ define float @fmaximum(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N_RND_UP:%.*]], 16
 ; IF-EVL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
+; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 15
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <8 x float> poison, float [[START:%.*]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT2]], <8 x float> poison, <8 x i32> zeroinitializer
@@ -1344,7 +1344,7 @@ define float @fmaximum(ptr %a, i64 %n, float %start) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 16
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x float> poison, float [[START:%.*]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT]], <8 x float> poison, <8 x i32> zeroinitializer

@@ -14,7 +14,7 @@ define void @foo(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 0, [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]

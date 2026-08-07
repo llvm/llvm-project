@@ -14,7 +14,7 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
-; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
+; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 15
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -165,8 +165,8 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; DEFAULT-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP118]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[LOOP1:.*]]
 ; DEFAULT:       [[LOOP1]]:
-; DEFAULT-NEXT:    [[TMP119:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP68:%.*]], %[[LOOP1]] ]
-; DEFAULT-NEXT:    [[SCALAR_RECUR15:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT11]], %[[SCALAR_PH]] ], [ [[TMP119]], %[[LOOP1]] ]
+; DEFAULT-NEXT:    [[TMP129:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP68:%.*]], %[[LOOP1]] ]
+; DEFAULT-NEXT:    [[SCALAR_RECUR15:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT11]], %[[SCALAR_PH]] ], [ [[TMP129]], %[[LOOP1]] ]
 ; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
 ; DEFAULT-NEXT:    [[SUM_RED:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_2:%.*]], %[[LOOP1]] ]
 ; DEFAULT-NEXT:    [[TMP67:%.*]] = add i64 [[Y]], 1
@@ -206,7 +206,7 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; VSCALEFORTUNING2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
 ; VSCALEFORTUNING2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VSCALEFORTUNING2:       [[VECTOR_PH]]:
-; VSCALEFORTUNING2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
+; VSCALEFORTUNING2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 15
 ; VSCALEFORTUNING2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -357,8 +357,8 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; VSCALEFORTUNING2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP118]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; VSCALEFORTUNING2-NEXT:    br label %[[LOOP:.*]]
 ; VSCALEFORTUNING2:       [[LOOP]]:
-; VSCALEFORTUNING2-NEXT:    [[TMP119:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP57:%.*]], %[[LOOP]] ]
-; VSCALEFORTUNING2-NEXT:    [[TMP55:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT11]], %[[SCALAR_PH]] ], [ [[TMP119]], %[[LOOP]] ]
+; VSCALEFORTUNING2-NEXT:    [[TMP132:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP57:%.*]], %[[LOOP]] ]
+; VSCALEFORTUNING2-NEXT:    [[TMP55:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT11]], %[[SCALAR_PH]] ], [ [[TMP132]], %[[LOOP]] ]
 ; VSCALEFORTUNING2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; VSCALEFORTUNING2-NEXT:    [[SUM_RED:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_2:%.*]], %[[LOOP]] ]
 ; VSCALEFORTUNING2-NEXT:    [[TMP56:%.*]] = add i64 [[Y]], 1

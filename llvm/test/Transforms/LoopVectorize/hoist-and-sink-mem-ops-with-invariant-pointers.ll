@@ -19,7 +19,7 @@ define void @hoist_invariant_load_noalias_due_to_memchecks(ptr %dst, ptr %invari
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP4]], i64 0
@@ -68,7 +68,7 @@ define void @dont_hoist_variant_address(ptr %dst, ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -126,7 +126,7 @@ define void @dont_hoist_predicated_load(ptr %dst, ptr %invariant_ptr, ptr %cond_
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -137,9 +137,9 @@ define void @dont_hoist_predicated_load(ptr %dst, ptr %invariant_ptr, ptr %cond_
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14:![0-9]+]]
+; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14:![0-9]+]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
-; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP9]], align 4, !alias.scope [[META16:![0-9]+]], !noalias [[META18:![0-9]+]]
+; CHECK-NEXT:    store i32 [[TMP23]], ptr [[TMP9]], align 4, !alias.scope [[META16:![0-9]+]], !noalias [[META18:![0-9]+]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP1]], i64 1
@@ -245,7 +245,7 @@ define void @load_store_noalias_via_tbaa(ptr %p, ptr %q, ptr %n) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP4]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul i64 [[N_VEC]], 12
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP18]]

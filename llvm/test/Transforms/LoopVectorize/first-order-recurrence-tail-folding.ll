@@ -10,7 +10,7 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2IC1:       [[VECTOR_PH]]:
 ; VF2IC1-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 1
-; VF2IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
+; VF2IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
 ; VF2IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF2IC1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; VF2IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -46,7 +46,7 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2IC2:       [[VECTOR_PH]]:
 ; VF2IC2-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 3
-; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 4
+; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 3
 ; VF2IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF2IC2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; VF2IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -100,7 +100,7 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF1IC2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF1IC2:       [[VECTOR_PH]]:
 ; VF1IC2-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 1
-; VF1IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
+; VF1IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
 ; VF1IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF1IC2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; VF1IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -187,7 +187,7 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2IC1:       [[VECTOR_PH]]:
 ; VF2IC1-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 1
-; VF2IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
+; VF2IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
 ; VF2IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF2IC1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; VF2IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -223,7 +223,7 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2IC2:       [[VECTOR_PH]]:
 ; VF2IC2-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 3
-; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 4
+; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 3
 ; VF2IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF2IC2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; VF2IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -277,7 +277,7 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF1IC2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF1IC2:       [[VECTOR_PH]]:
 ; VF1IC2-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 1
-; VF1IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
+; VF1IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
 ; VF1IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF1IC2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; VF1IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -364,7 +364,7 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2IC1:       [[VECTOR_PH]]:
 ; VF2IC1-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 1
-; VF2IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
+; VF2IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
 ; VF2IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF2IC1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; VF2IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -402,7 +402,7 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2IC2:       [[VECTOR_PH]]:
 ; VF2IC2-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 3
-; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 4
+; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 3
 ; VF2IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF2IC2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; VF2IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -462,7 +462,7 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF1IC2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF1IC2:       [[VECTOR_PH]]:
 ; VF1IC2-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 1
-; VF1IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
+; VF1IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 1
 ; VF1IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF1IC2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; VF1IC2-NEXT:    br label %[[VECTOR_BODY:.*]]

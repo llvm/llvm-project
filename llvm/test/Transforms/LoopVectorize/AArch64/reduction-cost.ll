@@ -117,7 +117,7 @@ define i32 @or_reduction_with_freeze(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP12]]

@@ -2369,7 +2369,7 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) {
 ; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
-; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; COMPARE-NO-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[STRIDE]], i64 0
 ; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -2429,7 +2429,7 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) {
 ; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
-; COMPARE-LAA-MV-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; COMPARE-LAA-MV-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; COMPARE-LAA-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_BODY]]:
@@ -2492,7 +2492,7 @@ define void @stride_as_btc(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
-; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; COMPARE-NO-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[STRIDE]], i64 0
 ; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -2592,7 +2592,7 @@ define void @stride_dependent_btc(ptr noalias %p.out, ptr %p, i64 %stride) {
 ; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
-; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; COMPARE-NO-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[STRIDE]], i64 0
 ; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -2695,7 +2695,7 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
-; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; COMPARE-NO-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[STRIDE]], i64 0
 ; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -2757,7 +2757,7 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_PH]]:
-; COMPARE-LAA-MV-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX1]], 4
+; COMPARE-LAA-MV-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX1]], 3
 ; COMPARE-LAA-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX1]], [[N_MOD_VF]]
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_BODY]]:
@@ -2821,7 +2821,7 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
-; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; COMPARE-NO-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[STRIDE]], i64 0
 ; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -3030,7 +3030,7 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; COMPARE-NO-MV-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP21]], 31
 ; COMPARE-NO-MV-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
-; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; COMPARE-NO-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[STRIDE]], i64 0
 ; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -4761,7 +4761,7 @@ define void @test_rewrite_iv_scevs(i32 %start, ptr %dst) {
 ; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
-; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; COMPARE-NO-MV-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; COMPARE-NO-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COMPARE-NO-MV-NEXT:    [[TMP1:%.*]] = add i64 [[START_EXT]], [[N_VEC]]
 ; COMPARE-NO-MV-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], [[START_EXT]]

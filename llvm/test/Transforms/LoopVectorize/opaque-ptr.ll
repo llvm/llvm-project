@@ -31,7 +31,7 @@ define void @test_ptr_iv_no_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end) 
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = shl i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[P1_END]], i64 [[TMP13]]
@@ -112,7 +112,7 @@ define void @test_ptr_iv_with_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[P1_END]], i64 [[TMP9]]
@@ -182,7 +182,7 @@ define void @store_pointer_induction(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[END]], i64 [[TMP4]]

@@ -487,7 +487,7 @@ define float @fadd_predicated(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-ORDERED: %[[RDX_PHI:.*]] =  phi float [ 0.000000e+00, %vector.ph ], [ %[[RDX:.*]], %pred.load.continue2 ]
 ; CHECK-ORDERED: pred.load.continue2
 ; CHECK-ORDERED: %[[PHI:.*]] = phi <2 x float> [ %[[PHI0:.*]], %pred.load.continue ], [ %[[INS_ELT:.*]], %pred.load.if1 ]
-; CHECK-ORDERED: %[[MASK:.*]] = select <2 x i1> %0, <2 x float> %[[PHI]], <2 x float> splat (float -0.000000e+00)
+; CHECK-ORDERED: %[[MASK:.*]] = select <2 x i1> {{.*}}, <2 x float> %[[PHI]], <2 x float> splat (float -0.000000e+00)
 ; CHECK-ORDERED: %[[RDX]] = call float @llvm.vector.reduce.fadd.v2f32(float %[[RDX_PHI]], <2 x float> %[[MASK]])
 ; CHECK-ORDERED: for.end:
 ; CHECK-ORDERED: ret float %[[RDX]]

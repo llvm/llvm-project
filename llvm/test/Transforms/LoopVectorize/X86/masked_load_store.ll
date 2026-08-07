@@ -1351,7 +1351,7 @@ define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX1-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 16
 ; AVX1-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; AVX1:       [[VECTOR_PH]]:
-; AVX1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 16
+; AVX1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 15
 ; AVX1-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; AVX1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX1:       [[VECTOR_BODY]]:
@@ -1407,7 +1407,7 @@ define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF29:![0-9]+]]
 ; AVX1:       [[VEC_EPILOG_PH]]:
 ; AVX1-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AVX1-NEXT:    [[N_MOD_VF8:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; AVX1-NEXT:    [[N_MOD_VF8:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; AVX1-NEXT:    [[N_VEC9:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF8]]
 ; AVX1-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; AVX1:       [[VEC_EPILOG_VECTOR_BODY]]:
@@ -1443,7 +1443,7 @@ define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX2-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 16
 ; AVX2-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; AVX2:       [[VECTOR_PH]]:
-; AVX2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 16
+; AVX2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 15
 ; AVX2-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; AVX2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX2:       [[VECTOR_BODY]]:
@@ -1499,7 +1499,7 @@ define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX2-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF33:![0-9]+]]
 ; AVX2:       [[VEC_EPILOG_PH]]:
 ; AVX2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AVX2-NEXT:    [[N_MOD_VF8:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; AVX2-NEXT:    [[N_MOD_VF8:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; AVX2-NEXT:    [[N_VEC9:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF8]]
 ; AVX2-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; AVX2:       [[VEC_EPILOG_VECTOR_BODY]]:
@@ -1535,7 +1535,7 @@ define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX512-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 32
 ; AVX512-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; AVX512:       [[VECTOR_PH]]:
-; AVX512-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 32
+; AVX512-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 31
 ; AVX512-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; AVX512-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX512:       [[VECTOR_BODY]]:
@@ -1591,7 +1591,7 @@ define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX512-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF21]]
 ; AVX512:       [[VEC_EPILOG_PH]]:
 ; AVX512-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AVX512-NEXT:    [[N_MOD_VF8:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 8
+; AVX512-NEXT:    [[N_MOD_VF8:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 7
 ; AVX512-NEXT:    [[N_VEC9:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF8]]
 ; AVX512-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; AVX512:       [[VEC_EPILOG_VECTOR_BODY]]:
@@ -1672,7 +1672,7 @@ define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX1-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 16
 ; AVX1-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; AVX1:       [[VECTOR_PH]]:
-; AVX1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 16
+; AVX1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 15
 ; AVX1-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; AVX1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX1:       [[VECTOR_BODY]]:
@@ -1728,7 +1728,7 @@ define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF29]]
 ; AVX1:       [[VEC_EPILOG_PH]]:
 ; AVX1-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AVX1-NEXT:    [[N_MOD_VF8:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; AVX1-NEXT:    [[N_MOD_VF8:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; AVX1-NEXT:    [[N_VEC9:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF8]]
 ; AVX1-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; AVX1:       [[VEC_EPILOG_VECTOR_BODY]]:
@@ -1764,7 +1764,7 @@ define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX2-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 16
 ; AVX2-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; AVX2:       [[VECTOR_PH]]:
-; AVX2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 16
+; AVX2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 15
 ; AVX2-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; AVX2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX2:       [[VECTOR_BODY]]:
@@ -1820,7 +1820,7 @@ define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX2-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF33]]
 ; AVX2:       [[VEC_EPILOG_PH]]:
 ; AVX2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AVX2-NEXT:    [[N_MOD_VF8:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; AVX2-NEXT:    [[N_MOD_VF8:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; AVX2-NEXT:    [[N_VEC9:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF8]]
 ; AVX2-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; AVX2:       [[VEC_EPILOG_VECTOR_BODY]]:
@@ -1856,7 +1856,7 @@ define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX512-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 32
 ; AVX512-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; AVX512:       [[VECTOR_PH]]:
-; AVX512-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 32
+; AVX512-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 31
 ; AVX512-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; AVX512-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX512:       [[VECTOR_BODY]]:
@@ -1912,7 +1912,7 @@ define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX512-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF21]]
 ; AVX512:       [[VEC_EPILOG_PH]]:
 ; AVX512-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AVX512-NEXT:    [[N_MOD_VF8:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 8
+; AVX512-NEXT:    [[N_MOD_VF8:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 7
 ; AVX512-NEXT:    [[N_VEC9:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF8]]
 ; AVX512-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; AVX512:       [[VEC_EPILOG_VECTOR_BODY]]:
