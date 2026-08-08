@@ -150,16 +150,16 @@ std::string SmartPtrInitializationCheck::getSmartPointerDescription(
 
 std::string SmartPtrInitializationCheck::getRawPointerDescription(
     const Expr *PointerExpr, const ASTContext &Context) {
-  std::string Description;
-  llvm::raw_string_ostream OS(Description);
-
   // Try to get a readable representation of the expression
   PrintingPolicy Policy(Context.getLangOpts());
   Policy.SuppressSpecifiers = false;
   Policy.SuppressTagKeyword = true;
 
-  PointerExpr->printPretty(OS, nullptr, Policy);
-  return OS.str();
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  PointerExpr->printPretty(OS, /*PrinterHelper=*/nullptr, Policy);
+
+  return Result;
 }
 
 } // namespace clang::tidy::bugprone
