@@ -1165,6 +1165,8 @@ __kmp_init_indirect_csptr(kmp_critical_name *crit, ident_t const *loc,
     // KMP_D_LOCK_FUNC(&idx, destroy)((kmp_dyna_lock_t *)&idx);
   }
   KMP_DEBUG_ASSERT(*lck != NULL);
+  // save the reverse critical section global lock reference
+  ilk->rev_ptr_critSec = crit;
 }
 
 // Fast-path acquire tas lock
