@@ -56,7 +56,7 @@ int main(int, char**) {
                          (obj ? obj->data_ : "nullptr"));
       dom.unlock();
       log(start, "t1: printing all reader states");
-      dom.printAllReaderStatesInHex();
+      dom.debugPrintAllReaderStatesInHex();
     }
   });
 
@@ -73,7 +73,7 @@ int main(int, char**) {
                          (obj ? obj->data_ : "nullptr"));
       dom.unlock();
       log(start, "t2: printing all reader states");
-      dom.printAllReaderStatesInHex();
+      dom.debugPrintAllReaderStatesInHex();
     }
   });
 
@@ -90,7 +90,7 @@ int main(int, char**) {
                          (obj ? obj->data_ : "nullptr"));
       dom.unlock();
       log(start, "t3: printing all reader states");
-      dom.printAllReaderStatesInHex();
+      dom.debugPrintAllReaderStatesInHex();
     }
   });
   auto t4 = support::make_test_thread([start]() {
@@ -106,7 +106,7 @@ int main(int, char**) {
                          (obj ? obj->data_ : "nullptr"));
       dom.unlock();
       log(start, "t4: printing all reader states");
-      dom.printAllReaderStatesInHex();
+      dom.debugPrintAllReaderStatesInHex();
     }
   });
 
