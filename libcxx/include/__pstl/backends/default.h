@@ -91,6 +91,8 @@ namespace __pstl {
 // - generate_n
 // - uninitialized_default_construct
 // - uninitialized_default_construct_n
+// - uninitialized_value_construct
+// - uninitialized_value_construct_n
 // - uninitialized_fill
 // - uninitialized_fill_n
 //
