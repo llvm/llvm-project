@@ -396,8 +396,17 @@ Error llvm::hlsl::packSignaturePrefixStable(
     MutableArrayRef<SemanticSignatureElement> Elements,
     Triple::EnvironmentType ShaderStage, SemanticSignatureKind SignatureKind,
     bool UseNative16BitTypes) {
-  std::array<SignatureRow, MaxSignatureRows> Rows;
-  ClipCullState ClipCull;
+  // Only a geometry shader output signature packs its streams independently.
+  const unsigned StreamCount =
+      ShaderStage == Triple::EnvironmentType::Geometry &&
+              SignatureKind == SemanticSignatureKind::Output
+          ? MaxGeometryStreams
+          : 1;
+
+  std::array<std::array<SignatureRow, MaxSignatureRows>, MaxGeometryStreams>
+      Rows;
+  std::array<ClipCullState, MaxGeometryStreams> ClipCullStates;
+
   for (SemanticSignatureElement &Element : Elements) {
     assert(Element.StartRow == UnallocatedRow &&
            Element.StartCol == UnallocatedCol && "already allocated?");
@@ -405,6 +414,8 @@ Error llvm::hlsl::packSignaturePrefixStable(
            "signature element must have between 1 and 32 rows");
     assert(Element.Cols > 0 && Element.Cols <= MaxSignatureCols &&
            "signature element must have between 1 and 4 columns");
+    assert(Element.GSStream < StreamCount &&
+           "signature element has an unexpected geometry stream");
 
     const unsigned ComponentWidth =
         getComponentWidth(Element.CompType, UseNative16BitTypes);
@@ -414,18 +425,22 @@ Error llvm::hlsl::packSignaturePrefixStable(
                                         ComponentWidth, Element.InterpMode,
                                         Category};
 
+    const unsigned StreamIndex = StreamCount == 1 ? 0 : Element.GSStream;
+    MutableArrayRef<SignatureRow> StreamRows = Rows[StreamIndex];
+
     switch (Category) {
     case SemanticCategory::NotPacked:
       continue;
     case SemanticCategory::CullClip:
-      if (Error E = packClipCullElement(Element, Rows, ClipCull, Placement))
+      if (Error E = packClipCullElement(Element, StreamRows,
+                                        ClipCullStates[StreamIndex], Placement))
         return E;
       continue;
     case SemanticCategory::TessFactor:
     case SemanticCategory::Arbitrary:
     case SemanticCategory::SystemValue:
     case SemanticCategory::SystemGeneratedValue:
-      if (Error E = packElement(Element, Rows, Placement))
+      if (Error E = packElement(Element, StreamRows, Placement))
         return E;
       continue;
     }

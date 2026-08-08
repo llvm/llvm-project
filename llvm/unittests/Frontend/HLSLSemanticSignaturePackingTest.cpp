@@ -32,6 +32,8 @@ protected:
     uint8_t Cols;
     dxil::ElementType CompType;
     dxbc::PSV::InterpolationMode InterpMode;
+    // Only meaningful for geometry shader output signatures.
+    uint32_t GSStream = 0;
   };
 
   struct ExpectedLocation {
@@ -78,7 +80,7 @@ protected:
           /*StartCol=*/UnallocatedCol,
           /*UsageMask=*/0,
           /*DynIndexMask=*/0,
-          /*GSStream=*/0,
+          /*GSStream=*/Element.GSStream,
       });
     }
     return Elements;
@@ -961,6 +963,43 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCullWhenAppended) {
                  {/*Row=*/1, /*Col=*/3},
                  {/*Row=*/0, /*Col=*/3},
                  {/*Row=*/3, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableGeometryStreams) {
+  // Each geometry shader output stream is packed into its own signature, so
+  // elements of different streams never share a register. The reported number
+  // of rows is the maximum used by any single stream.
+
+  // struct Stream0 {
+  //   float4 A : A;
+  //   float2 C : C;
+  // };
+  // struct Stream1 {
+  //   float4 B : B;
+  // };
+  // void GSMain(inout PointStream<Stream0> S0, inout PointStream<Stream1> S1);
+  //
+  // Elements are declared in the order A, B, C.
+  TestConfig Config(Triple::EnvironmentType::Geometry,
+                    SemanticSignatureKind::Output,
+                    /*UseNative16BitTypes=*/false,
+                    {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1,
+                      /*Cols=*/4, dxil::ElementType::F32,
+                      dxbc::PSV::InterpolationMode::Linear, /*GSStream=*/0},
+                     {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1,
+                      /*Cols=*/4, dxil::ElementType::F32,
+                      dxbc::PSV::InterpolationMode::Linear, /*GSStream=*/1},
+                     {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1,
+                      /*Cols=*/2, dxil::ElementType::F32,
+                      dxbc::PSV::InterpolationMode::Linear, /*GSStream=*/0}});
+
+  // Expected layout:
+  // stream0 reg0: A.xyzw
+  // stream0 reg1: C.xy | unused.zw
+  // stream1 reg0: B.xyzw
+  expectPacking(
+      Config, /*ExpectedRows=*/2,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableFillsAllRows) {
