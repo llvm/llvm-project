@@ -2433,6 +2433,10 @@ ScalarEvolution::getStrengthenedNoWrapFlagsFromBinOp(
 
   bool Deduced = false;
 
+  if (!isSCEVable(OBO->getOperand(0)->getType()) ||
+      !isSCEVable(OBO->getOperand(1)->getType()))
+    return std::nullopt;
+
   Instruction::BinaryOps Opcode = (Instruction::BinaryOps)OBO->getOpcode();
   const SCEV *LHS = getSCEV(OBO->getOperand(0));
   const SCEV *RHS = getSCEV(OBO->getOperand(1));
