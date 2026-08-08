@@ -99,6 +99,12 @@ path __canonical(path const& orig_p, error_code* ec) {
   path cwd;
   ErrorHandler<path> err("canonical", ec, &orig_p, &cwd);
 
+  // canonical() requires !exists(p) to be an error ([fs.op.canonical]). An empty
+  // path never exists, but __do_absolute("") below would resolve to the (existing)
+  // current directory and hide that error, so it must be checked here first.
+  if (orig_p.empty())
+    return err.report(errc::no_such_file_or_directory);
+
   path p = __do_absolute(orig_p, &cwd, ec);
 #if (defined(_POSIX_VERSION) && _POSIX_VERSION >= 200112) || defined(_WIN32)
   std::unique_ptr<path::value_type, decltype(&::free)> hold(detail::realpath(p.c_str(), nullptr), &::free);
@@ -1042,8 +1048,9 @@ path __temp_directory_path(error_code* ec) {
 path __weakly_canonical(const path& p, error_code* ec) {
   ErrorHandler<path> err("weakly_canonical", ec, &p);
 
+  // weakly_canonical() never requires its argument to exist ([fs.op.weakly.canonical]).
   if (p.empty())
-    return __canonical("", ec);
+    return __current_path(ec);
 
   path result;
   path tmp;
@@ -1069,7 +1076,8 @@ path __weakly_canonical(const path& p, error_code* ec) {
     --PP;
   }
   if (PP.State_ == PathParser::PS_BeforeBegin) {
-    result = __canonical("", &m_ec);
+    // No element of p exists; canonical() of that degenerate case is the current directory.
+    result = __current_path(&m_ec);
     if (m_ec) {
       return err.report(m_ec);
     }
