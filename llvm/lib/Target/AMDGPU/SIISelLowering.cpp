@@ -18870,12 +18870,10 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
 
   // Check if FrexpVal comes from amdgcn_frexp_exp or amdgcn_frexp_mant.
   SDValue FrexpInput;
-  if (!sd_match(FrexpVal,
-                m_IntrinsicWOChain<Intrinsic::amdgcn_frexp_exp>(
-                    m_Value(FrexpInput))) &&
-      !sd_match(FrexpVal,
-                m_IntrinsicWOChain<Intrinsic::amdgcn_frexp_mant>(
-                    m_Value(FrexpInput))))
+  if (!sd_match(FrexpVal, m_IntrinsicWOChain<Intrinsic::amdgcn_frexp_exp>(
+                              m_Value(FrexpInput))) &&
+      !sd_match(FrexpVal, m_IntrinsicWOChain<Intrinsic::amdgcn_frexp_mant>(
+                              m_Value(FrexpInput))))
     return SDValue();
 
   // The frexp intrinsics ignore sign, so we can strip sign ops when comparing.
