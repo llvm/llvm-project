@@ -24,7 +24,8 @@ define i64 @load_addr_shift_zext2(i32 zeroext %a, i64 %b) {
 ; CHECK-LABEL: load_addr_shift_zext2:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    ldr x0, [x1, x0, lsl #3]
+; CHECK-NEXT:    lsr w8, w0, #0
+; CHECK-NEXT:    ldr x0, [x1, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %1 = zext i32 %a to i64
   %2 = shl i64 %1, 3
@@ -77,7 +78,7 @@ define i64 @load_addr_shift_sext3(i32 signext %a, i64 %b) {
 ; CHECK-LABEL: load_addr_shift_sext3:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    ldr x0, [x1, x0, lsl #3]
+; CHECK-NEXT:    ldr x0, [x1, w0, sxtw #3]
 ; CHECK-NEXT:    ret
   %1 = sext i32 %a to i64
   %2 = shl i64 %1, 3
@@ -107,7 +108,8 @@ define i64 @load_addr_mul_zext2(i32 zeroext %a, i64 %b) {
 ; CHECK-LABEL: load_addr_mul_zext2:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    ldr x0, [x1, x0, lsl #3]
+; CHECK-NEXT:    lsr w8, w0, #0
+; CHECK-NEXT:    ldr x0, [x1, x8, lsl #3]
 ; CHECK-NEXT:    ret
   %1 = zext i32 %a to i64
   %2 = mul i64 %1, 8
@@ -160,7 +162,7 @@ define i64 @load_addr_mul_sext3(i32 signext %a, i64 %b) {
 ; CHECK-LABEL: load_addr_mul_sext3:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    ldr x0, [x1, x0, lsl #3]
+; CHECK-NEXT:    ldr x0, [x1, w0, sxtw #3]
 ; CHECK-NEXT:    ret
   %1 = sext i32 %a to i64
   %2 = mul i64 %1, 8
