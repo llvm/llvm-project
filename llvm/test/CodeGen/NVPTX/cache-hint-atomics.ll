@@ -46,7 +46,7 @@ define i32 @atomicrmw_xchg_l2_cache_policy(ptr addrspace(1) %p) {
 define i32 @cmpxchg_l2_cache_policy(ptr addrspace(1) %p, i32 %cmp, i32 %new) {
 ; CHECK-LABEL: cmpxchg_l2_cache_policy(
 ; CHECK:    atom.relaxed.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
-  %pair = cmpxchg ptr addrspace(1) %p, i32 %cmp, i32 %new monotonic monotonic, align 4, !mem.cache_hint !1
+  %pair = cmpxchg ptr addrspace(1) %p, i32 %cmp, i32 %new monotonic monotonic, align 4, !mem.cache_hint !3
   %old = extractvalue { i32, i1 } %pair, 0
   ret i32 %old
 }
