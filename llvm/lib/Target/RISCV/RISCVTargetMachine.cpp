@@ -34,12 +34,10 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <optional>
 using namespace llvm;
 
@@ -679,17 +677,6 @@ bool RISCVPassConfig::addILPOpts() {
     addPass(&MachineCombinerID);
 
   return true;
-}
-
-void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
-#define GET_PASS_REGISTRY "RISCVPassRegistry.def"
-#include "llvm/Passes/TargetPassRegistry.inc"
-
-  PB.registerLateLoopOptimizationsEPCallback([=](LoopPassManager &LPM,
-                                                 OptimizationLevel Level) {
-    if (Level != OptimizationLevel::O0)
-      LPM.addPass(LoopIdiomVectorizePass(LoopIdiomVectorizeStyle::Predicated));
-  });
 }
 
 yaml::MachineFunctionInfo *
