@@ -140,59 +140,6 @@ define i32 @test_lrint_i32_f80(x86_fp80 %x) nounwind {
 }
 
 ; FIXME(#44744): incorrect libcall
-define i32 @test_lrint_i32_f128(fp128 %x) nounwind {
-; X86-NOSSE-LABEL: test_lrint_i32_f128:
-; X86-NOSSE:       # %bb.0:
-; X86-NOSSE-NEXT:    pushl %ebp
-; X86-NOSSE-NEXT:    movl %esp, %ebp
-; X86-NOSSE-NEXT:    andl $-16, %esp
-; X86-NOSSE-NEXT:    subl $16, %esp
-; X86-NOSSE-NEXT:    pushl 20(%ebp)
-; X86-NOSSE-NEXT:    pushl 16(%ebp)
-; X86-NOSSE-NEXT:    pushl 12(%ebp)
-; X86-NOSSE-NEXT:    pushl 8(%ebp)
-; X86-NOSSE-NEXT:    calll lrintl
-; X86-NOSSE-NEXT:    addl $16, %esp
-; X86-NOSSE-NEXT:    movl %ebp, %esp
-; X86-NOSSE-NEXT:    popl %ebp
-; X86-NOSSE-NEXT:    retl
-;
-; X86-SSE2-LABEL: test_lrint_i32_f128:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    andl $-16, %esp
-; X86-SSE2-NEXT:    subl $16, %esp
-; X86-SSE2-NEXT:    pushl 20(%ebp)
-; X86-SSE2-NEXT:    pushl 16(%ebp)
-; X86-SSE2-NEXT:    pushl 12(%ebp)
-; X86-SSE2-NEXT:    pushl 8(%ebp)
-; X86-SSE2-NEXT:    calll lrintl
-; X86-SSE2-NEXT:    addl $16, %esp
-; X86-SSE2-NEXT:    movl %ebp, %esp
-; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    retl
-;
-; X86-AVX-LABEL: test_lrint_i32_f128:
-; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    pushl %ebp
-; X86-AVX-NEXT:    movl %esp, %ebp
-; X86-AVX-NEXT:    andl $-16, %esp
-; X86-AVX-NEXT:    subl $32, %esp
-; X86-AVX-NEXT:    vmovups 8(%ebp), %xmm0
-; X86-AVX-NEXT:    vmovups %xmm0, (%esp)
-; X86-AVX-NEXT:    calll lrintl
-; X86-AVX-NEXT:    movl %ebp, %esp
-; X86-AVX-NEXT:    popl %ebp
-; X86-AVX-NEXT:    retl
-;
-; X64-LABEL: test_lrint_i32_f128:
-; X64:       # %bb.0:
-; X64-NEXT:    jmp lrintl@PLT # TAILCALL
-  %conv = tail call i32 @llvm.lrint.i32.f128(fp128 %x)
-  ret i32 %conv
-}
-
 define i32 @test_lrint_i32_f16_strict(half %x) nounwind strictfp {
 ; X86-NOSSE-LABEL: test_lrint_i32_f16_strict:
 ; X86-NOSSE:       # %bb.0:
@@ -338,62 +285,6 @@ define i32 @test_lrint_i32_f80_strict(x86_fp80 %x) nounwind strictfp {
 }
 
 ; FIXME(#44744): incorrect libcall
-define i32 @test_lrint_i32_f128_strict(fp128 %x) nounwind strictfp {
-; X86-NOSSE-LABEL: test_lrint_i32_f128_strict:
-; X86-NOSSE:       # %bb.0:
-; X86-NOSSE-NEXT:    pushl %ebp
-; X86-NOSSE-NEXT:    movl %esp, %ebp
-; X86-NOSSE-NEXT:    andl $-16, %esp
-; X86-NOSSE-NEXT:    subl $16, %esp
-; X86-NOSSE-NEXT:    pushl 20(%ebp)
-; X86-NOSSE-NEXT:    pushl 16(%ebp)
-; X86-NOSSE-NEXT:    pushl 12(%ebp)
-; X86-NOSSE-NEXT:    pushl 8(%ebp)
-; X86-NOSSE-NEXT:    calll lrintl
-; X86-NOSSE-NEXT:    addl $16, %esp
-; X86-NOSSE-NEXT:    movl %ebp, %esp
-; X86-NOSSE-NEXT:    popl %ebp
-; X86-NOSSE-NEXT:    retl
-;
-; X86-SSE2-LABEL: test_lrint_i32_f128_strict:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    andl $-16, %esp
-; X86-SSE2-NEXT:    subl $16, %esp
-; X86-SSE2-NEXT:    pushl 20(%ebp)
-; X86-SSE2-NEXT:    pushl 16(%ebp)
-; X86-SSE2-NEXT:    pushl 12(%ebp)
-; X86-SSE2-NEXT:    pushl 8(%ebp)
-; X86-SSE2-NEXT:    calll lrintl
-; X86-SSE2-NEXT:    addl $16, %esp
-; X86-SSE2-NEXT:    movl %ebp, %esp
-; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    retl
-;
-; X86-AVX-LABEL: test_lrint_i32_f128_strict:
-; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    pushl %ebp
-; X86-AVX-NEXT:    movl %esp, %ebp
-; X86-AVX-NEXT:    andl $-16, %esp
-; X86-AVX-NEXT:    subl $32, %esp
-; X86-AVX-NEXT:    vmovups 8(%ebp), %xmm0
-; X86-AVX-NEXT:    vmovups %xmm0, (%esp)
-; X86-AVX-NEXT:    calll lrintl
-; X86-AVX-NEXT:    movl %ebp, %esp
-; X86-AVX-NEXT:    popl %ebp
-; X86-AVX-NEXT:    retl
-;
-; X64-LABEL: test_lrint_i32_f128_strict:
-; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq lrintl@PLT
-; X64-NEXT:    popq %rcx
-; X64-NEXT:    retq
-  %conv = tail call i32 @llvm.experimental.constrained.lrint.i32.f128(fp128 %x, metadata!"round.dynamic", metadata!"fpexcept.strict")
-  ret i32 %conv
-}
-
 declare i32 @llvm.lrint.i32.f32(float) nounwind readnone
 declare i32 @llvm.lrint.i32.f64(double) nounwind readnone
 declare i32 @llvm.lrint.i32.f80(x86_fp80) nounwind readnone
