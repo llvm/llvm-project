@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 < %s | FileCheck -check-prefix=GFX950 %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti < %s | FileCheck -check-prefix=SI %s
 
 ; Test that redundant inf/nan checks are folded into frexp instructions.
 ; The AMDGPU frexp instructions already return 0 for inf/nan inputs.
@@ -12,9 +12,14 @@
 declare {float, i32} @llvm.frexp.f32.i32(float)
 declare {double, i32} @llvm.frexp.f64.i32(double)
 declare {half, i16} @llvm.frexp.f16.i16(half)
+declare {bfloat, i16} @llvm.frexp.bf16.i16(bfloat)
+declare {<2 x float>, <2 x i32>} @llvm.frexp.v2f32.v2i32(<2 x float>)
 declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 declare half @llvm.fabs.f16(half)
+declare bfloat @llvm.fabs.bf16(bfloat)
+declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
+declare float @llvm.copysign.f32(float, float)
 
 ; Pattern 1: select (fcmp uno x, 0), 0, (frexp_exp x)
 ; NaN check - should fold to just frexp_exp
@@ -525,4 +530,160 @@ define i32 @frexp_lt_zero_not_folded(float %x) {
   %is_lt_zero = fcmp olt float %x, 0.0
   %result = select i1 %is_lt_zero, i32 0, i32 %exp
   ret i32 %result
+}
+
+; Test with copysign - should still fold since frexp ignores sign
+define i32 @frexp_nan_clamp_copysign_f32(float %x, float %sign) {
+; GFX9-LABEL: frexp_nan_clamp_copysign_f32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: frexp_nan_clamp_copysign_f32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: frexp_nan_clamp_copysign_f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: frexp_nan_clamp_copysign_f32:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-LABEL: frexp_nan_clamp_copysign_f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_brev_b32 s4, -2
+; SI-NEXT:    v_bfi_b32 v1, s4, v0, v1
+; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v1|, s4
+; SI-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; SI-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
+; SI-NEXT:    s_and_b64 vcc, vcc, s[4:5]
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; SI-NEXT:    s_setpc_b64 s[30:31]
+  %copysign = call float @llvm.copysign.f32(float %x, float %sign)
+  %frexp = call {float, i32} @llvm.frexp.f32.i32(float %copysign)
+  %exp = extractvalue {float, i32} %frexp, 1
+  %is_nan = fcmp uno float %x, 0.0
+  %result = select i1 %is_nan, i32 0, i32 %exp
+  ret i32 %result
+}
+
+; Test bfloat16
+define i16 @frexp_nan_clamp_exp_bf16(bfloat %x) {
+; GFX9-LABEL: frexp_nan_clamp_exp_bf16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
+; GFX9-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: frexp_nan_clamp_exp_bf16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX10-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
+; GFX10-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: frexp_nan_clamp_exp_bf16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
+; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
+; GFX11-NEXT:    v_cndmask_b16 v0.l, 0, v1.l, vcc_lo
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: frexp_nan_clamp_exp_bf16:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
+; GFX950-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-LABEL: frexp_nan_clamp_exp_bf16:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
+; SI-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; SI-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
+; SI-NEXT:    s_and_b64 vcc, vcc, s[4:5]
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; SI-NEXT:    s_setpc_b64 s[30:31]
+  %frexp = call {bfloat, i16} @llvm.frexp.bf16.i16(bfloat %x)
+  %exp = extractvalue {bfloat, i16} %frexp, 1
+  %is_nan = fcmp uno bfloat %x, 0.0
+  %result = select i1 %is_nan, i16 0, i16 %exp
+  ret i16 %result
+}
+
+; Test v2f32 vector case
+define <2 x i32> @frexp_nan_clamp_exp_v2f32(<2 x float> %x) {
+; GFX9-LABEL: frexp_nan_clamp_exp_v2f32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; GFX9-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: frexp_nan_clamp_exp_v2f32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; GFX10-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: frexp_nan_clamp_exp_v2f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; GFX11-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: frexp_nan_clamp_exp_v2f32:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-LABEL: frexp_nan_clamp_exp_v2f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s6, 0x7f800000
+; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v1|, s6
+; SI-NEXT:    v_cmp_lt_f32_e64 s[6:7], |v0|, s6
+; SI-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
+; SI-NEXT:    v_frexp_exp_i32_f32_e32 v3, v0
+; SI-NEXT:    s_and_b64 vcc, vcc, s[6:7]
+; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc
+; SI-NEXT:    v_cmp_o_f32_e32 vcc, v1, v1
+; SI-NEXT:    v_frexp_exp_i32_f32_e32 v2, v1
+; SI-NEXT:    s_and_b64 vcc, vcc, s[4:5]
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
+; SI-NEXT:    s_setpc_b64 s[30:31]
+  %frexp = call {<2 x float>, <2 x i32>} @llvm.frexp.v2f32.v2i32(<2 x float> %x)
+  %exp = extractvalue {<2 x float>, <2 x i32>} %frexp, 1
+  %is_nan = fcmp uno <2 x float> %x, zeroinitializer
+  %result = select <2 x i1> %is_nan, <2 x i32> zeroinitializer, <2 x i32> %exp
+  ret <2 x i32> %result
 }

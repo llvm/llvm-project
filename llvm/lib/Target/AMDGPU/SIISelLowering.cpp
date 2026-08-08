@@ -18829,6 +18829,12 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
   return getCanonicalConstantFP(DCI.DAG, SDLoc(N), N->getValueType(0), F);
 }
 
+/// Check if a value is a positive or negative infinity constant.
+static bool isInfinityFPConstant(SDValue V) {
+  auto *CFP = dyn_cast<ConstantFPSDNode>(V);
+  return CFP && CFP->getValueAPF().isInfinity();
+}
+
 SDValue
 SITargetLowering::performFrexpSelectCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
@@ -18843,21 +18849,19 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
   // Determine which value is 0 and which might be the frexp result.
   // Pattern 1: select cond, 0, frexp_result (cond true -> return 0)
   // Pattern 2: select cond, frexp_result, 0 (cond false -> return 0)
+  // Only check FP zero - frexp returns FP or integer, handle separately.
   SDValue FrexpVal;
   bool CondSelectsZero; // If true, condition=true selects zero
 
-  auto isZero = [](SDValue V) {
-    if (auto *C = dyn_cast<ConstantSDNode>(V))
-      return C->isZero();
-    if (auto *C = dyn_cast<ConstantFPSDNode>(V))
-      return C->isZero();
-    return false;
-  };
+  bool TrueIsFPZero = isNullFPConstant(TrueVal);
+  bool FalseIsFPZero = isNullFPConstant(FalseVal);
+  bool TrueIsIntZero = isNullConstant(TrueVal);
+  bool FalseIsIntZero = isNullConstant(FalseVal);
 
-  if (isZero(TrueVal)) {
+  if (TrueIsFPZero || TrueIsIntZero) {
     FrexpVal = FalseVal;
     CondSelectsZero = true;
-  } else if (isZero(FalseVal)) {
+  } else if (FalseIsFPZero || FalseIsIntZero) {
     FrexpVal = TrueVal;
     CondSelectsZero = false;
   } else {
@@ -18865,25 +18869,14 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
   }
 
   // Check if FrexpVal comes from amdgcn_frexp_exp or amdgcn_frexp_mant.
-  if (FrexpVal.getOpcode() != ISD::INTRINSIC_WO_CHAIN)
+  SDValue FrexpInput;
+  if (!sd_match(FrexpVal,
+                m_IntrinsicWOChain<Intrinsic::amdgcn_frexp_exp>(
+                    m_Value(FrexpInput))) &&
+      !sd_match(FrexpVal,
+                m_IntrinsicWOChain<Intrinsic::amdgcn_frexp_mant>(
+                    m_Value(FrexpInput))))
     return SDValue();
-
-  unsigned IID = FrexpVal.getConstantOperandVal(0);
-  if (IID != Intrinsic::amdgcn_frexp_exp && IID != Intrinsic::amdgcn_frexp_mant)
-    return SDValue();
-
-  SDValue FrexpInput = FrexpVal.getOperand(1);
-
-  // Helper to strip fabs/fneg/fcopysign from a value.
-  auto peekFPSignOps = [](SDValue Val) {
-    if (Val.getOpcode() == ISD::FNEG)
-      Val = Val.getOperand(0);
-    if (Val.getOpcode() == ISD::FABS)
-      Val = Val.getOperand(0);
-    if (Val.getOpcode() == ISD::FCOPYSIGN)
-      Val = Val.getOperand(0);
-    return Val;
-  };
 
   // The frexp intrinsics ignore sign, so we can strip sign ops when comparing.
   SDValue FrexpInputStripped = peekFPSignOps(FrexpInput);
@@ -18929,11 +18922,6 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
     SDValue CondRHS = Cond.getOperand(1);
     SDValue CondLHSStripped = peekFPSignOps(CondLHS);
 
-    auto isInfConstant = [](SDValue V) {
-      auto *CFP = dyn_cast<ConstantFPSDNode>(V);
-      return CFP && CFP->getValueAPF().isInfinity();
-    };
-
     if (CC == ISD::SETUO) {
       // fcmp uno x, y - true if either x or y is NaN
       SDValue CondRHSStripped = peekFPSignOps(CondRHS);
@@ -18942,12 +18930,12 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
         IsNonFiniteTest = CondSelectsZero;
       }
     } else if ((CC == ISD::SETOEQ || CC == ISD::SETUEQ) &&
-               isInfConstant(CondRHS)) {
+               isInfinityFPConstant(CondRHS)) {
       // fcmp oeq/ueq |x|, inf - true if x is inf (or inf/nan for ueq)
       if (CondLHSStripped == FrexpInputStripped)
         IsNonFiniteTest = CondSelectsZero;
     } else if ((CC == ISD::SETONE || CC == ISD::SETUNE) &&
-               isInfConstant(CondRHS)) {
+               isInfinityFPConstant(CondRHS)) {
       // fcmp one/une |x|, inf - true if x is NOT inf
       if (CondLHSStripped == FrexpInputStripped)
         IsNonFiniteTest = !CondSelectsZero;
