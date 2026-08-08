@@ -65,11 +65,6 @@ bool KnownFPClass::isKnownNeverLogicalPosZero(DenormalMode Mode) const {
   llvm_unreachable("covered switch over denormal mode");
 }
 
-bool KnownFPClass::isKnownNeverLogicalFiniteNonZero(DenormalMode Mode) const {
-  return isKnownNever(fcNormal) &&
-         (isKnownNeverSubnormal() || Mode.inputsAreZero());
-}
-
 void KnownFPClass::propagateDenormal(const KnownFPClass &Src,
                                      DenormalMode Mode) {
   KnownFPClasses = Src.KnownFPClasses;
@@ -440,7 +435,7 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
   Known.propagateXorSign(KnownLHS, KnownRHS, Mode);
 
   // {0, Inf, NaN} / Y => {0, Inf, NaN}
-  if (KnownLHS.isKnownNeverLogicalFiniteNonZero(Mode)) {
+  if (KnownLHS.isKnownNever(fcNormal | fcSubnormal)) {
     Known.knownNot(fcNormal | fcSubnormal);
 
     // {0, NaN} / Y => 0 or NaN
@@ -453,7 +448,7 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
   }
 
   // X / {0, Inf, NaN} => {0, Inf, NaN}
-  if (KnownRHS.isKnownNeverLogicalFiniteNonZero(Mode)) {
+  if (KnownRHS.isKnownNever(fcNormal | fcSubnormal)) {
     Known.knownNot(fcNormal | fcSubnormal);
 
     // X / {0, NaN} => Inf or NaN
@@ -468,7 +463,7 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
   // X / 0   => Inf
   // X / Sub => Normal or Inf
   // X / Inf => 0
-  if (KnownRHS.isKnownNever(fcNormal) || Mode.outputsAreZero())
+  if (KnownRHS.isKnownNever(fcNormal))
     Known.knownNot(fcSubnormal);
 
   // 0 / Y      => 0
@@ -487,7 +482,7 @@ KnownFPClass KnownFPClass::fdiv_self(const KnownFPClass &KnownSrc,
   KnownFPClass Known(fcNan | fcPosNormal);
 
   // X / X => +1.0 only for finite nonzero X
-  if (KnownSrc.isKnownNeverLogicalFiniteNonZero(Mode))
+  if (KnownSrc.isKnownNever(fcNormal | fcSubnormal))
     Known.knownNot(fcPosNormal);
 
   // X / X => NaN only for 0, Inf and NaN

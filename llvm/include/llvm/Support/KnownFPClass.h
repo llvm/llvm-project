@@ -100,10 +100,6 @@ struct KnownFPClass {
   /// zero.
   LLVM_ABI bool isKnownNeverLogicalPosZero(DenormalMode Mode) const;
 
-  /// Return true if it's known this can never be interpreted as a finite
-  /// nonzero value, accounting for denormals the mode reads as zero.
-  LLVM_ABI bool isKnownNeverLogicalFiniteNonZero(DenormalMode Mode) const;
-
   static constexpr FPClassTest OrderedLessThanZeroMask =
       fcNegSubnormal | fcNegNormal | fcNegInf;
   static constexpr FPClassTest OrderedGreaterThanZeroMask =
@@ -400,21 +396,20 @@ struct KnownFPClass {
   // operand signs, such as multiply and divide. This only rules out possible
   // non-NaN sign classes. NaNs do not have a constrained sign class here.
   //
-  // A negative subnormal is read as +0.0 under a positive-zero input mode, so
-  // it counts towards the positive side and not the negative one.
+  // A negative subnormal may be read as +0.0 under a positive-zero input mode,
+  // so it can act on the positive side and cannot count as known negative.
+  // Flushing is a per-operation choice, never a guarantee.
   //
-  // TODO: With a positive-zero output mode a -sub result is flushed to +0.0, so
-  // the result can be positive after all. Fix it in fmul and fdiv by adding
-  // fcPosZero back and dropping SignBit before they rule out fcSubnormal.
+  // TODO: With a positive-zero output mode a -sub result may be flushed to
+  // +0.0, so the result can be positive after all. Fix it in fmul and fdiv by
+  // adding fcPosZero back and dropping SignBit before they rule out
+  // fcSubnormal.
   void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS,
                         DenormalMode Mode) {
-    bool MustFlushNegSub = Mode.Input == DenormalMode::PositiveZero;
-    bool MayFlushNegSub = Mode.inputsMayBePositiveZero();
-
-    FPClassTest NegMask =
-        MustFlushNegSub ? fcNegative & ~fcNegSubnormal : fcNegative;
-    FPClassTest PosMask =
-        MayFlushNegSub ? fcPositive | fcNegSubnormal : fcPositive;
+    FPClassTest NegMask = fcNegative;
+    FPClassTest PosMask = Mode.inputsMayBePositiveZero()
+                              ? fcPositive | fcNegSubnormal
+                              : fcPositive;
 
     if ((LHS.isKnownNever(NegMask) && RHS.isKnownNever(NegMask)) ||
         (LHS.isKnownNever(PosMask) && RHS.isKnownNever(PosMask)))
