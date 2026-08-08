@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMOrcDebugging
   DebuggerSupportPlugin.cpp
   ELFDebugObjectPlugin.cpp
   LLJITUtilsCBindings.cpp
+  PerfSupport.cpp
   PerfSupportPlugin.cpp
   VTuneSupportPlugin.cpp
 
