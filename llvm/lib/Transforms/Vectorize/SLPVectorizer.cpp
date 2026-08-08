@@ -3413,7 +3413,7 @@ private:
     void setInterleave(unsigned Factor) { InterleaveFactor = Factor; }
 
     /// Marks the node as one that does not require scheduling.
-    void setDoesNotNeedToSchedule() { DoesNotNeedToSchedule = true; }
+    void setDoesNotNeedToSchedule() {DoesNotNeedToSchedule=true; }
     /// Returns true if the node is marked as one that does not require
     /// scheduling.
     bool doesNotNeedToSchedule() const { return DoesNotNeedToSchedule; }
