@@ -100,6 +100,10 @@ struct KnownFPClass {
   /// zero.
   LLVM_ABI bool isKnownNeverLogicalPosZero(DenormalMode Mode) const;
 
+  /// Return true if it's known this can never be interpreted as a finite
+  /// nonzero value, accounting for denormals the mode reads as zero.
+  LLVM_ABI bool isKnownNeverLogicalFiniteNonZero(DenormalMode Mode) const;
+
   static constexpr FPClassTest OrderedLessThanZeroMask =
       fcNegSubnormal | fcNegNormal | fcNegInf;
   static constexpr FPClassTest OrderedGreaterThanZeroMask =
@@ -395,13 +399,25 @@ struct KnownFPClass {
   // Propagate knowledge for operations whose result sign is the xor of the
   // operand signs, such as multiply and divide. This only rules out possible
   // non-NaN sign classes. NaNs do not have a constrained sign class here.
-  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS) {
-    if ((LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcNegative)) ||
-        (LHS.isKnownNever(fcPositive) && RHS.isKnownNever(fcPositive)))
+  //
+  // A negative subnormal is read as +0.0 under a positive-zero input mode, so
+  // it counts towards the positive side and not the negative one.
+  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS,
+                        DenormalMode Mode) {
+    bool MustFlushNegSub = Mode.Input == DenormalMode::PositiveZero;
+    bool MayFlushNegSub = Mode.inputsMayBePositiveZero();
+
+    FPClassTest NegMask =
+        MustFlushNegSub ? fcNegative & ~fcNegSubnormal : fcNegative;
+    FPClassTest PosMask =
+        MayFlushNegSub ? fcPositive | fcNegSubnormal : fcPositive;
+
+    if ((LHS.isKnownNever(NegMask) && RHS.isKnownNever(NegMask)) ||
+        (LHS.isKnownNever(PosMask) && RHS.isKnownNever(PosMask)))
       knownNot(fcNegative);
 
-    if ((LHS.isKnownNever(fcPositive) && RHS.isKnownNever(fcNegative)) ||
-        (LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcPositive)))
+    if ((LHS.isKnownNever(PosMask) && RHS.isKnownNever(NegMask)) ||
+        (LHS.isKnownNever(NegMask) && RHS.isKnownNever(PosMask)))
       knownNot(fcPositive);
   }
 

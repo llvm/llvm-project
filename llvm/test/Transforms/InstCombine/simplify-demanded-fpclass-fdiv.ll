@@ -665,7 +665,7 @@ define nofpclass(ninf nnorm nsub nzero nan) half @ret_only_positive_results_know
 define nofpclass(nsub) half @ret__known_zero_or_nan__fdiv__not_inf(half nofpclass(inf sub norm) %zero.or.nan, half nofpclass(inf) %not.inf) {
 ; CHECK-LABEL: define nofpclass(nsub) half @ret__known_zero_or_nan__fdiv__not_inf(
 ; CHECK-SAME: half nofpclass(inf sub norm) [[ZERO_OR_NAN:%.*]], half nofpclass(inf) [[NOT_INF:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv half [[ZERO_OR_NAN]], [[NOT_INF]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf half [[ZERO_OR_NAN]], [[NOT_INF]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %div = fdiv half %zero.or.nan, %not.inf
@@ -676,7 +676,7 @@ define nofpclass(nsub) half @ret__known_zero_or_nan__fdiv__not_inf(half nofpclas
 define nofpclass(nsub) half @ret__known_zero_or_nan__fdiv__not_inf_or_nan(half nofpclass(inf sub norm) %zero.or.nan, half nofpclass(inf nan) %not.inf.or.nan) {
 ; CHECK-LABEL: define nofpclass(nsub) half @ret__known_zero_or_nan__fdiv__not_inf_or_nan(
 ; CHECK-SAME: half nofpclass(inf sub norm) [[ZERO_OR_NAN:%.*]], half nofpclass(nan inf) [[NOT_INF_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv half [[ZERO_OR_NAN]], [[NOT_INF_OR_NAN]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf half [[ZERO_OR_NAN]], [[NOT_INF_OR_NAN]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %div = fdiv half %zero.or.nan, %not.inf.or.nan
@@ -698,7 +698,7 @@ define nofpclass(nsub) half @ret__not_inf_or_nan__fdiv__known_zero_or_nan(half n
 define nofpclass(nsub) half @ret__known_pzero_or_nan__fdiv__not_inf_or_nan(half nofpclass(inf sub norm nzero) %pzero.or.nan, half nofpclass(inf nan) %not.inf.or.nan) {
 ; CHECK-LABEL: define nofpclass(nsub) half @ret__known_pzero_or_nan__fdiv__not_inf_or_nan(
 ; CHECK-SAME: half nofpclass(inf nzero sub norm) [[PZERO_OR_NAN:%.*]], half nofpclass(nan inf) [[NOT_INF_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv half [[PZERO_OR_NAN]], [[NOT_INF_OR_NAN]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf half [[PZERO_OR_NAN]], [[NOT_INF_OR_NAN]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %div = fdiv half %pzero.or.nan, %not.inf.or.nan
@@ -1217,7 +1217,7 @@ define nofpclass(ninf) half @ret_ninf__fdiv_nnan_unknown__zero(half %unknown) {
 define nofpclass(snan) half @known__nzero_or_nan__fdiv__not_inf_or_nan(half nofpclass(inf sub norm pzero) %nzero.or.nan, half nofpclass(inf nan) %not.inf.or.nan) {
 ; CHECK-LABEL: define nofpclass(snan) half @known__nzero_or_nan__fdiv__not_inf_or_nan(
 ; CHECK-SAME: half nofpclass(inf pzero sub norm) [[NZERO_OR_NAN:%.*]], half nofpclass(nan inf) [[NOT_INF_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv contract half [[NZERO_OR_NAN]], [[NOT_INF_OR_NAN]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf contract half [[NZERO_OR_NAN]], [[NOT_INF_OR_NAN]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %div = fdiv contract half %nzero.or.nan, %not.inf.or.nan
@@ -1239,7 +1239,7 @@ define nofpclass(snan) half @known__not_inf_or_nan__fdiv__nzero_or_nan(half nofp
 define nofpclass(snan) half @known__nzero_or_nan__fdiv__not_inf(half nofpclass(inf sub norm pzero) %nzero.or.nan, half nofpclass(inf) %not.inf) {
 ; CHECK-LABEL: define nofpclass(snan) half @known__nzero_or_nan__fdiv__not_inf(
 ; CHECK-SAME: half nofpclass(inf pzero sub norm) [[NZERO_OR_NAN:%.*]], half nofpclass(inf) [[NOT_INF:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv half [[NZERO_OR_NAN]], [[NOT_INF]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf half [[NZERO_OR_NAN]], [[NOT_INF]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %div = fdiv half %nzero.or.nan, %not.inf
@@ -1294,8 +1294,7 @@ define nofpclass(inf) half @ret_noinf__nzero_or_nan__fdiv__not_inf_or_nan(half n
 define nofpclass(inf) half @ret_noinf__not_inf_or_nan__fdiv__nzero_or_nan(half nofpclass(nan) %not.nan, half nofpclass(inf sub norm pzero) %nzero.or.nan) {
 ; CHECK-LABEL: define nofpclass(inf) half @ret_noinf__not_inf_or_nan__fdiv__nzero_or_nan(
 ; CHECK-SAME: half nofpclass(nan) [[NOT_NAN:%.*]], half nofpclass(inf pzero sub norm) [[NZERO_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv half [[NOT_NAN]], [[NZERO_OR_NAN]]
-; CHECK-NEXT:    ret half [[DIV]]
+; CHECK-NEXT:    ret half +qnan
 ;
   %div = fdiv half %not.nan, %nzero.or.nan
   ret half %div
@@ -1338,8 +1337,7 @@ define nofpclass(snan) half @ret__nzero_or_nan__fdiv_ninf__not_inf_or_nan(half n
 define nofpclass(snan) half @ret_not_inf_or_nan__fdiv_ninf__nzero_or_nan(half nofpclass(nan) %not.nan, half nofpclass(inf sub norm pzero) %nzero.or.nan) {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_not_inf_or_nan__fdiv_ninf__nzero_or_nan(
 ; CHECK-SAME: half nofpclass(nan) [[NOT_NAN:%.*]], half nofpclass(inf pzero sub norm) [[NZERO_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf half [[NOT_NAN]], [[NZERO_OR_NAN]]
-; CHECK-NEXT:    ret half [[DIV]]
+; CHECK-NEXT:    ret half +qnan
 ;
   %div = fdiv ninf half %not.nan, %nzero.or.nan
   ret half %div
@@ -1371,7 +1369,7 @@ define nofpclass(snan) half @not_inf_or_nan__fdiv_nnan__nzero_or_nan(half %unkno
 define nofpclass(snan) half @known__pzero_or_nan__fdiv__not_inf_or_nan(half nofpclass(inf sub norm nzero) %pzero.or.nan, half nofpclass(inf nan) %not.inf.or.nan) {
 ; CHECK-LABEL: define nofpclass(snan) half @known__pzero_or_nan__fdiv__not_inf_or_nan(
 ; CHECK-SAME: half nofpclass(inf nzero sub norm) [[PZERO_OR_NAN:%.*]], half nofpclass(nan inf) [[NOT_INF_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv contract half [[PZERO_OR_NAN]], [[NOT_INF_OR_NAN]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf contract half [[PZERO_OR_NAN]], [[NOT_INF_OR_NAN]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %div = fdiv contract half %pzero.or.nan, %not.inf.or.nan
@@ -1393,7 +1391,7 @@ define nofpclass(snan) half @known__not_inf_or_nan__fdiv__pzero_or_nan(half nofp
 define nofpclass(snan) half @known__pzero_or_nan__fdiv__not_inf(half nofpclass(inf sub norm nzero) %pzero.or.nan, half nofpclass(inf) %not.inf) {
 ; CHECK-LABEL: define nofpclass(snan) half @known__pzero_or_nan__fdiv__not_inf(
 ; CHECK-SAME: half nofpclass(inf nzero sub norm) [[PZERO_OR_NAN:%.*]], half nofpclass(inf) [[NOT_INF:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv half [[PZERO_OR_NAN]], [[NOT_INF]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf half [[PZERO_OR_NAN]], [[NOT_INF]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %div = fdiv half %pzero.or.nan, %not.inf
@@ -1448,8 +1446,7 @@ define nofpclass(inf) half @ret_noinf__pzero_or_nan__fdiv__not_inf_or_nan(half n
 define nofpclass(inf) half @ret_noinf__not_inf_or_nan__fdiv__pzero_or_nan(half nofpclass(nan) %not.nan, half nofpclass(inf sub norm nzero) %pzero.or.nan) {
 ; CHECK-LABEL: define nofpclass(inf) half @ret_noinf__not_inf_or_nan__fdiv__pzero_or_nan(
 ; CHECK-SAME: half nofpclass(nan) [[NOT_NAN:%.*]], half nofpclass(inf nzero sub norm) [[PZERO_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv half [[NOT_NAN]], [[PZERO_OR_NAN]]
-; CHECK-NEXT:    ret half [[DIV]]
+; CHECK-NEXT:    ret half +qnan
 ;
   %div = fdiv half %not.nan, %pzero.or.nan
   ret half %div
@@ -1470,8 +1467,7 @@ define nofpclass(snan) half @ret__pzero_or_nan__fdiv_ninf__not_inf_or_nan(half n
 define nofpclass(snan) half @ret_not_inf_or_nan__fdiv_ninf__pzero_or_nan(half nofpclass(nan) %not.nan, half nofpclass(inf sub norm nzero) %pzero.or.nan) {
 ; CHECK-LABEL: define nofpclass(snan) half @ret_not_inf_or_nan__fdiv_ninf__pzero_or_nan(
 ; CHECK-SAME: half nofpclass(nan) [[NOT_NAN:%.*]], half nofpclass(inf nzero sub norm) [[PZERO_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf half [[NOT_NAN]], [[PZERO_OR_NAN]]
-; CHECK-NEXT:    ret half [[DIV]]
+; CHECK-NEXT:    ret half +qnan
 ;
   %div = fdiv ninf half %not.nan, %pzero.or.nan
   ret half %div
@@ -2346,8 +2342,7 @@ define nofpclass(nan) half @ret_nonan__unknown__fdiv__zero_or_nan(half %unknown,
 define nofpclass(inf) half @ret_noinf__unknown__fdiv__zero_or_nan(half %unknown, half nofpclass(inf sub norm) %zero.or.nan) {
 ; CHECK-LABEL: define nofpclass(inf) half @ret_noinf__unknown__fdiv__zero_or_nan(
 ; CHECK-SAME: half [[UNKNOWN:%.*]], half nofpclass(inf sub norm) [[ZERO_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv half [[UNKNOWN]], [[ZERO_OR_NAN]]
-; CHECK-NEXT:    ret half [[DIV]]
+; CHECK-NEXT:    ret half +qnan
 ;
   %div = fdiv half %unknown, %zero.or.nan
   ret half %div
