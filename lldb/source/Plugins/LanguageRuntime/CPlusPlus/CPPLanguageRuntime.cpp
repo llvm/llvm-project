@@ -13,6 +13,7 @@
 
 #include "CPPLanguageRuntime.h"
 #include "CommandObjectCPlusPlus.h"
+#include "ItaniumABIRuntime.h"
 #include "VerboseTrapFrameRecognizer.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -32,6 +33,7 @@
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Timer.h"
 
 using namespace lldb;
@@ -110,7 +112,7 @@ public:
 };
 
 CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
-    : LanguageRuntime(process), m_itanium_runtime(process) {
+    : LanguageRuntime(process) {
   if (process) {
     process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
         StackFrameRecognizerSP(new LibCXXFrameRecognizer()), {},
@@ -120,6 +122,8 @@ CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
 
     RegisterVerboseTrapFrameRecognizer(*process);
   }
+
+  m_abi_runtimes.emplace_back(new ItaniumABIRuntime(process));
 }
 
 bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
@@ -548,9 +552,8 @@ bool CPPLanguageRuntime::GetDynamicTypeAndAddress(
     return false;
   }
 
-  return m_itanium_runtime.GetDynamicTypeAndAddress(
-      in_value, use_dynamic, entry->info, class_type_or_name, dynamic_address,
-      value_type);
+  return entry->runtime->GetDynamicTypeAndAddress(
+      in_value, use_dynamic, entry->info, class_type_or_name, dynamic_address);
 }
 
 TypeAndOrName
@@ -631,8 +634,9 @@ CPPLanguageRuntime::CreateExceptionResolver(const BreakpointSP &bkpt,
                                             bool catch_bp, bool throw_bp,
                                             bool for_expressions) {
   std::vector<const char *> exception_names;
-  m_itanium_runtime.AppendExceptionBreakpointFunctions(
-      exception_names, catch_bp, throw_bp, for_expressions);
+  for (const auto &runtime : m_abi_runtimes)
+    runtime->AppendExceptionBreakpointFunctions(exception_names, catch_bp,
+                                                throw_bp, for_expressions);
 
   BreakpointResolverSP resolver_sp(new BreakpointResolverName(
       bkpt, exception_names.data(), exception_names.size(),
@@ -645,8 +649,9 @@ lldb::SearchFilterSP CPPLanguageRuntime::CreateExceptionSearchFilter() {
   Target &target = m_process->GetTarget();
 
   FileSpecList filter_modules;
-  m_itanium_runtime.AppendExceptionBreakpointFilterModules(filter_modules,
-                                                           target);
+  for (const auto &runtime : m_abi_runtimes)
+    runtime->AppendExceptionBreakpointFilterModules(filter_modules, target);
+
   return target.GetSearchFilterForModuleList(&filter_modules);
 }
 
@@ -713,7 +718,12 @@ bool CPPLanguageRuntime::ExceptionBreakpointsExplainStop(
 
 lldb::ValueObjectSP
 CPPLanguageRuntime::GetExceptionObjectForThread(lldb::ThreadSP thread_sp) {
-  return m_itanium_runtime.GetExceptionObjectForThread(std::move(thread_sp));
+  for (const auto &runtime : m_abi_runtimes) {
+    ValueObjectSP valobj = runtime->GetExceptionObjectForThread(thread_sp);
+    if (valobj)
+      return valobj;
+  }
+  return {};
 }
 
 static llvm::Error TypeHasVTable(CompilerType type) {
@@ -807,13 +817,23 @@ CPPLanguageRuntime::GetVTableInfoEntry(ValueObject &in_value, bool check_type) {
     return llvm::createStringError(std::errc::invalid_argument,
                                    "no symbol found for 0x%" PRIx64,
                                    vtable_load_addr);
-  if (m_itanium_runtime.IsVTableSymbol(symbol->GetMangled())) {
-    VTableInfoEntry entry{
-        /*info=*/VTableInfo{vtable_addr, symbol},
-    };
-    std::lock_guard<std::mutex> locker(m_vtable_mutex);
-    m_vtable_info_map[vtable_addr] = entry;
-    return entry;
+
+  Mangled &mangled = symbol->GetMangled();
+  Log *log = GetLog(LLDBLog::Object);
+  for (const auto &runtime : m_abi_runtimes) {
+    if (runtime->IsVTableSymbol(symbol->GetMangled())) {
+      LLDB_LOG(log, "{0:x16} ({1}): symbol='{2}' matches {3}", original_ptr,
+               in_value.GetTypeName(), mangled.GetDemangledName(),
+               runtime->GetName());
+
+      VTableInfoEntry entry{
+          /*info=*/VTableInfo{vtable_addr, symbol},
+          /*runtime=*/runtime.get(),
+      };
+      std::lock_guard<std::mutex> locker(m_vtable_mutex);
+      m_vtable_info_map[vtable_addr] = entry;
+      return entry;
+    }
   }
   return llvm::createStringError(std::errc::invalid_argument,
                                  "symbol found that contains 0x%" PRIx64

@@ -9,7 +9,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_CPLUSPLUS_COMMONABIRUNTIME_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGERUNTIME_CPLUSPLUS_COMMONABIRUNTIME_H
 
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include <map>
 #include <mutex>
@@ -19,6 +21,30 @@ namespace lldb_private {
 class CommonABIRuntime {
 public:
   virtual ~CommonABIRuntime() = default;
+
+  virtual llvm::StringRef GetName() const = 0;
+
+  virtual bool IsVTableSymbol(Mangled &mangled) const { return false; }
+
+  virtual bool GetDynamicTypeAndAddress(
+      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+      const LanguageRuntime::VTableInfo &vtable_info,
+      TypeAndOrName &class_type_or_name, Address &dynamic_address) {
+    return false;
+  }
+
+  virtual void
+  AppendExceptionBreakpointFunctions(std::vector<const char *> &names,
+                                     bool catch_bp, bool throw_bp,
+                                     bool for_expressions) {}
+
+  virtual void AppendExceptionBreakpointFilterModules(FileSpecList &list,
+                                                      const Target &target) {}
+
+  virtual lldb::ValueObjectSP
+  GetExceptionObjectForThread(lldb::ThreadSP thread_sp) {
+    return {};
+  }
 
 protected:
   CommonABIRuntime(Process *process);
@@ -31,6 +57,11 @@ protected:
   lldb::TypeSP LookupTypeByName(llvm::StringRef type_name,
                                 lldb::ModuleSP preferred_module,
                                 bool &any_found) const;
+
+  TypeAndOrName GetDynamicTypeInfo(const lldb_private::Address &vtable_addr);
+
+  void SetDynamicTypeInfo(const lldb_private::Address &vtable_addr,
+                          const TypeAndOrName &type_info);
 
   TypeAndOrName GetDynamicTypeInfo(const lldb_private::Address &vtable_addr);
 
