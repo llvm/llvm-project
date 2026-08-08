@@ -69,15 +69,53 @@ std::optional<MCFixupKind> SuperHAsmBackend::getFixupKind(StringRef Name) const 
 }
 
 MCFixupKindInfo SuperHAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  // clang-format off
   const static MCFixupKindInfo Infos[SuperH::NumTargetFixupKinds] = {
       // This table *must* be in same the order of fixup_* kinds in
-      // AVRFixupKinds.h.
+      // SuperHFixupKinds.h.
       //
-      // name                    offset  bits  flags
-      {"fixup_12_pcrel",         12,     16,   0},
-      {"fixup_8_pcrel",          8,      16,   0},
-      {"fixup_4_pcrel",          4,      16,   0},
+      // Name                    offset  bits  flags
+      {"fixup_got32",            0,      32,   0},
+      {"fixup_got_low16",        10,     16,   0},
+      {"fixup_got_medlow16",     10,     16,   0},
+      {"fixup_got_medhi16",      10,     16,   0},
+      {"fixup_got_hi16",         10,     16,   0},
+      {"fixup_got10by4",         10,     10,   0},
+      {"fixup_got10by8",         10,     10,   0},
+      {"fixup_plt32",            0,      32,   0},
+      {"fixup_plt_low16",        10,     16,   0},
+      {"fixup_plt_medlow16",     10,     16,   0},
+      {"fixup_plt_medhi16",      10,     16,   0},
+      {"fixup_plt_hi16",         10,     16,   0},
+      {"fixup_gotplt32",         0,      32,   0},
+      {"fixup_gotplt_low16",     10,     16,   0},
+      {"fixup_gotplt_medlow16",  10,     16,   0},
+      {"fixup_gotplt_medhi16",   10,     16,   0},
+      {"fixup_gotplt_hi16",      10,     16,   0},
+      {"fixup_gotoff",           0,      32,   0},
+      {"fixup_gotoff_low16",     10,     16,   0},
+      {"fixup_gotoff_medlow16",  10,     16,   0},
+      {"fixup_gotoff_medhi16",   10,     16,   0},
+      {"fixup_gotoff_hi16",      10,     16,   0},
+      {"fixup_gotpc",            0,      32,   0},
+      {"fixup_gotpc_low16" ,     10,     16,   0},
+      {"fixup_gotpc_medlow16" ,  10,     16,   0},
+      {"fixup_gotpc_medhi16" ,   10,     16,   0},
+      {"fixup_gotpc_hi16" ,      10,     16,   0},
+      {"fixup_copy",             0,      0,    0},
+      {"fixup_copy64",           0,      0,    0},
+      {"fixup_glob_dat",         0,      32,   0},
+      {"fixup_glob_dat64",       0,      64,   0},
+      {"fixup_jump_slot",        0,      32,   0},
+      {"fixup_jump_slot64",      0,      64,   0},
+      {"fixup_relative",         0,      32,   0},
+      {"fixup_relative64",       0,      64,   0},
+      {"fixup_dir32",            0,      32,   0},
+      {"fixup_rel32",            0,      32,   0},
+      {"fixup_64",               0,      64,   0},
+      {"fixup_64_pcrel",         0,      64,   0},
   };
+  // clang-format on
 
   if (mc::isRelocation(Kind))
     return {};

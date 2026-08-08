@@ -115,6 +115,7 @@ add_clang_library(clangBasic
   Targets/RISCV.cpp
   Targets/SPIR.cpp
   Targets/Sparc.cpp
+  Targets/SuperH.cpp
   Targets/SystemZ.cpp
   Targets/TCE.cpp
   Targets/VE.cpp

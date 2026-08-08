@@ -38,63 +38,69 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Base of all 16-bit SuperH instructions
-class SHInst <dag outs, dag ins, string asmstr, list<dag> pattern> : Instruction {
-  field bits<16> Inst;
-  field bits<16> SoftFail = 0;
-  
-  bits<16> Opcode = 0;
-
+class SHInst<dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+    : Instruction {
   let Namespace = "SH";
   dag OutOperandList = outs;
   dag InOperandList = ins;
   let AsmString = asmstr;
   let Pattern = pattern;
+}
+
+
+// Base of all 16-bit SuperH instructions
+class SHInst16<dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+    : SHInst<outs, ins, asmstr, pattern> {
+  field bits<16> SoftFail = 0;
+  field bits<16> Inst;
+  bits<16> Opcode = 0;
   let Size = 2;
 }
 
-// SuperH Psuedo Instruction
-class SHPseudo<dag outs, dag ins, string asmstr="; error: this should not be emitted", list<dag> pattern = []>
+class SHInst32<dag outs, dag ins, string asmstr, list<dag> pattern = []>
     : SHInst<outs, ins, asmstr, pattern> {
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
+  field bits<16> SoftFail = 0;
+  field bits<16> Inst;
+  bits<32> Opcode = 0;
+  let Size = 4;
 }
 
+// SuperH Pseudo Instruction
+// These are not real instructions but are expanded to real instructions
+// in later passes implemented in C++.
+class SHPseudo<dag outs, dag ins, string asmstr="; error: this should not be emitted", list<dag> pattern = []>
+    : SHInst<outs, ins, asmstr, pattern> {
+  let isCodeGenOnly = 1;
+  let isPseudo = 1;
+}
+
+
+
+
+//===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
 //  Instruction Formats
 //===----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
-class SHInstOP_N4_I8 <bits<16> opcode, dag outs, dag ins, string asmstr> 
-  : SHInst<outs, ins, asmstr, []> {
-
-  // Opcode
-  let Opcode = opcode;
-  let Inst{15-12} = Opcode{15-12};
-
-  // Operands
-  bits<4> Rn;
-  bits<8> imm;
-  let Inst{11-8} = Rn;
-  let Inst{7-0} = imm;
-}
-
-class SHInstOP_N4_D8 <bits<16> opcode, dag outs, dag ins, string asmstr> 
-  : SHInst<outs, ins, asmstr, []> {
-  
+//===----------------------------------------------------------------------===//
+// No-operand Instruction
+// <opopopopopopopop>
+//===----------------------------------------------------------------------===//
+class Inst<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+    : SHInst16<outs, ins, asmstr, pattern> {
   
   // Opcode
   let Opcode = opcode;
-  let Inst{15-12} = Opcode{15-12};
-
-  // Operands
-  bits<4> Rn;
-  bits<8> disp;
-  let Inst{11-8} = Rn;
-  let Inst{7-0} = disp;
+  let Inst = Opcode;
 }
 
-class SHInstOP_N4_M4 <bits<16> opcode, dag outs, dag ins, string asmstr> 
-  : SHInst<outs, ins, asmstr, []> {
+//===----------------------------------------------------------------------===//
+// Register -> Register Instruction
+// <opop|rnrn|rmrm|opop>
+//===----------------------------------------------------------------------===//
+class InstRmRn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+    : SHInst16<outs, ins, asmstr, pattern> {
   
   // Opcode
   let Opcode = opcode;
@@ -108,8 +114,103 @@ class SHInstOP_N4_M4 <bits<16> opcode, dag outs, dag ins, string asmstr>
   let Inst{7-4} = Rm;
 }
 
-class SHInstOP_N4_D4 <bits<16> opcode, dag outs, dag ins, string asmstr> 
-  : SHInst<outs, ins, asmstr, []> {
+//===----------------------------------------------------------------------===//
+// (Any) -> Register Instruction
+// <opop|rnrn|opopopop>
+//===----------------------------------------------------------------------===//
+class InstRn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+    : SHInst16<outs, ins, asmstr, pattern> {
+  
+  // Opcode
+  let Opcode = opcode;
+  let Inst{15-8} = Opcode{15-8};
+  let Inst{7-0} = Opcode{7-0};
+
+  // Operands
+  bits<4> Rn;
+  let Inst{11-8} = Rn;
+}
+
+//===----------------------------------------------------------------------===//
+// Register -> (Any) Instruction
+// <opop|rmrm|opopopop>
+//===----------------------------------------------------------------------===//
+class InstRm<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+    : SHInst16<outs, ins, asmstr, pattern> {
+  
+  // Opcode
+  let Opcode = opcode;
+  let Inst{15-8} = Opcode{15-8};
+  let Inst{7-0} = Opcode{7-0};
+
+  // Operands
+  bits<4> Rm;
+  let Inst{11-8} = Rm;
+}
+
+//===----------------------------------------------------------------------===//
+// Immediate -> Register Instruction
+// <opop|rnrn|iiiiiiii>
+//===----------------------------------------------------------------------===//
+class InstI8Rn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+    : SHInst16<outs, ins, asmstr, pattern> {
+
+  // Opcode
+  let Opcode = opcode;
+  let Inst{15-12} = Opcode{15-12};
+
+  // Operands
+  bits<4> Rn;
+  bits<8> imm;
+  let Inst{11-8} = Rn;
+  let Inst{7-0} = imm;
+}
+
+//===----------------------------------------------------------------------===//
+// (disp:8) -> Register Instruction
+// <opop|rnrn|dddddddd>
+//===----------------------------------------------------------------------===//
+class InstD8Rn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+    : SHInst16<outs, ins, asmstr, pattern> {
+  
+  
+  // Opcode
+  let Opcode = opcode;
+  let Inst{15-12} = Opcode{15-12};
+
+  // Operands
+  bits<4> Rn;
+  bits<8> disp;
+  let Inst{11-8} = Rn;
+  let Inst{7-0} = disp;
+}
+
+//===----------------------------------------------------------------------===//
+// (Register + disp:4) -> Register Instruction
+// <opop|rnrn|rmrm|dddd>
+//===----------------------------------------------------------------------===//
+class InstRmD4Rn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+    : SHInst16<outs, ins, asmstr, pattern> {
+  
+  // Opcode
+  let Opcode = opcode;
+  let Inst{15-12} = Opcode{15-12};
+
+  // Operands
+  bits<4> Rn;
+  bits<4> Rm;
+  bits<4> disp;
+  let Inst{11-8} = Rn;
+  let Inst{7-4} = Rm;
+  let Inst{0-3} = disp;
+}
+
+//===----------------------------------------------------------------------===//
+// (disp:4) -> Register Instruction
+// <opopopop|rnrn|dddd>
+//===----------------------------------------------------------------------===//
+class InstD4Rn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+    : SHInst16<outs, ins, asmstr, pattern> {
   
   // Opcode
   let Opcode = opcode;
@@ -122,8 +223,12 @@ class SHInstOP_N4_D4 <bits<16> opcode, dag outs, dag ins, string asmstr>
   let Inst{0-3} = disp;
 }
 
-class SHInstOP_M4_D4 <bits<16> opcode, dag outs, dag ins, string asmstr> 
-  : SHInst<outs, ins, asmstr, []> {
+//===----------------------------------------------------------------------===//
+// (disp:4 + Register) -> Reserved Register Instruction
+// <opopopop|rmrm|dddd>
+//===----------------------------------------------------------------------===//
+class InstD4RmRr <bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+    : SHInst16<outs, ins, asmstr, pattern> {
   
   // Opcode
   let Opcode = opcode;
@@ -136,36 +241,12 @@ class SHInstOP_M4_D4 <bits<16> opcode, dag outs, dag ins, string asmstr>
   let Inst{0-3} = disp;
 }
 
-class SHInstOP_N4_M4_D4 <bits<16> opcode, dag outs, dag ins, string asmstr> 
-  : SHInst<outs, ins, asmstr, []> {
-  
-  // Opcode
-  let Opcode = opcode;
-  let Inst{15-12} = Opcode{15-12};
-
-  // Operands
-  bits<4> Rn;
-  bits<4> Rm;
-  bits<4> disp;
-  let Inst{11-8} = Rn;
-  let Inst{7-4} = Rm;
-  let Inst{0-3} = disp;
-}
-
-class SHInstOP_D12 <bits<16> opcode, dag outs, dag ins, string asmstr> 
-  : SHInst<outs, ins, asmstr, []> {
-  
-  // Opcode
-  let Opcode = opcode;
-  let Inst{15-12} = Opcode{15-12};
-
-  // Operands
-  bits<12> disp;
-  let Inst{11-0} = disp;
-}
-
-class SHInstOP_D8 <bits<16> opcode, dag outs, dag ins, string asmstr> 
-  : SHInst<outs, ins, asmstr, []> {
+//===----------------------------------------------------------------------===//
+// (disp:8) Instruction
+// <opopopop|dddddddd>
+//===----------------------------------------------------------------------===//
+class InstD8Rr<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+    : SHInst16<outs, ins, asmstr, pattern> {
   
   // Opcode
   let Opcode = opcode;
@@ -176,8 +257,12 @@ class SHInstOP_D8 <bits<16> opcode, dag outs, dag ins, string asmstr>
   let Inst{7-0} = disp;
 }
 
-class SHInstOP_I8 <bits<16> opcode, dag outs, dag ins, string asmstr> 
-  : SHInst<outs, ins, asmstr, []> {
+//===----------------------------------------------------------------------===//
+// (imm:8) Instruction
+// <opopopop|iiiiiiii>
+//===----------------------------------------------------------------------===//
+class InstI8Rr <bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+    : SHInst16<outs, ins, asmstr, pattern> {
   
   // Opcode
   let Opcode = opcode;
@@ -188,37 +273,18 @@ class SHInstOP_I8 <bits<16> opcode, dag outs, dag ins, string asmstr>
   let Inst{7-0} = imm;
 }
 
-class SHInstOP_N4 <bits<16> opcode, dag outs, dag ins, string asmstr> 
-  : SHInst<outs, ins, asmstr, []> {
+//===----------------------------------------------------------------------===//
+// (disp:12) Instruction
+// <opop|dddddddddddd>
+//===----------------------------------------------------------------------===//
+class InstD12Rr<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+    : SHInst16<outs, ins, asmstr, pattern> {
   
   // Opcode
   let Opcode = opcode;
-  let Inst{15-8} = Opcode{15-8};
-  let Inst{7-0} = Opcode{7-0};
+  let Inst{15-12} = Opcode{15-12};
 
   // Operands
-  bits<4> Rn;
-  let Inst{11-8} = Rn;
+  bits<12> disp;
+  let Inst{11-0} = disp;
 }
-
-class SHInstOP_M4 <bits<16> opcode, dag outs, dag ins, string asmstr> 
-  : SHInst<outs, ins, asmstr, []> {
-  
-  // Opcode
-  let Opcode = opcode;
-  let Inst{15-8} = Opcode{15-8};
-  let Inst{7-0} = Opcode{7-0};
-
-  // Operands
-  bits<4> Rm;
-  let Inst{11-8} = Rm;
-}
-
-class SHInstOP <bits<16> opcode, dag outs, dag ins, string asmstr> 
-  : SHInst<outs, ins, asmstr, []> {
-  
-  // Opcode
-  let Opcode = opcode;
-  let Inst = Opcode;
-}
-
