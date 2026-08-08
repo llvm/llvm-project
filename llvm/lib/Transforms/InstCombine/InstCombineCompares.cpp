@@ -3652,6 +3652,51 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstant(ICmpInst &Cmp) {
       if (Instruction *I = foldICmpIntrinsicWithConstant(Cmp, II, *C))
         return I;
 
+    {
+      // icmp slt/sgt (extractvalue (frexp X), 1), C -->
+      //                         fcmp olt/oge (fabs X), 2^ExpVal
+      // slt -> olt, ExpVal = C-1; sgt -> oge, ExpVal = C.
+      Value *X;
+      if (match(Cmp.getOperand(0),
+                m_OneUse(m_ExtractValue<1>(
+                    m_OneUse(m_Intrinsic<Intrinsic::frexp>(m_Value(X))))))) {
+        ICmpInst::Predicate Pred = Cmp.getPredicate();
+        APInt Exp;
+        FCmpInst::Predicate NewPred;
+        bool ValidPred = true;
+
+        switch (Pred) {
+        case ICmpInst::ICMP_SLT:
+          NewPred = FCmpInst::FCMP_OLT;
+          Exp = *C - 1;
+          break;
+        case ICmpInst::ICMP_SGT:
+          NewPred = FCmpInst::FCMP_OGE;
+          Exp = *C;
+          break;
+        default:
+          ValidPred = false;
+          break;
+        }
+
+        if (ValidPred) {
+          const fltSemantics &Sem =
+              X->getType()->getScalarType()->getFltSemantics();
+          int MaxExp = APFloat::semanticsMaxExponent(Sem);
+
+          if (!Exp.isNegative() && Exp.sle(MaxExp + 1) &&
+              isKnownNeverInfOrNaN(X, SQ.getWithInstruction(&Cmp))) {
+            int ExpVal = static_cast<int>(Exp.getSExtValue());
+            APFloat CmpConst = scalbn(APFloat::getOne(Sem), ExpVal,
+                                      APFloat::rmNearestTiesToEven);
+            Value *Fabs = Builder.CreateFAbs(X);
+            return new FCmpInst(NewPred, Fabs,
+                                ConstantFP::get(X->getType(), CmpConst));
+          }
+        }
+      }
+    }
+
     // (extractval ([s/u]subo X, Y), 0) == 0 --> X == Y
     // (extractval ([s/u]subo X, Y), 0) != 0 --> X != Y
     // TODO: This checks one-use, but that is not strictly necessary.
