@@ -1196,10 +1196,11 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::mask_beforefirst:
   case Intrinsic::experimental_vector_extract_last_active:
     if (ST->isSVEorStreamingSVEAvailable()) {
       auto [LegalCost, _] = getTypeLegalizationCost(ICA.getArgTypes()[0]);
-      // This should turn into chained clastb instructions.
+      // This should turn into chained brkb/clastb instructions.
       return LegalCost;
     }
     break;

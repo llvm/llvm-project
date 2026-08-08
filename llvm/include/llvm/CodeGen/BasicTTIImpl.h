@@ -2204,6 +2204,7 @@ public:
       return Cost;
     }
     case Intrinsic::get_active_lane_mask:
+    case Intrinsic::mask_beforefirst:
     case Intrinsic::experimental_vector_match:
     case Intrinsic::experimental_vector_histogram_add:
     case Intrinsic::experimental_vector_histogram_uadd_sat:
@@ -2663,6 +2664,31 @@ public:
       InstructionCost Cost =
           thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
       Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, ExpRetTy, RetTy,
+                                          CmpInst::ICMP_ULT, CostKind);
+      return Cost;
+    }
+    case Intrinsic::mask_beforefirst: {
+      ISD = ISD::MASK_BEFOREFIRST;
+      EVT ResVT = getTLI()->getValueType(DL, RetTy, true);
+      if (!getTLI()->isOperationExpand(ISD, ResVT))
+        break;
+
+      // Expansion via icmp ult step-vector, (cttz.elts mask)
+      ConstantRange VScaleRange(APInt(64, 1), APInt::getZero(64));
+      unsigned EltWidth = getTLI()->getBitWidthForCttzElements(
+          getTLI()->getValueType(DL, RetTy), ResVT.getVectorElementCount(),
+          /*ZeroIsPoison=*/false, &VScaleRange);
+      Type *EltTy = IntegerType::get(RetTy->getContext(), EltWidth);
+      IntrinsicCostAttributes CttzEltsAttrs(Intrinsic::experimental_cttz_elts,
+                                            EltTy, RetTy, FMF);
+      InstructionCost Cost =
+          thisT()->getIntrinsicInstrCost(CttzEltsAttrs, CostKind);
+
+      Type *CmpTy = RetTy->getWithNewType(EltTy);
+      IntrinsicCostAttributes StepVecAttrs(Intrinsic::stepvector, CmpTy, {},
+                                           FMF);
+      Cost += thisT()->getIntrinsicInstrCost(StepVecAttrs, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CmpTy,
                                           CmpInst::ICMP_ULT, CostKind);
       return Cost;
     }
