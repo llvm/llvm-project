@@ -182,6 +182,7 @@ CompilerType PdbAstBuilderSwift::GetOrCreateType(PdbTypeSymId type) {
   return ct;
 }
 
-void PdbAstBuilderSwift::Dump(Stream &stream, llvm::StringRef filter) {
-  m_swift_ts.Dump(stream.AsRawOstream(), filter);
+void PdbAstBuilderSwift::Dump(Stream &stream, llvm::StringRef filter,
+                              bool show_color) {
+  m_swift_ts.Dump(stream.AsRawOstream(), filter, show_color);
 }

@@ -727,7 +727,7 @@ public:
     return ID;
 #include "URLComponents.def"
     return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+                                   name.AsCString(""));
   }
 
 private:
@@ -738,7 +738,7 @@ private:
   }
 #include "URLComponents.def"
 
-  SyntheticChildrenFrontEnd::AutoPointer m_synth_frontend_up;
+  SyntheticChildrenFrontEnd::UniquePointer m_synth_frontend_up;
   std::unique_ptr<ObjCRuntimeSyntheticProvider> m_synth_backend_up;
   bool m_valid = false;
 #define COMPONENT(Name, PrettyName, ID) ValueObject *m_##Name;

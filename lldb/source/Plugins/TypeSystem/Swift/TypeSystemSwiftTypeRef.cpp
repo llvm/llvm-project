@@ -1074,7 +1074,7 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
   TypeQuery query(mangled.GetStringRef(), TypeQueryOptions::e_find_one);
   if (!prefer_clang_types) {
     // First check if this type has already been parsed from DWARF.
-    if (auto cached = m_swift_type_map.Lookup(mangled.AsCString()))
+    if (auto cached = m_swift_type_map.Lookup(mangled.AsCString(nullptr)))
       results.InsertUnique(cached);
     else if (auto *M = GetModule())
       M->FindTypes(query, results);
@@ -1088,7 +1088,7 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
           return {GetDemangledType(dem, ty->GetMangledTypeName()), {}};
         LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), ty.takeError(),
                         "Could not resolve type alias {0}: {1}",
-                        mangled.AsCString());
+                        mangled.AsCString(nullptr));
       }
       // Do an even more expensive global search.
       target_sp->GetImages().FindTypes(/*search_first=*/nullptr, query,
@@ -1096,7 +1096,7 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     } else {
       LLDB_LOGF(GetLog(LLDBLog::Types),
                 "No module. Couldn't resolve type alias %s",
-                mangled.AsCString());
+                mangled.AsCString(""));
       return {{}, {}};
     }
   }
@@ -1125,13 +1125,13 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     if (!clang_type)
       LLDB_LOGF(GetLog(LLDBLog::Types),
                 "Couldn't resolve type alias %s as a Swift or clang type.",
-                mangled.AsCString());
+                mangled.AsCString(""));
     return {{}, clang_type};
   }
 
   if (!type) {
     LLDB_LOGF(GetLog(LLDBLog::Types), "Found empty type alias %s",
-              mangled.AsCString());
+              mangled.AsCString(""));
     return {{}, {}};
   }
 
@@ -1143,17 +1143,17 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     // to look it up as a clang type.
     LLDB_LOGF(GetLog(LLDBLog::Types),
               "Found non-Swift type alias %s, looking it up as clang type.",
-              mangled.AsCString());
+              mangled.AsCString(""));
     auto clang_type = resolve_clang_type();
     if (!clang_type)
       LLDB_LOGF(GetLog(LLDBLog::Types), "Could not find a clang type for %s.",
-                mangled.AsCString());
+                mangled.AsCString(""));
     return {{}, clang_type};
   }
   NodePointer n = GetDemangledType(dem, desugared_name.GetStringRef());
   if (!n) {
     LLDB_LOG(GetLog(LLDBLog::Types), "Unrecognized demangling {0}",
-             desugared_name.AsCString());
+             desugared_name.AsCString(nullptr));
     return {{}, {}};
   }
   return {n, {}};
@@ -2507,7 +2507,7 @@ const char *TypeSystemSwiftTypeRef::DeriveKeyFor(const SymbolContext &sc) {
 
   // Otherwise create a catch-all context per unique triple.
   if (sc.module_sp)
-    return ConstString(sc.module_sp->GetArchitecture().GetTriple().str()).AsCString();
+    return ConstString(sc.module_sp->GetArchitecture().GetTriple().str()).AsCString(nullptr);
 
   return nullptr;
 }
@@ -2805,7 +2805,7 @@ void *TypeSystemSwiftTypeRef::ReconstructType(opaque_compiler_type_t type,
   auto swift_ast_context = GetSwiftASTContext(sc);
   if (!swift_ast_context || swift_ast_context->HasFatalErrors())
     return nullptr;
-  void *result = llvm::expectedToStdOptional(swift_ast_context->ReconstructType(
+  void *result = llvm::expectedToOptional(swift_ast_context->ReconstructType(
                                                  GetMangledTypeName(type)))
                      .value_or(nullptr);
 
@@ -2839,7 +2839,7 @@ TypeSystemSwiftTypeRef::ReconstructType(CompilerType type,
 CompilerType TypeSystemSwiftTypeRef::GetTypeFromMangledTypename(
     ConstString mangled_typename) {
   return {weak_from_this(),
-          (opaque_compiler_type_t)mangled_typename.AsCString()};
+          (opaque_compiler_type_t)mangled_typename.AsCString(nullptr)};
 }
 
 TypeSP TypeSystemSwiftTypeRef::GetCachedType(ConstString mangled) {
@@ -3156,7 +3156,7 @@ template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
   // See comments in SwiftASTContext::ReconstructType(). For
   // SILFunctionTypes the mapping isn't bijective.
   auto ast_ctx = r.GetTypeSystem().dyn_cast_or_null<SwiftASTContext>();
-  if (((void *)llvm::expectedToStdOptional(
+  if (((void *)llvm::expectedToOptional(
            ast_ctx->ReconstructType(l.GetMangledTypeName()))
            .value_or(nullptr)) == r.GetOpaqueQualType())
     return true;
@@ -3395,8 +3395,8 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
     bool equivalent = true;                                                    \
     if (ReconstructType(TYPE) && !swift_ast_ctx->HasFatalErrors()) {           \
       equivalent = (Equivalent(                                                \
-          llvm::expectedToStdOptional(std::move(result)),                      \
-          llvm::expectedToStdOptional(swift_ast_ctx->REFERENCE ARGS)));        \
+          llvm::expectedToOptional(std::move(result)),                      \
+          llvm::expectedToOptional(swift_ast_ctx->REFERENCE ARGS)));        \
     } else { /* missing .swiftmodule */                                        \
       if (!result)                                                             \
         llvm::consumeError(result.takeError());                                \
@@ -4507,7 +4507,7 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
     if (auto swift_ast_context =
             GetSwiftASTContext(GetSymbolContextForType(type, exe_ctx)))
       if (auto n =
-              llvm::expectedToStdOptional(swift_ast_context->GetNumChildren(
+              llvm::expectedToOptional(swift_ast_context->GetNumChildren(
                   ReconstructType(type, exe_ctx), omit_empty_base_classes,
                   exe_ctx))) {
         LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), num_children.takeError(),
@@ -4660,7 +4660,7 @@ CompilerType TypeSystemSwiftTypeRef::ConvertClangTypeToSwiftType(
   swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer node = GetClangTypeTypeNode(dem, clang_type);
   CompilerType result = RemangleAsType(dem, node, flavor);
-  m_imported_type_map.Insert(result.GetMangledTypeName().AsCString(),
+  m_imported_type_map.Insert(result.GetMangledTypeName().AsCString(nullptr),
                              clang_type);
   return result;
 }
@@ -4703,7 +4703,7 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
       return *ast_num_children;
     if (auto swift_ast_context =
             GetSwiftASTContext(GetSymbolContextForType(type, exe_ctx)))
-      ast_num_children = llvm::expectedToStdOptional(
+      ast_num_children = llvm::expectedToOptional(
           swift_ast_context->GetNumChildren(ReconstructType(type, exe_ctx),
                                             omit_empty_base_classes, exe_ctx));
     return ast_num_children.value_or(0);
@@ -4778,7 +4778,7 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   // can't mix&match between the two typesystems if there is such a
   // divergence. We'll need to replace all calls at once.
   if (get_ast_num_children() <
-      llvm::expectedToStdOptional(
+      llvm::expectedToOptional(
           runtime->GetNumChildren({weak_from_this(), type}, exe_scope))
           .value_or(0))
     return result;

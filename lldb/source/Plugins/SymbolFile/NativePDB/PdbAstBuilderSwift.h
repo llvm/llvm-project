@@ -56,7 +56,7 @@ public:
 
   void ParseDeclsForContext(CompilerDeclContext context) override {}
 
-  void Dump(Stream &stream, llvm::StringRef filter) override;
+  void Dump(Stream &stream, llvm::StringRef filter, bool show_color) override;
 
   /// To avoid issues with uniquing, bound generics are emitted as follows in DWARF:
   /// - A sized outer structure with no name or identifier

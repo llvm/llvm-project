@@ -266,7 +266,7 @@ swift::Type SwiftASTContext::GetSwiftType(opaque_compiler_type_t opaque_type) {
 
 swift::Type
 SwiftASTContext::GetSwiftTypeIgnoringErrors(CompilerType compiler_type) {
-  return llvm::expectedToStdOptional(GetSwiftType(compiler_type))
+  return llvm::expectedToOptional(GetSwiftType(compiler_type))
       .value_or(swift::Type());
 }
 
@@ -484,7 +484,7 @@ public:
                             SwiftEnumDescriptor::Kind::CStyle),
         m_nopayload_elems_bitmask(), m_elements(), m_element_indexes() {
     LOG_PRINTF(GetLog(LLDBLog::Types), "doing C-style enum layout for %s",
-               GetTypeName().AsCString());
+               GetTypeName().AsCString(""));
 
     swift::irgen::IRGenModule &irgen_module = swift_ast_ctx->GetIRGenModule();
     const swift::irgen::EnumImplStrategy &enum_impl_strategy =
@@ -510,12 +510,12 @@ public:
           enum_impl_strategy.getBitPatternForNoPayloadElement(enum_case.decl);
 
       LOG_PRINTF(GetLog(LLDBLog::Types), "case_name = %s, unmasked value = %s",
-                 case_name.AsCString(), Dump(case_value).c_str());
+                 case_name.AsCString(""), Dump(case_value).c_str());
 
       case_value &= m_nopayload_elems_bitmask;
 
       LOG_PRINTF(GetLog(LLDBLog::Types), "case_name = %s, masked value = %s",
-                 case_name.AsCString(), Dump(case_value).c_str());
+                 case_name.AsCString(""), Dump(case_value).c_str());
 
       std::unique_ptr<ElementInfo> elem_info(
           new ElementInfo{case_name, CompilerType(), has_payload, is_indirect});
@@ -529,7 +529,7 @@ public:
                                   bool no_payload) override {
     LOG_PRINTF(GetLog(LLDBLog::Types),
                "C-style enum - inspecting data to find enum case for type %s",
-               GetTypeName().AsCString());
+               GetTypeName().AsCString(""));
 
     swift::ClusteredBitVector current_payload;
     lldb::offset_t offset = 0;
@@ -582,7 +582,7 @@ public:
       return nullptr;
     }
     LOG_PRINTF(GetLog(LLDBLog::Types), "bitmask search success - found case %s",
-               iter->second.get()->name.AsCString());
+               iter->second.get()->name.AsCString(""));
     return iter->second.get();
   }
 
@@ -624,7 +624,7 @@ public:
       : SwiftEnumDescriptor(swift_can_type, enum_decl,
                             SwiftEnumDescriptor::Kind::AllPayload) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "doing ADT-style enum layout for %s",
-               GetTypeName().AsCString());
+               GetTypeName().AsCString(""));
 
     swift::irgen::IRGenModule &irgen_module = swift_ast_ctx->GetIRGenModule();
     const swift::irgen::EnumImplStrategy &enum_impl_strategy =
@@ -656,7 +656,8 @@ public:
 
       LOG_PRINTF(GetLog(LLDBLog::Types),
                  "case_name = %s, type = %s, is_indirect = %s",
-                 case_name.AsCString(), case_type.GetTypeName().AsCString(),
+                 case_name.AsCString(""),
+                 case_type.GetTypeName().AsCString(""),
                  is_indirect ? "yes" : "no");
 
       std::unique_ptr<ElementInfo> elem_info(
@@ -669,7 +670,7 @@ public:
                                   bool no_payload) override {
     LOG_PRINTF(GetLog(LLDBLog::Types),
                "ADT-style enum - inspecting data to find enum case for type %s",
-               GetTypeName().AsCString());
+               GetTypeName().AsCString(""));
 
     // No elements, just fail.
     if (m_elements.size() == 0) {
@@ -680,7 +681,7 @@ public:
     if (m_elements.size() == 1) {
       LOG_PRINTF(GetLog(LLDBLog::Types),
                  "enum with one case. getting out easy with %s",
-                 m_elements.front().get()->name.AsCString());
+                 m_elements.front().get()->name.AsCString(""));
 
       return m_elements.front().get();
     }
@@ -730,7 +731,7 @@ public:
         LOG_PRINTF(GetLog(LLDBLog::Types),
                    "discriminator value of %" PRIu64
                    " acceptable, case %s matched",
-                   (uint64_t)discriminator, ptr->name.AsCString());
+                   (uint64_t)discriminator, ptr->name.AsCString(""));
       return ptr;
     }
   }
@@ -809,7 +810,7 @@ public:
       : SwiftEnumDescriptor(swift_can_type, enum_decl,
                             SwiftEnumDescriptor::Kind::Resilient) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "doing resilient enum layout for %s",
-               GetTypeName().AsCString());
+               GetTypeName().AsCString(""));
   }
 
   ElementInfo *GetElementFromData(const lldb_private::DataExtractor &data,
@@ -2315,7 +2316,7 @@ static std::optional<StringRef> GetDSYMBundle(Module &module) {
   if (!obj_file)
     return {};
 
-  StringRef dir = obj_file->GetFileSpec().GetDirectory().GetStringRef();
+  StringRef dir = obj_file->GetFileSpec().GetDirectory();
   auto it = llvm::sys::path::rbegin(dir);
   auto end = llvm::sys::path::rend(dir);
   if (it == end)
@@ -4938,7 +4939,7 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
 
   if (platform_sp) {
     library_fullname =
-        platform_sp->GetFullNameForDylib(ConstString(library_name)).AsCString();
+        platform_sp->GetFullNameForDylib(ConstString(library_name)).AsCString(nullptr);
   } else // This is the old way, and we shouldn't use it except on Mac OS
   {
 #ifdef __APPLE__
@@ -5192,14 +5193,14 @@ void SwiftASTContext::CacheDemangledType(ConstString name,
                                          swift::TypeBase *found_type) {
   VALID_OR_RETURN();
 
-  m_type_to_mangled_name_map.insert({found_type, name.AsCString()});
-  m_mangled_name_to_type_map.insert({name.AsCString(), found_type});
+  m_type_to_mangled_name_map.insert({found_type, name.AsCString(nullptr)});
+  m_mangled_name_to_type_map.insert({name.AsCString(nullptr), found_type});
 }
 
 void SwiftASTContext::CacheDemangledTypeFailure(ConstString name) {
   VALID_OR_RETURN();
 
-  m_negative_type_cache.Insert(name.AsCString());
+  m_negative_type_cache.Insert(name.AsCString(nullptr));
 }
 
 /// The old TypeReconstruction implementation would reconstruct SILFunctionTypes
@@ -5229,7 +5230,7 @@ CompilerType
 SwiftASTContext::GetTypeFromMangledTypename(ConstString mangled_typename) {
   if (llvm::isa<SwiftASTContextForExpressions>(this))
     return GetCompilerType(
-        llvm::expectedToStdOptional(ReconstructType(mangled_typename))
+        llvm::expectedToOptional(ReconstructType(mangled_typename))
             .value_or(nullptr));
   return GetCompilerType(mangled_typename);
 }
@@ -5304,7 +5305,7 @@ llvm::Expected<swift::TypeBase *>
 SwiftASTContext::ReconstructType(ConstString mangled_typename) {
   VALID_OR_RETURN(nullptr);
 
-  const char *mangled_cstr = mangled_typename.AsCString();
+  const char *mangled_cstr = mangled_typename.AsCString("");
   if (mangled_typename.IsEmpty() || !SwiftLanguageRuntime::IsSwiftMangledName(
                                         mangled_typename.GetStringRef())) {
     return llvm::createStringError("typename \"" +
@@ -6095,7 +6096,7 @@ void SwiftASTContext::LogConfiguration(bool repl, bool playground) {
   }
   if (m_main_swift_module)
     HEALTH_LOG_PRINTF("  Main module                      : %s",
-                      m_main_swift_module.AsCString());
+                      m_main_swift_module.AsCString(""));
   if (repl)
     HEALTH_LOG_PRINTF("  REPL                             : true");
   if (playground)
@@ -7316,7 +7317,7 @@ SwiftASTContext::GetByteStride(opaque_compiler_type_t type,
     swift::CanType swift_bound_type(GetCanonicalSwiftType(bound_type));
     if (swift_bound_type && swift_bound_type->hasTypeParameter()) {
       LOG_PRINTF(GetLog(LLDBLog::Types), "Can't bind type: %s",
-                 bound_type.GetTypeName().AsCString());
+                 bound_type.GetTypeName().AsCString(""));
       return {};
     }
 
@@ -7358,7 +7359,7 @@ SwiftASTContext::GetTypeBitAlign(opaque_compiler_type_t type,
     swift::CanType swift_bound_type(GetCanonicalSwiftType(bound_type));
     if (swift_bound_type && swift_bound_type->hasTypeParameter()) {
       LOG_PRINTF(GetLog(LLDBLog::Types), "Can't bind type: %s",
-                 bound_type.GetTypeName().AsCString());
+                 bound_type.GetTypeName().AsCString(""));
       return {};
 
     }
@@ -7726,7 +7727,7 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::Protocol:
   case swift::TypeKind::ProtocolComposition:
   case swift::TypeKind::Existential:
-    return llvm::expectedToStdOptional(
+    return llvm::expectedToOptional(
                GetNumChildren(type, /*omit_empty_base_classes=*/false, nullptr))
         .value_or(0);
 
@@ -8175,7 +8176,7 @@ static std::optional<uint64_t> GetInstanceVariableOffset_Metadata(
     StringRef ivar_name, const CompilerType &ivar_type) {
   llvm::SmallString<1> m_description;
   LOG_PRINTF(GetLog(LLDBLog::Types), "ivar_name = %s, type = %s",
-             ivar_name.str().c_str(), type.GetTypeName().AsCString());
+             ivar_name.str().c_str(), type.GetTypeName().AsCString(""));
 
   Process *process = exe_ctx->GetProcessPtr();
   if (!process) {
@@ -8563,7 +8564,7 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
   }
 
   case swift::TypeKind::LValue:
-    if (idx < llvm::expectedToStdOptional(
+    if (idx < llvm::expectedToOptional(
                   GetNumChildren(type, omit_empty_base_classes, exe_ctx))
                   .value_or(0)) {
       CompilerType pointee_clang_type(GetNonReferenceType(type));
@@ -9731,7 +9732,7 @@ LoadOneModule(const SourceModule &module, SwiftASTContext &swift_ast_context,
   ConstString toplevel = module.path.front();
   const std::string &m_description = swift_ast_context.GetDescription();
   LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions),
-             "Importing module %s", toplevel.AsCString());
+             "Importing module %s", toplevel.AsCString(""));
 
   auto load_impl =
       [&](ConstString path) -> llvm::Expected<swift::ModuleDecl &> {
@@ -9757,7 +9758,7 @@ LoadOneModule(const SourceModule &module, SwiftASTContext &swift_ast_context,
     HEALTH_LOG_PRINTF(
         "Missing Swift module or Clang module found for \"%s\""
             ", \"imported\" via SwiftDWARFImporterDelegate. Hint: %s",
-        toplevel.AsCString(),
+        toplevel.AsCString(""),
         swift_ast_context.GetTriple().isOSDarwin()
             ? "Register Swift modules with the linker using -add_ast_path."
             : "Swift modules can be wrapped in object containers using "
@@ -9780,7 +9781,7 @@ LoadOneModule(const SourceModule &module, SwiftASTContext &swift_ast_context,
 
   if (!swift_module) {
     LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions),
-               "Couldn't import module %s", toplevel.AsCString());
+               "Couldn't import module %s", toplevel.AsCString(""));
     return swift_module;
   }
 
@@ -9789,7 +9790,7 @@ LoadOneModule(const SourceModule &module, SwiftASTContext &swift_ast_context,
     for (const swift::FileUnit *file_unit : swift_module->getFiles())
       DescribeFileUnit(ss, file_unit);
     LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions),
-               "Imported module %s from {%s}", module.path.front().AsCString(),
+               "Imported module %s from {%s}", module.path.front().AsCString(""),
                ss.GetData());
   }
   return swift_module;

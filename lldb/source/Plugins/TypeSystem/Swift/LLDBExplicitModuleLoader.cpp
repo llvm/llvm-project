@@ -109,16 +109,19 @@ std::error_code LLDBExplicitSwiftModuleLoader::findModuleFilesInDirectory(
 }
 bool LLDBExplicitSwiftModuleLoader::canImportModule(
     swift::ImportPath::Module named, swift::SourceLoc loc,
-    ModuleVersionInfo *versionInfo, bool isTestableImport) {
+    ModuleVersionInfo *versionInfo, bool isTestableImport,
+    bool isSourceCanImport) {
   if (!enabled())
     return false;
 
   if (m_casml &&
       llvm::cast<swift::SerializedModuleLoaderBase>(m_casml.get())
-          ->canImportModule(named, loc, versionInfo, isTestableImport))
+          ->canImportModule(named, loc, versionInfo, isTestableImport,
+                            isSourceCanImport))
     return true;
   return llvm::cast<swift::SerializedModuleLoaderBase>(m_esml.get())
-      ->canImportModule(named, loc, versionInfo, isTestableImport);
+      ->canImportModule(named, loc, versionInfo, isTestableImport,
+                        isSourceCanImport);
 }
 
 swift::ModuleDecl *

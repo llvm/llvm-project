@@ -125,7 +125,7 @@ static bool readStringFromAddress(
     return true;
   }
 
-  read_options.SetLocation(startAddress);
+  read_options.SetLocation(Address(startAddress));
   read_options.SetTargetSP(valobj.GetTargetSP());
   read_options.SetStream(&stream);
   read_options.SetSourceSize(length);
@@ -559,7 +559,7 @@ bool lldb_private::formatters::swift::StaticString_SummaryProvider(
   }
 
   read_options.SetTargetSP(valobj.GetTargetSP());
-  read_options.SetLocation(start_ptr);
+  read_options.SetLocation(Address(start_ptr));
   read_options.SetSourceSize(size);
   read_options.SetHasSourceSize(true);
   read_options.SetBinaryZeroIsTerminator(false);
@@ -1019,7 +1019,7 @@ public:
     const auto *it = llvm::find(children, name);
     if (it == children.end())
       return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
+                                     name.AsCString(""));
     return std::distance(children.begin(), it);
   }
 
@@ -1100,7 +1100,7 @@ public:
       return 0;
 
     return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+                                   name.AsCString(""));
   }
 
   lldb::ChildCacheState Update() override {
@@ -1185,7 +1185,7 @@ public:
       return 0;
 
     return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+                                   name.AsCString(""));
   }
 
   lldb::ChildCacheState Update() override {
@@ -1271,7 +1271,7 @@ public:
     if (buf.consume_front("[") && !buf.consumeInteger(10, idx) && buf == "]")
       return idx;
     return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+                                   name.AsCString(""));
   }
 
   lldb::ChildCacheState Update() override {
@@ -1483,7 +1483,7 @@ public:
     if (m_is_supported_target && name == "unprioritised_jobs")
       return 0;
     return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+                                   name.AsCString(""));
   }
 
   lldb::ChildCacheState Update() override {
@@ -1669,7 +1669,7 @@ lldb_private::formatters::swift::EnumSyntheticFrontEnd::GetIndexOfChildWithName(
   if (m_projected && name == m_projected->GetName())
     return 0;
   return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+                                 name.AsCString(""));
 }
 
 SyntheticChildrenFrontEnd *
@@ -1735,7 +1735,7 @@ bool lldb_private::formatters::swift::ObjC_Selector_SummaryProvider(
     return false;
 
   StringPrinter::ReadStringAndDumpToStreamOptions read_options;
-  read_options.SetLocation(ptr_value);
+  read_options.SetLocation(Address(ptr_value));
   read_options.SetTargetSP(valobj.GetTargetSP());
   read_options.SetStream(&stream);
   read_options.SetQuote('"');

@@ -347,7 +347,7 @@ public:
     if (!ts)
       return nullptr;
     CompilerType clang_type =
-        m_runtime.LookupAnonymousClangType(mangled.AsCString());
+        m_runtime.LookupAnonymousClangType(mangled.AsCString(nullptr));
     // If this is an objc type consult the ObjC runtime first, as it should be
     // cheaper than looking for the type in the module and work when the ObjC is
     // compiled without debug info.
@@ -424,7 +424,7 @@ public:
           llvm::raw_string_ostream(unique_swift_name)
               << '#' << m_num_anonymous_clang_types++;
           swift_type = typesystem.CreateClangStructType(unique_swift_name);
-          auto *key = swift_type.GetMangledTypeName().AsCString();
+          auto *key = swift_type.GetMangledTypeName().AsCString(nullptr);
           m_runtime.RegisterAnonymousClangType(key, field_type);
         } else {
           // TODO: The mangling flavor should be threaded through getTypeInfo.
@@ -962,7 +962,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
 
   {
     CompilerType clang_type = m_runtime.LookupAnonymousClangType(
-        m_type.GetMangledTypeName().AsCString());
+        m_type.GetMangledTypeName().AsCString(nullptr));
     if (!clang_type)
       ts.IsImportedType(m_type.GetOpaqueQualType(), &clang_type);
     if (clang_type) {
@@ -2210,7 +2210,7 @@ SwiftLanguageRuntime::BindGenericPackType(StackFrame &frame,
         // Read the type metadata pointer.
         Status status;
         lldb::addr_t md = LLDB_INVALID_ADDRESS;
-        target.ReadMemory(md_ptr, &md, ptr_size, status, true);
+        target.ReadMemory(Address(md_ptr), &md, ptr_size, status, true);
         if (!status.Success())
           return llvm::createStringError(
                     "cannot decode pack_expansion type: failed to read type "
@@ -3834,7 +3834,7 @@ lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
     Target &target = GetProcess().GetTarget();
     size_t ptr_size = GetProcess().GetAddressByteSize();
     lldb::addr_t refd_addr = LLDB_INVALID_ADDRESS;
-    target.ReadMemory(stripped_addr, &refd_addr, ptr_size, error, true);
+    target.ReadMemory(Address(stripped_addr), &refd_addr, ptr_size, error, true);
     return refd_addr;
   }
   return addr;

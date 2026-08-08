@@ -725,7 +725,7 @@ static llvm::Expected<Value> SwiftAsyncEvaluate_DW_OP_entry_value(
 
   DataExtractor subexpr_extractor(
       subexpr_data, subexpr_len, opcodes.GetByteOrder(),
-      opcodes.GetAddressByteSize(), opcodes.getTargetByteSize());
+      opcodes.GetAddressByteSize());
   if (!IsAsyncRegCtxExpr(subexpr_extractor,
                          exe_ctx.GetTargetRef().GetArchitecture().GetMachine()))
     return llvm::createStringError("SwiftAsyncEvaluate_DW_OP_entry_value: "
@@ -742,8 +742,7 @@ static llvm::Expected<Value> SwiftAsyncEvaluate_DW_OP_entry_value(
 
   static const uint8_t cfa_opcode = DW_OP_call_frame_cfa;
   DataExtractor cfa_expr_data(&cfa_opcode, 1, opcodes.GetByteOrder(),
-                              opcodes.GetAddressByteSize(),
-                              opcodes.getTargetByteSize());
+                              opcodes.GetAddressByteSize());
   DWARFExpressionList cfa_expr(func.CalculateSymbolContextModule(),
                                cfa_expr_data, dwarf_cu);
   llvm::Expected<Value> maybe_result = cfa_expr.Evaluate(

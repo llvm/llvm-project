@@ -21,11 +21,11 @@
 #include <lldb/lldb-enumerations.h>
 #include <llvm/ADT/StringRef.h>
 
-LLDB_PLUGIN_DEFINE(TypeSystemSwift)
-
 using namespace lldb;
 using namespace lldb_private;
 using llvm::StringRef;
+
+LLDB_PLUGIN_DEFINE(TypeSystemSwift)
 
 TypeSystemSwift::TypeSystemSwift() : TypeSystem() {}
 
@@ -93,14 +93,14 @@ bool TypeSystemSwift::CheckFlagInCU(CompileUnit *cu, const char *flag) {
     if (sym_file->GetCompileOption(flag, value, cu)) {
       LLDB_LOG_VERBOSE(GetLog(LLDBLog::Types),
                        "[CheckFlagInCU] Found flag {0} in CU: {1}", flag,
-                       cu->GetPrimaryFile().GetFilename().AsCString());
+                       cu->GetPrimaryFile().GetFilename());
       return true;
     }
   }
   }
   LLDB_LOG_VERBOSE(GetLog(LLDBLog::Types),
                    "[CheckFlagInCU] Did not find flag {0} in CU: {1}", flag,
-                   cu->GetPrimaryFile().GetFilename().AsCString());
+                   cu->GetPrimaryFile().GetFilename());
   return false;
 }
 
@@ -113,7 +113,8 @@ bool TypeSystemSwift::ShouldEnableEmbeddedSwift(CompileUnit *cu) {
   return CheckFlagInCU(cu, "-enable-embedded-swift");
 }
 
-void TypeSystemSwift::Dump(llvm::raw_ostream &output, llvm::StringRef filter) {
+void TypeSystemSwift::Dump(llvm::raw_ostream &output, llvm::StringRef filter,
+                           bool show_color) {
   // TODO: What to dump?
 }
 
