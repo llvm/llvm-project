@@ -128,7 +128,20 @@ bool test_with_hash() {
   return true;
 }
 
+// TODO: move to libcxx/include/__functional/hash.h
+namespace std {
+
+template <class _Key>
+struct __constexpr_hash {};
+
+} // namespace std
+
 int main(int, char**) {
   assert(test_with_hash<std::hash>());
+
+#if TEST_STD_VER >= 26
+  static_assert(test_with_hash<std::__constexpr_hash>());
+#endif
+
   return 0;
 }
