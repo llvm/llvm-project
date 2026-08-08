@@ -3669,7 +3669,8 @@ void TaskOp::build(OpBuilder &builder, OperationState &state,
       makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
       clauses.priority, /*private_vars=*/clauses.privateVars,
       /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
-      clauses.privateNeedsBarrier, clauses.untied, clauses.eventHandle);
+      clauses.privateNeedsBarrier, clauses.threadset, clauses.untied,
+      clauses.eventHandle);
 }
 
 LogicalResult TaskOp::verify() {
@@ -3723,7 +3724,8 @@ void TaskloopContextOp::build(OpBuilder &builder, OperationState &state,
       /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
       clauses.privateNeedsBarrier, clauses.reductionMod, clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-      makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadset,
+      clauses.untied);
   state.addAttribute("omp.combined", UnitAttr::get(ctx));
 }
 
