@@ -72,6 +72,10 @@ protected:
 
 TEST_F(HLSLSemanticSignatureMetadataTest, StructHelpers) {
   SemanticSignatureElement Elem;
+  Elem.SigId = 0;
+  Elem.CompType = dxil::ElementType::F32;
+  Elem.SemanticKind = dxbc::PSV::SemanticKind::Arbitrary;
+  Elem.Rows = 1;
   EXPECT_FALSE(Elem.isAllocated());
 
   Elem.Cols = 4;
@@ -446,9 +450,13 @@ TEST_F(HLSLSemanticSignatureMetadataTest, ElementToMetadataSystemValue) {
 // An unallocated element emits the row/col sentinels
 TEST_F(HLSLSemanticSignatureMetadataTest, ElementToMetadataUnallocated) {
   SemanticSignatureElement Elem;
+  Elem.SigId = 0;
   Elem.SemanticName = "POSITION";
   Elem.CompType = dxil::ElementType::F32;
+  Elem.SemanticKind = dxbc::PSV::SemanticKind::Arbitrary;
   Elem.SemanticIndices = {0};
+  Elem.Rows = 0;
+  Elem.Cols = 0;
 
   MDNode *Node = Elem.toMetadata(Ctx);
   ASSERT_EQ(Node->getNumOperands(), 13u);

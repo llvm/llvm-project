@@ -404,6 +404,19 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  sleep_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    sleep_test.cpp
+  DEPENDS
+    libc.hdr.time_macros
+    libc.hdr.types.struct_timespec
+    libc.src.__support.time.clock_gettime
+    libc.src.unistd.sleep
+)
+
+add_libc_unittest(
   symlink_test
   SUITE
     libc_unistd_unittests
@@ -493,6 +506,20 @@ add_libc_unittest(
     libc.src.unistd.unlinkat
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  usleep_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    usleep_test.cpp
+  DEPENDS
+    libc.hdr.time_macros
+    libc.hdr.types.struct_timespec
+    libc.src.__support.time.clock_gettime
+    libc.src.unistd.usleep
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_unittest(
@@ -689,7 +716,6 @@ add_libc_test(
 if(LLVM_LIBC_FULL_BUILD)
   add_libc_test(
     _exit_test
-    UNIT_TEST_ONLY
     SUITE
       libc_unistd_unittests
     SRCS
