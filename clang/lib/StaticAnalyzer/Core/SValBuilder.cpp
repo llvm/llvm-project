@@ -887,6 +887,17 @@ public:
     return UnknownVal();
   }
   SVal VisitConcreteFloat(nonloc::ConcreteFloat V) {
+    // A null original type occurs when trying to read a region as CastTy, as
+    // in the case of type punning. Only model when trying to read a float back
+    // as its original format (otherwise bits may be interpreted differently).
+    if (OriginalTy.isNull()) {
+      if (CastTy->isRealFloatingType() &&
+          &VB.getContext().getFloatTypeSemantics(CastTy) ==
+              &V.getValue()->getSemantics())
+        return V;
+      return UnknownVal();
+    }
+
     // Float to float. Modeled only when the conversion is exact, which needs no
     // rounding and so does not depend on the rounding mode in effect.
     if (CastTy->isRealFloatingType()) {
@@ -944,6 +955,9 @@ public:
 
     // Integer to float. Modeled only when the conversion is exact.
     if (CastTy->isRealFloatingType()) {
+      // Do not model type punning.
+      if (OriginalTy.isNull())
+        return UnknownVal();
       const llvm::fltSemantics &TargetSem =
           VB.getContext().getFloatTypeSemantics(CastTy);
       llvm::APSInt Value = V.getValue();
