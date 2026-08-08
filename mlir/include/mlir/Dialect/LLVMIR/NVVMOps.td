@@ -5340,7 +5340,7 @@ def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMf<[100, 101,
     llvm::SmallVector<llvm::Value *> args;
     auto id = NVVM::Tcgen05CommitOp::getIntrinsicIDAndArgs(
       *op, moduleTranslation, args);
-    createIntrinsicCall(builder, id, args);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
   }];
 }
 
