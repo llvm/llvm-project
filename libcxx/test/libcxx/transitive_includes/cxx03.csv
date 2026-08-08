@@ -503,6 +503,7 @@ mutex ctime
 mutex limits
 mutex ratio
 mutex version
+new cstdint
 new version
 numbers version
 numeric version

@@ -509,6 +509,7 @@ mutex limits
 mutex ratio
 mutex tuple
 mutex version
+new cstdint
 new version
 numbers version
 numeric version
