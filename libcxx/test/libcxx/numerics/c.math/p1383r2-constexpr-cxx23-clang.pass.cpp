@@ -17,7 +17,7 @@
 // The test also works as a reference list of unimplemented functions.
 //
 // REQUIRES: clang
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 
 // We don't control the implementation of these functions on windows
 // UNSUPPORTED: windows
