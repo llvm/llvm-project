@@ -7,6 +7,16 @@
 # GCN-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0xdf,0x00,0x00,0x02
 
+# This is v_readfirstlane_b32 with an SGPR destination that does not fit the
+# 7-bit scalar register encoding of the 8-bit VOP1 vdst field.
+# GCN-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0x00,0x05,0xf4,0x7f
+
+# This is v_s_exp_f32 with an SGPR destination that does not fit the 7-bit
+# scalar register encoding of the 8-bit VOP3 vdst field.
+# GFX12-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0xfa,0x00,0x80,0xd6,0x01,0x00,0x01,0x02
+
 # this is s_waitcnt_vscnt exec_hi, 0x1234, which is valid on gfx11, but not on gfx12
 # GFX12-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x34,0x12,0x7f,0xbc
