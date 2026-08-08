@@ -270,8 +270,8 @@ body:             |
   for (auto &MD : MDList)
     Collected.push_back(MD.second);
 
-  llvm::sort(Generated);
-  llvm::sort(Collected);
+  llvm::sort</*AllowPointers=*/true>(Generated);
+  llvm::sort</*AllowPointers=*/true>(Collected);
   EXPECT_EQ(Collected, Generated);
 
   // FileCheck the output from MIR printer.
@@ -421,8 +421,8 @@ body:             |
   for (auto &MD : MDList)
     Collected.push_back(MD.second);
 
-  llvm::sort(Generated);
-  llvm::sort(Collected);
+  llvm::sort</*AllowPointers=*/true>(Generated);
+  llvm::sort</*AllowPointers=*/true>(Collected);
   EXPECT_EQ(Collected, Generated);
 
   // FileCheck the output from MIR printer.
@@ -521,8 +521,8 @@ body:             |
   for (auto &MD : MDList)
     Collected.push_back(MD.second);
 
-  llvm::sort(Generated);
-  llvm::sort(Collected);
+  llvm::sort</*AllowPointers=*/true>(Generated);
+  llvm::sort</*AllowPointers=*/true>(Collected);
   EXPECT_EQ(Collected, Generated);
 
   // FileCheck the output from MIR printer.
