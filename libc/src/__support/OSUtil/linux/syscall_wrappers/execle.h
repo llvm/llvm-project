@@ -28,7 +28,7 @@ LIBC_INLINE ErrorOr<int> execle(const char *path, Args... args) {
   // All this logic because the standard says the environment pointer goes at
   // the end. It's annoying but it's all compile time so it's not actually a
   // problem.
-  const void *all[] = {static_cast<const void *>(args)...};
+  const void *all[] = {reinterpret_cast<const void *>(args)...};
   constexpr size_t total = sizeof...(Args);
   static_assert(total >= 2,
                 "execle requires at least (arg0, ..., nullptr, envp)");
@@ -37,7 +37,7 @@ LIBC_INLINE ErrorOr<int> execle(const char *path, Args... args) {
 
   const char *argv[total];
   for (size_t i = 0; i < total - 1; ++i)
-    argv[i] = static_cast<const char *>(all[i]);
+    argv[i] = reinterpret_cast<const char *>(all[i]);
   argv[total - 1] = nullptr;
 
   return syscall_checked<int>(SYS_execve, path, argv, envp);

@@ -32,6 +32,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+const char *SHELL_PATH = "/bin/sh";
+
 LLVM_LIBC_FUNCTION(int, system, (const char *command)) {
   if (command == nullptr)
     return 1;
@@ -86,7 +88,7 @@ LLVM_LIBC_FUNCTION(int, system, (const char *command)) {
 
     // Error checking isn't helpful since this is the forked process, so we
     // can't set errno. All we can meaningfully do is exit with status 127.
-    linux_syscalls::execle("/bin/sh", "sh", "-c", command, nullptr, environ);
+    linux_syscalls::execle(SHELL_PATH, "sh", "-c", command, 0, environ);
 
     internal::exit(127);
   }
