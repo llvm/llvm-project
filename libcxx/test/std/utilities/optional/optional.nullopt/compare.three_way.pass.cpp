@@ -31,40 +31,46 @@ static_assert(std::three_way_comparable<std::nullopt_t, std::strong_ordering>);
 
 constexpr bool test() {
   { // ==
-    static_assert(std::is_same_v<decltype(std::nullopt == std::nullopt), bool>);
+    auto result = (std::nullopt == std::nullopt);
+    static_assert(std::is_same_v<decltype(result), bool>);
     static_assert(noexcept(std::nullopt == std::nullopt));
 
-    assert(std::nullopt == std::nullopt);
+    assert(result);
   }
   { // !=
-    static_assert(std::is_same_v<decltype(std::nullopt != std::nullopt), bool>);
+    auto result = (std::nullopt != std::nullopt);
+    static_assert(std::is_same_v<decltype(result), bool>);
     static_assert(noexcept(std::nullopt != std::nullopt));
 
-    assert(!(std::nullopt != std::nullopt));
+    assert(!result);
   }
   { // <=
-    static_assert(std::is_same_v<decltype(std::nullopt <= std::nullopt), bool>);
+    auto result = (std::nullopt <= std::nullopt);
+    static_assert(std::is_same_v<decltype(result), bool>);
     static_assert(noexcept(std::nullopt <= std::nullopt));
 
-    assert(std::nullopt <= std::nullopt);
+    assert(result);
   }
   { // >=
-    static_assert(std::is_same_v<decltype(std::nullopt >= std::nullopt), bool>);
+    auto result = (std::nullopt >= std::nullopt);
+    static_assert(std::is_same_v<decltype(result), bool>);
     static_assert(noexcept(std::nullopt >= std::nullopt));
 
-    assert(std::nullopt >= std::nullopt);
+    assert(result);
   }
   { // >
-    static_assert(std::is_same_v<decltype(std::nullopt > std::nullopt), bool>);
+    auto result = (std::nullopt > std::nullopt);
+    static_assert(std::is_same_v<decltype(result), bool>);
     static_assert(noexcept(std::nullopt > std::nullopt));
 
     assert(!(std::nullopt > std::nullopt));
   }
   { // <
-    static_assert(std::is_same_v<decltype(std::nullopt < std::nullopt), bool>);
+    auto result = (std::nullopt < std::nullopt);
+    static_assert(std::is_same_v<decltype(result), bool>);
     static_assert(noexcept(std::nullopt < std::nullopt));
 
-    assert(!(std::nullopt < std::nullopt));
+    assert(!result);
   }
 
 #if TEST_STD_VER >= 20
