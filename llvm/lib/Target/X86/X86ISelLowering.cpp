@@ -912,6 +912,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                          ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
                          ISD::STRICT_FDIV, ISD::STRICT_FSQRT})
       setOperationPromotedToType(Opc, VT, MVT::f80);
+
+    setOperationAction(ISD::FP_ROUND, VT, Custom);
+    setOperationAction(ISD::STRICT_FP_ROUND, VT, Custom);
   }
 
   // f128 uses xmm registers, but most operations require libcalls.
@@ -22932,6 +22935,17 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i16, Res,
                       DAG.getVectorIdxConstant(0, DL));
     Res = DAG.getBitcast(MVT::f16, Res);
+
+    if (IsStrict)
+      return DAG.getMergeValues({Res, Chain}, DL);
+
+    return Res;
+  }
+
+  if (needsX87RoundToType(VT) && isScalarFPTypeOnX87Stack(SVT)) {
+    SDValue Res;
+    Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
+    std::tie(Res, Chain) = RoundX87ToType(VT, DL, Chain, In, DAG);
 
     if (IsStrict)
       return DAG.getMergeValues({Res, Chain}, DL);

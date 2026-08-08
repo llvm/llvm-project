@@ -17,15 +17,16 @@ define dso_local float @fast_recip_sqrt(float %x) {
 ;
 ; X86-LABEL: fast_recip_sqrt:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fsqrt
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    fld1
-; X86-NEXT:    fdivp %st, %st(1)
+; X86-NEXT:    fdivs {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    flds (%esp)
-; X86-NEXT:    popl %eax
+; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %y = call fast float @llvm.sqrt.f32(float %x)
@@ -71,25 +72,21 @@ define dso_local double @not_so_fast_mul_add(double %x) {
 ;
 ; X86-LABEL: not_so_fast_mul_add:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    .cfi_def_cfa_register %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    fldl 8(%ebp)
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 20
+; X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fld %st(0)
-; X86-NEXT:    fmull {{\.?LCPI[0-9]+_[0-9]+}}
-; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fmull {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    fstpl (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    fxch %st(1)
+; X86-NEXT:    fmull {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fstpl mul1
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %m = fmul double %x, 4.2
   %a = fadd fast double %m, %x
@@ -120,12 +117,12 @@ define dso_local float @not_so_fast_recip_sqrt(float %x) {
 ; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fsqrt
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    flds (%esp)
-; X86-NEXT:    fld1
-; X86-NEXT:    fdiv %st(1), %st
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fld1
+; X86-NEXT:    fdiv %st(1), %st
+; X86-NEXT:    fstps (%esp)
+; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fstps sqrt1
 ; X86-NEXT:    addl $8, %esp
@@ -152,18 +149,20 @@ define dso_local float @div_arcp_by_const(half %x) {
 ;
 ; X86-LABEL: div_arcp_by_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
 ; X86-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    popl %eax
+; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %rcp = fdiv arcp half %x, 10.0

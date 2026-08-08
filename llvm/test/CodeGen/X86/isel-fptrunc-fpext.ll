@@ -207,15 +207,11 @@ define float @fptrunc_x86_fp80_to_float(x86_fp80 %x) nounwind {
 define double @fptrunc_x86_fp80_to_double(x86_fp80 %x) nounwind {
 ; X86-LABEL: fptrunc_x86_fp80_to_double:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    fldt 8(%ebp)
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstpl (%esp)
 ; X86-NEXT:    fldl (%esp)
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    retl
 ;
 ; FASTSDAG-SSE-LABEL: fptrunc_x86_fp80_to_double:

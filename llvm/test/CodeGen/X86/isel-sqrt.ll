@@ -68,13 +68,13 @@ define double @test_sqrt_f64(double %a) {
 ;
 ; X86-LABEL: test_sqrt_f64:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 16
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fsqrt
 ; X86-NEXT:    fstpl (%esp)
 ; X86-NEXT:    fldl (%esp)
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
   %res = call double @llvm.sqrt.f64(double %a)

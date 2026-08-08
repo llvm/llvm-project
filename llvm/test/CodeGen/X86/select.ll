@@ -305,14 +305,14 @@ define void @test6(i32 %C, ptr %A, ptr %B) nounwind {
 ; ATHLON-NEXT:    fstps {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    flds 8(%ecx)
 ; ATHLON-NEXT:    fmul %st, %st(0)
-; ATHLON-NEXT:    fstps {{[0-9]+}}(%esp)
+; ATHLON-NEXT:    fstps (%esp)
 ; ATHLON-NEXT:    flds 4(%ecx)
 ; ATHLON-NEXT:    fmul %st, %st(0)
 ; ATHLON-NEXT:    fstps {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    flds (%ecx)
 ; ATHLON-NEXT:    fmul %st, %st(0)
-; ATHLON-NEXT:    fstps (%esp)
-; ATHLON-NEXT:    flds (%esp)
+; ATHLON-NEXT:    fstps {{[0-9]+}}(%esp)
+; ATHLON-NEXT:    flds {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    fxch %st(1)
 ; ATHLON-NEXT:    fcmove %st(1), %st
@@ -321,7 +321,7 @@ define void @test6(i32 %C, ptr %A, ptr %B) nounwind {
 ; ATHLON-NEXT:    fxch %st(2)
 ; ATHLON-NEXT:    fcmove %st(2), %st
 ; ATHLON-NEXT:    fstp %st(2)
-; ATHLON-NEXT:    flds {{[0-9]+}}(%esp)
+; ATHLON-NEXT:    flds (%esp)
 ; ATHLON-NEXT:    fxch %st(3)
 ; ATHLON-NEXT:    fcmove %st(3), %st
 ; ATHLON-NEXT:    fstp %st(3)
