@@ -27,7 +27,7 @@ define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %cal
 ; CHECK-NEXT:    store i32 0, ptr [[THIS]], align 4
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       for.body45:
-; CHECK-NEXT:    [[CALL49:%.*]] = load volatile i1, ptr [[ARRAYIDX_I_I]], align 1
+; CHECK-NEXT:    [[CALL49:%.*]] = load volatile i1, ptr [[ARRAYIDX_I_I]], align 4
 ; CHECK-NEXT:    [[CALL43:%.*]] = load volatile i32, ptr [[OTHER]], align 4
 ; CHECK-NEXT:    [[CMP44:%.*]] = icmp sgt i32 [[CALL43]], 0
 ; CHECK-NEXT:    br i1 [[CMP44]], label [[FOR_BODY45]], label [[FOR_COND]]
