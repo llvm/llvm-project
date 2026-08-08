@@ -15132,10 +15132,13 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     TargetTransformInfo::VectorInstrContext Ctx =
         TargetTransformInfo::VectorInstrContext::None;
 
-    InVector(Value *Vec)
-        : Vec(Vec), Ctx(TargetTransformInfo::VectorInstrContext::None) {}
-    InVector(const TreeEntry *Vec)
-        : Vec(Vec), Ctx(TargetTransformInfo::VectorInstrContext::None) {}
+    InVector(Value *Vec, TargetTransformInfo::VectorInstrContext Ctx =
+                             TargetTransformInfo::VectorInstrContext::None)
+        : Vec(Vec), Ctx(Ctx) {}
+    InVector(const TreeEntry *Vec,
+             TargetTransformInfo::VectorInstrContext Ctx =
+                 TargetTransformInfo::VectorInstrContext::None)
+        : Vec(Vec), Ctx(Ctx) {}
   };
   SmallVector<InVector, 2> InVectors;
   /// Captures the original scalar VL of a single, "clean" gather() call so
@@ -15909,17 +15912,13 @@ public:
   void
   add(Value *V1, ArrayRef<int> Mask, bool ForExtracts = false,
       TTI::VectorInstrContext ContextHint = TTI::VectorInstrContext::None) {
-    assert(
-        (InVectors.empty() || ContextHint == TTI::VectorInstrContext::None) &&
-        "Only expected hint with single input shuffle");
     if (BVValues && !isa<Constant>(V1))
       BVValues.reset();
     if (InVectors.empty()) {
       assert(CommonMask.empty() && !ForExtracts &&
              "Expected empty input mask/vectors.");
       CommonMask.assign(Mask.begin(), Mask.end());
-      InVectors.assign(1, V1);
-      InVectors.back().Ctx = ContextHint;
+      InVectors.assign(1, InVector(V1, ContextHint));
       return;
     }
     if (ForExtracts) {
@@ -15958,7 +15957,7 @@ public:
                             cast<Value *>(InVectors.front().Vec)->getType())
                             ->getNumElements());
     }
-    InVectors.push_back(V1);
+    InVectors.emplace_back(V1, ContextHint);
     for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
       if (Mask[Idx] != PoisonMaskElem && CommonMask[Idx] == PoisonMaskElem)
         CommonMask[Idx] = Mask[Idx] + VF;
