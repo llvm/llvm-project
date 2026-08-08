@@ -286,13 +286,19 @@ class RISCVUImmOp<int bitsNum> : RISCVOp {
 class RISCVUImmLeafOp<int bitsNum> :
   RISCVUImmOp<bitsNum>, ImmLeaf<XLenVT, "return isUInt<" # bitsNum # ">(Imm);">;
 
+// Variant of RISCVUImmLeafOp for memory-operand offsets that may be omitted
+// entirely, e.g. "c.lbu a0, (a1)". See OptionalMemOffsetAsmOperand.
+class OptionalUImmLeafOp<int bitsNum> : RISCVUImmLeafOp<bitsNum> {
+  let ParserMatchClass = OptionalMemOffsetAsmOperand<UImmAsmOperand<bitsNum>>;
+}
+
 // A N-bit unsigned immediate where the least significant bits are zero.
 class RISCVUImmLsbZeroOp<int width, int zeros>
     : RISCVOp, ImmLeaf<XLenVT, [{return isShiftedUInt<}] # !sub(width, zeros) #
                        [{, }] # zeros # [{>(Imm);}]> {
 
   // Create suffix with the appropriate number of 0s to append to all names
-  defvar Suffix = !foldl("", !range(zeros), acc, ignore, !strconcat(acc, "0"));
+  string Suffix = !foldl("", !range(zeros), acc, ignore, !strconcat(acc, "0"));
 
   let ParserMatchClass = UImmAsmOperand<width, "Lsb" # Suffix>;
   let EncoderMethod = "getImmOpValue";
@@ -305,6 +311,14 @@ class RISCVUImmLsbZeroOp<int width, int zeros>
       return false;
     return isShiftedUInt<}] # !sub(width, zeros) # [{, }] # zeros # [{>(Imm);
   }];
+}
+
+// Variant of RISCVUImmLsbZeroOp for memory-operand offsets that may be
+// omitted entirely, e.g. "c.lw a0, (a1)". See OptionalMemOffsetAsmOperand.
+class OptionalUImmLsbZeroOp<int width, int zeros>
+    : RISCVUImmLsbZeroOp<width, zeros> {
+  let ParserMatchClass =
+      OptionalMemOffsetAsmOperand<UImmAsmOperand<width, "Lsb" # Suffix>>;
 }
 
 class RISCVSImmOp<int bitsNum> : RISCVOp {
@@ -322,6 +336,12 @@ class RISCVSImmOp<int bitsNum> : RISCVOp {
 
 class RISCVSImmLeafOp<int bitsNum> :
   RISCVSImmOp<bitsNum>, ImmLeaf<XLenVT, "return isInt<" # bitsNum # ">(Imm);">;
+
+// Variant of RISCVSImmLeafOp for memory-operand offsets that may be omitted
+// entirely, e.g. "qc.e.lb a0, (a1)". See OptionalMemOffsetAsmOperand.
+class OptionalSImmLeafOp<int bitsNum> : RISCVSImmLeafOp<bitsNum> {
+  let ParserMatchClass = OptionalMemOffsetAsmOperand<SImmAsmOperand<bitsNum>>;
+}
 
 def FenceArg : AsmOperandClass {
   let Name = "FenceArg";
