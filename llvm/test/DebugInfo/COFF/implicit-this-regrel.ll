@@ -2,10 +2,11 @@
 ; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s --check-prefix=SIMPLE
 ; RUN: llc < %s -O0 -enable-tail-merge=0 | FileCheck %s --check-prefix=MULTI-ASM
 ; RUN: llc < %s -O0 -enable-tail-merge=0 -filetype=obj | llvm-readobj - --codeview | FileCheck %s --check-prefix=MULTI
+; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s --check-prefix=NOEPILOGUE
 
 ; Check that the compatibility S_REGREL32 record used for an implicit C++
 ; `this` pointer is bounded by the containing procedure's debug range,
-; including when the function has multiple epilogues.
+; including when the function has multiple epilogues or no epilogue.
 
 ; MULTI-ASM-LABEL: "?f@foo@@QEAAXH@Z":
 ; MULTI-ASM-COUNT-3: retq
@@ -30,6 +31,15 @@
 ; MULTI-COUNT-1: RegRelativeSym {
 ; MULTI-NEXT:   Kind: S_REGREL32 (0x1111)
 ; MULTI:        VarName: this
+
+; NOEPILOGUE-LABEL: {{^ *ProcIdSym \{$}}
+; NOEPILOGUE:        CodeSize: 0x[[NOEPILOGUE_SIZE:[1-9A-Fa-f][0-9A-Fa-f]*]]
+; NOEPILOGUE:        DbgStart: 0x{{[1-9A-Fa-f][0-9A-Fa-f]*}}
+; NOEPILOGUE:        DbgEnd: 0x[[NOEPILOGUE_SIZE]]
+; NOEPILOGUE:        DisplayName: foo::g
+; NOEPILOGUE:        RegRelativeSym {
+; NOEPILOGUE-NEXT:   Kind: S_REGREL32 (0x1111)
+; NOEPILOGUE:        VarName: this
 
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.11.25507"
@@ -56,6 +66,7 @@ entry:
 declare void @exit_a(ptr)
 declare void @exit_b(ptr)
 declare void @exit_c(ptr)
+declare void @throw_now(ptr) #1
 
 ; Function Attrs: noinline optnone uwtable
 define linkonce_odr void @"?f@foo@@QEAAXH@Z"(ptr %this, i32 %value) #0 comdat align 2 !dbg !22 {
@@ -87,9 +98,21 @@ exit.c:
   ret void, !dbg !29
 }
 
+; Function Attrs: noinline noreturn optnone uwtable
+define internal void @"?g@foo@@QEAAXXZ"(ptr %this) #0 align 2 !dbg !32 {
+entry:
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !31,
+                               metadata !DIExpression()), !dbg !33
+  call void @throw_now(ptr %this), !dbg !34
+  unreachable
+}
+
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 attributes #0 = { noinline optnone uwtable "frame-pointer"="none" }
+attributes #1 = { noreturn nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!14, !15, !16}
@@ -145,3 +168,15 @@ attributes #0 = { noinline optnone uwtable "frame-pointer"="none" }
 !27 = !DILocation(line: 8, column: 5, scope: !22)
 !28 = !DILocation(line: 9, column: 5, scope: !22)
 !29 = !DILocation(line: 10, column: 5, scope: !22)
+!30 = !DISubprogram(name: "g", linkageName: "?g@foo@@QEAAXXZ", scope: !3,
+  file: !1, line: 13, type: !6, isLocal: false, isDefinition: false,
+  scopeLine: 13,
+  flags: DIFlagPublic | DIFlagPrototyped)
+!31 = !DILocalVariable(name: "this", arg: 1, scope: !32, type: !9,
+  flags: DIFlagArtificial | DIFlagObjectPointer)
+!32 = distinct !DISubprogram(name: "g", linkageName: "?g@foo@@QEAAXXZ",
+  scope: !3, file: !1, line: 13, type: !6, isLocal: false, scopeLine: 13,
+  flags: DIFlagPublic | DIFlagPrototyped, spFlags: DISPFlagDefinition,
+  unit: !0, declaration: !30, retainedNodes: !2)
+!33 = !DILocation(line: 0, scope: !32)
+!34 = !DILocation(line: 14, column: 5, scope: !32)

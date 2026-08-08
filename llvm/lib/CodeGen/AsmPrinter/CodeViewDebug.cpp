@@ -3171,6 +3171,7 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
   const Function &GV = MF->getFunction();
   assert(FnDebugInfo.count(&GV));
   assert(CurFn == FnDebugInfo[&GV].get());
+  const MCSymbol *FunctionEnd = Asm->getFunctionEnd();
 
   collectVariableInfo(GV.getSubprogram());
 
@@ -3213,8 +3214,9 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
             : (ImplicitThis->DefRanges.empty()
                    ? nullptr
                    : ImplicitThis->DefRanges.begin()->second.front().first);
-    if (!CurFn->EpilogueRanges.empty())
-      CurFn->DebugEnd = CurFn->EpilogueRanges.back().first;
+    CurFn->DebugEnd = CurFn->EpilogueRanges.empty()
+                          ? FunctionEnd
+                          : CurFn->EpilogueRanges.back().first;
   }
 
   // Build the lexical block structure to emit for this routine.
@@ -3254,7 +3256,7 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
 
   CurFn->Annotations = MF->getCodeViewAnnotations();
 
-  CurFn->End = Asm->getFunctionEnd();
+  CurFn->End = FunctionEnd;
 
   CurFn = nullptr;
 }
