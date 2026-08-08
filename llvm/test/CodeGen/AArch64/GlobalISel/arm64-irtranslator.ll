@@ -1408,10 +1408,10 @@ define i32 @test_ctlz_intrinsic_zero_not_undef(i32 %a) {
 }
 
 declare i32 @llvm.cttz.i32(i32, i1)
-define i32 @test_cttz_intrinsic_zero_undef(i32 %a) {
-; CHECK-LABEL: name: test_cttz_intrinsic_zero_undef
+define i32 @test_cttz_intrinsic_zero_poison(i32 %a) {
+; CHECK-LABEL: name: test_cttz_intrinsic_zero_poison
 ; CHECK: [[A:%[0-9]+]]:_(i32) = COPY $w0
-; CHECK: [[RES:%[0-9]+]]:_(i32) = G_CTTZ_ZERO_UNDEF [[A]]
+; CHECK: [[RES:%[0-9]+]]:_(i32) = G_CTTZ_ZERO_POISON [[A]]
 ; CHECK: $w0 = COPY [[RES]]
   %res = call i32 @llvm.cttz.i32(i32 %a, i1 1)
   ret i32 %res

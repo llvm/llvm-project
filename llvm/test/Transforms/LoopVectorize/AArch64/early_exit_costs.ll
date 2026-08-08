@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt -S < %s -p loop-vectorize -disable-output \
-; RUN:   -debug-only=loop-vectorize 2>&1 | FileCheck %s --check-prefixes=CHECK
+; RUN: -debug-only=loop-vectorize 2>&1 | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -12,10 +12,10 @@ define i64 @same_exit_block_pre_inc_use1_sve() #1 {
 ; CHECK: Calculating cost of work in exit block vector.early.exit
 ; CHECK-NEXT: Cost of 4 for VF vscale x 16: EMIT vp<{{.*}}> = first-active-lane ir<%cmp3>
 ; CHECK-NEXT: Cost of 0 for VF vscale x 16: EMIT vp<{{.*}}> = add
-; CHECK-NEXT: Cost of 0 for VF vscale x 16: vp<{{.*}}> = DERIVED-IV
+; CHECK-NEXT: Cost of 1 for VF vscale x 16: vp<{{.*}}> = DERIVED-IV
 ; CHECK-NEXT: Cost of 4 for VF vscale x 16: EMIT vp<{{.*}}> = first-active-lane ir<%cmp3>
 ; CHECK-NEXT: Cost of 0 for VF vscale x 16: EMIT vp<{{.*}}> = add
-; CHECK-NEXT: Cost of 0 for VF vscale x 16: vp<{{.*}}> = DERIVED-IV
+; CHECK-NEXT: Cost of 2 for VF vscale x 16: vp<{{.*}}> = DERIVED-IV
 ; CHECK: LV: Minimum required TC for runtime checks to be profitable:16
 entry:
   %p1 = alloca [1024 x i8]
@@ -53,10 +53,10 @@ define i64 @same_exit_block_pre_inc_use1_nosve() {
 ; CHECK: Calculating cost of work in exit block vector.early.exit
 ; CHECK-NEXT: Cost of 48 for VF 16: EMIT vp<{{.*}}> = first-active-lane ir<%cmp3>
 ; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.*}}> = add
-; CHECK-NEXT: Cost of 0 for VF 16: vp<{{.*}}> = DERIVED-IV
+; CHECK-NEXT: Cost of 1 for VF 16: vp<{{.*}}> = DERIVED-IV
 ; CHECK-NEXT: Cost of 48 for VF 16: EMIT vp<{{.*}}> = first-active-lane ir<%cmp3>
 ; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.*}}> = add
-; CHECK-NEXT: Cost of 0 for VF 16: vp<{{.*}}> = DERIVED-IV
+; CHECK-NEXT: Cost of 2 for VF 16: vp<{{.*}}> = DERIVED-IV
 ; CHECK: LV: Minimum required TC for runtime checks to be profitable:16
 entry:
   %p1 = alloca [1024 x i8]

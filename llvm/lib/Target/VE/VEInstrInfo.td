@@ -1289,7 +1289,7 @@ defm MRG : RRMRGm<"mrg", 0x56, I64>;
 // Section 8.5.7 - LDZ (Leading Zero Count)
 def ctlz_pat : PatFrags<(ops node:$src),
                         [(ctlz node:$src),
-                         (ctlz_zero_undef node:$src)]>;
+                         (ctlz_zero_poison node:$src)]>;
 defm LDZ : RRI1m<"ldz", 0x67, I64, i64, ctlz_pat>;
 
 // Section 8.5.8 - PCNT (Population Count)

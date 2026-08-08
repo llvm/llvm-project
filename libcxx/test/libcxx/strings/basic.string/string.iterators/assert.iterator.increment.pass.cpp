@@ -10,8 +10,8 @@
 
 // Increment iterator past end.
 
-// REQUIRES: has-unix-headers, libcpp-has-abi-bounded-iterators-in-string
-// UNSUPPORTED: libcpp-hardening-mode=none, c++03
+// REQUIRES: can-test-hardening-assertions-fast
+// REQUIRES: libcpp-has-abi-bounded-iterators-in-string
 
 #include <string>
 #include <cassert>

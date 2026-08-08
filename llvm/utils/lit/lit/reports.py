@@ -17,7 +17,7 @@ def by_suite_and_test_path(test):
     return (test.suite.name, id(test.suite), test.path_in_suite)
 
 
-class Report(object):
+class Report:
     def __init__(self, output_file):
         self.output_file = output_file
         # Set by the option parser later.
@@ -183,7 +183,7 @@ class XunitReport(Report):
         if code == lit.Test.EXCLUDED:
             return "Test not selected (--filter, --max-tests)"
         if code == lit.Test.SKIPPED:
-            return "User interrupt"
+            return "Skipped"
 
         assert code == lit.Test.UNSUPPORTED
         features = test.getMissingRequiredFeatures()

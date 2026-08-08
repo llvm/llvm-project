@@ -4,7 +4,7 @@
 // RUN: %clang --target=aarch64 -mlittle-endian -march=armv8.3-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A %s
 // RUN: %clang --target=aarch64_be -mlittle-endian -march=armv8.3a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A %s
 // RUN: %clang --target=aarch64_be -mlittle-endian -march=armv8.3-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A %s
-// GENERICV83A: "-cc1"{{.*}} "-triple" "aarch64{{(--)?}}"{{.*}} "-target-cpu" "generic" "-target-feature" "+v8.3a"{{.*}} "-target-feature" "+neon"
+// GENERICV83A: "-cc1"{{.*}} "-triple" "aarch64{{(-unknown-unknown)?}}"{{.*}} "-target-cpu" "generic" "-target-feature" "+v8.3a"{{.*}} "-target-feature" "+neon"
 
 // RUN: %clang --target=aarch64_be -march=armv8.3a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-BE %s
 // RUN: %clang --target=aarch64_be -march=armv8.3-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-BE %s

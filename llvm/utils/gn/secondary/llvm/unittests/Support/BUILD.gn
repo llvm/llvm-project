@@ -19,6 +19,7 @@ unittest("SupportTests") {
     "BinaryStreamTest.cpp",
     "BlockFrequencyTest.cpp",
     "BranchProbabilityTest.cpp",
+    "CHERICapabilityFormatTest.cpp",
     "CRCTest.cpp",
     "CSKYAttributeParserTest.cpp",
     "CachePruningTest.cpp",

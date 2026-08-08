@@ -3,14 +3,6 @@
 Core Pipeline
 =============
 
-.. toctree::
-  :hidden:
-
-  IRTranslator
-  Legalizer
-  RegBankSelect
-  InstructionSelect
-
 The core pipeline of GlobalISel is:
 
 .. image:: pipeline-overview.png

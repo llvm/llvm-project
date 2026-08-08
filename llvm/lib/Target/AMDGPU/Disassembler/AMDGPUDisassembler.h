@@ -54,7 +54,7 @@ private:
 
   const MCExpr *createConstantSymbolExpr(StringRef Id, int64_t Val);
 
-  void decodeImmOperands(MCInst &MI, const MCInstrInfo &MCII) const;
+  bool decodeImmOperands(MCInst &MI, const MCInstrInfo &MCII) const;
 
 public:
   AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
@@ -62,6 +62,8 @@ public:
   ~AMDGPUDisassembler() override = default;
 
   void setABIVersion(unsigned Version) override;
+
+  void emitTargetIDIfSupported(raw_ostream &OS, unsigned EFlags) const override;
 
   DecodeStatus getInstruction(MCInst &MI, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,

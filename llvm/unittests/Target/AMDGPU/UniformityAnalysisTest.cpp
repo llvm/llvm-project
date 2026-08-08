@@ -40,7 +40,6 @@ static UniformityInfo computeUniformity(const TargetTransformInfo *TTI,
 TEST_F(AMDGPUTestBase, NewValueIsConservativelyDivergent) {
 
   StringRef ModuleString = R"(
-  target triple = "amdgcn-unknown-amdhsa"
   define amdgpu_kernel void @test(i32 inreg %a, i32 inreg %b) {
     %add = add i32 %a, %b
     ret void
@@ -54,8 +53,8 @@ TEST_F(AMDGPUTestBase, NewValueIsConservativelyDivergent) {
   Function *F = M->getFunction("test");
   ASSERT_TRUE(F);
 
-  auto TM =
-      createAMDGPUTargetMachine("amdgcn-amd-", "gfx1010", "+wavefrontsize32");
+  auto TM = createAMDGPUTargetMachine(Triple("amdgpu10.10-amd-"), "",
+                                      "+wavefrontsize32");
   ASSERT_TRUE(TM);
   TargetTransformInfo TTI = TM->getTargetTransformInfo(*F);
 
@@ -64,9 +63,9 @@ TEST_F(AMDGPUTestBase, NewValueIsConservativelyDivergent) {
   // Existing values from the analysis are uniform (kernel args are inreg).
   Instruction *AddInst = &*F->getEntryBlock().begin();
   ASSERT_TRUE(isa<BinaryOperator>(AddInst));
-  EXPECT_FALSE(UI.isDivergent(AddInst)) << "%add should be uniform";
-  EXPECT_FALSE(UI.isDivergent(F->getArg(0))) << "%a should be uniform";
-  EXPECT_FALSE(UI.isDivergent(F->getArg(1))) << "%b should be uniform";
+  EXPECT_FALSE(UI.isDivergentAtDef(AddInst)) << "%add should be uniform";
+  EXPECT_FALSE(UI.isDivergentAtDef(F->getArg(0))) << "%a should be uniform";
+  EXPECT_FALSE(UI.isDivergentAtDef(F->getArg(1))) << "%b should be uniform";
 
   // Create a new instruction after analysis. It was not present during
   // analysis, so it is not in UniformValues and must be conservatively
@@ -74,6 +73,6 @@ TEST_F(AMDGPUTestBase, NewValueIsConservativelyDivergent) {
   IRBuilder<> Builder(AddInst->getNextNode());
   Value *NewInst = Builder.CreateMul(F->getArg(0), F->getArg(1), "new_mul");
 
-  EXPECT_TRUE(UI.isDivergent(NewInst))
+  EXPECT_TRUE(UI.isDivergentAtDef(NewInst))
       << "New instruction created after analysis must be reported divergent";
 }
