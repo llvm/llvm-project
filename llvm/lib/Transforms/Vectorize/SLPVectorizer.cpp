@@ -5335,13 +5335,13 @@ private:
                         IsBlended ? In->getOperand(OpIdx)
                                   : Bundle->getTreeEntry()->getOperand(
                                         OpIdx)[Lane])) {
-                  FoundInOpColumns |= I == In;
                   LLVM_DEBUG(dbgs() << "SLP:   check for readiness (def): "
                                     << *I << "\n");
                   // The scheduling node works on the rematerialized version
                   // of the extract
                   if (auto *RI = DE.lookupRemat(I))
                     I = RI;
+                  FoundInOpColumns |= I == In;
                   DecrUnschedForInst(
                       I, Bundle->getTreeEntry(), OpIdx, Checked,
                       Bundle->getTreeEntry()->isExpandedOperand(In, OpIdx));
