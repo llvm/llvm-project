@@ -824,6 +824,7 @@ multiclass TMA_TENSOR_S2G_INTR<int dim, string mode,
   // Fix-up the asm_str when it is im2col/scatter4.
   defvar mode_asm_str = !cond(
                           !eq(mode, "im2col") : "im2col_no_offs",
+                          !eq(mode, "im2col_w") : "im2col_no_offs::w",
                           !eq(mode, "tile_scatter4") : "tile::scatter4",
                           true : mode);
   defvar prefix = "cp.async.bulk.tensor"
@@ -849,6 +850,11 @@ foreach dim = 1...5 in {
     defm TMA_TENSOR_S2G_ # suffix : TMA_TENSOR_S2G_INTR<dim, mode>;
   }
 }
+foreach dim = 3...5 in {
+  defm TMA_TENSOR_S2G_IM2COL_W_ # dim # D
+    : TMA_TENSOR_S2G_INTR<dim, "im2col_w",
+                          [callSubtarget<"hasRubinFamilySupport">]>;
+}
 defm TMA_S2G_TILE_SCATTER4_2D : TMA_TENSOR_S2G_INTR<5, "tile_scatter4",
                                 [callSubtarget<"hasTMABlackwellSupport">]>;
 
@@ -860,14 +866,15 @@ def tma_tensor_reduction_imm :
     TImmLeaf<i32, [{ return Imm >= 0 && Imm < 8; }]>;
 
 // TMA Copy from Shared to Global memory with Reduction
-multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode> {
+multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode,
+                                            list<Predicate> pred = [hasPTX<80>, SM90]> {
   defvar dims_dag = TMA_DIMS_UTIL<dim>.ins_dag;
   defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
   defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
 
-  // For im2col mode, the actual asm_str is "im2col_no_offs"
-  defvar mode_asm_str = !if(!eq(mode, "im2col"),
-                            "im2col_no_offs", mode);
+  defvar mode_asm_str = !cond(!eq(mode, "im2col") : "im2col_no_offs",
+                              !eq(mode, "im2col_w") : "im2col_no_offs::w",
+                              true : mode);
   defvar prefix = "cp.reduce.async.bulk.tensor"
                   # "." # dim # "d"
                   # ".global.shared::cta";
@@ -894,14 +901,14 @@ multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode> {
                  (ins TMAReductionFlags:$red_op)),
             !strconcat(prefix, "${red_op}", suffix, asm_str, ";"),
             [intr_dag]>,
-            Requires<[hasPTX<80>, SM90]>;
+            Requires<pred>;
   def _CH : NVPTXInst<(outs),
               !con((ins ADDR:$src, B64:$tmap), dims_dag,
                    (ins B64:$ch, TMAReductionFlags:$red_op)),
               !strconcat(prefix, "${red_op}", suffix,
                          ".L2::cache_hint", asm_str, ", $ch;"),
               [intr_dag_with_ch]>,
-              Requires<[hasPTX<80>, SM90]>;
+              Requires<pred>;
 }
 
 foreach dim = 1...5 in {
@@ -910,6 +917,12 @@ foreach dim = 1...5 in {
     defm CP_ASYNC_BULK_TENSOR_RED_ # suffix :
       CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, mode>;
   }
+}
+
+foreach dim = 3...5 in {
+  defm CP_ASYNC_BULK_TENSOR_RED_ # dim # D_IM2COL_W
+    : CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, "im2col_w",
+                          [callSubtarget<"hasRubinFamilySupport">]>;
 }
 
 // TMA Prefetch from Global memory to L2 cache
@@ -5739,25 +5752,41 @@ defm TCGEN05_RELINQ_CG2: TCGEN05_RELINQ_PERMIT_INTR<"2", int_nvvm_tcgen05_relinq
 def tcgen05_wait_ld: NullaryInst<"tcgen05.wait::ld.sync.aligned", int_nvvm_tcgen05_wait_ld>;
 def tcgen05_wait_st: NullaryInst<"tcgen05.wait::st.sync.aligned", int_nvvm_tcgen05_wait_st>;
 
-multiclass TCGEN05_COMMIT_INTR<string AS, string num> {
-  defvar prefix = "tcgen05.commit.cta_group::" # num #".mbarrier::arrive::one.shared::cluster";
+multiclass TCGEN05_COMMIT_INTR<string num> {
+  defvar prefix = "tcgen05.commit.cta_group::" # num #
+                  ".mbarrier::arrive::one.shared::cluster";
+  defvar prefix_smem_a_read = prefix # ".sync_restrict::shared::read::mma::a";
 
-  defvar intr_suffix = !if(!eq(AS, "shared"), "_shared", "") # "_cg" # num;
-  defvar Intr = !cast<Intrinsic>("int_nvvm_tcgen05_commit" # intr_suffix);
-  defvar IntrMC = !cast<Intrinsic>("int_nvvm_tcgen05_commit_mc" # intr_suffix);
+  defvar intr_prefix = "int_nvvm_tcgen05_commit";
+  defvar intr_suffix = "_cg" # num;
+  defvar Intr = !cast<Intrinsic>(intr_prefix # intr_suffix);
+  defvar IntrMC = !cast<Intrinsic>(intr_prefix # "_mc" # intr_suffix);
+  defvar IntrSmemARead =
+      !cast<Intrinsic>(intr_prefix # "_smem_a_read" # intr_suffix);
+  defvar IntrSmemAReadMC =
+      !cast<Intrinsic>(intr_prefix # "_smem_a_read_mc" # intr_suffix);
 
   def "" : BasicNVPTXInst<(outs), (ins ADDR:$mbar),
              prefix # ".b64",
              [(Intr addr:$mbar)]>;
   def _MC : BasicNVPTXInst<(outs), (ins ADDR:$mbar, B16:$mc),
-                   prefix # ".multicast::cluster.b64",
-                   [(IntrMC addr:$mbar, B16:$mc)]>;
+              prefix # ".multicast::cluster.b64",
+              [(IntrMC addr:$mbar, i16:$mc)]>;
+  let Predicates = [callSubtarget<"hasRubinFamilySupport">] in {
+    def _MC_32B : BasicNVPTXInst<(outs), (ins ADDR:$mbar, B32:$mc),
+                    prefix # ".multicast::cluster::32b.b64",
+                    [(IntrMC addr:$mbar, i32:$mc)]>;
+    def _SMEM_A_READ : BasicNVPTXInst<(outs), (ins ADDR:$mbar),
+                  prefix_smem_a_read # ".b64",
+                  [(IntrSmemARead addr:$mbar)]>;
+    def _SMEM_A_READ_MC : BasicNVPTXInst<(outs), (ins ADDR:$mbar, B16:$mc),
+                    prefix_smem_a_read # ".multicast::cluster.b64",
+                    [(IntrSmemAReadMC addr:$mbar, i16:$mc)]>;
+    def _SMEM_A_READ_MC_32B : BasicNVPTXInst<(outs), (ins ADDR:$mbar, B32:$mc),
+                        prefix_smem_a_read # ".multicast::cluster::32b.b64",
+                        [(IntrSmemAReadMC addr:$mbar, i32:$mc)]>;
+  }
 }
-
-defm TCGEN05_COMMIT_CG1 : TCGEN05_COMMIT_INTR<"", "1">;
-defm TCGEN05_COMMIT_CG2 : TCGEN05_COMMIT_INTR<"", "2">;
-defm TCGEN05_COMMIT_S64_CG1 : TCGEN05_COMMIT_INTR<"shared", "1">;
-defm TCGEN05_COMMIT_S64_CG2 : TCGEN05_COMMIT_INTR<"shared", "2">;
 
 multiclass TCGEN05_CP_INTR<string shape, string src_fmt, string mc = ""> {
   defvar dst_fmt = !if(!eq(src_fmt, ""), "", ".b8x16");
@@ -5790,6 +5819,9 @@ foreach src_fmt = ["", "b6x16_p32", "b4x16_p64"] in {
   defm TCGEN05_CP_32x128 # src_fmt   : TCGEN05_CP_INTR<"32x128b", src_fmt, "warpx4">;
 }
 } // Predicates
+
+defm TCGEN05_COMMIT_CG1 : TCGEN05_COMMIT_INTR<"1">;
+defm TCGEN05_COMMIT_CG2 : TCGEN05_COMMIT_INTR<"2">;
 
 let Predicates = [callSubtarget<"hasTcgen05ShiftSupport">] in {
 multiclass TCGEN05_SHIFT_INTR<string num, Intrinsic Intr> {

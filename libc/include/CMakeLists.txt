@@ -359,6 +359,7 @@ add_header_macro(
     .llvm-libc-types.clock_t
     .llvm-libc-types.errno_t
     .llvm-libc-types.time_t
+    .llvm-libc-types.timer_t
     .llvm-libc-types.struct_tm
     .llvm-libc-types.struct_timespec
     .llvm-libc-types.struct_timeval
@@ -906,6 +907,7 @@ add_header_macro(
     .llvm-libc-types.ssize_t
     .llvm-libc-types.suseconds_t
     .llvm-libc-types.time_t
+    .llvm-libc-types.timer_t
     .llvm-libc-types.u_char
     .llvm-libc-types.u_int
     .llvm-libc-types.u_int16_t
