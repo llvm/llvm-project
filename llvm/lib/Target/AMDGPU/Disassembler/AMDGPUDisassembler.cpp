@@ -2262,6 +2262,15 @@ MCOperand AMDGPUDisassembler::decodeBoolReg(const MCInst &Inst,
 
 MCOperand AMDGPUDisassembler::decodeSplitBarrier(const MCInst &Inst,
                                                  unsigned Val) const {
+  using namespace AMDGPU::EncValues;
+  constexpr unsigned M0Encoding = 125;
+  bool IsValidBarrier =
+      Val == M0Encoding ||
+      (INLINE_INTEGER_C_MIN <= Val && Val < INLINE_INTEGER_C_MIN + 32) ||
+      (INLINE_INTEGER_C_POSITIVE_MAX < Val &&
+       Val <= INLINE_INTEGER_C_POSITIVE_MAX + 4);
+  if (!IsValidBarrier)
+    return MCOperand();
   return decodeSrcOp(Inst, 32, Val);
 }
 
