@@ -34,6 +34,32 @@ func.func @simple_loop(%arg0: !fir.ref<!fir.array<100xi32>>) {
 
 // -----
 
+// CHECK-LABEL: func.func @typed_loop(
+// CHECK-SAME: %[[LB:.*]]: i32, %[[UB:.*]]: i32, %[[STEP:.*]]: i32,
+// CHECK-SAME: %[[ADDR:.*]]: !fir.ref<i32>) {
+// CHECK: %[[LB_IDX:.*]] = fir.convert %[[LB]] : (i32) -> index
+// CHECK: %[[UB_IDX:.*]] = fir.convert %[[UB]] : (i32) -> index
+// CHECK: %[[STEP_IDX:.*]] = fir.convert %[[STEP]] : (i32) -> index
+// CHECK: %[[DIFF:.*]] = arith.subi %[[UB_IDX]], %[[LB_IDX]] : index
+// CHECK: %[[DISTANCE:.*]] = arith.addi %[[DIFF]], %[[STEP_IDX]] : index
+// CHECK: %[[TRIP:.*]] = arith.divsi %[[DISTANCE]], %[[STEP_IDX]] : index
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: scf.for %{{.*}} = %[[C0]] to %[[TRIP]] step %[[C1]] iter_args(%[[IV:.*]] = %[[LB]]) -> (i32) {
+// CHECK:   %[[NEXT:.*]] = arith.addi %[[IV]], %[[STEP]] : i32
+// CHECK:   fir.store %[[IV]] to %[[ADDR]] : !fir.ref<i32>
+// CHECK:   scf.yield %[[NEXT]] : i32
+// CHECK: }
+func.func @typed_loop(%lb: i32, %ub: i32, %step: i32,
+                      %addr: !fir.ref<i32>) {
+  fir.do_loop %iv = %lb to %ub step %step : i32 {
+    fir.store %iv to %addr : !fir.ref<i32>
+  }
+  return
+}
+
+// -----
+
 // CHECK-LABEL:   func.func @loop_with_negtive_step(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>>) {
 // CHECK:           %[[VAL_0:.*]] = arith.constant 100 : index

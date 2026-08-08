@@ -805,8 +805,9 @@ define half @intrinsic_fround_half(half %arg) {
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 0x3c00
 ; GFX9-GISEL-NEXT:    v_cmp_ge_f16_e64 vcc, |v2|, 0.5
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v3, vcc
-; GFX9-GISEL-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9-GISEL-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v2, 0x7fff, v2
+; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff8000, v0
+; GFX9-GISEL-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX9-GISEL-NEXT:    v_add_f16_e32 v0, v1, v0
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -826,9 +827,11 @@ define half @intrinsic_fround_half(half %arg) {
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_trunc_f16_e32 v1, v0
 ; GFX10-GISEL-NEXT:    v_sub_f16_e32 v2, v0, v1
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff8000, v0
 ; GFX10-GISEL-NEXT:    v_cmp_ge_f16_e64 s4, |v2|, 0.5
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 0x3c00, s4
-; GFX10-GISEL-NEXT:    v_bfi_b32 v0, 0x7fff, v2, v0
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v2, 0x7fff, v2
+; GFX10-GISEL-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX10-GISEL-NEXT:    v_add_f16_e32 v0, v1, v0
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -881,13 +884,15 @@ define half @intrinsic_fround_half(half %arg) {
 ; GFX11-GISEL-FAKE16:       ; %bb.0: ; %entry
 ; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-FAKE16-NEXT:    v_trunc_f16_e32 v1, v0
-; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-FAKE16-NEXT:    v_sub_f16_e32 v2, v0, v1
+; GFX11-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff8000, v0
 ; GFX11-GISEL-FAKE16-NEXT:    v_cmp_ge_f16_e64 s0, |v2|, 0.5
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v2, 0, 0x3c00, s0
-; GFX11-GISEL-FAKE16-NEXT:    v_bfi_b32 v0, 0x7fff, v2, v0
-; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-FAKE16-NEXT:    v_and_b32_e32 v2, 0x7fff, v2
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-FAKE16-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX11-GISEL-FAKE16-NEXT:    v_add_f16_e32 v0, v1, v0
 ; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:

@@ -247,14 +247,13 @@ define half @test_max_K0min_ValK1_f16(half %a) #0 {
 ; GFX10-LABEL: test_max_K0min_ValK1_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_min_f16_e32 v0, 4.0, v0
-; GFX10-NEXT:    v_max_f16_e32 v0, 2.0, v0
+; GFX10-NEXT:    v_med3_f16 v0, v0, 2.0, 4.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-LABEL: test_max_K0min_ValK1_f16:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_minmax_num_f16 v0, v0, 4.0, 2.0
+; GFX1170-NEXT:    v_med3_num_f16 v0, v0, 2.0, 4.0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-TRUE16-LABEL: test_max_K0min_ValK1_f16:
@@ -274,7 +273,7 @@ define half @test_max_K0min_ValK1_f16(half %a) #0 {
 ; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    v_minmax_num_f16 v0, v0, 4.0, 2.0
+; GFX12-FAKE16-NEXT:    v_med3_num_f16 v0, v0, 2.0, 4.0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %minnum = call nnan half @llvm.minnum.f16(half %a, half 4.0)
   %fmed = call nnan half @llvm.maxnum.f16(half 2.0, half %minnum)
@@ -292,14 +291,13 @@ define half @test_max_K0min_K1Val_f16(half %a) #1 {
 ; GFX10-LABEL: test_max_K0min_K1Val_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_min_f16_e32 v0, 4.0, v0
-; GFX10-NEXT:    v_max_f16_e32 v0, 2.0, v0
+; GFX10-NEXT:    v_med3_f16 v0, v0, 2.0, 4.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-LABEL: test_max_K0min_K1Val_f16:
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_minmax_num_f16 v0, v0, 4.0, 2.0
+; GFX1170-NEXT:    v_med3_num_f16 v0, v0, 2.0, 4.0
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-TRUE16-LABEL: test_max_K0min_K1Val_f16:
@@ -319,7 +317,7 @@ define half @test_max_K0min_K1Val_f16(half %a) #1 {
 ; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    v_minmax_num_f16 v0, v0, 4.0, 2.0
+; GFX12-FAKE16-NEXT:    v_med3_num_f16 v0, v0, 2.0, 4.0
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %minnum = call nnan half @llvm.minnum.f16(half 4.0, half %a)
   %fmed = call nnan half @llvm.maxnum.f16(half 2.0, half %minnum)

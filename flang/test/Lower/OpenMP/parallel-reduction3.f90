@@ -104,19 +104,22 @@
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
-! CHECK:           %[[VAL_39:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_40:.*]] = hlfir.designate %[[VAL_12]]#0 (%[[VAL_39]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-! CHECK:           %[[VAL_41:.*]] = fir.load %[[VAL_40]] : !fir.ref<i32>
-! CHECK:           %[[VAL_42:.*]] = arith.constant 5050 : i32
-! CHECK:           %[[VAL_43:.*]] = arith.cmpi ne, %[[VAL_41]], %[[VAL_42]] : i32
-! CHECK:           cf.cond_br %[[VAL_43]], ^bb1, ^bb2
-! CHECK:         ^bb1:
-! CHECK:           %[[VAL_44:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_45:.*]] = arith.constant false
-! CHECK:           %[[VAL_46:.*]] = arith.constant false
-! CHECK:           fir.call @_FortranAStopStatement(%[[VAL_44]], %[[VAL_45]], %[[VAL_46]]) fastmath<contract> : (i32, i1, i1) -> ()
-! CHECK:           fir.unreachable
-! CHECK:         ^bb2:
+! CHECK:           scf.execute_region no_inline {
+! CHECK:             %[[VAL_39:.*]] = arith.constant 1 : index
+! CHECK:             %[[VAL_40:.*]] = hlfir.designate %[[VAL_12]]#0 (%[[VAL_39]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! CHECK:             %[[VAL_41:.*]] = fir.load %[[VAL_40]] : !fir.ref<i32>
+! CHECK:             %[[VAL_42:.*]] = arith.constant 5050 : i32
+! CHECK:             %[[VAL_43:.*]] = arith.cmpi ne, %[[VAL_41]], %[[VAL_42]] : i32
+! CHECK:             cf.cond_br %[[VAL_43]], ^bb1, ^bb2
+! CHECK:           ^bb1:
+! CHECK:             %[[VAL_44:.*]] = arith.constant 1 : i32
+! CHECK:             %[[VAL_45:.*]] = arith.constant false
+! CHECK:             %[[VAL_46:.*]] = arith.constant false
+! CHECK:             fir.call @_FortranAStopStatement(%[[VAL_44]], %[[VAL_45]], %[[VAL_46]]) fastmath<contract> : (i32, i1, i1) -> ()
+! CHECK:             fir.unreachable
+! CHECK:           ^bb2:
+! CHECK:             scf.yield
+! CHECK:           }
 ! CHECK:           return
 ! CHECK:         }
 ! CHECK:         func.func private @_FortranAStopStatement(i32, i1, i1) attributes {fir.runtime}

@@ -9,7 +9,7 @@
 ; XUN: llc -global-isel=1 -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=GCN,GFX6,GFX6-GISEL %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu8.02 < %s | FileCheck -check-prefixes=GCN,GFX8,GFX8-GISEL %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9-GISEL %s
-; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GCN,GFX11,GFX11-GISEL,GFX11-GISEL-TRUE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GCN,GFX11,GFX11-GISEL,GFX11-GISEL-TRUE16 %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu11.00 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GCN,GFX11,GFX11-GISEL,GFX11-GISEL-FAKE16 %s
 
 ; define half @test_ldexp_f16_i16(ptr addrspace(1) %out, half %a, i16 %b) #0 {
@@ -18,23 +18,23 @@
 ; }
 
 define half @test_ldexp_f16_i32(ptr addrspace(1) %out, half %a, i32 %b) #0 {
-; GFX8-LABEL: test_ldexp_f16_i32:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_movk_i32 s4, 0x8000
-; GFX8-NEXT:    v_mov_b32_e32 v0, 0x7fff
-; GFX8-NEXT:    v_med3_i32 v0, v3, s4, v0
-; GFX8-NEXT:    v_ldexp_f16_e32 v0, v2, v0
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
+; GFX8-SDAG-LABEL: test_ldexp_f16_i32:
+; GFX8-SDAG:       ; %bb.0:
+; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-SDAG-NEXT:    s_movk_i32 s4, 0x8000
+; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, 0x7fff
+; GFX8-SDAG-NEXT:    v_med3_i32 v0, v3, s4, v0
+; GFX8-SDAG-NEXT:    v_ldexp_f16_e32 v0, v2, v0
+; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: test_ldexp_f16_i32:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_movk_i32 s4, 0x8000
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0x7fff
-; GFX9-NEXT:    v_med3_i32 v0, v3, s4, v0
-; GFX9-NEXT:    v_ldexp_f16_e32 v0, v2, v0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: test_ldexp_f16_i32:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_movk_i32 s4, 0x8000
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0x7fff
+; GFX9-SDAG-NEXT:    v_med3_i32 v0, v3, s4, v0
+; GFX9-SDAG-NEXT:    v_ldexp_f16_e32 v0, v2, v0
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-TRUE16-LABEL: test_ldexp_f16_i32:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
@@ -54,6 +54,24 @@ define half @test_ldexp_f16_i32(ptr addrspace(1) %out, half %a, i32 %b) #0 {
 ; GFX11-SDAG-FAKE16-NEXT:    v_ldexp_f16_e32 v0, v2, v0
 ; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
+; GFX8-GISEL-LABEL: test_ldexp_f16_i32:
+; GFX8-GISEL:       ; %bb.0:
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, 0xffff8000
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, 0x7fff
+; GFX8-GISEL-NEXT:    v_med3_i32 v0, v3, v0, v1
+; GFX8-GISEL-NEXT:    v_ldexp_f16_e32 v0, v2, v0
+; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: test_ldexp_f16_i32:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0xffff8000
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0x7fff
+; GFX9-GISEL-NEXT:    v_med3_i32 v0, v3, v0, v1
+; GFX9-GISEL-NEXT:    v_ldexp_f16_e32 v0, v2, v0
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX11-GISEL-TRUE16-LABEL: test_ldexp_f16_i32:
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -66,9 +84,9 @@ define half @test_ldexp_f16_i32(ptr addrspace(1) %out, half %a, i32 %b) #0 {
 ; GFX11-GISEL-FAKE16-LABEL: test_ldexp_f16_i32:
 ; GFX11-GISEL-FAKE16:       ; %bb.0:
 ; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-FAKE16-NEXT:    s_movk_i32 s0, 0x8000
-; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-FAKE16-NEXT:    v_med3_i32 v0, v3, s0, 0x7fff
+; GFX11-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, 0x7fff
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-FAKE16-NEXT:    v_med3_i32 v0, 0xffff8000, v3, v0
 ; GFX11-GISEL-FAKE16-NEXT:    v_ldexp_f16_e32 v0, v2, v0
 ; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.experimental.constrained.ldexp.f16.i32(half %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -372,21 +390,21 @@ define <4 x half> @test_ldexp_v4f16_v4i32(ptr addrspace(1) %out, <4 x half> %a, 
 }
 
 define amdgpu_ps half @s_test_ldexp_f16_i32(half inreg %a, i32 inreg %b) #0 {
-; GFX8-LABEL: s_test_ldexp_f16_i32:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    v_mov_b32_e32 v0, 0xffff8000
-; GFX8-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX8-NEXT:    v_med3_i32 v0, s1, v0, v1
-; GFX8-NEXT:    v_ldexp_f16_e32 v0, s0, v0
-; GFX8-NEXT:    ; return to shader part epilog
+; GFX8-SDAG-LABEL: s_test_ldexp_f16_i32:
+; GFX8-SDAG:       ; %bb.0:
+; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, 0xffff8000
+; GFX8-SDAG-NEXT:    v_mov_b32_e32 v1, 0x7fff
+; GFX8-SDAG-NEXT:    v_med3_i32 v0, s1, v0, v1
+; GFX8-SDAG-NEXT:    v_ldexp_f16_e32 v0, s0, v0
+; GFX8-SDAG-NEXT:    ; return to shader part epilog
 ;
-; GFX9-LABEL: s_test_ldexp_f16_i32:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0xffff8000
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7fff
-; GFX9-NEXT:    v_med3_i32 v0, s1, v0, v1
-; GFX9-NEXT:    v_ldexp_f16_e32 v0, s0, v0
-; GFX9-NEXT:    ; return to shader part epilog
+; GFX9-SDAG-LABEL: s_test_ldexp_f16_i32:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0xffff8000
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, 0x7fff
+; GFX9-SDAG-NEXT:    v_med3_i32 v0, s1, v0, v1
+; GFX9-SDAG-NEXT:    v_ldexp_f16_e32 v0, s0, v0
+; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SDAG-TRUE16-LABEL: s_test_ldexp_f16_i32:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
@@ -404,20 +422,36 @@ define amdgpu_ps half @s_test_ldexp_f16_i32(half inreg %a, i32 inreg %b) #0 {
 ; GFX11-SDAG-FAKE16-NEXT:    v_ldexp_f16_e32 v0, s0, v0
 ; GFX11-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
+; GFX8-GISEL-LABEL: s_test_ldexp_f16_i32:
+; GFX8-GISEL:       ; %bb.0:
+; GFX8-GISEL-NEXT:    s_max_i32 s1, s1, 0xffff8000
+; GFX8-GISEL-NEXT:    s_min_i32 s1, s1, 0x7fff
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s1
+; GFX8-GISEL-NEXT:    v_ldexp_f16_e32 v0, s0, v0
+; GFX8-GISEL-NEXT:    ; return to shader part epilog
+;
+; GFX9-GISEL-LABEL: s_test_ldexp_f16_i32:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_max_i32 s1, s1, 0xffff8000
+; GFX9-GISEL-NEXT:    s_min_i32 s1, s1, 0x7fff
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s1
+; GFX9-GISEL-NEXT:    v_ldexp_f16_e32 v0, s0, v0
+; GFX9-GISEL-NEXT:    ; return to shader part epilog
+;
 ; GFX11-GISEL-TRUE16-LABEL: s_test_ldexp_f16_i32:
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
-; GFX11-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, 0x7fff
-; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-TRUE16-NEXT:    v_med3_i32 v0, 0xffff8000, s1, v0
-; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e32 v0.l, s0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    s_max_i32 s1, s1, 0xffff8000
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-GISEL-TRUE16-NEXT:    s_min_i32 s1, s1, 0x7fff
+; GFX11-GISEL-TRUE16-NEXT:    v_ldexp_f16_e64 v0.l, s0, s1
 ; GFX11-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-GISEL-FAKE16-LABEL: s_test_ldexp_f16_i32:
 ; GFX11-GISEL-FAKE16:       ; %bb.0:
-; GFX11-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, 0x7fff
-; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-FAKE16-NEXT:    v_med3_i32 v0, 0xffff8000, s1, v0
-; GFX11-GISEL-FAKE16-NEXT:    v_ldexp_f16_e32 v0, s0, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_max_i32 s1, s1, 0xffff8000
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-GISEL-FAKE16-NEXT:    s_min_i32 s1, s1, 0x7fff
+; GFX11-GISEL-FAKE16-NEXT:    v_ldexp_f16_e64 v0, s0, s1
 ; GFX11-GISEL-FAKE16-NEXT:    ; return to shader part epilog
   %result = call half @llvm.experimental.constrained.ldexp.f16.i32(half %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret half %result
@@ -437,7 +471,3 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(inaccessib
 ; GFX11: {{.*}}
 ; GFX11-GISEL: {{.*}}
 ; GFX11-SDAG: {{.*}}
-; GFX8-GISEL: {{.*}}
-; GFX8-SDAG: {{.*}}
-; GFX9-GISEL: {{.*}}
-; GFX9-SDAG: {{.*}}

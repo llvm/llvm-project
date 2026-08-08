@@ -8,9 +8,9 @@
 
 ; RUN: llc -mtriple=amdgpu8.03 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GISEL-VI %s
 ; RUN: llc -mtriple=amdgpu9.00 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GISEL-GFX9 %s
-; RUN: llc -mtriple=amdgpu11.01 -mattr=+real-true16 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX11,GISEL-GFX11,GISEL-GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgpu11.01 -mattr=+real-true16 -global-isel < %s | FileCheck -check-prefixes=GFX11,GISEL-GFX11,GISEL-GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgpu11.01 -mattr=-real-true16 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX11,GISEL-GFX11,GISEL-GFX11-FAKE16 %s
-; RUN: llc -mtriple=amdgpu12.00 -mattr=+real-true16 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GISEL-GFX12,GISEL-GFX12-TRUE16 %s
+; RUN: llc -mtriple=amdgpu12.00 -mattr=+real-true16 -global-isel < %s | FileCheck -check-prefixes=GISEL-GFX12,GISEL-GFX12-TRUE16 %s
 ; RUN: llc -mtriple=amdgpu12.00 -mattr=-real-true16 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GISEL-GFX12,GISEL-GFX12-FAKE16 %s
 
 ; <GFX9 has no V_SAT_PK, GFX9+ has V_SAT_PK, GFX11 has V_SAT_PK with t16

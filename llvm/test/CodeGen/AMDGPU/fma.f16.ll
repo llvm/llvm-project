@@ -178,12 +178,19 @@ define half @test_fmac(half %x, half %y, half %z) {
 
 ; GFX10+ has v_fmaak_f16.
 define half @test_fmaak(half %x, half %y, half %z) {
-; GFX9-LABEL: test_fmaak:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_movk_i32 s4, 0x4200
-; GFX9-NEXT:    v_fma_f16 v0, v0, v1, s4
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: test_fmaak:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_movk_i32 s4, 0x4200
+; GFX9-SDAG-NEXT:    v_fma_f16 v0, v0, v1, s4
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: test_fmaak:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0x4200
+; GFX9-GISEL-NEXT:    v_fma_f16 v0, v0, v1, v2
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: test_fmaak:
 ; GFX10:       ; %bb.0:
@@ -260,12 +267,19 @@ define half @test_fmaak(half %x, half %y, half %z) {
 
 ; GFX10+ has v_fmamk_f16.
 define half @test_fmamk(half %x, half %y, half %z) {
-; GFX9-LABEL: test_fmamk:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_movk_i32 s4, 0x4200
-; GFX9-NEXT:    v_fma_f16 v0, v0, s4, v2
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: test_fmamk:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_movk_i32 s4, 0x4200
+; GFX9-SDAG-NEXT:    v_fma_f16 v0, v0, s4, v2
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: test_fmamk:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0x4200
+; GFX9-GISEL-NEXT:    v_fma_f16 v0, v0, v1, v2
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: test_fmamk:
 ; GFX10:       ; %bb.0:
@@ -342,28 +356,53 @@ define half @test_fmamk(half %x, half %y, half %z) {
 
 ; Regression test for a crash caused by D139469.
 define i32 @test_D139469_f16(half %arg) {
-; GFX9-LABEL: test_D139469_f16:
-; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_movk_i32 s4, 0x291e
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0x211e
-; GFX9-NEXT:    v_mul_f16_e32 v1, 0x291e, v0
-; GFX9-NEXT:    v_fma_f16 v0, v0, s4, v2
-; GFX9-NEXT:    v_min_f16_e32 v0, v1, v0
-; GFX9-NEXT:    v_cmp_gt_f16_e32 vcc, 0, v0
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: test_D139469_f16:
+; GFX9-SDAG:       ; %bb.0: ; %bb
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_movk_i32 s4, 0x291e
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, 0x211e
+; GFX9-SDAG-NEXT:    v_mul_f16_e32 v1, 0x291e, v0
+; GFX9-SDAG-NEXT:    v_fma_f16 v0, v0, s4, v2
+; GFX9-SDAG-NEXT:    v_min_f16_e32 v0, v1, v0
+; GFX9-SDAG-NEXT:    v_cmp_gt_f16_e32 vcc, 0, v0
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10-LABEL: test_D139469_f16:
-; GFX10:       ; %bb.0: ; %bb
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_movk_i32 s4, 0x291e
-; GFX10-NEXT:    v_mul_f16_e32 v1, 0x291e, v0
-; GFX10-NEXT:    v_fmaak_f16 v0, s4, v0, 0x211e
-; GFX10-NEXT:    v_min_f16_e32 v0, v1, v0
-; GFX10-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-LABEL: test_D139469_f16:
+; GFX9-GISEL:       ; %bb.0: ; %bb
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_mul_f16_e32 v2, 0x291e, v0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, 0x291e
+; GFX9-GISEL-NEXT:    v_cmp_gt_f16_e32 vcc, 0, v2
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0x211e
+; GFX9-GISEL-NEXT:    v_fma_f16 v0, v0, v1, v2
+; GFX9-GISEL-NEXT:    v_cmp_gt_f16_e64 s[4:5], 0, v0
+; GFX9-GISEL-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-SDAG-LABEL: test_D139469_f16:
+; GFX10-SDAG:       ; %bb.0: ; %bb
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_movk_i32 s4, 0x291e
+; GFX10-SDAG-NEXT:    v_mul_f16_e32 v1, 0x291e, v0
+; GFX10-SDAG-NEXT:    v_fmaak_f16 v0, s4, v0, 0x211e
+; GFX10-SDAG-NEXT:    v_min_f16_e32 v0, v1, v0
+; GFX10-SDAG-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v0
+; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: test_D139469_f16:
+; GFX10-GISEL:       ; %bb.0: ; %bb
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0x211e
+; GFX10-GISEL-NEXT:    v_mul_f16_e32 v2, 0x291e, v0
+; GFX10-GISEL-NEXT:    v_fmac_f16_e32 v1, 0x291e, v0
+; GFX10-GISEL-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v2
+; GFX10-GISEL-NEXT:    v_cmp_gt_f16_e64 s4, 0, v1
+; GFX10-GISEL-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-TRUE16-LABEL: test_D139469_f16:
 ; GFX11-SDAG-TRUE16:       ; %bb.0: ; %bb
@@ -408,13 +447,15 @@ define i32 @test_D139469_f16(half %arg) {
 ; GFX11-GISEL-FAKE16-LABEL: test_D139469_f16:
 ; GFX11-GISEL-FAKE16:       ; %bb.0: ; %bb
 ; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-FAKE16-NEXT:    s_movk_i32 s0, 0x291e
-; GFX11-GISEL-FAKE16-NEXT:    v_mul_f16_e32 v1, 0x291e, v0
-; GFX11-GISEL-FAKE16-NEXT:    v_fmaak_f16 v0, s0, v0, 0x211e
-; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-FAKE16-NEXT:    v_min_f16_e32 v0, v1, v0
-; GFX11-GISEL-FAKE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v0
-; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0x211e
+; GFX11-GISEL-FAKE16-NEXT:    v_mul_f16_e32 v2, 0x291e, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GISEL-FAKE16-NEXT:    v_fmac_f16_e32 v1, 0x291e, v0
+; GFX11-GISEL-FAKE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v2
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-GISEL-FAKE16-NEXT:    v_cmp_gt_f16_e64 s0, 0, v1
+; GFX11-GISEL-FAKE16-NEXT:    s_or_b32 s0, vcc_lo, s0
+; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-TRUE16-LABEL: test_D139469_f16:
@@ -480,15 +521,16 @@ define i32 @test_D139469_f16(half %arg) {
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-FAKE16-NEXT:    s_movk_i32 s0, 0x291e
-; GFX12-GISEL-FAKE16-NEXT:    v_mul_f16_e32 v1, 0x291e, v0
+; GFX12-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0x211e
+; GFX12-GISEL-FAKE16-NEXT:    v_mul_f16_e32 v2, 0x291e, v0
+; GFX12-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-FAKE16-NEXT:    v_fmac_f16_e32 v1, 0x291e, v0
+; GFX12-GISEL-FAKE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v2
+; GFX12-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-GISEL-FAKE16-NEXT:    v_cmp_gt_f16_e64 s0, 0, v1
+; GFX12-GISEL-FAKE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-FAKE16-NEXT:    v_fmaak_f16 v0, s0, v0, 0x211e
-; GFX12-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-FAKE16-NEXT:    v_min_num_f16_e32 v0, v1, v0
-; GFX12-GISEL-FAKE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, 0, v0
-; GFX12-GISEL-FAKE16-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX12-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX12-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %i = fmul contract half %arg, 0xH291E
@@ -698,8 +740,3 @@ bb:
   %i5 = zext <2 x i1> %i4 to <2 x i32>
   ret <2 x i32> %i5
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX10-GISEL: {{.*}}
-; GFX10-SDAG: {{.*}}
-; GFX9-GISEL: {{.*}}
-; GFX9-SDAG: {{.*}}

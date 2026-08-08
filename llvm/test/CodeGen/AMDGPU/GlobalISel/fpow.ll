@@ -135,34 +135,34 @@ define half @v_pow_f16(half %x, half %y) {
 ; GFX8-LABEL: v_pow_f16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX8-NEXT:    v_log_f16_e32 v0, v0
 ; GFX8-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX8-NEXT:    v_log_f32_e32 v0, v0
-; GFX8-NEXT:    v_mul_legacy_f32_e32 v0, v1, v0
-; GFX8-NEXT:    v_exp_f32_e32 v0, v0
+; GFX8-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX8-NEXT:    v_mul_legacy_f32_e32 v0, v0, v1
 ; GFX8-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX8-NEXT:    v_exp_f16_e32 v0, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_pow_f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX9-NEXT:    v_log_f16_e32 v0, v0
 ; GFX9-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX9-NEXT:    v_log_f32_e32 v0, v0
-; GFX9-NEXT:    v_mul_legacy_f32_e32 v0, v1, v0
-; GFX9-NEXT:    v_exp_f32_e32 v0, v0
+; GFX9-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX9-NEXT:    v_mul_legacy_f32_e32 v0, v0, v1
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX9-NEXT:    v_exp_f16_e32 v0, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_pow_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX10-NEXT:    v_log_f16_e32 v0, v0
 ; GFX10-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX10-NEXT:    v_log_f32_e32 v0, v0
-; GFX10-NEXT:    v_mul_legacy_f32_e32 v0, v1, v0
-; GFX10-NEXT:    v_exp_f32_e32 v0, v0
+; GFX10-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX10-NEXT:    v_mul_legacy_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX10-NEXT:    v_exp_f16_e32 v0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: v_pow_f16:
@@ -182,15 +182,15 @@ define half @v_pow_f16(half %x, half %y) {
 ; GFX11-FAKE16-LABEL: v_pow_f16:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX11-FAKE16-NEXT:    v_log_f16_e32 v0, v0
 ; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX11-FAKE16-NEXT:    v_log_f32_e32 v0, v0
 ; GFX11-FAKE16-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-FAKE16-NEXT:    v_mul_dx9_zero_f32_e32 v0, v1, v0
-; GFX11-FAKE16-NEXT:    v_exp_f32_e32 v0, v0
-; GFX11-FAKE16-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
+; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_mul_dx9_zero_f32_e32 v0, v0, v1
 ; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_exp_f16_e32 v0, v0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %pow = call half @llvm.pow.f16(half %x, half %y)
   ret half %pow

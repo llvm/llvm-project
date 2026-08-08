@@ -1,63 +1,46 @@
 ! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
 
 ! Test while loop inside do loop.
+! With the wrap-unstructured-constructs-in-execute-region pass, the inner
+! `do while` is the only unstructured construct: it gets wrapped, and the
+! outer counted `do` folds back to fir.do_loop.
 ! CHECK-LABEL: while_inside_do_loop
 subroutine while_inside_do_loop
-  ! CHECK-DAG: %[[T_REF:.*]] = fir.alloca i32
   ! CHECK-DAG: %[[I_ADDR:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFwhile_inside_do_loopEi"}
   ! CHECK-DAG: %[[I:.*]]:2 = hlfir.declare %[[I_ADDR]]
   ! CHECK-DAG: %[[J_ADDR:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFwhile_inside_do_loopEj"}
   ! CHECK-DAG: %[[J:.*]]:2 = hlfir.declare %[[J_ADDR]]
   integer :: i, j
 
-  ! CHECK-DAG: %[[C8:.*]] = arith.constant 8 : i32
-  ! CHECK-DAG: %[[C13:.*]] = arith.constant 13 : i32
-  ! CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i32
-  ! CHECK: %[[DIFF:.*]] = arith.subi %[[C13]], %[[C8]] : i32
-  ! CHECK: %[[RANGE:.*]] = arith.addi %[[DIFF]], %[[C1]] : i32
-  ! CHECK: %[[HIGH:.*]] = arith.divsi %[[RANGE]], %[[C1]] : i32
-  ! CHECK: fir.store %[[HIGH]] to %[[T_REF]] : !fir.ref<i32>
-  ! CHECK: fir.store %[[C8]] to %[[I]]#0 : !fir.ref<i32>
-
-  ! CHECK: cf.br ^[[HDR1:.*]]
-  ! CHECK: ^[[HDR1]]:  // 2 preds: ^{{.*}}, ^[[EXIT2:.*]]
-  ! CHECK: %[[T:.*]] = fir.load %[[T_REF]] : !fir.ref<i32>
-  ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
-  ! CHECK: %[[COND:.*]] = arith.cmpi sgt, %[[T]], %[[C0]] : i32
-  ! CHECK: cf.cond_br %[[COND]], ^[[BODY1:.*]], ^[[EXIT1:.*]]
+  ! CHECK: fir.do_loop %[[I_IV:.*]] = %{{.*}} to %{{.*}} step %{{.*}} : i32 {
+  ! CHECK:   fir.store %[[I_IV]] to %[[I]]#0 : !fir.ref<i32>
   do i=8,13
-    ! CHECK: ^[[BODY1]]:  // pred: ^[[HDR1]]
-    ! CHECK: %[[C3:.*]] = arith.constant 3 : i32
-    ! CHECK: hlfir.assign %[[C3]] to %[[J]]#0 : i32, !fir.ref<i32>
+    ! CHECK:   %[[C3:.*]] = arith.constant 3 : i32
+    ! CHECK:   hlfir.assign %[[C3]] to %[[J]]#0 : i32, !fir.ref<i32>
     j=3
 
-    ! CHECK: cf.br ^[[HDR2:.*]]
-    ! CHECK: ^[[HDR2]]:  // 2 preds: ^[[BODY1]], ^[[BODY2:.*]]
-    ! CHECK: %[[JVAL:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
-    ! CHECK: %[[IVAL:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
-    ! CHECK: %[[COND2:.*]] = arith.cmpi slt, %[[JVAL]], %[[IVAL]] : i32
-    ! CHECK: cf.cond_br %[[COND2]], ^[[BODY2:.*]], ^[[EXIT2]]
+    ! CHECK:   scf.execute_region no_inline {
+    ! CHECK:     cf.br ^[[HDR2:.*]]
+    ! CHECK:   ^[[HDR2]]:  // 2 preds: ^{{.*}}, ^[[BODY2:.*]]
+    ! CHECK:     %[[JVAL:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
+    ! CHECK:     %[[IVAL:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
+    ! CHECK:     %[[COND2:.*]] = arith.cmpi slt, %[[JVAL]], %[[IVAL]] : i32
+    ! CHECK:     cf.cond_br %[[COND2]], ^[[BODY2]], ^[[EXIT2:.*]]
     do while (j .lt. i)
-      ! CHECK: ^[[BODY2]]:  // pred: ^[[HDR2]]
-      ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
-      ! CHECK: %[[JVAL2:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
-      ! CHECK: %[[INC2:.*]] = arith.muli %[[C2]], %[[JVAL2]] : i32
-      ! CHECK: hlfir.assign %[[INC2]] to %[[J]]#0 : i32, !fir.ref<i32>
+      ! CHECK:   ^[[BODY2]]:  // pred: ^[[HDR2]]
+      ! CHECK:     %[[C2:.*]] = arith.constant 2 : i32
+      ! CHECK:     %[[JVAL2:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
+      ! CHECK:     %[[INC2:.*]] = arith.muli %[[C2]], %[[JVAL2]] : i32
+      ! CHECK:     hlfir.assign %[[INC2]] to %[[J]]#0 : i32, !fir.ref<i32>
       j=j*2
-    ! CHECK: cf.br ^[[HDR2]]
+    ! CHECK:     cf.br ^[[HDR2]]
     end do
-
-  ! CHECK: ^[[EXIT2]]: // pred: ^[[HDR2]]
-  ! CHECK: %[[T2:.*]] = fir.load %[[T_REF]] : !fir.ref<i32>
-  ! CHECK: %[[TDEC:.*]] = arith.subi %[[T2]], {{.*}} : i32
-  ! CHECK: fir.store %[[TDEC]] to %[[T_REF]]
-  ! CHECK: %[[I3:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
-  ! CHECK: %[[IINC:.*]] = arith.addi %[[I3]], {{.*}} overflow<nsw> : i32
-  ! CHECK: fir.store %[[IINC]] to %[[I]]#0 : !fir.ref<i32>
-  ! CHECK: cf.br ^[[HDR1]]
+    ! CHECK:   ^[[EXIT2]]:
+    ! CHECK:     scf.yield
+    ! CHECK:   }
   end do
+  ! CHECK: }
 
-  ! CHECK: ^[[EXIT1]]:  // pred: ^[[HDR1]]
   ! CHECK: %[[IPRINT:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
   ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[IPRINT]])
   ! CHECK: %[[JPRINT:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
@@ -78,37 +61,51 @@ subroutine do_inside_while_loop
     ! CHECK: hlfir.assign %[[C3]] to %[[J]]#0 : i32, !fir.ref<i32>
     j=3
 
-    ! CHECK: cf.br ^[[HDR1:.*]]
+    ! The outer `do while` is wrapped in scf.execute_region; the inner counted
+    ! `do` lowers as fir.do_loop inside the wrap.
+    ! CHECK: scf.execute_region no_inline {
+    ! CHECK:   cf.br ^[[HDR1:.*]]
     ! CHECK: ^[[HDR1]]:  // 2 preds: ^{{.*}}, ^[[BODY1:.*]]
-    ! CHECK: %[[JVAL:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
-    ! CHECK: %[[UL:.*]] = arith.constant 21 : i32
-    ! CHECK: %[[COND:.*]] = arith.cmpi slt, %[[JVAL]], %[[UL]] : i32
-    ! CHECK: cf.cond_br %[[COND]], ^[[BODY1]], ^[[EXIT1:.*]]
+    ! CHECK:   %[[JVAL:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
+    ! CHECK:   %[[UL:.*]] = arith.constant 21 : i32
+    ! CHECK:   %[[COND:.*]] = arith.cmpi slt, %[[JVAL]], %[[UL]] : i32
+    ! CHECK:   cf.cond_br %[[COND]], ^[[BODY1]], ^[[EXIT1:.*]]
     do while (j .lt. 21)
       ! CHECK: ^[[BODY1]]:  // pred: ^[[HDR1]]
 
       ! CHECK-DAG: %[[C8:.*]] = arith.constant 8 : i32
       ! CHECK-DAG: %[[C13:.*]] = arith.constant 13 : i32
-      ! CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-      ! CHECK: %{{.*}} = fir.do_loop %{{.*}} = {{.*}} to {{.*}} step {{.*}} iter_args(%[[I_IV:.*]] = {{.*}}) -> (i32) {
-        ! CHECK: fir.store %[[I_IV]] to %[[I]]#0 : !fir.ref<i32>
+      ! CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i32
+      ! CHECK: fir.do_loop %[[LI:.*]] = %[[LB:.*]] to %[[UB:.*]] step %[[STEP:.*]] : i32 {
+        ! CHECK: fir.store %[[LI]] to %[[I]]#0 : !fir.ref<i32>
         ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
         ! CHECK: %[[J2VAL:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
         ! CHECK: %[[JINC:.*]] = arith.muli %[[C2]], %[[J2VAL]] : i32
         ! CHECK: hlfir.assign %[[JINC]] to %[[J]]#0 : i32, !fir.ref<i32>
-        ! CHECK: %[[I_IVLOAD:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
-        ! CHECK: %[[I_IVINC:.*]] = arith.addi %[[I_IVLOAD]], {{.*}} overflow<nsw> : i32
-        ! CHECK: fir.result %[[I_IVINC]] : i32
       do i=8,13
         j=j*2
 
-      ! CHECK: fir.store %{{.*}} to %[[I]]#0 : !fir.ref<i32>
+      ! CHECK: %[[LBIDX:.*]] = fir.convert %[[LB]] : (i32) -> index
+      ! CHECK: %[[UBIDX:.*]] = fir.convert %[[UB]] : (i32) -> index
+      ! CHECK: %[[STEPIDX:.*]] = fir.convert %[[STEP]] : (i32) -> index
+      ! CHECK: %[[C0:.*]] = arith.constant 0 : index
+      ! CHECK: %[[DIFF:.*]] = arith.subi %[[UBIDX]], %[[LBIDX]] : index
+      ! CHECK: %[[ADD:.*]] = arith.addi %[[DIFF]], %[[STEPIDX]] : index
+      ! CHECK: %[[TRIP:.*]] = arith.divsi %[[ADD]], %[[STEPIDX]] : index
+      ! CHECK: %[[CMP:.*]] = arith.cmpi slt, %[[TRIP]], %[[C0]] : index
+      ! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[C0]], %[[TRIP]] : index
+      ! CHECK: %[[MUL:.*]] = arith.muli %[[SEL]], %[[STEPIDX]] : index
+      ! CHECK: %[[LASTIDX:.*]] = arith.addi %[[LBIDX]], %[[MUL]] : index
+      ! CHECK: %[[LAST:.*]] = fir.convert %[[LASTIDX]] : (index) -> i32
+      ! CHECK: fir.store %[[LAST]] to %[[I]]#0 : !fir.ref<i32>
       end do
 
-    ! CHECK: cf.br ^[[HDR1]]
+    ! CHECK:   cf.br ^[[HDR1]]
     end do
+    ! CHECK: ^[[EXIT1]]:
+    ! CHECK:   scf.yield
+    ! CHECK: }
 
-  ! CHECK: ^[[EXIT1]]:  // pred: ^[[HDR1]]
   ! CHECK: %[[IPRINT:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
   ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[IPRINT]])
   ! CHECK: %[[JPRINT:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>

@@ -3640,6 +3640,26 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 
     return Legalized;
   }
+  case TargetOpcode::G_BITCAST:
+    if (WideTy.isVector())
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    if (TypeIdx == 0)
+      widenScalarDst(MI, WideTy, 0, TargetOpcode::G_TRUNC);
+    else
+      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
+    Observer.changedInstr(MI);
+
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
+    if (MRI.getType(Dst) == MRI.getType(Src)) {
+      Observer.changingAllUsesOfReg(MRI, Dst);
+      MRI.replaceRegWith(Dst, Src);
+      Observer.finishedChangingAllUsesOfReg();
+      MI.eraseFromParent();
+    }
+
+    return Legalized;
   }
 }
 
