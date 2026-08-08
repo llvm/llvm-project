@@ -108,6 +108,7 @@ jobs:
         else
           if [ "$RUNNER_OS" = "Windows" ]; then
             release_version="$LLVM_VERSION_FROM_SOURCE"
+            release_version-"23.0.0.2"
           else
             release_version="${{ (github.event_name == 'pull_request' && format('PR{0}', github.event.pull_request.number)) || 'CI'}}-$GITHUB_SHA"
           fi
