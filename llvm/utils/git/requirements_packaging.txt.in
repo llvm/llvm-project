@@ -1,0 +1,11 @@
+# Convert this file into a requirements.txt file by running:
+#
+# pip install pip-tools
+# pip-compile --generate-hashes -o requirements_packaging.txt requirements_packaging.txt.in
+#
+# or with uv by running:
+#
+# uv pip compile --generate-hashes --python-platform linux --python-version 3.10 -o requirements_packaging.txt requirements_packaging.txt.in
+
+build>=1.2.1
+twine>=6.1.0
