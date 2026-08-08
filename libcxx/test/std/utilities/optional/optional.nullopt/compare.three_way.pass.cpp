@@ -71,6 +71,7 @@ constexpr bool test() {
   { // <=>
     std::same_as<std::strong_ordering> auto result = (std::nullopt <=> std::nullopt);
     static_assert(noexcept(std::nullopt <=> std::nullopt));
+
     assert(result == std::strong_ordering::equal);
   }
 
