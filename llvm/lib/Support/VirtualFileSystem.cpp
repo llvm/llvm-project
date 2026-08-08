@@ -436,26 +436,34 @@ std::unique_ptr<FileSystem> vfs::createPhysicalFileSystem() {
 namespace {
 
 class RealFSDirIter : public llvm::vfs::detail::DirIterImpl {
-  llvm::sys::fs::directory_iterator Iter;
+  std::vector<directory_entry> Entries;
+  size_t Index = 0;
 
 public:
   RealFSDirIter(const Twine &Path, std::error_code &EC) {
     auto BypassSandbox = sys::sandbox::scopedDisable();
 
-    Iter = sys::fs::directory_iterator(Path, EC);
-    if (Iter != sys::fs::directory_iterator())
-      CurrentEntry = directory_entry(Iter->path(), Iter->type());
+    for (sys::fs::directory_iterator Iter(Path, EC), End; Iter != End && !EC;
+         Iter.increment(EC)) {
+      Entries.push_back(directory_entry(Iter->path(), Iter->type()));
+    }
+    if (EC)
+      return;
+
+    // Sort entries in case-insensitive lexicographical order to replicate
+    // Windows (NTFS) directory iteration behavior on Linux.
+    llvm::sort(Entries, [](const directory_entry &A, const directory_entry &B) {
+      return StringRef(A.path()).compare_insensitive(StringRef(B.path())) < 0;
+    });
+
+    if (!Entries.empty())
+      CurrentEntry = Entries[0];
   }
 
   std::error_code increment() override {
-    auto BypassSandbox = sys::sandbox::scopedDisable();
-
-    std::error_code EC;
-    Iter.increment(EC);
-    CurrentEntry = (Iter == llvm::sys::fs::directory_iterator())
-                       ? directory_entry()
-                       : directory_entry(Iter->path(), Iter->type());
-    return EC;
+    Index++;
+    CurrentEntry = (Index < Entries.size()) ? Entries[Index] : directory_entry();
+    return std::error_code();
   }
 };
 
