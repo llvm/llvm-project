@@ -1,8 +1,8 @@
 # LLVM Programmer's Manual
 
-````{warning}
+::::{warning}
 This is always a work in progress.
-````
+::::
 (introduction)=
 
 ## Introduction
@@ -425,14 +425,14 @@ the program that can handle them appropriately. Handling the error may be
 as simple as reporting the issue to the user, or it may involve attempts at
 recovery.
 
-````{note}
+::::{note}
 While it would be ideal to use this error handling scheme throughout
 LLVM, there are places where this hasn't been practical to apply. In
 situations where you absolutely must emit a non-programmatic error and
 the `Error` model isn't workable you can call `reportFatalUsageError`,
 which will call installed error handlers, print a message, and exit the
 program. The use of `reportFatalUsageError` in this case is discouraged.
-````
+::::
 Recoverable errors are modeled using LLVM's `Error` scheme. This scheme
 represents errors using function return values, similar to classic C integer
 error codes, or C++'s `std::error_code`. However, the `Error` class is
@@ -1556,7 +1556,7 @@ to keep `sizeof(SmallVector<T>)` around 64 bytes).
    platforms, since it uses `unsigned` (instead of `void*`) for its size
    and capacity.
 
-````{note}
+::::{note}
 Prefer to use `ArrayRef<T>` or `SmallVectorImpl<T>` as a parameter type.
 
 It's rarely appropriate to use `SmallVector<T, N>` as a parameter type.
@@ -1592,7 +1592,7 @@ void someFunc2() {
 Even though it has "`Impl`" in the name, SmallVectorImpl is widely used
 and is no longer "private to the implementation". A name like
 `SmallVectorHeader` might be more appropriate.
-````
+::::
 (dss_pagedvector)=
 
 #### llvm/ADT/PagedVector.h

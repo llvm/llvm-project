@@ -7,12 +7,12 @@ ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 # LLVM {{env.config.release}} Release Notes
 
 
-````{only} PreRelease
-```{warning} These are in-progress notes for the upcoming LLVM {{env.config.release}}
+::::{only} PreRelease
+:::{warning} These are in-progress notes for the upcoming LLVM {{env.config.release}}
              release. Release notes for previous releases can be found on
              [the Download Page](https://releases.llvm.org/download.html).
-```
-````
+:::
+::::
 
 ## Introduction
 

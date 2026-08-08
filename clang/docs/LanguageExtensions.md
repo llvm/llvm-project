@@ -57,7 +57,7 @@ It can be used like this:
 ...
 ```
 
-```{note}
+:::{note}
 Prior to Clang 10, `__has_builtin` could not be used to detect most builtin
 pseudo-functions.
 
@@ -66,7 +66,7 @@ use `#ifdef` instead.
 
 When compiling with target offloading, `__has_builtin` only considers the
 currently active target.
-```
+:::
 
 ### `__has_constexpr_builtin`
 
@@ -5016,10 +5016,10 @@ will be used.
 
 ### C++ Coroutines support builtins
 
-```{warning}
+:::{warning}
 This is a work in progress. Compatibility across Clang/LLVM releases is not
 guaranteed.
-```
+:::
 
 Clang provides experimental builtins to support C++ Coroutines as defined by
 <https://wg21.link/P0057>. The following four are intended to be used by the
