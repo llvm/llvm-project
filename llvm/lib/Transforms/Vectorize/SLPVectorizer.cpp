@@ -15847,7 +15847,6 @@ public:
     VectorizedVals.clear();
     SameNodesEstimated = true;
   }
-
   void add(const TreeEntry &E1, const TreeEntry &E2, ArrayRef<int> Mask) {
     BVValues.reset();
     if (&E1 == &E2) {
