@@ -13,6 +13,7 @@
 
 void clang_analyzer_dump_float(float);
 void clang_analyzer_dump_double(double);
+void clang_analyzer_dump_int(int);
 void clang_analyzer_eval(int);
 
 void testLiterals(void) {
@@ -67,6 +68,15 @@ void testNegation(void) {
 void testFloatConversions(void) {
   clang_analyzer_dump_double((double)1.5f); // expected-warning{{1.5 IEEEdouble}}
   clang_analyzer_dump_float((float)3.14);   // expected-warning{{Unknown}}
+}
+
+// Type punning reinterprets the bits, whereas we only model conversions of the
+// value, so decline it in both directions.
+void testTypePunning(void) {
+  float f = 1.5f;
+  clang_analyzer_dump_int(*(int *)&f);     // expected-warning{{Unknown}}
+  int i = 5;
+  clang_analyzer_dump_float(*(float *)&i); // expected-warning{{Unknown}}
 }
 
 // Casts to bool is defined as a comparison to zero.
