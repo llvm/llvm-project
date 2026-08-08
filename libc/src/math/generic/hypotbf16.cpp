@@ -11,8 +11,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(bfloat16, hypotbf16, (bfloat16 x, bfloat16 y)) {
-  return math::hypotbf16(x, y);
+LLVM_LIBC_FUNCTION(__bf16, hypotbf16, (__bf16 x, __bf16 y)) {
+  return static_cast<__bf16>(math::hypotbf16(bfloat16(x), bfloat16(y)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
