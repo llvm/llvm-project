@@ -440,8 +440,30 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
   Known.propagateXorSign(KnownLHS, KnownRHS, Mode);
 
   // {0, Inf, NaN} / Y => {0, Inf, NaN}
-  if (KnownLHS.isKnownNeverLogicalFiniteNonZero(Mode))
+  if (KnownLHS.isKnownNeverLogicalFiniteNonZero(Mode)) {
     Known.knownNot(fcNormal | fcSubnormal);
+
+    // {0, NaN} / Y => 0 or NaN
+    if (KnownLHS.isKnownNever(fcInf))
+      Known.knownNot(fcInf);
+
+    // {Inf, NaN} / Y => Inf or NaN
+    if (KnownLHS.isKnownNeverLogicalZero(Mode))
+      Known.knownNot(fcZero);
+  }
+
+  // X / {0, Inf, NaN} => {0, Inf, NaN}
+  if (KnownRHS.isKnownNeverLogicalFiniteNonZero(Mode)) {
+    Known.knownNot(fcNormal | fcSubnormal);
+
+    // X / {0, NaN} => Inf or NaN
+    if (KnownRHS.isKnownNever(fcInf))
+      Known.knownNot(fcZero);
+
+    // X / {Inf, NaN} => 0 or NaN
+    if (KnownRHS.isKnownNeverLogicalZero(Mode))
+      Known.knownNot(fcInf);
+  }
 
   // X / 0   => Inf
   // X / Sub => Normal or Inf
@@ -450,23 +472,11 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
     Known.knownNot(fcSubnormal);
 
   // 0 / Y      => 0
-  // X / Inf    => 0
   // X / Normal => 0 on underflow
+  // X / Inf    => 0
   if (KnownLHS.isKnownNeverLogicalZero(Mode) &&
       KnownRHS.isKnownNever(fcNormal | fcInf))
     Known.knownNot(fcZero);
-
-  // {0, NaN} / Y   => 0 or NaN
-  // X / {Inf, NaN} => 0 or NaN
-  if (KnownLHS.isKnownAlways(fcZero | fcNan) ||
-      KnownRHS.isKnownAlways(fcInf | fcNan))
-    Known.knownNot(fcSubnormal | fcNormal | fcInf);
-
-  // {Inf, NaN} / Y => Inf or NaN
-  // X / {0, NaN}   => Inf or NaN
-  if (KnownLHS.isKnownAlways(fcInf | fcNan) ||
-      KnownRHS.isKnownAlways(fcZero | fcNan))
-    Known.knownNot(fcFinite);
 
   return Known;
 }
