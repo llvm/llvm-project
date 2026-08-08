@@ -572,3 +572,71 @@ add_header_library(
     libc.src.__support.builtins.cmp_helper
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  floatsitf
+  HDRS
+    floatsitf.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.builtins.floatint_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  floatditf
+  HDRS
+    floatditf.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.builtins.floatint_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  floattitf
+  HDRS
+    floattitf.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.builtins.floatint_helper
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  floatunsitf
+  HDRS
+    floatunsitf.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.builtins.floatint_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  floatunditf
+  HDRS
+    floatunditf.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.builtins.floatint_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  floatuntitf
+  HDRS
+    floatuntitf.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.builtins.floatint_helper
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
