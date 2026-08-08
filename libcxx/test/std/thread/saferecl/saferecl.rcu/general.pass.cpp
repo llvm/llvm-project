@@ -40,7 +40,7 @@ int main(int, char**) {
       log(start, "t1: leaving rcu read-side critical section " + std::to_string(i));
       dom.unlock();
        log(start, "t1: printing all reader states");
-      dom.printAllReaderStatesInHex();
+      dom.debugPrintAllReaderStatesInHex();
     }
   });
 
@@ -55,7 +55,7 @@ int main(int, char**) {
       log(start, "t2: leaving rcu read-side critical section " + std::to_string(i));
       dom.unlock();
        log(start, "t2: printing all reader states");
-      dom.printAllReaderStatesInHex();
+      dom.debugPrintAllReaderStatesInHex();
     }
   });
 
@@ -70,7 +70,7 @@ int main(int, char**) {
       log(start, "t3: leaving rcu read-side critical section " + std::to_string(i));
       dom.unlock();
        log(start, "t3: printing all reader states");
-      dom.printAllReaderStatesInHex();
+      dom.debugPrintAllReaderStatesInHex();
     }
   });
   auto t4 = support::make_test_thread([start]() {
@@ -84,7 +84,7 @@ int main(int, char**) {
       log(start, "t4: leaving rcu read-side critical section " + std::to_string(i));
       dom.unlock();
        log(start, "t4: printing all reader states");
-      dom.printAllReaderStatesInHex();
+      dom.debugPrintAllReaderStatesInHex();
     }
   });
   /*
@@ -102,7 +102,7 @@ int main(int, char**) {
   for (int i = 0; i < loop_num+5; ++i) {
 
   log(start, "t0: printing all reader states before synchronize");
-  std::rcu_default_domain().printAllReaderStatesInHex();
+  std::rcu_default_domain().debugPrintAllReaderStatesInHex();
   log(start, "t0: calling rcu_synchronize" + std::to_string(i));
   std::rcu_synchronize();
   log(start, "t0: rcu_synchronize returned" + std::to_string(i));
