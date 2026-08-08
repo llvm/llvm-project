@@ -20680,6 +20680,31 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   return Tmp.first;
 }
 
+std::pair<SDValue, SDValue>
+X86TargetLowering::RoundX87ToType(EVT VT, const SDLoc &DL, SDValue Chain,
+                                  SDValue Src, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  unsigned SSFISize = VT.getStoreSize();
+  // The slot is private, so ABI alignment is enough. More might realign the
+  // frame.
+  Align SlotAlign = DAG.getEVTAlign(VT);
+  int SSFI = MF.getFrameInfo().CreateStackObject(SSFISize, SlotAlign, false);
+  auto PtrVT = getPointerTy(MF.getDataLayout());
+  SDValue StackSlot = DAG.getFrameIndex(SSFI, PtrVT);
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, SSFI);
+
+  SDVTList Tys = DAG.getVTList(MVT::Other);
+  SDValue FSTOps[] = {Chain, Src, StackSlot};
+  MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOStore, SSFISize, SlotAlign);
+
+  Chain = DAG.getMemIntrinsicNode(X86ISD::FST, DL, Tys, FSTOps, VT, StoreMMO);
+  SDValue Result = DAG.getLoad(VT, DL, Chain, StackSlot, PtrInfo, SlotAlign);
+  Chain = Result.getValue(1);
+
+  return {Result, Chain};
+}
+
 std::pair<SDValue, SDValue> X86TargetLowering::BuildFILD(
     EVT DstVT, EVT SrcVT, const SDLoc &DL, SDValue Chain, SDValue Pointer,
     MachinePointerInfo PtrInfo, Align Alignment, SelectionDAG &DAG) const {
@@ -20698,29 +20723,8 @@ std::pair<SDValue, SDValue> X86TargetLowering::BuildFILD(
                               Alignment, MachineMemOperand::MOLoad);
   Chain = Result.getValue(1);
 
-  if (useSSE || needsX87Round) {
-    MachineFunction &MF = DAG.getMachineFunction();
-    unsigned SSFISize = DstVT.getStoreSize();
-    // The slot is private, so ABI alignment is enough. More might realign the
-    // frame.
-    Align SlotAlign = DAG.getEVTAlign(DstVT);
-    int SSFI = MF.getFrameInfo().CreateStackObject(SSFISize, SlotAlign, false);
-    auto PtrVT = getPointerTy(MF.getDataLayout());
-    SDValue StackSlot = DAG.getFrameIndex(SSFI, PtrVT);
-    Tys = DAG.getVTList(MVT::Other);
-    SDValue FSTOps[] = {Chain, Result, StackSlot};
-    MachineMemOperand *StoreMMO = DAG.getMachineFunction().getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI),
-        MachineMemOperand::MOStore, SSFISize, SlotAlign);
-
-    Chain =
-        DAG.getMemIntrinsicNode(X86ISD::FST, DL, Tys, FSTOps, DstVT, StoreMMO);
-    Result = DAG.getLoad(
-        DstVT, DL, Chain, StackSlot,
-        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI),
-        SlotAlign);
-    Chain = Result.getValue(1);
-  }
+  if (useSSE || needsX87Round)
+    std::tie(Result, Chain) = RoundX87ToType(DstVT, DL, Chain, Result, DAG);
 
   return { Result, Chain };
 }

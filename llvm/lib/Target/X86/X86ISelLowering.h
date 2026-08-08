@@ -668,6 +668,12 @@ namespace llvm {
     Value *getSafeStackPointerLocation(
         IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const override;
 
+    /// Rounds the x87 value \p Src to \p VT by storing it to a stack slot of
+    /// that width and reloading it.
+    std::pair<SDValue, SDValue> RoundX87ToType(EVT VT, const SDLoc &DL,
+                                               SDValue Chain, SDValue Src,
+                                               SelectionDAG &DAG) const;
+
     std::pair<SDValue, SDValue> BuildFILD(EVT DstVT, EVT SrcVT, const SDLoc &DL,
                                           SDValue Chain, SDValue Pointer,
                                           MachinePointerInfo PtrInfo,
