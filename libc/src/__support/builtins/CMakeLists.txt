@@ -506,6 +506,8 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
 )
+
+add_header_library(
   unordsf2
   HDRS
     unordsf2.h
