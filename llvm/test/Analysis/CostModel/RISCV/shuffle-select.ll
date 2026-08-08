@@ -55,6 +55,81 @@ define <8 x i64> @select_non_contiguous_v8i64(<8 x i64> %v, <8 x i64> %w) {
   %res = shufflevector <8 x i64> %v, <8 x i64> %w, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 4, i32 13, i32 6, i32 15>
   ret <8 x i64> %res
 }
+
+define <8 x i16> @shuffle_can_vslideup(<8 x i16> %v, <8 x i16> %w, <16 x i16> %shuff0, <16 x i16> %shuff1) {
+; CHECK-LABEL: 'shuffle_can_vslideup'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %res0 = shufflevector <8 x i16> %v, <8 x i16> %w, <8 x i32> <i32 2, i32 1, i32 3, i32 0, i32 8, i32 9, i32 11, i32 13>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %res1 = shufflevector <8 x i16> %v, <8 x i16> %w, <8 x i32> <i32 12, i32 11, i32 9, i32 10, i32 3, i32 7, i32 4, i32 1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %res2 = shufflevector <8 x i16> %v, <8 x i16> %w, <8 x i32> <i32 12, i32 11, i32 0, i32 5, i32 3, i32 7, i32 4, i32 1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %res3 = shufflevector <8 x i16> %v, <8 x i16> %w, <8 x i32> <i32 12, i32 poison, i32 0, i32 5, i32 3, i32 7, i32 poison, i32 1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %merge2 = shufflevector <16 x i16> %shuff0, <16 x i16> %shuff1, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 19, i32 23, i32 27, i32 31, i32 18, i32 22, i32 26, i32 30>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %res3
+;
+; CHECK-SIZE-LABEL: 'shuffle_can_vslideup'
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %res0 = shufflevector <8 x i16> %v, <8 x i16> %w, <8 x i32> <i32 2, i32 1, i32 3, i32 0, i32 8, i32 9, i32 11, i32 13>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %res1 = shufflevector <8 x i16> %v, <8 x i16> %w, <8 x i32> <i32 12, i32 11, i32 9, i32 10, i32 3, i32 7, i32 4, i32 1>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %res2 = shufflevector <8 x i16> %v, <8 x i16> %w, <8 x i32> <i32 12, i32 11, i32 0, i32 5, i32 3, i32 7, i32 4, i32 1>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %res3 = shufflevector <8 x i16> %v, <8 x i16> %w, <8 x i32> <i32 12, i32 poison, i32 0, i32 5, i32 3, i32 7, i32 poison, i32 1>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %merge2 = shufflevector <16 x i16> %shuff0, <16 x i16> %shuff1, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 19, i32 23, i32 27, i32 31, i32 18, i32 22, i32 26, i32 30>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %res3
+;
+  %res0 = shufflevector <8 x i16> %v, <8 x i16> %w, <8 x i32> <i32 2, i32 1, i32 3, i32 0, i32 8, i32 9, i32 11, i32 13> ; Balanced
+  %res1 = shufflevector <8 x i16> %v, <8 x i16> %w, <8 x i32> <i32 12, i32 11, i32 9, i32 10, i32 3, i32 7, i32 4, i32 1> ; Reversed
+  %res2 = shufflevector <8 x i16> %v, <8 x i16> %w, <8 x i32> <i32 12, i32 11, i32 0, i32 5, i32 3, i32 7, i32 4, i32 1> ; Unbalanced
+  %res3 = shufflevector <8 x i16> %v, <8 x i16> %w, <8 x i32> <i32 12, i32 poison, i32 0, i32 5, i32 3, i32 7, i32 poison, i32 1> ; poison
+  %merge2 = shufflevector <16 x i16> %shuff0, <16 x i16> %shuff1, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 19, i32 23, i32 27, i32 31, i32 18, i32 22, i32 26, i32 30>
+
+  ret <8 x i16> %res3
+}
+
+; Can be lowered to VRGATHER-VRGATHER-VSLIDEUP.VX
+define <64 x i16> @shuffle_can_vslideup_shfamt_gt_31(<32 x i16> %v, <32 x i16> %w) {
+; CHECK-LABEL: 'shuffle_can_vslideup_shfamt_gt_31'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 151 for instruction: %res = shufflevector <32 x i16> %v, <32 x i16> %w, <64 x i32> <i32 32, i32 33, i32 43, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 32, i32 42, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63, i32 32, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 29, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 10, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 20, i32 30>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <64 x i16> %res
+;
+; CHECK-SIZE-LABEL: 'shuffle_can_vslideup_shfamt_gt_31'
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %res = shufflevector <32 x i16> %v, <32 x i16> %w, <64 x i32> <i32 32, i32 33, i32 43, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 32, i32 42, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63, i32 32, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 29, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 10, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 20, i32 30>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i16> %res
+;
+  %res = shufflevector <32 x i16> %v, <32 x i16> %w,
+           <64 x i32> <i32 32, i32 33, i32 43, i32 35, i32 36, i32 37, i32 38, i32 39,
+                       i32 40, i32 41, i32 32, i32 42, i32 44, i32 45, i32 46, i32 47,
+                       i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55,
+                       i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63,
+                       i32 32,
+                       i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                       i32 8, i32 9, i32 29, i32 11, i32 12, i32 13, i32 14, i32 15,
+                       i32 16, i32 17, i32 18, i32 19, i32 10, i32 21, i32 22, i32 23,
+                       i32 24, i32 25, i32 26, i32 27, i32 28, i32 20, i32 30>
+  ret <64 x i16> %res
+}
+
+; Can be lowered to VRGATHER-VRGATHER-VSLIDEUP.VI
+define <64 x i16> @shuffle_can_vslideup_shfamt_lt_31(<32 x i16> %v, <32 x i16> %w) {
+  ; Lowering pattern for RISC-V vslideup with shift amount 33 (> 32):
+  ; result[i] = (i < 33) ? w[i] : v[i - 33]
+  ; Note: w[32] is out of range for 32-lane input, modeled with 'poison' in the mask.
+; CHECK-LABEL: 'shuffle_can_vslideup_shfamt_lt_31'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 151 for instruction: %res = shufflevector <32 x i16> %v, <32 x i16> %w, <64 x i32> <i32 32, i32 33, i32 43, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 32, i32 42, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 29, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 10, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 20, i32 30, i32 2, i32 31>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <64 x i16> %res
+;
+; CHECK-SIZE-LABEL: 'shuffle_can_vslideup_shfamt_lt_31'
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %res = shufflevector <32 x i16> %v, <32 x i16> %w, <64 x i32> <i32 32, i32 33, i32 43, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 32, i32 42, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 29, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 10, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 20, i32 30, i32 2, i32 31>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i16> %res
+;
+  %res = shufflevector <32 x i16> %v, <32 x i16> %w,
+           <64 x i32> <i32 32, i32 33, i32 43, i32 35, i32 36, i32 37, i32 38, i32 39,
+                       i32 40, i32 41, i32 32, i32 42, i32 44, i32 45, i32 46, i32 47,
+                       i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55,
+                       i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62,
+                       i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                       i32 8, i32 9, i32 29, i32 11, i32 12, i32 13, i32 14, i32 15,
+                       i32 16, i32 17, i32 18, i32 19, i32 10, i32 21, i32 22, i32 23,
+                       i32 24, i32 25, i32 26, i32 27, i32 28, i32 20, i32 30, i32 2, i32 31>
+  ret <64 x i16> %res
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; RV32: {{.*}}
 ; RV32-SIZE: {{.*}}
