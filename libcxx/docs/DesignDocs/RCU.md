@@ -74,7 +74,7 @@ The core idea of `rcu` can be described by this image from lwn.net
 
 - Each row is a thread. The last row is the writer thread and the rows above are the reader threads.
 - Each "Reader" block represents a critical section, which starts with `rcu_domain::lock` and ends with `rcu_domain::unlock` .
-- When `run_retire` is called from the writer thread, it starts the "Removal" block.
+- When `rcu_retire` is called from the writer thread, it starts the "Removal" block.
 - When `run_synchronize` is called from the writer thread, it starts the "Grace Period" block. We need to wait until all the 
   "Reader" blocks that started before the "Grace Period" started, to exit via `rcu_domain::unlock`, then we can end the "Grace Period".
   Note that the "Grace Period" ends after the 4th row's "Reader" block ends. Also note that the "Grace Period" does not need to wait
