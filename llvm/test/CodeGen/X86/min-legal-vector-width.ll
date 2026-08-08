@@ -2063,3 +2063,135 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
   ret <32 x i8> %or
 }
 
+define <8 x i64> @udiv_v8i64_prefer256(<8 x i64> %x, <8 x i64> %y) nounwind "min-legal-vector-width"="0" {
+; CHECK-LABEL: udiv_v8i64_prefer256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm4
+; CHECK-NEXT:    vpextrq $1, %xmm4, %rax
+; CHECK-NEXT:    vextracti128 $1, %ymm2, %xmm5
+; CHECK-NEXT:    vpextrq $1, %xmm5, %rcx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rcx
+; CHECK-NEXT:    movq %rax, %rdi
+; CHECK-NEXT:    vmovq %xmm4, %rax
+; CHECK-NEXT:    vmovq %xmm5, %rcx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rcx
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    vpextrq $1, %xmm0, %rax
+; CHECK-NEXT:    vpextrq $1, %xmm2, %rsi
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rsi
+; CHECK-NEXT:    movq %rax, %rsi
+; CHECK-NEXT:    vmovq %xmm0, %rax
+; CHECK-NEXT:    vmovq %xmm2, %r8
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %r8
+; CHECK-NEXT:    movq %rax, %r8
+; CHECK-NEXT:    vmovq %rdi, %xmm0
+; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; CHECK-NEXT:    vpextrq $1, %xmm2, %rax
+; CHECK-NEXT:    vextracti128 $1, %ymm3, %xmm4
+; CHECK-NEXT:    vpextrq $1, %xmm4, %rdi
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rdi
+; CHECK-NEXT:    movq %rax, %rdi
+; CHECK-NEXT:    vmovq %rcx, %xmm5
+; CHECK-NEXT:    vmovq %xmm2, %rax
+; CHECK-NEXT:    vmovq %xmm4, %rcx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rcx
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm5[0],xmm0[0]
+; CHECK-NEXT:    vmovq %rsi, %xmm2
+; CHECK-NEXT:    vmovq %r8, %xmm4
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm4[0],xmm2[0]
+; CHECK-NEXT:    vpextrq $1, %xmm1, %rax
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
+; CHECK-NEXT:    vpextrq $1, %xmm3, %rsi
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rsi
+; CHECK-NEXT:    movq %rax, %rsi
+; CHECK-NEXT:    vmovq %rdi, %xmm2
+; CHECK-NEXT:    vmovq %xmm1, %rax
+; CHECK-NEXT:    vmovq %xmm3, %rdi
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rdi
+; CHECK-NEXT:    vmovq %rcx, %xmm1
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; CHECK-NEXT:    vmovq %rsi, %xmm2
+; CHECK-NEXT:    vmovq %rax, %xmm3
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; CHECK-NEXT:    retq
+  %r = udiv <8 x i64> %x, %y
+  ret <8 x i64> %r
+}
+
+define <8 x i64> @udiv_v8i64_512(<8 x i64> %x, <8 x i64> %y) nounwind "min-legal-vector-width"="512" {
+; CHECK-LABEL: udiv_v8i64_512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vextracti32x4 $3, %zmm0, %xmm2
+; CHECK-NEXT:    vpextrq $1, %xmm2, %rax
+; CHECK-NEXT:    vextracti32x4 $3, %zmm1, %xmm3
+; CHECK-NEXT:    vpextrq $1, %xmm3, %rcx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rcx
+; CHECK-NEXT:    movq %rax, %rsi
+; CHECK-NEXT:    vmovq %xmm2, %rax
+; CHECK-NEXT:    vmovq %xmm3, %rcx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rcx
+; CHECK-NEXT:    movq %rax, %rdi
+; CHECK-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
+; CHECK-NEXT:    vpextrq $1, %xmm2, %rax
+; CHECK-NEXT:    vextracti32x4 $2, %zmm1, %xmm3
+; CHECK-NEXT:    vpextrq $1, %xmm3, %rcx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rcx
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    vmovq %xmm2, %rax
+; CHECK-NEXT:    vmovq %xmm3, %r8
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %r8
+; CHECK-NEXT:    movq %rax, %r8
+; CHECK-NEXT:    vmovq %rsi, %xmm2
+; CHECK-NEXT:    vmovq %rdi, %xmm3
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm4
+; CHECK-NEXT:    vpextrq $1, %xmm4, %rax
+; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm5
+; CHECK-NEXT:    vpextrq $1, %xmm5, %rsi
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rsi
+; CHECK-NEXT:    movq %rax, %rsi
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; CHECK-NEXT:    vmovq %xmm4, %rax
+; CHECK-NEXT:    vmovq %xmm5, %rdi
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rdi
+; CHECK-NEXT:    movq %rax, %rdi
+; CHECK-NEXT:    vmovq %rcx, %xmm3
+; CHECK-NEXT:    vmovq %r8, %xmm4
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm4[0],xmm3[0]
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
+; CHECK-NEXT:    vpextrq $1, %xmm0, %rax
+; CHECK-NEXT:    vmovq %rsi, %xmm3
+; CHECK-NEXT:    vpextrq $1, %xmm1, %rcx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rcx
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    vmovq %rdi, %xmm4
+; CHECK-NEXT:    vmovq %xmm0, %rax
+; CHECK-NEXT:    vmovq %xmm1, %rsi
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq %rsi
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm4[0],xmm3[0]
+; CHECK-NEXT:    vmovq %rcx, %xmm1
+; CHECK-NEXT:    vmovq %rax, %xmm3
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm3[0],xmm1[0]
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; CHECK-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %r = udiv <8 x i64> %x, %y
+  ret <8 x i64> %r
+}
