@@ -8,6 +8,7 @@ from lldbsuite.test.decorators import *
 class TestTraceLoad(TraceIntelPTTestCaseBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfNoIntelPT
     @testSBAPIAndCommands
     def testLoadMultiCoreTrace(self):
         src_dir = self.getSourceDir()
@@ -119,6 +120,7 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
             ],
         )
 
+    @skipIfNoIntelPT
     @testSBAPIAndCommands
     def testLoadCompactMultiCoreTrace(self):
         src_dir = self.getSourceDir()
@@ -178,6 +180,7 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         # We clean up for the next run of this test
         self.dbg.DeleteTarget(self.dbg.GetTargetAtIndex(0))
 
+    @skipIfNoIntelPT
     @testSBAPIAndCommands
     def testLoadMultiCoreTraceWithStringNumbers(self):
         src_dir = self.getSourceDir()
@@ -203,6 +206,7 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
             ],
         )
 
+    @skipIfNoIntelPT
     @testSBAPIAndCommands
     def testLoadMultiCoreTraceWithMissingThreads(self):
         src_dir = self.getSourceDir()
@@ -228,6 +232,7 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
             ],
         )
 
+    @skipIfNoIntelPT
     @testSBAPIAndCommands
     def testLoadTrace(self):
         src_dir = self.getSourceDir()
@@ -387,6 +392,7 @@ Context:
         )
         self.assertEqual(self.dbg.GetNumTargets(), 0)
 
+    @skipIfNoIntelPT
     def testLoadTraceCursor(self):
         src_dir = self.getSourceDir()
         trace_description_file_path = os.path.join(
@@ -492,6 +498,7 @@ Context:
                 sequentialTraversalCursor, randomAccessCursor
             )
 
+    @skipIfNoIntelPT
     @testSBAPIAndCommands
     def testLoadKernelTrace(self):
         # kernel section without loadAddress (using default loadAddress).

@@ -5,7 +5,6 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
 
-@skipIfNoIntelPT
 class TestTraceStartStop(TraceIntelPTTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 
@@ -15,6 +14,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
             substrs=["Syntax: thread trace start [<trace-options>]"],
         )
 
+    @skipIfNoIntelPT
     @testSBAPIAndCommands
     def testStartStopSessionFileThreads(self):
         # it should fail for processes from json session files
@@ -34,6 +34,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
     def testStartWithNoProcess(self):
         self.traceStartThread(error=True)
 
+    @skipIfNoIntelPT
     @testSBAPIAndCommands
     def testStartSessionWithWrongSize(self):
         self.expect(
@@ -62,6 +63,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
 
         self.traceStartThread(iptTraceSize=1048576)
 
+    @skipIfNoIntelPT
     @testSBAPIAndCommands
     def testStartSessionWithSizeDeclarationInUnits(self):
         self.expect(
@@ -158,6 +160,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
 
         self.traceStartThread(iptTraceSize="1048576")
 
+    @skipIfNoIntelPT
     @skipIf(oslist=no_match(["linux"]), archs=no_match(["i386", "x86_64"]))
     def testSBAPIHelp(self):
         self.expect(
@@ -170,6 +173,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.assertIn("iptTraceSize", help)
         self.assertIn("processBufferSizeLimit", help)
 
+    @skipIfNoIntelPT
     @skipIf(oslist=no_match(["linux"]), archs=no_match(["i386", "x86_64"]))
     def testStoppingAThread(self):
         self.expect(
@@ -193,6 +197,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
             "thread trace dump instructions", substrs=["not traced"], error=True
         )
 
+    @skipIfNoIntelPT
     @skipIf(oslist=no_match(["linux"]), archs=no_match(["i386", "x86_64"]))
     def testStartStopLiveThreads(self):
         # The help command should be the generic one if there's no process running
