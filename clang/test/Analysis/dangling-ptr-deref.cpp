@@ -272,3 +272,62 @@ char member_subregion_dangling_deref_increment() {
   // expected-note@-2    {{Use of 'tmp_buffer.buffer[1]' after its lifetime ended}}
 }
 
+void chain() {
+  int *ptr = nullptr;
+  {
+    int local = 5;  // expected-note  {{'local' initialized to 5}}
+    int *a = &local; // expected-note {{'a' initialized here}}
+    int *b = a; // expected-note      {{'b' initialized to the value of 'a'}}
+    int *c = b; // expected-note      {{'c' initialized to the value of 'b'}}
+    ptr = c; // expected-note         {{The value of 'c' is assigned to 'ptr'}}
+  }
+  // expected-note@-1    {{'local' is destroyed here}}
+  *ptr = 6;
+  // expected-warning@-1 {{Use of 'local' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'local' after its lifetime ended}}
+}
+
+void branch(bool cond) {
+  int *ptr = nullptr;
+  {
+    int x = 1; // expected-note {{'x' initialized to 1}}
+    int y = 2; // expected-note {{'y' initialized to 2}}
+    if (cond) {
+      // expected-note@-1 {{Assuming 'cond' is true}}
+      // expected-note@-2 {{Taking true branch}}
+      // expected-note@-3 {{Assuming 'cond' is false}}
+      // expected-note@-4 {{Taking false branch}}
+      ptr = &x; // expected-note {{Value assigned to 'ptr'}}
+    } else {
+      ptr = &y; // expected-note {{Value assigned to 'ptr'}}
+    }
+  }
+  // expected-note@-1 {{'x' is destroyed here}}
+  // expected-note@-2 {{'y' is destroyed here}}
+  *ptr = 6;
+  // expected-warning@-1 {{Use of 'x' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'x' after its lifetime ended}}
+  // expected-warning@-3 {{Use of 'y' after its lifetime ended}}
+  // expected-note@-4    {{Use of 'y' after its lifetime ended}}
+}
+
+int *func(int *p) { return p; }
+int *call_func(int *p) { return func(p); }
+// expected-note@-1 {{Passing value via 1st parameter 'p'}}
+// expected-note@-2 {{Returning pointer}}
+
+void dangling_through_calls() {
+  int *ptr = nullptr;
+  {
+    int local = 5; // expected-note {{'local' initialized to 5}}
+    ptr = call_func(&local);
+    // expected-note@-1 {{Passing value via 1st parameter 'p'}}
+    // expected-note@-2 {{Calling 'call_func'}}
+    // expected-note@-3 {{Returning from 'call_func'}}
+    // expected-note@-4 {{Value assigned to 'ptr'}}
+  }
+  // expected-note@-1 {{'local' is destroyed here}}
+  *ptr = 6;
+  // expected-warning@-1 {{Use of 'local' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'local' after its lifetime ended}}
+}

@@ -1173,11 +1173,15 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                                 ReturnValueSlot returnValue,
                                 const CallArgList &args,
                                 cir::CIRCallOpInterface *callOp,
-                                mlir::Location loc) {
+                                bool isMustTail, mlir::Location loc) {
   QualType retTy = funcInfo.getReturnType();
   cir::FuncType cirFuncTy = getTypes().getFunctionType(funcInfo);
 
   SmallVector<mlir::Value, 16> cirCallArgs(args.size());
+
+  const Decl *targetDecl = callee.getAbstractInfo().getCalleeDecl().getDecl();
+  const FunctionDecl *callerDecl = dyn_cast_or_null<FunctionDecl>(curCodeDecl);
+  const FunctionDecl *calleeDecl = dyn_cast_or_null<FunctionDecl>(targetDecl);
 
   assert(!cir::MissingFeatures::emitLifetimeMarkers());
 
@@ -1350,7 +1354,52 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   if (callOp)
     *callOp = theCall;
 
-  assert(!cir::MissingFeatures::opCallMustTail());
+  // Sema/emitAttributedStmt (see
+  // https://github.com/llvm/llvm-project/issues/214764) should one-day enforce
+  // that only one of these is valid at a time. For now, we have the same 'bug'
+  // as classic codegen where we can end up having BOTH of these.
+  if (inNoInlineAttributedStmt)
+    theCall.setInlineKind(cir::InlineKind::NoInline);
+  if (inAlwaysInlineAttributedStmt &&
+      !cgm.getTargetCIRGenInfo().wouldInliningViolateFunctionCallABI(
+          callerDecl, calleeDecl))
+    theCall.setInlineKind(cir::InlineKind::AlwaysInline);
+
+  if (isMustTail) {
+    // PPC/MIPS have some diagnostics for classic-codegen, but we don't support
+    // them yet.
+    const llvm::Triple &triple = getTarget().getTriple();
+    if (triple.isPPC() || triple.isMIPS()) {
+      cgm.errorNYI(mustTailCall->getBeginLoc(),
+                   "musttail call target legality checks");
+      return getUndefRValue(retTy);
+    }
+
+    // Musttail is required to return immediately. Classic codegen does some
+    // work here to go through the exception handling scopes to put them before
+    // the call (it seems?) since musttail must be the last op before the
+    // return.  For now, skip this so we an do it later.
+    if (ehStack.stable_begin() != prologueCleanupDepth) {
+      cgm.errorNYI(mustTailCall->getBeginLoc(),
+                   "musttail call that skips cleanups");
+      return getUndefRValue(retTy);
+    }
+
+    theCall->setAttr(cir::CIRDialect::getMustTailAttrName(),
+                     builder.getUnitAttr());
+
+    if (isa<cir::VoidType>(convertType(retTy)))
+      cir::ReturnOp::create(builder, loc);
+    else
+      cir::ReturnOp::create(builder, loc, theCall->getResult(0));
+
+    // Musttail must return immediately, so we just do that.  All of the below
+    // stuff is effectively UB if this is a musttail, so just do a return
+    // immediately.
+    builder.createBlock(builder.getBlock()->getParent());
+    return getUndefRValue(retTy);
+  }
+
   assert(!cir::MissingFeatures::opCallReturn());
 
   mlir::Type retCIRTy = convertType(retTy);

@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: llvm-offload-wrapper --triple=x86_64-unknown-linux-gnu -kind=openmp %s -o %t.bc
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=OMP
 ; RUN: llc --filetype=obj %t.bc -o %t.o
