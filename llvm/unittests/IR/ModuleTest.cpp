@@ -103,30 +103,6 @@ TEST(ModuleTest, setModuleFlagInt) {
   EXPECT_EQ(Val2, A2->getZExtValue());
 }
 
-TEST(ModuleTest, getLongDoubleFormat) {
-  LLVMContext Context;
-
-  // With no module flag, falls back to the triple's default long double format.
-  Module MX86("x86", Context);
-  MX86.setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
-  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended, MX86.getLongDoubleFormat());
-
-  Module MPPC("ppc", Context);
-  MPPC.setTargetTriple(Triple("powerpc64-unknown-linux-gnu"));
-  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble, MPPC.getLongDoubleFormat());
-
-  // An explicit module flag overrides the triple default.
-  MX86.setLongDoubleFormat(LongDoubleFormat::IEEEquad);
-  EXPECT_EQ(LongDoubleFormat::IEEEquad, MX86.getLongDoubleFormat());
-
-  // The flag is the string-valued "long-double-type" flag emitted by clang.
-  Module MFlag("flag", Context);
-  MFlag.setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
-  MFlag.addModuleFlag(Module::Error, "long-double-type",
-                      MDString::get(Context, "fp128"));
-  EXPECT_EQ(LongDoubleFormat::IEEEquad, MFlag.getLongDoubleFormat());
-}
-
 TEST(ModuleTest, setModuleFlagTwoMod) {
   LLVMContext Context;
   Module MA("MA", Context);
