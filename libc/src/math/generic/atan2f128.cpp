@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/atan2f128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/atan2f128.h"
 
 #ifndef LIBC_TYPES_HAS_FLOAT128
@@ -16,7 +17,8 @@ using float128 = LIBC_NAMESPACE::fputil::Float128;
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float128, atan2f128, (float128 y, float128 x)) {
-  return fputil::cast<float128>(math::atan2f128(Float128(y), Float128(x)));
+  return cpp::bit_cast<float128>(
+      math::atan2f128(Float128(y), Float128(x)).bits);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

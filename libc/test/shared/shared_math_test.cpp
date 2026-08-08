@@ -584,8 +584,8 @@ using LIBC_NAMESPACE::fputil::Float128;
 
 TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
-  EXPECT_FP_EQ(float128(0.0),
-               LIBC_NAMESPACE::shared::atan2f128(float128(0.0), float128(0.0)));
+  EXPECT_FP_EQ(Float128(0.0),
+               LIBC_NAMESPACE::shared::atan2f128(Float128(0.0), Float128(0.0)));
 }
 
 #ifdef LIBC_TYPES_HAS_FLOAT128

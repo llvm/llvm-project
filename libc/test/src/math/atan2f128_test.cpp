@@ -11,7 +11,8 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-using LlvmLibcAtan2f128Test = LIBC_NAMESPACE::testing::FPTest<float128>;
+using LIBC_NAMESPACE::fputil::Float128;
+using LlvmLibcAtan2f128Test = LIBC_NAMESPACE::testing::FPTest<Float128>;
 using LIBC_NAMESPACE::testing::tlog;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
@@ -19,14 +20,14 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 TEST_F(LlvmLibcAtan2f128Test, InQuadRange) {
   constexpr StorageType X_COUNT = 123;
   constexpr StorageType X_START =
-      FPBits(static_cast<float128>(0.25q)).uintval();
-  constexpr StorageType X_STOP = FPBits(static_cast<float128>(4.0q)).uintval();
+      FPBits(static_cast<Float128>(0.25q)).uintval();
+  constexpr StorageType X_STOP = FPBits(static_cast<Float128>(4.0q)).uintval();
   constexpr StorageType X_STEP = (X_STOP - X_START) / X_COUNT;
 
   constexpr StorageType Y_COUNT = 137;
   constexpr StorageType Y_START =
-      FPBits(static_cast<float128>(0.25q)).uintval();
-  constexpr StorageType Y_STOP = FPBits(static_cast<float128>(4.0q)).uintval();
+      FPBits(static_cast<Float128>(0.25q)).uintval();
+  constexpr StorageType Y_STOP = FPBits(static_cast<Float128>(4.0q)).uintval();
   constexpr StorageType Y_STEP = (Y_STOP - Y_START) / Y_COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
@@ -37,26 +38,26 @@ TEST_F(LlvmLibcAtan2f128Test, InQuadRange) {
     uint64_t fails = 0;
     uint64_t finite_count = 0;
     uint64_t total_count = 0;
-    float128 failed_x = 0.0, failed_y = 0.0, failed_r = 0.0;
+    Float128 failed_x = 0.0, failed_y = 0.0, failed_r = 0.0;
     double tol = 0.5;
 
     for (StorageType i = 0, v = X_START; i <= X_COUNT; ++i, v += X_STEP) {
-      float128 x = FPBits(v).get_val();
+      Float128 x = FPBits(v).get_val();
       if (FPBits(x).is_inf_or_nan() || x < 0.0q)
         continue;
 
       for (StorageType j = 0, w = Y_START; j <= Y_COUNT; ++j, w += Y_STEP) {
-        float128 y = FPBits(w).get_val();
+        Float128 y = FPBits(w).get_val();
         if (FPBits(y).is_inf_or_nan())
           continue;
 
-        float128 result = LIBC_NAMESPACE::atan2f128(x, y);
+        Float128 result = LIBC_NAMESPACE::atan2f128(x, y);
         ++total_count;
         if (FPBits(result).is_inf_or_nan())
           continue;
 
         ++finite_count;
-        mpfr::BinaryInput<float128> inputs{x, y};
+        mpfr::BinaryInput<Float128> inputs{x, y};
 
         if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Atan2, inputs,
                                                result, 2.0, rounding_mode)) {
@@ -81,7 +82,7 @@ TEST_F(LlvmLibcAtan2f128Test, InQuadRange) {
            << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
     }
     if (fails) {
-      mpfr::BinaryInput<float128> inputs{failed_x, failed_y};
+      mpfr::BinaryInput<Float128> inputs{failed_x, failed_y};
       EXPECT_MPFR_MATCH(mpfr::Operation::Atan2, inputs, failed_r, 0.5,
                         rounding_mode);
     }
