@@ -5465,6 +5465,15 @@ static bool upperBitsAreDiscarded(SDNode *N) {
     return TruncVT == MVT::i16 || TruncVT == MVT::i8;
   }
 
+  if (User->isMachineOpcode() &&
+      User->getMachineOpcode() == TargetOpcode::EXTRACT_SUBREG) {
+    if (auto *IdxNode = dyn_cast<ConstantSDNode>(User->getOperand(1))) {
+      unsigned Idx = IdxNode->getZExtValue();
+      if (Idx == X86::sub_16bit || Idx == X86::sub_8bit)
+        return true;
+    }
+  }
+
   return false;
 }
 
