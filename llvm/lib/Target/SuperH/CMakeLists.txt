@@ -4,8 +4,8 @@ set(LLVM_TARGET_DEFINITIONS SuperH.td)
 
 tablegen(LLVM SuperHGenAsmMatcher.inc         -gen-asm-matcher)
 tablegen(LLVM SuperHGenAsmWriter.inc          -gen-asm-writer)
-tablegen(LLVM SuperHGenCallingConv.inc        -gen-callingconv)
 tablegen(LLVM SuperHGenDAGISel.inc            -gen-dag-isel)
+tablegen(LLVM SuperHGenCallingConv.inc        -gen-callingconv)
 tablegen(LLVM SuperHGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM SuperHGenRegisterInfo.inc       -gen-register-info)
 tablegen(LLVM SuperHGenInstrInfo.inc          -gen-instr-info)
@@ -20,6 +20,11 @@ add_llvm_target(SuperHCodeGen
   SuperHTargetMachine.cpp
   SuperHFrameLowering.cpp
   SuperHRegisterInfo.cpp
+  SuperHMCInstLower.cpp
+  SuperHSelectionDAGInfo.cpp
+  SuperHISelDAGToDAG.cpp
+  SuperHISelLowering.cpp
+  SuperHAsmPrinter.cpp
   SuperHInstrInfo.cpp
   SuperHSubtarget.cpp
 

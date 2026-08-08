@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMSuperHDesc
   SuperHMCAsmInfo.cpp
   SuperHInstPrinter.cpp
   SuperHELFObjectWriter.cpp
+  SuperHTargetStreamer.cpp
   SuperHAsmBackend.cpp
 
   LINK_COMPONENTS

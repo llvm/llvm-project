@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SuperHInstrInfo.h"
+#include "SuperHRegisterInfo.h"
 #include "SuperHSubtarget.h"
 #include "SuperHTargetMachine.h"
 #include "SuperH.h"
@@ -28,8 +29,23 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "SuperHGenInstrInfo.inc"
 
-void SuperHInstrInfo::anchor() {}
-
 SuperHInstrInfo::SuperHInstrInfo(const SuperHSubtarget &ST)
     : SuperHGenInstrInfo(ST, RI, SH::ADJCALLSTACKDOWN, SH::ADJCALLSTACKUP),
       RI(ST), Subtarget(ST) { }
+
+void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MI, const DebugLoc &DL,
+                           Register DestReg, Register SrcReg, bool KillSrc,
+                           bool RenamableDest,
+                           bool RenamableSrc) const {
+
+  // If the targets are GPR registers, use MOV Rm, Rn.
+  if (SH::GPRRegClass.contains(DestReg, SrcReg)) {
+    BuildMI(MBB, MI, DL, get(SH::MOVRmRn), DestReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  // Otherwise this is not possible.
+  llvm_unreachable("Impossible reg-to-reg copy");
+}
