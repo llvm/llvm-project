@@ -10839,4 +10839,11 @@ bool AMDGPUOperand::isEndpgm() const { return isImmTy(ImmTyEndpgm); }
 // Split Barrier
 //===----------------------------------------------------------------------===//
 
-bool AMDGPUOperand::isSplitBarrier() const { return isInlinableImm(MVT::i32); }
+bool AMDGPUOperand::isSplitBarrier() const {
+  if (!isImm())
+    return false;
+
+  int64_t Imm = getImm();
+  return isUInt<5>(Imm) || (AMDGPU::Barrier::CLUSTER_TRAP <= Imm &&
+                            Imm <= AMDGPU::Barrier::WORKGROUP);
+}
