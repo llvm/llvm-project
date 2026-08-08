@@ -3,23 +3,23 @@
 ; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11-TRUE16 %s
 
 ; Test fcanonicalize optimization that scalarizes when building vectors with
-; undef or constant elements. This optimization only applies when scalar
+; poison or constant elements. This optimization only applies when scalar
 ; fcanonicalize is legal for the element type (f16, f32, f64 - not bf16).
 
 declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>)
 declare <2 x float> @llvm.canonicalize.v2f32(<2 x float>)
 declare <2 x double> @llvm.canonicalize.v2f64(<2 x double>)
 
-; Test v2f16 with register in low lane, undef in high lane
-define <2 x half> @test_canonicalize_v2f16_reg_undef(half %val) {
-; GFX9-LABEL: test_canonicalize_v2f16_reg_undef:
+; Test v2f16 with register in low lane, poison in high lane
+define <2 x half> @test_canonicalize_v2f16_reg_poison(half %val) {
+; GFX9-LABEL: test_canonicalize_v2f16_reg_poison:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX9-NEXT:    v_pack_b32_f16 v0, v0, 0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: test_canonicalize_v2f16_reg_undef:
+; GFX11-TRUE16-LABEL: test_canonicalize_v2f16_reg_poison:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
@@ -31,16 +31,16 @@ define <2 x half> @test_canonicalize_v2f16_reg_undef(half %val) {
   ret <2 x half> %canonicalized
 }
 
-; Test v2f16 with undef in low lane, register in high lane
-define <2 x half> @test_canonicalize_v2f16_undef_reg(half %val) {
-; GFX9-LABEL: test_canonicalize_v2f16_undef_reg:
+; Test v2f16 with poison in low lane, register in high lane
+define <2 x half> @test_canonicalize_v2f16_poison_reg(half %val) {
+; GFX9-LABEL: test_canonicalize_v2f16_poison_reg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX9-NEXT:    v_pack_b32_f16 v0, 0, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: test_canonicalize_v2f16_undef_reg:
+; GFX11-TRUE16-LABEL: test_canonicalize_v2f16_poison_reg:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v0.l, v0.l
@@ -94,16 +94,16 @@ define <2 x half> @test_canonicalize_v2f16_const_reg(half %val) {
   ret <2 x half> %canonicalized
 }
 
-; Test v2f32 with register in low lane, undef in high lane
-define <2 x float> @test_canonicalize_v2f32_reg_undef(float %val) {
-; GFX9-LABEL: test_canonicalize_v2f32_reg_undef:
+; Test v2f32 with register in low lane, poison in high lane
+define <2 x float> @test_canonicalize_v2f32_reg_poison(float %val) {
+; GFX9-LABEL: test_canonicalize_v2f32_reg_poison:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_max_f32_e32 v0, v0, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: test_canonicalize_v2f32_reg_undef:
+; GFX11-TRUE16-LABEL: test_canonicalize_v2f32_reg_poison:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_mov_b32 v1, 0
@@ -113,16 +113,16 @@ define <2 x float> @test_canonicalize_v2f32_reg_undef(float %val) {
   ret <2 x float> %canonicalized
 }
 
-; Test v2f32 with undef in low lane, register in high lane
-define <2 x float> @test_canonicalize_v2f32_undef_reg(float %val) {
-; GFX9-LABEL: test_canonicalize_v2f32_undef_reg:
+; Test v2f32 with poison in low lane, register in high lane
+define <2 x float> @test_canonicalize_v2f32_poison_reg(float %val) {
+; GFX9-LABEL: test_canonicalize_v2f32_poison_reg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_max_f32_e32 v1, v0, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: test_canonicalize_v2f32_undef_reg:
+; GFX11-TRUE16-LABEL: test_canonicalize_v2f32_poison_reg:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_dual_max_f32 v1, v0, v0 :: v_dual_mov_b32 v0, 0
@@ -152,9 +152,9 @@ define <2 x float> @test_canonicalize_v2f32_reg_const(float %val) {
   ret <2 x float> %canonicalized
 }
 
-; Test v2f64 with register in low lane, undef in high lane
-define <2 x double> @test_canonicalize_v2f64_reg_undef(double %val) {
-; GFX9-LABEL: test_canonicalize_v2f64_reg_undef:
+; Test v2f64 with register in low lane, poison in high lane
+define <2 x double> @test_canonicalize_v2f64_reg_poison(double %val) {
+; GFX9-LABEL: test_canonicalize_v2f64_reg_poison:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
@@ -162,7 +162,7 @@ define <2 x double> @test_canonicalize_v2f64_reg_undef(double %val) {
 ; GFX9-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: test_canonicalize_v2f64_reg_undef:
+; GFX11-TRUE16-LABEL: test_canonicalize_v2f64_reg_poison:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
@@ -173,9 +173,9 @@ define <2 x double> @test_canonicalize_v2f64_reg_undef(double %val) {
   ret <2 x double> %canonicalized
 }
 
-; Test v2f64 with undef in low lane, register in high lane
-define <2 x double> @test_canonicalize_v2f64_undef_reg(double %val) {
-; GFX9-LABEL: test_canonicalize_v2f64_undef_reg:
+; Test v2f64 with poison in low lane, register in high lane
+define <2 x double> @test_canonicalize_v2f64_poison_reg(double %val) {
+; GFX9-LABEL: test_canonicalize_v2f64_poison_reg:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[0:1], v[0:1]
@@ -183,7 +183,7 @@ define <2 x double> @test_canonicalize_v2f64_undef_reg(double %val) {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: test_canonicalize_v2f64_undef_reg:
+; GFX11-TRUE16-LABEL: test_canonicalize_v2f64_poison_reg:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_max_f64 v[2:3], v[0:1], v[0:1]
