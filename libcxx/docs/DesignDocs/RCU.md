@@ -48,7 +48,7 @@ Here is an example usage ::
     std::rcu_retire(olddata); // reclaim *olddata when safe
   }
 
-There are several key details that an implementation of `rcu` must address:
+There are several key properties that an implementation of `rcu` must satisfy:
 
 - On the reader side, `rcu_domain::lock` and `rcu_domain::unlock` must not block the thread while the writer thread
   is performing updates.
