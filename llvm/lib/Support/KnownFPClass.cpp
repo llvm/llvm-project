@@ -556,15 +556,20 @@ KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc,
   if (KnownSrc.isKnownNever(fcSNan))
     Known.knownNot(fcSNan);
 
-  // Any negative value besides -0 returns a nan.
+  // Any negative value besides -0.0 returns a nan.
   if (KnownSrc.isKnownNeverNaN() && KnownSrc.cannotBeOrderedLessThanZero())
     Known.knownNot(fcNan);
 
-  // The only negative value that can be returned is -0 for -0 inputs.
+  // The only negative value that can be returned is -0.0 for -0.0 inputs.
   Known.knownNot(fcNegInf | fcNegSubnormal | fcNegNormal);
 
-  // If the input denormal mode could be PreserveSign, a negative
-  // subnormal input could produce a negative zero output.
+  // Only sqrt(+0.0) == +0.0. However, subnormals may also be treated as +0.0
+  // depending on the input denormal mode.
+  if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
+    Known.knownNot(fcPosZero);
+
+  // Only sqrt(-0.0) == -0.0. However, negative subnormals may also be treated
+  // as -0.0 depending on the input denormal mode.
   if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
     Known.knownNot(fcNegZero);
 
