@@ -1246,6 +1246,26 @@ define float @ret_fdiv_same_operands_nonorm_dynamic(float noundef nofpclass(norm
   ret float %fdiv
 }
 
+define float @ret_fdiv_same_operands_nonorm_dapz(float noundef nofpclass(norm) %arg) #2 {
+; CHECK-LABEL: define noundef nofpclass(inf zero sub norm) float @ret_fdiv_same_operands_nonorm_dapz
+; CHECK-SAME: (float noundef nofpclass(norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg, %arg
+  ret float %fdiv
+}
+
+define float @ret_fdiv_same_operands_nosnan_nosub_nonorm(float noundef nofpclass(snan sub norm) %arg) #0 {
+; CHECK-LABEL: define noundef nofpclass(snan inf zero sub norm) float @ret_fdiv_same_operands_nosnan_nosub_nonorm
+; CHECK-SAME: (float noundef nofpclass(snan sub norm) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv float [[ARG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = fdiv float %arg, %arg
+  ret float %fdiv
+}
+
 define float @ret_fdiv_ieee_all_nosub_nonorm(float %arg0, float nofpclass(sub norm) %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(sub norm) float @ret_fdiv_ieee_all_nosub_nonorm
 ; CHECK-SAME: (float [[ARG0:%.*]], float nofpclass(sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
