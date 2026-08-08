@@ -1247,6 +1247,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                            getTarget().isCLZForZeroUndef());
   case Builtin::BI__builtin_ctzg:
     return emitBuiltinBitOpWithFallback<cir::BitCtzOp>(*this, e);
+  case Builtin::BIstdc_trailing_zeros_uc:
+  case Builtin::BIstdc_trailing_zeros_us:
+  case Builtin::BIstdc_trailiing_zeros_ui:
+  case Builtin::BIstdc_trailing_zeros_ul:
+  case Builtin::BIstdc_trailing_zeros_ull:
+  case Builtin::BI__builtin_stdc_trailing_zeros:
+    return emitBuiltinBitOp<cir::BitCtzOp>(*this, e, /*poisonZero=*/false);
 
   case Builtin::BI__builtin_clzs:
   case Builtin::BI__builtin_clz:
