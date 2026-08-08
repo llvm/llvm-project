@@ -46,6 +46,8 @@
 {'is_defined': False, 'name': '__ZNSt20bad_array_new_lengthD0Ev', 'type': 'U'}
 {'is_defined': False, 'name': '__ZNSt20bad_array_new_lengthD1Ev', 'type': 'U'}
 {'is_defined': False, 'name': '__ZNSt20bad_array_new_lengthD2Ev', 'type': 'U'}
+{'is_defined': False, 'name': '__ZNSt3__114__new_at_leastEm', 'type': 'U'}
+{'is_defined': False, 'name': '__ZNSt3__114__new_at_leastEmSt11align_val_t', 'type': 'U'}
 {'is_defined': False, 'name': '__ZNSt8bad_castC1Ev', 'type': 'U'}
 {'is_defined': False, 'name': '__ZNSt8bad_castC2Ev', 'type': 'U'}
 {'is_defined': False, 'name': '__ZNSt8bad_castD0Ev', 'type': 'U'}
@@ -1308,6 +1310,8 @@
 {'is_defined': True, 'name': '__ZNSt3__113shared_futureIvED1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__113shared_futureIvED2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__113shared_futureIvEaSERKS1_', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__114__new_at_leastEm', 'type':'I'}
+{'is_defined': True, 'name': '__ZNSt3__114__new_at_leastEmSt11align_val_t', 'type':'I'}
 {'is_defined': True, 'name': '__ZNSt3__114__num_get_base10__get_baseERNS_8ios_baseE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__114__num_get_base5__srcE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__114__num_put_base12__format_intEPcPKcbj', 'type': 'FUNC'}

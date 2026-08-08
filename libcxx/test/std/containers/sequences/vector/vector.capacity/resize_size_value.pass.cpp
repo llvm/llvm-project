@@ -20,9 +20,10 @@
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
     std::vector<int> v(100);
+    auto cap = v.capacity();
     v.resize(50, 1);
     assert(v.size() == 50);
-    assert(v.capacity() == 100);
+    assert(v.capacity() == cap);
     assert(v == std::vector<int>(50));
     v.resize(200, 1);
     assert(v.size() == 200);

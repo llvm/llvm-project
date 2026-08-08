@@ -127,4 +127,8 @@
 #  endif
 #endif
 
+#if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
+#  define _LIBCPP_ABI_VCRUNTIME
+#endif
+
 #endif // _LIBCPP___CONFIGURATION_ABI_H

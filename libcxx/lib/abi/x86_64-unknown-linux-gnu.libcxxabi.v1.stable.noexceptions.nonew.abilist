@@ -2,6 +2,7 @@
 {'is_defined': False, 'name': '_ZNKSt13runtime_error4whatEv', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt11logic_errorD2Ev', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt13runtime_errorD2Ev', 'type': 'FUNC'}
+{'is_defined': False, 'name': '_ZNSt3__114__new_at_leastEm', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt8bad_castD2Ev', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt9exceptionD2Ev', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZSt9terminatev', 'type': 'FUNC'}

@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___CONFIGURATION_AVAILABILITY_H
 #define _LIBCPP___CONFIGURATION_AVAILABILITY_H
 
+#include <__configuration/abi.h>
 #include <__configuration/compiler.h>
 #include <__configuration/language.h>
 
@@ -38,6 +39,9 @@
 // When availability annotations are disabled, we take for granted that features introduced
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE /* nothing */
+
 #  define _LIBCPP_INTRODUCED_IN_LLVM_24 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE /* nothing */
 
@@ -264,6 +268,14 @@
 // The platform specific implementation is built in the library.
 #define _LIBCPP_AVAILABILITY_HAS_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_24
 #define _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE
+
+// This determines whether `std::__new_at_least` is available in the dylib, which
+// is used for std::allocator::allocate_at_least.
+#ifndef _LIBCPP_ABI_VCRUNTIME
+#  define _LIBCPP_AVAILABILITY_HAS_NEW_AT_LEAST _LIBCPP_INTRODUCED_IN_LLVM_24
+#else
+#  define _LIBCPP_AVAILABILITY_HAS_NEW_AT_LEAST 0
+#endif
 
 // This determines whether we assume that the internal std::__bad_variant_access_with_msg class
 // (which carries a message describing the cause of the failure in bad_variant_access::what())

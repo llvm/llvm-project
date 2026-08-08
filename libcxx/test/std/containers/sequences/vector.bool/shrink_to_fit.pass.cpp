@@ -47,33 +47,6 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(v.size() == 1);
   }
 
-#if defined(_LIBCPP_VERSION)
-  {
-    using C                = std::vector<bool>;
-    unsigned bits_per_word = static_cast<unsigned>(sizeof(C::__storage_type) * CHAR_BIT);
-    C v(bits_per_word);
-    v.push_back(1);
-    assert(v.capacity() == bits_per_word * 2);
-    assert(v.size() == bits_per_word + 1);
-    v.pop_back();
-    v.shrink_to_fit();
-    assert(v.capacity() == bits_per_word);
-    assert(v.size() == bits_per_word);
-  }
-  {
-    using C                = std::vector<bool>;
-    unsigned bits_per_word = static_cast<unsigned>(sizeof(C::__storage_type) * CHAR_BIT);
-    C v;
-    v.reserve(bits_per_word * 2);
-    v.push_back(1);
-    assert(v.capacity() == bits_per_word * 2);
-    assert(v.size() == 1);
-    v.shrink_to_fit();
-    assert(v.capacity() == bits_per_word);
-    assert(v.size() == 1);
-  }
-#endif
-
   return true;
 }
 

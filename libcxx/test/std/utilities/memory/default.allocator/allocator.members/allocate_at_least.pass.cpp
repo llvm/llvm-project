@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // <memory>
 
 // allocation_result<T*> allocate_at_least(size_t n)
