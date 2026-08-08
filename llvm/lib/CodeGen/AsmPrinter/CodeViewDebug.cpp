@@ -246,9 +246,15 @@ CodeViewDebug::getInlineSite(const DILocation *InlinedAt,
               .SiteFuncId;
 
     Site->SiteFuncId = NextFuncId++;
+
+    // Set to unknown on overflow. We only have 16 bits to play with here.
+    unsigned IAColumn = InlinedAt->getColumn();
+    if (IAColumn > UINT16_MAX)
+      IAColumn = 0;
+
     OS.emitCVInlineSiteIdDirective(
         Site->SiteFuncId, ParentFuncId, maybeRecordFile(InlinedAt->getFile()),
-        InlinedAt->getLine(), InlinedAt->getColumn(), SMLoc());
+        InlinedAt->getLine(), IAColumn, SMLoc());
     Site->Inlinee = Inlinee;
     InlinedSubprograms.insert(Inlinee);
     auto InlineeIdx = getFuncIdForSubprogram(Inlinee);
@@ -523,9 +529,10 @@ void CodeViewDebug::maybeRecordLocation(const DebugLoc &DL,
       LI.isNeverStepInto())
     return;
 
-  ColumnInfo CI(DL.getCol(), /*EndColumn=*/0);
-  if (CI.getStartColumn() != DL.getCol())
-    return;
+  // Set to unknown on overflow. We only have 16 bits to play with here.
+  unsigned Column = DL.getCol();
+  if (Column > UINT16_MAX)
+    Column = 0;
 
   if (!CurFn->HaveLineInfo)
     CurFn->HaveLineInfo = true;
@@ -558,7 +565,7 @@ void CodeViewDebug::maybeRecordLocation(const DebugLoc &DL,
     addLocIfNotPresent(CurFn->ChildSites, Loc);
   }
 
-  OS.emitCVLocDirective(FuncId, FileId, DL.getLine(), DL.getCol(),
+  OS.emitCVLocDirective(FuncId, FileId, DL.getLine(), Column,
                         /*PrologueEnd=*/false, /*IsStmt=*/false,
                         DL->getFilename(), SMLoc());
 }
