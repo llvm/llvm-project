@@ -9,6 +9,7 @@
 {'is_defined': False, 'name': '_ZNSt16invalid_argumentD1Ev', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt20bad_array_new_lengthC1Ev', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt20bad_array_new_lengthD1Ev', 'type': 'FUNC'}
+{'is_defined': False, 'name': '_ZNSt3__114__new_at_leastEm', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt8bad_castC1Ev', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt8bad_castD1Ev', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt8bad_castD2Ev', 'type': 'FUNC'}
