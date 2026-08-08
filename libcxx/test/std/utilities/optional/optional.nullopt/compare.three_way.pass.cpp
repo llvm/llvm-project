@@ -30,23 +30,58 @@ static_assert(std::three_way_comparable<std::nullopt_t, std::strong_ordering>);
 #endif
 
 constexpr bool test() {
-  assert(std::nullopt == std::nullopt);
-  assert(!(std::nullopt != std::nullopt));
-  assert(std::nullopt <= std::nullopt);
-  assert(std::nullopt >= std::nullopt);
-  assert(!(std::nullopt > std::nullopt));
-  assert(!(std::nullopt < std::nullopt));
+  { // ==
+    static_assert(std::is_same_v<decltype(std::nullopt == std::nullopt), bool>);
+    static_assert(noexcept(std::nullopt == std::nullopt));
+
+    assert(std::nullopt == std::nullopt);
+  }
+  { // !=
+    static_assert(std::is_same_v<decltype(std::nullopt != std::nullopt), bool>);
+    static_assert(noexcept(std::nullopt != std::nullopt));
+
+    assert(!(std::nullopt != std::nullopt));
+  }
+  { // <=
+    static_assert(std::is_same_v<decltype(std::nullopt <= std::nullopt), bool>);
+    static_assert(noexcept(std::nullopt <= std::nullopt));
+
+    assert(std::nullopt <= std::nullopt);
+  }
+  { // >=
+    static_assert(std::is_same_v<decltype(std::nullopt >= std::nullopt), bool>);
+    static_assert(noexcept(std::nullopt >= std::nullopt));
+
+    assert(std::nullopt >= std::nullopt);
+  }
+  { // >
+    static_assert(std::is_same_v<decltype(std::nullopt > std::nullopt), bool>);
+    static_assert(noexcept(std::nullopt > std::nullopt));
+
+    assert(!(std::nullopt > std::nullopt));
+  }
+  { // <
+    static_assert(std::is_same_v<decltype(std::nullopt < std::nullopt), bool>);
+    static_assert(noexcept(std::nullopt < std::nullopt));
+
+    assert(!(std::nullopt < std::nullopt));
+  }
 
 #if TEST_STD_VER >= 20
-  assert((std::nullopt <=> std::nullopt) == std::strong_ordering::equal);
+  { // <=>
+    std::same_as<std::strong_ordering> auto result = (std::nullopt <=> std::nullopt);
+    static_assert(noexcept(std::nullopt <=> std::nullopt));
+    assert(result == std::strong_ordering::equal);
+  }
 
-  // Test ranges::find with nullopt
-  std::vector<std::optional<int>> v = {1, 2, std::nullopt, 4, 5};
+  { // Test ranges::find with nullopt
+    std::vector<std::optional<int>> v = {1, 2, std::nullopt, 4, 5};
 
-  auto it = std::ranges::find(v, std::nullopt);
+    auto it = std::ranges::find(v, std::nullopt);
 
-  assert(it != v.end());
-  assert(*it == std::nullopt);
+    assert(it != v.end());
+    assert(*it == std::nullopt);
+  }
 #endif
 
   return true;
