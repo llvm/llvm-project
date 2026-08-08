@@ -17,7 +17,7 @@ define i32 @consecutive_ptr_forward(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -57,7 +57,7 @@ define i32 @consecutive_ptr_forward(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; INTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTER:       [[VECTOR_PH]]:
-; INTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; INTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; INTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; INTER-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTER:       [[VECTOR_BODY]]:
@@ -121,7 +121,7 @@ define i32 @consecutive_ptr_reverse(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -167,7 +167,7 @@ define i32 @consecutive_ptr_reverse(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; INTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTER:       [[VECTOR_PH]]:
-; INTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 4
+; INTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
 ; INTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; INTER-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; INTER-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -235,7 +235,7 @@ define i32 @interleaved_access_forward(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -304,7 +304,7 @@ define i32 @interleaved_access_forward(ptr %p, i64 %n) {
 ; INTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; INTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTER:       [[VECTOR_PH]]:
-; INTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; INTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; INTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; INTER-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTER:       [[VECTOR_BODY]]:
@@ -379,7 +379,7 @@ define i32 @interleaved_access_reverse(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -452,7 +452,7 @@ define i32 @interleaved_access_reverse(ptr %p, i64 %n) {
 ; INTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; INTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTER:       [[VECTOR_PH]]:
-; INTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 4
+; INTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
 ; INTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; INTER-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; INTER-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -532,7 +532,7 @@ define void @predicated_store(ptr %p, i32 %x, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -611,7 +611,7 @@ define void @predicated_store(ptr %p, i32 %x, i64 %n) {
 ; INTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[SMAX]], 4
 ; INTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTER:       [[VECTOR_PH]]:
-; INTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; INTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; INTER-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; INTER-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 4, i64 [[N_MOD_VF]]
 ; INTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[TMP1]]
@@ -717,7 +717,7 @@ define void @irregular_type(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -760,7 +760,7 @@ define void @irregular_type(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; INTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTER:       [[VECTOR_PH]]:
-; INTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; INTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; INTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; INTER-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTER:       [[VECTOR_BODY]]:
@@ -823,7 +823,7 @@ define void @pointer_iv_uniform(ptr %a, i32 %x, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
@@ -863,7 +863,7 @@ define void @pointer_iv_uniform(ptr %a, i32 %x, i64 %n) {
 ; INTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; INTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTER:       [[VECTOR_PH]]:
-; INTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; INTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; INTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; INTER-NEXT:    [[TMP0:%.*]] = shl i64 [[N_VEC]], 2
 ; INTER-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
@@ -925,7 +925,7 @@ define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N_VEC]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
@@ -1037,7 +1037,7 @@ define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[SMAX]], 4
 ; INTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTER:       [[VECTOR_PH]]:
-; INTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; INTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; INTER-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; INTER-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 4, i64 [[N_MOD_VF]]
 ; INTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[TMP1]]
@@ -1157,7 +1157,7 @@ define void @pointer_iv_non_uniform_1(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N_VEC]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
@@ -1205,7 +1205,7 @@ define void @pointer_iv_non_uniform_1(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; INTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; INTER:       [[VECTOR_PH]]:
-; INTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
+; INTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX]], 3
 ; INTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
 ; INTER-NEXT:    [[TMP0:%.*]] = shl i64 [[N_VEC]], 4
 ; INTER-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
@@ -1286,7 +1286,7 @@ define i32 @pointer_iv_mixed(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX2]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
@@ -1314,14 +1314,14 @@ define i32 @pointer_iv_mixed(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ], [ [[A]], %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[B]], %[[ENTRY]] ], [ [[B]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ], [ [[A]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[B]], %[[ENTRY]] ], [ [[B]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[UNNAMEDTMP3:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[Q:%.*]] = phi ptr [ [[UNNAMEDTMP4:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[UNNAMEDTMP3:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[Q:%.*]] = phi ptr [ [[UNNAMEDTMP4:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[UNNAMEDTMP0:%.*]] = phi i32 [ [[UNNAMEDTMP2:%.*]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[UNNAMEDTMP1:%.*]] = load i32, ptr [[P]], align 8
 ; CHECK-NEXT:    [[UNNAMEDTMP2]] = add i32 [[UNNAMEDTMP1]], [[UNNAMEDTMP0]]
@@ -1352,7 +1352,7 @@ define i32 @pointer_iv_mixed(ptr %a, ptr %b, i64 %n) {
 ; INTER-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; INTER-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; INTER:       [[VECTOR_PH]]:
-; INTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX2]], 4
+; INTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX2]], 3
 ; INTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX2]], [[N_MOD_VF]]
 ; INTER-NEXT:    [[TMP2:%.*]] = shl i64 [[N_VEC]], 2
 ; INTER-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
@@ -1380,14 +1380,14 @@ define i32 @pointer_iv_mixed(ptr %a, ptr %b, i64 %n) {
 ; INTER-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; INTER:       [[SCALAR_PH]]:
 ; INTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; INTER-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ], [ [[A]], %[[VECTOR_MEMCHECK]] ]
-; INTER-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[B]], %[[ENTRY]] ], [ [[B]], %[[VECTOR_MEMCHECK]] ]
+; INTER-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ], [ [[A]], %[[VECTOR_MEMCHECK]] ]
+; INTER-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[B]], %[[ENTRY]] ], [ [[B]], %[[VECTOR_MEMCHECK]] ]
 ; INTER-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; INTER-NEXT:    br label %[[FOR_BODY:.*]]
 ; INTER:       [[FOR_BODY]]:
 ; INTER-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; INTER-NEXT:    [[P:%.*]] = phi ptr [ [[UNNAMEDTMP3:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ]
-; INTER-NEXT:    [[Q:%.*]] = phi ptr [ [[UNNAMEDTMP4:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ]
+; INTER-NEXT:    [[P:%.*]] = phi ptr [ [[UNNAMEDTMP3:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ]
+; INTER-NEXT:    [[Q:%.*]] = phi ptr [ [[UNNAMEDTMP4:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ]
 ; INTER-NEXT:    [[UNNAMEDTMP0:%.*]] = phi i32 [ [[UNNAMEDTMP2:%.*]], %[[FOR_BODY]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
 ; INTER-NEXT:    [[UNNAMEDTMP1:%.*]] = load i32, ptr [[P]], align 8
 ; INTER-NEXT:    [[UNNAMEDTMP2]] = add i32 [[UNNAMEDTMP1]], [[UNNAMEDTMP0]]
@@ -1446,7 +1446,7 @@ define void @pointer_operand_geps_with_different_indexed_types(ptr %A, ptr %B, i
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX2]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -1522,7 +1522,7 @@ define void @pointer_operand_geps_with_different_indexed_types(ptr %A, ptr %B, i
 ; INTER-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; INTER-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; INTER:       [[VECTOR_PH]]:
-; INTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX2]], 4
+; INTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[SMAX2]], 3
 ; INTER-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; INTER-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 4, i64 [[N_MOD_VF]]
 ; INTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX2]], [[TMP3]]

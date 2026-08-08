@@ -37,5 +37,3 @@ add_libc_unittest(
     libc.hdr.types.DIR
     libc.hdr.types.struct_dirent
 )
-
-
