@@ -1670,9 +1670,8 @@ entry:
 
 define i32 @fold_zext_or_disjoint_xor_i8_to_i32(i8 %input) {
 ; CHECK-LABEL: @fold_zext_or_disjoint_xor_i8_to_i32(
-; CHECK-NEXT:    [[INPUT:%.*]] = or disjoint i8 [[INPUT1:%.*]], 10
-; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[INPUT]] to i32
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Z]], 257
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[INPUT:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Z]], 267
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %or = or disjoint i8 %input, 10
@@ -1683,9 +1682,8 @@ define i32 @fold_zext_or_disjoint_xor_i8_to_i32(i8 %input) {
 
 define i64 @fold_zext_or_disjoint_xor_i32_to_i64(i32 %x) {
 ; CHECK-LABEL: @fold_zext_or_disjoint_xor_i32_to_i64(
-; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[X1:%.*]], 1
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[R:%.*]] = xor i64 [[Z]], 2611923443488327891
+; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = xor i64 [[Z]], 2611923443488327890
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %or = or disjoint i32 %x, 1
@@ -1696,9 +1694,8 @@ define i64 @fold_zext_or_disjoint_xor_i32_to_i64(i32 %x) {
 
 define i64 @fold_zext_or_disjoint_xor_nneg(i32 %x) {
 ; CHECK-LABEL: @fold_zext_or_disjoint_xor_nneg(
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[X:%.*]], 16842752
-; CHECK-NEXT:    [[Z:%.*]] = zext nneg i32 [[OR]] to i64
-; CHECK-NEXT:    [[R:%.*]] = xor i64 [[Z]], 7640891576956012808
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = xor i64 [[TMP1]], 7640891576939301128
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %or = or disjoint i32 %x, 16842752

@@ -1775,6 +1775,27 @@ static Instruction *foldLogicCastConstant(BinaryOperator &Logic, CastInst *Cast,
   Type *DestTy = Logic.getType();
   Type *SrcTy = Cast->getSrcTy();
 
+  // xor (zext (or disjoint X, NarrowC)), WideC
+  //   -> xor (zext X), WideC ^ zext(NarrowC)
+  if (LogicOpc == Instruction::Xor && SrcTy->isIntegerTy() &&
+      DestTy->isIntegerTy()) {
+    Value *X;
+    ConstantInt *NarrowC, *WideC;
+
+    if (match(C, m_ConstantInt(WideC)) &&
+        match(Cast,
+              m_OneUse(m_ZExt(m_OneUse(
+                  m_c_DisjointOr(m_Value(X), m_ConstantInt(NarrowC))))))) {
+      APInt NewC =
+          WideC->getValue() ^
+          NarrowC->getValue().zext(WideC->getBitWidth());
+
+      Value *NewZExt = IC.Builder.CreateZExt(X, DestTy);
+      return BinaryOperator::CreateXor(NewZExt,
+                                       ConstantInt::get(DestTy, NewC));
+    }
+  }
+
   // Move the logic operation ahead of a zext or sext if the constant is
   // unchanged in the smaller source type. Performing the logic in a smaller
   // type may provide more information to later folds, and the smaller logic
