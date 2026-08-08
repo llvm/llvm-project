@@ -367,27 +367,28 @@ public:
     return *currentOpLoc;
   }
 
-  struct ExprParserProxy {
+  class ExprParserProxy {
   public:
     friend ExpressionParser;
     inline auto parseBlockFuncType(OpBuilder &builder) {
       return exprParser.parseBlockFuncType(builder);
     }
 
-    template <typename FilterT = ByteSequence<WasmBinaryEncoding::endByte>>
     /// @param blockToFill: the block which content will be populated
     /// @param resType: the type that this block is supposed to return
+    template <typename FilterT = ByteSequence<WasmBinaryEncoding::endByte>>
     llvm::FailureOr<std::byte>
     parseBlockContent(OpBuilder &builder, Block *blockToFill,
                       TypeRange resTypes, Location opLoc,
                       LabelLevelOpInterface levelOp,
                       FilterT parseEndBytes = {}) {
-      OpBuilder::InsertionGuard guard{builder};
+      OpBuilder::InsertionGuard guard(builder);
+      assert(blockToFill && blockToFill->empty() && "expected an empty block");
       builder.setInsertionPointToStart(blockToFill);
       LDBG() << "parsing a block of type "
              << builder.getFunctionType(blockToFill->getArgumentTypes(),
                                         resTypes);
-      auto nC = exprParser.addNesting(levelOp);
+      auto nestingGuard = exprParser.addNesting(levelOp);
 
       if (failed(exprParser.pushResults(blockToFill->getArguments())))
         return failure();
@@ -1469,22 +1470,20 @@ parsed_inst_t parse(OpCode<WasmBinaryEncoding::OpCode::saturatedTruncate>,
     return emitError(parser.getCurrentOpLoc())
            << "invalid sub-opcode for trunc_saturate: " << subOpCode;
   LDBG() << "Sub subOpcode for operation: " << subOpCode;
-  bool isDestUnsigned = subOpCode & 1;
-  bool isSrcF64 = subOpCode & 2;
-  bool isDestI64 = subOpCode & 4;
-  auto srcTypeBuilder =
-      isSrcF64 ? buildLiteralType<double> : buildLiteralType<float>;
-  auto destTypeBuilder =
-      isDestI64 ? buildLiteralType<uint64_t> : buildLiteralType<int32_t>;
-  auto srcOp = parser.popOperands(srcTypeBuilder(builder));
+  bool isDestUnsigned = (subOpCode & 1) != 0;
+  bool isSrcF64 = (subOpCode & 2) != 0;
+  bool isDestI64 = (subOpCode & 4) != 0;
+
+  Type srcType = isSrcF64 ? builder.getF64Type() : builder.getF32Type();
+  Type destType = isDestI64 ? builder.getI64Type() : builder.getI32Type();
+  auto srcOp = parser.popOperands(srcType);
   if (failed(srcOp))
     return failure();
-  Operation *op =
-      isDestUnsigned
-          ? TruncSatUIOp::create(builder, parser.getCurrentOpLoc(),
-                                 destTypeBuilder(builder), srcOp->front())
-          : TruncSatSIOp::create(builder, parser.getCurrentOpLoc(),
-                                 destTypeBuilder(builder), srcOp->front());
+  Operation *op = isDestUnsigned
+                      ? TruncSatUIOp::create(builder, parser.getCurrentOpLoc(),
+                                             destType, srcOp->front())
+                      : TruncSatSIOp::create(builder, parser.getCurrentOpLoc(),
+                                             destType, srcOp->front());
   LDBG() << "Built operation: " << op;
   return {{op->getResult(0)}};
 }
