@@ -6,7 +6,7 @@
 define float @f1(float %x) nounwind noinline {
 ; precision6-LABEL: f1:
 ; precision6:       # %bb.0: # %entry
-; precision6-NEXT:    subl $48, %esp
+; precision6-NEXT:    subl $44, %esp
 ; precision6-NEXT:    flds {{[0-9]+}}(%esp)
 ; precision6-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
 ; precision6-NEXT:    fstps {{[0-9]+}}(%esp)
@@ -36,18 +36,16 @@ define float @f1(float %x) nounwind noinline {
 ; precision6-NEXT:    flds {{[0-9]+}}(%esp)
 ; precision6-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}
 ; precision6-NEXT:    fstps {{[0-9]+}}(%esp)
-; precision6-NEXT:    flds {{[0-9]+}}(%esp)
-; precision6-NEXT:    fstps {{[0-9]+}}(%esp)
 ; precision6-NEXT:    shll $23, %eax
 ; precision6-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; precision6-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; precision6-NEXT:    flds {{[0-9]+}}(%esp)
-; precision6-NEXT:    addl $48, %esp
+; precision6-NEXT:    addl $44, %esp
 ; precision6-NEXT:    retl
 ;
 ; precision12-LABEL: f1:
 ; precision12:       # %bb.0: # %entry
-; precision12-NEXT:    subl $56, %esp
+; precision12-NEXT:    subl $52, %esp
 ; precision12-NEXT:    flds {{[0-9]+}}(%esp)
 ; precision12-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
 ; precision12-NEXT:    fstps {{[0-9]+}}(%esp)
@@ -83,18 +81,16 @@ define float @f1(float %x) nounwind noinline {
 ; precision12-NEXT:    flds {{[0-9]+}}(%esp)
 ; precision12-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}
 ; precision12-NEXT:    fstps {{[0-9]+}}(%esp)
-; precision12-NEXT:    flds {{[0-9]+}}(%esp)
-; precision12-NEXT:    fstps {{[0-9]+}}(%esp)
 ; precision12-NEXT:    shll $23, %eax
 ; precision12-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; precision12-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; precision12-NEXT:    flds {{[0-9]+}}(%esp)
-; precision12-NEXT:    addl $56, %esp
+; precision12-NEXT:    addl $52, %esp
 ; precision12-NEXT:    retl
 ;
 ; precision18-LABEL: f1:
 ; precision18:       # %bb.0: # %entry
-; precision18-NEXT:    subl $80, %esp
+; precision18-NEXT:    subl $76, %esp
 ; precision18-NEXT:    flds {{[0-9]+}}(%esp)
 ; precision18-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
 ; precision18-NEXT:    fstps {{[0-9]+}}(%esp)
@@ -148,13 +144,11 @@ define float @f1(float %x) nounwind noinline {
 ; precision18-NEXT:    fld1
 ; precision18-NEXT:    fadds {{[0-9]+}}(%esp)
 ; precision18-NEXT:    fstps {{[0-9]+}}(%esp)
-; precision18-NEXT:    flds {{[0-9]+}}(%esp)
-; precision18-NEXT:    fstps {{[0-9]+}}(%esp)
 ; precision18-NEXT:    shll $23, %eax
 ; precision18-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; precision18-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; precision18-NEXT:    flds {{[0-9]+}}(%esp)
-; precision18-NEXT:    addl $80, %esp
+; precision18-NEXT:    addl $76, %esp
 ; precision18-NEXT:    retl
 entry:
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
@@ -167,7 +161,7 @@ declare float @llvm.exp.f32(float) nounwind readonly
 define float @f2(float %x) nounwind noinline {
 ; precision6-LABEL: f2:
 ; precision6:       # %bb.0: # %entry
-; precision6-NEXT:    subl $44, %esp
+; precision6-NEXT:    subl $40, %esp
 ; precision6-NEXT:    flds {{[0-9]+}}(%esp)
 ; precision6-NEXT:    fnstcw (%esp)
 ; precision6-NEXT:    movzwl (%esp), %eax
@@ -194,18 +188,16 @@ define float @f2(float %x) nounwind noinline {
 ; precision6-NEXT:    flds {{[0-9]+}}(%esp)
 ; precision6-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}
 ; precision6-NEXT:    fstps {{[0-9]+}}(%esp)
-; precision6-NEXT:    flds {{[0-9]+}}(%esp)
-; precision6-NEXT:    fstps {{[0-9]+}}(%esp)
 ; precision6-NEXT:    shll $23, %eax
 ; precision6-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; precision6-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; precision6-NEXT:    flds {{[0-9]+}}(%esp)
-; precision6-NEXT:    addl $44, %esp
+; precision6-NEXT:    addl $40, %esp
 ; precision6-NEXT:    retl
 ;
 ; precision12-LABEL: f2:
 ; precision12:       # %bb.0: # %entry
-; precision12-NEXT:    subl $52, %esp
+; precision12-NEXT:    subl $48, %esp
 ; precision12-NEXT:    flds {{[0-9]+}}(%esp)
 ; precision12-NEXT:    fnstcw (%esp)
 ; precision12-NEXT:    movzwl (%esp), %eax
@@ -238,18 +230,16 @@ define float @f2(float %x) nounwind noinline {
 ; precision12-NEXT:    flds {{[0-9]+}}(%esp)
 ; precision12-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}
 ; precision12-NEXT:    fstps {{[0-9]+}}(%esp)
-; precision12-NEXT:    flds {{[0-9]+}}(%esp)
-; precision12-NEXT:    fstps {{[0-9]+}}(%esp)
 ; precision12-NEXT:    shll $23, %eax
 ; precision12-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; precision12-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; precision12-NEXT:    flds {{[0-9]+}}(%esp)
-; precision12-NEXT:    addl $52, %esp
+; precision12-NEXT:    addl $48, %esp
 ; precision12-NEXT:    retl
 ;
 ; precision18-LABEL: f2:
 ; precision18:       # %bb.0: # %entry
-; precision18-NEXT:    subl $76, %esp
+; precision18-NEXT:    subl $72, %esp
 ; precision18-NEXT:    flds {{[0-9]+}}(%esp)
 ; precision18-NEXT:    fnstcw (%esp)
 ; precision18-NEXT:    movzwl (%esp), %eax
@@ -300,13 +290,11 @@ define float @f2(float %x) nounwind noinline {
 ; precision18-NEXT:    fld1
 ; precision18-NEXT:    fadds {{[0-9]+}}(%esp)
 ; precision18-NEXT:    fstps {{[0-9]+}}(%esp)
-; precision18-NEXT:    flds {{[0-9]+}}(%esp)
-; precision18-NEXT:    fstps {{[0-9]+}}(%esp)
 ; precision18-NEXT:    shll $23, %eax
 ; precision18-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; precision18-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; precision18-NEXT:    flds {{[0-9]+}}(%esp)
-; precision18-NEXT:    addl $76, %esp
+; precision18-NEXT:    addl $72, %esp
 ; precision18-NEXT:    retl
 entry:
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
@@ -319,7 +307,7 @@ declare float @llvm.exp2.f32(float) nounwind readonly
 define float @f3(float %x) nounwind noinline {
 ; precision6-LABEL: f3:
 ; precision6:       # %bb.0: # %entry
-; precision6-NEXT:    subl $48, %esp
+; precision6-NEXT:    subl $44, %esp
 ; precision6-NEXT:    flds {{[0-9]+}}(%esp)
 ; precision6-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
 ; precision6-NEXT:    fstps {{[0-9]+}}(%esp)
@@ -349,18 +337,16 @@ define float @f3(float %x) nounwind noinline {
 ; precision6-NEXT:    flds {{[0-9]+}}(%esp)
 ; precision6-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}
 ; precision6-NEXT:    fstps {{[0-9]+}}(%esp)
-; precision6-NEXT:    flds {{[0-9]+}}(%esp)
-; precision6-NEXT:    fstps {{[0-9]+}}(%esp)
 ; precision6-NEXT:    shll $23, %eax
 ; precision6-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; precision6-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; precision6-NEXT:    flds {{[0-9]+}}(%esp)
-; precision6-NEXT:    addl $48, %esp
+; precision6-NEXT:    addl $44, %esp
 ; precision6-NEXT:    retl
 ;
 ; precision12-LABEL: f3:
 ; precision12:       # %bb.0: # %entry
-; precision12-NEXT:    subl $56, %esp
+; precision12-NEXT:    subl $52, %esp
 ; precision12-NEXT:    flds {{[0-9]+}}(%esp)
 ; precision12-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
 ; precision12-NEXT:    fstps {{[0-9]+}}(%esp)
@@ -396,18 +382,16 @@ define float @f3(float %x) nounwind noinline {
 ; precision12-NEXT:    flds {{[0-9]+}}(%esp)
 ; precision12-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}
 ; precision12-NEXT:    fstps {{[0-9]+}}(%esp)
-; precision12-NEXT:    flds {{[0-9]+}}(%esp)
-; precision12-NEXT:    fstps {{[0-9]+}}(%esp)
 ; precision12-NEXT:    shll $23, %eax
 ; precision12-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; precision12-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; precision12-NEXT:    flds {{[0-9]+}}(%esp)
-; precision12-NEXT:    addl $56, %esp
+; precision12-NEXT:    addl $52, %esp
 ; precision12-NEXT:    retl
 ;
 ; precision18-LABEL: f3:
 ; precision18:       # %bb.0: # %entry
-; precision18-NEXT:    subl $80, %esp
+; precision18-NEXT:    subl $76, %esp
 ; precision18-NEXT:    flds {{[0-9]+}}(%esp)
 ; precision18-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
 ; precision18-NEXT:    fstps {{[0-9]+}}(%esp)
@@ -461,13 +445,11 @@ define float @f3(float %x) nounwind noinline {
 ; precision18-NEXT:    fld1
 ; precision18-NEXT:    fadds {{[0-9]+}}(%esp)
 ; precision18-NEXT:    fstps {{[0-9]+}}(%esp)
-; precision18-NEXT:    flds {{[0-9]+}}(%esp)
-; precision18-NEXT:    fstps {{[0-9]+}}(%esp)
 ; precision18-NEXT:    shll $23, %eax
 ; precision18-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; precision18-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; precision18-NEXT:    flds {{[0-9]+}}(%esp)
-; precision18-NEXT:    addl $80, %esp
+; precision18-NEXT:    addl $76, %esp
 ; precision18-NEXT:    retl
 entry:
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]

@@ -4,7 +4,6 @@
 define void @foo(i32 %n, ptr nocapture %p) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    .p2align 4
@@ -12,13 +11,10 @@ define void @foo(i32 %n, ptr nocapture %p) nounwind {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    fldl (%eax,%ecx,8)
 ; CHECK-NEXT:    fmull {{\.?LCPI[0-9]+_[0-9]+}}
-; CHECK-NEXT:    fstpl (%esp)
-; CHECK-NEXT:    fldl (%esp)
 ; CHECK-NEXT:    fstpl (%eax,%ecx,8)
 ; CHECK-NEXT:    decl %ecx
 ; CHECK-NEXT:    js .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %return
-; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    retl
 	br label %bb
 
