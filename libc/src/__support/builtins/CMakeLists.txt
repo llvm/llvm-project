@@ -232,6 +232,9 @@ add_header_library(
     truncdfsf2.h
   DEPENDS
     libc.src.__support.builtins.fpconvert_helper
+)
+
+add_header_library(
   cmp_helper
   HDRS
     cmp_helper.h
