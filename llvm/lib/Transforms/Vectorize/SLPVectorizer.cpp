@@ -4633,8 +4633,28 @@ private:
               IsCommutativeUser && User->getOperand(0) == User->getOperand(1);
           if ((!IsCommutativeUser || IsCommutativeWithSameOps) &&
               !isa<CmpInst>(User)) {
+            if (CurNumOps != NumOps)
+              continue;
+            // A reassociated node flattens the operand chain, so the operand
+            // may be placed in any operand column rather than at the
+            // instruction's operand number.
+            if (TE->hasReassocScalars()) {
+              bool ReplacedByCopyable = false;
+              for (auto It = find(TE->Scalars, User); It != TE->Scalars.end();
+                   It = find(make_range(std::next(It), TE->Scalars.end()),
+                             User)) {
+                int Lane = std::distance(TE->Scalars.begin(), It);
+                for (unsigned OpIdx : seq<unsigned>(TE->getNumOperands()))
+                  ReplacedByCopyable |=
+                      TE->getOperand(OpIdx)[Lane] == Op &&
+                      getScheduleCopyableData(EdgeInfo(TE, OpIdx), Op);
+              }
+              if (ReplacedByCopyable)
+                continue;
+              return false;
+            }
             EdgeInfo EI(TE, U.getOperandNo());
-            if (CurNumOps != NumOps || getScheduleCopyableData(EI, Op))
+            if (getScheduleCopyableData(EI, Op))
               continue;
             return false;
           }
