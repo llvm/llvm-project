@@ -68,7 +68,7 @@ There are several key properties that an implementation of `rcu` must satisfy:
 Adopted Design
 ==============
 
-The core idea of `rcu` can be described in this simple image from lwn.net
+The core idea of `rcu` can be described by this image from lwn.net
 
 .. image:: https://static.lwn.net/images/ns/kernel/rcu/GracePeriodGood.png
 
