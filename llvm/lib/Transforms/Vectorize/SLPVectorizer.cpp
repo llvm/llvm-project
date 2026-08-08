@@ -15685,12 +15685,10 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         Constant::getNullValue(getWidenedType(ScalarTy, CommonMask.size()));
     if (InVectors.size() == 2)
       InVectors.pop_back();
-    assert(Ctx2 == TTI::VectorInstrContext::None &&
-           "Did not expect context for second vector");
-    assert((Ctx1 == TTI::VectorInstrContext::None || P2.isNull()) &&
-           "Only support context for single vector shuffle");
+    TTI::VectorInstrContext Ctx =
+        P2.isNull() ? Ctx1 : combineVectorInstrContexts(Ctx1, Ctx2);
     return ExtraCost + BaseShuffleAnalysis::createShuffle<InstructionCost>(
-                           V1, V2, CommonMask, Builder, ScalarTy, VL, Ctx1);
+                           V1, V2, CommonMask, Builder, ScalarTy, VL, Ctx);
   }
 
 public:

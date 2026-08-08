@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Intrinsics.h"
 
 #include <optional>
@@ -30,7 +31,6 @@ class Constant;
 class DataLayout;
 class Instruction;
 class TargetLibraryInfo;
-class TargetTransformInfo;
 class Type;
 class Value;
 } // namespace llvm
@@ -301,6 +301,12 @@ SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val, unsigned VF);
 /// Opcode. Disabled lanes of these intrinsics are poison rather than UB,
 /// unlike the plain opcode.
 Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode);
+
+/// Combines 2 context hints into a single value. If both are equal, keep the
+/// shared context, otherwise fall back to no specific context.
+TargetTransformInfo::VectorInstrContext
+combineVectorInstrContexts(TargetTransformInfo::VectorInstrContext Ctx1,
+                           TargetTransformInfo::VectorInstrContext Ctx2);
 
 } // namespace llvm::slpvectorizer
 
