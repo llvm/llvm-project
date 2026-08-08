@@ -19,11 +19,8 @@
 void test() {
   std::unique_ptr<int[]> p(new int(3));
   const std::unique_ptr<int[]>& cp = p;
-
-  // expected-error-re@+1 {{indirection requires pointer operand ('std::unique_ptr<int{{[ ]*}}[]>' invalid)}}
-  TEST_IGNORE_NODISCARD(*p);
-  // expected-error-re@+1 {{indirection requires pointer operand ('const std::unique_ptr<int{{[ ]*}}[]>' invalid)}}
-  TEST_IGNORE_NODISCARD(*cp);
+  TEST_IGNORE_NODISCARD(*p);  // expected-error-re {{indirection requires pointer operand ('std::unique_ptr<int{{[ ]*}}[]>' invalid)}}
+  TEST_IGNORE_NODISCARD(*cp); // expected-error-re {{indirection requires pointer operand ('const std::unique_ptr<int{{[ ]*}}[]>' invalid)}}
 }
 
 void test_lwg4196() {
