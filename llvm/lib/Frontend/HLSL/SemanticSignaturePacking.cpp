@@ -66,6 +66,7 @@ enum class SemanticCategory {
   Arbitrary,
   SystemValue,
   SystemGeneratedValue,
+  TessFactor,
 };
 
 struct SignatureRow {
@@ -96,7 +97,7 @@ static uint8_t getStartColumn(uint8_t ColumnMask) {
 }
 
 static SemanticCategory
-getSemanticCategory(dxbc::PSV::SemanticKind SemanticKind) {
+getSemanticCategory(dxbc::PSV::SemanticKind SemanticKind, unsigned Rows) {
   switch (SemanticKind) {
   case dxbc::PSV::SemanticKind::Arbitrary:
     return SemanticCategory::Arbitrary;
@@ -106,6 +107,12 @@ getSemanticCategory(dxbc::PSV::SemanticKind SemanticKind) {
   case dxbc::PSV::SemanticKind::PrimitiveID:
   case dxbc::PSV::SemanticKind::IsFrontFace:
     return SemanticCategory::SystemGeneratedValue;
+  case dxbc::PSV::SemanticKind::TessFactor:
+  case dxbc::PSV::SemanticKind::InsideTessFactor:
+    // Only a tess factor that covers multiple rows is dynamically indexable
+    // and needs to be reserved in the last column.
+    return Rows > 1 ? SemanticCategory::TessFactor
+                    : SemanticCategory::SystemValue;
   case dxbc::PSV::SemanticKind::SampleIndex:
     return SemanticCategory::NotPacked;
   default:
@@ -156,12 +163,20 @@ static bool canCoPack(const SignatureRow &Row,
   if (Row.IndexedRangeFixed && !Row.IndexedRange.contains(IndexedRange))
     return false;
 
+  // A tess factor fixes the indexed range of the rows it is reserved in, so it
+  // may only extend the range that those rows already have.
+  if (Placement.Category == SemanticCategory::TessFactor &&
+      !IndexedRange.contains(Row.IndexedRange))
+    return false;
+
   if (Row.OccupiedColumns && Row.ComponentWidth != Placement.ComponentWidth)
     return false;
   if (Row.InterpMode != dxbc::PSV::InterpolationMode::Undefined &&
       Row.InterpMode != Placement.InterpMode)
     return false;
-  if (Row.OccupiedColumns && Placement.Category < Row.RightmostCategory)
+  if (Row.OccupiedColumns && Placement.Category < Row.RightmostCategory &&
+      !(Placement.Category == SemanticCategory::Arbitrary &&
+        Row.RightmostCategory == SemanticCategory::TessFactor))
     return false;
   return true;
 }
@@ -179,6 +194,15 @@ static std::optional<uint8_t> canPlaceAt(ArrayRef<SignatureRow> Rows,
     if (!canCoPack(Row, Placement, IndexedRange))
       return std::nullopt;
     OccupiedColumns |= Row.OccupiedColumns;
+  }
+
+  // An indexed tess factor is reserved in the last column so that other
+  // elements can still be co-packed into the rows that it covers.
+  if (Placement.Category == SemanticCategory::TessFactor) {
+    constexpr uint8_t LastColumn = 1U << (MaxSignatureCols - 1);
+    if (Placement.Cols != 1 || (OccupiedColumns & LastColumn))
+      return std::nullopt;
+    return LastColumn;
   }
 
   for (unsigned StartCol = 0; StartCol + Placement.Cols <= MaxSignatureCols;
@@ -209,7 +233,8 @@ static void placeAt(MutableArrayRef<SignatureRow> Rows, unsigned StartRow,
 
     Row.IndexedRange = Row.IndexedRange.unionWith(IndexedRange);
     if (Placement.Category == SemanticCategory::SystemValue ||
-        Placement.Category == SemanticCategory::SystemGeneratedValue) {
+        Placement.Category == SemanticCategory::SystemGeneratedValue ||
+        Placement.Category == SemanticCategory::TessFactor) {
       assert(Row.IndexedRange == IndexedRange && "incompatible index range");
       Row.IndexedRangeFixed = true;
     }
@@ -247,7 +272,8 @@ Error llvm::hlsl::packSignaturePrefixStable(
 
     const unsigned ComponentWidth =
         getComponentWidth(Element.CompType, UseNative16BitTypes);
-    const SemanticCategory Category = getSemanticCategory(Element.SemanticKind);
+    const SemanticCategory Category =
+        getSemanticCategory(Element.SemanticKind, Element.Rows);
     if (Category == SemanticCategory::NotPacked)
       continue;
     const ElementPlacement Placement = {Element.Rows, Element.Cols,
