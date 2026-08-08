@@ -1226,7 +1226,7 @@ bool SelectOptimizeImpl::isSelectHighlyPredictable(const SelectLike SI) {
     uint64_t Sum = TrueWeight + FalseWeight;
     if (Sum != 0) {
       auto Probability = BranchProbability::getBranchProbability(Max, Sum);
-      if (Probability > TTI->getPredictableBranchThreshold())
+      if (Probability >= TTI->getPredictableBranchThreshold())
         return true;
     }
   }
