@@ -366,6 +366,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
+- Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
 
 #### Bug Fixes to Compiler Builtins
 
