@@ -388,7 +388,7 @@ define void @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP8]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP8]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[TMP4]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[ARRAYIDX5_PROMOTED]], i32 0
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[ARRAYIDX5_PROMOTED]], i64 0
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

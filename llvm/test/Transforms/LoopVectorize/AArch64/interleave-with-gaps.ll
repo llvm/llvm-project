@@ -456,7 +456,7 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP44]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NOTF-NEXT:    [[N_MOD_VF13:%.*]] = and i64 [[N]], 3
 ; CHECK-NOTF-NEXT:    [[N_VEC14:%.*]] = sub i64 [[N]], [[N_MOD_VF13]]
-; CHECK-NOTF-NEXT:    [[TMP45:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; CHECK-NOTF-NEXT:    [[TMP45:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NOTF-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-NOTF:       [[LOOP]]:
 ; CHECK-NOTF-NEXT:    [[IV:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDEX_NEXT21:%.*]], %[[LOOP]] ]
@@ -768,7 +768,7 @@ define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[TMP47:%.*]] = icmp eq i64 [[N_MOD_VF13]], 0
 ; CHECK-NOTF-NEXT:    [[TMP48:%.*]] = select i1 [[TMP47]], i64 4, i64 [[N_MOD_VF13]]
 ; CHECK-NOTF-NEXT:    [[N_VEC14:%.*]] = sub i64 [[N]], [[TMP48]]
-; CHECK-NOTF-NEXT:    [[TMP49:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; CHECK-NOTF-NEXT:    [[TMP49:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NOTF-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-NOTF:       [[LOOP]]:
 ; CHECK-NOTF-NEXT:    [[IV:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDEX_NEXT21:%.*]], %[[LOOP]] ]
@@ -1088,7 +1088,7 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[N_MOD_VF24:%.*]] = urem i64 [[TMP0]], [[TMP50]]
 ; CHECK-NOTF-NEXT:    [[N_VEC25:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF24]]
 ; CHECK-NOTF-NEXT:    [[TMP46:%.*]] = sub i64 [[N]], [[N_VEC25]]
-; CHECK-NOTF-NEXT:    [[TMP52:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; CHECK-NOTF-NEXT:    [[TMP52:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NOTF-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-NOTF:       [[LOOP]]:
 ; CHECK-NOTF-NEXT:    [[INDEX26:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDEX_NEXT35:%.*]], %[[LOOP]] ]

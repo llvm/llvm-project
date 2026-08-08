@@ -317,10 +317,10 @@ define i64 @findlast_non_canonical_iv_with_expr(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i64, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i64, ptr [[TMP12]], align 8
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i64, ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> poison, i64 [[TMP14]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP15]], i32 1
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i64> [[TMP19]], i64 [[TMP16]], i32 2
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i64> [[TMP20]], i64 [[TMP17]], i32 3
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> poison, i64 [[TMP14]], i64 0
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP15]], i64 1
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i64> [[TMP19]], i64 [[TMP16]], i64 2
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i64> [[TMP20]], i64 [[TMP17]], i64 3
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq <4 x i64> [[TMP21]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP23:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 100)
 ; CHECK-NEXT:    [[TMP24]] = select <4 x i1> [[TMP22]], <4 x i64> [[TMP23]], <4 x i64> [[VEC_PHI]]

@@ -904,10 +904,10 @@ define i32 @scale_mismatch_rejected(ptr %A, i32 %N) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP11]], align 4
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i32> poison, i32 [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> [[TMP16]], i32 [[TMP13]], i32 1
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i32> [[TMP17]], i32 [[TMP14]], i32 2
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i32> [[TMP18]], i32 [[TMP15]], i32 3
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i32> poison, i32 [[TMP12]], i64 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> [[TMP16]], i32 [[TMP13]], i64 1
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i32> [[TMP17]], i32 [[TMP14]], i64 2
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i32> [[TMP18]], i32 [[TMP15]], i64 3
 ; CHECK-NEXT:    [[TMP20]] = add <4 x i32> [[VEC_PHI]], [[TMP19]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)

@@ -60,10 +60,10 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) v
 ; COMPARE-NO-MV-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP6]], align 8
 ; COMPARE-NO-MV-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP7]], align 8
 ; COMPARE-NO-MV-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP8]], align 8
-; COMPARE-NO-MV-NEXT:    [[TMP13:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i32 0
-; COMPARE-NO-MV-NEXT:    [[TMP14:%.*]] = insertelement <4 x i64> [[TMP13]], i64 [[TMP10]], i32 1
-; COMPARE-NO-MV-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> [[TMP14]], i64 [[TMP11]], i32 2
-; COMPARE-NO-MV-NEXT:    [[TMP16:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP12]], i32 3
+; COMPARE-NO-MV-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i64 0
+; COMPARE-NO-MV-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP10]], i64 1
+; COMPARE-NO-MV-NEXT:    [[TMP20:%.*]] = insertelement <4 x i64> [[TMP19]], i64 [[TMP11]], i64 2
+; COMPARE-NO-MV-NEXT:    [[TMP16:%.*]] = insertelement <4 x i64> [[TMP20]], i64 [[TMP12]], i64 3
 ; COMPARE-NO-MV-NEXT:    [[TMP17:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-NEXT:    store <4 x i64> [[TMP16]], ptr [[TMP17]], align 8
 ; COMPARE-NO-MV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -428,10 +428,10 @@ define void @stride_as_btc(ptr noalias %p.out, ptr %p, i64 %stride) vscale_range
 ; COMPARE-NO-MV-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP6]], align 8
 ; COMPARE-NO-MV-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP7]], align 8
 ; COMPARE-NO-MV-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP8]], align 8
-; COMPARE-NO-MV-NEXT:    [[TMP13:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i32 0
-; COMPARE-NO-MV-NEXT:    [[TMP14:%.*]] = insertelement <4 x i64> [[TMP13]], i64 [[TMP10]], i32 1
-; COMPARE-NO-MV-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> [[TMP14]], i64 [[TMP11]], i32 2
-; COMPARE-NO-MV-NEXT:    [[TMP16:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP12]], i32 3
+; COMPARE-NO-MV-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i64 0
+; COMPARE-NO-MV-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP10]], i64 1
+; COMPARE-NO-MV-NEXT:    [[TMP20:%.*]] = insertelement <4 x i64> [[TMP19]], i64 [[TMP11]], i64 2
+; COMPARE-NO-MV-NEXT:    [[TMP16:%.*]] = insertelement <4 x i64> [[TMP20]], i64 [[TMP12]], i64 3
 ; COMPARE-NO-MV-NEXT:    [[TMP17:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-NEXT:    store <4 x i64> [[TMP16]], ptr [[TMP17]], align 8
 ; COMPARE-NO-MV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -725,10 +725,10 @@ define void @stride_dependent_btc(ptr noalias %p.out, ptr %p, i64 %stride) vscal
 ; COMPARE-NO-MV-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP6]], align 8
 ; COMPARE-NO-MV-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP7]], align 8
 ; COMPARE-NO-MV-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP8]], align 8
-; COMPARE-NO-MV-NEXT:    [[TMP13:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i32 0
-; COMPARE-NO-MV-NEXT:    [[TMP14:%.*]] = insertelement <4 x i64> [[TMP13]], i64 [[TMP10]], i32 1
-; COMPARE-NO-MV-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> [[TMP14]], i64 [[TMP11]], i32 2
-; COMPARE-NO-MV-NEXT:    [[TMP16:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP12]], i32 3
+; COMPARE-NO-MV-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i64 0
+; COMPARE-NO-MV-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP10]], i64 1
+; COMPARE-NO-MV-NEXT:    [[TMP20:%.*]] = insertelement <4 x i64> [[TMP19]], i64 [[TMP11]], i64 2
+; COMPARE-NO-MV-NEXT:    [[TMP16:%.*]] = insertelement <4 x i64> [[TMP20]], i64 [[TMP12]], i64 3
 ; COMPARE-NO-MV-NEXT:    [[TMP17:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-NEXT:    store <4 x i64> [[TMP16]], ptr [[TMP17]], align 8
 ; COMPARE-NO-MV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -1029,10 +1029,10 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; COMPARE-NO-MV-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP6]], align 8
 ; COMPARE-NO-MV-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP7]], align 8
 ; COMPARE-NO-MV-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP8]], align 8
-; COMPARE-NO-MV-NEXT:    [[TMP13:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i32 0
-; COMPARE-NO-MV-NEXT:    [[TMP14:%.*]] = insertelement <4 x i64> [[TMP13]], i64 [[TMP10]], i32 1
-; COMPARE-NO-MV-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> [[TMP14]], i64 [[TMP11]], i32 2
-; COMPARE-NO-MV-NEXT:    [[TMP16:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP12]], i32 3
+; COMPARE-NO-MV-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i64 0
+; COMPARE-NO-MV-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP10]], i64 1
+; COMPARE-NO-MV-NEXT:    [[TMP20:%.*]] = insertelement <4 x i64> [[TMP19]], i64 [[TMP11]], i64 2
+; COMPARE-NO-MV-NEXT:    [[TMP16:%.*]] = insertelement <4 x i64> [[TMP20]], i64 [[TMP12]], i64 3
 ; COMPARE-NO-MV-NEXT:    [[TMP17:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-NEXT:    store <4 x i64> [[TMP16]], ptr [[TMP17]], align 8
 ; COMPARE-NO-MV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -1406,10 +1406,10 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; COMPARE-NO-MV-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP6]], align 8
 ; COMPARE-NO-MV-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP7]], align 8
 ; COMPARE-NO-MV-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP8]], align 8
-; COMPARE-NO-MV-NEXT:    [[TMP13:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i32 0
-; COMPARE-NO-MV-NEXT:    [[TMP14:%.*]] = insertelement <4 x i64> [[TMP13]], i64 [[TMP10]], i32 1
-; COMPARE-NO-MV-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> [[TMP14]], i64 [[TMP11]], i32 2
-; COMPARE-NO-MV-NEXT:    [[TMP16:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP12]], i32 3
+; COMPARE-NO-MV-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i64 0
+; COMPARE-NO-MV-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP10]], i64 1
+; COMPARE-NO-MV-NEXT:    [[TMP20:%.*]] = insertelement <4 x i64> [[TMP19]], i64 [[TMP11]], i64 2
+; COMPARE-NO-MV-NEXT:    [[TMP16:%.*]] = insertelement <4 x i64> [[TMP20]], i64 [[TMP12]], i64 3
 ; COMPARE-NO-MV-NEXT:    [[TMP17:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-NEXT:    store <4 x i64> [[TMP16]], ptr [[TMP17]], align 8
 ; COMPARE-NO-MV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -1938,10 +1938,10 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; COMPARE-NO-MV-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP6]], align 8
 ; COMPARE-NO-MV-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP7]], align 8
 ; COMPARE-NO-MV-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP8]], align 8
-; COMPARE-NO-MV-NEXT:    [[TMP13:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i32 0
-; COMPARE-NO-MV-NEXT:    [[TMP14:%.*]] = insertelement <4 x i64> [[TMP13]], i64 [[TMP10]], i32 1
-; COMPARE-NO-MV-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> [[TMP14]], i64 [[TMP11]], i32 2
-; COMPARE-NO-MV-NEXT:    [[TMP16:%.*]] = insertelement <4 x i64> [[TMP15]], i64 [[TMP12]], i32 3
+; COMPARE-NO-MV-NEXT:    [[TMP22:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i64 0
+; COMPARE-NO-MV-NEXT:    [[TMP23:%.*]] = insertelement <4 x i64> [[TMP22]], i64 [[TMP10]], i64 1
+; COMPARE-NO-MV-NEXT:    [[TMP24:%.*]] = insertelement <4 x i64> [[TMP23]], i64 [[TMP11]], i64 2
+; COMPARE-NO-MV-NEXT:    [[TMP16:%.*]] = insertelement <4 x i64> [[TMP24]], i64 [[TMP12]], i64 3
 ; COMPARE-NO-MV-NEXT:    [[TMP17:%.*]] = getelementptr i64, ptr [[P2]], i64 [[INDEX]]
 ; COMPARE-NO-MV-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP17]], align 8
 ; COMPARE-NO-MV-NEXT:    [[TMP18:%.*]] = add <4 x i64> [[TMP16]], [[WIDE_LOAD]]

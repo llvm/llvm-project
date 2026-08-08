@@ -17,8 +17,8 @@ define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr> [[TMP6]], ptr [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr> [[TMP6]], ptr [[TMP5]], i64 1
 ; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.v2p0.i32(<2 x ptr> [[TMP7]], i32 1, <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
@@ -66,12 +66,12 @@ define void @histogram_extra_use_of_bucket_value(ptr noalias %buckets, ptr reado
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x ptr> [[TMP7]], ptr [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x ptr> [[TMP7]], ptr [[TMP6]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> poison, i32 [[TMP9]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i32> [[TMP11]], i32 [[TMP10]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> poison, i32 [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i32> [[TMP11]], i32 [[TMP10]], i64 1
 ; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.v2p0.i32(<2 x ptr> [[TMP8]], i32 1, <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP12]], ptr [[TMP13]], align 4
@@ -123,12 +123,12 @@ define void @histogram_extra_use_of_update(ptr noalias %buckets, ptr readonly %i
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x ptr> [[TMP7]], ptr [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x ptr> [[TMP7]], ptr [[TMP6]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> poison, i32 [[TMP9]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i32> [[TMP11]], i32 [[TMP10]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> poison, i32 [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i32> [[TMP11]], i32 [[TMP10]], i64 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = add nsw <2 x i32> [[TMP12]], splat (i32 1)
 ; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.v2p0.i32(<2 x ptr> [[TMP8]], i32 1, <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[INDEX]]

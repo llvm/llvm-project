@@ -180,7 +180,7 @@ define i32 @PR35734(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP8]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP8]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[X]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[Y:%.*]], i64 0
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
