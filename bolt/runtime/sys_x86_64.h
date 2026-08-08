@@ -350,7 +350,7 @@ int __prctl(int Option, unsigned long Arg2, unsigned long Arg3,
                        "syscall\n"
                        : "=a"(Ret)
                        : "D"(Option), "S"(Arg2), "d"(rdx), "r"(r10), "r"(r8)
-                       :);
+                       : "cc", "rcx", "r11", "memory");
   return Ret;
 }
 
