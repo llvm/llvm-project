@@ -243,19 +243,6 @@ addNodeToMDG(Operation *nodeOp, MemRefDependenceGraph &mdg,
   return &node;
 }
 
-/// Returns the memref being read/written by a memref/affine load/store op.
-static Value getMemRef(Operation *memOp) {
-  if (auto memrefLoad = dyn_cast<memref::LoadOp>(memOp))
-    return memrefLoad.getMemRef();
-  if (auto affineLoad = dyn_cast<AffineReadOpInterface>(memOp))
-    return affineLoad.getMemRef();
-  if (auto memrefStore = dyn_cast<memref::StoreOp>(memOp))
-    return memrefStore.getMemRef();
-  if (auto affineStore = dyn_cast<AffineWriteOpInterface>(memOp))
-    return affineStore.getMemRef();
-  llvm_unreachable("unexpected op");
-}
-
 /// Returns true if there may be a dependence on `memref` from srcNode's
 /// memory ops to dstNode's memory ops, while using the affine memory
 /// dependence analysis checks. The method assumes that there is at least one
@@ -275,13 +262,25 @@ static bool mayDependence(const Node &srcNode, const Node &dstNode,
   // destination read/write one; all expected to be memref/affine load/store.
   auto hasNonAffineDep = [&](ArrayRef<Operation *> srcMemOps,
                              ArrayRef<Operation *> dstMemOps) {
+    auto accessesMemref = [&](Operation *op) {
+      if (auto memrefLoad = dyn_cast<memref::LoadOp>(op))
+        return memrefLoad.getMemRef() == memref;
+      if (auto affineLoad = dyn_cast<AffineReadOpInterface>(op))
+        return affineLoad.getMemRef() == memref;
+      if (auto memrefStore = dyn_cast<memref::StoreOp>(op))
+        return memrefStore.getMemRef() == memref;
+      if (auto affineStore = dyn_cast<AffineWriteOpInterface>(op))
+        return affineStore.getMemRef() == memref;
+      SmallVector<Value> effected;
+      getEffectedValues<MemoryEffects::Read, MemoryEffects::Write,
+                        MemoryEffects::Free>(op, effected);
+      return llvm::is_contained(effected, memref);
+    };
+
     return llvm::any_of(srcMemOps, [&](Operation *srcOp) {
-      Value srcMemref = getMemRef(srcOp);
-      if (srcMemref != memref)
+      if (!accessesMemref(srcOp))
         return false;
-      return llvm::find_if(dstMemOps, [&](Operation *dstOp) {
-               return srcMemref == getMemRef(dstOp);
-             }) != dstMemOps.end();
+      return llvm::any_of(dstMemOps, accessesMemref);
     });
   };
 
