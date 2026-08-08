@@ -94,11 +94,52 @@ cc_library(
     ],
 )
 
+genrule(
+    name = "CommonABIRuntime_corrected_hdr",
+    srcs = ["LanguageRuntime/CPlusPlus/CommonABIRuntime.h"],
+    outs = ["corrected_hdrs/Plugins/LanguageRuntime/CPlusPlus/CommonABIRuntime.h"],
+    cmd = """
+python3 -c "
+import sys
+with open(sys.argv[1], 'r') as f:
+    lines = f.readlines()
+out_lines = []
+seen_get = False
+seen_set = False
+i = 0
+while i < len(lines):
+    line = lines[i]
+    if 'TypeAndOrName GetDynamicTypeInfo(const lldb_private::Address &vtable_addr);' in line:
+        if seen_get:
+            i += 1
+            continue
+        seen_get = True
+    elif 'void SetDynamicTypeInfo(const lldb_private::Address &vtable_addr,' in line:
+        if seen_set:
+            i += 2
+            continue
+        seen_set = True
+    out_lines.append(line)
+    i += 1
+with open(sys.argv[2], 'w') as f:
+    f.writelines(out_lines)
+" "$<" "$@"
+""",
+)
+
 cc_library(
     name = "PluginCPPRuntime",
     srcs = glob(["LanguageRuntime/CPlusPlus/*.cpp"]),
-    hdrs = glob(["LanguageRuntime/CPlusPlus/*.h"]),
-    includes = [".."],
+    hdrs = glob(
+        ["LanguageRuntime/CPlusPlus/*.h"],
+        exclude = ["LanguageRuntime/CPlusPlus/CommonABIRuntime.h"],
+    ) + [":CommonABIRuntime_corrected_hdr"],
+    includes = [
+        "..",
+        "corrected_hdrs",
+        "corrected_hdrs/Plugins",
+        "corrected_hdrs/Plugins/LanguageRuntime/CPlusPlus",
+    ],
     deps = [
         ":PluginTypeSystemClangHeaders",
         "//clang:codegen",
