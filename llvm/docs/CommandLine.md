@@ -1703,6 +1703,7 @@ TODO: complete this section
 
 ### Dynamically adding command line options
 
-```{todo}
-TODO: fill in this section
-```
+Options declared with `cl::opt` (and related classes) are registered via
+static constructors. When a shared library containing such options is loaded,
+those options become available to the command-line parser automatically; see
+also {ref}dynamically loaded options.
