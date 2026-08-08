@@ -260,7 +260,7 @@ private:
   }
 
   SmallSetVector<Instruction *, 32> UsersToReplace;
-  MapVector<Value *, Value *> WorkMap;
+  DenseMap<Value *, Value *> WorkMap;
   InstCombinerImpl &IC;
   Instruction &Root;
   unsigned FromAS;
