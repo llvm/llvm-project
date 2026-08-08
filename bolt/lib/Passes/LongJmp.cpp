@@ -665,17 +665,8 @@ Error LongJmpPass::relax(BinaryFunction &Func, bool &Modified) {
   return Error::success();
 }
 
-// Set when relaxLocalBranches() fails to relax a branch. We don't exit directly
-// from relaxLocalBranches() since it runs on a thread pool, and exiting from a
-// worker thread would run the ThreadPool destructor on that same thread. So
-// we're finishing all parallel jobs and checking the flag after it.
-static std::atomic<bool> PassFailed{false};
-
-void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
+bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
                                      const BranchLivenessInfo *BLI) {
-  if (PassFailed)
-    return;
-
   BinaryContext &BC = BF.getBinaryContext();
   auto &MIB = BC.MIB;
 
@@ -683,7 +674,7 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
   // basic blocks of the function itself. A non-simple function may branch to a
   // symbol outside of it that ends up out of range.
   if (BF.isSimple() && !BF.isSplit() && BF.estimateSize() < ShortestJumpSpan)
-    return;
+    return true;
 
   auto isBranchOffsetInRange = [&](const MCInst &Inst, int64_t Offset) {
     const unsigned Bits = MIB->getPCRelEncodingSize(Inst);
@@ -800,8 +791,9 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
     };
 
     // Pre-populate trampolines by splitting unconditional branches from the
-    // containing basic block. Skip for non-simple functions because inserting
-    // blocks after existing BBs would shift code and break jump table offsets.
+    // containing basic block. Skip for non-simple functions: this creates
+    // trampolines for targets inside the function, while in a non-simple
+    // function we only relax branches to targets outside of it.
     if (BF.isSimple()) {
       for (BinaryBasicBlock *BB : FF) {
         MCInst *Inst = BB->getLastNonPseudoInstr();
@@ -973,8 +965,7 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
                         << OffsetToEnd << " bytes away, out of reach for a "
                         << BitsAvailable << "-bit branch\n";
               BC.printInstruction(BC.errs(), Inst);
-              PassFailed = true;
-              return;
+              return false;
             }
 
             TrampolineBB = addTrampolineAfter(/*BB=*/nullptr, TargetSymbol,
@@ -1019,6 +1010,8 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
                          /*UpdateLayout*/ true, /*UpdateCFI*/ true,
                          /*RecomputeLPs*/ false);
   }
+
+  return true;
 }
 
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
@@ -1050,8 +1043,12 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
     BC.outs()
         << "BOLT-INFO: relaxing branches for compact code model (<128MB)\n";
 
+    std::atomic<bool> HasFatal{false};
     ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-      relaxLocalBranches(BF, getBranchLiveness(BF));
+      if (HasFatal)
+        return;
+      if (!relaxLocalBranches(BF, getBranchLiveness(BF)))
+        HasFatal = true;
     };
 
     ParallelUtilities::PredicateTy SkipPredicate =
@@ -1062,8 +1059,8 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
         SkipPredicate, "RelaxLocalBranches");
 
     // The error has already been reported by relaxLocalBranches().
-    if (PassFailed)
-      return createFatalBOLTError("");
+    if (HasFatal)
+      return createFatalBOLTError("branch relaxation failure");
 
     return Error::success();
   }
