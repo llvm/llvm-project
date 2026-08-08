@@ -285,7 +285,7 @@ define ptr @replicating_store_in_conditional_latch(ptr %p, i32 %n) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 4, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[TMP5]]
@@ -447,22 +447,23 @@ define void @test_prefer_vector_addressing(ptr %start, ptr %ms, ptr noalias %src
 ; CHECK-LABEL: define void @test_prefer_vector_addressing(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[MS:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[MS1:%.*]] = ptrtoint ptr [[MS]] to i64
 ; CHECK-NEXT:    [[GEP_START:%.*]] = getelementptr i8, ptr [[START]], i64 3
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoaddr ptr [[MS]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[START2]], 3
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[MS1]], i64 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[UMAX]], -3
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP10]], i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[START2]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 1)
+; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[TMP2]], -3
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP23]], i64 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[UMIN]]
-; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP3]], 3
+; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[TMP3]], -3
+; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP24]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[UMIN]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP6]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP6]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP6]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP6]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[GEP_START]], i64 [[TMP7]]

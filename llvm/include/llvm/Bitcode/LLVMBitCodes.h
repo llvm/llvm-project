@@ -120,6 +120,11 @@ enum ModuleCodes {
 
   // IFUNC: [ifunc value type, addrspace, resolver val#, linkage, visibility]
   MODULE_CODE_IFUNC = 18,
+
+  MODULE_CODE_ASM_PROPERTY = 19, // [strchr x N]
+
+  // GUIDLIST: [n x i64]
+  MODULE_CODE_GUIDLIST = 20,
 };
 
 /// PARAMATTR blocks have code for defining a parameter attribute set.

@@ -439,6 +439,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// The typedef for the predefined \c __builtin_ms_va_list type.
   mutable TypedefDecl *BuiltinMSVaListDecl = nullptr;
 
+  /// The typedef for the predefined \c __builtin_zos_va_list type.
+  mutable TypedefDecl *BuiltinZOSVaListDecl = nullptr;
+
   /// The typedef for the predefined \c id type.
   mutable TypedefDecl *ObjCIdDecl = nullptr;
 
@@ -1381,6 +1384,8 @@ public:
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
+#include "clang/Basic/SPIRVTypes.def"
 
   // Types for deductions in C++0x [stmt.ranged]'s desugaring. Built on demand.
   mutable QualType AutoDeductTy;     // Deduction against 'auto'.
@@ -1637,6 +1642,12 @@ public:
   getCountAttributedType(QualType T, Expr *CountExpr, bool CountInBytes,
                          bool OrNull,
                          ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
+
+  /// Return a placeholder type for a late-parsed type attribute.
+  /// This type wraps another type and holds the LateParsedAttribute
+  /// that will be parsed later.
+  QualType getLateParsedAttrType(QualType Wrapped,
+                                 LateParsedTypeAttribute *LateParsedAttr) const;
 
   /// Return the uniqued reference to a type adjusted from the original
   /// type to a new type.
@@ -2529,6 +2540,17 @@ public:
     if (!MSTypeInfoTagDecl)
       MSTypeInfoTagDecl = buildImplicitRecord("type_info", TagTypeKind::Class);
     return MSTypeInfoTagDecl;
+  }
+
+  /// Retrieve the C type declaration corresponding to the predefined
+  /// \c __builtin_zos_va_list type.
+  TypedefDecl *getBuiltinZOSVaListDecl() const;
+
+  /// Retrieve the type of the \c __builtin_zos_va_list type.
+  QualType getBuiltinZOSVaListType() const {
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt,
+                          getBuiltinZOSVaListDecl());
   }
 
   /// Return whether a declaration to a builtin is allowed to be

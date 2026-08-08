@@ -55,7 +55,7 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; COST1-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[START]], 32
 ; COST1-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COST1:       [[VECTOR_PH]]:
-; COST1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[START]], 32
+; COST1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[START]], 31
 ; COST1-NEXT:    [[N_VEC:%.*]] = sub i64 [[START]], [[N_MOD_VF]]
 ; COST1-NEXT:    [[IND_END:%.*]] = sub i64 [[START]], [[N_VEC]]
 ; COST1-NEXT:    [[IND_END9:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[N_VEC]]
@@ -77,7 +77,7 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; COST1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; COST1:       [[VEC_EPILOG_PH]]:
 ; COST1-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; COST1-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[START]], 4
+; COST1-NEXT:    [[N_MOD_VF2:%.*]] = and i64 [[START]], 3
 ; COST1-NEXT:    [[N_VEC3:%.*]] = sub i64 [[START]], [[N_MOD_VF2]]
 ; COST1-NEXT:    [[TMP2:%.*]] = sub i64 [[START]], [[N_VEC3]]
 ; COST1-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[N_VEC3]]
@@ -108,7 +108,7 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; COST10-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[START]], 16
 ; COST10-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COST10:       [[VECTOR_PH]]:
-; COST10-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[START]], 16
+; COST10-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[START]], 15
 ; COST10-NEXT:    [[N_VEC:%.*]] = sub i64 [[START]], [[N_MOD_VF]]
 ; COST10-NEXT:    [[IND_END:%.*]] = sub i64 [[START]], [[N_VEC]]
 ; COST10-NEXT:    [[IND_END9:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[N_VEC]]
@@ -128,7 +128,7 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; COST10-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; COST10:       [[VEC_EPILOG_PH]]:
 ; COST10-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; COST10-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[START]], 4
+; COST10-NEXT:    [[N_MOD_VF2:%.*]] = and i64 [[START]], 3
 ; COST10-NEXT:    [[N_VEC3:%.*]] = sub i64 [[START]], [[N_MOD_VF2]]
 ; COST10-NEXT:    [[TMP1:%.*]] = sub i64 [[START]], [[N_VEC3]]
 ; COST10-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[N_VEC3]]
@@ -319,7 +319,7 @@ define void @invalid_legacy_cost(i64 %N, ptr %x) #0 {
 ; COST1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; COST1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COST1:       [[VECTOR_PH]]:
-; COST1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; COST1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; COST1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COST1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST1:       [[VECTOR_BODY]]:
@@ -346,7 +346,7 @@ define void @invalid_legacy_cost(i64 %N, ptr %x) #0 {
 ; COST10-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; COST10-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COST10:       [[VECTOR_PH]]:
-; COST10-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; COST10-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 1
 ; COST10-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COST10-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST10:       [[VECTOR_BODY]]:
@@ -600,8 +600,8 @@ define void @forced_scalar_instr(ptr %gep.dst) {
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
 ; COMMON-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
-; COMMON-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i32
 ; COMMON-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 4)
+; COMMON-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i32
 ; COMMON-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; COMMON-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; COMMON:       [[PRED_STORE_IF]]:

@@ -81,6 +81,7 @@ class TestCase(TestBase):
             return debug_stats["commands"]
         return None
 
+    @skipIfWasm  # no expression evaluation
     def test_expressions_frame_var_counts(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -348,6 +349,8 @@ class TestCase(TestBase):
         strings = memory["strings"]
         strings_keys = [
             "bytesTotal",
+            "bytesUsed",
+            "bytesUnused",
         ]
         self.verify_keys(strings, '"strings"', strings_keys, None)
 

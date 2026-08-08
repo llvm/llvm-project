@@ -1,6 +1,6 @@
-; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O2 | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefix=OPT %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O0 | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefix=NOOPT %s
-; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O0 | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck -check-prefix=NOOPT %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | opt -mtriple=amdgpu9.00-amd-amdhsa -O2 | llc | FileCheck -check-prefix=OPT %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | opt -mtriple=amdgpu9.00-amd-amdhsa -O0 | llc | FileCheck -check-prefix=NOOPT %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | opt -mtriple=amdgpu9.00-amd-amdhsa -O0 | llc | FileCheck -check-prefix=NOOPT %s
 
 ; Check that AMDGPUAttributor is not run with -O0.
 ; OPT: .amdhsa_user_sgpr_private_segment_buffer 1

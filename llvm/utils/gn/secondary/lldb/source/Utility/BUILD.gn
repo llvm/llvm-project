@@ -37,6 +37,8 @@ static_library("Utility") {
     "Policy.cpp",
     "ProcessInfo.cpp",
     "RealpathPrefixes.cpp",
+    "RegisterType.cpp",
+    "RegisterTypeFlags.cpp",
     "RegisterValue.cpp",
     "RegularExpression.cpp",
     "Scalar.cpp",

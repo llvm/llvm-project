@@ -1,8 +1,7 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O2 -glldb %s -o %t
-// RUN: %dexter -w --use-script %dexter_lldb_args --binary %t -- %s \
-// RUN:   | FileCheck %s
+// RUN: %dexter -w %dexter_lldb_args --binary %t -- %s | FileCheck %s
 
 //// Check that we give good locations to a variable ('local') which is escaped
 //// down some control paths and not others. This example is handled well currently.

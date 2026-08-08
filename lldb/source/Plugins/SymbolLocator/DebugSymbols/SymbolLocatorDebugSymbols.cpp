@@ -53,10 +53,37 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static CFURLRef (*g_dlsym_DBGCopyFullDSYMURLForUUID)(
-    CFUUIDRef uuid, CFURLRef exec_url) = nullptr;
-static CFDictionaryRef (*g_dlsym_DBGCopyDSYMPropertyLists)(CFURLRef dsym_url) =
-    nullptr;
+namespace {
+struct DebugSymbolsDylibFunctions {
+  CFURLRef (*DBGCopyFullDSYMURLForUUID)(CFUUIDRef uuid,
+                                        CFURLRef exec_url) = nullptr;
+  CFDictionaryRef (*DBGCopyDSYMPropertyLists)(CFURLRef dsym_url) = nullptr;
+
+  DebugSymbolsDylibFunctions() {
+    void *handle = dlopen(
+        "/System/Library/PrivateFrameworks/DebugSymbols.framework/DebugSymbols",
+        RTLD_LAZY | RTLD_LOCAL);
+    if (handle) {
+      DBGCopyFullDSYMURLForUUID = (CFURLRef (*)(CFUUIDRef, CFURLRef))dlsym(
+          handle, "DBGCopyFullDSYMURLForUUID");
+      DBGCopyDSYMPropertyLists = (CFDictionaryRef (*)(CFURLRef))dlsym(
+          handle, "DBGCopyDSYMPropertyLists");
+    }
+  }
+
+  /// Returns true if all DebugSymbols functions were found in the framework.
+  bool FoundFunctions() const {
+    return DBGCopyFullDSYMURLForUUID != nullptr &&
+           DBGCopyDSYMPropertyLists != nullptr;
+  }
+};
+} // namespace
+
+static const DebugSymbolsDylibFunctions &GetDebugSymbolsDylibFunctions() {
+  // This is a static local to avoid race conditions.
+  static DebugSymbolsDylibFunctions g_functions;
+  return g_functions;
+}
 
 LLDB_PLUGIN_DEFINE(SymbolLocatorDebugSymbols)
 
@@ -98,24 +125,10 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
 
   int items_found = 0;
 
-  if (g_dlsym_DBGCopyFullDSYMURLForUUID == nullptr ||
-      g_dlsym_DBGCopyDSYMPropertyLists == nullptr) {
-    void *handle = dlopen(
-        "/System/Library/PrivateFrameworks/DebugSymbols.framework/DebugSymbols",
-        RTLD_LAZY | RTLD_LOCAL);
-    if (handle) {
-      g_dlsym_DBGCopyFullDSYMURLForUUID =
-          (CFURLRef(*)(CFUUIDRef, CFURLRef))dlsym(handle,
-                                                  "DBGCopyFullDSYMURLForUUID");
-      g_dlsym_DBGCopyDSYMPropertyLists = (CFDictionaryRef(*)(CFURLRef))dlsym(
-          handle, "DBGCopyDSYMPropertyLists");
-    }
-  }
-
-  if (g_dlsym_DBGCopyFullDSYMURLForUUID == nullptr ||
-      g_dlsym_DBGCopyDSYMPropertyLists == nullptr) {
+  const DebugSymbolsDylibFunctions &dylib_functions =
+      GetDebugSymbolsDylibFunctions();
+  if (!dylib_functions.FoundFunctions())
     return {};
-  }
 
   if (uuid && uuid->IsValid()) {
     // Try and locate the dSYM file using DebugSymbols first
@@ -138,8 +151,9 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
                 FALSE));
         }
 
-        CFCReleaser<CFURLRef> dsym_url(g_dlsym_DBGCopyFullDSYMURLForUUID(
-            module_uuid_ref.get(), exec_url.get()));
+        CFCReleaser<CFURLRef> dsym_url(
+            dylib_functions.DBGCopyFullDSYMURLForUUID(module_uuid_ref.get(),
+                                                      exec_url.get()));
         char path[PATH_MAX];
 
         if (dsym_url.get()) {
@@ -175,7 +189,7 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
           }
 
           CFCReleaser<CFDictionaryRef> dict(
-              g_dlsym_DBGCopyDSYMPropertyLists(dsym_url.get()));
+              dylib_functions.DBGCopyDSYMPropertyLists(dsym_url.get()));
           CFDictionaryRef uuid_dict = NULL;
           if (dict.get()) {
             CFCString uuid_cfstr(uuid->GetAsString().c_str());
@@ -538,24 +552,10 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
 
   int items_found = 0;
 
-  if (g_dlsym_DBGCopyFullDSYMURLForUUID == nullptr ||
-      g_dlsym_DBGCopyDSYMPropertyLists == nullptr) {
-    void *handle = dlopen(
-        "/System/Library/PrivateFrameworks/DebugSymbols.framework/DebugSymbols",
-        RTLD_LAZY | RTLD_LOCAL);
-    if (handle) {
-      g_dlsym_DBGCopyFullDSYMURLForUUID =
-          (CFURLRef(*)(CFUUIDRef, CFURLRef))dlsym(handle,
-                                                  "DBGCopyFullDSYMURLForUUID");
-      g_dlsym_DBGCopyDSYMPropertyLists = (CFDictionaryRef(*)(CFURLRef))dlsym(
-          handle, "DBGCopyDSYMPropertyLists");
-    }
-  }
-
-  if (g_dlsym_DBGCopyFullDSYMURLForUUID == nullptr ||
-      g_dlsym_DBGCopyDSYMPropertyLists == nullptr) {
+  const DebugSymbolsDylibFunctions &dylib_functions =
+      GetDebugSymbolsDylibFunctions();
+  if (!dylib_functions.FoundFunctions())
     return items_found;
-  }
 
   if (uuid && uuid->IsValid()) {
     // Try and locate the dSYM file using DebugSymbols first
@@ -578,8 +578,9 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                 FALSE));
         }
 
-        CFCReleaser<CFURLRef> dsym_url(g_dlsym_DBGCopyFullDSYMURLForUUID(
-            module_uuid_ref.get(), exec_url.get()));
+        CFCReleaser<CFURLRef> dsym_url(
+            dylib_functions.DBGCopyFullDSYMURLForUUID(module_uuid_ref.get(),
+                                                      exec_url.get()));
         char path[PATH_MAX];
 
         if (dsym_url.get()) {
@@ -615,7 +616,7 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
           }
 
           CFCReleaser<CFDictionaryRef> dict(
-              g_dlsym_DBGCopyDSYMPropertyLists(dsym_url.get()));
+              dylib_functions.DBGCopyDSYMPropertyLists(dsym_url.get()));
           CFDictionaryRef uuid_dict = NULL;
           if (dict.get()) {
             CFCString uuid_cfstr(uuid->GetAsString().c_str());
