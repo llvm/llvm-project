@@ -86,36 +86,6 @@ def c_lui_imm : RISCVOp,
   }];
 }
 
-// A N-bit unsigned immediate where the least significant bits are zero.
-class RISCVUImmLsbZeroOp<int width, int zeros>
-    : RISCVOp, ImmLeaf<XLenVT, [{return isShiftedUInt<}] # !sub(width, zeros) #
-                       [{, }] # zeros # [{>(Imm);}]> {
-
-  // Create suffix with the appropriate number of 0s to append to all names
-  defvar Suffix = !foldl("", !range(zeros), acc, ignore, !strconcat(acc, "0"));
-
-  let ParserMatchClass = UImmAsmOperand<width, "Lsb" # Suffix>;
-  let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeUImmOperand<" # width # ">";
-  let OperandType = "OPERAND_UIMM" # width # "_LSB" # Suffix;
-
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isShiftedUInt<}] # !sub(width, zeros) # [{, }] # zeros # [{>(Imm);
-  }];
-}
-
-// Variant of RISCVUImmLsbZeroOp for memory-operand offsets that may be
-// omitted entirely, e.g. "c.lw a0, (a1)". See OptionalMemOffsetAsmOperand.
-class OptionalUImmLsbZeroOp<int width, int zeros>
-    : RISCVUImmLsbZeroOp<width, zeros> {
-  defvar Suffix0 = !foldl("", !range(zeros), acc, ignore, !strconcat(acc, "0"));
-  let ParserMatchClass =
-      OptionalMemOffsetAsmOperand<UImmAsmOperand<width, "Lsb" # Suffix0>>;
-}
-
 // A 7-bit unsigned immediate where the least significant two bits are zero.
 def uimm7_lsb00 : RISCVUImmLsbZeroOp<7, 2>;
 def uimm7_lsb00_optional : OptionalUImmLsbZeroOp<7, 2>;

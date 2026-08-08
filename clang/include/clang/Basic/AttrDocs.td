@@ -1205,10 +1205,15 @@ code. See the documentation for `__declspec(code_seg)`_ on MSDN.
 def AllocAlignDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-Use ``__attribute__((alloc_align(<alignment>))`` on a function
-declaration to specify that the return value of the function (which must be a
-pointer type) is at least as aligned as the value of the indicated parameter. The
-parameter is given by its index in the list of formal parameters; the first
+Use ``__attribute__((alloc_align(<parameter-index>)))`` on a declaration with a
+function prototype to specify that the prototype's return value (which must be a
+pointer type) is at least as aligned as the value of the indicated parameter.
+This includes functions, Objective-C methods, blocks, and declarations of
+function pointer, member function pointer, function reference, and block pointer
+types. The attribute can also be applied to typedef or type alias declarations
+whose underlying type has a function prototype.
+
+The parameter is given by its index in the list of formal parameters; the first
 parameter has index 1 unless the function is a C++ non-static member function,
 in which case the first parameter has index 2 to account for the implicit ``this``
 parameter.
@@ -1217,6 +1222,10 @@ parameter.
 
   // The returned pointer has the alignment specified by the first parameter.
   void *a(size_t align) __attribute__((alloc_align(1)));
+
+  // The function pointer's returned pointer has the alignment specified by
+  // the first parameter of the pointed-to function.
+  void *(*allocator)(size_t align) __attribute__((alloc_align(1)));
 
   // The returned pointer has the alignment specified by the second parameter.
   void *b(void *v, size_t align) __attribute__((alloc_align(2)));

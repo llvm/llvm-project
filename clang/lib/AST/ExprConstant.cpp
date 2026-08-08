@@ -2703,9 +2703,12 @@ static llvm::RoundingMode getActiveRoundingMode(EvalInfo &Info, const Expr *E) {
   return RM;
 }
 
-/// Check if the given evaluation result is allowed for constant evaluation.
-static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
-                                     APFloat::opStatus St) {
+/// Check if the given floating-point evaluation result is allowed for
+/// compile-time constant folding during translation (as opposed to mandatory
+/// constant expression evaluation).
+static bool checkFloatingPointResultForConstantFolding(EvalInfo &Info,
+                                                       const Expr *E,
+                                                       APFloat::opStatus St) {
   // In a constant context, assume that any dynamic rounding mode or FP
   // exception state matches the default floating-point environment.
   if (Info.InConstantContext)
@@ -2757,7 +2760,7 @@ static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
   APFloat Value = Result;
   bool ignored;
   St = Result.convert(Info.Ctx.getFloatTypeSemantics(DestType), RM, &ignored);
-  return checkFloatingPointResult(Info, E, St);
+  return checkFloatingPointResultForConstantFolding(Info, E, St);
 }
 
 static APSInt HandleIntToIntCast(EvalInfo &Info, const Expr *E,
@@ -2780,7 +2783,7 @@ static bool HandleIntToFloatCast(EvalInfo &Info, const Expr *E,
   Result = APFloat(Info.Ctx.getFloatTypeSemantics(DestType), 1);
   llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
   APFloat::opStatus St = Result.convertFromAPInt(Value, Value.isSigned(), RM);
-  return checkFloatingPointResult(Info, E, St);
+  return checkFloatingPointResultForConstantFolding(Info, E, St);
 }
 
 static bool truncateBitfieldValue(EvalInfo &Info, const Expr *E,
@@ -2978,16 +2981,20 @@ static bool handleFloatFloatBinOp(EvalInfo &Info, const BinaryOperator *E,
     break;
   }
 
+  // FIXME: The standard quote below is deleted by P3899R3.
   // [expr.pre]p4:
   //   If during the evaluation of an expression, the result is not
   //   mathematically defined [...], the behavior is undefined.
   // FIXME: C++ rules require us to not conform to IEEE 754 here.
+  // FIXME: The NaN check should not be applied outside of "constant contexts"
+  // because it prevents NaN propagation and the "invalid" status is the
+  // responsibility of checkFloatingPointResultForConstantFolding.
   if (LHS.isNaN()) {
     Info.CCEDiag(E, diag::note_constexpr_float_arithmetic) << LHS.isNaN();
     return Info.noteUndefinedBehavior();
   }
 
-  return checkFloatingPointResult(Info, E, St);
+  return checkFloatingPointResultForConstantFolding(Info, E, St);
 }
 
 static bool handleLogicalOpForVector(const APInt &LHSValue,
@@ -5295,7 +5302,7 @@ struct IncDecSubobjectHandler {
       St = Value.add(One, RM);
     else
       St = Value.subtract(One, RM);
-    return checkFloatingPointResult(Info, E, St);
+    return checkFloatingPointResultForConstantFolding(Info, E, St);
   }
   bool foundPointer(APValue &Subobj, QualType SubobjType) {
     if (!checkConst(SubobjType))
@@ -16323,6 +16330,8 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
       return GCCTypeClass::None;
 
     case BuiltinType::Dependent:
@@ -16778,11 +16787,7 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
   return true;
 }
 
-/// Tries to evaluate the __builtin_object_size for @p E. If successful,
-/// returns true and stores the result in @p Size.
-///
-/// If @p WasError is non-null, this will report whether the failure to evaluate
-/// is to be treated as an Error in IntExprEvaluator.
+/// Tries to evaluate the __builtin_object_size for @p E.
 ///
 /// If @p IsDynamic is true (i.e. we're evaluating
 /// __builtin_dynamic_object_size) and the operand designates a flexible array
