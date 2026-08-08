@@ -26,6 +26,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
@@ -99,6 +100,10 @@ static cl::opt<bool>
     EnablePostSCCAdvisorPrinting("enable-scc-inline-advisor-printing",
                                  cl::init(false), cl::Hidden);
 
+static cl::opt<bool> ForceInlineDomTreeUpdates(
+    "force-inline-dom-tree-updates", cl::init(false), cl::Hidden,
+    cl::desc("Force enable batch DominatorTree updates in InlineFunction for "
+             "testing"));
 
 static cl::opt<std::string> CGSCCInlineReplayFile(
     "cgscc-inline-replay", cl::init(""), cl::value_desc("filename"),
@@ -311,6 +316,11 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       return FAM.getResult<AssumptionAnalysis>(F);
     };
 
+    std::optional<DomTreeUpdater> InlinerDTU;
+    if (ForceInlineDomTreeUpdates)
+      InlinerDTU.emplace(FAM.getResult<DominatorTreeAnalysis>(F),
+                         DomTreeUpdater::UpdateStrategy::Eager);
+
     // Now process as many calls as we have within this caller in the sequence.
     // We bail out as soon as the caller has to change so we can update the
     // call graph and prepare the context of that new caller.
@@ -384,7 +394,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       InlineFunctionInfo IFI(
           GetAssumptionCache, PSI,
           &FAM.getResult<BlockFrequencyAnalysis>(*(CB->getCaller())),
-          &FAM.getResult<BlockFrequencyAnalysis>(Callee));
+          &FAM.getResult<BlockFrequencyAnalysis>(Callee),
+          /*UpdateProfile=*/true, InlinerDTU ? &*InlinerDTU : nullptr);
 
       // For compile time reasons we try to only track inline history for the
       // calls where it may actually prevent inlining, which is inlining through

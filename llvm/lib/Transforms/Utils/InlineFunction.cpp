@@ -24,6 +24,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
@@ -2709,6 +2710,114 @@ llvm::InlineResult llvm::CanInlineCallSite(const CallBase &CB,
   return InlineResult::success();
 }
 
+namespace {
+/// InlineFunctionDTUpdater applies DominatorTree updates during inlining. By
+/// capturing the tail of the caller as an anchor and snapshotting call-site
+/// boundaries upon construction, its update() method triggers a unified
+/// updates pass.
+struct InlineFunctionDTUpdater {
+  DomTreeUpdater *DTU;
+  BasicBlock *OrigBB;
+  BasicBlock *InvokeUnwindDest = nullptr;
+  Function::iterator LastBlock;
+  SmallPtrSet<BasicBlock *, 2> OrigBBSuccs;
+  SmallPtrSet<BasicBlock *, 2> UnwindDestSuccs;
+  BasicBlock *DeferredCalleeEntry = nullptr;
+  BasicBlock *AfterCallBB = nullptr;
+
+  InlineFunctionDTUpdater(DomTreeUpdater *DTU, BasicBlock *OrigBB, CallBase &CB)
+      : DTU(DTU), OrigBB(OrigBB) {
+    if (!DTU)
+      return;
+
+    Function *Caller = OrigBB->getParent();
+    LastBlock = --Caller->end();
+
+    OrigBBSuccs.insert_range(successors(OrigBB));
+
+    if (auto *II = dyn_cast<InvokeInst>(&CB)) {
+      InvokeUnwindDest = II->getUnwindDest();
+      UnwindDestSuccs.insert_range(successors(InvokeUnwindDest));
+    }
+  }
+
+  void setDeferredDelete(BasicBlock *CalleeEntry) {
+    DeferredCalleeEntry = CalleeEntry;
+    // Inject a dummy terminator to keep the block well-formed, preventing
+    // DomTreeUpdater from crashing when traversing the CFG during updates.
+    new UnreachableInst(CalleeEntry->getContext(), CalleeEntry);
+  }
+
+  void setAfterCallBB(BasicBlock *BB) { AfterCallBB = BB; }
+
+  void update() {
+    if (!DTU)
+      return;
+
+    // Discover all newly introduced blocks by sweeping the trailing blocks
+    // after our anchor.
+    Function *Caller = OrigBB->getParent();
+    SmallVector<BasicBlock *, 16> NewBlocks;
+
+    // Add AfterCallBB if it was not deleted due to musttail calls.
+    if (AfterCallBB) {
+      assert(AfterCallBB->getParent() && "AfterCallBB must be parented");
+      NewBlocks.push_back(AfterCallBB);
+    }
+
+    // Sweep and append all surviving cloned blocks trailing our anchor.
+    // We rely on the property that InlineFunction appends new blocks to the end
+    // of the caller. This allows us to avoid scanning all blocks in the
+    // function to find the new ones.
+    for (BasicBlock *BB : llvm::make_pointer_range(
+             llvm::make_range(std::next(LastBlock), Caller->end()))) {
+      // Avoid duplicate if AfterCallBB happened to be inserted after LastBlock.
+      if (BB != AfterCallBB)
+        NewBlocks.push_back(BB);
+    }
+
+    SmallVector<DominatorTree::UpdateType, 16> Inserts;
+    SmallVector<DominatorTree::UpdateType, 16> Deletes;
+
+    auto ComputeBoundaryUpdates =
+        [&](BasicBlock *From,
+            const SmallPtrSetImpl<BasicBlock *> &InitialSuccs) {
+          SmallPtrSet<BasicBlock *, 4> CurrentSuccs(llvm::from_range,
+                                                    successors(From));
+
+          for (BasicBlock *S : InitialSuccs)
+            if (!CurrentSuccs.contains(S))
+              Deletes.emplace_back(DominatorTree::Delete, From, S);
+          for (BasicBlock *S : CurrentSuccs)
+            if (!InitialSuccs.contains(S))
+              Inserts.emplace_back(DominatorTree::Insert, From, S);
+        };
+
+    // Compute boundary edge changes for the call site block (OrigBB).
+    ComputeBoundaryUpdates(OrigBB, OrigBBSuccs);
+
+    // Compute boundary edge changes for the unwind destination (if invoke).
+    if (InvokeUnwindDest)
+      ComputeBoundaryUpdates(InvokeUnwindDest, UnwindDestSuccs);
+
+    // Wire up all internal and outgoing edges for the new cloned subgraph.
+    for (BasicBlock *BB : NewBlocks) {
+      SmallPtrSet<BasicBlock *, 4> UniqueSuccs;
+      for (BasicBlock *Succ : successors(BB))
+        if (UniqueSuccs.insert(Succ).second)
+          Inserts.emplace_back(DominatorTree::Insert, BB, Succ);
+    }
+
+    // Perform deletions last so replacement paths are known to the tree first.
+    append_range(Inserts, Deletes);
+    DTU->applyUpdates(Inserts);
+
+    if (DeferredCalleeEntry)
+      DTU->deleteBB(DeferredCalleeEntry);
+  }
+};
+} // namespace
+
 /// This function inlines the called function into the basic block of the
 /// caller. This returns false if it is not possible to inline this call.
 /// The program is still in a well defined state if this occurs though.
@@ -2727,6 +2836,8 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   Function *CalledFunc = CB.getCalledFunction();
   assert(CalledFunc && !CalledFunc->isDeclaration() &&
          "CanInlineCallSite should have verified direct call to definition");
+
+  InlineFunctionDTUpdater Updater(IFI.DTU, OrigBB, CB);
 
   // Determine if we are dealing with a call in an EHPad which does not unwind
   // to caller.
@@ -3392,6 +3503,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
       AttributeFuncs::mergeAttributesForInlining(*Caller, *CalledFunc);
 
     // We are now done with the inlining.
+    Updater.update();
     return;
   }
 
@@ -3527,6 +3639,8 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   // unreachable, delete it.  It can only contain a ret.
   if (InlinedMustTailCalls && pred_empty(AfterCallBB))
     AfterCallBB->eraseFromParent();
+  else
+    Updater.setAfterCallBB(AfterCallBB);
 
   // We should always be able to fold the entry block of the function into the
   // single predecessor of the block...
@@ -3541,7 +3655,10 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   Br->eraseFromParent();
 
   // Now we can remove the CalleeEntry block, which is now empty.
-  CalleeEntry->eraseFromParent();
+  if (IFI.DTU)
+    Updater.setDeferredDelete(CalleeEntry);
+  else
+    CalleeEntry->eraseFromParent();
 
   // If we inserted a phi node, check to see if it has a single value (e.g. all
   // the entries are the same or undef).  If so, remove the PHI so it doesn't
@@ -3558,6 +3675,8 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
 
   if (MergeAttributes)
     AttributeFuncs::mergeAttributesForInlining(*Caller, *CalledFunc);
+
+  Updater.update();
 }
 
 llvm::InlineResult llvm::InlineFunction(
