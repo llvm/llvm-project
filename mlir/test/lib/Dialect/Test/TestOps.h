@@ -112,6 +112,29 @@ struct TestNonAddressableResourceB
   }
 };
 
+struct TestResourceA : public mlir::SideEffects::Resource::Base<TestResourceA> {
+  llvm::StringRef getName() final { return "<TestA>"; }
+};
+
+struct TestResourceB : public mlir::SideEffects::Resource::Base<TestResourceB> {
+  llvm::StringRef getName() final { return "<TestB>"; }
+};
+
+struct TestResourceC : public mlir::SideEffects::Resource::Base<TestResourceC> {
+  llvm::StringRef getName() final { return "<TestC>"; }
+};
+
+struct TestResourceD : public mlir::SideEffects::Resource::Base<TestResourceD> {
+  llvm::StringRef getName() final { return "<TestD>"; }
+};
+
+struct TestResourceE : public mlir::SideEffects::Resource::Base<TestResourceE> {
+  llvm::StringRef getName() final { return "<TestE>"; }
+};
+
+struct TestResourceF : public mlir::SideEffects::Resource::Base<TestResourceF> {
+  llvm::StringRef getName() final { return "<TestF>"; }
+};
 //===----------------------------------------------------------------------===//
 // PropertiesWithCustomPrint
 //===----------------------------------------------------------------------===//

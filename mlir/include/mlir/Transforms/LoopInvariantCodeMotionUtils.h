@@ -9,9 +9,12 @@
 #ifndef MLIR_TRANSFORMS_LOOPINVARIANTCODEMOTIONUTILS_H
 #define MLIR_TRANSFORMS_LOOPINVARIANTCODEMOTIONUTILS_H
 
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/TypeID.h"
+#include "llvm/ADT/SmallSet.h"
 
-#include "llvm/ADT/SmallVector.h"
+#include <utility>
 
 namespace mlir {
 
@@ -20,6 +23,43 @@ class Operation;
 class Region;
 class RewriterBase;
 class Value;
+
+/// Alias for map used in LICM pass to track which memory resources have
+/// conflicts due to sequence of memory effects applied to them in the region of
+/// interest.  
+using MemoryConflictMap = DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>;
+
+/// Gathers potential conflicts on all memory resources used within loop.
+///
+/// Given a target loop and an op within it (or the loop op itself),
+/// gathers op's memory effects and flags potential resource conflicts
+/// in a map and then recurses into the op's regions to gather nested
+/// resource conflicts.
+///
+/// Typical usage:
+/// \code
+///   LoopLikeOpInterface myLoop = ...;
+///   DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>
+///   myConflicts;
+///   gatherResourceConflicts(myLoop, myLoop.getOperation(), resourceConflicts);
+/// \endcode
+///
+/// \param loop The loop to gather resource conflicts for.
+/// \param op The operation to gather resource conflicts for,
+/// typically the loop op itself via loop.getOperation().
+/// \param resourceConflicts Map to store potential resource conflicts.
+/// Key is the resource ID that effects are applied to. Value is a pair of
+/// a boolean, indicating if the resource has a conflict, and the last effect
+/// that was applied to the resource (if no conflicts exist) or the effect
+/// that caused the conflict (if conflicts exist).
+///
+/// resourceConflicts is modified by the function and will be non-empty
+/// as long as there are memory effects within the loop, even if there are
+/// no conflicts.
+void mapResourceConflicts(
+    LoopLikeOpInterface loop, Operation *op,
+    DenseMap<TypeID, std::pair<bool, MemoryEffects::EffectInstance>>
+        &resourceConflicts);
 
 /// Given a list of regions, perform loop-invariant code motion. An operation is
 /// loop-invariant if it depends only of values defined outside of the loop.
@@ -63,9 +103,10 @@ class Value;
 ///
 /// Returns the number of operations moved.
 size_t moveLoopInvariantCode(
-    ArrayRef<Region *> regions,
+    LoopLikeOpInterface loopLike,
     function_ref<bool(Value, Region *)> isDefinedOutsideRegion,
-    function_ref<bool(Operation *, Region *)> shouldMoveOutOfRegion,
+    function_ref<bool(Operation *, Region *)> shouldMoveSpeculatable,
+    function_ref<bool(Operation *, MemoryConflictMap *)> shouldMoveMemoryEffect,
     function_ref<void(Operation *, Region *)> moveOutOfRegion);
 
 /// Move side-effect free loop invariant code out of a loop-like op using
