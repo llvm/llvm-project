@@ -2,6 +2,7 @@
 # RUN: llvm-mc -triple=amdgpu11.00 -disassemble -show-encoding < %s | FileCheck -check-prefixes=W32 %s
 # RUN: llvm-mc -triple=amdgpu11.00 -mattr=+wavefrontsize64 -disassemble -show-encoding < %s 2>&1 | FileCheck -check-prefixes=W64 %s
 # RUN: llvm-mc -triple=amdgpu12.00 -disassemble -filetype=null < %s 2>&1 | FileCheck -check-prefix=GFX12-ERR %s
+# RUN: llvm-mc -triple=amdgpu12.50 -disassemble -filetype=null < %s 2>&1 | FileCheck -check-prefix=GFX1250-ERR %s
 
 # GCN-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0xdf,0x00,0x00,0x02
@@ -9,6 +10,16 @@
 # this is s_waitcnt_vscnt exec_hi, 0x1234, which is valid on gfx11, but not on gfx12
 # GFX12-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x34,0x12,0x7f,0xbc
+
+# GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0xa0,0x4e,0x80,0xbe
+
+# GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0xc5,0x4e,0x80,0xbe
+
+# Literal constants are invalid for split barrier operands.
+# GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0xff,0x4e,0x80,0xbe,0xbe,0x00,0x00,0x00
 
 # W32: v_dual_add_f32 v5, 0xaf123456, v2 :: v_dual_fmaak_f32 v6, v3, v1, 0xaf123456 ; encoding: [0xff,0x04,0x02,0xc9,0x03,0x03,0x06,0x05,0x56,0x34,0x12,0xaf]
 # W64: [[@LINE+1]]:1: warning: invalid instruction encoding
@@ -57,3 +68,7 @@
 # This is ds_read_b32 with gds bit which is not valid on gfx90a.
 # GFX90A: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x00,0x00,0x6d,0xd8,0x01,0x00,0x00,0x00
+
+# This encoding references a missing trailing literal.
+# GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0x00,0x00,0x33,0xcc,0xff,0x68,0x02,0x02

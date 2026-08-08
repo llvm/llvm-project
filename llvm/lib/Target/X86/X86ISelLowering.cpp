@@ -2849,6 +2849,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::FP_TO_UINT_SAT,
                        ISD::SETCC,
                        ISD::MUL,
+                       ISD::UDIV,
+                       ISD::SDIV,
+                       ISD::UREM,
+                       ISD::SREM,
+                       ISD::MASKED_UDIV,
+                       ISD::MASKED_SDIV,
+                       ISD::MASKED_UREM,
+                       ISD::MASKED_SREM,
                        ISD::XOR,
                        ISD::MSCATTER,
                        ISD::MGATHER,
@@ -3611,19 +3619,26 @@ bool X86TargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
          (1 - MulC).isPowerOf2() || (-(MulC + 1)).isPowerOf2();
 }
 
-bool X86TargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                                unsigned Index) const {
+TargetLowering::ExtractSubvectorCost
+X86TargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                           unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
-    return false;
+    return ExtractSubvectorCost::Expensive;
 
   // Mask vectors support all subregister combinations and operations that
   // extract half of vector.
-  if (ResVT.getVectorElementType() == MVT::i1)
-    return Index == 0 ||
-           ((ResVT.getSizeInBits() * 2 == SrcVT.getSizeInBits()) &&
-            (Index == ResVT.getVectorNumElements()));
+  if (ResVT.getVectorElementType() == MVT::i1) {
+    if (Index == 0 || ((ResVT.getSizeInBits() * 2 == SrcVT.getSizeInBits()) &&
+                       (Index == ResVT.getVectorNumElements())))
+      return ExtractSubvectorCost::Free;
+    return ExtractSubvectorCost::Expensive;
+  }
 
-  return (Index % ResVT.getVectorNumElements()) == 0;
+  if (Index == 0)
+    return ExtractSubvectorCost::Free;
+  else if ((Index % ResVT.getVectorNumElements()) == 0)
+    return ExtractSubvectorCost::Cheap;
+  return ExtractSubvectorCost::Expensive;
 }
 
 bool X86TargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
@@ -50603,6 +50618,126 @@ static SDValue combineMulToPMADD52(SDNode *N, const SDLoc &DL,
   return SDValue();
 }
 
+// x86 has no vector integer divide instructions. Lower vector
+// UDIV/SDIV/UREM/SREM through float division instead of scalarizing into N
+// scalar hardware divides.
+static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
+                                TargetLowering::DAGCombinerInfo &DCI,
+                                const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // Vector division never survives op legalization to reach later rounds.
+  if (!VT.isVector() || !Subtarget.hasSSE2())
+    return SDValue();
+
+  SDValue Dividend = N->getOperand(0);
+  SDValue Divisor = N->getOperand(1);
+  unsigned Opc = N->getOpcode();
+
+  // Disabled lanes are poison and fdiv never traps, so ignore the mask.
+  if (Opc == ISD::MASKED_UDIV || Opc == ISD::MASKED_SDIV ||
+      Opc == ISD::MASKED_UREM || Opc == ISD::MASKED_SREM)
+    Opc = ISD::getUnmaskedBinOpOpcode(Opc);
+  bool IsRem = Opc == ISD::UREM || Opc == ISD::SREM;
+  bool IsSigned = Opc == ISD::SDIV || Opc == ISD::SREM;
+
+  // If the result is only read back as scalar extracts, scalarization computes
+  // just the demanded lanes.
+  if (all_of(N->users(), [](const SDNode *U) {
+        return U->getOpcode() == ISD::EXTRACT_VECTOR_ELT;
+      }))
+    return SDValue();
+
+  // Magic multiply lowers constant divisors cheaper than a divide.
+  if (DAG.isConstantIntBuildVectorOrConstantInt(Divisor))
+    return SDValue();
+
+  unsigned EltBits = VT.getScalarSizeInBits();
+  auto FitsFP = [&](SDValue V, const fltSemantics &Sem) {
+    unsigned Precision = APFloat::semanticsPrecision(Sem);
+    return IsSigned ? DAG.ComputeNumSignBits(V) + Precision > EltBits
+                    : DAG.computeKnownBits(V).countMaxActiveBits() <= Precision;
+  };
+  auto BothFitFP = [&](const fltSemantics &Sem) {
+    return FitsFP(Dividend, Sem) && FitsFP(Divisor, Sem);
+  };
+  // i8/i16/i32: the operands fit the float mantissa
+  // exactly so one float divide recovers the exact quotient.
+  if (EltBits > 32)
+    return SDValue();
+
+  // f32 recovers the quotient exactly when both operands fit in 24 bits
+  MVT FPSclVT = MVT::f64;
+  if (EltBits <= 16 || BothFitFP(APFloat::IEEEsingle()))
+    FPSclVT = MVT::f32;
+  EVT FPVT = VT.changeVectorElementType(*DAG.getContext(), FPSclVT);
+
+  bool IsStrict = DAG.getMachineFunction().getFunction().hasFnAttribute(
+      Attribute::StrictFP);
+  if (IsStrict) {
+    // The SAE forms are 512-bit only. Inputs widen into a zmm below, which
+    // requires 512-bit types to be legal and a power of 2 lane count.
+    if (!Subtarget.useAVX512Regs() || !isPowerOf2_32(VT.getVectorNumElements()))
+      return SDValue();
+  } else if (!IsSigned && VT.getScalarSizeInBits() == 32 &&
+             !Subtarget.hasAVX2()) {
+    // Unsigned i32 needs FP_TO_UINT(f64->u32) which is emulated and a loss
+    // for latency and code size before AVX2.
+    return SDValue();
+  }
+
+  // Nothing will split an illegal FP type after type legalization and the
+  // strict SAE divide is 512-bit only.
+  bool FPVTUsable = IsStrict
+                        ? FPVT.getSizeInBits() <= 512
+                        : DCI.isBeforeLegalize() ||
+                              DAG.getTargetLoweringInfo().isTypeLegal(FPVT);
+
+  // Halve the divide while the integer halves stay legal.
+  if (!FPVTUsable) {
+    if (VT.is256BitVector() || VT.is512BitVector()) {
+      EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+      if (DAG.getTargetLoweringInfo().isTypeLegal(HalfVT))
+        return splitVectorIntBinary(SDValue(N, 0), DAG, DL);
+    }
+    return SDValue();
+  }
+
+  unsigned ToFP = IsSigned ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
+  SDValue X = DAG.getNode(ToFP, DL, FPVT, Dividend);
+  SDValue Y = DAG.getNode(ToFP, DL, FPVT, Divisor);
+  SDValue Q;
+  if (IsStrict) {
+    // The converts are exact so only the divide and the truncate can
+    // raise flags.
+    unsigned WideElts = 512 / FPSclVT.getSizeInBits(); // 16 f32 or 8 f64
+    MVT WideFP = MVT::getVectorVT(FPSclVT, WideElts);
+    MVT WideIScl = MVT::i32;
+    MVT WideI = MVT::getVectorVT(WideIScl, WideElts);
+    SDValue RN = DAG.getTargetConstant(X86::STATIC_ROUNDING::TO_NEAREST_INT, DL,
+                                       MVT::i32); // {rn-sae}
+    SDValue Quot =
+        DAG.getNode(X86ISD::FDIV_RND, DL, WideFP,
+                    widenSubVector(X, false, Subtarget, DAG, DL, 512),
+                    widenSubVector(Y, false, Subtarget, DAG, DL, 512), RN);
+    unsigned FromFP = IsSigned ? X86ISD::CVTTP2SI_SAE : X86ISD::CVTTP2UI_SAE;
+    Q = DAG.getNode(FromFP, DL, WideI, Quot); // vcvttp*2dq/qq {sae}
+    MVT NarrowI = MVT::getVectorVT(WideIScl, VT.getVectorNumElements());
+    Q = extractSubVector(Q, 0, DAG, DL, NarrowI.getSizeInBits());
+    Q = IsSigned ? DAG.getSExtOrTrunc(Q, DL, VT)
+                 : DAG.getZExtOrTrunc(Q, DL, VT);
+  } else {
+    unsigned FromFP = IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
+    Q = DAG.getNode(FromFP, DL, VT, DAG.getNode(ISD::FDIV, DL, FPVT, X, Y));
+  }
+  if (!IsRem)
+    return Q;
+  // rem = dividend - quotient * divisor
+  return DAG.getNode(ISD::SUB, DL, VT, Dividend,
+                     DAG.getNode(ISD::MUL, DL, VT, Q, Divisor));
+}
+
 static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -63098,6 +63233,14 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SBB:         return combineSBB(N, DAG);
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);
+  case ISD::UDIV:
+  case ISD::SDIV:
+  case ISD::UREM:
+  case ISD::SREM:
+  case ISD::MASKED_UDIV:
+  case ISD::MASKED_SDIV:
+  case ISD::MASKED_UREM:
+  case ISD::MASKED_SREM:    return combineIntDivRem(N, DAG, DCI, Subtarget);
   case ISD::SHL:            return combineShiftLeft(N, DAG, Subtarget);
   case ISD::SRA:            return combineShiftRightArithmetic(N, DAG, Subtarget);
   case ISD::SRL:            return combineShiftRightLogical(N, DAG, DCI, Subtarget);
