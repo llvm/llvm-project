@@ -2,6 +2,7 @@
 ; RUN: opt -passes=instcombine %s -S | FileCheck %s
 
 declare void @use_i32(i32)
+declare void @use_v8i32(<8 x i32>)
 
 define i8 @umin_mul3_clamp(i8 %x) {
 ; CHECK-LABEL: define i8 @umin_mul3_clamp(
@@ -620,4 +621,133 @@ define <vscale x 4 x i8> @smax_sext_scalable_vec(<vscale x 4 x i8> %x, <vscale x
   %u = call <vscale x 4 x i32> @llvm.smax.nxv4i32(<vscale x 4 x i32> %sx, <vscale x 4 x i32> %sy)
   %t = trunc <vscale x 4 x i32> %u to <vscale x 4 x i8>
   ret <vscale x 4 x i8> %t
+}
+
+define <8 x i16> @smin_smax_dag_shared_sext_vec(
+; CHECK-LABEL: define <8 x i16> @smin_smax_dag_shared_sext_vec(
+; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <8 x i16> [[C:%.*]]) {
+; CHECK-NEXT:    [[AW:%.*]] = sext <8 x i16> [[A]] to <8 x i32>
+; CHECK-NEXT:    [[BW:%.*]] = sext <8 x i16> [[B]] to <8 x i32>
+; CHECK-NEXT:    [[CW:%.*]] = sext <8 x i16> [[C]] to <8 x i32>
+; CHECK-NEXT:    [[LO:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[AW]], <8 x i32> [[BW]])
+; CHECK-NEXT:    [[HI:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[AW]], <8 x i32> [[BW]])
+; CHECK-NEXT:    [[MID:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[CW]], <8 x i32> [[HI]])
+; CHECK-NEXT:    [[WIDE:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[MID]], <8 x i32> [[LO]])
+; CHECK-NEXT:    [[RESULT:%.*]] = trunc nsw <8 x i32> [[WIDE]] to <8 x i16>
+; CHECK-NEXT:    ret <8 x i16> [[RESULT]]
+;
+  <8 x i16> %a, <8 x i16> %b, <8 x i16> %c) {
+  %aw = sext <8 x i16> %a to <8 x i32>
+  %bw = sext <8 x i16> %b to <8 x i32>
+  %cw = sext <8 x i16> %c to <8 x i32>
+  %lo = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %aw, <8 x i32> %bw)
+  %hi = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %aw, <8 x i32> %bw)
+  %mid = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %cw, <8 x i32> %hi)
+  %wide = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %mid, <8 x i32> %lo)
+  %result = trunc nsw <8 x i32> %wide to <8 x i16>
+  ret <8 x i16> %result
+}
+
+; Check that the fold is independent of the element widths and also handles a
+; non-adjacent narrowing from i64 to i8.
+define <4 x i8> @smin_smax_dag_sext_i8_i64_vec(
+; CHECK-LABEL: define <4 x i8> @smin_smax_dag_sext_i8_i64_vec(
+; CHECK-SAME: <4 x i8> [[A:%.*]], <4 x i8> [[B:%.*]], <4 x i8> [[C:%.*]]) {
+; CHECK-NEXT:    [[AW:%.*]] = sext <4 x i8> [[A]] to <4 x i64>
+; CHECK-NEXT:    [[BW:%.*]] = sext <4 x i8> [[B]] to <4 x i64>
+; CHECK-NEXT:    [[CW:%.*]] = sext <4 x i8> [[C]] to <4 x i64>
+; CHECK-NEXT:    [[LO:%.*]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[AW]], <4 x i64> [[BW]])
+; CHECK-NEXT:    [[HI:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[AW]], <4 x i64> [[BW]])
+; CHECK-NEXT:    [[MID:%.*]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[CW]], <4 x i64> [[HI]])
+; CHECK-NEXT:    [[WIDE:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[MID]], <4 x i64> [[LO]])
+; CHECK-NEXT:    [[RESULT:%.*]] = trunc nsw <4 x i64> [[WIDE]] to <4 x i8>
+; CHECK-NEXT:    ret <4 x i8> [[RESULT]]
+;
+    <4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
+  %aw = sext <4 x i8> %a to <4 x i64>
+  %bw = sext <4 x i8> %b to <4 x i64>
+  %cw = sext <4 x i8> %c to <4 x i64>
+  %lo = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %aw, <4 x i64> %bw)
+  %hi = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %aw, <4 x i64> %bw)
+  %mid = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %cw, <4 x i64> %hi)
+  %wide = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %mid, <4 x i64> %lo)
+  %result = trunc nsw <4 x i64> %wide to <4 x i8>
+  ret <4 x i8> %result
+}
+
+; Do not build a narrow DAG when that would leave an externally-used copy of
+; the wide DAG alive.
+define <8 x i16> @smin_smax_dag_external_wide_use_vec(
+; CHECK-LABEL: define <8 x i16> @smin_smax_dag_external_wide_use_vec(
+; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <8 x i16> [[C:%.*]]) {
+; CHECK-NEXT:    [[AW:%.*]] = sext <8 x i16> [[A]] to <8 x i32>
+; CHECK-NEXT:    [[BW:%.*]] = sext <8 x i16> [[B]] to <8 x i32>
+; CHECK-NEXT:    [[CW:%.*]] = sext <8 x i16> [[C]] to <8 x i32>
+; CHECK-NEXT:    [[LO:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[AW]], <8 x i32> [[BW]])
+; CHECK-NEXT:    call void @use_v8i32(<8 x i32> [[LO]])
+; CHECK-NEXT:    [[HI:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[AW]], <8 x i32> [[BW]])
+; CHECK-NEXT:    [[MID:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[CW]], <8 x i32> [[HI]])
+; CHECK-NEXT:    [[WIDE:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[MID]], <8 x i32> [[LO]])
+; CHECK-NEXT:    [[RESULT:%.*]] = trunc nsw <8 x i32> [[WIDE]] to <8 x i16>
+; CHECK-NEXT:    ret <8 x i16> [[RESULT]]
+;
+    <8 x i16> %a, <8 x i16> %b, <8 x i16> %c) {
+  %aw = sext <8 x i16> %a to <8 x i32>
+  %bw = sext <8 x i16> %b to <8 x i32>
+  %cw = sext <8 x i16> %c to <8 x i32>
+  %lo = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %aw, <8 x i32> %bw)
+  call void @use_v8i32(<8 x i32> %lo)
+  %hi = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %aw, <8 x i32> %bw)
+  %mid = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %cw, <8 x i32> %hi)
+  %wide = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %mid, <8 x i32> %lo)
+  %result = trunc nsw <8 x i32> %wide to <8 x i16>
+  ret <8 x i16> %result
+}
+
+; Do not narrow a DAG with a leaf that is not a sign extension from the
+; destination type.
+define <8 x i16> @smin_smax_dag_non_sext_leaf_vec(
+; CHECK-LABEL: define <8 x i16> @smin_smax_dag_non_sext_leaf_vec(
+; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <8 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[AW:%.*]] = sext <8 x i16> [[A]] to <8 x i32>
+; CHECK-NEXT:    [[BW:%.*]] = sext <8 x i16> [[B]] to <8 x i32>
+; CHECK-NEXT:    [[LO:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[AW]], <8 x i32> [[X]])
+; CHECK-NEXT:    [[WIDE:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[LO]], <8 x i32> [[BW]])
+; CHECK-NEXT:    [[RESULT:%.*]] = trunc nsw <8 x i32> [[WIDE]] to <8 x i16>
+; CHECK-NEXT:    ret <8 x i16> [[RESULT]]
+;
+    <8 x i16> %a, <8 x i16> %b, <8 x i32> %x) {
+  %aw = sext <8 x i16> %a to <8 x i32>
+  %bw = sext <8 x i16> %b to <8 x i32>
+  %lo = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %aw, <8 x i32> %x)
+  %wide = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %lo, <8 x i32> %bw)
+  %result = trunc nsw <8 x i32> %wide to <8 x i16>
+  ret <8 x i16> %result
+}
+
+; The min/max DAG itself proves that the wide result fits in the narrow type,
+; so the final trunc does not need an nsw flag.
+define <4 x i16> @smin_smax_dag_plain_trunc_vec(
+; CHECK-LABEL: define <4 x i16> @smin_smax_dag_plain_trunc_vec(
+; CHECK-SAME: <4 x i16> [[A:%.*]], <4 x i16> [[B:%.*]], <4 x i16> [[C:%.*]]) {
+; CHECK-NEXT:    [[AW:%.*]] = sext <4 x i16> [[A]] to <4 x i32>
+; CHECK-NEXT:    [[BW:%.*]] = sext <4 x i16> [[B]] to <4 x i32>
+; CHECK-NEXT:    [[CW:%.*]] = sext <4 x i16> [[C]] to <4 x i32>
+; CHECK-NEXT:    [[LO:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[AW]], <4 x i32> [[BW]])
+; CHECK-NEXT:    [[HI:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[AW]], <4 x i32> [[BW]])
+; CHECK-NEXT:    [[MID:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[CW]], <4 x i32> [[HI]])
+; CHECK-NEXT:    [[WIDE:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[MID]], <4 x i32> [[LO]])
+; CHECK-NEXT:    [[RESULT:%.*]] = trunc <4 x i32> [[WIDE]] to <4 x i16>
+; CHECK-NEXT:    ret <4 x i16> [[RESULT]]
+;
+    <4 x i16> %a, <4 x i16> %b, <4 x i16> %c) {
+  %aw = sext <4 x i16> %a to <4 x i32>
+  %bw = sext <4 x i16> %b to <4 x i32>
+  %cw = sext <4 x i16> %c to <4 x i32>
+  %lo = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %aw, <4 x i32> %bw)
+  %hi = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %aw, <4 x i32> %bw)
+  %mid = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %cw, <4 x i32> %hi)
+  %wide = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %mid, <4 x i32> %lo)
+  %result = trunc <4 x i32> %wide to <4 x i16>
+  ret <4 x i16> %result
 }
