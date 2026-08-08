@@ -1250,16 +1250,15 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
   // Append 'remapOutputs' to 'newMapOperands'.
   newMapOperands.append(remapOutputs.begin(), remapOutputs.end());
 
-  // Create new fully composed AffineMap for new op to be created.
-  assert(newMapOperands.size() == newMemRefRank);
-  auto newMap = builder.getMultiDimIdentityMap(newMemRefRank);
-  fullyComposeAffineMapAndOperands(&newMap, &newMapOperands);
-  newMap = simplifyAffineMap(newMap);
-  canonicalizeMapAndOperands(&newMap, &newMapOperands);
-  // Remove any affine.apply's that became dead as a result of composition.
-  for (Value value : affineApplyOps)
-    if (value.use_empty())
-      value.getDefiningOp()->erase();
+  AffineMap newMap;
+  if (affMapAccInterface) {
+    // Create new fully composed AffineMap for new op to be created.
+    assert(newMapOperands.size() == newMemRefRank);
+    newMap = builder.getMultiDimIdentityMap(newMemRefRank);
+    fullyComposeAffineMapAndOperands(&newMap, &newMapOperands);
+    newMap = simplifyAffineMap(newMap);
+    canonicalizeMapAndOperands(&newMap, &newMapOperands);
+  }
 
   OperationState state(op->getLoc(), op->getName());
   // Construct the new operation using this memref.
@@ -1271,21 +1270,7 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
   state.operands.push_back(newMemRef);
 
   // Insert the new memref map operands.
-  if (affMapAccInterface) {
-    state.operands.append(newMapOperands.begin(), newMapOperands.end());
-  } else {
-    // In the case of dereferencing ops not implementing
-    // AffineMapAccessInterface, we need to apply the values of `newMapOperands`
-    // to the `newMap` to get the correct indices.
-    for (unsigned i = 0; i < newMemRefRank; i++) {
-      state.operands.push_back(AffineApplyOp::create(
-          builder, op->getLoc(),
-          AffineMap::get(newMap.getNumDims(), newMap.getNumSymbols(),
-                         newMap.getResult(i)),
-          newMapOperands));
-    }
-  }
-
+  state.operands.append(newMapOperands.begin(), newMapOperands.end());
   // Insert the remaining operands unmodified.
   unsigned oldMapNumInputs = oldMapOperands.size();
   state.operands.append(op->operand_begin() + memRefOperandPos + 1 +
@@ -1296,21 +1281,32 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
   for (auto result : op->getResults())
     state.types.push_back(result.getType());
 
-  // Add attribute for 'newMap', other Attributes do not change.
-  auto newMapAttr = AffineMapAttr::get(newMap);
-  for (auto namedAttr : op->getAttrs()) {
-    if (affMapAccInterface &&
-        namedAttr.getName() ==
-            affMapAccInterface.getAffineMapAttrForMemRef(oldMemRef).getName())
-      state.attributes.push_back({namedAttr.getName(), newMapAttr});
-    else
+  if (affMapAccInterface) {
+    // Add attribute for 'newMap', other Attributes do not change.
+    auto newMapAttr = AffineMapAttr::get(newMap);
+    for (auto namedAttr : op->getAttrs()) {
+      if (namedAttr.getName() == affMapAccInterface.getMapAttrName()) {
+        state.attributes.push_back(
+            builder.getNamedAttr(namedAttr.getName(), newMapAttr));
+      } else {
+        state.attributes.push_back(namedAttr);
+      }
+    }
+  } else {
+    for (auto namedAttr : op->getAttrs()) {
       state.attributes.push_back(namedAttr);
+    }
   }
 
   // Create the new operation.
-  auto *repOp = builder.create(state);
-  op->replaceAllUsesWith(repOp);
+  Operation *newOp = builder.create(state);
+  op->replaceAllUsesWith(newOp);
   op->erase();
+
+  // Remove any affine.apply's that became dead as a result of composition.
+  for (Value value : affineApplyOps)
+    if (value.use_empty())
+      value.getDefiningOp()->erase();
 
   return success();
 }
