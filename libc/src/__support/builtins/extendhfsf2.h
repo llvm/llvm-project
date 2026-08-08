@@ -15,11 +15,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_BUILTINS_EXTENDHFSF2_H
 #define LLVM_LIBC_SRC___SUPPORT_BUILTINS_EXTENDHFSF2_H
 
-#include "src/__support/macros/properties/types.h"
-
-#ifdef LIBC_TYPES_HAS_FLOAT16
-
 #include "hdr/stdint_proxy.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/builtins/fpconvert_helper.h"
 #include "src/__support/macros/config.h"
 
@@ -28,12 +25,10 @@ namespace builtins {
 
 // Extend float16 to float; mirrors compiler-rt's __extendhfsf2.
 LIBC_INLINE float extendhfsf2(uint16_t bits) {
-  return fpconvert_from_bits<float, float16>(bits);
+  return fpconvert_from_bits<float, fputil::FPType::IEEE754_Binary16>(bits);
 }
 
 } // namespace builtins
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SRC___SUPPORT_BUILTINS_EXTENDHFSF2_H

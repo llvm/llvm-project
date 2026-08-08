@@ -45,25 +45,26 @@ namespace builtins {
 // __trunc*.
 namespace internal {
 
-// Shared conversion body, taking the source as FPBits.  FPBits is backed by an
-// unsigned integer (uint16_t for the 16-bit floats), so passing it -- rather
-// than a From value -- keeps clang from emitting a circular __extendhfsf2 for a
-// float16 argument (see the TODO above).
-template <typename To, typename FromBits>
-LIBC_INLINE constexpr To fpconvert(FromBits x_bits) {
+// Shared conversion body.  The source is named by FPType, so it needs no
+// native C++ type; only the destination does.
+template <typename To, fputil::FPType FromFPType>
+LIBC_INLINE constexpr To
+fpconvert(typename fputil::FPRep<FromFPType>::StorageType bits) {
+  using FromRep = fputil::FPRep<FromFPType>;
   using ToBits = fputil::FPBits<To>;
   using ToStorageType = typename ToBits::StorageType;
 
+  FromRep x_bits(bits);
+
   if (x_bits.is_nan()) {
-    typename FromBits::StorageType x_frac = x_bits.get_mantissa();
-    if constexpr (ToBits::FRACTION_LEN >= FromBits::FRACTION_LEN) {
-      ToStorageType to_frac =
-          static_cast<ToStorageType>(x_frac)
-          << (ToBits::FRACTION_LEN - FromBits::FRACTION_LEN);
+    typename FromRep::StorageType x_frac = x_bits.get_mantissa();
+    if constexpr (ToBits::FRACTION_LEN >= FromRep::FRACTION_LEN) {
+      ToStorageType to_frac = static_cast<ToStorageType>(x_frac)
+                              << (ToBits::FRACTION_LEN - FromRep::FRACTION_LEN);
       return ToBits::signaling_nan(x_bits.sign(), to_frac).get_val();
     }
     ToStorageType to_frac = static_cast<ToStorageType>(
-        x_frac >> (FromBits::FRACTION_LEN - ToBits::FRACTION_LEN));
+        x_frac >> (FromRep::FRACTION_LEN - ToBits::FRACTION_LEN));
     return ToBits::quiet_nan(x_bits.sign(), to_frac).get_val();
   }
 
@@ -71,10 +72,14 @@ LIBC_INLINE constexpr To fpconvert(FromBits x_bits) {
     return ToBits::inf(x_bits.sign()).get_val();
 
   // Zero and subnormals fall through: DyadicFloat gives a zero mantissa for
-  // zero, which as<To>() maps back to a correctly-signed zero.
+  // zero, which as<To>() maps back to a correctly-signed zero.  Built from
+  // parts so no From value is materialized.
   constexpr size_t MAX_FRACTION_LEN =
-      cpp::max(ToBits::FRACTION_LEN, FromBits::FRACTION_LEN);
-  fputil::DyadicFloat<cpp::bit_ceil(MAX_FRACTION_LEN)> xd(x_bits.get_val());
+      cpp::max(ToBits::FRACTION_LEN, FromRep::FRACTION_LEN);
+  using DyadicType = fputil::DyadicFloat<cpp::bit_ceil(MAX_FRACTION_LEN)>;
+  DyadicType xd(
+      x_bits.sign(), x_bits.get_explicit_exponent() - FromRep::FRACTION_LEN,
+      typename DyadicType::MantissaType(x_bits.get_explicit_mantissa()));
   return xd.template as<To, /*ShouldSignalExceptions=*/true>();
 }
 
@@ -86,19 +91,16 @@ LIBC_INLINE constexpr To fpconvert(From x) {
   if constexpr (cpp::is_same_v<To, From>)
     return x;
   else
-    return internal::fpconvert<To>(fputil::FPBits<From>(x));
+    return internal::fpconvert<To, fputil::get_fp_type<From>()>(
+        cpp::bit_cast<typename fputil::FPBits<From>::StorageType>(x));
 }
 
-// Same, for a float16/bfloat16 source delivered as raw bits.  Reconstructing
-// the value here (instead of taking a From parameter) avoids clang's _Float16
-// ABI lowering, which would emit a circular __extendhfsf2.
-template <typename To, typename From>
-LIBC_INLINE constexpr To fpconvert_from_bits(uint16_t bits) {
-  if constexpr (cpp::is_same_v<To, From>)
-    return cpp::bit_cast<To>(bits);
-  else
-    return internal::fpconvert<To>(
-        fputil::FPBits<From>(cpp::bit_cast<From>(bits)));
+// Same, for a source delivered as raw bits.  Keeps _Float16 out of the
+// signature, which would otherwise lower to a circular __extendhfsf2.
+template <typename To, fputil::FPType FromFPType>
+LIBC_INLINE constexpr To
+fpconvert_from_bits(typename fputil::FPRep<FromFPType>::StorageType bits) {
+  return internal::fpconvert<To, FromFPType>(bits);
 }
 
 } // namespace builtins

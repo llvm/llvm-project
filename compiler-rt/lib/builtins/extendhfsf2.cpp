@@ -17,17 +17,13 @@
 #include "fp_extend_impl.inc"
 
 #include "fp_libc_config.h"
+#include "shared/bit.h"
 #include "shared/builtins/extendhfsf2.h"
 
-#ifdef LIBC_TYPES_HAS_FLOAT16
 extern "C" COMPILER_RT_ABI NOINLINE dst_t __extendhfsf2(src_t a) {
-  return LIBC_NAMESPACE::shared::extendhfsf2(__builtin_bit_cast(uint16_t, a));
+  return LIBC_NAMESPACE::shared::extendhfsf2(
+      LIBC_NAMESPACE::shared::bit_cast<uint16_t>(a));
 }
-#else
-extern "C" COMPILER_RT_ABI NOINLINE dst_t __extendhfsf2(src_t a) {
-  return __extendXfYf2__(a);
-}
-#endif
 
 extern "C" {
 #if defined(__ARM_EABI__)
