@@ -229,11 +229,6 @@ foreach Ext = ZfhminDExts in {
 // Assembler Pseudo Instructions (User-Level ISA, Version 2.2, Chapter 20)
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasHalfFPLoadStoreMove] in {
-def : InstAlias<"flh $rd, (${rs1})",  (FLH FPR16:$rd,  GPR:$rs1, 0), 0>;
-def : InstAlias<"fsh $rs2, (${rs1})", (FSH FPR16:$rs2, GPR:$rs1, 0), 0>;
-} // Predicates = [HasStdExtZfhmin]
-
 let Predicates = [HasStdExtZfh] in {
 def : InstAlias<"fmv.h $rd, $rs",  (FSGNJ_H  FPR16:$rd, FPR16:$rs, FPR16:$rs)>;
 def : InstAlias<"fabs.h $rd, $rs", (FSGNJX_H FPR16:$rd, FPR16:$rs, FPR16:$rs)>;

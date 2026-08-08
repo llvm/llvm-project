@@ -127,6 +127,7 @@ static_library("LLVMRISCVCodeGen") {
     "GISel/RISCVRegisterBankInfo.cpp",
     "RISCVAsmPrinter.cpp",
     "RISCVCallingConv.cpp",
+    "RISCVCodeGenPassBuilder.cpp",
     "RISCVCodeGenPrepare.cpp",
     "RISCVConstantPoolValue.cpp",
     "RISCVDeadRegisterDefinitions.cpp",

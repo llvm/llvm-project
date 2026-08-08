@@ -518,6 +518,13 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
 #undef RTLIBCASE
 }
 
+static bool hasSwiftErrorArg(MachineFunction &MF) {
+  const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
+  return TLI.supportSwiftError() &&
+         MF.getFunction().getAttributes().hasAttrSomewhere(
+             Attribute::SwiftError);
+}
+
 /// True if an instruction is in tail position in its caller. Intended for
 /// legalizing libcalls as tail calls when possible.
 static bool isLibCallInTailPosition(const CallLowering::ArgInfo &Result,
@@ -599,7 +606,10 @@ LegalizerHelper::LegalizeResult LegalizerHelper::createLibcall(
         (Result.Ty->isVoidTy() ||
          Result.Ty == MIRBuilder.getMF().getFunction().getReturnType()) &&
         isLibCallInTailPosition(Result, *MI, MIRBuilder.getTII(),
-                                *MIRBuilder.getMRI());
+                                *MIRBuilder.getMRI()) &&
+        // Lowering doesn't support tail calling inside a function with
+        // a swifterror argument yet.
+        !hasSwiftErrorArg(MIRBuilder.getMF());
 
   llvm::append_range(Info.OrigArgs, Args);
   if (!CLI.lowerCall(MIRBuilder, Info))
@@ -849,7 +859,10 @@ LegalizerHelper::createMemLibcall(MachineRegisterInfo &MRI, MachineInstr &MI,
   Info.OrigRet = CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0);
   Info.IsTailCall =
       MI.getOperand(MI.getNumOperands() - 1).getImm() &&
-      isLibCallInTailPosition(Info.OrigRet, MI, MIRBuilder.getTII(), MRI);
+      isLibCallInTailPosition(Info.OrigRet, MI, MIRBuilder.getTII(), MRI) &&
+      // Lowering doesn't support tail calling inside a function with
+      // a swifterror argument yet.
+      !hasSwiftErrorArg(MIRBuilder.getMF());
 
   llvm::append_range(Info.OrigArgs, Args);
   if (!CLI.lowerCall(MIRBuilder, Info))

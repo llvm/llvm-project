@@ -226,7 +226,8 @@ void emitStdNameCases(const RecordKeeper &Records, raw_ostream &OS) {
 
 } // namespace
 
-void clang::EmitClangTraits(const RecordKeeper &Records, raw_ostream &OS) {
+void clang::EmitClangBuiltinTraits(const RecordKeeper &Records,
+                                   raw_ostream &OS) {
   emitSourceFileHeader("Type and expression traits", OS, Records);
   OS << "#if defined(EMIT_TOKENKEY)\n";
   emitTokenKey(Records, OS);

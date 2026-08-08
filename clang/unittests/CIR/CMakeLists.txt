@@ -12,6 +12,7 @@ add_distinct_clang_unittest(CIRUnitTests
   PointerLikeTest.cpp
   RecordTypeMetadataTest.cpp
   UnionTypeSizeTest.cpp
+  VectorTypeABIAlignTest.cpp
   LLVM_COMPONENTS
   Core
 

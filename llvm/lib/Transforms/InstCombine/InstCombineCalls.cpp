@@ -522,6 +522,11 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     if (match(Op0, m_c_And(m_Neg(m_Value(X)), m_Deferred(X))))
       return CallInst::Create(II.getCalledFunction(), {X, Op1});
 
+    // cttz(mul(X, OddC)) -> cttz(X)
+    if (match(Op0, m_Mul(m_Value(X),
+                         m_CheckedInt([](const APInt &C) { return C[0]; }))))
+      return CallInst::Create(II.getCalledFunction(), {X, Op1});
+
     // cttz(sext(x)) -> cttz(zext(x))
     if (match(Op0, m_OneUse(m_SExt(m_Value(X))))) {
       auto *Zext = IC.Builder.CreateZExt(X, II.getType());

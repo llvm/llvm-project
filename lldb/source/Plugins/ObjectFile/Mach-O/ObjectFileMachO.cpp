@@ -6694,6 +6694,7 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
                 "ObjectFileMachO::%s binary at 0x%" PRIx64
                 " is a platform binary, has been handled by a Platform plugin.",
                 __FUNCTION__, image.load_address);
+      found_platform_binary = true;
       continue;
     }
 
@@ -6748,8 +6749,9 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
                       module_sp->GetFileSpec().GetPath().c_str(),
                       uuidstr.c_str());
         }
+        ObjectFile *objfile = module_sp->GetObjectFile();
+        SectionList *sectlist = objfile ? objfile->GetSectionList() : nullptr;
         for (auto name_vmaddr_tuple : image.segment_load_addresses) {
-          SectionList *sectlist = module_sp->GetObjectFile()->GetSectionList();
           if (sectlist) {
             SectionSP sect_sp =
                 sectlist->FindSectionByName(std::get<0>(name_vmaddr_tuple));

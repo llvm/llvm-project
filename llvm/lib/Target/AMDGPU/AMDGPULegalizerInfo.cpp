@@ -1091,8 +1091,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.has16BitInsts()) {
     getActionDefinitionsBuilder(G_FSQRT)
         .legalFor({F16})
+        .legalFor(ST.hasBF16TransInsts(), {BF16})
         .customFor({F32, F64})
         .scalarize(0)
+        .widenScalarFor({BF16}, changeElementTo(0, F32))
         .unsupported();
     getActionDefinitionsBuilder(G_FFLOOR)
         .legalFor({F32, F64, F16})
@@ -1118,6 +1120,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     getActionDefinitionsBuilder(G_FSQRT)
         .customFor({F32, F64, F16})
         .scalarize(0)
+        .widenScalarFor({BF16}, changeElementTo(0, F32))
         .unsupported();
 
     if (ST.hasFractBug()) {
@@ -1367,14 +1370,18 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(G_FLOG2)
       .legalFor(ST.has16BitInsts(), {F16})
+      .legalFor(ST.hasBF16TransInsts(), {BF16})
       .customFor({F32, F16})
       .scalarize(0)
+      .widenScalarFor({BF16}, changeElementTo(0, F32))
       .lower();
 
   getActionDefinitionsBuilder(G_FEXP2)
       .legalFor(ST.has16BitInsts(), {F16})
+      .legalFor(ST.hasBF16TransInsts(), {BF16})
       .customFor({F32, F64, F16})
       .scalarize(0)
+      .widenScalarFor({BF16}, changeElementTo(0, F32))
       .lower();
 
   getActionDefinitionsBuilder({G_FLOG, G_FLOG10})

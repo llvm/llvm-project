@@ -1402,6 +1402,29 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
         Mul->setHasNoSignedWrap(OBO->hasNoSignedWrap());
         return Mul;
       }
+
+      // (X * C1) / C2 -> (X * (C1/D)) / (C2/D) if D = gcd(C1, C2) > 1.
+      if (Op0->hasOneUse()) {
+        APInt GCD = IsSigned
+                        ? APIntOps::GreatestCommonDivisor(C1->abs(), C2->abs())
+                        : APIntOps::GreatestCommonDivisor(*C1, *C2);
+        if (GCD.ugt(1)) {
+          APInt NewC1 = IsSigned ? C1->sdiv(GCD) : C1->udiv(GCD);
+          APInt NewC2 = IsSigned ? C2->sdiv(GCD) : C2->udiv(GCD);
+
+          auto *OldMul = cast<OverflowingBinaryOperator>(Op0);
+          Value *NewMul = Builder.CreateMul(X, ConstantInt::get(Ty, NewC1), "",
+                                            OldMul->hasNoUnsignedWrap(),
+                                            OldMul->hasNoSignedWrap());
+          NewMul->takeName(OldMul);
+
+          Constant *NewDivisor = ConstantInt::get(Ty, NewC2);
+          auto *NewDiv =
+              BinaryOperator::Create(I.getOpcode(), NewMul, NewDivisor);
+          NewDiv->setIsExact(I.isExact());
+          return NewDiv;
+        }
+      }
     }
 
     if ((IsSigned && match(Op0, m_NSWShl(m_Value(X), m_APInt(C1))) &&
@@ -1427,6 +1450,29 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
         Mul->setHasNoUnsignedWrap(!IsSigned && OBO->hasNoUnsignedWrap());
         Mul->setHasNoSignedWrap(OBO->hasNoSignedWrap());
         return Mul;
+      }
+
+      // (X << C1) / C2 -> (X << (C1 - K)) / (C2 / (1 << K))
+      // Where K = min(C1, countr_zero(C2)), the shared power of 2.
+      if (Op0->hasOneUse()) {
+        unsigned ShiftAmt = static_cast<unsigned>(C1->getZExtValue());
+        unsigned K = std::min(C2->countr_zero(), ShiftAmt);
+        if (K > 0) {
+          unsigned NewShiftAmt = ShiftAmt - K;
+          APInt NewC2 = IsSigned ? C2->ashr(K) : C2->lshr(K);
+
+          auto *OldShift = cast<OverflowingBinaryOperator>(Op0);
+          Value *NewShift = Builder.CreateShl(
+              X, ConstantInt::get(Ty, NewShiftAmt), "",
+              OldShift->hasNoUnsignedWrap(), OldShift->hasNoSignedWrap());
+          NewShift->takeName(OldShift);
+
+          Constant *NewDivisor = ConstantInt::get(Ty, NewC2);
+          auto *NewDiv =
+              BinaryOperator::Create(I.getOpcode(), NewShift, NewDivisor);
+          NewDiv->setIsExact(I.isExact());
+          return NewDiv;
+        }
       }
     }
 

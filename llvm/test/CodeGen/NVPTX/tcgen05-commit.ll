@@ -10,10 +10,10 @@
 ; RUN: %if ptxas-sm_100f && ptxas-isa-8.8 %{ llc < %s -march=nvptx64 -mcpu=sm_100f -mattr=+ptx88 | %ptxas-verify -arch=sm_100f %}
 ; RUN: %if ptxas-sm_110f && ptxas-isa-9.0 %{ llc < %s -march=nvptx64 -mcpu=sm_110f -mattr=+ptx90 | %ptxas-verify -arch=sm_110f %}
 
-declare void @llvm.nvvm.tcgen05.commit.cg1(ptr %bar_addr)
-declare void @llvm.nvvm.tcgen05.commit.cg2(ptr %bar_addr)
-declare void @llvm.nvvm.tcgen05.commit.shared.cg1(ptr addrspace(3) %bar_addr)
-declare void @llvm.nvvm.tcgen05.commit.shared.cg2(ptr addrspace(3) %bar_addr)
+declare void @llvm.nvvm.tcgen05.commit.cg1.p0(ptr %bar_addr)
+declare void @llvm.nvvm.tcgen05.commit.cg2.p0(ptr %bar_addr)
+declare void @llvm.nvvm.tcgen05.commit.cg1.p3(ptr addrspace(3) %bar_addr)
+declare void @llvm.nvvm.tcgen05.commit.cg2.p3(ptr addrspace(3) %bar_addr)
 
 define void @test_tcgen05_commit_cg1(ptr %bar_addr) {
 ; CHECK_PTX64-LABEL: test_tcgen05_commit_cg1(
@@ -33,7 +33,7 @@ define void @test_tcgen05_commit_cg1(ptr %bar_addr) {
 ; CHECK_PTX64_SHARED32-NEXT:    ld.param.b64 %rd1, [test_tcgen05_commit_cg1_param_0];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::1.mbarrier::arrive::one.shared::cluster.b64 [%rd1];
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
-  call void @llvm.nvvm.tcgen05.commit.cg1(ptr %bar_addr)
+  call void @llvm.nvvm.tcgen05.commit.cg1.p0(ptr %bar_addr)
 
   ret void
 }
@@ -56,7 +56,7 @@ define void @test_tcgen05_commit_cg2(ptr %bar_addr) {
 ; CHECK_PTX64_SHARED32-NEXT:    ld.param.b64 %rd1, [test_tcgen05_commit_cg2_param_0];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::2.mbarrier::arrive::one.shared::cluster.b64 [%rd1];
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
-  call void @llvm.nvvm.tcgen05.commit.cg2(ptr %bar_addr)
+  call void @llvm.nvvm.tcgen05.commit.cg2.p0(ptr %bar_addr)
 
   ret void
 }
@@ -79,7 +79,7 @@ define void @test_tcgen05_commit_shared_cg1(ptr addrspace(3) %bar_addr) {
 ; CHECK_PTX64_SHARED32-NEXT:    ld.param.b32 %r1, [test_tcgen05_commit_shared_cg1_param_0];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::1.mbarrier::arrive::one.shared::cluster.b64 [%r1];
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
-  call void @llvm.nvvm.tcgen05.commit.shared.cg1(ptr addrspace(3) %bar_addr)
+  call void @llvm.nvvm.tcgen05.commit.cg1.p3(ptr addrspace(3) %bar_addr)
 
   ret void
 }
@@ -102,15 +102,15 @@ define void @test_tcgen05_commit_shared_cg2(ptr addrspace(3) %bar_addr) {
 ; CHECK_PTX64_SHARED32-NEXT:    ld.param.b32 %r1, [test_tcgen05_commit_shared_cg2_param_0];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::2.mbarrier::arrive::one.shared::cluster.b64 [%r1];
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
-  call void @llvm.nvvm.tcgen05.commit.shared.cg2(ptr addrspace(3) %bar_addr)
+  call void @llvm.nvvm.tcgen05.commit.cg2.p3(ptr addrspace(3) %bar_addr)
 
   ret void
 }
 
-declare void @llvm.nvvm.tcgen05.commit.mc.cg1(ptr %bar_addr, i16 %cta_mask)
-declare void @llvm.nvvm.tcgen05.commit.mc.cg2(ptr %bar_addr, i16 %cta_mask)
-declare void @llvm.nvvm.tcgen05.commit.mc.shared.cg1(ptr addrspace(3) %bar_addr, i16 %cta_mask)
-declare void @llvm.nvvm.tcgen05.commit.mc.shared.cg2(ptr addrspace(3) %bar_addr, i16 %cta_mask)
+declare void @llvm.nvvm.tcgen05.commit.mc.cg1.p0.i16(ptr %bar_addr, i16 %cta_mask)
+declare void @llvm.nvvm.tcgen05.commit.mc.cg2.p0.i16(ptr %bar_addr, i16 %cta_mask)
+declare void @llvm.nvvm.tcgen05.commit.mc.cg1.p3.i16(ptr addrspace(3) %bar_addr, i16 %cta_mask)
+declare void @llvm.nvvm.tcgen05.commit.mc.cg2.p3.i16(ptr addrspace(3) %bar_addr, i16 %cta_mask)
 
 define void @test_tcgen05_commit_mc_cg1(ptr %bar_addr, i16 %cta_mask) {
 ; CHECK_PTX64-LABEL: test_tcgen05_commit_mc_cg1(
@@ -134,7 +134,7 @@ define void @test_tcgen05_commit_mc_cg1(ptr %bar_addr, i16 %cta_mask) {
 ; CHECK_PTX64_SHARED32-NEXT:    ld.param.b16 %rs1, [test_tcgen05_commit_mc_cg1_param_1];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::1.mbarrier::arrive::one.shared::cluster.multicast::cluster.b64 [%rd1], %rs1;
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
-  call void @llvm.nvvm.tcgen05.commit.mc.cg1(ptr %bar_addr, i16 %cta_mask)
+  call void @llvm.nvvm.tcgen05.commit.mc.cg1.p0.i16(ptr %bar_addr, i16 %cta_mask)
   ret void
 }
 
@@ -160,7 +160,7 @@ define void @test_tcgen05_commit_mc_cg2(ptr %bar_addr, i16 %cta_mask) {
 ; CHECK_PTX64_SHARED32-NEXT:    ld.param.b16 %rs1, [test_tcgen05_commit_mc_cg2_param_1];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::2.mbarrier::arrive::one.shared::cluster.multicast::cluster.b64 [%rd1], %rs1;
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
-  call void @llvm.nvvm.tcgen05.commit.mc.cg2(ptr %bar_addr, i16 %cta_mask)
+  call void @llvm.nvvm.tcgen05.commit.mc.cg2.p0.i16(ptr %bar_addr, i16 %cta_mask)
   ret void
 }
 
@@ -186,7 +186,7 @@ define void @test_tcgen05_commit_mc_shared_cg1(ptr addrspace(3) %bar_addr, i16 %
 ; CHECK_PTX64_SHARED32-NEXT:    ld.param.b16 %rs1, [test_tcgen05_commit_mc_shared_cg1_param_1];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::1.mbarrier::arrive::one.shared::cluster.multicast::cluster.b64 [%r1], %rs1;
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
-  call void @llvm.nvvm.tcgen05.commit.mc.shared.cg1(ptr addrspace(3) %bar_addr, i16 %cta_mask)
+  call void @llvm.nvvm.tcgen05.commit.mc.cg1.p3.i16(ptr addrspace(3) %bar_addr, i16 %cta_mask)
   ret void
 }
 
@@ -212,6 +212,6 @@ define void @test_tcgen05_commit_mc_shared_cg2(ptr addrspace(3) %bar_addr, i16 %
 ; CHECK_PTX64_SHARED32-NEXT:    ld.param.b16 %rs1, [test_tcgen05_commit_mc_shared_cg2_param_1];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.commit.cta_group::2.mbarrier::arrive::one.shared::cluster.multicast::cluster.b64 [%r1], %rs1;
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
-  call void @llvm.nvvm.tcgen05.commit.mc.shared.cg2(ptr addrspace(3) %bar_addr, i16 %cta_mask)
+  call void @llvm.nvvm.tcgen05.commit.mc.cg2.p3.i16(ptr addrspace(3) %bar_addr, i16 %cta_mask)
   ret void
 }

@@ -2164,7 +2164,10 @@ SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
   const Function &F = DAG.getMachineFunction().getFunction();
   bool isTailCall =
       TLI.isInTailCallPosition(DAG, Node, TCChain) &&
-      (RetTy == F.getReturnType() || F.getReturnType()->isVoidTy());
+      (RetTy == F.getReturnType() || F.getReturnType()->isVoidTy()) &&
+      // Lowering doesn't support tail calling inside a function with
+      // a swifterror argument yet.
+      !DAG.hasSwiftErrorArg();
   if (isTailCall)
     InChain = TCChain;
 

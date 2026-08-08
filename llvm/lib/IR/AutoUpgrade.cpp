@@ -1254,6 +1254,31 @@ static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
   return Intrinsic::not_intrinsic;
 }
 
+static Intrinsic::ID
+shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(Function *F, StringRef Name) {
+  if (!Name.consume_front("tcgen05.commit."))
+    return Intrinsic::not_intrinsic;
+
+  if (Name.consume_front("shared."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_commit_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_commit_cg2)
+        .Default(Intrinsic::not_intrinsic);
+
+  if (Name.consume_front("mc.shared.")) {
+    // Only upgrade older i16 mc variants.
+    if (!F->getArg(1)->getType()->isIntegerTy(16))
+      return Intrinsic::not_intrinsic;
+
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_commit_mc_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_commit_mc_cg2)
+        .Default(Intrinsic::not_intrinsic);
+  }
+
+  return Intrinsic::not_intrinsic;
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   if (Name.consume_front("fma.rn."))
     return StringSwitch<Intrinsic::ID>(Name)
@@ -1761,6 +1786,16 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       IID = shouldUpgradeNVPTXTMAReductionIntrinsics(Name);
       if (IID != Intrinsic::not_intrinsic) {
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
+      }
+
+      // Upgrade tcgen05.commit shared variants to anyptr intrinsics.
+      IID = shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(
+            F->getParent(), IID, F->getReturnType(),
+            F->getFunctionType()->params());
         return true;
       }
 

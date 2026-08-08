@@ -440,6 +440,10 @@ features cannot lower the translation-unit ABI level;
   copy so the union's object representation is copied, matching the defaulted
   union copy constructor.
 
+- Compute value dependence correctly for structured bindings. This mostly
+  affect C++26 constexpr structured bindings and expansion statements, but
+  also affects some uses of plain structured bindings. (#GH211930)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

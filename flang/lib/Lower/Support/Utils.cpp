@@ -242,6 +242,11 @@ public:
            static_cast<unsigned>(x.dimension());
   }
   static unsigned
+  getHashValue(const Fortran::evaluate::RankOneBoundElement &x) {
+    return getHashValue(x.base()) * 141u +
+           static_cast<unsigned>(x.dimension()) * 17u;
+  }
+  static unsigned
   getHashValue(const Fortran::evaluate::StructureConstructor &x) {
     // FIXME: hash the contents.
     return 149u;
@@ -546,6 +551,10 @@ public:
                       const Fortran::evaluate::DescriptorInquiry &y) {
     return isEqual(x.base(), y.base()) && x.field() == y.field() &&
            x.dimension() == y.dimension();
+  }
+  static bool isEqual(const Fortran::evaluate::RankOneBoundElement &x,
+                      const Fortran::evaluate::RankOneBoundElement &y) {
+    return x.dimension() == y.dimension() && isEqual(x.base(), y.base());
   }
   static bool isEqual(const Fortran::evaluate::StructureConstructor &x,
                       const Fortran::evaluate::StructureConstructor &y) {
