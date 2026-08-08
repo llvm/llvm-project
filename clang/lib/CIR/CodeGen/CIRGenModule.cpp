@@ -806,6 +806,13 @@ getFeatureDeltaFromDefault(const CIRGenModule &cgm, llvm::StringRef targetCPU,
   return delta;
 }
 
+/// The names getCPUAndFeaturesAttributes produces.  setNonAliasAttributes
+/// clears them before writing a definition's values, so the two have to agree.
+static constexpr llvm::StringLiteral targetCPUAttrName = "cir.target-cpu";
+static constexpr llvm::StringLiteral tuneCPUAttrName = "cir.tune-cpu";
+static constexpr llvm::StringLiteral targetFeaturesAttrName =
+    "cir.target-features";
+
 bool CIRGenModule::getCPUAndFeaturesAttributes(
     GlobalDecl gd, llvm::StringMap<std::string> &attrs,
     bool setTargetFeatures) {
@@ -885,11 +892,11 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
   }
 
   if (!targetCPU.empty()) {
-    attrs["cir.target-cpu"] = targetCPU.str();
+    attrs[targetCPUAttrName] = targetCPU.str();
     addedAttr = true;
   }
   if (!tuneCPU.empty()) {
-    attrs["cir.tune-cpu"] = tuneCPU.str();
+    attrs[tuneCPUAttrName] = tuneCPU.str();
     addedAttr = true;
   }
   if (!features.empty() && setTargetFeatures) {
@@ -899,7 +906,7 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
       return getTarget().isReadOnlyFeature(f.substr(1));
     });
     llvm::sort(features);
-    attrs["cir.target-features"] = llvm::join(features, ",");
+    attrs[targetFeaturesAttrName] = llvm::join(features, ",");
     addedAttr = true;
   }
   // TODO(cir): add metadata for AArch64 Function Multi Versioning.
@@ -921,9 +928,15 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
       if (auto func = dyn_cast<cir::FuncOp>(op)) {
         llvm::StringMap<std::string> attrs;
         if (getCPUAndFeaturesAttributes(gd, attrs)) {
-          // TODO(cir): Classic codegen removes the existing target-cpu,
-          // target-features, tune-cpu and fmv-features attributes here
-          // before adding the new ones.
+          // TODO(cir): Classic codegen also removes fmv-features here, which
+          // CIR does not emit yet.
+          //
+          // getCPUAndFeaturesAttributes reads the most recent declaration, so
+          // its result supersedes anything an earlier one wrote.  Clear first:
+          // setAttr alone would leave a name this call no longer produces.
+          for (llvm::StringRef name :
+               {targetCPUAttrName, tuneCPUAttrName, targetFeaturesAttrName})
+            func->removeAttr(name);
           for (const auto &[key, val] : attrs)
             func->setAttr(key, builder.getStringAttr(val));
         }
