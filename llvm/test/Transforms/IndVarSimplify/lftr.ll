@@ -663,8 +663,8 @@ define void @PR49993() {
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       d:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD:%.*]], [[D:%.*]] ], [ [[REM10:%.*]], [[IF_END]] ]
-; CHECK-NEXT:    [[ADD]] = add nsw i32 [[PHI]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[PHI]], 3
+; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[PHI]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[ADD]], 4
 ; CHECK-NEXT:    br i1 [[CMP]], label [[D]], label [[IF_END_LOOPEXIT:%.*]]
 ; CHECK:       if.end.loopexit:
 ; CHECK-NEXT:    br label [[IF_END]]

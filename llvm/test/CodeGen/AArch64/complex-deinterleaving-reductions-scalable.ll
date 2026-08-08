@@ -14,19 +14,21 @@ target triple = "aarch64"
 define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_v2f64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #50 // =0x32
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    neg x9, x8
-; CHECK-NEXT:    mov w10, #100 // =0x64
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    and x9, x9, x10
 ; CHECK-NEXT:    rdvl x10, #2
+; CHECK-NEXT:    udiv x9, x9, x8
+; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    mneg x9, x9, x8
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr z2, [x0, #1, mul vl]
 ; CHECK-NEXT:    ldr z3, [x0]
-; CHECK-NEXT:    subs x9, x9, x8
+; CHECK-NEXT:    adds x9, x9, x8
 ; CHECK-NEXT:    ldr z4, [x1, #1, mul vl]
 ; CHECK-NEXT:    ldr z5, [x1]
 ; CHECK-NEXT:    add x1, x1, x10
@@ -97,21 +99,23 @@ exit.block:                                     ; preds = %vector.body
 define %"class.std::complex" @complex_mul_nonzero_init_v2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_nonzero_init_v2f64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #50 // =0x32
 ; CHECK-NEXT:    fmov d1, #1.00000000
+; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    fmov d2, #2.00000000
-; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    neg x9, x8
-; CHECK-NEXT:    mov w10, #100 // =0x64
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    and x9, x9, x10
 ; CHECK-NEXT:    rdvl x10, #2
+; CHECK-NEXT:    udiv x9, x9, x8
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    zip2 z0.d, z2.d, z1.d
 ; CHECK-NEXT:    zip1 z1.d, z2.d, z1.d
+; CHECK-NEXT:    mneg x9, x9, x8
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr z2, [x0, #1, mul vl]
 ; CHECK-NEXT:    ldr z3, [x0]
-; CHECK-NEXT:    subs x9, x9, x8
+; CHECK-NEXT:    adds x9, x9, x8
 ; CHECK-NEXT:    ldr z4, [x1, #1, mul vl]
 ; CHECK-NEXT:    ldr z5, [x1]
 ; CHECK-NEXT:    add x1, x1, x10
@@ -178,21 +182,23 @@ exit.block:                                     ; preds = %vector.body
 define %"class.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_v2f64_unrolled:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov w9, #250 // =0xfa
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    cntw x8
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    neg x9, x8
-; CHECK-NEXT:    mov w10, #1000 // =0x3e8
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    and x9, x9, x10
 ; CHECK-NEXT:    rdvl x10, #4
+; CHECK-NEXT:    udiv x9, x9, x8
+; CHECK-NEXT:    cntw x8
+; CHECK-NEXT:    mneg x9, x9, x8
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr z4, [x0, #1, mul vl]
 ; CHECK-NEXT:    ldr z5, [x0]
-; CHECK-NEXT:    subs x9, x9, x8
+; CHECK-NEXT:    adds x9, x9, x8
 ; CHECK-NEXT:    ldr z6, [x0, #3, mul vl]
 ; CHECK-NEXT:    ldr z7, [x1, #1, mul vl]
 ; CHECK-NEXT:    ldr z16, [x1]
