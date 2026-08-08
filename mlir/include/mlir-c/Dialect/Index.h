@@ -17,6 +17,10 @@ extern "C" {
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Index, index);
 
+#include "mlir/Dialect/Index/IR/IndexOpsCAPIEnumAttrs.h.inc"
+#include "mlir/Dialect/Index/IR/IndexOpsCAPITypes.h.inc"
+#include "mlir/Dialect/Index/IR/IndexOpsCAPIAttrs.h.inc"
+
 #ifdef __cplusplus
 }
 #endif
