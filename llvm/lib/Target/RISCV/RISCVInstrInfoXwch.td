@@ -28,9 +28,11 @@ class QKStackInst<bits<2> funct2, dag outs, dag ins,
 def uimm4_optional : OptionalUImmLeafOp<4>;
 
 // A 5-bit unsigned immediate where the least significant bit is zero.
+def uimm5_lsb0 : RISCVUImmLsbZeroOp<5, 1>;
 def uimm5_lsb0_optional : OptionalUImmLsbZeroOp<5, 1>;
 
 // A 6-bit unsigned immediate where the least significant bit is zero.
+def uimm6_lsb0 : RISCVUImmLsbZeroOp<6, 1>;
 def uimm6_lsb0_optional : OptionalUImmLsbZeroOp<6, 1>;
 
 //===----------------------------------------------------------------------===//
@@ -127,20 +129,20 @@ def QK_C_SHSP : QKStackInst<0b11, (outs),
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXwchc] in {
-def : CompressPat<(LBU GPRC:$rd, BasePtrC:$rs1, uimm5_optional:$imm),
-                  (QK_C_LBU GPRC:$rd, BasePtrC:$rs1, uimm5_optional:$imm)>;
-def : CompressPat<(SB GPRC:$rs2, BasePtrC:$rs1, uimm5_optional:$imm),
-                  (QK_C_SB GPRC:$rs2, BasePtrC:$rs1, uimm5_optional:$imm)>;
-def : CompressPat<(LHU GPRC:$rd, BasePtrC:$rs1, uimm6_lsb0_optional:$imm),
-                  (QK_C_LHU GPRC:$rd, BasePtrC:$rs1, uimm6_lsb0_optional:$imm)>;
-def : CompressPat<(SH GPRC:$rs2, BasePtrC:$rs1, uimm6_lsb0_optional:$imm),
-                  (QK_C_SH GPRC:$rs2, BasePtrC:$rs1, uimm6_lsb0_optional:$imm)>;
-def : CompressPat<(LBU GPRC:$rd, SPMem:$rs1,   uimm4_optional:$imm),
-                  (QK_C_LBUSP GPRC:$rd, SPMem:$rs1, uimm4_optional:$imm)>;
-def : CompressPat<(SB GPRC:$rs2, SPMem:$rs1,   uimm4_optional:$imm),
-                  (QK_C_SBSP GPRC:$rs2, SPMem:$rs1, uimm4_optional:$imm)>;
-def : CompressPat<(LHU GPRC:$rd, SPMem:$rs1,   uimm5_lsb0_optional:$imm),
-                  (QK_C_LHUSP GPRC:$rd, SPMem:$rs1, uimm5_lsb0_optional:$imm)>;
-def : CompressPat<(SH GPRC:$rs2, SPMem:$rs1,   uimm5_lsb0_optional:$imm),
-                  (QK_C_SHSP GPRC:$rs2, SPMem:$rs1, uimm5_lsb0_optional:$imm)>;
+def : CompressPat<(LBU GPRC:$rd, BasePtrC:$rs1, uimm5:$imm),
+                  (QK_C_LBU GPRC:$rd, BasePtrC:$rs1, uimm5:$imm)>;
+def : CompressPat<(SB GPRC:$rs2, BasePtrC:$rs1, uimm5:$imm),
+                  (QK_C_SB GPRC:$rs2, BasePtrC:$rs1, uimm5:$imm)>;
+def : CompressPat<(LHU GPRC:$rd, BasePtrC:$rs1, uimm6_lsb0:$imm),
+                  (QK_C_LHU GPRC:$rd, BasePtrC:$rs1, uimm6_lsb0:$imm)>;
+def : CompressPat<(SH GPRC:$rs2, BasePtrC:$rs1, uimm6_lsb0:$imm),
+                  (QK_C_SH GPRC:$rs2, BasePtrC:$rs1, uimm6_lsb0:$imm)>;
+def : CompressPat<(LBU GPRC:$rd, SPMem:$rs1,   uimm4:$imm),
+                  (QK_C_LBUSP GPRC:$rd, SPMem:$rs1, uimm4:$imm)>;
+def : CompressPat<(SB GPRC:$rs2, SPMem:$rs1,   uimm4:$imm),
+                  (QK_C_SBSP GPRC:$rs2, SPMem:$rs1, uimm4:$imm)>;
+def : CompressPat<(LHU GPRC:$rd, SPMem:$rs1,   uimm5_lsb0:$imm),
+                  (QK_C_LHUSP GPRC:$rd, SPMem:$rs1, uimm5_lsb0:$imm)>;
+def : CompressPat<(SH GPRC:$rs2, SPMem:$rs1,   uimm5_lsb0:$imm),
+                  (QK_C_SHSP GPRC:$rs2, SPMem:$rs1, uimm5_lsb0:$imm)>;
 }
