@@ -19,6 +19,8 @@ TEST_F(LlvmLibcAtan2f128Test, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(neg_zero,
                             LIBC_NAMESPACE::atan2f128(neg_zero, zero));
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::atan2f128(1.0, inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(0x1.2d97c7f3321d234f272993d1414ap+1q,
+                            LIBC_NAMESPACE::atan2f128(inf, neg_inf));
   EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::atan2f128(-1.0, inf));
 
   float128 x = 0x1.ffffffffffffffffffffffffffe7p1q;
