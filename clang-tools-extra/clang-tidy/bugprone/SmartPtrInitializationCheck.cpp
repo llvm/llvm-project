@@ -159,7 +159,7 @@ std::string SmartPtrInitializationCheck::getRawPointerDescription(
 
   std::string Result;
   llvm::raw_string_ostream OS(Result);
-  PointerExpr->printPretty(OS, /*PrinterHelper=*/nullptr, Policy);
+  PointerExpr->printPretty(OS, /*Helper=*/nullptr, Policy);
 
   return Result;
 }
