@@ -38,5 +38,12 @@ add_llvm_unittest(CASTests
 target_link_libraries(CASTests PRIVATE LLVMTestingSupport)
 
 if (LLVM_ENABLE_ONDISK_CAS)
+  # Place the plugin library next to the test executable so getCASPluginPath()
+  # can locate it with a single parent_path regardless of the generator type.
+  set(CAS_UNITTEST_DIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
+  set_output_directory(CASPluginTest
+      BINARY_DIR ${CAS_UNITTEST_DIR}
+      LIBRARY_DIR ${CAS_UNITTEST_DIR}
+  )
   add_dependencies(CASTests CASPluginTest)
 endif()
