@@ -12,6 +12,7 @@
 
 #include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
 #include "llvm/ADT/bit.h"
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <optional>
@@ -24,6 +25,40 @@ static constexpr StringLiteral SignatureOverflowMessage =
 
 namespace {
 
+// The range of rows covered by a dynamically indexable element. Only an
+// element that covers multiple rows is dynamically indexable, so a single row
+// element has an empty range.
+struct IndexedRowRange {
+  uint8_t Begin = 0;
+  uint8_t End = 0;
+
+  static IndexedRowRange of(unsigned StartRow, unsigned RowCount) {
+    if (RowCount < 2)
+      return {};
+    return {static_cast<uint8_t>(StartRow),
+            static_cast<uint8_t>(StartRow + RowCount)};
+  }
+
+  bool isEmpty() const { return Begin == End; }
+
+  // An empty range is contained by every range.
+  bool contains(IndexedRowRange Other) const {
+    return Other.isEmpty() || (Begin <= Other.Begin && Other.End <= End);
+  }
+
+  IndexedRowRange unionWith(IndexedRowRange Other) const {
+    if (isEmpty())
+      return Other;
+    if (Other.isEmpty())
+      return *this;
+    return {std::min(Begin, Other.Begin), std::max(End, Other.End)};
+  }
+
+  bool operator==(IndexedRowRange Other) const {
+    return Begin == Other.Begin && End == Other.End;
+  }
+};
+
 // Categories are ordered by the component order they must be packed in, so an
 // element may only be co-packed to the right of a lesser or equal category.
 enum class SemanticCategory {
@@ -35,6 +70,8 @@ enum class SemanticCategory {
 
 struct SignatureRow {
   uint8_t OccupiedColumns = 0;
+  IndexedRowRange IndexedRange;
+  bool IndexedRangeFixed = false;
   unsigned ComponentWidth = 0;
   dxbc::PSV::InterpolationMode InterpMode =
       dxbc::PSV::InterpolationMode::Undefined;
@@ -100,9 +137,25 @@ static unsigned getComponentWidth(dxil::ElementType ComponentType,
   }
 }
 
-// Returns whether Placement may be co-packed into a Row that it covers.
+// Returns whether Placement may be co-packed into a Row that it covers, where
+// IndexedRange is the range of rows that it is dynamically indexed over.
 static bool canCoPack(const SignatureRow &Row,
-                      const ElementPlacement &Placement) {
+                      const ElementPlacement &Placement,
+                      IndexedRowRange IndexedRange) {
+  const bool IsSystemValue =
+      Placement.Category == SemanticCategory::SystemValue ||
+      Placement.Category == SemanticCategory::SystemGeneratedValue;
+
+  // A system value is never dynamically indexable, so it cannot be placed in a
+  // row that is.
+  if (IsSystemValue && !Row.IndexedRange.isEmpty())
+    return false;
+
+  // A row whose indexed range is fixed only accepts elements that are indexed
+  // within that range.
+  if (Row.IndexedRangeFixed && !Row.IndexedRange.contains(IndexedRange))
+    return false;
+
   if (Row.OccupiedColumns && Row.ComponentWidth != Placement.ComponentWidth)
     return false;
   if (Row.InterpMode != dxbc::PSV::InterpolationMode::Undefined &&
@@ -118,10 +171,12 @@ static bool canCoPack(const SignatureRow &Row,
 static std::optional<uint8_t> canPlaceAt(ArrayRef<SignatureRow> Rows,
                                          unsigned StartRow,
                                          const ElementPlacement &Placement) {
+  const IndexedRowRange IndexedRange =
+      IndexedRowRange::of(StartRow, Placement.Rows);
   uint8_t OccupiedColumns = 0;
   for (unsigned ElementRow = 0; ElementRow != Placement.Rows; ++ElementRow) {
     const SignatureRow &Row = Rows[StartRow + ElementRow];
-    if (!canCoPack(Row, Placement))
+    if (!canCoPack(Row, Placement, IndexedRange))
       return std::nullopt;
     OccupiedColumns |= Row.OccupiedColumns;
   }
@@ -138,6 +193,8 @@ static std::optional<uint8_t> canPlaceAt(ArrayRef<SignatureRow> Rows,
 
 static void placeAt(MutableArrayRef<SignatureRow> Rows, unsigned StartRow,
                     const ElementPlacement &Placement, uint8_t ColumnMask) {
+  const IndexedRowRange IndexedRange =
+      IndexedRowRange::of(StartRow, Placement.Rows);
   for (unsigned ElementRow = 0; ElementRow != Placement.Rows; ++ElementRow) {
     SignatureRow &Row = Rows[StartRow + ElementRow];
     const uint8_t PreviousOccupiedColumns = Row.OccupiedColumns;
@@ -149,6 +206,13 @@ static void placeAt(MutableArrayRef<SignatureRow> Rows, unsigned StartRow,
     // Non-overlapping masks compare according to their rightmost set bit.
     if (!PreviousOccupiedColumns || ColumnMask > PreviousOccupiedColumns)
       Row.RightmostCategory = Placement.Category;
+
+    Row.IndexedRange = Row.IndexedRange.unionWith(IndexedRange);
+    if (Placement.Category == SemanticCategory::SystemValue ||
+        Placement.Category == SemanticCategory::SystemGeneratedValue) {
+      assert(Row.IndexedRange == IndexedRange && "incompatible index range");
+      Row.IndexedRangeFixed = true;
+    }
   }
 }
 
