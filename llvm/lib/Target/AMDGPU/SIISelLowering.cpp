@@ -16392,8 +16392,8 @@ SITargetLowering::performFCanonicalizeCombine(SDNode *N,
 
   // TODO: This could be better with wider vectors that will be split to v2f16,
   // and to consider uses since there aren't that many packed operations.
-  if (N0.getOpcode() == ISD::BUILD_VECTOR &&
-      VT.getVectorNumElements() == 2 && isTypeLegal(VT)) {
+  if (N0.getOpcode() == ISD::BUILD_VECTOR && VT.getVectorNumElements() == 2 &&
+      isTypeLegal(VT)) {
     SDLoc SL(N);
     SDValue NewElts[2];
     SDValue Lo = N0.getOperand(0);
