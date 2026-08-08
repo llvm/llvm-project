@@ -16,6 +16,7 @@
 #include "include/rcu/rcu_list.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace {
 
@@ -253,4 +254,5 @@ void rcu_synchronize(rcu_domain& dom) noexcept { dom.__pimpl_->synchronize(); }
 
 void rcu_barrier(rcu_domain& dom) noexcept { rcu_synchronize(dom); }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
