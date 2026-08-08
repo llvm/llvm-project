@@ -840,7 +840,7 @@ and can also be duplicated. Note that a constant with significant address
 *can* be merged with a `unnamed_addr` constant, the result being a
 constant whose address is significant.
 
-```{warning}
+:::{warning}
 Constant duplication currently makes it unsound to compare pointers
 if either may be `unnamed_addr`, because each reference to the
 global in the IR may return a different pointer, and optimization
@@ -850,7 +850,7 @@ will return true if the object is the same, which theoretically can
 make any usage of `unnamed_addr` unsound, but in practice it is
 unlikely that input IR that does not explicitly compare pointers
 will be affected by this issue.
-```
+:::
 
 If the `local_unnamed_addr` attribute is given, the address is known to
 not be significant within the module.
@@ -4011,7 +4011,7 @@ Likewise, the backend should never split or merge target-legal volatile
 load/store instructions. Similarly, IR-level volatile loads and stores cannot
 change from integer to floating-point or vice versa.
 
-```{admonition} Rationale
+:::{admonition} Rationale
 Platforms may rely on volatile loads and stores of natively supported
 data width to be executed as single instruction. For example, in C
 this holds for an l-value of volatile primitive type with native
@@ -4019,7 +4019,7 @@ hardware support, but not necessarily for aggregate types. The
 frontend upholds these expectations, which are intentionally
 unspecified in the IR. The rules above ensure that IR transformations
 do not violate the frontend's contract with the language.
-```
+:::
 
 (memmodel)=
 
@@ -5262,12 +5262,12 @@ indicates that the user of the value may receive an unspecified
 bit-pattern. Undefined values may be of any type (other than '`label`'
 or '`void`') and be used anywhere a constant is permitted.
 
-```{note}
+:::{note}
 A '`poison`' value (described in the next section) should be used instead of
 '`undef`' whenever possible. Poison values are stronger than undef, and
 enable more optimizations. Just the existence of '`undef`' blocks certain
 optimizations (see the examples below).
-```
+:::
 
 Undefined values are useful because they indicate to the compiler that
 the program is well defined no matter what value is used. This gives the
@@ -6507,10 +6507,10 @@ There are two metadata primitives: strings and nodes. There are
 also specialized nodes which have a distinguished name and a set of named
 arguments.
 
-```{note}
+:::{note}
 One example application of metadata is source-level debug information,
 which is currently the only user of specialized nodes.
-```
+:::
 
 Metadata does not have a type, and is not a value.
 
@@ -6526,7 +6526,7 @@ type:
 - Arguments to certain intrinsic functions, as described in their specification.
 - Arguments to the `catchpad`/`cleanuppad` instructions.
 
-````{note}
+::::{note}
 Metadata can be "wrapped" in a `MetadataAsValue` so it can be referenced
 in a value context: `MetadataAsValue` is-a `Value`.
 
@@ -6564,7 +6564,7 @@ And the first element of this `MDTuple` is a `ValueAsMetadata(Value)`:
 ```llvm
 !{i32 1}
 ```
-````
+::::
 
 (metadata-string)=
 
@@ -6576,9 +6576,9 @@ contain any character by escaping non-printable characters with
 "`\xx`" where "`xx`" is the two digit hex code. For example:
 "`!"test\00"`".
 
-```{note}
+:::{note}
 A metadata string is metadata, but is not a metadata node.
-```
+:::
 
 (metadata-node)=
 
@@ -7196,10 +7196,10 @@ LLVM variable relates to the source language variable.
 
 See {ref}`diexpression` for details.
 
-```{note}
+:::{note}
 `DIExpression`s are always printed and parsed inline; they can never be
 referenced by an ID (e.g., `!1`).
-```
+:::
 
 Some examples of expressions:
 
@@ -11221,10 +11221,10 @@ result of the division and the remainder.)
 The '`frem`' instruction returns the remainder from the division of
 its two operands.
 
-```{note}
+:::{note}
 The instruction is implemented as a call to libm's '`fmod`'
 for some targets, and using the instruction may thus require linking libm.
-```
+:::
 
 
 ##### Arguments:
@@ -16911,10 +16911,10 @@ This is equivalent to the `llvm.sincos.*` intrinsic where the argument has been
 multiplied by pi, however, it computes the result more accurately especially
 for large input values.
 
-```{note}
+:::{note}
 Currently, the default lowering of this intrinsic relies on the `sincospi[f|l]`
 functions being available in the target's runtime (e.g., libc).
-```
+:::
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
@@ -17476,11 +17476,11 @@ which follow {ref}`LLVM's usual signaling NaN behavior <floatnan>` instead.
 The `llvm.minnum` intrinsic can be refined into `llvm.minimumnum`, as the
 latter exhibits a subset of behaviors of the former.
 
-```{warning}
+:::{warning}
 If the intrinsic is used without nsz, not all backends currently respect the
 specified signed zero ordering. Do not rely on it until this warning has
 been removed. See [issue #174730](https://github.com/llvm/llvm-project/issues/174730).
-```
+:::
 
 (i_maxnum)=
 
@@ -17536,11 +17536,11 @@ which follow {ref}`LLVM's usual signaling NaN behavior <floatnan>` instead.
 The `llvm.maxnum` intrinsic can be refined into `llvm.maximumnum`, as the
 latter exhibits a subset of behaviors of the former.
 
-```{warning}
+:::{warning}
 If the intrinsic is used without nsz, not all backends currently respect the
 specified signed zero ordering. Do not rely on it until this warning has
 been removed. See [issue #174730](https://github.com/llvm/llvm-project/issues/174730).
-```
+:::
 
 (i_minimum)=
 
