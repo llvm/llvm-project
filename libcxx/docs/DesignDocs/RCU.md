@@ -53,8 +53,7 @@ There are several key details that an implementation of `rcu` must address:
 - On the reader side, `rcu_domain::lock` and `rcu_domain::unlock` must not block the thread while the writer thread
   is performing updates.
 
-- On the writer side, `retire` -ing an object in principle should not block at all. However, it is conforming to
-  evaluate the `deleter` s inside `run_retire` .
+- On the writer side, `retire`-ing an object in principle should not block at all. However, it is technically conforming to block (e.g. evaluate the `deleter`s directly inside `run_retire`).
 
 - On the writer side, `rcu_synchronize` should block until at least all the existing readers exit their critical sections
   via `rcu_domain::unlock` . Note that this is a key difference between `rcu` and read-write locks:
