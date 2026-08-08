@@ -60,7 +60,7 @@ There are several key details that an implementation of `rcu` must address:
   In case a late reader enters the critical section after the writer thread has called `rcu_synchronize` and started waiting, the
   writer thread does not need to wait for the late reader to exit the critical section. In contrast, a writer thread trying to acquire a read-write lock would have to wait until the late reader releases the lock before it can acquire it.
 
-- On the writer side, `run_barrier` should block until all the `retired` objects that happen before the `run_barrier` call are reclaimed.
+- On the writer side, `rcu_barrier` should block until all the objects `retired` before the `rcu_barrier` call have been reclaimed.
 
 - The threads that are using `rcu` must be known by the `rcu` implementation states.
 
