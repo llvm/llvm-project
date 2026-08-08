@@ -4243,7 +4243,8 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
         return ExprError();
       }
       QualType TypeIdentity = OperatorDelete->getParamDecl(0)->getType();
-      if (RequireCompleteType(StartLoc, TypeIdentity, diag::err_incomplete_type))
+      if (RequireCompleteType(StartLoc, TypeIdentity,
+                              diag::err_incomplete_type))
         return ExprError();
       AddressParamIdx = 1;
     } else if (!IsComplete && isTypeAwareAllocation(PassTypeIdentity)) {
