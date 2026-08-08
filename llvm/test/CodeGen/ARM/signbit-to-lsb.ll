@@ -6,17 +6,13 @@
 define i32 @test_sext_i16_to_i32(i16 %a) {
 ; ARM-LABEL: test_sext_i16_to_i32:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    sxth r0, r0
-; ARM-NEXT:    ubfx r0, r0, #20, #1
+; ARM-NEXT:    ubfx r0, r0, #15, #1
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: test_sext_i16_to_i32:
 ; THUMB:       @ %bb.0: @ %entry
-; THUMB-NEXT:    movs r1, #1
-; THUMB-NEXT:    lsls r1, r1, #20
-; THUMB-NEXT:    sxth r0, r0
-; THUMB-NEXT:    ands r0, r1
-; THUMB-NEXT:    lsrs r0, r0, #20
+; THUMB-NEXT:    lsls r0, r0, #16
+; THUMB-NEXT:    lsrs r0, r0, #31
 ; THUMB-NEXT:    bx lr
 entry:
   %sext = sext i16 %a to i32
