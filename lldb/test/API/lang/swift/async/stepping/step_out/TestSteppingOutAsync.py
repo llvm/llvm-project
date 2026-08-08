@@ -28,7 +28,7 @@ class TestCase(lldbtest.TestBase):
             self.assertStopReason(stop_reason, lldb.eStopReasonPlanComplete)
             self.assertEqual(thread.frames[0].GetFunctionName(), expected_func_name)
 
-    @skipEmbeddedSwift
+    @skipEmbeddedSwift  # rdar://183960945 (Fix async tests running in embedded mode)
     @swiftTest
     @skipIf(oslist=["windows"])
     def test(self):

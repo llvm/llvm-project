@@ -4,7 +4,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftClangImporterExtraInhabitants(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @skipUnlessDarwin
     # Don't run ClangImporter tests if Clangimporter is disabled.

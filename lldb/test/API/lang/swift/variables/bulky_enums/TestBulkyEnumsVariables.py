@@ -20,7 +20,7 @@ import os
 
 
 class TestBulkyEnumVariables(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_bulky_enum_variables(self):
         """Tests that large-size Enum variables display correctly"""

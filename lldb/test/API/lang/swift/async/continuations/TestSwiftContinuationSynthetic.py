@@ -7,7 +7,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    @skipEmbeddedSwift
+    @skipEmbeddedSwift  # rdar://183960945 (Fix async tests running in embedded mode)
     @swiftTest
     def test_unsafe_continuation_printing(self):
         """Print an UnsafeContinuation and verify its children."""
@@ -34,7 +34,7 @@ class TestCase(TestBase):
             ],
         )
 
-    @skipEmbeddedSwift
+    @skipEmbeddedSwift  # rdar://183960945 (Fix async tests running in embedded mode)
     @swiftTest
     def test_checked_continuation_printing(self):
         """Print an CheckedContinuation and verify its children."""

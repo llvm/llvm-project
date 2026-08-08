@@ -20,7 +20,7 @@ import os
 
 
 class TestSwiftPrivateTypeAlias(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_swift_private_typealias(self):
         """Test that we can correctly print variables whose types are private type aliases"""

@@ -201,6 +201,7 @@ ifeq "$(SWIFT_EMBEDDED_CONCURRENCY)" "1"
 	SWIFT_EMBEDDED_LIB_DIR = $(shell dirname $(SWIFTC))/../lib/swift/embedded/$(SWIFT_EMBEDDED_TRIPLE)
 	LD_EXTRAS +=  -Xlinker $(SWIFT_EMBEDDED_LIB_DIR)/libswift_Concurrency.a
 	LD_EXTRAS +=  -Xlinker $(SWIFT_EMBEDDED_LIB_DIR)/libswift_ConcurrencyDefaultExecutor.a
+	LD_EXTRAS +=  -Xlinker $(SWIFT_EMBEDDED_LIB_DIR)/libswiftEmbeddedPlatformSingleThreaded.a
 	LD_EXTRAS += -lc++
 	LD_EXTRAS += -Xlinker -dead_strip
 endif

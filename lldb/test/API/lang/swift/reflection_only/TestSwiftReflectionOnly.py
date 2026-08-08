@@ -9,7 +9,7 @@ class TestSwiftReflectionOnly(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test(self):
         """Test debugging a program without swiftmodules is functional"""

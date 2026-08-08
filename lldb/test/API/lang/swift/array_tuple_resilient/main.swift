@@ -3,15 +3,14 @@
 
 import Foundation
 
-var patatino : [(URL, Int64)] = [(URL(string: "https://github.com")!, 1001)]
-var tinky : [(URL, URL)] = [(URL(string: "https://github.com")!,
-                            URL(string: "https://github.com")!)]
+var patatino : [(Data, Int64)] = [(Data([1, 2, 3]), 1001)]
+var tinky : [(Data, Data)] = [(Data([1, 2, 3]), Data([9]))]
 print(patatino) //%self.expect('frame variable -d run -- patatino',
-                //%             substrs=['[0] = (0 = "https://github.com", 1 = 1001)'])
+                //%             substrs=['0 = 3 bytes', '1 = 1001'])
                 //%self.expect('expr -d run -- patatino',
-                //%             substrs=['[0] = (0 = "https://github.com", 1 = 1001)'])
+                //%             substrs=['0 = 3 bytes', '1 = 1001'])
 
 print(tinky)    //%self.expect('frame variable -d run -- tinky',
-                //%             substrs=['[0] = (0 = "https://github.com", 1 = "https://github.com")'])
+                //%             substrs=['0 = 3 bytes', '1 = 1 byte'])
                 //%self.expect('expr -d run -- tinky',
-                //%             substrs=['[0] = (0 = "https://github.com", 1 = "https://github.com")'])
+                //%             substrs=['0 = 3 bytes', '1 = 1 byte'])

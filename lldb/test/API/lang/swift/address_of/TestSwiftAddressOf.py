@@ -44,7 +44,7 @@ class TestSwiftAddressOf(lldbtest.TestBase):
         self.assertSuccess(error)
 
         
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test(self):
         self.build()

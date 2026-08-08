@@ -7,7 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestCase(TestBase):
 
     @swiftTest
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     def test(self):
         """Test that a Swift array of ObjC items prints correctly."""

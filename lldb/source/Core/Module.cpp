@@ -1450,6 +1450,9 @@ void Module::FindSymbolsMatchingRegExAndType(
 }
 
 void Module::PreloadSymbols() {
+  if (m_did_preload_symbols.exchange(true))
+    return;
+
   LockedPtr<SymbolFile> sym_file = GetSymbolFileLocked();
   if (!sym_file)
     return;
@@ -1523,6 +1526,7 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
   m_symfile_spec = file;
   m_symfile_up.reset();
   m_did_load_symfile = false;
+  m_did_preload_symbols = false;
 }
 
 bool Module::IsExecutable() {

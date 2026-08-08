@@ -23,7 +23,6 @@ class TestSwiftSubmoduleImport(TestBase):
     # Have to find some submodule that is present on both Darwin & Linux for this
     # test to run on both systems...
 
-    @skipEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     def test_swift_submodule_import(self):

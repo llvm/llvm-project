@@ -6,12 +6,12 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftResilienceOtherModule(TestBase):
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_with_debug_info(self):
         self.impl('break here with debug info')
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_without_debug_info(self):
         self.impl('break here without debug info')

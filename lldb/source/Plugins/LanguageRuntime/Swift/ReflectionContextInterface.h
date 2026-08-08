@@ -68,7 +68,8 @@ public:
   /// Return a reflection context.
   static std::unique_ptr<ReflectionContextInterface> CreateReflectionContext(
       uint8_t pointer_size, std::shared_ptr<swift::remote::MemoryReader> reader,
-      bool objc_interop, SwiftMetadataCache *swift_metadata_cache);
+      bool objc_interop, SwiftMetadataCache *swift_metadata_cache,
+      swift::Mangle::ManglingFlavor flavor);
 
   virtual ~ReflectionContextInterface() = default;
 

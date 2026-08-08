@@ -28,7 +28,7 @@ class TestSwiftUnknownReference(lldbtest.TestBase):
         lldbutil.check_variable(self, m_string, summary='"world"')
 
     
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipIfLinux  # https://github.com/swiftlang/llvm-project/issues/13465
     @skipUnlessFoundationEssentials
     @swiftTest

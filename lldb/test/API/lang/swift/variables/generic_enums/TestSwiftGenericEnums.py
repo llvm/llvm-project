@@ -26,7 +26,7 @@ class TestSwiftGenericEnumTypes(TestBase):
         var.SetPreferSyntheticValue(True)
         return var
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift # embedded Swift monomorphizes every generic, so the static type is never an unbound Optional<U>
     @swiftTest
     def test_swift_generic_enum_types(self):
         """Test that we handle reasonably generically-typed enums"""

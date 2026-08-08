@@ -23,7 +23,7 @@ import os
 
 
 class TestSwiftBridgedStringVariables(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     def test_swift_bridged_string_variables(self):

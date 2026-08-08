@@ -11,7 +11,7 @@ import sys
 
 
 class TestCase(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessFoundationEssentials
     @skipIfLinux  # https://github.com/swiftlang/llvm-project/issues/13465
     @swiftTest

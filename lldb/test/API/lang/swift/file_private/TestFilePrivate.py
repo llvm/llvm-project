@@ -29,7 +29,7 @@ class TestFilePrivate(TestBase):
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test(self):
         """Test that we find the right file-local private decls using the discriminator"""

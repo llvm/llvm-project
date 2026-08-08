@@ -8,7 +8,7 @@ class TestSwiftPrivateGenericType(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     def test_private_generic_type(self):

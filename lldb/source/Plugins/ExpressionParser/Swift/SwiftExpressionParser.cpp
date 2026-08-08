@@ -1013,6 +1013,15 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
       actual_type =
           swift_ast_ctx->GetTypeRefType(actual_type.GetOpaqueQualType());
 
+      // Hoist the type into the scratch typesystem.
+      if (lldb::StackFrameSP frame_sp = stack_frame_wp.lock())
+        if (auto *runtime =
+                SwiftLanguageRuntime::Get(frame_sp->CalculateProcess()))
+          if (auto rt = runtime->GetRuntimeType(actual_type,
+                                                ExecutionContext(frame_sp)))
+            if (rt->IsValid())
+              actual_type = *rt;
+
       offset = materializer.AddResultVariable(
           actual_type, false, true,
           is_result ? &user_expression.GetResultDelegate()

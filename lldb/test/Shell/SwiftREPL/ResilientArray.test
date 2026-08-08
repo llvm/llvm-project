@@ -3,10 +3,14 @@
 
 // RUN: %lldb --repl < %s | FileCheck %s
 
+// This exercises the Array data formatter with a *resilient* (non-@frozen)
+// Foundation value element type, whose layout is only known at runtime. Data
+// is used as a representative resilient Foundation value type.
+
 import Foundation
 
-let x : [URL] = [URL(string: "https://github.com")!, URL(string: "https://apple.com")!]
-// CHECK: {{x}}: [Foundation.URL] = 2 values {
-// CHECK-NEXT:  [0] = "https://github.com"
-// CHECK-NEXT:  [1] = "https://apple.com"
+let x : [Data] = [Data([1, 2, 3]), Data([9])]
+// CHECK: {{x}}: [Foundation.Data] = 2 values {
+// CHECK-NEXT:  [0] = 3 bytes
+// CHECK-NEXT:  [1] = 1 byte
 // CHECK-NEXT: }

@@ -21,7 +21,7 @@ import platform
 
 class TestSwiftTypes(TestBase):
     @swiftTest
-    @skipEmbeddedSwift
+    @skipEmbeddedSwift # printing the x86_64-only Float80 crashes LLDB in embedded Swift.
     def test_swift_types(self):
         """Test that we can inspect basic Swift types"""
         self.build()

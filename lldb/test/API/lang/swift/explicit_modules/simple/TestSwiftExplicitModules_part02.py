@@ -6,9 +6,14 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftExplicitModules(lldbtest.TestBase):
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @skipIfLinux
+    # Not working correctly with DWARFImporter. NSData may get an
+    # incomplete definition that also isn't updated when Foundation is
+    # imported.
+    @skipIf(setting=("symbols.use-swift-clangimporter", "false"),
+            bugnumber="rdar://118337109")
     def test_import(self):
         """Test an implicit import inside an explicit build"""
         mod_cache = self.getBuildArtifact("my-clang-modules-cache")
@@ -23,8 +28,8 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
-        self.expect('expression URL(string: "https://lldb.llvm.org")',
+        self.expect('expression Data([1, 2, 3])',
                     error=True)
         self.expect("expression import Foundation")
-        self.expect('expression URL(string: "https://lldb.llvm.org")',
-                    substrs=["https://lldb.llvm.org"])
+        self.expect('expression Data([1, 2, 3])',
+                    substrs=["3 bytes"])

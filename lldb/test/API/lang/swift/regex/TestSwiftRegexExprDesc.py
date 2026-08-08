@@ -12,7 +12,7 @@ class TestSwiftRegexExprDesc(TestBase):
         TestBase.setUp(self)
         self.main_source_spec = lldb.SBFileSpec("main.swift")
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @skipIf(debug_info=no_match("dsym"))
     def test_swift_regex_expr_desc(self):

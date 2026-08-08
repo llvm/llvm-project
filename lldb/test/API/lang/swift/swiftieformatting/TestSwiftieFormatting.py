@@ -20,7 +20,7 @@ import os
 
 
 class TestSwiftieFormatting(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     def test_swiftie_formatting(self):
