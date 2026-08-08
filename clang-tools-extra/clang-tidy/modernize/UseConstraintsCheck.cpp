@@ -68,8 +68,8 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
 
   if (const auto SpecializationLoc =
           TheType.getAs<TemplateSpecializationTypeLoc>()) {
-    const auto *Specialization =
-        dyn_cast<TemplateSpecializationType>(SpecializationLoc.getTypePtr());
+    const TemplateSpecializationType *Specialization =
+        SpecializationLoc.getTypePtr();
     if (!Specialization)
       return std::nullopt;
 
@@ -98,8 +98,8 @@ static std::optional<TemplateSpecializationTypeLoc>
 matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
   if (const auto SpecializationLoc =
           TheType.getAs<TemplateSpecializationTypeLoc>()) {
-    const auto *Specialization =
-        dyn_cast<TemplateSpecializationType>(SpecializationLoc.getTypePtr());
+    const TemplateSpecializationType *Specialization =
+        SpecializationLoc.getTypePtr();
     if (!Specialization)
       return std::nullopt;
 
@@ -186,16 +186,13 @@ matchTrailingTemplateParam(const FunctionTemplateDecl *FunctionTemplate) {
                 LastTemplateParam->getTypeSourceInfo()->getTypeLoc()),
             LastTemplateParam};
   }
-  if (const auto *LastTemplateParam =
-          dyn_cast<TemplateTypeParmDecl>(LastParam)) {
-    if (LastTemplateParam->hasDefaultArgument() &&
-        LastTemplateParam->getIdentifier() == nullptr) {
-      return {
-          matchEnableIfSpecialization(LastTemplateParam->getDefaultArgument()
-                                          .getTypeSourceInfo()
-                                          ->getTypeLoc()),
-          LastTemplateParam};
-    }
+  if (const auto *LastTemplateParam = dyn_cast<TemplateTypeParmDecl>(LastParam);
+      LastTemplateParam && LastTemplateParam->hasDefaultArgument() &&
+      LastTemplateParam->getIdentifier() == nullptr) {
+    return {matchEnableIfSpecialization(LastTemplateParam->getDefaultArgument()
+                                            .getTypeSourceInfo()
+                                            ->getTypeLoc()),
+            LastTemplateParam};
   }
   return {};
 }

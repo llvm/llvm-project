@@ -273,6 +273,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  timer_t
+  HDRS
+    timer_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.timer_t
+    libc.include.time
+)
+
+add_proxy_header_library(
   clockid_t
   HDRS
     clockid_t.h
@@ -1021,7 +1030,7 @@ add_proxy_header_library(
 add_proxy_header_library(
   Elf32_Xword
   HDRS
-  Elf32_Xword.h
+    Elf32_Xword.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.Elf32_Xword
 )
@@ -1029,7 +1038,7 @@ add_proxy_header_library(
 add_proxy_header_library(
   Elf32_auxv_t
   HDRS
-  Elf32_auxv_t.h
+    Elf32_auxv_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.Elf32_auxv_t
 )
@@ -1173,7 +1182,7 @@ add_proxy_header_library(
 add_proxy_header_library(
   Elf64_auxv_t
   HDRS
-  Elf64_auxv_t.h
+    Elf64_auxv_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.Elf64_auxv_t
 )
@@ -1291,4 +1300,3 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.tcflag_t
 )
-

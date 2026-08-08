@@ -989,7 +989,7 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   const NVPTXSubtarget *STI = &NTM.getSubtarget<NVPTXSubtarget>(F);
 
-  if (STI->getSmVersion() >= 90) {
+  if (STI->hasFeature(NVPTX::SM90)) {
     const auto ClusterDim = getClusterDim(F);
     const bool BlocksAreClusters = hasBlocksAreClusters(F);
 
@@ -1232,7 +1232,8 @@ DwarfDebug *NVPTXAsmPrinter::createDwarfDebug() {
 bool NVPTXAsmPrinter::doInitialization(Module &M) {
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   const NVPTXSubtarget &STI = *NTM.getSubtargetImpl();
-  if (M.alias_size() && (STI.getPTXVersion() < 63 || STI.getSmVersion() < 30))
+  if (M.alias_size() &&
+      (STI.getPTXVersion() < 63 || !STI.hasFeature(NVPTX::SM30)))
     report_fatal_error(".alias requires PTX version >= 6.3 and sm_30");
 
   // We need to call the parent's one explicitly.
@@ -1540,7 +1541,7 @@ void NVPTXAsmPrinter::emitPTXGlobalVariableDefinition(
   emitPTXAddressSpace(GVar->getAddressSpace(), O);
 
   if (isManaged(*GVar)) {
-    if (STI.getPTXVersion() < 40 || STI.getSmVersion() < 30)
+    if (STI.getPTXVersion() < 40 || !STI.hasFeature(NVPTX::SM30))
       report_fatal_error(
           ".attribute(.managed) requires PTX version >= 4.0 and sm_30");
     O << " .attribute(.managed)";
@@ -1839,7 +1840,7 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
   O << ".";
   emitPTXAddressSpace(GVar->getType()->getAddressSpace(), O);
   if (isManaged(*GVar)) {
-    if (STI.getPTXVersion() < 40 || STI.getSmVersion() < 30)
+    if (STI.getPTXVersion() < 40 || !STI.hasFeature(NVPTX::SM30))
       report_fatal_error(
           ".attribute(.managed) requires PTX version >= 4.0 and sm_30");
 
@@ -2229,6 +2230,7 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
   case Type::BFloatTyID:
   case Type::FloatTyID:
   case Type::DoubleTyID:
+  case Type::FP128TyID:
     AddIntToBuffer(cast<ConstantFP>(CPV)->getValueAPF().bitcastToAPInt());
     break;
 
