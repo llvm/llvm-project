@@ -87,7 +87,29 @@ struct TestCounted {
   }
 };
 
+template <class Iter>
+struct TestInt {
+  template <class ExecutionPolicy>
+  void operator()(ExecutionPolicy&& policy) {
+    {
+      constexpr int n = 1073;
+      std::allocator<int> alloc;
+      int* data = alloc.allocate(n);
+      int* last = data + n;
+
+      std::uninitialized_fill(policy, Iter(data), Iter(last), 42);
+      for (int i = 0; i != n; ++i) {
+        assert(data[i] == 42);
+      }
+
+      std::destroy(data, last);
+      alloc.deallocate(data, n);
+    }
+  }
+};
+
 int main(int, char**) {
   types::for_each(types::forward_iterator_list<Counted*>{}, TestIteratorWithPolicies<TestCounted>{});
+  types::for_each(types::forward_iterator_list<int*>{}, TestIteratorWithPolicies<TestInt>{});
   return 0;
 }
