@@ -4292,14 +4292,16 @@ struct OmpPrescriptiveness {
   WRAPPER_CLASS_BOILERPLATE(OmpPrescriptiveness, Value);
 };
 
-// Ref: [4.5:216-219], [5.0:315-324], [5.1:347-355], [5.2:150-158],
-// [6.0:279-288]
+// Ref: [5.1:205-210], [6.0:279-288]
 //
 // present-modifier ->
-//    PRESENT                                       // since 5.1
+//    PRESENT                                       // since 5.1, until 5.1
+//                                                  // since 6.0
 //
-// Until 5.2, it was a part of map-type-modifier. Since 6.0 the
-// map-type-modifier has been split into individual modifiers.
+// In 5.1 it was a part of "motion-modifier" (on FROM and TO clauses), which
+// should really be modeled as a modifier-group. In 5.2 it was replaced by
+// "expectation". It was restored in 6.0 when map-type-modifier was broken up
+// into individual modifiers.
 struct OmpPresentModifier {
   ENUM_CLASS(Value, Present)
   WRAPPER_CLASS_BOILERPLATE(OmpPresentModifier, Value);
@@ -4711,17 +4713,24 @@ struct OmpFailClause {
   WRAPPER_CLASS_BOILERPLATE(OmpFailClause, MemoryOrder);
 };
 
-// Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
+// Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168],
+//      [6.0:298-299]
 //
 // from-clause ->
-//    FROM(locator-list) |
-//    FROM(mapper-modifier: locator-list) |         // since 5.0
-//    FROM(motion-modifier[,] ...: locator-list)    // since 5.1
+//    FROM(locator-list) |                          // since 4.5
+//    FROM(modifier[,] ...: locator-list) |         // since 5.0
+// modifier ->
+//    mapper |                                      // since 5.2
+//    motion-modifier |                             // since 5.1, until 5.1
+//    expectation | mapper | iterator               // since 5.2, until 5.2
+//    present-modifier | mapper | iterator |        // since 6.0
+//    directive-name-modifier                       // since 6.0
 //  motion-modifier ->
 //    PRESENT | mapper-modifier | iterator-modifier
 struct OmpFromClause {
   TUPLE_CLASS_BOILERPLATE(OmpFromClause);
-  MODIFIER_BOILERPLATE(OmpExpectation, OmpIterator, OmpMapper);
+  MODIFIER_BOILERPLATE(
+      OmpExpectation, OmpPresentModifier, OmpIterator, OmpMapper);
   std::tuple<MODIFIERS(), OmpObjectList, /*CommaSeparated=*/bool> t;
 };
 
@@ -5070,18 +5079,25 @@ struct OmpThreadsetClause {
 };
 
 // Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
+//      [6.0:297-298]
 //
 // to-clause (in DECLARE TARGET) ->
-//    TO(extended-list) |                           // until 5.1
+//    TO(extended-list) |                           // since 4.5, until 5.1
 // to-clause (in TARGET UPDATE) ->
-//    TO(locator-list) |
-//    TO(mapper-modifier: locator-list) |           // since 5.0
-//    TO(motion-modifier[,] ...: locator-list)      // since 5.1
-// motion-modifier ->
+//    TO(locator-list) |                            // since 4.5
+//    TO(modifier[,] ...: locator-list) |           // since 5.0
+// modifier ->
+//    mapper |                                      // since 5.2
+//    motion-modifier |                             // since 5.1, until 5.1
+//    expectation | mapper | iterator               // since 5.2, until 5.2
+//    present-modifier | mapper | iterator |        // since 6.0
+//    directive-name-modifier                       // since 6.0
+//  motion-modifier ->
 //    PRESENT | mapper-modifier | iterator-modifier
 struct OmpToClause {
   TUPLE_CLASS_BOILERPLATE(OmpToClause);
-  MODIFIER_BOILERPLATE(OmpExpectation, OmpIterator, OmpMapper);
+  MODIFIER_BOILERPLATE(
+      OmpExpectation, OmpPresentModifier, OmpIterator, OmpMapper);
   std::tuple<MODIFIERS(), OmpObjectList, /*CommaSeparated=*/bool> t;
 };
 

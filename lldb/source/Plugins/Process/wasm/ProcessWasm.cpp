@@ -73,8 +73,7 @@ bool ProcessWasm::CanDebug(lldb::TargetSP target_sp,
 
   if (Module *exe_module = target_sp->GetExecutableModulePointer()) {
     if (ObjectFile *exe_objfile = exe_module->GetObjectFile())
-      return exe_objfile->GetArchitecture().GetMachine() ==
-             llvm::Triple::wasm32;
+      return exe_objfile->GetArchitecture().GetTriple().isWasm();
   }
 
   // However, if there is no wasm module, we return false, otherwise,
@@ -83,6 +82,9 @@ bool ProcessWasm::CanDebug(lldb::TargetSP target_sp,
 }
 
 std::shared_ptr<ThreadGDBRemote> ProcessWasm::CreateThread(lldb::tid_t tid) {
+  if (!GetTarget().GetArchitecture().GetTriple().isWasm())
+    return ProcessGDBRemote::CreateThread(tid);
+
   return std::make_shared<ThreadWasm>(*this, tid);
 }
 

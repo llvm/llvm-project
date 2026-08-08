@@ -767,6 +767,13 @@ void CheckHelper::CheckObjectEntity(
   CheckConflicting(symbol, Attr::VOLATILE, Attr::PARAMETER);
   Check(details.shape());
   Check(details.coshape());
+  // Validate bounds of a zero-size explicit-shape bounds array (F2023).  The
+  // entity is scalar, so these bounds were dropped from its shape; they were
+  // stashed during name resolution and are checked here, where the scope is
+  // final.
+  for (const Bound &bound : details.droppedBoundsToCheck()) {
+    Check(bound);
+  }
   if (details.shape().Rank() > common::maxRank) {
     messages_.Say(
         "'%s' has rank %d, which is greater than the maximum supported rank %d"_err_en_US,
