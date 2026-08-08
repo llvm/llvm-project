@@ -16,7 +16,10 @@ using LIBC_NAMESPACE::Sign;
 using LIBC_NAMESPACE::fputil::Float80;
 using FPBits = LIBC_NAMESPACE::fputil::FPBits<Float80>;
 
-TEST(LlvmLibcFloat80Test, temp) { Float80 a(1.0f); }
+TEST(LlvmLibcFloat80Test, temp) { 
+  Float80 a(1.0f);
+
+}
 
 TEST(LlvmLibcFloat80Test, IntegerConversion) {
   // Float80 to Integer conversion test
@@ -58,6 +61,41 @@ TEST(LlvmLibcFloat80Test, IntegerConversion) {
   ASSERT_EQ(static_cast<int>(Float80(0.5)), 0);
   EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID), 0);
 }
+
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+TEST(LlvmLibcFloat80Test, randomTest) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
+
+  const FPBits::StorageType EDGE_CASES[] = {
+      FPBits::zero(Sign::POS).uintval(),
+      FPBits::zero(Sign::NEG).uintval(),
+      FPBits::inf(Sign::POS).uintval(),
+      FPBits::inf(Sign::NEG).uintval(),
+      FPBits::quiet_nan().uintval(),
+      FPBits::signaling_nan().uintval(),
+      FPBits::min_subnormal(Sign::POS).uintval(),
+      FPBits::min_subnormal(Sign::NEG).uintval(),
+      FPBits::max_subnormal(Sign::POS).uintval(),
+      FPBits::max_subnormal(Sign::NEG).uintval(),
+      FPBits::min_normal(Sign::POS).uintval(),
+      FPBits::min_normal(Sign::NEG).uintval(),
+      FPBits::max_normal(Sign::POS).uintval(),
+      FPBits::max_normal(Sign::NEG).uintval(),
+      FPBits::one(Sign::POS).uintval(),
+      FPBits::one(Sign::NEG).uintval(),
+  };
+
+  for (FPBits::StorageType bits : EDGE_CASES) {
+    long double native = FPBits(bits).get_val();
+    Float80 emulated(native);
+    if (FPBits(bits).is_nan()) {
+      EXPECT_TRUE(FPBits(emulated).is_nan());
+    } else {
+      EXPECT_EQ(FPBits(emulated).uintval(), bits);
+    }
+  }
+}
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 TEST(LlvmLibcFloat80Test, FromIntegralTypes) {
   // Integer to Float80 conversion test
