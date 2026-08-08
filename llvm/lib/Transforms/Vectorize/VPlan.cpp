@@ -279,6 +279,8 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
       CurrentParentLoop(CurrentParentLoop), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
+  assert(!isa<VPRegionValue>(Def) &&
+         "VPRegionValue must be materialized before VPTransformState::get");
   if (isa<VPIRValue, VPSymbolicValue>(Def))
     return Def->getUnderlyingValue();
 
@@ -311,6 +313,8 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
 }
 
 Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
+  assert(!isa<VPRegionValue>(Def) &&
+         "VPRegionValue must be materialized before VPTransformState::get");
   if (NeedsScalar) {
     assert((VF.isScalar() || isa<VPIRValue, VPSymbolicValue>(Def) ||
             hasVectorValue(Def) || !vputils::onlyFirstLaneUsed(Def) ||

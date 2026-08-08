@@ -9,28 +9,28 @@
 define amdgpu_ps void @image_store_f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, half %data) {
 ; UNPACKED-LABEL: image_store_f16:
 ; UNPACKED:       ; %bb.0:
-; UNPACKED-NEXT:    s_mov_b32 s11, s9
-; UNPACKED-NEXT:    s_mov_b32 s10, s8
-; UNPACKED-NEXT:    s_mov_b32 s9, s7
-; UNPACKED-NEXT:    s_mov_b32 s8, s6
-; UNPACKED-NEXT:    s_mov_b32 s7, s5
-; UNPACKED-NEXT:    s_mov_b32 s6, s4
-; UNPACKED-NEXT:    s_mov_b32 s5, s3
-; UNPACKED-NEXT:    s_mov_b32 s4, s2
-; UNPACKED-NEXT:    image_store v2, v[0:1], s[4:11] dmask:0x1 unorm d16
+; UNPACKED-NEXT:    s_mov_b32 s0, s2
+; UNPACKED-NEXT:    s_mov_b32 s1, s3
+; UNPACKED-NEXT:    s_mov_b32 s2, s4
+; UNPACKED-NEXT:    s_mov_b32 s3, s5
+; UNPACKED-NEXT:    s_mov_b32 s4, s6
+; UNPACKED-NEXT:    s_mov_b32 s5, s7
+; UNPACKED-NEXT:    s_mov_b32 s6, s8
+; UNPACKED-NEXT:    s_mov_b32 s7, s9
+; UNPACKED-NEXT:    image_store v2, v[0:1], s[0:7] dmask:0x1 unorm d16
 ; UNPACKED-NEXT:    s_endpgm
 ;
 ; GFX81-LABEL: image_store_f16:
 ; GFX81:       ; %bb.0:
-; GFX81-NEXT:    s_mov_b32 s11, s9
-; GFX81-NEXT:    s_mov_b32 s10, s8
-; GFX81-NEXT:    s_mov_b32 s9, s7
-; GFX81-NEXT:    s_mov_b32 s8, s6
-; GFX81-NEXT:    s_mov_b32 s7, s5
-; GFX81-NEXT:    s_mov_b32 s6, s4
-; GFX81-NEXT:    s_mov_b32 s5, s3
-; GFX81-NEXT:    s_mov_b32 s4, s2
-; GFX81-NEXT:    image_store v2, v[0:1], s[4:11] dmask:0x1 unorm d16
+; GFX81-NEXT:    s_mov_b32 s0, s2
+; GFX81-NEXT:    s_mov_b32 s1, s3
+; GFX81-NEXT:    s_mov_b32 s2, s4
+; GFX81-NEXT:    s_mov_b32 s3, s5
+; GFX81-NEXT:    s_mov_b32 s4, s6
+; GFX81-NEXT:    s_mov_b32 s5, s7
+; GFX81-NEXT:    s_mov_b32 s6, s8
+; GFX81-NEXT:    s_mov_b32 s7, s9
+; GFX81-NEXT:    image_store v2, v[0:1], s[0:7] dmask:0x1 unorm d16
 ; GFX81-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.f16.i32(half %data, i32 1, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void

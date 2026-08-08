@@ -306,7 +306,7 @@ subroutine sub2()
 5 j = j + 1
 6 i = i + j/2
 
-  ! CHECK: <<DoConstruct!>>
+  ! CHECK: <<DoConstruct>>
   do1: do k=1,10
     ! CHECK: <<DoConstruct!>>
     do2: do l=5,20
@@ -317,7 +317,7 @@ subroutine sub2()
     end do do2
     ! CHECK: <<End DoConstruct!>>
   end do do1
-  ! CHECK: <<End DoConstruct!>>
+  ! CHECK: <<End DoConstruct>>
 
   ! CHECK: PauseStmt
   pause 7

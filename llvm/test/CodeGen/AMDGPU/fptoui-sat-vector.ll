@@ -6,7 +6,7 @@
 ; RUN: llc < %s -global-isel=0 -mtriple=amdgpu11.00 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 | FileCheck %s --check-prefixes=GFX11,GFX11-TRUE16
 ; RUN: llc < %s -global-isel=0 -mtriple=amdgpu12.00 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 | FileCheck %s --check-prefixes=GFX12,GFX12-ISEL,GFX12-FAKE16
 ; RUN: llc < %s -global-isel=0 -mtriple=amdgpu12.00 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 | FileCheck %s --check-prefixes=GFX12,GFX12-ISEL,GFX12-TRUE16
-; RUN: llc < %s -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu12.00 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 | FileCheck %s --check-prefixes=GFX12,GFX12-GI
+; RUN: llc < %s -global-isel=1 -mtriple=amdgpu12.00 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 | FileCheck %s --check-prefixes=GFX12,GFX12-GI
 
 ;
 ; Float to unsigned 32-bit -- Vector size variation

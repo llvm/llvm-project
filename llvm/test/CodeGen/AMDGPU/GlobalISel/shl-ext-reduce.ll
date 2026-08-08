@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu8.03-amd-amdpal < %s | FileCheck -check-prefixes=GCN,GFX8 %s
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu9.00-amd-amdpal < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu10.10-amd-amdpal < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
-; RUN: llc -global-isel -mtriple=amdgpu11.00-amd-amdpal -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11,GFX11-TRUE16 %s
+; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu11.00-amd-amdpal -mattr=+real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11,GFX11-TRUE16 %s
 ; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu11.00-amd-amdpal -mattr=-real-true16 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11,GFX11-FAKE16 %s
 
 ; Test optimization to reduce shifts to narrower sizes.

@@ -3838,11 +3838,10 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
       if (auto callOp = mlir::dyn_cast_or_null<mlir::LLVM::CallOp>(
               inputBoxStorage.getDefiningOp())) {
         if (callOp.getCallee() &&
-            ((*callOp.getCallee())
-                 .starts_with(RTNAME_STRING(CUFAllocDescriptor)) ||
-             (*callOp.getCallee()).starts_with("__tgt_acc_get_deviceptr"))) {
-          // CUDA Fortran local descriptor are allocated in managed memory. So
-          // new storage must be allocated the same way.
+            (*callOp.getCallee()).starts_with("__tgt_acc_get_deviceptr")) {
+          // The device pointer descriptor is allocated in managed memory, so
+          // new storage must be allocated the same way. A CUFAllocDescriptor
+          // source is handled below if the load is used by a GPU launch.
           auto mod = load->getParentOfType<mlir::ModuleOp>();
           newBoxStorage =
               genCUFAllocDescriptor(loc, rewriter, mod, boxTy, lowerTy());
