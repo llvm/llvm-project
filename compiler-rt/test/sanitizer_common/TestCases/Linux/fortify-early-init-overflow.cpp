@@ -5,11 +5,11 @@
 // RUN: %clangxx -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-// Only the tools using the common default _chk implementation reach CHECK_LE:
-// msan supplies its own, and lsan and ubsan do not intercept these at all.
-// tsan reaches it too, but faults while unwinding this early in startup, so
-// its exit status is not stable enough to match on.
-// REQUIRES: glibc && (asan || hwasan)
+// lsan and ubsan do not intercept these, so they just get glibc's own abort,
+// which fortify-overflow.cpp already covers. tsan does reach the CHECK, but
+// then faults while unwinding this early in startup, so its exit status is not
+// stable enough to match on.
+// REQUIRES: glibc && (asan || hwasan || msan)
 
 #include <stddef.h>
 
@@ -34,14 +34,31 @@ const char *__hwasan_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }
+const char *__lsan_default_options()
+    __attribute__((disable_sanitizer_instrumentation)) {
+  return test();
+}
+const char *__msan_default_options()
+    __attribute__((disable_sanitizer_instrumentation)) {
+  return test();
+}
+const char *__rtsan_default_options()
+    __attribute__((disable_sanitizer_instrumentation)) {
+  return test();
+}
 const char *__tsan_default_options()
+    __attribute__((disable_sanitizer_instrumentation)) {
+  return test();
+}
+const char *__ubsan_default_options()
     __attribute__((disable_sanitizer_instrumentation)) {
   return test();
 }
 }
 
-// The reported values confirm the destination size was the bound applied.
-// CHECK: CHECK failed: {{.*}}memintrinsics.inc{{.*}}size{{.*}}dst_size{{.*}}(0x10, 0x8)
+// The reported values confirm the destination size was the bound applied. Which
+// file reports it differs, as msan supplies its own _chk implementations.
+// CHECK: CHECK failed: {{.*}} (0x10, 0x8)
 
 int main(int argc, char *argv[]) {
   // CHECK-NOT: unreachable

@@ -1824,9 +1824,16 @@ void *__msan_memmove(void *dest, const void *src, SIZE_T n) {
 // but call the corresponding REAL(__*_chk) so that glibc's _FORTIFY_SOURCE
 // overflow checks are preserved. They have internal linkage and are not part of
 // the MSan interface.
+//
+// REAL() is not resolved before initialization completes, so the bound is
+// enforced with CHECK_LE there instead, matching the default implementations in
+// sanitizer_common_interceptors_memintrinsics.inc. Truncating to dest_size
+// would silently hide the overflow that these functions exist to report.
 static void* __msan_memset_chk(void* dest, int c, SIZE_T n, SIZE_T dest_size) {
-  if (!msan_inited)
-    return internal_memset(dest, c, Min(n, dest_size));
+  if (!msan_inited) {
+    CHECK_LE(n, dest_size);
+    return internal_memset(dest, c, n);
+  }
   if (msan_init_is_running)
     return REAL(__memset_chk)(dest, c, n, dest_size);
   ENSURE_MSAN_INITED();
@@ -1837,8 +1844,10 @@ static void* __msan_memset_chk(void* dest, int c, SIZE_T n, SIZE_T dest_size) {
 
 static void* __msan_memmove_chk(void* dest, const void* src, SIZE_T n,
                                 SIZE_T dest_size) {
-  if (!msan_inited)
-    return internal_memmove(dest, src, Min(n, dest_size));
+  if (!msan_inited) {
+    CHECK_LE(n, dest_size);
+    return internal_memmove(dest, src, n);
+  }
   if (msan_init_is_running)
     return REAL(__memmove_chk)(dest, src, n, dest_size);
   ENSURE_MSAN_INITED();
@@ -1850,8 +1859,10 @@ static void* __msan_memmove_chk(void* dest, const void* src, SIZE_T n,
 
 static void* __msan_memcpy_chk(void* dest, const void* src, SIZE_T n,
                                SIZE_T dest_size) {
-  if (!msan_inited)
-    return internal_memcpy(dest, src, Min(n, dest_size));
+  if (!msan_inited) {
+    CHECK_LE(n, dest_size);
+    return internal_memcpy(dest, src, n);
+  }
   if (msan_init_is_running || __msan::IsInSymbolizerOrUnwider())
     return REAL(__memcpy_chk)(dest, src, n, dest_size);
   ENSURE_MSAN_INITED();
