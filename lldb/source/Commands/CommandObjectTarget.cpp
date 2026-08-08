@@ -3314,6 +3314,7 @@ protected:
     }
     ModuleSP old_module_sp =
         FindModuleToReplace(*target, new_module_spec, result);
+    // FindModuleToReplace() has already put the error into result.
     if (!old_module_sp)
       return;
 
