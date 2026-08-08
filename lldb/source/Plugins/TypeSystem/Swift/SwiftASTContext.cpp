@@ -1730,7 +1730,7 @@ void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &source,
     if (IsMultiArgClangFlag(clang_argument))
       continue;
 
-    auto clear_arg = llvm::make_scope_exit([&] { clang_argument.clear(); });
+    auto clear_arg = llvm::scope_exit([&] { clang_argument.clear(); });
 
     // Consume any -working-directory arguments.
     StringRef cwd(clang_argument);
@@ -1954,7 +1954,7 @@ void SwiftASTContext::AddExtraClangArgs(
     llvm::ArrayRef<std::pair<std::string, bool>> framework_search_paths,
     StringRef overrideOpts) {
   swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
-  auto defer = llvm::make_scope_exit([&]() {
+  auto defer = llvm::scope_exit([&]() {
     // Detect explicitly-built modules.
     m_has_explicit_modules |=
         llvm::any_of(importer_options.ExtraArgs, [](const std::string &s) {
@@ -2286,7 +2286,7 @@ void SwiftASTContext::FilterClangImporterOptions(
       continue;
     }
     if (!ivfs_arg.empty()) {
-      auto clear_ivfs_arg = llvm::make_scope_exit([&] { ivfs_arg.clear(); });
+      auto clear_ivfs_arg = llvm::scope_exit([&] { ivfs_arg.clear(); });
       if (!IsModuleAvailable(arg)) {
         if (ctx) {
           std::string error;
@@ -2370,6 +2370,12 @@ static std::string GetSDKPath(std::string m_description, XcodeSDK sdk) {
   return sdk_path;
 }
 
+/// Returns the module's filename, or a placeholder if it has none.
+static std::string GetModuleNameForLog(Module &module) {
+  llvm::StringRef name = module.GetFileSpec().GetFilename();
+  return name.empty() ? "<unknown module>" : name.str();
+}
+
 /// Force parsing of the CUs to extract the SDK info.
 static std::string GetSDKPathFromDebugInfo(std::string m_description,
                                            Module &module) {
@@ -2395,7 +2401,7 @@ static std::string GetSDKPathFromDebugInfo(std::string m_description,
         "Unsupported mixing of public and internal SDKs in "
         "'%s'. Mixed use of SDKs indicates use of different "
         "toolchains, which is not supported.",
-        module.GetFileSpec().GetFilename().AsCString("<unknown module>"));
+        GetModuleNameForLog(module).c_str());
 
   return GetSDKPath(m_description, std::move(sdk));
 }
@@ -2666,7 +2672,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
           typeref_typesystem.GetTypeSystemSwiftTypeRef())));
   bool suppress_config_log = false;
   auto defer_log =
-      llvm::make_scope_exit([swift_ast_sp, &suppress_config_log] {
+      llvm::scope_exit([swift_ast_sp, &suppress_config_log] {
         // To avoid spamming the log with useless info, we don't log the
         // configuration if everything went fine and the current module
         // doesn't have any Swift contents (i.e., the shared cache dylibs).
@@ -2805,7 +2811,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     LOG_PRINTF(
         GetLog(LLDBLog::Types),
         "(\"%s\") returning NULL - couldn't create a ClangImporter",
-        module.GetFileSpec().GetFilename().AsCString("<unknown module>"));
+        GetModuleNameForLog(module).c_str());
     return {};
   }
 
@@ -2829,7 +2835,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
 
     // Clear the callback function on scope exit to prevent an out-of-scope
     // access of the progress local variable
-    auto on_exit = llvm::make_scope_exit([&]() {
+    auto on_exit = llvm::scope_exit([&]() {
       ast_context->SetPreModuleImportCallback(
           [](llvm::StringRef module_name,
              swift::ASTContext::ModuleImportKind kind) {});
@@ -2857,7 +2863,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
       LOG_PRINTF(
           GetLog(LLDBLog::Types), "((Module*)%p, \"%s\") = %p",
           static_cast<void *>(&module),
-          module.GetFileSpec().GetFilename().AsCString("<unknown module>"),
+          GetModuleNameForLog(module).c_str(),
           static_cast<void *>(swift_ast_sp.get()));
     }
   }
@@ -2873,7 +2879,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
 static bool IsUnitTestExecutable(lldb_private::Module &module) {
   static ConstString s_xctest("xctest");
   static ConstString s_XCTRunner("XCTRunner");
-  ConstString executable_name = module.GetFileSpec().GetFilename();
+  ConstString executable_name(module.GetFileSpec().GetFilename());
   return (executable_name == s_xctest || executable_name == s_XCTRunner);
 }
 
@@ -3229,7 +3235,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     if (ShouldEnableEmbeddedSwift(cu))
       lang_opts.enableFeature(swift::Feature::Embedded);
   }
-  auto defer_log = llvm::make_scope_exit([swift_ast_sp, repl, playground] {
+  auto defer_log = llvm::scope_exit([swift_ast_sp, repl, playground] {
     swift_ast_sp->LogConfiguration(repl, playground);
   });
 
@@ -3630,7 +3636,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
 
     // Clear the callback function on scope exit to prevent an out-of-scope
     // access of the progress local variable
-    auto on_exit = llvm::make_scope_exit([&]() {
+    auto on_exit = llvm::scope_exit([&]() {
       ast_context->SetPreModuleImportCallback(
           [](llvm::StringRef module_name,
              swift::ASTContext::ModuleImportKind kind) {});
@@ -4165,7 +4171,7 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
       GetLanguageOptions(), GetTypeCheckerOptions(), GetSILOptions(),
       GetSearchPathOptions(), GetClangImporterOptions(),
       GetSymbolGraphOptions(), GetCASOptions(), GetSerializationOptions(),
-      GetSourceManager(), GetDiagnosticEngine(), GetSDKInfo(),
+      GetSourceManager(), GetDiagnosticEngine(),
       /*OutputBackend=*/nullptr));
 
   if (getenv("LLDB_SWIFT_DUMP_DIAGS")) {
@@ -4624,7 +4630,7 @@ SwiftASTContext::GetModule(const FileSpec &module_spec) {
     return llvm::createStringError("couldn't get a ClangImporter");
   }
 
-  std::string module_directory(module_spec.GetDirectory().GetCString());
+  std::string module_directory(module_spec.GetDirectory().str());
   bool add_search_path = true;
   for (auto path : ast->SearchPathOpts.getImportSearchPaths()) {
     if (path.Path == module_directory) {
@@ -5096,7 +5102,7 @@ void SwiftASTContext::RegisterSectionModules(
           "failed to parse AST section %zu/%zu in image \"%s\" "
           "(filter=\"%s\"). %s",
           n, total,
-          module.GetFileSpec().GetFilename().AsCString("<unknown module>"),
+          GetModuleNameForLog(module).c_str(),
           filter.str().c_str(), error.c_str());
       return;
     }
@@ -5109,7 +5115,7 @@ void SwiftASTContext::RegisterSectionModules(
           "parsed module \"%s\" from Swift AST section %zu/%zu in "
           "image \"%s\" (filter=\"%s\").",
           module_name.c_str(), n, total,
-          module.GetFileSpec().GetFilename().AsCString("<unknown module>"),
+          GetModuleNameForLog(module).c_str(),
           filter.str().c_str());
     }
   };
@@ -5815,7 +5821,7 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
     std::string error_str;
     llvm::Triple llvm_triple = GetTriple();
     const llvm::Target *llvm_target =
-        llvm::TargetRegistry::lookupTarget(llvm_triple.str(), error_str);
+        llvm::TargetRegistry::lookupTarget(llvm_triple, error_str);
 
     llvm::CodeGenOptLevel optimization_level = llvm::CodeGenOptLevel::None;
 
@@ -10082,7 +10088,7 @@ llvm::Error SwiftASTContext::GetCompileUnitImportsImpl(
     }
 
     std::string category = "Importing dependencies for ";
-    category += compile_unit->GetPrimaryFile().GetFilename().GetString();
+    category += compile_unit->GetPrimaryFile().GetFilename();
 
     // Load main module.
     auto module_import_progress_raii = GetModuleImportProgressRAII(category);

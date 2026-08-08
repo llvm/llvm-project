@@ -1756,7 +1756,7 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
 
     return ValueObjectMemory::Create(exe_ctx.GetBestExecutionContextScope(),
                                      "$indirect." + field_info.Name,
-                                     payload_addr, payload_type, &valobj);
+                                     Address(payload_addr), payload_type, &valobj);
   };
 
   // Type infos of single case enums simply are the payload's type's type info,
@@ -1808,7 +1808,7 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
     }
     
     return ValueObjectMemory::Create(exe_ctx.GetBestExecutionContextScope(),
-                                     "$indirect.$single_case", payload,
+                                     "$indirect.$single_case", Address(payload),
                                      payload_type, &valobj);
   };
 
@@ -2932,7 +2932,7 @@ CompilerType SwiftLanguageRuntime::GetTypeFromMetadata(TypeSystemSwift &ts,
 std::optional<lldb::addr_t>
 SwiftLanguageRuntime::GetTypeMetadataForTypeNameAndFrame(StringRef mdvar_name,
                                                          StackFrame &frame) {
-  VariableList *var_list = frame.GetVariableList(false, nullptr);
+  VariableList *var_list = frame.GetVariableList(false, false, nullptr);
   if (!var_list)
     return {};
 

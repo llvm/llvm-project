@@ -135,10 +135,8 @@ public:
 
   std::optional<uint32_t> ReadELF(
       swift::remote::RemoteAddress ImageStart,
-      std::optional<llvm::sys::MemoryBlock> FileBuffer,
       llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) override {
-    auto id = m_reflection_ctx.readELF(ImageStart, FileBuffer,
-                                    likely_module_names);
+    auto id = m_reflection_ctx.readELF(ImageStart, likely_module_names);
     m_forwader.SetImageAdded(id.has_value());
     return id;
   }
@@ -154,7 +152,7 @@ public:
   auto PushDescriptorFinderAndPopOnExit(
       swift::reflection::DescriptorFinder *descriptor_finder) {
     m_forwader.PushExternalDescriptorFinder(descriptor_finder);
-    return llvm::make_scope_exit(
+    return llvm::scope_exit(
         [&]() { m_forwader.PopExternalDescriptorFinder(); });
   }
 
