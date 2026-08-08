@@ -1014,7 +1014,7 @@ std::optional<HoverInfo> getHoverContents(const SelectionTree::Node *N,
 std::optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
   HoverInfo HI;
 
-  if (const auto *RS = llvm::dyn_cast<RootSignatureAttr>(A)) {
+  if (llvm::isa<RootSignatureAttr>(A)) {
     HI.Name = "RootSignature";
     HI.Documentation = Attr::getDocumentation(A->getKind()).str();
     return HI;
