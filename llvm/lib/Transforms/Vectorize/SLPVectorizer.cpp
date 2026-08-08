@@ -25616,7 +25616,8 @@ Value *BoUpSLP::vectorizeTree(
     Value *Vec = E->VectorizedValue;
     assert(Vec && "Can't find vectorizable value");
 
-    auto ExtractAndExtendIfNeeded = [&](Value *Vec, bool ExtractAnyways = false) {
+    auto ExtractAndExtendIfNeeded = [&](Value *Vec,
+                                        bool ExtractAnyways = false) {
       if (isa<InsertValueInst>(Scalar))
         return Vec;
       if (Scalar->getType() != Vec->getType()) {
@@ -25782,7 +25783,8 @@ Value *BoUpSLP::vectorizeTree(
       if (!Inst)
         return;
       if (ExternalUsesAsOriginalScalar.contains(Inst)) {
-        Value *ReplacedExtract = ExtractAndExtendIfNeeded(Vec, /*ExtractAnyways*/true);
+        Value *ReplacedExtract =
+            ExtractAndExtendIfNeeded(Vec, /*ExtractAnyways*/ true);
         auto *EI = dyn_cast<ExtractElementInst>(ReplacedExtract);
         auto *RI = dyn_cast<Instruction>(Replacement);
         assert(EI && RI && "Expected to find underlying instructions");
@@ -27748,7 +27750,8 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
         PickedInst->moveAfter(LastScheduledInst->getPrevNode());
       LastScheduledInst = PickedInst;
       if (auto *EI = DE.lookupExtract(PickedInst)) {
-        assert(EI->getParent() == PickedInst->getParent() && "Expected extract to be in same block as rematerialize version");
+        assert(EI->getParent() == PickedInst->getParent() &&
+               "Expected extract to be in same block as rematerialize version");
         // Keep deferred extract/remat instructions contiguous in the scheduled
         // suffix so the scheduling frontier always points at a valid anchor.
         if (EI->getNextNode() != LastScheduledInst)
