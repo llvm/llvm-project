@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "LogChannelSwift.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Version/Version.h"
-#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace lldb_private;
 
@@ -25,7 +25,7 @@ static Log::Channel g_channel(g_categories, SwiftLog::Health);
 
 static constexpr size_t g_health_log_size = 5000;
 static std::shared_ptr<RotatingLogHandler> g_health_log_handler;
-static std::optional<Diagnostics::CallbackID> g_diagnostics_callback_id;
+static std::optional<Diagnostics::ArtifactProviderID> g_diagnostics_artifact_id;
 
 template <> Log::Channel &lldb_private::LogChannelFor<SwiftLog>() {
   return g_channel;
@@ -34,7 +34,8 @@ template <> Log::Channel &lldb_private::LogChannelFor<SwiftLog>() {
 void LogChannelSwift::Initialize() {
   Log::Register("swift", g_channel);
 
-  g_health_log_handler = std::make_shared<RotatingLogHandler>(g_health_log_size);
+  g_health_log_handler =
+      std::make_shared<RotatingLogHandler>(g_health_log_size);
   auto system_log_handler_sp = std::make_shared<SystemLogHandler>();
   auto log_handler_sp = std::make_shared<TeeLogHandler>(g_health_log_handler,
                                                         system_log_handler_sp);
@@ -50,25 +51,21 @@ void LogChannelSwift::Initialize() {
         lldb_private::GetVersion());
 
   if (Diagnostics::Enabled()) {
-    g_diagnostics_callback_id = Diagnostics::Instance().AddCallback(
-        [](const FileSpec &dir) -> llvm::Error {
-          FileSpec log_file =
-              dir.CopyByAppendingPathComponent("swift-healthcheck.log");
-          std::error_code ec;
-          llvm::raw_fd_ostream stream(log_file.GetPath(), ec);
-          if (ec)
-            return llvm::errorCodeToError(ec);
+    g_diagnostics_artifact_id = Diagnostics::Instance().AddArtifactProvider(
+        "swift-healthcheck.log", []() -> std::string {
+          std::string content;
+          llvm::raw_string_ostream stream(content);
           if (g_health_log_handler)
             g_health_log_handler->Dump(stream);
-          return llvm::Error::success();
+          return content;
         });
   }
 }
 
 void LogChannelSwift::Terminate() {
-  if (g_diagnostics_callback_id && Diagnostics::Enabled())
-    Diagnostics::Instance().RemoveCallback(*g_diagnostics_callback_id);
-  g_diagnostics_callback_id.reset();
+  if (g_diagnostics_artifact_id && Diagnostics::Enabled())
+    Diagnostics::Instance().RemoveArtifactProvider(*g_diagnostics_artifact_id);
+  g_diagnostics_artifact_id.reset();
   g_health_log_handler.reset();
   Log::Unregister("swift");
 }
