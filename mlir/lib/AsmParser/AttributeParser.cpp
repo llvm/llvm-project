@@ -1103,15 +1103,56 @@ Attribute Parser::parseDenseResourceElementsAttr(Type attrType) {
   if (parseToken(Token::less, "expected '<' after 'dense_resource'"))
     return nullptr;
 
-  // Parse the resource handle.
-  FailureOr<AsmDialectResourceHandle> rawHandle =
-      parseResourceHandle(getContext()->getLoadedDialect<BuiltinDialect>());
-  if (failed(rawHandle) || parseToken(Token::greater, "expected '>'"))
-    return nullptr;
+  // Parse the resource key. This may be a bare identifier or a quoted string.
+  // If the key contains "::", the prefix identifies the dialect that owns the
+  // resource blob; otherwise BuiltinDialect is used as the default.
+  std::string keyStr;
+  if (failed(parseOptionalKeywordOrString(&keyStr)))
+    return emitError("expected resource key for 'dense_resource'"), nullptr;
 
-  auto *handle = dyn_cast<DenseResourceElementsHandle>(&*rawHandle);
-  if (!handle)
-    return emitError(loc, "invalid `dense_resource` handle type"), nullptr;
+  Dialect *dialect = nullptr;
+  StringRef blobKey = keyStr;
+  size_t sepPos = keyStr.find("::");
+  if (sepPos != std::string::npos) {
+    StringRef dialectName = StringRef(keyStr).take_front(sepPos);
+    blobKey = StringRef(keyStr).drop_front(sepPos + 2);
+    dialect = getContext()->getOrLoadDialect(dialectName);
+    if (!dialect)
+      return emitError(loc, "unknown dialect '" + dialectName +
+                                "' in dense_resource handle"),
+             nullptr;
+  } else {
+    dialect = getContext()->getOrLoadDialect<BuiltinDialect>();
+  }
+
+  // Resolve the resource handle through the dialect's OpAsmDialectInterface.
+  const auto *interface = dyn_cast<OpAsmDialectInterface>(dialect);
+  if (!interface)
+    return emitError(loc, "dialect '" + dialect->getNamespace() +
+                              "' does not support resource handles"),
+           nullptr;
+
+  // Declare the resource and cache the handle.
+  auto &resources = getState().symbols.dialectResources;
+  std::string resolvedKey(blobKey);
+  std::pair<std::string, AsmDialectResourceHandle> &entry =
+      resources[interface][resolvedKey];
+  if (entry.first.empty()) {
+    FailureOr<AsmDialectResourceHandle> result =
+        interface->declareResource(blobKey);
+    if (failed(result))
+      return emitError(loc, "unknown 'resource' key '" + Twine(blobKey) +
+                                "' for dialect '" + dialect->getNamespace() +
+                                "'"),
+             nullptr;
+    entry.first = interface->getResourceKey(*result);
+    entry.second = *result;
+  }
+
+  DenseResourceBlobHandle handle(entry.second);
+
+  if (parseToken(Token::greater, "expected '>'"))
+    return nullptr;
 
   // Parse the type of the attribute if the user didn't provide one.
   SMLoc typeLoc = loc;
@@ -1127,7 +1168,7 @@ Attribute Parser::parseDenseResourceElementsAttr(Type attrType) {
     return nullptr;
   }
 
-  return DenseResourceElementsAttr::get(shapedType, *handle);
+  return DenseResourceElementsAttr::get(shapedType, handle);
 }
 
 /// Shaped type for elements attribute.

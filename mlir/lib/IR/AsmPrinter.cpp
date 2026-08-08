@@ -2572,7 +2572,20 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
   } else if (auto resourceAttr =
                  llvm::dyn_cast<DenseResourceElementsAttr>(attr)) {
     os << "dense_resource<";
-    printResourceHandle(resourceAttr.getRawHandle());
+    auto handle = resourceAttr.getResourceHandle();
+    Dialect *dialect = handle.getDialect();
+    if (!llvm::isa<BuiltinDialect>(dialect)) {
+      // Print as a quoted "dialect::key" string for non-builtin dialects.
+      os << '"';
+      llvm::printEscapedString(
+          (dialect->getNamespace() + "::" + handle.getKey()).str(), os);
+      os << '"';
+      // Register the resource with the correct dialect for the resource
+      // section.
+      state.getDialectResources()[dialect].insert(handle);
+    } else {
+      printResourceHandle(handle);
+    }
     os << ">";
   } else if (auto locAttr = llvm::dyn_cast<LocationAttr>(attr)) {
     printLocation(locAttr);

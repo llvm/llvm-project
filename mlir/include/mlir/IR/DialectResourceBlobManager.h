@@ -216,6 +216,55 @@ struct DialectResourceBlobHandle
   }
 };
 
+//===----------------------------------------------------------------------===//
+// DenseResourceBlobHandle
+//===----------------------------------------------------------------------===//
+
+/// A dialect-generic handle to a resource blob entry. Unlike
+/// DialectResourceBlobHandle<T>, this is not parameterized on a specific
+/// dialect, allowing it to reference resource blobs owned by any dialect.
+/// This is used by DenseResourceElementsAttr to decouple the attribute from
+/// BuiltinDialect.
+class DenseResourceBlobHandle : public AsmDialectResourceHandle {
+public:
+  using BlobEntry = DialectResourceBlobManager::BlobEntry;
+
+  DenseResourceBlobHandle() = default;
+
+  /// Direct construction with an explicit dialect owner. Uses its own TypeID.
+  DenseResourceBlobHandle(BlobEntry *entry, Dialect *dialect)
+      : AsmDialectResourceHandle(entry, TypeID::get<DenseResourceBlobHandle>(),
+                                 dialect) {}
+
+  /// Implicit conversion from any dialect-specific blob handle. Preserves the
+  /// original handle's TypeID so that dyn_cast to the original type still
+  /// works.
+  template <typename DialectT>
+  DenseResourceBlobHandle(DialectResourceBlobHandle<DialectT> handle)
+      : AsmDialectResourceHandle(handle) {}
+
+  /// Construct from a type-erased base handle (used by the bytecode reader).
+  DenseResourceBlobHandle(AsmDialectResourceHandle handle)
+      : AsmDialectResourceHandle(handle) {}
+
+  /// Return the underlying blob entry.
+  BlobEntry *getEntry() const {
+    return static_cast<BlobEntry *>(AsmDialectResourceHandle::getResource());
+  }
+
+  /// Return the human-readable string key for this handle.
+  StringRef getKey() const { return getEntry()->getKey(); }
+
+  /// Return the blob referenced by this handle, or nullptr if uninitialized.
+  AsmResourceBlob *getBlob() { return getEntry()->getBlob(); }
+  const AsmResourceBlob *getBlob() const { return getEntry()->getBlob(); }
+
+  /// DenseResourceBlobHandle is a type-erased wrapper that accepts any
+  /// resource handle. Code needing dialect-specific checks should use
+  /// dyn_cast<DialectResourceBlobHandle<SpecificDialect>> instead.
+  static bool classof(const AsmDialectResourceHandle *) { return true; }
+};
+
 } // namespace mlir
 
 #endif // MLIR_IR_DIALECTRESOURCEBLOBMANAGER_H
