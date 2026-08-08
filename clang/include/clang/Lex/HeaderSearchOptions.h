@@ -222,6 +222,13 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesForceValidateUserHeaders : 1;
 
+  /// Whether to re-stat umbrella directories when a module is loaded and treat
+  /// the module as out of date if a header has been added to one since it was
+  /// built. This catches a "negative dependency" that ordinary input-file
+  /// validation misses, because added headers were never recorded as inputs.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ModulesValidateUmbrellaDirs : 1;
+
   // Whether the content of input files should be hashed and used to
   // validate consistency.
   LLVM_PREFERRED_TYPE(bool)
@@ -297,6 +304,7 @@ public:
         ModulesValidateOncePerBuildSession(false),
         ModulesValidateSystemHeaders(false),
         ModulesForceValidateUserHeaders(true),
+        ModulesValidateUmbrellaDirs(false),
         ValidateASTInputFilesContent(false),
         ForceCheckCXX20ModulesInputFiles(false), UseDebugInfo(false),
         ModulesValidateDiagnosticOptions(true),

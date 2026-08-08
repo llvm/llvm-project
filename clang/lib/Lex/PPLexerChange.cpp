@@ -295,13 +295,9 @@ void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
   for (llvm::vfs::recursive_directory_iterator Entry(FS, Dir->getName(), EC),
        End;
        Entry != End && !EC; Entry.increment(EC)) {
-    using llvm::StringSwitch;
-
     // Check whether this entry has an extension typically associated with
     // headers.
-    if (!StringSwitch<bool>(llvm::sys::path::extension(Entry->path()))
-             .Cases({".h", ".H", ".hh", ".hpp"}, true)
-             .Default(false))
+    if (!ModMap.isModularHeaderExtension(Entry->path()))
       continue;
 
     if (auto Header = getFileManager().getOptionalFileRef(Entry->path()))
