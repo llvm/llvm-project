@@ -37,6 +37,12 @@ class NVPTXTTIImpl final : public BasicTTIImplBase<NVPTXTTIImpl> {
   const NVPTXSubtarget *getST() const { return ST; };
   const NVPTXTargetLowering *getTLI() const { return TLI; };
 
+  mutable DenseMap<const Function *, bool> CachedFunctionHasPointerStore;
+
+  /// Returns true if \p F or any of its direct/indirect callees contains a
+  /// pointer store.
+  bool kernelHasAnyPointerStore(const Function &F) const;
+
   /// \returns true if the result of the value could potentially be
   /// different across threads in a warp.
   bool isSourceOfDivergence(const Value *V) const;
@@ -212,6 +218,7 @@ public:
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const override;
   unsigned getAssumedAddrSpace(const Value *V) const override;
+  int getPointerLoadAddressSpace(const Value *V) const;
 
   void collectKernelLaunchBounds(
       const Function &F,
