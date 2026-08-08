@@ -42,3 +42,21 @@ void test_final_coverage() {
   // expected-warning@+1 {{the two-parameter std::string_view construction is unsafe}}
   std::string_view d1("hi", get_size()); 
 }
+
+template <typename T>
+struct vector_iterator {
+  operator T*() const;
+};
+
+struct my_vector {
+  vector_iterator <char> begin();
+  vector_iterator <char> end();
+  int length();
+};
+
+void test_iterators_with_implicit_conversion() {
+  my_vector v;
+  // expected-warning@+1 {{the two-parameter std::string_view construction is unsafe}}
+  std::string_view sv(v.begin(), v.length());
+  std::string_view sv2(v.begin(), v.end()); // no-warning
+}

@@ -738,8 +738,9 @@ static bool isSafeStringViewTwoParamConstruct(const CXXConstructExpr &Node,
     E = E->IgnoreParenImpCasts();
     if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(E)) {
       const auto *MD = MCE->getMethodDecl();
-      if (MD && (MD->getName() == "begin" || MD->getName() == "end"))
-        return MCE->getImplicitObjectArgument()->IgnoreParenImpCasts();
+      if (MD && MD->getIdentifier())
+        if (MD->getName() == "begin" || MD->getName() == "end")
+          return MCE->getImplicitObjectArgument()->IgnoreParenImpCasts();
     }
     return nullptr;
   };
