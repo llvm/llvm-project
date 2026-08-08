@@ -1106,6 +1106,11 @@ public:
   /// Tests whether the target is SPARC.
   bool isSPARC() const { return isSPARC32() || isSPARC64(); }
 
+  /// Tests whether the target is SuperH.
+  bool isSuperH() const { 
+    return getArch() == Triple::sh || getArch() == Triple::sh_le;
+  }
+
   /// Tests whether the target is SystemZ.
   bool isSystemZ() const { return getArch() == Triple::systemz; }
 

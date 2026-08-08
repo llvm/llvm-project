@@ -16,4 +16,20 @@
 
 #include "MCTargetDesc/SuperHMCTargetDesc.h"
 
+using namespace llvm;
+namespace llvm {
+class AsmPrinter;
+class FunctionPass;
+class MCInst;
+class MachineInstr;
+class PassRegistry;
+class SuperHTargetMachine;
+
+FunctionPass *createSuperHISelDag(SuperHTargetMachine &TM, CodeGenOptLevel OptLevel);
+
+void initializeSuperHDAGToDAGISelLegacyPass(PassRegistry &);
+void initializeSuperHAsmPrinterPass(PassRegistry &);
+} // namespace llvm
+
+
 #endif

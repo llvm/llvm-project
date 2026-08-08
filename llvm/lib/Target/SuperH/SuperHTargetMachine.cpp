@@ -11,8 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "SuperHTargetMachine.h"
+#include "SuperH.h"
+#include "SuperHSubtarget.h"
 #include "TargetInfo/SuperHTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
@@ -24,6 +27,33 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSuperHTarget() {
   RegisterTargetMachine<SuperHTargetMachine> SH(getTheSuperHTarget());
   RegisterTargetMachine<SuperHTargetMachine> SHLE(getTheSuperHLETarget());
 }
+
+//
+//      PASS CONFIG
+//
+
+namespace {
+class SuperHPassConfig : public TargetPassConfig {
+public:
+  SuperHPassConfig(SuperHTargetMachine &TM, PassManagerBase &PM)
+    : TargetPassConfig(TM, PM) {}
+
+  bool addInstSelector() override;
+  SuperHTargetMachine &getSuperHTargetMachine() const {
+    return getTM<SuperHTargetMachine>();
+  }
+};
+
+bool SuperHPassConfig::addInstSelector() {
+  addPass(createSuperHISelDag(getSuperHTargetMachine(), getOptLevel()));
+  return false;
+}
+} // namespace
+
+
+//
+//      TARGET MACHINE
+//
 
 SuperHTargetMachine::~SuperHTargetMachine() {}
 
@@ -37,7 +67,31 @@ SuperHTargetMachine::SuperHTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
                                RM.value_or(Reloc::Static),
                                getEffectiveCodeModel(CM, CodeModel::Small),
-                               OL) {
+                               OL), TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
 
   initAsmInfo();
+}
+
+TargetPassConfig *SuperHTargetMachine::createPassConfig(PassManagerBase &PM) {
+  return new SuperHPassConfig(*this, PM);
+}
+
+const TargetSubtargetInfo *
+SuperHTargetMachine::getSubtargetImpl(const Function &F) const {
+  Attribute CPUAttr = F.getFnAttribute("target-cpu");
+  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
+  Attribute FSAttr = F.getFnAttribute("target-features");
+
+  std::string CPU =
+      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+  std::string TuneCPU =
+      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
+  std::string FS =
+      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+
+  resetTargetOptions(F);
+  if (!ST) {
+    ST = std::make_unique<SuperHSubtarget>(CPU, TuneCPU, FS, *this);
+  }
+  return ST.get();
 }

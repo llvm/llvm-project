@@ -15,6 +15,7 @@
 #include "SuperHMCTargetDesc.h"
 #include "SuperHInstPrinter.h"
 #include "SuperHMCAsmInfo.h"
+#include "SuperHTargetStreamer.h"
 #include "TargetInfo/SuperHTargetInfo.h"
 
 #include "llvm/MC/MCELFStreamer.h"
@@ -35,11 +36,11 @@ using namespace llvm;
 #define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "SuperHGenInstrInfo.inc"
 
-#define GET_REGINFO_MC_DESC
-#include "SuperHGenRegisterInfo.inc"
-
 #define GET_SUBTARGETINFO_MC_DESC
 #include "SuperHGenSubtargetInfo.inc"
+
+#define GET_REGINFO_MC_DESC
+#include "SuperHGenRegisterInfo.inc"
 
 static MCInstrInfo *createSuperHMCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();
@@ -73,6 +74,21 @@ static MCAsmInfo *createSuperHMCAsmInfo(const MCRegisterInfo &MRI,
   return MAI;
 }
 
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new SuperHTargetStreamer(S);
+}
+
+static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
+                                                 formatted_raw_ostream &OS,
+                                                 MCInstPrinter *InstPrint) {
+  return new SuperHTargetAsmStreamer(S, OS);
+}
+
+static MCTargetStreamer *
+createTargetObjectStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+  return new SuperHTargetELFStreamer(S, STI);
+}
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeSuperHTargetMC() {
   for (Target *T : {&getTheSuperHTarget(), &getTheSuperHLETarget()}) {
@@ -85,17 +101,26 @@ LLVMInitializeSuperHTargetMC() {
 
     // Register the MC subtarget info.
     TargetRegistry::RegisterMCSubtargetInfo(*T, createSuperHMCSubtargetInfo);
-    
-    // Register the MC asm info.
-    TargetRegistry::RegisterMCAsmInfo(*T, createSuperHMCAsmInfo);
-
-    // Register the MCInstPrinter.
-    TargetRegistry::RegisterMCInstPrinter(*T, createSuperHMCInstPrinter);
 
     // Register the MCCodeEmitter.
     TargetRegistry::RegisterMCCodeEmitter(*T, createSuperHMCCodeEmitter);
 
     // Register the AsmBackend
     TargetRegistry::RegisterMCAsmBackend(*T, createSuperHAsmBackend);
+    
+    // Register the MC asm info.
+    TargetRegistry::RegisterMCAsmInfo(*T, createSuperHMCAsmInfo);
+
+    // Register the object target streamer.
+    TargetRegistry::RegisterObjectTargetStreamer(*T, createTargetObjectStreamer);
+
+    // Register the asm streamer.
+    TargetRegistry::RegisterAsmTargetStreamer(*T, createTargetAsmStreamer);
+
+    // Register the null streamer.
+    TargetRegistry::RegisterNullTargetStreamer(*T, createNullTargetStreamer);
+
+    // Register the MCInstPrinter.
+    TargetRegistry::RegisterMCInstPrinter(*T, createSuperHMCInstPrinter);
   }
 }

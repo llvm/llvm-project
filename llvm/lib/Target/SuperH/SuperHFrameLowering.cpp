@@ -22,14 +22,24 @@ using namespace llvm;
 
 void SuperHFrameLowering::emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const {
 
+  // If function is naked, don't emit prologue.
+  if (MF.getFunction().getAttributes().hasFnAttr(Attribute::Naked)) {
+    return;
+  }
+
 }
 
 void SuperHFrameLowering::emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const {
 
+  // If function is naked, don't emit epilogue.
+  if (MF.getFunction().getAttributes().hasFnAttr(Attribute::Naked)) {
+    return;
+  }
 }
 
 bool SuperHFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
-	return true;
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  return hasFP(MF) && !MFI.hasVarSizedObjects();
 }
 
 MachineBasicBlock::iterator

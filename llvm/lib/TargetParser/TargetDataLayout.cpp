@@ -563,8 +563,15 @@ static std::string computeSuperHDataLayout(const Triple &T) {
   // 32-bit pointers, 32 bit aligned
   Ret += "-p:32:32";
 
-  // 32 bit integers, 32 bit aligned
+  // Integer alignments
+  Ret += "-i18:32";
+  Ret += "-i16:32";
   Ret += "-i32:32";
+  Ret += "-i64:64";
+
+  // Floating alignments
+  Ret += "-f32:32";
+  Ret += "-f64:64";
 
   // 32 bit alignment of objects of aggregate type
   Ret += "-a:0:32";

@@ -26,10 +26,23 @@ namespace llvm {
 class SuperHInstrInfo : public SuperHGenInstrInfo {
   const SuperHRegisterInfo RI;
   const SuperHSubtarget &Subtarget;
-  virtual void anchor();
+
 public:
   explicit SuperHInstrInfo(const SuperHSubtarget &STI);
+
+  /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
+  /// such, whenever a client has an instance of instruction info, it should
+  /// always be able to get register info as well (through this method).
+  const SuperHRegisterInfo &getRegisterInfo() const { return RI; }
+
+  void copyPhysReg(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MI, const DebugLoc &DL,
+                           Register DestReg, Register SrcReg, bool KillSrc,
+                           bool RenamableDest = false,
+                           bool RenamableSrc = false) const override;
 };
+
+const SuperHInstrInfo *createSuperHInstrInfo(const SuperHSubtarget &STI);
 }
 
 #endif // end LLVM_LIB_TARGET_SUPERH_SUPERHINSTRINFO_H
