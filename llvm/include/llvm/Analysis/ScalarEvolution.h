@@ -714,7 +714,8 @@ public:
   /// SCEV no-wrap flags, and deduce flag[s] that aren't known yet.
   /// Does not mutate the original instruction. Returns std::nullopt if it could
   /// not deduce more precise flags than the instruction already has, otherwise
-  /// returns proven flags.
+  /// returns proven flags. \p OBO does not need to be of a type SCEV can model;
+  /// std::nullopt is returned for operations SCEV cannot reason about.
   LLVM_ABI std::optional<SCEV::NoWrapFlags>
   getStrengthenedNoWrapFlagsFromBinOp(const OverflowingBinaryOperator *OBO);
 

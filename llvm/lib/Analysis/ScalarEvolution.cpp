@@ -2492,6 +2492,10 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
 std::optional<SCEV::NoWrapFlags>
 ScalarEvolution::getStrengthenedNoWrapFlagsFromBinOp(
     const OverflowingBinaryOperator *OBO) {
+  // SCEV cannot reason about types it does not model, e.g. vectors.
+  if (!isSCEVable(OBO->getType()))
+    return std::nullopt;
+
   // It cannot be done any better.
   if (OBO->hasNoUnsignedWrap() && OBO->hasNoSignedWrap())
     return std::nullopt;
