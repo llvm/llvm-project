@@ -1092,7 +1092,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
         log,
         "Added persistent variable %s with flags 0x%llx to "
         "struct at offset %llu",
-        variable_metadata->m_persistent_variable_sp->GetName().AsCString(nullptr),
+        variable_metadata->m_persistent_variable_sp->GetName().AsCString(""),
         (unsigned long long)
             variable_metadata->m_persistent_variable_sp->m_flags,
         (unsigned long long)offset);

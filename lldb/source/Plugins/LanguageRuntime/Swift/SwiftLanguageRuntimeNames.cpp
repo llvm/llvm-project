@@ -535,7 +535,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
     return nullptr;
 
   Mangled &mangled_symbol_name = symbol->GetMangled();
-  const char *symbol_name = mangled_symbol_name.GetMangledName().AsCString(nullptr);
+  const char *symbol_name = mangled_symbol_name.GetMangledName().AsCString("");
 
   if (ThreadPlanSP thread_plan = CreateRunThroughTaskSwitchingTrampolines(
           thread, mangled_symbol_name.GetDemangledName()))

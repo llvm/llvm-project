@@ -1096,7 +1096,7 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     } else {
       LLDB_LOGF(GetLog(LLDBLog::Types),
                 "No module. Couldn't resolve type alias %s",
-                mangled.AsCString(nullptr));
+                mangled.AsCString(""));
       return {{}, {}};
     }
   }
@@ -1125,13 +1125,13 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     if (!clang_type)
       LLDB_LOGF(GetLog(LLDBLog::Types),
                 "Couldn't resolve type alias %s as a Swift or clang type.",
-                mangled.AsCString(nullptr));
+                mangled.AsCString(""));
     return {{}, clang_type};
   }
 
   if (!type) {
     LLDB_LOGF(GetLog(LLDBLog::Types), "Found empty type alias %s",
-              mangled.AsCString(nullptr));
+              mangled.AsCString(""));
     return {{}, {}};
   }
 
@@ -1143,11 +1143,11 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
     // to look it up as a clang type.
     LLDB_LOGF(GetLog(LLDBLog::Types),
               "Found non-Swift type alias %s, looking it up as clang type.",
-              mangled.AsCString(nullptr));
+              mangled.AsCString(""));
     auto clang_type = resolve_clang_type();
     if (!clang_type)
       LLDB_LOGF(GetLog(LLDBLog::Types), "Could not find a clang type for %s.",
-                mangled.AsCString(nullptr));
+                mangled.AsCString(""));
     return {{}, clang_type};
   }
   NodePointer n = GetDemangledType(dem, desugared_name.GetStringRef());

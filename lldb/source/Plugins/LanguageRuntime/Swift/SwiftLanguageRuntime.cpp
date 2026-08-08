@@ -1875,7 +1875,7 @@ protected:
           return idx;
       }
       return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString(nullptr));
+                                     name.AsCString(""));
     }
 
     lldb::ChildCacheState Update() override {
