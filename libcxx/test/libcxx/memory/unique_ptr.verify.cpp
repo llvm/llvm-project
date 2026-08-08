@@ -20,7 +20,7 @@ struct deleter {
 void test() {
   long l = 0;
   std::unique_ptr<const int, deleter> p(&l);
-  // expected-error-re@*:* {{static assertion failed{{.*}}'!__reference_converts_from_temporary(const int &, long &)': Reference type _Tp must not convert from a temporary object}}
-  // expected-error@*:*{{returning reference to local temporary object}}
-  std::ignore = *p; // expected-note {{requested here}}
+// expected-error-re@*:* {{static assertion failed{{.*}}the returned reference must not bind to a temporary object}}
+  // expected-error@*:* 0-1{{returning reference to local temporary object}}
+  (void)*p; // expected-note {{requested here}}
 }
