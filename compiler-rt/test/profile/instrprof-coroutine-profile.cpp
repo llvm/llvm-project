@@ -1,3 +1,4 @@
+// REQUIRES: coroutines
 // RUN: %clangxx_pgogen -std=c++20 -O2 -o %t %s
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: llvm-profdata show -function=foo -counts %t.profraw | FileCheck %s

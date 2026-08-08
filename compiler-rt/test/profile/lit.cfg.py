@@ -186,6 +186,20 @@ if config.android:
 if config.have_curl:
     config.available_features.add("curl")
 
+# Detect whether the C++ standard library used by %clangxx_pgogen actually
+# ships a usable <coroutine> header (e.g. libstdc++ before GCC 10 lacks it),
+# since --driver-mode=g++ makes clang resolve headers the way the host g++
+# would rather than always using libc++.
+cmd = subprocess.Popen(
+    (build_invocation(clang_cxxflags) + " -std=c++20 -fsyntax-only -x c++ -").split(),
+    stdin=subprocess.PIPE,
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL,
+)
+cmd.communicate(b"#include <coroutine>\n")
+if cmd.returncode == 0:
+    config.available_features.add("coroutines")
+
 if config.target_os in ("AIX", "Darwin", "Linux"):
     config.available_features.add("continuous-mode")
 
