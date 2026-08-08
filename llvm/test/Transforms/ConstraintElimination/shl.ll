@@ -1520,8 +1520,7 @@ define i1 @shl_nuw_by_63_self(i64 %x, i64 %b) {
 ; CHECK-NEXT:    [[S:%.*]] = shl nuw i64 [[X:%.*]], 63
 ; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[S]], [[B:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[C2:%.*]] = icmp ule i64 [[S]], [[B]]
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %s = shl nuw i64 %x, 63
