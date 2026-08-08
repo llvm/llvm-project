@@ -62,7 +62,6 @@ concurrency:
 jobs:
   setup-variables:
     if: >-
-      (github.event_name != 'pull_request' || github.event.action != 'closed')
     runs-on: ubuntu-24.04
     outputs:
       release-version: ${{ steps.vars.outputs.release-version }}
@@ -76,7 +75,6 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: Validate Input
-        if: inputs.release-version != ''
         uses: ./.github/workflows/validate-release-version
         with:
           release-version: ${{ inputs.release-version }}
