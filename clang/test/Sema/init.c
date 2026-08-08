@@ -216,6 +216,13 @@ char PR192471_3[1] = {
 , 49, 49, 49, 48 // expected-warning {{excess elements in array initializer}}
 };
 
+void PR192471_4(int *ptr) {
+  *ptr = (int){{}, // expected-warning {{too many braces around scalar initializer}}
+#embed __FILE__ limit(1) // expected-warning {{#embed is a C23 extension}} \
+                           expected-warning {{excess elements in scalar initializer}}
+  };
+}
+
 // GH137845
 struct GH137845_Data; // expected-note 2 {{forward declaration of 'struct GH137845_Data'}}
 double GH137845_swap(struct GH137845_Data *, struct GH137845_Data *);
