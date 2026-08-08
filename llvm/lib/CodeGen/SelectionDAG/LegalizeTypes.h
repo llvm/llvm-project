@@ -738,6 +738,7 @@ private:
   SDValue ExpandFloatOp_FCOPYSIGN(SDNode *N);
   SDValue ExpandFloatOp_FP_ROUND(SDNode *N);
   SDValue ExpandFloatOp_FP_TO_XINT(SDNode *N);
+  SDValue ExpandFloatOp_XRINT_XROUND(SDNode *N, RTLIB::Libcall LC);
   SDValue ExpandFloatOp_LROUND(SDNode *N);
   SDValue ExpandFloatOp_LLROUND(SDNode *N);
   SDValue ExpandFloatOp_LRINT(SDNode *N);
