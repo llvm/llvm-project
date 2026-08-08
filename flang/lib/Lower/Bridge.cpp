@@ -288,14 +288,14 @@ static void emitUseStmtOp(Fortran::lower::AbstractConverter &converter,
                          renamesAttr, hasOnlyWithRenamesAttr);
 }
 
-/// Emit fir.module_debug_imports for USE statements in a module.
+/// Emit fir.module_debug_imports for USE statements in a module. The operation
+/// is emitted for every module, even one with no USE statement, because its
+/// location is also what tells AddDebugInfo the line of the MODULE statement.
 static void
 emitModuleDebugImports(Fortran::lower::AbstractConverter &converter,
                        mlir::OpBuilder &builder, mlir::Location loc,
                        const Fortran::lower::pft::ModuleLikeUnit &mod) {
   if (!converter.getLoweringOptions().getPreserveUseDebugInfo())
-    return;
-  if (mod.preservedUseStmts.empty())
     return;
 
   const Fortran::semantics::Scope &modScope = mod.getScope();

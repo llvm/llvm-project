@@ -398,7 +398,6 @@ features cannot lower the translation-unit ABI level;
   the `sized_by`/`sized_by_or_null` attributes. Because `sized_by` and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
-- Propagate attributes on redeclarations across modules.
 
 #### Bug Fixes to C++ Support
 
@@ -440,6 +439,10 @@ features cannot lower the translation-unit ABI level;
   example through a pointer to member. Clang now synthesizes a whole-object
   copy so the union's object representation is copied, matching the defaulted
   union copy constructor.
+
+- Compute value dependence correctly for structured bindings. This mostly
+  affect C++26 constexpr structured bindings and expansion statements, but
+  also affects some uses of plain structured bindings. (#GH211930)
 
 #### Bug Fixes to AST Handling
 
@@ -497,6 +500,12 @@ features cannot lower the translation-unit ABI level;
 #### RISC-V Support
 
 #### CUDA/HIP Language Changes
+
+- HIP compilations now add the `include/libhipcxx` directory from the selected
+  ROCm installation to the header search path when it exists. This allows
+  libhipcxx headers to be included with paths such as `<cuda/std/atomic>`.
+  The `-nogpuinc` option disables this path together with the other HIP include
+  paths.
 
 #### CUDA Support
 
