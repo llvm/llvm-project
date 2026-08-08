@@ -286,11 +286,6 @@ def t_addrmode_sp : MemOperand,
   let MIOperandInfo = (ops GPR:$base, i32imm:$offsimm);
 }
 
-// Inspects parent to determine whether an or instruction can be implemented as
-// an add (i.e. whether we know overflow won't occur in the add).
-let WantsParent = true in
-def AddLikeOrOp : ComplexPattern<i32, 1, "SelectAddLikeOr">;
-
 // Pattern to exclude immediates from matching
 def non_imm32 : PatLeaf<(i32 GPR), [{ return !isa<ConstantSDNode>(N); }]>;
 
@@ -988,7 +983,7 @@ let isAdd = 1, hasSideEffects = 0 in {
     T1sIGenEncodeImm<0b01110, (outs tGPR:$Rd), (ins tGPR:$Rm, imm0_7:$imm3),
                      IIC_iALUi,
                      "add", "\t$Rd, $Rm, $imm3",
-                     [(set tGPR:$Rd, (add tGPR:$Rm, imm0_7:$imm3))]>,
+                     [(set tGPR:$Rd, (add_like tGPR:$Rm, imm0_7:$imm3))]>,
                      Sched<[WriteALU]> {
     bits<3> imm3;
     let Inst{8-6} = imm3;
@@ -998,7 +993,7 @@ let isAdd = 1, hasSideEffects = 0 in {
     T1sItGenEncodeImm<{1,1,0,?,?}, (outs tGPR:$Rdn),
                       (ins tGPR:$Rn, imm0_255_expr:$imm8), IIC_iALUi,
                       "add", "\t$Rdn, $imm8",
-                      [(set tGPR:$Rdn, (add tGPR:$Rn, imm0_255_expr:$imm8))]>,
+                      [(set tGPR:$Rdn, (add_like tGPR:$Rn, imm0_255_expr:$imm8))]>,
                       Sched<[WriteALU]>;
 
   // Add register
@@ -1007,7 +1002,7 @@ let isAdd = 1, hasSideEffects = 0 in {
     T1sIGenEncode<0b01100, (outs tGPR:$Rd), (ins tGPR:$Rn, tGPR:$Rm),
                   IIC_iALUr,
                   "add", "\t$Rd, $Rn, $Rm",
-                  [(set tGPR:$Rd, (add tGPR:$Rn, tGPR:$Rm))]>,
+                  [(set tGPR:$Rd, (add_like tGPR:$Rn, tGPR:$Rm))]>,
                   Sched<[WriteALU]>;
 
   /// Similar to the above except these set the 's' bit so the
@@ -1059,15 +1054,6 @@ let isAdd = 1, hasSideEffects = 0 in {
     let Inst{2-0} = Rdn{2-0};
   }
 }
-
-// Thumb has more flexible short encodings for ADD than ORR, so use those where
-// possible.
-def : T1Pat<(or AddLikeOrOp:$Rn, imm0_7:$imm), (tADDi3 $Rn, imm0_7:$imm)>;
-
-def : T1Pat<(or AddLikeOrOp:$Rn, imm8_255:$imm), (tADDi8 $Rn, imm8_255:$imm)>;
-
-def : T1Pat<(or AddLikeOrOp:$Rn, tGPR:$Rm), (tADDrr $Rn, $Rm)>;
-
 
 def : tInstAlias <"add${s}${p} $Rdn, $Rm",
                  (tADDrr tGPR:$Rdn,s_cc_out:$s, tGPR:$Rdn, tGPR:$Rm, pred:$p)>;
