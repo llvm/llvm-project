@@ -1589,7 +1589,7 @@ public:
   LogicalResult
   matchAndRewrite(vector::PrintOp printOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto parent = printOp->getParentOfType<ModuleOp>();
+    auto parent = SymbolTable::getNearestSymbolTable(printOp);
     if (!parent)
       return failure();
 
@@ -1653,7 +1653,7 @@ private:
   };
 
   LogicalResult emitScalarPrint(ConversionPatternRewriter &rewriter,
-                                ModuleOp parent, Location loc, Type printType,
+                                Operation *parent, Location loc, Type printType,
                                 Value value) const {
     if (typeConverter->convertType(printType) == nullptr)
       return failure();

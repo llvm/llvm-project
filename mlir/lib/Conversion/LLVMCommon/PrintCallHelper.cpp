@@ -22,7 +22,7 @@ using namespace llvm;
 /// returned. Otherwise, a unique and yet unused identifier is computed starting
 /// from the requested one.
 static std::string
-ensureSymbolNameIsUnique(ModuleOp moduleOp, StringRef symbolName,
+ensureSymbolNameIsUnique(Operation *moduleOp, StringRef symbolName,
                          SymbolTableCollection *symbolTables = nullptr) {
   if (symbolTables) {
     SymbolTable &symbolTable = symbolTables->getSymbolTable(moduleOp);
@@ -39,19 +39,19 @@ ensureSymbolNameIsUnique(ModuleOp moduleOp, StringRef symbolName,
 
   static int counter = 0;
   std::string uniqueName = std::string(symbolName);
-  while (moduleOp.lookupSymbol(uniqueName)) {
+  while (SymbolTable::lookupSymbolIn(moduleOp, uniqueName)) {
     uniqueName = std::string(symbolName) + "_" + std::to_string(counter++);
   }
   return uniqueName;
 }
 
 LogicalResult mlir::LLVM::createPrintStrCall(
-    OpBuilder &builder, Location loc, ModuleOp moduleOp, StringRef symbolName,
+    OpBuilder &builder, Location loc, Operation *moduleOp, StringRef symbolName,
     StringRef string, const LLVMTypeConverter &typeConverter, bool addNewline,
     std::optional<StringRef> runtimeFunctionName,
     SymbolTableCollection *symbolTables) {
   auto ip = builder.saveInsertionPoint();
-  builder.setInsertionPointToStart(moduleOp.getBody());
+  builder.setInsertionPointToStart(&moduleOp->getRegion(0).front());
   MLIRContext *ctx = builder.getContext();
 
   // Create a zero-terminated byte representation and allocate global symbol.

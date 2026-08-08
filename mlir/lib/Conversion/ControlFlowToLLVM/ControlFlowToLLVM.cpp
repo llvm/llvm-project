@@ -50,7 +50,7 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
   matchAndRewrite(cf::AssertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
-    auto module = op->getParentOfType<ModuleOp>();
+    auto module = SymbolTable::getNearestSymbolTable(op);
 
     // Split block at `assert` operation.
     Block *opBlock = rewriter.getInsertionBlock();
@@ -68,10 +68,10 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
 
     if (abortOnFailedAssert) {
       // Insert the `abort` declaration if necessary.
-      auto abortFunc = module.lookupSymbol<LLVM::LLVMFuncOp>("abort");
+      auto abortFunc = SymbolTable::lookupSymbolIn<LLVM::LLVMFuncOp>(module, "abort");
       if (!abortFunc) {
         OpBuilder::InsertionGuard guard(rewriter);
-        rewriter.setInsertionPointToStart(module.getBody());
+        rewriter.setInsertionPointToStart(&module->getRegion(0).front());
         auto abortFuncTy = LLVM::LLVMFunctionType::get(getVoidType(), {});
         abortFunc = LLVM::LLVMFuncOp::create(rewriter, rewriter.getUnknownLoc(),
                                              "abort", abortFuncTy);

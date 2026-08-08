@@ -25,7 +25,7 @@ namespace LLVM {
 /// If a custom runtime function is defined via `runtimeFunctionName`, it must
 /// have the signature void(char const*). The default function is `printString`.
 LogicalResult createPrintStrCall(
-    OpBuilder &builder, Location loc, ModuleOp moduleOp, StringRef symbolName,
+    OpBuilder &builder, Location loc, Operation *moduleOp, StringRef symbolName,
     StringRef string, const LLVMTypeConverter &typeConverter,
     bool addNewline = true, std::optional<StringRef> runtimeFunctionName = {},
     SymbolTableCollection *symbolTables = nullptr);
