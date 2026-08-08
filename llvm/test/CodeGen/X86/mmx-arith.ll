@@ -412,12 +412,13 @@ define <1 x i64> @test3(ptr %a, ptr %b, i32 %count) nounwind {
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB3_3: # %bb26
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl (%edi,%ebx,8), %ebp
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    movl 4(%edi,%ebx,8), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl (%esi,%ebx,8), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    addl (%edi,%ebx,8), %ebp
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl 4(%ecx,%ebx,8), %ecx
 ; X86-NEXT:    adcl 4(%edi,%ebx,8), %ecx
 ; X86-NEXT:    addl %ebp, %eax
 ; X86-NEXT:    adcl %ecx, %edx

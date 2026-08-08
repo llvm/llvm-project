@@ -32,16 +32,16 @@ define i1 @main(ptr %var_117, ptr %arrayinit.element3045, ptr %arrayinit.element
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vs4r.v v8, (a0) # vscale x 32-byte Folded Spill
 ; CHECK-NEXT:    vsetvli t0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v11, 0
+; CHECK-NEXT:    # kill: def $v12 killed $v11 killed $vtype
 ; CHECK-NEXT:    vmv.v.i v13, 0
-; CHECK-NEXT:    # kill: def $v14 killed $v13 killed $vtype
+; CHECK-NEXT:    vmv.v.i v14, 0
 ; CHECK-NEXT:    vmv.v.i v15, 0
-; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    vmv.v.i v17, 0
 ; CHECK-NEXT:    vsetvli t0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v20, 0
-; CHECK-NEXT:    vmv1r.v v18, v13
+; CHECK-NEXT:    vmv1r.v v16, v11
 ; CHECK-NEXT:    vmv.v.i v22, 0
-; CHECK-NEXT:    vmv1r.v v19, v13
+; CHECK-NEXT:    vmv1r.v v17, v11
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli t0, a0, 4
 ; CHECK-NEXT:    add a0, t0, a0
@@ -68,8 +68,8 @@ define i1 @main(ptr %var_117, ptr %arrayinit.element3045, ptr %arrayinit.element
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    ld t4, 16(a0)
 ; CHECK-NEXT:    vmv.v.i v24, 0
-; CHECK-NEXT:    vmv1r.v v9, v13
-; CHECK-NEXT:    vmv1r.v v10, v13
+; CHECK-NEXT:    vmv1r.v v26, v11
+; CHECK-NEXT:    vmv1r.v v27, v11
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    csrr a0, vlenb
@@ -77,19 +77,17 @@ define i1 @main(ptr %var_117, ptr %arrayinit.element3045, ptr %arrayinit.element
 ; CHECK-NEXT:    add a0, t5, a0
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    ld t5, 24(a0)
-; CHECK-NEXT:    vmv1r.v v11, v13
-; CHECK-NEXT:    vmv1r.v v12, v13
+; CHECK-NEXT:    vmv1r.v v28, v11
+; CHECK-NEXT:    vmv1r.v v29, v11
 ; CHECK-NEXT:    csrr t6, vlenb
 ; CHECK-NEXT:    add t6, sp, t6
 ; CHECK-NEXT:    addi t6, t6, 16
-; CHECK-NEXT:    vs1r.v v9, (t6) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vs2r.v v26, (t6) # vscale x 16-byte Folded Spill
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    add t6, t6, a0
-; CHECK-NEXT:    vs2r.v v10, (t6) # vscale x 16-byte Folded Spill
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add t6, t6, a0
 ; CHECK-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    vs1r.v v12, (t6) # vscale x 8-byte Folded Spill
+; CHECK-NEXT:    vs2r.v v28, (t6) # vscale x 16-byte Folded Spill
 ; CHECK-NEXT:    vmclr.m v9
 ; CHECK-NEXT:    addi t6, sp, 16
 ; CHECK-NEXT:    vs1r.v v9, (t6) # vscale x 8-byte Folded Spill
@@ -101,28 +99,28 @@ define i1 @main(ptr %var_117, ptr %arrayinit.element3045, ptr %arrayinit.element
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv.v.i v18, 0
 ; CHECK-NEXT:    vmv.v.i v30, 0
-; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, tu, ma
 ; CHECK-NEXT:    vle64.v v30, (a4)
+; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmv1r.v v28, v8
-; CHECK-NEXT:    vle32.v v12, (t4)
+; CHECK-NEXT:    vle32.v v0, (t1)
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vle32.v v28, (t2)
+; CHECK-NEXT:    vmv1r.v v28, v8
+; CHECK-NEXT:    vle32.v v0, (t3)
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vle32.v v28, (a6)
+; CHECK-NEXT:    vmv1r.v v28, v8
+; CHECK-NEXT:    vle32.v v0, (a5)
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vle32.v v28, (t4)
 ; CHECK-NEXT:    vmv1r.v v29, v8
-; CHECK-NEXT:    vle32.v v28, (t1)
+; CHECK-NEXT:    vle32.v v10, (a7)
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vle32.v v29, (t2)
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vle32.v v9, (t3)
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vle32.v v10, (a6)
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vle32.v v9, (a7)
-; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vle32.v v10, (a5)
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vle32.v v11, (a2)
-; CHECK-NEXT:    vle32.v v10, (a3)
+; CHECK-NEXT:    vle32.v v29, (a2)
+; CHECK-NEXT:    vle32.v v9, (a3)
 ; CHECK-NEXT:    csrr t5, vlenb
 ; CHECK-NEXT:    add t5, sp, t5
 ; CHECK-NEXT:    addi t5, t5, 16
@@ -135,15 +133,17 @@ define i1 @main(ptr %var_117, ptr %arrayinit.element3045, ptr %arrayinit.element
 ; CHECK-NEXT:    vl1r.v v4, (t5) # vscale x 8-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg4e32.v v1, (zero)
-; CHECK-NEXT:    vmv4r.v v0, v12
-; CHECK-NEXT:    vmv4r.v v4, v16
-; CHECK-NEXT:    vmv1r.v v2, v9
-; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vmv2r.v v0, v10
+; CHECK-NEXT:    vmv2r.v v2, v12
+; CHECK-NEXT:    vmv2r.v v4, v14
+; CHECK-NEXT:    vmv2r.v v6, v16
+; CHECK-NEXT:    vmv1r.v v2, v10
+; CHECK-NEXT:    vmv1r.v v0, v28
 ; CHECK-NEXT:    vsseg8e32.v v0, (a1)
 ; CHECK-NEXT:    addi t5, sp, 16
-; CHECK-NEXT:    vl1r.v v12, (t5) # vscale x 8-byte Folded Reload
-; CHECK-NEXT:    vmv1r.v v9, v12
-; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vl1r.v v28, (t5) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    vmv1r.v v10, v28
+; CHECK-NEXT:    vmv1r.v v0, v28
 ; CHECK-NEXT:    csrr t5, vlenb
 ; CHECK-NEXT:    slli t6, t5, 2
 ; CHECK-NEXT:    add t5, t6, t5
@@ -157,16 +157,15 @@ define i1 @main(ptr %var_117, ptr %arrayinit.element3045, ptr %arrayinit.element
 ; CHECK-NEXT:    vsetvli zero, t0, e64, m2, ta, ma
 ; CHECK-NEXT:    vsseg2e64.v v2, (zero)
 ; CHECK-NEXT:    vsetivli zero, 0, e64, m2, ta, mu
-; CHECK-NEXT:    vmv.v.i v28, 0
-; CHECK-NEXT:    vmflt.vv v9, v30, v28, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vmflt.vv v10, v30, v18, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
-; CHECK-NEXT:    vssub.vv v10, v8, v11, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v12
+; CHECK-NEXT:    vssub.vv v9, v8, v29, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v28
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vsseg4e64.v v20, (zero), v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vsseg8e32.v v10, (a0)
+; CHECK-NEXT:    vsseg8e32.v v9, (a0)
 ; CHECK-NEXT:    csrr t5, vlenb
 ; CHECK-NEXT:    slli t6, t5, 3
 ; CHECK-NEXT:    add t5, t6, t5

@@ -948,8 +948,7 @@ void RegPressureTracker::advance() {
 static void computeExcessPressureDelta(ArrayRef<unsigned> OldPressureVec,
                                        ArrayRef<unsigned> NewPressureVec,
                                        RegPressureDelta &Delta,
-                                       const RegisterClassInfo *RCI,
-                                       ArrayRef<unsigned> LiveThruPressureVec) {
+                                       const RegisterClassInfo *RCI) {
   Delta.Excess = PressureChange();
   for (unsigned i = 0, e = OldPressureVec.size(); i < e; ++i) {
     unsigned POld = OldPressureVec[i];
@@ -959,8 +958,6 @@ static void computeExcessPressureDelta(ArrayRef<unsigned> OldPressureVec,
       continue;
     // Only consider change beyond the limit.
     unsigned Limit = RCI->getRegPressureSetLimit(i);
-    if (!LiveThruPressureVec.empty())
-      Limit += LiveThruPressureVec[i];
 
     if (Limit > POld) {
       if (Limit > PNew)
@@ -1093,8 +1090,7 @@ getMaxUpwardPressureDelta(const MachineInstr *MI, PressureDiff *PDiff,
 
   bumpUpwardPressure(MI);
 
-  computeExcessPressureDelta(SavedPressure, CurrSetPressure, Delta, RCI,
-                             LiveThruPressure);
+  computeExcessPressureDelta(SavedPressure, CurrSetPressure, Delta, RCI);
   computeMaxPressureDelta(SavedMaxPressure, P.MaxSetPressure, CriticalPSets,
                           MaxPressureLimit, Delta);
   assert(Delta.CriticalMax.getUnitInc() >= 0 &&
@@ -1160,8 +1156,6 @@ getUpwardPressureDelta(const MachineInstr *MI, /*const*/ PressureDiff &PDiff,
 
     unsigned PSetID = PDiffI->getPSet();
     unsigned Limit = RCI->getRegPressureSetLimit(PSetID);
-    if (!LiveThruPressure.empty())
-      Limit += LiveThruPressure[PSetID];
 
     unsigned POld = CurrSetPressure[PSetID];
     unsigned MOld = P.MaxSetPressure[PSetID];
@@ -1342,8 +1336,7 @@ getMaxDownwardPressureDelta(const MachineInstr *MI, RegPressureDelta &Delta,
 
   bumpDownwardPressure(MI);
 
-  computeExcessPressureDelta(SavedPressure, CurrSetPressure, Delta, RCI,
-                             LiveThruPressure);
+  computeExcessPressureDelta(SavedPressure, CurrSetPressure, Delta, RCI);
   computeMaxPressureDelta(SavedMaxPressure, P.MaxSetPressure, CriticalPSets,
                           MaxPressureLimit, Delta);
   assert(Delta.CriticalMax.getUnitInc() >= 0 &&
