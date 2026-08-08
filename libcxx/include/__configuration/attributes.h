@@ -473,6 +473,12 @@
 #  define _LIBCPP_DISABLE_POINTER_FIELD_PROTECTION
 #endif
 
+#if __has_cpp_attribute(_Clang::__malloc_span__)
+#  define _LIBCPP_MALLOC_SPAN [[_Clang::__malloc_span__]]
+#else
+#  define _LIBCPP_MALLOC_SPAN
+#endif
+
 // TODO(LLVM 25): Remove this escape hatch
 #ifndef _LIBCPP_DISABLE_UNUSED_STRUCT_WARNINGS
 #  define _LIBCPP_WARN_UNUSED [[__gnu__::__warn_unused__]]
