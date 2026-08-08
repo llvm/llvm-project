@@ -827,8 +827,8 @@ declare void @_ZN21HNodeTranslateRotate311toCartesianEv(ptr)
 define linkonce void @_ZN21HNodeTranslateRotate36setVelERK9CDSVectorIdLi1EN3CDS12DefaultAllocEE(ptr %this, ptr %velv) {
 ; CHECK-LABEL: _ZN21HNodeTranslateRotate36setVelERK9CDSVectorIdLi1EN3CDS12DefaultAllocEE:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    subl $100, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 104
+; CHECK-NEXT:    subl $120, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 124
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    fldl 0
@@ -840,55 +840,55 @@ define linkonce void @_ZN21HNodeTranslateRotate36setVelERK9CDSVectorIdLi1EN3CDS1
 ; CHECK-NEXT:    fld %st(1)
 ; CHECK-NEXT:    fadd %st(1), %st
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldl 3184(%ecx)
 ; CHECK-NEXT:    fld %st(0)
-; CHECK-NEXT:    fmul %st(5), %st
+; CHECK-NEXT:    fmul %st(4), %st
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fadd %st(3), %st
+; CHECK-NEXT:    fld %st(1)
+; CHECK-NEXT:    faddl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fxch %st(5)
+; CHECK-NEXT:    fxch %st(3)
 ; CHECK-NEXT:    fmul %st, %st(0)
-; CHECK-NEXT:    fstpl (%esp)
-; CHECK-NEXT:    fldl (%esp)
-; CHECK-NEXT:    fadd %st, %st(5)
-; CHECK-NEXT:    fxch %st(5)
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fsub %st(5), %st
+; CHECK-NEXT:    fld %st(0)
+; CHECK-NEXT:    faddl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fld %st(0)
+; CHECK-NEXT:    fsubrl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fxch %st(4)
 ; CHECK-NEXT:    fmull -8
-; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fxch %st(4)
 ; CHECK-NEXT:    fstl 8
+; CHECK-NEXT:    fxch %st(4)
+; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fsubl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fsubrp %st, %st(3)
-; CHECK-NEXT:    fxch %st(2)
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fsubrl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fsubp %st, %st(3)
-; CHECK-NEXT:    fxch %st(2)
+; CHECK-NEXT:    fld %st(0)
+; CHECK-NEXT:    faddl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fadd %st(3), %st
-; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    faddp %st, %st(3)
-; CHECK-NEXT:    fxch %st(2)
+; CHECK-NEXT:    faddl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fstl 16
-; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fadd %st, %st(0)
+; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fxch %st(2)
 ; CHECK-NEXT:    fadd %st, %st(0)
+; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    fadd %st, %st(0)
+; CHECK-NEXT:    fstpl (%esp)
+; CHECK-NEXT:    fldl (%esp)
 ; CHECK-NEXT:    fxch %st(2)
 ; CHECK-NEXT:    fstpl 2056(%ecx)
 ; CHECK-NEXT:    fstpl 2064(%ecx)

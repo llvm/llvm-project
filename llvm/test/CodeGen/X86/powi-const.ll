@@ -8,34 +8,28 @@
 define double @pow_wrapper(double %a) nounwind readonly ssp noredzone {
 ; X86-X87-LABEL: pow_wrapper:
 ; X86-X87:       # %bb.0:
-; X86-X87-NEXT:    pushl %ebp
-; X86-X87-NEXT:    movl %esp, %ebp
-; X86-X87-NEXT:    andl $-8, %esp
 ; X86-X87-NEXT:    subl $48, %esp
-; X86-X87-NEXT:    fldl 8(%ebp)
+; X86-X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    fld %st(0)
 ; X86-X87-NEXT:    fmul %st(1), %st
+; X86-X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fld %st(0)
+; X86-X87-NEXT:    fmul %st(1), %st
+; X86-X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fmulp %st, %st(1)
+; X86-X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fld %st(0)
+; X86-X87-NEXT:    fmull {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fmul %st, %st(0)
+; X86-X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fmull {{[0-9]+}}(%esp)
 ; X86-X87-NEXT:    fstpl (%esp)
 ; X86-X87-NEXT:    fldl (%esp)
-; X86-X87-NEXT:    fld %st(0)
-; X86-X87-NEXT:    fmul %st(1), %st
-; X86-X87-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    fmulp %st, %st(1)
-; X86-X87-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    fld %st(0)
-; X86-X87-NEXT:    fmul %st(1), %st
-; X86-X87-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    fmulp %st, %st(1)
-; X86-X87-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    fmulp %st, %st(1)
-; X86-X87-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-X87-NEXT:    movl %ebp, %esp
-; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    addl $48, %esp
 ; X86-X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: pow_wrapper:

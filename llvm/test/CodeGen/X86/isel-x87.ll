@@ -192,11 +192,15 @@ define void @f6(ptr %a, ptr %b) nounwind {
 ;
 ; SDAG_X86-LABEL: f6:
 ; SDAG_X86:       # %bb.0:
+; SDAG_X86-NEXT:    pushl %eax
 ; SDAG_X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SDAG_X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SDAG_X86-NEXT:    flds (%ecx)
 ; SDAG_X86-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}
+; SDAG_X86-NEXT:    fstps (%esp)
+; SDAG_X86-NEXT:    flds (%esp)
 ; SDAG_X86-NEXT:    fstps (%eax)
+; SDAG_X86-NEXT:    popl %eax
 ; SDAG_X86-NEXT:    retl
 ;
 ; GISEL_X64-LABEL: f6:
@@ -210,6 +214,8 @@ define void @f6(ptr %a, ptr %b) nounwind {
 ; SDAG_X64:       # %bb.0:
 ; SDAG_X64-NEXT:    flds (%rdi)
 ; SDAG_X64-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; SDAG_X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
+; SDAG_X64-NEXT:    flds -{{[0-9]+}}(%rsp)
 ; SDAG_X64-NEXT:    fstps (%rsi)
 ; SDAG_X64-NEXT:    retq
   %load1 = load float, ptr %a

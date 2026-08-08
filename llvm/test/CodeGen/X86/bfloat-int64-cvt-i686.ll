@@ -132,6 +132,8 @@ define bfloat @uitofp_i64_to_bf16(i64 %a) nounwind {
 ; X87-NEXT:    shrl $31, %ecx
 ; X87-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X87-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%ecx,4)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstps (%esp)
 ; X87-NEXT:    calll __truncsfbf2
 ; X87-NEXT:    # kill: def $ax killed $ax def $eax
@@ -201,6 +203,8 @@ define bfloat @uitofp_load_i64_to_bf16(ptr %p) nounwind {
 ; X87-NEXT:    shrl $31, %eax
 ; X87-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X87-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
+; X87-NEXT:    fstps {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstps (%esp)
 ; X87-NEXT:    calll __truncsfbf2
 ; X87-NEXT:    # kill: def $ax killed $ax def $eax

@@ -70,14 +70,14 @@ define void @h(float %i) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    fld %st(5)
 ; CHECK-NEXT:    fmul %st(2), %st
+; CHECK-NEXT:    fstps 20(%esi)
+; CHECK-NEXT:    fld %st(4)
+; CHECK-NEXT:    fdivrs 20(%esi)
+; CHECK-NEXT:    fstps 16(%esi)
+; CHECK-NEXT:    fld %st(3)
+; CHECK-NEXT:    fadds 16(%esi)
 ; CHECK-NEXT:    fstps 12(%esi)
 ; CHECK-NEXT:    flds 12(%esi)
-; CHECK-NEXT:    fdiv %st(5), %st
-; CHECK-NEXT:    fstps 16(%esi)
-; CHECK-NEXT:    flds 16(%esi)
-; CHECK-NEXT:    fadd %st(4), %st
-; CHECK-NEXT:    fstps 20(%esi)
-; CHECK-NEXT:    flds 20(%esi)
 ; CHECK-NEXT:    fsts _g
 ; CHECK-NEXT:    fxch %st(3)
 ; CHECK-NEXT:    fucom %st(3)
