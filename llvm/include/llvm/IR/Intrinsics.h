@@ -168,6 +168,14 @@ LLVM_ABI bool isConstrainedFPIntrinsic(ID QID);
 /// Floating-Point Intrinsics" that take rounding mode metadata.
 LLVM_ABI bool hasConstrainedFPRoundingModeOperand(ID QID);
 
+/// Returns true if \p ID represents an intrinsic function that may access FP
+/// environment.
+///
+/// Access to FP environment means that in the strict FP environment the
+/// function has read/write memory effect, which is used to maintain proper
+/// instructions ordering.
+LLVM_ABI bool isFPOperation(ID IID);
+
 /// This is a type descriptor which explains the type requirements of an
 /// intrinsic. This is returned by getIntrinsicInfoTableEntries.
 struct IITDescriptor {

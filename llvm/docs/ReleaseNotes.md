@@ -52,6 +52,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* Calls to floating-point intrinsics implicitly acquire side effects if
+  containing function has strictfp attribute.
+
 ### Changes to LLVM infrastructure
 
 ### Changes to building LLVM
