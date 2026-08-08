@@ -123,7 +123,13 @@ def CIR_ArgPassingKind : CIR_I32EnumAttr<
   let genSpecializedAttr = 0;
 }
 
-def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout"> {
+def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
+    // record_align is consumed as an llvm::Align, whose constructor asserts a
+    // non-zero power of two.
+    PredAttrTrait<"record_align must be a non-zero power of two",
+                  CPred<"$record_align != 0 && "
+                        "::llvm::isPowerOf2_64($record_align)">>
+  ]> {
   let summary = "ABI layout metadata for a record type";
   let description = [{
     Holds AST-derived ABI metadata for a named record type.  These

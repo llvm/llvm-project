@@ -1068,6 +1068,72 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back("-freciprocal-math");
 }
 
+// Add options related to IEEE Floating point modes
+//
+// Initial halting mode:
+// Validate -ffpe-trap= and forward it to -fc1. This is handled separately from
+// addFloatingPointOptions() on purpose: -ffpe-trap= is not part of the
+// fast-math option set, so it must not be skipped by that function's
+// -ffast-math fast path. The value check and the target-support warnings depend
+// only on the option value and the target triple (no frontend-only state), so
+// they are done here in the driver rather than deferred to -fc1; -fc1 only
+// translates the list into its LangOptions bitmask.
+//
+// TODO:
+// Rounding modes
+// Underflow mode
+static void addIEEEFPModesOptions(const Driver &D, const ArgList &Args,
+                                  ArgStringList &CmdArgs,
+                                  const llvm::Triple &Triple) {
+  const Arg *A = Args.getLastArg(options::OPT_ffpe_trap_EQ);
+  if (!A)
+    return;
+
+  // The value is a comma-separated list of exception mnemonics. "none" and an
+  // empty list request no halting and reset any earlier request in the list;
+  // any other unrecognized mnemonic is an error.
+  llvm::SmallVector<StringRef, 6> Traps;
+  StringRef(A->getValue())
+      .split(Traps, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+
+  bool RequestsTrap = false;
+  bool RequestsDenormal = false;
+  for (StringRef Trap : Traps) {
+    if (Trap == "none") {
+      RequestsTrap = false;
+      RequestsDenormal = false;
+      continue;
+    }
+    bool IsKnown = llvm::StringSwitch<bool>(Trap)
+                       .Cases({"invalid", "zero", "overflow", "underflow",
+                               "inexact", "denormal"},
+                              true)
+                       .Default(false);
+    if (!IsKnown) {
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Trap;
+      return;
+    }
+    RequestsTrap = true;
+    RequestsDenormal |= (Trap == "denormal");
+  }
+
+  // Run-time halting is implemented in flang-rt only where the target's
+  // floating-point environment can trap: it relies on glibc's feenableexcept
+  // (in practice Linux), and "denormal" additionally requires an x86 target.
+  // Warn (conservatively) when the target cannot honor the request; the runtime
+  // otherwise ignores it. The denormal-specific warning names just
+  // "-ffpe-trap=denormal" to point at the unsupported mnemonic.
+  if (RequestsTrap && !Triple.isX86() && !Triple.isOSLinux())
+    D.Diag(diag::warn_drv_unsupported_option_for_target)
+        << A->getAsString(Args) << Triple.str();
+  else if (RequestsDenormal && !Triple.isX86())
+    D.Diag(diag::warn_drv_unsupported_option_for_target)
+        << "-ffpe-trap=denormal" << Triple.str();
+
+  A->render(Args, CmdArgs);
+}
+
 static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
                                  const InputInfo &Input) {
   StringRef Format = "yaml";
@@ -1246,6 +1312,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Floating point related options
   addFloatingPointOptions(D, Args, CmdArgs);
+
+  // Initial floating-point exception halting mode. Handled separately so it is
+  // not skipped by the -ffast-math fast path in addFloatingPointOptions().
+  addIEEEFPModesOptions(D, Args, CmdArgs, Triple);
 
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs, JA.getOffloadingArch(),

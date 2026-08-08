@@ -184,11 +184,10 @@ void PreferMemberInitializerCheck::check(
     if (isNoReturnCallStatement(S))
       return;
 
-    if (const auto *CondOp = dyn_cast<ConditionalOperator>(S)) {
-      if (isNoReturnCallStatement(CondOp->getLHS()) ||
-          isNoReturnCallStatement(CondOp->getRHS()))
-        return;
-    }
+    if (const auto *CondOp = dyn_cast<ConditionalOperator>(S);
+        CondOp && (isNoReturnCallStatement(CondOp->getLHS()) ||
+                   isNoReturnCallStatement(CondOp->getRHS())))
+      return;
 
     std::optional<AssignmentPair> AssignmentToMember =
         isAssignmentToMemberOf(Class, S, Ctor);

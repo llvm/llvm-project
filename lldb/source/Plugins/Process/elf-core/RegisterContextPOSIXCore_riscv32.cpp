@@ -336,6 +336,5 @@ RegisterContextCorePOSIX_riscv32::BuildDynamicRegister(
       CopyRegisterListToVector(reg_info.value_regs),
       CopyRegisterListToVector(reg_info.invalidate_regs),
       /*value_reg_offset=*/0,
-      llvm::dyn_cast_if_present<lldb_private::RegisterFlags>(
-          reg_info.register_type)};
+      reg_info.register_type};
 }
