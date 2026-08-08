@@ -16,10 +16,7 @@ using LIBC_NAMESPACE::Sign;
 using LIBC_NAMESPACE::fputil::Float80;
 using FPBits = LIBC_NAMESPACE::fputil::FPBits<Float80>;
 
-TEST(LlvmLibcFloat80Test, temp) { 
-  Float80 a(1.0f);
-
-}
+TEST(LlvmLibcFloat80Test, temp) { Float80 a(1.0f); }
 
 TEST(LlvmLibcFloat80Test, IntegerConversion) {
   // Float80 to Integer conversion test
