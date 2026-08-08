@@ -24,27 +24,29 @@
 
 #include "test_macros.h"
 
-
 #if TEST_STD_VER >= 20
 static_assert(std::copyable<std::nullopt_t>);
 static_assert(std::three_way_comparable<std::nullopt_t, std::strong_ordering>);
 #endif
 
 constexpr bool test() {
-  assert(std::nullopt == std:nullopt);
-  assert(!(std:nullopt != std:nullopt));
-  assert(std:nullopt <= std:nullopt);
-  assert(std:nullopt >= std:nullopt);
-  assert(!(std:nullopt > std:nullopt));
-  assert(!(std:nullopt < std:nullopt));
+  assert(std::nullopt == std::nullopt);
+  assert(!(std::nullopt != std::nullopt));
+  assert(std::nullopt <= std::nullopt);
+  assert(std::nullopt >= std::nullopt);
+  assert(!(std::nullopt > std::nullopt));
+  assert(!(std::nullopt < std::nullopt));
 
 #if TEST_STD_VER >= 20
-  assert((std:nullopt <=> std:nullopt) == std::strong_ordering::equal);
+  assert((std::nullopt <=> std::nullopt) == std::strong_ordering::equal);
+
   // Test ranges::find with nullopt
-  std::vector<std::optional<int>> v = {1, 2, nullopt, 4, 5};
-  auto it                           = std::ranges::find(v, nullopt);
-  assert(itr != v.end());
-  assert(*itr == nullopt);
+  std::vector<std::optional<int>> v = {1, 2, std::nullopt, 4, 5};
+
+  auto it = std::ranges::find(v, std::nullopt);
+
+  assert(it != v.end());
+  assert(*it == std::nullopt);
 #endif
 
   return true;
@@ -52,7 +54,6 @@ constexpr bool test() {
 
 int main(int, char**) {
   test();
-
   static_assert(test());
 
   return 0;
