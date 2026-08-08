@@ -504,23 +504,11 @@ namespace llvm {
     }
 
     static MVT getVectorVT(MVT VT, unsigned NumElements) {
-#define GET_VT_VECATTR(Ty, Sc, Tup, nElem, ElTy)                             \
-    if (!Sc && !Tup && VT.SimpleTy == ElTy && NumElements == nElem)            \
-      return Ty;
-#include "llvm/CodeGen/GenVT.inc"
-#undef GET_VT_VECATTR
-
-      return (MVT::SimpleValueType)(MVT::INVALID_SIMPLE_VALUE_TYPE);
+      return getVectorVT(VT, NumElements, /*IsScalable=*/false);
     }
 
     static MVT getScalableVectorVT(MVT VT, unsigned NumElements) {
-#define GET_VT_VECATTR(Ty, Sc, Tup, nElem, ElTy)                             \
-    if (Sc && VT.SimpleTy == ElTy && NumElements == nElem)                     \
-      return Ty;
-#include "llvm/CodeGen/GenVT.inc"
-#undef GET_VT_VECATTR
-
-      return (MVT::SimpleValueType)(MVT::INVALID_SIMPLE_VALUE_TYPE);
+      return getVectorVT(VT, NumElements, /*IsScalable=*/true);
     }
 
     static MVT getRISCVVectorTupleVT(unsigned Sz, unsigned NFields) {
@@ -546,15 +534,41 @@ namespace llvm {
     }
 
     static MVT getVectorVT(MVT VT, unsigned NumElements, bool IsScalable) {
-      if (IsScalable)
-        return getScalableVectorVT(VT, NumElements);
-      return getVectorVT(VT, NumElements);
+      constexpr unsigned MaxNumElements = 4096;
+      constexpr unsigned NumSlots = 32;
+      struct VecVTTable {
+        // Maps number of elements to a compact slot index. Only element counts
+        // used by any vector type get a slot; others stay 0. There are only a
+        // small number (< 32) of distinct element counts for vector types.
+        uint8_t Slots[MaxNumElements + 1] = {};
+        // The vector MVTs, indexed by [IsScalable][ElementType][Slot]. Element
+        // types are scalar MVTs, so only those need an entry. Other entries
+        // stay INVALID_SIMPLE_VALUE_TYPE.
+        SimpleValueType Tys[2][FIRST_VECTOR_VALUETYPE][NumSlots] = {};
+      };
+      static constexpr VecVTTable VecVTs = [] {
+        VecVTTable T{};
+        uint8_t NextSlot = 1;
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)    \
+    if (Vec && !Tup && !T.Slots[NElem])                                        \
+      T.Slots[NElem] = NextSlot++;
+#include "llvm/CodeGen/GenVT.inc"
+#undef GET_VT_ATTR
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)    \
+    if (Vec && !Tup)                                                           \
+      T.Tys[Sc][EltTy][T.Slots[NElem]] = Ty;
+#include "llvm/CodeGen/GenVT.inc"
+#undef GET_VT_ATTR
+        return T;
+      }();
+
+      if (VT.SimpleTy >= FIRST_VECTOR_VALUETYPE || NumElements > MaxNumElements)
+        return INVALID_SIMPLE_VALUE_TYPE;
+      return VecVTs.Tys[IsScalable][VT.SimpleTy][VecVTs.Slots[NumElements]];
     }
 
     static MVT getVectorVT(MVT VT, ElementCount EC) {
-      if (EC.isScalable())
-        return getScalableVectorVT(VT, EC.getKnownMinValue());
-      return getVectorVT(VT, EC.getKnownMinValue());
+      return getVectorVT(VT, EC.getKnownMinValue(), EC.isScalable());
     }
 
     /// Return the value type corresponding to the specified type.
