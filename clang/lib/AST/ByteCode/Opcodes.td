@@ -321,6 +321,10 @@ def Null : SuccessOpcode {
   let HasGroup = 1;
 }
 
+def CastAddressSpace : Opcode {
+  let Args = [ArgUint64, ArgTypePtr];
+}
+
 //===----------------------------------------------------------------------===//
 // Pointer generation
 //===----------------------------------------------------------------------===//
@@ -644,7 +648,7 @@ def GetFnPtr : SuccessOpcode {
 
 def GetIntPtr : Opcode {
   let Types = [AluTypeClass];
-  let Args = [ArgTypePtr];
+  let Args = [ArgTypePtr, ArgUint64];
   let HasGroup = 1;
 }
 
