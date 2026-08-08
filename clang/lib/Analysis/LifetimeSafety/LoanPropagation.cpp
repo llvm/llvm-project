@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include <algorithm>
 #include <cassert>
 #include <memory>
 
@@ -251,10 +252,12 @@ public:
       }
 
       // If we found the IssueFact, we're done
-      if (Complete)
-        return llvm::SmallVector<OriginID>(llvm::reverse(
-            llvm::SmallVector<OriginID>(CurrNode.OriginFlowChain.begin(),
-                                        CurrNode.OriginFlowChain.end())));
+      if (Complete) {
+        llvm::SmallVector<OriginID> Result(CurrNode.OriginFlowChain.begin(),
+                                           CurrNode.OriginFlowChain.end());
+        std::reverse(Result.begin(), Result.end());
+        return Result;
+      }
 
       // Only explore predecessor blocks where the target loan is present in the
       // current origin.
