@@ -63,11 +63,6 @@ protected:
   void SetDynamicTypeInfo(const lldb_private::Address &vtable_addr,
                           const TypeAndOrName &type_info);
 
-  TypeAndOrName GetDynamicTypeInfo(const lldb_private::Address &vtable_addr);
-
-  void SetDynamicTypeInfo(const lldb_private::Address &vtable_addr,
-                          const TypeAndOrName &type_info);
-
 protected:
   Process *m_process;
   std::mutex m_mutex;
