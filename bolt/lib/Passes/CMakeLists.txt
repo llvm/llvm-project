@@ -17,6 +17,7 @@ add_llvm_library(LLVMBOLTPasses
   Hugify.cpp
   IdenticalCodeFolding.cpp
   IndirectCallPromotion.cpp
+  InferNonStale.cpp
   Inliner.cpp
   Instrumentation.cpp
   JTFootprintReduction.cpp
@@ -67,5 +68,6 @@ add_llvm_library(LLVMBOLTPasses
 target_link_libraries(LLVMBOLTPasses
   PRIVATE
   LLVMBOLTCore
+  LLVMBOLTProfile
   LLVMBOLTUtils
   )
