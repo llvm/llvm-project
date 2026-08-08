@@ -79,7 +79,7 @@ protected:
   ///
   /// It also allows calls to set the required number of positional parameters.
   CommonOptionsParser(
-      int &argc, const char **argv, llvm::cl::OptionCategory &Category,
+      int &argc, const char **argv, const llvm::cl::OptionCategory &Category,
       llvm::cl::NumOccurrencesFlag OccurrencesFlag = llvm::cl::OneOrMore,
       const char *Overview = nullptr);
 
@@ -87,7 +87,7 @@ public:
   /// A factory method that is similar to the above constructor, except
   /// this returns an error instead exiting the program on error.
   static llvm::Expected<CommonOptionsParser>
-  create(int &argc, const char **argv, llvm::cl::OptionCategory &Category,
+  create(int &argc, const char **argv, const llvm::cl::OptionCategory &Category,
          llvm::cl::NumOccurrencesFlag OccurrencesFlag = llvm::cl::OneOrMore,
          const char *Overview = nullptr);
 
@@ -111,7 +111,7 @@ private:
   CommonOptionsParser() = default;
 
   llvm::Error init(int &argc, const char **argv,
-                   llvm::cl::OptionCategory &Category,
+                   const llvm::cl::OptionCategory &Category,
                    llvm::cl::NumOccurrencesFlag OccurrencesFlag,
                    const char *Overview);
 

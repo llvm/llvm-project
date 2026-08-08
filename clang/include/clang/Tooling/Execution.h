@@ -170,13 +170,13 @@ public:
 /// `--executor` is not provided.
 llvm::Expected<std::unique_ptr<ToolExecutor>>
 createExecutorFromCommandLineArgs(int &argc, const char **argv,
-                                  llvm::cl::OptionCategory &Category,
+                                  const llvm::cl::OptionCategory &Category,
                                   const char *Overview = nullptr);
 
 namespace internal {
 llvm::Expected<std::unique_ptr<ToolExecutor>>
 createExecutorFromCommandLineArgsImpl(int &argc, const char **argv,
-                                      llvm::cl::OptionCategory &Category,
+                                      const llvm::cl::OptionCategory &Category,
                                       const char *Overview = nullptr);
 } // end namespace internal
 

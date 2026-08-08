@@ -58,7 +58,7 @@ llvm::Error ToolExecutor::execute(std::unique_ptr<FrontendActionFactory> Action,
 namespace internal {
 llvm::Expected<std::unique_ptr<ToolExecutor>>
 createExecutorFromCommandLineArgsImpl(int &argc, const char **argv,
-                                      llvm::cl::OptionCategory &Category,
+                                      const llvm::cl::OptionCategory &Category,
                                       const char *Overview) {
   auto OptionsParser =
       CommonOptionsParser::create(argc, argv, Category, llvm::cl::ZeroOrMore,
@@ -88,7 +88,7 @@ createExecutorFromCommandLineArgsImpl(int &argc, const char **argv,
 
 llvm::Expected<std::unique_ptr<ToolExecutor>>
 createExecutorFromCommandLineArgs(int &argc, const char **argv,
-                                  llvm::cl::OptionCategory &Category,
+                                  const llvm::cl::OptionCategory &Category,
                                   const char *Overview) {
   return internal::createExecutorFromCommandLineArgsImpl(argc, argv, Category,
                                                          Overview);
