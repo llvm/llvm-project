@@ -3233,6 +3233,13 @@ private:
   /// \p E.
   Value *vectorizeOperand(TreeEntry *E, unsigned NodeIdx);
 
+  /// Pass a hint to the TTI when building vectors for special use cases
+  /// Backends may have a fast path for splatting scalar operands (i.e. rather
+  /// than generating the splat vector, the vector instruction may be able to
+  /// take a scalar operand), for example RISCV vfoo.vx instructions.
+  TargetTransformInfo::VectorInstrContext
+  getBuildVectorContextHint(const TreeEntry *E, ArrayRef<int> ReuseMask);
+
   /// Create a new vector from a list of scalar values.  Produces a sequence
   /// which exploits values reused across lanes, and arranges the inserts
   /// for ease of later optimization.
@@ -22135,6 +22142,35 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
   return vectorizeTree(getOperandEntry(E, NodeIdx));
 }
 
+TargetTransformInfo::VectorInstrContext
+BoUpSLP::getBuildVectorContextHint(const TreeEntry *E,
+                                   ArrayRef<int> ReuseMask) {
+  if (ShuffleVectorInst::isZeroEltSplatMask(ReuseMask, ReuseMask.size())) {
+    Value *SplatVal = E->Scalars.front();
+    if (!isa<VectorType>(SplatVal->getType()) &&
+        !isa<ExtractElementInst>(SplatVal)) {
+      SmallVector<TreeEntry *> MatchingTEs;
+      for (const auto &TE : VectorizableTree) {
+        if (DeletedNodes.contains(TE.get()))
+          continue;
+        if (TE->isGather() && E->isSame(TE->Scalars))
+          MatchingTEs.emplace_back(TE.get());
+      }
+      assert(MatchingTEs.size() &&
+             "Ought to at least match with current entry");
+      if (all_of(MatchingTEs, [this](auto *TE) {
+            auto *UserTE = TE->UserTreeIndex.UserTE;
+            if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle())
+              return false;
+            return TTI->canSplatOperand(UserTE->getOpcode(),
+                                        TE->UserTreeIndex.EdgeIdx);
+          }))
+        return TTI::VectorInstrContext::SplatOpFolded;
+    }
+  }
+  return TTI::VectorInstrContext::None;
+}
+
 template <typename BVTy, typename ResTy, typename... Args>
 ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
                                   Args &...Params) {
@@ -22686,35 +22722,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     // Gather unique scalars and all constants.
     SmallVector<int> ReuseMask(GatheredScalars.size(), PoisonMaskElem);
     TryPackScalars(GatheredScalars, ReuseMask, /*IsRootPoison=*/true);
-    // Backends may have a fast path for splatting scalar operands (i.e. rather
-    // than generating the splat vector, the vector instruction may be able to
-    // take a scalar operand), for example RISCV vfoo.vx instructions. Pass a
-    // hint to the TTI when costing the insert/shuffle sequence in such cases.
-    auto ContextHint = TTI::VectorInstrContext::None;
-
-    if (ShuffleVectorInst::isZeroEltSplatMask(ReuseMask, ReuseMask.size())) {
-      Value *SplatVal = E->Scalars.front();
-      if (!isa<VectorType>(SplatVal->getType()) &&
-          !isa<ExtractElementInst>(SplatVal)) {
-        SmallVector<TreeEntry *> MatchingTEs;
-        for (const auto &TE : VectorizableTree) {
-          if (DeletedNodes.contains(TE.get()))
-            continue;
-          if (TE->isGather() && E->isSame(TE->Scalars))
-            MatchingTEs.emplace_back(TE.get());
-        }
-        assert(MatchingTEs.size() &&
-               "Ought to at least match with current entry");
-        if (all_of(MatchingTEs, [this](auto *TE) {
-              auto *UserTE = TE->UserTreeIndex.UserTE;
-              if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle())
-                return false;
-              return TTI->canSplatOperand(UserTE->getOpcode(),
-                                          TE->UserTreeIndex.EdgeIdx);
-            }))
-          ContextHint = TTI::VectorInstrContext::SplatOpFolded;
-      }
-    }
+    auto ContextHint = getBuildVectorContextHint(E, ReuseMask);
     Value *BV = ShuffleBuilder.gather(GatheredScalars, ReuseMask.size(),
                                       /*Root*/ nullptr, ContextHint);
     ShuffleBuilder.add(BV, ReuseMask, /*ForExtract*/ false, ContextHint);
