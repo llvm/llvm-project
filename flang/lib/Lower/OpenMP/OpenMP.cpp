@@ -7830,8 +7830,12 @@ void Fortran::lower::genOpenMPSymbolProperties(
   if (sym.test(semantics::Symbol::Flag::OmpThreadprivate))
     lower::genThreadprivateOp(converter, var);
 
-  if (sym.test(semantics::Symbol::Flag::OmpDeclareTarget))
-    lower::genDeclareTargetIntGlobal(converter, var);
+  if (sym.test(semantics::Symbol::Flag::OmpDeclareTarget)) {
+    if (var.isGlobal())
+      lower::attachOpenMPDeclareTargetAttributes(converter, var);
+    else
+      lower::genDeclareTargetIntGlobal(converter, var);
+  }
 }
 
 void Fortran::lower::genGroupprivateOp(lower::AbstractConverter &converter,
@@ -7931,14 +7935,12 @@ void Fortran::lower::genThreadprivateOp(lower::AbstractConverter &converter,
 // generation.
 void Fortran::lower::genDeclareTargetIntGlobal(
     lower::AbstractConverter &converter, const lower::pft::Variable &var) {
-  if (!var.isGlobal()) {
-    // A non-global variable which can be in a declare target directive must
-    // be a variable in the main program, and it has the implicit SAVE
-    // attribute. We create a GlobalOp for it to simplify the translation to
-    // LLVM IR.
-    globalInitialization(converter, converter.getFirOpBuilder(),
-                         var.getSymbol(), var, converter.getCurrentLocation());
-  }
+  // A non-global variable which can be in a declare target directive must
+  // be a variable in the main program, and it has the implicit SAVE
+  // attribute. We create a GlobalOp for it to simplify the translation to
+  // LLVM IR.
+  globalInitialization(converter, converter.getFirOpBuilder(), var.getSymbol(),
+                       var, converter.getCurrentLocation());
 }
 
 bool Fortran::lower::isOpenMPTargetConstruct(
@@ -8093,3 +8095,38 @@ void Fortran::lower::materializeOpenMPDeclareMappers(
 // Walk scopes and materialize omp.declare_reduction ops for user-defined
 // operator reductions imported from modules (deleted: replaced by lazy,
 // clause-driven materialization).
+
+void Fortran::lower::attachOpenMPDeclareTargetAttributes(
+    lower::AbstractConverter &converter, const lower::pft::Variable &var) {
+  auto module = converter.getModuleOp();
+
+  mlir::Operation *globalOp =
+      module.lookupSymbol(converter.mangleName(var.getSymbol()));
+
+  auto ultimateSymbol = var.getSymbol().GetUltimate();
+
+  if (globalOp && ultimateSymbol.IsFromModFile()) {
+    auto declareTargetOp =
+        llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(globalOp);
+    Fortran::common::visit(
+        [&](const auto &details) {
+          if constexpr (std::is_base_of_v<semantics::WithOmpDeclarative,
+                                          std::decay_t<decltype(details)>>) {
+            mlir::omp::DeclareTargetDeviceType deviceType =
+                toMLIRDeclareTargetDeviceType(
+                    details.ompDeclTargetDeviceType().value_or(
+                        Fortran::common::OmpDeviceType::Any));
+
+            mlir::omp::DeclareTargetCaptureClause clause;
+            if (details.ompDeclTarget().test(llvm::omp::Clause::OMPC_link))
+              clause = mlir::omp::DeclareTargetCaptureClause::link;
+            else
+              clause = mlir::omp::DeclareTargetCaptureClause::enter;
+
+            declareTargetOp.setDeclareTarget(deviceType, clause,
+                                             /*automap=*/false);
+          }
+        },
+        ultimateSymbol.details());
+  }
+}

@@ -106,6 +106,11 @@ void materializeOpenMPDeclareMappers(
     Fortran::lower::AbstractConverter &, Fortran::semantics::SemanticsContext &,
     const Fortran::semantics::Scope *scope = nullptr);
 
+// Attach declare target attributes to declare target global variables
+// imported from a module file.
+void attachOpenMPDeclareTargetAttributes(lower::AbstractConverter &converter,
+                                         const lower::pft::Variable &var);
+
 namespace omp {
 /// If \p base carries OpenMP DECLARE VARIANT entries, return the variant symbol
 /// that best matches the enclosing OpenMP context, or nullptr if none matches.
