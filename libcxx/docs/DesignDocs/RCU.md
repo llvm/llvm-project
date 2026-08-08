@@ -57,8 +57,8 @@ There are several key details that an implementation of `rcu` must address:
 
 - On the writer side, `rcu_synchronize` should block until at least all the existing readers exit their critical sections
   via `rcu_domain::unlock` . Note that this is a key difference between `rcu` and read-write locks:
-  In case a late reader enters the critical section after the writer thread has called `rcu_synchronize` and waiting, the
-  writer thread does not need to wait for the late reader to exit the critical section.
+  In case a late reader enters the critical section after the writer thread has called `rcu_synchronize` and started waiting, the
+  writer thread does not need to wait for the late reader to exit the critical section. In contrast, a writer thread trying to acquire a read-write lock would have to wait until the late reader releases the lock before it can acquire it.
 
 - On the writer side, `run_barrier` should block until all the `retired` objects that happen before the `run_barrier` call are reclaimed.
 
