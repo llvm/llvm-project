@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=bonaire -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgpu7.04 -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
+; RUN: llc -mtriple=amdgpu8.02 -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
 declare void @llvm.amdgcn.s.dcache.inv.vol() #0
 declare void @llvm.amdgcn.s.waitcnt(i32) #0

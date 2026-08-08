@@ -2,162 +2,116 @@
 Test lldb-dap setBreakpoints request in assembly source references.
 """
 
-from lldbsuite.test.decorators import *
-from dap_server import Source
-import lldbdap_testcase
+from lldbsuite.test.decorators import skipIfWindows
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
-class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_setBreakpointsAssembly(DAPTestCaseBase):
     # When using PDB, we need to have debug information to break on assembly_func,
     # but this test relies on us not having debug information for that function.
     @skipIfWindows
     def test_can_break_in_source_references(self):
         """Tests hitting assembly source breakpoints"""
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-
-        assmebly_func_breakpoints = self.set_function_breakpoints(["assembly_func"])
-        self.continue_to_breakpoints(assmebly_func_breakpoints)
-
-        assembly_func_frame = self.get_stackFrames()[0]
-        self.assertIn(
-            "sourceReference",
-            assembly_func_frame.get("source"),
-            "Expected assembly source frame",
+        session = self.build_and_create_session()
+        with session.configure(LaunchArgs(program)) as ctx:
+            [assembly_func_id] = session.resolve_function_breakpoints(["assembly_func"])
+        stop_event = session.verify_stopped_on_breakpoint(
+            assembly_func_id, after=ctx.process_event
         )
 
-        line = assembly_func_frame["line"]
-
-        # Set an assembly breakpoint in the next line and check that it's hit
-        source_reference = assembly_func_frame["source"]["sourceReference"]
-        assembly_breakpoint_ids = self.set_source_breakpoints_assembly(
-            source_reference, [line + 1]
+        top_frame = session.top_frame_from(stop_event).frame
+        source_reference = self.expect_not_none(
+            top_frame.source and top_frame.source.sourceReference,
+            "expected an assembly source reference",
         )
-        self.continue_to_breakpoints(assembly_breakpoint_ids)
 
-        # Continue again and verify it hits in the next function call
-        self.continue_to_breakpoints(assmebly_func_breakpoints)
-        self.continue_to_breakpoints(assembly_breakpoint_ids)
+        # Set an assembly breakpoint on the next line and check that it's hit.
+        asm_bp_response = session.set_assembly_breakpoints(
+            source_reference, [top_frame.line + 1]
+        )
+        [asm_bp_id] = session.breakpoints_to_ids(asm_bp_response.body.breakpoints)
+        session.continue_to_breakpoint(asm_bp_id)
 
-        # Clear the breakpoint and then check that the assembly breakpoint does not hit next time
-        self.set_source_breakpoints_assembly(source_reference, [])
-        self.continue_to_breakpoints(assmebly_func_breakpoints)
-        self.continue_to_exit()
+        # Continue again and verify it hits in the next function call.
+        session.continue_to_breakpoint(assembly_func_id)
+        session.continue_to_breakpoint(asm_bp_id)
+
+        # Clear the assembly breakpoint and verify it does not hit again.
+        session.set_assembly_breakpoints(source_reference, [])
+        session.continue_to_breakpoint(assembly_func_id)
+        session.continue_to_exit()
 
     def test_break_on_invalid_source_reference(self):
-        """Tests hitting assembly source breakpoints"""
+        """Tests setting breakpoints on invalid source references fails cleanly."""
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        session = self.build_and_create_session()
+        session.launch(LaunchArgs(program))
 
-        # Verify that setting a breakpoint on an invalid source reference fails
-        response = self.dap_server.request_setBreakpoints(
-            Source.build(source_reference=-1), [1]
-        )
-        self.assertIsNotNone(response)
-        breakpoints = response["body"]["breakpoints"]
-        self.assertEqual(len(breakpoints), 1)
-        breakpoint = breakpoints[0]
-        self.assertFalse(
-            breakpoint["verified"], "Expected breakpoint to not be verified"
-        )
-        self.assertIn("message", breakpoint, "Expected message to be present")
-        self.assertEqual(
-            breakpoint["message"],
-            "Invalid sourceReference.",
-        )
-
-        # Verify that setting a breakpoint on a source reference that is not created fails
-        response = self.dap_server.request_setBreakpoints(
-            Source.build(source_reference=200), [1]
-        )
-        self.assertIsNotNone(response)
-        breakpoints = response["body"]["breakpoints"]
-        self.assertEqual(len(breakpoints), 1)
-        break_point = breakpoints[0]
-        self.assertFalse(
-            break_point["verified"], "Expected breakpoint to not be verified"
-        )
-        self.assertIn("message", break_point, "Expected message to be present")
-        self.assertEqual(
-            break_point["message"],
-            "Invalid sourceReference.",
-        )
+        # Verify that setting a breakpoint on an invalid source reference or
+        # a source reference not created fails.
+        for bad_ref in (-1, 200):
+            response = session.set_assembly_breakpoints(bad_ref, [1])
+            [bp] = response.body.breakpoints
+            self.assertFalse(bp.verified, "expected breakpoint to not be verified")
+            self.assertEqual(bp.message, "Invalid sourceReference.")
 
     @skipIfWindows
     def test_persistent_assembly_breakpoint(self):
-        """Tests that assembly breakpoints are working persistently across sessions"""
+        """Tests that assembly breakpoints persist across sessions."""
         self.build()
         program = self.getBuildArtifact("a.out")
-        self.create_debug_adapter()
 
-        # Run the first session and set a persistent assembly breakpoint
-        try:
-            self.dap_server.request_initialize()
-            self.dap_server.request_launch(program)
-            self.dap_server.wait_for_event(["initialized"])
+        # Session 1: set the persistent assembly breakpoint.
+        session = self.create_session(disconnect_automatically=False)
+        with session.configure(LaunchArgs(program)) as ctx:
+            function_bp_ids = session.resolve_function_breakpoints(["assembly_func"])
+        stop_event = session.verify_stopped_on_breakpoint(
+            function_bp_ids, after=ctx.process_event
+        )
 
-            assembly_func_breakpoints = self.set_function_breakpoints(["assembly_func"])
-            self.continue_to_breakpoints(assembly_func_breakpoints)
+        top_frame = session.top_frame_from(stop_event).frame
+        source = self.expect_not_none(top_frame.source)
+        source_reference = self.expect_not_none(source.sourceReference)
 
-            assembly_func_frame = self.get_stackFrames()[0]
-            source_reference = assembly_func_frame["source"]["sourceReference"]
+        persistent_breakpoint_line = 4
+        response = session.set_assembly_breakpoints(
+            source_reference, [persistent_breakpoint_line]
+        )
+        [persistent_bp] = response.body.breakpoints
+        persistent_source = self.expect_not_none(
+            persistent_bp.source, "expected resolved breakpoint to carry a source"
+        )
+        adapter_data = self.expect_not_none(
+            persistent_source.adapterData,
+            "expected assembly breakpoint to carry persistence info",
+        )
+        self.assertIn(
+            "persistenceData",
+            adapter_data,
+            "expected adapterData to include persistenceData",
+        )
 
-            # Set an assembly breakpoint in the middle of the assembly function
-            persistent_breakpoint_line = 4
-            persistent_breakpoint_ids = self.set_source_breakpoints_assembly(
-                source_reference, [persistent_breakpoint_line]
+        session.continue_to_breakpoint(self.expect_not_none(persistent_bp.id))
+        session.disconnect(terminateDebuggee=True)
+        session.stop()
+
+        # Session 2: replay the persisted source and verify the breakpoint hits.
+        adapter = self.create_stdio_debug_adapter()
+        session2 = self.create_session(adapter=adapter)
+        with session2.configure(LaunchArgs(program)) as ctx:
+            response = session2.set_assembly_breakpoints(
+                persistent_source, [persistent_breakpoint_line]
             )
+            [new_bp_id] = session2.breakpoints_to_ids(response.body.breakpoints)
 
-            self.assertEqual(
-                len(persistent_breakpoint_ids),
-                1,
-                "Expected one assembly breakpoint to be set",
-            )
-
-            persistent_breakpoint_source = self.dap_server.resolved_breakpoints[
-                persistent_breakpoint_ids[0]
-            ]["source"]
-            self.assertIn(
-                "adapterData",
-                persistent_breakpoint_source,
-                "Expected assembly breakpoint to have persistent information",
-            )
-            self.assertIn(
-                "persistenceData",
-                persistent_breakpoint_source["adapterData"],
-                "Expected assembly breakpoint to have persistent information",
-            )
-
-            self.continue_to_breakpoints(persistent_breakpoint_ids)
-        finally:
-            self.dap_server.request_disconnect(terminateDebuggee=True)
-            self.dap_server.terminate()
-
-        # Restart the session and verify the breakpoint is still there
-        self.create_debug_adapter()
-        try:
-            self.dap_server.request_initialize()
-            self.dap_server.request_launch(program)
-            self.dap_server.wait_for_event(["initialized"])
-
-            new_session_breakpoints_ids = self.set_source_breakpoints_from_source(
-                Source(persistent_breakpoint_source),
-                [persistent_breakpoint_line],
-            )
-
-            self.assertEqual(
-                len(new_session_breakpoints_ids),
-                1,
-                "Expected one breakpoint to be set in the new session",
-            )
-
-            self.continue_to_breakpoints(new_session_breakpoints_ids)
-            current_line = self.get_stackFrames()[0]["line"]
-            self.assertEqual(
-                current_line,
-                persistent_breakpoint_line,
-                "Expected to hit the persistent assembly breakpoint at the same line",
-            )
-        finally:
-            self.dap_server.request_disconnect(terminateDebuggee=True)
-            self.dap_server.terminate()
+        stop_event = session2.verify_stopped_on_breakpoint(
+            new_bp_id, after=ctx.process_event
+        )
+        top_frame = session2.top_frame_from(stop_event).frame
+        self.assertEqual(
+            top_frame.line,
+            persistent_breakpoint_line,
+            "expected to hit the persistent assembly breakpoint at the same line",
+        )

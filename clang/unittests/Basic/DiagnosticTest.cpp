@@ -460,6 +460,7 @@ TEST(EscapeSingleCodepointForDiagnosticTest, nonPrintableDisplaysNoQuoted) {
   EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U'\n'), "U+000A");
   EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U'\0'), "U+0000");
   EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U'\x1B'), "U+001B");
+  EXPECT_EQ(EscapeSingleCodepointForDiagnostic(U'\uFEFF'), "U+FEFF");
 }
 
 TEST(EscapeSingleCodepointForDiagnosticTest, nonScalarValues) {

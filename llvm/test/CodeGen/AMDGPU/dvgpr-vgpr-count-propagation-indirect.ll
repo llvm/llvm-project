@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 < %s | FileCheck -check-prefix=DVGPR %s
+; RUN: llc -mtriple=amdgpu12.00-amd-amdpal < %s | FileCheck -check-prefix=DVGPR %s
 ; RUN: sed 's/"amdgpu-dynamic-vgpr-block-size"="16"/"amdgpu-dynamic-vgpr-block-size"="0"/' %s \
-; RUN:   | llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 | FileCheck -check-prefix=NODVGPR %s
+; RUN:   | llc -mtriple=amdgpu12.00-amd-amdpal | FileCheck -check-prefix=NODVGPR %s
 
 ; In DVGPR mode, chain functions that have indirect non-chain calls should have
 ; their `num_vgpr` count set to the max of their local count and the module-wide

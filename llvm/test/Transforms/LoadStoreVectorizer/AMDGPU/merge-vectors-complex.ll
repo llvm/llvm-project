@@ -119,13 +119,13 @@ define void @merge_i32_p3(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2) {
 ; CHECK-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[PTR1]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[GEP1]], align 4
-; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i32 [[LOAD22]] to ptr addrspace(3)
 ; CHECK-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD11]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD11]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr addrspace(3) [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP4]], i64 1
 ; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr addrspace(2) [[STORE_GEP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -150,9 +150,9 @@ define void @split_i32_p1_p1(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2) {
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[GEP1]], align 8
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[PTR1]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr addrspace(1) [[GEP2]], align 8
-; CHECK-NEXT:    [[LOAD21:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
+; CHECK-NEXT:    [[LOAD21:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[LOAD21]] to ptr addrspace(1)
-; CHECK-NEXT:    [[LOAD32:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LOAD32:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[LOAD32]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
 ; CHECK-NEXT:    store i32 [[LOAD1]], ptr addrspace(2) [[STORE_GEP1]], align 8
@@ -185,17 +185,17 @@ define void @split_i32_i32_p1_p1(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2)
 ; CHECK-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[PTR1]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[GEP1]], align 8
-; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[PTR1]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr addrspace(1) [[GEP3]], align 8
-; CHECK-NEXT:    [[LOAD33:%.*]] = extractelement <2 x i64> [[TMP2]], i32 0
+; CHECK-NEXT:    [[LOAD33:%.*]] = extractelement <2 x i64> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[LOAD33]] to ptr addrspace(1)
-; CHECK-NEXT:    [[LOAD44:%.*]] = extractelement <2 x i64> [[TMP2]], i32 1
+; CHECK-NEXT:    [[LOAD44:%.*]] = extractelement <2 x i64> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[LOAD44]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD11]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[LOAD22]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD11]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[LOAD22]], i64 1
 ; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr addrspace(2) [[STORE_GEP1]], align 8
 ; CHECK-NEXT:    [[STORE_GEP3:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(2) [[PTR2]], i64 1
 ; CHECK-NEXT:    store ptr addrspace(1) [[TMP3]], ptr addrspace(2) [[STORE_GEP3]], align 8
@@ -230,13 +230,13 @@ define void @split_i32_i32_p1(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2) {
 ; CHECK-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[PTR1]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[GEP1]], align 8
-; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[PTR1]], i64 1
 ; CHECK-NEXT:    [[LOAD3:%.*]] = load ptr addrspace(1), ptr addrspace(1) [[GEP3]], align 8
 ; CHECK-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD11]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[LOAD22]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD11]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[LOAD22]], i64 1
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr addrspace(2) [[STORE_GEP1]], align 8
 ; CHECK-NEXT:    [[STORE_GEP3:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(2) [[PTR2]], i64 1
 ; CHECK-NEXT:    store ptr addrspace(1) [[LOAD3]], ptr addrspace(2) [[STORE_GEP3]], align 8
@@ -264,15 +264,15 @@ define void @no_split_p3_p3(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2) {
 ; CHECK-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds ptr addrspace(3), ptr addrspace(1) [[PTR1]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[GEP1]], align 4
-; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i32 [[LOAD11]] to ptr addrspace(3)
-; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i32 [[LOAD22]] to ptr addrspace(3)
 ; CHECK-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds ptr addrspace(3), ptr addrspace(2) [[PTR2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr addrspace(3) [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr addrspace(3) [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP6]], i64 1
 ; CHECK-NEXT:    store <2 x i32> [[TMP7]], ptr addrspace(2) [[STORE_GEP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -295,15 +295,15 @@ define void @split_p1_p1_p3_p3(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2) {
 ; CHECK-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[PTR1]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr addrspace(1) [[GEP1]], align 8
-; CHECK-NEXT:    [[LOAD13:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
+; CHECK-NEXT:    [[LOAD13:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[LOAD13]] to ptr addrspace(1)
-; CHECK-NEXT:    [[LOAD24:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LOAD24:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[LOAD24]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds ptr addrspace(3), ptr addrspace(1) [[PTR1]], i64 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr addrspace(1) [[GEP3]], align 4
-; CHECK-NEXT:    [[LOAD31:%.*]] = extractelement <2 x i32> [[TMP4]], i32 0
+; CHECK-NEXT:    [[LOAD31:%.*]] = extractelement <2 x i32> [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i32 [[LOAD31]] to ptr addrspace(3)
-; CHECK-NEXT:    [[LOAD42:%.*]] = extractelement <2 x i32> [[TMP4]], i32 1
+; CHECK-NEXT:    [[LOAD42:%.*]] = extractelement <2 x i32> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i32 [[LOAD42]] to ptr addrspace(3)
 ; CHECK-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(2) [[PTR2]], i64 0
 ; CHECK-NEXT:    store ptr addrspace(1) [[TMP2]], ptr addrspace(2) [[STORE_GEP1]], align 8
@@ -311,9 +311,9 @@ define void @split_p1_p1_p3_p3(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2) {
 ; CHECK-NEXT:    store ptr addrspace(1) [[TMP3]], ptr addrspace(2) [[STORE_GEP2]], align 8
 ; CHECK-NEXT:    [[STORE_GEP3:%.*]] = getelementptr inbounds ptr addrspace(3), ptr addrspace(2) [[PTR2]], i64 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr addrspace(3) [[TMP5]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr addrspace(3) [[TMP6]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[TMP9]], i64 1
 ; CHECK-NEXT:    store <2 x i32> [[TMP10]], ptr addrspace(2) [[STORE_GEP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -343,9 +343,9 @@ define void @no_split_p1_p1(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2) {
 ; CHECK-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[PTR1]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr addrspace(1) [[GEP1]], align 8
-; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
+; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[LOAD11]] to ptr addrspace(1)
-; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[LOAD22]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(2) [[PTR2]], i64 0
 ; CHECK-NEXT:    store ptr addrspace(1) [[TMP2]], ptr addrspace(2) [[STORE_GEP1]], align 8
@@ -372,23 +372,23 @@ define void @split_i16_i16_p3_p3(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2)
 ; CHECK-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[PTR1]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr addrspace(1) [[GEP1]], align 4
-; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x i16> [[TMP1]], i32 0
-; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x i16> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LOAD11:%.*]] = extractelement <2 x i16> [[TMP1]], i64 0
+; CHECK-NEXT:    [[LOAD22:%.*]] = extractelement <2 x i16> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds ptr addrspace(3), ptr addrspace(1) [[PTR1]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr addrspace(1) [[GEP3]], align 4
-; CHECK-NEXT:    [[LOAD33:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
+; CHECK-NEXT:    [[LOAD33:%.*]] = extractelement <2 x i32> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i32 [[LOAD33]] to ptr addrspace(3)
-; CHECK-NEXT:    [[LOAD44:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
+; CHECK-NEXT:    [[LOAD44:%.*]] = extractelement <2 x i32> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i32 [[LOAD44]] to ptr addrspace(3)
 ; CHECK-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i16, ptr addrspace(2) [[PTR2]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i16> poison, i16 [[LOAD11]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i16> [[TMP5]], i16 [[LOAD22]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i16> poison, i16 [[LOAD11]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i16> [[TMP5]], i16 [[LOAD22]], i64 1
 ; CHECK-NEXT:    store <2 x i16> [[TMP6]], ptr addrspace(2) [[STORE_GEP1]], align 4
 ; CHECK-NEXT:    [[STORE_GEP3:%.*]] = getelementptr inbounds ptr addrspace(3), ptr addrspace(2) [[PTR2]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr addrspace(3) [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr addrspace(3) [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[TMP9]], i64 1
 ; CHECK-NEXT:    store <2 x i32> [[TMP10]], ptr addrspace(2) [[STORE_GEP3]], align 4
 ; CHECK-NEXT:    ret void
 ;

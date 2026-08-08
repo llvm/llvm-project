@@ -125,6 +125,11 @@ struct GPUToXeVMPipelineOptions
       llvm::cl::desc("Granularity of XeGPU operations to target: workgroup | "
                      "subgroup | lane"),
       llvm::cl::init("workgroup")};
+  PassOptions::Option<bool> enableVectorToXeGPU{
+      *this, "enable-vector-to-xegpu",
+      llvm::cl::desc("Run convert-vector-to-xegpu so the pipeline can accept "
+                     "vector dialect (one level above XeGPU) as entry IR"),
+      llvm::cl::init(false)};
   // General lowering controls.
   PassOptions::Option<bool> use64bitIndex{
       *this, "use-64bit-index",

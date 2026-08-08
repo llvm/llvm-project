@@ -1371,6 +1371,10 @@ ExpectedType ASTNodeImporter::VisitBuiltinType(const BuiltinType *T) {
   case BuiltinType::Id:                                                        \
     return Importer.getToContext().SingletonId;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    return Importer.getToContext().SingletonId;
+#include "clang/Basic/SPIRVTypes.def"
 #define SHARED_SINGLETON_TYPE(Expansion)
 #define BUILTIN_TYPE(Id, SingletonId) \
   case BuiltinType::Id: return Importer.getToContext().SingletonId;
@@ -1846,6 +1850,11 @@ ASTNodeImporter::VisitCountAttributedType(const CountAttributedType *T) {
   return Importer.getToContext().getCountAttributedType(
       *ToWrappedTypeOrErr, CountExpr, T->isCountInBytes(), T->isOrNull(),
       ArrayRef(CoupledDecls));
+}
+
+ExpectedType
+ASTNodeImporter::VisitLateParsedAttrType(const LateParsedAttrType *T) {
+  llvm_unreachable("should be replaced with a concrete type before AST import");
 }
 
 ExpectedType ASTNodeImporter::VisitTemplateTypeParmType(
@@ -2835,7 +2844,8 @@ ExpectedDecl ASTNodeImporter::VisitBindingDecl(BindingDecl *D) {
   Error Err = Error::success();
   QualType ToType = importChecked(Err, D->getType());
   Expr *ToBinding = importChecked(Err, D->getBinding());
-  ValueDecl *ToDecomposedDecl = importChecked(Err, D->getDecomposedDecl());
+  DecompositionDecl *ToDecomposedDecl =
+      importChecked(Err, D->getDecomposedDecl());
   if (Err)
     return std::move(Err);
 
@@ -10826,11 +10836,13 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
     break;
   case APValue::Struct:
     Result.MakeStruct(FromValue.getStructNumBases(),
-                      FromValue.getStructNumFields());
+                      FromValue.getStructNumFields(),
+                      FromValue.getStructNumVirtualBases());
     ImportLoop(
         ((const APValue::StructData *)(const char *)&FromValue.Data)->Elts,
         ((const APValue::StructData *)(const char *)&Result.Data)->Elts,
-        FromValue.getStructNumBases() + FromValue.getStructNumFields());
+        FromValue.getStructNumBases() + FromValue.getStructNumFields() +
+            FromValue.getStructNumVirtualBases());
     break;
   case APValue::Union: {
     Result.MakeUnion();

@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_INTERP_BYTECODEEXPRGEN_H
 
 #include "ByteCodeEmitter.h"
+#include "DeclOrExpr.h"
 #include "EvalEmitter.h"
 #include "Pointer.h"
 #include "PrimType.h"
@@ -323,7 +324,8 @@ protected:
   VarCreationState visitDecl(const VarDecl *VD);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, SourceInfo Info);
-  bool visitAPValueInitializer(const APValue &Val, SourceInfo Info, QualType T);
+  bool visitAPValueInitializer(const APValue &Val, SourceInfo Info, QualType T,
+                               bool IsCompleteClass = true);
   /// Visit the given decl as if we have a reference to it.
   bool visitDeclRef(const ValueDecl *D, const Expr *E);
 
@@ -338,12 +340,12 @@ protected:
                      bool Activate, bool IsOperatorCall);
 
   /// Creates a local primitive value.
-  unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
+  unsigned allocateLocalPrimitive(DeclOrExpr &&Decl, PrimType Ty, bool IsConst,
                                   bool IsVolatile = false,
                                   ScopeKind SC = ScopeKind::Block);
 
   /// Allocates a space storing a local given its type.
-  UnsignedOrNone allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
+  UnsignedOrNone allocateLocal(DeclOrExpr &&Decl, QualType Ty = QualType(),
                                ScopeKind = ScopeKind::Block);
   UnsignedOrNone allocateTemporary(const Expr *E);
 
@@ -366,7 +368,8 @@ private:
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
-  bool visitZeroRecordInitializer(const Record *R, const Expr *E);
+  bool visitZeroRecordInitializer(const Record *R, const Expr *E,
+                                  bool IsCompleteClass = true);
   bool visitZeroArrayInitializer(QualType T, const Expr *E);
   bool visitAssignment(const Expr *LHS, const Expr *RHS, const Expr *E);
 
@@ -425,7 +428,7 @@ private:
                              const BinaryOperator *E);
   bool emitRecordDestructionPop(const Record *R, SourceInfo Loc);
   bool emitDestructionPop(const Descriptor *Desc, SourceInfo Loc);
-  bool emitDummyPtr(const DeclTy &D, const Expr *E, bool CU = false);
+  bool emitDummyPtr(DeclOrExpr D, const Expr *E, bool CU = false);
   bool emitFloat(const APFloat &F, SourceInfo Info);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
@@ -492,7 +495,7 @@ protected:
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
   bool Initializing = false;
-  const ValueDecl *InitializingDecl = nullptr;
+  const VarDecl *InitializingDecl = nullptr;
 
   llvm::SmallVector<InitLink> InitStack;
   bool InitStackActive = false;

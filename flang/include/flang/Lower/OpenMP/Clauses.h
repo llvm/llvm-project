@@ -322,6 +322,8 @@ using Uniform = tomp::clause::UniformT<TypeTy, IdTy, ExprTy>;
 using Unknown = tomp::clause::UnknownT<TypeTy, IdTy, ExprTy>;
 using Untied = tomp::clause::UntiedT<TypeTy, IdTy, ExprTy>;
 using Update = tomp::clause::UpdateT<TypeTy, IdTy, ExprTy>;
+using UpdateDependObjects =
+    tomp::clause::UpdateDependObjectsT<TypeTy, IdTy, ExprTy>;
 using Use = tomp::clause::UseT<TypeTy, IdTy, ExprTy>;
 using UseDeviceAddr = tomp::clause::UseDeviceAddrT<TypeTy, IdTy, ExprTy>;
 using UseDevicePtr = tomp::clause::UseDevicePtrT<TypeTy, IdTy, ExprTy>;

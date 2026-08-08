@@ -636,16 +636,14 @@ define void @simple_histogram_rtdepcheck(ptr noalias %buckets, ptr %array, ptr %
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP3]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP6]], 4
-; CHECK-NEXT:    [[TMP17:%.*]] = sub i64 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 4
+; CHECK-NEXT:    [[TMP17:%.*]] = add nsw i64 [[TMP4]], -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[ARRAY1]], [[INDICES2]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], [[TMP17]]
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP7]], 2
+; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP8]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
@@ -878,7 +876,7 @@ attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.interleave.count", i32 2}
 !2 = distinct !{!2, !3}
-!3 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.predicate.enable"}
 !4 = distinct !{!4, !5}
 !5 = !{!"llvm.loop.interleave.count", i32 1}
 !6 = !{!7}
