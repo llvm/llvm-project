@@ -41,6 +41,10 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
       if (BF.isFolded())
         return false;
 
+      // Skip functions that already have clones at origin.
+      if (BF.hasCloneAtOrigin())
+        return false;
+
       // Patching is always needed if explicitly requested.
       if (BF.needsPatch())
         return true;
@@ -75,6 +79,10 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
 
     // Patch original code only for functions that will be emitted.
     if (!BC.shouldEmit(Function))
+      continue;
+
+    // Skip functions that already have clones at origin.
+    if (Function.hasCloneAtOrigin())
       continue;
 
     // Check if we can skip patching the function.

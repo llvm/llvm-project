@@ -7,6 +7,7 @@ add_llvm_library(LLVMBOLTPasses
   BranchLivenessUtils.cpp
   CMOVConversion.cpp
   CacheMetrics.cpp
+  CreateClonesAtOrigin.cpp
   DataflowAnalysis.cpp
   DataflowInfoManager.cpp
   FrameAnalysis.cpp
