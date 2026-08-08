@@ -73,6 +73,11 @@ struct __optional_destruct_base;
 template <class _Tp>
 struct __optional_destruct_base<_Tp, false> {
   typedef _Tp value_type;
+#  if _LIBCPP_STD_VER >= 26
+  static_assert(!is_rvalue_reference_v<_Tp>, "instantiation of optional with an rvalue reference type is ill-formed");
+#  else
+  static_assert(!is_reference_v<_Tp>, "instantiation of optional with a reference type is ill-formed");
+#  endif
   static_assert(is_object_v<value_type>, "instantiation of optional with a non-object type is undefined behavior");
   union {
     char __null_state_;
@@ -109,6 +114,11 @@ struct __optional_destruct_base<_Tp, false> {
 template <class _Tp>
 struct __optional_destruct_base<_Tp, true> {
   typedef _Tp value_type;
+#  if _LIBCPP_STD_VER >= 26
+  static_assert(!is_rvalue_reference_v<_Tp>, "instantiation of optional with an rvalue reference type is ill-formed");
+#  else
+  static_assert(!is_reference_v<_Tp>, "instantiation of optional with a reference type is ill-formed");
+#  endif
   static_assert(is_object_v<value_type>, "instantiation of optional with a non-object type is undefined behavior");
   union {
     char __null_state_;
@@ -419,11 +429,6 @@ public:
 private:
   static_assert(!is_same_v<remove_cv_t<_Tp>, in_place_t>, "instantiation of optional with in_place_t is ill-formed");
   static_assert(!is_same_v<remove_cv_t<_Tp>, nullopt_t>, "instantiation of optional with nullopt_t is ill-formed");
-#  if _LIBCPP_STD_VER >= 26
-  static_assert(!is_rvalue_reference_v<_Tp>, "instantiation of optional with an rvalue reference type is ill-formed");
-#  else
-  static_assert(!is_reference_v<_Tp>, "instantiation of optional with a reference type is ill-formed");
-#  endif
   static_assert(is_destructible_v<_Tp>, "instantiation of optional with a non-destructible type is ill-formed");
   static_assert(!is_array_v<_Tp>, "instantiation of optional with an array type is ill-formed");
 
