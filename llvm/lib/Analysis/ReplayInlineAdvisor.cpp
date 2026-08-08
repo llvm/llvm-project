@@ -88,7 +88,8 @@ llvm::getReplayInlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
   return Advisor;
 }
 
-std::unique_ptr<InlineAdvice> ReplayInlineAdvisor::getAdviceImpl(CallBase &CB) {
+std::unique_ptr<InlineAdvice>
+ReplayInlineAdvisor::getAdviceImpl(CallBase &CB, bool IsInlinedCall) {
   assert(HasReplayRemarks);
 
   Function &Caller = *CB.getCaller();
@@ -98,7 +99,8 @@ std::unique_ptr<InlineAdvice> ReplayInlineAdvisor::getAdviceImpl(CallBase &CB) {
   if (!hasInlineAdvice(*CB.getFunction())) {
     // If there's a registered original advisor, return its decision
     if (OriginalAdvisor)
-      return OriginalAdvisor->getAdvice(CB);
+      return OriginalAdvisor->getAdvice(CB, /*MandatoryOnly=*/false,
+                                        IsInlinedCall);
 
     // If no decision is made above, return non-decision
     return {};
@@ -143,7 +145,8 @@ std::unique_ptr<InlineAdvice> ReplayInlineAdvisor::getAdviceImpl(CallBase &CB) {
            ReplayInlinerSettings::Fallback::Original);
     // If there's a registered original advisor, return its decision
     if (OriginalAdvisor)
-      return OriginalAdvisor->getAdvice(CB);
+      return OriginalAdvisor->getAdvice(CB, /*MandatoryOnly=*/false,
+                                        IsInlinedCall);
   }
 
   // If no decision is made above, return non-decision
