@@ -8,6 +8,8 @@
 
 #include "clc/subgroup/clc_sub_group_non_uniform_reduce.h"
 
+#ifdef cl_khr_subgroup_non_uniform_arithmetic
+
 #define __CLC_BODY "sub_group_non_uniform_reduce.inc"
 #include "clc/integer/gentype.inc"
 
@@ -28,3 +30,5 @@ _CLC_DEF _CLC_OVERLOAD int
 sub_group_non_uniform_reduce_logical_xor(int predicate) {
   return __clc_sub_group_non_uniform_reduce_logical_xor(predicate);
 }
+
+#endif // cl_khr_subgroup_non_uniform_arithmetic
