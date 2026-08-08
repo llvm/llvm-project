@@ -383,6 +383,21 @@ struct TypeBuilderImpl {
     std::vector<std::pair<std::string, mlir::Type>> ps;
     std::vector<std::pair<std::string, mlir::Type>> cs;
     if (tySpec.IsVectorType()) {
+      // Register an empty fir.type<> so TypeInfoConverter emits a fir.type_info
+      // stub (see Bridge.cpp).  This lets CodeGen resolve the .dt. global when
+      // a vector type appears in a fir.class<> descriptor.
+      if (const Fortran::semantics::Scope *scope = tySpec.GetScope()) {
+        if (const Fortran::semantics::Symbol *typeInfoSym =
+                scope->runtimeDerivedTypeDescription()) {
+          mlir::Location loc =
+              converter.genLocation(tySpec.typeSymbol().name());
+          auto rec =
+              fir::RecordType::get(context, converter.mangleName(tySpec));
+          if (!rec.isFinalized())
+            rec.finalize({}, {}); // empty: no Fortran components, no len params
+          converter.registerTypeInfo(loc, *typeInfoSym, tySpec, rec);
+        }
+      }
       return genVectorType(tySpec);
     }
 

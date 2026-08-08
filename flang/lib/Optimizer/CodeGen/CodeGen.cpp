@@ -1936,6 +1936,10 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
             auto recTy = mlir::dyn_cast<fir::RecordType>(innerType);
             typeDesc =
                 getTypeDescriptor(mod, rewriter, loc, recTy, this->options);
+          } else if (auto recTy = fir::unwrapIfDerived(boxTy)) {
+            // If inputType is not a RecordType, use the record type from boxTy.
+            typeDesc =
+                getTypeDescriptor(mod, rewriter, loc, recTy, this->options);
           } else {
             // Unlimited polymorphic type descriptor with no record type. Set
             // type descriptor address to a clean state.

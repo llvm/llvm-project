@@ -87,6 +87,34 @@ public:
         fir::StoreOp::create(builder, loc, rhsVal, temp);
         rhsExv = temp;
       }
+      // For polymorphic LHS with an IBM vector RHS, re-box as
+      // fir.class<fir.type<...>> so CodeGen writes the .dt. global into
+      // the descriptor addendum.  Name via fir::getPpcVectorRecordName().
+      if (lhs.isPolymorphic()) {
+        mlir::Type rhsElemTy = rhs.getFortranElementType();
+        if (auto vecTy = mlir::dyn_cast<fir::VectorType>(rhsElemTy)) {
+          std::string recName = fir::getPpcVectorRecordName(vecTy);
+          if (!recName.empty()) {
+            fir::RecordType recTy =
+                fir::RecordType::get(builder.getContext(), recName);
+            if (recTy) {
+              mlir::Value baseAddr = fir::getBase(rhsExv);
+              mlir::Type rhsSeqTy =
+                  fir::unwrapPassByRefType(baseAddr.getType());
+              mlir::Type recSeqTy;
+              if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(rhsSeqTy))
+                recSeqTy = fir::SequenceType::get(seqTy.getShape(), recTy);
+              else
+                recSeqTy = recTy;
+              mlir::Type classTy = fir::ClassType::get(recSeqTy);
+              mlir::Value shape = builder.createShape(loc, rhsExv);
+              return builder.createBox(loc, classTy, baseAddr, shape,
+                                       /*slice=*/{}, /*lengths=*/{},
+                                       /*tdesc=*/{});
+            }
+          }
+        }
+      }
       return fir::getBase(builder.createBox(loc, rhsExv));
     };
 

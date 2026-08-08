@@ -106,11 +106,14 @@ bool RTDEF(SameTypeAs)(const Descriptor &a, const Descriptor &b) {
         return true;
       } else if (const typeInfo::DerivedType *
           uninstDerivedTypeA{derivedTypeA->uninstantiatedType()}) {
-        // There are KIND type parameters, are these the same type if those
-        // are ignored?
+        // IBM vector() KINDs share one PDT template but are distinct types.
         const typeInfo::DerivedType *uninstDerivedTypeB{
             derivedTypeB->uninstantiatedType()};
-        return uninstDerivedTypeA == uninstDerivedTypeB;
+        if (uninstDerivedTypeA != uninstDerivedTypeB)
+          return false;
+        if (derivedTypeA->isVectorType())
+          return false; // same template, different KIND -- distinct types
+        return true;
       }
     }
   }

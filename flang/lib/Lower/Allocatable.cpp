@@ -207,7 +207,60 @@ static mlir::Value genRuntimeAllocateSource(fir::FirOpBuilder &builder,
   return fir::CallOp::create(builder, loc, callee, args).getResult(0);
 }
 
-/// Generate runtime call to apply mold to the descriptor.
+/// Re-box IBM vector molds as fir.class so AllocatableApplyMold copies
+/// derivedType_ into the destination descriptor.
+static mlir::Value genVectorMoldBox(fir::FirOpBuilder &builder,
+                                    mlir::Location loc,
+                                    const fir::ExtendedValue &mold) {
+  // The mold is always boxed; unwrap through the box to the vector element.
+  mlir::Value baseVal = fir::getBase(mold);
+  mlir::Type elemTy = fir::unwrapSeqOrBoxedSeqType(baseVal.getType());
+  auto vecTy = mlir::dyn_cast<fir::VectorType>(elemTy);
+  if (!vecTy)
+    return {};
+  // Look up by MLIR-uniqued name; fir.type_info ops are emitted later.
+  std::string recName = fir::getPpcVectorRecordName(vecTy);
+  if (recName.empty())
+    return {};
+  fir::RecordType recTy = fir::RecordType::get(builder.getContext(), recName);
+  if (!recTy)
+    return {};
+  // fir.embox takes a data pointer, not a descriptor.
+  mlir::Value dataAddr = fir::BoxAddrOp::create(builder, loc, baseVal);
+  // Build seqTy from the unwrapped address shape.
+  mlir::Type seqTy;
+  if (auto arrTy = mlir::dyn_cast<fir::SequenceType>(
+          fir::unwrapPassByRefType(dataAddr.getType())))
+    seqTy = fir::SequenceType::get(arrTy.getShape(), recTy);
+  else
+    seqTy =
+        fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, recTy);
+  // If createShape returns {}, read extents from the box.
+  mlir::Value shape = builder.createShape(loc, mold);
+  if (!shape) {
+    mlir::Type innerTy = fir::dyn_cast_ptrOrBoxEleTy(baseVal.getType());
+    if (auto seqArrTy = mlir::dyn_cast<fir::SequenceType>(innerTy)) {
+      mlir::Type idxTy = builder.getIndexType();
+      llvm::SmallVector<mlir::Value> extents;
+      for (auto [d, ext] : llvm::enumerate(seqArrTy.getShape())) {
+        if (ext != fir::SequenceType::getUnknownExtent())
+          extents.push_back(builder.createIntegerConstant(loc, idxTy, ext));
+        else {
+          mlir::Value dimIdx = builder.createIntegerConstant(loc, idxTy, d);
+          auto dimInfo = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy,
+                                                idxTy, baseVal, dimIdx);
+          extents.push_back(dimInfo.getResult(1));
+        }
+      }
+      if (!extents.empty())
+        shape = builder.genShape(loc, extents);
+    }
+  }
+  return builder.createBox(loc, fir::ClassType::get(seqTy), dataAddr, shape,
+                           /*slice=*/{}, /*lengths=*/{},
+                           /*tdesc=*/{});
+}
+
 static void genRuntimeAllocateApplyMold(fir::FirOpBuilder &builder,
                                         mlir::Location loc,
                                         const fir::MutableBoxValue &box,
@@ -218,9 +271,13 @@ static void genRuntimeAllocateApplyMold(fir::FirOpBuilder &builder,
                                                                     builder)
           : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableApplyMold)>(
                 loc, builder);
+  // Re-box IBM vector molds as fir.class so the addendum carries derivedType_.
+  mlir::Value moldBase = genVectorMoldBox(builder, loc, mold);
+  if (!moldBase)
+    moldBase = fir::getBase(mold);
   const auto args = fir::runtime::createArguments(
       builder, loc, callee.getFunctionType(),
-      fir::factory::getMutableIRBox(builder, loc, box), fir::getBase(mold),
+      fir::factory::getMutableIRBox(builder, loc, box), moldBase,
       builder.createIntegerConstant(
           loc, callee.getFunctionType().getInputs()[2], rank));
   fir::CallOp::create(builder, loc, callee, args);
@@ -232,7 +289,7 @@ static mlir::Value genRuntimeDeallocate(fir::FirOpBuilder &builder,
                                         const fir::MutableBoxValue &box,
                                         ErrorManager &errorManager,
                                         mlir::Value declaredTypeDesc = {}) {
-  // Ensure fir.box is up-to-date before passing it to deallocate runtime.
+  // Sync fir.box before the runtime call.
   mlir::Value boxAddress = fir::factory::getMutableIRBox(builder, loc, box);
   mlir::func::FuncOp callee;
   llvm::SmallVector<mlir::Value> args;

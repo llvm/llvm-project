@@ -209,6 +209,22 @@ inline bool isa_vector(mlir::Type t) {
   return mlir::isa<mlir::VectorType, fir::VectorType>(t);
 }
 
+/// Return the MLIR-uniqued fir.type<> name for an IBM PPC vector type.
+/// Integer (signless) uses K0K, unsigned uses K1K, real uses K2K.
+/// Returns "" for any other element type.
+inline std::string getPpcVectorRecordName(fir::VectorType vecTy) {
+  mlir::Type eleTy = vecTy.getEleTy();
+  std::string kSuffix;
+  if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(eleTy)) {
+    const char *prefix = intTy.isUnsigned() ? "K1K" : "K0K";
+    kSuffix = prefix + std::to_string(intTy.getWidth() / 8);
+  } else if (auto floatTy = mlir::dyn_cast<mlir::FloatType>(eleTy))
+    kSuffix = "K2K" + std::to_string(floatTy.getWidth() / 8);
+  if (kSuffix.empty())
+    return {};
+  return "_QM__ppc_typesT__builtin_ppc_intrinsic_vector" + kSuffix;
+}
+
 mlir::Type parseFirType(FIROpsDialect *, mlir::DialectAsmParser &parser);
 
 void printFirType(FIROpsDialect *, mlir::Type ty, mlir::DialectAsmPrinter &p);

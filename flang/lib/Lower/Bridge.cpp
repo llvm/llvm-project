@@ -402,14 +402,31 @@ private:
 
   void createTypeInfoOp(Fortran::lower::AbstractConverter &converter,
                         const TypeInfo &info) {
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    fir::TypeInfoOp dt;
+    mlir::OpBuilder::InsertPoint insertPointIfCreated;
+
+    // IBM vector types have no components or bindings; emit a minimal
+    // fir.type_info stub so CodeGen can resolve the .dt. global in
+    // fir.class<fir.type<...>> descriptors (same_type_as support).
+    if (info.typeSpec.IsVectorType()) {
+      std::tie(dt, insertPointIfCreated) =
+          builder.createTypeInfoOp(info.loc, info.type,
+                                   /*parentType=*/fir::RecordType{});
+      if (!insertPointIfCreated.isSet())
+        return;
+      dt->setAttr(dt.getNoInitAttrName(), builder.getUnitAttr());
+      dt->setAttr(dt.getNoDestroyAttrName(), builder.getUnitAttr());
+      dt->setAttr(dt.getNoFinalAttrName(), builder.getUnitAttr());
+      builder.restoreInsertionPoint(insertPointIfCreated);
+      return;
+    }
+
     fir::RecordType parentType{};
     if (const Fortran::semantics::DerivedTypeSpec *parent =
             Fortran::evaluate::GetParentTypeSpec(info.typeSpec))
       parentType = mlir::cast<fir::RecordType>(converter.genType(*parent));
 
-    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-    fir::TypeInfoOp dt;
-    mlir::OpBuilder::InsertPoint insertPointIfCreated;
     std::tie(dt, insertPointIfCreated) =
         builder.createTypeInfoOp(info.loc, info.type, parentType);
     if (!insertPointIfCreated.isSet())
