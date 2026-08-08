@@ -179,6 +179,11 @@ mlir::Value createIgnoredValue(mlir::OpBuilder &builder, mlir::Location loc,
 /// llvm.align on Indirect args.  Preserves any existing arg attributes on
 /// retained arg slots.  \p origArgTypes provides the pre-rewrite type for
 /// each arg slot (needed to compute the llvm.byval pointee type).
+///
+/// An attribute this function sets can already be present on the arg slot:
+/// CIRGen marks a scalar parameter llvm.noundef, and the ABI can then pass that
+/// parameter byval, which wants llvm.noundef too.  So each name has to be set
+/// rather than appended, or the dictionary carries it twice.
 mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
                                ArrayRef<mlir::Type> origArgTypes,
                                mlir::ArrayAttr existingArgAttrs,
@@ -204,9 +209,9 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       newArgAttrs.append(recTy.getNumElements(), builder.getDictionaryAttr({}));
     } else if (ac.kind == ArgKind::Extend) {
       StringRef attrName = ac.signExtend ? "llvm.signext" : "llvm.zeroext";
-      SmallVector<mlir::NamedAttribute> attrs(existing.begin(), existing.end());
-      attrs.push_back(builder.getNamedAttr(attrName, builder.getUnitAttr()));
-      newArgAttrs.push_back(builder.getDictionaryAttr(attrs));
+      mlir::NamedAttrList attrs(existing);
+      attrs.set(attrName, builder.getUnitAttr());
+      newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else if (ac.kind == ArgKind::Indirect) {
       // byval: caller-allocated copy; callee receives pointer to copy.
       // byref: callee receives pointer to the caller's original storage.
@@ -226,18 +231,15 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       //     produces a fresh alloca+store.
       mlir::Type pointeeTy = origArgTypes[oldIdx];
       StringRef ownershipAttr = ac.byVal ? "llvm.byval" : "llvm.byref";
-      SmallVector<mlir::NamedAttribute> attrs(existing.begin(), existing.end());
-      attrs.push_back(builder.getNamedAttr(
-          "llvm.align", builder.getI64IntegerAttr(ac.indirectAlign.value())));
-      attrs.push_back(
-          builder.getNamedAttr(ownershipAttr, mlir::TypeAttr::get(pointeeTy)));
+      mlir::NamedAttrList attrs(existing);
+      attrs.set("llvm.align",
+                builder.getI64IntegerAttr(ac.indirectAlign.value()));
+      attrs.set(ownershipAttr, mlir::TypeAttr::get(pointeeTy));
       if (ac.byVal) {
-        attrs.push_back(
-            builder.getNamedAttr("llvm.noalias", builder.getUnitAttr()));
-        attrs.push_back(
-            builder.getNamedAttr("llvm.noundef", builder.getUnitAttr()));
+        attrs.set("llvm.noalias", builder.getUnitAttr());
+        attrs.set("llvm.noundef", builder.getUnitAttr());
       }
-      newArgAttrs.push_back(builder.getDictionaryAttr(attrs));
+      newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else {
       newArgAttrs.push_back(existing);
     }
