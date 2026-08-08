@@ -838,6 +838,18 @@ add_fp_unittest(
     libc.src.__support.builtins.extendsfdf2
     libc.src.__support.builtins.extendsftf2
     libc.src.__support.builtins.extendxftf2
+    libc.src.__support.builtins.fixdfdi
+    libc.src.__support.builtins.fixdfsi
+    libc.src.__support.builtins.fixdfti
+    libc.src.__support.builtins.fixsfdi
+    libc.src.__support.builtins.fixsfsi
+    libc.src.__support.builtins.fixsfti
+    libc.src.__support.builtins.fixunsdfdi
+    libc.src.__support.builtins.fixunsdfsi
+    libc.src.__support.builtins.fixunsdfti
+    libc.src.__support.builtins.fixunssfdi
+    libc.src.__support.builtins.fixunssfsi
+    libc.src.__support.builtins.fixunssfti
     libc.src.__support.builtins.muldf3
     libc.src.__support.builtins.mulsf3
     libc.src.__support.builtins.multf3
@@ -850,6 +862,7 @@ add_fp_unittest(
     libc.src.__support.builtins.trunctfdf2
     libc.src.__support.builtins.trunctfsf2
     libc.src.__support.builtins.trunctfxf2
+    libc.src.__support.uint128
 )
 
 add_fp_unittest(

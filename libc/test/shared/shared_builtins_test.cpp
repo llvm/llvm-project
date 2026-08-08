@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "shared/builtins.h"
+#include "src/__support/uint128.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
