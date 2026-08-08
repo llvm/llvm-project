@@ -87,7 +87,7 @@ TEST_CONSTEXPR_CXX20 void test_hash_enabled(Key const& key = Key{}) {
 
 // Test that the specified Hash meets the requirements of a disabled hash.
 template <class Key, class Hash = std::hash<Key>>
-void test_hash_disabled() {
+TEST_CONSTEXPR_CXX26 void test_hash_disabled() {
   // Disabled hash requirements
   static_assert(!std::is_default_constructible<Hash>::value, "");
   static_assert(!std::is_copy_constructible<Hash>::value, "");
