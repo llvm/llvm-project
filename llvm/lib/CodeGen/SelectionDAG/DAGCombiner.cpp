@@ -12000,7 +12000,7 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
     unsigned SignBits = DAG.ComputeNumSignBits(X);
     if (N1C->getZExtValue() >= OpSizeInBits - SignBits)
       return DAG.getNode(ISD::SRL, DL, VT, X,
-                         DAG.getConstant(OpSizeInBits - 1, DL, VT));
+                         DAG.getShiftAmountConstant(OpSizeInBits - 1, VT, DL));
   }
 
   return SDValue();
