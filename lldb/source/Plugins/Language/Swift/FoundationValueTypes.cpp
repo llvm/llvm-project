@@ -365,7 +365,7 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     if (!int_size)
       return false;
     const uint64_t slice_size =
-        slice_sp ? llvm::expectedToStdOptional(slice_sp->GetByteSize())
+        slice_sp ? llvm::expectedToOptional(slice_sp->GetByteSize())
                        .value_or(0)
                  : 0;
 
