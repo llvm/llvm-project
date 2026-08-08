@@ -402,6 +402,10 @@ struct KnownFPClass {
   //
   // A negative subnormal is read as +0.0 under a positive-zero input mode, so
   // it counts towards the positive side and not the negative one.
+  //
+  // TODO: With a positive-zero output mode a -sub result is flushed to +0.0, so
+  // the result can be positive after all. Fix it in fmul and fdiv by adding
+  // fcPosZero back and dropping SignBit before they rule out fcSubnormal.
   void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS,
                         DenormalMode Mode) {
     bool MustFlushNegSub = Mode.Input == DenormalMode::PositiveZero;
