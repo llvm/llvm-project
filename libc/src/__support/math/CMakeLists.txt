@@ -314,6 +314,7 @@ add_header_library(
     atan2f128.h
   DEPENDS
     .atan_utils
+    libc.src.__support.FPUtil.float128
     libc.src.__support.integer_literals
     libc.src.__support.uint128
     libc.src.__support.FPUtil.dyadic_float
