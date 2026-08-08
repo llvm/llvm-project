@@ -15,6 +15,7 @@
 #include "CASTestConfig.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
@@ -23,6 +24,12 @@
 using namespace llvm;
 using namespace llvm::cas;
 using namespace llvm::unittest::cas;
+
+// HWASan does not tag the globals of a dlopen'ed library with glibc, so the
+// plugin faults as soon as it touches one of its own globals.
+// FIXME: Re-enable once https://github.com/llvm/llvm-project/issues/57206 is
+// fixed.
+#if !LLVM_HWADDRESS_SANITIZER_BUILD
 
 TEST(PluginCASTest, isMaterialized) {
   unittest::TempDir Temp("plugin-cas", /*Unique=*/true);
@@ -89,3 +96,5 @@ TEST(PluginCASTest, isMaterialized) {
     EXPECT_TRUE(IsMaterialized);
   }
 }
+
+#endif /* !LLVM_HWADDRESS_SANITIZER_BUILD */
