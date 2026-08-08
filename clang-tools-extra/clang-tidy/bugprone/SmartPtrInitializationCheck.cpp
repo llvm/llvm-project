@@ -87,7 +87,8 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
               .bind("method-decl")),
       hasArgument(0, PointerArg), unless(HasCustomDeleter),
       unless(hasArgument(0, cxxNewExpr())),
-      unless(hasArgument(0, ReleaseCallMatcher)));
+      unless(hasArgument(0, ReleaseCallMatcher)),
+      unless(hasArgument(0, conditionalOperator())));
 
   // Matcher for reset() calls
   // Exclude reset() calls with custom deleters:
@@ -110,7 +111,8 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
                  .bind("method-decl")),
       hasArgument(0, PointerArg), unless(HasCustomDeleterInReset),
       unless(hasArgument(0, cxxNewExpr())),
-      unless(hasArgument(0, ReleaseCallMatcher)));
+      unless(hasArgument(0, ReleaseCallMatcher)),
+      unless(hasArgument(0, conditionalOperator())));
 
   Finder->addMatcher(SmartPtrConstructorMatcher, this);
   Finder->addMatcher(ResetCallMatcher, this);
