@@ -6577,6 +6577,15 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
   }
   Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize, Flag);
 
+  // Allocate p.lastiter and set it to 1 (true). The target workshare loop
+  // executes synchronously on the device and completely finishes before
+  // returning, so the thread executing after it is effectively the one that
+  // executed the last iteration, and needs to do the linear variable updates.
+  Builder.restoreIP(AllocaIP);
+  Value *PLastIter = Builder.CreateAlloca(Builder.getInt32Ty(), nullptr, "p.lastiter");
+  Builder.CreateStore(Builder.getInt32(1), PLastIter);
+  CLI->setLastIter(PLastIter);
+
   auto OI = std::make_unique<OutlineInfo>();
   OI->OuterAllocBB = CLI->getPreheader();
   Function *OuterFn = CLI->getPreheader()->getParent();
