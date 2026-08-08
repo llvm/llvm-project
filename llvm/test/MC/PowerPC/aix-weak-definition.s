@@ -1,20 +1,12 @@
-# Check that .weak_definition marks symbols as weak externals on AIX/XCOFF.
+# Check that .weak_definition is rejected at parse time on AIX/XCOFF.
 #
-# .weak_definition is not a documented AIX directive; LLVM emits the
-# documented .weak directive instead.
+# .weak_definition is a Mach-O-specific directive and is not supported on
+# XCOFF. The documented AIX directive for weak symbols is .weak.
 #
-# RUN: llvm-mc -triple powerpc-ibm-aix-xcoff %s -filetype=obj -o - | \
-# RUN:   llvm-objdump --syms - | FileCheck %s
-# RUN: llvm-mc -triple powerpc-ibm-aix-xcoff %s -filetype=asm -o - | \
-# RUN:   FileCheck %s --check-prefix=ASM
+# RUN: not llvm-mc -triple powerpc-ibm-aix-xcoff %s 2>&1 | FileCheck %s
 
         .weak_definition foo
 foo:
         blr
 
-# CHECK:      SYMBOL TABLE:
-# CHECK-NEXT: 00000000      df *DEBUG*    00000000 .file
-# CHECK-NEXT: 00000000 l       .text    00000004
-# CHECK-NEXT: 00000000 w     F .text (csect: )  00000000 foo
-
-# ASM:        .weak  foo
+# CHECK: error: '.weak_definition' is not supported on XCOFF
