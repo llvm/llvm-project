@@ -1664,3 +1664,92 @@ entry:
   %or = or <2 x i32> %add, %c
   ret <2 x i32> %or
 }
+
+; xor(zext(or disjoint X, NarrowC), WideC) ->
+; xor(zext(X), WideC ^ zext(NarrowC))
+
+define i32 @fold_zext_or_disjoint_xor_i8_to_i32(i8 %input) {
+; CHECK-LABEL: @fold_zext_or_disjoint_xor_i8_to_i32(
+; CHECK-NEXT:    [[INPUT:%.*]] = or disjoint i8 [[INPUT1:%.*]], 10
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[INPUT]] to i32
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Z]], 257
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %or = or disjoint i8 %input, 10
+  %z = zext i8 %or to i32
+  %r = xor i32 %z, 257
+  ret i32 %r
+}
+
+define i64 @fold_zext_or_disjoint_xor_i32_to_i64(i32 %x) {
+; CHECK-LABEL: @fold_zext_or_disjoint_xor_i32_to_i64(
+; CHECK-NEXT:    [[X:%.*]] = or disjoint i32 [[X1:%.*]], 1
+; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[X]] to i64
+; CHECK-NEXT:    [[R:%.*]] = xor i64 [[Z]], 2611923443488327891
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %or = or disjoint i32 %x, 1
+  %z = zext i32 %or to i64
+  %r = xor i64 %z, 2611923443488327891
+  ret i64 %r
+}
+
+define i64 @fold_zext_or_disjoint_xor_nneg(i32 %x) {
+; CHECK-LABEL: @fold_zext_or_disjoint_xor_nneg(
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[X:%.*]], 16842752
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i32 [[OR]] to i64
+; CHECK-NEXT:    [[R:%.*]] = xor i64 [[Z]], 7640891576956012808
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %or = or disjoint i32 %x, 16842752
+  %z = zext nneg i32 %or to i64
+  %r = xor i64 %z, 7640891576956012808
+  ret i64 %r
+}
+
+define i32 @no_fold_zext_plain_or_xor(i8 %x) {
+; CHECK-LABEL: @no_fold_zext_plain_or_xor(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[OR]] to i32
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Z]], 257
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %or = or i8 %x, 2
+  %z = zext i8 %or to i32
+  %r = xor i32 %z, 257
+  ret i32 %r
+}
+
+define i32 @no_fold_zext_multi_use(i8 %x) {
+; CHECK-LABEL: @no_fold_zext_multi_use(
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[OR]] to i32
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Z]], 257
+; CHECK-NEXT:    [[USE:%.*]] = add nuw nsw i32 [[Z]], 1
+; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw i32 [[R]], [[USE]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %or = or disjoint i8 %x, 2
+  %z = zext i8 %or to i32
+  %r = xor i32 %z, 257
+  %use = add i32 %z, 1
+  %result = add i32 %r, %use
+  ret i32 %result
+}
+
+define i32 @no_fold_inner_or_multi_use(i8 %x) {
+; CHECK-LABEL: @no_fold_inner_or_multi_use(
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[OR]] to i32
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Z]], 257
+; CHECK-NEXT:    [[EXTRA:%.*]] = zext i8 [[OR]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw i32 [[R]], [[EXTRA]]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %or = or disjoint i8 %x, 2
+  %z = zext i8 %or to i32
+  %r = xor i32 %z, 257
+  %extra = zext i8 %or to i32
+  %result = add i32 %r, %extra
+  ret i32 %result
+}
