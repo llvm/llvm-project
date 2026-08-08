@@ -854,7 +854,9 @@ class LoopVectorizationPlanner {
   LoopVectorizationLegality *Legal;
 
   /// The profitability analysis.
-  LoopVectorizationCostModel &CM;
+  LoopVectorizationCostModel *EnabledCM;
+  LoopVectorizationCostModel *DefaultCM;
+  LoopVectorizationCostModel *EpilogueTFCM;
 
   /// VF selection state independent of cost-modeling decisions.
   VFSelectionContext &Config;
@@ -884,8 +886,7 @@ class LoopVectorizationPlanner {
   ///
   /// TODO: Move to VPlan::cost once the use of LoopVectorizationLegality has
   /// been retired.
-  InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU,
-                       LoopVectorizationCostModel &EnabledCM) const;
+  InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU) const;
 
   /// Precompute costs for certain instructions using the legacy cost model. The
   /// function is used to bring up the VPlan-based cost model to initially avoid
@@ -897,11 +898,22 @@ public:
   LoopVectorizationPlanner(
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
-      LoopVectorizationCostModel &CM, VFSelectionContext &Config,
+      LoopVectorizationCostModel *DefaultCM,
+      LoopVectorizationCostModel *EpilogueTFCM, VFSelectionContext &Config,
       InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
       const LoopVectorizeHints &Hints, OptimizationRemarkEmitter *ORE)
-      : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        Config(Config), IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
+      : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal),
+        DefaultCM(DefaultCM), EpilogueTFCM(EpilogueTFCM), Config(Config),
+        IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {
+    enableDefaultCM();
+  }
+
+  void enableDefaultCM() { EnabledCM = DefaultCM; }
+
+  void enableEpilogueTFCM() {
+    assert(EpilogueTFCM && "No CM for epilogue tail-folding to enable");
+    EnabledCM = EpilogueTFCM;
+  }
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
@@ -911,8 +923,7 @@ public:
   /// Build VPlans for the specified \p EpilogueUserVF and \p IC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
   /// tail-folding should be avoided up-front, no plans are generated.
-  bool planForEpilogueTF(ElementCount UserVF, unsigned UserIC,
-                         LoopVectorizationCostModel &EpilogueCM);
+  bool planForEpilogueTF(ElementCount UserVF, unsigned UserIC);
 
   /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
   /// for each VF.
@@ -1011,7 +1022,7 @@ private:
   /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
   /// scalar transformations applied. Returns null if an initial VPlan cannot
   /// be built.
-  VPlanPtr tryToBuildVPlan1(LoopVectorizationCostModel &EnabledCM);
+  VPlanPtr tryToBuildVPlan1();
 
   /// Build a VPlan using VPRecipes according to the information gathered by
   /// Legal and VPlan-based analysis. For outer loops, performs basic recipe
@@ -1021,14 +1032,12 @@ private:
   /// maximum VF for which no plan could be built. Each VPlan is built starting
   /// from a copy of \p InitialPlan, which is a plain CFG VPlan wrapping the
   /// original scalar loop.
-  VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range,
-                           LoopVectorizationCostModel &EnabledCM);
+  VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// based on \p VPlan1 and according to the information gathered by Legal
   /// when it checked if it is legal to vectorize the loop.
-  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF,
-                   LoopVectorizationCostModel &EnabledCM);
+  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF);
 
   /// Add ComputeReductionResult recipes to the middle block to compute the
   /// final reduction results. Add Select recipes to the latch block when
