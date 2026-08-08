@@ -20,6 +20,30 @@ Read-Copy Update <http://www.rdrop.com/users/paulmck/RCU/urcu-supp-accepted.2011
 
 libc++ adopted a variation that closely resembles the "General-Purpose RCU" design in the above paper.
 
+Synopsis
+========
+::
+
+  class rcu_domain {
+  public:
+    void lock() noexcept;
+    bool try_lock() noexcept;
+    void unlock() noexcept;
+  };
+
+  rcu_domain& rcu_default_domain() noexcept;
+
+  void rcu_synchronize(rcu_domain& dom = rcu_default_domain()) noexcept;
+  void rcu_barrier(rcu_domain& dom = rcu_default_domain()) noexcept;
+
+  template<class T, class D = default_delete<T>>
+  void rcu_retire(T* p, D d = D(), rcu_domain& dom = rcu_default_domain());
+
+  template<class T, class D = default_delete<T>>
+  class rcu_obj_base {
+  public:
+    void retire(D d = D(), rcu_domain& dom = rcu_default_domain()) noexcept;
+  };
 
 Background Information
 ======================
