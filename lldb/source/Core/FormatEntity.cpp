@@ -1047,12 +1047,13 @@ bool FormatEntity::Formatter::DumpValue(Stream &s,
                   "[Debugger::FormatPrompt] ERROR in getting child item at "
                   "index %" PRId64,
                   index);
-      } else {
-        LLDB_LOGF(
-            log,
-            "[Debugger::FormatPrompt] special_directions for child item: %s",
-            special_directions.data() ? special_directions.data() : "");
+        success = false;
+        continue;
       }
+
+      LLDB_LOGF(
+          log, "[Debugger::FormatPrompt] special_directions for child item: %s",
+          special_directions.data() ? special_directions.data() : "");
 
       if (special_directions.empty()) {
         success &= item->DumpPrintableRepresentation(s, val_obj_display,
