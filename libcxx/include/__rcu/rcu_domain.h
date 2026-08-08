@@ -59,7 +59,7 @@ public:
   rcu_domain& operator=(const rcu_domain&) = delete;
   ~rcu_domain();
 
-  void printAllReaderStatesInHex();
+  void debugPrintAllReaderStatesInHex();
 
   void lock() noexcept;
 
