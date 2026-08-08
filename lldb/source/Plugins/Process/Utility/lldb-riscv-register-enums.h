@@ -152,7 +152,15 @@ enum {
   fpr_ft11_riscv = fpr_f31_riscv,
   fpr_last_riscv = fpr_fcsr_riscv,
 
-  vpr_first_riscv = 66,
+  vcsr_first_riscv = 66,
+  vpr_vstart_riscv = vcsr_first_riscv,
+  vpr_vl_riscv,
+  vpr_vtype_riscv,
+  vpr_vcsr_riscv,
+  vpr_vlenb_riscv,
+  vcsr_last_riscv = vpr_vlenb_riscv,
+
+  vpr_first_riscv = 71,
   vpr_v0_riscv = vpr_first_riscv,
   vpr_v1_riscv,
   vpr_v2_riscv,
