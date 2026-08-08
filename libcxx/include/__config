@@ -38,10 +38,6 @@
 // defined to XXYYZZ.
 #  define _LIBCPP_VERSION 240000
 
-#  if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
-#    define _LIBCPP_ABI_VCRUNTIME
-#  endif
-
 #  if defined(_WIN32)
 #    if defined(_MSC_VER) && !defined(__MINGW32__)
 #      define _LIBCPP_MSVCRT // Using Microsoft's C Runtime library

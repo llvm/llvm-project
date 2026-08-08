@@ -16,6 +16,12 @@ New entries should be added directly below the "Version" header.
 Version 24.0
 ------------
 
+* [libc++] Add __new_at_least
+
+  All platforms
+  -------------
+  Symbol added: _ZNSt3__114__new_at_leastEm
+
 * [libc++] Remove locale::id::__next_id from the ABI
 
   `__next_id` is only ever used inside the dylib, so we can avoid making it public.
