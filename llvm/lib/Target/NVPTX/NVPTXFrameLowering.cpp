@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXFrameLowering.h"
+#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXRegisterInfo.h"
 #include "NVPTXSubtarget.h"
-#include "NVPTXTargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -44,27 +44,36 @@ void NVPTXFrameLowering::emitPrologue(MachineFunction &MF,
     // in the BB, so giving it no debug location.
     DebugLoc dl = DebugLoc();
 
-    // Emits
-    //   mov %SPL, %depot;
-    //   cvta.local %SP, %SPL;
-    // for local address accesses in MF.
-    bool Is64Bit =
-        static_cast<const NVPTXTargetMachine &>(MF.getTarget()).is64Bit();
+    // Emits the %SPL depot move and, when %SP is used, cvta.local.
+    // Mixed-width targets widen %SPL before cvta.local.
+    const Register FrameReg = NRI->getFrameRegister(MF);
+    const Register FrameLocalReg = NRI->getFrameLocalRegister(MF);
+    const bool Is64Bit = FrameReg == NVPTX::VRFrame64;
+    const bool IsLocal64 = FrameLocalReg == NVPTX::VRFrameLocal64;
     unsigned CvtaLocalOpcode =
-        (Is64Bit ? NVPTX::cvta_local_64 : NVPTX::cvta_local);
+        (Is64Bit ? NVPTX::cvta_local_64 : NVPTX::cvta_local_32);
     unsigned MovDepotOpcode =
-        (Is64Bit ? NVPTX::MOV_DEPOT_ADDR_64 : NVPTX::MOV_DEPOT_ADDR);
-    if (!MR.use_empty(NRI->getFrameRegister(MF))) {
+        (IsLocal64 ? NVPTX::MOV_DEPOT_ADDR_64 : NVPTX::MOV_DEPOT_ADDR);
+    if (!MR.use_empty(FrameReg)) {
       // If %SP is not used, do not bother emitting "cvta.local %SP, %SPL".
       MBBI = BuildMI(MBB, MBBI, dl,
                      MF.getSubtarget().getInstrInfo()->get(CvtaLocalOpcode),
-                     NRI->getFrameRegister(MF))
-                 .addReg(NRI->getFrameLocalRegister(MF));
+                     FrameReg)
+                 .addReg(Is64Bit == IsLocal64 ? FrameLocalReg : FrameReg);
+      if (Is64Bit && !IsLocal64) {
+        // Widen %SPL before converting it to a generic pointer.
+        MBBI =
+            BuildMI(MBB, MBBI, dl,
+                    MF.getSubtarget().getInstrInfo()->get(NVPTX::CVT_u64_u32),
+                    FrameReg)
+                .addReg(FrameLocalReg)
+                .addImm(NVPTX::PTXCvtMode::NONE);
+      }
     }
-    if (!MR.use_empty(NRI->getFrameLocalRegister(MF))) {
+    if (!MR.use_empty(FrameLocalReg)) {
       BuildMI(MBB, MBBI, dl,
               MF.getSubtarget().getInstrInfo()->get(MovDepotOpcode),
-              NRI->getFrameLocalRegister(MF))
+              FrameLocalReg)
           .addImm(MF.getFunctionNumber());
     }
   }

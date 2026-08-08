@@ -1,14 +1,14 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu tahiti -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu6.00-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN: -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu tahiti -fcuda-is-device -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple amdgpu6.00-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN: -fcuda-is-device -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu tahiti -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu6.00-amd-amdhsa -x hip -std=c++11 \
+// RUN: -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 #define __device__ __attribute__((device))
@@ -282,4 +282,34 @@ __device__ void test_fcmp_f32(unsigned long* out, float a, float b) {
 // LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 __device__ void test_fcmp_f64(unsigned long* out, double a, double b) {
   *out = __builtin_amdgcn_fcmp(a, b, 3 + 3);
+// CIR-LABEL: @_Z19test_trig_preop_f32Pffi
+// CIR: cir.call_llvm_intrinsic "amdgcn.trig.preop" {{.*}} : (!cir.float, !s32i) -> !cir.float
+// LLVM: define{{.*}} void @_Z19test_trig_preop_f32Pffi
+// LLVM: call{{.*}} float @llvm.amdgcn.trig.preop.f32(float %{{.+}}, i32 %{{.+}})
+__device__ void test_trig_preop_f32(float* out, float a, int b) {
+  *out = __builtin_amdgcn_trig_preopf(a, b);
+}
+
+// CIR-LABEL: @_Z19test_trig_preop_f64Pddi
+// CIR: cir.call_llvm_intrinsic "amdgcn.trig.preop" {{.*}} : (!cir.double, !s32i) -> !cir.double
+// LLVM: define{{.*}} void @_Z19test_trig_preop_f64Pddi
+// LLVM: call{{.*}} double @llvm.amdgcn.trig.preop.f64(double %{{.+}}, i32 %{{.+}})
+__device__ void test_trig_preop_f64(double* out, double a, int b) {
+  *out = __builtin_amdgcn_trig_preop(a, b);
+}
+
+// CIR-LABEL: @_Z14test_ldexp_f32Pffi
+// CIR: cir.call_llvm_intrinsic "ldexp" {{.*}} : (!cir.float, !s32i) -> !cir.float
+// LLVM: define{{.*}} void @_Z14test_ldexp_f32Pffi
+// LLVM: call{{.*}} float @llvm.ldexp.f32.i32(float %{{.*}}, i32 %{{.*}})
+__device__ void test_ldexp_f32(float* out, float a, int b) {
+  *out = __builtin_amdgcn_ldexpf(a, b);
+}
+
+// CIR-LABEL: @_Z14test_ldexp_f64Pddi
+// CIR: cir.call_llvm_intrinsic "ldexp" {{.*}} : (!cir.double, !s32i) -> !cir.double
+// LLVM: define{{.*}} void @_Z14test_ldexp_f64Pddi
+// LLVM: call{{.*}} double @llvm.ldexp.f64.i32(double %{{.*}}, i32 %{{.*}})
+__device__ void test_ldexp_f64(double* out, double a, int b) {
+  *out = __builtin_amdgcn_ldexp(a, b);
 }
