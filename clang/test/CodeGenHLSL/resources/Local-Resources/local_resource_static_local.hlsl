@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.6-compute %s -emit-llvm -disable-llvm-passes -Wno-hlsl-explicit-binding -o - | FileCheck %s
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.6-compute %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 RWByteAddressBuffer GBuf0 : register(u0);
 

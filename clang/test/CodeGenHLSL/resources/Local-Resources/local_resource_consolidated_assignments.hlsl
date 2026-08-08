@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.6-compute %s -emit-llvm -O1 -Wno-hlsl-explicit-binding -Wno-unused-value -o - | FileCheck %s
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.6-compute %s -emit-llvm -O1 -Wno-unused-value -o - | FileCheck %s
 
 // Consolidated coverage for local-resource assignment/initialization patterns
 // that must fold to a single unique global binding.
