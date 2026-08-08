@@ -92,7 +92,7 @@ Some key details of this design are:
   - flips the global state to the next phase
   - Going through a grace period: waits until all the threads that are in the critical section with the previous phase to exit the critical section.
   - flips the global state back to the original phase
-  - Going through another grace period: waits until all the threads that are in the critical section ith the next phase to exit the critical section.
+  - Going through another grace period: waits until all the threads that are in the critical section with the next phase to exit the critical section.
 
 When `run_synchronize` returns, we can be sure that all the readers that were in the critical section before `run_synchronize` are now out of the critical section.
 The paper explains why we need to wait two phases instead of just one phase in detail. The key point is that, if we only wait for the readers in the previous phase to exit,
