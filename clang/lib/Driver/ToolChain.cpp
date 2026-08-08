@@ -25,6 +25,7 @@
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/XRayArgs.h"
 #include "clang/Options/Options.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -351,14 +352,14 @@ static void getARMMultilibFlags(const Driver &D, const llvm::Triple &Triple,
   llvm::DenseSet<StringRef> FeatureSet(UnifiedFeatures.begin(),
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
-  for (const auto &Ext : ARM::ARCHExtNames)
-    if (!Ext.Name.empty())
-      if (FeatureSet.contains(Ext.Feature))
-        MArch.push_back(Ext.Name.str());
-  for (const auto &Ext : ARM::ARCHExtNames)
-    if (!Ext.Name.empty())
-      if (FeatureSet.contains(Ext.NegFeature))
-        MArch.push_back(("no" + Ext.Name).str());
+  for (const auto &Ext : ARM::getArchExts())
+    if (!Ext.name().empty())
+      if (FeatureSet.contains(Ext.name(1)))
+        MArch.push_back(Ext.name().str());
+  for (const auto &Ext : ARM::getArchExts())
+    if (!Ext.name().empty())
+      if (FeatureSet.contains(Ext.name(2)))
+        MArch.push_back(("no" + Ext.name()).str());
   MArch.insert(MArch.begin(), ("-march=" + Triple.getArchName()).str());
   Result.push_back(llvm::join(MArch, "+"));
 
