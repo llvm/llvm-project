@@ -4152,10 +4152,6 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     bool IsComplete = isCompleteType(StartLoc, Pointee);
     TypeAwareAllocationMode PassTypeIdentity =
         ShouldUseTypeAwareOperatorNewOrDelete();
-    if (!IsComplete && isTypeAwareAllocation(PassTypeIdentity)) {
-      Diag(StartLoc, diag::warn_type_aware_delete_incomplete) << Pointee;
-      PassTypeIdentity = TypeAwareAllocationMode::No;
-    }
 
     if (PointeeRD) {
       ImplicitDeallocationParameters IDP = {Pointee, PassTypeIdentity,
@@ -4242,11 +4238,16 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
     unsigned AddressParamIdx = 0;
     if (OperatorDelete->isTypeAwareOperatorNewOrDelete()) {
+      if (!IsComplete) {
+        Diag(StartLoc, diag::err_type_aware_delete_incomplete) << Pointee;
+        return ExprError();
+      }
       QualType TypeIdentity = OperatorDelete->getParamDecl(0)->getType();
-      if (RequireCompleteType(StartLoc, TypeIdentity,
-                              diag::err_incomplete_type))
+      if (RequireCompleteType(StartLoc, TypeIdentity, diag::err_incomplete_type))
         return ExprError();
       AddressParamIdx = 1;
+    } else if (!IsComplete && isTypeAwareAllocation(PassTypeIdentity)) {
+      Diag(StartLoc, diag::warn_type_aware_delete_incomplete) << Pointee;
     }
 
     // Convert the operand to the type of the first parameter of operator
