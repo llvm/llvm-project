@@ -2,13 +2,9 @@
 ; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11-TRUE16 %s
 
-; Test fcanonicalize optimization that scalarizes when building vectors with
-; poison or constant elements. This optimization only applies when scalar
+; Test fcanonicalize optimization that scalarizes when building 2-element vectors
+; with poison or constant elements. This optimization only applies when scalar
 ; fcanonicalize is legal for the element type (f16, f32, f64 - not bf16).
-
-declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>)
-declare <2 x float> @llvm.canonicalize.v2f32(<2 x float>)
-declare <2 x double> @llvm.canonicalize.v2f64(<2 x double>)
 
 ; Test v2f16 with register in low lane, poison in high lane
 define <2 x half> @test_canonicalize_v2f16_reg_poison(half %val) {
