@@ -40,7 +40,8 @@ void LogChannelSwift::Initialize() {
   auto log_handler_sp = std::make_shared<TeeLogHandler>(g_health_log_handler,
                                                         system_log_handler_sp);
 
-  Log::EnableLogChannel(log_handler_sp, 0, "swift", {"health"}, llvm::nulls());
+  llvm::consumeError(
+      Log::EnableLogChannel(log_handler_sp, 0, "swift", {"health"}));
   if (Log *log = GetSwiftHealthLog())
     log->Printf(
         "==== LLDB swift-healthcheck log. ===\n"
