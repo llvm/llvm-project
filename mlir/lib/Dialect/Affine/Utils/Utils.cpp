@@ -1277,12 +1277,17 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
     // In the case of dereferencing ops not implementing
     // AffineMapAccessInterface, we need to apply the values of `newMapOperands`
     // to the `newMap` to get the correct indices.
+    SmallVector<OpFoldResult, 4> newMapOfrs;
+    for (Value v : newMapOperands)
+      newMapOfrs.push_back(v);
     for (unsigned i = 0; i < newMemRefRank; i++) {
-      state.operands.push_back(AffineApplyOp::create(
+      OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
           builder, op->getLoc(),
           AffineMap::get(newMap.getNumDims(), newMap.getNumSymbols(),
                          newMap.getResult(i)),
-          newMapOperands));
+          newMapOfrs);
+      state.operands.push_back(
+          getValueOrCreateConstantIndexOp(builder, op->getLoc(), ofr));
     }
   }
 
