@@ -709,10 +709,10 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__opencl_atomic_fetch_min:
   case AtomicExpr::AO__atomic_fetch_min:
   case AtomicExpr::AO__scoped_atomic_fetch_min:
-    Op = ElemTy->isFloatingType() ? llvm::AtomicRMWInst::FMin
-                                  : (ElemTy->isSignedIntegerType()
-                                         ? llvm::AtomicRMWInst::Min
-                                         : llvm::AtomicRMWInst::UMin);
+    Op = ElemTy->isFloatingType()
+             ? llvm::AtomicRMWInst::FMin
+             : (ElemTy->isSignedIntegerType() ? llvm::AtomicRMWInst::Min
+                                              : llvm::AtomicRMWInst::UMin);
     break;
 
   case AtomicExpr::AO__atomic_fetch_fminimum:
@@ -738,10 +738,10 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__opencl_atomic_fetch_max:
   case AtomicExpr::AO__atomic_fetch_max:
   case AtomicExpr::AO__scoped_atomic_fetch_max:
-    Op = ElemTy->isFloatingType() ? llvm::AtomicRMWInst::FMax
-                                  : (ElemTy->isSignedIntegerType()
-                                         ? llvm::AtomicRMWInst::Max
-                                         : llvm::AtomicRMWInst::UMax);
+    Op = ElemTy->isFloatingType()
+             ? llvm::AtomicRMWInst::FMax
+             : (ElemTy->isSignedIntegerType() ? llvm::AtomicRMWInst::Max
+                                              : llvm::AtomicRMWInst::UMax);
     break;
 
   case AtomicExpr::AO__atomic_fetch_fmaximum:
@@ -845,9 +845,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   // determine the value which was written.
   llvm::Value *Result = RMWI;
   if (PostOpMinMax)
-    Result = EmitPostAtomicMinMax(CGF.Builder, E->getOp(),
-                                  ElemTy->isSignedIntegerType(), RMWI,
-                                  LoadVal1);
+    Result = EmitPostAtomicMinMax(
+        CGF.Builder, E->getOp(), ElemTy->isSignedIntegerType(), RMWI, LoadVal1);
   else if (PostOp)
     Result = CGF.Builder.CreateBinOp((llvm::Instruction::BinaryOps)PostOp, RMWI,
                                      LoadVal1);
@@ -879,8 +878,8 @@ static bool shouldCastToInt(llvm::Type *ValTy, bool CmpXchg) {
   // vector whose size is not a power of two is not a valid atomic operand, so
   // both are still handled as an integer of the enclosing atomic type's size.
   if (auto *VecTy = dyn_cast<llvm::FixedVectorType>(ValTy))
-    return CmpXchg ||
-           !llvm::isPowerOf2_64(VecTy->getPrimitiveSizeInBits().getFixedValue());
+    return CmpXchg || !llvm::isPowerOf2_64(
+                          VecTy->getPrimitiveSizeInBits().getFixedValue());
   if (ValTy->isFloatingPointTy())
     return ValTy->isX86_FP80Ty() || CmpXchg;
   return !ValTy->isIntegerTy() && !ValTy->isPointerTy();
