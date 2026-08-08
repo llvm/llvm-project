@@ -240,7 +240,7 @@ public:
       _NOEXCEPT_(_NOEXCEPT_(*std::declval<pointer>())) {
     static_assert(
         !__reference_converts_from_temporary_v<__add_lvalue_reference_t<_Tp>, decltype(*std::declval<pointer>())>,
-        "the returned reference must not bind to a temporary object");
+        "The returned reference must not bind to a temporary object.");
     return *__ptr_;
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 pointer operator->() const _NOEXCEPT { return __ptr_; }

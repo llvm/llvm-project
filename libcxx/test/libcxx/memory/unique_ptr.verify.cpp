@@ -12,15 +12,21 @@
 
 #include <memory>
 
-struct deleter {
+#include "test_macros.h"
+
+struct Deleter {
   using pointer = long*;
+
   void operator()(pointer) const {}
 };
 
 void test() {
   long l = 0;
-  std::unique_ptr<const int, deleter> p(&l);
-// expected-error-re@*:* {{static assertion failed{{.*}}the returned reference must not bind to a temporary object}}
-  // expected-error@*:* 0-1{{returning reference to local temporary object}}
-  (void)*p; // expected-note {{requested here}}
+  std::unique_ptr<const int, Deleter> p{&l};
+
+// expected-error-re@*:* {{static assertion failed due to requirement {{.+}}The returned reference must not bind to a temporary object.}}
+#if TEST_STD_VER >= 26
+// expected-error@*:* {{returning reference to local temporary object}}
+#endif
+  [[maybe_unused]] int i = *p;
 }
