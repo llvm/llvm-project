@@ -11991,6 +11991,18 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
                                         m_BitReverse(m_Value(Y))))))
     return DAG.getNode(ISD::CLMULH, DL, VT, X, Y);
 
+  // Extracting a bit that happens to be the sign bit using `AND` and shifting
+  // it to zero position. We can just get rid of the `AND` and shift the highest
+  // bit to the right.
+  if (N1C && sd_match(N0, m_And(m_Value(X),
+                                m_SpecificInt(APInt::getOneBitSet(
+                                    OpSizeInBits, N1C->getZExtValue()))))) {
+    unsigned SignBits = DAG.ComputeNumSignBits(X);
+    if (N1C->getZExtValue() >= OpSizeInBits - SignBits)
+      return DAG.getNode(ISD::SRL, DL, VT, X,
+                         DAG.getConstant(OpSizeInBits - 1, DL, VT));
+  }
+
   return SDValue();
 }
 
