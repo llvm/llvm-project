@@ -30,6 +30,7 @@ enum class SemanticSignatureKind {
 
 static constexpr unsigned MaxSignatureRows = 32;
 static constexpr unsigned MaxSignatureCols = 4;
+static constexpr unsigned MaxClipCullRows = 2;
 
 /// Iterates through Elements that belong to the signature described by
 /// ShaderStage and SignatureKind and 'packs' each element into 32 registers

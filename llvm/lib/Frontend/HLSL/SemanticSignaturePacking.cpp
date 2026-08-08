@@ -22,6 +22,8 @@ using namespace llvm::hlsl;
 
 static constexpr StringLiteral SignatureOverflowMessage =
     "signature elements do not fit in 32 rows";
+static constexpr StringLiteral ClipCullOverflowMessage =
+    "clip/cull elements do not fit in two rows";
 
 namespace {
 
@@ -66,6 +68,7 @@ enum class SemanticCategory {
   Arbitrary,
   SystemValue,
   SystemGeneratedValue,
+  CullClip,
   TessFactor,
 };
 
@@ -89,6 +92,15 @@ struct ElementPlacement {
   SemanticCategory Category;
 };
 
+// Clip/cull elements are first packed into an independent two-row grid. Each
+// row used in that grid maps to a whole reserved row in the signature.
+struct ClipCullState {
+  std::array<SignatureRow, MaxClipCullRows> Rows;
+  std::array<unsigned, MaxClipCullRows> SignatureRows = {UnallocatedRow,
+                                                         UnallocatedRow};
+  unsigned RowsUsed = 0;
+};
+
 } // namespace
 
 static uint8_t getStartColumn(uint8_t ColumnMask) {
@@ -97,7 +109,9 @@ static uint8_t getStartColumn(uint8_t ColumnMask) {
 }
 
 static SemanticCategory
-getSemanticCategory(dxbc::PSV::SemanticKind SemanticKind, unsigned Rows) {
+getSemanticCategory(dxbc::PSV::SemanticKind SemanticKind,
+                    Triple::EnvironmentType ShaderStage,
+                    SemanticSignatureKind SignatureKind, unsigned Rows) {
   switch (SemanticKind) {
   case dxbc::PSV::SemanticKind::Arbitrary:
     return SemanticCategory::Arbitrary;
@@ -107,6 +121,27 @@ getSemanticCategory(dxbc::PSV::SemanticKind SemanticKind, unsigned Rows) {
   case dxbc::PSV::SemanticKind::PrimitiveID:
   case dxbc::PSV::SemanticKind::IsFrontFace:
     return SemanticCategory::SystemGeneratedValue;
+  case dxbc::PSV::SemanticKind::ClipDistance:
+  case dxbc::PSV::SemanticKind::CullDistance:
+    if ((ShaderStage == Triple::EnvironmentType::Vertex &&
+         SignatureKind == SemanticSignatureKind::Input) ||
+        ((ShaderStage == Triple::EnvironmentType::Hull ||
+          ShaderStage == Triple::EnvironmentType::Domain) &&
+         SignatureKind == SemanticSignatureKind::PatchConstOrPrim))
+      return SemanticCategory::Arbitrary;
+    if ((ShaderStage == Triple::EnvironmentType::Vertex &&
+         SignatureKind == SemanticSignatureKind::Output) ||
+        ((ShaderStage == Triple::EnvironmentType::Hull ||
+          ShaderStage == Triple::EnvironmentType::Domain) &&
+         SignatureKind != SemanticSignatureKind::PatchConstOrPrim) ||
+        (ShaderStage == Triple::EnvironmentType::Geometry &&
+         SignatureKind == SemanticSignatureKind::Input) ||
+        (ShaderStage == Triple::EnvironmentType::Pixel &&
+         SignatureKind == SemanticSignatureKind::Input) ||
+        (ShaderStage == Triple::EnvironmentType::Mesh &&
+         SignatureKind == SemanticSignatureKind::Output))
+      return SemanticCategory::CullClip;
+    return SemanticCategory::NotPacked;
   case dxbc::PSV::SemanticKind::TessFactor:
   case dxbc::PSV::SemanticKind::InsideTessFactor:
     // Only a tess factor that covers multiple rows is dynamically indexable
@@ -258,10 +293,111 @@ static Error packElement(SemanticSignatureElement &Element,
   return createStringError(SignatureOverflowMessage);
 }
 
+// A clip/cull grid row is backed by a whole reserved signature row.
+static ElementPlacement
+getClipCullReservation(const ElementPlacement &Placement, unsigned RowCount) {
+  ElementPlacement Reservation = Placement;
+  Reservation.Rows = RowCount;
+  Reservation.Cols = MaxSignatureCols;
+  return Reservation;
+}
+
+static bool reserveClipCullRows(MutableArrayRef<SignatureRow> Rows,
+                                unsigned StartRow,
+                                const ElementPlacement &Reservation) {
+  std::optional<uint8_t> ColumnMask = canPlaceAt(Rows, StartRow, Reservation);
+  if (!ColumnMask)
+    return false;
+  placeAt(Rows, StartRow, Reservation, *ColumnMask);
+  return true;
+}
+
+static std::optional<unsigned>
+reserveNextClipCullRows(MutableArrayRef<SignatureRow> Rows,
+                        const ElementPlacement &Reservation) {
+  for (unsigned StartRow = 0; StartRow + Reservation.Rows <= Rows.size();
+       ++StartRow)
+    if (reserveClipCullRows(Rows, StartRow, Reservation))
+      return StartRow;
+  return std::nullopt;
+}
+
+// Reserves the whole signature rows that back the clip/cull grid rows that the
+// element is packed into. Existing rows cannot be moved without breaking
+// prefix stability, so an indexed element requires them to be adjacent.
+static Error reserveClipCullSignatureRows(
+    MutableArrayRef<SignatureRow> SignatureRows, ClipCullState &State,
+    const ElementPlacement &Placement, unsigned NewRowsUsed) {
+  if (Placement.Rows == 1) {
+    const ElementPlacement Reservation = getClipCullReservation(Placement, 1);
+    for (unsigned Row = State.RowsUsed; Row < NewRowsUsed; ++Row) {
+      std::optional<unsigned> StartRow =
+          reserveNextClipCullRows(SignatureRows, Reservation);
+      if (!StartRow)
+        return createStringError(SignatureOverflowMessage);
+      State.SignatureRows[Row] = *StartRow;
+    }
+    return Error::success();
+  }
+
+  if (State.RowsUsed == 0) {
+    std::optional<unsigned> StartRow = reserveNextClipCullRows(
+        SignatureRows, getClipCullReservation(Placement, MaxClipCullRows));
+    if (!StartRow)
+      return createStringError(SignatureOverflowMessage);
+    State.SignatureRows[0] = *StartRow;
+    State.SignatureRows[1] = *StartRow + 1;
+    return Error::success();
+  }
+
+  if (State.RowsUsed == 1) {
+    const unsigned StartRow = State.SignatureRows[0] + 1;
+    if (StartRow >= SignatureRows.size() ||
+        !reserveClipCullRows(SignatureRows, StartRow,
+                             getClipCullReservation(Placement, 1)))
+      return createStringError(SignatureOverflowMessage);
+    State.SignatureRows[1] = StartRow;
+    return Error::success();
+  }
+
+  if (State.SignatureRows[0] + 1 != State.SignatureRows[1])
+    return createStringError(ClipCullOverflowMessage);
+  return Error::success();
+}
+
+static Error packClipCullElement(SemanticSignatureElement &Element,
+                                 MutableArrayRef<SignatureRow> SignatureRows,
+                                 ClipCullState &State,
+                                 const ElementPlacement &Placement) {
+  std::optional<uint8_t> ColumnMask;
+  unsigned ClipCullStartRow = 0;
+  while (ClipCullStartRow + Placement.Rows <= MaxClipCullRows) {
+    ColumnMask = canPlaceAt(State.Rows, ClipCullStartRow, Placement);
+    if (ColumnMask)
+      break;
+    ClipCullStartRow += 1;
+  }
+  if (!ColumnMask)
+    return createStringError(ClipCullOverflowMessage);
+
+  const unsigned NewRowsUsed = ClipCullStartRow + Placement.Rows;
+  if (Error E = reserveClipCullSignatureRows(SignatureRows, State, Placement,
+                                             NewRowsUsed))
+    return E;
+
+  placeAt(State.Rows, ClipCullStartRow, Placement, *ColumnMask);
+  State.RowsUsed = std::max(State.RowsUsed, NewRowsUsed);
+  Element.StartRow = State.SignatureRows[ClipCullStartRow];
+  Element.StartCol = getStartColumn(*ColumnMask);
+  return Error::success();
+}
+
 Error llvm::hlsl::packSignaturePrefixStable(
-    MutableArrayRef<SemanticSignatureElement> Elements, Triple::EnvironmentType,
-    SemanticSignatureKind, bool UseNative16BitTypes) {
+    MutableArrayRef<SemanticSignatureElement> Elements,
+    Triple::EnvironmentType ShaderStage, SemanticSignatureKind SignatureKind,
+    bool UseNative16BitTypes) {
   std::array<SignatureRow, MaxSignatureRows> Rows;
+  ClipCullState ClipCull;
   for (SemanticSignatureElement &Element : Elements) {
     assert(Element.StartRow == UnallocatedRow &&
            Element.StartCol == UnallocatedCol && "already allocated?");
@@ -272,15 +408,27 @@ Error llvm::hlsl::packSignaturePrefixStable(
 
     const unsigned ComponentWidth =
         getComponentWidth(Element.CompType, UseNative16BitTypes);
-    const SemanticCategory Category =
-        getSemanticCategory(Element.SemanticKind, Element.Rows);
-    if (Category == SemanticCategory::NotPacked)
-      continue;
+    const SemanticCategory Category = getSemanticCategory(
+        Element.SemanticKind, ShaderStage, SignatureKind, Element.Rows);
     const ElementPlacement Placement = {Element.Rows, Element.Cols,
                                         ComponentWidth, Element.InterpMode,
                                         Category};
-    if (Error E = packElement(Element, Rows, Placement))
-      return E;
+
+    switch (Category) {
+    case SemanticCategory::NotPacked:
+      continue;
+    case SemanticCategory::CullClip:
+      if (Error E = packClipCullElement(Element, Rows, ClipCull, Placement))
+        return E;
+      continue;
+    case SemanticCategory::TessFactor:
+    case SemanticCategory::Arbitrary:
+    case SemanticCategory::SystemValue:
+    case SemanticCategory::SystemGeneratedValue:
+      if (Error E = packElement(Element, Rows, Placement))
+        return E;
+      continue;
+    }
   }
 
   return Error::success();
