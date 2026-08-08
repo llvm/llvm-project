@@ -19,7 +19,7 @@ namespace clang::tidy::readability {
 
 void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      typeLoc(unless(hasAncestor(decl(isInstantiated())))).bind("typeLoc"),
+      traverse(TK_IgnoreUnlessSpelledInSource, typeLoc().bind("typeLoc")),
       this);
 
   if (!getLangOpts().CPlusPlus20)
