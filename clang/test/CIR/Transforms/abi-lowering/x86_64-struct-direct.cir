@@ -118,6 +118,15 @@ module attributes {
   // CHECK:   cir.store %arg1, %[[E1]] : !s32i, !cir.ptr<!s32i>
   // CHECK:   %{{.*}} = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!cir.array<!s32i x 3>>
 
+  // Above eight eightbytes an array argument goes to memory.  Seventy-two
+  // bytes here and twelve bytes in take_arr3 above are the sizes either side
+  // of the window x86_64-array-drop-nyi.cir reports.
+  cir.func @take_arr9(%arg0: !cir.array<!s64i x 9>) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_arr9(%arg0: !cir.ptr<!cir.array<!s64i x 9>> {llvm.align = 8 : i64, llvm.byval = !cir.array<!s64i x 9>, llvm.noalias, llvm.noundef})
+
   // An anonymous struct has no record-layout entry, so it defaults to
   // can-pass-in-registers and coerces like its named counterpart.
   cir.func @take_anon(%arg0: !cir.struct<{!s32i, !s32i}>) {
@@ -168,6 +177,7 @@ module attributes {
 // LLVM: define void @take_charbuf(i32 %{{.+}})
 // LLVM: define void @take_char1(i8 %{{.+}})
 // LLVM: define void @take_arr3(i64 %{{.+}}, i32 %{{.+}})
+// LLVM: define void @take_arr9(ptr noalias noundef byval([9 x i64]) align 8 %{{[^,)]+}})
 // LLVM: define void @take_anon(i64 %{{.+}})
 // LLVM: define void @call_pair(i64 %{{.+}})
 // LLVM:   %{{.+}} = call i32 @take_pair(i64 %{{.+}})

@@ -1,0 +1,66 @@
+// RUN: not cir-opt %s -cir-call-conv-lowering=target=x86_64 \
+// RUN:     -split-input-file 2>&1 | FileCheck %s
+
+!s64i = !cir.int<s, 64>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The classifier answers Ignore for an array spanning three to eight
+  // eightbytes, where SysV says memory.  Rewriting that answer would pass
+  // nothing in the value's place, so it is reported instead.  Two eightbytes
+  // in registers and nine byval are both in x86_64-struct-direct.cir.
+  cir.func @take_arr_3eb(%arg0: !cir.array<!s64i x 3>) {
+    cir.return
+  }
+
+  // CHECK: error: 'cir.func' op x86_64 calling-convention lowering would drop an argument of type '!cir.array<!cir.int<s, 64> x 3>', which is not yet implemented
+
+  // Eight eightbytes is the last size the classifier answers Ignore for.
+  cir.func @take_arr_8eb(%arg0: !cir.array<!s64i x 8>) {
+    cir.return
+  }
+
+  // CHECK: error: 'cir.func' op x86_64 calling-convention lowering would drop an argument of type '!cir.array<!cir.int<s, 64> x 8>', which is not yet implemented
+
+  // The return value goes through the same guard and reports its own position.
+  cir.func @ret_arr_3eb() -> !cir.array<!s64i x 3> {
+    %0 = cir.alloca "r" align(8) : !cir.ptr<!cir.array<!s64i x 3>>
+    %1 = cir.load %0 : !cir.ptr<!cir.array<!s64i x 3>>, !cir.array<!s64i x 3>
+    cir.return %1 : !cir.array<!s64i x 3>
+  }
+
+  // CHECK: error: 'cir.func' op x86_64 calling-convention lowering would drop the return value of type '!cir.array<!cir.int<s, 64> x 3>', which is not yet implemented
+}
+
+// -----
+
+// An indirect callee carries the array only in its pointee signature, so the
+// report is anchored on the call rather than on the enclosing function.  It
+// needs its own module because a signature failure above stops the pass before
+// the indirect-call walk.
+
+!s64i = !cir.int<s, 64>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func @call_arr_3eb(%arg0: !cir.ptr<!cir.func<(!cir.array<!s64i x 3>)>>) {
+    %0 = cir.alloca "a" align(8) : !cir.ptr<!cir.array<!s64i x 3>>
+    %1 = cir.load %0 : !cir.ptr<!cir.array<!s64i x 3>>, !cir.array<!s64i x 3>
+    cir.call %arg0(%1) : (!cir.ptr<!cir.func<(!cir.array<!s64i x 3>)>>, !cir.array<!s64i x 3>) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op x86_64 calling-convention lowering would drop an argument of type '!cir.array<!cir.int<s, 64> x 3>', which is not yet implemented
+}

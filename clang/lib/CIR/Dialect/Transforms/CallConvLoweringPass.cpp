@@ -356,6 +356,25 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   return ArgClassification::getIgnore();
 }
 
+/// Whether dropping \p ty from the signature would lose data.  Ignore is the
+/// ABI's answer for a void type and for an aggregate holding no data, and
+/// dropping one of those is correct.  A classification that would drop
+/// anything else has to be reported instead, because nothing would be passed
+/// in its place.
+///
+/// An aggregate with no members counts as holding no data.  That relies on
+/// CIRGen only omitting a member that is itself empty, which is what makes an
+/// over-aligned union of empty classes droppable here the way the ABI wants.
+static bool ignoreLosesData(mlir::Type ty) {
+  if (!ty || isa<cir::VoidType>(ty))
+    return false;
+  if (auto recTy = dyn_cast<cir::RecordType>(ty))
+    return llvm::any_of(recTy.getMembers(), ignoreLosesData);
+  if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
+    return arrTy.getSize() != 0 && ignoreLosesData(arrTy.getElementType());
+  return true;
+}
+
 /// Where \p fnTy's declared parameters end and its ellipsis arguments begin.
 ///
 /// The only x86_64 rule that reads this boundary sends an unnamed vector wider
@@ -421,6 +440,17 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
                 << t;
   };
 
+  // An Ignore the ABI does not mean, where rewriting the signature would pass
+  // nothing in the value's place.
+  auto nyiDrop = [&](const ArgClassification &ac, mlir::Type t,
+                     llvm::StringRef what) {
+    if (ac.kind != ArgKind::Ignore || !ignoreLosesData(t))
+      return false;
+    emitError() << "x86_64 calling-convention lowering would drop " << what
+                << " of type " << t << ", which is not yet implemented";
+    return true;
+  };
+
   FunctionClassification fc;
   fc.returnsVoid = voidRet;
   mlir::Type origRet = voidRet ? mlir::Type() : retCIR;
@@ -430,6 +460,8 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
     nyiCoercion(retCIR);
     return std::nullopt;
   }
+  if (nyiDrop(*retAc, origRet, "the return value"))
+    return std::nullopt;
   fc.returnInfo = *retAc;
   for (unsigned i = 0, e = fi->arg_size(); i < e; ++i) {
     mlir::Type origArg = i < inputs.size() ? inputs[i] : mlir::Type();
@@ -439,6 +471,8 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
       nyiCoercion(origArg);
       return std::nullopt;
     }
+    if (nyiDrop(*ac, origArg, "an argument"))
+      return std::nullopt;
     fc.argInfos.push_back(*ac);
   }
   return fc;
@@ -750,17 +784,8 @@ void CallConvLoweringPass::runOnOperation() {
   // cached as the next one to visit.
   SmallVector<cir::CIRCallOpInterface> indirectCalls;
   moduleOp.walk([&](cir::CIRCallOpInterface c) {
-    cir::FuncType calleeTy = indirectCalleeType(c);
-    if (!calleeTy)
-      return;
-    // A cir.try_call is in this walk so that a variadic one reaches the
-    // ellipsis accounting below.  CIRABIRewriteContext cannot rebuild a
-    // cir.try_call at all, so a non-variadic one has never been rewritten
-    // here.  Keep it out rather than start reporting a gap that has nothing
-    // to do with the ellipsis.
-    if (!calleeTy.isVarArg() && isa<cir::TryCallOp>(c.getOperation()))
-      return;
-    indirectCalls.push_back(c);
+    if (indirectCalleeType(c))
+      indirectCalls.push_back(c);
   });
   for (cir::CIRCallOpInterface c : indirectCalls) {
     // classification-attr mode injects a per-function classification, which
