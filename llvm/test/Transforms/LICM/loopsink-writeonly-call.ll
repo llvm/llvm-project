@@ -25,7 +25,7 @@ exit:
   ret void
 }
 
-declare i32 @write() nounwind memory(write)
+declare i32 @write() nounwind willreturn memory(write)
 
 ; A call without willreturn cannot move to a path that may not execute.
 ;
