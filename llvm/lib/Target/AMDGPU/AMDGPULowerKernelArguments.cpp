@@ -316,7 +316,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
 
     MDBuilder MDB(Ctx);
 
-    if (Arg.hasAttribute(Attribute::NoUndef))
+    if (Arg.hasAttribute(Attribute::NoUndef) && AdjustedArgTy == ArgTy)
       Load->setMetadata(LLVMContext::MD_noundef, MDNode::get(Ctx, {}));
 
     if (Arg.hasAttribute(Attribute::Range) && AdjustedArgTy == ArgTy) {

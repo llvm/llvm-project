@@ -65,7 +65,7 @@ define amdgpu_ps void @_amdgpu_ps_main(i1 %arg) {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_branch .LBB0_3
 bb:
-  %i = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> zeroinitializer, i32 0, i32 0)
+  %i = call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) null, i32 0, i32 0), !invariant.load !{}
   %i1 = icmp slt i32 %i, 0
   br i1 %i1, label %bb2, label %bb12
 
@@ -93,4 +93,4 @@ bb12:
   unreachable
 }
 
-declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg)
+declare i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8), i32, i32 immarg)

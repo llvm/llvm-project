@@ -209,9 +209,10 @@ add_libc_test(
   SRCS
     nanosleep_test.cpp
   DEPENDS
-    libc.include.time
     libc.hdr.types.struct_timespec
+    libc.hdr.signal_macros
     libc.src.time.nanosleep
+    libc.src.__support.macros.config
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
@@ -224,6 +225,17 @@ add_libc_test(
   DEPENDS
     libc.hdr.types.struct_tm
     libc.src.time.strftime
+)
+
+add_libc_test(
+  strptime_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    strptime_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_tm
+    libc.src.time.strptime
 )
 
 add_libc_unittest(
