@@ -2,9 +2,9 @@
 
 template <class A, class B> struct O : A, B {};
 template <class T> void f() {
-  auto a = [](auto) {};
-  auto b = [](auto) -> decltype(({ })) {};
-  O(a, b)(T{});
+  auto a = [] {};
+  auto b = [] {};
+  O(a, b)();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: error: member 'operator()' found in multiple base classes of different types
 }
 template void f<int>();

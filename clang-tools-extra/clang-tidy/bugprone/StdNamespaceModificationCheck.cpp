@@ -34,8 +34,8 @@ AST_POLYMORPHIC_MATCHER_P(
                              Builder) != Args.end();
 }
 
-AST_MATCHER(NamedDecl, isInStdOrPosixNamespace) {
-  for (const DeclContext *DC = Node.getDeclContext(); DC;
+AST_MATCHER(Decl, isInStdOrPosixNamespace) {
+  for (const DeclContext *DC = dyn_cast<DeclContext>(&Node); DC;
        DC = DC->getParent()) {
     if (DC->isStdNamespace())
       return true;
@@ -56,8 +56,11 @@ void StdNamespaceModificationCheck::registerMatchers(MatchFinder *Finder) {
       hasDeclContext(namespaceDecl(hasAnyName("std", "posix"),
                                    unless(hasParent(namespaceDecl())))
                          .bind("nmspc"));
-  const auto UserDefinedDecl = namedDecl(anyOf(classTemplateDecl(), tagDecl()),
-                                         isInStdOrPosixNamespace());
+  // FIXME: Investigate why lambda closure declarations can be absent from the
+  // AST parent map.
+  const auto UserDefinedDecl =
+      namedDecl(anyOf(classTemplateDecl(), tagDecl()),
+                hasDeclContext(isInStdOrPosixNamespace()));
   const auto UserDefinedType = qualType(hasUnqualifiedDesugaredType(anyOf(
       tagType(unless(hasDeclaration(UserDefinedDecl))),
       templateSpecializationType(unless(hasDeclaration(UserDefinedDecl))))));
