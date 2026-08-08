@@ -223,7 +223,7 @@ public:
     __cxx_atomic_thread_fence(memory_order_seq_cst);
   }
 
-  void printAllReaderStatesInHex() {
+  void debugPrintAllReaderStatesInHex() {
     per_thread_states::for_each([](auto __state_ref) { std::printf("Reader state: 0x%04x\n", __state_ref.load()); });
   }
 };
@@ -239,7 +239,7 @@ rcu_domain& rcu_domain::__rcu_default_domain() noexcept {
 rcu_domain::rcu_domain() : __pimpl_(std::make_unique<__impl>()) {}
 rcu_domain::~rcu_domain() = default;
 
-void rcu_domain::printAllReaderStatesInHex() { __pimpl_->printAllReaderStatesInHex(); }
+void rcu_domain::debugPrintAllReaderStatesInHex() { __pimpl_->debugPrintAllReaderStatesInHex(); }
 
 void rcu_domain::lock() noexcept { __pimpl_->lock(); }
 
