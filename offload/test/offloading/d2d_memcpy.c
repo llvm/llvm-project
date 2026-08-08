@@ -1,9 +1,9 @@
 // RUN: %libomptarget-compile-generic && \
-// RUN: env OMP_MAX_ACTIVE_LEVELS=2 %libomptarget-run-generic | \
-// RUN: %fcheck-generic -allow-empty
+// RUN: env %if amdgpu %{ LIBOMPTARGET_AMDGPU_ENABLE_DEVICE_TO_DEVICE_MEM_ACCESS=1 %} \
+// RUN: OMP_MAX_ACTIVE_LEVELS=2 %libomptarget-run-generic | %fcheck-generic -allow-empty
 // RUN: %libomptarget-compileopt-generic && \
-// RUN: env OMP_MAX_ACTIVE_LEVELS=2 %libomptarget-run-generic | \
-// RUN: %fcheck-generic -allow-empty
+// RUN: env %if amdgpu %{ LIBOMPTARGET_AMDGPU_ENABLE_DEVICE_TO_DEVICE_MEM_ACCESS=1 %} \
+// RUN: OMP_MAX_ACTIVE_LEVELS=2 %libomptarget-run-generic | %fcheck-generic -allow-empty
 // XFAIL: intelgpu
 
 #include <assert.h>

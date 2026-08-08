@@ -1,6 +1,7 @@
 // RUN: %libomptarget-compile-generic && \
-// RUN: env LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES=0 %libomptarget-run-generic | \
-// RUN: %fcheck-generic -allow-empty
+// RUN: env LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES=0 \
+// RUN: LIBOMPTARGET_AMDGPU_ENABLE_DEVICE_TO_DEVICE_MEM_ACCESS=1 \
+// RUN: %libomptarget-run-generic | %fcheck-generic -allow-empty
 // REQUIRES: amdgcn-amd-amdhsa
 
 #include <assert.h>
