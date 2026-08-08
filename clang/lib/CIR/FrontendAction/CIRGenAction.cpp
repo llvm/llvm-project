@@ -144,8 +144,7 @@ public:
       if (runCIRToCIRPasses(
               MlirModule, MlirCtx, C, !FEOptions.ClangIRDisableCIRVerifier,
               FEOptions.ClangIREnableIdiomRecognizer, CGO.OptimizationLevel > 0,
-              EnableLibOpt, LibOptOptions,
-              FEOptions.ClangIREnableCallConvLowering)
+              EnableLibOpt, LibOptOptions, FEOptions.ClangIRCallConvLowering)
               .failed()) {
         CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
         return;
