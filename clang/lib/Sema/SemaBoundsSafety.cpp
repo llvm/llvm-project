@@ -79,6 +79,13 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
   //   attributes missing from upstream.
   // * Some diagnostics want the attribute spelling and some don't. This seems
   //   really inconsistent.
+  //
+  // FIXME: Sugar handling in this function is a mess. It is unclear if this
+  // function should be using desugaring checks (e.g. `Ty->IsPointerType`) or
+  // direct checks (e.g. `dyn_cast<PointerType>`, `isa<ValueTerminatedType>`).
+  // This function and `Sema::ValidateBoundsAttrTypeShape` use a mix of the two.
+  // We need to decide what the contract with our callers is and then perform
+  // checks consistently OR clearly document why we need the mix.
 
   assert(AttrSpelling.size() > 0);
   const Type *T = Ty.getTypePtr();

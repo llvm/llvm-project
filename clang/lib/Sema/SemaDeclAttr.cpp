@@ -6570,21 +6570,47 @@ public:
   }
 
   QualType VisitType(const Type *T) {
-    // Fallback visitor for types that don't have a specific visitor.
+    // Fallback visitor for type classes without a dedicated visitor.
 
-    // Handle typedefs and sugar types that wrap a PointerType.
-    if (const auto *PTy = T->getAs<PointerType>())
-      return VisitPointerType(PTy);
+    // Generic fallback for **sugar** without a dedicated visitor (e.g.
+    // `BTFTagAttributedType` and `TemplateSpecializationType`)
+    //
+    // FIXME: This generic desugar approach doesn't try to rebuild the types on
+    // return which means they will be dropped from the AST (rdar://185244036).
+    //
+    // Note several important type sugars do not take this path due to having
+    // their own visitors (e.g. `TypedefType` and `AttributedType`).
+    //
+    // This is here for two reasons:
+    //
+    // 1. We need to explicitly do `Visit(T_desugared)` so that other visitor
+    //    methods in this class get a chance to be called. E.g. this sugar type
+    //    wraps an `AttributedType` which we want to handle.
+    //
+    // 2. To support the fact that `ValidateBoundsAttrTypeShape` currently
+    //    doesn't fully handle its own desugaring. So we desugar here (and in
+    //    other visitors like `VisitTypedefType`) so that
+    //    `ValidateBoundsAttrTypeShape` has a chance to run again on the
+    //    desugared type. This is the wrong design because it is problematic for
+    //    warnings (they might get emitted multiple times) and does lots of
+    //    redundant work. FIXME: Fix `ValidateBoundsAttrTypeShape` to do its
+    //    own desugaring.
+    QualType QT(T, 0);
+    QualType Desugared = QT.getSingleStepDesugaredType(S.Context);
+    if (Desugared != QT)
+      return Visit(Desugared);
 
-    // T is not a pointer (nor sugar for one), so there is no pointer here for
-    // the bounds attribute to attach to. Run the type-shape check to emit the
-    // diagnostic. Reachable when the requested `Level` exceeds the type's
-    // pointer nesting, e.g. an out-of-range level from API Notes.
+    // T is a non-sugar, non-pointer, non-array, so there is no pointer nor
+    // array here for the bounds attribute to attach to. Run the type-shape
+    // check to emit a diagnostic to reject this. Reachable when the requested
+    // `Level` exceeds the type's pointer nesting, e.g. an out-of-range level
+    // from API Notes.
     bool Valid = S.ValidateBoundsAttrTypeShape(
-        QualType(T, 0), Loc, SourceRange(Loc), Flags,
+        QT, Loc, SourceRange(Loc), Flags,
         /*FullBoundsSafetyDiagnostics=*/true, DiagName, AllowRedecl,
         AutoPtrAttributed, ArgExpr);
-    assert(!Valid && "non-pointer T should have been rejected");
+    assert(!Valid &&
+           "T should have been rejected because its not an array or pointer");
     (void)Valid;
     return QualType();
   }
@@ -6718,10 +6744,51 @@ public:
     return S.Context.getMacroQualifiedType(NewTy, T->getMacroIdentifier());
   }
 
-  // FIXME: Would like to apply AttributedType(attr::CountedBy/SizedBy[OrNull])
-  // but this may trigger additional needed fixes.
+  // Shared handler for the "named alias" family of sugar (e.g. `TypedefType`)
+  QualType HandleNamedAliasType(const Type *Orig, QualType Desugared) {
+    // `TypeOfExprType` and `DecltypeType` are only sugar when non-dependent; a
+    // dependent one desugars to itself. It shouldn't be possible for us to
+    // see a dependent `TypeOfExprType` or `DecltypeType` because those only
+    // occur in templates that aren't fully instantiated and we only apply the
+    // attribute when the template is fully instantiated. So in principle this
+    // assert should never fire. However, to be more robust try to defensively
+    // to handle this.
+    assert(Desugared.getTypePtr() != Orig && "Sugar type desugared to itself");
+    // In non-assert builds avoid the infinite recursion.
+    if (Desugared.getTypePtr() == Orig)
+      return VisitType(Orig);
+
+    return Visit(Desugared);
+  }
+
+  // FIXME: We shouldn't strip named sugars from the constructed type
+  // (rdar://185140320).
   QualType VisitTypedefType(const TypedefType *T) {
-    return Visit(T->desugar());
+    return HandleNamedAliasType(T, T->desugar());
+  }
+
+  // FIXME: We shouldn't strip named sugars from the constructed type
+  // (rdar://185140320).
+  QualType VisitUsingType(const UsingType *T) {
+    return HandleNamedAliasType(T, T->desugar());
+  }
+
+  // FIXME: We shouldn't strip named sugars from the constructed type
+  // (rdar://185140320).
+  QualType VisitTypeOfExprType(const TypeOfExprType *T) {
+    return HandleNamedAliasType(T, T->desugar());
+  }
+
+  // FIXME: We shouldn't strip named sugars from the constructed type
+  // (rdar://185140320).
+  QualType VisitTypeOfType(const TypeOfType *T) {
+    return HandleNamedAliasType(T, T->desugar());
+  }
+
+  // FIXME: We shouldn't strip named sugars from the constructed type
+  // (rdar://185140320).
+  QualType VisitDecltypeType(const DecltypeType *T) {
+    return HandleNamedAliasType(T, T->desugar());
   }
 
   QualType VisitArrayType(const ArrayType *T) {
