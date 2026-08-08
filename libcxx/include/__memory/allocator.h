@@ -17,6 +17,7 @@
 #include <__memory/allocator_traits.h>
 #include <__new/align_val_t.h>
 #include <__new/exceptions.h>
+#include <__new/new_at_least.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_same.h>
@@ -111,6 +112,12 @@ public:
 #if _LIBCPP_STD_VER >= 23
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr allocation_result<_Tp*> allocate_at_least(size_t __n) {
     static_assert(sizeof(_Tp) >= 0, "cannot allocate memory for an incomplete type");
+#  if _LIBCPP_AVAILABILITY_HAS_NEW_AT_LEAST
+    if !consteval {
+      auto [__ptr, __count] = std::__new_at_least<value_type>(__element_count(__n));
+      return {__ptr, __count};
+    }
+#  endif
     return {allocate(__n), __n};
   }
 #endif
