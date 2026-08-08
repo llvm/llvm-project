@@ -15,9 +15,50 @@
 
 namespace clang::tidy {
 
+ClangTidyCheckFactories::FactoryEntry::FactoryEntry(
+    CheckFactoryFunction Function)
+    : Function(Function) {}
+
+ClangTidyCheckFactories::FactoryEntry::FactoryEntry(CheckFactory Factory)
+    : Factory(std::make_unique<CheckFactory>(std::move(Factory))) {}
+
+ClangTidyCheckFactories::FactoryEntry::FactoryEntry(const FactoryEntry &Other)
+    : Function(Other.Function) {
+  if (Other.Factory)
+    Factory = std::make_unique<CheckFactory>(*Other.Factory);
+}
+
+ClangTidyCheckFactories::FactoryEntry &
+ClangTidyCheckFactories::FactoryEntry::operator=(const FactoryEntry &Other) {
+  if (this == &Other)
+    return *this;
+  Function = Other.Function;
+  Factory =
+      Other.Factory ? std::make_unique<CheckFactory>(*Other.Factory) : nullptr;
+  return *this;
+}
+
+std::unique_ptr<ClangTidyCheck>
+ClangTidyCheckFactories::FactoryEntry::operator()(
+    StringRef Name, ClangTidyContext *Context) const {
+  if (Function)
+    return Function(Name, Context);
+  return (*Factory)(Name, Context);
+}
+
 void ClangTidyCheckFactories::registerCheckFactory(StringRef Name,
                                                    CheckFactory Factory) {
-  Factories.insert_or_assign(Name, std::move(Factory));
+  Factories.insert_or_assign(Name, FactoryEntry(std::move(Factory)));
+}
+
+void ClangTidyCheckFactories::registerCheckFactory(
+    StringRef Name, const FactoryEntry &Factory) {
+  Factories.insert_or_assign(Name, Factory);
+}
+
+void ClangTidyCheckFactories::registerCheckFunction(
+    StringRef Name, CheckFactoryFunction Function) {
+  Factories.insert_or_assign(Name, FactoryEntry(Function));
 }
 
 std::vector<std::unique_ptr<ClangTidyCheck>>
