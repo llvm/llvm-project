@@ -361,11 +361,12 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpExpectation>() {
       /*name=*/"expectation",
       /*props=*/
       {
-          {51, {OmpProperty::Unique}},
+          {52, {OmpProperty::Unique}},
       },
       /*clauses=*/
       {
-          {51, {Clause::OMPC_from, Clause::OMPC_to}},
+          {52, {Clause::OMPC_from, Clause::OMPC_to}},
+          {60, {}},
       },
   };
   return desc;
@@ -629,7 +630,9 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpPresentModifier>() {
       },
       /*clauses=*/
       {
-          {51, {Clause::OMPC_map}},
+          {51, {Clause::OMPC_from, Clause::OMPC_to}},
+          {52, {}},
+          {60, {Clause::OMPC_from, Clause::OMPC_map, Clause::OMPC_to}},
       },
   };
   return desc;

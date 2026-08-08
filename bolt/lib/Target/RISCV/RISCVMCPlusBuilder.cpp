@@ -162,11 +162,13 @@ public:
     }
   }
 
-  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
-                              MCContext *Ctx) const override {
+  InstructionListType
+  reverseBranchCondition(MCInst Inst, const MCSymbol *TBB, MCContext *Ctx,
+                         bool MustPreserveFlags = true) const override {
     auto Opcode = getInvertedBranchOpcode(Inst.getOpcode());
     Inst.setOpcode(Opcode);
     replaceBranchTarget(Inst, TBB, Ctx);
+    return {Inst};
   }
 
   void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
