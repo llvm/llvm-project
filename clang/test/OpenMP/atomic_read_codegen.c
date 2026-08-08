@@ -231,8 +231,8 @@ int main(void) {
 // CHECK: store double
 #pragma omp atomic read
   cdv = llx;
-// CHECK: [[I128VAL:%.+]] = load atomic i128, ptr @{{.+}} monotonic, align 16
-// CHECK: store i128 [[I128VAL]], ptr [[LDTEMP:%.+]]
+// CHECK: [[VECVAL:%.+]] = load atomic <4 x i32>, ptr @{{.+}} monotonic, align 16
+// CHECK: store <4 x i32> [[VECVAL]], ptr [[LDTEMP:%.+]]
 // CHECK: [[LD:%.+]] = load <4 x i32>, ptr [[LDTEMP]]
 // CHECK: extractelement <4 x i32> [[LD]]
 // CHECK: store i8
@@ -318,8 +318,8 @@ int main(void) {
 // CHECK: store x86_fp80
 #pragma omp atomic read acquire
   ldv = bfx4_packed.b;
-// CHECK: [[LD:%.+]] = load atomic i64, ptr @{{.+}} monotonic, align 8
-// CHECK: store i64 [[LD]], ptr [[LDTEMP:%.+]]
+// CHECK: [[VECVAL:%.+]] = load atomic <2 x float>, ptr @{{.+}} monotonic, align 8
+// CHECK: store <2 x float> [[VECVAL]], ptr [[LDTEMP:%.+]]
 // CHECK: [[LD:%.+]] = load <2 x float>, ptr [[LDTEMP]]
 // CHECK: extractelement <2 x float> [[LD]]
 // CHECK: store i64
