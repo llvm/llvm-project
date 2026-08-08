@@ -61,12 +61,10 @@ define double @foo(double %0) #0 {
 ; X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
 ; X86-NEXT:    fdivp %st, %st(1)
 ; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
 ; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
 ; X86-NEXT:    fstpl (%esp)
-; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X86-NEXT:    wait
 ; X86-NEXT:    calll fma
 ; X86-NEXT:    addl $92, %esp
@@ -107,7 +105,7 @@ define double @bar(double %0) #0 {
 ;
 ; X86-LABEL: bar:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $60, %esp
+; X86-NEXT:    subl $44, %esp
 ; X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-NEXT:    wait
 ; X86-NEXT:    #APP
@@ -134,15 +132,11 @@ define double @bar(double %0) #0 {
 ; X86-NEXT:    fdivp %st, %st(3)
 ; X86-NEXT:    fxch %st(2)
 ; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fstpl (%esp)
-; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X86-NEXT:    wait
 ; X86-NEXT:    calll fma
-; X86-NEXT:    addl $60, %esp
+; X86-NEXT:    addl $44, %esp
 ; X86-NEXT:    retl
     call void asm sideeffect "SETROUND $0", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) null)
     %2 = call double @llvm.experimental.constrained.fdiv.f64(double 1.000000e+00, double %0, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0

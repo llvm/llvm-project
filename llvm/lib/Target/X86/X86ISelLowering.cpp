@@ -22848,6 +22848,21 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(X86ISD::VFPEXT, DL, VT, Res);
 }
 
+/// Returns true if every user of \p Op is a store that writes exactly \p Op's
+/// own type. FST rounds on the way to memory, so such a store already performs
+/// the rounding an x87 FP_ROUND stands for; combineStore turns each of them
+/// into a truncating store, which leaves the round dead.
+static bool isX87RoundDoneByStores(SDValue Op) {
+  EVT VT = Op.getValueType();
+  // A truncating store, or one of a narrower type, would round past VT instead,
+  // which is not the same as rounding to VT first.
+  return !Op->use_empty() && all_of(Op->users(), [&](SDNode *U) {
+    auto *St = dyn_cast<StoreSDNode>(U);
+    return St && !St->isTruncatingStore() && St->getMemoryVT() == VT &&
+           St->getValue() == Op;
+  });
+}
+
 SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
 
@@ -22943,6 +22958,11 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (needsX87RoundToType(VT) && isScalarFPTypeOnX87Stack(SVT)) {
+    // Leave the round alone when the stores that consume it already do it;
+    // combineStore turns those into truncating stores.
+    if (isX87RoundDoneByStores(Op))
+      return Op;
+
     SDValue Res;
     Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
     std::tie(Res, Chain) = RoundX87ToType(VT, DL, Chain, In, DAG);
@@ -55050,6 +55070,37 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   SDValue StoredVal = St->getValue();
   EVT VT = StoredVal.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // store (fp_round X) -> fst X, when the round exists only to force an x87
+  // value to its own type: fst already rounds on the way to memory.
+  // LowerFP_ROUND only leaves such a round in the DAG when every one of its
+  // users is a store like this one.
+  // Only after legalization: before it, the rounds are still the generic ones
+  // the combiner is free to fold away - a constant one folds to the narrow
+  // type, which beats materializing the wide value and rounding it here.
+  bool IsX87Round = DCI.isAfterLegalizeDAG() &&
+                    (StoredVal.getOpcode() == ISD::FP_ROUND ||
+                     StoredVal.getOpcode() == ISD::STRICT_FP_ROUND);
+  if (IsX87Round && St->isUnindexed() && !St->isTruncatingStore() &&
+      VT == StVT) {
+    const X86TargetLowering &XTLI = *Subtarget.getTargetLowering();
+    bool IsStrict = StoredVal->isStrictFPOpcode();
+    SDValue Src = StoredVal.getOperand(IsStrict ? 1 : 0);
+    if (XTLI.needsX87RoundToType(VT) &&
+        XTLI.isScalarFPTypeOnX87Stack(Src.getValueType())) {
+      // A strict round is ordered, so a store that took its chain from the
+      // round has to take the round's own input chain instead once the round
+      // goes away. A store ordered after a sibling store keeps its chain.
+      SDValue Chain = St->getChain();
+      if (IsStrict && Chain == StoredVal.getValue(1))
+        Chain = StoredVal.getOperand(0);
+      // Not a truncating store: f64 -> f32 is expanded for SSE, but on the x87
+      // stack ST_Fp64m32 does it in one instruction.
+      return DAG.getMemIntrinsicNode(X86ISD::FST, dl, DAG.getVTList(MVT::Other),
+                                     {Chain, Src, St->getBasePtr()}, VT,
+                                     St->getMemOperand());
+    }
+  }
 
   // Pattern: store(trunc(load vXiY) to vXiZ) optimization
   SDValue Src;

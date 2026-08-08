@@ -225,14 +225,10 @@ define float @fabs_f32(float %a) nounwind {
 define void @store_only_f32(float %a, float %b, ptr %p) nounwind {
 ; X87-LABEL: store_only_f32:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fadds {{[0-9]+}}(%esp)
-; X87-NEXT:    fstps (%esp)
-; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    fstps (%eax)
-; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %r = fadd float %a, %b
   store float %r, ptr %p
@@ -242,14 +238,10 @@ define void @store_only_f32(float %a, float %b, ptr %p) nounwind {
 define void @store_only_f64(double %a, double %b, ptr %p) nounwind {
 ; X87-LABEL: store_only_f64:
 ; X87:       # %bb.0:
-; X87-NEXT:    subl $8, %esp
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    faddl {{[0-9]+}}(%esp)
-; X87-NEXT:    fstpl (%esp)
-; X87-NEXT:    fldl (%esp)
 ; X87-NEXT:    fstpl (%eax)
-; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    retl
   %r = fadd double %a, %b
   store double %r, ptr %p
@@ -260,16 +252,12 @@ define void @store_only_f64(double %a, double %b, ptr %p) nounwind {
 define void @store_twice_f32(float %a, float %b, ptr %p, ptr %q) nounwind {
 ; X87-LABEL: store_twice_f32:
 ; X87:       # %bb.0:
-; X87-NEXT:    pushl %eax
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fadds {{[0-9]+}}(%esp)
-; X87-NEXT:    fstps (%esp)
-; X87-NEXT:    flds (%esp)
 ; X87-NEXT:    fsts (%ecx)
 ; X87-NEXT:    fstps (%eax)
-; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %r = fadd float %a, %b
   store float %r, ptr %p
@@ -299,16 +287,14 @@ define float @store_and_use_f32(float %a, float %b, ptr %p) nounwind {
 define void @store_narrower_f32(double %a, double %b, ptr %p) nounwind {
 ; X87-LABEL: store_narrower_f32:
 ; X87:       # %bb.0:
-; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    subl $8, %esp
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    faddl {{[0-9]+}}(%esp)
-; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X87-NEXT:    fldl {{[0-9]+}}(%esp)
-; X87-NEXT:    fstps (%esp)
-; X87-NEXT:    flds (%esp)
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    fldl (%esp)
 ; X87-NEXT:    fstps (%eax)
-; X87-NEXT:    addl $12, %esp
+; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    retl
   %r = fadd double %a, %b
   %t = fptrunc double %r to float
