@@ -98,3 +98,19 @@ lldb::TypeSP CommonABIRuntime::LookupTypeByName(llvm::StringRef type_name,
            type_name);
   return {};
 }
+
+TypeAndOrName
+CommonABIRuntime::GetDynamicTypeInfo(const lldb_private::Address &vtable_addr) {
+  std::lock_guard<std::mutex> locker(m_mutex);
+  DynamicTypeCache::const_iterator pos = m_dynamic_type_map.find(vtable_addr);
+  if (pos == m_dynamic_type_map.end())
+    return TypeAndOrName();
+
+  return pos->second;
+}
+
+void CommonABIRuntime::SetDynamicTypeInfo(
+    const lldb_private::Address &vtable_addr, const TypeAndOrName &type_info) {
+  std::lock_guard<std::mutex> locker(m_mutex);
+  m_dynamic_type_map[vtable_addr] = type_info;
+}

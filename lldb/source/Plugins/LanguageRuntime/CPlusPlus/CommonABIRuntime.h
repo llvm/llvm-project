@@ -11,6 +11,7 @@
 
 #include "lldb/Target/Process.h"
 
+#include <map>
 #include <mutex>
 
 namespace lldb_private {
@@ -31,9 +32,19 @@ protected:
                                 lldb::ModuleSP preferred_module,
                                 bool &any_found) const;
 
+  TypeAndOrName GetDynamicTypeInfo(const lldb_private::Address &vtable_addr);
+
+  void SetDynamicTypeInfo(const lldb_private::Address &vtable_addr,
+                          const TypeAndOrName &type_info);
+
 protected:
   Process *m_process;
   std::mutex m_mutex;
+
+private:
+  using DynamicTypeCache = std::map<Address, TypeAndOrName>;
+
+  DynamicTypeCache m_dynamic_type_map;
 };
 
 } // namespace lldb_private
