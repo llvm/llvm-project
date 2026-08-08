@@ -35,7 +35,7 @@ AST_POLYMORPHIC_MATCHER_P(
 }
 
 AST_MATCHER(Decl, isInStdOrPosixNamespace) {
-  for (const DeclContext *DC = dyn_cast<DeclContext>(&Node); DC;
+  for (const auto *DC = dyn_cast<DeclContext>(&Node); DC;
        DC = DC->getParent()) {
     if (DC->isStdNamespace())
       return true;
