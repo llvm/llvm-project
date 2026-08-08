@@ -570,8 +570,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (Subtarget.canUseCMPXCHG16B())
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i128, Custom);
 
-  // 32-bit Windows non-GNU EH (MSVC/Itanium SEH) does not use per-invoke
-  // EH labels, so expand them away. SjLj EH does use them.
+  // 32-bit Windows non-GNU EH (MSVC/Itanium SEH) does not use per-invoke EH
+  // labels, so expand them away. SjLj EH does use them.
   if (Subtarget.isTargetWin32() && !Subtarget.isTargetCygMing() &&
       TM.Options.ExceptionModel != ExceptionHandling::SjLj) {
     setOperationAction(ISD::EH_LABEL, MVT::Other, Expand);
