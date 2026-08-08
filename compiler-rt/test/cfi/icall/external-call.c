@@ -12,7 +12,7 @@
 #include <math.h>
 
 int main(int argc, char **argv) {
-  // CFI: 1
+  // CFI: {{^1$}}
   fprintf(stderr, "1\n");
 
   double (*fn)(double);
@@ -23,6 +23,6 @@ int main(int argc, char **argv) {
 
   fn(atof(argv[2]));
 
-  // CFI: 2
+  // CFI: {{^2$}}
   fprintf(stderr, "2\n");
 }
