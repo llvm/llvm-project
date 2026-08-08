@@ -214,7 +214,8 @@ OptTable::findByPrefix(StringRef Cur, Visibility VisibilityMask,
   std::vector<std::string> Ret;
   for (size_t I = FirstSearchableIndex, E = OptionInfos.size(); I < E; I++) {
     const Info &In = OptionInfos[I];
-    if (In.hasNoPrefix() || (!In.HelpText && !In.GroupID))
+    const char *HelpText = In.getHelpText(VisibilityMask);
+    if (In.hasNoPrefix() || (!HelpText && !In.GroupID))
       continue;
     if (!(In.Visibility & VisibilityMask))
       continue;
@@ -225,8 +226,8 @@ OptTable::findByPrefix(StringRef Cur, Visibility VisibilityMask,
     for (auto PrefixOffset : In.getPrefixOffsets(PrefixesTable)) {
       StringRef Prefix = (*StrTable)[PrefixOffset];
       std::string S = (Twine(Prefix) + Name + "\t").str();
-      if (In.HelpText)
-        S += In.HelpText;
+      if (HelpText)
+        S += HelpText;
       if (StringRef(S).starts_with(Cur) && S != std::string(Cur) + "\t")
         Ret.push_back(S);
     }

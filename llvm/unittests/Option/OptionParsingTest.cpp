@@ -32,6 +32,11 @@ enum ID {
 #undef OPTION
 };
 
+enum OptionVisibility {
+  SubtoolVis = (1 << 2),
+  MultiLineVis = (1 << 3),
+};
+
 #define OPTTABLE_PREFIXES_TABLE_CODE
 #include "Opts.inc"
 #undef OPTTABLE_PREFIXES_TABLE_CODE
@@ -44,11 +49,6 @@ enum OptionFlags {
   OptFlag1 = (1 << 4),
   OptFlag2 = (1 << 5),
   OptFlag3 = (1 << 6)
-};
-
-enum OptionVisibility {
-  SubtoolVis = (1 << 2),
-  MultiLineVis = (1 << 3),
 };
 
 static constexpr OptTable::Info InfoTable[] = {
@@ -207,6 +207,31 @@ TYPED_TEST(OptTableTest, ParseWithVisibility) {
   EXPECT_TRUE(AL.hasArg(OPT_A));
   EXPECT_TRUE(AL.hasArg(OPT_Q));
   EXPECT_TRUE(AL.hasArg(OPT_R));
+}
+
+TYPED_TEST(OptTableTest, HelpTextForVisibilityVariants) {
+  TypeParam T;
+
+  EXPECT_STREQ("The default variant-help text",
+               T.getOptionHelpText(OPT_variant_help, Visibility(DefaultVis)));
+  EXPECT_STREQ("The subtool variant-help text",
+               T.getOptionHelpText(OPT_variant_help, Visibility(SubtoolVis)));
+  EXPECT_STREQ("The subtool variant-help text",
+               T.getOptionHelpText(OPT_variant_help, Visibility(MultiLineVis)));
+  EXPECT_EQ(StringRef("The default variant-help text"),
+            T.getOption(OPT_variant_help).getHelpText());
+
+  std::vector<std::string> Completions =
+      T.findByPrefix("--variant", Visibility(SubtoolVis), 0);
+  ASSERT_EQ(1u, Completions.size());
+  EXPECT_EQ("--variant-help\tThe subtool variant-help text", Completions[0]);
+
+  std::string Help;
+  raw_string_ostream OS(Help);
+  T.printHelp(OS, "test", "title", /*ShowHidden=*/false,
+              /*ShowAllAliases=*/false, Visibility(SubtoolVis));
+  EXPECT_NE(std::string::npos, Help.find("The subtool variant-help text"));
+  EXPECT_EQ(std::string::npos, Help.find("The default variant-help text"));
 }
 
 TYPED_TEST(OptTableTest, ParseAliasInGroup) {
