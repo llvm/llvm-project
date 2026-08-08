@@ -15011,6 +15011,9 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       var->getType().isDestructedType() == QualType::DK_nontrivial_c_struct)
     setFunctionHasBranchProtectedScope();
 
+  if (var->hasLocalStorage() && var->needsDestruction(Context))
+    getCurFunction()->ObjUnwindingLocs.push_back(var->getLocation());
+
   // Warn about externally-visible variables being defined without a
   // prior declaration.  We only want to do this for global
   // declarations, but we also specifically need to avoid doing it for
@@ -16757,6 +16760,10 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
   sema::AnalysisBasedWarnings::Policy WP =
       AnalysisWarnings.getPolicyInEffectAt(AnalysisLoc);
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
+
+  if (getLangOpts().CXXExceptions && FD && FD->usesSEHTry())
+    for (SourceLocation Loc : FSI->ObjUnwindingLocs)
+      Diag(Loc, diag::err_seh_object_unwinding);
 
   // If we skip function body, we can't tell if a function is a coroutine.
   if (getLangOpts().Coroutines && FD && !FD->hasSkippedBody()) {
