@@ -395,13 +395,13 @@ void no_dangling_by_value_argument() {
   takes_by_value(BoundToSelf());
 }
 
-struct F {
+struct IntPtr {
   int *p;
 };
 
-F makeView(int &x [[clang::lifetimebound]]) { return F{&x}; }
+IntPtr makeView(int &x [[clang::lifetimebound]]) { return IntPtr{&x}; }
 
-F whole_struct_return_lazycompoundval() {
+IntPtr whole_struct_return_lazycompoundval() {
   int x = 5; // expected-note {{'x' initialized here}}
   return makeView(x);
   // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
@@ -434,25 +434,40 @@ PtrPair return_pair_by_value() {
   // expected-warning@-6 {{address of stack memory associated with local variable 'local' returned}}
 }
 
-struct InnerS {
-  int *p;
-};
-
-struct OuterS {
-  InnerS inner;
+struct NestedIntPtr {
+  IntPtr inner;
   int *q;
 };
 
-OuterS makeNested(int &x [[clang::lifetimebound]]) {
-  return OuterS{InnerS{&x}};
+NestedIntPtr makeNested(int &x [[clang::lifetimebound]]) {
+  return NestedIntPtr{IntPtr{&x}};
 }
 
 // FIXME: Nested structs are not yet handled by getRegionsFromAggrVal,
 // that is why this dangling pointer is not yet detected.
-OuterS nested_struct_return_not_yet_detected() {
+NestedIntPtr nested_struct_return_not_yet_detected() {
   int y = 5;
   return makeNested(y);
   // expected-warning@-1 {{Address of stack memory associated with local variable 'y' returned to caller}}
   // expected-note@-2    {{Address of stack memory associated with local variable 'y' returned to caller}}
   // expected-warning@-3 {{address of stack memory associated with local variable 'y' returned}}
+}
+
+struct IntPtrArr {
+  int *arr[4];
+};
+
+IntPtrArr makeIntPtrArr(int &x [[clang::lifetimebound]]) {
+  return IntPtrArr{{&x, &global_v}};
+}
+
+// FIXME: Array fields are not split into their individual elements by
+// getRegionsFromAggrVal, that is why this dangling pointer is not yet
+// detected.
+IntPtrArr return_array_field_not_yet_detected() {
+  int z = 5;
+  return makeIntPtrArr(z);
+  // expected-warning@-1 {{Address of stack memory associated with local variable 'z' returned to caller}}
+  // expected-note@-2    {{Address of stack memory associated with local variable 'z' returned to caller}}
+  // expected-warning@-3 {{address of stack memory associated with local variable 'z' returned}}
 }

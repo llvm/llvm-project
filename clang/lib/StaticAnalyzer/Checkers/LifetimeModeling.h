@@ -23,8 +23,8 @@ bool isBoundToLifetimeSource(ProgramStateRef State, SVal Val);
 /// descriptive name cannot be constructed for it.
 std::string getRegionName(const MemRegion *Reg);
 
-/// Returns the MemRegions the fields of an aggregate value (CompoundVal,
-/// LazyCompoundVal) point to.
+/// Returns the MemRegions the fields of an aggregate value
+/// (CompoundVal, LazyCompoundVal) point to.
 SmallVector<const MemRegion *, 4> getRegionsFromAggrVal(SVal Val,
                                                         CheckerContext &C);
 } // namespace clang::ento::lifetime_modeling
