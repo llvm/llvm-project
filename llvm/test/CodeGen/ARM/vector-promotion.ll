@@ -1,6 +1,9 @@
 ; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -mtriple=thumbv7-apple-ios %s -o - -mattr=+neon -S | FileCheck --check-prefix=IR-BOTH --check-prefix=IR-NORMAL %s
 ; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -mtriple=thumbv7-apple-ios %s -o - -mattr=+neon -S -stress-cgp-store-extract | FileCheck --check-prefix=IR-BOTH --check-prefix=IR-STRESS %s
 ; RUN: llc -mtriple=thumbv7-apple-ios %s -o - -mattr=+neon | FileCheck --check-prefix=ASM %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -mtriple=thumbv8.1m.main-none-eabi %s -o - -mattr=+mve -S | FileCheck --check-prefix=IR-MVE %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -mtriple=thumbv8.1m.main-none-eabi %s -o - -mattr=+mve -S -stress-cgp-store-extract | FileCheck --check-prefix=IR-MVE-STRESS %s
+; RUN: llc -mtriple=thumbv8.1m.main-none-eabi %s -o - -mattr=+mve | FileCheck --check-prefix=ASM-MVE %s
 
 ; IR-BOTH-LABEL: @simpleOneInstructionPromotion
 ; IR-BOTH: [[LOAD:%[a-zA-Z_0-9-]+]] = load <2 x i32>, ptr %addr1
@@ -391,5 +394,49 @@ define void @simpleOneInstructionPromotion4x32(ptr %addr1, ptr %dest) {
   %extract = extractelement <4 x i32> %in1, i32 1
   %out = or i32 %extract, 1
   store i32 %out, ptr %dest, align 1
+  ret void
+}
+
+; MVE only supports the Q-register (128-bit) case for this combine.
+; IR-MVE-LABEL: @simpleOneInstructionPromotionMVE4x32
+; IR-MVE: [[LOAD:%[a-zA-Z_0-9-]+]] = load <4 x i32>, ptr %addr1
+; IR-MVE-NEXT: [[VECTOR_OR:%[a-zA-Z_0-9-]+]] = or <4 x i32> [[LOAD]], <i32 poison, i32 1, i32 poison, i32 poison>
+; IR-MVE-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <4 x i32> [[VECTOR_OR]], i32 1
+; IR-MVE-NEXT: store i32 [[EXTRACT]], ptr %dest
+; IR-MVE-NEXT: ret
+; IR-MVE-STRESS-LABEL: @simpleOneInstructionPromotionMVE4x32
+; IR-MVE-STRESS: [[LOAD:%[a-zA-Z_0-9-]+]] = load <4 x i32>, ptr %addr1
+; IR-MVE-STRESS-NEXT: [[VECTOR_OR:%[a-zA-Z_0-9-]+]] = or <4 x i32> [[LOAD]], <i32 poison, i32 1, i32 poison, i32 poison>
+; IR-MVE-STRESS-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <4 x i32> [[VECTOR_OR]], i32 1
+; IR-MVE-STRESS-NEXT: store i32 [[EXTRACT]], ptr %dest
+; IR-MVE-STRESS-NEXT: ret
+; ASM-MVE-LABEL: simpleOneInstructionPromotionMVE4x32:
+define void @simpleOneInstructionPromotionMVE4x32(ptr %addr1, ptr %dest) {
+  %in1 = load <4 x i32>, ptr %addr1, align 16
+  %extract = extractelement <4 x i32> %in1, i32 1
+  %out = or i32 %extract, 1
+  store i32 %out, ptr %dest, align 4
+  ret void
+}
+
+; For MVE-only targets, 64-bit vectors should not use this combine.
+; IR-MVE-LABEL: @simpleOneInstructionPromotionMVE2x32
+; IR-MVE: [[LOAD:%[a-zA-Z_0-9-]+]] = load <2 x i32>, ptr %addr1
+; IR-MVE-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[LOAD]], i32 1
+; IR-MVE-NEXT: [[OUT:%[a-zA-Z_0-9-]+]] = or i32 [[EXTRACT]], 1
+; IR-MVE-NEXT: store i32 [[OUT]], ptr %dest
+; IR-MVE-NEXT: ret
+; IR-MVE-STRESS-LABEL: @simpleOneInstructionPromotionMVE2x32
+; IR-MVE-STRESS: [[LOAD:%[a-zA-Z_0-9-]+]] = load <2 x i32>, ptr %addr1
+; IR-MVE-STRESS-NEXT: [[VECTOR_OR:%[a-zA-Z_0-9-]+]] = or <2 x i32> [[LOAD]], <i32 poison, i32 1>
+; IR-MVE-STRESS-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[VECTOR_OR]], i32 1
+; IR-MVE-STRESS-NEXT: store i32 [[EXTRACT]], ptr %dest
+; IR-MVE-STRESS-NEXT: ret
+; ASM-MVE-LABEL: simpleOneInstructionPromotionMVE2x32:
+define void @simpleOneInstructionPromotionMVE2x32(ptr %addr1, ptr %dest) {
+  %in1 = load <2 x i32>, ptr %addr1, align 8
+  %extract = extractelement <2 x i32> %in1, i32 1
+  %out = or i32 %extract, 1
+  store i32 %out, ptr %dest, align 4
   ret void
 }
