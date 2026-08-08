@@ -19,14 +19,15 @@ TEST_F(LlvmLibcAtan2f128Test, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(neg_zero,
                             LIBC_NAMESPACE::atan2f128(neg_zero, zero));
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::atan2f128(1.0, inf));
-  EXPECT_FP_EQ_ALL_ROUNDING(0x1.2d97c7f3321d234f272993d1414ap+1q,
-                            LIBC_NAMESPACE::atan2f128(inf, neg_inf));
   EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::atan2f128(-1.0, inf));
 
   float128 x = 0x1.ffffffffffffffffffffffffffe7p1q;
   float128 y = 0x1.fffffffffffffffffffffffffff2p1q;
   float128 r = 0x1.921fb54442d18469898cc51701b3p-1q;
   EXPECT_FP_EQ(r, LIBC_NAMESPACE::atan2f128(x, y));
+
+  EXPECT_FP_EQ(0x1.2d97c7f3321d234f272993d1414ap+1q,
+               LIBC_NAMESPACE::atan2f128(inf, neg_inf));
 
   x = -0x1.f122e07fff556143p+3524q;
   y = 0x1.f122e07fff55615b75p+6316q;
