@@ -1067,6 +1067,49 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     }
     break;
   }
+
+  case TargetOpcode::G_INSERT_SUBVECTOR: {
+    GInsertSubvector &Insert = cast<GInsertSubvector>(MI);
+
+    Register Src = Insert.getBigVec();
+    Register Sub = Insert.getSubVec();
+    uint64_t Idx = Insert.getIndexImm();
+
+    LLT SrcTy = MRI.getType(Src);
+    LLT SubTy = MRI.getType(Sub);
+
+    APInt DemandedSubElts;
+    APInt DemandedSrcElts;
+
+    if (SrcTy.isScalableVector()) {
+      DemandedSubElts = SubTy.isScalableVector()
+                            ? APInt(1, 1)
+                            : APInt::getAllOnes(SubTy.getNumElements());
+      DemandedSrcElts = APInt(1, 1);
+    } else {
+      unsigned NumSubElts = SubTy.getNumElements();
+      DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+      DemandedSrcElts = DemandedElts;
+      DemandedSrcElts.clearBits(Idx, Idx + NumSubElts);
+    }
+
+    Known.setAllConflict();
+
+    if (!!DemandedSubElts) {
+      computeKnownBitsImpl(Sub, Known2, DemandedSubElts, Depth + 1);
+      Known = Known.intersectWith(Known2);
+      if (Known.isUnknown())
+        break;
+    }
+
+    if (!!DemandedSrcElts) {
+      computeKnownBitsImpl(Src, Known2, DemandedSrcElts, Depth + 1);
+      Known = Known.intersectWith(Known2);
+    }
+
+    break;
+  }
+
   case TargetOpcode::G_EXTRACT_SUBVECTOR: {
     Register SrcReg = MI.getOperand(1).getReg();
     LLT SrcTy = MRI.getType(SrcReg);

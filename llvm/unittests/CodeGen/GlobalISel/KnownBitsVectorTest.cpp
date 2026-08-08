@@ -180,3 +180,71 @@ TEST_F(AArch64GISelMITest, TestVectorMetadata) {
   Mask.flipAllBits();
   EXPECT_EQ(Mask.getZExtValue(), Res.Zero.getZExtValue());
 }
+
+TEST_F(AArch64GISelMITest, TestInsertSubvectorScalable) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  const LLT S16 = LLT::scalar(16);
+  const LLT V2S16 = LLT::fixed_vector(2, 16);
+  const LLT NXV2S16 = LLT::scalable_vector(2, 16);
+  const LLT NXV4S16 = LLT::scalable_vector(4, 16);
+
+  Register C255 = B.buildConstant(S16, 255).getReg(0);
+  Register C4095 = B.buildConstant(S16, 4095).getReg(0);
+
+  auto Src = B.buildSplatVector(NXV4S16, C255);
+
+  auto ScalableSub = B.buildSplatVector(NXV2S16, C4095);
+  auto ScalableInsert = B.buildInsertSubvector(NXV4S16, Src, ScalableSub, 2);
+
+  auto FixedSub = B.buildSplatVector(V2S16, C4095);
+  auto FixedInsert = B.buildInsertSubvector(NXV4S16, Src, FixedSub, 2);
+
+  GISelValueTracking Info(*MF);
+
+  KnownBits ScalableRes = Info.getKnownBits(ScalableInsert.getReg(0));
+  EXPECT_EQ(APInt(16, 0xf000), ScalableRes.Zero);
+  EXPECT_EQ(APInt(16, 0x00ff), ScalableRes.One);
+
+  KnownBits FixedRes = Info.getKnownBits(FixedInsert.getReg(0));
+  EXPECT_EQ(APInt(16, 0xf000), FixedRes.Zero);
+  EXPECT_EQ(APInt(16, 0x00ff), FixedRes.One);
+}
+
+TEST_F(AArch64GISelMITest, TestInsertSubvectorDemandedElts) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  const LLT S16 = LLT::scalar(16);
+  const LLT V2S16 = LLT::fixed_vector(2, 16);
+  const LLT V4S16 = LLT::fixed_vector(4, 16);
+
+  Register C255 = B.buildConstant(S16, 255).getReg(0);
+  Register C4095 = B.buildConstant(S16, 4095).getReg(0);
+  Register Undef = B.buildUndef(S16).getReg(0);
+
+  auto Src = B.buildBuildVector(V4S16, {C255, C255, Undef, Undef});
+  auto Sub = B.buildBuildVector(V2S16, {C4095, Undef});
+  auto Insert = B.buildInsertSubvector(V4S16, Src, Sub, 2);
+
+  GISelValueTracking Info(*MF);
+
+  KnownBits SrcOnly = Info.getKnownBits(Insert.getReg(0), APInt(4, 0b0001));
+  EXPECT_EQ(APInt(16, 0xff00), SrcOnly.Zero);
+  EXPECT_EQ(APInt(16, 0x00ff), SrcOnly.One);
+
+  KnownBits SubOnly = Info.getKnownBits(Insert.getReg(0), APInt(4, 0b0100));
+  EXPECT_EQ(APInt(16, 0xf000), SubOnly.Zero);
+  EXPECT_EQ(APInt(16, 0x0fff), SubOnly.One);
+
+  KnownBits SrcAndSub = Info.getKnownBits(Insert.getReg(0), APInt(4, 0b0101));
+  EXPECT_EQ(APInt(16, 0xf000), SrcAndSub.Zero);
+  EXPECT_EQ(APInt(16, 0x00ff), SrcAndSub.One);
+
+  KnownBits UnknownSub = Info.getKnownBits(Insert.getReg(0), APInt(4, 0b1000));
+  EXPECT_TRUE(UnknownSub.Zero.isZero());
+  EXPECT_TRUE(UnknownSub.One.isZero());
+}
