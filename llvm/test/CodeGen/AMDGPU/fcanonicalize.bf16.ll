@@ -1087,22 +1087,12 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v2bf16(ptr addrspace(1) %ou
 }
 
 define <2 x bfloat> @v_test_canonicalize_reg_undef_v2bf16(bfloat %val) #1 {
-; FAKE16-LABEL: v_test_canonicalize_reg_undef_v2bf16:
-; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; FAKE16-NEXT:    v_perm_b32 v0, 0, v0, 0x5040100
-; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; REAL16-LABEL: v_test_canonicalize_reg_undef_v2bf16:
-; REAL16:       ; %bb.0:
-; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
-; REAL16-NEXT:    v_mov_b16_e32 v0.h, 0
-; REAL16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: v_test_canonicalize_reg_undef_v2bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <2 x bfloat> poison, bfloat %val, i32 0
   %canonicalized = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %vec)
   ret <2 x bfloat> %canonicalized
@@ -1113,19 +1103,18 @@ define <2 x bfloat> @v_test_canonicalize_undef_reg_v2bf16(bfloat %val) #1 {
 ; FAKE16:       ; %bb.0:
 ; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; FAKE16-NEXT:    v_perm_b32 v0, v0, 0, 0x5040100
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; REAL16-LABEL: v_test_canonicalize_undef_reg_v2bf16:
 ; REAL16:       ; %bb.0:
 ; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    v_pk_mul_bf16 v1, 1.0, v0 op_sel_hi:[0,1]
-; REAL16-NEXT:    v_mov_b16_e32 v0.l, 0
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; REAL16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; REAL16-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <2 x bfloat> poison, bfloat %val, i32 1
   %canonicalized = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %vec)
@@ -1185,18 +1174,20 @@ define <2 x bfloat> @v_test_canonicalize_reg_k_v2bf16(bfloat %val) #1 {
 ; FAKE16:       ; %bb.0:
 ; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_movk_i32 s0, 0x4000
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; FAKE16-NEXT:    v_perm_b32 v0, s0, v0, 0x5040100
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; REAL16-LABEL: v_test_canonicalize_reg_k_v2bf16:
 ; REAL16:       ; %bb.0:
 ; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
-; REAL16-NEXT:    v_mov_b16_e32 v0.h, 0x4000
+; REAL16-NEXT:    v_mov_b16_e32 v1.h, 0x4000
+; REAL16-NEXT:    v_mov_b16_e32 v1.l, v0.l
+; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v1 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <2 x bfloat> poison, bfloat %val, i32 0
   %vec1 = insertelement <2 x bfloat> %vec0, bfloat 2.0, i32 1
@@ -1209,20 +1200,20 @@ define <2 x bfloat> @v_test_canonicalize_k_reg_v2bf16(bfloat %val) #1 {
 ; FAKE16:       ; %bb.0:
 ; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_movk_i32 s0, 0x4000
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; FAKE16-NEXT:    v_perm_b32 v0, v0, s0, 0x5040100
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; REAL16-LABEL: v_test_canonicalize_k_reg_v2bf16:
 ; REAL16:       ; %bb.0:
 ; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    v_pk_mul_bf16 v1, 1.0, v0 op_sel_hi:[0,1]
-; REAL16-NEXT:    v_mov_b16_e32 v0.l, 0x4000
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; REAL16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; REAL16-NEXT:    v_mov_b16_e32 v1.l, 0x4000
+; REAL16-NEXT:    v_mov_b16_e32 v1.h, v0.l
+; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v1 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <2 x bfloat> poison, bfloat 2.0, i32 0
   %vec1 = insertelement <2 x bfloat> %vec0, bfloat %val, i32 1
@@ -1249,24 +1240,13 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v4bf16(ptr addrspace(1) %ou
 }
 
 define <4 x bfloat> @v_test_canonicalize_reg_undef_undef_undef_v4bf16(bfloat %val) #1 {
-; FAKE16-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4bf16:
-; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
-; FAKE16-NEXT:    v_mov_b32_e32 v1, 0x7fc07fc0
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; FAKE16-NEXT:    v_perm_b32 v0, 0, v0, 0x5040100
-; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; REAL16-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4bf16:
-; REAL16:       ; %bb.0:
-; REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
-; REAL16-NEXT:    v_mov_b16_e32 v0.h, 0
-; REAL16-NEXT:    v_mov_b32_e32 v1, 0x7fc07fc0
-; REAL16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4bf16:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0x7fc07fc0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <4 x bfloat> poison, bfloat %val, i32 0
   %canonicalized = call <4 x bfloat> @llvm.canonicalize.v4bf16(<4 x bfloat> %vec)
   ret <4 x bfloat> %canonicalized
@@ -1303,10 +1283,9 @@ define <4 x bfloat> @v_test_canonicalize_reg_undef_reg_reg_v4bf16(bfloat %val0, 
 ; FAKE16:       ; %bb.0:
 ; FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    v_perm_b32 v1, v2, v1, 0x5040100
-; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; FAKE16-NEXT:    v_perm_b32 v0, 0, v0, 0x5040100
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; FAKE16-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
 ; FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -1316,8 +1295,7 @@ define <4 x bfloat> @v_test_canonicalize_reg_undef_reg_reg_v4bf16(bfloat %val0, 
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
 ; REAL16-NEXT:    v_mov_b16_e32 v1.h, v2.l
 ; REAL16-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
-; REAL16-NEXT:    v_mov_b16_e32 v0.h, 0
-; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; REAL16-NEXT:    v_pk_mul_bf16 v1, 1.0, v1 op_sel_hi:[0,1]
 ; REAL16-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <4 x bfloat> poison, bfloat %val0, i32 0
