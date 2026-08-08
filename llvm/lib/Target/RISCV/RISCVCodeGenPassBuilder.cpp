@@ -13,6 +13,7 @@
 #include "RISCVAsmPrinter.h"
 #include "RISCVFoldMemOffset.h"
 #include "RISCVGatherScatterLowering.h"
+#include "RISCVOptWInstrs.h"
 #include "RISCVTargetMachine.h"
 #include "RISCVVLOptimizer.h"
 #include "RISCVVectorPeephole.h"
@@ -118,9 +119,8 @@ void RISCVCodeGenPassBuilder::addMachineSSAOptimization(
 
   Base::addMachineSSAOptimization(PMW);
 
-  if (TM.getTargetTriple().isRISCV64()) {
-    // TODO: RISCVOptWInstrsPass
-  }
+  if (TM.getTargetTriple().isRISCV64())
+    addMachineFunctionPass(RISCVOptWInstrsPass(), PMW);
 }
 
 void RISCVCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) const {
