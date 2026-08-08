@@ -84,6 +84,32 @@ uninitialized_default_construct_n(_ExecutionPolicy&& __policy, _ForwardIterator 
 
 template <class _ExecutionPolicy,
           class _ForwardIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI void
+uninitialized_value_construct(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "uninitialized_value_construct requires ForwardIterators");
+  using _Implementation =
+      __pstl::__dispatch<__pstl::__uninitialized_value_construct, __pstl::__current_configuration, _RawPolicy>;
+  __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last));
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _Size,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI void
+uninitialized_value_construct_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _Size __n) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "uninitialized_value_construct_n requires ForwardIterators");
+  using _Implementation =
+      __pstl::__dispatch<__pstl::__uninitialized_value_construct_n, __pstl::__current_configuration, _RawPolicy>;
+  __pstl::__handle_exception<_Implementation>(std::forward<_ExecutionPolicy>(__policy), std::move(__first), __n);
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
           class _Tp,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>

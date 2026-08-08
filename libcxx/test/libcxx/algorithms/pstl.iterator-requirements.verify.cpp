@@ -283,6 +283,10 @@ void f(non_forward_iterator non_fwd,
         pol, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_default_construct}}
     std::uninitialized_default_construct_n(
         pol, non_fwd, n); // expected-error@*:* {{static assertion failed: uninitialized_default_construct_n}}
+    std::uninitialized_value_construct(
+        pol, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_value_construct}}
+    std::uninitialized_value_construct_n(
+        pol, non_fwd, n); // expected-error@*:* {{static assertion failed: uninitialized_value_construct_n}}
     std::uninitialized_fill(
         pol, non_fwd, non_fwd, val); // expected-error@*:* {{static assertion failed: uninitialized_fill}}
     std::uninitialized_fill_n(

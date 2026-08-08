@@ -53,7 +53,7 @@ struct TestCounted {
   void operator()(ExecutionPolicy&& policy) {
     {
       std::atomic_int(&counters)[1073] = Counted::counters;
-      Counted*(&pool)                  = Counted::pool;
+      Counted*& pool                   = Counted::pool;
 
       // initialize all Counted counters to 0
       std::fill_n(std::begin(counters), std::size(counters), 0);

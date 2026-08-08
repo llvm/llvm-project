@@ -11,9 +11,8 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
 // template <class ExecutionPolicy,
-//           class ForwardIterator,
-//           class Size>
-//   void uninitialized_default_construct_n(ExecutionPolicy&& exec, ForwardIterator first, Size n);
+//           class ForwardIterator>
+//   void uninitialized_value_construct(ExecutionPolicy&& exec, ForwardIterator first, ForwardIterator last);
 
 #include <atomic>
 #include <algorithm>
@@ -29,10 +28,10 @@
 #include "type_algorithms.h"
 #include "runway_sample.h"
 
-EXECUTION_POLICY_SFINAE_TEST(uninitialized_default_construct_n);
+EXECUTION_POLICY_SFINAE_TEST(uninitialized_value_construct);
 
-static_assert(sfinae_test_uninitialized_default_construct_n<int, int*, int>);
-static_assert(!sfinae_test_uninitialized_default_construct_n<std::execution::parallel_policy, int*, int>);
+static_assert(sfinae_test_uninitialized_value_construct<int, int*, int*>);
+static_assert(!sfinae_test_uninitialized_value_construct<std::execution::parallel_policy, int*, int*>);
 
 // Each Counted object has a dedicated external atomic counter.
 // To be able to connect with that counter, each Counted object knows that it is located inside a single pool.
@@ -66,8 +65,8 @@ struct TestCounted {
 
       runway_sample(std::size(counters) + 1, [&](size_t size) {
         // Default-construct the Counted objects in range [0, size).
-        std::uninitialized_default_construct_n(policy, Iter(pool), size);
-        ASSERT_SAME_TYPE(decltype(std::uninitialized_default_construct_n(policy, Iter(pool), size)), void);
+        std::uninitialized_value_construct(policy, Iter(pool), Iter(pool + size));
+        ASSERT_SAME_TYPE(decltype(std::uninitialized_value_construct(policy, Iter(pool), Iter(pool + size))), void);
 
         // Verify that inside this range the counters are all 1 and outside the range they are all 0.
         assert(std::all_of(std::begin(counters), std::begin(counters) + size, [](auto& x) { return x == 1; }));
@@ -93,10 +92,9 @@ struct TestInt {
       int* data = alloc.allocate(n);
       int* last = data + n;
 
-      std::uninitialized_default_construct_n(policy, Iter(data), n);
+      std::uninitialized_value_construct(policy, Iter(data), Iter(last));
       for (int i = 0; i != n; ++i) {
-        data[i] = -i;
-        assert(data[i] == -i);
+        assert(data[i] == 0);
       }
 
       std::destroy(data, last);

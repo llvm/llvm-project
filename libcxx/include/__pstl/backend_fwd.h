@@ -390,6 +390,18 @@ struct __uninitialized_default_construct_n;
 // operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __uninitialized_value_construct;
+// template <class _Policy, class _ForwardIterator>
+// optional<__empty>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __uninitialized_value_construct_n;
+// template <class _Policy, class _ForwardIterator, class _Size>
+// optional<__empty>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __uninitialized_fill;
 // template <class _Policy, class _ForwardIterator, class _Tp>
 // optional<__empty>
