@@ -254,10 +254,6 @@ LLVM_ABI Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
 LLVM_ABI bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
                              bool &TrueIfSigned);
 
-LLVM_ABI KnownFPClass analyzeKnownFPClassFromSelect(
-    const Instruction *I, const KnownFPClass &KnownLHS,
-    const KnownFPClass &KnownRHS, const SimplifyQuery &SQ, unsigned Depth = 0);
-
 /// Determine which floating-point classes are valid for \p V, and return them
 /// in KnownFPClass bit sets.
 ///
