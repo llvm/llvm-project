@@ -29,8 +29,9 @@ TEST_F(LlvmLibcSendfileTest, CreateAndTransfer) {
   //   2. Use sendfile to copy it to another file.
   //   3. Make sure that the data was actually copied.
   //   4. Clean up the temporary files.
-  constexpr const char *IN_FILE = "testdata/sendfile_in.test";
-  constexpr const char *OUT_FILE = "testdata/sendfile_out.test";
+  constexpr const char *IN_FILE = APPEND_LIBC_TEST("testdata/sendfile_in.test");
+  constexpr const char *OUT_FILE =
+      APPEND_LIBC_TEST("testdata/sendfile_out.test");
   const char IN_DATA[] = "sendfile test";
   constexpr ssize_t IN_SIZE = ssize_t(sizeof(IN_DATA));
 

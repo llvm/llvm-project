@@ -242,7 +242,7 @@ endfunction()
 
 # Rule to add a libc unittest.
 # Usage
-#    add_libc_unittest(
+#    create_libc_unittest(
 #      <target name>
 #      SUITE <name of the suite this test belongs to>
 #      SRCS  <list of .cpp files for the test>
@@ -265,11 +265,11 @@ function(create_libc_unittest fq_target_name)
     ${ARGN}
   )
   if(NOT LIBC_UNITTEST_SRCS)
-    message(FATAL_ERROR "'add_libc_unittest' target requires a SRCS list of .cpp "
+    message(FATAL_ERROR "'create_libc_unittest' target requires a SRCS list of .cpp "
       "files.")
   endif()
   if(NOT LIBC_UNITTEST_DEPENDS)
-    message(FATAL_ERROR "'add_libc_unittest' target requires a DEPENDS list of "
+    message(FATAL_ERROR "'create_libc_unittest' target requires a DEPENDS list of "
       "'add_entrypoint_object' targets.")
   endif()
 
@@ -406,7 +406,7 @@ function(create_libc_unittest fq_target_name)
   endif()
 endfunction()
 
-function(add_libc_unittest target_name)
+function(_add_libc_unittest target_name)
   add_target_with_flags(
     ${target_name}
     CREATE_TARGET create_libc_unittest
@@ -1026,7 +1026,7 @@ function(add_libc_test test_name)
     ${ARGN}
   )
   if(LIBC_ENABLE_UNITTESTS AND NOT LIBC_TEST_HERMETIC_TEST_ONLY)
-    add_libc_unittest(${test_name}.__unit__ ${LIBC_TEST_UNPARSED_ARGUMENTS})
+    _add_libc_unittest(${test_name}.__unit__ ${LIBC_TEST_UNPARSED_ARGUMENTS})
   endif()
   if(LIBC_ENABLE_HERMETIC_TESTS AND NOT LIBC_TEST_UNIT_TEST_ONLY)
     add_libc_hermetic(

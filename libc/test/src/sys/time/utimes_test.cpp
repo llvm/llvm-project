@@ -26,7 +26,7 @@ using LlvmLibcUtimesTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 TEST_F(LlvmLibcUtimesTest, ChangeTimesSpecific) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
-  constexpr const char *FILE_PATH = "utimes_pass.test";
+  constexpr const char *FILE_PATH = APPEND_LIBC_TEST("utimes_pass.test");
   auto TEST_FILE = libc_make_test_file_path(FILE_PATH);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
