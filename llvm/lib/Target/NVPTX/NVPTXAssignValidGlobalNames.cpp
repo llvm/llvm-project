@@ -25,23 +25,7 @@
 
 using namespace llvm;
 
-namespace {
-/// NVPTXAssignValidGlobalNames
-class NVPTXAssignValidGlobalNames : public ModulePass {
-public:
-  static char ID;
-  NVPTXAssignValidGlobalNames() : ModulePass(ID) {}
-
-  bool runOnModule(Module &M) override;
-};
-} // namespace
-
-char NVPTXAssignValidGlobalNames::ID = 0;
-
-INITIALIZE_PASS(NVPTXAssignValidGlobalNames, "nvptx-assign-valid-global-names",
-                "Assign valid PTX names to globals", false, false)
-
-bool NVPTXAssignValidGlobalNames::runOnModule(Module &M) {
+static bool assignValidGlobalNames(Module &M) {
   for (GlobalVariable &GV : M.globals()) {
     // We are only allowed to rename symbols that are not externally linked by
     // name
@@ -66,6 +50,29 @@ bool NVPTXAssignValidGlobalNames::runOnModule(Module &M) {
   return true;
 }
 
+namespace {
+/// NVPTXAssignValidGlobalNamesLegacyPass
+class NVPTXAssignValidGlobalNamesLegacyPass : public ModulePass {
+public:
+  static char ID;
+  NVPTXAssignValidGlobalNamesLegacyPass() : ModulePass(ID) {}
+
+  bool runOnModule(Module &M) override { return assignValidGlobalNames(M); }
+};
+} // namespace
+
+char NVPTXAssignValidGlobalNamesLegacyPass::ID = 0;
+
+INITIALIZE_PASS(NVPTXAssignValidGlobalNamesLegacyPass,
+                "nvptx-assign-valid-global-names",
+                "Assign valid PTX names to globals", false, false)
+
 ModulePass *llvm::createNVPTXAssignValidGlobalNamesPass() {
-  return new NVPTXAssignValidGlobalNames();
+  return new NVPTXAssignValidGlobalNamesLegacyPass();
+}
+
+PreservedAnalyses
+NVPTXAssignValidGlobalNamesPass::run(Module &M, ModuleAnalysisManager &) {
+  return assignValidGlobalNames(M) ? PreservedAnalyses::none()
+                                   : PreservedAnalyses::all();
 }

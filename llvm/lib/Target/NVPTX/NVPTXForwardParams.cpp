@@ -145,11 +145,13 @@ static bool forwardDeviceParams(MachineFunction &MF) {
 /// ----------------------------------------------------------------------------
 
 namespace {
-struct NVPTXForwardParamsPass : public MachineFunctionPass {
+struct NVPTXForwardParamsLegacyPass : public MachineFunctionPass {
   static char ID;
-  NVPTXForwardParamsPass() : MachineFunctionPass(ID) {}
+  NVPTXForwardParamsLegacyPass() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return forwardDeviceParams(MF);
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -157,15 +159,18 @@ struct NVPTXForwardParamsPass : public MachineFunctionPass {
 };
 } // namespace
 
-char NVPTXForwardParamsPass::ID = 0;
+char NVPTXForwardParamsLegacyPass::ID = 0;
 
-INITIALIZE_PASS(NVPTXForwardParamsPass, "nvptx-forward-params",
+INITIALIZE_PASS(NVPTXForwardParamsLegacyPass, "nvptx-forward-params",
                 "NVPTX Forward Params", false, false)
 
-bool NVPTXForwardParamsPass::runOnMachineFunction(MachineFunction &MF) {
-  return forwardDeviceParams(MF);
+MachineFunctionPass *llvm::createNVPTXForwardParamsPass() {
+  return new NVPTXForwardParamsLegacyPass();
 }
 
-MachineFunctionPass *llvm::createNVPTXForwardParamsPass() {
-  return new NVPTXForwardParamsPass();
+PreservedAnalyses
+NVPTXForwardParamsPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &) {
+  return forwardDeviceParams(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                 : PreservedAnalyses::all();
 }

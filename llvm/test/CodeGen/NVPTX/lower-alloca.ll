@@ -1,5 +1,7 @@
 ; RUN: opt < %s -S -nvptx-lower-alloca -infer-address-spaces | FileCheck %s
+; RUN: opt < %s -S -passes='nvptx-lower-alloca,infer-address-spaces' | FileCheck %s
 ; RUN: opt < %s -S -nvptx-lower-alloca | FileCheck %s --check-prefix LOWERALLOCAONLY
+; RUN: opt < %s -S -passes=nvptx-lower-alloca | FileCheck %s --check-prefix LOWERALLOCAONLY
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_35 | FileCheck %s --check-prefix PTX
 ; RUN: llc < %s -O0 -mtriple=nvptx64 -mcpu=sm_35 | FileCheck %s --check-prefix PTXO0
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_35 | %ptxas-verify %}

@@ -24,31 +24,19 @@
 using namespace llvm;
 
 namespace {
-class NVPTXReplaceImageHandles : public MachineFunctionPass {
-private:
-  static char ID;
+class NVPTXReplaceImageHandles {
   DenseSet<MachineInstr *> InstrsToRemove;
 
 public:
-  NVPTXReplaceImageHandles();
+  bool run(MachineFunction &MF);
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override {
-    return "NVPTX Replace Image Handles";
-  }
 private:
   bool processInstr(MachineInstr &MI);
   bool replaceImageHandle(MachineOperand &Op, MachineFunction &MF);
 };
 } // namespace
 
-char NVPTXReplaceImageHandles::ID = 0;
-
-NVPTXReplaceImageHandles::NVPTXReplaceImageHandles()
-  : MachineFunctionPass(ID) {}
-
-bool NVPTXReplaceImageHandles::runOnMachineFunction(MachineFunction &MF) {
+bool NVPTXReplaceImageHandles::run(MachineFunction &MF) {
   bool Changed = false;
   InstrsToRemove.clear();
 
@@ -1836,6 +1824,32 @@ bool NVPTXReplaceImageHandles::replaceImageHandle(MachineOperand &Op,
   }
 }
 
+namespace {
+class NVPTXReplaceImageHandlesLegacyPass : public MachineFunctionPass {
+public:
+  static char ID;
+  NVPTXReplaceImageHandlesLegacyPass() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return NVPTXReplaceImageHandles().run(MF);
+  }
+
+  StringRef getPassName() const override {
+    return "NVPTX Replace Image Handles";
+  }
+};
+} // namespace
+
+char NVPTXReplaceImageHandlesLegacyPass::ID = 0;
+
 MachineFunctionPass *llvm::createNVPTXReplaceImageHandlesPass() {
-  return new NVPTXReplaceImageHandles();
+  return new NVPTXReplaceImageHandlesLegacyPass();
+}
+
+PreservedAnalyses
+NVPTXReplaceImageHandlesPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &) {
+  return NVPTXReplaceImageHandles().run(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+             : PreservedAnalyses::all();
 }

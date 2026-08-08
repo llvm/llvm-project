@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=nvptx64-nvidia-cuda -run-pass=nvptx-address-folder -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=nvptx64-nvidia-cuda -passes=nvptx-address-folder -verify-machineinstrs -o - %s | FileCheck %s
 
 --- |
   target triple = "nvptx64-nvidia-cuda"

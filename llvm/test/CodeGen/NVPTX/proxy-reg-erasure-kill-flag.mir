@@ -1,4 +1,5 @@
 # RUN: llc %s --run-pass=nvptx-proxyreg-erasure -mtriple=nvptx64 -o - | FileCheck %s
+# RUN: llc %s -passes=nvptx-proxyreg-erasure -mtriple=nvptx64 -o - | FileCheck %s
 
 ---
 name: test_proxy_reg

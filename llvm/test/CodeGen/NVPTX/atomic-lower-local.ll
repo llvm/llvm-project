@@ -1,4 +1,5 @@
 ; RUN: opt < %s -S -nvptx-atomic-lower | FileCheck %s
+; RUN: opt < %s -S -passes=nvptx-atomic-lower | FileCheck %s
 
 ; This test ensures that there is a legal way for ptx to lower atomics
 ; on local memory. Here, we demonstrate this by lowering them to simple
