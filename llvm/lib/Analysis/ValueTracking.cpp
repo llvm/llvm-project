@@ -5914,22 +5914,29 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     }
 
     const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
-    const bool WantPositive =
-        Opc == Instruction::FRem && (InterestedClasses & fcPositive) != fcNone;
+    const bool WantPositive = (InterestedClasses & fcPositive) != fcNone;
     if (!WantNan && !WantNegative && !WantPositive)
       break;
 
     KnownFPClass KnownLHS, KnownRHS;
+    const bool IsFDiv = Opc == Instruction::FDiv;
+    FPClassTest InterestedRHS =
+        IsFDiv ? fcAllFlags : fcNan | fcInf | fcZero | fcNegative;
 
-    computeKnownFPClass(Op->getOperand(1), DemandedElts,
-                        fcNan | fcInf | fcZero | fcNegative, KnownRHS, Q,
-                        Depth + 1);
+    computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedRHS,
+                        KnownRHS, Q, Depth + 1);
 
-    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN() ||
-                               KnownRHS.isKnownNever(fcNegative) ||
-                               KnownRHS.isKnownNever(fcPositive);
+    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN();
+    if (IsFDiv) {
+      KnowSomethingUseful |=
+          KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
+          KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
+    } else {
+      KnowSomethingUseful |= KnownRHS.isKnownNever(fcNegative) ||
+                             KnownRHS.isKnownNever(fcPositive);
+    }
 
-    if (KnowSomethingUseful || WantPositive) {
+    if (KnowSomethingUseful || (!IsFDiv && WantPositive)) {
       computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
                           Q, Depth + 1);
     }
@@ -5938,7 +5945,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     const fltSemantics &FltSem =
         Op->getType()->getScalarType()->getFltSemantics();
 
-    if (Op->getOpcode() == Instruction::FDiv) {
+    if (IsFDiv) {
       DenormalMode Mode =
           F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
       Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
