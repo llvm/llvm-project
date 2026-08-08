@@ -27,7 +27,7 @@ Background Information
 `rcu` is an alternative to read-write locks and it is suitable for read-mostly data structures.
 Here is an example usage ::
 
-  struct Data /* members */ ;
+  struct Data { /* members */ };
   std::atomic<Data*> data_;
 
   // ==============================================
