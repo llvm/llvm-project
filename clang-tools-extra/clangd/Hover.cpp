@@ -1013,6 +1013,13 @@ std::optional<HoverInfo> getHoverContents(const SelectionTree::Node *N,
 // Generates hover info for attributes.
 std::optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
   HoverInfo HI;
+
+  if (const auto *RS = llvm::dyn_cast<RootSignatureAttr>(A)) {
+    HI.Name = "RootSignature";
+    HI.Documentation = Attr::getDocumentation(A->getKind()).str();
+    return HI;
+  }
+
   HI.Name = A->getSpelling();
   if (A->hasScope())
     HI.LocalScope = A->getScopeName()->getName().str();
