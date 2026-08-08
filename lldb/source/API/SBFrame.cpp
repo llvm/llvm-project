@@ -36,6 +36,7 @@
 #include "lldb/Target/StackID.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/CarolinesTimers.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -405,11 +406,30 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
   if (StackFrame *frame = exe_ctx->GetFramePtr()) {
     VariableSP var_sp;
     Status error;
+    timespec start_time1;
+    timespec start_time2;
+    timespec end_time1;
+    timespec end_time2;
+
+    CarolineTimeStamp(eCarolineStartFrameVar, var_path, &start_time1);
     ValueObjectSP value_sp(frame->GetValueForVariableExpressionPath(
         var_path, eNoDynamicValues,
         StackFrame::eExpressionPathOptionCheckPtrVsMember |
             StackFrame::eExpressionPathOptionsAllowDirectIVarAccess,
         var_sp, error, mode));
+    CarolineTimeStamp(eCarolineEndFrameVar, var_path, &end_time1);
+
+    lldb::ValueObjectSP expr_valobj_sp;
+    Target *target = exe_ctx->GetTargetPtr();
+    SBExpressionOptions options;
+    options.SetFetchDynamicValue(target->GetPreferDynamicValue());
+    options.SetUnwindOnError(true);
+    options.SetIgnoreBreakpoints(true);
+    SourceLanguage language = target->GetLanguage();
+    options.SetLanguage((SBSourceLanguageName)language.name, language.version);
+    CarolineTimeStamp(eCarolineStartExprEval, var_path, &start_time2);
+    target->EvaluateExpression(var_path, frame, expr_valobj_sp, options.ref());
+    CarolineTimeStamp(eCarolineEndExprEval, var_path, &end_time2);
     sb_value.SetSP(value_sp, use_dynamic);
   }
   return sb_value;
