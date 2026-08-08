@@ -17223,25 +17223,6 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
   if (DAG.MaskedValueIsZero(N0, APInt::getOneBitSet(VTBits, ExtVTBits - 1)))
     return DAG.getZeroExtendInReg(N0, DL, ExtVT);
 
-  // fold (sext_in_reg add(x, sign_bit_of(x))) -> add(x, sign_bit_of(x))
-  // if we are not extending beyond the original extension type of x.
-  {
-    SDValue AddOp;
-    uint64_t BitNo;
-    APInt BitMask;
-    if (sd_match(N0,
-                 m_c_BinOp(ISD::ADD, m_Value(AddOp),
-                           m_Srl(m_And(m_Deferred(AddOp), m_ConstInt(BitMask)),
-                                 m_ConstInt(BitNo)))) &&
-        BitMask == APInt::getOneBitSet(VTBits, BitNo)) {
-      unsigned SignBits = DAG.ComputeNumSignBits(AddOp);
-      unsigned NonSignBits = VTBits - DAG.ComputeNumSignBits(AddOp);
-      unsigned ExtendedBits = VTBits - ExtVTBits;
-      if (BitNo >= NonSignBits && ExtendedBits < SignBits)
-        return N0;
-    }
-  }
-
   // fold operands of sext_in_reg based on knowledge that the top bits are not
   // demanded.
   if (SimplifyDemandedBits(SDValue(N, 0)))
