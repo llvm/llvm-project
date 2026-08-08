@@ -2,6 +2,7 @@
 # RUN: llvm-mc -triple=amdgpu11.00 -disassemble -show-encoding < %s | FileCheck -check-prefixes=W32 %s
 # RUN: llvm-mc -triple=amdgpu11.00 -mattr=+wavefrontsize64 -disassemble -show-encoding < %s 2>&1 | FileCheck -check-prefixes=W64 %s
 # RUN: llvm-mc -triple=amdgpu12.00 -disassemble -filetype=null < %s 2>&1 | FileCheck -check-prefix=GFX12-ERR %s
+# RUN: llvm-mc -triple=amdgpu12.50 -disassemble -filetype=null < %s 2>&1 | FileCheck -check-prefix=GFX1250-ERR %s
 
 # GCN-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0xdf,0x00,0x00,0x02
@@ -57,3 +58,7 @@
 # This is ds_read_b32 with gds bit which is not valid on gfx90a.
 # GFX90A: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x00,0x00,0x6d,0xd8,0x01,0x00,0x00,0x00
+
+# This encoding references a missing trailing literal.
+# GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0x00,0x00,0x33,0xcc,0xff,0x68,0x02,0x02
