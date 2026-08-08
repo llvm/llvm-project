@@ -1,0 +1,42 @@
+# REQUIRES: python, system-darwin
+#
+# Test that when load-script-from-symbol-file is set to 'warn' and multiple
+# dependent modules with dSYM scripts are loaded in a single batch (via
+# target create), LLDB emits a single warning listing all detected scripts.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g -shared %t/lib.c -o %t/libTestLib1.dylib
+# RUN: %clang_host -g -shared %t/lib.c -o %t/libTestLib2.dylib
+# RUN: %clang_host -g %t/main.c -o %t/main.out %t/libTestLib1.dylib %t/libTestLib2.dylib
+# RUN: mkdir -p %t/libTestLib1.dylib.dSYM/Contents/Resources/Python
+# RUN: mkdir -p %t/libTestLib2.dylib.dSYM/Contents/Resources/Python
+# RUN: cp %t/dsym_script1.py %t/libTestLib1.dylib.dSYM/Contents/Resources/Python/libTestLib1.py
+# RUN: cp %t/dsym_script2.py %t/libTestLib2.dylib.dSYM/Contents/Resources/Python/libTestLib2.py
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file warn' \
+# RUN:   -o 'target create %t/main.out' 2>&1 \
+# RUN:   | FileCheck %s --strict-whitespace \
+# RUN:                  --implicit-check-not=DSYM_SCRIPT1 --implicit-check-not=DSYM_SCRIPT2
+
+# Both dependent libraries should appear in a single warning.
+# CHECK:      warning: {{.*}}The following debug scripts were detected but not loaded:
+# CHECK-EMPTY:
+# CHECK-DAG:{{^}}    - {{.*}}/libTestLib1.dylib.dSYM/Contents/Resources/Python/libTestLib1.py
+# CHECK-DAG:{{^}}    - {{.*}}/libTestLib2.dylib.dSYM/Contents/Resources/Python/libTestLib2.py
+
+#--- main.c
+extern int lib_func(void);
+int main() { return lib_func(); }
+
+#--- lib.c
+int lib_func(void) { return 0; }
+
+#--- dsym_script1.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("DSYM_SCRIPT1", file=sys.stderr)
+
+#--- dsym_script2.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("DSYM_SCRIPT2", file=sys.stderr)

@@ -1,0 +1,44 @@
+# REQUIRES: python, asserts, !system-windows
+#
+# Test that when load-script-from-symbol-file is set to 'warn' and multiple
+# dependent modules with safe-path scripts are loaded in a single batch (via
+# target create), LLDB emits a single warning listing all detected scripts.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -shared -fPIC %t/lib.c -o %t/libTestLib1.so
+# RUN: %clang_host -shared -fPIC %t/lib.c -o %t/libTestLib2.so
+# RUN: %clang_host %t/main.c -o %t/main.out %t/libTestLib1.so %t/libTestLib2.so \
+# RUN:             -Wl,-rpath,%t
+# RUN: mkdir -p %t/safe-path/libTestLib1
+# RUN: mkdir -p %t/safe-path/libTestLib2
+# RUN: cp %t/script1.py %t/safe-path/libTestLib1/libTestLib1.py
+# RUN: cp %t/script2.py %t/safe-path/libTestLib2/libTestLib2.py
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file warn' \
+# RUN:   -o 'settings append testing.safe-auto-load-paths %t/safe-path' \
+# RUN:   -o 'target create %t/main.out' 2>&1 \
+# RUN:   | FileCheck %s --strict-whitespace \
+# RUN:                  --implicit-check-not=SCRIPT_LOADED1 --implicit-check-not=SCRIPT_LOADED2
+
+# Both dependent libraries should appear in a single warning.
+# CHECK:      warning: {{.*}}The following debug scripts were detected but not loaded:
+# CHECK-EMPTY:
+# CHECK-DAG:{{^}}    - {{.*}}/safe-path/libTestLib1/libTestLib1.py
+# CHECK-DAG:{{^}}    - {{.*}}/safe-path/libTestLib2/libTestLib2.py
+
+#--- main.c
+extern int lib_func(void);
+int main() { return lib_func(); }
+
+#--- lib.c
+int lib_func(void) { return 0; }
+
+#--- script1.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("SCRIPT_LOADED1", file=sys.stderr)
+
+#--- script2.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("SCRIPT_LOADED2", file=sys.stderr)
