@@ -38,5 +38,5 @@ entry:
   ret double %fsqrt
 }
 
-; CHECK: attributes #[[ATTR]] = { nocallback nofree nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite) }
+; CHECK: attributes #[[ATTR]] = { nocallback nofree nosync nounwind strictfp willreturn memory(fpcontrol: read, fpstatus: readwrite) }
 ; CHECK: attributes #[[STRICTFP]] = { strictfp }

@@ -861,7 +861,7 @@ static bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
   // Calls that only access inaccessible memory cannot read or write any memory
   // locations we consider for elimination.
   if (auto *CB = dyn_cast<CallBase>(DI))
-    if (CB->onlyAccessesInaccessibleMemory())
+    if (CB->onlyAccessesNonaddressableMemory())
       return true;
 
   // We can eliminate stores to locations not visible to the caller across
@@ -1502,7 +1502,7 @@ bool DSEState::isCompleteOverwrite(const MemoryLocation &DefLoc,
     return false;
 
   if (auto *CB = dyn_cast<CallBase>(UseInst))
-    if (CB->onlyAccessesInaccessibleMemory())
+    if (CB->onlyAccessesNonaddressableMemory())
       return false;
 
   int64_t InstWriteOffset, DepWriteOffset;
@@ -1610,7 +1610,7 @@ bool DSEState::isReadClobber(const MemoryLocation &DefLoc,
     return false;
 
   if (auto *CB = dyn_cast<CallBase>(UseInst))
-    if (CB->onlyAccessesInaccessibleMemory())
+    if (CB->onlyAccessesNonaddressableMemory())
       return false;
 
   return isRefSet(BatchAA.getModRefInfo(UseInst, DefLoc));
@@ -2551,7 +2551,7 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
     // Check whether "CurArg" could alias with global variables. We require
     // either it's function local and isn't captured before or the "CB" only
     // accesses arg or inaccessible mem.
-    if (!Inits.empty() && !CB->onlyAccessesInaccessibleMemOrArgMem() &&
+    if (!Inits.empty() && !CB->onlyAccessesNonaddressableMemOrArgMem() &&
         !isFuncLocalAndNotCaptured(CurArg, CB, EA))
       Inits = ConstantRangeList();
 

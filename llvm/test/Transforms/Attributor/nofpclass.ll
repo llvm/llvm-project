@@ -1906,13 +1906,13 @@ define <8 x float> @shufflevector_shufflevector(<4 x float> nofpclass(inf nan) %
 }
 
 define float @constrained_sitofp(i32 %arg) strictfp {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn
 ; TUNIT-LABEL: define nofpclass(nan nzero sub) float @constrained_sitofp
 ; TUNIT-SAME: (i32 [[ARG:%.*]]) #[[ATTR8:[0-9]+]] {
 ; TUNIT-NEXT:    [[VAL:%.*]] = call nofpclass(nan nzero sub) float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR27:[0-9]+]]
 ; TUNIT-NEXT:    ret float [[VAL]]
 ;
-; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn
 ; CGSCC-LABEL: define nofpclass(nan nzero sub) float @constrained_sitofp
 ; CGSCC-SAME: (i32 [[ARG:%.*]]) #[[ATTR8:[0-9]+]] {
 ; CGSCC-NEXT:    [[VAL:%.*]] = call nofpclass(nan nzero sub) float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR26:[0-9]+]]
@@ -1923,13 +1923,13 @@ define float @constrained_sitofp(i32 %arg) strictfp {
 }
 
 define float @constrained_uitofp(i32 %arg) strictfp {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn
 ; TUNIT-LABEL: define nofpclass(nan ninf nzero sub nnorm) float @constrained_uitofp
 ; TUNIT-SAME: (i32 [[ARG:%.*]]) #[[ATTR8]] {
 ; TUNIT-NEXT:    [[VAL:%.*]] = call nofpclass(nan ninf nzero sub nnorm) float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR27]]
 ; TUNIT-NEXT:    ret float [[VAL]]
 ;
-; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite)
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind strictfp willreturn
 ; CGSCC-LABEL: define nofpclass(nan ninf nzero sub nnorm) float @constrained_uitofp
 ; CGSCC-SAME: (i32 [[ARG:%.*]]) #[[ATTR8]] {
 ; CGSCC-NEXT:    [[VAL:%.*]] = call nofpclass(nan ninf nzero sub nnorm) float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR26]]

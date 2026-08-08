@@ -255,10 +255,10 @@ declare double @llvm.experimental.constrained.fmuladd.f64(double, double, double
 ; CHECK: @llvm.experimental.constrained.fmuladd.f64({{.*}}) #[[ATTR1]]
 
 declare i32 @llvm.experimental.constrained.fptosi.i32.f64(double, metadata)
-; CHECK: @llvm.experimental.constrained.fptosi.i32.f64({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.fptosi.i32.f64({{.*}}) #[[ATTR2:[0-9]+]]
 
 declare i32 @llvm.experimental.constrained.fptoui.i32.f64(double, metadata)
-; CHECK: @llvm.experimental.constrained.fptoui.i32.f64({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.fptoui.i32.f64({{.*}}) #[[ATTR2]]
 
 declare double @llvm.experimental.constrained.sitofp.f64.i32(i32, metadata, metadata)
 ; CHECK: @llvm.experimental.constrained.sitofp.f64.i32({{.*}}) #[[ATTR1]]
@@ -270,7 +270,7 @@ declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, m
 ; CHECK: @llvm.experimental.constrained.fptrunc.f32.f64({{.*}}) #[[ATTR1]]
 
 declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
-; CHECK: @llvm.experimental.constrained.fpext.f64.f32({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.fpext.f64.f32({{.*}}) #[[ATTR2]]
 
 declare double @llvm.experimental.constrained.sqrt.f64(double, metadata, metadata)
 ; CHECK: @llvm.experimental.constrained.sqrt.f64({{.*}}) #[[ATTR1]]
@@ -339,44 +339,45 @@ declare i64 @llvm.experimental.constrained.llrint.i64.f64(double, metadata, meta
 ; CHECK: @llvm.experimental.constrained.llrint.i64.f64({{.*}}) #[[ATTR1]]
 
 declare double @llvm.experimental.constrained.maxnum.f64(double, double, metadata)
-; CHECK: @llvm.experimental.constrained.maxnum.f64({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.maxnum.f64({{.*}}) #[[ATTR2]]
 
 declare double @llvm.experimental.constrained.minnum.f64(double, double, metadata)
-; CHECK: @llvm.experimental.constrained.minnum.f64({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.minnum.f64({{.*}}) #[[ATTR2]]
 
 declare double @llvm.experimental.constrained.maximum.f64(double, double, metadata)
-; CHECK: @llvm.experimental.constrained.maximum.f64({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.maximum.f64({{.*}}) #[[ATTR2]]
 
 declare double @llvm.experimental.constrained.minimum.f64(double, double, metadata)
-; CHECK: @llvm.experimental.constrained.minimum.f64({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.minimum.f64({{.*}}) #[[ATTR2]]
 
 declare double @llvm.experimental.constrained.ceil.f64(double, metadata)
-; CHECK: @llvm.experimental.constrained.ceil.f64({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.ceil.f64({{.*}}) #[[ATTR2]]
 
 declare double @llvm.experimental.constrained.floor.f64(double, metadata)
-; CHECK: @llvm.experimental.constrained.floor.f64({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.floor.f64({{.*}}) #[[ATTR2]]
 
 declare i32 @llvm.experimental.constrained.lround.i32.f64(double, metadata)
-; CHECK: @llvm.experimental.constrained.lround.i32.f64({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.lround.i32.f64({{.*}}) #[[ATTR2]]
 
 declare i64 @llvm.experimental.constrained.llround.i64.f64(double, metadata)
-; CHECK: @llvm.experimental.constrained.llround.i64.f64({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.llround.i64.f64({{.*}}) #[[ATTR2]]
 
 declare double @llvm.experimental.constrained.round.f64(double, metadata)
-; CHECK: @llvm.experimental.constrained.round.f64({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.round.f64({{.*}}) #[[ATTR2]]
 
 declare double @llvm.experimental.constrained.roundeven.f64(double, metadata)
-; CHECK: @llvm.experimental.constrained.roundeven.f64({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.roundeven.f64({{.*}}) #[[ATTR2]]
 
 declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
-; CHECK: @llvm.experimental.constrained.trunc.f64({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.trunc.f64({{.*}}) #[[ATTR2]]
 
 declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)
-; CHECK: @llvm.experimental.constrained.fcmp.f64({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.fcmp.f64({{.*}}) #[[ATTR2]]
 
 declare i1 @llvm.experimental.constrained.fcmps.f64(double, double, metadata, metadata)
-; CHECK: @llvm.experimental.constrained.fcmps.f64({{.*}}) #[[ATTR1]]
+; CHECK: @llvm.experimental.constrained.fcmps.f64({{.*}}) #[[ATTR2]]
 
 ; CHECK: attributes #[[ATTR0]] = {{{.*}} strictfp {{.*}}}
-; CHECK: attributes #[[ATTR1]] = { {{.*}} strictfp {{.*}} }
+; CHECK: attributes #[[ATTR1]] = { {{.*}} strictfp {{.*}} memory(fpcontrol: read, fpstatus: readwrite) {{.*}}}
+; CHECK: attributes #[[ATTR2]] = { {{.*}} strictfp {{.*}} memory(fpstatus: readwrite) {{.*}}}
 

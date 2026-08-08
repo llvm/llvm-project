@@ -317,7 +317,7 @@ bool LoopVersioningLICM::instructionSafeForVersioning(Instruction *I) {
     // llvm.pseudoprobe (used for sample-based profiling under
     // -fpseudo-probe-for-profiling).
     if (Call->mayThrow() ||
-        !AA->getMemoryEffects(Call).onlyAccessesInaccessibleMem()) {
+        !AA->getMemoryEffects(Call).onlyAccessesNonaddressableMem()) {
       LLVM_DEBUG(dbgs() << "    Unsafe call site found.\n");
       return false;
     }

@@ -237,7 +237,7 @@ void GlobalsAAResult::DeletionCallbackHandle::deleted() {
 
 MemoryEffects GlobalsAAResult::getMemoryEffects(const Function *F) {
   if (FunctionInfo *FI = getFunctionInfo(F))
-    return MemoryEffects(FI->getModRefInfo());
+    return MemoryEffects(FI->getModRefInfo(), false); // Skip FP registers.
 
   return MemoryEffects::unknown();
 }

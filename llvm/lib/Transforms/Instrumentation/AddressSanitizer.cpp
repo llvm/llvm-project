@@ -656,6 +656,8 @@ void llvm::removeASanIncompatibleFnAttributes(Function &F, bool ReadsArgMem) {
   // memory.
   if (!F.getMemoryEffects()
            .getWithoutLoc(IRMemLocation::InaccessibleMem)
+           .getWithoutLoc(IRMemLocation::FPControl)
+           .getWithoutLoc(IRMemLocation::FPStatus)
            .doesNotAccessMemory() &&
       !isModAndRefSet(F.getMemoryEffects().getModRef(IRMemLocation::Other))) {
     F.setMemoryEffects(F.getMemoryEffects() |

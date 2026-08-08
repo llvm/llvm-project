@@ -727,6 +727,21 @@ void CallBase::setOnlyAccessesInaccessibleMemOrArgMem() {
                    MemoryEffects::inaccessibleOrArgMemOnly());
 }
 
+bool CallBase::onlyAccessesNonaddressableMemory() const {
+  return getMemoryEffects().onlyAccessesNonaddressableMem();
+}
+void CallBase::setOnlyAccessesNonaddressableMemory() {
+  setMemoryEffects(getMemoryEffects() & MemoryEffects::nonaddressableMemOnly());
+}
+
+bool CallBase::onlyAccessesNonaddressableMemOrArgMem() const {
+  return getMemoryEffects().onlyAccessesNonaddressableOrArgMem();
+}
+void CallBase::setOnlyAccessesNonaddressableMemOrArgMem() {
+  setMemoryEffects(getMemoryEffects() &
+                   MemoryEffects::nonaddressableOrArgMemOnly());
+}
+
 CaptureInfo CallBase::getCaptureInfo(unsigned OpNo) const {
   if (OpNo < arg_size()) {
     // If the argument is passed byval, the callee does not have access to the

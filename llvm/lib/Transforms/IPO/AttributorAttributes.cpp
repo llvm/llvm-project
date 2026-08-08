@@ -8185,7 +8185,7 @@ struct AAMemoryBehaviorFunction final : public AAMemoryBehaviorImpl {
     // we could determine read/write per location. This would also have the
     // benefit of only one place trying to manifest the memory attribute.
     Function &F = cast<Function>(getAnchorValue());
-    MemoryEffects ME = MemoryEffects::unknown();
+    MemoryEffects ME = MemoryEffects::unknown_mem();
     if (isAssumedReadNone())
       ME = MemoryEffects::none();
     else if (isAssumedReadOnly())
@@ -8223,7 +8223,7 @@ struct AAMemoryBehaviorCallSite final
   ChangeStatus manifest(Attributor &A) override {
     // TODO: Deduplicate this with AAMemoryBehaviorFunction.
     CallBase &CB = cast<CallBase>(getAnchorValue());
-    MemoryEffects ME = MemoryEffects::unknown();
+    MemoryEffects ME = MemoryEffects::unknown_mem();
     if (isAssumedReadNone())
       ME = MemoryEffects::none();
     else if (isAssumedReadOnly())
@@ -8547,7 +8547,7 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
           State.addKnownBits(inverseLocation(NO_ARGUMENT_MEM, true, true));
         else {
           // Remove location information, only keep read/write info.
-          ME = MemoryEffects(ME.getModRef());
+          ME = MemoryEffects(ME.getModRef(), false);
           A.manifestAttrs(IRP,
                           Attribute::getWithMemoryEffects(
                               IRP.getAnchorValue().getContext(), ME),
@@ -8561,7 +8561,7 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
               NO_INACCESSIBLE_MEM | NO_ARGUMENT_MEM, true, true));
         else {
           // Remove location information, only keep read/write info.
-          ME = MemoryEffects(ME.getModRef());
+          ME = MemoryEffects(ME.getModRef(), false);
           A.manifestAttrs(IRP,
                           Attribute::getWithMemoryEffects(
                               IRP.getAnchorValue().getContext(), ME),

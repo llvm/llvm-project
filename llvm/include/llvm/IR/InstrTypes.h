@@ -2013,6 +2013,16 @@ public:
   LLVM_ABI bool onlyAccessesInaccessibleMemOrArgMem() const;
   LLVM_ABI void setOnlyAccessesInaccessibleMemOrArgMem();
 
+  /// Determine if the function may only access memory that cannot be pointed
+  /// by any pointer.
+  LLVM_ABI bool onlyAccessesNonaddressableMemory() const;
+  LLVM_ABI void setOnlyAccessesNonaddressableMemory();
+
+  /// Determine if the function may only access memory that cannot be pointed
+  /// by any pointer or memory pointed to by its arguments.
+  LLVM_ABI bool onlyAccessesNonaddressableMemOrArgMem() const;
+  LLVM_ABI void setOnlyAccessesNonaddressableMemOrArgMem();
+
   /// Determine if the call cannot return.
   bool doesNotReturn() const { return hasFnAttr(Attribute::NoReturn); }
   void setDoesNotReturn() { addFnAttr(Attribute::NoReturn); }
