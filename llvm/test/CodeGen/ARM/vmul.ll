@@ -283,7 +283,7 @@ define <2 x i64> @vmullu32_int(<2 x i32> %A, <2 x i32> %B) nounwind {
 define <8 x i16> @vmulla8(<8 x i8> %A, <8 x i8> %B) nounwind {
 ; CHECK-LABEL: vmulla8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmull.u8 q0, d0, d1
+; CHECK-NEXT:    vmull.s8 q0, d0, d1
 ; CHECK-NEXT:    vbic.i16 q0, #0xff00
 ; CHECK-NEXT:    bx lr
 	%tmp3 = zext <8 x i8> %A to <8 x i16>
@@ -296,7 +296,7 @@ define <8 x i16> @vmulla8(<8 x i8> %A, <8 x i8> %B) nounwind {
 define <4 x i32> @vmulla16(<4 x i16> %A, <4 x i16> %B) nounwind {
 ; CHECK-LABEL: vmulla16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmull.u16 q8, d0, d1
+; CHECK-NEXT:    vmull.s16 q8, d0, d1
 ; CHECK-NEXT:    vmov.i32 q9, #0xffff
 ; CHECK-NEXT:    vand q0, q8, q9
 ; CHECK-NEXT:    bx lr
@@ -310,7 +310,7 @@ define <4 x i32> @vmulla16(<4 x i16> %A, <4 x i16> %B) nounwind {
 define <2 x i64> @vmulla32(<2 x i32> %A, <2 x i32> %B) nounwind {
 ; CHECK-LABEL: vmulla32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmull.u32 q8, d0, d1
+; CHECK-NEXT:    vmull.s32 q8, d0, d1
 ; CHECK-NEXT:    vmov.i64 q9, #0xffffffff
 ; CHECK-NEXT:    vand q0, q8, q9
 ; CHECK-NEXT:    bx lr
@@ -429,7 +429,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @test_vmull_lanea16(<4 x i16> %arg0_uint16x4_t, <4 x i16> %arg1_uint16x4_t) nounwind readnone {
 ; CHECK-LABEL: test_vmull_lanea16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmull.u16 q8, d0, d1[1]
+; CHECK-NEXT:    vmull.s16 q8, d0, d1[1]
 ; CHECK-NEXT:    vmov.i32 q9, #0xffff
 ; CHECK-NEXT:    vand q0, q8, q9
 ; CHECK-NEXT:    bx lr
@@ -445,7 +445,7 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @test_vmull_lanea32(<2 x i32> %arg0_uint32x2_t, <2 x i32> %arg1_uint32x2_t) nounwind readnone {
 ; CHECK-LABEL: test_vmull_lanea32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmull.u32 q8, d0, d1[1]
+; CHECK-NEXT:    vmull.s32 q8, d0, d1[1]
 ; CHECK-NEXT:    vmov.i64 q9, #0xffffffff
 ; CHECK-NEXT:    vand q0, q8, q9
 ; CHECK-NEXT:    bx lr
