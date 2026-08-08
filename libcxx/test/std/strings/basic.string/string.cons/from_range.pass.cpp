@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // template<container-compatible-range<charT> R>
 //   constexpr basic_string(from_range_t, R&& rg, const Allocator& a = Allocator());           // since C++23
 

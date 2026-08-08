@@ -18,8 +18,8 @@
 TEST_CONSTEXPR_CXX20 bool tests() {
   {   // Test with various cases where assign may or may not trigger reallocations
     { // Reallocation happens
-      std::size_t N = 128;
       std::vector<bool> v(5, false);
+      std::size_t N = v.capacity() + 1;
       assert(v.capacity() < N);
       v.assign(N, true);
       assert(v.size() == N);
