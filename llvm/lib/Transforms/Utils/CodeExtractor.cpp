@@ -482,12 +482,20 @@ CodeExtractor::getLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
       // We don't model addresses with multiple start/end markers, but the
       // markers do not need to be in the region.
       if (IntrInst->getIntrinsicID() == Intrinsic::lifetime_start) {
+        if (definedInRegion(Blocks, U)) {
+          Info.LifeStartInRegion = true;
+          continue;
+        }
         if (Info.LifeStart)
           return {};
         Info.LifeStart = IntrInst;
         continue;
       }
       if (IntrInst->getIntrinsicID() == Intrinsic::lifetime_end) {
+        if (definedInRegion(Blocks, U)) {
+          Info.LifeEndInRegion = true;
+          continue;
+        }
         if (Info.LifeEnd)
           return {};
         Info.LifeEnd = IntrInst;
@@ -499,18 +507,17 @@ CodeExtractor::getLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
       return {};
   }
 
-  if (!Info.LifeStart || !Info.LifeEnd)
+  if ((!Info.LifeStart && !Info.LifeStartInRegion) ||
+      (!Info.LifeEnd && !Info.LifeEndInRegion))
     return {};
 
-  Info.SinkLifeStart = !definedInRegion(Blocks, Info.LifeStart);
-  Info.HoistLifeEnd = !definedInRegion(Blocks, Info.LifeEnd);
   // Do legality check.
-  if ((Info.SinkLifeStart || Info.HoistLifeEnd) &&
+  if ((Info.LifeStart || Info.LifeEnd) &&
       !isLegalToShrinkwrapLifetimeMarkers(CEAC, Addr))
     return {};
 
   // Check to see if we have a place to do hoisting, if not, bail.
-  if (Info.HoistLifeEnd && !ExitBlock)
+  if (Info.LifeEnd && !ExitBlock)
     return {};
 
   return Info;
@@ -524,14 +531,14 @@ void CodeExtractor::findAllocas(const CodeExtractorAnalysisCache &CEAC,
 
   auto moveOrIgnoreLifetimeMarkers =
       [&](const LifetimeMarkerInfo &LMI) -> bool {
-    if (!LMI.LifeStart)
+    if (!LMI.LifeStart && !LMI.LifeStartInRegion)
       return false;
-    if (LMI.SinkLifeStart) {
+    if (LMI.LifeStart) {
       LLVM_DEBUG(dbgs() << "Sinking lifetime.start: " << *LMI.LifeStart
                         << "\n");
       SinkCands.insert(LMI.LifeStart);
     }
-    if (LMI.HoistLifeEnd) {
+    if (LMI.LifeEnd) {
       LLVM_DEBUG(dbgs() << "Hoisting lifetime.end: " << *LMI.LifeEnd << "\n");
       HoistCands.insert(LMI.LifeEnd);
     }
@@ -1488,11 +1495,32 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   ValueSet LifetimesStart;
   eraseLifetimeMarkersOnInputs(Blocks, SinkingCands, LifetimesStart);
 
+  auto IsReachable = [&](BasicBlock *BB) {
+    SmallPtrSet<BasicBlock *, 4> Visited;
+    SmallVector<BasicBlock *, 4> Worklist;
+    Worklist.push_back(CommonExit);
+    do {
+      BasicBlock *P = Worklist.pop_back_val();
+      if (P == BB)
+        return true;
+      if (!Visited.insert(P).second)
+        continue;
+
+      append_range(Worklist, successors(P));
+    } while (!Worklist.empty());
+    return false;
+  };
+
   if (!HoistingCands.empty()) {
     auto *HoistToBlock = findOrCreateBlockForHoisting(CommonExit);
     Instruction *TI = HoistToBlock->getTerminator();
-    for (auto *II : HoistingCands)
-      cast<Instruction>(II)->moveBefore(TI->getIterator());
+    for (auto *II : HoistingCands) {
+      auto *I = cast<Instruction>(II);
+      if (IsReachable(I->getParent()))
+        I->moveBefore(TI->getIterator());
+      else
+        I->eraseFromParent();
+    }
     computeExtractedFuncRetVals();
   }
 
