@@ -8,6 +8,11 @@
 // RUN: %clang_cc1 -E -dM -triple=amdgcn-amd-amdhsa -target-cpu gfx90a < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix=LP64 %s
 //
+// RUN: %clang_cc1 -E -dM -triple=amdgpu9.0a-amd-amdhsa < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix=LP64 %s
+// RUN: %clang_cc1 -x c++ -E -dM -triple=amdgpu12.50-amd-amdhsa < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix=LP64 %s
+//
 // r600 has 32-bit pointers and keeps the generic defaults.
 //
 // RUN: %clang_cc1 -E -dM -triple=r600 < /dev/null \
@@ -16,6 +21,8 @@
 // OpenCL mandates its own widths regardless of the target.
 //
 // RUN: %clang_cc1 -x cl -cl-std=CL2.0 -E -dM -triple=amdgcn-amd-amdhsa < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix=OPENCL %s
+// RUN: %clang_cc1 -x cl -cl-std=CL2.0 -E -dM -triple=amdgpu9.0a-amd-amdhsa < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix=OPENCL %s
 //
 // Offloading languages copy these from the auxiliary host target, so the
@@ -30,8 +37,14 @@
 // RUN: %clang_cc1 -x hip -fcuda-is-device -E -dM -triple=amdgcn-amd-amdhsa \
 // RUN:   -aux-triple i386-unknown-linux-gnu < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix=LLP64 %s
+// RUN: %clang_cc1 -x hip -fcuda-is-device -E -dM -triple=amdgpu9.0a-amd-amdhsa \
+// RUN:   -aux-triple x86_64-pc-windows-msvc < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix=LLP64 %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-is-target-device -E -dM \
 // RUN:   -triple=amdgcn-amd-amdhsa -aux-triple x86_64-pc-windows-msvc < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix=LLP64 %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-is-target-device -E -dM \
+// RUN:   -triple=amdgpu9.0a-amd-amdhsa -aux-triple x86_64-pc-windows-msvc < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix=LLP64 %s
 
 // LP64-DAG: #define __INT64_TYPE__ long int
