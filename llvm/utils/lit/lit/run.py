@@ -239,7 +239,8 @@ class Run:
             future_to_index = {}
 
             # Batch tests to reduce IPC traffic and events across workers.
-            batch_size = int(os.getenv("LIT_BATCH_SIZE", "2"))
+            default_batch = 2 if self.workers > 1 else 1
+            batch_size = int(os.getenv("LIT_BATCH_SIZE", default_batch))
 
             # Avoid overhead from concurrent.furtures.wait(), by using
             # callbacks with a SimpleQueue. This removes many checks of futures
