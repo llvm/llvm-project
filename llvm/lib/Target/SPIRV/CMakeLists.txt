@@ -41,6 +41,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVPreLegalizer.cpp
   SPIRVPreLegalizerCombiner.cpp
   SPIRVPostLegalizer.cpp
+  SPIRVFixupMergePlacement.cpp
   SPIRVPrepareFunctions.cpp
   SPIRVPrepareGlobals.cpp
   SPIRVRegisterBankInfo.cpp
