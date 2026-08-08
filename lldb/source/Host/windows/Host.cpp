@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/windows/AutoHandle.h"
+#include "lldb/Host/windows/LazyImport.h"
 #include "lldb/Host/windows/windows.h"
 #include <cstdio>
 
@@ -26,7 +27,9 @@
 #include "llvm/Support/ConvertUTF.h"
 
 // Windows includes
+#include <shellapi.h>
 #include <tlhelp32.h>
+#include <winternl.h>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -101,6 +104,132 @@ static void GetProcessExecutableAndTriple(const AutoHandle &handle,
   // TODO(zturner): Add the ability to get the process user name.
 }
 
+// Reads command-line arguments from a process via its PEB.
+//
+// Handles both native 64-bit targets and WOW64 (32-bit on 64-bit Windows)
+// targets, whose PEB and RTL_USER_PROCESS_PARAMETERS layouts differ.
+static void GetProcessArgs(HANDLE handle, ProcessInstanceInfo &process) {
+  using NtQueryInformationProcessFn =
+      NTSTATUS(NTAPI *)(HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG);
+  static LazyImport<NtQueryInformationProcessFn> sNtQueryInformationProcess(
+      L"ntdll.dll", "NtQueryInformationProcess");
+  if (!sNtQueryInformationProcess)
+    return;
+
+  // Determine whether the target is a WOW64 (32-bit) process.
+  BOOL isWow64 = FALSE;
+  ::IsWow64Process(handle, &isWow64);
+
+  // Get the PEB base address.
+  //   Native:  ProcessBasicInformation (0) →
+  //   PROCESS_BASIC_INFORMATION.PebBaseAddress WOW64:   ProcessWow64Information
+  //   (26) → ULONG_PTR holding the 32-bit PEB address
+  ULONGLONG pebAddress = 0;
+  ULONG returnLen = 0;
+  if (isWow64) {
+    ULONG_PTR wow64PebAddr = 0;
+    constexpr PROCESSINFOCLASS ProcessWow64Information =
+        static_cast<PROCESSINFOCLASS>(26);
+    if ((*sNtQueryInformationProcess)(handle, ProcessWow64Information,
+                                      &wow64PebAddr, sizeof(wow64PebAddr),
+                                      &returnLen) != 0)
+      return;
+    pebAddress = static_cast<ULONGLONG>(wow64PebAddr);
+  } else {
+    PROCESS_BASIC_INFORMATION pbi = {};
+    if ((*sNtQueryInformationProcess)(handle, ProcessBasicInformation, &pbi,
+                                      sizeof(pbi), &returnLen) != 0)
+      return;
+    pebAddress = reinterpret_cast<ULONGLONG>(pbi.PebBaseAddress);
+  }
+  if (pebAddress == 0)
+    return;
+
+  // Read the RTL_USER_PROCESS_PARAMETERS pointer from the PEB.
+  //   32-bit PEB: ProcessParameters pointer at offset 0x10
+  //   64-bit PEB: ProcessParameters pointer at offset 0x20
+  ULONGLONG processParamsAddr = 0;
+  SIZE_T bytesRead = 0;
+  if (isWow64) {
+    DWORD addr32 = 0;
+    if (!::ReadProcessMemory(handle,
+                             reinterpret_cast<LPCVOID>(pebAddress + 0x10),
+                             &addr32, sizeof(addr32), &bytesRead) ||
+        bytesRead != sizeof(addr32))
+      return;
+    processParamsAddr = addr32;
+  } else {
+    if (!::ReadProcessMemory(
+            handle, reinterpret_cast<LPCVOID>(pebAddress + 0x20),
+            &processParamsAddr, sizeof(processParamsAddr), &bytesRead) ||
+        bytesRead != sizeof(processParamsAddr))
+      return;
+  }
+  if (processParamsAddr == 0)
+    return;
+
+  // Read the CommandLine UNICODE_STRING from RTL_USER_PROCESS_PARAMETERS.
+  //   32-bit layout: { USHORT Length; USHORT MaxLen; DWORD Buffer; }   @ offset
+  //   0x40 64-bit layout: { USHORT Length; USHORT MaxLen; DWORD pad; ULONGLONG
+  //   Buffer; } @ offset 0x70
+  USHORT cmdLineByteLen = 0;
+  ULONGLONG cmdLineBufAddr = 0;
+  if (isWow64) {
+    struct {
+      USHORT Length;
+      USHORT MaximumLength;
+      DWORD Buffer;
+    } us = {};
+    if (!::ReadProcessMemory(
+            handle, reinterpret_cast<LPCVOID>(processParamsAddr + 0x40), &us,
+            sizeof(us), &bytesRead) ||
+        bytesRead != sizeof(us))
+      return;
+    cmdLineByteLen = us.Length;
+    cmdLineBufAddr = us.Buffer;
+  } else {
+    struct {
+      USHORT Length;
+      USHORT MaximumLength;
+      DWORD Padding;
+      ULONGLONG Buffer;
+    } us = {};
+    if (!::ReadProcessMemory(
+            handle, reinterpret_cast<LPCVOID>(processParamsAddr + 0x70), &us,
+            sizeof(us), &bytesRead) ||
+        bytesRead != sizeof(us))
+      return;
+    cmdLineByteLen = us.Length;
+    cmdLineBufAddr = us.Buffer;
+  }
+  if (cmdLineByteLen == 0 || cmdLineBufAddr == 0)
+    return;
+
+  // Read the command-line string itself.
+  std::wstring cmdLine(cmdLineByteLen / sizeof(wchar_t), L'\0');
+  if (!::ReadProcessMemory(handle, reinterpret_cast<LPCVOID>(cmdLineBufAddr),
+                           cmdLine.data(), cmdLineByteLen, &bytesRead) ||
+      bytesRead != cmdLineByteLen)
+    return;
+
+  // Split into argv using the standard Windows shell tokenisation rules.
+  int argc = 0;
+  wchar_t **argv = ::CommandLineToArgvW(cmdLine.c_str(), &argc);
+  if (!argv || argc == 0)
+    return;
+
+  for (int i = 0; i < argc; ++i) {
+    std::string arg;
+    if (!llvm::convertWideToUTF8(argv[i], arg))
+      continue;
+    if (i == 0)
+      process.SetArg0(arg);
+    else
+      process.GetArguments().AppendArgument(arg);
+  }
+  ::LocalFree(argv);
+}
+
 lldb::thread_t Host::GetCurrentThread() {
   return lldb::thread_t(::GetCurrentThread());
 }
@@ -148,17 +277,24 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
   pe.dwSize = sizeof(PROCESSENTRY32W);
   if (Process32FirstW(snapshot.get(), &pe)) {
     do {
-      AutoHandle handle(::OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE,
-                                      pe.th32ProcessID),
-                        nullptr);
-
       ProcessInstanceInfo process;
       std::string exeFile;
       llvm::convertWideToUTF8(pe.szExeFile, exeFile);
       process.SetExecutableFile(FileSpec(exeFile), true);
       process.SetProcessID(pe.th32ProcessID);
       process.SetParentProcessID(pe.th32ParentProcessID);
+
+      HANDLE hProcess =
+          ::OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ,
+                        FALSE, pe.th32ProcessID);
+      const bool canReadMem = (hProcess != nullptr);
+      if (!canReadMem)
+        hProcess = ::OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE,
+                                 pe.th32ProcessID);
+      AutoHandle handle(hProcess, nullptr);
       GetProcessExecutableAndTriple(handle, process);
+      if (canReadMem)
+        GetProcessArgs(handle.get(), process);
 
       if (match_info.MatchAllProcesses() || match_info.Matches(process))
         process_infos.push_back(process);
@@ -178,8 +314,7 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
 
   process_info.SetProcessID(pid);
   GetProcessExecutableAndTriple(handle, process_info);
-
-  // Need to read the PEB to get parent process and command line arguments.
+  GetProcessArgs(handle.get(), process_info);
 
   AutoHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
   if (!snapshot.IsValid())
