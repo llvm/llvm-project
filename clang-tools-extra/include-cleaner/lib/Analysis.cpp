@@ -70,8 +70,7 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
           RT = RefType::Ambiguous;
         SpellLoc = SM.getSpellingLoc(Loc);
       }
-      auto FID = SM.getFileID(SpellLoc);
-      if (FID != SM.getMainFileID() && FID != SM.getPreambleFileID())
+      if (!isUsedAsMainFile(SM.getFileID(SpellLoc), SM, PI))
         return;
       // FIXME: Most of the work done here is repetitive. It might be useful to
       // have a cache/batching.
@@ -81,7 +80,8 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   }
   for (const SymbolReference &MacroRef : MacroRefs) {
     assert(MacroRef.Target.kind() == Symbol::Macro);
-    if (!SM.isWrittenInMainFile(SM.getSpellingLoc(MacroRef.RefLocation)) ||
+    if (!isUsedAsMainFile(SM.getFileID(SM.getSpellingLoc(MacroRef.RefLocation)),
+                          SM, PI) ||
         shouldIgnoreMacroReference(PP, MacroRef.Target.macro()))
       continue;
     CB(MacroRef, headersForSymbol(MacroRef.Target, PP, PI));

@@ -125,12 +125,22 @@ struct RecordedAST {
   std::unique_ptr<ASTConsumer> record();
 
   ASTContext *Ctx = nullptr;
+  /// If set, some declarations from non-self-contained headers will be included
+  /// in Roots.
+  /// These are headers that are included by the main file and are not
+  /// self-contained.
+  const PragmaIncludes *PI = nullptr;
   /// The set of declarations written at file scope inside the main file.
   ///
   /// These are the roots of the subtrees that should be traversed to find uses.
   /// (Traversing the TranslationUnitDecl would find uses inside headers!)
   std::vector<Decl *> Roots;
 };
+
+/// Returns true if FID is the main file or a non-self-contained file included
+/// by the main file (transitively through other non-self-contained files).
+bool isUsedAsMainFile(FileID FID, const SourceManager &SM,
+                      const PragmaIncludes *PI);
 
 /// Recorded main-file preprocessor events relevant to include-cleaner.
 ///
