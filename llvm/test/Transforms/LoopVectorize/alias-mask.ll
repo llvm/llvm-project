@@ -650,4 +650,4 @@ exit:
 
 
 !2 = distinct !{!2, !3}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable"}
