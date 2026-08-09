@@ -80,6 +80,15 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT v16s32 = LLT::fixed_vector(16, 32);
   const LLT v8s64 = LLT::fixed_vector(8, 64);
 
+  const X86TargetLowering &TLI = *Subtarget.getTargetLowering();
+  bool RoundX87S32 = TLI.needsX87RoundToType(MVT::f32);
+  bool RoundX87S64 = TLI.needsX87RoundToType(MVT::f64);
+  auto NeedsX87RoundToType = [=](const LegalityQuery &Query) {
+    return (RoundX87S32 && Query.Types[0] == s32) ||
+           (RoundX87S64 && Query.Types[0] == s64);
+  };
+  auto WidenToS80 = [=](const LegalityQuery &) { return std::pair(0u, s80); };
+
   const LLT s8MaxVector = HasAVX512 ? v64s8 : HasAVX ? v32s8 : v16s8;
   const LLT s16MaxVector = HasAVX512 ? v32s16 : HasAVX ? v16s16 : v8s16;
   const LLT s32MaxVector = HasAVX512 ? v16s32 : HasAVX ? v8s32 : v4s32;
@@ -137,9 +146,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .lower();
 
   getActionDefinitionsBuilder(G_FSQRT)
-      .legalFor(HasSSE1 || UseX87, {s32})
-      .legalFor(HasSSE2 || UseX87, {s64})
-      .legalFor(UseX87, {s80});
+      .legalFor(HasSSE1, {s32})
+      .legalFor(HasSSE2, {s64})
+      .widenScalarIf(NeedsX87RoundToType, WidenToS80)
+      .legalFor(UseX87, {s32, s64, s80});
 
   getActionDefinitionsBuilder({G_GET_ROUNDING, G_SET_ROUNDING})
       .customFor({s32});
@@ -440,6 +450,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // fp arithmetic
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
+      .widenScalarIf(NeedsX87RoundToType, WidenToS80)
       .legalFor({s32, s64})
       .legalFor(HasSSE1, {v4s32})
       .legalFor(HasSSE2, {v2s64})
