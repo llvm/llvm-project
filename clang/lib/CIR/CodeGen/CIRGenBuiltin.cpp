@@ -1249,7 +1249,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitBuiltinBitOpWithFallback<cir::BitCtzOp>(*this, e);
   case Builtin::BIstdc_trailing_zeros_uc:
   case Builtin::BIstdc_trailing_zeros_us:
-  case Builtin::BIstdc_trailiing_zeros_ui:
+  case Builtin::BIstdc_trailing_zeros_ui:
   case Builtin::BIstdc_trailing_zeros_ul:
   case Builtin::BIstdc_trailing_zeros_ull:
   case Builtin::BI__builtin_stdc_trailing_zeros:
@@ -1262,6 +1262,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIstdc_leading_zeros_ull:
   case Builtin::BI__builtin_stdc_leading_zeros:
     return emitBuiltinBitOp<cir::BitClzOp>(*this, e, /*poisonZero=*/false);
+
+  case Builtin::BIstdc_count_ones_uc:
+  case Builtin::BIstdc_count_ones_us:
+  case Builtin::BIstdc_count_ones_ui:
+  case Builtin::BIstdc_count_ones_ul:
+  case Builtin::BIstdc_count_ones_ull:
+  case Builtin::BI__builtin_stdc_count_ones:
+    return emitBuiltinBitOp<cir::BitPopcountOp>(*this, e);
 
   case Builtin::BI__builtin_clzs:
   case Builtin::BI__builtin_clz:
