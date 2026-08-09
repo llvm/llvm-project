@@ -1,0 +1,41 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!u8i = !cir.int<u, 8>
+// expected-error @below {{expected non-function type}}
+!rec_S = !cir.struct<"S" {bogus !u8i}>
+
+module {}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+// expected-error @below {{a data member is spelled without a mark}}
+!rec_S = !cir.struct<"S" {data !u8i}>
+
+module {}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+// expected-error @below {{a record member takes at most one kind mark}}
+!rec_S = !cir.struct<"S" {pad empty !u8i}>
+
+module {}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+// expected-error @below {{a union's tail padding takes no kind mark}}
+!rec_U = !cir.union<"U" {!s32i}, padding = {pad !cir.array<!u8i x 4>}>
+
+module {}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+// expected-error @below {{a union member cannot be marked pad}}
+!rec_U = !cir.union<"U" {!s32i, pad !u8i}>
+
+module {}

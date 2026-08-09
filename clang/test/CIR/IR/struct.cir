@@ -19,6 +19,7 @@
 !rec_S1 = !cir.struct<"S1" {!s32i, !s32i}>
 !rec_Sc = !cir.struct<"Sc" {!u8i, !u16i, !u32i}>
 
+// CHECK-DAG: ![[ARR_TY:rec_anon_struct[0-9]*]] = !cir.struct<packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
 // CHECK-DAG: !cir.struct<{!cir.array<!cir.ptr<!u8i> x 5>}>
 // CHECK-DAG: !cir.struct<{!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
 // CHECK-DAG: !rec_S1 = !cir.struct<"S1" {!s32i, !s32i}>
@@ -29,15 +30,46 @@
 !rec_P2 = !cir.struct<"P2" padded {!u8i, !u16i, !u32i}>
 !rec_P3 = !cir.struct<"P3" packed padded {!u8i, !u16i, !u32i}>
 
+// Members marked pad or empty
+!rec_P4 = !cir.struct<"P4" {pad !u8i}>
+!rec_P5 = !cir.struct<"P5" {empty !u8i}>
+!rec_P6 = !cir.struct<"P6" {!u32i, empty !cir.array<!u8i x 3>, pad !u8i}>
+!rec_P7 = !cir.struct<"P7" packed padded {!u8i, pad !u8i}>
+
 // CHECK-DAG: !rec_P1 = !cir.struct<"P1" packed {!s32i, !s32i}>
 // CHECK-DAG: !rec_P2 = !cir.struct<"P2" padded {!u8i, !u16i, !u32i}>
 // CHECK-DAG: !rec_P3 = !cir.struct<"P3" packed padded {!u8i, !u16i, !u32i}>
+// CHECK-DAG: !rec_P4 = !cir.struct<"P4" {pad !u8i}>
+// CHECK-DAG: !rec_P5 = !cir.struct<"P5" {empty !u8i}>
+// CHECK-DAG: !rec_P6 = !cir.struct<"P6" {!u32i, empty !cir.array<!u8i x 3>, pad !u8i}>
+// CHECK-DAG: !rec_P7 = !cir.struct<"P7" packed padded {!u8i, pad !u8i}>
+
+// Records with identical member types, spelled apart by their marks.  The
+// anonymous pair must stay two distinct types, since an anonymous record keys
+// on its whole body.
+!rec_M1 = !cir.struct<"M1" {!u8i, pad !u8i}>
+!rec_M2 = !cir.struct<"M2" {!u8i, empty !u8i}>
+!rec_anon_pad = !cir.struct<{!u8i, pad !u8i}>
+!rec_anon_empty = !cir.struct<{!u8i, empty !u8i}>
+
+// CHECK-DAG: !rec_M1 = !cir.struct<"M1" {!u8i, pad !u8i}>
+// CHECK-DAG: !rec_M2 = !cir.struct<"M2" {!u8i, empty !u8i}>
+// CHECK-DAG: !cir.struct<{!u8i, pad !u8i}>
+// CHECK-DAG: !cir.struct<{!u8i, empty !u8i}>
 
 !rec_U1 = !cir.union<"U1" {!s32i, !u8i}, padding = {!u8i}>
 !rec_U2 = !cir.union<"U2" packed {!s32i}, padding = {!cir.array<!u8i x 4>}>
+!rec_anon_u_empty = !cir.union<{!s32i, empty !u8i}>
+!rec_anon_u_plain = !cir.union<{!s32i, !u8i}>
+!rec_U3 = !cir.union<"U3" {empty !u8i}>
+!rec_U4 = !cir.union<"U4" {!s32i, empty !u8i}, padding = {!cir.array<!u8i x 4>}>
 
 // CHECK-DAG: !rec_U1 = !cir.union<"U1" {!s32i, !u8i}, padding = {!u8i}>
 // CHECK-DAG: !rec_U2 = !cir.union<"U2" packed {!s32i}, padding = {!cir.array<!u8i x 4>}>
+// CHECK-DAG: !cir.union<{!s32i, empty !u8i}>
+// CHECK-DAG: !cir.union<{!s32i, !u8i}>
+// CHECK-DAG: !rec_U3 = !cir.union<"U3" {empty !u8i}>
+// CHECK-DAG: !rec_U4 = !cir.union<"U4" {!s32i, empty !u8i}, padding = {!cir.array<!u8i x 4>}>
 
 
 // Complete a previously incomplete record
@@ -45,9 +77,18 @@
 !rec_Ac = !cir.struct<class "A" {!u8i, !s32i}>
 // CHECK-DAG: !rec_A = !cir.struct<class "A" {!u8i, !s32i}>
 
+// Complete a previously incomplete record whose members carry marks.
+!rec_B = !cir.struct<class "B" incomplete>
+!rec_Bc = !cir.struct<class "B" {!u8i, pad !cir.array<!u8i x 3>, !s32i}>
+// CHECK-DAG: !rec_B = !cir.struct<class "B" {!u8i, pad !cir.array<!u8i x 3>, !s32i}>
+
 // Test recursive struct parsing/printing.
 !rec_Node = !cir.struct<"Node" {!cir.ptr<!cir.struct<"Node">>}>
 // CHECK-DAG: !cir.struct<"Node" {!cir.ptr<!cir.struct<"Node">>}>
+
+// A mark survives the cyclic-print guard on a self-referential record.
+!rec_PadNode = !cir.struct<"PadNode" {!cir.ptr<!cir.struct<"PadNode">>, pad !u8i}>
+// CHECK-DAG: !cir.struct<"PadNode" {!cir.ptr<!cir.struct<"PadNode">>, pad !u8i}>
 
 
 
@@ -59,7 +100,7 @@ module  {
 // CHECK: cir.global external @p1 = #cir.ptr<null> : !cir.ptr<!rec_S>
 // CHECK: cir.global external @p2 = #cir.ptr<null> : !cir.ptr<!rec_U>
 // CHECK: cir.global external @p3 = #cir.ptr<null> : !cir.ptr<!rec_C>
-// CHECK: cir.global external @arr = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.zero : !cir.array<!s32i x 8>}> : !rec_anon_struct
+// CHECK: cir.global external @arr = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.zero : !cir.array<!s32i x 8>}> : ![[ARR_TY]]{{$}}
 
   // Dummy function to use types and force them to be printed.
   cir.func @useTypes(%arg0: !rec_Node,
@@ -71,7 +112,21 @@ module  {
                      %arg6: !rec_P2,
                      %arg7: !rec_P3,
                      %arg8: !rec_U1,
-                     %arg9: !rec_U2) {
+                     %arg9: !rec_U2,
+                     %arg10: !rec_P4,
+                     %arg11: !rec_P5,
+                     %arg12: !rec_P6,
+                     %arg13: !rec_M1,
+                     %arg14: !rec_M2,
+                     %arg15: !rec_anon_pad,
+                     %arg16: !rec_anon_empty,
+                     %arg17: !rec_U3,
+                     %arg18: !rec_U4,
+                     %arg19: !rec_Bc,
+                     %arg20: !rec_PadNode,
+                     %arg21: !rec_P7,
+                     %arg22: !rec_anon_u_empty,
+                     %arg23: !rec_anon_u_plain) {
     cir.return
   }
 
