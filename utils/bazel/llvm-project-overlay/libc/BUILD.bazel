@@ -1692,6 +1692,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_getcwd",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/getcwd.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":hdr_errno_macros",
+        ":types_ssize_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_chdir",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/chdir.h"],
     target_compatible_with = select({
@@ -3319,6 +3336,30 @@ libc_support_library(
         ":hdr_stdint_proxy",
         ":types_struct_stat",
     ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_path",
+    hdrs = ["src/__support/OSUtil/linux/path.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_cpp_string_view",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_path",
+    hdrs = ["src/__support/OSUtil/path.h"],
+    deps = select({
+        "@platforms//os:linux": [
+            ":__support_osutil_linux_path",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 libc_support_library(
@@ -14090,6 +14131,33 @@ libc_function(
 )
 
 libc_function(
+    name = "realpath",
+    srcs = ["src/stdlib/linux/realpath.cpp"],
+    hdrs = ["src/stdlib/realpath.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_optional",
+        ":__support_cpp_string",
+        ":__support_cpp_string_view",
+        ":__support_error_or",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_stat_kernel_statx_types",
+        ":__support_osutil_linux_syscall_wrappers_getcwd",
+        ":__support_osutil_linux_syscall_wrappers_readlink",
+        ":__support_osutil_linux_syscall_wrappers_statx",
+        ":__support_osutil_path",
+        ":hdr_errno_macros",
+        ":hdr_fcntl_macros",
+        ":hdr_limits_macros",
+        ":hdr_sys_stat_macros",
+        ":string_memory_utils",
+        ":types_mode_t",
+        ":types_size_t",
+    ],
+)
+
+libc_function(
     name = "srand",
     srcs = ["src/stdlib/srand.cpp"],
     hdrs = ["src/stdlib/srand.h"],
@@ -14309,6 +14377,19 @@ libc_support_library(
         ":__support_macros_properties_cpu_features",
         ":__support_macros_properties_types",
         ":hdr_stdint_proxy",
+    ],
+)
+
+libc_support_library(
+    name = "allocating_string_utils",
+    hdrs = ["src/string/allocating_string_utils.h"],
+    deps = [
+        ":__support_alloc_checker",
+        ":__support_cpp_new",
+        ":__support_cpp_optional",
+        ":__support_macros_config",
+        ":string_memory_utils",
+        ":string_utils",
     ],
 )
 
@@ -14771,6 +14852,21 @@ libc_function(
 )
 
 libc_function(
+    name = "strdup",
+    srcs = ["src/string/strdup.cpp"],
+    hdrs = ["src/string/strdup.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":allocating_string_utils",
+        ":hdr_stdlib_macros",
+        ":llvm_libc_types_size_t",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
     name = "strspn",
     srcs = ["src/string/strspn.cpp"],
     hdrs = ["src/string/strspn.h"],
@@ -15039,18 +15135,22 @@ libc_function(
     ],
 )
 
-# libc_function(
-#     name = "getcwd",
-#     srcs = ["src/unistd/linux/getcwd.cpp"],
-#     hdrs = ["src/unistd/getcwd.h"],
-#     deps = [
-#         ":__support_common",
-#         ":__support_osutil_syscall",
-#         ":errno",
-#         ":hdr_unistd_macros",
-#         ":types_size_t",
-#     ],
-# )
+libc_function(
+    name = "getcwd",
+    srcs = ["src/unistd/linux/getcwd.cpp"],
+    hdrs = ["src/unistd/getcwd.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_optional",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_getcwd",
+        ":allocating_string_utils",
+        ":hdr_unistd_macros",
+        ":types_size_t",
+        ":types_ssize_t",
+    ],
+)
 
 libc_function(
     name = "geteuid",
@@ -15075,6 +15175,19 @@ libc_function(
         ":__support_common",
         ":__support_macros_config",
         ":__support_osutil_linux_auxv",
+    ],
+)
+
+libc_function(
+    name = "getpid",
+    srcs = ["src/unistd/linux/getpid.cpp"],
+    hdrs = ["src/unistd/getpid.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":hdr_unistd_macros",
+        ":types_pid_t",
     ],
 )
 
@@ -16258,6 +16371,23 @@ libc_function(
         ":errno",
         ":shm_common",
         ":types_mode_t",
+    ],
+)
+
+############################# sys/random targets #############################
+
+libc_function(
+    name = "getrandom",
+    srcs = ["src/sys/random/linux/getrandom.cpp"],
+    hdrs = ["src/sys/random/getrandom.h"],
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_getrandom",
+        ":types_size_t",
+        ":types_ssize_t",
     ],
 )
 
