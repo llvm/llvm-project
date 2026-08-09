@@ -7,6 +7,7 @@
 declare i32 @llvm.ctlz.i32(i32, i1)
 declare <2 x i8> @llvm.cttz.v2i8(<2 x i8>, i1)
 declare void @use(i8)
+declare void @use_i32(i32)
 
 define i1 @test0(i1 %A) {
 ; CHECK-LABEL: @test0(
@@ -1704,6 +1705,18 @@ define i64 @fold_zext_or_disjoint_xor_nneg(i32 %x) {
   ret i64 %r
 }
 
+define <2 x i32> @fold_zext_or_disjoint_xor_splat_vector(<2 x i8> %x) {
+; CHECK-LABEL: @fold_zext_or_disjoint_xor_splat_vector(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i32> [[TMP1]], splat (i32 267)
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %or = or disjoint <2 x i8> %x, <i8 10, i8 10>
+  %z = zext <2 x i8> %or to <2 x i32>
+  %r = xor <2 x i32> %z, <i32 257, i32 257>
+  ret <2 x i32> %r
+}
+
 define i32 @no_fold_zext_plain_or_xor(i8 %x) {
 ; CHECK-LABEL: @no_fold_zext_plain_or_xor(
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], 2
@@ -1722,16 +1735,14 @@ define i32 @no_fold_zext_multi_use(i8 %x) {
 ; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X:%.*]], 2
 ; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[OR]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Z]], 257
-; CHECK-NEXT:    [[USE:%.*]] = add nuw nsw i32 [[Z]], 1
-; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw i32 [[R]], [[USE]]
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    call void @use_i32(i32 [[Z]])
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %or = or disjoint i8 %x, 2
   %z = zext i8 %or to i32
   %r = xor i32 %z, 257
-  %use = add i32 %z, 1
-  %result = add i32 %r, %use
-  ret i32 %result
+  call void @use_i32(i32 %z)
+  ret i32 %r
 }
 
 define i32 @no_fold_inner_or_multi_use(i8 %x) {
@@ -1739,14 +1750,12 @@ define i32 @no_fold_inner_or_multi_use(i8 %x) {
 ; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X:%.*]], 2
 ; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[OR]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Z]], 257
-; CHECK-NEXT:    [[EXTRA:%.*]] = zext i8 [[OR]] to i32
-; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw i32 [[R]], [[EXTRA]]
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    call void @use(i8 [[OR]])
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %or = or disjoint i8 %x, 2
   %z = zext i8 %or to i32
   %r = xor i32 %z, 257
-  %extra = zext i8 %or to i32
-  %result = add i32 %r, %extra
-  ret i32 %result
+  call void @use(i8 %or)
+  ret i32 %r
 }
