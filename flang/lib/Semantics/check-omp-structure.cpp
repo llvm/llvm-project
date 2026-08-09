@@ -5596,9 +5596,11 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
     const parser::Name *memSpaceName{
         parser::Unwrap<parser::Name>(memSpaceExpr)};
     bool ok{memSpaceName &&
-        (IsPredefinedHandle(*memSpaceName, predefinedMemSpaceNames, version) ||
+        (llvm::is_contained(
+             predefinedMemSpaceNames, memSpaceName->ToString()) ||
             (version >= 60 &&
-                IsPredefinedHandle(*memSpaceName, nullMemSpaceName, version)))};
+                llvm::is_contained(
+                    nullMemSpaceName, memSpaceName->ToString())))};
     if (!ok) {
       context_.Say(memSpaceSource,
           "The MEMSPACE modifier must name a predefined memory space"_err_en_US);

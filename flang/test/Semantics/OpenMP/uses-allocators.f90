@@ -289,7 +289,8 @@ subroutine uses_allocators_predefined_identity
   x = 3
   !$omp end target
 
-  ! A renamed memory space likewise still denotes a predefined memory space.
+  ! A memory space must use the written name of a predefined memory space.
+  !ERROR: The MEMSPACE modifier must name a predefined memory space
   !$omp target uses_allocators(memspace(renamed_space): my_alloc)
   x = 4
   !$omp end target
