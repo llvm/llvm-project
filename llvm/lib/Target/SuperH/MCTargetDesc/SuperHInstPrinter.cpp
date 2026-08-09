@@ -50,8 +50,7 @@ void SuperHInstPrinter::printOperand(const MCInst *MI, unsigned OpNo, raw_ostrea
 
 	// Print immediates
 	if (Op.isImm()) {
-		assert(Op.getImm() <= 255 && "Only 8-bit immediates are supported.");
-		O << "#" << Op.getImm();
+		O << Op.getImm();
 		return;
 	}
 }

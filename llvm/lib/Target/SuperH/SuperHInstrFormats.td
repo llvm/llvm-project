@@ -152,7 +152,7 @@ class InstRm<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> patter
 // Immediate -> Register Instruction
 // <opop|rnrn|iiiiiiii>
 //===----------------------------------------------------------------------===//
-class InstI8Rn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+class InstRnI8<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
     : SHInst16<outs, ins, asmstr, pattern> {
 
   // Opcode
@@ -170,7 +170,7 @@ class InstI8Rn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> patt
 // (disp:8) -> Register Instruction
 // <opop|rnrn|dddddddd>
 //===----------------------------------------------------------------------===//
-class InstD8Rn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+class InstRnD8<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
     : SHInst16<outs, ins, asmstr, pattern> {
   
   
@@ -189,7 +189,7 @@ class InstD8Rn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> patt
 // (Register + disp:4) -> Register Instruction
 // <opop|rnrn|rmrm|dddd>
 //===----------------------------------------------------------------------===//
-class InstRmD4Rn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+class InstRmRnD4<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
     : SHInst16<outs, ins, asmstr, pattern> {
   
   // Opcode
@@ -209,7 +209,7 @@ class InstRmD4Rn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pa
 // (disp:4) -> Register Instruction
 // <opopopop|rnrn|dddd>
 //===----------------------------------------------------------------------===//
-class InstD4Rn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+class InstRnD4<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
     : SHInst16<outs, ins, asmstr, pattern> {
   
   // Opcode
@@ -227,7 +227,7 @@ class InstD4Rn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> patt
 // (disp:4 + Register) -> Reserved Register Instruction
 // <opopopop|rmrm|dddd>
 //===----------------------------------------------------------------------===//
-class InstD4RmRr <bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+class InstRmD4<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
     : SHInst16<outs, ins, asmstr, pattern> {
   
   // Opcode
@@ -245,7 +245,7 @@ class InstD4RmRr <bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> p
 // (disp:8) Instruction
 // <opopopop|dddddddd>
 //===----------------------------------------------------------------------===//
-class InstD8Rr<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+class InstD8<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
     : SHInst16<outs, ins, asmstr, pattern> {
   
   // Opcode
@@ -261,7 +261,7 @@ class InstD8Rr<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> patt
 // (imm:8) Instruction
 // <opopopop|iiiiiiii>
 //===----------------------------------------------------------------------===//
-class InstI8Rr <bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+class InstI8<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
     : SHInst16<outs, ins, asmstr, pattern> {
   
   // Opcode
@@ -277,7 +277,7 @@ class InstI8Rr <bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pat
 // (disp:12) Instruction
 // <opop|dddddddddddd>
 //===----------------------------------------------------------------------===//
-class InstD12Rr<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+class InstD12<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
     : SHInst16<outs, ins, asmstr, pattern> {
   
   // Opcode

@@ -40,6 +40,11 @@ public:
                            Register DestReg, Register SrcReg, bool KillSrc,
                            bool RenamableDest = false,
                            bool RenamableSrc = false) const override;
+
+  bool expandPostRAPseudo(MachineInstr &MI) const override;
+
+private:
+  bool expandDIV(unsigned Opcode, MachineInstr &MI) const;
 };
 
 const SuperHInstrInfo *createSuperHInstrInfo(const SuperHSubtarget &STI);
