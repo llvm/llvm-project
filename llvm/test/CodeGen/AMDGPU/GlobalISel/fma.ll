@@ -1526,7 +1526,7 @@ define amdgpu_ps half @fma_s16_uniform(half inreg %a, half inreg %b, half inreg 
 ;
 ; GFX11-TRUE16-LABEL: fma_s16_uniform:
 ; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-TRUE16-NEXT:    v_fma_f16 v0.l, s1, s0, v0.l
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;

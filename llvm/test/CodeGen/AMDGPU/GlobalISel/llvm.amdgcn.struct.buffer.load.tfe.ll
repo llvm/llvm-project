@@ -277,8 +277,9 @@ define amdgpu_ps void @raw_buffer_load_i16_tfe(<4 x i32> inreg %rsrc, ptr addrsp
   ; GFX11-TRUE16-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_USHORT_TFE_IDXEN]].sub1
   ; GFX11-TRUE16-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
   ; GFX11-TRUE16-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GFX11-TRUE16-NEXT:   [[COPY12:%[0-9]+]]:vgpr_16 = COPY [[COPY11]]
-  ; GFX11-TRUE16-NEXT:   GLOBAL_STORE_SHORT_t16 [[REG_SEQUENCE1]], [[COPY12]], 0, 0, implicit $exec :: (store (i16) into %ir.data_addr, addrspace 1)
+  ; GFX11-TRUE16-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
+  ; GFX11-TRUE16-NEXT:   [[COPY13:%[0-9]+]]:vgpr_16 = COPY [[COPY12]].lo16
+  ; GFX11-TRUE16-NEXT:   GLOBAL_STORE_SHORT_t16 [[REG_SEQUENCE1]], [[COPY13]], 0, 0, implicit $exec :: (store (i16) into %ir.data_addr, addrspace 1)
   ; GFX11-TRUE16-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY10]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX11-TRUE16-NEXT:   S_ENDPGM 0
   ;
@@ -328,8 +329,9 @@ define amdgpu_ps void @raw_buffer_load_i16_tfe(<4 x i32> inreg %rsrc, ptr addrsp
   ; GFX12-TRUE16-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_USHORT_TFE_VBUFFER_IDXEN]].sub1
   ; GFX12-TRUE16-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
   ; GFX12-TRUE16-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GFX12-TRUE16-NEXT:   [[COPY12:%[0-9]+]]:vgpr_16 = COPY [[COPY11]]
-  ; GFX12-TRUE16-NEXT:   GLOBAL_STORE_SHORT_t16 [[REG_SEQUENCE1]], [[COPY12]], 0, 0, implicit $exec :: (store (i16) into %ir.data_addr, addrspace 1)
+  ; GFX12-TRUE16-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
+  ; GFX12-TRUE16-NEXT:   [[COPY13:%[0-9]+]]:vgpr_16 = COPY [[COPY12]].lo16
+  ; GFX12-TRUE16-NEXT:   GLOBAL_STORE_SHORT_t16 [[REG_SEQUENCE1]], [[COPY13]], 0, 0, implicit $exec :: (store (i16) into %ir.data_addr, addrspace 1)
   ; GFX12-TRUE16-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY10]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX12-TRUE16-NEXT:   S_ENDPGM 0
   ;
@@ -493,8 +495,9 @@ define amdgpu_ps void @raw_buffer_load_f16_tfe(<4 x i32> inreg %rsrc, ptr addrsp
   ; GFX11-TRUE16-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_USHORT_TFE_IDXEN]].sub1
   ; GFX11-TRUE16-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
   ; GFX11-TRUE16-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GFX11-TRUE16-NEXT:   [[COPY12:%[0-9]+]]:vgpr_16 = COPY [[COPY11]]
-  ; GFX11-TRUE16-NEXT:   GLOBAL_STORE_SHORT_t16 [[REG_SEQUENCE1]], [[COPY12]], 0, 0, implicit $exec :: (store (f16) into %ir.data_addr, addrspace 1)
+  ; GFX11-TRUE16-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
+  ; GFX11-TRUE16-NEXT:   [[COPY13:%[0-9]+]]:vgpr_16 = COPY [[COPY12]].lo16
+  ; GFX11-TRUE16-NEXT:   GLOBAL_STORE_SHORT_t16 [[REG_SEQUENCE1]], [[COPY13]], 0, 0, implicit $exec :: (store (f16) into %ir.data_addr, addrspace 1)
   ; GFX11-TRUE16-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY10]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX11-TRUE16-NEXT:   S_ENDPGM 0
   ;
@@ -544,8 +547,9 @@ define amdgpu_ps void @raw_buffer_load_f16_tfe(<4 x i32> inreg %rsrc, ptr addrsp
   ; GFX12-TRUE16-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_USHORT_TFE_VBUFFER_IDXEN]].sub1
   ; GFX12-TRUE16-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]], implicit $exec
   ; GFX12-TRUE16-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GFX12-TRUE16-NEXT:   [[COPY12:%[0-9]+]]:vgpr_16 = COPY [[COPY11]]
-  ; GFX12-TRUE16-NEXT:   GLOBAL_STORE_SHORT_t16 [[REG_SEQUENCE1]], [[COPY12]], 0, 0, implicit $exec :: (store (f16) into %ir.data_addr, addrspace 1)
+  ; GFX12-TRUE16-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
+  ; GFX12-TRUE16-NEXT:   [[COPY13:%[0-9]+]]:vgpr_16 = COPY [[COPY12]].lo16
+  ; GFX12-TRUE16-NEXT:   GLOBAL_STORE_SHORT_t16 [[REG_SEQUENCE1]], [[COPY13]], 0, 0, implicit $exec :: (store (f16) into %ir.data_addr, addrspace 1)
   ; GFX12-TRUE16-NEXT:   GLOBAL_STORE_DWORD [[REG_SEQUENCE2]], [[COPY10]], 0, 0, implicit $exec :: (store (i32) into %ir.tfe_addr, addrspace 1)
   ; GFX12-TRUE16-NEXT:   S_ENDPGM 0
   ;

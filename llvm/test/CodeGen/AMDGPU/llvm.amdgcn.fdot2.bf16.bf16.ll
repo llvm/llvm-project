@@ -166,7 +166,7 @@ define amdgpu_ps void @test_llvm_amdgcn_fdot2_bf16_bf16_sis(
 ;
 ; GISEL-GFX11-TRUE16-LABEL: test_llvm_amdgcn_fdot2_bf16_bf16_sis:
 ; GISEL-GFX11-TRUE16:       ; %bb.0: ; %entry
-; GISEL-GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, s1
+; GISEL-GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, s1
 ; GISEL-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX11-TRUE16-NEXT:    v_dot2_bf16_bf16 v2.l, s0, 0x3f803f80, v2.l
 ; GISEL-GFX11-TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
