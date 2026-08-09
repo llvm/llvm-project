@@ -1,0 +1,147 @@
+---
+myst:
+  enable_extensions:
+    - attrs_block
+    - colon_fence
+    - substitution
+---
+
+% If you want to modify sections/contents permanently, you should modify both
+% ReleaseNotes.md and ReleaseNotesTemplate.txt.
+
+{#extra-clang-tools-release-releasenotestitle}
+# Extra Clang Tools {{env.config.release}} {{ (('(In-Progress) ' if env.app.tags.has('PreRelease') else '') ~ 'Release Notes') }}
+
+```{contents}
+:depth: 3
+:local: true
+```
+
+Written by the [LLVM Team](https://llvm.org/)
+
+::::{only} PreRelease
+
+:::{warning}
+These are in-progress notes for the upcoming Extra Clang Tools {{env.config.version}} release.
+Release notes for previous releases can be found on
+[the Download Page](https://releases.llvm.org/download.html).
+:::
+::::
+
+## Introduction
+
+This document contains the release notes for the Extra Clang Tools, part of the
+Clang release {{env.config.release}}. Here we describe the status of the Extra Clang Tools in
+some detail, including major improvements from the previous release and new
+feature work. All LLVM releases may be downloaded from the [LLVM releases web
+site](https://llvm.org/releases/).
+
+For more information about Clang or LLVM, including information about
+the latest release, please see the [Clang Web Site](https://clang.llvm.org) or
+the [LLVM Web Site](https://llvm.org).
+
+Note that if you are reading this file from a Git checkout or the
+main Clang web page, this document applies to the *next* release, not
+the current one. To see the release notes for a specific release, please
+see the [releases page](https://llvm.org/releases/).
+
+{#what-s-new-in-extra-clang-tools-release}
+## What's New in Extra Clang Tools {{env.config.release}}?
+
+Some of the major new features and improvements to Extra Clang Tools are listed
+here. Generic improvements to Extra Clang Tools as a whole or to its underlying
+infrastructure are described first, followed by tool-specific sections.
+
+### Major New Features
+
+### Potentially Breaking Changes
+
+### Improvements to clangd
+
+#### Inlay hints
+
+#### Diagnostics
+
+#### Semantic Highlighting
+
+#### Compile flags
+
+#### Hover
+
+#### Code completion
+
+#### Code actions
+
+#### Signature help
+
+#### Cross-references
+
+#### Objective-C
+
+#### Miscellaneous
+
+### Improvements to clang-doc
+
+### Improvements to clang-query
+
+### Improvements to clang-tidy
+
+- Improved {program}`check_clang_tidy.py` by adding support of
+  `-std=cXX-or-earlier` values, mirroring the existing `-std=cXX-or-later`.
+  New construct expands to the given standard and every earlier one.
+
+#### New checks
+
+- New {doc}`performance-expensive-value-or
+  <clang-tidy/checks/performance/expensive-value-or>` check.
+
+  Finds calls to `value_or` (and alternative spellings `valueOr`,
+  `ValueOr`) on optional types where the return type is expensive to copy.
+
+#### New check aliases
+
+#### Changes in existing checks
+
+- Fixed a crash in {doc}`bugprone-std-namespace-modification
+  <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
+  lambda closure types used as template arguments.
+
+- Improved {doc}`cppcoreguidelines-pro-type-member-init
+  <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
+  `std::array` the same as built-in arrays when `IgnoreArrays` option is enabled.
+
+- Improved {doc}`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
+  nested expressions involving different macros or a mix of macro and
+  non-macro operands.
+
+- Improved {doc}`modernize-return-braced-init-list
+  <clang-tidy/checks/modernize/return-braced-init-list>` check to no longer
+  rewrite the return value when the constructed type has a
+  `std::initializer_list` constructor, as the braced form could select a
+  different constructor.
+
+- Improved {doc}`readability-named-parameter
+  <clang-tidy/checks/readability/named-parameter>` check by ignoring
+  standard tag types (e.g. `std::in_place_t`, `std::allocator_arg_t`,
+  `std::nothrow_t`, iterator tags, lock tags, etc.) that are used
+  exclusively for overload resolution. Added the {option}`IgnoredTypes`
+  option to allow customizing the set of ignored types.
+
+- Improved {doc}`readability-use-std-min-max
+  <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
+  trailing semicolons and lost comments when the `if` body has no braces.
+
+#### Removed checks
+
+#### Miscellaneous
+
+### Improvements to include-fixer
+
+### Improvements to clang-include-fixer
+
+### Improvements to modularize
+
+### Improvements to pp-trace
+
+### Clang-tidy Visual Studio plugin

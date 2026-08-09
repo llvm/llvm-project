@@ -13,9 +13,9 @@
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/Calls.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
-
 #include "llvm/Object/COFF.h"
 
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -663,11 +663,14 @@ Error COFFPlatform::runBootstrapInitializers(JDBootstrapState &BState) {
 Error COFFPlatform::runBootstrapSubsectionInitializers(JDBootstrapState &BState,
                                                        StringRef Start,
                                                        StringRef End) {
+  rt::Int32VoidCaller CallInitializer;
+  if (auto Err = rt::buildCallers(
+          ES, rt::callerInit<rt::sps::Int32VoidCallerSpec>(&CallInitializer)))
+    return Err;
   for (auto &Initializer : BState.Initializers)
     if (Initializer.first >= Start && Initializer.first <= End &&
         Initializer.second) {
-      auto Res =
-          ES.getExecutorProcessControl().runAsVoidFunction(Initializer.second);
+      auto Res = CallInitializer(ES, Initializer.second);
       if (!Res)
         return Res.takeError();
     }
@@ -733,7 +736,11 @@ Error COFFPlatform::runSymbolIfExists(JITDylib &PlatformJD,
       ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
       {{ES.intern(SymbolName), &jit_function}});
   if (!AfterCLookupErr) {
-    auto Res = ES.getExecutorProcessControl().runAsVoidFunction(jit_function);
+    rt::Int32VoidCaller CallFn;
+    if (auto Err = rt::buildCallers(
+            ES, rt::callerInit<rt::sps::Int32VoidCallerSpec>(&CallFn)))
+      return Err;
+    auto Res = CallFn(ES, jit_function);
     if (!Res)
       return Res.takeError();
     return Error::success();

@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
@@ -30,21 +31,35 @@
 
 namespace llvm::orc::rt {
 
+class CallerBase {
+public:
+  CallerBase() = default;
+  CallerBase(ExecutorAddr CalleeAddr) : CalleeAddr(CalleeAddr) {}
+
+  /// Returns the address of the callee in the executor.
+  const ExecutorAddr &calleeAddr() const { return CalleeAddr; }
+
+  /// Evaluates to true if the callee is non-null.
+  explicit operator bool() const { return !!CalleeAddr; }
+
+private:
+  ExecutorAddr CalleeAddr;
+};
+
 template <typename FnT> class Caller;
 
 /// Runtime-agnostic interface for invoking an executor-side operation with the
 /// signature RetT(ArgTs...).
 ///
-/// The operation is identified by an ExecutorAddr (the address of the
-/// executor-side function to invoke) and takes ArgTs... as arguments. Two call
-/// operators are provided: an asynchronous form that delivers the result to an
-/// OnComplete continuation, and a synchronous form that blocks until the result
-/// is available.
+/// Two call operators are provided: an asynchronous form that delivers the
+/// result to an OnComplete continuation, and a synchronous form that blocks
+/// until the result is available.
 ///
 /// A Caller abstracts over how the operation is dispatched to the executor.
 /// Concrete implementations (e.g. rt::sps::Caller) supply the dispatch
 /// mechanism.
-template <typename RetT, typename... ArgTs> class Caller<RetT(ArgTs...)> {
+template <typename RetT, typename... ArgTs>
+class Caller<RetT(ArgTs...)> : public CallerBase {
 public:
   using FnType = RetT(ArgTs...);
 
@@ -56,40 +71,119 @@ public:
   using ErrorRetT =
       std::conditional_t<std::is_void_v<RetT>, Error, Expected<RetT>>;
 
-  virtual ~Caller() = default;
+  using DispatchFn = void (*)(unique_function<void(ErrorRetT)> OnComplete,
+                              ExecutionSession &ES, ExecutorAddr Callee,
+                              const ArgTs &...Args);
 
-  /// Asynchronously invoke the executor-side function at FnAddr with the given
-  /// Args, delivering its result (or an error) to OnComplete.
-  virtual void operator()(unique_function<void(ErrorRetT)> OnComplete,
-                          ExecutorAddr FnAddr, ArgTs... Args) = 0;
+  Caller() = default;
+  Caller(DispatchFn Dispatch, ExecutorAddr CalleeAddr)
+      : CallerBase(CalleeAddr), Dispatch(Dispatch) {}
 
-  /// Invoke the executor-side function at FnAddr with the given Args, blocking
-  /// until its result (or an error) is available.
-  ErrorRetT operator()(ExecutorAddr FnAddr, ArgTs &&...Args) {
+  static Expected<Caller> Create(DispatchFn Dispatch, JITDylib &JD,
+                                 StringRef Name, SymbolLookupFlags LF) {
+    auto &ES = JD.getExecutionSession();
+    if (auto CalleeSyms = ES.lookup(makeJITDylibSearchOrder(&JD),
+                                    SymbolLookupSet{ES.intern(Name), LF})) {
+      if (!CalleeSyms->empty())
+        return Caller(Dispatch, CalleeSyms->begin()->second.getAddress());
+      assert(LF == SymbolLookupFlags::WeaklyReferencedSymbol);
+      return Caller();
+    } else
+      return CalleeSyms.takeError();
+  }
+
+  static Expected<Caller> Create(DispatchFn Dispatch, ExecutionSession &ES,
+                                 StringRef Name, SymbolLookupFlags LF) {
+    return Create(Dispatch, ES.getBootstrapJITDylib(), Name, LF);
+  }
+
+  /// Asynchronously invoke the operation with the given Args, delivering its
+  /// result (or an error) to OnComplete.
+  void operator()(unique_function<void(ErrorRetT)> OnComplete,
+                  ExecutionSession &ES, const ArgTs &...Args) const {
+    assert(Dispatch && "Caller's Dispatch member is not set");
+    Dispatch(std::move(OnComplete), ES, calleeAddr(), Args...);
+  }
+
+  /// Invoke the operation with the given Args, blocking until its result (or an
+  /// error) is available.
+  ErrorRetT operator()(ExecutionSession &ES, const ArgTs &...Args) const {
     using PromiseValT = std::conditional_t<std::is_void_v<RetT>, MSVCPError,
                                            MSVCPExpected<RetT>>;
     std::promise<PromiseValT> P;
     auto F = P.get_future();
     this->operator()(
         [P = std::move(P)](ErrorRetT R) mutable { P.set_value(std::move(R)); },
-        FnAddr, std::forward<ArgTs>(Args)...);
+        ES, Args...);
     return F.get();
   }
+
+private:
+  DispatchFn Dispatch = nullptr;
 };
+
+template <typename FnT> struct CallerInit {
+  Caller<FnT> *C = nullptr;
+  typename Caller<FnT>::DispatchFn Dispatch = nullptr;
+  StringRef Name;
+  SymbolLookupFlags LookupFlags = SymbolLookupFlags::RequiredSymbol;
+};
+
+template <typename FnT>
+CallerInit<FnT>
+callerInit(Caller<FnT> *C, typename Caller<FnT>::DispatchFn Dispatch,
+           StringRef Name,
+           SymbolLookupFlags LookupFlags = SymbolLookupFlags::RequiredSymbol) {
+  return {C, Dispatch, Name, LookupFlags};
+}
+
+template <typename CallerSpecT, typename FnT>
+CallerInit<FnT>
+callerInit(Caller<FnT> *C,
+           SymbolLookupFlags LookupFlags = SymbolLookupFlags::RequiredSymbol) {
+  return {C, CallerSpecT::dispatch, CallerSpecT::Name, LookupFlags};
+}
+
+template <typename CallerSpecT, typename FnT>
+CallerInit<FnT>
+callerInit(Caller<FnT> *C, StringRef Name,
+           SymbolLookupFlags LookupFlags = SymbolLookupFlags::RequiredSymbol) {
+  return {C, CallerSpecT::dispatch, Name, LookupFlags};
+}
+
+/// buildCallers base case.
+inline Error buildCallers(JITDylib &JD) { return Error::success(); }
+
+/// buildCallers: Given an ExecutionSession, use BootstrapJITDylib.
+template <typename... FnTs>
+Error buildCallers(ExecutionSession &ES, CallerInit<FnTs>... CIs) {
+  return buildCallers(ES.getBootstrapJITDylib(), CIs...);
+}
+
+/// Build a sequence of callers from their respective caller-builders.
+template <typename FnT, typename... FnTs>
+Error buildCallers(JITDylib &JD, CallerInit<FnT> CI, CallerInit<FnTs>... CIs) {
+  if (auto COrErr =
+          Caller<FnT>::Create(CI.Dispatch, JD, CI.Name, CI.LookupFlags))
+    *CI.C = std::move(*COrErr);
+  else
+    return COrErr.takeError();
+  return buildCallers(JD, CIs...);
+}
 
 /// Runtime-agnostic interface for running a main-like function
 /// (int(int argc, char *argv[])) in the executor.
 ///
 /// The function to run is given by its ExecutorAddr, its arguments as an
 /// argument vector, and its int64_t result is returned.
-class MainCaller : public Caller<int64_t(ArrayRef<std::string>)> {};
+using MainCaller = Caller<int64_t(ExecutorAddr, ArrayRef<std::string>)>;
 
 /// Runtime-agnostic interface for running a void() function in the executor.
 ///
 /// The function to run is given by its ExecutorAddr.
 ///
 /// WARNING: This Caller is experimental and may be removed.
-class VoidVoidCaller : public Caller<void()> {};
+using VoidVoidCaller = Caller<void(ExecutorAddr)>;
 
 /// Runtime-agnostic interface for running an int32_t() function in the
 /// executor.
@@ -97,7 +191,7 @@ class VoidVoidCaller : public Caller<void()> {};
 /// The function to run is given by its ExecutorAddr.
 ///
 /// WARNING: This Caller is experimental and may be removed.
-class Int32VoidCaller : public Caller<int32_t()> {};
+using Int32VoidCaller = Caller<int32_t(ExecutorAddr)>;
 
 /// Runtime-agnostic interface for running an int32_t(int32_t) function in the
 /// executor.
@@ -105,7 +199,7 @@ class Int32VoidCaller : public Caller<int32_t()> {};
 /// The function to run is given by its ExecutorAddr.
 ///
 /// WARNING: This Caller is experimental and may be removed.
-class Int32Int32Caller : public Caller<int32_t(int32_t)> {};
+using Int32Int32Caller = Caller<int32_t(ExecutorAddr, int32_t)>;
 
 } // namespace llvm::orc::rt
 

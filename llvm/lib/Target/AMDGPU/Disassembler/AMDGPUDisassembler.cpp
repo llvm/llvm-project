@@ -218,7 +218,8 @@ static DecodeStatus decodeDpp8FI(MCInst &Inst, unsigned Val, uint64_t Addr,
 #define DECODE_SrcOp(Name, EncSize, OpWidth, EncImm)                           \
   static DecodeStatus Name(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,      \
                            const MCDisassembler *Decoder) {                    \
-    assert(Imm < (1 << EncSize) && #EncSize "-bit encoding");                  \
+    if (!isUInt<EncSize>(Imm))                                                 \
+      return MCDisassembler::Fail;                                             \
     auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);              \
     return addOperand(Inst, DAsm->decodeSrcOp(Inst, OpWidth, EncImm));         \
   }
@@ -489,6 +490,8 @@ DecodeStatus AMDGPUDisassembler::tryDecodeInst(const uint8_t *Table, MCInst &MI,
 
   DecodeStatus Res =
       decodeInstruction(Table, TmpInst, Inst, Address, this, STI);
+  if (Res != MCDisassembler::Fail && !decodeImmOperands(TmpInst, *MCII))
+    Res = MCDisassembler::Fail;
 
   CommentStream = nullptr;
 
@@ -541,7 +544,7 @@ static inline std::bitset<128> eat16Bytes(ArrayRef<uint8_t> &Bytes) {
   return (Hi << 64) | Lo;
 }
 
-void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
+bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
                                            const MCInstrInfo &MCII) const {
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   for (auto [OpNo, OpDesc] : enumerate(Desc.operands())) {
@@ -567,6 +570,8 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
 
     if (Imm == AMDGPU::EncValues::LITERAL_CONST) {
       Op = decodeLiteralConstant(Desc, OpDesc);
+      if (!Op.isValid())
+        return false;
       continue;
     }
 
@@ -614,6 +619,7 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
       Op.setImm(Imm);
     }
   }
+  return true;
 }
 
 DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
@@ -834,8 +840,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   } while (false);
 
   DecodeStatus Status = MCDisassembler::Success;
-
-  decodeImmOperands(MI, *MCII);
 
   if (SIInstrFlags::isDPP(*MCII, MI)) {
     if (isMacDPP(MI))
@@ -2259,6 +2263,15 @@ MCOperand AMDGPUDisassembler::decodeBoolReg(const MCInst &Inst,
 
 MCOperand AMDGPUDisassembler::decodeSplitBarrier(const MCInst &Inst,
                                                  unsigned Val) const {
+  using namespace AMDGPU::EncValues;
+  constexpr unsigned M0Encoding = 125;
+  bool IsValidBarrier =
+      Val == M0Encoding ||
+      (INLINE_INTEGER_C_MIN <= Val && Val < INLINE_INTEGER_C_MIN + 32) ||
+      (INLINE_INTEGER_C_POSITIVE_MAX < Val &&
+       Val <= INLINE_INTEGER_C_POSITIVE_MAX + 4);
+  if (!IsValidBarrier)
+    return MCOperand();
   return decodeSrcOp(Inst, 32, Val);
 }
 
