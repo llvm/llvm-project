@@ -5,18 +5,19 @@ define void @test(ptr %p, float %conv, i64 %n) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[P:%.*]], float [[CONV:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <3 x float> poison, float [[CONV]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x float> [[TMP0]], <3 x float> poison, <3 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = fsub <3 x float> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul <3 x float> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP6]], <3 x float> [[TMP7]], <3 x i32> <i32 0, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <3 x float> [[TMP4]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> <float poison, float poison, float poison, float -0.000000e+00>, <4 x float> [[TMP5]], <4 x i32> <i32 4, i32 5, i32 6, i32 3>
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP:.*]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[OUT:%.*]] = phi ptr [ [[P]], %[[ENTRY]] ], [ [[OUT_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[M2:%.*]] = fmul float [[CONV]], 0.000000e+00
-; CHECK-NEXT:    [[M3:%.*]] = fmul float [[CONV]], 0.000000e+00
-; CHECK-NEXT:    [[S0:%.*]] = fsub float 0.000000e+00, [[CONV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float poison, float poison, float poison, float -0.000000e+00>, float [[S0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[M2]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[M3]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd contract <4 x float> <float -0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, [[TMP2]]
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    [[OUT_NEXT]] = getelementptr inbounds i8, ptr [[OUT]], i64 16

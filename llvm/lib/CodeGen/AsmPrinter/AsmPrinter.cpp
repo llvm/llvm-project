@@ -1534,7 +1534,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     OutStreamer->emitULEB128IntValue(MBBSectionRanges.size());
   }
   // Number of blocks in each MBB section.
-  MapVector<MBBSectionID, unsigned> MBBSectionNumBlocks;
+  DenseMap<MBBSectionID, unsigned> MBBSectionNumBlocks;
   const MCSymbol *PrevMBBEndSymbol = nullptr;
   if (!Features.MultiBBRange) {
     OutStreamer->AddComment("function address");
@@ -3342,13 +3342,21 @@ void AsmPrinter::emitConstantPool() {
       unsigned NewOffset = alignTo(Offset, CPE.getAlign());
       OutStreamer->emitZeros(NewOffset - Offset);
 
-      Offset = NewOffset + CPE.getSizeInBytes(getDataLayout());
-
+      if (MAI.hasDotTypeDotSizeDirective())
+        OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
       OutStreamer->emitLabel(Sym);
+
       if (CPE.isMachineConstantPoolEntry())
         emitMachineConstantPoolValue(CPE.Val.MachineCPVal);
       else
         emitGlobalConstant(getDataLayout(), CPE.Val.ConstVal);
+
+      unsigned EntrySize = CPE.getSizeInBytes(getDataLayout());
+      if (MAI.hasDotTypeDotSizeDirective())
+        OutStreamer->emitELFSize(Sym,
+                                 MCConstantExpr::create(EntrySize, OutContext));
+
+      Offset = NewOffset + EntrySize;
     }
   }
 }
@@ -3458,12 +3466,19 @@ void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
       OutStreamer->emitLabel(GetJTISymbol(JumpTableIndex, true));
 
     MCSymbol *JTISymbol = GetJTISymbol(JumpTableIndex);
+    if (JTInDiffSection && MAI.hasDotTypeDotSizeDirective())
+      OutStreamer->emitSymbolAttribute(JTISymbol, MCSA_ELF_TypeObject);
     OutStreamer->emitLabel(JTISymbol);
 
     // Defer MCAssembler based constant folding due to a performance issue. The
     // label differences will be evaluated at write time.
     for (const MachineBasicBlock *MBB : JTBBs)
       emitJumpTableEntry(MJTI, MBB, JumpTableIndex);
+
+    if (JTInDiffSection && MAI.hasDotTypeDotSizeDirective())
+      OutStreamer->emitELFSize(
+          JTISymbol, MCConstantExpr::create(
+                         JTBBs.size() * MJTI.getEntrySize(DL), OutContext));
   }
 
   if (EmitJumpTableSizesSection)

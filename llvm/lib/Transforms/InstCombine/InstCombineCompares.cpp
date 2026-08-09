@@ -1989,6 +1989,31 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
   if (!Cmp.isEquality())
     return nullptr;
 
+  // (X & -X) == 0 --> X == 0
+  // (X & -X) != 0 --> X != 0
+  // (X & -X) == 1 --> trunc X to i1
+  // (X & -X) != 1 --> !(trunc X to i1)
+  // Cmp is == or != by the check above.
+  Value *MatchedX;
+  // Match X & -X in either operand order.
+  if (C.getBitWidth() > 1 && (C.isZero() || C.isOne()) &&
+      match(And, m_c_And(m_Neg(m_Value(MatchedX)), m_Deferred(MatchedX)))) {
+    // Preserve the predicate: (X & -X) ==/!= 0 --> X ==/!= 0.
+    if (C.isZero())
+      return new ICmpInst(Pred, MatchedX, Cmp.getOperand(1));
+
+    // (X & -X) == 1 iff the low bit of X is set.
+    if (Pred == CmpInst::ICMP_EQ)
+      return new TruncInst(MatchedX, Cmp.getType());
+
+    // The remaining case needs a trunc and not. Require the original and
+    // to become dead to avoid increasing the instruction count.
+    if (And->hasOneUse()) {
+      Value *Trunc = Builder.CreateTrunc(MatchedX, Cmp.getType());
+      return BinaryOperator::CreateNot(Trunc);
+    }
+  }
+
   // X & -C == -C -> X >  u ~C
   // X & -C != -C -> X <= u ~C
   //   iff C is a power of 2
@@ -3626,6 +3651,51 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstant(ICmpInst &Cmp) {
     if (auto *II = dyn_cast<IntrinsicInst>(Cmp.getOperand(0)))
       if (Instruction *I = foldICmpIntrinsicWithConstant(Cmp, II, *C))
         return I;
+
+    {
+      // icmp slt/sgt (extractvalue (frexp X), 1), C -->
+      //                         fcmp olt/oge (fabs X), 2^ExpVal
+      // slt -> olt, ExpVal = C-1; sgt -> oge, ExpVal = C.
+      Value *X;
+      if (match(Cmp.getOperand(0),
+                m_OneUse(m_ExtractValue<1>(
+                    m_OneUse(m_Intrinsic<Intrinsic::frexp>(m_Value(X))))))) {
+        ICmpInst::Predicate Pred = Cmp.getPredicate();
+        APInt Exp;
+        FCmpInst::Predicate NewPred;
+        bool ValidPred = true;
+
+        switch (Pred) {
+        case ICmpInst::ICMP_SLT:
+          NewPred = FCmpInst::FCMP_OLT;
+          Exp = *C - 1;
+          break;
+        case ICmpInst::ICMP_SGT:
+          NewPred = FCmpInst::FCMP_OGE;
+          Exp = *C;
+          break;
+        default:
+          ValidPred = false;
+          break;
+        }
+
+        if (ValidPred) {
+          const fltSemantics &Sem =
+              X->getType()->getScalarType()->getFltSemantics();
+          int MaxExp = APFloat::semanticsMaxExponent(Sem);
+
+          if (!Exp.isNegative() && Exp.sle(MaxExp + 1) &&
+              isKnownNeverInfOrNaN(X, SQ.getWithInstruction(&Cmp))) {
+            int ExpVal = static_cast<int>(Exp.getSExtValue());
+            APFloat CmpConst = scalbn(APFloat::getOne(Sem), ExpVal,
+                                      APFloat::rmNearestTiesToEven);
+            Value *Fabs = Builder.CreateFAbs(X);
+            return new FCmpInst(NewPred, Fabs,
+                                ConstantFP::get(X->getType(), CmpConst));
+          }
+        }
+      }
+    }
 
     // (extractval ([s/u]subo X, Y), 0) == 0 --> X == Y
     // (extractval ([s/u]subo X, Y), 0) != 0 --> X != Y
