@@ -184,23 +184,6 @@ struct __optional_storage_base : __optional_destruct_base<_Tp> {
         __construct(std::forward<_That>(__opt).__get());
     }
   }
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-  __swap(__optional_storage_base& __rhs) noexcept(is_nothrow_move_constructible_v<_Tp> && is_nothrow_swappable_v<_Tp>) {
-    using std::swap;
-    if (this->has_value() == __rhs.has_value()) {
-      if (this->has_value())
-        swap(this->__get(), __rhs.__get());
-    } else {
-      if (this->has_value()) {
-        __rhs.__construct(std::move(this->__get()));
-        this->reset();
-      } else {
-        this->__construct(std::move(__rhs.__get()));
-        __rhs.reset();
-      }
-    }
-  }
 };
 
 template <class _Tp, bool = is_trivially_copy_constructible_v<_Tp>>
@@ -496,7 +479,19 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
   swap(optional& __opt) noexcept((is_nothrow_move_constructible_v<_Tp> && is_nothrow_swappable_v<_Tp>)) {
-    this->__swap(__opt);
+    using std::swap;
+    if (this->has_value() == __opt.has_value()) {
+      if (this->has_value())
+        swap(this->__get(), __opt.__get());
+    } else {
+      if (this->has_value()) {
+        __opt.__construct(std::move(this->__get()));
+        this->reset();
+      } else {
+        this->__construct(std::move(__opt.__get()));
+        __opt.reset();
+      }
+    }
   }
 
   // [optional.observe]
