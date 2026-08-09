@@ -667,16 +667,25 @@ bool TypeEvaluationHelper::canEvaluateTruncatedPred(Value *V, Type *Ty,
     Value *Op1 = MM->getRHS();
     uint32_t BitWidth = Ty->getScalarSizeInBits();
     if (MM->isSigned()) {
-      if (IC.ComputeMaxSignificantBits(Op0, CxtI) > BitWidth ||
-          IC.ComputeMaxSignificantBits(Op1, CxtI) > BitWidth)
-        break;
-    } else {
-      APInt Mask =
-          APInt::getBitsSetFrom(OrigTy->getScalarSizeInBits(), BitWidth);
-      if (!IC.MaskedValueIsZero(Op0, Mask, CxtI) ||
-          !IC.MaskedValueIsZero(Op1, Mask, CxtI))
-        break;
+      auto CanEvaluateOperand = [&](Value *Op) {
+        if (IC.ComputeMaxSignificantBits(Op, CxtI) <= BitWidth)
+          return canEvaluateTruncatedImpl(Op, Ty, IC, CxtI);
+
+        // A signed min/max result is one of its operands, so recursively prove
+        // the range for nested fixed-vector signed min/max operations.
+        auto *NestedMM = dyn_cast<MinMaxIntrinsic>(Op);
+        return isa<FixedVectorType>(Ty) && NestedMM && NestedMM->isSigned() &&
+               canEvaluateTruncatedImpl(Op, Ty, IC, CxtI);
+      };
+
+      return CanEvaluateOperand(Op0) && CanEvaluateOperand(Op1);
     }
+
+    APInt Mask = APInt::getBitsSetFrom(OrigTy->getScalarSizeInBits(), BitWidth);
+    if (!IC.MaskedValueIsZero(Op0, Mask, CxtI) ||
+        !IC.MaskedValueIsZero(Op1, Mask, CxtI))
+      break;
+
     return canEvaluateTruncatedImpl(Op0, Ty, IC, CxtI) &&
            canEvaluateTruncatedImpl(Op1, Ty, IC, CxtI);
   }
