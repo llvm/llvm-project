@@ -223,13 +223,16 @@ public:
     using NodeList = SmallVector<BlockNode, 4>;
     using HeaderMassList = SmallVector<BlockMass, 1>;
 
-    LoopData *Parent;                 ///< The parent loop.
-    bool IsPackaged = false;          ///< Whether this has been packaged.
-    bool ContainsIrreducible = false; ///< Contains irreducible sub-SCCs.
-    uint32_t NumHeaders = 1;          ///< Number of headers.
-    ExitMap Exits;                    ///< Successor edges (and weights).
-    NodeList Nodes;                   ///< Header and the members of the loop.
-    HeaderMassList BackedgeMass;      ///< Mass returned to each loop header.
+    LoopData *Parent;            ///< The parent loop.
+    bool IsPackaged = false;     ///< Whether this has been packaged.
+    // Has an irreducible SCC in its own nodes; sub-loops package theirs first.
+    bool ContainsIrreducible = false;
+    // Headers are Nodes[0, NumHeaders), sorted. For an irreducible loop, the
+    // SCC's entries and the nodes a retreating edge from a non-entry reaches.
+    uint32_t NumHeaders = 1;
+    ExitMap Exits;               ///< Successor edges (and weights).
+    NodeList Nodes;              ///< Header and the members of the loop.
+    HeaderMassList BackedgeMass; ///< Mass returned to each loop header.
     BlockMass Mass;
     Scaled64 Scale;
 
