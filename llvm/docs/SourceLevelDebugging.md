@@ -131,10 +131,10 @@ which can have a value, including at least:
 - Constants
 - Formal parameters
 
-```{note}
+:::{note}
 There is no special provision for "true" constants in LLVM today, and
 they are instead treated as local or global variables.
-```
+:::
 A variable is represented by a {ref}`local variable <dilocalvariable>` or
 {ref}`global variable <diglobalvariable>` metadata node.
 
@@ -149,10 +149,10 @@ The operands of the `DW_OP_LLVM_fragment` operation encode the bit offset of
 the fragment relative to the start of the variable, and the size of the
 fragment in bits, respectively.
 
-```{note}
+:::{note}
 The `DW_OP_LLVM_fragment` operation acts only to encode the fragment
 information, and does not have an effect on the semantics of the expression.
-```
+:::
 (format)=
 
 ## Debugging information format
@@ -324,10 +324,10 @@ See {doc}`AssignmentTracking` for more info.
 
 ### Debugger intrinsic functions
 
-```{warning}
+:::{warning}
 These intrinsics are deprecated, please use {ref}`debug records
 <debug_records>` instead. For more details see {doc}`RemoveDIs <RemoveDIsDebugInfo>`.
-```
+:::
 (format_common_intrinsics)=
 
 In intrinsic-mode, LLVM uses several intrinsic functions (name prefixed with "`llvm.dbg`") to
@@ -412,13 +412,13 @@ direct value. For example, if the first operand is an indirect value, it may be
 necessary to insert `DW_OP_deref` into the `DIExpression` in order to
 produce a valid debug record.
 
-```{note}
+:::{note}
 A `DIExpression` is interpreted in the same way regardless of which kind
 of debug record it's attached to.
 
 `DIExpression`s are always printed and parsed inline; they can never be
 referenced by an ID (e.g. `!1`).
-```
+:::
 (dwarf-opcodes)=
 
 #### DWARF Opcodes
@@ -462,11 +462,11 @@ vocabulary is limited, but includes at least:
 Where the DWARF equivalent is not suitable, or no DWARF equivalent exists, LLVM
 defines internal-only opcodes which have no direct analog in DWARF.
 
-```{note}
+:::{note}
 Some opcodes do not influence the final DWARF expression directly, instead
 encoding information logically belonging to the debug records which use
 them.
-```
+:::
 - `DW_OP_LLVM_fragment, <offset>, <size>` may appear at most once in an
   expression, and must be the last opcode. It specifies the bit offset and bit
   size of the variable fragment being described by the record or intrinsic
@@ -731,7 +731,7 @@ variable's new location. Compared with the `#dbg_declare` record:
 * A `#dbg_value` terminates the effects that any preceding records have on
   any common bits of a common variable.
 
-  ```{note}
+  :::{note}
   The current implementation generally terminates the effect of every
   record in its entirety if any of its effects would be terminated, rather
   than carrying forward the effect of previous records for non-overlapping
@@ -741,7 +741,7 @@ variable's new location. Compared with the `#dbg_declare` record:
 
   One exception to this is {doc}`AssignmentTracking` where certain
   memory-based locations are carried forward partially in some situations.
-  ```
+  :::
 * The `#dbg_value`'s position in the IR defines where in the instruction
   stream the variable's value changes.
 * Operands can be constants, indicating the variable is assigned a

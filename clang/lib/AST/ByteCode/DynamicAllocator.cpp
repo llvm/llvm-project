@@ -8,7 +8,6 @@
 
 #include "DynamicAllocator.h"
 #include "InterpBlock.h"
-#include "InterpState.h"
 
 using namespace clang;
 using namespace clang::interp;

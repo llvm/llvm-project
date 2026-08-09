@@ -911,7 +911,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *Res = PoisonValue::get(toVectorizedTy(ScalarTy, NumOfElements));
     for (const auto &[Idx, Op] : enumerate(operands()))
       Res = Builder.CreateInsertElement(Res, State.get(Op, true),
-                                        Builder.getInt32(Idx));
+                                        Builder.getInt64(Idx));
     return Res;
   }
   case VPInstruction::ReductionStartVector: {
@@ -925,7 +925,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
         cast<VPConstantInt>(getOperand(2))->getZExtValue());
     auto *Iden = Builder.CreateVectorSplat(VF, State.get(getOperand(1), true));
     return Builder.CreateInsertElement(Iden, State.get(getOperand(0), true),
-                                       Builder.getInt32(0));
+                                       Builder.getInt64(0));
   }
   case VPInstruction::ComputeReductionResult: {
     RecurKind RK = getRecurKind();

@@ -137,9 +137,6 @@ LLVM_ABI bool getEnableStaticDataPartitioning();
 
 LLVM_ABI bool getEnableDebugEntryValues();
 
-LLVM_ABI bool getValueTrackingVariableLocations();
-LLVM_ABI std::optional<bool> getExplicitValueTrackingVariableLocations();
-
 LLVM_ABI bool getForceDwarfFrameSection();
 
 LLVM_ABI bool getXRayFunctionIndex();
@@ -207,10 +204,6 @@ LLVM_ABI void setFunctionAttributes(Function &F, StringRef CPU,
 /// TuneCPU, Features, and command line flags.
 LLVM_ABI void setFunctionAttributes(Module &M, StringRef CPU,
                                     StringRef Features, StringRef TuneCPU = "");
-
-/// Should value-tracking variable locations / instruction referencing be
-/// enabled by default for this triple?
-LLVM_ABI bool getDefaultValueTrackingVariableLocations(const llvm::Triple &T);
 
 /// Creates a TargetMachine instance with the options defined on the command
 /// line. This can be used for tools that do not need further customization of

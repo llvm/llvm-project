@@ -31,6 +31,36 @@
 # GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
 0xff,0x4e,0x80,0xbe,0xbe,0x00,0x00,0x00
 
+# src_private_base (237) and src_private_limit (238) are reserved on targets
+# with globally addressable scratch. Both the 32-bit and the 64-bit operand
+# forms are covered here.
+# GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0xed,0x0e,0x80,0xbe
+
+# GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0xed,0x01,0xfe,0xbe
+
+# GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0xee,0x0e,0x80,0xbe
+
+# GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0xee,0x01,0xfe,0xbe
+
+# src_pops_exiting_wave_id (239) is only available on targets that support
+# POPS.
+# GFX12-ERR: [[@LINE+2]]:1: warning: invalid instruction encoding
+# GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0x00,0xef,0x0c,0xbf
+
+# src_vccz (251) and src_execz (252) are reserved on GFX11+.
+# GFX12-ERR: [[@LINE+2]]:1: warning: invalid instruction encoding
+# GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0xfb,0x0e,0x80,0xbe
+
+# GFX12-ERR: [[@LINE+2]]:1: warning: invalid instruction encoding
+# GFX1250-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0xfc,0x0e,0x80,0xbe
+
 # W32: v_dual_add_f32 v5, 0xaf123456, v2 :: v_dual_fmaak_f32 v6, v3, v1, 0xaf123456 ; encoding: [0xff,0x04,0x02,0xc9,0x03,0x03,0x06,0x05,0x56,0x34,0x12,0xaf]
 # W64: [[@LINE+1]]:1: warning: invalid instruction encoding
 0xff,0x04,0x02,0xc9,0x03,0x03,0x06,0x05,0x56,0x34,0x12,0xaf

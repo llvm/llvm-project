@@ -792,13 +792,14 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
     if (!HoistPoint || VPDT.properlyDominates(R, HoistPoint))
       HoistPoint = R;
   }
-  assert(all_of(FOR->users(),
-                [&VPDT, HoistPoint](VPUser *U) {
-                  auto *R = cast<VPRecipeBase>(U);
-                  return HoistPoint == R ||
-                         VPDT.properlyDominates(HoistPoint, R);
-                }) &&
-         "HoistPoint must dominate all users of FOR");
+  // Dominance is only a partial order, so the users of FOR may not have a
+  // single user dominating all others. Bail out in that case.
+  if (!HoistPoint || HoistPoint->isPhi() ||
+      any_of(FOR->users(), [&VPDT, HoistPoint](VPUser *U) {
+        auto *R = cast<VPRecipeBase>(U);
+        return HoistPoint != R && !VPDT.properlyDominates(HoistPoint, R);
+      }))
+    return false;
 
   auto NeedsHoisting = [HoistPoint, &VPDT,
                         &Visited](VPValue *HoistCandidateV) -> VPRecipeBase * {
@@ -846,6 +847,13 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
       }
     }
   }
+
+  // Moving a candidate to HoistPoint keeps it dominating its other users only
+  // if HoistPoint dominates the candidate's current position.
+  if (any_of(HoistCandidates, [&VPDT, HoistPoint](VPRecipeBase *R) {
+        return !VPDT.properlyDominates(HoistPoint, R);
+      }))
+    return false;
 
   // Order recipes to hoist by dominance so earlier instructions are processed
   // first.

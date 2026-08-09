@@ -151,7 +151,7 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[TMP65:%.*]] = and i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[N_VEC36:%.*]] = sub i64 [[TMP2]], [[TMP65]]
 ; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC36]]
-; CHECK-NEXT:    [[TMP67:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BC_MERGE_RDX]], i32 0
+; CHECK-NEXT:    [[TMP67:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[VEC_EPILOG_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1>

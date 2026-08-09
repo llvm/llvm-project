@@ -4633,8 +4633,28 @@ private:
               IsCommutativeUser && User->getOperand(0) == User->getOperand(1);
           if ((!IsCommutativeUser || IsCommutativeWithSameOps) &&
               !isa<CmpInst>(User)) {
+            if (CurNumOps != NumOps)
+              continue;
+            // A reassociated node flattens the operand chain, so the operand
+            // may be placed in any operand column rather than at the
+            // instruction's operand number.
+            if (TE->hasReassocScalars()) {
+              bool ReplacedByCopyable = false;
+              for (auto It = find(TE->Scalars, User); It != TE->Scalars.end();
+                   It = find(make_range(std::next(It), TE->Scalars.end()),
+                             User)) {
+                int Lane = std::distance(TE->Scalars.begin(), It);
+                for (unsigned OpIdx : seq<unsigned>(TE->getNumOperands()))
+                  ReplacedByCopyable |=
+                      TE->getOperand(OpIdx)[Lane] == Op &&
+                      getScheduleCopyableData(EdgeInfo(TE, OpIdx), Op);
+              }
+              if (ReplacedByCopyable)
+                continue;
+              return false;
+            }
             EdgeInfo EI(TE, U.getOperandNo());
-            if (CurNumOps != NumOps || getScheduleCopyableData(EI, Op))
+            if (getScheduleCopyableData(EI, Op))
               continue;
             return false;
           }
@@ -18678,9 +18698,22 @@ InstructionCost BoUpSLP::getSpillCost() {
       if (ScalarOrPseudoEntries.contains(Op))
         continue;
       if (Entry->State == TreeEntry::SplitVectorize ||
-          (Entry->getOpcode() != Instruction::PHI && Op->isGather()) ||
           (Op->isGather() && allConstant(Op->Scalars)))
         continue;
+      // A gather with all loop-invariant lanes is hoisted to the loop
+      // preheader by optimizeGatherSequence, so its vector value becomes live
+      // across any non-vectorized call in the loop body. Charge it like any
+      // other vectorized value live over a call instead of skipping it.
+      if (Entry->hasState() && Entry->getOpcode() != Instruction::PHI &&
+          Op->isGather()) {
+        if (const Loop *L = LI->getLoopFor(Parent);
+            L && L->getLoopPreheader() && LoopBodyHasCall(L) &&
+            all_of(Op->Scalars, [&](Value *V) {
+              return !isa<Instruction>(V) || L->isLoopInvariant(V);
+            }))
+          AddCosts(Op);
+        continue;
+      }
       Budget = 0;
       BasicBlock *Pred = nullptr;
       if (auto *Phi = dyn_cast<PHINode>(Entry->getMainOp()))
@@ -25915,10 +25948,8 @@ void BoUpSLP::optimizeGatherSequence() {
   SmallVector<const DomTreeNode *, 8> CSEWorkList;
   CSEWorkList.reserve(CSEBlocks.size());
   for (BasicBlock *BB : CSEBlocks)
-    if (DomTreeNode *N = DT->getNode(BB)) {
-      assert(DT->isReachableFromEntry(N));
+    if (DomTreeNode *N = DT->getNode(BB))
       CSEWorkList.push_back(N);
-    }
 
   // Sort blocks by domination. This ensures we visit a block after all blocks
   // dominating it are visited.

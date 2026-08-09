@@ -7072,11 +7072,12 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   case SRC_SHARED_BASE:
   case SRC_SHARED_LIMIT_LO:
   case SRC_SHARED_LIMIT:
+    return isGFX9Plus();
   case SRC_PRIVATE_BASE_LO:
   case SRC_PRIVATE_BASE:
   case SRC_PRIVATE_LIMIT_LO:
   case SRC_PRIVATE_LIMIT:
-    return isGFX9Plus();
+    return AMDGPU::hasPrivateApertureRegs(getSTI());
   case SRC_FLAT_SCRATCH_BASE_LO:
   case SRC_FLAT_SCRATCH_BASE_HI:
     return hasGloballyAddressableScratch();

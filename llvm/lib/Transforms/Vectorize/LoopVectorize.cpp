@@ -1417,7 +1417,7 @@ private:
 
   /// Holds the instructions (address computations) that are forced to be
   /// scalarized.
-  DenseMap<ElementCount, SmallPtrSet<Instruction *, 4>> ForcedScalars;
+  DenseMap<ElementCount, SmallSetVector<Instruction *, 4>> ForcedScalars;
 
   /// Returns the expected difference in cost from scalarizing the expression
   /// feeding a predicated instruction \p PredInst. The instructions to

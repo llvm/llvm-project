@@ -16,8 +16,6 @@ unittest("OrcJITTests") {
   ]
   sources = [
     "COFFAutoImportGeneratorTest.cpp",
-    "CallSPSViaEPCTest.cpp",
-    "CallableTraitsHelperTest.cpp",
     "CoreAPIsTest.cpp",
     "EPCGenericDylibManagerTest.cpp",
     "EPCGenericJITLinkMemoryManagerTest.cpp",

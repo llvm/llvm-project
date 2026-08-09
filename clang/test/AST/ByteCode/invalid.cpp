@@ -241,3 +241,9 @@ namespace InheritedCtor {
 
   SS ss{42};
 }
+
+namespace InvalidStaticInvoker {
+  auto foo = [](bar) { int j; return j; }; // both-error {{unknown type name 'bar'}}
+  constexpr int (*baz)(int) = foo;
+  int i = baz(42);
+}

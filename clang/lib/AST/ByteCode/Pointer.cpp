@@ -176,28 +176,34 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   if (isZero())
     return APValue(APValue::LValueBase(), CharUnits::Zero(), Path,
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/true);
-  if (isIntegralPointer())
+
+  switch (StorageKind) {
+  case Storage::Int:
     return APValue(static_cast<const Expr *>(nullptr),
                    CharUnits::fromQuantity(asIntPointer().Value + this->Offset),
                    Path,
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
-  if (isFunctionPointer()) {
+  case Storage::Block:
+    // See below.
+    break;
+  case Storage::Fn: {
     const FunctionPointer &FP = asFunctionPointer();
     if (const FunctionDecl *FD = FP.Func->getDecl())
       return APValue(FD, CharUnits::fromQuantity(Offset), {},
                      /*OnePastTheEnd=*/false, /*IsNull=*/false);
     return APValue(FP.Func->getExpr(), CharUnits::fromQuantity(Offset), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
-  }
-
-  if (isTypeidPointer()) {
+  } break;
+  case Storage::Typeid: {
     TypeInfoLValue TypeInfo(Typeid.TypePtr);
     return APValue(APValue::LValueBase::getTypeInfo(
                        TypeInfo, QualType(Typeid.TypeInfoType, 0)),
                    CharUnits::Zero(), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
+  } break;
   }
 
+  assert(isBlockPointer());
   // Build the lvalue base from the block.
   const Descriptor *Desc = getDeclDesc();
   APValue::LValueBase Base;

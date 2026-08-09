@@ -1153,10 +1153,6 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     return false;
   }
 
-  // Implicitly constexpr.
-  if (F->isLambdaStaticInvoker())
-    return true;
-
   return diagnoseCallableDecl(S, OpPC, DiagDecl);
 }
 
@@ -2908,8 +2904,7 @@ bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
   return Shorter == Longer.take_front(Shorter.size());
 }
 
-static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
-                                PrimType T) {
+static void copyPrimitiveMemory(InterpState &S, PtrView Ptr, PrimType T) {
   if (T == PT_IntAPS) {
     auto &Val = Ptr.deref<IntegralAP<true>>();
     if (!Val.singleWord()) {
@@ -2938,7 +2933,7 @@ static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
 }
 
 template <typename T>
-static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr) {
+static void copyPrimitiveMemory(InterpState &S, PtrView Ptr) {
   assert(needsAlloc<T>());
   if constexpr (std::is_same_v<T, MemberPointer>) {
     auto &Val = Ptr.deref<MemberPointer>();
@@ -2955,7 +2950,7 @@ static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr) {
   }
 }
 
-static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
+static void finishGlobalRecurse(InterpState &S, PtrView Ptr) {
   if (const Record *R = Ptr.getRecord()) {
     for (const Record::Field &Fi : R->fields()) {
       if (Fi.Desc->isPrimitive()) {
@@ -2979,7 +2974,7 @@ static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
       if (!needsAlloc(PT))
         return;
       assert(NumElems >= 1);
-      const Pointer EP = Ptr.atIndex(0);
+      PtrView EP = Ptr.atIndex(0);
       bool AllSingleWord = true;
       TYPE_SWITCH_ALLOC(PT, {
         if (!EP.deref<T>().singleWord()) {
@@ -2990,13 +2985,13 @@ static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
       if (AllSingleWord)
         return;
       for (unsigned I = 1; I != D->getNumElems(); ++I) {
-        const Pointer EP = Ptr.atIndex(I);
+        PtrView EP = Ptr.atIndex(I);
         copyPrimitiveMemory(S, EP, PT);
       }
     } else {
       assert(D->isCompositeArray());
       for (unsigned I = 0; I != D->getNumElems(); ++I) {
-        const Pointer EP = Ptr.atIndex(I).narrow();
+        PtrView EP = Ptr.atIndex(I).narrow();
         finishGlobalRecurse(S, EP);
       }
     }
@@ -3006,7 +3001,7 @@ static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
 bool FinishInitGlobal(InterpState &S) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  finishGlobalRecurse(S, Ptr);
+  finishGlobalRecurse(S, Ptr.view());
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
     Ptr.activate();
