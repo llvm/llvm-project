@@ -343,6 +343,32 @@ def CSR_PPC64_R2_Altivec : CalleeSavedRegs<(add CSR_PPC64_Altivec, X2)>;
 
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
 
+def CSR_PPC32_PreserveAll
+    : CalleeSavedRegs<(add (sequence "R%u", 5, 11), (sequence "R%u", 14, 31),
+                           F0, (sequence "F%u", 2, 31))>;
+
+def CSR_PPC32_PreserveAll_Altivec
+    : CalleeSavedRegs<(add CSR_PPC32_PreserveAll,
+                           (sequence "V%u", 0, 1), (sequence "V%u", 3, 31))>;
+
+def CSR_PPC32_PreserveAll_SPE
+    : CalleeSavedRegs<(add (sequence "R%u", 5, 11), (sequence "R%u", 14, 31),
+                           (sequence "S%u", 5, 31))>;
+
+def CSR_PPC64_PreserveAll
+    : CalleeSavedRegs<(add (sequence "X%u", 5, 11), (sequence "X%u", 14, 31),
+                           F0, (sequence "F%u", 2, 31))>;
+
+def CSR_PPC64_PreserveAll_Altivec
+    : CalleeSavedRegs<(add CSR_PPC64_PreserveAll,
+                           (sequence "V%u", 0, 1), (sequence "V%u", 3, 31))>;
+
+def CSR_PPC64_PreserveAll_R2
+    : CalleeSavedRegs<(add CSR_PPC64_PreserveAll, X2)>;
+
+def CSR_PPC64_PreserveAll_R2_Altivec
+    : CalleeSavedRegs<(add CSR_PPC64_PreserveAll_Altivec, X2)>;
+
 // coldcc calling convection marks most registers as non-volatile.
 // Do not include r1 since the stack pointer is never considered a CSR.
 // Do not include r2, since it is the TOC register and is added depending

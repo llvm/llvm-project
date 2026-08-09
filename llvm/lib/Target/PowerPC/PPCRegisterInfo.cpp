@@ -209,6 +209,25 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   bool SaveR2 = MF->getRegInfo().isAllocatable(PPC::X2) &&
                 !Subtarget.isUsingPCRelativeCalls();
 
+  if (MF->getFunction().getCallingConv() == CallingConv::PreserveAll) {
+    if (Subtarget.pairedVectorMemops() || Subtarget.isAIXABI())
+      report_fatal_error("PreserveAll unimplemented on this target.");
+
+    if (TM.isPPC64()) {
+      if (Subtarget.hasAltivec())
+        return SaveR2 ? CSR_PPC64_PreserveAll_R2_Altivec_SaveList
+                      : CSR_PPC64_PreserveAll_Altivec_SaveList;
+      return SaveR2 ? CSR_PPC64_PreserveAll_R2_SaveList
+                    : CSR_PPC64_PreserveAll_SaveList;
+    }
+
+    if (Subtarget.hasAltivec())
+      return CSR_PPC32_PreserveAll_Altivec_SaveList;
+    if (Subtarget.hasSPE())
+      return CSR_PPC32_PreserveAll_SPE_SaveList;
+    return CSR_PPC32_PreserveAll_SaveList;
+  }
+
   // Cold calling convention CSRs.
   if (MF->getFunction().getCallingConv() == CallingConv::Cold) {
     if (Subtarget.isAIXABI())
@@ -289,6 +308,18 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       return CSR_64_AllRegs_Altivec_RegMask;
     }
     return CSR_64_AllRegs_RegMask;
+  }
+
+  if (CC == CallingConv::PreserveAll) {
+    if (TM.isPPC64())
+      return Subtarget.hasAltivec() ? CSR_PPC64_PreserveAll_Altivec_RegMask
+                                    : CSR_PPC64_PreserveAll_RegMask;
+
+    if (Subtarget.hasAltivec())
+      return CSR_PPC32_PreserveAll_Altivec_RegMask;
+    if (Subtarget.hasSPE())
+      return CSR_PPC32_PreserveAll_SPE_RegMask;
+    return CSR_PPC32_PreserveAll_RegMask;
   }
 
   if (Subtarget.isAIXABI()) {
