@@ -55,13 +55,26 @@ LIBC_INLINE_VAR constexpr Frac64 INV_LN2 = Frac64(0xb8aa'3b29'5c17'f0bc);
 // > dirtyinfnorm(2^x - P(x), [0, 1]);
 // 0x1.9d39...p-29
 // ULPs of coeffs = 2^-64
+// LIBC_INLINE_VAR constexpr Frac64 EXPF_COEFFS[] = {
+//     Frac64(0xb172'14ea'215c'7750), // x
+//     Frac64(0x3d7f'b5e7'4e78'9f2b), // x^2
+//     Frac64(0x0e34'15ac'7481'5dee), // x^3
+//     Frac64(0x027a'7e40'a2eb'6584), // x^4
+//     Frac64(0x0051'56c0'9d53'15f3), // x^5
+//     Frac64(0x000e'4a74'a170'46e8), // x^6
+// };
 LIBC_INLINE_VAR constexpr Frac64 EXPF_COEFFS[] = {
-    Frac64(0xb172'14ea'215c'7750), // x
-    Frac64(0x3d7f'b5e7'4e78'9f2b), // x^2
-    Frac64(0x0e34'15ac'7481'5dee), // x^3
-    Frac64(0x027a'7e40'a2eb'6584), // x^4
-    Frac64(0x0051'56c0'9d53'15f3), // x^5
-    Frac64(0x000e'4a74'a170'46e8), // x^6
+    Frac64(0xb172'17f7'd1cf'b7cf), // x
+    Frac64(0x3d7f'7bff'057d'4a5e), // x^2
+    Frac64(0x0e35'846b'8363'9484), // x^3
+    Frac64(0x0276'556d'ec97'dcd4), // x^4
+    Frac64(0x0057'61ff'dc04'c7ff), // x^5
+    Frac64(0x000a'1847'b6e7'92ec), // x^6
+    Frac64(0x0000'ffe8'14e5'7033), // x^7
+    Frac64(0x0000'1628'b6e9'70c8), // x^8
+    Frac64(0x0000'01b8'8ce7'4088), // x^9
+    Frac64(0x0000'001c'18d5'cb29), // x^10
+    Frac64(0x0000'0002'b43f'4490), // x^11
 };
 
 // print(2+round(1/log(2), 32, RN));
