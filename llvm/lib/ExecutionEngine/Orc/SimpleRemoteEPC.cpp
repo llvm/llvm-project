@@ -102,7 +102,7 @@ SimpleRemoteEPC::createDefaultMemoryAccess() {
            {FAs.ReadStrings, rt::MemoryReadStringsWrapperName}}))
     return std::move(Err);
 
-  return std::make_unique<EPCGenericMemoryAccess>(*this, FAs);
+  return std::make_unique<EPCGenericMemoryAccess>(getExecutionSession(), FAs);
 }
 
 Error SimpleRemoteEPC::disconnect() {
