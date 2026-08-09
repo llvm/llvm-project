@@ -22,14 +22,14 @@
 declare void @llvm.experimental.noalias.scope.decl(metadata)
 
 define void @test_no_third_arg() {
-  %domain = call token @llvm.experimental.noalias.scope.decl(
+  call void @llvm.experimental.noalias.scope.decl(
       metadata !0)
   ret void
 }
 
 ; Third arg present and <= 64 bits wide — must also pass
 define void @test_valid_third_arg() {
-  %domain = call token @llvm.experimental.noalias.scope.decl(
+  call void @llvm.experimental.noalias.scope.decl(
       metadata !0)
   ret void
 }
