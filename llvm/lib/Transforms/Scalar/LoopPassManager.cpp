@@ -192,17 +192,17 @@ void FunctionToLoopPassAdaptor::printPipeline(
 
 PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
-  // Before we even compute any loop analyses, first run a miniature function
-  // pass pipeline to put loops into their canonical form. Note that we can
-  // directly build up function analyses after this as the function pass
-  // manager handles all the invalidation at that layer.
-  PassInstrumentation PI = AM.getResult<PassInstrumentationAnalysis>(F);
-
   PreservedAnalyses PA = PreservedAnalyses::all();
   // If there are no loops, there's no need to run any loop passes or construct
   // the required analyses.
   if (AM.getResult<LoopAnalysis>(F).empty())
     return PA;
+
+  // Before we even compute any loop analyses, first run a miniature function
+  // pass pipeline to put loops into their canonical form. Note that we can
+  // directly build up function analyses after this as the function pass
+  // manager handles all the invalidation at that layer.
+  PassInstrumentation PI = AM.getResult<PassInstrumentationAnalysis>(F);
 
   // Check the PassInstrumentation's BeforePass callbacks before running the
   // canonicalization pipeline.
@@ -213,10 +213,6 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
 
   // Get the loop structure for this function
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
-
-  // If there are no loops, there is nothing to do here.
-  if (LI.empty())
-    return PA;
 
   // Get the analysis results needed by loop passes.
   MemorySSA *MSSA =
