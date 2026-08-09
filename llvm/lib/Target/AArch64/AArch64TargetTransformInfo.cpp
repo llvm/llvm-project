@@ -5081,8 +5081,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::XOR:
   case ISD::OR:
   case ISD::AND:
-    // These nodes are marked as 'custom' for combining purposes only.
-    // We know that they are legal. See related functions in ISelLowering.
+    // TODO: revisit these costs as it's not accurate enough for non-uniform
+    // constant.
     return LT.first;
   case ISD::SRL:
   case ISD::SRA:
@@ -5091,6 +5091,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     // constants therefore use variable shifts and require materializing the
     // shift vector. Account for a shift and materialization per legalized
     // vector, together with shared setup.
+    // This cost is for (ldr, shl) + adrp
+    // TODO: These costs are based on CodeSz only, consider other CostKinds.
     if (Op2Info.isConstant() && !Op2Info.isUniform() &&
         LT.second.isFixedLengthVector())
       return 2 * LT.first + 1;
