@@ -1733,7 +1733,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFDivByConstPow2) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcZero | fcSubnormal | fcPosNormal, Known.KnownFPClasses);
+  EXPECT_EQ(fcPosZero | fcPosSubnormal | fcPosNormal, Known.KnownFPClasses);
   EXPECT_EQ(false, Known.SignBit);
 }
 
