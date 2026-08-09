@@ -103,19 +103,6 @@ struct __optional_ref_base {
       __construct(std::forward<_That>(__opt).__get());
   }
 
-  template <class _That>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from(_That&& __opt) {
-    if (has_value() == __opt.has_value()) {
-      if (has_value())
-        *__value_ = std::forward<_That>(__opt).__get();
-    } else {
-      if (has_value())
-        reset();
-      else
-        __construct(std::forward<_That>(__opt).__get());
-    }
-  }
-
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __swap(__optional_ref_base& __rhs) noexcept {
     std::swap(__value_, __rhs.__value_);
   }
