@@ -434,7 +434,7 @@ public:
   /// Indexed information about loops.
   std::list<LoopData> Loops;
 
-  /// Whether the top level contains irreducible SCCs.
+  /// Has an irreducible SCC outside every loop.
   bool TopContainsIrreducible = false;
 
   /// Virtual destructor.
@@ -1139,7 +1139,8 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::initializeLoops() {
       LLVM_DEBUG(dbgs() << " - loop = " << getBlockName(Header) << "\n");
       Parent = &Loops.back();
     } else if (!CI->isReducible(Cycle)) {
-      // No LoopData represents this cycle; computeIrreducibleMass packages it.
+      // No LoopData yet; ask computeIrreducibleMass to package the SCC
+      // that contains this cycle.
       if (Parent)
         Parent->ContainsIrreducible = true;
       else
