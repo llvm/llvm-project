@@ -2683,7 +2683,7 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
 }
 
 static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
-                            DomTreeUpdater *DTU, bool SimplifyInsts) {
+                            DomTreeUpdater *DTU, bool FoldInstsToUnreachable) {
   SmallVector<BasicBlock*, 128> Worklist;
   BasicBlock *BB = &F.front();
   Worklist.push_back(BB);
@@ -2697,7 +2697,7 @@ static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
     // canonicalizes unreachable insts into stores to null or undef.
     // Note that it traverses the whole instruction list, so it may incur
     // significant performance overhead.
-    if (SimplifyInsts) {
+    if (FoldInstsToUnreachable) {
       for (Instruction &I : *BB) {
         if (auto *CI = dyn_cast<CallInst>(&I)) {
           Value *Callee = CI->getCalledOperand();
@@ -2921,9 +2921,9 @@ Instruction *llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
 /// otherwise.
 bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
                                    MemorySSAUpdater *MSSAU,
-                                   bool SimplifyInsts) {
+                                   bool FoldInstsToUnreachable) {
   SmallVector<bool, 16> Reachable(F.getMaxBlockNumber());
-  bool Changed = markAliveBlocks(F, Reachable, DTU, SimplifyInsts);
+  bool Changed = markAliveBlocks(F, Reachable, DTU, FoldInstsToUnreachable);
 
   // Are there any blocks left to actually delete?
   SmallSetVector<BasicBlock *, 8> BlocksToRemove;

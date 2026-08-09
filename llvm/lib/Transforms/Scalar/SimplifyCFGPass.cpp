@@ -289,13 +289,14 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
   // removeUnreachableBlocks doesn't do anything.
   // Avoid scanning instructions to reduce compile-time.
   if (!removeUnreachableBlocks(F, DT ? &DTU : nullptr, /*MSSAU=*/nullptr,
-                               /*SimplifyInsts=*/false))
+                               /*FoldInstsToUnreachable=*/false))
     return true;
 
   do {
     EverChanged = iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, Options);
-    EverChanged |= removeUnreachableBlocks(
-        F, DT ? &DTU : nullptr, /*MSSAU=*/nullptr, /*SimplifyInsts=*/false);
+    EverChanged |=
+        removeUnreachableBlocks(F, DT ? &DTU : nullptr, /*MSSAU=*/nullptr,
+                                /*FoldInstsToUnreachable=*/false);
   } while (EverChanged);
 
   return true;
