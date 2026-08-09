@@ -40,17 +40,14 @@ define float @test_fdiv_f32(float %arg1, float %arg2) {
 ;
 ; GISEL-X86-LABEL: test_fdiv_f32:
 ; GISEL-X86:       # %bb.0:
-; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-X86-NEXT:    movl %eax, (%esp)
-; GISEL-X86-NEXT:    flds (%esp)
-; GISEL-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fdivs {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    pushl %eax
+; GISEL-X86-NEXT:    .cfi_def_cfa_offset 8
 ; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    addl $12, %esp
+; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    fdivrp %st, %st(1)
+; GISEL-X86-NEXT:    fstps (%esp)
+; GISEL-X86-NEXT:    flds (%esp)
+; GISEL-X86-NEXT:    popl %eax
 ; GISEL-X86-NEXT:    .cfi_def_cfa_offset 4
 ; GISEL-X86-NEXT:    retl
 ;

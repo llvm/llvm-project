@@ -80,6 +80,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT v16s32 = LLT::fixed_vector(16, 32);
   const LLT v8s64 = LLT::fixed_vector(8, 64);
 
+  bool X87S32 = isScalarFPTypeOnX87Stack(32);
+  bool X87S64 = isScalarFPTypeOnX87Stack(64);
   bool RoundX87S32 = needsX87RoundToType(32);
   bool RoundX87S64 = needsX87RoundToType(64);
   auto NeedsX87RoundToType = [=](const LegalityQuery &Query) {
@@ -476,6 +478,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .legalFor(HasSSE2, {{s64, s32}})
       .legalFor(HasAVX, {{v4s64, v4s32}})
       .legalFor(HasAVX512, {{v8s64, v8s32}})
+      .legalFor(X87S32 && X87S64, {{s64, s32}})
+      .legalFor(X87S32, {{s80, s32}})
+      .legalFor(X87S64, {{s80, s64}})
       .lowerFor(UseX87, {{s64, s32}, {s80, s32}, {s80, s64}})
       .libcall();
 
@@ -647,6 +652,20 @@ bool X86LegalizerInfo::needsX87RoundToType(unsigned SizeInBits) const {
     return TLI.needsX87RoundToType(MVT::f32);
   case 64:
     return TLI.needsX87RoundToType(MVT::f64);
+  default:
+    return false;
+  }
+}
+
+bool X86LegalizerInfo::isScalarFPTypeOnX87Stack(unsigned SizeInBits) const {
+  const X86TargetLowering &TLI = *Subtarget.getTargetLowering();
+  switch (SizeInBits) {
+  case 32:
+    return TLI.isScalarFPTypeOnX87Stack(MVT::f32);
+  case 64:
+    return TLI.isScalarFPTypeOnX87Stack(MVT::f64);
+  case 80:
+    return TLI.isScalarFPTypeOnX87Stack(MVT::f80);
   default:
     return false;
   }
