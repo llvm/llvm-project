@@ -163,3 +163,15 @@
 // CHECK-64-WRAP-SAME: "--wrap=_ZnamRKSt9nothrow_t"
 // CHECK-64-WRAP-SAME: "--wrap=_ZdlPvRKSt9nothrow_t"
 // CHECK-64-WRAP-SAME: "--wrap=_ZdaPvRKSt9nothrow_t"
+
+// RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:                -resource-dir=%S/Inputs/resource_dir -rtlib=compiler-rt \
+// RUN:   2>&1 | FileCheck --check-prefix=CHECK-64-RTLIB %s
+// CHECK-64-RTLIB:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-RTLIB-SAME: "{{.*}}{{/|\\\\}}lib{{/|\\\\}}cygwin{{/|\\\\}}libclang_rt.builtins-x86_64.a"
+
+// RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:                -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir -rtlib=compiler-rt \
+// RUN:   2>&1 | FileCheck --check-prefix=CHECK-64-RTLIB-PER-TARGET %s
+// CHECK-64-RTLIB-PER-TARGET:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-RTLIB-PER-TARGET-SAME: "{{.*}}{{/|\\\\}}lib{{/|\\\\}}x86_64-pc-windows-cygnus{{/|\\\\}}libclang_rt.builtins.a"
