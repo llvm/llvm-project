@@ -27,5 +27,6 @@ export namespace std {
   using std::sorted_equivalent_t;
 
   // [flat.multimap.erasure], erasure for flat_multimap
+  // (erase_if is shared or overloaded for flat_multimap)
 #endif // _LIBCPP_STD_VER >= 23
 } // namespace std
