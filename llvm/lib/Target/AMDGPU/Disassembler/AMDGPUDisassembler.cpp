@@ -2119,11 +2119,26 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
   case 231: return createRegOperand(SRC_FLAT_SCRATCH_BASE_HI);
   case 235: return createRegOperand(SRC_SHARED_BASE_LO);
   case 236: return createRegOperand(SRC_SHARED_LIMIT_LO);
-  case 237: return createRegOperand(SRC_PRIVATE_BASE_LO);
-  case 238: return createRegOperand(SRC_PRIVATE_LIMIT_LO);
-  case 239: return createRegOperand(SRC_POPS_EXITING_WAVE_ID);
-  case 251: return createRegOperand(SRC_VCCZ);
-  case 252: return createRegOperand(SRC_EXECZ);
+  case 237:
+    if (AMDGPU::hasPrivateApertureRegs(STI))
+      return createRegOperand(SRC_PRIVATE_BASE_LO);
+    break;
+  case 238:
+    if (AMDGPU::hasPrivateApertureRegs(STI))
+      return createRegOperand(SRC_PRIVATE_LIMIT_LO);
+    break;
+  case 239:
+    if (AMDGPU::hasPopsExitingWaveID(STI))
+      return createRegOperand(SRC_POPS_EXITING_WAVE_ID);
+    break;
+  case 251:
+    if (!isGFX11Plus())
+      return createRegOperand(SRC_VCCZ);
+    break;
+  case 252:
+    if (!isGFX11Plus())
+      return createRegOperand(SRC_EXECZ);
+    break;
   case 253: return createRegOperand(SRC_SCC);
   case 254: return createRegOperand(LDS_DIRECT);
   default: break;
@@ -2153,11 +2168,26 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
   case 230: return createRegOperand(SRC_FLAT_SCRATCH_BASE_LO);
   case 235: return createRegOperand(SRC_SHARED_BASE);
   case 236: return createRegOperand(SRC_SHARED_LIMIT);
-  case 237: return createRegOperand(SRC_PRIVATE_BASE);
-  case 238: return createRegOperand(SRC_PRIVATE_LIMIT);
-  case 239: return createRegOperand(SRC_POPS_EXITING_WAVE_ID);
-  case 251: return createRegOperand(SRC_VCCZ);
-  case 252: return createRegOperand(SRC_EXECZ);
+  case 237:
+    if (AMDGPU::hasPrivateApertureRegs(STI))
+      return createRegOperand(SRC_PRIVATE_BASE);
+    break;
+  case 238:
+    if (AMDGPU::hasPrivateApertureRegs(STI))
+      return createRegOperand(SRC_PRIVATE_LIMIT);
+    break;
+  case 239:
+    if (AMDGPU::hasPopsExitingWaveID(STI))
+      return createRegOperand(SRC_POPS_EXITING_WAVE_ID);
+    break;
+  case 251:
+    if (!isGFX11Plus())
+      return createRegOperand(SRC_VCCZ);
+    break;
+  case 252:
+    if (!isGFX11Plus())
+      return createRegOperand(SRC_EXECZ);
+    break;
   case 253: return createRegOperand(SRC_SCC);
   default: break;
   }
@@ -2373,7 +2403,6 @@ bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
 bool AMDGPUDisassembler::hasKernargPreload() const {
   return AMDGPU::hasKernargPreload(STI);
 }
-
 //===----------------------------------------------------------------------===//
 // AMDGPU specific symbol handling
 //===----------------------------------------------------------------------===//

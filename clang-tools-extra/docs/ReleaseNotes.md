@@ -56,6 +56,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 ### Potentially Breaking Changes
 
+- In 22nd release, The `clang-tidy/ClangTidyModuleRegistry.h` header was deprecated.
+  All of the symbols it used to define were moved into `clang-tidy/ClangTidyModule.h`.
+  The deprecated header has been removed in this release.
+
 ### Improvements to clangd
 
 #### Inlay hints
