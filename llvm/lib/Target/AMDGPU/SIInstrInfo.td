@@ -1741,8 +1741,12 @@ def VOP3OpSelMods  : ComplexPattern<untyped, 2, "SelectVOP3OpSelMods">;
 
 def VOP3PMadMixModsExt : ComplexPattern<untyped, 2, "SelectVOP3PMadMixModsExt">;
 def VOP3PMadMixMods : ComplexPattern<untyped, 2, "SelectVOP3PMadMixMods">;
+def VOP3PMadMixModsExtNeg : ComplexPattern<untyped, 2, "SelectVOP3PMadMixModsExtNeg">;
+def VOP3PMadMixModsNeg : ComplexPattern<untyped, 2, "SelectVOP3PMadMixModsNeg">;
 def VOP3PMadMixBF16ModsExt : ComplexPattern<untyped, 2, "SelectVOP3PMadMixBF16ModsExt">;
 def VOP3PMadMixBF16Mods : ComplexPattern<untyped, 2, "SelectVOP3PMadMixBF16Mods">;
+def VOP3PMadMixBF16ModsExtNeg : ComplexPattern<untyped, 2, "SelectVOP3PMadMixBF16ModsExtNeg">;
+def VOP3PMadMixBF16ModsNeg : ComplexPattern<untyped, 2, "SelectVOP3PMadMixBF16ModsNeg">;
 
 def VINTERPMods  : ComplexPattern<untyped, 2, "SelectVINTERPMods">;
 def VINTERPModsHi  : ComplexPattern<untyped, 2, "SelectVINTERPModsHi">;
@@ -3262,6 +3266,11 @@ class Commutable_REV <string revOp, bit isOrig> {
   bit IsOrig = isOrig;
 }
 
+class AGPRFormTable<string Kind, string Name = NAME> {
+  string AGPRFormOp = Name;
+  string AGPRFormKind = Kind;
+}
+
 //===----------------------------------------------------------------------===//
 // Interpolation opcodes
 //===----------------------------------------------------------------------===//
@@ -3512,11 +3521,11 @@ def getMFMAEarlyClobberOp : InstrMapping {
   let ValueCols = [["0"]];
 }
 
-// Map from an mfma using VGPRs to one using AGPRs.
-def getMFMASrcCVDstAGPROp : InstrMapping {
-  let FilterClass = "MFMATable";
-  let RowFields = ["AGPROp"];
-  let ColFields = ["MFMAKind"];
+// Map from an instruction using VGPRs to one using AGPRs.
+def getAGPRFormOp : InstrMapping {
+  let FilterClass = "AGPRFormTable";
+  let RowFields = ["AGPRFormOp"];
+  let ColFields = ["AGPRFormKind"];
   let KeyCol = ["VGPR"];
   let ValueCols = [["AGPR"]];
 }
