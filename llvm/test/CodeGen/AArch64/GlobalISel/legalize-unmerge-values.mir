@@ -32,11 +32,9 @@ body: |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i8), [[UV1:%[0-9]+]]:_(i8), [[UV2:%[0-9]+]]:_(i8), [[UV3:%[0-9]+]]:_(i8) = G_UNMERGE_VALUES [[COPY]](i32)
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[UV]](i8)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[ZEXT]], [[C]](i64)
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[UV]](i8)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[COPY]], [[C]](i64)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[COPY]](i32)
     ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(i64) = G_ANYEXT [[LSHR]](i32)
     ; CHECK-NEXT: $x0 = COPY [[ANYEXT]](i64)
     ; CHECK-NEXT: $x1 = COPY [[ANYEXT1]](i64)
