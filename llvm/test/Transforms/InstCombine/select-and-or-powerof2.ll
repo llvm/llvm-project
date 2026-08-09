@@ -6,11 +6,7 @@ define i8 @select_or_eq_zero_powerof2(i8 %a, i8 %b, i8 %mask) {
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[MASK:%.*]]) {
 ; CHECK-NEXT:    [[SH:%.*]] = shl nuw i8 1, [[MASK]]
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i8 [[SH]], [[A]]
-; CHECK-NEXT:    [[LSB_1:%.*]] = icmp eq i8 [[AND_1]], 0
-; CHECK-NEXT:    [[AND_2:%.*]] = and i8 [[SH]], [[B]]
-; CHECK-NEXT:    [[LSB_2:%.*]] = icmp eq i8 [[AND_2]], 0
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[LSB_1]], [[LSB_2]]
-; CHECK-NEXT:    [[ZERO_OR_SHIFT:%.*]] = select i1 [[OR]], i8 0, i8 [[SH]]
+; CHECK-NEXT:    [[ZERO_OR_SHIFT:%.*]] = and i8 [[AND_1]], [[B]]
 ; CHECK-NEXT:    ret i8 [[ZERO_OR_SHIFT]]
 ;
   %sh = shl nuw i8 1, %mask
@@ -28,11 +24,7 @@ define i8 @select_and_ne_zero_powerof2(i8 %a, i8 %b, i8 %mask) {
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[MASK:%.*]]) {
 ; CHECK-NEXT:    [[SH:%.*]] = shl nuw i8 1, [[MASK]]
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i8 [[SH]], [[A]]
-; CHECK-NEXT:    [[LSB_1:%.*]] = icmp ne i8 [[AND_1]], 0
-; CHECK-NEXT:    [[AND_2:%.*]] = and i8 [[SH]], [[B]]
-; CHECK-NEXT:    [[LSB_2:%.*]] = icmp ne i8 [[AND_2]], 0
-; CHECK-NEXT:    [[AND_COND:%.*]] = and i1 [[LSB_1]], [[LSB_2]]
-; CHECK-NEXT:    [[ZERO_OR_SHIFT:%.*]] = select i1 [[AND_COND]], i8 [[SH]], i8 0
+; CHECK-NEXT:    [[ZERO_OR_SHIFT:%.*]] = and i8 [[AND_1]], [[B]]
 ; CHECK-NEXT:    ret i8 [[ZERO_OR_SHIFT]]
 ;
   %sh = shl nuw i8 1, %mask
@@ -49,12 +41,8 @@ define i8 @select_or_eq_zero_powerof2_commuted(i8 %a, i8 %b, i8 %mask) {
 ; CHECK-LABEL: define i8 @select_or_eq_zero_powerof2_commuted(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[MASK:%.*]]) {
 ; CHECK-NEXT:    [[SH:%.*]] = shl nuw i8 1, [[MASK]]
-; CHECK-NEXT:    [[AND_1:%.*]] = and i8 [[A]], [[SH]]
-; CHECK-NEXT:    [[LSB_1:%.*]] = icmp eq i8 [[AND_1]], 0
-; CHECK-NEXT:    [[AND_2:%.*]] = and i8 [[B]], [[SH]]
-; CHECK-NEXT:    [[LSB_2:%.*]] = icmp eq i8 [[AND_2]], 0
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[LSB_1]], [[LSB_2]]
-; CHECK-NEXT:    [[ZERO_OR_SHIFT:%.*]] = select i1 [[OR]], i8 0, i8 [[SH]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[SH]], [[A]]
+; CHECK-NEXT:    [[ZERO_OR_SHIFT:%.*]] = and i8 [[TMP1]], [[B]]
 ; CHECK-NEXT:    ret i8 [[ZERO_OR_SHIFT]]
 ;
   %sh = shl nuw i8 1, %mask
@@ -71,12 +59,8 @@ define i8 @select_and_ne_zero_powerof2_commuted(i8 %a, i8 %b, i8 %mask) {
 ; CHECK-LABEL: define i8 @select_and_ne_zero_powerof2_commuted(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[MASK:%.*]]) {
 ; CHECK-NEXT:    [[SH:%.*]] = shl nuw i8 1, [[MASK]]
-; CHECK-NEXT:    [[AND_1:%.*]] = and i8 [[A]], [[SH]]
-; CHECK-NEXT:    [[LSB_1:%.*]] = icmp ne i8 [[AND_1]], 0
-; CHECK-NEXT:    [[AND_2:%.*]] = and i8 [[B]], [[SH]]
-; CHECK-NEXT:    [[LSB_2:%.*]] = icmp ne i8 [[AND_2]], 0
-; CHECK-NEXT:    [[AND_COND:%.*]] = and i1 [[LSB_1]], [[LSB_2]]
-; CHECK-NEXT:    [[ZERO_OR_SHIFT:%.*]] = select i1 [[AND_COND]], i8 [[SH]], i8 0
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[SH]], [[A]]
+; CHECK-NEXT:    [[ZERO_OR_SHIFT:%.*]] = and i8 [[TMP1]], [[B]]
 ; CHECK-NEXT:    ret i8 [[ZERO_OR_SHIFT]]
 ;
   %sh = shl nuw i8 1, %mask
@@ -94,11 +78,7 @@ define <2 x i8> @select_or_eq_zero_powerof2_vec(<2 x i8> %a, <2 x i8> %b, <2 x i
 ; CHECK-SAME: <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]], <2 x i8> [[MASK:%.*]]) {
 ; CHECK-NEXT:    [[SH:%.*]] = shl nuw <2 x i8> splat (i8 1), [[MASK]]
 ; CHECK-NEXT:    [[AND_1:%.*]] = and <2 x i8> [[SH]], [[A]]
-; CHECK-NEXT:    [[LSB_1:%.*]] = icmp eq <2 x i8> [[AND_1]], zeroinitializer
-; CHECK-NEXT:    [[AND_2:%.*]] = and <2 x i8> [[SH]], [[B]]
-; CHECK-NEXT:    [[LSB_2:%.*]] = icmp eq <2 x i8> [[AND_2]], zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[LSB_1]], [[LSB_2]]
-; CHECK-NEXT:    [[ZERO_OR_SHIFT:%.*]] = select <2 x i1> [[OR]], <2 x i8> zeroinitializer, <2 x i8> [[SH]]
+; CHECK-NEXT:    [[ZERO_OR_SHIFT:%.*]] = and <2 x i8> [[AND_1]], [[B]]
 ; CHECK-NEXT:    ret <2 x i8> [[ZERO_OR_SHIFT]]
 ;
   %sh = shl nuw <2 x i8> <i8 1, i8 1>, %mask
