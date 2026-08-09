@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "NVPTXAsmPrinter.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "MCTargetDesc/NVPTXInstPrinter.h"
 #include "MCTargetDesc/NVPTXTargetStreamer.h"
@@ -43,6 +44,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -839,16 +841,17 @@ void NVPTXAsmPrinter::emitJumpTable(const MachineJumpTableEntry &MJT,
 // llvm.loop.unroll.disable or llvm.loop.unroll.count=1.
 bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
     const MachineBasicBlock &MBB) const {
-  MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  const MachineLoopInfo *LI = GetMLI(*MF);
+  assert(LI && "NVPTXAsmPrinter requires MachineLoopInfo");
   // We insert .pragma "nounroll" only to the loop header.
-  if (!LI.isLoopHeader(&MBB))
+  if (!LI->isLoopHeader(&MBB))
     return false;
 
   // llvm.loop.unroll.disable is marked on the back edges of a loop. Therefore,
   // we iterate through each back edge of the loop with header MBB, and check
   // whether its metadata contains llvm.loop.unroll.disable.
   for (const MachineBasicBlock *PMBB : MBB.predecessors()) {
-    if (LI.getLoopFor(PMBB) != LI.getLoopFor(&MBB)) {
+    if (LI->getLoopFor(PMBB) != LI->getLoopFor(&MBB)) {
       // Edges from other loops to MBB are not back edges.
       continue;
     }
@@ -2759,4 +2762,32 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeNVPTXAsmPrinter() {
   RegisterAsmPrinter<NVPTXAsmPrinter> X(getTheNVPTXTarget32());
   RegisterAsmPrinter<NVPTXAsmPrinter> Y(getTheNVPTXTarget64());
+}
+
+PreservedAnalyses NVPTXAsmPrinterBeginPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  AsmPrinter &Printer = MAM.getResult<AsmPrinterAnalysis>(M).getPrinter();
+  setupModuleAsmPrinter(M, MAM, Printer);
+  Printer.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+NVPTXAsmPrinterPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  AsmPrinter &Printer =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter();
+  setupMachineFunctionAsmPrinter(MFAM, MF, Printer);
+  Printer.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses NVPTXAsmPrinterEndPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  AsmPrinter &Printer = MAM.getResult<AsmPrinterAnalysis>(M).getPrinter();
+  setupModuleAsmPrinter(M, MAM, Printer);
+  Printer.doFinalization(M);
+  return PreservedAnalyses::all();
 }
