@@ -1695,7 +1695,7 @@ define i64 @fold_zext_or_disjoint_xor_i32_to_i64(i32 %x) {
 
 define i64 @fold_zext_or_disjoint_xor_nneg(i32 %x) {
 ; CHECK-LABEL: @fold_zext_or_disjoint_xor_nneg(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[R:%.*]] = xor i64 [[TMP1]], 7640891576939301128
 ; CHECK-NEXT:    ret i64 [[R]]
 ;

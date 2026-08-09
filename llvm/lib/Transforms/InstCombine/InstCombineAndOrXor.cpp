@@ -5447,17 +5447,6 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       Value *X;
       const APInt *C;
 
-      // xor (zext (or disjoint X, C)), RHSC
-      //   -> xor (zext X), RHSC ^ zext(C)
-      if (match(Op0, m_OneUse(m_ZExt(m_OneUse(
-                        m_DisjointOr(m_Value(X), m_APInt(C))))))) {
-        APInt NewC = *RHSC ^ C->zext(RHSC->getBitWidth());
-
-        Value *NewZExt = Builder.CreateZExt(X, Ty);
-        return BinaryOperator::CreateXor(
-            NewZExt, Constant::getIntegerValue(Ty, NewC));
-      }
-
       // (C - X) ^ signmaskC --> (C + signmaskC) - X
       if (RHSC->isSignMask() && match(Op0, m_Sub(m_APInt(C), m_Value(X))))
         return BinaryOperator::CreateSub(ConstantInt::get(Ty, *C + *RHSC), X);
