@@ -25935,10 +25935,8 @@ void BoUpSLP::optimizeGatherSequence() {
   SmallVector<const DomTreeNode *, 8> CSEWorkList;
   CSEWorkList.reserve(CSEBlocks.size());
   for (BasicBlock *BB : CSEBlocks)
-    if (DomTreeNode *N = DT->getNode(BB)) {
-      assert(DT->isReachableFromEntry(N));
+    if (DomTreeNode *N = DT->getNode(BB))
       CSEWorkList.push_back(N);
-    }
 
   // Sort blocks by domination. This ensures we visit a block after all blocks
   // dominating it are visited.
