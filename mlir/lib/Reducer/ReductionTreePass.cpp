@@ -14,16 +14,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/IR/IRMapping.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Reducer/Passes.h"
 #include "mlir/Reducer/ReductionNode.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Reducer/Tester.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/RegionUtils.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/DebugLog.h"
+
+#define DEBUG_TYPE "reduction-tree"
 
 namespace mlir {
 #define GEN_PASS_DEF_REDUCTIONTREEPASS
@@ -182,11 +189,190 @@ static LogicalResult eraseAllOpsInRegion(ModuleOp module, Region &region,
   return failure();
 }
 
+/// Searches for an unvisited branch terminator within the given region based on
+/// the specified conditionality. This helper scans blocks in the \p region to
+/// find a terminator that has not yet been processed (not in \p visited). If
+/// \p isConditional is true, it looks for terminators with multiple successors
+/// (e.g., cf.cond_br). Otherwise, it looks for single-successor terminators
+/// (e.g., cf.br).
+static Operation *getBranchTerminatorInRegion(Region &region,
+                                              DenseSet<Operation *> &visited,
+                                              bool isConditional = true) {
+  auto it = llvm::find_if(region.getBlocks(), [&](Block &block) {
+    if (!block.mightHaveTerminator())
+      return false;
+    size_t numSucc = block.getNumSuccessors();
+    Operation *term = block.getTerminator();
+    return !visited.contains(term) &&
+           (isConditional ? numSucc > 1 : numSucc == 1);
+  });
+  return it != region.end() ? it->getTerminator() : nullptr;
+}
+
+/// Prunes unreachable blocks from the CFG using the \p worklist. This function
+/// iteratively removes blocks that have no predecessors. When a block is
+/// erased, its successors are added to the worklist as they may consequently
+/// become unreachable. This ensures a cascading deletion of dead-end paths in
+/// the control flow graph.
+static void pruneCFGEdges(SetVector<Block *> &workList, IRRewriter &rewriter) {
+  while (!workList.empty()) {
+    Block *b = workList.front();
+    workList.erase(workList.begin());
+    if (b->hasNoPredecessors()) {
+      for (Block *it : b->getSuccessors())
+        workList.insert(it);
+      rewriter.eraseBlock(b);
+    }
+  }
+}
+
+/// Reduces the control flow in a region by iteratively forcing branching
+/// terminators to point to a single successor. It evaluates each potential
+/// branch path and commits the reduction that results in the smallest
+/// "interesting" module.
+static LogicalResult reduceConditionalsInRegion(ModuleOp module, Region &region,
+                                                const Tester &test) {
+  std::pair<Tester::Interestingness, size_t> initStatus =
+      test.isInteresting(module);
+
+  if (initStatus.first != Tester::Interestingness::True)
+    return module.emitWarning() << "uninterested module will not be reduced";
+  llvm::SpecificBumpPtrAllocator<ReductionNode> allocator;
+
+  ReductionNode *smallestNode = nullptr;
+  mlir::IRRewriter rewriter(region.getContext());
+  DenseSet<Operation *> visited;
+
+  // This loop attempts to convert conditional branch operations into
+  // unconditional ones.
+  while (Operation *branchTerminator =
+             getBranchTerminatorInRegion(region, visited)) {
+    size_t numSuccessor = branchTerminator->getNumSuccessors();
+    std::vector<ReductionNode::Range> ranges{
+        {0, std::distance(region.op_begin(), region.op_end())}};
+    // Iterate through each successor of the branching terminator to try
+    // reducing the control flow to a single-path execution.
+    int branchIdx = -1;
+    for (int i = 0, e = numSuccessor; i < e; ++i) {
+      // We allocate memory on the heap because the object will be assigned to
+      // 'smallestNode'.
+      ReductionNode *root = allocator.Allocate();
+      new (root) ReductionNode(nullptr, ranges, allocator);
+      mlir::IRMapping mapper;
+      if (failed(root->initialize(module, region, mapper)))
+        llvm_unreachable("unexpected initialization failure");
+
+      Operation *tergetTerminator = mapper.lookup(branchTerminator);
+      Block *selectedBlock = tergetTerminator->getSuccessor(i);
+      auto branchOp = cast<BranchOpInterface>(tergetTerminator);
+      mlir::SuccessorOperands selectedBlockOperands =
+          branchOp.getSuccessorOperands(i);
+      rewriter.setInsertionPointAfter(tergetTerminator);
+      cf::BranchOp::create(rewriter, tergetTerminator->getLoc(), selectedBlock,
+                           selectedBlockOperands.getForwardedOperands());
+      auto succs = llvm::to_vector(tergetTerminator->getSuccessors());
+      succs.erase(succs.begin() + i);
+      SetVector<Block *> workList(succs.begin(), succs.end());
+      rewriter.eraseOp(tergetTerminator);
+      pruneCFGEdges(workList, rewriter);
+      root->update(test.isInteresting(root->getModule()));
+      if (root->isInteresting() == Tester::Interestingness::True &&
+          (smallestNode == nullptr ||
+           root->getSize() < smallestNode->getSize())) {
+        smallestNode = root;
+        branchIdx = i;
+      }
+    }
+
+    if (branchIdx != -1) {
+      Block *selectedBlock = branchTerminator->getSuccessor(branchIdx);
+      auto branchOp = cast<BranchOpInterface>(branchTerminator);
+      mlir::SuccessorOperands selectedBlockOperands =
+          branchOp.getSuccessorOperands(branchIdx);
+      rewriter.setInsertionPointAfter(branchTerminator);
+      cf::BranchOp::create(rewriter, branchTerminator->getLoc(), selectedBlock,
+                           selectedBlockOperands.getForwardedOperands());
+
+      auto succs = llvm::to_vector(branchOp->getSuccessors());
+      succs.erase(succs.begin() + branchIdx);
+      SetVector<Block *> workList(succs.begin(), succs.end());
+      rewriter.eraseOp(branchOp);
+      pruneCFGEdges(workList, rewriter);
+    } else {
+      // Insert 'branchTerminator' into visited to prevent it from being
+      // processed again.
+      visited.insert(branchTerminator);
+    }
+  }
+  return success();
+}
+
+/// Simplifies the Control Flow Graph (CFG) by merging blocks that have a
+/// single-successor / single-predecessor relationship. This function leverages
+/// the canonicalization patterns of 'cf.br' to perform the merge
+static LogicalResult reduceBlockMergeInRegion(ModuleOp module, Region &region,
+                                              const Tester &test) {
+  std::pair<Tester::Interestingness, size_t> initStatus =
+      test.isInteresting(module);
+
+  if (initStatus.first != Tester::Interestingness::True)
+    return module.emitWarning() << "uninterested module will not be reduced";
+  llvm::SpecificBumpPtrAllocator<ReductionNode> allocator;
+
+  GreedyRewriteConfig config;
+  auto context = region.getContext();
+  RewritePatternSet patterns(context);
+  cf::BranchOp::getCanonicalizationPatterns(patterns, context);
+  FrozenRewritePatternSet fPatterns = std::move(patterns);
+
+  mlir::IRRewriter rewriter(context);
+  DenseSet<Operation *> visited;
+  while (Operation *branchTerminator =
+             getBranchTerminatorInRegion(region, visited, false)) {
+    std::vector<ReductionNode::Range> ranges{
+        {0, std::distance(region.op_begin(), region.op_end())}};
+    ReductionNode *root = allocator.Allocate();
+    new (root) ReductionNode(nullptr, ranges, allocator);
+    mlir::IRMapping mapper;
+    if (failed(root->initialize(module, region, mapper)))
+      llvm_unreachable("unexpected initialization failure");
+    Operation *tergetTerminator = mapper.lookup(branchTerminator);
+    bool changed = false;
+    (void)applyOpPatternsGreedily(tergetTerminator, fPatterns, config,
+                                  &changed);
+    root->update(test.isInteresting(root->getModule()));
+
+    // If the changed variable is false, it indicates that the pattern failed to
+    // apply. We should insert it into visited to prevent it from being
+    // processed again.
+    if (changed && root->isInteresting() == Tester::Interestingness::True)
+      (void)applyOpPatternsGreedily(branchTerminator, fPatterns, config);
+    else
+      visited.insert(branchTerminator);
+  }
+  return success();
+}
+
+static LogicalResult eraseRedundantBlocksInRegion(ModuleOp module,
+                                                  Region &region,
+                                                  const Tester &test) {
+  /// We separate the reduction control flow graph process into 2 steps.
+
+  // we attempts to simplify conditional branches into unconditional ones by
+  // picking the "interesting" path.
+  (void)reduceConditionalsInRegion(module, region, test);
+
+  // We merge redundant blocks that have single-successor/single-predecessor
+  // relationships using canonicalization patterns.
+  (void)reduceBlockMergeInRegion(module, region, test);
+  return success();
+}
+
 template <typename IteratorType>
 static LogicalResult findOptimal(ModuleOp module, Region &region,
                                  const FrozenRewritePatternSet &patterns,
                                  const Tester &test) {
-  // We separate the reduction process into 3 steps, the first one is to erase
+  // We separate the reduction process into 4 steps, the first one is to erase
   // redundant operations and the second one is to apply the reducer patterns.
 
   // In the first phase, we attempt to erase all operations within the entire
@@ -194,12 +380,16 @@ static LogicalResult findOptimal(ModuleOp module, Region &region,
   if (succeeded(eraseAllOpsInRegion(module, region, test)))
     return success();
 
-  // In the second phase, we don't apply any patterns so that we only select the
+  // In the second phase, we attempt to eliminate redundant blocks. This reduces
+  // the program's execution paths.
+  (void)eraseRedundantBlocksInRegion(module, region, test);
+
+  // In the third phase, we don't apply any patterns so that we only select the
   // range of operations to keep to the module stay interesting.
   if (failed(findOptimal<IteratorType>(module, region, /*patterns=*/{}, test,
                                        /*eraseOpNotInRange=*/true)))
     return failure();
-  // In the third phase, we suppose that no operation is redundant, so we try
+  // In the fourth phase, we suppose that no operation is redundant, so we try
   // to rewrite the operation into simpler form.
   return findOptimal<IteratorType>(module, region, patterns, test,
                                    /*eraseOpNotInRange=*/false);

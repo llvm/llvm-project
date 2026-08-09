@@ -58,3 +58,101 @@ func.func @simple4(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 func.func @simple5() {
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @br_reduction
+//  CHECK-SAME:  %[[ARG0:.*]]: i1,
+//  CHECK-SAME:  %[[ARG1:.*]]: memref<2xf32>,
+//  CHECK-SAME:  %[[ARG2:.*]]: memref<2xf32>) {
+func.func @br_reduction(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+  cf.cond_br %arg0, ^bb1, ^bb2
+^bb1:
+  cf.br ^bb3(%arg1 : memref<2xf32>)
+^bb2:
+  %0 = memref.alloc() : memref<2xf32>
+  cf.br ^bb3(%0 : memref<2xf32>)
+^bb3(%1: memref<2xf32>):
+  "test.op_crash"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  return
+}
+// CHECK-NEXT: "test.op_crash"(%[[ARG1]], %[[ARG2]])
+
+// -----
+
+// CHECK-LABEL: func @br_reduction_loop
+//  CHECK-SAME:   %[[ARG0:.*]]: i1,
+//  CHECK-SAME:   %[[ARG1:.*]]: memref<2xf32>,
+//  CHECK-SAME:   %[[ARG2:.*]]: memref<2xf32>) {
+func.func @br_reduction_loop(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+  // select ^bb2
+  cf.cond_br %arg0, ^bb1, ^bb2
+^bb1:
+  cf.br ^bb3(%arg1 : memref<2xf32>)
+^bb2:
+  %0 = memref.alloc() : memref<2xf32>
+  cf.br ^bb3(%0 : memref<2xf32>)
+^bb3(%1: memref<2xf32>):
+  "test.op_crash"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  // select ^bb4
+  cf.cond_br %arg0, ^bb3(%1: memref<2xf32>), ^bb4
+^bb4:
+  return
+}
+// CHECK:   cf.br ^bb1(%[[ARG1]] : memref<2xf32>)
+// CHECK: ^bb1(%[[VAL_0:.*]]: memref<2xf32>):
+// CHECK:   "test.op_crash"(%[[VAL_0]], %[[ARG2]])
+// CHECK:   cf.br ^bb1(%[[VAL_0]] : memref<2xf32>)
+
+// -----
+
+// CHECK-LABEL: func @switch_reduction
+//  CHECK-SAME:   %[[ARG0:.*]]: i32,
+//  CHECK-SAME:   %[[ARG1:.*]]: memref<2xf32>,
+//  CHECK-SAME:   %[[ARG2:.*]]: memref<3xf32>)
+func.func @switch_reduction(%arg0: i32, %arg1: memref<2xf32>, %arg2: memref<3xf32>) {
+  cf.switch %arg0 : i32, [
+    default: ^bb3(%arg1 : memref<2xf32>),
+    0: ^bb1(%arg2: memref<3xf32>),
+    1: ^bb2
+  ]
+^bb1(%0: memref<3xf32>):
+  cf.br ^bb3(%arg1 : memref<2xf32>)
+^bb2:
+  %1 = memref.alloc() : memref<2xf32>
+  cf.br ^bb3(%1 : memref<2xf32>)
+^bb3(%2: memref<2xf32>):
+  "test.op_crash"(%2, %arg2) : (memref<2xf32>, memref<3xf32>) -> ()
+  return
+}
+// CHECK-NEXT:  "test.op_crash"(%[[ARG1]], %[[ARG2]])
+
+// -----
+
+// This test verifies the ability to reduce unreachable code. 
+
+// CHECK-LABEL: func @unreachable_code
+// CHECK-SAME:      %[[ARG0:.*]]: i1,
+// CHECK-SAME:      %[[ARG1:.*]]: memref<2xf32>,
+// CHECK-SAME:      %[[ARG2:.*]]: memref<2xf32>)
+func.func @unreachable_code(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+  cf.br ^bb1
+^bb1:
+  cf.cond_br %arg0, ^bb2, ^bb3
+^bb2:
+  cf.br ^bb1
+^bb3:
+  %alloc = memref.alloc() : memref<2xf32>
+  cf.br ^bb1
+^bb4(%0: memref<2xf32>):
+  "test.op_crash"(%0, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  cf.cond_br %arg0, ^bb4(%0 : memref<2xf32>), ^bb5
+^bb5:
+  return
+}
+// CHECK:   cf.br ^bb1
+// CHECK: ^bb1:
+// CHECK:   cf.br ^bb1
+// CHECK: ^bb2(%[[VAL_0:.*]]: memref<2xf32>):
+// CHECK:   "test.op_crash"(%[[VAL_0]], %[[ARG2]])
+// CHECK:    cf.br ^bb2(%[[VAL_0]] : memref<2xf32>)
