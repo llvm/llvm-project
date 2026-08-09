@@ -102,8 +102,8 @@ define signext i32 @select_const_int_harder(i1 zeroext %a) nounwind {
 ;
 ; RV32ZICOND-LABEL: select_const_int_harder:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    xori a0, a0, 1
-; RV32ZICOND-NEXT:    slli a0, a0, 5
+; RV32ZICOND-NEXT:    addi a0, a0, -1
+; RV32ZICOND-NEXT:    andi a0, a0, 32
 ; RV32ZICOND-NEXT:    addi a0, a0, 6
 ; RV32ZICOND-NEXT:    ret
 ;
@@ -135,8 +135,8 @@ define signext i32 @select_const_int_harder(i1 zeroext %a) nounwind {
 ;
 ; RV64ZICOND-LABEL: select_const_int_harder:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    xori a0, a0, 1
-; RV64ZICOND-NEXT:    slli a0, a0, 5
+; RV64ZICOND-NEXT:    addi a0, a0, -1
+; RV64ZICOND-NEXT:    andi a0, a0, 32
 ; RV64ZICOND-NEXT:    addiw a0, a0, 6
 ; RV64ZICOND-NEXT:    ret
   %1 = select i1 %a, i32 6, i32 38

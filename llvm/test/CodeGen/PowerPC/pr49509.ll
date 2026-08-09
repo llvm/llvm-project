@@ -26,21 +26,19 @@ define void @test() {
 ; CHECK-NEXT:    and 5, 4, 5
 ; CHECK-NEXT:    cmpwi 3, 0
 ; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    cmpwi 1, 5, -1
 ; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    bc 12, 2, .LBB0_5
 ; CHECK-NEXT:  # %bb.4: # %bb66
-; CHECK-NEXT:    lis 4, 256
+; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:  .LBB0_5: # %bb66
-; CHECK-NEXT:    cmpwi 5, 5, -1
+; CHECK-NEXT:    cmpwi 5, -1
 ; CHECK-NEXT:    lis 5, 512
-; CHECK-NEXT:    beq 5, .LBB0_7
+; CHECK-NEXT:    beq 0, .LBB0_7
 ; CHECK-NEXT:  # %bb.6: # %bb66
-; CHECK-NEXT:    mr 5, 4
+; CHECK-NEXT:    slwi 5, 4, 24
 ; CHECK-NEXT:  .LBB0_7: # %bb66
-; CHECK-NEXT:    cror 20, 6, 2
-; CHECK-NEXT:    stw 5, 0(3)
 ; CHECK-NEXT:    stw 3, 0(3)
+; CHECK-NEXT:    stw 5, 0(3)
 ; CHECK-NEXT:    blr
 bb:
   br i1 undef, label %bb2, label %bb1

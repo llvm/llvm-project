@@ -340,21 +340,11 @@ define i8 @sel_constants_mul_constant(i1 %cond) {
 }
 
 define i8 @sel_constants_sdiv_constant(i1 %cond) {
-; ISEL-LABEL: sel_constants_sdiv_constant:
-; ISEL:       # %bb.0:
-; ISEL-NEXT:    andi. 3, 3, 1
-; ISEL-NEXT:    li 3, 4
-; ISEL-NEXT:    iselgt 3, 0, 3
-; ISEL-NEXT:    blr
-;
-; NO_ISEL-LABEL: sel_constants_sdiv_constant:
-; NO_ISEL:       # %bb.0:
-; NO_ISEL-NEXT:    andi. 3, 3, 1
-; NO_ISEL-NEXT:    li 3, 0
-; NO_ISEL-NEXT:    bclr 12, 1, 0
-; NO_ISEL-NEXT:  # %bb.1:
-; NO_ISEL-NEXT:    li 3, 4
-; NO_ISEL-NEXT:    blr
+; ALL-LABEL: sel_constants_sdiv_constant:
+; ALL:       # %bb.0:
+; ALL-NEXT:    not 3, 3
+; ALL-NEXT:    rlwinm 3, 3, 2, 29, 29
+; ALL-NEXT:    blr
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = sdiv i8 %sel, 5
   ret i8 %bo

@@ -617,12 +617,13 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; P8-NEXT:    std r30, 112(r1) # 8-byte Folded Spill
 ; P8-NEXT:    lfs f0, .LCPI13_0@toc@l(r3)
 ; P8-NEXT:    fcmpo cr1, f2, f3
-; P8-NEXT:    lis r3, -32768
+; P8-NEXT:    li r3, 1
 ; P8-NEXT:    fcmpo cr0, f1, f0
 ; P8-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
 ; P8-NEXT:    crandc 4*cr5+gt, lt, eq
 ; P8-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
-; P8-NEXT:    isel r30, 0, r3, 4*cr5+lt
+; P8-NEXT:    isel r3, 0, r3, 4*cr5+lt
+; P8-NEXT:    slwi r30, r3, 31
 ; P8-NEXT:    bc 12, 4*cr5+lt, .LBB13_2
 ; P8-NEXT:  # %bb.1: # %entry
 ; P8-NEXT:    fmr f3, f0
@@ -639,7 +640,6 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; P8-NEXT:    mffprwz r3, f0
 ; P8-NEXT:    xor r3, r3, r30
 ; P8-NEXT:    ld r30, 112(r1) # 8-byte Folded Reload
-; P8-NEXT:    clrldi r3, r3, 32
 ; P8-NEXT:    addi r1, r1, 128
 ; P8-NEXT:    ld r0, 16(r1)
 ; P8-NEXT:    mtlr r0
@@ -658,12 +658,13 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; P9-NEXT:    std r0, 64(r1)
 ; P9-NEXT:    lfs f0, .LCPI13_0@toc@l(r3)
 ; P9-NEXT:    fcmpo cr1, f2, f3
-; P9-NEXT:    lis r3, -32768
+; P9-NEXT:    li r3, 1
 ; P9-NEXT:    fcmpo cr0, f1, f0
 ; P9-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
 ; P9-NEXT:    crandc 4*cr5+gt, lt, eq
 ; P9-NEXT:    cror 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
-; P9-NEXT:    isel r30, 0, r3, 4*cr5+lt
+; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
+; P9-NEXT:    slwi r30, r3, 31
 ; P9-NEXT:    bc 12, 4*cr5+lt, .LBB13_2
 ; P9-NEXT:  # %bb.1: # %entry
 ; P9-NEXT:    fmr f3, f0
@@ -679,7 +680,6 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; P9-NEXT:    xscvdpsxws f0, f1
 ; P9-NEXT:    mffprwz r3, f0
 ; P9-NEXT:    xor r3, r3, r30
-; P9-NEXT:    clrldi r3, r3, 32
 ; P9-NEXT:    addi r1, r1, 48
 ; P9-NEXT:    ld r0, 16(r1)
 ; P9-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -720,11 +720,11 @@ define zeroext i32 @ppcq_to_u32(ppc_fp128 %m) #0 {
 ; NOVSX-NEXT:    mtfsf 1, f0
 ; NOVSX-NEXT:    fctiwz f0, f1
 ; NOVSX-NEXT:    stfiwx f0, 0, r3
-; NOVSX-NEXT:    lis r3, -32768
+; NOVSX-NEXT:    li r3, 1
 ; NOVSX-NEXT:    lwz r4, 44(r1)
 ; NOVSX-NEXT:    isel r3, 0, r3, 4*cr2+lt
+; NOVSX-NEXT:    slwi r3, r3, 31
 ; NOVSX-NEXT:    xor r3, r4, r3
-; NOVSX-NEXT:    clrldi r3, r3, 32
 ; NOVSX-NEXT:    addi r1, r1, 48
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    lwz r12, 8(r1)

@@ -802,3 +802,30 @@ entry:
   %2 = select i1 %1, i64 8, i64 0
   ret i64 %2
 }
+
+; select Cond, 0, Pow2 --> (zext (!Cond)) << log2(Pow2)
+
+define i32 @select_0_or_16(i1 %cond) {
+; ARM-LABEL: select_0_or_16:
+; ARM:       @ %bb.0:
+; ARM-NEXT:    mov r1, #1
+; ARM-NEXT:    bic r0, r1, r0
+; ARM-NEXT:    lsl r0, r0, #4
+; ARM-NEXT:    mov pc, lr
+;
+; THUMB2-LABEL: select_0_or_16:
+; THUMB2:       @ %bb.0:
+; THUMB2-NEXT:    movs r1, #1
+; THUMB2-NEXT:    bic.w r0, r1, r0
+; THUMB2-NEXT:    lsls r0, r0, #4
+; THUMB2-NEXT:    bx lr
+;
+; THUMB-LABEL: select_0_or_16:
+; THUMB:       @ %bb.0:
+; THUMB-NEXT:    mvns r0, r0
+; THUMB-NEXT:    lsls r0, r0, #31
+; THUMB-NEXT:    lsrs r0, r0, #27
+; THUMB-NEXT:    bx lr
+  %sel = select i1 %cond, i32 0, i32 16
+  ret i32 %sel
+}

@@ -57,10 +57,9 @@ define i32 @test3a(i32 %a, i32 %b) {
 ; CHECK-LABEL: test3a:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    subs r0, r0, r1
-; CHECK-NEXT:    beq .LBB4_2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:    movs r0, #4
-; CHECK-NEXT:  .LBB4_2: @ %entry
+; CHECK-NEXT:    subs r1, r0, #1
+; CHECK-NEXT:    sbcs r0, r1
+; CHECK-NEXT:    lsls r0, r0, #2
 ; CHECK-NEXT:    bx lr
 entry:
   %cmp = icmp eq i32 %a, %b
@@ -88,13 +87,10 @@ entry:
 define i32 @test4a(i32 %a, i32 %b) {
 ; CHECK-LABEL: test4a:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    cmp r0, r1
-; CHECK-NEXT:    bne .LBB6_2
-; CHECK-NEXT:  @ %bb.1: @ %entry
-; CHECK-NEXT:    movs r0, #4
-; CHECK-NEXT:    bx lr
-; CHECK-NEXT:  .LBB6_2:
-; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    subs r0, r0, r1
+; CHECK-NEXT:    rsbs r1, r0, #0
+; CHECK-NEXT:    adcs r1, r0
+; CHECK-NEXT:    lsls r0, r1, #2
 ; CHECK-NEXT:    bx lr
 entry:
   %cmp = icmp ne i32 %a, %b
