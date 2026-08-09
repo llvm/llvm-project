@@ -56,6 +56,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 ### Potentially Breaking Changes
 
+- The deprecated `zircon` clang-tidy module has been removed. Users of
+  `zircon-temporary-objects` should migrate to {doc}`fuchsia-temporary-objects
+  <clang-tidy/checks/fuchsia/temporary-objects>`.
+
 ### Improvements to clangd
 
 #### Inlay hints
@@ -133,6 +137,9 @@ infrastructure are described first, followed by tool-specific sections.
   trailing semicolons and lost comments when the `if` body has no braces.
 
 #### Removed checks
+
+- Removed the deprecated `zircon-temporary-objects` check. Users should migrate to
+  {doc}`fuchsia-temporary-objects <clang-tidy/checks/fuchsia/temporary-objects>`.
 
 #### Miscellaneous
 
