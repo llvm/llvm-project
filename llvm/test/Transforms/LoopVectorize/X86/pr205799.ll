@@ -67,7 +67,7 @@ define { i32, i32 } @variant_step_induction(i8 %a, i32 %b) {
 ; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i8 [ [[IV_NEXT]], %[[LOOP]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[IV_NEXT_LCSSA]] to i32
-; CHECK-NEXT:    [[R0:%.*]] = insertvalue { i32, i32 } undef, i32 [[CONV]], 0
+; CHECK-NEXT:    [[R0:%.*]] = insertvalue { i32, i32 } poison, i32 [[CONV]], 0
 ; CHECK-NEXT:    [[R1:%.*]] = insertvalue { i32, i32 } [[R0]], i32 [[RDX_NEXT_LCSSA]], 1
 ; CHECK-NEXT:    ret { i32, i32 } [[R1]]
 ;
@@ -86,7 +86,7 @@ loop:
 
 exit:
   %conv = zext i8 %iv.next to i32
-  %r0 = insertvalue { i32, i32 } undef, i32 %conv, 0
+  %r0 = insertvalue { i32, i32 } poison, i32 %conv, 0
   %r1 = insertvalue { i32, i32 } %r0, i32 %rdx.next, 1
   ret { i32, i32 } %r1
 }
@@ -230,7 +230,7 @@ define { i32, i32 } @variant_step_induction_sub(i8 %a, i32 %b) {
 ; CHECK-NEXT:    [[RDX_NEXT_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i8 [ [[IV_NEXT]], %[[LOOP]] ], [ [[TMP14]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[IV_NEXT_LCSSA]] to i32
-; CHECK-NEXT:    [[R0:%.*]] = insertvalue { i32, i32 } undef, i32 [[CONV]], 0
+; CHECK-NEXT:    [[R0:%.*]] = insertvalue { i32, i32 } poison, i32 [[CONV]], 0
 ; CHECK-NEXT:    [[R1:%.*]] = insertvalue { i32, i32 } [[R0]], i32 [[RDX_NEXT_LCSSA]], 1
 ; CHECK-NEXT:    ret { i32, i32 } [[R1]]
 ;
@@ -249,7 +249,7 @@ loop:
 
 exit:
   %conv = zext i8 %iv.next to i32
-  %r0 = insertvalue { i32, i32 } undef, i32 %conv, 0
+  %r0 = insertvalue { i32, i32 } poison, i32 %conv, 0
   %r1 = insertvalue { i32, i32 } %r0, i32 %rdx.next, 1
   ret { i32, i32 } %r1
 }
