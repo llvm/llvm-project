@@ -937,15 +937,23 @@ static DefinedData *materializeOptionalDataSymbol(StringRef name,
                                                   bool force) {
   if (slot)
     return slot;
-  if (ctx.isPic) {
-    ctx.arg.allowUndefinedSymbols.insert(name);
-    return nullptr;
-  }
   if (DefinedData *d = symtab->addOptionalDataSymbol(name, 0, force))
     slot = d;
   else if (Symbol *s = symtab->find(name))
     slot = dyn_cast<DefinedData>(s);
   return slot;
+}
+
+static DefinedData *materializeOptionalDataLayoutSymbol(StringRef name,
+                                                        DefinedData *&slot,
+                                                        bool force) {
+  if (slot)
+    return slot;
+  if (ctx.isPic) {
+    ctx.arg.allowUndefinedSymbols.insert(name);
+    return nullptr;
+  }
+  return materializeOptionalDataSymbol(name, slot, force);
 }
 
 // Materialize a known optional linker-created symbol when required by a stub
@@ -960,35 +968,35 @@ static Symbol *resolveStubDependency(StringRef name) {
     return symtab->find(name);
   }
   if (name == "__data_end") {
-    materializeOptionalDataSymbol(name, ctx.sym.dataEnd, true);
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.dataEnd, true);
     return symtab->find(name);
   }
   if (name == "__rodata_start") {
-    materializeOptionalDataSymbol(name, ctx.sym.rodataStart, true);
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.rodataStart, true);
     return symtab->find(name);
   }
   if (name == "__rodata_end") {
-    materializeOptionalDataSymbol(name, ctx.sym.rodataEnd, true);
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.rodataEnd, true);
     return symtab->find(name);
   }
   if (name == "__stack_low") {
-    materializeOptionalDataSymbol(name, ctx.sym.stackLow, true);
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.stackLow, true);
     return symtab->find(name);
   }
   if (name == "__stack_high") {
-    materializeOptionalDataSymbol(name, ctx.sym.stackHigh, true);
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.stackHigh, true);
     return symtab->find(name);
   }
   if (name == "__global_base") {
-    materializeOptionalDataSymbol(name, ctx.sym.globalBase, true);
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.globalBase, true);
     return symtab->find(name);
   }
   if (name == "__heap_base") {
-    materializeOptionalDataSymbol(name, ctx.sym.heapBase, true);
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.heapBase, true);
     return symtab->find(name);
   }
   if (name == "__heap_end") {
-    materializeOptionalDataSymbol(name, ctx.sym.heapEnd, true);
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.heapEnd, true);
     return symtab->find(name);
   }
   if (name == "__memory_base" && !ctx.isPic) {
@@ -1019,30 +1027,16 @@ static void createOptionalSymbols() {
     return;
 
   if (!ctx.sym.dsoHandle)
-    ctx.sym.dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
+    materializeOptionalDataSymbol("__dso_handle", ctx.sym.dsoHandle, false);
 
-  auto addDataLayoutSymbol = [&](StringRef s, DefinedData *&slot) -> DefinedData * {
-    if (slot)
-      return slot;
-    if (ctx.isPic) {
-      ctx.arg.allowUndefinedSymbols.insert(s);
-      return nullptr;
-    }
-    if (DefinedData *d = symtab->addOptionalDataSymbol(s))
-      slot = d;
-    else if (Symbol *sym = symtab->find(s))
-      slot = dyn_cast<DefinedData>(sym);
-    return slot;
-  };
-
-  addDataLayoutSymbol("__data_end", ctx.sym.dataEnd);
-  addDataLayoutSymbol("__rodata_start", ctx.sym.rodataStart);
-  addDataLayoutSymbol("__rodata_end", ctx.sym.rodataEnd);
-  addDataLayoutSymbol("__stack_low", ctx.sym.stackLow);
-  addDataLayoutSymbol("__stack_high", ctx.sym.stackHigh);
-  addDataLayoutSymbol("__global_base", ctx.sym.globalBase);
-  addDataLayoutSymbol("__heap_base", ctx.sym.heapBase);
-  addDataLayoutSymbol("__heap_end", ctx.sym.heapEnd);
+  materializeOptionalDataLayoutSymbol("__data_end", ctx.sym.dataEnd, false);
+  materializeOptionalDataLayoutSymbol("__rodata_start", ctx.sym.rodataStart, false);
+  materializeOptionalDataLayoutSymbol("__rodata_end", ctx.sym.rodataEnd, false);
+  materializeOptionalDataLayoutSymbol("__stack_low", ctx.sym.stackLow, false);
+  materializeOptionalDataLayoutSymbol("__stack_high", ctx.sym.stackHigh, false);
+  materializeOptionalDataLayoutSymbol("__global_base", ctx.sym.globalBase, false);
+  materializeOptionalDataLayoutSymbol("__heap_base", ctx.sym.heapBase, false);
+  materializeOptionalDataLayoutSymbol("__heap_end", ctx.sym.heapEnd, false);
 
   // for pic, __memory_base and __table_base are handled in
   // createSyntheticSymbols.
@@ -1054,8 +1048,7 @@ static void createOptionalSymbols() {
   }
 
   if (!ctx.sym.firstPageEnd)
-    ctx.sym.firstPageEnd =
-        symtab->addOptionalDataSymbol("__wasm_first_page_end");
+    materializeOptionalDataSymbol("__wasm_first_page_end", ctx.sym.firstPageEnd, false);
   if (ctx.sym.firstPageEnd)
     ctx.sym.firstPageEnd->setVA(ctx.arg.pageSize);
 

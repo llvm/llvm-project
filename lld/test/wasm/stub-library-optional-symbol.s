@@ -48,3 +48,29 @@
 # CHECK-MEM:         Field:           foo_import
 # CHECK-MEM:       - Name:            __memory_base
 # CHECK-MEM-NEXT:    Kind:            GLOBAL
+
+# --- Case 7: PIC __dso_handle stub dependency (must be created) ---
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t-pic-dso.o %S/Inputs/stub-optional-absent.s
+# RUN: wasm-ld --experimental-pic -pie --import-memory %t-pic-dso.o %S/Inputs/libstub-dso-handle.so -o %t-pic-dso.wasm
+# RUN: obj2yaml %t-pic-dso.wasm | FileCheck %s --check-prefix=CHECK-PIC-DSO
+
+# --- Case 8: PIC __wasm_first_page_end stub dependency (must be created) ---
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t-pic-fpe.o %S/Inputs/stub-optional-absent.s
+# RUN: wasm-ld --experimental-pic -pie --import-memory %t-pic-fpe.o %S/Inputs/libstub-first-page-end.so -o %t-pic-fpe.wasm
+# RUN: obj2yaml %t-pic-fpe.wasm | FileCheck %s --check-prefix=CHECK-PIC-FPE
+
+# --- Case 9: PIC __heap_base stub dependency (must NOT be linker-created) ---
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t-pic-heap.o %S/Inputs/stub-optional-absent.s
+# RUN: not wasm-ld --experimental-pic -pie --import-memory %t-pic-heap.o %S/Inputs/libstub-heap-base.so -o %t-pic-heap.wasm 2>&1 | FileCheck %s --check-prefix=CHECK-PIC-HEAP-FAIL
+
+# CHECK-PIC-DSO:         Field:           foo_import
+# CHECK-PIC-DSO:       - Name:            __dso_handle
+# CHECK-PIC-DSO-NEXT:    Kind:            GLOBAL
+
+# CHECK-PIC-FPE:         InitExpr:
+# CHECK-PIC-FPE-NEXT:      Opcode:          I32_CONST
+# CHECK-PIC-FPE-NEXT:      Value:           65536
+# CHECK-PIC-FPE:       - Name:            __wasm_first_page_end
+# CHECK-PIC-FPE-NEXT:    Kind:            GLOBAL
+
+# CHECK-PIC-HEAP-FAIL: undefined symbol: __heap_base
