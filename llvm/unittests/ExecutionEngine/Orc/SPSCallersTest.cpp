@@ -23,10 +23,15 @@
 using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
-using llvm::orc::rt::sps::Int32Int32Caller;
-using llvm::orc::rt::sps::Int32VoidCaller;
-using llvm::orc::rt::sps::MainCaller;
-using llvm::orc::rt::sps::VoidVoidCaller;
+
+// rt::* are the runtime-agnostic caller handles; rt::sps::*Spec are the SPS
+// caller specs that supply each caller's dispatch function and
+// controller-interface name.
+namespace sps = llvm::orc::rt::sps;
+using llvm::orc::rt::Int32Int32Caller;
+using llvm::orc::rt::Int32VoidCaller;
+using llvm::orc::rt::MainCaller;
+using llvm::orc::rt::VoidVoidCaller;
 
 // Test "main" function. Returns argc plus the length of the first element of
 // argv (if argv is non-empty). Does not inspect argv entries beyond the first.
@@ -59,21 +64,22 @@ static CWrapperFunctionBuffer callMainWrapper(const char *ArgData,
 TEST(SPSCallersTest, CallMainSyncViaDirectConstruction) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
-  MainCaller CallMain(ES, ExecutorAddr::fromPtr(callMainWrapper));
+  MainCaller CallMain(sps::MainCallerSpec::dispatch,
+                      ExecutorAddr::fromPtr(callMainWrapper));
   ExecutorAddr MainAddr = ExecutorAddr::fromPtr(testMain);
 
   std::vector<std::string> Args;
-  Expected<int64_t> R0 = CallMain(MainAddr, Args);
+  Expected<int64_t> R0 = CallMain(ES, MainAddr, Args);
   ASSERT_THAT_EXPECTED(R0, Succeeded());
   EXPECT_EQ(*R0, 0); // argc == 0, no argv[0].
 
   Args = {"hello"};
-  Expected<int64_t> R1 = CallMain(MainAddr, Args);
+  Expected<int64_t> R1 = CallMain(ES, MainAddr, Args);
   ASSERT_THAT_EXPECTED(R1, Succeeded());
   EXPECT_EQ(*R1, 1 + 5); // argc == 1, strlen("hello") == 5.
 
   Args = {"a", "bb"};
-  Expected<int64_t> R2 = CallMain(MainAddr, Args);
+  Expected<int64_t> R2 = CallMain(ES, MainAddr, Args);
   ASSERT_THAT_EXPECTED(R2, Succeeded());
   EXPECT_EQ(*R2, 2 + 1); // argc == 2, strlen("a") == 1.
 
@@ -83,12 +89,13 @@ TEST(SPSCallersTest, CallMainSyncViaDirectConstruction) {
 TEST(SPSCallersTest, CallMainAsyncViaCallOperator) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
-  MainCaller CallMain(ES, ExecutorAddr::fromPtr(callMainWrapper));
+  MainCaller CallMain(sps::MainCallerSpec::dispatch,
+                      ExecutorAddr::fromPtr(callMainWrapper));
 
   std::vector<std::string> Args = {"foo", "bar"};
   std::promise<MSVCPExpected<int64_t>> P;
   auto F = P.get_future();
-  CallMain([&](Expected<int64_t> R) { P.set_value(std::move(R)); },
+  CallMain([&](Expected<int64_t> R) { P.set_value(std::move(R)); }, ES,
            ExecutorAddr::fromPtr(testMain), Args);
 
   Expected<int64_t> R = F.get();
@@ -98,51 +105,19 @@ TEST(SPSCallersTest, CallMainAsyncViaCallOperator) {
   cantFail(ES.endSession());
 }
 
-TEST(SPSCallersTest, CallMainThroughRTInterface) {
+// operator bool reflects whether the caller has a non-null callee address, and
+// calleeAddr() returns the address the caller was constructed with.
+TEST(SPSCallersTest, OperatorBoolAndAccessors) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
-  MainCaller CallMain(ES, ExecutorAddr::fromPtr(callMainWrapper));
+  ExecutorAddr CalleeAddr = ExecutorAddr::fromPtr(callMainWrapper);
+  MainCaller CallMain(sps::MainCallerSpec::dispatch, CalleeAddr);
+  EXPECT_TRUE(static_cast<bool>(CallMain));
+  EXPECT_EQ(CallMain.calleeAddr(), CalleeAddr);
 
-  // Drive the caller through the runtime-agnostic rt::MainCaller interface to
-  // exercise the virtual dispatch path (and to guard the interface's public
-  // accessibility).
-  rt::MainCaller &Base = CallMain;
-  ExecutorAddr MainAddr = ExecutorAddr::fromPtr(testMain);
-
-  // Synchronous call operator (inherited from rt::MainCaller).
-  std::vector<std::string> Args = {"hello"};
-  Expected<int64_t> RSync = Base(MainAddr, Args);
-  ASSERT_THAT_EXPECTED(RSync, Succeeded());
-  EXPECT_EQ(*RSync, 1 + 5); // argc == 1, strlen("hello") == 5.
-
-  // Asynchronous call operator (virtual).
-  std::promise<MSVCPExpected<int64_t>> P;
-  auto F = P.get_future();
-  Base([&](Expected<int64_t> R) { P.set_value(std::move(R)); }, MainAddr, Args);
-  Expected<int64_t> RAsync = F.get();
-  ASSERT_THAT_EXPECTED(RAsync, Succeeded());
-  EXPECT_EQ(*RAsync, 1 + 5);
-
-  cantFail(ES.endSession());
-}
-
-TEST(SPSCallersTest, CreateLooksUpCallMainInBootstrapJD) {
-  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
-
-  // Register the call-main wrapper in the bootstrap JITDylib under the name
-  // MainCaller::Create looks for.
-  auto &BootstrapJD = ES.getBootstrapJITDylib();
-  cantFail(BootstrapJD.define(absoluteSymbols(
-      {{ES.intern(MainCaller::CIName),
-        {ExecutorAddr::fromPtr(callMainWrapper), JITSymbolFlags::Exported}}})));
-
-  Expected<MainCaller> CallMain = MainCaller::Create(ES);
-  ASSERT_THAT_EXPECTED(CallMain, Succeeded());
-
-  std::vector<std::string> Args = {"x", "y", "z"};
-  Expected<int64_t> R = (*CallMain)(ExecutorAddr::fromPtr(testMain), Args);
-  ASSERT_THAT_EXPECTED(R, Succeeded());
-  EXPECT_EQ(*R, 3 + 1); // argc == 3, strlen("x") == 1.
+  // A default-constructed caller has a null callee address and is falsey.
+  MainCaller NullCall;
+  EXPECT_FALSE(static_cast<bool>(NullCall));
 
   cantFail(ES.endSession());
 }
@@ -183,19 +158,20 @@ static CWrapperFunctionBuffer callInt32Int32Wrapper(const char *ArgData,
 TEST(SPSCallersTest, VoidVoidSyncAndAsync) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
-  VoidVoidCaller Call(ES, ExecutorAddr::fromPtr(callVoidVoidWrapper));
+  VoidVoidCaller Call(sps::VoidVoidCallerSpec::dispatch,
+                      ExecutorAddr::fromPtr(callVoidVoidWrapper));
   ExecutorAddr TargetAddr = ExecutorAddr::fromPtr(voidVoidTarget);
 
   // Synchronous: the call operator returns Error, not Expected<T>.
   VoidVoidCallCount = 0;
-  EXPECT_THAT_ERROR(Call(TargetAddr), Succeeded());
+  EXPECT_THAT_ERROR(Call(ES, TargetAddr), Succeeded());
   EXPECT_EQ(VoidVoidCallCount, 1);
 
   // Asynchronous: the result is delivered as an Error.
   VoidVoidCallCount = 0;
   std::promise<MSVCPError> P;
   auto F = P.get_future();
-  Call([&](Error Err) { P.set_value(std::move(Err)); }, TargetAddr);
+  Call([&](Error Err) { P.set_value(std::move(Err)); }, ES, TargetAddr);
   EXPECT_THAT_ERROR(Error(F.get()), Succeeded());
   EXPECT_EQ(VoidVoidCallCount, 1);
 
@@ -203,28 +179,15 @@ TEST(SPSCallersTest, VoidVoidSyncAndAsync) {
 }
 
 // Exercises a non-void caller with an argument (so argument forwarding through
-// the pack is covered), and the Create / bootstrap lookup path for a caller
-// other than MainCaller.
-TEST(SPSCallersTest, Int32Int32SyncAndCreate) {
+// the pack is covered).
+TEST(SPSCallersTest, Int32Int32Sync) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
-  Int32Int32Caller Call(ES, ExecutorAddr::fromPtr(callInt32Int32Wrapper));
-  Expected<int32_t> RDirect = Call(ExecutorAddr::fromPtr(int32Int32Target), 21);
-  ASSERT_THAT_EXPECTED(RDirect, Succeeded());
-  EXPECT_EQ(*RDirect, 42); // 21 * 2.
-
-  auto &BootstrapJD = ES.getBootstrapJITDylib();
-  cantFail(BootstrapJD.define(
-      absoluteSymbols({{ES.intern(Int32Int32Caller::CIName),
-                        {ExecutorAddr::fromPtr(callInt32Int32Wrapper),
-                         JITSymbolFlags::Exported}}})));
-
-  Expected<Int32Int32Caller> CreatedCall = Int32Int32Caller::Create(ES);
-  ASSERT_THAT_EXPECTED(CreatedCall, Succeeded());
-  Expected<int32_t> RCreated =
-      (*CreatedCall)(ExecutorAddr::fromPtr(int32Int32Target), 21);
-  ASSERT_THAT_EXPECTED(RCreated, Succeeded());
-  EXPECT_EQ(*RCreated, 42); // 21 * 2.
+  Int32Int32Caller Call(sps::Int32Int32CallerSpec::dispatch,
+                        ExecutorAddr::fromPtr(callInt32Int32Wrapper));
+  Expected<int32_t> R = Call(ES, ExecutorAddr::fromPtr(int32Int32Target), 21);
+  ASSERT_THAT_EXPECTED(R, Succeeded());
+  EXPECT_EQ(*R, 42); // 21 * 2.
 
   cantFail(ES.endSession());
 }
@@ -249,28 +212,48 @@ static CWrapperFunctionBuffer callInt32VoidWrapper(const char *ArgData,
 TEST(SPSCallersTest, Int32VoidSync) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
-  Int32VoidCaller Call(ES, ExecutorAddr::fromPtr(callInt32VoidWrapper));
-  Expected<int32_t> R = Call(ExecutorAddr::fromPtr(int32VoidTarget));
+  Int32VoidCaller Call(sps::Int32VoidCallerSpec::dispatch,
+                       ExecutorAddr::fromPtr(callInt32VoidWrapper));
+  Expected<int32_t> R = Call(ES, ExecutorAddr::fromPtr(int32VoidTarget));
   ASSERT_THAT_EXPECTED(R, Succeeded());
   EXPECT_EQ(*R, 42);
 
   cantFail(ES.endSession());
 }
 
-// operator bool reflects whether the caller has a non-null callee address, and
-// the accessors return the values the caller was constructed with.
-TEST(SPSCallersTest, OperatorBoolAndAccessors) {
+// Create looks the callee up by name in the bootstrap JITDylib and binds a
+// usable caller to it (required-symbol, present).
+TEST(SPSCallersTest, CreateLooksUpCallMainInBootstrapJD) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
-  ExecutorAddr CalleeAddr = ExecutorAddr::fromPtr(callMainWrapper);
-  MainCaller CallMain(ES, CalleeAddr);
-  EXPECT_TRUE(static_cast<bool>(CallMain));
-  EXPECT_EQ(CallMain.calleeAddr(), CalleeAddr);
-  EXPECT_EQ(&CallMain.executionSession(), &ES);
+  auto &BootstrapJD = ES.getBootstrapJITDylib();
+  cantFail(BootstrapJD.define(absoluteSymbols(
+      {{ES.intern(sps::MainCallerSpec::Name),
+        {ExecutorAddr::fromPtr(callMainWrapper), JITSymbolFlags::Exported}}})));
 
-  // A caller with a null callee address is falsey.
-  MainCaller NullCall(ES, ExecutorAddr());
-  EXPECT_FALSE(static_cast<bool>(NullCall));
+  Expected<MainCaller> CallMain = MainCaller::Create(
+      sps::MainCallerSpec::dispatch, ES, sps::MainCallerSpec::Name,
+      SymbolLookupFlags::RequiredSymbol);
+  ASSERT_THAT_EXPECTED(CallMain, Succeeded());
+
+  std::vector<std::string> Args = {"x", "y", "z"};
+  Expected<int64_t> R = (*CallMain)(ES, ExecutorAddr::fromPtr(testMain), Args);
+  ASSERT_THAT_EXPECTED(R, Succeeded());
+  EXPECT_EQ(*R, 3 + 1); // argc == 3, strlen("x") == 1.
+
+  cantFail(ES.endSession());
+}
+
+// A required (default) Create against a missing symbol fails, rather than
+// yielding a null caller as the weakly-referenced form does.
+TEST(SPSCallersTest, CreateRequiredAbsentFails) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  // Nothing is defined for the call-main name in the bootstrap JITDylib.
+  Expected<MainCaller> CallMain = MainCaller::Create(
+      sps::MainCallerSpec::dispatch, ES, sps::MainCallerSpec::Name,
+      SymbolLookupFlags::RequiredSymbol);
+  EXPECT_THAT_EXPECTED(CallMain, Failed());
 
   cantFail(ES.endSession());
 }
@@ -280,9 +263,9 @@ TEST(SPSCallersTest, OperatorBoolAndAccessors) {
 TEST(SPSCallersTest, CreateWeaklyReferencedAbsent) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
-  // Nothing is defined for MainCaller::CIName in the bootstrap JITDylib.
-  Expected<MainCaller> CallMain =
-      MainCaller::Create(ES, SymbolLookupFlags::WeaklyReferencedSymbol);
+  Expected<MainCaller> CallMain = MainCaller::Create(
+      sps::MainCallerSpec::dispatch, ES, sps::MainCallerSpec::Name,
+      SymbolLookupFlags::WeaklyReferencedSymbol);
   ASSERT_THAT_EXPECTED(CallMain, Succeeded());
   EXPECT_FALSE(static_cast<bool>(*CallMain));
   EXPECT_EQ(CallMain->calleeAddr(), ExecutorAddr());
@@ -298,33 +281,38 @@ TEST(SPSCallersTest, CreateWeaklyReferencedPresent) {
   auto &BootstrapJD = ES.getBootstrapJITDylib();
   ExecutorAddr CalleeAddr = ExecutorAddr::fromPtr(callMainWrapper);
   cantFail(BootstrapJD.define(
-      absoluteSymbols({{ES.intern(MainCaller::CIName),
+      absoluteSymbols({{ES.intern(sps::MainCallerSpec::Name),
                         {CalleeAddr, JITSymbolFlags::Exported}}})));
 
-  Expected<MainCaller> CallMain =
-      MainCaller::Create(ES, SymbolLookupFlags::WeaklyReferencedSymbol);
+  Expected<MainCaller> CallMain = MainCaller::Create(
+      sps::MainCallerSpec::dispatch, ES, sps::MainCallerSpec::Name,
+      SymbolLookupFlags::WeaklyReferencedSymbol);
   ASSERT_THAT_EXPECTED(CallMain, Succeeded());
   EXPECT_TRUE(static_cast<bool>(*CallMain));
   EXPECT_EQ(CallMain->calleeAddr(), CalleeAddr);
 
-  // The resolved caller is usable.
-  std::vector<std::string> Args = {"a", "bb"};
-  Expected<int64_t> R = (*CallMain)(ExecutorAddr::fromPtr(testMain), Args);
-  ASSERT_THAT_EXPECTED(R, Succeeded());
-  EXPECT_EQ(*R, 2 + 1); // argc == 2, strlen("a") == 1.
-
   cantFail(ES.endSession());
 }
 
-// A required (default) Create against a missing symbol fails, rather than
-// yielding a null caller as the weakly-referenced form does.
-TEST(SPSCallersTest, CreateRequiredAbsentFails) {
+// buildCallers resolves a caller from the bootstrap JITDylib via its builder,
+// exercising the callerInit / buildCallers client entry point.
+TEST(SPSCallersTest, BuildCallersResolvesFromBootstrap) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
-  // Nothing is defined for MainCaller::CIName in the bootstrap JITDylib, and
-  // the default lookup requires the symbol.
-  Expected<MainCaller> CallMain = MainCaller::Create(ES);
-  EXPECT_THAT_EXPECTED(CallMain, Failed());
+  auto &BootstrapJD = ES.getBootstrapJITDylib();
+  cantFail(BootstrapJD.define(absoluteSymbols(
+      {{ES.intern(sps::MainCallerSpec::Name),
+        {ExecutorAddr::fromPtr(callMainWrapper), JITSymbolFlags::Exported}}})));
+
+  MainCaller CallMain;
+  cantFail(
+      rt::buildCallers(ES, rt::callerInit<sps::MainCallerSpec>(&CallMain)));
+  ASSERT_TRUE(static_cast<bool>(CallMain));
+
+  std::vector<std::string> Args = {"hi"};
+  Expected<int64_t> R = CallMain(ES, ExecutorAddr::fromPtr(testMain), Args);
+  ASSERT_THAT_EXPECTED(R, Succeeded());
+  EXPECT_EQ(*R, 1 + 2); // argc == 1, strlen("hi") == 2.
 
   cantFail(ES.endSession());
 }
