@@ -102,13 +102,11 @@ bool DominatorTree::dominates(const Value *DefV,
   const BasicBlock *DefBB = Def->getParent();
 
   // Any unreachable use is dominated, even if Def == User.
-  const DomTreeNode *UseNode = getNode(UseBB);
-  if (!UseNode)
+  if (!isReachableFromEntry(UseBB))
     return true;
 
   // Unreachable definitions don't dominate anything.
-  const DomTreeNode *DefNode = getNode(DefBB);
-  if (!DefNode)
+  if (!isReachableFromEntry(DefBB))
     return false;
 
   // An instruction doesn't dominate a use in itself.
@@ -123,7 +121,7 @@ bool DominatorTree::dominates(const Value *DefV,
     return dominates(Def, UseBB);
 
   if (DefBB != UseBB)
-    return dominates(DefNode, UseNode);
+    return dominates(DefBB, UseBB);
 
   return Def->comesBefore(User);
 }
@@ -135,13 +133,11 @@ bool DominatorTree::dominates(const Instruction *Def,
   const BasicBlock *DefBB = Def->getParent();
 
   // Any unreachable use is dominated, even if DefBB == UseBB.
-  const DomTreeNode *UseNode = getNode(UseBB);
-  if (!UseNode)
+  if (!isReachableFromEntry(UseBB))
     return true;
 
   // Unreachable definitions don't dominate anything.
-  const DomTreeNode *DefNode = getNode(DefBB);
-  if (!DefNode)
+  if (!isReachableFromEntry(DefBB))
     return false;
 
   if (DefBB == UseBB)
@@ -155,7 +151,7 @@ bool DominatorTree::dominates(const Instruction *Def,
     return dominates(E, UseBB);
   }
 
-  return dominates(DefNode, UseNode);
+  return dominates(DefBB, UseBB);
 }
 
 bool DominatorTree::dominates(const BasicBlockEdge &BBE,
@@ -164,8 +160,7 @@ bool DominatorTree::dominates(const BasicBlockEdge &BBE,
   // edge also doesn't.
   const BasicBlock *Start = BBE.getStart();
   const BasicBlock *End = BBE.getEnd();
-  const DomTreeNode *EndNode = getNode(End);
-  if (!dominates(EndNode, getNode(UseBB)))
+  if (!dominates(End, UseBB))
     return false;
 
   // Simple case: if the end BB has a single predecessor, the fact that it
@@ -203,7 +198,7 @@ bool DominatorTree::dominates(const BasicBlockEdge &BBE,
       continue;
     }
 
-    if (!dominates(EndNode, getNode(BB)))
+    if (!dominates(End, BB))
       return false;
   }
   return true;
@@ -248,13 +243,11 @@ bool DominatorTree::dominates(const Value *DefV, const Use &U) const {
     UseBB = UserInst->getParent();
 
   // Any unreachable use is dominated, even if Def == User.
-  const DomTreeNode *UseNode = getNode(UseBB);
-  if (!UseNode)
+  if (!isReachableFromEntry(UseBB))
     return true;
 
   // Unreachable definitions don't dominate anything.
-  const DomTreeNode *DefNode = getNode(DefBB);
-  if (!DefNode)
+  if (!isReachableFromEntry(DefBB))
     return false;
 
   // Invoke instructions define their return values on the edges to their normal
@@ -271,7 +264,7 @@ bool DominatorTree::dominates(const Value *DefV, const Use &U) const {
   // If the def and use are in different blocks, do a simple CFG dominator
   // tree query.
   if (DefBB != UseBB)
-    return dominates(DefNode, UseNode);
+    return dominates(DefBB, UseBB);
 
   // Ok, def and use are in the same block. If the def is an invoke, it
   // doesn't dominate anything in the block. If it's a PHI, it dominates

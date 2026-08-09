@@ -1,7 +1,7 @@
 add_subdirectory(testdata)
 add_custom_target(libc_dirent_unittests)
 
-add_libc_test(
+add_libc_unittest(
   dirent_test
   SUITE
     libc_dirent_unittests
@@ -17,7 +17,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   fdopendir_test
   SUITE
     libc_dirent_unittests

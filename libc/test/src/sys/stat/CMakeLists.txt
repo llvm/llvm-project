@@ -2,7 +2,7 @@ add_custom_target(libc_sys_stat_unittests)
 
 add_subdirectory(testdata)
 
-add_libc_test(
+add_libc_unittest(
   chmod_test
   SUITE
     libc_sys_stat_unittests
@@ -21,7 +21,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   fchmodat_test
   SUITE
     libc_sys_stat_unittests
@@ -40,7 +40,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   fchmod_test
   SUITE
     libc_sys_stat_unittests
@@ -59,7 +59,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   mkdirat_test
   SUITE
     libc_sys_stat_unittests
@@ -75,7 +75,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   stat_test
   SUITE
     libc_sys_stat_unittests
@@ -94,7 +94,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   lstat_test
   SUITE
     libc_sys_stat_unittests
@@ -113,7 +113,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   fstat_test
   SUITE
     libc_sys_stat_unittests
@@ -132,7 +132,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   utimensat_test
   SUITE
     libc_sys_stat_unittests

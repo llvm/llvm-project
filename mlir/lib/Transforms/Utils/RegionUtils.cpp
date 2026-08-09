@@ -831,19 +831,12 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
   return success();
 }
 
-/// Returns true if the predecessor terminators of the given block can have
-/// their operands updated by appending values of the given types: each must
-/// implement BranchOpInterface and be willing to forward every one of the
-/// types to the block.
-static bool ableToUpdatePredOperands(Block *block, ArrayRef<Type> types) {
+/// Returns true if the predecessor terminators of the given block can not have
+/// their operands updated.
+static bool ableToUpdatePredOperands(Block *block) {
   for (auto it = block->pred_begin(), e = block->pred_end(); it != e; ++it) {
-    auto branch = dyn_cast<BranchOpInterface>((*it)->getTerminator());
-    if (!branch)
+    if (!isa<BranchOpInterface>((*it)->getTerminator()))
       return false;
-    unsigned succIndex = it.getSuccessorIndex();
-    for (Type type : types)
-      if (!branch.mayForwardTypeToSuccessor(succIndex, type))
-        return false;
   }
   return true;
 }
@@ -944,27 +937,11 @@ LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
   if (!operandsToMerge.empty()) {
     // If the cluster has operands to merge, verify that the predecessor
     // terminators of each of the blocks can have their successor operands
-    // updated: merging threads the mismatched values through them as new
-    // successor operands, so each terminator must be able to forward values
-    // of those types. The types are read off the leader block; addToCluster
-    // already required every block's mismatched operand types to match.
+    // updated.
     // TODO: We could try and sub-partition this cluster if only some blocks
     // cause the mismatch.
-    SmallVector<Type> operandTypes;
-    operandTypes.reserve(operandsToMerge.size());
-    {
-      unsigned curOpIndex = 0;
-      Block::iterator opIt = leaderBlock->begin();
-      for (const auto &it : operandsToMerge) {
-        std::advance(opIt, it.first - curOpIndex);
-        curOpIndex = it.first;
-        operandTypes.push_back(opIt->getOperand(it.second).getType());
-      }
-    }
-    if (!ableToUpdatePredOperands(leaderBlock, operandTypes) ||
-        !llvm::all_of(blocksToMerge, [&](Block *block) {
-          return ableToUpdatePredOperands(block, operandTypes);
-        }))
+    if (!ableToUpdatePredOperands(leaderBlock) ||
+        !llvm::all_of(blocksToMerge, ableToUpdatePredOperands))
       return failure();
 
     // Collect the iterators for each of the blocks to merge. We will walk all

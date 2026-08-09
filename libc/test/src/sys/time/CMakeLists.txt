@@ -1,6 +1,6 @@
 add_custom_target(libc_sys_time_unittests)
 
-add_libc_test(
+add_libc_unittest(
   utimes_test
   SUITE
     libc_sys_time_unittests
@@ -20,7 +20,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   setitimer_test
   SUITE
     libc_sys_time_unittests
@@ -38,7 +38,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   getitimer_test
   SUITE
     libc_sys_time_unittests
@@ -53,7 +53,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   gettimeofday_test
   SUITE
     libc_sys_time_unittests

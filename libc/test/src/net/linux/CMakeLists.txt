@@ -1,6 +1,6 @@
 add_custom_target(libc_net_unittests)
 
-add_libc_test(
+add_libc_unittest(
   if_indextoname_test
   SUITE
     libc_net_unittests
@@ -14,7 +14,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   if_nametoindex_test
   SUITE
     libc_net_unittests
@@ -26,7 +26,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   if_nameindex_test
   SUITE
     libc_net_unittests

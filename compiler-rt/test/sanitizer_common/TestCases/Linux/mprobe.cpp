@@ -1,6 +1,5 @@
 // RUN: %clangxx %s -o %t && %run %t 2>&1 | FileCheck %s
 // UNSUPPORTED: android, hwasan, ubsan
-// UNSUPPORTED: rtsan
 
 #include <stdio.h>
 #include <stdlib.h>

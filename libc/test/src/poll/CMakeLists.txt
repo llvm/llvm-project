@@ -1,6 +1,6 @@
 add_custom_target(libc_poll_unittests)
 
-add_libc_test(
+add_libc_unittest(
   poll_test
   SUITE
     libc_poll_unittests

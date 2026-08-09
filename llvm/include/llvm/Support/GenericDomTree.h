@@ -462,8 +462,10 @@ public:
   bool isReachableFromEntry(const NodeT *A) const {
     assert(!this->isPostDominator() &&
            "This is not implemented for post dominators");
-    return getNode(A) != nullptr;
+    return isReachableFromEntry(getNode(A));
   }
+
+  bool isReachableFromEntry(const DomTreeNodeBase<NodeT> *A) const { return A; }
 
   /// dominates - Returns true iff A dominates B.  Note that this is not a
   /// constant time operation!
@@ -475,11 +477,11 @@ public:
       return true;
 
     // An unreachable node is dominated by anything.
-    if (!B)
+    if (!isReachableFromEntry(B))
       return true;
 
     // And dominates nothing.
-    if (!A)
+    if (!isReachableFromEntry(A))
       return false;
 
     if (B->getIDom() == A) return true;
@@ -937,7 +939,8 @@ protected:
   bool dominatedBySlowTreeWalk(const DomTreeNodeBase<NodeT> *A,
                                const DomTreeNodeBase<NodeT> *B) const {
     assert(A != B);
-    assert(A && B);
+    assert(isReachableFromEntry(B));
+    assert(isReachableFromEntry(A));
 
     const unsigned ALevel = A->getLevel();
     const DomTreeNodeBase<NodeT> *IDom;

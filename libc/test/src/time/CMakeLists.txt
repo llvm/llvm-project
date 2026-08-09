@@ -12,7 +12,7 @@ add_header_library(
     LibcTest
 )
 
-add_libc_test(
+add_libc_unittest(
   asctime_test
   SUITE
     libc_time_unittests
@@ -29,7 +29,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   asctime_r_test
   SUITE
     libc_time_unittests
@@ -46,7 +46,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   ctime_test
   SUITE
     libc_time_unittests
@@ -64,7 +64,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   ctime_r_test
   SUITE
     libc_time_unittests
@@ -82,7 +82,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   localtime_test
   SUITE
     libc_time_unittests
@@ -93,7 +93,7 @@ add_libc_test(
     libc.src.time.localtime
 )
 
-add_libc_test(
+add_libc_unittest(
   localtime_r_test
   SUITE
     libc_time_unittests
@@ -143,7 +143,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   difftime_test
   SUITE
     libc_time_unittests
@@ -155,7 +155,7 @@ add_libc_test(
     libc.src.__support.FPUtil.fp_bits
 )
 
-add_libc_test(
+add_libc_unittest(
   gmtime_test
   SUITE
     libc_time_unittests
@@ -172,7 +172,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   gmtime_r_test
   SUITE
     libc_time_unittests
@@ -238,7 +238,7 @@ add_libc_test(
     libc.src.time.strptime
 )
 
-add_libc_test(
+add_libc_unittest(
   time_test
   SUITE
     libc_time_unittests

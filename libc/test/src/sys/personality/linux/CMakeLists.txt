@@ -1,6 +1,6 @@
 add_custom_target(libc_sys_personality_unittests)
 
-add_libc_test(
+add_libc_unittest(
   personality_test
   SUITE
     libc_sys_personality_unittests

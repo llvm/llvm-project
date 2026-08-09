@@ -1,6 +1,5 @@
 // UNSUPPORTED: android
 // UNSUPPORTED: hwasan
-// UNSUPPORTED: rtsan
 
 // RUN: %clangxx -O0 %s -o %t
 

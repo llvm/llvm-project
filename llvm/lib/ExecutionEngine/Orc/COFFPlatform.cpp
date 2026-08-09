@@ -13,7 +13,7 @@
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpecs.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/Calls.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Object/COFF.h"
@@ -663,14 +663,13 @@ Error COFFPlatform::runBootstrapInitializers(JDBootstrapState &BState) {
 Error COFFPlatform::runBootstrapSubsectionInitializers(JDBootstrapState &BState,
                                                        StringRef Start,
                                                        StringRef End) {
-  rt::CallInt32VoidProxy CallInitializer;
-  if (auto Err = rt::buildProxies(
-          ES, rt::proxyInit<rt::sps::CallInt32VoidProxySpec>(&CallInitializer)))
-    return Err;
+  auto CallInitializer = rt::sps::Int32VoidCaller::Create(ES);
+  if (!CallInitializer)
+    return CallInitializer.takeError();
   for (auto &Initializer : BState.Initializers)
     if (Initializer.first >= Start && Initializer.first <= End &&
         Initializer.second) {
-      auto Res = CallInitializer(ES, Initializer.second);
+      auto Res = (*CallInitializer)(Initializer.second);
       if (!Res)
         return Res.takeError();
     }
@@ -736,11 +735,10 @@ Error COFFPlatform::runSymbolIfExists(JITDylib &PlatformJD,
       ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
       {{ES.intern(SymbolName), &jit_function}});
   if (!AfterCLookupErr) {
-    rt::CallInt32VoidProxy CallFn;
-    if (auto Err = rt::buildProxies(
-            ES, rt::proxyInit<rt::sps::CallInt32VoidProxySpec>(&CallFn)))
-      return Err;
-    auto Res = CallFn(ES, jit_function);
+    auto CallFn = rt::sps::Int32VoidCaller::Create(ES);
+    if (!CallFn)
+      return CallFn.takeError();
+    auto Res = (*CallFn)(jit_function);
     if (!Res)
       return Res.takeError();
     return Error::success();

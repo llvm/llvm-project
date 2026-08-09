@@ -20,8 +20,6 @@
 // Currently fails on darwin/lsan
 // XFAIL: darwin && lsan
 
-// UNSUPPORTED: rtsan
-
 #include <malloc/malloc.h>
 #include <stdlib.h>
 #include <stdio.h>

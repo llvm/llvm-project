@@ -1,6 +1,6 @@
 add_custom_target(libc_stack_chk_guard_unittests)
 
-add_libc_test(
+add_libc_unittest(
   stack_chk_guard_test
   SUITE
     libc_stack_chk_guard_unittests

@@ -13,36 +13,23 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_JITLINKDYLIB_H
 #define LLVM_EXECUTIONENGINE_JITLINK_JITLINKDYLIB_H
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Compiler.h"
-
 #include <string>
 
-namespace llvm::jitlink {
+namespace llvm {
+namespace jitlink {
 
-class JITLinkMemoryManager;
-
-/// Represents a JITDylib as seen by JITLink.
-class LLVM_ABI JITLinkDylib {
+class JITLinkDylib {
 public:
   JITLinkDylib(std::string Name) : Name(std::move(Name)) {}
-
-  ~JITLinkDylib();
 
   /// Get the name for this JITLinkDylib.
   const std::string &getName() const { return Name; }
 
-  /// Register a JITLinkMemoryManager to be notified when this JITLinkDylib
-  /// is destroyed.
-  void notifyOnDestruction(JITLinkMemoryManager &MemMgr) {
-    ToNotifyOnDestruction.push_back(&MemMgr);
-  }
-
 private:
   std::string Name;
-  SmallVector<JITLinkMemoryManager *> ToNotifyOnDestruction;
 };
 
-} // namespace llvm::jitlink
+} // end namespace jitlink
+} // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_JITLINK_JITLINKDYLIB_H

@@ -664,9 +664,7 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
   }
 
   if (match(V, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI)) {
-    // The scale 1 << shift must fit in the signed coefficient, so reject a
-    // shift of 63, for which int64_t{1} << 63 is INT64_MIN.
-    if (CI->getSExtValue() < 0 || CI->getSExtValue() >= 63)
+    if (CI->getSExtValue() < 0 || CI->getSExtValue() >= 64)
       return V;
     auto Result = decompose(Op1, Info, IsSigned, DL);
     if (!Result.mul(int64_t{1} << CI->getSExtValue()))

@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include <algorithm>
 #include <cassert>
 #include <memory>
 
@@ -19,7 +18,6 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/ImmutableList.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
@@ -177,14 +175,12 @@ public:
     using SearchState = std::pair<const CFGBlock *, OriginID>;
     struct DFSNode {
       SearchState CurrState;
-      llvm::ImmutableList<OriginID> OriginFlowChain;
+      llvm::SmallVector<OriginID> OriginFlowChain;
     };
 
     llvm::SmallVector<DFSNode> PendingStates;
     llvm::SmallSet<SearchState, 16> VistedStates;
-    llvm::ImmutableList<OriginID>::Factory OriginFlowChainFactory;
-    PendingStates.push_back(
-        {{EndBlock, StartOID}, OriginFlowChainFactory.getEmptyList()});
+    PendingStates.push_back({{EndBlock, StartOID}, {}});
 
     // DFS loop to trace loan backwards through CFG
     while (!PendingStates.empty()) {
@@ -195,19 +191,13 @@ public:
       const auto [BuildResult, Complete] =
           buildOriginFlowChain(CurrBlock, CurrOID, TargetLoan);
       if (!BuildResult.empty()) {
-        for (OriginID OID : BuildResult)
-          CurrNode.OriginFlowChain =
-              OriginFlowChainFactory.add(OID, CurrNode.OriginFlowChain);
+        CurrNode.OriginFlowChain.append(BuildResult);
         CurrOID = BuildResult.back();
       }
 
       // If we found the IssueFact, we're done
-      if (Complete) {
-        llvm::SmallVector<OriginID> Result(CurrNode.OriginFlowChain.begin(),
-                                           CurrNode.OriginFlowChain.end());
-        std::reverse(Result.begin(), Result.end());
-        return Result;
-      }
+      if (Complete)
+        return CurrNode.OriginFlowChain;
 
       // Only explore predecessor blocks where the target loan is present in the
       // current origin.
@@ -219,8 +209,8 @@ public:
       }
     }
 
-    llvm_unreachable("Could not reconstruct origin flow. Search finished "
-                     "without reaching IssueFact");
+    llvm_unreachable(
+        "buildOriginFlowChain did not reach IssueFact for TargetLoan");
   }
 
   llvm::SmallVector<OriginID> buildOriginFlowChain(const UseFact *UF,

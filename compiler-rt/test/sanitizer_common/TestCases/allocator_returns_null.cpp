@@ -38,8 +38,6 @@
 // TODO(alekseyshl): win32 is disabled due to failing errno tests, fix it there.
 // UNSUPPORTED: ubsan, target={{.*windows-msvc.*}}
 
-// UNSUPPORTED: rtsan
-
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>

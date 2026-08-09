@@ -1,6 +1,6 @@
 add_custom_target(libc_sys_statvfs_unittests)
 
-add_libc_test(
+add_libc_unittest(
   statvfs_test
   SUITE
     libc_sys_statvfs_unittests
@@ -16,7 +16,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   fstatvfs_test
   SUITE
     libc_sys_statvfs_unittests

@@ -3,7 +3,6 @@
 // UNSUPPORTED: lsan
 // UNSUPPORTED: msan
 // UNSUPPORTED: ubsan
-// UNSUPPORTED: rtsan
 #include <stdio.h>
 int main() {
   int a;

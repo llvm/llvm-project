@@ -8,7 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
-#include "llvm/ExecutionEngine/Orc/RTBridge/Proxy.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/Calls.h"
 
 namespace llvm {
 namespace orc {

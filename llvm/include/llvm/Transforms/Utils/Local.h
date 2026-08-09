@@ -411,14 +411,11 @@ LLVM_ABI Instruction *removeUnwindEdge(BasicBlock *BB,
                                        DomTreeUpdater *DTU = nullptr);
 
 /// Remove all blocks that can not be reached from the function's entry.
-/// When \p FoldInstsToUnreachable is true, it will also convert obviously
-/// unreachable instructions into unreachable (e.g, store to null).
 ///
-/// Returns true if any basic block was removed or any instruction was folded.
+/// Returns true if any basic block was removed.
 LLVM_ABI bool removeUnreachableBlocks(Function &F,
                                       DomTreeUpdater *DTU = nullptr,
-                                      MemorySSAUpdater *MSSAU = nullptr,
-                                      bool FoldInstsToUnreachable = true);
+                                      MemorySSAUpdater *MSSAU = nullptr);
 
 /// Combine the metadata of two instructions so that K can replace J. This
 /// specifically handles the case of CSE-like transformations. Some

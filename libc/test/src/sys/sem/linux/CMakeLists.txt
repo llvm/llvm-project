@@ -1,6 +1,6 @@
 add_custom_target(libc_sys_sem_unittests)
 
-add_libc_test(
+add_libc_unittest(
   sem_test
   SUITE
     libc_sys_sem_unittests

@@ -18,7 +18,6 @@
 // REQUIRES: stable-runtime
 
 // UNSUPPORTED: ubsan
-// UNSUPPORTED: rtsan
 
 #include <assert.h>
 #include <errno.h>

@@ -517,7 +517,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   wcsxfrm_test
   SUITE
     libc_wchar_unittests

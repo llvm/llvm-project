@@ -20,7 +20,7 @@ add_header_library(
 
 add_custom_target(libc_sys_socket_unittests)
 
-add_libc_test(
+add_libc_unittest(
   socket_test
   SUITE
     libc_sys_socket_unittests
@@ -35,7 +35,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   bind_test
   SUITE
     libc_sys_socket_unittests
@@ -62,7 +62,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   connect_accept_test
   SUITE
     libc_sys_socket_unittests
@@ -92,7 +92,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   listen_test
   SUITE
     libc_sys_socket_unittests
@@ -114,7 +114,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   socketopt_test
   SUITE
     libc_sys_socket_unittests
@@ -142,7 +142,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   socketpair_test
   SUITE
     libc_sys_socket_unittests
@@ -157,7 +157,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   sockatmark_test
   SUITE
     libc_sys_socket_unittests
@@ -176,7 +176,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   sockname_test
   SUITE
     libc_sys_socket_unittests
@@ -203,7 +203,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   send_recv_test
   SUITE
     libc_sys_socket_unittests
@@ -221,7 +221,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   sendto_recvfrom_test
   SUITE
     libc_sys_socket_unittests
@@ -239,7 +239,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   sendrecvmmsg_test
   SUITE
     libc_sys_socket_unittests
@@ -261,7 +261,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   sendmsg_recvmsg_test
   SUITE
     libc_sys_socket_unittests
@@ -285,7 +285,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   shutdown_test
   SUITE
     libc_sys_socket_unittests
@@ -305,7 +305,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   sockaddr_storage_test
   SUITE
     libc_sys_socket_unittests

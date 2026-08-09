@@ -9,8 +9,6 @@
 // No allocator and hooks.
 // XFAIL: ubsan
 
-// UNSUPPORTED: rtsan
-
 #ifndef BUILD_SO
 #  include <assert.h>
 #  include <dlfcn.h>

@@ -69,7 +69,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
     unsigned Parent = 0;
     unsigned Semi = 0;
     unsigned Label = 0;
-    unsigned IDom = 0;
+    NodePtr IDom = nullptr;
     // Head index + 1 into ReverseChildren; 0: empty list.
     unsigned ReverseChildrenStart = 0;
   };
@@ -138,6 +138,24 @@ template <typename DomTreeT> struct SemiNCAInfo {
     if constexpr (IsPostDom)
       return NodeInfos[BB ? GraphTraits<NodePtr>::getNumber(BB) + 1 : 0];
     return NodeInfos[GraphTraits<NodePtr>::getNumber(BB)];
+  }
+
+  NodePtr getIDom(NodePtr BB) { return getNodeInfo(BB).IDom; }
+
+  TreeNodePtr getNodeForBlock(NodePtr BB, DomTreeT &DT) {
+    if (TreeNodePtr Node = DT.getNode(BB))
+      return Node;
+
+    // Haven't calculated this node yet?  Get or calculate the node for the
+    // immediate dominator.
+    NodePtr IDom = getIDom(BB);
+
+    assert(IDom || DT.getNode(nullptr));
+    TreeNodePtr IDomNode = getNodeForBlock(IDom, DT);
+
+    // Add a new tree node for this NodeT, and link it as a child of
+    // IDomNode
+    return DT.createNode(BB, IDomNode);
   }
 
   static bool AlwaysDescend(NodePtr, NodePtr) { return true; }
@@ -269,14 +287,16 @@ template <typename DomTreeT> struct SemiNCAInfo {
   // This function requires DFS to be run before calling it.
   void runSemiNCA() {
     const unsigned NextDFSNum(NumToNode.size());
-    // NumToInfo is indexed by DFS number; 0 is the root. IDoms holds
+    // NumToInfo and IDoms are indexed by DFS number; 0 is the root. IDoms holds
     // immediate dominators in DFS-number space, initialized below to spanning
     // tree parents.
     SmallVector<InfoRec *, 32> NumToInfo;
     NumToInfo.resize_for_overwrite(NextDFSNum);
+    SmallVector<unsigned, 32> IDoms;
+    IDoms.resize_for_overwrite(NextDFSNum);
     for (unsigned i = 0; i < NextDFSNum; ++i) {
       auto &VInfo = getNodeInfo(NumToNode[i]);
-      VInfo.IDom = VInfo.Parent;
+      IDoms[i] = VInfo.Parent;
       NumToInfo[i] = &VInfo;
     }
 
@@ -303,10 +323,11 @@ template <typename DomTreeT> struct SemiNCAInfo {
     // SDom[i]'s DFS number is just Semi.
     for (unsigned i = 1; i < NextDFSNum; ++i) {
       auto &WInfo = *NumToInfo[i];
-      unsigned WIDom = WInfo.IDom;
+      unsigned WIDom = IDoms[i];
       while (WIDom > WInfo.Semi)
-        WIDom = NumToInfo[WIDom]->IDom;
-      WInfo.IDom = WIDom;
+        WIDom = IDoms[WIDom];
+      IDoms[i] = WIDom;
+      WInfo.IDom = NumToNode[WIDom];
     }
   }
 
@@ -588,28 +609,35 @@ template <typename DomTreeT> struct SemiNCAInfo {
     NodePtr Root = IsPostDom ? nullptr : DT.Roots[0];
 
     DT.RootNode = DT.createNode(Root);
-    SNCA.attachNewSubtree(DT);
+    SNCA.attachNewSubtree(DT, DT.RootNode);
   }
 
-  // For each non-root node in a subtree, attach it to the immediate dominator.
-  void attachNewSubtree(DomTreeT &DT) {
-    for (unsigned Num = 1, E = NumToNode.size(); Num != E; ++Num) {
-      NodePtr W = NumToNode[Num];
-      assert(!DT.getNode(W) && "node was already attached");
+  void attachNewSubtree(DomTreeT &DT, const TreeNodePtr AttachTo) {
+    // Attach the first unreachable block to AttachTo.
+    getNodeInfo(NumToNode[0]).IDom = AttachTo->getBlock();
+    // Loop over all of the discovered blocks in the function...
+    for (NodePtr W : NumToNode) {
+      if (DT.getNode(W))
+        continue; // Already calculated the node before
+
+      NodePtr ImmDom = getIDom(W);
+
+      // Get or calculate the node for the immediate dominator.
+      TreeNodePtr IDomNode = getNodeForBlock(ImmDom, DT);
 
       // Add a new tree node for this BasicBlock, and link it as a child of
       // IDomNode.
-      auto IDomNode = DT.getNode(NumToNode[getNodeInfo(W).IDom]);
       DT.createNode(W, IDomNode);
     }
   }
 
   void reattachExistingSubtree(DomTreeT &DT, const TreeNodePtr AttachTo) {
-    DT.getNode(NumToNode[0])->setIDom(AttachTo);
-    for (unsigned Num = 1, E = NumToNode.size(); Num != E; ++Num) {
-      NodePtr N = NumToNode[Num];
-      auto IDomNode = DT.getNode(NumToNode[getNodeInfo(N).IDom]);
-      DT.getNode(N)->setIDom(IDomNode);
+    getNodeInfo(NumToNode[0]).IDom = AttachTo->getBlock();
+    for (const NodePtr N : NumToNode) {
+      const TreeNodePtr TN = DT.getNode(N);
+      assert(TN);
+      const TreeNodePtr NewIDom = DT.getNode(getNodeInfo(N).IDom);
+      TN->setIDom(NewIDom);
     }
   }
 
@@ -897,8 +925,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
     SemiNCAInfo SNCA(DT, BUI);
     SNCA.runDFS(Root, 0, UnreachableDescender, 0);
     SNCA.runSemiNCA();
-    DT.createNode(SNCA.NumToNode[0], Incoming);
-    SNCA.attachNewSubtree(DT);
+    SNCA.attachNewSubtree(DT, Incoming);
 
     LLVM_DEBUG(dbgs() << "After adding unreachable nodes\n");
   }

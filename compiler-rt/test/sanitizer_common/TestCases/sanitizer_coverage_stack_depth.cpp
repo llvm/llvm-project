@@ -6,8 +6,6 @@
 // RUN:     %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s --implicit-check-not Assertion{{.*}}failed
 
-// UNSUPPORTED: rtsan
-
 #include <cstdint>
 #include <cstdio>
 #include <cassert>

@@ -1,6 +1,6 @@
 add_custom_target(libc_pthread_unittests)
 
-add_libc_test(
+add_libc_unittest(
   pthread_attr_test
   SUITE
     libc_pthread_unittests
@@ -21,7 +21,7 @@ add_libc_test(
     libc.hdr.errno_macros
 )
 
-add_libc_test(
+add_libc_unittest(
   pthread_mutexattr_test
   SUITE
     libc_pthread_unittests
@@ -40,7 +40,7 @@ add_libc_test(
     libc.hdr.errno_macros
 )
 
-add_libc_test(
+add_libc_unittest(
   pthread_condattr_test
   SUITE
     libc_pthread_unittests
@@ -58,7 +58,7 @@ add_libc_test(
     libc.src.pthread.pthread_condattr_setpshared
 )
 
-add_libc_test(
+add_libc_unittest(
   pthread_rwlockattr_test
   SUITE
     libc_pthread_unittests

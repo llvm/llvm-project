@@ -1,6 +1,6 @@
 add_custom_target(libc_sched_unittests)
 
-add_libc_test(
+add_libc_unittest(
   affinity_test
   SUITE
     libc_sched_unittests
@@ -18,7 +18,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   yield_test
   SUITE
     libc_sched_unittests
@@ -30,7 +30,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   get_priority_test
   SUITE
     libc_sched_unittests
@@ -44,7 +44,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   getcpu_test
   SUITE
     libc_sched_unittests
@@ -56,7 +56,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   sched_getcpu_test
   SUITE
     libc_sched_unittests
@@ -68,7 +68,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   scheduler_test
   SUITE
     libc_sched_unittests
@@ -88,7 +88,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   sched_rr_get_interval_test
   SUITE
     libc_sched_unittests
@@ -106,7 +106,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
+add_libc_unittest(
   cpu_alloc_test
   SUITE
     libc_sched_unittests
@@ -123,7 +123,7 @@ add_libc_test(
     libc.src.sched.__sched_setcpuzero
 )
 
-add_libc_test(
+add_libc_unittest(
   cpu_count_test
   SUITE
     libc_sched_unittests
@@ -146,7 +146,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
+add_libc_unittest(
   sched_andcpuset_test
   SUITE
     libc_sched_unittests
@@ -161,7 +161,7 @@ add_libc_test(
     libc.src.sched.__sched_setcpuzero
 )
 
-add_libc_test(
+add_libc_unittest(
   sched_cpuequal_test
   SUITE
     libc_sched_unittests
@@ -174,7 +174,7 @@ add_libc_test(
     libc.src.sched.__sched_setcpuzero
 )
 
-add_libc_test(
+add_libc_unittest(
   sched_orcpuset_test
   SUITE
     libc_sched_unittests
@@ -189,7 +189,7 @@ add_libc_test(
     libc.src.sched.__sched_setcpuzero
 )
 
-add_libc_test(
+add_libc_unittest(
   sched_xorcpuset_test
   SUITE
     libc_sched_unittests

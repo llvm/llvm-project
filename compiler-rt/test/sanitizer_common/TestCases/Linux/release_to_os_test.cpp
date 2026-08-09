@@ -14,8 +14,6 @@
 // Page size is hardcoded below, but test still fails even if not hardcoded.
 // REQUIRES: page-size-4096
 
-// UNSUPPORTED: rtsan
-
 #include <algorithm>
 #include <assert.h>
 #include <fcntl.h>

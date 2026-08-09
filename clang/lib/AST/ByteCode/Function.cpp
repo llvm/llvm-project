@@ -39,10 +39,9 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
     } else if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
       ExplicitThisPointer = MD->isExplicitObjectMemberFunction();
       Virtual = MD->isVirtual();
-      if (IsLambdaStaticInvoker) {
+      if (IsLambdaStaticInvoker)
         Kind = FunctionKind::LambdaStaticInvoker;
-        Constexpr = true;
-      } else if (clang::isLambdaCallOperator(F))
+      else if (clang::isLambdaCallOperator(F))
         Kind = FunctionKind::LambdaCallOperator;
       else if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())
         Kind = FunctionKind::CopyOrMoveOperator;
