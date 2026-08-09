@@ -18698,9 +18698,22 @@ InstructionCost BoUpSLP::getSpillCost() {
       if (ScalarOrPseudoEntries.contains(Op))
         continue;
       if (Entry->State == TreeEntry::SplitVectorize ||
-          (Entry->getOpcode() != Instruction::PHI && Op->isGather()) ||
           (Op->isGather() && allConstant(Op->Scalars)))
         continue;
+      // A gather with all loop-invariant lanes is hoisted to the loop
+      // preheader by optimizeGatherSequence, so its vector value becomes live
+      // across any non-vectorized call in the loop body. Charge it like any
+      // other vectorized value live over a call instead of skipping it.
+      if (Entry->hasState() && Entry->getOpcode() != Instruction::PHI &&
+          Op->isGather()) {
+        if (const Loop *L = LI->getLoopFor(Parent);
+            L && L->getLoopPreheader() && LoopBodyHasCall(L) &&
+            all_of(Op->Scalars, [&](Value *V) {
+              return !isa<Instruction>(V) || L->isLoopInvariant(V);
+            }))
+          AddCosts(Op);
+        continue;
+      }
       Budget = 0;
       BasicBlock *Pred = nullptr;
       if (auto *Phi = dyn_cast<PHINode>(Entry->getMainOp()))
