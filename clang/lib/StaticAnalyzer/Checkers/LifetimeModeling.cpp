@@ -105,6 +105,56 @@ std::string lifetime_modeling::getRegionName(const MemRegion *Reg) {
   return "the region";
 }
 
+// FIXME: Retrieving the MemRegions of nested struct fields is not yet
+// supported.
+SmallVector<const MemRegion *, 4>
+lifetime_modeling::getRegionsFromAggrVal(SVal Val, CheckerContext &C) {
+  SmallVector<const MemRegion *, 4> Reg;
+
+  if (auto LCV = Val.getAs<nonloc::LazyCompoundVal>()) {
+    const TypedValueRegion *LCVRegion = LCV->getRegion();
+    QualType T = LCVRegion->getValueType();
+    MemRegionManager &MemMgr = C.getSValBuilder().getRegionManager();
+    StoreManager &StoreMgr = C.getState()->getStateManager().getStoreManager();
+
+    if (const RecordType *RT = T->getAsStructureType()) {
+      const RecordDecl *RD = RT->getDecl()->getDefinition();
+      if (!RD)
+        return Reg;
+
+      for (const auto *I : RD->fields()) {
+        // Unnamed bitfields in a struct are not relevant for the analysis
+        // so the checker should skip them and jsut continue.
+        // CallAndMessageChecker has the same logic.
+        if (I->isUnnamedBitField())
+          continue;
+
+        const FieldRegion *FR = MemMgr.getFieldRegion(I, LCVRegion);
+        SVal V = StoreMgr.getBinding(LCV->getStore(), loc::MemRegionVal(FR));
+        if (const MemRegion *R = V.getAsRegion())
+          Reg.push_back(R);
+      }
+    }
+  } else if (auto CV = Val.getAs<nonloc::CompoundVal>()) {
+    for (SVal CVVal : *CV) {
+      if (const MemRegion *CVReg = CVVal.getAsRegion())
+        Reg.push_back(CVReg);
+    }
+  }
+  return Reg;
+}
+
+static bool isAnnotated(const FunctionDecl *FD) {
+  for (const ParmVarDecl *PVD : FD->parameters()) {
+    if (PVD->hasAttr<LifetimeBoundAttr>())
+      return true;
+  }
+
+  if (lifetimes::implicitObjectParamIsLifetimeBound(FD))
+    return true;
+  return false;
+}
+
 void LifetimeModeling::checkPostCall(const CallEvent &Call,
                                      CheckerContext &C) const {
   ProgramStateRef State = C.getState();
@@ -118,6 +168,14 @@ void LifetimeModeling::checkPostCall(const CallEvent &Call,
     return;
 
   SVal RetVal = Call.getReturnValue();
+
+  if (isAnnotated(FD)) {
+    SmallVector<const MemRegion *, 4> AggrRegs =
+        lifetime_modeling::getRegionsFromAggrVal(RetVal, C);
+    for (const MemRegion *I : AggrRegs) {
+      State = bindSource(State, RetVal, I);
+    }
+  }
 
   for (const ParmVarDecl *PVD : FD->parameters()) {
     if (PVD->hasAttr<LifetimeBoundAttr>()) {
@@ -172,6 +230,11 @@ void LifetimeModeling::checkDeadSymbols(SymbolReaper &SymReaper,
 
     if (SymbolRef S = Val.getAsSymbol(/*IncludeBaseRegions=*/true);
         S && SymReaper.isLive(S))
+      continue;
+
+    if (llvm::any_of(
+            lifetime_modeling::getRegionsFromAggrVal(Val, C),
+            [&](const MemRegion *R) { return SymReaper.isLiveRegion(R); }))
       continue;
 
     State = State->remove<LifetimeBoundMap>(Val);
