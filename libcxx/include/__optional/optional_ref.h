@@ -102,10 +102,6 @@ struct __optional_ref_base {
     if (__opt.has_value())
       __construct(std::forward<_That>(__opt).__get());
   }
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __swap(__optional_ref_base& __rhs) noexcept {
-    std::swap(__value_, __rhs.__value_);
-  }
 };
 
 template <class _Tp>
@@ -256,7 +252,7 @@ public:
     return this->__get();
   }
 
-  constexpr void swap(optional& __rhs) noexcept { this->__swap(__rhs); }
+  constexpr void swap(optional& __rhs) noexcept { std::swap(this->__value_, __rhs.__value_); }
 
   // [optional.ref.observe]
   _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<_Tp> operator->() const noexcept {
