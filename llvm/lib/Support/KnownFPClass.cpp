@@ -401,8 +401,7 @@ KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc,
       (fcZero | fcSubnormal))
     return Known;
 
-  // x + x scales by 2, down to 1 when one read flushes and leaves x + 0 = x.
-  Known.propagateExpRange(KnownSrc, 0, 1, /*NegativeScale=*/false, Sem, Mode);
+  Known.propagateExpRange(KnownSrc, 1, 1, /*NegativeScale=*/false, Sem, Mode);
   return Known;
 }
 
@@ -455,7 +454,8 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
   const int Exp = ilogb(ConstRHS);
   const bool IsPow2 = ConstRHS.getExactLog2Abs() != INT_MIN;
 
-  // |C| in [2^Exp, 2^(Exp+1)), exactly 2^Exp for a power of two.
+  // |C| in [2^Exp, 2^Exp] exactly when C is power of two
+  // |C| in [2^Exp, 2^(Exp+1)) otherwise
   Known.propagateExpRange(KnownLHS, Exp, IsPow2 ? Exp : Exp + 1,
                           ConstRHS.isNegative(), ConstRHS.getSemantics(), Mode);
   return Known;
@@ -501,7 +501,8 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
   const int Exp = ilogb(ConstRHS);
   const bool IsPow2 = ConstRHS.getExactLog2Abs() != INT_MIN;
 
-  // |1 / C| in (2^(-Exp-1), 2^-Exp], exactly 2^-Exp for a power of two.
+  // |1 / C| in [2^-Exp, 2^-Exp] exactly when C is power of two
+  // |1 / C| in (2^(-Exp-1), 2^-Exp] otherwise
   Known.propagateExpRange(KnownLHS, IsPow2 ? -Exp : -Exp - 1, -Exp,
                           ConstRHS.isNegative(), ConstRHS.getSemantics(), Mode);
   return Known;
