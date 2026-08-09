@@ -937,8 +937,8 @@ public:
   /// recomputes them.  This guarantees that the MBB numbers are sequential,
   /// dense, and match the ordering of the blocks within the function.  If a
   /// specific MachineBasicBlock is specified, only that block and those after
-  /// it are renumbered.
-  void RenumberBlocks(MachineBasicBlock *MBBFrom = nullptr);
+  /// it are renumbered. Returns true if any block number changed.
+  bool RenumberBlocks(MachineBasicBlock *MBBFrom = nullptr);
 
   /// Return an estimate of the function's code size,
   /// taking into account block and function alignment
