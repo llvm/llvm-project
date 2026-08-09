@@ -1077,39 +1077,19 @@ InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
   return Cost;
 }
 
-// Find the vector loop region by following the last successor of each block,
-// starting from the plan's entry. The vector code path is always the last
-// successor of the entry (and of the min-iters bypass block, if present), and
-// every block on the path to the region has a single predecessor. Stop at the
-// first block with multiple predecessors: in a plain CFG that is the loop
-// header (no region exists yet), and in a rolled CFG it is the middle block
-// following the region.
-static VPRegionBlock *findVectorLoopRegion(VPBlockBase *Entry) {
+VPRegionBlock *VPlan::getVectorLoopRegion() {
+  // Find the vector loop region by following the last successor of each block,
+  // starting from the plan's entry. The vector code path is always the last
+  // successor of the entry (and of the min-iters bypass block, if present), and
+  // every block on the path to the region has a single predecessor. Stop at the
+  // first block with multiple predecessors: in a plain CFG that is the loop
+  // header (no region exists yet), and in a rolled CFG it is the middle block
+  // following the region.
   for (VPBlockBase *B = Entry; B && B->getNumPredecessors() <= 1;
        B = B->hasSuccessors() ? B->getSuccessors().back() : nullptr)
     if (auto *R = dyn_cast<VPRegionBlock>(B))
       return R->isReplicator() ? nullptr : R;
   return nullptr;
-}
-
-#ifdef EXPENSIVE_CHECKS
-// Reference lookup that scans every top-level block. Used only to validate
-// findVectorLoopRegion() when the invariants of the last-successor walk change.
-static VPRegionBlock *findVectorLoopRegionByScan(VPBlockBase *Entry) {
-  for (VPBlockBase *B : vp_depth_first_shallow(Entry))
-    if (auto *R = dyn_cast<VPRegionBlock>(B))
-      return R->isReplicator() ? nullptr : R;
-  return nullptr;
-}
-#endif
-
-VPRegionBlock *VPlan::getVectorLoopRegion() {
-  VPRegionBlock *LoopRegion = findVectorLoopRegion(getEntry());
-#ifdef EXPENSIVE_CHECKS
-  assert(LoopRegion == findVectorLoopRegionByScan(getEntry()) &&
-         "fast vector loop region lookup disagrees with full CFG scan");
-#endif
-  return LoopRegion;
 }
 
 const VPRegionBlock *VPlan::getVectorLoopRegion() const {

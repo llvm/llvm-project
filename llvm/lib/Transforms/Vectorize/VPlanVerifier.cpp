@@ -483,7 +483,19 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
              [this](const VPBlockBase *VPB) { return !verifyBlock(VPB); }))
     return false;
 
+  // Check that the plan has a single loop region reachable from entry, and it
+  // matches the one returned by getVectorLoopRegion.
   const VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
+  if (any_of(VPBlockUtils::blocksOnly<const VPRegionBlock>(
+                 vp_depth_first_shallow(Plan.getEntry())),
+             [TopRegion](const VPRegionBlock *R) {
+               return !R->isReplicator() && R != TopRegion;
+             })) {
+    errs() << "VPlan must have a single top-level loop region, reachable from "
+              "the entry by following the last successor of each block\n";
+    return false;
+  }
+
   // TODO: Verify all blocks using vp_depth_first_deep iterators.
   if (!TopRegion)
     return true;
@@ -525,6 +537,13 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
 }
 
 bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
+  // The entry must be the root of the plan's top-level CFG: the dominator tree
+  // constructed below and the verifier's block walks all start there.
+  if (Plan.getEntry()->hasPredecessors()) {
+    errs() << "VPlan entry block has predecessors\n";
+    return false;
+  }
+
   VPDominatorTree VPDT(const_cast<VPlan &>(Plan));
   VPlanVerifier Verifier(VPDT);
   return Verifier.verify(Plan);
