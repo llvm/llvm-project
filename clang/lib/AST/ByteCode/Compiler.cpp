@@ -37,8 +37,8 @@ static std::optional<bool> getBoolValue(const Expr *E) {
   return std::nullopt;
 }
 
-/// Check if \c E has side-effects. This is used to avoid some tempoarary
-/// variables and is supposed to be a quick check, not exhausite. That's why
+/// Check if \c E has side-effects. This is used to avoid some temporary
+/// variables and is supposed to be a quick check, not exhaustive. That's why
 /// we're not using Expr::HasSideEffects().
 static bool isSideEffectFree(const Expr *E) {
   if (isa<IntegerLiteral, FloatingLiteral, CharacterLiteral,
