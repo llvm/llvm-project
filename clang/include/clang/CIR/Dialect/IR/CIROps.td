@@ -4907,7 +4907,7 @@ def CIR_CoroBeginOp : CIR_CoroIntrinsicOp<"begin",
 
 def CIR_CoroEndOp : CIR_CoroIntrinsicOp<"end",
     (ins CIR_VoidPtrType:$handle, CIR_AnyBoolType:$unwind, Token:$resultToken),
-    (outs), [TokenConsumerTrait]> {
+    (outs CIR_AnyVoidType:$result), [TokenConsumerTrait]> {
   let summary = "Represents llvm.coro.end";
   let description = [{
     Marks a point at which a coroutine must be suspended or destroyed for the

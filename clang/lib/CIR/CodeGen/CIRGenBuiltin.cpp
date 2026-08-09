@@ -1389,7 +1389,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                    : getUndefRValue(e->getType());
   }
   case Builtin::BI__builtin_coro_end:
-    return RValue::get(emitCoroEndBuiltinCall(e).getResultToken());
+    return RValue::get(emitCoroEndBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_promise:
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_promise NYI");
     return getUndefRValue(e->getType());

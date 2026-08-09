@@ -282,7 +282,7 @@ cir::CoroEndOp CIRGenFunction::emitCoroEndBuiltinCall(const CallExpr *e) {
   for (const Expr *arg : e->arguments())
     args.push_back(emitScalarExpr(arg));
   args.push_back(cir::TokenNoneOp::create(builder, loc));
-  return cir::CoroEndOp::create(builder, loc, {}, args);
+  return cir::CoroEndOp::create(builder, loc, {cgm.voidTy}, args);
 }
 
 cir::CoroFreeOp CIRGenFunction::emitCoroFreeBuiltin(const CallExpr *e) {
