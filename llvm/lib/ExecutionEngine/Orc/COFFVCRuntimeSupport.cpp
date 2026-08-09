@@ -124,27 +124,26 @@ Error COFFVCRuntimeBootstrapper::initializeStaticVCRuntime(JITDylib &JD) {
             &jit_scrt_initialize_default_local_stdio_options}}))
     return Err;
 
-  auto CallInt32Void = rt::sps::Int32VoidCaller::Create(ES);
-  if (!CallInt32Void)
-    return CallInt32Void.takeError();
+  rt::Int32VoidCaller CallInt32Void;
+  rt::Int32Int32Caller CallInt32Int32;
+  if (auto Err = buildCallers(
+          ES, rt::callerInit<rt::sps::Int32VoidCallerSpec>(&CallInt32Void),
+          rt::callerInit<rt::sps::Int32Int32CallerSpec>(&CallInt32Int32)))
+    return Err;
 
-  auto CallInt32Int32 = rt::sps::Int32Int32Caller::Create(ES);
-  if (!CallInt32Int32)
-    return CallInt32Int32.takeError();
-
-  auto R = (*CallInt32Int32)(jit_scrt_initialize, 0);
+  auto R = CallInt32Int32(ES, jit_scrt_initialize, 0);
   if (!R)
     return R.takeError();
 
   if (auto Err =
-          (*CallInt32Void)(jit_scrt_dllmain_before_initialize_c).takeError())
+          CallInt32Void(ES, jit_scrt_dllmain_before_initialize_c).takeError())
     return Err;
 
-  if (auto Err = (*CallInt32Void)(jit_scrt_initialize_type_info).takeError())
+  if (auto Err = CallInt32Void(ES, jit_scrt_initialize_type_info).takeError())
     return Err;
 
   if (auto Err =
-          (*CallInt32Void)(jit_scrt_initialize_default_local_stdio_options)
+          CallInt32Void(ES, jit_scrt_initialize_default_local_stdio_options)
               .takeError())
     return Err;
 
