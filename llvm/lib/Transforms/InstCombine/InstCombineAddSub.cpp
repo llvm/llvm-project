@@ -1003,7 +1003,17 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
     return replaceInstUsesWith(
         Add, Builder.CreateBinaryIntrinsic(
                  Intrinsic::usub_sat, X, ConstantInt::get(Add.getType(), -*C)));
-
+  // uadd.sat(X, C) + -C --> umin(X, ~C)
+  // The saturating add gives X + C or UMAX, so subtracting C leaves X or
+  // UMAX - C. Note UMAX - C == ~C.
+  {
+    APInt SatC = -*C;
+    if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::uadd_sat>(
+                       m_Value(X), m_SpecificInt(SatC)))))
+      return replaceInstUsesWith(
+          Add, Builder.CreateBinaryIntrinsic(Intrinsic::umin, X,
+                                             ConstantInt::get(Ty, ~SatC)));
+  }
   // Fold (add (zext (add X, -C)), C) -> (zext X) if X u>= C.
   // Truncate C to the narrow type to avoid mismatched width comparisons.
   {
