@@ -36,13 +36,13 @@ struct B {
 };
 
 // LLVM-DAG: [[STRUCT_C:%.*]] = type <{ [[STRUCT_B]], [[STRUCT_A]], i32, [4 x i8] }>
-// CIR-DAG: ![[STRUCT_C:.*]] = !cir.struct<"C" packed padded {![[STRUCT_B]], ![[STRUCT_A]], !s32i, !cir.array<!u8i x 4>}>
+// CIR-DAG: ![[STRUCT_C:.*]] = !cir.struct<"C" packed padded {![[STRUCT_B]], ![[STRUCT_A]], !s32i, pad !cir.array<!u8i x 4>}>
 struct C : public B, public A {
   int c;
 };
 
 // LLVM-DAG: [[STRUCT_D:%.*]] = type { [[STRUCT_A]], [[STRUCT_A]], i8, [[STRUCT_A]] }
-// CIR-DAG: ![[STRUCT_D:.*]] = !cir.struct<"D" {![[STRUCT_A]], ![[STRUCT_A]], !u8i, ![[STRUCT_A]]}>
+// CIR-DAG: ![[STRUCT_D:.*]] = !cir.struct<"D" {![[STRUCT_A]], ![[STRUCT_A]], empty !u8i, ![[STRUCT_A]]}>
 struct D {
   A a;
   A b = A{2, 2.0};
@@ -58,7 +58,7 @@ struct E {
   ~E() {};
 };
 
-// CIR-DAG: ![[STRUCT_F:.*]] = !cir.struct<"F" padded {!u8i}>
+// CIR-DAG: ![[STRUCT_F:.*]] = !cir.struct<"F" padded {pad !u8i}>
 struct F {
   F (int i = 1);
   F (const F &f) = delete;
@@ -67,7 +67,7 @@ struct F {
 
 // LLVMCIR-DAG: [[STRUCT_G:%.*]] = type <{ i32, %struct.F, [3 x i8] }>
 // OGCG-DAG:    [[STRUCT_G:%.*]] = type <{ i32, [4 x i8] }>
-// CIR-DAG: ![[STRUCT_G:.*]] = !cir.struct<"G" packed padded {!s32i, !rec_F, !cir.array<!u8i x 3>}>
+// CIR-DAG: ![[STRUCT_G:.*]] = !cir.struct<"G" packed padded {!s32i, !rec_F, pad !cir.array<!u8i x 3>}>
 struct G {
   int a;
   F f;
@@ -75,7 +75,7 @@ struct G {
 
 // LLVM-DAG: [[UNION_U:%.*]] = type { [[STRUCT_A]] }
 // LLVM-DAG: [[STR:@.*]] = private {{.*}}constant [6 x i8] {{.*}}foo18{{.*}}, align 1
-// CIR-DAG: ![[UNION_U:.*]] = !cir.union<"U" {!u8i, ![[STRUCT_A]], !s8i}>
+// CIR-DAG: ![[UNION_U:.*]] = !cir.union<"U" {empty !u8i, ![[STRUCT_A]], !s8i}>
 union U {
   unsigned : 1;
   A a;
@@ -85,7 +85,7 @@ union U {
 
 namespace gh61145 {
   // LLVM-DAG: [[STRUCT_VEC:%.*Vec.*]] = type { i8 }
-  // CIR-DAG: ![[STRUCT_VEC:.*]] = !cir.struct<"gh61145::Vec" padded {!u8i}>
+  // CIR-DAG: ![[STRUCT_VEC:.*]] = !cir.struct<"gh61145::Vec" padded {pad !u8i}>
   struct Vec {
     Vec();
     Vec(Vec&&);

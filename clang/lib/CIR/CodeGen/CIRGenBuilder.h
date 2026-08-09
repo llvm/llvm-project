@@ -154,26 +154,18 @@ public:
   ///
   /// If a record already exists and is complete, but the client tries to fetch
   /// it with a different set of attributes, this method will crash.
-  cir::RecordType getCompleteNamedRecordType(llvm::ArrayRef<mlir::Type> members,
-                                             bool packed, bool padded,
-                                             llvm::StringRef name) {
+  cir::RecordType getCompleteNamedRecordType(
+      llvm::ArrayRef<mlir::Type> members, bool packed, bool padded,
+      llvm::StringRef name, llvm::ArrayRef<cir::RecordMemberKind> memberKinds) {
     const auto nameAttr = getStringAttr(name);
     assert(!cir::MissingFeatures::astRecordDeclAttr());
 
     // Create or get the struct type (named anonymous struct helper — always
     // struct, never class or union at this call site).
     auto type = cir::StructType::get(getContext(), members, nameAttr, packed,
-                                     padded, /*is_class=*/false);
+                                     padded, /*is_class=*/false, memberKinds);
 
-    // If we found an existing type, verify that either it is incomplete or
-    // it matches the requested attributes.
-    assert(!type.isIncomplete() ||
-           (type.getMembers() == members && type.getPacked() == packed &&
-            type.getPadded() == padded));
-
-    // Complete an incomplete record or ensure the existing complete record
-    // matches the requested attributes.
-    type.complete(members, packed, padded);
+    type.complete(members, packed, padded, memberKinds);
 
     return type;
   }

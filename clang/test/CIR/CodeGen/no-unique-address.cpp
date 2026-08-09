@@ -30,7 +30,7 @@ struct Outer {
 // Middle's tail padding.
 
 // CIR: !rec_Middle2Ebase = !cir.struct<"Middle.base" packed {!rec_Base, !s8i}>
-// CIR: !rec_Outer = !cir.struct<"Outer" padded {!rec_Middle2Ebase, !s8i,
+// CIR: !rec_Outer = !cir.struct<"Outer" padded {!rec_Middle2Ebase, !s8i, pad
 
 // CIR-LABEL: cir.func {{.*}} @_ZN5OuterC2ERK6Middlec(
 // CIR:         %[[THIS:.*]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!rec_Outer>>, !cir.ptr<!rec_Outer>
@@ -203,6 +203,6 @@ OuterAllEmpty oae;
 // CIR-NUA-DAG: !rec_OuterAllEmpty = !cir.struct<"OuterAllEmpty" {!cir.bool}>
 // CIR-NUA-DAG: cir.global external @oae = #cir.zero : !rec_OuterAllEmpty
 
-// CIR-NUA-DAG: !rec_UnionZeroDataSize = !cir.union<"UnionZeroDataSize" {!rec_EmptyForNUA, !s32i}>
+// CIR-NUA-DAG: !rec_UnionZeroDataSize = !cir.union<"UnionZeroDataSize" {empty !rec_EmptyForNUA, !s32i}>
 // CIR-NUA-DAG: !rec_OuterZeroData = !cir.struct<"OuterZeroData" {!rec_UnionZeroDataSize, !cir.bool}>
 // CIR-NUA-DAG: cir.global external @ozd = #cir.zero : !rec_OuterZeroData

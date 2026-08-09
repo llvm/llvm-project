@@ -853,17 +853,20 @@ class CIRABITypeConverter : public mlir::TypeConverter {
     // just do a conversion on it.
     if (!type.getName()) {
       llvm::SmallVector<mlir::Type> converted = convertRecordMemberTypes(type);
+      // Member conversion is one type in, one type out, so the marks carry
+      // over by index.
       if (auto u = mlir::dyn_cast<cir::UnionType>(type)) {
         mlir::Type loweredPadding;
         if (mlir::Type pad = u.getPadding())
           loweredPadding = convertType(pad);
         return cir::UnionType::get(type.getContext(), converted,
-                                   type.getPacked(), loweredPadding);
+                                   type.getPacked(), loweredPadding,
+                                   u.getMemberKinds());
       }
       auto s = mlir::cast<cir::StructType>(type);
       return cir::StructType::get(type.getContext(), converted,
                                   type.getPacked(), type.getPadded(),
-                                  s.getIsClass());
+                                  s.getIsClass(), s.getMemberKinds());
     }
 
     assert(!type.isIncomplete() || type.getMembers().empty());
@@ -908,7 +911,7 @@ class CIRABITypeConverter : public mlir::TypeConverter {
       if (mlir::Type pad = u.getPadding())
         loweredPadding = convertType(pad);
     convertedType.complete(convertedMembers, type.getPacked(), type.getPadded(),
-                           loweredPadding);
+                           loweredPadding, type.getMemberKinds());
     addConvertedRecordType(convertedType);
     return convertedType;
   }
