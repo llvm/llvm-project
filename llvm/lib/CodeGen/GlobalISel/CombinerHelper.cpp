@@ -6489,7 +6489,6 @@ bool CombinerHelper::matchCombineFAddFMulToFMadOrFMA(
     return false;
 
   unsigned Flags = MI.getFlags();
-
   Register Op1 = MI.getOperand(1).getReg();
   Register Op2 = MI.getOperand(2).getReg();
   DefinitionAndSourceRegister LHS = {MRI.getVRegDef(Op1), Op1};
@@ -6511,7 +6510,8 @@ bool CombinerHelper::matchCombineFAddFMulToFMadOrFMA(
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
                    {LHS.MI->getOperand(1).getReg(),
-                    LHS.MI->getOperand(2).getReg(), RHS.Reg}, Flags);
+                    LHS.MI->getOperand(2).getReg(), RHS.Reg},
+                   Flags);
     };
     return true;
   }
@@ -6522,7 +6522,8 @@ bool CombinerHelper::matchCombineFAddFMulToFMadOrFMA(
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
                    {RHS.MI->getOperand(1).getReg(),
-                    RHS.MI->getOperand(2).getReg(), LHS.Reg}, Flags);
+                    RHS.MI->getOperand(2).getReg(), LHS.Reg},
+                   Flags);
     };
     return true;
   }
@@ -6540,7 +6541,6 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMA(
     return false;
 
   unsigned Flags = MI.getFlags();
-
   const auto &TLI = *MI.getMF()->getSubtarget().getTargetLowering();
   Register Op1 = MI.getOperand(1).getReg();
   Register Op2 = MI.getOperand(2).getReg();
@@ -6602,7 +6602,6 @@ bool CombinerHelper::matchCombineFAddFMAFMulToFMadOrFMA(
     return false;
 
   unsigned Flags = MI.getFlags();
-
   Register Op1 = MI.getOperand(1).getReg();
   Register Op2 = MI.getOperand(2).getReg();
   DefinitionAndSourceRegister LHS = {MRI.getVRegDef(Op1), Op1};
@@ -6696,9 +6695,9 @@ bool CombinerHelper::matchCombineFAddFpExtFMulToFMadOrFMAAggressive(
                                  Register Y, MachineIRBuilder &B) {
     Register FpExtU = B.buildFPExt(DstType, U).getReg(0);
     Register FpExtV = B.buildFPExt(DstType, V).getReg(0);
-    Register InnerFMA =
-        B.buildInstr(PreferredFusedOpcode, {DstType}, {FpExtU, FpExtV, Z}, Flags)
-            .getReg(0);
+    Register InnerFMA = B.buildInstr(PreferredFusedOpcode, {DstType},
+                                     {FpExtU, FpExtV, Z}, Flags)
+                            .getReg(0);
     B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
                  {X, Y, InnerFMA}, Flags);
   };
@@ -6798,7 +6797,6 @@ bool CombinerHelper::matchCombineFSubFMulToFMadOrFMA(
     return false;
 
   unsigned Flags = MI.getFlags();
-
   Register Op1 = MI.getOperand(1).getReg();
   Register Op2 = MI.getOperand(2).getReg();
   DefinitionAndSourceRegister LHS = {MRI.getVRegDef(Op1), Op1};
@@ -6824,7 +6822,8 @@ bool CombinerHelper::matchCombineFSubFMulToFMadOrFMA(
       Register NegZ = B.buildFNeg(DstTy, RHS.Reg).getReg(0);
       B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
                    {LHS.MI->getOperand(1).getReg(),
-                    LHS.MI->getOperand(2).getReg(), NegZ}, Flags);
+                    LHS.MI->getOperand(2).getReg(), NegZ},
+                   Flags);
     };
     return true;
   }
@@ -6853,7 +6852,6 @@ bool CombinerHelper::matchCombineFSubFNegFMulToFMadOrFMA(
     return false;
 
   unsigned Flags = MI.getFlags();
-
   Register LHSReg = MI.getOperand(1).getReg();
   Register RHSReg = MI.getOperand(2).getReg();
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
@@ -6885,7 +6883,8 @@ bool CombinerHelper::matchCombineFSubFNegFMulToFMadOrFMA(
     MatchInfo = [=, &MI](MachineIRBuilder &B) {
       B.buildInstr(PreferredFusedOpcode, {MI.getOperand(0).getReg()},
                    {FMulMI->getOperand(1).getReg(),
-                    FMulMI->getOperand(2).getReg(), LHSReg}, Flags);
+                    FMulMI->getOperand(2).getReg(), LHSReg},
+                   Flags);
     };
     return true;
   }
@@ -6903,7 +6902,6 @@ bool CombinerHelper::matchCombineFSubFpExtFMulToFMadOrFMA(
     return false;
 
   unsigned Flags = MI.getFlags();
-
   Register LHSReg = MI.getOperand(1).getReg();
   Register RHSReg = MI.getOperand(2).getReg();
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
@@ -6957,7 +6955,6 @@ bool CombinerHelper::matchCombineFSubFpExtFNegFMulToFMadOrFMA(
     return false;
 
   unsigned Flags = MI.getFlags();
-
   const auto &TLI = *MI.getMF()->getSubtarget().getTargetLowering();
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
   Register LHSReg = MI.getOperand(1).getReg();
