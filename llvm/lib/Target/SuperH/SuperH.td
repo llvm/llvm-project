@@ -23,14 +23,17 @@ include "llvm/TableGen/SearchableTable.td"
 
 // NOTE:  Some SH4 CPUs support FSCA and FSRRA despite their
 //        ISA manuals not specifying so.
-def FeatureFSCA     : SubtargetFeature<"fsca", "HasFSCA", "true",
-                                       "Enable use of fsca instruction.">;
-def FeatureFSRRA    : SubtargetFeature<"fsrra", "HasFSRRA", "true",
-                                       "Enable use of fsrra instruction.">;
-def FeatureFP32     : SubtargetFeature<"fp32", "HasFP32", "true",
+def FeatureFPU      : SubtargetFeature<"fp32", "HasFPU", "true",
                                        "Enable use of 32-bit floating point instructions.">;
-def FeatureFP64     : SubtargetFeature<"fp64", "HasFP64", "true",
-                                       "Enable use of 64-bit floating point instructions.">;
+def FeatureFPU64    : SubtargetFeature<"fp64", "HasFP64", "true",
+                                       "Enable use of 64-bit floating point instructions.",
+                                       [FeatureFPU]>;
+def FeatureFSCA     : SubtargetFeature<"fsca", "HasFSCA", "true",
+                                       "Enable use of fsca instruction.",
+                                       [FeatureFPU]>;
+def FeatureFSRRA    : SubtargetFeature<"fsrra", "HasFSRRA", "true",
+                                       "Enable use of fsrra instruction.",
+                                       [FeatureFPU]>;
 def FeatureDSP      : SubtargetFeature<"dsp", "HasDSP", "true",
                                        "Enable SuperH DSP Extensions">;
 
@@ -38,31 +41,29 @@ def FeatureDSP      : SubtargetFeature<"dsp", "HasDSP", "true",
 // SuperH CPU Family features
 //===----------------------------------------------------------------------===//
 
-def FeatureSH1      : SubtargetFeature<"sh1", "SHArchVersion", "SH1",
-                          "SH-1 ISA Support">;
 def FeatureSH2      : SubtargetFeature<"sh2", "SHArchVersion", "SH2",
                           "SH-2 ISA Support",
-                          [FeatureSH1]>;
+                          []>;
 def FeatureSH2E     : SubtargetFeature<"sh2e", "SHArchVersion", "SH2E",
                           "SH-2E ISA Support",
-                          [FeatureSH1, FeatureSH2, FeatureFP32]>;
+                          [FeatureSH2, FeatureFPU]>;
 def FeatureSH2A     : SubtargetFeature<"sh2a", "SHArchVersion", "SH2A",
                           "SH-2A ISA Support",
-                          [FeatureSH1, FeatureSH2, FeatureFP32, FeatureFP64]>;
+                          [FeatureSH2, FeatureFPU, FeatureFPU64]>;
 def FeatureSH3      : SubtargetFeature<"sh3", "SHArchVersion", "SH3",
                           "SH-3 ISA Support",
-                          [FeatureSH1, FeatureSH2]>;
+                          [FeatureSH2]>;
 def FeatureSH3E     : SubtargetFeature<"sh3e", "SHArchVersion", "SH3E",
                           "SH-3E ISA Support",
-                          [FeatureSH1, FeatureSH2, FeatureFP32]>;
+                          [FeatureSH2, FeatureFPU]>;
 def FeatureSH4      : SubtargetFeature<"sh4", "SHArchVersion", "SH4",
                           "SH-4 ISA Support",
-                          [FeatureSH1, FeatureSH2, FeatureSH3, FeatureFP32, 
-                           FeatureFP64]>;
+                          [FeatureSH2, FeatureSH3, FeatureFPU, 
+                           FeatureFPU64]>;
 def FeatureSH4A     : SubtargetFeature<"sh4a", "SHArchVersion", "SH4A",
                           "SH-4A ISA Support",
-                          [FeatureSH1, FeatureSH2, FeatureSH3, FeatureSH4, 
-                           FeatureFP32, FeatureFP64, FeatureFSCA, FeatureFSRRA]>;
+                          [FeatureSH2, FeatureSH3, FeatureSH4, 
+                           FeatureFPU, FeatureFPU64, FeatureFSCA, FeatureFSRRA]>;
 
 //===----------------------------------------------------------------------===//
 // SuperH Processors
@@ -73,8 +74,8 @@ include "SuperHSchedule.td"
 class ProcModel<string Name, list<SubtargetFeature> Features>
     : ProcessorModel<Name, GenericSuperHModel, Features>;
 
-def : ProcModel<"generic", [FeatureSH4]>;
-def : ProcModel<"sh1", [FeatureSH1]>;
+def : ProcModel<"generic", [FeatureSH2]>;
+def : ProcModel<"sh1", []>;
 def : ProcModel<"sh2", [FeatureSH2]>;
 def : ProcModel<"sh2e", [FeatureSH2E]>;
 def : ProcModel<"sh2a", [FeatureSH2A]>;
