@@ -1350,7 +1350,7 @@ define amdgpu_ps void @raw_buffer_load_f16(<4 x i32> inreg %rsrc, ptr addrspace(
 ; GFX12-GISEL-TRUE16-NEXT:    buffer_load_u16 v1, off, s[0:3], null
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX12-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v1.l, s0
+; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-GISEL-TRUE16-NEXT:    ds_store_b16 v0, v1
 ; GFX12-GISEL-TRUE16-NEXT:    s_endpgm
 main_body:

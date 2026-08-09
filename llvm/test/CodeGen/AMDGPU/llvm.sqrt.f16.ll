@@ -146,7 +146,7 @@ define amdgpu_kernel void @sqrt_f16(
 ; GFX12-TRUE16-GISEL-NEXT:    v_s_sqrt_f16 s2, s2
 ; GFX12-TRUE16-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-TRUE16-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-TRUE16-GISEL-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX12-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-TRUE16-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX12-TRUE16-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX12-TRUE16-GISEL-NEXT:    s_endpgm

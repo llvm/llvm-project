@@ -1530,7 +1530,7 @@ define amdgpu_kernel void @fmaximum_f16_move_to_valu(ptr addrspace(1) %out, ptr 
 ; GFX12-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX12-GISEL-TRUE16-NEXT:    s_maximum_f16 s2, s2, s3
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-GISEL-TRUE16-NEXT:    global_store_b16 v2, v0, s[0:1]
 ; GFX12-GISEL-TRUE16-NEXT:    s_endpgm
 ;

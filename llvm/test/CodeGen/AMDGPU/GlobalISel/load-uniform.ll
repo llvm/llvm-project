@@ -16,21 +16,13 @@ define amdgpu_ps void @load_uniform_P1_i16_gfx12(ptr addrspace(1) inreg %ptra, p
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-True16-LABEL: load_uniform_P1_i16_gfx12:
-; GFX12-True16:       ; %bb.0:
-; GFX12-True16-NEXT:    s_load_u16 s0, s[0:1], 0x0
-; GFX12-True16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-True16-NEXT:    v_mov_b16_e32 v2.l, s0
-; GFX12-True16-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX12-True16-NEXT:    s_endpgm
-;
-; GFX12-NoTrue16-LABEL: load_uniform_P1_i16_gfx12:
-; GFX12-NoTrue16:       ; %bb.0:
-; GFX12-NoTrue16-NEXT:    s_load_u16 s0, s[0:1], 0x0
-; GFX12-NoTrue16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NoTrue16-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-NoTrue16-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX12-NoTrue16-NEXT:    s_endpgm
+; GFX12-LABEL: load_uniform_P1_i16_gfx12:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_u16 s0, s[0:1], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX12-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(1) %ptra
   store i16 %a, ptr addrspace(1) %out
   ret void
@@ -44,25 +36,17 @@ define amdgpu_ps void @load_uniform_P1_i16_align4_widen_mmo_gfx11(ptr addrspace(
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX11-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-True16-LABEL: load_uniform_P1_i16_align4_widen_mmo_gfx11:
-; GFX12-True16:       ; %bb.0:
-; GFX12-True16-NEXT:    s_load_u16 s0, s[0:1], 0x0
-; GFX12-True16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-True16-NEXT:    v_mov_b16_e32 v2.l, s0
-; GFX12-True16-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX12-True16-NEXT:    s_endpgm
-;
-; GFX12-NoTrue16-LABEL: load_uniform_P1_i16_align4_widen_mmo_gfx11:
-; GFX12-NoTrue16:       ; %bb.0:
-; GFX12-NoTrue16-NEXT:    s_load_u16 s0, s[0:1], 0x0
-; GFX12-NoTrue16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NoTrue16-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-NoTrue16-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX12-NoTrue16-NEXT:    s_endpgm
+; GFX12-LABEL: load_uniform_P1_i16_align4_widen_mmo_gfx11:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_u16 s0, s[0:1], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX12-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(1) %ptra, align 4
   store i16 %a, ptr addrspace(1) %out
   ret void
@@ -312,21 +296,13 @@ define amdgpu_ps void @load_uniform_P4_i16_gfx12(ptr addrspace(4) inreg %ptra, p
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-True16-LABEL: load_uniform_P4_i16_gfx12:
-; GFX12-True16:       ; %bb.0:
-; GFX12-True16-NEXT:    s_load_u16 s0, s[0:1], 0x0
-; GFX12-True16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-True16-NEXT:    v_mov_b16_e32 v2.l, s0
-; GFX12-True16-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX12-True16-NEXT:    s_endpgm
-;
-; GFX12-NoTrue16-LABEL: load_uniform_P4_i16_gfx12:
-; GFX12-NoTrue16:       ; %bb.0:
-; GFX12-NoTrue16-NEXT:    s_load_u16 s0, s[0:1], 0x0
-; GFX12-NoTrue16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NoTrue16-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-NoTrue16-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX12-NoTrue16-NEXT:    s_endpgm
+; GFX12-LABEL: load_uniform_P4_i16_gfx12:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_u16 s0, s[0:1], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX12-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(4) %ptra
   store i16 %a, ptr addrspace(1) %out
   ret void
@@ -337,25 +313,17 @@ define amdgpu_ps void @load_uniform_P4_i16_align4_widen_mmo_gfx11(ptr addrspace(
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX11-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-True16-LABEL: load_uniform_P4_i16_align4_widen_mmo_gfx11:
-; GFX12-True16:       ; %bb.0:
-; GFX12-True16-NEXT:    s_load_u16 s0, s[0:1], 0x0
-; GFX12-True16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-True16-NEXT:    v_mov_b16_e32 v2.l, s0
-; GFX12-True16-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX12-True16-NEXT:    s_endpgm
-;
-; GFX12-NoTrue16-LABEL: load_uniform_P4_i16_align4_widen_mmo_gfx11:
-; GFX12-NoTrue16:       ; %bb.0:
-; GFX12-NoTrue16-NEXT:    s_load_u16 s0, s[0:1], 0x0
-; GFX12-NoTrue16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NoTrue16-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-NoTrue16-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX12-NoTrue16-NEXT:    s_endpgm
+; GFX12-LABEL: load_uniform_P4_i16_align4_widen_mmo_gfx11:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_u16 s0, s[0:1], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX12-NEXT:    s_endpgm
   %a = load i16, ptr addrspace(4) %ptra, align 4
   store i16 %a, ptr addrspace(1) %out
   ret void
@@ -594,3 +562,6 @@ define amdgpu_ps void @load_uniform_P4_v16i32(ptr addrspace(4) inreg %ptra, ptr 
   store <16 x i32> %a, ptr addrspace(1) %out
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX12-NoTrue16: {{.*}}
+; GFX12-True16: {{.*}}

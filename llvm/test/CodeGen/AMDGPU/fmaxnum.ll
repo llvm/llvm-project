@@ -1943,7 +1943,7 @@ define amdgpu_kernel void @test_fmax_f16_v_ieee_on(ptr addrspace(1) %out, half %
 ; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX12-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -2064,7 +2064,7 @@ define amdgpu_kernel void @test_fmax_f16_s_ieee_on(ptr addrspace(1) %out, half i
 ; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX12-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX12-GISEL-NEXT:    s_endpgm

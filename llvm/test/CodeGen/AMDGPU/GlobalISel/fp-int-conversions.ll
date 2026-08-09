@@ -531,7 +531,7 @@ define amdgpu_ps void @s_uitofp_i32_to_f16(i32 inreg %x, ptr addrspace(1) %out) 
 ; GFX12:  ; %bb.0:
 ; GFX12:    s_cvt_f32_u32 s0, s0
 ; GFX12:    s_cvt_f16_f32 s0, s0
-; GFX12:    v_mov_b16_e32 v2.l, s0
+; GFX12:    v_mov_b32_e32 v2, s0
   %result = uitofp i32 %x to half
   store half %result, ptr addrspace(1) %out
   ret void
@@ -552,7 +552,7 @@ define amdgpu_ps void @s_sitofp_i32_to_f16(i32 inreg %x, ptr addrspace(1) %out) 
 ; GFX12:  ; %bb.0:
 ; GFX12:    s_cvt_f32_i32 s0, s0
 ; GFX12:    s_cvt_f16_f32 s0, s0
-; GFX12:    v_mov_b16_e32 v2.l, s0
+; GFX12:    v_mov_b32_e32 v2, s0
   %result = sitofp i32 %x to half
   store half %result, ptr addrspace(1) %out
   ret void
