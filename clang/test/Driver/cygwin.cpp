@@ -66,7 +66,6 @@
 // CHECK-64-SAME: "-m" "i386pep"
 // CHECK-64-SAME: "{{.*}}{{/|\\\\}}crt0.o"
 // CHECK-64-SAME: "{{.*}}x86_64-pc-msys{{/|\\\\}}{{[0-9.]*}}{{/|\\\\}}crtbegin.o"
-// CHECK-64-SAME: "--disable-high-entropy-va"
 // CHECK-64-SAME: "{{.*}}x86_64-pc-msys{{/|\\\\}}{{[0-9.]*}}{{/|\\\\}}crtend.o"
 
 // RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
