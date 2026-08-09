@@ -12,6 +12,8 @@
 
 // test op*()
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <memory>
 
 #include "test_macros.h"
