@@ -781,7 +781,7 @@ define { float, i32 } @frexp_nan_clamp_both_f32(float %x) {
   %is_nan = fcmp uno float %x, 0.0
   %mant_result = select i1 %is_nan, float 0.0, float %mant
   %exp_result = select i1 %is_nan, i32 0, i32 %exp
-  %result0 = insertvalue { float, i32 } undef, float %mant_result, 0
+  %result0 = insertvalue { float, i32 } poison, float %mant_result, 0
   %result1 = insertvalue { float, i32 } %result0, i32 %exp_result, 1
   ret { float, i32 } %result1
 }
