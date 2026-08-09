@@ -47,8 +47,16 @@ define float @test_sqrt_f32(float %a) {
 ;
 ; GISEL-X86-LABEL: test_sqrt_f32:
 ; GISEL-X86:       # %bb.0:
-; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    subl $8, %esp
+; GISEL-X86-NEXT:    .cfi_def_cfa_offset 12
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, (%esp)
+; GISEL-X86-NEXT:    flds (%esp)
 ; GISEL-X86-NEXT:    fsqrt
+; GISEL-X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    addl $8, %esp
+; GISEL-X86-NEXT:    .cfi_def_cfa_offset 4
 ; GISEL-X86-NEXT:    retl
   %res = call float @llvm.sqrt.f32(float %a)
   ret float %res
