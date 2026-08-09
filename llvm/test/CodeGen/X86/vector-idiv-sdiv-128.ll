@@ -4,6 +4,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=AVX --check-prefix=AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=AVX --check-prefix=AVX2 --check-prefix=AVX2NOBW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw | FileCheck %s --check-prefix=AVX --check-prefix=AVX2 --check-prefix=AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=novalake | FileCheck %s --check-prefix=NVL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=znver6 | FileCheck %s --check-prefix=ZN6
 
 ;
 ; sdiv by 7
@@ -1633,4 +1635,25 @@ define <4 x i32> @test_divv_4i32_one_narrow(<4 x i32> %a, <4 x i32> %b) nounwind
   %aa = ashr <4 x i32> %a, splat (i32 8)
   %res = sdiv <4 x i32> %aa, %b
   ret <4 x i32> %res
+}
+
+define <16 x i8> @test_fast_fp16_div_16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
+; NVL-LABEL: test_fast_fp16_div_16i8:
+; NVL:       vpmovsxbw
+; NVL:       vcvtw2ph
+; NVL:       vdivph
+; NVL:       vcvttph2w
+; NVL:       vpmovwb
+; NVL:       retq
+
+; ZN6-LABEL: test_fast_fp16_div_16i8:
+; ZN6:       vpmovsxbw
+; ZN6:       vcvtw2ph
+; ZN6:       vdivph
+; ZN6:       vcvttph2w
+; ZN6:       vpmovwb
+; ZN6:       retq
+
+%res = sdiv <16 x i8> %a, %b
+ret <16 x i8> %res
 }

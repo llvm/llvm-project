@@ -798,6 +798,11 @@ def TuningFastDPWSSD
           "Prefer vpdpwssd instruction over vpmaddwd+vpaddd instruction sequence",
           [], InlineIgnore>;
 
+def TuningFastVectorFP16Div
+    : SubtargetFeature<"fast-vector-fp16-div", "HasFastFP16Div", "true", 
+                        "Vector FP16 division is fast", 
+                        [], InlineIgnore>;
+
 def TuningPreferNoGather
     : SubtargetFeature<"prefer-no-gather", "PreferGather", "false",
                        "Prefer no gather instructions",
@@ -1468,7 +1473,7 @@ def ProcessorFeatures {
                                                   FeaturePREFETCHI];
   list<SubtargetFeature> NVLFeatures =
       !listconcat(PTLFeatures, NVLAdditionalFeatures);
-  list<SubtargetFeature> NVLAdditionalTuning = [TuningPreferLegacySetCC];
+  list<SubtargetFeature> NVLAdditionalTuning = [TuningPreferLegacySetCC, TuningFastVectorFP16Div];
   list<SubtargetFeature> NVLTuning = !listconcat(ADLTuning, NVLAdditionalTuning);
 
   // Clearwaterforest
@@ -1756,7 +1761,8 @@ def ProcessorFeatures {
                                             TuningBLSFalseDeps
                                             ];
   list<SubtargetFeature> ZN6Tuning =
-    !listremove(ZN5Tuning, ZN6RemoveTuning);
+    !listconcat(!listremove(ZN5Tuning, ZN6RemoveTuning),
+                [TuningFastVectorFP16Div]);
   list<SubtargetFeature> ZN6AdditionalFeatures = [FeatureFP16,
                                                   FeatureAVXVNNIINT8,
                                                   FeatureAVXNECONVERT,
