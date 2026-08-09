@@ -857,9 +857,7 @@ template <class BT> class BlockFrequencyInfoImpl : BlockFrequencyInfoImplBase {
     return RPOT[Node.Index];
   }
 
-  /// Run (and save) a post-order traversal.
-  ///
-  /// Saves a reverse post-order traversal of all the nodes in \a F.
+  /// Save a reverse post-order traversal of all the nodes.
   void initializeRPOT();
 
   /// Initialize loop data.
@@ -887,6 +885,10 @@ template <class BT> class BlockFrequencyInfoImpl : BlockFrequencyInfoImplBase {
   /// and \a computeIrreducibleMass() for \c Loop if it contains irreducible
   /// control flow.
   void computeMassInLoop(LoopData &Loop);
+
+  /// Distribute mass in a multi-header loop, seeding the headers from
+  /// irr_loop_header_weight metadata and marking them in IsIrrLoopHeader.
+  void computeMassInIrreducibleLoop(LoopData &Loop);
 
   /// Compute mass in (and package up) irreducible SCCs.
   ///
@@ -1028,17 +1030,22 @@ void BlockFrequencyInfoImpl<BT>::calculate(const FunctionT &F,
   RPOT.clear();
   Nodes.clear();
 
-  // Initialize.
   LLVM_DEBUG(dbgs() << "\nblock-frequency: " << F.getName()
                     << "\n================="
                     << std::string(F.getName().size(), '=') << "\n");
+
+  // Mass flows over a DAG: loops are packaged into pseudo-nodes, and backedges
+  // accumulate as loop mass instead of being followed.
+
+  // Number blocks in reverse post-order; BlockNode comparisons use it.
   initializeRPOT();
+  // Group blocks into the loops BFI represents, marking irreducible regions.
   initializeLoops();
 
-  // Visit loops in post-order to find the local mass distribution, and then do
-  // the full function.
+  // Deepest loop first, so each is packaged before its parent needs it.
   computeMassInLoops();
   computeMassInFunction();
+  // Unpackage, scaling members by the loop's iterations and package mass.
   unwrapLoops();
   // Apply a post-processing step improving computed frequencies for functions
   // with irreducible loops.
@@ -1194,62 +1201,11 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::computeMassInLoops() {
 
 template <class BT>
 void BlockFrequencyInfoImpl<BT>::computeMassInLoop(LoopData &Loop) {
-  // Compute mass in loop.
   LLVM_DEBUG(dbgs() << "compute-mass-in-loop: " << getLoopName(Loop) << "\n");
 
   if (Loop.isIrreducible()) {
     LLVM_DEBUG(dbgs() << "isIrreducible = true\n");
-    Distribution Dist;
-    unsigned NumHeadersWithWeight = 0;
-    std::optional<uint64_t> MinHeaderWeight;
-    DenseSet<uint32_t> HeadersWithoutWeight;
-    HeadersWithoutWeight.reserve(Loop.NumHeaders);
-    for (uint32_t H = 0; H < Loop.NumHeaders; ++H) {
-      auto &HeaderNode = Loop.Nodes[H];
-      const BlockT *Block = getBlock(HeaderNode);
-      IsIrrLoopHeader.set(Loop.Nodes[H].Index);
-      std::optional<uint64_t> HeaderWeight = Block->getIrrLoopHeaderWeight();
-      if (!HeaderWeight) {
-        LLVM_DEBUG(dbgs() << "Missing irr loop header metadata on "
-                          << getBlockName(HeaderNode) << "\n");
-        HeadersWithoutWeight.insert(H);
-        continue;
-      }
-      LLVM_DEBUG(dbgs() << getBlockName(HeaderNode)
-                        << " has irr loop header weight " << *HeaderWeight
-                        << "\n");
-      NumHeadersWithWeight++;
-      uint64_t HeaderWeightValue = *HeaderWeight;
-      if (!MinHeaderWeight || HeaderWeightValue < MinHeaderWeight)
-        MinHeaderWeight = HeaderWeightValue;
-      if (HeaderWeightValue) {
-        Dist.addLocal(HeaderNode, HeaderWeightValue);
-      }
-    }
-    // As a heuristic, if some headers don't have a weight, give them the
-    // minimum weight seen (not to disrupt the existing trends too much by
-    // using a weight that's in the general range of the other headers' weights,
-    // and the minimum seems to perform better than the average.)
-    // FIXME: better update in the passes that drop the header weight.
-    // If no headers have a weight, give them even weight (use weight 1).
-    if (!MinHeaderWeight)
-      MinHeaderWeight = 1;
-    for (uint32_t H : HeadersWithoutWeight) {
-      auto &HeaderNode = Loop.Nodes[H];
-      assert(!getBlock(HeaderNode)->getIrrLoopHeaderWeight() &&
-             "Shouldn't have a weight metadata");
-      uint64_t MinWeight = *MinHeaderWeight;
-      LLVM_DEBUG(dbgs() << "Giving weight " << MinWeight << " to "
-                        << getBlockName(HeaderNode) << "\n");
-      if (MinWeight)
-        Dist.addLocal(HeaderNode, MinWeight);
-    }
-    distributeIrrLoopHeaderMass(Dist);
-    for (const BlockNode &M : Loop.Nodes)
-      propagateMassToSuccessors(&Loop, M);
-    if (NumHeadersWithWeight == 0)
-      // No headers have a metadata. Adjust header mass.
-      adjustLoopHeaderMass(Loop);
+    computeMassInIrreducibleLoop(Loop);
   } else {
     Working[Loop.getHeader().Index].getMass() = BlockMass::getFull();
     propagateMassToSuccessors(&Loop, Loop.getHeader());
@@ -1259,6 +1215,63 @@ void BlockFrequencyInfoImpl<BT>::computeMassInLoop(LoopData &Loop) {
 
   computeLoopScale(Loop);
   packageLoop(Loop);
+}
+
+template <class BT>
+void BlockFrequencyInfoImpl<BT>::computeMassInIrreducibleLoop(LoopData &Loop) {
+  Distribution Dist;
+  unsigned NumHeadersWithWeight = 0;
+  std::optional<uint64_t> MinHeaderWeight;
+  DenseSet<uint32_t> HeadersWithoutWeight;
+  HeadersWithoutWeight.reserve(Loop.NumHeaders);
+  for (uint32_t H = 0; H < Loop.NumHeaders; ++H) {
+    auto &HeaderNode = Loop.Nodes[H];
+    const BlockT *Block = getBlock(HeaderNode);
+    IsIrrLoopHeader.set(Loop.Nodes[H].Index);
+    std::optional<uint64_t> HeaderWeight = Block->getIrrLoopHeaderWeight();
+    if (!HeaderWeight) {
+      LLVM_DEBUG(dbgs() << "Missing irr loop header metadata on "
+                        << getBlockName(HeaderNode) << "\n");
+      HeadersWithoutWeight.insert(H);
+      continue;
+    }
+    LLVM_DEBUG(dbgs() << getBlockName(HeaderNode)
+                      << " has irr loop header weight " << *HeaderWeight
+                      << "\n");
+    NumHeadersWithWeight++;
+    uint64_t HeaderWeightValue = *HeaderWeight;
+    if (!MinHeaderWeight || HeaderWeightValue < MinHeaderWeight)
+      MinHeaderWeight = HeaderWeightValue;
+    if (HeaderWeightValue) {
+      Dist.addLocal(HeaderNode, HeaderWeightValue);
+    }
+  }
+  // As a heuristic, if some headers don't have a weight, give them the
+  // minimum weight seen (not to disrupt the existing trends too much by
+  // using a weight that's in the general range of the other headers' weights,
+  // and the minimum seems to perform better than the average.)
+  // FIXME: better update in the passes that drop the header weight.
+  // If no headers have a weight, give them even weight (use weight 1).
+  if (!MinHeaderWeight)
+    MinHeaderWeight = 1;
+  for (uint32_t H : HeadersWithoutWeight) {
+    auto &HeaderNode = Loop.Nodes[H];
+    assert(!getBlock(HeaderNode)->getIrrLoopHeaderWeight() &&
+           "Shouldn't have a weight metadata");
+    uint64_t MinWeight = *MinHeaderWeight;
+    LLVM_DEBUG(dbgs() << "Giving weight " << MinWeight << " to "
+                      << getBlockName(HeaderNode) << "\n");
+    if (MinWeight)
+      Dist.addLocal(HeaderNode, MinWeight);
+  }
+  distributeIrrLoopHeaderMass(Dist);
+  // Seeded headers are ordered first. Any retreating edge from a non-header
+  // targets a header.
+  for (const BlockNode &M : Loop.Nodes)
+    propagateMassToSuccessors(&Loop, M);
+  if (NumHeadersWithWeight == 0)
+    // No headers have a metadata. Adjust header mass.
+    adjustLoopHeaderMass(Loop);
 }
 
 template <class BT> void BlockFrequencyInfoImpl<BT>::computeMassInFunction() {
