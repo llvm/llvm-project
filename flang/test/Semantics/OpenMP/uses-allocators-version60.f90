@@ -9,6 +9,33 @@
 ! [6.0:B.2] also removes every feature deprecated in 5.0, 5.1 and 5.2, which
 ! includes the comma-separated list syntax deprecated by [5.2:181].
 
+module uses_allocators_60_traits
+  use omp_lib
+  type(omp_alloctrait), parameter :: module_tr(1) = &
+      [omp_alloctrait(omp_atk_alignment, 64)]
+end module
+
+subroutine uses_allocators_v60_association
+  use omp_lib
+  use uses_allocators_60_traits
+  integer(omp_allocator_handle_kind) :: my_alloc
+  type(omp_alloctrait), parameter :: host_tr(1) = &
+      [omp_alloctrait(omp_atk_alignment, 64)]
+  integer :: x
+
+  !$omp target uses_allocators(traits(module_tr): my_alloc)
+  x = 1
+  !$omp end target
+
+  call inner
+contains
+  subroutine inner
+    !$omp target uses_allocators(traits(host_tr): my_alloc)
+    x = 2
+    !$omp end target
+  end subroutine
+end subroutine
+
 subroutine uses_allocators_v60_null
   use omp_lib
   integer(omp_allocator_handle_kind) :: my_alloc

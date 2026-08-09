@@ -5417,6 +5417,16 @@ static bool IsIntrinsicOmpLibEntity(const Symbol &ultimate) {
       scope.parent().IsIntrinsicModules();
 }
 
+static bool IsIntrinsicOmpAlloctrait(
+    const DerivedTypeSpec &derived, SemanticsContext &context) {
+  const Scope *scope{context.GetBuiltinModule("omp_lib")};
+  const Symbol *symbol{scope ? scope->FindSymbol(SourceName{"omp_alloctrait",
+                                   std::strlen("omp_alloctrait")})
+                             : nullptr};
+  return symbol && IsIntrinsicOmpLibEntity(*symbol) &&
+      &derived.typeSymbol() == &symbol->GetUltimate();
+}
+
 // Recognition of a predefined allocator or memory space differs by version.
 //
 // [5.2:182] asks whether the allocator *is* a predefined allocator, so it
@@ -5478,6 +5488,50 @@ static bool HasOmpHandleKind(
   expected = *want;
   auto got{evaluate::ToInt64(type->numericTypeSpec().kind())};
   return !got || *got == *want;
+}
+
+static bool ClauseHasTargetEffect(
+    llvm::omp::Directive directive, llvm::omp::Clause clause) {
+  llvm::ArrayRef<llvm::omp::Directive> leafs{
+      llvm::omp::getLeafConstructsOrSelf(directive)};
+  if (!llvm::is_contained(leafs, llvm::omp::Directive::OMPD_target)) {
+    return false;
+  }
+  if (leafs.size() == 1) {
+    return true;
+  }
+
+  // Keep this narrow mirror synchronized with the authoritative distribution
+  // rules in llvm/include/llvm/Frontend/OpenMP/ConstructDecompositionT.h.
+  switch (clause) {
+  case llvm::omp::Clause::OMPC_private:
+    // [5.2:340:1-2] Applies to the innermost permitting leaf.
+    return false;
+  case llvm::omp::Clause::OMPC_shared:
+    // [5.2:340:31-32] TARGET is not a permitting leaf.
+    return false;
+  case llvm::omp::Clause::OMPC_firstprivate:
+    // [5.2:340:3-14] Applies to TARGET.
+    return true;
+  case llvm::omp::Clause::OMPC_map:
+    return true;
+  case llvm::omp::Clause::OMPC_lastprivate:
+    // [5.2:340:21-30] Synthesizes TARGET map(tofrom).
+    return true;
+  case llvm::omp::Clause::OMPC_reduction:
+    // [5.2:341:11-13] Synthesizes TARGET map(tofrom).
+    return true;
+  case llvm::omp::Clause::OMPC_linear:
+    // [5.2:341:15-22] Creates outer FIRSTPRIVATE/LASTPRIVATE state.
+    return true;
+  case llvm::omp::Clause::OMPC_in_reduction:
+  case llvm::omp::Clause::OMPC_is_device_ptr:
+  case llvm::omp::Clause::OMPC_has_device_addr:
+    // [5.2:339-341] These clauses are TARGET-owned.
+    return true;
+  default:
+    return true;
+  }
 }
 
 void OmpStructureChecker::CheckUsesAllocatorsSpec(
@@ -5570,6 +5624,9 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
           id != llvm::omp::Clause::OMPC_map) {
         continue;
       }
+      if (!ClauseHasTargetEffect(GetContext().directive, id)) {
+        continue;
+      }
       const parser::OmpObjectList *objects{GetOmpObjectList(clause)};
       if (!objects) {
         continue;
@@ -5626,31 +5683,35 @@ void OmpStructureChecker::CheckUsesAllocatorsTraits(
   const parser::Name *name{parser::Unwrap<parser::Name>(expr)};
   const Symbol *symbol{name ? name->symbol : nullptr};
 
-  // [5.2:182] publishes one restriction for both languages: the traits
-  // argument must be a constant array, have constant values, and be defined in
-  // the same scope as the construct. [6.0:317] later splits that per language,
-  // keeping the same-scope requirement for C/C++ and stating the Fortran rule
-  // as a named constant of rank one. Follow the 6.0 clarification, so an
-  // otherwise valid host- or use-associated named constant is accepted.
+  // [5.0:175], [5.1:203], and [5.2:182] require the traits array declaration
+  // in the same scoping unit as the construct. [6.0:317] retains same-scope
+  // only for C/C++; Fortran instead requires a rank-one named constant.
   if (!symbol) {
     context_.Say(traitsSource,
         "The traits array must be a named constant array"_err_en_US);
     return;
+  }
+  const Symbol &ultimate{symbol->GetUltimate()};
+  if (context_.langOptions().OpenMPVersion < 60 &&
+      &ultimate.owner() !=
+          &GetScopingUnit(context_.FindScope(GetContext().directiveSource))) {
+    context_.Say(traitsSource,
+        "The traits array '%s' must be defined in the same scope as the construct"_err_en_US,
+        name->ToString());
   }
   if (value->Rank() != 1) {
     context_.Say(traitsSource,
         "The traits array '%s' must be a rank-one array"_err_en_US,
         name->ToString());
   }
-  if (!IsNamedConstant(symbol->GetUltimate()) ||
-      !evaluate::IsConstantExpr(*value)) {
+  if (!IsNamedConstant(ultimate) || !evaluate::IsConstantExpr(*value)) {
     context_.Say(traitsSource,
         "The traits array '%s' must be a constant array with constant values"_err_en_US,
         name->ToString());
   }
-  const DeclTypeSpec *type{symbol->GetUltimate().GetType()};
+  const DeclTypeSpec *type{ultimate.GetType()};
   const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
-  if (!derived || derived->name().ToString() != "omp_alloctrait") {
+  if (!derived || !IsIntrinsicOmpAlloctrait(*derived, context_)) {
     context_.Say(traitsSource,
         "The traits array '%s' must be of type OMP_ALLOCTRAIT"_err_en_US,
         name->ToString());

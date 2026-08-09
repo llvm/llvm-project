@@ -50,6 +50,19 @@ subroutine uses_allocators_ok
   !$omp end target teams
 end subroutine
 
+subroutine uses_allocators_renamed_type
+  use omp_lib, only: renamed_alloctrait => omp_alloctrait, &
+      omp_allocator_handle_kind, omp_atk_alignment
+  integer(omp_allocator_handle_kind) :: my_alloc
+  type(renamed_alloctrait), parameter :: tr(1) = &
+      [renamed_alloctrait(omp_atk_alignment, 64)]
+  integer :: x
+
+  !$omp target uses_allocators(traits(tr): my_alloc)
+  x = 1
+  !$omp end target
+end subroutine
+
 subroutine uses_allocators_loop_construct
   use omp_lib
   integer(omp_allocator_handle_kind) :: my_alloc
@@ -211,24 +224,81 @@ subroutine uses_allocators_traits_association
   use omp_lib
   use uses_allocators_traits_module
   integer(omp_allocator_handle_kind) :: my_alloc
+  type(omp_alloctrait), parameter :: host_tr(1) = &
+      [omp_alloctrait(omp_atk_alignment, 64)]
   integer :: x
 
-  ! [5.2:182] pairs the constant-array requirement with a "same scope as the
-  ! construct" requirement, which [6.0:317] keeps only for C/C++ while stating
-  ! the Fortran rule as a named constant of rank one. A use-associated named
-  ! constant therefore satisfies the Fortran rule.
+  ! [5.2:182] requires the traits array to be defined in the construct scope.
+  !ERROR: The traits array 'module_tr' must be defined in the same scope as the construct
   !$omp target uses_allocators(traits(module_tr): my_alloc)
   x = 1
   !$omp end target
 
-  ! The same holds for a host-associated named constant.
   call inner
 contains
   subroutine inner
-    !$omp target uses_allocators(traits(module_tr): my_alloc)
+    !ERROR: The traits array 'host_tr' must be defined in the same scope as the construct
+    !$omp target uses_allocators(traits(host_tr): my_alloc)
     x = 2
     !$omp end target
   end subroutine
+end subroutine
+
+subroutine uses_allocators_impostor_type
+  use omp_lib, only: omp_allocator_handle_kind
+  type omp_alloctrait
+    integer :: key
+    integer :: value
+  end type
+  integer(omp_allocator_handle_kind) :: my_alloc
+  type(omp_alloctrait), parameter :: tr(1) = [omp_alloctrait(1, 64)]
+  integer :: x
+
+  !ERROR: The traits array 'tr' must be of type OMP_ALLOCTRAIT
+  !$omp target uses_allocators(traits(tr): my_alloc)
+  x = 1
+  !$omp end target
+end subroutine
+
+subroutine uses_allocators_combined_conflicts
+  use omp_lib
+  integer(omp_allocator_handle_kind) :: private_alloc, shared_alloc, fp_alloc
+  integer(omp_allocator_handle_kind) :: map_alloc, last_alloc, reduction_alloc
+  integer :: i, x(10)
+
+  !$omp target teams distribute parallel do uses_allocators(private_alloc) private(private_alloc)
+  do i = 1, 10
+    x(i) = i
+  end do
+
+  !$omp target teams distribute parallel do uses_allocators(shared_alloc) shared(shared_alloc)
+  do i = 1, 10
+    x(i) = i
+  end do
+
+  !ERROR: An allocator in a USES_ALLOCATORS clause cannot also appear in the FIRSTPRIVATE clause on the same construct
+  !$omp target teams distribute parallel do uses_allocators(fp_alloc) firstprivate(fp_alloc)
+  do i = 1, 10
+    x(i) = i
+  end do
+
+  !ERROR: An allocator in a USES_ALLOCATORS clause cannot also appear in the MAP clause on the same construct
+  !$omp target teams distribute parallel do uses_allocators(map_alloc) map(tofrom: map_alloc)
+  do i = 1, 10
+    x(i) = i
+  end do
+
+  !ERROR: An allocator in a USES_ALLOCATORS clause cannot also appear in the LASTPRIVATE clause on the same construct
+  !$omp target teams distribute parallel do uses_allocators(last_alloc) lastprivate(last_alloc)
+  do i = 1, 10
+    x(i) = i
+  end do
+
+  !ERROR: An allocator in a USES_ALLOCATORS clause cannot also appear in the REDUCTION clause on the same construct
+  !$omp target teams distribute parallel do uses_allocators(reduction_alloc) reduction(+: reduction_alloc)
+  do i = 1, 10
+    x(i) = i
+  end do
 end subroutine
 
 subroutine uses_allocators_conflicting_clauses

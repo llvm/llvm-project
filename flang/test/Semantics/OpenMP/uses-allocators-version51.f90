@@ -5,6 +5,12 @@
 ! OpenMP 5.1 keeps the pre-5.2 USES_ALLOCATORS syntax and the [5.1:203]
 ! requirement that a non-predefined allocator specifies traits.
 
+module uses_allocators_51_traits
+  use omp_lib
+  type(omp_alloctrait), parameter :: module_tr(1) = &
+      [omp_alloctrait(omp_atk_alignment, 64)]
+end module
+
 subroutine uses_allocators_51
   use omp_lib
   integer(omp_allocator_handle_kind) :: my_alloc, other_alloc
@@ -38,6 +44,29 @@ subroutine uses_allocators_51
   !$omp target uses_allocators(omp_default_mem_alloc(tr))
   x = 5
   !$omp end target
+end subroutine
+
+subroutine uses_allocators_51_association
+  use omp_lib
+  use uses_allocators_51_traits
+  integer(omp_allocator_handle_kind) :: my_alloc
+  type(omp_alloctrait), parameter :: host_tr(1) = &
+      [omp_alloctrait(omp_atk_alignment, 64)]
+  integer :: x
+
+  !ERROR: The traits array 'module_tr' must be defined in the same scope as the construct
+  !$omp target uses_allocators(my_alloc(module_tr))
+  x = 1
+  !$omp end target
+
+  call inner
+contains
+  subroutine inner
+    !ERROR: The traits array 'host_tr' must be defined in the same scope as the construct
+    !$omp target uses_allocators(my_alloc(host_tr))
+    x = 2
+    !$omp end target
+  end subroutine
 end subroutine
 
 subroutine uses_allocators_51_rename

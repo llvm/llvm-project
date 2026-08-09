@@ -6,6 +6,12 @@
 ! "allocator[(traits-array)]" list syntax, and [5.0:175] requires a
 ! non-predefined allocator to specify traits.
 
+module uses_allocators_50_traits
+  use omp_lib
+  type(omp_alloctrait), parameter :: module_tr(1) = &
+      [omp_alloctrait(omp_atk_alignment, 64)]
+end module
+
 subroutine uses_allocators_50
   use omp_lib
   integer(omp_allocator_handle_kind) :: my_alloc, other_alloc
@@ -50,6 +56,29 @@ subroutine uses_allocators_50
   !$omp target uses_allocators(omp_null_allocator(tr))
   x = 7
   !$omp end target
+end subroutine
+
+subroutine uses_allocators_50_association
+  use omp_lib
+  use uses_allocators_50_traits
+  integer(omp_allocator_handle_kind) :: my_alloc
+  type(omp_alloctrait), parameter :: host_tr(1) = &
+      [omp_alloctrait(omp_atk_alignment, 64)]
+  integer :: x
+
+  !ERROR: The traits array 'module_tr' must be defined in the same scope as the construct
+  !$omp target uses_allocators(my_alloc(module_tr))
+  x = 1
+  !$omp end target
+
+  call inner
+contains
+  subroutine inner
+    !ERROR: The traits array 'host_tr' must be defined in the same scope as the construct
+    !$omp target uses_allocators(my_alloc(host_tr))
+    x = 2
+    !$omp end target
+  end subroutine
 end subroutine
 
 subroutine uses_allocators_50_rename
