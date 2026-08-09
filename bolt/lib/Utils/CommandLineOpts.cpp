@@ -192,7 +192,9 @@ bool HeatmapBlockSpecParser::parse(cl::Option &O, StringRef ArgName,
   unsigned PreviousSize = 0;
   for (StringRef Size : Sizes) {
     StringRef OrigSize = Size;
-    unsigned &SizeVal = Val.emplace_back(0);
+    HeatmapBlockSize &Block = Val.emplace_back();
+    Block.Spec = OrigSize.str();
+    unsigned &SizeVal = Block.Value;
     if (Size.consumeInteger(10, SizeVal)) {
       O.error("'" + OrigSize + "' value can't be parsed as an integer");
       return true;
@@ -217,7 +219,9 @@ cl::opt<opts::HeatmapBlockSizes, false, opts::HeatmapBlockSpecParser>
         "block-size", cl::value_desc("initial_size{,zoom-out_size,...}"),
         cl::desc("heatmap bucket size, optionally followed by zoom-out sizes "
                  "for coarse-grained heatmaps (default 64B, 4K, 256K)."),
-        cl::init(HeatmapBlockSizes{/*Initial*/ 64, /*Zoom-out*/ 4096, 262144}),
+        cl::init(HeatmapBlockSizes{/*Initial*/ {64, "64"},
+                                   /*Zoom-out*/ {4096, "4K"},
+                                   {262144, "256K"}}),
         cl::cat(HeatmapCategory));
 
 cl::opt<int> HeatmapCdfPct(
