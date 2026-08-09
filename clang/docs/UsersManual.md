@@ -2101,8 +2101,10 @@ excess precision arithmetic.  Valid values are:
 * `standard` - The default.  Allow the use of excess precision arithmetic
   under the constraints of the C and C++ standards. Has no effect except on
   the types and targets listed above.
-* `fast` - Accepted for GCC compatibility, but currently treated as an
-  alias for `standard`.
+* `fast` - Allow excess precision to escape an expression. On x86 without SSE:
+  x87 `float`/`double` results keep the register's extended precision instead of
+  being rounded to their type, and `__FLT_EVAL_METHOD__` becomes `2` rather than
+  `0`. It has no effect on other targets.
 * `16` - Forces `_Float16` operations to be emitted without using excess
   precision arithmetic.
 :::

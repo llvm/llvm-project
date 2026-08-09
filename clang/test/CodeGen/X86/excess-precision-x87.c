@@ -1,14 +1,17 @@
 // RUN: %clang_cc1 -triple i386-unknown-linux-gnu -target-feature -sse \
-// RUN:   -O1 -emit-llvm -o - %s | FileCheck %s --check-prefix=SRC
+// RUN:   -O1 -emit-llvm -o - %s | FileCheck %s --check-prefixes=NARROW,SRC
+// RUN: %clang_cc1 -triple i386-unknown-linux-gnu -target-feature -sse \
+// RUN:   -target-feature +x87-excess-precision -O1 -emit-llvm -o - %s \
+// RUN:   | FileCheck %s --check-prefixes=NARROW,FAST
 // RUN: %clang_cc1 -triple i386-unknown-linux-gnu -target-feature -sse \
 // RUN:   -ffp-eval-method=extended -O1 -emit-llvm -o - %s \
 // RUN:   | FileCheck %s --check-prefix=EXT
 
-// SRC-LABEL: define {{.*}}float @expr(
-// SRC: fmul float
-// SRC: fmul float
-// SRC: fadd float
-// SRC-NOT: x86_fp80
+// NARROW-LABEL: define {{.*}}float @expr(
+// NARROW: fmul float
+// NARROW: fmul float
+// NARROW: fadd float
+// NARROW-NOT: x86_fp80
 //
 // EXT-LABEL: define {{.*}}float @expr(
 // EXT: fmul x86_fp80
@@ -19,8 +22,9 @@ float expr(float a, float b, float c, float d) {
   return a * b + c * d;
 }
 
-// SRC-LABEL: define {{.*}}i32 @eval_method(
+// NARROW-LABEL: define {{.*}}i32 @eval_method(
 // SRC: ret i32 0
+// FAST: ret i32 2
 //
 // EXT-LABEL: define {{.*}}i32 @eval_method(
 // EXT: ret i32 2

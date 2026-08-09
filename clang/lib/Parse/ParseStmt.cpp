@@ -1260,16 +1260,15 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   if (isStmtExpr && LastIsError && !Stmts.empty())
     return StmtError();
 
-  // Warn the user that using option `-ffp-eval-method=source` on a
-  // 32-bit target and feature `sse` disabled, or using
-  // `pragma clang fp eval_method=source` and feature `sse` disabled, is not
-  // supported.
+  // Warn the user that using option `-ffp-eval-method=source`, or using
+  // `pragma clang fp eval_method=source`, is not supported on a target that
+  // keeps excess precision (x87 without SSE, under -fexcess-precision=fast).
   if (!PP.getTargetInfo().supportSourceEvalMethod() &&
       (PP.getLastFPEvalPragmaLocation().isValid() ||
        PP.getCurrentFPEvalMethod() ==
            LangOptions::FPEvalMethodKind::FEM_Source))
     Diag(Tok.getLocation(),
-         diag::warn_no_support_for_eval_method_source_on_m32);
+         diag::warn_no_support_for_eval_method_source_with_excess_precision);
 
   SourceLocation CloseLoc = Tok.getLocation();
 

@@ -230,6 +230,10 @@ features cannot lower the translation-unit ABI level;
 - `-ffp-eval-method=source` and `#pragma clang fp eval_method(source)` are now
   accepted on x86 without SSE, where they used to be rejected because the
   backend could not round x87 results to their type.
+- `-fexcess-precision=fast` is no longer an alias for `standard`. On x86 without
+  SSE: x87 `float`/`double` results keep the register's extended precision
+  instead of being rounded to their type, and `__FLT_EVAL_METHOD__` becomes `2`
+  rather than `0`. It has no effect on other targets.
 
 ### Removed Compiler Flags
 
@@ -649,6 +653,7 @@ features cannot lower the translation-unit ABI level;
   `float`/`double` result is now rounded, just as is already is documented in
   the manual. As a consequence, `__FLT_EVAL_METHOD__` is now `0` by default,
   instead of `2`, on x86 without SSE.
+- `-fexcess-precision=fast` opts out of the fix described above.
 
 ### Fixed Point Support in Clang
 
