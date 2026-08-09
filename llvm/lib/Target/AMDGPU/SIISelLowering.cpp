@@ -11099,6 +11099,8 @@ SDValue SITargetLowering::lowerToFP8(SDValue Op, bool IsBF8,
   bool IsF16 = Src.getValueType().getScalarType() == MVT::f16;
   assert((!IsF16 || Subtarget->hasF16FP8ConversionInsts()) &&
          "f16 -> fp8/bf8 conversion requires F16FP8ConversionInsts");
+  assert((!ResVT.isVector() || ResVT == MVT::v2i8) &&
+         "only the v2i8 vector result is custom lowered");
 
   if (IsF16) {
     unsigned Opc =
@@ -11112,9 +11114,10 @@ SDValue SITargetLowering::lowerToFP8(SDValue Op, bool IsBF8,
   SDValue WordSel = DAG.getTargetConstant(0, SL, MVT::i1);
 
   if (!ResVT.isVector()) {
-    // Convert one lane, the second is unused.
-    SDValue Packed = DAG.getNode(Opc, SL, MVT::i32, Src,
-                                 DAG.getPOISON(MVT::f32), PoisonI32, WordSel);
+    // Convert one lane, the second is unused. Feed it the same source so the
+    // instruction does not read an undefined register.
+    SDValue Packed =
+        DAG.getNode(Opc, SL, MVT::i32, Src, Src, PoisonI32, WordSel);
     return DAG.getAnyExtOrTrunc(Packed, SL, ResVT);
   }
 
