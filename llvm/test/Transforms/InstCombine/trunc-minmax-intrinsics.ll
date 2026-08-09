@@ -626,15 +626,11 @@ define <vscale x 4 x i8> @smax_sext_scalable_vec(<vscale x 4 x i8> %x, <vscale x
 define <8 x i16> @smin_smax_dag_shared_sext_vec(
 ; CHECK-LABEL: define <8 x i16> @smin_smax_dag_shared_sext_vec(
 ; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <8 x i16> [[C:%.*]]) {
-; CHECK-NEXT:    [[AW:%.*]] = sext <8 x i16> [[A]] to <8 x i32>
-; CHECK-NEXT:    [[BW:%.*]] = sext <8 x i16> [[B]] to <8 x i32>
-; CHECK-NEXT:    [[CW:%.*]] = sext <8 x i16> [[C]] to <8 x i32>
-; CHECK-NEXT:    [[LO:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[AW]], <8 x i32> [[BW]])
-; CHECK-NEXT:    [[HI:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[AW]], <8 x i32> [[BW]])
-; CHECK-NEXT:    [[MID:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[CW]], <8 x i32> [[HI]])
-; CHECK-NEXT:    [[WIDE:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[MID]], <8 x i32> [[LO]])
-; CHECK-NEXT:    [[RESULT:%.*]] = trunc nsw <8 x i32> [[WIDE]] to <8 x i16>
-; CHECK-NEXT:    ret <8 x i16> [[RESULT]]
+; CHECK-NEXT:    [[LO:%.*]] = call <8 x i16> @llvm.smin.v8i16(<8 x i16> [[A]], <8 x i16> [[B]])
+; CHECK-NEXT:    [[HI:%.*]] = call <8 x i16> @llvm.smax.v8i16(<8 x i16> [[A]], <8 x i16> [[B]])
+; CHECK-NEXT:    [[MID:%.*]] = call <8 x i16> @llvm.smin.v8i16(<8 x i16> [[C]], <8 x i16> [[HI]])
+; CHECK-NEXT:    [[WIDE:%.*]] = call <8 x i16> @llvm.smax.v8i16(<8 x i16> [[MID]], <8 x i16> [[LO]])
+; CHECK-NEXT:    ret <8 x i16> [[WIDE]]
 ;
   <8 x i16> %a, <8 x i16> %b, <8 x i16> %c) {
   %aw = sext <8 x i16> %a to <8 x i32>
@@ -653,15 +649,11 @@ define <8 x i16> @smin_smax_dag_shared_sext_vec(
 define <4 x i8> @smin_smax_dag_sext_i8_i64_vec(
 ; CHECK-LABEL: define <4 x i8> @smin_smax_dag_sext_i8_i64_vec(
 ; CHECK-SAME: <4 x i8> [[A:%.*]], <4 x i8> [[B:%.*]], <4 x i8> [[C:%.*]]) {
-; CHECK-NEXT:    [[AW:%.*]] = sext <4 x i8> [[A]] to <4 x i64>
-; CHECK-NEXT:    [[BW:%.*]] = sext <4 x i8> [[B]] to <4 x i64>
-; CHECK-NEXT:    [[CW:%.*]] = sext <4 x i8> [[C]] to <4 x i64>
-; CHECK-NEXT:    [[LO:%.*]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[AW]], <4 x i64> [[BW]])
-; CHECK-NEXT:    [[HI:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[AW]], <4 x i64> [[BW]])
-; CHECK-NEXT:    [[MID:%.*]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[CW]], <4 x i64> [[HI]])
-; CHECK-NEXT:    [[WIDE:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[MID]], <4 x i64> [[LO]])
-; CHECK-NEXT:    [[RESULT:%.*]] = trunc nsw <4 x i64> [[WIDE]] to <4 x i8>
-; CHECK-NEXT:    ret <4 x i8> [[RESULT]]
+; CHECK-NEXT:    [[LO:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[A]], <4 x i8> [[B]])
+; CHECK-NEXT:    [[HI:%.*]] = call <4 x i8> @llvm.smax.v4i8(<4 x i8> [[A]], <4 x i8> [[B]])
+; CHECK-NEXT:    [[MID:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[C]], <4 x i8> [[HI]])
+; CHECK-NEXT:    [[WIDE:%.*]] = call <4 x i8> @llvm.smax.v4i8(<4 x i8> [[MID]], <4 x i8> [[LO]])
+; CHECK-NEXT:    ret <4 x i8> [[WIDE]]
 ;
     <4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
   %aw = sext <4 x i8> %a to <4 x i64>
@@ -730,15 +722,11 @@ define <8 x i16> @smin_smax_dag_non_sext_leaf_vec(
 define <4 x i16> @smin_smax_dag_plain_trunc_vec(
 ; CHECK-LABEL: define <4 x i16> @smin_smax_dag_plain_trunc_vec(
 ; CHECK-SAME: <4 x i16> [[A:%.*]], <4 x i16> [[B:%.*]], <4 x i16> [[C:%.*]]) {
-; CHECK-NEXT:    [[AW:%.*]] = sext <4 x i16> [[A]] to <4 x i32>
-; CHECK-NEXT:    [[BW:%.*]] = sext <4 x i16> [[B]] to <4 x i32>
-; CHECK-NEXT:    [[CW:%.*]] = sext <4 x i16> [[C]] to <4 x i32>
-; CHECK-NEXT:    [[LO:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[AW]], <4 x i32> [[BW]])
-; CHECK-NEXT:    [[HI:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[AW]], <4 x i32> [[BW]])
-; CHECK-NEXT:    [[MID:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[CW]], <4 x i32> [[HI]])
-; CHECK-NEXT:    [[WIDE:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[MID]], <4 x i32> [[LO]])
-; CHECK-NEXT:    [[RESULT:%.*]] = trunc <4 x i32> [[WIDE]] to <4 x i16>
-; CHECK-NEXT:    ret <4 x i16> [[RESULT]]
+; CHECK-NEXT:    [[LO:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[A]], <4 x i16> [[B]])
+; CHECK-NEXT:    [[HI:%.*]] = call <4 x i16> @llvm.smax.v4i16(<4 x i16> [[A]], <4 x i16> [[B]])
+; CHECK-NEXT:    [[MID:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[C]], <4 x i16> [[HI]])
+; CHECK-NEXT:    [[WIDE:%.*]] = call <4 x i16> @llvm.smax.v4i16(<4 x i16> [[MID]], <4 x i16> [[LO]])
+; CHECK-NEXT:    ret <4 x i16> [[WIDE]]
 ;
     <4 x i16> %a, <4 x i16> %b, <4 x i16> %c) {
   %aw = sext <4 x i16> %a to <4 x i32>
