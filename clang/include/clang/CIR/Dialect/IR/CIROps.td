@@ -8744,9 +8744,8 @@ def CIR_TokenNoneOp : CIR_Op<"token.none", [
 ]> {
   let summary = "Produces an empty token value.";
   let description = [{
-    MLIR does not have a way to represent the LLVM IR `none` token literal.
-    Like the LLVM dialect, CIR provides an operation that produces a token
-    value, which can later be lowered to `llvm::ConstantTokenNone`.
+    Produces a `none` token value, mirroring LLVM IR's `none` token
+    literal. Lowers to `llvm::ConstantTokenNone`.
   }];
 
   let results = (outs Token:$result);

@@ -281,8 +281,7 @@ cir::CoroEndOp CIRGenFunction::emitCoroEndBuiltinCall(const CallExpr *e) {
   llvm::SmallVector<mlir::Value, 3> args;
   for (const Expr *arg : e->arguments())
     args.push_back(emitScalarExpr(arg));
-  auto tkNone = cir::TokenNoneOp::create(builder, loc);
-  args.push_back(tkNone.getResult());
+  args.push_back(cir::TokenNoneOp::create(builder, loc));
   return cir::CoroEndOp::create(builder, loc, {}, args);
 }
 
@@ -510,11 +509,11 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
     }
   }
 
-  auto tkNone = cir::TokenNoneOp::create(cgm.getBuilder(), openCurlyLoc);
   cir::CoroEndOp::create(
       cgm.getBuilder(), openCurlyLoc,
       builder.getNullPtr(builder.getVoidPtrTy(), openCurlyLoc),
-      builder.getBool(false, openCurlyLoc), tkNone.getResult());
+      builder.getBool(false, openCurlyLoc),
+      cir::TokenNoneOp::create(cgm.getBuilder(), openCurlyLoc));
   if (auto *ret = cast_or_null<ReturnStmt>(s.getReturnStmt())) {
     // Since we already emitted the return value above, so we shouldn't
     // emit it again here.
