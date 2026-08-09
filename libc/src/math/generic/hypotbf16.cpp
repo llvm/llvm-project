@@ -14,8 +14,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(__bf16, hypotbf16, (__bf16 x, __bf16 y)) {
   return cpp::bit_cast<__bf16>(
-      math::hypotbf16(cpp::bit_cast<bfloat16>(x), cpp::bit_cast<bfloat16>(y))
-          .bits);
+      math::hypotbf16(cpp::bit_cast<bfloat16>(x), cpp::bit_cast<bfloat16>(y)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
