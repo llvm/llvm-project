@@ -193,8 +193,8 @@ void LifetimeModeling::checkPostCall(const CallEvent &Call,
 
   if (hasAnyParamLifetimeAnnotated(FD)) {
     auto AggrRegs = lifetime_modeling::getRegionsFromAggrVal(RetVal, C);
-    for (const MemRegion *I : AggrRegs) {
-      State = bindSource(State, RetVal, I);
+    for (const MemRegion *R : AggrRegs) {
+      State = bindSource(State, RetVal, R);
     }
   }
 
@@ -202,8 +202,14 @@ void LifetimeModeling::checkPostCall(const CallEvent &Call,
     if (PVD->hasAttr<LifetimeBoundAttr>()) {
       unsigned Idx = PVD->getFunctionScopeIndex();
       SVal Arg = Call.getArgSVal(Idx);
-      if (const MemRegion *ArgValRegion = Arg.getAsRegion())
+      if (const MemRegion *ArgValRegion = Arg.getAsRegion()) {
         State = bindSource(State, RetVal, ArgValRegion);
+      } else {
+        auto AggrRegs = lifetime_modeling::getRegionsFromAggrVal(Arg, C);
+        for (const MemRegion *R : AggrRegs) {
+          State = bindSource(State, RetVal, R);
+        }
+      }
     }
   }
 
