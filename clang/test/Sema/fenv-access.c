@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -verify -Wfenv-access %s
-// RUN: %clang_cc1 -verify -Wfenv-access -ffp-exception-behavior=maytrap -DNO_WARN %s
-// RUN: %clang_cc1 -verify -Wfenv-access -ffp-exception-behavior=strict -DNO_WARN %s
+// RUN: %clang_cc1 -verify -Wfenv-access -ffp-exception-behavior=strict %s
+// RUN: %clang_cc1 -verify -Wfenv-access -frounding-math %s
+// RUN: %clang_cc1 -verify -Wfenv-access -ffp-exception-behavior=strict -frounding-math -DNO_WARN %s
+// RUN: %clang_cc1 -verify -Wfenv-access -ffp-exception-behavior=maytrap -frounding-math -DNO_WARN %s
 // RUN: %clang_cc1 -verify -Wfenv-access -triple armv7-linux-gnueabihf -DNO_WARN -DUNSUPPORTED %s
 
 typedef struct {} fenv_t;
@@ -37,18 +39,18 @@ void test_fenv_access_off(void) {
   feholdexcept(envp);
   fesetenv(envp);
   feupdateenv(envp);
-#else 
-  feclearexcept(FE_INVALID); // expected-warning {{'feclearexcept' used without enabling floating-point exception behavior; use 'pragma STDC FENV_ACCESS ON' or compile with '-ffp-exception-behavior=maytrap'}}
-  fegetexceptflag(flagp, FE_INVALID); // expected-warning {{'fegetexceptflag' used without enabling floating-point exception behavior; use 'pragma STDC FENV_ACCESS ON' or compile with '-ffp-exception-behavior=maytrap'}}
-  feraiseexcept(FE_INVALID); // expected-warning {{'feraiseexcept' used without enabling floating-point exception behavior; use 'pragma STDC FENV_ACCESS ON' or compile with '-ffp-exception-behavior=maytrap'}}
-  fesetexceptflag(flagp, FE_INVALID); // expected-warning {{'fesetexceptflag' used without enabling floating-point exception behavior; use 'pragma STDC FENV_ACCESS ON' or compile with '-ffp-exception-behavior=maytrap'}}
-  fetestexcept(FE_INVALID); // expected-warning {{'fetestexcept' used without enabling floating-point exception behavior; use 'pragma STDC FENV_ACCESS ON' or compile with '-ffp-exception-behavior=maytrap'}}
-  fegetround(); // expected-warning {{'fegetround' used without enabling floating-point exception behavior; use 'pragma STDC FENV_ACCESS ON' or compile with '-ffp-exception-behavior=maytrap'}}
-  fesetround(0); // expected-warning {{'fesetround' used without enabling floating-point exception behavior; use 'pragma STDC FENV_ACCESS ON' or compile with '-ffp-exception-behavior=maytrap'}}
-  fegetenv(envp); // expected-warning {{'fegetenv' used without enabling floating-point exception behavior; use 'pragma STDC FENV_ACCESS ON' or compile with '-ffp-exception-behavior=maytrap'}}
-  feholdexcept(envp); // expected-warning {{'feholdexcept' used without enabling floating-point exception behavior; use 'pragma STDC FENV_ACCESS ON' or compile with '-ffp-exception-behavior=maytrap'}}
-  fesetenv(envp); // expected-warning {{'fesetenv' used without enabling floating-point exception behavior; use 'pragma STDC FENV_ACCESS ON' or compile with '-ffp-exception-behavior=maytrap'}}
-  feupdateenv(envp); // expected-warning {{'feupdateenv' used without enabling floating-point exception behavior; use 'pragma STDC FENV_ACCESS ON' or compile with '-ffp-exception-behavior=maytrap'}}
+#else
+  feclearexcept(FE_INVALID); // expected-warning {{'feclearexcept' used without enabling strict floating-point exception semantics and dynamic rounding mode; use '#pragma STDC FENV_ACCESS ON' or compile with '-ftrapping-math -frounding-math'}}
+  fegetexceptflag(flagp, FE_INVALID); // expected-warning {{'fegetexceptflag' used without enabling strict floating-point exception semantics and dynamic rounding mode; use '#pragma STDC FENV_ACCESS ON' or compile with '-ftrapping-math -frounding-math'}}
+  feraiseexcept(FE_INVALID); // expected-warning {{'feraiseexcept' used without enabling strict floating-point exception semantics and dynamic rounding mode; use '#pragma STDC FENV_ACCESS ON' or compile with '-ftrapping-math -frounding-math'}}
+  fesetexceptflag(flagp, FE_INVALID); // expected-warning {{'fesetexceptflag' used without enabling strict floating-point exception semantics and dynamic rounding mode; use '#pragma STDC FENV_ACCESS ON' or compile with '-ftrapping-math -frounding-math'}}
+  fetestexcept(FE_INVALID); // expected-warning {{'fetestexcept' used without enabling strict floating-point exception semantics and dynamic rounding mode; use '#pragma STDC FENV_ACCESS ON' or compile with '-ftrapping-math -frounding-math'}}
+  fegetround(); // expected-warning {{'fegetround' used without enabling strict floating-point exception semantics and dynamic rounding mode; use '#pragma STDC FENV_ACCESS ON' or compile with '-ftrapping-math -frounding-math'}}
+  fesetround(0); // expected-warning {{'fesetround' used without enabling strict floating-point exception semantics and dynamic rounding mode; use '#pragma STDC FENV_ACCESS ON' or compile with '-ftrapping-math -frounding-math'}}
+  fegetenv(envp); // expected-warning {{'fegetenv' used without enabling strict floating-point exception semantics and dynamic rounding mode; use '#pragma STDC FENV_ACCESS ON' or compile with '-ftrapping-math -frounding-math'}}
+  feholdexcept(envp); // expected-warning {{'feholdexcept' used without enabling strict floating-point exception semantics and dynamic rounding mode; use '#pragma STDC FENV_ACCESS ON' or compile with '-ftrapping-math -frounding-math'}}
+  fesetenv(envp); // expected-warning {{'fesetenv' used without enabling strict floating-point exception semantics and dynamic rounding mode; use '#pragma STDC FENV_ACCESS ON' or compile with '-ftrapping-math -frounding-math'}}
+  feupdateenv(envp); // expected-warning {{'feupdateenv' used without enabling strict floating-point exception semantics and dynamic rounding mode; use '#pragma STDC FENV_ACCESS ON' or compile with '-ftrapping-math -frounding-math'}}
 #endif
 }
 
