@@ -35,6 +35,22 @@ entry:
   ret <8 x i64> %3
 }
 
+; concatenation test for swapped operands
+define <8 x i64> @test_mm512_cvtne2ps2bf16_512_concat(<16 x float> %A, <16 x float> %B) {
+; CHECK-LABEL: test_mm512_cvtne2ps2bf16_512_concat:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vcvtneps2bf16 %zmm0, %ymm0 # encoding: [0x62,0xf2,0x7e,0x48,0x72,0xc0]
+; CHECK-NEXT:    vcvtneps2bf16 %zmm1, %ymm1 # encoding: [0x62,0xf2,0x7e,0x48,0x72,0xc9]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0 # encoding: [0x62,0xf3,0xfd,0x48,0x1a,0xc1,0x01]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+entry:
+  %0 = tail call <16 x bfloat> @llvm.x86.avx512bf16.cvtneps2bf16.512(<16 x float> %A)
+  %1 = tail call <16 x bfloat> @llvm.x86.avx512bf16.cvtneps2bf16.512(<16 x float> %B)
+  %2 = shufflevector <16 x bfloat> %0, <16 x bfloat> %1, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %3 = bitcast <32 x bfloat> %2 to <8 x i64>
+  ret <8 x i64> %3
+}
+
 define <8 x i64> @test_mm512_mask_cvtne2ps2bf16_512(<8 x i64> %C, i32 %U, <16 x float> %A, <16 x float> %B) local_unnamed_addr #2 {
 ; X86-LABEL: test_mm512_mask_cvtne2ps2bf16_512:
 ; X86:       # %bb.0: # %entry
