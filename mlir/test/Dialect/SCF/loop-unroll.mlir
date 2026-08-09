@@ -38,6 +38,17 @@ func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
 //   UNROLL-BY-2-DAG:  %[[V7:.*]] = arith.addi %[[LB]], %[[V6]] : index
 //       Compute step of unrolled loop in V8.
 //   UNROLL-BY-2-DAG:  %[[V8:.*]] = arith.muli %[[STEP]], %[[C2]] : index
+// Runtime checks from splitForOpAtPoint (dynamic split = lb + evenMult * step).
+//       UNROLL-BY-2:  %[[LB_OK:.*]] = arith.cmpi sle, %[[LB]], %[[V7]]
+//       UNROLL-BY-2:  cf.assert %[[LB_OK]]
+//       UNROLL-BY-2:  %[[UB_OK:.*]] = arith.cmpi slt, %[[V7]], %[[UB]]
+//       UNROLL-BY-2:  cf.assert %[[UB_OK]]
+//       UNROLL-BY-2:  arith.cmpi sgt, %[[STEP]]
+//       UNROLL-BY-2:  cf.assert
+//       UNROLL-BY-2:  %[[SPLIT_DIFF:.*]] = arith.subi %[[V7]], %[[LB]]
+//       UNROLL-BY-2:  %[[SPLIT_REM:.*]] = arith.remsi %[[SPLIT_DIFF]], %[[STEP]]
+//       UNROLL-BY-2:  %[[ALIGNED:.*]] = arith.cmpi eq, %[[SPLIT_REM]]
+//       UNROLL-BY-2:  cf.assert %[[ALIGNED]]
 //       UNROLL-BY-2:  scf.for %[[IV:.*]] = %[[LB]] to %[[V7]] step %[[V8]] {
 //  UNROLL-BY-2-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
 //  UNROLL-BY-2-NEXT:    %[[C1_IV:.*]] = arith.constant 1 : index
@@ -71,6 +82,17 @@ func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
 //   UNROLL-BY-3-DAG:  %[[V7:.*]] = arith.addi %[[LB]], %[[V6]] : index
 //       Compute step of unrolled loop in V8.
 //   UNROLL-BY-3-DAG:  %[[V8:.*]] = arith.muli %[[STEP]], %[[C3]] : index
+// Runtime checks from splitForOpAtPoint (dynamic split = lb + evenMult * step).
+//       UNROLL-BY-3:  %[[LB_OK:.*]] = arith.cmpi sle, %[[LB]], %[[V7]]
+//       UNROLL-BY-3:  cf.assert %[[LB_OK]]
+//       UNROLL-BY-3:  %[[UB_OK:.*]] = arith.cmpi slt, %[[V7]], %[[UB]]
+//       UNROLL-BY-3:  cf.assert %[[UB_OK]]
+//       UNROLL-BY-3:  arith.cmpi sgt, %[[STEP]]
+//       UNROLL-BY-3:  cf.assert
+//       UNROLL-BY-3:  %[[SPLIT_DIFF:.*]] = arith.subi %[[V7]], %[[LB]]
+//       UNROLL-BY-3:  %[[SPLIT_REM:.*]] = arith.remsi %[[SPLIT_DIFF]], %[[STEP]]
+//       UNROLL-BY-3:  %[[ALIGNED:.*]] = arith.cmpi eq, %[[SPLIT_REM]]
+//       UNROLL-BY-3:  cf.assert %[[ALIGNED]]
 //       UNROLL-BY-3:  scf.for %[[IV:.*]] = %[[LB]] to %[[V7]] step %[[V8]] {
 //  UNROLL-BY-3-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
 //  UNROLL-BY-3-NEXT:    %[[C1_IV:.*]] = arith.constant 1 : index
@@ -699,7 +721,25 @@ func.func @static_loop_unroll_by_3_no_promote_epilogue(%arg0 : memref<?xf32>) {
 // PROMOTE-BY-3-NOT: scf.for
 //  PROMOTE-BY-3: memref.store
 
+// -----
 
+// Dynamic bounds with a constant zero step: splitForOpAtPoint fails the static
+// step check, so unrolling does not rewrite the loop.
+func.func @dynamic_unroll_zero_step(%lb: index, %ub: index,
+                                    %mem: memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  %step = arith.constant 0 : index
+  scf.for %i0 = %lb to %ub step %step {
+    memref.store %0, %mem[%i0] : memref<?xf32>
+  }
+  return
+}
+// UNROLL-BY-2-LABEL: func @dynamic_unroll_zero_step
+//  UNROLL-BY-2-SAME: %[[LB:.*]]: index, %[[UB:.*]]: index
+//       UNROLL-BY-2: scf.for %{{.*}} = %[[LB]] to %[[UB]] step %{{.*}}
+//  UNROLL-BY-2-NEXT:   memref.store
+//  UNROLL-BY-2-NEXT: }
+//  UNROLL-BY-2-NEXT: return
 
 // -----
 

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -267,6 +268,61 @@ struct TestSCFPipeliningPass
     });
   }
 };
+
+static constexpr StringLiteral kSplitAtAttr = "test.split_at";
+static constexpr StringLiteral kSplitArgAttr = "test.split_arg";
+
+struct TestSplitForOpAtPointPass
+    : public PassWrapper<TestSplitForOpAtPointPass,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSplitForOpAtPointPass)
+
+  StringRef getArgument() const final { return "test-split-for-op-at-point"; }
+
+  StringRef getDescription() const final { return "test splitForOpAtPoint"; }
+
+  TestSplitForOpAtPointPass() = default;
+  TestSplitForOpAtPointPass(const TestSplitForOpAtPointPass &) {}
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect, cf::ControlFlowDialect>();
+  }
+
+  void runOnOperation() override {
+    func::FuncOp func = getOperation();
+    SmallVector<scf::ForOp> loopsToSplit;
+    func.walk([&](scf::ForOp forOp) {
+      if (forOp->hasAttr(kSplitAtAttr) || forOp->hasAttr(kSplitArgAttr))
+        loopsToSplit.push_back(forOp);
+    });
+
+    for (scf::ForOp forOp : loopsToSplit) {
+      Value splitPoint;
+      if (auto splitAttr = forOp->getAttrOfType<IntegerAttr>(kSplitAtAttr)) {
+        OpBuilder builder(forOp);
+        splitPoint =
+            arith::ConstantOp::create(builder, forOp.getLoc(), splitAttr);
+        forOp->removeAttr(kSplitAtAttr);
+      } else if (auto argAttr =
+                     forOp->getAttrOfType<IntegerAttr>(kSplitArgAttr)) {
+        int64_t argNo = argAttr.getInt();
+        if (argNo < 0 ||
+            static_cast<unsigned>(argNo) >= func.getNumArguments()) {
+          emitError(forOp.getLoc(), "test.split_arg is out of range");
+          return signalPassFailure();
+        }
+        splitPoint = func.getArgument(argNo);
+        forOp->removeAttr(kSplitArgAttr);
+      } else {
+        continue;
+      }
+      if (failed(splitForOpAtPoint(forOp, splitPoint))) {
+        emitError(forOp.getLoc(), "failed to split scf.for");
+        return signalPassFailure();
+      }
+    }
+  }
+};
 } // namespace
 
 namespace mlir {
@@ -275,6 +331,7 @@ void registerTestSCFUtilsPass() {
   PassRegistration<TestSCFForUtilsPass>();
   PassRegistration<TestSCFIfUtilsPass>();
   PassRegistration<TestSCFPipeliningPass>();
+  PassRegistration<TestSplitForOpAtPointPass>();
 }
 } // namespace test
 } // namespace mlir

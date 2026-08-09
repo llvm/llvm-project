@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
 #include <tuple>
+#include <utility>
 
 namespace mlir {
 class Location;
@@ -107,6 +108,16 @@ struct UnrolledLoopInfo {
   std::optional<scf::ForOp> mainLoopOp = std::nullopt;
   std::optional<scf::ForOp> epilogueLoopOp = std::nullopt;
 };
+
+/// Splits `forOp` into two consecutive loops at `splitPoint`:
+///   first:  [lowerBound, splitPoint)
+///   second: [splitPoint, upperBound)
+///
+/// Returns the two new loops and replaces `forOp`. Iter-args are chained
+/// from the first loop to the second. The split point is checked statically
+/// when bounds are constant, and with runtime asserts otherwise.
+FailureOr<std::pair<scf::ForOp, scf::ForOp>>
+splitForOpAtPoint(scf::ForOp forOp, Value splitPoint);
 
 /// Unrolls this for operation by the specified unroll factor. Returns the
 /// unrolled main loop and the epilogue loop, if the loop is unrolled. Otherwise
