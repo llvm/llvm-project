@@ -1525,6 +1525,12 @@ bool isGFX940(const MCSubtargetInfo &STI);
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
 bool hasPopsExitingWaveID(const MCSubtargetInfo &STI);
+
+/// \returns true if the src_private_base and src_private_limit aperture
+/// registers are available on \p STI. Targets with globally addressable
+/// scratch have no private aperture and expose src_flat_scratch_base instead.
+bool hasPrivateApertureRegs(const MCSubtargetInfo &STI);
+
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
 
