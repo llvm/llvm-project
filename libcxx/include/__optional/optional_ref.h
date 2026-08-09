@@ -83,14 +83,14 @@ struct __optional_ref_base {
   }
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void reset() noexcept { __value_ = nullptr; }
+  _LIBCPP_HIDE_FROM_ABI constexpr void reset() noexcept { __value_ = nullptr; }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return __value_ != nullptr; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr value_type& __get() const noexcept { return *__value_; }
 
   template <class _UArg>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct(_UArg&& __val) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void __construct(_UArg&& __val) {
     static_assert(!__reference_constructs_from_temporary_v<_Tp, _UArg>,
                   "Attempted to construct a reference element in tuple from a "
                   "possible temporary");
@@ -98,7 +98,7 @@ struct __optional_ref_base {
   }
 
   template <class _That>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct_from(_That&& __opt) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void __construct_from(_That&& __opt) {
     if (__opt.has_value())
       __construct(std::forward<_That>(__opt).__get());
   }
