@@ -1073,9 +1073,9 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   if (Name.starts_with("spirv.")) {
     if (Name.ends_with("TypedPointerType"))
       return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
-                          TargetExtType::CanBeGlobal,
-                          TargetExtType::CanBeLocal,
-                          TargetExtType::CanBeVectorElement);
+                            TargetExtType::CanBeGlobal,
+                            TargetExtType::CanBeLocal,
+                            TargetExtType::CanBeVectorElement);
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal,
                           TargetExtType::CanBeLocal);

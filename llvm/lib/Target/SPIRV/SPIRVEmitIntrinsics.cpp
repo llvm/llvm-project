@@ -2039,8 +2039,8 @@ SPIRVEmitIntrinsicsImpl::visitGetElementPtrInst(GetElementPtrInst &I) {
           // We cannot use the builder here as for splat-ed / constant vectors
           // it will fold to the scalar, and then it becomes impossible to
           // retrieve / retain the vectorness.
-          auto *EI = ExtractElementInst::Create(Idx, LaneIdx, "",
-                                                B.GetInsertPoint());
+          auto *EI =
+              ExtractElementInst::Create(Idx, LaneIdx, "", B.GetInsertPoint());
           if (isVector1(Idx->getType())) // IRTranslator clobbers <1 x T>.
             Args.push_back(visitExtractElementInst(*EI));
           else

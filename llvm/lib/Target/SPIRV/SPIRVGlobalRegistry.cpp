@@ -637,9 +637,9 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(const APInt &Val,
   Type *LLVMBaseTy = LLVMVecTy->getElementType();
   const auto &ST = I.getMF()->getSubtarget<SPIRVSubtarget>();
   assert((LLVMBaseTy->isIntegerTy() ||
-         (LLVMBaseTy->isPointerTy() &&
-          ST.canUseExtension(
-              SPIRV::Extension::SPV_INTEL_masked_gather_scatter))) &&
+          (LLVMBaseTy->isPointerTy() &&
+           ST.canUseExtension(
+               SPIRV::Extension::SPV_INTEL_masked_gather_scatter))) &&
          "Expected either integer element type for APInt constant vector or "
          "pointer type if the SPV_INTEL_masked_gather_scatter extension is "
          "enabled!");
@@ -1477,8 +1477,8 @@ SPIRVGlobalRegistry::getScalarOrVectorComponentCount(SPIRVTypeInst Type) const {
     return 0;
   if (isVectorType(Type))
     return (Type->getOpcode() == SPIRV::OpTypeVector)
-        ? static_cast<unsigned>(Type->getOperand(2).getImm())
-        : foldImm(Type->getOperand(2), &CurMF->getRegInfo());
+               ? static_cast<unsigned>(Type->getOperand(2).getImm())
+               : foldImm(Type->getOperand(2), &CurMF->getRegInfo());
   return 1;
 }
 
@@ -2044,9 +2044,9 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
       MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
         // TODO: consider adding non-const accessors to SPIRVTypeInst, which
         //       would remove the need for the gash casting here.
-        return const_cast<MachineInstr *>(static_cast<const MachineInstr *>(
-            getOpTypeVectorImpl(NumElements, BaseType, MIRBuilder,
-                                isLongVectorEXT(Ty))));
+        return const_cast<MachineInstr *>(
+            static_cast<const MachineInstr *>(getOpTypeVectorImpl(
+                NumElements, BaseType, MIRBuilder, isLongVectorEXT(Ty))));
       });
   add(Ty, false, NewMI);
   return finishCreatingSPIRVType(Ty, NewMI);
