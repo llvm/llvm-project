@@ -359,67 +359,11 @@ using __optional_sfinae_assign_base_t _LIBCPP_NODEBUG =
                           (is_move_constructible_v<_Tp> && is_move_assignable_v<_Tp>)>;
 
 template <class _Tp>
-struct __optional_iterator_base : __optional_move_assign_base<_Tp> {
-  using __optional_move_assign_base<_Tp>::__optional_move_assign_base;
-};
-
-#  if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
-
-template <class _Tp>
-  requires is_object_v<_Tp>
-struct __optional_iterator_base<_Tp> : __optional_move_assign_base<_Tp> {
-private:
-  using __pointer _LIBCPP_NODEBUG       = add_pointer_t<_Tp>;
-  using __const_pointer _LIBCPP_NODEBUG = add_pointer_t<const _Tp>;
-
-public:
-  using __optional_move_assign_base<_Tp>::__optional_move_assign_base;
-
-#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-  using iterator       = __bounded_iter<__pointer>;
-  using const_iterator = __bounded_iter<__const_pointer>;
-#    else
-  using iterator       = __capacity_aware_iterator<__pointer, optional<_Tp>, 1>;
-  using const_iterator = __capacity_aware_iterator<__const_pointer, optional<_Tp>, 1>;
-#    endif
-
-  // [optional.iterators], iterator support
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() noexcept {
-    auto* __ptr = std::addressof(this->__get());
-
-#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-    return std::__make_bounded_iter(__ptr, __ptr, __ptr + (this->has_value() ? 1 : 0));
-#    else
-    return std::__make_capacity_aware_iterator<__pointer, optional<_Tp>, 1>(__ptr);
-#    endif
-  }
-
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_iterator begin() const noexcept {
-    auto* __ptr = std::addressof(this->__get());
-
-#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
-    return std::__make_bounded_iter(__ptr, __ptr, __ptr + (this->has_value() ? 1 : 0));
-#    else
-    return std::__make_capacity_aware_iterator<__const_pointer, optional<_Tp>, 1>(__ptr);
-#    endif
-  }
-
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator end() noexcept {
-    return begin() + (this->has_value() ? 1 : 0);
-  }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_iterator end() const noexcept {
-    return begin() + (this->has_value() ? 1 : 0);
-  }
-};
-
-#  endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
-
-template <class _Tp>
 class _LIBCPP_DECLSPEC_EMPTY_BASES optional
-    : public __optional_iterator_base<_Tp>,
+    : public __optional_move_assign_base<_Tp>,
       private __optional_sfinae_ctor_base_t<_Tp>,
       private __optional_sfinae_assign_base_t<_Tp> {
-  using __base _LIBCPP_NODEBUG = __optional_iterator_base<_Tp>;
+  using __base _LIBCPP_NODEBUG = __optional_move_assign_base<_Tp>;
 
 public:
   using value_type = __libcpp_remove_reference_t<_Tp>;
@@ -750,6 +694,53 @@ public:
 #  endif // _LIBCPP_STD_VER >= 23
 
   using __base::reset;
+
+#  if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
+
+private:
+  using __pointer _LIBCPP_NODEBUG       = add_pointer_t<_Tp>;
+  using __const_pointer _LIBCPP_NODEBUG = add_pointer_t<const _Tp>;
+
+public:
+  using __optional_move_assign_base<_Tp>::__optional_move_assign_base;
+
+#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+  using iterator       = __bounded_iter<__pointer>;
+  using const_iterator = __bounded_iter<__const_pointer>;
+#    else
+  using iterator       = __capacity_aware_iterator<__pointer, optional<_Tp>, 1>;
+  using const_iterator = __capacity_aware_iterator<__const_pointer, optional<_Tp>, 1>;
+#    endif
+
+  // [optional.iterators], iterator support
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() noexcept {
+    auto* __ptr = std::addressof(this->__get());
+
+#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+    return std::__make_bounded_iter(__ptr, __ptr, __ptr + (this->has_value() ? 1 : 0));
+#    else
+    return std::__make_capacity_aware_iterator<__pointer, optional<_Tp>, 1>(__ptr);
+#    endif
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_iterator begin() const noexcept {
+    auto* __ptr = std::addressof(this->__get());
+
+#    ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+    return std::__make_bounded_iter(__ptr, __ptr, __ptr + (this->has_value() ? 1 : 0));
+#    else
+    return std::__make_capacity_aware_iterator<__const_pointer, optional<_Tp>, 1>(__ptr);
+#    endif
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator end() noexcept {
+    return begin() + (this->has_value() ? 1 : 0);
+  }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_iterator end() const noexcept {
+    return begin() + (this->has_value() ? 1 : 0);
+  }
+
+#  endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
 };
 
 _LIBCPP_END_NAMESPACE_STD
