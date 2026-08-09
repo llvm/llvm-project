@@ -21683,12 +21683,38 @@ static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
 static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const AArch64Subtarget *Subtarget) {
-  if (SDValue Res =
-          tryToReplaceScalarFPConversionWithSVE(N, DAG, DCI, Subtarget))
-    return Res;
+  static SDValue performFpToIntCombine(SDNode * N, SelectionDAG & DAG,
+                                       TargetLowering::DAGCombinerInfo & DCI,
+                                       const AArch64Subtarget *Subtarget) {
+    if (SDValue Res =
+            tryToReplaceScalarFPConversionWithSVE(N, DAG, DCI, Subtarget))
+      return Res;
 
-  return SDValue();
-}
+    EVT VT = N->getValueType(0);
+    if (VT.isScalableVector() && Subtarget->hasSVE()) {
+      SDValue FDiv = N->getOperand(0);
+      if (FDiv.getOpcode() == ISD::FDIV && FDiv.hasOneUse() &&
+          VT.getVectorElementType() == MVT::i32 &&
+          FDiv.getValueType().getVectorElementType() == MVT::f64) {
+        unsigned ToFPOpcode = (N->getOpcode() == ISD::FP_TO_UINT)
+                                  ? ISD::UINT_TO_FP
+                                  : ISD::SINT_TO_FP;
+        unsigned DivOpcode =
+            (N->getOpcode() == ISD::FP_TO_UINT) ? ISD::UDIV : ISD::SDIV;
+        SDValue Op0 = FDiv.getOperand(0);
+        SDValue Op1 = FDiv.getOperand(1);
+
+        if (Op0.getOpcode() == ToFPOpcode && Op1.getOpcode() == ToFPOpcode &&
+            Op0.getOperand(0).getValueType() == VT &&
+            Op1.getOperand(0).getValueType() == VT) {
+          return DAG.getNode(DivOpcode, SDLoc(N), VT, Op0.getOperand(0),
+                             Op1.getOperand(0));
+        }
+      }
+    }
+
+    return SDValue();
+  }
 
 // Given a tree of and/or(csel(0, 1, cc0), csel(0, 1, cc1)), we may be able to
 // convert to csel(ccmp(.., cc0)), depending on cc1:
