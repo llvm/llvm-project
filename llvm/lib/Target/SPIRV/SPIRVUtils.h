@@ -513,7 +513,8 @@ inline bool isVector1(Type *Ty) {
 
 // We define this predicate out of line to avoid having to include all OpTypes.
 bool isVectorType(SPIRVTypeInst SPVTy);
-inline bool isLongVector(const Type *Ty) {
+
+inline bool isLongVectorEXT(const Type *Ty) {
   if (auto *FVTy = dyn_cast<FixedVectorType>(Ty)) {
     unsigned N = FVTy->getNumElements();
     // Per specification: `Vector types must be parameterized only with 2, 3, or

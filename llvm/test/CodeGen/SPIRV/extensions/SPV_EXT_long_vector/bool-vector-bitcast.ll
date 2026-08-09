@@ -1,17 +1,19 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_long_vector,+SPV_ALTERA_arbitrary_precision_integers %s -o - | FileCheck %s
-; spirv-val seems to have problems reading OpTypeVectorIdEXT correctly, enable once fixed
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_long_vector,+SPV_ALTERA_arbitrary_precision_integers %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_long_vector,+SPV_ALTERA_arbitrary_precision_integers %s -o - -filetype=obj | spirv-val %}
 
 ; Verify that bitcasts between bool vectors and other types are decomposed
 ; into element-wise operations instead of generating OpBitcast, which is
 ; invalid for OpTypeBool.
 
+; CHECK-DAG: %[[#I32:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#ONE:]] = OpConstant %[[#I32]] 1
+; CHECK-DAG: %[[#SEVENTEEN:]] = OpConstant %[[#I32]] 17
 ; CHECK-DAG: %[[#BOOL:]] = OpTypeBool
 ; CHECK-DAG: %[[#BVEC8:]] = OpTypeVector %[[#BOOL]] 8
-; CHECK-DAG: %[[#BVEC17:]] = OpTypeVectorIdEXT %[[#BOOL]] 17
+; CHECK-DAG: %[[#BVEC17:]] = OpTypeVectorIdEXT %[[#BOOL]] %[[#SEVENTEEN]]
 ; CHECK-DAG: %[[#I8:]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[#I17:]] = OpTypeInt 17 0
-; CHECK-DAG: %[[#VEC1_I8:]] = OpTypeVectorIdEXT %[[#I8]] 1
+; CHECK-DAG: %[[#VEC1_I8:]] = OpTypeVectorIdEXT %[[#I8]] %[[#ONE]]
 
 ; CHECK-DAG: %[[#ZERO:]] = OpConstantNull %[[#I8]]
 ; CHECK-DAG: %[[#ONE:]] = OpConstant %[[#I8]] 1{{$}}

@@ -315,7 +315,7 @@ const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeVectorImpl(
     uint32_t NumElems, SPIRVTypeInst ElemType, MachineIRBuilder &MIRBuilder,
-    bool IsLongVector) {
+    bool IsLongVectorEXT) {
   if (ElemType.isPointer()) {
     if (!cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget())
              .canUseExtension(
@@ -336,12 +336,18 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeVectorImpl(
 
   return createConstOrTypeAtFunctionEntry(
       MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        return MIRBuilder
-            .buildInstr(IsLongVector ? SPIRV::OpTypeVectorIdEXT
-                                     : SPIRV::OpTypeVector)
-            .addDef(createTypeVReg(MIRBuilder))
-            .addUse(getSPIRVTypeID(ElemType))
-            .addImm(NumElems);
+        unsigned Op =
+            IsLongVectorEXT ? SPIRV::OpTypeVectorIdEXT : SPIRV::OpTypeVector;
+        Register VTy = createTypeVReg(MIRBuilder);
+        Register Ty = getSPIRVTypeID(ElemType);
+        auto &MIB = MIRBuilder.buildInstr(Op).addDef(VTy).addUse(Ty);
+        if (!IsLongVectorEXT)
+          return MIB.addImm(NumElems);
+
+        const auto &ST = MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>();
+        SPIRVTypeInst Int32Ty = getOrCreateSPIRVIntegerType(32, MIRBuilder);
+        return MIB.addUse(getOrCreateConstInt(NumElems, *MIB.getInstr(),
+                                              Int32Ty, *ST.getInstrInfo()));
       });
 }
 
@@ -629,9 +635,23 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(const APInt &Val,
          "Expected vector type for constant vector creation");
   const FixedVectorType *LLVMVecTy = cast<FixedVectorType>(LLVMTy);
   Type *LLVMBaseTy = LLVMVecTy->getElementType();
-  assert(LLVMBaseTy->isIntegerTy() &&
-         "Expected integer element type for APInt constant vector");
-  auto *ConstVal = cast<ConstantInt>(ConstantInt::get(LLVMBaseTy, Val));
+  const auto &ST = I.getMF()->getSubtarget<SPIRVSubtarget>();
+  assert((LLVMBaseTy->isIntegerTy() ||
+         (LLVMBaseTy->isPointerTy() &&
+          ST.canUseExtension(
+              SPIRV::Extension::SPV_INTEL_masked_gather_scatter))) &&
+         "Expected either integer element type for APInt constant vector or "
+         "pointer type if the SPV_INTEL_masked_gather_scatter extension is "
+         "enabled!");
+  Constant *ConstVal = nullptr;
+  if (LLVMBaseTy->isIntegerTy()) {
+    ConstVal = ConstantInt::get(LLVMBaseTy, Val);
+  } else {
+    if (Val.isZero())
+      ConstVal = ConstantPointerNull::get(LLVMBaseTy);
+    else
+      llvm_unreachable("Vectors of non-null constant pointers unimplemented!");
+  }
   auto *ConstVec =
       ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstVal);
   unsigned BW = getScalarOrVectorBitWidth(SpvType);
@@ -1239,7 +1259,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::createSPIRVType(
                       AccQual, ExplicitLayoutRequired, EmitIR);
     unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
     const auto &STI = MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>();
-    if (isLongVector(Ty) &&
+    if (isLongVectorEXT(Ty) &&
         STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
       return getOpTypeVectorIdEXT(NumElts, El, MIRBuilder);
     return getOpTypeVector(NumElts, El, MIRBuilder);
@@ -1455,9 +1475,11 @@ unsigned
 SPIRVGlobalRegistry::getScalarOrVectorComponentCount(SPIRVTypeInst Type) const {
   if (!Type)
     return 0;
-  return (isVectorType(Type))
-             ? static_cast<unsigned>(Type->getOperand(2).getImm())
-             : 1;
+  if (isVectorType(Type))
+    return (Type->getOpcode() == SPIRV::OpTypeVector)
+        ? static_cast<unsigned>(Type->getOperand(2).getImm())
+        : foldImm(Type->getOperand(2), &CurMF->getRegInfo());
+  return 1;
 }
 
 SPIRVTypeInst
@@ -1481,7 +1503,10 @@ SPIRVGlobalRegistry::getScalarOrVectorBitWidth(SPIRVTypeInst Type) const {
     return ScalarType->getOperand(1).getImm();
   if (ScalarType->getOpcode() == SPIRV::OpTypeBool)
     return 1;
-  llvm_unreachable("Attempting to get bit width of non-integer/float type.");
+  if (ScalarType->getOpcode() == SPIRV::OpTypePointer)
+    return getPointerSize(); // TODO: does not work for different per AS sizes.
+  llvm_unreachable(
+      "Attempting to get bit width of non-integer/float/pointer type.");
 }
 
 unsigned SPIRVGlobalRegistry::getNumScalarOrVectorTotalBitWidth(
@@ -2017,13 +2042,11 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
   MachineIRBuilder MIRBuilder(*DepMI->getParent(), DepMI->getIterator());
   const MachineInstr *NewMI = createConstOrTypeAtFunctionEntry(
       MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        auto OpTy =
-            (isLongVector(Ty)) ? SPIRV::OpTypeVectorIdEXT : SPIRV::OpTypeVector;
-        return BuildMI(MIRBuilder.getMBB(), *MIRBuilder.getInsertPt(),
-                       MIRBuilder.getDL(), TII.get(OpTy))
-            .addDef(createTypeVReg(CurMF->getRegInfo()))
-            .addUse(getSPIRVTypeID(BaseType))
-            .addImm(NumElements);
+        // TODO: consider adding non-const accessors to SPIRVTypeInst, which
+        //       would remove the need for the gash casting here.
+        return const_cast<MachineInstr *>(static_cast<const MachineInstr *>(
+            getOpTypeVectorImpl(NumElements, BaseType, MIRBuilder,
+                                isLongVectorEXT(Ty))));
       });
   add(Ty, false, NewMI);
   return finishCreatingSPIRVType(Ty, NewMI);

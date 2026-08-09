@@ -1,9 +1,9 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_long_vector %s -o - | FileCheck %s
-; spirv-val seems to have problems reading OpTypeVectorIdEXT correctly, enable once fixed
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_long_vector %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_long_vector %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: %[[#Int:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#Vec17:]] = OpTypeVectorIdEXT %[[#Int]] 17
+; CHECK-DAG: %[[#Seventeen:]] = OpConstant %[[#Int]] 17
+; CHECK-DAG: %[[#Vec17:]] = OpTypeVectorIdEXT %[[#Int]] %[[#Seventeen]]
 ; CHECK-DAG: %[[#PtrGlobalInt:]] = OpTypePointer CrossWorkgroup %[[#Int]]
 ; CHECK-DAG: %[[#Const10:]] = OpConstant %[[#Int]] 10
 ; CHECK-DAG: %[[#Const20:]] = OpConstant %[[#Int]] 20

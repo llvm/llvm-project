@@ -2035,10 +2035,19 @@ SPIRVEmitIntrinsicsImpl::visitGetElementPtrInst(GetElementPtrInst &I) {
       Args.push_back(InBounds);
       Args.push_back(ScalarPtr);
       for (Value *Idx : I.indices()) {
-        if (isa<VectorType>(Idx->getType()))
-          Args.push_back(B.CreateExtractElement(Idx, LaneIdx));
-        else
+        if (isa<VectorType>(Idx->getType())) {
+          // We cannot use the builder here as for splat-ed / constant vectors
+          // it will fold to the scalar, and then it becomes impossible to
+          // retrieve / retain the vectorness.
+          auto *EI = ExtractElementInst::Create(Idx, LaneIdx, "",
+                                                B.GetInsertPoint());
+          if (isVector1(Idx->getType())) // IRTranslator clobbers <1 x T>.
+            Args.push_back(visitExtractElementInst(*EI));
+          else
+            Args.push_back(EI);
+        } else {
           Args.push_back(Idx);
+        }
       }
       Value *ScalarGep = B.CreateIntrinsic(Intrinsic::spv_gep, GepTypes, Args);
       GR->buildAssignPtr(B, LanePointeeTy, ScalarGep);
@@ -2938,6 +2947,7 @@ void SPIRVEmitIntrinsicsImpl::insertAssignTypeIntrs(Instruction *I,
   }
   for (const auto &Op : I->operands()) {
     if (isa<ConstantPointerNull>(Op) || isa<UndefValue>(Op) ||
+        isVector1(Op->getType()) || // <1 x T> gets clobbered ty IRTranslator.
         // Check GetElementPtrConstantExpr case.
         (isa<ConstantExpr>(Op) &&
          (isa<GEPOperator>(Op) ||

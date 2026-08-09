@@ -387,12 +387,14 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder({G_TRUNC, G_ZEXT, G_SEXT, G_ANYEXT})
       .legalForCartesianProduct(allScalarsAndVectors)
       .legalIf(ExtendedScalarsAndVectorsProduct)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
                            0, ElementCount::getFixed(MaxVectorSize)));
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
+      .lowerIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -400,12 +402,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .lower();
 
   getActionDefinitionsBuilder(G_PHI)
+      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
                            0, ElementCount::getFixed(MaxVectorSize)))
       .legalFor(allPtrsScalarsAndVectors)
       .legalIf(ExtendedPtrsScalarsAndVectors)
-      .legalIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder(G_BITCAST).legalIf(

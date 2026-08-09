@@ -476,7 +476,7 @@ private:
 
   SPIRVTypeInst getOpTypeVectorImpl(uint32_t NumElems, SPIRVTypeInst ElemType,
                                     MachineIRBuilder &MIRBuilder,
-                                    bool IsLongVector = false);
+                                    bool IsLongVectorEXT = false);
 
   SPIRVTypeInst getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
                                 MachineIRBuilder &MIRBuilder);

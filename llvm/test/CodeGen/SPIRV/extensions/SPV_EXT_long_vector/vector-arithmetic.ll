@@ -1,13 +1,13 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_long_vector %s -o - | FileCheck %s
-; spirv-val seems to have problems reading OpTypeVectorIdEXT correctly, enable once fixed
+; spirv-val doesn't implement validation for fma with OpTypeVectorIdEXT results, it only allows vectors with 2, 3, 4, 8, 16 elements.
 ; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_long_vector %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName %[[#main:]] "main"
 ; CHECK-DAG: %[[#float:]] = OpTypeFloat 32
-; CHECK-DAG: %[[#v17f32:]] = OpTypeVectorIdEXT %[[#float]] 17
 ; CHECK-DAG: %[[#int:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#c17:]] = OpConstant %[[#int]] 17
-; CHECK-DAG: %[[#v17i32:]] = OpTypeVectorIdEXT %[[#int]] 17
+; CHECK-DAG: %[[#v17f32:]] = OpTypeVectorIdEXT %[[#float]] %[[#c17]]
+; CHECK-DAG: %[[#v17i32:]] = OpTypeVectorIdEXT %[[#int]] %[[#c17]]
 ; CHECK-DAG: %[[#ptr_v17i32:]] = OpTypePointer CrossWorkgroup %[[#v17i32]]
 
 @f1 = internal addrspace(1) global [4 x [17 x float] ] zeroinitializer

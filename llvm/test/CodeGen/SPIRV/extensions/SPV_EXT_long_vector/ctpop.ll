@@ -1,9 +1,9 @@
 ; RUN: llc -verify-machineinstrs -O0 --spirv-ext=+SPV_EXT_long_vector -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; spirv-val does not yet handle long vectors of pointers even though the rules are the same as for OpTypeVector
-; TODO: %if spirv-tools %{ llc -O0 --spirv-ext=+SPV_EXT_long_vector -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 --spirv-ext=+SPV_EXT_long_vector -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: %[[#I32:]] = OpTypeInt 32
-; CHECK: %[[#V17I32:]] = OpTypeVectorIdEXT %[[#I32]] 17
+; CHECK: %[[#SEVENTEEN:]] = OpConstant %[[#I32]] 17
+; CHECK: %[[#V17I32:]] = OpTypeVectorIdEXT %[[#I32]] %[[#SEVENTEEN]]
 ; CHECK: OpTypeFunction
 ; CHECK: %[[#X17I32:]] = OpFunctionParameter %[[#V17I32]]
 ; CHECK: %[[#]] = OpBitCount %[[#V17I32]] %[[#X17I32]]

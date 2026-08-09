@@ -2237,7 +2237,7 @@ bool SPIRVInstructionSelector::selectStore(MachineInstr &I) const {
 
   SPIRVTypeInst PointeeTy = GR.getPointeeType(GR.getSPIRVTypeForVReg(Ptr));
   SPIRVTypeInst StoreTy = GR.getSPIRVTypeForVReg(StoreVal);
-  if (PointeeTy->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
+  if (PointeeTy && PointeeTy->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
       StoreTy->getOpcode() != SPIRV::OpTypeVectorIdEXT &&
       GR.getScalarOrVectorComponentCount(PointeeTy) == 1) {
     MachineInstr *StoreValDef = getVRegDef(*MRI, StoreVal);
@@ -4388,7 +4388,7 @@ bool SPIRVInstructionSelector::selectConcatVectors(Register ResVReg,
   // Implement G_CONCAT_VECTORS using OpCompositeConstruct, which allows vector
   // constituents that share the result's component type to be
   // concatenated in operand order.
-  if (ResType->getOpcode() != SPIRV::OpTypeVector)
+  if (!isVectorType(ResType))
     report_fatal_error(
         "Cannot select G_CONCAT_VECTORS with a non-vector result");
 
@@ -4895,9 +4895,22 @@ bool SPIRVInstructionSelector::selectConst(Register ResVReg,
     MachineBasicBlock &DepMBB = I.getMF()->front();
     MachineIRBuilder MIRBuilder(DepMBB, DepMBB.getFirstNonPHI());
     Reg = GR.getOrCreateConstNullPtr(MIRBuilder, ResType);
+  } else if (TpOpcode == SPIRV::OpTypeVectorIdEXT) {
+    // We ended up here coming from a splat on a <1 x T> type, which
+    // IRTranslator translated into a scalar, so we have to restore the
+    // vectorness.
+    assert(GR.getScalarOrVectorComponentCount(ResType) == 1 &&
+           "Expected <1 x T> Vector!");
+    if (Opcode == TargetOpcode::G_FCONSTANT)
+      Reg = GR.getOrCreateConstVector(I.getOperand(1).getFPImm()->getValue(), I,
+                                      ResType, TII);
+    else // We handle vector of pointer here as well.
+      Reg = GR.getOrCreateConstVector(I.getOperand(1).getCImm()->getValue(), I,
+                                      ResType, TII);
   } else if (Opcode == TargetOpcode::G_FCONSTANT) {
     Reg = GR.getOrCreateConstFP(I.getOperand(1).getFPImm()->getValue(), I,
                                 ResType, TII, !STI.isShader());
+
   } else {
     Reg = GR.getOrCreateConstInt(I.getOperand(1).getCImm()->getValue(), I,
                                  ResType, TII, !STI.isShader());

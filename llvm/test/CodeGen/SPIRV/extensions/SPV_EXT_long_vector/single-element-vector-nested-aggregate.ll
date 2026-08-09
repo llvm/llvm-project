@@ -1,11 +1,12 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown -verify-machineinstrs --spirv-ext=+SPV_EXT_long_vector %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_long_vector %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_long_vector %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-NOT: OpTypeVector
 ; CHECK-DAG: %[[#FloatTy:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#IntTy:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#Vec1FloatTy:]] = OpTypeVectorIdEXT %[[#FloatTy]] 1
-; CHECK-DAG: %[[#Vec1IntTy:]] = OpTypeVectorIdEXT %[[#IntTy]] 1
+; CHECK-DAG: %[[#One:]] = OpConstant %[[#IntTy]] 1
+; CHECK-DAG: %[[#Vec1FloatTy:]] = OpTypeVectorIdEXT %[[#FloatTy]] %[[#One]]
+; CHECK-DAG: %[[#Vec1IntTy:]] = OpTypeVectorIdEXT %[[#IntTy]] %[[#One]]
 ; CHECK-DAG: %[[#PtrFloat:]] = OpTypePointer Function %[[#Vec1FloatTy]]
 ; CHECK-DAG: %[[#Const8:]] = OpConstant %[[#IntTy]] 8
 ; CHECK-DAG: %[[#Const4:]] = OpConstant %[[#IntTy]] 4
@@ -15,8 +16,11 @@
 ; CHECK-DAG: %[[#Float2:]] = OpConstant %[[#FloatTy]] 2
 ; CHECK-DAG: %[[#Vec1Float2:]] = OpConstantComposite %[[#Vec1FloatTy]] %[[#Float2]]
 ; CHECK-DAG: %[[#Float3:]] = OpConstant %[[#FloatTy]] 3
+; CHECK-DAG: %[[#Vec1Float3:]] = OpConstantComposite %[[#Vec1FloatTy]] %[[#Float3]]
 ; CHECK-DAG: %[[#Int42:]] = OpConstant %[[#IntTy]] 42
+; CHECK-DAG: %[[#Vec1Int42:]] = OpConstantComposite %[[#Vec1IntTy]] %[[#Int42]]
 ; CHECK-DAG: %[[#Int7:]] = OpConstant %[[#IntTy]] 7
+; CHECK-DAG: %[[#Vec1Int7:]] = OpConstantComposite %[[#Vec1IntTy]] %[[#Int7]]
 ; CHECK-DAG: %[[#Arr8Float:]] = OpTypeArray %[[#Vec1FloatTy]] %[[#Const8]]
 ; CHECK-DAG: %[[#PtrArr8Float:]] = OpTypePointer Function %[[#Arr8Float]]
 ; CHECK-DAG: %[[#Arr4x8Float:]] = OpTypeArray %[[#Arr8Float]] %[[#Const4]]
@@ -86,8 +90,8 @@ entry:
 }
 
 ; CHECK: OpFunction
-; CHECK: %[[#ArrInsert1:]] = OpCompositeInsert %[[#Arr4Float]] %[[#Float1]] %[[#]] 0
-; CHECK: %[[#ArrInsert2:]] = OpCompositeInsert %[[#Arr4Float]] %[[#Float2]] %[[#ArrInsert1]] 1
+; CHECK: %[[#ArrInsert1:]] = OpCompositeInsert %[[#Arr4Float]] %[[#Vec1Float1]] %[[#]] 0
+; CHECK: %[[#ArrInsert2:]] = OpCompositeInsert %[[#Arr4Float]] %[[#Vec1Float2]] %[[#ArrInsert1]] 1
 ; CHECK: %[[#ArrExtract:]] = OpCompositeExtract %[[#Vec1FloatTy]] %[[#ArrInsert2]] 1
 ; CHECK: %[[#ExtractElt3:]] = OpCompositeExtract %[[#FloatTy]] %[[#ArrExtract]] 0
 ; CHECK: OpStore %[[#]] %[[#ExtractElt3]] Aligned 4
@@ -103,8 +107,8 @@ entry:
 }
 
 ; CHECK: OpFunction
-; CHECK: %[[#StructInsert1:]] = OpCompositeInsert %[[#StructFloatInt]] %[[#Float1]] %[[#]] 0
-; CHECK: %[[#StructInsert2:]] = OpCompositeInsert %[[#StructFloatInt]] %[[#Int42]] %[[#StructInsert1]] 1
+; CHECK: %[[#StructInsert1:]] = OpCompositeInsert %[[#StructFloatInt]] %[[#Vec1Float1]] %[[#]] 0
+; CHECK: %[[#StructInsert2:]] = OpCompositeInsert %[[#StructFloatInt]] %[[#Vec1Int42]] %[[#StructInsert1]] 1
 ; CHECK: %[[#StructExtract:]] = OpCompositeExtract %[[#Vec1FloatTy]] %[[#StructInsert2]] 0
 ; CHECK: %[[#ExtractElt4:]] = OpCompositeExtract %[[#FloatTy]] %[[#StructExtract]] 0
 ; CHECK: OpStore %[[#]] %[[#ExtractElt4]] Aligned 4
@@ -120,8 +124,8 @@ entry:
 }
 
 ; CHECK: OpFunction
-; CHECK: %[[#MixedInsert1:]] = OpCompositeInsert %[[#StructFloatArr2Int]] %[[#Float3]] %[[#]] 0
-; CHECK: %[[#MixedInsert2:]] = OpCompositeInsert %[[#StructFloatArr2Int]] %[[#Int7]] %[[#MixedInsert1]] 1 0
+; CHECK: %[[#MixedInsert1:]] = OpCompositeInsert %[[#StructFloatArr2Int]] %[[#Vec1Float3]] %[[#]] 0
+; CHECK: %[[#MixedInsert2:]] = OpCompositeInsert %[[#StructFloatArr2Int]] %[[#Vec1Int7]] %[[#MixedInsert1]] 1 0
 ; CHECK: %[[#MixedExtract:]] = OpCompositeExtract %[[#Vec1FloatTy]] %[[#MixedInsert2]] 0
 ; CHECK: %[[#ExtractElt5:]] = OpCompositeExtract %[[#FloatTy]] %[[#MixedExtract]] 0
 ; CHECK: OpStore %[[#]] %[[#ExtractElt5]] Aligned 4

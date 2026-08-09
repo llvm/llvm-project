@@ -1,10 +1,11 @@
 ; RUN: llc -verify-machineinstrs -O0 --spirv-ext=+SPV_EXT_long_vector -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; spirv-val does not yet handle long vectors of pointers even though the rules are the same as for OpTypeVector
+; spirv-val has a bug around validating OpVectorShuffle with large OpTypeVectorIdEXT operands, as it seems to incorrectly compute the combined size.
 ; TODO: %if spirv-tools %{ llc -O0 --spirv-ext=+SPV_EXT_long_vector -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: %[[#I32:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#THIRTYTWO:]] = OpConstant %[[#I32]] 32
 ; CHECK-DAG: %[[#V16:]] = OpTypeVector %[[#I32]] 16
-; CHECK-DAG: %[[#V32:]] = OpTypeVectorIdEXT %[[#I32]] 32
+; CHECK-DAG: %[[#V32:]] = OpTypeVectorIdEXT %[[#I32]] %[[#THIRTYTWO]]
 ; CHECK: %[[#PHI:]] = OpPhi %[[#V32]]
 
 define spir_kernel void @phi_v32(ptr addrspace(1) %out, i1 %cond,

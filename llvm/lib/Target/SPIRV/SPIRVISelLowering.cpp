@@ -432,12 +432,12 @@ void validateAccessChain(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
   }
 }
 
-inline void validateVec1Ops(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
+static void validateVec1Ops(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
                             SPIRVGlobalRegistry &GR, MachineInstr &MI) {
   // IRTranslator does not believe that rank-1 vectors exist, unlike upstream
   // LLVM which happily creates <1 x T> vectors. This leads to operations over
   // <1 x T> vectors getting translated as their scalar counterparts, which is
-  // wrong if we used SPV_EXT_long_vector we to preserve the actual vector-ness.
+  // wrong if we used SPV_EXT_long_vector to preserve the actual vector-ness.
   switch (MI.getOpcode()) {
   case SPIRV::OpBitwiseAndS:
   case SPIRV::OpBitwiseOrS:

@@ -1,10 +1,12 @@
 ; RUN: llc -verify-machineinstrs -O0 --spirv-ext=+SPV_EXT_long_vector -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; spirv-val does not yet handle long vectors of pointers even though the rules are the same as for OpTypeVector
-; TODO: %if spirv-tools %{ llc -O0 --spirv-ext=+SPV_EXT_long_vector -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 --spirv-ext=+SPV_EXT_long_vector -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+; CHECK-DAG: %[[Int:.*]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[Float:.*]] = OpTypeFloat 32
-; CHECK-DAG: %[[FloatVec1:.*]] = OpTypeVectorIdEXT %[[Float]] 1
-; CHECK-DAG: %[[FloatVec17:.*]] = OpTypeVectorIdEXT %[[Float]] 17
+; CHECK-DAG: %[[One:.*]] = OpConstant %[[Int]] 1
+; CHECK-DAG: %[[Seventeen:.*]] = OpConstant %[[Int]] 17
+; CHECK-DAG: %[[FloatVec1:.*]] = OpTypeVectorIdEXT %[[Float]] %[[One]]
+; CHECK-DAG: %[[FloatVec17:.*]] = OpTypeVectorIdEXT %[[Float]] %[[Seventeen]]
 
 ; CHECK: OpFunction
 ; CHECK: %[[SP:.*]] = OpFunctionParameter %[[Float]]

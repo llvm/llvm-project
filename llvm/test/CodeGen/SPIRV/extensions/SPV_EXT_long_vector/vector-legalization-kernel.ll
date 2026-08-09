@@ -1,11 +1,13 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_long_vector %s -o - | FileCheck %s
-; spirv-val seems to have problems reading OpTypeVectorIdEXT correctly, enable once fixed
+; spirv-val has a bug around validating OpVectorShuffle with large OpTypeVectorIdEXT operands, as it seems to incorrectly compute the combined size.
 ; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_EXT_long_vector %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName %[[#test_int32_double_conversion:]] "test_int32_double_conversion"
 ; CHECK-DAG: %[[#int:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#v18i32:]] = OpTypeVectorIdEXT %[[#int]] 18
-; CHECK-DAG: %[[#v9i32:]] = OpTypeVectorIdEXT %[[#int]] 9
+; CHECK-DAG: %[[#nine:]] = OpConstant %[[#int]] 9
+; CHECK-DAG: %[[#eighteen:]] = OpConstant %[[#int]] 18
+; CHECK-DAG: %[[#v18i32:]] = OpTypeVectorIdEXT %[[#int]] %[[#eighteen]]
+; CHECK-DAG: %[[#v9i32:]] = OpTypeVectorIdEXT %[[#int]] %[[#nine]]
 ; CHECK-DAG: %[[#ptr_func_v18i32:]] = OpTypePointer Function %[[#v18i32]]
 
 define spir_kernel void @test_int32_double_conversion(ptr %G_vec) {

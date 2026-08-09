@@ -1535,6 +1535,19 @@ static void addImageOperandReqs(const MachineInstr &MI,
                                  1U << I, ST);
 }
 
+static inline void maybeAddScatterGatherReq(const MachineInstr &MI,
+                                            SPIRV::RequirementHandler &Reqs,
+                                            const SPIRVSubtarget &ST) {
+  assert(MI.getOperand(1).isReg());
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  SPIRVTypeInst ElemTypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+  if (ElemTypeDef->getOpcode() == SPIRV::OpTypePointer &&
+      ST.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter);
+    Reqs.addCapability(SPIRV::Capability::MaskedGatherScatterINTEL);
+  }
+}
+
 void addInstrRequirements(const MachineInstr &MI,
                           SPIRV::ModuleAnalysisInfo &MAI,
                           const SPIRVSubtarget &ST) {
@@ -1621,14 +1634,7 @@ void addInstrRequirements(const MachineInstr &MI,
     if (NumComponents == 8 || NumComponents == 16)
       Reqs.addCapability(SPIRV::Capability::Vector16);
 
-    assert(MI.getOperand(1).isReg());
-    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-    SPIRVTypeInst ElemTypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
-    if (ElemTypeDef->getOpcode() == SPIRV::OpTypePointer &&
-        ST.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
-      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter);
-      Reqs.addCapability(SPIRV::Capability::MaskedGatherScatterINTEL);
-    }
+    maybeAddScatterGatherReq(MI, Reqs, ST);
     break;
   }
   case SPIRV::OpTypeVectorIdEXT: {
@@ -1637,14 +1643,7 @@ void addInstrRequirements(const MachineInstr &MI,
                             "extension: SPV_EXT_long_vector extension");
     Reqs.addExtension(SPIRV::Extension::SPV_EXT_long_vector);
     Reqs.addCapability(SPIRV::Capability::LongVectorEXT);
-    assert(MI.getOperand(1).isReg());
-    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-    SPIRVTypeInst ElemTypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
-    if (ElemTypeDef->getOpcode() == SPIRV::OpTypePointer &&
-        ST.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
-      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter);
-      Reqs.addCapability(SPIRV::Capability::MaskedGatherScatterINTEL);
-    }
+    maybeAddScatterGatherReq(MI, Reqs, ST);
     break;
   }
   case SPIRV::OpTypePointer: {
