@@ -401,8 +401,8 @@ define i1 @icmp_ult_sremsmax_smax(i32 %x) {
 define i1 @icmp_eq_srem_dividend(i64 %x) {
 ; CHECK-LABEL: define i1 @icmp_eq_srem_dividend(
 ; CHECK-SAME: i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[X]], 250
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[REM]], [[X]]
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i64 [[X]], 249
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X_OFF]], 499
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %rem = srem i64 %x, 250
@@ -413,8 +413,8 @@ define i1 @icmp_eq_srem_dividend(i64 %x) {
 define i1 @icmp_ne_dividend_srem(i64 %x) {
 ; CHECK-LABEL: define i1 @icmp_ne_dividend_srem(
 ; CHECK-SAME: i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[X]], 250
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X]], [[REM]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[X]], -250
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[TMP1]], -499
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %rem = srem i64 %x, 250
@@ -425,8 +425,8 @@ define i1 @icmp_ne_dividend_srem(i64 %x) {
 define i1 @icmp_ne_srem_dividend_smax(i8 %x) {
 ; CHECK-LABEL: define i1 @icmp_ne_srem_dividend_smax(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X]], 127
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[REM]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -127
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], 3
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %rem = srem i8 %x, 127
@@ -437,8 +437,8 @@ define i1 @icmp_ne_srem_dividend_smax(i8 %x) {
 define <2 x i1> @icmp_eq_srem_dividend_vec(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i1> @icmp_eq_srem_dividend_vec(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[REM:%.*]] = srem <2 x i8> [[X]], splat (i8 5)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[REM]], [[X]]
+; CHECK-NEXT:    [[X_OFF:%.*]] = add <2 x i8> [[X]], splat (i8 4)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[X_OFF]], splat (i8 9)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %rem = srem <2 x i8> %x, <i8 5, i8 5>
@@ -477,8 +477,8 @@ define i64 @icmp_ne_srem_dividend_multi_use(i64 %x) {
 define i1 @icmp_eq_srem_dividend_negative_divisor_canonicalized(i64 %x) {
 ; CHECK-LABEL: define i1 @icmp_eq_srem_dividend_negative_divisor_canonicalized(
 ; CHECK-SAME: i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[X]], 250
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[REM]], [[X]]
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i64 [[X]], 249
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X_OFF]], 499
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %rem = srem i64 %x, -250
