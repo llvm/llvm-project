@@ -50711,10 +50711,6 @@ static SDValue combineIntDivRemViaFPReciprocal(SDNode *N, bool IsSigned,
   if (!Subtarget.hasDQI() || !Subtarget.useAVX512Regs())
     return SDValue();
   bool Widen = VT != MVT::v8i64;
-  // v2/v4 keep their integer ops at the original width and run only the
-  // rounded FP ops in the low half of a zmm, which needs VLX.
-  if (Widen && !Subtarget.hasVLX())
-    return SDValue();
   // The chain multiplies twice on its critical path, so v2i64 only pays
   // off where vpmullq is fast.
   if (VT == MVT::v2i64 && Subtarget.isPMULLQSlow())
@@ -50768,8 +50764,7 @@ static SDValue combineIntDivRemViaFPReciprocal(SDNode *N, bool IsSigned,
   if (IsRem)
     Mag = DAG.getSelect(DL, VT, Ge, DAG.getNode(ISD::SUB, DL, VT, Rem, B), Rem);
   else
-    Mag = DAG.getNode(ISD::ADD, DL, VT, Quot,
-                      DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Ge));
+    Mag = DAG.getNode(ISD::SUB, DL, VT, Quot, DAG.getSExtOrTrunc(Ge, DL, VT));
   if (!IsSigned)
     return Mag;
   // A quotient is negative when the operand signs differ. A remainder takes
