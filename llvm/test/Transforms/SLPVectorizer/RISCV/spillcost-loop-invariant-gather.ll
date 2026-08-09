@@ -12,8 +12,6 @@ define void @invariant_gather_over_call(ptr %out, ptr %in, double %a, double %b,
 ; CHECK-LABEL: define void @invariant_gather_over_call(
 ; CHECK-SAME: ptr [[OUT:%.*]], ptr [[IN:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[B]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[C]], i64 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[LOOP]] ]
@@ -21,18 +19,24 @@ define void @invariant_gather_over_call(ptr %out, ptr %in, double %a, double %b,
 ; CHECK-NEXT:    [[V0:%.*]] = load double, ptr [[P0]], align 8
 ; CHECK-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 3
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds double, ptr [[IN]], i64 [[I1]]
+; CHECK-NEXT:    [[V1:%.*]] = load double, ptr [[P1]], align 8
+; CHECK-NEXT:    [[I2:%.*]] = add nuw nsw i64 [[I]], 7
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds double, ptr [[IN]], i64 [[I2]]
+; CHECK-NEXT:    [[V2:%.*]] = load double, ptr [[P2]], align 8
 ; CHECK-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 100
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds double, ptr [[IN]], i64 [[I3]]
 ; CHECK-NEXT:    [[V3:%.*]] = load double, ptr [[P3]], align 8
 ; CHECK-NEXT:    [[R0:%.*]] = fmul double [[V0]], [[A]]
+; CHECK-NEXT:    [[R1:%.*]] = fmul double [[V1]], [[B]]
+; CHECK-NEXT:    [[R2:%.*]] = fmul double [[V2]], [[C]]
 ; CHECK-NEXT:    [[R3:%.*]] = fmul double [[V3]], [[D]]
 ; CHECK-NEXT:    [[O0:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 [[I]]
 ; CHECK-NEXT:    [[O1:%.*]] = getelementptr inbounds double, ptr [[O0]], i64 1
+; CHECK-NEXT:    [[O2:%.*]] = getelementptr inbounds double, ptr [[O0]], i64 2
 ; CHECK-NEXT:    [[O3:%.*]] = getelementptr inbounds double, ptr [[O0]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x double> @llvm.experimental.vp.strided.load.v2f64.p0.i64(ptr align 8 [[P1]], i64 32, <2 x i1> splat (i1 true), i32 2)
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    store double [[R0]], ptr [[O0]], align 8
-; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[O1]], align 8
+; CHECK-NEXT:    store double [[R1]], ptr [[O1]], align 8
+; CHECK-NEXT:    store double [[R2]], ptr [[O2]], align 8
 ; CHECK-NEXT:    store double [[R3]], ptr [[O3]], align 8
 ; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I]], 4
