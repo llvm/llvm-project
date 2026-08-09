@@ -4633,8 +4633,28 @@ private:
               IsCommutativeUser && User->getOperand(0) == User->getOperand(1);
           if ((!IsCommutativeUser || IsCommutativeWithSameOps) &&
               !isa<CmpInst>(User)) {
+            if (CurNumOps != NumOps)
+              continue;
+            // A reassociated node flattens the operand chain, so the operand
+            // may be placed in any operand column rather than at the
+            // instruction's operand number.
+            if (TE->hasReassocScalars()) {
+              bool ReplacedByCopyable = false;
+              for (auto It = find(TE->Scalars, User); It != TE->Scalars.end();
+                   It = find(make_range(std::next(It), TE->Scalars.end()),
+                             User)) {
+                int Lane = std::distance(TE->Scalars.begin(), It);
+                for (unsigned OpIdx : seq<unsigned>(TE->getNumOperands()))
+                  ReplacedByCopyable |=
+                      TE->getOperand(OpIdx)[Lane] == Op &&
+                      getScheduleCopyableData(EdgeInfo(TE, OpIdx), Op);
+              }
+              if (ReplacedByCopyable)
+                continue;
+              return false;
+            }
             EdgeInfo EI(TE, U.getOperandNo());
-            if (CurNumOps != NumOps || getScheduleCopyableData(EI, Op))
+            if (getScheduleCopyableData(EI, Op))
               continue;
             return false;
           }
@@ -29442,7 +29462,10 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = R.getMinVF(Sz);
   unsigned MaxVF = std::max<unsigned>(
-      getFloorFullVectorNumberOfElements(*TTI, ScalarTy, VL.size()), MinVF);
+      isAllowedNonPowerOf2VF(VL.size())
+          ? VL.size()
+          : getFloorFullVectorNumberOfElements(*TTI, ScalarTy, VL.size()),
+      MinVF);
   MaxVF = std::min(R.getMaximumVF(Sz, S.getOpcode()), MaxVF);
   // Standalone seeds only need one register worth of lanes.
   if (StandaloneSeeds && Sz != 0)
@@ -29472,7 +29495,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     for (unsigned I = NextInst; I < MaxInst; ++I) {
       unsigned ActualVF = std::min(MaxInst - I, VF);
 
-      if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF))
+      if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF) &&
+          (ActualVF != VL.size() || !isAllowedNonPowerOf2VF(ActualVF)))
         continue;
 
       if (MaxVFOnly && ActualVF < MaxVF)
