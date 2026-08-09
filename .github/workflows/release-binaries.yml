@@ -115,6 +115,8 @@ jobs:
           ref="$GITHUB_SHA"
         fi
 
+        echo RELEASE VERSION: $release_version
+        grep 'rc' <<< $release_version
         if [ "$RUNNER_OS" = "Windows" ] && grep 'rc' <<< $release_version; then
           # The Wix installer generator does not support strings in the version number,
           # so we need to fixup the version number for release candidates.
