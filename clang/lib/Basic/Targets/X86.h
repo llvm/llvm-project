@@ -183,13 +183,13 @@ public:
   }
 
   LangOptions::FPEvalMethodKind getFPEvalMethod() const override {
-    // X87 evaluates with 80 bits "long double" precision.
-    return SSELevel == NoSSE ? LangOptions::FPEvalMethodKind::FEM_Extended
-                             : LangOptions::FPEvalMethodKind::FEM_Source;
+    // X87 computes at 80 bits, but the backend rounds every f32/f64 result
+    // back to its own type, so intermediate results have the range and
+    // precision of their type just as they do with SSE.
+    return LangOptions::FPEvalMethodKind::FEM_Source;
   }
 
-  // EvalMethod `source` is not supported for targets with `NoSSE` feature.
-  bool supportSourceEvalMethod() const override { return SSELevel > NoSSE; }
+  bool supportSourceEvalMethod() const override { return true; }
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
