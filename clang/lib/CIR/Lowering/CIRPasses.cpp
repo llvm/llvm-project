@@ -29,6 +29,26 @@ static CallConvTarget getCallConvTarget(const llvm::Triple &triple) {
   return CallConvTarget::None;
 }
 
+/// The AVX level the classifier uses to size a native vector.  Read from the
+/// target ABI name, as CodeGenModule does.
+static llvm::abi::X86AVXABILevel getX86AVXABILevel(llvm::StringRef abi) {
+  if (abi == "avx512")
+    return llvm::abi::X86AVXABILevel::AVX512;
+  if (abi == "avx")
+    return llvm::abi::X86AVXABILevel::AVX;
+  return llvm::abi::X86AVXABILevel::None;
+}
+
+/// Whether `__attribute__((target(...)))` on a function may raise its AVX ABI
+/// level above the command line's.  Mirrors getEffectiveX86AVXABILevel in
+/// clang/lib/CodeGen/Targets/X86.cpp, which keeps a target that opts out, and
+/// any ABI older than the rule, at the module level.
+static bool allowsX86TargetAttrAvx(const clang::ASTContext &astContext) {
+  return !astContext.getTargetInfo().getTriple().isPS() &&
+         astContext.getLangOpts().getClangABICompat() >
+             clang::LangOptions::ClangABI::Ver23;
+}
+
 /// The x86_64 ABI-compatibility flags, derived from the target and the
 /// requested compatibility version.  Every flag defaults to true in the ABI
 /// library, which is not what any target computes: Clang11Compat is false for a
@@ -95,12 +115,12 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
     // so it must run after CXXABILowering has lowered C++ ABI types to plain
     // records the classifier can handle.  Only the x86_64 System V classifier
     // is implemented; other targets are left unchanged.
-    CallConvTarget target =
-        getCallConvTarget(astContext.getTargetInfo().getTriple());
+    const clang::TargetInfo &targetInfo = astContext.getTargetInfo();
+    CallConvTarget target = getCallConvTarget(targetInfo.getTriple());
     if (target != CallConvTarget::None)
       pm.addPass(mlir::createCallConvLoweringPass(
-          target, llvm::abi::X86AVXABILevel::None,
-          getX86ABICompatInfo(astContext)));
+          target, getX86AVXABILevel(targetInfo.getABI()),
+          allowsX86TargetAttrAvx(astContext), getX86ABICompatInfo(astContext)));
   }
 
   pm.addPass(mlir::createLoweringPreparePass(&astContext));
