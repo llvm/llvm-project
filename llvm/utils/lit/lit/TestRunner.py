@@ -668,9 +668,14 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
         builtin_fn = pipeline_builtins.get(args[0])
         use_inproc = _should_run_inproc(builtin_fn, not_crash, cmd_shenv, shenv)
+        # PYTHONPATH override for the builtin-command spawn-fallback below,
+        # applied only to the one subprocess.Popen call for this command
+        # (not to cmd_shenv.env) so it doesn't leak into later RUN lines
+        # that share cmd_shenv.
+        popen_pythonpath_override = None
         if not use_inproc and args[0] in builtin_commands:
             args.insert(0, sys.executable)
-            cmd_shenv.env["PYTHONPATH"] = os.path.dirname(os.path.abspath(__file__))
+            popen_pythonpath_override = os.path.dirname(os.path.abspath(__file__))
             args[1] = os.path.join(builtin_commands_dir, args[1] + ".py")
 
 
@@ -786,6 +791,10 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             old_umask = -1
             if cmd_shenv.umask != -1:
                 old_umask = os.umask(cmd_shenv.umask)
+            popen_env = cmd_shenv.env
+            if popen_pythonpath_override is not None:
+                popen_env = dict(cmd_shenv.env)
+                popen_env["PYTHONPATH"] = popen_pythonpath_override
             procs.append(
                 subprocess.Popen(
                     args,
@@ -794,7 +803,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     stdin=stdin,
                     stdout=stdout,
                     stderr=stderr,
-                    env=cmd_shenv.env,
+                    env=popen_env,
                     close_fds=kUseCloseFDs,
                     universal_newlines=True,
                     errors="replace",

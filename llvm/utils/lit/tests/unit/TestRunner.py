@@ -3,16 +3,23 @@
 # END.
 
 
+import os
 import os.path
 import platform
+import shutil
+import tempfile
 import unittest
 
 import lit.discovery
 import lit.LitConfig
 import lit.Test as Test
+import lit.TestRunner
+from lit.ShellEnvironment import ShellEnvironment
+from lit.ShUtil import ShParser
 from lit.TestRunner import (
     ParserKind,
     IntegratedTestKeywordParser,
+    executeShCmd,
     parseIntegratedTestScript,
 )
 
@@ -380,6 +387,65 @@ class TestApplySubtitutions(unittest.TestCase):
                 self.fail("applySubstitutions should have raised an exception")
             except AssertionError:
                 pass
+
+
+class TestBuiltinSpawnFallbackPythonPath(unittest.TestCase):
+    """Regression test for https://github.com/llvm/llvm-project/issues/191131:
+
+    The spawn-fallback path used for builtin 'cat'/'diff' commands (taken
+    when the command can't run in-process, e.g. because it's wrapped in
+    'not --crash') must not permanently mutate the shared
+    ShellEnvironment's PYTHONPATH, or it leaks into every later RUN line
+    that shares the same shell environment.
+
+    Forcing this path normally requires the 'not --crash' wrapper, which
+    in turn requires the real 'not' helper binary that ships with a full
+    LLVM/Clang build -- unavailable in a pure-Python test environment.
+    Instead, this test drives the real executeShCmd()/_executeShCmd() path
+    for a plain 'cat' command (so cmd_shenv is the pipeline's own shenv,
+    exactly as it is for 'not --crash') and monkeypatches only the
+    use-in-process decision (lit.TestRunner._should_run_inproc) to return
+    False, so the real spawn-fallback code -- the code under test -- still
+    runs unmodified and unmocked.
+    """
+
+    def test_cat_spawn_fallback_does_not_leak_pythonpath(self):
+        tmpdir = tempfile.mkdtemp()
+        try:
+            input_path = os.path.join(tmpdir, "input.txt")
+            with open(input_path, "w") as f:
+                f.write("hello\n")
+
+            env = dict(os.environ)
+            sentinel = "sentinel-pythonpath-value"
+            env["PYTHONPATH"] = sentinel
+            shenv = ShellEnvironment(tmpdir, env)
+
+            # Shell-quote the path so ShParser doesn't treat any backslashes
+            # (e.g. on Windows) as escape characters.
+            cmd = ShParser('cat "%s"' % input_path.replace("\\", "\\\\")).parse()
+
+            original_should_run_inproc = lit.TestRunner._should_run_inproc
+            lit.TestRunner._should_run_inproc = lambda *args, **kwargs: False
+            try:
+                results = []
+                exitCode, timeoutInfo = executeShCmd(cmd, shenv, results)
+            finally:
+                lit.TestRunner._should_run_inproc = original_should_run_inproc
+
+            self.assertEqual(timeoutInfo, None)
+            self.assertEqual(exitCode, 0)
+            self.assertEqual(len(results), 1)
+            self.assertEqual(results[0].stdout, "hello\n")
+
+            # The bug: the spawn-fallback path used to mutate
+            # cmd_shenv.env["PYTHONPATH"] in place, and here cmd_shenv is
+            # shenv itself (no 'env'/'not' prefix forked a private copy),
+            # so that would corrupt PYTHONPATH for every subsequent RUN
+            # line sharing this ShellEnvironment.
+            self.assertEqual(shenv.env["PYTHONPATH"], sentinel)
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 if __name__ == "__main__":
