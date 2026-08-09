@@ -21,17 +21,17 @@ using namespace clang::targets;
 static constexpr int NumBuiltins =
     XCore::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-static constexpr llvm::StringTable BuiltinStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsXCore.def"
-    ;
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsXCore.inc"
+#undef GET_BUILTIN_STR_TABLE
 
-static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
-#include "clang/Basic/BuiltinsXCore.def"
-});
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsXCore.inc"
+#undef GET_BUILTIN_INFOS
+};
+
+static_assert(std::size(BuiltinInfos) == NumBuiltins);
 
 void XCoreTargetInfo::getTargetDefines(const LangOptions &Opts,
                                        MacroBuilder &Builder) const {
