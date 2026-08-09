@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -192,6 +193,30 @@ private:
   mlir::Location loc;
 };
 
+/// Set the "executable-stack" LLVM module flag on \p module, which makes the
+/// backend mark the `.note.GNU-stack` section executable on ELF targets.
+static void requestExecutableStack(mlir::ModuleOp module) {
+  mlir::MLIRContext *context{module.getContext()};
+  auto flag{mlir::LLVM::ModuleFlagAttr::get(
+      context, mlir::LLVM::ModFlagBehavior::Max,
+      mlir::StringAttr::get(context, "executable-stack"),
+      mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), 1))};
+
+  // Append to the module flags that are already there, if any.
+  for (auto flagsOp : module.getOps<mlir::LLVM::ModuleFlagsOp>()) {
+    llvm::SmallVector<mlir::Attribute> flags{flagsOp.getFlags().getValue()};
+    if (llvm::is_contained(flags, flag))
+      return;
+    flags.push_back(flag);
+    flagsOp.setFlagsAttr(mlir::ArrayAttr::get(context, flags));
+    return;
+  }
+
+  mlir::OpBuilder builder{module.getBody(), module.getBody()->begin()};
+  mlir::LLVM::ModuleFlagsOp::create(builder, module.getLoc(),
+                                    builder.getArrayAttr({flag}));
+}
+
 /// A `boxproc` is an abstraction for a Fortran procedure reference. Typically,
 /// Fortran procedures can be referenced directly through a function pointer.
 /// However, Fortran has one-level dynamic scoping between a host procedure and
@@ -236,10 +261,16 @@ public:
           processOp(op, rewriter, typeConverter);
         });
       }
+
+      if (needsExecutableStack)
+        requestExecutableStack(getModule());
     }
   }
 
 private:
+  /// Set when a stack based trampoline has been emitted.
+  bool needsExecutableStack = false;
+
   /// Trampoline handles collected while processing a function.
   /// Each entry is a Value representing the opaque handle returned
   /// by _FortranATrampolineInit, which must be freed before the
@@ -436,7 +467,10 @@ private:
             rewriter.replaceOpWithNewOp<ConvertOp>(embox, toTy, callableAddr);
           }
         } else {
-          // Legacy stack-based trampoline path.
+          // Legacy stack-based trampoline path. The thunk is built in the host
+          // procedure's stack frame and jumped to, so request an executable
+          // stack.
+          needsExecutableStack = true;
           FirOpBuilder builder(rewriter, module);
           mlir::Type i8Ty{builder.getI8Type()};
           mlir::Type i8Ptr{builder.getRefType(i8Ty)};
