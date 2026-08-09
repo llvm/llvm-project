@@ -80,9 +80,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT v16s32 = LLT::fixed_vector(16, 32);
   const LLT v8s64 = LLT::fixed_vector(8, 64);
 
-  const X86TargetLowering &TLI = *Subtarget.getTargetLowering();
-  bool RoundX87S32 = TLI.needsX87RoundToType(MVT::f32);
-  bool RoundX87S64 = TLI.needsX87RoundToType(MVT::f64);
+  bool RoundX87S32 = needsX87RoundToType(32);
+  bool RoundX87S64 = needsX87RoundToType(64);
   auto NeedsX87RoundToType = [=](const LegalityQuery &Query) {
     return (RoundX87S32 && Query.Types[0] == s32) ||
            (RoundX87S64 && Query.Types[0] == s64);
@@ -641,6 +640,18 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   verify(*STI.getInstrInfo());
 }
 
+bool X86LegalizerInfo::needsX87RoundToType(unsigned SizeInBits) const {
+  const X86TargetLowering &TLI = *Subtarget.getTargetLowering();
+  switch (SizeInBits) {
+  case 32:
+    return TLI.needsX87RoundToType(MVT::f32);
+  case 64:
+    return TLI.needsX87RoundToType(MVT::f64);
+  default:
+    return false;
+  }
+}
+
 bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
                                       LostDebugLocObserver &LocObserver) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
@@ -694,10 +705,21 @@ bool X86LegalizerInfo::legalizeSITOFP(MachineInstr &MI,
 
   MachineMemOperand *LoadMMO = MF.getMachineMemOperand(
       PtrInfo, MachineMemOperand::MOLoad, MemSize, Align(MemSize));
+
+  // fild loads the integer at the x87 register's full 80-bit precision, so an
+  // s32/s64 result does not generally hold a value of its own type yet. Take
+  // the wide value and let G_FPTRUNC round it back through memory.
+  bool NeedsRound = needsX87RoundToType(DstTy.getSizeInBits());
+  Register FILDDst =
+      NeedsRound ? MRI.createGenericVirtualRegister(LLT::scalar(80)) : Dst;
+
   MIRBuilder.buildInstr(X86::G_FILD)
-      .addDef(Dst)
+      .addDef(FILDDst)
       .addUse(SlotPointer.getReg(0))
       .addMemOperand(LoadMMO);
+
+  if (NeedsRound)
+    MIRBuilder.buildFPTrunc(Dst, FILDDst);
 
   MI.eraseFromParent();
   return true;
