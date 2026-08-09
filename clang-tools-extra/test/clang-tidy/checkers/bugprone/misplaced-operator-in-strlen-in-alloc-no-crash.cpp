@@ -2,3 +2,7 @@
 
 void *f() { return new int[](); }
 // CHECK-MESSAGES: :[[@LINE-1]]:24: error: cannot determine allocated array size from initializer [clang-diagnostic-error]
+
+template <int... Is> void g() {
+  new int[]{Is...};
+}
