@@ -811,6 +811,10 @@ def TuningFastDPWSSD
           "Prefer vpdpwssd instruction over vpmaddwd+vpaddd instruction sequence",
           [], InlineIgnore>;
 
+def TuningFastVectorFP16Div
+    : SubtargetFeature<"fast-vector-fp16-div", "HasFastFP16Div", "true",
+                        "Vector FP16 division is fast",
+                        [], InlineIgnore>;
 def TuningPreferNoGather
     : SubtargetFeature<"prefer-no-gather", "PreferGather", "false",
                        "Prefer no gather instructions",
