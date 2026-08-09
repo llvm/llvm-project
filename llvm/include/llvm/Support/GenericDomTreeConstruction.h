@@ -142,22 +142,6 @@ template <typename DomTreeT> struct SemiNCAInfo {
 
   NodePtr getIDom(NodePtr BB) { return getNodeInfo(BB).IDom; }
 
-  TreeNodePtr getNodeForBlock(NodePtr BB, DomTreeT &DT) {
-    if (TreeNodePtr Node = DT.getNode(BB))
-      return Node;
-
-    // Haven't calculated this node yet?  Get or calculate the node for the
-    // immediate dominator.
-    NodePtr IDom = getIDom(BB);
-
-    assert(IDom || DT.getNode(nullptr));
-    TreeNodePtr IDomNode = getNodeForBlock(IDom, DT);
-
-    // Add a new tree node for this NodeT, and link it as a child of
-    // IDomNode
-    return DT.createNode(BB, IDomNode);
-  }
-
   static bool AlwaysDescend(NodePtr, NodePtr) { return true; }
 
   struct BlockNamePrinter {
@@ -620,10 +604,10 @@ template <typename DomTreeT> struct SemiNCAInfo {
       if (DT.getNode(W))
         continue; // Already calculated the node before
 
+      // W's dominator has a smaller DFS number, so its tree node already exists.
       NodePtr ImmDom = getIDom(W);
-
-      // Get or calculate the node for the immediate dominator.
-      TreeNodePtr IDomNode = getNodeForBlock(ImmDom, DT);
+      TreeNodePtr IDomNode = DT.getNode(ImmDom);
+      assert(IDomNode);
 
       // Add a new tree node for this BasicBlock, and link it as a child of
       // IDomNode.
