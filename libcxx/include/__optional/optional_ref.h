@@ -119,23 +119,6 @@ struct __optional_ref_base {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __swap(__optional_ref_base& __rhs) noexcept {
     std::swap(__value_, __rhs.__value_);
   }
-
-  // [optional.ref.observe]
-  _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<_Tp> operator->() const noexcept {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator-> called on a disengaged value");
-    return std::addressof(this->__get());
-  }
-
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() const noexcept {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
-    return this->__get();
-  }
-
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& value() const {
-    if (!this->has_value())
-      std::__throw_bad_optional_access();
-    return this->__get();
-  }
 };
 
 template <class _Tp>
@@ -288,13 +271,26 @@ public:
 
   constexpr void swap(optional& __rhs) noexcept { this->__swap(__rhs); }
 
-  using __base::operator->;
-  using __base::operator*;
+  // [optional.ref.observe]
+  _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<_Tp> operator->() const noexcept {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator-> called on a disengaged value");
+    return std::addressof(this->__get());
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() const noexcept {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
+    return this->__get();
+  }
 
   constexpr explicit operator bool() const noexcept { return has_value(); }
 
   using __base::has_value;
-  using __base::value;
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& value() const {
+    if (!this->has_value())
+      std::__throw_bad_optional_access();
+    return this->__get();
+  }
 
   template <class _Up = remove_cv_t<_Tp>>
     requires(!is_array_v<_Tp> && is_object_v<_Tp>)
