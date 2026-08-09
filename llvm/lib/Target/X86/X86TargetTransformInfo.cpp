@@ -753,6 +753,212 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
+  // rem matches div because the divider returns the remainder for free.
+  static const CostKindTblEntry ScalarVarDivCostTable[] = {
+    { ISD::SDIV, MVT::i8,  { 15, 20, 2, 4 } },
+    { ISD::UDIV, MVT::i8,  { 15, 20, 2, 4 } },
+    { ISD::SREM, MVT::i8,  { 15, 20, 2, 4 } },
+    { ISD::UREM, MVT::i8,  { 15, 20, 2, 4 } },
+    { ISD::SDIV, MVT::i16, { 17, 20, 2, 4 } },
+    { ISD::UDIV, MVT::i16, { 17, 20, 2, 4 } },
+    { ISD::SREM, MVT::i16, { 17, 20, 2, 4 } },
+    { ISD::UREM, MVT::i16, { 17, 20, 2, 4 } },
+    { ISD::SDIV, MVT::i32, { 25, 22, 2, 4 } },
+    { ISD::UDIV, MVT::i32, { 25, 22, 2, 4 } },
+    { ISD::SREM, MVT::i32, { 25, 22, 2, 4 } },
+    { ISD::UREM, MVT::i32, { 25, 22, 2, 4 } },
+    { ISD::SDIV, MVT::i64, { 41, 24, 2, 4 } },
+    { ISD::UDIV, MVT::i64, { 41, 24, 2, 4 } },
+    { ISD::SREM, MVT::i64, { 41, 24, 2, 4 } },
+    { ISD::UREM, MVT::i64, { 41, 24, 2, 4 } },
+  };
+
+  if (!LT.second.isVector() && !Op2Info.isConstant())
+    if (const auto *Entry =
+            CostTableLookup(ScalarVarDivCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  // Variable divisors lower through a float divide. strictfp needs SAE
+  // rounding which is 512-bit only.
+  bool IsStrictFP =
+      CxtI && CxtI->getFunction()->hasFnAttribute(Attribute::StrictFP);
+  bool VarDivToFP =
+      !Op2Info.isConstant() && (!IsStrictFP || ST->useAVX512Regs());
+
+  static const CostKindTblEntry AVX512BWVarDivCostTable[] = {
+    { ISD::UDIV, MVT::v16i8,  {  10 } }, // unpack+cvt+divps sequence
+    { ISD::SDIV, MVT::v16i8,  {  10 } },
+    { ISD::UREM, MVT::v16i8,  {  10 } },
+    { ISD::SREM, MVT::v16i8,  {  10 } },
+    { ISD::UDIV, MVT::v32i8,  {  20 } },
+    { ISD::SDIV, MVT::v32i8,  {  20 } },
+    { ISD::UREM, MVT::v32i8,  {  20 } },
+    { ISD::SREM, MVT::v32i8,  {  20 } },
+    { ISD::UDIV, MVT::v64i8,  {  40 } },
+    { ISD::SDIV, MVT::v64i8,  {  40 } },
+    { ISD::UREM, MVT::v64i8,  {  40 } },
+    { ISD::SREM, MVT::v64i8,  {  40 } },
+    { ISD::UDIV, MVT::v8i16,  {   5 } },
+    { ISD::SDIV, MVT::v8i16,  {   5 } },
+    { ISD::UREM, MVT::v8i16,  {   5 } },
+    { ISD::SREM, MVT::v8i16,  {   5 } },
+    { ISD::UDIV, MVT::v16i16, {  10 } },
+    { ISD::SDIV, MVT::v16i16, {  10 } },
+    { ISD::UREM, MVT::v16i16, {  10 } },
+    { ISD::SREM, MVT::v16i16, {  10 } },
+    { ISD::UDIV, MVT::v32i16, {  20 } },
+    { ISD::SDIV, MVT::v32i16, {  20 } },
+    { ISD::UREM, MVT::v32i16, {  20 } },
+    { ISD::SREM, MVT::v32i16, {  20 } },
+    { ISD::UDIV, MVT::v4i32,  {   8 } }, // cvt+divpd sequence
+    { ISD::SDIV, MVT::v4i32,  {   8 } },
+    { ISD::UREM, MVT::v4i32,  {   8 } },
+    { ISD::SREM, MVT::v4i32,  {   8 } },
+    { ISD::UDIV, MVT::v8i32,  {  16 } },
+    { ISD::SDIV, MVT::v8i32,  {  16 } },
+    { ISD::UREM, MVT::v8i32,  {  16 } },
+    { ISD::SREM, MVT::v8i32,  {  16 } },
+    { ISD::UDIV, MVT::v16i32, {  32 } },
+    { ISD::SDIV, MVT::v16i32, {  32 } },
+    { ISD::UREM, MVT::v16i32, {  32 } },
+    { ISD::SREM, MVT::v16i32, {  32 } },
+  };
+
+  if (VarDivToFP && ST->hasBWI())
+    if (const auto *Entry =
+            CostTableLookup(AVX512BWVarDivCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  static const CostKindTblEntry AVX512VarDivCostTable[] = {
+    { ISD::UDIV, MVT::v16i8,  {  14 } }, // unpack+cvt+divps sequence
+    { ISD::SDIV, MVT::v16i8,  {  14 } },
+    { ISD::UREM, MVT::v16i8,  {  14 } },
+    { ISD::SREM, MVT::v16i8,  {  14 } },
+    { ISD::UDIV, MVT::v32i8,  {  28 } },
+    { ISD::SDIV, MVT::v32i8,  {  28 } },
+    { ISD::UREM, MVT::v32i8,  {  28 } },
+    { ISD::SREM, MVT::v32i8,  {  28 } },
+    { ISD::UDIV, MVT::v64i8,  {  56 } },
+    { ISD::SDIV, MVT::v64i8,  {  56 } },
+    { ISD::UREM, MVT::v64i8,  {  56 } },
+    { ISD::SREM, MVT::v64i8,  {  56 } },
+    { ISD::UDIV, MVT::v8i16,  {  14 } },
+    { ISD::SDIV, MVT::v8i16,  {  14 } },
+    { ISD::UREM, MVT::v8i16,  {  14 } },
+    { ISD::SREM, MVT::v8i16,  {  14 } },
+    { ISD::UDIV, MVT::v16i16, {  14 } },
+    { ISD::SDIV, MVT::v16i16, {  14 } },
+    { ISD::UREM, MVT::v16i16, {  14 } },
+    { ISD::SREM, MVT::v16i16, {  14 } },
+    { ISD::UDIV, MVT::v32i16, {  28 } },
+    { ISD::SDIV, MVT::v32i16, {  28 } },
+    { ISD::UREM, MVT::v32i16, {  28 } },
+    { ISD::SREM, MVT::v32i16, {  28 } },
+    { ISD::UDIV, MVT::v4i32,  {  28 } }, // cvt+divpd sequence
+    { ISD::SDIV, MVT::v4i32,  {  28 } },
+    { ISD::UREM, MVT::v4i32,  {  28 } },
+    { ISD::SREM, MVT::v4i32,  {  28 } },
+    { ISD::UDIV, MVT::v8i32,  {  28 } },
+    { ISD::SDIV, MVT::v8i32,  {  28 } },
+    { ISD::UREM, MVT::v8i32,  {  28 } },
+    { ISD::SREM, MVT::v8i32,  {  28 } },
+    { ISD::UDIV, MVT::v16i32, {  56 } },
+    { ISD::SDIV, MVT::v16i32, {  56 } },
+    { ISD::UREM, MVT::v16i32, {  56 } },
+    { ISD::SREM, MVT::v16i32, {  56 } },
+  };
+
+  if (VarDivToFP && ST->hasAVX512())
+    if (const auto *Entry =
+            CostTableLookup(AVX512VarDivCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  static const CostKindTblEntry AVX2VarDivCostTable[] = {
+    { ISD::UDIV, MVT::v16i8,  {  28 } }, // unpack+cvt+divps sequence
+    { ISD::SDIV, MVT::v16i8,  {  28 } },
+    { ISD::UREM, MVT::v16i8,  {  28 } },
+    { ISD::SREM, MVT::v16i8,  {  28 } },
+    { ISD::UDIV, MVT::v32i8,  {  56 } },
+    { ISD::SDIV, MVT::v32i8,  {  56 } },
+    { ISD::UREM, MVT::v32i8,  {  56 } },
+    { ISD::SREM, MVT::v32i8,  {  56 } },
+    { ISD::UDIV, MVT::v8i16,  {  14 } },
+    { ISD::SDIV, MVT::v8i16,  {  14 } },
+    { ISD::UREM, MVT::v8i16,  {  14 } },
+    { ISD::SREM, MVT::v8i16,  {  14 } },
+    { ISD::UDIV, MVT::v16i16, {  28 } },
+    { ISD::SDIV, MVT::v16i16, {  28 } },
+    { ISD::UREM, MVT::v16i16, {  28 } },
+    { ISD::SREM, MVT::v16i16, {  28 } },
+    { ISD::UDIV, MVT::v4i32,  {  28 } }, // cvt+divpd sequence
+    { ISD::SDIV, MVT::v4i32,  {  28 } },
+    { ISD::UREM, MVT::v4i32,  {  28 } },
+    { ISD::SREM, MVT::v4i32,  {  28 } },
+    { ISD::UDIV, MVT::v8i32,  {  56 } },
+    { ISD::SDIV, MVT::v8i32,  {  56 } },
+    { ISD::UREM, MVT::v8i32,  {  56 } },
+    { ISD::SREM, MVT::v8i32,  {  56 } },
+  };
+
+  if (VarDivToFP && ST->hasAVX2())
+    if (const auto *Entry =
+            CostTableLookup(AVX2VarDivCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  // No unsigned i32 entries below AVX2, where the u32 to f64 converts are
+  // emulated and the fold stays off.
+  static const CostKindTblEntry AVX1VarDivCostTable[] = {
+    { ISD::UDIV, MVT::v16i8,  {  56 } }, // unpack+cvt+divps sequence
+    { ISD::SDIV, MVT::v16i8,  {  56 } },
+    { ISD::UREM, MVT::v16i8,  {  56 } },
+    { ISD::SREM, MVT::v16i8,  {  56 } },
+    { ISD::UDIV, MVT::v32i8,  { 112 } },
+    { ISD::SDIV, MVT::v32i8,  { 112 } },
+    { ISD::UREM, MVT::v32i8,  { 112 } },
+    { ISD::SREM, MVT::v32i8,  { 112 } },
+    { ISD::UDIV, MVT::v8i16,  {  28 } },
+    { ISD::SDIV, MVT::v8i16,  {  28 } },
+    { ISD::UREM, MVT::v8i16,  {  28 } },
+    { ISD::SREM, MVT::v8i16,  {  28 } },
+    { ISD::UDIV, MVT::v16i16, {  56 } },
+    { ISD::SDIV, MVT::v16i16, {  56 } },
+    { ISD::UREM, MVT::v16i16, {  56 } },
+    { ISD::SREM, MVT::v16i16, {  56 } },
+    { ISD::SDIV, MVT::v4i32,  {  44 } }, // cvt+divpd sequence
+    { ISD::SREM, MVT::v4i32,  {  44 } },
+    { ISD::SDIV, MVT::v8i32,  {  88 } },
+    { ISD::SREM, MVT::v8i32,  {  88 } },
+  };
+
+  if (VarDivToFP && ST->hasAVX())
+    if (const auto *Entry =
+            CostTableLookup(AVX1VarDivCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  static const CostKindTblEntry SSE2VarDivCostTable[] = {
+    { ISD::UDIV, MVT::v16i8,  {  56 } }, // unpack+cvt+divps sequence
+    { ISD::SDIV, MVT::v16i8,  {  56 } },
+    { ISD::UREM, MVT::v16i8,  {  56 } },
+    { ISD::SREM, MVT::v16i8,  {  56 } },
+    { ISD::UDIV, MVT::v8i16,  {  28 } },
+    { ISD::SDIV, MVT::v8i16,  {  28 } },
+    { ISD::UREM, MVT::v8i16,  {  28 } },
+    { ISD::SREM, MVT::v8i16,  {  28 } },
+    { ISD::SDIV, MVT::v4i32,  {  44 } }, // cvt+divpd sequence
+    { ISD::SREM, MVT::v4i32,  {  44 } },
+  };
+
+  if (VarDivToFP && ST->hasSSE2())
+    if (const auto *Entry =
+            CostTableLookup(SSE2VarDivCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
   static const CostKindTblEntry AVX512BWUniformCostTable[] = {
     { ISD::SHL,  MVT::v16i8,  { 3, 5, 5, 7 } }, // psllw + pand.
     { ISD::SRL,  MVT::v16i8,  { 3,10, 5, 8 } }, // psrlw + pand.

@@ -93,27 +93,27 @@ entry:
 define void @test_urem_add(ptr %arr1, ptr %arr2, i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: @test_urem_add(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP1_1:%.*]] = getelementptr i32, ptr [[ARR1:%.*]], i32 1
-; CHECK-NEXT:    [[GEP1_2:%.*]] = getelementptr i32, ptr [[ARR1]], i32 2
+; CHECK-NEXT:    [[GEP1_2:%.*]] = getelementptr i32, ptr [[ARR1:%.*]], i32 2
 ; CHECK-NEXT:    [[GEP1_3:%.*]] = getelementptr i32, ptr [[ARR1]], i32 3
-; CHECK-NEXT:    [[GEP2_1:%.*]] = getelementptr i32, ptr [[ARR2:%.*]], i32 1
-; CHECK-NEXT:    [[GEP2_2:%.*]] = getelementptr i32, ptr [[ARR2]], i32 2
+; CHECK-NEXT:    [[GEP2_2:%.*]] = getelementptr i32, ptr [[ARR2:%.*]], i32 2
 ; CHECK-NEXT:    [[GEP2_3:%.*]] = getelementptr i32, ptr [[ARR2]], i32 3
-; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[ARR1]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[GEP1_1]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[GEP1_2]], align 4
 ; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[GEP1_3]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = add nsw i32 [[A0:%.*]], 1146
-; CHECK-NEXT:    [[Y1:%.*]] = add nsw i32 [[A1:%.*]], 146
-; CHECK-NEXT:    [[Y2:%.*]] = add nsw i32 [[A2:%.*]], 42
-; CHECK-NEXT:    [[Y3:%.*]] = add nsw i32 [[A3:%.*]], 0
-; CHECK-NEXT:    [[RES0:%.*]] = urem i32 [[V0]], [[Y0]]
-; CHECK-NEXT:    [[RES1:%.*]] = urem i32 [[V1]], [[Y1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[A0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[A1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 1146, i32 146>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[A2:%.*]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[A3:%.*]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[V3]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <2 x i32> [[TMP4]], <i32 42, i32 0>
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <2 x i32> [[TMP7]], i64 0
 ; CHECK-NEXT:    [[RES2:%.*]] = urem i32 [[V2]], [[Y2]]
-; CHECK-NEXT:    [[RES3:%.*]] = add nsw i32 [[V3]], [[Y3]]
-; CHECK-NEXT:    store i32 [[RES0]], ptr [[ARR2]], align 4
-; CHECK-NEXT:    store i32 [[RES1]], ptr [[GEP2_1]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i32>, ptr [[ARR1]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = urem <2 x i32> [[TMP9]], [[TMP2]]
+; CHECK-NEXT:    store <2 x i32> [[TMP10]], ptr [[ARR2]], align 4
 ; CHECK-NEXT:    store i32 [[RES2]], ptr [[GEP2_2]], align 4
+; CHECK-NEXT:    [[RES3:%.*]] = extractelement <2 x i32> [[TMP7]], i64 1
 ; CHECK-NEXT:    store i32 [[RES3]], ptr [[GEP2_3]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -152,27 +152,27 @@ entry:
 define void @test_srem_add(ptr %arr1, ptr %arr2, i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: @test_srem_add(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP1_1:%.*]] = getelementptr i32, ptr [[ARR1:%.*]], i32 1
-; CHECK-NEXT:    [[GEP1_2:%.*]] = getelementptr i32, ptr [[ARR1]], i32 2
+; CHECK-NEXT:    [[GEP1_2:%.*]] = getelementptr i32, ptr [[ARR1:%.*]], i32 2
 ; CHECK-NEXT:    [[GEP1_3:%.*]] = getelementptr i32, ptr [[ARR1]], i32 3
-; CHECK-NEXT:    [[GEP2_1:%.*]] = getelementptr i32, ptr [[ARR2:%.*]], i32 1
-; CHECK-NEXT:    [[GEP2_2:%.*]] = getelementptr i32, ptr [[ARR2]], i32 2
+; CHECK-NEXT:    [[GEP2_2:%.*]] = getelementptr i32, ptr [[ARR2:%.*]], i32 2
 ; CHECK-NEXT:    [[GEP2_3:%.*]] = getelementptr i32, ptr [[ARR2]], i32 3
-; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[ARR1]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[GEP1_1]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[GEP1_2]], align 4
 ; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[GEP1_3]], align 4
-; CHECK-NEXT:    [[Y0:%.*]] = add nsw i32 [[A0:%.*]], 1146
-; CHECK-NEXT:    [[Y1:%.*]] = add nsw i32 [[A1:%.*]], 146
-; CHECK-NEXT:    [[Y2:%.*]] = add nsw i32 [[A2:%.*]], 42
-; CHECK-NEXT:    [[Y3:%.*]] = add nsw i32 [[A3:%.*]], 0
-; CHECK-NEXT:    [[RES0:%.*]] = srem i32 [[V0]], [[Y0]]
-; CHECK-NEXT:    [[RES1:%.*]] = srem i32 [[V1]], [[Y1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[A0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[A1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 1146, i32 146>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[A2:%.*]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[A3:%.*]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[V3]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <2 x i32> [[TMP4]], <i32 42, i32 0>
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <2 x i32> [[TMP7]], i64 0
 ; CHECK-NEXT:    [[RES2:%.*]] = srem i32 [[V2]], [[Y2]]
-; CHECK-NEXT:    [[RES3:%.*]] = add nsw i32 [[V3]], [[Y3]]
-; CHECK-NEXT:    store i32 [[RES0]], ptr [[ARR2]], align 4
-; CHECK-NEXT:    store i32 [[RES1]], ptr [[GEP2_1]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i32>, ptr [[ARR1]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = srem <2 x i32> [[TMP9]], [[TMP2]]
+; CHECK-NEXT:    store <2 x i32> [[TMP10]], ptr [[ARR2]], align 4
 ; CHECK-NEXT:    store i32 [[RES2]], ptr [[GEP2_2]], align 4
+; CHECK-NEXT:    [[RES3:%.*]] = extractelement <2 x i32> [[TMP7]], i64 1
 ; CHECK-NEXT:    store i32 [[RES3]], ptr [[GEP2_3]], align 4
 ; CHECK-NEXT:    ret void
 ;
