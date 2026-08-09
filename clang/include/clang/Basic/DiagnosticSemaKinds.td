@@ -1067,9 +1067,9 @@ def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
   "%select{subtraction|addition}0 of address-of-label expressions is not "
   "supported with ptrauth indirect gotos">;
 
-def warn_fe_access_without_fenv_access : Warning<
-  "'%0' used without enabling floating-point exception behavior; use 'pragma STDC "
-  "FENV_ACCESS ON' or compile with '-ffp-exception-behavior=maytrap'">,
+def warn_fenv_access_no_exception_semantics_or_rounding_mode : Warning<
+  "'%0' used without enabling strict floating-point exception semantics and dynamic rounding mode;"
+  " use '#pragma STDC FENV_ACCESS ON' or compile with '-ftrapping-math -frounding-math'">,
   InGroup<DiagGroup<"fenv-access">>;
 
 // __ptrauth qualifier

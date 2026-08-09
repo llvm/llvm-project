@@ -4196,12 +4196,14 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BIfeholdexcept:
   case Builtin::BIfesetenv:
   case Builtin::BIfeupdateenv:
-    if (TheCall->getFPFeaturesInEffect(getLangOpts()).getExceptionMode() ==
-            LangOptions::FPE_Ignore &&
+    const FPOptions &fpOpts = TheCall->getFPFeaturesInEffect(getLangOpts());
+    if ((fpOpts.getExceptionMode() == LangOptions::FPE_Ignore ||
+         fpOpts.getRoundingMode() != LangOptions::RoundingMode::Dynamic) &&
         isPotentiallyEvaluatedContext() &&
         (getASTContext().getTargetInfo().hasStrictFP() ||
          getLangOpts().ExpStrictFP)) {
-      Diag(TheCall->getBeginLoc(), diag::warn_fe_access_without_fenv_access)
+      Diag(TheCall->getBeginLoc(),
+           diag::warn_fenv_access_no_exception_semantics_or_rounding_mode)
           << FDecl->getName() << TheCall->getSourceRange();
     }
   }
