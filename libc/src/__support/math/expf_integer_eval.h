@@ -17,13 +17,11 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
-#include "src/__support/frac32.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/math/check/exp_exceptions.h"
 #include "src/__support/math/exp_integer_utils.h"
 #include "src/__support/uint128.h"
-#include "src/string/memory_utils/aarch64/inline_memset.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -45,8 +43,11 @@ LIBC_INLINE float expf(float x) {
   uint32_t x_val = xbits.uintval();
   uint32_t x_val_abs = x_val & 0x7fff'ffffU;
 
-  // When |x| >= 89, |x| <= 2^-25, or x is NaN
-  if (LIBC_UNLIKELY(x_val_abs >= 0x42b1'7218 || x_val_abs <= 0x3300'0000U)) {
+  // When |x| >= smallest value that will cause overflow, |x| <= 2^-25, or x is
+  // NaN
+  if (LIBC_UNLIKELY(x_val_abs >=
+                        check::exp_internal::Bounds<float>::UPPER_BITS ||
+                    x_val_abs <= 0x3300'0000U)) {
     // |x| <= 2^-25
     if (xbits.get_biased_exponent() <= 102) {
       return 1.0f;

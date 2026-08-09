@@ -23,20 +23,11 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/big_int.h"
-#include "src/__support/frac32.h"
 #include "src/__support/frac64.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/math_extras.h"
-
-#undef LIBC_TARGET_IS_BIG_ENDIAN
-#if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) ||           \
-    !defined(__ORDER_BIG_ENDIAN__)
-#define LIBC_TARGET_IS_BIG_ENDIAN 0
-#else
-#define LIBC_TARGET_IS_BIG_ENDIAN (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-#endif // LIBC_TARGET_IS_BIG_ENDIAN
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -48,21 +39,12 @@ namespace integer_only {
 // LSB(INV_LN2) = 2^-63
 LIBC_INLINE_VAR constexpr Frac64 INV_LN2 = Frac64(0xb8aa'3b29'5c17'f0bc);
 
-// 1-ULP
 // 64-bit polynomial approximation of 2^x coefficients generated with Sollya:
-// > P = fpminimax(2^x, 6, [|1, 64...|], [0, 1], absolute, fixed);
+// > P = fpminimax(2^x, 11, [|1, 64...|], [0, 1], absolute, fixed);
 // Store the fractional part of the coefficients below
 // > dirtyinfnorm(2^x - P(x), [0, 1]);
-// 0x1.9d39...p-29
-// ULPs of coeffs = 2^-64
-// LIBC_INLINE_VAR constexpr Frac64 EXPF_COEFFS[] = {
-//     Frac64(0xb172'14ea'215c'7750), // x
-//     Frac64(0x3d7f'b5e7'4e78'9f2b), // x^2
-//     Frac64(0x0e34'15ac'7481'5dee), // x^3
-//     Frac64(0x027a'7e40'a2eb'6584), // x^4
-//     Frac64(0x0051'56c0'9d53'15f3), // x^5
-//     Frac64(0x000e'4a74'a170'46e8), // x^6
-// };
+// 0x1.6238...p-58
+// LSB(EXPF_COEFFS[i]) = 2^-64
 LIBC_INLINE_VAR constexpr Frac64 EXPF_COEFFS[] = {
     Frac64(0xb172'17f7'd1cf'b7cf), // x
     Frac64(0x3d7f'7bff'057d'4a5e), // x^2
@@ -76,23 +58,6 @@ LIBC_INLINE_VAR constexpr Frac64 EXPF_COEFFS[] = {
     Frac64(0x0000'001c'18d5'cb29), // x^10
     Frac64(0x0000'0002'b43f'4490), // x^11
 };
-
-// print(2+round(1/log(2), 32, RN));
-// LSB(INV_LN2_FRAC32) = 2^-31
-LIBC_INLINE_VAR constexpr Frac32 INV_LN2_FRAC32 = Frac32(0xb8aa'3b29);
-
-// 1-ULP
-// Degree-6 still works fine (p-29), degree-5 yields p-23 accuracy
-// This is still the case for Frac32!
-// 32-bit polynomial approximation of 2^x coefficients generated with Sollya:
-// > P = fpminimax(2^x, 6, [|1, 32...|], [0, 1], absolute, fixed);
-// Store the fractional part of the coefficients below
-// > dirtyinfnorm(2^x - P(x), [0, 1]);
-// 0x1.9ded...p-29
-// ULPs of coeffs = 2^-32
-LIBC_INLINE_VAR constexpr Frac32 EXPF_COEFFS_FRAC32[] = {
-    Frac32(0xb172'14e8), Frac32(0x3d7f'b5f8), Frac32(0x0e34'1554),
-    Frac32(0x027a'7f04), Frac32(0x0051'55fe), Frac32(0x000e'4abc)};
 
 } // namespace integer_only
 
