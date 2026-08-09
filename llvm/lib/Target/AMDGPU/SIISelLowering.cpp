@@ -247,13 +247,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       // Turn fsub into fadd(x, fneg y) so it reuses the packed v_pk_add_bf16
       // path instead of promoting to f32.
       setOperationAction(ISD::FSUB, MVT::bf16, Expand);
-      // Widen scalar fadd to a v2bf16 operation with an unused high lane.
-      setOperationAction(ISD::FADD, MVT::bf16, Custom);
-      // Widen scalar fcanonicalize to a v2bf16 operation with an unused high
-      // lane.
-      setOperationAction(ISD::FCANONICALIZE, MVT::bf16, Custom);
-      // Widen scalar fmul to a v2bf16 operation with an unused high lane.
-      setOperationAction(ISD::FMUL, MVT::bf16, Custom);
+      // Widen scalar operations to a v2bf16 operation with an unused high lane.
+      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMAXNUM, ISD::FMINNUM,
+                          ISD::FCANONICALIZE},
+                         MVT::bf16, Custom);
     }
 
     setOperationAction(ISD::FP_ROUND, MVT::bf16, Expand);
@@ -7717,9 +7714,15 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
         Op.getOperand(0).getValueType().getScalarType() == MVT::f32)
       return splitUnaryVectorOp(Op, DAG);
     return LowerFP_TO_INT_SAT(Op, DAG);
+  case ISD::FADD:
+  case ISD::FMUL:
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
-    return lowerFMINNUM_FMAXNUM(Op, DAG);
+    if (Op.getValueType() == MVT::bf16)
+      return lowerScalarBF16BinaryOp(Op, DAG);
+    if (Op.getOpcode() == ISD::FMINNUM || Op.getOpcode() == ISD::FMAXNUM)
+      return lowerFMINNUM_FMAXNUM(Op, DAG);
+    return splitBinaryVectorOp(Op, DAG);
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
     return lowerFMINIMUMNUM_FMAXIMUMNUM(Op, DAG);
@@ -7754,11 +7757,6 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::USUBSAT:
   case ISD::SADDSAT:
   case ISD::SSUBSAT:
-    return splitBinaryVectorOp(Op, DAG);
-  case ISD::FADD:
-  case ISD::FMUL:
-    if (Op.getValueType() == MVT::bf16)
-      return lowerScalarBF16BinaryOp(Op, DAG);
     return splitBinaryVectorOp(Op, DAG);
   case ISD::FCANONICALIZE:
     if (Op.getValueType() == MVT::bf16)
