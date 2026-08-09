@@ -310,6 +310,7 @@ public:
     IndexOpts.SystemSymbolFilter =
         index::IndexingOptions::SystemSymbolFilterKind::All;
     IndexOpts.IndexFunctionLocals = true;
+    IndexOpts.IndexImplicitInstantiation = true;
     std::shared_ptr<include_cleaner::PragmaIncludes> PI =
         std::make_shared<include_cleaner::PragmaIncludes>();
     COpts.PragmaIncludes = PI.get();
@@ -485,25 +486,50 @@ TEST_F(SymbolCollectorTest, FileLocal) {
 
 TEST_F(SymbolCollectorTest, Template) {
   Annotations Header(R"(
-    // Primary template and explicit specialization are indexed, instantiation
-    // is not.
-    template <class T, class U> struct [[Tmpl]] {T $xdecl[[x]] = 0;};
+    template <class T, class U> struct [[Tmpl]] {
+      //doc only for primary x
+      T $xdecl[[x]] = 0;
+      //doc only for primary y
+      T $ydecl[[y]]();
+      //doc only for primary z
+      struct $zdecl[[z]] {};
+    };
     template <> struct $specdecl[[Tmpl]]<int, bool> {};
     template <class U> struct $partspecdecl[[Tmpl]]<bool, U> {};
-    extern template struct Tmpl<float, bool>;
-    template struct Tmpl<double, bool>;
+    extern template struct $extinst[[Tmpl]]<float, bool>;
+    template struct $inst[[Tmpl]]<double, bool>;
   )");
+  CollectorOpts.StoreAllDocumentation = true;
   runSymbolCollector(Header.code(), /*Main=*/"");
-  EXPECT_THAT(Symbols,
-              UnorderedElementsAre(
-                  AllOf(qName("Tmpl"), declRange(Header.range()),
-                        forCodeCompletion(true)),
-                  AllOf(qName("Tmpl"), declRange(Header.range("specdecl")),
-                        forCodeCompletion(false)),
-                  AllOf(qName("Tmpl"), declRange(Header.range("partspecdecl")),
-                        forCodeCompletion(false)),
-                  AllOf(qName("Tmpl::x"), declRange(Header.range("xdecl")),
-                        forCodeCompletion(false))));
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          AllOf(qName("Tmpl"), declRange(Header.range()),
+                forCodeCompletion(true)),
+          AllOf(qName("Tmpl::x"), declRange(Header.range("xdecl")),
+                doc("doc only for primary x"), forCodeCompletion(false)),
+          AllOf(qName("Tmpl::y"), declRange(Header.range("ydecl")),
+                doc("doc only for primary y"), forCodeCompletion(false)),
+          AllOf(qName("Tmpl::z"), declRange(Header.range("zdecl")),
+                doc("doc only for primary z"), forCodeCompletion(false)),
+          AllOf(qName("Tmpl"), declRange(Header.range("specdecl")),
+                forCodeCompletion(false)),
+          AllOf(qName("Tmpl"), declRange(Header.range("partspecdecl")),
+                forCodeCompletion(false)),
+          AllOf(qName("Tmpl"), declRange(Header.range("extinst")),
+                forCodeCompletion(false)),
+          AllOf(qName("Tmpl<float, bool>::x"), declRange(Header.range("xdecl")),
+                doc(""), forCodeCompletion(false)),
+          AllOf(qName("Tmpl<float, bool>::y"), declRange(Header.range("ydecl")),
+                doc(""), forCodeCompletion(false)),
+          AllOf(qName("Tmpl"), declRange(Header.range("inst")),
+                forCodeCompletion(false)),
+          AllOf(qName("Tmpl<double, bool>::x"),
+                declRange(Header.range("xdecl")), doc(""),
+                forCodeCompletion(false)),
+          AllOf(qName("Tmpl<double, bool>::y"),
+                declRange(Header.range("ydecl")), doc(""),
+                forCodeCompletion(false))));
 }
 
 TEST_F(SymbolCollectorTest, templateArgs) {

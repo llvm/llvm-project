@@ -34,6 +34,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
@@ -589,6 +590,7 @@ bool SymbolCollector::handleDeclOccurrence(
   assert(ASTCtx && PP && HeaderFileURIs);
   assert(CompletionAllocator && CompletionTUInfo);
   assert(ASTNode.OrigD);
+
   // Indexing API puts canonical decl into D, which might not have a valid
   // source location for implicit/built-in decls. Fallback to original decl in
   // such cases.
@@ -659,9 +661,14 @@ bool SymbolCollector::handleDeclOccurrence(
   // refs, because the indexing code only populates relations for specific
   // occurrences. For example, RelationBaseOf is only populated for the
   // occurrence inside the base-specifier.
-  processRelations(*ND, ID, Relations);
+  processRelations(ID, *ASTNode.OrigD, Relations);
 
   bool CollectRef = static_cast<bool>(Opts.RefFilter & toRefKind(Roles));
+  // For now we only want the bare minimum of information for a class
+  // instantiation such that we have symbols for the `BaseOf` relation.
+  if (isTemplateInstantiationScope(ND)) {
+    CollectRef = false;
+  }
   // Unlike other fields, e.g. Symbols (which use spelling locations), we use
   // file locations for references (as it aligns the behavior of clangd's
   // AST-based xref).
@@ -861,7 +868,7 @@ bool SymbolCollector::handleMacroOccurrence(const IdentifierInfo *Name,
 }
 
 void SymbolCollector::processRelations(
-    const NamedDecl &ND, const SymbolID &ID,
+    const SymbolID &ID, const Decl &OrigD,
     ArrayRef<index::SymbolRelation> Relations) {
   for (const auto &R : Relations) {
     auto RKind = indexableRelation(R);
@@ -882,9 +889,17 @@ void SymbolCollector::processRelations(
     //       in the index and find nothing, but that's a situation they
     //       probably need to handle for other reasons anyways.
     // We currently do (B) because it's simpler.
-    if (*RKind == RelationKind::BaseOf)
+    if (*RKind == RelationKind::BaseOf) {
       this->Relations.insert({ID, *RKind, ObjectID});
-    else if (*RKind == RelationKind::OverriddenBy)
+      // If the Subject is a template, we also want a relation to the
+      // template instantiation (OrigD) to record inheritance chains.
+      if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(&OrigD);
+          CTSD && !CTSD->isExplicitSpecialization()) {
+        auto OrigID = getSymbolIDCached(&OrigD);
+        if (OrigID)
+          this->Relations.insert({OrigID, *RKind, ObjectID});
+      }
+    } else if (*RKind == RelationKind::OverriddenBy)
       this->Relations.insert({ObjectID, *RKind, ID});
   }
 }
@@ -1088,6 +1103,14 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   if (ND.getAvailability() == AR_Deprecated)
     S.Flags |= Symbol::Deprecated;
 
+  // Computing doc comments is expensive, so if we can skip it we should do so.
+  if (isTemplateInstantiationScope(&ND) ||
+      (!(S.Flags & Symbol::IndexedForCodeCompletion) &&
+       !Opts.StoreAllDocumentation)) {
+    Symbols.insert(S);
+    return Symbols.find(S.ID);
+  }
+
   // Add completion info.
   // FIXME: we may want to choose a different redecl, or combine from several.
   assert(ASTCtx && PP && "ASTContext and Preprocessor must be set.");
@@ -1104,21 +1127,16 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
     DocComment = getDocComment(Ctx, SymbolCompletion,
                                /*CommentsFromHeaders=*/true);
     Documentation = formatDocumentation(*CCS, DocComment);
+    if (!DocComment.empty())
+      S.Flags |= Symbol::HasDocComment;
+    S.Documentation = Documentation;
   }
-  const auto UpdateDoc = [&] {
-    if (!AlreadyHasDoc) {
-      if (!DocComment.empty())
-        S.Flags |= Symbol::HasDocComment;
-      S.Documentation = Documentation;
-    }
-  };
+
   if (!(S.Flags & Symbol::IndexedForCodeCompletion)) {
-    if (Opts.StoreAllDocumentation)
-      UpdateDoc();
     Symbols.insert(S);
     return Symbols.find(S.ID);
   }
-  UpdateDoc();
+
   std::string Signature;
   std::string SnippetSuffix;
   getSignature(*CCS, &Signature, &SnippetSuffix, SymbolCompletion.Kind,
