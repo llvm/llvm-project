@@ -2416,6 +2416,16 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     break;
   }
+  case TargetOpcode::G_ROTL:
+  case TargetOpcode::G_ROTR: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    unsigned Tmp = computeNumSignBits(SrcReg, DemandedElts, Depth + 1);
+    auto MaybeAmt =
+        isConstantOrConstantSplatVector(MI.getOperand(2).getReg(), MRI);
+    FirstAnswer =
+        SignBitsOps::rot(Tmp, TyBits, MaybeAmt, Opcode == TargetOpcode::G_ROTR);
+    break;
+  }
   case TargetOpcode::G_SREM: {
     // The sign bit is the LHS's sign bit, except when the result of the
     // remainder is zero. The magnitude of the result should be less than or
