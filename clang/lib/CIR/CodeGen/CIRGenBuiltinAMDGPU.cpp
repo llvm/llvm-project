@@ -211,13 +211,16 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_permlane16:
-  case AMDGPU::BI__builtin_amdgcn_permlanex16:
-  case AMDGPU::BI__builtin_amdgcn_permlane64: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+  case AMDGPU::BI__builtin_amdgcn_permlanex16: {
+    llvm::StringRef intrinsicName =
+        builtinId == AMDGPU::BI__builtin_amdgcn_permlane16
+            ? "amdgcn.permlane16"
+            : "amdgcn.permlanex16";
+    return emitBuiltinWithOneOverloadedType<6>(expr, intrinsicName).getValue();
   }
+  case AMDGPU::BI__builtin_amdgcn_permlane64:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.permlane64")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_readlane:
     return emitBuiltinWithOneOverloadedType<2>(expr, "amdgcn.readlane")
         .getValue();
