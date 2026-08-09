@@ -218,7 +218,8 @@ static DecodeStatus decodeDpp8FI(MCInst &Inst, unsigned Val, uint64_t Addr,
 #define DECODE_SrcOp(Name, EncSize, OpWidth, EncImm)                           \
   static DecodeStatus Name(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,      \
                            const MCDisassembler *Decoder) {                    \
-    assert(Imm < (1 << EncSize) && #EncSize "-bit encoding");                  \
+    if (!isUInt<EncSize>(Imm))                                                 \
+      return MCDisassembler::Fail;                                             \
     auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);              \
     return addOperand(Inst, DAsm->decodeSrcOp(Inst, OpWidth, EncImm));         \
   }
@@ -489,6 +490,8 @@ DecodeStatus AMDGPUDisassembler::tryDecodeInst(const uint8_t *Table, MCInst &MI,
 
   DecodeStatus Res =
       decodeInstruction(Table, TmpInst, Inst, Address, this, STI);
+  if (Res != MCDisassembler::Fail && !decodeImmOperands(TmpInst, *MCII))
+    Res = MCDisassembler::Fail;
 
   CommentStream = nullptr;
 
@@ -541,7 +544,7 @@ static inline std::bitset<128> eat16Bytes(ArrayRef<uint8_t> &Bytes) {
   return (Hi << 64) | Lo;
 }
 
-void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
+bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
                                            const MCInstrInfo &MCII) const {
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   for (auto [OpNo, OpDesc] : enumerate(Desc.operands())) {
@@ -567,6 +570,8 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
 
     if (Imm == AMDGPU::EncValues::LITERAL_CONST) {
       Op = decodeLiteralConstant(Desc, OpDesc);
+      if (!Op.isValid())
+        return false;
       continue;
     }
 
@@ -614,6 +619,7 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
       Op.setImm(Imm);
     }
   }
+  return true;
 }
 
 DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
@@ -834,8 +840,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   } while (false);
 
   DecodeStatus Status = MCDisassembler::Success;
-
-  decodeImmOperands(MI, *MCII);
 
   if (SIInstrFlags::isDPP(*MCII, MI)) {
     if (isMacDPP(MI))
@@ -2115,11 +2119,26 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
   case 231: return createRegOperand(SRC_FLAT_SCRATCH_BASE_HI);
   case 235: return createRegOperand(SRC_SHARED_BASE_LO);
   case 236: return createRegOperand(SRC_SHARED_LIMIT_LO);
-  case 237: return createRegOperand(SRC_PRIVATE_BASE_LO);
-  case 238: return createRegOperand(SRC_PRIVATE_LIMIT_LO);
-  case 239: return createRegOperand(SRC_POPS_EXITING_WAVE_ID);
-  case 251: return createRegOperand(SRC_VCCZ);
-  case 252: return createRegOperand(SRC_EXECZ);
+  case 237:
+    if (AMDGPU::hasPrivateApertureRegs(STI))
+      return createRegOperand(SRC_PRIVATE_BASE_LO);
+    break;
+  case 238:
+    if (AMDGPU::hasPrivateApertureRegs(STI))
+      return createRegOperand(SRC_PRIVATE_LIMIT_LO);
+    break;
+  case 239:
+    if (AMDGPU::hasPopsExitingWaveID(STI))
+      return createRegOperand(SRC_POPS_EXITING_WAVE_ID);
+    break;
+  case 251:
+    if (!isGFX11Plus())
+      return createRegOperand(SRC_VCCZ);
+    break;
+  case 252:
+    if (!isGFX11Plus())
+      return createRegOperand(SRC_EXECZ);
+    break;
   case 253: return createRegOperand(SRC_SCC);
   case 254: return createRegOperand(LDS_DIRECT);
   default: break;
@@ -2149,11 +2168,26 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
   case 230: return createRegOperand(SRC_FLAT_SCRATCH_BASE_LO);
   case 235: return createRegOperand(SRC_SHARED_BASE);
   case 236: return createRegOperand(SRC_SHARED_LIMIT);
-  case 237: return createRegOperand(SRC_PRIVATE_BASE);
-  case 238: return createRegOperand(SRC_PRIVATE_LIMIT);
-  case 239: return createRegOperand(SRC_POPS_EXITING_WAVE_ID);
-  case 251: return createRegOperand(SRC_VCCZ);
-  case 252: return createRegOperand(SRC_EXECZ);
+  case 237:
+    if (AMDGPU::hasPrivateApertureRegs(STI))
+      return createRegOperand(SRC_PRIVATE_BASE);
+    break;
+  case 238:
+    if (AMDGPU::hasPrivateApertureRegs(STI))
+      return createRegOperand(SRC_PRIVATE_LIMIT);
+    break;
+  case 239:
+    if (AMDGPU::hasPopsExitingWaveID(STI))
+      return createRegOperand(SRC_POPS_EXITING_WAVE_ID);
+    break;
+  case 251:
+    if (!isGFX11Plus())
+      return createRegOperand(SRC_VCCZ);
+    break;
+  case 252:
+    if (!isGFX11Plus())
+      return createRegOperand(SRC_EXECZ);
+    break;
   case 253: return createRegOperand(SRC_SCC);
   default: break;
   }
@@ -2259,6 +2293,15 @@ MCOperand AMDGPUDisassembler::decodeBoolReg(const MCInst &Inst,
 
 MCOperand AMDGPUDisassembler::decodeSplitBarrier(const MCInst &Inst,
                                                  unsigned Val) const {
+  using namespace AMDGPU::EncValues;
+  constexpr unsigned M0Encoding = 125;
+  bool IsValidBarrier =
+      Val == M0Encoding ||
+      (INLINE_INTEGER_C_MIN <= Val && Val < INLINE_INTEGER_C_MIN + 32) ||
+      (INLINE_INTEGER_C_POSITIVE_MAX < Val &&
+       Val <= INLINE_INTEGER_C_POSITIVE_MAX + 4);
+  if (!IsValidBarrier)
+    return MCOperand();
   return decodeSrcOp(Inst, 32, Val);
 }
 
@@ -2360,7 +2403,6 @@ bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
 bool AMDGPUDisassembler::hasKernargPreload() const {
   return AMDGPU::hasKernargPreload(STI);
 }
-
 //===----------------------------------------------------------------------===//
 // AMDGPU specific symbol handling
 //===----------------------------------------------------------------------===//

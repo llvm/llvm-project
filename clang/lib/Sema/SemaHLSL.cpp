@@ -2238,15 +2238,10 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
 
   switch (AL.getKind()) {
   case ParsedAttr::AT_HLSLResourceClass: {
-    if (!AL.isArgIdent(0)) {
-      Diag(AL.getLoc(), diag::err_attribute_argument_type)
-          << AL << AANT_ArgumentIdentifier;
+    StringRef Identifier;
+    SourceLocation ArgLoc;
+    if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Identifier, &ArgLoc))
       return false;
-    }
-
-    IdentifierLoc *Loc = AL.getArgAsIdent(0);
-    StringRef Identifier = Loc->getIdentifierInfo()->getName();
-    SourceLocation ArgLoc = Loc->getLoc();
 
     // Validate resource class value
     ResourceClass RC;

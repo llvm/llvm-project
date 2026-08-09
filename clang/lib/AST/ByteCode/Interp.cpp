@@ -1188,19 +1188,8 @@ bool CheckThis(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
-bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
-                      APFloat::opStatus Status, FPOptions FPO) {
-  // [expr.pre]p4:
-  //   If during the evaluation of an expression, the result is not
-  //   mathematically defined [...], the behavior is undefined.
-  // FIXME: C++ rules require us to not conform to IEEE 754 here.
-  if (Result.isNan()) {
-    const SourceInfo &E = S.Current->getSource(OpPC);
-    S.CCEDiag(E, diag::note_constexpr_float_arithmetic)
-        << /*NaN=*/true << S.Current->getRange(OpPC);
-    return S.noteUndefinedBehavior();
-  }
-
+bool CheckFloatStatus(InterpState &S, CodePtr OpPC, APFloat::opStatus Status,
+                      FPOptions FPO) {
   // In a constant context, assume that any dynamic rounding mode or FP
   // exception state matches the default floating-point environment.
   if (S.inConstantContext())
@@ -1233,6 +1222,26 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
   }
 
   return true;
+}
+
+bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
+                      APFloat::opStatus Status, FPOptions FPO) {
+  // FIXME: The standard quote below is deleted by P3899R3.
+  // [expr.pre]p4:
+  //   If during the evaluation of an expression, the result is not
+  //   mathematically defined [...], the behavior is undefined.
+  // FIXME: C++ rules require us to not conform to IEEE 754 here.
+  // FIXME: The NaN check should not be applied outside of "constant contexts"
+  // because it prevents NaN propagation and the "invalid" status is the
+  // responsibility of CheckFloatStatus.
+  if (Result.isNan()) {
+    const SourceInfo &E = S.Current->getSource(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_float_arithmetic)
+        << /*NaN=*/true << S.Current->getRange(OpPC);
+    return S.noteUndefinedBehavior();
+  }
+
+  return CheckFloatStatus(S, OpPC, Status, FPO);
 }
 
 bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC) {
@@ -2166,9 +2175,13 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
 
     CXXBasePaths Paths;
     getRecord(P.getBase())->isDerivedFrom(getRecord(P), Paths);
-    assert(std::distance(Paths.begin(), Paths.end()) == 1);
 
-    return Paths.front().Access == AS_private;
+    // Through virtual bases, there might be more than one "direct" base. They
+    // can have different access specifiers. They must all be private to be
+    // considered private.
+    return llvm::all_of(Paths, [](const CXXBasePath &P) -> bool {
+      return P.Access == AS_private;
+    });
   };
 
   enum {
@@ -2895,8 +2908,7 @@ bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
   return Shorter == Longer.take_front(Shorter.size());
 }
 
-static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
-                                PrimType T) {
+static void copyPrimitiveMemory(InterpState &S, PtrView Ptr, PrimType T) {
   if (T == PT_IntAPS) {
     auto &Val = Ptr.deref<IntegralAP<true>>();
     if (!Val.singleWord()) {
@@ -2925,7 +2937,7 @@ static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
 }
 
 template <typename T>
-static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr) {
+static void copyPrimitiveMemory(InterpState &S, PtrView Ptr) {
   assert(needsAlloc<T>());
   if constexpr (std::is_same_v<T, MemberPointer>) {
     auto &Val = Ptr.deref<MemberPointer>();
@@ -2942,7 +2954,7 @@ static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr) {
   }
 }
 
-static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
+static void finishGlobalRecurse(InterpState &S, PtrView Ptr) {
   if (const Record *R = Ptr.getRecord()) {
     for (const Record::Field &Fi : R->fields()) {
       if (Fi.Desc->isPrimitive()) {
@@ -2966,7 +2978,7 @@ static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
       if (!needsAlloc(PT))
         return;
       assert(NumElems >= 1);
-      const Pointer EP = Ptr.atIndex(0);
+      PtrView EP = Ptr.atIndex(0);
       bool AllSingleWord = true;
       TYPE_SWITCH_ALLOC(PT, {
         if (!EP.deref<T>().singleWord()) {
@@ -2977,13 +2989,13 @@ static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
       if (AllSingleWord)
         return;
       for (unsigned I = 1; I != D->getNumElems(); ++I) {
-        const Pointer EP = Ptr.atIndex(I);
+        PtrView EP = Ptr.atIndex(I);
         copyPrimitiveMemory(S, EP, PT);
       }
     } else {
       assert(D->isCompositeArray());
       for (unsigned I = 0; I != D->getNumElems(); ++I) {
-        const Pointer EP = Ptr.atIndex(I).narrow();
+        PtrView EP = Ptr.atIndex(I).narrow();
         finishGlobalRecurse(S, EP);
       }
     }
@@ -2993,7 +3005,7 @@ static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
 bool FinishInitGlobal(InterpState &S) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  finishGlobalRecurse(S, Ptr);
+  finishGlobalRecurse(S, Ptr.view());
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
     Ptr.activate();
