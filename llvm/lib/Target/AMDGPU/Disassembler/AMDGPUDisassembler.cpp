@@ -218,7 +218,8 @@ static DecodeStatus decodeDpp8FI(MCInst &Inst, unsigned Val, uint64_t Addr,
 #define DECODE_SrcOp(Name, EncSize, OpWidth, EncImm)                           \
   static DecodeStatus Name(MCInst &Inst, unsigned Imm, uint64_t /*Addr*/,      \
                            const MCDisassembler *Decoder) {                    \
-    assert(Imm < (1 << EncSize) && #EncSize "-bit encoding");                  \
+    if (!isUInt<EncSize>(Imm))                                                 \
+      return MCDisassembler::Fail;                                             \
     auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);              \
     return addOperand(Inst, DAsm->decodeSrcOp(Inst, OpWidth, EncImm));         \
   }
