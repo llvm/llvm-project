@@ -1688,10 +1688,12 @@ bool GetElementPtrInst::hasNoUnsignedWrap() const {
   return cast<GEPOperator>(this)->hasNoUnsignedWrap();
 }
 
-bool GetElementPtrInst::accumulateConstantOffset(const DataLayout &DL,
-                                                 APInt &Offset) const {
+bool GetElementPtrInst::accumulateConstantOffset(
+    const DataLayout &DL, APInt &Offset,
+    function_ref<bool(Value &, APInt &)> ExternalAnalysis) const {
   // Delegate to the generic GEPOperator implementation.
-  return cast<GEPOperator>(this)->accumulateConstantOffset(DL, Offset);
+  return cast<GEPOperator>(this)->accumulateConstantOffset(DL, Offset,
+                                                           ExternalAnalysis);
 }
 
 bool GetElementPtrInst::collectOffset(

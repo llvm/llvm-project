@@ -274,16 +274,18 @@ define i32 @test_select_idx_escaped(i1 %c, ptr %p) {
 ; constants?
 define i32 @test_select_idx_nested(i1 %c, i1 %c2) {
 ; CHECK-LABEL: @test_select_idx_nested(
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i64], align 8
-; CHECK-NEXT:    store i32 1, ptr [[ALLOCA]], align 4
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [28 x i8], align 8
+; CHECK-NEXT:    store i32 1, ptr [[ALLOCA]], align 8
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 8
-; CHECK-NEXT:    store i32 2, ptr [[GEP1]], align 4
+; CHECK-NEXT:    store i32 2, ptr [[GEP1]], align 8
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 24
-; CHECK-NEXT:    store i32 3, ptr [[GEP2]], align 4
+; CHECK-NEXT:    store i32 3, ptr [[GEP2]], align 8
 ; CHECK-NEXT:    [[IDX1:%.*]] = select i1 [[C:%.*]], i64 24, i64 0
 ; CHECK-NEXT:    [[IDX2:%.*]] = select i1 [[C2:%.*]], i64 [[IDX1]], i64 8
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 [[IDX2]]
-; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[GEP3]], align 4
+; CHECK-NEXT:    [[ALLOCA_SROA_0_0_GEP3_SROA_STRIDE:%.*]] = mul i64 [[IDX2]], 1
+; CHECK-NEXT:    [[ALLOCA_SROA_0_0_GEP3_SROA_OFFSET:%.*]] = add i64 0, [[ALLOCA_SROA_0_0_GEP3_SROA_STRIDE]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i64 [[ALLOCA_SROA_0_0_GEP3_SROA_OFFSET]]
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[GEP3]], align 1
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %alloca = alloca [20 x i64], align 8

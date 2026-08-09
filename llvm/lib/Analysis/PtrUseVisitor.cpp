@@ -20,24 +20,43 @@ using namespace llvm;
 void detail::PtrUseVisitorBase::enqueueUsers(Value &I) {
   for (Use &U : I.uses()) {
     if (VisitedUses.insert(&U).second) {
-      UseToVisit NewU = {
-        UseToVisit::UseAndIsOffsetKnownPair(&U, IsOffsetKnown),
-        Offset
-      };
+      UseToVisit NewU = {UseToVisit::UseAndIsOffsetKnownPair(&U, IsOffsetKnown),
+                         Offset, HighOffset};
       Worklist.push_back(std::move(NewU));
     }
   }
 }
 
-bool detail::PtrUseVisitorBase::adjustOffsetForGEP(GetElementPtrInst &GEPI) {
+bool detail::PtrUseVisitorBase::adjustOffsetForGEP(
+    GetElementPtrInst &GEPI,
+    function_ref<bool(const Value &, ConstantRange &)> RangeAnalysis) {
   if (!IsOffsetKnown)
     return false;
 
-  APInt TmpOffset(DL.getIndexTypeSizeInBits(GEPI.getType()), 0);
-  if (GEPI.accumulateConstantOffset(DL, TmpOffset)) {
+  if (!RangeAnalysis) {
+    APInt TmpOffset(DL.getIndexTypeSizeInBits(GEPI.getType()), 0);
+    if (!GEPI.accumulateConstantOffset(DL, TmpOffset))
+      return false;
     Offset += TmpOffset.sextOrTrunc(Offset.getBitWidth());
+    HighOffset += TmpOffset.sextOrTrunc(HighOffset.getBitWidth());
     return true;
   }
 
-  return false;
+  auto AccumulateBound = [&](APInt &Accum, bool IsUpperBound) {
+    auto ExternalAnalysis = [&](Value &V, APInt &Index) {
+      ConstantRange CR(Index.getBitWidth(), /*isFullSet=*/false);
+      if (!RangeAnalysis(V, CR))
+        return false;
+      Index = IsUpperBound ? CR.getSignedMax() : CR.getSignedMin();
+      return true;
+    };
+    APInt Tmp(DL.getIndexTypeSizeInBits(GEPI.getType()), 0);
+    if (!GEPI.accumulateConstantOffset(DL, Tmp, ExternalAnalysis))
+      return false;
+    Accum += Tmp.sextOrTrunc(Accum.getBitWidth());
+    return true;
+  };
+
+  return AccumulateBound(Offset, /*IsUpperBound=*/false) &&
+         AccumulateBound(HighOffset, /*IsUpperBound=*/true);
 }

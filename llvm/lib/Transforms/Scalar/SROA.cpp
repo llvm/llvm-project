@@ -48,6 +48,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFolder.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
@@ -333,8 +334,12 @@ static DebugVariable getAggregateVariable(DbgVariableRecord *DVR) {
 /// \param OldAlloca             Alloca for the variable before splitting.
 /// \param IsSplit               True if the store (not necessarily alloca)
 ///                              is being split.
-/// \param OldAllocaOffsetInBits Offset of the slice taken from OldAlloca.
-/// \param SliceSizeInBits       New number of bits being written to.
+/// \param OldAllocaOffsetInBits Offset of the slice taken from OldAlloca, if
+///                              constant. Must not be nullopt if the store is
+///                              being split.
+/// \param SliceSizeInBits       New number of bits being written to, if
+///                              constant. Must not be nullopt if the store is
+///                              being split.
 /// \param OldInst               Instruction that is being split.
 /// \param Inst                  New instruction performing this part of the
 ///                              split store.
@@ -342,10 +347,10 @@ static DebugVariable getAggregateVariable(DbgVariableRecord *DVR) {
 /// \param Value                 Stored value.
 /// \param DL                    Datalayout.
 static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
-                             uint64_t OldAllocaOffsetInBits,
-                             uint64_t SliceSizeInBits, Instruction *OldInst,
-                             Instruction *Inst, Value *Dest, Value *Value,
-                             const DataLayout &DL) {
+                             std::optional<uint64_t> OldAllocaOffsetInBits,
+                             std::optional<uint64_t> SliceSizeInBits,
+                             Instruction *OldInst, Instruction *Inst,
+                             Value *Dest, Value *Value, const DataLayout &DL) {
   // If we want allocas to be migrated using this helper then we need to ensure
   // that the BaseFragments map code still works. A simple solution would be
   // to choose to always clone alloca dbg_assigns (rather than sometimes
@@ -391,6 +396,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     bool SetKillLocation = false;
 
     if (IsSplit) {
+      assert(OldAllocaOffsetInBits && SliceSizeInBits);
       std::optional<DIExpression::FragmentInfo> BaseFragment;
       {
         auto R = BaseFragments.find(getAggregateVariable(DbgAssign));
@@ -402,7 +408,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
           Expr->getFragmentInfo();
       DIExpression::FragmentInfo NewFragment;
       FragCalcResult Result = calculateFragment(
-          DbgAssign->getVariable(), OldAllocaOffsetInBits, SliceSizeInBits,
+          DbgAssign->getVariable(), *OldAllocaOffsetInBits, *SliceSizeInBits,
           BaseFragment, CurrentFragment, NewFragment);
 
       if (Result == Skip)
@@ -533,12 +539,16 @@ class Slice {
   /// split.
   PointerIntPair<Use *, 1, bool> UseAndIsSplittable;
 
+  /// Whether the slice is indexed by non-constant indices.
+  bool IsDynamic;
+
 public:
   Slice() = default;
 
-  Slice(uint64_t BeginOffset, uint64_t EndOffset, Use *U, bool IsSplittable)
+  Slice(uint64_t BeginOffset, uint64_t EndOffset, Use *U, bool IsSplittable,
+        bool IsDynamic)
       : BeginOffset(BeginOffset), EndOffset(EndOffset),
-        UseAndIsSplittable(U, IsSplittable) {}
+        UseAndIsSplittable(U, IsSplittable), IsDynamic(IsDynamic) {}
 
   uint64_t beginOffset() const { return BeginOffset; }
   uint64_t endOffset() const { return EndOffset; }
@@ -550,6 +560,8 @@ public:
 
   bool isDead() const { return getUse() == nullptr; }
   void kill() { UseAndIsSplittable.setPointer(nullptr); }
+
+  bool isDynamic() const { return IsDynamic; }
 
   /// Support for ordering ranges.
   ///
@@ -584,6 +596,36 @@ public:
   bool operator!=(const Slice &RHS) const { return !operator==(RHS); }
 };
 
+/// The indices and strides used to offset a pointer from an alloca.
+class AccumulatedGEPIndices {
+  APInt ConstantOffset;
+  SmallVector<std::pair<Value *, APInt>, 4> VariableIndices;
+
+public:
+  explicit AccumulatedGEPIndices(unsigned BitWidth)
+      : ConstantOffset(BitWidth, 0, true) {}
+
+  /// Adds a GEP index of `V` with stride `Stride`.
+  void addIndex(Value *V, const APInt &Stride) {
+    VariableIndices.emplace_back(
+        V, Stride.sextOrTrunc(ConstantOffset.getBitWidth()));
+  }
+
+  /// Gets the constant offset of the pointer relative to `Base`.
+  APInt getAdjustedConstantOffset(uint64_t Base) const {
+    return ConstantOffset - APInt(ConstantOffset.getBitWidth(), Base);
+  }
+
+  /// Increments the constant offset by `V`.
+  void incConstantOffset(const APInt &V) {
+    ConstantOffset += V.sextOrTrunc(ConstantOffset.getBitWidth());
+  }
+
+  auto indices() const {
+    return make_range(VariableIndices.begin(), VariableIndices.end());
+  }
+};
+
 /// Representation of the alloca slices.
 ///
 /// This class represents the slices of an alloca which are formed by its
@@ -594,7 +636,8 @@ public:
 class AllocaSlices {
 public:
   /// Construct the slices of a particular alloca.
-  AllocaSlices(const DataLayout &DL, AllocaInst &AI);
+  AllocaSlices(const DataLayout &DL, AllocaInst &AI, AssumptionCache &AC,
+               DominatorTree &DT);
 
   /// Test whether a pointer to the allocation escapes our analysis.
   ///
@@ -655,6 +698,12 @@ public:
   /// need to replace with undef.
   ArrayRef<Use *> getDeadOperands() const { return DeadOperands; }
 
+  /// Gets the accumulated offset of `Ptr` from its alloca.
+  const AccumulatedGEPIndices *getAccumulatedGEPIndices(Value *Ptr) const {
+    auto It = PtrOffsets.find(Ptr);
+    return It == PtrOffsets.end() ? nullptr : &It->second;
+  }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void print(raw_ostream &OS, const_iterator I, StringRef Indent = "  ") const;
   void printSlice(raw_ostream &OS, const_iterator I,
@@ -693,6 +742,9 @@ private:
   /// slices before the splittable ones. See the Slice inner class for more
   /// details.
   SmallVector<Slice, 8> Slices;
+
+  /// Symbolic offsets of each pointer value derived from the alloca.
+  SmallDenseMap<Value *, AccumulatedGEPIndices> PtrOffsets;
 
   /// Instructions which will become dead if we rewrite the alloca.
   ///
@@ -1023,17 +1075,29 @@ class AllocaSlices::SliceBuilder : public PtrUseVisitor<SliceBuilder> {
 
   const uint64_t AllocSize;
   AllocaSlices &AS;
+  AssumptionCache &AC;
+  DominatorTree &DT;
 
   SmallDenseMap<Instruction *, unsigned> MemTransferSliceMap;
   SmallDenseMap<Instruction *, uint64_t> PHIOrSelectSizes;
 
+  /// Map from GEP instruction and non-constant index to the range of values
+  /// that index can take, if such a range can be determined.
+  SmallDenseMap<std::pair<const Instruction *, const Value *>, ConstantRange>
+      DynGepRanges;
+
   /// Set to de-duplicate dead instructions found in the use walk.
   SmallPtrSet<Instruction *, 4> VisitedDeadInsts;
 
+  bool CanDynSlicesReduceAllocaSize;
+  SmallVector<unsigned> DynamicSliceIndices;
+
 public:
-  SliceBuilder(const DataLayout &DL, AllocaInst &AI, AllocaSlices &AS)
+  SliceBuilder(const DataLayout &DL, AllocaInst &AI, AllocaSlices &AS,
+               AssumptionCache &AC, DominatorTree &DT)
       : PtrUseVisitor<SliceBuilder>(DL),
-        AllocSize(AI.getAllocationSize(DL)->getFixedValue()), AS(AS) {}
+        AllocSize(AI.getAllocationSize(DL)->getFixedValue()), AS(AS), AC(AC),
+        DT(DT), CanDynSlicesReduceAllocaSize(true) {}
 
 private:
   void markAsDead(Instruction &I) {
@@ -1041,11 +1105,54 @@ private:
       AS.DeadUsers.push_back(&I);
   }
 
+  bool isSliceDynamic() const { return Offset != HighOffset; }
+
+  // Aborts all dynamic slices that have been found so far, and prevents the
+  // addition of any more.
+  void abortDynamicSlices() {
+    if (CanDynSlicesReduceAllocaSize) {
+      for (unsigned Idx : DynamicSliceIndices)
+        PI.setAborted(cast<Instruction>(AS.Slices[Idx].getUse()->getUser()));
+    }
+    CanDynSlicesReduceAllocaSize = false;
+  }
+
+  // Returns true and aborts all dynamic slices if the slice is dynamic but it
+  // cannot be optimized or has no chance of reducing the alloca size.
+  //
+  // `Length` is the amount of bytes that the user will access.
+  bool isInvalidDynamicUse(uint64_t Length) {
+    if (!isSliceDynamic())
+      return false;
+
+    bool DoesUseEntireAlloca =
+        Offset.isNonPositive() && HighOffset.isNonNegative() &&
+        HighOffset.uge(AllocSize - std::min(Length, AllocSize));
+    if (!CanDynSlicesReduceAllocaSize || !Length || DoesUseEntireAlloca ||
+        !AS.getAccumulatedGEPIndices(U->get())) {
+      abortDynamicSlices();
+      return true;
+    }
+    return false;
+  }
+
+  bool isInvalidDynamicUse(ConstantInt *Length) {
+    return isInvalidDynamicUse(Length ? Length->getLimitedValue() : 0);
+  }
+
+  // Returns true if the slice cannot access in-bounds memory from `0` to
+  // `LastByteIdx`, (inclusive). If ` LastByteIdx` is not specified, the last
+  // byte of the allocation is used.
+  bool isSliceOOB(std::optional<uint64_t> LastByteIdx = std::nullopt) const {
+    auto LastByte = LastByteIdx.value_or(AllocSize - 1);
+    return Offset.ugt(LastByte) && HighOffset.uge(Offset);
+  }
+
   void insertUse(Instruction &I, const APInt &Offset, uint64_t Size,
                  bool IsSplittable = false) {
     // Completely skip uses which have a zero size or start either before or
     // past the end of the allocation.
-    if (Size == 0 || Offset.uge(AllocSize)) {
+    if (Size == 0 || isSliceOOB()) {
       LLVM_DEBUG(dbgs() << "WARNING: Ignoring " << Size << " byte use @"
                         << Offset
                         << " which has zero size or starts outside of the "
@@ -1056,7 +1163,20 @@ private:
     }
 
     uint64_t BeginOffset = Offset.getZExtValue();
-    uint64_t EndOffset = BeginOffset + Size;
+    uint64_t EndOffset = HighOffset.getZExtValue() + Size;
+
+    // Clamp the begin offset to the beginning of the allocation. We may reach
+    // this point if the offset is negative but the high offset is not, so the
+    // slice may touch valid memory.
+    if (Offset.isNegative()) {
+      LLVM_DEBUG(dbgs() << "WARNING: Clamping a " << Size << " byte use @"
+                        << Offset << ":" << HighOffset
+                        << " to remain within the " << AllocSize
+                        << " byte alloca:\n"
+                        << "    alloca: " << AS.AI << "\n"
+                        << "       use: " << I << "\n");
+      BeginOffset = 0;
+    }
 
     // Clamp the end offset to the end of the allocation. Note that this is
     // formulated to handle even the case where "BeginOffset + Size" overflows.
@@ -1065,22 +1185,31 @@ private:
     // some instructions are dead but not others. We can't completely ignore
     // them, and so have to record at least the information here.
     assert(AllocSize >= BeginOffset); // Established above.
-    if (Size > AllocSize - BeginOffset) {
+    if (HighOffset.uge(AllocSize) ||
+        Size > AllocSize - HighOffset.getZExtValue()) {
       LLVM_DEBUG(dbgs() << "WARNING: Clamping a " << Size << " byte use @"
-                        << Offset << " to remain within the " << AllocSize
+                        << Offset << ":" << HighOffset
+                        << " to remain within the " << AllocSize
                         << " byte alloca:\n"
                         << "    alloca: " << AS.AI << "\n"
                         << "       use: " << I << "\n");
       EndOffset = AllocSize;
     }
 
-    AS.Slices.push_back(Slice(BeginOffset, EndOffset, U, IsSplittable));
+    bool IsDynamic = isSliceDynamic();
+    // We cannot split an alloca that is dynamically indexed.
+    IsSplittable &= !IsDynamic;
+    AS.Slices.push_back(
+        Slice(BeginOffset, EndOffset, U, IsSplittable, IsDynamic));
+    if (IsDynamic)
+      DynamicSliceIndices.push_back(AS.Slices.size() - 1);
   }
 
   void visitBitCastInst(BitCastInst &BC) {
     if (BC.use_empty())
       return markAsDead(BC);
 
+    AS.PtrOffsets.try_emplace(&BC, getOrCreateOffsetsOf(BC.getOperand(0)));
     return Base::visitBitCastInst(BC);
   }
 
@@ -1088,6 +1217,8 @@ private:
     if (ASC.use_empty())
       return markAsDead(ASC);
 
+    AS.PtrOffsets.try_emplace(&ASC,
+                              getOrCreateOffsetsOf(ASC.getPointerOperand()));
     return Base::visitAddrSpaceCastInst(ASC);
   }
 
@@ -1095,6 +1226,7 @@ private:
     if (GEPI.use_empty())
       return markAsDead(GEPI);
 
+    computeNonConstantGepRanges(GEPI);
     return Base::visitGetElementPtrInst(GEPI);
   }
 
@@ -1105,6 +1237,9 @@ private:
     // of bits" patterns.
     bool IsSplittable =
         Ty->isIntegerTy() && !IsVolatile && DL.typeSizeEqualsStoreSize(Ty);
+
+    if (isInvalidDynamicUse(Size))
+      return PI.setAborted(&I);
 
     insertUse(I, Offset, Size, IsSplittable);
   }
@@ -1156,7 +1291,7 @@ private:
     // risk of overflow.
     // FIXME: We should instead consider the pointer to have escaped if this
     // function is being instrumented for addressing bugs or race conditions.
-    if (Size > AllocSize || Offset.ugt(AllocSize - Size)) {
+    if (Size > AllocSize || isSliceOOB(AllocSize - Size)) {
       LLVM_DEBUG(dbgs() << "WARNING: Ignoring " << Size << " byte store @"
                         << Offset << " which extends past the end of the "
                         << AllocSize << " byte alloca:\n"
@@ -1173,12 +1308,11 @@ private:
   void visitMemSetInst(MemSetInst &II) {
     assert(II.getRawDest() == *U && "Pointer use is not the destination?");
     ConstantInt *Length = dyn_cast<ConstantInt>(II.getLength());
-    if ((Length && Length->getValue() == 0) ||
-        (IsOffsetKnown && Offset.uge(AllocSize)))
+    if ((Length && Length->getValue() == 0) || (IsOffsetKnown && isSliceOOB()))
       // Zero-length mem transfer intrinsics can be ignored entirely.
       return markAsDead(II);
 
-    if (!IsOffsetKnown)
+    if (!IsOffsetKnown || isInvalidDynamicUse(Length))
       return PI.setAborted(&II);
 
     insertUse(II, Offset,
@@ -1198,7 +1332,7 @@ private:
     if (VisitedDeadInsts.count(&II))
       return;
 
-    if (!IsOffsetKnown)
+    if (!IsOffsetKnown || isInvalidDynamicUse(Length))
       return PI.setAborted(&II);
 
     // This side of the transfer is completely out-of-bounds, and so we can
@@ -1206,7 +1340,7 @@ private:
     // if already added to our partitions.
     // FIXME: Yet another place we really should bypass this when
     // instrumenting for ASan.
-    if (Offset.uge(AllocSize)) {
+    if (isSliceOOB()) {
       auto MTPI = MemTransferSliceMap.find(&II);
       if (MTPI != MemTransferSliceMap.end())
         AS.Slices[MTPI->second].kill();
@@ -1295,7 +1429,8 @@ private:
 
       if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
         TypeSize LoadSize = DL.getTypeStoreSize(LI->getType());
-        if (LoadSize.isScalable()) {
+        if (LoadSize.isScalable() ||
+            isInvalidDynamicUse(LoadSize.getFixedValue())) {
           PI.setAborted(LI);
           return nullptr;
         }
@@ -1307,7 +1442,8 @@ private:
         if (Op == UsedI)
           return SI;
         TypeSize StoreSize = DL.getTypeStoreSize(Op->getType());
-        if (StoreSize.isScalable()) {
+        if (StoreSize.isScalable() ||
+            isInvalidDynamicUse(StoreSize.getFixedValue())) {
           PI.setAborted(SI);
           return nullptr;
         }
@@ -1351,14 +1487,16 @@ private:
     // %other)" may trap because the select may return the first operand
     // "undef".
     if (Value *Result = foldPHINodeOrSelectInst(I)) {
-      if (Result == *U)
+      if (Result == *U) {
         // If the result of the constant fold will be the pointer, recurse
         // through the PHI/select as if we had RAUW'ed it.
         enqueueUsers(I);
-      else
+        AS.PtrOffsets.try_emplace(&I, getOrCreateOffsetsOf(Result));
+      } else {
         // Otherwise the operand to the PHI/select is dead, and we can replace
         // it with poison.
         AS.DeadOperands.push_back(U);
+      }
 
       return;
     }
@@ -1380,7 +1518,7 @@ private:
     // themselves which should be replaced with poison.
     // FIXME: This should instead be escaped in the event we're instrumenting
     // for address sanitization.
-    if (Offset.uge(AllocSize)) {
+    if (isSliceOOB()) {
       AS.DeadOperands.push_back(U);
       return;
     }
@@ -1407,15 +1545,60 @@ private:
 
     Base::visitCallBase(CB);
   }
+
+  // Gets the accumulated GEP indices of `Ptr`, creating them if necessary.
+  AccumulatedGEPIndices getOrCreateOffsetsOf(Value *Ptr) {
+    // Returns by value so callers can directly re-insert the offsets.
+    return AS.PtrOffsets.try_emplace(Ptr, Offset.getBitWidth()).first->second;
+  }
+
+  // Computes the constant ranges of non-constant GEP indices and caches them in
+  // `Ranges`, and keeps track of the accumulated constant and non-constant
+  // indices in the `AllocaSlices` object so that we can reconstruct the
+  // indexing correctly in the `SliceBuilder`.
+  void computeNonConstantGepRanges(GetElementPtrInst &GEP) {
+    unsigned IdxBits = DL.getIndexTypeSizeInBits(GEP.getType());
+    SmallMapVector<Value *, APInt, 4> VarOffsets;
+    APInt ConstantOffset(IdxBits, 0);
+    if (!GEP.collectOffset(DL, IdxBits, VarOffsets, ConstantOffset))
+      return;
+
+    auto Offsets = getOrCreateOffsetsOf(GEP.getPointerOperand());
+    Offsets.incConstantOffset(ConstantOffset);
+
+    const SimplifyQuery SQ(DL, /*DT=*/&DT, &AC, /*CxtI=*/&GEP);
+    SmallVector<std::pair<Value *, ConstantRange>, 4> Ranges;
+    for (auto &[V, Stride] : VarOffsets) {
+      ConstantRange CR = computeConstantRange(V, /*ForSigned=*/true, SQ);
+      if (CR.isFullSet() || CR.isEmptySet() || CR.isSignWrappedSet())
+        return abortDynamicSlices();
+      Ranges.emplace_back(V, std::move(CR));
+      Offsets.addIndex(V, Stride);
+    }
+
+    for (auto &[V, CR] : Ranges)
+      DynGepRanges.try_emplace({&GEP, V}, std::move(CR));
+    AS.PtrOffsets.try_emplace(&GEP, Offsets);
+  }
+
+  bool getNonConstantGepIndexRange(const GetElementPtrInst &GEP, const Value &V,
+                                   ConstantRange &CR) const {
+    auto It = DynGepRanges.find({&GEP, &V});
+    if (It == DynGepRanges.end())
+      return false;
+    CR = It->second;
+    return true;
+  }
 };
 
-AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
+AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI,
+                           AssumptionCache &AC, DominatorTree &DT)
     :
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       AI(AI),
 #endif
       PointerEscapingInstr(nullptr), PointerEscapingInstrReadOnly(nullptr) {
-  SliceBuilder PB(DL, AI, *this);
+  SliceBuilder PB(DL, AI, *this, AC, DT);
   SliceBuilder::PtrInfo PtrI = PB.visitPtr(AI);
   if (PtrI.isEscaped() || PtrI.isAborted()) {
     // FIXME: We should sink the escape vs. abort info into the caller nicely,
@@ -2018,6 +2201,9 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
                                             uint64_t ElementSize,
                                             const DataLayout &DL,
                                             unsigned VScale) {
+  if (S.isDynamic())
+    return false;
+
   // First validate the slice offsets.
   uint64_t BeginOffset =
       std::max(S.beginOffset(), P.beginOffset()) - P.beginOffset();
@@ -2324,6 +2510,9 @@ static bool isIntegerWideningViableForSlice(const Slice &S,
                                             Type *AllocaTy,
                                             const DataLayout &DL,
                                             bool &WholeAllocaOp) {
+  if (S.isDynamic())
+    return false;
+
   uint64_t Size = DL.getTypeStoreSize(AllocaTy).getFixedValue();
 
   uint64_t RelBegin = S.beginOffset() - AllocBeginOffset;
@@ -2668,6 +2857,114 @@ static Value *mergeTwoVectors(Value *V0, Value *V1, const DataLayout &DL,
 
 namespace {
 
+/// Information about a Slice being rewritten.
+class SliceInfo {
+  /// The original offset of the slice currently being rewritten relative to
+  /// the original alloca.
+  uint64_t BeginOffset = 0;
+  uint64_t EndOffset = 0;
+
+  /// The new offsets of the slice currently being rewritten relative to the
+  /// original alloca.
+  uint64_t NewBeginOffset = 0, NewEndOffset = 0;
+
+  uint64_t SliceSize = 0;
+
+  bool IsDynamic = false;
+  bool IsSplittable = false;
+  bool IsSplit = false;
+
+public:
+  SliceInfo() = default;
+  SliceInfo(AllocaSlices::const_iterator I, uint64_t NewAllocaBeginOffset,
+            uint64_t NewAllocaEndOffset) {
+    BeginOffset = I->beginOffset();
+    EndOffset = I->endOffset();
+    IsDynamic = I->isDynamic();
+    IsSplittable = I->isSplittable();
+    IsSplit =
+        BeginOffset < NewAllocaBeginOffset || EndOffset > NewAllocaEndOffset;
+    // A dynamically-indexed slice is unsplittable, so the builder must never
+    // hand us one that spans partitions.
+    assert(!(IsDynamic && IsSplit) &&
+           "Dynamic slice unexpectedly split across partitions!");
+
+    // Compute the intersecting offset range.
+    assert(BeginOffset < NewAllocaEndOffset);
+    assert(EndOffset > NewAllocaBeginOffset);
+    NewBeginOffset = std::max(BeginOffset, NewAllocaBeginOffset);
+    NewEndOffset = std::min(EndOffset, NewAllocaEndOffset);
+
+    SliceSize = NewEndOffset - NewBeginOffset;
+    LLVM_DEBUG(dbgs() << "   Begin:(" << BeginOffset << ", " << EndOffset
+                      << ") NewBegin:(" << NewBeginOffset << ", "
+                      << NewEndOffset << ") NewAllocaBegin:("
+                      << NewAllocaBeginOffset << ", " << NewAllocaEndOffset
+                      << ")\n");
+    assert(IsSplit || NewBeginOffset == BeginOffset);
+  }
+
+  /// Gets the concrete original begin offset of the slice, if it's not dynamic.
+  std::optional<uint64_t> getBeginOffset() const {
+    if (IsDynamic)
+      return std::nullopt;
+    return BeginOffset;
+  }
+  /// Gets the concrete original end offset of the slice, if it's not dynamic.
+  std::optional<uint64_t> getEndOffset() const {
+    if (IsDynamic)
+      return std::nullopt;
+    return EndOffset;
+  }
+  /// Gets the concrete new begin offset of the rewritten slice, if it's not
+  /// dynamic.
+  std::optional<uint64_t> getNewBeginOffset() const {
+    if (IsDynamic)
+      return std::nullopt;
+    return NewBeginOffset;
+  }
+  /// Gets the concrete new end offset of the rewritten slice, if it's not
+  /// dynamic.
+  std::optional<uint64_t> getNewEndOffset() const {
+    if (IsDynamic)
+      return std::nullopt;
+    return NewEndOffset;
+  }
+  /// Gets the concrete new begin offset in bits of the rewritten slice, if it's
+  /// not dynamic.
+  std::optional<uint64_t> getNewBeginOffsetInBits() const {
+    if (IsDynamic)
+      return std::nullopt;
+    return NewBeginOffset * 8;
+  }
+
+  /// Gets the size of the slice, if it's not dynamic.
+  std::optional<uint64_t> getSliceSize() const {
+    if (IsDynamic)
+      return std::nullopt;
+    return SliceSize;
+  }
+  /// Gets the size of the slice in bits, if it's not dynamic.
+  std::optional<uint64_t> getSliceSizeInBits() const {
+    if (IsDynamic)
+      return std::nullopt;
+    return SliceSize * 8;
+  }
+
+  uint64_t getMinBeginOffset() const { return BeginOffset; }
+  uint64_t getMaxEndOffset() const { return EndOffset; }
+  uint64_t getMinNewBeginOffset() const { return NewBeginOffset; }
+  /// Gets the begin offset of the rewritten slice relative to the original
+  /// slice's begin.
+  uint64_t getRelativeBeginOffset() const {
+    return NewBeginOffset - BeginOffset;
+  }
+
+  bool isDynamic() const { return IsDynamic; }
+  bool isSplit() const { return IsSplit; }
+  bool isSplittable() const { return IsSplittable; }
+};
+
 /// Visitor to rewrite instructions using p particular slice of an alloca
 /// to use a new alloca.
 ///
@@ -2706,18 +3003,8 @@ class AllocaSliceRewriter : public InstVisitor<AllocaSliceRewriter, bool> {
   Type *ElementTy;
   uint64_t ElementSize;
 
-  // The original offset of the slice currently being rewritten relative to
-  // the original alloca.
-  uint64_t BeginOffset = 0;
-  uint64_t EndOffset = 0;
+  SliceInfo CurSlice;
 
-  // The new offsets of the slice currently being rewritten relative to the
-  // original alloca.
-  uint64_t NewBeginOffset = 0, NewEndOffset = 0;
-
-  uint64_t SliceSize = 0;
-  bool IsSplittable = false;
-  bool IsSplit = false;
   Use *OldUse = nullptr;
   Instruction *OldPtr = nullptr;
 
@@ -2771,28 +3058,11 @@ public:
 
   bool visit(AllocaSlices::const_iterator I) {
     bool CanSROA = true;
-    BeginOffset = I->beginOffset();
-    EndOffset = I->endOffset();
-    IsSplittable = I->isSplittable();
-    IsSplit =
-        BeginOffset < NewAllocaBeginOffset || EndOffset > NewAllocaEndOffset;
-    LLVM_DEBUG(dbgs() << "  rewriting " << (IsSplit ? "split " : ""));
+    CurSlice = SliceInfo(I, NewAllocaBeginOffset, NewAllocaEndOffset);
+    LLVM_DEBUG(dbgs() << "  rewriting "
+                      << (CurSlice.isSplit() ? "split " : ""));
     LLVM_DEBUG(AS.printSlice(dbgs(), I, ""));
     LLVM_DEBUG(dbgs() << "\n");
-
-    // Compute the intersecting offset range.
-    assert(BeginOffset < NewAllocaEndOffset);
-    assert(EndOffset > NewAllocaBeginOffset);
-    NewBeginOffset = std::max(BeginOffset, NewAllocaBeginOffset);
-    NewEndOffset = std::min(EndOffset, NewAllocaEndOffset);
-
-    SliceSize = NewEndOffset - NewBeginOffset;
-    LLVM_DEBUG(dbgs() << "   Begin:(" << BeginOffset << ", " << EndOffset
-                      << ") NewBegin:(" << NewBeginOffset << ", "
-                      << NewEndOffset << ") NewAllocaBegin:("
-                      << NewAllocaBeginOffset << ", " << NewAllocaEndOffset
-                      << ")\n");
-    assert(IsSplit || NewBeginOffset == BeginOffset);
     OldUse = I->getUse();
     OldPtr = cast<Instruction>(OldUse->get());
 
@@ -2802,7 +3072,8 @@ public:
     // Avoid materializing the name prefix when it is discarded anyway.
     if (!IRB.getContext().shouldDiscardValueNames())
       IRB.getInserter().SetNamePrefix(Twine(NewAI.getName()) + "." +
-                                      Twine(BeginOffset) + ".");
+                                      Twine(CurSlice.getMinBeginOffset()) +
+                                      ".");
 
     CanSROA &= visit(cast<Instruction>(OldUse->getUser()));
     if (VecTy || IntTy)
@@ -2868,6 +3139,11 @@ public:
   rewriteTreeStructuredMerge(Partition &P) {
     // No tail slices that overlap with the partition
     if (P.splitSliceTails().size() > 0)
+      return std::nullopt;
+
+    // A dynamic slice does not necessarily use its entire range, so we cannot
+    // optimize this partition.
+    if (any_of(P, [](auto &S) { return S.isDynamic(); }))
       return std::nullopt;
 
     // Structure to hold store information
@@ -3262,8 +3538,7 @@ private:
   Value *getNewAllocaSlicePtr(IRBuilderTy &IRB, Type *PointerTy) {
     // Note that the offset computation can use BeginOffset or NewBeginOffset
     // interchangeably for unsplit slices.
-    assert(IsSplit || BeginOffset == NewBeginOffset);
-    uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
+    assert(CurSlice.isSplit() || CurSlice.getRelativeBeginOffset() == 0);
 
     StringRef OldName = OldPtr->getName();
     // Skip through the last '.sroa.' component of the name.
@@ -3284,9 +3559,39 @@ private:
     // Strip any SROA suffixes as well.
     OldName = OldName.substr(0, OldName.find(".sroa_"));
 
+    if (CurSlice.isDynamic())
+      return getDynamicAdjustedPtr(IRB, PointerTy, Twine(OldName) + ".");
+    uint64_t Offset = *CurSlice.getNewBeginOffset() - NewAllocaBeginOffset;
     return getAdjustedPtr(IRB, DL, &NewAI,
                           APInt(DL.getIndexTypeSizeInBits(PointerTy), Offset),
                           PointerTy, Twine(OldName) + ".");
+  }
+
+  // If `OldPtr` relies on dynamic GEPs, returns an equivalent of `OldPtr` but
+  // remapped into the new alloca.
+  Value *getDynamicAdjustedPtr(IRBuilderTy &IRB, Type *PointerTy,
+                               const Twine &NamePrefix) {
+    auto *Indices = AS.getAccumulatedGEPIndices(OldPtr);
+    assert(Indices && "Dynamic slice pointer has no recorded indices!");
+    unsigned BitWidth = DL.getIndexTypeSizeInBits(PointerTy);
+    auto ConstantOffset =
+        Indices->getAdjustedConstantOffset(NewAllocaBeginOffset)
+            .sextOrTrunc(BitWidth);
+
+    Type *IdxTy = IRB.getIntNTy(BitWidth);
+    Value *Offset = ConstantInt::get(IdxTy, ConstantOffset);
+    for (auto &[Val, Stride] : Indices->indices()) {
+      Value *Idx = IRB.CreateSExtOrTrunc(Val, IdxTy);
+      Value *Term = IRB.CreateMul(
+          Idx, ConstantInt::get(IdxTy, Stride.sextOrTrunc(BitWidth)),
+          NamePrefix + "sroa_stride");
+      Offset = IRB.CreateAdd(Offset, Term, NamePrefix + "sroa_offset");
+    }
+
+    Value *Ptr =
+        IRB.CreateInBoundsPtrAdd(&NewAI, Offset, NamePrefix + "sroa_idx");
+    return IRB.CreatePointerBitCastOrAddrSpaceCast(Ptr, PointerTy,
+                                                   NamePrefix + "sroa_cast");
   }
 
   /// Compute suitable alignment to access this slice of the *new*
@@ -3295,8 +3600,17 @@ private:
   /// You can optionally pass a type to this routine and if that type's ABI
   /// alignment is itself suitable, this will return zero.
   Align getSliceAlign() {
-    return commonAlignment(NewAI.getAlign(),
-                           NewBeginOffset - NewAllocaBeginOffset);
+    Align A =
+        commonAlignment(NewAI.getAlign(),
+                        CurSlice.getMinNewBeginOffset() - NewAllocaBeginOffset);
+    if (!CurSlice.isDynamic())
+      return A;
+
+    auto *Indices = AS.getAccumulatedGEPIndices(OldPtr);
+    assert(Indices && "Dynamic slice pointer has no recorded indices!");
+    for (auto &ValStride : Indices->indices())
+      A = commonAlignment(A, ValStride.second.getZExtValue());
+    return A;
   }
 
   unsigned getIndex(uint64_t Offset) {
@@ -3315,8 +3629,9 @@ private:
   }
 
   Value *rewriteVectorizedLoadInst(LoadInst &LI) {
-    unsigned BeginIndex = getIndex(NewBeginOffset);
-    unsigned EndIndex = getIndex(NewEndOffset);
+    assert(!CurSlice.isDynamic());
+    unsigned BeginIndex = getIndex(*CurSlice.getNewBeginOffset());
+    unsigned EndIndex = getIndex(*CurSlice.getNewEndOffset());
     assert(EndIndex > BeginIndex && "Empty vector!");
 
     LoadInst *Load =
@@ -3330,6 +3645,10 @@ private:
   Value *rewriteIntegerLoad(LoadInst &LI) {
     assert(IntTy && "We cannot insert an integer to the alloca");
     assert(!LI.isVolatile());
+    assert(!CurSlice.isDynamic());
+    uint64_t NewBeginOffset = *CurSlice.getNewBeginOffset();
+    uint64_t NewEndOffset = *CurSlice.getNewEndOffset();
+    uint64_t SliceSize = *CurSlice.getSliceSize();
     Value *V =
         IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(), "load");
     V = IRB.CreateBitPreservingCastChain(DL, V, IntTy);
@@ -3360,19 +3679,23 @@ private:
 
     unsigned AS = LI.getPointerAddressSpace();
 
-    Type *TargetTy = IsSplit ? Type::getIntNTy(LI.getContext(), SliceSize * 8)
-                             : LI.getType();
+    Type *TargetTy =
+        CurSlice.isSplit()
+            ? Type::getIntNTy(LI.getContext(), *CurSlice.getSliceSizeInBits())
+            : LI.getType();
     bool IsPtrAdjusted = false;
     Value *V;
     if (VecTy) {
       V = rewriteVectorizedLoadInst(LI);
     } else if (IntTy && LI.getType()->isIntegerTy()) {
       V = rewriteIntegerLoad(LI);
-    } else if (NewBeginOffset == NewAllocaBeginOffset &&
-               NewEndOffset == NewAllocaEndOffset &&
+    } else if (!CurSlice.isDynamic() &&
+               *CurSlice.getNewBeginOffset() == NewAllocaBeginOffset &&
+               *CurSlice.getNewEndOffset() == NewAllocaEndOffset &&
                (canConvertValue(DL, NewAllocaTy, TargetTy) ||
                 (NewAllocaTy->isIntegerTy() && TargetTy->isIntegerTy() &&
-                 DL.getTypeStoreSize(TargetTy).getFixedValue() > SliceSize &&
+                 DL.getTypeStoreSize(TargetTy).getFixedValue() >
+                     *CurSlice.getSliceSize() &&
                  !LI.isVolatile()))) {
       Value *NewPtr =
           getPtrToNewAI(LI.getPointerAddressSpace(), LI.isVolatile());
@@ -3391,7 +3714,7 @@ private:
       // Do this after copyMetadataForLoad() to preserve the TBAA shift.
       if (AATags)
         NewLI->setAAMetadata(AATags.adjustForAccess(
-            NewBeginOffset - BeginOffset, NewLI->getType(), DL));
+            CurSlice.getRelativeBeginOffset(), NewLI->getType(), DL));
 
       // Try to preserve nonnull metadata
       V = NewLI;
@@ -3415,7 +3738,7 @@ private:
 
       if (AATags)
         NewLI->setAAMetadata(AATags.adjustForAccess(
-            NewBeginOffset - BeginOffset, NewLI->getType(), DL));
+            CurSlice.getRelativeBeginOffset(), NewLI->getType(), DL));
 
       if (LI.isVolatile())
         NewLI->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
@@ -3427,11 +3750,12 @@ private:
     }
     V = IRB.CreateBitPreservingCastChain(DL, V, TargetTy);
 
-    if (IsSplit) {
+    if (CurSlice.isSplit()) {
       assert(!LI.isVolatile());
       assert(LI.getType()->isIntegerTy() &&
              "Only integer type loads and stores are split");
-      assert(SliceSize < DL.getTypeStoreSize(LI.getType()).getFixedValue() &&
+      assert(*CurSlice.getSliceSize() <
+                 DL.getTypeStoreSize(LI.getType()).getFixedValue() &&
              "Split load isn't smaller than original load");
       assert(DL.typeSizeEqualsStoreSize(LI.getType()) &&
              "Non-byte-multiple bit width");
@@ -3449,8 +3773,8 @@ private:
       Value *Placeholder =
           new LoadInst(LI.getType(), PoisonValue::get(IRB.getPtrTy(AS)), "",
                        false, Align(1));
-      V = insertInteger(DL, IRB, Placeholder, V, NewBeginOffset - BeginOffset,
-                        "insert");
+      V = insertInteger(DL, IRB, Placeholder, V,
+                        CurSlice.getRelativeBeginOffset(), "insert");
       LI.replaceAllUsesWith(V);
       Placeholder->replaceAllUsesWith(&LI);
       Placeholder->deleteValue();
@@ -3466,12 +3790,13 @@ private:
 
   bool rewriteVectorizedStoreInst(Value *V, StoreInst &SI, Value *OldOp,
                                   AAMDNodes AATags) {
+    assert(!CurSlice.isDynamic());
     // Capture V for the purpose of debug-info accounting once it's converted
     // to a vector store.
     Value *OrigV = V;
     if (V->getType() != VecTy) {
-      unsigned BeginIndex = getIndex(NewBeginOffset);
-      unsigned EndIndex = getIndex(NewEndOffset);
+      unsigned BeginIndex = getIndex(*CurSlice.getNewBeginOffset());
+      unsigned EndIndex = getIndex(*CurSlice.getNewEndOffset());
       assert(EndIndex > BeginIndex && "Empty vector!");
       unsigned NumElements = EndIndex - BeginIndex;
       assert(NumElements <= cast<FixedVectorType>(VecTy)->getNumElements() &&
@@ -3491,13 +3816,15 @@ private:
     Store->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
     if (AATags)
-      Store->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
-                                                  V->getType(), DL));
+      Store->setAAMetadata(AATags.adjustForAccess(
+          CurSlice.getRelativeBeginOffset(), V->getType(), DL));
     Pass.DeadInsts.push_back(&SI);
 
     // NOTE: Careful to use OrigV rather than V.
-    migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &SI,
-                     Store, Store->getPointerOperand(), OrigV, DL);
+    migrateDebugInfo(&OldAI, CurSlice.isSplit(),
+                     CurSlice.getNewBeginOffsetInBits(),
+                     CurSlice.getSliceSizeInBits(), &SI, Store,
+                     Store->getPointerOperand(), OrigV, DL);
     LLVM_DEBUG(dbgs() << "          to: " << *Store << "\n");
     return true;
   }
@@ -3505,13 +3832,15 @@ private:
   bool rewriteIntegerStore(Value *V, StoreInst &SI, AAMDNodes AATags) {
     assert(IntTy && "We cannot extract an integer from the alloca");
     assert(!SI.isVolatile());
+    assert(!CurSlice.isDynamic());
     if (DL.getTypeSizeInBits(V->getType()).getFixedValue() !=
         IntTy->getBitWidth()) {
       Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(),
                                          "oldload");
       Old = IRB.CreateBitPreservingCastChain(DL, Old, IntTy);
-      assert(BeginOffset >= NewAllocaBeginOffset && "Out of bounds offset");
-      uint64_t Offset = BeginOffset - NewAllocaBeginOffset;
+      assert(*CurSlice.getBeginOffset() >= NewAllocaBeginOffset &&
+             "Out of bounds offset");
+      uint64_t Offset = *CurSlice.getBeginOffset() - NewAllocaBeginOffset;
       V = insertInteger(DL, IRB, Old, SI.getValueOperand(), Offset, "insert");
     }
     V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
@@ -3519,12 +3848,13 @@ private:
     Store->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
     if (AATags)
-      Store->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
-                                                  V->getType(), DL));
+      Store->setAAMetadata(AATags.adjustForAccess(
+          CurSlice.getRelativeBeginOffset(), V->getType(), DL));
 
-    migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &SI,
-                     Store, Store->getPointerOperand(),
-                     Store->getValueOperand(), DL);
+    migrateDebugInfo(&OldAI, CurSlice.isSplit(),
+                     CurSlice.getNewBeginOffsetInBits(),
+                     CurSlice.getSliceSizeInBits(), &SI, Store,
+                     Store->getPointerOperand(), Store->getValueOperand(), DL);
 
     Pass.DeadInsts.push_back(&SI);
     LLVM_DEBUG(dbgs() << "          to: " << *Store << "\n");
@@ -3546,15 +3876,17 @@ private:
         Pass.PostPromotionWorklist.insert(AI);
 
     TypeSize StoreSize = DL.getTypeStoreSize(V->getType());
-    if (StoreSize.isFixed() && SliceSize < StoreSize.getFixedValue()) {
+    if (!CurSlice.isDynamic() && StoreSize.isFixed() &&
+        *CurSlice.getSliceSize() < StoreSize.getFixedValue()) {
       assert(!SI.isVolatile());
       assert(V->getType()->isIntegerTy() &&
              "Only integer type loads and stores are split");
       assert(DL.typeSizeEqualsStoreSize(V->getType()) &&
              "Non-byte-multiple bit width");
-      IntegerType *NarrowTy = Type::getIntNTy(SI.getContext(), SliceSize * 8);
-      V = extractInteger(DL, IRB, V, NarrowTy, NewBeginOffset - BeginOffset,
-                         "extract");
+      IntegerType *NarrowTy =
+          Type::getIntNTy(SI.getContext(), *CurSlice.getSliceSizeInBits());
+      V = extractInteger(DL, IRB, V, NarrowTy,
+                         CurSlice.getRelativeBeginOffset(), "extract");
     }
 
     if (VecTy)
@@ -3563,8 +3895,9 @@ private:
       return rewriteIntegerStore(V, SI, AATags);
 
     StoreInst *NewSI;
-    if (NewBeginOffset == NewAllocaBeginOffset &&
-        NewEndOffset == NewAllocaEndOffset &&
+    if (!CurSlice.isDynamic() &&
+        *CurSlice.getNewBeginOffset() == NewAllocaBeginOffset &&
+        *CurSlice.getNewEndOffset() == NewAllocaEndOffset &&
         canConvertValue(DL, V->getType(), NewAllocaTy)) {
       V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
       Value *NewPtr =
@@ -3581,16 +3914,17 @@ private:
     NewSI->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
     if (AATags)
-      NewSI->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
-                                                  V->getType(), DL));
+      NewSI->setAAMetadata(AATags.adjustForAccess(
+          CurSlice.getRelativeBeginOffset(), V->getType(), DL));
     if (SI.isVolatile())
       NewSI->setAtomic(SI.getOrdering(), SI.getSyncScopeID());
     if (NewSI->isAtomic())
       NewSI->setAlignment(SI.getAlign());
 
-    migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &SI,
-                     NewSI, NewSI->getPointerOperand(),
-                     NewSI->getValueOperand(), DL);
+    migrateDebugInfo(&OldAI, CurSlice.isSplit(),
+                     CurSlice.getNewBeginOffsetInBits(),
+                     CurSlice.getSliceSizeInBits(), &SI, NewSI,
+                     NewSI->getPointerOperand(), NewSI->getValueOperand(), DL);
 
     Pass.DeadInsts.push_back(&SI);
     deleteIfTriviallyDead(OldOp);
@@ -3643,8 +3977,8 @@ private:
     // If the memset has a variable size, it cannot be split, just adjust the
     // pointer to the new alloca.
     if (!isa<ConstantInt>(II.getLength())) {
-      assert(!IsSplit);
-      assert(NewBeginOffset == BeginOffset);
+      assert(!CurSlice.isSplit() && !CurSlice.isDynamic());
+      assert(CurSlice.getRelativeBeginOffset() == 0);
       II.setDest(getNewAllocaSlicePtr(IRB, OldPtr->getType()));
       II.setDestAlignment(getSliceAlign());
       // In theory we should call migrateDebugInfo here. However, we do not
@@ -3664,7 +3998,11 @@ private:
     const bool CanContinue = [&]() {
       if (VecTy || IntTy)
         return true;
-      if (BeginOffset > NewAllocaBeginOffset || EndOffset < NewAllocaEndOffset)
+      if (CurSlice.isDynamic())
+        // A dynamic slice must retain the actual memset.
+        return false;
+      if (*CurSlice.getBeginOffset() > NewAllocaBeginOffset ||
+          *CurSlice.getEndOffset() < NewAllocaEndOffset)
         return false;
       // Length must be in range for FixedVectorType.
       auto *C = cast<ConstantInt>(II.getLength());
@@ -3681,21 +4019,26 @@ private:
     // a single value type, just emit a memset.
     if (!CanContinue) {
       Type *SizeTy = II.getLength()->getType();
-      unsigned Sz = NewEndOffset - NewBeginOffset;
+      unsigned Sz = CurSlice.isDynamic()
+                        ? cast<ConstantInt>(II.getLength())->getZExtValue()
+                        : *CurSlice.getSliceSize();
       Constant *Size = ConstantInt::get(SizeTy, Sz);
       MemIntrinsic *New = cast<MemIntrinsic>(IRB.CreateMemSet(
           getNewAllocaSlicePtr(IRB, OldPtr->getType()), II.getValue(), Size,
           MaybeAlign(getSliceAlign()), II.isVolatile()));
       if (AATags)
         New->setAAMetadata(
-            AATags.adjustForAccess(NewBeginOffset - BeginOffset, Sz));
+            AATags.adjustForAccess(CurSlice.getRelativeBeginOffset(), Sz));
 
-      migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &II,
-                       New, New->getRawDest(), nullptr, DL);
+      migrateDebugInfo(&OldAI, CurSlice.isSplit(),
+                       CurSlice.getNewBeginOffsetInBits(),
+                       CurSlice.getSliceSizeInBits(), &II, New,
+                       New->getRawDest(), nullptr, DL);
 
       LLVM_DEBUG(dbgs() << "          to: " << *New << "\n");
       return false;
     }
+    assert(!CurSlice.isDynamic());
 
     // If we can represent this as a simple value, we have to build the actual
     // value to store, which requires expanding the byte present in memset to
@@ -3708,8 +4051,8 @@ private:
       // If this is a memset of a vectorized alloca, insert it.
       assert(ElementTy == ScalarTy);
 
-      unsigned BeginIndex = getIndex(NewBeginOffset);
-      unsigned EndIndex = getIndex(NewEndOffset);
+      unsigned BeginIndex = getIndex(*CurSlice.getNewBeginOffset());
+      unsigned EndIndex = getIndex(*CurSlice.getNewEndOffset());
       assert(EndIndex > BeginIndex && "Empty vector!");
       unsigned NumElements = EndIndex - BeginIndex;
       assert(NumElements <= cast<FixedVectorType>(VecTy)->getNumElements() &&
@@ -3728,16 +4071,15 @@ private:
       // If this is a memset on an alloca where we can widen stores, insert the
       // set integer.
       assert(!II.isVolatile());
-
-      uint64_t Size = NewEndOffset - NewBeginOffset;
+      uint64_t Size = *CurSlice.getSliceSize();
       V = getIntegerSplat(II.getValue(), Size);
 
-      if (IntTy && (NewBeginOffset != NewAllocaBeginOffset ||
-                    NewEndOffset != NewAllocaEndOffset)) {
+      if (IntTy && (*CurSlice.getNewBeginOffset() != NewAllocaBeginOffset ||
+                    *CurSlice.getNewEndOffset() != NewAllocaEndOffset)) {
         Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI,
                                            NewAI.getAlign(), "oldload");
         Old = IRB.CreateBitPreservingCastChain(DL, Old, IntTy);
-        uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
+        uint64_t Offset = *CurSlice.getNewBeginOffset() - NewAllocaBeginOffset;
         V = insertInteger(DL, IRB, Old, V, Offset, "insert");
       } else {
         assert(V->getType() == IntTy &&
@@ -3746,8 +4088,8 @@ private:
       V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
     } else {
       // Established these invariants above.
-      assert(NewBeginOffset == NewAllocaBeginOffset);
-      assert(NewEndOffset == NewAllocaEndOffset);
+      assert(*CurSlice.getNewBeginOffset() == NewAllocaBeginOffset);
+      assert(*CurSlice.getNewEndOffset() == NewAllocaEndOffset);
 
       V = getIntegerSplat(II.getValue(),
                           DL.getTypeSizeInBits(ScalarTy).getFixedValue() / 8);
@@ -3764,11 +4106,13 @@ private:
     New->copyMetadata(II, {LLVMContext::MD_mem_parallel_loop_access,
                            LLVMContext::MD_access_group});
     if (AATags)
-      New->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
-                                                V->getType(), DL));
+      New->setAAMetadata(AATags.adjustForAccess(
+          CurSlice.getRelativeBeginOffset(), V->getType(), DL));
 
-    migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &II,
-                     New, New->getPointerOperand(), V, DL);
+    migrateDebugInfo(&OldAI, CurSlice.isSplit(),
+                     CurSlice.getNewBeginOffsetInBits(),
+                     CurSlice.getSliceSizeInBits(), &II, New,
+                     New->getPointerOperand(), V, DL);
 
     LLVM_DEBUG(dbgs() << "          to: " << *New << "\n");
     return !II.isVolatile();
@@ -3794,7 +4138,7 @@ private:
     // a variable length. We may also be dealing with memmove instead of
     // memcpy, and so simply updating the pointers is the necessary for us to
     // update both source and dest of a single call.
-    if (!IsSplittable) {
+    if (!CurSlice.isSplittable()) {
       Value *AdjustedPtr = getNewAllocaSlicePtr(IRB, OldPtr->getType());
       if (IsDest) {
         // Update the address component of linked dbg.assigns.
@@ -3814,6 +4158,7 @@ private:
       deleteIfTriviallyDead(OldPtr);
       return false;
     }
+    assert(!CurSlice.isDynamic());
     // For split transfer intrinsics we have an incredibly useful assurance:
     // the source and destination do not reside within the same alloca, and at
     // least one of them does not escape. This means that we can replace
@@ -3822,23 +4167,24 @@ private:
 
     // If this doesn't map cleanly onto the alloca type, and that type isn't
     // a single value type, just emit a memcpy.
-    bool EmitMemCpy =
-        !VecTy && !IntTy &&
-        (BeginOffset > NewAllocaBeginOffset || EndOffset < NewAllocaEndOffset ||
-         SliceSize != DL.getTypeStoreSize(NewAllocaTy).getFixedValue() ||
-         !DL.typeSizeEqualsStoreSize(NewAllocaTy) ||
-         !NewAllocaTy->isSingleValueType());
+    bool EmitMemCpy = !VecTy && !IntTy &&
+                      (*CurSlice.getBeginOffset() > NewAllocaBeginOffset ||
+                       *CurSlice.getEndOffset() < NewAllocaEndOffset ||
+                       *CurSlice.getSliceSize() !=
+                           DL.getTypeStoreSize(NewAllocaTy).getFixedValue() ||
+                       !DL.typeSizeEqualsStoreSize(NewAllocaTy) ||
+                       !NewAllocaTy->isSingleValueType());
 
     // If we're just going to emit a memcpy, the alloca hasn't changed, and the
     // size hasn't been shrunk based on analysis of the viable range, this is
     // a no-op.
     if (EmitMemCpy && &OldAI == &NewAI) {
       // Ensure the start lines up.
-      assert(NewBeginOffset == BeginOffset);
+      assert(CurSlice.getRelativeBeginOffset() == 0);
 
       // Rewrite the size as needed.
-      if (NewEndOffset != EndOffset)
-        II.setLength(NewEndOffset - NewBeginOffset);
+      if (*CurSlice.getNewEndOffset() != *CurSlice.getEndOffset())
+        II.setLength(*CurSlice.getSliceSize());
       return false;
     }
     // Record this instruction for deletion.
@@ -3859,7 +4205,7 @@ private:
 
     // Compute the relative offset for the other pointer within the transfer.
     unsigned OffsetWidth = DL.getIndexSizeInBits(OtherAS);
-    APInt OtherOffset(OffsetWidth, NewBeginOffset - BeginOffset);
+    APInt OtherOffset(OffsetWidth, CurSlice.getRelativeBeginOffset());
     Align OtherAlign =
         (IsDest ? II.getSourceAlign() : II.getDestAlign()).valueOrOne();
     OtherAlign =
@@ -3873,7 +4219,7 @@ private:
 
       Value *OurPtr = getNewAllocaSlicePtr(IRB, OldPtr->getType());
       Type *SizeTy = II.getLength()->getType();
-      Constant *Size = ConstantInt::get(SizeTy, NewEndOffset - NewBeginOffset);
+      Constant *Size = ConstantInt::get(SizeTy, *CurSlice.getSliceSize());
 
       Value *DestPtr, *SrcPtr;
       MaybeAlign DestAlign, SrcAlign;
@@ -3892,27 +4238,30 @@ private:
       CallInst *New = IRB.CreateMemCpy(DestPtr, DestAlign, SrcPtr, SrcAlign,
                                        Size, II.isVolatile());
       if (AATags)
-        New->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
+        New->setAAMetadata(AATags.shift(CurSlice.getRelativeBeginOffset()));
 
       APInt Offset(DL.getIndexTypeSizeInBits(DestPtr->getType()), 0);
       if (IsDest) {
-        migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8,
-                         &II, New, DestPtr, nullptr, DL);
+        migrateDebugInfo(
+            &OldAI, CurSlice.isSplit(), CurSlice.getNewBeginOffsetInBits(),
+            CurSlice.getSliceSizeInBits(), &II, New, DestPtr, nullptr, DL);
       } else if (AllocaInst *Base = dyn_cast<AllocaInst>(
                      DestPtr->stripAndAccumulateConstantOffsets(
                          DL, Offset, /*AllowNonInbounds*/ true))) {
-        migrateDebugInfo(Base, IsSplit, Offset.getZExtValue() * 8,
-                         SliceSize * 8, &II, New, DestPtr, nullptr, DL);
+        migrateDebugInfo(Base, CurSlice.isSplit(), Offset.getZExtValue() * 8,
+                         CurSlice.getSliceSizeInBits(), &II, New, DestPtr,
+                         nullptr, DL);
       }
       LLVM_DEBUG(dbgs() << "          to: " << *New << "\n");
       return false;
     }
 
-    bool IsWholeAlloca = NewBeginOffset == NewAllocaBeginOffset &&
-                         NewEndOffset == NewAllocaEndOffset;
-    uint64_t Size = NewEndOffset - NewBeginOffset;
-    unsigned BeginIndex = VecTy ? getIndex(NewBeginOffset) : 0;
-    unsigned EndIndex = VecTy ? getIndex(NewEndOffset) : 0;
+    bool IsWholeAlloca =
+        *CurSlice.getNewBeginOffset() == NewAllocaBeginOffset &&
+        *CurSlice.getNewEndOffset() == NewAllocaEndOffset;
+    uint64_t Size = *CurSlice.getSliceSize();
+    unsigned BeginIndex = VecTy ? getIndex(*CurSlice.getNewBeginOffset()) : 0;
+    unsigned EndIndex = VecTy ? getIndex(*CurSlice.getNewEndOffset()) : 0;
     unsigned NumElements = EndIndex - BeginIndex;
     IntegerType *SubIntTy =
         IntTy ? Type::getIntNTy(IntTy->getContext(), Size * 8) : nullptr;
@@ -3958,7 +4307,7 @@ private:
       Src =
           IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(), "load");
       Src = IRB.CreateBitPreservingCastChain(DL, Src, IntTy);
-      uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
+      uint64_t Offset = *CurSlice.getNewBeginOffset() - NewAllocaBeginOffset;
       Src = extractInteger(DL, IRB, Src, SubIntTy, Offset, "extract");
     } else {
       LoadInst *Load = IRB.CreateAlignedLoad(OtherTy, SrcPtr, SrcAlign,
@@ -3966,8 +4315,8 @@ private:
       Load->copyMetadata(II, {LLVMContext::MD_mem_parallel_loop_access,
                               LLVMContext::MD_access_group});
       if (AATags)
-        Load->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
-                                                   Load->getType(), DL));
+        Load->setAAMetadata(AATags.adjustForAccess(
+            CurSlice.getRelativeBeginOffset(), Load->getType(), DL));
       Src = Load;
     }
 
@@ -3979,7 +4328,7 @@ private:
       Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(),
                                          "oldload");
       Old = IRB.CreateBitPreservingCastChain(DL, Old, IntTy);
-      uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
+      uint64_t Offset = *CurSlice.getNewBeginOffset() - NewAllocaBeginOffset;
       Src = insertInteger(DL, IRB, Old, Src, Offset, "insert");
       Src = IRB.CreateBitPreservingCastChain(DL, Src, NewAllocaTy);
     }
@@ -3989,19 +4338,21 @@ private:
     Store->copyMetadata(II, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
     if (AATags)
-      Store->setAAMetadata(AATags.adjustForAccess(NewBeginOffset - BeginOffset,
-                                                  Src->getType(), DL));
+      Store->setAAMetadata(AATags.adjustForAccess(
+          CurSlice.getRelativeBeginOffset(), Src->getType(), DL));
 
     APInt Offset(DL.getIndexTypeSizeInBits(DstPtr->getType()), 0);
     if (IsDest) {
 
-      migrateDebugInfo(&OldAI, IsSplit, NewBeginOffset * 8, SliceSize * 8, &II,
-                       Store, DstPtr, Src, DL);
+      migrateDebugInfo(
+          &OldAI, CurSlice.isSplit(), CurSlice.getNewBeginOffsetInBits(),
+          CurSlice.getSliceSizeInBits(), &II, Store, DstPtr, Src, DL);
     } else if (AllocaInst *Base = dyn_cast<AllocaInst>(
                    DstPtr->stripAndAccumulateConstantOffsets(
                        DL, Offset, /*AllowNonInbounds*/ true))) {
-      migrateDebugInfo(Base, IsSplit, Offset.getZExtValue() * 8, SliceSize * 8,
-                       &II, Store, DstPtr, Src, DL);
+      migrateDebugInfo(Base, CurSlice.isSplit(), Offset.getZExtValue() * 8,
+                       CurSlice.getSliceSizeInBits(), &II, Store, DstPtr, Src,
+                       DL);
     }
 
     LLVM_DEBUG(dbgs() << "          to: " << *Store << "\n");
@@ -4069,8 +4420,10 @@ private:
 
   bool visitPHINode(PHINode &PN) {
     LLVM_DEBUG(dbgs() << "    original: " << PN << "\n");
-    assert(BeginOffset >= NewAllocaBeginOffset && "PHIs are unsplittable");
-    assert(EndOffset <= NewAllocaEndOffset && "PHIs are unsplittable");
+    assert(CurSlice.getMinBeginOffset() >= NewAllocaBeginOffset &&
+           "PHIs are unsplittable");
+    assert(CurSlice.getMaxEndOffset() <= NewAllocaEndOffset &&
+           "PHIs are unsplittable");
 
     // We would like to compute a new pointer in only one place, but have it be
     // as local as possible to the PHI. To do that, we re-use the location of
@@ -4105,8 +4458,10 @@ private:
     LLVM_DEBUG(dbgs() << "    original: " << SI << "\n");
     assert((SI.getTrueValue() == OldPtr || SI.getFalseValue() == OldPtr) &&
            "Pointer isn't an operand!");
-    assert(BeginOffset >= NewAllocaBeginOffset && "Selects are unsplittable");
-    assert(EndOffset <= NewAllocaEndOffset && "Selects are unsplittable");
+    assert(CurSlice.getMinBeginOffset() >= NewAllocaBeginOffset &&
+           "Selects are unsplittable");
+    assert(CurSlice.getMaxEndOffset() <= NewAllocaEndOffset &&
+           "Selects are unsplittable");
 
     Value *NewPtr = getNewAllocaSlicePtr(IRB, OldPtr->getType());
     // Replace the operands which were using the old pointer.
@@ -5070,7 +5425,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       NewSlices.push_back(
           Slice(BaseOffset + PartOffset, BaseOffset + PartOffset + PartSize,
                 &PLoad->getOperandUse(PLoad->getPointerOperandIndex()),
-                /*IsSplittable*/ false));
+                /*IsSplittable*/ false, /*IsDynamic*/ false));
       LLVM_DEBUG(dbgs() << "    new slice [" << NewSlices.back().beginOffset()
                         << ", " << NewSlices.back().endOffset()
                         << "): " << *PLoad << "\n");
@@ -5229,7 +5584,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       NewSlices.push_back(
           Slice(BaseOffset + PartOffset, BaseOffset + PartOffset + PartSize,
                 &PStore->getOperandUse(PStore->getPointerOperandIndex()),
-                /*IsSplittable*/ false));
+                /*IsSplittable*/ false, /*IsDynamic*/ false));
       LLVM_DEBUG(dbgs() << "    new slice [" << NewSlices.back().beginOffset()
                         << ", " << NewSlices.back().endOffset()
                         << "): " << *PStore << "\n");
@@ -6162,7 +6517,7 @@ SROA::runOnAlloca(AllocaInst &AI) {
   Changed |= AggRewriter.rewrite(AI);
 
   // Build the slices using a recursive instruction-visiting builder.
-  AllocaSlices AS(DL, AI);
+  AllocaSlices AS(DL, AI, *AC, DTU->getDomTree());
   LLVM_DEBUG(AS.print(dbgs()));
   if (AS.isEscaped())
     return {Changed, CFGChanged};
