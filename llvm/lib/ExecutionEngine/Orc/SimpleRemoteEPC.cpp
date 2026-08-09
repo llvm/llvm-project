@@ -10,7 +10,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/Calls.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpecs.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 

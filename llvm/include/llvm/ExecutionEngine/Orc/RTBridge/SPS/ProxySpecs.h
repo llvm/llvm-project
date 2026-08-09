@@ -1,4 +1,4 @@
-//===------------- Calls.h - SPS-based Call Wrappers ------------*- C++ -*-===//
+//===-------- ProxySpecs.h - SPS-based Call Wrappers ------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,31 +6,31 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// SPS-based implementations of the RTBridge caller interfaces.
+// SPS-based implementations of the RTBridge proxy interfaces.
 //
-// These implement the rt::Caller interfaces by invoking executor-side wrapper
+// These implement the rt::Proxy interfaces by invoking executor-side wrapper
 // functions in the runtime's controller interface, using Simple Packed
 // Serialization to encode arguments and decode results.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_SPS_CALLS_H
-#define LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_SPS_CALLS_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_SPS_PROXYSPECS_H
+#define LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_SPS_PROXYSPECS_H
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/Calls.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/Proxy.h"
 
 namespace llvm::orc::rt::sps {
 
-template <typename CallerT, typename SPSSigT, const char *DefaultName,
-          typename FnType = typename CallerT::FnType>
-class CallerSpec;
+template <typename ProxyT, typename SPSSigT, const char *DefaultName,
+          typename FnType = typename ProxyT::FnType>
+class ProxySpec;
 
-template <typename CallerT, typename SPSSigT, const char *DefaultName,
+template <typename ProxyT, typename SPSSigT, const char *DefaultName,
           typename RetT, typename... ArgTs>
-class CallerSpec<CallerT, SPSSigT, DefaultName, RetT(ArgTs...)> {
-  using CalleeRetT = typename CallerT::CalleeRetT;
-  using ErrorRetT = typename CallerT::ErrorRetT;
+class ProxySpec<ProxyT, SPSSigT, DefaultName, RetT(ArgTs...)> {
+  using CalleeRetT = typename ProxyT::CalleeRetT;
+  using ErrorRetT = typename ProxyT::ErrorRetT;
 
 public:
   static constexpr const char *Name = DefaultName;
@@ -60,35 +60,35 @@ public:
 using CallMainSPSSig = int64_t(shared::SPSExecutorAddr,
                                shared::SPSSequence<shared::SPSString>);
 inline constexpr char CallMainCIName[] = "orc_rt_ci_sps_call_main";
-/// SPS caller for rt::MainCaller: runs a main-like function
+/// SPS proxy for rt::CallMainProxy: runs a main-like function
 /// (int(int argc, char *argv[])) in the executor.
-using MainCallerSpec =
-    CallerSpec<rt::MainCaller, CallMainSPSSig, CallMainCIName>;
+using CallMainProxySpec =
+    ProxySpec<rt::CallMainProxy, CallMainSPSSig, CallMainCIName>;
 
 using CallVoidVoidSPSSig = void(shared::SPSExecutorAddr);
 inline constexpr char CallVoidVoidCIName[] = "orc_rt_ci_sps_call_void_void";
-/// SPS caller for rt::VoidVoidCaller: runs a void() function in the executor.
-/// WARNING: This Caller is experimental and may be removed.
-using VoidVoidCallerSpec =
-    CallerSpec<rt::VoidVoidCaller, CallVoidVoidSPSSig, CallVoidVoidCIName>;
+/// SPS proxy for rt::CallVoidVoidProxy: runs a void() function in the executor.
+/// WARNING: This Proxy is experimental and may be removed.
+using CallVoidVoidProxySpec =
+    ProxySpec<rt::CallVoidVoidProxy, CallVoidVoidSPSSig, CallVoidVoidCIName>;
 
 using CallInt32VoidSPSSig = int32_t(shared::SPSExecutorAddr);
 inline constexpr char CallInt32VoidCIName[] = "orc_rt_ci_sps_call_int32_void";
-/// SPS caller for rt::Int32VoidCaller: runs an int32_t() function in the
+/// SPS proxy for rt::CallInt32VoidProxy: runs an int32_t() function in the
 /// executor.
-/// WARNING: This Caller is experimental and may be removed.
-using Int32VoidCallerSpec =
-    CallerSpec<rt::Int32VoidCaller, CallInt32VoidSPSSig, CallInt32VoidCIName>;
+/// WARNING: This Proxy is experimental and may be removed.
+using CallInt32VoidProxySpec =
+    ProxySpec<rt::CallInt32VoidProxy, CallInt32VoidSPSSig, CallInt32VoidCIName>;
 
 using CallInt32Int32SPSSig = int32_t(shared::SPSExecutorAddr, int32_t);
 inline constexpr char CallInt32Int32CIName[] = "orc_rt_ci_sps_call_int32_int32";
-/// SPS caller for rt::Int32Int32Caller: runs an int32_t(int32_t) function in
+/// SPS proxy for rt::CallInt32Int32Proxy: runs an int32_t(int32_t) function in
 /// the executor.
-/// WARNING: This Caller is experimental and may be removed.
-using Int32Int32CallerSpec =
-    CallerSpec<rt::Int32Int32Caller, CallInt32Int32SPSSig,
-               CallInt32Int32CIName>;
+/// WARNING: This Proxy is experimental and may be removed.
+using CallInt32Int32ProxySpec =
+    ProxySpec<rt::CallInt32Int32Proxy, CallInt32Int32SPSSig,
+              CallInt32Int32CIName>;
 
 } // namespace llvm::orc::rt::sps
 
-#endif // LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_SPS_CALLS_H
+#endif // LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_SPS_PROXYSPECS_H

@@ -13,7 +13,7 @@
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/Calls.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpecs.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Object/COFF.h"
@@ -663,9 +663,9 @@ Error COFFPlatform::runBootstrapInitializers(JDBootstrapState &BState) {
 Error COFFPlatform::runBootstrapSubsectionInitializers(JDBootstrapState &BState,
                                                        StringRef Start,
                                                        StringRef End) {
-  rt::Int32VoidCaller CallInitializer;
-  if (auto Err = rt::buildCallers(
-          ES, rt::callerInit<rt::sps::Int32VoidCallerSpec>(&CallInitializer)))
+  rt::CallInt32VoidProxy CallInitializer;
+  if (auto Err = rt::buildProxies(
+          ES, rt::proxyInit<rt::sps::CallInt32VoidProxySpec>(&CallInitializer)))
     return Err;
   for (auto &Initializer : BState.Initializers)
     if (Initializer.first >= Start && Initializer.first <= End &&
@@ -736,9 +736,9 @@ Error COFFPlatform::runSymbolIfExists(JITDylib &PlatformJD,
       ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
       {{ES.intern(SymbolName), &jit_function}});
   if (!AfterCLookupErr) {
-    rt::Int32VoidCaller CallFn;
-    if (auto Err = rt::buildCallers(
-            ES, rt::callerInit<rt::sps::Int32VoidCallerSpec>(&CallFn)))
+    rt::CallInt32VoidProxy CallFn;
+    if (auto Err = rt::buildProxies(
+            ES, rt::proxyInit<rt::sps::CallInt32VoidProxySpec>(&CallFn)))
       return Err;
     auto Res = CallFn(ES, jit_function);
     if (!Res)

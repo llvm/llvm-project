@@ -44,12 +44,13 @@ add_llvm_unittest(OrcJITTests
   ObjectLinkingLayerTest.cpp
   OrcCAPITest.cpp
   OrcTestCommon.cpp
+  ProxyTest.cpp
   ResourceTrackerTest.cpp
   RTDyldObjectLinkingLayerTest.cpp
   SharedMemoryMapperTest.cpp
   SimpleExecutorMemoryManagerTest.cpp
   SimplePackedSerializationTest.cpp
-  SPSCallersTest.cpp
+  SPSProxiesTest.cpp
   SymbolStringPoolTest.cpp
   TaskDispatchTest.cpp
   ThreadSafeModuleTest.cpp
