@@ -21,7 +21,8 @@ _ZN6OnExitD2Ev:
 main:
         .cfi_startproc
 # %bb.0:
-        stmg    %r14, %r15, 48(%r15)
+        stmg    %r14, %r15, 112(%r15)
+        aghi    %r15, -160
         lgrl    %r2, _ZN6OnExitD2Ev@GOT
         lgrl    %r4, __dso_handle@GOT
         larl    %r3, _ZL6onExit
@@ -29,7 +30,7 @@ main:
         lghi    %r2, 1
         brasl   %r14, llvm_jitlink_setTestResultOverride@PLT
         lghi    %r2, 0
-        lmg     %r14, %r15, 48(%r15)
+        lmg     %r14, %r15, 272(%r15)
         br      %r14
 .Lfunc_end1:
         .size   main, .Lfunc_end1-main
