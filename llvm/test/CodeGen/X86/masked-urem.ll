@@ -179,22 +179,24 @@ define <2 x i64> @urem_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i1> %m) {
 ;
 ; AVX512-LABEL: urem_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsllq $63, %xmm2, %xmm2
-; AVX512-NEXT:    vpmovq2m %xmm2, %k1
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [1,1]
-; AVX512-NEXT:    vmovdqa64 %xmm1, %xmm2 {%k1}
-; AVX512-NEXT:    vpextrq $1, %xmm2, %rcx
-; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divq %rcx
-; AVX512-NEXT:    movq %rdx, %rcx
-; AVX512-NEXT:    vmovq %xmm2, %rsi
-; AVX512-NEXT:    vmovq %xmm0, %rax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divq %rsi
-; AVX512-NEXT:    vmovq %rcx, %xmm0
-; AVX512-NEXT:    vmovq %rdx, %xmm1
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512-NEXT:    vcvtuqq2pd {ru-sae}, %zmm1, %zmm2
+; AVX512-NEXT:    vbroadcastsd {{.*#+}} zmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX512-NEXT:    vdivpd {rd-sae}, %zmm2, %zmm3, %zmm2
+; AVX512-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm3
+; AVX512-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm3, %zmm3
+; AVX512-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
+; AVX512-NEXT:    vpmullq %xmm1, %xmm3, %xmm3
+; AVX512-NEXT:    vpsubq %xmm3, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm3
+; AVX512-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm3, %zmm2
+; AVX512-NEXT:    vcvtpd2uqq {rd-sae}, %zmm2, %zmm2
+; AVX512-NEXT:    vpmullq %xmm1, %xmm2, %xmm2
+; AVX512-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    vpcmpnltuq %xmm1, %xmm0, %k1
+; AVX512-NEXT:    vpsubq %xmm1, %xmm0, %xmm0 {%k1}
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %res = call <2 x i64> @llvm.masked.urem(<2 x i64> %x, <2 x i64> %y, <2 x i1> %m)
   ret <2 x i64> %res
@@ -321,38 +323,23 @@ define <4 x i64> @urem_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 ;
 ; AVX512-LABEL: urem_v4i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpslld $31, %xmm2, %xmm2
-; AVX512-NEXT:    vpmovd2m %xmm2, %k1
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
-; AVX512-NEXT:    vmovdqa64 %ymm1, %ymm2 {%k1}
-; AVX512-NEXT:    vextracti128 $1, %ymm2, %xmm1
-; AVX512-NEXT:    vpextrq $1, %xmm1, %rcx
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; AVX512-NEXT:    vpextrq $1, %xmm3, %rax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divq %rcx
-; AVX512-NEXT:    movq %rdx, %rcx
-; AVX512-NEXT:    vmovq %xmm1, %rsi
-; AVX512-NEXT:    vmovq %xmm3, %rax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divq %rsi
-; AVX512-NEXT:    movq %rdx, %rsi
-; AVX512-NEXT:    vpextrq $1, %xmm2, %rdi
-; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divq %rdi
-; AVX512-NEXT:    movq %rdx, %rdi
-; AVX512-NEXT:    vmovq %rcx, %xmm1
-; AVX512-NEXT:    vmovq %xmm2, %rcx
-; AVX512-NEXT:    vmovq %xmm0, %rax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divq %rcx
-; AVX512-NEXT:    vmovq %rsi, %xmm0
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX512-NEXT:    vmovq %rdi, %xmm1
-; AVX512-NEXT:    vmovq %rdx, %xmm2
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vcvtuqq2pd {ru-sae}, %zmm1, %zmm2
+; AVX512-NEXT:    vbroadcastsd {{.*#+}} zmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX512-NEXT:    vdivpd {rd-sae}, %zmm2, %zmm3, %zmm2
+; AVX512-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm3
+; AVX512-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm3, %zmm3
+; AVX512-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
+; AVX512-NEXT:    vpmullq %ymm1, %ymm3, %ymm3
+; AVX512-NEXT:    vpsubq %ymm3, %ymm0, %ymm0
+; AVX512-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm3
+; AVX512-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm3, %zmm2
+; AVX512-NEXT:    vcvtpd2uqq {rd-sae}, %zmm2, %zmm2
+; AVX512-NEXT:    vpmullq %ymm1, %ymm2, %ymm2
+; AVX512-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
+; AVX512-NEXT:    vpcmpnltuq %ymm1, %ymm0, %k1
+; AVX512-NEXT:    vpsubq %ymm1, %ymm0, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
   %res = call <4 x i64> @llvm.masked.urem(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m)
   ret <4 x i64> %res
@@ -1154,70 +1141,21 @@ define <8 x i64> @urem_v8i64(<8 x i64> %x, <8 x i64> %y, <8 x i1> %m) {
 ;
 ; AVX512-LABEL: urem_v8i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsllw $15, %xmm2, %xmm2
-; AVX512-NEXT:    vpmovw2m %xmm2, %k1
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [1,1,1,1,1,1,1,1]
-; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm2 {%k1}
-; AVX512-NEXT:    vextracti32x4 $3, %zmm2, %xmm1
-; AVX512-NEXT:    vpextrq $1, %xmm1, %rcx
-; AVX512-NEXT:    vextracti32x4 $3, %zmm0, %xmm3
-; AVX512-NEXT:    vpextrq $1, %xmm3, %rax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divq %rcx
-; AVX512-NEXT:    movq %rdx, %rsi
-; AVX512-NEXT:    vmovq %xmm1, %rcx
-; AVX512-NEXT:    vmovq %xmm3, %rax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divq %rcx
-; AVX512-NEXT:    movq %rdx, %rdi
-; AVX512-NEXT:    vextracti32x4 $2, %zmm2, %xmm1
-; AVX512-NEXT:    vpextrq $1, %xmm1, %rcx
-; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
-; AVX512-NEXT:    vpextrq $1, %xmm3, %rax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divq %rcx
-; AVX512-NEXT:    movq %rdx, %rcx
-; AVX512-NEXT:    vmovq %xmm1, %r8
-; AVX512-NEXT:    vmovq %xmm3, %rax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divq %r8
-; AVX512-NEXT:    movq %rdx, %r8
-; AVX512-NEXT:    vmovq %rsi, %xmm1
-; AVX512-NEXT:    vmovq %rdi, %xmm3
-; AVX512-NEXT:    vextracti128 $1, %ymm2, %xmm4
-; AVX512-NEXT:    vpextrq $1, %xmm4, %rsi
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm5
-; AVX512-NEXT:    vpextrq $1, %xmm5, %rax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divq %rsi
-; AVX512-NEXT:    movq %rdx, %rsi
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm3[0],xmm1[0]
-; AVX512-NEXT:    vmovq %xmm4, %rdi
-; AVX512-NEXT:    vmovq %xmm5, %rax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divq %rdi
-; AVX512-NEXT:    movq %rdx, %rdi
-; AVX512-NEXT:    vmovq %rcx, %xmm3
-; AVX512-NEXT:    vmovq %r8, %xmm4
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm4[0],xmm3[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm1
-; AVX512-NEXT:    vpextrq $1, %xmm2, %rcx
-; AVX512-NEXT:    vmovq %rsi, %xmm3
-; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divq %rcx
-; AVX512-NEXT:    movq %rdx, %rcx
-; AVX512-NEXT:    vmovq %rdi, %xmm4
-; AVX512-NEXT:    vmovq %xmm2, %rsi
-; AVX512-NEXT:    vmovq %xmm0, %rax
-; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    divq %rsi
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm4[0],xmm3[0]
-; AVX512-NEXT:    vmovq %rcx, %xmm2
-; AVX512-NEXT:    vmovq %rdx, %xmm3
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
-; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vcvtuqq2pd {ru-sae}, %zmm1, %zmm2
+; AVX512-NEXT:    vbroadcastsd {{.*#+}} zmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX512-NEXT:    vdivpd {rd-sae}, %zmm2, %zmm3, %zmm2
+; AVX512-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm3
+; AVX512-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm3, %zmm3
+; AVX512-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
+; AVX512-NEXT:    vpmullq %zmm1, %zmm3, %zmm3
+; AVX512-NEXT:    vpsubq %zmm3, %zmm0, %zmm0
+; AVX512-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm3
+; AVX512-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm3, %zmm2
+; AVX512-NEXT:    vcvtpd2uqq {rd-sae}, %zmm2, %zmm2
+; AVX512-NEXT:    vpmullq %zmm1, %zmm2, %zmm2
+; AVX512-NEXT:    vpsubq %zmm2, %zmm0, %zmm0
+; AVX512-NEXT:    vpcmpnltuq %zmm1, %zmm0, %k1
+; AVX512-NEXT:    vpsubq %zmm1, %zmm0, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %res = call <8 x i64> @llvm.masked.urem(<8 x i64> %x, <8 x i64> %y, <8 x i1> %m)
   ret <8 x i64> %res
