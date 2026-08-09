@@ -15,8 +15,8 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTX_H
 
 #include "llvm/ADT/Bitfields.h"
-#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
