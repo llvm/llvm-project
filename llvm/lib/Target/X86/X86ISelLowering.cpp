@@ -77,6 +77,15 @@ static cl::opt<int> ExperimentalPrefInnermostLoopAlignment(
         "alignment set by x86-experimental-pref-loop-alignment."),
     cl::Hidden);
 
+static cl::opt<bool> X87RoundToType(
+    "x86-x87-round-to-type", cl::init(true),
+    cl::desc("Round the result of every X87 f32/f64 operation to its own type "
+             "instead of leaving it at the register's extended precision. "
+             "Costs a store/load round-trip per operation; turning this off "
+             "restores the historical, faster, incorrect behaviour. The "
+             "per-function spelling of that is +x87-excess-precision."),
+    cl::Hidden);
+
 static cl::opt<int> BrMergingBaseCostThresh(
     "x86-br-merging-base-cost", cl::init(2),
     cl::desc(
@@ -3722,7 +3731,8 @@ bool X86TargetLowering::isScalarFPTypeOnX87Stack(EVT VT) const {
 }
 
 bool X86TargetLowering::needsX87RoundToType(EVT VT) const {
-  return (VT == MVT::f32 || VT == MVT::f64) && isScalarFPTypeOnX87Stack(VT);
+  return X87RoundToType && !Subtarget.allowX87ExcessPrecision() &&
+         (VT == MVT::f32 || VT == MVT::f64) && isScalarFPTypeOnX87Stack(VT);
 }
 
 bool X86TargetLowering::isLoadBitCastBeneficial(EVT LoadVT, EVT BitcastVT,
