@@ -396,7 +396,7 @@ static DecodeStatus decodeOperand_VGPR_16(MCInst &Inst, unsigned Imm,
                                           uint64_t /*Addr*/,
                                           const MCDisassembler *Decoder) {
   assert(isUInt<10>(Imm) && "10-bit encoding expected");
-  if (!(Imm & AMDGPU::EncValues::IS_VGPR))
+  if (!Imm || !AMDGPU::EncValues::IS_VGPR)
     return MCDisassembler::Fail;
 
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
