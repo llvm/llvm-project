@@ -817,6 +817,12 @@ bool CodeGenPrepare::eliminateAssumptions(Function &F) {
       if (auto *Assume = dyn_cast<AssumeInst>(I)) {
         MadeChange = true;
         Value *Operand = Assume->getOperand(0);
+        Value *V;
+        ConstantInt *C;
+        if (match(Operand, m_c_ICmp(m_Value(V), m_ConstantInt(C))) &&
+            cast<ICmpInst>(Operand)->getPredicate() == ICmpInst::ICMP_EQ)
+          replaceDominatedUsesWith(V, C, getDT(), Assume);
+
         Assume->eraseFromParent();
 
         resetIteratorIfInvalidatedWhileCalling(&BB, [&]() {

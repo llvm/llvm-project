@@ -3,8 +3,8 @@
 
 define i64 @propagate_equality(i64 %x, i64 %old, i64 %C) {
 ; CHECK-LABEL: @propagate_equality(
-; CHECK-NEXT:    [[NOTC:%.*]] = xor i64 [[C:%.*]], -1
-; CHECK-NEXT:    [[NEW_BYTES:%.*]] = and i64 [[X:%.*]], [[C]]
+; CHECK-NEXT:    [[NOTC:%.*]] = xor i64 65535, -1
+; CHECK-NEXT:    [[NEW_BYTES:%.*]] = and i64 [[X:%.*]], 65535
 ; CHECK-NEXT:    [[OLD_REST:%.*]] = and i64 [[OLD:%.*]], [[NOTC]]
 ; CHECK-NEXT:    [[MERGED:%.*]] = or disjoint i64 [[OLD_REST]], [[NEW_BYTES]]
 ; CHECK-NEXT:    ret i64 [[MERGED]]
@@ -21,8 +21,8 @@ define i64 @propagate_equality(i64 %x, i64 %old, i64 %C) {
 
 define i64 @commuted_equality(i64 %x, i64 %old, i64 %C) {
 ; CHECK-LABEL: @commuted_equality(
-; CHECK-NEXT:    [[NOTC:%.*]] = xor i64 [[C:%.*]], -1
-; CHECK-NEXT:    [[NEW_BYTES:%.*]] = and i64 [[X:%.*]], [[C]]
+; CHECK-NEXT:    [[NOTC:%.*]] = xor i64 255, -1
+; CHECK-NEXT:    [[NEW_BYTES:%.*]] = and i64 [[X:%.*]], 255
 ; CHECK-NEXT:    [[OLD_REST:%.*]] = and i64 [[OLD:%.*]], [[NOTC]]
 ; CHECK-NEXT:    [[MERGED:%.*]] = or disjoint i64 [[OLD_REST]], [[NEW_BYTES]]
 ; CHECK-NEXT:    ret i64 [[MERGED]]
@@ -126,10 +126,10 @@ define i64 @assume_feeding_branch(i64 %C, i1 %c) {
 ; CHECK-LABEL: @assume_feeding_branch(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[R1:%.*]] = add i64 [[C:%.*]], 1
+; CHECK-NEXT:    [[R1:%.*]] = add i64 65535, 1
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       false:
-; CHECK-NEXT:    [[R2:%.*]] = add i64 [[C]], 2
+; CHECK-NEXT:    [[R2:%.*]] = add i64 65535, 2
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[R1]], [[TRUE]] ], [ [[R2]], [[FALSE]] ]

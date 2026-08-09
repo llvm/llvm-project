@@ -4,11 +4,7 @@
 define void @tgt_i8(ptr %p, i64 %x, i64 %C) {
 ; CHECK-LABEL: tgt_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    xorq %rax, %rsi
-; CHECK-NEXT:    andq %rdx, %rsi
-; CHECK-NEXT:    xorq %rax, %rsi
-; CHECK-NEXT:    movq %rsi, (%rdi)
+; CHECK-NEXT:    movb %sil, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
   %is.low8.mask = icmp eq i64 %C, 255
@@ -26,11 +22,7 @@ entry:
 define void @tgt_i16(ptr %p, i64 %x, i64 %C) {
 ; CHECK-LABEL: tgt_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    xorq %rax, %rsi
-; CHECK-NEXT:    andq %rdx, %rsi
-; CHECK-NEXT:    xorq %rax, %rsi
-; CHECK-NEXT:    movq %rsi, (%rdi)
+; CHECK-NEXT:    movw %si, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
   %is.low16.mask = icmp eq i64 %C, 65535
@@ -48,11 +40,7 @@ entry:
 define void @tgt_i32(ptr %p, i64 %x, i64 %C) {
 ; CHECK-LABEL: tgt_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    xorq %rax, %rsi
-; CHECK-NEXT:    andq %rdx, %rsi
-; CHECK-NEXT:    xorq %rax, %rsi
-; CHECK-NEXT:    movq %rsi, (%rdi)
+; CHECK-NEXT:    movl %esi, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
   %is.low32.mask = icmp eq i64 %C, 4294967295
