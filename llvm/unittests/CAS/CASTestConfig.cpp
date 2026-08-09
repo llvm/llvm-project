@@ -35,6 +35,9 @@ std::string unittest::cas::getCASPluginPath() {
 #ifndef _WIN32
   std::string LibName = "libCASPluginTest";
   sys::path::append(PathBuf, "lib", LibName + LLVM_PLUGIN_EXT);
+#elif defined(__MINGW32__)
+  std::string LibName = "libCASPluginTest";
+  sys::path::append(PathBuf, "bin", LibName + LLVM_PLUGIN_EXT);
 #else
   std::string LibName = "CASPluginTest";
   sys::path::append(PathBuf, "bin", LibName + LLVM_PLUGIN_EXT);
