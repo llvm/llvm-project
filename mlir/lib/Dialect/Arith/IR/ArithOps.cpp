@@ -3131,11 +3131,11 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
     return builder.getIntegerAttr(resultType, 1);
   case AtomicRMWKind::mulf:
     return builder.getFloatAttr(resultType, 1);
-  // TODO: Add remaining reduction operations.
-  default:
-    (void)emitOptionalError(loc, "Reduction operation type not supported");
+  // `assign` is not a reduction and has no identity element.
+  case AtomicRMWKind::assign:
     break;
   }
+  (void)emitOptionalError(loc, "Reduction operation type not supported");
   return nullptr;
 }
 
@@ -3226,11 +3226,11 @@ Value mlir::arith::getReductionOp(AtomicRMWKind op, OpBuilder &builder,
     return arith::AndIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::xori:
     return arith::XOrIOp::create(builder, loc, lhs, rhs);
-  // TODO: Add remaining reduction operations.
-  default:
-    (void)emitOptionalError(loc, "Reduction operation type not supported");
+  // `assign` is not a reduction and has no corresponding binary operation.
+  case AtomicRMWKind::assign:
     break;
   }
+  (void)emitOptionalError(loc, "Reduction operation type not supported");
   return nullptr;
 }
 
