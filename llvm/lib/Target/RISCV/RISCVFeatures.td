@@ -1115,6 +1115,28 @@ def FeatureStdExtSsehv
                                  "Synchronous Exception Hardware Vectoring at Supervisor Level",
                                  [FeatureStdExtSsijt]>;
 
+def FeatureStdExtSmeihv
+    : RISCVExperimentalExtension<0, 19,
+                                 "External Interrupt Hardware Vectoring at Machine Level">;
+def FeatureStdExtSseihv
+    : RISCVExperimentalExtension<0, 19,
+                                 "External Interrupt Hardware Vectoring at Supervisor Level">;
+
+def FeatureStdExtSmip
+    : RISCVExperimentalExtension<0, 19,
+                                 "Support for Interrupt Handler Push/Pop at Machine Level">;
+def HasStdExtSmip : Predicate<"Subtarget->hasStdExtSmip()">,
+                    AssemblerPredicate<(all_of FeatureStdExtSmip),
+                        "'Smip' (Support for Interrupt Handler Push/Pop at "
+                        "Machine Level)">;
+def FeatureStdExtSsip
+    : RISCVExperimentalExtension<0, 19,
+                                 "Support for Interrupt Handler Push/Pop at Supervisor Level">;
+def HasStdExtSsip : Predicate<"Subtarget->hasStdExtSsip()">,
+                    AssemblerPredicate<(all_of FeatureStdExtSsip),
+                        "'Ssip' (Support for Interrupt Handler Push/Pop at "
+                        "Supervisor Level)">;
+
 def FeatureStdExtSmpmpmt
     : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;
 

@@ -135,6 +135,10 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-ssijt %s -o - | FileCheck --check-prefix=RV32SSIJT %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-smehv %s -o - | FileCheck --check-prefix=RV32SMEHV %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-ssehv %s -o - | FileCheck --check-prefix=RV32SSEHV %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-smeihv %s -o - | FileCheck --check-prefix=RV32SMEIHV %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-sseihv %s -o - | FileCheck --check-prefix=RV32SSEIHV %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-smip %s -o - | FileCheck --check-prefix=RV32SMIP %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-ssip %s -o - | FileCheck --check-prefix=RV32SSIP %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-smpmpmt %s -o - | FileCheck --check-prefixes=CHECK,RV32SMPMPMT %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smrnmi %s -o - | FileCheck --check-prefixes=CHECK,RV32SMRNMI %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV32ZFBFMIN %s
@@ -308,6 +312,10 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssijt %s -o - | FileCheck --check-prefix=RV64SSIJT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-smehv %s -o - | FileCheck --check-prefix=RV64SMEHV %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssehv %s -o - | FileCheck --check-prefix=RV64SSEHV %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-smeihv %s -o - | FileCheck --check-prefix=RV64SMEIHV %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-sseihv %s -o - | FileCheck --check-prefix=RV64SSEIHV %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-smip %s -o - | FileCheck --check-prefix=RV64SMIP %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssip %s -o - | FileCheck --check-prefix=RV64SSIP %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-smpmpmt %s -o - | FileCheck --check-prefixes=CHECK,RV64SMPMPMT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smrnmi %s -o - | FileCheck --check-prefixes=CHECK,RV64SMRNMI %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV64ZFBFMIN %s
@@ -491,6 +499,10 @@
 ; RV32SSIJT: .attribute 5, "rv32i2p1_ssijt0p19"
 ; RV32SMEHV: .attribute 5, "rv32i2p1_smehv0p19_smijt0p19"
 ; RV32SSEHV: .attribute 5, "rv32i2p1_ssehv0p19_ssijt0p19"
+; RV32SMEIHV: .attribute 5, "rv32i2p1_smeihv0p19"
+; RV32SSEIHV: .attribute 5, "rv32i2p1_sseihv0p19"
+; RV32SMIP: .attribute 5, "rv32i2p1_smip0p19"
+; RV32SSIP: .attribute 5, "rv32i2p1_ssip0p19"
 ; RV32SMPMPMT: .attribute 5, "rv32i2p1_smpmpmt0p6"
 ; RV32SMRNMI: .attribute 5, "rv32i2p1_smrnmi1p0"
 ; RV32ZFBFMIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin1p0"
@@ -661,6 +673,10 @@
 ; RV64SSIJT: .attribute 5, "rv64i2p1_ssijt0p19"
 ; RV64SMEHV: .attribute 5, "rv64i2p1_smehv0p19_smijt0p19"
 ; RV64SSEHV: .attribute 5, "rv64i2p1_ssehv0p19_ssijt0p19"
+; RV64SMEIHV: .attribute 5, "rv64i2p1_smeihv0p19"
+; RV64SSEIHV: .attribute 5, "rv64i2p1_sseihv0p19"
+; RV64SMIP: .attribute 5, "rv64i2p1_smip0p19"
+; RV64SSIP: .attribute 5, "rv64i2p1_ssip0p19"
 ; RV64SMPMPMT: .attribute 5, "rv64i2p1_smpmpmt0p6"
 ; RV64SMRNMI: .attribute 5, "rv64i2p1_smrnmi1p0"
 ; RV64ZFBFMIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin1p0"

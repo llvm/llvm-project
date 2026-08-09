@@ -375,6 +375,18 @@
 .attribute arch, "rv32i_ssehv0p19"
 # CHECK: attribute      5, "rv32i2p1_ssehv0p19_ssijt0p19"
 
+.attribute arch, "rv32i_smeihv0p19"
+# CHECK: attribute      5, "rv32i2p1_smeihv0p19"
+
+.attribute arch, "rv32i_sseihv0p19"
+# CHECK: attribute      5, "rv32i2p1_sseihv0p19"
+
+.attribute arch, "rv32i_smip0p19"
+# CHECK: attribute      5, "rv32i2p1_smip0p19"
+
+.attribute arch, "rv32i_ssip0p19"
+# CHECK: attribute      5, "rv32i2p1_ssip0p19"
+
 .attribute arch, "rv32i_smpmpmt0p6"
 # CHECK: attribute      5, "rv32i2p1_smpmpmt0p6"
 
