@@ -2025,10 +2025,6 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     case DK_REFERENCE:
       return parseDirectiveSymbolAttribute(MCSA_Reference);
     case DK_WEAK_DEFINITION:
-      // .weak_definition is a Mach-O-specific directive and is not supported
-      // on XCOFF.
-      if (getContext().getObjectFileType() == MCContext::IsXCOFF)
-        return Error(IDLoc, "'.weak_definition' is not supported on XCOFF");
       return parseDirectiveSymbolAttribute(MCSA_WeakDefinition);
     case DK_WEAK_REFERENCE:
       return parseDirectiveSymbolAttribute(MCSA_WeakReference);
