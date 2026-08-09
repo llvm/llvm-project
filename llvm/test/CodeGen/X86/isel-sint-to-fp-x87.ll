@@ -23,7 +23,9 @@ define void @test_int8_to_float(i8 %x, ptr %p) nounwind {
 ; GISEL-X64-NEXT:    sarw $8, %di
 ; GISEL-X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    filds -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fstps (%rsi)
+; GISEL-X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; GISEL-X64-NEXT:    movl %eax, (%rsi)
 ; GISEL-X64-NEXT:    retq
 ;
 ; SDAG-X86-LABEL: test_int8_to_float:
@@ -39,15 +41,17 @@ define void @test_int8_to_float(i8 %x, ptr %p) nounwind {
 ;
 ; GISEL-X86-LABEL: test_int8_to_float:
 ; GISEL-X86:       # %bb.0: # %entry
-; GISEL-X86-NEXT:    pushl %eax
+; GISEL-X86-NEXT:    subl $8, %esp
 ; GISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-NEXT:    shlw $8, %ax
 ; GISEL-X86-NEXT:    sarw $8, %ax
 ; GISEL-X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    filds {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstps (%ecx)
-; GISEL-X86-NEXT:    popl %eax
+; GISEL-X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, (%ecx)
+; GISEL-X86-NEXT:    addl $8, %esp
 ; GISEL-X86-NEXT:    retl
 entry:
   %conv = sitofp i8 %x to float
@@ -56,12 +60,21 @@ entry:
 }
 
 define void @test_int16_to_float(i16 %x, ptr %p) nounwind {
-; X64-LABEL: test_int16_to_float:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fstps (%rsi)
-; X64-NEXT:    retq
+; SDAG-X64-LABEL: test_int16_to_float:
+; SDAG-X64:       # %bb.0: # %entry
+; SDAG-X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    filds -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    fstps (%rsi)
+; SDAG-X64-NEXT:    retq
+;
+; GISEL-X64-LABEL: test_int16_to_float:
+; GISEL-X64:       # %bb.0: # %entry
+; GISEL-X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    filds -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; GISEL-X64-NEXT:    movl %eax, (%rsi)
+; GISEL-X64-NEXT:    retq
 ;
 ; SDAG-X86-LABEL: test_int16_to_float:
 ; SDAG-X86:       # %bb.0: # %entry
@@ -76,13 +89,15 @@ define void @test_int16_to_float(i16 %x, ptr %p) nounwind {
 ;
 ; GISEL-X86-LABEL: test_int16_to_float:
 ; GISEL-X86:       # %bb.0: # %entry
-; GISEL-X86-NEXT:    pushl %eax
+; GISEL-X86-NEXT:    subl $8, %esp
 ; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    filds {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstps (%ecx)
-; GISEL-X86-NEXT:    popl %eax
+; GISEL-X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, (%ecx)
+; GISEL-X86-NEXT:    addl $8, %esp
 ; GISEL-X86-NEXT:    retl
 entry:
   %conv = sitofp i16 %x to float
@@ -91,12 +106,21 @@ entry:
 }
 
 define void @test_int32_to_float(i32 %x, ptr %p) nounwind {
-; X64-LABEL: test_int32_to_float:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fstps (%rsi)
-; X64-NEXT:    retq
+; SDAG-X64-LABEL: test_int32_to_float:
+; SDAG-X64:       # %bb.0: # %entry
+; SDAG-X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    fstps (%rsi)
+; SDAG-X64-NEXT:    retq
+;
+; GISEL-X64-LABEL: test_int32_to_float:
+; GISEL-X64:       # %bb.0: # %entry
+; GISEL-X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; GISEL-X64-NEXT:    movl %eax, (%rsi)
+; GISEL-X64-NEXT:    retq
 ;
 ; SDAG-X86-LABEL: test_int32_to_float:
 ; SDAG-X86:       # %bb.0: # %entry
@@ -111,13 +135,15 @@ define void @test_int32_to_float(i32 %x, ptr %p) nounwind {
 ;
 ; GISEL-X86-LABEL: test_int32_to_float:
 ; GISEL-X86:       # %bb.0: # %entry
-; GISEL-X86-NEXT:    pushl %eax
+; GISEL-X86-NEXT:    subl $8, %esp
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-X86-NEXT:    movl %eax, (%esp)
-; GISEL-X86-NEXT:    fildl (%esp)
-; GISEL-X86-NEXT:    fstps (%ecx)
-; GISEL-X86-NEXT:    popl %eax
+; GISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    fildl {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    fstps (%esp)
+; GISEL-X86-NEXT:    movl (%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, (%ecx)
+; GISEL-X86-NEXT:    addl $8, %esp
 ; GISEL-X86-NEXT:    retl
 entry:
   %conv = sitofp i32 %x to float
@@ -126,12 +152,21 @@ entry:
 }
 
 define void @test_int64_to_float(i64 %x, ptr %p) nounwind {
-; X64-LABEL: test_int64_to_float:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fstps (%rsi)
-; X64-NEXT:    retq
+; SDAG-X64-LABEL: test_int64_to_float:
+; SDAG-X64:       # %bb.0: # %entry
+; SDAG-X64-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    fstps (%rsi)
+; SDAG-X64-NEXT:    retq
+;
+; GISEL-X64-LABEL: test_int64_to_float:
+; GISEL-X64:       # %bb.0: # %entry
+; GISEL-X64-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; GISEL-X64-NEXT:    movl %eax, (%rsi)
+; GISEL-X64-NEXT:    retq
 ;
 ; X86-LABEL: test_int64_to_float:
 ; X86:       # %bb.0: # %entry
@@ -255,19 +290,43 @@ define void @test_int8to_double(i8 %x, ptr %p) nounwind {
 ; GISEL-X64-NEXT:    sarw $8, %di
 ; GISEL-X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    filds -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fstpl (%rsi)
+; GISEL-X64-NEXT:    fstpl -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; GISEL-X64-NEXT:    movq %rax, (%rsi)
 ; GISEL-X64-NEXT:    retq
 ;
-; X86-LABEL: test_int8to_double:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; X86-NEXT:    filds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl (%ecx)
-; X86-NEXT:    addl $12, %esp
-; X86-NEXT:    retl
+; SDAG-X86-LABEL: test_int8to_double:
+; SDAG-X86:       # %bb.0: # %entry
+; SDAG-X86-NEXT:    subl $12, %esp
+; SDAG-X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SDAG-X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    filds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fstpl (%ecx)
+; SDAG-X86-NEXT:    addl $12, %esp
+; SDAG-X86-NEXT:    retl
+;
+; GISEL-X86-LABEL: test_int8to_double:
+; GISEL-X86:       # %bb.0: # %entry
+; GISEL-X86-NEXT:    pushl %ebp
+; GISEL-X86-NEXT:    movl %esp, %ebp
+; GISEL-X86-NEXT:    andl $-8, %esp
+; GISEL-X86-NEXT:    subl $16, %esp
+; GISEL-X86-NEXT:    movzbl 8(%ebp), %ecx
+; GISEL-X86-NEXT:    movl 12(%ebp), %eax
+; GISEL-X86-NEXT:    shlw $8, %cx
+; GISEL-X86-NEXT:    sarw $8, %cx
+; GISEL-X86-NEXT:    movw %cx, {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    filds {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    fstpl {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; GISEL-X86-NEXT:    movl 4(%ecx), %ecx
+; GISEL-X86-NEXT:    movl %edx, (%eax)
+; GISEL-X86-NEXT:    movl %ecx, 4(%eax)
+; GISEL-X86-NEXT:    movl %ebp, %esp
+; GISEL-X86-NEXT:    popl %ebp
+; GISEL-X86-NEXT:    retl
 entry:
   %conv = sitofp i8 %x to double
   store double %conv, ptr %p, align 4
@@ -275,23 +334,52 @@ entry:
 }
 
 define void @test_int16_to_double(i16 %x, ptr %p) nounwind {
-; X64-LABEL: test_int16_to_double:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fstpl (%rsi)
-; X64-NEXT:    retq
+; SDAG-X64-LABEL: test_int16_to_double:
+; SDAG-X64:       # %bb.0: # %entry
+; SDAG-X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    filds -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    fstpl (%rsi)
+; SDAG-X64-NEXT:    retq
 ;
-; X86-LABEL: test_int16_to_double:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movw %cx, {{[0-9]+}}(%esp)
-; X86-NEXT:    filds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl (%eax)
-; X86-NEXT:    addl $12, %esp
-; X86-NEXT:    retl
+; GISEL-X64-LABEL: test_int16_to_double:
+; GISEL-X64:       # %bb.0: # %entry
+; GISEL-X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    filds -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    fstpl -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; GISEL-X64-NEXT:    movq %rax, (%rsi)
+; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: test_int16_to_double:
+; SDAG-X86:       # %bb.0: # %entry
+; SDAG-X86-NEXT:    subl $12, %esp
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; SDAG-X86-NEXT:    movw %cx, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    filds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fstpl (%eax)
+; SDAG-X86-NEXT:    addl $12, %esp
+; SDAG-X86-NEXT:    retl
+;
+; GISEL-X86-LABEL: test_int16_to_double:
+; GISEL-X86:       # %bb.0: # %entry
+; GISEL-X86-NEXT:    pushl %ebp
+; GISEL-X86-NEXT:    movl %esp, %ebp
+; GISEL-X86-NEXT:    andl $-8, %esp
+; GISEL-X86-NEXT:    subl $16, %esp
+; GISEL-X86-NEXT:    movzwl 8(%ebp), %eax
+; GISEL-X86-NEXT:    movl 12(%ebp), %ecx
+; GISEL-X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    filds {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    fstpl {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; GISEL-X86-NEXT:    movl 4(%eax), %eax
+; GISEL-X86-NEXT:    movl %edx, (%ecx)
+; GISEL-X86-NEXT:    movl %eax, 4(%ecx)
+; GISEL-X86-NEXT:    movl %ebp, %esp
+; GISEL-X86-NEXT:    popl %ebp
+; GISEL-X86-NEXT:    retl
 entry:
   %conv = sitofp i16 %x to double
   store double %conv, ptr %p, align 4
@@ -299,23 +387,52 @@ entry:
 }
 
 define void @test_int32_to_double(i32 %x, ptr %p) nounwind {
-; X64-LABEL: test_int32_to_double:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fstpl (%rsi)
-; X64-NEXT:    retq
+; SDAG-X64-LABEL: test_int32_to_double:
+; SDAG-X64:       # %bb.0: # %entry
+; SDAG-X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    fstpl (%rsi)
+; SDAG-X64-NEXT:    retq
 ;
-; X86-LABEL: test_int32_to_double:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, (%esp)
-; X86-NEXT:    fildl (%esp)
-; X86-NEXT:    fstpl (%eax)
-; X86-NEXT:    addl $12, %esp
-; X86-NEXT:    retl
+; GISEL-X64-LABEL: test_int32_to_double:
+; GISEL-X64:       # %bb.0: # %entry
+; GISEL-X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    fstpl -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; GISEL-X64-NEXT:    movq %rax, (%rsi)
+; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: test_int32_to_double:
+; SDAG-X86:       # %bb.0: # %entry
+; SDAG-X86-NEXT:    subl $12, %esp
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SDAG-X86-NEXT:    movl %ecx, (%esp)
+; SDAG-X86-NEXT:    fildl (%esp)
+; SDAG-X86-NEXT:    fstpl (%eax)
+; SDAG-X86-NEXT:    addl $12, %esp
+; SDAG-X86-NEXT:    retl
+;
+; GISEL-X86-LABEL: test_int32_to_double:
+; GISEL-X86:       # %bb.0: # %entry
+; GISEL-X86-NEXT:    pushl %ebp
+; GISEL-X86-NEXT:    movl %esp, %ebp
+; GISEL-X86-NEXT:    andl $-8, %esp
+; GISEL-X86-NEXT:    subl $16, %esp
+; GISEL-X86-NEXT:    movl 8(%ebp), %eax
+; GISEL-X86-NEXT:    movl 12(%ebp), %ecx
+; GISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    fildl {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    fstpl {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; GISEL-X86-NEXT:    movl 4(%eax), %eax
+; GISEL-X86-NEXT:    movl %edx, (%ecx)
+; GISEL-X86-NEXT:    movl %eax, 4(%ecx)
+; GISEL-X86-NEXT:    movl %ebp, %esp
+; GISEL-X86-NEXT:    popl %ebp
+; GISEL-X86-NEXT:    retl
 entry:
   %conv = sitofp i32 %x to double
   store double %conv, ptr %p, align 4
@@ -323,12 +440,21 @@ entry:
 }
 
 define void @test_int64_to_double(i64 %x, ptr %p) nounwind {
-; X64-LABEL: test_int64_to_double:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fstpl (%rsi)
-; X64-NEXT:    retq
+; SDAG-X64-LABEL: test_int64_to_double:
+; SDAG-X64:       # %bb.0: # %entry
+; SDAG-X64-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    fstpl (%rsi)
+; SDAG-X64-NEXT:    retq
+;
+; GISEL-X64-LABEL: test_int64_to_double:
+; GISEL-X64:       # %bb.0: # %entry
+; GISEL-X64-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    fstpl -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; GISEL-X64-NEXT:    movq %rax, (%rsi)
+; GISEL-X64-NEXT:    retq
 ;
 ; X86-LABEL: test_int64_to_double:
 ; X86:       # %bb.0: # %entry
@@ -363,6 +489,8 @@ define i32 @test_int32_to_float_roundtrip(i32 %x, ptr %p) nounwind {
 ; GISEL-X64:       # %bb.0: # %entry
 ; GISEL-X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    flds -{{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    fsts (%rsi)
 ; GISEL-X64-NEXT:    flds (%rsi)
 ; GISEL-X64-NEXT:    fxch %st(1)
@@ -397,11 +525,13 @@ define i32 @test_int32_to_float_roundtrip(i32 %x, ptr %p) nounwind {
 ;
 ; GISEL-X86-LABEL: test_int32_to_float_roundtrip:
 ; GISEL-X86:       # %bb.0: # %entry
-; GISEL-X86-NEXT:    pushl %eax
+; GISEL-X86-NEXT:    subl $8, %esp
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-X86-NEXT:    movl %eax, (%esp)
-; GISEL-X86-NEXT:    fildl (%esp)
+; GISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    fildl {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    fstps (%esp)
+; GISEL-X86-NEXT:    flds (%esp)
 ; GISEL-X86-NEXT:    fsts (%ecx)
 ; GISEL-X86-NEXT:    flds (%ecx)
 ; GISEL-X86-NEXT:    fxch %st(1)
@@ -412,7 +542,7 @@ define i32 @test_int32_to_float_roundtrip(i32 %x, ptr %p) nounwind {
 ; GISEL-X86-NEXT:    andb %al, %cl
 ; GISEL-X86-NEXT:    movzbl %cl, %eax
 ; GISEL-X86-NEXT:    andl $1, %eax
-; GISEL-X86-NEXT:    popl %ecx
+; GISEL-X86-NEXT:    addl $8, %esp
 ; GISEL-X86-NEXT:    retl
 entry:
   %conv = sitofp i32 %x to float
