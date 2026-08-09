@@ -149,7 +149,8 @@ LIBC_INLINE float expf(float x) {
   // but wondering if there is any lighter solution without touching the 128-bit
   // types?
   if (LIBC_UNLIKELY(is_neg && d >= 0)) { // subnormal
-    UInt128 full_val = (UInt128(1) << 63) | (p.val[0] >> 1); // 1 + p
+    // 1 + p
+    UInt128 full_val = (UInt128(1) << 63) | (p.val[0] >> 1);
 
     // add rounding bit
     // TODO: skip for R0, RD
