@@ -5446,7 +5446,6 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     if (match(Op1, m_APInt(RHSC))) {
       Value *X;
       const APInt *C;
-
       // (C - X) ^ signmaskC --> (C + signmaskC) - X
       if (RHSC->isSignMask() && match(Op0, m_Sub(m_APInt(C), m_Value(X))))
         return BinaryOperator::CreateSub(ConstantInt::get(Ty, *C + *RHSC), X);
