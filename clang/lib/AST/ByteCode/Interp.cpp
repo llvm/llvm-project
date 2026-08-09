@@ -1153,10 +1153,6 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     return false;
   }
 
-  // Implicitly constexpr.
-  if (F->isLambdaStaticInvoker())
-    return true;
-
   return diagnoseCallableDecl(S, OpPC, DiagDecl);
 }
 
