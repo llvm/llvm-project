@@ -120,6 +120,7 @@ jobs:
           # so we need to fixup the version number for release candidates.
           release_version="$LLVM_VERSION_MAJOR.0.0.$(cut -d c -f2 <<< $release_version)"
         fi
+        echo RELEASE VERSION: $release_version
 
         if [ -n "${{ inputs.upload }}" ]; then
           upload="${{ inputs.upload }}"
