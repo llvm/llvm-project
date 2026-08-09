@@ -168,15 +168,13 @@ lifetime_modeling::getRegionsFromAggrVal(SVal Val, CheckerContext &C) {
   return {};
 }
 
-static bool isAnnotated(const FunctionDecl *FD) {
+static bool hasAnyParamLifetimeAnnotated(const FunctionDecl *FD) {
   for (const ParmVarDecl *PVD : FD->parameters()) {
     if (PVD->hasAttr<LifetimeBoundAttr>())
       return true;
   }
 
-  if (lifetimes::implicitObjectParamIsLifetimeBound(FD))
-    return true;
-  return false;
+  return lifetimes::implicitObjectParamIsLifetimeBound(FD);
 }
 
 void LifetimeModeling::checkPostCall(const CallEvent &Call,
@@ -193,7 +191,7 @@ void LifetimeModeling::checkPostCall(const CallEvent &Call,
 
   SVal RetVal = Call.getReturnValue();
 
-  if (isAnnotated(FD)) {
+  if (hasAnyParamLifetimeAnnotated(FD)) {
     SmallVector<const MemRegion *, 4> AggrRegs =
         lifetime_modeling::getRegionsFromAggrVal(RetVal, C);
     for (const MemRegion *I : AggrRegs) {
