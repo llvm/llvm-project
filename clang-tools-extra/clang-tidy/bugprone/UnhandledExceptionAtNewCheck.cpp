@@ -52,12 +52,13 @@ void UnhandledExceptionAtNewCheck::registerMatchers(MatchFinder *Finder) {
   auto BadAllocReferenceType = referenceType(pointee(BadAllocType));
   auto ExceptionReferenceType = referenceType(pointee(ExceptionType));
 
-  auto CatchBadAllocType =
+  const auto CatchBadAllocType =
       qualType(hasCanonicalType(anyOf(BadAllocType, BadAllocReferenceType,
                                       ExceptionType, ExceptionReferenceType)));
-  auto BadAllocCatchingTryBlock = cxxTryStmt(hasHandlerFor(CatchBadAllocType));
+  const auto BadAllocCatchingTryBlock =
+      cxxTryStmt(hasHandlerFor(CatchBadAllocType));
 
-  auto FunctionMayNotThrow = functionDecl(isNoThrow());
+  const auto FunctionMayNotThrow = functionDecl(isNoThrow());
 
   Finder->addMatcher(cxxNewExpr(mayThrow(),
                                 unless(hasAncestor(BadAllocCatchingTryBlock)),
