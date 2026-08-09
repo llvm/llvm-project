@@ -2,7 +2,11 @@
 // RUN:   | FileCheck %s -strict-whitespace
 
 // RUN: %clang_cc1 -E -dM -triple=x86_64-none-none -target-feature -sse \
-// RUN:   %s -o - | FileCheck %s -check-prefix=EXT -strict-whitespace
+// RUN:   %s -o - | FileCheck %s -strict-whitespace
+
+// RUN: %clang_cc1 -E -dM -triple=x86_64-none-none -target-feature -sse \
+// RUN:   -ffp-eval-method=extended %s -o - \
+// RUN:   | FileCheck %s -check-prefix=EXT -strict-whitespace
 
 // RUN: %clang_cc1 -E -dM -triple=arm64e-apple-ios -target-feature -sse \
 // RUN:   %s -o - | FileCheck %s  -strict-whitespace
@@ -23,8 +27,7 @@
 // RUN:   | FileCheck %s  -strict-whitespace
 
 // RUN: %clang_cc1 -E -dM -triple i386-pc-windows -target-cpu pentium4 \
-// RUN:   -target-feature -sse %s -o - | FileCheck -check-prefix=EXT %s \
-// RUN:   -strict-whitespace
+// RUN:   -target-feature -sse %s -o - | FileCheck %s -strict-whitespace
 
 #ifdef __FLT_EVAL_METHOD__
 #if __FLT_EVAL_METHOD__ == 3
