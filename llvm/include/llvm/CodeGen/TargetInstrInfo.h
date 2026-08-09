@@ -193,7 +193,8 @@ public:
   }
 
   /// Given operand \p OpIdx of \p MI is a PhysReg use, return if it can be
-  /// ignored for the purpose of instruction rematerialization or sinking.
+  /// ignored for the purpose of instruction rematerialization, sinking, or
+  /// hoisting.
   virtual bool isIgnorableUse(const MachineInstr &MI, unsigned OpIdx) const {
     return false;
   }
