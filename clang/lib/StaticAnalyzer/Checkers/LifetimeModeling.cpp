@@ -192,8 +192,7 @@ void LifetimeModeling::checkPostCall(const CallEvent &Call,
   SVal RetVal = Call.getReturnValue();
 
   if (hasAnyParamLifetimeAnnotated(FD)) {
-    SmallVector<const MemRegion *, 4> AggrRegs =
-        lifetime_modeling::getRegionsFromAggrVal(RetVal, C);
+    auto AggrRegs = lifetime_modeling::getRegionsFromAggrVal(RetVal, C);
     for (const MemRegion *I : AggrRegs) {
       State = bindSource(State, RetVal, I);
     }
