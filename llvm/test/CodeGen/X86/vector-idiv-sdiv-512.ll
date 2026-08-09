@@ -740,9 +740,9 @@ define <8 x i64> @test_remv_8i64(<8 x i64> %a, <8 x i64> %b) nounwind {
 ; AVX512DQ-NEXT:    vpsubq %zmm1, %zmm3, %zmm1
 ; AVX512DQ-NEXT:    vpcmpnltuq %zmm2, %zmm1, %k1
 ; AVX512DQ-NEXT:    vpsubq %zmm2, %zmm1, %zmm1 {%k1}
+; AVX512DQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512DQ-NEXT:    vpmovq2m %zmm0, %k1
-; AVX512DQ-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512DQ-NEXT:    vpsubq %zmm1, %zmm0, %zmm1 {%k1}
+; AVX512DQ-NEXT:    vpsubq %zmm1, %zmm2, %zmm1 {%k1}
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; AVX512DQ-NEXT:    retq
   %res = srem <8 x i64> %a, %b

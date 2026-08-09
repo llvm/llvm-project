@@ -293,9 +293,9 @@ define <4 x i64> @srem_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 ; AVX512-NEXT:    vpsubq %ymm1, %ymm3, %ymm1
 ; AVX512-NEXT:    vpcmpnltuq %ymm2, %ymm1, %k1
 ; AVX512-NEXT:    vpsubq %ymm2, %ymm1, %ymm1 {%k1}
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vpmovq2m %ymm0, %k1
-; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vpsubq %ymm1, %ymm0, %ymm1 {%k1}
+; AVX512-NEXT:    vpsubq %ymm1, %ymm2, %ymm1 {%k1}
 ; AVX512-NEXT:    vmovdqa %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %res = call <4 x i64> @llvm.masked.srem(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m)
