@@ -1683,8 +1683,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       break;
     }
 
-    DenormalMode Mode =
-        MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
+    const fltSemantics &Flt = getFltSemanticForLLT(DstTy.getScalarType());
+    DenormalMode Mode = MF->getDenormalMode(Flt);
 
     FPClassTest InterestedSrcs = InterestedClasses;
     if (WantNegative)
@@ -1697,7 +1697,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       KnownFPClass KnownSelf;
       computeKnownFPClass(LHS, DemandedElts, InterestedSrcs, KnownSelf,
                           Depth + 1);
-      Known = KnownFPClass::fadd_self(KnownSelf, Mode);
+      Known = KnownFPClass::fadd_self(KnownSelf, Flt, Mode);
       break;
     }
 
@@ -1795,17 +1795,26 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       break;
     }
 
+    // A constant divisor bounds the scale factor, which refines both signs.
+    std::optional<APFloat> CRHS;
+    if (Opcode == TargetOpcode::G_FDIV) {
+      auto RHSCst = GFConstant::getConstant(RHS, MRI);
+      if (RHSCst && RHSCst->getKind() == GFConstant::GFConstantKind::Scalar)
+        CRHS = RHSCst->getScalarValue();
+    }
+
     const bool WantNan = (InterestedClasses & fcNan) != fcNone;
     const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
-    const bool WantPositive = Opcode == TargetOpcode::G_FREM &&
-                              (InterestedClasses & fcPositive) != fcNone;
+    const bool WantPositive = (InterestedClasses & fcPositive) != fcNone &&
+                              (Opcode == TargetOpcode::G_FREM || CRHS);
     if (!WantNan && !WantNegative && !WantPositive) {
       break;
     }
 
     KnownFPClass KnownLHS, KnownRHS;
 
-    computeKnownFPClass(RHS, DemandedElts, fcNan | fcInf | fcZero | fcNegative,
+    computeKnownFPClass(RHS, DemandedElts,
+                        fcNan | fcInf | fcZero | fcSubnormal | fcNegative,
                         KnownRHS, Depth + 1);
 
     bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN() ||
@@ -1817,7 +1826,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     }
 
     if (Opcode == TargetOpcode::G_FDIV) {
-      Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
+      Known = CRHS ? KnownFPClass::fdiv(KnownLHS, *CRHS, Mode)
+                   : KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
     } else {
       // Inf REM x and x REM 0 produce NaN.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&

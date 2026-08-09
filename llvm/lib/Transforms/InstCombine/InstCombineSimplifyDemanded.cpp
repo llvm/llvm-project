@@ -2488,7 +2488,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                   Depth + 1))
         return I;
 
-      Known = KnownFPClass::fadd_self(KnownLHS, Mode);
+      Known = KnownFPClass::fadd_self(KnownLHS, EltTy->getFltSemantics(), Mode);
       KnownRHS = KnownLHS;
     } else {
       FPClassTest SrcDemandedMask = fcFinite;

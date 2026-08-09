@@ -110,10 +110,7 @@ define i32 @fractional_divisor(i32 %x) {
 define i32 @zero_divisor(i32 %x) {
 ; CHECK-LABEL: define i32 @zero_divisor(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = uitofp i32 [[X]] to double
-; CHECK-NEXT:    [[D:%.*]] = fdiv double [[A]], 0.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = fptoui double [[D]] to i32
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 0
 ;
   %a = uitofp i32 %x to double
   %d = fdiv double %a, 0.000000e+00
