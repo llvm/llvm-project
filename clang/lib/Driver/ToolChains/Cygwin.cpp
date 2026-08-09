@@ -239,15 +239,6 @@ void cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     if (!Args.hasArg(options::OPT_mdll) && !IsShared)
       CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
-    if (ToolChain.GetRuntimeLibType(Args) == ToolChain::RLT_CompilerRT) {
-      std::string crtbegin =
-          ToolChain.getCompilerRT(Args, "crtbegin", ToolChain::FT_Object);
-      if (ToolChain.getVFS().exists(crtbegin)) {
-        std::string P;
-        P = crtbegin;
-        CmdArgs.push_back(Args.MakeArgString(P));
-      }
-    }
     if (IsShared)
       CmdArgs.push_back(
           Args.MakeArgString(ToolChain.GetFilePath("crtbeginS.o")));
@@ -368,18 +359,8 @@ void cygwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         tools::AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
     }
 
-    if (!Args.hasArg(options::OPT_nostartfiles)) {
-      if (ToolChain.GetRuntimeLibType(Args) == ToolChain::RLT_CompilerRT) {
-        std::string crtend =
-            ToolChain.getCompilerRT(Args, "crtend", ToolChain::FT_Object);
-        if (ToolChain.getVFS().exists(crtend)) {
-          std::string P;
-          P = crtend;
-          CmdArgs.push_back(Args.MakeArgString(P));
-        }
-      }
+    if (!Args.hasArg(options::OPT_nostartfiles))
       CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtend.o")));
-    }
   }
 
   Args.addAllArgs(CmdArgs, {options::OPT_T, options::OPT_t});
