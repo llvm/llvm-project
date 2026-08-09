@@ -22958,6 +22958,11 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (needsX87RoundToType(VT) && isScalarFPTypeOnX87Stack(SVT)) {
+    // A value-preserving round has nothing to do: the value already fits VT,
+    // and both operands stay on the x87 stack.
+    if (Op.getConstantOperandVal(IsStrict ? 2 : 1))
+      return Op;
+
     // Leave the round alone when the stores that consume it already do it;
     // combineStore turns those into truncating stores.
     if (isX87RoundDoneByStores(Op))

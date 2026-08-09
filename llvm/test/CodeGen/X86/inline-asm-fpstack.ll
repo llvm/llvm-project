@@ -16,13 +16,9 @@ define x86_fp80 @test1() nounwind {
 define double @test2() nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    fld0
 ; CHECK-NEXT:    ## InlineAsm End
-; CHECK-NEXT:    fstpl (%esp)
-; CHECK-NEXT:    fldl (%esp)
-; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    retl
   %tmp85 = call double asm sideeffect "fld0", "={st(0)}"()
   ret double %tmp85
@@ -355,15 +351,11 @@ entry:
 define float @sincos1(float %x) nounwind ssp {
 ; CHECK-LABEL: sincos1:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    sincos
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    fstps (%esp)
-; CHECK-NEXT:    flds (%esp)
-; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    retl
 entry:
   %0 = tail call %complex asm "sincos", "={st},={st(1)},0,~{dirflag},~{fpsr},~{flags}"(float %x) nounwind
@@ -375,15 +367,11 @@ entry:
 define float @sincos2(float %x) nounwind ssp {
 ; CHECK-LABEL: sincos2:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    sincos
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(1)
-; CHECK-NEXT:    fstps (%esp)
-; CHECK-NEXT:    flds (%esp)
-; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    retl
 entry:
   %0 = tail call %complex asm "sincos", "={st(1)},={st},1,~{dirflag},~{fpsr},~{flags}"(float %x) nounwind
@@ -399,22 +387,18 @@ entry:
 define float @sincos3(float %x) nounwind ssp {
 ; CHECK-LABEL: sincos3:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    sincos
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    fstps (%esp)
-; CHECK-NEXT:    flds (%esp)
 ; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    sincos
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(1)
 ; CHECK-NEXT:    fstp %st(0)
-; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    retl
 entry:
   %0 = tail call %complex asm sideeffect "sincos", "={st(1)},={st},1,~{dirflag},~{fpsr},~{flags}"(float %x) nounwind
@@ -511,17 +495,14 @@ return:
 define double @test_operand_rewrite() nounwind {
 ; CHECK-LABEL: test_operand_rewrite:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    subl $24, %esp
+; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    foo %st, %st(1)
 ; CHECK-NEXT:    ## InlineAsm End
-; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fsubl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fsubp %st, %st(1)
 ; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    fldl (%esp)
-; CHECK-NEXT:    addl $24, %esp
+; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    retl
 entry:
   %0 = tail call { double, double } asm sideeffect "foo $0, $1", "={st},={st(1)},~{dirflag},~{fpsr},~{flags}"()
