@@ -412,9 +412,9 @@ struct KnownFPClass {
   /// Refine the known classes of Src scaled by a factor with magnitude in
   /// [2^LoExp, 2^HiExp], as ldexp and a constant multiply or divide do. A
   /// scale that cannot grow rules out infinities and normals, one that cannot
-  /// shrink rules out subnormals and zeroes. NegativeScale flips the sign.
+  /// shrink rules out subnormals and zeroes. IsNegative flips the sign.
   LLVM_ABI void propagateExpRange(const KnownFPClass &Src, int LoExp, int HiExp,
-                                  bool NegativeScale, const fltSemantics &Sem,
+                                  bool IsNegative, const fltSemantics &Sem,
                                   DenormalMode Mode);
 
   /// Propagate knowledge from a source value that could be a denormal or

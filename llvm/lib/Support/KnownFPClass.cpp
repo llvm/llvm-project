@@ -68,7 +68,7 @@ bool KnownFPClass::isKnownNeverLogicalPosZero(DenormalMode Mode) const {
 }
 
 void KnownFPClass::propagateExpRange(const KnownFPClass &Src, int LoExp,
-                                     int HiExp, bool NegativeScale,
+                                     int HiExp, bool IsNegative,
                                      const fltSemantics &Sem,
                                      DenormalMode Mode) {
   FPClassTest Result = fcNone;
@@ -79,7 +79,7 @@ void KnownFPClass::propagateExpRange(const KnownFPClass &Src, int LoExp,
   if (!Src.isKnownNeverLogicalNegZero(Mode))
     KnownFPClasses |= fcNegZero;
 
-  if (NegativeScale)
+  if (IsNegative)
     KnownFPClasses = llvm::fneg(KnownFPClasses);
 
   // A scale that cannot grow keeps |result| <= |source|.
@@ -401,7 +401,7 @@ KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc,
       (fcZero | fcSubnormal))
     return Known;
 
-  Known.propagateExpRange(KnownSrc, 1, 1, /*NegativeScale=*/false, Sem, Mode);
+  Known.propagateExpRange(KnownSrc, 1, 1, /*IsNegative=*/false, Sem, Mode);
   return Known;
 }
 
@@ -882,7 +882,7 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
 
   Known.propagateExpRange(KnownSrc, SaturatedIntExp(ConstantRangeExpMin),
                           SaturatedIntExp(ConstantRangeExpMax),
-                          /*NegativeScale=*/false, Flt, Mode);
+                          /*IsNegative=*/false, Flt, Mode);
   return Known;
 }
 
