@@ -510,10 +510,11 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   }
 
   cir::CoroEndOp::create(
-      cgm.getBuilder(), openCurlyLoc,
+      builder, openCurlyLoc,
       builder.getNullPtr(builder.getVoidPtrTy(), openCurlyLoc),
       builder.getBool(false, openCurlyLoc),
-      cir::TokenNoneOp::create(cgm.getBuilder(), openCurlyLoc));
+      cir::TokenNoneOp::create(builder, openCurlyLoc));
+
   if (auto *ret = cast_or_null<ReturnStmt>(s.getReturnStmt())) {
     // Since we already emitted the return value above, so we shouldn't
     // emit it again here.
