@@ -51230,8 +51230,15 @@ combineIntDivRemViaExactFPDiv(SDNode *N, MVT FPSclVT, bool IsSigned, bool IsRem,
     Q = IsSigned ? DAG.getSExtOrTrunc(Q, DL, VT)
                  : DAG.getZExtOrTrunc(Q, DL, VT);
   } else {
+    SDValue FPQuot = DAG.getNode(ISD::FDIV, DL, FPVT, X, Y);
     unsigned FromFP = IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
-    Q = DAG.getNode(FromFP, DL, VT, DAG.getNode(ISD::FDIV, DL, FPVT, X, Y));
+    if (FPSclVT == MVT::f16 && VT.getScalarSizeInBits() == 8) {
+      EVT I16VT = VT.changeVectorElementType(*DAG.getContext(), MVT::i16);
+      SDValue Q16 = DAG.getNode(FromFP, DL, I16VT, FPQuot);
+      Q = DAG.getNode(ISD::TRUNCATE, DL, VT, Q16);
+    } else {
+      Q = DAG.getNode(FromFP, DL, VT, FPQuot);
+    }
   }
   if (!IsRem)
     return Q;
@@ -51394,7 +51401,11 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
 
   // f32 recovers the quotient exactly when both operands fit in 24 bits
   MVT FPSclVT = MVT::f64;
-  if (UseExactFPDiv && (EltBits <= 16 || BothFitFP(APFloat::IEEEsingle())))
+  if (UseExactFPDiv && EltBits == 8 && Subtarget.hasFastFP16Div() &&
+      BothFitFP(APFloat::IEEEhalf()))
+    FPSclVT = MVT::f16;
+  else if (UseExactFPDiv &&
+           (EltBits <= 16 || BothFitFP(APFloat::IEEEsingle())))
     FPSclVT = MVT::f32;
 
   bool IsStrict = DAG.getMachineFunction().getFunction().hasFnAttribute(
