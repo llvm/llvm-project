@@ -129,6 +129,9 @@ const llvm::fltSemantics &llvm::getFltSemanticForLLT(LLT Ty) {
       return APFloat::IEEEsingle();
     case 64:
       return APFloat::IEEEdouble();
+    case 80:
+      // Not an IEEE format, but the only 80-bit float there is.
+      return APFloat::x87DoubleExtended();
     case 128:
       return APFloat::IEEEquad();
     }
