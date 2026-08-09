@@ -117,8 +117,9 @@ getRegionsFromAggrVal(nonloc::LazyCompoundVal LCV, CheckerContext &C) {
   StoreManager &StoreMgr = C.getState()->getStateManager().getStoreManager();
 
   // FIXME: getAsRecordDecl() also includes unions which need different
-  // handling. Reading a binding for every member of a union may produce regions
-  // that are not actually live.
+  // handling while also returning null on array aggregate types. Reading a
+  // binding for every member of a union may produce regions that are not
+  // actually live.
   if (const RecordDecl *RD = T->getAsRecordDecl()) {
     RD = RD->getDefinition();
     if (!RD)
