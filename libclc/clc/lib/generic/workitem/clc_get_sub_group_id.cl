@@ -8,6 +8,7 @@
 
 #include "clc/workitem/clc_get_local_linear_id.h"
 #include "clc/workitem/clc_get_max_sub_group_size.h"
+#include "clc/workitem/clc_get_sub_group_id.h"
 
 _CLC_OVERLOAD _CLC_DEF uint __clc_get_sub_group_id(void) {
   return __clc_get_local_linear_id() / __clc_get_max_sub_group_size();

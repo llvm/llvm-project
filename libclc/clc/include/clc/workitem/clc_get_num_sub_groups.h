@@ -11,6 +11,6 @@
 
 #include "clc/internal/clc.h"
 
-_CLC_OVERLOAD _CLC_CONST _CLC_DECL uint __clc_get_num_sub_groups();
+_CLC_DECL _CLC_OVERLOAD _CLC_CONST uint __clc_get_num_sub_groups(void);
 
 #endif // __CLC_WORKITEM_CLC_GET_NUM_SUB_GROUPS_H__
