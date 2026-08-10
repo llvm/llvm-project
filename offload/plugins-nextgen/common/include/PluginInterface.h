@@ -17,7 +17,6 @@
 #include <list>
 #include <map>
 #include <shared_mutex>
-#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -859,10 +858,8 @@ public:
   }
 };
 
-/// A plugin-side context grouping a set of devices. Plugins that need to hold
-/// native context state (e.g. Level Zero's ze_context_handle_t) override this
-/// through GenericPluginTy::createPluginContext. The base class is a plain
-/// device set used by plugins that do not need native context state.
+/// A plugin-side context grouping a set of devices. Every plugin provides a
+/// concrete subclass through GenericPluginTy::createPluginContext.
 struct PluginContextTy {
   PluginContextTy(GenericPluginTy &Plugin,
                   llvm::ArrayRef<GenericDeviceTy *> Devices)
@@ -883,9 +880,10 @@ struct PluginContextTy {
   llvm::ArrayRef<GenericDeviceTy *> getDevices() const { return Devices; }
   GenericPluginTy &getPlugin() const { return Plugin; }
 
-  /// Initialize a __tgt_async_info structure.
-  Error initAsyncInfo(GenericDeviceTy& Device, __tgt_async_info **AsyncInfoPtr);
-  virtual Error initAsyncInfoImpl(GenericDeviceTy& Device, AsyncInfoWrapperTy &AsyncInfoWrapper);
+  /// Initialize a __tgt_async_info structure on \p Device.
+  Error initAsyncInfo(GenericDeviceTy &Device, __tgt_async_info **AsyncInfoPtr);
+  virtual Error initAsyncInfoImpl(GenericDeviceTy &Device,
+                                  AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
 protected:
   GenericPluginTy &Plugin;
@@ -1119,10 +1117,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                      KernelArgsTy &KernelArgs,
                      KernelExtraArgsTy *KernelExtraArgs,
                      __tgt_async_info *AsyncInfo);
-
-  /// Initialize a __tgt_async_info structure.
-  Error initAsyncInfo(__tgt_async_info **AsyncInfoPtr);
-  virtual Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
   /// Enqueue a host call to AsyncInfo
   Error enqueueHostCall(void (*Callback)(void *), void *UserData,
@@ -1630,14 +1624,10 @@ struct GenericPluginTy {
                          "async_barrier not supported");
   }
 
-  /// Create a plugin-side context grouping the given devices. The default
-  /// implementation returns a plain PluginContextTy that only tracks the
-  /// device set. Plugins that own native context state (e.g. Level Zero)
-  /// override this to instantiate a plugin-specific subclass.
+  /// Create a plugin-side context grouping the given devices. Each plugin
+  /// returns its own PluginContextTy subclass.
   virtual Expected<std::unique_ptr<PluginContextTy>>
-  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) {
-    return std::make_unique<PluginContextTy>(*this, Devices);
-  }
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) = 0;
 
 protected:
   /// Indicate whether a device id is valid.

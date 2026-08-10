@@ -331,11 +331,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
-  /// This plugin does not support interoperability
-  Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    return Plugin::success();
-  }
-
   Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
                             AsyncInfoWrapperTy &AsyncInfo) override {
     Callback(UserData);
@@ -487,6 +482,16 @@ public:
   }
 };
 
+/// PluginContextTy for the host plugin. No per-context state.
+struct GenELF64PluginContextTy final : public PluginContextTy {
+  using PluginContextTy::PluginContextTy;
+
+  Error initAsyncInfoImpl(GenericDeviceTy &,
+                          AsyncInfoWrapperTy &) override {
+    return Plugin::success();
+  }
+};
+
 /// Class implementing the plugin functionalities for GenELF64.
 struct GenELF64PluginTy final : public GenericPluginTy {
   /// Create the GenELF64 plugin.
@@ -510,6 +515,11 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override {
     return new GenELF64DeviceTy(Plugin, DeviceId, NumDevices);
+  }
+
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override {
+    return std::make_unique<GenELF64PluginContextTy>(*this, Devices);
   }
 
   /// Creates a generic global handler.

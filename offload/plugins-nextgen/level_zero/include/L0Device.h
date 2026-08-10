@@ -184,7 +184,6 @@ public:
   Error initImpl(GenericPluginTy &Plugin) override;
   Error deinitImpl() override;
   ze_device_handle_t getZeDevice() const { return zeDevice; }
-  Error initAsyncInfoImpl(AsyncInfoWrapperTy &) override;
 
   bool supportsCooperativeKernels() const {
     return QueueConfig.SupportsCooperativeKernels;

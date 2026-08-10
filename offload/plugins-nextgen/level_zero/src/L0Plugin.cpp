@@ -17,7 +17,6 @@
 #include "L0Kernel.h"
 #include "L0Plugin.h"
 #include "L0Trace.h"
-#include "PluginInterface.h"
 
 #include "llvm/Object/OffloadBinary.h"
 
@@ -255,8 +254,9 @@ Error LevelZeroPluginTy::asyncBarrierImpl(omp_interop_val_t *Interop) {
   return Plugin::success();
 }
 
-Error LevelZeroPluginContextTy::initAsyncInfoImpl(GenericDeviceTy& Device, AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  auto& L0Device = static_cast<L0DeviceTy&>(Device);
+Error LevelZeroPluginContextTy::initAsyncInfoImpl(
+    GenericDeviceTy &Device, AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  auto &L0Device = static_cast<L0DeviceTy &>(Device);
   auto QueueOrErr = L0Device.getOrCreateQueue(AsyncInfoWrapper, this);
   return QueueOrErr ? Plugin::success() : QueueOrErr.takeError();
 }

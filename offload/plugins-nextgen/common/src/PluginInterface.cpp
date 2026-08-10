@@ -1218,7 +1218,8 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
   return Err;
 }
 
-Error PluginContextTy::initAsyncInfo(GenericDeviceTy& Device, __tgt_async_info **AsyncInfoPtr) {
+Error PluginContextTy::initAsyncInfo(GenericDeviceTy &Device,
+                                     __tgt_async_info **AsyncInfoPtr) {
   assert(AsyncInfoPtr && "Invalid async info");
 
   *AsyncInfoPtr = new __tgt_async_info();
@@ -1228,11 +1229,6 @@ Error PluginContextTy::initAsyncInfo(GenericDeviceTy& Device, __tgt_async_info *
   auto Err = initAsyncInfoImpl(Device, AsyncInfoWrapper);
   AsyncInfoWrapper.finalize(Err);
   return Err;
-}
-
-// Default implementation with fallback to device
-Error PluginContextTy::initAsyncInfoImpl(GenericDeviceTy& Device, AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  return Device.initAsyncInfoImpl(AsyncInfoWrapper);
 }
 
 Error GenericDeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,

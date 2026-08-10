@@ -407,10 +407,6 @@ Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
   return Plugin::success();
 }
 
-Error L0DeviceTy::initAsyncInfoImpl(AsyncInfoWrapperTy &) {
-  return Plugin::success();
-}
-
 const char *L0DeviceTy::getArchCStr() const {
   switch (getDeviceArch()) {
   case DeviceArchTy::DeviceArch_Gen:
