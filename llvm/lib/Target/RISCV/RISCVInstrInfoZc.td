@@ -17,6 +17,7 @@
 
 def uimm2_optional : OptionalUImmLeafOp<2>;
 
+def uimm2_lsb0 : RISCVUImmLsbZeroOp<2, 1>;
 def uimm2_lsb0_optional : OptionalUImmLsbZeroOp<2, 1>;
 
 def uimm8ge32 : RISCVOp {
@@ -309,21 +310,21 @@ def : CompressPat<(XORI GPRC:$rs1, GPRC:$rs1, -1),
 }
 
 let Predicates = [HasStdExtZcb] in{
-def : CompressPat<(LBU GPRC:$rd, BasePtrC:$rs1, uimm2_optional:$imm),
-                  (C_LBU GPRC:$rd, BasePtrC:$rs1, uimm2_optional:$imm)>;
-def : CompressPat<(LHU GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0_optional:$imm),
-                  (C_LHU GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0_optional:$imm)>;
-def : CompressPat<(LH GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0_optional:$imm),
-                  (C_LH GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0_optional:$imm)>;
-def : CompressPat<(SB GPRC:$rs2, BasePtrC:$rs1, uimm2_optional:$imm),
-                  (C_SB GPRC:$rs2, BasePtrC:$rs1, uimm2_optional:$imm)>;
-def : CompressPat<(SH GPRC:$rs2, BasePtrC:$rs1, uimm2_lsb0_optional:$imm),
-                  (C_SH GPRC:$rs2, BasePtrC:$rs1, uimm2_lsb0_optional:$imm)>;
+def : CompressPat<(LBU GPRC:$rd, BasePtrC:$rs1, uimm2:$imm),
+                  (C_LBU GPRC:$rd, BasePtrC:$rs1, uimm2:$imm)>;
+def : CompressPat<(LHU GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_LHU GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(LH GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_LH GPRC:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(SB GPRC:$rs2, BasePtrC:$rs1, uimm2:$imm),
+                  (C_SB GPRC:$rs2, BasePtrC:$rs1, uimm2:$imm)>;
+def : CompressPat<(SH GPRC:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_SH GPRC:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
 
 let isCompressOnly = true in {
-def : CompressPat<(LH_INX GPRF16C:$rd, BasePtrC:$rs1, uimm2_lsb0_optional:$imm),
-                  (C_LH_INX GPRF16C:$rd, BasePtrC:$rs1, uimm2_lsb0_optional:$imm)>;
-def : CompressPat<(SH_INX GPRF16C:$rs2, BasePtrC:$rs1, uimm2_lsb0_optional:$imm),
-                  (C_SH_INX GPRF16C:$rs2, BasePtrC:$rs1, uimm2_lsb0_optional:$imm)>;
+def : CompressPat<(LH_INX GPRF16C:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_LH_INX GPRF16C:$rd, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
+def : CompressPat<(SH_INX GPRF16C:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm),
+                  (C_SH_INX GPRF16C:$rs2, BasePtrC:$rs1, uimm2_lsb0:$imm)>;
 }
 }// Predicates = [HasStdExtZcb]
