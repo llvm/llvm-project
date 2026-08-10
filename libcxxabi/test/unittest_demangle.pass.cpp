@@ -81,6 +81,13 @@ void testPODSmallVector() {
       (void)x;
     }
   }
+
+  {
+    itanium_demangle::PODSmallVector<int, 0> PSV;
+    PSV.push_back(10);
+    assert(PSV.size() == 1);
+    assert(PSV.capacity() >= PSV.size());
+  }
 }
 
 int main(int, char**) {

@@ -123,7 +123,7 @@ public:
   // NOLINTNEXTLINE(readability-identifier-naming)
   void push_back(const T &Elem) {
     if (Last == Cap)
-      reserve(size() * 2);
+      reserve(std::max<size_t>(1, size() * 2));
     *Last++ = Elem;
   }
 
@@ -143,6 +143,7 @@ public:
 
   bool empty() const { return First == Last; }
   size_t size() const { return static_cast<size_t>(Last - First); }
+  size_t capacity() const { return static_cast<size_t>(Cap - First); }
   T &back() {
     DEMANGLE_ASSERT(Last != First, "Calling back() on empty vector!");
     return *(Last - 1);
