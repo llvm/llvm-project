@@ -18,7 +18,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-Listener::Listener(llvm::StringRef name) : m_name(name.str()) {
+Listener::Listener(std::string name) : m_name(std::move(name)) {
   LLDB_LOGF(GetLog(LLDBLog::Object), "%p Listener::Listener('%s')",
             static_cast<void *>(this), m_name.c_str());
 }
@@ -371,5 +371,5 @@ bool Listener::StopListeningForEventSpec(const BroadcasterManagerSP &manager_sp,
 }
 
 ListenerSP Listener::MakeListener(llvm::StringRef name) {
-  return ListenerSP(new Listener(name));
+  return ListenerSP(new Listener(name.str()));
 }

@@ -44,7 +44,7 @@ public:
   // Listeners have to be constructed into shared pointers - at least if you
   // want them to listen to Broadcasters,
 protected:
-  Listener(llvm::StringRef name);
+  Listener(std::string name);
 
 public:
   static lldb::ListenerSP MakeListener(llvm::StringRef name);
