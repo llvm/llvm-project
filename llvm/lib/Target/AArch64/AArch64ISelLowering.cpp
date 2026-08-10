@@ -16993,8 +16993,19 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
-  bool OverrideNEON = !Subtarget->isNeonAvailable() ||
-                      cast<BuildVectorSDNode>(Op)->isArithmeticSequence();
+  bool OverrideNEON = false;
+  if (!Subtarget->isNeonAvailable())
+    OverrideNEON = true;
+  else if (DAG.getSubtarget<AArch64Subtarget>()
+               .isSVEorStreamingSVEAvailable()) {
+    if (auto Seq = cast<BuildVectorSDNode>(Op)->isArithmeticSequence()) {
+      // Only attempt to use the SVE index instruction if both operands are
+      // immediate, otherwise it's better to load a literal.
+      if (Seq->first.sge(-16) && Seq->first.slt(16) && Seq->second.sge(-16) &&
+          Seq->second.slt(16))
+        OverrideNEON = true;
+    }
+  }
   if (useSVEForFixedLengthVectorVT(VT, OverrideNEON))
     return LowerFixedLengthBuildVectorToSVE(Op, DAG);
 
