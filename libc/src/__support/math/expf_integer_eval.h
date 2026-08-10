@@ -30,10 +30,6 @@ namespace integer_only {
 
 // Round-nearest, no except implementation of expf using integer-only
 // arithmetic.
-// Failing exhaustive tests:
-// Negative:
-// Test failed for 90853 inputs in range: 3267362816 to 3268411392 [0xc2c00000,
-// 0xc2d00000), [-0x1.8p+6, -0x1.ap+6)
 LIBC_INLINE float expf(float x) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
@@ -128,6 +124,15 @@ LIBC_INLINE float expf(float x) {
     e_y_unbiased = (FPBits::EXP_BIAS << 23) + static_cast<uint32_t>(e_y >> 31);
   }
 
+  uint32_t k = static_cast<uint32_t>(e_y >> 54);
+  int d = static_cast<int>(k) - FPBits::EXP_BIAS;
+
+  // d >= 24 --> k >= 151
+  // --> guaranteed to below 2^-150
+  if (LIBC_UNLIKELY(is_neg && d >= 24)) { // underflow
+    return 0.0f;
+  }
+
   // LSB(l2y_r_frac) = LSB(l2y_r) * 2^-10 = 2^-64
   Frac64 l2y_r_frac(l2y_r << 10);
 
@@ -137,13 +142,6 @@ LIBC_INLINE float expf(float x) {
                               EXPF_COEFFS[2], EXPF_COEFFS[3], EXPF_COEFFS[4],
                               EXPF_COEFFS[5], EXPF_COEFFS[6], EXPF_COEFFS[7],
                               EXPF_COEFFS[8], EXPF_COEFFS[9], EXPF_COEFFS[10]);
-
-  uint32_t k = static_cast<uint32_t>(e_y >> 54);
-  int d = static_cast<int>(k) - FPBits::EXP_BIAS;
-
-  if (LIBC_UNLIKELY(is_neg && d >= 23)) { // underflow
-    return 0.0f;
-  }
 
   // Dropping some last bits (won't need them as we're casting into 32-bit float
   // anyway)
