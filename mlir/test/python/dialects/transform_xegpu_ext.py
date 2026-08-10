@@ -195,6 +195,46 @@ def insertPrefetchNbPrefetchParam():
 
 
 @run
+def insertPrefetchTileShape():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.load_nd"),
+    )
+    with InsertionPoint(sequence.body):
+        xegpu.insert_prefetch(
+            sequence.bodyTarget, nb_prefetch=2, prefetch_tile_shape=[64, 32]
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: insertPrefetchTileShape
+    # CHECK: transform.xegpu.insert_prefetch
+    # CHECK-SAME: nb_prefetch = 2
+    # CHECK-SAME: prefetch_tile_shape = [64, 32]
+
+
+@run
+def insertPrefetchTileShapeParam():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.load_nd"),
+    )
+    with InsertionPoint(sequence.body):
+        int32_t = IntegerType.get_signless(32)
+        param_int32_t = transform.ParamType.get(int32_t)
+        dim_param = transform.ParamConstantOp(
+            param_int32_t,
+            IntegerAttr.get(int32_t, 64),
+        )
+        xegpu.insert_prefetch(sequence.bodyTarget, prefetch_tile_shape=[dim_param, 32])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: insertPrefetchTileShapeParam
+    # CHECK: %[[PARAM_OP:.*]] = transform.param.constant 64
+    # CHECK: transform.xegpu.insert_prefetch
+    # CHECK-SAME: prefetch_tile_shape = [%[[PARAM_OP]], 32]
+
+
+@run
 def ConvertLayoutMinimal():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,

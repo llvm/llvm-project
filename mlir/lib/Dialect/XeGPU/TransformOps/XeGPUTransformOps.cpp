@@ -406,10 +406,44 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
     return emitSilenceableFailure(getLoc()) << "Could not find descriptor op.";
   auto descOp = *maybeDescOp;
 
+  // Optionally override the prefetched tile shape. By default the shape of the
+  // load op's descriptor is used.
+  xegpu::TensorDescType prefetchDescType = descOp.getType();
+  if (!getMixedPrefetchTileShape().empty()) {
+    SmallVector<int32_t> prefetchTileShape;
+    auto status = convertMixedValuesToInt(state, (*this), prefetchTileShape,
+                                          getMixedPrefetchTileShape());
+    if (!status.succeeded())
+      return status;
+
+    if (static_cast<int64_t>(prefetchTileShape.size()) !=
+        prefetchDescType.getRank()) {
+      auto diag = emitSilenceableFailure(getLoc())
+                  << "prefetch_tile_shape rank (" << prefetchTileShape.size()
+                  << ") must match the load op descriptor rank ("
+                  << prefetchDescType.getRank() << ")";
+      diag.attachNote(loadOp.getLoc()) << "load op";
+      return diag;
+    }
+    if (llvm::any_of(prefetchTileShape, [](int32_t dim) { return dim <= 0; }))
+      return emitSilenceableFailure(getLoc())
+             << "prefetch_tile_shape values must be positive integers.";
+
+    // Drop the layout as it is not guaranteed to be valid for the new shape.
+    // A layout can be attached to the emitted prefetch ops afterwards.
+    prefetchDescType = xegpu::TensorDescType::get(
+        getContext(),
+        SmallVector<int64_t>(prefetchTileShape.begin(),
+                             prefetchTileShape.end()),
+        prefetchDescType.getElementType(), prefetchDescType.getEncoding(),
+        /*layout=*/nullptr);
+  }
+
   // Clone desc op outside the loop.
   rewriter.setInsertionPoint(forOp);
   auto newDescOp =
       cast<xegpu::CreateNdDescOp>(rewriter.clone(*descOp.getOperation()));
+  newDescOp.getResult().setType(prefetchDescType);
 
   // Clone reduction loop to emit initial prefetches.
   // Compute upper bound of the init loop: start + nbPrefetch * step.
@@ -474,6 +508,7 @@ void transform::InsertPrefetchOp::getEffects(
     ::llvm::SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   onlyReadsHandle(getTargetMutable(), effects);
   onlyReadsHandle(getDynamicNbPrefetchMutable(), effects);
+  onlyReadsHandle(getPrefetchTileShapeMutable(), effects);
   producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
 }

@@ -171,6 +171,7 @@ class InsertPrefetchOp(InsertPrefetchOp):
         target: Union[Operation, Value],
         *,
         nb_prefetch: Optional[MixedInt] = 1,
+        prefetch_tile_shape: Optional[MixedValues] = None,
         loc=None,
         ip=None,
     ):
@@ -183,11 +184,20 @@ class InsertPrefetchOp(InsertPrefetchOp):
         elif isinstance(nb_prefetch, (Operation, Value, OpView)):
             dynamic_nb_prefetch = nb_prefetch
 
+        prefetch_tile_shape = [] if prefetch_tile_shape is None else prefetch_tile_shape
+        (
+            dynamic_prefetch_tile_shape,
+            static_prefetch_tile_shape,
+            _,
+        ) = _dispatch_dynamic_index_list(prefetch_tile_shape)
+
         super().__init__(
             transform.AnyOpType.get(),
             target,
+            prefetch_tile_shape=dynamic_prefetch_tile_shape,
             dynamic_nb_prefetch=dynamic_nb_prefetch,
             static_nb_prefetch=static_nb_prefetch,
+            static_prefetch_tile_shape=static_prefetch_tile_shape,
             loc=loc,
             ip=ip,
         )
@@ -197,10 +207,17 @@ def insert_prefetch(
     target: Union[Operation, Value],
     *,
     nb_prefetch: Optional[MixedInt] = 1,
+    prefetch_tile_shape: Optional[MixedValues] = None,
     loc=None,
     ip=None,
 ) -> OpResult:
-    return InsertPrefetchOp(target, nb_prefetch=nb_prefetch, loc=loc, ip=ip).result
+    return InsertPrefetchOp(
+        target,
+        nb_prefetch=nb_prefetch,
+        prefetch_tile_shape=prefetch_tile_shape,
+        loc=loc,
+        ip=ip,
+    ).result
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)

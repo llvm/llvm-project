@@ -146,6 +146,7 @@ def SetGPULaunchThreadsOp
 }
 
 def InsertPrefetchOp : Op<Transform_Dialect, "xegpu.insert_prefetch", [
+  AttrSizedOperandSegments,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
   TransformOpInterface
 ]> {
@@ -156,11 +157,20 @@ def InsertPrefetchOp : Op<Transform_Dialect, "xegpu.insert_prefetch", [
     The load op must reside within the `scf.for` loop. Number of prefetch steps
     is set by the `nb_prefetch` argument (default value is 1). Returns a handle
     to the created `xegpu.create_nd_desc` op.
+
+    By default the prefetched tile shape is taken from the load op's tensor
+    descriptor. The optional `prefetch_tile_shape` argument overrides it.
+    The prefetch offsets are always derived from the load op's offsets, so
+    the prefetches still start at the loaded tile's origin and advance by
+     the loop step. `prefetch_tile_shape` must have the same rank as
+    the load op's tensor descriptor and all its values must be positive.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                    Optional<TransformAnyParamTypeOrAnyHandle>:$dynamic_nb_prefetch,
-                   DefaultValuedOptionalAttr<I64Attr, "1">:$static_nb_prefetch
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$prefetch_tile_shape,
+                   DefaultValuedOptionalAttr<I64Attr, "1">:$static_nb_prefetch,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_prefetch_tile_shape
                    );
 
   let results = (outs TransformHandleTypeInterface:$desc_op);
@@ -168,6 +178,8 @@ def InsertPrefetchOp : Op<Transform_Dialect, "xegpu.insert_prefetch", [
   let assemblyFormat = [{
     $target
     `nb_prefetch` `=` ($dynamic_nb_prefetch^):($static_nb_prefetch)?
+    (`prefetch_tile_shape` `=` custom<DynamicIndexList>($prefetch_tile_shape,
+                                                        $static_prefetch_tile_shape)^)?
     attr-dict `:` functional-type(operands, results)
   }];
 
@@ -183,6 +195,12 @@ def InsertPrefetchOp : Op<Transform_Dialect, "xegpu.insert_prefetch", [
         return OpFoldResult(getDynamicNbPrefetch());
       return OpFoldResult(IntegerAttr::get(
                           IntegerType::get(cxt, 64), getStaticNbPrefetch()));
+    }
+
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedPrefetchTileShape() {
+      Builder b(getContext());
+      return getMixedValues(getStaticPrefetchTileShape(),
+                            getPrefetchTileShape(), b);
     }
   }];
 }

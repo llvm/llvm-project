@@ -433,6 +433,151 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Prefetch tile shape overrides the load op tile shape, but prefetch offsets
+// still follow the load op offsets.
+// CHECK-LABEL: @insert_prefetch_tile_shape
+func.func @insert_prefetch_tile_shape(%arg0: memref<4096x4096xf16>, %arg1: memref<4096x4096xf16>, %arg2: memref<4096x4096xf16>) {
+  // CHECK: %[[C64:.+]] = arith.constant 64 : index
+  // CHECK: %[[C32:.+]] = arith.constant 32 : index
+  %c32 = arith.constant 32 : index
+  %c4096 = arith.constant 4096 : index
+  // CHECK: %[[C0:.+]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  %0 = xegpu.create_nd_tdesc %arg2 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x256xf16>
+  %1 = xegpu.load_nd %0[%c0, %c0]  : !xegpu.tensor_desc<256x256xf16> -> vector<256x256xf16>
+  // CHECK: xegpu.create_nd_tdesc %arg0
+  // CHECK: xegpu.create_nd_tdesc %arg1
+  // CHECK: %[[V0:.+]] = xegpu.create_nd_tdesc %arg0
+  // CHECK-SAME: !xegpu.tensor_desc<64x32xf16
+  // CHECK: xegpu.prefetch_nd %[[V0]][%[[C0]], %[[C0]]]
+  // CHECK: xegpu.prefetch_nd %[[V0]][%[[C0]], %[[C32]]]
+  %3 = xegpu.create_nd_tdesc %arg0 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x32xf16>
+  %4 = xegpu.create_nd_tdesc %arg1 : memref<4096x4096xf16> -> !xegpu.tensor_desc<32x256xf16>
+  // CHECK: scf.for %[[ARG3:.+]] = %[[C0]]
+  %2 = scf.for %arg3 = %c0 to %c4096 step %c32 iter_args(%arg4 = %1) -> (vector<256x256xf16>) {
+    // CHECK: %[[ADD:.+]] = arith.addi %[[ARG3]], %[[C64]]
+    // CHECK: xegpu.prefetch_nd %[[V0]][%[[C0]], %[[ADD]]]
+    // CHECK: xegpu.load_nd {{.*}} !xegpu.tensor_desc<256x32xf16> -> vector<256x32xf16>
+    %5 = xegpu.load_nd %3[%c0, %arg3] : !xegpu.tensor_desc<256x32xf16> -> vector<256x32xf16>
+    %6 = xegpu.load_nd %4[%arg3, %c0] : !xegpu.tensor_desc<32x256xf16> -> vector<32x256xf16>
+    %7 = xegpu.dpas %5, %6, %arg4 : vector<256x32xf16>, vector<32x256xf16>, vector<256x256xf16> -> vector<256x256xf16>
+    scf.yield %7 : vector<256x256xf16>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["xegpu.dpas"]} in %func : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_operand %0[0] : (!transform.any_op) -> !transform.any_value
+    %2 = transform.xegpu.get_load_op %1 : (!transform.any_value) -> !transform.any_op
+    // CHECK: transform.xegpu.insert_prefetch %{{.*}} nb_prefetch = 2 prefetch_tile_shape = [64, 32]
+    %3 = transform.xegpu.insert_prefetch %2 nb_prefetch = 2 prefetch_tile_shape = [64, 32] : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.canonicalization
+    } : !transform.any_op
+
+    transform.yield
+  }
+}
+
+// -----
+
+// Prefetch tile shape can be given as transform params.
+// CHECK-LABEL: @insert_prefetch_tile_shape_param
+func.func @insert_prefetch_tile_shape_param(%arg0: memref<4096x4096xf16>, %arg1: memref<4096x4096xf16>, %arg2: memref<4096x4096xf16>) {
+  // CHECK: %[[C32:.+]] = arith.constant 32 : index
+  %c32 = arith.constant 32 : index
+  %c4096 = arith.constant 4096 : index
+  // CHECK: %[[C0:.+]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  %0 = xegpu.create_nd_tdesc %arg2 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x256xf16>
+  %1 = xegpu.load_nd %0[%c0, %c0]  : !xegpu.tensor_desc<256x256xf16> -> vector<256x256xf16>
+  // CHECK: xegpu.create_nd_tdesc %arg0
+  // CHECK: xegpu.create_nd_tdesc %arg1
+  // CHECK: %[[V0:.+]] = xegpu.create_nd_tdesc %arg1
+  // CHECK-SAME: !xegpu.tensor_desc<16x128xf16
+  // CHECK: xegpu.prefetch_nd %[[V0]][%[[C0]], %[[C0]]]
+  %3 = xegpu.create_nd_tdesc %arg0 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x32xf16>
+  %4 = xegpu.create_nd_tdesc %arg1 : memref<4096x4096xf16> -> !xegpu.tensor_desc<32x256xf16>
+  // CHECK: scf.for %[[ARG3:.+]] = %[[C0]]
+  %2 = scf.for %arg3 = %c0 to %c4096 step %c32 iter_args(%arg4 = %1) -> (vector<256x256xf16>) {
+    // CHECK: %[[ADD:.+]] = arith.addi %[[ARG3]], %[[C32]]
+    // CHECK: xegpu.prefetch_nd %[[V0]][%[[ADD]], %[[C0]]]
+    %5 = xegpu.load_nd %3[%c0, %arg3] : !xegpu.tensor_desc<256x32xf16> -> vector<256x32xf16>
+    %6 = xegpu.load_nd %4[%arg3, %c0] : !xegpu.tensor_desc<32x256xf16> -> vector<32x256xf16>
+    %7 = xegpu.dpas %5, %6, %arg4 : vector<256x32xf16>, vector<32x256xf16>, vector<256x256xf16> -> vector<256x256xf16>
+    scf.yield %7 : vector<256x256xf16>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["xegpu.dpas"]} in %func : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_operand %0[1] : (!transform.any_op) -> !transform.any_value
+    %2 = transform.xegpu.get_load_op %1 : (!transform.any_value) -> !transform.any_op
+    %k = transform.param.constant 16 : i64 -> !transform.param<i64>
+    // CHECK: transform.xegpu.insert_prefetch %{{.*}} nb_prefetch = 1 prefetch_tile_shape = [%{{.*}}, 128]
+    %3 = transform.xegpu.insert_prefetch %2 nb_prefetch = 1 prefetch_tile_shape = [%k, 128] : (!transform.any_op, !transform.param<i64>) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.canonicalization
+    } : !transform.any_op
+
+    transform.yield
+  }
+}
+
+// -----
+
+// The descriptor layout is dropped when the prefetch tile shape is overridden,
+// since it is not guaranteed to be valid for the new shape.
+// CHECK-LABEL: @insert_prefetch_tile_shape_drops_layout
+func.func @insert_prefetch_tile_shape_drops_layout(%arg0: memref<4096x4096xf16>, %arg1: memref<4096x4096xf16>, %arg2: memref<4096x4096xf16>) {
+  %c32 = arith.constant 32 : index
+  %c4096 = arith.constant 4096 : index
+  // CHECK: %[[C0:.+]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  %0 = xegpu.create_nd_tdesc %arg2 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x256xf16>
+  %1 = xegpu.load_nd %0[%c0, %c0]  : !xegpu.tensor_desc<256x256xf16> -> vector<256x256xf16>
+  // CHECK: xegpu.create_nd_tdesc %arg0
+  // CHECK-SAME: #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 8]>
+  // CHECK: xegpu.create_nd_tdesc %arg1
+  // CHECK: %[[V0:.+]] = xegpu.create_nd_tdesc %arg0
+  // CHECK-SAME: !xegpu.tensor_desc<64x32xf16>
+  // CHECK: xegpu.prefetch_nd %[[V0]][%[[C0]], %[[C0]]]
+  // CHECK-SAME: !xegpu.tensor_desc<64x32xf16>
+  %3 = xegpu.create_nd_tdesc %arg0 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x32xf16, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 8]>>
+  %4 = xegpu.create_nd_tdesc %arg1 : memref<4096x4096xf16> -> !xegpu.tensor_desc<32x256xf16>
+  %2 = scf.for %arg3 = %c0 to %c4096 step %c32 iter_args(%arg4 = %1) -> (vector<256x256xf16>) {
+    %5 = xegpu.load_nd %3[%c0, %arg3] : !xegpu.tensor_desc<256x32xf16, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 8]>> -> vector<256x32xf16>
+    %6 = xegpu.load_nd %4[%arg3, %c0] : !xegpu.tensor_desc<32x256xf16> -> vector<32x256xf16>
+    %7 = xegpu.dpas %5, %6, %arg4 : vector<256x32xf16>, vector<32x256xf16>, vector<256x256xf16> -> vector<256x256xf16>
+    scf.yield %7 : vector<256x256xf16>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["xegpu.dpas"]} in %func : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_operand %0[0] : (!transform.any_op) -> !transform.any_value
+    %2 = transform.xegpu.get_load_op %1 : (!transform.any_value) -> !transform.any_op
+    // CHECK: transform.xegpu.insert_prefetch %{{.*}}
+    %3 = transform.xegpu.insert_prefetch %2 nb_prefetch = 1 prefetch_tile_shape = [64, 32] : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.canonicalization
+    } : !transform.any_op
+
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: @convert_layout_a
 func.func @convert_layout_a(%arg0: memref<4096x4096xf16>, %arg1: memref<4096x4096xf16>, %arg2: memref<4096x4096xf16>) {
   %c0 = arith.constant 0 : index
