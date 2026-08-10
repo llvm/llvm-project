@@ -136,7 +136,7 @@ llvm::prepareForDynamicDebugging(Module *M, StringRef PromotionSuffix) {
         // Remove the inner module reference.
         auto GVAndUnoptPair = VMap.find(&GV);
         assert(GVAndUnoptPair != VMap.end() && "Unmapped global?");
-        // Delete the external reference - VMap shold only contain mappings to
+        // Delete the external reference - VMap should only contain mappings to
         // those declarations now.
         assert(cast<GlobalValue>(GVAndUnoptPair->second)->isDeclaration() &&
                "expected only declarations in VMap now");
