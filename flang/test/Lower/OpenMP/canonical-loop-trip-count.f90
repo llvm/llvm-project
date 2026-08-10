@@ -117,3 +117,22 @@ end subroutine
 ! CHECK: %[[TRIP_COUNT:.*]] = arith.constant 100 : i64
 ! CHECK-NEXT: %[[CLI:.*]] = omp.new_cli
 ! CHECK-NEXT: omp.canonical_loop(%[[CLI]]) {{.*}} : i64 in range(%[[TRIP_COUNT]]) {
+
+subroutine constant_i64_default_kind_bounds()
+  integer(kind=8) :: i
+  !$omp unroll
+  do i = 1, 100
+  end do
+  !$omp end unroll
+end subroutine
+
+! CHECK-LABEL: func.func @_QPconstant_i64_default_kind_bounds()
+! CHECK-NOT: fir.convert
+! CHECK-NOT: arith.cmpi
+! CHECK-NOT: arith.select
+! CHECK-NOT: arith.subi
+! CHECK-NOT: arith.divui
+! CHECK-NOT: arith.addi
+! CHECK: %[[TRIP_COUNT:.*]] = arith.constant 100 : i64
+! CHECK-NEXT: %[[CLI:.*]] = omp.new_cli
+! CHECK-NEXT: omp.canonical_loop(%[[CLI]]) {{.*}} : i64 in range(%[[TRIP_COUNT]]) {

@@ -3182,9 +3182,21 @@ static void genCanonicalLoopNest(
       return firOpBuilder.createIntegerConstant(loc, loopVarType, 1);
     }();
 
-    loopLBVar = firOpBuilder.createConvert(loc, loopVarType, loopLBVar);
-    loopUBVar = firOpBuilder.createConvert(loc, loopVarType, loopUBVar);
-    loopStepVar = firOpBuilder.createConvert(loc, loopVarType, loopStepVar);
+    auto convertToLoopVarType = [&](mlir::Value value) -> mlir::Value {
+      if (value.getType() == loopVarType)
+        return value;
+      if (std::optional<llvm::APInt> constant = fir::getIntIfConstant(value)) {
+        unsigned width = mlir::cast<mlir::IntegerType>(loopVarType).getWidth();
+        llvm::APInt converted = constant->sextOrTrunc(width);
+        return mlir::arith::ConstantOp::create(
+            firOpBuilder, loc, loopVarType,
+            mlir::IntegerAttr::get(loopVarType, converted));
+      }
+      return firOpBuilder.createConvert(loc, loopVarType, value);
+    };
+    loopLBVar = convertToLoopVarType(loopLBVar);
+    loopUBVar = convertToLoopVarType(loopUBVar);
+    loopStepVar = convertToLoopVarType(loopStepVar);
     loopLBVars.push_back(loopLBVar);
     loopStepVars.push_back(loopStepVar);
 
