@@ -806,13 +806,6 @@ getFeatureDeltaFromDefault(const CIRGenModule &cgm, llvm::StringRef targetCPU,
   return delta;
 }
 
-/// The names getCPUAndFeaturesAttributes produces.  setNonAliasAttributes
-/// clears them before writing a definition's values, so the two have to agree.
-static constexpr llvm::StringLiteral targetCPUAttrName = "cir.target-cpu";
-static constexpr llvm::StringLiteral tuneCPUAttrName = "cir.tune-cpu";
-static constexpr llvm::StringLiteral targetFeaturesAttrName =
-    "cir.target-features";
-
 bool CIRGenModule::getCPUAndFeaturesAttributes(
     GlobalDecl gd, llvm::StringMap<std::string> &attrs,
     bool setTargetFeatures) {
@@ -892,11 +885,11 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
   }
 
   if (!targetCPU.empty()) {
-    attrs[targetCPUAttrName] = targetCPU.str();
+    attrs[cir::CIRDialect::getTargetCPUAttrName()] = targetCPU.str();
     addedAttr = true;
   }
   if (!tuneCPU.empty()) {
-    attrs[tuneCPUAttrName] = tuneCPU.str();
+    attrs[cir::CIRDialect::getTuneCPUAttrName()] = tuneCPU.str();
     addedAttr = true;
   }
   if (!features.empty() && setTargetFeatures) {
@@ -906,7 +899,8 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
       return getTarget().isReadOnlyFeature(f.substr(1));
     });
     llvm::sort(features);
-    attrs[targetFeaturesAttrName] = llvm::join(features, ",");
+    attrs[cir::CIRDialect::getTargetFeaturesAttrName()] =
+        llvm::join(features, ",");
     addedAttr = true;
   }
   // TODO(cir): add metadata for AArch64 Function Multi Versioning.
@@ -935,7 +929,9 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
           // its result supersedes anything an earlier one wrote.  Clear first:
           // setAttr alone would leave a name this call no longer produces.
           for (llvm::StringRef name :
-               {targetCPUAttrName, tuneCPUAttrName, targetFeaturesAttrName})
+               {cir::CIRDialect::getTargetCPUAttrName(),
+                cir::CIRDialect::getTuneCPUAttrName(),
+                cir::CIRDialect::getTargetFeaturesAttrName()})
             func->removeAttr(name);
           for (const auto &[key, val] : attrs)
             func->setAttr(key, builder.getStringAttr(val));
