@@ -8,12 +8,12 @@ define void @external(ptr %dest, ptr %dest2, ptr %src) {
 ; DEFAULT-NEXT:    [[INC7:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 7
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = load float, ptr [[INC7]], align 2
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[SRC]], align 4
+; DEFAULT-NEXT:    store <8 x float> [[TMP0]], ptr [[DEST]], align 4
 ; DEFAULT-NEXT:    [[D4:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 4
 ; DEFAULT-NEXT:    [[D5:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 5
 ; DEFAULT-NEXT:    [[D6:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 6
 ; DEFAULT-NEXT:    [[D7:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 7
-; DEFAULT-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[SRC]], align 4
-; DEFAULT-NEXT:    store <8 x float> [[TMP0]], ptr [[DEST]], align 4
+; DEFAULT-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; DEFAULT-NEXT:    store <4 x float> [[TMP1]], ptr [[DEST2]], align 4
 ; DEFAULT-NEXT:    store float [[TMP3]], ptr [[D7]], align 2
 ; DEFAULT-NEXT:    ret void
@@ -81,10 +81,10 @@ define void @external_schedule(ptr %dest, ptr %dest2, ptr %dest3, ptr %src, ptr 
 ; DEFAULT-NEXT:    [[D7:%.*]] = getelementptr inbounds float, ptr [[DEST2]], i64 7
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC1]], align 4
 ; DEFAULT-NEXT:    store i8 0, ptr [[DEST3]], align 4
-; DEFAULT-NEXT:    [[TMP7:%.*]] = load float, ptr [[INC7]], align 2
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr [[SRC]], align 4
-; DEFAULT-NEXT:    [[TMP5:%.*]] = load <4 x float>, ptr [[SRC]], align 4
+; DEFAULT-NEXT:    [[TMP7:%.*]] = load float, ptr [[INC7]], align 2
 ; DEFAULT-NEXT:    store <8 x float> [[TMP1]], ptr [[DEST]], align 4
+; DEFAULT-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[TMP5]], [[TMP0]]
 ; DEFAULT-NEXT:    store <4 x float> [[TMP6]], ptr [[DEST2]], align 4
 ; DEFAULT-NEXT:    store float [[TMP7]], ptr [[D7]], align 2
