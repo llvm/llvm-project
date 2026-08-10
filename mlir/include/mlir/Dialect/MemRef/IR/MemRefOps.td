@@ -419,14 +419,13 @@ def MemRef_AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource,[
 // AllocaScopeOp
 //===----------------------------------------------------------------------===//
 
-def MemRef_AllocaScopeOp
-    : MemRef_Op<"alloca_scope",
-                [AutomaticAllocationScope,
-                 DeclareOpInterfaceMethods<
-                     RegionBranchOpInterface, ["getSuccessorInputs"]>,
-                 DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
-                 SingleBlockImplicitTerminator<"AllocaScopeReturnOp">,
-                 RecursiveMemoryEffects, NoRegionArguments]> {
+def MemRef_AllocaScopeOp : MemRef_Op<"alloca_scope",
+      [AutomaticAllocationScope,
+       DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+          "getSuccessorInputs"]>,
+       SingleBlockImplicitTerminator<"AllocaScopeReturnOp">,
+       RecursiveMemoryEffects,
+       NoRegionArguments]> {
   let summary = "explicitly delimited scope for stack allocation";
   let description = [{
     The `memref.alloca_scope` operation represents an explicitly-delimited
