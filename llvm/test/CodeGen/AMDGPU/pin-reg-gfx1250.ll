@@ -66,6 +66,49 @@ define amdgpu_kernel void @pin_split_wide_load(ptr addrspace(1) %in, ptr addrspa
   ret void
 }
 
+; Clang pins every store to a pinned variable, so reassigning one yields two
+; pins on the same tuple. The second takes the tuple over -- the update is
+; in-place, reading and writing the same registers -- instead of leaving the
+; variable's later value wherever the allocator puts it.
+; CHECK-LABEL: {{^}}pin_reassigned_variable:
+; CHECK: global_load_b128 v[{{[0-9:]+}}] /*v[304:307]*/
+; CHECK: global_load_b128 v[{{[0-9:]+}}] /*v[300:303]*/
+; CHECK: v_pk_fma_f32 v[{{[0-9:]+}}] /*v[306:307]*/, {{.*}}v[{{[0-9:]+}}] /*v[306:307]*/
+; CHECK: v_pk_fma_f32 v[{{[0-9:]+}}] /*v[300:301]*/, {{.*}}v[{{[0-9:]+}}] /*v[300:301]*/
+; CHECK: .set .Lpin_reassigned_variable.num_vgpr, 308
+define amdgpu_kernel void @pin_reassigned_variable(ptr addrspace(1) %p) {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %idx = sext i32 %tid to i64
+  %a = getelementptr inbounds <8 x float>, ptr addrspace(1) %p, i64 %idx
+  %v = load <8 x float>, ptr addrspace(1) %a, align 32
+  %v.i = bitcast <8 x float> %v to <8 x i32>
+  %p1 = call <8 x i32> @llvm.amdgcn.pin.vgpr.v8i32(<8 x i32> %v.i, i32 300)
+  %f = bitcast <8 x i32> %p1 to <8 x float>
+  %m = fmul contract <8 x float> %f, splat (float 3.000000e+00)
+  %s = fadd contract <8 x float> %m, splat (float -1.000000e+00)
+  %s.i = bitcast <8 x float> %s to <8 x i32>
+  %p2 = call <8 x i32> @llvm.amdgcn.pin.vgpr.v8i32(<8 x i32> %s.i, i32 300)
+  store <8 x i32> %p2, ptr addrspace(1) %a, align 32
+  ret void
+}
+
+; Two distinct values whose live ranges overlap must not share the tuple, even
+; though both ask for it: the second one is still loaded when the first is read.
+; CHECK-LABEL: {{^}}pin_two_live_values:
+; CHECK: global_load_b128 v[{{[0-9:]+}}] /*v[300:303]*/
+; CHECK: global_load_b128 v[0:3],
+; CHECK: global_store_b128 v{{[0-9]+}}, v[{{[0-9:]+}}] /*v[300:303]*/
+; CHECK: global_store_b128 v{{[0-9]+}}, v[0:3],
+define amdgpu_kernel void @pin_two_live_values(ptr addrspace(1) %p, ptr addrspace(1) %q) {
+  %a = load volatile <4 x float>, ptr addrspace(1) %p
+  %pa = call <4 x float> @llvm.amdgcn.pin.vgpr.v4f32(<4 x float> %a, i32 300)
+  %b = load volatile <4 x float>, ptr addrspace(1) %q
+  %pb = call <4 x float> @llvm.amdgcn.pin.vgpr.v4f32(<4 x float> %b, i32 300)
+  store volatile <4 x float> %pa, ptr addrspace(1) %p
+  store volatile <4 x float> %pb, ptr addrspace(1) %q
+  ret void
+}
+
 ; A pinned value defined outside a loop and carried into it reaches a PHI. The
 ; physical tuple must not be substituted into the PHI operand: LiveVariables
 ; walks PHI sources through getVarInfo(), which asserts on a physical register,
