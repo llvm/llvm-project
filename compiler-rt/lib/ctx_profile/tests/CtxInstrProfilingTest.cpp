@@ -85,7 +85,11 @@ TEST_F(ContextTest, Callsite) {
 
   EXPECT_EQ(Subctx->size(), sizeof(ContextNode) + 3 * sizeof(uint64_t) +
                                 1 * sizeof(ContextNode *));
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  __llvm_ctx_profile_release_context(&FData);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
   __llvm_ctx_profile_release_context(&Root);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
 }
 
 TEST_F(ContextTest, ScratchNoCollectionProfilingNotStarted) {
@@ -122,11 +126,39 @@ TEST_F(ContextTest, ScratchNoCollectionProfilingStarted) {
   EXPECT_NE(FData.FlatCtx, nullptr);
   EXPECT_EQ(reinterpret_cast<uintptr_t>(FData.FlatCtx) + 1,
             reinterpret_cast<uintptr_t>(Ctx));
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
+  __llvm_ctx_profile_release_context(&FData);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
+}
+
+TEST_F(ContextTest, RootCallingRootDoesNotChangeCurrentContext) {
+  ASSERT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
+  int FakeCalleeAddress[2]{0, 0};
+  FunctionData FData[2];
+  FData[0].getOrAllocateContextRoot();
+  FData[1].getOrAllocateContextRoot();
+  __llvm_ctx_profile_start_collection();
+  auto *Ctx1 = __llvm_ctx_profile_get_context(&FData[0], &FakeCalleeAddress[0],
+                                              1234U, 1U, 1U);
+  EXPECT_EQ(Ctx1, FData[0].CtxRoot->FirstNode);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, FData[0].CtxRoot);
+
+  __llvm_ctx_profile_expected_callee[0] = &FakeCalleeAddress[0];
+  __llvm_ctx_profile_callsite[0] = &Ctx1->subContexts()[0];
+  auto *Ctx2 =
+      __llvm_ctx_profile_get_context(&FData[1], &FakeCalleeAddress[1], 2, 1, 0);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, FData[0].CtxRoot);
+  __llvm_ctx_profile_release_context(&FData[1]);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, FData[0].CtxRoot);
+  __llvm_ctx_profile_release_context(&FData[0]);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
 }
 
 TEST_F(ContextTest, ScratchDuringCollection) {
   __llvm_ctx_profile_start_collection();
   auto *Ctx = __llvm_ctx_profile_start_context(&Root, 1, 10, 4);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+
   int FakeCalleeAddress = 0;
   int OtherFakeCalleeAddress = 0;
   __llvm_ctx_profile_expected_callee[0] = &FakeCalleeAddress;
@@ -164,7 +196,15 @@ TEST_F(ContextTest, ScratchDuringCollection) {
   EXPECT_TRUE(isScratch(Subctx3));
   EXPECT_EQ(FData[2].FlatCtx, nullptr);
 
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  __llvm_ctx_profile_release_context(&FData[2]);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  __llvm_ctx_profile_release_context(&FData[1]);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  __llvm_ctx_profile_release_context(&FData[0]);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
   __llvm_ctx_profile_release_context(&Root);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
 }
 
 TEST_F(ContextTest, NeedMoreMemory) {
