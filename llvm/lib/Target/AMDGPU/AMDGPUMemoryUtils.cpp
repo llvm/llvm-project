@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMemoryUtils.h"
+#include "AMDGPUMachineInstrs.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -43,6 +44,24 @@ unsigned AllocatedVGPRsMetadata::getAddress() const {
 unsigned AllocatedVGPRsMetadata::getSize() const {
   return cast<ConstantInt>(cast<ConstantAsMetadata>(getOperand(1))->getValue())
       ->getZExtValue();
+}
+
+bool isVGPRLoadStoreSupported(unsigned MemSize, unsigned ValSize,
+                              Align Alignment) {
+  if (MemSize == 8 || MemSize == 16) {
+    if (Alignment < Align(MemSize / 8))
+      return false;
+    if (ValSize == MemSize)
+      return true;
+    if (ValSize > MemSize && (ValSize == 16 || ValSize == 32))
+      return true;
+    return false;
+  }
+  if (MemSize != ValSize)
+    return false;
+  if (Alignment < Align(4))
+    return false;
+  return AMDGPUMI::VLoadIdxInst::tryGetOpcodeForBitWidth(MemSize) != -1;
 }
 
 bool AllocatedVGPRsMetadata::classof(const MDNode *N) {
