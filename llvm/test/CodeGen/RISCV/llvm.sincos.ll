@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=riscv32-linux-gnu -mattr=+d < %s | FileCheck %s --check-prefix=RV32
 
 ; Test the llvm.sincos intrinsic lowering to the sincos libcalls, which glibc
-; provides (sincosf/sincos/sincosl). RISCV long double is fp128, so f128 uses
+; provides (sincosf/sincos/sincosl). RISC-V long double is fp128, so f128 uses
 ; sincosl.
 
 define { float, float } @test_sincos_f32(float %a) nounwind {
