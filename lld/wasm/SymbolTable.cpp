@@ -270,7 +270,8 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef name,
 DefinedData *SymbolTable::addOptionalDataSymbol(StringRef name, uint64_t value,
                                                 bool force) {
   Symbol *s = find(name);
-  if (!s && (force || ctx.arg.exportAll || ctx.arg.exportedSymbols.contains(name)))
+  if (!s &&
+      (force || ctx.arg.exportAll || ctx.arg.exportedSymbols.contains(name)))
     s = insertName(name).first;
   else if (!s || s->isDefined())
     return nullptr;
@@ -304,7 +305,8 @@ DefinedGlobal *SymbolTable::addOptionalGlobalSymbol(StringRef name,
                                                     InputGlobal *global,
                                                     bool force) {
   Symbol *s = find(name);
-  if (!s && (force || ctx.arg.exportAll || ctx.arg.exportedSymbols.contains(name)))
+  if (!s &&
+      (force || ctx.arg.exportAll || ctx.arg.exportedSymbols.contains(name)))
     s = insertName(name).first;
   else if (!s || s->isDefined())
     return nullptr;

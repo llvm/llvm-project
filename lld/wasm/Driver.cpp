@@ -924,23 +924,15 @@ static DefinedGlobal *createGlobalVariable(StringRef name, bool isMutable,
 
 static DefinedGlobal *createOptionalGlobal(StringRef name, bool isMutable,
                                            bool force = false) {
-  if (Symbol *s = symtab->find(name)) {
-    if (s->isDefined())
-      return dyn_cast<DefinedGlobal>(s);
-  }
   InputGlobal *g = createGlobal(name, isMutable);
   return symtab->addOptionalGlobalSymbol(name, g, force);
 }
 
-static DefinedData *materializeOptionalDataSymbol(StringRef name,
-                                                  DefinedData *&slot,
-                                                  bool force) {
+static DefinedData *
+materializeOptionalDataSymbol(StringRef name, DefinedData *&slot, bool force) {
   if (slot)
     return slot;
-  if (DefinedData *d = symtab->addOptionalDataSymbol(name, 0, force))
-    slot = d;
-  else if (Symbol *s = symtab->find(name))
-    slot = dyn_cast<DefinedData>(s);
+  slot = symtab->addOptionalDataSymbol(name, 0, force);
   return slot;
 }
 
@@ -1030,11 +1022,13 @@ static void createOptionalSymbols() {
     materializeOptionalDataSymbol("__dso_handle", ctx.sym.dsoHandle, false);
 
   materializeOptionalDataLayoutSymbol("__data_end", ctx.sym.dataEnd, false);
-  materializeOptionalDataLayoutSymbol("__rodata_start", ctx.sym.rodataStart, false);
+  materializeOptionalDataLayoutSymbol("__rodata_start", ctx.sym.rodataStart,
+                                      false);
   materializeOptionalDataLayoutSymbol("__rodata_end", ctx.sym.rodataEnd, false);
   materializeOptionalDataLayoutSymbol("__stack_low", ctx.sym.stackLow, false);
   materializeOptionalDataLayoutSymbol("__stack_high", ctx.sym.stackHigh, false);
-  materializeOptionalDataLayoutSymbol("__global_base", ctx.sym.globalBase, false);
+  materializeOptionalDataLayoutSymbol("__global_base", ctx.sym.globalBase,
+                                      false);
   materializeOptionalDataLayoutSymbol("__heap_base", ctx.sym.heapBase, false);
   materializeOptionalDataLayoutSymbol("__heap_end", ctx.sym.heapEnd, false);
 
@@ -1048,7 +1042,8 @@ static void createOptionalSymbols() {
   }
 
   if (!ctx.sym.firstPageEnd)
-    materializeOptionalDataSymbol("__wasm_first_page_end", ctx.sym.firstPageEnd, false);
+    materializeOptionalDataSymbol("__wasm_first_page_end", ctx.sym.firstPageEnd,
+                                  false);
   if (ctx.sym.firstPageEnd)
     ctx.sym.firstPageEnd->setVA(ctx.arg.pageSize);
 
