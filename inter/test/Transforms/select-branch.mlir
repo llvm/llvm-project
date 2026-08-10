@@ -1,6 +1,6 @@
 // Branch selection: llvm branches lift to scf.if, then lower to cmp +
 // exec_if with merged results.
-// RUN: inter-opt %s --inter-normalize-cf --lift-cf-to-scf --inter-select-to-machine | FileCheck %s
+// RUN: inter-opt %s --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine | FileCheck %s
 
 module {
   llvm.func spir_kernelcc @branch_kernel(%out: !llvm.ptr<1>, %a: !llvm.ptr<1>,
@@ -27,6 +27,12 @@ module {
 
 // The condition comes from a load: divergent.
 // CHECK: xemachine.cmp
-// CHECK: xemachine.exec_if
+// CHECK: [[IF:%.*]]:2 = xemachine.exec_if
 // Merge movs into the result register inside both regions.
-// CHECK-COUNT-2: xemachine.mov {{.*}}-> !xemachine.reg<32,
+// CHECK: xemachine.mov {{.*}}-> !xemachine.reg<32,
+// CHECK: xemachine.yield {{.*}} : !xemachine.reg<32,{{.*}}>, !xemachine.mem.token
+// CHECK: } otherwise {
+// CHECK: xemachine.mov {{.*}}-> !xemachine.reg<32,
+// CHECK: xemachine.yield {{.*}} : !xemachine.reg<32,{{.*}}>, !xemachine.mem.token
+// CHECK: } -> !xemachine.reg<32,{{.*}}>, !xemachine.mem.token
+// CHECK: xemachine.store_a64 {{.*}} dep [[IF]]#1

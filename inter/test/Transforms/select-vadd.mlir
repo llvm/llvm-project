@@ -1,6 +1,6 @@
 // Straight-line selection: vadd lowers to the prologue, gid computation,
 // A64 loads, a store, and EOT.
-// RUN: inter-opt %s --inter-normalize-cf --inter-select-to-machine | FileCheck %s
+// RUN: inter-opt %s --inter-normalize-cf --inter-convert-calls --inter-convert-memory --inter-select-to-machine | FileCheck %s
 
 module {
   // CHECK: func.func @vadd
@@ -31,5 +31,6 @@ module {
 // Two A64 loads and one store with a data payload.
 // CHECK-COUNT-2: xemachine.load_a64
 // CHECK: xemachine.store_a64 {{.*}}data
+// CHECK: [[FINAL:%.*]] = xemachine.token_join
 // EOT via the gateway.
-// CHECK: xemachine.eot
+// CHECK: xemachine.eot {{.*}} dep [[FINAL]]

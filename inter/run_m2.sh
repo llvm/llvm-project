@@ -15,7 +15,7 @@ run_kernel() {
     -o $OUT/$name/k.ll inter/$cl
   inter/build/tools/inter-translate/inter-translate $OUT/$name/k.ll --import-llvm -o $OUT/$name/k.mlir
   inter/build/tools/inter-opt/inter-opt $OUT/$name/k.mlir \
-    --inter-normalize-cf --lift-cf-to-scf --inter-select-to-machine \
+    --inter-normalize-cf --lift-cf-to-scf --inter-convert-calls --inter-convert-memory --inter-select-to-machine \
     -o $OUT/$name/k.xemachine.mlir
   inter/build/tools/inter-translate/inter-translate $OUT/$name/k.xemachine.mlir \
     --xemachine-to-iga -o $OUT/$name/k.asm

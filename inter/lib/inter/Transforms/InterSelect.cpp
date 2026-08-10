@@ -7,6 +7,7 @@
 // scattered sends is guaranteed by allocation order.
 
 #include "inter/Analysis/UniformityAnalysis.h"
+#include "inter/Dialect/Inter/IR/XW.h"
 #include "inter/Support/Builtins.h"
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
 #include "inter/Transforms/Passes.h"
@@ -41,17 +42,15 @@ struct SelectToMachine
     : public inter::impl::SelectToMachineBase<SelectToMachine> {
   void runOnOperation() override {
     SmallVector<func::FuncOp> kernels;
-    getOperation().walk([&](func::FuncOp f) {
-      if (f->hasAttr("xemachine.kernel"))
-        kernels.push_back(f);
+    getOperation().walk([&](func::FuncOp func) {
+      if (func->hasAttr("xemachine.kernel"))
+        kernels.push_back(func);
     });
     if (kernels.empty()) {
       getOperation().emitError("no kernel function found");
       return signalPassFailure();
     }
     for (func::FuncOp kernel : kernels) {
-      // Sparse liveness seeds from the top op's region: one solver per
-      // kernel.
       DataFlowSolver solver;
       dataflow::loadBaselineAnalyses(solver);
       solver.load<inter::UniformityAnalysis>();
@@ -102,35 +101,33 @@ struct SelectToMachine
         .getResult();
   }
 
-  // Memory ops thread an explicit token chain (total order per thread; the
-  // alias-analysis-driven synthesis prunes edges later — design doc S9).
+  // Memory ops carry the AA-decided dependency token; each machine op's
+  // result token maps back to the frontend op's token result. memToken is
+  // scratch for the barrier's internal chaining.
   Value memToken;
 
-  Value dep() { return memToken; }
-  void track(Operation *op) { memToken = op->getResult(1); }
-
-  Value emitLoadA64(Type dstTy, Value addrPayload) {
+  Value emitLoadA64(Type dstTy, Value addrPayload, Value depTok) {
     auto op = LoadA64Op::create(*b, *loc, dstTy, MemTokenType::get(ctx),
-                                addrPayload, dep(), 32);
-    track(op);
+                                addrPayload, depTok, 32);
+    memToken = op.getToken();
     return op.getDst();
   }
 
-  void emitStoreA64(Value addrPayload, Value dataPayload) {
+  void emitStoreA64(Value addrPayload, Value dataPayload, Value depTok) {
     auto op = StoreA64Op::create(*b, *loc, MemTokenType::get(ctx), addrPayload,
-                                 dataPayload, dep(), 32);
+                                 dataPayload, depTok, 32);
     memToken = op.getToken();
   }
 
   Value emitLoadBlock(Type dstTy, Value addrPayload, int words) {
     auto op = LoadBlockA32Op::create(*b, *loc, dstTy, MemTokenType::get(ctx),
-                                     addrPayload, dep(), words);
-    track(op);
+                                     addrPayload, Value(), words);
+    memToken = op.getToken();
     return op.getDst();
   }
 
   void emitSync(SyncKind kind) {
-    auto op = SyncOp::create(*b, *loc, MemTokenType::get(ctx), SyncKindAttr::get(ctx, kind), dep());
+    auto op = SyncOp::create(*b, *loc, MemTokenType::get(ctx), SyncKindAttr::get(ctx, kind), memToken);
     memToken = op.getToken();
   }
 
@@ -164,35 +161,57 @@ struct SelectToMachine
   }
 
   // One dispatch step per op; regions recurse.
+  FailureOr<Value> mapDependency(Operation *operation, Value dependency) {
+    if (!dependency)
+      return Value();
+    Value mapped = vmap.lookup(dependency);
+    if (!mapped)
+      return operation->emitOpError("memory dependency not lowered"), failure();
+    return mapped;
+  }
+
   LogicalResult lowerBlock(Block &blk) {
     for (Operation &op : blk) {
-      if (auto call = dyn_cast<LLVM::CallOp>(&op)) {
-        auto callee = call.getCallee();
-        if (!callee)
-          return emitError(op.getLoc(), "indirect call"), failure();
-        if (callee->starts_with(inter::builtins::kGetGlobalId)) {
-          if (failed(emitPrologueAndGid()))
+      if (auto gid = dyn_cast<xw::GlobalIdOp>(&op)) {
+        if (failed(emitPrologueAndGid()))
+          return failure();
+        vmap[op.getResult(0)] = gidValue;
+      } else if (isa<xw::LocalIdOp>(&op)) {
+        if (failed(emitPrologueAndGid()))
+          return failure();
+        // Widen the packed u16 lane ids to dwords once.
+        Value lid = MovOp::create(*b, *loc, grf(32), i32(), /*execSize=*/32,
+                                  dcanon(), rcanon(), IntegerAttr(),
+                                  IntegerAttr(), ty(i16()),
+                                  /*noMask=*/false, /*maskOffset=*/0,
+                                  localXValue)
+                        .getResult();
+        vmap[op.getResult(0)] = lid;
+      } else if (auto tok = dyn_cast<xw::TokenOp>(&op)) {
+        memToken =
+            TokenOp::create(*b, *loc, MemTokenType::get(ctx)).getToken();
+        vmap[tok.getToken()] = memToken;
+      } else if (auto join = dyn_cast<xw::TokenJoinOp>(&op)) {
+        SmallVector<Value> deps;
+        for (Value dependency : join.getDependencies()) {
+          FailureOr<Value> mapped = mapDependency(&op, dependency);
+          if (failed(mapped))
             return failure();
-          vmap[op.getResult(0)] = gidValue;
-        } else if (callee->starts_with(inter::builtins::kGetLocalId)) {
-          if (failed(emitPrologueAndGid()))
-            return failure();
-          // Widen the packed u16 lane ids to dwords once.
-          Value lid = MovOp::create(*b, *loc, grf(32), i32(), /*execSize=*/32,
-                                    dcanon(), rcanon(), IntegerAttr(),
-                                    IntegerAttr(), ty(i16()),
-                                    /*noMask=*/false, /*maskOffset=*/0,
-                                    localXValue)
-                          .getResult();
-          vmap[op.getResult(0)] = lid;
-        } else if (callee->starts_with(inter::builtins::kBarrier)) {
-          emitBarrier();
-        } else if (callee->starts_with(inter::builtins::kAtomicAdd)) {
-          if (failed(emitAtomicAdd(call)))
-            return failure();
-        } else {
-          return emitError(op.getLoc(), "unsupported call"), failure();
+          deps.push_back(*mapped);
         }
+        memToken = TokenJoinOp::create(*b, *loc, MemTokenType::get(ctx), deps)
+                       .getToken();
+        vmap[join.getToken()] = memToken;
+      } else if (auto barrier = dyn_cast<xw::BarrierOp>(&op)) {
+        FailureOr<Value> dependency =
+            mapDependency(&op, barrier.getDependency());
+        if (failed(dependency))
+          return failure();
+        emitBarrier(*dependency);
+        vmap[barrier.getToken()] = memToken;
+      } else if (auto atomic = dyn_cast<xw::AtomicAddOp>(&op)) {
+        if (failed(emitAtomicAdd(atomic)))
+          return failure();
       } else if (isa<LLVM::AndOp, LLVM::TruncOp, LLVM::ZExtOp>(&op)) {
         // 64->32 id truncations: forward the mapped source value.
         vmap[op.getResult(0)] = vmap.lookup(op.getOperand(0));
@@ -211,10 +230,15 @@ struct SelectToMachine
           return failure();
       } else if (isa<scf::YieldOp>(&op)) {
         continue; // structural; merge movs are injected by emitIf
-      } else if (auto load = dyn_cast<LLVM::LoadOp>(&op)) {
-        if (failed(emitLoad(cast<LLVM::GEPOp>(load.getAddr().getDefiningOp()),
-                            load.getResult())))
+      } else if (auto load = dyn_cast<xw::LoadOp>(&op)) {
+        FailureOr<Value> dependency =
+            mapDependency(&op, load.getDependency());
+        if (failed(dependency))
           return failure();
+        if (failed(emitLoad(cast<LLVM::GEPOp>(load.getAddress().getDefiningOp()),
+                            load.getValue(), *dependency)))
+          return failure();
+        vmap[load.getToken()] = memToken;
       } else if (isa<LLVM::AddOp>(&op)) {
         if (failed(emitSum(&op)))
           return failure();
@@ -236,10 +260,15 @@ struct SelectToMachine
                                    lhs)
                          .getResult();
         vmap[op.getResult(0)] = diff;
-      } else if (auto store = dyn_cast<LLVM::StoreOp>(&op)) {
-        if (failed(emitStore(cast<LLVM::GEPOp>(store.getAddr().getDefiningOp()),
-                             vmap.lookup(store.getValue()))))
+      } else if (auto store = dyn_cast<xw::StoreOp>(&op)) {
+        FailureOr<Value> dependency =
+            mapDependency(&op, store.getDependency());
+        if (failed(dependency))
           return failure();
+        if (failed(emitStore(cast<LLVM::GEPOp>(store.getAddress().getDefiningOp()),
+                             vmap.lookup(store.getValue()), *dependency)))
+          return failure();
+        vmap[store.getToken()] = memToken;
       } else if (isa<LLVM::ReturnOp, func::ReturnOp>(&op)) {
         emitEot();
       }
@@ -328,12 +357,12 @@ struct SelectToMachine
     bool varying = isBranchVarying(ifOp.getCondition());
 
     SmallVector<Type> resultTypes;
-    for (Value r : ifOp.getResults())
-      resultTypes.push_back(grf(32));
-    // The exit memory token escapes as an extra region result: values do not
-    // leave regions except through results (design doc S9).
-    resultTypes.push_back(MemTokenType::get(ctx));
-    int tokenResultIndex = resultTypes.size() - 1;
+    for (Value result : ifOp.getResults()) {
+      if (isa<MemTokenType>(result.getType()))
+        resultTypes.push_back(MemTokenType::get(ctx));
+      else
+        resultTypes.push_back(grf(32));
+    }
 
     Operation *ifm;
     if (varying)
@@ -345,7 +374,10 @@ struct SelectToMachine
 
     if (failed(emitIfRegions(ifOp, ifm, varying)))
       return failure();
-    memToken = ifm->getResult(tokenResultIndex);
+    for (auto [index, result] : llvm::enumerate(ifOp.getResults())) {
+      if (isa<MemTokenType>(result.getType()))
+        memToken = ifm->getResult(index);
+    }
     return success();
   }
 
@@ -373,6 +405,10 @@ struct SelectToMachine
         if (!v)
           return emitError(yield.getLoc(), "yielded value not lowered"),
                  failure();
+        if (isa<MemTokenType>(yielded.getType())) {
+          yieldVals.push_back(v);
+          continue;
+        }
         // The mov result aliases the exec_if result register; yielding it
         // keeps types consistent along the region-branch edges.
         maybeSync({v});
@@ -380,11 +416,9 @@ struct SelectToMachine
             MovOp::create(*b, *loc, ifm->getResult(i).getType(), i32(),
                           /*execSize=*/32, dcanon(), rcanon(), IntegerAttr(),
                           IntegerAttr(), TypeAttr(), /*noMask=*/false,
-                          /*maskOffset=*/0, v);
+                           /*maskOffset=*/0, v);
         yieldVals.push_back(merge.getResult());
       }
-      if (memToken)
-        yieldVals.push_back(memToken); // exit token escapes as a result
       YieldOp::create(*b, *loc, yieldVals);
       loadsPending = savedLoadsPending;
     }
@@ -538,14 +572,14 @@ struct SelectToMachine
         .getResult();
   }
 
-  LogicalResult emitLoad(LLVM::GEPOp gep, Value result) {
+  LogicalResult emitLoad(LLVM::GEPOp gep, Value result, Value depTok) {
     if (isSlmAddress(gep.getResult())) {
       Value addr = emitSlmAddress(gep);
       if (!addr)
         return failure();
       auto op = LoadSLMOp::create(*b, *loc, grf(32), MemTokenType::get(ctx),
-                                  addr, dep(), 32);
-      track(op);
+                                  addr, depTok, 32);
+      memToken = op.getToken();
       vmap[result] = op.getDst();
       loadsPending = true;
       return success();
@@ -555,7 +589,7 @@ struct SelectToMachine
     int argIndex = cast<BlockArgument>(gep.getBase()).getArgNumber();
     emitByteOffsets();
     auto [a0, a1] = emitAddress(byteOffLo, byteOffHi, argIndex);
-    Value v = emitLoadA64(grf(32), a0);
+    Value v = emitLoadA64(grf(32), a0, depTok);
     vmap[result] = v;
     loadsPending = true;
     return success();
@@ -592,20 +626,20 @@ struct SelectToMachine
     return success();
   }
 
-  LogicalResult emitStore(LLVM::GEPOp gep, Value data) {
+  LogicalResult emitStore(LLVM::GEPOp gep, Value data, Value depTok) {
     if (isSlmAddress(gep.getResult())) {
       Value addr = emitSlmAddress(gep);
       if (!addr)
         return failure();
       maybeSync({data});
       auto op = StoreSLMOp::create(*b, *loc, MemTokenType::get(ctx), addr,
-                                   data, dep(), 32);
+                                   data, depTok, 32);
       memToken = op.getToken();
       return success();
     }
     int argIndex = cast<BlockArgument>(gep.getBase()).getArgNumber();
     auto [a0, a1] = emitAddress(byteOffLo, byteOffHi, argIndex);
-    emitStoreA64(a0, data);
+    emitStoreA64(a0, data, depTok);
     return success();
   }
 
@@ -615,18 +649,18 @@ struct SelectToMachine
                                   IntegerAttr(), TypeAttr(), /*noMask=*/true,
                                   /*maskOffset=*/0, archreg(0))
                         .getResult();
-    EotOp::create(*b, *loc, scratch, dep());
+    EotOp::create(*b, *loc, scratch, memToken);
   }
 
   // barrier(CLK_*_MEM_FENCE): fence.slm -> drain -> signal -> sync.bar, all
   // token-chained (design doc: every part explicit, ordered by tokens).
-  void emitBarrier() {
+  void emitBarrier(Value entryDep) {
     Value r0 = archreg(0);
     auto fence = FenceSLMOp::create(*b, *loc, grf(16), MemTokenType::get(ctx),
-                                    r0, dep());
-    track(fence);
+                                    r0, entryDep);
+    memToken = fence.getToken();
     auto awaitOp = FenceAwaitOp::create(*b, *loc, MemTokenType::get(ctx),
-                                        fence.getReadback(), dep());
+                                        fence.getReadback(), memToken);
     memToken = awaitOp.getToken();
 
     // Barrier payload: zero GRF with dword 2 = 0x400000 and byte 10 = r0.11.
@@ -647,18 +681,22 @@ struct SelectToMachine
                             /*noMask=*/true, /*maskOffset=*/0, r0)
                   .getResult();
     auto sig = BarrierSignalOp::create(*b, *loc, MemTokenType::get(ctx),
-                                       payload, dep());
+                                       payload, memToken);
     memToken = sig.getToken();
     emitSync(SyncKind::bar);
   }
 
   // atomic_add(ptr, 1): naive per-lane vector form; IGC's prefix-sum folding
   // is an optimization we do not replicate.
-  LogicalResult emitAtomicAdd(LLVM::CallOp call) {
-    auto barg = dyn_cast<BlockArgument>(call.getArgOperands()[0]);
+  LogicalResult emitAtomicAdd(xw::AtomicAddOp call) {
+    auto barg = dyn_cast<BlockArgument>(call.getAddress());
     if (!barg)
       return emitError(call.getLoc(), "atomic arg must be a kernel pointer"),
              failure();
+    FailureOr<Value> dependency =
+        mapDependency(call.getOperation(), call.getDependency());
+    if (failed(dependency))
+      return failure();
     auto [ptr, sub] = pointerArg(barg.getArgNumber());
     // Per-lane address payload: the uniform pointer broadcast into qwords.
     Type i64t = i64();
@@ -677,10 +715,12 @@ struct SelectToMachine
                                IntegerAttr(), TypeAttr(), /*noMask=*/false,
                                /*maskOffset=*/0, imm(1, i16()))
                      .getResult();
-    auto op = AtomicIAddA64Op::create(*b, *loc, grf(32), MemTokenType::get(ctx),
-                                      a0, ones, dep(), 32);
-    track(op);
-    vmap[call.getResult()] = op.getDst();
+    auto op = AtomicIAddA64Op::create(*b, *loc, grf(32),
+                                      MemTokenType::get(ctx), a0, ones,
+                                      *dependency, 32);
+    memToken = op.getToken();
+    vmap[call.getToken()] = memToken;
+    vmap[call.getOld()] = op.getDst();
     return success();
   }
 };

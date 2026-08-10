@@ -25,8 +25,10 @@ include_directories(BEFORE
 include_directories(SYSTEM ${LLVM_INCLUDE_DIRS} ${MLIR_INCLUDE_DIRS})
 
 add_subdirectory(include/inter/Dialect/XeMachine/IR)
+add_subdirectory(include/inter/Dialect/Inter/IR)
 add_subdirectory(include/inter/Transforms)
 add_subdirectory(lib/inter/Dialect/XeMachine/IR)
+add_subdirectory(lib/inter/Dialect/Inter/IR)
 add_subdirectory(lib/inter/Analysis)
 add_subdirectory(lib/inter/Transforms)
 add_subdirectory(lib/inter/Emit)

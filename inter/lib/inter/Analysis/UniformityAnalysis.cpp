@@ -1,5 +1,5 @@
 #include "inter/Analysis/UniformityAnalysis.h"
-#include "inter/Support/Builtins.h"
+#include "inter/Dialect/Inter/IR/XW.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -67,10 +67,9 @@ LogicalResult UniformityAnalysis::visitOperation(
 
   if (isa<LLVM::ConstantOp, arith::ConstantOp>(op)) {
     out = Uniformity::constant();
-  } else if (auto call = dyn_cast<LLVM::CallOp>(op)) {
-    if (call.getCallee() && call.getCallee()->starts_with(builtins::kGetGlobalId))
-      out = Uniformity::strided(1);
-  } else if (isa<LLVM::LoadOp>(op)) {
+  } else if (isa<xw::GlobalIdOp, xw::LocalIdOp>(op)) {
+    out = Uniformity::strided(1);
+  } else if (isa<LLVM::LoadOp, xw::LoadOp, xw::AtomicAddOp>(op)) {
     out = Uniformity::varying();
   } else if (op->getNumResults() > 0 && !operands.empty()) {
     out = transfer(op->getName().getStringRef(), operands);

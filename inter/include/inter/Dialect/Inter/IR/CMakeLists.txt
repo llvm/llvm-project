@@ -1,0 +1,6 @@
+set(LLVM_TARGET_DEFINITIONS XW.td)
+mlir_tablegen(XWDialect.h.inc -gen-dialect-decls -dialect xw)
+mlir_tablegen(XWDialect.cpp.inc -gen-dialect-defs -dialect xw)
+mlir_tablegen(XWOps.h.inc -gen-op-decls)
+mlir_tablegen(XWOps.cpp.inc -gen-op-defs)
+add_public_tablegen_target(InterXWIRIncGen)

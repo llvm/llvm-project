@@ -11,12 +11,25 @@ def SelectToMachine : Pass<"inter-select-to-machine", "::mlir::ModuleOp"> {
   ];
 }
 
+// Rooted on the module: rewrites the symbol table (llvm.func -> func.func).
 def NormalizeCf : Pass<"inter-normalize-cf", "::mlir::ModuleOp"> {
   let summary = "llvm.func -> func.func, llvm branches -> cf branches";
   let dependentDialects = [
     "mlir::func::FuncDialect",
     "mlir::cf::ControlFlowDialect",
   ];
+}
+
+def ConvertCalls : Pass<"inter-convert-calls", "::mlir::func::FuncOp"> {
+  let summary = "llvm.call builtins -> xw special ops";
+  let dependentDialects = ["xw::XWDialect",
+                           "inter::xemachine::XeMachineDialect"];
+}
+
+def ConvertMemory : Pass<"inter-convert-memory", "::mlir::func::FuncOp"> {
+  let summary = "llvm load/store -> xw token-carrying ops with AA edges";
+  let dependentDialects = ["xw::XWDialect",
+                           "inter::xemachine::XeMachineDialect"];
 }
 
 #endif // INTER_TRANSFORMS_PASSES_TD
