@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
+#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -22,6 +23,8 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
@@ -44,6 +47,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.cpp.inc"
+#include "mlir/Support/LLVM.h"
 
 using namespace mlir;
 using namespace mlir::omp;
@@ -2571,7 +2575,7 @@ LogicalResult TargetDataOp::verify() {
   return verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
-// Adapted from fir.if implementation.
+// Adapted from scf.if implementation.
 void TargetDataOp::getSuccessorRegions(
     mlir::RegionBranchPoint point,
     llvm::SmallVectorImpl<::mlir::RegionSuccessor> &regions) {
@@ -2864,7 +2868,6 @@ LogicalResult TargetOp::verifyRegions() {
   return success();
 }
 
-// Copy from `TargetDataOp::getSuccessorRegions`
 void TargetOp::getSuccessorRegions(
     mlir::RegionBranchPoint point,
     llvm::SmallVectorImpl<::mlir::RegionSuccessor> &regions) {
@@ -2873,6 +2876,20 @@ void TargetOp::getSuccessorRegions(
     return;
   }
   regions.push_back(mlir::RegionSuccessor(&getRegion()));
+}
+
+OperandRange
+TargetOp::getEntrySuccessorOperands(mlir::RegionSuccessor successor) {
+  assert(successor.getSuccessor() == &getRegion());
+  return getHostEvalVars();
+}
+
+mlir::ValueRange TargetOp::getSuccessorInputs(mlir::RegionSuccessor successor) {
+  if (successor.isOperation())
+    return {};
+  assert(successor == &getRegion());
+  return mlir::cast<BlockArgOpenMPOpInterface>(getOperation())
+      .getHostEvalBlockArgs();
 }
 
 //===----------------------------------------------------------------------===//
