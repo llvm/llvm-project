@@ -431,7 +431,7 @@ void DeclSpec::forEachQualifier(
 }
 
 bool DeclSpec::hasTagDefinition() const {
-  if (!TypeSpecOwned || !isDeclRep((TST)TypeSpecType))
+  if (!TypeSpecOwned)
     return false;
   return cast<TagDecl>(getRepAsDecl())->isCompleteDefinition();
 }
