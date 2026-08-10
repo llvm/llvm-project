@@ -17604,7 +17604,6 @@ static bool findOMPAllocatorHandleT(Sema &S, SourceLocation Loc,
   }
   QualType AllocatorHandleEnumTy = PT.get();
   AllocatorHandleEnumTy.addConst();
-  Stack->setOMPAllocatorHandleT(AllocatorHandleEnumTy);
 
   // Fill the predefined allocator map.
   bool ErrorFound = false;
@@ -17640,6 +17639,11 @@ static bool findOMPAllocatorHandleT(Sema &S, SourceLocation Loc,
         << "omp_allocator_handle_t";
     return false;
   }
+
+  // Record the type only now. It is what tells a later call that the map above
+  // is ready to be read, so setting it before the map is filled would let that
+  // call proceed on a map this one gave up on halfway through.
+  Stack->setOMPAllocatorHandleT(AllocatorHandleEnumTy);
 
   return true;
 }
