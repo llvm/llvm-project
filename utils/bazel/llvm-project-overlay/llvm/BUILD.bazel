@@ -4361,7 +4361,6 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/JITLink/*.h",
-        "include/llvm/ExecutionEngine/Orc/*.h",
     ]),
     copts = llvm_copts,
     deps = [
@@ -4379,6 +4378,7 @@ cc_library(
         ":TargetParser",
         ":TransformUtils",
         ":config",
+        ":orc_headers",
     ],
 )
 

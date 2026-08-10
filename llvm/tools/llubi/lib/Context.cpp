@@ -1011,12 +1011,8 @@ Context::computeGEP(GEPOperator &GEP,
     AccumulatedOffset =
         AnyValue::getVectorSplat(AccumulatedOffset, Res.asAggregate().size());
   auto ApplyScaledOffset = [&](const AnyValue &Index, const APInt &Scale) {
-    if (Index.isAggregate() && !Res.isAggregate()) {
-      Res = AnyValue::getVectorSplat(Res, Index.asAggregate().size());
-      AccumulatedOffset = AnyValue::getVectorSplat(AccumulatedOffset,
-                                                   Index.asAggregate().size());
-    }
-    if (Index.isAggregate() && Res.isAggregate()) {
+    if (Index.isAggregate()) {
+      assert(Res.isAggregate() && "Res must be splatted before.");
       for (auto &&[ResElem, IndexElem, OffsetElem] :
            zip(Res.asAggregate(), Index.asAggregate(),
                AccumulatedOffset.asAggregate()))
@@ -1040,6 +1036,16 @@ Context::computeGEP(GEPOperator &GEP,
   for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
        GTI != GTE; ++GTI) {
     Value *V = GTI.getOperand();
+
+    // If the index is a vector, make sure the accumulated pointer is also a
+    // vector. Otherwise, make it a vector splat.
+    if (auto *VTy = dyn_cast<VectorType>(V->getType());
+        VTy && !Res.isAggregate()) {
+      uint32_t NumElements = getEVL(VTy->getElementCount());
+      Res = AnyValue::getVectorSplat(Res, NumElements);
+      AccumulatedOffset =
+          AnyValue::getVectorSplat(AccumulatedOffset, NumElements);
+    }
 
     // Fast path for zero offsets.
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
