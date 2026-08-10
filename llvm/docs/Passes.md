@@ -11,11 +11,11 @@ LoopFusion
 
 ## Introduction
 
-```{warning}
+:::{warning}
 This document is not updated frequently, and the list of passes
 is most likely incomplete. It is possible to list passes known by the opt
 tool using `opt -print-passes`.
-```
+:::
 
 This document serves as a high-level summary of the optimization features that
 LLVM provides.  Optimizations are implemented as Passes that traverse some
@@ -588,14 +588,6 @@ This file implements the Dead Loop Deletion Pass.  This pass is responsible for
 eliminating loops with non-infinite computable trip counts that have no side
 effects or volatile instructions, and do not contribute to the computation of
 the function's return value.
-
-(passes-loop-extract)=
-
-### `loop-extract`: Extract loops into new functions
-
-A pass wrapper around the `ExtractLoop()` scalar transformation to extract
-each top-level loop into its own new function.  If the loop is the *only* loop
-in a given function, it is not touched.
 
 ### `loop-fusion`: Loop Fusion
 
