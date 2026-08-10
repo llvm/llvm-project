@@ -507,7 +507,7 @@ TEST_P(CASTest, StandaloneMemoryBufferOutlivesCAS) {
   // gone. Cover both sides of the size threshold that decides whether an
   // on-disk CAS embeds an object in its shared data pool or gives it a file of
   // its own, since only the latter can be mapped.
-  for (uint64_t Size : {64ULL, 100ULL * 1024}) {
+  for (uint64_t Size : {uint64_t(64), uint64_t(100 * 1024)}) {
     std::shared_ptr<ObjectStore> CAS = createObjectStore();
     std::string Data(Size, '\a');
     Data.front() = 'b';
@@ -537,8 +537,8 @@ TEST_P(CASTest, StandaloneMemoryBufferNullTerminated) {
   // and include exact multiples of the page size: a mapping ending on a page
   // boundary has no zero-filled slack to serve as the terminator.
   uint64_t PageSize = sys::Process::getPageSizeEstimate();
-  for (uint64_t Size :
-       {64ULL, 60000ULL, 65535ULL, 100ULL * 1024, PageSize, 4 * PageSize}) {
+  for (uint64_t Size : {uint64_t(64), uint64_t(60000), uint64_t(65535),
+                        uint64_t(100 * 1024), PageSize, 4 * PageSize}) {
     std::string Data(Size, 'z');
     std::optional<ObjectProxy> Proxy;
     ASSERT_THAT_ERROR(CAS->createProxy({}, Data).moveInto(Proxy), Succeeded());
@@ -554,8 +554,8 @@ TEST_P(CASTest, StandaloneMemoryBufferNullTerminated) {
 TEST_P(CASTest, StandaloneMemoryBufferWithoutNullTerminator) {
   std::shared_ptr<ObjectStore> CAS = createObjectStore();
   uint64_t PageSize = sys::Process::getPageSizeEstimate();
-  for (uint64_t Size :
-       {64ULL, 60000ULL, 65535ULL, 100ULL * 1024, PageSize, 4 * PageSize}) {
+  for (uint64_t Size : {uint64_t(64), uint64_t(60000), uint64_t(65535),
+                        uint64_t(100 * 1024), PageSize, 4 * PageSize}) {
     std::string Data(Size, 'q');
     Data.front() = 'b';
     Data.back() = 'e';
@@ -599,8 +599,12 @@ TEST_F(OnDiskCASTest, StandaloneMemoryBufferSurvivesDeletedCAS) {
     ASSERT_TRUE(BigBuffer);
   }
 
+  // Windows refuses to delete a file while it is still mapped, so only check
+  // the deleted case where unlinking a mapped file is allowed.
+#ifndef _WIN32
   ASSERT_EQ(std::error_code(), sys::fs::remove_directories(Temp.path()));
   ASSERT_FALSE(sys::fs::exists(Temp.path()));
+#endif
 
   EXPECT_EQ(SmallData, SmallBuffer->getBuffer());
   EXPECT_EQ(BigData, BigBuffer->getBuffer());
@@ -637,8 +641,6 @@ TEST_F(OnDiskCASTest, StandaloneMemoryBufferRecordWithRefs) {
     Buffer = Parent->getStandaloneMemoryBuffer("name");
     ASSERT_TRUE(Buffer);
   }
-
-  ASSERT_EQ(std::error_code(), sys::fs::remove_directories(Temp.path()));
 
   EXPECT_EQ(MemoryBuffer::MemoryBuffer_MMap, Buffer->getBufferKind());
   EXPECT_EQ("name", Buffer->getBufferIdentifier());
