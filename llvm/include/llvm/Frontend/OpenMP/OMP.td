@@ -665,6 +665,7 @@ def OMP_Allocate : Directive<[Spelling<"allocate">]> {
   ];
   let association = AS_None;
   let category = CA_Declarative;
+  let pureSince = 50;
 }
 def OMP_Allocators : Directive<[Spelling<"allocators">]> {
   let allowedClauses = [
@@ -755,12 +756,14 @@ def OMP_BeginDeclareTarget : Directive<[Spelling<"begin declare target", 1, 52>,
   let association = AS_Delimited;
   let category = CA_Declarative;
   let languages = [L_C];
+  let pureSince = 45;
 }
 def OMP_EndDeclareTarget : Directive<[Spelling<"end declare target", 1, 52>,
                                       Spelling<"end declare_target", 60>]> {
   let association = AS_Delimited;
   let category = OMP_BeginDeclareTarget.category;
   let languages = OMP_BeginDeclareTarget.languages;
+  let pureSince = OMP_BeginDeclareTarget.pureSince;
 }
 def OMP_BeginDeclareVariant
     : Directive<[Spelling<"begin declare variant", 1, 52>,
@@ -768,12 +771,14 @@ def OMP_BeginDeclareVariant
   let association = AS_Delimited;
   let category = CA_Declarative;
   let languages = [L_C];
+  let pureSince = 50;
 }
 def OMP_EndDeclareVariant : Directive<[Spelling<"end declare variant", 1, 52>,
                                        Spelling<"end declare_variant", 60>]> {
   let association = AS_Delimited;
   let category = OMP_BeginDeclareVariant.category;
   let languages = OMP_BeginDeclareVariant.languages;
+  let pureSince = 50;
 }
 def OMP_Cancel : Directive<[Spelling<"cancel">]> {
   let allowedClauses = [
@@ -807,6 +812,7 @@ def OMP_DeclareInduction : Directive<[Spelling<"declare_induction">]> {
   ];
   let association = AS_None;
   let category = CA_Declarative;
+  let pureSince = 50;
 }
 def OMP_DeclareMapper : Directive<[Spelling<"declare mapper", 1, 52>,
                                    Spelling<"declare_mapper", 60>]> {
@@ -815,6 +821,7 @@ def OMP_DeclareMapper : Directive<[Spelling<"declare mapper", 1, 52>,
   ];
   let association = AS_None;
   let category = CA_Declarative;
+  let pureSince = 50;
 }
 def OMP_DeclareReduction : Directive<[Spelling<"declare reduction", 1, 52>,
                                       Spelling<"declare_reduction", 60>]> {
@@ -824,6 +831,7 @@ def OMP_DeclareReduction : Directive<[Spelling<"declare reduction", 1, 52>,
   ];
   let association = AS_None;
   let category = CA_Declarative;
+  let pureSince = 50;
 }
 def OMP_DeclareSimd : Directive<[Spelling<"declare simd", 1, 52>,
                                  Spelling<"declare_simd", 60>]> {
@@ -841,6 +849,7 @@ def OMP_DeclareSimd : Directive<[Spelling<"declare simd", 1, 52>,
   ];
   let association = AS_Declaration;
   let category = CA_Declarative;
+  let pureSince = 50;
 }
 def OMP_DeclareTarget : Directive<[Spelling<"declare target", 1, 52>,
                                    Spelling<"declare_target", 60>]> {
@@ -856,6 +865,7 @@ def OMP_DeclareTarget : Directive<[Spelling<"declare target", 1, 52>,
   ];
   let association = AS_None;
   let category = CA_Declarative;
+  let pureSince = 45;
 }
 def OMP_DeclareVariant : Directive<[Spelling<"declare variant", 1, 52>,
                                     Spelling<"declare_variant", 60>]> {
@@ -869,6 +879,7 @@ def OMP_DeclareVariant : Directive<[Spelling<"declare variant", 1, 52>,
   let association = AS_Declaration;
   let category = CA_Declarative;
   let languages = [L_C];
+  let pureSince = 50;
 }
 def OMP_Depobj : Directive<[Spelling<"depobj">]> {
   let allowedClauses = [
@@ -998,6 +1009,7 @@ def OMP_Groupprivate : Directive<[Spelling<"groupprivate">]> {
   let association = AS_None;
   let category = CA_Declarative;
   let languages = [L_C, L_Fortran];
+  let pureSince = 50;
 }
 def OMP_Fuse : Directive<[Spelling<"fuse">]> {
   let allowedClauses = [
@@ -1012,7 +1024,7 @@ def OMP_Fuse : Directive<[Spelling<"fuse">]> {
   let allowedLoopModifiers = [
     LM_Fused,
   ];
-  let pureSince = 52;
+  let pureSince = 60;
 }
 def OMP_Interchange : Directive<[Spelling<"interchange">]> {
   let allowedClauses = [
@@ -1136,6 +1148,7 @@ def OMP_Requires : Directive<[Spelling<"requires">]> {
   ];
   let association = AS_None;
   let category = CA_Informational;
+  let pureSince = 50;
 }
 def OMP_Reverse : Directive<[Spelling<"reverse">]> {
   let allowedClauses = [
@@ -1146,7 +1159,7 @@ def OMP_Reverse : Directive<[Spelling<"reverse">]> {
   let allowedLoopModifiers = [
     LM_Reversed,
   ];
-  let pureSince = 52;
+  let pureSince = 60;
 }
 def OMP_Scan : Directive<[Spelling<"scan">]> {
   let allowedOnceClauses = [
@@ -1207,6 +1220,7 @@ def OMP_Simd : Directive<[Spelling<"simd">]> {
   ];
   let association = AS_LoopNest;
   let category = CA_Executable;
+  let pureSince = 45;
 }
 def OMP_Single : Directive<[Spelling<"single">]> {
   let allowedClauses = [
@@ -1427,6 +1441,7 @@ def OMP_Teams : Directive<[Spelling<"teams">]> {
   let category = CA_Executable;
 }
 def OMP_ThreadPrivate : Directive<[Spelling<"threadprivate">]> {
+  let pureSince = 50;
   let association = AS_None;
   let category = CA_Declarative;
 }
@@ -1461,7 +1476,7 @@ def OMP_Stripe : Directive<[Spelling<"stripe">]> {
     LM_Grid,
     LM_Offsets,
   ];
-  let pureSince = 52;
+  let pureSince = 60;
 }
 def OMP_Split : Directive<[Spelling<"split">]> {
   let allowedClauses = [
@@ -1478,7 +1493,7 @@ def OMP_Split : Directive<[Spelling<"split">]> {
   let allowedLoopModifiers = [
     LM_Split,
   ];
-  let pureSince = 52;
+  let pureSince = 60;
 }
 def OMP_Unknown : Directive<[Spelling<"unknown">]> {
   let isDefault = true;

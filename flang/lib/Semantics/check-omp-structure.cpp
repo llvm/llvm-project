@@ -952,15 +952,10 @@ void OmpStructureChecker::CheckDirectiveInPureProcedure(
     return;
   }
   unsigned version{context_.langOptions().OpenMPVersion};
-  // OpenMP 5.1 permits only SIMD and declarative directives in a PURE
-  // procedure; OpenMP 5.2 additionally permits metadirective, assume(s),
-  // nothing, error, and the loop-transforming constructs).
-  bool alwaysAllowed{id == llvm::omp::Directive::OMPD_simd ||
-      llvm::omp::getDirectiveCategory(id) == llvm::omp::Category::Declarative};
   // A directive's "pure" property is version-specific: pureSince is the
   // OpenMP version at which the directive gained that property.
   unsigned pureSince{llvm::omp::getDirectivePureSince(id)};
-  if (alwaysAllowed || version >= pureSince) {
+  if (version >= pureSince) {
     return;
   }
   if (pureSince != 0x7FFFFFFF) {
