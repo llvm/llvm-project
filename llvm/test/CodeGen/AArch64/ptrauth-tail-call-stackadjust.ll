@@ -39,4 +39,32 @@ entry:
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
+; Test the same combined teardown when the callee-popped argument space is
+; large enough that its cleanup is split into a shifted and unshifted parts.
+%large_struct2 = type { [600 x i64] }
+
+define swifttailcc void @test_frame_and_large_args(%large_struct2 %s) #0 {
+; CHECK-LABEL: test_frame_and_large_args:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    pacibsp
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    stp x28, x30, [sp, #32] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w28, -16
+; CHECK-NEXT:    bl _external_func
+; CHECK-NEXT:    ldp x28, x30, [sp, #32] ; 16-byte Folded Reload
+; CHECK-NEXT:    add x16, sp, #48
+; CHECK-NEXT:    autib x30, x16
+; CHECK-NEXT:    add sp, sp, #688
+; CHECK-NEXT:    add sp, sp, #1, lsl #12 ; =4096
+; CHECK-NEXT:    ret
+entry:
+  %local1 = alloca [32 x i8], align 8
+  call void @llvm.lifetime.start.p0(i64 32, ptr %local1)
+  call void @external_func()
+  call void @llvm.lifetime.end.p0(i64 32, ptr %local1)
+  ret void
+}
+
 attributes #0 = { "ptrauth-returns" "sign-return-address"="all" "sign-return-address-key"="b_key" }

@@ -13,6 +13,7 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
+#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -332,9 +333,9 @@ void AArch64PointerAuthImpl::authenticateLR(
           I->getOperand(0).getReg() == AArch64::SP &&
           I->getOperand(1).getReg() == AArch64::SP) {
         SPMods.push_back(&*I);
-        Offset += I->getOpcode() == AArch64::ADDXri
-                      ? I->getOperand(2).getImm()
-                      : -I->getOperand(2).getImm();
+        int64_t Imm = I->getOperand(2).getImm()
+                      << AArch64_AM::getShiftValue(I->getOperand(3).getImm());
+        Offset += I->getOpcode() == AArch64::ADDXri ? Imm : -Imm;
       }
     }
   }
