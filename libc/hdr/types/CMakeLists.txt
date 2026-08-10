@@ -154,6 +154,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_passwd
+  HDRS
+    struct_passwd.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_passwd
+)
+
+add_proxy_header_library(
   rsize_t
   HDRS
     rsize_t.h
@@ -175,6 +183,14 @@ add_proxy_header_library(
     struct_stat.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_stat
+)
+
+add_proxy_header_library(
+  struct_statfs
+  HDRS
+    struct_statfs.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_statfs
 )
 
 add_proxy_header_library(
@@ -257,6 +273,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  timer_t
+  HDRS
+    timer_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.timer_t
+    libc.include.time
+)
+
+add_proxy_header_library(
   clockid_t
   HDRS
     clockid_t.h
@@ -280,6 +305,14 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.suseconds_t
     libc.include.sys_time
+)
+
+add_proxy_header_library(
+  useconds_t
+  HDRS
+    useconds_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.useconds_t
 )
 
 add_proxy_header_library(
@@ -584,6 +617,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_if_nameindex
+  HDRS
+    struct_if_nameindex.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_if_nameindex
+    libc.include.net_if
+)
+
+add_proxy_header_library(
   struct_sockaddr
   HDRS
     struct_sockaddr.h
@@ -685,7 +727,6 @@ add_proxy_header_library(
     libc.include.llvm-libc-types.wint_t
     libc.include.wchar
 )
-
 
 add_proxy_header_library(
   wctype_t
@@ -989,7 +1030,7 @@ add_proxy_header_library(
 add_proxy_header_library(
   Elf32_Xword
   HDRS
-  Elf32_Xword.h
+    Elf32_Xword.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.Elf32_Xword
 )
@@ -997,7 +1038,7 @@ add_proxy_header_library(
 add_proxy_header_library(
   Elf32_auxv_t
   HDRS
-  Elf32_auxv_t.h
+    Elf32_auxv_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.Elf32_auxv_t
 )
@@ -1141,7 +1182,7 @@ add_proxy_header_library(
 add_proxy_header_library(
   Elf64_auxv_t
   HDRS
-  Elf64_auxv_t.h
+    Elf64_auxv_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.Elf64_auxv_t
 )
@@ -1259,4 +1300,3 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.tcflag_t
 )
-

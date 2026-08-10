@@ -1451,6 +1451,10 @@ void RewriteInstance::discoverFileObjects() {
   FileSymRefs.clear();
 
   discoverBOLTReserved();
+
+  // The name resolver is only needed while discovering and disambiguating file
+  // objects. Release its memory now that all names have been uniquified.
+  NR.clear();
 }
 
 void RewriteInstance::discoverBOLTReserved() {
@@ -5990,7 +5994,7 @@ void RewriteInstance::patchELFAllocatableRelrSection(
       RelOffset = RelOffset == 0 ? SectionAddress + Rel.Offset : RelOffset;
       assert((RelOffset & 1) == 0 && "Wrong relocation offset");
       RelOffsets.emplace(RelOffset);
-      FixAddend(Section, Rel, RelOffset);
+      FixAddend(Section, Rel, getFileOffsetForAddress(RelOffset));
     }
   }
 

@@ -1,5 +1,6 @@
 import("//llvm/include/llvm/Config/config.gni")
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
+import("//llvm/lib/Target/targets.gni")
 import("//llvm/lib/Target/targets_string.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
@@ -328,7 +329,6 @@ group("test") {
     "//llvm/tools/llvm-reduce",
     "//llvm/tools/llvm-remarkutil",
     "//llvm/tools/llvm-rtdyld",
-    "//llvm/tools/llvm-sim",
     "//llvm/tools/llvm-size",
     "//llvm/tools/llvm-split",
     "//llvm/tools/llvm-stress",
@@ -358,6 +358,10 @@ group("test") {
     # its tests, but nothing in the tree depends on them.
     "//third-party/unittest/UnitTestMain:gtest_main",
   ]
+
+  if (llvm_build_AMDGPU) {
+    deps += [ "//llvm/tools/llvm-calc-occupancy" ]
+  }
 
   # FIXME: llvm_build_examples
   testonly = true

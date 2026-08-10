@@ -46,7 +46,6 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
@@ -731,38 +730,6 @@ RenderDebugEnablingArgs(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
-static void RenderDebugInfoCompressionArgs(const ArgList &Args,
-                                           ArgStringList &CmdArgs,
-                                           const Driver &D,
-                                           const ToolChain &TC) {
-  const Arg *A = Args.getLastArg(options::OPT_gz_EQ);
-  if (!A)
-    return;
-  if (checkDebugInfoOption(A, Args, D, TC)) {
-    StringRef Value = A->getValue();
-    if (Value == "none") {
-      CmdArgs.push_back("--compress-debug-sections=none");
-    } else if (Value == "zlib") {
-      if (llvm::compression::zlib::isAvailable()) {
-        CmdArgs.push_back(
-            Args.MakeArgString("--compress-debug-sections=" + Twine(Value)));
-      } else {
-        D.Diag(diag::warn_debug_compression_unavailable) << "zlib";
-      }
-    } else if (Value == "zstd") {
-      if (llvm::compression::zstd::isAvailable()) {
-        CmdArgs.push_back(
-            Args.MakeArgString("--compress-debug-sections=" + Twine(Value)));
-      } else {
-        D.Diag(diag::warn_debug_compression_unavailable) << "zstd";
-      }
-    } else {
-      D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getSpelling() << Value;
-    }
-  }
-}
-
 static void handleAMDGPUCodeObjectVersionOptions(const Driver &D,
                                                  const ArgList &Args,
                                                  ArgStringList &CmdArgs,
@@ -1093,7 +1060,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       const ToolChain *TC = I.second;
       for (BoundArch Arch :
            D.getOffloadArchs(C, C.getArgs(), Action::OFK_Cuda, *TC)) {
-        if (IsNVIDIAOffloadArch(Arch.Arch))
+        if (Arch.Arch.isNVPTX())
           ArchIDs.insert(CudaArchToID(Arch.Arch));
       }
     }
@@ -5034,7 +5001,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     CmdArgs.push_back("-dwarf-explicit-import");
 
   renderDwarfFormat(D, T, Args, CmdArgs, EffectiveDWARFVersion);
-  RenderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
+  renderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
 
   // This controls whether or not we perform JustMyCode instrumentation.
   if (Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false)) {
@@ -7142,11 +7109,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       // thread and team counts in the device.
       if (Args.hasFlag(options::OPT_fopenmp_assume_teams_oversubscription,
                        options::OPT_fno_openmp_assume_teams_oversubscription,
-                       /*Default=*/false))
+                       /*Default=*/TargetFastUsed))
         CmdArgs.push_back("-fopenmp-assume-teams-oversubscription");
       if (Args.hasFlag(options::OPT_fopenmp_assume_threads_oversubscription,
                        options::OPT_fno_openmp_assume_threads_oversubscription,
-                       /*Default=*/false))
+                       /*Default=*/TargetFastUsed))
         CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
 
       // Handle -fopenmp-assume-no-thread-state (implied by target-fast)
@@ -7160,6 +7127,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        options::OPT_fno_openmp_assume_no_nested_parallelism,
                        /*Default=*/TargetFastUsed))
         CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
+
+      // Handle -fopenmp-target-atomic-reduction.
+      if (Args.hasFlag(options::OPT_fopenmp_target_atomic_reduction,
+                       options::OPT_fno_openmp_target_atomic_reduction,
+                       /*Default=*/false))
+        CmdArgs.push_back("-fopenmp-target-atomic-reduction");
 
       if (Args.hasArg(options::OPT_fopenmp_offload_mandatory))
         CmdArgs.push_back("-fopenmp-offload-mandatory");
@@ -8317,7 +8290,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fcuda-include-gpubinary");
     CmdArgs.push_back(CudaDeviceInput->getFilename());
   } else if (!HostOffloadingInputs.empty()) {
-    if ((IsCuda || IsHIP) && !IsRDCMode) {
+    if ((IsCuda || IsHIP) &&
+        (!IsRDCMode || Args.hasArg(options::OPT_cuda_emit_nvcc_abi))) {
       assert(HostOffloadingInputs.size() == 1 && "Only one input expected");
       CmdArgs.push_back("-fcuda-include-gpubinary");
       CmdArgs.push_back(HostOffloadingInputs.front().getFilename());
@@ -8332,6 +8306,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (Args.hasFlag(options::OPT_fcuda_short_ptr,
                      options::OPT_fno_cuda_short_ptr, false))
       CmdArgs.push_back("-fcuda-short-ptr");
+    if (Args.hasArg(options::OPT_cuda_emit_nvcc_abi))
+      CmdArgs.push_back("--cuda-emit-nvcc-abi");
   }
 
   if (IsCuda || IsHIP) {
@@ -9353,7 +9329,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, DwarfVersion,
                           llvm::DebuggerKind::Default);
   renderDwarfFormat(D, Triple, Args, CmdArgs, DwarfVersion);
-  RenderDebugInfoCompressionArgs(Args, CmdArgs, D, getToolChain());
+  renderDebugInfoCompressionArgs(Args, CmdArgs, D, getToolChain());
 
   // Handle -fPIC et al -- the relocation-model affects the assembler
   // for some targets.
@@ -9794,6 +9770,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_R_value_Group,
       OPT_R_Group,
       OPT_Xcuda_ptxas,
+      OPT_ptxas_path_EQ,
       OPT_ftime_report,
       OPT_ftime_trace,
       OPT_ftime_trace_EQ,

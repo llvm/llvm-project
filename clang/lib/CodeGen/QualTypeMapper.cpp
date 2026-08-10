@@ -267,6 +267,10 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
 #include "clang/Basic/HLSLIntangibleTypes.def"
     llvm::reportFatalInternalError(
         "HLSL intangible types not yet Supported in ABI lowering library");
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
+    llvm::reportFatalInternalError(
+        "SPIR-V types not yet supported in ABI lowering library");
 
     // Placeholder types should never reach ABI lowering.
 #define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:
