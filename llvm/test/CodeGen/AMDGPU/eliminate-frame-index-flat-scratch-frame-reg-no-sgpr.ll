@@ -28,8 +28,6 @@ define fastcc i64 @no_scavengeable_sgpr_with_frame_register(
 ) #0 {
 entry:
   %local = alloca i64, align 8, addrspace(5)
-
-  ; Fill all 16 allocatable SGPRs (8 pairs).
   %asm = call {i64, i64, i64, i64, i64, i64, i64, i64}
     asm sideeffect "; fill sgprs",
     "={s[0:1]},={s[2:3]},={s[4:5]},={s[6:7]},={s[8:9]},={s[10:11]},={s[12:13]},={s[14:15]}"()
@@ -43,14 +41,11 @@ entry:
   %s1213 = extractvalue {i64, i64, i64, i64, i64, i64, i64, i64} %asm, 6
   %s1415 = extractvalue {i64, i64, i64, i64, i64, i64, i64, i64} %asm, 7
 
-  ; The addrspacecast + subtract produces V_SUB_CO_U32_e32 with %stack.0.
   %flat_ptr = addrspacecast ptr addrspace(5) %local to ptr
   %ptrint = ptrtoint ptr %flat_ptr to i64
   %loaded = load i64, ptr null, align 8
   %diff = sub i64 %ptrint, %loaded
 
-  ; Use every SGPR value together with the subtract result so the "use all" asm
-  ; stays after the subtract, keeping all SGPRs live across it.
   call void asm sideeffect "; use all",
     "{s[0:1]},{s[2:3]},{s[4:5]},{s[6:7]},{s[8:9]},{s[10:11]},{s[12:13]},{s[14:15]},{v[0:1]}"(
     i64 %s01, i64 %s23, i64 %s45, i64 %s67,
