@@ -11,7 +11,7 @@
 #include "llvm/ExecutionEngine/Orc/COFF.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/Calls.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpecs.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/WindowsDriver/MSVCPaths.h"
 
@@ -124,11 +124,11 @@ Error COFFVCRuntimeBootstrapper::initializeStaticVCRuntime(JITDylib &JD) {
             &jit_scrt_initialize_default_local_stdio_options}}))
     return Err;
 
-  rt::Int32VoidCaller CallInt32Void;
-  rt::Int32Int32Caller CallInt32Int32;
-  if (auto Err = buildCallers(
-          ES, rt::callerInit<rt::sps::Int32VoidCallerSpec>(&CallInt32Void),
-          rt::callerInit<rt::sps::Int32Int32CallerSpec>(&CallInt32Int32)))
+  rt::CallInt32VoidProxy CallInt32Void;
+  rt::CallInt32Int32Proxy CallInt32Int32;
+  if (auto Err = buildProxies(
+          ES, rt::proxyInit<rt::sps::CallInt32VoidProxySpec>(&CallInt32Void),
+          rt::proxyInit<rt::sps::CallInt32Int32ProxySpec>(&CallInt32Int32)))
     return Err;
 
   auto R = CallInt32Int32(ES, jit_scrt_initialize, 0);

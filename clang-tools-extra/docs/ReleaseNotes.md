@@ -60,6 +60,10 @@ infrastructure are described first, followed by tool-specific sections.
   `zircon-temporary-objects` should migrate to {doc}`fuchsia-temporary-objects
   <clang-tidy/checks/fuchsia/temporary-objects>`.
 
+- In 22nd release, The `clang-tidy/ClangTidyModuleRegistry.h` header was deprecated.
+  All of the symbols it used to define were moved into `clang-tidy/ClangTidyModule.h`.
+  The deprecated header has been removed in this release.
+
 ### Improvements to clangd
 
 #### Inlay hints
@@ -105,6 +109,10 @@ infrastructure are described first, followed by tool-specific sections.
 #### New check aliases
 
 #### Changes in existing checks
+
+- Fixed a crash in {doc}`bugprone-misplaced-operator-in-strlen-in-alloc
+  <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
+  checking an array new expression without a size expression.
 
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
