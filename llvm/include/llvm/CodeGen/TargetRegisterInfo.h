@@ -781,9 +781,16 @@ public:
   virtual const char *getRegPressureSetName(unsigned Idx) const = 0;
 
   /// Get the register unit pressure limit for this dimension.
-  /// This limit must be adjusted dynamically for reserved registers.
+  /// The limit will be adjusted for reserved registers.
+  /// Avoid using this method directly as it is costly to compute. Use the
+  /// cached version `RegisterClassInfo::getRegPressureSetLimit` instead.
   virtual unsigned getRegPressureSetLimit(const MachineFunction &MF,
-                                          unsigned Idx) const = 0;
+                                          unsigned Idx) const;
+
+  /// Get the raw register unit pressure limit for this dimension.
+  /// This limit must be adjusted dynamically for reserved registers.
+  virtual unsigned getRawRegPressureSetLimit(const MachineFunction &MF,
+                                             unsigned Idx) const = 0;
 
   /// Get the register class for this pressure set with the largest
   /// `RegClassWeight::WeightLimit`.

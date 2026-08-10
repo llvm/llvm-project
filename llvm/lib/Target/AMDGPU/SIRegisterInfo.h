@@ -356,8 +356,8 @@ public:
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
 
-  unsigned getRegPressureSetLimit(const MachineFunction &MF,
-                                  unsigned Idx) const override;
+  unsigned getRawRegPressureSetLimit(const MachineFunction &MF,
+                                     unsigned Idx) const override;
 
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
                              SmallVectorImpl<MCPhysReg> &Hints,

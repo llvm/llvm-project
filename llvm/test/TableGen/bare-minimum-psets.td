@@ -55,7 +55,7 @@ def MyTarget : Target;
 // CHECK-NEXT:  }
 
 // CHECK:      unsigned MyTargetGenRegisterInfo::
-// CHECK-NEXT: getRegPressureSetLimit(const MachineFunction &MF, unsigned Idx) const {
+// CHECK-NEXT: getRawRegPressureSetLimit(const MachineFunction &MF, unsigned Idx) const {
 // CHECK-NEXT:  static const uint8_t PressureLimitTable[] = {
 // CHECK-NEXT:    {{[0-9]+}},        // 0: D_32
 // CHECK-NEXT:  };

@@ -200,25 +200,6 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
   RCI.Tag = Tag;
 }
 
-/// This is not accurate because two overlapping register sets may have some
-/// nonoverlapping reserved registers. However, computing the allocation order
-/// for all register classes would be too expensive.
-unsigned RegisterClassInfo::computePSetLimit(unsigned Idx) const {
-  const TargetRegisterClass *RC = TRI->getLargestRegClassForRegPressureSet(Idx);
-  assert(RC && "Failed to find register class");
-  compute(RC);
-  unsigned NAllocatableRegs = getNumAllocatableRegs(RC);
-  unsigned RegPressureSetLimit = TRI->getRegPressureSetLimit(*MF, Idx);
-  // If all the regs are reserved, return raw RegPressureSetLimit.
-  // One example is VRSAVERC in PowerPC.
-  // Avoid returning zero, getRegPressureSetLimit(Idx) assumes computePSetLimit
-  // return non-zero value.
-  if (NAllocatableRegs == 0)
-    return RegPressureSetLimit;
-  unsigned NReserved = RC->getNumRegs() - NAllocatableRegs;
-  return RegPressureSetLimit - TRI->getRegClassWeight(RC).RegWeight * NReserved;
-}
-
 INITIALIZE_PASS(MachineRegisterClassInfoWrapperPass,
                 "machine-register-class-info",
                 "Machine Register Class Info Analysis", true, true)

@@ -676,6 +676,34 @@ TargetRegisterInfo::prependOffsetExpression(const DIExpression *Expr,
                                       PrependFlags & DIExpression::EntryValue);
 }
 
+/// This is not accurate because two overlapping register sets may have some
+/// nonoverlapping reserved registers. However, computing the allocation order
+/// for all register classes would be too expensive.
+unsigned TargetRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
+                                                    unsigned Idx) const {
+  const TargetRegisterClass *RC = getLargestRegClassForRegPressureSet(Idx);
+  assert(RC && "Failed to find register class");
+
+  unsigned NAllocatableRegs = 0;
+  const BitVector &Reserved = MF.getRegInfo().getReservedRegs();
+  for (MCPhysReg PhysReg : getRawAllocationOrder(*RC, MF))
+    if (!Reserved.test(PhysReg))
+      NAllocatableRegs++;
+
+  unsigned RegPressureSetLimit = getRawRegPressureSetLimit(MF, Idx);
+  // If all the regs are reserved, return raw RegPressureSetLimit.
+  // One example is VRSAVERC in PowerPC.
+  // Avoid returning zero, RegisterClassInfo::getRegPressureSetLimit(Idx)
+  // assumes this returns non-zero value.
+  if (NAllocatableRegs == 0) {
+    LLVM_DEBUG(dbgs() << "All registers of " << getRegClassName(RC)
+                      << " are reserved!\n";);
+    return RegPressureSetLimit;
+  }
+  unsigned NReserved = RC->getNumRegs() - NAllocatableRegs;
+  return RegPressureSetLimit - getRegClassWeight(RC).RegWeight * NReserved;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 void TargetRegisterInfo::dumpReg(Register Reg, unsigned SubRegIndex,

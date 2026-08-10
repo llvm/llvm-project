@@ -4074,8 +4074,8 @@ unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   }
 }
 
-unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
-                                                unsigned Idx) const {
+unsigned SIRegisterInfo::getRawRegPressureSetLimit(const MachineFunction &MF,
+                                                   unsigned Idx) const {
   switch (static_cast<AMDGPU::RegisterPressureSets>(Idx)) {
   case AMDGPU::RegisterPressureSets::VGPR_32:
   case AMDGPU::RegisterPressureSets::AGPR_32:
