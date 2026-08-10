@@ -105,13 +105,13 @@ protected:
           /*AllowReordering=*/false);
     }
 
+    VPlanTransforms::addMiddleCheck(*Plan);
     if (Style) {
       OptimizationRemarkEmitter ORE(&F);
       VPlanTransforms::handleUncountableEarlyExits(*Plan, &ORE, L, PSE, *DT,
                                                    AC.get(), *Style);
     } else
       VPlanTransforms::handleCountableEarlyExits(*Plan);
-    VPlanTransforms::addMiddleCheck(*Plan);
 
     if (CreateLoopRegions)
       VPlanTransforms::createLoopRegions(*Plan, {});
