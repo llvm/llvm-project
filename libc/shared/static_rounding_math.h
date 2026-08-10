@@ -11,20 +11,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SHARED_MATH_STATIC_ROUNDING_MATH_H
-#define LLVM_LIBC_SHARED_MATH_STATIC_ROUNDING_MATH_H
+#ifndef LLVM_LIBC_SHARED_STATIC_ROUNDING_MATH_H
+#define LLVM_LIBC_SHARED_STATIC_ROUNDING_MATH_H
 
+#include "math/static_rounding/expf.h"
 #include "shared/libc_common.h"
-#include "static_rounding/expf.h"
 
-namespace LIBC_NAMESPACE_DECL {
-
-namespace shared {
-
-using math::static_rounding::expf;
-
-} // namespace shared
-
-} // namespace LIBC_NAMESPACE_DECL
-
-#endif // LLVM_LIBC_SHARED_MATH_STATIC_ROUNDING_MATH_H
+#endif // LLVM_LIBC_SHARED_STATIC_ROUNDING_MATH_H

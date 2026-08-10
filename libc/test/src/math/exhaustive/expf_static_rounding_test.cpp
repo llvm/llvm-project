@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "exhaustive_test_static_rounding.h"
-#include "shared/math/static_rounding/expf.h"
+// TODO: debug this? Why do we even need this at all?
+#undef LIBC_ERRNO_MODE
+#include "shared/static_rounding_math.h"
 #include "src/__support/math/expf.h"
 
 using LlvmLibcStaticallyRoundedExpfExhaustiveTest =
