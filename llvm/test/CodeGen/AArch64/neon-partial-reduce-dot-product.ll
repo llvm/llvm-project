@@ -1693,14 +1693,14 @@ define <4 x i32> @partial_reduce_sext_cmp_i8tov4i32(<4 x i32> %acc, <16 x i8> %a
 ;
 ; CHECK-DOT-LABEL: partial_reduce_sext_cmp_i8tov4i32:
 ; CHECK-DOT:       // %bb.0:
-; CHECK-DOT-NEXT:    movi v3.2d, #0xffffffffffffffff
+; CHECK-DOT-NEXT:    movi v3.16b, #1
 ; CHECK-DOT-NEXT:    cmeq v1.16b, v1.16b, v2.16b
 ; CHECK-DOT-NEXT:    sdot v0.4s, v1.16b, v3.16b
 ; CHECK-DOT-NEXT:    ret
 ;
 ; CHECK-DOT-I8MM-LABEL: partial_reduce_sext_cmp_i8tov4i32:
 ; CHECK-DOT-I8MM:       // %bb.0:
-; CHECK-DOT-I8MM-NEXT:    movi v3.2d, #0xffffffffffffffff
+; CHECK-DOT-I8MM-NEXT:    movi v3.16b, #1
 ; CHECK-DOT-I8MM-NEXT:    cmeq v1.16b, v1.16b, v2.16b
 ; CHECK-DOT-I8MM-NEXT:    sdot v0.4s, v1.16b, v3.16b
 ; CHECK-DOT-I8MM-NEXT:    ret
@@ -1795,7 +1795,7 @@ define <2 x i64> @partial_reduce_sext_cmp_i8tov2i64(<2 x i64> %acc, <16 x i8> %a
 ;
 ; CHECK-DOT-LABEL: partial_reduce_sext_cmp_i8tov2i64:
 ; CHECK-DOT:       // %bb.0:
-; CHECK-DOT-NEXT:    movi v3.2d, #0xffffffffffffffff
+; CHECK-DOT-NEXT:    movi v3.16b, #1
 ; CHECK-DOT-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-DOT-NEXT:    cmeq v1.16b, v1.16b, v2.16b
 ; CHECK-DOT-NEXT:    sdot v4.4s, v1.16b, v3.16b
@@ -1804,7 +1804,7 @@ define <2 x i64> @partial_reduce_sext_cmp_i8tov2i64(<2 x i64> %acc, <16 x i8> %a
 ;
 ; CHECK-DOT-I8MM-LABEL: partial_reduce_sext_cmp_i8tov2i64:
 ; CHECK-DOT-I8MM:       // %bb.0:
-; CHECK-DOT-I8MM-NEXT:    movi v3.2d, #0xffffffffffffffff
+; CHECK-DOT-I8MM-NEXT:    movi v3.16b, #1
 ; CHECK-DOT-I8MM-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-DOT-I8MM-NEXT:    cmeq v1.16b, v1.16b, v2.16b
 ; CHECK-DOT-I8MM-NEXT:    sdot v4.4s, v1.16b, v3.16b
