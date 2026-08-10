@@ -182,17 +182,17 @@ define void @load_select_zero_v16i32(ptr %x, <16 x i1> %mask) {
 ;
 ; AVX-FAST-LABEL: load_select_zero_v16i32:
 ; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vpmovzxbd {{.*#+}} ymm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; AVX-FAST-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX-FAST-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-FAST-NEXT:    vpmovzxbd {{.*#+}} ymm2 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX-FAST-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
-; AVX-FAST-NEXT:    vpxor %ymm3, %ymm1, %ymm1
-; AVX-FAST-NEXT:    vpslld $31, %ymm1, %ymm1
-; AVX-FAST-NEXT:    vpmaskmovd %ymm2, %ymm1, (%rdi)
+; AVX-FAST-NEXT:    vpxor %ymm3, %ymm2, %ymm2
+; AVX-FAST-NEXT:    vpslld $31, %ymm2, %ymm2
+; AVX-FAST-NEXT:    vpmaskmovd %ymm1, %ymm2, (%rdi)
 ; AVX-FAST-NEXT:    vpunpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; AVX-FAST-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX-FAST-NEXT:    vpxor %ymm3, %ymm0, %ymm0
 ; AVX-FAST-NEXT:    vpslld $31, %ymm0, %ymm0
-; AVX-FAST-NEXT:    vpmaskmovd %ymm2, %ymm0, 32(%rdi)
+; AVX-FAST-NEXT:    vpmaskmovd %ymm1, %ymm0, 32(%rdi)
 ; AVX-FAST-NEXT:    vzeroupper
 ; AVX-FAST-NEXT:    retq
 ;
