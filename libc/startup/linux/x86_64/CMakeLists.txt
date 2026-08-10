@@ -1,12 +1,13 @@
 add_startup_object(
   tls
   SRC
-    tls.cpp
+  tls.cpp
   DEPENDS
     libc.config.app_h
     libc.hdr.sys_mman_macros
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
     libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
     libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
     libc.src.string.memory_utils.inline_memcpy
@@ -20,7 +21,7 @@ add_startup_object(
 add_startup_object(
   start
   SRC
-    start.cpp
+  start.cpp
   DEPENDS
     libc.config.app_h
     libc.src.__support.macros.attributes
@@ -34,7 +35,7 @@ add_startup_object(
 add_startup_object(
   irelative
   SRC
-    irelative.cpp
+  irelative.cpp
   DEPENDS
     libc.hdr.link_macros
     libc.hdr.elf_macros

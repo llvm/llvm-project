@@ -49,6 +49,19 @@ struct move_only_large final {
   int value;
 };
 
+// a non-movable type
+struct nonmovable {
+  nonmovable(const nonmovable&) = default;
+  nonmovable(nonmovable&&)      = delete;
+};
+
+// a non-movable type with a usable copy constructor
+// verifying that tuple's move constructor is not confused to select that copy constructor
+struct nonmovable_with_copy_ctor {
+  nonmovable_with_copy_ctor(const nonmovable_with_copy_ctor&) = default;
+  nonmovable_with_copy_ctor(nonmovable_with_copy_ctor&&)      = delete;
+};
+
 template <class Elem>
 void test_sfinae() {
     using Tup = std::tuple<Elem>;
@@ -113,20 +126,31 @@ int main(int, char**)
     }
 // Remove this guard when compiler versions older than clang 23 are no longer supported.
 #if defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2300
-  // A bug in tuple caused __tuple_leaf to use its explicit converting constructor
-  //  as its move constructor. This tests that ConstructsWithTupleLeaf is not called
-  // (w/ __tuple_leaf)
-  {
-    typedef std::tuple<ConstructsWithTupleLeaf> d_t;
-    d_t d((ConstructsWithTupleLeaf()));
-    d_t d2(static_cast<d_t&&>(d));
-  }
+    // A bug in tuple caused __tuple_leaf to use its explicit converting constructor
+    //  as its move constructor. This tests that ConstructsWithTupleLeaf is not called
+    // (w/ __tuple_leaf)
+    {
+        typedef std::tuple<ConstructsWithTupleLeaf> d_t;
+        d_t d((ConstructsWithTupleLeaf()));
+        d_t d2(static_cast<d_t&&>(d));
+    }
 #endif // defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2300
+    {
+        test_sfinae<move_only_ebo>();
+        test_sfinae<move_only_large>();
+    }
+    // non-movable types
+    {
+      using Alloc = std::allocator<int>;
+      using Tag   = std::allocator_arg_t;
 
-  {
-    test_sfinae<move_only_ebo>();
-    test_sfinae<move_only_large>();
-  }
+      static_assert(!std::is_move_constructible<nonmovable>::value, "");
+      static_assert(!std::is_constructible<nonmovable, Tag, Alloc, nonmovable>::value, "");
+
+      static_assert(!std::is_move_constructible<nonmovable_with_copy_ctor>::value, "");
+      static_assert(
+          !std::is_constructible<nonmovable_with_copy_ctor, Tag, Alloc, nonmovable_with_copy_ctor>::value, "");
+    }
 
   return 0;
 }

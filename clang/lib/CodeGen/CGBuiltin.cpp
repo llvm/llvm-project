@@ -108,8 +108,8 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
     return CGF->EmitPPCBuiltinExpr(BuiltinID, E);
+  case llvm::Triple::amdgpu:
   case llvm::Triple::r600:
-  case llvm::Triple::amdgcn:
     return CGF->EmitAMDGPUBuiltinExpr(BuiltinID, E);
   case llvm::Triple::systemz:
     return CGF->EmitSystemZBuiltinExpr(BuiltinID, E);
@@ -1620,11 +1620,19 @@ static llvm::Value *EmitBitCountExpr(CodeGenFunction &CGF, const Expr *E) {
   // Boolean vectors can be casted directly to its bitfield representation. We
   // intentionally do not round up to the next power of two size and let LLVM
   // handle the trailing bits.
+  //
+  // In big endian mode, the bitfield representation has a reversed bit order,
+  // hence the need to add an operation to reverse it back to the expected
+  // order.
   if (auto *VT = dyn_cast<llvm::FixedVectorType>(ArgType);
       VT && VT->getElementType()->isIntegerTy(1)) {
     llvm::Type *StorageType =
         llvm::Type::getIntNTy(CGF.getLLVMContext(), VT->getNumElements());
     ArgValue = CGF.Builder.CreateBitCast(ArgValue, StorageType);
+
+    if (CGF.getTarget().isBigEndian())
+      ArgValue = CGF.Builder.CreateIntrinsic(Intrinsic::bitreverse,
+                                             {StorageType}, ArgValue);
   }
 
   return ArgValue;
@@ -2723,6 +2731,13 @@ private:
       if (ASTLayout.hasOwnVFPtr()) {
         OccuppiedIntervals.push_back(BitInterval{
             StartBitOffset, StartBitOffset + DL.getPointerSizeInBits()});
+      }
+
+      if (ASTLayout.hasOwnVBPtr()) {
+        auto Offset = ASTLayout.getVBPtrOffset().getQuantity();
+        auto StartVBPtr = StartBitOffset + Offset * CharWidth;
+        OccuppiedIntervals.push_back(
+            BitInterval{StartVBPtr, StartVBPtr + DL.getPointerSizeInBits()});
       }
 
       const auto VisitBase = [&ASTLayout, StartBitOffset, this](
@@ -5677,16 +5692,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         break;
       case 1:  // memory_order_consume
       case 2:  // memory_order_acquire
-        Builder.CreateFence(llvm::AtomicOrdering::Acquire, SSID);
+        emitAtomicFence(llvm::AtomicOrdering::Acquire, SSID);
         break;
       case 3:  // memory_order_release
-        Builder.CreateFence(llvm::AtomicOrdering::Release, SSID);
+        emitAtomicFence(llvm::AtomicOrdering::Release, SSID);
         break;
       case 4:  // memory_order_acq_rel
-        Builder.CreateFence(llvm::AtomicOrdering::AcquireRelease, SSID);
+        emitAtomicFence(llvm::AtomicOrdering::AcquireRelease, SSID);
         break;
       case 5:  // memory_order_seq_cst
-        Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent, SSID);
+        emitAtomicFence(llvm::AtomicOrdering::SequentiallyConsistent, SSID);
         break;
       }
       return RValue::get(nullptr);
@@ -5703,23 +5718,23 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::SwitchInst *SI = Builder.CreateSwitch(Order, ContBB);
 
     Builder.SetInsertPoint(AcquireBB);
-    Builder.CreateFence(llvm::AtomicOrdering::Acquire, SSID);
+    emitAtomicFence(llvm::AtomicOrdering::Acquire, SSID);
     Builder.CreateBr(ContBB);
     SI->addCase(Builder.getInt32(1), AcquireBB);
     SI->addCase(Builder.getInt32(2), AcquireBB);
 
     Builder.SetInsertPoint(ReleaseBB);
-    Builder.CreateFence(llvm::AtomicOrdering::Release, SSID);
+    emitAtomicFence(llvm::AtomicOrdering::Release, SSID);
     Builder.CreateBr(ContBB);
     SI->addCase(Builder.getInt32(3), ReleaseBB);
 
     Builder.SetInsertPoint(AcqRelBB);
-    Builder.CreateFence(llvm::AtomicOrdering::AcquireRelease, SSID);
+    emitAtomicFence(llvm::AtomicOrdering::AcquireRelease, SSID);
     Builder.CreateBr(ContBB);
     SI->addCase(Builder.getInt32(4), AcqRelBB);
 
     Builder.SetInsertPoint(SeqCstBB);
-    Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent, SSID);
+    emitAtomicFence(llvm::AtomicOrdering::SequentiallyConsistent, SSID);
     Builder.CreateBr(ContBB);
     SI->addCase(Builder.getInt32(5), SeqCstBB);
 
@@ -5743,32 +5758,30 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         break;
       case 1: // memory_order_consume
       case 2: // memory_order_acquire
-        Builder.CreateFence(
-            llvm::AtomicOrdering::Acquire,
-            getTargetHooks().getLLVMSyncScopeID(getLangOpts(), SS,
-                                                llvm::AtomicOrdering::Acquire,
-                                                getLLVMContext()));
+        emitAtomicFence(llvm::AtomicOrdering::Acquire,
+                        getTargetHooks().getLLVMSyncScopeID(
+                            getLangOpts(), SS, llvm::AtomicOrdering::Acquire,
+                            getLLVMContext()));
         break;
       case 3: // memory_order_release
-        Builder.CreateFence(
-            llvm::AtomicOrdering::Release,
-            getTargetHooks().getLLVMSyncScopeID(getLangOpts(), SS,
-                                                llvm::AtomicOrdering::Release,
-                                                getLLVMContext()));
+        emitAtomicFence(llvm::AtomicOrdering::Release,
+                        getTargetHooks().getLLVMSyncScopeID(
+                            getLangOpts(), SS, llvm::AtomicOrdering::Release,
+                            getLLVMContext()));
         break;
       case 4: // memory_order_acq_rel
-        Builder.CreateFence(llvm::AtomicOrdering::AcquireRelease,
-                            getTargetHooks().getLLVMSyncScopeID(
-                                getLangOpts(), SS,
-                                llvm::AtomicOrdering::AcquireRelease,
-                                getLLVMContext()));
+        emitAtomicFence(llvm::AtomicOrdering::AcquireRelease,
+                        getTargetHooks().getLLVMSyncScopeID(
+                            getLangOpts(), SS,
+                            llvm::AtomicOrdering::AcquireRelease,
+                            getLLVMContext()));
         break;
       case 5: // memory_order_seq_cst
-        Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
-                            getTargetHooks().getLLVMSyncScopeID(
-                                getLangOpts(), SS,
-                                llvm::AtomicOrdering::SequentiallyConsistent,
-                                getLLVMContext()));
+        emitAtomicFence(llvm::AtomicOrdering::SequentiallyConsistent,
+                        getTargetHooks().getLLVMSyncScopeID(
+                            getLangOpts(), SS,
+                            llvm::AtomicOrdering::SequentiallyConsistent,
+                            getLLVMContext()));
         break;
       }
       return RValue::get(nullptr);
@@ -5829,9 +5842,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         SyncScope SS = ScopeModel->isValid(Scp->getZExtValue())
                            ? ScopeModel->map(Scp->getZExtValue())
                            : ScopeModel->map(ScopeModel->getFallBackValue());
-        Builder.CreateFence(Ordering,
-                            getTargetHooks().getLLVMSyncScopeID(
-                                getLangOpts(), SS, Ordering, getLLVMContext()));
+        emitAtomicFence(Ordering,
+                        getTargetHooks().getLLVMSyncScopeID(
+                            getLangOpts(), SS, Ordering, getLLVMContext()));
         Builder.CreateBr(ContBB);
       } else {
         llvm::DenseMap<unsigned, llvm::BasicBlock *> BBs;
@@ -5845,9 +5858,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           SI->addCase(Builder.getInt32(Scp), B);
 
           Builder.SetInsertPoint(B);
-          Builder.CreateFence(Ordering, getTargetHooks().getLLVMSyncScopeID(
-                                            getLangOpts(), ScopeModel->map(Scp),
-                                            Ordering, getLLVMContext()));
+          emitAtomicFence(Ordering, getTargetHooks().getLLVMSyncScopeID(
+                                        getLangOpts(), ScopeModel->map(Scp),
+                                        Ordering, getLLVMContext()));
           Builder.CreateBr(ContBB);
         }
       }
@@ -6257,6 +6270,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin_ptrauth_auth:
   case Builtin::BI__builtin_ptrauth_auth_and_resign:
+  case Builtin::BI__builtin_ptrauth_auth_with_pc_and_resign:
   case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
   case Builtin::BI__builtin_ptrauth_blend_discriminator:
   case Builtin::BI__builtin_ptrauth_sign_generic_data:
@@ -6273,6 +6287,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Args[0] = Builder.CreatePtrToInt(Args[0], IntPtrTy);
 
     switch (BuiltinID) {
+    case Builtin::BI__builtin_ptrauth_auth_with_pc_and_resign:
+      // Convert oldDiscriminator (arg 2), oldPC (arg 3) and newDiscriminator
+      // (arg 5) to intptr_t
+      if (Args[2]->getType()->isPointerTy())
+        Args[2] = Builder.CreatePtrToInt(Args[2], IntPtrTy);
+      if (Args[3]->getType()->isPointerTy())
+        Args[3] = Builder.CreatePtrToInt(Args[3], IntPtrTy);
+      if (Args[5]->getType()->isPointerTy())
+        Args[5] = Builder.CreatePtrToInt(Args[5], IntPtrTy);
+      break;
+
     case Builtin::BI__builtin_ptrauth_auth_and_resign:
     case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
       if (Args[4]->getType()->isPointerTy())
@@ -6302,6 +6327,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         return Intrinsic::ptrauth_auth;
       case Builtin::BI__builtin_ptrauth_auth_and_resign:
         return Intrinsic::ptrauth_resign;
+      case Builtin::BI__builtin_ptrauth_auth_with_pc_and_resign:
+        return Intrinsic::ptrauth_auth_with_pc_and_resign;
       case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
         return Intrinsic::ptrauth_resign_load_relative;
       case Builtin::BI__builtin_ptrauth_blend_discriminator:
@@ -6967,6 +6994,34 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     Value *ArgPtr = Builder.CreateLoad(SrcAddr, "ap.val");
     return RValue::get(Builder.CreateStore(ArgPtr, DestAddr));
+  }
+
+  case Builtin::BI__builtin_zos_va_start:
+  case Builtin::BI__builtin_zos_va_end: {
+    // The va_list is an array with 2 elements, called curr and next.
+    // Element curr is set to 0. For builtin_zos_va_start, next is initialized
+    // with a call to @llvm.va_start. Otherwise, next is passed to @llvm.va_end.
+    Address VAList = EmitZOSVAListRef(E->getArg(0));
+    llvm::Type *VAListTy = ConvertType(getContext().getBuiltinZOSVaListType());
+    VAList = VAList.withElementType(VAListTy);
+    Address Curr = Builder.CreateConstArrayGEP(VAList, 0, "curr");
+    Value *Zero = llvm::Constant::getNullValue(VoidPtrTy);
+    Builder.CreateStore(Zero, Curr);
+    Address Next = Builder.CreateConstArrayGEP(VAList, 1, "next");
+    return RValue::get(
+        EmitVAStartEnd(Next.emitRawPointer(*this),
+                       BuiltinID == Builtin::BI__builtin_zos_va_start));
+  }
+  case Builtin::BI__builtin_zos_va_copy: {
+    // Lower this manually because later can't reliably determine the type.
+    Address Dest = EmitZOSVAListRef(E->getArg(0));
+    Address Src = EmitZOSVAListRef(E->getArg(1));
+    llvm::Type *VAListTy = ConvertType(getContext().getBuiltinZOSVaListType());
+    uint64_t SizeBytes =
+        CGM.getDataLayout().getTypeAllocSize(VAListTy).getFixedValue();
+    Value *SizeVal = llvm::ConstantInt::get(Int64Ty, SizeBytes);
+    Builder.CreateMemCpy(Dest, Src, SizeVal, false);
+    return RValue::get(Dest.emitRawPointer(*this));
   }
 
   case Builtin::BI__builtin_get_device_side_mangled_name: {

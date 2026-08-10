@@ -61,7 +61,7 @@ public:
   void Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
             bool show_header, uint32_t depth) const;
 
-  lldb::SectionSP FindSectionByName(ConstString section_dstr) const;
+  lldb::SectionSP FindSectionByName(llvm::StringRef section_name) const;
 
   lldb::SectionSP FindSectionByID(lldb::user_id_t sect_id) const;
 
@@ -208,7 +208,7 @@ public:
 
   bool IsDescendant(const Section *section);
 
-  ConstString GetName() const { return m_name; }
+  llvm::StringRef GetName() const { return m_name; }
 
   bool Slide(lldb::addr_t slide_amount, bool slide_children);
 

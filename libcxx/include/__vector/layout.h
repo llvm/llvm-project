@@ -179,9 +179,6 @@ public:
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type
   __remaining_capacity() const _NOEXCEPT;
 
-  /// Determines if a reallocation is necessary.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __is_full() const _NOEXCEPT;
-
   /// Sets the member pointing to the first element in the vector to `__new_begin`, the member used
   /// to obtain the vector's bound to the equivalent of `__new_size`, and the member that represents
   /// the vector's capacity to the equivalent to `__new_capacity`.
@@ -203,8 +200,6 @@ public:
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __size() const _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __capacity() const _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __empty() const _NOEXCEPT;
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _Tp& __back() _NOEXCEPT;
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _Tp const& __back() const _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __end_ptr() _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __end_ptr() const _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __capacity_ptr() _NOEXCEPT;
@@ -217,7 +212,7 @@ private:
 #ifdef _LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED
   size_type __size_     = 0;
   size_type __capacity_ = 0;
-  [[no_unique_address]] allocator_type __alloc_;
+  _LIBCPP_NO_UNIQUE_ADDRESS allocator_type __alloc_;
 #else
   pointer __end_ = nullptr;
   _LIBCPP_COMPRESSED_PAIR(pointer, __capacity_ = nullptr, allocator_type, __alloc_);
@@ -250,11 +245,6 @@ template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::size_type
 __vector_layout<_Tp, _Alloc>::__remaining_capacity() const _NOEXCEPT {
   return __capacity_ - __size_;
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__is_full() const _NOEXCEPT {
-  return __size_ == __capacity_;
 }
 
 template <class _Tp, class _Alloc>
@@ -330,16 +320,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__empty() const
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& __vector_layout<_Tp, _Alloc>::__back() _NOEXCEPT {
-  return __begin_[__size_ - 1];
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp const& __vector_layout<_Tp, _Alloc>::__back() const _NOEXCEPT {
-  return __begin_[__size_ - 1];
-}
-
-template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() _NOEXCEPT {
   return __begin_ + __size_;
@@ -382,11 +362,6 @@ template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::size_type
 __vector_layout<_Tp, _Alloc>::__remaining_capacity() const _NOEXCEPT {
   return __capacity_ - __end_;
-}
-
-template <class _Tp, class _Alloc>
-[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__is_full() const _NOEXCEPT {
-  return __end_ == __capacity_;
 }
 
 template <class _Tp, class _Alloc>
@@ -462,16 +437,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__empty() const
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& __vector_layout<_Tp, _Alloc>::__back() _NOEXCEPT {
-  return __end_[-1];
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp const& __vector_layout<_Tp, _Alloc>::__back() const _NOEXCEPT {
-  return __end_[-1];
-}
-
-template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() _NOEXCEPT {
   return __end_;
@@ -505,7 +470,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__invariants() 
     return false;
   return __end_ <= __capacity_;
 }
-#endif // _LIBCPP_ABI_SIZE_BASED_VECTOR
+#endif // _LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -34,3 +34,11 @@ Otherwise, the ``switch`` can be better expressed with an ``if`` statement.
   // The switch without any labels will be diagnosed.
   int i = 42;
   switch (i) {}
+
+Options
+-------
+
+.. option:: IgnoreMacros
+
+   If set to `true`, the check will not give warnings inside macros. Default
+   is `true`.

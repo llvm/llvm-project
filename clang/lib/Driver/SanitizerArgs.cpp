@@ -705,7 +705,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(SanitizerKind::Type,
                      SanitizerKind::Address | SanitizerKind::KernelAddress |
                          SanitizerKind::Memory | SanitizerKind::Leak |
-                         SanitizerKind::Thread | SanitizerKind::KernelAddress),
+                         SanitizerKind::Thread),
       std::make_pair(SanitizerKind::Thread, SanitizerKind::Memory),
       std::make_pair(SanitizerKind::Leak,
                      SanitizerKind::Thread | SanitizerKind::Memory),
@@ -963,6 +963,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         Args.hasArg(options::OPT_fsanitize_cfi_icall_normalize_integers);
 
     KcfiArity = Args.hasArg(options::OPT_fsanitize_kcfi_arity);
+
+    if (const Arg *A = Args.getLastArg(options::OPT_fsanitize_kcfi_hash_EQ))
+      KcfiHash = A->getValue();
 
     if (AllAddedKinds & SanitizerKind::CFI && DiagnoseErrors)
       D.Diag(diag::err_drv_argument_not_allowed_with)
@@ -1572,6 +1575,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     }
     CmdArgs.push_back("-fsanitize-kcfi-arity");
   }
+
+  if (KcfiHash)
+    CmdArgs.push_back(Args.MakeArgString("-fsanitize-kcfi-hash=" + *KcfiHash));
 
   if (CfiCanonicalJumpTables)
     CmdArgs.push_back("-fsanitize-cfi-canonical-jump-tables");

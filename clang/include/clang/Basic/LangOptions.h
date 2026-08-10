@@ -621,6 +621,9 @@ public:
   /// The allocation token mode.
   std::optional<llvm::AllocTokenMode> AllocTokenMode;
 
+  /// Name of the literal encoding to convert the internal encoding to.
+  std::string LiteralEncoding;
+
   LangOptions();
 
   /// Set language defaults for the given input language and
@@ -986,6 +989,10 @@ public:
 ///
 /// The is implemented as a value of the new FPOptions plus a mask showing which
 /// fields are actually set in it.
+///
+/// NOTE: This type is serialized into the AST format (e.g. for defaulted
+/// functions). When adding a new field here or in FPOptions, ensure that the
+/// AST VERSION_MAJOR is bumped if it changes the layout or size.
 class FPOptionsOverride {
   FPOptions Options = FPOptions::getFromOpaqueInt(0);
   FPOptions::storage_type OverrideMask = 0;

@@ -195,20 +195,87 @@ func.func @source_and_result_mismatch(%arg0 : f32) -> vector<1xi1> {
 
 // -----
 
-// vector.fma only supports vectors - currently it's not possible to replace this with e.g.:
+// vector.fma only supports vectors - when the broadcast source is a scalar,
+// currently it's not possible to replace this with e.g.:
 //    %scalar_res = vector.fma %scalar_1, %scalar2
 //    %vec_res = vector.broadcast %scalar_res
 //
-// TODO: It should be possible to support this case
-
-// CHECK-LABEL: func.func @negative_op_only_supports_vectors
-  //     CHECK:   %[[BROADCAST:.+]] = vector.broadcast
-  //     CHECK:   %[[RESULT:.+]] = vector.fma %[[BROADCAST]]
-  //     CHECK:   return %[[RESULT]]
-func.func @negative_op_only_supports_vectors(%arg0 : f32) -> vector<1xf32> {
+// TODO: It may be better to support this case by promoting the scalar
+// to a single element vector.
+// CHECK-LABEL: func.func @negative_fma_scalar_broadcast_source
+//     CHECK:   %[[BROADCAST:.+]] = vector.broadcast
+//     CHECK:   %[[RESULT:.+]] = vector.fma %[[BROADCAST]]
+//     CHECK:   return %[[RESULT]]
+func.func @negative_fma_scalar_broadcast_source(%arg0 : f32) -> vector<1xf32> {
   %0 = vector.broadcast %arg0 : f32 to vector<1xf32>
   %1 = vector.fma %0, %0, %0 : vector<1xf32>
   return %1 : vector<1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_fma_mixed_scalar_and_vector_broadcast_source(
+//  CHECK-SAME:   %[[ARG0:.*]]: vector<4xf32>, %[[ARG1:.*]]: f32, %[[ARG2:.*]]: vector<4xf32>)
+//       CHECK:   %[[BCAST0:.*]] = vector.broadcast %[[ARG0]] : vector<4xf32> to vector<3x4xf32>
+//       CHECK:   %[[BCAST1:.*]] = vector.broadcast %[[ARG1]] : f32 to vector<3x4xf32>
+//       CHECK:   %[[BCAST2:.*]] = vector.broadcast %[[ARG2]] : vector<4xf32> to vector<3x4xf32>
+//       CHECK:   %[[FMA:.*]] = vector.fma %[[BCAST0]], %[[BCAST1]], %[[BCAST2]] : vector<3x4xf32>
+//       CHECK:   return %[[FMA]] : vector<3x4xf32>
+func.func @negative_fma_mixed_scalar_and_vector_broadcast_source(%arg0: vector<4xf32>, %arg1: f32, %arg2: vector<4xf32>) -> vector<3x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4xf32> to vector<3x4xf32>
+  %1 = vector.broadcast %arg1 : f32 to vector<3x4xf32>
+  %2 = vector.broadcast %arg2 : vector<4xf32> to vector<3x4xf32>
+  %3 = vector.fma %0, %1, %2 : vector<3x4xf32>
+  return %3 : vector<3x4xf32>
+}
+
+// -----
+
+// vector.fma only supports vector operands, hence the broadcast can only be
+// sunk when the broadcast source is a vector as well.
+
+// CHECK-LABEL: func.func @fma_vector_broadcast_source(
+//  CHECK-SAME:   %[[ARG0:.*]]: vector<4xf32>, %[[ARG1:.*]]: vector<4xf32>, %[[ARG2:.*]]: vector<4xf32>)
+//       CHECK:   %[[FMA:.*]] = vector.fma %[[ARG0]], %[[ARG1]], %[[ARG2]] : vector<4xf32>
+//       CHECK:   %[[BCAST:.*]] = vector.broadcast %[[FMA]] : vector<4xf32> to vector<3x4xf32>
+//       CHECK:   return %[[BCAST]] : vector<3x4xf32>
+func.func @fma_vector_broadcast_source(%arg0: vector<4xf32>, %arg1: vector<4xf32>, %arg2: vector<4xf32>) -> vector<3x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4xf32> to vector<3x4xf32>
+  %1 = vector.broadcast %arg1 : vector<4xf32> to vector<3x4xf32>
+  %2 = vector.broadcast %arg2 : vector<4xf32> to vector<3x4xf32>
+  %3 = vector.fma %0, %1, %2 : vector<3x4xf32>
+  return %3 : vector<3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @fma_vector_broadcast_source_scalable(
+//  CHECK-SAME:   %[[ARG0:.*]]: vector<[4]xf32>, %[[ARG1:.*]]: vector<[4]xf32>, %[[ARG2:.*]]: vector<[4]xf32>)
+//       CHECK:   %[[FMA:.*]] = vector.fma %[[ARG0]], %[[ARG1]], %[[ARG2]] : vector<[4]xf32>
+//       CHECK:   %[[BCAST:.*]] = vector.broadcast %[[FMA]] : vector<[4]xf32> to vector<3x[4]xf32>
+//       CHECK:   return %[[BCAST]] : vector<3x[4]xf32>
+func.func @fma_vector_broadcast_source_scalable(%arg0: vector<[4]xf32>, %arg1: vector<[4]xf32>, %arg2: vector<[4]xf32>) -> vector<3x[4]xf32> {
+  %0 = vector.broadcast %arg0 : vector<[4]xf32> to vector<3x[4]xf32>
+  %1 = vector.broadcast %arg1 : vector<[4]xf32> to vector<3x[4]xf32>
+  %2 = vector.broadcast %arg2 : vector<[4]xf32> to vector<3x[4]xf32>
+  %3 = vector.fma %0, %1, %2 : vector<3x[4]xf32>
+  return %3 : vector<3x[4]xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @fma_vector_broadcast_source_and_splat_const(
+//  CHECK-SAME:   %[[ARG0:.*]]: vector<4xf32>, %[[ARG1:.*]]: vector<4xf32>)
+//       CHECK:   %[[NEW_CST:.*]] = arith.constant dense<2.000000e+00> : vector<4xf32>
+//       CHECK:   %[[FMA:.*]] = vector.fma %[[ARG0]], %[[ARG1]], %[[NEW_CST]] : vector<4xf32>
+//       CHECK:   %[[BCAST:.*]] = vector.broadcast %[[FMA]] : vector<4xf32> to vector<3x4xf32>
+//       CHECK:   return %[[BCAST]] : vector<3x4xf32>
+func.func @fma_vector_broadcast_source_and_splat_const(%arg0: vector<4xf32>, %arg1: vector<4xf32>) -> vector<3x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4xf32> to vector<3x4xf32>
+  %1 = vector.broadcast %arg1 : vector<4xf32> to vector<3x4xf32>
+  %cst = arith.constant dense<2.0> : vector<3x4xf32>
+  %2 = vector.fma %0, %1, %cst : vector<3x4xf32>
+  return %2 : vector<3x4xf32>
 }
 
 // -----

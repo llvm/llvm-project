@@ -5,6 +5,8 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_tool(clang-ssaf-linker
+  MultiArchCreateCLI.cpp
+  StaticLibraryCreateCLI.cpp
   SSAFLinker.cpp
   )
 

@@ -292,6 +292,8 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
         .Case("0x004", "carmel")
         .Case("0x10", "olympus")
         .Case("0x010", "olympus")
+        .Case("0x11", "rigel")
+        .Case("0x011", "rigel")
         .Default("generic");
   }
 
@@ -567,6 +569,9 @@ StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
       .Case("eswin,eic770x", "sifive-p550")
       .Case("sifive,u74-mc", "sifive-u74")
       .Case("sifive,bullet0", "sifive-u74")
+      .Case("spacemit,x60", "spacemit-x60")
+      .Case("spacemit,x100", "spacemit-x100")
+      .Case("spacemit,a100", "spacemit-a100")
       .Default("");
 }
 
@@ -2141,6 +2146,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
                       !getX86CpuIDAndInfo(0x80000021, &EAX, &EBX, &ECX, &EDX);
   // AMD cpuid bit for prefetchi is different from Intel
   Features["prefetchi"] = HasExtLeaf21 && ((EAX >> 20) & 1);
+  Features["avx512bmm"] = HasExtLeaf21 && ((EAX >> 23) & 1) && HasAVX512Save;
 
   bool HasLeaf7 =
       MaxLevel >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
@@ -2260,7 +2266,6 @@ StringMap<bool> sys::getHostCPUFeatures() {
   bool HasLeaf1E = MaxLevel >= 0x1e &&
                    !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
   Features["amx-fp8"] = HasLeaf1E && ((EAX >> 4) & 1) && HasAMXSave;
-  Features["amx-tf32"] = HasLeaf1E && ((EAX >> 6) & 1) && HasAMXSave;
   Features["amx-avx512"] = HasLeaf1E && ((EAX >> 7) & 1) && HasAMXSave;
   Features["amx-movrs"] = HasLeaf1E && ((EAX >> 8) & 1) && HasAMXSave;
 
