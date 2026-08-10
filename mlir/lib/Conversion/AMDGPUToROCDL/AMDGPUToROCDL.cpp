@@ -489,13 +489,9 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     sgprOffset = LLVM::MulOp::create(rewriter, loc, sgprOffset, byteWidthConst);
     args.push_back(sgprOffset);
 
-    if constexpr (!std::is_same_v<Intrinsic, ROCDL::RawPtrBufferLoadOp>) {
-      // No syncscope information is available at this level, so conservatively
-      // report an empty (unspecified) scope.
-      Value noScope = LLVM::MetadataAsValueOp::create(
-          rewriter, loc, LLVM::MDNodeAttr::get(rewriter.getContext(), {}));
-      args.push_back(noScope);
-    }
+    // These ops are never atomic, so report the empty metadata node.
+    args.push_back(LLVM::MetadataAsValueOp::create(
+        rewriter, loc, LLVM::MDNodeAttr::get(rewriter.getContext(), {})));
 
     llvm::SmallVector<Type, 1> resultTypes(gpuOp->getNumResults(),
                                            llvmBufferValType);

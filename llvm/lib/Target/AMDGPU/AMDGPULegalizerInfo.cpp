@@ -6664,7 +6664,7 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
 
   unsigned ImmOffset;
 
-  // The trailing syncscope metadata operand on _ptr_ intrinsics is not one
+  // The trailing atomicity metadata operand on _ptr_ intrinsics is not one
   // of the positional arguments counted below.
   unsigned NumOperands = MI.getNumOperands();
   if (MI.getOperand(NumOperands - 1).isMetadata())
@@ -6785,7 +6785,7 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
   castBufferRsrcArgToV4I32(MI, B, 2 + OpOffset);
   Register RSrc = MI.getOperand(2 + OpOffset).getReg();
 
-  // The trailing syncscope metadata operand on _ptr_ intrinsics is not one
+  // The trailing atomicity metadata operand on _ptr_ intrinsics is not one
   // of the positional arguments counted below.
   unsigned NumOperands = MI.getNumOperands();
   if (MI.getOperand(NumOperands - 1).isMetadata())
@@ -7067,7 +7067,7 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   Register RSrc = MI.getOperand(3 + OpOffset).getReg();
   const unsigned NumVIndexOps = IsCmpSwap ? 9 : 8;
 
-  // The trailing syncscope metadata operand on _ptr_ intrinsics is not one
+  // The trailing atomicity metadata operand on _ptr_ intrinsics is not one
   // of the positional arguments counted below.
   unsigned NumOperands = MI.getNumOperands();
   if (MI.getOperand(NumOperands - 1).isMetadata())

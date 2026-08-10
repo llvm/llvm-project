@@ -81,8 +81,15 @@ define void @buffer_fat_ptr_seq_cst_atomic_add_noret_i32(ptr addrspace(7) inreg 
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s16
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    buffer_atomic_add_u32 v0, v1, s[0:3], null offen scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
@@ -123,8 +130,15 @@ define i32 @buffer_fat_ptr_seq_cst_cmpxchg_i32(ptr addrspace(7) inreg %ptr, i32 
 ; GFX1250-NEXT:    s_wait_xcnt 0x1
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s16
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v2, s[0:3], null offen th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $vgpr0_vgpr1 killed $exec
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -161,7 +175,11 @@ define i32 @buffer_fat_ptr_seq_cst_load_i32(ptr addrspace(7) inreg %ptr) {
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s16
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
@@ -196,7 +214,12 @@ define void @buffer_fat_ptr_seq_cst_store_i32(ptr addrspace(7) inreg %ptr, i32 %
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s16
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    buffer_store_b32 v0, v1, s[0:3], null offen scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0

@@ -1545,6 +1545,36 @@ loads.
   requirements of strict OOB mode. However, in strict OOB mode, those intrinsics
   will not be combined in a way that would violate the guarantees of that mode.
 
+.. _amdgpu-buffer-intrinsic-atomicity:
+
+Buffer memory intrinsic atomicity
+---------------------------------
+
+The buffer memory intrinsics (``llvm.amdgcn.{raw,struct}.ptr.buffer.{load,store}``,
+``llvm.amdgcn.{raw,struct}.ptr.buffer.{load,store}.format``,
+``llvm.amdgcn.{raw,struct}.ptr.atomic.buffer.load`` and
+``llvm.amdgcn.{raw,struct}.ptr.buffer.atomic.*``) each take a trailing metadata
+argument that records the atomicity of the access. It is either the empty node,
+``!{}``, meaning that the access is not atomic, or a two-element node
+``!{!"<ordering>", !"<syncscope>"}``, where ``<ordering>`` is the LLVM IR
+spelling of the memory ordering (``unordered``, ``monotonic``, ``acquire``,
+``release``, ``acq_rel`` or ``seq_cst``) and ``<syncscope>`` is a synchronization
+scope name from table :ref:`amdgpu-amdhsa-llvm-sync-scopes-table` (the empty
+string denotes system scope).
+
+This argument is needed because a buffer instruction is the same instruction
+whether or not the access it implements is atomic, so the atomicity cannot be
+recovered from the selected instruction. The information is transferred to the
+``MachineMemOperand`` during instruction selection, where ``SIMemoryLegalizer``
+uses it to set the cache-bypass bits and to insert the cache invalidations and
+writebacks the memory model requires.
+
+``AMDGPULowerBufferFatPointers`` populates the argument from the ``atomicrmw``,
+``cmpxchg``, ``load`` or ``store`` instruction it lowers. Frontends that call
+these intrinsics directly and cannot express atomicity should pass ``!{}``.
+For compatibility, bitcode from before this argument existed is upgraded by
+appending ``!{}``.
+
 Target Types
 ------------
 
