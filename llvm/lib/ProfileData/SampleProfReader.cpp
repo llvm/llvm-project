@@ -895,10 +895,18 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     if (!M) {
       Data = End;
     } else {
+      bool IsEytzinger =
+          hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagEytzinger);
+      bool IsFlat = hasSecFlag(Entry, SecCommonFlags::SecFlagFlat);
+      // An unflagged function offset table inherently indexes the primary
+      // context-sensitive symbol span.
+      bool IsCS = !IsFlat;
       assert((!ProfileIsCS ||
-              hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered)) &&
-             "func offset table should always be sorted in CS profile");
-      if (std::error_code EC = readFuncOffsetTable())
+              hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered) ||
+              IsEytzinger) &&
+             "func offset table should always be sorted or in Eytzinger BFS "
+             "order in CS profile");
+      if (std::error_code EC = readFuncOffsetTable(IsEytzinger, IsCS))
         return EC;
     }
     break;
@@ -985,7 +993,36 @@ bool SampleProfileReaderExtBinaryBase::collectFuncsFromModule() {
   return true;
 }
 
-std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
+std::error_code
+SampleProfileReaderExtBinaryBase::readFuncOffsetTable(bool IsEytzinger,
+                                                      bool IsCS) {
+  if (IsEytzinger)
+    return readEytzingerFuncOffsetTable(IsCS);
+  return readLegacyFuncOffsetTable();
+}
+
+std::error_code
+SampleProfileReaderExtBinaryBase::readEytzingerFuncOffsetTable(bool IsCS) {
+  // If there are more than one function offset section, the profile associated
+  // with the previous section has to be done reading before next one is read.
+  FuncOffsetTable.reset();
+
+  size_t Size = End - Data;
+  size_t SpanSize = NameTable->getEytzingerSpan(IsCS).size();
+  if (Size != SpanSize * sizeof(uint32_t))
+    return sampleprof_error::malformed;
+
+  auto *Array = reinterpret_cast<const support::ulittle32_t *>(Data);
+  ArrayRef<support::ulittle32_t> Offsets(Array, SpanSize);
+
+  FuncOffsetTable.emplace(EytzingerMode, NameTable->getEytzingerSpan(IsCS),
+                          Offsets);
+
+  Data = End;
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderExtBinaryBase::readLegacyFuncOffsetTable() {
   // If there are more than one function offset section, the profile associated
   // with the previous section has to be done reading before next one is read.
   FuncOffsetTable.reset();
@@ -1030,6 +1067,21 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
     for (auto Name : FuncsToUse) {
       Remapper->insert(Name);
     }
+  }
+
+  if (FuncOffsetTable && FuncOffsetTable->isEytzinger() &&
+      useFuncOffsetList()) {
+    ArrayRef<support::ulittle32_t> Offsets = FuncOffsetTable->getFuncOffsets();
+    if (Offsets.size() != FuncOffsetTable->getExpectedSize())
+      return sampleprof_error::malformed;
+    for (const auto &[LocalIdx, RelOffset] : llvm::enumerate(Offsets)) {
+      if (RelOffset == UINT32_MAX)
+        continue;
+      const uint8_t *FuncProfileAddr = Start + RelOffset;
+      if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
+        return EC;
+    }
+    return sampleprof_error::success;
   }
 
   if (ProfileIsCS) {
@@ -1669,6 +1721,8 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
   case SecFuncOffsetTable:
     if (hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered))
       Flags.append("ordered,");
+    if (hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagEytzinger))
+      Flags.append("eytzinger,");
     break;
   case SecFuncMetadata:
     if (hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagIsProbeBased))
