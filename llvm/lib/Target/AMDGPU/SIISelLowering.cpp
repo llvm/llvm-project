@@ -16374,7 +16374,6 @@ SDValue SITargetLowering::getCanonicalConstantFP(SelectionDAG &DAG,
       return DAG.getConstantFP(C.makeQuiet(), SL, VT);
     }
 
-    // A QNaN is already canonical on AMDGPU regardless of payload.
   }
 
   // Already canonical.
