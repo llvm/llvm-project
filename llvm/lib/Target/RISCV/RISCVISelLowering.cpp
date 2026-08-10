@@ -25738,7 +25738,6 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   case CallingConv::PreserveMost:
   case CallingConv::GRAAL:
   case CallingConv::RISCV_VectorCall:
-  case CallingConv::Swift:
 #define CC_VLS_CASE(ABI_VLEN) case CallingConv::RISCV_VLSCall_##ABI_VLEN:
     CC_VLS_CASE(32)
     CC_VLS_CASE(64)
@@ -25753,6 +25752,12 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     CC_VLS_CASE(32768)
     CC_VLS_CASE(65536)
 #undef CC_VLS_CASE
+    break;
+  case CallingConv::Swift:
+    if (Subtarget.getTargetABI() == RISCVABI::ABI_ILP32E ||
+        Subtarget.getTargetABI() == RISCVABI::ABI_LP64E)
+      reportFatalUsageError(
+          "Swift calling convention is not supported on the E ABIs");
     break;
   case CallingConv::GHC:
     if (Subtarget.hasStdExtE())
@@ -25980,6 +25985,18 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
     if (Arg.Flags.isByVal())
       return false;
 
+  // Any argument passed in a register that the caller's convention treats as
+  // callee-saved (e.g. a swiftself context in x20) is clobbered when the
+  // epilogue restores callee-saved registers before the tail-call jump,
+  // unless the outgoing value is the caller's own incoming value forwarded
+  // unchanged. This applies to musttail too: rejecting here surfaces a fatal
+  // error in LowerCall rather than a miscompile.
+  const RISCVRegisterInfo *TRI = Subtarget.getRegisterInfo();
+  const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
+  if (!parametersInCSRMatch(MF.getRegInfo(), CallerPreserved, ArgLocs,
+                            CLI.OutVals))
+    return false;
+
   // musttail bypasses the remaining checks: the checks either reject cases
   // we handle specially (indirect args are forwarded via incoming pointers,
   // stack-passed args reuse the matching incoming layout, sret is forwarded
@@ -26009,8 +26026,6 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
     return false;
 
   // The callee has to preserve all registers the caller needs to preserve.
-  const RISCVRegisterInfo *TRI = Subtarget.getRegisterInfo();
-  const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
   if (CalleeCC != CallerCC) {
     const uint32_t *CalleePreserved = TRI->getCallPreservedMask(MF, CalleeCC);
     if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved))

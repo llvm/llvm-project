@@ -1085,14 +1085,27 @@ void RISCVABIInfo::createCoercedStore(llvm::Value *Val, Address Dst,
 }
 
 namespace {
+class RISCVSwiftABIInfo : public SwiftABIInfo {
+public:
+  explicit RISCVSwiftABIInfo(CodeGen::CodeGenTypes &CGT)
+      : SwiftABIInfo(CGT, /*SwiftErrorInRegister=*/false) {}
+
+  bool isLegalVectorType(CharUnits VectorSize, llvm::Type *EltTy,
+                         unsigned NumElts) const override {
+    // The base calling convention has no vector registers; lower vectors
+    // into scalar components rather than relying on the default's
+    // assumption of 128-bit SIMD registers.
+    return false;
+  }
+};
+
 class RISCVTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   RISCVTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT, unsigned XLen,
                          unsigned FLen, bool EABI)
       : TargetCodeGenInfo(
             std::make_unique<RISCVABIInfo>(CGT, XLen, FLen, EABI)) {
-    SwiftInfo =
-        std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
+    SwiftInfo = std::make_unique<RISCVSwiftABIInfo>(CGT);
   }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,

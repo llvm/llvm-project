@@ -479,6 +479,13 @@ features cannot lower the translation-unit ABI level;
 
 #### RISC-V Support
 
+- The `swiftcall` calling convention is now supported, except on the E ABIs.
+  The Swift context (`swift_context`) is passed in `x20`, values are returned
+  directly in up to four registers, and floating-point register use follows
+  the selected floating-point ABI. As on all platforms without a declared
+  stable Swift ABI, the convention's lowering is subject to change between
+  releases. `swiftasynccall` is not supported.
+
 #### CUDA/HIP Language Changes
 
 #### CUDA Support

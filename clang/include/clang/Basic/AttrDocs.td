@@ -6427,6 +6427,15 @@ with ``__has_attribute(swiftcall)``. Query if the target supports the
 calling convention with ``__has_extension(swiftcc)``. This implies
 support for the ``swift_context``, ``swift_error_result``, and
 ``swift_indirect_result`` attributes.
+
+The Swift calling convention is a stable ABI only on platforms for which
+the Swift project has declared a stable ABI (currently, Apple platforms).
+This is a platform-specific property, not an architecture-specific one:
+for example, the convention is stable on Darwin x86-64 but not on Linux
+x86-64. On platforms where it is not stable, the convention's lowering
+may change between compiler releases, and it must not be used in
+ABI-stable binary interfaces; it remains usable for code built and
+distributed as a unit, such as when bringing up a new Swift port.
   }];
 }
 
