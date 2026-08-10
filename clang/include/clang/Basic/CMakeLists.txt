@@ -98,6 +98,10 @@ clang_tablegen(BuiltinsAArch64.inc -gen-clang-builtins
   SOURCE BuiltinsAArch64.td
   TARGET ClangBuiltinsAArch64)
 
+clang_tablegen(BuiltinsARM.inc -gen-clang-builtins
+  SOURCE BuiltinsARM.td
+  TARGET ClangBuiltinsARM)
+
 clang_tablegen(BuiltinsAMDGPU.inc -gen-clang-builtins
   SOURCE BuiltinsAMDGPU.td
   TARGET ClangBuiltinsAMDGPU)
