@@ -15,6 +15,8 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTX_H
 
 #include "llvm/ADT/Bitfields.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -41,7 +43,7 @@ enum CondCodes {
 
 FunctionPass *createNVPTXISelDag(NVPTXTargetMachine &TM,
                                  llvm::CodeGenOptLevel OptLevel);
-ModulePass *createNVPTXAssignValidGlobalNamesPass();
+ModulePass *createNVPTXAssignValidGlobalNamesLegacyPass();
 ModulePass *createGenericToNVVMLegacyPass();
 ModulePass *createNVPTXCtorDtorLoweringLegacyPass();
 FunctionPass *createNVVMIntrRangePass();
@@ -59,14 +61,14 @@ FunctionPass *createNVPTXTagInvariantLoadsPass();
 FunctionPass *createNVPTXIRPeepholePass();
 MachineFunctionPass *createNVPTXPeephole();
 MachineFunctionPass *createNVPTXProxyRegErasurePass();
-MachineFunctionPass *createNVPTXForwardParamsPass();
+MachineFunctionPass *createNVPTXForwardParamsLegacyPass();
 MachineFunctionPass *createNVPTXAddressFolderPass();
 
 void initializeNVVMReflectLegacyPassPass(PassRegistry &);
 void initializeGenericToNVVMLegacyPassPass(PassRegistry &);
 void initializeNVPTXAllocaHoistingPass(PassRegistry &);
 void initializeNVPTXAsmPrinterPass(PassRegistry &);
-void initializeNVPTXAssignValidGlobalNamesPass(PassRegistry &);
+void initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PassRegistry &);
 void initializeNVPTXAtomicLowerPass(PassRegistry &);
 void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
 void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
@@ -75,7 +77,7 @@ void initializeNVPTXLowerUnreachablePass(PassRegistry &);
 void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
 void initializeNVPTXPromoteParamAlignLegacyPassPass(PassRegistry &);
 void initializeNVPTXProxyRegErasurePass(PassRegistry &);
-void initializeNVPTXForwardParamsPassPass(PassRegistry &);
+void initializeNVPTXForwardParamsLegacyPassPass(PassRegistry &);
 void initializeNVPTXAddressFolderPassPass(PassRegistry &);
 void initializeNVVMIntrRangePass(PassRegistry &);
 void initializeNVVMReflectPass(PassRegistry &);
@@ -134,6 +136,24 @@ struct NVPTXMarkKernelPtrsGlobalPass
 struct NVPTXTagInvariantLoadsPass
     : OptionalPassInfoMixin<NVPTXTagInvariantLoadsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+class NVPTXISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  NVPTXISelDAGToDAGPass(NVPTXTargetMachine &TM, CodeGenOptLevel OptLevel);
+};
+
+class NVPTXForwardParamsPass
+    : public RequiredPassInfoMixin<NVPTXForwardParamsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class NVPTXAssignValidGlobalNamesPass
+    : public RequiredPassInfoMixin<NVPTXAssignValidGlobalNamesPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 namespace NVPTX {
