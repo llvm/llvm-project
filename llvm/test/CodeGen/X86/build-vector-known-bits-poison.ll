@@ -10,19 +10,11 @@ define <4 x i8> @poison_build_vector_known_bits(<4 x i32> %v) {
 ; CHECK-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    packssdw %xmm0, %xmm0
 ; CHECK-NEXT:    packsswb %xmm0, %xmm0
-; CHECK-NEXT:    psllw $5, %xmm0
-; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    paddb %xmm0, %xmm0
-; CHECK-NEXT:    paddb %xmm0, %xmm0
+; CHECK-NEXT:    psllw $7, %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtb %xmm0, %xmm1
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [11,11,11,11,u,u,u,u,u,u,u,u,u,u,u,u]
-; CHECK-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-NEXT:    paddb %xmm0, %xmm2
-; CHECK-NEXT:    pand %xmm1, %xmm2
-; CHECK-NEXT:    pandn %xmm0, %xmm1
-; CHECK-NEXT:    por %xmm2, %xmm1
-; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %icmp = icmp ugt <4 x i32> %v, splat (i32 -9)
