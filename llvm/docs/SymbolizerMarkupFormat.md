@@ -1,10 +1,6 @@
-==========================
-Symbolizer Markup Format
-==========================
+# Symbolizer Markup Format
 
-
-Overview
-========
+## Overview
 
 This document defines a text format for log messages that can be processed by a
 symbolizing filter. The basic idea is that logging code emits text that contains
@@ -28,15 +24,14 @@ distinctive. It's simple enough to be matched and parsed with straightforward
 code. It's distinctive enough that character sequences that look like the start
 or end of a markup element should rarely if ever appear incidentally in logging
 text. It's specifically intended not to require sanitizing plain text, such as
-the HTML/XML requirement to replace ``<`` with ``&lt;`` and the like.
+the HTML/XML requirement to replace `<` with `&lt;` and the like.
 
-:doc:`llvm-symbolizer <CommandGuide/llvm-symbolizer>` includes a symbolizing
-filter via its ``--filter-markup`` option. Also, LLVM utilites emit stack
-traces as markup when the ``LLVM_ENABLE_SYMBOLIZER_MARKUP`` environment
+{doc}`llvm-symbolizer <CommandGuide/llvm-symbolizer>` includes a symbolizing
+filter via its `--filter-markup` option. Also, LLVM utilites emit stack
+traces as markup when the `LLVM_ENABLE_SYMBOLIZER_MARKUP` environment
 variable is set.
 
-Scope and assumptions
-=====================
+## Scope and assumptions
 
 A symbolizing filter implementation will be independent both of the target
 operating system and machine architecture where the logs are generated and of
@@ -61,16 +56,15 @@ disjoint address regions in most operating systems, a single user process
 address space plus the kernel address space can be treated as a single address
 space for symbolization purposes if desired.
 
-Dependence on Build IDs
-=======================
+## Dependence on Build IDs
 
 The symbolizer markup scheme relies on contextual information about runtime
 memory address layout to make it possible to convert markup elements into useful
 symbolic form. This relies on having an unmistakable identification of which
 binary was loaded at each address.
 
-An ELF Build ID is the payload of an ELF note with name ``"GNU"`` and type
-``NT_GNU_BUILD_ID``, a unique byte sequence that identifies a particular binary
+An ELF Build ID is the payload of an ELF note with name `"GNU"` and type
+`NT_GNU_BUILD_ID`, a unique byte sequence that identifies a particular binary
 (executable, shared library, loadable module, or driver module). The linker
 generates this automatically based on a hash that includes the complete symbol
 table and debugging information, even if this is later stripped from the binary.
@@ -81,20 +75,18 @@ Build ID. The symbolizing filter must have some means of mapping a Build ID back
 to the original ELF binary (either the whole unstripped binary, or a stripped
 binary paired with a separate debug file).
 
-Colorization
-============
+## Colorization
 
 The markup format supports a restricted subset of ANSI X3.64 SGR (Select Graphic
 Rendition) control sequences. These are unlike other markup elements:
 
-* They specify presentation details (bold or colors) rather than semantic
+- They specify presentation details (bold or colors) rather than semantic
   information. The association of semantic meaning with color (e.g. red for
   errors) is chosen by the code doing the logging, rather than by the UI
   presentation of the symbolizing filter. This is a concession to existing code
   (e.g. LLVM sanitizer runtimes) that use specific colors and would require
   substantial changes to generate semantic markup instead.
-
-* A single control sequence changes "the state", rather than being an
+- A single control sequence changes "the state", rather than being an
   hierarchical structure that surrounds affected text.
 
 The filter processes ANSI SGR control sequences only within a single line. If a
@@ -108,36 +100,35 @@ However, other markup elements may appear between SGR control sequences and the
 color/bold state is expected to apply to the symbolic output that replaces the
 markup element in the filter's output.
 
-The accepted SGR control sequences all have the form ``"\033[%um"`` (expressed here
-using C string syntax), where ``%u`` is one of these:
+The accepted SGR control sequences all have the form `"\033[%um"` (expressed here
+using C string syntax), where `%u` is one of these:
 
-==== ============================ ===============================================
-Code Effect                       Notes
-==== ============================ ===============================================
-0    Reset to default formatting.
-1    Bold text                    Combines with color states, doesn't reset them.
-30   Black foreground
-31   Red foreground
-32   Green foreground
-33   Yellow foreground
-34   Blue foreground
-35   Magenta foreground
-36   Cyan foreground
-37   White foreground
-==== ============================ ===============================================
+| Code | Effect                       | Notes                                           |
+| ---- | ---------------------------- | ----------------------------------------------- |
+| 0    | Reset to default formatting. |                                                 |
+| 1    | Bold text                    | Combines with color states, doesn't reset them. |
+| 30   | Black foreground             |                                                 |
+| 31   | Red foreground               |                                                 |
+| 32   | Green foreground             |                                                 |
+| 33   | Yellow foreground            |                                                 |
+| 34   | Blue foreground              |                                                 |
+| 35   | Magenta foreground           |                                                 |
+| 36   | Cyan foreground              |                                                 |
+| 37   | White foreground             |                                                 |
 
-Common markup element syntax
-============================
+## Common markup element syntax
 
 All the markup elements share a common syntactic structure to facilitate simple
-matching and parsing code. Each element has the form::
+matching and parsing code. Each element has the form:
 
-  {{{tag:fields}}}
+```
+{{{tag:fields}}}
+```
 
-``tag`` identifies one of the element types described below, and is always a
+`tag` identifies one of the element types described below, and is always a
 short alphabetic string that must be in lower case. The rest of the element
-consists of one or more fields. Fields are separated by ``:`` and cannot contain
-any ``:`` or ``}`` characters. How many fields must be or may be present and
+consists of one or more fields. Fields are separated by `:` and cannot contain
+any `:` or `}` characters. How many fields must be or may be present and
 what they contain is specified for each element type.
 
 No markup elements or ANSI SGR control sequences are interpreted inside the
@@ -148,71 +139,82 @@ adding new fields to backwards-compatibly extend elements. Implementations need
 not ignore them silently, but the element should behave otherwise as if the
 fields were removed.
 
-In the descriptions of each element type, ``printf``-style placeholders indicate
+In the descriptions of each element type, `printf`-style placeholders indicate
 field contents:
 
-``%s``
-  A string of printable characters, not including ``:`` or ``}``.
+`%s`
 
-``%p``
-  An address value represented by ``0x`` followed by an even number of
-  hexadecimal digits (using either lower-case or upper-case for ``A``–``F``).
-  If the digits are all ``0`` then the ``0x`` prefix may be omitted. No more
+: A string of printable characters, not including `:` or `}`.
+
+`%p`
+
+: An address value represented by `0x` followed by an even number of
+  hexadecimal digits (using either lower-case or upper-case for `A`–`F`).
+  If the digits are all `0` then the `0x` prefix may be omitted. No more
   than 16 hexadecimal digits are expected to appear in a single value (64 bits).
 
-``%u``
-  A nonnegative decimal integer.
+`%u`
 
-``%i``
-  A nonnegative integer. The digits are hexadecimal if prefixed by ``0x``, octal
-  if prefixed by ``0``, or decimal otherwise.
+: A nonnegative decimal integer.
 
-``%x``
-  A sequence of an even number of hexadecimal digits (using either lower-case or
-  upper-case for ``A``–``F``), with no ``0x`` prefix. This represents an
+`%i`
+
+: A nonnegative integer. The digits are hexadecimal if prefixed by `0x`, octal
+  if prefixed by `0`, or decimal otherwise.
+
+`%x`
+
+: A sequence of an even number of hexadecimal digits (using either lower-case or
+  upper-case for `A`–`F`), with no `0x` prefix. This represents an
   arbitrary sequence of bytes, such as an ELF Build ID.
 
-Presentation elements
-=====================
+## Presentation elements
 
 These are elements that convey a specific program entity to be displayed in
 human-readable symbolic form.
 
-``{{{symbol:%s}}}``
-  Here ``%s`` is the linkage name for a symbol or type. It may require
+`{{{symbol:%s}}}`
+
+: Here `%s` is the linkage name for a symbol or type. It may require
   demangling according to language ABI rules. Even for unmangled names, it's
   recommended that this markup element be used to identify a symbol name so that
   it can be presented distinctively.
 
-  Examples::
+  Examples:
 
-    {{{symbol:_ZN7Mangled4NameEv}}}
-    {{{symbol:foobar}}}
+  ```
+  {{{symbol:_ZN7Mangled4NameEv}}}
+  {{{symbol:foobar}}}
+  ```
 
-``{{{pc:%p}}}``, ``{{{pc:%p:ra}}}``, ``{{{pc:%p:pc}}}``
+`{{{pc:%p}}}`, `{{{pc:%p:ra}}}`, `{{{pc:%p:pc}}}`
 
-  Here ``%p`` is the memory address of a code location. It might be presented as a
+: Here `%p` is the memory address of a code location. It might be presented as a
   function name and source location. The second two forms distinguish the kind of
   code location, as described in detail for bt elements below.
 
-  Examples::
+  Examples:
 
-    {{{pc:0x12345678}}}
-    {{{pc:0xffffffff9abcdef0}}}
+  ```
+  {{{pc:0x12345678}}}
+  {{{pc:0xffffffff9abcdef0}}}
+  ```
 
-``{{{data:%p}}}``
+`{{{data:%p}}}`
 
-  Here ``%p`` is the memory address of a data location. It might be presented as
+: Here `%p` is the memory address of a data location. It might be presented as
   the name of a global variable at that location.
 
-  Examples::
+  Examples:
 
-    {{{data:0x12345678}}}
-    {{{data:0xffffffff9abcdef0}}}
+  ```
+  {{{data:0x12345678}}}
+  {{{data:0xffffffff9abcdef0}}}
+  ```
 
-``{{{bt:%u:%p}}}``, ``{{{bt:%u:%p:ra}}}``, ``{{{bt:%u:%p:pc}}}``
+`{{{bt:%u:%p}}}`, `{{{bt:%u:%p:ra}}}`, `{{{bt:%u:%p:pc}}}`
 
-  This represents one frame in a backtrace. It usually appears on a line by
+: This represents one frame in a backtrace. It usually appears on a line by
   itself (surrounded only by whitespace), in a sequence of such lines with
   ascending frame numbers. So the human-readable output might be formatted
   assuming that, such that it looks good for a sequence of bt elements each
@@ -220,9 +222,9 @@ human-readable symbolic form.
   anywhere, so the filter should not remove any non-whitespace text surrounding
   the element.
 
-  Here ``%u`` is the frame number, which starts at zero for the location of the
+  Here `%u` is the frame number, which starts at zero for the location of the
   fault being identified, increments to one for the caller of frame zero's call
-  frame, to two for the caller of frame one, etc. ``%p`` is the memory address
+  frame, to two for the caller of frame one, etc. `%p` is the memory address
   of a code location.
 
   Code locations in a backtrace come from two distinct sources. Most backtrace
@@ -235,7 +237,7 @@ human-readable symbolic form.
   byte or one instruction length from the actual return address for the call
   site, with the intent that the address logged can be translated directly to a
   source location for the call site and not for the apparent return site
-  thereafter (which can be confusing).  When inlined functions are involved, the
+  thereafter (which can be confusing). When inlined functions are involved, the
   call site and the return site can appear to be in different functions at
   entirely unrelated source locations rather than just a line away, making the
   confusion of showing the return site rather the call site quite severe.
@@ -250,17 +252,17 @@ human-readable symbolic form.
   address, presented as the "caller" of a trap handler function (for example,
   signal handlers in POSIX systems).
 
-  Return address frames are identified by the ``:ra`` suffix. Precise code
-  location frames are identified by the ``:pc`` suffix.
+  Return address frames are identified by the `:ra` suffix. Precise code
+  location frames are identified by the `:pc` suffix.
 
   Traditional practice has often been to collect backtraces as simple address
   lists, losing the distinction between return address code locations and
   precise code locations. Some such code applies the "subtract one" adjustment
   described above to the address values before reporting them, and it's not
   always clear or consistent whether this adjustment has been applied or not.
-  These ambiguous cases are supported by the ``bt`` and ``pc`` forms with no
-  ``:ra`` or ``:pc`` suffix, which indicate it's unclear which sort of code
-  location this is.  However, it's highly recommended that all emitters use the
+  These ambiguous cases are supported by the `bt` and `pc` forms with no
+  `:ra` or `:pc` suffix, which indicate it's unclear which sort of code
+  location this is. However, it's highly recommended that all emitters use the
   suffixed forms and deliver address values with no adjustments applied. When
   traditional practice has been ambiguous, the majority of cases seem to have
   been of printing addresses that are return address code locations and printing
@@ -271,17 +273,19 @@ human-readable symbolic form.
   still results in an address somewhere in the call instruction, so a little
   sloppiness here often does little or no harm.
 
-  Examples::
+  Examples:
 
-    {{{bt:0:0x12345678:pc}}}
-    {{{bt:1:0xffffffff9abcdef0:ra}}}
+  ```
+  {{{bt:0:0x12345678:pc}}}
+  {{{bt:1:0xffffffff9abcdef0:ra}}}
+  ```
 
-``{{{hexdict:...}}}`` [#not_yet_implemented]_
+`{{{hexdict:...}}}` [^not-yet-implemented]
 
-  This element can span multiple lines. Here ``...`` is a sequence of key-value
-  pairs where a single ``:`` separates each key from its value, and arbitrary
+: This element can span multiple lines. Here `...` is a sequence of key-value
+  pairs where a single `:` separates each key from its value, and arbitrary
   whitespace separates the pairs. The value (right-hand side) of each pair
-  either is one or more ``0`` digits, or is ``0x`` followed by hexadecimal
+  either is one or more `0` digits, or is `0x` followed by hexadecimal
   digits. Each value might be a memory address or might be some other integer
   (including an integer that looks like a likely memory address but actually has
   an unrelated purpose). When the contextual information about the memory layout
@@ -299,28 +303,29 @@ human-readable symbolic form.
   the dump text as is, but highlight values with symbolic information available
   and pop up a presentation of symbolic details when a value is selected.
 
-  Example::
+  Example:
 
-    {{{hexdict:
-        CS:                   0 RIP:     0x6ee17076fb80 EFL:            0x10246 CR2:                  0
-        RAX:      0xc53d0acbcf0 RBX:     0x1e659ea7e0d0 RCX:                  0 RDX:     0x6ee1708300cc
-        RSI:                  0 RDI:     0x6ee170830040 RBP:     0x3b13734898e0 RSP:     0x3b13734898d8
-        R8:      0x3b1373489860 R9:          0x2776ff4f R10:     0x2749d3e9a940 R11:              0x246
-        R12:     0x1e659ea7e0f0 R13: 0xd7231230fd6ff2e7 R14:     0x1e659ea7e108 R15:      0xc53d0acbcf0
-      }}}
+  ```
+  {{{hexdict:
+      CS:                   0 RIP:     0x6ee17076fb80 EFL:            0x10246 CR2:                  0
+      RAX:      0xc53d0acbcf0 RBX:     0x1e659ea7e0d0 RCX:                  0 RDX:     0x6ee1708300cc
+      RSI:                  0 RDI:     0x6ee170830040 RBP:     0x3b13734898e0 RSP:     0x3b13734898d8
+      R8:      0x3b1373489860 R9:          0x2776ff4f R10:     0x2749d3e9a940 R11:              0x246
+      R12:     0x1e659ea7e0f0 R13: 0xd7231230fd6ff2e7 R14:     0x1e659ea7e108 R15:      0xc53d0acbcf0
+    }}}
+  ```
 
-Trigger elements
-================
+## Trigger elements
 
 These elements cause an external action and will be presented to the user in a
 human-readable form. Generally they trigger an external action to occur that
 results in a linkable page. The link or some other informative information about
 the external action can then be presented to the user.
 
-``{{{dumpfile:%s:%s}}}`` [#not_yet_implemented]_
+`{{{dumpfile:%s:%s}}}` [^not-yet-implemented]
 
-  Here the first ``%s`` is an identifier for a type of dump and the second
-  ``%s`` is an identifier for a particular dump that's just been published. The
+: Here the first `%s` is an identifier for a type of dump and the second
+  `%s` is an identifier for a particular dump that's just been published. The
   types of dumps, the exact meaning of "published", and the nature of the
   identifier are outside the scope of the markup format per se. In general it
   might correspond to writing a file by that name or something similar.
@@ -336,15 +341,16 @@ the external action can then be presented to the user.
   need to feed some distilled form of the contextual information to those
   processes.
 
-  An example of a type identifier is ``sancov``, for dumps from LLVM
-  `SanitizerCoverage <https://clang.llvm.org/docs/SanitizerCoverage.html>`_.
+  An example of a type identifier is `sancov`, for dumps from LLVM
+  [SanitizerCoverage](https://clang.llvm.org/docs/SanitizerCoverage.html).
 
-  Example::
+  Example:
 
-    {{{dumpfile:sancov:sancov.8675}}}
+  ```
+  {{{dumpfile:sancov:sancov.8675}}}
+  ```
 
-Contextual elements
-===================
+## Contextual elements
 
 These are elements that supply information necessary to convert presentation
 elements to symbolic form. Unlike presentation elements, they are not directly
@@ -365,9 +371,9 @@ elements should have appeared somewhere earlier in the logging stream. It should
 always be possible for the symbolizing filter to be implemented as a single pass
 over the raw logging stream, accumulating context and massaging text as it goes.
 
-``{{{reset}}}``
+`{{{reset}}}`
 
-  This should be output before any other contextual element. The need for this
+: This should be output before any other contextual element. The need for this
   contextual element is to support implementations that handle logs coming from
   multiple processes. Such implementations might not know when a new process
   starts or ends. Because some identifying information (like process IDs) might
@@ -377,63 +383,65 @@ over the raw logging stream, accumulating context and massaging text as it goes.
   previous process's contextual elements is not assumed for new process that
   just happens have the same identifying information.
 
-``{{{module:%i:%s:%s:...}}}``
+`{{{module:%i:%s:%s:...}}}`
 
-  This element represents a so-called "module". A "module" is a single linked
+: This element represents a so-called "module". A "module" is a single linked
   binary, such as a loaded ELF file. Usually each module occupies a contiguous
   range of memory.
 
-  Here ``%i`` is the module ID which is used by other contextual elements to
-  refer to this module. The first ``%s`` is a human-readable identifier for the
-  module, such as an ELF ``DT_SONAME`` string or a file name; but it might be
+  Here `%i` is the module ID which is used by other contextual elements to
+  refer to this module. The first `%s` is a human-readable identifier for the
+  module, such as an ELF `DT_SONAME` string or a file name; but it might be
   empty. It's only for casual information. Only the module ID is used to refer
-  to this module in other contextual elements, never the ``%s`` string. The
-  ``module`` element defining a module ID must always be emitted before any
+  to this module in other contextual elements, never the `%s` string. The
+  `module` element defining a module ID must always be emitted before any
   other elements that refer to that module ID, so that a filter never needs to
-  keep track of dangling references. The second ``%s`` is the module type and it
+  keep track of dangling references. The second `%s` is the module type and it
   determines what the remaining fields are. The following module types are
   supported:
 
-  * ``elf:%x``
+  - `elf:%x`
 
-  Here ``%x`` encodes an ELF Build ID. The Build ID should refer to a single
+  Here `%x` encodes an ELF Build ID. The Build ID should refer to a single
   linked binary. The Build ID string is the sole way to identify the binary from
   which this module was loaded.
 
-  Example::
+  Example:
 
-    {{{module:1:libc.so:elf:83238ab56ba10497}}}
+  ```
+  {{{module:1:libc.so:elf:83238ab56ba10497}}}
+  ```
 
-``{{{mmap:%p:%i:...}}}``
+`{{{mmap:%p:%i:...}}}`
 
-  This contextual element is used to give information about a particular region
-  in memory. ``%p`` is the starting address and ``%i`` gives the size in hex of the
-  region of memory. The ``...`` part can take different forms to give different
+: This contextual element is used to give information about a particular region
+  in memory. `%p` is the starting address and `%i` gives the size in hex of the
+  region of memory. The `...` part can take different forms to give different
   information about the specified region of memory. The allowed forms are the
   following:
 
-  * ``load:%i:%s:%p``
+  - `load:%i:%s:%p`
 
   This subelement informs the filter that a segment was loaded from a module.
-  The module is identified by its module ID ``%i``. The ``%s`` is one or more of
+  The module is identified by its module ID `%i`. The `%s` is one or more of
   the letters 'r', 'w', and 'x' (in that order and in either upper or lower
   case) to indicate this segment of memory is readable, writable, and/or
   executable. The symbolizing filter can use this information to guess whether
   an address is a likely code address or a likely data address in the given
-  module. The remaining ``%p`` gives the module relative address. For ELF files
-  the module relative address will be the ``p_vaddr`` of the associated program
+  module. The remaining `%p` gives the module relative address. For ELF files
+  the module relative address will be the `p_vaddr` of the associated program
   header. For example if your module's executable segment has
-  ``p_vaddr=0x1000``, ``p_memsz=0x1234``, and was loaded at ``0x7acba69d5000``
-  then you need to subtract ``0x7acba69d4000`` from any address between
-  ``0x7acba69d5000`` and ``0x7acba69d6234`` to get the module relative address.
+  `p_vaddr=0x1000`, `p_memsz=0x1234`, and was loaded at `0x7acba69d5000`
+  then you need to subtract `0x7acba69d4000` from any address between
+  `0x7acba69d5000` and `0x7acba69d6234` to get the module relative address.
   The starting address will usually have been rounded down to the active page
   size, and the size rounded up.
 
-  Example::
+  Example:
 
-    {{{mmap:0x7acba69d5000:0x5a000:load:1:rx:0x1000}}}
+  ```
+  {{{mmap:0x7acba69d5000:0x5a000:load:1:rx:0x1000}}}
+  ```
 
-.. rubric:: Footnotes
-
-.. [#not_yet_implemented] This markup element is not yet implemented in
-  :doc:`llvm-symbolizer <CommandGuide/llvm-symbolizer>`.
+[^not-yet-implemented]: This markup element is not yet implemented in
+    {doc}`llvm-symbolizer <CommandGuide/llvm-symbolizer>`.

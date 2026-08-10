@@ -1,87 +1,94 @@
-==================================
-Benchmarking tips
-==================================
+# Benchmarking tips
 
-
-Introduction
-============
+## Introduction
 
 For benchmarking a patch we want to reduce all possible sources of
 noise as much as possible. How to do that is very OS dependent.
 
 Note that low noise is required, but not sufficient. It does not
 exclude measurement bias.
-See `"Producing Wrong Data Without Doing Anything Obviously Wrong!" by Mytkowicz, Diwan, Hauswith and Sweeney (ASPLOS 2009) <https://users.cs.northwestern.edu/~robby/courses/322-2013-spring/mytkowicz-wrong-data.pdf>`_
+See ["Producing Wrong Data Without Doing Anything Obviously Wrong!" by Mytkowicz, Diwan, Hauswith and Sweeney (ASPLOS 2009)](https://users.cs.northwestern.edu/~robby/courses/322-2013-spring/mytkowicz-wrong-data.pdf)
 for example.
 
-General
-================================
+## General
 
-* Use a high-resolution timer, e.g., perf under Linux.
+- Use a high-resolution timer, e.g., perf under Linux.
 
-* Run the benchmark multiple times to be able to recognize noise.
+- Run the benchmark multiple times to be able to recognize noise.
 
-* Disable as many processes or services as possible on the target system.
+- Disable as many processes or services as possible on the target system.
 
-* Disable frequency scaling, Turbo Boost and address space
+- Disable frequency scaling, Turbo Boost and address space
   randomization (see OS-specific section).
 
-* Use static linking if the OS supports it. That avoids any variation that
+- Use static linking if the OS supports it. That avoids any variation that
   might be introduced by loading dynamic libraries. This can be done
-  by passing ``-DLLVM_BUILD_STATIC=ON`` to CMake.
+  by passing `-DLLVM_BUILD_STATIC=ON` to CMake.
 
-* Try to avoid storage. On some systems, you can use tmpfs. Putting the
+- Try to avoid storage. On some systems, you can use tmpfs. Putting the
   program, inputs and outputs on tmpfs avoids touching a real storage
   system, which can have a pretty big variability.
 
-  To mount it (on Linux and FreeBSD at least)::
+  To mount it (on Linux and FreeBSD at least):
 
-    mount -t tmpfs -o size=<XX>g none dir_to_mount
+  ```
+  mount -t tmpfs -o size=<XX>g none dir_to_mount
+  ```
 
-Linux
-=====
+## Linux
 
-* Disable address space randomization::
+- Disable address space randomization:
 
-    echo 0 > /proc/sys/kernel/randomize_va_space
+  ```
+  echo 0 > /proc/sys/kernel/randomize_va_space
+  ```
 
-* Set scaling_governor to performance::
+- Set scaling_governor to performance:
 
-   for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
-   do
-     echo performance > $i
-   done
+  ```
+  for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+  do
+    echo performance > $i
+  done
+  ```
 
-* Use https://github.com/lpechacek/cpuset to reserve CPU cores for just the
+- Use <https://github.com/lpechacek/cpuset> to reserve CPU cores for just the
   program you are benchmarking. If using perf, leave at least 2 cores
-  so that perf runs in one and your program in another::
+  so that perf runs in one and your program in another:
 
-    cset shield -c N1,N2 -k on
+  ```
+  cset shield -c N1,N2 -k on
+  ```
 
-  This will move all threads out of N1 and N2. The ``-k on`` means
+  This will move all threads out of N1 and N2. The `-k on` means
   that even kernel threads are moved out.
 
-* Disable the SMT pair of the cpus you will use for the benchmark. The
+- Disable the SMT pair of the cpus you will use for the benchmark. The
   pair of cpu N can be found in
-  ``/sys/devices/system/cpu/cpuN/topology/thread_siblings_list`` and
-  disabled with::
+  `/sys/devices/system/cpu/cpuN/topology/thread_siblings_list` and
+  disabled with:
 
-    echo 0 > /sys/devices/system/cpu/cpuX/online
+  ```
+  echo 0 > /sys/devices/system/cpu/cpuX/online
+  ```
 
+- Run the program with:
 
-* Run the program with::
+  ```
+  cset shield --exec -- perf stat -r 10 <cmd>
+  ```
 
-    cset shield --exec -- perf stat -r 10 <cmd>
-
-  This will run the command after ``--`` in the isolated CPU cores. The
-  particular perf command runs the ``<cmd>`` 10 times and reports
+  This will run the command after `--` in the isolated CPU cores. The
+  particular perf command runs the `<cmd>` 10 times and reports
   statistics.
 
 With these in place you can expect perf variations of less than 0.1%.
 
-Linux Intel
------------
+### Linux Intel
 
-* Disable Turbo Boost::
+- Disable Turbo Boost:
 
-    echo 1 > /sys/devices/system/cpu/intel_pstate/no_turbo
+  ```
+  echo 1 > /sys/devices/system/cpu/intel_pstate/no_turbo
+  ```
+
