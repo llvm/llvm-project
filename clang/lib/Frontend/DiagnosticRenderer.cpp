@@ -42,8 +42,9 @@ clang::getExpansionRangeInFile(CharSourceRange Range, FileID FID,
 
   CharSourceRange Expansion = SM.getExpansionRange(Range);
   if (SM.getFileID(Expansion.getBegin()) != FID ||
-      SM.getFileID(Expansion.getEnd()) != FID)
+      SM.getFileID(Expansion.getEnd()) != FID) {
     return std::nullopt;
+  }
 
   return Expansion;
 }
