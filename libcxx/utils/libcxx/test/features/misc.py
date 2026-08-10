@@ -122,17 +122,23 @@ features = [
     # https://developercommunity.visualstudio.com/t/utf-8-locales-break-ctype-functions-for-wchar-type/1653678
     Feature(
         name="win32-broken-utf8-wchar-ctype",
-        when=lambda cfg: not "_LIBCPP_HAS_LOCALIZATION" in compilerMacros(cfg)
-        or compilerMacros(cfg)["_LIBCPP_HAS_LOCALIZATION"] == "1"
-        and "_WIN32" in compilerMacros(cfg)
-        and not programSucceeds(
+        when=lambda cfg: "_WIN32" in compilerMacros(cfg)
+        and programSucceeds(
             cfg,
             """
-            #include <locale.h>
+            #if __has_include(<locale.h>)
+            # include <locale.h>
+            #endif
+            #include <stdlib.h>
             #include <wctype.h>
+
             int main(int, char**) {
+            #if !defined(_LIBCPP_VERSION) || (defined(_LIBCPP_HAS_LOCALIZATION) && _LIBCPP_HAS_LOCALIZATION)
               setlocale(LC_ALL, "en_US.UTF-8");
-              return towlower(L'\\xDA') != L'\\xFA';
+              return towlower(L'\\xDA') == L'\\xFA' ? EXIT_FAILURE : EXIT_SUCCESS;
+            #else
+              return EXIT_FAILURE; // no localization: assume bug not present
+            #endif
             }
           """,
         ),
