@@ -31,42 +31,42 @@ static_assert(std::three_way_comparable<std::nullopt_t, std::strong_ordering>);
 
 constexpr bool test() {
   { // ==
-    auto result = (std::nullopt == std::nullopt);
+    decltype(auto) result = std::nullopt == std::nullopt;
     static_assert(std::is_same_v<decltype(result), bool>);
     static_assert(noexcept(std::nullopt == std::nullopt));
 
     assert(result);
   }
   { // !=
-    auto result = (std::nullopt != std::nullopt);
+    decltype(auto) result = std::nullopt != std::nullopt;
     static_assert(std::is_same_v<decltype(result), bool>);
     static_assert(noexcept(std::nullopt != std::nullopt));
 
     assert(!result);
   }
   { // <=
-    auto result = (std::nullopt <= std::nullopt);
+    decltype(auto) result = std::nullopt <= std::nullopt;
     static_assert(std::is_same_v<decltype(result), bool>);
     static_assert(noexcept(std::nullopt <= std::nullopt));
 
     assert(result);
   }
   { // >=
-    auto result = (std::nullopt >= std::nullopt);
+    decltype(auto) result = std::nullopt >= std::nullopt;
     static_assert(std::is_same_v<decltype(result), bool>);
     static_assert(noexcept(std::nullopt >= std::nullopt));
 
     assert(result);
   }
   { // >
-    auto result = (std::nullopt > std::nullopt);
+    decltype(auto) result = std::nullopt > std::nullopt;
     static_assert(std::is_same_v<decltype(result), bool>);
     static_assert(noexcept(std::nullopt > std::nullopt));
 
     assert(!(std::nullopt > std::nullopt));
   }
   { // <
-    auto result = (std::nullopt < std::nullopt);
+    decltype(auto) result = std::nullopt < std::nullopt;
     static_assert(std::is_same_v<decltype(result), bool>);
     static_assert(noexcept(std::nullopt < std::nullopt));
 
@@ -75,7 +75,7 @@ constexpr bool test() {
 
 #if TEST_STD_VER >= 20
   { // <=>
-    std::same_as<std::strong_ordering> auto result = (std::nullopt <=> std::nullopt);
+    std::same_as<std::strong_ordering> decltype(auto) result = std::nullopt <=> std::nullopt;
     static_assert(noexcept(std::nullopt <=> std::nullopt));
 
     assert(result == std::strong_ordering::equal);
