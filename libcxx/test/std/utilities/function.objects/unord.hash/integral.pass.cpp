@@ -30,7 +30,7 @@
 #  include "poisoned_hash_helper.h"
 #endif
 
-template <class T, template <typename> typename THash = std::hash >
+template <class T, template <class> class THash = std::hash >
 TEST_CONSTEXPR_CXX26 void test() {
 #if TEST_STD_VER >= 11
   test_hash_disabled<const T, THash<const T>>();
