@@ -461,7 +461,7 @@ TEST(DynamicDebugging, GlobalVariableLinkage) {
   ExpectNotPromoted(GlobalValue::CommonLinkage,
                     GlobalValue::ProtectedVisibility, __LINE__);
 
-  // Add a comadt group.
+  // Add a comdat group.
   Comdat *Comdat = M->getOrInsertComdat("c");
   Comdat->setSelectionKind(Comdat::Any);
   GlobalVariable *G = M->getGlobalVariable("g");
