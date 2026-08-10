@@ -33,8 +33,7 @@ define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %cal
 ; CHECK-NEXT:    br i1 [[CMP44]], label [[FOR_BODY45]], label [[FOR_COND]]
 ; CHECK:       for.inc57:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[INDVARS_IV_NEXT]], 4294967295
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[TMP1]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND41_PREHEADER_PREHEADER]], label [[FOR_COND41_PREHEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 false
