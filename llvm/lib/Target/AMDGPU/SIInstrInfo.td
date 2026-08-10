@@ -326,22 +326,6 @@ class UnscaledMFMAOptimizationPat<SDPatternOperator intrin> : PatFrag<
 def mfma_f32_16x16x128_f8f6f4 : UnscaledMFMAOptimizationPat<int_amdgcn_mfma_scale_f32_16x16x128_f8f6f4>;
 def mfma_f32_32x32x64_f8f6f4 : UnscaledMFMAOptimizationPat<int_amdgcn_mfma_scale_f32_32x32x64_f8f6f4>;
 
-def cvt_from_fp8 : PatFrag<(ops node:$src),
-                           (convert_from_arbitrary_fp node:$src, Float8E4M3FN)>;
-def cvt_from_bf8 : PatFrag<(ops node:$src),
-                           (convert_from_arbitrary_fp node:$src, Float8E5M2)>;
-
-// The packed HW conversions round to nearest-even and never saturate, so only
-// those forms of convert_to_arbitrary_fp are matched here.
-def cvt_to_fp8 : PatFrag<(ops node:$src),
-                         (convert_to_arbitrary_fp node:$src, Float8E4M3FN,
-                                                  NearestTiesToEven,
-                                                  FPNoSaturation)>;
-def cvt_to_bf8 : PatFrag<(ops node:$src),
-                         (convert_to_arbitrary_fp node:$src, Float8E5M2,
-                                                  NearestTiesToEven,
-                                                  FPNoSaturation)>;
-
 def AMDGPUcvt_pk_f32_fp8 : SDNode<"AMDGPUISD::CVT_PK_F32_FP8",
   SDTypeProfile<1, 1, [SDTCisVT<0, v2f32>, SDTCisVT<1, i32>]>>;
 def AMDGPUcvt_pk_f32_bf8 : SDNode<"AMDGPUISD::CVT_PK_F32_BF8",
@@ -957,6 +941,31 @@ def SupportedRoundMode : TImmLeaf<i32, [{
 def RtzRoundMode : TImmLeaf<i32, [{
   return Imm == (int)RoundingMode::TowardZero;
 }]>;
+
+// llvm.convert.to.arbitrary.fp rounding-mode and saturation selectors.
+def RneRoundMode : TImmLeaf<i32, [{
+  return Imm == (int)RoundingMode::NearestTiesToEven;
+}]>;
+def NoFPSaturation : TImmLeaf<i32, [{ return Imm == 0; }]>;
+
+// llvm.convert.{from,to}.arbitrary.fp format selectors. Only the OCP formats
+// have HW conversions; the FNUZ formats use the generic expansion.
+def Float8E4M3FN : TImmLeaf<i32, [{ return Imm == APFloatBase::S_Float8E4M3FN; }]>;
+def Float8E5M2 : TImmLeaf<i32, [{ return Imm == APFloatBase::S_Float8E5M2; }]>;
+
+def cvt_from_fp8 : PatFrag<(ops node:$src),
+                           (convert_from_arbitrary_fp node:$src, Float8E4M3FN)>;
+def cvt_from_bf8 : PatFrag<(ops node:$src),
+                           (convert_from_arbitrary_fp node:$src, Float8E5M2)>;
+
+// The HW conversions round to nearest-even and never saturate, so only those
+// forms of convert_to_arbitrary_fp are matched here.
+def cvt_to_fp8 : PatFrag<(ops node:$src),
+                         (convert_to_arbitrary_fp node:$src, Float8E4M3FN,
+                                                  RneRoundMode, NoFPSaturation)>;
+def cvt_to_bf8 : PatFrag<(ops node:$src),
+                         (convert_to_arbitrary_fp node:$src, Float8E5M2,
+                                                  RneRoundMode, NoFPSaturation)>;
 
 def VOP3PModsNeg : SDNodeXForm<timm, [{
   unsigned Mods = SISrcMods::OP_SEL_1;
