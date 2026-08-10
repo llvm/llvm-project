@@ -31,9 +31,11 @@
 # CHECK: Initialized CAS at [[CAS:.*]]
 # CHECK: Loading module 'Top' from CAS at
 # CHECK: top = (x = 1)
-# CHECK: CAS at [[CAS]] was garbage-collected
-# CHECK: Initialized CAS at [[CAS]]
-# CHECK: Loading module 'Top' from CAS at
+# One CAS is opened for the session and released at the end of it, with
+# nothing left holding it. Loading a second module out of the same CAS reuses
+# the open one rather than opening it again.
+# CHECK-NOT: Initialized CAS at
+# CHECK: Released 1 CAS object store(s), 0 still referenced
 
 # NONCAS-NOT: is not valid CASID
 # NONCAS: unable to locate module needed for external types

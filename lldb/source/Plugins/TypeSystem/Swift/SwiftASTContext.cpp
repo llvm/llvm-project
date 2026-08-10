@@ -936,8 +936,7 @@ static std::string GetClangModulesCacheProperty() {
 }
 
 void SwiftASTContext::ConfigureDefaultCASStorage(const ModuleSP &module_sp) {
-  llvm::ArrayRef<ModuleList::CAS> all_cas =
-      ModuleList::GetCASStorage(module_sp);
+  std::vector<ModuleList::CAS> all_cas = ModuleList::GetCASStorage(module_sp);
   if (all_cas.empty()) {
     HEALTH_LOG_PRINTF("Did not create CAS: no CAS associated with module");
     return;
@@ -9984,7 +9983,9 @@ loadPCHFromCAS(llvm::cas::ObjectStore &m_cas, llvm::cas::ActionCache &m_cache,
   }
   if (!*proxy)
     return nullptr;
-  return (*proxy)->getMemoryBuffer();
+  // The PCH is handed to a filesystem that the ASTContext keeps, so it has to
+  // stay readable after the CAS is released.
+  return (*proxy)->getStandaloneMemoryBuffer(maybe_id);
 }
 
 void SwiftASTContext::ConfigureBridgingHeader(const SymbolContext &sc) {

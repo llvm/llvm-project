@@ -1318,16 +1318,24 @@ private:
   // BEGIN CAS
 public:
   struct CAS {
-    std::weak_ptr<llvm::cas::ObjectStore> object_store;
-    std::weak_ptr<llvm::cas::ActionCache> action_cache;
+    std::shared_ptr<llvm::cas::ObjectStore> object_store;
+    std::shared_ptr<llvm::cas::ActionCache> action_cache;
     CAS(std::shared_ptr<llvm::cas::ObjectStore> os,
         std::shared_ptr<llvm::cas::ActionCache> ac)
         : object_store(std::move(os)), action_cache(std::move(ac)) {}
   };
 
-  /// Holds all currently loaded CAS for each configuration. If the
-  /// weak_ptr is null, the CAS was previously created, but has been
-  /// garbage collected.
+  /// Holds every CAS that has been opened, keyed by its configuration, so a
+  /// second module with the same configuration reuses it rather than opening
+  /// the database again. A disengaged optional records a configuration that
+  /// failed to open, so it is not retried.
+  ///
+  /// These are strong references, and an open CAS holds a lock against the
+  /// on-disk database being pruned, so something has to let them go:
+  /// \c ModuleList::ReleaseCASObjectStores().
+  ///
+  /// Reading or writing this requires holding
+  /// \c SharedModuleListInfo::shared_lock.
   llvm::DenseMap<llvm::cas::CASConfiguration, std::optional<CAS>> m_cas_cache;
 
 private:
@@ -1402,6 +1410,41 @@ lldb::ModuleSP ModuleList::FindSharedModule(const UUID &uuid) {
 size_t ModuleList::RemoveOrphanSharedModules(bool mandatory) {
   return GetSharedModuleList().RemoveOrphans(mandatory);
 }
+
+// BEGIN CAS
+size_t ModuleList::ReleaseCASObjectStores() {
+  SharedModuleListInfo &shared_module_list_info = GetSharedModuleListInfo();
+  std::scoped_lock<std::mutex> lock(shared_module_list_info.shared_lock);
+  auto &cas_cache = shared_module_list_info.module_list.m_cas_cache;
+
+  Log *log = GetLog(LLDBLog::Modules);
+  size_t released = 0;
+  size_t still_referenced = 0;
+  for (auto &entry : cas_cache) {
+    if (!entry.second)
+      continue;
+    // Anything referenced elsewhere stays open, and its database stays locked,
+    // so report it rather than assume the release worked. The cache's own
+    // reference is the one being dropped, hence the comparison against 1.
+    if (entry.second->object_store.use_count() > 1 ||
+        entry.second->action_cache.use_count() > 1) {
+      ++still_referenced;
+      LLDB_LOG(log, "CAS still referenced: {0}", entry.first.CASPath);
+      continue;
+    }
+    ++released;
+  }
+
+  // Drop the entries outright rather than marking them, so a module that needs
+  // one of these again opens it again instead of treating the configuration as
+  // one that failed.
+  cas_cache.clear();
+
+  LLDB_LOG(log, "Released {0} CAS object store(s), {1} still referenced",
+           released, still_referenced);
+  return still_referenced;
+}
+// END CAS
 
 Status
 ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
@@ -1693,15 +1736,15 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
 llvm::Expected<ModuleSpec> ModuleList::LoadModuleFromCAS(
     llvm::StringRef cas_id, llvm::StringRef name_for_diagnostics,
     const ModuleSP &nearby, const UUID &uuid, const ArchSpec &arch) {
-  ConfigureCASStorage(nearby);
   if (!nearby) {
     LLDB_LOG(GetLog(LLDBLog::Modules),
              "Failed to load module '{0}' at '{1}' from CAS: no module",
              name_for_diagnostics, cas_id);
     return ModuleSpec();
   }
-  assert(nearby->m_cas && "ConfigureCASStorage should have populated m_cas");
-  if (nearby->m_cas->empty()) {
+  // Holds the stores alive for the duration of the loop.
+  std::vector<CAS> all_cas = GetCASStorage(nearby);
+  if (all_cas.empty()) {
     LLDB_LOG(GetLog(LLDBLog::Modules),
              "Failed to load module '{0}' at '{1}' from CAS: no CAS "
              "associated with module",
@@ -1711,7 +1754,7 @@ llvm::Expected<ModuleSpec> ModuleList::LoadModuleFromCAS(
 
   // Try each CAS in turn; return on the first successful resolve.
   llvm::Error errors = llvm::Error::success();
-  for (const auto &entry : *nearby->m_cas) {
+  for (const auto &entry : all_cas) {
     const auto &cas = entry.object_store;
     if (!cas)
       continue;
@@ -1728,8 +1771,16 @@ llvm::Expected<ModuleSpec> ModuleList::LoadModuleFromCAS(
       errors = joinErrors(std::move(errors), module_proxy.takeError());
       continue;
     }
-    auto file_buffer =
-        std::make_shared<DataBufferLLVM>(module_proxy->getMemoryBuffer());
+    // Ask for a buffer that does not reference the CAS, so the store can be
+    // released at the end of the session while this module stays usable.
+    //
+    // Object files are read as a sized range, not as a C string, so they do
+    // not need a nul terminator; FileSystem::CreateDataBuffer() does not ask
+    // for one either. Requiring it would force a copy of exactly the objects
+    // big enough to be worth not copying.
+    auto file_buffer = std::make_shared<DataBufferLLVM>(
+        module_proxy->getStandaloneMemoryBuffer(
+            cas_id, /*RequiresNullTerminator=*/false));
     FileSpec cas_spec;
     cas_spec.SetDirectory(ConstString(entry.configuration.CASPath));
     cas_spec.SetFilename(ConstString(cas_id));
@@ -1886,80 +1937,66 @@ FindCASConfigurations(const ModuleSP &module_sp) {
   return {};
 }
 
-/// Look up cas_config in the shared CAS cache, or instantiate it and
-/// insert. Returns a CAS triple with null instances if instantiation
-/// failed.
-///
-/// \pre Caller must hold \c shared_module_list.shared_lock — the
-///      function mutates \c shared_module_list.module_list.m_cas_cache.
-static ModuleList::CAS
-FindOrCreateInSharedCache(const llvm::cas::CASConfiguration &cas_config,
-                          SharedModuleListInfo &shared_module_list) {
-  auto &cas_cache = shared_module_list.module_list.m_cas_cache;
-  auto weak_cached = cas_cache.find(cas_config);
-  if (weak_cached != cas_cache.end()) {
-    if (weak_cached->second) {
-      auto os = weak_cached->second->object_store.lock();
-      auto ac = weak_cached->second->action_cache.lock();
-      if (os && ac)
-        return {cas_config, std::move(os), std::move(ac)};
-      cas_cache.erase(cas_config);
-      LLDB_LOG(GetLog(LLDBLog::Modules | LLDBLog::Symbols),
-               "CAS at {0} was garbage-collected", cas_config.CASPath);
-    } else {
-      return {cas_config, nullptr, nullptr};
-    }
-  }
-  auto created = cas_config.createDatabases();
-  if (!created) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Modules | LLDBLog::Symbols),
-                   created.takeError(), "Failed to initialize CAS at {1}: {0}",
-                   cas_config.CASPath);
-    cas_cache.insert({cas_config, {}});
-    return {cas_config, nullptr, nullptr};
-  }
-  LLDB_LOG(GetLog(LLDBLog::Modules | LLDBLog::Symbols),
-           "Initialized CAS at {0}", cas_config.CASPath);
-  cas_cache.insert(
-      {cas_config, SharedModuleList::CAS(created->first, created->second)});
-  return {cas_config, created->first, created->second};
-}
-
-void ModuleList::ConfigureCASStorage(const ModuleSP &module_sp) {
-  if (!module_sp)
-    return;
-  std::lock_guard<std::mutex> module_lock(module_sp->m_cas_init_mutex);
-  std::optional<std::vector<ModuleList::CAS>> &module_cas = module_sp->m_cas;
-  if (module_cas)
-    return; // Already initialized.
-  std::vector<llvm::cas::CASConfiguration> found =
-      FindCASConfigurations(module_sp);
-  auto &entries = module_cas.emplace();
-  if (found.empty())
-    return;
-  auto &shared_module_list = GetSharedModuleListInfo();
-  std::scoped_lock<std::mutex> lock(shared_module_list.shared_lock);
-  entries.reserve(found.size());
-  for (auto &cfg : found)
-    entries.push_back(FindOrCreateInSharedCache(cfg, shared_module_list));
-}
-
-llvm::ArrayRef<ModuleList::CAS>
+std::vector<ModuleList::CAS>
 ModuleList::GetCASStorage(const ModuleSP &module_sp) {
-  ConfigureCASStorage(module_sp);
   if (!module_sp)
     return {};
-  assert(module_sp->m_cas && "ConfigureCASStorage should have populated m_cas");
-  return *module_sp->m_cas;
+
+  // Which CAS a module uses does not change, so the search for its
+  // configurations runs once.
+  std::vector<llvm::cas::CASConfiguration> configurations;
+  {
+    std::lock_guard<std::mutex> module_lock(module_sp->m_cas_init_mutex);
+    if (!module_sp->m_cas)
+      module_sp->m_cas = FindCASConfigurations(module_sp);
+    configurations = *module_sp->m_cas;
+  }
+  if (configurations.empty())
+    return {};
+
+  auto &shared_module_list_info = GetSharedModuleListInfo();
+  auto &cas_cache = shared_module_list_info.module_list.m_cas_cache;
+  std::scoped_lock<std::mutex> lock(shared_module_list_info.shared_lock);
+
+  std::vector<CAS> entries;
+  entries.reserve(configurations.size());
+  for (const llvm::cas::CASConfiguration &cas_config : configurations) {
+    auto cached = cas_cache.find(cas_config);
+    if (cached != cas_cache.end()) {
+      // A disengaged entry records a configuration that failed to open, so it
+      // is not retried.
+      if (cached->second)
+        entries.push_back({cas_config, cached->second->object_store,
+                           cached->second->action_cache});
+      else
+        entries.push_back({cas_config, nullptr, nullptr});
+      continue;
+    }
+
+    auto created = cas_config.createDatabases();
+    if (!created) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Modules | LLDBLog::Symbols),
+                     created.takeError(),
+                     "Failed to initialize CAS at {1}: {0}",
+                     cas_config.CASPath);
+      cas_cache[cas_config] = std::nullopt;
+      entries.push_back({cas_config, nullptr, nullptr});
+      continue;
+    }
+    LLDB_LOG(GetLog(LLDBLog::Modules | LLDBLog::Symbols),
+             "Initialized CAS at {0}", cas_config.CASPath);
+    cas_cache[cas_config] =
+        SharedModuleList::CAS(created->first, created->second);
+    entries.push_back({cas_config, created->first, created->second});
+  }
+  return entries;
 }
 
 bool ModuleList::IsCASID(const ModuleSP &module_sp,
                          llvm::StringRef id) {
-  ConfigureCASStorage(module_sp);
   if (!module_sp)
     return false;
-  assert(module_sp->m_cas && "ConfigureCASStorage should have populated m_cas");
-  for (const auto &entry : *module_sp->m_cas) {
+  for (const auto &entry : GetCASStorage(module_sp)) {
     if (!entry.object_store)
       continue;
     auto ref = entry.object_store->parseID(id);
@@ -1972,14 +2009,13 @@ bool ModuleList::IsCASID(const ModuleSP &module_sp,
 
 llvm::Expected<ModuleList::CAS>
 ModuleList::GetCASForID(const ModuleSP &module_sp, llvm::StringRef cas_id) {
-  ConfigureCASStorage(module_sp);
   if (!module_sp)
     return llvm::createStringError("no lldb::Module available");
-  assert(module_sp->m_cas && "ConfigureCASStorage should have populated m_cas");
-  if (module_sp->m_cas->empty())
+  std::vector<CAS> all_cas = GetCASStorage(module_sp);
+  if (all_cas.empty())
     return llvm::createStringError("no CAS associated with module");
   llvm::Error errors = llvm::Error::success();
-  for (const auto &entry : *module_sp->m_cas) {
+  for (const auto &entry : all_cas) {
     if (!entry.object_store)
       continue;
     auto id = entry.object_store->parseID(cas_id);
@@ -2020,9 +2056,16 @@ llvm::Expected<bool> ModuleList::GetSharedModuleFromCAS(
   auto status = GetSharedModule(module_spec, module_sp, nullptr, nullptr,
                                 /*always_create=*/false);
   if (status.Success()) {
-    if (module_sp) {
+    if (module_sp && module_sp != nearby) {
+      // The loaded module resolves its CASIDs against the same configurations
+      // as the module that referenced it.
+      std::optional<std::vector<llvm::cas::CASConfiguration>> configurations;
+      {
+        std::lock_guard<std::mutex> src_lock(nearby->m_cas_init_mutex);
+        configurations = nearby->m_cas;
+      }
       std::lock_guard<std::mutex> dest_lock(module_sp->m_cas_init_mutex);
-      module_sp->m_cas = nearby->m_cas;
+      module_sp->m_cas = std::move(configurations);
     }
     return true;
   }

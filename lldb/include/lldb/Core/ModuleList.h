@@ -574,11 +574,10 @@ public:
     std::shared_ptr<llvm::cas::ObjectStore> object_store;
     std::shared_ptr<llvm::cas::ActionCache> action_cache;
   };
-  /// Find an initialize every CAS associated with \c module_sp.
-  static void ConfigureCASStorage(const lldb::ModuleSP &module_sp);
-
-  /// Return a list of all CAS associated with \c module_sp.
-  static llvm::ArrayRef<CAS> GetCASStorage(const lldb::ModuleSP &module_sp);
+  /// Return a list of all CAS associated with \c module_sp, opening them if
+  /// they are not currently open. The returned instances keep the stores alive
+  /// for as long as the caller holds them, and no longer.
+  static std::vector<CAS> GetCASStorage(const lldb::ModuleSP &module_sp);
 
   /// Return the first CAS associated with \c module_sp whose
   /// ObjectStore resolves \c cas_id. Returns an error if no CAS
@@ -612,6 +611,16 @@ public:
   static lldb::ModuleSP FindSharedModule(const UUID &uuid);
 
   static size_t RemoveOrphanSharedModules(bool mandatory);
+
+  // BEGIN CAS
+  /// Let go of every CAS ObjectStore the shared cache is keeping open, so the
+  /// on-disk databases stop being locked against pruning. A module that needs
+  /// one again will reopen it.
+  ///
+  /// \returns the number of stores that something else still references, and
+  /// which therefore stay open. Non-zero means a leak; each is logged by path.
+  static size_t ReleaseCASObjectStores();
+  // END CAS
 
   static bool RemoveSharedModuleIfOrphaned(const lldb::ModuleWP module_ptr);
 

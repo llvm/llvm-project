@@ -1,0 +1,2 @@
+module Cached { header "cached.h" export * }
+module Uncached { header "uncached.h" export * }
