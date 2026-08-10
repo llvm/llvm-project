@@ -28,7 +28,12 @@
 //
 // Every MCInstPredicate class has a well-known semantic in tablegen. For
 // example, `CheckOpcode` is a special type of predicate used to describe a
-// constraint on the value of an instruction opcode.
+// constraint on the value of an instruction opcode, while `CheckIsRegOperand` 
+// checks whether an instruction operand is a register operand.
+// `CheckRegOperand` performs this check implicitly before comparing the
+// register value. Therefore, a preceding `CheckIsRegOperand` is unnecessary
+// when we don't care about the type of the operand (e.g. an immediate or a 
+// register) but only care the fact that it is a target register.
 //
 // MCInstPredicate definitions are typically used by scheduling models to
 // construct MCSchedPredicate definitions (see the definition of class
@@ -44,7 +49,7 @@
 // def M3BranchLinkFastPred  : SchedPredicate<[{
 //    MI->getOpcode() == AArch64::BLR &&
 //    MI->getOperand(0).isReg() &&
-//    MI->getOperand(0).getReg() != AArch64::LR}]>;
+//    !(MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == AArch64::LR)}]>;
 //
 // The main advantage of using MCInstPredicate instead of SchedPredicate is
 // portability: users don't need to specify predicates in C++. As a consequence
@@ -123,8 +128,8 @@ class CheckOperandBase<int Index, string Fn = ""> : MCOperandPredicate<Index> {
 }
 
 // Check that the machine register operand at position `Index` references
-// register R. This predicate assumes that we already checked that the machine
-// operand at position `Index` is a register operand.
+// register R. This predicate checks whether the operand at position `Index`
+// is a register first and return false when not satisfied.
 class CheckRegOperand<int Index, Register R> : CheckOperandBase<Index> {
   Register Reg = R;
 }

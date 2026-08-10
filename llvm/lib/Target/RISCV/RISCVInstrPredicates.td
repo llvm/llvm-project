@@ -43,7 +43,6 @@ def isZEXT_W
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADD_UW]>,
                      CheckIsRegOperand<1>,
-                     CheckIsRegOperand<2>,
                      CheckRegOperand<2, X0>
                    ]>>>;
 
@@ -184,7 +183,6 @@ def isLoadImmediate
     : TIIPredicate<"isLoadImmediate",
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADDI]>,
-                     CheckIsRegOperand<1>,
                      CheckRegOperand<1, X0>,
                      CheckIsImmOperand<2>
                    ]>>>;
@@ -193,7 +191,6 @@ def isNonZeroLoadImmediate
     : TIIPredicate<"isNonZeroLoadImmediate",
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADDI]>,
-                     CheckIsRegOperand<1>,
                      CheckRegOperand<1, X0>,
                      CheckIsImmOperand<2>,
                      CheckNot<CheckImmOperand<2, 0>>
@@ -203,7 +200,6 @@ def isLPAD
     : TIIPredicate<"isLPAD",
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[AUIPC]>,
-                     CheckIsRegOperand<0>,
                      CheckRegOperand<0, X0>,
                    ]>>>;
 

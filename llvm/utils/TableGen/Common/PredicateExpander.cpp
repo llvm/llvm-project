@@ -88,30 +88,37 @@ void PredicateExpander::expandCheckRegOperand(raw_ostream &OS, int OpIndex,
                                               StringRef FunctionMapper) {
   assert(Reg->isSubClassOf("Register") && "Expected a register Record!");
 
+  OS << (shouldNegate() ? "!(" : "(");
+  OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
+     << ").isReg()";
+  OS << " && ";
   if (!FunctionMapper.empty())
     OS << FunctionMapper << "(";
   OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
      << ").getReg()";
   if (!FunctionMapper.empty())
     OS << ")";
-  OS << (shouldNegate() ? " != " : " == ");
+  OS << " == ";
   const StringRef Str = Reg->getValueAsString("Namespace");
   if (!Str.empty())
     OS << Str << "::";
-  OS << Reg->getName();
+  OS << Reg->getName() << ")";
 }
 
 void PredicateExpander::expandCheckRegOperandSimple(raw_ostream &OS,
                                                     int OpIndex,
                                                     StringRef FunctionMapper) {
-  if (shouldNegate())
-    OS << "!";
+  OS << (shouldNegate() ? "!(" : "(");
+  OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
+     << ").isReg()";
+  OS << " && ";
   if (!FunctionMapper.empty())
     OS << FunctionMapper << "(";
   OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
      << ").getReg()";
   if (!FunctionMapper.empty())
     OS << ")";
+  OS << ")";
 }
 
 void PredicateExpander::expandCheckInvalidRegOperand(raw_ostream &OS,
