@@ -101,6 +101,25 @@ static bool isMarshalLike(Operation *op) {
   return resIsMemRef || argIsMemRef;
 }
 
+/// Peel `FortranObjectViewOpInterface` ops with a statically-known zero
+/// offset (fir.declare, ref/box fir.convert, fir.box_addr,
+/// fir.volatile_cast, fir.create_box, unsliced fir.embox/fir.rebox) down to
+/// whatever produced the address underneath, e.g. fir.array_coor or a
+/// *sliced* embox/rebox (offset == nullopt, handled separately). Excludes a
+/// marshal-like fir.convert, which must go through its own dedicated path.
+static Value peelZeroOffsetViews(Value memref) {
+  while (Operation *defOp = memref.getDefiningOp()) {
+    auto view = dyn_cast<fir::FortranObjectViewOpInterface>(defOp);
+    if (!view || isMarshalLike(defOp))
+      break;
+    auto result = cast<OpResult>(memref);
+    if (view.getViewOffset(result) != 0)
+      break;
+    memref = view.getViewSource(result);
+  }
+  return memref;
+}
+
 using MemRefInfo = FailureOr<std::pair<Value, SmallVector<Value>>>;
 
 static llvm::cl::opt<bool> enableFIRConvertOptimizations(
@@ -144,7 +163,8 @@ private:
                                       PatternRewriter &,
                                       FIRToMemRefTypeConverter &);
 
-  void replaceFIRMemrefs(Value, Value, PatternRewriter &) const;
+  void replaceFIRMemrefs(Value, Value, ArrayRef<Value> indices,
+                         PatternRewriter &) const;
 
   FailureOr<Value> getFIRConvert(Operation *memOp, Operation *memref,
                                  PatternRewriter &, FIRToMemRefTypeConverter &);
@@ -1453,6 +1473,8 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
                                       PatternRewriter &rewriter,
                                       FIRToMemRefTypeConverter &typeConverter,
                                       Operation *memOp) {
+  firMemref = peelZeroOffsetViews(firMemref);
+
   Operation *memrefOp = firMemref.getDefiningOp();
   if (!memrefOp) {
     if (auto blockArg = dyn_cast<BlockArgument>(firMemref)) {
@@ -1504,20 +1526,6 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
     return std::pair{*converted, indices};
   }
 
-  if (auto declareOp = dyn_cast<fir::DeclareOp>(memrefOp)) {
-    FailureOr<Value> converted =
-        getFIRConvert(memOp, declareOp, rewriter, typeConverter);
-    if (failed(converted)) {
-      LLVM_DEBUG(llvm::dbgs()
-                     << "FIRToMemRef: unable to create convert for scalar "
-                        "memref:\n";
-                 firMemref.dump());
-      return failure();
-    }
-    SmallVector<Value> indices;
-    return std::pair{*converted, indices};
-  }
-
   if (auto coordinateOp = dyn_cast<fir::CoordinateOp>(memrefOp)) {
     // Fast path: coordinate_of used as a plain array indexer on a static-extent
     // scalar array (e.g. a struct component `A%v(i)`).
@@ -1558,39 +1566,6 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
     return std::pair{*converted, indices};
   }
 
-  if (auto convertOp = dyn_cast<fir::ConvertOp>(memrefOp)) {
-    Type fromTy = convertOp->getOperand(0).getType();
-    Type toTy = firMemref.getType();
-    if (isa<fir::ReferenceType>(fromTy) && isa<fir::ReferenceType>(toTy)) {
-      FailureOr<Value> converted =
-          getFIRConvert(memOp, convertOp, rewriter, typeConverter);
-      if (failed(converted)) {
-        LLVM_DEBUG(
-            llvm::dbgs()
-                << "FIRToMemRef: unable to create convert for conversion "
-                   "op:\n";
-            firMemref.dump());
-        return failure();
-      }
-      SmallVector<Value> indices;
-      return std::pair{*converted, indices};
-    }
-  }
-
-  if (auto boxAddrOp = dyn_cast<fir::BoxAddrOp>(memrefOp)) {
-    FailureOr<Value> converted =
-        getFIRConvert(memOp, boxAddrOp, rewriter, typeConverter);
-    if (failed(converted)) {
-      LLVM_DEBUG(llvm::dbgs()
-                     << "FIRToMemRef: unable to create convert for box_addr "
-                        "op:\n";
-                 firMemref.dump());
-      return failure();
-    }
-    SmallVector<Value> indices;
-    return std::pair{*converted, indices};
-  }
-
   if (memrefIsDeviceData(memrefOp)) {
     FailureOr<Value> converted =
         getFIRConvert(memOp, memrefOp, rewriter, typeConverter);
@@ -1608,9 +1583,15 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
 }
 
 void FIRToMemRef::replaceFIRMemrefs(Value firMemref, Value converted,
+                                    ArrayRef<Value> indices,
                                     PatternRewriter &rewriter) const {
+  // converted is only a base memref paired with indices, not a standalone
+  // address-equivalent for firMemref, so don't redirect other users to it.
+  if (!indices.empty())
+    return;
+
   Operation *op = firMemref.getDefiningOp();
-  if (op && (isa<fir::ArrayCoorOp>(op) || isMarshalLike(op)))
+  if (op && isMarshalLike(op))
     return;
 
   SmallPtrSet<Operation *, 4> worklist;
@@ -1721,7 +1702,7 @@ void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
   }
 
   if (!isa<fir::LogicalType>(originalType))
-    replaceFIRMemrefs(firMemref, converted, rewriter);
+    replaceFIRMemrefs(firMemref, converted, indices, rewriter);
 }
 
 void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
@@ -1775,7 +1756,7 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
           llvm::dyn_cast<fir::ReferenceType>(firMemref.getType()))
     isLogicalRef = llvm::isa<fir::LogicalType>(refTy.getEleTy());
   if (!isLogicalRef)
-    replaceFIRMemrefs(firMemref, converted, rewriter);
+    replaceFIRMemrefs(firMemref, converted, indices, rewriter);
 }
 
 // Lower operand and result type of FIR logical operation to get rid
