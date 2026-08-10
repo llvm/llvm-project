@@ -3431,6 +3431,10 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
     return false;
 
+  // Not implemented yet.
+  if (EnableVPlanBasedStrideMV)
+    return false;
+
   return true;
 }
 

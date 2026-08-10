@@ -43,7 +43,7 @@ using namespace llvm;
 using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
-static cl::opt<bool> EnableVPlanBasedStrideMV(
+cl::opt<bool> llvm::EnableVPlanBasedStrideMV(
     "enable-vplan-based-stride-mv", cl::init(false), cl::Hidden,
     cl::desc("Perform stride multiversioning directly on VPlan instead of in "
              "LoopAccessAnalysis."));
