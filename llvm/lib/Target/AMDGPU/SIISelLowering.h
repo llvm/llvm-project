@@ -17,6 +17,7 @@
 #include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUISelLowering.h"
 #include "SIDefines.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
@@ -405,8 +406,8 @@ public:
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                         Type *Ty) const override;
 
-  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                               unsigned Index) const override;
+  ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                               unsigned Index) const override;
   bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;
 
   bool isTypeDesirableForOp(unsigned Op, EVT VT) const override;
@@ -505,6 +506,15 @@ public:
                                   const LLT Ty) const override;
   bool isFMADLegal(const SelectionDAG &DAG, const SDNode *N) const override;
   bool isFMADLegal(const MachineInstr &MI, const LLT Ty) const override;
+
+  /// Variants for IR level callers, which have no MachineFunction to read the
+  /// denormal mode from and must pass \p FPEnv explicitly.
+  bool isFMAFasterThanFMulAndFAdd(EVT VT, DenormalFPEnv FPEnv) const;
+
+  /// \p VT is used as written, so a vector type reports false.
+  bool isFMADLegal(EVT VT, DenormalFPEnv FPEnv) const;
+
+  bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
 
   SDValue splitUnaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue splitBinaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
