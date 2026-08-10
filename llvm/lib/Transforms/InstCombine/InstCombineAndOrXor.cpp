@@ -3964,6 +3964,9 @@ Value *InstCombinerImpl::foldDisjointOr(Value *LHS, Value *RHS) {
   if (Value *Res = foldIntegerRepackThroughZExt(LHS, RHS, Builder))
     return Res;
 
+  // For defined inputs, `or disjoint` is equivalent to xor:
+  // or disjoint (zext (xor X, C1)), C2
+  //   -> xor (zext X), C2 ^ zext(C1)
   Value *X;
   Constant *C1, *C2;
   if (match(LHS, m_OneUse(m_ZExt(m_OneUse(
