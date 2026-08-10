@@ -887,19 +887,24 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
 
     bool IsAdd = isa<SCEVAddExpr>(S);
     unsigned Opcode = IsAdd ? Instruction::Add : Instruction::Mul;
-    // Iterate in reverse so that constants are emitted last. For adds, sort
-    // non-constant-negative operands last, matching SCEVExpander's LoopCompare,
-    // so that they are negated and subtracted from the running result rather
-    // than starting it.
+    // Non-constant-negative add operands are expanded negated and subtracted
+    // from the running result below, instead of being negated and added.
+    auto UseSubtract = [IsAdd](const SCEV *Op) {
+      return IsAdd && Op->isNonConstantNegative();
+    };
+    // Iterate in reverse so that constants are emitted last, and move the
+    // subtracted operands last, matching SCEVExpander's LoopCompare, so that
+    // they don't start the running result.
     SmallVector<const SCEV *, 2> SCEVOps(reverse(NAry->operands()));
-    if (IsAdd)
-      stable_sort(SCEVOps, [](const SCEV *L, const SCEV *R) {
-        return !L->isNonConstantNegative() && R->isNonConstantNegative();
+    if (IsAdd) {
+      stable_sort(SCEVOps, [&](const SCEV *L, const SCEV *R) {
+        return !UseSubtract(L) && UseSubtract(R);
       });
+    }
     SmallVector<VPValue *, 2> Ops;
     for (const SCEV *Op : SCEVOps) {
-      // Expand the negation of the operands that are subtracted below.
-      bool Negate = IsAdd && !Ops.empty() && Op->isNonConstantNegative();
+      // The first operand starts the result, so it is never subtracted.
+      bool Negate = !Ops.empty() && UseSubtract(Op);
       VPValue *OpV = tryToExpand(Negate ? SE.getNegativeSCEV(Op) : Op);
       if (!OpV)
         return nullptr;
@@ -907,18 +912,18 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     }
     VPValue *Result = Ops.front();
     for (auto [Op, OpV] : drop_begin(zip_equal(SCEVOps, Ops))) {
-      if (IsAdd && Op->isNonConstantNegative()) {
-        // Result + (-Op) = Result - Op unless negating Op overflows. This saves
-        // a extra multiply for the negation and allows carrying over the NSW
-        // flag from the SCEV expression.
+      if (UseSubtract(Op)) {
+        // Result + (-Op) == Result - Op, which saves the multiply for the
+        // negation. NSW only transfers if negating Op cannot overflow, see
+        // ScalarEvolution::getMinusSCEV.
         bool HasNSW =
             WrapFlags.HasNSW && !SE.getSignedRangeMin(Op).isMinSignedValue();
         Result = Builder.createOverflowingOp(Instruction::Sub, {Result, OpV},
                                              {/*HasNUW=*/false, HasNSW}, DL);
-      } else {
-        Result =
-            Builder.createOverflowingOp(Opcode, {Result, OpV}, WrapFlags, DL);
+        continue;
       }
+      Result =
+          Builder.createOverflowingOp(Opcode, {Result, OpV}, WrapFlags, DL);
     }
     return Result;
   }
