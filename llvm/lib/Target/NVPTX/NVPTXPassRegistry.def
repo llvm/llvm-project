@@ -21,6 +21,7 @@ MODULE_PASS("nvptx-lower-args", NVPTXLowerArgsPass(*this))
 MODULE_PASS("nvptx-lower-ctor-dtor", NVPTXCtorDtorLoweringPass())
 MODULE_PASS("nvptx-promote-param-align", NVPTXPromoteParamAlignPass())
 MODULE_PASS("nvvm-reflect", NVVMReflectPass())
+MODULE_PASS("nvptx-assign-valid-global-names", NVPTXAssignValidGlobalNamesPass())
 #undef MODULE_PASS
 
 #ifndef FUNCTION_ANALYSIS
