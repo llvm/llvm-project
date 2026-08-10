@@ -231,7 +231,7 @@ public:
     llvm::SmallVector<ConstraintEntry> Constraints(CZ.begin(), CZ.end());
     llvm::DenseMap<SymbolRef, SmallVector<size_t>> ConstraintsBySym;
     llvm::DenseSet<SymbolRef> TraversedSymbols;
-    SmallVector<SymbolRef> WorkList;
+    llvm::SmallVector<SymbolRef> WorkList;
     llvm::BitVector RelevantConstraints(Constraints.size());
 
     for (size_t Idx = 0; Idx < Constraints.size(); ++Idx) {
