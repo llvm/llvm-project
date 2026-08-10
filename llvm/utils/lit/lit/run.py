@@ -1,3 +1,4 @@
+import itertools
 import multiprocessing
 import os
 import platform
@@ -49,7 +50,14 @@ class Run:
     """A concrete, configured testing run."""
 
     def __init__(
-        self, tests, lit_config, workers, progress_callback, max_failures, timeout
+        self,
+        tests,
+        lit_config,
+        workers,
+        progress_callback,
+        max_failures,
+        timeout,
+        dispatch_chunk_size=1,
     ):
         self.tests = tests
         self.lit_config = lit_config
@@ -57,7 +65,9 @@ class Run:
         self.progress_callback = progress_callback
         self.max_failures = max_failures
         self.timeout = timeout
+        self.dispatch_chunk_size = dispatch_chunk_size
         assert workers > 0
+        assert dispatch_chunk_size > 0
 
     def execute(self):
         """
@@ -92,7 +102,7 @@ class Run:
                 if test.result is None:
                     test.setResult(skipped)
 
-    def _abort_executors(self, executors, future_to_test):
+    def _abort_executors(self, executors, future_to_tests):
         """SIGKILL all workers on abort (ctrl-C, --max-failures, --max-time,
         worker crash). Pre-3.14 ProcessPoolExecutor has no force-stop."""
         try:
@@ -103,7 +113,7 @@ class Run:
             # Skipping it is safe because we SIGKILL workers below, so no pending future
             # will ever be dispatched. cancel() on 3.10+ is a clean hint.
             if sys.version_info >= (3, 10):
-                for future in future_to_test:
+                for future in future_to_tests:
                     future.cancel()
             # Killing worker processes can corrupt the executor's queues, which makes it
             # unsafe for its atexit hooks to join their threads. Disable those hooks
@@ -176,12 +186,12 @@ class Run:
             for pool_size in workers_per_pool_list
         ]
 
-        future_to_test = {}
+        future_to_tests = {}
 
         try:
-            self._dispatch_and_wait(executors, future_to_test, deadline)
+            self._dispatch_and_wait(executors, future_to_tests, deadline)
         except BaseException:
-            self._abort_executors(executors, future_to_test)
+            self._abort_executors(executors, future_to_tests)
             raise
         else:
             for ex in executors:
@@ -195,26 +205,27 @@ class Run:
                     ex._call_queue.cancel_join_thread()
                 ex.shutdown(wait=True)
 
-    def _dispatch_and_wait(self, executors, future_to_test, deadline):
+    def _dispatch_and_wait(self, executors, future_to_tests, deadline):
         """Submits tests to executors and collects results as they complete.
 
         Bounds the number of futures outstanding at any time to at most
         window (see SUBMISSION_WINDOW_PER_WORKER), submitting exactly one
-        new test for each one that completes. Submitting every test up
+        new chunk for each one that completes. Submitting every test up
         front floods the executor's wakeup pipe and can deadlock submit()
         against the executor's manager thread on Python <= 3.11.5
-        (https://github.com/python/cpython/issues/105829)
+        (https://github.com/python/cpython/issues/105829). window bounds
+        submit() calls, so it is independent of dispatch_chunk_size.
 
-        Mutates future_to_test in place: adds an entry for every test
-        submitted, and removes it once that test's result has been
-        collected. On return, or if this call raises, future_to_test
+        Mutates future_to_tests in place: adds an entry for every chunk
+        submitted, and removes it once that chunk's results have been
+        collected. On return, or if this call raises, future_to_tests
         holds exactly the futures that have not yet been collected, which
         the caller's abort path relies on.
 
         Args:
             executors: The ProcessPoolExecutor pool(s) tests are dispatched to.
-            future_to_test: A dict mapping each in-flight Future to its
-              corresponding Test. Populated and drained by this call.
+            future_to_tests: A dict mapping each in-flight Future to the
+              list of Tests in its chunk. Populated and drained by this call.
             deadline: The absolute time (as returned by time.time()) after
               which the call raises TimeoutError.
 
@@ -231,24 +242,34 @@ class Run:
                     SUBMISSION_WINDOW_PER_WORKER * self.workers,
                 )
             ) or len(self.tests)
+            chunk_size = self.dispatch_chunk_size
             tests_iter = enumerate(self.tests)
             pending = set()
             future_to_index = {}
+            chunk_counter = itertools.count()
 
             def submit_next():
-                """Submits the next not-yet-submitted test, if any.
+                """Submits the next not-yet-submitted chunk of tests, if any.
 
                 Returns:
-                    True if a test was submitted, False if none remained.
+                    True if a chunk was submitted, False if none remained.
                 """
-                for i, test in tests_iter:
-                    ex = executors[i % len(executors)]
-                    future = ex.submit(lit.worker.execute, test)
-                    future_to_test[future] = test
-                    future_to_index[future] = i
-                    pending.add(future)
-                    return True
-                return False
+                chunk = list(itertools.islice(tests_iter, chunk_size))
+                if not chunk:
+                    return False
+                indices, chunk_tests = zip(*chunk)
+                # Round-robin by chunk, not by test index, which would send
+                # every chunk to the same pool whenever chunk_size is a
+                # multiple of len(executors).
+                ex = executors[next(chunk_counter) % len(executors)]
+                if chunk_size == 1:
+                    future = ex.submit(lit.worker.execute, chunk_tests[0])
+                else:
+                    future = ex.submit(lit.worker.execute_batch, list(chunk_tests))
+                future_to_tests[future] = list(chunk_tests)
+                future_to_index[future] = indices[0]
+                pending.add(future)
+                return True
 
             while len(pending) < window and submit_next():
                 pass
@@ -263,17 +284,20 @@ class Run:
                     raise TimeoutError()
                 for future in sorted(done, key=lambda f: future_to_index[f]):
                     del future_to_index[future]
-                    remote_test = future.result()
-                    local_test = future_to_test.pop(future)
-                    self._update_test(local_test, remote_test)
-                    self.progress_callback(remote_test)
-                    if remote_test.isFailure():
-                        self.failures += 1
-                        # max_failures is None or a positive int, never 0
-                        # (cl_arguments.py's _positive_int enforces i > 0),
-                        # so this equality check can't misfire on failures=0.
-                        if self.failures == self.max_failures:
-                            raise MaxFailuresError()
+                    remote_tests = future.result()
+                    if chunk_size == 1:
+                        remote_tests = [remote_tests]
+                    local_tests = future_to_tests.pop(future)
+                    for local_test, remote_test in zip(local_tests, remote_tests):
+                        self._update_test(local_test, remote_test)
+                        self.progress_callback(remote_test)
+                        if remote_test.isFailure():
+                            self.failures += 1
+                            # max_failures is None or a positive int, never 0
+                            # (cl_arguments.py's _positive_int enforces i > 0),
+                            # so this equality check can't misfire on failures=0.
+                            if self.failures == self.max_failures:
+                                raise MaxFailuresError()
                     submit_next()
 
         except BrokenProcessPool as e:
