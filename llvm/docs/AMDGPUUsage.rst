@@ -1301,14 +1301,14 @@ supported for the ``amdgcn`` target.
   Buffer resources can be created from 64-bit pointers (which should be either
   generic or global) using the ``llvm.amdgcn.make.buffer.rsrc`` intrinsic, which
   takes the pointer, which becomes the base of the resource,
-  the 16-bit stride (and swzizzle control) field stored in bits `63:48` of a `V#`,
-  the 32-bit NumRecords/extent field (bits `95:64`), and the 32-bit flags field
-  (bits `127:96`). The specific interpretation of these fields varies by the
-  target architecture and is detailed in the ISA descriptions.
+  the 16-bit stride (and swizzle control) field stored in bits `63:48` of a `V#`,
+  the NumRecords/extent field, and the 32-bit flags field. NumRecords may be
+  any integer width and is zero-extended or truncated to the target resource
+  field width. The specific interpretation of these fields varies by the target
+  architecture and is detailed in the ISA descriptions.
 
   On gfx1250, the base pointer is instead truncated to 57 bits and the NumRecords
-  field is 45 bits, which necessitated a change to ``make.buffer.rsrcs``'s arguments
-  in order to make that field an ``i64``.
+  field is 45 bits.
 
   When buffer resources are passed to buffer intrinsics such as
   ``llvm.amdgcn.raw.ptr.buffer.load`` or
