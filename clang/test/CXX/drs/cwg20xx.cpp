@@ -11,6 +11,89 @@
 // cxx98-error@-1 {{variadic macros are a C99 feature}}
 #endif
 
+namespace std { class type_info; }
+namespace cwg2006 { // cwg2006: 2.7
+  void test_object_pointer(const void *cp, volatile void *vp, const volatile void *cvp) {
+    (void)static_cast<const void*>(cp);
+    (void)static_cast<volatile void*>(vp);
+    (void)static_cast<const volatile void*>(cvp);
+
+    int x = 0;
+    const int cx = 0;
+    const void *p1 = &x;
+    const void *p2 = &cx;
+    (void)p1;
+    (void)p2;
+  }
+
+  void test_cast(int x) {
+    (const void)x;
+    (volatile void)x;
+    (const volatile void)x;
+  }
+
+  const void get_const_void()
+#if __cplusplus >= 201103L
+    noexcept
+#endif
+  {}
+
+  volatile void get_volatile_void()
+#if __cplusplus >= 201103L
+    noexcept
+#endif
+  {}
+  // since-cxx20-warning@-5 {{volatile-qualified return type 'volatile void' is deprecated}}
+
+  const volatile void get_cv_void()
+#if __cplusplus >= 201103L
+    noexcept
+#endif
+  {}
+  // since-cxx20-warning@-5 {{volatile-qualified return type 'const volatile void' is deprecated}}
+
+  void test_return() {
+    return get_const_void();
+  }
+
+  void test_return_volatile() {
+    return get_volatile_void();
+  }
+
+  void test_return_cv() {
+    return get_cv_void();
+  }
+
+  void test_conditional(bool b) {
+    b ? get_const_void() : get_const_void();
+    b ? get_volatile_void() : get_const_void();
+    b ? get_cv_void() : get_const_void();
+  }
+
+  namespace std { class type_info; }
+  void test_typeid() {
+    (void)typeid(const void);
+    (void)typeid(volatile void);
+    (void)typeid(const volatile void);
+  }
+
+#if __cplusplus >= 201103L
+  template <typename T, typename U>
+  struct is_same { static constexpr bool value = false; };
+
+  template <typename T>
+  struct is_same<T, T> { static constexpr bool value = true; };
+
+  void test_cxx11() {
+    decltype(get_const_void()) *p = nullptr;
+    static_assert(noexcept(get_const_void()), "");
+
+    using CommonType = decltype(true ? get_const_void() : get_volatile_void());
+    static_assert(is_same<CommonType, void>::value, "");
+  }
+#endif
+} // namespace cwg2006
+
 namespace cwg2007 { // cwg2007: 3.4
 template<typename T> struct A { typename T::error e; };
 template<typename T> struct B { };
