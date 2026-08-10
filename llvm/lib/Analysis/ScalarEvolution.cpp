@@ -14692,6 +14692,8 @@ void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
   if (auto *AR = dyn_cast<SCEVAddRecExpr>(S)) {
     UnsignedWrapViaInductionTried.erase(AR);
     SignedWrapViaInductionTried.erase(AR);
+    const_cast<SCEVAddRecExpr *>(AR)->SubclassData &=
+        ~static_cast<unsigned short>(SCEV::NoWrapMask);
   }
 
   auto ExprIt = ExprValueMap.find(S);

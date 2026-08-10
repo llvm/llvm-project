@@ -332,12 +332,10 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
   // loop analysis manager incrementally above.
   PA.preserveSet<AllAnalysesOn<Loop>>();
   PA.preserve<LoopAnalysisManagerFunctionProxy>();
-  // We also preserve the set of standard analyses, unless the loop pipeline
-  // explicitly invalidated SCEV.
+  // We also preserve the set of standard analyses.
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();
-  if (PA.getChecker<ScalarEvolutionAnalysis>().preserved())
-    PA.preserve<ScalarEvolutionAnalysis>();
+  PA.preserve<ScalarEvolutionAnalysis>();
   if (UseMemorySSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;
