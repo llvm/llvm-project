@@ -1144,10 +1144,10 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     addGnuPubAttributes(NewCU, Die);
   }
 
-  if (useAppleExtensionAttributes()) {
-    if (DIUnit->isOptimized())
-      NewCU.addFlag(Die, dwarf::DW_AT_APPLE_optimized);
+  if (DIUnit->isOptimized())
+    NewCU.addFlag(Die, dwarf::DW_AT_APPLE_optimized);
 
+  if (useAppleExtensionAttributes()) {
     StringRef Flags = DIUnit->getFlags();
     if (!Flags.empty())
       NewCU.addString(Die, dwarf::DW_AT_APPLE_flags, Flags);
@@ -1155,9 +1155,6 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     if (unsigned RVer = DIUnit->getRuntimeVersion())
       NewCU.addUInt(Die, dwarf::DW_AT_APPLE_major_runtime_vers,
                     dwarf::DW_FORM_data1, RVer);
-  } else {
-    if (DIUnit->isOptimized())
-      NewCU.addFlag(Die, dwarf::DW_AT_LLVM_optimized);
   }
 
   if (DIUnit->getDWOId()) {

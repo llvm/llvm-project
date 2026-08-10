@@ -164,8 +164,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 6                                   // DW_FORM_data4
 ; CHECK-NEXT: .b8 27                                  // DW_AT_comp_dir
 ; CHECK-NEXT: .b8 8                                   // DW_FORM_string
-; CHECK-NEXT: .b8 150                                 // DW_AT_LLVM_optimized
-; CHECK-NEXT: .b8 124
+; CHECK-NEXT: .b8 225                                 // DW_AT_APPLE_optimized
+; CHECK-NEXT: .b8 127
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 0                                   // EOM(1)
 ; CHECK-NEXT: .b8 0                                   // EOM(2)
@@ -200,8 +200,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 63                                  // DW_AT_external
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
-; CHECK-NEXT: .b8 150                                 // DW_AT_LLVM_optimized
-; CHECK-NEXT: .b8 124
+; CHECK-NEXT: .b8 225                                 // DW_AT_APPLE_optimized
+; CHECK-NEXT: .b8 127
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 0                                   // EOM(1)
 ; CHECK-NEXT: .b8 0                                   // EOM(2)
@@ -223,8 +223,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 63                                  // DW_AT_external
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
-; CHECK-NEXT: .b8 150                                 // DW_AT_LLVM_optimized
-; CHECK-NEXT: .b8 124
+; CHECK-NEXT: .b8 225                                 // DW_AT_APPLE_optimized
+; CHECK-NEXT: .b8 127
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 0                                   // EOM(1)
 ; CHECK-NEXT: .b8 0                                   // EOM(2)
@@ -250,8 +250,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 63                                  // DW_AT_external
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
-; CHECK-NEXT: .b8 150                                 // DW_AT_LLVM_optimized
-; CHECK-NEXT: .b8 124
+; CHECK-NEXT: .b8 225                                 // DW_AT_APPLE_optimized
+; CHECK-NEXT: .b8 127
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 50                                  // DW_AT_accessibility
 ; CHECK-NEXT: .b8 11                                  // DW_FORM_data1
@@ -280,8 +280,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 63                                  // DW_AT_external
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
-; CHECK-NEXT: .b8 150                                 // DW_AT_LLVM_optimized
-; CHECK-NEXT: .b8 124
+; CHECK-NEXT: .b8 225                                 // DW_AT_APPLE_optimized
+; CHECK-NEXT: .b8 127
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 50                                  // DW_AT_accessibility
 ; CHECK-NEXT: .b8 11                                  // DW_FORM_data1
@@ -305,8 +305,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 63                                  // DW_AT_external
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
-; CHECK-NEXT: .b8 150                                 // DW_AT_LLVM_optimized
-; CHECK-NEXT: .b8 124
+; CHECK-NEXT: .b8 225                                 // DW_AT_APPLE_optimized
+; CHECK-NEXT: .b8 127
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 50                                  // DW_AT_accessibility
 ; CHECK-NEXT: .b8 11                                  // DW_FORM_data1
@@ -409,8 +409,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 63                                  // DW_AT_external
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
-; CHECK-NEXT: .b8 150                                 // DW_AT_LLVM_optimized
-; CHECK-NEXT: .b8 124
+; CHECK-NEXT: .b8 225                                 // DW_AT_APPLE_optimized
+; CHECK-NEXT: .b8 127
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 0                                   // EOM(1)
 ; CHECK-NEXT: .b8 0                                   // EOM(2)
@@ -432,8 +432,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 63                                  // DW_AT_external
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
-; CHECK-NEXT: .b8 150                                 // DW_AT_LLVM_optimized
-; CHECK-NEXT: .b8 124
+; CHECK-NEXT: .b8 225                                 // DW_AT_APPLE_optimized
+; CHECK-NEXT: .b8 127
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 0                                   // EOM(1)
 ; CHECK-NEXT: .b8 0                                   // EOM(2)
@@ -464,8 +464,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 11                                  // DW_FORM_data1
 ; CHECK-NEXT: .b8 63                                  // DW_AT_external
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
-; CHECK-NEXT: .b8 150                                 // DW_AT_LLVM_optimized
-; CHECK-NEXT: .b8 124
+; CHECK-NEXT: .b8 225                                 // DW_AT_APPLE_optimized
+; CHECK-NEXT: .b8 127
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 32                                  // DW_AT_inline
 ; CHECK-NEXT: .b8 11                                  // DW_FORM_data1
@@ -504,8 +504,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 11                                  // DW_FORM_data1
 ; CHECK-NEXT: .b8 63                                  // DW_AT_external
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
-; CHECK-NEXT: .b8 150                                 // DW_AT_LLVM_optimized
-; CHECK-NEXT: .b8 124
+; CHECK-NEXT: .b8 225                                 // DW_AT_APPLE_optimized
+; CHECK-NEXT: .b8 127
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 0                                   // EOM(1)
 ; CHECK-NEXT: .b8 0                                   // EOM(2)
@@ -635,8 +635,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 19                                  // DW_FORM_ref4
 ; CHECK-NEXT: .b8 60                                  // DW_AT_declaration
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
-; CHECK-NEXT: .b8 150                                 // DW_AT_LLVM_optimized
-; CHECK-NEXT: .b8 124
+; CHECK-NEXT: .b8 225                                 // DW_AT_APPLE_optimized
+; CHECK-NEXT: .b8 127
 ; CHECK-NEXT: .b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT: .b8 0                                   // EOM(1)
 ; CHECK-NEXT: .b8 0                                   // EOM(2)
@@ -684,7 +684,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 114
 ; CHECK-NEXT: .b8 121
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 2                                   // Abbrev [2] 0x32:0x232 DW_TAG_structure_type
 ; CHECK-NEXT: .b8 95                                  // DW_AT_name
 ; CHECK-NEXT: .b8 95
@@ -791,7 +791,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 612                                // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // Abbrev [3] 0xa0:0x50 DW_TAG_subprogram
 ; CHECK-NEXT: .b8 95                                  // DW_AT_MIPS_linkage_name
 ; CHECK-NEXT: .b8 90
@@ -868,7 +868,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 612                                // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // Abbrev [3] 0xf0:0x50 DW_TAG_subprogram
 ; CHECK-NEXT: .b8 95                                  // DW_AT_MIPS_linkage_name
 ; CHECK-NEXT: .b8 90
@@ -945,7 +945,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 612                                // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 4                                   // Abbrev [4] 0x140:0x4a DW_TAG_subprogram
 ; CHECK-NEXT: .b8 95                                  // DW_AT_MIPS_linkage_name
 ; CHECK-NEXT: .b8 90
@@ -1009,7 +1009,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 628                                // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x183:0x6 DW_TAG_formal_parameter
 ; CHECK-NEXT: .b32 675                                // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_artificial
@@ -1045,7 +1045,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 85                                  // DW_AT_decl_line
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // DW_AT_accessibility
 ; CHECK-NEXT:                                         // DW_ACCESS_private
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x1ab:0x6 DW_TAG_formal_parameter
@@ -1083,7 +1083,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 85                                  // DW_AT_decl_line
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // DW_AT_accessibility
 ; CHECK-NEXT:                                         // DW_ACCESS_private
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x1d3:0x6 DW_TAG_formal_parameter
@@ -1146,7 +1146,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 85                                  // DW_AT_decl_line
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // DW_AT_accessibility
 ; CHECK-NEXT:                                         // DW_ACCESS_private
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x217:0x6 DW_TAG_formal_parameter
@@ -1207,7 +1207,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 695                                // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // DW_AT_accessibility
 ; CHECK-NEXT:                                         // DW_ACCESS_private
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x25c:0x6 DW_TAG_formal_parameter
@@ -1388,7 +1388,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 612                                // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // Abbrev [3] 0x330:0x50 DW_TAG_subprogram
 ; CHECK-NEXT: .b8 95                                  // DW_AT_MIPS_linkage_name
 ; CHECK-NEXT: .b8 90
@@ -1465,7 +1465,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 612                                // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // Abbrev [3] 0x380:0x50 DW_TAG_subprogram
 ; CHECK-NEXT: .b8 95                                  // DW_AT_MIPS_linkage_name
 ; CHECK-NEXT: .b8 90
@@ -1542,7 +1542,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 612                                // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 4                                   // Abbrev [4] 0x3d0:0x48 DW_TAG_subprogram
 ; CHECK-NEXT: .b8 95                                  // DW_AT_MIPS_linkage_name
 ; CHECK-NEXT: .b8 90
@@ -1604,7 +1604,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 1266                               // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x411:0x6 DW_TAG_formal_parameter
 ; CHECK-NEXT: .b32 1445                               // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_artificial
@@ -1640,7 +1640,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 96                                  // DW_AT_decl_line
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // DW_AT_accessibility
 ; CHECK-NEXT:                                         // DW_ACCESS_private
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x439:0x6 DW_TAG_formal_parameter
@@ -1678,7 +1678,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 96                                  // DW_AT_decl_line
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // DW_AT_accessibility
 ; CHECK-NEXT:                                         // DW_ACCESS_private
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x461:0x6 DW_TAG_formal_parameter
@@ -1741,7 +1741,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 96                                  // DW_AT_decl_line
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // DW_AT_accessibility
 ; CHECK-NEXT:                                         // DW_ACCESS_private
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x4a5:0x6 DW_TAG_formal_parameter
@@ -1802,7 +1802,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 1465                               // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // DW_AT_accessibility
 ; CHECK-NEXT:                                         // DW_ACCESS_private
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x4ea:0x6 DW_TAG_formal_parameter
@@ -1861,7 +1861,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 1
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x52f:0x6 DW_TAG_formal_parameter
 ; CHECK-NEXT: .b32 1426                               // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_artificial
@@ -1883,7 +1883,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 1
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x551:0x6 DW_TAG_formal_parameter
 ; CHECK-NEXT: .b32 1426                               // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_artificial
@@ -1931,7 +1931,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 1431                               // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x58a:0x6 DW_TAG_formal_parameter
 ; CHECK-NEXT: .b32 1426                               // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_artificial
@@ -2071,7 +2071,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 612                                // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // Abbrev [3] 0x634:0x51 DW_TAG_subprogram
 ; CHECK-NEXT: .b8 95                                  // DW_AT_MIPS_linkage_name
 ; CHECK-NEXT: .b8 90
@@ -2149,7 +2149,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 612                                // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // Abbrev [3] 0x685:0x51 DW_TAG_subprogram
 ; CHECK-NEXT: .b8 95                                  // DW_AT_MIPS_linkage_name
 ; CHECK-NEXT: .b8 90
@@ -2227,7 +2227,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 612                                // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 4                                   // Abbrev [4] 0x6d6:0x4b DW_TAG_subprogram
 ; CHECK-NEXT: .b8 95                                  // DW_AT_MIPS_linkage_name
 ; CHECK-NEXT: .b8 90
@@ -2292,7 +2292,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 628                                // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x71a:0x6 DW_TAG_formal_parameter
 ; CHECK-NEXT: .b32 2047                               // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_artificial
@@ -2329,7 +2329,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 74                                  // DW_AT_decl_line
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // DW_AT_accessibility
 ; CHECK-NEXT:                                         // DW_ACCESS_private
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x743:0x6 DW_TAG_formal_parameter
@@ -2368,7 +2368,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 74                                  // DW_AT_decl_line
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // DW_AT_accessibility
 ; CHECK-NEXT:                                         // DW_ACCESS_private
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x76c:0x6 DW_TAG_formal_parameter
@@ -2432,7 +2432,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 74                                  // DW_AT_decl_line
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // DW_AT_accessibility
 ; CHECK-NEXT:                                         // DW_ACCESS_private
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x7b1:0x6 DW_TAG_formal_parameter
@@ -2494,7 +2494,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b32 2067                               // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 3                                   // DW_AT_accessibility
 ; CHECK-NEXT:                                         // DW_ACCESS_private
 ; CHECK-NEXT: .b8 5                                   // Abbrev [5] 0x7f7:0x6 DW_TAG_formal_parameter
@@ -2534,7 +2534,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 1                                   // DW_AT_decl_file
 ; CHECK-NEXT: .b8 3                                   // DW_AT_decl_line
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 1                                   // DW_AT_inline
 ; CHECK-NEXT: .b8 22                                  // Abbrev [22] 0x833:0x9 DW_TAG_formal_parameter
 ; CHECK-NEXT: .b8 120                                 // DW_AT_name
@@ -2597,7 +2597,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 1                                   // DW_AT_decl_file
 ; CHECK-NEXT: .b8 5                                   // DW_AT_decl_line
 ; CHECK-NEXT: .b8 1                                   // DW_AT_external
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 24                                  // Abbrev [24] 0x88b:0x10 DW_TAG_formal_parameter
 ; CHECK-NEXT: .b8 2                                   // DW_AT_address_class
 ; CHECK-NEXT: .b8 5                                   // DW_AT_location
@@ -2706,7 +2706,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 44                                  // DW_AT_decl_line
 ; CHECK-NEXT: .b32 2406                               // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_declaration
-; CHECK-NEXT: .b8 1                                   // DW_AT_LLVM_optimized
+; CHECK-NEXT: .b8 1                                   // DW_AT_APPLE_optimized
 ; CHECK-NEXT: .b8 7                                   // Abbrev [7] 0x960:0x5 DW_TAG_formal_parameter
 ; CHECK-NEXT: .b32 2406                               // DW_AT_type
 ; CHECK-NEXT: .b8 0                                   // End Of Children Mark
