@@ -20,6 +20,8 @@ def GPRPairNoX0RV32Operand : AsmOperandClass {
   let ParserMethod = "parseGPRPair<false>";
   let PredicateMethod = "isGPRPairNoX0";
   let RenderMethod = "addRegOperands";
+  let DiagnosticType = "InvalidGPRPairNoX0RV32";
+  let DiagnosticString = "register pair must start with an even GPR other than x0";
 }
 
 def GPRPairNoX0RV32 : RegisterOperand<GPRPairNoX0> {
@@ -31,6 +33,8 @@ def GPRPairCRV32Operand : AsmOperandClass {
   let ParserMethod = "parseGPRPair<false>";
   let PredicateMethod = "isGPRPairC";
   let RenderMethod = "addRegOperands";
+  let DiagnosticType = "InvalidGPRPairCRV32";
+  let DiagnosticString = "register pair must start with x8, x10, x12, or x14";
 }
 
 def GPRPairCRV32 : RegisterOperand<GPRPairC> {

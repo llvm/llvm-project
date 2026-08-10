@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
@@ -525,6 +526,7 @@ INITIALIZE_PASS_END(StackColoringLegacy, DEBUG_TYPE,
 
 void StackColoringLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<SlotIndexesWrapperPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -1194,8 +1196,11 @@ bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
   StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
-  if (SC.run(MF))
-    return getMachineFunctionPassPreservedAnalyses();
+  if (SC.run(MF)) {
+    auto PA = getMachineFunctionPassPreservedAnalyses();
+    PA.preserve<MachineRegisterClassAnalysis>();
+    return PA;
+  }
   return PreservedAnalyses::all();
 }
 
@@ -1224,7 +1229,7 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
 
   unsigned NumMarkers = collectMarkers(NumSlots);
 
-  unsigned TotalSize = 0;
+  int64_t TotalSize = 0;
   LLVM_DEBUG(dbgs() << "Found " << NumMarkers << " markers and " << NumSlots
                     << " slots\n");
   LLVM_DEBUG(dbgs() << "Slot structure:\n");
@@ -1270,7 +1275,7 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
   // Maps old slots to new slots.
   DenseMap<int, int> SlotRemap;
   unsigned RemovedSlots = 0;
-  unsigned ReducedSize = 0;
+  int64_t ReducedSize = 0;
 
   // Do not bother looking at empty intervals.
   for (unsigned I = 0; I < NumSlots; ++I) {

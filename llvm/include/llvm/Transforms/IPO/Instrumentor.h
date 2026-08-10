@@ -65,6 +65,7 @@ struct IRTArg {
     POTENTIALLY_INDIRECT = 1 << 3,
     INDIRECT_HAS_SIZE = 1 << 4,
     VALUE_PACK = 1 << 5,
+    TYPEID = 1 << 6,
     LAST,
   };
 
@@ -369,6 +370,10 @@ struct LLVM_ABI InstrumentationConfig {
         *this, "host_enabled", "Instrument non-GPU targets", true);
     GPUEnabled = BaseConfigurationOption::createBoolOption(
         *this, "gpu_enabled", "Instrument GPU targets", true);
+    RuntimeBitcode = BaseConfigurationOption::createStringOption(
+        *this, "runtime_bitcode", "Link runtime bitcode", "");
+    InlineRuntimeEagerly = BaseConfigurationOption::createBoolOption(
+        *this, "inline_runtime", "Inline runtime function calls eagerly", true);
     populate(IIRB);
   }
 
@@ -440,6 +445,8 @@ struct LLVM_ABI InstrumentationConfig {
   std::unique_ptr<BaseConfigurationOption> FunctionRegex;
   std::unique_ptr<BaseConfigurationOption> HostEnabled;
   std::unique_ptr<BaseConfigurationOption> GPUEnabled;
+  std::unique_ptr<BaseConfigurationOption> RuntimeBitcode;
+  std::unique_ptr<BaseConfigurationOption> InlineRuntimeEagerly;
 
   /// The map registered instrumentation opportunities. The map is indexed by
   /// the instrumentation location kind and then by the opportunity name. Notice
@@ -471,6 +478,9 @@ struct InstrumentationOpportunity {
   /// The order within the array determines the order of arguments. Arguments
   /// may be disabled and will not be passed to the function call.
   SmallVector<IRTArg> IRTArgs;
+
+  /// Flag names and their integer bitmask values.
+  StringMap<int32_t> FlagNames;
 
   /// Whether the opportunity is enabled.
   bool Enabled = true;
@@ -606,6 +616,9 @@ struct BaseInstructionIO : public InstrumentationOpportunity {
   LLVM_ABI static Value *getTypeId(Value &V, Type &Ty,
                                    InstrumentationConfig &IConf,
                                    InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getSubTypeId(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
 };
 
 /// The common instrumentation opportunity class for instruction opportunities.
@@ -933,6 +946,7 @@ struct StoreIO : public InstructionIO<Instruction::Store> {
     PassStoredValueSize,
     PassAlignment,
     PassValueTypeId,
+    PassValueSubTypeId,
     PassAtomicityOrdering,
     PassSyncScopeId,
     PassIsVolatile,
@@ -982,6 +996,9 @@ struct StoreIO : public InstructionIO<Instruction::Store> {
   LLVM_ABI static Value *getValueTypeId(Value &V, Type &Ty,
                                         InstrumentationConfig &IConf,
                                         InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getValueSubTypeId(Value &V, Type &Ty,
+                                           InstrumentationConfig &IConf,
+                                           InstrumentorIRBuilderTy &IIRB);
   LLVM_ABI static Value *getAtomicityOrdering(Value &V, Type &Ty,
                                               InstrumentationConfig &IConf,
                                               InstrumentorIRBuilderTy &IIRB);
@@ -1026,6 +1043,7 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
     PassValueSize,
     PassAlignment,
     PassValueTypeId,
+    PassValueSubTypeId,
     PassAtomicityOrdering,
     PassSyncScopeId,
     PassIsVolatile,
@@ -1075,6 +1093,9 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
   LLVM_ABI static Value *getValueTypeId(Value &V, Type &Ty,
                                         InstrumentationConfig &IConf,
                                         InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getValueSubTypeId(Value &V, Type &Ty,
+                                           InstrumentationConfig &IConf,
+                                           InstrumentorIRBuilderTy &IIRB);
   LLVM_ABI static Value *getAtomicityOrdering(Value &V, Type &Ty,
                                               InstrumentationConfig &IConf,
                                               InstrumentorIRBuilderTy &IIRB);
@@ -1113,10 +1134,12 @@ struct CastIO final
   enum ConfigKind {
     PassInput,
     PassInputTypeId,
+    PassInputSubTypeId,
     PassInputSize,
     PassResult,
     ReplaceResult,
     PassResultTypeId,
+    PassResultSubTypeId,
     PassResultSize,
     PassOpcode,
     PassId,
@@ -1138,12 +1161,18 @@ struct CastIO final
   LLVM_ABI static Value *getInputTypeId(Value &V, Type &Ty,
                                         InstrumentationConfig &IConf,
                                         InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getInputSubTypeId(Value &V, Type &Ty,
+                                           InstrumentationConfig &IConf,
+                                           InstrumentorIRBuilderTy &IIRB);
   LLVM_ABI static Value *getInputSize(Value &V, Type &Ty,
                                       InstrumentationConfig &IConf,
                                       InstrumentorIRBuilderTy &IIRB);
   LLVM_ABI static Value *getResultTypeId(Value &V, Type &Ty,
                                          InstrumentationConfig &IConf,
                                          InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getResultSubTypeId(Value &V, Type &Ty,
+                                            InstrumentationConfig &IConf,
+                                            InstrumentorIRBuilderTy &IIRB);
   LLVM_ABI static Value *getResultSize(Value &V, Type &Ty,
                                        InstrumentationConfig &IConf,
                                        InstrumentorIRBuilderTy &IIRB);
@@ -1175,6 +1204,7 @@ struct NumericIO final
 
   enum ConfigKind {
     PassTypeId,
+    PassSubTypeId,
     PassSize,
     PassOpcode,
     PassResult,
@@ -1194,6 +1224,7 @@ struct NumericIO final
   LLVM_ABI void init(InstrumentationConfig &IConf,
                      InstrumentorIRBuilderTy &IIRB,
                      ConfigTy *UserConfig = nullptr);
+  LLVM_ABI void addFlagNames();
 
   LLVM_ABI static Value *getFlags(Value &V, Type &Ty,
                                   InstrumentationConfig &IConf,
@@ -1238,6 +1269,7 @@ struct CompareIO final
   LLVM_ABI void init(InstrumentationConfig &IConf,
                      InstrumentorIRBuilderTy &IIRB,
                      ConfigTy *UserConfig = nullptr);
+  LLVM_ABI void addFlagNames();
 
   LLVM_ABI static Value *getOperandTypeId(Value &V, Type &Ty,
                                           InstrumentationConfig &IConf,

@@ -150,3 +150,13 @@ func.func @test_preserve_matmul_t_dynamic_broadcast(%arg0: tensor<4x14x19xf32>, 
   %0 = tosa.matmul_t %arg0, %arg1, %arg2, %arg3 : (tensor<4x14x19xf32>, tensor<?x28x19xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<4x14x28xf32>
   return %0 : tensor<4x14x28xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @test_preserve_matmul_t_block_scaled
+// CHECK: %[[MATMUL_T:.+]] = tosa.matmul_t %arg0, %arg1, %arg2, %arg3 : (tensor<1x14x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, tensor<1x28x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x14x28xf32>
+// CHECK: return %[[MATMUL_T]]
+func.func @test_preserve_matmul_t_block_scaled(%arg0: tensor<1x14x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, %arg1: tensor<1x28x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, %arg2: tensor<1xf32>, %arg3: tensor<1xf32>) -> tensor<1x14x28xf32> {
+  %0 = tosa.matmul_t %arg0, %arg1, %arg2, %arg3 : (tensor<1x14x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, tensor<1x28x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x14x28xf32>
+  return %0 : tensor<1x14x28xf32>
+}

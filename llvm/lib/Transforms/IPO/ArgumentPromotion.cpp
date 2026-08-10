@@ -294,7 +294,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     NewCS->setAttributes(AttributeList::get(F->getContext(),
                                             CallPAL.getFnAttrs(),
                                             CallPAL.getRetAttrs(), ArgAttrVec));
-    NewCS->copyMetadata(CB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+    NewCS->copyProfileAndDebugMetadata(CB);
     Args.clear();
     ArgAttrVec.clear();
 
@@ -815,6 +815,10 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
 
   // Make sure that it is local to this module.
   if (!F->hasLocalLinkage())
+    return nullptr;
+
+  // Ensure function definition is available for interprocedural analysis.
+  if (!F->isDefinitionExact())
     return nullptr;
 
   // Don't promote arguments for variadic functions. Adding, removing, or

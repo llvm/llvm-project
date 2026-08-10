@@ -29,6 +29,10 @@
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64 a.s -o a.o
 # RUN: llvm-profdata merge a.proftext -o a.profdata
+
+# RUN: not ld.lld a.o --irpgo-profile=missing.profdata --bp-startup-sort=function -o /dev/null 2>&1 | FileCheck %s --check-prefix=MISSING -DMSG=%errc_ENOENT
+# MISSING: error: [[MSG]]
+
 # RUN: ld.lld a.o --irpgo-profile=a.profdata --bp-startup-sort=function --verbose-bp-section-orderer --icf=all --gc-sections 2>&1 | FileCheck %s --check-prefix=STARTUP-FUNC-ORDER
 
 # STARTUP-FUNC-ORDER: Ordered 4 sections ([[#]] bytes) using balanced partitioning

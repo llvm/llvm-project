@@ -128,8 +128,16 @@
 // RUN: %clang -### -target amdgcn -mcpu=gfx10-1-generic %s 2>&1 | FileCheck --check-prefix=GFX10_1_GENERIC %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx10-3-generic %s 2>&1 | FileCheck --check-prefix=GFX10_3_GENERIC %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx11-generic %s 2>&1 | FileCheck --check-prefix=GFX11_GENERIC %s
+// RUN: %clang -### -target amdgcn -mcpu=gfx11-7-generic %s 2>&1 | FileCheck --check-prefix=GFX11_7_GENERIC %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx12-generic %s 2>&1 | FileCheck --check-prefix=GFX12_GENERIC %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx12-5-generic %s 2>&1 | FileCheck --check-prefix=GFX12_5_GENERIC %s
+// RUN: %clang -### -target amdgcn -mcpu=gfx13-generic %s 2>&1 | FileCheck --check-prefix=GFX13_GENERIC %s
+
+// The pseudo targets "generic"/"generic-hsa" may not be used.
+// RUN: not %clang -target amdgcn -mcpu=generic -nogpulib -c %s 2>&1 | FileCheck --check-prefix=PSEUDO-GENERIC %s
+// RUN: not %clang -target amdgcn-amd-amdhsa -mcpu=generic -nogpulib -c %s 2>&1 | FileCheck --check-prefix=PSEUDO-GENERIC %s
+// RUN: not %clang -target amdgcn -mcpu=generic-hsa -nogpulib -c %s 2>&1 | FileCheck --check-prefix=PSEUDO-GENERIC-HSA %s
+// RUN: not %clang -target amdgcn-amd-amdhsa -mcpu=generic-hsa -nogpulib -c %s 2>&1 | FileCheck --check-prefix=PSEUDO-GENERIC-HSA %s
 
 // GCNDEFAULT-NOT: -target-cpu
 // GFX600:    "-target-cpu" "gfx600"
@@ -190,5 +198,10 @@
 // GFX10_1_GENERIC:   "-target-cpu" "gfx10-1-generic"
 // GFX10_3_GENERIC:   "-target-cpu" "gfx10-3-generic"
 // GFX11_GENERIC:     "-target-cpu" "gfx11-generic"
+// GFX11_7_GENERIC:   "-target-cpu" "gfx11-7-generic"
 // GFX12_GENERIC:     "-target-cpu" "gfx12-generic"
 // GFX12_5_GENERIC:   "-target-cpu" "gfx12-5-generic"
+// GFX13_GENERIC:     "-target-cpu" "gfx13-generic"
+
+// PSEUDO-GENERIC:     error: unknown target CPU 'generic'
+// PSEUDO-GENERIC-HSA: error: unknown target CPU 'generic-hsa'

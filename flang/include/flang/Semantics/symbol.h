@@ -14,6 +14,7 @@
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
 #include "flang/Semantics/module-dependences.h"
+#include "flang/Semantics/omp-declare-variant.h"
 #include "flang/Support/Fortran.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
@@ -52,11 +53,8 @@ using MutableSymbolVector = std::vector<MutableSymbolRef>;
 // Mixin for details with OpenMP declarative constructs.
 class WithOmpDeclarative {
 public:
-  using OmpClauseSet =
-      common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
-
-  const OmpClauseSet &ompRequires() const { return ompRequires_; }
-  void set_ompRequires(OmpClauseSet clauses) { ompRequires_ = clauses; }
+  const llvm::omp::ClauseSet &ompRequires() const { return ompRequires_; }
+  void set_ompRequires(llvm::omp::ClauseSet clauses) { ompRequires_ = clauses; }
 
   const std::optional<common::OmpMemoryOrderType> &
   ompAtomicDefaultMemOrder() const {
@@ -66,8 +64,10 @@ public:
     ompAtomicDefaultMemOrder_ = flags;
   }
 
-  const OmpClauseSet &ompDeclTarget() const { return ompDeclTarget_; }
-  void set_ompDeclTarget(OmpClauseSet clauses) { ompDeclTarget_ = clauses; }
+  const llvm::omp::ClauseSet &ompDeclTarget() const { return ompDeclTarget_; }
+  void set_ompDeclTarget(llvm::omp::ClauseSet clauses) {
+    ompDeclTarget_ = clauses;
+  }
 
   const std::optional<common::OmpDeviceType> &ompDeclTargetDeviceType() const {
     return ompDeclTargetDeviceType_;
@@ -76,8 +76,12 @@ public:
     ompDeclTargetDeviceType_ = device;
   }
 
-  const OmpClauseSet &ompGroupprivate() const { return ompGroupprivate_; }
-  void set_ompGroupprivate(OmpClauseSet clauses) { ompGroupprivate_ = clauses; }
+  const llvm::omp::ClauseSet &ompGroupprivate() const {
+    return ompGroupprivate_;
+  }
+  void set_ompGroupprivate(llvm::omp::ClauseSet clauses) {
+    ompGroupprivate_ = clauses;
+  }
 
   const std::optional<common::OmpDeviceType> &
   ompGroupprivateDeviceType() const {
@@ -89,8 +93,8 @@ public:
 
   // \p dir indicates to which declarative directive the given clauses
   // belong to.
-  void printClauseSet(llvm::raw_ostream &os, const OmpClauseSet &clauses,
-      llvm::omp::Directive dir,
+  void printClauseSet(llvm::raw_ostream &os,
+      const llvm::omp::ClauseSet &clauses, llvm::omp::Directive dir,
       parser::CharBlock name = parser::CharBlock{}) const;
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const WithOmpDeclarative &);
@@ -103,18 +107,18 @@ private:
   // to program unit symbols (i.e. scopes of the REQUIRES directive).
   // The set of requirements for any program unit include requirements
   // from any module used in the program unit.
-  OmpClauseSet ompRequires_;
+  llvm::omp::ClauseSet ompRequires_;
   // The argument to ATOMIC_DEFAULT_MEM_ORDER. Only needed when the ADMO
   // clause is present in the ompRequires_ set.
   std::optional<common::OmpMemoryOrderType> ompAtomicDefaultMemOrder_;
   // The set of clauses on DECLARE_TARGET directive that apply to this
   // symbol.
-  OmpClauseSet ompDeclTarget_;
+  llvm::omp::ClauseSet ompDeclTarget_;
   // The argument to DEVICE_TYPE clause. Only needed when the clause is
   // present in the ompDeclTarget_ set.
   std::optional<common::OmpDeviceType> ompDeclTargetDeviceType_;
   // The set of clauses on a GROUPPRIVATE directive declaring this symbol.
-  OmpClauseSet ompGroupprivate_;
+  llvm::omp::ClauseSet ompGroupprivate_;
   // The argument to a DEVICE_TYPE clause on a GROUPPRIVATE directive declaring
   // this symbol. Only needed when the clause is present in ompGroupprivate_.
   std::optional<common::OmpDeviceType> ompGroupprivateDeviceType_;
@@ -307,6 +311,13 @@ public:
     openACCRoutineInfos_.push_back(info);
   }
 
+  const std::vector<OmpDeclareVariantEntry> &ompDeclareVariants() const {
+    return ompDeclareVariants_;
+  }
+  void addOmpDeclareVariant(OmpDeclareVariantEntry &&entry) {
+    ompDeclareVariants_.push_back(std::move(entry));
+  }
+
 private:
   bool isInterface_{false}; // true if this represents an interface-body
   bool isDummy_{false}; // true when interface of dummy procedure
@@ -325,6 +336,7 @@ private:
   std::vector<std::int64_t> cudaLaunchBounds_, cudaClusterDims_;
   // OpenACC routine information
   std::vector<OpenACCRoutineInfo> openACCRoutineInfos_;
+  std::vector<OmpDeclareVariantEntry> ompDeclareVariants_;
 
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const SubprogramDetails &);
@@ -457,12 +469,23 @@ public:
   void set_cudaDataAttr(std::optional<common::CUDADataAttr> attr) {
     cudaDataAttr_ = attr;
   }
+  // Specification expressions from the bounds of a zero-size explicit-shape
+  // bounds array (F2023).  The entity is scalar, so these bounds are not
+  // part of shape(), but they are still specification expressions that must be
+  // validated during declaration checking, when the scope is fully resolved.
+  void add_droppedBoundToCheck(Bound &&bound) {
+    droppedBoundsToCheck_.emplace_back(std::move(bound));
+  }
+  const std::vector<Bound> &droppedBoundsToCheck() const {
+    return droppedBoundsToCheck_;
+  }
 
 private:
   MaybeExpr init_;
   const parser::Expr *unanalyzedPDTComponentInit_{nullptr};
   ArraySpec shape_;
   ArraySpec coshape_;
+  std::vector<Bound> droppedBoundsToCheck_;
   common::IgnoreTKRSet ignoreTKR_;
   const Symbol *commonBlock_{nullptr}; // common block this object is in
   std::optional<common::CUDADataAttr> cudaDataAttr_;
@@ -547,6 +570,9 @@ public:
   bool isDECStructure() const { return isDECStructure_; }
   bool isEnumerationType() const { return isEnumerationType_; }
   void set_isEnumerationType(bool x = true) { isEnumerationType_ = x; }
+  // Name of the hidden component created for an enumeration type to hold
+  // the 1-based enumerator ordinal.
+  static constexpr char ordinalComponentName[]{"__ordinal"};
   int enumeratorCount() const { return enumeratorCount_; }
   void set_enumeratorCount(int n) { enumeratorCount_ = n; }
   std::map<SourceName, SymbolRef> &finals() { return finals_; }
