@@ -30,6 +30,7 @@ from lldbsuite.support import temp_file
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbplatformutil
 from lldbsuite.test.cpu_feature import CPUFeature
+from lldbsuite.test.skip_reason import UnsupportedReason
 import swift
 
 
