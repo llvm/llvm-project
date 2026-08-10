@@ -664,7 +664,7 @@ void LoopInfoBase<BlockT, LoopT>::analyze(
       // Whatever reaches a latch without passing the header is in the loop.
       for (unsigned I = 0; I != Worklist.size(); ++I)
         for (BlockT *Pred : inverse_children<BlockT *>(Worklist[I]))
-          //  Do not enqueue any unreachable nodes
+          // Do not enqueue any unreachable nodes.
           if (Blocks[num(Pred)])
             enqueue(Pred);
       // Without a backedge the header forms no loop at all.
