@@ -1173,6 +1173,15 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     Index.exportToDot(OSDot, {});
   }
 
+  for (const GlobalObject &GO : M.global_objects()) {
+    if (GO.isDeclaration() || GO.getName().starts_with("llvm."))
+      continue;
+    if (GO.hasSection()) {
+      auto &Entry = Index.sectionInfos()[GO.getGUID()];
+      Entry.SectionName = Index.saveString(GO.getSection());
+    }
+  }
+
   return Index;
 }
 

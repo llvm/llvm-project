@@ -10002,8 +10002,9 @@ static void resolveFwdRef(ValueInfo *Fwd, ValueInfo &Resolved) {
 /// Stores the given Name/GUID and associated summary into the Index.
 /// Also updates any forward references to the associated entry ID.
 bool LLParser::addGlobalValueToIndex(
-    std::string Name, GlobalValue::GUID GUID, GlobalValue::LinkageTypes Linkage,
-    unsigned ID, std::unique_ptr<GlobalValueSummary> Summary, LocTy Loc) {
+    std::string Name, GlobalValue::GUID &GUID,
+    GlobalValue::LinkageTypes Linkage, unsigned ID,
+    std::unique_ptr<GlobalValueSummary> Summary, LocTy Loc) {
   // First create the ValueInfo utilizing the Name or GUID.
   ValueInfo VI;
   if (GUID != 0) {
@@ -10173,8 +10174,70 @@ bool LLParser::parseGVEntry(unsigned ID) {
     }
   } while (EatIfPresent(lltok::comma));
 
-  if (parseToken(lltok::rparen, "expected ')' here") ||
-      parseToken(lltok::rparen, "expected ')' here"))
+  if (parseToken(lltok::rparen, "expected ')' here"))
+    return true;
+
+  if (EatIfPresent(lltok::comma)) {
+    if (parseToken(lltok::kw_sectionInfo, "expected 'sectioninfo' here") ||
+        parseToken(lltok::colon, "expected ':' here") ||
+        parseToken(lltok::lparen, "expected '(' here"))
+      return true;
+
+    ModuleSummaryIndex::SectionInfo Info;
+    do {
+      switch (Lex.getKind()) {
+      case lltok::kw_sectionName: {
+        Lex.Lex();
+        if (parseToken(lltok::colon, "expected ':' here"))
+          return true;
+        std::string SectionName;
+        if (parseStringConstant(SectionName))
+          return true;
+        Info.SectionName = Index->saveString(SectionName);
+        break;
+      }
+      case lltok::kw_outputSectionName: {
+        Lex.Lex();
+        if (parseToken(lltok::colon, "expected ':' here"))
+          return true;
+        std::string OutputSectionName;
+        if (parseStringConstant(OutputSectionName))
+          return true;
+        Info.OutputSectionName = Index->saveString(OutputSectionName);
+        break;
+      }
+      case lltok::kw_keep: {
+        Lex.Lex();
+        if (parseToken(lltok::colon, "expected ':' here"))
+          return true;
+        switch (Lex.getKind()) {
+        case lltok::kw_true:
+          Lex.Lex();
+          Info.Keep = true;
+          break;
+        case lltok::kw_false:
+          Lex.Lex();
+          Info.Keep = false;
+          break;
+        default:
+          return error(Lex.getLoc(), "expected 'true' or 'false'");
+        }
+        break;
+      }
+      default:
+        return error(Lex.getLoc(), "expected sectionInfo field");
+      }
+    } while (EatIfPresent(lltok::comma));
+
+    if (parseToken(lltok::rparen, "expected ')' here"))
+      return true;
+
+    if (!GUID)
+      return error(Lex.getLoc(), "missing GUID parsing sectionInfo");
+    Index->sectionInfos().insert_or_assign(GUID, Info);
+  }
+
+  if (parseToken(lltok::rparen, "expected ')' here"))
     return true;
 
   return false;
@@ -10185,7 +10248,7 @@ bool LLParser::parseGVEntry(unsigned ID) {
 ///         ',' 'insts' ':' UInt32 [',' OptionalFFlags]? [',' OptionalCalls]?
 ///         [',' OptionalTypeIdInfo]? [',' OptionalParamAccesses]?
 ///         [',' OptionalRefs]? ')'
-bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
+bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID &GUID,
                                     unsigned ID) {
   LocTy Loc = Lex.getLoc();
   assert(Lex.getKind() == lltok::kw_function);
@@ -10273,7 +10336,7 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
 /// VariableSummary
 ///   ::= 'variable' ':' '(' 'module' ':' ModuleReference ',' GVFlags
 ///         [',' OptionalRefs]? ')'
-bool LLParser::parseVariableSummary(std::string Name, GlobalValue::GUID GUID,
+bool LLParser::parseVariableSummary(std::string Name, GlobalValue::GUID &GUID,
                                     unsigned ID) {
   LocTy Loc = Lex.getLoc();
   assert(Lex.getKind() == lltok::kw_variable);
@@ -10332,7 +10395,7 @@ bool LLParser::parseVariableSummary(std::string Name, GlobalValue::GUID GUID,
 /// AliasSummary
 ///   ::= 'alias' ':' '(' 'module' ':' ModuleReference ',' GVFlags ','
 ///         'aliasee' ':' GVReference ')'
-bool LLParser::parseAliasSummary(std::string Name, GlobalValue::GUID GUID,
+bool LLParser::parseAliasSummary(std::string Name, GlobalValue::GUID &GUID,
                                  unsigned ID) {
   assert(Lex.getKind() == lltok::kw_alias);
   LocTy Loc = Lex.getLoc();

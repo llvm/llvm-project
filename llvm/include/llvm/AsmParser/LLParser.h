@@ -426,9 +426,11 @@ namespace llvm {
     bool parseSummaryIndexFlags();
     bool parseBlockCount();
     bool parseGVEntry(unsigned ID);
-    bool parseFunctionSummary(std::string Name, GlobalValue::GUID, unsigned ID);
-    bool parseVariableSummary(std::string Name, GlobalValue::GUID, unsigned ID);
-    bool parseAliasSummary(std::string Name, GlobalValue::GUID, unsigned ID);
+    bool parseFunctionSummary(std::string Name, GlobalValue::GUID &,
+                              unsigned ID);
+    bool parseVariableSummary(std::string Name, GlobalValue::GUID &,
+                              unsigned ID);
+    bool parseAliasSummary(std::string Name, GlobalValue::GUID &, unsigned ID);
     bool parseGVFlags(GlobalValueSummary::GVFlags &GVFlags);
     bool parseGVarFlags(GlobalVarSummary::GVarFlags &GVarFlags);
     bool parseOptionalFFlags(FunctionSummary::FFlags &FFlags);
@@ -469,7 +471,7 @@ namespace llvm {
         std::map<std::vector<uint64_t>, WholeProgramDevirtResolution::ByArg>
             &ResByArg);
     bool parseArgs(std::vector<uint64_t> &Args);
-    bool addGlobalValueToIndex(std::string Name, GlobalValue::GUID,
+    bool addGlobalValueToIndex(std::string Name, GlobalValue::GUID &,
                                GlobalValue::LinkageTypes Linkage, unsigned ID,
                                std::unique_ptr<GlobalValueSummary> Summary,
                                LocTy Loc);

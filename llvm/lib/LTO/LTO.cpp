@@ -61,6 +61,7 @@
 #include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 
 #include <optional>
@@ -827,7 +828,8 @@ static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,
 }
 
 Error LTO::add(std::unique_ptr<InputFile> InputPtr,
-               ArrayRef<SymbolResolution> Res) {
+               ArrayRef<SymbolResolution> Res,
+               SectionResolverFn SectionResolver) {
   llvm::TimeTraceScope timeScope("LTO add input", InputPtr->getName());
   assert(!CalledGetMaxTasks);
 
@@ -849,7 +851,8 @@ Error LTO::add(std::unique_ptr<InputFile> InputPtr,
 
   ArrayRef<SymbolResolution> InputRes = Res;
   for (unsigned I = 0; I != Input->Mods.size(); ++I) {
-    if (auto Err = addModule(*Input, InputRes, I, Res).moveInto(Res))
+    if (auto Err =
+            addModule(*Input, InputRes, I, Res, SectionResolver).moveInto(Res))
       return Err;
   }
 
@@ -865,7 +868,8 @@ void LTO::setBitcodeLibFuncs(ArrayRef<StringRef> BitcodeLibFuncs) {
 
 Expected<ArrayRef<SymbolResolution>>
 LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
-               unsigned ModI, ArrayRef<SymbolResolution> Res) {
+               unsigned ModI, ArrayRef<SymbolResolution> Res,
+               SectionResolverFn SectionResolver) {
   llvm::TimeTraceScope timeScope("LTO add module", Input.getName());
   Expected<BitcodeLTOInfo> LTOInfo = Input.Mods[ModI].getLTOInfo();
   if (!LTOInfo)
@@ -904,10 +908,11 @@ LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
                        LTOInfo->HasSummary, Triple(Input.getTargetTriple()));
 
   if (IsThinLTO)
-    return addThinLTO(BM, ModSyms, Res);
+    return addThinLTO(BM, ModSyms, Res, SectionResolver);
 
   RegularLTO.EmptyCombinedModule = false;
-  auto ModOrErr = addRegularLTO(Input, InputRes, BM, ModSyms, Res);
+  auto ModOrErr =
+      addRegularLTO(Input, InputRes, BM, ModSyms, Res, SectionResolver);
   if (!ModOrErr)
     return ModOrErr.takeError();
   Res = ModOrErr->second;
@@ -964,7 +969,8 @@ Expected<
     std::pair<LTO::RegularLTOState::AddedModule, ArrayRef<SymbolResolution>>>
 LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
                    BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                   ArrayRef<SymbolResolution> Res) {
+                   ArrayRef<SymbolResolution> Res,
+                   SectionResolverFn SectionResolver) {
   llvm::TimeTraceScope timeScope("LTO add regular LTO");
   RegularLTOState::AddedModule Mod;
   Expected<std::unique_ptr<Module>> MOrErr =
@@ -977,6 +983,21 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
 
   if (Error Err = M.materializeMetadata())
     return std::move(Err);
+
+  if (SectionResolver) {
+    SmallVector<GlobalValue *, 4> Keep;
+    for (GlobalObject &GO : M.global_objects()) {
+      if (GO.isDeclaration() || GO.getName().starts_with("llvm."))
+        continue;
+      if (GO.hasSection()) {
+        auto Res = SectionResolver(GO.getSection());
+        if (Res.Keep)
+          Keep.push_back(&GO);
+      }
+    }
+    if (!Keep.empty())
+      appendToCompilerUsed(M, Keep);
+  }
 
   if (LTOMode == LTOK_UnifiedRegular) {
     // cfi.functions metadata is intended to be used with ThinLTO and may
@@ -1181,7 +1202,8 @@ Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
 // Add a ThinLTO module to the link.
 Expected<ArrayRef<SymbolResolution>>
 LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                ArrayRef<SymbolResolution> Res) {
+                ArrayRef<SymbolResolution> Res,
+                SectionResolverFn SectionResolver) {
   llvm::TimeTraceScope timeScope("LTO add thin LTO");
   const auto BMID = BM.getModuleIdentifier();
   ArrayRef<SymbolResolution> ResTmp = Res;
@@ -1209,6 +1231,23 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
             }
           }))
     return Err;
+
+  if (SectionResolver) {
+    for (auto &Entry : ThinLTO.CombinedIndex.sectionInfos()) {
+      GlobalValue::GUID GUID = Entry.first;
+      ValueInfo VI = ThinLTO.CombinedIndex.getValueInfo(GUID);
+      if (VI) {
+        for (const auto &Summary : VI.getSummaryList()) {
+          if (Summary->modulePath() == BMID) {
+            auto Res = SectionResolver(Entry.second.SectionName);
+            Entry.second.Keep = Res.Keep;
+            break;
+          }
+        }
+      }
+    }
+  }
+
   LLVM_DEBUG(dbgs() << "Module " << BMID << "\n");
 
   for (const InputFile::Symbol &Sym : Syms) {
@@ -1339,12 +1378,23 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
     if (Res.second.VisibleOutsideSummary && Res.second.Prevailing)
       GUIDPreservedSymbols.insert(GUID);
 
+    auto It = ThinLTO.CombinedIndex.sectionInfos().find(GUID);
+    if (It != ThinLTO.CombinedIndex.sectionInfos().end() && It->second.Keep &&
+        Res.second.Prevailing) {
+      Res.second.Partition = GlobalResolution::External;
+      Res.second.VisibleOutsideSummary = true;
+    }
+
     if (Res.second.ExportDynamic)
       DynamicExportSymbols.insert(GUID);
 
     GUIDPrevailingResolutions[GUID] =
         Res.second.Prevailing ? PrevailingType::Yes : PrevailingType::No;
   }
+
+  for (const auto &Entry : ThinLTO.CombinedIndex.sectionInfos())
+    if (Entry.second.Keep)
+      GUIDPreservedSymbols.insert(Entry.first);
 
   auto isPrevailing = [&](GlobalValue::GUID G) {
     auto It = GUIDPrevailingResolutions.find(G);

@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -1597,6 +1598,16 @@ private:
   CfiFunctionIndex CfiFunctionDefs;
   CfiFunctionIndex CfiFunctionDecls;
 
+public:
+  struct SectionInfo {
+    StringRef SectionName;
+    StringRef OutputSectionName;
+    bool Keep = false;
+  };
+
+private:
+  MapVector<GlobalValue::GUID, SectionInfo> SectionInfos;
+
   // Used in cases where we want to record the name of a global, but
   // don't have the string owned elsewhere (e.g. the Strtab on a module).
   BumpPtrAllocator Alloc;
@@ -1693,6 +1704,13 @@ public:
     assert(StackIdToIndex.size() == StackIds.size());
     StackIdToIndex.clear();
     StackIds.shrink_to_fit();
+  }
+
+  const MapVector<GlobalValue::GUID, SectionInfo> &sectionInfos() const {
+    return SectionInfos;
+  }
+  MapVector<GlobalValue::GUID, SectionInfo> &sectionInfos() {
+    return SectionInfos;
   }
 
   /// Convenience function for doing a DFS on a ValueInfo. Marks the function in

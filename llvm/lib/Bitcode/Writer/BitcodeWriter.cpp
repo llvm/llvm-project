@@ -5010,6 +5010,17 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     Stream.EmitRecord(bitc::FS_BLOCK_COUNT,
                       ArrayRef<uint64_t>{Index->getBlockCount()});
 
+  for (const auto &Entry : Index->sectionInfos()) {
+    NameVals.push_back(Entry.first); // GUID
+    NameVals.push_back(StrtabBuilder.add(Entry.second.SectionName));
+    NameVals.push_back(Entry.second.SectionName.size());
+    NameVals.push_back(StrtabBuilder.add(Entry.second.OutputSectionName));
+    NameVals.push_back(Entry.second.OutputSectionName.size());
+    NameVals.push_back(Entry.second.Keep);
+    Stream.EmitRecord(bitc::FS_SECTION_INFO, NameVals);
+    NameVals.clear();
+  }
+
   Stream.ExitBlock();
 }
 
@@ -5430,6 +5441,17 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   if (Index.getBlockCount())
     Stream.EmitRecord(bitc::FS_BLOCK_COUNT,
                       ArrayRef<uint64_t>{Index.getBlockCount()});
+
+  for (const auto &Entry : Index.sectionInfos()) {
+    NameVals.push_back(Entry.first); // GUID
+    NameVals.push_back(StrtabBuilder.add(Entry.second.SectionName));
+    NameVals.push_back(Entry.second.SectionName.size());
+    NameVals.push_back(StrtabBuilder.add(Entry.second.OutputSectionName));
+    NameVals.push_back(Entry.second.OutputSectionName.size());
+    NameVals.push_back(Entry.second.Keep);
+    Stream.EmitRecord(bitc::FS_SECTION_INFO, NameVals);
+    NameVals.clear();
+  }
 
   Stream.ExitBlock();
 }
