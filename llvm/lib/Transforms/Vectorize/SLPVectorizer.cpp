@@ -29649,11 +29649,6 @@ namespace {
 class HorizontalReduction {
   using ReductionOpsType = SmallVector<Value *, 16>;
   using ReductionOpsListType = SmallVector<ReductionOpsType, 2>;
-  enum class ReductionContext {
-    None,
-    CmpZero,
-  };
-
   ReductionOpsListType ReductionOps;
   /// List of possibly reduced values.
   SmallVector<SmallVector<Value *>> ReducedVals;
@@ -30915,16 +30910,6 @@ public:
             LocalExternallyUsedValues.insert(RdxVal);
         V.buildExternalUses(LocalExternallyUsedValues);
 
-        // Use the zero-test cost only for a complete, standalone scalar
-        // reduction that can become one vector comparison and i1 reduction.
-        TTI::VectorInstrContext CostContext = TTI::VectorInstrContext::None;
-        if (isZeroCmpContext(RdxContext) && this->ReducedVals.size() == 1 &&
-            VL.size() == this->ReducedVals.front().size() &&
-            VectorValuesAndScales.empty() && !VectorizedTree &&
-            !isa<VectorType>(VL.front()->getType()) && !allConstant(VL) &&
-            !V.isReducedBitcastRoot() && !V.isReducedCmpBitcastRoot())
-          CostContext = RdxContext;
-
         // Estimate cost.
         InstructionCost ReductionCost;
         if (RK == ReductionOrdering::Ordered || V.isReducedBitcastRoot() ||
@@ -30933,7 +30918,7 @@ public:
         else
           ReductionCost =
               getReductionCost(TTI, VL, SameValuesCounter, IsCmpSelMinMax,
-                               RdxFMF, V, DT, DL, TLI, CostContext);
+                               RdxFMF, V, DT, DL, TLI, RdxContext);
         // If the root is a select (min/max idiom), the insert point is the
         // compare condition of that select.
         Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
@@ -31627,8 +31612,13 @@ private:
     // 2. The storage does not have any vector with full vector use (first
     // vector with full register use).
     bool DoesRequireReductionOp = !AllConsts && VectorValuesAndScales.empty();
+    bool IsCompleteReduction =
+        this->ReducedVals.size() == 1 &&
+        ReducedVals.size() == this->ReducedVals.front().size();
+    bool UseCmpZeroCost = isZeroCmpContext(Context) && IsCompleteReduction &&
+                          DoesRequireReductionOp && !isa<VectorType>(ScalarTy);
     InstructionCost CmpReductionCost = InstructionCost::getInvalid();
-    if (isZeroCmpContext(Context)) {
+    if (UseCmpZeroCost) {
       // For a complete OR/UMax reduction used only by an eq/ne zero test,
       // account for moving the comparison before the reduction:
       //
@@ -31644,8 +31634,7 @@ private:
       // inequality requires any lane to be nonzero, so it uses OR. Add the
       // vector comparison and boolean reduction costs, then remove the scalar
       // comparison cost eliminated by this replacement.
-      assert(DoesRequireReductionOp && !isa<VectorType>(ScalarTy) &&
-             (RdxKind == RecurKind::Or || RdxKind == RecurKind::UMax) &&
+      assert((RdxKind == RecurKind::Or || RdxKind == RecurKind::UMax) &&
              "Unexpected zero comparison reduction");
       auto *ScalarCmp =
           cast<ICmpInst>(*cast<Instruction>(ReductionRoot)->user_begin());
@@ -31670,7 +31659,7 @@ private:
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(RdxKind);
       if (!AllConsts) {
         if (DoesRequireReductionOp) {
-          if (isZeroCmpContext(Context)) {
+          if (UseCmpZeroCost) {
             VectorCost = CmpReductionCost;
           } else if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
             assert(SLPReVec && "FixedVectorType is not expected.");
@@ -31777,7 +31766,7 @@ private:
       Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
       if (!AllConsts) {
         if (DoesRequireReductionOp) {
-          if (isZeroCmpContext(Context))
+          if (UseCmpZeroCost)
             VectorCost = CmpReductionCost;
           else
             VectorCost =
