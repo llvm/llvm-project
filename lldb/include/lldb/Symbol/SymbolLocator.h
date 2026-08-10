@@ -42,6 +42,10 @@ public:
     /// What to look for.
     ModuleSpec module_spec;
 
+    /// A platform that may know where the binary is. The locator plugins have
+    /// no Platform of their own to consult.
+    lldb::PlatformSP platform;
+
     /// Allow contacting an external symbol server when the local searches come
     /// up empty.
     bool external_lookup = false;
