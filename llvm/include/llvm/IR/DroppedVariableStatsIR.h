@@ -15,11 +15,12 @@
 #define LLVM_CODEGEN_DROPPEDVARIABLESTATSIR_H
 
 #include "llvm/IR/DroppedVariableStats.h"
+#include "llvm/IR/IRUnitRef.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
-class Any;
+class IRUnitRef;
 class StringRef;
 class PassInstrumentationCallbacks;
 class Function;
@@ -34,9 +35,9 @@ public:
   DroppedVariableStatsIR(bool DroppedVarStatsEnabled)
       : llvm::DroppedVariableStats(DroppedVarStatsEnabled) {}
 
-  void runBeforePass(StringRef P, const Any &IR);
+  void runBeforePass(StringRef P, IRUnitRef IR);
 
-  void runAfterPass(StringRef P, const Any &IR);
+  void runAfterPass(StringRef P, IRUnitRef IR);
 
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
@@ -80,8 +81,6 @@ private:
       DenseSet<VarID> &VarIDSet,
       DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
       StringRef FuncName, bool Before) override;
-
-  template <typename IRUnitT> static const IRUnitT *unwrapIR(const Any &IR);
 };
 
 } // namespace llvm
