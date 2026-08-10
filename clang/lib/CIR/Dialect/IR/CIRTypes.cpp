@@ -1279,7 +1279,9 @@ llvm::TypeSize cir::VectorType::getTypeSizeInBits(
 uint64_t
 cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                                  ::mlir::DataLayoutEntryListRef params) const {
-  return llvm::NextPowerOf2(dataLayout.getTypeSizeInBits(*this));
+  // This hook answers in bytes, not bits.
+  return llvm::PowerOf2Ceil(
+      llvm::divideCeil(dataLayout.getTypeSizeInBits(*this), 8u));
 }
 
 mlir::LogicalResult cir::VectorType::verify(

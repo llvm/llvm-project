@@ -116,7 +116,8 @@ CWrapperFunctionBuffer testReadStrings(const char *ArgData, size_t ArgSize) {
 class EPCGenericMemoryAccessTest : public testing::Test {
 public:
   EPCGenericMemoryAccessTest() {
-    EPC = cantFail(SelfExecutorProcessControl::Create());
+    ES = std::make_unique<ExecutionSession>(
+        cantFail(SelfExecutorProcessControl::Create()));
 
     EPCGenericMemoryAccess::FuncAddrs FAs;
     FAs.WriteUInt8s = ExecutorAddr::fromPtr(
@@ -137,13 +138,13 @@ public:
     FAs.ReadBuffers = ExecutorAddr::fromPtr(&testReadBuffers);
     FAs.ReadStrings = ExecutorAddr::fromPtr(&testReadStrings);
 
-    MemAccess = std::make_unique<EPCGenericMemoryAccess>(*EPC, FAs);
+    MemAccess = std::make_unique<EPCGenericMemoryAccess>(*ES, FAs);
   }
 
-  ~EPCGenericMemoryAccessTest() override { cantFail(EPC->disconnect()); }
+  ~EPCGenericMemoryAccessTest() override { cantFail(ES->endSession()); }
 
 protected:
-  std::shared_ptr<SelfExecutorProcessControl> EPC;
+  std::shared_ptr<ExecutionSession> ES;
   std::unique_ptr<MemoryAccess> MemAccess;
 
   static const uint8_t UInt8_1_TestValue;

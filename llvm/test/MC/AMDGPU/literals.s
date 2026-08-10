@@ -1406,17 +1406,19 @@ s_add_i32 s0, src_shared_limit, s0
 
 s_add_i32 s0, src_private_base, s0
 // GFX11: s_add_i32 s0, src_private_base, s0      ; encoding: [0xed,0x00,0x00,0x81]
-// GFX12XX: s_add_co_i32 s0, src_private_base, s0   ; encoding: [0xed,0x00,0x00,0x81]
+// GFX12: s_add_co_i32 s0, src_private_base, s0   ; encoding: [0xed,0x00,0x00,0x81]
 // GFX9: s_add_i32 s0, src_private_base, s0      ; encoding: [0xed,0x00,0x00,0x81]
-// NOSICI: :[[@LINE-4]]:15: error: src_private_base register not available on this GPU
-// NOVI: :[[@LINE-5]]:15: error: src_private_base register not available on this GPU
+// NOGFX1250: :[[@LINE-4]]:15: error: src_private_base register not available on this GPU
+// NOSICI: :[[@LINE-5]]:15: error: src_private_base register not available on this GPU
+// NOVI: :[[@LINE-6]]:15: error: src_private_base register not available on this GPU
 
 s_add_i32 s0, src_private_limit, s0
 // GFX11: s_add_i32 s0, src_private_limit, s0     ; encoding: [0xee,0x00,0x00,0x81]
-// GFX12XX: s_add_co_i32 s0, src_private_limit, s0  ; encoding: [0xee,0x00,0x00,0x81]
+// GFX12: s_add_co_i32 s0, src_private_limit, s0  ; encoding: [0xee,0x00,0x00,0x81]
 // GFX9: s_add_i32 s0, src_private_limit, s0     ; encoding: [0xee,0x00,0x00,0x81]
-// NOSICI: :[[@LINE-4]]:15: error: src_private_limit register not available on this GPU
-// NOVI: :[[@LINE-5]]:15: error: src_private_limit register not available on this GPU
+// NOGFX1250: :[[@LINE-4]]:15: error: src_private_limit register not available on this GPU
+// NOSICI: :[[@LINE-5]]:15: error: src_private_limit register not available on this GPU
+// NOVI: :[[@LINE-6]]:15: error: src_private_limit register not available on this GPU
 
 s_add_i32 s0, src_pops_exiting_wave_id, s0
 // GFX9: s_add_i32 s0, src_pops_exiting_wave_id, s0 ; encoding: [0xef,0x00,0x00,0x81]
@@ -1447,17 +1449,19 @@ s_and_b64 s[0:1], s[0:1], src_shared_limit
 
 s_and_b64 s[0:1], s[0:1], src_private_base
 // GFX11: s_and_b64 s[0:1], s[0:1], src_private_base ; encoding: [0x00,0xed,0x80,0x8b]
-// GFX12XX: s_and_b64 s[0:1], s[0:1], src_private_base ; encoding: [0x00,0xed,0x80,0x8b]
+// GFX12: s_and_b64 s[0:1], s[0:1], src_private_base ; encoding: [0x00,0xed,0x80,0x8b]
 // GFX9: s_and_b64 s[0:1], s[0:1], src_private_base ; encoding: [0x00,0xed,0x80,0x86]
-// NOSICI: :[[@LINE-4]]:27: error: src_private_base register not available on this GPU
-// NOVI: :[[@LINE-5]]:27: error: src_private_base register not available on this GPU
+// NOGFX1250: :[[@LINE-4]]:27: error: src_private_base register not available on this GPU
+// NOSICI: :[[@LINE-5]]:27: error: src_private_base register not available on this GPU
+// NOVI: :[[@LINE-6]]:27: error: src_private_base register not available on this GPU
 
 s_and_b64 s[0:1], s[0:1], src_private_limit
 // GFX11: s_and_b64 s[0:1], s[0:1], src_private_limit ; encoding: [0x00,0xee,0x80,0x8b]
-// GFX12XX: s_and_b64 s[0:1], s[0:1], src_private_limit ; encoding: [0x00,0xee,0x80,0x8b]
+// GFX12: s_and_b64 s[0:1], s[0:1], src_private_limit ; encoding: [0x00,0xee,0x80,0x8b]
 // GFX9: s_and_b64 s[0:1], s[0:1], src_private_limit ; encoding: [0x00,0xee,0x80,0x86]
-// NOSICI: :[[@LINE-4]]:27: error: src_private_limit register not available on this GPU
-// NOVI: :[[@LINE-5]]:27: error: src_private_limit register not available on this GPU
+// NOGFX1250: :[[@LINE-4]]:27: error: src_private_limit register not available on this GPU
+// NOSICI: :[[@LINE-5]]:27: error: src_private_limit register not available on this GPU
+// NOVI: :[[@LINE-6]]:27: error: src_private_limit register not available on this GPU
 
 s_and_b64 s[0:1], s[0:1], src_pops_exiting_wave_id
 // GFX9: s_and_b64 s[0:1], s[0:1], src_pops_exiting_wave_id ; encoding: [0x00,0xef,0x80,0x86]
@@ -1679,11 +1683,12 @@ v_ceil_f32_sdwa v5, |src_shared_base| dst_sel:DWORD src0_sel:DWORD
 
 v_add_u32 v0, private_base, s0
 // GFX11: v_add_nc_u32_e64 v0, src_private_base, s0 ; encoding: [0x00,0x00,0x25,0xd5,0xed,0x00,0x00,0x02]
-// GFX12XX: v_add_nc_u32_e64 v0, src_private_base, s0 ; encoding: [0x00,0x00,0x25,0xd5,0xed,0x00,0x00,0x02]
+// GFX12: v_add_nc_u32_e64 v0, src_private_base, s0 ; encoding: [0x00,0x00,0x25,0xd5,0xed,0x00,0x00,0x02]
 // NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx704): v_add_u32
-// NOGFX9: :[[@LINE-4]]:29: error: invalid operand (violates constant bus restrictions)
-// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx600): v_add_u32
-// NOVI: :[[@LINE-6]]:15: error: src_private_base register not available on this GPU
+// NOGFX1250: :[[@LINE-4]]:15: error: src_private_base register not available on this GPU
+// NOGFX9: :[[@LINE-5]]:29: error: invalid operand (violates constant bus restrictions)
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (gfx600): v_add_u32
+// NOVI: :[[@LINE-7]]:15: error: src_private_base register not available on this GPU
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_add_u32 v0, scc, s0
@@ -1714,10 +1719,11 @@ v_div_fmas_f32 v0, v0, shared_limit, v1
 // v_div_fmas implicitly reads VCC
 v_div_fmas_f32 v0, v0, v1, private_limit
 // GFX11: v_div_fmas_f32 v0, v0, v1, src_private_limit ; encoding: [0x00,0x00,0x37,0xd6,0x00,0x03,0xba,0x03]
-// GFX12XX: v_div_fmas_f32 v0, v0, v1, src_private_limit ; encoding: [0x00,0x00,0x37,0xd6,0x00,0x03,0xba,0x03]
-// NOGFX9: :[[@LINE-3]]:28: error: invalid operand (violates constant bus restrictions)
-// NOSICI: :[[@LINE-4]]:28: error: src_private_limit register not available on this GPU
-// NOVI: :[[@LINE-5]]:28: error: src_private_limit register not available on this GPU
+// GFX12: v_div_fmas_f32 v0, v0, v1, src_private_limit ; encoding: [0x00,0x00,0x37,0xd6,0x00,0x03,0xba,0x03]
+// NOGFX1250: :[[@LINE-3]]:28: error: src_private_limit register not available on this GPU
+// NOGFX9: :[[@LINE-4]]:28: error: invalid operand (violates constant bus restrictions)
+// NOSICI: :[[@LINE-5]]:28: error: src_private_limit register not available on this GPU
+// NOVI: :[[@LINE-6]]:28: error: src_private_limit register not available on this GPU
 
 // v_div_fmas implicitly reads VCC
 v_div_fmas_f32 v0, execz, v0, v1
@@ -1835,7 +1841,7 @@ v_madmk_f16 v0, 0xff32, 1, v0
 v_cmp_eq_f32 s[0:1], private_base, private_limit
 // NOGFX11: :[[@LINE-1]]:14: error: invalid operand for instruction
 // NOGFX12: :[[@LINE-2]]:14: error: invalid operand for instruction
-// NOGFX1250: :[[@LINE-3]]:14: error: invalid operand for instruction
+// NOGFX1250: :[[@LINE-3]]:22: error: src_private_base register not available on this GPU
 // NOGFX9: :[[@LINE-4]]:36: error: invalid operand (violates constant bus restrictions)
 // NOSICI: :[[@LINE-5]]:22: error: src_private_base register not available on this GPU
 // NOVI: :[[@LINE-6]]:22: error: src_private_base register not available on this GPU
@@ -1843,7 +1849,7 @@ v_cmp_eq_f32 s[0:1], private_base, private_limit
 v_cmp_eq_f32 s[0:1], private_base, s0
 // NOGFX11: :[[@LINE-1]]:14: error: invalid operand for instruction
 // NOGFX12: :[[@LINE-2]]:14: error: invalid operand for instruction
-// NOGFX1250: :[[@LINE-3]]:14: error: invalid operand for instruction
+// NOGFX1250: :[[@LINE-3]]:22: error: src_private_base register not available on this GPU
 // NOGFX9: :[[@LINE-4]]:36: error: invalid operand (violates constant bus restrictions)
 // NOSICI: :[[@LINE-5]]:22: error: src_private_base register not available on this GPU
 // NOVI: :[[@LINE-6]]:22: error: src_private_base register not available on this GPU
@@ -1857,11 +1863,12 @@ v_cmp_eq_f32 s[0:1], execz, s0
 
 v_pk_add_f16 v255, private_base, private_limit
 // GFX11: v_pk_add_f16 v255, src_private_base, src_private_limit ; encoding: [0xff,0x40,0x0f,0xcc,0xed,0xdc,0x01,0x1a]
-// GFX12XX: v_pk_add_f16 v255, src_private_base, src_private_limit ; encoding: [0xff,0x40,0x0f,0xcc,0xed,0xdc,0x01,0x1a]
+// GFX12: v_pk_add_f16 v255, src_private_base, src_private_limit ; encoding: [0xff,0x40,0x0f,0xcc,0xed,0xdc,0x01,0x1a]
 // NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (gfx704): v_pk_add_f16
-// NOGFX9: :[[@LINE-4]]:34: error: invalid operand (violates constant bus restrictions)
-// NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (gfx600): v_pk_add_f16
-// NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (gfx802): v_pk_add_f16
+// NOGFX1250: :[[@LINE-4]]:20: error: src_private_base register not available on this GPU
+// NOGFX9: :[[@LINE-5]]:34: error: invalid operand (violates constant bus restrictions)
+// NOSI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (gfx600): v_pk_add_f16
+// NOVI: :[[@LINE-7]]:1: error: instruction not supported on this GPU (gfx802): v_pk_add_f16
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_pk_add_f16 v255, vccz, execz
