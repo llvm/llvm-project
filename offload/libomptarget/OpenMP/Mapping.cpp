@@ -671,6 +671,10 @@ int MappingInfoTy::shareEntryStorageWithOriginal(HDTTMapAccessorTy &HDTTMap,
   ODBG(ODT_Mapping) << "Releasing the device allocation of map entry (hst:"
                     << HstPtrBegin << ") -> (tgt:" << TgtAllocBegin
                     << "), so that its storage is shared with the original";
+  ODBG(ODT_Mapping) << "Mapping of " << HstPtrBegin
+                    << " reuses the original storage, despite a close modifier "
+                       "if one was given, because a pointer whose own storage "
+                       "is the original is attached to it";
 
   Entry->shareStorageWithOriginal();
 

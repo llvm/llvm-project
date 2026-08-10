@@ -905,52 +905,19 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
     return PteeEntry && !PteeEntry->isHostBound();
   };
 
-  // Demoting one pointee can leave another attachment unsettled: the demoted
-  // storage may itself hold a pointer whose own pointee is device-bound. So
-  // keep going until a pass demotes nothing. Each demotion releases an
-  // allocation made by this construct, and none are created here, so this
-  // terminates.
-  for (bool Demoted = true; Demoted;) {
-    Demoted = false;
-    for (const auto &AttachEntry : StateInfo.AttachEntries) {
-      void **HstPtr = reinterpret_cast<void **>(AttachEntry.PointerBase);
-      void *HstPteeBegin = AttachEntry.PointeeBegin;
-      if (!WillAttach(AttachEntry) ||
-          !NeedsSettling(HstPtr, AttachEntry.PointerSize, HstPteeBegin))
-        continue;
-
-      // Only a pointee allocated for this construct may give its allocation up.
-      if (!StateInfo.wasNewlyAllocated(HstPteeBegin).has_value())
-        continue;
-
-      HostDataToTargetTy *PteeEntry = FindEntry(HstPteeBegin, /*Size=*/0);
-#ifndef NDEBUG
-    // Giving the allocation up moves the pointee's device address, which would
-    // strand any pointer already attached to it. That cannot happen here: the
-    // allocation was made by this construct, so no earlier construct could have
-    // attached to it, and this pre-pass runs before any attachment is performed
-    // for this one.
-    for (auto &[AttachedPtee, AttachedPtrs] : MappingInfo.AttachedPointers) {
-      (void)AttachedPtrs;
-      assert((reinterpret_cast<uintptr_t>(AttachedPtee) <
-                  PteeEntry->HstPtrBegin ||
-              reinterpret_cast<uintptr_t>(AttachedPtee) >=
-                  PteeEntry->HstPtrEnd) &&
-             "Releasing an allocation that a pointer is already attached to");
-    }
-#endif
-    if (MappingInfo.shareEntryStorageWithOriginal(HDTTMap, PteeEntry,
-                                                  AsyncInfo) != OFFLOAD_SUCCESS)
-      return OFFLOAD_FAIL;
-    Demoted = true;
-    }
-  }
-
+  // Give a pointer device storage only where the pointee cannot give its own
+  // allocation up: it was made by an enclosing construct, so its device address
+  // may already have been obtained by the program. Those are the attachments
+  // that have no other way to be settled, so they are settled first, and the
+  // releases below then see the storage they forced.
   for (const auto &AttachEntry : StateInfo.AttachEntries) {
     void **HstPtr = reinterpret_cast<void **>(AttachEntry.PointerBase);
     if (!WillAttach(AttachEntry) ||
         !NeedsSettling(HstPtr, AttachEntry.PointerSize,
                        AttachEntry.PointeeBegin))
+      continue;
+
+    if (StateInfo.wasNewlyAllocated(AttachEntry.PointeeBegin).has_value())
       continue;
 
     // Give the pointer, and whatever points at it, device storage. A pointer
@@ -1024,6 +991,52 @@ static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
         ToUpgrade.push_back({reinterpret_cast<void **>(Pending.PointerBase),
                              Pending.PointerSize, UpHstPtr});
       }
+    }
+  }
+
+  // Whatever is still unsettled has a pointee this construct allocated, so it
+  // can be released. That is preferred over giving the pointer device storage:
+  // it settles the attachment outright, whereas an upgrade propagates to
+  // everything that points at the pointer.
+  //
+  // Releasing one pointee can leave another attachment unsettled, because the
+  // storage just released may itself hold a pointer whose own pointee is
+  // device-bound. So keep going until a pass releases nothing. Each release
+  // frees an allocation made by this construct, and none are created here, so
+  // this terminates.
+  for (bool Demoted = true; Demoted;) {
+    Demoted = false;
+    for (const auto &AttachEntry : StateInfo.AttachEntries) {
+      void **HstPtr = reinterpret_cast<void **>(AttachEntry.PointerBase);
+      void *HstPteeBegin = AttachEntry.PointeeBegin;
+      if (!WillAttach(AttachEntry) ||
+          !NeedsSettling(HstPtr, AttachEntry.PointerSize, HstPteeBegin))
+        continue;
+
+      // Only a pointee allocated for this construct may give its allocation up.
+      if (!StateInfo.wasNewlyAllocated(HstPteeBegin).has_value())
+        continue;
+
+      HostDataToTargetTy *PteeEntry = FindEntry(HstPteeBegin, /*Size=*/0);
+#ifndef NDEBUG
+      // Giving the allocation up moves the pointee's device address, which
+      // would strand any pointer already attached to it. That cannot happen
+      // here: the allocation was made by this construct, so no earlier
+      // construct could have attached to it, and this pre-pass runs before any
+      // attachment is performed for this one.
+      for (auto &[AttachedPtee, AttachedPtrs] : MappingInfo.AttachedPointers) {
+        (void)AttachedPtrs;
+        assert((reinterpret_cast<uintptr_t>(AttachedPtee) <
+                    PteeEntry->HstPtrBegin ||
+                reinterpret_cast<uintptr_t>(AttachedPtee) >=
+                    PteeEntry->HstPtrEnd) &&
+               "Releasing an allocation that a pointer is already attached to");
+      }
+#endif
+      if (MappingInfo.shareEntryStorageWithOriginal(
+              HDTTMap, PteeEntry, AsyncInfo) != OFFLOAD_SUCCESS)
+        return OFFLOAD_FAIL;
+      Demoted = true;
     }
   }
 
